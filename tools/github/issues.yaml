@@ -1,0 +1,348 @@
+# Mycelium — GitHub issues import source.
+# Generated from docs/planning/phase-0.md … phase-3.md (the human-readable task source of truth).
+# Consumers (gh-bootstrap.sh / Grok): create issues in the order listed; then in a SECOND pass
+# resolve each `depends_on` task-id to its created issue number and set it as a dependency
+# ("blocked by") and/or add it to the parent epic as a sub-issue. The `id` is the stable task key.
+# Phase 2/3 entries are EPICS (decompose into child issues when that phase's gate opens).
+
+issues:
+  # ---------------- Phase 0 ----------------
+  - id: M-001
+    title: "M-001 — Liquid-Haskell bundle capacity-refinement probe"
+    milestone: "Phase 0 — Confirm & Specify"
+    labels: [phase:0, type:verification, area:numerics, priority:P0]
+    depends_on: [M-010]
+    body: |
+      Encode MAP-I `bundle` as a capacity refinement instantiating the cited theorems (RFC-0003 §5; T0.2: Clarkson 2023, Thomas 2021) and confirm Z3 discharges it for >=3 concrete (d,k,s,m,delta) settings.
+      Acceptance: LH module type-checks; Z3 discharges; short writeup confirms the axiomatized-theorem + checked-instantiation strategy; KC-1 upgraded "passed (literature)" -> "confirmed (build)".
+
+  - id: M-002
+    title: "M-002 — KC-2 LLM-leverage experiment (E4)"
+    milestone: "Phase 0 — Confirm & Specify"
+    labels: [phase:0, type:research, area:project, priority:P0]
+    depends_on: [M-020, M-010]
+    body: |
+      Fixed benchmark: tasks generated in the minimal Mycelium surface fragment vs a Python-embedded DSL baseline; measure syntactic validity + type-check pass rate + edit-to-fix iterations (Foundation §6 P0.2; SC-5b; G10).
+      Acceptance: SC-5b baseline number + a written KC-2 verdict (proceed / reweight-to-human / fall-back-to-embedded-DSL).
+
+  - id: M-020
+    title: "M-020 — Minimal surface-syntax fragment (experiment-only)"
+    milestone: "Phase 0 — Confirm & Specify"
+    labels: [phase:0, type:spec, area:core-ir, priority:P0]
+    depends_on: []
+    body: |
+      A tiny throwaway-grade concrete syntax covering declare-value / swap / one VSA op, sufficient to run M-002 (SPEC §10.1). NOT a committed surface (gated on KC-2).
+
+  - id: M-010
+    title: "M-010 — Ratify core data-contract schemas"
+    milestone: "Phase 0 — Confirm & Specify"
+    labels: [phase:0, type:spec, area:project, priority:P0]
+    depends_on: []
+    body: |
+      Review the 10 JSON Schemas (docs/spec/schemas/) against their source RFCs; add >=1 valid + >=1 invalid example per schema; CI runs check-jsonschema/ajv over examples.
+      Acceptance: examples validate in CI; schema status draft -> ratified.
+
+  - id: M-011
+    title: "M-011 — Ratify SPECIFICATION.md"
+    milestone: "Phase 0 — Confirm & Specify"
+    labels: [phase:0, type:spec, area:project, priority:P1]
+    depends_on: [M-010]
+    body: |
+      Confirm §1–§9 match their RFCs; link every §10 TODO to a live issue id (docs/spec/SPECIFICATION.md).
+      Acceptance: status consolidating-draft -> ratified-skeleton.
+
+  - id: M-012
+    title: "M-012 — Binary<->ternary canonical encoding spec"
+    milestone: "Phase 0 — Confirm & Specify"
+    labels: [phase:0, type:spec, area:swap, priority:P1]
+    depends_on: []
+    body: |
+      Precise enc/dec for chosen widths (range, rounding, out-of-range), implementable (M-120) and provable (M-121) (RFC-0002 §4; T2.1 IOTA/Jones).
+      Acceptance: spec + one worked end-to-end example.
+
+  - id: M-090
+    title: "M-090 — Docs CI"
+    milestone: "Phase 0 — Confirm & Specify"
+    labels: [phase:0, type:infra, area:project, priority:P1]
+    depends_on: []
+    body: |
+      GitHub Actions: markdown-lint + link-check (+ Trunk if configured) over docs/** and schemas; PR template wired.
+      Acceptance: green on a no-op PR.
+
+  - id: M-091
+    title: "M-091 — Rust workspace skeleton"
+    milestone: "Phase 0 — Confirm & Specify"
+    labels: [phase:0, type:infra, area:core-ir, priority:P0]
+    depends_on: []
+    body: |
+      Cargo workspace: crates mycelium-core, mycelium-interp, mycelium-vsa, mycelium-mlir (stub), mycelium-cert (stub), xtask; MSRV pinned 1.92 (ADR-007).
+      Acceptance: cargo fmt --check, clippy -D warnings, test all green in CI on the empty skeleton.
+
+  - id: M-092
+    title: "M-092 — Python tooling skeleton"
+    milestone: "Phase 0 — Confirm & Specify"
+    labels: [phase:0, type:infra, area:project, priority:P1]
+    depends_on: []
+    body: |
+      UV-managed experiments/ project; pytest + ruff + black; trivial passing test; codecov upload in CI (ADR-007: Python 3.13/3.14).
+
+  # ---------------- Phase 1 ----------------
+  - id: M-101
+    title: "M-101 — Core IR data structures"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:feature, area:core-ir, priority:P0]
+    depends_on: [M-091, M-010]
+    body: |
+      Rust types for Value<Repr,Meta>, Repr enum, Meta mirroring the schemas; commit a concrete Core IR node grammar (EBNF; closes SPEC §10.2) (RFC-0001 §4.1–§4.3).
+      Acceptance: construction + well-formedness unit tests.
+
+  - id: M-102
+    title: "M-102 — Guarantee lattice + meet-composition"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:feature, area:core-ir, priority:P0]
+    depends_on: [M-101]
+    body: |
+      Guarantee lattice with meet (assoc/comm/idempotent, property-tested); ops propagate by meet (RFC-0001 §3.4/§4.7).
+      Acceptance: all 4x4 pairs tested.
+
+  - id: M-103
+    title: "M-103 — Content-addressing"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:feature, area:core-ir, priority:P1]
+    depends_on: [M-101]
+    body: |
+      Hash-of-AST identity + names-as-metadata (RFC-0001 §4.6; ADR-003); cert/policy refs are content hashes.
+      Acceptance: identical defs collide; trivial renames don't change identity.
+
+  - id: M-104
+    title: "M-104 — Core IR (de)serialization"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:feature, area:core-ir, priority:P1]
+    depends_on: [M-101, M-010]
+    body: |
+      (De)serialize Core IR to/from the JSON schemas; round-trip property test; output validates against value.schema.json in CI.
+
+  - id: M-110
+    title: "M-110 — Reference interpreter"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:feature, area:core-ir, priority:P0]
+    depends_on: [M-101]
+    body: |
+      The executable reference semantics for the Core IR; document small-step rules alongside (closes SPEC §10.3) (RFC-0004 §2; ADR-009; NFR-7).
+      Acceptance: golden test corpus with expected results.
+
+  - id: M-111
+    title: "M-111 — Bit/Trit values + balanced-ternary arithmetic"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:feature, area:core-ir, priority:P0]
+    depends_on: [M-110]
+    body: |
+      First-class Bit and Trit{-1,0,+1}; balanced-ternary add/neg/mul with identities (negation=flip; rounding≡truncation) (FR-M2).
+      Acceptance: property tests vs an oracle (balanced-ternary crate or hand-derived).
+
+  - id: M-112
+    title: "M-112 — Inspectable lowering (>=2 stages)"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:feature, area:execution, priority:P1]
+    depends_on: [M-110]
+    body: |
+      >=2 dumpable/diffable lowering stages; metadata preserved across stages (WF5; SC-4; closes SPEC §10.5 partial).
+      Acceptance: a wrong/missing metadata propagation is caught by test.
+
+  - id: M-120
+    title: "M-120 — Binary<->ternary swap (LosslessWithinRange)"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:feature, area:swap, priority:P0]
+    depends_on: [M-111, M-012]
+    body: |
+      enc/dec per M-012; dec returns Option; out-of-range = explicit error (never silent); emits a LosslessWithinRange certificate (RFC-0002 §4).
+      Acceptance: dec(enc x)=Some x over a large corpus (SC-1, SC-3).
+
+  - id: M-121
+    title: "M-121 — Round-trip proof"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:verification, area:swap, priority:P1]
+    depends_on: [M-120]
+    body: |
+      Machine-checkable round-trip/injectivity proof for fixed widths (SMT or Coq decide), referenced by proof_ref (VR-1; SC-1).
+
+  - id: M-130
+    title: "M-130 — VsaModel trait + MAP-I"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:feature, area:vsa, priority:P0]
+    depends_on: [M-101]
+    body: |
+      Composition-style VsaModel trait; MAP-I bind/unbind (self-inverse, Exact), permute (Exact), bundle; dependency-gated submodule (kernel still type-checks hypervector mentions; KC-3) (RFC-0003 §3–§4; T2.6).
+
+  - id: M-131
+    title: "M-131 — Tagged bounds on shipped ops (SC-2)"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:verification, area:vsa, priority:P0]
+    depends_on: [M-130, M-102]
+    body: |
+      bundle ships a CapacityBound tagged Proven (citing the M-001 theorem) with side-conditions checked; measured behavior within bound across >=1e4 trials; honest per-op tag (RFC-0003 §4; VR-3/5; SC-2).
+
+  - id: M-132
+    title: "M-132 — Item-memory / cleanup"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:feature, area:vsa, priority:P2]
+    depends_on: [M-130]
+    body: |
+      Clean-up memory (nearest-neighbor item memory) returning (item, confidence) to make approximate unbind usable (FR-S4).
+
+  - id: M-140
+    title: "M-140 — LSP skeleton"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:feature, area:toolchain, priority:P1]
+    depends_on: [M-110, M-112]
+    body: |
+      LSP exposing the four feedback artifact kinds — typecheck diagnostics, swap certificates, bound/guarantee annotations, lowering-stage dumps — over one surface (FR-S5; §5.8; SC-5 channel).
+      Acceptance: verified with a scripted client.
+
+  - id: M-141
+    title: "M-141 — Invariant linter"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:feature, area:toolchain, priority:P1]
+    depends_on: [M-101]
+    body: |
+      Lints for implicit-swap attempt, untagged bound, swap without PolicyRef (SC-3; G2).
+      Acceptance: positive + negative test per lint.
+
+  - id: M-142
+    title: "M-142 — Formatter"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:feature, area:toolchain, priority:P2]
+    depends_on: [M-101]
+    body: |
+      Canonical rendering; reformatting does not change content-addressed identity (ADR-003).
+
+  - id: M-150
+    title: "M-150 — MLIR->LLVM AOT path (ternary dialect skeleton)"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:feature, area:execution, priority:P1]
+    depends_on: [M-110, M-091]
+    body: |
+      A ternary MLIR dialect skeleton lowering a kernel subset via arith/vector -> LLVM -> native; each stage dumpable (no opaque pass) (RFC-0004 §2; ADR-007; T1.5).
+      Acceptance: runnable artifact for the subset.
+
+  - id: M-151
+    title: "M-151 — Interp<->AOT differential testing"
+    milestone: "Phase 1 — Minimal Viable Core"
+    labels: [phase:1, type:verification, area:execution, priority:P1]
+    depends_on: [M-150, M-110]
+    body: |
+      Harness runs the kernel corpus under interpreter and AOT artifact; asserts observable equivalence; divergence fails CI (NFR-7; VR-4; RR-12). Cheap baseline preceding per-artifact TV in Phase 2.
+
+  # ---------------- Phase 2 (epics) ----------------
+  - id: E2-1
+    title: "E2-1 (epic) — Dense embeddings + Dense<->VSA swaps"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:swap, priority:P1]
+    depends_on: [M-101, M-120, M-130]
+    body: |
+      EPIC. Typed dim-tracked Dense{dim,dtype}; Dense<->VSA swaps with epsilon/delta bounds (RFC-0002 §5). Exit: SC-2 for new swaps. Decompose at the Phase-1 gate.
+
+  - id: E2-2
+    title: "E2-2 (epic) — Remaining VSA models"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:vsa, priority:P1]
+    depends_on: [M-130, M-131]
+    body: |
+      EPIC. MAP-B, BSC, HRR, FHRR, sparse/SBC with RFC-0003 §4 honest tags; HRR/FHRR unbind Empirical + cleanup; restrict MAP-B deep nesting (RR-13). Decompose at gate.
+
+  - id: E2-3
+    title: "E2-3 (epic) — Full swap + shared certificate checker"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:swap, priority:P0]
+    depends_on: [E2-1, E2-4]
+    body: |
+      EPIC. Complete swap with split regime; the single translation-validation certificate checker (A,B,R,bound,certificate) shared with interp<->AOT (RFC-0002 §2 / RFC-0004 §3). Exit: SC-3 global; cert overhead within KC-4 budget.
+
+  - id: E2-4
+    title: "E2-4 (epic) — Verified-numerics checker (ADR-010)"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:verification, area:numerics, priority:P0]
+    depends_on: [M-102, M-001]
+    body: |
+      EPIC. ErrorBound (affine arith) + ProbBound (union-bound; apRHL) kernels meeting at the shared {eps,delta,strength} certificate; certificate-checker-in-Rust (tier-i; tier-ii optional) (ADR-010). Exit: sound/monotone/deterministic composition; tier-i checker validates examples.
+
+  - id: E2-5
+    title: "E2-5 (epic) — Reconstruction manifest"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:vsa, priority:P1]
+    depends_on: [E2-2]
+    body: |
+      EPIC. Implement ReconInfo (RFC-0003 §6; recon-info.schema.json): indexed retrieval vs compositional reconstruction; content-addressed codebooks; bound attached. Exit: compositional path recovers a novel combination.
+
+  - id: E2-6
+    title: "E2-6 (epic) — Selection policy + EXPLAIN"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:selection, priority:P0]
+    depends_on: [E2-3, E2-7]
+    body: |
+      EPIC. Total non-learned content-addressed decision-table policy (RFC-0005) + mandatory EXPLAIN; one mechanism, two sites. Exit: every selection emits a valid explain-record; determinism + overrides tested.
+
+  - id: E2-7
+    title: "E2-7 (epic) — Schedule-staged packing selector"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:execution, priority:P1]
+    depends_on: [M-150, E2-6]
+    body: |
+      EPIC. Cost-model + exhaustive-over-fixed-set selector among bitnet.cpp packings (I2_S/TL1/TL2); records meta.physical; runs E1 (perf) + E3 (wrong-layout soundness vs NFR-7) (RFC-0004 §5). Exit: within ~0.01 PPL / 0.1% of full precision; E3 catches a mislabeled layout.
+
+  # ---------------- Phase 3 (epics) ----------------
+  - id: E3-1
+    title: "E3-1 (epic) — Semantic-level projections"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:needs-design]
+    depends_on: [E3-3]
+    body: |
+      EPIC (exploratory, FR-C1/G11). Multiple human/machine views of the same content-addressed artifact. Contingent on projection ergonomics + KC-2.
+
+  - id: E3-2
+    title: "E3-2 (epic) — AI co-authoring loop"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P1]
+    depends_on: [M-140, E2-6]
+    body: |
+      EPIC. generate -> semantic-feedback -> self-correct loop over the LSP surface; operationalizes SC-5b (NFR-2; Area 6).
+
+  - id: E3-3
+    title: "E3-3 (epic) — Matured toolchain"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P1]
+    depends_on: [M-140, M-141, M-142]
+    body: |
+      EPIC. Full LSP + rich diagnostics; linter/formatter maturity; build-system stable/experimental management + content-addressed caching + certificate artifacts.
+
+  - id: E3-4
+    title: "E3-4 (epic) — JIT optimization"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:execution, priority:P2]
+    depends_on: [E2-3]
+    body: |
+      EPIC (ADR-009). JIT for dynamic/long-running VSA pipelines; same lowering + runtime specialization. Exit: NFR-7 equivalence + speedup target.
+
+  - id: E3-5
+    title: "E3-5 (epic) — Resonator factorization (opt-in, probabilistic)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:vsa, priority:P2, status:needs-design]
+    depends_on: [E2-4, E2-5]
+    body: |
+      EPIC (FR-C2/G4). Factorization for unknown-factor products; per-factor codebooks + approximate inverse; probabilistic-only guarantee; never in core. Exit: documented convergence regime + bounds.
+
+  - id: E3-6
+    title: "E3-6 (epic) — BitNet-class packed-ternary acceleration"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:execution, priority:P2]
+    depends_on: [E2-7]
+    body: |
+      EPIC (FR-C3/G3). Production acceleration paths beyond the Phase-2 selector baseline.
+
+  - id: E3-7
+    title: "E3-7 (epic) — Native-ternary forward-compatibility path"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:execution, priority:P2]
+    depends_on: [M-150, E2-7]
+    body: |
+      EPIC (R7). Documented mapping from the ternary value-semantics contract to a future 3-state hardware backend; stubbed dialect target.

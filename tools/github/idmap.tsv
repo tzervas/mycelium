@@ -1,0 +1,46 @@
+# Mycelium task-id -> GitHub issue map (created 2026-06-08 via the GitHub MCP server).
+# Columns (TAB-separated): task_id  issue_number  issue_db_id
+#   - issue_number : use for "blocked by" issue-dependency links and human reference.
+#   - issue_db_id  : the issue's REST database id; pass as sub_issue_id to sub_issue_write
+#                    (sub-issue linking takes the ID, NOT the number).
+# Repo: tzervas/mycelium. Milestones are NOT yet assigned (see gh-bootstrap-local.sh).
+M-001	2	4617116767
+M-002	3	4617123049
+M-020	4	4617123141
+M-010	5	4617123321
+M-011	6	4617123444
+M-012	7	4617123592
+M-090	8	4617123878
+M-091	9	4617124033
+M-092	10	4617124158
+M-101	11	4617125522
+M-102	12	4617125568
+M-103	13	4617125604
+M-104	14	4617125650
+M-110	15	4617125702
+M-111	16	4617125746
+M-112	17	4617125811
+M-120	18	4617126032
+M-121	19	4617126211
+M-130	20	4617126575
+M-131	21	4617126718
+M-132	22	4617126880
+M-140	23	4617127070
+M-141	24	4617127185
+M-142	25	4617127432
+M-150	26	4617127757
+M-151	27	4617127905
+E2-1	28	4617129312
+E2-2	29	4617129348
+E2-3	30	4617129393
+E2-4	31	4617129450
+E2-5	32	4617129491
+E2-6	33	4617129528
+E2-7	34	4617129887
+E3-1	35	4617130041
+E3-2	36	4617130161
+E3-3	37	4617130281
+E3-4	38	4617130563
+E3-5	39	4617130878
+E3-6	40	4617130997
+E3-7	41	4617131114
