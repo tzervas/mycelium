@@ -22,7 +22,7 @@ Survey the prior art across the six areas Mycelium sits astride, then synthesize
 - **Type-level representation tracking works** (F# units-of-measure; dependent/refinement types — Idris, Agda, Liquid Haskell, F\*), but mainstream systems *erase* it at runtime — the anti-pattern Mycelium rejects (metadata must persist).
 - **VSA is powerful but capacity/crosstalk-limited:** bundling/binding have real information-theoretic limits; some bounds are proven, others only Gaussian-approximate — forcing an *honesty* distinction (→ guarantee lattice). True compositional reconstruction differs from indexed retrieval.
 - **Balanced ternary** is elegant (symmetric, sign-as-digit) but has no sustained modern ecosystem; its value here is *logical*, with forward-compatibility to native-ternary hardware.
-- **Verified numerics prove _bounds_, not equalities:** Gappa, FPTaylor, Flocq, Rosa/Daisy, Herbie establish the "ideal-real spec + certified error" pattern — exactly the model Mycelium's bounds encode (later ADR-010).
+- **Verified numerics prove *bounds*, not equalities:** Gappa, FPTaylor, Flocq, Rosa/Daisy, Herbie establish the "ideal-real spec + certified error" pattern — exactly the model Mycelium's bounds encode (later ADR-010).
 
 ## Tension B resolution (seeded here, ratified in ADR-001)
 Reframed "no hidden approximation" as the operating rule: every approximate operation = an exact deterministic spec + a declared/proven bound, tagged by guarantee strength. This dissolved the apparent contradiction between the "no black boxes" principle and first-class VSA.

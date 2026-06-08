@@ -8,12 +8,15 @@ useDefault = true
 
 [allowlist]
 description = "Allowlist for Mycelium project"
+# Paths exempt from scanning. Keep this list minimal — a real secret pasted into an
+# allowlisted file would go undetected. (`.gitleaks.toml` itself is here because it
+# documents detection patterns.)
 paths = [
   ".gitleaks.toml",
   "research/",
   "LICENSE",
   "README.md"
 ]
-regexes = [
-  '''AKIA[0-9A-Z]{16}''',
-]
+# NOTE: do NOT allowlist secret *patterns* here (e.g. the AWS `AKIA…` key format) — an
+# allowlist regex tells gitleaks to IGNORE matches, which would suppress real leaked keys.
+# Allowlist a specific example string or file path instead, never the whole pattern.

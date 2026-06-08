@@ -15,6 +15,13 @@ corpus, not released software. Versioning will begin when the kernel does.
   (`research/01`, `research/02`).
 - Repository scaffolding: `README.md`, `LICENSE` (MIT), `CONTRIBUTING.md`,
   `.gitignore` (Rust + Python), and index/process READMEs for `docs/adr/` and `docs/rfcs/`.
+- **GitHub PM bootstrap** (`tools/github/`): `issues.yaml` / `labels.json` / `milestones.json`,
+  the `mcp-bootstrap.md` runner + `gh-bootstrap-local.sh`, and the `idmap.tsv` task→issue map.
+- **Agent tooling**: `CLAUDE.md` and `.claude/skills/` (`pr-review`, `security-review`,
+  `dev-workflow`, `docs-review`, `changelog`) operationalizing the `CONTRIBUTING.md` house rules.
+- **Local check tooling** with local↔CI parity: `justfile` + `scripts/checks/*` (markdownlint,
+  offline link/cross-reference, json-schema, codespell, shellcheck, secret scan, fmt/lint),
+  `.pre-commit-config.yaml`, and a manual-dispatch **advisory** GitHub Actions workflow.
 
 ### Changed (baseline-review consistency pass)
 - ADR-001 promoted to firmly **Accepted**; the "no statistical approximation vs
@@ -29,6 +36,16 @@ corpus, not released software. Versioning will begin when the kernel does.
 - `README.md` decisions table: fixed a placeholder reference for the
   "no implicit conversion" rule (grounded in RFC-0001 §3.3 / FR-M3).
 - `docs/Doc-Index.md`: the two research rows now point to the in-repo records.
+
+### Fixed
+- Markdown hygiene surfaced by the new check tooling: normalized emphasis to the corpus
+  asterisk style and added a missing trailing newline (`README.md`,
+  `research/01-prior-art-survey-RECORD.md`, `docs/notes/DN-01-Packing-Placement-Tradeoffs.md`).
+
+### Security
+- `.gitleaks.toml`: removed an allowlist **regex** (`AKIA[0-9A-Z]{16}`) that exempted the AWS
+  access-key-ID *pattern* from scanning — it would have suppressed detection of a real leaked
+  key. The path allowlist is retained; pattern-level allowlisting is documented as forbidden.
 
 ### Open
 - One confirming build: the Liquid-Haskell `bundle` capacity-refinement probe (RFC-0003 §5).
