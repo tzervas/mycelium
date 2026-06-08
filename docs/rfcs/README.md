@@ -1,0 +1,49 @@
+# RFCs
+
+An RFC is a detailed, normative design of a subsystem that multiple decisions plug into. RFCs are **append-only** with status transitions and cite their grounding (survey `G*/A–E/R*`, research `T0/T1/T2`, and the ADRs they implement).
+
+## Status set
+
+`Draft → Accepted → Superseded`. All current RFCs are **Accepted** (solidified from the two research passes).
+
+## Index
+
+| RFC | Title | Status | Implements / depends on |
+|---|---|---|---|
+| 0001 | Core IR & Metadata Schema | Accepted | Foundation FR-M*/VR-*; ADR-001/002/003/006/008; ADR-010 (§4.7) |
+| 0002 | Swap Certificate & Split Regime | Accepted | RFC-0001; ADR-002; ADR-010; shares the certificate checker with RFC-0004 |
+| 0003 | VSA Submodule Boundary | Accepted | RFC-0001; ADR-008; ADR-010 |
+| 0004 | Execution Model & "Stable Component" | Accepted | RFC-0001; ADR-007; ADR-009; DN-01; shares the checker with RFC-0002 |
+| 0005 | Selection-Policy Language | Accepted | RFC-0001; ADR-006; same mechanism used by RFC-0002 & RFC-0004 |
+
+Cross-cutting machinery (decided across RFCs): **one** certificate checker (RFC-0002 ⇄ RFC-0004), **one** selection mechanism (RFC-0002 ⇄ RFC-0004), and **two** bound kernels meeting at one shared certificate (ADR-010 → RFC-0001/0002/0003). See `../Doc-Index.md` for the dependency DAG.
+
+## Relationship to ADRs
+
+An **ADR** records *a* decision; an **RFC** designs *a subsystem* and may rest on several ADRs. When an RFC makes a new architectural decision in passing, capture that decision as an ADR too, so it's discoverable from the ADR index.
+
+## Template
+
+```markdown
+# RFC-NNNN — <title>
+
+| Field | Value |
+|---|---|
+| **RFC** | NNNN |
+| **Status** | Draft \| Accepted \| Superseded |
+| **Type** | Foundational / normative \| Informational |
+| **Date** | YYYY-MM-DD |
+| **Depends on** | <RFCs / ADRs / Foundation labels> |
+
+## 1. Summary
+## 2. Motivation
+## 3. Guide-level explanation
+## 4. Reference-level design (normative)
+## 5. Drawbacks
+## 6. Rationale & alternatives
+## 7. Prior art
+## 8. Unresolved questions
+## 9. Future possibilities
+
+## Meta — changelog
+```

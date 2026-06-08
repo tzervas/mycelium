@@ -6,7 +6,7 @@
 | **Status** | **Accepted** (solidified from the research pass) |
 | **Type** | Foundational / normative |
 | **Date** | June 08, 2026 |
-| **Depends on** | RFC-0001 (`VSA` Repr kind, `Hypervector` slot, `ModelId` registry, `CapacityBound`/`CrosstalkBound`, guarantee lattice); ADR-008 (VSA optional submodule); ADR-010 (bound kernels); Research Findings **T0.2**, **T1.2**, **T1.3**, **T2.2**, **T2.6** |
+| **Depends on** | RFC-0001 (`VSA` Repr kind, `Hypervector` slot, `ModelId` registry, `CapacityBound`/`CrosstalkBound`, lattice); ADR-008 (VSA optional submodule); ADR-010 (bound kernels); Research Findings **T0.2**, **T1.2**, **T1.3**, **T2.2**, **T2.6** |
 | **Coupled with** | RFC-0001 §4.3/§4.5 (sparsity refinement feeds back, now resolved) |
 
 ## 1. Scope
@@ -38,7 +38,7 @@ Net: `bind`/`unbind` (MAP, BSC) and `permute` (all) are **Exact/algebraic**; `bu
 - Caveat: how sparsity *evolves* through nonlinear (majority/sign) bundling is genuinely hard → only **conservative declared** post-conditions there.
 - *Closest prior art:* **Heim** (Yi & Achour, OOPSLA 2023) does this as static *analysis*, not types — borrow its derivations. No prior system tracks VSA capacity *in types*; this part is partly novel.
 
-**Confirming probe (the one remaining make-or-break build):** encode MAP-I `bundle` in Liquid Haskell as `{v | activeCount ≤ s} → {d | d ≥ ⌈(2/μ^{2})·ln(m/δ)⌉} → {r | failProb r ≤ δ}` and confirm Z3 discharges it for concrete params. Success ratifies the cited-theorem + checked-instantiation strategy (and KC-1 / ADR-010).
+**Confirming probe (the one remaining make-or-break build):** encode MAP-I `bundle` in Liquid Haskell as `{v | activeCount ≤ s} → {d | d ≥ ⌈(2/μ²)·ln(m/δ)⌉} → {r | failProb r ≤ δ}` and confirm Z3 discharges it for concrete params. Success ratifies the cited-theorem + checked-instantiation strategy (and KC-1 / ADR-010).
 
 ## 6. Reconstruction manifest (T2.2) — normative
 Distinguish, explicitly and inspectably:

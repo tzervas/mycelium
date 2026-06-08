@@ -10,7 +10,7 @@ useDefault = true
 description = "Allowlist for Mycelium project"
 paths = [
   ".gitleaks.toml",
-  "docs/research/",
+  "research/",
   "LICENSE",
   "README.md"
 ]

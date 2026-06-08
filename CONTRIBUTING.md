@@ -1,0 +1,87 @@
+# Contributing to Mycelium
+
+Mycelium is in the **design phase**: the corpus in `docs/` is the product right now, and the discipline below is what keeps it auditable as it grows into an implementation. Please read `README.md` and `docs/Doc-Index.md` first.
+
+---
+
+## How the project is organized
+
+- **`docs/Mycelium_Project_Foundation.md`** — the charter (vision, scope, requirements `FR/NFR/VR`, success `SC-*` and kill `KC-*` criteria, the ADR log 001–009, roadmap, risk register). The living source of truth for *what* and *why*.
+- **`docs/rfcs/`** — RFCs: detailed, normative designs of specific subsystems. See `docs/rfcs/README.md` for the index + process.
+- **`docs/adr/`** — Architecture Decision Records. See `docs/adr/README.md` for the index + process. (ADR-001…009 live in the Foundation §8; ADR-010+ are standalone files here.)
+- **`docs/notes/`** — design notes / tradeoff studies (e.g., DN-01) that *feed* a decision without being normative themselves.
+- **`research/`** — the evidence base: records of the two research passes, with source lists.
+
+---
+
+## The decision process (append-only)
+
+Decisions are **never silently edited**. Each ADR/RFC carries a status that only moves forward:
+
+```
+Draft / Proposed / Preliminary  →  Accepted  →  Superseded
+                                       │
+                                  (Resolved, for design notes)
+```
+
+- To change an accepted decision, **supersede** it: write a new ADR/RFC (or revision) and link the old one forward. Don't rewrite history.
+- Every normative claim **cites its grounding** using the established labels: survey labels (`G1–G11`, tensions `A–E`, recommendations `R1–R8`) and research labels (`T0.x / T1.x / T2.x`). If a claim can't be grounded, mark it as an open question, not a fact.
+- Documents are revised in place only for *editorial* fixes and status transitions; the changelog at the bottom of each doc (and the top-level `CHANGELOG.md`) records what moved.
+
+### When to write what
+- **ADR** — a single architectural decision and its consequences (template in `docs/adr/README.md`).
+- **RFC** — a full subsystem design that multiple decisions plug into (template in `docs/rfcs/README.md`).
+- **Design note (DN)** — explores a tradeoff and *recommends*; it does not decide. When its recommendation is adopted, mark it `Resolved` and fold the result into the relevant RFC/ADR.
+
+---
+
+## The honesty rule (non-negotiable)
+
+This is the project's reason to exist; it applies to docs and, later, code.
+
+- Accuracy/guarantee claims use the lattice **`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`**, assigned **per model and per operation** — never in aggregate (`VR-5`).
+- A bound may be tagged **`Proven`** *only* if it cites a theorem whose side-conditions are checked. Otherwise it is **`Empirical`** (validated by trials) or **`Declared`** (user-asserted; always flagged in tooling).
+- New results may *upgrade* a tag; absence of a proof keeps it weaker. Downgrading to keep a claim honest is always acceptable; upgrading without a checked basis is not.
+- **No black boxes.** Any feature that could introduce opaque behavior — especially "intelligent" automatic representation selection — must be reified, inspectable, and explainable (`EXPLAIN`). If you find yourself hiding a conversion or an approximation, that's a bug.
+
+---
+
+## Engineering principles (house style)
+
+SRP · OCP · LSP · ISP · DIP · DRY · KISS · YAGNI · Law of Demeter · Separation of Concerns. **Composition over inheritance.** Keep the kernel small enough for one domain expert to audit (`KC-3`) — a large kernel is itself a black box.
+
+---
+
+## Development environment (implementation phase)
+
+> No code has landed yet; this is the agreed toolchain so contributors set up consistently.
+
+- **Rust** — the kernel + reference interpreter. **MSRV 1.92** (pinned). Format with `cargo fmt`; lint with `cargo clippy`. The AOT path uses **MLIR → LLVM** (confined to the performance path; the interpreter stays the trusted base).
+- **Python 3.13 / 3.14** — tooling, experiments, and the LLM-leverage harness. Managed with **UV**. Tests with **pytest**; coverage to **codecov**. Style: **PEP 8** + **Black**.
+- **Devcontainers** are preferred for any environment not fully covered by UV, to keep setups reproducible.
+- **VSA submodule** reuses the `balanced-ternary` crate and ports `torchhd`'s operation set as a reference.
+
+### CI / quality gates (intended)
+GitHub Actions running `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test`, and `uv run pytest` with coverage; Trunk for meta-linting. A change that adds an approximate operation must ship its bound + guarantee tag and a property test that exercises the bound (`SC-2`).
+
+---
+
+## Workflow
+
+- **Kanban**, with tasks that are **dependency-ordered and priority-tagged**, grouped into related, non-blocking units of work, and phased so development flows in a logical, efficient order. (The decomposed task/issue set and phase plans live under `docs/planning/` — *forthcoming*.)
+- We use a lightweight **persona loop**: a *Project Manager* assigns and sequences tasks and coordinates with an *Evaluator* for QA; the *Evaluator* gives critical feedback and sends failed work back for revision. Treat review as a first-class step, not an afterthought.
+- **Kill criteria (`KC-1…KC-4`) are re-checked at every phase gate.** A gate that doesn't check them is hiding risk.
+
+---
+
+## Branches, commits, PRs
+
+- Branch from `main`; keep branches focused on one task/issue.
+- Conventional, imperative commit subjects (e.g., `docs(rfc-0003): tighten capacity-bound wording`). Reference the issue/task.
+- A PR should state which `FR/NFR/VR/SC` it advances (or which ADR/RFC it implements), and how it was verified. Editorial-only PRs say so.
+
+---
+
+## Provenance
+
+Mycelium was formerly named *Verid* (provenance note only). Everything in `docs/` traces to the research recorded in `research/`.

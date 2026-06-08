@@ -12,6 +12,8 @@
 
 > RFC-0001 §4.1 tentatively chose **metadata** (packing in `Meta.physical`). This note re-examines that against the prior art the survey deferred, surfaces a **third option RFC-0001 did not consider** (schedule-staged), and isolates the distinction that actually drives the answer (lossless layout vs semantically-significant parameter). It is decision-support: it narrows and frames, and proposes experiments, but the ratification is the maintainer's.
 
+---
+
 ## 1. Why this is not a local choice
 
 Packing placement propagates into at least six other decisions already on the table: type compatibility/interop, content-addressed identity (RFC-0001 §4.6), the AOT-stable/JIT-dev split (ADR-009), what is statically provable (VR-1/3), how operations are dispatched, and memory soundness. The systems that have made this choice paid for it in exactly these places. This note treats those ripples as the primary subject, not the surface choice.
@@ -88,6 +90,8 @@ Costs this candidate still owes (carried, not hidden): Halide's open problem —
 - **No change** to `dtype`-in-type for dense (already correct under §6.2).
 
 If the note is **not** accepted, the fallback ranking is **B (current RFC-0001 choice) > A**: keep packing as runtime metadata, never put lossless packing in the type — because A's collision with no-implicit-conversion (§5) is the worst outcome for this project specifically.
+
+---
 
 ## Meta
 - Status flow: Research → (feeds) RFC-0001 revision → Accepted/Rejected as part of that RFC's ratification. Append-only, like the ADRs.
