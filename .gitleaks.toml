@@ -1,0 +1,19 @@
+# Gitleaks configuration for Mycelium
+# https://github.com/gitleaks/gitleaks
+
+title = "Mycelium Gitleaks Config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlist for Mycelium project"
+paths = [
+  ".gitleaks.toml",
+  "docs/research/",
+  "LICENSE",
+  "README.md"
+]
+regexes = [
+  '''AKIA[0-9A-Z]{16}''',
+]
