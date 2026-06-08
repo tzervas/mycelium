@@ -411,6 +411,6 @@ Designing the LSP protocol surface early is high-leverage: it is the channel thr
 - **ADRs are append-only** with status transitions (Proposed → Accepted → Superseded). Never silently edit a decision; supersede it and link forward.
 - **Re-run the kill criteria (KC-1…KC-4) at every phase gate.** They are the project's circuit-breakers; a gate that doesn't check them is a gate that hides risk (**KC-3** spirit).
 - **Keep `Proven | Empirical` tags honest as the literature moves.** New non-asymptotic VSA results can *upgrade* a tag; absence of one keeps it `Empirical` (**G5**, **VR-5**).
-- **Update grounding references when new research lands.** This phase forbade new prior art; the next survey round (P0.3) will add citations — re-anchor claims to them rather than letting assertions float.
+- **Update grounding references when new research lands.** This phase forbade new prior art; subsequent research passes will add citations — re-anchor claims to them rather than letting assertions float.
 - **Freeze the Phase-1 spec only after the four coverage gaps are closed** (**R8**) and after ADR-001's definitional question is ratified.
 - **Track work as dependency-ordered, priority-tagged tasks** (§10 is already in that shape) so the Kanban board mirrors this document, and the document remains the single source of truth the board points back to.

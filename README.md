@@ -28,7 +28,7 @@ Three non-negotiables shape every decision:
 - **Honesty is a typed, monotone property.** A guarantee lattice — **`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`** — travels with every value and degrades by *meet* through operations, so a disclosed guarantee can never spuriously strengthen.
 - **Metadata is self-describing and survives lowering** (Apache-Arrow-grade): provenance, bounds, layout, and reconstruction info are queryable at runtime and exposed to tooling.
 - **Split verification regime:** binary↔ternary swaps are *provable/bijective-within-range*; VSA/embedding swaps carry *bounded/probabilistic* per-instance certificates (translation-validation style).
-- **Physical packing is a _schedule_, not a type.** Lossless layout (e.g. ternary packing) is chosen at a lowering stage and *recorded* as inspectable metadata — values of the same logical type stay interoperable whether packed or not.
+- **Physical packing is a *schedule*, not a type.** Lossless layout (e.g. ternary packing) is chosen at a lowering stage and *recorded* as inspectable metadata — values of the same logical type stay interoperable whether packed or not.
 
 ---
 

@@ -1,0 +1,27 @@
+{
+  // markdownlint config tuned to Mycelium's existing normative-docs house style: compact
+  // headings/lists/tables, long prose lines, unicode, template files. The goal is a linter
+  // that's GREEN on the current corpus and catches regressions — not a mass reformat.
+  // Re-enable any of the disabled stylistic rules (and run `npx markdownlint-cli2 --fix`) if
+  // the team later decides to normalize spacing across the corpus.
+  "default": true,
+
+  // Prose / formatting freedoms the corpus relies on:
+  "MD013": false, // line length — prose, tables, citations run long on purpose
+  "MD033": false, // inline HTML (<br>, <details>, badges)
+  "MD041": false, // first line need not be H1 (templates, front matter)
+  "MD046": false, // mixed code-block styles tolerated
+
+  // Compact style the corpus uses deliberately (disabled to avoid corpus-wide churn):
+  "MD022": false, // blank lines around headings
+  "MD032": false, // blank lines around lists
+  "MD058": false, // blank lines around tables
+  "MD060": false, // table column pipe spacing (corpus uses compact tables)
+  "MD036": false, // emphasis-as-heading (intentional in templates/sections)
+  "MD040": false, // fenced code language (some illustrative blocks are languageless)
+
+  // Kept, with corpus-appropriate options:
+  "MD024": { "siblings_only": true }, // duplicate headings ok unless siblings (changelogs)
+  "MD007": { "indent": 2 },
+  "MD029": { "style": "ordered" }
+}

@@ -1,6 +1,6 @@
 # Mycelium GitHub bootstrap — MCP runner (model-executed)
 
-This is the **machine-runnable** counterpart to `gh-bootstrap.sh`. A model (Claude Code or
+This is the **machine-runnable** counterpart to `gh-bootstrap-local.sh`. A model (Claude Code or
 Grok) with the **GitHub MCP server** attached executes the steps below by calling the MCP
 tools directly. It fills the gaps a model **can** fill over MCP; the gaps it **cannot**
 (label colors/descriptions, milestone *creation*) are handled by `gh-bootstrap-local.sh`.
@@ -26,6 +26,7 @@ Verified in-session against the GitHub MCP server (`mcp__github__*`). Tool names
 the harness prefix; call them as your client exposes them.
 
 ### `issue_write`
+
 ```jsonc
 {
   "method": "create" | "update",     // required
@@ -39,10 +40,12 @@ the harness prefix; call them as your client exposes them.
   "issue_number": 5                  // update: required
 }
 ```
+
 Note: passing a `labels` name that does not yet exist makes GitHub auto-create it in the
 default color. `gh-bootstrap-local.sh` repaints those to the spec colors/descriptions.
 
 ### `list_issues`
+
 ```jsonc
 { "owner": "tzervas", "repo": "mycelium",
   "state": "OPEN" | "CLOSED", "labels": ["phase:0"],
@@ -50,6 +53,7 @@ default color. `gh-bootstrap-local.sh` repaints those to the spec colors/descrip
 ```
 
 ### `sub_issue_write`
+
 ```jsonc
 { "method": "add" | "remove" | "reprioritize",  // required
   "owner": "tzervas", "repo": "mycelium",        // required
@@ -59,6 +63,7 @@ default color. `gh-bootstrap-local.sh` repaints those to the spec colors/descrip
 ```
 
 ### `get_label`
+
 ```jsonc
 { "owner": "tzervas", "repo": "mycelium", "name": "phase:0" }
 ```

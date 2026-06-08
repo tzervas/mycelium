@@ -3,7 +3,7 @@
 #
 # WHY THIS EXISTS
 # ---------------
-# The original gh-bootstrap.sh assumes a host where `gh` is installed and authenticated.
+# The original PM-package gh-bootstrap.sh (not committed here) assumes a host where `gh` is installed and authenticated.
 # In the Claude Code *web* sandbox that is not the case: GitHub is reachable only through
 # the GitHub MCP server, which can create/update ISSUES but has NO tool to create labels
 # (with colors/descriptions) or milestones. So the work was split:
@@ -57,11 +57,12 @@ existing_json=$(gh api "repos/$REPO/milestones?state=all" --paginate)
 jq -c '.[]' "$MILESTONES" | while read -r row; do
   title=$(jq -r '.title' <<<"$row")
   desc=$(jq -r '.description' <<<"$row")
+  state=$(jq -r '.state // "open"' <<<"$row")   # honor milestones.json state (default open)
   num=$(jq -r --arg t "$title" '.[] | select(.title==$t) | .number' <<<"$existing_json" | head -n1)
   if [[ -n "${num:-}" && "$num" != "null" ]]; then
     echo "   = exists #$num: $title"
   else
-    num=$(gh api "repos/$REPO/milestones" -f title="$title" -f state=open -f description="$desc" | jq -r '.number')
+    num=$(gh api "repos/$REPO/milestones" -f title="$title" -f state="$state" -f description="$desc" | jq -r '.number')
     echo "   + created #$num: $title"
   fi
   printf '%s\t%s\n' "$num" "$title" >> "$MSMAP"
