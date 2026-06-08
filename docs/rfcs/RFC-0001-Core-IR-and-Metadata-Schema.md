@@ -24,7 +24,7 @@ Defines the Mycelium **Core IR** — the typed, content-addressed, metadata-bear
 
 1. **Representation paradigm is part of the type.** `Binary`, `Ternary`, `Dense`, `VSA` are distinct, parameterized type families (FR-M1).
 2. **No implicit conversion.** The kernel has *no* coercion rule between paradigms; the only node that changes a value's representation is an explicit `Swap` (FR-M3, FR-W2; cross-cutting **A.1**).
-3. **Honesty is a typed, monotone property.** A `GuaranteeStrength` lattice (`Exact ⊃ Proven ⊃ Empirical ⊃ Declared`) propagates by *meet* through every operation, so an approximation's disclosed strength can only degrade, never spuriously upgrade (Tension **B**; VR-3/VR-5).
+3. **Honesty is a typed, monotone property.** A `GuaranteeStrength` lattice (`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`) propagates by *meet* through every operation, so an approximation's disclosed strength can only degrade, never spuriously upgrade (Tension **B**; VR-3/VR-5).
 4. **Metadata is self-describing, inspectable, and survives lowering.** Provenance, bounds, layout, and reconstruction info travel with values and are queryable (Arrow-grade self-description; dimensional persistence, contra units-erasure) (FR-M5; NFR-3; Area 4).
 
 It defines the extension hooks consumed by RFC-0002/0003/0004/0005 and defers their internals.
@@ -63,7 +63,7 @@ Every value carries a `GuaranteeStrength`:
 - **`Empirical`** — approximate, with an *empirically-validated* bound (e.g., a Frady-Sommer Gaussian-approximation capacity estimate). Honest about its weaker basis (**G5**; VR-5).
 - **`Declared`** — approximate, with a *user-asserted* bound not yet validated. Tooling must always flag it; it is never silently trusted.
 
-These form a lattice, `Exact ⊃ Proven ⊃ Empirical ⊃ Declared`. Any operation's result takes the **meet** (weakest) of its inputs' strengths and the operation's own intrinsic strength. So combining an `Empirical` hypervector into an otherwise `Exact` computation yields an `Empirical` result — disclosure can only degrade. This is the type-level realization of the Tension-B resolution (ADR-001): approximation is first-class but never hidden, and its trustworthiness is conserved downward.
+These form a lattice, `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`. Any operation's result takes the **meet** (weakest) of its inputs' strengths and the operation's own intrinsic strength. So combining an `Empirical` hypervector into an otherwise `Exact` computation yields an `Empirical` result — disclosure can only degrade. This is the type-level realization of the Tension-B resolution (ADR-001): approximation is first-class but never hidden, and its trustworthiness is conserved downward.
 
 ### 3.5 Worked example
 
@@ -153,9 +153,9 @@ PackScheme     ::= Unpacked | TwoBitPerTrit | FiveTritPerByte | I2S | TL1 | TL2 
 
 **Schema invariants (normative).**
 - **M-I1.** `guarantee == Exact  ⟺  bound == None`.
-- **M-I2.** `guarantee == Proven  ⇒  bound.basis == ProvenThm{..}`.
-- **M-I3.** `guarantee == Empirical ⇒ bound.basis == EmpiricalFit{..}`.
-- **M-I4.** `guarantee == Declared ⇒ bound.basis == UserDeclared`, and any tool presenting the value MUST surface a "declared, unverified" marker (VR-5; honesty).
+- **M-I2.** `guarantee == Proven  ⟹  bound.basis == ProvenThm{..}`.
+- **M-I3.** `guarantee == Empirical ⟹ bound.basis == EmpiricalFit{..}`.
+- **M-I4.** `guarantee == Declared ⟹ bound.basis == UserDeclared`, and any tool presenting the value MUST surface a "declared, unverified" marker (VR-5; honesty).
 - **M-I5.** `physical` is always a *lossless* encoding of `payload`; changing `physical` MUST NOT change the value's type or its `guarantee`.
 
 ### 4.4 Static contract vs. dynamic metadata; what is part of code identity
@@ -207,7 +207,7 @@ Consequence: two definitions differing only in representation paradigm have diff
 
 ### 4.7 Guarantee lattice & bound composition
 
-**Lattice (normative).** `Exact ⊃ Proven ⊃ Empirical ⊃ Declared`, with `meet` = weakest. For an operation `f` with intrinsic guarantee `g_f` over inputs `v_1..v_n`:
+**Lattice (normative).** `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`, with `meet` = weakest. For an operation `f` with intrinsic guarantee `g_f` over inputs `v_1..v_n`:
 
 ```
 guarantee(result) = meet(guarantee(v_1), …, guarantee(v_n), g_f)
@@ -250,7 +250,7 @@ This is monotone-downward: no operation can produce a result stronger than its w
 
 ## 7. Prior art (from the survey; no new sources)
 
-Apache Arrow — self-describing schema/metadata travelling with data, faithful round-trips (§4.8). Unison — content-addressed definition identity, names-as-metadata (§4.6). MLIR — typed, inspectable, multi-level IR; its open type system is the extensibility point this RFC deliberately constrains (§4.1). F# units-of-measure — compile-time representation tracking, whose *erasure* this RFC rejects (§4.4). Refinement types (Liquid Haskell, F*) — the basis for declared static bounds in the contract (§4.4) and the eventual bound checking. Rosa/Daisy + verified numerics — the ideal-real-spec-plus-certified-error pattern the bound model encodes, and the source of the composition arithmetic deferred to ADR-010 (§4.7).
+Apache Arrow — self-describing schema/metadata travelling with data, faithful round-trips (§4.8). Unison — content-addressed definition identity, names-as-metadata (§4.6). MLIR — typed, inspectable, multi-level IR; its open type system is the extensibility point this RFC deliberately constrains (§4.1). F# units-of-measure — compile-time representation tracking, whose *erasure* this RFC rejects (§4.4). Refinement types (Liquid Haskell, F*) — the basis for declared static bounds in the contract (§4.4) and the eventual bound checking. Rosa/Daisy + verified numerics — the ideal-real-spec-plus-certified-error pattern the bound model encodes, and the source of the composition arithmetic now concrete in ADR-010 (§4.7).
 
 ## 8. Unresolved questions
 

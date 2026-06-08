@@ -3,12 +3,14 @@
 **Date:** June 08, 2026
 **Purpose:** map of the solidified document corpus. The two research passes are complete; the design corpus below is finalized (Accepted/Resolved) and ready for detailed design + hard planning.
 
+---
+
 ## 1. Corpus & status (post-solidification)
 
 | Doc | Role | Status |
 |---|---|---|
-| **Prior-Art Survey & Synthesis** | evidence base (pass 1) | Delivered |
-| **Research Findings (T0/T1/T2)** | evidence base (pass 2) | Delivered |
+| **Prior-Art Survey & Synthesis** | evidence base (pass 1) | Recorded → `research/01-prior-art-survey-RECORD.md` (full narrative is a conversation artifact) |
+| **Research Findings (T0/T1/T2)** | evidence base (pass 2) | Recorded → `research/02-research-findings-RECORD.md` (full narrative is a conversation artifact) |
 | **Project Foundation (r3)** | charter, scope, requirements, ADR-001…010, roadmap, risks | **Living — updated** |
 | **RFC-0001 — Core IR & Metadata Schema** | value model, `Repr`, `Meta`, guarantee lattice, content-addressing | **Accepted** |
 | **DN-01 — Packing Placement** | tradeoff study → schedule-staged decision | **Resolved → folded into RFC-0001 §4.1 + RFC-0004 §5** |
@@ -34,20 +36,22 @@ Shared machinery (decided):
 ```
 
 ## 3. What the research resolved (decisions now baked in)
-
 - **KC-1 (VSA-in-core viability): PASSED.** Proven non-asymptotic bundling bounds exist (Clarkson-Ubaru-Yang 2023; Thomas-Dasgupta-Rosing 2021) → VSA stays in core with honest `Proven` tags for MAP-I/sparse `bundle`. (T0.2)
 - **Bounds: two kernels, one certificate** — ε via affine arithmetic (Daisy/FloVer), δ via union-bound/apRHL; `strength` composes by meet. (ADR-010 / T0.1)
 - **Packing: schedule-staged**, not in the type; cost-model+exhaustive selector over the fixed bitnet.cpp set (I2_S/TL1/TL2). (DN-01 / T1.4)
 - **Sparsity: declared class = static refinement; capacity = axiomatized-theorem + checked instantiation; observed sparsity = runtime metadata.** (T1.3)
 - **Backend: MLIR backbone → LLVM**, Rust interpreter as reference + trusted base. (T1.5)
-- **Validation: one translation-validation certificate checker** for swaps *and* interpreter-vs-compiled equivalence. (T1.1)
+- **Validation: one translation-validation certificate checker** for swaps *and* interpreter-vs-compiled equivalence; graded (differential testing + per-artifact TV for stable components). (T1.1)
 - **Bijection: `LosslessWithinRange`** (total bijection impossible at fixed widths), `Option`-typed inverse, Exact-within-range, never silent. (T2.1)
-- **Selection: total cost-based policy + mandatory EXPLAIN**; avoids the DB cardinality-estimation black box. (T2.3)
+- **Selection: total, non-learned cost policy + mandatory EXPLAIN**; avoids the DB cardinality-estimate trap because Mycelium's statistics are exact metadata. (T2.3)
+- **VSA guarantee matrix** per model × operation encoded into RFC-0003; **HRR/FHRR unbind is the residual `Empirical` weak link.** (T1.2)
 
-## 4. Directory layout
+## 4. Remaining experiments (small; for the build phase, not blockers to design)
+- **LH bundling-bound instantiation** — encode MAP-I `bundle` capacity refinement in Liquid Haskell; confirm Z3 discharges it. The one confirming build for the cited-theorem + checked-instantiation strategy (ratifies ADR-010 / KC-1). *(RFC-0003 §5)*
+- **E1** staged-packing perf over the 5 schemes *(RFC-0004 §8)* · **E3** wrong-layout-tag soundness vs NFR-7 *(RFC-0004 §8)* · **E4** LLM surface comparison, "packing in type" vs absent *(G10)*.
 
-All major documents live under `docs/`.
+## 5. Next phase — detailed design & hard planning
+With the corpus Accepted, the work shifts to: (a) the confirming LH probe; (b) the Core IR concrete grammar + the Rust interpreter (reference semantics) + the kernel data structures; (c) the `ternary` MLIR dialect and the certificate checker; (d) the VSA submodule (per the §4-matrix tags), reusing `balanced-ternary`. Track as dependency-ordered, priority-tagged tasks; this index remains the map the board points back to.
 
-## 5. Next actions
-
-See `docs/Mycelium_Project_Foundation.md` §10 for the prioritized build list.
+## 6. Maintenance
+Append-only with status transitions (Draft/Proposed/Preliminary → Accepted → Superseded), mirroring the ADR discipline. Keep `Proven | Empirical | Declared` tags honest per VR-5 — per model/op, never in aggregate. New non-asymptotic results may *upgrade* a tag; absence keeps it `Empirical`.
