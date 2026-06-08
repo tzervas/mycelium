@@ -1,0 +1,7 @@
+[codespell]
+# Spell-check prose. Add genuine false positives to ignore-words-list (comma-separated,
+# lowercase). Keep this list small and justified.
+skip = .git,*.lock,node_modules,target,.tools-venv,*.svg,idmap.tsv
+# Domain terms / abbreviations codespell otherwise flags:
+ignore-words-list = crate,crates,iff,ist,nin,ba,te,fo,mor,ans,od,implementor,referenced
+quiet-level = 3

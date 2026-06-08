@@ -1,0 +1,58 @@
+# Local-parity checks, run on demand only.
+#
+# POLICY (see CLAUDE.md): no automatic remote CI. This workflow triggers ONLY via manual
+# dispatch (no push / pull_request auto-triggers) to avoid surprise Actions cost, and it is
+# ADVISORY — the check step is non-blocking so it informs without gating merges. It runs the
+# exact same suite as local (`just ci` → scripts/checks/*), so results match what you saw
+# before you pushed.
+name: checks (manual, advisory)
+
+on:
+  workflow_dispatch:
+    inputs:
+      strict:
+        description: "Fail the run if checks fail (default: advisory / non-blocking)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Install check tools
+        run: bash scripts/install-tools.sh
+
+      - name: Run checks (advisory unless strict=true)
+        id: run
+        continue-on-error: ${{ !inputs.strict }}
+        run: just ci
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.run.outcome }}" = "success" ]; then
+            echo "✅ All checks passed." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "⚠️ Checks reported findings (advisory). See the **Run checks** step log." >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Reproduce locally: \`just setup && just check\`" >> "$GITHUB_STEP_SUMMARY"
+          fi

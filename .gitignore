@@ -42,3 +42,11 @@ Thumbs.db
 
 # ---- Build/devcontainer ----
 .devcontainer/.cache/
+
+# ---- Claude Code / agent tooling (personal, machine-local) ----
+.claude/settings.local.json
+CLAUDE.local.md
+
+# ---- Local check-tool installs ----
+.tools-venv/
+node_modules/
