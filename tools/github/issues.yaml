@@ -1,6 +1,8 @@
 # Mycelium — GitHub issues import source.
-# Generated from docs/planning/phase-0.md … phase-3.md (the human-readable task source of truth).
-# Consumers (gh-bootstrap.sh / Grok): create issues in the order listed; then in a SECOND pass
+# Source: the Phase 0–3 task breakdowns (docs/planning/phase-0.md … phase-3.md — the
+# human-readable task source of truth; the docs/planning/ set is forthcoming in-repo).
+# Consumers (mcp-bootstrap.md over MCP; gh-bootstrap-local.sh for labels/milestones; Grok for
+# the board): create issues in the order listed; then in a SECOND pass
 # resolve each `depends_on` task-id to its created issue number and set it as a dependency
 # ("blocked by") and/or add it to the parent epic as a sub-issue. The `id` is the stable task key.
 # Phase 2/3 entries are EPICS (decompose into child issues when that phase's gate opens).

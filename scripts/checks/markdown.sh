@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Lint markdown with markdownlint-cli2 (config: .markdownlint.jsonc).
 source "${BASH_SOURCE%/*}/../lib.sh"
-cd "$REPO_ROOT"
+cd "$REPO_ROOT" || exit 1
 section "markdownlint"
 
 tracked '*.md'

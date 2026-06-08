@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Spell-check prose with codespell (config: .codespellrc).
 source "${BASH_SOURCE%/*}/../lib.sh"
-cd "$REPO_ROOT"
+cd "$REPO_ROOT" || exit 1
 section "codespell"
 
 if ! have codespell; then skip "codespell not found — run \`just setup\`"; exit 0; fi

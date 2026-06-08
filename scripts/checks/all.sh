@@ -2,7 +2,7 @@
 # Run the full local suite. This is the single entrypoint shared by `just check`,
 # `just ci`, and the GitHub Actions workflow — guaranteeing local↔CI parity.
 source "${BASH_SOURCE%/*}/../lib.sh"
-cd "$REPO_ROOT"
+cd "$REPO_ROOT" || exit 1
 
 checks=(structured shell markdown links schema spell secrets format lint)
 failed=()

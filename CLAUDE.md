@@ -34,6 +34,7 @@ never-silent** representation swaps and **honest, per-operation guarantees**. It
 
 ## Local checks — run before every commit (local↔CI parity)
 One source of truth (`just`); pre-commit and CI route through the same recipes.
+
 ```
 just            # list recipes
 just setup      # best-effort install of the check tools (uv tool / npx / pip)
@@ -41,6 +42,7 @@ just check      # run the FULL suite — identical to what CI runs (`just ci`)
 just fmt        # auto-format (rust + python)
 just hooks      # install the pre-commit hooks
 ```
+
 Checks **skip gracefully** when a tool or language isn't present yet (most code doesn't exist
 yet). Never hand off a red `just check` without explaining the skip.
 

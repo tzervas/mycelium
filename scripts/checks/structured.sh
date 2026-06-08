@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Validate that every tracked JSON / YAML / TOML file parses.
 source "${BASH_SOURCE%/*}/../lib.sh"
-cd "$REPO_ROOT"
+cd "$REPO_ROOT" || exit 1
 section "structured data (json/yaml/toml parse)"
 
 if ! have python3; then skip "python3 not found"; exit 0; fi
@@ -38,5 +38,5 @@ for p in sys.argv[1:]:
 sys.exit(1 if bad else 0)
 PY
 rc=$?
-[[ $rc -eq 0 ]] && ok "all structured files parse" || fail "structured parse errors"
+if [[ $rc -eq 0 ]]; then ok "all structured files parse"; else fail "structured parse errors"; fi
 exit $rc

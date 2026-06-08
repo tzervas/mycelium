@@ -11,8 +11,11 @@ placeholders. Anchors on a path (file.md#section) are stripped before checking.
 
 No network. Exit 1 if any broken reference is found.
 """
+
 from __future__ import annotations
-import re, subprocess, sys
+import re
+import subprocess
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -21,13 +24,18 @@ REFDEF = re.compile(r"^\s{0,3}\[[^\]]+\]:\s*<?([^\s>]+)>?", re.MULTILINE)
 ATIMPORT = re.compile(r"(?:^|\s)@([./~][\w./\-]+)")
 SKIP_PREFIX = ("http://", "https://", "mailto:", "tel:", "#", "data:")
 # Placeholder targets that are intentionally not real paths.
-PLACEHOLDER = re.compile(r"\((issue|owner|repo|version|path|url|name)\)|<[^>]+>|\{[^}]+\}", re.I)
+PLACEHOLDER = re.compile(
+    r"\((issue|owner|repo|version|path|url|name)\)|<[^>]+>|\{[^}]+\}", re.I
+)
 
 
 def tracked_markdown() -> list[Path]:
     out = subprocess.run(
         ["git", "ls-files", "-z", "--", "*.md"],
-        cwd=REPO, capture_output=True, text=True, check=True,
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     return [REPO / p for p in out.split("\0") if p]
 
@@ -38,7 +46,7 @@ def resolve(target: str, src: Path) -> Path:
         return REPO / target.lstrip("/")
     if target.startswith("~"):
         return Path(target).expanduser()
-    return (src.parent / target)
+    return src.parent / target
 
 
 def main() -> int:

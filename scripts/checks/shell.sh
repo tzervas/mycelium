@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Lint shell scripts with shellcheck (incl. the shellcheck-py wheel).
 source "${BASH_SOURCE%/*}/../lib.sh"
-cd "$REPO_ROOT"
+cd "$REPO_ROOT" || exit 1
 section "shellcheck"
 
 tracked '*.sh'

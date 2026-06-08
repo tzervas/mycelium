@@ -1,6 +1,6 @@
 # Mycelium GitHub bootstrap — MCP runner (model-executed)
 
-This is the **machine-runnable** counterpart to `gh-bootstrap.sh`. A model (Claude Code or
+This is the **machine-runnable** counterpart to `gh-bootstrap-local.sh`. A model (Claude Code or
 Grok) with the **GitHub MCP server** attached executes the steps below by calling the MCP
 tools directly. It fills the gaps a model **can** fill over MCP; the gaps it **cannot**
 (label colors/descriptions, milestone *creation*) are handled by `gh-bootstrap-local.sh`.

@@ -16,7 +16,8 @@ corpus, not released software. Versioning will begin when the kernel does.
 - Repository scaffolding: `README.md`, `LICENSE` (MIT), `CONTRIBUTING.md`,
   `.gitignore` (Rust + Python), and index/process READMEs for `docs/adr/` and `docs/rfcs/`.
 - **GitHub PM bootstrap** (`tools/github/`): `issues.yaml` / `labels.json` / `milestones.json`,
-  the `mcp-bootstrap.md` runner + `gh-bootstrap-local.sh`, and the `idmap.tsv` task→issue map.
+  the `mcp-bootstrap.md` runner + `gh-bootstrap-local.sh`, the `project-v2-spec.md` board spec,
+  and the `idmap.tsv` task→issue map.
 - **Agent tooling**: `CLAUDE.md` and `.claude/skills/` (`pr-review`, `security-review`,
   `dev-workflow`, `docs-review`, `changelog`) operationalizing the `CONTRIBUTING.md` house rules.
 - **Local check tooling** with local↔CI parity: `justfile` + `scripts/checks/*` (markdownlint,
@@ -41,6 +42,14 @@ corpus, not released software. Versioning will begin when the kernel does.
 - Markdown hygiene surfaced by the new check tooling: normalized emphasis to the corpus
   asterisk style and added a missing trailing newline (`README.md`,
   `research/01-prior-art-survey-RECORD.md`, `docs/notes/DN-01-Packing-Placement-Tradeoffs.md`).
+- Copilot PR-review findings (PR #1, #42) addressed: corrected the binary↔ternary swap's partial
+  right-inverse in RFC-0002 §4 (`dec y = Some x ⟹ enc x = y`; the prior `enc y = …` was a type
+  error since `enc : Bin_n → Tern_m`); resolved a P0.3 status contradiction in the Foundation
+  Meta section (P0.3 is already resolved per §6); corrected stale references in `tools/github/`
+  (`gh-bootstrap.sh`, `docs/planning/*`, `project-v2-spec.md`); `gh-bootstrap-local.sh` now
+  honors each milestone's `state` instead of hardcoding `open`.
+- Tooling self-lint: `scripts/*` made shellcheck/ruff/markdownlint-clean (cd-failure guards,
+  if/then/else over `A && B || C`, split imports, fenced-block spacing).
 
 ### Security
 - `.gitleaks.toml`: removed an allowlist **regex** (`AKIA[0-9A-Z]{16}`) that exempted the AWS

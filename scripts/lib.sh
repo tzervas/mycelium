@@ -10,6 +10,7 @@ else
 fi
 
 # Repo root = parent of the dir holding this lib.
+# shellcheck disable=SC2034  # consumed by the scripts that source this lib
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 have()    { command -v "$1" >/dev/null 2>&1; }
@@ -19,4 +20,7 @@ skip()    { printf '  %sskip%s  %s\n'   "$C_YEL" "$C_RST" "$*"; }
 fail()    { printf '  %sFAIL%s  %s\n'   "$C_RED" "$C_RST" "$*"; }
 
 # List tracked files matching the given git pathspecs (NUL-safe), into array $TRACKED.
-tracked() { mapfile -d '' -t TRACKED < <(git ls-files -z -- "$@"); }
+tracked() {
+  # shellcheck disable=SC2034  # TRACKED is read by callers after they invoke `tracked ...`
+  mapfile -d '' -t TRACKED < <(git ls-files -z -- "$@")
+}

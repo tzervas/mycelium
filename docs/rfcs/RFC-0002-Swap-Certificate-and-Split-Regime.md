@@ -31,7 +31,7 @@ Balanced ternary: digits {−1,0,+1}; negation = digit-wise sign flip; truncatio
 - A **total bijection** requires 2ⁿ = 3ᵐ, which holds only trivially → **never for fixed nonzero widths**.
 - The real regime is **`LosslessWithinRange`**: an injection of the smaller domain into the larger codomain, with the inverse defined only on the image.
 
-**Specification:** define `enc : Bin_n → Tern_m` and `dec : Tern_m → Option Bin_n`; prove (a) `dec (enc x) = Some x` ∀x (left-inverse/injectivity) and (b) `dec y = Some x ⟹ enc y = ...` (partial right-inverse on the image). This **round-trip property is SMT-dischargeable** for fixed widths and provable by `decide`/computation in Coq. Tag **Exact within range**; out-of-range inputs are an explicit `Option`/error, **never silent** (consistent with no-hidden-behavior). Canonical encodings to adopt/learn from: IOTA TIP-5 byte↔trit (6-trit groups/byte); the Douglas W. Jones 2-bits-per-trit family.
+**Specification:** define `enc : Bin_n → Tern_m` and `dec : Tern_m → Option Bin_n`; prove (a) `dec (enc x) = Some x` ∀x (left-inverse/injectivity) and (b) `dec y = Some x ⟹ enc x = y` (partial right-inverse on the image). This **round-trip property is SMT-dischargeable** for fixed widths and provable by `decide`/computation in Coq. Tag **Exact within range**; out-of-range inputs are an explicit `Option`/error, **never silent** (consistent with no-hidden-behavior). Canonical encodings to adopt/learn from: IOTA TIP-5 byte↔trit (6-trit groups/byte); the Douglas W. Jones 2-bits-per-trit family.
 
 This is the only genuinely bijective/provable swap class — exactly as the split regime (ADR-002) assumes.
 

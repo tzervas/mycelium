@@ -4,7 +4,7 @@
 #   docs/spec/schemas/examples/<name>/valid/*.json   (must validate)
 #   docs/spec/schemas/examples/<name>/invalid/*.json (must NOT validate)
 source "${BASH_SOURCE%/*}/../lib.sh"
-cd "$REPO_ROOT"
+cd "$REPO_ROOT" || exit 1
 section "json-schema"
 
 dir="docs/spec/schemas"
@@ -28,5 +28,5 @@ for s in "${schemas[@]}"; do
     fi
   done
 done
-[[ $rc -eq 0 ]] && ok "schemas + examples valid" || fail "schema validation errors"
+if [[ $rc -eq 0 ]]; then ok "schemas + examples valid"; else fail "schema validation errors"; fi
 exit $rc
