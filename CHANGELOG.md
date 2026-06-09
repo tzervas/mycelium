@@ -9,6 +9,17 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Interpreter composes approximate inputs honestly** (`mycelium-interp::prims`, **M-204**, Phase 2;
+  RFC-0001 §4.7; ADR-010): retires the Phase-1 blanket `ApproxCompositionUnsupported` refusal for
+  composable inputs. `exact_result` → `compose_result`: exact-over-exact stays `Exact`/`bound=None`
+  (M-I1); over an approximate input it composes per a per-prim `ApproxRule` — `core.id` passes the
+  bound through verbatim (citation preserved), `trit.add`/`sub`/`neg` carry the sound affine ε
+  composition via `mycelium_numerics::compose_error_bound` (strength `meet`s to the weakest input,
+  basis re-derived so M-I2…M-I4 hold), and `bit.*` / `trit.mul` still refuse (no defined ε rule —
+  honest, never a fabricated bound). Five new golden tests cover additive ε composition (Proven⊕Proven
+  → Proven, ε sums), negation (ε preserved), `core.id` passthrough, meet-down to Declared, and the
+  explicit `trit.mul` refusal; the Phase-1 `bit.not` refusal test still holds. **Closes the documented
+  Phase-1 honesty gap** (the interpreter previously could not compose approximate inputs).
 - **Verified-numerics foundation — two bound kernels + shared certificate + tier-i checker**
   (`mycelium-numerics`, **M-201/M-202/M-203**, Phase 2; ADR-010; RFC-0001 §4.7; SPEC §10.7): a new
   crate realizing ADR-010's two-kernels-one-certificate decision, deliberately *outside*

@@ -77,10 +77,10 @@ All Phase-2 tasks, with issue number (`idmap.tsv`), priority, dependency, and **
 
 | Task | Issue | Pri | Depends on | Maps to | Readiness |
 |---|---|---|---|---|---|
-| **M-201** ErrorBound (ε) affine kernel | [#48](https://github.com/tzervas/mycelium/issues/48) | P0 | M-101 (bound) | ADR-010 §1 / RFC-0001 §4.7 | **In progress** — keystone (§4) |
-| **M-202** ProbBound (δ) union/apRHL kernel | [#49](https://github.com/tzervas/mycelium/issues/49) | P0 | M-101 (bound) | ADR-010 §2 / RFC-0001 §4.7 | **In progress** |
-| **M-203** Shared `{ε,δ,strength}` cert + tier-i checker | [#50](https://github.com/tzervas/mycelium/issues/50) | P0 | M-201, M-202 | ADR-010 §3/§4 + Trusted base | **Ready after M-201/M-202** |
-| **M-204** Interp honest approximate composition | [#51](https://github.com/tzervas/mycelium/issues/51) | P0 | M-201…M-203 | RFC-0001 §4.7 | **Ready after M-203** |
+| **M-201** ErrorBound (ε) affine kernel | [#48](https://github.com/tzervas/mycelium/issues/48) | P0 | M-101 (bound) | ADR-010 §1 / RFC-0001 §4.7 | **Done (2026-06-09)** — `mycelium-numerics::error` |
+| **M-202** ProbBound (δ) union/apRHL kernel | [#49](https://github.com/tzervas/mycelium/issues/49) | P0 | M-101 (bound) | ADR-010 §2 / RFC-0001 §4.7 | **Done (2026-06-09)** — `mycelium-numerics::prob` |
+| **M-203** Shared `{ε,δ,strength}` cert + tier-i checker | [#50](https://github.com/tzervas/mycelium/issues/50) | P0 | M-201, M-202 | ADR-010 §3/§4 + Trusted base | **Done (2026-06-09)** — `mycelium-numerics::cert` |
+| **M-204** Interp honest approximate composition | [#51](https://github.com/tzervas/mycelium/issues/51) | P0 | M-201…M-203 | RFC-0001 §4.7 | **Done (2026-06-09)** — refusal retired for additive arithmetic |
 | **M-210** Shared TV certificate checker | [#52](https://github.com/tzervas/mycelium/issues/52) | P0 | E2-4, M-120/M-151 | RFC-0002 §2 / RFC-0004 §3 | Ready after E2-4 |
 | **M-211** Bounded/lossy swap (F32→BF16) | [#53](https://github.com/tzervas/mycelium/issues/53) | P1 | E2-4, M-210, M-230 | RFC-0002 §5 / ADR-010 §1 | Ready after M-210 + M-230 |
 | **M-212** KC-4 overhead + SC-3 global | [#54](https://github.com/tzervas/mycelium/issues/54) | P1 | M-210, M-211 | KC-4 / SC-3 | Ready after M-211 |
@@ -222,10 +222,27 @@ basis.
 - **Honesty.** Incompleteness of the checker is an explicit `Rejected`/`Malformed`, never a silent
   pass (RFC-0002 §2); strength is never upgraded without a checked basis (VR-5).
 
-### 6.4 M-204 — Interpreter honest approximate composition · #51 · P0
+### 6.4 M-204 — Interpreter honest approximate composition · #51 · P0 · done 2026-06-09
 
-*(to be filled on landing — wires `compose_error_bound` into `mycelium-interp::prims`, retiring the
-`ApproxCompositionUnsupported` refusal for composable approximate inputs.)*
+- **Goal / acceptance (from issue).** Retire `EvalError::ApproxCompositionUnsupported` for composable
+  approximate inputs; an exact-over-exact op stays `Exact`/`bound=None`; an op over approximate inputs
+  carries the kernel-composed `Bound` + meet-strength; a golden test checks the propagated
+  `{bound, guarantee}` against the kernel's direct composition; M-I1…M-I4 stay enforced.
+- **Delivered.** `mycelium-interp::prims`: `exact_result` generalized to `compose_result`, which
+  short-circuits to `Exact`/`bound=None` when all inputs are exact (M-I1) and otherwise composes per a
+  per-prim `ApproxRule`: `core.id` → `Passthrough` (the bound is preserved verbatim, citation
+  included); `trit.add`/`trit.sub`/`trit.neg` → `Error(Add|Sub|Neg)` (sound 1-Lipschitz affine ε
+  propagation via `mycelium_numerics::compose_error_bound`); `bit.*` and `trit.mul` → `Refuse` (no
+  defined ε rule — `trit.mul` needs the central-operand magnitudes that land with the Dense numerics,
+  E2-1). Strength is the `meet` of the inputs' bases (Proven⊕Proven stays Proven; …⊕Declared →
+  Declared), and the basis is re-derived to match (so M-I2…M-I4 hold through `Meta::new`). Five new
+  golden tests: additive composition sums ε and keeps Proven; neg preserves ε; `core.id` passes the
+  bound through; the meet degrades to Declared; `trit.mul` still refuses (explicit, never silent). The
+  Phase-1 `bit.not` refusal test still holds (bit ops keep `Refuse`).
+- **Honesty.** Refusing was the honest Phase-1 choice; composing-with-a-checked-kernel is the honest
+  Phase-2 upgrade — but only where a *sound* propagation rule exists; the rest still refuse rather
+  than fabricate (G2/VR-5). This closes the documented Phase-1 honesty gap (the interpreter could not
+  compose approximate inputs).
 
 ---
 

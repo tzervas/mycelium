@@ -107,6 +107,7 @@ name = "mycelium-interp"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
+ "mycelium-numerics",
 ]
 
 [[package]]
@@ -125,6 +126,15 @@ dependencies = [
  "mycelium-cert",
  "mycelium-core",
  "mycelium-interp",
+]
+
+[[package]]
+name = "mycelium-numerics"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

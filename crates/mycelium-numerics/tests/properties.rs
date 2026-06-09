@@ -198,7 +198,11 @@ fn union_bound_is_sound() {
     }
     let empirical = failures as f64 / n as f64;
     // Union bound must over-estimate the true "any fails" probability.
-    assert!(claimed.delta + 0.01 >= empirical, "union {} < emp {empirical}", claimed.delta);
+    assert!(
+        claimed.delta + 0.01 >= empirical,
+        "union {} < emp {empirical}",
+        claimed.delta
+    );
 }
 
 /// **Monotonicity + saturation.** Adding a failure mode never lowers δ; δ saturates at 1.
@@ -214,7 +218,10 @@ fn union_bound_is_monotone_and_saturates() {
 /// **Determinism.** Same δ inputs → same union; empty union is `certain`.
 #[test]
 fn union_bound_is_deterministic() {
-    let xs: Vec<ProbBound> = [0.1, 0.2].iter().map(|d| ProbBound::new(*d).unwrap()).collect();
+    let xs: Vec<ProbBound> = [0.1, 0.2]
+        .iter()
+        .map(|d| ProbBound::new(*d).unwrap())
+        .collect();
     assert_eq!(ProbBound::union(&xs), ProbBound::union(&xs));
     assert_eq!(ProbBound::union::<&[ProbBound]>(&[]), ProbBound::certain());
 }
@@ -247,10 +254,16 @@ fn checker_rejects_too_tight_claims() {
 
     // Exact claim: valid.
     let exact_claim = ErrorBound::new(5.0, NormKind::Linf).unwrap();
-    assert_eq!(check_error_claim(&inputs, ErrorOp::Add, exact_claim), CheckOutcome::Valid);
+    assert_eq!(
+        check_error_claim(&inputs, ErrorOp::Add, exact_claim),
+        CheckOutcome::Valid
+    );
     // Looser claim: valid (sound, allowed).
     let loose = ErrorBound::new(7.0, NormKind::Linf).unwrap();
-    assert_eq!(check_error_claim(&inputs, ErrorOp::Add, loose), CheckOutcome::Valid);
+    assert_eq!(
+        check_error_claim(&inputs, ErrorOp::Add, loose),
+        CheckOutcome::Valid
+    );
     // Too-tight claim: rejected.
     let tight = ErrorBound::new(4.0, NormKind::Linf).unwrap();
     assert!(matches!(
@@ -259,7 +272,10 @@ fn checker_rejects_too_tight_claims() {
     ));
     // Norm mismatch: malformed.
     let wrong_norm = ErrorBound::new(5.0, NormKind::L1).unwrap();
-    assert_eq!(check_error_claim(&inputs, ErrorOp::Add, wrong_norm), CheckOutcome::Malformed);
+    assert_eq!(
+        check_error_claim(&inputs, ErrorOp::Add, wrong_norm),
+        CheckOutcome::Malformed
+    );
 }
 
 /// The union checker likewise rejects a δ claim below `min(1, Σδ)`.

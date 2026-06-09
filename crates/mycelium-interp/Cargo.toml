@@ -13,3 +13,5 @@ workspace = true
 
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
+# The verified-numerics kernels: composing an approximate input's bound honestly (M-204; ADR-010).
+mycelium-numerics = { path = "../mycelium-numerics" }

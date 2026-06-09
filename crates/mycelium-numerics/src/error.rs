@@ -125,7 +125,11 @@ impl AffineForm {
     pub fn scale(&self, c: f64) -> Self {
         AffineForm {
             center: c * self.center,
-            terms: self.terms.iter().map(|(s, coeff)| (*s, c * coeff)).collect(),
+            terms: self
+                .terms
+                .iter()
+                .map(|(s, coeff)| (*s, c * coeff))
+                .collect(),
         }
     }
 

@@ -10,18 +10,39 @@
 //! width is an explicit [`EvalError::PrimType`], never a silent coercion (SC-3; G2). Result metadata
 //! is threaded honestly: provenance becomes `Derived{ op: hash(prim), inputs: [hash(arg)…] }`
 //! (RFC-0001 §4.6) and the guarantee is the `meet` of the inputs and the prim's intrinsic strength
-//! (RFC-0001 §4.7). Because the built-ins are exact and require exact inputs, results stay `Exact`;
-//! composing an *approximate* input is refused (`EvalError::ApproxCompositionUnsupported`) until the
-//! ADR-010 bound kernels land (Phase 2 / E2-4) — refusing is the honest choice over fabricating a
-//! composed bound.
+//! (RFC-0001 §4.7). Exact inputs through an exact built-in stay `Exact` / `bound = None`.
+//!
+//! **Composing an approximate input (M-204; ADR-010).** With the verified-numerics kernels landed
+//! (`mycelium-numerics`, E2-4), a built-in over an *approximate* input no longer refuses outright: it
+//! composes the input's `Error` bound through the affine ε-kernel and meets the strength to the
+//! weakest input ([`mycelium_numerics::compose_error_bound`]). Each prim declares its
+//! [`ApproxRule`]: the additive ternary arithmetic (`trit.add/sub/neg`) carries a sound affine
+//! composition; `core.id` passes the bound through unchanged; the logical `bit.*` ops and `trit.mul`
+//! have **no defined ε-propagation rule over approximate inputs** and so still refuse
+//! (`EvalError::ApproxCompositionUnsupported`) — refusing remains the honest choice over fabricating a
+//! bound (G2/VR-5).
 
 use std::collections::BTreeMap;
 
 use mycelium_core::{
-    operation_hash, ternary, GuaranteeStrength, Meta, Payload, Provenance, Repr, Trit, Value,
+    operation_hash, ternary, Bound, GuaranteeStrength, Meta, Payload, Provenance, Repr, Trit, Value,
 };
+use mycelium_numerics::{compose_error_bound, ErrorOp};
 
 use crate::EvalError;
+
+/// How a built-in composes an *approximate* input's bound (M-204). Exact inputs never reach this —
+/// they short-circuit to an `Exact`/`bound = None` result.
+#[derive(Debug, Clone, Copy)]
+enum ApproxRule {
+    /// No defined ε-propagation over an approximate input — refuse (honest; `bit.*`, `trit.mul`).
+    Refuse,
+    /// Unary identity (`core.id`): pass the single input's bound and strength through unchanged.
+    Passthrough,
+    /// Compose the inputs' `Error` bounds through the affine ε-kernel under this op (the additive
+    /// ternary arithmetic — sound 1-Lipschitz propagation).
+    Error(ErrorOp),
+}
 
 /// A primitive implementation: a pure function from argument values to a result value (or an error).
 pub type PrimFn = fn(prim: &str, args: &[&Value]) -> Result<Value, EvalError>;
@@ -78,31 +99,62 @@ impl PrimRegistry {
     }
 }
 
-/// Build an `Exact` result value with honest provenance/guarantee threading (RFC-0001 §4.6/§4.7).
-/// Refuses to compose an approximate input (no bound kernel yet — ADR-010/E2-4).
-fn exact_result(
+/// Build a result value with honest provenance/guarantee threading (RFC-0001 §4.6/§4.7). The
+/// intrinsic strength of every built-in is `Exact`, so the result strength is the `meet` over the
+/// inputs. Exact inputs → an `Exact`/`bound = None` result; an approximate input is composed per the
+/// prim's [`ApproxRule`] (M-204) — or explicitly refused when no rule applies (never a fabricated
+/// bound; G2).
+fn compose_result(
     prim: &str,
     inputs: &[&Value],
     repr: Repr,
     payload: Payload,
+    rule: ApproxRule,
 ) -> Result<Value, EvalError> {
-    // Intrinsic strength of every built-in is Exact; the result is the meet over the inputs.
-    let guarantee = GuaranteeStrength::propagate(
+    let strength = GuaranteeStrength::propagate(
         GuaranteeStrength::Exact,
         inputs.iter().map(|v| v.meta().guarantee()),
     );
-    if guarantee != GuaranteeStrength::Exact {
-        return Err(EvalError::ApproxCompositionUnsupported {
-            prim: prim.to_owned(),
-        });
-    }
     let provenance = Provenance::Derived {
         op: operation_hash(prim),
         inputs: inputs.iter().map(|v| v.content_hash()).collect(),
     };
-    let meta = Meta::new(provenance, GuaranteeStrength::Exact, None, None, None, None)
-        .map_err(EvalError::Wf)?;
+    let (guarantee, bound) = if strength == GuaranteeStrength::Exact {
+        // All inputs exact ⇒ exact result, no bound (M-I1).
+        (GuaranteeStrength::Exact, None)
+    } else {
+        compose_approx(prim, inputs, rule)?
+    };
+    let meta = Meta::new(provenance, guarantee, bound, None, None, None).map_err(EvalError::Wf)?;
     Value::new(repr, payload, meta).map_err(EvalError::Wf)
+}
+
+/// Compose the bound + strength for a result over at least one *approximate* input (M-204; ADR-010).
+/// The honest upgrade over the Phase-1 blanket refusal: a defined rule composes a *checked* bound; an
+/// undefined one still refuses rather than guessing.
+fn compose_approx(
+    prim: &str,
+    inputs: &[&Value],
+    rule: ApproxRule,
+) -> Result<(GuaranteeStrength, Option<Bound>), EvalError> {
+    let refuse = || EvalError::ApproxCompositionUnsupported {
+        prim: prim.to_owned(),
+    };
+    match rule {
+        ApproxRule::Refuse => Err(refuse()),
+        ApproxRule::Passthrough => {
+            // Identity preserves the bound exactly (citation included) — clone it through.
+            let v = inputs.first().ok_or_else(refuse)?;
+            Ok((v.meta().guarantee(), v.meta().bound().cloned()))
+        }
+        ApproxRule::Error(op) => {
+            // The non-exact inputs carry the Error bounds; exact inputs contribute the ε/strength
+            // identity, so collecting only the present bounds is exactly the composition input set.
+            let bounds: Vec<&Bound> = inputs.iter().filter_map(|v| v.meta().bound()).collect();
+            let composed = compose_error_bound(&bounds, op).ok_or_else(refuse)?;
+            Ok((composed.strength, Some(composed.bound)))
+        }
+    }
 }
 
 fn expect_arity(prim: &str, args: &[&Value], n: usize) -> Result<(), EvalError> {
@@ -132,7 +184,13 @@ fn as_bits<'a>(prim: &str, v: &'a Value) -> Result<&'a [bool], EvalError> {
 fn prim_id(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     expect_arity(prim, args, 1)?;
     let v = args[0];
-    exact_result(prim, args, v.repr().clone(), v.payload().clone())
+    compose_result(
+        prim,
+        args,
+        v.repr().clone(),
+        v.payload().clone(),
+        ApproxRule::Passthrough,
+    )
 }
 
 /// `bit.not : Binary{n} → Binary{n}` — elementwise complement.
@@ -140,7 +198,13 @@ fn prim_bit_not(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     expect_arity(prim, args, 1)?;
     let bits = as_bits(prim, args[0])?;
     let out: Vec<bool> = bits.iter().map(|&b| !b).collect();
-    exact_result(prim, args, args[0].repr().clone(), Payload::Bits(out))
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
 }
 
 /// Shared elementwise binary-logical kernel for `bit.and/or/xor`.
@@ -155,7 +219,13 @@ fn bit_binop(prim: &str, args: &[&Value], op: fn(bool, bool) -> bool) -> Result<
         });
     }
     let out: Vec<bool> = a.iter().zip(b).map(|(&x, &y)| op(x, y)).collect();
-    exact_result(prim, args, args[0].repr().clone(), Payload::Bits(out))
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
 }
 
 fn prim_bit_and(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
@@ -183,7 +253,13 @@ fn as_trits<'a>(prim: &str, v: &'a Value) -> Result<&'a [Trit], EvalError> {
 fn prim_trit_neg(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     expect_arity(prim, args, 1)?;
     let out = ternary::neg(as_trits(prim, args[0])?);
-    exact_result(prim, args, args[0].repr().clone(), Payload::Trits(out))
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Trits(out),
+        ApproxRule::Error(ErrorOp::Neg),
+    )
 }
 
 /// Shared kernel for the fixed-width balanced-ternary binary arithmetic prims (`trit.add/sub/mul`).
@@ -193,6 +269,7 @@ fn trit_binop(
     prim: &str,
     args: &[&Value],
     op: fn(&[Trit], &[Trit]) -> Option<Vec<Trit>>,
+    rule: ApproxRule,
 ) -> Result<Value, EvalError> {
     expect_arity(prim, args, 2)?;
     let a = as_trits(prim, args[0])?;
@@ -206,15 +283,27 @@ fn trit_binop(
     let out = op(a, b).ok_or_else(|| EvalError::Overflow {
         prim: prim.to_owned(),
     })?;
-    exact_result(prim, args, args[0].repr().clone(), Payload::Trits(out))
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Trits(out),
+        rule,
+    )
 }
 
+/// `trit.add`: balanced-ternary addition is exact on the values, so an approximate input's ε
+/// propagates additively (1-Lipschitz; affine `Add`) — sound (M-204).
 fn prim_trit_add(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
-    trit_binop(prim, args, ternary::add)
+    trit_binop(prim, args, ternary::add, ApproxRule::Error(ErrorOp::Add))
 }
+/// `trit.sub`: same additive ε propagation as `trit.add` (affine `Sub`).
 fn prim_trit_sub(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
-    trit_binop(prim, args, ternary::sub)
+    trit_binop(prim, args, ternary::sub, ApproxRule::Error(ErrorOp::Sub))
 }
+/// `trit.mul`: multiplicative ε propagation needs the central operand magnitudes (affine `Mul`); that
+/// plumbing lands with the Dense numerics (E2-1), so an approximate input is refused for now — honest,
+/// not a fabricated bound (G2).
 fn prim_trit_mul(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
-    trit_binop(prim, args, ternary::mul)
+    trit_binop(prim, args, ternary::mul, ApproxRule::Refuse)
 }
