@@ -9,13 +9,17 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **ADR-011 — `BoundBasis` is a property of every `Bound`** (`docs/adr/ADR-011-...md`, Accepted):
+  formally supersedes the implicit RFC-0001 r1 §4.3 decision that scoped `basis` to `CapacityBound`
+  only, so every approximate value (ε, δ, crosstalk, capacity) honestly records how its bound was
+  obtained (VR-5, G5). Resolves OQ-3.
 - **Core data-contract schemas** (`docs/spec/schemas/`, **M-010**): the 10 ratified JSON Schemas
   (draft 2020-12) — `repr`, `value`, `meta`, `guarantee`, `bound`, `provenance`,
   `physical-layout`, `swap-certificate`, `policy`, `reconstruction-manifest` — each a faithful
   projection of its source RFC/ADR section, plus ≥1 valid and ≥1 invalid example per schema (the
   invalids exercise the honesty-load-bearing invariants M-I1/M-I4). `just schema` validates the
-  set in CI. Raised OQ-3 (`bound.basis` placement), OQ-4 (`NormKind` registry), OQ-5 (policy
-  predicate grammar) as targeted corpus clarifications; see `docs/spec/schemas/README.md`.
+  set in CI. The OQ-3/OQ-4/OQ-5 clarifications surfaced here are now resolved (see below /
+  `docs/spec/schemas/README.md`).
 - **Phase-0 working plan** (`docs/planning/phase-0.md`): the first issue-coupled expansion of
   Foundation §6, mapping the nine Phase-0 tasks (M-001/002/010/011/012/020/090/091/092) to their
   GitHub issues, the critical path, honest KC-1/KC-2 gate status, the proposed canonical
@@ -35,6 +39,13 @@ corpus, not released software. Versioning will begin when the kernel does.
 - **Local check tooling** with local↔CI parity: `justfile` + `scripts/checks/*` (markdownlint,
   offline link/cross-reference, json-schema, codespell, shellcheck, secret scan, fmt/lint),
   `.pre-commit-config.yaml`, and a manual-dispatch **advisory** GitHub Actions workflow.
+
+### Changed
+- **RFC-0001 → r2** (status stays Accepted): §4.3 `Bound` grammar revised per **ADR-011** —
+  `BoundBasis` factored out to a required companion of *every* `Bound` (was: `CapacityBound` only),
+  and `NormKind` enumerated `L1|L2|Linf|Rel` as an extensible registry (resolves OQ-4). The r1 §4.3
+  grammar is formally superseded; indexes (`Doc-Index.md`, `docs/rfcs/README.md`,
+  `docs/adr/README.md`) and the `bound` schema updated to match.
 
 ### Changed (baseline-review consistency pass)
 - ADR-001 promoted to firmly **Accepted**; the "no statistical approximation vs

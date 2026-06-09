@@ -17,7 +17,7 @@ Ratified per **M-010** ([#5](https://github.com/tzervas/mycelium/issues/5)); see
 | `value` | `Value = {repr, payload, meta}`; the self-describing wire form | RFC-0001 §4.2, §4.8 |
 | `meta` | `Meta` (7 fields) + invariants **M-I1…M-I4** encoded as conditionals | RFC-0001 §4.3 |
 | `guarantee` | `GuaranteeStrength` lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` | RFC-0001 §3.4, §4.7 |
-| `bound` | `Bound` + `BoundBasis` (Proven/Empirical/Declared basis) | RFC-0001 §4.3; ADR-010 |
+| `bound` | `Bound` + `BoundBasis` (Proven/Empirical/Declared basis) | RFC-0001 §4.3 (r2); ADR-010; ADR-011 |
 | `provenance` | `Provenance` content-hash derivation DAG | RFC-0001 §4.6 |
 | `physical-layout` | `PhysicalLayout` + `PackScheme` (the schedule *record*) | RFC-0001 §4.1/§4.3; DN-01; RFC-0004 §5 |
 | `swap-certificate` | `SwapCertificate` (`Bijective` \| `Bounded`); never silent | RFC-0002 §3–§5 |
@@ -54,15 +54,16 @@ schema's `$comment`:
 - **legal swap-pair table** (RFC-0002 §5) → M-120/M-150.
 - **policy determinism / totality** → the policy engine (later RFC + impl).
 
-## Open questions raised to the corpus owner (do not silently resolve)
+## Open questions — resolved
 
-These are minor corpus clarifications surfaced while projecting the RFCs; each is flagged in the
-relevant schema's `$comment` and tracked in `docs/planning/phase-0.md`:
+Three corpus clarifications were surfaced while projecting the RFCs and have since been resolved
+(2026-06-09):
 
-- **OQ-3** (`bound`): RFC-0001 §4.3 attaches `basis` only to `CapacityBound`, but invariants
-  M-I2/3/4 and RFC-0002 §3 read `bound.basis` for *any* bound. The schemas make `basis` a common,
-  required companion of every `Bound`. → proposes a one-line RFC-0001 §4.3 clarification.
-- **OQ-4** (`bound`): `NormKind` is named but not enumerated normatively; kept as a non-empty
-  string pending a fixed registry.
-- **OQ-5** (`policy`): RFC-0005 defers the concrete predicate grammar; `rules[].when` is a declared
-  object until that RFC lands.
+- **OQ-3** (`bound`) — **Resolved by ADR-011 (RFC-0001 r2).** `basis` is now a required companion
+  of *every* `Bound`, not just `CapacityBound`, reconciling the §4.3 grammar with invariants
+  M-I2/3/4 and RFC-0002 §3. The r1 §4.3 grammar is formally superseded.
+- **OQ-4** (`bound`) — **Resolved.** `NormKind` is enumerated `L1 | L2 | Linf | Rel` as an
+  extensible registry (RFC-0001 §4.3 r2), matching the `ScalarKind`/`PackScheme` treatment.
+- **OQ-5** (`policy`) — **Deferred (by design), tracked.** RFC-0005 intentionally defers the
+  concrete predicate grammar to a later RFC; `rules[].when` stays a declared object. Tracked by the
+  Phase-2 epic **E2-6 "Selection policy + EXPLAIN"** (#33).

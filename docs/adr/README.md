@@ -27,6 +27,7 @@ New ADRs go here as standalone files. (ADR-001…009 may be extracted into indiv
 | 008 | VSA is in core semantics but packaged as an optional submodule | Accepted | Foundation §8 |
 | 009 | Hybrid execution; AOT preferred for stable components; interpreter is reference | Accepted | Foundation §8 |
 | 010 | Verified-numerics foundation: two bound kernels (ε / δ) + shared certificate | Accepted | `ADR-010-Verified-Numerics-Foundation.md` |
+| 011 | `BoundBasis` is a property of every `Bound` (not just `CapacityBound`) | Accepted | `ADR-011-BoundBasis-Is-Universal.md` |
 
 ## Template
 

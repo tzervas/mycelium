@@ -4,7 +4,7 @@
 |---|---|
 | **RFC** | 0001 |
 | **Title** | Core IR & Metadata Schema |
-| **Status** | **Accepted** (r1 — solidified from the research pass) |
+| **Status** | **Accepted** (r2 — §4.3 `Bound` grammar revised per **ADR-011**; supersedes r1) |
 | **Type** | Foundational / normative |
 | **Date** | June 08, 2026 |
 | **Depends on** | *Mycelium Project Foundation* (r3): FR-M1/M3/M4/M5/M8, FR-S2, NFR-3/6/7, VR-1/2/3/4/5, SC-3/4, ADR-001/002/003/006/008 |
@@ -139,10 +139,12 @@ Meta = {
 
 GuaranteeStrength ::= Exact | Proven | Empirical | Declared
 
-Bound ::= ErrorBound      { eps: Real, norm: NormKind }
-        | ProbabilityBound { delta: Real }                       // failure probability
-        | CrosstalkBound   { expected: Real, tail: Option<Real> }
-        | CapacityBound    { items: Nat, dim: Nat, basis: BoundBasis }
+Bound      ::= { kind: BoundKind, basis: BoundBasis }  // r2 (ADR-011): `basis` is a companion of EVERY bound; supersedes r1, where only CapacityBound carried it
+BoundKind  ::= ErrorBound      { eps: Real, norm: NormKind }
+             | ProbabilityBound { delta: Real }                       // failure probability
+             | CrosstalkBound   { expected: Real, tail: Option<Real> }
+             | CapacityBound    { items: Nat, dim: Nat }
+NormKind   ::= L1 | L2 | Linf | Rel                                   // extensible registry (r2)
 BoundBasis ::= ProvenThm    { citation: Text }      // e.g. "Clarkson-Ubaru-Yang 2023"
              | EmpiricalFit { trials: Nat, method: Text }  // e.g. "Frady-Sommer Gaussian"
              | UserDeclared
@@ -150,6 +152,12 @@ BoundBasis ::= ProvenThm    { citation: Text }      // e.g. "Clarkson-Ubaru-Yang
 PhysicalLayout ::= BinaryWords | TritPacked { scheme: PackScheme } | DenseArray | VsaStore { sparse: Bool }
 PackScheme     ::= Unpacked | TwoBitPerTrit | FiveTritPerByte | I2S | TL1 | TL2  // extensible registry
 ```
+
+> **r2 note (ADR-011).** `basis` is a required companion of **every** `Bound`, not just
+> `CapacityBound` (the r1 grammar, now superseded). The strength tag derives from `basis` for all
+> bound kinds, which is what M-I2/M-I3/M-I4 below already require and what RFC-0002 §3 (a certificate
+> carries `Bound` + `BoundBasis`) assumes. An `Exact` value carries no `Bound` (M-I1), so this adds
+> nothing there. `NormKind` is enumerated `L1|L2|Linf|Rel` as an extensible registry (§4.1).
 
 **Schema invariants (normative).**
 - **M-I1.** `guarantee == Exact  ⟺  bound == None`.
@@ -270,6 +278,7 @@ A fifth paradigm kind (e.g., a future native-ternary-hardware representation, or
 
 - **r0 (initial draft):** initial Core IR & metadata schema; refines Foundation §5.2; introduces the four-point guarantee lattice and honesty-propagation rule; fixes the bound-composition *contract* and defers its arithmetic to ADR-010.
 - **r1 (solidified, this version):** **Accepted.** Packing moved from metadata to **schedule-staged** (§4.1, per DN-01 + T1.4); sparsity-as-static-refinement **resolved** (§4.4); §4.7 bound composition made **concrete** via ADR-010's two kernels (Accepted); §8 unresolved questions resolved with pointers. Remaining: the full term language, and the one confirming Liquid-Haskell `bundle` probe.
+- **r2 (this revision):** **Accepted.** §4.3 — `BoundBasis` factored out to a required companion of *every* `Bound` (r1 attached it to `CapacityBound` only), per **ADR-011**, reconciling the grammar with invariants M-I2/M-I3/M-I4 and RFC-0002 §3; `NormKind` registry enumerated `L1|L2|Linf|Rel`. **Supersedes** the r1 §4.3 `Bound` grammar. Surfaced as OQ-3/OQ-4 during M-010 schema ratification (#5).
 - Maintain as append-only with status transitions (Draft → Accepted → Superseded), mirroring the ADR discipline (Foundation Meta).
 - On acceptance, add a one-line forward-pointer in Foundation §5.2 noting that RFC-0001 supersedes that sketch's packing placement, to prevent divergence.
 - Re-validate §4.7 once ADR-010 is ratified; promote composed-result default from `Declared` to the foundation's actual composition rules.

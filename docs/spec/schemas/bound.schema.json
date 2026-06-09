@@ -5,10 +5,10 @@
   "x-mycelium": {
     "status": "ratified",
     "task": "M-010",
-    "source": "RFC-0001 §4.3; ADR-010; RFC-0002 §3",
-    "ratified_against": "RFC-0001 (Accepted, r1) §4.3 + ADR-010 (Accepted)",
+    "source": "RFC-0001 §4.3 (r2); ADR-010; ADR-011; RFC-0002 §3",
+    "ratified_against": "RFC-0001 (Accepted, r2) §4.3 + ADR-010 + ADR-011 (Accepted)",
     "ratified_on": "2026-06-09",
-    "$comment": "RECONCILIATION (OQ-3, raised to corpus owner): RFC-0001 §4.3's grammar attaches `basis` only to CapacityBound, but invariants M-I2/M-I3/M-I4 read `bound.basis` for ANY bound, and RFC-0002 §3 pairs every certificate Bound with a BoundBasis. This schema makes `basis` a required companion of every Bound kind, which is the only reading consistent with M-I2/3/4. A one-line RFC-0001 §4.3 clarification is proposed to fold `basis` out to the common Bound level."
+    "$comment": "OQ-3 RESOLVED by ADR-011 (RFC-0001 r2): `basis` is a required companion of EVERY Bound, not just CapacityBound — consistent with invariants M-I2/M-I3/M-I4 and RFC-0002 §3. OQ-4 RESOLVED: NormKind is enumerated as an extensible registry (L1|L2|Linf|Rel)."
   },
   "$defs": {
     "BoundBasis": {
@@ -46,8 +46,8 @@
     },
     "NormKind": {
       "type": "string",
-      "minLength": 1,
-      "$comment": "RFC-0001 §4.3 names `norm: NormKind` for ErrorBound but does not enumerate it normatively (open registry; OQ-4). Kept as a non-empty string until the registry is fixed; common intended members: L1, L2, Linf, Rel."
+      "enum": ["L1", "L2", "Linf", "Rel"],
+      "$comment": "RFC-0001 §4.3 (r2): an EXTENSIBLE registry (OQ-4 resolved). Adding a member is a registry change, not an RFC, exactly like ScalarKind/PackScheme. 'Rel' = relative error; L1/L2/Linf are the p-norms."
     }
   },
   "type": "object",

@@ -271,8 +271,11 @@ upgrade to `confirmed (build)`. We do not pre-write the upgrade.
 
 | Id | Item | Disposition |
 |---|---|---|
-| **OQ-1** | Is the §3 canonical 10-schema set the intended "10 schemas" of M-010? | **Ask the author before authoring** — "10" implies prior intent; the set is derived, not given. |
+| **OQ-1** | Is the §3 canonical 10-schema set the intended "10 schemas" of M-010? | **Resolved (2026-06-09)** — owner confirmed the derived set; M-010/M-011 issue bodies amended to author-then-ratify. |
 | **OQ-2** | Where do the LH probe (M-001) and a `proofs/` tree live relative to M-091/M-092? | Decide alongside M-091 layout; record in `SPECIFICATION.md` §10 / phase-1.md. |
+| **OQ-3** | `bound.basis` placement (RFC-0001 §4.3 grammar vs. invariants M-I2/3/4) | **Resolved (2026-06-09)** — formal supersede: **ADR-011** + **RFC-0001 r2** factor `basis` to every `Bound`. |
+| **OQ-4** | `NormKind` not enumerated normatively | **Resolved (2026-06-09)** — enumerated `L1\|L2\|Linf\|Rel` as an extensible registry (RFC-0001 §4.3 r2). |
+| **OQ-5** | Concrete policy-predicate grammar (RFC-0005 deferral) | **Deferred by design, tracked** — Phase-2 epic **E2-6** (#33). `rules[].when` stays a declared object. |
 | **RR-3** | LLM leverage collapses on novel syntax (KC-2) | The one existential risk research didn't settle; M-002 is its circuit-breaker. Acceptable outcomes include fall-back-to-embedded-DSL. (Foundation RR-3.) |
 | **RR-2/KC-3** | Schema + spec surface grows past single-expert auditability | Keep schemas a thin 1:1 projection of the RFCs; no new design in the spec layer. |
 | **Seq-1** | M-010/M-011 framed as "ratify" but artifacts absent (§3) | Reframed here as author-then-ratify; tooling already supports it (`schema.sh`). Surface to the author so issue bodies can be amended if desired. |
