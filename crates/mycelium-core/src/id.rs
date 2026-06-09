@@ -1,8 +1,9 @@
 //! Content addresses (RFC-0001 §4.6): `<algo>:<digest>`.
 
-/// A content address, e.g. `blake3:Hh3kQ_x-1A`. The concrete hash algorithm is fixed in M-103;
-/// this type fixes only the shape (`<algo>:<digest>`, matching the schema pattern).
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// A content address, e.g. `blake3:Hh3kQ_x-1A`. The kernel hash is **BLAKE3** (fixed in M-103),
+/// rendered as `blake3:<64-hex>`; this type fixes the shape (`<algo>:<digest>`, matching the schema
+/// pattern) and stays algorithm-agnostic so a future migration is a value change, not a type change.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ContentHash(String);
 
 impl ContentHash {
@@ -29,6 +30,26 @@ impl ContentHash {
         Some(ContentHash(s.to_owned()))
     }
 
+    /// Build a content address from an algorithm tag and digest, validating the shape (`algo` is
+    /// `[a-z0-9]+`, `digest` is `[A-Za-z0-9_-]+`). Returns `None` if either part is malformed. This
+    /// is the constructor the content-addressing pass (M-103) uses after computing a digest.
+    #[must_use]
+    pub fn from_parts(algo: &str, digest: &str) -> Option<Self> {
+        Self::parse(&format!("{algo}:{digest}"))
+    }
+
+    /// The algorithm tag (the part before `:`), e.g. `blake3`.
+    #[must_use]
+    pub fn algo(&self) -> &str {
+        self.0.split_once(':').map_or("", |(a, _)| a)
+    }
+
+    /// The digest (the part after `:`).
+    #[must_use]
+    pub fn digest(&self) -> &str {
+        self.0.split_once(':').map_or("", |(_, d)| d)
+    }
+
     /// The address as a string slice.
     #[must_use]
     pub fn as_str(&self) -> &str {
@@ -52,5 +73,15 @@ mod tests {
         assert!(ContentHash::parse(":digest").is_none());
         assert!(ContentHash::parse("UPPER:abc").is_none());
         assert!(ContentHash::parse("blake3:has space").is_none());
+    }
+
+    #[test]
+    fn from_parts_splits_back_out() {
+        let h = ContentHash::from_parts("blake3", "Hh3kQ_x-1A").expect("valid");
+        assert_eq!(h.algo(), "blake3");
+        assert_eq!(h.digest(), "Hh3kQ_x-1A");
+        assert_eq!(h.as_str(), "blake3:Hh3kQ_x-1A");
+        assert!(ContentHash::from_parts("blake3", "has space").is_none());
+        assert!(ContentHash::from_parts("UPPER", "abc").is_none());
     }
 }

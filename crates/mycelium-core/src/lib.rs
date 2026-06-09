@@ -3,10 +3,12 @@
 //! data-contract schemas under `docs/spec/schemas/`, and the honesty invariants (M-I1…M-I4) are
 //! enforced *by construction* (see [`meta::Meta::new`]).
 //!
-//! Not yet here (own issues): the guarantee `meet` composition + laws (M-102), content-addressing
-//! (M-103), (de)serialization to the schemas (M-104), the reference interpreter (M-110).
+//! Here so far: the guarantee `meet` composition + laws (M-102) and content-addressing (M-103).
+//! Not yet here (own issues): (de)serialization to the schemas (M-104), the reference interpreter
+//! (M-110).
 
 pub mod bound;
+pub mod content;
 pub mod guarantee;
 pub mod id;
 pub mod meta;
@@ -15,6 +17,7 @@ pub mod repr;
 pub mod value;
 
 pub use bound::{Bound, BoundBasis, BoundKind, NormKind};
+pub use content::Names;
 pub use guarantee::GuaranteeStrength;
 pub use id::ContentHash;
 pub use meta::{Meta, PackScheme, PhysicalLayout, Provenance, SparsityObs};

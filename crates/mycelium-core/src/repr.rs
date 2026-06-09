@@ -16,6 +16,20 @@ pub enum ScalarKind {
     F64,
 }
 
+impl ScalarKind {
+    /// A stable one-byte code for content-addressing (M-103). Append-only: existing codes are
+    /// frozen so a definition's identity never shifts when the registry grows.
+    #[must_use]
+    pub fn tag(self) -> u8 {
+        match self {
+            ScalarKind::F16 => 0,
+            ScalarKind::Bf16 => 1,
+            ScalarKind::F32 => 2,
+            ScalarKind::F64 => 3,
+        }
+    }
+}
+
 /// Declared sparsity class of a VSA value (RFC-0001 §4.1; RFC-0003 §5). The *declared* class is a
 /// static refinement; *observed* sparsity lives in [`crate::meta::Meta`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
