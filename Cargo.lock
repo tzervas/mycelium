@@ -116,6 +116,9 @@ version = "0.0.0"
 [[package]]
 name = "mycelium-vsa"
 version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+]
 
 [[package]]
 name = "proc-macro2"

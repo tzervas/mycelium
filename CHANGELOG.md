@@ -9,6 +9,18 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **VSA submodule — `VsaModel` trait + MAP-I** (`mycelium-vsa`, **M-130**, Phase 1; RFC-0003 §3–§4;
+  ADR-008; T2.6): a composition-style `VsaModel` trait (`bind`/`unbind` + self-inverse flag,
+  `bundle`, `permute`/`unpermute`, `similarity`, and the honest per-op intrinsic guarantee) and its
+  first model **MAP-I** — `bind`/`unbind` are self-inverse and **`Exact`** (elementwise product),
+  `permute` is **`Exact`** (cyclic shift), `bundle` is elementwise superposition. Value-level
+  adapters for the Exact ops carry honest `Derived` provenance. **Dependency-gated** (ADR-008): the
+  crate depends on `mycelium-core` but the kernel does not depend on it — VSA values stay
+  type-checkable in the kernel without pulling in this algebra (KC-3). Tests: bind/unbind round-trip
+  exactly, permute is invertible/cyclic, a bundle is far more similar to its members than to a
+  stranger, dim-mismatch/empty-bundle are explicit errors. The `bundle` **`Proven`** capacity bound
+  (M-I2: a *value*-level Proven bound needs a checked basis) is deferred to **M-131** — not stamped
+  here (VR-5).
 - **Binary↔ternary certified swap** (`mycelium-cert` + `mycelium-core::binary`, **M-120**, Phase 1;
   RFC-0002 §3/§4): `enc`/`dec` per `docs/spec/swaps/binary-ternary.md` over a legal `(n, m)` pair,
   emitting a `SwapCertificate::Bijective` (`LosslessWithinRange`) that references the once-per-pair

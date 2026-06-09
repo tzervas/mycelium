@@ -79,7 +79,7 @@ All Phase-1 issues, with issue number (`idmap.tsv`), priority, dependency, and *
 | **M-112** ≥2 inspectable lowering stages | [#17](https://github.com/tzervas/mycelium/issues/17) | P1 | M-110 | SPEC §10.5 / RFC-0004 §5 / SC-4 | **Ready after M-110** |
 | **M-120** Binary↔ternary swap | [#18](https://github.com/tzervas/mycelium/issues/18) | P0 | M-101 | `binary-ternary.md` / RFC-0002 §4 | **Done (2026-06-09)** — `mycelium-cert` enc/dec + `Bijective` cert; exhaustive `dec(enc x)` over all 256 bytes; interp `SwapEngine` |
 | **M-121** Machine-checked round-trip proof | [#19](https://github.com/tzervas/mycelium/issues/19) | P0 | M-120 | RFC-0002 §4 (P1/P2) / VR-1 | **Done (2026-06-09)** — `proofs/binary-ternary-roundtrip/`; Z3 `unsat` (injectivity, 8↔6) |
-| **M-130** `VsaModel` trait + MAP-I | [#20](https://github.com/tzervas/mycelium/issues/20) | P0 | M-101 | RFC-0003 / ADR-008 | **Ready** — parallel track |
+| **M-130** `VsaModel` trait + MAP-I | [#20](https://github.com/tzervas/mycelium/issues/20) | P0 | M-101 | RFC-0003 / ADR-008 | **Done (2026-06-09)** — `mycelium-vsa`: trait + MAP-I bind/unbind/permute (Exact) + bundle; dependency-gated |
 | **M-131** `Proven` capacity bound + validation | [#21](https://github.com/tzervas/mycelium/issues/21) | P0 | M-130, M-001 | RFC-0003 §5 / SC-2 / KC-1 | **Ready after M-130** — cites M-001 theorem |
 | **M-132** Cleanup memory | [#22](https://github.com/tzervas/mycelium/issues/22) | P1 | M-130 | RFC-0003 | **Ready after M-130** |
 | **M-140** LSP skeleton | [#23](https://github.com/tzervas/mycelium/issues/23) | P1 | M-110 | FR-S5 / SC-5 | **After interpreter** |
