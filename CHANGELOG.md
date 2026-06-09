@@ -9,6 +9,15 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Inspectable lowering — ≥2 dumpable/diffable stages** (`mycelium-core::lower`, **M-112**, Phase 1;
+  RFC-0004 §5/§6; SC-4; WF5): a backend-agnostic lowering pipeline. `stages(node)` returns **`core`**
+  (the canonical Core IR tree dump) → **`substrate`** (an A-normal form flattening nested
+  `Op`/`Swap`/`Let` to a linear binding list — the pre-codegen shape backends consume), each binding
+  whose result repr is statically known (`Const`, `Swap` target) annotated with its **scheduled
+  `PhysicalLayout`** (the default schedule, `I2_S` for ternary; RFC-0004 §5 / DN-01). Dumps are
+  canonical (deterministic — structurally identical programs render identically, SC-4) and `Meta`
+  guarantee tags survive lowering (WF5). `Op`-result layout is left explicitly unannotated (no
+  operator typing yet — the omission is honest, not silent; G2).
 - **Cleanup / item memory** (`mycelium-vsa::cleanup`, **M-132**, Phase 1; FR-S4; RFC-0003 §3): a
   labelled associative memory (`CleanupMemory`) that snaps a noisy query — an *approximate* `unbind`
   result or a `bundle` decode — to the nearest stored atom by similarity, returning a `Match { label,

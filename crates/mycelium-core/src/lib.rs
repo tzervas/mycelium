@@ -12,6 +12,7 @@ pub mod bound;
 pub mod content;
 pub mod guarantee;
 pub mod id;
+pub mod lower;
 pub mod meta;
 pub mod node;
 pub mod repr;
