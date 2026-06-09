@@ -1,5 +1,7 @@
 //! Content addresses (RFC-0001 §4.6): `<algo>:<digest>`.
 
+use serde::{Deserialize, Serialize};
+
 /// A content address, e.g. `blake3:Hh3kQ_x-1A`. The kernel hash is **BLAKE3** (fixed in M-103),
 /// rendered as `blake3:<64-hex>`; this type fixes the shape (`<algo>:<digest>`, matching the schema
 /// pattern) and stays algorithm-agnostic so a future migration is a value change, not a type change.
@@ -54,6 +56,21 @@ impl ContentHash {
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+}
+
+impl Serialize for ContentHash {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for ContentHash {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        // Validate the shape on the way in — a malformed address is an error, never silent.
+        let s = String::deserialize(deserializer)?;
+        ContentHash::parse(&s)
+            .ok_or_else(|| serde::de::Error::custom(format!("malformed content address: {s:?}")))
     }
 }
 

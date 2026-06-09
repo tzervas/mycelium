@@ -2,13 +2,20 @@
 //!
 //! The four paradigm *kinds* are closed in the kernel (a fifth needs an RFC + ADR); the parameter
 //! registries (`ScalarKind`, VSA `model`, `SparsityClass`) are open.
+//!
+//! The `serde` wire forms are exactly `repr.schema.json` (M-104): `Repr` is tagged on `kind`
+//! (`Binary|Ternary|Dense|VSA`), `SparsityClass` on `class` (`Dense|Sparse`), and `ScalarKind`
+//! renders `BF16` (Rust's `Bf16`).
+
+use serde::{Deserialize, Serialize};
 
 /// Scalar element kind for `Dense` values (extensible registry).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ScalarKind {
     /// IEEE-754 binary16.
     F16,
     /// bfloat16.
+    #[serde(rename = "BF16")]
     Bf16,
     /// IEEE-754 binary32.
     F32,
@@ -32,7 +39,8 @@ impl ScalarKind {
 
 /// Declared sparsity class of a VSA value (RFC-0001 §4.1; RFC-0003 §5). The *declared* class is a
 /// static refinement; *observed* sparsity lives in [`crate::meta::Meta`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "class")]
 pub enum SparsityClass {
     /// Dense hypervector.
     Dense,
@@ -44,7 +52,8 @@ pub enum SparsityClass {
 }
 
 /// The four closed paradigm kinds (RFC-0001 §4.1).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind")]
 pub enum Repr {
     /// `n`-bit value.
     Binary {
@@ -64,6 +73,7 @@ pub enum Repr {
         dtype: ScalarKind,
     },
     /// Hypervector of the named VSA model.
+    #[serde(rename = "VSA")]
     Vsa {
         /// Model id, resolved against the VSA registry (ADR-008); non-empty when well-formed.
         model: String,

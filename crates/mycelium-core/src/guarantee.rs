@@ -9,7 +9,10 @@
 
 /// How trustworthy a value's representation/bound is. Honesty is monotone-downward: an operation's
 /// result is never stronger than its weakest input (the [`meet`](GuaranteeStrength::meet)).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// The `serde` form is the bare string `"Exact"|"Proven"|"Empirical"|"Declared"`
+/// (`guarantee.schema.json`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum GuaranteeStrength {
     /// No approximation; `bound == None` (M-I1).
     Exact,

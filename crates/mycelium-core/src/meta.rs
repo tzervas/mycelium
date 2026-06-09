@@ -1,14 +1,21 @@
 //! Runtime metadata that travels with every value (RFC-0001 §4.3; `meta.schema.json`).
 //!
 //! [`Meta`] enforces the schema invariants **M-I1…M-I4** *by construction* — a [`Meta`] cannot be
-//! built with an inconsistent guarantee/bound pairing (the honesty rule, mechanically).
+//! built with an inconsistent guarantee/bound pairing (the honesty rule, mechanically). Its `serde`
+//! form is `meta.schema.json` (M-104): `bound` is modelled by **presence** (absent for `Exact`,
+//! per M-I1), and `Deserialize` re-runs the M-I1…M-I4 invariants through [`Meta::new`] so a
+//! malformed wire `Meta` is rejected, never silently trusted.
+
+use serde::{Deserialize, Serialize};
 
 use crate::bound::{Bound, BoundBasis};
 use crate::id::ContentHash;
 use crate::{GuaranteeStrength, WfError};
 
-/// Provenance: an acyclic derivation DAG (RFC-0001 §4.6). Not part of code identity.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Provenance: an acyclic derivation DAG (RFC-0001 §4.6). Not part of code identity. The `serde`
+/// form is tagged on `kind` (`Root|Derived`), matching `provenance.schema.json`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind")]
 pub enum Provenance {
     /// A primitive/constant origin.
     Root,
@@ -22,7 +29,7 @@ pub enum Provenance {
 }
 
 /// Measured (dynamic) sparsity — distinct from the declared [`crate::repr::SparsityClass`].
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct SparsityObs {
     /// Number of active components.
     pub active: u64,
@@ -30,8 +37,9 @@ pub struct SparsityObs {
     pub density: f64,
 }
 
-/// Lossless physical packing schemes (extensible registry; RFC-0001 §4.3; DN-01).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Lossless physical packing schemes (extensible registry; RFC-0001 §4.3; DN-01). The `serde`
+/// renderings match `physical-layout.schema.json`'s `PackScheme` enum (`I2S|TL1|TL2`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PackScheme {
     /// Unpacked.
     Unpacked,
@@ -42,13 +50,17 @@ pub enum PackScheme {
     /// bitnet.cpp I2_S.
     I2S,
     /// bitnet.cpp TL1.
+    #[serde(rename = "TL1")]
     Tl1,
     /// bitnet.cpp TL2.
+    #[serde(rename = "TL2")]
     Tl2,
 }
 
 /// The recorded schedule-staged packing (RFC-0001 §4.3; RFC-0004 §5). A *record*, not the decision.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The `serde` form is tagged on `layout`, matching `physical-layout.schema.json`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "layout")]
 pub enum PhysicalLayout {
     /// Binary words.
     BinaryWords,
@@ -160,6 +172,53 @@ impl Meta {
     #[must_use]
     pub fn policy_used(&self) -> Option<&ContentHash> {
         self.policy_used.as_ref()
+    }
+}
+
+/// The wire projection of [`Meta`] (`meta.schema.json`). Optional fields are omitted when absent
+/// (so `Exact` emits no `bound`, satisfying M-I1's presence model); on the way back in, `null` and
+/// absent both decode to `None`. `reconstruction` (RFC-0003 §6) is deferred (M-130) and not carried.
+#[derive(Serialize, Deserialize)]
+struct MetaWire {
+    provenance: Provenance,
+    guarantee: GuaranteeStrength,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    bound: Option<Bound>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    sparsity: Option<SparsityObs>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    physical: Option<PhysicalLayout>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    policy_used: Option<ContentHash>,
+}
+
+impl Serialize for Meta {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        MetaWire {
+            provenance: self.provenance.clone(),
+            guarantee: self.guarantee,
+            bound: self.bound.clone(),
+            sparsity: self.sparsity,
+            physical: self.physical,
+            policy_used: self.policy_used.clone(),
+        }
+        .serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Meta {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let w = MetaWire::deserialize(deserializer)?;
+        // Re-run M-I1…M-I4 (+ numeric well-formedness): wire data is never silently trusted.
+        Meta::new(
+            w.provenance,
+            w.guarantee,
+            w.bound,
+            w.sparsity,
+            w.physical,
+            w.policy_used,
+        )
+        .map_err(serde::de::Error::custom)
     }
 }
 
