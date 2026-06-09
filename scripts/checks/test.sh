@@ -12,11 +12,11 @@ else
   skip "rust: no Cargo.toml or cargo"
 fi
 
-# Python — pytest, once an experiments/ project exists (M-092).
-if have pytest && { [[ -f experiments/pyproject.toml ]] || [[ -f pyproject.toml ]]; }; then
-  if pytest -q; then ok "pytest"; else fail "pytest failures"; rc=1; fi
+# Python — the uv-managed experiments project (M-092), under its pinned interpreter (3.13; ADR-007).
+if [[ -f experiments/pyproject.toml ]] && have uv; then
+  if ( cd experiments && uv run --frozen pytest ); then ok "uv run pytest (experiments)"; else fail "pytest failures"; rc=1; fi
 else
-  skip "python: no pytest project yet"
+  skip "python: no uv experiments project (or uv missing)"
 fi
 
 exit $rc

@@ -75,7 +75,7 @@ important column: see §3 for the gap it exposes.
 | **M-002** KC-2 LLM-leverage experiment | [#3](https://github.com/tzervas/mycelium/issues/3) | P0 | M-020, M-010 | P0.2 / KC-2 | n/a (experiment) | **Blocked** on M-020 + M-010 |
 | **M-090** Docs CI | [#8](https://github.com/tzervas/mycelium/issues/8) | P1 | — | infra | partial — `checks.yml` exists, advisory | **Mostly done** (§6.5) |
 | **M-091** Rust workspace skeleton | [#9](https://github.com/tzervas/mycelium/issues/9) | P0 | — | infra / ADR-007 | **Yes** — 6-crate workspace; fmt/clippy/test green on MSRV 1.92 | **Done** — 2026-06-09 (§6.4) |
-| **M-092** Python tooling skeleton | [#10](https://github.com/tzervas/mycelium/issues/10) | P1 | — | infra / ADR-007 | **No** — no `experiments/` yet | **Ready** — pure scaffolding |
+| **M-092** Python tooling skeleton | [#10](https://github.com/tzervas/mycelium/issues/10) | P1 | — | infra / ADR-007 | **Yes** — UV `experiments/` project; pytest green on Python 3.13 | **Done** — 2026-06-09 |
 
 Legend — **Ready**: can start now from the corpus. **Author-then-ratify**: the issue is framed as
 "ratify X" but X must be *authored* first (see §3). **Blocked**: a hard dependency is open.

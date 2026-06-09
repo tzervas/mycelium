@@ -9,6 +9,11 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Python tooling skeleton** (`experiments/`, **M-092**): a UV-managed project targeting
+  **Python 3.13** (ADR-007) with a `dev` group (pytest, pytest-cov, ruff, black), a trivial
+  importable module + passing smoke test, and a committed `uv.lock`. `scripts/checks/test.sh` runs
+  it via `uv run --frozen pytest` under the pinned interpreter, so it joins the `just check`/CI
+  suite (skip-graceful when uv is absent).
 - **Rust workspace skeleton** (**M-091**): a 6-crate Cargo workspace (`mycelium-core`,
   `mycelium-interp`, `mycelium-vsa`, `mycelium-mlir` stub, `mycelium-cert` stub, `xtask`) with
   **MSRV pinned to 1.92** via `rust-toolchain.toml` + `rust-version` (ADR-007), workspace lints
