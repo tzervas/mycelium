@@ -9,6 +9,18 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Core data-contract schemas** (`docs/spec/schemas/`, **M-010**): the 10 ratified JSON Schemas
+  (draft 2020-12) — `repr`, `value`, `meta`, `guarantee`, `bound`, `provenance`,
+  `physical-layout`, `swap-certificate`, `policy`, `reconstruction-manifest` — each a faithful
+  projection of its source RFC/ADR section, plus ≥1 valid and ≥1 invalid example per schema (the
+  invalids exercise the honesty-load-bearing invariants M-I1/M-I4). `just schema` validates the
+  set in CI. Raised OQ-3 (`bound.basis` placement), OQ-4 (`NormKind` registry), OQ-5 (policy
+  predicate grammar) as targeted corpus clarifications; see `docs/spec/schemas/README.md`.
+- **Phase-0 working plan** (`docs/planning/phase-0.md`): the first issue-coupled expansion of
+  Foundation §6, mapping the nine Phase-0 tasks (M-001/002/010/011/012/020/090/091/092) to their
+  GitHub issues, the critical path, honest KC-1/KC-2 gate status, the proposed canonical
+  data-contract schema set, and the author-then-ratify reframing for M-010/M-011 (the
+  `docs/spec/` artifacts they ratify do not exist yet).
 - Initial **design baseline**: project charter (`docs/Mycelium_Project_Foundation.md`, r3),
   document index (`docs/Doc-Index.md`), five RFCs (RFC-0001…0005, all Accepted),
   ADR-010 (Accepted), design note DN-01 (Resolved), and two research records
