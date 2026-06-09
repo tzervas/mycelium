@@ -171,7 +171,7 @@ cardinality-estimation opacity because its statistics are *exact metadata*, not 
 | 10.1 | Minimal surface-syntax fragment — ✅ [`experiments/surface-fragment/`](../../experiments/surface-fragment/README.md) (M-020, throwaway/experiment-only) | M-020 ([#4](https://github.com/tzervas/mycelium/issues/4)) | 0 |
 | 10.2 | Core IR node grammar — ✅ committed (EBNF in `mycelium-core::node`, RFC-0001 §4.5; M-101); full term language (abstraction/recursion/modules) still open → later RFC | M-101 ([#11](https://github.com/tzervas/mycelium/issues/11)) | 1 |
 | 10.3 | Reference-interpreter small-step operational semantics — ✅ committed (the `e ⟶ e'` rules E-Let-Bind/Step, E-Op-Arg/Apply, E-Swap-Arg/Apply documented in `mycelium-interp` crate docs; call-by-value substitution semantics + honest metadata threading; golden corpus, M-110). Arithmetic `δ` is M-111; certified swap `σ` is M-120 | M-110 ([#15](https://github.com/tzervas/mycelium/issues/15)) | 1 |
-| 10.4 | Binary↔ternary swap impl + machine-checked round-trip (encoding spec ✅ [`swaps/binary-ternary.md`](swaps/binary-ternary.md), M-012) | M-120 ([#18](https://github.com/tzervas/mycelium/issues/18)), M-121 ([#19](https://github.com/tzervas/mycelium/issues/19)) | 1 |
+| 10.4 | Binary↔ternary swap impl + machine-checked round-trip — ✅ committed: `enc`/`dec` + `Bijective` certificate in `mycelium-cert` (M-120; exhaustive `dec(enc x)` over all bytes), and the Z3-discharged injectivity proof in [`proofs/binary-ternary-roundtrip/`](../../proofs/binary-ternary-roundtrip/README.md) (M-121). Encoding spec ✅ [`swaps/binary-ternary.md`](swaps/binary-ternary.md) (M-012) | M-120 ([#18](https://github.com/tzervas/mycelium/issues/18)), M-121 ([#19](https://github.com/tzervas/mycelium/issues/19)) | 1 |
 | 10.5 | Inspectable lowering (≥2 stages); MLIR→LLVM skeleton; interp↔AOT differential | M-112 ([#17](https://github.com/tzervas/mycelium/issues/17)), M-150 ([#26](https://github.com/tzervas/mycelium/issues/26)), M-151 ([#27](https://github.com/tzervas/mycelium/issues/27)) | 1 |
 | 10.6 | `VsaModel` trait + MAP-I + tagged `bundle` bound + cleanup | M-130 ([#20](https://github.com/tzervas/mycelium/issues/20)), M-131 ([#21](https://github.com/tzervas/mycelium/issues/21)), M-132 ([#22](https://github.com/tzervas/mycelium/issues/22)) | 1 |
 | 10.7 | Verified-numerics checker (two kernels + shared certificate) | E2-4 ([#31](https://github.com/tzervas/mycelium/issues/31)) | 2 |
@@ -198,5 +198,9 @@ the ratified file is [`reconstruction-manifest.schema.json`](schemas/reconstruct
   committed (`mycelium-interp`): the `e ⟶ e'` rules, call-by-value substitution, honest guarantee/
   provenance threading, and a golden corpus. §10.3 flipped to ✅. (Balanced-ternary arithmetic is
   M-111; the certified binary↔ternary swap is M-120.)
+- **2026-06-09 (§10.4 lands):** M-120 (#18) + M-121 (#19) — the binary↔ternary `enc`/`dec` with a
+  `Bijective`/`LosslessWithinRange` certificate (`mycelium-cert`, exhaustive round-trip), and its
+  Z3-discharged injectivity proof (`proofs/binary-ternary-roundtrip/`, `unsat`). §10.4 flipped to ✅.
+  Balanced-ternary arithmetic (`mycelium-core::ternary`, oracle-tested) landed alongside (M-111).
 - Maintain append-only with status transitions, mirroring the RFC/ADR discipline. The RFCs stay
   normative; this index is folded forward, never used to override them.

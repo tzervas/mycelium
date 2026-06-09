@@ -100,6 +100,9 @@ pub enum EvalError {
     },
     /// Evaluation exceeded its step budget (a non-termination guard).
     FuelExhausted,
+    /// A swap engine reported a failure (e.g. an illegal pair or an out-of-range conversion). The
+    /// message comes from the engine; it is always explicit, never a silent coercion.
+    Swap(String),
     /// A constructed result violated a Core IR well-formedness invariant (RFC-0001 §4.3/§4.5).
     Wf(WfError),
 }
@@ -121,6 +124,7 @@ impl core::fmt::Display for EvalError {
                 write!(f, "{prim}: fixed-width arithmetic overflow (result out of range)")
             }
             EvalError::FuelExhausted => write!(f, "evaluation exceeded its step budget"),
+            EvalError::Swap(msg) => write!(f, "swap failed: {msg}"),
             EvalError::Wf(e) => write!(f, "well-formedness violation: {e}"),
         }
     }

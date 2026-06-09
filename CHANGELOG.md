@@ -9,6 +9,24 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Binary↔ternary certified swap** (`mycelium-cert` + `mycelium-core::binary`, **M-120**, Phase 1;
+  RFC-0002 §3/§4): `enc`/`dec` per `docs/spec/swaps/binary-ternary.md` over a legal `(n, m)` pair,
+  emitting a `SwapCertificate::Bijective` (`LosslessWithinRange`) that references the once-per-pair
+  round-trip lemma (`lemma_ref`) bound by concrete `params`. `enc` is total on `B_n`; `dec` is the
+  **partial** inverse — a value outside the binary range is an explicit `SwapError::OutOfRange`
+  (P4), an illegal pair is a **type error** (`IllegalPair`, RFC-0002 §5), never a `Declared` gamble.
+  Within range the result is `Exact`/`bound = None` (P3, M-I1) and records `policy_used` + `Derived`
+  provenance. A `BinaryTernarySwapEngine` plugs the swap into the M-110 interpreter. **Acceptance —
+  `dec(enc x) = Some x` exhaustively over all 256 bytes** (8↔6, SC-1); serializer output pinned to a
+  committed `swap-certificate` example validated against the schema in CI (SC-3). Adds a
+  two's-complement codec `mycelium-core::binary` (exhaustively round-trip-tested).
+- **Binary↔ternary round-trip proof** (`proofs/binary-ternary-roundtrip/`, **M-121**, Phase 1;
+  VR-1/SC-1): the SMT-LIB2 injectivity obligation for the 8↔6 pair — **discharged by Z3 4.16.0
+  (`unsat`)**: no two distinct 6-trit vectors collide ⟹ the value map is a bijection onto
+  `[−364, 364] ⊇ B_8` ⟹ `dec(enc b) = b` (P1/P2). Wired into `scripts/checks/proofs.sh`
+  (skip-graceful without z3); the lemma identity matches `mycelium_cert::roundtrip_lemma_ref()`. P3/P4
+  are additionally decided by the M-120 exhaustive Rust corpus. (The fixed `8↔6` instance; a
+  width-generic proof is future work — each legal pair gets its own discharged lemma.)
 - **Balanced-ternary arithmetic** (`mycelium-core::ternary` + `mycelium-interp`, **M-111**, Phase 1;
   FR-M2): the single home for the balanced-ternary integer codec (`int ↔ trits`, MSB-first, the
   §3.1 digit-extraction algorithm) and fixed-width digit-wise arithmetic — `neg` (digit-wise sign

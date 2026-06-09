@@ -7,6 +7,7 @@
 //! Not yet here (own issues): (de)serialization to the schemas (M-104), the reference interpreter
 //! (M-110).
 
+pub mod binary;
 pub mod bound;
 pub mod content;
 pub mod guarantee;
