@@ -9,6 +9,15 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Phase-2 plan + epic decomposition** (`docs/planning/phase-2.md`; **Phase 2**; Foundation §6;
+  SPEC §10.7–§10.10): decomposed the seven Phase-2 epics (#28–#34) into 18 issue-coupled `M-2xx`
+  build tasks (#48–#65), created as sub-issues of their epics and joined into `tools/github/idmap.tsv`.
+  The plan mirrors `phase-1.md`: readiness table, batch/parallelization structure, the critical path
+  (the ADR-010 ε/δ numerics kernels as keystone — they gate every honest approximation downstream),
+  and an honest Phase-1→2 re-run of the kill criteria (KC-1 confirmed/no-regression; KC-2
+  open/blocked on external LLM access; KC-3 holding — numerics + selection land as their own crates
+  to keep the kernel auditable; KC-4 first-measurable when the shared checker lands). Planning
+  artifact only — cites the corpus, introduces no requirements.
 - **MLIR→LLVM AOT path — ternary-dialect skeleton + runnable AOT artifact** (`mycelium-mlir`,
   **M-150**, Phase 1; RFC-0004 §2/§6; ADR-007; T1.5): `dialect::emit` renders the lowered A-normal
   form as a textual `ternary`-dialect MLIR-style module (one op per binding, all attributes inline —
