@@ -9,6 +9,19 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Reference interpreter** (`mycelium-interp`, **M-110**, Phase 1): the trusted, executable
+  **small-step operational semantics** for the Core IR, closing SPEC §10.3 (RFC-0004 §2; ADR-009;
+  NFR-7). Call-by-value substitution over closed `Node`s with the rules E-Let-Bind/Step,
+  E-Op-Arg/Apply, E-Swap-Arg/Apply (documented in the crate). An extensible **primitive registry**
+  (`PrimRegistry`) ships the exact elementwise built-ins (`core.id`, `bit.not/and/or/xor`,
+  `trit.neg`); a **`SwapEngine`** hook ships the trivial same-`Repr` `IdentitySwapEngine`. Results
+  thread metadata honestly — guarantee by `meet` (RFC-0001 §4.7), provenance `Derived{op, inputs}`
+  over content hashes (§4.6), `policy_used` on swaps. **Never silent**: free variables, unknown/
+  ill-typed prims, unsupported cross-paradigm swaps, approximate-input composition (no bound kernel
+  yet — ADR-010/E2-4), and fuel exhaustion are all explicit `EvalError`s. 20-case golden corpus.
+  Adds `mycelium_core::operation_hash` (provenance op identity for prims). Scope boundary:
+  balanced-ternary arithmetic + oracle property tests are **M-111**; the certified binary↔ternary
+  swap + proof are **M-120/M-121**.
 - **Guarantee `meet`-composition** (`mycelium-core::guarantee`, **M-102**, Phase 1):
   `GuaranteeStrength::meet` (the weakest-wins greatest-lower-bound) plus `propagate`/`meet_all` for
   the RFC-0001 §4.7 rule `guarantee(result) = meet(inputs…, g_f)`, and `TOP`/`ALL` constants. The

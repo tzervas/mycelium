@@ -264,6 +264,17 @@ impl Node {
     }
 }
 
+/// The content address of a *primitive operation* identified by its name — for the `op` field of a
+/// [`crate::meta::Provenance::Derived`] record produced by the interpreter (M-110). Domain-separated
+/// from node/value hashes so a prim name can never collide with a structural hash.
+#[must_use]
+pub fn operation_hash(prim: &str) -> ContentHash {
+    let mut c = Canon::new();
+    c.tag(0x07); // PRIM domain tag (distinct from the node/repr/payload tags above)
+    c.str(prim);
+    c.finish()
+}
+
 /// The separable `hash ↔ name` side-table (RFC-0001 §4.6, "names-as-metadata"). Names live *here*,
 /// not in identity, so they can be attached, changed, or dropped without affecting a definition's
 /// [`ContentHash`]. This is the kernel-side model of Unison's name store (ADR-003).

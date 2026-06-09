@@ -17,7 +17,7 @@ pub mod repr;
 pub mod value;
 
 pub use bound::{Bound, BoundBasis, BoundKind, NormKind};
-pub use content::Names;
+pub use content::{operation_hash, Names};
 pub use guarantee::GuaranteeStrength;
 pub use id::ContentHash;
 pub use meta::{Meta, PackScheme, PhysicalLayout, Provenance, SparsityObs};
