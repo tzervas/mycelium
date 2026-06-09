@@ -9,6 +9,11 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Phase-0 working plan** (`docs/planning/phase-0.md`): the first issue-coupled expansion of
+  Foundation §6, mapping the nine Phase-0 tasks (M-001/002/010/011/012/020/090/091/092) to their
+  GitHub issues, the critical path, honest KC-1/KC-2 gate status, the proposed canonical
+  data-contract schema set, and the author-then-ratify reframing for M-010/M-011 (the
+  `docs/spec/` artifacts they ratify do not exist yet).
 - Initial **design baseline**: project charter (`docs/Mycelium_Project_Foundation.md`, r3),
   document index (`docs/Doc-Index.md`), five RFCs (RFC-0001…0005, all Accepted),
   ADR-010 (Accepted), design note DN-01 (Resolved), and two research records
