@@ -69,7 +69,7 @@ important column: see §3 for the gap it exposes.
 |---|---|---|---|---|---|---|
 | **M-010** Ratify core data-contract schemas | [#5](https://github.com/tzervas/mycelium/issues/5) | P0 | — | P0.6 / RFC-0001–0003 | **Yes** — 10 schemas + examples authored, `just schema` green | **Done (ratified)** — 2026-06-09 (§3, §6.1); OQ-3/4/5 flagged |
 | **M-011** Ratify `SPECIFICATION.md` | [#6](https://github.com/tzervas/mycelium/issues/6) | P1 | M-010 | P0.6 | **Yes** — authored as the consolidation index; §10 fully issue-linked | **Done (ratified-skeleton)** — 2026-06-09 (§6.3) |
-| **M-001** LH `bundle` capacity probe | [#2](https://github.com/tzervas/mycelium/issues/2) | P0 | M-010 | P0.1 / KC-1 | scaffolded (`proofs/lh-bundle/`) | **Scaffolded — blocked on toolchain.** No GHC/LH/Z3 here; KC-1 stays `passed (literature)` (§6.2) |
+| **M-001** LH `bundle` capacity probe | [#2](https://github.com/tzervas/mycelium/issues/2) | P0 | M-010 | P0.1 / KC-1 | `proofs/lh-bundle/` — LH **SAFE**, Z3 discharged | **Done — KC-1 confirmed (build)** 2026-06-09 (§5, §6.2) |
 | **M-012** Binary↔ternary encoding spec | [#7](https://github.com/tzervas/mycelium/issues/7) | P1 | — | P0.4 / RFC-0002 §4 | **Yes** — `docs/spec/swaps/binary-ternary.md` + worked example | **Done (ratified)** — 2026-06-09 |
 | **M-020** Minimal surface fragment | [#4](https://github.com/tzervas/mycelium/issues/4) | P0 | — | P0.2 / SPEC §10.1 | n/a (throwaway) | **Ready**, but value-gated on M-002 design |
 | **M-002** KC-2 LLM-leverage experiment | [#3](https://github.com/tzervas/mycelium/issues/3) | P0 | M-020, M-010 | P0.2 / KC-2 | n/a (experiment) | **Blocked** on M-020 + M-010 |
@@ -179,14 +179,15 @@ Per the honesty rule and VR-5, gate status is tracked at the strength it has act
 
 | Gate | Question | Current status | What moves it | Issue |
 |---|---|---|---|---|
-| **KC-1** | Does a core VSA op admit a usefully tight, honestly-statable bound? | **passed (literature)** — Clarkson-Ubaru-Yang 2023, Thomas-Dasgupta-Rosing 2021 (T0.2); MAP-I/sparse `bundle` tagged `Proven` | **confirmed (build)** when the LH module type-checks **and** Z3 discharges ≥3 concrete `(d,k,s,m,δ)` settings | M-001 (#2) |
+| **KC-1** | Does a core VSA op admit a usefully tight, honestly-statable bound? | ✅ **confirmed (build)** 2026-06-09 — LH `bundle` probe **SAFE**, Z3 discharged (atop the literature: Clarkson-Ubaru-Yang 2023, Thomas-Dasgupta-Rosing 2021, T0.2); MAP-I/sparse `bundle` tagged `Proven` | *(met)* — was: LH type-checks + Z3 discharges ≥3 settings | M-001 (#2, closed) |
 | **KC-2** | Does LLM code-gen/reasoning survive on the Mycelium surface? | **open** — research did not settle it (RR-3) | a *written verdict* (proceed / reweight-to-human / fall-back-to-embedded-DSL) + SC-5b baseline X | M-002 (#3) |
 
-**KC-1 honesty note.** The literature pass justifies the `Proven` *tag* (a non-asymptotic theorem
-exists). M-001 confirms the *strategy* — that we can axiomatize the theorem statement and have the
-checker discharge only the arithmetic instantiation (RFC-0003 §5; ADR-010). Until that build runs,
-the status string stays `passed (literature)`; M-001's acceptance criterion is precisely the
-upgrade to `confirmed (build)`. We do not pre-write the upgrade.
+**KC-1 honesty note.** The literature pass justified the `Proven` *tag* (a non-asymptotic theorem
+exists). M-001 confirmed the *strategy*: the LH module axiomatizes the cited theorem statement and
+Z3 discharges only the arithmetic instantiation (`LIQUID: SAFE (16 constraints checked)`; RFC-0003
+§5; ADR-010). What is **not** claimed: a from-scratch proof of the Clarkson/Thomas concentration
+inequality — that stays cited (the ADR-010 / RFC-0002 §7 pattern). The upgrade to `confirmed
+(build)` was made only after the green run, not pre-written.
 
 ---
 

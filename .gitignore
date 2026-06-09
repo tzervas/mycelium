@@ -28,6 +28,7 @@ coverage.xml
 
 # ---- Haskell (LiquidHaskell proofs, cabal) ----
 dist-newstyle/
+.liquid/
 *.hi
 *.o
 .ghc.environment.*

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Task** | M-001 ([#2](https://github.com/tzervas/mycelium/issues/2)) · P0 · verification |
-| **Status** | **Scaffolded — NOT yet discharged.** The arithmetic is tabulated and independently checkable below; running LiquidHaskell is the remaining step. |
+| **Status** | ✅ **Discharged — confirmed (build), 2026-06-09.** LiquidHaskell reports `SAFE (16 constraints checked)`; Z3 discharged all four probes. Toolchain: GHC 9.8.2 · LiquidHaskell 0.9.8.2 / liquid-fixpoint 0.9.6.3.1 · Z3 4.8.12. |
 | **Grounding** | RFC-0003 §5; ADR-010; T0.2 (Clarkson-Ubaru-Yang 2023; Thomas-Dasgupta-Rosing 2021); KC-1 |
 | **Confirms** | the *axiomatized-theorem + checked-instantiation* strategy for honest VSA bounds |
 
@@ -28,15 +28,18 @@ bundle :: {v | activeCount v ≤ s}
 - The **checked part** is the integer inequality `d ≥ requiredDim(m,δ)` for each concrete instance.
   That is what Z3 discharges. In `src/Bundle.hs` these are `probe1 … probe4`.
 
-## ⚠️ Honesty status (VR-5)
+## Result & honesty status (VR-5)
 
-This environment has **no GHC / LiquidHaskell / Z3**, so the module has **not been type-checked and
-Z3 has not run**. Therefore:
+`cabal build` with the LiquidHaskell plugin reports **`LIQUID: SAFE (16 constraints checked)`**
+(exit 0): the module type-checks and **Z3 discharged** the verification conditions for all four
+`probe` instantiations. Toolchain: GHC 9.8.2, LiquidHaskell 0.9.8.2, liquid-fixpoint 0.9.6.3.1,
+Z3 4.8.12 (run under `LC_ALL=C.UTF-8`).
 
-- **KC-1 remains `passed (literature)`** — it is **not** upgraded to `confirmed (build)`. That
-  upgrade is gated on an actual green LH run (the acceptance criterion of #2).
-- `src/Bundle.hs` is a **DRAFT**: idiomatic and intended to be correct, but unverified. Treat the
-  table below — not the Haskell — as the authoritative, independently-checkable artifact.
+- **KC-1 → `confirmed (build)`** (Foundation §2.4; Doc-Index §3). The confirming build is complete.
+- **What is confirmed:** the *strategy* — Z3 discharges the **arithmetic instantiation** of an
+  **axiomatized** capacity theorem (`assume capacityThm`, T0.2). The Clarkson/Thomas theorem itself
+  remains cited, not re-proven — exactly the ADR-010 / RFC-0002 §7 pattern. This is precisely what
+  the probe was meant to ratify, not a from-scratch proof of the concentration inequality.
 
 ## Derivation table (independently checkable)
 
@@ -53,23 +56,25 @@ settings use dimension **d = 10000** (a standard MAP-I width):
 
 (Reproduce: `python3 -c "import math; print([math.ceil(200*math.log(m/d)) for m,d in [(3,1e-2),(10,1e-3),(50,1e-3),(100,1e-4)]])"`.)
 
-≥3 concrete `(d,k,s,m,δ)` settings discharge, satisfying #2's acceptance once the LH run is green.
+All four (≥3 required) `(d,m,δ)` settings discharge — #2's acceptance is met.
 
-## How to run (once the toolchain is available)
+## How to reproduce
 
 ```sh
-# Requires: ghcup (GHC + cabal), the liquidhaskell plugin, and z3 on PATH.
-z3 --version
+# Requires: GHC 9.8.2 + cabal (ghcup), the liquidhaskell 0.9.8.2 plugin, and z3 on PATH.
+# LiquidHaskell writes a UTF-8 HTML report, so a UTF-8 locale is required:
+export LC_ALL=C.UTF-8
 cabal build            # runs the LiquidHaskell GHC plugin over src/Bundle.hs
-# Green build  ⟺  Z3 discharged probe1..probe4  ⟺  KC-1 → confirmed (build).
+#   ⇒ LIQUID: SAFE (16 constraints checked)
+# Green build  ⟺  Z3 discharged probe1..probe4  ⟺  KC-1 confirmed (build).
 ```
 
-## On success — what to update (do NOT pre-write)
+## Done on confirmation (2026-06-09)
 
-1. Flip this file's **Status** to `confirmed (build)` with the LH/Z3 version + date.
-2. KC-1: `passed (literature) → confirmed (build)` in `docs/Mycelium_Project_Foundation.md` §2.4
+1. ✅ This file's **Status** → `confirmed (build)` with LH/Z3 versions.
+2. ✅ KC-1 `passed (literature) → confirmed (build)` in `docs/Mycelium_Project_Foundation.md` §2.4
    and `docs/Doc-Index.md` §3.
-3. Close #2 with the run log; note it ratifies ADR-010's cited-theorem strategy.
+3. ✅ #2 closed with the run log; ratifies ADR-010's cited-theorem + checked-instantiation strategy.
 
 ## Layout decision (resolves OQ-2)
 

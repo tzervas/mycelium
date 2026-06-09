@@ -68,6 +68,13 @@ corpus, not released software. Versioning will begin when the kernel does.
   `.pre-commit-config.yaml`, and a manual-dispatch **advisory** GitHub Actions workflow.
 
 ### Changed
+- **KC-1 confirmed (build)** (**M-001**): the Liquid-Haskell MAP-I `bundle` capacity refinement
+  (`proofs/lh-bundle/`) type-checks **`SAFE` (16 constraints)** and Z3 discharged all four `(d,m,δ)`
+  instantiations (GHC 9.8.2 · LiquidHaskell 0.9.8.2 · Z3 4.8.12), ratifying the axiomatized-theorem +
+  checked-instantiation strategy (RFC-0003 §5; ADR-010). KC-1 moves `passed (literature) → confirmed
+  (build)` in the Foundation §2.4 and Doc-Index §3/§4. (The Clarkson/Thomas theorem remains cited,
+  not re-proven — by design.) Haskell build output (`dist-newstyle/`, `.liquid/`) gitignored;
+  codespell skips them.
 - **Docs/parity CI hardened** (`.github/workflows/checks.yml`, **M-090**): the manual-dispatch
   advisory workflow now sets up **uv** (so the `experiments/` Python 3.13 tests actually run) and
   **Rust** (pinned via `rust-toolchain.toml`, so fmt/clippy/test run), and adds an advisory
