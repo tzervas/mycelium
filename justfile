@@ -41,6 +41,8 @@ structured:
     @bash scripts/checks/structured.sh
 secrets:
     @bash scripts/checks/secrets.sh
+test:
+    @bash scripts/checks/test.sh
 
 # --- pre-commit (optional, easy DX) ---
 # Install the git hooks so `just check`-equivalent runs on every commit.

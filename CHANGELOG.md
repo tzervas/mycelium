@@ -9,6 +9,19 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Rust workspace skeleton** (**M-091**): a 6-crate Cargo workspace (`mycelium-core`,
+  `mycelium-interp`, `mycelium-vsa`, `mycelium-mlir` stub, `mycelium-cert` stub, `xtask`) with
+  **MSRV pinned to 1.92** via `rust-toolchain.toml` + `rust-version` (ADR-007), workspace lints
+  (`unsafe_code = forbid`, clippy warn), and a smoke test per crate. `cargo fmt --check`,
+  `clippy -D warnings`, and `cargo test` are all green on 1.92. Adds `scripts/checks/test.sh` +
+  `just test`, wired into the `just check`/CI suite (skip-graceful when a toolchain is absent), so
+  test parity now holds local↔CI. Fixes a malformed `Cargo.lock` line in `.gitignore`.
+- **M-001 probe scaffold** (`proofs/lh-bundle/`): the Liquid-Haskell MAP-I `bundle`
+  capacity-refinement module + cabal project + writeup, encoding the axiomatized-theorem +
+  checked-instantiation strategy with ≥3 concrete `(d,m,δ)` settings (RFC-0003 §5; T0.2). **Not yet
+  discharged** — no GHC/LH/Z3 in this environment — so KC-1 stays `passed (literature)`; the
+  derivation table is the independently-checkable artifact. Establishes `proofs/<name>/` as the
+  home for machine-checkable proofs (resolves OQ-2).
 - **`SPECIFICATION.md` skeleton** (`docs/spec/SPECIFICATION.md`, **M-011**): the consolidation index
   over the corpus — §1–§9 reconciled to RFC-0001 (r2)/RFC-0002…0005/ADR-010/011/DN-01 and pointed at
   the ratified `docs/spec/schemas/` contracts; §10 enumerates the open build items, each linked to a

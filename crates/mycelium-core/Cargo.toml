@@ -1,0 +1,14 @@
+[package]
+name = "mycelium-core"
+version = "0.0.0"
+description = "Mycelium Core IR: Value<Repr,Meta>, guarantee lattice, content-addressing (RFC-0001). Skeleton; types land in M-101+."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]

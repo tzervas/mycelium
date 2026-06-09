@@ -1,0 +1,14 @@
+[package]
+name = "mycelium-vsa"
+version = "0.0.0"
+description = "VSA submodule: VsaModel trait + model algebra, dependency-gated (RFC-0003; ADR-008). Skeleton; M-130."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]

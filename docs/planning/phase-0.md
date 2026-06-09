@@ -69,12 +69,12 @@ important column: see §3 for the gap it exposes.
 |---|---|---|---|---|---|---|
 | **M-010** Ratify core data-contract schemas | [#5](https://github.com/tzervas/mycelium/issues/5) | P0 | — | P0.6 / RFC-0001–0003 | **Yes** — 10 schemas + examples authored, `just schema` green | **Done (ratified)** — 2026-06-09 (§3, §6.1); OQ-3/4/5 flagged |
 | **M-011** Ratify `SPECIFICATION.md` | [#6](https://github.com/tzervas/mycelium/issues/6) | P1 | M-010 | P0.6 | **Yes** — authored as the consolidation index; §10 fully issue-linked | **Done (ratified-skeleton)** — 2026-06-09 (§6.3) |
-| **M-001** LH `bundle` capacity probe | [#2](https://github.com/tzervas/mycelium/issues/2) | P0 | M-010 | P0.1 / KC-1 | n/a (new build) | **Ready** — narrow dep on `CapacityBound` shape (§6.2) |
+| **M-001** LH `bundle` capacity probe | [#2](https://github.com/tzervas/mycelium/issues/2) | P0 | M-010 | P0.1 / KC-1 | scaffolded (`proofs/lh-bundle/`) | **Scaffolded — blocked on toolchain.** No GHC/LH/Z3 here; KC-1 stays `passed (literature)` (§6.2) |
 | **M-012** Binary↔ternary encoding spec | [#7](https://github.com/tzervas/mycelium/issues/7) | P1 | — | P0.4 / RFC-0002 §4 | n/a (new spec) | **Ready** — pure spec authoring |
 | **M-020** Minimal surface fragment | [#4](https://github.com/tzervas/mycelium/issues/4) | P0 | — | P0.2 / SPEC §10.1 | n/a (throwaway) | **Ready**, but value-gated on M-002 design |
 | **M-002** KC-2 LLM-leverage experiment | [#3](https://github.com/tzervas/mycelium/issues/3) | P0 | M-020, M-010 | P0.2 / KC-2 | n/a (experiment) | **Blocked** on M-020 + M-010 |
 | **M-090** Docs CI | [#8](https://github.com/tzervas/mycelium/issues/8) | P1 | — | infra | partial — `checks.yml` exists, advisory | **Mostly done** (§6.5) |
-| **M-091** Rust workspace skeleton | [#9](https://github.com/tzervas/mycelium/issues/9) | P0 | — | infra / ADR-007 | **No** — no `Cargo.toml` yet | **Ready** — pure scaffolding (§6.4) |
+| **M-091** Rust workspace skeleton | [#9](https://github.com/tzervas/mycelium/issues/9) | P0 | — | infra / ADR-007 | **Yes** — 6-crate workspace; fmt/clippy/test green on MSRV 1.92 | **Done** — 2026-06-09 (§6.4) |
 | **M-092** Python tooling skeleton | [#10](https://github.com/tzervas/mycelium/issues/10) | P1 | — | infra / ADR-007 | **No** — no `experiments/` yet | **Ready** — pure scaffolding |
 
 Legend — **Ready**: can start now from the corpus. **Author-then-ratify**: the issue is framed as
@@ -272,7 +272,7 @@ upgrade to `confirmed (build)`. We do not pre-write the upgrade.
 | Id | Item | Disposition |
 |---|---|---|
 | **OQ-1** | Is the §3 canonical 10-schema set the intended "10 schemas" of M-010? | **Resolved (2026-06-09)** — owner confirmed the derived set; M-010/M-011 issue bodies amended to author-then-ratify. |
-| **OQ-2** | Where do the LH probe (M-001) and a `proofs/` tree live relative to M-091/M-092? | Decide alongside M-091 layout; record in `SPECIFICATION.md` §10 / phase-1.md. |
+| **OQ-2** | Where do the LH probe (M-001) and a `proofs/` tree live relative to M-091/M-092? | **Resolved (2026-06-09)** — formal/machine-checkable proofs live under `proofs/<name>/`; M-001 is `proofs/lh-bundle/`. M-121 round-trip proof follows suit. |
 | **OQ-3** | `bound.basis` placement (RFC-0001 §4.3 grammar vs. invariants M-I2/3/4) | **Resolved (2026-06-09)** — formal supersede: **ADR-011** + **RFC-0001 r2** factor `basis` to every `Bound`. |
 | **OQ-4** | `NormKind` not enumerated normatively | **Resolved (2026-06-09)** — enumerated `L1\|L2\|Linf\|Rel` as an extensible registry (RFC-0001 §4.3 r2). |
 | **OQ-5** | Concrete policy-predicate grammar (RFC-0005 deferral) | **Deferred by design, tracked** — Phase-2 epic **E2-6** (#33). `rules[].when` stays a declared object. |
