@@ -18,7 +18,7 @@
 use std::collections::BTreeMap;
 
 use mycelium_core::{
-    operation_hash, GuaranteeStrength, Meta, Payload, Provenance, Repr, Trit, Value,
+    operation_hash, ternary, GuaranteeStrength, Meta, Payload, Provenance, Repr, Trit, Value,
 };
 
 use crate::EvalError;
@@ -42,8 +42,9 @@ impl PrimRegistry {
         }
     }
 
-    /// The default registry: the exact elementwise built-ins (`core.id`, `bit.not/and/or/xor`,
-    /// `trit.neg`).
+    /// The default registry: the exact built-ins — elementwise logical (`core.id`,
+    /// `bit.not/and/or/xor`) and fixed-width balanced-ternary arithmetic (`trit.neg/add/sub/mul`,
+    /// M-111).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();
@@ -53,6 +54,9 @@ impl PrimRegistry {
         r.register("bit.or", prim_bit_or);
         r.register("bit.xor", prim_bit_xor);
         r.register("trit.neg", prim_trit_neg);
+        r.register("trit.add", prim_trit_add);
+        r.register("trit.sub", prim_trit_sub);
+        r.register("trit.mul", prim_trit_mul);
         r
     }
 
@@ -164,27 +168,53 @@ fn prim_bit_xor(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     bit_binop(prim, args, |x, y| x ^ y)
 }
 
+fn as_trits<'a>(prim: &str, v: &'a Value) -> Result<&'a [Trit], EvalError> {
+    match (v.repr(), v.payload()) {
+        (Repr::Ternary { .. }, Payload::Trits(t)) => Ok(t),
+        _ => Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: "expected a Ternary operand".to_owned(),
+        }),
+    }
+}
+
 /// `trit.neg : Ternary{m} → Ternary{m}` — digit-wise sign flip. Exactly `value(−t) = −value(t)`
-/// (balanced ternary has no sign asymmetry; `docs/spec/swaps/binary-ternary.md` §1).
+/// (balanced ternary has no sign asymmetry; `docs/spec/swaps/binary-ternary.md` §1). Always in range.
 fn prim_trit_neg(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     expect_arity(prim, args, 1)?;
-    let v = args[0];
-    let trits = match (v.repr(), v.payload()) {
-        (Repr::Ternary { .. }, Payload::Trits(t)) => t,
-        _ => {
-            return Err(EvalError::PrimType {
-                prim: prim.to_owned(),
-                why: "expected a Ternary operand".to_owned(),
-            })
-        }
-    };
-    let out: Vec<Trit> = trits
-        .iter()
-        .map(|&t| match t {
-            Trit::Neg => Trit::Pos,
-            Trit::Zero => Trit::Zero,
-            Trit::Pos => Trit::Neg,
-        })
-        .collect();
-    exact_result(prim, args, v.repr().clone(), Payload::Trits(out))
+    let out = ternary::neg(as_trits(prim, args[0])?);
+    exact_result(prim, args, args[0].repr().clone(), Payload::Trits(out))
+}
+
+/// Shared kernel for the fixed-width balanced-ternary binary arithmetic prims (`trit.add/sub/mul`).
+/// Operands must be equal-width `Ternary`; an out-of-range result is an explicit
+/// [`EvalError::Overflow`], never a silent wrap (M-111; `binary-ternary.md` §1).
+fn trit_binop(
+    prim: &str,
+    args: &[&Value],
+    op: fn(&[Trit], &[Trit]) -> Option<Vec<Trit>>,
+) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_trits(prim, args[0])?;
+    let b = as_trits(prim, args[1])?;
+    if a.len() != b.len() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("width mismatch: {} vs {} trits", a.len(), b.len()),
+        });
+    }
+    let out = op(a, b).ok_or_else(|| EvalError::Overflow {
+        prim: prim.to_owned(),
+    })?;
+    exact_result(prim, args, args[0].repr().clone(), Payload::Trits(out))
+}
+
+fn prim_trit_add(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    trit_binop(prim, args, ternary::add)
+}
+fn prim_trit_sub(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    trit_binop(prim, args, ternary::sub)
+}
+fn prim_trit_mul(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    trit_binop(prim, args, ternary::mul)
 }

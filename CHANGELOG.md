@@ -9,6 +9,15 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Balanced-ternary arithmetic** (`mycelium-core::ternary` + `mycelium-interp`, **M-111**, Phase 1;
+  FR-M2): the single home for the balanced-ternary integer codec (`int ↔ trits`, MSB-first, the
+  §3.1 digit-extraction algorithm) and fixed-width digit-wise arithmetic — `neg` (digit-wise sign
+  flip = value negation), ripple-carry `add`/`sub`, and shifted-add `mul`. Out-of-range results are
+  an explicit `None`/`EvalError::Overflow`, **never** a silent wrap (SC-3). The interpreter gains
+  `trit.neg/add/sub/mul` primitives over it. **Acceptance — property-tested vs an `i64` oracle by
+  exhaustion** over all operand pairs at widths `m ≤ 4` (and the codec round-trip/neg at `m ≤ 5`):
+  in range the digit-wise result equals the encoded integer result, out of range it overflows.
+  Grounded in `docs/spec/swaps/binary-ternary.md` §1/§3.1; reused by the M-120 swap.
 - **Reference interpreter** (`mycelium-interp`, **M-110**, Phase 1): the trusted, executable
   **small-step operational semantics** for the Core IR, closing SPEC §10.3 (RFC-0004 §2; ADR-009;
   NFR-7). Call-by-value substitution over closed `Node`s with the rules E-Let-Bind/Step,

@@ -14,6 +14,7 @@ pub mod id;
 pub mod meta;
 pub mod node;
 pub mod repr;
+pub mod ternary;
 pub mod value;
 
 pub use bound::{Bound, BoundBasis, BoundKind, NormKind};

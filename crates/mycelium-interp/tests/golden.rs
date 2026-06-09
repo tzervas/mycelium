@@ -171,6 +171,92 @@ fn trit_neg_flips_signs() {
     );
 }
 
+fn tern(value: i64, m: u32) -> Value {
+    Value::new(
+        Repr::Ternary { trits: m },
+        Payload::Trits(mycelium_core::ternary::int_to_trits(value, m).expect("in range")),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+fn trit_value_of(v: &Value) -> i64 {
+    match v.payload() {
+        Payload::Trits(t) => mycelium_core::ternary::trits_to_int(t),
+        other => panic!("expected trits, got {other:?}"),
+    }
+}
+
+#[test]
+fn trit_add_evaluates() {
+    // 5 + (−3) = 2, in 4 trits.
+    let node = Node::Op {
+        prim: "trit.add".into(),
+        args: vec![Node::Const(tern(5, 4)), Node::Const(tern(-3, 4))],
+    };
+    assert_eq!(trit_value_of(&run(&node)), 2);
+}
+
+#[test]
+fn trit_sub_and_mul_evaluate() {
+    let sub = Node::Op {
+        prim: "trit.sub".into(),
+        args: vec![Node::Const(tern(7, 4)), Node::Const(tern(9, 4))],
+    };
+    assert_eq!(trit_value_of(&run(&sub)), -2);
+
+    let mul = Node::Op {
+        prim: "trit.mul".into(),
+        args: vec![Node::Const(tern(6, 4)), Node::Const(tern(-6, 4))],
+    };
+    assert_eq!(trit_value_of(&run(&mul)), -36); // fits in 4 trits (|·| ≤ 40)
+}
+
+#[test]
+fn trit_arithmetic_overflow_is_explicit() {
+    // 30 + 30 = 60 > max(3 trits)=13 → explicit Overflow, never a silent wrap.
+    let node = Node::Op {
+        prim: "trit.add".into(),
+        args: vec![Node::Const(tern(11, 3)), Node::Const(tern(11, 3))],
+    };
+    assert!(matches!(
+        Interpreter::default().eval(&node),
+        Err(EvalError::Overflow { .. })
+    ));
+}
+
+#[test]
+fn trit_width_mismatch_is_type_error() {
+    let node = Node::Op {
+        prim: "trit.add".into(),
+        args: vec![Node::Const(tern(1, 3)), Node::Const(tern(1, 4))],
+    };
+    assert!(matches!(
+        Interpreter::default().eval(&node),
+        Err(EvalError::PrimType { .. })
+    ));
+}
+
+#[test]
+fn nested_ternary_arithmetic() {
+    // let x = 4 in trit.mul(trit.add(x, x), x)  =  (4+4)*4 = 32, in 4 trits.
+    let node = Node::Let {
+        id: "x".into(),
+        bound: Box::new(Node::Const(tern(4, 4))),
+        body: Box::new(Node::Op {
+            prim: "trit.mul".into(),
+            args: vec![
+                Node::Op {
+                    prim: "trit.add".into(),
+                    args: vec![Node::Var("x".into()), Node::Var("x".into())],
+                },
+                Node::Var("x".into()),
+            ],
+        }),
+    };
+    assert_eq!(trit_value_of(&run(&node)), 32);
+}
+
 #[test]
 fn identity_swap_preserves_value_and_records_policy() {
     // swap(A, to: Binary{8}, policy)  ⟶  A, with policy_used recorded (same-repr identity swap).
