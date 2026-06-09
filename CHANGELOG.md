@@ -9,6 +9,31 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Guarantee `meet`-composition** (`mycelium-core::guarantee`, **M-102**, Phase 1):
+  `GuaranteeStrength::meet` (the weakest-wins greatest-lower-bound) plus `propagate`/`meet_all` for
+  the RFC-0001 §4.7 rule `guarantee(result) = meet(inputs…, g_f)`, and `TOP`/`ALL` constants. The
+  meet-semilattice laws — commutativity, associativity, idempotence, identity `Exact`, `Declared`
+  absorbing — are verified by **exhaustion** over all 4×4(×4) tuples (complete for the finite
+  lattice, not sampled). Honesty can only degrade, never spuriously upgrade (VR-3/VR-5).
+- **Content-addressing** (`mycelium-core::content`, **M-103**, Phase 1): `Node::content_hash` /
+  `Value::content_hash` — a BLAKE3 hash over an injective, domain-separated, length-prefixed
+  encoding of the *identity-bearing* content: the α-normalized structure (bound vars as de Bruijn
+  indices, binder names dropped), types-with-`Repr`, constant literals, operator names, and swap
+  target+policy. Dynamic `Meta` (provenance, bounds, sparsity, `policy_used`) is excluded. Adds a
+  separable `hash ↔ name` table (`Names`) for names-as-metadata, `ScalarKind::tag`, and
+  `ContentHash::from_parts`/`algo`/`digest`. Acceptance met: identical defs collide; trivial (α)
+  renames don't change identity; a paradigm/precision/literal/operator change does (RFC-0001 §4.6;
+  ADR-003).
+- **Core IR (de)serialization** (`mycelium-core`, **M-104**, Phase 1): `serde`
+  `Serialize`/`Deserialize` for `Value`/`Meta`/`Repr`/`Bound`/`Provenance`/… emitting *exactly* the
+  ratified JSON data contracts (`kind`/`class`/`layout` tags; `VSA`/`BF16`/`TL1`/`TL2` renames;
+  `payload` as `{bits|trits|scalars|hypervector}` with MSB-first bit/trit strings; `bound` modelled
+  by presence; flat `kind`+`basis` `Bound`). `Deserialize` routes `Value`/`Meta` through their
+  checked constructors, so M-I1…M-I4 and payload↔repr mismatches are rejected on the wire — never
+  silently accepted. Faithful round-trip (`deserialize(serialize(v)) == v` incl. `Meta`) is tested
+  over a corpus spanning all four paradigms × every guarantee/bound/basis/layout; serializer output
+  is pinned to three new committed `value` examples (ternary/dense/vsa) that `scripts/checks/schema.sh`
+  validates against `value.schema.json` in CI (RFC-0001 §4.8).
 - **Core IR data structures** (`mycelium-core`, **M-101**, Phase 1): Rust types mirroring the
   ratified schemas — `Repr`/`ScalarKind`/`SparsityClass`, the `GuaranteeStrength` lattice,
   `Bound`/`BoundBasis`/`BoundKind`/`NormKind` (ADR-011: `basis` universal), `Meta` (with
