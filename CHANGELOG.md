@@ -9,6 +9,10 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **`SPECIFICATION.md` skeleton** (`docs/spec/SPECIFICATION.md`, **M-011**): the consolidation index
+  over the corpus — §1–§9 reconciled to RFC-0001 (r2)/RFC-0002…0005/ADR-010/011/DN-01 and pointed at
+  the ratified `docs/spec/schemas/` contracts; §10 enumerates the open build items, each linked to a
+  live issue (no floating TODOs). Status `consolidating-draft → ratified-skeleton`.
 - **ADR-011 — `BoundBasis` is a property of every `Bound`** (`docs/adr/ADR-011-...md`, Accepted):
   formally supersedes the implicit RFC-0001 r1 §4.3 decision that scoped `basis` to `CapacityBound`
   only, so every approximate value (ε, δ, crosstalk, capacity) honestly records how its bound was
