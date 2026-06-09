@@ -265,9 +265,10 @@ fn write_core(node: &Node, depth: usize, s: &mut String) {
 
 // --- Stage 1: A-normal-form "substrate" --------------------------------------------------------
 
-/// An operand of a lowered binding: a reference to a named/temp binding.
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum Atom {
+/// An operand of a lowered binding: a reference to a named/temp binding. (Public so backends — the
+/// MLIR emitter / AOT path, M-150 — can consume the lowered IR.)
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Atom {
     /// A source `let`-bound name.
     Named(String),
     /// An introduced temporary, `%k`.
@@ -275,7 +276,9 @@ enum Atom {
 }
 
 impl Atom {
-    fn render(&self) -> String {
+    /// The canonical textual rendering of this operand (`name` or `%k`).
+    #[must_use]
+    pub fn render(&self) -> String {
         match self {
             Atom::Named(x) => x.clone(),
             Atom::Temp(k) => format!("%{k}"),
@@ -283,20 +286,41 @@ impl Atom {
     }
 }
 
-#[derive(Debug, Clone)]
-enum Rhs {
+/// The right-hand side of a lowered binding.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Rhs {
+    /// A constant value (carries its `Meta`, WF5).
     Const(Value),
+    /// An alias to another binding (from a source `let`).
     Alias(Atom),
-    Op { prim: String, args: Vec<Atom> },
-    Swap { src: Atom, target: Repr },
+    /// A primitive application over atoms.
+    Op {
+        /// The primitive name.
+        prim: String,
+        /// Operand atoms.
+        args: Vec<Atom>,
+    },
+    /// The representation-changing swap (carries its target and policy, WF1/WF2).
+    Swap {
+        /// The value being converted.
+        src: Atom,
+        /// The target representation.
+        target: Repr,
+        /// The selection policy reference (RFC-0005).
+        policy: crate::ContentHash,
+    },
 }
 
-#[derive(Debug, Clone)]
-struct Binding {
-    name: Atom,
-    rhs: Rhs,
+/// One lowered binding: a name, its right-hand side, and (where statically known) its scheduled
+/// physical layout.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Binding {
+    /// The binding's name.
+    pub name: Atom,
+    /// Its right-hand side.
+    pub rhs: Rhs,
     /// The scheduled packing, when the result repr is statically known (RFC-0004 §5).
-    layout: Option<PhysicalLayout>,
+    pub layout: Option<PhysicalLayout>,
 }
 
 /// A flattened (A-normal-form) lowering of a Core IR node.
@@ -362,7 +386,7 @@ fn flatten(node: &Node, out: &mut Vec<Binding>, next: &mut usize) -> Atom {
         Node::Swap {
             src,
             target,
-            policy: _,
+            policy,
         } => {
             let sa = flatten(src, out, next);
             let name = Atom::Temp(fresh(next));
@@ -371,6 +395,7 @@ fn flatten(node: &Node, out: &mut Vec<Binding>, next: &mut usize) -> Atom {
                 rhs: Rhs::Swap {
                     src: sa,
                     target: target.clone(),
+                    policy: policy.clone(),
                 },
                 layout: Some(schedule(target)),
             });
@@ -401,8 +426,17 @@ impl Anf {
                     let a: Vec<String> = args.iter().map(Atom::render).collect();
                     format!("op {prim} {}", a.join(" "))
                 }
-                Rhs::Swap { src, target } => {
-                    format!("swap {} -> {}", src.render(), render_repr(target))
+                Rhs::Swap {
+                    src,
+                    target,
+                    policy,
+                } => {
+                    format!(
+                        "swap {} -> {} @{}",
+                        src.render(),
+                        render_repr(target),
+                        short_hash(policy)
+                    )
                 }
             };
             let _ = write!(s, "  {} = {rhs}", b.name.render());
@@ -426,6 +460,18 @@ impl Anf {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.bindings.is_empty()
+    }
+
+    /// The ordered bindings (for backends consuming the lowered IR — M-150).
+    #[must_use]
+    pub fn bindings(&self) -> &[Binding] {
+        &self.bindings
+    }
+
+    /// The result operand.
+    #[must_use]
+    pub fn result(&self) -> &Atom {
+        &self.result
     }
 }
 

@@ -85,8 +85,8 @@ All Phase-1 issues, with issue number (`idmap.tsv`), priority, dependency, and *
 | **M-140** LSP skeleton | [#23](https://github.com/tzervas/mycelium/issues/23) | P1 | M-110 | FR-S5 / SC-5 | **Done (2026-06-09)** — `mycelium-lsp::analyze` exposes the 4 feedback artifact kinds; scripted-client test |
 | **M-141** Invariant linter | [#24](https://github.com/tzervas/mycelium/issues/24) | P1 | M-101 | FR-S5 / RFC-0001 WF1/WF2 | **Done (2026-06-09)** — `mycelium-lsp::lint`: implicit-swap / unverified-bound / placeholder-policy / free-variable |
 | **M-142** Formatter | [#25](https://github.com/tzervas/mycelium/issues/25) | P2 | M-104 | §4.8 SC-4 | **Done (2026-06-09)** — `core::lower::format` α-normalized canonical dump; reformatting preserves identity (ADR-003) |
-| **M-150** MLIR→LLVM ternary dialect skeleton | [#26](https://github.com/tzervas/mycelium/issues/26) | P1 | M-110 | RFC-0004 / ADR-007 | **After interpreter** |
-| **M-151** interp↔AOT differential | [#27](https://github.com/tzervas/mycelium/issues/27) | P0 | M-110, M-150 | NFR-7 / ADR-009 | **After M-150** |
+| **M-150** MLIR→LLVM ternary dialect skeleton | [#26](https://github.com/tzervas/mycelium/issues/26) | P1 | M-110, M-112 | RFC-0004 / ADR-007 | **Done (2026-06-09)** — `mycelium-mlir`: textual ternary-dialect emitter + runnable AOT artifact over the lowered ANF (native codegen deferred) |
+| **M-151** interp↔AOT differential | [#27](https://github.com/tzervas/mycelium/issues/27) | P0 | M-110, M-150 | NFR-7 / ADR-009 | **Done (2026-06-09)** — kernel-corpus differential; observable equivalence; divergence fails CI |
 
 Legend — **Ready**: can start now from the corpus + landed deps. **Ready after X**: a hard
 dependency is open. **Done**: landed, tests green, issue closed.
@@ -234,5 +234,15 @@ site (RFC-0003 §5; ADR-010/011); otherwise it falls back to `Empirical` (Frady-
   the readiness table (§2), the batch/parallelization plan (§3), the critical path with M-110 as
   keystone (§4), honest KC-1…KC-4 status (§5), and per-task detail for the completed Batch A
   (M-102/M-103/M-104, §6). Open questions OQ-6/OQ-7/OQ-8 recorded as resolved by Batch A.
+- **2026-06-09 (all Phase-1 build items landed):** the remaining 13 Phase-1 issues are implemented,
+  tested, and closed — Core IR (M-101…M-104), interpreter + balanced-ternary arithmetic
+  (M-110/M-111), certified binary↔ternary swap + Z3-discharged round-trip proof (M-120/M-121), the
+  VSA track (M-130/M-131/M-132), inspectable lowering (M-112), the toolchain surface
+  (M-140/M-141/M-142), and the MLIR-skeleton + interp↔AOT differential (M-150/M-151). The Phase-1
+  **exit gate** (§1) is met *at the build level*; the formal gate verdict (and KC-1…KC-4 re-run, §5)
+  is the maintainer's to ratify. Two honestly-scoped deferrals remain documented in-code: M-150's
+  native libMLIR/LLVM codegen (Phase 3) and M-121's width-generic proof (per-`(n,m)` lemmas land as
+  needed). KC-2 (#3) stays the open Phase-0 experiment (needs LLM API access; now unblocked by the
+  M-110 interpreter for type-check scoring).
 - Maintain append-only; supersede, don't rewrite. Re-run KC-1…KC-4 at the phase gate (Foundation
   Meta). Keep `Proven|Empirical|Declared` verdicts honest per VR-5.

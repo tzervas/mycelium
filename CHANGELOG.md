@@ -9,6 +9,20 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **MLIR→LLVM AOT path — ternary-dialect skeleton + runnable AOT artifact** (`mycelium-mlir`,
+  **M-150**, Phase 1; RFC-0004 §2/§6; ADR-007; T1.5): `dialect::emit` renders the lowered A-normal
+  form as a textual `ternary`-dialect MLIR-style module (one op per binding, all attributes inline —
+  the no-opaque-pass anchor), and `aot::run` is the **runnable artifact for the subset** — an
+  independent big-step env-machine that executes the lowered ANF directly. Native libMLIR/LLVM
+  codegen is **deferred** (Phase 3 matures it; honestly scoped as a textual skeleton + execution
+  model, not a compiler).
+- **Interp↔AOT differential** (`mycelium-mlir` tests, **M-151**, Phase 1; NFR-7; VR-4; RR-12): a
+  harness runs a kernel corpus under both the M-110 reference interpreter (small-step substitution)
+  and the M-150 AOT artifact (big-step env-machine over the lowered ANF) and asserts **observable
+  equivalence** (repr + payload + guarantee); divergence fails CI. The two paths differ in IR shape
+  and evaluation strategy, sharing only the trusted primitive/swap semantics — so the differential
+  catches lowering/scheduling/ordering divergence (the cheap baseline preceding per-artifact
+  translation validation in Phase 2). A control test confirms the harness discriminates.
 - **LSP feedback facade** (`mycelium-lsp::feedback`, **M-140**, Phase 1; FR-S5; Foundation §5.8;
   SC-5): `analyze(node)` exposes the **four** semantic-feedback artifact kinds over one surface —
   (1) typecheck/invariant **diagnostics** (linter), (2) **swap certificates** for statically-

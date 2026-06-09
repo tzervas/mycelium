@@ -1,7 +1,7 @@
 [package]
 name = "mycelium-mlir"
 version = "0.0.0"
-description = "STUB — MLIR->LLVM AOT perf path (ternary dialect) (RFC-0004; ADR-007). Stub; M-150."
+description = "MLIR->LLVM AOT path — ternary dialect skeleton (textual emitter) + a runnable AOT model over the lowered IR (RFC-0004 §2; ADR-007; T1.5). M-150. Native libMLIR/LLVM codegen is deferred."
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -12,3 +12,9 @@ publish = false
 workspace = true
 
 [dependencies]
+mycelium-core = { path = "../mycelium-core" }
+mycelium-interp = { path = "../mycelium-interp" }
+
+[dev-dependencies]
+# The interp↔AOT differential (M-151) drives both paths with the certified binary↔ternary swap.
+mycelium-cert = { path = "../mycelium-cert" }
