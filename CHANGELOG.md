@@ -9,6 +9,11 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Minimal surface-syntax fragment** (`experiments/surface-fragment/`, **M-020**): a throwaway,
+  experiment-only concrete syntax (EBNF + desugaring to the Core IR nodes + 3 reference programs:
+  swap round-trip, VSA `bundle`, and a no-implicit-conversion type-error) to feed the KC-2
+  experiment. **Not** a committed surface — gated on KC-2 (hence under `experiments/`, not
+  `docs/spec/`). Linked from `SPECIFICATION.md` §10.1.
 - **Binary↔ternary encoding spec** (`docs/spec/swaps/binary-ternary.md`, **M-012**): precise
   `enc`/`dec` for the canonical `8↔6` width — balanced-ternary digit semantics, the legality
   condition `B_n ⊆ T_m`, `LosslessWithinRange` with an `Option`-typed (never-silent) inverse, the

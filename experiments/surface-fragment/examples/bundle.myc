@@ -1,0 +1,6 @@
+# Superpose three MAP-I hypervectors (one VSA op; ships a Proven capacity bound, M-001/M-131).
+let x: VSA{model: MAP-I, dim: 10000, sparsity: Dense} = atom("x")
+let y: VSA{model: MAP-I, dim: 10000, sparsity: Dense} = atom("y")
+let z: VSA{model: MAP-I, dim: 10000, sparsity: Dense} = atom("z")
+let s = bundle([x, y, z])
+# expectation: s.guarantee == Proven; s.bound == CapacityBound{items:3, dim:10000, ...}

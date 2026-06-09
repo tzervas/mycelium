@@ -1,0 +1,5 @@
+# Declare a byte, swap it to balanced ternary and back (M-012 LosslessWithinRange).
+let a: Binary{width:8} = 0b1011_0010
+let t: Ternary{trits:6} = swap(a, to: Ternary{trits:6}, policy: round_trip_safe)
+let back: Binary{width:8} = swap(t, to: Binary{width:8}, policy: round_trip_safe)
+# expectation: back == a  (Exact within range)

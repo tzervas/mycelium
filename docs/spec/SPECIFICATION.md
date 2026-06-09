@@ -168,7 +168,7 @@ cardinality-estimation opacity because its statistics are *exact metadata*, not 
 
 | § | Open item | Issue(s) | Phase |
 |---|---|---|---|
-| 10.1 | Minimal surface-syntax fragment (experiment-only; gated on KC-2) | M-020 ([#4](https://github.com/tzervas/mycelium/issues/4)) | 0 |
+| 10.1 | Minimal surface-syntax fragment — ✅ [`experiments/surface-fragment/`](../../experiments/surface-fragment/README.md) (M-020, throwaway/experiment-only) | M-020 ([#4](https://github.com/tzervas/mycelium/issues/4)) | 0 |
 | 10.2 | Concrete Core IR node grammar (EBNF) + full term language | M-101 ([#11](https://github.com/tzervas/mycelium/issues/11)) | 1 |
 | 10.3 | Reference-interpreter small-step operational semantics | M-110 ([#15](https://github.com/tzervas/mycelium/issues/15)) | 1 |
 | 10.4 | Binary↔ternary swap impl + machine-checked round-trip (encoding spec ✅ [`swaps/binary-ternary.md`](swaps/binary-ternary.md), M-012) | M-120 ([#18](https://github.com/tzervas/mycelium/issues/18)), M-121 ([#19](https://github.com/tzervas/mycelium/issues/19)) | 1 |

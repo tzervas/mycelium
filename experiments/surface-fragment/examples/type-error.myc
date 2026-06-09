@@ -1,0 +1,5 @@
+# NEGATIVE example: no implicit conversion between paradigms (RFC-0001 §3.3).
+let a: Binary{width:8}  = 0b0000_0001
+let b: Ternary{trits:6} = <+,0,0,0,0,0>
+let bad = add_binary(a, b)
+# expectation: TYPE ERROR — operand 2 is Ternary, expected Binary. Insert an explicit swap.
