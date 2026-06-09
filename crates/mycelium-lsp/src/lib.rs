@@ -5,8 +5,10 @@
 //! This is a *toolchain* crate, deliberately kept out of the small auditable kernel (KC-3): it
 //! depends on `mycelium-core`/`-interp`/`-cert` but nothing depends on it.
 
+pub mod feedback;
 pub mod fmt;
 pub mod lint;
 
+pub use feedback::{analyze, Feedback, GuaranteeAnnotation, SwapSite};
 pub use fmt::format;
 pub use lint::{has_errors, lint, Diagnostic, Severity};

@@ -178,7 +178,7 @@ cardinality-estimation opacity because its statistics are *exact metadata*, not 
 | 10.8 | Full swap + the single shared certificate checker | E2-3 ([#30](https://github.com/tzervas/mycelium/issues/30)) | 2 |
 | 10.9 | Selection-policy predicate grammar + EXPLAIN impl | E2-6 ([#33](https://github.com/tzervas/mycelium/issues/33)) | 2 |
 | 10.10 | Reconstruction-manifest implementation | E2-5 ([#32](https://github.com/tzervas/mycelium/issues/32)) | 2 |
-| 10.11 | Toolchain surface — LSP, invariant linter, formatter | M-140 ([#23](https://github.com/tzervas/mycelium/issues/23)), M-141 ([#24](https://github.com/tzervas/mycelium/issues/24)), M-142 ([#25](https://github.com/tzervas/mycelium/issues/25)) | 1 |
+| 10.11 | Toolchain surface — ✅ committed in `mycelium-lsp`: invariant linter (M-141), α-normalizing canonical formatter (M-142), and the LSP feedback facade (M-140) exposing the four artifact kinds (diagnostics, swap certificates, bound/guarantee annotations, lowering-stage dumps) over one surface | M-140 ([#23](https://github.com/tzervas/mycelium/issues/23)), M-141 ([#24](https://github.com/tzervas/mycelium/issues/24)), M-142 ([#25](https://github.com/tzervas/mycelium/issues/25)) | 1 |
 | 10.12 | Confirming Liquid-Haskell `bundle` capacity probe (ratifies KC-1) | M-001 ([#2](https://github.com/tzervas/mycelium/issues/2)) | 0 |
 | 10.13 | KC-2 LLM-leverage experiment (verdict) | M-002 ([#3](https://github.com/tzervas/mycelium/issues/3)) | 0 |
 

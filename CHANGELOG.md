@@ -9,6 +9,13 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **LSP feedback facade** (`mycelium-lsp::feedback`, **M-140**, Phase 1; FR-S5; Foundation §5.8;
+  SC-5): `analyze(node)` exposes the **four** semantic-feedback artifact kinds over one surface —
+  (1) typecheck/invariant **diagnostics** (linter), (2) **swap certificates** for statically-
+  resolvable swap sites, (3) per-value **bound/guarantee annotations**, (4) **lowering-stage dumps**.
+  A failed/unsupported swap is surfaced on the diagnostics channel, never silent. Verified by a
+  **scripted-client** integration test driving all four channels (incl. a Proven bound, an
+  out-of-range swap, and invariant violations).
 - **Canonical formatter** (`mycelium-core::lower::format` + `mycelium-lsp::fmt`, **M-142**, Phase 1;
   RFC-0001 §4.8; ADR-003): a canonical textual normal form that **α-normalizes binder names**
   (`v0, v1, …`), so definitions differing only in names render to identical text and share one
