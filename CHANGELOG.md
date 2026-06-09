@@ -9,6 +9,16 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **MAP-I bundle capacity bound — `Proven` via checked instantiation** (`mycelium-vsa::capacity`,
+  **M-131**, Phase 1; RFC-0003 §5; ADR-010; SC-2; KC-1): `required_dim(m, δ) = ⌈(2/μ²)·ln(m/δ)⌉`
+  (μ=0.1) and `proven_capacity_bound` / `MapI::bundle_values_certified`, which attach a **`Proven`**
+  `CapacityBound` (basis `ProvenThm`, citing Clarkson-Ubaru-Yang 2023 / Thomas-Dasgupta-Rosing 2021)
+  **iff** the checked side-condition `dim ≥ required_dim` holds — exactly the M-001 axiomatized-
+  theorem + checked-instantiation pattern (the formula is cited, not re-proven). An undersized
+  dimension returns an explicit `InsufficientCapacity` error rather than an unbacked `Proven` tag
+  (M-I2/VR-5). `required_dim` reproduces the four M-001 probe settings (1141/1843/2164/2764).
+  **Acceptance — ≥10⁴-trial empirical validation (SC-2):** over 10,000 independent trials at
+  `dim ≥ required_dim(3, 1e-2)`, the measured nearest-neighbour retrieval-failure rate stays `≤ δ`.
 - **VSA submodule — `VsaModel` trait + MAP-I** (`mycelium-vsa`, **M-130**, Phase 1; RFC-0003 §3–§4;
   ADR-008; T2.6): a composition-style `VsaModel` trait (`bind`/`unbind` + self-inverse flag,
   `bundle`, `permute`/`unpermute`, `similarity`, and the honest per-op intrinsic guarantee) and its

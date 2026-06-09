@@ -16,6 +16,7 @@
 //! Value-level bundle (which must carry the checked `CapacityBound`, M-I2) is added in M-131 — we do
 //! not stamp `Proven` on a value without a checked bound here (VR-5).
 
+pub mod capacity;
 pub mod mapi;
 
 pub use mapi::MapI;
@@ -47,6 +48,17 @@ pub enum VsaError {
     },
     /// A bundle was requested over zero items (no superposition is defined).
     EmptyBundle,
+    /// A `Proven` bundle was requested but the dimension is below `requiredDim(items, δ)` — the
+    /// cited capacity theorem's side-condition fails, so no `Proven` bound can be issued (M-131;
+    /// M-I2/VR-5). Raise the dimension or lower the item count / relax `δ`.
+    InsufficientCapacity {
+        /// Number of items bundled.
+        items: u64,
+        /// The dimension supplied.
+        dim: u64,
+        /// The dimension the theorem requires.
+        required: u64,
+    },
     /// A value handed to a Value-level adapter was not a hypervector of the expected model.
     NotThisModel {
         /// The model id the adapter expected.
@@ -63,6 +75,14 @@ impl core::fmt::Display for VsaError {
                 write!(f, "dimension mismatch: expected {expected}, got {got}")
             }
             VsaError::EmptyBundle => write!(f, "bundle requires at least one item"),
+            VsaError::InsufficientCapacity {
+                items,
+                dim,
+                required,
+            } => write!(
+                f,
+                "insufficient capacity for a Proven bound: bundling {items} items needs dim ≥ {required}, got {dim}"
+            ),
             VsaError::NotThisModel { expected } => {
                 write!(f, "expected a {expected} hypervector value")
             }

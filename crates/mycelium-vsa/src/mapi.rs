@@ -13,7 +13,7 @@ use mycelium_core::{
     Value,
 };
 
-use crate::{VsaError, VsaModel, VsaOp};
+use crate::{capacity, VsaError, VsaModel, VsaOp};
 
 /// The MAP-I model at a fixed dimensionality.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -109,6 +109,57 @@ impl MapI {
     pub fn permute_value(&self, a: &Value, shift: i64) -> Result<Value, VsaError> {
         let out = self.permute(self.hv_of(a)?, shift)?;
         self.wrap_exact(out, "vsa.map_i.permute", vec![a.content_hash()])
+    }
+
+    /// Value-level **certified `bundle`** (M-131): superpose `items` and attach a **`Proven`**
+    /// `CapacityBound` targeting failure probability `delta` — but **only** when the checked
+    /// side-condition `dim ≥ requiredDim(m, δ)` holds (the M-001 checked-instantiation pattern,
+    /// citing Clarkson/Thomas). If the dimension is insufficient the theorem does not apply and we
+    /// return [`VsaError::InsufficientCapacity`] rather than stamping an unbacked `Proven` tag
+    /// (M-I2/VR-5). The result `Value` is `Proven` with the bound and `Derived` provenance over all
+    /// inputs.
+    pub fn bundle_values_certified(&self, items: &[&Value], delta: f64) -> Result<Value, VsaError> {
+        if items.is_empty() {
+            return Err(VsaError::EmptyBundle);
+        }
+        let m = items.len() as u64;
+        let dim = u64::from(self.dim);
+        let bound = capacity::proven_capacity_bound(m, dim, delta).ok_or_else(|| {
+            VsaError::InsufficientCapacity {
+                items: m,
+                dim,
+                required: capacity::required_dim(m, delta, capacity::MARGIN_MU),
+            }
+        })?;
+        // Compute the superposition over the extracted hypervectors.
+        let hvs: Vec<&[f64]> = items
+            .iter()
+            .map(|v| self.hv_of(v))
+            .collect::<Result<_, _>>()?;
+        let data = self.bundle(&hvs)?;
+        let inputs: Vec<ContentHash> = items.iter().map(|v| v.content_hash()).collect();
+        let meta = Meta::new(
+            Provenance::Derived {
+                op: operation_hash("vsa.map_i.bundle"),
+                inputs,
+            },
+            GuaranteeStrength::Proven,
+            Some(bound),
+            None,
+            None,
+            None,
+        )
+        .map_err(VsaError::Wf)?;
+        Value::new(
+            Repr::Vsa {
+                model: self.model_id().to_owned(),
+                dim: self.dim,
+                sparsity: SparsityClass::Dense,
+            },
+            Payload::Hypervector(data),
+            meta,
+        )
+        .map_err(VsaError::Wf)
     }
 }
 
