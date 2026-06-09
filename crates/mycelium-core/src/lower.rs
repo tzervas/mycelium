@@ -159,6 +159,71 @@ fn dump_core(node: &Node) -> String {
     s
 }
 
+/// The **canonical formatter** (M-142; RFC-0001 §4.8; ADR-003). Like [`dump_node`] but with binder
+/// names **α-normalized** to `v0, v1, …` in binding order, so that definitions differing only in
+/// names (a "reformatting") render to *identical* canonical text — and, since names are not part of
+/// content identity (RFC-0001 §4.6), that shared canonical form carries one shared
+/// [`Node::content_hash`]. Formatting is a projection: it never changes identity.
+#[must_use]
+pub fn format(node: &Node) -> String {
+    let mut s = String::new();
+    let mut scope: Vec<(String, String)> = Vec::new();
+    let mut counter = 0usize;
+    write_canon(node, 0, &mut scope, &mut counter, &mut s);
+    s
+}
+
+fn write_canon(
+    node: &Node,
+    depth: usize,
+    scope: &mut Vec<(String, String)>,
+    counter: &mut usize,
+    s: &mut String,
+) {
+    indent(depth, s);
+    match node {
+        Node::Const(v) => {
+            let _ = writeln!(s, "{}", render_const(v));
+        }
+        Node::Var(x) => {
+            // Innermost-first; a bound var renders as its canonical name, a free var keeps its own.
+            match scope.iter().rev().find(|(orig, _)| orig == x) {
+                Some((_, canon)) => {
+                    let _ = writeln!(s, "var {canon}");
+                }
+                None => {
+                    let _ = writeln!(s, "free {x}");
+                }
+            }
+        }
+        Node::Let { id, bound, body } => {
+            let canon = format!("v{counter}");
+            *counter += 1;
+            let _ = writeln!(s, "let {canon} =");
+            write_canon(bound, depth + 1, scope, counter, s);
+            indent(depth, s);
+            let _ = writeln!(s, "in");
+            scope.push((id.clone(), canon));
+            write_canon(body, depth + 1, scope, counter, s);
+            scope.pop();
+        }
+        Node::Op { prim, args } => {
+            let _ = writeln!(s, "op {prim}");
+            for a in args {
+                write_canon(a, depth + 1, scope, counter, s);
+            }
+        }
+        Node::Swap {
+            src,
+            target,
+            policy,
+        } => {
+            let _ = writeln!(s, "swap -> {} @{}", render_repr(target), short_hash(policy));
+            write_canon(src, depth + 1, scope, counter, s);
+        }
+    }
+}
+
 fn indent(depth: usize, s: &mut String) {
     for _ in 0..depth {
         s.push_str("  ");

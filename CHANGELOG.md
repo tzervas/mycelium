@@ -9,6 +9,12 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Canonical formatter** (`mycelium-core::lower::format` + `mycelium-lsp::fmt`, **M-142**, Phase 1;
+  RFC-0001 §4.8; ADR-003): a canonical textual normal form that **α-normalizes binder names**
+  (`v0, v1, …`), so definitions differing only in names render to identical text and share one
+  `content_hash` — reformatting is a projection that never changes content-addressed identity (tested:
+  renamed defs format identically and hash equally; formatting leaves identity untouched; free
+  variables keep their names).
 - **Invariant linter** (`mycelium-lsp::lint`, **M-141**, Phase 1; SC-3; G2; FR-M3; VR-5): static,
   inspectable lints over a Core IR program, emitted as `Diagnostic`s for authoring tools — `implicit-swap`
   (an `Op` mixing paradigms implies a conversion that must be an explicit `Swap`), `unverified-bound`
