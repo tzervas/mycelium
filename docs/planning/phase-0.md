@@ -70,7 +70,7 @@ important column: see §3 for the gap it exposes.
 | **M-010** Ratify core data-contract schemas | [#5](https://github.com/tzervas/mycelium/issues/5) | P0 | — | P0.6 / RFC-0001–0003 | **Yes** — 10 schemas + examples authored, `just schema` green | **Done (ratified)** — 2026-06-09 (§3, §6.1); OQ-3/4/5 flagged |
 | **M-011** Ratify `SPECIFICATION.md` | [#6](https://github.com/tzervas/mycelium/issues/6) | P1 | M-010 | P0.6 | **Yes** — authored as the consolidation index; §10 fully issue-linked | **Done (ratified-skeleton)** — 2026-06-09 (§6.3) |
 | **M-001** LH `bundle` capacity probe | [#2](https://github.com/tzervas/mycelium/issues/2) | P0 | M-010 | P0.1 / KC-1 | scaffolded (`proofs/lh-bundle/`) | **Scaffolded — blocked on toolchain.** No GHC/LH/Z3 here; KC-1 stays `passed (literature)` (§6.2) |
-| **M-012** Binary↔ternary encoding spec | [#7](https://github.com/tzervas/mycelium/issues/7) | P1 | — | P0.4 / RFC-0002 §4 | n/a (new spec) | **Ready** — pure spec authoring |
+| **M-012** Binary↔ternary encoding spec | [#7](https://github.com/tzervas/mycelium/issues/7) | P1 | — | P0.4 / RFC-0002 §4 | **Yes** — `docs/spec/swaps/binary-ternary.md` + worked example | **Done (ratified)** — 2026-06-09 |
 | **M-020** Minimal surface fragment | [#4](https://github.com/tzervas/mycelium/issues/4) | P0 | — | P0.2 / SPEC §10.1 | n/a (throwaway) | **Ready**, but value-gated on M-002 design |
 | **M-002** KC-2 LLM-leverage experiment | [#3](https://github.com/tzervas/mycelium/issues/3) | P0 | M-020, M-010 | P0.2 / KC-2 | n/a (experiment) | **Blocked** on M-020 + M-010 |
 | **M-090** Docs CI | [#8](https://github.com/tzervas/mycelium/issues/8) | P1 | — | infra | partial — `checks.yml` exists, advisory | **Mostly done** (§6.5) |

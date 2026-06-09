@@ -9,6 +9,11 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Binary↔ternary encoding spec** (`docs/spec/swaps/binary-ternary.md`, **M-012**): precise
+  `enc`/`dec` for the canonical `8↔6` width — balanced-ternary digit semantics, the legality
+  condition `B_n ⊆ T_m`, `LosslessWithinRange` with an `Option`-typed (never-silent) inverse, the
+  four M-121 correctness obligations, and a worked round-trip + out-of-range example (RFC-0002
+  §4/§5; T2.1). Linked from `SPECIFICATION.md` §6/§10.4.
 - **Python tooling skeleton** (`experiments/`, **M-092**): a UV-managed project targeting
   **Python 3.13** (ADR-007) with a `dev` group (pytest, pytest-cov, ruff, black), a trivial
   importable module + passing smoke test, and a committed `uv.lock`. `scripts/checks/test.sh` runs

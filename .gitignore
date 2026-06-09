@@ -26,6 +26,12 @@ htmlcov/
 .coverage.*
 coverage.xml
 
+# ---- Haskell (LiquidHaskell proofs, cabal) ----
+dist-newstyle/
+*.hi
+*.o
+.ghc.environment.*
+
 # ---- Tooling / verification scratch ----
 *.smt2.out
 *.cert.tmp

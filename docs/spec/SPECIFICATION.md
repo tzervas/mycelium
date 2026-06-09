@@ -110,9 +110,9 @@ total, `dec : Tern_m → Option Bin_n`, `Exact` within range, out-of-range an ex
 A pair with no statable bound is a **type error**, not a `Declared` gamble. The certificate format
 and its checker are shared with the interpreter-vs-compiled equivalence check (§8).
 
-- **Normative:** RFC-0002 (all); ADR-002.
+- **Normative:** RFC-0002 (all); ADR-002. Precise binary↔ternary `enc`/`dec`: [`swaps/binary-ternary.md`](swaps/binary-ternary.md) (M-012, ratified).
 - **Contract:** [`swap-certificate.schema.json`](schemas/swap-certificate.schema.json).
-- **Open:** concrete binary↔ternary encoding spec (§10.4); the shared certificate checker (§10.8).
+- **Open:** the binary↔ternary *implementation* + round-trip proof (§10.4); the shared certificate checker (§10.8).
 
 ## 7. VSA submodule
 
@@ -171,7 +171,7 @@ cardinality-estimation opacity because its statistics are *exact metadata*, not 
 | 10.1 | Minimal surface-syntax fragment (experiment-only; gated on KC-2) | M-020 ([#4](https://github.com/tzervas/mycelium/issues/4)) | 0 |
 | 10.2 | Concrete Core IR node grammar (EBNF) + full term language | M-101 ([#11](https://github.com/tzervas/mycelium/issues/11)) | 1 |
 | 10.3 | Reference-interpreter small-step operational semantics | M-110 ([#15](https://github.com/tzervas/mycelium/issues/15)) | 1 |
-| 10.4 | Binary↔ternary encoding spec, swap, machine-checked round-trip | M-012 ([#7](https://github.com/tzervas/mycelium/issues/7)), M-120 ([#18](https://github.com/tzervas/mycelium/issues/18)), M-121 ([#19](https://github.com/tzervas/mycelium/issues/19)) | 0/1 |
+| 10.4 | Binary↔ternary swap impl + machine-checked round-trip (encoding spec ✅ [`swaps/binary-ternary.md`](swaps/binary-ternary.md), M-012) | M-120 ([#18](https://github.com/tzervas/mycelium/issues/18)), M-121 ([#19](https://github.com/tzervas/mycelium/issues/19)) | 1 |
 | 10.5 | Inspectable lowering (≥2 stages); MLIR→LLVM skeleton; interp↔AOT differential | M-112 ([#17](https://github.com/tzervas/mycelium/issues/17)), M-150 ([#26](https://github.com/tzervas/mycelium/issues/26)), M-151 ([#27](https://github.com/tzervas/mycelium/issues/27)) | 1 |
 | 10.6 | `VsaModel` trait + MAP-I + tagged `bundle` bound + cleanup | M-130 ([#20](https://github.com/tzervas/mycelium/issues/20)), M-131 ([#21](https://github.com/tzervas/mycelium/issues/21)), M-132 ([#22](https://github.com/tzervas/mycelium/issues/22)) | 1 |
 | 10.7 | Verified-numerics checker (two kernels + shared certificate) | E2-4 ([#31](https://github.com/tzervas/mycelium/issues/31)) | 2 |

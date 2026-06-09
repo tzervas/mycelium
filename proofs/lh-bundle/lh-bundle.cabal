@@ -8,8 +8,5 @@ library
     hs-source-dirs:   src
     exposed-modules:  Bundle
     default-language: Haskell2010
-    build-depends:    base >=4 && <5
-    -- LiquidHaskell runs as a GHC plugin; requires z3 on PATH at build time.
-    -- Uncomment once the toolchain is installed (see README "How to run"):
-    -- build-depends:    liquidhaskell
-    -- ghc-options:      -fplugin=LiquidHaskell
+    build-depends:    base, liquidhaskell
+    ghc-options:      -fplugin=LiquidHaskell
