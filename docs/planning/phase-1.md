@@ -83,7 +83,7 @@ All Phase-1 issues, with issue number (`idmap.tsv`), priority, dependency, and *
 | **M-131** `Proven` capacity bound + validation | [#21](https://github.com/tzervas/mycelium/issues/21) | P0 | M-130, M-001 | RFC-0003 §5 / SC-2 / KC-1 | **Done (2026-06-09)** — checked-instantiation `Proven` `CapacityBound`; ≥10⁴-trial validation ≤ δ |
 | **M-132** Cleanup memory | [#22](https://github.com/tzervas/mycelium/issues/22) | P2 | M-130 | RFC-0003 / FR-S4 | **Done (2026-06-09)** — `CleanupMemory` nearest-neighbour item memory → `(label, confidence, margin)` |
 | **M-140** LSP skeleton | [#23](https://github.com/tzervas/mycelium/issues/23) | P1 | M-110 | FR-S5 / SC-5 | **After interpreter** |
-| **M-141** Invariant linter | [#24](https://github.com/tzervas/mycelium/issues/24) | P1 | M-101 | FR-S5 / RFC-0001 WF1/WF2 | **Ready** — no-implicit-swap / no-untagged-bound |
+| **M-141** Invariant linter | [#24](https://github.com/tzervas/mycelium/issues/24) | P1 | M-101 | FR-S5 / RFC-0001 WF1/WF2 | **Done (2026-06-09)** — `mycelium-lsp::lint`: implicit-swap / unverified-bound / placeholder-policy / free-variable |
 | **M-142** Formatter | [#25](https://github.com/tzervas/mycelium/issues/25) | P2 | M-104 | §4.8 SC-4 | **Ready** — projection, identity-preserving |
 | **M-150** MLIR→LLVM ternary dialect skeleton | [#26](https://github.com/tzervas/mycelium/issues/26) | P1 | M-110 | RFC-0004 / ADR-007 | **After interpreter** |
 | **M-151** interp↔AOT differential | [#27](https://github.com/tzervas/mycelium/issues/27) | P0 | M-110, M-150 | NFR-7 / ADR-009 | **After M-150** |

@@ -145,6 +145,14 @@ fn short_hash(h: &crate::ContentHash) -> String {
 
 // --- Stage 0: canonical Core IR dump -----------------------------------------------------------
 
+/// The canonical, deterministic textual rendering of a Core IR node (the `core` stage). A
+/// projection: it does not affect content identity (RFC-0001 §4.6/§4.8), and structurally identical
+/// nodes render identically (SC-4). Reused as the basis of the formatter (M-142).
+#[must_use]
+pub fn dump_node(node: &Node) -> String {
+    dump_core(node)
+}
+
 fn dump_core(node: &Node) -> String {
     let mut s = String::new();
     write_core(node, 0, &mut s);

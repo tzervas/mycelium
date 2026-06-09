@@ -9,6 +9,7 @@ members = [
     "crates/mycelium-vsa",
     "crates/mycelium-mlir",
     "crates/mycelium-cert",
+    "crates/mycelium-lsp",
     "xtask",
 ]
 

@@ -9,6 +9,13 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Invariant linter** (`mycelium-lsp::lint`, **M-141**, Phase 1; SC-3; G2; FR-M3; VR-5): static,
+  inspectable lints over a Core IR program, emitted as `Diagnostic`s for authoring tools — `implicit-swap`
+  (an `Op` mixing paradigms implies a conversion that must be an explicit `Swap`), `unverified-bound`
+  (a `Declared` value must always be surfaced, never silently trusted), `placeholder-policy` (a swap
+  citing a stub rather than a real `PolicyRef`), and `free-variable` (an open term). Each lint has a
+  positive and a negative test. Introduces the toolchain crate `mycelium-lsp` (FR-S5), kept out of
+  the auditable kernel (KC-3 — depends on core/interp/cert, nothing depends on it).
 - **Inspectable lowering — ≥2 dumpable/diffable stages** (`mycelium-core::lower`, **M-112**, Phase 1;
   RFC-0004 §5/§6; SC-4; WF5): a backend-agnostic lowering pipeline. `stages(node)` returns **`core`**
   (the canonical Core IR tree dump) → **`substrate`** (an A-normal form flattening nested
