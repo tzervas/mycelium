@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bound",
+  "description": "A sound bound on an approximate operation, with the BASIS by which it was obtained. Projection of RFC-0001 §4.3 (Bound, BoundBasis) reconciled with ADR-010 (the {eps, delta, strength} certificate vocabulary) and RFC-0002 §3 (a certificate carries Bound + BoundBasis).",
+  "x-mycelium": {
+    "status": "ratified",
+    "task": "M-010",
+    "source": "RFC-0001 §4.3; ADR-010; RFC-0002 §3",
+    "ratified_against": "RFC-0001 (Accepted, r1) §4.3 + ADR-010 (Accepted)",
+    "ratified_on": "2026-06-09",
+    "$comment": "RECONCILIATION (OQ-3, raised to corpus owner): RFC-0001 §4.3's grammar attaches `basis` only to CapacityBound, but invariants M-I2/M-I3/M-I4 read `bound.basis` for ANY bound, and RFC-0002 §3 pairs every certificate Bound with a BoundBasis. This schema makes `basis` a required companion of every Bound kind, which is the only reading consistent with M-I2/3/4. A one-line RFC-0001 §4.3 clarification is proposed to fold `basis` out to the common Bound level."
+  },
+  "$defs": {
+    "BoundBasis": {
+      "description": "How the bound was obtained. Determines the honest GuaranteeStrength: Proven only with a checked-instantiation cited theorem; else Empirical (trials) or UserDeclared (asserted, always flagged).",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "ProvenThm" },
+            "citation": { "type": "string", "minLength": 1 }
+          },
+          "required": ["kind", "citation"],
+          "description": "e.g. 'Clarkson-Ubaru-Yang 2023'. Side-conditions (dimension, sparsity class, model) MUST be checked where this basis is asserted (RFC-0002 §3; RFC-0003 §5)."
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "EmpiricalFit" },
+            "trials": { "type": "integer", "minimum": 1 },
+            "method": { "type": "string", "minLength": 1 }
+          },
+          "required": ["kind", "trials", "method"],
+          "description": "e.g. method 'Frady-Sommer Gaussian'."
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "UserDeclared" } },
+          "required": ["kind"],
+          "description": "User-asserted, not yet validated. Any tool presenting the value MUST surface a 'declared, unverified' marker (M-I4; VR-5)."
+        }
+      ]
+    },
+    "NormKind": {
+      "type": "string",
+      "minLength": 1,
+      "$comment": "RFC-0001 §4.3 names `norm: NormKind` for ErrorBound but does not enumerate it normatively (open registry; OQ-4). Kept as a non-empty string until the registry is fixed; common intended members: L1, L2, Linf, Rel."
+    }
+  },
+  "type": "object",
+  "required": ["kind", "basis"],
+  "properties": {
+    "basis": { "$ref": "#/$defs/BoundBasis" }
+  },
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "ErrorBound" },
+        "eps": { "type": "number", "minimum": 0 },
+        "norm": { "$ref": "#/$defs/NormKind" },
+        "basis": true
+      },
+      "required": ["kind", "eps", "norm", "basis"],
+      "description": "epsilon-magnitude bound; composes via ADR-010's affine-arithmetic ErrorBound kernel."
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "ProbabilityBound" },
+        "delta": { "type": "number", "minimum": 0, "maximum": 1 },
+        "basis": true
+      },
+      "required": ["kind", "delta", "basis"],
+      "description": "failure-probability bound; composes via ADR-010's union-bound ProbBound kernel."
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "CrosstalkBound" },
+        "expected": { "type": "number", "minimum": 0 },
+        "tail": { "type": ["number", "null"], "minimum": 0 },
+        "basis": true
+      },
+      "required": ["kind", "expected", "basis"],
+      "description": "expected crosstalk with optional tail; VSA content per RFC-0003 / T0.2."
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "CapacityBound" },
+        "items": { "type": "integer", "minimum": 1 },
+        "dim": { "type": "integer", "minimum": 1 },
+        "basis": true
+      },
+      "required": ["kind", "items", "dim", "basis"],
+      "description": "VSA superposition capacity (items into dim). The MAP-I/sparse Proven cases cite T0.2 theorems via basis.ProvenThm (RFC-0003 §4); the M-001 LH probe confirms the checked-instantiation strategy."
+    }
+  ]
+}

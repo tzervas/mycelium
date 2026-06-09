@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReconstructionManifest",
+  "description": "The Manifest-style reconstruction info for lossy/holographic (VSA) forms, referenced from Meta.reconstruction (RFC-0001 §4.3 ReconInfo; specified in RFC-0003 §6). Explicitly distinguishes INDEXED RETRIEVAL (codebook + similarity + threshold; returns a stored atom; bounded-lossy; NOT holographic) from TRUE COMPOSITIONAL RECONSTRUCTION (requires the structural recipe/role schema + algebraic inverse ops; can recover novel combinations never stored) — VSA's defining capability over a hash table.",
+  "x-mycelium": {
+    "status": "ratified",
+    "task": "M-010",
+    "source": "RFC-0003 §6",
+    "ratified_against": "RFC-0003 (Accepted) §6 Reconstruction manifest",
+    "ratified_on": "2026-06-09",
+    "$comment": "Factorization (resonator networks) is Phase-3 exploratory and probabilistic-only (FR-C2); when present, `decode` carries the factor structure + iteration budget and `bound.strength` MUST NOT exceed Empirical."
+  },
+  "$defs": {
+    "ContentHash": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+:[A-Za-z0-9_-]+$"
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode", "model", "dim", "codebooks", "decode", "bound"],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["IndexedRetrieval", "CompositionalReconstruction"],
+      "description": "Which capability this manifest supports (RFC-0003 §6). CompositionalReconstruction MUST supply a `recipe`."
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "description": "VSA ModelId (matches the producing Repr.model)."
+    },
+    "dim": { "type": "integer", "minimum": 1 },
+    "codebooks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/ContentHash" },
+      "description": "Atomic item-memory codebook(s) as CONTENT-ADDRESSED references (Unison identity fits)."
+    },
+    "recipe": {
+      "type": ["object", "null"],
+      "description": "The compositional recipe / role schema: which ops combined which slots. REQUIRED (non-null) for CompositionalReconstruction; absent/null for IndexedRetrieval.",
+      "additionalProperties": false,
+      "properties": {
+        "roles": { "type": "array", "items": { "type": "string" } },
+        "structure": { "type": "object" }
+      }
+    },
+    "decode": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Decoding procedure + params: a cleanup threshold (indexed) or a resonator factor structure + iteration budget (compositional).",
+      "properties": {
+        "procedure": { "type": "string", "enum": ["Cleanup", "Resonator"] },
+        "cleanup_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+        "factors": { "type": "array", "items": { "$ref": "#/$defs/ContentHash" } },
+        "iteration_budget": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["procedure"]
+    },
+    "bound": {
+      "$ref": "bound.schema.json",
+      "description": "The {ε, δ, strength} bound certificate for the reconstruction."
+    }
+  },
+  "allOf": [
+    {
+      "$comment": "CompositionalReconstruction requires a non-null recipe.",
+      "if": { "properties": { "mode": { "const": "CompositionalReconstruction" } }, "required": ["mode"] },
+      "then": { "properties": { "recipe": { "type": "object" } }, "required": ["recipe"] }
+    }
+  ]
+}

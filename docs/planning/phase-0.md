@@ -67,7 +67,7 @@ important column: see §3 for the gap it exposes.
 
 | Task | Issue | Pri | Depends on | Maps to | Artifact exists? | Readiness |
 |---|---|---|---|---|---|---|
-| **M-010** Ratify core data-contract schemas | [#5](https://github.com/tzervas/mycelium/issues/5) | P0 | — | P0.6 / RFC-0001–0003 | **No** — `docs/spec/schemas/` is empty | **Author-then-ratify** (§3, §6.1) |
+| **M-010** Ratify core data-contract schemas | [#5](https://github.com/tzervas/mycelium/issues/5) | P0 | — | P0.6 / RFC-0001–0003 | **Yes** — 10 schemas + examples authored, `just schema` green | **Done (ratified)** — 2026-06-09 (§3, §6.1); OQ-3/4/5 flagged |
 | **M-011** Ratify `SPECIFICATION.md` | [#6](https://github.com/tzervas/mycelium/issues/6) | P1 | M-010 | P0.6 | **No** — `docs/spec/SPECIFICATION.md` absent | **Author-then-ratify**, gated on M-010 (§6.3) |
 | **M-001** LH `bundle` capacity probe | [#2](https://github.com/tzervas/mycelium/issues/2) | P0 | M-010 | P0.1 / KC-1 | n/a (new build) | **Ready** — narrow dep on `CapacityBound` shape (§6.2) |
 | **M-012** Binary↔ternary encoding spec | [#7](https://github.com/tzervas/mycelium/issues/7) | P1 | — | P0.4 / RFC-0002 §4 | n/a (new spec) | **Ready** — pure spec authoring |
