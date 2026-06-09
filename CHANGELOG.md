@@ -68,6 +68,12 @@ corpus, not released software. Versioning will begin when the kernel does.
   `.pre-commit-config.yaml`, and a manual-dispatch **advisory** GitHub Actions workflow.
 
 ### Changed
+- **Docs/parity CI hardened** (`.github/workflows/checks.yml`, **M-090**): the manual-dispatch
+  advisory workflow now sets up **uv** (so the `experiments/` Python 3.13 tests actually run) and
+  **Rust** (pinned via `rust-toolchain.toml`, so fmt/clippy/test run), and adds an advisory
+  **Codecov** upload of the experiments coverage. Markdown-lint + offline link-check + schema
+  validation already covered `docs/**` and the schemas via `just ci`; the PR template was already
+  wired. Posture unchanged: `workflow_dispatch` only, non-blocking (no auto-triggers — CLAUDE.md).
 - **RFC-0001 → r2** (status stays Accepted): §4.3 `Bound` grammar revised per **ADR-011** —
   `BoundBasis` factored out to a required companion of *every* `Bound` (was: `CapacityBound` only),
   and `NormKind` enumerated `L1|L2|Linf|Rel` as an extensible registry (resolves OQ-4). The r1 §4.3

@@ -38,6 +38,12 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v2
 
+      - name: Set up uv (drives the experiments/ Python 3.13 tests — M-092)
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set up Rust (pinned to MSRV via rust-toolchain.toml — M-091)
+        run: rustup show
+
       - name: Install check tools
         run: bash scripts/install-tools.sh
 
@@ -45,6 +51,22 @@ jobs:
         id: run
         continue-on-error: ${{ !inputs.strict }}
         run: just ci
+
+      - name: Python coverage + Codecov upload (advisory — M-092)
+        if: always()
+        continue-on-error: true
+        run: |
+          ( cd experiments && uv run --frozen pytest --cov=mycelium_experiments --cov-report=xml:coverage.xml )
+      - name: Upload coverage to Codecov (advisory)
+        if: always()
+        continue-on-error: true
+        uses: codecov/codecov-action@v5
+        with:
+          files: experiments/coverage.xml
+          flags: experiments
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Summary
         if: always()
