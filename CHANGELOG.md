@@ -9,6 +9,13 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Cleanup / item memory** (`mycelium-vsa::cleanup`, **M-132**, Phase 1; FR-S4; RFC-0003 §3): a
+  labelled associative memory (`CleanupMemory`) that snaps a noisy query — an *approximate* `unbind`
+  result or a `bundle` decode — to the nearest stored atom by similarity, returning a `Match { label,
+  index, confidence, margin }`. The confidence (match cosine) and margin (gap to the runner-up) make
+  approximate unbind *usable* and *inspectable* (the retrieval decision is reported, never a hidden
+  nearest-neighbour pick; G2). Tested incl. the role⊗filler record-decode use case (bundle two bound
+  pairs, unbind by a role, clean up to the right filler).
 - **MAP-I bundle capacity bound — `Proven` via checked instantiation** (`mycelium-vsa::capacity`,
   **M-131**, Phase 1; RFC-0003 §5; ADR-010; SC-2; KC-1): `required_dim(m, δ) = ⌈(2/μ²)·ln(m/δ)⌉`
   (μ=0.1) and `proven_capacity_bound` / `MapI::bundle_values_certified`, which attach a **`Proven`**

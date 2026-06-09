@@ -81,7 +81,7 @@ All Phase-1 issues, with issue number (`idmap.tsv`), priority, dependency, and *
 | **M-121** Machine-checked round-trip proof | [#19](https://github.com/tzervas/mycelium/issues/19) | P0 | M-120 | RFC-0002 §4 (P1/P2) / VR-1 | **Done (2026-06-09)** — `proofs/binary-ternary-roundtrip/`; Z3 `unsat` (injectivity, 8↔6) |
 | **M-130** `VsaModel` trait + MAP-I | [#20](https://github.com/tzervas/mycelium/issues/20) | P0 | M-101 | RFC-0003 / ADR-008 | **Done (2026-06-09)** — `mycelium-vsa`: trait + MAP-I bind/unbind/permute (Exact) + bundle; dependency-gated |
 | **M-131** `Proven` capacity bound + validation | [#21](https://github.com/tzervas/mycelium/issues/21) | P0 | M-130, M-001 | RFC-0003 §5 / SC-2 / KC-1 | **Done (2026-06-09)** — checked-instantiation `Proven` `CapacityBound`; ≥10⁴-trial validation ≤ δ |
-| **M-132** Cleanup memory | [#22](https://github.com/tzervas/mycelium/issues/22) | P1 | M-130 | RFC-0003 | **Ready after M-130** |
+| **M-132** Cleanup memory | [#22](https://github.com/tzervas/mycelium/issues/22) | P2 | M-130 | RFC-0003 / FR-S4 | **Done (2026-06-09)** — `CleanupMemory` nearest-neighbour item memory → `(label, confidence, margin)` |
 | **M-140** LSP skeleton | [#23](https://github.com/tzervas/mycelium/issues/23) | P1 | M-110 | FR-S5 / SC-5 | **After interpreter** |
 | **M-141** Invariant linter | [#24](https://github.com/tzervas/mycelium/issues/24) | P1 | M-101 | FR-S5 / RFC-0001 WF1/WF2 | **Ready** — no-implicit-swap / no-untagged-bound |
 | **M-142** Formatter | [#25](https://github.com/tzervas/mycelium/issues/25) | P2 | M-104 | §4.8 SC-4 | **Ready** — projection, identity-preserving |

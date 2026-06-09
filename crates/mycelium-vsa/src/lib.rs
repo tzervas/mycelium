@@ -17,8 +17,10 @@
 //! not stamp `Proven` on a value without a checked bound here (VR-5).
 
 pub mod capacity;
+pub mod cleanup;
 pub mod mapi;
 
+pub use cleanup::{CleanupMemory, Match};
 pub use mapi::MapI;
 
 use mycelium_core::GuaranteeStrength;
