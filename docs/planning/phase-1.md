@@ -75,18 +75,18 @@ All Phase-1 issues, with issue number (`idmap.tsv`), priority, dependency, and *
 | **M-103** Content-addressing | [#13](https://github.com/tzervas/mycelium/issues/13) | P1 | M-101 | RFC-0001 §4.6 / ADR-003 | **Done (2026-06-09)** — §6.2; BLAKE3 hash-of-AST + `Names` |
 | **M-104** Core IR (de)serialization | [#14](https://github.com/tzervas/mycelium/issues/14) | P1 | M-101, M-010 | RFC-0001 §4.8 | **Done (2026-06-09)** — §6.3; round-trip + schema-pinned examples |
 | **M-110** Reference interpreter | [#15](https://github.com/tzervas/mycelium/issues/15) | P0 | M-101 | SPEC §10.3 / RFC-0004 §2 / ADR-009 | **Ready** — Batch A complete; the next keystone (§4) |
-| **M-111** Bit/Trit + balanced-ternary arithmetic | [#16](https://github.com/tzervas/mycelium/issues/16) | P0 | M-110 | RFC-0004 / `binary-ternary.md` §1 | **Ready after M-110** — property-test vs. oracle |
-| **M-112** ≥2 inspectable lowering stages | [#17](https://github.com/tzervas/mycelium/issues/17) | P1 | M-110 | SPEC §10.5 / RFC-0004 §5 / SC-4 | **Ready after M-110** |
-| **M-120** Binary↔ternary swap | [#18](https://github.com/tzervas/mycelium/issues/18) | P0 | M-101 | `binary-ternary.md` / RFC-0002 §4 | **Ready** — spec ratified; emits `LosslessWithinRange` |
-| **M-121** Machine-checked round-trip proof | [#19](https://github.com/tzervas/mycelium/issues/19) | P0 | M-120 | RFC-0002 §4 (P1/P2) / VR-1 | **Ready after M-120** — `proofs/` (OQ-2 home) |
-| **M-130** `VsaModel` trait + MAP-I | [#20](https://github.com/tzervas/mycelium/issues/20) | P0 | M-101 | RFC-0003 / ADR-008 | **Ready** — parallel track |
-| **M-131** `Proven` capacity bound + validation | [#21](https://github.com/tzervas/mycelium/issues/21) | P0 | M-130, M-001 | RFC-0003 §5 / SC-2 / KC-1 | **Ready after M-130** — cites M-001 theorem |
-| **M-132** Cleanup memory | [#22](https://github.com/tzervas/mycelium/issues/22) | P1 | M-130 | RFC-0003 | **Ready after M-130** |
-| **M-140** LSP skeleton | [#23](https://github.com/tzervas/mycelium/issues/23) | P1 | M-110 | FR-S5 / SC-5 | **After interpreter** |
-| **M-141** Invariant linter | [#24](https://github.com/tzervas/mycelium/issues/24) | P1 | M-101 | FR-S5 / RFC-0001 WF1/WF2 | **Ready** — no-implicit-swap / no-untagged-bound |
-| **M-142** Formatter | [#25](https://github.com/tzervas/mycelium/issues/25) | P2 | M-104 | §4.8 SC-4 | **Ready** — projection, identity-preserving |
-| **M-150** MLIR→LLVM ternary dialect skeleton | [#26](https://github.com/tzervas/mycelium/issues/26) | P1 | M-110 | RFC-0004 / ADR-007 | **After interpreter** |
-| **M-151** interp↔AOT differential | [#27](https://github.com/tzervas/mycelium/issues/27) | P0 | M-110, M-150 | NFR-7 / ADR-009 | **After M-150** |
+| **M-111** Bit/Trit + balanced-ternary arithmetic | [#16](https://github.com/tzervas/mycelium/issues/16) | P0 | M-110 | RFC-0004 / `binary-ternary.md` §1 | **Done (2026-06-09)** — `core::ternary` codec + neg/add/sub/mul; exhaustive `i64`-oracle property tests; `trit.*` prims |
+| **M-112** ≥2 inspectable lowering stages | [#17](https://github.com/tzervas/mycelium/issues/17) | P1 | M-110 | SPEC §10.5 / RFC-0004 §5 / SC-4 | **Done (2026-06-09)** — `core::lower`: `core` → ANF `substrate` + scheduled layouts; dumpable/diffable |
+| **M-120** Binary↔ternary swap | [#18](https://github.com/tzervas/mycelium/issues/18) | P0 | M-101 | `binary-ternary.md` / RFC-0002 §4 | **Done (2026-06-09)** — `mycelium-cert` enc/dec + `Bijective` cert; exhaustive `dec(enc x)` over all 256 bytes; interp `SwapEngine` |
+| **M-121** Machine-checked round-trip proof | [#19](https://github.com/tzervas/mycelium/issues/19) | P0 | M-120 | RFC-0002 §4 (P1/P2) / VR-1 | **Done (2026-06-09)** — `proofs/binary-ternary-roundtrip/`; Z3 `unsat` (injectivity, 8↔6) |
+| **M-130** `VsaModel` trait + MAP-I | [#20](https://github.com/tzervas/mycelium/issues/20) | P0 | M-101 | RFC-0003 / ADR-008 | **Done (2026-06-09)** — `mycelium-vsa`: trait + MAP-I bind/unbind/permute (Exact) + bundle; dependency-gated |
+| **M-131** `Proven` capacity bound + validation | [#21](https://github.com/tzervas/mycelium/issues/21) | P0 | M-130, M-001 | RFC-0003 §5 / SC-2 / KC-1 | **Done (2026-06-09)** — checked-instantiation `Proven` `CapacityBound`; ≥10⁴-trial validation ≤ δ |
+| **M-132** Cleanup memory | [#22](https://github.com/tzervas/mycelium/issues/22) | P2 | M-130 | RFC-0003 / FR-S4 | **Done (2026-06-09)** — `CleanupMemory` nearest-neighbour item memory → `(label, confidence, margin)` |
+| **M-140** LSP skeleton | [#23](https://github.com/tzervas/mycelium/issues/23) | P1 | M-110 | FR-S5 / SC-5 | **Done (2026-06-09)** — `mycelium-lsp::analyze` exposes the 4 feedback artifact kinds; scripted-client test |
+| **M-141** Invariant linter | [#24](https://github.com/tzervas/mycelium/issues/24) | P1 | M-101 | FR-S5 / RFC-0001 WF1/WF2 | **Done (2026-06-09)** — `mycelium-lsp::lint`: implicit-swap / unverified-bound / placeholder-policy / free-variable |
+| **M-142** Formatter | [#25](https://github.com/tzervas/mycelium/issues/25) | P2 | M-104 | §4.8 SC-4 | **Done (2026-06-09)** — `core::lower::format` α-normalized canonical dump; reformatting preserves identity (ADR-003) |
+| **M-150** MLIR→LLVM ternary dialect skeleton | [#26](https://github.com/tzervas/mycelium/issues/26) | P1 | M-110, M-112 | RFC-0004 / ADR-007 | **Done (2026-06-09)** — `mycelium-mlir`: textual ternary-dialect emitter + runnable AOT artifact over the lowered ANF (native codegen deferred) |
+| **M-151** interp↔AOT differential | [#27](https://github.com/tzervas/mycelium/issues/27) | P0 | M-110, M-150 | NFR-7 / ADR-009 | **Done (2026-06-09)** — kernel-corpus differential; observable equivalence; divergence fails CI |
 
 Legend — **Ready**: can start now from the corpus + landed deps. **Ready after X**: a hard
 dependency is open. **Done**: landed, tests green, issue closed.
@@ -234,5 +234,15 @@ site (RFC-0003 §5; ADR-010/011); otherwise it falls back to `Empirical` (Frady-
   the readiness table (§2), the batch/parallelization plan (§3), the critical path with M-110 as
   keystone (§4), honest KC-1…KC-4 status (§5), and per-task detail for the completed Batch A
   (M-102/M-103/M-104, §6). Open questions OQ-6/OQ-7/OQ-8 recorded as resolved by Batch A.
+- **2026-06-09 (all Phase-1 build items landed):** the remaining 13 Phase-1 issues are implemented,
+  tested, and closed — Core IR (M-101…M-104), interpreter + balanced-ternary arithmetic
+  (M-110/M-111), certified binary↔ternary swap + Z3-discharged round-trip proof (M-120/M-121), the
+  VSA track (M-130/M-131/M-132), inspectable lowering (M-112), the toolchain surface
+  (M-140/M-141/M-142), and the MLIR-skeleton + interp↔AOT differential (M-150/M-151). The Phase-1
+  **exit gate** (§1) is met *at the build level*; the formal gate verdict (and KC-1…KC-4 re-run, §5)
+  is the maintainer's to ratify. Two honestly-scoped deferrals remain documented in-code: M-150's
+  native libMLIR/LLVM codegen (Phase 3) and M-121's width-generic proof (per-`(n,m)` lemmas land as
+  needed). KC-2 (#3) stays the open Phase-0 experiment (needs LLM API access; now unblocked by the
+  M-110 interpreter for type-check scoring).
 - Maintain append-only; supersede, don't rewrite. Re-run KC-1…KC-4 at the phase gate (Foundation
   Meta). Keep `Proven|Empirical|Declared` verdicts honest per VR-5.

@@ -7,13 +7,16 @@
 //! Not yet here (own issues): (de)serialization to the schemas (M-104), the reference interpreter
 //! (M-110).
 
+pub mod binary;
 pub mod bound;
 pub mod content;
 pub mod guarantee;
 pub mod id;
+pub mod lower;
 pub mod meta;
 pub mod node;
 pub mod repr;
+pub mod ternary;
 pub mod value;
 
 pub use bound::{Bound, BoundBasis, BoundKind, NormKind};

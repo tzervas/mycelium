@@ -92,8 +92,17 @@ pub enum EvalError {
         /// Target representation.
         to: Repr,
     },
+    /// A fixed-width arithmetic result fell outside the representable range — explicit, never a
+    /// silent wrap (SC-3; balanced-ternary range, `binary-ternary.md` §1).
+    Overflow {
+        /// The primitive name.
+        prim: String,
+    },
     /// Evaluation exceeded its step budget (a non-termination guard).
     FuelExhausted,
+    /// A swap engine reported a failure (e.g. an illegal pair or an out-of-range conversion). The
+    /// message comes from the engine; it is always explicit, never a silent coercion.
+    Swap(String),
     /// A constructed result violated a Core IR well-formedness invariant (RFC-0001 §4.3/§4.5).
     Wf(WfError),
 }
@@ -111,7 +120,11 @@ impl core::fmt::Display for EvalError {
             EvalError::UnsupportedSwap { from, to } => {
                 write!(f, "unsupported swap: {from:?} → {to:?} (certified swap is M-120)")
             }
+            EvalError::Overflow { prim } => {
+                write!(f, "{prim}: fixed-width arithmetic overflow (result out of range)")
+            }
             EvalError::FuelExhausted => write!(f, "evaluation exceeded its step budget"),
+            EvalError::Swap(msg) => write!(f, "swap failed: {msg}"),
             EvalError::Wf(e) => write!(f, "well-formedness violation: {e}"),
         }
     }

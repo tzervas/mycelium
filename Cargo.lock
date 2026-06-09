@@ -86,6 +86,12 @@ checksum = "6b947ae49db0d222b1dbc6b113ce7248a3fc3a6ca21b696717bfc000ba4484d8"
 [[package]]
 name = "mycelium-cert"
 version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-interp",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "mycelium-core"
@@ -104,12 +110,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-lsp"
+version = "0.0.0"
+dependencies = [
+ "mycelium-cert",
+ "mycelium-core",
+ "mycelium-interp",
+]
+
+[[package]]
 name = "mycelium-mlir"
 version = "0.0.0"
+dependencies = [
+ "mycelium-cert",
+ "mycelium-core",
+ "mycelium-interp",
+]
 
 [[package]]
 name = "mycelium-vsa"
 version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+]
 
 [[package]]
 name = "proc-macro2"

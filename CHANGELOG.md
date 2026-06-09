@@ -9,6 +9,105 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **MLIR→LLVM AOT path — ternary-dialect skeleton + runnable AOT artifact** (`mycelium-mlir`,
+  **M-150**, Phase 1; RFC-0004 §2/§6; ADR-007; T1.5): `dialect::emit` renders the lowered A-normal
+  form as a textual `ternary`-dialect MLIR-style module (one op per binding, all attributes inline —
+  the no-opaque-pass anchor), and `aot::run` is the **runnable artifact for the subset** — an
+  independent big-step env-machine that executes the lowered ANF directly. Native libMLIR/LLVM
+  codegen is **deferred** (Phase 3 matures it; honestly scoped as a textual skeleton + execution
+  model, not a compiler).
+- **Interp↔AOT differential** (`mycelium-mlir` tests, **M-151**, Phase 1; NFR-7; VR-4; RR-12): a
+  harness runs a kernel corpus under both the M-110 reference interpreter (small-step substitution)
+  and the M-150 AOT artifact (big-step env-machine over the lowered ANF) and asserts **observable
+  equivalence** (repr + payload + guarantee); divergence fails CI. The two paths differ in IR shape
+  and evaluation strategy, sharing only the trusted primitive/swap semantics — so the differential
+  catches lowering/scheduling/ordering divergence (the cheap baseline preceding per-artifact
+  translation validation in Phase 2). A control test confirms the harness discriminates.
+- **LSP feedback facade** (`mycelium-lsp::feedback`, **M-140**, Phase 1; FR-S5; Foundation §5.8;
+  SC-5): `analyze(node)` exposes the **four** semantic-feedback artifact kinds over one surface —
+  (1) typecheck/invariant **diagnostics** (linter), (2) **swap certificates** for statically-
+  resolvable swap sites, (3) per-value **bound/guarantee annotations**, (4) **lowering-stage dumps**.
+  A failed/unsupported swap is surfaced on the diagnostics channel, never silent. Verified by a
+  **scripted-client** integration test driving all four channels (incl. a Proven bound, an
+  out-of-range swap, and invariant violations).
+- **Canonical formatter** (`mycelium-core::lower::format` + `mycelium-lsp::fmt`, **M-142**, Phase 1;
+  RFC-0001 §4.8; ADR-003): a canonical textual normal form that **α-normalizes binder names**
+  (`v0, v1, …`), so definitions differing only in names render to identical text and share one
+  `content_hash` — reformatting is a projection that never changes content-addressed identity (tested:
+  renamed defs format identically and hash equally; formatting leaves identity untouched; free
+  variables keep their names).
+- **Invariant linter** (`mycelium-lsp::lint`, **M-141**, Phase 1; SC-3; G2; FR-M3; VR-5): static,
+  inspectable lints over a Core IR program, emitted as `Diagnostic`s for authoring tools — `implicit-swap`
+  (an `Op` mixing paradigms implies a conversion that must be an explicit `Swap`), `unverified-bound`
+  (a `Declared` value must always be surfaced, never silently trusted), `placeholder-policy` (a swap
+  citing a stub rather than a real `PolicyRef`), and `free-variable` (an open term). Each lint has a
+  positive and a negative test. Introduces the toolchain crate `mycelium-lsp` (FR-S5), kept out of
+  the auditable kernel (KC-3 — depends on core/interp/cert, nothing depends on it).
+- **Inspectable lowering — ≥2 dumpable/diffable stages** (`mycelium-core::lower`, **M-112**, Phase 1;
+  RFC-0004 §5/§6; SC-4; WF5): a backend-agnostic lowering pipeline. `stages(node)` returns **`core`**
+  (the canonical Core IR tree dump) → **`substrate`** (an A-normal form flattening nested
+  `Op`/`Swap`/`Let` to a linear binding list — the pre-codegen shape backends consume), each binding
+  whose result repr is statically known (`Const`, `Swap` target) annotated with its **scheduled
+  `PhysicalLayout`** (the default schedule, `I2_S` for ternary; RFC-0004 §5 / DN-01). Dumps are
+  canonical (deterministic — structurally identical programs render identically, SC-4) and `Meta`
+  guarantee tags survive lowering (WF5). `Op`-result layout is left explicitly unannotated (no
+  operator typing yet — the omission is honest, not silent; G2).
+- **Cleanup / item memory** (`mycelium-vsa::cleanup`, **M-132**, Phase 1; FR-S4; RFC-0003 §3): a
+  labelled associative memory (`CleanupMemory`) that snaps a noisy query — an *approximate* `unbind`
+  result or a `bundle` decode — to the nearest stored atom by similarity, returning a `Match { label,
+  index, confidence, margin }`. The confidence (match cosine) and margin (gap to the runner-up) make
+  approximate unbind *usable* and *inspectable* (the retrieval decision is reported, never a hidden
+  nearest-neighbour pick; G2). Tested incl. the role⊗filler record-decode use case (bundle two bound
+  pairs, unbind by a role, clean up to the right filler).
+- **MAP-I bundle capacity bound — `Proven` via checked instantiation** (`mycelium-vsa::capacity`,
+  **M-131**, Phase 1; RFC-0003 §5; ADR-010; SC-2; KC-1): `required_dim(m, δ) = ⌈(2/μ²)·ln(m/δ)⌉`
+  (μ=0.1) and `proven_capacity_bound` / `MapI::bundle_values_certified`, which attach a **`Proven`**
+  `CapacityBound` (basis `ProvenThm`, citing Clarkson-Ubaru-Yang 2023 / Thomas-Dasgupta-Rosing 2021)
+  **iff** the checked side-condition `dim ≥ required_dim` holds — exactly the M-001 axiomatized-
+  theorem + checked-instantiation pattern (the formula is cited, not re-proven). An undersized
+  dimension returns an explicit `InsufficientCapacity` error rather than an unbacked `Proven` tag
+  (M-I2/VR-5). `required_dim` reproduces the four M-001 probe settings (1141/1843/2164/2764).
+  **Acceptance — ≥10⁴-trial empirical validation (SC-2):** over 10,000 independent trials at
+  `dim ≥ required_dim(3, 1e-2)`, the measured nearest-neighbour retrieval-failure rate stays `≤ δ`.
+- **VSA submodule — `VsaModel` trait + MAP-I** (`mycelium-vsa`, **M-130**, Phase 1; RFC-0003 §3–§4;
+  ADR-008; T2.6): a composition-style `VsaModel` trait (`bind`/`unbind` + self-inverse flag,
+  `bundle`, `permute`/`unpermute`, `similarity`, and the honest per-op intrinsic guarantee) and its
+  first model **MAP-I** — `bind`/`unbind` are self-inverse and **`Exact`** (elementwise product),
+  `permute` is **`Exact`** (cyclic shift), `bundle` is elementwise superposition. Value-level
+  adapters for the Exact ops carry honest `Derived` provenance. **Dependency-gated** (ADR-008): the
+  crate depends on `mycelium-core` but the kernel does not depend on it — VSA values stay
+  type-checkable in the kernel without pulling in this algebra (KC-3). Tests: bind/unbind round-trip
+  exactly, permute is invertible/cyclic, a bundle is far more similar to its members than to a
+  stranger, dim-mismatch/empty-bundle are explicit errors. The `bundle` **`Proven`** capacity bound
+  (M-I2: a *value*-level Proven bound needs a checked basis) is deferred to **M-131** — not stamped
+  here (VR-5).
+- **Binary↔ternary certified swap** (`mycelium-cert` + `mycelium-core::binary`, **M-120**, Phase 1;
+  RFC-0002 §3/§4): `enc`/`dec` per `docs/spec/swaps/binary-ternary.md` over a legal `(n, m)` pair,
+  emitting a `SwapCertificate::Bijective` (`LosslessWithinRange`) that references the once-per-pair
+  round-trip lemma (`lemma_ref`) bound by concrete `params`. `enc` is total on `B_n`; `dec` is the
+  **partial** inverse — a value outside the binary range is an explicit `SwapError::OutOfRange`
+  (P4), an illegal pair is a **type error** (`IllegalPair`, RFC-0002 §5), never a `Declared` gamble.
+  Within range the result is `Exact`/`bound = None` (P3, M-I1) and records `policy_used` + `Derived`
+  provenance. A `BinaryTernarySwapEngine` plugs the swap into the M-110 interpreter. **Acceptance —
+  `dec(enc x) = Some x` exhaustively over all 256 bytes** (8↔6, SC-1); serializer output pinned to a
+  committed `swap-certificate` example validated against the schema in CI (SC-3). Adds a
+  two's-complement codec `mycelium-core::binary` (exhaustively round-trip-tested).
+- **Binary↔ternary round-trip proof** (`proofs/binary-ternary-roundtrip/`, **M-121**, Phase 1;
+  VR-1/SC-1): the SMT-LIB2 injectivity obligation for the 8↔6 pair — **discharged by Z3 4.16.0
+  (`unsat`)**: no two distinct 6-trit vectors collide ⟹ the value map is a bijection onto
+  `[−364, 364] ⊇ B_8` ⟹ `dec(enc b) = b` (P1/P2). Wired into `scripts/checks/proofs.sh`
+  (skip-graceful without z3); the lemma identity matches `mycelium_cert::roundtrip_lemma_ref()`. P3/P4
+  are additionally decided by the M-120 exhaustive Rust corpus. (The fixed `8↔6` instance; a
+  width-generic proof is future work — each legal pair gets its own discharged lemma.)
+- **Balanced-ternary arithmetic** (`mycelium-core::ternary` + `mycelium-interp`, **M-111**, Phase 1;
+  FR-M2): the single home for the balanced-ternary integer codec (`int ↔ trits`, MSB-first, the
+  §3.1 digit-extraction algorithm) and fixed-width digit-wise arithmetic — `neg` (digit-wise sign
+  flip = value negation), ripple-carry `add`/`sub`, and shifted-add `mul`. Out-of-range results are
+  an explicit `None`/`EvalError::Overflow`, **never** a silent wrap (SC-3). The interpreter gains
+  `trit.neg/add/sub/mul` primitives over it. **Acceptance — property-tested vs an `i64` oracle by
+  exhaustion** over all operand pairs at widths `m ≤ 4` (and the codec round-trip/neg at `m ≤ 5`):
+  in range the digit-wise result equals the encoded integer result, out of range it overflows.
+  Grounded in `docs/spec/swaps/binary-ternary.md` §1/§3.1; reused by the M-120 swap.
 - **Reference interpreter** (`mycelium-interp`, **M-110**, Phase 1): the trusted, executable
   **small-step operational semantics** for the Core IR, closing SPEC §10.3 (RFC-0004 §2; ADR-009;
   NFR-7). Call-by-value substitution over closed `Node`s with the rules E-Let-Bind/Step,

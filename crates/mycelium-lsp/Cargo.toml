@@ -1,0 +1,17 @@
+[package]
+name = "mycelium-lsp"
+version = "0.0.0"
+description = "Minimal toolchain surface (FR-S5): invariant linter (M-141), canonical formatter (M-142), and the LSP feedback facade (M-140) — one surface for diagnostics, swap certificates, bound/guarantee annotations, and lowering-stage dumps."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+mycelium-core = { path = "../mycelium-core" }
+mycelium-interp = { path = "../mycelium-interp" }
+mycelium-cert = { path = "../mycelium-cert" }

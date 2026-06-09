@@ -27,4 +27,18 @@ else
   skip "lh-bundle: cabal/z3 absent (needs GHC + LiquidHaskell + z3)"
 fi
 
+# M-121 — binary<->ternary round-trip / injectivity (proofs/binary-ternary-roundtrip/).
+# A pure SMT-LIB2 obligation: Z3 must report `unsat` (no two distinct 6-trit vectors collide ⟹ the
+# value map is injective ⟹ dec(enc b) = b for all b ∈ B_8). Skips when z3 is absent.
+if [[ -f proofs/binary-ternary-roundtrip/roundtrip_8x6.smt2 ]] && have z3; then
+  if out="$( z3 -smt2 proofs/binary-ternary-roundtrip/roundtrip_8x6.smt2 2>&1 )" \
+     && [[ "$(printf '%s' "$out" | tr -d '[:space:]')" == "unsat" ]]; then
+    ok "binary-ternary-roundtrip: Z3 unsat (injectivity ⟹ round-trip, 8↔6)"
+  else
+    fail "binary-ternary-roundtrip: expected 'unsat', got: $out"; rc=1
+  fi
+else
+  skip "binary-ternary-roundtrip: z3 absent (needs z3)"
+fi
+
 exit $rc
