@@ -68,6 +68,11 @@ corpus, not released software. Versioning will begin when the kernel does.
   `.pre-commit-config.yaml`, and a manual-dispatch **advisory** GitHub Actions workflow.
 
 ### Changed
+- **Proofs wired into the check suite** (`scripts/checks/proofs.sh` + `just proofs`): runs the
+  LiquidHaskell `bundle` probe (`LC_ALL=C.UTF-8 cabal build`, a green build ⟺ LH `SAFE`),
+  skip-graceful when GHC/cabal/z3 are absent. Added to `just check`/`just ci`; the manual-dispatch CI
+  workflow now sets up GHC 9.8.2 + cabal + z3 (with a cabal/dist-newstyle cache) so the proof
+  verifies on a manual run. (Whole suite remains `workflow_dispatch`-only.)
 - **KC-1 confirmed (build)** (**M-001**): the Liquid-Haskell MAP-I `bundle` capacity refinement
   (`proofs/lh-bundle/`) type-checks **`SAFE` (16 constraints)** and Z3 discharged all four `(d,m,δ)`
   instantiations (GHC 9.8.2 · LiquidHaskell 0.9.8.2 · Z3 4.8.12), ratifying the axiomatized-theorem +

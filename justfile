@@ -43,6 +43,8 @@ secrets:
     @bash scripts/checks/secrets.sh
 test:
     @bash scripts/checks/test.sh
+proofs:
+    @bash scripts/checks/proofs.sh
 
 # --- pre-commit (optional, easy DX) ---
 # Install the git hooks so `just check`-equivalent runs on every commit.

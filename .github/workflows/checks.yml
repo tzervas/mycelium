@@ -44,6 +44,24 @@ jobs:
       - name: Set up Rust (pinned to MSRV via rust-toolchain.toml — M-091)
         run: rustup show
 
+      - name: Set up Haskell (GHC + cabal) for proofs — M-001
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: "9.8.2"
+          cabal-version: "3.16.1.0"
+
+      - name: Install z3 (LiquidHaskell proofs need it on PATH)
+        run: sudo apt-get update && sudo apt-get install -y z3
+
+      - name: Cache cabal store + LH build (proofs are a cold-build pole)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cabal/store
+            proofs/lh-bundle/dist-newstyle
+          key: lh-${{ runner.os }}-ghc9.8.2-${{ hashFiles('proofs/lh-bundle/*.cabal', 'proofs/lh-bundle/cabal.project') }}
+          restore-keys: lh-${{ runner.os }}-ghc9.8.2-
+
       - name: Install check tools
         run: bash scripts/install-tools.sh
 
