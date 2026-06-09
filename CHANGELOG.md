@@ -9,13 +9,95 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Reference interpreter** (`mycelium-interp`, **M-110**, Phase 1): the trusted, executable
+  **small-step operational semantics** for the Core IR, closing SPEC §10.3 (RFC-0004 §2; ADR-009;
+  NFR-7). Call-by-value substitution over closed `Node`s with the rules E-Let-Bind/Step,
+  E-Op-Arg/Apply, E-Swap-Arg/Apply (documented in the crate). An extensible **primitive registry**
+  (`PrimRegistry`) ships the exact elementwise built-ins (`core.id`, `bit.not/and/or/xor`,
+  `trit.neg`); a **`SwapEngine`** hook ships the trivial same-`Repr` `IdentitySwapEngine`. Results
+  thread metadata honestly — guarantee by `meet` (RFC-0001 §4.7), provenance `Derived{op, inputs}`
+  over content hashes (§4.6), `policy_used` on swaps. **Never silent**: free variables, unknown/
+  ill-typed prims, unsupported cross-paradigm swaps, approximate-input composition (no bound kernel
+  yet — ADR-010/E2-4), and fuel exhaustion are all explicit `EvalError`s. 20-case golden corpus.
+  Adds `mycelium_core::operation_hash` (provenance op identity for prims). Scope boundary:
+  balanced-ternary arithmetic + oracle property tests are **M-111**; the certified binary↔ternary
+  swap + proof are **M-120/M-121**.
+- **Guarantee `meet`-composition** (`mycelium-core::guarantee`, **M-102**, Phase 1):
+  `GuaranteeStrength::meet` (the weakest-wins greatest-lower-bound) plus `propagate`/`meet_all` for
+  the RFC-0001 §4.7 rule `guarantee(result) = meet(inputs…, g_f)`, and `TOP`/`ALL` constants. The
+  meet-semilattice laws — commutativity, associativity, idempotence, identity `Exact`, `Declared`
+  absorbing — are verified by **exhaustion** over all 4×4(×4) tuples (complete for the finite
+  lattice, not sampled). Honesty can only degrade, never spuriously upgrade (VR-3/VR-5).
+- **Content-addressing** (`mycelium-core::content`, **M-103**, Phase 1): `Node::content_hash` /
+  `Value::content_hash` — a BLAKE3 hash over an injective, domain-separated, length-prefixed
+  encoding of the *identity-bearing* content: the α-normalized structure (bound vars as de Bruijn
+  indices, binder names dropped), types-with-`Repr`, constant literals, operator names, and swap
+  target+policy. Dynamic `Meta` (provenance, bounds, sparsity, `policy_used`) is excluded. Adds a
+  separable `hash ↔ name` table (`Names`) for names-as-metadata, `ScalarKind::tag`, and
+  `ContentHash::from_parts`/`algo`/`digest`. Acceptance met: identical defs collide; trivial (α)
+  renames don't change identity; a paradigm/precision/literal/operator change does (RFC-0001 §4.6;
+  ADR-003).
+- **Core IR (de)serialization** (`mycelium-core`, **M-104**, Phase 1): `serde`
+  `Serialize`/`Deserialize` for `Value`/`Meta`/`Repr`/`Bound`/`Provenance`/… emitting *exactly* the
+  ratified JSON data contracts (`kind`/`class`/`layout` tags; `VSA`/`BF16`/`TL1`/`TL2` renames;
+  `payload` as `{bits|trits|scalars|hypervector}` with MSB-first bit/trit strings; `bound` modelled
+  by presence; flat `kind`+`basis` `Bound`). `Deserialize` routes `Value`/`Meta` through their
+  checked constructors, so M-I1…M-I4 and payload↔repr mismatches are rejected on the wire — never
+  silently accepted. Faithful round-trip (`deserialize(serialize(v)) == v` incl. `Meta`) is tested
+  over a corpus spanning all four paradigms × every guarantee/bound/basis/layout; serializer output
+  is pinned to three new committed `value` examples (ternary/dense/vsa) that `scripts/checks/schema.sh`
+  validates against `value.schema.json` in CI (RFC-0001 §4.8).
+- **Core IR data structures** (`mycelium-core`, **M-101**, Phase 1): Rust types mirroring the
+  ratified schemas — `Repr`/`ScalarKind`/`SparsityClass`, the `GuaranteeStrength` lattice,
+  `Bound`/`BoundBasis`/`BoundKind`/`NormKind` (ADR-011: `basis` universal), `Meta` (with
+  `Provenance`, `SparsityObs`, `PhysicalLayout`/`PackScheme`), `Value`/`Payload`, `ContentHash`,
+  and the `Node` grammar (closes the core of SPEC §10.2; RFC-0001 §4.5). The honesty invariants
+  **M-I1…M-I4** and payload↔repr/repr well-formedness are enforced **by construction**
+  (`Meta::new`, `Value::new` → `WfError`). 17 unit tests; `fmt`/`clippy -D warnings`/`test` green on
+  MSRV 1.92.
+- **Minimal surface-syntax fragment** (`experiments/surface-fragment/`, **M-020**): a throwaway,
+  experiment-only concrete syntax (EBNF + desugaring to the Core IR nodes + 3 reference programs:
+  swap round-trip, VSA `bundle`, and a no-implicit-conversion type-error) to feed the KC-2
+  experiment. **Not** a committed surface — gated on KC-2 (hence under `experiments/`, not
+  `docs/spec/`). Linked from `SPECIFICATION.md` §10.1.
+- **Binary↔ternary encoding spec** (`docs/spec/swaps/binary-ternary.md`, **M-012**): precise
+  `enc`/`dec` for the canonical `8↔6` width — balanced-ternary digit semantics, the legality
+  condition `B_n ⊆ T_m`, `LosslessWithinRange` with an `Option`-typed (never-silent) inverse, the
+  four M-121 correctness obligations, and a worked round-trip + out-of-range example (RFC-0002
+  §4/§5; T2.1). Linked from `SPECIFICATION.md` §6/§10.4.
+- **Python tooling skeleton** (`experiments/`, **M-092**): a UV-managed project targeting
+  **Python 3.13** (ADR-007) with a `dev` group (pytest, pytest-cov, ruff, black), a trivial
+  importable module + passing smoke test, and a committed `uv.lock`. `scripts/checks/test.sh` runs
+  it via `uv run --frozen pytest` under the pinned interpreter, so it joins the `just check`/CI
+  suite (skip-graceful when uv is absent).
+- **Rust workspace skeleton** (**M-091**): a 6-crate Cargo workspace (`mycelium-core`,
+  `mycelium-interp`, `mycelium-vsa`, `mycelium-mlir` stub, `mycelium-cert` stub, `xtask`) with
+  **MSRV pinned to 1.92** via `rust-toolchain.toml` + `rust-version` (ADR-007), workspace lints
+  (`unsafe_code = forbid`, clippy warn), and a smoke test per crate. `cargo fmt --check`,
+  `clippy -D warnings`, and `cargo test` are all green on 1.92. Adds `scripts/checks/test.sh` +
+  `just test`, wired into the `just check`/CI suite (skip-graceful when a toolchain is absent), so
+  test parity now holds local↔CI. Fixes a malformed `Cargo.lock` line in `.gitignore`.
+- **M-001 probe scaffold** (`proofs/lh-bundle/`): the Liquid-Haskell MAP-I `bundle`
+  capacity-refinement module + cabal project + writeup, encoding the axiomatized-theorem +
+  checked-instantiation strategy with ≥3 concrete `(d,m,δ)` settings (RFC-0003 §5; T0.2). **Not yet
+  discharged** — no GHC/LH/Z3 in this environment — so KC-1 stays `passed (literature)`; the
+  derivation table is the independently-checkable artifact. Establishes `proofs/<name>/` as the
+  home for machine-checkable proofs (resolves OQ-2).
+- **`SPECIFICATION.md` skeleton** (`docs/spec/SPECIFICATION.md`, **M-011**): the consolidation index
+  over the corpus — §1–§9 reconciled to RFC-0001 (r2)/RFC-0002…0005/ADR-010/011/DN-01 and pointed at
+  the ratified `docs/spec/schemas/` contracts; §10 enumerates the open build items, each linked to a
+  live issue (no floating TODOs). Status `consolidating-draft → ratified-skeleton`.
+- **ADR-011 — `BoundBasis` is a property of every `Bound`** (`docs/adr/ADR-011-...md`, Accepted):
+  formally supersedes the implicit RFC-0001 r1 §4.3 decision that scoped `basis` to `CapacityBound`
+  only, so every approximate value (ε, δ, crosstalk, capacity) honestly records how its bound was
+  obtained (VR-5, G5). Resolves OQ-3.
 - **Core data-contract schemas** (`docs/spec/schemas/`, **M-010**): the 10 ratified JSON Schemas
   (draft 2020-12) — `repr`, `value`, `meta`, `guarantee`, `bound`, `provenance`,
   `physical-layout`, `swap-certificate`, `policy`, `reconstruction-manifest` — each a faithful
   projection of its source RFC/ADR section, plus ≥1 valid and ≥1 invalid example per schema (the
   invalids exercise the honesty-load-bearing invariants M-I1/M-I4). `just schema` validates the
-  set in CI. Raised OQ-3 (`bound.basis` placement), OQ-4 (`NormKind` registry), OQ-5 (policy
-  predicate grammar) as targeted corpus clarifications; see `docs/spec/schemas/README.md`.
+  set in CI. The OQ-3/OQ-4/OQ-5 clarifications surfaced here are now resolved (see below /
+  `docs/spec/schemas/README.md`).
 - **Phase-0 working plan** (`docs/planning/phase-0.md`): the first issue-coupled expansion of
   Foundation §6, mapping the nine Phase-0 tasks (M-001/002/010/011/012/020/090/091/092) to their
   GitHub issues, the critical path, honest KC-1/KC-2 gate status, the proposed canonical
@@ -35,6 +117,31 @@ corpus, not released software. Versioning will begin when the kernel does.
 - **Local check tooling** with local↔CI parity: `justfile` + `scripts/checks/*` (markdownlint,
   offline link/cross-reference, json-schema, codespell, shellcheck, secret scan, fmt/lint),
   `.pre-commit-config.yaml`, and a manual-dispatch **advisory** GitHub Actions workflow.
+
+### Changed
+- **Proofs wired into the check suite** (`scripts/checks/proofs.sh` + `just proofs`): runs the
+  LiquidHaskell `bundle` probe (`LC_ALL=C.UTF-8 cabal build`, a green build ⟺ LH `SAFE`),
+  skip-graceful when GHC/cabal/z3 are absent. Added to `just check`/`just ci`; the manual-dispatch CI
+  workflow now sets up GHC 9.8.2 + cabal + z3 (with a cabal/dist-newstyle cache) so the proof
+  verifies on a manual run. (Whole suite remains `workflow_dispatch`-only.)
+- **KC-1 confirmed (build)** (**M-001**): the Liquid-Haskell MAP-I `bundle` capacity refinement
+  (`proofs/lh-bundle/`) type-checks **`SAFE` (16 constraints)** and Z3 discharged all four `(d,m,δ)`
+  instantiations (GHC 9.8.2 · LiquidHaskell 0.9.8.2 · Z3 4.8.12), ratifying the axiomatized-theorem +
+  checked-instantiation strategy (RFC-0003 §5; ADR-010). KC-1 moves `passed (literature) → confirmed
+  (build)` in the Foundation §2.4 and Doc-Index §3/§4. (The Clarkson/Thomas theorem remains cited,
+  not re-proven — by design.) Haskell build output (`dist-newstyle/`, `.liquid/`) gitignored;
+  codespell skips them.
+- **Docs/parity CI hardened** (`.github/workflows/checks.yml`, **M-090**): the manual-dispatch
+  advisory workflow now sets up **uv** (so the `experiments/` Python 3.13 tests actually run) and
+  **Rust** (pinned via `rust-toolchain.toml`, so fmt/clippy/test run), and adds an advisory
+  **Codecov** upload of the experiments coverage. Markdown-lint + offline link-check + schema
+  validation already covered `docs/**` and the schemas via `just ci`; the PR template was already
+  wired. Posture unchanged: `workflow_dispatch` only, non-blocking (no auto-triggers — CLAUDE.md).
+- **RFC-0001 → r2** (status stays Accepted): §4.3 `Bound` grammar revised per **ADR-011** —
+  `BoundBasis` factored out to a required companion of *every* `Bound` (was: `CapacityBound` only),
+  and `NormKind` enumerated `L1|L2|Linf|Rel` as an extensible registry (resolves OQ-4). The r1 §4.3
+  grammar is formally superseded; indexes (`Doc-Index.md`, `docs/rfcs/README.md`,
+  `docs/adr/README.md`) and the `bound` schema updated to match.
 
 ### Changed (baseline-review consistency pass)
 - ADR-001 promoted to firmly **Accepted**; the "no statistical approximation vs

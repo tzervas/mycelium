@@ -1,0 +1,5 @@
+# Pin the toolchain to Mycelium's MSRV (ADR-007). Do NOT bump without an ADR — the
+# committed pin is a decision, not a build detail (CLAUDE.md / CONTRIBUTING).
+[toolchain]
+channel = "1.92"
+components = ["rustfmt", "clippy"]

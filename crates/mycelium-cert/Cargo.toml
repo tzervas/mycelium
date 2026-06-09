@@ -1,0 +1,14 @@
+[package]
+name = "mycelium-cert"
+version = "0.0.0"
+description = "STUB — the single translation-validation certificate checker (RFC-0002 §2 / RFC-0004 §3; ADR-010). Stub; E2-3/E2-4."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]

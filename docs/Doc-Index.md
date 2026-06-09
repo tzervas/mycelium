@@ -12,13 +12,14 @@
 | **Prior-Art Survey & Synthesis** | evidence base (pass 1) | Recorded → `research/01-prior-art-survey-RECORD.md` (full narrative is a conversation artifact) |
 | **Research Findings (T0/T1/T2)** | evidence base (pass 2) | Recorded → `research/02-research-findings-RECORD.md` (full narrative is a conversation artifact) |
 | **Project Foundation (r3)** | charter, scope, requirements, ADR-001…010, roadmap, risks | **Living — updated** |
-| **RFC-0001 — Core IR & Metadata Schema** | value model, `Repr`, `Meta`, guarantee lattice, content-addressing | **Accepted** |
+| **RFC-0001 — Core IR & Metadata Schema** | value model, `Repr`, `Meta`, guarantee lattice, content-addressing | **Accepted (r2)** |
 | **DN-01 — Packing Placement** | tradeoff study → schedule-staged decision | **Resolved → folded into RFC-0001 §4.1 + RFC-0004 §5** |
 | **RFC-0002 — Swap Certificate & Split Regime** | certificate, legal pairs, bijection semantics, shared checker | **Accepted** |
 | **RFC-0003 — VSA Submodule Boundary** | boundary, guarantee matrix, sparsity refinement, manifest | **Accepted** |
 | **RFC-0004 — Execution Model & "Stable Component"** | MLIR backbone, shared checker, schedule-staged packing | **Accepted** |
 | **RFC-0005 — Selection-Policy Language** | total cost-based policy + EXPLAIN | **Accepted** |
 | **ADR-010 — Verified-Numerics Foundation** | two bound kernels + shared certificate | **Accepted** |
+| **ADR-011 — BoundBasis is universal** | `basis` is a companion of every `Bound` (supersedes RFC-0001 r1 §4.3) | **Accepted** |
 
 ## 2. Dependency DAG
 
@@ -36,7 +37,7 @@ Shared machinery (decided):
 ```
 
 ## 3. What the research resolved (decisions now baked in)
-- **KC-1 (VSA-in-core viability): PASSED.** Proven non-asymptotic bundling bounds exist (Clarkson-Ubaru-Yang 2023; Thomas-Dasgupta-Rosing 2021) → VSA stays in core with honest `Proven` tags for MAP-I/sparse `bundle`. (T0.2)
+- **KC-1 (VSA-in-core viability): PASSED → confirmed (build) 2026-06-09.** Proven non-asymptotic bundling bounds exist (Clarkson-Ubaru-Yang 2023; Thomas-Dasgupta-Rosing 2021) → VSA stays in core with honest `Proven` tags for MAP-I/sparse `bundle`. (T0.2) The confirming Liquid-Haskell `bundle` probe (`proofs/lh-bundle/`, M-001) is **SAFE** (Z3 discharged), ratifying the cited-theorem + checked-instantiation strategy.
 - **Bounds: two kernels, one certificate** — ε via affine arithmetic (Daisy/FloVer), δ via union-bound/apRHL; `strength` composes by meet. (ADR-010 / T0.1)
 - **Packing: schedule-staged**, not in the type; cost-model+exhaustive selector over the fixed bitnet.cpp set (I2_S/TL1/TL2). (DN-01 / T1.4)
 - **Sparsity: declared class = static refinement; capacity = axiomatized-theorem + checked instantiation; observed sparsity = runtime metadata.** (T1.3)
@@ -47,7 +48,7 @@ Shared machinery (decided):
 - **VSA guarantee matrix** per model × operation encoded into RFC-0003; **HRR/FHRR unbind is the residual `Empirical` weak link.** (T1.2)
 
 ## 4. Remaining experiments (small; for the build phase, not blockers to design)
-- **LH bundling-bound instantiation** — encode MAP-I `bundle` capacity refinement in Liquid Haskell; confirm Z3 discharges it. The one confirming build for the cited-theorem + checked-instantiation strategy (ratifies ADR-010 / KC-1). *(RFC-0003 §5)*
+- ~~**LH bundling-bound instantiation**~~ — **DONE (2026-06-09).** MAP-I `bundle` capacity refinement encoded in Liquid Haskell (`proofs/lh-bundle/`, M-001); LH reports **SAFE**, Z3 discharged all constraints — ratifies the cited-theorem + checked-instantiation strategy (ADR-010 / KC-1). *(RFC-0003 §5)*
 - **E1** staged-packing perf over the 5 schemes *(RFC-0004 §8)* · **E3** wrong-layout-tag soundness vs NFR-7 *(RFC-0004 §8)* · **E4** LLM surface comparison, "packing in type" vs absent *(G10)*.
 
 ## 5. Next phase — detailed design & hard planning

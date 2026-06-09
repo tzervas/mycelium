@@ -1,0 +1,15 @@
+[package]
+name = "mycelium-interp"
+version = "0.0.0"
+description = "Reference interpreter — the trusted executable semantics for the Core IR (RFC-0004; ADR-009). Skeleton; M-110."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+mycelium-core = { path = "../mycelium-core" }

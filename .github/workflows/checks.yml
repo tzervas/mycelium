@@ -38,6 +38,30 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v2
 
+      - name: Set up uv (drives the experiments/ Python 3.13 tests — M-092)
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set up Rust (pinned to MSRV via rust-toolchain.toml — M-091)
+        run: rustup show
+
+      - name: Set up Haskell (GHC + cabal) for proofs — M-001
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: "9.8.2"
+          cabal-version: "3.16.1.0"
+
+      - name: Install z3 (LiquidHaskell proofs need it on PATH)
+        run: sudo apt-get update && sudo apt-get install -y z3
+
+      - name: Cache cabal store + LH build (proofs are a cold-build pole)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cabal/store
+            proofs/lh-bundle/dist-newstyle
+          key: lh-${{ runner.os }}-ghc9.8.2-${{ hashFiles('proofs/lh-bundle/*.cabal', 'proofs/lh-bundle/cabal.project') }}
+          restore-keys: lh-${{ runner.os }}-ghc9.8.2-
+
       - name: Install check tools
         run: bash scripts/install-tools.sh
 
@@ -45,6 +69,22 @@ jobs:
         id: run
         continue-on-error: ${{ !inputs.strict }}
         run: just ci
+
+      - name: Python coverage + Codecov upload (advisory — M-092)
+        if: always()
+        continue-on-error: true
+        run: |
+          ( cd experiments && uv run --frozen pytest --cov=mycelium_experiments --cov-report=xml:coverage.xml )
+      - name: Upload coverage to Codecov (advisory)
+        if: always()
+        continue-on-error: true
+        uses: codecov/codecov-action@v5
+        with:
+          files: experiments/coverage.xml
+          flags: experiments
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Summary
         if: always()

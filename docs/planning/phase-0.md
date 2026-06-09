@@ -68,14 +68,14 @@ important column: see §3 for the gap it exposes.
 | Task | Issue | Pri | Depends on | Maps to | Artifact exists? | Readiness |
 |---|---|---|---|---|---|---|
 | **M-010** Ratify core data-contract schemas | [#5](https://github.com/tzervas/mycelium/issues/5) | P0 | — | P0.6 / RFC-0001–0003 | **Yes** — 10 schemas + examples authored, `just schema` green | **Done (ratified)** — 2026-06-09 (§3, §6.1); OQ-3/4/5 flagged |
-| **M-011** Ratify `SPECIFICATION.md` | [#6](https://github.com/tzervas/mycelium/issues/6) | P1 | M-010 | P0.6 | **No** — `docs/spec/SPECIFICATION.md` absent | **Author-then-ratify**, gated on M-010 (§6.3) |
-| **M-001** LH `bundle` capacity probe | [#2](https://github.com/tzervas/mycelium/issues/2) | P0 | M-010 | P0.1 / KC-1 | n/a (new build) | **Ready** — narrow dep on `CapacityBound` shape (§6.2) |
-| **M-012** Binary↔ternary encoding spec | [#7](https://github.com/tzervas/mycelium/issues/7) | P1 | — | P0.4 / RFC-0002 §4 | n/a (new spec) | **Ready** — pure spec authoring |
-| **M-020** Minimal surface fragment | [#4](https://github.com/tzervas/mycelium/issues/4) | P0 | — | P0.2 / SPEC §10.1 | n/a (throwaway) | **Ready**, but value-gated on M-002 design |
-| **M-002** KC-2 LLM-leverage experiment | [#3](https://github.com/tzervas/mycelium/issues/3) | P0 | M-020, M-010 | P0.2 / KC-2 | n/a (experiment) | **Blocked** on M-020 + M-010 |
-| **M-090** Docs CI | [#8](https://github.com/tzervas/mycelium/issues/8) | P1 | — | infra | partial — `checks.yml` exists, advisory | **Mostly done** (§6.5) |
-| **M-091** Rust workspace skeleton | [#9](https://github.com/tzervas/mycelium/issues/9) | P0 | — | infra / ADR-007 | **No** — no `Cargo.toml` yet | **Ready** — pure scaffolding (§6.4) |
-| **M-092** Python tooling skeleton | [#10](https://github.com/tzervas/mycelium/issues/10) | P1 | — | infra / ADR-007 | **No** — no `experiments/` yet | **Ready** — pure scaffolding |
+| **M-011** Ratify `SPECIFICATION.md` | [#6](https://github.com/tzervas/mycelium/issues/6) | P1 | M-010 | P0.6 | **Yes** — authored as the consolidation index; §10 fully issue-linked | **Done (ratified-skeleton)** — 2026-06-09 (§6.3) |
+| **M-001** LH `bundle` capacity probe | [#2](https://github.com/tzervas/mycelium/issues/2) | P0 | M-010 | P0.1 / KC-1 | `proofs/lh-bundle/` — LH **SAFE**, Z3 discharged | **Done — KC-1 confirmed (build)** 2026-06-09 (§5, §6.2) |
+| **M-012** Binary↔ternary encoding spec | [#7](https://github.com/tzervas/mycelium/issues/7) | P1 | — | P0.4 / RFC-0002 §4 | **Yes** — `docs/spec/swaps/binary-ternary.md` + worked example | **Done (ratified)** — 2026-06-09 |
+| **M-020** Minimal surface fragment | [#4](https://github.com/tzervas/mycelium/issues/4) | P0 | — | P0.2 / SPEC §10.1 | **Yes** — `experiments/surface-fragment/` (grammar + 3 gold programs) | **Done** — 2026-06-09 (throwaway, gated on KC-2) |
+| **M-002** KC-2 LLM-leverage experiment | [#3](https://github.com/tzervas/mycelium/issues/3) | P0 | M-020, M-010 | P0.2 / KC-2 | n/a (experiment) | **Blocked** — M-010/M-020 met; now needs LLM API access **and** a fragment parser/type-checker (M-101 #11 / M-110 #15) to score type-check pass rate |
+| **M-090** Docs CI | [#8](https://github.com/tzervas/mycelium/issues/8) | P1 | — | infra | **Yes** — `checks.yml` runs full `just ci`; uv/Rust setup + Codecov wired; PR template present | **Done** — 2026-06-09 (§6.5) |
+| **M-091** Rust workspace skeleton | [#9](https://github.com/tzervas/mycelium/issues/9) | P0 | — | infra / ADR-007 | **Yes** — 6-crate workspace; fmt/clippy/test green on MSRV 1.92 | **Done** — 2026-06-09 (§6.4) |
+| **M-092** Python tooling skeleton | [#10](https://github.com/tzervas/mycelium/issues/10) | P1 | — | infra / ADR-007 | **Yes** — UV `experiments/` project; pytest green on Python 3.13 | **Done** — 2026-06-09 |
 
 Legend — **Ready**: can start now from the corpus. **Author-then-ratify**: the issue is framed as
 "ratify X" but X must be *authored* first (see §3). **Blocked**: a hard dependency is open.
@@ -179,14 +179,15 @@ Per the honesty rule and VR-5, gate status is tracked at the strength it has act
 
 | Gate | Question | Current status | What moves it | Issue |
 |---|---|---|---|---|
-| **KC-1** | Does a core VSA op admit a usefully tight, honestly-statable bound? | **passed (literature)** — Clarkson-Ubaru-Yang 2023, Thomas-Dasgupta-Rosing 2021 (T0.2); MAP-I/sparse `bundle` tagged `Proven` | **confirmed (build)** when the LH module type-checks **and** Z3 discharges ≥3 concrete `(d,k,s,m,δ)` settings | M-001 (#2) |
+| **KC-1** | Does a core VSA op admit a usefully tight, honestly-statable bound? | ✅ **confirmed (build)** 2026-06-09 — LH `bundle` probe **SAFE**, Z3 discharged (atop the literature: Clarkson-Ubaru-Yang 2023, Thomas-Dasgupta-Rosing 2021, T0.2); MAP-I/sparse `bundle` tagged `Proven` | *(met)* — was: LH type-checks + Z3 discharges ≥3 settings | M-001 (#2, closed) |
 | **KC-2** | Does LLM code-gen/reasoning survive on the Mycelium surface? | **open** — research did not settle it (RR-3) | a *written verdict* (proceed / reweight-to-human / fall-back-to-embedded-DSL) + SC-5b baseline X | M-002 (#3) |
 
-**KC-1 honesty note.** The literature pass justifies the `Proven` *tag* (a non-asymptotic theorem
-exists). M-001 confirms the *strategy* — that we can axiomatize the theorem statement and have the
-checker discharge only the arithmetic instantiation (RFC-0003 §5; ADR-010). Until that build runs,
-the status string stays `passed (literature)`; M-001's acceptance criterion is precisely the
-upgrade to `confirmed (build)`. We do not pre-write the upgrade.
+**KC-1 honesty note.** The literature pass justified the `Proven` *tag* (a non-asymptotic theorem
+exists). M-001 confirmed the *strategy*: the LH module axiomatizes the cited theorem statement and
+Z3 discharges only the arithmetic instantiation (`LIQUID: SAFE (16 constraints checked)`; RFC-0003
+§5; ADR-010). What is **not** claimed: a from-scratch proof of the Clarkson/Thomas concentration
+inequality — that stays cited (the ADR-010 / RFC-0002 §7 pattern). The upgrade to `confirmed
+(build)` was made only after the green run, not pre-written.
 
 ---
 
@@ -271,8 +272,11 @@ upgrade to `confirmed (build)`. We do not pre-write the upgrade.
 
 | Id | Item | Disposition |
 |---|---|---|
-| **OQ-1** | Is the §3 canonical 10-schema set the intended "10 schemas" of M-010? | **Ask the author before authoring** — "10" implies prior intent; the set is derived, not given. |
-| **OQ-2** | Where do the LH probe (M-001) and a `proofs/` tree live relative to M-091/M-092? | Decide alongside M-091 layout; record in `SPECIFICATION.md` §10 / phase-1.md. |
+| **OQ-1** | Is the §3 canonical 10-schema set the intended "10 schemas" of M-010? | **Resolved (2026-06-09)** — owner confirmed the derived set; M-010/M-011 issue bodies amended to author-then-ratify. |
+| **OQ-2** | Where do the LH probe (M-001) and a `proofs/` tree live relative to M-091/M-092? | **Resolved (2026-06-09)** — formal/machine-checkable proofs live under `proofs/<name>/`; M-001 is `proofs/lh-bundle/`. M-121 round-trip proof follows suit. |
+| **OQ-3** | `bound.basis` placement (RFC-0001 §4.3 grammar vs. invariants M-I2/3/4) | **Resolved (2026-06-09)** — formal supersede: **ADR-011** + **RFC-0001 r2** factor `basis` to every `Bound`. |
+| **OQ-4** | `NormKind` not enumerated normatively | **Resolved (2026-06-09)** — enumerated `L1\|L2\|Linf\|Rel` as an extensible registry (RFC-0001 §4.3 r2). |
+| **OQ-5** | Concrete policy-predicate grammar (RFC-0005 deferral) | **Deferred by design, tracked** — Phase-2 epic **E2-6** (#33). `rules[].when` stays a declared object. |
 | **RR-3** | LLM leverage collapses on novel syntax (KC-2) | The one existential risk research didn't settle; M-002 is its circuit-breaker. Acceptable outcomes include fall-back-to-embedded-DSL. (Foundation RR-3.) |
 | **RR-2/KC-3** | Schema + spec surface grows past single-expert auditability | Keep schemas a thin 1:1 projection of the RFCs; no new design in the spec layer. |
 | **Seq-1** | M-010/M-011 framed as "ratify" but artifacts absent (§3) | Reframed here as author-then-ratify; tooling already supports it (`schema.sh`). Surface to the author so issue bodies can be amended if desired. |

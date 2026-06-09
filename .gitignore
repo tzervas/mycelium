@@ -2,7 +2,8 @@
 /target/
 **/target/
 *.rs.bk
-Cargo.lock        # keep for binaries; remove this line if publishing a library crate
+# Cargo.lock IS committed — the workspace ships a binary (`xtask`), so the lockfile is
+# tracked for reproducible builds. (gitignore has no inline comments; keep this on its own line.)
 *.pdb
 
 # ---- Python ----
@@ -24,6 +25,13 @@ htmlcov/
 .coverage
 .coverage.*
 coverage.xml
+
+# ---- Haskell (LiquidHaskell proofs, cabal) ----
+dist-newstyle/
+.liquid/
+*.hi
+*.o
+.ghc.environment.*
 
 # ---- Tooling / verification scratch ----
 *.smt2.out
