@@ -177,21 +177,55 @@ basis.
 
 ## 6. Per-task detail (filled as tasks land)
 
-### 6.1 M-201 — ErrorBound (ε) affine-arithmetic kernel · #48 · P0
+### 6.1 M-201 — ErrorBound (ε) affine-arithmetic kernel · #48 · P0 · done 2026-06-09
 
-*(to be filled on landing — goal/acceptance from the issue, what was delivered, honesty note)*
+- **Goal / acceptance (from issue).** Affine-form ε composition (`add`/`sub`/`mul`/`neg`/`scale`)
+  with a radius→`eps` projection; Soundness/Monotonicity/Determinism each property-tested.
+- **Delivered.** `mycelium-numerics::error`: `AffineForm` (`x₀ + Σxᵢ·εᵢ`, noise symbols `εᵢ∈[−1,1]`),
+  exact linear ops (shared symbols cancel — the correlation advantage over interval arithmetic) and a
+  sound `mul` (second-order remainder `≤ rad(x)·rad(y)` onto a fresh symbol). The scalar
+  `ErrorBound{eps,norm}` projection carries the conservative magnitude composition used when the
+  affine structure isn't available (the interpreter's case). Property tests: linear ops are *exact*
+  for every noise assignment; `mul` is sound (true product ∈ `[center±radius]`); scalar `add/sub/
+  scale/mul` upper-bound true deviations; monotone; deterministic; norm-mismatch refused (`None`,
+  never silent). 20k trials each.
+- **Honesty.** The kernel only ever *degrades* strength (composition is monotone-downward); norm
+  mixing is an explicit `None`, not a coercion (G2).
 
-### 6.2 M-202 — ProbBound (δ) union-bound kernel · #49 · P0
+### 6.2 M-202 — ProbBound (δ) union-bound kernel · #49 · P0 · done 2026-06-09
 
-*(to be filled on landing)*
+- **Goal / acceptance (from issue).** `union(δ₁..δₙ)=min(1,Σδ)`; apRHL `[SEQ]` `⟨ε,δ⟩`; Soundness/
+  Monotonicity/Determinism tested; does *not* supply VSA crosstalk content (ADR-010 §5).
+- **Delivered.** `mycelium-numerics::prob`: `ProbBound{delta}` with `union` (saturating at 1 — a sound
+  over-approximation) and `or`; `ApRhlJudgment{eps,delta}` with `seq` (ε adds as the `e^ε` factors
+  multiply, δ adds, both clamped — ADR-010 §2). Tests: union over-estimates the empirical "any fails"
+  rate of independent events (200k Monte-Carlo trials); monotone + saturates; deterministic; `[SEQ]`
+  composes and saturates.
+- **Honesty.** A different monoid from ε by construction (T0.1c); no VSA capacity/crosstalk content
+  lives here (that stays in RFC-0003's cited-theorem path).
 
-### 6.3 M-203 — Shared `{ε,δ,strength}` certificate + tier-i checker · #50 · P0
+### 6.3 M-203 — Shared `{ε,δ,strength}` certificate + tier-i checker · #50 · P0 · done 2026-06-09
 
-*(to be filled on landing)*
+- **Goal / acceptance (from issue).** `Certificate{eps,delta,strength}` (strength by `meet`,
+  serializable); tier-i checker rejects a too-tight certificate; `accuracy_to_probability` the single
+  legal cross-kernel rule.
+- **Delivered.** `mycelium-numerics::cert`: `Certificate` (serde round-trips; range-checked
+  constructor — out-of-range δ refused); `recompute_error` (the kernel re-derivation), the tier-i
+  `check_error_claim`/`check_union_claim` returning `Valid` / `Rejected{recomputed,claimed}` /
+  `Malformed` — a claim *tighter* than the re-derivation is **rejected**, a looser one is `Valid`
+  (sound, allowed); `accuracy_to_probability` (within tolerance ⇒ inherits the accuracy confidence,
+  outside ⇒ honest worst case δ=1). Also `compose_error_bound` (the M-204 entry, §6.4): composes
+  approximate inputs' `Error` bounds, meeting `strength` to the weakest input and deriving a matching
+  basis (Proven⊕Proven stays Proven under the affine-composition citation; Proven⊕Empirical→Empirical
+  carrying the fewest trials; …⊕Declared→Declared); a non-`Error` input ⇒ `None` (refuse, never
+  fabricate).
+- **Honesty.** Incompleteness of the checker is an explicit `Rejected`/`Malformed`, never a silent
+  pass (RFC-0002 §2); strength is never upgraded without a checked basis (VR-5).
 
 ### 6.4 M-204 — Interpreter honest approximate composition · #51 · P0
 
-*(to be filled on landing)*
+*(to be filled on landing — wires `compose_error_bound` into `mycelium-interp::prims`, retiring the
+`ApproxCompositionUnsupported` refusal for composable approximate inputs.)*
 
 ---
 

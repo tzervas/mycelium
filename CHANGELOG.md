@@ -9,6 +9,21 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Verified-numerics foundation — two bound kernels + shared certificate + tier-i checker**
+  (`mycelium-numerics`, **M-201/M-202/M-203**, Phase 2; ADR-010; RFC-0001 §4.7; SPEC §10.7): a new
+  crate realizing ADR-010's two-kernels-one-certificate decision, deliberately *outside*
+  `mycelium-core` (KC-3/SoC — the trusted kernel stays small; numerics is a certificate consumer).
+  **`error`** composes ε through **affine arithmetic** — `AffineForm` (`x₀ + Σxᵢ·εᵢ`) with *exact*
+  linear ops (correlated noise symbols cancel) and a sound `mul` (second-order remainder onto a fresh
+  symbol), and the scalar `ErrorBound{eps,norm}` projection (`add`/`sub`/`neg`/`scale`/`mul`).
+  **`prob`** composes δ through the **union bound** (`min(1,Σδ)`) and the apRHL `[SEQ]` rule
+  (`ApRhlJudgment` — ε adds as the `e^ε` factors multiply, δ adds, both saturating). They meet at the
+  shared **`Certificate{eps,delta,strength}`** (`strength` by `meet`), with a **tier-i Rust checker**
+  (`check_error_claim`/`check_union_claim`) that re-derives a composition and **rejects any claim
+  tighter than the re-derivation** — never a silent pass (RFC-0002 §2) — and the one sanctioned
+  cross-kernel rule `accuracy_to_probability` (ADR-010 §4). The three normative properties
+  (**Soundness, Monotonicity, Determinism**; RFC-0001 §4.7) are property-tested over 20k-trial inline
+  loops (Phase-1 house style — no `proptest`/`rand` dep); 17 tests green, clippy `-D warnings` clean.
 - **Phase-2 plan + epic decomposition** (`docs/planning/phase-2.md`; **Phase 2**; Foundation §6;
   SPEC §10.7–§10.10): decomposed the seven Phase-2 epics (#28–#34) into 18 issue-coupled `M-2xx`
   build tasks (#48–#65), created as sub-issues of their epics and joined into `tools/github/idmap.tsv`.
