@@ -87,8 +87,8 @@ change is a `Swap`; WF2 every `Swap` carries a `PolicyRef`; WF3 every non-`Exact
 consistent `bound`; WF4 every node is content-addressable; WF5 lowering preserves `Meta` semantics.
 
 - **Normative:** RFC-0001 §4.4, §4.5.
-- **Open:** the concrete full node grammar (EBNF) and the full term language (abstraction,
-  recursion, modules) — see §10.2.
+- **Core node grammar:** committed in `mycelium-core::node` (M-101); RFC-0001 §4.5.
+- **Open:** the full term language (abstraction, recursion, modules) — see §10.2.
 
 ## 5. Content-addressing & identity
 
@@ -169,7 +169,7 @@ cardinality-estimation opacity because its statistics are *exact metadata*, not 
 | § | Open item | Issue(s) | Phase |
 |---|---|---|---|
 | 10.1 | Minimal surface-syntax fragment — ✅ [`experiments/surface-fragment/`](../../experiments/surface-fragment/README.md) (M-020, throwaway/experiment-only) | M-020 ([#4](https://github.com/tzervas/mycelium/issues/4)) | 0 |
-| 10.2 | Concrete Core IR node grammar (EBNF) + full term language | M-101 ([#11](https://github.com/tzervas/mycelium/issues/11)) | 1 |
+| 10.2 | Core IR node grammar — ✅ committed (EBNF in `mycelium-core::node`, RFC-0001 §4.5; M-101); full term language (abstraction/recursion/modules) still open → later RFC | M-101 ([#11](https://github.com/tzervas/mycelium/issues/11)) | 1 |
 | 10.3 | Reference-interpreter small-step operational semantics | M-110 ([#15](https://github.com/tzervas/mycelium/issues/15)) | 1 |
 | 10.4 | Binary↔ternary swap impl + machine-checked round-trip (encoding spec ✅ [`swaps/binary-ternary.md`](swaps/binary-ternary.md), M-012) | M-120 ([#18](https://github.com/tzervas/mycelium/issues/18)), M-121 ([#19](https://github.com/tzervas/mycelium/issues/19)) | 1 |
 | 10.5 | Inspectable lowering (≥2 stages); MLIR→LLVM skeleton; interp↔AOT differential | M-112 ([#17](https://github.com/tzervas/mycelium/issues/17)), M-150 ([#26](https://github.com/tzervas/mycelium/issues/26)), M-151 ([#27](https://github.com/tzervas/mycelium/issues/27)) | 1 |

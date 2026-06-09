@@ -9,6 +9,14 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Core IR data structures** (`mycelium-core`, **M-101**, Phase 1): Rust types mirroring the
+  ratified schemas — `Repr`/`ScalarKind`/`SparsityClass`, the `GuaranteeStrength` lattice,
+  `Bound`/`BoundBasis`/`BoundKind`/`NormKind` (ADR-011: `basis` universal), `Meta` (with
+  `Provenance`, `SparsityObs`, `PhysicalLayout`/`PackScheme`), `Value`/`Payload`, `ContentHash`,
+  and the `Node` grammar (closes the core of SPEC §10.2; RFC-0001 §4.5). The honesty invariants
+  **M-I1…M-I4** and payload↔repr/repr well-formedness are enforced **by construction**
+  (`Meta::new`, `Value::new` → `WfError`). 17 unit tests; `fmt`/`clippy -D warnings`/`test` green on
+  MSRV 1.92.
 - **Minimal surface-syntax fragment** (`experiments/surface-fragment/`, **M-020**): a throwaway,
   experiment-only concrete syntax (EBNF + desugaring to the Core IR nodes + 3 reference programs:
   swap round-trip, VSA `bundle`, and a no-implicit-conversion type-error) to feed the KC-2
