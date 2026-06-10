@@ -83,7 +83,7 @@ All Phase-2 tasks, with issue number (`idmap.tsv`), priority, dependency, and **
 | **M-204** Interp honest approximate composition | [#51](https://github.com/tzervas/mycelium/issues/51) | P0 | M-201…M-203 | RFC-0001 §4.7 | **Done (2026-06-09)** — refusal retired for additive arithmetic |
 | **M-210** Shared TV certificate checker | [#52](https://github.com/tzervas/mycelium/issues/52) | P0 | E2-4, M-120/M-151 | RFC-0002 §2 / RFC-0004 §3 | **Done (2026-06-10)** — `mycelium-cert::check` |
 | **M-211** Bounded/lossy swap (F32→BF16) | [#53](https://github.com/tzervas/mycelium/issues/53) | P1 | E2-4, M-210, M-230 | RFC-0002 §5 / ADR-010 §1 | **Done (2026-06-10)** — `mycelium-cert::dense` (M-101's `Dense` repr sufficed; M-230's *ops* remain open) |
-| **M-212** KC-4 overhead + SC-3 global | [#54](https://github.com/tzervas/mycelium/issues/54) | P1 | M-210, M-211 | KC-4 / SC-3 | Ready after M-211 |
+| **M-212** KC-4 overhead + SC-3 global | [#54](https://github.com/tzervas/mycelium/issues/54) | P1 | M-210, M-211 | KC-4 / SC-3 | **Done (2026-06-10)** — `xtask kc4` + `tests/sc3.rs`; measured verdict in §6.7 |
 | **M-220** Decision-table SelectionPolicy | [#55](https://github.com/tzervas/mycelium/issues/55) | P0 | M-101…M-103 | RFC-0005 §2/§3 | Ready (parallel to E2-4) |
 | **M-221** Mandatory EXPLAIN + LSP surfacing | [#56](https://github.com/tzervas/mycelium/issues/56) | P0 | M-220, M-140 | RFC-0005 §2.2/§4 / SC-5 | Ready after M-220 |
 | **M-222** Wire selection into swap/packing sites | [#57](https://github.com/tzervas/mycelium/issues/57) | P1 | M-220, M-221 | RFC-0005 §4 | Ready after M-221 |
@@ -165,7 +165,7 @@ Per the honesty rule and VR-5, kill-criterion status is tracked at the strength 
 | **KC-1** | Honest, usefully-tight bound for a core VSA op? | ✅ **confirmed (build)** — carried from Phase 1: M-001 LH probe SAFE; M-131 ships a `Proven` capacity bound via checked instantiation + ≥1e4-trial validation. No regression. | Phase 2 *extends* the pattern to MAP-B/BSC/HRR/FHRR/sparse (M-240…M-242) — each tagged at the strength its basis supports, never upgraded. |
 | **KC-2** | LLM code-gen/reasoning survives the Mycelium surface? | **open — blocked (external)** — unchanged; M-002 (#3) needs LLM API access. *Structurally* unblocked by the M-110 interpreter + M-141 linter (a type-check-pass-rate harness now exists). | Out of Phase-2 scope to *run*; remains the open Phase-0 experiment. Honest verdict: not yet established. |
 | **KC-3** | Kernel stays single-expert auditable? | **holding** — `mycelium-core` stayed small and by-construction-correct through Phase 1; VSA is behind the ADR-008 submodule boundary. | Phase 2 adds surface (numerics, swaps, selection, more VSA). Decision: keep numerics in a *separate* `mycelium-numerics` crate and selection in `mycelium-select` (SoC) so the core kernel does not balloon. Re-assess at the Phase-2 gate. |
-| **KC-4** | Per-swap certificate-check overhead within budget? | **n/a yet** — first *measurable* when the shared checker (M-210) lands; the only swap today (M-120 bijective) references a cached lemma, no per-value proof. | M-212 measures it across the now-complete swap set and records an honest verdict vs the budget (the measured number, never pre-written). |
+| **KC-4** | Per-swap certificate-check overhead within budget? | **measured (2026-06-10, M-212)** — cert checks cost the same order as the swap itself (bijective ≈1.3× of a ~1.3 µs swap; bounded ≈0.13× of a ~16 µs swap; observational ≈10 ns) → the downgrade path is **not** triggered on this evidence. See §6.7 for the numbers + caveats. | A *ratified numeric budget* is still pending (Foundation says "an agreed budget" — a maintainer decision); re-measure on representative hardware when one is set. |
 
 **KC-3 decision (sequencing/scope, 2026-06-09).** The two bound kernels and the selection mechanism
 land as their own crates (`mycelium-numerics`, `mycelium-select`), *not* inside `mycelium-core`. This
@@ -295,6 +295,40 @@ basis.
   gamble"): the subnormal absolute-spacing bound and the input-bound composition rule (E2-1) are
   honest future work, recorded here.
 
+### 6.7 M-212 — KC-4 cert-overhead measurement + SC-3 global exit · #54 · P1 · done 2026-06-10
+
+- **Goal / acceptance (from issue).** A bench harness reporting cert-check cost per swap kind with
+  an honest measured verdict vs the KC-4 budget; a test asserting every swap in the legal-pair
+  table emits and validates a certificate (SC-3 global).
+- **Delivered.**
+  - **KC-4 harness:** `cargo run --release -p xtask -- kc4` times every implemented swap kind and
+    its M-210 check (warmup + minimum-mean-of-5-batches; refuses to measure a debug build — its
+    numbers would be dishonest to record). No bench dependency (house style).
+  - **Measured (2026-06-10, containerized x86-64 CI runner, single run — indicative, not a
+    calibrated benchmark):**
+
+    | Swap kind | swap | cert check | check/swap |
+    |---|---|---|---|
+    | bijective enc `Binary{8}→Ternary{6}` | ≈1.3 µs | ≈1.7 µs | ≈1.3× |
+    | bijective dec `Ternary{6}→Binary{8}` | ≈1.3 µs | ≈1.6 µs | ≈1.3× |
+    | bounded `Dense{768} F32→BF16` | ≈16 µs | ≈2.0 µs | ≈0.13× |
+    | observational interp↔AOT pair | — | ≈10 ns | — |
+
+  - **Honest KC-4 verdict (this evidence):** per-swap certificate checking costs the *same order
+    as the swap itself* (the bijective check re-derives the swap, hence ~1.3×; the bounded check
+    is ~13% of its swap) — microseconds, not CompCert-level effort. On this evidence the KC-4
+    downgrade path (certified → declared-and-property-tested) is **not** triggered. **Caveat:**
+    the Foundation specifies "an agreed budget" but none is ratified; ratifying a numeric budget
+    (and re-measuring on representative hardware) is a maintainer decision — this records the
+    measured number, not a pre-written "within budget".
+  - **SC-3 global:** `crates/mycelium-cert/tests/sc3.rs` — every *implemented* legal-pair row
+    (bijective enc/dec over four `(n, m)` pairs; bounded F32→BF16) emits a certificate that
+    validates through the one checker, and every rejected/unimplemented row (out-of-range,
+    illegal pair, Dense↔VSA, cross-paradigm without a rule) is an explicit error through
+    `CertifiedSwapEngine` — never silent, anywhere on the surface.
+- **Honesty.** The unimplemented table rows are *part of* the SC-3 statement: SC-3 demands they
+  fail explicitly until their swaps exist (M-231/M-242), and the test pins exactly that.
+
 ---
 
 ## 7. Risks & open questions
@@ -302,10 +336,10 @@ basis.
 | Id | Item | Disposition |
 |---|---|---|
 | **T0.1c** | ε and δ do **not** share one composition algebra (settled negative). | Accepted as inherent (ADR-010): two kernels, one certificate. The crate exposes them as separate monoids meeting at `{ε,δ,strength}`; `strength` composes by `meet`. |
-| **RR-12** | Dual-path semantic divergence (interpreter vs AOT). | Carried from Phase 1; the M-210 shared checker now folds the M-151 differential into one translation-validation surface, and M-251's E3 extends it to wrong-layout. |
+| **RR-12** | Dual-path semantic divergence (interpreter vs AOT). | Carried from Phase 1; the M-210 shared checker **has folded the M-151 differential in** (every corpus pair validates through the `ObservationalEquiv` instance, done 2026-06-10), and M-251's E3 extends it to wrong-layout. |
 | **RR-13** | MAP-B accuracy degrades past a nesting depth. | M-242 enforces/flags the limit explicitly — never a silent accuracy loss (G2). |
 | **KC-3** | Integrative complexity → un-auditable kernel. | §5 decision: numerics + selection in separate crates; VSA stays behind ADR-008. Re-run KC-3 at the gate. |
-| **KC-4** | Cert-check overhead unknown until the checker exists. | First measured by M-212; recorded honestly, not pre-budgeted. |
+| **KC-4** | Cert-check overhead unknown until the checker exists. | **Measured** by M-212 (2026-06-10, §6.7): same order as the swap itself — downgrade path not triggered on this evidence. Numeric budget ratification still pending (maintainer). |
 | **OQ (naming)** | Issue E2-5 (#32) says `recon-info.schema.json`; the ratified file is `reconstruction-manifest.schema.json`. | The ratified name is authoritative (SPEC §10 note); M-260 reconciles the issue text. |
 
 ---
@@ -325,6 +359,12 @@ basis.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-10 (E2-3 lands):** M-210/M-211/M-212 done — the shared TV checker
+  (`mycelium-cert::check`, with the M-120 cert and the M-151 differential folded in as instances),
+  the first `Bounded` swap (Dense F32→BF16, proven `Rel 2^−8` rounding bound), and the KC-4
+  measurement + SC-3 global test. §2 rows, §5 KC-4 verdict (measured, downgrade not triggered;
+  budget ratification pending), §6.5–§6.7, and the §7 RR-12/KC-4 dispositions updated. M-211
+  scope note: it needed only the Phase-1 `Dense{dim,dtype}` repr; M-230 (Dense *ops*) stays open.
 - **2026-06-09 (initial draft):** decomposed Phase-2 epics #28–#34 into 18 `M-2xx` tasks
   (#48–#65), created as sub-issues of their epics and appended to `idmap.tsv`. Records the readiness
   table (§2), the batch/parallelization plan (§3), the critical path with the E2-4 numerics kernels

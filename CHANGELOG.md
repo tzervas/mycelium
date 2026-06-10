@@ -9,6 +9,18 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **KC-4 cert-overhead measurement + SC-3 global exit** (`xtask kc4` +
+  `mycelium-cert/tests/sc3.rs`, **M-212**, Phase 2; Foundation KC-4; SC-3; RFC-0002 §2):
+  `cargo run --release -p xtask -- kc4` times every implemented swap kind and its M-210
+  certificate check (no bench dependency; refuses debug builds — their numbers would be dishonest
+  to record). **Measured 2026-06-10** (containerized runner, indicative): bijective check ≈1.6–1.7 µs
+  (~1.3× its ~1.3 µs swap — it re-derives the swap), bounded `Dense{768}` check ≈2.0 µs (~0.13× its
+  ~16 µs swap), observational pair ≈10 ns. Honest verdict: per-swap checking costs the same order
+  as the swap itself — the KC-4 downgrade path is **not triggered on this evidence**; a *ratified*
+  numeric budget remains a pending maintainer decision (recorded in `phase-2.md` §6.7, not
+  pre-written as "within budget"). The SC-3 global test pins the whole surface: every implemented
+  legal-pair row emits a certificate that validates through the one checker, and every
+  rejected/unimplemented row is an explicit error — never silent, anywhere.
 - **First Bounded/lossy swap — Dense `F32 → BF16`** (`mycelium-cert::dense`, **M-211**, Phase 2;
   RFC-0002 §3/§5; ADR-010 §1): establishes the split regime (ADR-002) alongside the bijective
   binary↔ternary class. `dense_f32_to_bf16` rounds to-nearest-even and emits a

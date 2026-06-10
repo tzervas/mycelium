@@ -12,3 +12,7 @@ publish = false
 workspace = true
 
 [dependencies]
+# The KC-4 cert-overhead measurement (M-212) drives the real swap + checker surface.
+mycelium-cert = { path = "../crates/mycelium-cert" }
+mycelium-core = { path = "../crates/mycelium-core" }
+mycelium-numerics = { path = "../crates/mycelium-numerics" }
