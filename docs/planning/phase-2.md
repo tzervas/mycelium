@@ -81,7 +81,7 @@ All Phase-2 tasks, with issue number (`idmap.tsv`), priority, dependency, and **
 | **M-202** ProbBound (δ) union/apRHL kernel | [#49](https://github.com/tzervas/mycelium/issues/49) | P0 | M-101 (bound) | ADR-010 §2 / RFC-0001 §4.7 | **Done (2026-06-09)** — `mycelium-numerics::prob` |
 | **M-203** Shared `{ε,δ,strength}` cert + tier-i checker | [#50](https://github.com/tzervas/mycelium/issues/50) | P0 | M-201, M-202 | ADR-010 §3/§4 + Trusted base | **Done (2026-06-09)** — `mycelium-numerics::cert` |
 | **M-204** Interp honest approximate composition | [#51](https://github.com/tzervas/mycelium/issues/51) | P0 | M-201…M-203 | RFC-0001 §4.7 | **Done (2026-06-09)** — refusal retired for additive arithmetic |
-| **M-210** Shared TV certificate checker | [#52](https://github.com/tzervas/mycelium/issues/52) | P0 | E2-4, M-120/M-151 | RFC-0002 §2 / RFC-0004 §3 | Ready after E2-4 |
+| **M-210** Shared TV certificate checker | [#52](https://github.com/tzervas/mycelium/issues/52) | P0 | E2-4, M-120/M-151 | RFC-0002 §2 / RFC-0004 §3 | **Done (2026-06-10)** — `mycelium-cert::check` |
 | **M-211** Bounded/lossy swap (F32→BF16) | [#53](https://github.com/tzervas/mycelium/issues/53) | P1 | E2-4, M-210, M-230 | RFC-0002 §5 / ADR-010 §1 | Ready after M-210 + M-230 |
 | **M-212** KC-4 overhead + SC-3 global | [#54](https://github.com/tzervas/mycelium/issues/54) | P1 | M-210, M-211 | KC-4 / SC-3 | Ready after M-211 |
 | **M-220** Decision-table SelectionPolicy | [#55](https://github.com/tzervas/mycelium/issues/55) | P0 | M-101…M-103 | RFC-0005 §2/§3 | Ready (parallel to E2-4) |
@@ -243,6 +243,33 @@ basis.
   Phase-2 upgrade — but only where a *sound* propagation rule exists; the rest still refuse rather
   than fabricate (G2/VR-5). This closes the documented Phase-1 honesty gap (the interpreter could not
   compose approximate inputs).
+
+### 6.5 M-210 — Shared TV certificate checker · #52 · P0 · done 2026-06-10
+
+- **Goal / acceptance (from issue).** One `check(A, B, R, claimed-bound, certificate)` with a
+  `RefinementRelation` (bijection | bounded-similarity | observational-equiv); Exact instances
+  discharge by equality, bounded instances consume the E2-4 certificate; TV incompleteness is an
+  explicit fallback, never a silent pass; the M-120 cert and the M-151 differential both validate
+  through the one checker.
+- **Delivered.** `mycelium-cert::check` (module `check.rs`): `check(a, b, relation, claimed:
+  numerics::Certificate, evidence)` → `CheckVerdict::Validated{strength}` or
+  `NotValidated{reason, fallback}`. **Bijection** re-checks the lemma reference
+  (`roundtrip_lemma_ref`) and the `legal_pair(n, m)` side-condition (the honesty rule — `Proven`
+  only with checked side-conditions), then discharges by *structural re-derivation equality*
+  (re-run `enc`/`dec` on A, compare payloads with B — the computational analogue of the SMT/
+  `decide` discharge, per-instance and cheap; no per-value proof objects). **BoundedSimilarity**
+  measures the actual A↔B deviation in the certificate's own norm and re-validates twice through
+  the E2-4 tier-i kernel (`check_error_claim`): the certificate ε must cover the measured instance,
+  and the claimed ε must not be tighter than the certificate (VR-5 — a claim never outruns its
+  checked evidence); a claimed *strength* above `basis_strength(basis)` is likewise rejected.
+  δ-side and non-`Error` bounds are explicit `Incomplete` (lands with M-231). **ObservationalEquiv**
+  discharges by structural equality of the NFR-7 observable `(repr, payload, guarantee)`; the M-151
+  differential now validates every corpus pair through this instance (and its control test asserts
+  the checker rejects a genuinely divergent pair). Every non-validation carries
+  `Fallback::UseReference` (refuse the swap / run the trusted interpreter, ADR-007).
+- **Honesty.** TV incompleteness is a typed `Incomplete{detail}` verdict — distinct from a
+  `Diverged` counterexample — and never a pass (RFC-0002 §2). Theorem citations in a `ProvenThm`
+  basis are accepted axiomatically; only the arithmetic instantiation is re-checked (RFC-0002 §7).
 
 ---
 

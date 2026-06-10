@@ -9,6 +9,20 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Single shared translation-validation certificate checker** (`mycelium-cert::check`, **M-210**,
+  Phase 2; RFC-0002 §2; RFC-0004 §3; T1.1): one `check(A, B, R, claimed, evidence)` answering "does
+  artifact B refine reference A under relation R within the claimed `{ε,δ,strength}`?" — build once,
+  use twice. Three `RefinementRelation` instances: **Bijection** (the M-120 binary↔ternary cert —
+  lemma reference + `legal_pair` side-condition checked, then structural *re-derivation equality*
+  against B), **BoundedSimilarity** (lossy swaps — the measured A↔B deviation and the claim are both
+  re-validated through the E2-4 `mycelium-numerics` tier-i checker; a claim tighter than its
+  certificate, a certificate tighter than the measured instance, or a strength upgrade past the
+  basis (VR-5) is rejected), and **ObservationalEquiv** (interp↔AOT over the NFR-7 observable —
+  the **M-151 differential is folded in** as an instance and now validates every corpus pair
+  through this checker). TV incompleteness is an explicit `NotValidated{reason, fallback}` with the
+  `UseReference` fallback path — **never a silent pass** (RFC-0002 §2). `mycelium-numerics` now
+  exports `basis_strength` (the M-I2…M-I4 basis→strength mapping) for certificate consumers.
+  16 checker tests cover all three instances and every refusal path.
 - **Interpreter composes approximate inputs honestly** (`mycelium-interp::prims`, **M-204**, Phase 2;
   RFC-0001 §4.7; ADR-010): retires the Phase-1 blanket `ApproxCompositionUnsupported` refusal for
   composable inputs. `exact_result` → `compose_result`: exact-over-exact stays `Exact`/`bound=None`

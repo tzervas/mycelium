@@ -1,7 +1,7 @@
 [package]
 name = "mycelium-cert"
 version = "0.0.0"
-description = "Swap certificates + the binary<->ternary certified swap (RFC-0002 §3/§4; M-120). The unified translation-validation checker is still E2-3/E2-4."
+description = "Swap certificates, the binary<->ternary certified swap (RFC-0002 §3/§4; M-120), and the single shared translation-validation checker (RFC-0002 §2 / RFC-0004 §3; M-210)."
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -14,6 +14,9 @@ workspace = true
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
 mycelium-interp = { path = "../mycelium-interp" }
+# The M-210 checker discharges bounded instances through the E2-4 tier-i kernel and consumes the
+# shared {ε,δ,strength} certificate (ADR-010; RFC-0002 §2).
+mycelium-numerics = { path = "../mycelium-numerics" }
 serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]

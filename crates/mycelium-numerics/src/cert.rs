@@ -209,7 +209,10 @@ pub struct ComposedBound {
 }
 
 /// The strength implied by a bound's basis (M-I2/M-I3/M-I4): the basis *is* the evidence class.
-fn basis_strength(basis: &BoundBasis) -> GuaranteeStrength {
+/// Public because certificate consumers (the M-210 translation-validation checker) must derive the
+/// honest strength **from** the evidence, never accept an asserted one (RFC-0002 §3; VR-5).
+#[must_use]
+pub fn basis_strength(basis: &BoundBasis) -> GuaranteeStrength {
     match basis {
         BoundBasis::ProvenThm { .. } => GuaranteeStrength::Proven,
         BoundBasis::EmpiricalFit { .. } => GuaranteeStrength::Empirical,

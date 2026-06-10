@@ -10,8 +10,13 @@
 //! (P4), never a coerced wrap.
 //!
 //! The single, unified translation-validation certificate *checker* (shared with RFC-0004 §3) is
-//! still **E2-3/E2-4** (Phase 2); this crate provides the certificate vocabulary and the first swap
-//! that emits one. The serialized form is exactly `docs/spec/schemas/swap-certificate.schema.json`.
+//! the [`check`] module (M-210, E2-3): `check(A, B, R, claimed, evidence)` validates bijective
+//! certificates by re-derivation equality, bounded certificates through the `mycelium-numerics`
+//! tier-i checker (E2-4), and interp↔AOT observational equivalence (the M-151 differential) — one
+//! checker, every instance, never a silent pass. The serialized certificate form is exactly
+//! `docs/spec/schemas/swap-certificate.schema.json`.
+
+pub mod check;
 
 use serde::{Deserialize, Serialize};
 
@@ -20,6 +25,8 @@ use mycelium_core::{
     Provenance, Repr, Value, WfError,
 };
 use mycelium_interp::{EvalError, SwapEngine};
+
+pub use check::{check, CheckVerdict, Evidence, Fallback, NotValidatedReason, RefinementRelation};
 
 /// Concrete parameters binding a bijection lemma to one use — `{ width, trits }` for binary↔ternary
 /// (lets the certificate be cached by content hash; RFC-0002 §3).

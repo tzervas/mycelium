@@ -24,8 +24,9 @@ pub mod error;
 pub mod prob;
 
 pub use cert::{
-    accuracy_to_probability, check_error_claim, check_union_claim, compose_error_bound, error_norm,
-    recompute_error, Certificate, CheckOutcome, ComposedBound, ErrorOp,
+    accuracy_to_probability, basis_strength, check_error_claim, check_union_claim,
+    compose_error_bound, error_norm, recompute_error, Certificate, CheckOutcome, ComposedBound,
+    ErrorOp,
 };
 pub use error::{AffineForm, ErrorBound, NoiseSym};
 pub use prob::{ApRhlJudgment, ProbBound};
