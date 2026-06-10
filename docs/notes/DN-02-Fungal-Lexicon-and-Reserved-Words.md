@@ -3,11 +3,11 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-02 |
-| **Status** | **Draft** — decision-support; the proposed lexicon awaits maintainer ratification before it is frozen into the grammar artifacts (RFC-0006 §4.3) |
+| **Status** | **Resolved** (2026-06-10) — ratified by the maintainer with adjustments (§7); the ratified set below is frozen into the grammar artifacts (RFC-0006 §4.3) |
 | **Feeds** | RFC-0006 (surface language; the L3 lexicon + the L1/L2 reserved words); the grammar/conformance corpus (`docs/spec/grammar/`); the L1 prototype crate |
 | **Date** | June 10, 2026 |
-| **Decides (proposes)** | the surface vocabulary of Mycelium-the-language: which concepts get a fungal-themed term, which keep a conventional one, the full reserved-word set, operators, literal forms, and the `unsafe`-class boundary |
-| **Maintainer direction (this session)** | language name = **Mycelium** (shared with the project); `unsafe` boundary = **reserved now** as a themed, denied-by-default block; sequencing = **this note first, then build**; and the **naming law** below, in the maintainer's words |
+| **Decides** | the surface vocabulary of Mycelium-the-language: which concepts get a fungal-themed term, which keep a conventional one, the full reserved-word set, operators, literal forms, and the `unsafe`-class boundary |
+| **Maintainer direction (this session)** | language name = **Mycelium** (shared with the project); `unsafe` boundary = **reserved now** as a themed, denied-by-default block; sequencing = **this note first, then build**; the **naming law** below; and the §7 ratification: keep `trait` (not `guild`), `spore` yes, **`matured`** (not `hardened`/`sclerotium`), keep `type`, `wild`, `@`-annotation approved, import = `use` |
 
 > This note narrows and frames; ratification is the maintainer's. Where a term is a genuine
 > judgment call it is **flagged ⚑** for an explicit decision rather than silently chosen. Nothing
@@ -51,12 +51,11 @@ universal scaffolding conventional.
 | Concept (corpus reference) | Proposed term | Why it maps (T-map / T-illuminate) | Confidence |
 |---|---|---|---|
 | **Module / namespace of definitions** | `colony` | A colony is a bounded, self-sustaining network of organisms = a cohesive unit of definitions. Maintainer-endorsed. | High |
-| **Cross-colony dependency graph** (the content-addressed import network; ADR-003) | `network` / *mycorrhizal* link | The mycorrhizal network is exactly a content-addressed web connecting colonies; importing = tapping that network. | High |
-| **Trait / typeclass** (a shared behavior set; LR-2) | `guild` | An ecological guild is a set of organisms sharing a functional role — precisely a set of types sharing an interface. Teaches "membership in a behavior set". | Med-High ⚑ |
-| **Affine external resource** (the LR-8 `Resource` kind; consumed exactly once) | `substrate` | A substrate is the material a fungus consumes to grow — used up, **exactly once**. Affinity *is* single-consumption; the metaphor teaches the linearity. | High |
-| **Reconstruction manifest** (RFC-0003 §6; the self-contained recipe to regrow a value) | `spore` | A spore is the self-contained dispersal unit that **regrows the whole organism** — exactly a reconstruction manifest. Schema name stays `reconstruction-manifest`; `spore` is the surface term. | High ⚑ |
-| **Promoted stable / AOT component** (RFC-0004 §4; hardened, persistent, verified) | `sclerotium` (or friendlier `hardened`) | A sclerotium is a hardened mycelial mass that persists and survives — a definition hardened from interpreted to compiled-and-frozen. Strong map but obscure word ⇒ alternative `hardened`. | Med ⚑ |
-| **`unsafe`-class block** (LR-9; denied by default, lexically marked) | `wild` | "Wild" growth is uncultivated, outside the tended colony — code outside the safe, cultivated guarantees. Teaches "you have left the safe culture". Maintainer chose to reserve this now. | High ⚑ |
+| **Cross-colony dependency graph** (the content-addressed import network; ADR-003) | `network` / *mycorrhizal* link | The mycorrhizal network is exactly a content-addressed web connecting colonies; the network *model* is themed, the import *keyword* stays `use` (§3, ratified). | High |
+| **Affine external resource** (the LR-8 `Resource` kind; consumed exactly once) | `substrate` | A substrate is the material a fungus consumes to grow — used up, **exactly once**. Affinity *is* single-consumption; the metaphor teaches the linearity. | Ratified |
+| **Reconstruction manifest** (RFC-0003 §6; the self-contained recipe to regrow a value) | `spore` | A spore is the self-contained dispersal unit that **regrows the whole organism** — exactly a reconstruction manifest. Schema name stays `reconstruction-manifest`; `spore` is the surface term. | Ratified |
+| **Promoted stable / AOT component** (RFC-0004 §4; matured, persistent, verified) | `matured` | A *matured* definition has grown from interpreted to compiled-and-frozen — the metaphor teaches "grown to a hardened, persistent stage". (Chosen over the more vivid-but-obscure `sclerotium`.) | Ratified |
+| **`unsafe`-class block** (LR-9; denied by default, lexically marked) | `wild` | "Wild" growth is uncultivated, outside the tended colony — code outside the safe, cultivated guarantees. Teaches "you have left the safe culture". | Ratified |
 
 ---
 
@@ -66,7 +65,9 @@ universal scaffolding conventional.
 |---|---|---|
 | Local binding | `let` | Universal; theming adds no behavioral insight; high dual-readability (T-learn). |
 | Function definition | `fn` | `spawn`/`grow` imply concurrency or mutation the construct lacks (T-map fail); `fn` is universally learnable. |
-| Data-type declaration | `type` | `species` is decorative, not illuminating (T-illuminate fail); `type` is universal. ⚑ (close call — see §7) |
+| Data-type declaration | `type` | `species` is decorative, not illuminating (T-illuminate fail); `type` is universal. Ratified: keep `type`. |
+| Trait / typeclass (a shared behavior set; LR-2) | `trait` | Ratified conventional (the themed `guild` was considered and declined): `trait` is machine-familiar and precise; theming costs dual-readability for no behavioral teaching. |
+| Import / dependency | `use` | Ratified conventional: the *network* model is themed (§2) but the keyword stays `use` for learnability (Rust-familiar). |
 | Pattern match | `match` | Universal control form; theming (`sift`) costs learnability for no teaching gain. |
 | Conditional | `if` / `else` | Universal; maximal dual-readability. |
 | Booleans / option / result | `true` `false` `Option` `Some` `None` `Result` `Ok` `Err` | Established, precise, machine-familiar; the never-silent partiality (S5) is carried by *using* `Result`, not by renaming it. |
@@ -130,23 +131,17 @@ construction*. Reserving the keyword now fixes the boundary in the spec before F
 
 ---
 
-## 7. Open judgment calls — flagged for the maintainer ⚑
+## 7. Judgment calls — **resolved by maintainer ratification (2026-06-10)**
 
-1. **`guild` vs `trait`** for the typeclass concept — `guild` passes the gate (a guild *is* a
-   shared-role set) but `trait` is more machine-familiar. Recommend `guild`; confirm or override.
-2. **`spore` as the surface term for the reconstruction manifest** — strong metaphor; the schema
-   keeps `reconstruction-manifest`. Confirm the surface/schema split is acceptable.
-3. **`sclerotium` vs `hardened`** for a promoted stable component — strongest metaphor vs
-   approachability. Recommend `hardened` (a `hardened fn …` reads clearly; `sclerotium` is a great
-   *doc* metaphor but a hard *keyword*).
-4. **`type` vs `species`** — recommend keeping `type` (T-illuminate fail), but the maintainer may
-   want the taxonomy theme; this is the one "kept conventional" call most reasonably overridden.
-5. **`wild` vs `feral` vs `raw`** for the unsafe block — recommend `wild`; `raw` is more
-   conventional/clear, `feral` is more vivid. Maintainer's aesthetic call.
-6. **Guarantee-annotation spelling** `T @ Exact` vs a keyword vs a refinement brace (LR-6 surface).
-7. **Import keyword** — `use` (conventional, Rust-familiar) vs a themed `tap`/`graft` into the
-   `network`. Recommend `use` for learnability; the *network* theme lives in the dependency model,
-   not the keyword.
+1. **Trait term** — ratified **`trait`** (conventional); the themed `guild` was declined.
+2. **`spore`** for the reconstruction manifest (surface term; schema stays
+   `reconstruction-manifest`) — ratified **yes**.
+3. **Promoted stable component** — ratified **`matured`** (over `hardened`/`sclerotium`).
+4. **Type term** — ratified **`type`** (kept conventional).
+5. **Unsafe block** — ratified **`wild`**.
+6. **Guarantee-annotation spelling** — ratified **`T @ Exact`** (the `@strength` index, LR-6).
+7. **Import keyword** — ratified **`use`**; the `network` theme lives in the dependency model, not
+   the keyword.
 
 ---
 
@@ -168,8 +163,9 @@ Until ratified, the L1 prototype uses this set **provisionally** and flags it as
 ## Meta — changelog & maintenance
 
 - **2026-06-10 — Draft.** Initial proposal: the naming law (three-test gate from maintainer
-  direction), the themed set (`colony`, `network`, `guild`, `substrate`, `spore`,
-  `sclerotium`/`hardened`, `wild`), the conventional-kept set (`let`, `fn`, `type`, `match`, `if`,
-  `swap`, the guarantee tags), literals/operators, the `wild` unsafe boundary (reserved per
-  maintainer direction), and seven flagged judgment calls (§7). Language name = Mycelium (shared).
-  Append-only; on ratification, move Status → **Resolved** and cut the grammar artifacts.
+  direction), the themed set, the conventional-kept set, literals/operators, the `wild` unsafe
+  boundary, and seven flagged judgment calls (§7). Language name = Mycelium (shared).
+- **2026-06-10 — Resolved.** Maintainer ratified §7: keep **`trait`** (declined `guild`); **`spore`**
+  yes; **`matured`** (over `hardened`/`sclerotium`); keep **`type`**; **`wild`**; **`@`**-annotation
+  approved; import = **`use`**. The ratified set is frozen into the grammar artifacts (RFC-0006
+  §4.3). Superseding any term is a new note, not a rewrite.

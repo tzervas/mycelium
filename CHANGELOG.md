@@ -24,19 +24,18 @@ corpus, not released software. Versioning will begin when the kernel does.
   open question Q8 (reclamation mechanism, cycle handling, `unsafe` spelling).
 
 ### Added
-- **DN-02 (Draft) — Fungal Lexicon & Reserved-Word Set** (`docs/notes/DN-02-Fungal-Lexicon-and-Reserved-Words.md`;
-  feeds RFC-0006 §4.3): the deliberation artifact for Mycelium-the-language's surface vocabulary.
-  Codifies the maintainer's **naming law** as a three-test gate (T-map fidelity / T-illuminate
-  teaching-value / T-learn dual-readability) — *theme where the fungal metaphor is accurate and
-  illuminating; keep conventional where a borrowed term is clearer to learn and read*. Proposes the
-  themed set (`colony` = module, `network` = the content-addressed dependency web, `guild` = trait,
-  `substrate` = the affine external-resource kind, `spore` = reconstruction manifest, `hardened`/
-  `sclerotium` = promoted stable component, `wild` = the denied-by-default unsafe block) and the
-  conventional-kept set (`let`, `fn`, `type`, `match`, `if`, `swap` — already a native corpus term,
-  the guarantee tags), with literals (universal-until-elaboration, no cross-family defaulting), the
-  `wild` boundary (reserved now per maintainer direction; LR-9/S6), and **seven flagged judgment
-  calls** left explicitly to the maintainer. Language name ratified as **Mycelium** (shared with the
-  project). Status Draft — on ratification it freezes into the grammar artifacts.
+- **DN-02 (Resolved) — Fungal Lexicon & Reserved-Word Set** (`docs/notes/DN-02-Fungal-Lexicon-and-Reserved-Words.md`;
+  feeds RFC-0006 §4.3): the surface vocabulary of Mycelium-the-language, drafted then **ratified by
+  the maintainer** the same day. Codifies the **naming law** as a three-test gate (T-map fidelity /
+  T-illuminate teaching-value / T-learn dual-readability) — *theme where the fungal metaphor is
+  accurate and illuminating; keep conventional where a borrowed term is clearer to learn and read*.
+  Ratified themed set: `colony` = module, `network` = the content-addressed dependency web,
+  `substrate` = the affine external-resource kind, `spore` = reconstruction manifest (schema stays
+  `reconstruction-manifest`), `matured` = promoted stable/AOT component, `wild` = the
+  denied-by-default unsafe block. Ratified conventional: `let`, `fn`, `type`, `trait`, `match`,
+  `if`, `swap` (a native corpus term), `use`, the guarantee tags; guarantee annotation `T @ Exact`.
+  Literals universal-until-elaboration (no cross-family defaulting). Language name = **Mycelium**
+  (shared). Status **Resolved** — the set is now frozen into the grammar artifacts.
 - **Research Pass 3 — language-layer targets T3.1–T3.6** (`research/03-language-layer-RECORD.md`;
   grounds RFC-0006 Q1–Q6): four parallel primary-source deep-dives. Headlines: every surveyed
   kernel (GHC Core, Lean, Coq, Unison) keeps ~10–16 expression nodes with **data declarations in
