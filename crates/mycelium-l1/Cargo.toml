@@ -1,0 +1,12 @@
+[package]
+name = "mycelium-l1"
+version = "0.0.0"
+description = "L1 surface prototype (RFC-0006; NON-NORMATIVE until RFC-0006 is ratified): a hand-written lexer + recursive-descent parser for the ratified DN-02 surface vocabulary, checked against docs/spec/grammar's conformance corpus. Typechecker/elaborator/totality-checker land here next."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true

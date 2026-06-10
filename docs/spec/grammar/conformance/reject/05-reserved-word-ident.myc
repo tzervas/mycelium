@@ -1,0 +1,4 @@
+// rejected: 'colony' is a reserved word and cannot be used as an identifier
+colony bad
+
+fn colony(x: Binary{8}) -> Binary{8} = x

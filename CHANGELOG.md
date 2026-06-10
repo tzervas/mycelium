@@ -8,7 +8,65 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (RFC-0006 language-layer requirements)
+- **RFC-0006 → r3 (Draft): two foundational language requirements** (maintainer direction;
+  grounded in T3.5). **S6 self-sufficiency / AI-independence** — Mycelium is a complete software-
+  engineering language whose parser/checker/elaborator/interpreter/AOT path are ordinary
+  deterministic software runnable with **no AI/LLM in the loop**; models are an optional
+  co-authoring convenience, never a runtime/compile-time/semantic dependency (remove every model
+  and the language still builds, checks, runs, and reproduces bit-for-bit). This bounds KC-2: it
+  can only choose the L3 surface, never make the language *need* a model. **LR-9 memory safety by
+  construction** — Rust-grade safety *outcomes* without the borrow checker: value semantics
+  removes use-after-free/data-races/double-free from the model, the language exposes no manual
+  alloc/free (automatic deterministic reclamation — Perceus + region inference), the sole leak
+  vector (external resources) is closed by the affine `Resource` kind, and any unsafe op is
+  denied-by-default + lexically marked — *in safe Mycelium a memory leak is not expressible*. New
+  open question Q8 (reclamation mechanism, cycle handling, `unsafe` spelling).
+
 ### Added
+- **L1 grammar infrastructure + parser prototype** (`docs/spec/grammar/`, `scripts/checks/grammar.sh`,
+  `crates/mycelium-l1`; RFC-0006 §4.3; **non-normative until RFC-0006 ratifies**): the WebAssembly-spec
+  pattern (T3.1-B) made real. **`docs/spec/grammar/mycelium.ebnf`** — the normative v0 surface grammar
+  in W3C notation (not ISO 14977), over the ratified DN-02 vocabulary (`colony`, `use`, `type`,
+  `trait`, `fn`, `matured`, `let`/`in`, `if`, `match`, `swap`, `wild`, `spore`, `Substrate{…}`, the
+  `T @ Strength` honesty index, representation-typed literals). **A conformance corpus** of 10
+  `accept/` + 7 `reject/` `.myc` programs, each with an explanatory header — the corpus is the ground
+  truth, not any single parser. **`grammar.sh`** (wired into `just check`/CI) structurally validates
+  the artifacts; **`mycelium-l1`** is the real parser gate — a hand-written, dependency-free lexer +
+  recursive-descent parser producing an inspectable AST, with `tests/conformance.rs` asserting every
+  `accept/` parses and every `reject/` fails with an **explicit `ParseError` (never a panic, never a
+  silent accept** — S5/G2). The lexer disambiguates the one tricky token (`<` opening a ternary
+  literal vs a type-arg list) by lookahead; a malformed ternary literal is an explicit error. First
+  increment of the L1 track (RFC-0006 §3) — typechecker, Maranget match compiler, structural totality
+  checker, and L0 elaboration land next.
+- **DN-02 (Resolved) — Fungal Lexicon & Reserved-Word Set** (`docs/notes/DN-02-Fungal-Lexicon-and-Reserved-Words.md`;
+  feeds RFC-0006 §4.3): the surface vocabulary of Mycelium-the-language, drafted then **ratified by
+  the maintainer** the same day. Codifies the **naming law** as a three-test gate (T-map fidelity /
+  T-illuminate teaching-value / T-learn dual-readability) — *theme where the fungal metaphor is
+  accurate and illuminating; keep conventional where a borrowed term is clearer to learn and read*.
+  Ratified themed set: `colony` = module, `network` = the content-addressed dependency web,
+  `substrate` = the affine external-resource kind, `spore` = reconstruction manifest (schema stays
+  `reconstruction-manifest`), `matured` = promoted stable/AOT component, `wild` = the
+  denied-by-default unsafe block. Ratified conventional: `let`, `fn`, `type`, `trait`, `match`,
+  `if`, `swap` (a native corpus term), `use`, the guarantee tags; guarantee annotation `T @ Exact`.
+  Literals universal-until-elaboration (no cross-family defaulting). Language name = **Mycelium**
+  (shared). Status **Resolved** — the set is now frozen into the grammar artifacts.
+- **Research Pass 3 — language-layer targets T3.1–T3.6** (`research/03-language-layer-RECORD.md`;
+  grounds RFC-0006 Q1–Q6): four parallel primary-source deep-dives. Headlines: every surveyed
+  kernel (GHC Core, Lean, Coq, Unison) keeps ~10–16 expression nodes with **data declarations in
+  a registry/environment layer** and Unison gives the cycle-hashing recipe (T3.1); the guarantee
+  lattice is formally an **integrity lattice** — silent upgrade = IFC's *endorsement*, gated here
+  by a checked certificate — and graded coeffects (Granule-style) subsume flat labels, with
+  refinements reserved for certificate side-conditions (T3.2); GHC levity polymorphism's two
+  restrictions + monomorphization give the LR-5 restriction set (T3.3); divergence-only effect
+  tracking (Koka's `div`, degenerate) + Lean's `partial`-opaque split + CakeML clocked semantics
+  settle Q4/LR-4 (T3.4); ownership/borrowing confirmed **not applicable** to value semantics
+  (Hylo/Swift), linearity deferred to a reserved affine `Resource` hook (T3.5); and the measured
+  LLM evidence (MultiPL-E/T, MTOB, SynCode, grammar-aligned-decoding distortion) yields a
+  five-condition KC-2 design with an explicit falsification threshold (T3.6). Honest-uncertainty
+  register included; two pieces flagged **novel with no found precedent** (grading + runtime
+  certificates; totality gating AOT promotion). **RFC-0006 revised to r2 (still Draft)**: §8
+  positions per question, new Q7; §4.2 postures updated.
 - **RFC-0006 (Draft) — Surface Language, Grammar & Term-Language Layering**
   (`docs/rfcs/RFC-0006-Surface-Language-and-Term-Layering.md`; SPEC §10.2's deferred "later RFC"):
   the deliberation artifact that nails down the language architecture *before* implementation

@@ -1,0 +1,11 @@
+// exercises: sum-type declaration + exhaustive match with constructor and wildcard patterns
+colony shapes
+
+type Sign = Neg | Zero | Pos
+
+fn label(s: Sign) -> Ternary{1} =
+    match s {
+        Neg => <->,
+        Zero => <0>,
+        _ => <+>
+    }

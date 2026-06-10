@@ -89,10 +89,22 @@ at the language level, so violating them in a syntax proposal is a rejection cri
 - **S5 (explicit partiality).** Anything that can fail — out-of-range, illegal pair, unsupported
   composition — is an explicit `Option`/`Result`/diagnostic in the language, mirroring the kernel
   (G2). No surface construct may erase a kernel refusal.
+- **S6 (self-sufficiency / AI-independence) — foundational.** Mycelium is a *programming
+  language for software engineering*, complete and runnable with **no AI/LLM in the loop**: the
+  parser, type checker, elaborator, interpreter, and AOT path are ordinary deterministic
+  software. An AI model is a *co-authoring convenience* (the FR-S5 dual-intelligibility surface,
+  the KC-2 question), **never a runtime, compile-time, or semantic dependency** — nothing in the
+  language's meaning, execution, or toolchain may require model inference to resolve. A program's
+  behavior is defined by the L0/L1 semantics alone; remove every model and the language still
+  builds, checks, runs, and reproduces bit-for-bit. (AI tooling *may* call out to providers as an
+  optional editor feature — that is integration, not dependence; it sits strictly above S4's
+  inspectable elaboration and may not influence it.) This bounds KC-2: the experiment measures
+  how *well* models co-author Mycelium, and can only ever choose the L3 surface — it can never
+  make the language *need* a model.
 
 ### 4.2 Capability target — "Rust-class and beyond", as requirements
 
-Stated as language requirements **LR-1…LR-8** so the eventual L1/L2 designs are checkable against
+Stated as language requirements **LR-1…LR-9** so the eventual L1/L2 designs are checkable against
 them rather than against a vibe:
 
 | Id | Requirement | Posture |
@@ -100,15 +112,19 @@ them rather than against a vibe:
 | **LR-1** | Algebraic data types + exhaustive `match` (no fall-through silently) | committed direction |
 | **LR-2** | Parametric polymorphism with bounded abstraction (traits/typeclasses; coherent, no overlapping-instance ambiguity) | committed direction |
 | **LR-3** | Modules with content-addressed identity (ADR-003); separate compilation falls out of hashing, not file layout | committed direction |
-| **LR-4** | General recursion, **with a declared totality posture**: the trusted interpreter keeps its fuel guard; a checked-total fragment is what "stable components" (RFC-0004 §4) promote from | committed direction |
-| **LR-5** | **Repr polymorphism**: abstracting over the paradigm (`∀r: Repr-of-kind-K`) without violating S1 — swap insertion stays explicit even in generic code | committed direction (the "beyond Rust" core) |
-| **LR-6** | **Guarantee-indexed types**: the lattice tag as a type-level index (e.g. a function demanding `Exact` input is a *type error* to call with `Declared`), with `meet` as the composition law — the honesty rule moved into the type system | beyond-Rust goal; open design (Q3) |
-| **LR-7** | Effects: at minimum, partiality and swap-effects tracked; full effect system | open (Q4) |
-| **LR-8** | Ownership/borrowing: **likely not applicable as in Rust** — Mycelium is a value-semantics substrate (no aliased mutable state to police). What may be needed is *linearity/affinity for external resources* only | open (Q5); do not cargo-cult Rust's borrow checker without a problem it solves here |
+| **LR-4** | General recursion, **with a declared totality posture**: the trusted interpreter keeps its fuel guard; a checked-total fragment is what "stable components" (RFC-0004 §4) promote from | committed direction; mechanism researched (T3.4) |
+| **LR-5** | **Repr polymorphism**: abstracting over the paradigm (`∀r: Repr-of-kind-K`) without violating S1 — swap insertion stays explicit even in generic code | committed direction (the "beyond Rust" core); restriction set researched (T3.3) |
+| **LR-6** | **Guarantee-indexed types**: the lattice tag as a type-level index (e.g. a function demanding `Exact` input is a *type error* to call with `Declared`), with `meet` as the composition law — the honesty rule moved into the type system | beyond-Rust goal; mechanism position recorded (Q3/T3.2) |
+| **LR-7** | Effects: at minimum, partiality and swap-effects tracked; full effect system | position recorded (Q4/T3.4): divergence-only |
+| **LR-8** | Ownership/borrowing: **likely not applicable as in Rust** — Mycelium is a value-semantics substrate (no aliased mutable state to police). What may be needed is *linearity/affinity for external resources* only | position recorded (Q5/T3.5): confirmed not applicable; affine `Resource` hook reserved |
+| **LR-9** | **Memory safety by construction, leaks structurally excluded** — Rust-grade safety *outcomes* without Rust's mechanism. Value semantics (immutable values, no aliased mutable state) already removes use-after-free, data races, and double-free from the language model; on top of that the language exposes **no manual allocation/free**, reclamation is automatic and deterministic (Perceus-style reference counting + region/scope inference; T3.5), and the *only* leak vector — an unreleased **external resource** — is closed by the affine `Resource` kind (LR-8). Any operation that could violate these (raw FFI, foreign memory) is **not reachable from safe code**: it must be lexically marked (an explicit `unsafe`-class form, themed in L3) and is denied by default; safe code cannot leak, and unsafe regions are auditable and minimal. The guarantee: *in safe Mycelium a memory leak is not expressible.* | committed direction; mechanism researched (T3.5); see Q8 |
 
 "Beyond Rust" therefore means LR-5 + LR-6 (+ LR-7 if accepted): paradigm- and honesty-aware types
 that no mainstream language has — *not* exotic syntax. KC-2 will test whether the *surface* can
-stay boring while the type system carries the novelty (the RR-3 hypothesis).
+stay boring while the type system carries the novelty (the RR-3 hypothesis). LR-9 makes explicit
+that "beyond Rust" is *also* about reaching Rust's safety **outcomes** by a simpler route — value
+semantics gets most of them for free, and the rest (leaks, external resources) are closed by
+construction rather than by a borrow checker the substrate doesn't need.
 
 ### 4.3 Grammar & spec discipline
 
@@ -163,19 +179,69 @@ Core elaboration with a small trusted core); Rust (HIR/MIR staging; trait cohere
 (typed array calculi with explicit effects); F* / Liquid Haskell (refinement-indexed types — the
 nearest relatives of LR-6); Idris/Agda (totality checking informing LR-4's posture).
 
-## 8. Unresolved questions
+## 8. Unresolved questions — with Pass-3 positions
 
-- **Q1 (KC-2 gate):** text syntax vs projections vs embedded DSL for L3 — decided by M-002 (#3),
-  not by taste.
-- **Q2 (L1 node budget):** exactly which nodes join the Core IR (`Fix` vs structured recursion;
-  data declarations as nodes vs a registry like VSA models).
-- **Q3 (LR-6 mechanism):** guarantee indices as a kind, as refinements, or as a coeffect — and
-  what `Proven`'s *checked side-conditions* (VR-5) look like as a typing premise.
-- **Q4 (effects):** dedicated effect system vs monadic encoding vs nothing-beyond-partiality.
-- **Q5 (linearity):** does any real resource in scope (handles? reconstruction manifests?) need
-  affine types, or is LR-8's "not applicable" the final answer?
-- **Q6 (numeric literals & bounds):** how surface literals declare/infer `Repr` without violating
-  S1 (the M-020 fragment's `0b…`/`<…>` approach is one candidate).
+The third research pass (`research/03-language-layer-RECORD.md`, findings **T3.1–T3.6**)
+grounded each open question. A *position* below is a researched recommendation awaiting
+ratification with the rest of this Draft; what remains genuinely open is marked.
+
+- **Q1 (KC-2 gate):** text syntax vs projections vs embedded DSL for L3 — still decided by
+  M-002 (#3), but the experiment is now **designed from evidence** (T3.6): five conditions
+  (bare novel syntax; + book-quality grammar-in-context; + constrained decoding measured
+  separately; familiar-skinned same-AST — the ablation no published study has run; eDSL), with
+  the **LLM-leverage retention ratio** as headline metric and an explicit falsification
+  threshold (spec-in-context retaining <~70% of the familiar-skin condition's pass@1 on
+  composition tasks ⇒ L3 becomes a projection of known syntax). Working hypothesis, falsifiable:
+  novel-but-regular syntax + grammar-in-context + content-addressed skins retains most leverage
+  (MTOB; grammar prompting; Unison-proven projection architecture).
+- **Q2 (L1 node budget) — position (T3.1):** L1 = L0 + `Lam, App, Construct (saturated), Match
+  (flat/exhaustive, Maranget-compiled), Fix` (~10 expression nodes — the GHC-Core/Lean/Coq
+  convergence zone); **data declarations are content-addressed registry entries**, not nodes
+  (every surveyed kernel does this); recursive groups hash Unison-style (cycle as a unit,
+  members ordered by cycle-removed hashes). General `Fix` in the kernel; the totality checker
+  lives outside it (T3.4). Open: exact `Match` binder/default form; whether `Fix` is a node or a
+  recursive-`Let` flag.
+- **Q3 (LR-6 mechanism) — position (T3.2):** a **graded coeffect modality over the guarantee
+  meet-semilattice**, soundness stated as DCC-style noninterference read in the *integrity*
+  direction ("no `Declared` input influences an `Exact`-typed output except through a certified
+  `Swap`" — the certificate is controlled endorsement; the guarantee lattice is formally an
+  integrity lattice, Biba-dual to confidentiality). Refinement types are reserved for
+  certificate side-conditions ("Proven with checked side-conditions" as a refinement premise on
+  `Swap`), not for the 4-point tag. Staged: runtime tags (built) → static grades (monomorphic,
+  then bounded grade polymorphism with FlowCaml-style inference — near-trivial over a 4-chain) →
+  refinement premises. Open and **must be recorded as a decision**: whether *implicit flows*
+  taint (does branching on a `Declared` value degrade the result, requiring a `pc`-like index,
+  or do guarantees track data lineage only?). Flagged novel: grading + runtime certificates has
+  no found precedent — needs its own soundness argument.
+- **Q4 (effects) — position (T3.4):** **no algebraic-effect system.** Divergence-only tracking:
+  one per-definition bit (`total` vs `partial`), Koka's `div` effect in degenerate form; growth
+  path documented (bit → small fixed row → row polymorphism), untyped handlers ruled out
+  (honesty rule). Partiality stays in values; swap stays lexical (S1).
+- **Q5 (linearity) — position (T3.5):** ownership/borrowing **not applicable** (it polices
+  aliased mutation, which value semantics excludes; Hylo/Swift demonstrate
+  exclusivity-by-construction; in-place performance is Perceus-style implementation work, not
+  typing). Reserve an affine `Resource` kind hook for external handles (what linearity is
+  actually used for in practice — Linear Haskell experience); ship nothing now.
+- **Q6 (literals & bounds) — position (T3.1-B):** literals are **universal until elaboration**
+  (Ada-style), then assigned exactly one representation type by suffix or inference with **no
+  defaulting across representation families** (stricter than Rust's `i32` default); Ada-2022-
+  style literal functions for `VSA{...}` construction. Open: concrete suffix/annotation
+  spelling (an L3/KC-2 matter).
+- **Q7 (new, from T3.4):** the formal statement of "checked total" for stable-component
+  promotion — adopt CakeML-style clock quantification (terminates for every sufficiently large
+  fuel under the reference interpreter)? Flagged novel: totality *gating AOT promotion*
+  specifically has no found precedent (Idris gates trust; Lean gates kernel reduction) — needs
+  its own argument, by analogy.
+- **Q8 (new, from LR-9):** the reclamation/safety *mechanism* — confirm Perceus-style reference
+  counting (Reinking et al., PLDI 2021; T3.5) as the default reclamation strategy, with
+  region/scope inference where it tightens lifetimes, and the affine `Resource` kind (LR-8) as
+  the sole external-resource discipline. Open sub-questions: cycle handling under reference
+  counting for a value-semantics language (immutable acyclic value graphs make cycles rare but
+  not impossible once recursive closures/data enter at L1 — does the language forbid value cycles,
+  detect them, or fall back to a tracing pass?); the exact spelling and audit story of the
+  `unsafe`-class boundary (S6/LR-9 require it denied-by-default and lexically marked — the L3
+  spelling is a DN/KC-2 matter). The *outcome* (no leaks in safe code) is committed; the
+  mechanism choice is the open part.
 
 ## 9. Future possibilities
 
@@ -186,6 +252,27 @@ human and machine co-authors (FR-S5's dual intelligibility).
 
 ## Meta — changelog
 
+- **2026-06-10 (r3) — Draft, two foundational requirements added (maintainer direction).**
+  **S6 (self-sufficiency / AI-independence):** Mycelium is a complete SWE programming language
+  runnable with no AI/LLM in the loop — models are an optional co-authoring convenience, never a
+  runtime/compile-time/semantic dependency; this *bounds* KC-2 (it can choose the surface, never
+  make the language need a model). **LR-9 (memory safety by construction):** Rust-grade safety
+  outcomes without the borrow checker — value semantics removes use-after-free/data-races/
+  double-free from the model, no manual alloc/free, automatic deterministic reclamation, the only
+  leak vector (external resources) closed by the affine `Resource` kind, and any unsafe operation
+  denied-by-default and lexically marked; *in safe Mycelium a memory leak is not expressible*. New
+  **Q8** records the open mechanism question (Perceus + regions; cycle handling; `unsafe` spelling).
+  Both grounded in T3.5.
+- **2026-06-10 (r2) — Draft, research-grounded.** Folded in Research Pass 3
+  (`research/03-language-layer-RECORD.md`, T3.1–T3.6): §8 now records a researched *position*
+  per question — L1 node budget + declarations-as-registry + Unison-style cycle hashing (Q2);
+  guarantee-indexing as a graded coeffect modality with IFC/DCC integrity-noninterference as the
+  soundness story and refinements reserved for certificate side-conditions (Q3); divergence-only
+  effect tracking (Q4); ownership not-applicable + reserved affine `Resource` hook (Q5);
+  universal-until-elaboration literals with no cross-family defaulting (Q6); the KC-2 experiment
+  redesigned from measured evidence with a falsification threshold (Q1); new Q7 (formal
+  "checked total" statement; flagged-novel pieces named). §4.2 posture column updated to point
+  at the findings. Still **Draft** — positions await ratification.
 - **2026-06-10 — Draft.** Initial deliberation draft: layering L0–L3, syntactic honesty
   invariants S1–S5, capability requirements LR-1…LR-8 ("Rust-class and beyond" made checkable),
   grammar/spec discipline, sequencing, and the open questions Q1–Q6. Concrete L3 syntax is

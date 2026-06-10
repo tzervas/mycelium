@@ -1,0 +1,6 @@
+// rejected: unbalanced brace — the match block is never closed
+colony bad
+
+fn f(s: Sign) -> Sign =
+    match s {
+        Pos => s
