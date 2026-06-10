@@ -8,6 +8,31 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (L1 execution: evaluator, elaboration, three-way differential)
+- **L1 fuel-guarded evaluator** (`crates/mycelium-l1/src/eval.rs`; RFC-0007 §4.6): a big-step
+  environment machine mirroring M-110's contract — CakeML-style clocked semantics (explicit
+  `FuelExhausted`, never a hang; T3.4), dispatching through the *same* trusted prim registry and
+  certified binary↔ternary swap engine as the L0 paths (NFR-7). Runs the full checked surface
+  (data values, flat `match`, recursion); the stage-0 **dynamic guarantee-index check**
+  (RFC-0007 §4.3): asserting `@ g` stronger than a value's tag is an explicit
+  `GuaranteeTooWeak` — an annotation may only weaken, never upgrade (VR-5). A separate explicit
+  recursion-**depth guard** (`DepthExceeded`) keeps deep recursion an error, never a host stack
+  overflow. Checker-unreachable states are explicit `Stuck` errors, never panics (S5/G2).
+- **Elaboration to L0 on the evaluation-complete fragment** (`crates/mycelium-l1/src/elab.rs`;
+  RFC-0007 §4.6): acyclic calls inline (CBV order preserved via `Let` bindings); bodies must
+  reduce to `Const/Var/Let/Op/Swap` residue; recursion (`Fix`), `match`/`if`, data construction,
+  and dynamic guarantee indices are explicit **`Residual` refusals — never a partial artifact**.
+  Includes the shared surface→kernel bridge (literals, repr resolution) and the documented v0
+  **policy-name reference** stand-in (deterministic, domain-separated; honest about deferring
+  RFC-0005 name→policy-object binding) shared by both execution paths.
+- **The RFC-0007 §4.6 differential** (`crates/mycelium-l1/tests/differential.rs`; NFR-7): on a
+  10-program fragment corpus, **L1-eval ↔ elaborate→L0-interp ↔ AOT** agree on the observable
+  (`repr + payload + guarantee`), with every agreeing pair validated through the **M-210 shared
+  TV checker** (`ObservationalEquiv`) and a control asserting the checker rejects a genuinely
+  divergent pair. Outside-the-fragment behavior is pinned too: elaboration refuses (`Residual`)
+  while L1-eval runs — including a `Total`-classified structural recursion that terminates and a
+  `Partial` one that exhausts fuel explicitly. 31 crate tests; `just check` green.
+
 ### Added (L1 static analysis + lexicon integration)
 - **L1 typechecker + structural totality checker** (`crates/mycelium-l1`, RFC-0007 §4.4/§4.5):
   the v0 monomorphic typechecker over the data registry (declarations-as-registry), exhaustiveness
