@@ -1,7 +1,7 @@
 [package]
 name = "mycelium-l1"
 version = "0.0.0"
-description = "L1 surface prototype (RFC-0006; NON-NORMATIVE until RFC-0006 is ratified): a hand-written lexer + recursive-descent parser for the ratified DN-02 surface vocabulary, checked against docs/spec/grammar's conformance corpus. Typechecker/elaborator/totality-checker land here next."
+description = "L1 prototype (RFC-0006/RFC-0007; NON-NORMATIVE until those RFCs are ratified): lexer + parser for the ratified DN-02 vocabulary (conformance-corpus gated), the v0 monomorphic typechecker, the structural totality checker + matured gate, the fuel-guarded L1 evaluator, and elaboration to the L0 Core IR on the evaluation-complete fragment."
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -10,3 +10,16 @@ publish = false
 
 [lints]
 workspace = true
+
+[dependencies]
+# The L1 evaluator produces L0 values and reuses the trusted primitive/swap semantics — the same
+# registries the reference interpreter and the AOT path share (RFC-0007 §4.6).
+mycelium-core = { path = "../mycelium-core" }
+mycelium-interp = { path = "../mycelium-interp" }
+mycelium-cert = { path = "../mycelium-cert" }
+
+[dev-dependencies]
+# The RFC-0007 §4.6 differential: L1-eval vs elaborate→L0-interp vs elaborate→AOT, validated
+# through the M-210 shared TV checker.
+mycelium-mlir = { path = "../mycelium-mlir" }
+mycelium-numerics = { path = "../mycelium-numerics" }

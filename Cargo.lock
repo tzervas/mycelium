@@ -114,6 +114,13 @@ dependencies = [
 [[package]]
 name = "mycelium-l1"
 version = "0.0.0"
+dependencies = [
+ "mycelium-cert",
+ "mycelium-core",
+ "mycelium-interp",
+ "mycelium-mlir",
+ "mycelium-numerics",
+]
 
 [[package]]
 name = "mycelium-lsp"
