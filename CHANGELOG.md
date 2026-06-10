@@ -9,6 +9,20 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **First Bounded/lossy swap — Dense `F32 → BF16`** (`mycelium-cert::dense`, **M-211**, Phase 2;
+  RFC-0002 §3/§5; ADR-010 §1): establishes the split regime (ADR-002) alongside the bijective
+  binary↔ternary class. `dense_f32_to_bf16` rounds to-nearest-even and emits a
+  `SwapCertificate::Bounded` carrying the proven per-element relative rounding bound
+  `{Rel, u = 2^−8}` with a `ProvenThm` basis — the strength is *derived from how the bound was
+  obtained, never asserted* (RFC-0002 §3), and the theorem's side-conditions are **checked per
+  element**: finite, exactly an `f32`, zero-or-normal, no overflow on rounding; each violation is
+  a typed explicit `SwapError` (`NonFinite`/`NotAnF32`/`SubnormalUnsupported`/`RoundOverflow`),
+  never a silent coercion. Approximate sources are refused (`ApproximateSource`) until the E2-1
+  composition rule exists — refusal, never fabrication. The certificate **validates through the
+  M-210 shared checker**, a tampered conversion is caught (tier-i rejection), and a new
+  `CertifiedSwapEngine` serves the complete certified surface (bijective + bounded + identity),
+  explicit `UnsupportedSwap` for everything else. 11 tests incl. a 20k-sweep soundness property
+  for the `2^−8` bound and ties-to-even spot checks.
 - **Single shared translation-validation certificate checker** (`mycelium-cert::check`, **M-210**,
   Phase 2; RFC-0002 §2; RFC-0004 §3; T1.1): one `check(A, B, R, claimed, evidence)` answering "does
   artifact B refine reference A under relation R within the claimed `{ε,δ,strength}`?" — build once,

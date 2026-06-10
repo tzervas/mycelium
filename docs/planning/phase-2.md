@@ -82,7 +82,7 @@ All Phase-2 tasks, with issue number (`idmap.tsv`), priority, dependency, and **
 | **M-203** Shared `{ε,δ,strength}` cert + tier-i checker | [#50](https://github.com/tzervas/mycelium/issues/50) | P0 | M-201, M-202 | ADR-010 §3/§4 + Trusted base | **Done (2026-06-09)** — `mycelium-numerics::cert` |
 | **M-204** Interp honest approximate composition | [#51](https://github.com/tzervas/mycelium/issues/51) | P0 | M-201…M-203 | RFC-0001 §4.7 | **Done (2026-06-09)** — refusal retired for additive arithmetic |
 | **M-210** Shared TV certificate checker | [#52](https://github.com/tzervas/mycelium/issues/52) | P0 | E2-4, M-120/M-151 | RFC-0002 §2 / RFC-0004 §3 | **Done (2026-06-10)** — `mycelium-cert::check` |
-| **M-211** Bounded/lossy swap (F32→BF16) | [#53](https://github.com/tzervas/mycelium/issues/53) | P1 | E2-4, M-210, M-230 | RFC-0002 §5 / ADR-010 §1 | Ready after M-210 + M-230 |
+| **M-211** Bounded/lossy swap (F32→BF16) | [#53](https://github.com/tzervas/mycelium/issues/53) | P1 | E2-4, M-210, M-230 | RFC-0002 §5 / ADR-010 §1 | **Done (2026-06-10)** — `mycelium-cert::dense` (M-101's `Dense` repr sufficed; M-230's *ops* remain open) |
 | **M-212** KC-4 overhead + SC-3 global | [#54](https://github.com/tzervas/mycelium/issues/54) | P1 | M-210, M-211 | KC-4 / SC-3 | Ready after M-211 |
 | **M-220** Decision-table SelectionPolicy | [#55](https://github.com/tzervas/mycelium/issues/55) | P0 | M-101…M-103 | RFC-0005 §2/§3 | Ready (parallel to E2-4) |
 | **M-221** Mandatory EXPLAIN + LSP surfacing | [#56](https://github.com/tzervas/mycelium/issues/56) | P0 | M-220, M-140 | RFC-0005 §2.2/§4 / SC-5 | Ready after M-220 |
@@ -270,6 +270,30 @@ basis.
 - **Honesty.** TV incompleteness is a typed `Incomplete{detail}` verdict — distinct from a
   `Diverged` counterexample — and never a pass (RFC-0002 §2). Theorem citations in a `ProvenThm`
   basis are accepted axiomatically; only the arithmetic instantiation is re-checked (RFC-0002 §7).
+
+### 6.6 M-211 — Bounded/lossy swap (Dense F32→BF16) · #53 · P1 · done 2026-06-10
+
+- **Goal / acceptance (from issue).** `dense_f32_to_bf16` emits the converted value + a `Bounded`
+  cert with a basis-derived ε bound; the cert validates through M-210; NaN/Inf handling explicit.
+- **Scope note (dependency).** The issue lists M-230 (Dense ops) as a dependency; what M-211
+  actually needs is the `Dense{dim, dtype}` *representation* + `Scalars` payload, which landed with
+  M-101/M-103 in Phase 1 — so this was built against that, and M-230 (Dense *operations*) stays
+  open and independent.
+- **Delivered.** `mycelium-cert::dense`: round-to-nearest-even `F32 → BF16` (bit-level, ties to
+  even), emitting `SwapCertificate::Bounded` with the proven per-element relative bound
+  `{eps: 2^−8, norm: Rel}` and a `ProvenThm` basis citing the standard round-to-nearest theorem
+  (Higham 2002, Thm 2.2 instantiated at β=2, p=8) — side-conditions **checked per element** (finite;
+  exactly an `f32`; zero or normal; no overflow on rounding), each violation a typed explicit
+  `SwapError`. The result value discloses `Proven` + the same bound (M-I2) and records
+  `policy_used`. Validates through the M-210 checker under `BoundedSimilarity`; a tampered
+  conversion is caught by the tier-i measured-deviation check. `CertifiedSwapEngine` now serves
+  the complete certified surface (bijective binary↔ternary + bounded F32→BF16 + identity), with
+  explicit `UnsupportedSwap` elsewhere. Property test: 20k-sweep relative-bound soundness +
+  idempotence (output on the bf16 grid).
+- **Honesty.** Subnormal inputs and approximate sources are *refused* (explicit errors), not
+  tagged with a bound the theorem doesn't cover (VR-5; RFC-0002 §5 "type error, not a `Declared`
+  gamble"): the subnormal absolute-spacing bound and the input-bound composition rule (E2-1) are
+  honest future work, recorded here.
 
 ---
 

@@ -17,6 +17,7 @@
 //! `docs/spec/schemas/swap-certificate.schema.json`.
 
 pub mod check;
+pub mod dense;
 
 use serde::{Deserialize, Serialize};
 
@@ -27,6 +28,7 @@ use mycelium_core::{
 use mycelium_interp::{EvalError, SwapEngine};
 
 pub use check::{check, CheckVerdict, Evidence, Fallback, NotValidatedReason, RefinementRelation};
+pub use dense::{dense_f32_to_bf16, BF16_MIN_NORMAL, BF16_REL_EPS};
 
 /// Concrete parameters binding a bijection lemma to one use — `{ width, trits }` for binary↔ternary
 /// (lets the certificate be cached by content hash; RFC-0002 §3).
@@ -87,6 +89,33 @@ pub enum SwapError {
     },
     /// `dec` of a ternary value that lies outside the binary range — the partial-inverse path (P4).
     OutOfRange,
+    /// A Dense source element is NaN/±Inf — rounding it has no defined error bound; explicit,
+    /// never silent (M-211 acceptance; RFC-0002 §5).
+    NonFinite {
+        /// Index of the offending element.
+        index: usize,
+    },
+    /// A Dense source element is not exactly an `f32` value although the repr declares
+    /// `dtype: F32` — the payload contradicts its own representation; refused, never re-rounded.
+    NotAnF32 {
+        /// Index of the offending element.
+        index: usize,
+    },
+    /// A Dense source element is subnormal — outside the checked side-conditions of the proven
+    /// relative rounding bound (M-211 v1 scope); refused rather than tagged with a bound the
+    /// theorem does not cover (VR-5/G2).
+    SubnormalUnsupported {
+        /// Index of the offending element.
+        index: usize,
+    },
+    /// Rounding overflowed the target's finite range — explicit, never a silent ±Inf.
+    RoundOverflow {
+        /// Index of the offending element.
+        index: usize,
+    },
+    /// The source value is itself approximate; composing its bound with the swap's ε is not yet a
+    /// defined rule (E2-1 Dense numerics) — refused, never fabricated.
+    ApproximateSource,
     /// A constructed result violated a Core IR invariant.
     Wf(WfError),
 }
@@ -103,6 +132,33 @@ impl core::fmt::Display for SwapError {
                 write!(
                     f,
                     "ternary value is outside the target binary range (dec = None)"
+                )
+            }
+            SwapError::NonFinite { index } => {
+                write!(f, "element {index} is NaN/Inf — no defined rounding bound")
+            }
+            SwapError::NotAnF32 { index } => {
+                write!(
+                    f,
+                    "element {index} is not exactly an f32 value (payload contradicts dtype F32)"
+                )
+            }
+            SwapError::SubnormalUnsupported { index } => {
+                write!(
+                    f,
+                    "element {index} is subnormal — outside the proven relative-bound range (v1 scope)"
+                )
+            }
+            SwapError::RoundOverflow { index } => {
+                write!(
+                    f,
+                    "element {index} overflows the target's finite range on rounding"
+                )
+            }
+            SwapError::ApproximateSource => {
+                write!(
+                    f,
+                    "source is approximate; composing its bound with the swap ε is not a defined rule yet (E2-1)"
                 )
             }
             SwapError::Wf(e) => write!(f, "well-formedness violation: {e}"),
@@ -266,6 +322,32 @@ impl SwapEngine for BinaryTernarySwapEngine {
                 from: a.clone(),
                 to: b.clone(),
             }),
+        }
+    }
+}
+
+/// A [`SwapEngine`] over the **complete certified swap surface** (SC-3 global, M-212): the
+/// bijective binary↔ternary class (M-120), the bounded Dense `F32→BF16` class (M-211), and
+/// same-`Repr` identity. Every implemented legal-pair-table row goes through a certificate-emitting
+/// function; everything else is an explicit [`EvalError::UnsupportedSwap`] — never silent
+/// (RFC-0002 §5: a pair with no statable bound is a type error).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CertifiedSwapEngine;
+
+impl SwapEngine for CertifiedSwapEngine {
+    fn swap(&self, src: &Value, target: &Repr, policy: &ContentHash) -> Result<Value, EvalError> {
+        match (src.repr(), target) {
+            (
+                Repr::Dense {
+                    dim: src_dim,
+                    dtype: mycelium_core::ScalarKind::F32,
+                },
+                Repr::Dense {
+                    dim: target_dim,
+                    dtype: mycelium_core::ScalarKind::Bf16,
+                },
+            ) if src_dim == target_dim => Ok(dense::dense_f32_to_bf16(src, policy)?.0),
+            _ => BinaryTernarySwapEngine.swap(src, target, policy),
         }
     }
 }
