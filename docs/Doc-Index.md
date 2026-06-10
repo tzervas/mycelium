@@ -20,6 +20,7 @@
 | **RFC-0004 — Execution Model & "Stable Component"** | MLIR backbone, shared checker, schedule-staged packing | **Accepted** |
 | **RFC-0005 — Selection-Policy Language** | total cost-based policy + EXPLAIN | **Accepted** |
 | **RFC-0006 — Surface Language & Term-Language Layering** | L0–L3 layering, syntactic honesty invariants, Rust-class-and-beyond capability targets; concrete syntax KC-2-gated | **Draft** |
+| **RFC-0007 — The L1 Kernel Calculus** | ten-node term budget, registry data declarations, totality/`matured` gate, v0 elaboration fragment | **Draft** |
 | **ADR-010 — Verified-Numerics Foundation** | two bound kernels + shared certificate | **Accepted** |
 | **ADR-011 — BoundBasis is universal** | `basis` is a companion of every `Bound` (supersedes RFC-0001 r1 §4.3) | **Accepted** |
 
