@@ -8,6 +8,26 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (L1 static analysis + lexicon integration)
+- **L1 typechecker + structural totality checker** (`crates/mycelium-l1`, RFC-0007 §4.4/§4.5):
+  the v0 monomorphic typechecker over the data registry (declarations-as-registry), exhaustiveness
+  checked (W7, never assumed), representation-typed literals, generics/`spore`/`wild` as explicit
+  refusals; a Foetus-style structural-descent totality classifier whose verdict gates `matured`
+  (mutual recursion stays Partial — R7-Q3). 8 tests; clippy clean.
+- **Lexicon integration & architect review** (ADR-012 §7; `Lexicon-Reference.md`,
+  `Example-Programs-Reference.md`, `Doc-Index.md`): verified the maintainer's three new lexicon
+  documents against the corpus and integrated them. **Applied:** de-conflicted the lexicon
+  "L1/L2/L3" tier labels (which collided with RFC-0006's language layers L0–L3) → renamed
+  **Surface / Runtime / Formal**; fixed example bracket typos; added grounding notes. **Flagged for
+  the maintainer (ADR-012 §7):** the Runtime tier (`hyph`/`anas`/`xloc`/…) is an *aspirational,
+  ungrounded* concurrency/distribution model needing a Runtime RFC (RFC-0008) + research Pass-4 and
+  reconciliation with RFC-0004; imperative `loop`/`while` contradicts the functional core
+  (RFC-0007 §6); `spore` scope drifted from RFC-0003's reconstruction manifest; new Surface terms
+  (`consume`/`embody`/`grow`) need a DN-02 amendment through the three-test gate (`embody` weakest);
+  several short forms (`sclrt`/`cmn`/`anas`/`myco`) recommended for refinement; example
+  bound-kind/partiality corrections. No contradictions found with ADR-010/011, the guarantee
+  lattice, or content-addressing.
+
 ### Changed (RFC-0006 language-layer requirements)
 - **RFC-0006 → r3 (Draft): two foundational language requirements** (maintainer direction;
   grounded in T3.5). **S6 self-sufficiency / AI-independence** — Mycelium is a complete software-

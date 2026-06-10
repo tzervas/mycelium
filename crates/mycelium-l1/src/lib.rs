@@ -15,14 +15,18 @@
 //! ternary literal is an explicit error, not a silent truncation.
 
 pub mod ast;
+pub mod checkty;
 pub mod error;
 pub mod lexer;
 pub mod parse;
 pub mod token;
+pub mod totality;
 
 pub use ast::Colony;
+pub use checkty::{check_colony, CheckError, Env, Ty};
 pub use error::ParseError;
 pub use parse::parse;
+pub use totality::Totality;
 
 #[cfg(test)]
 mod tests {

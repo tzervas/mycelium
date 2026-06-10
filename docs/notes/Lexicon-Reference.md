@@ -16,13 +16,25 @@ This document is the single source of truth for terminology in the Mycelium prog
 - Use **short, distinctive abbreviations** for frequent use in code while preserving full terms for documentation and mental models.
 - Clearly separate concerns through a three-layer model so developers are not overwhelmed.
 
-### Layer Model
+### Vocabulary Tiers
 
-| Layer | Purpose                              | Theming Approach                  | Typical User                  | Example Terms                  |
-|-------|--------------------------------------|-----------------------------------|-------------------------------|--------------------------------|
-| L1    | Daily surface syntax & keywords      | Conservative (three-test gate)    | All developers                | `colony`, `consume`, `embody`  |
-| L2    | Runtime primitives & architecture    | Aggressive with short mnemonics   | Systems & runtime developers  | `hyph`, `anas`, `xloc`, `sclrt`|
-| L3    | Formal semantics & Core IR           | Technical / conventional          | Language designers & compilers| `Repr`, `GuaranteeStrength`    |
+> **Note (terminology de-confliction, per ADR-012 §7.1):** these vocabulary **tiers** are named
+> **Surface / Runtime / Formal** — *not* "L1/L2/L3", which RFC-0006 §3 already uses for the
+> language **layers** (L0 Core IR → L1 kernel calculus → L2 surface → L3 projection). The two are
+> orthogonal; reusing the L-numbers inverted them and was a collision. Tiers below.
+
+| Tier        | Purpose                              | Theming Approach                  | Typical User                  | Example Terms                  |
+|-------------|--------------------------------------|-----------------------------------|-------------------------------|--------------------------------|
+| **Surface** | Daily surface syntax & keywords      | Conservative (three-test gate)    | All developers                | `colony`, `consume`, `embody`  |
+| **Runtime** | Runtime primitives & architecture    | Aggressive with short mnemonics   | Systems & runtime developers  | `hyph`, `anas`, `xloc`, `sclrt`|
+| **Formal**  | Formal semantics & Core IR           | Technical / conventional          | Language designers & compilers| `Repr`, `GuaranteeStrength`    |
+
+> **Status & grounding:** the **Surface** tier extends the Resolved DN-02 set (new terms
+> `consume`/`embody`/`grow` await a DN-02 amendment through the three-test gate — ADR-012 §7.5).
+> The **Runtime** tier is **aspirational**: it presupposes a concurrency/distribution execution
+> model that the corpus has **not** yet defined (RFC-0004 is single-machine value semantics), so it
+> is a *reserved, name-stable vocabulary*, **not active syntax**, pending a Runtime RFC (RFC-0008)
+> and research Pass-4 (ADR-012 §7.3). The **Formal** tier is normative (RFC-0001).
 
 **Naming Rules**
 - **Short form** (3–5 characters preferred): Used in source code.
@@ -31,7 +43,7 @@ This document is the single source of truth for terminology in the Mycelium prog
 
 ---
 
-## 2. Layer 1: Surface Keywords & Syntax
+## 2. Surface Tier: Keywords & Syntax
 
 ### Themed Terms (Ratified)
 
@@ -45,15 +57,35 @@ This document is the single source of truth for terminology in the Mycelium prog
 | `wild`     | Wild        | Lexically marked, denied-by-default region for unsafe/raw operations. | Growth that has left the safe, cultivated colony. | Only place raw FFI or manual memory is allowed. | `wild { foreign_call(...) }` |
 | `matured`  | Matured     | Marks a definition as stable, verified, and eligible for AOT compilation. | The component has grown into a hardened, persistent form. | Used for promotion to stable components. | `matured fn critical_path(...)` |
 
+> **⚑ `spore` scope (ADR-012 §7.4):** DN-02 / RFC-0003 §6 fix `spore` as the **reconstruction
+> manifest** (the recipe to regrow a *value*). The broader "deployable code + state + metadata"
+> sense above is a deliberate generalization that **must be reconciled in an RFC-0003 revision**
+> (the manifest becomes one component of a spore) so the narrow and broad meanings do not silently
+> diverge. `substrate` (the affine resource kind, DN-02) is the type `consume` operates on.
+
 ### Conventional Terms (Retained for Learnability)
 
-`let`, `fn`, `type`, `trait`, `use`, `match`, `if` / `else`, `loop`, `while`, `for`, `break`, `continue`, `return`, `pub`, `self`, `where`, `Result` / `Option` family, `swap`, `policy`, `total` / `partial`.
+`let`, `fn`, `type`, `trait`, `use`, `match`, `if` / `else`, `pub`, `self`, `where`,
+`Result` / `Option` family, `swap`, `policy`, `total` / `partial`.
+
+> **⚑ Control flow (ADR-012 §7.2):** `loop` / `while` / `for` / `break` / `continue` / `return`
+> are **not yet reserved** — the L1 kernel calculus (RFC-0007) is functional (recursion via `fn` +
+> `Fix`, with the structural totality posture), and unbounded loops would undermine the
+> totality/divergence story (LR-4/Q4). Adding bounded iteration as Surface sugar over recursion
+> needs an RFC-0007 amendment; until then, iterate by recursion.
 
 ---
 
-## 3. Layer 2: Runtime Primitives & Architectural Concepts
+## 3. Runtime Tier: Runtime Primitives & Architectural Concepts
 
-These primitives form the execution model and distributed systems substrate. Short forms are used in code.
+> **⚑ Aspirational — reserved vocabulary, not active syntax (ADR-012 §7.3).** These primitives
+> describe a concurrency/distribution execution model the corpus has **not yet defined or
+> grounded**; RFC-0004's execution model is single-machine value semantics. They are documented and
+> name-stable, but pending a Runtime RFC (RFC-0008) and research Pass-4 they are *intent*, not
+> runnable language. Several short forms are also flagged for refinement (ADR-012 §7.6:
+> `sclrt`→`dorm`, `cmn`→`mesh`, `anas`→`weave`, `myco`→`graft`).
+
+These primitives are intended to form the execution model and distributed-systems substrate.
 
 | Short Form | Full Term              | Definition | Mnemonic Hook | Programming Concept | Key Behaviors |
 |------------|------------------------|------------|---------------|---------------------|---------------|
@@ -70,7 +102,7 @@ These primitives form the execution model and distributed systems substrate. Sho
 
 ---
 
-## 4. Layer 3: Formal / IR / Semantic Concepts
+## 4. Formal Tier: Formal / IR / Semantic Concepts
 
 These concepts come primarily from RFC-0001 and remain largely technical.
 
