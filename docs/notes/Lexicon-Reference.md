@@ -31,10 +31,12 @@ This document is the single source of truth for terminology in the Mycelium prog
 
 > **Status & grounding:** the **Surface** tier extends the Resolved DN-02 set (new terms
 > `consume`/`embody`/`grow` await a DN-02 amendment through the three-test gate — ADR-012 §7.5).
-> The **Runtime** tier is **aspirational**: it presupposes a concurrency/distribution execution
-> model that the corpus has **not** yet defined (RFC-0004 is single-machine value semantics), so it
-> is a *reserved, name-stable vocabulary*, **not active syntax**, pending a Runtime RFC (RFC-0008)
-> and research Pass-4 (ADR-012 §7.3). The **Formal** tier is normative (RFC-0001).
+> The **Runtime** tier now has a **drafted model**: RFC-0008 (Runtime & Concurrency Execution
+> Model, Draft), grounded by research Pass-4 (`research/04-runtime-concurrency-RECORD.md`,
+> T4.1–T4.6), defines each term's operational meaning (RFC-0008 §4.5) under the RT1–RT7 runtime
+> invariants. The vocabulary remains *reserved, name-stable — **not active syntax*** until DN-03
+> ratifies the names through the three-test gate and implementation RFCs land (RFC-0008 §4.5
+> status rule). The **Formal** tier is normative (RFC-0001).
 
 **Naming Rules**
 - **Short form** (3–5 characters preferred): Used in source code.
@@ -78,12 +80,13 @@ This document is the single source of truth for terminology in the Mycelium prog
 
 ## 3. Runtime Tier: Runtime Primitives & Architectural Concepts
 
-> **⚑ Aspirational — reserved vocabulary, not active syntax (ADR-012 §7.3).** These primitives
-> describe a concurrency/distribution execution model the corpus has **not yet defined or
-> grounded**; RFC-0004's execution model is single-machine value semantics. They are documented and
-> name-stable, but pending a Runtime RFC (RFC-0008) and research Pass-4 they are *intent*, not
-> runnable language. Several short forms are also flagged for refinement (ADR-012 §7.6:
-> `sclrt`→`dorm`, `cmn`→`mesh`, `anas`→`weave`, `myco`→`graft`).
+> **⚑ Reserved vocabulary, not active syntax — but now grounded (RFC-0008 Draft).** These
+> primitives describe the concurrency/distribution execution model defined by **RFC-0008**
+> (grounded by research Pass-4, T4.1–T4.6): each term's operational meaning and the runtime
+> invariants (RT1–RT7) it must respect are in RFC-0008 §4.5. They remain *reserved* — activation
+> requires DN-03 name ratification (three-test gate) plus per-construct implementation RFCs.
+> Several short forms are flagged for refinement at DN-03 (ADR-012 §7.6: `sclrt`→`dorm`,
+> `cmn`→`mesh`, `anas`→`weave`, `myco`→`graft`).
 
 These primitives are intended to form the execution model and distributed-systems substrate.
 

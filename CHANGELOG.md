@@ -8,6 +8,35 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (RFC-0008 + Research Pass 4 — the Runtime tier, grounded)
+- **Research Record 04** (`research/04-runtime-concurrency-RECORD.md`; findings **T4.1–T4.6**):
+  the fourth research pass, grounding the Runtime tier ADR-012 §7.3 flagged as aspirational —
+  concurrency units & structured lifetimes (Erlang isolation, nurseries, Kahn/LVars determinism,
+  CakeML clocked-semantics extension), state merge & meshes (CRDT convergence, session types,
+  epidemic protocols), mobility & placement (Unison ship-by-hash, the Legion
+  placement-is-never-semantics separation, Reactive-Streams backpressure, work-stealing bounds
+  with side-conditions), durability (CRIU's exception catalogue vs durable-execution's
+  determinism requirement; Nix/OCI/Wasm content-addressed artifacts), failure & supervision
+  (OTP, FLP, φ-accrual, Waldo et al.), and mode switching (verified deoptimization, CoreJIT).
+  Primary-source verified with per-target uncertainty registers; three explicit novelty flags
+  (no found precedent: determinism-gated checkpointability; learned-placement-as-inspectable-
+  policy; per-value guarantee tags across a distribution boundary).
+- **RFC-0008 — Runtime & Concurrency Execution Model** (Draft): the runtime model the Runtime
+  vocabulary presupposed, built on Pass 4. **RT1–RT7 runtime invariants** extend S1–S6 to
+  concurrency/distribution: values move & state is never shared (RT1); the deterministic
+  fragment is the default with *sequential reference semantics* — NFR-7 extends to concurrency
+  via the M-210 checker (RT2); nondeterminism is reified as RFC-0005 policies — placement
+  becomes the **third site** of the one selection mechanism (RT3); partial failure is explicit,
+  distribution transparency forbidden (RT4); runtime guarantees (delivery/convergence/failure
+  suspicion) are tagged on the same lattice with `ProbabilityBound`s (RT5); fusion is lawful
+  semilattice merge — payload joins, guarantee meets (RT6); runtime lifetimes are structured —
+  *a leaked task is not expressible*, extending LR-9 (RT7). RFC-0004's per-node model is
+  extended, not changed; the Runtime vocabulary is grounded (§4.5 operational-meaning table)
+  but stays **reserved, not active syntax**, pending DN-03 + implementation RFCs. The `spore`
+  scope reconciliation (ADR-012 §7.4) and name ratification are deliberately left to the
+  RFC-0003 revision and DN-03 respectively. Indexes updated (`docs/rfcs/README.md`,
+  `docs/Doc-Index.md`, Lexicon-Reference status notes).
+
 ### Added (L1 execution: evaluator, elaboration, three-way differential)
 - **L1 fuel-guarded evaluator** (`crates/mycelium-l1/src/eval.rs`; RFC-0007 §4.6): a big-step
   environment machine mirroring M-110's contract — CakeML-style clocked semantics (explicit
