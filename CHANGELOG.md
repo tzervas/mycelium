@@ -8,6 +8,21 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (RFC-0006 language-layer requirements)
+- **RFC-0006 → r3 (Draft): two foundational language requirements** (maintainer direction;
+  grounded in T3.5). **S6 self-sufficiency / AI-independence** — Mycelium is a complete software-
+  engineering language whose parser/checker/elaborator/interpreter/AOT path are ordinary
+  deterministic software runnable with **no AI/LLM in the loop**; models are an optional
+  co-authoring convenience, never a runtime/compile-time/semantic dependency (remove every model
+  and the language still builds, checks, runs, and reproduces bit-for-bit). This bounds KC-2: it
+  can only choose the L3 surface, never make the language *need* a model. **LR-9 memory safety by
+  construction** — Rust-grade safety *outcomes* without the borrow checker: value semantics
+  removes use-after-free/data-races/double-free from the model, the language exposes no manual
+  alloc/free (automatic deterministic reclamation — Perceus + region inference), the sole leak
+  vector (external resources) is closed by the affine `Resource` kind, and any unsafe op is
+  denied-by-default + lexically marked — *in safe Mycelium a memory leak is not expressible*. New
+  open question Q8 (reclamation mechanism, cycle handling, `unsafe` spelling).
+
 ### Added
 - **Research Pass 3 — language-layer targets T3.1–T3.6** (`research/03-language-layer-RECORD.md`;
   grounds RFC-0006 Q1–Q6): four parallel primary-source deep-dives. Headlines: every surveyed

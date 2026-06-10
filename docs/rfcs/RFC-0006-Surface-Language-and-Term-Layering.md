@@ -89,10 +89,22 @@ at the language level, so violating them in a syntax proposal is a rejection cri
 - **S5 (explicit partiality).** Anything that can fail — out-of-range, illegal pair, unsupported
   composition — is an explicit `Option`/`Result`/diagnostic in the language, mirroring the kernel
   (G2). No surface construct may erase a kernel refusal.
+- **S6 (self-sufficiency / AI-independence) — foundational.** Mycelium is a *programming
+  language for software engineering*, complete and runnable with **no AI/LLM in the loop**: the
+  parser, type checker, elaborator, interpreter, and AOT path are ordinary deterministic
+  software. An AI model is a *co-authoring convenience* (the FR-S5 dual-intelligibility surface,
+  the KC-2 question), **never a runtime, compile-time, or semantic dependency** — nothing in the
+  language's meaning, execution, or toolchain may require model inference to resolve. A program's
+  behavior is defined by the L0/L1 semantics alone; remove every model and the language still
+  builds, checks, runs, and reproduces bit-for-bit. (AI tooling *may* call out to providers as an
+  optional editor feature — that is integration, not dependence; it sits strictly above S4's
+  inspectable elaboration and may not influence it.) This bounds KC-2: the experiment measures
+  how *well* models co-author Mycelium, and can only ever choose the L3 surface — it can never
+  make the language *need* a model.
 
 ### 4.2 Capability target — "Rust-class and beyond", as requirements
 
-Stated as language requirements **LR-1…LR-8** so the eventual L1/L2 designs are checkable against
+Stated as language requirements **LR-1…LR-9** so the eventual L1/L2 designs are checkable against
 them rather than against a vibe:
 
 | Id | Requirement | Posture |
@@ -105,10 +117,14 @@ them rather than against a vibe:
 | **LR-6** | **Guarantee-indexed types**: the lattice tag as a type-level index (e.g. a function demanding `Exact` input is a *type error* to call with `Declared`), with `meet` as the composition law — the honesty rule moved into the type system | beyond-Rust goal; mechanism position recorded (Q3/T3.2) |
 | **LR-7** | Effects: at minimum, partiality and swap-effects tracked; full effect system | position recorded (Q4/T3.4): divergence-only |
 | **LR-8** | Ownership/borrowing: **likely not applicable as in Rust** — Mycelium is a value-semantics substrate (no aliased mutable state to police). What may be needed is *linearity/affinity for external resources* only | position recorded (Q5/T3.5): confirmed not applicable; affine `Resource` hook reserved |
+| **LR-9** | **Memory safety by construction, leaks structurally excluded** — Rust-grade safety *outcomes* without Rust's mechanism. Value semantics (immutable values, no aliased mutable state) already removes use-after-free, data races, and double-free from the language model; on top of that the language exposes **no manual allocation/free**, reclamation is automatic and deterministic (Perceus-style reference counting + region/scope inference; T3.5), and the *only* leak vector — an unreleased **external resource** — is closed by the affine `Resource` kind (LR-8). Any operation that could violate these (raw FFI, foreign memory) is **not reachable from safe code**: it must be lexically marked (an explicit `unsafe`-class form, themed in L3) and is denied by default; safe code cannot leak, and unsafe regions are auditable and minimal. The guarantee: *in safe Mycelium a memory leak is not expressible.* | committed direction; mechanism researched (T3.5); see Q8 |
 
 "Beyond Rust" therefore means LR-5 + LR-6 (+ LR-7 if accepted): paradigm- and honesty-aware types
 that no mainstream language has — *not* exotic syntax. KC-2 will test whether the *surface* can
-stay boring while the type system carries the novelty (the RR-3 hypothesis).
+stay boring while the type system carries the novelty (the RR-3 hypothesis). LR-9 makes explicit
+that "beyond Rust" is *also* about reaching Rust's safety **outcomes** by a simpler route — value
+semantics gets most of them for free, and the rest (leaks, external resources) are closed by
+construction rather than by a borrow checker the substrate doesn't need.
 
 ### 4.3 Grammar & spec discipline
 
@@ -216,6 +232,16 @@ ratification with the rest of this Draft; what remains genuinely open is marked.
   fuel under the reference interpreter)? Flagged novel: totality *gating AOT promotion*
   specifically has no found precedent (Idris gates trust; Lean gates kernel reduction) — needs
   its own argument, by analogy.
+- **Q8 (new, from LR-9):** the reclamation/safety *mechanism* — confirm Perceus-style reference
+  counting (Reinking et al., PLDI 2021; T3.5) as the default reclamation strategy, with
+  region/scope inference where it tightens lifetimes, and the affine `Resource` kind (LR-8) as
+  the sole external-resource discipline. Open sub-questions: cycle handling under reference
+  counting for a value-semantics language (immutable acyclic value graphs make cycles rare but
+  not impossible once recursive closures/data enter at L1 — does the language forbid value cycles,
+  detect them, or fall back to a tracing pass?); the exact spelling and audit story of the
+  `unsafe`-class boundary (S6/LR-9 require it denied-by-default and lexically marked — the L3
+  spelling is a DN/KC-2 matter). The *outcome* (no leaks in safe code) is committed; the
+  mechanism choice is the open part.
 
 ## 9. Future possibilities
 
@@ -226,6 +252,17 @@ human and machine co-authors (FR-S5's dual intelligibility).
 
 ## Meta — changelog
 
+- **2026-06-10 (r3) — Draft, two foundational requirements added (maintainer direction).**
+  **S6 (self-sufficiency / AI-independence):** Mycelium is a complete SWE programming language
+  runnable with no AI/LLM in the loop — models are an optional co-authoring convenience, never a
+  runtime/compile-time/semantic dependency; this *bounds* KC-2 (it can choose the surface, never
+  make the language need a model). **LR-9 (memory safety by construction):** Rust-grade safety
+  outcomes without the borrow checker — value semantics removes use-after-free/data-races/
+  double-free from the model, no manual alloc/free, automatic deterministic reclamation, the only
+  leak vector (external resources) closed by the affine `Resource` kind, and any unsafe operation
+  denied-by-default and lexically marked; *in safe Mycelium a memory leak is not expressible*. New
+  **Q8** records the open mechanism question (Perceus + regions; cycle handling; `unsafe` spelling).
+  Both grounded in T3.5.
 - **2026-06-10 (r2) — Draft, research-grounded.** Folded in Research Pass 3
   (`research/03-language-layer-RECORD.md`, T3.1–T3.6): §8 now records a researched *position*
   per question — L1 node budget + declarations-as-registry + Unison-style cycle hashing (Q2);
