@@ -9,6 +9,21 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **RFC-0006 (Draft) — Surface Language, Grammar & Term-Language Layering**
+  (`docs/rfcs/RFC-0006-Surface-Language-and-Term-Layering.md`; SPEC §10.2's deferred "later RFC"):
+  the deliberation artifact that nails down the language architecture *before* implementation
+  accretes a de-facto one. Fixes now: the **L0–L3 layering** (Core IR → kernel calculus → surface
+  term language → KC-2-gated projection layer; only L0/L1 trusted — KC-3), the **syntactic honesty
+  invariants S1–S5** (never-silent swap stays lexically visible through every layer; guarantee
+  tags are part of every binding's observable interface; content-addressed identity; inspectable
+  elaboration; explicit partiality), the **capability targets LR-1…LR-8** ("Rust-class and beyond"
+  made checkable: ADTs, coherent traits, content-addressed modules, totality-postured recursion,
+  plus the beyond-Rust core — Repr polymorphism and guarantee-indexed types; ownership/borrowing
+  flagged as likely-not-applicable to a value-semantics substrate), and the **grammar/spec
+  discipline** (EBNF + machine-readable grammar artifacts + conformance corpus, mirroring the
+  schema pattern). Defers exactly one thing, deliberately: the concrete L3 syntax, which the
+  corpus already gates on the KC-2 experiment (M-002; RR-3). Status **Draft** — ratification is a
+  maintainer decision. Indexed in `docs/rfcs/README.md`, `docs/Doc-Index.md`, SPEC §10.2.
 - **Selection-policy language + mandatory EXPLAIN + site wiring** (`mycelium-select` — a new
   crate — plus the `mycelium-lsp` EXPLAIN channel, **M-220/M-221/M-222**, Phase 2; RFC-0005;
   ADR-006; SC-5): realizes RFC-0005 §2's decision verbatim. **M-220:** `SelectionPolicy` — an
