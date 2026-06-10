@@ -9,6 +9,26 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Selection-policy language + mandatory EXPLAIN + site wiring** (`mycelium-select` — a new
+  crate — plus the `mycelium-lsp` EXPLAIN channel, **M-220/M-221/M-222**, Phase 2; RFC-0005;
+  ADR-006; SC-5): realizes RFC-0005 §2's decision verbatim. **M-220:** `SelectionPolicy` — an
+  ordered decision table (`Predicate` over queryable `Meta`: dtype, guarantee, ε bounds, sparsity —
+  *exact* metadata, never sampled estimates) over a finite `Candidate` set (`Repr` | `PackScheme`),
+  with an explicit `CostModel` (cost = weight × storage **bits**, a real declared unit) and a
+  mandatory default arm — total and terminating *by construction* (validated constructor; wire
+  forms re-validated on deserialize); deterministic (first-match precedence; `Cheapest` ties break
+  to lowest index); **content-addressed** (`policy_ref()` = hash of the canonical serialization —
+  RFC-0005 §3); first-class deterministic overrides. **M-221:** every selection emits a
+  serializable `Explanation` `{policy ref, inputs considered, cost of every candidate, matched
+  rule, chosen, override state}`; `explain(policy, inputs)` is total and deterministic; the
+  `mycelium-lsp` facade surfaces it as the fifth artifact kind (`analyze_with(node, &PolicyRegistry)`
+  re-derives the trace at each resolvable swap site and raises a `policy-divergence` warning when
+  the node's target disagrees with the policy's choice — surfaced, never silent). **M-222:** one
+  mechanism, two sites — `select_swap_target`/`select_packing` are thin adapters over the single
+  `select` (a wrong-kind candidate at a site is an explicit refusal); the wiring test drives an
+  auto-selected target through the real interpreter + `CertifiedSwapEngine` and the result records
+  `Meta.policy_used = PolicyRef` (the packing site is consumed by E2-7/M-250). 15 new tests across
+  policy semantics, EXPLAIN, LSP surfacing, and the swap-site wiring.
 - **KC-4 cert-overhead measurement + SC-3 global exit** (`xtask kc4` +
   `mycelium-cert/tests/sc3.rs`, **M-212**, Phase 2; Foundation KC-4; SC-3; RFC-0002 §2):
   `cargo run --release -p xtask -- kc4` times every implemented swap kind and its M-210

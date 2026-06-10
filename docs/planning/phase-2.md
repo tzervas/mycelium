@@ -84,9 +84,9 @@ All Phase-2 tasks, with issue number (`idmap.tsv`), priority, dependency, and **
 | **M-210** Shared TV certificate checker | [#52](https://github.com/tzervas/mycelium/issues/52) | P0 | E2-4, M-120/M-151 | RFC-0002 §2 / RFC-0004 §3 | **Done (2026-06-10)** — `mycelium-cert::check` |
 | **M-211** Bounded/lossy swap (F32→BF16) | [#53](https://github.com/tzervas/mycelium/issues/53) | P1 | E2-4, M-210, M-230 | RFC-0002 §5 / ADR-010 §1 | **Done (2026-06-10)** — `mycelium-cert::dense` (M-101's `Dense` repr sufficed; M-230's *ops* remain open) |
 | **M-212** KC-4 overhead + SC-3 global | [#54](https://github.com/tzervas/mycelium/issues/54) | P1 | M-210, M-211 | KC-4 / SC-3 | **Done (2026-06-10)** — `xtask kc4` + `tests/sc3.rs`; measured verdict in §6.7 |
-| **M-220** Decision-table SelectionPolicy | [#55](https://github.com/tzervas/mycelium/issues/55) | P0 | M-101…M-103 | RFC-0005 §2/§3 | Ready (parallel to E2-4) |
-| **M-221** Mandatory EXPLAIN + LSP surfacing | [#56](https://github.com/tzervas/mycelium/issues/56) | P0 | M-220, M-140 | RFC-0005 §2.2/§4 / SC-5 | Ready after M-220 |
-| **M-222** Wire selection into swap/packing sites | [#57](https://github.com/tzervas/mycelium/issues/57) | P1 | M-220, M-221 | RFC-0005 §4 | Ready after M-221 |
+| **M-220** Decision-table SelectionPolicy | [#55](https://github.com/tzervas/mycelium/issues/55) | P0 | M-101…M-103 | RFC-0005 §2/§3 | **Done (2026-06-10)** — `mycelium-select` |
+| **M-221** Mandatory EXPLAIN + LSP surfacing | [#56](https://github.com/tzervas/mycelium/issues/56) | P0 | M-220, M-140 | RFC-0005 §2.2/§4 / SC-5 | **Done (2026-06-10)** — `Explanation` + LSP channel |
+| **M-222** Wire selection into swap/packing sites | [#57](https://github.com/tzervas/mycelium/issues/57) | P1 | M-220, M-221 | RFC-0005 §4 | **Done (2026-06-10)** — swap site wired; packing adapter ready for E2-7 |
 | **M-230** Dense{dim,dtype} ops | [#58](https://github.com/tzervas/mycelium/issues/58) | P1 | M-101 (Dense repr) | RFC-0001 §4.1 / RFC-0002 §5 | Ready after E2-4 (float bounds) |
 | **M-231** Dense↔VSA swaps (ε/δ) | [#59](https://github.com/tzervas/mycelium/issues/59) | P1 | E2-4, M-210, M-230, VSA | RFC-0002 §5 / RFC-0003 | Ready after M-210 + M-230 |
 | **M-240** VSA: MAP-B + BSC (Exact) | [#60](https://github.com/tzervas/mycelium/issues/60) | P1 | M-130 | RFC-0003 §4 | Ready after E2-4 (tags) |
@@ -329,6 +329,60 @@ basis.
 - **Honesty.** The unimplemented table rows are *part of* the SC-3 statement: SC-3 demands they
   fail explicitly until their swaps exist (M-231/M-242), and the test pins exactly that.
 
+### 6.8 M-220 — Decision-table SelectionPolicy + cost function · #55 · P0 · done 2026-06-10
+
+- **Goal / acceptance (from issue).** Ordered `(predicate over queryable Meta) → candidate` rules +
+  explicit cost; total (default arm) and terminating by construction; deterministic;
+  content-addressed; first-class override; fixed declared precedence.
+- **Delivered.** New crate `mycelium-select` (the §5 KC-3 decision — selection stays out of the
+  trusted kernel; depends on `mycelium-core` only). `SelectionPolicy{name, candidates, rules,
+  default_choice, cost}` with private fields and a validating constructor (empty candidate set,
+  dangling `Choose(i)`/default indices, degenerate cost weights are construction errors; the wire
+  form re-validates on deserialize). `Predicate` is a small closed non-Turing-complete language
+  (`Always | SrcKindIs | DtypeIs | GuaranteeAtLeast | ErrorEpsAtMost | DeclaredSparse | All | Any |
+  Not`) — structural recursion on finite data, so evaluation is total and terminating. `CostModel`:
+  cost = `storage_weight ×` storage **bits** (a real declared unit, not the "arbitrary internal
+  units" failure mode RFC-0005 §2 documents; packing bits/element per RFC-0004 §5 / DN-01).
+  `Action::Choose(i) | Cheapest` (ties → lowest index); first matching rule wins (fixed declared
+  precedence); `policy_ref()` content-addresses the canonical serialization (RFC-0005 §3);
+  overrides are a first-class `forced` argument, out-of-range → explicit error.
+- **Honesty.** The "statistics" are the kernel's exact metadata — the cardinality-estimation
+  opacity trap does not arise (RFC-0005 §2.5); every failure mode is a typed explicit error.
+
+### 6.9 M-221 — Mandatory EXPLAIN trace + LSP surfacing · #56 · P0 · done 2026-06-10
+
+- **Goal / acceptance (from issue).** A serializable `Explanation` populated on every selection
+  (candidates + per-candidate cost + chosen + override state); `explain(policy, meta)` total and
+  deterministic; the LSP facade exposes EXPLAIN as a surfaced artifact kind; a ranking test.
+- **Delivered.** `Explanation{policy, policy_name, inputs, costs, matched_rule, chosen_index,
+  chosen, overridden}` — emitted by `select` on **every** call (there is no selection without an
+  EXPLAIN) and serde round-trips. `explain(policy, inputs)` is total (un-overridden selection on a
+  validated policy cannot fail) and deterministic. `mycelium-lsp::analyze_with(node,
+  &PolicyRegistry)` adds the **fifth artifact kind** to the M-140 facade: at every swap site whose
+  `PolicyRef` resolves and whose source is statically known, the trace is re-derived and surfaced;
+  a `policy-divergence` warning fires when the node's recorded target disagrees with the policy's
+  choice (override or stale policy — visible either way). The ranking test hand-computes the
+  64-vs-128-bit costs and pins the full trace.
+- **Honesty.** Mandatory EXPLAIN is the operational form of "no black boxes" (G2/ADR-006); the
+  divergence warning keeps even *overridden* selections inspectable.
+
+### 6.10 M-222 — Wire selection into swap-target (and packing) sites · #57 · P1 · done 2026-06-10
+
+- **Goal / acceptance (from issue).** Swap path records `Meta.policy_used = PolicyRef` + EXPLAIN
+  on auto-selection; a single `select(policy, candidates, meta) → (choice, explanation)` serves
+  both sites; override forces the alternate target deterministically.
+- **Delivered.** One mechanism, two thin site adapters over the single `select`:
+  `select_swap_target` (candidates must be `Repr`s) and `select_packing` (must be `PackScheme`s) —
+  a wrong-kind candidate at a site is an explicit `WrongSiteKind` refusal, never a coercion. The
+  wiring test selects a target for an exact Dense F32 value, builds the `Node::Swap` with the
+  policy's content hash (WF2), runs it through the reference interpreter + `CertifiedSwapEngine`,
+  and asserts the result's `Meta.policy_used` **is** the `PolicyRef` — "which policy chose this?"
+  answerable from the value alone (RFC-0005 §3). The override path forces the alternate target
+  deterministically across repeated calls. The packing site consumes the same entry point and is
+  wired for real by E2-7/M-250 (its adapter + cost figures are already in place).
+- **Honesty.** The packing-site *consumption* is honestly deferred to E2-7 exactly as the issue
+  scopes it; nothing here pre-claims M-250.
+
 ---
 
 ## 7. Risks & open questions
@@ -359,6 +413,11 @@ basis.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-10 (E2-6 lands):** M-220/M-221/M-222 done — the `mycelium-select` decision-table
+  policy language (total/terminating by construction, content-addressed, explicit bits-based cost),
+  the mandatory serializable EXPLAIN + the LSP fifth artifact kind (`analyze_with` +
+  `policy-divergence` warning), and the swap-site wiring (`Meta.policy_used = PolicyRef` through
+  the real interpreter; packing adapter ready for E2-7). §2 rows + §6.8–§6.10 added.
 - **2026-06-10 (E2-3 lands):** M-210/M-211/M-212 done — the shared TV checker
   (`mycelium-cert::check`, with the M-120 cert and the M-151 differential folded in as instances),
   the first `Bounded` swap (Dense F32→BF16, proven `Rel 2^−8` rounding bound), and the KC-4
