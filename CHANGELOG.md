@@ -9,6 +9,41 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Interpreter composes approximate inputs honestly** (`mycelium-interp::prims`, **M-204**, Phase 2;
+  RFC-0001 §4.7; ADR-010): retires the Phase-1 blanket `ApproxCompositionUnsupported` refusal for
+  composable inputs. `exact_result` → `compose_result`: exact-over-exact stays `Exact`/`bound=None`
+  (M-I1); over an approximate input it composes per a per-prim `ApproxRule` — `core.id` passes the
+  bound through verbatim (citation preserved), `trit.add`/`sub`/`neg` carry the sound affine ε
+  composition via `mycelium_numerics::compose_error_bound` (strength `meet`s to the weakest input,
+  basis re-derived so M-I2…M-I4 hold), and `bit.*` / `trit.mul` still refuse (no defined ε rule —
+  honest, never a fabricated bound). Five new golden tests cover additive ε composition (Proven⊕Proven
+  → Proven, ε sums), negation (ε preserved), `core.id` passthrough, meet-down to Declared, and the
+  explicit `trit.mul` refusal; the Phase-1 `bit.not` refusal test still holds. **Closes the documented
+  Phase-1 honesty gap** (the interpreter previously could not compose approximate inputs).
+- **Verified-numerics foundation — two bound kernels + shared certificate + tier-i checker**
+  (`mycelium-numerics`, **M-201/M-202/M-203**, Phase 2; ADR-010; RFC-0001 §4.7; SPEC §10.7): a new
+  crate realizing ADR-010's two-kernels-one-certificate decision, deliberately *outside*
+  `mycelium-core` (KC-3/SoC — the trusted kernel stays small; numerics is a certificate consumer).
+  **`error`** composes ε through **affine arithmetic** — `AffineForm` (`x₀ + Σxᵢ·εᵢ`) with *exact*
+  linear ops (correlated noise symbols cancel) and a sound `mul` (second-order remainder onto a fresh
+  symbol), and the scalar `ErrorBound{eps,norm}` projection (`add`/`sub`/`neg`/`scale`/`mul`).
+  **`prob`** composes δ through the **union bound** (`min(1,Σδ)`) and the apRHL `[SEQ]` rule
+  (`ApRhlJudgment` — ε adds as the `e^ε` factors multiply, δ adds, both saturating). They meet at the
+  shared **`Certificate{eps,delta,strength}`** (`strength` by `meet`), with a **tier-i Rust checker**
+  (`check_error_claim`/`check_union_claim`) that re-derives a composition and **rejects any claim
+  tighter than the re-derivation** — never a silent pass (RFC-0002 §2) — and the one sanctioned
+  cross-kernel rule `accuracy_to_probability` (ADR-010 §4). The three normative properties
+  (**Soundness, Monotonicity, Determinism**; RFC-0001 §4.7) are property-tested over 20k-trial inline
+  loops (Phase-1 house style — no `proptest`/`rand` dep); 17 tests green, clippy `-D warnings` clean.
+- **Phase-2 plan + epic decomposition** (`docs/planning/phase-2.md`; **Phase 2**; Foundation §6;
+  SPEC §10.7–§10.10): decomposed the seven Phase-2 epics (#28–#34) into 18 issue-coupled `M-2xx`
+  build tasks (#48–#65), created as sub-issues of their epics and joined into `tools/github/idmap.tsv`.
+  The plan mirrors `phase-1.md`: readiness table, batch/parallelization structure, the critical path
+  (the ADR-010 ε/δ numerics kernels as keystone — they gate every honest approximation downstream),
+  and an honest Phase-1→2 re-run of the kill criteria (KC-1 confirmed/no-regression; KC-2
+  open/blocked on external LLM access; KC-3 holding — numerics + selection land as their own crates
+  to keep the kernel auditable; KC-4 first-measurable when the shared checker lands). Planning
+  artifact only — cites the corpus, introduces no requirements.
 - **MLIR→LLVM AOT path — ternary-dialect skeleton + runnable AOT artifact** (`mycelium-mlir`,
   **M-150**, Phase 1; RFC-0004 §2/§6; ADR-007; T1.5): `dialect::emit` renders the lowered A-normal
   form as a textual `ternary`-dialect MLIR-style module (one op per binding, all attributes inline —

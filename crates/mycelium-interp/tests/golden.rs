@@ -4,7 +4,7 @@
 
 use mycelium_core::{
     operation_hash, Bound, BoundBasis, BoundKind, ContentHash, GuaranteeStrength, Meta, Node,
-    Payload, Provenance, Repr, Trit, Value,
+    NormKind, Payload, Provenance, Repr, Trit, Value,
 };
 use mycelium_interp::{EvalError, Interpreter, Step};
 
@@ -411,6 +411,175 @@ fn composing_an_approximate_input_is_refused() {
     let node = Node::Op {
         prim: "bit.not".into(),
         args: vec![Node::Const(approx)],
+    };
+    assert!(matches!(
+        Interpreter::default().eval(&node),
+        Err(EvalError::ApproxCompositionUnsupported { .. })
+    ));
+}
+
+// --- M-204: honest approximate composition via the verified-numerics kernel ---------------------
+
+/// A ternary value carrying an `Error` bound at the given strength (the M-I strength↔basis coupling
+/// is the caller's to keep consistent — `Meta::new` enforces it).
+fn tern_err(value: i64, m: u32, strength: GuaranteeStrength, eps: f64, basis: BoundBasis) -> Value {
+    Value::new(
+        Repr::Ternary { trits: m },
+        Payload::Trits(mycelium_core::ternary::int_to_trits(value, m).expect("in range")),
+        Meta::new(
+            Provenance::Root,
+            strength,
+            Some(Bound {
+                kind: BoundKind::Error {
+                    eps,
+                    norm: NormKind::Linf,
+                },
+                basis,
+            }),
+            None,
+            None,
+            None,
+        )
+        .unwrap(),
+    )
+    .unwrap()
+}
+
+fn proven(cite: &str) -> BoundBasis {
+    BoundBasis::ProvenThm {
+        citation: cite.to_owned(),
+    }
+}
+
+fn result_error(v: &Value) -> (f64, GuaranteeStrength) {
+    match v.meta().bound() {
+        Some(Bound {
+            kind: BoundKind::Error { eps, .. },
+            ..
+        }) => (*eps, v.meta().guarantee()),
+        other => panic!("expected an Error bound, got {other:?}"),
+    }
+}
+
+#[test]
+fn trit_add_composes_approximate_error_bounds() {
+    // Two Proven-bounded approximate ternaries → trit.add carries the affine-composed ε (1.0+2.0)
+    // and stays Proven (affine composition is itself sound; value is still 5+(-3)=2).
+    let node = Node::Op {
+        prim: "trit.add".into(),
+        args: vec![
+            Node::Const(tern_err(
+                5,
+                4,
+                GuaranteeStrength::Proven,
+                1.0,
+                proven("thm-x"),
+            )),
+            Node::Const(tern_err(
+                -3,
+                4,
+                GuaranteeStrength::Proven,
+                2.0,
+                proven("thm-y"),
+            )),
+        ],
+    };
+    let out = run(&node);
+    assert_eq!(trit_value_of(&out), 2);
+    let (eps, strength) = result_error(&out);
+    assert!((eps - 3.0).abs() < 1e-12);
+    assert_eq!(strength, GuaranteeStrength::Proven);
+    assert!(matches!(
+        out.meta().bound().unwrap().basis,
+        BoundBasis::ProvenThm { .. }
+    ));
+}
+
+#[test]
+fn trit_neg_preserves_error_magnitude() {
+    // Negation is affine: ε is unchanged, strength stays Empirical.
+    let node = Node::Op {
+        prim: "trit.neg".into(),
+        args: vec![Node::Const(tern_err(
+            4,
+            4,
+            GuaranteeStrength::Empirical,
+            0.5,
+            BoundBasis::EmpiricalFit {
+                trials: 10_000,
+                method: "fit".into(),
+            },
+        ))],
+    };
+    let out = run(&node);
+    assert_eq!(trit_value_of(&out), -4);
+    let (eps, strength) = result_error(&out);
+    assert!((eps - 0.5).abs() < 1e-12);
+    assert_eq!(strength, GuaranteeStrength::Empirical);
+}
+
+#[test]
+fn core_id_passes_bound_through_unchanged() {
+    // core.id preserves the bound verbatim, including its original citation (identity changes nothing).
+    let v = tern_err(
+        2,
+        4,
+        GuaranteeStrength::Proven,
+        0.25,
+        proven("original-thm"),
+    );
+    let node = Node::Op {
+        prim: "core.id".into(),
+        args: vec![Node::Const(v.clone())],
+    };
+    let out = run(&node);
+    assert_eq!(out.meta().bound(), v.meta().bound());
+    assert_eq!(out.meta().guarantee(), GuaranteeStrength::Proven);
+}
+
+#[test]
+fn approximate_composition_meets_strength_down() {
+    // Proven ⊕ Declared → Declared (the weakest input governs; VR-5).
+    let node = Node::Op {
+        prim: "trit.add".into(),
+        args: vec![
+            Node::Const(tern_err(
+                5,
+                4,
+                GuaranteeStrength::Proven,
+                1.0,
+                proven("thm"),
+            )),
+            Node::Const(tern_err(
+                -3,
+                4,
+                GuaranteeStrength::Declared,
+                2.0,
+                BoundBasis::UserDeclared,
+            )),
+        ],
+    };
+    let out = run(&node);
+    let (_eps, strength) = result_error(&out);
+    assert_eq!(strength, GuaranteeStrength::Declared);
+    assert_eq!(out.meta().bound().unwrap().basis, BoundBasis::UserDeclared);
+}
+
+#[test]
+fn trit_mul_still_refuses_approximate_input() {
+    // No multiplicative ε rule yet (needs Dense magnitudes, E2-1) → explicit refusal, never silent.
+    let node = Node::Op {
+        prim: "trit.mul".into(),
+        args: vec![
+            Node::Const(tern_err(
+                3,
+                4,
+                GuaranteeStrength::Proven,
+                1.0,
+                proven("thm"),
+            )),
+            Node::Const(tern(2, 4)),
+        ],
     };
     assert!(matches!(
         Interpreter::default().eval(&node),

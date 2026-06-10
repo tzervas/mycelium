@@ -78,8 +78,10 @@ pub enum EvalError {
         /// A human-readable explanation.
         why: String,
     },
-    /// A primitive would have to compose an approximate input, which has no bound kernel yet
-    /// (ADR-010 / Phase-2 E2-4). Refused rather than fabricating a composed bound.
+    /// A primitive would have to compose an approximate input for which it has **no defined
+    /// ε-propagation rule** (the logical `bit.*` ops; `trit.mul` pending the Dense magnitudes; or an
+    /// input carrying a non-`Error` bound). The additive arithmetic *does* compose now via the
+    /// verified-numerics kernel (M-204; ADR-010); this is refused rather than fabricating a bound.
     ApproxCompositionUnsupported {
         /// The primitive name.
         prim: String,
@@ -115,13 +117,19 @@ impl core::fmt::Display for EvalError {
             EvalError::PrimType { prim, why } => write!(f, "type error in {prim}: {why}"),
             EvalError::ApproxCompositionUnsupported { prim } => write!(
                 f,
-                "{prim}: composing an approximate input is unsupported (no bound kernel yet; ADR-010/E2-4)"
+                "{prim}: no defined ε-propagation rule for an approximate input (ADR-010/M-204)"
             ),
             EvalError::UnsupportedSwap { from, to } => {
-                write!(f, "unsupported swap: {from:?} → {to:?} (certified swap is M-120)")
+                write!(
+                    f,
+                    "unsupported swap: {from:?} → {to:?} (certified swap is M-120)"
+                )
             }
             EvalError::Overflow { prim } => {
-                write!(f, "{prim}: fixed-width arithmetic overflow (result out of range)")
+                write!(
+                    f,
+                    "{prim}: fixed-width arithmetic overflow (result out of range)"
+                )
             }
             EvalError::FuelExhausted => write!(f, "evaluation exceeded its step budget"),
             EvalError::Swap(msg) => write!(f, "swap failed: {msg}"),
