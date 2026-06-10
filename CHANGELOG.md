@@ -9,6 +9,22 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **Research Pass 3 — language-layer targets T3.1–T3.6** (`research/03-language-layer-RECORD.md`;
+  grounds RFC-0006 Q1–Q6): four parallel primary-source deep-dives. Headlines: every surveyed
+  kernel (GHC Core, Lean, Coq, Unison) keeps ~10–16 expression nodes with **data declarations in
+  a registry/environment layer** and Unison gives the cycle-hashing recipe (T3.1); the guarantee
+  lattice is formally an **integrity lattice** — silent upgrade = IFC's *endorsement*, gated here
+  by a checked certificate — and graded coeffects (Granule-style) subsume flat labels, with
+  refinements reserved for certificate side-conditions (T3.2); GHC levity polymorphism's two
+  restrictions + monomorphization give the LR-5 restriction set (T3.3); divergence-only effect
+  tracking (Koka's `div`, degenerate) + Lean's `partial`-opaque split + CakeML clocked semantics
+  settle Q4/LR-4 (T3.4); ownership/borrowing confirmed **not applicable** to value semantics
+  (Hylo/Swift), linearity deferred to a reserved affine `Resource` hook (T3.5); and the measured
+  LLM evidence (MultiPL-E/T, MTOB, SynCode, grammar-aligned-decoding distortion) yields a
+  five-condition KC-2 design with an explicit falsification threshold (T3.6). Honest-uncertainty
+  register included; two pieces flagged **novel with no found precedent** (grading + runtime
+  certificates; totality gating AOT promotion). **RFC-0006 revised to r2 (still Draft)**: §8
+  positions per question, new Q7; §4.2 postures updated.
 - **RFC-0006 (Draft) — Surface Language, Grammar & Term-Language Layering**
   (`docs/rfcs/RFC-0006-Surface-Language-and-Term-Layering.md`; SPEC §10.2's deferred "later RFC"):
   the deliberation artifact that nails down the language architecture *before* implementation
