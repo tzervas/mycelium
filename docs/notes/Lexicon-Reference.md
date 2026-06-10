@@ -25,12 +25,13 @@ This document is the single source of truth for terminology in the Mycelium prog
 
 | Tier        | Purpose                              | Theming Approach                  | Typical User                  | Example Terms                  |
 |-------------|--------------------------------------|-----------------------------------|-------------------------------|--------------------------------|
-| **Surface** | Daily surface syntax & keywords      | Conservative (three-test gate)    | All developers                | `colony`, `consume`, `embody`  |
+| **Surface** | Daily surface syntax & keywords      | Conservative (three-test gate)    | All developers                | `colony`, `consume`, `grow`    |
 | **Runtime** | Runtime primitives & architecture    | Aggressive with short mnemonics   | Systems & runtime developers  | `hyph`, `anas`, `xloc`, `sclrt`|
 | **Formal**  | Formal semantics & Core IR           | Technical / conventional          | Language designers & compilers| `Repr`, `GuaranteeStrength`    |
 
-> **Status & grounding:** the **Surface** tier extends the Resolved DN-02 set (new terms
-> `consume`/`embody`/`grow` await a DN-02 amendment through the three-test gate — ADR-012 §7.5).
+> **Status & grounding:** the **Surface** tier extends the Resolved DN-02 set; the additions
+> were ratified through the three-test gate in **DN-03** — `consume` and `grow` adopted,
+> `embody` **declined** (inherent methods keep `impl`), `for` reserved (RFC-0007 §4.8).
 > The **Runtime** tier now has a **drafted model**: RFC-0008 (Runtime & Concurrency Execution
 > Model, Draft), grounded by research Pass-4 (`research/04-runtime-concurrency-RECORD.md`,
 > T4.1–T4.6), defines each term's operational meaning (RFC-0008 §4.5) under the RT1–RT7 runtime
@@ -54,7 +55,6 @@ This document is the single source of truth for terminology in the Mycelium prog
 | `colony`   | Colony      | A bounded, self-sustaining unit of definitions and behavior. | A fungal colony is a living network of hyphae working together. | Owns definitions, controls visibility, participates in the larger network. | `colony math { fn add(...) }` |
 | `spore`    | Spore       | An immutable, verifiable, self-contained artifact of code + state + metadata that can germinate into execution. | A biological spore carries everything needed to regrow the organism. | Content-addressed, signed, dispersible. Supports lightweight and durable variants. | `let s = spore { ... }; germinate(s)` |
 | `consume`  | Consume     | Acquire and take exclusive ownership of a linear/affine resource. | A fungus consumes substrate exactly once to grow. | Enforces single-use semantics via the type system. | `let res = consume(substrate);` |
-| `embody`   | Embody      | Declare inherent behavior and methods attached to a specific type. | The type *embodies* its own capabilities. | Distinct from shared `trait` behavior. | `embody Point { fn distance(self) }` |
 | `grow`     | Grow        | Automatically generate or extend behavior on a type. | The system *grows* new capabilities, like fungal extension. | Used for derive-like and generative features. | `grow Debug for Point;` |
 | `wild`     | Wild        | Lexically marked, denied-by-default region for unsafe/raw operations. | Growth that has left the safe, cultivated colony. | Only place raw FFI or manual memory is allowed. | `wild { foreign_call(...) }` |
 | `matured`  | Matured     | Marks a definition as stable, verified, and eligible for AOT compilation. | The component has grown into a hardened, persistent form. | Used for promotion to stable components. | `matured fn critical_path(...)` |
@@ -68,41 +68,54 @@ This document is the single source of truth for terminology in the Mycelium prog
 
 ### Conventional Terms (Retained for Learnability)
 
-`let`, `fn`, `type`, `trait`, `use`, `match`, `if` / `else`, `pub`, `self`, `where`,
-`Result` / `Option` family, `swap`, `policy`, `total` / `partial`.
+`let`, `fn`, `type`, `trait`, `use`, `match`, `if` / `else`, `for`, `impl`, `pub`, `self`,
+`where`, `Result` / `Option` family, `swap`, `policy`, `total` / `partial`.
 
-> **⚑ Control flow (ADR-012 §7.2):** `loop` / `while` / `for` / `break` / `continue` / `return`
-> are **not yet reserved** — the L1 kernel calculus (RFC-0007) is functional (recursion via `fn` +
-> `Fix`, with the structural totality posture), and unbounded loops would undermine the
-> totality/divergence story (LR-4/Q4). Adding bounded iteration as Surface sugar over recursion
-> needs an RFC-0007 amendment; until then, iterate by recursion.
+> **Inherent methods = `impl` (DN-03):** the themed `embody` was evaluated and **declined** —
+> `impl` is machine-/human-familiar and theming costs dual readability for no behavioral teaching
+> (same logic as `trait`/`type`). Methods are not in the v0 grammar yet; `impl` is the chosen
+> term for when they land.
+>
+> **Control flow (RFC-0007 §4.8 r2; DN-03):** `for` is **reserved** — the keyword of bounded-
+> iteration sugar (a `for`-fold that elaborates to structural recursion, `Total` by construction;
+> *provisional spelling*, KC-2-gated). `while` / `loop` / `break` / `continue` / `return` stay
+> **excluded and unreserved** (unbounded iteration would undermine the divergence bit); the
+> toolchain emits teaching diagnostics where they appear, pointing at recursion / `for`.
 
 ---
 
 ## 3. Runtime Tier: Runtime Primitives & Architectural Concepts
 
-> **⚑ Reserved vocabulary, not active syntax — but now grounded (RFC-0008 Draft).** These
-> primitives describe the concurrency/distribution execution model defined by **RFC-0008**
+> **Reserved vocabulary, not active syntax — grounded (RFC-0008) and name-ratified (DN-03).**
+> These primitives describe the concurrency/distribution execution model defined by **RFC-0008**
 > (grounded by research Pass-4, T4.1–T4.6): each term's operational meaning and the runtime
-> invariants (RT1–RT7) it must respect are in RFC-0008 §4.5. They remain *reserved* — activation
-> requires DN-03 name ratification (three-test gate) plus per-construct implementation RFCs.
-> Several short forms are flagged for refinement at DN-03 (ADR-012 §7.6: `sclrt`→`dorm`,
-> `cmn`→`mesh`, `anas`→`weave`, `myco`→`graft`).
+> invariants (RT1–RT7) it must respect are in RFC-0008 §4.5. **DN-03 ratified the names** through
+> the three-test gate against those meanings (the §7.6 refinements `anas`→`weave`, `cmn`→`mesh`,
+> `myco`→`graft`, `sclrt`→`dorm`). They remain *reserved* — activation requires each construct's
+> RFC-0008 implementation-stage RFC (R1/R2). Each term is **one canonical long form + one
+> sanctioned short alias** (§ "The alias rule" below): same content hash, projected differently.
 
-These primitives are intended to form the execution model and distributed-systems substrate.
+These primitives form the execution model and distributed-systems substrate (RFC-0008). The
+**Short** column is the DN-03-ratified single alias; **Canonical** is the long form.
 
-| Short Form | Full Term              | Definition | Mnemonic Hook | Programming Concept | Key Behaviors |
-|------------|------------------------|------------|---------------|---------------------|---------------|
-| `hyph`     | Hypha                  | Fundamental unit of concurrent execution and exploratory growth. | Active growth path / unit | Lightweight concurrent context with topology | Can branch, participate in anastomosis, be sclerotized |
-| `anas`     | Anastomose             | Dynamically fuse or connect execution units for redundancy or collaboration. | Network fusion / connection | Typed channel or state fusion | Supports safe merging via protocols or CRDTs |
-| `xloc`     | Translocate            | Move data or resources across the network with prioritization. | Cross-location movement | Efficient routed dataflow | Supports backpressure and path promotion to `rhizo` |
-| `sclrt`    | Sclerotize / Sclerotium| Create a durable, resumable checkpoint of execution state. | Scale + shelter / hardened survival structure | Checkpoint, migration, hibernation | Produces a first-class resumable artifact |
-| `myco`     | Mycorrhize             | Declare a mutualistic, capability-based contract with infrastructure or other components. | Symbiotic interface | Clean, mutual-benefit boundary | Enforces mutual obligations and isolation |
-| `forage`   | Forage                 | Adaptive, signal-driven discovery and placement of work or resources. | Biological foraging behavior | Adaptive scheduling / placement policy | Can integrate feedback or simple learned policies |
-| `rhizo`    | Rhizomorph             | High-bandwidth or priority long-distance transport path. | Root-like high-capacity strand | Optimized backbone route | Can be statically declared or dynamically promoted |
-| `cmn`      | Common Mycorrhizal Network (Wood Wide Web) | Decentralized signaling and resource-sharing mesh enabling emergent coordination. | Emergent underground network | Gossip / decentralized overlay | Supports pub/sub and indirect resource transfer |
-| `dimorph`  | Dimorph                | Switch between execution modes (e.g. dense vs sparse, interpreted vs native). | Dual-form adaptation | Context-aware mode switching | Explicit or policy-driven |
-| `reclaim`  | Reclaim (Saprotroph)   | Reclaim or decompose stale or unused resources. | Decomposition and recycling | Resource cleanup / reclamation policy | Can run as background or explicit operation |
+| Short | Canonical | RFC-0008 meaning (RT invariants) |
+|------------|------------------------|---------------------------------------------------|
+| `hyph`     | `hypha`                | structurally-scoped concurrent computation over immutable values (RT1/RT2/RT7) |
+| `weave`    | `anastomose`           | lawful state fusion: semilattice merge, meet-composed `Meta` (RT6) |
+| `xloc`     | `translocate`          | explicit, fallible, `Meta`-preserving value movement with backpressure (RT1/RT4) |
+| `dorm`     | `sclerotium`           | content-addressed checkpoint of a dormable computation (RT2) |
+| `graft`    | `mycorrhize`           | capability contract with external infra (the capability is an affine `substrate`) (RT4) |
+| `forage`   | `forage`               | adaptive placement/discovery as a reified RFC-0005 policy — the third site (RT3) |
+| `rhizo`    | `rhizomorph`           | a declared/promoted transport path; a placement-policy artifact, semantics-free (RT3) |
+| `mesh`     | `mycorrhizal-network`  | gossip/pub-sub overlay with honest **probabilistic** guarantees (δ) (RT5) |
+| `dimorph`  | `dimorph`              | execution-mode switch: tiering = RFC-0004 `ExecutionMode`; repr switch = `Swap` (S1) |
+| `reclaim`  | `reclaim`              | supervision-tree reclamation of *runtime units* — **never memory** (LR-9) (RT7) |
+
+> **The alias rule (DN-03 §3).** Each themed term has **one** canonical long form and **at most
+> one** sanctioned short alias — never a family of abbreviations. Because identity is
+> content-addressed (ADR-003) and one canonical formatter (M-142, S3) renders it, the long form
+> and the alias are the *same token* (same hash): beginners read `anastomose`, experts type
+> `weave`, at zero identity cost. The reserved-word set holds both spellings.
 
 ---
 
@@ -122,11 +135,13 @@ These concepts come primarily from RFC-0001 and remain largely technical.
 
 ## 5. Usage Guidelines
 
-- **General development**: Stay in L1 + conventional keywords.
-- **Systems programming & runtime work**: Use L2 short forms.
-- **Documentation & diagnostics**: Introduce concepts with the full term followed by the short form in parentheses on first use.
-- **Error messages**: Prefer clarity — e.g., “Cannot `anas` (anastomose) incompatible `hyph` types.”
+- **General development**: stay in the Surface tier + conventional keywords.
+- **Systems programming & runtime work**: use the Runtime short aliases (once activated).
+- **Documentation & diagnostics**: introduce a concept with the canonical long form followed by
+  its short alias in parentheses on first use.
+- **Error messages**: prefer clarity — e.g., "Cannot `weave` (anastomose) incompatible `hyph`
+  types."
 
 ---
 
-*End of Lexicon Reference v0.4*
+*End of Lexicon Reference v0.4 (DN-03-amended 2026-06-10).*
