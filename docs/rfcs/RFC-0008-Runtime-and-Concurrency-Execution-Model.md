@@ -304,8 +304,11 @@ deployables); JIT tier-up/deopt (mode switching with semantic equivalence). Full
 - **R8-Q4 (trust scope).** v0 mesh trusts its members (no Byzantine tolerance) and defers
   consensus. The boundary where "honest guarantees" meets "adversarial participants" is a
   future RFC with its own research pass.
-- **R8-Q5 (`spore` reconciliation).** Owned by the RFC-0003 revision (ADR-012 §7.4); §4.4 here
-  is written to compose with either resolution.
+- **R8-Q5 (`spore` reconciliation).** *Resolved at the scope level* (ADR-013 + RFC-0003 r2,
+  2026-06-10): spore = the content-addressed deployable unit, the manifest one component,
+  `spore(v)` the degenerate single-value case — §4.4's composition reading is ratified. Still
+  open: the deployable artifact's schema, signing story, and germination contract (the R2
+  implementation stage's obligation).
 - **R8-Q6 (vocabulary ratification).** DN-03: the three-test gate over §4.5's meanings, the
   short-form refinements (ADR-012 §7.6), and the canonical-long-form + one-short-alias rule.
 

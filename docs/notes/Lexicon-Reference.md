@@ -59,11 +59,12 @@ This document is the single source of truth for terminology in the Mycelium prog
 | `wild`     | Wild        | Lexically marked, denied-by-default region for unsafe/raw operations. | Growth that has left the safe, cultivated colony. | Only place raw FFI or manual memory is allowed. | `wild { foreign_call(...) }` |
 | `matured`  | Matured     | Marks a definition as stable, verified, and eligible for AOT compilation. | The component has grown into a hardened, persistent form. | Used for promotion to stable components. | `matured fn critical_path(...)` |
 
-> **⚑ `spore` scope (ADR-012 §7.4):** DN-02 / RFC-0003 §6 fix `spore` as the **reconstruction
-> manifest** (the recipe to regrow a *value*). The broader "deployable code + state + metadata"
-> sense above is a deliberate generalization that **must be reconciled in an RFC-0003 revision**
-> (the manifest becomes one component of a spore) so the narrow and broad meanings do not silently
-> diverge. `substrate` (the affine resource kind, DN-02) is the type `consume` operates on.
+> **`spore` scope — resolved (ADR-013 + RFC-0003 r2, 2026-06-10):** `spore` is the
+> **content-addressed deployable unit** (code + values + metadata); the RFC-0003 §6
+> reconstruction manifest is **one digest-referenced component**, and `spore(v)` constructs the
+> degenerate single-value spore (the manifest for `v`). The schema name stays
+> `reconstruction-manifest`. `substrate` (the affine resource kind, DN-02) is the type `consume`
+> operates on.
 
 ### Conventional Terms (Retained for Learnability)
 

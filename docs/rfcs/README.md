@@ -12,7 +12,7 @@ An RFC is a detailed, normative design of a subsystem that multiple decisions pl
 |---|---|---|---|
 | 0001 | Core IR & Metadata Schema | Accepted (r2) | Foundation FR-M*/VR-*; ADR-001/002/003/006/008; ADR-010 (§4.7); ADR-011 (§4.3 `Bound`) |
 | 0002 | Swap Certificate & Split Regime | Accepted | RFC-0001; ADR-002; ADR-010; shares the certificate checker with RFC-0004 |
-| 0003 | VSA Submodule Boundary | Accepted | RFC-0001; ADR-008; ADR-010 |
+| 0003 | VSA Submodule Boundary | Accepted (r2) | RFC-0001; ADR-008; ADR-010; ADR-013 (r2 `spore` scope note) |
 | 0004 | Execution Model & "Stable Component" | Accepted | RFC-0001; ADR-007; ADR-009; DN-01; shares the checker with RFC-0002 |
 | 0005 | Selection-Policy Language | Accepted | RFC-0001; ADR-006; same mechanism used by RFC-0002 & RFC-0004 |
 | 0006 | Surface Language, Grammar & Term-Language Layering | **Draft** | RFC-0001 §4.5; ADR-003/006/007; KC-2/KC-3; RR-3; SPEC §10.1/§10.2 |

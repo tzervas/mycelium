@@ -8,6 +8,19 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (ADR-013 — `spore` is the deployable unit; resolves ADR-012 §7.4)
+- **ADR-013** (Accepted, maintainer deliberation 2026-06-10): `spore` = the
+  **content-addressed deployable unit** — a hash-identified DAG of code (ADR-003 definitions,
+  ship-by-hash per T4.3), values (with `Meta` intact), the RFC-0003 §6 **reconstruction
+  manifest** as one digest-referenced component, and artifact metadata. The narrow ratified
+  sense is the **degenerate case**: `spore(v)` constructs the single-value spore (the manifest
+  for `v`); the schema name `reconstruction-manifest` is unchanged. Grounded in T4.3/T4.4
+  (Nix/OCI/Wasm/Unison convergence on content-addressed artifact DAGs).
+- **RFC-0003 → Accepted (r2)**: §6 scope note only — manifest contents, schema, and guarantees
+  unchanged. **RFC-0008 R8-Q5** resolved at the scope level (schema/signing/germination contract
+  remain the R2 implementation stage's obligation). Lexicon-Reference `spore` flag resolved;
+  ADR index gains 012/013 rows.
+
 ### Changed (RFC-0007 r2 — bounded iteration; resolves ADR-012 §7.2)
 - **RFC-0007 §4.8 (new, r2)**: bounded iteration as **elaboration-defined sugar** over
   structural recursion — no new kernel node. Normative content = the desugaring to a synthesized
