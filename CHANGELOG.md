@@ -8,6 +8,23 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (RFC-0007 r2 — bounded iteration; resolves ADR-012 §7.2)
+- **RFC-0007 §4.8 (new, r2)**: bounded iteration as **elaboration-defined sugar** over
+  structural recursion — no new kernel node. Normative content = the desugaring to a synthesized
+  self-recursive helper over *linearly recursive* (nil/cons-shaped) data, classified `Total` by
+  the existing §4.5 checker with zero extension (bounded **by construction**: values are finite
+  and acyclic). Provisional spelling A — `for x in xs, acc = init => body` — ships in the
+  non-normative prototype grammar (`for` reserved, recorded in DN-03); named-args `fold` is the
+  planned L2 library form; the ratified spelling is **KC-2-evidence-gated** (T3.6).
+  `while`/`loop`/`break`/`continue`/`return` stay excluded and **unreserved**, with *teaching
+  diagnostics* where they already error (parse-level juxtaposition + check-level unknown name).
+- **Prototype** (`crates/mycelium-l1`): `for` through the whole pipeline — lexer/parser
+  (+ teaching diagnostics), T-For with explicit linear-shape refusals, totality (a `for` adds no
+  recursion), an **iterative** spine-walk evaluator (long folds cost fuel, never host stack),
+  elaboration `Residual` (Fix is outside the evaluation-complete fragment); EBNF + conformance
+  corpus (`accept/11`, `reject/08`). **KC-2**: tasks kc2-09 (`for`) / kc2-10 (explicit
+  recursion) form the runnable iteration-spelling ablation pair. 44 crate tests green.
+
 ### Added (RFC-0008 + Research Pass 4 — the Runtime tier, grounded)
 - **Research Record 04** (`research/04-runtime-concurrency-RECORD.md`; findings **T4.1–T4.6**):
   the fourth research pass, grounding the Runtime tier ADR-012 §7.3 flagged as aspirational —

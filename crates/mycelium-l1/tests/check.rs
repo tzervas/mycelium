@@ -84,3 +84,65 @@ fn generics_are_an_explicit_deferral_not_a_guess() {
     let err = check(src).unwrap_err();
     assert!(err.message.contains("deferred"), "got: {}", err.message);
 }
+
+// --- bounded iteration (RFC-0007 §4.8, r2) ---
+
+const BYTES: &str = "colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n";
+
+#[test]
+fn a_for_fold_typechecks_and_is_total() {
+    let env = check(&format!(
+        "{BYTES}matured fn checksum(bs: Bytes) -> Binary{{8}} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)"
+    ))
+    .expect("checks");
+    // Bounded by construction: the fn is non-recursive, so `matured` is admissible.
+    assert_eq!(env.totality["checksum"], Totality::Total);
+}
+
+#[test]
+fn for_over_a_non_linear_type_is_an_explicit_refusal() {
+    // A branching (tree) type is outside the v0 linear-recursion shape.
+    let err = check(
+        "colony d\ntype Tree = Leaf | Node(Tree, Tree)\nfn f(t: Tree) -> Binary{8} =\n    for x in t, acc = 0b0000_0000 => acc",
+    )
+    .unwrap_err();
+    assert!(
+        err.message.contains("linearly recursive"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn for_body_must_yield_the_accumulator_type() {
+    let err = check(&format!(
+        "{BYTES}fn f(bs: Bytes) -> Binary{{8}} =\n    for b in bs, acc = 0b0000_0000 => <+0->"
+    ))
+    .unwrap_err();
+    assert!(err.message.contains("accumulator"), "got: {}", err.message);
+}
+
+#[test]
+fn for_over_a_repr_value_is_an_explicit_refusal() {
+    let err = check("colony d\nfn f(x: Binary{8}) -> Binary{8} = for b in x, acc = x => acc")
+        .unwrap_err();
+    assert!(err.message.contains("data value"), "got: {}", err.message);
+}
+
+#[test]
+fn imperative_words_get_teaching_diagnostics() {
+    // Juxtaposition (`while x`) was never valid syntax — the parse error teaches (§4.8).
+    let perr = parse("colony d\nfn f(x: Binary{8}) -> Binary{8} = while x").unwrap_err();
+    assert!(
+        perr.message.contains("for x in xs"),
+        "got: {}",
+        perr.message
+    );
+    // Call-shaped use fails name resolution — the check error teaches too.
+    let cerr = check("colony d\nfn f(x: Binary{8}) -> Binary{8} = loop(x)").unwrap_err();
+    assert!(
+        cerr.message.contains("not a Mycelium form"),
+        "got: {}",
+        cerr.message
+    );
+}

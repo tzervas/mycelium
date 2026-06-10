@@ -101,6 +101,13 @@ fn walk(e: &Expr, f: &mut impl FnMut(&Expr)) {
                 walk(&a.body, f);
             }
         }
+        // A `for` is bounded by construction (RFC-0007 §4.8) — it adds no recursion of its own;
+        // only the calls inside its sub-expressions matter.
+        Expr::For { xs, init, body, .. } => {
+            walk(xs, f);
+            walk(init, f);
+            walk(body, f);
+        }
         Expr::Swap { value, .. } => walk(value, f),
         Expr::Wild(b) | Expr::Spore(b) => walk(b, f),
         Expr::App { head, args } => {
@@ -211,6 +218,26 @@ fn descend_walk(
             descend_walk(cond, fname, param, pos, smaller, ok);
             descend_walk(conseq, fname, param, pos, smaller, ok);
             descend_walk(alt, fname, param, pos, smaller, ok);
+        }
+        Expr::For {
+            x,
+            xs,
+            acc,
+            init,
+            body,
+        } => {
+            descend_walk(xs, fname, param, pos, smaller, ok);
+            descend_walk(init, fname, param, pos, smaller, ok);
+            // The binders shadow; conservatively drop smallness for the shadowed names.
+            let had_x = smaller.remove(x);
+            let had_acc = smaller.remove(acc);
+            descend_walk(body, fname, param, pos, smaller, ok);
+            if had_x {
+                smaller.insert(x.clone());
+            }
+            if had_acc {
+                smaller.insert(acc.clone());
+            }
         }
         Expr::Swap { value, .. } => descend_walk(value, fname, param, pos, smaller, ok),
         Expr::Wild(b) | Expr::Spore(b) => descend_walk(b, fname, param, pos, smaller, ok),

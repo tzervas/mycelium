@@ -350,15 +350,80 @@ impl Parser {
     // ---- expressions ----
 
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
+        self.teach_imperative()?;
         match self.cur() {
             Tok::Let => self.parse_let(),
             Tok::If => self.parse_if(),
             Tok::Match => self.parse_match(),
+            Tok::For => self.parse_for(),
             Tok::Swap => self.parse_swap(),
             Tok::Wild => self.parse_wild(),
             Tok::Spore => self.parse_spore(),
             _ => self.parse_app(),
         }
+    }
+
+    /// Teaching diagnostic (RFC-0007 §4.8): `while`/`loop`/`break`/`continue`/`return` are not
+    /// forms — and juxtaposition (`while cond …`) was never valid syntax anyway, so when one of
+    /// these *unreserved* identifiers is immediately followed by an expression opener or `{`,
+    /// the (inevitable) error teaches instead of confusing. Any other use stays an ordinary
+    /// identifier.
+    fn teach_imperative(&mut self) -> Result<(), ParseError> {
+        let Tok::Ident(word) = self.cur() else {
+            return Ok(());
+        };
+        if !matches!(
+            word.as_str(),
+            "while" | "loop" | "break" | "continue" | "return"
+        ) {
+            return Ok(());
+        }
+        let word = word.clone();
+        let next = &self.toks[(self.i + 1).min(self.toks.len() - 1)].tok;
+        let juxtaposed = matches!(
+            next,
+            Tok::Ident(_)
+                | Tok::BinLit(_)
+                | Tok::TritLit(_)
+                | Tok::Int(_)
+                | Tok::LBrace
+                | Tok::If
+                | Tok::Let
+                | Tok::Match
+                | Tok::For
+                | Tok::Swap
+        );
+        if juxtaposed {
+            return Err(ParseError::new(
+                self.pos(),
+                format!(
+                    "`{word}` is not a Mycelium form — iterate by recursion or `for x in xs, \
+                     acc = init => body` (bounded, total by construction; RFC-0007 §4.8)"
+                ),
+            ));
+        }
+        Ok(())
+    }
+
+    /// `for x in xs, acc = init => body` (RFC-0007 §4.8; provisional spelling, KC-2-gated).
+    fn parse_for(&mut self) -> Result<Expr, ParseError> {
+        self.expect(&Tok::For, "`for`")?;
+        let x = self.ident()?;
+        self.expect(&Tok::In, "`in` after the element binder")?;
+        let xs = Box::new(self.parse_app()?);
+        self.expect(&Tok::Comma, "`,` before the accumulator binding")?;
+        let acc = self.ident()?;
+        self.expect(&Tok::Eq, "`=` and the initial accumulator")?;
+        let init = Box::new(self.parse_app()?);
+        self.expect(&Tok::FatArrow, "`=>` and the fold body")?;
+        let body = Box::new(self.parse_expr()?);
+        Ok(Expr::For {
+            x,
+            xs,
+            acc,
+            init,
+            body,
+        })
     }
 
     fn parse_let(&mut self) -> Result<Expr, ParseError> {

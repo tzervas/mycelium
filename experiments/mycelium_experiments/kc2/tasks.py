@@ -9,6 +9,11 @@ is solvable in both arms — checked by the test suite); they are never used to 
 The set is *fixed*: append new tasks rather than editing existing ones once a baseline run has
 been recorded, or the SC-5b number stops being comparable (append-only, the changelog rule
 applied to a benchmark).
+
+Iteration ablation (RFC-0007 §4.8 r2): kc2-09 (the provisional `for` spelling) and kc2-10 (the
+same semantics by explicit recursion) form the runnable spelling-sensitivity pair today; a
+third variant in the planned named-args `fold(xs, from: …, with: …)` L2 library form joins when
+lambdas land, so the ratified spelling decision is made on measured evidence (T3.6).
 """
 
 from __future__ import annotations
@@ -150,5 +155,57 @@ TASKS: tuple[Task, ...] = (
         expect_baseline=("bin", 8),
         reference_mycelium="colony bench\nmatured fn main() -> Binary{8} = 0b0000_1111\n",
         reference_baseline="def main():\n    return Bin('0000_1111')\n",
+    ),
+    Task(
+        id="kc2-09-iterate-for",
+        prompt=(
+            "Declare a list-shaped type `Bytes` (constructors: `End`, and `More` carrying one "
+            "8-bit binary word and the rest of the list). Define a nullary function `main` that "
+            "folds xor over the two-element list [1111_0000, 0000_1111] starting from "
+            "0000_0000, using the language's bounded iteration form."
+        ),
+        expect_main="Binary{8}",
+        expect_baseline=("bin", 8),
+        reference_mycelium=(
+            "colony bench\n"
+            "type Bytes = End | More(Binary{8}, Bytes)\n"
+            "fn main() -> Binary{8} =\n"
+            "    let bs = More(0b1111_0000, More(0b0000_1111, End)) in\n"
+            "    for b in bs, acc = 0b0000_0000 => xor(acc, b)\n"
+        ),
+        reference_baseline=(
+            "def main():\n"
+            "    acc = Bin('0000_0000')\n"
+            "    for b in [Bin('1111_0000'), Bin('0000_1111')]:\n"
+            "        acc = xor(acc, b)\n"
+            "    return acc\n"
+        ),
+    ),
+    Task(
+        id="kc2-10-iterate-recursion",
+        prompt=(
+            "Declare a list-shaped type `Bytes` (constructors: `End`, and `More` carrying one "
+            "8-bit binary word and the rest of the list). Define a recursive function `checksum` "
+            "that xors all elements together (empty list gives 0000_0000), by case analysis and "
+            "recursion only, and a nullary `main` applying it to the two-element list "
+            "[1111_0000, 0000_1111]."
+        ),
+        expect_main="Binary{8}",
+        expect_baseline=("bin", 8),
+        reference_mycelium=(
+            "colony bench\n"
+            "type Bytes = End | More(Binary{8}, Bytes)\n"
+            "fn checksum(bs: Bytes) -> Binary{8} =\n"
+            "    match bs { End => 0b0000_0000, More(b, rest) => xor(b, checksum(rest)) }\n"
+            "fn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))\n"
+        ),
+        reference_baseline=(
+            "def checksum(bs):\n"
+            "    if not bs:\n"
+            "        return Bin('0000_0000')\n"
+            "    return xor(bs[0], checksum(bs[1:]))\n"
+            "def main():\n"
+            "    return checksum([Bin('1111_0000'), Bin('0000_1111')])\n"
+        ),
     ),
 )

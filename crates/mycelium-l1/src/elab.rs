@@ -257,6 +257,11 @@ impl Elab<'_> {
             }
             Expr::If { .. } => residual(site, "`if` elaborates to `Match`, which has no L0 node"),
             Expr::Match { .. } => residual(site, "`Match` has no L0 node"),
+            Expr::For { .. } => residual(
+                site,
+                "`for` elaborates to a structurally recursive fold (Fix) — outside the \
+                 evaluation-complete fragment (RFC-0007 §4.8)",
+            ),
             Expr::Swap {
                 value,
                 target,
@@ -460,6 +465,18 @@ mod tests {
             panic!("expected Residual, got {err:?}");
         };
         assert!(what.contains("guarantee index"), "got: {what}");
+    }
+
+    #[test]
+    fn a_for_fold_is_an_explicit_residual() {
+        // `for` desugars to Fix — outside the evaluation-complete fragment (RFC-0007 §4.8).
+        let env = env("colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
+             fn main() -> Binary{8} = for b in End, acc = 0b0000_0000 => xor(acc, b)");
+        let err = elaborate(&env, "main").unwrap_err();
+        let ElabError::Residual { what, .. } = &err else {
+            panic!("expected Residual, got {err:?}");
+        };
+        assert!(what.contains("for"), "got: {what}");
     }
 
     #[test]

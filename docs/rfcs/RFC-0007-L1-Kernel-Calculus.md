@@ -174,6 +174,57 @@ value can only contain values that existed before it. Reclamation is therefore p
 check time with an explicit diagnostic — the capability to run one must be introduced by a later
 FFI RFC, and *granting* it will be lexical and auditable (DN-02 §5).
 
+### 4.8 Bounded iteration — elaboration-defined sugar, no new kernel node (r2)
+
+Resolves ADR-012 §7.2 (maintainer decision, 2026-06-10). The kernel stays functional and its
+node budget unchanged: **iteration is sugar over structural recursion**, never a kernel form.
+
+**The normative content is the elaboration rule.** A bounded-iteration expression over a value
+of a *linearly recursive* data type `T` (v0 shape restriction: every constructor of `T` is
+either a **nil** — no fields — or a **cons** — exactly one field of type `T` (the spine) and
+exactly one non-`T` field (the element, of type `E`, the same `E` across all cons constructors);
+anything else is an explicit refusal, with general catamorphisms deferred to L2-with-lambdas)
+elaborates to a **synthesized self-recursive helper**:
+
+```text
+ for x in xs, acc = init => body     ⤳     %fold_T(xs, init)   where
+
+ fn %fold_T(s: T, a: A) -> A =
+     match s {
+         Nil          => a,
+         Cons(x, rest) => %fold_T(rest, body[acc ↦ a])
+     }
+```
+
+with the spine walked head-to-tail (outermost constructor first) and the result the final
+accumulator. The helper descends structurally on the spine, so the existing checker (§4.5)
+classifies it **`Total` with zero extension** — iteration is bounded *by construction* (a value
+is finite and acyclic, §4.7), not by programmer promise. Typing:
+
+```text
+ T-For   Γ ⊢ xs : T   (T linear-recursive, element type E)
+         Γ ⊢ init : A        Γ, x:E, acc:A ⊢ body : A
+         ─────────────────────────────────────────────
+         Γ ⊢ for x in xs, acc = init => body : A
+```
+
+**Spelling vs semantics (the Q6 split, applied to control flow).** The elaboration rule above
+is normative; the concrete spelling `for x in xs, acc = init => body` is **provisional** — the
+v0 grammar is non-normative and the surface is KC-2-gated (RFC-0006 §1). The maintainer-chosen
+plan: spelling A (`for`-head, explicit accumulator binder — familiar head, *binders not
+closures*, honest about v0's first-orderness) ships in the prototype grammar now; a named-args
+`fold(xs, from: …, with: …)` arrives as an ordinary **L2 library function** once lambdas land
+(same elaboration, no new syntax); and the KC-2 benchmark carries iteration tasks so the
+ratified spelling is chosen on measured evidence (T3.6), not taste. `for` joins the v0
+reserved-word set (recorded in DN-03).
+
+**What stays out.** `while`, `loop`, `break`, `continue`, and `return` remain **excluded and
+unreserved** (DN-02 §6): unbounded iteration would undermine the divergence bit (§4.5), and
+early exit is a later, explicit form (fold-to-`Option`), never ambient control flow. Honesty at
+the diagnostic level: where these words already produce an error (juxtaposition is never valid
+syntax; an unknown name is a check error), the diagnostic *teaches* — "Mycelium iterates by
+recursion or `for` (§4.8)" — rather than reporting a generic failure.
+
 ## 5. Drawbacks
 
 Ten nodes + a registry is more machinery than L0's five — but it is the smallest budget any
@@ -217,6 +268,15 @@ and retiring §4.6's fragment restriction.
 
 ## Meta — changelog
 
+- **2026-06-10 (r2) — Draft, bounded iteration added (maintainer decision).** New §4.8: bounded
+  iteration as **elaboration-defined sugar** over structural recursion — no new kernel node; the
+  normative content is the desugaring to a synthesized self-recursive helper, `Total` by the
+  existing §4.5 classifier with zero extension; v0 domain is linearly recursive (list-shaped)
+  data with explicit refusals beyond it. Provisional spelling A (`for x in xs, acc = init =>
+  body`) ships in the non-normative prototype grammar; named-args `fold` is the planned L2
+  library form; the ratified spelling is KC-2-evidence-gated (T3.6). `while`/`loop`/`break`/
+  `continue`/`return` stay excluded and unreserved, with teaching diagnostics where they already
+  error. Resolves ADR-012 §7.2; `for`'s reservation is recorded in DN-03.
 - **2026-06-10 — Draft.** Initial draft from the T3.1/T3.4 positions and the ratified DN-02
   lexicon: the ten-node term budget, registry-not-nodes data declarations with Unison cycle
   hashing, v0 monomorphic typing judgments, the divergence bit + `matured` gate (novelty

@@ -1,0 +1,7 @@
+// exercises: bounded iteration (`for` fold over a linearly recursive data value; RFC-0007 §4.8)
+colony folds
+
+type Bytes = End | More(Binary{8}, Bytes)
+
+fn checksum(bs: Bytes) -> Binary{8} =
+    for b in bs, acc = 0b0000_0000 => xor(acc, b)

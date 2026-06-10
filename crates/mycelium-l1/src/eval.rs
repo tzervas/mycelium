@@ -329,6 +329,14 @@ impl<'e> Evaluator<'e> {
                 self.eval_match(fuel, depth, site, scope, scrutinee, arms)
             }
 
+            Expr::For {
+                x,
+                xs,
+                acc,
+                init,
+                body,
+            } => self.eval_for(fuel, depth, site, scope, x, xs, acc, init, body),
+
             Expr::Swap {
                 value,
                 target,
@@ -370,6 +378,77 @@ impl<'e> Evaluator<'e> {
             }
 
             Expr::App { head, args } => self.eval_app(fuel, depth, site, scope, head, args),
+        }
+    }
+
+    /// Bounded iteration (RFC-0007 §4.8): walk the linearly recursive spine head-to-tail,
+    /// folding the accumulator through the body. The walk is **iterative** — a `for` over a long
+    /// list costs fuel per element (each body evaluation is clocked) but never host stack, so it
+    /// cannot trip the depth guard the way the equivalent hand-written recursion would.
+    #[allow(clippy::too_many_arguments)] // the machine threads its budgets + the form's five parts
+    fn eval_for(
+        &self,
+        fuel: &mut u64,
+        depth: u32,
+        site: &str,
+        scope: &mut Vec<(String, L1Value)>,
+        x: &str,
+        xs: &Expr,
+        acc: &str,
+        init: &Expr,
+        body: &Expr,
+    ) -> Result<L1Value, L1Error> {
+        let mut spine = self.eval(fuel, depth, site, scope, xs)?;
+        let mut accv = self.eval(fuel, depth, site, scope, init)?;
+        loop {
+            let L1Value::Data { ty, ctor, fields } = spine else {
+                return Err(L1Error::Stuck {
+                    site: site.to_owned(),
+                    why: "`for` spine is not a data value".to_owned(),
+                });
+            };
+            if fields.is_empty() {
+                return Ok(accv); // a nil — the spine ends, the fold is the accumulator
+            }
+            // A cons: exactly one spine field (type == ty) and one element field (checked).
+            let Some(d) = self.env.types.get(&ty) else {
+                return Err(L1Error::Stuck {
+                    site: site.to_owned(),
+                    why: format!("`for` over unregistered type `{ty}`"),
+                });
+            };
+            let Some(ci) = d.ctors.iter().position(|c| c.name == ctor) else {
+                return Err(L1Error::Stuck {
+                    site: site.to_owned(),
+                    why: format!("`for` met unknown constructor `{ctor}` of `{ty}`"),
+                });
+            };
+            let mut elem = None;
+            let mut rest = None;
+            for (f, v) in d.ctors[ci].fields.iter().zip(fields) {
+                if matches!(f, crate::checkty::Ty::Data(n) if *n == ty) {
+                    rest = Some(v);
+                } else {
+                    elem = Some(v);
+                }
+            }
+            let (Some(elem), Some(rest)) = (elem, rest) else {
+                return Err(L1Error::Stuck {
+                    site: site.to_owned(),
+                    why: format!(
+                        "`{ctor}` is not nil/cons-shaped — the checker should have refused"
+                    ),
+                });
+            };
+            // Each element's body evaluation is clocked like any other expression.
+            *fuel = fuel.checked_sub(1).ok_or(L1Error::FuelExhausted)?;
+            scope.push((x.to_owned(), elem));
+            scope.push((acc.to_owned(), accv));
+            let next = self.eval(fuel, depth, site, scope, body);
+            scope.pop();
+            scope.pop();
+            accv = next?;
+            spine = rest;
         }
     }
 
@@ -645,6 +724,73 @@ mod tests {
             matches!(err, L1Error::DepthExceeded { .. }),
             "expected DepthExceeded, got {err:?}"
         );
+    }
+
+    #[test]
+    fn a_for_fold_evaluates_head_to_tail() {
+        // checksum(More(0b1111_0000, More(0b0000_1111, End))) = 0b1111_1111 (xor-fold).
+        let v = run(
+            "colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
+             fn checksum(bs: Bytes) -> Binary{8} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
+             fn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))",
+        )
+        .expect("evaluates");
+        let L1Value::Repr(v) = v else { panic!("repr") };
+        assert_eq!(v.payload(), &Payload::Bits(vec![true; 8]));
+    }
+
+    #[test]
+    fn a_for_fold_over_nil_is_the_initial_accumulator() {
+        let v = run(
+            "colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
+             fn checksum(bs: Bytes) -> Binary{8} =\n    for b in bs, acc = 0b1010_1010 => xor(acc, b)\n\
+             fn main() -> Binary{8} = checksum(End)",
+        )
+        .expect("evaluates");
+        let L1Value::Repr(v) = v else { panic!("repr") };
+        assert_eq!(
+            v.payload(),
+            &Payload::Bits(vec![true, false, true, false, true, false, true, false])
+        );
+    }
+
+    #[test]
+    fn a_long_for_fold_costs_fuel_not_host_stack() {
+        // 200 elements would blow the depth guard (64) as hand-written recursion; the `for`
+        // spine walk is iterative and must not (RFC-0007 §4.8). The list value is built
+        // programmatically — a 200-deep nested *expression* would itself be depth-guarded.
+        let env = env(
+            "colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
+             fn checksum(bs: Bytes) -> Binary{8} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)",
+        );
+        let byte = || {
+            L1Value::Repr(
+                Value::new(
+                    mycelium_core::Repr::Binary { width: 8 },
+                    Payload::Bits(vec![false, false, false, false, false, false, false, true]),
+                    mycelium_core::Meta::exact(mycelium_core::Provenance::Root),
+                )
+                .unwrap(),
+            )
+        };
+        let mut list = L1Value::Data {
+            ty: "Bytes".into(),
+            ctor: "End".into(),
+            fields: vec![],
+        };
+        for _ in 0..200 {
+            list = L1Value::Data {
+                ty: "Bytes".into(),
+                ctor: "More".into(),
+                fields: vec![byte(), list],
+            };
+        }
+        let v = Evaluator::new(&env)
+            .call("checksum", vec![list])
+            .expect("evaluates");
+        let L1Value::Repr(v) = v else { panic!("repr") };
+        // 200 xors of 0b0000_0001 → even count → all zeros.
+        assert_eq!(v.payload(), &Payload::Bits(vec![false; 8]));
     }
 
     #[test]
