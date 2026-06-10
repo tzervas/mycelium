@@ -33,6 +33,20 @@ corpus, not released software. Versioning will begin when the kernel does.
   while L1-eval runs — including a `Total`-classified structural recursion that terminates and a
   `Partial` one that exhausts fuel explicitly. 31 crate tests; `just check` green.
 
+### Added (KC-2 harness)
+- **KC-2 LLM-leverage harness** (M-002 structural deliverable; Foundation §6 P0.2; SC-5b; G10):
+  `experiments/mycelium_experiments/kc2/` — the **fixed 8-task benchmark** (minimal Mycelium
+  surface fragment vs a **Python-embedded DSL baseline**, both arms carrying checked reference
+  solutions that prove the benchmark well-posed), the `myc-check` CLI oracle
+  (`crates/mycelium-l1/src/bin/myc-check.rs`: parse / typecheck / task-signature conformance with
+  distinct exit codes — no AI in the judging loop, S6), and the generate→check→feedback harness
+  measuring **syntactic validity**, **first-attempt type-check pass rate** (the SC-5b number),
+  and **edit-to-fix iterations**. *Running* the experiment remains blocked on LLM API access
+  (the documented M-002 external blocker); the report hard-codes
+  `verdict: not established` — never pre-written (VR-5). Baseline-arm execution is in-process
+  `exec` and documented as requiring a disposable sandbox for untrusted model output. 8 pytest
+  tests; `just check` green.
+
 ### Added (L1 static analysis + lexicon integration)
 - **L1 typechecker + structural totality checker** (`crates/mycelium-l1`, RFC-0007 §4.4/§4.5):
   the v0 monomorphic typechecker over the data registry (declarations-as-registry), exhaustiveness
