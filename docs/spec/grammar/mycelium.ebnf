@@ -1,0 +1,100 @@
+(* Mycelium surface grammar — v0 (L1-facing fragment).
+ *
+ * Notation: W3C EBNF (as used by the XML 1.0 spec), NOT ISO 14977 (RFC-0006 §4.3 / T3.1-B;
+ * Wheeler's critique). Terminals are 'quoted'; A? optional; A* zero-or-more; A+ one-or-more;
+ * A | B alternation; (A B) grouping; /* ... */ comments. This artifact is the NORMATIVE oracle
+ * for the accept/reject conformance corpus under ./conformance/ — every accept/ program parses
+ * by this grammar, every reject/ program does not.
+ *
+ * Vocabulary is the ratified DN-02 set (Resolved 2026-06-10). Themed keywords: colony, substrate,
+ * spore, matured, wild. Conventional: use, type, trait, fn, let, in, if, then, else, match, swap.
+ * This is v0 — it covers the L1-facing core (RFC-0006 §3 L1); abstraction/recursion typing,
+ * the full trait/guild machinery (LR-2), and L2 sugar layer above it.
+ *)
+
+program        ::= colony_header item*
+
+colony_header  ::= 'colony' path
+
+item           ::= use_item
+                 | type_item
+                 | trait_item
+                 | fn_item
+
+use_item       ::= 'use' path
+
+/* Algebraic data type (LR-1): a sum of constructors, each with optional positional fields. */
+type_item      ::= 'type' Ident type_params? '=' constructor ('|' constructor)*
+type_params    ::= '<' Ident (',' Ident)* '>'
+constructor    ::= Ident ('(' type_ref (',' type_ref)* ')')?
+
+/* Trait = a named set of function signatures (LR-2; conventional term, DN-02). */
+trait_item     ::= 'trait' Ident type_params? '{' fn_sig* '}'
+fn_sig         ::= 'fn' Ident '(' params? ')' '->' type_ref
+
+/* Function. 'matured' marks a promoted stable component (RFC-0004 §4; DN-02 themed term). */
+fn_item        ::= 'matured'? 'fn' Ident type_params? '(' params? ')' '->' type_ref '=' expr
+params         ::= param (',' param)*
+param          ::= Ident ':' type_ref
+
+/* Types. A guarantee-annotated type carries its honesty tag as a type-level index (LR-6). */
+type_ref       ::= base_type ('@' strength)?
+base_type      ::= 'Binary'  '{' Int '}'
+                 | 'Ternary' '{' Int '}'
+                 | 'Dense'   '{' Int ',' scalar '}'
+                 | 'VSA'     '{' Ident ',' Int ',' sparsity '}'
+                 | 'Substrate' '{' Ident '}'                  /* affine external resource (LR-8) */
+                 | Ident type_args?                           /* named type or type variable */
+type_args      ::= '<' type_ref (',' type_ref)* '>'
+sparsity       ::= 'Dense' | 'Sparse' '{' Int '}'
+scalar         ::= 'F16' | 'BF16' | 'F32' | 'F64'
+strength       ::= 'Exact' | 'Proven' | 'Empirical' | 'Declared'
+
+/* Expressions. */
+expr           ::= let_expr
+                 | if_expr
+                 | match_expr
+                 | swap_expr
+                 | wild_expr
+                 | spore_expr
+                 | app_expr
+
+let_expr       ::= 'let' Ident (':' type_ref)? '=' expr 'in' expr
+if_expr        ::= 'if' expr 'then' expr 'else' expr
+match_expr     ::= 'match' expr '{' arm (',' arm)* ','? '}'
+arm            ::= pattern '=>' expr
+pattern        ::= '_'
+                 | literal
+                 | Ident ('(' pattern (',' pattern)* ')')?    /* constructor / binder */
+
+/* swap: the never-silent representation change — target and policy ALWAYS lexical (S1/WF2). */
+swap_expr      ::= 'swap' '(' expr ',' 'to' ':' type_ref ',' 'policy' ':' path ')'
+
+/* wild: the denied-by-default unsafe escape hatch (LR-9/S6; DN-02 §5). */
+wild_expr      ::= 'wild' '{' expr '}'
+
+/* spore: build a reconstruction manifest for a value (RFC-0003 §6; DN-02 themed term). */
+spore_expr     ::= 'spore' '(' expr ')'
+
+/* Application / primary. Calls and atoms; ascription binds loosest. */
+app_expr       ::= primary ('(' args? ')')* (':' type_ref)?
+args           ::= expr (',' expr)*
+primary        ::= literal
+                 | path
+                 | '(' expr ')'
+
+path           ::= Ident ('.' Ident)*
+
+/* Literals — representation-typed, universal-until-elaboration, no cross-family defaulting (Q6). */
+literal        ::= BinLit | TritLit | Int | ListLit
+ListLit        ::= '[' (expr (',' expr)*)? ']'
+
+/* Terminals (lexer). */
+BinLit         ::= '0b' ('0' | '1' | '_')+
+TritLit        ::= '<' Trit+ '>'                     /* MSB-first balanced trits, compact */
+Trit           ::= '+' | '0' | '-'
+Int            ::= '-'? [0-9]+
+Ident          ::= (Letter | '_') (Letter | [0-9] | '_')*
+Letter         ::= [a-zA-Z]
+
+/* Comments: line comments start with '//' and run to end-of-line; ignored by the grammar. */

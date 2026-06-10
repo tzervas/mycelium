@@ -24,6 +24,21 @@ corpus, not released software. Versioning will begin when the kernel does.
   open question Q8 (reclamation mechanism, cycle handling, `unsafe` spelling).
 
 ### Added
+- **L1 grammar infrastructure + parser prototype** (`docs/spec/grammar/`, `scripts/checks/grammar.sh`,
+  `crates/mycelium-l1`; RFC-0006 §4.3; **non-normative until RFC-0006 ratifies**): the WebAssembly-spec
+  pattern (T3.1-B) made real. **`docs/spec/grammar/mycelium.ebnf`** — the normative v0 surface grammar
+  in W3C notation (not ISO 14977), over the ratified DN-02 vocabulary (`colony`, `use`, `type`,
+  `trait`, `fn`, `matured`, `let`/`in`, `if`, `match`, `swap`, `wild`, `spore`, `Substrate{…}`, the
+  `T @ Strength` honesty index, representation-typed literals). **A conformance corpus** of 10
+  `accept/` + 7 `reject/` `.myc` programs, each with an explanatory header — the corpus is the ground
+  truth, not any single parser. **`grammar.sh`** (wired into `just check`/CI) structurally validates
+  the artifacts; **`mycelium-l1`** is the real parser gate — a hand-written, dependency-free lexer +
+  recursive-descent parser producing an inspectable AST, with `tests/conformance.rs` asserting every
+  `accept/` parses and every `reject/` fails with an **explicit `ParseError` (never a panic, never a
+  silent accept** — S5/G2). The lexer disambiguates the one tricky token (`<` opening a ternary
+  literal vs a type-arg list) by lookahead; a malformed ternary literal is an explicit error. First
+  increment of the L1 track (RFC-0006 §3) — typechecker, Maranget match compiler, structural totality
+  checker, and L0 elaboration land next.
 - **DN-02 (Resolved) — Fungal Lexicon & Reserved-Word Set** (`docs/notes/DN-02-Fungal-Lexicon-and-Reserved-Words.md`;
   feeds RFC-0006 §4.3): the surface vocabulary of Mycelium-the-language, drafted then **ratified by
   the maintainer** the same day. Codifies the **naming law** as a three-test gate (T-map fidelity /

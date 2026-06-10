@@ -33,6 +33,8 @@ links:
     @bash scripts/checks/links.sh
 schema:
     @bash scripts/checks/schema.sh
+grammar:
+    @bash scripts/checks/grammar.sh
 spell:
     @bash scripts/checks/spell.sh
 shell:
