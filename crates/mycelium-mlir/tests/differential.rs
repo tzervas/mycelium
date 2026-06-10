@@ -9,10 +9,16 @@
 //! *Observable* = `repr + payload + guarantee`. Dynamic metadata (provenance, `policy_used`) is
 //! path-dependent and intentionally excluded — "two execution paths must never mean two semantics"
 //! is about results, not derivation records (NFR-7).
+//!
+//! Since M-210 the differential is **folded into the single shared TV checker** (RFC-0002 §2 /
+//! RFC-0004 §3): each corpus pair also validates through
+//! `mycelium_cert::check(interp, aot, ObservationalEquiv, {0,0,Exact}, Observational)` — the
+//! interp↔AOT instance of the one checker that also validates swap certificates.
 
-use mycelium_cert::BinaryTernarySwapEngine;
+use mycelium_cert::{check, BinaryTernarySwapEngine, CheckVerdict, Evidence, RefinementRelation};
 use mycelium_core::{ternary, GuaranteeStrength, Meta, Node, Payload, Provenance, Repr, Value};
 use mycelium_interp::{Interpreter, PrimRegistry};
+use mycelium_numerics::Certificate;
 
 fn byte(bits: [bool; 8]) -> Value {
     Value::new(
@@ -135,20 +141,38 @@ fn interp_and_aot_are_observably_equivalent_on_the_corpus() {
         let r = interp.eval(node);
         let a = mycelium_mlir::run(node, &prims, &engine);
         match (r, a) {
-            (Ok(rv), Ok(av)) => assert_eq!(
-                observable(&rv),
-                observable(&av),
-                "program #{i} diverged: interp {:?} vs aot {:?}",
-                rv.payload(),
-                av.payload()
-            ),
+            (Ok(rv), Ok(av)) => {
+                assert_eq!(
+                    observable(&rv),
+                    observable(&av),
+                    "program #{i} diverged: interp {:?} vs aot {:?}",
+                    rv.payload(),
+                    av.payload()
+                );
+                // M-210: the same pair validates through the shared TV checker — the
+                // interp↔AOT observational-equivalence instance (RFC-0004 §3).
+                assert_eq!(
+                    check(
+                        &rv,
+                        &av,
+                        RefinementRelation::ObservationalEquiv,
+                        Certificate::exact(),
+                        &Evidence::Observational,
+                    ),
+                    CheckVerdict::Validated {
+                        strength: GuaranteeStrength::Exact
+                    },
+                    "program #{i}: the shared checker must validate the differential pair"
+                );
+            }
             (re, ae) => panic!("program #{i}: interp={re:?} aot={ae:?} — both paths must agree"),
         }
     }
 }
 
 /// Sanity: the harness actually discriminates — two different programs are NOT observably equal
-/// (so a passing differential is meaningful, not vacuous).
+/// (so a passing differential is meaningful, not vacuous), and the shared checker reports the
+/// same divergence explicitly (never a silent pass).
 #[test]
 fn differential_distinguishes_different_programs() {
     let prims = PrimRegistry::with_builtins();
@@ -156,4 +180,15 @@ fn differential_distinguishes_different_programs() {
     let x = mycelium_mlir::run(&Node::Const(byte(A)), &prims, &engine).unwrap();
     let y = mycelium_mlir::run(&Node::Const(byte(ONES)), &prims, &engine).unwrap();
     assert_ne!(observable(&x), observable(&y));
+    let verdict = check(
+        &x,
+        &y,
+        RefinementRelation::ObservationalEquiv,
+        Certificate::exact(),
+        &Evidence::Observational,
+    );
+    assert!(
+        matches!(verdict, CheckVerdict::NotValidated { .. }),
+        "the checker must reject a genuinely divergent pair, got {verdict:?}"
+    );
 }

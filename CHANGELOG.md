@@ -9,6 +9,81 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added
+- **RFC-0006 (Draft) — Surface Language, Grammar & Term-Language Layering**
+  (`docs/rfcs/RFC-0006-Surface-Language-and-Term-Layering.md`; SPEC §10.2's deferred "later RFC"):
+  the deliberation artifact that nails down the language architecture *before* implementation
+  accretes a de-facto one. Fixes now: the **L0–L3 layering** (Core IR → kernel calculus → surface
+  term language → KC-2-gated projection layer; only L0/L1 trusted — KC-3), the **syntactic honesty
+  invariants S1–S5** (never-silent swap stays lexically visible through every layer; guarantee
+  tags are part of every binding's observable interface; content-addressed identity; inspectable
+  elaboration; explicit partiality), the **capability targets LR-1…LR-8** ("Rust-class and beyond"
+  made checkable: ADTs, coherent traits, content-addressed modules, totality-postured recursion,
+  plus the beyond-Rust core — Repr polymorphism and guarantee-indexed types; ownership/borrowing
+  flagged as likely-not-applicable to a value-semantics substrate), and the **grammar/spec
+  discipline** (EBNF + machine-readable grammar artifacts + conformance corpus, mirroring the
+  schema pattern). Defers exactly one thing, deliberately: the concrete L3 syntax, which the
+  corpus already gates on the KC-2 experiment (M-002; RR-3). Status **Draft** — ratification is a
+  maintainer decision. Indexed in `docs/rfcs/README.md`, `docs/Doc-Index.md`, SPEC §10.2.
+- **Selection-policy language + mandatory EXPLAIN + site wiring** (`mycelium-select` — a new
+  crate — plus the `mycelium-lsp` EXPLAIN channel, **M-220/M-221/M-222**, Phase 2; RFC-0005;
+  ADR-006; SC-5): realizes RFC-0005 §2's decision verbatim. **M-220:** `SelectionPolicy` — an
+  ordered decision table (`Predicate` over queryable `Meta`: dtype, guarantee, ε bounds, sparsity —
+  *exact* metadata, never sampled estimates) over a finite `Candidate` set (`Repr` | `PackScheme`),
+  with an explicit `CostModel` (cost = weight × storage **bits**, a real declared unit) and a
+  mandatory default arm — total and terminating *by construction* (validated constructor; wire
+  forms re-validated on deserialize); deterministic (first-match precedence; `Cheapest` ties break
+  to lowest index); **content-addressed** (`policy_ref()` = hash of the canonical serialization —
+  RFC-0005 §3); first-class deterministic overrides. **M-221:** every selection emits a
+  serializable `Explanation` `{policy ref, inputs considered, cost of every candidate, matched
+  rule, chosen, override state}`; `explain(policy, inputs)` is total and deterministic; the
+  `mycelium-lsp` facade surfaces it as the fifth artifact kind (`analyze_with(node, &PolicyRegistry)`
+  re-derives the trace at each resolvable swap site and raises a `policy-divergence` warning when
+  the node's target disagrees with the policy's choice — surfaced, never silent). **M-222:** one
+  mechanism, two sites — `select_swap_target`/`select_packing` are thin adapters over the single
+  `select` (a wrong-kind candidate at a site is an explicit refusal); the wiring test drives an
+  auto-selected target through the real interpreter + `CertifiedSwapEngine` and the result records
+  `Meta.policy_used = PolicyRef` (the packing site is consumed by E2-7/M-250). 15 new tests across
+  policy semantics, EXPLAIN, LSP surfacing, and the swap-site wiring.
+- **KC-4 cert-overhead measurement + SC-3 global exit** (`xtask kc4` +
+  `mycelium-cert/tests/sc3.rs`, **M-212**, Phase 2; Foundation KC-4; SC-3; RFC-0002 §2):
+  `cargo run --release -p xtask -- kc4` times every implemented swap kind and its M-210
+  certificate check (no bench dependency; refuses debug builds — their numbers would be dishonest
+  to record). **Measured 2026-06-10** (containerized runner, indicative): bijective check ≈1.6–1.7 µs
+  (~1.3× its ~1.3 µs swap — it re-derives the swap), bounded `Dense{768}` check ≈2.0 µs (~0.13× its
+  ~16 µs swap), observational pair ≈10 ns. Honest verdict: per-swap checking costs the same order
+  as the swap itself — the KC-4 downgrade path is **not triggered on this evidence**; a *ratified*
+  numeric budget remains a pending maintainer decision (recorded in `phase-2.md` §6.7, not
+  pre-written as "within budget"). The SC-3 global test pins the whole surface: every implemented
+  legal-pair row emits a certificate that validates through the one checker, and every
+  rejected/unimplemented row is an explicit error — never silent, anywhere.
+- **First Bounded/lossy swap — Dense `F32 → BF16`** (`mycelium-cert::dense`, **M-211**, Phase 2;
+  RFC-0002 §3/§5; ADR-010 §1): establishes the split regime (ADR-002) alongside the bijective
+  binary↔ternary class. `dense_f32_to_bf16` rounds to-nearest-even and emits a
+  `SwapCertificate::Bounded` carrying the proven per-element relative rounding bound
+  `{Rel, u = 2^−8}` with a `ProvenThm` basis — the strength is *derived from how the bound was
+  obtained, never asserted* (RFC-0002 §3), and the theorem's side-conditions are **checked per
+  element**: finite, exactly an `f32`, zero-or-normal, no overflow on rounding; each violation is
+  a typed explicit `SwapError` (`NonFinite`/`NotAnF32`/`SubnormalUnsupported`/`RoundOverflow`),
+  never a silent coercion. Approximate sources are refused (`ApproximateSource`) until the E2-1
+  composition rule exists — refusal, never fabrication. The certificate **validates through the
+  M-210 shared checker**, a tampered conversion is caught (tier-i rejection), and a new
+  `CertifiedSwapEngine` serves the complete certified surface (bijective + bounded + identity),
+  explicit `UnsupportedSwap` for everything else. 11 tests incl. a 20k-sweep soundness property
+  for the `2^−8` bound and ties-to-even spot checks.
+- **Single shared translation-validation certificate checker** (`mycelium-cert::check`, **M-210**,
+  Phase 2; RFC-0002 §2; RFC-0004 §3; T1.1): one `check(A, B, R, claimed, evidence)` answering "does
+  artifact B refine reference A under relation R within the claimed `{ε,δ,strength}`?" — build once,
+  use twice. Three `RefinementRelation` instances: **Bijection** (the M-120 binary↔ternary cert —
+  lemma reference + `legal_pair` side-condition checked, then structural *re-derivation equality*
+  against B), **BoundedSimilarity** (lossy swaps — the measured A↔B deviation and the claim are both
+  re-validated through the E2-4 `mycelium-numerics` tier-i checker; a claim tighter than its
+  certificate, a certificate tighter than the measured instance, or a strength upgrade past the
+  basis (VR-5) is rejected), and **ObservationalEquiv** (interp↔AOT over the NFR-7 observable —
+  the **M-151 differential is folded in** as an instance and now validates every corpus pair
+  through this checker). TV incompleteness is an explicit `NotValidated{reason, fallback}` with the
+  `UseReference` fallback path — **never a silent pass** (RFC-0002 §2). `mycelium-numerics` now
+  exports `basis_strength` (the M-I2…M-I4 basis→strength mapping) for certificate consumers.
+  16 checker tests cover all three instances and every refusal path.
 - **Interpreter composes approximate inputs honestly** (`mycelium-interp::prims`, **M-204**, Phase 2;
   RFC-0001 §4.7; ADR-010): retires the Phase-1 blanket `ApproxCompositionUnsupported` refusal for
   composable inputs. `exact_result` → `compose_result`: exact-over-exact stays `Exact`/`bound=None`

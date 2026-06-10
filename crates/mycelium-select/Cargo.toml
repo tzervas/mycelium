@@ -1,0 +1,27 @@
+[package]
+name = "mycelium-select"
+version = "0.0.0"
+description = "Selection-policy language: total, non-learned, content-addressed decision tables with an explicit cost function and mandatory EXPLAIN (RFC-0005; ADR-006; M-220/M-221/M-222)."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+# Queryable Meta (bounds, dtype, sparsity), Repr, PackScheme, ContentHash — selection's only
+# inputs are the kernel's exact metadata (RFC-0005 §2.5), so core is the only kernel dependency
+# (KC-3: selection stays out of the trusted kernel as its own crate).
+mycelium-core = { path = "../mycelium-core" }
+serde = { version = "1", features = ["derive"] }
+# Canonical-JSON serialization for the content-addressed PolicyRef (RFC-0005 §3).
+serde_json = "1"
+
+[dev-dependencies]
+# The M-222 swap-site wiring test drives a selected target through the real interpreter + the
+# certified swap engine.
+mycelium-cert = { path = "../mycelium-cert" }
+mycelium-interp = { path = "../mycelium-interp" }

@@ -169,3 +169,90 @@ fn proven_bound_is_visible_on_the_guarantee_channel() {
         Some(BoundBasis::ProvenThm { .. })
     ));
 }
+
+/// M-221 acceptance — the facade surfaces the **EXPLAIN channel** (RFC-0005 §4; SC-5): with a
+/// registered policy, `analyze_with` re-derives the selection at the swap site (deterministic),
+/// and a target that disagrees with the policy's choice raises a `policy-divergence` warning —
+/// surfaced, never silent.
+#[test]
+fn facade_surfaces_selection_explain() {
+    use mycelium_core::ScalarKind;
+    use mycelium_lsp::analyze_with;
+    use mycelium_select::{
+        Action, Candidate, CostModel, PolicyRegistry, Predicate, Rule, SelectionPolicy,
+    };
+
+    let select_policy = SelectionPolicy::new(
+        "bf16-when-f32",
+        vec![
+            Candidate::Repr(Repr::Dense {
+                dim: 2,
+                dtype: ScalarKind::Bf16,
+            }),
+            Candidate::Repr(Repr::Dense {
+                dim: 2,
+                dtype: ScalarKind::F32,
+            }),
+        ],
+        vec![Rule {
+            when: Predicate::DtypeIs(ScalarKind::F32),
+            action: Action::Choose(0),
+        }],
+        1,
+        CostModel {
+            storage_weight: 1.0,
+        },
+    )
+    .unwrap();
+    let mut registry = PolicyRegistry::new();
+    let policy_ref = registry.register(select_policy.clone());
+
+    let f32_const = Value::new(
+        Repr::Dense {
+            dim: 2,
+            dtype: ScalarKind::F32,
+        },
+        Payload::Scalars(vec![1.5, -2.0]),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap();
+
+    // A swap whose target agrees with the policy's choice: EXPLAIN surfaced, no divergence.
+    let agreeing = Node::Swap {
+        src: Box::new(Node::Const(f32_const.clone())),
+        target: Repr::Dense {
+            dim: 2,
+            dtype: ScalarKind::Bf16,
+        },
+        policy: policy_ref.clone(),
+    };
+    let fb = analyze_with(&agreeing, &registry);
+    assert_eq!(fb.explanations.len(), 1, "the EXPLAIN channel is populated");
+    let ex = &fb.explanations[0].explanation;
+    assert_eq!(ex.policy, policy_ref);
+    assert_eq!(ex.costs.len(), 2, "every candidate is costed in the trace");
+    assert!(!fb.diagnostics.iter().any(|d| d.code == "policy-divergence"));
+    // Deterministic: re-analyzing yields the identical trace (same Meta in, same trace out).
+    assert_eq!(
+        analyze_with(&agreeing, &registry).explanations,
+        fb.explanations
+    );
+
+    // A swap whose recorded target disagrees with the policy: surfaced as a warning.
+    let diverging = Node::Swap {
+        src: Box::new(Node::Const(f32_const)),
+        target: Repr::Dense {
+            dim: 2,
+            dtype: ScalarKind::F32,
+        },
+        policy: policy_ref,
+    };
+    let fb = analyze_with(&diverging, &registry);
+    assert!(fb
+        .diagnostics
+        .iter()
+        .any(|d| d.code == "policy-divergence" && d.severity == Severity::Warning));
+
+    // Plain `analyze` (no registry) keeps the channel empty — nothing to resolve against.
+    assert!(analyze(&swap_program()).explanations.is_empty());
+}

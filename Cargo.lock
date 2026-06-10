@@ -89,6 +89,7 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-interp",
+ "mycelium-numerics",
  "serde",
  "serde_json",
 ]
@@ -117,6 +118,7 @@ dependencies = [
  "mycelium-cert",
  "mycelium-core",
  "mycelium-interp",
+ "mycelium-select",
 ]
 
 [[package]]
@@ -126,6 +128,7 @@ dependencies = [
  "mycelium-cert",
  "mycelium-core",
  "mycelium-interp",
+ "mycelium-numerics",
 ]
 
 [[package]]
@@ -133,6 +136,17 @@ name = "mycelium-numerics"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "mycelium-select"
+version = "0.0.0"
+dependencies = [
+ "mycelium-cert",
+ "mycelium-core",
+ "mycelium-interp",
  "serde",
  "serde_json",
 ]
@@ -231,6 +245,11 @@ checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
 [[package]]
 name = "xtask"
 version = "0.0.0"
+dependencies = [
+ "mycelium-cert",
+ "mycelium-core",
+ "mycelium-numerics",
+]
 
 [[package]]
 name = "zmij"

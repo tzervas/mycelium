@@ -16,5 +16,7 @@ mycelium-core = { path = "../mycelium-core" }
 mycelium-interp = { path = "../mycelium-interp" }
 
 [dev-dependencies]
-# The interp↔AOT differential (M-151) drives both paths with the certified binary↔ternary swap.
+# The interp↔AOT differential (M-151) drives both paths with the certified binary↔ternary swap,
+# and since M-210 validates each pair through the shared TV checker (Certificate from numerics).
 mycelium-cert = { path = "../mycelium-cert" }
+mycelium-numerics = { path = "../mycelium-numerics" }
