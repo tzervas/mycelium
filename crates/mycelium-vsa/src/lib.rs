@@ -19,12 +19,16 @@
 pub mod bsc;
 pub mod capacity;
 pub mod cleanup;
+pub mod fhrr;
+pub mod hrr;
 pub mod mapb;
 pub mod mapi;
 pub(crate) mod wrap;
 
 pub use bsc::Bsc;
 pub use cleanup::{CleanupMemory, Match};
+pub use fhrr::Fhrr;
+pub use hrr::Hrr;
 pub use mapb::MapB;
 pub use mapi::MapI;
 
@@ -90,6 +94,12 @@ pub enum VsaError {
         /// The model whose bundle nesting was refused.
         model: &'static str,
     },
+    /// An FHRR bundle component's phasor sum has (near-)zero magnitude — its phase is undefined;
+    /// refused, never an arbitrary pick (G2).
+    DegenerateBundleComponent {
+        /// Index of the offending component.
+        index: usize,
+    },
     /// A constructed result violated a Core IR invariant.
     Wf(mycelium_core::WfError),
 }
@@ -121,6 +131,10 @@ impl core::fmt::Display for VsaError {
             VsaError::NestedBundleUnsupported { model } => write!(
                 f,
                 "{model} bundle nesting beyond depth 1 is refused (reliability decays with depth — RR-13)"
+            ),
+            VsaError::DegenerateBundleComponent { index } => write!(
+                f,
+                "bundle component {index} has a vanished phasor sum — its phase is undefined"
             ),
             VsaError::Wf(e) => write!(f, "well-formedness violation: {e}"),
         }
