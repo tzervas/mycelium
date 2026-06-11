@@ -5,6 +5,7 @@
 resolver = "2"
 members = [
     "crates/mycelium-core",
+    "crates/mycelium-dense",
     "crates/mycelium-interp",
     "crates/mycelium-numerics",
     "crates/mycelium-select",

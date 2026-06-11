@@ -104,6 +104,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-dense"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+]
+
+[[package]]
 name = "mycelium-interp"
 version = "0.0.0"
 dependencies = [
