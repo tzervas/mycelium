@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::bound::{Bound, BoundBasis};
 use crate::id::ContentHash;
+use crate::recon::ReconInfo;
 use crate::{GuaranteeStrength, WfError};
 
 /// Provenance: an acyclic derivation DAG (RFC-0001 §4.6). Not part of code identity. The `serde`
@@ -81,8 +82,8 @@ pub enum PhysicalLayout {
 /// Runtime, queryable metadata (RFC-0001 §4.3). Fields are private; the only way to build a `Meta`
 /// is [`Meta::new`], which enforces M-I1…M-I4 — so an inconsistent `Meta` is unrepresentable.
 ///
-/// `reconstruction` (RFC-0003 §6) is deferred to the VSA work (M-130 / E2-5) and intentionally
-/// omitted here.
+/// `reconstruction` (RFC-0003 §6; M-260) is attached via [`Meta::with_reconstruction`] — its own
+/// invariants are enforced by [`ReconInfo::new`], and it does not interact with M-I1…M-I4.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Meta {
     provenance: Provenance,
@@ -90,6 +91,7 @@ pub struct Meta {
     bound: Option<Bound>,
     sparsity: Option<SparsityObs>,
     physical: Option<PhysicalLayout>,
+    reconstruction: Option<Box<ReconInfo>>,
     policy_used: Option<ContentHash>,
 }
 
@@ -126,8 +128,18 @@ impl Meta {
             bound,
             sparsity,
             physical,
+            reconstruction: None,
             policy_used,
         })
+    }
+
+    /// Attach a reconstruction manifest (RFC-0003 §6; M-260). The manifest's own schema
+    /// invariants are already enforced by [`ReconInfo::new`]; it is independent of M-I1…M-I4,
+    /// so this cannot invalidate an existing `Meta`.
+    #[must_use]
+    pub fn with_reconstruction(mut self, reconstruction: ReconInfo) -> Self {
+        self.reconstruction = Some(Box::new(reconstruction));
+        self
     }
 
     /// The common `Exact` metadata with no bound (M-I1).
@@ -139,6 +151,7 @@ impl Meta {
             bound: None,
             sparsity: None,
             physical: None,
+            reconstruction: None,
             policy_used: None,
         }
     }
@@ -168,6 +181,11 @@ impl Meta {
     pub fn physical(&self) -> Option<PhysicalLayout> {
         self.physical
     }
+    /// The reconstruction manifest, if attached (RFC-0003 §6).
+    #[must_use]
+    pub fn reconstruction(&self) -> Option<&ReconInfo> {
+        self.reconstruction.as_deref()
+    }
     /// The policy that produced this value (set iff produced by a swap).
     #[must_use]
     pub fn policy_used(&self) -> Option<&ContentHash> {
@@ -189,6 +207,8 @@ struct MetaWire {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     physical: Option<PhysicalLayout>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    reconstruction: Option<Box<ReconInfo>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     policy_used: Option<ContentHash>,
 }
 
@@ -200,6 +220,7 @@ impl Serialize for Meta {
             bound: self.bound.clone(),
             sparsity: self.sparsity,
             physical: self.physical,
+            reconstruction: self.reconstruction.clone(),
             policy_used: self.policy_used.clone(),
         }
         .serialize(serializer)
@@ -210,7 +231,8 @@ impl<'de> Deserialize<'de> for Meta {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let w = MetaWire::deserialize(deserializer)?;
         // Re-run M-I1…M-I4 (+ numeric well-formedness): wire data is never silently trusted.
-        Meta::new(
+        // (`ReconInfo`'s own `Deserialize` has already re-run its schema invariants.)
+        let meta = Meta::new(
             w.provenance,
             w.guarantee,
             w.bound,
@@ -218,7 +240,11 @@ impl<'de> Deserialize<'de> for Meta {
             w.physical,
             w.policy_used,
         )
-        .map_err(serde::de::Error::custom)
+        .map_err(serde::de::Error::custom)?;
+        Ok(match w.reconstruction {
+            Some(r) => meta.with_reconstruction(*r),
+            None => meta,
+        })
     }
 }
 

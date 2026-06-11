@@ -27,13 +27,15 @@
 //! carrying its [`NotValidatedReason`] *and* the explicit [`Fallback`] path (RFC-0002 §2): keep the
 //! reference artifact `A` (refuse the swap; run the trusted interpreter, ADR-007).
 
-use mycelium_core::{BoundKind, GuaranteeStrength, NormKind, Payload, Repr, Value};
+use mycelium_core::{BoundKind, ContentHash, GuaranteeStrength, NormKind, Payload, Repr, Value};
 use mycelium_numerics::{
-    basis_strength, check_error_claim, Certificate, CheckOutcome, ErrorBound, ErrorOp,
+    basis_strength, check_error_claim, check_union_claim, Certificate, CheckOutcome, ErrorBound,
+    ErrorOp, ProbBound,
 };
 
 use crate::{
-    binary_to_ternary, legal_pair, roundtrip_lemma_ref, ternary_to_binary, SwapCertificate,
+    binary_to_ternary, dense_vsa, legal_pair, roundtrip_lemma_ref, ternary_to_binary,
+    SwapCertificate,
 };
 
 /// The relation `R` under which `B` claims to refine `A` (RFC-0002 §2).
@@ -286,7 +288,10 @@ fn check_bounded(
         return mismatch("BoundedSimilarity requires swap-certificate evidence");
     };
     let SwapCertificate::Bounded {
-        src, target, bound, ..
+        src,
+        target,
+        policy_used,
+        bound,
     } = cert
     else {
         return mismatch("BoundedSimilarity requires a Bounded certificate, got Bijective");
@@ -308,17 +313,23 @@ fn check_bounded(
             claimed.strength
         ));
     }
-    if claimed.delta != 0.0 {
-        return incomplete(
-            "δ-side bounded validation is not implemented yet (lands with Dense↔VSA, M-231)",
-        );
-    }
-    let BoundKind::Error {
-        eps: cert_eps,
-        norm,
-    } = bound.kind
-    else {
-        return incomplete("only ε (ErrorBound) certificates are checkable in this version");
+    // δ certificates (the M-231 Dense↔VSA class) discharge by deterministic re-derivation; ε
+    // certificates by measured deviation through the tier-i kernel.
+    let (cert_eps, norm) = match bound.kind {
+        BoundKind::Probability { delta: cert_delta } => {
+            return check_bounded_prob(a, b, target, policy_used, cert_delta, claimed);
+        }
+        BoundKind::Error { eps, norm } => {
+            if claimed.delta != 0.0 {
+                return mismatch("an ε certificate carries no δ side");
+            }
+            (eps, norm)
+        }
+        _ => {
+            return incomplete(
+                "only ε (ErrorBound) and δ (ProbabilityBound) certificates are checkable",
+            )
+        }
     };
     // The arithmetic instantiation, re-checked (RFC-0002 §7): the actual deviation of *this*
     // instance, in the certificate's own norm.
@@ -370,6 +381,84 @@ fn check_bounded(
     }
     CheckVerdict::Validated {
         strength: claimed.strength,
+    }
+}
+
+/// The δ instance (M-231): tier-i claim-vs-certificate through the union-bound kernel, then
+/// **deterministic re-derivation equality** — the Dense↔VSA encoding/decoding is a pure function
+/// of `A` and the versioned codebook, so the checker re-runs the swap (which re-checks the
+/// capacity/profile side-conditions and re-derives the honest basis) and compares payloads with
+/// `B`. A failed re-derivation means the certificate does not bind to this instance; a payload
+/// difference is a genuine divergence; a basis stronger than the re-derivation supports is a
+/// VR-5 rejection.
+fn check_bounded_prob(
+    a: &Value,
+    b: &Value,
+    target: &Repr,
+    policy_used: &ContentHash,
+    cert_delta: f64,
+    claimed: Certificate,
+) -> CheckVerdict {
+    if claimed.eps != 0.0 {
+        return mismatch("a δ certificate carries no ε side");
+    }
+    let (Some(cert_pb), Some(claimed_pb)) =
+        (ProbBound::new(cert_delta), ProbBound::new(claimed.delta))
+    else {
+        return mismatch("certificate/claimed δ is not a well-formed probability");
+    };
+    // Tier-i: the claim must not be tighter than the certificate (VR-5), through the one shared
+    // union-bound kernel comparison.
+    match check_union_claim(&[cert_pb], claimed_pb) {
+        CheckOutcome::Valid => {}
+        CheckOutcome::Rejected {
+            recomputed,
+            claimed,
+        } => {
+            return not_validated(NotValidatedReason::ClaimTooTight {
+                recomputed,
+                claimed,
+            })
+        }
+        CheckOutcome::Malformed => return incomplete("tier-i δ re-derivation was malformed"),
+    }
+    // Re-derive the swap on A (re-checking its side-conditions and honest basis as it goes).
+    let rederived = match (a.repr(), target) {
+        (Repr::Dense { .. }, Repr::Vsa { dim, .. }) => {
+            dense_vsa::dense_to_vsa(a, *dim, cert_delta, policy_used)
+        }
+        (Repr::Vsa { .. }, Repr::Dense { dim, .. }) => {
+            dense_vsa::vsa_to_dense(a, *dim, cert_delta, policy_used)
+        }
+        // TV incompleteness, stated: Dense↔VSA is the only δ-certified swap class (M-231).
+        _ => return incomplete("no δ re-derivation for this swap kind (only Dense↔VSA, M-231)"),
+    };
+    match rederived {
+        Err(e) => mismatch(format!(
+            "certificate does not bind: re-derivation of the swap on A refused: {e}"
+        )),
+        Ok((rv, rcert)) => {
+            // The evidence basis must not be stronger than the honest re-derived one (VR-5).
+            if let SwapCertificate::Bounded {
+                bound: ref rebound, ..
+            } = rcert
+            {
+                if claimed.strength.rank() < basis_strength(&rebound.basis).rank() {
+                    return mismatch(format!(
+                        "claimed strength {:?} upgrades past the re-derived basis ({:?}) — VR-5",
+                        claimed.strength,
+                        basis_strength(&rebound.basis)
+                    ));
+                }
+            }
+            if rv.payload() == b.payload() {
+                CheckVerdict::Validated {
+                    strength: claimed.strength,
+                }
+            } else {
+                diverged("re-derived payload differs from B — B is not the swap of A")
+            }
+        }
     }
 }
 

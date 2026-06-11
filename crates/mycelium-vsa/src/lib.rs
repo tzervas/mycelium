@@ -16,14 +16,29 @@
 //! Value-level bundle (which must carry the checked `CapacityBound`, M-I2) is added in M-131 — we do
 //! not stamp `Proven` on a value without a checked bound here (VR-5).
 
+pub mod bsc;
 pub mod capacity;
 pub mod cleanup;
+pub mod fhrr;
+pub mod hrr;
+pub mod mapb;
 pub mod mapi;
+pub mod matrix;
+pub mod recon;
+pub mod sbc;
+pub(crate) mod wrap;
 
+pub use bsc::Bsc;
 pub use cleanup::{CleanupMemory, Match};
+pub use fhrr::Fhrr;
+pub use hrr::Hrr;
+pub use mapb::MapB;
 pub use mapi::MapI;
+pub use matrix::{matrix_tag, RFC0003_MATRIX};
+pub use recon::reconstruct_role;
+pub use sbc::Sbc;
 
-use mycelium_core::GuaranteeStrength;
+use mycelium_core::{Bound, BoundBasis, BoundKind, GuaranteeStrength};
 
 /// The VSA operations a model supplies (RFC-0003 §3).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,7 +54,7 @@ pub enum VsaOp {
 }
 
 /// Why a VSA operation could not be performed — always explicit, never a silent coercion (G2).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum VsaError {
     /// Operand dimensionalities disagree (or disagree with the model's `dim`).
     DimMismatch {
@@ -66,6 +81,48 @@ pub enum VsaError {
         /// The model id the adapter expected.
         expected: &'static str,
     },
+    /// A component is outside the model's alphabet (e.g. not `±1` for a bipolar model, not
+    /// `0/1` for BSC) — the algebra is undefined there; refused, never coerced (G2).
+    NonAlphabetComponent {
+        /// Index of the offending component.
+        index: usize,
+    },
+    /// An `Empirical` Value-level op was requested outside the side-conditions its declared
+    /// trial-validated profile covers — issuing the tag there would outrun the evidence (VR-5).
+    OutsideEmpiricalProfile {
+        /// Which side-condition failed.
+        detail: String,
+    },
+    /// A MAP-B bundle input is itself a MAP-B bundle: reliability decays `1/2 + 1/2^r` with
+    /// nesting depth `r` (RR-13; RFC-0003 §4), so nesting beyond depth 1 is refused explicitly —
+    /// never a silent accuracy loss (M-242).
+    NestedBundleUnsupported {
+        /// The model whose bundle nesting was refused.
+        model: &'static str,
+    },
+    /// An FHRR bundle component's phasor sum has (near-)zero magnitude — its phase is undefined;
+    /// refused, never an arbitrary pick (G2).
+    DegenerateBundleComponent {
+        /// Index of the offending component.
+        index: usize,
+    },
+    /// The manifest does not support compositional reconstruction with a cleanup decode — the
+    /// RFC-0003 §6 indexed-vs-compositional distinction, made operational (M-260).
+    NotCompositional,
+    /// The requested role is not named in the manifest's recipe — reconstruction outside the
+    /// recorded structure is refused, never guessed (G2).
+    UnknownRole {
+        /// The role that was asked for.
+        role: String,
+    },
+    /// The cleanup confidence fell below the manifest's own threshold — an explicit refusal,
+    /// never a silent low-quality retrieval (G2; FR-S4).
+    BelowCleanupThreshold {
+        /// The achieved confidence.
+        confidence: f64,
+        /// The manifest's threshold.
+        threshold: f64,
+    },
     /// A constructed result violated a Core IR invariant.
     Wf(mycelium_core::WfError),
 }
@@ -88,6 +145,34 @@ impl core::fmt::Display for VsaError {
             VsaError::NotThisModel { expected } => {
                 write!(f, "expected a {expected} hypervector value")
             }
+            VsaError::NonAlphabetComponent { index } => {
+                write!(f, "component {index} is outside the model's alphabet")
+            }
+            VsaError::OutsideEmpiricalProfile { detail } => {
+                write!(f, "outside the trial-validated empirical profile: {detail}")
+            }
+            VsaError::NestedBundleUnsupported { model } => write!(
+                f,
+                "{model} bundle nesting beyond depth 1 is refused (reliability decays with depth — RR-13)"
+            ),
+            VsaError::DegenerateBundleComponent { index } => write!(
+                f,
+                "bundle component {index} has a vanished phasor sum — its phase is undefined"
+            ),
+            VsaError::NotCompositional => write!(
+                f,
+                "manifest does not support compositional reconstruction with a cleanup decode"
+            ),
+            VsaError::UnknownRole { role } => {
+                write!(f, "role {role:?} is not named in the manifest's recipe")
+            }
+            VsaError::BelowCleanupThreshold {
+                confidence,
+                threshold,
+            } => write!(
+                f,
+                "cleanup confidence {confidence} is below the manifest threshold {threshold}"
+            ),
             VsaError::Wf(e) => write!(f, "well-formedness violation: {e}"),
         }
     }
@@ -128,4 +213,62 @@ pub trait VsaModel {
 
     /// Cosine similarity in `[-1, 1]` (`0` if either operand has zero norm).
     fn similarity(&self, a: &[f64], b: &[f64]) -> f64;
+}
+
+/// A **trial-validated empirical profile**: the regime over which a crate-declared `Empirical`
+/// bound was actually validated, and the bound it backs. The honest counterpart of the M-131
+/// checked-instantiation pattern for operations whose corpus basis is trials rather than a cited
+/// theorem (RFC-0003 §4 "else `Empirical`"; M-I3/VR-5): the constants below are **exercised by
+/// this crate's own trial tests** (`tests/empirical_profiles.rs`) with exactly the declared
+/// `trials` count, and a Value-level op refuses — explicitly — outside the profile's
+/// side-conditions rather than stretching the tag past its evidence.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EmpiricalProfile {
+    /// Maximum number of operands the trials covered.
+    pub max_items: usize,
+    /// Whether the trials covered only an odd operand count (majority/sign bundles).
+    pub odd_items_only: bool,
+    /// Minimum dimensionality the trials covered.
+    pub min_dim: u32,
+    /// The validated failure probability (the δ the trials stayed at or below).
+    pub delta: f64,
+    /// Number of trials the validation runs.
+    pub trials: u64,
+    /// The fitting/validation method recorded in the `EmpiricalFit` basis.
+    pub method: &'static str,
+}
+
+impl EmpiricalProfile {
+    /// Check the profile's side-conditions for an op over `items` operands at `dim`; a violation
+    /// is an explicit [`VsaError::OutsideEmpiricalProfile`].
+    pub fn check(&self, items: usize, dim: u32) -> Result<(), VsaError> {
+        if items == 0 || items > self.max_items {
+            return Err(VsaError::OutsideEmpiricalProfile {
+                detail: format!("validated for 1..={} items, got {items}", self.max_items),
+            });
+        }
+        if self.odd_items_only && items.is_multiple_of(2) {
+            return Err(VsaError::OutsideEmpiricalProfile {
+                detail: format!("validated for an odd item count only, got {items}"),
+            });
+        }
+        if dim < self.min_dim {
+            return Err(VsaError::OutsideEmpiricalProfile {
+                detail: format!("validated for dim ≥ {}, got {dim}", self.min_dim),
+            });
+        }
+        Ok(())
+    }
+
+    /// The δ bound this profile backs, with its honest `EmpiricalFit` basis (M-I3).
+    #[must_use]
+    pub fn bound(&self) -> Bound {
+        Bound {
+            kind: BoundKind::Probability { delta: self.delta },
+            basis: BoundBasis::EmpiricalFit {
+                trials: self.trials,
+                method: self.method.to_owned(),
+            },
+        }
+    }
 }

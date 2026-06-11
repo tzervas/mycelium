@@ -4,12 +4,13 @@
 //!
 //! Implemented rows today: Binary↔Ternary in range (`LosslessWithinRange`, bijective; M-120),
 //! Binary↔Ternary out of range / illegal pair (explicit rejection), Dense `F32→BF16` (Bounded ε;
-//! M-211). The remaining rows (Dense↔VSA, VSA↔VSA — M-231/M-242) do not exist yet and are
-//! asserted to *fail explicitly*, which is exactly what SC-3 requires of an unimplemented swap.
+//! M-211), and Dense↔VSA (Bounded δ; M-231 — proven/empirical basis, refusing instances no basis
+//! covers). The remaining rows (VSA↔VSA cross-model) do not exist and are asserted to *fail
+//! explicitly*, which is exactly what SC-3 requires of an unimplemented swap.
 
 use mycelium_cert::{
-    binary_to_ternary, check, dense_f32_to_bf16, ternary_to_binary, CertifiedSwapEngine,
-    CheckVerdict, Evidence, RefinementRelation, SwapError, BF16_REL_EPS,
+    binary_to_ternary, check, dense_f32_to_bf16, dense_to_vsa, ternary_to_binary, vsa_to_dense,
+    CertifiedSwapEngine, CheckVerdict, Evidence, RefinementRelation, SwapError, BF16_REL_EPS,
 };
 use mycelium_core::{
     binary, ContentHash, GuaranteeStrength, Meta, Payload, Provenance, Repr, ScalarKind,
@@ -96,6 +97,35 @@ fn every_implemented_swap_emits_and_validates_a_certificate() {
         ),
         "bounded F32→BF16",
     );
+    // Bounded-probabilistic row: Dense ↔ VSA (M-231), both directions, at the proven dimension.
+    let delta = 1e-2;
+    let bipolar = dense_f32(vec![1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0]);
+    let vsa_dim = 2048; // ≥ requiredDim(8, 1e-2)
+    let (hv, enc_cert) =
+        dense_to_vsa(&bipolar, vsa_dim, delta, &policy()).expect("enc must emit a certificate");
+    let claimed = Certificate::new(0.0, delta, GuaranteeStrength::Proven).unwrap();
+    assert_validated(
+        check(
+            &bipolar,
+            &hv,
+            RefinementRelation::BoundedSimilarity,
+            claimed,
+            &Evidence::Swap(&enc_cert),
+        ),
+        "bounded-probabilistic Dense→VSA",
+    );
+    let (back, dec_cert) =
+        vsa_to_dense(&hv, 8, delta, &policy()).expect("dec must emit a certificate");
+    assert_validated(
+        check(
+            &hv,
+            &back,
+            RefinementRelation::BoundedSimilarity,
+            claimed,
+            &Evidence::Swap(&dec_cert),
+        ),
+        "bounded-probabilistic VSA→Dense",
+    );
 }
 
 /// **SC-3 global, negative half:** the rejected/unimplemented rows of the table are *explicit*
@@ -119,16 +149,32 @@ fn every_unimplemented_or_illegal_pair_is_explicit() {
         Err(SwapError::IllegalPair { width: 8, trits: 4 })
     );
 
-    // Unimplemented rows through the complete engine: all explicit `UnsupportedSwap`.
+    // Dense↔VSA rows no basis covers are explicit refusals through the engine, never silent:
+    // a non-bipolar source and a dimension below both the theorem and the empirical profile.
     let engine = CertifiedSwapEngine;
-    let dense = dense_f32(vec![1.0, 2.0]);
-    let vsa_target = Repr::Vsa {
+    let non_bipolar = dense_f32(vec![1.0, 2.0]);
+    let map_i_64 = Repr::Vsa {
         model: "MAP-I".to_owned(),
         dim: 64,
         sparsity: SparsityClass::Dense,
     };
+    assert!(
+        matches!(
+            engine.swap(&non_bipolar, &map_i_64, &policy()),
+            Err(EvalError::Swap(_))
+        ),
+        "uncovered Dense→VSA instance must be an explicit swap error"
+    );
+
+    // Unimplemented rows through the complete engine: all explicit `UnsupportedSwap`.
+    let dense = dense_f32(vec![1.0, 2.0]);
+    let hrr_target = Repr::Vsa {
+        model: "HRR".to_owned(),
+        dim: 256,
+        sparsity: SparsityClass::Dense,
+    };
     let unsupported = [
-        (dense.clone(), vsa_target),                // Dense ↔ VSA: M-231
+        (dense.clone(), hrr_target), // Dense ↔ non-MAP-I VSA: no certified rule
         (dense.clone(), Repr::Binary { width: 8 }), // no cross-paradigm rule
         (
             bin_of(1, 8),

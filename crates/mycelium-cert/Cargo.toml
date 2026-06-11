@@ -17,6 +17,8 @@ mycelium-interp = { path = "../mycelium-interp" }
 # The M-210 checker discharges bounded instances through the E2-4 tier-i kernel and consumes the
 # shared {ε,δ,strength} certificate (ADR-010; RFC-0002 §2).
 mycelium-numerics = { path = "../mycelium-numerics" }
+# The M-231 Dense<->VSA swap re-uses the M-131 checked capacity instantiation (RFC-0003 §5).
+mycelium-vsa = { path = "../mycelium-vsa" }
 serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]

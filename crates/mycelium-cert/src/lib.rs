@@ -18,6 +18,7 @@
 
 pub mod check;
 pub mod dense;
+pub mod dense_vsa;
 
 use serde::{Deserialize, Serialize};
 
@@ -29,6 +30,7 @@ use mycelium_interp::{EvalError, SwapEngine};
 
 pub use check::{check, CheckVerdict, Evidence, Fallback, NotValidatedReason, RefinementRelation};
 pub use dense::{dense_f32_to_bf16, BF16_MIN_NORMAL, BF16_REL_EPS};
+pub use dense_vsa::{dense_to_vsa, vsa_to_dense, DENSE_VSA_EMP_DELTA, DENSE_VSA_MODEL};
 
 /// Concrete parameters binding a bijection lemma to one use — `{ width, trits }` for binary↔ternary
 /// (lets the certificate be cached by content hash; RFC-0002 §3).
@@ -116,6 +118,32 @@ pub enum SwapError {
     /// The source value is itself approximate; composing its bound with the swap's ε is not yet a
     /// defined rule (E2-1 Dense numerics) — refused, never fabricated.
     ApproximateSource,
+    /// A Dense↔VSA instance no basis covers: the proven capacity side-condition
+    /// `vsa_dim ≥ requiredDim(components, δ)` fails *and* the trial-validated empirical profile
+    /// does not reach it — a type error, not a `Declared` gamble (M-231; RFC-0002 §5).
+    InsufficientCapacity {
+        /// Dense components being encoded/decoded.
+        components: u32,
+        /// The hypervector dimension supplied.
+        dim: u32,
+        /// The dimension the cited theorem requires at the requested δ.
+        required: u64,
+    },
+    /// A Dense component is not `±1` — the cited capacity theorem covers bundles of bipolar
+    /// atoms only; a weighted-superposition bound is not in the corpus (M-231 v1 scope).
+    NotBipolar {
+        /// Index of the offending component.
+        index: usize,
+    },
+    /// `vsa_to_dense` of a value that is not a `swap.dense_vsa.enc.v1` product — the δ describes
+    /// retrieval from that encoding and nothing else (VR-5; provenance-gated).
+    NotDenseVsaEncoding,
+    /// A decode correlation vanished — the component's sign is undefined; explicit, never an
+    /// arbitrary pick.
+    AmbiguousDecode {
+        /// Index of the undecodable component.
+        index: usize,
+    },
     /// A constructed result violated a Core IR invariant.
     Wf(WfError),
 }
@@ -161,6 +189,27 @@ impl core::fmt::Display for SwapError {
                     "source is approximate; composing its bound with the swap ε is not a defined rule yet (E2-1)"
                 )
             }
+            SwapError::InsufficientCapacity {
+                components,
+                dim,
+                required,
+            } => write!(
+                f,
+                "no basis covers this Dense↔VSA instance: {components} components into dim {dim} \
+                 (the theorem requires ≥ {required}; the empirical profile does not reach it)"
+            ),
+            SwapError::NotBipolar { index } => write!(
+                f,
+                "component {index} is not ±1 — the capacity theorem covers bipolar bundles only"
+            ),
+            SwapError::NotDenseVsaEncoding => write!(
+                f,
+                "source is not a swap.dense_vsa.enc.v1 product — its δ would describe nothing"
+            ),
+            SwapError::AmbiguousDecode { index } => write!(
+                f,
+                "component {index}'s decode correlation vanished — its sign is undefined"
+            ),
             SwapError::Wf(e) => write!(f, "well-formedness violation: {e}"),
         }
     }
@@ -326,10 +375,16 @@ impl SwapEngine for BinaryTernarySwapEngine {
     }
 }
 
+/// The δ the engine requests for a Dense↔VSA swap when no policy channel supplies one — the same
+/// target the M-131 capacity validation uses. A future selection-policy extension (RFC-0005) may
+/// make it choosable; until then it is one documented constant, never an implicit per-call guess.
+pub const DENSE_VSA_DEFAULT_DELTA: f64 = 1e-2;
+
 /// A [`SwapEngine`] over the **complete certified swap surface** (SC-3 global, M-212): the
-/// bijective binary↔ternary class (M-120), the bounded Dense `F32→BF16` class (M-211), and
-/// same-`Repr` identity. Every implemented legal-pair-table row goes through a certificate-emitting
-/// function; everything else is an explicit [`EvalError::UnsupportedSwap`] — never silent
+/// bijective binary↔ternary class (M-120), the bounded Dense `F32→BF16` class (M-211), the
+/// bounded-probabilistic Dense↔VSA class (M-231, at [`DENSE_VSA_DEFAULT_DELTA`]), and
+/// same-`Repr` identity. Every implemented legal-pair-table row goes through a
+/// certificate-emitting function; everything else is an explicit error — never silent
 /// (RFC-0002 §5: a pair with no statable bound is a type error).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CertifiedSwapEngine;
@@ -347,6 +402,28 @@ impl SwapEngine for CertifiedSwapEngine {
                     dtype: mycelium_core::ScalarKind::Bf16,
                 },
             ) if src_dim == target_dim => Ok(dense::dense_f32_to_bf16(src, policy)?.0),
+            (
+                Repr::Dense {
+                    dtype: mycelium_core::ScalarKind::F32,
+                    ..
+                },
+                Repr::Vsa {
+                    model,
+                    dim,
+                    sparsity: mycelium_core::SparsityClass::Dense,
+                },
+            ) if model == dense_vsa::DENSE_VSA_MODEL => {
+                Ok(dense_vsa::dense_to_vsa(src, *dim, DENSE_VSA_DEFAULT_DELTA, policy)?.0)
+            }
+            (
+                Repr::Vsa { model, .. },
+                Repr::Dense {
+                    dim,
+                    dtype: mycelium_core::ScalarKind::F32,
+                },
+            ) if model == dense_vsa::DENSE_VSA_MODEL => {
+                Ok(dense_vsa::vsa_to_dense(src, *dim, DENSE_VSA_DEFAULT_DELTA, policy)?.0)
+            }
             _ => BinaryTernarySwapEngine.swap(src, target, policy),
         }
     }
