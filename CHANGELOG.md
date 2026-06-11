@@ -8,6 +8,44 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase-2 Batch G — Dense surface, VSA breadth, Dense↔VSA swaps, reconstruction manifest)
+- **M-230 (`mycelium-dense`, new crate):** the typed dim-tracked `Dense{dim, dtype}` operational
+  surface (RFC-0001 §4.1) — `DenseSpace` binds dim+dtype in the type; `add`/`sub`/`scale` are
+  `Proven` with per-element relative ε (Higham Thm 2.2, side-conditions checked per element;
+  BF16 carries the two-rounding composition `2⁻⁸ + 2⁻²³`); `neg` is `Exact`; `dot`/`similarity`
+  are `f64` measurement helpers. Off-grid payloads, overflow, subnormal results, and approximate
+  sources are typed explicit errors; a 20k-pair sweep per dtype exercises the bound (SC-2).
+- **M-240/M-241/M-242 (`mycelium-vsa`):** the **full RFC-0003 §4 model breadth** — MAP-B
+  (sign-rounded bundle), BSC (XOR bind, majority bundle, centered Hamming similarity), HRR
+  (circular convolution; correlation unbind), FHRR (phasor phase algebra; explicit
+  degenerate-bundle refusal), and SBC (one-hot-per-block sparse codes with the T1.3 placement:
+  declared `Sparse{max_active}` class in the `Repr`, observed `SparsityObs` in `Meta`). The §4
+  guarantee matrix is encoded as the single source-of-truth table (`RFC0003_MATRIX`) asserted
+  model-by-model in tests; **HRR/FHRR unbind stays the pinned `Empirical` weak link** (T1.2).
+  New honesty pattern: a declared **`EmpiricalProfile`** (regime + δ + trial count) backs every
+  `Empirical` Value-level op and is exercised by exactly its declared trials in
+  `tests/empirical_profiles.rs`; outside-profile calls are explicit refusals. **RR-13 enforced:**
+  MAP-B bundle nesting beyond depth 1 is the explicit `NestedBundleUnsupported` error.
+- **M-231 (`mycelium-cert::dense_vsa`):** Dense↔VSA swaps (RFC-0002 §5) — bipolar `Dense{n,F32}`
+  vectors encode as MAP-I superpositions over a deterministic versioned codebook (a genuine
+  bipolar bundle, so the T0.2 capacity theorem applies); decode is provenance-gated signed
+  correlation. The δ certificate's basis is derived, never asserted: `ProvenThm` iff
+  `vsa_dim ≥ requiredDim(n, δ)` (the M-131 checked instantiation), `EmpiricalFit` iff the
+  10⁴-trial profile covers the instance, an explicit `InsufficientCapacity` type error elsewhere.
+  The **M-210 checker's δ-side lands** (the recorded `Incomplete` placeholder retired):
+  `ProbabilityBound` certificates discharge by tier-i union-bound claim-vs-certificate plus
+  deterministic re-derivation equality. `CertifiedSwapEngine` + the SC-3 global test cover the
+  new rows (SC-2 satisfied for the new swaps).
+- **M-260 (`mycelium-core::recon` + `mycelium-vsa::recon`):** the **reconstruction manifest**
+  (RFC-0003 §6; `reconstruction-manifest.schema.json`, the ratified name) — `ReconInfo` with a
+  validating constructor/deserializer (compositional ⇒ recipe; resonator ⇒ probabilistic-only,
+  FR-C2), carried in the ratified `Meta.reconstruction` field (`with_reconstruction`); the
+  submodule-side `reconstruct_role` executes the manifest with the threshold made explicit.
+  Acceptance: the compositional path **recovers a novel combination** never stored in any
+  codebook (the §6 exit criterion), wire-round-tripped end to end.
+- Phase-2 status: epics **E2-1, E2-2, E2-5 complete at the task level**; the Phase-2 exit gate
+  now waits only on Batch H (M-250 packing selector → M-251 E3 wrong-layout differential).
+
 ### Changed (RFC-0007 r3 — `for` spelling adopted)
 - **RFC-0007 §4.8 → r3**: the bounded-iteration spelling `for x in xs, acc = init => body`
   moves from *provisional* to **adopted** (maintainer decision, 2026-06-10) — committed now

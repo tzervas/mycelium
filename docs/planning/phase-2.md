@@ -87,14 +87,14 @@ All Phase-2 tasks, with issue number (`idmap.tsv`), priority, dependency, and **
 | **M-220** Decision-table SelectionPolicy | [#55](https://github.com/tzervas/mycelium/issues/55) | P0 | M-101…M-103 | RFC-0005 §2/§3 | **Done (2026-06-10)** — `mycelium-select` |
 | **M-221** Mandatory EXPLAIN + LSP surfacing | [#56](https://github.com/tzervas/mycelium/issues/56) | P0 | M-220, M-140 | RFC-0005 §2.2/§4 / SC-5 | **Done (2026-06-10)** — `Explanation` + LSP channel |
 | **M-222** Wire selection into swap/packing sites | [#57](https://github.com/tzervas/mycelium/issues/57) | P1 | M-220, M-221 | RFC-0005 §4 | **Done (2026-06-10)** — swap site wired; packing adapter ready for E2-7 |
-| **M-230** Dense{dim,dtype} ops | [#58](https://github.com/tzervas/mycelium/issues/58) | P1 | M-101 (Dense repr) | RFC-0001 §4.1 / RFC-0002 §5 | Ready after E2-4 (float bounds) |
-| **M-231** Dense↔VSA swaps (ε/δ) | [#59](https://github.com/tzervas/mycelium/issues/59) | P1 | E2-4, M-210, M-230, VSA | RFC-0002 §5 / RFC-0003 | Ready after M-210 + M-230 |
-| **M-240** VSA: MAP-B + BSC (Exact) | [#60](https://github.com/tzervas/mycelium/issues/60) | P1 | M-130 | RFC-0003 §4 | Ready after E2-4 (tags) |
-| **M-241** VSA: HRR + FHRR (Empirical unbind) | [#61](https://github.com/tzervas/mycelium/issues/61) | P1 | M-130/M-132, E2-4 | RFC-0003 §4 / T1.2 | Ready after M-240 |
-| **M-242** Sparse/SBC + §4 matrix + MAP-B nesting | [#62](https://github.com/tzervas/mycelium/issues/62) | P1 | M-240, M-241 | RFC-0003 §4 / RR-13 | Ready after M-241 |
+| **M-230** Dense{dim,dtype} ops | [#58](https://github.com/tzervas/mycelium/issues/58) | P1 | M-101 (Dense repr) | RFC-0001 §4.1 / RFC-0002 §5 | **Done (2026-06-11)** — `mycelium-dense` |
+| **M-231** Dense↔VSA swaps (ε/δ) | [#59](https://github.com/tzervas/mycelium/issues/59) | P1 | E2-4, M-210, M-230, VSA | RFC-0002 §5 / RFC-0003 | **Done (2026-06-11)** — `mycelium-cert::dense_vsa` + the checker's δ-side |
+| **M-240** VSA: MAP-B + BSC (Exact) | [#60](https://github.com/tzervas/mycelium/issues/60) | P1 | M-130 | RFC-0003 §4 | **Done (2026-06-11)** — `mycelium-vsa::{mapb,bsc}` |
+| **M-241** VSA: HRR + FHRR (Empirical unbind) | [#61](https://github.com/tzervas/mycelium/issues/61) | P1 | M-130/M-132, E2-4 | RFC-0003 §4 / T1.2 | **Done (2026-06-11)** — `mycelium-vsa::{hrr,fhrr}` |
+| **M-242** Sparse/SBC + §4 matrix + MAP-B nesting | [#62](https://github.com/tzervas/mycelium/issues/62) | P1 | M-240, M-241 | RFC-0003 §4 / RR-13 | **Done (2026-06-11)** — `mycelium-vsa::{sbc,matrix}` + RR-13 refusal |
 | **M-250** Packing selector (I2_S/TL1/TL2) | [#63](https://github.com/tzervas/mycelium/issues/63) | P1 | E2-6 (M-222), M-112 | RFC-0004 §5 / DN-01 | Ready after E2-6 |
 | **M-251** E3 wrong-layout differential | [#64](https://github.com/tzervas/mycelium/issues/64) | P1 | M-250, M-151 | RFC-0004 §8 / NFR-7 | Ready after M-250 |
-| **M-260** Reconstruction manifest (ReconInfo) | [#65](https://github.com/tzervas/mycelium/issues/65) | P1 | VSA, E2-4 | RFC-0003 §6 | Ready after E2-4 + VSA |
+| **M-260** Reconstruction manifest (ReconInfo) | [#65](https://github.com/tzervas/mycelium/issues/65) | P1 | VSA, E2-4 | RFC-0003 §6 | **Done (2026-06-11)** — `mycelium-core::recon` + `mycelium-vsa::recon` |
 
 Legend — **Ready**: can start now from the corpus + landed deps. **Ready after X**: a hard
 dependency is open. **In progress / Done**: as the issue progresses; **Done** = landed, tests green,
@@ -385,16 +385,134 @@ basis.
 
 ---
 
+### 6.11 M-230 — Typed dim-tracked `Dense{dim,dtype}` ops · #58 · P1 · done 2026-06-11
+
+- **Goal / acceptance (from issue).** Dense construction over `ScalarKind` (`F32`/`BF16`) with dim
+  in the type; elementwise + similarity ops with `Exact`/`Bounded` tags per op; dim mismatch a
+  typed error; property tests; float-op ε via E2-4.
+- **Delivered.** New crate `mycelium-dense` (KC-3: stays out of the trusted kernel, like
+  numerics/selection): `DenseSpace{dim, dtype}` binds both in the type; `value` checks every
+  element finite and **exactly on the dtype grid** (an off-grid payload contradicts its `Repr` —
+  refused, never re-rounded). `add`/`sub`/`scale` are **`Proven`** with a per-element relative ε
+  (`Rel`) and a `ProvenThm` basis — Higham Thm 2.2 with side-conditions checked per element
+  (F32: native single rounding, `u = 2⁻²⁴`; BF16: the two-rounding composition
+  `≤ 2⁻⁸ + 2⁻²³`, derivation in the crate docs); `neg` is **`Exact`** (never rounds);
+  `dot`/`similarity` are `f64` measurement helpers (mirroring `VsaModel::similarity`).
+  Mismatches (dim/dtype), NaN, off-grid, overflow, subnormal results, and approximate sources are
+  typed explicit errors. A 20k-pair sweep per dtype exercises the disclosed bound (SC-2).
+- **Honesty.** `F16`/`F64` are explicitly unsupported (no exact `f64` reference for `F64` ops);
+  composing an *approximate input's* bound with the op ε remains the open magnitude-aware rule
+  recorded at M-204/M-211 — refused via `ApproximateSource`, never fabricated.
+
+### 6.12 M-240 — VSA models MAP-B + BSC · #60 · P1 · done 2026-06-11
+
+- **Goal / acceptance (from issue).** `MapB`/`Bsc` implement the trait; bind/unbind/permute
+  `Exact` (property-tested round-trips); bundle carries the honest capacity tag per the §4 matrix.
+- **Delivered.** `mycelium-vsa::{mapb,bsc}`: MAP-B (bipolar, sign-rounded bundle, tie → first
+  operand, documented) and BSC (binary, XOR bind, majority bundle, **centered Hamming
+  similarity** `1 − 2·d_H/d`). Exact ops have Value adapters with `Derived` provenance; alphabet
+  violations (`±1` / `{0,1}`) are the explicit `NonAlphabetComponent`. The **intrinsic** bundle
+  tag is `Proven` per the matrix (MAP-B membership-only, Clarkson Thm 16; BSC on-expectation,
+  Heim / Yi & Achour) — but the corpus carries a checked-instantiation *formula* only for MAP-I
+  (M-131), so the **Value-level** bundles carry an **`Empirical`** δ instead, from declared
+  `EmpiricalProfile` constants (odd m ≤ 5, d ≥ 1024, δ = 1e-2) **exercised with exactly the
+  declared 10⁴ trials** in `tests/empirical_profiles.rs` (M-I3 — the basis is honest because the
+  suite runs it).
+- **Honesty.** A `Proven` value tag without a corpus formula would violate M-I2/VR-5; the honest
+  path is the trial-backed `Empirical` downgrade plus an explicit refusal outside the validated
+  profile (`OutsideEmpiricalProfile`).
+
+### 6.13 M-241 — VSA models HRR + FHRR (Empirical unbind) · #61 · P1 · done 2026-06-11
+
+- **Goal / acceptance (from issue).** `Hrr`/`Fhrr` implement the trait; bind algebraic; unbind
+  tagged `Empirical` with a trial-validated `EmpiricalFit` bound, routed through cleanup;
+  bind→unbind→cleanup recovery trials within the stated δ.
+- **Delivered.** `mycelium-vsa::{hrr,fhrr}`: HRR (naive-`O(d²)` circular convolution — the
+  trusted reference; correlation unbind) and FHRR (phase-angle components in `(−π, π]`;
+  phase-add bind; complex-sum bundle with the explicit `DegenerateBundleComponent` refusal when a
+  phasor sum vanishes). `unbind` is the **residual `Empirical` weak link** (matrix-pinned in
+  `tests/matrix.rs`; FHRR stays `Empirical` even though pure-pair recovery is near-exact — the
+  matrix is normative, never upgraded). The Value-level `unbind_values` carries a
+  trial-validated δ profile (d ≥ 256, codebook ≤ 16, δ = 1e-2; 2×10³ / 10⁴ trials) and is
+  **provenance-gated to the validated single-factor regime** (the input must be a
+  `vsa.{hrr,fhrr}.bind` product) — the structural witness of T1.2's "single-factor" scope.
+  Recovery routes through `CleanupMemory` with inspectable confidence/margin (FR-S4/G2).
+- **Honesty.** Unbinding bundles/unknown vectors stays algebra (no tag is issued); multi-factor
+  recovery is the Phase-3 resonator (RFC-0003 §6), not silently approximated here.
+
+### 6.14 M-242 — Sparse/SBC + the §4 matrix + RR-13 · #62 · P1 · done 2026-06-11
+
+- **Goal / acceptance (from issue).** A sparse model with declared sparsity as a static
+  refinement + observed sparsity as runtime metadata (T1.3); the §4 matrix as a single
+  source-of-truth table asserted in tests; MAP-B deep nesting an explicit flagged condition.
+- **Delivered.** `mycelium-vsa::sbc`: sparse block codes (one-hot per block; blockwise index-add
+  bind with an exact algebraic unbind; counting-Bloom bundle; within-block permute). Values carry
+  the **declared** `Sparse{max_active: blocks}` class in the `Repr` and the **observed**
+  `SparsityObs` in `Meta` (T1.3, both halves). `mycelium-vsa::matrix` encodes RFC-0003 §4 as
+  `RFC0003_MATRIX` (6 models × 4 ops, row bases documented); `tests/matrix.rs` asserts every
+  implemented model×op intrinsic tag equals the table, pins the HRR/FHRR `Empirical` unbind, and
+  checks totality/closure. **RR-13**: bundling a MAP-B bundle is the explicit
+  `NestedBundleUnsupported` refusal (provenance-detected; landed with M-240, tested there).
+- **Honesty.** SBC bind/unbind are tagged `Proven` *as the §4 row states* even though the algebra
+  is exact — encoding the normative row verbatim (downgrades are always honest); a Value-level
+  SBC bundle bound is recorded future work (no corpus Bloom formula), not approximated.
+
+### 6.15 M-231 — Dense↔VSA swaps with δ bounds · #59 · P1 · done 2026-06-11
+
+- **Goal / acceptance (from issue).** `dense_to_vsa`/`vsa_to_dense` emit `Bounded` certs with
+  ε and/or δ, basis derived (`ProvenThm` where a cited capacity theorem's side-conditions check;
+  else `EmpiricalFit`); certs validate through M-210; SC-2 for the new swaps.
+- **Delivered.** `mycelium-cert::dense_vsa`: `dense_to_vsa` encodes a **bipolar** `Dense{n,F32}`
+  vector as the MAP-I superposition of signed atoms from a **deterministic versioned codebook**
+  (`swap.dense_vsa.enc.v1`) — a genuine n-item bipolar bundle, so the T0.2 capacity theorem
+  applies; `vsa_to_dense` decodes by signed correlation, **provenance-gated to enc products**.
+  The δ basis is derived, never asserted: `ProvenThm` iff `vsa_dim ≥ requiredDim(n, δ)` (re-using
+  `mycelium_vsa::capacity` — the M-131 checked instantiation), `EmpiricalFit` iff the
+  trial-validated profile covers the instance (n ≤ 16, dim ≥ 32n, δ = 0.05; 10⁴ round-trip
+  trials in `tests/dense_vsa.rs`), and an explicit `InsufficientCapacity` type-error elsewhere.
+  The **M-210 checker's δ-side lands** (the recorded `Incomplete` placeholder retired):
+  `ProbabilityBound` certs discharge by tier-i union-bound claim-vs-certificate plus
+  deterministic re-derivation equality (which re-checks side-conditions and rejects a basis
+  upgrade — VR-5). `CertifiedSwapEngine` serves both directions at the documented
+  `DENSE_VSA_DEFAULT_DELTA`; SC-3 global updated (new rows emit-and-validate; uncovered
+  instances stay explicit).
+- **Honesty.** Only the bipolar subclass encodes — the weighted-superposition bound is not in the
+  corpus, so general-real components are refused (`NotBipolar`), not tagged; vanished decode
+  correlations are `AmbiguousDecode`, never an arbitrary sign.
+
+### 6.16 M-260 — Reconstruction manifest (ReconInfo) · #65 · P1 · done 2026-06-11
+
+- **Goal / acceptance (from issue).** A `ReconInfo` serializing to
+  `reconstruction-manifest.schema.json` (the ratified name — the issue's `recon-info.schema.json`
+  reconciled, closing the §7 naming OQ) distinguishing indexed retrieval from compositional
+  reconstruction, content-addressed codebooks, attached bound; the compositional path recovers a
+  **novel combination**; round-trip + reconstruction tests.
+- **Delivered.** `mycelium-core::recon` (the kernel carries the metadata *field* per RFC-0003 §2):
+  `ReconInfo` with a validating constructor + re-validating `Deserialize` enforcing the schema
+  invariants — compositional ⇒ recipe required, indexed ⇒ recipe absent, `Cleanup` ⇒ threshold in
+  `[0,1]`, `Resonator` ⇒ factors + budget **and probabilistic-only** (FR-C2: a `ProvenThm` basis
+  is refused), bound well-formed. `Meta` gains the ratified `reconstruction` field
+  (`with_reconstruction`; wire-optional — `meta.schema.json` already specified it; the meta.rs
+  deferral note retired). `mycelium-vsa::recon::reconstruct_role` executes the manifest: unbind
+  by a recipe-named role, clean up against the codebook, threshold by the manifest's own
+  `cleanup_threshold` (below-threshold / unknown-role / non-compositional are explicit refusals).
+  Acceptance test: `bundle(color⊗red, shape⊗cube)` with both pairs **absent from every codebook**
+  is recovered role-by-role through the manifest (the §6 exit criterion), carrying a `Proven`
+  capacity bound from the checked instantiation, surviving the full value wire round-trip.
+- **Honesty.** The indexed-vs-compositional distinction is *operational* (an indexed manifest
+  refuses the compositional path); resonator factorization stays Phase-3 with the
+  probabilistic-only ceiling enforced in the type.
+
 ## 7. Risks & open questions
 
 | Id | Item | Disposition |
 |---|---|---|
 | **T0.1c** | ε and δ do **not** share one composition algebra (settled negative). | Accepted as inherent (ADR-010): two kernels, one certificate. The crate exposes them as separate monoids meeting at `{ε,δ,strength}`; `strength` composes by `meet`. |
 | **RR-12** | Dual-path semantic divergence (interpreter vs AOT). | Carried from Phase 1; the M-210 shared checker **has folded the M-151 differential in** (every corpus pair validates through the `ObservationalEquiv` instance, done 2026-06-10), and M-251's E3 extends it to wrong-layout. |
-| **RR-13** | MAP-B accuracy degrades past a nesting depth. | M-242 enforces/flags the limit explicitly — never a silent accuracy loss (G2). |
+| **RR-13** | MAP-B accuracy degrades past a nesting depth. | **Enforced (2026-06-11, M-240/M-242):** a MAP-B bundle input that is itself a MAP-B bundle (detected via provenance) is the explicit `NestedBundleUnsupported` refusal — never a silent accuracy loss (G2). |
 | **KC-3** | Integrative complexity → un-auditable kernel. | §5 decision: numerics + selection in separate crates; VSA stays behind ADR-008. Re-run KC-3 at the gate. |
 | **KC-4** | Cert-check overhead unknown until the checker exists. | **Measured** by M-212 (2026-06-10, §6.7): same order as the swap itself — downgrade path not triggered on this evidence. Numeric budget ratification still pending (maintainer). |
-| **OQ (naming)** | Issue E2-5 (#32) says `recon-info.schema.json`; the ratified file is `reconstruction-manifest.schema.json`. | The ratified name is authoritative (SPEC §10 note); M-260 reconciles the issue text. |
+| **OQ (naming)** | Issue E2-5 (#32) says `recon-info.schema.json`; the ratified file is `reconstruction-manifest.schema.json`. | **Resolved (2026-06-11, M-260):** built against the ratified name; §6.16 records the reconciliation. |
 
 ---
 
@@ -413,6 +531,14 @@ basis.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-11 (Batch G lands):** M-230/M-240/M-241/M-242/M-231/M-260 done — epics **E2-1, E2-2,
+  E2-5 complete at the task level**. The Dense operational surface (`mycelium-dense`), the full
+  VSA model breadth (MAP-B/BSC/HRR/FHRR/SBC) with the §4 matrix as a checked table and the
+  trial-validated `EmpiricalProfile` pattern, the Dense↔VSA δ-certified swaps + the M-210
+  checker's δ-side, and the reconstruction manifest (`ReconInfo` + `Meta.reconstruction` +
+  the compositional novel-combination recovery). §2 rows, §6.11–§6.16, §7 RR-13/OQ-naming
+  dispositions updated. Remaining for the Phase-2 exit gate: **Batch H** (M-250 packing
+  selector → M-251 E3 wrong-layout differential).
 - **2026-06-10 (E2-6 lands):** M-220/M-221/M-222 done — the `mycelium-select` decision-table
   policy language (total/terminating by construction, content-addressed, explicit bits-based cost),
   the mandatory serializable EXPLAIN + the LSP fifth artifact kind (`analyze_with` +
