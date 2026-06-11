@@ -388,10 +388,11 @@ fn strength_upgrade_past_the_basis_is_rejected() {
     ));
 }
 
-/// δ-side validation does not exist yet — explicit `Incomplete` with a fallback, never a pass
-/// (the TV-incompleteness path, RFC-0002 §2).
+/// A δ claim against an ε certificate is a certificate mismatch — the two sides are distinct
+/// kernels and never silently mixed (ADR-010; the δ class itself is checked via the M-231
+/// Dense↔VSA instance, `tests/dense_vsa.rs`).
 #[test]
-fn delta_claims_are_explicit_incompleteness() {
+fn delta_claims_against_an_eps_certificate_are_explicit() {
     let a = dense(vec![1.0], ScalarKind::F32, Meta::exact(Provenance::Root));
     let b = dense(vec![1.0], ScalarKind::Bf16, Meta::exact(Provenance::Root));
     let cert = bounded_cert(&a, &b, 0.1, empirical());
@@ -403,7 +404,10 @@ fn delta_claims_are_explicit_incompleteness() {
         claimed,
         &Evidence::Swap(&cert),
     ));
-    assert!(matches!(reason, NotValidatedReason::Incomplete { .. }));
+    assert!(matches!(
+        reason,
+        NotValidatedReason::CertificateMismatch { .. }
+    ));
 }
 
 /// A bounded certificate over a payload with no deviation metric is `Incomplete`, not a guess.
