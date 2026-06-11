@@ -82,7 +82,7 @@ This document is the single source of truth for terminology in the Mycelium prog
 >
 > **Control flow (RFC-0007 §4.8 r2; DN-03):** `for` is **reserved** — the keyword of bounded-
 > iteration sugar (a `for`-fold that elaborates to structural recursion, `Total` by construction;
-> *provisional spelling*, KC-2-gated). `while` / `loop` / `break` / `continue` / `return` stay
+> spelling **adopted**, RFC-0007 §4.8 r3). `while` / `loop` / `break` / `continue` / `return` stay
 > **excluded and unreserved** (unbounded iteration would undermine the divergence bit); the
 > toolchain emits teaching diagnostics where they appear, pointing at recursion / `for`.
 

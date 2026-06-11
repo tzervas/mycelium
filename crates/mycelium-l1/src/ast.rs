@@ -191,7 +191,7 @@ pub enum Expr {
     },
     /// `for x in xs, acc = init => body` — bounded iteration over a linearly recursive data
     /// value; elaboration-defined sugar for a synthesized structurally-recursive fold, `Total`
-    /// by construction (RFC-0007 §4.8; spelling provisional, KC-2-gated).
+    /// by construction (RFC-0007 §4.8; spelling adopted at r3).
     For {
         /// The element binder.
         x: String,

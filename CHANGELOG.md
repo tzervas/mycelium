@@ -8,6 +8,15 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (RFC-0007 r3 — `for` spelling adopted)
+- **RFC-0007 §4.8 → r3**: the bounded-iteration spelling `for x in xs, acc = init => body`
+  moves from *provisional* to **adopted** (maintainer decision, 2026-06-10) — committed now
+  rather than held pending a KC-2 ablation run. The kc2-09/kc2-10 benchmark tasks remain as
+  measurements of the choice, not its gate; like all v0 surface syntax it stays under RFC-0006
+  §1's global KC-2 gate, and revisiting it later is an explicit recorded decision (append-only).
+  Wording updated in DN-03 §2, Lexicon Reference, Example-Programs note, `mycelium.ebnf`, the
+  prototype doc-comments, and the KC-2 tasks docstring.
+
 ### Added (DN-03 — lexicon amendment; resolves ADR-012 §7.5/§7.6)
 - **DN-03** (Resolved): amends DN-02 (append-only) through the three-test gate — **adopt**
   `consume` and `grow` (Surface), **decline** `embody` (inherent methods keep the conventional

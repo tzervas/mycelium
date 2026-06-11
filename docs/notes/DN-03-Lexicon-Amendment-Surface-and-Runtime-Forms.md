@@ -31,7 +31,8 @@ they enter the grammar** — the binding is decided, the grammar work is later.
 ## 2. Control flow — `for` reserved (RFC-0007 §4.8 r2)
 
 `for` is **reserved** as the keyword of bounded-iteration sugar (RFC-0007 §4.8): elaboration-
-defined, `Total` by construction, *provisional spelling* (KC-2-gated). It is **conventional**
+defined, `Total` by construction, spelling **adopted** (RFC-0007 r3; under RFC-0006's global
+KC-2 gate like all v0 surface syntax). It is **conventional**
 (not themed): an iteration head is universal scaffolding, high on T-learn, and theming it would
 cost machine familiarity for no teaching gain — the same reasoning that kept `let`/`if`/`match`
 in DN-02 §3.

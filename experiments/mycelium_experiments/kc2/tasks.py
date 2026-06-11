@@ -10,10 +10,11 @@ The set is *fixed*: append new tasks rather than editing existing ones once a ba
 been recorded, or the SC-5b number stops being comparable (append-only, the changelog rule
 applied to a benchmark).
 
-Iteration ablation (RFC-0007 §4.8 r2): kc2-09 (the provisional `for` spelling) and kc2-10 (the
-same semantics by explicit recursion) form the runnable spelling-sensitivity pair today; a
+Iteration pair (RFC-0007 §4.8): kc2-09 (the adopted `for` spelling, r3) and kc2-10 (the same
+semantics by explicit recursion) measure spelling sensitivity. The spelling decision is made
+(maintainer, 2026-06-10) — these tasks inform any future revisiting, they do not gate it; a
 third variant in the planned named-args `fold(xs, from: …, with: …)` L2 library form joins when
-lambdas land, so the ratified spelling decision is made on measured evidence (T3.6).
+lambdas land (T3.6).
 """
 
 from __future__ import annotations

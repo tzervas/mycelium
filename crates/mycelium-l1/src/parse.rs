@@ -405,7 +405,7 @@ impl Parser {
         Ok(())
     }
 
-    /// `for x in xs, acc = init => body` (RFC-0007 §4.8; provisional spelling, KC-2-gated).
+    /// `for x in xs, acc = init => body` (RFC-0007 §4.8; spelling adopted at r3).
     fn parse_for(&mut self) -> Result<Expr, ParseError> {
         self.expect(&Tok::For, "`for`")?;
         let x = self.ident()?;

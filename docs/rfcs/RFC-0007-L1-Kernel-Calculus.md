@@ -209,14 +209,14 @@ is finite and acyclic, §4.7), not by programmer promise. Typing:
 ```
 
 **Spelling vs semantics (the Q6 split, applied to control flow).** The elaboration rule above
-is normative; the concrete spelling `for x in xs, acc = init => body` is **provisional** — the
-v0 grammar is non-normative and the surface is KC-2-gated (RFC-0006 §1). The maintainer-chosen
-plan: spelling A (`for`-head, explicit accumulator binder — familiar head, *binders not
-closures*, honest about v0's first-orderness) ships in the prototype grammar now; a named-args
-`fold(xs, from: …, with: …)` arrives as an ordinary **L2 library function** once lambdas land
-(same elaboration, no new syntax); and the KC-2 benchmark carries iteration tasks so the
-ratified spelling is chosen on measured evidence (T3.6), not taste. `for` joins the v0
-reserved-word set (recorded in DN-03).
+is normative; the concrete spelling `for x in xs, acc = init => body` is **adopted** (maintainer
+decision, 2026-06-10): spelling A — `for`-head, explicit accumulator binder — for its familiar
+head, *binders not closures*, honest about v0's first-orderness. Like all v0 surface syntax it
+remains under RFC-0006 §1's global KC-2 gate, and revisiting it later is an explicit recorded
+decision (append-only), not a drift. A named-args `fold(xs, from: …, with: …)` arrives as an
+ordinary **L2 library function** once lambdas land (same elaboration, no new syntax); the KC-2
+benchmark's iteration tasks (kc2-09/kc2-10) remain as measurements of the choice, not its gate.
+`for` joins the v0 reserved-word set (recorded in DN-03).
 
 **What stays out.** `while`, `loop`, `break`, `continue`, and `return` remain **excluded and
 unreserved** (DN-02 §6): unbounded iteration would undermine the divergence bit (§4.5), and
@@ -268,6 +268,11 @@ and retiring §4.6's fragment restriction.
 
 ## Meta — changelog
 
+- **2026-06-10 (r3) — Draft, `for` spelling adopted (maintainer decision).** §4.8's spelling A
+  (`for x in xs, acc = init => body`) moves from *provisional* to **adopted**: the maintainer
+  chose to commit it now rather than hold it pending a KC-2 ablation run; the kc2-09/kc2-10
+  benchmark tasks remain as measurements, not a gate. Like all v0 surface syntax it stays under
+  RFC-0006 §1's global KC-2 gate; revisiting is an explicit recorded decision (append-only).
 - **2026-06-10 (r2) — Draft, bounded iteration added (maintainer decision).** New §4.8: bounded
   iteration as **elaboration-defined sugar** over structural recursion — no new kernel node; the
   normative content is the desugaring to a synthesized self-recursive helper, `Total` by the

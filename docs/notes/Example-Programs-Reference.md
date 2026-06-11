@@ -269,7 +269,7 @@ reconciliation with the ratified semantics. Cross-references: ADR-012 §7.
   (ADR-010), not a `CapacityBound` (which describes VSA superposition capacity, not swap error).
   The guarantee correctly degrades (`Empirical` for HRR/FHRR-class ops, RFC-0003 §4).
 - **Example #17 — `loop`** is superseded: bounded iteration is now `for x in xs, acc = init =>
-  body` (RFC-0007 §4.8 r2, `Total` by construction; provisional spelling). `loop`/`while` stay
+  body` (RFC-0007 §4.8, `Total` by construction; spelling adopted at r3). `loop`/`while` stay
   excluded (ADR-012 §7.2 resolved).
 - **`embody` → `impl`** (DN-03): inherent-method blocks (Example #1's `embody Vector { … }`) use
   the conventional `impl` when methods enter the grammar; `embody` was declined at the gate.
