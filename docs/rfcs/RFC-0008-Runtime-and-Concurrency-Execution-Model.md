@@ -186,7 +186,7 @@ This RFC composes nodes; it changes nothing inside one. Specifically:
   static fusion safety (T4.2); v0 commits only the *hook*: a channel's element type may be a
   protocol reference, and protocol conformance is a checkable obligation (the same
   pattern as guarantee indices: dynamic check first, static discipline staged later).
-- **The mesh** (`cmn`) is gossip/pub-sub overlay coordination for discovery, signals, and
+- **The mesh** (`mycorrhizal-network`) is gossip/pub-sub overlay coordination for discovery, signals, and
   resource accounting. Its guarantees are explicitly probabilistic (RT5): per-protocol
   `ProbabilityBound`s with declared bases (T4.2's verified results for epidemic broadcast),
   surfaced through `Meta` like every other δ. Byzantine participants are **out of scope of v0**
@@ -212,24 +212,27 @@ place for it* and that the manifest is the natural component of the larger artif
 ### 4.5 The Runtime vocabulary, grounded — and still reserved
 
 The operational meaning each term now has (the T-map test ADR-012 §7.3 said could not yet be
-run), with grounding and the §7.6 short-form recommendations left to DN-03:
+run) — with the names **ratified by DN-03** (the §7.6 refinements, against these very meanings):
 
-| Term (long) | Operational meaning (this RFC) | Grounding | Invariants |
+| Canonical (alias) | Operational meaning (this RFC) | Grounding | Invariants |
 |---|---|---|---|
-| `hypha` (`hyph`) | structurally-scoped concurrent computation over immutable values | T4.1 | RT1/RT2/RT7 |
-| `anastomose` (`anas`→`weave`?) | lawful state fusion: semilattice merge, meet-composed `Meta` | T4.2 | RT6 |
+| `hypha` | structurally-scoped concurrent computation over immutable values | T4.1 | RT1/RT2/RT7 |
+| `anastomose` (`fuse`) | lawful state fusion: semilattice merge, meet-composed `Meta` (RT6 is genuine *merge*, so `fuse` not `weave`) | T4.2 | RT6 |
 | `translocate` (`xloc`) | explicit, fallible, `Meta`-preserving value movement with backpressure | T4.3 | RT1/RT4 |
-| `sclerotium` (`sclrt`→`dorm`?) | content-addressed checkpoint of a dormable computation | T4.4 | RT2 + §4.4 |
-| `mycorrhize` (`myco`→`graft`?) | capability contract with external infrastructure; the capability is an affine `substrate` handle (LR-8) | T4.3/T4.5 | RT4 |
+| `sclerotium` (`cyst`, verb `encyst`) | content-addressed checkpoint of a dormable computation — encystment *is* the dormant-resumable form | T4.4 | RT2 + §4.4 |
+| `mycorrhize` (`graft`) | capability contract with external infrastructure; the capability is an affine `substrate` handle (LR-8) | T4.3/T4.5 | RT4 |
 | `forage` | adaptive placement/discovery as a reified RFC-0005 policy (third site) | T4.3 | RT3 |
-| `rhizomorph` (`rhizo`) | a declared/promoted transport path — a placement-policy artifact, semantics-free | T4.3 | RT3 |
-| `common mycorrhizal network` (`cmn`→`mesh`?) | gossip/pub-sub overlay with honest probabilistic guarantees | T4.2 | RT5 |
+| `rhizomorph` | a declared/promoted transport path — a placement-policy artifact, semantics-free | T4.3 | RT3 |
+| `mycorrhizal-network` (`mesh`) | gossip/pub-sub overlay with honest probabilistic guarantees | T4.2 | RT5 |
 | `dimorph` | execution-mode switch: tiering = RFC-0004 `ExecutionMode` (NFR-7-equivalent); representation switch = `Swap` (S1) | T4.6 | RT2/S1 |
 | `reclaim` | supervision-tree reclamation of *runtime units* (never memory — LR-9) | T4.5 | RT7 |
 
-**Status rule (normative):** these remain **reserved vocabulary, not active syntax**, until
-(a) DN-03 ratifies each name through the DN-02 three-test gate against the meanings above, and
-(b) an implementation RFC commits the construct's typing and elaboration per RFC-0006 §4.3.
+(`hypha`, `forage`, `rhizomorph`, `dimorph`, `reclaim` carry **no** alias — the canonical is
+already short, and DN-03's "at most one" includes zero.)
+
+**Status rule (normative):** these remain **reserved vocabulary, not active syntax** — DN-03 has
+ratified the *names* (above) through the DN-02 three-test gate, but activation still requires an
+implementation RFC committing each construct's typing and elaboration per RFC-0006 §4.3.
 Examples using them remain illustrations of intent (ADR-012 §7.3's marking stands).
 
 ### 4.6 Staging

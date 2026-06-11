@@ -273,9 +273,11 @@ reconciliation with the ratified semantics. Cross-references: ADR-012 §7.
   excluded (ADR-012 §7.2 resolved).
 - **`embody` → `impl`** (DN-03): inherent-method blocks (Example #1's `embody Vector { … }`) use
   the conventional `impl` when methods enter the grammar; `embody` was declined at the gate.
-- **Runtime short forms** (DN-03): the ratified aliases are `weave` (was `anas`), `mesh` (`cmn`),
-  `graft` (`myco`), `dorm` (`sclrt`); others unchanged. The Runtime examples remain *intent*
-  pending RFC-0008 activation, but should read with the ratified names.
+- **Runtime names** (DN-03): the example code below uses the *superseded* draft spellings; the
+  ratified names are **`fuse`** (was `anas`/`weave`; `encyst`/`Sclerotium` → the verb is
+  `encyst`, was `sclrt`), **`mesh`** (`cmn`), **`graft`** (`myco`), and the canonicals `hypha` /
+  `forage` / `rhizomorph` carry **no** short alias. The Runtime examples remain *intent* pending
+  RFC-0008 activation; read them with the ratified names (DN-03 §4 is the source of truth).
 - **Consistent with the corpus:** the `swap`/`policy`/`Meta`/`guarantee`/`bound`/`policy_used`
   shape (Examples #2, #11, #18) matches RFC-0001 §4.3 and RFC-0002; `matured` (Examples #8, #18)
   matches the stable-component gate (RFC-0004 §4); content-addressed `spore` matches RFC-0003 §6

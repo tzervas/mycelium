@@ -26,7 +26,7 @@ This document is the single source of truth for terminology in the Mycelium prog
 | Tier        | Purpose                              | Theming Approach                  | Typical User                  | Example Terms                  |
 |-------------|--------------------------------------|-----------------------------------|-------------------------------|--------------------------------|
 | **Surface** | Daily surface syntax & keywords      | Conservative (three-test gate)    | All developers                | `colony`, `consume`, `grow`    |
-| **Runtime** | Runtime primitives & architecture    | Aggressive with short mnemonics   | Systems & runtime developers  | `hyph`, `anas`, `xloc`, `sclrt`|
+| **Runtime** | Runtime primitives & architecture    | Themed, name-stable (DN-03)       | Systems & runtime developers  | `hypha`, `fuse`, `xloc`, `cyst`|
 | **Formal**  | Formal semantics & Core IR           | Technical / conventional          | Language designers & compilers| `Repr`, `GuaranteeStrength`    |
 
 > **Status & grounding:** the **Surface** tier extends the Resolved DN-02 set; the additions
@@ -90,32 +90,36 @@ This document is the single source of truth for terminology in the Mycelium prog
 > These primitives describe the concurrency/distribution execution model defined by **RFC-0008**
 > (grounded by research Pass-4, T4.1–T4.6): each term's operational meaning and the runtime
 > invariants (RT1–RT7) it must respect are in RFC-0008 §4.5. **DN-03 ratified the names** through
-> the three-test gate against those meanings (the §7.6 refinements `anas`→`weave`, `cmn`→`mesh`,
-> `myco`→`graft`, `sclrt`→`dorm`). They remain *reserved* — activation requires each construct's
-> RFC-0008 implementation-stage RFC (R1/R2). Each term is **one canonical long form + one
-> sanctioned short alias** (§ "The alias rule" below): same content hash, projected differently.
+> the three-test gate against those meanings (`anas`→`fuse`, `cmn`→`mesh`, `myco`→`graft`,
+> `sclrt`→`cyst`/`encyst`). They remain *reserved* — activation requires each construct's
+> RFC-0008 implementation-stage RFC (R1/R2). Each term is **one canonical name + at most one
+> sanctioned alias** (§ "The alias rule" below): same content-addressed definition, same hash.
 
-These primitives form the execution model and distributed-systems substrate (RFC-0008). The
-**Short** column is the DN-03-ratified single alias; **Canonical** is the long form.
+These primitives form the execution model and distributed-systems substrate (RFC-0008).
+**Canonical** is the name docs lead with; **Alias** is the DN-03-ratified single short synonym
+(or — when the canonical is already short — *none*).
 
-| Short | Canonical | RFC-0008 meaning (RT invariants) |
-|------------|------------------------|---------------------------------------------------|
-| `hyph`     | `hypha`                | structurally-scoped concurrent computation over immutable values (RT1/RT2/RT7) |
-| `weave`    | `anastomose`           | lawful state fusion: semilattice merge, meet-composed `Meta` (RT6) |
-| `xloc`     | `translocate`          | explicit, fallible, `Meta`-preserving value movement with backpressure (RT1/RT4) |
-| `dorm`     | `sclerotium`           | content-addressed checkpoint of a dormable computation (RT2) |
-| `graft`    | `mycorrhize`           | capability contract with external infra (the capability is an affine `substrate`) (RT4) |
-| `forage`   | `forage`               | adaptive placement/discovery as a reified RFC-0005 policy — the third site (RT3) |
-| `rhizo`    | `rhizomorph`           | a declared/promoted transport path; a placement-policy artifact, semantics-free (RT3) |
-| `mesh`     | `mycorrhizal-network`  | gossip/pub-sub overlay with honest **probabilistic** guarantees (δ) (RT5) |
-| `dimorph`  | `dimorph`              | execution-mode switch: tiering = RFC-0004 `ExecutionMode`; repr switch = `Swap` (S1) |
-| `reclaim`  | `reclaim`              | supervision-tree reclamation of *runtime units* — **never memory** (LR-9) (RT7) |
+| Canonical | Alias | RFC-0008 meaning (RT invariants) |
+|------------------------|----------|---------------------------------------------------|
+| `hypha`                | *(none)* | structurally-scoped concurrent computation over immutable values (RT1/RT2/RT7) |
+| `anastomose`           | `fuse`   | lawful state fusion: semilattice merge, meet-composed `Meta` (RT6) |
+| `translocate`          | `xloc`   | explicit, fallible, `Meta`-preserving value movement with backpressure (RT1/RT4) |
+| `sclerotium`           | `cyst` (verb `encyst`) | content-addressed checkpoint of a dormable computation — a cyst *is* a dormant resumable form (RT2) |
+| `mycorrhize`           | `graft`  | capability contract with external infra (the capability is an affine `substrate`) (RT4) |
+| `forage`               | *(none)* | adaptive placement/discovery as a reified RFC-0005 policy — the third site (RT3) |
+| `rhizomorph`           | *(none)* | a declared/promoted transport path; a placement-policy artifact, semantics-free (RT3) |
+| `mycorrhizal-network`  | `mesh`   | gossip/pub-sub overlay with honest **probabilistic** guarantees (δ) (RT5) |
+| `dimorph`              | *(none)* | execution-mode switch: tiering = RFC-0004 `ExecutionMode`; repr switch = `Swap` (S1) |
+| `reclaim`              | *(none)* | supervision-tree reclamation of *runtime units* — **never memory** (LR-9) (RT7) |
 
-> **The alias rule (DN-03 §3).** Each themed term has **one** canonical long form and **at most
-> one** sanctioned short alias — never a family of abbreviations. Because identity is
-> content-addressed (ADR-003) and one canonical formatter (M-142, S3) renders it, the long form
-> and the alias are the *same token* (same hash): beginners read `anastomose`, experts type
-> `weave`, at zero identity cost. The reserved-word set holds both spellings.
+> **The alias rule (DN-03 §3).** Each themed term has **one** canonical name and **at most one**
+> sanctioned alias — never a family of forms, and *zero* when the canonical is already short and
+> pronounceable (`hypha`, `forage`). Because identity is content-addressed (ADR-003) and one
+> canonical formatter (M-142, S3) renders it, the canonical and the alias denote the *same
+> definition* (same hash): beginners read `anastomose`, experts type `fuse`, at zero identity
+> cost. Where the alias is a *synonym* rather than an abbreviation, the two are different words
+> bound to one hash — same meaning, not "one word projected twice". The reserved-word set holds
+> both spellings.
 
 ---
 
@@ -139,7 +143,7 @@ These concepts come primarily from RFC-0001 and remain largely technical.
 - **Systems programming & runtime work**: use the Runtime short aliases (once activated).
 - **Documentation & diagnostics**: introduce a concept with the canonical long form followed by
   its short alias in parentheses on first use.
-- **Error messages**: prefer clarity — e.g., "Cannot `weave` (anastomose) incompatible `hyph`
+- **Error messages**: prefer clarity — e.g., "Cannot `fuse` (anastomose) incompatible `hypha`
   types."
 
 ---

@@ -12,13 +12,17 @@ corpus, not released software. Versioning will begin when the kernel does.
 - **DN-03** (Resolved): amends DN-02 (append-only) through the three-test gate — **adopt**
   `consume` and `grow` (Surface), **decline** `embody` (inherent methods keep the conventional
   `impl`), **reserve** `for` (the RFC-0007 §4.8 bounded-iteration keyword). Ratifies the
-  **canonical-long-form + one-short-alias rule** (each themed term: one long form + at most one
-  short alias, same content hash projected differently — ADR-003 makes it free). Ratifies the
-  Runtime-tier renames against RFC-0008 §4.5's grounded meanings: `anas`→`weave`, `cmn`→`mesh`,
-  `myco`→`graft` (the latter resolving the collision with the language family name),
-  `sclrt`→`dorm`; others kept; `reclaim` scope clarified (runtime units, never memory). Runtime
-  vocabulary stays reserved-not-active. Lexicon Reference + Example-Programs notes updated;
-  Doc-Index gains the DN-03 row.
+  **canonical-name + one-alias rule** (each themed term: one canonical name + at most one alias —
+  *zero* when the canonical is already short — same content hash; ADR-003 makes it free; with the
+  abbreviation-vs-synonym precision so the "projection" framing isn't overstated). Ratifies the
+  Runtime-tier names against RFC-0008 §4.5's grounded meanings: `anas`→**`fuse`** (RT6 is genuine
+  merge, so `weave` was rejected on T-map — woven threads stay distinct), `cmn`→**`mesh`**,
+  `myco`→**`graft`** (resolving the collision with the language family name),
+  `sclrt`→**`cyst`/`encyst`** (encystment = the dormant, resistant, *resumable* form — the most
+  behaviorally-accurate T-map in the set); `xloc`/`dimorph`/`reclaim` kept;
+  `hypha`/`forage`/`rhizomorph` carry **no** alias. `reclaim` scope clarified (runtime units,
+  never memory). Runtime vocabulary stays reserved-not-active. Lexicon Reference, Example-Programs
+  note, and RFC-0008 §4.5 table updated to the ratified names; Doc-Index gains the DN-03 row.
 
 ### Added (ADR-013 — `spore` is the deployable unit; resolves ADR-012 §7.4)
 - **ADR-013** (Accepted, maintainer deliberation 2026-06-10): `spore` = the
