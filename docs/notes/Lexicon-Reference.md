@@ -39,10 +39,14 @@ This document is the single source of truth for terminology in the Mycelium prog
 > ratifies the names through the three-test gate and implementation RFCs land (RFC-0008 §4.5
 > status rule). The **Formal** tier is normative (RFC-0001).
 
-**Naming Rules**
-- **Short form** (3–5 characters preferred): Used in source code.
-- **Full term**: Used in documentation, comments, error messages, and when first introducing a concept.
-- Abbreviations must be mnemonic and must not collide with common meanings in Rust, Python, C, Go, or other widely used languages.
+**Naming Rules** (DN-03 — one name per term, flat)
+- **One name per concept.** No canonical/alias pairs; pick the single clearest name and stop
+  (DN-03 §3 supersedes ADR-012 §7.6's long-form + short-alias scheme).
+- The name is **themed where the themed word is itself clearest** (`hypha`, `cyst`, `graft`) and
+  **conventional where a plain word is clearer** (`fuse`, `mesh`, `reclaim`) — the DN-02 gate
+  applied once, to one name.
+- A name must be mnemonic, pronounceable, and must not collide with common meanings in Rust,
+  Python, C, Go, or other widely used languages — nor with the language family name (`myco`).
 
 ---
 
@@ -89,37 +93,33 @@ This document is the single source of truth for terminology in the Mycelium prog
 > **Reserved vocabulary, not active syntax — grounded (RFC-0008) and name-ratified (DN-03).**
 > These primitives describe the concurrency/distribution execution model defined by **RFC-0008**
 > (grounded by research Pass-4, T4.1–T4.6): each term's operational meaning and the runtime
-> invariants (RT1–RT7) it must respect are in RFC-0008 §4.5. **DN-03 ratified the names** through
-> the three-test gate against those meanings (`anas`→`fuse`, `cmn`→`mesh`, `myco`→`graft`,
-> `sclrt`→`cyst`/`encyst`). They remain *reserved* — activation requires each construct's
-> RFC-0008 implementation-stage RFC (R1/R2). Each term is **one canonical name + at most one
-> sanctioned alias** (§ "The alias rule" below): same content-addressed definition, same hash.
+> invariants (RT1–RT7) it must respect are in RFC-0008 §4.5. **DN-03 ratified one name per term**
+> through the three-test gate against those meanings, rejecting ADR-012 §7.6's canonical+alias
+> scheme as needless surface area (DN-03 §3). They remain *reserved* — activation requires each
+> construct's RFC-0008 implementation-stage RFC (R1/R2).
 
-These primitives form the execution model and distributed-systems substrate (RFC-0008).
-**Canonical** is the name docs lead with; **Alias** is the DN-03-ratified single short synonym
-(or — when the canonical is already short — *none*).
+These primitives form the execution model and distributed-systems substrate (RFC-0008) — **one
+name each**, themed where the themed word is itself clearest, conventional where a plain word is.
 
-| Canonical | Alias | RFC-0008 meaning (RT invariants) |
-|------------------------|----------|---------------------------------------------------|
-| `hypha`                | *(none)* | structurally-scoped concurrent computation over immutable values (RT1/RT2/RT7) |
-| `anastomose`           | `fuse`   | lawful state fusion: semilattice merge, meet-composed `Meta` (RT6) |
-| `translocate`          | `xloc`   | explicit, fallible, `Meta`-preserving value movement with backpressure (RT1/RT4) |
-| `sclerotium`           | `cyst` (verb `encyst`) | content-addressed checkpoint of a dormable computation — a cyst *is* a dormant resumable form (RT2) |
-| `mycorrhize`           | `graft`  | capability contract with external infra (the capability is an affine `substrate`) (RT4) |
-| `forage`               | *(none)* | adaptive placement/discovery as a reified RFC-0005 policy — the third site (RT3) |
-| `rhizomorph`           | *(none)* | a declared/promoted transport path; a placement-policy artifact, semantics-free (RT3) |
-| `mycorrhizal-network`  | `mesh`   | gossip/pub-sub overlay with honest **probabilistic** guarantees (δ) (RT5) |
-| `dimorph`              | *(none)* | execution-mode switch: tiering = RFC-0004 `ExecutionMode`; repr switch = `Swap` (S1) |
-| `reclaim`              | *(none)* | supervision-tree reclamation of *runtime units* — **never memory** (LR-9) (RT7) |
+| Name | RFC-0008 meaning (RT invariants) |
+|------------|---------------------------------------------------|
+| `hypha`      | structurally-scoped concurrent computation over immutable values (RT1/RT2/RT7) |
+| `fuse`       | lawful state fusion: semilattice merge, meet-composed `Meta` — two states converge into one (RT6) |
+| `xloc`       | explicit, fallible, `Meta`-preserving value movement with backpressure ("trans-locate") (RT1/RT4) |
+| `cyst`       | content-addressed checkpoint of a dormable computation — encystment *is* the dormant resumable form; `cyst(…)` constructor-style like `spore(…)` (RT2) |
+| `graft`      | capability contract with external infra (the capability is an affine `substrate`) (RT4) |
+| `forage`     | adaptive placement/discovery as a reified RFC-0005 policy — the third site (RT3) |
+| `backbone`   | a declared/promoted high-bandwidth transport path; a placement-policy artifact, semantics-free (RT3) |
+| `mesh`       | gossip/pub-sub overlay with honest **probabilistic** guarantees (δ) (RT5) |
+| `tier`       | execution-mode switch: tiering interpreted↔native = RFC-0004 `ExecutionMode` (a dense↔sparse *repr* switch is a `Swap`, S1) |
+| `reclaim`    | supervision-tree reclamation of *runtime units* — **never memory** (LR-9) (RT7) |
 
-> **The alias rule (DN-03 §3).** Each themed term has **one** canonical name and **at most one**
-> sanctioned alias — never a family of forms, and *zero* when the canonical is already short and
-> pronounceable (`hypha`, `forage`). Because identity is content-addressed (ADR-003) and one
-> canonical formatter (M-142, S3) renders it, the canonical and the alias denote the *same
-> definition* (same hash): beginners read `anastomose`, experts type `fuse`, at zero identity
-> cost. Where the alias is a *synonym* rather than an abbreviation, the two are different words
-> bound to one hash — same meaning, not "one word projected twice". The reserved-word set holds
-> both spellings.
+> **One name per term (DN-03 §3).** Each themed term has exactly one name — no canonical/alias
+> pairs, no per-audience projection. ADR-012 §7.6 proposed a long-form + short-alias scheme
+> ("content-addressing makes the second spelling free"); DN-03 rejected it as a speculative
+> benefit at a real cost (two labels per concept to keep in sync). Pick the single clearest name
+> and stop — content-addressing still underlies *definition* identity (ADR-003), the lexicon just
+> doesn't mint two labels for it.
 
 ---
 

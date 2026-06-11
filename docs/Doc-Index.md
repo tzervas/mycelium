@@ -15,7 +15,7 @@
 | **RFC-0001 — Core IR & Metadata Schema** | value model, `Repr`, `Meta`, guarantee lattice, content-addressing | **Accepted (r2)** |
 | **DN-01 — Packing Placement** | tradeoff study → schedule-staged decision | **Resolved → folded into RFC-0001 §4.1 + RFC-0004 §5** |
 | **DN-02 — Fungal Lexicon & Reserved Words** | the naming law + ratified surface vocabulary (themed vs conventional) feeding RFC-0006's grammar | **Resolved** (ratified 2026-06-10) |
-| **DN-03 — Lexicon Amendment: Surface Additions, Alias Rule & Runtime Names** | amends DN-02: adopt `consume`/`grow`, decline `embody` (keep `impl`), reserve `for`, the canonical-long-form/one-short-alias rule, the Runtime renames | **Resolved** (2026-06-10) |
+| **DN-03 — Lexicon Amendment: Surface Additions & Runtime Names (one name each)** | amends DN-02: adopt `consume`/`grow`, decline `embody` (keep `impl`), reserve `for`; **one name per term** (flat — rejects ADR-012 §7.6's canonical+alias scheme); the single Runtime names (`hypha`/`fuse`/`xloc`/`cyst`/`graft`/`forage`/`backbone`/`mesh`/`tier`/`reclaim`) | **Resolved** (2026-06-10) |
 | **Lexicon Reference (v0.4)** | the three-tier vocabulary catalog (Surface/Runtime/Formal) with short mnemonic forms; extends DN-02 | **Draft** (review notes in ADR-012 §7) |
 | **Example Programs Reference (v0.2)** | 20 worked examples demonstrating the lexicon and surface syntax against RFC-0001 semantics | **Draft** (grounding notes appended) |
 | **RFC-0002 — Swap Certificate & Split Regime** | certificate, legal pairs, bijection semantics, shared checker | **Accepted** |

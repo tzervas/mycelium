@@ -1,14 +1,14 @@
-# Design Note DN-03 — Lexicon Amendment: Surface Additions, the Alias Rule & Runtime Names
+# Design Note DN-03 — Lexicon Amendment: Surface Additions & Runtime Names (one name each)
 
 | Field | Value |
 |---|---|
 | **Note** | DN-03 |
 | **Status** | **Resolved** (2026-06-10) — ratified by the maintainer through the DN-02 three-test gate; the agreed set feeds the grammar artifacts (RFC-0006 §4.3) |
-| **Amends** | DN-02 (Resolved, append-only) — adds Surface terms and the canonical-long-form/one-short-alias rule; does **not** rewrite DN-02 (supersede-don't-edit) |
-| **Feeds** | RFC-0006 (surface vocabulary); the grammar/conformance corpus; the L1 prototype reserved-word set; the M-142 formatter's canonical spelling |
+| **Amends** | DN-02 (Resolved, append-only) — adds Surface terms and the one-name-per-term rule; does **not** rewrite DN-02 (supersede-don't-edit) |
+| **Feeds** | RFC-0006 (surface vocabulary); the grammar/conformance corpus; the L1 prototype reserved-word set; the M-142 formatter |
 | **Date** | June 10, 2026 |
-| **Decides** | (a) the Surface-tier additions `consume`/`grow` (adopt) and `embody` (decline → keep `impl`); (b) `for`'s reservation (RFC-0007 §4.8 r2); (c) the **canonical-long-form + one-short-alias** rule; (d) the Runtime-tier short-form refinements (ADR-012 §7.6) against the RFC-0008-grounded meanings |
-| **Depends on** | DN-02 (the naming law + three-test gate); ADR-012 §7.5/§7.6 (the flags); RFC-0007 §4.8 (`for`); RFC-0008 §4.5 (the grounded Runtime meanings — the T-map test these names are now scored against); ADR-003 (content addressing makes aliases free) |
+| **Decides** | (a) the Surface-tier additions `consume`/`grow` (adopt) and `embody` (decline → keep `impl`); (b) `for`'s reservation (RFC-0007 §4.8 r2); (c) **one name per term** — flat, rejecting ADR-012 §7.6's canonical+alias scheme; (d) the single Runtime-tier names against the RFC-0008-grounded meanings |
+| **Depends on** | DN-02 (the naming law + three-test gate); ADR-012 §7.5/§7.6 (the flags — §7.6's alias scheme is superseded here); RFC-0007 §4.8 (`for`); RFC-0008 §4.5 (the grounded Runtime meanings the names are scored against) |
 
 > Like DN-02, this note narrows and the maintainer ratifies. The three-test gate (DN-02 §1 —
 > **T-map** fidelity, **T-illuminate** teaching value, **T-learn** dual readability) is applied
@@ -41,43 +41,43 @@ unbounded iteration would undermine the divergence bit (RFC-0007 §4.5), and the
 already emits *teaching diagnostics* where these words appear (parse-level juxtaposition,
 check-level unknown name) pointing at recursion / `for`.
 
-## 3. The canonical-name + one-alias rule (ADR-012 §7.6)
+## 3. One name per term — flat (supersedes ADR-012 §7.6's canonical+alias scheme)
 
-**Rule (normative for the lexicon).** Each themed term has **one canonical name** and **at most
-one sanctioned alias**. Because identity is content-addressed (ADR-003), the two spellings denote
-the **same definition — the same hash** — and the one canonical formatter (M-142, S3) renders
-whichever the configured audience reads; a beginner sees `anastomose`, an expert types `fuse`,
-with **zero identity cost** and no second definition. The reserved-word set contains both
-spellings (a collision with either is an explicit diagnostic, never a silent shadow).
+ADR-012 §7.6 proposed a **canonical long form + one short alias** per Runtime term, on the
+reasoning that content-addressing (ADR-003) makes a second spelling "free" (same hash, projected
+differently by the formatter). **Rejected** here in favor of a flat rule:
 
-A precision the projection metaphor must not overstate: where the alias is a genuine
-*abbreviation* it is literally one word shortened; where it is a chosen *synonym*
-(`anastomose`/`fuse`, `mycorrhizal-network`/`mesh`, `sclerotium`/`cyst`) the two are different
-words bound to one content-addressed definition — same *meaning*, same hash, **not** "the same
-word projected two ways". The rule is "one canonical name + at most one sanctioned synonym", and
-the alias must earn its single slot by the mnemonic/collision-free/pronounceable test (DN-02 §1).
+> **Each term has exactly one name.** No canonical/alias pairs, no per-audience projection.
 
-This bounds vocabulary growth: no term may sprout a *family* of forms (the `sclrt`/`sclerotize`/
-`sclerotium` sprawl is exactly what the rule forbids), and a term whose canonical name is already
-short and pronounceable (`hypha`, `forage`) takes **no alias** — "at most one" includes zero.
+The "free" benefit is speculative (there are no users, and no formatter yet), while the cost is
+real *now*: two spellings per concept to keep in sync, a normative projection rule, and the
+honesty wrinkle that a "synonym alias" (`anastomose`/`fuse`) is two different words dressed as
+one. Flat is DRY/KISS — pick the single clearest name and stop. Where a concept's *themed* word
+is itself the clearest, it is themed (`hypha`, `cyst`, `graft`); where a plain word is clearer,
+the plain word is the name (`fuse`, `mesh`, `reclaim`) — the DN-02 gate applied once, to one
+name. Content-addressing still underlies *definition* identity; the lexicon just doesn't mint two
+labels for it.
 
-## 4. Runtime-tier names (ADR-012 §7.6, against the RFC-0008 meanings)
+This still bounds growth (the `sclrt`/`sclerotize`/`sclerotium` sprawl is exactly what one-name
+forbids) and keeps the reserved-word set minimal.
+
+## 4. Runtime-tier names (one each, against the RFC-0008 meanings)
 
 Now that RFC-0008 §4.5 gives each Runtime term an operational meaning, the T-map test is
-runnable. The ratified set (canonical name ⟶ **at most one** sanctioned alias):
+runnable. The ratified **single name** per concept:
 
-| Concept (RFC-0008) | Canonical | Old short | **Ratified alias** | Why |
-|---|---|---|---|---|
-| concurrent execution unit | `hypha` | `hyph` | **none** | `hypha` is already short + pronounceable; "at most one" is *zero* here — no abbreviation earns its slot |
-| lawful state fusion (RT6) | `anastomose` | `anas` | **`fuse`** | RT6 is genuine *merge* (CRDT join — two states converge into one); `weave` was rejected on **T-map** (woven threads stay distinct, implying the wrong behavior — the DN-02 `spawn`-for-a-pure-fn disqualifier); `fuse` is honest to "two become one" and equally pronounceable |
-| decentralized mesh (RT5) | `mycorrhizal-network` | `cmn` | **`mesh`** | a gossip/pub-sub overlay has a *universal* name; keeping it conventional is what the gate demands (theme the unique, keep the universal). `cmn` read as "common", not a mesh |
-| capability contract w/ infra | `mycorrhize` | `myco` | **`graft`** | `myco` **collides with the language family name** (Mycelium/"Myco"), forcing a rename; `graft` is pronounceable and teaches host-binding (eyes open: botanical not fungal, and implies more permanence than RT4's revocable affine contract — accepted as clean-word-beats-ugly-accurate, `symb` being a vowel-strip we penalize elsewhere) |
-| durable checkpoint | `sclerotium` | `sclrt` | **`cyst`** (verb `encyst`) | `sclrt` was an unpronounceable vowel-strip; **encystment is the biological process of becoming a dormant, resistant, *resumable* form** — the single most behaviorally-accurate T-map in the Runtime set (a cyst *is* an RT2 checkpoint). Reads as noun (`a cyst`) and verb (`encyst(x)`). `dorm` was the runner-up; `cyst` wins on theme fidelity |
-| explicit value movement | `translocate` | `xloc` | **`xloc`** | kept — `x` = cross/trans is an established abbreviation convention (xfer, xlat, xchg), so `xloc` *teaches* "trans-locate"; not a bare vowel-strip |
-| adaptive placement policy | `forage` | `forage` | **none** | already a clean pronounceable word; a reified RFC-0005 policy (RT3). No alias earns its slot |
-| priority transport path | `rhizomorph` | `rhizo` | **none** | appears rarely; the canonical name suffices (`rhizo` retired as a reflex abbreviation under "at most one = zero") |
-| execution-mode switch | `dimorph` | `dimorph` | **`dimorph`** | kept (tiering = RFC-0004 `ExecutionMode`; repr-switch = `Swap`, S1) |
-| runtime-unit reclamation | `reclaim` | `reclaim` | **`reclaim`** | kept — clear; **scope clarified** (RFC-0008 RT7): reclaims *stale runtime units*, **never memory** (LR-9 makes memory reclamation automatic; a memory-`reclaim` would contradict it) |
+| Concept (RFC-0008) | **Name** | Why this name |
+|---|---|---|
+| concurrent execution unit | `hypha` | the fungal unit; short, pronounceable, the signature concept of the runtime |
+| lawful state fusion (RT6) | `fuse` | RT6 is genuine *merge* (CRDT join — two states converge into one); `fuse` is honest to "two become one". (`anastomose` was the obscure long form; `weave` was rejected on T-map — woven threads stay distinct) |
+| decentralized mesh (RT5) | `mesh` | a gossip/pub-sub overlay has a *universal* name; the gate keeps the universal word where it is clearest (`cmn`/`mycorrhizal-network` were opaque/ornamental) |
+| capability contract w/ infra | `graft` | `myco`/`mycorrhize` **collide with the language family name** (Mycelium/"Myco"); `graft` is pronounceable and teaches host-binding (eyes open: botanical not fungal, implies more permanence than RT4's revocable affine contract — accepted as clean-beats-ugly, `symb` being a vowel-strip) |
+| durable checkpoint | `cyst` | **encystment is becoming a dormant, resistant, *resumable* form** — the most behaviorally-accurate T-map in the set (a cyst *is* an RT2 checkpoint); used constructor-style `cyst(computation)`, matching `spore(value)`. (`sclerotium` was the obscure long form; `sclrt` an unpronounceable vowel-strip; `dorm` the runner-up) |
+| explicit value movement | `xloc` | `x` = cross/trans is an established abbreviation convention (xfer, xlat, xchg), so `xloc` *teaches* "trans-locate"; chosen over the longer `translocate` for the flat single name |
+| adaptive placement policy | `forage` | a clean pronounceable word; a reified RFC-0005 policy (RT3) |
+| priority transport path | `backbone` | the standard term for a declared high-bandwidth/long-distance path — exactly RT3's definition (the obscure `rhizomorph`/`rhizo` is dropped) |
+| execution-mode switch | `tier` | the canonical behavior *is* tiering (interpreted↔native `ExecutionMode`, RFC-0004); standard compiler vocabulary, and more precise than `dimorph` (the dense↔sparse sense is a `Swap`, S1, not this) |
+| runtime-unit reclamation | `reclaim` | clear; **scope clarified** (RFC-0008 RT7): reclaims *stale runtime units*, **never memory** (LR-9 makes memory reclamation automatic; a memory-`reclaim` would contradict it) |
 
 **Status (unchanged from RFC-0008 §4.5):** these remain **reserved vocabulary, not active
 syntax** — DN-03 ratifies the *names*; activation still requires each construct's implementation
@@ -87,15 +87,13 @@ the *right* names.
 ## 5. What this changes in the artifacts
 
 - **Reserved-word set** (lexer + M-141 linter) gains: `consume`, `grow`, `for` (active Surface);
-  the Runtime canonical names + their single aliases (`hypha`, `anastomose`/`fuse`,
-  `mycorrhizal-network`/`mesh`, `mycorrhize`/`graft`, `sclerotium`/`cyst` (+ verb `encyst`),
-  `translocate`/`xloc`, `forage`, `rhizomorph`, `dimorph`, `reclaim`) as **reserved-but-inactive**
-  (a parse-time "reserved for the runtime model (RFC-0008), not yet active" diagnostic, never a
-  silent accept).
+  the Runtime names `hypha`, `fuse`, `mesh`, `graft`, `cyst`, `xloc`, `forage`, `backbone`,
+  `tier`, `reclaim` — **one each** — as **reserved-but-inactive** (a parse-time "reserved for
+  the runtime model (RFC-0008), not yet active" diagnostic, never a silent accept).
 - **`impl`** is the inherent-method keyword (conventional) when methods enter the grammar; `embody`
   is **not** reserved.
-- **Lexicon Reference** updates its Surface table (drop `embody`, the `consume`/`grow` notes), the
-  Runtime table (the ratified names), and adds the alias rule (§3).
+- **Lexicon Reference** updates its Surface table (drop `embody`, the `consume`/`grow` notes) and
+  collapses the Runtime table to one name per concept (the alias rule is retired, §3).
 - **The Example Programs Reference** `loop` note (Example #17) is superseded by `for` (§2);
   Runtime examples keep their "intent, not runnable" marking until activation.
 
@@ -104,17 +102,16 @@ the *right* names.
 - **`grow` vs `derive`** spelling-overlap with the eventual macro/derive system — flagged, not
   decided; revisit when generative features are specified.
 - **Activation** of any Runtime term — each needs its RFC-0008 implementation-stage RFC (R1/R2).
-- **The alias projection UX** (which audience sees which spelling, how the formatter is
-  configured) — an M-142/L3 tooling matter, not a vocabulary decision.
 
 ---
 
 ## Meta — changelog
 
 - **2026-06-10 — Resolved.** Amends DN-02 (append-only): adopt `consume`/`grow`; decline
-  `embody` (keep `impl`); reserve `for` (RFC-0007 §4.8); ratify the **canonical-name +
-  one-alias** rule (with the abbreviation-vs-synonym precision, §3) and the Runtime names against
-  RFC-0008 §4.5's grounded meanings — `anas`→`fuse` (genuine merge; `weave` rejected on T-map),
-  `cmn`→`mesh`, `myco`→`graft`, `sclrt`→`cyst`/`encyst` (encystment = dormant resumable form);
-  `xloc`/`dimorph`/`reclaim` kept; `hypha`/`forage`/`rhizomorph` take **no** alias ("at most one"
-  = zero). Still reserved-not-active. Superseding any term is a new note, not a rewrite.
+  `embody` (keep `impl`); reserve `for` (RFC-0007 §4.8); adopt **one name per term** (flat —
+  ADR-012 §7.6's canonical+alias scheme is rejected as needless surface area, §3) and the single
+  Runtime names against RFC-0008 §4.5's grounded meanings: `hypha`, `fuse` (genuine merge —
+  `anastomose`/`weave` dropped), `mesh`, `graft`, `cyst` (encystment = dormant resumable form;
+  `cyst(…)` constructor-style like `spore`), `xloc`, `forage`, `backbone` (was `rhizomorph`),
+  `tier` (was `dimorph`), `reclaim`. Still reserved-not-active. Superseding any term is a new
+  note, not a rewrite.

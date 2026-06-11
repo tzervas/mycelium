@@ -57,25 +57,24 @@ checked term-by-term in §4.5:
   living inside a *scope* that outlives none of its children (structured concurrency — T4.1).
   Hyphae never share state; they exchange **values** (with their `Meta` intact) over typed
   connections.
-- **Anastomosis** (fusion) is how two hyphae's *state* merges: only through declared merge
+- `fuse` (anastomosis) is how two hyphae's *state* merges: only through declared merge
   operations with join-semilattice discipline (commutative, associative, idempotent — the
   CRDT *sufficient condition* for convergence, T4.2), and the merged value's guarantee is the
-  **meet** of the inputs.
-  Fusion is an operation with semantics, never an ambient effect.
-- **Translocation** moves values between nodes. It is explicit, typed as fallible, preserves
+  **meet** of the inputs. Fusion is an operation with semantics, never an ambient effect.
+- `xloc` (translocation) moves values between nodes. It is explicit, typed as fallible, preserves
   metadata (WF5 does not stop at the NIC), and is *not* a representation change — if the wire
   format differs from the value's `Repr`, that is a `Swap` and it is visible (S1).
-- A **sclerotium** (dormant form) is a checkpoint: because the deterministic fragment's
+- A `cyst` (encystment — the dormant form) is a checkpoint: because the deterministic fragment's
   computations are replayable values-plus-continuation, a checkpoint is an ordinary
   content-addressed artifact — the same move durable-execution runtimes made by *requiring*
   determinism of workflow code (T4.4).
-- **Foraging** is placement: *where* work runs. Placement affects performance, never meaning —
+- `forage` is placement: *where* work runs. Placement affects performance, never meaning —
   the Legion lesson (mapping is separated from semantics, T4.3) — so it is an RFC-0005 policy
   with EXPLAIN, the third site of the one selection mechanism.
-- The **mesh** (common mycorrhizal network) is decentralized coordination: gossip/pub-sub whose
+- The `mesh` (the common mycorrhizal network) is decentralized coordination: gossip/pub-sub whose
   delivery and convergence guarantees are *probabilistic* — so they carry `ProbabilityBound`s
   and honest strength tags, like every other approximate thing in Mycelium (T4.2).
-- **Reclaim** is supervision: detecting and reclaiming stale *runtime units* (never memory —
+- `reclaim` is supervision: detecting and reclaiming stale *runtime units* (never memory —
   LR-9 already handles memory automatically), under reified supervision policies, in the OTP
   tradition (T4.5).
 
@@ -170,7 +169,7 @@ This RFC composes nodes; it changes nothing inside one. Specifically:
   checkpointability (§4.4) and migration presuppose replayable determinism, so the
   deterministic-fragment + checked-total discipline is what makes a computation *dormable* —
   the same gate, one more privilege behind it.
-- **`dimorph`** (mode switching) is not a new mechanism: switching interpreted ↔ native is
+- **`tier`** (mode switching) is not a new mechanism: switching interpreted ↔ native is
   RFC-0004's existing `ExecutionMode` story (observable-equivalent by NFR-7, the JIT-tiering
   precedent — T4.6); switching dense ↔ sparse *representation* is a `Swap` (S1) — lexically
   visible, certified, never a runtime's silent prerogative.
@@ -186,20 +185,20 @@ This RFC composes nodes; it changes nothing inside one. Specifically:
   static fusion safety (T4.2); v0 commits only the *hook*: a channel's element type may be a
   protocol reference, and protocol conformance is a checkable obligation (the same
   pattern as guarantee indices: dynamic check first, static discipline staged later).
-- **The mesh** (`mycorrhizal-network`) is gossip/pub-sub overlay coordination for discovery, signals, and
+- **The `mesh`** (the common mycorrhizal network) is gossip/pub-sub overlay coordination for discovery, signals, and
   resource accounting. Its guarantees are explicitly probabilistic (RT5): per-protocol
   `ProbabilityBound`s with declared bases (T4.2's verified results for epidemic broadcast),
   surfaced through `Meta` like every other δ. Byzantine participants are **out of scope of v0**
   (R8-Q4): the mesh trusts its members; hostile-member hardening is its own future RFC.
 
-### 4.4 Durability: sclerotia and spores
+### 4.4 Durability: cysts and spores
 
-A computation in the dormable fragment (§4.2) checkpoints to a **sclerotium**: a content-addressed
-artifact containing (a) the values in scope, (b) the continuation *by content hash* (the code is
-already content-addressed — ADR-003), and (c) the `Meta` needed to resume honestly. Determinism
-makes this sound: resume-and-replay reaches the same observable (the durable-execution precedent,
-which *requires* workflow determinism for exactly this reason — T4.4). A sclerotium is data:
-storable, translocatable, inspectable, EXPLAIN-able.
+A computation in the dormable fragment (§4.2) checkpoints to a `cyst` (encystment): a
+content-addressed artifact containing (a) the values in scope, (b) the continuation *by content
+hash* (the code is already content-addressed — ADR-003), and (c) the `Meta` needed to resume
+honestly. Determinism makes this sound: resume-and-replay reaches the same observable (the
+durable-execution precedent, which *requires* workflow determinism for exactly this reason —
+T4.4). A `cyst` is data: storable, `xloc`-able, inspectable, EXPLAIN-able.
 
 The **spore** is the deployment-shaped sibling: code + initial values + manifest, germinating
 into a running hypha. Its precedents are content-addressed artifact systems (Nix derivations,
@@ -212,23 +211,21 @@ place for it* and that the manifest is the natural component of the larger artif
 ### 4.5 The Runtime vocabulary, grounded — and still reserved
 
 The operational meaning each term now has (the T-map test ADR-012 §7.3 said could not yet be
-run) — with the names **ratified by DN-03** (the §7.6 refinements, against these very meanings):
+run) — with **one name per term** ratified by DN-03 (flat; ADR-012 §7.6's canonical+alias scheme
+was rejected as needless surface area):
 
-| Canonical (alias) | Operational meaning (this RFC) | Grounding | Invariants |
+| Name | Operational meaning (this RFC) | Grounding | Invariants |
 |---|---|---|---|
 | `hypha` | structurally-scoped concurrent computation over immutable values | T4.1 | RT1/RT2/RT7 |
-| `anastomose` (`fuse`) | lawful state fusion: semilattice merge, meet-composed `Meta` (RT6 is genuine *merge*, so `fuse` not `weave`) | T4.2 | RT6 |
-| `translocate` (`xloc`) | explicit, fallible, `Meta`-preserving value movement with backpressure | T4.3 | RT1/RT4 |
-| `sclerotium` (`cyst`, verb `encyst`) | content-addressed checkpoint of a dormable computation — encystment *is* the dormant-resumable form | T4.4 | RT2 + §4.4 |
-| `mycorrhize` (`graft`) | capability contract with external infrastructure; the capability is an affine `substrate` handle (LR-8) | T4.3/T4.5 | RT4 |
+| `fuse` | lawful state fusion: semilattice merge, meet-composed `Meta` — RT6 is genuine *merge* (two states converge into one), so `fuse` (not `weave`/`anastomose`) | T4.2 | RT6 |
+| `xloc` | explicit, fallible, `Meta`-preserving value movement with backpressure ("trans-locate") | T4.3 | RT1/RT4 |
+| `cyst` | content-addressed checkpoint of a dormable computation — encystment *is* the dormant-resumable form; `cyst(…)` constructor-style like `spore(…)` | T4.4 | RT2 + §4.4 |
+| `graft` | capability contract with external infrastructure; the capability is an affine `substrate` handle (LR-8) | T4.3/T4.5 | RT4 |
 | `forage` | adaptive placement/discovery as a reified RFC-0005 policy (third site) | T4.3 | RT3 |
-| `rhizomorph` | a declared/promoted transport path — a placement-policy artifact, semantics-free | T4.3 | RT3 |
-| `mycorrhizal-network` (`mesh`) | gossip/pub-sub overlay with honest probabilistic guarantees | T4.2 | RT5 |
-| `dimorph` | execution-mode switch: tiering = RFC-0004 `ExecutionMode` (NFR-7-equivalent); representation switch = `Swap` (S1) | T4.6 | RT2/S1 |
+| `backbone` | a declared/promoted high-bandwidth transport path — a placement-policy artifact, semantics-free | T4.3 | RT3 |
+| `mesh` | gossip/pub-sub overlay with honest probabilistic guarantees | T4.2 | RT5 |
+| `tier` | execution-mode switch: tiering = RFC-0004 `ExecutionMode` (NFR-7-equivalent); a representation switch is a `Swap` (S1), not this | T4.6 | RT2/S1 |
 | `reclaim` | supervision-tree reclamation of *runtime units* (never memory — LR-9) | T4.5 | RT7 |
-
-(`hypha`, `forage`, `rhizomorph`, `dimorph`, `reclaim` carry **no** alias — the canonical is
-already short, and DN-03's "at most one" includes zero.)
 
 **Status rule (normative):** these remain **reserved vocabulary, not active syntax** — DN-03 has
 ratified the *names* (above) through the DN-02 three-test gate, but activation still requires an
@@ -240,7 +237,7 @@ Examples using them remain illustrations of intent (ADR-012 §7.3's marking stan
 - **R0 (this RFC):** the model and invariants. No syntax, no implementation obligation.
 - **R1 (single node):** structured concurrency + deterministic channels in the runtime, behind
   the RT2 reference-sequentialization differential. The natural successor to the L1 track.
-- **R2 (distribution):** translocation, mesh, sclerotia — each construct landing with its
+- **R2 (distribution):** `xloc`, `mesh`, `cyst`s — each construct landing with its
   honest bounds (RT5) and its differential/TV obligations.
 
 R1 before R2 is load-bearing: every R2 guarantee is stated against R1's deterministic core.
@@ -312,14 +309,15 @@ deployables); JIT tier-up/deopt (mode switching with semantic equivalence). Full
   `spore(v)` the degenerate single-value case — §4.4's composition reading is ratified. Still
   open: the deployable artifact's schema, signing story, and germination contract (the R2
   implementation stage's obligation).
-- **R8-Q6 (vocabulary ratification).** DN-03: the three-test gate over §4.5's meanings, the
-  short-form refinements (ADR-012 §7.6), and the canonical-long-form + one-short-alias rule.
+- **R8-Q6 (vocabulary ratification).** *Resolved* — DN-03 ran the three-test gate over §4.5's
+  meanings and ratified **one name per term** (flat), rejecting ADR-012 §7.6's canonical+alias
+  scheme. §4.5's table now carries the single ratified names.
 
 ## 9. Future possibilities
 
 Guarantee-aware placement (forage policies that weigh a node's ability to *preserve* strength —
 e.g. avoid lossy re-encodes); mesh-wide EXPLAIN ("why is this value here?" answered from
-provenance + placement records); sclerotium-based time-travel debugging (checkpoints are values;
+provenance + placement records); `cyst`-based time-travel debugging (checkpoints are values;
 diffing them is `EXPLAIN` over history); native-ternary nodes joining the mesh as just another
 substrate (the RFC-0004 backend story, distributed).
 
