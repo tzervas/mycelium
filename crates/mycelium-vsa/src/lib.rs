@@ -24,6 +24,7 @@ pub mod hrr;
 pub mod mapb;
 pub mod mapi;
 pub mod matrix;
+pub mod recon;
 pub mod sbc;
 pub(crate) mod wrap;
 
@@ -34,6 +35,7 @@ pub use hrr::Hrr;
 pub use mapb::MapB;
 pub use mapi::MapI;
 pub use matrix::{matrix_tag, RFC0003_MATRIX};
+pub use recon::reconstruct_role;
 pub use sbc::Sbc;
 
 use mycelium_core::{Bound, BoundBasis, BoundKind, GuaranteeStrength};
@@ -52,7 +54,7 @@ pub enum VsaOp {
 }
 
 /// Why a VSA operation could not be performed — always explicit, never a silent coercion (G2).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum VsaError {
     /// Operand dimensionalities disagree (or disagree with the model's `dim`).
     DimMismatch {
@@ -104,6 +106,23 @@ pub enum VsaError {
         /// Index of the offending component.
         index: usize,
     },
+    /// The manifest does not support compositional reconstruction with a cleanup decode — the
+    /// RFC-0003 §6 indexed-vs-compositional distinction, made operational (M-260).
+    NotCompositional,
+    /// The requested role is not named in the manifest's recipe — reconstruction outside the
+    /// recorded structure is refused, never guessed (G2).
+    UnknownRole {
+        /// The role that was asked for.
+        role: String,
+    },
+    /// The cleanup confidence fell below the manifest's own threshold — an explicit refusal,
+    /// never a silent low-quality retrieval (G2; FR-S4).
+    BelowCleanupThreshold {
+        /// The achieved confidence.
+        confidence: f64,
+        /// The manifest's threshold.
+        threshold: f64,
+    },
     /// A constructed result violated a Core IR invariant.
     Wf(mycelium_core::WfError),
 }
@@ -139,6 +158,20 @@ impl core::fmt::Display for VsaError {
             VsaError::DegenerateBundleComponent { index } => write!(
                 f,
                 "bundle component {index} has a vanished phasor sum — its phase is undefined"
+            ),
+            VsaError::NotCompositional => write!(
+                f,
+                "manifest does not support compositional reconstruction with a cleanup decode"
+            ),
+            VsaError::UnknownRole { role } => {
+                write!(f, "role {role:?} is not named in the manifest's recipe")
+            }
+            VsaError::BelowCleanupThreshold {
+                confidence,
+                threshold,
+            } => write!(
+                f,
+                "cleanup confidence {confidence} is below the manifest threshold {threshold}"
             ),
             VsaError::Wf(e) => write!(f, "well-formedness violation: {e}"),
         }

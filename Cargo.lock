@@ -175,6 +175,7 @@ name = "mycelium-vsa"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
+ "serde_json",
 ]
 
 [[package]]

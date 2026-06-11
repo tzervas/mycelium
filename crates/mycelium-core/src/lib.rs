@@ -15,6 +15,7 @@ pub mod id;
 pub mod lower;
 pub mod meta;
 pub mod node;
+pub mod recon;
 pub mod repr;
 pub mod ternary;
 pub mod value;
@@ -25,6 +26,7 @@ pub use guarantee::GuaranteeStrength;
 pub use id::ContentHash;
 pub use meta::{Meta, PackScheme, PhysicalLayout, Provenance, SparsityObs};
 pub use node::{Node, PolicyRef, Prim, VarId};
+pub use recon::{DecodeProcedure, DecodeSpec, Recipe, ReconInfo, ReconMode};
 pub use repr::{Repr, ScalarKind, SparsityClass};
 pub use value::{Payload, Trit, Value};
 
@@ -39,6 +41,9 @@ pub enum WfError {
     MalformedRepr,
     /// A payload does not match its representation (paradigm or length).
     PayloadReprMismatch,
+    /// A reconstruction manifest violates its schema invariants (RFC-0003 §6;
+    /// `reconstruction-manifest.schema.json`).
+    MalformedReconstruction,
 }
 
 impl core::fmt::Display for WfError {
@@ -50,6 +55,9 @@ impl core::fmt::Display for WfError {
                 "representation has non-positive width/dim/trits or empty model"
             }
             WfError::PayloadReprMismatch => "payload does not match its representation",
+            WfError::MalformedReconstruction => {
+                "reconstruction manifest violates its schema invariants (RFC-0003 §6)"
+            }
         };
         f.write_str(s)
     }
