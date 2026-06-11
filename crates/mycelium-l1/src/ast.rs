@@ -189,6 +189,21 @@ pub enum Expr {
         /// The arms (≥ 1).
         arms: Vec<Arm>,
     },
+    /// `for x in xs, acc = init => body` — bounded iteration over a linearly recursive data
+    /// value; elaboration-defined sugar for a synthesized structurally-recursive fold, `Total`
+    /// by construction (RFC-0007 §4.8; spelling adopted at r3).
+    For {
+        /// The element binder.
+        x: String,
+        /// The iterated (spine) value.
+        xs: Box<Expr>,
+        /// The accumulator binder.
+        acc: String,
+        /// The initial accumulator.
+        init: Box<Expr>,
+        /// The per-element body (yields the next accumulator).
+        body: Box<Expr>,
+    },
     /// `swap(value, to: target, policy: path)` — never-silent (S1).
     Swap {
         /// The value being converted.

@@ -45,6 +45,8 @@ pub enum Tok {
     Else,
     /// `match`.
     Match,
+    /// `for` — bounded iteration sugar over structural recursion (RFC-0007 §4.8; r2).
+    For,
     /// `swap` — the never-silent representation change (native corpus term).
     Swap,
     /// `wild` — the denied-by-default unsafe block (themed).
@@ -172,6 +174,7 @@ pub fn keyword(word: &str) -> Option<Tok> {
         "then" => Tok::Then,
         "else" => Tok::Else,
         "match" => Tok::Match,
+        "for" => Tok::For,
         "swap" => Tok::Swap,
         "wild" => Tok::Wild,
         "spore" => Tok::Spore,

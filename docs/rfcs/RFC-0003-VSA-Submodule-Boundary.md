@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0003 |
-| **Status** | **Accepted** (solidified from the research pass) |
+| **Status** | **Accepted (r2)** (solidified from the research pass; r2 scope note per ADR-013) |
 | **Type** | Foundational / normative |
 | **Date** | June 08, 2026 |
 | **Depends on** | RFC-0001 (`VSA` Repr kind, `Hypervector` slot, `ModelId` registry, `CapacityBound`/`CrosstalkBound`, lattice); ADR-008 (VSA optional submodule); ADR-010 (bound kernels); Research Findings **T0.2**, **T1.2**, **T1.3**, **T2.2**, **T2.6** |
@@ -49,8 +49,22 @@ Distinguish, explicitly and inspectably:
 
 **Factorization** (resonator networks — Frady/Kent/Olshausen/Sommer, *Neural Computation* 32(12), 2020): needed when a vector is a binding product of *unknown* factors; manifest adds per-factor codebooks + binding op + approximate inverse. **Not guaranteed to converge** (almost always within an operational-capacity regime); reconstruction is **lossy-bounded, best-effort**. Kept **Phase-3 exploratory** with a **probabilistic-only** guarantee (FR-C2).
 
+> **Scope note (r2, per ADR-013).** The surface term **`spore`** now names the
+> **content-addressed deployable unit** (code + values + metadata, T4.3/T4.4); the
+> reconstruction manifest specified in this section is **one digest-referenced component** of a
+> spore, and the surface expression `spore(v)` constructs the degenerate single-value spore
+> whose payload is `v`'s manifest. Nothing in this section's manifest contents, schema
+> (`reconstruction-manifest`, unchanged), or guarantees changes — only the term's scope is
+> reconciled so the narrow and broad senses cannot silently diverge (ADR-012 §7.4).
+
 ## 7. Implementation note (T2.6)
 Build the VSA submodule in Rust (no production-grade Rust VSA library exists; torchhd is Python — port its well-documented operation set as the reference). Reuse the `balanced-ternary` crate for trit storage / 5-trit-per-byte & 40-trit packings; evaluate the early "bitsliced ternary + VSA" crate as a reference. Implement MAP/BSC/HRR/FHRR/sparse with the §4 tags.
 
 ## 8. Interfaces
 Provides `bind/unbind/...` as RFC-0001 prims over `VSA`; populates `Meta.bound` (`CapacityBound`/`CrosstalkBound`) with lattice-correct tags; uses **ADR-010** kernels. §5 sparsity-refinement decision **feeds back into RFC-0001 §4.3/§4.5** (now applied there).
+
+## Meta — changelog
+
+- **2026-06-10 (r2) — scope note (ADR-013).** `spore` = the content-addressed deployable unit;
+  this RFC's reconstruction manifest is one component of it; `spore(v)` is the degenerate
+  single-value case. Manifest contents/schema unchanged. Resolves ADR-012 §7.4.

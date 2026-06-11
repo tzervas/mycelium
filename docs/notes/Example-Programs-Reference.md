@@ -268,8 +268,17 @@ reconciliation with the ratified semantics. Cross-references: ADR-012 §7.
 - **Example #11 — bound kind.** A VSA→Dense lossy swap carries an `ErrorBound`/`ProbabilityBound`
   (ADR-010), not a `CapacityBound` (which describes VSA superposition capacity, not swap error).
   The guarantee correctly degrades (`Empirical` for HRR/FHRR-class ops, RFC-0003 §4).
-- **Example #17 — `loop`** contradicts the functional core (RFC-0007 §6); express iteration as
-  recursion until a bounded-iteration sugar is decided (ADR-012 §7.2).
+- **Example #17 — `loop`** is superseded: bounded iteration is now `for x in xs, acc = init =>
+  body` (RFC-0007 §4.8, `Total` by construction; spelling adopted at r3). `loop`/`while` stay
+  excluded (ADR-012 §7.2 resolved).
+- **`embody` → `impl`** (DN-03): inherent-method blocks (Example #1's `embody Vector { … }`) use
+  the conventional `impl` when methods enter the grammar; `embody` was declined at the gate.
+- **Runtime names** (DN-03, *one name per term* — flat): the example code below uses the
+  *superseded* draft spellings. The ratified single names are **`hypha`**, **`fuse`** (was
+  `anas`), **`xloc`**, **`cyst`** (was `sclrt`/`Sclerotium`; `cyst(…)` constructor-style like
+  `spore`), **`graft`** (`myco`), **`mesh`** (`cmn`), **`forage`**, **`backbone`** (was `rhizo`/
+  `rhizomorph`), **`tier`** (was `dimorph`), `reclaim`. The Runtime examples remain *intent*
+  pending RFC-0008 activation; read them with the ratified names (DN-03 §4 is the source of truth).
 - **Consistent with the corpus:** the `swap`/`policy`/`Meta`/`guarantee`/`bound`/`policy_used`
   shape (Examples #2, #11, #18) matches RFC-0001 §4.3 and RFC-0002; `matured` (Examples #8, #18)
   matches the stable-component gate (RFC-0004 §4); content-addressed `spore` matches RFC-0003 §6

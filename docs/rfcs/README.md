@@ -4,7 +4,7 @@ An RFC is a detailed, normative design of a subsystem that multiple decisions pl
 
 ## Status set
 
-`Draft → Accepted → Superseded`. RFC-0001…0005 are **Accepted** (solidified from the two research passes); RFC-0006 and RFC-0007 are **Drafts** (the language layer; concrete surface syntax gated on KC-2).
+`Draft → Accepted → Superseded`. RFC-0001…0005 are **Accepted** (solidified from the two research passes); RFC-0006, RFC-0007, and RFC-0008 are **Drafts** (the language layer — concrete surface syntax gated on KC-2 — and the runtime model, grounded by Pass 4).
 
 ## Index
 
@@ -12,11 +12,12 @@ An RFC is a detailed, normative design of a subsystem that multiple decisions pl
 |---|---|---|---|
 | 0001 | Core IR & Metadata Schema | Accepted (r2) | Foundation FR-M*/VR-*; ADR-001/002/003/006/008; ADR-010 (§4.7); ADR-011 (§4.3 `Bound`) |
 | 0002 | Swap Certificate & Split Regime | Accepted | RFC-0001; ADR-002; ADR-010; shares the certificate checker with RFC-0004 |
-| 0003 | VSA Submodule Boundary | Accepted | RFC-0001; ADR-008; ADR-010 |
+| 0003 | VSA Submodule Boundary | Accepted (r2) | RFC-0001; ADR-008; ADR-010; ADR-013 (r2 `spore` scope note) |
 | 0004 | Execution Model & "Stable Component" | Accepted | RFC-0001; ADR-007; ADR-009; DN-01; shares the checker with RFC-0002 |
 | 0005 | Selection-Policy Language | Accepted | RFC-0001; ADR-006; same mechanism used by RFC-0002 & RFC-0004 |
 | 0006 | Surface Language, Grammar & Term-Language Layering | **Draft** | RFC-0001 §4.5; ADR-003/006/007; KC-2/KC-3; RR-3; SPEC §10.1/§10.2 |
 | 0007 | The L1 Kernel Calculus | **Draft** | RFC-0006; RFC-0001 §4.5/§4.6; RFC-0004 §4; ADR-003; T3.1/T3.4 |
+| 0008 | Runtime & Concurrency Execution Model | **Draft** | RFC-0004 (extends, per-node model unchanged); RFC-0001/0002/0005/0006/0007; ADR-012 §7.3; T4.1–T4.6 |
 
 Cross-cutting machinery (decided across RFCs): **one** certificate checker (RFC-0002 ⇄ RFC-0004), **one** selection mechanism (RFC-0002 ⇄ RFC-0004), and **two** bound kernels meeting at one shared certificate (ADR-010 → RFC-0001/0002/0003). See `../Doc-Index.md` for the dependency DAG.
 

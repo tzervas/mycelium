@@ -6,8 +6,9 @@
  * for the accept/reject conformance corpus under ./conformance/ — every accept/ program parses
  * by this grammar, every reject/ program does not.
  *
- * Vocabulary is the ratified DN-02 set (Resolved 2026-06-10). Themed keywords: colony, substrate,
- * spore, matured, wild. Conventional: use, type, trait, fn, let, in, if, then, else, match, swap.
+ * Vocabulary is the ratified DN-02 set (Resolved 2026-06-10) plus `for` (RFC-0007 §4.8 r2;
+ * recorded in DN-03). Themed keywords: colony, substrate, spore, matured, wild. Conventional:
+ * use, type, trait, fn, let, in, if, then, else, match, for, swap.
  * This is v0 — it covers the L1-facing core (RFC-0006 §3 L1); abstraction/recursion typing,
  * the full trait/guild machinery (LR-2), and L2 sugar layer above it.
  *)
@@ -54,6 +55,7 @@ strength       ::= 'Exact' | 'Proven' | 'Empirical' | 'Declared'
 expr           ::= let_expr
                  | if_expr
                  | match_expr
+                 | for_expr
                  | swap_expr
                  | wild_expr
                  | spore_expr
@@ -62,6 +64,13 @@ expr           ::= let_expr
 let_expr       ::= 'let' Ident (':' type_ref)? '=' expr 'in' expr
 if_expr        ::= 'if' expr 'then' expr 'else' expr
 match_expr     ::= 'match' expr '{' arm (',' arm)* ','? '}'
+
+/* for: bounded iteration — elaboration-defined sugar for a structurally-recursive fold over a
+ * linearly recursive data value, Total by construction (RFC-0007 §4.8). The spelling is adopted
+ * (r3; under the same global KC-2 gate as this whole grammar); `while`/`loop`/`break`/`continue`/
+ * `return` are NOT forms and NOT reserved (they get teaching diagnostics where they already
+ * error). */
+for_expr       ::= 'for' Ident 'in' app_expr ',' Ident '=' app_expr '=>' expr
 arm            ::= pattern '=>' expr
 pattern        ::= '_'
                  | literal

@@ -321,7 +321,7 @@ impl Cx<'_> {
                         d.ctors[i].fields.len()
                     ));
                 }
-                self.err(format!("unknown name `{name}`"))
+                self.err(teach_unknown(name, &format!("unknown name `{name}`")))
             }
             Expr::Let {
                 name,
@@ -356,6 +356,13 @@ impl Cx<'_> {
                 Ok(t)
             }
             Expr::Match { scrutinee, arms } => self.infer_match(scope, scrutinee, arms),
+            Expr::For {
+                x,
+                xs,
+                acc,
+                init,
+                body,
+            } => self.infer_for(scope, x, xs, acc, init, body),
             Expr::Swap { value, target, .. } => {
                 let vty = self.infer(scope, value)?;
                 if !matches!(vty, Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _)) {
@@ -454,7 +461,44 @@ impl Cx<'_> {
         if let Some(ret) = prim_sig(name, &arg_tys) {
             return Ok(ret);
         }
-        self.err(format!("unknown function/constructor/prim `{name}`"))
+        self.err(teach_unknown(
+            name,
+            &format!("unknown function/constructor/prim `{name}`"),
+        ))
+    }
+
+    /// T-For (RFC-0007 §4.8): `xs` must be a *linearly recursive* data type (nil/cons shape);
+    /// `init : A`; `body : A` under `x : E, acc : A`; the whole expression is `A`. Every shape
+    /// violation is an explicit refusal — general catamorphisms are an L2 concern.
+    fn infer_for(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        x: &str,
+        xs: &Expr,
+        acc: &str,
+        init: &Expr,
+        body: &Expr,
+    ) -> Result<Ty, CheckError> {
+        let sty = self.infer(scope, xs)?;
+        let Ty::Data(tname) = &sty else {
+            return self.err(format!(
+                "`for` iterates a linearly recursive data value, got {sty} (RFC-0007 §4.8)"
+            ));
+        };
+        let elem = linear_elem_ty(self.site, self.types, tname)?;
+        let aty = self.infer(scope, init)?;
+        scope.push((x.to_owned(), elem));
+        scope.push((acc.to_owned(), aty.clone()));
+        let bty = self.infer(scope, body);
+        scope.pop();
+        scope.pop();
+        let bty = bty?;
+        if bty != aty {
+            return self.err(format!(
+                "`for` body must yield the accumulator type {aty}, got {bty}"
+            ));
+        }
+        Ok(aty)
     }
 
     fn infer_match(
@@ -598,6 +642,77 @@ impl Cx<'_> {
             Literal::List(_) => self.err("list literals are deferred in v0 (Dense construction)"),
         }
     }
+}
+
+/// The teaching diagnostic for imperative control-flow words used as names (RFC-0007 §4.8):
+/// the error was happening anyway (unknown name) — make it teach instead of confuse.
+fn teach_unknown(name: &str, base: &str) -> String {
+    if matches!(name, "while" | "loop" | "break" | "continue" | "return") {
+        format!(
+            "{base} — `{name}` is not a Mycelium form; iterate by recursion or \
+             `for x in xs, acc = init => body` (RFC-0007 §4.8)"
+        )
+    } else {
+        base.to_owned()
+    }
+}
+
+/// The v0 linear-recursion shape check (RFC-0007 §4.8): every constructor of `tname` is either
+/// a **nil** (no fields) or a **cons** (exactly one spine field of type `tname` + exactly one
+/// element field), with one element type across all cons constructors. Returns the element
+/// type; anything else is an explicit refusal.
+fn linear_elem_ty(
+    site: &str,
+    types: &BTreeMap<String, DataInfo>,
+    tname: &str,
+) -> Result<Ty, CheckError> {
+    let d = types
+        .get(tname)
+        .ok_or_else(|| CheckError::new(site, format!("unknown type `{tname}`")))?;
+    let mut elem: Option<Ty> = None;
+    let mut has_cons = false;
+    for c in &d.ctors {
+        if c.fields.is_empty() {
+            continue; // a nil — ends the spine
+        }
+        let (spine, rest): (Vec<&Ty>, Vec<&Ty>) = c
+            .fields
+            .iter()
+            .partition(|f| matches!(f, Ty::Data(n) if n == tname));
+        if spine.len() != 1 || rest.len() != 1 {
+            return Err(CheckError::new(
+                site,
+                format!(
+                    "`for` needs a linearly recursive type: constructor `{}` of `{tname}` must \
+                     have exactly one `{tname}` field and one element field (general \
+                     catamorphisms are an L2 concern — RFC-0007 §4.8)",
+                    c.name
+                ),
+            ));
+        }
+        has_cons = true;
+        match &elem {
+            None => elem = Some(rest[0].clone()),
+            Some(e) if e == rest[0] => {}
+            Some(e) => {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "`for` needs one element type across `{tname}`'s constructors: \
+                         {e} vs {}",
+                        rest[0]
+                    ),
+                ))
+            }
+        }
+    }
+    if !has_cons {
+        return Err(CheckError::new(
+            site,
+            format!("`{tname}` has no recursive constructor — nothing for `for` to iterate"),
+        ));
+    }
+    Ok(elem.expect("has_cons implies an element type"))
 }
 
 /// The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. Surface names

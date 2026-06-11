@@ -3,11 +3,16 @@
 //! vocabulary, validated against the `docs/spec/grammar/` conformance corpus (the
 //! WebAssembly-spec pattern, T3.1-B: the corpus is the ground truth, not any single parser).
 //!
-//! This is the first increment of the L1 track (RFC-0006 §3): it turns Mycelium-the-language's
-//! ratified surface into an inspectable AST, and proves the grammar is real by parsing every
-//! `accept/` program and explicitly rejecting every `reject/` one (`tests/conformance.rs`). The
-//! type checker, the Maranget match compiler, the structural totality checker, and the elaboration
-//! to the L0 Core IR land here next, per the L1 kernel-calculus RFC (forthcoming).
+//! The L1 track so far (RFC-0006 §3; RFC-0007): the lexer + recursive-descent parser prove the
+//! grammar is real by parsing every `accept/` program and explicitly rejecting every `reject/`
+//! one (`tests/conformance.rs`); the v0 monomorphic typechecker + structural totality checker
+//! ([`checkty`], [`totality`]; RFC-0007 §4.4/§4.5) gate `matured` on checked totality; the
+//! fuel-guarded big-step evaluator ([`eval`]; §4.6) runs every checked program over the *same*
+//! trusted prim/swap engines as the L0 paths; and the elaborator ([`elab`]; §4.6) lowers the
+//! evaluation-complete fragment to closed L0 terms — refusing everything else with an explicit
+//! `Residual`, never a partial artifact. The three-way differential (L1-eval ↔ elaborate→L0-interp
+//! ↔ AOT, validated through the M-210 shared checker) lives in `tests/differential.rs` (NFR-7).
+//! Still ahead: the Maranget match compiler and full L1-in-Core-IR (the RFC-0001 revision).
 //!
 //! Honesty: every malformed input is an explicit [`ParseError`] with a source position — the
 //! parser never panics and never silently accepts (S5/G2). The lexer disambiguates the one tricky
@@ -16,7 +21,9 @@
 
 pub mod ast;
 pub mod checkty;
+pub mod elab;
 pub mod error;
+pub mod eval;
 pub mod lexer;
 pub mod parse;
 pub mod token;
@@ -24,7 +31,9 @@ pub mod totality;
 
 pub use ast::Colony;
 pub use checkty::{check_colony, CheckError, Env, Ty};
+pub use elab::{elaborate, ElabError};
 pub use error::ParseError;
+pub use eval::{Evaluator, L1Error, L1Value};
 pub use parse::parse;
 pub use totality::Totality;
 

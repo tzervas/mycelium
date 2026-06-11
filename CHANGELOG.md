@@ -8,6 +8,129 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (RFC-0007 r3 — `for` spelling adopted)
+- **RFC-0007 §4.8 → r3**: the bounded-iteration spelling `for x in xs, acc = init => body`
+  moves from *provisional* to **adopted** (maintainer decision, 2026-06-10) — committed now
+  rather than held pending a KC-2 ablation run. The kc2-09/kc2-10 benchmark tasks remain as
+  measurements of the choice, not its gate; like all v0 surface syntax it stays under RFC-0006
+  §1's global KC-2 gate, and revisiting it later is an explicit recorded decision (append-only).
+  Wording updated in DN-03 §2, Lexicon Reference, Example-Programs note, `mycelium.ebnf`, the
+  prototype doc-comments, and the KC-2 tasks docstring.
+
+### Added (DN-03 — lexicon amendment; resolves ADR-012 §7.5/§7.6)
+- **DN-03** (Resolved): amends DN-02 (append-only) through the three-test gate — **adopt**
+  `consume` and `grow` (Surface), **decline** `embody` (inherent methods keep the conventional
+  `impl`), **reserve** `for` (the RFC-0007 §4.8 bounded-iteration keyword). Ratifies the
+  **one name per term** (flat) — **rejecting ADR-012 §7.6's canonical+alias scheme** as needless
+  surface area (the "content-addressing makes a second spelling free" benefit is speculative; two
+  labels per concept to keep in sync is a real cost now). Ratifies the single Runtime names
+  against RFC-0008 §4.5's grounded meanings: `hypha`, **`fuse`** (RT6 is genuine merge —
+  `anastomose`/`weave` dropped), `xloc`, **`cyst`** (encystment = the dormant resumable form;
+  `cyst(…)` constructor-style like `spore`), **`graft`** (resolves the `myco` collision with the
+  language family name), **`mesh`**, `forage`, **`backbone`** (was `rhizomorph`), **`tier`** (was
+  `dimorph` — the canonical behavior is interpreted↔native tiering), `reclaim`. `reclaim` scope
+  clarified (runtime units, never memory). Runtime vocabulary stays reserved-not-active. Lexicon
+  Reference, Example-Programs note, and RFC-0008 §3/§4.2/§4.4/§4.5 updated to the single names;
+  Doc-Index gains the DN-03 row.
+
+### Added (ADR-013 — `spore` is the deployable unit; resolves ADR-012 §7.4)
+- **ADR-013** (Accepted, maintainer deliberation 2026-06-10): `spore` = the
+  **content-addressed deployable unit** — a hash-identified DAG of code (ADR-003 definitions,
+  ship-by-hash per T4.3), values (with `Meta` intact), the RFC-0003 §6 **reconstruction
+  manifest** as one digest-referenced component, and artifact metadata. The narrow ratified
+  sense is the **degenerate case**: `spore(v)` constructs the single-value spore (the manifest
+  for `v`); the schema name `reconstruction-manifest` is unchanged. Grounded in T4.3/T4.4
+  (Nix/OCI/Wasm/Unison convergence on content-addressed artifact DAGs).
+- **RFC-0003 → Accepted (r2)**: §6 scope note only — manifest contents, schema, and guarantees
+  unchanged. **RFC-0008 R8-Q5** resolved at the scope level (schema/signing/germination contract
+  remain the R2 implementation stage's obligation). Lexicon-Reference `spore` flag resolved;
+  ADR index gains 012/013 rows.
+
+### Changed (RFC-0007 r2 — bounded iteration; resolves ADR-012 §7.2)
+- **RFC-0007 §4.8 (new, r2)**: bounded iteration as **elaboration-defined sugar** over
+  structural recursion — no new kernel node. Normative content = the desugaring to a synthesized
+  self-recursive helper over *linearly recursive* (nil/cons-shaped) data, classified `Total` by
+  the existing §4.5 checker with zero extension (bounded **by construction**: values are finite
+  and acyclic). Provisional spelling A — `for x in xs, acc = init => body` — ships in the
+  non-normative prototype grammar (`for` reserved, recorded in DN-03); named-args `fold` is the
+  planned L2 library form; the ratified spelling is **KC-2-evidence-gated** (T3.6).
+  `while`/`loop`/`break`/`continue`/`return` stay excluded and **unreserved**, with *teaching
+  diagnostics* where they already error (parse-level juxtaposition + check-level unknown name).
+- **Prototype** (`crates/mycelium-l1`): `for` through the whole pipeline — lexer/parser
+  (+ teaching diagnostics), T-For with explicit linear-shape refusals, totality (a `for` adds no
+  recursion), an **iterative** spine-walk evaluator (long folds cost fuel, never host stack),
+  elaboration `Residual` (Fix is outside the evaluation-complete fragment); EBNF + conformance
+  corpus (`accept/11`, `reject/08`). **KC-2**: tasks kc2-09 (`for`) / kc2-10 (explicit
+  recursion) form the runnable iteration-spelling ablation pair. 44 crate tests green.
+
+### Added (RFC-0008 + Research Pass 4 — the Runtime tier, grounded)
+- **Research Record 04** (`research/04-runtime-concurrency-RECORD.md`; findings **T4.1–T4.6**):
+  the fourth research pass, grounding the Runtime tier ADR-012 §7.3 flagged as aspirational —
+  concurrency units & structured lifetimes (Erlang isolation, nurseries, Kahn/LVars determinism,
+  CakeML clocked-semantics extension), state merge & meshes (CRDT convergence, session types,
+  epidemic protocols), mobility & placement (Unison ship-by-hash, the Legion
+  placement-is-never-semantics separation, Reactive-Streams backpressure, work-stealing bounds
+  with side-conditions), durability (CRIU's exception catalogue vs durable-execution's
+  determinism requirement; Nix/OCI/Wasm content-addressed artifacts), failure & supervision
+  (OTP, FLP, φ-accrual, Waldo et al.), and mode switching (verified deoptimization, CoreJIT).
+  Primary-source verified with per-target uncertainty registers; three explicit novelty flags
+  (no found precedent: determinism-gated checkpointability; learned-placement-as-inspectable-
+  policy; per-value guarantee tags across a distribution boundary).
+- **RFC-0008 — Runtime & Concurrency Execution Model** (Draft): the runtime model the Runtime
+  vocabulary presupposed, built on Pass 4. **RT1–RT7 runtime invariants** extend S1–S6 to
+  concurrency/distribution: values move & state is never shared (RT1); the deterministic
+  fragment is the default with *sequential reference semantics* — NFR-7 extends to concurrency
+  via the M-210 checker (RT2); nondeterminism is reified as RFC-0005 policies — placement
+  becomes the **third site** of the one selection mechanism (RT3); partial failure is explicit,
+  distribution transparency forbidden (RT4); runtime guarantees (delivery/convergence/failure
+  suspicion) are tagged on the same lattice with `ProbabilityBound`s (RT5); fusion is lawful
+  semilattice merge — payload joins, guarantee meets (RT6); runtime lifetimes are structured —
+  *a leaked task is not expressible*, extending LR-9 (RT7). RFC-0004's per-node model is
+  extended, not changed; the Runtime vocabulary is grounded (§4.5 operational-meaning table)
+  but stays **reserved, not active syntax**, pending DN-03 + implementation RFCs. The `spore`
+  scope reconciliation (ADR-012 §7.4) and name ratification are deliberately left to the
+  RFC-0003 revision and DN-03 respectively. Indexes updated (`docs/rfcs/README.md`,
+  `docs/Doc-Index.md`, Lexicon-Reference status notes).
+
+### Added (L1 execution: evaluator, elaboration, three-way differential)
+- **L1 fuel-guarded evaluator** (`crates/mycelium-l1/src/eval.rs`; RFC-0007 §4.6): a big-step
+  environment machine mirroring M-110's contract — CakeML-style clocked semantics (explicit
+  `FuelExhausted`, never a hang; T3.4), dispatching through the *same* trusted prim registry and
+  certified binary↔ternary swap engine as the L0 paths (NFR-7). Runs the full checked surface
+  (data values, flat `match`, recursion); the stage-0 **dynamic guarantee-index check**
+  (RFC-0007 §4.3): asserting `@ g` stronger than a value's tag is an explicit
+  `GuaranteeTooWeak` — an annotation may only weaken, never upgrade (VR-5). A separate explicit
+  recursion-**depth guard** (`DepthExceeded`) keeps deep recursion an error, never a host stack
+  overflow. Checker-unreachable states are explicit `Stuck` errors, never panics (S5/G2).
+- **Elaboration to L0 on the evaluation-complete fragment** (`crates/mycelium-l1/src/elab.rs`;
+  RFC-0007 §4.6): acyclic calls inline (CBV order preserved via `Let` bindings); bodies must
+  reduce to `Const/Var/Let/Op/Swap` residue; recursion (`Fix`), `match`/`if`, data construction,
+  and dynamic guarantee indices are explicit **`Residual` refusals — never a partial artifact**.
+  Includes the shared surface→kernel bridge (literals, repr resolution) and the documented v0
+  **policy-name reference** stand-in (deterministic, domain-separated; honest about deferring
+  RFC-0005 name→policy-object binding) shared by both execution paths.
+- **The RFC-0007 §4.6 differential** (`crates/mycelium-l1/tests/differential.rs`; NFR-7): on a
+  10-program fragment corpus, **L1-eval ↔ elaborate→L0-interp ↔ AOT** agree on the observable
+  (`repr + payload + guarantee`), with every agreeing pair validated through the **M-210 shared
+  TV checker** (`ObservationalEquiv`) and a control asserting the checker rejects a genuinely
+  divergent pair. Outside-the-fragment behavior is pinned too: elaboration refuses (`Residual`)
+  while L1-eval runs — including a `Total`-classified structural recursion that terminates and a
+  `Partial` one that exhausts fuel explicitly. 31 crate tests; `just check` green.
+
+### Added (KC-2 harness)
+- **KC-2 LLM-leverage harness** (M-002 structural deliverable; Foundation §6 P0.2; SC-5b; G10):
+  `experiments/mycelium_experiments/kc2/` — the **fixed 8-task benchmark** (minimal Mycelium
+  surface fragment vs a **Python-embedded DSL baseline**, both arms carrying checked reference
+  solutions that prove the benchmark well-posed), the `myc-check` CLI oracle
+  (`crates/mycelium-l1/src/bin/myc-check.rs`: parse / typecheck / task-signature conformance with
+  distinct exit codes — no AI in the judging loop, S6), and the generate→check→feedback harness
+  measuring **syntactic validity**, **first-attempt type-check pass rate** (the SC-5b number),
+  and **edit-to-fix iterations**. *Running* the experiment remains blocked on LLM API access
+  (the documented M-002 external blocker); the report hard-codes
+  `verdict: not established` — never pre-written (VR-5). Baseline-arm execution is in-process
+  `exec` and documented as requiring a disposable sandbox for untrusted model output. 8 pytest
+  tests; `just check` green.
+
 ### Added (L1 static analysis + lexicon integration)
 - **L1 typechecker + structural totality checker** (`crates/mycelium-l1`, RFC-0007 §4.4/§4.5):
   the v0 monomorphic typechecker over the data registry (declarations-as-registry), exhaustiveness

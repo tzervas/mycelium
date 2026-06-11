@@ -15,17 +15,21 @@
 | **RFC-0001 — Core IR & Metadata Schema** | value model, `Repr`, `Meta`, guarantee lattice, content-addressing | **Accepted (r2)** |
 | **DN-01 — Packing Placement** | tradeoff study → schedule-staged decision | **Resolved → folded into RFC-0001 §4.1 + RFC-0004 §5** |
 | **DN-02 — Fungal Lexicon & Reserved Words** | the naming law + ratified surface vocabulary (themed vs conventional) feeding RFC-0006's grammar | **Resolved** (ratified 2026-06-10) |
+| **DN-03 — Lexicon Amendment: Surface Additions & Runtime Names (one name each)** | amends DN-02: adopt `consume`/`grow`, decline `embody` (keep `impl`), reserve `for`; **one name per term** (flat — rejects ADR-012 §7.6's canonical+alias scheme); the single Runtime names (`hypha`/`fuse`/`xloc`/`cyst`/`graft`/`forage`/`backbone`/`mesh`/`tier`/`reclaim`) | **Resolved** (2026-06-10) |
 | **Lexicon Reference (v0.4)** | the three-tier vocabulary catalog (Surface/Runtime/Formal) with short mnemonic forms; extends DN-02 | **Draft** (review notes in ADR-012 §7) |
 | **Example Programs Reference (v0.2)** | 20 worked examples demonstrating the lexicon and surface syntax against RFC-0001 semantics | **Draft** (grounding notes appended) |
 | **RFC-0002 — Swap Certificate & Split Regime** | certificate, legal pairs, bijection semantics, shared checker | **Accepted** |
-| **RFC-0003 — VSA Submodule Boundary** | boundary, guarantee matrix, sparsity refinement, manifest | **Accepted** |
+| **RFC-0003 — VSA Submodule Boundary** | boundary, guarantee matrix, sparsity refinement, manifest | **Accepted (r2)** — r2 `spore` scope note per ADR-013 |
 | **RFC-0004 — Execution Model & "Stable Component"** | MLIR backbone, shared checker, schedule-staged packing | **Accepted** |
 | **RFC-0005 — Selection-Policy Language** | total cost-based policy + EXPLAIN | **Accepted** |
 | **RFC-0006 — Surface Language & Term-Language Layering** | L0–L3 layering, syntactic honesty invariants, Rust-class-and-beyond capability targets; concrete syntax KC-2-gated | **Draft** |
 | **RFC-0007 — The L1 Kernel Calculus** | ten-node term budget, registry data declarations, totality/`matured` gate, v0 elaboration fragment | **Draft** |
 | **ADR-010 — Verified-Numerics Foundation** | two bound kernels + shared certificate | **Accepted** |
 | **ADR-011 — BoundBasis is universal** | `basis` is a companion of every `Bound` (supersedes RFC-0001 r1 §4.3) | **Accepted** |
-| **ADR-012 — Layered Lexicon & Fungal Runtime Model** | three-tier lexicon + an (aspirational) distributed fungal runtime vocabulary | **Proposed** (architect review notes appended §7; runtime model needs its own RFC + research) |
+| **ADR-012 — Layered Lexicon & Fungal Runtime Model** | three-tier lexicon + an (aspirational) distributed fungal runtime vocabulary | **Proposed** (architect review notes appended §7; the runtime model is now drafted as RFC-0008, grounded by research Pass 4) |
+| **Research Record 04 (T4.1–T4.6)** | evidence base (pass 4): concurrency, merge/mesh, mobility/placement, durability, failure, mode switching | Recorded → `research/04-runtime-concurrency-RECORD.md` |
+| **RFC-0008 — Runtime & Concurrency Execution Model** | RT1–RT7 runtime invariants; deterministic-fragment-first; placement as the third policy site; lawful fusion; honest probabilistic guarantees; Runtime vocabulary grounded but reserved | **Draft** |
+| **ADR-013 — `spore` Is the Deployable Unit** | spore = content-addressed code+values+metadata; the RFC-0003 manifest is one component; `spore(v)` is the degenerate case | **Accepted** |
 
 ## 2. Dependency DAG
 
