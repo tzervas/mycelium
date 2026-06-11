@@ -23,6 +23,8 @@ pub mod fhrr;
 pub mod hrr;
 pub mod mapb;
 pub mod mapi;
+pub mod matrix;
+pub mod sbc;
 pub(crate) mod wrap;
 
 pub use bsc::Bsc;
@@ -31,6 +33,8 @@ pub use fhrr::Fhrr;
 pub use hrr::Hrr;
 pub use mapb::MapB;
 pub use mapi::MapI;
+pub use matrix::{matrix_tag, RFC0003_MATRIX};
+pub use sbc::Sbc;
 
 use mycelium_core::{Bound, BoundBasis, BoundKind, GuaranteeStrength};
 
