@@ -20,3 +20,5 @@ mycelium-interp = { path = "../mycelium-interp" }
 # and since M-210 validates each pair through the shared TV checker (Certificate from numerics).
 mycelium-cert = { path = "../mycelium-cert" }
 mycelium-numerics = { path = "../mycelium-numerics" }
+# The E3 wrong-layout differential (M-251) drives the layout chosen by the M-250 packing selector.
+mycelium-select = { path = "../mycelium-select" }

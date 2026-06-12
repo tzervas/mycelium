@@ -142,6 +142,21 @@ impl Meta {
         self
     }
 
+    /// Record the schedule-staged packing chosen at a lowering stage (RFC-0004 §5; DN-01;
+    /// M-250). This is the **inspectable record** of the layout decision, not the decision locus
+    /// (the selector is [`mycelium-select`](https://docs.rs/mycelium-select); RFC-0005 §4).
+    ///
+    /// **M-I5 (lossless `physical`).** The layout is a lossless re-encoding of the same `payload`:
+    /// it touches only the `physical` field and leaves the guarantee, bound, and value untouched
+    /// — so recording (or *re*-recording) it can never change the value's type or its guarantee
+    /// (RFC-0001 §4.3; `physical-layout.schema.json`). M-I1…M-I4 are therefore preserved by
+    /// construction.
+    #[must_use]
+    pub fn with_physical(mut self, physical: PhysicalLayout) -> Self {
+        self.physical = Some(physical);
+        self
+    }
+
     /// The common `Exact` metadata with no bound (M-I1).
     #[must_use]
     pub fn exact(provenance: Provenance) -> Self {
@@ -368,6 +383,40 @@ mod tests {
             None,
         );
         assert_eq!(m.unwrap_err(), WfError::MalformedBound);
+    }
+
+    #[test]
+    fn with_physical_is_lossless_m_i5() {
+        // M-I5: recording a layout touches only `physical` — guarantee, bound, and every other
+        // field are untouched, so the value's type and guarantee cannot change.
+        let base = Meta::new(
+            Provenance::Root,
+            GuaranteeStrength::Proven,
+            Some(proven_capacity()),
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        let recorded = base.clone().with_physical(PhysicalLayout::TritPacked {
+            scheme: PackScheme::Tl2,
+        });
+        assert_eq!(
+            recorded.physical(),
+            Some(PhysicalLayout::TritPacked {
+                scheme: PackScheme::Tl2
+            })
+        );
+        // Everything that defines type/guarantee is identical (M-I5: lossless).
+        assert_eq!(recorded.guarantee(), base.guarantee());
+        assert_eq!(recorded.bound(), base.bound());
+        assert_eq!(recorded.provenance(), base.provenance());
+        // Re-recording a different layout still changes nothing but `physical`.
+        let rerecorded = recorded.clone().with_physical(PhysicalLayout::TritPacked {
+            scheme: PackScheme::I2S,
+        });
+        assert_eq!(rerecorded.guarantee(), base.guarantee());
+        assert_eq!(rerecorded.bound(), base.bound());
     }
 
     #[test]

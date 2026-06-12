@@ -17,6 +17,8 @@
 
 pub mod aot;
 pub mod dialect;
+pub mod pack;
 
-pub use aot::run;
+pub use aot::{run, run_with_layout};
 pub use dialect::emit;
+pub use pack::{pack_trits, relayout_trits, unpack_trits};

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Living draft** (initial cut, 2026-06-09) |
+| **Status** | **Exit gate met** (2026-06-12 — all five §1 build conditions; was Living draft 2026-06-09) |
 | **Owns** | the concrete, issue-coupled decomposition of the Phase-2 epics (#28–#34) into `M-2xx` build tasks |
 | **Source of truth above this doc** | `docs/Mycelium_Project_Foundation.md` §6 (roadmap), `docs/spec/SPECIFICATION.md` §10 (open build items 10.7–10.10), `tools/github/issues.yaml` + `idmap.tsv` (task ids), ADR-010/011 + RFC-0001…0005 + DN-01 (design corpus, all Accepted/Resolved) |
 | **Mirrors** | the GitHub board: every task carries its issue number from `tools/github/idmap.tsv` |
@@ -66,6 +66,12 @@ Phase 2 closes when **all** of:
   catches a mislabeled layout (NFR-7); the reconstruction manifest recovers a novel compositional
   combination.
 
+**Status (2026-06-12): all five conditions met.** Batches E/F (numerics, full swap + shared
+checker), E2-6 (selection + EXPLAIN), Batch G (Dense + VSA breadth, reconstruction), and Batch H
+(M-250 packing selector → M-251 E3 wrong-layout differential) have all landed at the task level. The
+gate is **met**; the KC re-run is in §5 (KC-2 stays open as an explicitly out-of-scope external
+probe — it is not one of the five gate conditions).
+
 Maps to Foundation §6 Phase-2 success metrics: SC-2 (new swaps), SC-3 (global), the KC-4 first
 measurement, NFR-7 (wrong-layout), and the SC-5 EXPLAIN channel.
 
@@ -92,8 +98,8 @@ All Phase-2 tasks, with issue number (`idmap.tsv`), priority, dependency, and **
 | **M-240** VSA: MAP-B + BSC (Exact) | [#60](https://github.com/tzervas/mycelium/issues/60) | P1 | M-130 | RFC-0003 §4 | **Done (2026-06-11)** — `mycelium-vsa::{mapb,bsc}` |
 | **M-241** VSA: HRR + FHRR (Empirical unbind) | [#61](https://github.com/tzervas/mycelium/issues/61) | P1 | M-130/M-132, E2-4 | RFC-0003 §4 / T1.2 | **Done (2026-06-11)** — `mycelium-vsa::{hrr,fhrr}` |
 | **M-242** Sparse/SBC + §4 matrix + MAP-B nesting | [#62](https://github.com/tzervas/mycelium/issues/62) | P1 | M-240, M-241 | RFC-0003 §4 / RR-13 | **Done (2026-06-11)** — `mycelium-vsa::{sbc,matrix}` + RR-13 refusal |
-| **M-250** Packing selector (I2_S/TL1/TL2) | [#63](https://github.com/tzervas/mycelium/issues/63) | P1 | E2-6 (M-222), M-112 | RFC-0004 §5 / DN-01 | Ready after E2-6 |
-| **M-251** E3 wrong-layout differential | [#64](https://github.com/tzervas/mycelium/issues/64) | P1 | M-250, M-151 | RFC-0004 §8 / NFR-7 | Ready after M-250 |
+| **M-250** Packing selector (I2_S/TL1/TL2) | [#63](https://github.com/tzervas/mycelium/issues/63) | P1 | E2-6 (M-222), M-112 | RFC-0004 §5 / DN-01 | **Done (2026-06-12)** — `mycelium-select::{bitnet_packing_policy,select_layout}` + `Meta::with_physical` |
+| **M-251** E3 wrong-layout differential | [#64](https://github.com/tzervas/mycelium/issues/64) | P1 | M-250, M-151 | RFC-0004 §8 / NFR-7 | **Done (2026-06-12)** — `mycelium-mlir::{pack,run_with_layout}` + `tests/wrong_layout.rs` |
 | **M-260** Reconstruction manifest (ReconInfo) | [#65](https://github.com/tzervas/mycelium/issues/65) | P1 | VSA, E2-4 | RFC-0003 §6 | **Done (2026-06-11)** — `mycelium-core::recon` + `mycelium-vsa::recon` |
 
 Legend — **Ready**: can start now from the corpus + landed deps. **Ready after X**: a hard
@@ -172,6 +178,32 @@ land as their own crates (`mycelium-numerics`, `mycelium-select`), *not* inside 
 keeps the trusted kernel auditable (KC-3 / SoC / ADR-010 "small trusted base") while the numerics
 checker is a certificate *consumer*. Routed back to ADR-010 (trusted-base tiers) for the normative
 basis.
+
+**Phase-2 exit-gate KC re-run (2026-06-12, after Batch H).** Re-run at the Phase-2 gate per the
+honesty rule (VR-5 — strength as actually *established*):
+
+- **KC-1 — ✅ confirmed (build), no regression.** Carried from Phase 1 (M-001 LH probe SAFE; M-131
+  `Proven` capacity bound by checked instantiation). Batch G/H added MAP-B/BSC/HRR/FHRR/SBC each
+  tagged at the strength its basis supports (the §4 matrix as a checked table) and the
+  trial-validated `EmpiricalProfile` pattern — extended, never upgraded.
+- **KC-2 — open, blocked (external).** Unchanged: the M-002 harness landed (2026-06-10) but *running*
+  it needs LLM API access; the report hard-codes "not established". **Out of the Phase-2 exit-gate
+  scope** (the gate is the five §1 build conditions, which map to SC-2/SC-3/KC-4/NFR-7/SC-5 — not
+  KC-2). Flagged, not silently closed.
+- **KC-3 — ✅ holds at the gate.** The trusted kernel stayed single-expert auditable through all four
+  batches: numerics, selection, and the **M-251 packing-byte codec** all live *outside* `mycelium-core`
+  (`mycelium-numerics`, `mycelium-select`, `mycelium-mlir`); core gained only small by-construction
+  records (`Meta.reconstruction`, `Meta.with_physical`) and the existing VSA submodule boundary
+  (ADR-008) held. The §6.9-decision crate split did its job.
+- **KC-4 — measured (2026-06-10), unchanged by Batch H.** The packing layout check rides the existing
+  `ObservationalEquiv` instance (≈10 ns in §6.7) — no new per-swap certificate, so the M-212 verdict
+  (cert-check cost is the same order as the swap; downgrade path **not** triggered) stands. The
+  numeric-budget ratification remains a pending maintainer decision (re-measure on representative
+  hardware when set).
+
+**Verdict:** the **five Phase-2 exit-gate build conditions (§1) are met**; KC-1/KC-3/KC-4 are honestly
+re-confirmed at the gate, KC-2 stays open as an explicitly out-of-scope external probe. The doc moves
+to **exit-gate met** (§8) on this basis.
 
 ---
 
@@ -503,12 +535,71 @@ basis.
   refuses the compositional path); resonator factorization stays Phase-3 with the
   probabilistic-only ceiling enforced in the type.
 
+### 6.17 M-250 — Schedule-staged packing selector · #63 · P1 · done 2026-06-12
+
+- **Goal / acceptance (from issue).** A packing candidate set + cost function; **exhaustive**
+  selection over the fixed bitnet.cpp set (`I2_S`/`TL1`/`TL2`) through the M-222 `select` API,
+  emitting an EXPLAIN trace; the chosen layout recorded in `meta.physical` (lossless, M-I5);
+  determinism + override tested; an E1 perf-harness stub recorded.
+- **Delivered.** `mycelium-select` (the **one** mechanism, RFC-0005 §4 — a thin wrapper over the
+  M-222 `select_packing` adapter, no parallel selector): `BITNET_PACKINGS = [I2S, TL1, TL2]`;
+  `bitnet_packing_policy()` builds the validated policy — the three candidates, a single
+  `Always → Cheapest` rule over the **bits/element** cost model (`I2_S`/`TL1` = 2.0, `TL2` = 1.67
+  b/w; RFC-0004 §5 / DN-01). `select_layout(policy, inputs, forced)` evaluates the cost model
+  **exhaustively** over all three (the set is small + fixed — T1.4, not an autoscheduler) and maps
+  the chosen `PackScheme` to the recorded `PhysicalLayout::TritPacked{scheme}`, returning it with
+  the **mandatory EXPLAIN** (every candidate costed, the matched rule, the override state).
+  `record_packing_layout` attaches it to a `Meta` via the new **`Meta::with_physical`** — a
+  **lossless** record builder (**M-I5**: it touches only `physical`, leaving the guarantee, bound,
+  and value untouched, so M-I1…M-I4 are preserved by construction). The exhaustive cheapest is
+  `TL2` deterministically; a first-class `forced` override picks `I2_S` (index 0, the lossless
+  multiply-add default) or `TL1`; an out-of-range override is an explicit `SelectError`. Tests
+  (`tests/packing.rs`): the fixed candidate set, the costed EXPLAIN ranking, determinism, override
+  (incl. out-of-range refusal), M-I5 losslessness on `Meta`, and size-invariance of the winner.
+  The **E1 stub** is `cargo xtask e1`: it times the substrate packing codec's pack/unpack
+  round-trip per scheme (the build-phase confirmation that staging is cheap to materialize), with
+  an explicit "E1 verdict: not established" — the calibrated kernel benchmark awaits the native
+  libMLIR/LLVM path (ADR-009), never pre-written (VR-5).
+- **Honesty.** Packing is a **schedule concern, not a type distinction** (DN-01 §2/§6): the layout
+  is chosen at a lowering stage and recorded as the inspectable `meta.physical`, never in the type
+  or the content hash. The cost is real storage **bits**, not "arbitrary internal units"
+  (RFC-0005 §2). The packing-codec *bytes* live in `mycelium-mlir` (the AOT crate), **not** the
+  trusted kernel — `mycelium-core` gains only the tiny `with_physical` record (KC-3).
+
+### 6.18 M-251 — E3 wrong-layout soundness differential · #64 · P1 · done 2026-06-12
+
+- **Goal / acceptance (from issue).** Extend the M-151 interp↔AOT differential so a deliberately
+  **mislabeled** `physical` layout **fails** observational equivalence through the M-210 checker
+  (NFR-7) and a **correct** one passes — proving the layout record is sound-by-checking.
+- **Delivered.** `mycelium-mlir::pack` — the **substrate byte-layout codec**: each `PackScheme` is
+  a bijective trit↔byte encoding (`I2_S`/`TL1`/`TwoBitPerTrit` are the three 2-bit-code rotations,
+  4 trits/byte; `TL2`/`FiveTritPerByte` are base-3, 5 trits/byte), so the three bitnet schemes are
+  **mutually distinct** and reading a buffer under the wrong scheme misreads it. Decoding is
+  **total** (an out-of-range code/byte folds `mod 3`) — a misread, never a panic; round-trip under
+  the *same* scheme is the identity (property-tested, incl. the degenerate all-`Zero` case which
+  still diverges across schemes). `relayout_trits(trits, packed_as, read_as)` models the hazard:
+  pack under the true scheme, read under the recorded tag. `aot::run_with_layout` extends the
+  M-151 differential to the packing stage — for a ternary result it materializes the buffer
+  (`packed_as`) and reads it back under the recorded tag (`read_as`), recording the layout on the
+  result's `Meta` (M-I5). The E3 test (`tests/wrong_layout.rs`): a **correct** tag (packed-as ==
+  tag) is the identity ⇒ observably equal to the layout-agnostic reference ⇒ the M-210
+  `ObservationalEquiv` checker **validates**; a **mislabeled** tag (packed-as ≠ tag) misreads the
+  buffer ⇒ a different payload ⇒ the **same** checker reports `NotValidated{ Diverged }` (the
+  circuit-breaker; fall back to the reference — ADR-007). The verdict flips **solely** on the
+  layout tag (so a passing E3 is meaningful, not vacuous), and the true scheme is the one the M-250
+  selector actually chooses (tying the soundness check to the selector it guards).
+- **Honesty.** This is the Mycelium analogue of the MLIR-`transpose` / Rust-`packed` "wrong layout
+  misreads memory" bug DN-01 §4 cites — the layout record is trusted **only because a wrong one is
+  caught** (NFR-7). The real `pack`/`unpack` *native* kernels are deferred (the codec here is the
+  honest skeleton that stands in for them, sufficient to exercise E3); the calibrated E1 perf
+  answer awaits the native backend (ADR-009).
+
 ## 7. Risks & open questions
 
 | Id | Item | Disposition |
 |---|---|---|
 | **T0.1c** | ε and δ do **not** share one composition algebra (settled negative). | Accepted as inherent (ADR-010): two kernels, one certificate. The crate exposes them as separate monoids meeting at `{ε,δ,strength}`; `strength` composes by `meet`. |
-| **RR-12** | Dual-path semantic divergence (interpreter vs AOT). | Carried from Phase 1; the M-210 shared checker **has folded the M-151 differential in** (every corpus pair validates through the `ObservationalEquiv` instance, done 2026-06-10), and M-251's E3 extends it to wrong-layout. |
+| **RR-12** | Dual-path semantic divergence (interpreter vs AOT). | Carried from Phase 1; the M-210 shared checker **has folded the M-151 differential in** (every corpus pair validates through the `ObservationalEquiv` instance, done 2026-06-10). **E3 landed (2026-06-12, M-251):** `run_with_layout` extends the differential to the schedule-staged packing stage — a mislabeled `meta.physical` tag misreads the buffer and is caught as `Diverged`, a correct one passes (NFR-7). The dual-path divergence risk now covers layout, not just lowering/ordering. |
 | **RR-13** | MAP-B accuracy degrades past a nesting depth. | **Enforced (2026-06-11, M-240/M-242):** a MAP-B bundle input that is itself a MAP-B bundle (detected via provenance) is the explicit `NestedBundleUnsupported` refusal — never a silent accuracy loss (G2). |
 | **KC-3** | Integrative complexity → un-auditable kernel. | §5 decision: numerics + selection in separate crates; VSA stays behind ADR-008. Re-run KC-3 at the gate. |
 | **KC-4** | Cert-check overhead unknown until the checker exists. | **Measured** by M-212 (2026-06-10, §6.7): same order as the swap itself — downgrade path not triggered on this evidence. Numeric budget ratification still pending (maintainer). |
@@ -519,8 +610,10 @@ basis.
 ## 8. How this doc stays honest
 
 - **Append-only with status transitions**, mirroring the ADR/RFC discipline: this file moves
-  `Living draft → ratified` only when the Phase-2 exit gate (§1) is met; task rows update in place as
-  their issues progress, but gate verdicts (§5) never pre-record an upgrade.
+  `Living draft → exit-gate met` only when the Phase-2 exit gate (§1) is met; task rows update in
+  place as their issues progress, but gate verdicts (§5) never pre-record an upgrade. **Transitioned
+  2026-06-12** — all five §1 build conditions met after Batch H; the §5 KC re-run was run *at* the
+  gate, not pre-written (KC-2 stays honestly open and out of the gate's scope).
 - **Every task row carries its issue number** (`idmap.tsv` is the join key) so the board and this doc
   cannot silently diverge.
 - **Progress is reported back to the issues** — each task's substantive output links its artifact from
@@ -531,6 +624,17 @@ basis.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-12 (Batch H lands — Phase-2 exit gate met):** M-250/M-251 done — epic **E2-7 complete
+  at the task level**, and with it **all five §1 exit-gate build conditions**. The schedule-staged
+  packing selector (`mycelium-select::{bitnet_packing_policy, select_layout, record_packing_layout}`
+  reusing the one E2-6 mechanism; the chosen `PhysicalLayout` recorded on `meta.physical` via the
+  new lossless `Meta::with_physical`, M-I5), the E3 wrong-layout soundness differential
+  (`mycelium-mlir::pack` byte codec + `run_with_layout` extending M-151 — a mislabeled layout is
+  caught as `Diverged` through the M-210 checker, a correct one passes; NFR-7), and the E1
+  perf-harness stub (`cargo xtask e1`). §2 rows, §6.17–§6.18, §7 RR-12, and the §5 Phase-2-gate KC
+  re-run (KC-1/KC-3/KC-4 re-confirmed; KC-2 open + out of gate scope) added; doc status →
+  **exit-gate met**. Remaining (out of the gate): the RFC-0006 ratification (#67, maintainer) and
+  the KC-2 *run* (M-002, #3, LLM API access).
 - **2026-06-11 (Batch G lands):** M-230/M-240/M-241/M-242/M-231/M-260 done — epics **E2-1, E2-2,
   E2-5 complete at the task level**. The Dense operational surface (`mycelium-dense`), the full
   VSA model breadth (MAP-B/BSC/HRR/FHRR/SBC) with the §4 matrix as a checked table and the

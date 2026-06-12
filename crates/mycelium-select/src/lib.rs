@@ -38,8 +38,8 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use mycelium_core::{
-    operation_hash, Bound, BoundKind, ContentHash, GuaranteeStrength, Meta, PackScheme, Repr,
-    ScalarKind, SparsityClass, SparsityObs, Value,
+    operation_hash, Bound, BoundKind, ContentHash, GuaranteeStrength, Meta, PackScheme,
+    PhysicalLayout, Repr, ScalarKind, SparsityClass, SparsityObs, Value,
 };
 
 /// The four closed paradigm kinds, as a predicate-level discriminator (RFC-0001 §4.1).
@@ -612,4 +612,95 @@ impl PolicyRegistry {
     pub fn is_empty(&self) -> bool {
         self.by_hash.is_empty()
     }
+}
+
+// ===================================================================================================
+// M-250 — the schedule-staged packing selector (E2-7; RFC-0004 §5; DN-01 Resolved; RFC-0005 §4).
+// ===================================================================================================
+//
+// Packing is a **schedule concern**, not a type distinction (DN-01 §2/§6): a lossless physical
+// re-encoding of the same trits. The *type* stays packing-agnostic; the layout is chosen here at a
+// lowering stage by a **cost model evaluated exhaustively over a fixed, enumerable candidate set**
+// — emphatically *not* a Halide-class autoscheduler (RFC-0004 §5; T1.4 confirms the small ≈5-scheme
+// set is materially easier than Halide's exponential search). The choice is then recorded as the
+// inspectable [`PhysicalLayout`] on `Meta.physical` (M-I5 lossless: [`Meta::with_physical`]).
+//
+// This **reuses the one selection mechanism** (RFC-0005 §4: one mechanism, two sites): it is a thin
+// wrapper over [`select_packing`], adding only the `PackScheme → PhysicalLayout` record mapping. No
+// parallel selector exists.
+
+/// The fixed **bitnet.cpp** ternary packing candidate set (RFC-0004 §5; Wang et al.): `I2_S`
+/// (2.0 b/w, lossless multiply-add, the default), `TL1` (2.0 b/w, 4-bit LUT, ARM/NEON), and `TL2`
+/// (1.67 b/w, x86/AVX2, memory-bound). Small and enumerable (T1.4), so the selector evaluates the
+/// cost model over *all three* — exhaustive, not heuristic search.
+pub const BITNET_PACKINGS: [PackScheme; 3] = [PackScheme::I2S, PackScheme::Tl1, PackScheme::Tl2];
+
+/// Map a chosen ternary [`PackScheme`] to the [`PhysicalLayout`] recorded on `Meta.physical`. A
+/// ternary value's packing is always `TritPacked` (RFC-0001 §4.3; mirrors `lower::schedule`); the
+/// scheme is the only degree of freedom, so this is total and lossless (M-I5).
+#[must_use]
+pub fn layout_of(scheme: PackScheme) -> PhysicalLayout {
+    PhysicalLayout::TritPacked { scheme }
+}
+
+/// Build the **default schedule-staged packing policy** (M-250): the three [`BITNET_PACKINGS`]
+/// candidates with a single `Always → Cheapest` rule over the bits/element [`CostModel`]. Because
+/// the cost is exact storage bits (`I2_S`/`TL1` = 2.0, `TL2` = 1.67 b/w; RFC-0004 §5 / DN-01), the
+/// exhaustive cheapest is `TL2`, deterministically — and an override can force `I2_S` (the lossless
+/// multiply-add default) or `TL1` (the ARM LUT) at a call site that knows its target.
+///
+/// The `storage_weight` is `1.0` (cost = raw bits/element × element count; the unit is real bits,
+/// not "arbitrary internal units" — RFC-0005 §2). Returns the validated policy.
+#[must_use]
+pub fn bitnet_packing_policy() -> SelectionPolicy {
+    let candidates = BITNET_PACKINGS
+        .iter()
+        .map(|s| Candidate::Packing(*s))
+        .collect();
+    SelectionPolicy::new(
+        "schedule-staged.bitnet.v1",
+        candidates,
+        vec![Rule {
+            when: Predicate::Always,
+            action: Action::Cheapest,
+        }],
+        0, // unreachable default (Always matches); valid index by construction.
+        CostModel {
+            storage_weight: 1.0,
+        },
+    )
+    .expect("the fixed bitnet packing policy is well-formed by construction")
+}
+
+/// The **packing-schedule selector** (M-250; RFC-0004 §5; one mechanism — RFC-0005 §4): evaluate
+/// the cost model exhaustively over the policy's fixed packing candidate set via [`select_packing`]
+/// and return the chosen [`PhysicalLayout`] to record on `Meta.physical` (M-I5 lossless), together
+/// with the **mandatory EXPLAIN** trace (M-221 — there is no selection without one).
+///
+/// Deterministic: same `(policy, inputs, forced)` → same layout. A first-class `forced` override
+/// picks a candidate by index (e.g. `Some(0)` forces `I2_S`); out of range is an explicit
+/// [`SelectError::OverrideOutOfRange`]. A non-`Packing` candidate at this site is the explicit
+/// [`SelectError::WrongSiteKind`] (`select_packing`'s contract) — never a coercion.
+pub fn select_layout(
+    policy: &SelectionPolicy,
+    inputs: &SelectionInputs,
+    forced: Option<usize>,
+) -> Result<(PhysicalLayout, Explanation), SelectError> {
+    let (scheme, explanation) = select_packing(policy, inputs, forced)?;
+    Ok((layout_of(scheme), explanation))
+}
+
+/// One-call convenience: select the packing layout for a value's `(Repr, Meta)` and **record it**
+/// onto a returned `Meta` (M-I5 lossless via [`Meta::with_physical`]), returning the updated `Meta`
+/// and the EXPLAIN trace. The src `Repr` drives the cost model's element count; the layout record
+/// is the schedule artifact, not a type change.
+pub fn record_packing_layout(
+    policy: &SelectionPolicy,
+    src: &Repr,
+    meta: &Meta,
+    forced: Option<usize>,
+) -> Result<(Meta, Explanation), SelectError> {
+    let inputs = SelectionInputs::from_meta(src.clone(), meta);
+    let (layout, explanation) = select_layout(policy, &inputs, forced)?;
+    Ok((meta.clone().with_physical(layout), explanation))
 }

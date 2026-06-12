@@ -16,3 +16,5 @@ workspace = true
 mycelium-cert = { path = "../crates/mycelium-cert" }
 mycelium-core = { path = "../crates/mycelium-core" }
 mycelium-numerics = { path = "../crates/mycelium-numerics" }
+# The E1 staged-packing perf stub (M-250) times the substrate packing codec.
+mycelium-mlir = { path = "../crates/mycelium-mlir" }

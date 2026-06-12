@@ -8,6 +8,40 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase-2 Batch H — schedule-staged packing selector + E3 wrong-layout differential)
+- **M-250 (`mycelium-select` + `mycelium-core::Meta::with_physical`):** the **schedule-staged
+  packing selector** (RFC-0004 §5; DN-01 Resolved; RFC-0005 §4). `bitnet_packing_policy` builds the
+  fixed bitnet.cpp candidate set (`I2_S`/`TL1`/`TL2`) with an `Always → Cheapest` rule over the
+  bits/element cost model; `select_layout`/`record_packing_layout` reuse the **one** E2-6 selection
+  mechanism (`select_packing`) — adding only the `PackScheme → PhysicalLayout::TritPacked` record
+  mapping — and emit the mandatory EXPLAIN. The exhaustive cheapest is `TL2` (1.67 b/w)
+  deterministically; a first-class override forces `I2_S`/`TL1`; out-of-range overrides are explicit
+  errors. The chosen layout is recorded on `Meta.physical` via the new `Meta::with_physical`, a
+  **lossless** record builder (**M-I5**: touches only `physical`, leaving guarantee/bound/value
+  untouched). Determinism + override + M-I5 losslessness are tested (`tests/packing.rs`).
+- **M-251 (`mycelium-mlir::pack` + `run_with_layout` + `tests/wrong_layout.rs`):** the **E3
+  wrong-layout soundness differential** (RFC-0004 §8; NFR-7; RR-12). A substrate byte-layout codec
+  (`pack_trits`/`unpack_trits`/`relayout_trits`) gives each scheme a bijective trit↔byte encoding —
+  the three bitnet schemes are mutually distinct, so reading a buffer under the wrong scheme
+  misreads it (decoding is total, never a panic). `run_with_layout` extends the M-151 interp↔AOT
+  differential to the packing stage: a **correctly-labeled** layout (packed-as == tag) is the
+  identity and **validates** through the M-210 `ObservationalEquiv` checker; a **mislabeled** layout
+  (packed-as ≠ tag) misreads the buffer and the same checker reports an explicit
+  `NotValidated{ Diverged }` — the circuit-breaker fires (the layout record the M-250 selector chose
+  is trusted *only because a wrong one is caught*). The true scheme used is the one M-250 actually
+  selects, tying the soundness check to the selector it guards.
+- **E1 perf-harness stub (`cargo xtask e1`):** times the substrate packing codec's pack/unpack
+  round-trip per scheme — the build-phase confirmation that staging is cheap to materialize (the
+  calibrated kernel benchmark awaits the native libMLIR/LLVM path; ADR-009). Honest framing: it
+  reports numbers, the E1 verdict stays **not established** (VR-5; deferred to the native path).
+- Phase-2 status: epic **E2-7 complete at the task level** → **all five Phase-2 exit-gate build
+  conditions met** (numerics, full swap + shared checker, selection + EXPLAIN, Dense + VSA breadth,
+  packing + reconstruction). KC-1…KC-4 re-run at the gate (phase-2.md §5): KC-1 confirmed (build,
+  no regression), KC-3 holds (the packing codec landed in `mycelium-mlir`, not the trusted kernel;
+  core gained only the tiny `with_physical` record), KC-4 unchanged (the layout check is the
+  existing ~10 ns observational instance). KC-2 (LLM-survives-the-surface) and the RFC-0006
+  ratification remain open but are **out of the Phase-2 exit-gate scope** (external/maintainer).
+
 ### Added (Phase-2 Batch G — Dense surface, VSA breadth, Dense↔VSA swaps, reconstruction manifest)
 - **M-230 (`mycelium-dense`, new crate):** the typed dim-tracked `Dense{dim, dtype}` operational
   surface (RFC-0001 §4.1) — `DenseSpace` binds dim+dtype in the type; `add`/`sub`/`scale` are
