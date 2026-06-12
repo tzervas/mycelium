@@ -10,8 +10,10 @@
 use std::collections::HashMap;
 
 use mycelium_core::lower::{self, Atom, Rhs};
-use mycelium_core::{Node, Value};
+use mycelium_core::{Node, PackScheme, Payload, PhysicalLayout, Repr, Value};
 use mycelium_interp::{EvalError, PrimRegistry, SwapEngine};
+
+use crate::pack;
 
 fn lookup(env: &HashMap<Atom, Value>, a: &Atom) -> Result<Value, EvalError> {
     env.get(a).cloned().ok_or_else(|| match a {
@@ -52,6 +54,41 @@ pub fn run(node: &Node, prims: &PrimRegistry, swap: &dyn SwapEngine) -> Result<V
         env.insert(b.name.clone(), value);
     }
     lookup(&env, anf.result())
+}
+
+/// Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251;
+/// RFC-0004 §5/§8). The result is first computed by [`run`], then — for a ternary result — its
+/// trits are materialized into a physical buffer **packed under `packed_as`** and **read back under
+/// the recorded tag `read_as`** (the `Meta.physical` claim), and the layout is recorded on the
+/// result's `Meta` (M-I5 lossless, [`Value`]'s `with_physical`).
+///
+/// When the tag is correct (`packed_as == read_as`) the read-back is the identity, so the result is
+/// observably equal to the layout-agnostic reference (the interpreter / [`run`]) — and the M-210
+/// observational-equivalence check validates. A **mislabeled** tag (`packed_as != read_as`)
+/// misreads the buffer, producing a different payload that the same check rejects (NFR-7) — the E3
+/// soundness property: the layout record is trusted *only because a wrong one is caught*.
+///
+/// Non-ternary results carry no trit-packing layout, so they pass through unchanged.
+pub fn run_with_layout(
+    node: &Node,
+    prims: &PrimRegistry,
+    swap: &dyn SwapEngine,
+    packed_as: PackScheme,
+    read_as: PackScheme,
+) -> Result<Value, EvalError> {
+    let v = run(node, prims, swap)?;
+    match (v.repr(), v.payload()) {
+        (Repr::Ternary { .. }, Payload::Trits(trits)) => {
+            let read = pack::relayout_trits(trits, packed_as, read_as);
+            let meta = v
+                .meta()
+                .clone()
+                .with_physical(PhysicalLayout::TritPacked { scheme: read_as });
+            Value::new(v.repr().clone(), Payload::Trits(read), meta)
+                .map_err(|e| EvalError::Swap(e.to_string()))
+        }
+        _ => Ok(v),
+    }
 }
 
 #[cfg(test)]
