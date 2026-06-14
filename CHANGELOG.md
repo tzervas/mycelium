@@ -8,6 +8,16 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (advisory review artifact)
+- **Deep review (2026-06):** `docs/reviews/2026-06-14-deep-review/` — a four-stage advisory
+  review (correctness + test-quality, security audit, quality/style vs the house rules, and a
+  QC/PE improvement roadmap) of the Phase-1/Phase-2 code at HEAD `e2d627e`. Report-only, gates
+  nothing, changed no code. Verdict: strong, honesty-disciplined codebase (0 Critical); 11
+  distinct High findings clustered at the honesty-tag/contract seams (numerics `Proven`-on-
+  unrounded-f64, VSA matrix/capacity over-tagging vs RFC-0003 §4, a totality-checker soundness
+  hole, an unbounded-recursion parser crash, a selection `PolicyRef` collision, and
+  schema↔Rust contract leaks). Not registered in `docs/Doc-Index.md` (advisory, non-normative).
+
 ### Added (Phase-2 Batch H — schedule-staged packing selector + E3 wrong-layout differential)
 - **M-250 (`mycelium-select` + `mycelium-core::Meta::with_physical`):** the **schedule-staged
   packing selector** (RFC-0004 §5; DN-01 Resolved; RFC-0005 §4). `bitnet_packing_policy` builds the
