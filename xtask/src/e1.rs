@@ -23,6 +23,11 @@
 //!    **genuine unpack-compute** (vs §2's spawn/fold overhead) — the runtime-input kernel the
 //!    compute-throughput verdict needed. Each scheme is reported against a hand-written Rust scalar
 //!    baseline doing the identical per-scheme unpack; skips when `clang` is absent.
+//! 4. **JIT runtime specialization** (M-340) — the weight-specialized dot kernel
+//!    (`mycelium_mlir::compile_specialized_dot`) bakes the runtime-known weights in as constants so
+//!    the optimiser drops the unpack and elides the zero lanes, timed against the generic §3 kernel
+//!    over the *same* runtime activation buffer. Both still take runtime activation pointers (no
+//!    constant folding), so the ratio is honest compute-vs-compute; reported as-measured (VR-5).
 //!
 //! No benchmarking dependency (house style): a warmup pass, then the minimum mean over several
 //! batches. Run with `--release` (`cargo run --release -p xtask -- e1`); a debug build is refused.
@@ -33,7 +38,9 @@ use std::time::Instant;
 use mycelium_core::{Meta, Node, PackScheme, Payload, Provenance, Repr, Trit, Value};
 use mycelium_interp::{IdentitySwapEngine, Interpreter, PrimRegistry};
 use mycelium_mlir::pack::{pack_trits, unpack_trits};
-use mycelium_mlir::{compile, compile_bitnet_dot_for, ternary_dot_ref, AotError};
+use mycelium_mlir::{
+    compile, compile_bitnet_dot_for, compile_specialized_dot, ternary_dot_ref, AotError,
+};
 
 const BATCHES: usize = 5;
 
@@ -111,6 +118,8 @@ pub fn run() {
 
     let measured_compute = bitnet_section(&buf, DIM);
 
+    specialize_section(&buf, DIM);
+
     if measured_compute {
         println!(
             "\nE1 verdict: packed-ternary **compute throughput is now measured over runtime data** \
@@ -121,8 +130,11 @@ pub fn run() {
              per-scheme unpack-compute. Still open (honest, VR-5/G3): parity with bitnet.cpp's \
              hand-tuned **SIMD** kernels (the next M-360 increment), and the true 1.67-b/w bitnet.cpp \
              **TL2 layout** — the current TL2 kernel decodes the 1.6-b/w base-3 placeholder codec \
-             (A5-08), inert for selection but not yet the published layout. No perf claim is \
-             pre-written; the numbers above are whatever was measured."
+             (A5-08), inert for selection but not yet the published layout. §4 adds the M-340 JIT \
+             runtime-specialization layer: baking the runtime-known weights in (zero lanes elided, \
+             unpack dropped) measured a further speedup over the generic kernel on the same runtime \
+             activations — as-measured, no target pre-written. No perf claim is pre-written; the \
+             numbers above are whatever was measured."
         );
     } else {
         println!(
@@ -222,6 +234,86 @@ fn bitnet_section(weights: &[Trit], dim: usize) -> bool {
         );
     }
     measured_any
+}
+
+/// E1 §4 (M-340): time the **weight-specialized** dot kernel against the generic runtime-pointer
+/// kernel over the *same* runtime activations. The specializer bakes the (runtime-known) weights in
+/// as constants, so the optimiser drops the unpack and elides every zero lane — a genuine JIT
+/// runtime-specialization win. Both still run in-process over runtime activation pointers (no
+/// constant folding), so the ratio is honest compute-vs-compute. Returns nothing but the printed
+/// numbers; reports the speedup as-measured (no pre-written target, VR-5). Skips gracefully.
+fn specialize_section(weights: &[Trit], dim: usize) {
+    println!("\n== E1 §4: weight-specialized vs generic dot kernel over runtime data (M-340) ==");
+
+    let acts = activations(dim);
+    let oracle_sum = ternary_dot_ref(weights, &acts);
+
+    // Generic I2_S kernel: re-loads + re-unpacks the weight buffer every call.
+    let generic = match compile_bitnet_dot_for(PackScheme::I2S) {
+        Ok(k) => k,
+        Err(AotError::ToolchainMissing(tool)) => {
+            println!("  skip: native toolchain absent ({tool}) — install clang to measure.");
+            return;
+        }
+        Err(e) => {
+            eprintln!("  generic kernel compile failed: {e}");
+            return;
+        }
+    };
+    // Specialized kernel: the same weights baked in as constants (zero lanes elided, ±1 → add/sub).
+    let spec = match compile_specialized_dot(weights) {
+        Ok(k) => k,
+        Err(AotError::ToolchainMissing(_)) => return,
+        Err(e) => {
+            eprintln!("  specialized kernel compile failed: {e}");
+            return;
+        }
+    };
+
+    let packed = pack_trits(weights, PackScheme::I2S);
+    // Correctness gate before timing: both compiled paths must agree with the oracle.
+    let generic_sum = generic
+        .call(&packed, &acts, dim)
+        .expect("generic kernel runs");
+    let spec_sum = spec.call(&acts).expect("specialized kernel runs");
+    assert_eq!(
+        generic_sum, oracle_sum,
+        "E1 §4: generic kernel disagrees with the oracle — refusing to time a wrong kernel"
+    );
+    assert_eq!(
+        spec_sum, oracle_sum,
+        "E1 §4: specialized kernel disagrees with the oracle — refusing to time a wrong kernel"
+    );
+
+    let iters = 5_000u32;
+    let generic_ns = bench(iters, || {
+        black_box(
+            generic
+                .call(black_box(&packed), black_box(&acts), dim)
+                .expect("generic"),
+        );
+    });
+    let spec_ns = bench(iters, || {
+        black_box(spec.call(black_box(&acts)).expect("spec"));
+    });
+
+    #[allow(clippy::cast_precision_loss)]
+    let sparsity = 100.0 * (spec.nonzero() as f64) / (dim as f64);
+    let ratio = if spec_ns > 0.0 {
+        generic_ns / spec_ns
+    } else {
+        0.0
+    };
+    println!(
+        "  generic (unpack every call) {generic_ns:>10.0} ns   specialized (weights baked, \
+         {nonzero}/{dim} nonzero, {sparsity:.0}% dense) {spec_ns:>10.0} ns   speedup {ratio:>5.2}x",
+        nonzero = spec.nonzero()
+    );
+    println!(
+        "  note: the specialized kernel takes no weight argument (only the runtime activation \
+         pointer) — the model's weights are baked in, so the optimiser elides the unpack and the \
+         zero lanes. Speedup reported as-measured (VR-5)."
+    );
 }
 
 /// A hand-written scalar Rust baseline doing the **same** unpack-compute as the JIT kernel for

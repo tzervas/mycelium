@@ -8,6 +8,31 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — JIT runtime specialization, M-340; E3-4; ADR-009/ADR-014; RFC-0004 §5/§8)
+- **`mycelium-mlir::specialize` — a weight-specialized ternary dot kernel (the classic JIT win).**
+  The generic BitNet dot kernel (M-360) reads its weight buffer as a runtime pointer and re-unpacks it
+  every call. In the inference setting the **weights are fixed at runtime** and only the activations
+  vary, so `emit_specialized_dot_ir(weights)` bakes the (runtime-known) weight vector into the kernel
+  `i64 @myc_bitnet_dot_spec(ptr %x)` as constants. The optimiser then **drops the unpack entirely**
+  (no packed-byte load / shift / mask / `code−1`), **elides every zero-weight lane** (a `0` weight's
+  activation load + multiply vanish from the emitted IR — the model's sparsity becomes inspectable,
+  FR-C3), and **strength-reduces ±1 to a single `add`/`sub`**. The only runtime argument is the
+  activation pointer; weights and length are compiled in. `compile_specialized_dot` JIT-compiles it
+  (`clang -shared -O2`) via the M-340 dynamic loader; `SpecializedDotKernel::call` takes **no weight
+  argument** (running it against weights it was not built for is unrepresentable — never a silent
+  stale-weights run) and **bounds-checks** the activation buffer (a short buffer is an explicit
+  `AotError`, never an OOB read). `nonzero()` exposes the surviving-lane count for EXPLAIN/inspection.
+  **Validated (NFR-7):** `tests/specialize_differential.rs` runs the specialized and generic kernels
+  over the same activations and validates them as observationally equivalent **through the single
+  shared M-210 checker** (`ObservationalEquiv`, `Certificate::exact()` ⇒ `Validated{Exact}`), plus a
+  negated-weights discrimination test that the checker must reject (guard 7, so a pass is meaningful).
+  **Honest speedup (E1 §4 / VR-5):** `cargo xtask e1` §4 times specialized-vs-generic over the same
+  runtime activation buffer (both runtime pointers, no constant folding) after an oracle cross-check;
+  indicative single run (n=4096, ~66 % dense) ≈ **10.7× as measured** — reported as-measured, no
+  target pre-written, sparsity/machine-dependent. **Honesty/scope:** same exact dot product, no
+  guarantee upgraded (both `Exact`); the weights are runtime data baked at JIT time, activations stay
+  runtime pointers, so the compute is real. (phase-3.md §2 / §9.10 / Meta)
+
 ### Added (Phase 3 — L1 Maranget decision-tree compiler, M-320; E3-3; RFC-0007 §3/§4.4)
 - **`mycelium-l1::decision` — the codegen half of the Maranget pipeline.** Compiles a checked
   nested-pattern `match` into a flat decision `Tree` of `switch`/`leaf` nodes over **occurrences**

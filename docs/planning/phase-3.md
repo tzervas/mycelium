@@ -97,7 +97,7 @@ completed. Readiness is relative to the corpus + landed Phase-1/2 deps.
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | **Done (2026-06-15)** — `mycelium-build::cache` (`BuildCache`, request-addressed) |
 | **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses) + the **Maranget decision-tree compiler** (the codegen half — `decision`: occurrences + `switch`/`leaf` tree, verified against the reference matcher, wired into `checkty` as a Fail-free cross-check). Remaining: emit tree leaves as **L0 kernel nodes** (gated on the RFC-0001 L0 revision). **RFC ratification is maintainer's** |
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
-| **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`); NFR-7 checked |
+| **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`), NFR-7 checked; **+ runtime-specialization layer** (`mycelium-mlir::specialize`): bakes the runtime-known weight vector into the dot kernel (zero lanes elided, unpack dropped, ±1 → add/sub), validated generic↔specialized through the shared M-210 checker, E1 §4 records the **measured** speedup (no target pre-written) |
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **Design drafted (2026-06-15)** — RFC-0009 (convergence regime, `Empirical`-ceiling honesty, never-silent verdicts); prototype gated on ratification |
 | **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | **In progress (2026-06-15)** — runtime-data dot kernels for **all three** bitnet packings (I2_S/TL1/TL2; in-process JIT, inspectable per-scheme unpack IR), each oracle-checked; E1 §3 compute-throughput measured (I2_S). **SIMD** next |
 | **M-370** Native-ternary forward-compat mapping (+ stub target) | E3-7 | P2 | M-150, M-301 | R7 | **Done (2026-06-15)** — `docs/notes/Native-Ternary-Forward-Compat.md`; dialect = stub target |
@@ -500,8 +500,59 @@ established strength.
   so it does not yet run programs. The compilation algorithm is real and checked; the L0 emission is
   the remaining step. No guarantee touched.
 
+### 9.10 M-340 — JIT runtime specialization (weight-specialized dot kernel) · Batch L · P2 · in progress 2026-06-15
+
+- **Goal (from §2 / issues.yaml #93).** Add a **runtime-specialization layer over the lowering** and
+  record an honest speedup (no pre-written target), validated through the shared M-210 checker
+  (NFR-7). The first M-340 increment landed the in-process `dlopen` JIT path; this adds the classic
+  JIT win — specialize on data known *at JIT time*.
+- **Delivered.** New `mycelium-mlir::specialize`: `emit_specialized_dot_ir(weights)` emits a
+  **weight-specialized** ternary dot kernel `i64 @myc_bitnet_dot_spec(ptr %x)` with the (runtime-known)
+  weight vector **baked in as constants**. Because the weights are compile-time-constant *in the JIT'd
+  kernel*, the optimiser (a) **drops the unpack entirely** (no packed-byte load / shift / mask /
+  `code−1`), (b) **elides every zero-weight lane** — a `0` weight's activation load + multiply simply
+  do not appear in the emitted IR (the model's sparsity becomes inspectable, FR-C3), and (c)
+  **strength-reduces the ±1 multiply** to a single `add`/`sub`. The only runtime argument is the
+  activation pointer; the length and weights are compiled in. `compile_specialized_dot` JIT-compiles
+  it (`clang -shared -O2`) and loads it via the M-340 dynamic loader; `SpecializedDotKernel::call`
+  takes **no weight argument** (you cannot run it against weights it was not built for — misuse is
+  unrepresentable, never a silent stale-weights run) and **bounds-checks** the activation buffer
+  against the baked lane count (a short buffer is an explicit `AotError::Run`, never an OOB read).
+  `nonzero()` exposes the surviving-lane count (EXPLAIN/inspection).
+- **Validation (NFR-7).** `tests/specialize_differential.rs`: the specialized kernel and the generic
+  runtime-pointer kernel (`compile_bitnet_dot_for`) are run over the same activations and validated
+  as observationally equivalent **through the single shared M-210 checker**
+  (`check(.., ObservationalEquiv, Certificate::exact(), Observational) ⇒ Validated{Exact}`) — the same
+  checker the AOT/JIT differentials use — plus a discrimination test that specializes on *negated*
+  weights and confirms the checker reports `NotValidated` (guard 7, so a pass is meaningful). Module
+  tests pin the IR shape (zero lanes elided — mutant-witnessed against loading an elided lane), the
+  all-zero → `ret i64 0` kernel, determinism, oracle agreement over several widths, and the
+  short-buffer refusal.
+- **Honest speedup (E1 §4 / VR-5).** `cargo xtask e1` gains **§4**: it times the specialized kernel
+  vs the generic kernel over the *same* runtime activation buffer (both still take runtime activation
+  pointers — no constant folding, so the compute is real), gated by an oracle cross-check before
+  timing. Indicative single run (containerized x86-64, `n = 4096`, ~66 % dense weights): generic
+  ≈ 3.9 µs/call, specialized ≈ 0.36 µs/call — **≈ 10.7× as measured**, driven by dropping the unpack,
+  eliding the zero lanes, and `-O2` vectorization of the straight-line adds/subs. The number is
+  reported **as-measured**; no target is pre-written, and the result is sparsity- and machine-dependent.
+- **Honesty / scope.** No guarantee upgraded — the specialized kernel computes the *same exact* dot
+  product (both `Exact` integer arithmetic). The weights are honest **runtime data** baked at JIT
+  time (the inference shape: weights fixed, activations vary), not a constant-folded closed kernel.
+  Shares the dot semantics + the M-340 loader with the generic kernel (DRY); the specialization
+  applies to the BitNet dot kernel today and generalizes to other runtime-fixed operands later.
+
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-340 runtime specialization — weight-specialized dot kernel; honest ≈10.7× E1 §4
+  speedup):** new `mycelium-mlir::specialize` bakes the runtime-known weight vector into the ternary
+  dot kernel as constants (`i64 @myc_bitnet_dot_spec(ptr %x)`), so the optimiser drops the unpack,
+  elides the zero lanes, and strength-reduces ±1 to add/sub. Validated generic↔specialized through the
+  shared M-210 checker (`ObservationalEquiv`/`Exact`) with a negated-weights discrimination test
+  (`tests/specialize_differential.rs`); `cargo xtask e1` §4 times specialized-vs-generic over the same
+  runtime activations and reports the speedup **as-measured** (no target pre-written). The call site
+  takes no weight argument (stale-weights misuse unrepresentable) and bounds-checks the activation
+  buffer (no OOB). §2 M-340 row updated, §9.10 added. **Scope:** same exact dot product, no guarantee
+  upgraded; weights are runtime data baked at JIT time, activations stay runtime pointers (VR-5/G3).
 - **2026-06-15 (M-320 Maranget decision-tree compiler — the codegen half):** new
   `mycelium-l1::decision` compiles a checked nested-pattern match into a flat `switch`/`leaf` `Tree`
   over occurrences (Maranget 2008) — column heuristic, ctor/literal specialization, `default` only when
