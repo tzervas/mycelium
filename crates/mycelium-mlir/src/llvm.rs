@@ -70,6 +70,9 @@ pub enum AotError {
     /// the overflow at runtime and signalled it through the read-back protocol (matches the
     /// interpreter's `EvalError::Overflow`; never a silent wrap, SC-3/G2).
     Overflow(String),
+    /// A [`PackScheme`](mycelium_core::PackScheme) with no BitNet compute kernel (only the three
+    /// bitnet packings I2_S/TL1/TL2 have one). An explicit refusal — never a silent misdecode.
+    UnsupportedScheme(String),
 }
 
 /// The single byte the native artifact prints (AOT) when a fixed-width trit-arithmetic result
@@ -93,6 +96,7 @@ impl fmt::Display for AotError {
             AotError::Parse(e) => write!(f, "native output parse failed: {e}"),
             AotError::Wf(e) => write!(f, "result not well-formed: {e}"),
             AotError::Overflow(e) => write!(f, "balanced-ternary overflow: {e}"),
+            AotError::UnsupportedScheme(s) => write!(f, "no BitNet kernel for packing scheme: {s}"),
         }
     }
 }

@@ -99,7 +99,7 @@ completed. Readiness is relative to the corpus + landed Phase-1/2 deps.
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
 | **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`); NFR-7 checked |
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **Design drafted (2026-06-15)** — RFC-0009 (convergence regime, `Empirical`-ceiling honesty, never-silent verdicts); prototype gated on ratification |
-| **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | **In progress (2026-06-15)** — I2_S runtime-data dot kernel (in-process JIT, inspectable IR), oracle-checked; E1 §3 compute-throughput now measured. TL1/TL2 + SIMD next |
+| **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | **In progress (2026-06-15)** — runtime-data dot kernels for **all three** bitnet packings (I2_S/TL1/TL2; in-process JIT, inspectable per-scheme unpack IR), each oracle-checked; E1 §3 compute-throughput measured (I2_S). **SIMD** next |
 | **M-370** Native-ternary forward-compat mapping (+ stub target) | E3-7 | P2 | M-150, M-301 | R7 | **Done (2026-06-15)** — `docs/notes/Native-Ternary-Forward-Compat.md`; dialect = stub target |
 | **M-380** Semantic-level projection framework | E3-1 | P2 | E3-3 | FR-C1 / G11 | **needs-design**; *KC-2-contingent* |
 | **M-002** KC-2 LLM-leverage run (carried; gates E3-1 + concrete syntax) | E4 | P0 | M-020 (harness landed) | SC-5b / G10 / KC-2 | **Blocked (external)** — needs LLM API |
@@ -435,11 +435,17 @@ established strength.
   hand-computed dot; `jit_dot_matches_reference` over `n ∈ {1,4,5,7,64,256,1000}` (mutant-witness: a
   wrong shift/mask or `code` vs `code−1` diverges); compile-once/call-many consistency; and short-buffer
   refusals (mutant-witness: dropping the bounds checks would read OOB). All toolchain-gated skips.
-- **Honesty / scope.** First increment only: **I2_S** (the RFC-0004 §5 default), a **scalar** loop. No
-  parity with bitnet.cpp's hand-tuned SIMD is claimed, and TL1/TL2 are not yet lowered — the next
-  M-360 increments. No guarantee is upgraded; the kernel is checked against the obvious oracle, the E1
-  number is whatever was measured (VR-5 / G3). The `unsafe` fn-pointer call carries a `// SAFETY:`
-  justification under ADR-014 (the bounds checks discharge the in-range obligation).
+- **Honesty / scope.** **All three** bitnet packings now have a kernel — I2_S (rot=0), TL1 (rot=2
+  inverted via `d01 = (code+1) mod 3`), and TL2 (base-3, 5 trits/byte, `digit = (byte / 3ᵖ) mod 3`
+  via a select-chain `3ᵖ` lookup) — each a **scalar** loop with the unpack inlined and visible in the
+  emitted IR (`emit_bitnet_dot_ir_for(scheme)`; a non-bitnet scheme is an explicit
+  `AotError::UnsupportedScheme`, never a silent misdecode). Each is differential-checked against the
+  packing-independent oracle `ternary_dot_ref` over the *same* `pack_trits` packing, so the in-IR
+  unpack is verified. The kernel's weight-buffer bound tracks the scheme density (`n.div_ceil(4)` for
+  I2_S/TL1, `/5` for TL2). **Not** claimed: parity with bitnet.cpp's hand-tuned **SIMD** — the next
+  M-360 increment. No guarantee upgraded; the E1 number is whatever was measured (VR-5 / G3). The
+  `unsafe` fn-pointer call carries a `// SAFETY:` justification under ADR-014 (the bounds checks
+  discharge the in-range obligation).
 
 ### 9.9 M-320 — L1 nested patterns + Maranget usefulness · Batch K · P1 · in progress 2026-06-15
 
@@ -469,6 +475,16 @@ established strength.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-360 TL1/TL2 kernels — full bitnet packing breadth):** `mycelium-mlir::bitnet`
+  generalised from I2_S-only to `emit_bitnet_dot_ir_for(scheme)` covering **all three** bitnet
+  packings — TL1 inverts the rot=2 LUT (`d01 = (code+1) mod 3`), TL2 decodes base-3 5-trits/byte
+  (`digit = (byte / 3ᵖ) mod 3` via a select-chain divisor lookup) — each a scalar loop with the
+  scheme-specific unpack inlined and inspectable; a non-bitnet scheme is an explicit
+  `AotError::UnsupportedScheme`. `BitnetDotKernel` now carries its scheme so the weight-buffer bound
+  tracks density (`/4` vs `/5`). All three are differential-checked against the packing-independent
+  oracle (`jit_dot_matches_reference_all_schemes`, n up to 1000) — clang present, so the kernels
+  actually ran and matched. §2 M-360 row + §9.8 updated; SIMD is the remaining increment. **Scope:**
+  scalar only, no bitnet.cpp SIMD parity claimed (VR-5/G3).
 - **2026-06-15 (board sync — Phase-2 closed, Phase-3 tasks bootstrapped):** synced the GitHub board to
   the corpus. Closed the completed **Phase-2** epics (E2-1…E2-7, #28–34) and tasks (M-230…M-260, #58–65)
   as *completed*, each with a grounding comment citing where it landed (CHANGELOG Batch G/H; Phase-2
