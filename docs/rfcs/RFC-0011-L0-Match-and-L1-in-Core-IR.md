@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0011 |
-| **Status** | **Draft** (proposes a revision to the frozen L0; **ratification — and the RFC-0001 r3 bump it asks for — is the maintainer's**, append-only) |
+| **Status** | **Accepted — decision only; enactment sequenced** (ratified 2026-06-15: maintainer chose the **staged** path — r3 = data-and-matching core, flat `Match`; `Lam/App/Fix` deferred to r4. **Enactment is deferred**, not done here: RFC-0011 depends on RFC-0007, and the maintainer directed that **RFC-0006 + RFC-0007 be completed and ratified first**. So the RFC-0001 r2 → r3 text-fold (§4.1/§4.3), the RFC-0007 §4.6 narrowing, and the M-320 elaborator wiring land **together as the core-lang step**, *after* the Phase-3 exit-gate assembly → M-360 SIMD → RFC-0006/0007 ratification. RFC-0001 stays **r2/frozen** until then. Append-only.) |
 | **Type** | Foundational / normative (once Accepted) |
 | **Date** | 2026-06-15 |
 | **Depends on** | RFC-0001 §4.5/§4.6 (frozen Core IR, WF1–WF5, content-addressing); RFC-0006 §3/§4.4 step 2 (layering; the named revision); RFC-0007 §4.1–4.6 (the L1 calculus this folds in: terms, registry, typing, the §4.6 fragment restriction this retires); ADR-003 (Unison identity); `crates/mycelium-l1` (the non-normative prototype: `usefulness`, `decision`, `checkty`, `elab`) |
@@ -284,6 +284,21 @@ backend grows data support.
 
 ## Meta — changelog
 
+- **2026-06-15 — Accepted (decision recorded; enactment sequenced).** The maintainer chose the
+  **staged** path (this RFC's recommendation): **RFC-0001 r3** = the data-and-matching core
+  (`Construct` + flat `Match` + the content-addressed registry, with WF6/WF7/WF8), `Lam/App/Fix`
+  deferred to a later **r4**; and the **flat `Match`** as the kernel node (Alternative A — the Maranget
+  tree stays untrusted). **What this entry records is the *decision*, not its enactment.** RFC-0011
+  depends on RFC-0007, and the maintainer subsequently directed that **RFC-0006 and RFC-0007 be
+  completed and ratified before the core-language implementation**. To avoid a grounding inversion (an
+  Accepted RFC-0001 r3 citing still-`Draft` RFC-0007 as normative), the §4.7 enactment steps — the
+  RFC-0001 r2 → r3 text-fold (§4.1/§4.3), the RFC-0007 §4.6 `Residual` narrowing, and the M-320
+  elaborator wiring (`Match`/`Construct` → L0, the M-110 interpreter cases, the M-210 differential
+  extension) — are deferred and land **together as the core-lang step**, in this order:
+  **Phase-3 exit-gate assembly → M-360 SIMD → complete + ratify RFC-0006/0007 → enact r3 + wire**.
+  RFC-0001 stays **r2/frozen** until that step; the `mycelium-l1` prototype keeps returning `Residual`
+  for these nodes, honestly, in the meantime. r4 (`Lam/App/Fix`, retiring §4.6 entirely) remains a named
+  future revision.
 - **2026-06-15 — Draft.** Initial draft. Proposes the named RFC-0001 revision (RFC-0006 §4.4 step 2 /
   RFC-0007 §9): fold the L1 data-and-matching core (`Construct` + flat `Match` + the content-addressed
   registry, with WF6/WF7/WF8) into the frozen L0 as **RFC-0001 r3**, staged ahead of an r4 that adds

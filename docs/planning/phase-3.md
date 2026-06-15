@@ -95,7 +95,7 @@ completed. Readiness is relative to the corpus + landed Phase-1/2 deps.
 | **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()`; **LSP wire protocol** (`wire`: JSON-RPC `Content-Length` framing, `publishDiagnostics` mapping, `initialize`/`shutdown`/`exit` lifecycle). Remaining: **document sync** (needs a text→`Node` path — L1, M-320) |
 | **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | **Done (2026-06-15)** — `mycelium-build` crate (decide + content-addressed `BuildCertificate`) |
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | **Done (2026-06-15)** — `mycelium-build::cache` (`BuildCache`, request-addressed) |
-| **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses) + the **Maranget decision-tree compiler** (the codegen half — `decision`: occurrences + `switch`/`leaf` tree, verified against the reference matcher, wired into `checkty` as a Fail-free cross-check). Remaining: emit tree leaves as **L0 kernel nodes** — now **surfaced as RFC-0011** (proposes RFC-0001 r3: `Construct` + flat `Match` into frozen L0); gated on its ratification. **RFC ratification (and the r3 bump) is maintainer's** |
+| **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses) + the **Maranget decision-tree compiler** (the codegen half — `decision`: occurrences + `switch`/`leaf` tree, verified against the reference matcher, wired into `checkty` as a Fail-free cross-check). Remaining: emit tree leaves as **L0 kernel nodes** — **RFC-0011 ratified** (RFC-0001 r3: `Construct` + flat `Match` into L0, staged; flat `Match` is the kernel node). Enactment (r3 text-fold + the wiring) sequenced as the **core-lang step after RFC-0006/0007 are completed + ratified**; RFC-0001 stays r2/frozen until then |
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
 | **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`), NFR-7 checked; **+ runtime-specialization layer** (`mycelium-mlir::specialize`): bakes the runtime-known weight vector into the dot kernel (zero lanes elided, unpack dropped, ±1 → add/sub), validated generic↔specialized through the shared M-210 checker, E1 §4 records the **measured** speedup (no target pre-written) |
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **Design drafted (2026-06-15)** — RFC-0009 (convergence regime, `Empirical`-ceiling honesty, never-silent verdicts); prototype gated on ratification |
@@ -543,17 +543,18 @@ established strength.
 
 ## Meta — changelog & maintenance
 
-- **2026-06-15 (keystone surfaced — RFC-0011 L0 `Match` / L1-in-Core-IR, Draft for maintainer
-  ratification):** authored `docs/rfcs/RFC-0011-L0-Match-and-L1-in-Core-IR.md` — the *normative* keystone
+- **2026-06-15 (keystone — RFC-0011 L0 `Match` / L1-in-Core-IR ratified as a decision; enactment
+  sequenced):** authored `docs/rfcs/RFC-0011-L0-Match-and-L1-in-Core-IR.md` — the *normative* keystone
   both M-320's remaining half (emit decision-tree leaves as real L0 nodes) and M-310's document sync ride
-  on. It proposes the **named RFC-0001 revision** (RFC-0006 §4.4 step 2 / RFC-0007 §9): fold the L1
-  data-and-matching core (`Construct` + flat `Match` + content-addressed registry, with WF6/WF7/WF8) into
-  frozen L0 as **r3**, staged ahead of an **r4** (`Lam/App/Fix`); recommends the flat `Match` as the kernel
-  node (Maranget tree stays untrusted) and records the `Switch`-form and one-shot-fold alternatives.
-  **Append-only, frozen-L0 not flipped:** the RFC does not change RFC-0001's status, bump it to r3, or land
-  the elaborator wiring — that is the maintainer's append-only decision (RFC-0011 §4.7); the prototype
-  keeps returning `Residual` until ratification. Registered in the RFC README + Doc-Index. M-320 row note
-  updated to point the remaining half at RFC-0011.
+  on — and the maintainer **ratified the staged path** (RFC-0001 r3 = data-and-matching core:
+  `Construct`, flat `Match`, content-addressed registry, WF6/WF7/WF8; flat `Match` as the kernel node,
+  Maranget tree untrusted; `Lam/App/Fix` deferred to r4). It is the **named RFC-0001 revision** (RFC-0006 §4.4 step 2 /
+  RFC-0007 §9). **Decision recorded, not yet enacted:** RFC-0011 depends on RFC-0007, and the maintainer
+  directed that **RFC-0006 + RFC-0007 be completed and ratified first**, so the RFC-0001 r2 → r3 text-fold,
+  the RFC-0007 §4.6 narrowing, and the M-320 wiring land together as the core-lang step — **after** the
+  Phase-3 exit-gate assembly → M-360 SIMD → RFC-0006/0007 ratification. RFC-0001 stays **r2/frozen** and
+  the prototype keeps returning `Residual` until then (no grounding inversion). Registered in the RFC
+  README + Doc-Index. M-320 row note points the remaining half at RFC-0011.
 - **2026-06-15 (M-340 runtime specialization — weight-specialized dot kernel; honest ≈10.7× E1 §4
   speedup):** new `mycelium-mlir::specialize` bakes the runtime-known weight vector into the ternary
   dot kernel as constants (`i64 @myc_bitnet_dot_spec(ptr %x)`), so the optimiser drops the unpack,
