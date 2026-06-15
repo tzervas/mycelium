@@ -56,7 +56,11 @@ pub fn proven_capacity_bound(items: u64, dim: u64, delta: f64) -> Option<Bound> 
     Some(Bound {
         kind: BoundKind::Capacity { items, dim },
         basis: BoundBasis::ProvenThm {
-            citation: CAPACITY_CITATION.to_owned(),
+            // Record the assumed margin μ and the checked side-condition in the basis, so EXPLAIN /
+            // the serialized bound expose exactly what the Proven tag rests on (A3-03/H6).
+            citation: format!(
+                "{CAPACITY_CITATION}; μ={MARGIN_MU} (illustrative margin); checked d ≥ requiredDim"
+            ),
         },
     })
 }

@@ -115,10 +115,12 @@ A3-07, A3-08, A3-09, A3-10.
 > **H4 and H5** with no code tag change (the code already matched the Net line); the code comment's
 > non-citable "issue #61" rationale was replaced by the §4.1 citation.
 >
-> **Remaining WS3 (code):** **H6** (A3-03/C1-02, `Proven` capacity must check bipolar-alphabet +
-> distinct-item side-conditions), A3-04 (MAP-I/MAP-B bind alphabet checks), A3-05 (`Bundle.hs` header
-> vs README), A3-06/C1-04 (on-expectation `Proven` qualifier), A3-07 (`EmptyCodebook` variant),
-> A3-08/09/10 (test gaps).
+> **WS3 code progress (2026-06-15):** **H6 LANDED** — the certified capacity path now checks the
+> bipolar-alphabet + distinct-item side-conditions (`NonAlphabetComponent` / new
+> `DuplicateBundleItems`) and records μ + the checked condition in the bound basis. **Remaining
+> (Medium/Low):** A3-04 (MAP-I/MAP-B *bind* alphabet checks), A3-05 (`Bundle.hs` header vs README),
+> A3-06/C1-04 (on-expectation `Proven` qualifier), A3-07 (`EmptyCodebook` variant), A3-08/09/10
+> (test gaps).
 
 - After the decision: realign `matrix.rs` (or the RFC) so code and the normative table agree
   cell-by-cell; ground or remove the "issue #61" citation (H5).

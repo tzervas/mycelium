@@ -9,6 +9,17 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Fixed (deep-review remediation — Wave 1)
+- **WS3 — VSA certified-capacity side-conditions (finding A3-03/C1-02 H6 — the last Wave-1 High;
+  advances M-I2/VR-5, SC-2).** `MapI::bundle_values_certified` issued a `Proven` `CapacityBound`
+  after checking only the dimension instantiation (`dim ≥ requiredDim`), but the cited
+  Clarkson/Thomas theorem also assumes **bipolar (±1) atoms** and **distinct items** — so a `Proven`
+  tag could be obtained for a bundle of duplicates or non-bipolar vectors. The certified path now
+  checks both before issuing the bound (`check_bipolar` → `NonAlphabetComponent`; `first_duplicate`
+  → new `VsaError::DuplicateBundleItems`), and the margin `μ` plus the checked side-condition are
+  **recorded in the bound's basis citation** so EXPLAIN/serialization expose exactly what the
+  `Proven` tag rests on. Regression test refuses non-bipolar and duplicate inputs and still certifies
+  distinct bipolar ones (mutant-witness A3-03); an existing capacity test that built identical
+  undersized atoms was corrected to use per-item seeds so it still isolates the dimension condition.
 - **WS6 — KC-2 baseline oracle fidelity (findings A6-01 H10, A6-04; M-002 well-posedness).** The
   Python baseline DSL read `Bin` as **unsigned** while the kernel/spec use **two's-complement**, so
   the benchmark's two arms computed different answers for the same prompt — e.g. `kc2-05`

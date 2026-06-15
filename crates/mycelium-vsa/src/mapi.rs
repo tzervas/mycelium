@@ -122,6 +122,21 @@ impl MapI {
         if items.is_empty() {
             return Err(VsaError::EmptyBundle);
         }
+        // Check the cited theorem's CHECKABLE side-conditions before issuing a Proven bound
+        // (A3-03/H6; M-I2/VR-5): the dimension instantiation alone is not enough — the
+        // Clarkson/Thomas capacity bound also assumes (i) bipolar (±1) atoms and (ii) distinct
+        // items. Without these the Proven tag is unbacked, so we refuse rather than stamp it.
+        let hvs: Vec<&[f64]> = items
+            .iter()
+            .map(|v| self.hv_of(v))
+            .collect::<Result<_, _>>()?;
+        for hv in &hvs {
+            Self::check_bipolar(hv)?;
+        }
+        let inputs: Vec<ContentHash> = items.iter().map(|v| v.content_hash()).collect();
+        if let Some(index) = first_duplicate(&inputs) {
+            return Err(VsaError::DuplicateBundleItems { index });
+        }
         let m = items.len() as u64;
         let dim = u64::from(self.dim);
         let bound = capacity::proven_capacity_bound(m, dim, delta).ok_or_else(|| {
@@ -131,13 +146,7 @@ impl MapI {
                 required: capacity::required_dim(m, delta, capacity::MARGIN_MU),
             }
         })?;
-        // Compute the superposition over the extracted hypervectors.
-        let hvs: Vec<&[f64]> = items
-            .iter()
-            .map(|v| self.hv_of(v))
-            .collect::<Result<_, _>>()?;
         let data = self.bundle(&hvs)?;
-        let inputs: Vec<ContentHash> = items.iter().map(|v| v.content_hash()).collect();
         let meta = Meta::new(
             Provenance::Derived {
                 op: operation_hash("vsa.map_i.bundle"),
@@ -161,6 +170,20 @@ impl MapI {
         )
         .map_err(VsaError::Wf)
     }
+
+    /// Every component must be `±1` — the MAP-I capacity theorem assumes bipolar atoms (A3-03/H6).
+    fn check_bipolar(v: &[f64]) -> Result<(), VsaError> {
+        match v.iter().position(|&x| x != 1.0 && x != -1.0) {
+            Some(index) => Err(VsaError::NonAlphabetComponent { index }),
+            None => Ok(()),
+        }
+    }
+}
+
+/// The index of the first content hash that repeats an earlier one, if any. Item counts are small,
+/// so the quadratic scan is fine and keeps the order deterministic (first repeat reported).
+fn first_duplicate(hashes: &[ContentHash]) -> Option<usize> {
+    (0..hashes.len()).find(|&i| hashes[..i].contains(&hashes[i]))
 }
 
 impl VsaModel for MapI {

@@ -76,6 +76,13 @@ pub enum VsaError {
         /// The dimension the theorem requires.
         required: u64,
     },
+    /// A `Proven` bundle was requested over **non-distinct** items. The cited capacity theorem
+    /// assumes distinct codebook atoms; bundling duplicates inflates the apparent capacity, so a
+    /// `Proven` tag there would be unbacked (A3-03/H6; M-I2/VR-5). Deduplicate the items.
+    DuplicateBundleItems {
+        /// Index of the first item that repeats an earlier one.
+        index: usize,
+    },
     /// A value handed to a Value-level adapter was not a hypervector of the expected model.
     NotThisModel {
         /// The model id the adapter expected.
@@ -141,6 +148,10 @@ impl core::fmt::Display for VsaError {
             } => write!(
                 f,
                 "insufficient capacity for a Proven bound: bundling {items} items needs dim ≥ {required}, got {dim}"
+            ),
+            VsaError::DuplicateBundleItems { index } => write!(
+                f,
+                "item {index} repeats an earlier one; a Proven capacity bound needs distinct items"
             ),
             VsaError::NotThisModel { expected } => {
                 write!(f, "expected a {expected} hypervector value")
