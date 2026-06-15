@@ -88,7 +88,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 
 | Task | Epic | Pri | Depends on | Maps to | Readiness |
 |---|---|---|---|---|---|
-| **M-301** Direct-LLVM-IR AOT backend (kernel subset) | E3-7 (prereq) | P1 | M-150, M-110 | RFC-0004 §2 / ADR-007/009 | **In progress (2026-06-15)** — bit subset landed (`mycelium-mlir::llvm`); trit subset is the next slice |
+| **M-301** Direct-LLVM-IR AOT backend (kernel subset) | E3-7 (prereq) | P1 | M-150, M-110 | RFC-0004 §2 / ADR-007/009 | **In progress (2026-06-15)** — bit subset + `trit.neg` landed; trit *carry arithmetic* (`add/sub/mul`) is the next slice |
 | **M-302** interp↔native differential (extend M-151) | E3-7 (prereq) | P1 | M-301, M-151 | NFR-7 / VR-4 / RR-12 | **Done (2026-06-15)** — `tests/native_differential.rs` (bit subset; toolchain-gated skip) |
 | **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | **Done (2026-06-15)** — `cargo xtask e1` §2 measures native AOT vs interp; compute-throughput verdict still pending in-process exec |
 | **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()` |
@@ -392,6 +392,14 @@ established strength.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-301 trit slice — `trit.neg`):** the direct-LLVM backend (`mycelium-mlir::llvm`) is
+  now **kind-aware** (a `Lane` is `Binary{w}` or `Ternary{m}`) and lowers `trit.neg` over `Ternary{m}`
+  end-to-end (digit-wise `0 - x`; ternary output via a branch-free `'-'`/`'0'`/`'+'` `select` chain;
+  read-back to a `Ternary{m}` value) — compiled and differential-checked (two trit-`neg` programs
+  added to the M-302 corpus). The parse shape is derived from the actual lowering (`lower_program` is
+  the single source of truth). `trit.add/sub/mul` (balanced-ternary **carry** arithmetic) stay an
+  explicit next-slice refusal; `bit.*`/`trit.*` on the wrong lane kind is a `require_kind` refusal.
+  §2 M-301 row updated. (Enabled later JIT/FFI work via ADR-014, separately.)
 - **2026-06-15 (M-310 first increment — structured feedback summary + navigable positions):**
   `Feedback::summary()` rolls up artifact-kind counts + worst severity (`FeedbackSummary`);
   `Diagnostic::path()` exposes the navigable breadcrumb. §2 M-310 row → in progress; §9.7 added.

@@ -8,6 +8,16 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — native AOT trit slice `trit.neg`, M-301)
+- **`mycelium-mlir::llvm` is now kind-aware** (a `Lane` carries `Binary{w}` *or* `Ternary{m}`): the
+  direct-LLVM backend lowers **`trit.neg`** over `Ternary{m}` end-to-end (digit-wise `0 - x` — exact,
+  no carry), printing ternary output as `'-'`/`'0'`/`'+'` via a branch-free `select` chain (still one
+  op per element) and reading it back into a `Ternary{m}` value. The parse shape is derived from the
+  actual lowering (`lower_program` is the single source of truth for `emit_llvm_ir` + `result_shape`).
+  The M-302 differential corpus gains two trit-`neg` programs (compiled + checked). `trit.add/sub/mul`
+  (balanced-ternary carry arithmetic) and `bit.*`/`trit.*` on the wrong lane kind are explicit
+  refusals (G2). (phase-3.md §2 / Meta)
+
 ### Changed (decision — ADR-014: `unsafe` policy relaxed from `forbid` to permitted-but-warned)
 - **`unsafe_code` is now `"warn"` workspace-wide (was `"forbid"`).** `unsafe` is permitted when
   explicit and justified: it **warns** in `cargo build`/`cargo test` (the caution incentive) and

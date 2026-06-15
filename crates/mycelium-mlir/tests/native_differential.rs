@@ -12,7 +12,7 @@
 //! as the proofs/api/supply-chain checks do — never a false failure.
 
 use mycelium_cert::{check, CheckVerdict, Evidence, RefinementRelation};
-use mycelium_core::{GuaranteeStrength, Meta, Node, Payload, Provenance, Repr, Value};
+use mycelium_core::{GuaranteeStrength, Meta, Node, Payload, Provenance, Repr, Trit, Value};
 use mycelium_interp::{IdentitySwapEngine, Interpreter, PrimRegistry};
 use mycelium_mlir::AotError;
 use mycelium_numerics::Certificate;
@@ -26,13 +26,23 @@ fn byte(bits: [bool; 8]) -> Value {
     .unwrap()
 }
 
+fn tern(trits: Vec<Trit>) -> Value {
+    let m = trits.len() as u32;
+    Value::new(
+        Repr::Ternary { trits: m },
+        Payload::Trits(trits),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
 const A: [bool; 8] = [true, false, true, true, false, false, true, false];
 const B: [bool; 8] = [false, false, true, false, true, false, true, true];
 const ONES: [bool; 8] = [true; 8];
 
-/// The **bit-subset** corpus: straight-line bit logic the direct-LLVM backend lowers (no swaps, no
-/// trits — those are out of subset and tested for refusal in the unit tests). A small *deterministic*
-/// set of programs, not a statistical sample.
+/// The bit/trit-subset corpus: straight-line bit logic + balanced-ternary `neg` the direct-LLVM
+/// backend lowers (no swaps, no trit *arithmetic* yet — those are out of subset and tested for
+/// refusal in the unit tests). A small *deterministic* set of programs, not a statistical sample.
 fn bit_corpus() -> Vec<Node> {
     let cst = |bits: [bool; 8]| Node::Const(byte(bits));
     vec![
@@ -76,6 +86,28 @@ fn bit_corpus() -> Vec<Node> {
             body: Box::new(Node::Op {
                 prim: "bit.not".into(),
                 args: vec![Node::Var("x".into())],
+            }),
+        },
+        // M-301 trit slice: balanced-ternary negation (a Ternary lane, end-to-end).
+        Node::Op {
+            prim: "trit.neg".into(),
+            args: vec![Node::Const(tern(vec![
+                Trit::Pos,
+                Trit::Zero,
+                Trit::Neg,
+                Trit::Pos,
+            ]))],
+        },
+        // trit.neg through a let / core.id passthrough on a ternary value.
+        Node::Let {
+            id: "t".into(),
+            bound: Box::new(Node::Const(tern(vec![Trit::Neg, Trit::Neg, Trit::Pos]))),
+            body: Box::new(Node::Op {
+                prim: "core.id".into(),
+                args: vec![Node::Op {
+                    prim: "trit.neg".into(),
+                    args: vec![Node::Var("t".into())],
+                }],
             }),
         },
     ]
