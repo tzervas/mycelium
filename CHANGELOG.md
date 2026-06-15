@@ -8,6 +8,17 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (decision — ADR-014: `unsafe` policy relaxed from `forbid` to permitted-but-warned)
+- **`unsafe_code` is now `"warn"` workspace-wide (was `"forbid"`).** `unsafe` is permitted when
+  explicit and justified: it **warns** in `cargo build`/`cargo test` (the caution incentive) and
+  still compiles/runs, the `just check` lint gate exempts only this lint (`scripts/checks/lint.sh`
+  now runs `clippy -- -D warnings -A unsafe_code`, every *other* warning still a hard error), and a
+  site silences the dev warning **for production release** with
+  `#[cfg_attr(not(debug_assertions), allow(unsafe_code))]` + a mandatory `// SAFETY:` comment.
+  Recorded as **ADR-014** (append-only; amends the M-091 lint policy). Enables in-process JIT/FFI
+  (M-340) via raw `extern "C"` `dlopen`/`dlsym` with no new dependency. The trusted-base crates stay
+  unsafe-free. CONTRIBUTING + the ADR index updated.
+
 ### Added (Phase 3 — LSP maturation: structured feedback summary, M-310)
 - **`mycelium-lsp::FeedbackSummary`** (`Feedback::summary()`): a structured roll-up of an analysis —
   per-artifact-kind counts, the Error/Warning breakdown, the worst severity, and `is_clean()` — the
