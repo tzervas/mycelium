@@ -21,16 +21,35 @@ else
 fi
 
 # Node tool: markdownlint-cli2 is invoked on demand via `npx --yes`; warm the cache.
+# Pinned to a specific version (B1-02) — keep this in sync with scripts/checks/markdown.sh.
 if have npx; then
-  if npx --yes markdownlint-cli2 --version >/dev/null 2>&1; then ok "npx markdownlint-cli2 ready"
+  if npx --yes markdownlint-cli2@0.22.1 --version >/dev/null 2>&1; then ok "npx markdownlint-cli2 ready"
   else skip "npx markdownlint-cli2 warmup failed"; fi
 else
   skip "no node/npx — markdown lint will skip"
 fi
 
-# gitleaks is optional (no pip package). If absent, secrets.sh uses a narrow fallback.
-if have gitleaks; then ok "gitleaks present"
-else skip "gitleaks not installed (optional; secrets.sh has a fallback)"; fi
+# gitleaks (C1-09): best-effort install so secrets.sh runs the full scan, not just the narrow
+# fallback. No pip package; try cargo (gitleaks has a Rust port? no — use the Go binary if go is
+# present) else leave it to the system package manager. Skip-if-missing in all cases.
+if have gitleaks; then
+  ok "gitleaks present"
+elif have go; then
+  if go install github.com/gitleaks/gitleaks/v8@latest >/dev/null 2>&1; then ok "go install: gitleaks"
+  else skip "gitleaks install via go failed (secrets.sh falls back)"; fi
+else
+  skip "gitleaks not installed (no go; install via your package manager — secrets.sh has a fallback)"
+fi
+
+# cargo-deny / cargo-audit (C1-09): supply-chain gates driven by scripts/checks/deny.sh.
+# Best-effort, skip-if-missing. `deny.sh` skips gracefully when either is absent.
+if have cargo; then
+  for t in cargo-deny cargo-audit; do
+    if cargo "${t#cargo-}" --version >/dev/null 2>&1; then ok "cargo: $t present"
+    elif cargo install --quiet "$t" 2>/dev/null; then ok "cargo install: $t"
+    else skip "cargo: $t (install failed or offline; \`just deny\` will skip it)"; fi
+  done
+fi
 
 # Code-map / API-surface tools (optional). `cargo public-api` (the `just api` gate) drives a
 # nightly rustdoc — used only to introspect the surface, not to build the MSRV-pinned artifact.

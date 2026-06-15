@@ -498,7 +498,7 @@ to **exit-gate met** (§8) on this basis.
   vector as the MAP-I superposition of signed atoms from a **deterministic versioned codebook**
   (`swap.dense_vsa.enc.v1`) — a genuine n-item bipolar bundle, so the T0.2 capacity theorem
   applies; `vsa_to_dense` decodes by signed correlation, **provenance-gated to enc products**.
-  The δ basis is derived, never asserted: `ProvenThm` iff `vsa_dim ≥ requiredDim(n, δ)` (re-using
+  The δ basis is derived, never asserted: `ProvenThm` iff `vsa_dim ≥ requiredDim(n, δ)` (reusing
   `mycelium_vsa::capacity` — the M-131 checked instantiation), `EmpiricalFit` iff the
   trial-validated profile covers the instance (n ≤ 16, dim ≥ 32n, δ = 0.05; 10⁴ round-trip
   trials in `tests/dense_vsa.rs`), and an explicit `InsufficientCapacity` type-error elsewhere.

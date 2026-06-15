@@ -3,5 +3,5 @@
 # lowercase). Keep this list small and justified.
 skip = .git,*.lock,node_modules,target,dist-newstyle,.venv,.tools-venv,*.svg,idmap.tsv
 # Domain terms / abbreviations codespell otherwise flags:
-ignore-words-list = crate,crates,iff,ist,nin,ba,te,fo,mor,ans,od,implementor,referenced
+ignore-words-list = crate,crates,iff,ist,nin,ba,te,fo,mor,ans,od,implementor,referenced,effekt,inout
 quiet-level = 3

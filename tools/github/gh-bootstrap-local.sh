@@ -32,7 +32,9 @@ REPO="${REPO:-tzervas/mycelium}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LABELS="$HERE/labels.json"
 MILESTONES="$HERE/milestones.json"
-MSMAP="${MSMAP:-/tmp/mycelium-msmap.tsv}"
+# B1-05: default to a fresh mktemp file rather than a fixed, world-readable /tmp path
+# (mild TOCTOU/symlink hardening). An explicit MSMAP=... still overrides for the MCP runner.
+MSMAP="${MSMAP:-$(mktemp -t mycelium-msmap.XXXXXX.tsv)}"
 
 echo ">> Repo: $REPO"
 command -v gh >/dev/null || { echo "ERROR: gh not found (this script is for a local host with gh; in the web sandbox use mcp-bootstrap.md)"; exit 1; }

@@ -28,3 +28,9 @@ unsafe_code = "forbid"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
+
+# Release arithmetic aligns with the never-silent honesty ethos (G2): trusted-kernel arithmetic
+# must panic on overflow, not silently wrap. Cargo disables overflow-checks in release by
+# default; we re-enable them so a release build fails loudly rather than producing a wrong value.
+[profile.release]
+overflow-checks = true

@@ -1,0 +1,25 @@
+# Dependabot — automated dependency-update PRs.
+#
+# POLICY NOTE (see CLAUDE.md "Remote CI policy"): Dependabot only RAISES PRs; it does not run
+# CI. The repo's sole workflow (.github/workflows/checks.yml) is manual-dispatch-only and
+# advisory, so Dependabot does NOT trigger it and therefore does not violate the no-auto-CI
+# policy. The PRs simply sit until a human dispatches checks (or merges).
+#
+# Scope: GitHub Actions (workflow `uses:` pins), Cargo (the Rust workspace), and pip (the
+# experiments/ Python deps, managed via uv but resolvable as pip ecosystem).
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "pip"
+    directory: "/experiments"
+    schedule:
+      interval: "weekly"

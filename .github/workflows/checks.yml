@@ -7,6 +7,13 @@
 # before you pushed.
 name: checks (manual, advisory)
 
+# B1-01 (target posture): the `uses:` actions below are pinned to mutable major tags
+# (@v4, @v5, …), not 40-char commit SHAs. Full-SHA pinning is the intended hardening target;
+# the SHAs were not resolvable in the offline authoring environment, so Dependabot
+# (.github/dependabot.yml, `github-actions` ecosystem) is configured to surface action updates
+# and, once SHA-pinned, to keep those pins current. Resolve each `uses:` to its SHA when network
+# access is available.
+
 on:
   workflow_dispatch:
     inputs:
@@ -51,6 +58,9 @@ jobs:
           cabal-version: "3.16.1.0"
 
       - name: Install z3 (LiquidHaskell proofs need it on PATH)
+        # B1-03: z3 is intentionally unpinned. This is an advisory, manual-dispatch-only job and
+        # z3 is a distro-signed apt package (Ubuntu archive, GPG-verified), so the supply-chain
+        # risk is low; pinning a distro version would churn on every runner-image bump.
         run: sudo apt-get update && sudo apt-get install -y z3
 
       - name: Cache cabal store + LH build (proofs are a cold-build pole)

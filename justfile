@@ -49,6 +49,9 @@ proofs:
     @bash scripts/checks/proofs.sh
 api:
     @bash scripts/checks/api.sh
+# Supply-chain gate: cargo-deny (deny.toml) + cargo-audit. Skips if the tools are absent.
+deny:
+    @bash scripts/checks/deny.sh
 
 # --- code map / observability (advisory; not gating) ---
 # Generate code maps (crate deps, module structure, rustdoc incl. private) under target/map/.
