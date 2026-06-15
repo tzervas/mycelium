@@ -97,7 +97,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 | **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses; recursive matcher; nested structural descent); **RFC ratification is maintainer's** |
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
 | **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`); NFR-7 checked |
-| **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **needs-design** |
+| **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **Design drafted (2026-06-15)** — RFC-0009 (convergence regime, `Empirical`-ceiling honesty, never-silent verdicts); prototype gated on ratification |
 | **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | **In progress (2026-06-15)** — I2_S runtime-data dot kernel (in-process JIT, inspectable IR), oracle-checked; E1 §3 compute-throughput now measured. TL1/TL2 + SIMD next |
 | **M-370** Native-ternary forward-compat mapping (+ stub target) | E3-7 | P2 | M-150, M-301 | R7 | **Done (2026-06-15)** — `docs/notes/Native-Ternary-Forward-Compat.md`; dialect = stub target |
 | **M-380** Semantic-level projection framework | E3-1 | P2 | E3-3 | FR-C1 / G11 | **needs-design**; *KC-2-contingent* |
@@ -467,6 +467,18 @@ established strength.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-350 needs-design — RFC-0009 resonator-network factorization drafted):** authored
+  `docs/rfcs/RFC-0009-Resonator-Network-Factorization.md` — the *needs-design* deliverable for M-350
+  (document the convergence regime + bounds **before** building, per RR-5/G4). Fixes: the iterative
+  resonator update over `VsaModel` bind/unbind/cleanup (Frady et al. 2020); the **probabilistic-only**
+  honesty contract — basis capped at `Empirical` (exact bind) / `Declared` (approximate), **never**
+  `Proven`, with the regime `{F, kᵢ, d}` as a checked `EmpiricalProfile` side-condition (the
+  `mycelium-core::recon` `Resonator` schema already enforces the ceiling, A6/FR-C2); never-silent
+  termination (bounded budget; `BudgetExhausted`/`Oscillating` are explicit verdicts, never a wrapped
+  answer); full reification/`EXPLAIN` of the run trace; and the open questions (init, cleanup shape,
+  oscillation detection, δ-derivation, multiplicity, per-model scope). Prior art
+  (`embeddenator-retrieval`/`-vsa`) flagged to mine, not copy. **No code; nothing in the kernel.** §2
+  M-350 row → design-drafted; registered in the Doc-Index. Prototype gated on ratification (maintainer's).
 - **2026-06-15 (M-320 nested patterns — Maranget usefulness; exhaustiveness/redundancy with
   witnesses):** L1 `match` now supports **nested** constructor/literal patterns. New
   `mycelium-l1::usefulness` implements Maranget's `U(P, q)` over a typed pattern matrix (witness-

@@ -8,6 +8,19 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — RFC-0009 resonator-network factorization design, M-350 needs-design)
+- **`docs/rfcs/RFC-0009-Resonator-Network-Factorization.md`** (Draft): the *needs-design* deliverable
+  for M-350 — fixes the convergence regime and the honest guarantee **before** any factorization code
+  is built (RR-5/G4). Specifies the iterative resonator update over the existing `VsaModel`
+  bind/unbind/cleanup (Frady et al. 2020); a **probabilistic-only** contract (basis capped at
+  `Empirical`/`Declared`, **never** `Proven`; the `mycelium-core::recon` `Resonator` schema already
+  enforces this ceiling, FR-C2), with the operational regime `{F, kᵢ, d}` as a checked
+  `EmpiricalProfile` side-condition; never-silent termination (bounded budget;
+  `BudgetExhausted`/`Oscillating` are explicit verdicts, never a wrapped result); full
+  reification/`EXPLAIN`; and the open design questions. Prior art (`embeddenator-retrieval`/`-vsa`)
+  flagged to mine, not copy. **No code; nothing in the kernel.** Registered in the Doc-Index;
+  prototype gated on ratification. (phase-3.md §2 / Meta)
+
 ### Added (Phase 3 — L1 nested patterns + Maranget usefulness, M-320)
 - **`mycelium-l1::usefulness`** — Maranget's usefulness algorithm `U(P, q)` over a typed pattern
   matrix (Maranget 2007), witness-returning. L1 `match` now supports **nested** constructor/literal
