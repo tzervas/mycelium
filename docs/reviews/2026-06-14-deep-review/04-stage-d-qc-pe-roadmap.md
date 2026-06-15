@@ -68,6 +68,30 @@ at A3-08/A3-09). The roadmap targets exactly those.
    workflow), so it does not violate the manual-CI policy — but record the choice explicitly.
    Pin `npx markdownlint-cli2` to a version (B1-02) at the same time.
 
+## Code enumeration / call-and-dependency mapping (developer-requested workflow tool)
+
+*Effort: low–medium; value: medium.* A workflow aid to enumerate/trace/map functionality, calls,
+paths, and routing. Two layers, both skip-if-missing per the existing tooling idiom:
+
+- **Advisory `just map` recipe** (artifacts under `target/map/`, *not* part of `just check`):
+  `cargo depgraph --workspace-only | dot` for the crate-to-crate routing graph (`cargo tree`
+  fallback when graphviz is absent); `cargo modules` for per-crate module/item structure with
+  internal `use` edges; `cargo doc --workspace --document-private-items` for the browsable item
+  graph including internals. **Caveat:** Rust *function-level* static call graphs are partial (trait
+  dispatch / generics) — use rust-analyzer's call hierarchy interactively for that, and
+  `cargo-call-stack` for the interp/AOT hot paths when needed.
+- **API-surface gate** (`scripts/checks/api.sh`, *in* `just check`): commit a `cargo public-api`
+  snapshot per crate under `docs/spec/api/<crate>.txt` and diff against it. Doubles as a map ("what
+  is callable from outside each crate") and a guardrail that catches accidental `pub` growth —
+  directly supporting **KC-3** (small auditable kernel) and the deferred **A2-05** (private fields).
+  Pin the snapshots so an intentional surface change is a reviewed diff.
+- **Mycelium-lang (forward, Phase 3):** the design already mandates the substrate — SC-4
+  dumpable/diffable lowering, content-addressed IR (an operation-hash graph is derivable from the
+  `mycelium-lsp` lowering dumps *today*), and EXPLAIN traces. Make a program's call/dataflow graph a
+  first-class **reified LSP/EXPLAIN artifact** when the toolchain matures ("no black boxes"), not a
+  bolted-on external tracer; a minimal "IR-dump → dot" `just map` sub-target is feasible now against
+  the existing dumps.
+
 ## Recommended — lower value / hygiene
 
 1. **`overflow-checks = true` for the trusted kernel crates' release profile** (B2-05) — aligns
