@@ -92,7 +92,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 | **M-302** interp↔native differential (extend M-151) | E3-7 (prereq) | P1 | M-301, M-151 | NFR-7 / VR-4 / RR-12 | **Done (2026-06-15)** — `tests/native_differential.rs` (bit subset; toolchain-gated skip) |
 | **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | **Done (2026-06-15)** — `cargo xtask e1` §2 measures native AOT vs interp; compute-throughput verdict still pending in-process exec |
 | **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | Ready (local) |
-| **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | Ready (local) |
+| **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | **Done (2026-06-15)** — `mycelium-build` crate (decide + content-addressed `BuildCertificate`) |
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | Ready after M-311 |
 | **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` landed; **RFC ratification is maintainer's** |
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
@@ -334,8 +334,34 @@ established strength.
   exercises more of §4.4/§4.5 in the non-normative prototype; moving RFC-0006/0007 `Draft → Accepted`
   stays the maintainer's append-only decision, and concrete-syntax ratification stays KC-2-gated.
 
+### 9.5 M-311 — Build-system: stable/experimental gate + certificate artifacts · Batch K · P1 · done 2026-06-15
+
+- **Goal (from §2 / issues.yaml).** A build-system layer distinguishing **stable** components
+  (content-addressed + spec-ratified + verification-passed → AOT-eligible, RFC-0004 §4) from
+  **experimental** (interpreted/JIT); emits a certificate artifact per build (ADR-003).
+- **Delivered.** New crate `mycelium-build` (KC-3: outside the trusted kernel, depends only on
+  `mycelium-core` for `ContentHash`). `check_eligibility` runs the automatic RFC-0004 §4 checks —
+  (1) content-addressed identity is structural (a `ContentHash`), (2) spec ratified, (3) the three
+  obligations discharged (swap certs / bound checks / interp↔AOT reference equivalence) — returning
+  the **specific** blocking reasons (never a silent refusal). `decide(component, promote)` routes a
+  component: **AOT only for an eligible, *explicitly promoted* one** ("marking-stable is deliberate",
+  §4), everything else interpreted/JIT — and a `promote` request for an ineligible component is
+  **refused** (route stays Interpreted, reasons recorded), never a silent AOT. It emits a
+  `BuildCertificate`: an inspectable, **content-addressed** (`cert_ref`, BLAKE3 of the canonical
+  serialization) record with **private fields** (guard 2) and a **re-validating `Deserialize`**
+  (guard 3, `deny_unknown_fields`) — a hand-edited certificate claiming `Aot` without discharged
+  obligations is rejected on the way in (the forge guard). Seven tests incl. the forged-AOT and
+  unknown-field rejections (mutant-witnessed).
+- **Honesty / scope.** The obligations are *recorded* facts discharged elsewhere (`mycelium-cert`,
+  the tier-i checker, the M-302 differential) — this crate is the gate + artifact, not a re-prover.
+  A JSON schema for the certificate (mirroring the M-260 manifest discipline) is a small follow-on.
+
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-311 build-system stable-component gate lands):** new `mycelium-build` crate makes
+  the RFC-0004 §4 stable/experimental gate executable + inspectable (`check_eligibility` / `decide` /
+  content-addressed `BuildCertificate` with a forge-proof validating deserialize). §2 M-311 row →
+  done; §9.5 added. Next: M-312 content-addressed build cache.
 - **2026-06-15 (M-320 first increment — literal-pattern `match`):** the L1 prototype's `match` now
   covers `Binary`/`Ternary` literal patterns with a mandatory default (W7), redundancy/width checks,
   and `repr+payload` arm selection (`checkty` + `eval`; elaboration inherits `Match ⇒ Residual`). §2

@@ -8,6 +8,16 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — build-system stable-component gate, M-311)
+- **`mycelium-build`** (new crate, outside the trusted kernel — KC-3): makes the RFC-0004 §4
+  stable/experimental gate executable. `check_eligibility` runs the automatic §4 checks (spec
+  ratified + obligations discharged) with specific blocking reasons; `decide(component, promote)`
+  routes to **AOT only for an eligible, explicitly promoted** component (promotion is deliberate,
+  §4) and refuses promotion of an ineligible one (never a silent AOT). Emits a content-addressed
+  `BuildCertificate` (`cert_ref`, BLAKE3) with private fields and a re-validating `Deserialize`
+  (`deny_unknown_fields`) so a forged `Aot` certificate is rejected on deserialize. Seven tests incl.
+  forged-AOT + unknown-field rejection. (phase-3.md §9.5)
+
 ### Added (Phase 3 — L1 literal-pattern `match`, M-320)
 - **`mycelium-l1`**: `match` now covers `Binary{n}`/`Ternary{m}` scrutinees with **literal patterns**,
   not just data types (the explicitly-deferred v0 gap). `checkty::infer_literal_match` enforces
