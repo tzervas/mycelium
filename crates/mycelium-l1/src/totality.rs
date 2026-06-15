@@ -185,6 +185,20 @@ fn descend_walk(
                 _ => false,
             };
             for Arm { pattern, body } in arms {
+                // Every binder the pattern introduces SHADOWS any outer variable of the same name,
+                // so its prior smallness must not leak into the arm body (A4-01: otherwise a binder
+                // reusing an outer `smaller` name lets a non-decreasing recursive call look
+                // structural). Drop all introduced binders, restore afterwards — mirroring the
+                // `Let`/`For` discipline. Only a constructor sub-binder of a *smaller* scrutinee is
+                // itself genuinely smaller, so re-add just those.
+                let mut introduced = Vec::new();
+                pattern_binders(pattern, &mut introduced);
+                let mut restore = Vec::new();
+                for b in &introduced {
+                    if smaller.remove(b) {
+                        restore.push(b.clone());
+                    }
+                }
                 let mut added = Vec::new();
                 if scrut_small {
                     if let Pattern::Ctor(_, subs) = pattern {
@@ -200,6 +214,9 @@ fn descend_walk(
                 descend_walk(body, fname, param, pos, smaller, ok);
                 for b in added {
                     smaller.remove(&b);
+                }
+                for b in restore {
+                    smaller.insert(b);
                 }
             }
         }
@@ -243,5 +260,19 @@ fn descend_walk(
         Expr::Wild(b) | Expr::Spore(b) => descend_walk(b, fname, param, pos, smaller, ok),
         Expr::Ascribe(b, _) => descend_walk(b, fname, param, pos, smaller, ok),
         Expr::Path(_) | Expr::Lit(_) => {}
+    }
+}
+
+/// Collect every variable a pattern binds, recursively — so a `Match` arm can shadow them all
+/// (A4-01). Wildcards and literals bind nothing.
+fn pattern_binders(p: &Pattern, out: &mut Vec<String>) {
+    match p {
+        Pattern::Ident(b) => out.push(b.clone()),
+        Pattern::Ctor(_, subs) => {
+            for s in subs {
+                pattern_binders(s, out);
+            }
+        }
+        Pattern::Wildcard | Pattern::Lit(_) => {}
     }
 }

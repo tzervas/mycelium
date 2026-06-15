@@ -72,6 +72,25 @@ fn non_decreasing_recursion_is_allowed_when_not_matured() {
 }
 
 #[test]
+fn shadowing_rebind_does_not_leak_smallness() {
+    // A4-01 regression: the inner arm rebinds `m` (matching `p`, an unrelated parameter), shadowing
+    // the outer `m` (a piece of `n`). The recursion `f(m, p)` is therefore NOT structural —
+    // `f(3,2) → f(1,2) → f(1,2) → …` diverges — so it must be classified Partial. Mutant-witness:
+    // without the drop-and-restore shadow handling in descend_walk's Match arm, the stale smallness
+    // of the outer `m` leaks in, `f` is wrongly classified Total, and the `matured` form below is
+    // wrongly accepted.
+    let body = "match n { Z => Z, S(m) => match p { Z => Z, S(m) => f(m, p) } }";
+    let src = format!("colony d\ntype Nat = Z | S(Nat)\nfn f(n: Nat, p: Nat) -> Nat = {body}");
+    let env = check(&src).expect("checks");
+    assert_eq!(env.totality["f"], Totality::Partial);
+
+    let matured =
+        format!("colony d\ntype Nat = Z | S(Nat)\nmatured fn f(n: Nat, p: Nat) -> Nat = {body}");
+    let err = check(&matured).unwrap_err();
+    assert!(err.message.contains("matured"), "got: {}", err.message);
+}
+
+#[test]
 fn wild_is_denied_by_default() {
     let src = "colony d\nfn f(x: Binary{8}) -> Binary{8} = wild { x }";
     let err = check(src).unwrap_err();
