@@ -186,7 +186,7 @@ the phase; the gate is defined in §6 and verdicts are filled as tasks land.
 
 ---
 
-## 6. Phase-3 exit gate (proposed — not yet met)
+## 6. Phase-3 exit gate (proposed — **substantially met; two sequenced residuals**, §6.1)
 
 Phase 3 is large and partly exploratory/external-blocked, so the gate is scoped to the **buildable,
 local** deliverables; the exploratory/KC-2-gated epics (E3-1 projections, the E3-2 operational arm,
@@ -205,15 +205,42 @@ hold the gate. Proposed: Phase 3 closes when **all** of —
   tests; RFC-0007 is presented for ratification (the **decision** is the maintainer's, recorded
   append-only; concrete syntax stays KC-2-gated).
 
-**Stretch (honest, out-of-gate):** JIT (M-340, needs an agreed speedup target), BitNet acceleration
-(M-360), native-ternary forward-compat doc (M-370), resonator factorization (M-350, needs-design),
-projections (M-380, KC-2-contingent), AI co-authoring run (M-330, needs API), and the KC-2 verdict
-(M-002, needs API). Each is delivered as far as the environment allows and its verdict pinned at the
-established strength.
+**Stretch (honest, out-of-gate):** JIT (M-340 — **delivered**: in-process JIT + runtime
+specialization with a measured ≈10.7× E1 §4 speedup, no pre-written target), BitNet acceleration
+(M-360 — in progress; SIMD + true-TL2 next), native-ternary forward-compat doc (M-370 — **done**),
+resonator factorization (M-350 — design-drafted, RFC-0009/0010 ratified), projections (M-380,
+KC-2-contingent), AI co-authoring run (M-330, needs API), and the KC-2 verdict (M-002, needs API).
+Each is delivered as far as the environment allows and its verdict pinned at the established strength.
+
+### 6.1 Verdict fill (2026-06-15, VR-5 — at the strength actually established)
+
+Re-read against the landed work. Each gate condition is filled at the strength a checked run
+established; **gate-blocking** vs **stretch** is flagged, and no verdict is pre-written.
+
+| Gate condition | Verdict (2026-06-15) | Gate-blocking? |
+|---|---|---|
+| **Native execution path** (M-301/302/303) | ✅ **MET (build + measured).** M-301 compiles+runs the bit/trit kernel subset to a native artifact; M-302 passes on the kernel corpus **and** catches a deliberately divergent lowering (the discrimination test — guard 7); M-303's E1 is **measured** (native-vs-interp, honestly captioned), and compute throughput is now genuinely measured over runtime data (M-360 §3 packed-ternary kernels ≈1.13–1.67× vs scalar; M-340 §4 weight-specialization ≈10.7×) — no "within an agreed target" claim. | **yes — satisfied** |
+| **Matured toolchain** (M-310/311/312) | 🟡 **MET except document sync.** M-311 (build-system gate + content-addressed `BuildCertificate`, forge-proof deserialize) and M-312 (request-addressed `BuildCache`, demonstrably reuses a prior cert; a weakened obligation misses) ship with tests — **met**. M-310 ships structured diagnostics (`FeedbackSummary`) + the LSP **wire protocol** (JSON-RPC framing, `publishDiagnostics`, lifecycle) with tests — the **diagnostics** condition is met; **document sync** is the honest residual (needs the text→`Node` path). | **yes — residual R1** |
+| **L1 surface** (M-320 + RFC-0007) | 🟡 **MET in prototype; ratification sequenced.** M-320 lands in `mycelium-l1` with tests (literal + nested `match`, Maranget usefulness with witnesses, the decision-tree compiler) — **met**. RFC-0007 is **presented**, and the L0-`Match` revision it needs is **ratified as a decision** (RFC-0011, staged r3). The maintainer has **directed RFC-0006 + RFC-0007 be completed and ratified** before core-lang impl — so full ratification is **sequenced** (residual R2). Concrete syntax stays KC-2-gated (unchanged). | **yes — residual R2** |
+
+**Overall verdict (honest, VR-5): the gate is *substantially met but not yet fully closed*.** The
+keystone native-execution-path condition is fully met and measured; the matured-toolchain and
+L1-surface conditions are met except for two **gate-relevant residuals** (not stretch — both are named
+in the gate), each now sequenced with an owner and an order:
+
+- **R1 — M-310 document sync.** Blocked on the text→`Node` path, which is the RFC-0011 enactment
+  (`Match`/`Construct` → L0 + the parser→checker→L0 pipeline). Closes in the **core-lang step**.
+- **R2 — RFC-0006 + RFC-0007 completed and ratified.** Maintainer-directed; **sequenced before**
+  core-lang impl (after the exit-gate assembly and the M-360 SIMD increment).
+
+So `docs/planning/phase-3.md` stays **Living draft** (not "exit-gate met"): the build order to close it
+is **M-360 SIMD + true-TL2 → complete + ratify RFC-0006/0007 → enact RFC-0011 r3 + M-320 wiring (closes
+R1) → re-assert the gate**. Everything else in the gate is met; nothing here upgrades a verdict beyond
+the checked run that established it.
 
 > The §6 gate is itself a **proposed** scope decision (what counts as "Phase-3 done" given two
-> external blockers). It is recorded here for the maintainer to ratify or adjust; it is not asserted
-> as met.
+> external blockers). It is recorded here for the maintainer to ratify or adjust; §6.1 fills it at the
+> established strength but does **not** assert the phase closed — two named residuals remain.
 
 ---
 
@@ -543,6 +570,16 @@ established strength.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (Phase-3 exit-gate assembly — §6.1 verdict fill, VR-5):** re-read §6 against the landed
+  work and filled each gate condition at the strength a checked run established. **Native execution
+  path** ✅ met + measured (M-301/302/303; compute throughput now real via M-360 §3 + M-340 §4).
+  **Matured toolchain** 🟡 met except **document sync** (M-311/312 done; M-310 diagnostics+wire done) —
+  residual **R1**, blocked on the RFC-0011 text→`Node` enactment. **L1 surface** 🟡 met in prototype
+  (M-320) with the L0-`Match` revision **ratified** (RFC-0011 staged r3); **RFC-0006/0007 full
+  ratification sequenced** (maintainer-directed) — residual **R2**. Overall: **substantially met, not
+  yet closed**; doc stays *Living draft*. Close-out order: **M-360 SIMD + true-TL2 → ratify
+  RFC-0006/0007 → enact RFC-0011 r3 + M-320 wiring (closes R1) → re-assert the gate.** No verdict
+  upgraded beyond its checked basis.
 - **2026-06-15 (keystone — RFC-0011 L0 `Match` / L1-in-Core-IR ratified as a decision; enactment
   sequenced):** authored `docs/rfcs/RFC-0011-L0-Match-and-L1-in-Core-IR.md` — the *normative* keystone
   both M-320's remaining half (emit decision-tree leaves as real L0 nodes) and M-310's document sync ride
