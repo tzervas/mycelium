@@ -41,6 +41,13 @@ const TRIALS: usize = 10_000; // ≥ 1e4 (SC-2)
 /// trials — every bundled member out-scores every non-member by nearest-neighbour cleanup.
 #[test]
 fn bundle_capacity_holds_over_1e4_trials() {
+    // A3-08: what this empirical check does — and does not — establish. The Clarkson/Thomas bound is
+    // a *sufficient* condition (`dim ≥ requiredDim ⟹ failProb ≤ δ`), so a trial run at the boundary
+    // dim can confirm the bound's *non-vacuity* (the rate really does stay ≤ δ there) but **cannot**
+    // confirm its *tightness*: a sufficient condition admits slack, and no number of trials at one
+    // dim distinguishes a tight bound from a loose one. Tamper-protection for the bound's *constant*
+    // is therefore NOT this test — it is the pinned-constant unit test in `mycelium_vsa::capacity`
+    // plus the `dim >= requiredDim` sentinel asserted below; this test only guards non-vacuity.
     let dim = capacity::required_dim(M, DELTA, capacity::MARGIN_MU) as usize; // 1141
     assert!(dim >= 1141);
 

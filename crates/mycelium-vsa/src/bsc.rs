@@ -152,8 +152,11 @@ impl VsaModel for Bsc {
         match op {
             // XOR self-inverse / circular shift: algebraic (RFC-0003 §4).
             VsaOp::Bind | VsaOp::Unbind | VsaOp::Permute => GuaranteeStrength::Exact,
-            // Proven on expectation (Heim / Yi & Achour) — weaker than w.p. ≥ 1−δ; the
-            // Value-level bundle is Empirical (module docs).
+            // A3-06/C1-04: this `Proven` is the literature's *operation-level, on-expectation* tag
+            // (Heim / Yi & Achour) — strictly weaker than a value-level w.p. ≥ 1−δ guarantee, even
+            // though the lattice renders it identically to MAP-I's tail-bound `Proven`. The lattice
+            // cannot carry the "on expectation" qualifier; a matrix consumer reads it in
+            // `matrix.rs`. The Value-level bundle is correctly `Empirical` (module docs).
             VsaOp::Bundle => GuaranteeStrength::Proven,
         }
     }
@@ -300,6 +303,18 @@ mod tests {
             member > stranger + 0.2,
             "member {member} vs stranger {stranger}"
         );
+    }
+
+    #[test]
+    fn even_count_ties_copy_the_first_operand_a3_09() {
+        // A3-09 regression: the documented BSC majority tie-break copies the first operand's bit on
+        // an exact tie (half ones, even operand count) — the analogue of MAP-B's tie test. Without a
+        // test this behavior is unverified. Mutant-witness: changing the `else { f }` arm in
+        // `bundle` (e.g. to a constant) flips this assertion.
+        let m = Bsc::new(4);
+        let a = vec![1.0, 0.0, 1.0, 0.0];
+        let b = vec![0.0, 1.0, 0.0, 1.0]; // every position ties (one 1, one 0)
+        assert_eq!(m.bundle(&[&a, &b]).unwrap(), a);
     }
 
     #[test]

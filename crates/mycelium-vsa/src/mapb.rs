@@ -75,11 +75,17 @@ impl MapB {
     }
 
     /// Value-level `bind` (Exact).
+    ///
+    /// The `Exact` tag rests on the bipolar self-inverse identity (`x·x = 1`), which holds **only**
+    /// on the `±1` alphabet. Non-bipolar components are refused with
+    /// [`VsaError::NonAlphabetComponent`] rather than stamped `Exact` on a wrong result
+    /// (A3-04; M-I2/VR-5; G2).
     pub fn bind_values(&self, a: &Value, b: &Value) -> Result<Value, VsaError> {
-        let out = self.bind(
-            hv_of(self.model_id(), self.dim, a)?,
-            hv_of(self.model_id(), self.dim, b)?,
-        )?;
+        let av = hv_of(self.model_id(), self.dim, a)?;
+        let bv = hv_of(self.model_id(), self.dim, b)?;
+        Self::check_bipolar(av)?;
+        Self::check_bipolar(bv)?;
+        let out = self.bind(av, bv)?;
         wrap_exact(
             self.model_id(),
             self.dim,
@@ -90,11 +96,15 @@ impl MapB {
     }
 
     /// Value-level `unbind` (Exact; self-inverse).
+    ///
+    /// As with [`bind_values`](Self::bind_values), the `Exact` self-inverse identity holds only on
+    /// the `±1` alphabet; non-bipolar components are refused, never stamped `Exact` (A3-04).
     pub fn unbind_values(&self, a: &Value, b: &Value) -> Result<Value, VsaError> {
-        let out = self.unbind(
-            hv_of(self.model_id(), self.dim, a)?,
-            hv_of(self.model_id(), self.dim, b)?,
-        )?;
+        let av = hv_of(self.model_id(), self.dim, a)?;
+        let bv = hv_of(self.model_id(), self.dim, b)?;
+        Self::check_bipolar(av)?;
+        Self::check_bipolar(bv)?;
+        let out = self.unbind(av, bv)?;
         wrap_exact(
             self.model_id(),
             self.dim,
@@ -295,6 +305,39 @@ mod tests {
         let a = vec![1.0, -1.0, 1.0, -1.0];
         let b = vec![-1.0, 1.0, -1.0, 1.0]; // every position ties
         assert_eq!(m.bundle(&[&a, &b]).unwrap(), a);
+    }
+
+    #[test]
+    fn value_bind_unbind_refuse_non_bipolar_a3_04() {
+        // A3-04 regression: bind/unbind_values stamp Exact on the bipolar self-inverse identity,
+        // which holds only on the ±1 alphabet. A non-bipolar component must be refused, never
+        // mis-tagged Exact. Mutant-witness: removing the check_bipolar guards in
+        // bind_values/unbind_values makes these return an (Exact-tagged) Value.
+        let m = MapB::new(D);
+        let mut data = bipolar(D, 3);
+        data[7] = 0.5;
+        let bad = Value::new(
+            Repr::Vsa {
+                model: "MAP-B".to_owned(),
+                dim: D,
+                sparsity: SparsityClass::Dense,
+            },
+            Payload::Hypervector(data),
+            Meta::exact(mycelium_core::Provenance::Root),
+        )
+        .unwrap();
+        let ok = hv_value(D, 4);
+        assert_eq!(
+            m.bind_values(&bad, &ok),
+            Err(VsaError::NonAlphabetComponent { index: 7 })
+        );
+        assert_eq!(
+            m.unbind_values(&ok, &bad),
+            Err(VsaError::NonAlphabetComponent { index: 7 })
+        );
+        // A bipolar bind still returns an unchanged Exact result.
+        let good = m.bind_values(&ok, &hv_value(D, 5)).unwrap();
+        assert_eq!(good.meta().guarantee(), GuaranteeStrength::Exact);
     }
 
     #[test]

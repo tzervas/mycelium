@@ -83,6 +83,11 @@ pub enum VsaError {
         /// Index of the first item that repeats an earlier one.
         index: usize,
     },
+    /// Cleanup was requested against a [`CleanupMemory`] that holds no usable codebook atom for
+    /// this model/dim — there is nothing to clean up against, which is a distinct condition from an
+    /// empty *bundle* of operands ([`EmptyBundle`](VsaError::EmptyBundle)). Surfaced explicitly so a
+    /// missing/dim-mismatched codebook is not mistaken for a degenerate bundle (A3-07; G2).
+    EmptyCodebook,
     /// A value handed to a Value-level adapter was not a hypervector of the expected model.
     NotThisModel {
         /// The model id the adapter expected.
@@ -141,6 +146,10 @@ impl core::fmt::Display for VsaError {
                 write!(f, "dimension mismatch: expected {expected}, got {got}")
             }
             VsaError::EmptyBundle => write!(f, "bundle requires at least one item"),
+            VsaError::EmptyCodebook => write!(
+                f,
+                "cleanup memory holds no codebook atom for this model/dim to clean up against"
+            ),
             VsaError::InsufficientCapacity {
                 items,
                 dim,

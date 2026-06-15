@@ -55,7 +55,12 @@ pub fn reconstruct_role<M: VsaModel>(
     let record_hv = hv_payload(model, manifest.dim(), record)?;
     let role_hv = hv_payload(model, manifest.dim(), role_atom)?;
     let noisy = model.unbind(record_hv, role_hv)?;
-    let hit = memory.cleanup(&noisy, model).ok_or(VsaError::EmptyBundle)?;
+    // `noisy` has length `dim` (it is an unbind of dim-checked payloads), so a `None` here means the
+    // codebook is empty or dim-mismatched — i.e. there is nothing to clean up against. That is a
+    // distinct condition from an empty bundle of operands, so surface the right variant (A3-07).
+    let hit = memory
+        .cleanup(&noisy, model)
+        .ok_or(VsaError::EmptyCodebook)?;
     if hit.confidence < threshold {
         return Err(VsaError::BelowCleanupThreshold {
             confidence: hit.confidence,

@@ -86,8 +86,16 @@ impl MapI {
     }
 
     /// Value-level `bind` (Exact): `bind(a, b)` with `Derived` provenance over both inputs.
+    ///
+    /// The `Exact` tag rests on the bipolar self-inverse identity (`x·x = 1`), which holds **only**
+    /// on the `±1` alphabet. A non-bipolar component would make the stamped `Exact` a wrong result,
+    /// so we guard both operands and refuse with [`VsaError::NonAlphabetComponent`] rather than
+    /// mis-tag (A3-04; M-I2/VR-5; G2).
     pub fn bind_values(&self, a: &Value, b: &Value) -> Result<Value, VsaError> {
-        let out = self.bind(self.hv_of(a)?, self.hv_of(b)?)?;
+        let (av, bv) = (self.hv_of(a)?, self.hv_of(b)?);
+        Self::check_bipolar(av)?;
+        Self::check_bipolar(bv)?;
+        let out = self.bind(av, bv)?;
         self.wrap_exact(
             out,
             "vsa.map_i.bind",
@@ -96,8 +104,14 @@ impl MapI {
     }
 
     /// Value-level `unbind` (Exact): recover a factor (self-inverse for MAP-I).
+    ///
+    /// As with [`bind_values`](Self::bind_values), the `Exact` self-inverse identity holds only on
+    /// the `±1` alphabet; non-bipolar components are refused, never stamped `Exact` (A3-04).
     pub fn unbind_values(&self, a: &Value, b: &Value) -> Result<Value, VsaError> {
-        let out = self.unbind(self.hv_of(a)?, self.hv_of(b)?)?;
+        let (av, bv) = (self.hv_of(a)?, self.hv_of(b)?);
+        Self::check_bipolar(av)?;
+        Self::check_bipolar(bv)?;
+        let out = self.unbind(av, bv)?;
         self.wrap_exact(
             out,
             "vsa.map_i.unbind",
@@ -388,6 +402,39 @@ mod tests {
         // unbind(bind(a,b), b) recovers a's payload.
         let recovered = m.unbind_values(&bound, &b).unwrap();
         assert_eq!(recovered.payload(), a.payload());
+    }
+
+    #[test]
+    fn value_bind_unbind_refuse_non_bipolar_a3_04() {
+        // A3-04 regression: bind/unbind_values stamp Exact on the bipolar self-inverse identity,
+        // which holds only on the ±1 alphabet. A non-bipolar component must be refused, never
+        // mis-tagged Exact. Mutant-witness: removing the check_bipolar guards in
+        // bind_values/unbind_values makes these return an (Exact-tagged) Value.
+        let m = MapI::new(D);
+        let mut data = bipolar(D, 3);
+        data[5] = 0.5;
+        let bad = Value::new(
+            Repr::Vsa {
+                model: "MAP-I".to_owned(),
+                dim: D,
+                sparsity: SparsityClass::Dense,
+            },
+            Payload::Hypervector(data),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap();
+        let ok = hv_value(D, 4);
+        assert_eq!(
+            m.bind_values(&bad, &ok),
+            Err(VsaError::NonAlphabetComponent { index: 5 })
+        );
+        assert_eq!(
+            m.unbind_values(&ok, &bad),
+            Err(VsaError::NonAlphabetComponent { index: 5 })
+        );
+        // A bipolar bind still returns an unchanged Exact result.
+        let good = m.bind_values(&ok, &hv_value(D, 5)).unwrap();
+        assert_eq!(good.meta().guarantee(), GuaranteeStrength::Exact);
     }
 
     #[test]
