@@ -8,20 +8,20 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
-### Changed (Phase 3 — RFC-0006/0007 completion-review for ratification; Draft, awaiting maintainer sign-off)
-- **RFC-0006 and RFC-0007 each gain a §10 "Ratification readiness" carve-out (status stays Draft).**
-  A completion-review pass (maintainer directive: complete and ratify RFC-0006/0007 before the
-  core-language implementation). The review finds **no missing normative content** in the
+### Changed (Phase 3 — RFC-0006 & RFC-0007 ratified, Draft → Accepted r4; maintainer sign-off)
+- **RFC-0006 (surface/term-layering) and RFC-0007 (L1 kernel calculus) are now Accepted (r4), with a
+  scoped §10 carve-out.** A completion-review found **no missing normative content** in the
   KC-2-independent scope — both are mature, and the v0 L1 calculus is prototype-realized in
-  `crates/mycelium-l1` and exercised by the M-320 usefulness + decision-tree work. §10 makes the
-  proposed `Draft → Accepted` split crisp **for sign-off**: ratifiable now = RFC-0006 §3 layering /
-  §4.1 invariants S1–S6 / §4.2 capability targets LR-1…LR-9 / §4.3 grammar discipline / §8 positions
-  Q2·Q4·Q5·Q7 (now realized by RFC-0007 §4.1–4.7 and the ratified **RFC-0011** staged-r3
-  `Match`-into-L0 decision), and RFC-0007 §4.1–4.8 (the v0 calculus, stage-0 dynamic guarantee check);
-  stays gated/deferred = concrete L3 syntax (KC-2/M-002-external), stage-1 static grading (RFC-0006 Q3
-  implicit-flows decision / R7-Q2), R7-Q1·Q3 → RFC-0001 r4, R7-Q4, and traits/LR-2. **The status is not
-  flipped** — this pass presents the scope; the maintainer performs the append-only `Draft → Accepted`
-  transition. No design content changed; §10 is a readiness map. (RFC-0006 r4 / RFC-0007 r4 Meta)
+  `crates/mycelium-l1` and exercised by the M-320 usefulness + decision-tree work — and the maintainer
+  signed off on the carve-out. **Ratified:** RFC-0006 §3 layering / §4.1 invariants S1–S6 / §4.2
+  capability targets LR-1…LR-9 / §4.3 grammar discipline / §8 positions Q2·Q4·Q5·Q7 (now realized by
+  RFC-0007 §4.1–4.7 and the ratified **RFC-0011** staged-r3 `Match`-into-L0 decision), and RFC-0007
+  §4.1–4.8 (the v0 calculus, stage-0 dynamic guarantee check). **Stays gated/deferred (NOT ratified):**
+  concrete L3 surface syntax (KC-2/M-002-external), stage-1 static grading (RFC-0006 Q3 implicit-flows
+  decision / R7-Q2), R7-Q1·Q3 → RFC-0001 r4, R7-Q4, and traits/LR-2. No design content changed on
+  acceptance; each RFC's status line + §10 carry the carve-out so "Accepted" is never read as ratifying
+  the gated parts (VR-5). RFC README index + Doc-Index status updated. This unblocks the core-language
+  step (the RFC-0011 r3 enactment + M-320 L0 wiring). (RFC-0006 r4 / RFC-0007 r4 Meta)
 
 ### Changed (Phase 3 — true bitnet.cpp 1.67-b/w TL2 layout closes A5-08, M-360; E3-6; RFC-0004 §5)
 - **`mycelium-mlir::pack` now realizes `TL2` as the true bitnet.cpp layout (1.67 b/w).** The prior

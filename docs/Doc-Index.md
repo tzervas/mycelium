@@ -23,8 +23,8 @@
 | **RFC-0003 — VSA Submodule Boundary** | boundary, guarantee matrix, sparsity refinement, manifest | **Accepted (r4)** — r3 §4.1 erratum; r4 §6 resonator decode params (RFC-0009) |
 | **RFC-0004 — Execution Model & "Stable Component"** | MLIR backbone, shared checker, schedule-staged packing | **Accepted** |
 | **RFC-0005 — Selection-Policy Language** | total cost-based policy + EXPLAIN | **Accepted** |
-| **RFC-0006 — Surface Language & Term-Language Layering** | L0–L3 layering, syntactic honesty invariants, Rust-class-and-beyond capability targets; concrete syntax KC-2-gated | **Draft** |
-| **RFC-0007 — The L1 Kernel Calculus** | ten-node term budget, registry data declarations, totality/`matured` gate, v0 elaboration fragment | **Draft** |
+| **RFC-0006 — Surface Language & Term-Language Layering** | L0–L3 layering, syntactic honesty invariants, Rust-class-and-beyond capability targets; concrete syntax KC-2-gated | **Accepted** (r4, 2026-06-15; layering/S1–S6/LR-1…LR-9/grammar ratified; concrete L3 syntax KC-2-gated, stage-1 grading deferred — §10) |
+| **RFC-0007 — The L1 Kernel Calculus** | ten-node term budget, registry data declarations, totality/`matured` gate, v0 elaboration fragment | **Accepted** (r4, 2026-06-15; v0 calculus §4.1–4.8 ratified; stage-1 grading / R7-Q1…Q4 / surface syntax deferred — §10) |
 | **ADR-010 — Verified-Numerics Foundation** | two bound kernels + shared certificate | **Accepted** |
 | **ADR-011 — BoundBasis is universal** | `basis` is a companion of every `Bound` (supersedes RFC-0001 r1 §4.3) | **Accepted** |
 | **ADR-012 — Layered Lexicon & Fungal Runtime Model** | three-tier lexicon + an (aspirational) distributed fungal runtime vocabulary | **Proposed** (architect review notes appended §7; the runtime model is now drafted as RFC-0008, grounded by research Pass 4) |
@@ -39,7 +39,7 @@
 ## 2. Dependency DAG
 
 ```
-Survey ─► Foundation(r3) ─► RFC-0001 ─► { RFC-0002, RFC-0003, RFC-0004, RFC-0005, RFC-0006 (Draft) }
+Survey ─► Foundation(r3) ─► RFC-0001 ─► { RFC-0002, RFC-0003, RFC-0004, RFC-0005, RFC-0006 (Accepted r4) ─► RFC-0007 (Accepted r4) ─► RFC-0011 (Accepted; r3 enactment pending) }
                                │
                                └─► DN-01 (Resolved) ─► RFC-0001 §4.1, RFC-0004 §5
 
