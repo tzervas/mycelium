@@ -18,8 +18,11 @@
 //! **A5-08 stand-in note.** This base-3 `TL2` is a placeholder: at 5 trits/byte it realizes 1.6
 //! b/w, whereas the published bitnet.cpp TL2 figure (and the selector's cost model in
 //! `mycelium-select`) is **1.67 b/w**. The discrepancy is inert for *selection* (both are < 2.0, so
-//! TL2 still wins the exhaustive cheapest) and is to be reconciled when the native TL2 kernel lands;
-//! see the matching note on `packing_bits_per_element` in `mycelium-select/src/lib.rs`.
+//! TL2 still wins the exhaustive cheapest). The M-360 native TL2 **dot kernel** (`bitnet`) decodes
+//! *this* placeholder codec — so the kernel landing does **not** change the b/w; it inherits the
+//! 1.6 stand-in. Aligning to bitnet.cpp's true 1.67-b/w TL2 bit-packing is therefore tied to the
+//! M-360 **real-layout / SIMD** increment (not the scalar kernel), and stays flagged here and on
+//! `packing_bits_per_element` in `mycelium-select/src/lib.rs` until then.
 //!
 //! Decoding is **total** (never panics): an out-of-range code/byte folds `mod 3`, so reading a
 //! buffer under a mismatched scheme yields *some* trit sequence deterministically — a misread, not

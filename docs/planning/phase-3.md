@@ -520,6 +520,14 @@ established strength.
   silent). Adds the workspace-pinned `serde_json`. 7 tests. §2 M-310 row + §9.7 updated. **Scope:**
   not a document-syncing server yet — text→`Node` sync needs the L1 surface (M-320); honestly
   advertised as `TextDocumentSyncKind.None` (VR-5).
+- **2026-06-15 (M-360 follow-ups — E1 §3 all-three + A5-08 reconciliation):** `cargo xtask e1` §3
+  now times **all three** bitnet packings in-process over runtime data (I2_S/TL1/TL2), each vs a
+  hand-written scalar baseline doing the identical per-scheme unpack (measured: JIT beats scalar
+  ≈1.69×/1.31×/1.15×; reported as-measured, VR-5). Re-exported `compile_bitnet_dot_for` /
+  `emit_bitnet_dot_ir_for` / `jit_ternary_dot_for`. The **A5-08** notes in `mycelium-mlir::pack` and
+  `mycelium-select` are refined to record that the scalar TL2 kernel decodes the 1.6-b/w *placeholder*
+  codec — it does **not** resolve the published 1.67-b/w discrepancy (inert for selection); the true
+  bitnet.cpp TL2 layout is tied to the **real-layout / SIMD** increment, kept flagged not silent.
 - **2026-06-15 (M-360 TL1/TL2 kernels — full bitnet packing breadth):** `mycelium-mlir::bitnet`
   generalised from I2_S-only to `emit_bitnet_dot_ir_for(scheme)` covering **all three** bitnet
   packings — TL1 inverts the rot=2 LUT (`d01 = (code+1) mod 3`), TL2 decodes base-3 5-trits/byte

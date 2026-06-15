@@ -57,9 +57,16 @@ corpus, not released software. Versioning will begin when the kernel does.
   TwoBitPerTrit / FiveTritPerByte) is the new explicit `AotError::UnsupportedScheme` refusal, never a
   silent misdecode. Each kernel is **differential-checked** against the packing-independent oracle
   `ternary_dot_ref` over the same `pack_trits` packing (`jit_dot_matches_reference_all_schemes`, n up to
-  1000; the JIT actually compiled+ran here, matching all three). **Honesty/scope:** scalar loops only —
-  no parity with bitnet.cpp's hand-tuned **SIMD** is claimed (the next M-360 increment); no guarantee is
-  upgraded (VR-5/G3). (phase-3.md §2 / §9.8 / Meta)
+  1000; the JIT actually compiled+ran here, matching all three). The **E1 §3** harness
+  (`cargo xtask e1`) now times **all three** packings in-process over runtime data, each against a
+  hand-written scalar baseline doing the identical per-scheme unpack (measured here: JIT beats scalar
+  1.69× I2_S / 1.31× TL1 / 1.15× TL2 — whatever was measured, no pre-written claim, VR-5). The
+  **A5-08** cross-reference notes (`mycelium-mlir::pack`, `mycelium-select`) are refined: the scalar
+  TL2 kernel decodes the **1.6-b/w placeholder codec**, so it does *not* resolve the published
+  1.67-b/w TL2 discrepancy (still inert for selection) — aligning to bitnet.cpp's true TL2 layout is
+  now explicitly tied to the **real-layout / SIMD** increment, not the scalar kernel. **Honesty/scope:**
+  scalar loops only — no parity with bitnet.cpp's hand-tuned **SIMD** is claimed (the next M-360
+  increment); no guarantee is upgraded (VR-5/G3). (phase-3.md §2 / §9.8 / Meta)
 
 ### Added (Phase 3 — board sync: Phase-2 issues closed, Phase-3 M-3xx bootstrapped)
 - **Tracker hygiene only.** Closed the completed Phase-2 epics (E2-1…E2-7, #28–34) and tasks

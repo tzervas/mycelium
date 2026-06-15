@@ -29,7 +29,8 @@ pub mod pack;
 
 pub use aot::{run, run_with_layout};
 pub use bitnet::{
-    compile_bitnet_dot, emit_bitnet_dot_ir, jit_ternary_dot, ternary_dot_ref, BitnetDotKernel,
+    compile_bitnet_dot, compile_bitnet_dot_for, emit_bitnet_dot_ir, emit_bitnet_dot_ir_for,
+    jit_ternary_dot, jit_ternary_dot_for, ternary_dot_ref, BitnetDotKernel,
 };
 pub use dialect::emit;
 pub use jit::{compile_so, jit_run, JitArtifact};
