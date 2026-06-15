@@ -13,6 +13,9 @@ workspace = true
 
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
+# RFC-0010: the one RFC-0005 selection mechanism, reused for the decode-method site (no parallel
+# selector). Acyclic — mycelium-select depends only on mycelium-core.
+mycelium-select = { path = "../mycelium-select" }
 
 [dev-dependencies]
 # Manifest/value wire round-trip tests (M-260); the on-the-wire form is JSON (M-104).

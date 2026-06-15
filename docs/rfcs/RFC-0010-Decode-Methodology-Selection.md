@@ -239,3 +239,18 @@ profile δ, or the recon schema; no learned/statistics-driven costing (RFC-0005 
   non-identifiable instance, still `Refuse`s; a forced `Resonator` out of regime still `Refuse`s. No
   kernel change (the recon `≤Empirical` ceiling is untouched); cleanup-variant selection stays deferred
   (§8). Honesty contract unchanged.
+- **2026-06-15 — Prototype landed (M-350; informative).** Built `mycelium-vsa::decode_select`
+  (`reconstruct_factors_auto` / `explain_decode_method` / `decode_method_policy` /
+  `DecodeSelection`) over the additively-extended one mechanism (`mycelium-select`: `DecodeMethod`,
+  `DecodeFacts`, the `CapacityAtMost`/`FactorsAtMost`/`InResonatorRegime` predicates, the
+  `select_decode_method` adapter — all core-only). The brute-force arm is identifiability-checked
+  (`VsaError::NonIdentifiable`) and tagged `Exact`; the resonator arm is tagged `Empirical`; the honesty
+  floor (§4.5) is enforced in the executor and covered by tests (forced overrides cannot escape it).
+  **Measured design consequence (honest):** with the default `enum_budget` = the resonator's validated
+  `max_capacity` (4096), every in-regime request is also enumerable, so the **brute-force `Exact` arm
+  dominates the entire current validated regime** — the resonator arm is reachable only at a tighter
+  (latency-driven) budget or once the validated capacity grows past the enumeration budget. This
+  sharpens §8's `enum_budget` question (a wall-clock crossover, still to be measured) and underlines why
+  pushing the resonator's validated capacity well beyond what is cheaply enumerable is what makes the
+  `Empirical` arm load-bearing. No kernel change; cleanup-variant selection still deferred (§8). RFC
+  stays **Accepted**; honesty contract unchanged.

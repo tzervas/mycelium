@@ -32,6 +32,31 @@ corpus, not released software. Versioning will begin when the kernel does.
   `atoms()`/`dim()` accessors; four resonator `VsaError` variants. **Nothing new in the kernel** beyond
   the r4 additive manifest metadata fields. (phase-3.md §2 / Meta)
 
+### Added (Phase 3 — RFC-0010 decode-methodology selector prototype, M-350)
+- **`mycelium-vsa::decode_select`** — the RFC-0010 decode-methodology selector, reusing the **one**
+  RFC-0005 selection mechanism as a **third site** (no parallel selector). `reconstruct_factors_auto`
+  routes a factorization request among `{ BruteForceExact, Resonator, Refuse }` by an ordered decision
+  table over **exact** facts (`F`, `∏kᵢ`, `d`, `ResonatorProfile` membership), runs the chosen arm, and
+  returns the recovered factors with the **guarantee tag read off the arm** — brute-force enumeration is
+  **`Exact`** (identifiability-checked against ties), the resonator is **`Empirical`**, else an explicit
+  `VsaError::DecodeRefused`. Every selection emits the mandatory EXPLAIN (`explain_decode_method` is the
+  pure, no-execution form). `DecodeMethodPolicy` is content-addressed (`enum_budget` is part of its
+  identity).
+- **Honesty floor enforced (RFC-0010 §4.5).** A forced `BruteForceExact` beyond `enum_budget`, a forced
+  `BruteForceExact` on a non-identifiable instance (`VsaError::NonIdentifiable`), and a forced
+  `Resonator` out of regime all still **refuse** — a first-class override cannot escape the floor or
+  upgrade a tag (VR-5). The `mycelium-core::recon` `≤Empirical` ceiling is untouched.
+- **Mechanism extended additively** (`mycelium-select`, core-only): an abstract `DecodeMethod`
+  candidate, the `DecodeFacts` queryable facts, the `CapacityAtMost`/`FactorsAtMost`/`InResonatorRegime`
+  predicates, and the `select_decode_method` adapter. `mycelium-vsa` now depends on `mycelium-select`
+  (acyclic — `mycelium-select` is `mycelium-core`-only).
+- **Honest finding recorded.** With `DEFAULT_ENUM_BUDGET = MAPI_RESONATOR_PROFILE.max_capacity` (4096),
+  *every* in-regime request is also enumerable, so the brute-force `Exact` arm dominates the **entire**
+  validated regime (never take `Empirical` when `Exact` is cheaply available) — the resonator arm
+  becomes load-bearing only at a tighter budget (latency) or once the validated capacity grows beyond
+  the enumeration budget. The `enum_budget` wall-clock crossover stays the RFC-0010 §8 open question.
+  (phase-3.md §2 / Meta)
+
 ### Added (Phase 3 — RFC-0010 decode-methodology selection design, M-350 needs-design)
 - **`docs/rfcs/RFC-0010-Decode-Methodology-Selection.md`** (Draft): the design artifact for choosing a
   **decode methodology** as a **third site of the one RFC-0005 selection mechanism** (no parallel
