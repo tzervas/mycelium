@@ -38,6 +38,12 @@ corpus, not released software. Versioning will begin when the kernel does.
     which construct these types via `new`/`exact`/the composition methods.
 
 ### Changed (deep-review remediation — Wave 1)
+- **Dev tooling — banked review lessons into the skills.** `dev-workflow/SKILL.md` gains a "Banked
+  guards" section and `_shared/review-rubric.md` a "Recurring defect patterns (grep-first)" list, so
+  the honesty-rule seams the review exposed (outward-rounded f64 bounds, fail-closed bound
+  constructors, `deny_unknown_fields` + schema re-validation, depth-guarded recursive descent,
+  ambiguous-encoding hashing, shadowing-aware analyses, mutant-witness tests) are caught while
+  authoring and during review, not only in audit. Each guard cites the finding that motivated it.
 - **RFC-0003 → Accepted (r3): §4.1 erratum** reconciling the §4 guarantee-tag table with its own
   "Net" line, resolving review findings **A3-01 / A3-02 (H4/H5)**. On a checked algebraic basis:
   `permute` is `Exact` for every model (the table's "Proven" conflated the permutation *operation* —
