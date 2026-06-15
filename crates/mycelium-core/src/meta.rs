@@ -119,7 +119,9 @@ impl Meta {
         }
         if let Some(s) = &sparsity {
             if !(0.0..=1.0).contains(&s.density) {
-                return Err(WfError::MalformedBound);
+                // A6-08: a sparsity observation is a measurement, not a guarantee bound — so an
+                // out-of-range density is `MalformedSparsity`, not the misleading `MalformedBound`.
+                return Err(WfError::MalformedSparsity);
             }
         }
         Ok(Meta {
@@ -387,6 +389,25 @@ mod tests {
             None,
         );
         assert_eq!(m.unwrap_err(), WfError::MalformedBound);
+    }
+
+    #[test]
+    fn out_of_range_sparsity_is_malformed_sparsity() {
+        // A6-08 mutant-witness: an out-of-range `density` is a sparsity-observation error, not a
+        // bound error — so it must be `MalformedSparsity`, never the misleading `MalformedBound`.
+        let bad_sparsity = SparsityObs {
+            active: 10,
+            density: 1.5,
+        };
+        let m = Meta::new(
+            Provenance::Root,
+            GuaranteeStrength::Exact,
+            None,
+            Some(bad_sparsity),
+            None,
+            None,
+        );
+        assert_eq!(m.unwrap_err(), WfError::MalformedSparsity);
     }
 
     #[test]

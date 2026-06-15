@@ -44,11 +44,17 @@ fn dense_f32(xs: Vec<f64>) -> Value {
     .unwrap()
 }
 
-fn assert_validated(v: CheckVerdict, what: &str) {
-    assert!(
-        matches!(v, CheckVerdict::Validated { .. }),
-        "{what}: must validate, got {v:?}"
-    );
+fn assert_validated(v: CheckVerdict, expected: GuaranteeStrength, what: &str) {
+    // A1-05 mutant-witness: the verdict must not only be `Validated` but established at the
+    // *honest* strength — `matches!(Validated { .. })` discarded `strength`, so a checker that
+    // upgraded (e.g. tagged a bounded swap `Exact`, or vice-versa) would have slipped through.
+    match v {
+        CheckVerdict::Validated { strength } => assert_eq!(
+            strength, expected,
+            "{what}: validated at the wrong strength (got {strength:?}, want {expected:?})"
+        ),
+        other => panic!("{what}: must validate, got {other:?}"),
+    }
 }
 
 /// **SC-3 global, positive half:** every implemented legal-pair row emits a certificate *and*
@@ -68,6 +74,7 @@ fn every_implemented_swap_emits_and_validates_a_certificate() {
                 Certificate::exact(),
                 &Evidence::Swap(&cert),
             ),
+            GuaranteeStrength::Exact,
             "bijective enc",
         );
         let (back, dec_cert) =
@@ -80,6 +87,7 @@ fn every_implemented_swap_emits_and_validates_a_certificate() {
                 Certificate::exact(),
                 &Evidence::Swap(&dec_cert),
             ),
+            GuaranteeStrength::Exact,
             "bijective dec",
         );
     }
@@ -95,6 +103,7 @@ fn every_implemented_swap_emits_and_validates_a_certificate() {
             claimed,
             &Evidence::Swap(&cert),
         ),
+        GuaranteeStrength::Proven,
         "bounded F32→BF16",
     );
     // Bounded-probabilistic row: Dense ↔ VSA (M-231), both directions, at the proven dimension.
@@ -112,6 +121,7 @@ fn every_implemented_swap_emits_and_validates_a_certificate() {
             claimed,
             &Evidence::Swap(&enc_cert),
         ),
+        GuaranteeStrength::Proven,
         "bounded-probabilistic Dense→VSA",
     );
     let (back, dec_cert) =
@@ -124,6 +134,7 @@ fn every_implemented_swap_emits_and_validates_a_certificate() {
             claimed,
             &Evidence::Swap(&dec_cert),
         ),
+        GuaranteeStrength::Proven,
         "bounded-probabilistic VSA→Dense",
     );
 }

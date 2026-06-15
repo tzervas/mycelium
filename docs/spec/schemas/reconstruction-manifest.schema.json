@@ -39,11 +39,16 @@
     },
     "recipe": {
       "type": ["object", "null"],
-      "description": "The compositional recipe / role schema: which ops combined which slots. REQUIRED (non-null) for CompositionalReconstruction; absent/null for IndexedRetrieval.",
+      "description": "The compositional recipe / role schema: which ops combined which slots. REQUIRED (non-null) for CompositionalReconstruction; absent/null for IndexedRetrieval. A6-06: both `roles` and `structure` are REQUIRED, and `structure` maps each role name to the CONTENT-ADDRESSED hash of its role atom — matching the Rust `Recipe { roles, structure: Map<String, ContentHash> }` contract, so a schema-valid recipe is also kernel-valid.",
       "additionalProperties": false,
+      "required": ["roles", "structure"],
       "properties": {
         "roles": { "type": "array", "items": { "type": "string" } },
-        "structure": { "type": "object" }
+        "structure": {
+          "type": "object",
+          "description": "Role name → content hash of the role atom (an inspectable, content-addressed object).",
+          "additionalProperties": { "$ref": "#/$defs/ContentHash" }
+        }
       }
     },
     "decode": {
@@ -68,6 +73,16 @@
       "$comment": "CompositionalReconstruction requires a non-null recipe.",
       "if": { "properties": { "mode": { "const": "CompositionalReconstruction" } }, "required": ["mode"] },
       "then": { "properties": { "recipe": { "type": "object" } }, "required": ["recipe"] }
+    },
+    {
+      "$comment": "A6-06: the Cleanup decode procedure REQUIRES `cleanup_threshold` — matching the Rust contract (ReconInfo::new rejects a Cleanup spec with no threshold). `cleanup_threshold`'s [0,1] range is enforced unconditionally by the `decode.cleanup_threshold` property, so a stray threshold on any procedure (e.g. Resonator) is range-checked too.",
+      "if": {
+        "properties": { "decode": { "properties": { "procedure": { "const": "Cleanup" } }, "required": ["procedure"] } },
+        "required": ["decode"]
+      },
+      "then": {
+        "properties": { "decode": { "required": ["procedure", "cleanup_threshold"] } }
+      }
     }
   ]
 }

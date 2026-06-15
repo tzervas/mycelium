@@ -21,9 +21,9 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::bound::{Bound, BoundBasis};
+use crate::bound::Bound;
 use crate::id::ContentHash;
-use crate::WfError;
+use crate::{GuaranteeStrength, WfError};
 
 /// Which capability the manifest supports (RFC-0003 §6).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -128,9 +128,22 @@ impl ReconInfo {
                 if !factors_ok || !budget_ok {
                     return Err(WfError::MalformedReconstruction);
                 }
-                // Probabilistic-only (FR-C2): a Proven basis must not appear on a resonator path.
-                if matches!(bound.basis, BoundBasis::ProvenThm { .. }) {
+                // Probabilistic-only (FR-C2): a resonator decode's basis must not *exceed*
+                // `Empirical`. Expressed via the lattice rank, not `matches!(ProvenThm)`, so the
+                // rule stays correct if a stronger basis variant is ever added (A1-04). A weaker
+                // basis (`UserDeclared`/`Declared`, rank ≥ Empirical's) is allowed; only a
+                // stronger one (smaller rank, e.g. `ProvenThm`) is rejected.
+                if bound.basis.strength().rank() < GuaranteeStrength::Empirical.rank() {
                     return Err(WfError::MalformedReconstruction);
+                }
+                // A6-06: `cleanup_threshold` is not required on a Resonator path, but the schema
+                // bounds it to `[0, 1]` *whenever present*. A stray out-of-range value must be an
+                // explicit rejection here too — never silently accepted (the never-silent rule) —
+                // so the Rust contract matches the schema's range constraint on the optional field.
+                if let Some(t) = decode.cleanup_threshold {
+                    if !(0.0..=1.0).contains(&t) {
+                        return Err(WfError::MalformedReconstruction);
+                    }
                 }
             }
         }
@@ -236,7 +249,7 @@ impl<'de> Deserialize<'de> for ReconInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bound::{BoundKind, NormKind};
+    use crate::bound::{BoundBasis, BoundKind, NormKind};
     use crate::content::operation_hash;
 
     fn empirical_bound() -> Bound {
@@ -316,6 +329,71 @@ mod tests {
             proven,
         );
         assert_eq!(err.unwrap_err(), WfError::MalformedReconstruction);
+    }
+
+    #[test]
+    fn resonator_allows_basis_weaker_than_empirical() {
+        // A1-04 mutant-witness: the resonator rule is "basis must not *exceed* Empirical", encoded
+        // via the lattice rank — so a *weaker* basis (`UserDeclared`/`Declared`) is allowed, only a
+        // stronger one (`ProvenThm`) is rejected. If the rule were `matches!(ProvenThm)` only this
+        // would still pass; the companion `resonator_is_probabilistic_only` pins the rejection side.
+        let declared = Bound {
+            kind: BoundKind::Probability { delta: 0.05 },
+            basis: BoundBasis::UserDeclared,
+        };
+        let ok = ReconInfo::new(
+            ReconMode::IndexedRetrieval,
+            "FHRR",
+            1024,
+            vec![operation_hash("codebook")],
+            None,
+            DecodeSpec {
+                procedure: DecodeProcedure::Resonator,
+                cleanup_threshold: None,
+                factors: Some(vec![operation_hash("factor")]),
+                iteration_budget: Some(100),
+            },
+            declared,
+        );
+        assert!(ok.is_ok());
+    }
+
+    #[test]
+    fn resonator_range_checks_a_stray_cleanup_threshold() {
+        // A6-06 mutant-witness: `cleanup_threshold` is optional on a Resonator path, but the schema
+        // bounds it to [0, 1] *whenever present*. An out-of-range stray value must be an explicit
+        // rejection (never silently accepted), matching the schema's constraint on the field.
+        let bad = ReconInfo::new(
+            ReconMode::IndexedRetrieval,
+            "FHRR",
+            1024,
+            vec![operation_hash("codebook")],
+            None,
+            DecodeSpec {
+                procedure: DecodeProcedure::Resonator,
+                cleanup_threshold: Some(1.5), // out of [0, 1]
+                factors: Some(vec![operation_hash("factor")]),
+                iteration_budget: Some(100),
+            },
+            empirical_bound(),
+        );
+        assert_eq!(bad.unwrap_err(), WfError::MalformedReconstruction);
+        // An in-range stray threshold is still accepted (it is merely ignored by the procedure).
+        let ok = ReconInfo::new(
+            ReconMode::IndexedRetrieval,
+            "FHRR",
+            1024,
+            vec![operation_hash("codebook")],
+            None,
+            DecodeSpec {
+                procedure: DecodeProcedure::Resonator,
+                cleanup_threshold: Some(0.4),
+                factors: Some(vec![operation_hash("factor")]),
+                iteration_budget: Some(100),
+            },
+            empirical_bound(),
+        );
+        assert!(ok.is_ok());
     }
 
     #[test]

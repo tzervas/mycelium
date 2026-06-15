@@ -44,6 +44,10 @@ pub enum WfError {
     /// A reconstruction manifest violates its schema invariants (RFC-0003 §6;
     /// `reconstruction-manifest.schema.json`).
     MalformedReconstruction,
+    /// A measured sparsity observation is out of range (e.g. `density ∉ [0,1]`). Distinct from
+    /// [`WfError::MalformedBound`]: a [`SparsityObs`](meta::SparsityObs) is an observation, not a
+    /// guarantee bound (A6-08).
+    MalformedSparsity,
 }
 
 impl core::fmt::Display for WfError {
@@ -58,6 +62,7 @@ impl core::fmt::Display for WfError {
             WfError::MalformedReconstruction => {
                 "reconstruction manifest violates its schema invariants (RFC-0003 §6)"
             }
+            WfError::MalformedSparsity => "sparsity observation out of range (density ∉ [0,1])",
         };
         f.write_str(s)
     }

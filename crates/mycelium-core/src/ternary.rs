@@ -28,11 +28,20 @@ pub fn digit(t: Trit) -> i64 {
 }
 
 fn from_digit(d: i64) -> Trit {
+    // C1-05: every caller normalizes into the balanced-ternary digit domain `{−1, 0, +1}` before
+    // reaching here — `int_to_trits` folds the `r == 2` carry to `−1`, and `add`'s `(s+1).rem_euclid(3) − 1`
+    // is provably in `[−1, +1]`. So `_ => Zero` is never taken on a well-formed call; the
+    // `debug_assert!` documents and (in debug builds) checks that domain invariant without a
+    // release-build panic in the trusted kernel. A stray out-of-domain digit maps to `Zero`
+    // (the additive identity) rather than wrapping silently — still sound, never undefined.
     match d {
         -1 => Trit::Neg,
-        0 => Trit::Zero,
         1 => Trit::Pos,
-        other => unreachable!("balanced-ternary digit out of range: {other}"),
+        0 => Trit::Zero,
+        _ => {
+            debug_assert!(false, "balanced-ternary digit out of range: {d}");
+            Trit::Zero
+        }
     }
 }
 

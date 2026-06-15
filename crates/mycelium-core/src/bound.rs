@@ -10,6 +10,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::GuaranteeStrength;
+
 /// How a bound was obtained — this determines the honest [`crate::GuaranteeStrength`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind")]
@@ -28,6 +30,22 @@ pub enum BoundBasis {
     },
     /// A user assertion, not yet validated. Tooling must surface a "declared, unverified" marker.
     UserDeclared,
+}
+
+impl BoundBasis {
+    /// The honest [`GuaranteeStrength`] this basis implies (M-I2/M-I3/M-I4): the basis *is* the
+    /// evidence class. This is the core-local equivalent of `mycelium_numerics::basis_strength`,
+    /// available to kernel code (e.g. [`crate::recon`]) that must rank a basis against the lattice
+    /// without depending on a downstream crate. Expressing rules via the lattice rank (rather than a
+    /// `matches!` on a specific variant) keeps them correct if a new, stronger basis is ever added.
+    #[must_use]
+    pub fn strength(&self) -> GuaranteeStrength {
+        match self {
+            BoundBasis::ProvenThm { .. } => GuaranteeStrength::Proven,
+            BoundBasis::EmpiricalFit { .. } => GuaranteeStrength::Empirical,
+            BoundBasis::UserDeclared => GuaranteeStrength::Declared,
+        }
+    }
 }
 
 /// Norm in which an [`BoundKind::Error`] `eps` is expressed (extensible registry; RFC-0001 §4.3 r2).
