@@ -127,6 +127,40 @@ fn oracle_exact_recovery_on_small_instances() {
 }
 
 #[test]
+fn oracle_exact_recovery_f3_small() {
+    // F=3 at k=4 (∏=64, cheap to brute-force): exact recovery + identifiability at the new factor
+    // count (RFC-0009 §9 Q6 widening). d=4096 keeps the capacity ratio comfortable.
+    let model = MapI::new(4096);
+    let cases = [
+        ([0usize, 0, 0], 11u64),
+        ([3, 1, 2], 12),
+        ([2, 3, 0], 13),
+        ([1, 2, 3], 14),
+    ];
+    for (truth, seed) in cases {
+        let (mems, atoms) = codebooks(3, 4, 4096, Lcg::new(seed));
+        let s = bind_tuple(&model, &atoms, &truth);
+        assert!(
+            is_identifiable(&model, &s, &atoms, &truth),
+            "F=3 instance (seed={seed}) must be identifiable"
+        );
+        let params = ResonatorParams::mapi_default(50, 0x0_F3E ^ seed);
+        let out = factorize(&model, &s, &mems, &params)
+            .unwrap_or_else(|e| panic!("F=3 seed={seed}: expected recovery, got {e:?}"));
+        assert_eq!(out.trace.stop, StopReason::Converged);
+        assert_eq!(
+            [
+                out.factors[0].index,
+                out.factors[1].index,
+                out.factors[2].index
+            ],
+            truth,
+            "F=3 seed={seed}: recovered the wrong tuple"
+        );
+    }
+}
+
+#[test]
 fn instance_is_identifiable_by_exhaustive_argmax() {
     // The oracle's premise: on a clean F=2, k=8 bipolar instance at d=4096 the true tuple is the
     // unique global arg-max. (If this ever failed, a resonator miss could be the instance's fault.)

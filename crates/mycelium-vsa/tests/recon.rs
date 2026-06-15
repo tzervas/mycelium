@@ -361,15 +361,15 @@ fn resonator_decode_recovers_factors_end_to_end() {
     assert_eq!(out.factors[1].index, 5);
 }
 
-/// An out-of-regime request (F = 3 > the profile's max_factors) is an explicit refusal, never a
-/// stretched tag (RFC-0009 §5.2). The profile gate fires before the loop runs.
+/// An out-of-regime request (k = 16 > the profile's max_codebook — past the operational wall) is an
+/// explicit refusal, never a stretched tag (RFC-0009 §5.2). The profile gate fires before the loop.
 #[test]
 fn resonator_decode_refuses_out_of_regime() {
     let model = MapI::new(DR);
-    let codebooks: Vec<CleanupMemory> = (0..3)
+    let codebooks: Vec<CleanupMemory> = (0..2)
         .map(|i| {
             let mut c = CleanupMemory::new(DR);
-            for j in 0..8u64 {
+            for j in 0..16u64 {
                 c.insert(format!("{i}:{j}"), atom_r(7000 + i * 100 + j))
                     .unwrap();
             }

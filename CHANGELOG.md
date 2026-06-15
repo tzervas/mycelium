@@ -32,6 +32,20 @@ corpus, not released software. Versioning will begin when the kernel does.
   `atoms()`/`dim()` accessors; four resonator `VsaError` variants. **Nothing new in the kernel** beyond
   the r4 additive manifest metadata fields. (phase-3.md §2 / Meta)
 
+### Changed (Phase 3 — resonator validated regime widened + operational-capacity map, M-350)
+- **`MAPI_RESONATOR_PROFILE` widened `F≤2, ∏k≤64` → `F≤3, k≤8, ∏k≤512, d≥4096`** with a **measured**
+  δ. A staged capacity sweep (`tests/resonator_profile.rs::resonator_capacity_sweep`, `#[ignore]`d)
+  mapped the operational edge: F=2/k=8 = **0/300**; F=3/k=8 (∏=512) = **6/1000 = 0.006** at d=4096
+  (→ **0.001** at d=8192) ⇒ **δ=0.02** conservative ceiling at the worst corner (gate re-measured
+  4/1000 on a fresh seed). The canonical gate now validates the F=3/k=8/d=4096 worst point.
+- **Operational-capacity wall recorded (honest boundary data).** The prototype's softmax resonator
+  (β=6, budget 50) collapses as `∏k → d`: **F=3/k=16 (∏=4096) ≈ 100% failure even at d=8192/β=10**,
+  and k=32 is hopeless. So `k≤8` is the validated edge for F=3 at these knobs — a far smaller
+  operational capacity than the literature's tuned resonators, reported as-measured not as-hoped
+  (VR-5). Tightening (β, d) helps the in-regime k=8 corner but does **not** breach the wall; that is
+  left to a future increment (better cleanup/normalisation). F=3 added to the brute-force oracle.
+  Tag stays **`Empirical`, MAP-I only, never `Proven`**. (phase-3.md §2 / Meta)
+
 ### Added (Phase 3 — RFC-0009 resonator-network factorization design, M-350 needs-design)
 - **`docs/rfcs/RFC-0009-Resonator-Network-Factorization.md`** (Draft): the *needs-design* deliverable
   for M-350 — fixes the convergence regime and the honest guarantee **before** any factorization code

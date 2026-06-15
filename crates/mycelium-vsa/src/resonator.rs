@@ -243,15 +243,17 @@ impl ResonatorProfile {
 /// is **set from the measured trial rate** in `tests/resonator_profile.rs`, never asserted ahead of
 /// the run (VR-5). Conservative ceiling: 0/`trials` failures ⇒ `δ ≤ 0.01` is an honest bound.
 pub const MAPI_RESONATOR_PROFILE: ResonatorProfile = ResonatorProfile {
-    max_factors: 2,
+    max_factors: 3,
     max_codebook: 8,
-    max_capacity: 64, // 8 × 8
+    max_capacity: 512, // 8³ — the operational capacity ∏ᵢ kᵢ
     min_dim: 4096,
-    delta: 0.01,
+    delta: 0.02,
     trials: 1_000,
-    method: "Monte-Carlo exact-tuple recovery vs brute-force oracle (MAP-I bipolar; \
-             softmax cleanup β=6, τ_lock=0.9, uniform superposition init; F≤2, k≤8, ∏k≤64, \
-             d≥4096; measured 0 failures ⇒ δ=0.01 conservative ceiling)",
+    method: "Monte-Carlo exact-tuple recovery vs brute-force oracle (MAP-I bipolar; softmax cleanup \
+             β=6, τ_lock=0.9, uniform superposition init, budget 50; F≤3, k≤8, ∏k≤512, d≥4096; worst \
+             corner F=3,k=8,d=4096 measured 6/1000=0.006 ⇒ δ=0.02 conservative ceiling — tightens to \
+             ~1e-3 at d≥8192. Operational wall (boundary data): ∏k≈d fails — F=3,k=16 (∏=4096) ≈100% \
+             even at d=8192, so k≤8 is the validated edge for F=3 at these knobs (RFC-0009 §9 Q4/Q6)",
 };
 
 /// Factorize `s` into one atom per slot of `codebooks`, running the RFC-0009 §3 loop with `params`.
@@ -689,18 +691,20 @@ mod tests {
     #[test]
     fn profile_check_refuses_outside_regime() {
         let p = &MAPI_RESONATOR_PROFILE;
+        // In regime: F≤3, k≤8, ∏k≤512, d≥4096.
         assert!(p.check(2, &[8, 8], 4096).is_ok());
-        // Too many factors / too-large codebook / capacity / dimension all refuse explicitly.
+        assert!(p.check(3, &[8, 8, 8], 4096).is_ok());
+        // Too many factors / too-large codebook / dimension all refuse explicitly.
         assert!(matches!(
-            p.check(3, &[8, 8, 8], 4096),
+            p.check(4, &[8, 8, 8, 8], 4096),
             Err(VsaError::OutsideEmpiricalProfile { .. })
         ));
         assert!(matches!(
-            p.check(2, &[16, 8], 4096),
+            p.check(3, &[16, 8, 8], 4096),
             Err(VsaError::OutsideEmpiricalProfile { .. })
         ));
         assert!(matches!(
-            p.check(2, &[8, 8], 1024),
+            p.check(3, &[8, 8, 8], 1024),
             Err(VsaError::OutsideEmpiricalProfile { .. })
         ));
         // The bound it backs is Empirical, never stronger.

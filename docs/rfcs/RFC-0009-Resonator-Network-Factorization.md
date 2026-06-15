@@ -342,3 +342,13 @@ deliberately left to be *fit by trials* rather than asserted (VR-5), and are fla
   `DecodeSpec` metadata fields via the append-only **RFC-0003 r4** revision — additive metadata only,
   no kernel logic/guarantee change, ≤`Empirical` ceiling preserved (§1; RFC-0003 §2; KC-3). Honesty
   contract unchanged.
+- **2026-06-15 — Prototype landed + §9 Q4 regime measured (M-350; informative).** The §10.2 prototype
+  is built and the §9 Q4 grid is now *measured*, not assumed. Validated envelope:
+  **`F≤3, k≤8, ∏k≤512, d≥4096`, δ=0.02** (worst corner F=3,k=8,d=4096 = 6/1000 = 0.006; tightens to
+  ~1e-3 at d≥8192) — encoded in `MAPI_RESONATOR_PROFILE`. **Operational-capacity wall found (boundary
+  data, honest):** the prototype's softmax resonator (β=6, budget 50) collapses as `∏k → d` —
+  F=3,k=16 (∏=4096) ≈ 100% failure even at d=8192/β=10 — so `k≤8` is the validated edge for F=3 at
+  these knobs, a far smaller operational capacity than the literature's tuned resonators. Reported
+  as-measured (VR-5), not as-hoped; breaching the wall (better cleanup/normalisation, the §10.3
+  ablation) is future work. Tag stays `Empirical`, MAP-I only, never `Proven`. RFC stays **Accepted**;
+  the contract is unchanged — only the prototype's *validated envelope* is recorded here.
