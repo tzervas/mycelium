@@ -135,6 +135,32 @@ fn failed_swap_is_surfaced_not_silent() {
         .any(|d| d.code == "swap-error" && d.severity == Severity::Error));
 }
 
+/// A6-05 regression: a statically-known source whose swap pair has *no* implemented certifier
+/// (e.g. Binary→Dense) must surface an `unsupported-swap-pair` diagnostic — the empty certificate
+/// channel is never silent for a known source. Mutant-witness: dropping the diagnostic on the
+/// `None` arm (back to a bare `None`) would leave `certificate: None` with zero diagnostics.
+#[test]
+fn unsupported_swap_pair_is_surfaced_not_silent() {
+    let prog = Node::Swap {
+        src: Box::new(Node::Const(byte([true; 8]))),
+        target: Repr::Dense {
+            dim: 4,
+            dtype: mycelium_core::ScalarKind::F32,
+        },
+        policy: policy(),
+    };
+    let fb = analyze(&prog);
+    // The source *is* statically known, yet no certifier exists for this pair.
+    assert!(fb.swaps[0].certificate.is_none());
+    assert!(
+        fb.diagnostics
+            .iter()
+            .any(|d| d.code == "unsupported-swap-pair" && d.severity == Severity::Error),
+        "an unsupported but statically-known swap pair must surface a diagnostic, got {:?}",
+        fb.diagnostics
+    );
+}
+
 /// A VSA value's Proven capacity bound is visible on the guarantee channel.
 #[test]
 fn proven_bound_is_visible_on_the_guarantee_channel() {

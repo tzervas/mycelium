@@ -5,11 +5,12 @@
 //! pinned here; the E3 wrong-layout soundness differential is M-251 (`mycelium-mlir`).
 
 use mycelium_core::{
-    GuaranteeStrength, Meta, PackScheme, PhysicalLayout, Provenance, Repr, SparsityClass,
+    GuaranteeStrength, Meta, PackScheme, PhysicalLayout, Provenance, Repr, ScalarKind,
+    SparsityClass,
 };
 use mycelium_select::{
-    bitnet_packing_policy, record_packing_layout, select_layout, Candidate, SelectionInputs,
-    BITNET_PACKINGS,
+    bitnet_packing_policy, record_packing_layout, select_layout, Candidate, SelectError,
+    SelectionInputs, BITNET_PACKINGS,
 };
 
 /// A ternary source value's queryable inputs (the packing site's subject is a ternary value).
@@ -145,18 +146,46 @@ fn element_count_scales_cost_but_not_the_winner() {
 }
 
 #[test]
-fn layout_record_does_not_depend_on_sparsity_class_of_a_dense_src() {
-    // A Dense/VSA src can still be costed (element count only); the packing site is meaningful for
-    // ternary, but the selector never panics on another paradigm — totality (RFC-0005 §2.1).
+fn a_trit_packed_layout_for_a_non_ternary_source_is_refused() {
+    // A5-02 mutant-witness: before the fix, `select_layout`/`record_packing_layout` would happily
+    // produce (and record) a `TritPacked` layout for a non-ternary source — a silent latent
+    // mis-tag, a layout that contradicts its own representation. A `TritPacked` record only
+    // describes how *trits* sit in bytes (RFC-0004 §5; DN-01), so a non-`Ternary` src is now the
+    // explicit `NonTernarySource` refusal, never a coercion or a quiet record (G2; never-silent).
     let meta = Meta::exact(Provenance::Root);
-    let dense_inputs = SelectionInputs::from_meta(
-        Repr::Vsa {
-            model: "MAP-I".into(),
-            dim: 100,
-            sparsity: SparsityClass::Dense,
-        },
-        &meta,
-    );
+    let vsa_src = Repr::Vsa {
+        model: "MAP-I".into(),
+        dim: 100,
+        sparsity: SparsityClass::Dense,
+    };
     let policy = bitnet_packing_policy();
-    assert!(select_layout(&policy, &dense_inputs, None).is_ok());
+
+    let vsa_inputs = SelectionInputs::from_meta(vsa_src.clone(), &meta);
+    assert_eq!(
+        select_layout(&policy, &vsa_inputs, None),
+        Err(SelectError::NonTernarySource {
+            src: vsa_src.clone()
+        })
+    );
+
+    // The one-call recorder refuses too — no mis-tagged `Meta` ever escapes.
+    assert_eq!(
+        record_packing_layout(&policy, &vsa_src, &meta, None),
+        Err(SelectError::NonTernarySource { src: vsa_src })
+    );
+
+    // Binary and Dense sources are equally refused (only `Ternary` admits a trit packing).
+    for non_ternary in [
+        Repr::Binary { width: 64 },
+        Repr::Dense {
+            dim: 8,
+            dtype: ScalarKind::F32,
+        },
+    ] {
+        let inputs = SelectionInputs::from_meta(non_ternary.clone(), &meta);
+        assert_eq!(
+            select_layout(&policy, &inputs, None),
+            Err(SelectError::NonTernarySource { src: non_ternary })
+        );
+    }
 }

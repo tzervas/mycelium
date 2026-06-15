@@ -10,6 +10,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::GuaranteeStrength;
+
 /// How a bound was obtained — this determines the honest [`crate::GuaranteeStrength`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind")]
@@ -28,6 +30,22 @@ pub enum BoundBasis {
     },
     /// A user assertion, not yet validated. Tooling must surface a "declared, unverified" marker.
     UserDeclared,
+}
+
+impl BoundBasis {
+    /// The honest [`GuaranteeStrength`] this basis implies (M-I2/M-I3/M-I4): the basis *is* the
+    /// evidence class. This is the core-local equivalent of `mycelium_numerics::basis_strength`,
+    /// available to kernel code (e.g. [`crate::recon`]) that must rank a basis against the lattice
+    /// without depending on a downstream crate. Expressing rules via the lattice rank (rather than a
+    /// `matches!` on a specific variant) keeps them correct if a new, stronger basis is ever added.
+    #[must_use]
+    pub fn strength(&self) -> GuaranteeStrength {
+        match self {
+            BoundBasis::ProvenThm { .. } => GuaranteeStrength::Proven,
+            BoundBasis::EmpiricalFit { .. } => GuaranteeStrength::Empirical,
+            BoundBasis::UserDeclared => GuaranteeStrength::Declared,
+        }
+    }
 }
 
 /// Norm in which an [`BoundKind::Error`] `eps` is expressed (extensible registry; RFC-0001 §4.3 r2).
@@ -93,17 +111,116 @@ pub struct Bound {
 }
 
 impl Bound {
-    /// Numeric well-formedness of the payload (ranges per `bound.schema.json`). Independent of the
-    /// guarantee↔basis coupling, which [`crate::meta::Meta`] enforces.
+    /// Well-formedness per `bound.schema.json`: the payload ranges (magnitudes finite and in range)
+    /// **and** the basis constraints. Independent of the guarantee↔basis coupling, which
+    /// [`crate::meta::Meta`] enforces; this is re-run on every deserialize, so the schema is a
+    /// contract the wire form cannot evade.
     #[must_use]
     pub fn well_formed(&self) -> bool {
-        match self.kind {
-            BoundKind::Error { eps, .. } => eps >= 0.0,
+        let payload_ok = match self.kind {
+            // Magnitudes must be finite, not just `>= 0` — an infinite ε/crosstalk is a vacuous
+            // bound that could otherwise ride as `Proven`/`Empirical` (A1-02/B2-03).
+            BoundKind::Error { eps, .. } => eps.is_finite() && eps >= 0.0,
             BoundKind::Probability { delta } => (0.0..=1.0).contains(&delta),
             BoundKind::Crosstalk { expected, tail } => {
-                expected >= 0.0 && tail.is_none_or(|t| t >= 0.0)
+                expected.is_finite()
+                    && expected >= 0.0
+                    && tail.is_none_or(|t| t.is_finite() && t >= 0.0)
             }
             BoundKind::Capacity { items, dim } => items >= 1 && dim >= 1,
+        };
+        payload_ok && self.basis_well_formed()
+    }
+
+    /// Basis constraints from `bound.schema.json` (A6-02/B2-03): a cited theorem names its citation;
+    /// an empirical fit rests on **at least one** trial with a named method — an `Empirical` tag must
+    /// never be evidence-free (`trials: 0`); a user declaration carries nothing.
+    #[must_use]
+    fn basis_well_formed(&self) -> bool {
+        match &self.basis {
+            BoundBasis::ProvenThm { citation } => !citation.trim().is_empty(),
+            BoundBasis::EmpiricalFit { trials, method } => {
+                *trials >= 1 && !method.trim().is_empty()
+            }
+            BoundBasis::UserDeclared => true,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn proven() -> BoundBasis {
+        BoundBasis::ProvenThm {
+            citation: "thm".to_owned(),
+        }
+    }
+
+    #[test]
+    fn well_formed_rejects_non_finite_magnitudes() {
+        // A1-02: infinite ε / crosstalk are vacuous bounds and must be rejected.
+        assert!(!Bound {
+            kind: BoundKind::Error {
+                eps: f64::INFINITY,
+                norm: NormKind::Linf
+            },
+            basis: proven(),
+        }
+        .well_formed());
+        assert!(!Bound {
+            kind: BoundKind::Crosstalk {
+                expected: f64::INFINITY,
+                tail: None
+            },
+            basis: proven(),
+        }
+        .well_formed());
+        assert!(Bound {
+            kind: BoundKind::Error {
+                eps: 0.5,
+                norm: NormKind::Linf
+            },
+            basis: proven(),
+        }
+        .well_formed());
+    }
+
+    #[test]
+    fn well_formed_rejects_evidence_free_basis() {
+        // A6-02/B2-03: an Empirical tag backed by zero trials (or an empty method/citation) is not
+        // honest evidence — well_formed (hence deserialize) must reject it.
+        let zero_trials = Bound {
+            kind: BoundKind::Error {
+                eps: 0.5,
+                norm: NormKind::Linf,
+            },
+            basis: BoundBasis::EmpiricalFit {
+                trials: 0,
+                method: "frady".to_owned(),
+            },
+        };
+        assert!(!zero_trials.well_formed());
+        let empty_method = Bound {
+            kind: BoundKind::Error {
+                eps: 0.5,
+                norm: NormKind::Linf,
+            },
+            basis: BoundBasis::EmpiricalFit {
+                trials: 10,
+                method: String::new(),
+            },
+        };
+        assert!(!empty_method.well_formed());
+        let empty_citation = Bound {
+            kind: BoundKind::Error {
+                eps: 0.5,
+                norm: NormKind::Linf,
+            },
+            basis: BoundBasis::ProvenThm {
+                citation: "  ".to_owned(),
+            },
+        };
+        assert!(!empty_citation.well_formed());
     }
 }

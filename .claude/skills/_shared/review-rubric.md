@@ -44,6 +44,31 @@ for local refs, or the GitHub MCP `pull_request_read` (and the PR diff) for a PR
 State the chosen tier **and the signals that set it**. A reviewer may override with an explicit
 `--tier` argument.
 
+## 1.5 Recurring defect patterns (grep-first)
+
+Banked from the 2026-06 deep review — the honesty rule leaks at predictable seams. On any change
+touching the relevant code, actively check for these (the `dev-workflow` skill states the
+corresponding authoring rule). Each maps to a severity by the §2 taxonomy.
+
+- **`Proven`/`Empirical` ε/δ composed in `f64` without outward rounding** — a round-to-nearest
+  bound can fall below the real value, so the tag is unbacked. Grep for arithmetic on bound fields
+  (`+`/`*` on `eps`/`delta`/radius) not using directed rounding; for re-validation checkers using an
+  **absolute** tolerance (vacuous for tiny bounds). (A2-01/A2-02 → Critical/High)
+- **Bound/guarantee constructor that silently coerces** out-of-range or non-finite input instead
+  of returning `Option`/`Err`; **`pub` fields** on a kernel bound type (bypasses validation). (A2-03/
+  A2-05 → High/Medium)
+- **Serde wire struct without `#[serde(deny_unknown_fields)]`**, or that deserializes without
+  re-checking the JSON-schema constraints it mirrors (e.g. `trials ≥ 1`). A tampered manifest then
+  carries a stronger guarantee than its evidence. (A6-02/B2-03 → High)
+- **Recursive-descent over untrusted input with no depth guard** (parser/checker/elaborator) — a
+  crafted nesting crashes the process. (A4-02/B2-01 → High)
+- **Value hashed for identity without rejecting ambiguous encodings** (non-finite `f64` →
+  JSON `null` → collision). (A5-01/B2-02 → High/Medium)
+- **Analysis tracking a fact across binders that ignores shadowing** (totality, scope). (A4-01 → High)
+- **Test weaknesses:** reject/negative test asserting only `is_err()` (not the variant); a
+  differential/bound test with no mutation that could make it fail; "≥N trials / empirical" wording
+  over a single fixed-seed sample. (A4/A2-07/A3-08-09/A6-04 → Medium/Low)
+
 ## 2. Severity taxonomy
 
 - **Critical** — merges a falsehood or breaks a safety invariant: a silent swap/conversion; a

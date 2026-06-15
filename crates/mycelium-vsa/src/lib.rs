@@ -76,6 +76,18 @@ pub enum VsaError {
         /// The dimension the theorem requires.
         required: u64,
     },
+    /// A `Proven` bundle was requested over **non-distinct** items. The cited capacity theorem
+    /// assumes distinct codebook atoms; bundling duplicates inflates the apparent capacity, so a
+    /// `Proven` tag there would be unbacked (A3-03/H6; M-I2/VR-5). Deduplicate the items.
+    DuplicateBundleItems {
+        /// Index of the first item that repeats an earlier one.
+        index: usize,
+    },
+    /// Cleanup was requested against a [`CleanupMemory`] that holds no usable codebook atom for
+    /// this model/dim — there is nothing to clean up against, which is a distinct condition from an
+    /// empty *bundle* of operands ([`EmptyBundle`](VsaError::EmptyBundle)). Surfaced explicitly so a
+    /// missing/dim-mismatched codebook is not mistaken for a degenerate bundle (A3-07; G2).
+    EmptyCodebook,
     /// A value handed to a Value-level adapter was not a hypervector of the expected model.
     NotThisModel {
         /// The model id the adapter expected.
@@ -134,6 +146,10 @@ impl core::fmt::Display for VsaError {
                 write!(f, "dimension mismatch: expected {expected}, got {got}")
             }
             VsaError::EmptyBundle => write!(f, "bundle requires at least one item"),
+            VsaError::EmptyCodebook => write!(
+                f,
+                "cleanup memory holds no codebook atom for this model/dim to clean up against"
+            ),
             VsaError::InsufficientCapacity {
                 items,
                 dim,
@@ -141,6 +157,10 @@ impl core::fmt::Display for VsaError {
             } => write!(
                 f,
                 "insufficient capacity for a Proven bound: bundling {items} items needs dim ≥ {required}, got {dim}"
+            ),
+            VsaError::DuplicateBundleItems { index } => write!(
+                f,
+                "item {index} repeats an earlier one; a Proven capacity bound needs distinct items"
             ),
             VsaError::NotThisModel { expected } => {
                 write!(f, "expected a {expected} hypervector value")

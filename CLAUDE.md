@@ -28,7 +28,7 @@ never-silent** representation swaps and **honest, per-operation guarantees**. It
 ## Toolchain
 - **Rust** kernel + reference interpreter — MSRV **1.92** pinned; `cargo fmt`, `cargo clippy
   -D warnings`, `cargo test`. MLIR→LLVM is the perf-path AOT; the interpreter is the trusted base.
-- **Python 3.13/3.14** via **UV** — `pytest` + codecov, **ruff** + **Black**.
+- **Python 3.13/3.14** via **UV** — `pytest` + codecov, **ruff** + **`ruff format`** (Black-compatible).
 - Don't silently bump committed version pins (MSRV, Python) — that's a decision (ADR), not a
   build detail, even if your local toolchain is newer.
 

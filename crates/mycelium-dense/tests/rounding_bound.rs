@@ -2,8 +2,11 @@
 //! 20k-pair sweep per dtype, every `add`/`sub`/`scale` result element stays within the disclosed
 //! relative ε of the exact (`f64`) reference, and the op result discloses exactly that bound.
 //!
-//! Exponents are drawn from a window (±20) where the `f64` reference arithmetic is itself exact,
-//! so the comparison measures only the op's own rounding — the thing the bound claims to cover.
+//! Exponents are drawn from a ±20 window so the `f64` reference arithmetic is *negligibly*
+//! perturbed relative to the disclosed ε: products/scale are **exact** (24×24-bit mantissas →
+//! ≤48-bit product, well inside f64's 53-bit significand), and sums/differences carry at most a
+//! single f64 round-off (~2⁻⁵³) — far inside the per-op ε (≥2⁻²⁴), so the comparison still
+//! measures only the op's own rounding, the thing the bound claims to cover.
 
 use mycelium_core::{BoundKind, GuaranteeStrength, NormKind, ScalarKind};
 use mycelium_dense::{DenseSpace, BF16_OP_REL_EPS, F32_OP_REL_EPS};
@@ -48,6 +51,9 @@ const PAIRS: usize = 20_000;
 fn sweep(dtype: ScalarKind, eps: f64) {
     let space = DenseSpace::new(1, dtype).unwrap();
     let mut rng = Lcg::new(0xD15EA5E ^ dtype as u64);
+    // A5-05: count the ops that actually exercised the bound. Without this the `else { continue }`
+    // on a refusal would let the sweep pass *vacuously* if the ops ever regressed to always-refuse.
+    let mut successes = 0usize;
     for i in 0..PAIRS {
         let x = rng.on_grid(dtype);
         let y = rng.on_grid(dtype);
@@ -80,8 +86,17 @@ fn sweep(dtype: ScalarKind, eps: f64) {
                 }
                 other => panic!("expected an Error bound, got {other:?}"),
             }
+            successes += 1;
         }
     }
+    // A5-05: the bound must have been exercised on the overwhelming majority of the 3×PAIRS ops.
+    // On-grid inputs in the ±20 window only rarely produce a subnormal refusal, so a regression to
+    // always-refuse (or a logic bug that skips the asserts) can no longer pass this test silently.
+    let total = 3 * PAIRS;
+    assert!(
+        successes >= total - total / 100,
+        "{dtype:?}: only {successes}/{total} ops exercised the bound — the sweep is near-vacuous"
+    );
 }
 
 /// F32 ops stay within `u = 2⁻²⁴` (single rounding) over 20k pairs × 3 ops.

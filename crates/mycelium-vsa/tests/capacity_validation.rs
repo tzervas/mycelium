@@ -41,6 +41,13 @@ const TRIALS: usize = 10_000; // ≥ 1e4 (SC-2)
 /// trials — every bundled member out-scores every non-member by nearest-neighbour cleanup.
 #[test]
 fn bundle_capacity_holds_over_1e4_trials() {
+    // A3-08: what this empirical check does — and does not — establish. The Clarkson/Thomas bound is
+    // a *sufficient* condition (`dim ≥ requiredDim ⟹ failProb ≤ δ`), so a trial run at the boundary
+    // dim can confirm the bound's *non-vacuity* (the rate really does stay ≤ δ there) but **cannot**
+    // confirm its *tightness*: a sufficient condition admits slack, and no number of trials at one
+    // dim distinguishes a tight bound from a loose one. Tamper-protection for the bound's *constant*
+    // is therefore NOT this test — it is the pinned-constant unit test in `mycelium_vsa::capacity`
+    // plus the `dim >= requiredDim` sentinel asserted below; this test only guards non-vacuity.
     let dim = capacity::required_dim(M, DELTA, capacity::MARGIN_MU) as usize; // 1141
     assert!(dim >= 1141);
 
@@ -122,15 +129,17 @@ fn certified_bundle_is_proven_only_when_dimension_suffices() {
 
     // Undersized model → explicit InsufficientCapacity, never an unbacked Proven tag.
     let small = MapI::new(64);
+    // Distinct (per-item seed) bipolar atoms so this isolates the dimension side-condition — the
+    // certified path also refuses duplicate/non-bipolar items (H6), which would otherwise mask it.
     let small_items: Vec<Value> = (0..M)
-        .map(|_| {
+        .map(|i| {
             Value::new(
                 Repr::Vsa {
                     model: "MAP-I".to_owned(),
                     dim: 64,
                     sparsity: SparsityClass::Dense,
                 },
-                Payload::Hypervector(Lcg::new(1).atom(64)),
+                Payload::Hypervector(Lcg::new(100 + i).atom(64)),
                 Meta::exact(Provenance::Root),
             )
             .unwrap()
@@ -141,4 +150,50 @@ fn certified_bundle_is_proven_only_when_dimension_suffices() {
         small.bundle_values_certified(&small_refs, DELTA),
         Err(VsaError::InsufficientCapacity { .. })
     ));
+}
+
+#[test]
+fn certified_bundle_refuses_unchecked_side_conditions() {
+    // A3-03/H6 regression: the cited capacity theorem assumes bipolar (±1) atoms and distinct items.
+    // The certified path must refuse both rather than stamp an unbacked Proven tag (M-I2/VR-5).
+    // Mutant-witness: removing the check_bipolar / first_duplicate guards in bundle_values_certified
+    // makes these return a Proven bundle.
+    let dim = capacity::required_dim(M, DELTA, capacity::MARGIN_MU) as u32; // sufficient
+    let model = MapI::new(dim);
+    let vsa = |hv: Vec<f64>| {
+        Value::new(
+            Repr::Vsa {
+                model: "MAP-I".to_owned(),
+                dim,
+                sparsity: SparsityClass::Dense,
+            },
+            Payload::Hypervector(hv),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap()
+    };
+
+    // Non-bipolar component (a 0.5) → NonAlphabetComponent, not a Proven bound.
+    let mut rng = Lcg::new(11);
+    let mut bad = rng.atom(dim as usize);
+    bad[0] = 0.5;
+    let a = vsa(bad);
+    let b = vsa(rng.atom(dim as usize));
+    let c = vsa(rng.atom(dim as usize));
+    assert!(matches!(
+        model.bundle_values_certified(&[&a, &b, &c], DELTA),
+        Err(VsaError::NonAlphabetComponent { index: 0 })
+    ));
+
+    // Duplicate item (same content) → DuplicateBundleItems.
+    let d = vsa(rng.atom(dim as usize));
+    let e = vsa(rng.atom(dim as usize));
+    assert!(matches!(
+        model.bundle_values_certified(&[&d, &e, &d], DELTA),
+        Err(VsaError::DuplicateBundleItems { index: 2 })
+    ));
+
+    // Distinct bipolar items at sufficient dim still certify Proven.
+    let f = vsa(rng.atom(dim as usize));
+    assert!(model.bundle_values_certified(&[&d, &e, &f], DELTA).is_ok());
 }

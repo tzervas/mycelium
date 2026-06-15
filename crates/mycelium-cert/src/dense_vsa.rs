@@ -9,7 +9,7 @@
 //! bound was obtained, never asserted* (RFC-0002 §3):
 //!
 //! - **`ProvenThm`** when the checked instantiation holds — `vsa_dim ≥ requiredDim(n, δ)` (the
-//!   M-001/M-131 pattern, re-using `mycelium_vsa::capacity`); the swap fails to decode with
+//!   M-001/M-131 pattern, reusing `mycelium_vsa::capacity`); the swap fails to decode with
 //!   probability ≤ δ.
 //! - **`EmpiricalFit`** otherwise, when the *trial-validated profile* covers the instance
 //!   (`n ≤ 16`, `vsa_dim ≥ 32·n`, δ = [`DENSE_VSA_EMP_DELTA`]) — exercised with exactly

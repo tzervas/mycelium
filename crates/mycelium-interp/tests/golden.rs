@@ -599,3 +599,70 @@ fn fuel_exhaustion_is_reported() {
         Err(EvalError::FuelExhausted)
     );
 }
+
+#[test]
+fn fuel_exhaustion_at_depth_is_reported_not_a_hang(// A4-04: the fuel guard must trip *partway through* a deeply nested reduction, not only at the
+    // trivial zero-fuel boundary. A right-nested chain of `core.id`s needs one δ-reduction per
+    // layer; budgeting fewer steps than the chain is deep forces FuelExhausted mid-evaluation —
+    // an explicit error, never a hang and never a silent truncated result (the never-silent path).
+) {
+    const DEPTH: usize = 64;
+    let mut node = Node::Const(byte(A));
+    for _ in 0..DEPTH {
+        node = Node::Op {
+            prim: "core.id".into(),
+            args: vec![node],
+        };
+    }
+    // Ample fuel evaluates the whole nest to the original value.
+    let full = Interpreter::default().eval(&node).expect("evaluates fully");
+    assert_eq!(bits_of(&full), A.to_vec());
+    // A budget smaller than the nesting depth must exhaust strictly *inside* the reduction.
+    assert_eq!(
+        Interpreter::default()
+            .with_fuel(DEPTH as u64 / 2)
+            .eval(&node),
+        Err(EvalError::FuelExhausted)
+    );
+}
+
+#[test]
+fn malformed_swap_meta_surfaces_as_wf_not_a_panic() {
+    // A4-04: `EvalError::Wf` is the never-panic guard for an internally inconsistent constructed
+    // result. It is unreachable from the *built-in* prims and the identity swap engine (see the
+    // doc comments at the construction sites in prims.rs/swap.rs), so we exercise it through the
+    // public `Interpreter::new` extension point with a deliberately broken swap engine that emits a
+    // Value whose payload length contradicts its repr. The interpreter must surface this as an
+    // explicit `EvalError::Wf`, never a panic and never a silently malformed value (G2).
+    use mycelium_core::{ContentHash, Meta, Provenance, Repr, WfError};
+    use mycelium_interp::{PrimRegistry, SwapEngine};
+
+    struct MalformedSwap;
+    impl SwapEngine for MalformedSwap {
+        fn swap(
+            &self,
+            _src: &Value,
+            _target: &Repr,
+            _policy: &ContentHash,
+        ) -> Result<Value, EvalError> {
+            // Claim Binary{8} but hand back a single bit → PayloadReprMismatch on Value::new.
+            Value::new(
+                Repr::Binary { width: 8 },
+                Payload::Bits(vec![true]),
+                Meta::exact(Provenance::Root),
+            )
+            .map_err(EvalError::Wf)
+        }
+    }
+
+    let node = Node::Swap {
+        src: Box::new(Node::Const(byte(A))),
+        target: Repr::Binary { width: 8 },
+        policy: policy(),
+    };
+    let interp = Interpreter::new(PrimRegistry::with_builtins(), Box::new(MalformedSwap));
+    assert_eq!(
+        interp.eval(&node),
+        Err(EvalError::Wf(WfError::PayloadReprMismatch))
+    );
+}

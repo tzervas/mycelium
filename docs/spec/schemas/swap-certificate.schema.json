@@ -37,10 +37,10 @@
         },
         "params": {
           "type": "object",
-          "description": "Concrete parameters binding the lemma to this use (e.g. {width, trits}). Lets the certificate be cached by content hash."
+          "description": "Concrete parameters binding the lemma to this use (e.g. {width, trits}). Lets the certificate be cached by content hash. REQUIRED (A6-09): the Rust `SwapCertificate::Bijective` always carries typed binding params, so a schema-valid cert without `params` would be rejected by the kernel — the schema now matches that stronger contract."
         }
       },
-      "required": ["kind", "src", "target", "policy_used", "lemma_ref"],
+      "required": ["kind", "src", "target", "policy_used", "lemma_ref", "params"],
       "description": "Exact-within-range; discharges by SMT/symbolic equality. Out-of-range inputs are an explicit Option/error, never silent (RFC-0002 §4)."
     },
     {

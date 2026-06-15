@@ -19,7 +19,13 @@ _TRIT_GLYPH = {1: "+", 0: "0", -1: "-"}
 
 @dataclass(frozen=True)
 class Bin:
-    """A width-checked binary word, most-significant bit first (e.g. ``Bin("1011_0010")``)."""
+    """A width-checked binary word, most-significant bit first (e.g. ``Bin("1011_0010")``).
+
+    Interpreted as **two's-complement**, matching the kernel's binary paradigm (``binary.rs``;
+    ``docs/spec/swaps/binary-ternary.md``): an ``n``-bit word ranges over ``[-2^(n-1), 2^(n-1)-1]``.
+    (Previously this was unsigned, which silently disagreed with the kernel on the very swap the
+    benchmark exercises — review finding A6-01.)
+    """
 
     bits: str
 
@@ -36,8 +42,11 @@ class Bin:
         return len(self.bits)
 
     def to_int(self) -> int:
-        """Unsigned integer value."""
-        return int(self.bits, 2)
+        """Two's-complement integer value (matches the kernel; A6-01)."""
+        raw = int(self.bits, 2)
+        if self.bits[0] == "1":  # sign bit set
+            raw -= 1 << self.width
+        return raw
 
 
 @dataclass(frozen=True)
@@ -82,6 +91,17 @@ def _int_to_tern(value: int, width: int) -> Tern:
     return Tern("".join(_TRIT_GLYPH[d] for d in reversed(digits)))
 
 
+def _int_to_bin(value: int, width: int) -> Bin:
+    """Two's-complement encoding of ``value`` in ``width`` bits; explicit on overflow (A6-01)."""
+    lo = -(1 << (width - 1))
+    hi = (1 << (width - 1)) - 1
+    if not lo <= value <= hi:
+        msg = f"{value} is outside the two's-complement range of {width} bits ([{lo}, {hi}])"
+        raise OverflowError(msg)
+    masked = value & ((1 << width) - 1)
+    return Bin(format(masked, f"0{width}b"))
+
+
 def bnot(x: Bin) -> Bin:
     """Elementwise complement."""
     return Bin("".join("1" if c == "0" else "0" for c in x.bits))
@@ -116,10 +136,6 @@ def swap(value: Bin | Tern, *, to: tuple[str, int], policy: str) -> Bin | Tern:
     if kind == "tern" and isinstance(value, Bin):
         return _int_to_tern(value.to_int(), width)
     if kind == "bin" and isinstance(value, Tern):
-        v = value.to_int()
-        if v < 0 or v >= 2**width:
-            msg = f"{v} is outside the unsigned range of {width} bits"
-            raise OverflowError(msg)
-        return Bin(format(v, f"0{width}b"))
+        return _int_to_bin(value.to_int(), width)
     msg = f"unsupported swap: {type(value).__name__} -> {to!r}"
     raise TypeError(msg)

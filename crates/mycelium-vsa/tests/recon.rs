@@ -188,6 +188,33 @@ fn indexed_manifests_and_weak_retrievals_refuse_explicitly() {
         Err(VsaError::NotCompositional)
     ));
 
+    // A3-07 regression: an EMPTY codebook surfaces as EmptyCodebook, not EmptyBundle (which means
+    // "a bundle of zero operands" — a semantically different condition). Mutant-witness: reverting
+    // reconstruct_role's `ok_or(VsaError::EmptyCodebook)` to `EmptyBundle` flips this assertion.
+    let well_formed = ReconInfo::new(
+        ReconMode::CompositionalReconstruction,
+        "MAP-I",
+        D,
+        vec![filler.content_hash()],
+        Some(Recipe {
+            roles: vec!["color".to_owned()],
+            structure: BTreeMap::from([("color".to_owned(), role.content_hash())]),
+        }),
+        DecodeSpec {
+            procedure: DecodeProcedure::Cleanup,
+            cleanup_threshold: Some(0.2),
+            factors: None,
+            iteration_budget: None,
+        },
+        empirical_bound.clone(),
+    )
+    .unwrap();
+    let empty_memory = CleanupMemory::new(D);
+    assert!(matches!(
+        reconstruct_role(&model, &well_formed, &record, "color", &role, &empty_memory),
+        Err(VsaError::EmptyCodebook)
+    ));
+
     // A compositional manifest with an unreachable threshold: the weak retrieval is explicit.
     let strict = ReconInfo::new(
         ReconMode::CompositionalReconstruction,

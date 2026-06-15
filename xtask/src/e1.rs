@@ -85,7 +85,7 @@ pub fn run() {
     for (name, scheme) in SCHEMES {
         let ns = bench(iters, || {
             let bytes = pack_trits(black_box(&buf), scheme);
-            let back = unpack_trits(black_box(&bytes), scheme, DIM);
+            let back = unpack_trits(black_box(&bytes), scheme, DIM).expect("round-trip unpack");
             black_box(back);
         });
         #[allow(clippy::cast_precision_loss)]

@@ -16,9 +16,10 @@
 //!   [`VsaError::NestedBundleUnsupported`](crate::VsaError)); permute `Exact`.
 //! - **BSC** — XOR bind/unbind `Exact`; bundle `Proven` **on expectation** (Heim / Yi & Achour —
 //!   weaker than w.p. ≥ 1−δ, tagged accordingly in the docs); circular-shift permute `Exact`.
-//! - **HRR / FHRR** — bind algebraic `Exact` (issue #61); **unbind the residual `Empirical`
-//!   weak link** (not self-inverse, needs cleanup; at most `Empirical` single-factor); bundle
-//!   `Empirical` (Gaussian/asymptotic); permute `Exact`.
+//! - **HRR / FHRR** — bind algebraic `Exact` (RFC-0003 §4.1 erratum, r3: `bind` is the exact
+//!   algebraic op — convolution / complex product — while `unbind` is the lossy one); **unbind the
+//!   residual `Empirical` weak link** (not self-inverse, needs cleanup; at most `Empirical`
+//!   single-factor); bundle `Empirical` (Gaussian/asymptotic); permute `Exact`.
 //! - **SBC (sparse)** — algebraic part `Proven`; bundle `Proven` via the Bloom / Counting-Bloom
 //!   analysis (Clarkson Thms 22–23); permute `Exact`.
 
@@ -41,6 +42,12 @@ pub const RFC0003_MATRIX: &[(&str, VsaOp, GuaranteeStrength)] = &[
     ("MAP-B", Permute, Exact),
     ("BSC", Bind, Exact),
     ("BSC", Unbind, Exact),
+    // A3-06/C1-04: this `Proven` is the literature's *operation-level, on-expectation* tag (Heim /
+    // Yi & Achour: minimum size to hit a target accuracy *in expectation*) — strictly weaker than a
+    // value-level w.p. ≥ 1−δ guarantee, and weaker than MAP-I's tail-bound `Proven` even though the
+    // lattice renders both as the same `Proven`. The lattice cannot carry the "on expectation"
+    // qualifier, so a matrix consumer must read it here: the BSC bundle's *value* path is correctly
+    // `Empirical` (a δ from `BSC_BUNDLE_PROFILE`), and no value carries a w.p.≥1−δ `Proven` (M-I2).
     ("BSC", Bundle, Proven),
     ("BSC", Permute, Exact),
     ("HRR", Bind, Exact),

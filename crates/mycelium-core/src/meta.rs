@@ -119,7 +119,9 @@ impl Meta {
         }
         if let Some(s) = &sparsity {
             if !(0.0..=1.0).contains(&s.density) {
-                return Err(WfError::MalformedBound);
+                // A6-08: a sparsity observation is a measurement, not a guarantee bound — so an
+                // out-of-range density is `MalformedSparsity`, not the misleading `MalformedBound`.
+                return Err(WfError::MalformedSparsity);
             }
         }
         Ok(Meta {
@@ -210,8 +212,12 @@ impl Meta {
 
 /// The wire projection of [`Meta`] (`meta.schema.json`). Optional fields are omitted when absent
 /// (so `Exact` emits no `bound`, satisfying M-I1's presence model); on the way back in, `null` and
-/// absent both decode to `None`. `reconstruction` (RFC-0003 §6) is deferred (M-130) and not carried.
+/// absent both decode to `None`. `reconstruction` (RFC-0003 §6) **is** carried (serialized when
+/// present, re-validated on the way in). `deny_unknown_fields` makes the schema's
+/// `additionalProperties: false` a real contract — an unknown wire field is rejected, not silently
+/// dropped (A6-02/B2-03).
 #[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct MetaWire {
     provenance: Provenance,
     guarantee: GuaranteeStrength,
@@ -383,6 +389,25 @@ mod tests {
             None,
         );
         assert_eq!(m.unwrap_err(), WfError::MalformedBound);
+    }
+
+    #[test]
+    fn out_of_range_sparsity_is_malformed_sparsity() {
+        // A6-08 mutant-witness: an out-of-range `density` is a sparsity-observation error, not a
+        // bound error — so it must be `MalformedSparsity`, never the misleading `MalformedBound`.
+        let bad_sparsity = SparsityObs {
+            active: 10,
+            density: 1.5,
+        };
+        let m = Meta::new(
+            Provenance::Root,
+            GuaranteeStrength::Exact,
+            None,
+            Some(bad_sparsity),
+            None,
+            None,
+        );
+        assert_eq!(m.unwrap_err(), WfError::MalformedSparsity);
     }
 
     #[test]

@@ -57,7 +57,7 @@ SRP · OCP · LSP · ISP · DIP · DRY · KISS · YAGNI · Law of Demeter · Sep
 > No code has landed yet; this is the agreed toolchain so contributors set up consistently.
 
 - **Rust** — the kernel + reference interpreter. **MSRV 1.92** (pinned). Format with `cargo fmt`; lint with `cargo clippy`. The AOT path uses **MLIR → LLVM** (confined to the performance path; the interpreter stays the trusted base).
-- **Python 3.13 / 3.14** — tooling, experiments, and the LLM-leverage harness. Managed with **UV**. Tests with **pytest**; coverage to **codecov**. Style: **PEP 8** + **Black**.
+- **Python 3.13 / 3.14** — tooling, experiments, and the LLM-leverage harness. Managed with **UV**. Tests with **pytest**; coverage to **codecov**. Style: **PEP 8**, formatted with **`ruff format`** (Black-compatible) and linted with **ruff** — the actual tooling wired into `justfile`/`scripts/`/CI.
 - **Devcontainers** are preferred for any environment not fully covered by UV, to keep setups reproducible.
 - **VSA submodule** reuses the `balanced-ternary` crate and ports `torchhd`'s operation set as a reference.
 

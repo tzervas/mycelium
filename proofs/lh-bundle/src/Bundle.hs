@@ -3,10 +3,14 @@
 
 -- | M-001 — MAP-I @bundle@ capacity-refinement probe (RFC-0003 §5).
 --
---   DRAFT / SCAFFOLD: this module is NOT yet type-checked. The authoring environment has no
---   GHC / LiquidHaskell / Z3 (see README "Honesty status"). The integer inequality each
---   verification condition reduces to is tabulated in the README and is the authoritative,
---   independently-checkable artifact; running LiquidHaskell is the remaining step.
+--   DISCHARGED — confirmed (build), 2026-06-09 (see README "Result & honesty status"):
+--   @cabal build@ with the LiquidHaskell plugin reports @LIQUID: SAFE (16 constraints checked)@ and
+--   Z3 discharged all four probes. Toolchain: GHC 9.8.2 · LiquidHaskell 0.9.8.2 /
+--   liquid-fixpoint 0.9.6.3.1 · Z3 4.8.12. The integer inequality each verification condition
+--   reduces to is tabulated in the README — the authoritative, independently-checkable artifact.
+--   (A3-05: header reconciled with the README's recorded discharged status; proof statements
+--   unchanged. The build cannot be re-run in the authoring environment — cabal/z3 absent — so this
+--   is a comment reconciliation against the README's run log.)
 --
 --   Strategy (the thing this probe confirms): AXIOMATIZE the cited capacity theorem's statement,
 --   and have Z3 discharge only the concrete ARITHMETIC INSTANTIATION — never re-prove the

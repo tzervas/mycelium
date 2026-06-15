@@ -330,3 +330,45 @@ fn rejects_bad_trit_glyph() {
                    "meta": { "provenance": { "kind": "Root" }, "guarantee": "Exact" } }"#;
     assert!(serde_json::from_str::<Value>(json).is_err());
 }
+
+/// `deny_unknown_fields` makes the schemas' `additionalProperties: false` a real contract: an
+/// unknown field at the value level or the meta level is rejected, not silently dropped (A6-02).
+/// Mutant-witness: removing `#[serde(deny_unknown_fields)]` from `ValueWire`/`MetaWire` makes these
+/// `from_str` calls succeed.
+#[test]
+fn rejects_unknown_wire_fields() {
+    // Baseline (no extra field) parses.
+    let ok = r#"{ "repr": { "kind": "Binary", "width": 1 }, "payload": { "bits": "0" },
+                  "meta": { "provenance": { "kind": "Root" }, "guarantee": "Exact" } }"#;
+    assert!(serde_json::from_str::<Value>(ok).is_ok());
+    // Unknown field at the value level.
+    let value_extra = r#"{ "repr": { "kind": "Binary", "width": 1 }, "payload": { "bits": "0" },
+                          "meta": { "provenance": { "kind": "Root" }, "guarantee": "Exact" },
+                          "EXTRA_FIELD": true }"#;
+    assert!(serde_json::from_str::<Value>(value_extra).is_err());
+    // Unknown field at the meta level.
+    let meta_extra = r#"{ "repr": { "kind": "Binary", "width": 1 }, "payload": { "bits": "0" },
+                         "meta": { "provenance": { "kind": "Root" }, "guarantee": "Exact",
+                                   "BOGUS": 1 } }"#;
+    assert!(serde_json::from_str::<Value>(meta_extra).is_err());
+}
+
+/// An `Empirical` guarantee whose bound rests on **zero trials** is evidence-free and must be
+/// rejected on the wire, not silently accepted (A6-02/B2-03). Mutant-witness: reverting
+/// `Bound::well_formed` to skip the basis check makes the `trials: 0` case parse.
+#[test]
+fn rejects_evidence_free_empirical_bound() {
+    let zero = r#"{ "repr": { "kind": "Binary", "width": 1 }, "payload": { "bits": "0" },
+                   "meta": { "provenance": { "kind": "Root" }, "guarantee": "Empirical",
+                             "bound": { "kind": "ErrorBound", "eps": 0.5, "norm": "Linf",
+                                        "basis": { "kind": "EmpiricalFit", "trials": 0,
+                                                   "method": "frady" } } } }"#;
+    assert!(serde_json::from_str::<Value>(zero).is_err());
+    // The same bound backed by real trials deserializes fine.
+    let ok = r#"{ "repr": { "kind": "Binary", "width": 1 }, "payload": { "bits": "0" },
+                  "meta": { "provenance": { "kind": "Root" }, "guarantee": "Empirical",
+                            "bound": { "kind": "ErrorBound", "eps": 0.5, "norm": "Linf",
+                                       "basis": { "kind": "EmpiricalFit", "trials": 10000,
+                                                  "method": "frady" } } } }"#;
+    assert!(serde_json::from_str::<Value>(ok).is_ok());
+}

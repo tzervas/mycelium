@@ -50,7 +50,48 @@ How we build Mycelium. This operationalizes `CONTRIBUTING.md`; follow it while a
 - **Python 3.13/3.14** via **UV**; `pytest` + codecov; **ruff** + **Black** (PEP 8).
 - Reuse the `balanced-ternary` crate; port `torchhd`'s op set as a VSA reference.
 
+## Banked guards (lessons from the 2026-06 deep review)
+
+Concrete, mechanical rules so the honesty rule holds *while you write the code*, not just in
+audit. Each is grounded in a real finding (ID in parens). Apply the matching one whenever you
+touch that kind of code; reviewers grep for these too (`_shared/review-rubric.md` §1.5).
+
+1. **Floating-point bounds round *outward*.** Any ε/δ — or any number that will carry a
+   `Proven`/`Empirical` tag — composed in `f64` must be rounded **outward**, so the stored value
+   is a *true* upper bound and not a round-to-nearest value that can fall below the real one. Use
+   the directed-rounding helpers (`mycelium-numerics::round::{add_up,mul_up}`); they push up only
+   when IEEE actually rounded down, so an exact composition stays exact. Re-validation checkers
+   compare with a **relative** tolerance, never an absolute slack that goes vacuous for tiny
+   bounds. (A2-01 / A2-02)
+2. **Guarantee/bound constructors fail closed.** Non-finite or out-of-range inputs return
+   `Option`/`Err` — never a silent collapse (e.g. infinite uncertainty must not become "exact").
+   Prefer private fields + a validating constructor so an invalid bound is unrepresentable, and
+   re-validate a *composed* result before emitting it (overflow to `inf` is a refusal, not a
+   bound). (A2-03 / A2-04 / A2-05 / B2-03)
+3. **A serde wire struct is a contract on *both* sides.** Every struct mirroring a
+   `docs/spec/schemas/*.json` uses `#[serde(deny_unknown_fields)]` **and** re-checks every schema
+   constraint on deserialize (e.g. `EmpiricalFit.trials ≥ 1`, non-empty citation). Ship an
+   emit-then-validate test that pins one committed example per enum spelling / basis / layout — a
+   round-trip test alone cannot catch tag drift. (A6-02 / A6-03 / B2-03)
+4. **Recursive descent over untrusted input is depth-guarded.** Parsers, type/totality checkers,
+   and elaborators that recurse on input carry an explicit depth budget and return a clean error
+   past it — never lean on the host stack. Add a deep-nesting *reject* fixture. `myc-check` is the
+   M-002 oracle: a degenerate input must exit-2, not `SIGABRT`. (A4-02 / B2-01)
+5. **Content-addressed identity rejects ambiguous encodings.** Anything hashed for identity must
+   reject inputs that canonicalize ambiguously (non-finite `f64` serialize to JSON `null`, so two
+   different policies collide on one ref). Validate *before* hashing. (A5-01 / B2-02)
+6. **Property-tracking analyses handle shadowing.** Any pass that carries a fact across binders
+   (totality "smaller-than", scope, linearity) must drop-and-restore that fact on a *shadowing*
+   rebind, or a non-terminating/ill-formed program slips the gate. (A4-01)
+7. **Tests assert the *specific* failure and ship a mutant-witness.** Negative/reject tests assert
+   the exact error variant (and span/message), not just "some `Err`". Every differential, negative,
+   or bound test carries a one-line comment naming a mutation that makes it fail (reuse the probe
+   that found the bug). Don't present a single fixed-seed sample as a statistical procedure — say
+   "one deterministic sample of N", or rotate the seed in CI. (A4 reject corpus / A2-07 / A3-08-09
+   / A6-04)
+
 ## Definition of done
 Tests pass · `just check` green (or skips explained) · bounds carry tag+proof/property test ·
 claims grounded · decisions append-only · changelog/status updated · conventional commit +
-verified-how PR note. When in doubt, prefer the smaller, more auditable change.
+verified-how PR note · the **banked guards** above applied to any code of their kind. When in
+doubt, prefer the smaller, more auditable change.

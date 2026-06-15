@@ -45,9 +45,11 @@ fn affine_linear_ops_are_exact() {
     for _ in 0..TRIALS {
         // Two forms over a shared symbol 0 plus private symbols 1 and 2 — exercises correlation.
         let x = AffineForm::uncertain(rng.unit() * 5.0, 0, rng.nonneg(3.0))
-            .add(&AffineForm::uncertain(0.0, 1, rng.nonneg(2.0)));
+            .unwrap()
+            .add(&AffineForm::uncertain(0.0, 1, rng.nonneg(2.0)).unwrap());
         let y = AffineForm::uncertain(rng.unit() * 5.0, 0, rng.nonneg(3.0))
-            .add(&AffineForm::uncertain(0.0, 2, rng.nonneg(2.0)));
+            .unwrap()
+            .add(&AffineForm::uncertain(0.0, 2, rng.nonneg(2.0)).unwrap());
         let e0 = rng.unit();
         let e1 = rng.unit();
         let e2 = rng.unit();
@@ -82,9 +84,11 @@ fn affine_mul_is_sound() {
     let mut rng = Lcg::new(2);
     for _ in 0..TRIALS {
         let x = AffineForm::uncertain(rng.unit() * 5.0, 0, rng.nonneg(3.0))
-            .add(&AffineForm::uncertain(0.0, 1, rng.nonneg(2.0)));
+            .unwrap()
+            .add(&AffineForm::uncertain(0.0, 1, rng.nonneg(2.0)).unwrap());
         let y = AffineForm::uncertain(rng.unit() * 5.0, 0, rng.nonneg(3.0))
-            .add(&AffineForm::uncertain(0.0, 2, rng.nonneg(2.0)));
+            .unwrap()
+            .add(&AffineForm::uncertain(0.0, 2, rng.nonneg(2.0)).unwrap());
         // Fresh symbol 9 not used by x or y.
         let prod = x.mul(&y, 9);
         let e0 = rng.unit();
@@ -107,7 +111,10 @@ fn affine_mul_is_sound() {
 }
 
 /// **Soundness (scalar `ErrorBound`).** The composed `eps` upper-bounds the true deviation of the
-/// composed *values* for `add`/`sub`/`scale`/`mul` — sampled over worst-case-aligned deviations.
+/// composed *values* for `add`/`sub`/`scale`/`mul` over both signs of the deviation. With outward
+/// rounding (A2-01) the composed `eps` is a true upper bound, so the assertions hold with **zero**
+/// slack — the previous `1e-9`/`1e-6` slacks (which masked the ulp-scale unsoundness, A2-07) are
+/// removed.
 #[test]
 fn error_bound_scalar_is_sound() {
     let mut rng = Lcg::new(3);
@@ -116,23 +123,43 @@ fn error_bound_scalar_is_sound() {
         let ey = rng.nonneg(4.0);
         let bx = ErrorBound::new(ex, NormKind::Linf).unwrap();
         let by = ErrorBound::new(ey, NormKind::Linf).unwrap();
-        // True deviations within the per-input bounds.
+        // True deviations within the per-input bounds (both signs exercised by `rng.unit()`).
         let dx = rng.unit() * ex;
         let dy = rng.unit() * ey;
 
-        // add: |dx + dy| <= eps_add
-        assert!(dx + dy - 1e-9 <= bx.add(&by).unwrap().eps);
+        // add: |dx + dy| <= eps_add (both sides; A2-07 fix — was only the positive side).
+        assert!((dx + dy).abs() <= bx.add(&by).unwrap().eps());
         // sub: |dx - dy| <= eps_sub
-        assert!((dx - dy).abs() - 1e-9 <= bx.sub(&by).unwrap().eps);
+        assert!((dx - dy).abs() <= bx.sub(&by).unwrap().eps());
         // scale
         let c = rng.unit() * 3.0;
-        assert!((c * dx).abs() - 1e-9 <= bx.scale(c).eps);
+        assert!((c * dx).abs() <= bx.scale(c).eps());
         // mul about centers x0,y0: |(x0+dx)(y0+dy) - x0 y0| <= eps_mul
         let x0 = rng.unit() * 6.0;
         let y0 = rng.unit() * 6.0;
         let true_dev = ((x0 + dx) * (y0 + dy) - x0 * y0).abs();
-        assert!(true_dev - 1e-6 <= bx.mul(&by, x0, y0).unwrap().eps);
+        assert!(true_dev <= bx.mul(&by, x0, y0).unwrap().eps());
     }
+}
+
+/// **Outward rounding (A2-01 / C1-01 regression; mutant-witness).** A composition whose real sum is
+/// not representable must yield an `eps` *strictly greater* than the round-to-nearest sum — otherwise
+/// the `Proven` tag `compose_error_bound` attaches would not be backed. Reverting `ErrorBound::add`
+/// to `self.eps() + other.eps()` (plain RN) makes this fail.
+#[test]
+fn error_bound_add_rounds_outward() {
+    // 1.0 and 2^-54: their real sum is unrepresentable and rounds to exactly 1.0 under RN.
+    let a = ErrorBound::new(1.0, NormKind::Linf).unwrap();
+    let b = ErrorBound::new(2f64.powi(-54), NormKind::Linf).unwrap();
+    let composed = a.add(&b).unwrap().eps();
+    assert!(
+        composed > 1.0,
+        "composed eps {composed} did not round outward above the RN sum 1.0"
+    );
+    assert!(composed >= 1.0 + 2f64.powi(-54));
+    // Exact composition is preserved: 0 + 0 stays exactly 0 (Exact ⊕ Exact is not inflated).
+    let zero = ErrorBound::exact(NormKind::Linf);
+    assert_eq!(zero.add(&zero).unwrap().eps(), 0.0);
 }
 
 /// **Monotonicity.** Raising any input `eps` can only raise the composed `eps`.
@@ -146,8 +173,8 @@ fn error_bound_is_monotone() {
         let lo = ErrorBound::new(ex, NormKind::L2).unwrap();
         let hi = ErrorBound::new(ex + bump, NormKind::L2).unwrap();
         let y = ErrorBound::new(ey, NormKind::L2).unwrap();
-        assert!(hi.add(&y).unwrap().eps >= lo.add(&y).unwrap().eps);
-        assert!(hi.mul(&y, 2.0, 3.0).unwrap().eps >= lo.mul(&y, 2.0, 3.0).unwrap().eps);
+        assert!(hi.add(&y).unwrap().eps() >= lo.add(&y).unwrap().eps());
+        assert!(hi.mul(&y, 2.0, 3.0).unwrap().eps() >= lo.mul(&y, 2.0, 3.0).unwrap().eps());
     }
 }
 
@@ -175,6 +202,35 @@ fn error_bound_refuses_norm_mismatch() {
     assert!(x.mul(&y, 1.0, 1.0).is_none());
 }
 
+/// Constructor refusals are explicit `None`, never a silent coercion (A2-08).
+#[test]
+fn constructors_refuse_out_of_range() {
+    assert!(ErrorBound::new(f64::NAN, NormKind::L2).is_none());
+    assert!(ErrorBound::new(-1.0, NormKind::L2).is_none());
+    assert!(ErrorBound::new(f64::INFINITY, NormKind::L2).is_none());
+    assert!(ProbBound::new(1.5).is_none());
+    assert!(ProbBound::new(-0.1).is_none());
+    assert!(ProbBound::new(f64::NAN).is_none());
+    assert!(ApRhlJudgment::new(-0.1, 0.0).is_none());
+    assert!(ApRhlJudgment::new(0.0, 1.5).is_none());
+    assert!(ApRhlJudgment::new(f64::INFINITY, 0.0).is_none());
+}
+
+/// `AffineForm::uncertain` refuses a non-finite center or a non-finite/negative radius — infinite
+/// uncertainty is an explicit `None`, **never** a silent collapse to an exact (radius-0) form (A2-03;
+/// mutant-witness: reverting to the infallible constructor that drops a non-finite radius makes the
+/// `is_none` checks fail).
+#[test]
+fn uncertain_refuses_non_finite() {
+    assert!(AffineForm::uncertain(0.0, 0, f64::INFINITY).is_none());
+    assert!(AffineForm::uncertain(0.0, 0, f64::NAN).is_none());
+    assert!(AffineForm::uncertain(0.0, 0, -1.0).is_none());
+    assert!(AffineForm::uncertain(f64::INFINITY, 0, 1.0).is_none());
+    // A finite, non-negative radius is accepted; radius 0 is the exact constant.
+    assert_eq!(AffineForm::uncertain(2.0, 0, 0.0).unwrap().radius(), 0.0);
+    assert!(AffineForm::uncertain(2.0, 0, 1.5).unwrap().radius() >= 1.5);
+}
+
 // --- ProbBound ---------------------------------------------------------------------------------
 
 /// **Soundness (union bound).** The union δ upper-bounds the empirical failure rate of independent
@@ -185,7 +241,7 @@ fn union_bound_is_sound() {
     let deltas = [0.01, 0.02, 0.05];
     let bounds: Vec<ProbBound> = deltas.iter().map(|d| ProbBound::new(*d).unwrap()).collect();
     let claimed = ProbBound::union(&bounds);
-    assert!(claimed.delta <= 1.0);
+    assert!(claimed.delta() <= 1.0);
     let mut failures = 0u64;
     let n = 200_000u64;
     for _ in 0..n {
@@ -199,9 +255,9 @@ fn union_bound_is_sound() {
     let empirical = failures as f64 / n as f64;
     // Union bound must over-estimate the true "any fails" probability.
     assert!(
-        claimed.delta + 0.01 >= empirical,
+        claimed.delta() + 0.01 >= empirical,
         "union {} < emp {empirical}",
-        claimed.delta
+        claimed.delta()
     );
 }
 
@@ -211,8 +267,8 @@ fn union_bound_is_monotone_and_saturates() {
     let a = ProbBound::new(0.4).unwrap();
     let b = ProbBound::new(0.4).unwrap();
     let c = ProbBound::new(0.9).unwrap();
-    assert!(a.or(&b).delta >= a.delta);
-    assert_eq!(a.or(&b).or(&c).delta, 1.0); // 0.4+0.4+0.9 -> clamp to 1
+    assert!(a.or(&b).delta() >= a.delta());
+    assert_eq!(a.or(&b).or(&c).delta(), 1.0); // 0.4+0.4+0.9 -> clamp to 1
 }
 
 /// **Determinism.** Same δ inputs → same union; empty union is `certain`.
@@ -232,11 +288,11 @@ fn aprhl_seq_composes() {
     let j1 = ApRhlJudgment::new(0.5, 0.01).unwrap();
     let j2 = ApRhlJudgment::new(0.3, 0.02).unwrap();
     let seq = j1.seq(&j2);
-    assert!((seq.eps - 0.8).abs() < 1e-12);
-    assert!((seq.delta - 0.03).abs() < 1e-12);
+    assert!((seq.eps() - 0.8).abs() < 1e-12);
+    assert!((seq.delta() - 0.03).abs() < 1e-12);
     // Saturation at δ = 1.
     let big = ApRhlJudgment::new(0.0, 0.7).unwrap();
-    assert_eq!(big.seq(&big).delta, 1.0);
+    assert_eq!(big.seq(&big).delta(), 1.0);
 }
 
 // --- tier-i checker ----------------------------------------------------------------------------
@@ -250,7 +306,7 @@ fn checker_rejects_too_tight_claims() {
     let inputs = [x, y];
     // Sound re-derivation of add = 5.0.
     let recomputed = recompute_error(&inputs, ErrorOp::Add).unwrap();
-    assert!((recomputed.eps - 5.0).abs() < 1e-12);
+    assert!((recomputed.eps() - 5.0).abs() < 1e-12);
 
     // Exact claim: valid.
     let exact_claim = ErrorBound::new(5.0, NormKind::Linf).unwrap();
@@ -290,6 +346,30 @@ fn union_checker_rejects_too_tight() {
         check_union_claim(&inputs, ProbBound::new(0.2).unwrap()),
         CheckOutcome::Rejected { .. }
     ));
+}
+
+/// The tier-i checker is **not vacuous in the small-ε regime** (A2-02; mutant-witness): a claim of
+/// `eps = 0` against a tiny but nonzero re-derivation (~5e-13) is rejected — where the previous
+/// absolute `1e-12` slack would have silently accepted it (claiming exactness for an approximate
+/// result). Restoring the absolute `CHECK_TOL = 1e-12` makes this fail.
+#[test]
+fn checker_is_not_vacuous_for_tiny_bounds() {
+    let x = ErrorBound::new(2.5e-13, NormKind::Linf).unwrap();
+    let y = ErrorBound::new(2.5e-13, NormKind::Linf).unwrap();
+    let inputs = [x, y];
+    let recomputed = recompute_error(&inputs, ErrorOp::Add).unwrap();
+    assert!(recomputed.eps() >= 5e-13);
+    // Claiming exactness (eps = 0) for an approximate result must be rejected.
+    let zero_claim = ErrorBound::new(0.0, NormKind::Linf).unwrap();
+    assert!(matches!(
+        check_error_claim(&inputs, ErrorOp::Add, zero_claim),
+        CheckOutcome::Rejected { .. }
+    ));
+    // The honest (≥ re-derivation) claim is still accepted.
+    assert_eq!(
+        check_error_claim(&inputs, ErrorOp::Add, recomputed),
+        CheckOutcome::Valid
+    );
 }
 
 // --- cross-kernel + certificate ----------------------------------------------------------------
@@ -414,4 +494,19 @@ fn compose_refuses_non_error_bounds() {
     );
     assert!(compose_error_bound(&[&capacity, &err], ErrorOp::Add).is_none());
     assert!(compose_error_bound(&[], ErrorOp::Add).is_none());
+}
+
+/// `compose_error_bound` refuses (returns `None`) when the composition overflows to non-finite,
+/// rather than emitting a fabricated `inf` bound (A2-04; mutant-witness: removing the
+/// `ErrorBound::new` re-validation in `compose_error_bound` makes this return `Some`).
+#[test]
+fn compose_refuses_overflow_to_non_finite() {
+    let huge = error_bound(
+        f64::MAX,
+        BoundBasis::ProvenThm {
+            citation: "x".to_owned(),
+        },
+    );
+    // f64::MAX + f64::MAX overflows to +inf — must be refused, not emitted as a bound.
+    assert!(compose_error_bound(&[&huge, &huge], ErrorOp::Add).is_none());
 }

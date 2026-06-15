@@ -152,6 +152,16 @@ pub fn run() {
     // ---- bijective dec: Ternary{6} → Binary{8} ----
     let a = tern_of(101, 6);
     let (b, cert) = ternary_to_binary(&a, 8, &pol).unwrap();
+    assert_validated(
+        &check(
+            &a,
+            &b,
+            RefinementRelation::Bijection,
+            Certificate::exact(),
+            &Evidence::Swap(&cert),
+        ),
+        "bijective dec",
+    );
     let swap_ns = bench(100_000, || {
         black_box(ternary_to_binary(black_box(&a), 8, &pol).unwrap());
     });

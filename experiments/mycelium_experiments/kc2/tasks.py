@@ -38,6 +38,12 @@ class Task:
     """A known-good Mycelium solution (well-posedness witness, not a scoring aid)."""
     reference_baseline: str
     """A known-good baseline-DSL solution (same role)."""
+    expect_value: int | None = None
+    """The exact integer value ``main()`` must produce — two's-complement for ``Bin``,
+    balanced-ternary for ``Tern`` (representation-agnostic: it is compared against ``.to_int()``).
+    ``None`` when the task has no single determinate value. The well-posedness test checks it, so a
+    value-wrong reference solution — or a baseline↔kernel convention drift like A6-01 — is caught,
+    not just the result *shape* (A6-04)."""
 
 
 TASKS: tuple[Task, ...] = (
@@ -48,6 +54,7 @@ TASKS: tuple[Task, ...] = (
         expect_baseline=("bin", 8),
         reference_mycelium="colony bench\nfn main() -> Binary{8} = 0b1011_0010\n",
         reference_baseline="def main():\n    return Bin('1011_0010')\n",
+        expect_value=-78,
     ),
     Task(
         id="kc2-02-complement",
@@ -59,6 +66,7 @@ TASKS: tuple[Task, ...] = (
         expect_baseline=("bin", 8),
         reference_mycelium="colony bench\nfn main() -> Binary{8} = not(0b1011_0010)\n",
         reference_baseline="def main():\n    return bnot(Bin('1011_0010'))\n",
+        expect_value=77,
     ),
     Task(
         id="kc2-03-xor",
@@ -72,6 +80,7 @@ TASKS: tuple[Task, ...] = (
             "colony bench\nfn main() -> Binary{8} = xor(0b1011_0010, 0b1111_1111)\n"
         ),
         reference_baseline=("def main():\n    return xor(Bin('1011_0010'), Bin('1111_1111'))\n"),
+        expect_value=77,
     ),
     Task(
         id="kc2-04-ternary-add",
@@ -83,6 +92,7 @@ TASKS: tuple[Task, ...] = (
         expect_baseline=("tern", 4),
         reference_mycelium="colony bench\nfn main() -> Ternary{4} = add(<00+->, <0+0->)\n",
         reference_baseline="def main():\n    return tadd(Tern('00+-'), Tern('0+0-'))\n",
+        expect_value=10,
     ),
     Task(
         id="kc2-05-swap",
@@ -99,6 +109,7 @@ TASKS: tuple[Task, ...] = (
         reference_baseline=(
             "def main():\n    return swap(Bin('1011_0010'), to=('tern', 6), policy='rt')\n"
         ),
+        expect_value=-78,
     ),
     Task(
         id="kc2-06-helper",
@@ -117,6 +128,7 @@ TASKS: tuple[Task, ...] = (
         reference_baseline=(
             "def flip(x):\n    return bnot(x)\n\ndef main():\n    return flip(flip(Bin('1010_1010')))\n"
         ),
+        expect_value=-86,
     ),
     Task(
         id="kc2-07-data-match",
@@ -144,6 +156,7 @@ TASKS: tuple[Task, ...] = (
             "        case _: return Tern('+')\n"
             "def main():\n    return label(Sign.ZERO)\n"
         ),
+        expect_value=0,
     ),
     Task(
         id="kc2-08-matured",

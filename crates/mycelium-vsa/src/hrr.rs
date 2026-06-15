@@ -27,6 +27,18 @@ use crate::{EmpiricalProfile, VsaError, VsaModel, VsaOp};
 
 /// The trial-validated regime backing the Value-level HRR unbind's `Empirical` δ
 /// (`tests/empirical_profiles.rs` runs exactly these trials).
+///
+/// **Honest limitations of this profile (A3-10):**
+/// - `trials = 2_000` is **thinner** than the other profiles' `10_000` at the same `δ = 1e-2`, so
+///   this `Empirical` δ is estimated at a *coarser resolution* (a 1e-2 tail estimated from 2k
+///   trials has wide confidence; 10k would tighten it). The count is held here deliberately — it is
+///   an empirical-evidence decision, not a build detail, so it is documented rather than silently
+///   bumped (do not raise it without re-running the trials).
+/// - The **codebook-size side-condition** (`codebook ≤ 16`) is recorded **only in the free-text
+///   `method` string**, which [`EmpiricalProfile::check`] cannot inspect — so `check` gates on item
+///   count / parity / dimension but *not* on codebook size. A caller cleaning up against a larger
+///   codebook is outside the validated regime without an explicit refusal; the constraint is honest
+///   documentation, not an enforced guard.
 pub const HRR_UNBIND_PROFILE: EmpiricalProfile = EmpiricalProfile {
     max_items: 1,
     odd_items_only: false,

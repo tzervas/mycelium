@@ -8,6 +8,167 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (deep-review remediation — Medium/Low/Nit tail; all findings now closed)
+- The remaining **Medium/Low/Nit** findings across every workstream are resolved (one commit per
+  area), completing the review's Gate-A list — **0 findings now open**:
+  - **core/cert (WS2):** recon manifest schema↔Rust reconciled (A6-06), `swap-certificate` requires
+    bijective `params` (A6-09), `MalformedSparsity` variant (A6-08), basis-rank rule (A1-04),
+    SC-3 helper asserts strength (A1-05), kernel `unreachable!`→`debug_assert` (C1-05).
+  - **vsa (WS3):** MAP-I/MAP-B bind/unbind enforce the ±1 alphabet (A3-04), `EmptyCodebook` variant
+    (A3-07), BSC on-expectation `Proven` documented (A3-06), tie-break/HRR/SC-2 notes (A3-08/09/10),
+    `Bundle.hs` header reconciled (A3-05).
+  - **l1/interp (WS4):** reject corpus pins per-file expected error reasons (A4), `Wf`-path +
+    fuel-at-depth tests (A4-04), documented depth ceiling (A4-03).
+  - **select/mlir/dense (WS5):** non-ternary layout refusal (A5-02), `unpack_trits` returns a
+    `Result` not a silent truncation (A5-03), non-vacuous dense sweep (A5-05), pinned op-eps
+    constants (A5-07), comment fixes (A5-06/A5-08).
+  - **lsp/kc2/xtask (WS6):** never-silent unsupported-swap-pair diagnostic (A6-05), `exec` gated
+    behind `allow_untrusted` (A6-10/B2-04), kc4 bijective-dec precheck (A6-11).
+  - **numerics (WS1 deferred):** kernel-type fields are `pub(crate)` with accessors + a validating
+    `Certificate` deserialize, making the outward-rounding/range invariants structural (A2-05);
+    composed `Proven` basis preserves the input theorems' provenance (A2-09).
+
+### Added (developer tooling — supply-chain gate)
+- **`just deny`** (`scripts/checks/deny.sh`, in `just check`): runs `cargo deny check` + `cargo
+  audit` when present (skip-if-missing), with a root `deny.toml` (advisories/licenses/sources).
+  `.github/dependabot.yml` added (github-actions + cargo + pip, weekly; PRs only — no auto-CI).
+  `[profile.release] overflow-checks = true`. gitleaks/cargo-deny/cargo-audit added to
+  `install-tools.sh`. `npx markdownlint-cli2` pinned. Editorial: docs say "ruff format
+  (Black-compatible)"; codespell + markdownlint clean repo-wide.
+
+### Fixed (deep-review remediation — Wave 1)
+- **WS3 — VSA certified-capacity side-conditions (finding A3-03/C1-02 H6 — the last Wave-1 High;
+  advances M-I2/VR-5, SC-2).** `MapI::bundle_values_certified` issued a `Proven` `CapacityBound`
+  after checking only the dimension instantiation (`dim ≥ requiredDim`), but the cited
+  Clarkson/Thomas theorem also assumes **bipolar (±1) atoms** and **distinct items** — so a `Proven`
+  tag could be obtained for a bundle of duplicates or non-bipolar vectors. The certified path now
+  checks both before issuing the bound (`check_bipolar` → `NonAlphabetComponent`; `first_duplicate`
+  → new `VsaError::DuplicateBundleItems`), and the margin `μ` plus the checked side-condition are
+  **recorded in the bound's basis citation** so EXPLAIN/serialization expose exactly what the
+  `Proven` tag rests on. Regression test refuses non-bipolar and duplicate inputs and still certifies
+  distinct bipolar ones (mutant-witness A3-03); an existing capacity test that built identical
+  undersized atoms was corrected to use per-item seeds so it still isolates the dimension condition.
+- **WS6 — KC-2 baseline oracle fidelity (findings A6-01 H10, A6-04; M-002 well-posedness).** The
+  Python baseline DSL read `Bin` as **unsigned** while the kernel/spec use **two's-complement**, so
+  the benchmark's two arms computed different answers for the same prompt — e.g. `kc2-05`
+  `swap(0b1011_0010 → 6-trit)` gave the baseline `+178` vs the kernel/spec `−78` (`0-00+0`),
+  invisible because the oracle checked only result *shape*. `baseline.Bin.to_int` and the `Tern→Bin`
+  swap are now two's-complement (`B_n = [−2^(n−1), 2^(n−1)−1]`), matching `binary.rs` — the worked
+  example now yields `−78` in both arms. Added an `expect_value` field to `Task` (the independently
+  computed integer) and a well-posedness test asserting each reference baseline's `to_int()` matches
+  it, so a value-wrong reference or a future convention drift is caught (A6-04). Scoring stays
+  shape-only (SC-5b symmetry). Remaining WS6 (tracked): A6-05 (LSP unsupported-swap diagnostic),
+  A6-10/B2-04 (`exec` `allow_untrusted` guard), A6-11 (xtask kc4 precheck).
+- **WS5 — `mycelium-select` content-addressing integrity (finding A5-01/B2-02 H9; advances
+  RFC-0005 §3).** `SelectionPolicy::new` (and, via it, `Deserialize`) now rejects a rule predicate
+  carrying a **non-finite `f64` literal** (`Predicate::literals_finite`, recursing through
+  `All`/`Any`/`Not`), with a new `PolicyError::BadPredicateLiteral`. `NaN` and `±∞` both serialize
+  to JSON `null`, so two materially different policies (`eps ≤ NaN`, never-matches, vs `eps ≤ ∞`,
+  always-matches) would otherwise hash to the **same** `policy_ref` — collapsing the audit anchor
+  recorded in `Meta.policy_used`. Regression test asserts all three non-finite forms are refused
+  (and nesting is checked), citing A5-01 as its mutant-witness.
+- **WS4 — `mycelium-l1` soundness + parser hardening (findings A4-01 H7, A4-02 H8; advances S5/G2,
+  RFC-0007 §4.5).**
+  - **Totality soundness (H7):** the structural totality checker classified a non-terminating
+    function as `Total` and admitted it as `matured`, because a `Match` arm binder reusing an outer
+    "smaller-than" variable's name was never dropped — stale smallness leaked into the arm body and a
+    non-decreasing recursive call looked structural (`f(n,p)=match n{Z=>Z,S(m)=>match p{Z=>Z,S(m)=>
+    f(m,p)}}` diverges yet was accepted). `descend_walk` now drops every binder a pattern introduces
+    (recursively) for the arm body and restores it after, re-adding only the genuinely-smaller
+    constructor sub-binders — mirroring the existing `Let`/`For` discipline.
+  - **Parser DoS (H8):** the recursive-descent parser had no depth guard, so crafted deeply-nested
+    input overflowed the host stack and aborted `myc-check` (the M-002 oracle) instead of returning
+    an error. `parse_expr` is now depth-guarded (`MAX_EXPR_DEPTH = 256`), returning an explicit
+    `ParseError`; bounding the parser bounds the AST depth, protecting the downstream
+    typechecker/totality/elaborator passes transitively.
+  - Regression tests for both (the divergent witness is `Partial` + `matured` refused; 2000-deep
+    input returns `Err`, not a crash), each citing its finding ID as a mutant-witness.
+  - Remaining WS4 (tracked): A4-03 (charge eval depth per call-frame), A4-04 (`Wf`-error-path test),
+    and switching the reject corpus from `is_err()` to per-file expected-error-substring assertions.
+- **WS2 — `mycelium-core` contract integrity (findings A6-02, B2-03, A1-01, A1-02, A1-03;
+  advances M-I1…M-I4, the schema contract).** The JSON schema is now enforced on the Rust side too,
+  closing the tampered-manifest vector:
+  - `#[serde(deny_unknown_fields)]` on `ValueWire`/`MetaWire`/`ReconWire`, so an unknown wire field
+    is **rejected**, not silently dropped — `additionalProperties: false` is now a real contract on
+    both sides (A6-02). (`Bound` uses `#[serde(flatten)]`, which serde cannot combine with
+    `deny_unknown_fields`; its integrity is enforced by `well_formed` below instead.)
+  - `Bound::well_formed` now also checks **finiteness** (an infinite ε/crosstalk is a vacuous bound,
+    A1-02) and the **basis constraints** — an `EmpiricalFit` must rest on `trials ≥ 1` with a named
+    method, a `ProvenThm` must name its citation — so an evidence-free `Empirical` tag (`trials: 0`)
+    is refused on deserialize (A6-02/B2-03). Fixed the stale `MetaWire` doc claiming `reconstruction`
+    is "not carried" (A1-01/A6-07).
+  - New unit tests (`bound.rs`) and wire-tamper regression tests (`serde_roundtrip.rs`), each citing
+    its finding ID as a mutant-witness (A1-03).
+  - Remaining WS2 (tracked, not yet done): A6-03 (broaden the emit-then-validate schema pinning to
+    one example per enum/basis/layout), A6-06 (recon schema↔Rust conditional reconciliation), A6-08
+    (sparsity `WfError` variant), A6-09 (cert `params` schema drift), A1-04/A1-05 (nits).
+- **WS1 — `mycelium-numerics` honesty hardening (findings A2-01, A2-02, A2-03, A2-04, A2-06,
+  A2-07, A2-08; advances VR-3/VR-5, SC-2).** A `Proven`/`Empirical` ε or δ that travels in a
+  `Bound` is now a *true* upper bound under floating point, closing the headline honesty hole where
+  `compose_error_bound` emitted `ProvenThm` on round-to-nearest f64 that could fall below the real
+  bound:
+  - New private `round` module: directed (outward) rounding (`add_up`/`mul_up`) via the Knuth/Møller
+    two-sum and an FMA, rounding a bound-increasing result up **only when IEEE actually rounded
+    down** — so an exact composition (e.g. `Exact ⊕ Exact`) stays exactly `0` and is not silently
+    inflated to "approximate".
+  - Every ε/δ composition rounds outward: `ErrorBound::{add,scale,mul}`, `AffineForm::radius`, the
+    `mul` second-order remainder, `ProbBound::union`, and `ApRhlJudgment::seq`. Each `AffineForm`
+    op also folds the magnitude of its own center/coefficient round-off into a reserved
+    `ROUNDOFF_SYM`, so `radius` is a sound enclosure under f64 (A2-01).
+  - The tier-i checker's tolerance is now **relative** (a few ULPs of the re-derivation) instead of
+    an absolute `1e-12` that was vacuous for tiny bounds — a claim of `eps = 0` against a re-derived
+    `~5e-13` is now correctly **rejected** (A2-02).
+  - `AffineForm::uncertain` returns `Option`, refusing a non-finite center / non-finite or negative
+    radius instead of silently collapsing infinite uncertainty to an exact form (A2-03, house rule
+    2); `compose_error_bound` re-validates the composed magnitude and refuses an overflow to
+    non-finite rather than emitting a fabricated `inf` bound (A2-04); `AffineForm::mul`
+    `debug_assert`s its fresh-symbol precondition (A2-06).
+  - Property tests strengthened to assert with **zero slack** over both deviation signs (A2-07) and
+    new regression/refusal tests added, each citing the finding ID as its mutant-witness (A2-08).
+  - Deferred within WS1 (tracked, not yet done): A2-05 (make the kernel-type fields private — a
+    cross-crate API change, kept separate from this rounding fix) and A2-09 (composed-`Proven`
+    citation provenance, Nit). The outward-rounding guarantee holds for all current call paths,
+    which construct these types via `new`/`exact`/the composition methods.
+
+### Changed (deep-review remediation — Wave 1)
+- **Dev tooling — banked review lessons into the skills.** `dev-workflow/SKILL.md` gains a "Banked
+  guards" section and `_shared/review-rubric.md` a "Recurring defect patterns (grep-first)" list, so
+  the honesty-rule seams the review exposed (outward-rounded f64 bounds, fail-closed bound
+  constructors, `deny_unknown_fields` + schema re-validation, depth-guarded recursive descent,
+  ambiguous-encoding hashing, shadowing-aware analyses, mutant-witness tests) are caught while
+  authoring and during review, not only in audit. Each guard cites the finding that motivated it.
+- **RFC-0003 → Accepted (r3): §4.1 erratum** reconciling the §4 guarantee-tag table with its own
+  "Net" line, resolving review findings **A3-01 / A3-02 (H4/H5)**. On a checked algebraic basis:
+  `permute` is `Exact` for every model (the table's "Proven" conflated the permutation *operation* —
+  an exactly-invertible coordinate shift — with sequence-decoding error growth, which belongs to the
+  `bundle`/`unbind` path), and the HRR/FHRR bind/unbind cell splits into bind `Exact` (exact algebraic
+  convolution / complex product) and unbind `Empirical` (the lossy approximate inverse — the residual
+  weak link, unchanged). Append-only: the r2 table cells are preserved, §4.1 is authoritative. **No
+  code tag changes** — `mycelium-vsa::matrix.rs` / `tests/matrix.rs` already followed the Net line;
+  the non-citable "issue #61" rationale in the code comment is replaced by the §4.1 citation.
+
+### Added (developer tooling — code enumeration / mapping)
+- **`just map`** (advisory; `scripts/map.sh`): generates a crate-to-crate dependency graph
+  (`cargo depgraph` → Graphviz, `cargo tree` fallback), per-crate module/item structure
+  (`cargo modules`), and rustdoc including private items, under `target/map/` + `target/doc/`. Not
+  part of `just check`. Function-level call graphs in Rust are partial (trait dispatch / generics) —
+  use rust-analyzer's call hierarchy or `cargo-call-stack` for those.
+- **`just api` / `just api-baseline`** (`scripts/checks/api.sh`, `scripts/api-baseline.sh`): a
+  public-API **surface gate** wired into `just check`. It diffs each crate's surface against a
+  committed snapshot (`docs/spec/api/<crate>.txt`) and fails on an unreviewed change — a guardrail
+  for KC-3 and the A2-05 private-fields work. All tools are optional and **skip gracefully** when
+  absent (installer adds them best-effort); snapshots are bootstrapped with `just api-baseline`.
+
+### Added (advisory review artifact)
+- **Deep review (2026-06):** `docs/reviews/2026-06-14-deep-review/` — a four-stage advisory
+  review (correctness + test-quality, security audit, quality/style vs the house rules, and a
+  QC/PE improvement roadmap) of the Phase-1/Phase-2 code at HEAD `e2d627e`. Report-only, gates
+  nothing, changed no code. Verdict: strong, honesty-disciplined codebase (0 Critical); 11
+  distinct High findings clustered at the honesty-tag/contract seams (numerics `Proven`-on-
+  unrounded-f64, VSA matrix/capacity over-tagging vs RFC-0003 §4, a totality-checker soundness
+  hole, an unbounded-recursion parser crash, a selection `PolicyRef` collision, and
+  schema↔Rust contract leaks). Not registered in `docs/Doc-Index.md` (advisory, non-normative).
+
 ### Added (Phase-2 Batch H — schedule-staged packing selector + E3 wrong-layout differential)
 - **M-250 (`mycelium-select` + `mycelium-core::Meta::with_physical`):** the **schedule-staged
   packing selector** (RFC-0004 §5; DN-01 Resolved; RFC-0005 §4). `bitnet_packing_policy` builds the

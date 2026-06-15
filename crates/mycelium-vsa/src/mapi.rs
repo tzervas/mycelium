@@ -86,8 +86,16 @@ impl MapI {
     }
 
     /// Value-level `bind` (Exact): `bind(a, b)` with `Derived` provenance over both inputs.
+    ///
+    /// The `Exact` tag rests on the bipolar self-inverse identity (`x·x = 1`), which holds **only**
+    /// on the `±1` alphabet. A non-bipolar component would make the stamped `Exact` a wrong result,
+    /// so we guard both operands and refuse with [`VsaError::NonAlphabetComponent`] rather than
+    /// mis-tag (A3-04; M-I2/VR-5; G2).
     pub fn bind_values(&self, a: &Value, b: &Value) -> Result<Value, VsaError> {
-        let out = self.bind(self.hv_of(a)?, self.hv_of(b)?)?;
+        let (av, bv) = (self.hv_of(a)?, self.hv_of(b)?);
+        Self::check_bipolar(av)?;
+        Self::check_bipolar(bv)?;
+        let out = self.bind(av, bv)?;
         self.wrap_exact(
             out,
             "vsa.map_i.bind",
@@ -96,8 +104,14 @@ impl MapI {
     }
 
     /// Value-level `unbind` (Exact): recover a factor (self-inverse for MAP-I).
+    ///
+    /// As with [`bind_values`](Self::bind_values), the `Exact` self-inverse identity holds only on
+    /// the `±1` alphabet; non-bipolar components are refused, never stamped `Exact` (A3-04).
     pub fn unbind_values(&self, a: &Value, b: &Value) -> Result<Value, VsaError> {
-        let out = self.unbind(self.hv_of(a)?, self.hv_of(b)?)?;
+        let (av, bv) = (self.hv_of(a)?, self.hv_of(b)?);
+        Self::check_bipolar(av)?;
+        Self::check_bipolar(bv)?;
+        let out = self.unbind(av, bv)?;
         self.wrap_exact(
             out,
             "vsa.map_i.unbind",
@@ -122,6 +136,21 @@ impl MapI {
         if items.is_empty() {
             return Err(VsaError::EmptyBundle);
         }
+        // Check the cited theorem's CHECKABLE side-conditions before issuing a Proven bound
+        // (A3-03/H6; M-I2/VR-5): the dimension instantiation alone is not enough — the
+        // Clarkson/Thomas capacity bound also assumes (i) bipolar (±1) atoms and (ii) distinct
+        // items. Without these the Proven tag is unbacked, so we refuse rather than stamp it.
+        let hvs: Vec<&[f64]> = items
+            .iter()
+            .map(|v| self.hv_of(v))
+            .collect::<Result<_, _>>()?;
+        for hv in &hvs {
+            Self::check_bipolar(hv)?;
+        }
+        let inputs: Vec<ContentHash> = items.iter().map(|v| v.content_hash()).collect();
+        if let Some(index) = first_duplicate(&inputs) {
+            return Err(VsaError::DuplicateBundleItems { index });
+        }
         let m = items.len() as u64;
         let dim = u64::from(self.dim);
         let bound = capacity::proven_capacity_bound(m, dim, delta).ok_or_else(|| {
@@ -131,13 +160,7 @@ impl MapI {
                 required: capacity::required_dim(m, delta, capacity::MARGIN_MU),
             }
         })?;
-        // Compute the superposition over the extracted hypervectors.
-        let hvs: Vec<&[f64]> = items
-            .iter()
-            .map(|v| self.hv_of(v))
-            .collect::<Result<_, _>>()?;
         let data = self.bundle(&hvs)?;
-        let inputs: Vec<ContentHash> = items.iter().map(|v| v.content_hash()).collect();
         let meta = Meta::new(
             Provenance::Derived {
                 op: operation_hash("vsa.map_i.bundle"),
@@ -161,6 +184,20 @@ impl MapI {
         )
         .map_err(VsaError::Wf)
     }
+
+    /// Every component must be `±1` — the MAP-I capacity theorem assumes bipolar atoms (A3-03/H6).
+    fn check_bipolar(v: &[f64]) -> Result<(), VsaError> {
+        match v.iter().position(|&x| x != 1.0 && x != -1.0) {
+            Some(index) => Err(VsaError::NonAlphabetComponent { index }),
+            None => Ok(()),
+        }
+    }
+}
+
+/// The index of the first content hash that repeats an earlier one, if any. Item counts are small,
+/// so the quadratic scan is fine and keeps the order deterministic (first repeat reported).
+fn first_duplicate(hashes: &[ContentHash]) -> Option<usize> {
+    (0..hashes.len()).find(|&i| hashes[..i].contains(&hashes[i]))
 }
 
 impl VsaModel for MapI {
@@ -365,6 +402,39 @@ mod tests {
         // unbind(bind(a,b), b) recovers a's payload.
         let recovered = m.unbind_values(&bound, &b).unwrap();
         assert_eq!(recovered.payload(), a.payload());
+    }
+
+    #[test]
+    fn value_bind_unbind_refuse_non_bipolar_a3_04() {
+        // A3-04 regression: bind/unbind_values stamp Exact on the bipolar self-inverse identity,
+        // which holds only on the ±1 alphabet. A non-bipolar component must be refused, never
+        // mis-tagged Exact. Mutant-witness: removing the check_bipolar guards in
+        // bind_values/unbind_values makes these return an (Exact-tagged) Value.
+        let m = MapI::new(D);
+        let mut data = bipolar(D, 3);
+        data[5] = 0.5;
+        let bad = Value::new(
+            Repr::Vsa {
+                model: "MAP-I".to_owned(),
+                dim: D,
+                sparsity: SparsityClass::Dense,
+            },
+            Payload::Hypervector(data),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap();
+        let ok = hv_value(D, 4);
+        assert_eq!(
+            m.bind_values(&bad, &ok),
+            Err(VsaError::NonAlphabetComponent { index: 5 })
+        );
+        assert_eq!(
+            m.unbind_values(&ok, &bad),
+            Err(VsaError::NonAlphabetComponent { index: 5 })
+        );
+        // A bipolar bind still returns an unchanged Exact result.
+        let good = m.bind_values(&ok, &hv_value(D, 5)).unwrap();
+        assert_eq!(good.meta().guarantee(), GuaranteeStrength::Exact);
     }
 
     #[test]

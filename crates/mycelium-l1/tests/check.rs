@@ -72,6 +72,48 @@ fn non_decreasing_recursion_is_allowed_when_not_matured() {
 }
 
 #[test]
+fn shadowing_rebind_does_not_leak_smallness() {
+    // A4-01 regression: the inner arm rebinds `m` (matching `p`, an unrelated parameter), shadowing
+    // the outer `m` (a piece of `n`). The recursion `f(m, p)` is therefore NOT structural —
+    // `f(3,2) → f(1,2) → f(1,2) → …` diverges — so it must be classified Partial. Mutant-witness:
+    // without the drop-and-restore shadow handling in descend_walk's Match arm, the stale smallness
+    // of the outer `m` leaks in, `f` is wrongly classified Total, and the `matured` form below is
+    // wrongly accepted.
+    let body = "match n { Z => Z, S(m) => match p { Z => Z, S(m) => f(m, p) } }";
+    let src = format!("colony d\ntype Nat = Z | S(Nat)\nfn f(n: Nat, p: Nat) -> Nat = {body}");
+    let env = check(&src).expect("checks");
+    assert_eq!(env.totality["f"], Totality::Partial);
+
+    let matured =
+        format!("colony d\ntype Nat = Z | S(Nat)\nmatured fn f(n: Nat, p: Nat) -> Nat = {body}");
+    let err = check(&matured).unwrap_err();
+    assert!(err.message.contains("matured"), "got: {}", err.message);
+}
+
+#[test]
+fn deeply_nested_input_is_refused_not_a_crash() {
+    // A4-02/B2-01 regression: unbounded recursive descent would overflow the host stack and abort
+    // the process (SIGABRT) on crafted nesting. The depth guard turns that into an explicit
+    // ParseError, well before any crash. Mutant-witness: removing the MAX_EXPR_DEPTH guard in
+    // parse_expr makes 2000-deep input abort instead of returning Err.
+    let deep = format!(
+        "colony d\nfn f(x: Binary{{8}}) -> Binary{{8}} = {}x{}",
+        "(".repeat(2000),
+        ")".repeat(2000)
+    );
+    let err = parse(&deep).expect_err("deep nesting must be refused, not crash");
+    assert!(err.message.contains("nests deeper"), "got: {}", err.message);
+
+    // A modest nesting still parses.
+    let shallow = format!(
+        "colony d\nfn f(x: Binary{{8}}) -> Binary{{8}} = {}x{}",
+        "(".repeat(50),
+        ")".repeat(50)
+    );
+    assert!(parse(&shallow).is_ok());
+}
+
+#[test]
 fn wild_is_denied_by_default() {
     let src = "colony d\nfn f(x: Binary{8}) -> Binary{8} = wild { x }";
     let err = check(src).unwrap_err();

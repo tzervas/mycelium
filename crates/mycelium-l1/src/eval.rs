@@ -250,6 +250,20 @@ impl<'e> Evaluator<'e> {
 
     /// Big-step evaluation of `e` under `scope`. Every node costs one unit of fuel, so an
     /// unproductive recursion is an explicit [`L1Error::FuelExhausted`], never a hang.
+    ///
+    /// **Depth is charged per AST node, not per call frame (A4-03).** `eval` recurses on the host
+    /// stack for *every* sub-expression — an operand of an `App`, the bound of a `Let`, an `if`
+    /// branch — not only at a function `invoke`. The depth budget is a *host-stack* guard (see
+    /// [`L1Error::DepthExceeded`]), so it must count exactly the recursion that consumes host
+    /// stack: a deeply **nested expression** (e.g. `not(not(… not(x) …))`) overflows the stack just
+    /// as a deep call chain does, and charging only at `invoke` would leave it unguarded. The
+    /// honest consequence is that [`DEFAULT_DEPTH`] = 64 is a *nesting* ceiling, not a call-depth
+    /// ceiling: an expression whose AST is more than ~64 nodes deep along any single path is
+    /// refused with an explicit [`L1Error::DepthExceeded`] even if it makes no recursive call.
+    /// This is a deliberate over-approximation in favor of the termination/no-crash guarantee
+    /// (S5/G2) — raise the budget via [`Evaluator::with_depth`] on a larger host stack when a
+    /// legitimately deep but terminating expression needs it. (`for`-folds walk their spine
+    /// iteratively and so are *not* subject to this ceiling per element — see [`Self::eval_for`].)
     fn eval(
         &self,
         fuel: &mut u64,
@@ -259,6 +273,9 @@ impl<'e> Evaluator<'e> {
         e: &Expr,
     ) -> Result<L1Value, L1Error> {
         *fuel = fuel.checked_sub(1).ok_or(L1Error::FuelExhausted)?;
+        // Per-node (not per-call-frame) on purpose: this counts host-stack recursion, which a wide
+        // *and* a deep AST both incur. See the method doc for why the per-node charge is the safe
+        // choice and what the resulting 64-node nesting ceiling means (A4-03).
         let depth = depth
             .checked_sub(1)
             .ok_or(L1Error::DepthExceeded { limit: self.depth })?;
@@ -724,6 +741,39 @@ mod tests {
             matches!(err, L1Error::DepthExceeded { .. }),
             "expected DepthExceeded, got {err:?}"
         );
+    }
+
+    #[test]
+    fn deeply_nested_expression_trips_the_depth_guard_without_any_recursive_call() {
+        // A4-03 mutant-witness: depth is charged per AST node, so a *wide-but-shallow* program —
+        // here a deep but call-free `not(not(… not(0b…) …))` nest, which makes no recursive
+        // function call at all — still hits the host-stack guard explicitly once its nesting
+        // exceeds DEFAULT_DEPTH (64). This pins the documented per-node (not per-call-frame)
+        // contract: a refactor charging depth only at `invoke` would let this nest recurse on the
+        // host stack unguarded, flipping this assertion (the depth guard would never trip) and so
+        // turning the test red — the regression we want to catch.
+        let mut expr = "0b0000_0001".to_owned();
+        for _ in 0..200 {
+            expr = format!("not({expr})");
+        }
+        let deep_env = env(&format!("colony d\nfn main() -> Binary{{8}} = {expr}"));
+        let err = Evaluator::new(&deep_env).call("main", vec![]).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                L1Error::DepthExceeded {
+                    limit: DEFAULT_DEPTH
+                }
+            ),
+            "expected DepthExceeded(limit=64) from a call-free 200-deep nest, got {err:?}"
+        );
+
+        // And the same nest within the depth budget evaluates fine (200 nested `not`s exceed 64;
+        // a small nest does not) — confirming the guard refuses *only* genuine over-nesting.
+        let shallow = env("colony d\nfn main() -> Binary{8} = not(not(0b0000_0001))");
+        Evaluator::new(&shallow)
+            .call("main", vec![])
+            .expect("a shallow nest is well within the depth budget");
     }
 
     #[test]

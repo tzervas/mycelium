@@ -13,6 +13,11 @@ description = "Allowlist for Mycelium project"
 # documents detection patterns.)
 paths = [
   ".gitleaks.toml",
+  # B1-06: `research/` is allowlisted wholesale as a DELIBERATE, documented trade-off — it is the
+  # evidence base (prose + source lists, no credentials) and its example strings (API key formats
+  # discussed in source surveys) trip gitleaks' default rules with high false-positive noise. The
+  # accepted risk: a real key pasted under research/ would go un-scanned. If research/ ever holds
+  # live config, narrow this to the specific noisy subpaths instead of the whole tree.
   "research/",
   "LICENSE",
   "README.md"
