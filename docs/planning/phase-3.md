@@ -94,7 +94,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 | **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | Ready (local) |
 | **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | Ready (local) |
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | Ready after M-311 |
-| **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | Ready (local); **RFC ratification is maintainer's** |
+| **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` landed; **RFC ratification is maintainer's** |
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
 | **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301 | ADR-009 / RR-12 | Ready after native path |
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **needs-design** |
@@ -312,8 +312,34 @@ established strength.
 - **Scope.** The §1 packing-codec measurement is retained (staging-cheap confirmation). KC-4 §5 notes
   the native path now allows a compiled-artifact re-measure when an in-process path lands.
 
+### 9.4 M-320 — L1 term-language extension: literal-pattern `match` · Batch K · P1 · in progress 2026-06-15
+
+- **Goal (from §2 / issues.yaml).** Extend the `mycelium-l1` prototype's term language per RFC-0007
+  §§3–4, with tests; RFC ratification is the maintainer's (append-only), concrete syntax KC-2-gated.
+- **Delivered (first increment).** `match` now covers `Binary{n}`/`Ternary{m}` scrutinees with
+  **literal patterns**, not just data types (the explicitly-deferred v0 gap at `checkty`/`eval`).
+  `checkty::infer_literal_match` types a literal match: each literal arm must have exactly the
+  scrutinee's repr+width (`lit_ty`), duplicate literals and arms-after-default are redundancy errors,
+  and — because the 2ⁿ/3ᵐ domain is **not enumerated** — a literal match **requires** a `_`/binder
+  default; without one it is non-exhaustive and refused (W7 — coverage never assumed).
+  `eval::eval_literal_match` fires a literal arm on `repr + payload` equality (reusing
+  `elab::lit_value` as the one literal interpretation) and binds the scrutinee on a binder default.
+  Elaboration is unchanged: the whole `Match` family already lowers to `Residual` (L0 Core IR has no
+  match node), so literal match is evaluable + type-checked but not yet L0-elaborable — consistent,
+  not a new asymmetry. Five tests (`eval::tests`): arm selection, default fall-through, and three
+  mutant-witnessed refusals (non-exhaustive, duplicate literal, width mismatch).
+- **Honesty / scope.** No guarantee upgraded; the parser and totality checker already handled literal
+  patterns (this unlocks the typechecker + evaluator). Nested patterns / the Maranget compiler and
+  full L1-in-Core-IR remain ahead. **RFC-0007 ratification is presented, not flipped:** this increment
+  exercises more of §4.4/§4.5 in the non-normative prototype; moving RFC-0006/0007 `Draft → Accepted`
+  stays the maintainer's append-only decision, and concrete-syntax ratification stays KC-2-gated.
+
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-320 first increment — literal-pattern `match`):** the L1 prototype's `match` now
+  covers `Binary`/`Ternary` literal patterns with a mandatory default (W7), redundancy/width checks,
+  and `repr+payload` arm selection (`checkty` + `eval`; elaboration inherits `Match ⇒ Residual`). §2
+  M-320 row → in progress; §9.4 added. RFC-0007 ratification presented, not flipped (maintainer's).
 - **2026-06-15 (M-303 E1 native-path measurement lands — Batch J complete at the task level):**
   `cargo xtask e1` §2 measures the native AOT path (compile-once / run-many) against the interpreter;
   the E1 verdict moves from "no native path (stub)" to "native path established + measured, compute

@@ -8,6 +8,16 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — L1 literal-pattern `match`, M-320)
+- **`mycelium-l1`**: `match` now covers `Binary{n}`/`Ternary{m}` scrutinees with **literal patterns**,
+  not just data types (the explicitly-deferred v0 gap). `checkty::infer_literal_match` enforces
+  repr+width-matching literal arms, rejects duplicate literals, and **requires** a `_`/binder default
+  (the 2ⁿ/3ᵐ domain is never enumerated — W7 coverage is never assumed); `eval::eval_literal_match`
+  fires an arm on `repr + payload` equality. Elaboration is unchanged (the `Match` family already
+  lowers to `Residual`). Five tests incl. three mutant-witnessed refusals. RFC-0007 ratification is
+  presented, not flipped — that stays the maintainer's append-only decision (concrete syntax remains
+  KC-2-gated). (phase-3.md §9.4)
+
 ### Added (Phase 3 — E1 native-path measurement, M-303)
 - **`cargo xtask e1` §2** now measures the native AOT path against the interpreter (M-303): one-time
   AOT compile cost, warm native per-invocation (process spawn + run), and interpreter per-eval, for a

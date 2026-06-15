@@ -12,7 +12,10 @@
 //! evaluation-complete fragment to closed L0 terms — refusing everything else with an explicit
 //! `Residual`, never a partial artifact. The three-way differential (L1-eval ↔ elaborate→L0-interp
 //! ↔ AOT, validated through the M-210 shared checker) lives in `tests/differential.rs` (NFR-7).
-//! Still ahead: the Maranget match compiler and full L1-in-Core-IR (the RFC-0001 revision).
+//! `match` covers data types *and* `Binary`/`Ternary` literal patterns (M-320): a literal arm fires
+//! on `repr + payload` equality, and because the value domain (2ⁿ/3ᵐ) is never enumerated, a literal
+//! match **requires** a `_`/binder default (W7 — coverage is never assumed). Still ahead: nested
+//! patterns / the Maranget match compiler and full L1-in-Core-IR (the RFC-0001 revision).
 //!
 //! Honesty: every malformed input is an explicit [`ParseError`] with a source position — the
 //! parser never panics and never silently accepts (S5/G2). The lexer disambiguates the one tricky

@@ -481,11 +481,13 @@ impl<'e> Evaluator<'e> {
         arms: &[crate::ast::Arm],
     ) -> Result<L1Value, L1Error> {
         let sv = self.eval(fuel, depth, site, scope, scrutinee)?;
-        let L1Value::Data { ty, ctor, fields } = sv else {
-            return Err(L1Error::Stuck {
-                site: site.to_owned(),
-                why: "match scrutinee is not a data value".to_owned(),
-            });
+        let (ty, ctor, fields) = match sv {
+            L1Value::Data { ty, ctor, fields } => (ty, ctor, fields),
+            // A Binary/Ternary scrutinee matches literal patterns (M-320). The typechecker has
+            // already required a default and matching widths, so this path runs only checked code.
+            L1Value::Repr(value) => {
+                return self.eval_literal_match(fuel, depth, site, scope, arms, value)
+            }
         };
         for arm in arms {
             match &arm.pattern {
@@ -555,6 +557,53 @@ impl<'e> Evaluator<'e> {
         Err(L1Error::Stuck {
             site: site.to_owned(),
             why: format!("no arm matched constructor `{ctor}` of `{ty}` (W7 coverage)"),
+        })
+    }
+
+    /// Evaluate a `match` whose scrutinee is a `Binary`/`Ternary` value against literal patterns
+    /// (M-320). A literal arm fires on `repr + payload` equality (reusing [`crate::elab::lit_value`]
+    /// as the single literal interpretation); a `_`/binder default always fires (the binder binds
+    /// the scrutinee). The trailing `Stuck` is unreachable for checked programs (the checker mandates
+    /// a default) but kept as the honest never-silent fallback (G2).
+    fn eval_literal_match(
+        &self,
+        fuel: &mut u64,
+        depth: u32,
+        site: &str,
+        scope: &mut Vec<(String, L1Value)>,
+        arms: &[crate::ast::Arm],
+        value: mycelium_core::Value,
+    ) -> Result<L1Value, L1Error> {
+        for arm in arms {
+            match &arm.pattern {
+                Pattern::Wildcard => return self.eval(fuel, depth, site, scope, &arm.body),
+                Pattern::Ident(n) => {
+                    scope.push((n.clone(), L1Value::Repr(value.clone())));
+                    let r = self.eval(fuel, depth, site, scope, &arm.body);
+                    scope.pop();
+                    return r;
+                }
+                Pattern::Lit(lit) => {
+                    let lv = crate::elab::lit_value(site, lit).map_err(|e| L1Error::Stuck {
+                        site: site.to_owned(),
+                        why: format!("malformed literal pattern: {e}"),
+                    })?;
+                    if lv.repr() == value.repr() && lv.payload() == value.payload() {
+                        return self.eval(fuel, depth, site, scope, &arm.body);
+                    }
+                }
+                Pattern::Ctor(..) => {
+                    return Err(L1Error::Unsupported {
+                        site: site.to_owned(),
+                        what: "constructor pattern on a Binary/Ternary scrutinee".to_owned(),
+                    })
+                }
+            }
+        }
+        Err(L1Error::Stuck {
+            site: site.to_owned(),
+            why: "no literal arm matched the scrutinee (W7 — the checker requires a default)"
+                .to_owned(),
         })
     }
 
@@ -697,6 +746,73 @@ mod tests {
         assert_eq!(
             v.payload(),
             &Payload::Trits(vec![mycelium_core::Trit::Zero])
+        );
+    }
+
+    // --- M-320: literal-pattern match over Binary/Ternary scrutinees -------------------------
+
+    const CLASSIFY: &str = "colony d\nfn classify(b: Binary{4}) -> Ternary{1} = \
+        match b { 0b0000 => <0>, 0b1111 => <+>, _ => <-> }\n\
+        fn main() -> Ternary{1} = classify(0b1111)";
+
+    #[test]
+    fn literal_match_over_binary_selects_the_matching_arm() {
+        // Mutant-witness: if eval_literal_match compared the wrong payload (or always took the
+        // first arm), classify(0b1111) would not yield <+>.
+        let v = run(CLASSIFY).expect("evaluates");
+        let L1Value::Repr(v) = v else { panic!("repr") };
+        assert_eq!(v.payload(), &Payload::Trits(vec![mycelium_core::Trit::Pos]));
+    }
+
+    #[test]
+    fn literal_match_falls_through_to_the_default() {
+        // Mutant-witness: if a non-matching literal arm fired anyway, classify(0b0101) would not
+        // reach the `_` default <->.
+        let src = CLASSIFY.replace("classify(0b1111)", "classify(0b0101)");
+        let L1Value::Repr(v) = run(&src).expect("evaluates") else {
+            panic!("repr")
+        };
+        assert_eq!(v.payload(), &Payload::Trits(vec![mycelium_core::Trit::Neg]));
+    }
+
+    #[test]
+    fn literal_match_without_a_default_is_non_exhaustive() {
+        // Mutant-witness: dropping the mandatory-default check would let a literal match silently
+        // assume coverage of the 2^4 domain (W7 violation).
+        let src = "colony d\nfn classify(b: Binary{4}) -> Ternary{1} = \
+            match b { 0b0000 => <0>, 0b1111 => <+> }\nfn main() -> Ternary{1} = classify(0b1111)";
+        let err = check_colony(&parse(src).expect("parses")).expect_err("must reject");
+        assert!(
+            err.message.contains("non-exhaustive"),
+            "got: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn duplicate_literal_pattern_is_rejected() {
+        // Mutant-witness: dropping the dedupe would silently accept a redundant arm (W7).
+        let src = "colony d\nfn classify(b: Binary{4}) -> Ternary{1} = \
+            match b { 0b0000 => <0>, 0b00_00 => <+>, _ => <-> }\nfn main() -> Ternary{1} = classify(0b0000)";
+        let err = check_colony(&parse(src).expect("parses")).expect_err("must reject");
+        assert!(
+            err.message.contains("duplicate literal"),
+            "got: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn literal_pattern_width_must_match_the_scrutinee() {
+        // Mutant-witness: dropping the width check would let a 2-bit literal match a Binary{4}
+        // scrutinee — a payload-length mismatch that could never fire (or panic downstream).
+        let src = "colony d\nfn classify(b: Binary{4}) -> Ternary{1} = \
+            match b { 0b00 => <0>, _ => <-> }\nfn main() -> Ternary{1} = classify(0b0000)";
+        let err = check_colony(&parse(src).expect("parses")).expect_err("must reject");
+        assert!(
+            err.message.contains("literal pattern has type"),
+            "got: {}",
+            err.message
         );
     }
 

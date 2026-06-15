@@ -508,10 +508,17 @@ impl Cx<'_> {
         arms: &[crate::ast::Arm],
     ) -> Result<Ty, CheckError> {
         let sty = self.infer(scope, scrutinee)?;
-        let Ty::Data(tname) = &sty else {
-            return self.err(format!("match scrutinee must be a data type, got {sty}"));
+        let tname = match &sty {
+            Ty::Data(t) => t.clone(),
+            // Binary/Ternary scrutinees match against literal patterns (M-320; RFC-0007 §4.4/§4.5).
+            Ty::Binary(_) | Ty::Ternary(_) => return self.infer_literal_match(scope, &sty, arms),
+            other => {
+                return self.err(format!(
+                    "match scrutinee must be a data, Binary, or Ternary type, got {other}"
+                ))
+            }
         };
-        let d = self.types.get(tname).expect("registered").clone();
+        let d = self.types.get(&tname).expect("registered").clone();
         let mut covered = vec![false; d.ctors.len()];
         let mut has_default = false;
         let mut result: Option<Ty> = None;
@@ -605,6 +612,75 @@ impl Cx<'_> {
         result.map_or_else(|| self.err("a match needs at least one arm"), Ok)
     }
 
+    /// Type a `match` whose scrutinee is `Binary{n}`/`Ternary{m}` — literal patterns plus a
+    /// **mandatory** `_`/binder default (M-320). The value domain (2ⁿ / 3ᵐ) is *not* enumerated, so
+    /// coverage is never assumed: a literal match without a default is non-exhaustive and refused
+    /// (W7). Duplicate literals and arms after a default are redundancy errors. Each literal arm must
+    /// have exactly the scrutinee's repr and width; a constructor pattern here is a type error.
+    fn infer_literal_match(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        sty: &Ty,
+        arms: &[crate::ast::Arm],
+    ) -> Result<Ty, CheckError> {
+        let mut seen: Vec<String> = Vec::new();
+        let mut has_default = false;
+        let mut result: Option<Ty> = None;
+        for arm in arms {
+            if has_default {
+                return self.err("arms after a wildcard/binder default are unreachable (W7)");
+            }
+            let mut pushed = 0;
+            match &arm.pattern {
+                Pattern::Wildcard => has_default = true,
+                Pattern::Ident(n) => {
+                    // Binary/Ternary have no nullary constructors, so a bare name is a binder
+                    // default — it binds the whole scrutinee (and ends coverage).
+                    has_default = true;
+                    scope.push((n.clone(), sty.clone()));
+                    pushed = 1;
+                }
+                Pattern::Lit(lit) => {
+                    let lty = self.lit_ty(lit)?;
+                    if lty != *sty {
+                        return self.err(format!(
+                            "literal pattern has type {lty} but the scrutinee is {sty} \
+                             (W7: a literal arm must match the scrutinee's repr and width)"
+                        ));
+                    }
+                    let key = literal_key(lit);
+                    if seen.contains(&key) {
+                        return self.err("duplicate literal pattern (W7 — redundant arm)");
+                    }
+                    seen.push(key);
+                }
+                Pattern::Ctor(n, _) => {
+                    return self.err(format!(
+                        "constructor pattern `{n}` on a {sty} scrutinee — match a literal or `_`"
+                    ))
+                }
+            }
+            let bty = self.infer(scope, &arm.body)?;
+            for _ in 0..pushed {
+                scope.pop();
+            }
+            match &result {
+                None => result = Some(bty),
+                Some(r) if *r != bty => {
+                    return self.err(format!("match arms disagree: {r} vs {bty}"))
+                }
+                Some(_) => {}
+            }
+        }
+        if !has_default {
+            return self.err(format!(
+                "non-exhaustive match on {sty}: a literal match needs a `_` or binder default \
+                 (W7 — the {sty} value domain is not enumerated, so coverage is never assumed)"
+            ));
+        }
+        result.map_or_else(|| self.err("a match needs at least one arm"), Ok)
+    }
+
     fn mark(&self, covered: &mut [bool], i: usize, name: &str) -> Result<(), CheckError> {
         if covered[i] {
             return self.err(format!(
@@ -641,6 +717,23 @@ impl Cx<'_> {
             ),
             Literal::List(_) => self.err("list literals are deferred in v0 (Dense construction)"),
         }
+    }
+}
+
+/// A canonical key for de-duplicating literal patterns (M-320): normalize away `_` separators so
+/// `0b1010` and `0b10_10` collide as the *same* literal. Only `Bin`/`Trit` reach here (the caller
+/// type-checks the literal first, which rejects `Int`/`List`).
+fn literal_key(lit: &Literal) -> String {
+    match lit {
+        Literal::Bin(s) => format!(
+            "b:{}",
+            s.chars()
+                .filter(|c| *c == '0' || *c == '1')
+                .collect::<String>()
+        ),
+        Literal::Trit(s) => format!("t:{s}"),
+        Literal::Int(i) => format!("i:{i}"),
+        Literal::List(_) => "list".to_owned(),
     }
 }
 
