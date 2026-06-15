@@ -11,6 +11,7 @@ from mycelium_experiments.kc2 import (
     MyceliumChecker,
     StaticGenerator,
     ToolUnavailable,
+    baseline,
     run_arm,
     run_experiment,
 )
@@ -38,6 +39,33 @@ def test_every_reference_baseline_solution_passes() -> None:
     for task in TASKS:
         result = checker.check(task.reference_baseline, task)
         assert result.passes, f"{task.id}: {result.diagnostic}"
+
+
+def test_reference_baseline_values_match_expected() -> None:
+    """A6-04: the reference baselines compute the *expected value*, not merely the right shape — so a
+    value-wrong reference, or a baseline↔kernel integer-convention drift (A6-01: the baseline now
+    reads `Bin` as two's-complement, matching the kernel), is caught. Scoring stays shape-only for
+    SC-5b symmetry; this is a well-posedness assertion over the fixtures only."""
+    ns_base: dict[str, object] = {
+        "Bin": baseline.Bin,
+        "Tern": baseline.Tern,
+        "bnot": baseline.bnot,
+        "xor": baseline.xor,
+        "tadd": baseline.tadd,
+        "swap": baseline.swap,
+    }
+    checked = 0
+    for task in TASKS:
+        if task.expect_value is None:
+            continue
+        ns = dict(ns_base)
+        exec(task.reference_baseline, ns)  # noqa: S102 — fixture/reference code only (see BaselineChecker)
+        result = ns["main"]()  # type: ignore[operator]
+        assert result.to_int() == task.expect_value, (
+            f"{task.id}: reference value {result.to_int()} != expected {task.expect_value}"
+        )
+        checked += 1
+    assert checked >= 5, "expected several tasks to pin a determinate value"
 
 
 def test_the_mycelium_checker_separates_syntax_from_typecheck(

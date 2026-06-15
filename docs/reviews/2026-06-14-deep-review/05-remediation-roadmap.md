@@ -181,6 +181,13 @@ Findings: **H9** (A5-01/B2-02), A5-02, A5-03, A5-05, A5-06, A5-07, A5-08.
 - **Restores:** the content-addressed audit anchor (RFC-0005 §3); never-silent in the codec.
 - **Verify:** the NaN/Inf-policy hash-collision probe now produces distinct refs/errors.
 
+### WS6 — Harness oracle fidelity + LSP never-silent · effort S · risk low · **H10 LANDED; rest remaining**
+
+> **Status (2026-06-15):** H10 done — baseline DSL is two's-complement (matches the kernel; the
+> `kc2-05` worked example agrees at `−78`/`0-00+0`), plus an `expect_value` oracle (A6-04) in the
+> well-posedness test. **Remaining:** A6-05 (LSP unsupported-swap-pair diagnostic), A6-10/B2-04
+> (`exec` `allow_untrusted` guard), A6-11 (xtask kc4 precheck).
+
 ### WS6 — Harness oracle fidelity + LSP never-silent · effort S · risk low
 
 Findings: **H10** (A6-01), A6-04, A6-05, A6-10/B2-04, A6-11.

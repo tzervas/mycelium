@@ -9,6 +9,17 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Fixed (deep-review remediation — Wave 1)
+- **WS6 — KC-2 baseline oracle fidelity (findings A6-01 H10, A6-04; M-002 well-posedness).** The
+  Python baseline DSL read `Bin` as **unsigned** while the kernel/spec use **two's-complement**, so
+  the benchmark's two arms computed different answers for the same prompt — e.g. `kc2-05`
+  `swap(0b1011_0010 → 6-trit)` gave the baseline `+178` vs the kernel/spec `−78` (`0-00+0`),
+  invisible because the oracle checked only result *shape*. `baseline.Bin.to_int` and the `Tern→Bin`
+  swap are now two's-complement (`B_n = [−2^(n−1), 2^(n−1)−1]`), matching `binary.rs` — the worked
+  example now yields `−78` in both arms. Added an `expect_value` field to `Task` (the independently
+  computed integer) and a well-posedness test asserting each reference baseline's `to_int()` matches
+  it, so a value-wrong reference or a future convention drift is caught (A6-04). Scoring stays
+  shape-only (SC-5b symmetry). Remaining WS6 (tracked): A6-05 (LSP unsupported-swap diagnostic),
+  A6-10/B2-04 (`exec` `allow_untrusted` guard), A6-11 (xtask kc4 precheck).
 - **WS5 — `mycelium-select` content-addressing integrity (finding A5-01/B2-02 H9; advances
   RFC-0005 §3).** `SelectionPolicy::new` (and, via it, `Deserialize`) now rejects a rule predicate
   carrying a **non-finite `f64` literal** (`Predicate::literals_finite`, recursing through
