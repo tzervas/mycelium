@@ -29,6 +29,17 @@ ratifying an explicit release gate. The remaining feature work (KC-2 verdict, na
 either an external blocker or Phase-3/post-1.0. This roadmap is therefore the bulk of the
 1.0.0 critical path.
 
+## Status — COMPLETE (2026-06-15)
+
+**All review findings are resolved.** Every High (H1–H11) landed first; the full Medium/Low/Nit
+tail across WS2–WS7 plus the deferred WS1 items (A2-05/A2-09) followed, one commit per area, each
+with a regression test citing its finding ID as a mutant-witness. Workspace `cargo test`,
+`clippy -D warnings`, `cargo fmt`, and the full `scripts/checks/all.sh` suite are green (only
+environment-skips remain: gitleaks/proofs/public-api/cargo-deny tooling absent in this sandbox).
+The one item that needs network — **B1-01** action SHA-pinning — is left as PARTIAL with dependabot
+(`github-actions`) configured to surface the pins; everything else is done. The sections below are
+the original plan (retained for traceability); the per-WS "Status" notes mark what landed.
+
 ## 2. Triage
 
 Every finding was re-checked; all are accepted as valid (no false positives to retract — the

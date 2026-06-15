@@ -8,6 +8,34 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (deep-review remediation — Medium/Low/Nit tail; all findings now closed)
+- The remaining **Medium/Low/Nit** findings across every workstream are resolved (one commit per
+  area), completing the review's Gate-A list — **0 findings now open**:
+  - **core/cert (WS2):** recon manifest schema↔Rust reconciled (A6-06), `swap-certificate` requires
+    bijective `params` (A6-09), `MalformedSparsity` variant (A6-08), basis-rank rule (A1-04),
+    SC-3 helper asserts strength (A1-05), kernel `unreachable!`→`debug_assert` (C1-05).
+  - **vsa (WS3):** MAP-I/MAP-B bind/unbind enforce the ±1 alphabet (A3-04), `EmptyCodebook` variant
+    (A3-07), BSC on-expectation `Proven` documented (A3-06), tie-break/HRR/SC-2 notes (A3-08/09/10),
+    `Bundle.hs` header reconciled (A3-05).
+  - **l1/interp (WS4):** reject corpus pins per-file expected error reasons (A4), `Wf`-path +
+    fuel-at-depth tests (A4-04), documented depth ceiling (A4-03).
+  - **select/mlir/dense (WS5):** non-ternary layout refusal (A5-02), `unpack_trits` returns a
+    `Result` not a silent truncation (A5-03), non-vacuous dense sweep (A5-05), pinned op-eps
+    constants (A5-07), comment fixes (A5-06/A5-08).
+  - **lsp/kc2/xtask (WS6):** never-silent unsupported-swap-pair diagnostic (A6-05), `exec` gated
+    behind `allow_untrusted` (A6-10/B2-04), kc4 bijective-dec precheck (A6-11).
+  - **numerics (WS1 deferred):** kernel-type fields are `pub(crate)` with accessors + a validating
+    `Certificate` deserialize, making the outward-rounding/range invariants structural (A2-05);
+    composed `Proven` basis preserves the input theorems' provenance (A2-09).
+
+### Added (developer tooling — supply-chain gate)
+- **`just deny`** (`scripts/checks/deny.sh`, in `just check`): runs `cargo deny check` + `cargo
+  audit` when present (skip-if-missing), with a root `deny.toml` (advisories/licenses/sources).
+  `.github/dependabot.yml` added (github-actions + cargo + pip, weekly; PRs only — no auto-CI).
+  `[profile.release] overflow-checks = true`. gitleaks/cargo-deny/cargo-audit added to
+  `install-tools.sh`. `npx markdownlint-cli2` pinned. Editorial: docs say "ruff format
+  (Black-compatible)"; codespell + markdownlint clean repo-wide.
+
 ### Fixed (deep-review remediation — Wave 1)
 - **WS3 — VSA certified-capacity side-conditions (finding A3-03/C1-02 H6 — the last Wave-1 High;
   advances M-I2/VR-5, SC-2).** `MapI::bundle_values_certified` issued a `Proven` `CapacityBound`
