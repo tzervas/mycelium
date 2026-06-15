@@ -8,6 +8,17 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — in-process JIT, M-340; first intentional unsafe under ADR-014)
+- **`mycelium-mlir::jit`** — an in-process JIT: emits the kernel as `void @myc_kernel(ptr)`, compiles
+  it to a shared object (`clang -shared`), and calls it **in-process** via `dlopen`/`dlsym` (the
+  first intentional `unsafe` FFI under ADR-014 — justified `// SAFETY:` comments +
+  `#[cfg_attr(not(debug_assertions), allow(unsafe_code))]`, **no new dependency**). Reuses the same
+  `lower_program` + element encode/decode as the AOT path, so it agrees with the interpreter through
+  the shared M-210 `ObservationalEquiv` checker (`tests/jit_differential.rs`, NFR-7). Removes the
+  process-spawn overhead of the M-303 AOT path; skips gracefully when `clang` is absent. **Honest
+  E1:** the closed kernel constant-folds, so a calibrated compute-throughput verdict still needs
+  runtime-input kernels (M-360) — not pre-written (VR-5). (phase-3.md §2 / Meta)
+
 ### Added (Phase 3 — native AOT trit slice `trit.neg`, M-301)
 - **`mycelium-mlir::llvm` is now kind-aware** (a `Lane` carries `Binary{w}` *or* `Ternary{m}`): the
   direct-LLVM backend lowers **`trit.neg`** over `Ternary{m}` end-to-end (digit-wise `0 - x` — exact,

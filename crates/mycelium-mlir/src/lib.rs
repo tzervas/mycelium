@@ -22,10 +22,12 @@
 
 pub mod aot;
 pub mod dialect;
+pub mod jit;
 pub mod llvm;
 pub mod pack;
 
 pub use aot::{run, run_with_layout};
 pub use dialect::emit;
+pub use jit::{compile_so, jit_run, JitArtifact};
 pub use llvm::{compile, compile_and_run, emit_llvm_ir, AotError, CompiledArtifact};
 pub use pack::{pack_trits, relayout_trits, unpack_trits};

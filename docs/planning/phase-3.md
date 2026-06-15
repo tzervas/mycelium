@@ -96,7 +96,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | **Done (2026-06-15)** — `mycelium-build::cache` (`BuildCache`, request-addressed) |
 | **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` landed; **RFC ratification is maintainer's** |
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
-| **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301 | ADR-009 / RR-12 | Ready after native path |
+| **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`); NFR-7 checked |
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **needs-design** |
 | **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | Ready after native path |
 | **M-370** Native-ternary forward-compat mapping (+ stub target) | E3-7 | P2 | M-150, M-301 | R7 | Ready after native path |
@@ -392,6 +392,17 @@ established strength.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-340 in-process JIT — first increment, uses ADR-014):** `mycelium-mlir::jit` emits
+  the kernel as `void @myc_kernel(ptr)`, compiles it to a shared object (`clang -shared`), and calls
+  it **in-process** via `dlopen`/`dlsym` — the **first intentional `unsafe` FFI under ADR-014**
+  (justified `// SAFETY:` + `#[cfg_attr(not(debug_assertions), allow(unsafe_code))]`; no new
+  dependency). It reuses the same `lower_program` + `emit_char_code`/`decode_result` as the AOT path,
+  so it agrees with the interpreter through the shared M-210 checker (`tests/jit_differential.rs`,
+  NFR-7). Removes the process-spawn overhead of the M-303 AOT path. **Honest E1:** the closed kernel
+  constant-folds, so the in-process per-call time is call overhead, not compute — a calibrated
+  throughput verdict still needs runtime-input kernels (M-360); not pre-written (VR-5). §2 M-340 row
+  → in progress. Confirms ADR-014's incentive works: gate clippy (`-A unsafe_code`) clean, dev clippy
+  emits the 4 unsafe warnings.
 - **2026-06-15 (M-301 trit slice — `trit.neg`):** the direct-LLVM backend (`mycelium-mlir::llvm`) is
   now **kind-aware** (a `Lane` is `Binary{w}` or `Ternary{m}`) and lowers `trit.neg` over `Ternary{m}`
   end-to-end (digit-wise `0 - x`; ternary output via a branch-free `'-'`/`'0'`/`'+'` `select` chain;

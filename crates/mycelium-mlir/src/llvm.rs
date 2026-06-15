@@ -87,7 +87,7 @@ type Operand = String;
 
 /// Which representation a lane carries — fixes how its elements are computed and printed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum LaneKind {
+pub(crate) enum LaneKind {
     /// `Binary{w}` — elements in `{0, 1}`, printed `'0'`/`'1'`.
     Binary,
     /// `Ternary{m}` — balanced-ternary elements in `{-1, 0, 1}`, printed `'-'`/`'0'`/`'+'`.
@@ -96,15 +96,15 @@ enum LaneKind {
 
 /// A computed value lane: its representation kind and one `i32` operand per element.
 #[derive(Debug, Clone)]
-struct Lane {
-    kind: LaneKind,
-    vals: Vec<Operand>,
+pub(crate) struct Lane {
+    pub(crate) kind: LaneKind,
+    pub(crate) vals: Vec<Operand>,
 }
 
 /// SSA-name generator for the emitted IR (monotone counter → deterministic names).
-struct Ssa(usize);
+pub(crate) struct Ssa(pub(crate) usize);
 impl Ssa {
-    fn fresh(&mut self) -> String {
+    pub(crate) fn fresh(&mut self) -> String {
         let n = self.0;
         self.0 += 1;
         format!("%r{n}")
@@ -112,17 +112,97 @@ impl Ssa {
 }
 
 /// The lowered program: the emitted op `body`, the `result` lane, and the SSA counter to continue
-/// from. The **single source of truth** for both [`emit_llvm_ir`] and [`result_shape`] — so the
-/// shape used to parse the native output can never disagree with what was emitted.
-struct Lowered {
-    body: String,
-    result: Lane,
-    ssa: Ssa,
+/// from. The **single source of truth** for [`emit_llvm_ir`], [`result_shape`], and the JIT
+/// function emitter — so the shape used to parse the output can never disagree with what was emitted.
+pub(crate) struct Lowered {
+    pub(crate) body: String,
+    pub(crate) result: Lane,
+    pub(crate) ssa: Ssa,
+}
+
+/// Emit the `i32` ASCII char code for one result element of `kind` (operand `v`), returning the SSA
+/// register holding it. Binary → `val + 48` (`'0'`/`'1'`); Ternary → `'-'`(45)/`'0'`(48)/`'+'`(43)
+/// via a branch-free `select` chain. **Shared** by the AOT (`putchar`) and JIT (`store`) emitters so
+/// their element encodings — and thus the read-back — can never diverge.
+pub(crate) fn emit_char_code(kind: LaneKind, v: &str, ssa: &mut Ssa, body: &mut String) -> String {
+    match kind {
+        LaneKind::Binary => {
+            let c = ssa.fresh();
+            let _ = writeln!(body, "  {c} = add i32 {v}, 48");
+            c
+        }
+        LaneKind::Ternary => {
+            let isneg = ssa.fresh();
+            let _ = writeln!(body, "  {isneg} = icmp eq i32 {v}, -1");
+            let ispos = ssa.fresh();
+            let _ = writeln!(body, "  {ispos} = icmp eq i32 {v}, 1");
+            let t = ssa.fresh();
+            let _ = writeln!(body, "  {t} = select i1 {ispos}, i32 43, i32 48");
+            let c = ssa.fresh();
+            let _ = writeln!(body, "  {c} = select i1 {isneg}, i32 45, i32 {t}");
+            c
+        }
+    }
+}
+
+/// Decode `width` printed element chars (Binary: `'0'`/`'1'`; Ternary: `'-'`/`'0'`/`'+'`) into an
+/// `Exact` `Value`. **Shared** by the AOT stdout read-back and the JIT buffer read-back.
+pub(crate) fn decode_result(
+    kind: LaneKind,
+    width: usize,
+    chars: impl Iterator<Item = char>,
+) -> Result<Value, AotError> {
+    let chars: Vec<char> = chars.collect();
+    if chars.len() != width {
+        return Err(AotError::Parse(format!(
+            "expected {width} elements, got {} ({chars:?})",
+            chars.len()
+        )));
+    }
+    match kind {
+        LaneKind::Binary => {
+            let bits: Vec<bool> = chars
+                .into_iter()
+                .map(|c| match c {
+                    '0' => Ok(false),
+                    '1' => Ok(true),
+                    other => Err(AotError::Parse(format!("non-bit char {other:?}"))),
+                })
+                .collect::<Result<_, _>>()?;
+            Value::new(
+                Repr::Binary {
+                    width: width as u32,
+                },
+                Payload::Bits(bits),
+                Meta::exact(Provenance::Root),
+            )
+            .map_err(|e| AotError::Wf(e.to_string()))
+        }
+        LaneKind::Ternary => {
+            let trits: Vec<Trit> = chars
+                .into_iter()
+                .map(|c| match c {
+                    '-' => Ok(Trit::Neg),
+                    '0' => Ok(Trit::Zero),
+                    '+' => Ok(Trit::Pos),
+                    other => Err(AotError::Parse(format!("non-trit char {other:?}"))),
+                })
+                .collect::<Result<_, _>>()?;
+            Value::new(
+                Repr::Ternary {
+                    trits: width as u32,
+                },
+                Payload::Trits(trits),
+                Meta::exact(Provenance::Root),
+            )
+            .map_err(|e| AotError::Wf(e.to_string()))
+        }
+    }
 }
 
 /// Walk the lowered ANF, emitting one op per binding, and return the result lane. Returns an
 /// explicit [`AotError`] for anything outside the bit/trit subset.
-fn lower_program(node: &Node) -> Result<Lowered, AotError> {
+pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
     let anf = lower::lower_to_anf(node);
     let mut env: HashMap<Atom, Lane> = HashMap::new();
     let mut ssa = Ssa(0);
@@ -166,28 +246,10 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
     out.push_str("declare i32 @putchar(i32)\n\n");
     out.push_str("define i32 @main() {\nentry:\n");
     out.push_str(&body);
-    // Emit each result element as its ASCII char, then a newline. Binary: '0'/'1' (val+48).
-    // Ternary: '-'(45)/'0'(48)/'+'(43) via a branch-free select chain — one op per element, so the
-    // printout stays a transparent rendering of the computed lane (no opaque pass, RFC-0004 §6).
+    // Emit each result element as its ASCII char (one op per element — a transparent rendering of
+    // the computed lane, no opaque pass, RFC-0004 §6), then a trailing newline.
     for v in &result.vals {
-        let c = match result.kind {
-            LaneKind::Binary => {
-                let c = ssa.fresh();
-                let _ = writeln!(&mut out, "  {c} = add i32 {v}, 48");
-                c
-            }
-            LaneKind::Ternary => {
-                let isneg = ssa.fresh();
-                let _ = writeln!(&mut out, "  {isneg} = icmp eq i32 {v}, -1");
-                let ispos = ssa.fresh();
-                let _ = writeln!(&mut out, "  {ispos} = icmp eq i32 {v}, 1");
-                let t = ssa.fresh();
-                let _ = writeln!(&mut out, "  {t} = select i1 {ispos}, i32 43, i32 48");
-                let c = ssa.fresh();
-                let _ = writeln!(&mut out, "  {c} = select i1 {isneg}, i32 45, i32 {t}");
-                c
-            }
-        };
+        let c = emit_char_code(result.kind, v, &mut ssa, &mut out);
         let p = ssa.fresh();
         let _ = writeln!(&mut out, "  {p} = call i32 @putchar(i32 {c})");
     }
@@ -386,52 +448,7 @@ impl CompiledArtifact {
         let stdout = String::from_utf8(output.stdout)
             .map_err(|e| AotError::Parse(format!("non-utf8 output: {e}")))?;
         let line = stdout.lines().next().unwrap_or("");
-        if line.chars().count() != self.width {
-            return Err(AotError::Parse(format!(
-                "expected {} elements, got {} ({line:?})",
-                self.width,
-                line.chars().count()
-            )));
-        }
-        match self.kind {
-            LaneKind::Binary => {
-                let bits: Vec<bool> = line
-                    .chars()
-                    .map(|c| match c {
-                        '0' => Ok(false),
-                        '1' => Ok(true),
-                        other => Err(AotError::Parse(format!("non-bit char {other:?}"))),
-                    })
-                    .collect::<Result<_, _>>()?;
-                Value::new(
-                    Repr::Binary {
-                        width: self.width as u32,
-                    },
-                    Payload::Bits(bits),
-                    Meta::exact(Provenance::Root),
-                )
-                .map_err(|e| AotError::Wf(e.to_string()))
-            }
-            LaneKind::Ternary => {
-                let trits: Vec<Trit> = line
-                    .chars()
-                    .map(|c| match c {
-                        '-' => Ok(Trit::Neg),
-                        '0' => Ok(Trit::Zero),
-                        '+' => Ok(Trit::Pos),
-                        other => Err(AotError::Parse(format!("non-trit char {other:?}"))),
-                    })
-                    .collect::<Result<_, _>>()?;
-                Value::new(
-                    Repr::Ternary {
-                        trits: self.width as u32,
-                    },
-                    Payload::Trits(trits),
-                    Meta::exact(Provenance::Root),
-                )
-                .map_err(|e| AotError::Wf(e.to_string()))
-            }
-        }
+        decode_result(self.kind, self.width, line.chars())
     }
 }
 
@@ -478,7 +495,7 @@ fn ensure_toolchain() -> Result<(), AotError> {
     Ok(())
 }
 
-fn run_tool(tool: &str, args: &[&str]) -> Result<(), AotError> {
+pub(crate) fn run_tool(tool: &str, args: &[&str]) -> Result<(), AotError> {
     let out = Command::new(tool)
         .args(args)
         .output()
@@ -494,12 +511,12 @@ fn run_tool(tool: &str, args: &[&str]) -> Result<(), AotError> {
     }
 }
 
-fn path(p: &Path) -> Result<&str, AotError> {
+pub(crate) fn path(p: &Path) -> Result<&str, AotError> {
     p.to_str()
         .ok_or_else(|| AotError::Run(format!("non-utf8 path {}", p.display())))
 }
 
-fn unique_tmp_dir() -> Result<std::path::PathBuf, AotError> {
+pub(crate) fn unique_tmp_dir() -> Result<std::path::PathBuf, AotError> {
     use std::sync::atomic::{AtomicUsize, Ordering};
     static N: AtomicUsize = AtomicUsize::new(0);
     let nanos = std::time::SystemTime::now()
@@ -513,7 +530,7 @@ fn unique_tmp_dir() -> Result<std::path::PathBuf, AotError> {
 }
 
 /// Best-effort cleanup of the per-run temp dir.
-struct TmpDir(std::path::PathBuf);
+pub(crate) struct TmpDir(pub(crate) std::path::PathBuf);
 impl Drop for TmpDir {
     fn drop(&mut self) {
         let _ = std::fs::remove_dir_all(&self.0);
