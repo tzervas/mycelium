@@ -8,6 +8,20 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — decode `enum_budget` default ratified, M-350; ADR-015; RFC-0010 §8)
+- **`docs/adr/ADR-015-decode-enum-budget-default.md`** (Accepted): ratifies the RFC-0010 decode-selector
+  default **`DEFAULT_ENUM_BUDGET = 4096`** (= `MAPI_RESONATOR_PROFILE.max_capacity`), the
+  *guarantee-maximal* arm — every in-regime request is also enumerable, so the brute-force `Exact` arm
+  dominates the whole validated envelope (never take `Empirical` when `Exact` is cheaply available) —
+  over the *cost-optimal* ≈128. Grounded in the already-measured `∏k ≈ 100–128` cost-parity crossover
+  (`d`-independent; ≈ 19× / ≤ ≈ 157 ms latency tax at the regime edge `∏k=4096`; cited from the
+  `decode_method_enum_budget_crossover` instrument, **not re-run**). Tagged a `Declared` policy stance;
+  neither value upgrades any guarantee (VR-5) — the budget moves only *which arm runs*, never *what tag
+  it earns*. The cheap resonator-arm identifiability precheck (RFC-0010 §8) is recorded as the deferred
+  re-open trigger (YAGNI). Standalone decision record — **no code, kernel, or test change**. Registered
+  in `docs/Doc-Index.md` and the ADR index; RFC-0010 §8's `enum_budget` open question marked **resolved**
+  (append-only footer).
+
 ### Added (Phase 3 — resonator-network factorization prototype, M-350; RFC-0009 §10.2)
 - **`mycelium-vsa::resonator`** — the RFC-0009 §3 factorization loop over any `VsaModel`
   (MAP-I-first), recovering the unknown factors of a bind product `s = x₁ ⊛ … ⊛ x_F`. Parallel /
