@@ -299,12 +299,60 @@ fn arity2<'a>(
     }
 }
 
-/// Compile the bit-subset program to a native executable (via `llc` + `clang`), run it, and read the
-/// result back as an `Exact` `Binary{w}` [`Value`] (bit ops are exact; the subset refuses approximate
-/// inputs). Returns [`AotError::ToolchainMissing`] when `llc`/`clang` are absent so callers can skip.
-///
-/// This is the **compiled** execution path the M-302 differential checks against the interpreter.
-pub fn compile_and_run(node: &Node) -> Result<Value, AotError> {
+/// A compiled native artifact for a bit-subset program: the executable on disk (in a per-artifact
+/// temp dir, cleaned up on drop) plus the result width needed to parse its output. Produced by
+/// [`compile`]; run any number of times with [`CompiledArtifact::run`]. The **compile-once /
+/// run-many** split is the natural AOT shape and lets a harness time the one-time AOT cost
+/// separately from warm per-invocation cost (the E1 perf measurement, M-303).
+pub struct CompiledArtifact {
+    _dir: TmpDir,
+    bin: std::path::PathBuf,
+    width: usize,
+}
+
+impl CompiledArtifact {
+    /// Execute the compiled artifact and read its result back as an `Exact` `Binary{w}` [`Value`]
+    /// (bit ops are exact; the subset refuses approximate inputs).
+    pub fn run(&self) -> Result<Value, AotError> {
+        let output = Command::new(&self.bin)
+            .output()
+            .map_err(|e| AotError::Run(format!("exec {}: {e}", self.bin.display())))?;
+        if !output.status.success() {
+            return Err(AotError::Run(format!("artifact exited {}", output.status)));
+        }
+        let stdout = String::from_utf8(output.stdout)
+            .map_err(|e| AotError::Parse(format!("non-utf8 output: {e}")))?;
+        let line = stdout.lines().next().unwrap_or("");
+        if line.len() != self.width {
+            return Err(AotError::Parse(format!(
+                "expected {} bits, got {} ({line:?})",
+                self.width,
+                line.len()
+            )));
+        }
+        let bits: Vec<bool> = line
+            .chars()
+            .map(|c| match c {
+                '0' => Ok(false),
+                '1' => Ok(true),
+                other => Err(AotError::Parse(format!("non-bit char {other:?}"))),
+            })
+            .collect::<Result<_, _>>()?;
+        Value::new(
+            Repr::Binary {
+                width: self.width as u32,
+            },
+            Payload::Bits(bits),
+            Meta::exact(Provenance::Root),
+        )
+        .map_err(|e| AotError::Wf(e.to_string()))
+    }
+}
+
+/// Compile the bit-subset program to a native executable (emit LLVM IR → `llc` → `clang`) without
+/// running it. Returns [`AotError::ToolchainMissing`] when `llc`/`clang` are absent so callers can
+/// skip; any out-of-subset construct is the same explicit refusal as [`emit_llvm_ir`].
+pub fn compile(node: &Node) -> Result<CompiledArtifact, AotError> {
     let ir = emit_llvm_ir(node)?;
     let width = result_width(node)?;
     ensure_toolchain()?;
@@ -313,45 +361,24 @@ pub fn compile_and_run(node: &Node) -> Result<Value, AotError> {
     let ll = dir.join("kernel.ll");
     let obj = dir.join("kernel.o");
     let bin = dir.join("kernel");
-    let _guard = TmpDir(dir.clone());
+    let guard = TmpDir(dir);
 
     std::fs::write(&ll, ir.as_bytes()).map_err(|e| AotError::Run(format!("write IR: {e}")))?;
-
     run_tool("llc", &["-filetype=obj", path(&ll)?, "-o", path(&obj)?])?;
     run_tool("clang", &[path(&obj)?, "-o", path(&bin)?])?;
 
-    let output = Command::new(&bin)
-        .output()
-        .map_err(|e| AotError::Run(format!("exec {}: {e}", bin.display())))?;
-    if !output.status.success() {
-        return Err(AotError::Run(format!("artifact exited {}", output.status)));
-    }
-    let stdout = String::from_utf8(output.stdout)
-        .map_err(|e| AotError::Parse(format!("non-utf8 output: {e}")))?;
-    let line = stdout.lines().next().unwrap_or("");
-    if line.len() != width {
-        return Err(AotError::Parse(format!(
-            "expected {width} bits, got {} ({line:?})",
-            line.len()
-        )));
-    }
-    let bits: Vec<bool> = line
-        .chars()
-        .map(|c| match c {
-            '0' => Ok(false),
-            '1' => Ok(true),
-            other => Err(AotError::Parse(format!("non-bit char {other:?}"))),
-        })
-        .collect::<Result<_, _>>()?;
+    Ok(CompiledArtifact {
+        _dir: guard,
+        bin,
+        width,
+    })
+}
 
-    Value::new(
-        Repr::Binary {
-            width: width as u32,
-        },
-        Payload::Bits(bits),
-        Meta::exact(Provenance::Root),
-    )
-    .map_err(|e| AotError::Wf(e.to_string()))
+/// Compile the bit-subset program to a native executable, run it once, and read the result back as
+/// an `Exact` `Binary{w}` [`Value`]. The convenience wrapper over [`compile`] + [`CompiledArtifact::run`];
+/// this is the **compiled** execution path the M-302 differential checks against the interpreter.
+pub fn compile_and_run(node: &Node) -> Result<Value, AotError> {
+    compile(node)?.run()
 }
 
 fn ensure_toolchain() -> Result<(), AotError> {

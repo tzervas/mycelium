@@ -8,6 +8,17 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — E1 native-path measurement, M-303)
+- **`cargo xtask e1` §2** now measures the native AOT path against the interpreter (M-303): one-time
+  AOT compile cost, warm native per-invocation (process spawn + run), and interpreter per-eval, for a
+  bit-subset program. The E1 verdict moves from "no native path (stub)" to **native path established
+  and measured** — the *compute-throughput* verdict ("reaches hand-packed perf") stays honestly NOT
+  established, now with a precise reason: the standalone tiny-kernel artifact is process-spawn-bound
+  and constant-folds, so it needs in-process execution (JIT/FFI — M-340 / deferred libMLIR). Adds the
+  `compile` / `CompiledArtifact::run` compile-once/run-many split to `mycelium-mlir::llvm` (with
+  `compile_and_run` as the wrapper). **Batch J (M-301→M-302→M-303) complete at the task level.**
+  (phase-3.md §9.3)
+
 ### Added (Phase 3 — interp↔native differential, M-302)
 - **`mycelium-mlir/tests/native_differential.rs`** — extends the M-151 differential to the *compiled*
   path: a bit-subset corpus runs under the reference interpreter and `compile_and_run`, asserting

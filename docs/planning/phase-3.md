@@ -90,7 +90,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 |---|---|---|---|---|---|
 | **M-301** Direct-LLVM-IR AOT backend (kernel subset) | E3-7 (prereq) | P1 | M-150, M-110 | RFC-0004 §2 / ADR-007/009 | **In progress (2026-06-15)** — bit subset landed (`mycelium-mlir::llvm`); trit subset is the next slice |
 | **M-302** interp↔native differential (extend M-151) | E3-7 (prereq) | P1 | M-301, M-151 | NFR-7 / VR-4 / RR-12 | **Done (2026-06-15)** — `tests/native_differential.rs` (bit subset; toolchain-gated skip) |
-| **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | Ready after M-302 |
+| **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | **Done (2026-06-15)** — `cargo xtask e1` §2 measures native AOT vs interp; compute-throughput verdict still pending in-process exec |
 | **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | Ready (local) |
 | **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | Ready (local) |
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | Ready after M-311 |
@@ -290,8 +290,36 @@ established strength.
   covers the full corpus (swaps/trits) — M-302 *adds* the compiled-artifact path, it does not
   replace it.
 
+### 9.3 M-303 — E1 perf verdict on the native path · Batch J · P1 · done 2026-06-15
+
+- **Goal (from §2 / issues.yaml).** Replace the `cargo xtask e1` stub's "not established" with a
+  measured native-vs-interpreter number now that the M-301 native path exists; honest caption, no
+  pre-written perf claim (VR-5).
+- **Delivered.** `xtask::e1` gains §2 (M-303): using the compile-once/run-many split
+  (`mycelium_mlir::{compile, CompiledArtifact::run}`, refactored from `compile_and_run`), it times,
+  for `not(a xor b)` over 8 bits — (a) the one-time **AOT compile** (emit IR → `llc` → `clang`),
+  (b) the warm **native per-invocation** (process spawn + run + read-back), and (c) the reference
+  **interpreter** per-eval — and skips on `ToolchainMissing`. Indicative single run (containerized
+  x86-64): AOT compile ≈ 112 ms one-time; native per-invocation ≈ 1.3 ms; interpreter ≈ 3.8 µs.
+- **Honest verdict.** The native AOT path is now **established and measured end-to-end** (was: no
+  native path at all). A *calibrated compute-throughput* verdict ("reaches hand-packed perf") stays
+  **NOT established** — and the reason is now precise: the standalone tiny-kernel artifact's
+  per-invocation cost is **process-spawn-bound** (1.3 ms ≫ the 3.8 µs interpreter eval), and the
+  constant inputs constant-fold, so a meaningful kernel-throughput number needs **in-process
+  execution** (JIT/FFI — M-340, or the deferred libMLIR backend). This narrows the open E1 question
+  from "no native path" to "needs in-process execution," recorded honestly (VR-5) rather than
+  pronounced.
+- **Scope.** The §1 packing-codec measurement is retained (staging-cheap confirmation). KC-4 §5 notes
+  the native path now allows a compiled-artifact re-measure when an in-process path lands.
+
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-303 E1 native-path measurement lands — Batch J complete at the task level):**
+  `cargo xtask e1` §2 measures the native AOT path (compile-once / run-many) against the interpreter;
+  the E1 verdict moves from "no native path (stub)" to "native path established + measured, compute
+  throughput pending in-process execution." `compile_and_run` refactored into `compile` +
+  `CompiledArtifact::run`. §2 M-303 row → done; §9.3 added. **Batch J (M-301→M-302→M-303) is now done
+  at the task level** — the native execution path keystone is in place (bit subset).
 - **2026-06-15 (M-302 interp↔native differential lands):** the compiled M-301 path is now checked
   against the reference interpreter on the bit-subset corpus through the single shared M-210 checker
   (`tests/native_differential.rs`), with a discrimination test and graceful toolchain-absent skips.

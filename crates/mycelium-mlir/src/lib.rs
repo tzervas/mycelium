@@ -27,5 +27,5 @@ pub mod pack;
 
 pub use aot::{run, run_with_layout};
 pub use dialect::emit;
-pub use llvm::{compile_and_run, emit_llvm_ir, AotError};
+pub use llvm::{compile, compile_and_run, emit_llvm_ir, AotError, CompiledArtifact};
 pub use pack::{pack_trits, relayout_trits, unpack_trits};
