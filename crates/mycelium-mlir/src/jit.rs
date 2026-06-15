@@ -39,26 +39,45 @@ extern "C" {
 
 const RTLD_NOW: c_int = 2;
 
-/// Emit the JIT kernel as `void @myc_kernel(ptr %out)` writing each result element's ASCII char into
-/// `out[i]` (one op per element — same transparent rendering as the AOT path). Deterministic.
+/// Emit the JIT kernel as `i32 @myc_kernel(ptr %out)`: it writes each result element's ASCII char
+/// into `out[i]` (one op per element — same transparent rendering as the AOT path) and **returns the
+/// overflow status** (0 = ok, 1 = balanced-ternary overflow). The non-`void` return is the in-process
+/// half of the read-back protocol: on overflow the kernel returns 1 *without* writing `out`, mirroring
+/// the AOT sentinel line and the interpreter's `EvalError::Overflow`. Deterministic.
 fn emit_kernel_fn(node: &Node) -> Result<(String, LaneKind, usize), AotError> {
     let lowered = lower_program(node)?;
     let kind = lowered.result.kind;
     let width = lowered.result.vals.len();
+    let vals = lowered.result.vals;
+    let overflow = lowered.overflow;
     let mut ssa = lowered.ssa;
 
     let mut ir = String::from("; mycelium direct-LLVM JIT kernel (M-340)\n");
-    ir.push_str("define void @myc_kernel(ptr %out) {\nentry:\n");
+    ir.push_str("define i32 @myc_kernel(ptr %out) {\nentry:\n");
     ir.push_str(&lowered.body);
-    for (i, v) in lowered.result.vals.iter().enumerate() {
-        let c = emit_char_code(kind, v, &mut ssa, &mut ir);
-        let t = ssa.fresh();
-        let _ = writeln!(ir, "  {t} = trunc i32 {c} to i8");
-        let p = ssa.fresh();
-        let _ = writeln!(ir, "  {p} = getelementptr i8, ptr %out, i64 {i}");
-        let _ = writeln!(ir, "  store i8 {t}, ptr {p}");
+
+    let emit_stores_and_ok = |ir: &mut String, ssa: &mut crate::llvm::Ssa| {
+        for (i, v) in vals.iter().enumerate() {
+            let c = emit_char_code(kind, v, ssa, ir);
+            let t = ssa.fresh();
+            let _ = writeln!(ir, "  {t} = trunc i32 {c} to i8");
+            let p = ssa.fresh();
+            let _ = writeln!(ir, "  {p} = getelementptr i8, ptr %out, i64 {i}");
+            let _ = writeln!(ir, "  store i8 {t}, ptr {p}");
+        }
+        ir.push_str("  ret i32 0\n");
+    };
+
+    match overflow {
+        None => emit_stores_and_ok(&mut ir, &mut ssa),
+        // Branch on the runtime overflow flag: return 1 (no stores) on overflow, else write + 0.
+        Some(ovf) => {
+            let _ = writeln!(ir, "  br i1 {ovf}, label %ovf, label %ok");
+            ir.push_str("ovf:\n  ret i32 1\nok:\n");
+            emit_stores_and_ok(&mut ir, &mut ssa);
+        }
     }
-    ir.push_str("  ret void\n}\n");
+    ir.push_str("}\n");
     Ok((ir, kind, width))
 }
 
@@ -85,14 +104,23 @@ impl JitArtifact {
         let fptr = lookup_sym(handle, &sym)?;
 
         let mut buf = vec![0u8; self.width];
-        // SAFETY: `fptr` is the address `dlsym` returned for the `void myc_kernel(ptr)` we just
-        // emitted and compiled, so the `extern "C" fn(*mut u8)` type matches; `buf` is exactly
-        // `self.width` bytes and the kernel writes one byte per result element (`self.width` total),
-        // so the write is in-bounds. The library stays loaded for the call (`_lib`).
+        // SAFETY: `fptr` is the address `dlsym` returned for the `i32 myc_kernel(ptr)` we just
+        // emitted and compiled, so the `extern "C" fn(*mut u8) -> i32` type matches; `buf` is exactly
+        // `self.width` bytes and the kernel writes one byte per result element (`self.width` total)
+        // only on the ok path, so the write is in-bounds. The library stays loaded for the call
+        // (`_lib`).
         #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
-        unsafe {
-            let kernel: extern "C" fn(*mut u8) = std::mem::transmute(fptr);
-            kernel(buf.as_mut_ptr());
+        let status = unsafe {
+            let kernel: extern "C" fn(*mut u8) -> i32 = std::mem::transmute(fptr);
+            kernel(buf.as_mut_ptr())
+        };
+        // Read-back protocol: a non-zero status means the in-process kernel overflowed the m-trit
+        // range — an explicit error, never a silently-wrapped (and unwritten) buffer.
+        if status != 0 {
+            return Err(AotError::Overflow(format!(
+                "fixed-width result out of {}-trit range",
+                self.width
+            )));
         }
         decode_result(self.kind, self.width, buf.iter().map(|&b| b as char))
     }
@@ -191,9 +219,9 @@ mod tests {
             args: vec![Node::Const(binary(vec![true, false]))],
         };
         let (ir, _, width) = emit_kernel_fn(&prog).unwrap();
-        assert!(ir.contains("define void @myc_kernel(ptr %out)"));
+        assert!(ir.contains("define i32 @myc_kernel(ptr %out)"));
         assert!(ir.contains("store i8")); // writes results into the out buffer
-        assert!(ir.contains("ret void"));
+        assert!(ir.contains("ret i32 0")); // ok status (no overflow path for a bit op)
         assert_eq!(width, 2);
     }
 
@@ -232,6 +260,56 @@ mod tests {
                 v.payload(),
                 &Payload::Trits(vec![Trit::Neg, Trit::Zero, Trit::Pos])
             ),
+            Err(AotError::ToolchainMissing(_)) => {}
+            Err(e) => panic!("unexpected JIT error: {e}"),
+        }
+    }
+
+    fn tern(trits: Vec<Trit>) -> Value {
+        let m = trits.len() as u32;
+        Value::new(
+            Repr::Ternary { trits: m },
+            Payload::Trits(trits),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn jit_trit_add_matches_oracle() {
+        // 5 + 4 = 9 in 3 trits: [+,-,-] + [0,+,+] = [+,0,0] — the in-process ripple-carry path.
+        let prog = Node::Op {
+            prim: "trit.add".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Pos, Trit::Neg, Trit::Neg])),
+                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Pos])),
+            ],
+        };
+        match jit_run(&prog) {
+            Ok(v) => assert_eq!(
+                v.payload(),
+                &Payload::Trits(vec![Trit::Pos, Trit::Zero, Trit::Zero])
+            ),
+            Err(AotError::ToolchainMissing(_)) => {}
+            Err(e) => panic!("unexpected JIT error: {e}"),
+        }
+    }
+
+    #[test]
+    fn jit_trit_overflow_is_explicit() {
+        // 4 + 4 = 8 in 2 trits overflows: the kernel returns the non-zero status, surfaced as an
+        // explicit Overflow — never a silently-wrapped (unwritten) buffer. Mutant-witness: a `void`
+        // kernel (no status) could not signal this in-process.
+        let prog = Node::Op {
+            prim: "trit.add".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Pos, Trit::Pos])),
+                Node::Const(tern(vec![Trit::Pos, Trit::Pos])),
+            ],
+        };
+        match jit_run(&prog) {
+            Ok(v) => panic!("overflow must not produce a value, got {:?}", v.payload()),
+            Err(AotError::Overflow(_)) => { /* expected */ }
             Err(AotError::ToolchainMissing(_)) => {}
             Err(e) => panic!("unexpected JIT error: {e}"),
         }

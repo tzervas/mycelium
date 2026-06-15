@@ -8,6 +8,20 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — native trit carry arithmetic `add/sub/mul`, M-301 done)
+- **`mycelium-mlir` now lowers balanced-ternary carry arithmetic over `Ternary{m}`.** `trit.add` is a
+  fixed-width **ripple-carry** (LSB→MSB; balanced digit `x srem 3 − 1` and carry `x sdiv 3 − 1` with
+  `x = aᵢ+bᵢ+carry+4 ≥ 1`, so the LLVM `srem`/`sdiv` are euclidean), `trit.sub = add(a, neg b)`, and
+  `trit.mul` is **shifted accumulation** in a 2m-trit buffer (each `b` digit scales `a` via `i32 mul`,
+  the digit being ±1/0). Each mirrors `mycelium-core::ternary` digit-for-digit.
+- **Fixed-width overflow is detected at runtime and never wraps silently (SC-3/G2).** A non-zero final
+  carry (add/sub) or non-zero product high trit (mul) sets an `i1` flag carried through an extended
+  **read-back protocol**: the AOT artifact prints a `'!'` sentinel line and the JIT kernel — now
+  `i32 @myc_kernel(ptr)` — returns a non-zero status, both surfaced as an explicit `AotError::Overflow`
+  matching the interpreter's `EvalError::Overflow`. The M-302 (native) and M-340 (JIT) differential
+  corpora gain in-range add/sub/mul + a nested `(5+4)−4`, plus an overflow-parity test. **Completes
+  M-301** (last open slice). (phase-3.md §2 / §9.1 / Meta)
+
 ### Added (Phase 3 — native-ternary forward-compat map, M-370)
 - **`docs/notes/Native-Ternary-Forward-Compat.md`** (Living note): documents the **ternary
   value-semantics contract** and the forward map from today's emulated-on-binary packing to a future

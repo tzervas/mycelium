@@ -110,6 +110,47 @@ fn bit_corpus() -> Vec<Node> {
                 }],
             }),
         },
+        // M-301 trit *carry* arithmetic (in range, so no overflow): add 5+4=9, sub 9-4=5, mul 2*3=6
+        // over 3 trits. These exercise the ripple-carry / shifted-accumulate codegen end-to-end.
+        Node::Op {
+            prim: "trit.add".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Pos, Trit::Neg, Trit::Neg])),
+                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Pos])),
+            ],
+        },
+        Node::Op {
+            prim: "trit.sub".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Pos, Trit::Zero, Trit::Zero])),
+                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Pos])),
+            ],
+        },
+        Node::Op {
+            prim: "trit.mul".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Neg])),
+                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Zero])),
+            ],
+        },
+        // nested arithmetic through a let: (5 + 4) - 4 = 5, mixing the adder and subtractor.
+        Node::Let {
+            id: "s".into(),
+            bound: Box::new(Node::Op {
+                prim: "trit.add".into(),
+                args: vec![
+                    Node::Const(tern(vec![Trit::Pos, Trit::Neg, Trit::Neg])),
+                    Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Pos])),
+                ],
+            }),
+            body: Box::new(Node::Op {
+                prim: "trit.sub".into(),
+                args: vec![
+                    Node::Var("s".into()),
+                    Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Pos])),
+                ],
+            }),
+        },
     ]
 }
 
@@ -160,6 +201,37 @@ fn interp_and_native_are_observably_equivalent_on_the_bit_corpus() {
             },
             "program #{i}: the shared checker must validate the interp↔native pair"
         );
+    }
+}
+
+/// M-301 overflow parity: a fixed-width balanced-ternary result out of range must be **refused** by
+/// *both* the interpreter (`EvalError::Overflow`) and the native path (`AotError::Overflow`) — never
+/// a silent wrap on either side (SC-3/G2). 4 + 4 = 8 overflows the 2-trit range (max magnitude 4).
+#[test]
+fn interp_and_native_agree_on_overflow_refusal() {
+    let overflow = Node::Op {
+        prim: "trit.add".into(),
+        args: vec![
+            Node::Const(tern(vec![Trit::Pos, Trit::Pos])),
+            Node::Const(tern(vec![Trit::Pos, Trit::Pos])),
+        ],
+    };
+    // The interpreter refuses with an explicit overflow.
+    let interp_err = Interpreter::new(PrimRegistry::with_builtins(), Box::new(IdentitySwapEngine))
+        .eval(&overflow);
+    assert!(
+        matches!(interp_err, Err(mycelium_interp::EvalError::Overflow { .. })),
+        "interpreter must refuse the out-of-range sum, got {interp_err:?}"
+    );
+    // The native path computes the overflow at runtime and refuses through the read-back protocol.
+    match mycelium_mlir::compile_and_run(&overflow) {
+        Ok(v) => panic!(
+            "native path silently wrapped the overflow: {:?}",
+            v.payload()
+        ),
+        Err(AotError::Overflow(_)) => { /* expected — parity with the interpreter */ }
+        Err(AotError::ToolchainMissing(_)) => { /* environment skip */ }
+        Err(e) => panic!("native path errored unexpectedly: {e}"),
     }
 }
 

@@ -88,7 +88,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 
 | Task | Epic | Pri | Depends on | Maps to | Readiness |
 |---|---|---|---|---|---|
-| **M-301** Direct-LLVM-IR AOT backend (kernel subset) | E3-7 (prereq) | P1 | M-150, M-110 | RFC-0004 §2 / ADR-007/009 | **In progress (2026-06-15)** — bit subset + `trit.neg` landed; trit *carry arithmetic* (`add/sub/mul`) is the next slice |
+| **M-301** Direct-LLVM-IR AOT backend (kernel subset) | E3-7 (prereq) | P1 | M-150, M-110 | RFC-0004 §2 / ADR-007/009 | **Done (2026-06-15)** — bit subset + `trit.neg` + trit *carry arithmetic* (`add/sub/mul`, ripple-carry/shifted-accumulate, runtime-overflow read-back); shared by AOT + JIT |
 | **M-302** interp↔native differential (extend M-151) | E3-7 (prereq) | P1 | M-301, M-151 | NFR-7 / VR-4 / RR-12 | **Done (2026-06-15)** — `tests/native_differential.rs` (bit subset; toolchain-gated skip) |
 | **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | **Done (2026-06-15)** — `cargo xtask e1` §2 measures native AOT vs interp; compute-throughput verdict still pending in-process exec |
 | **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()` |
@@ -244,7 +244,7 @@ established strength.
 
 ## 9. Per-task detail (filled as tasks land)
 
-### 9.1 M-301 — Direct-LLVM-IR AOT backend (bit subset) · Batch J · P1 · in progress 2026-06-15
+### 9.1 M-301 — Direct-LLVM-IR AOT backend (bit/trit subset) · Batch J · P1 · done 2026-06-15
 
 - **Goal (from §2 / issues.yaml).** A genuinely compiled native artifact for the kernel subset via
   the RFC-0004 §2 direct-LLVM fallback (libMLIR absent; LLVM 18 present), each stage dumpable,
@@ -264,11 +264,28 @@ established strength.
   comment — guard 7); a width-mismatch refusal; and the compiled `native_bit_not_matches_interpreter`
   roundtrip (toolchain-gated) asserting the native payload equals the complemented input (mutant:
   an `or`/`and` mis-lowering would diverge).
+- **Delivered (trit slice — `neg` + carry arithmetic).** The backend is **kind-aware** (a `Lane` is
+  `Binary{w}` or `Ternary{m}`). `trit.neg` is digit-wise (`0 - x`). `trit.add` lowers to a fixed-width
+  **ripple-carry** over the trits (LSB→MSB): with `x = aᵢ + bᵢ + carry + 4` (always ≥ 1, so the LLVM
+  `srem`/`sdiv` coincide with euclidean rem/div by 3), the balanced digit is `x srem 3 − 1` and the
+  next carry is `x sdiv 3 − 1` — mirroring `mycelium_core::ternary::add` digit-for-digit. `trit.sub`
+  is `add(a, neg b)`; `trit.mul` is **shifted accumulation** into a 2m-trit buffer (each `b` digit
+  scales `a` by an `i32 mul`, the digit being ±1/0), keeping the low `m` trits. **Fixed-width overflow
+  is computed at runtime** — a non-zero final carry (add/sub) or any non-zero product high trit (mul)
+  sets an `i1` flag (folded across the program). The **read-back protocol** is extended to carry it:
+  on overflow the AOT artifact prints the `'!'` sentinel line and the JIT kernel (now
+  `i32 @myc_kernel(ptr)`) returns a non-zero status, both surfaced as an explicit `AotError::Overflow`
+  — never a silent wrap (SC-3/G2), matching the interpreter's `EvalError::Overflow`.
+- **Tests (trit slice).** `trit_add_emits_ripple_carry_ir` (srem/sdiv + overflow branch + sentinel);
+  arithmetic determinism; width/kind refusals; oracle round-trips for add (`5+4=9`), sub (`9−4=5`),
+  mul (`2×3=6`) on both AOT and JIT; and explicit-overflow tests on both paths (`4+4`, `4×4` in 2
+  trits). The M-302/M-340 differential corpora gain in-range arithmetic + nested `(5+4)−4`, and an
+  overflow-parity test asserts interpreter and native **both** refuse the same out-of-range sum.
 - **Honesty / scope.** The MLIR `ternary`-dialect lowering stays the **eventual** path (`dialect::emit`
-  is its dumpable skeleton) and is **deferred** until libMLIR exists (RR-N1). The **trit subset**
-  (balanced-ternary carry chains) is the next M-301 slice; it is refused here, not half-lowered. No
-  guarantee is upgraded: the reconstructed `Value` is `Exact` only because the bit ops are exact and
-  the subset refuses approximate inputs (VR-5).
+  is its dumpable skeleton) and is **deferred** until libMLIR exists (RR-N1). No guarantee is
+  upgraded: the reconstructed `Value` is `Exact` only because the bit/trit ops are exact and the
+  subset refuses approximate inputs; an out-of-range arithmetic result is an explicit overflow, not a
+  fabricated value (VR-5/G2).
 
 ### 9.2 M-302 — interp↔native differential · Batch J · P1 · done 2026-06-15
 
@@ -285,9 +302,11 @@ established strength.
   (`not(A)` vs `id(A)`) and asserts the checker reports `NotValidated` — the differential
   discriminates, so a pass is meaningful (guard 7, mutant-witness comments inline). Both tests
   **skip** on `AotError::ToolchainMissing` (no `llc`/`clang`), never a false failure.
-- **Honesty / scope.** Scoped to the bit subset (what M-301 lowers today); the trit subset joins the
-  corpus when M-301's trit slice lands. The env-machine M-151 differential is unchanged and still
-  covers the full corpus (swaps/trits) — M-302 *adds* the compiled-artifact path, it does not
+- **Honesty / scope.** Now covers the full bit/trit subset M-301 lowers — bit logic, `trit.neg`, and
+  the `trit.add/sub/mul` carry arithmetic (in-range cases + a nested `(5+4)−4`), plus an
+  overflow-parity test asserting interpreter and native **both** refuse the same out-of-range sum
+  (`AotError::Overflow` ↔ `EvalError::Overflow`). The env-machine M-151 differential is unchanged and
+  still covers the wider corpus (swaps) — M-302 *adds* the compiled-artifact path, it does not
   replace it.
 
 ### 9.3 M-303 — E1 perf verdict on the native path · Batch J · P1 · done 2026-06-15
@@ -392,6 +411,19 @@ established strength.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-301 trit slice — carry arithmetic `add/sub/mul`, M-301 done):** the direct-LLVM
+  backend now lowers balanced-ternary **carry arithmetic** over `Ternary{m}`: `trit.add` as a
+  fixed-width **ripple-carry** (LSB→MSB, balanced digit `x srem 3 − 1` / carry `x sdiv 3 − 1` with
+  `x = aᵢ+bᵢ+carry+4 ≥ 1` so the LLVM `srem`/`sdiv` are euclidean), `trit.sub = add(a, neg b)`, and
+  `trit.mul` as **shifted accumulation** in a 2m-trit buffer (each `b` digit scales `a` via `i32 mul`,
+  the digit being ±1/0). Each mirrors `mycelium_core::ternary` digit-for-digit. **Fixed-width overflow
+  is computed at runtime** (non-zero final carry, or non-zero product high trits) and signalled
+  through an extended **read-back protocol** — an out-of-range result prints the `'!'` sentinel line
+  (AOT) / returns a non-zero kernel status (JIT, now `i32 @myc_kernel`) and surfaces as an explicit
+  `AotError::Overflow`, matching the interpreter's `EvalError::Overflow` (never a silent wrap, SC-3/G2).
+  Both differential corpora (M-302 native, M-340 JIT) gain in-range add/sub/mul + nested arithmetic,
+  and a new overflow-parity test asserts interp **and** native both refuse the same out-of-range sum.
+  §2 M-301 row → **done**; §9.1 updated. This closes the last open slice of M-301.
 - **2026-06-15 (M-370 native-ternary forward-compat map):** authored
   `docs/notes/Native-Ternary-Forward-Compat.md` — the ternary value-semantics contract (§1), the
   emulated-on-binary → native 3-state mapping with the `ternary` dialect (`dialect::emit`) as the
