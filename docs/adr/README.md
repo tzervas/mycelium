@@ -32,6 +32,7 @@ New ADRs go here as standalone files. (ADR-001…009 may be extracted into indiv
 | 012 | Layered lexicon (Surface/Runtime/Formal tiers) + fungal runtime vocabulary | Proposed | `ADR-012-Layered-Lexicon-and-Fungal-Runtime-Model.md` |
 | 013 | `spore` is the deployable unit; the reconstruction manifest is one component | Accepted | `ADR-013-Spore-Is-The-Deployable-Unit.md` |
 | 014 | `unsafe` Rust: permitted-but-warned (explicit, justified, dev-warned, release-silenceable), not forbidden | Accepted | `ADR-014-Unsafe-Code-Policy.md` |
+| 015 | `DEFAULT_ENUM_BUDGET = 4096` (guarantee-maximal): the RFC-0010 decode selector defaults to the `Exact` arm across the whole validated envelope, not the cost-optimal ≈128 | Accepted | `ADR-015-decode-enum-budget-default.md` |
 
 ## Template
 

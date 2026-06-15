@@ -33,6 +33,7 @@
 | **RFC-0009 — Resonator-Network Factorization** | opt-in VSA factorization of bind products into unknown codebook factors; iterative resonator loop; probabilistic-only (`Empirical` ceiling, never `Proven`); never-silent termination verdicts; reuses `VsaModel`/cleanup/`EmpiricalProfile` (M-350) | **Accepted** (ratified 2026-06-15; prototype building) |
 | **RFC-0010 — Decode-Methodology Selection** | choose the decode methodology (brute-force `Exact` vs resonator `Empirical` vs refuse) as a third site of the one RFC-0005 selection mechanism; reified, `EXPLAIN`-mandatory decision table over exact metadata; guarantee tag read off the chosen arm; cleanup-variant selection deferred (Hebbian dominates) (M-350) | **Accepted** (ratified 2026-06-15; prototype building) |
 | **ADR-013 — `spore` Is the Deployable Unit** | spore = content-addressed code+values+metadata; the RFC-0003 manifest is one component; `spore(v)` is the degenerate case | **Accepted** |
+| **ADR-015 — Decode `DEFAULT_ENUM_BUDGET` = 4096** | fixes the RFC-0010 decode-selector default at the *guarantee-maximal* enumeration budget (4096 = `MAPI_RESONATOR_PROFILE.max_capacity`) — every in-regime request is also enumerable, so the brute-force `Exact` arm dominates the whole validated envelope — over the cost-optimal ≈128; resolves RFC-0010 §8 | **Accepted** |
 
 ## 2. Dependency DAG
 

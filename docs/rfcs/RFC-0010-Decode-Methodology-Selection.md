@@ -198,6 +198,10 @@ profile δ, or the recon schema; no learned/statistics-driven costing (RFC-0005 
   `DEFAULT_ENUM_BUDGET` is currently *guarantee-maximal* (= `max_capacity` = 4096 ⇒ always `Exact`
   in-regime, bounded ≤ ≈157 ms at d=8192); a *cost-optimal* default would be ≈128. The knob is exposed
   per call and the choice is the maintainer's; the EXPLAIN cost lines surface the trade.
+  **Resolved (2026-06-15) by [ADR-015](../adr/ADR-015-decode-enum-budget-default.md):**
+  `DEFAULT_ENUM_BUDGET = 4096` (guarantee-maximal) is ratified over the cost-optimal ≈128 — a `Declared`
+  policy stance, neither value upgrading any guarantee (VR-5). The knob stays per-call overridable; the
+  identifiability-precheck companion below is the deferred re-open trigger (YAGNI).
 - **Identifiability precheck cost.** Arm 1 gets identifiability for free; should arm 2 (resonator) also
   run a cheap identifiability precheck so a `Refuse` distinguishes "ambiguous instance" from "resonator
   miss"? (Leans yes for `EXPLAIN` quality; costs `∏k` — only affordable in the arm-1 regime.)
@@ -274,3 +278,12 @@ profile δ, or the recon schema; no learned/statistics-driven costing (RFC-0005 
   `F=4, k=8`, ∏=4096 — which the plain `reconstruct_factors` refuses) is recovered **exactly** (RFC-0010
   §4.4: brute force is `Exact` for any factor count). Tag still read off the arm; recon `≤Empirical`
   ceiling untouched. RFC stays **Accepted**; honesty contract unchanged.
+- **2026-06-15 — §8 `enum_budget` default ratified (ADR-015; informative).** The §8 open question on
+  `DEFAULT_ENUM_BUDGET` is **resolved** by [ADR-015](../adr/ADR-015-decode-enum-budget-default.md):
+  the default is fixed at **4096** (= `MAPI_RESONATOR_PROFILE.max_capacity`), the *guarantee-maximal*
+  arm — every in-regime request is also enumerable, so the brute-force `Exact` arm dominates the whole
+  validated envelope — over the *cost-optimal* ≈128, on the already-measured `∏k ≈ 100–128` crossover
+  (≈ 19× / ≤ ≈ 157 ms latency tax at the regime edge). Tagged a `Declared` policy stance; neither value
+  upgrades any guarantee (VR-5), and the budget moves only *which arm runs*, never *what tag it earns*.
+  The identifiability-precheck companion is the deferred re-open trigger (YAGNI). No code/kernel/test
+  change; RFC stays **Accepted**, honesty contract unchanged.
