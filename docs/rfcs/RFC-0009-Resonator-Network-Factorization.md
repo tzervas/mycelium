@@ -352,3 +352,20 @@ deliberately left to be *fit by trials* rather than asserted (VR-5), and are fla
   as-measured (VR-5), not as-hoped; breaching the wall (better cleanup/normalisation, the §10.3
   ablation) is future work. Tag stays `Empirical`, MAP-I only, never `Proven`. RFC stays **Accepted**;
   the contract is unchanged — only the prototype's *validated envelope* is recorded here.
+- **2026-06-15 — §10.3 cleanup ablation: operational-capacity wall breached (M-350; informative).** Ran
+  the §10.3 cleanup ablation against the wall (`tests/resonator_profile.rs::resonator_cleanup_ablation`,
+  `#[ignore]`d), measuring four cleanups at F=3, k∈{16,32}, d∈{4096,8192,16384}. **Diagnosis confirmed:**
+  the softmax cleanup fed the *real-valued* superposition into the next bind, so crosstalk compounded
+  through the elementwise product of `F−1` noisy real vectors. **Fix (adopted):** the **Hebbian bipolar**
+  cleanup `x̂ ← sign(Σⱼ simⱼ·cⱼ)` (Frady et al. 2020) keeps the explain-away on the `±1` alphabet, so the
+  MAP-I unbind stays *exact* instead of accumulating crosstalk. **Measured (exact-tuple recovery vs the
+  brute-force oracle):** at F=3,k=16 (∏k=4096) — softmax **300/300 fail → Hebbian 0/300** at d=4096; the
+  1000-trial gate validates the F=3/k=16/d=4096 worst corner at **0/1000 ⇒ δ=0.02** conservative ceiling.
+  **Validated envelope widened `F≤3, k≤8, ∏k≤512` → `F≤3, k≤16, ∏k≤4096, d≥4096`** in
+  `MAPI_RESONATOR_PROFILE`. **Honest boundary (recorded, not claimed):** `SoftmaxSign` does *not* breach
+  the wall (sign of a sharp softmax ≈ a noisy arg-max); `ArgMax` only partially (brittle at d=4096);
+  F=3,k=32 (∏=32768) stays *outside* the envelope — 0.085 at d=8192, 0.005 only at d≥16384. The
+  `Cleanup::Hebbian` / `Cleanup::SoftmaxSign` variants live only in `mycelium-vsa` (the kernel
+  `CleanupShape` schema is unchanged; the unspecified-manifest decode path adopts the Hebbian default).
+  Tag stays `Empirical`, MAP-I only, never `Proven`; the never-silent verdicts and the §5/§6 contract are
+  unchanged. RFC stays **Accepted** — only the prototype's *validated envelope* is updated.

@@ -108,14 +108,15 @@ pub fn reconstruct_factors<M: VsaModel>(
     // recommended MAP-I defaults (RFC-0003 §6.1). The numeric ranges were already checked by
     // `ReconInfo::new`, so we only translate here.
     let mut params = ResonatorParams::mapi_default(iteration_budget, decode.seed.unwrap_or(0));
+    // The kernel `CleanupShape` schema is `ArgMax | Softmax` (additive metadata; not the validated
+    // Hebbian cleanup, which lives only in `mycelium-vsa` — no kernel change). So an *unspecified*
+    // cleanup keeps the `mapi_default` validated default (`Cleanup::Hebbian`, the §10.3 wall-breach);
+    // an explicit shape is honored as the caller's recorded (un-profiled) choice (RFC-0009 §10.3).
     params.cleanup = match decode.cleanup {
+        None => params.cleanup, // the validated Hebbian default
         Some(CleanupShape::ArgMax) => Cleanup::ArgMax,
-        // Softmax (explicit or default): use the manifest β when present, else the default.
-        _ => Cleanup::Softmax {
-            beta: decode.beta.unwrap_or(match params.cleanup {
-                Cleanup::Softmax { beta } => beta,
-                Cleanup::ArgMax => 6.0,
-            }),
+        Some(CleanupShape::Softmax) => Cleanup::Softmax {
+            beta: decode.beta.unwrap_or(6.0),
         },
     };
     if let Some(tau) = decode.tau_lock {
