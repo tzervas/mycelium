@@ -93,7 +93,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 | **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | **Done (2026-06-15)** — `cargo xtask e1` §2 measures native AOT vs interp; compute-throughput verdict still pending in-process exec |
 | **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | Ready (local) |
 | **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | **Done (2026-06-15)** — `mycelium-build` crate (decide + content-addressed `BuildCertificate`) |
-| **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | Ready after M-311 |
+| **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | **Done (2026-06-15)** — `mycelium-build::cache` (`BuildCache`, request-addressed) |
 | **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` landed; **RFC ratification is maintainer's** |
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
 | **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301 | ADR-009 / RR-12 | Ready after native path |
@@ -356,8 +356,30 @@ established strength.
   the tier-i checker, the M-302 differential) — this crate is the gate + artifact, not a re-prover.
   A JSON schema for the certificate (mirroring the M-260 manifest discipline) is a small follow-on.
 
+### 9.6 M-312 — Content-addressed build cache · Batch K · P2 · done 2026-06-15
+
+- **Goal (from §2 / issues.yaml).** Cache build outputs + certificates keyed by content hash
+  (ADR-003); a re-build of an unchanged definition reuses the cached certificate.
+- **Delivered.** `mycelium-build::cache`: `BuildCache` maps a **build-request content address** to
+  the emitted `BuildCertificate`. The key (`request_key`) folds the component's identity hash with
+  *every* decision input — spec ratification, the three obligations, and the `promote` flag — so an
+  identical request is a `Hit` (reuses the prior certificate verbatim) and **any** change in
+  verification state is a `Miss` that re-decides, never a stale hit (G2). `build(component, promote)`
+  returns a `CacheOutcome::{Hit, Miss}`. Three tests: the unchanged-second-build hit (the M-312
+  acceptance), a weakened-obligation miss whose re-decided certificate flips `Aot → Interpreted`
+  (mutant-witness: a key ignoring obligations would return a stale AOT cert), and a `promote`-flip
+  miss.
+- **Honesty / scope.** The cache addresses the *request*, not just the definition, precisely because
+  the build decision depends on verification state that is not part of the code hash — so "unchanged
+  definition" only hits when its obligations are also unchanged. **Batch K's gate items (M-310 LSP
+  pending, M-311 + M-312 done) advance the matured-toolchain exit condition.**
+
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-312 content-addressed build cache lands):** `mycelium-build::cache::BuildCache`
+  caches certificates by build-request content address (component identity + decision inputs); an
+  unchanged request hits and reuses the certificate, a changed verification state misses (never a
+  stale hit). §2 M-312 row → done; §9.6 added.
 - **2026-06-15 (M-311 build-system stable-component gate lands):** new `mycelium-build` crate makes
   the RFC-0004 §4 stable/experimental gate executable + inspectable (`check_eligibility` / `decide` /
   content-addressed `BuildCertificate` with a forge-proof validating deserialize). §2 M-311 row →

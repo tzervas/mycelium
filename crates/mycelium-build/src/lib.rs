@@ -22,6 +22,9 @@
 use mycelium_core::{operation_hash, ContentHash};
 use serde::{Deserialize, Deserializer, Serialize};
 
+pub mod cache;
+pub use cache::{BuildCache, CacheOutcome};
+
 /// The execution route a component takes (RFC-0004 §4 / ADR-009).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ExecutionRoute {

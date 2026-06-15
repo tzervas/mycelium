@@ -8,6 +8,14 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — content-addressed build cache, M-312)
+- **`mycelium-build::cache`** — `BuildCache` caches `BuildCertificate`s by **build-request** content
+  address: the key folds the component's identity hash with every decision input (spec ratification,
+  the three obligations, the `promote` flag), so an unchanged request is a `Hit` reusing the prior
+  certificate and any change in verification state is a `Miss` that re-decides — never a stale hit
+  (G2). Three tests incl. the weakened-obligation `Aot → Interpreted` miss (mutant-witnessed).
+  (phase-3.md §9.6)
+
 ### Added (Phase 3 — build-system stable-component gate, M-311)
 - **`mycelium-build`** (new crate, outside the trusted kernel — KC-3): makes the RFC-0004 §4
   stable/experimental gate executable. `check_eligibility` runs the automatic §4 checks (spec
