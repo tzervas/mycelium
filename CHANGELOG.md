@@ -8,6 +8,23 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — LSP wire protocol, M-310; E3-3; FR-S5 / SC-5)
+- **`mycelium-lsp::wire` wraps the feedback facade in the LSP transport.** The byte-level JSON-RPC 2.0
+  codec — `read_message`/`write_message` with `Content-Length` header framing (a clean inter-message
+  EOF returns `None`; a truncated body / missing or invalid `Content-Length` / non-JSON body is an
+  explicit `io::Error`, never a silent partial read) — plus the `Diagnostic` → LSP-`Diagnostic` mapping
+  (spec `DiagnosticSeverity`: Error→1, Warning→2), the `textDocument/publishDiagnostics` notification
+  builder, and a minimal `serve` lifecycle loop (`initialize` → capabilities + `serverInfo`,
+  `shutdown` → null result, `exit` → stop; any other **request** → JSON-RPC `MethodNotFound` -32601,
+  never silence; unknown notifications ignored). New dependency: the workspace-pinned `serde_json`.
+  **Honesty/scope (VR-5):** not a document-syncing server — the facade analyzes Core IR `Node`s, not
+  source text, so the server advertises `TextDocumentSyncKind.None` and the diagnostic `range` is a
+  **zero placeholder** with the navigable location carried in `data.breadcrumb`; real source spans and
+  `didOpen`/`didChange` sync arrive with the L1 surface (M-320), and the wire layer carries them
+  without a protocol change. Seven tests (framing round-trip incl. back-to-back, clean-EOF,
+  truncated-body refusal, severity mapping, `publishDiagnostics` shape, the scripted-client lifecycle,
+  the unknown-request refusal). (phase-3.md §2 / §9.7 / Meta)
+
 ### Added (Phase 3 — BitNet TL1/TL2 packed-ternary kernels, M-360; E3-6; RFC-0004 §5/§8)
 - **`mycelium-mlir::bitnet` now covers all three bitnet packings.** The I2_S-only dot kernel
   generalised to `emit_bitnet_dot_ir_for(scheme)`: **TL1** inverts the rot=2 code LUT

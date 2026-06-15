@@ -92,7 +92,7 @@ completed. Readiness is relative to the corpus + landed Phase-1/2 deps.
 | **M-301** Direct-LLVM-IR AOT backend (kernel subset) | E3-7 (prereq) | P1 | M-150, M-110 | RFC-0004 §2 / ADR-007/009 | **Done (2026-06-15)** — bit subset + `trit.neg` + trit *carry arithmetic* (`add/sub/mul`, ripple-carry/shifted-accumulate, runtime-overflow read-back); shared by AOT + JIT |
 | **M-302** interp↔native differential (extend M-151) | E3-7 (prereq) | P1 | M-301, M-151 | NFR-7 / VR-4 / RR-12 | **Done (2026-06-15)** — `tests/native_differential.rs` (bit subset; toolchain-gated skip) |
 | **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | **Done (2026-06-15)** — `cargo xtask e1` §2 measures native AOT vs interp; compute throughput now measured over runtime data in §3 (M-360) |
-| **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()` |
+| **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()`; **LSP wire protocol** (`wire`: JSON-RPC `Content-Length` framing, `publishDiagnostics` mapping, `initialize`/`shutdown`/`exit` lifecycle). Remaining: **document sync** (needs a text→`Node` path — L1, M-320) |
 | **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | **Done (2026-06-15)** — `mycelium-build` crate (decide + content-addressed `BuildCertificate`) |
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | **Done (2026-06-15)** — `mycelium-build::cache` (`BuildCache`, request-addressed) |
 | **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses; recursive matcher; nested structural descent); **RFC ratification is maintainer's** |
@@ -409,7 +409,20 @@ established strength.
   mutant-witness; the breadcrumb-path split).
 - **Honesty / scope.** Severity stays `Error`/`Warning` (the existing lattice); the L0 Core IR has no
   source spans, so "structured positions" are the navigable breadcrumb path (source line/col live in
-  the L1 surface, a later step). The stdio LSP wire protocol remains the mechanical wrapping step.
+  the L1 surface, a later step).
+- **Delivered (second increment — LSP wire protocol).** `mycelium-lsp::wire`: the byte-level JSON-RPC
+  codec (`read_message`/`write_message` with `Content-Length` header framing — clean EOF vs an
+  explicit error on a truncated frame, never a silent drop), the `Diagnostic` → LSP-`Diagnostic`
+  mapping with the spec `DiagnosticSeverity` codes (Error→1, Warning→2) and the
+  `textDocument/publishDiagnostics` notification builder, and a minimal [`serve`] lifecycle loop
+  (`initialize` → capabilities + `serverInfo`, `shutdown` → null, `exit` → stop; any other request →
+  JSON-RPC `MethodNotFound`, never silence). New dep: the workspace-pinned `serde_json`. Seven tests
+  (framing round-trip + many, clean-EOF, truncated-body error, severity mapping, `publishDiagnostics`
+  shape, the scripted-client lifecycle, the unknown-request refusal). **Honest scope (VR-5):** not a
+  document-syncing server — the facade analyzes Core IR `Node`s, not text, so the server advertises
+  `TextDocumentSyncKind.None` and the diagnostic `range` is a **zero placeholder** with the navigable
+  location in `data.breadcrumb`. Real spans + `didOpen`/`didChange` sync arrive with the L1 surface
+  (M-320); the wire layer carries them without a protocol change.
 
 ### 9.8 M-360 — BitNet packed-ternary acceleration (first increment) · Batch L · P2 · in progress 2026-06-15
 
@@ -475,6 +488,15 @@ established strength.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-310 LSP wire protocol — stdio JSON-RPC + LSP-shaped diagnostics):** new
+  `mycelium-lsp::wire` wraps the M-140 feedback facade in the LSP transport — `Content-Length`
+  message framing (`read_message`/`write_message`; clean EOF vs explicit truncated-frame error), the
+  `Diagnostic`→LSP-`Diagnostic` mapping (spec severity codes; zero-range placeholder + breadcrumb in
+  `data` since L0 has no spans), the `textDocument/publishDiagnostics` notification builder, and a
+  minimal `serve` lifecycle (`initialize`/`shutdown`/`exit`; other requests → `MethodNotFound`, never
+  silent). Adds the workspace-pinned `serde_json`. 7 tests. §2 M-310 row + §9.7 updated. **Scope:**
+  not a document-syncing server yet — text→`Node` sync needs the L1 surface (M-320); honestly
+  advertised as `TextDocumentSyncKind.None` (VR-5).
 - **2026-06-15 (M-360 TL1/TL2 kernels — full bitnet packing breadth):** `mycelium-mlir::bitnet`
   generalised from I2_S-only to `emit_bitnet_dot_ir_for(scheme)` covering **all three** bitnet
   packings — TL1 inverts the rot=2 LUT (`d01 = (code+1) mod 3`), TL2 decodes base-3 5-trits/byte

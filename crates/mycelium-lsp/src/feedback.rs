@@ -16,9 +16,10 @@
 //! own choice disagrees with the node's recorded target, a `policy-divergence` warning surfaces it
 //! (an override or a stale policy — visible either way, never silent).
 //!
-//! This is the **skeleton**: a programmatic in-process surface (a scripted client drives
-//! [`analyze`]/[`analyze_with`] and reads the channels). Wrapping it in the LSP wire protocol over
-//! stdio is a later, mechanical step.
+//! This is the in-process surface: a scripted client drives [`analyze`]/[`analyze_with`] and reads
+//! the channels. The LSP **wire protocol** over stdio (JSON-RPC framing + LSP-shaped diagnostics +
+//! the lifecycle handshake) lives in [`crate::wire`] (M-310); the remaining gap to a full server is
+//! document sync, which needs a text → `Node` path (the L1 surface, M-320).
 
 use mycelium_cert::{binary_to_ternary, ternary_to_binary, SwapCertificate};
 use mycelium_core::lower::{self, Stage};
