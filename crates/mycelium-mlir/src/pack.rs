@@ -11,18 +11,24 @@
 //! Schemes (RFC-0004 §5; the bitnet.cpp set + the two reference packings):
 //! - `I2_S`, `TL1`, `TwoBitPerTrit` — **2 bits/trit**, 4 trits/byte, distinguished by their code
 //!   LUT (the three rotations of `{0,1,2}`), so the same trits pack to *different* bytes.
-//! - `TL2`, `FiveTritPerByte` — **base-3**, 5 trits/byte (`3⁵ = 243 ≤ 256`; ≈1.6–1.67 b/w),
-//!   distinguished by digit order.
+//! - `FiveTritPerByte` — the **base-3 reference** packing, 5 trits/byte (`3⁵ = 243 ≤ 256`; **1.6
+//!   b/w**), the near-optimal-density encoding (entropy limit `log₂3 ≈ 1.585`).
+//! - `TL2` — the **true bitnet.cpp TL2 layout**: 3 trits → a **5-bit LUT index** (`c = d₀ + 3·d₁ +
+//!   9·d₂ ∈ [0,27)`), bit-packed as a contiguous 5-bit-field stream ⇒ **1.67 b/w** (`5/3`). It is
+//!   *less* dense than `FiveTritPerByte` on purpose: the 5-bit index is directly LUT-addressable
+//!   (the "TL" = ternary lookup), trading a little density for fast decode.
 //! - `Unpacked` — 1 trit/byte.
 //!
-//! **A5-08 stand-in note.** This base-3 `TL2` is a placeholder: at 5 trits/byte it realizes 1.6
-//! b/w, whereas the published bitnet.cpp TL2 figure (and the selector's cost model in
-//! `mycelium-select`) is **1.67 b/w**. The discrepancy is inert for *selection* (both are < 2.0, so
-//! TL2 still wins the exhaustive cheapest). The M-360 native TL2 **dot kernel** (`bitnet`) decodes
-//! *this* placeholder codec — so the kernel landing does **not** change the b/w; it inherits the
-//! 1.6 stand-in. Aligning to bitnet.cpp's true 1.67-b/w TL2 bit-packing is therefore tied to the
-//! M-360 **real-layout / SIMD** increment (not the scalar kernel), and stays flagged here and on
-//! `packing_bits_per_element` in `mycelium-select/src/lib.rs` until then.
+//! **A5-08 — resolved (M-360 real-layout increment).** `TL2` now realizes the published bitnet.cpp
+//! **1.67 b/w** (3-trits-per-5-bits LUT-index bitstream), matching the selector's cost model
+//! (`packing_bits_per_element(Tl2) = 1.67` in `mycelium-select`) — the prior 1.6-b/w base-3
+//! placeholder (which shared `FiveTritPerByte`'s layout) is retired; the two schemes are now
+//! genuinely distinct densities. The M-360 native TL2 **dot kernel** (`bitnet`) decodes this layout.
+//! **Honest scope (VR-5):** this realizes the bitnet.cpp TL2 *density and 5-bit-LUT-index semantics*
+//! (3 trits → a 5-bit code), bit-packed contiguously; the exact upstream *byte/bit ordering* of
+//! bitnet.cpp's internal buffer is not claimed byte-identical (that needs the upstream source to
+//! verify) — our codec is self-consistent (round-trip identity) and oracle-checked, which is what
+//! the value semantics and the differential require.
 //!
 //! Decoding is **total** (never panics): an out-of-range code/byte folds `mod 3`, so reading a
 //! buffer under a mismatched scheme yields *some* trit sequence deterministically — a misread, not
@@ -36,7 +42,7 @@ use mycelium_core::{PackScheme, Trit};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PackError {
     /// The byte buffer is too short to decode `count` trits under `scheme`: `count` needs at least
-    /// `needed` bytes (`count.div_ceil(trits_per_byte)`) but only `got` were supplied.
+    /// `needed` bytes ([`needed_bytes`]) but only `got` were supplied.
     BufferTooShort {
         /// The trit count requested.
         count: usize,
@@ -60,13 +66,93 @@ impl core::fmt::Display for PackError {
 
 impl std::error::Error for PackError {}
 
-/// Trits-per-byte for `scheme` (the packing density's structural form).
+/// Trits-per-byte for the **byte-aligned** schemes (the packing density's structural form). `TL2` is
+/// *not* byte-aligned (it is a 5-bit-field bitstream — see [`needed_bytes`]); callers must route TL2
+/// through the bitstream path, not this. `FiveTritPerByte` remains the byte-aligned 5-trits/byte
+/// base-3 reference.
 fn group_size(scheme: PackScheme) -> usize {
     match scheme {
         PackScheme::Unpacked => 1,
         PackScheme::TwoBitPerTrit | PackScheme::I2S | PackScheme::Tl1 => 4,
-        PackScheme::FiveTritPerByte | PackScheme::Tl2 => 5,
+        PackScheme::FiveTritPerByte => 5,
+        // TL2 is a bitstream; this is the byte-aligned fallback used only by the misread model.
+        PackScheme::Tl2 => 5,
     }
+}
+
+/// The true bitnet.cpp **TL2** layout: 3 trits → one 5-bit LUT-index code (`3⁵ = 243`, but `3³ = 27`
+/// fits a 5-bit field), bit-packed contiguously ⇒ `5/3 ≈ 1.67` b/w.
+const TL2_TRITS_PER_GROUP: usize = 3;
+const TL2_BITS_PER_GROUP: usize = 5;
+
+/// Bytes required to hold `count` trits under `scheme` — the buffer-bound model. For the byte-aligned
+/// schemes this is `count.div_ceil(trits_per_byte)`; for the bitstream `TL2` it is the packed
+/// 5-bit-code stream length (`⌈5·⌈count/3⌉ / 8⌉`).
+#[must_use]
+pub fn needed_bytes(scheme: PackScheme, count: usize) -> usize {
+    match scheme {
+        PackScheme::Tl2 => {
+            let groups = count.div_ceil(TL2_TRITS_PER_GROUP);
+            (TL2_BITS_PER_GROUP * groups).div_ceil(8)
+        }
+        _ => count.div_ceil(group_size(scheme)),
+    }
+}
+
+/// Write the low `TL2_BITS_PER_GROUP` bits of `code` into `buf` starting at bit offset `bit_off`
+/// (LSB-first, little-endian within the stream). `buf` must be long enough ([`needed_bytes`] sizes it).
+fn write_tl2_code(buf: &mut [u8], bit_off: usize, code: u8) {
+    for b in 0..TL2_BITS_PER_GROUP {
+        if (code >> b) & 1 == 1 {
+            buf[(bit_off + b) / 8] |= 1 << ((bit_off + b) % 8);
+        }
+    }
+}
+
+/// Read the 5-bit TL2 code at bit offset `bit_off` (may straddle a byte boundary). Out-of-range bytes
+/// read as 0 (total, like the byte-aligned misread) — but [`needed_bytes`] guarantees the bits exist
+/// for an in-bounds decode.
+fn read_tl2_code(bytes: &[u8], bit_off: usize) -> u8 {
+    let byte = bit_off / 8;
+    let shift = bit_off % 8;
+    let lo = u16::from(bytes.get(byte).copied().unwrap_or(0));
+    let hi = u16::from(bytes.get(byte + 1).copied().unwrap_or(0));
+    let window = (lo | (hi << 8)) >> shift;
+    #[allow(clippy::cast_possible_truncation)]
+    {
+        (window & 0x1F) as u8
+    }
+}
+
+/// Pack `trits` under the true TL2 layout (3 trits → 5-bit code, bit-packed). Bijective with
+/// [`unpack_tl2`].
+fn pack_tl2(trits: &[Trit]) -> Vec<u8> {
+    let mut bytes = vec![0u8; needed_bytes(PackScheme::Tl2, trits.len())];
+    for (gi, chunk) in trits.chunks(TL2_TRITS_PER_GROUP).enumerate() {
+        // code = d₀ + 3·d₁ + 9·d₂, each dₖ = d01(trit) ∈ {0,1,2} ⇒ code ∈ [0, 27).
+        let mut code: u8 = 0;
+        let mut p: u8 = 1;
+        for &t in chunk {
+            code += d01(t) * p;
+            p *= 3;
+        }
+        write_tl2_code(&mut bytes, gi * TL2_BITS_PER_GROUP, code);
+    }
+    bytes
+}
+
+/// Decode `count` trits from a TL2 bitstream. Each trit `i` is digit `p = i % 3` of the 5-bit code at
+/// group `g = i / 3`: `digit = (code / 3ᵖ) mod 3`.
+fn unpack_tl2(bytes: &[u8], count: usize) -> Vec<Trit> {
+    let mut out = Vec::with_capacity(count);
+    for i in 0..count {
+        let g = i / TL2_TRITS_PER_GROUP;
+        let p = i % TL2_TRITS_PER_GROUP;
+        let code = read_tl2_code(bytes, g * TL2_BITS_PER_GROUP);
+        let digit = (code / 3u8.pow(u32::try_from(p).expect("p < 3"))) % 3;
+        out.push(from_d01(digit));
+    }
+    out
 }
 
 /// A trit as a base-3 digit `{0, 1, 2}` (`Neg→0, Zero→1, Pos→2`).
@@ -109,6 +195,9 @@ fn base3_reversed(scheme: PackScheme) -> bool {
 /// partial group is zero-padded; [`unpack_trits`] reads exactly the requested count back.
 #[must_use]
 pub fn pack_trits(trits: &[Trit], scheme: PackScheme) -> Vec<u8> {
+    if matches!(scheme, PackScheme::Tl2) {
+        return pack_tl2(trits); // the bitstream layout, not byte-aligned
+    }
     let g = group_size(scheme);
     let mut bytes = Vec::with_capacity(trits.len().div_ceil(g));
     for chunk in trits.chunks(g) {
@@ -152,8 +241,7 @@ pub fn unpack_trits(
     scheme: PackScheme,
     count: usize,
 ) -> Result<Vec<Trit>, PackError> {
-    let g = group_size(scheme);
-    let needed = count.div_ceil(g);
+    let needed = needed_bytes(scheme, count);
     if bytes.len() < needed {
         return Err(PackError::BufferTooShort {
             count,
@@ -161,6 +249,10 @@ pub fn unpack_trits(
             got: bytes.len(),
         });
     }
+    if matches!(scheme, PackScheme::Tl2) {
+        return Ok(unpack_tl2(bytes, count)); // bitstream decode
+    }
+    let g = group_size(scheme);
     let mut out = Vec::with_capacity(count);
     'outer: for (bi, &byte) in bytes.iter().enumerate() {
         for i in 0..g {
@@ -194,10 +286,10 @@ pub fn unpack_trits(
 #[must_use]
 pub fn relayout_trits(trits: &[Trit], packed_as: PackScheme, read_as: PackScheme) -> Vec<Trit> {
     let mut bytes = pack_trits(trits, packed_as);
-    // A denser `packed_as` (5 trits/byte) emits fewer bytes than a sparser `read_as` (4 trits/byte)
-    // needs for the same count; zero-pad to the bytes `read_as` requires so the read is the modeled
-    // misread (a wrong layout tag over the *same* buffer, zero-extended) — never an explicit short.
-    let needed = trits.len().div_ceil(group_size(read_as));
+    // A denser `packed_as` emits fewer bytes than a sparser `read_as` needs for the same count;
+    // zero-pad to the bytes `read_as` requires so the read is the modeled misread (a wrong layout
+    // tag over the *same* buffer, zero-extended) — never an explicit short.
+    let needed = needed_bytes(read_as, trits.len());
     if bytes.len() < needed {
         bytes.resize(needed, 0);
     }
@@ -284,6 +376,52 @@ mod tests {
         for s in ALL_SCHEMES {
             let _ = unpack_trits(&bytes, s, 5).unwrap();
         }
+    }
+
+    #[test]
+    fn tl2_realizes_the_true_167_bits_per_weight() {
+        // A5-08 closure: TL2 is the true bitnet.cpp 1.67-b/w layout (3 trits → 5 bits), strictly
+        // *less* dense than the FiveTritPerByte base-3 reference (1.6 b/w, 5 trits/byte). The two are
+        // now distinct densities — TL2 uses more bytes for the same count.
+        for &count in &[3usize, 6, 24, 100, 1000, 4096] {
+            let tl2 = needed_bytes(PackScheme::Tl2, count);
+            let five = needed_bytes(PackScheme::FiveTritPerByte, count);
+            // 1.67 b/w ⇒ bytes ≈ count·5/3/8; check it matches the exact bitstream length and that
+            // it exceeds (or equals, only for the tiniest) the 1.6-b/w reference.
+            assert_eq!(
+                tl2,
+                (5 * count.div_ceil(3)).div_ceil(8),
+                "TL2 bitstream length at {count}"
+            );
+            assert!(
+                tl2 >= five,
+                "1.67 b/w must not be denser than 1.6 b/w at {count}"
+            );
+        }
+        // Observed b/w over a large buffer is ~1.667 (5/3), distinctly above FiveTritPerByte's ~1.6.
+        let n = 30_000;
+        #[allow(clippy::cast_precision_loss)]
+        let bpw = (needed_bytes(PackScheme::Tl2, n) as f64) * 8.0 / (n as f64);
+        assert!(
+            (1.66..=1.68).contains(&bpw),
+            "TL2 b/w {bpw} should be ≈1.67"
+        );
+    }
+
+    #[test]
+    fn tl2_and_five_trit_per_byte_are_now_distinct_layouts() {
+        // Before A5-08 closure TL2 shared FiveTritPerByte's byte-aligned base-3 layout (1.6 b/w); now
+        // TL2 is the 1.67-b/w bitstream, so packing as one and reading as the other misreads.
+        let t = sample();
+        assert_ne!(
+            relayout_trits(&t, PackScheme::Tl2, PackScheme::FiveTritPerByte),
+            t,
+            "TL2 packed, read as the base-3 reference, must misread"
+        );
+        assert_ne!(
+            relayout_trits(&t, PackScheme::FiveTritPerByte, PackScheme::Tl2),
+            t
+        );
     }
 
     #[test]

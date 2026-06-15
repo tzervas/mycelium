@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0007 |
-| **Status** | **Draft** (the L1 layer of RFC-0006 §3; ratification is the maintainer's) |
+| **Status** | **Accepted** (r4 — ratified 2026-06-15 per §10: the **v0 kernel calculus** §4.1–4.8 (ten-node budget, registry, stage-0 *dynamic* guarantee check, `matured` totality gate, evaluation-complete-fragment elaboration, acyclicity, `for`-sugar). **Deferred (NOT ratified):** stage-1 static grading (§4.3; R7-Q2), R7-Q1/Q3 → RFC-0001 r4, R7-Q4, traits/LR-2, and concrete surface syntax (KC-2). Supersedes the r3 Draft.) |
 | **Type** | Foundational / normative (once Accepted) |
 | **Date** | June 10, 2026 |
 | **Depends on** | RFC-0006 (layering L0–L3, S1–S6, LR-1…LR-9; DN-02 ratified lexicon); RFC-0001 §4.5/§4.6 (Core IR, WF1–WF5, content-addressing); RFC-0004 §4 (stable-component gate); ADR-003 (Unison identity); research T3.1/T3.2/T3.4/T3.5 (`research/03-language-layer-RECORD.md`) |
@@ -266,8 +266,62 @@ Stage-1 static grading (T3.2: FlowCaml-style inference over the 4-chain); the tr
 sized-type totality beyond structural descent; the RFC-0001 revision folding L1 into the Core IR
 and retiring §4.6's fragment restriction.
 
+## 10. Ratification scope (ratified 2026-06-15 — the carve-out, **Accepted**)
+
+This RFC moved `Draft → Accepted` on 2026-06-15 (maintainer sign-off). A completion-review found the
+**v0 calculus complete and implementation-validated** — the non-normative `crates/mycelium-l1`
+prototype exercises every part (terms, registry, the §4.4 typing judgments, the §4.5 totality/`matured`
+gate, §4.6 elaboration with explicit `Residual`, §4.7 acyclicity, §4.8 bounded-iteration desugaring),
+and the M-320 work added the Maranget usefulness analysis + decision-tree compiler against it. The split
+of what is **now ratified** vs deferred:
+
+**Ratified (the v0 calculus — stage-0).**
+
+- **§4.1 terms** (the ten-node budget: L0's five + `Lam/App/Construct/Match/Fix`) and **§4.2
+  declarations-as-registry** (content-addressed, Unison `#T#i` + cycle hashing) — the
+  GHC-Core/Lean/Coq/Unison convergence (T3.1), prototype-realized.
+- **§4.3 types** (stage-0: the guarantee index `τ @ g` checked **dynamically** against `Meta`; only
+  *weakening* allowed) and **§4.4 typing judgments** (v0 simple/monomorphic: `T-Const…T-Match`),
+  with W6/W7/W8 — prototype-realized; the `Match`-into-L0 path is now ratified (**RFC-0011** staged
+  r3, the named revision this RFC's §9 points at).
+- **§4.5 divergence bit + `matured` gate** ("checked total" = CakeML clock quantification; checker
+  outside the kernel, gates packaging never meaning) and **§4.6 elaboration** (the
+  evaluation-complete fragment, explicit `Residual`; the differential obligation) — prototype-realized.
+  *Note:* RFC-0011 (ratified) **narrows** §4.6's `Residual` for data/matching when the r3 enactment
+  lands; until then §4.6 is accurate as written.
+- **§4.7 memory-safety** (immutable acyclic values; `wild` denied-by-default) and **§4.8 bounded
+  iteration** (elaboration-defined `for`-sugar over structural recursion, `Total` by construction —
+  the maintainer-adopted spelling A) — prototype-realized.
+
+**Stays gated / deferred (explicit — NOT ratified by accepting v0).**
+
+- **Stage-1 static graded judgment (§4.3).** A revision of this RFC: the static graded typing (vs v0's
+  dynamic `Meta` check). Couples to RFC-0006 Q3's open implicit-flows decision; **R7-Q2** (does a
+  `Match` default arm meet-degrade differently?) is part of it.
+- **R7-Q1 (`Fix` node vs recursive-`Let` flag) and R7-Q3 (mutual recursion in v0).** Both deferred to
+  the **RFC-0001 r4** revision (the `Lam/App/Fix`-into-L0 step that RFC-0011 §4.5 sketches and names);
+  cosmetic at the hash level (R7-Q1) / additive (R7-Q3, groups already hash per §4.2).
+- **R7-Q4 (prim table `Π` as content-addressed declarations).** A later refinement; v0's fixed builtin
+  table is sound meanwhile.
+- **Concrete surface syntax (L2/L3).** KC-2-gated via RFC-0006 §1 (M-002-external) — the prototype's
+  grammar is non-normative; ratifying RFC-0007 ratifies the *calculus*, never a surface spelling.
+- **Polymorphism / traits (LR-2).** Explicitly out of v0 (§4.4) — its own later RFC.
+
+**Status line (now in force):** *Accepted — the v0 kernel calculus (§4.1–4.8, stage-0 dynamic
+guarantee check); stage-1 static grading, R7-Q1…Q4, and concrete surface syntax remain later
+revisions / KC-2-gated.*
+
 ## Meta — changelog
 
+- **2026-06-15 (r4) — Accepted (maintainer sign-off).** Moved `Draft → Accepted` with the **§10
+  carve-out**: ratified = the v0 calculus §4.1–4.8 (ten-node budget, registry, stage-0 dynamic
+  guarantee check, the `matured` totality gate, evaluation-complete-fragment elaboration, acyclicity,
+  bounded-iteration sugar), all prototype-realized in `crates/mycelium-l1` and exercised by the M-320
+  usefulness + decision-tree work; the `Match`-into-L0 path is the ratified **RFC-0011** staged r3.
+  **Deferred (NOT ratified):** stage-1 static grading (§4.3; R7-Q2), R7-Q1/Q3 → RFC-0001 r4, R7-Q4
+  (prim-table-as-declarations), traits/polymorphism (LR-2), and concrete surface syntax (KC-2). A
+  completion-review found the v0 calculus complete + implementation-validated; no design content
+  changed on acceptance. The status line carries the carve-out (VR-5).
 - **2026-06-10 (r3) — Draft, `for` spelling adopted (maintainer decision).** §4.8's spelling A
   (`for x in xs, acc = init => body`) moves from *provisional* to **adopted**: the maintainer
   chose to commit it now rather than hold it pending a KC-2 ablation run; the kc2-09/kc2-10

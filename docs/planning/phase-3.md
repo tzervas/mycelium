@@ -95,11 +95,11 @@ completed. Readiness is relative to the corpus + landed Phase-1/2 deps.
 | **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()`; **LSP wire protocol** (`wire`: JSON-RPC `Content-Length` framing, `publishDiagnostics` mapping, `initialize`/`shutdown`/`exit` lifecycle). Remaining: **document sync** (needs a text→`Node` path — L1, M-320) |
 | **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | **Done (2026-06-15)** — `mycelium-build` crate (decide + content-addressed `BuildCertificate`) |
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | **Done (2026-06-15)** — `mycelium-build::cache` (`BuildCache`, request-addressed) |
-| **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses) + the **Maranget decision-tree compiler** (the codegen half — `decision`: occurrences + `switch`/`leaf` tree, verified against the reference matcher, wired into `checkty` as a Fail-free cross-check). Remaining: emit tree leaves as **L0 kernel nodes** (gated on the RFC-0001 L0 revision). **RFC ratification is maintainer's** |
+| **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses) + the **Maranget decision-tree compiler** (the codegen half — `decision`: occurrences + `switch`/`leaf` tree, verified against the reference matcher, wired into `checkty` as a Fail-free cross-check). Remaining: emit tree leaves as **L0 kernel nodes** — **RFC-0011 ratified** (RFC-0001 r3: `Construct` + flat `Match` into L0, staged; flat `Match` is the kernel node). Enactment (r3 text-fold + the wiring) sequenced as the **core-lang step after RFC-0006/0007 are completed + ratified**; RFC-0001 stays r2/frozen until then |
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
-| **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`); NFR-7 checked |
+| **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`), NFR-7 checked; **+ runtime-specialization layer** (`mycelium-mlir::specialize`): bakes the runtime-known weight vector into the dot kernel (zero lanes elided, unpack dropped, ±1 → add/sub), validated generic↔specialized through the shared M-210 checker, E1 §4 records the **measured** speedup (no target pre-written) |
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **Design drafted (2026-06-15)** — RFC-0009 (convergence regime, `Empirical`-ceiling honesty, never-silent verdicts); prototype gated on ratification |
-| **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | **In progress (2026-06-15)** — runtime-data dot kernels for **all three** bitnet packings (I2_S/TL1/TL2; in-process JIT, inspectable per-scheme unpack IR), each oracle-checked; E1 §3 compute-throughput measured (I2_S). **SIMD** next |
+| **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | **In progress (2026-06-15)** — runtime-data dot kernels for **all three** bitnet packings (I2_S/TL1/TL2; in-process JIT, inspectable per-scheme unpack IR), each oracle-checked; E1 §3 measured. **+ hand-vectorized SIMD** (`mycelium-mlir::simd`, 8-wide I2_S, vector-IR unpack) differential-checked against the scalar oracle through the shared M-210 checker, E1 §5 measured. **+ true 1.67-b/w TL2** (`pack`: 3 trits → 5-bit LUT-index bitstream; the dot kernel decodes it with a bounds-clamped 2-byte window) — **closes A5-08** (codec now matches the selector cost model). Remaining: TL1/TL2 vectorized SIMD unpacks |
 | **M-370** Native-ternary forward-compat mapping (+ stub target) | E3-7 | P2 | M-150, M-301 | R7 | **Done (2026-06-15)** — `docs/notes/Native-Ternary-Forward-Compat.md`; dialect = stub target |
 | **M-380** Semantic-level projection framework | E3-1 | P2 | E3-3 | FR-C1 / G11 | **needs-design**; *KC-2-contingent* |
 | **M-002** KC-2 LLM-leverage run (carried; gates E3-1 + concrete syntax) | E4 | P0 | M-020 (harness landed) | SC-5b / G10 / KC-2 | **Blocked (external)** — needs LLM API |
@@ -186,7 +186,7 @@ the phase; the gate is defined in §6 and verdicts are filled as tasks land.
 
 ---
 
-## 6. Phase-3 exit gate (proposed — not yet met)
+## 6. Phase-3 exit gate (proposed — **substantially met; two sequenced residuals**, §6.1)
 
 Phase 3 is large and partly exploratory/external-blocked, so the gate is scoped to the **buildable,
 local** deliverables; the exploratory/KC-2-gated epics (E3-1 projections, the E3-2 operational arm,
@@ -205,15 +205,42 @@ hold the gate. Proposed: Phase 3 closes when **all** of —
   tests; RFC-0007 is presented for ratification (the **decision** is the maintainer's, recorded
   append-only; concrete syntax stays KC-2-gated).
 
-**Stretch (honest, out-of-gate):** JIT (M-340, needs an agreed speedup target), BitNet acceleration
-(M-360), native-ternary forward-compat doc (M-370), resonator factorization (M-350, needs-design),
-projections (M-380, KC-2-contingent), AI co-authoring run (M-330, needs API), and the KC-2 verdict
-(M-002, needs API). Each is delivered as far as the environment allows and its verdict pinned at the
-established strength.
+**Stretch (honest, out-of-gate):** JIT (M-340 — **delivered**: in-process JIT + runtime
+specialization with a measured ≈10.7× E1 §4 speedup, no pre-written target), BitNet acceleration
+(M-360 — in progress; SIMD + true-TL2 next), native-ternary forward-compat doc (M-370 — **done**),
+resonator factorization (M-350 — design-drafted, RFC-0009/0010 ratified), projections (M-380,
+KC-2-contingent), AI co-authoring run (M-330, needs API), and the KC-2 verdict (M-002, needs API).
+Each is delivered as far as the environment allows and its verdict pinned at the established strength.
+
+### 6.1 Verdict fill (2026-06-15, VR-5 — at the strength actually established)
+
+Re-read against the landed work. Each gate condition is filled at the strength a checked run
+established; **gate-blocking** vs **stretch** is flagged, and no verdict is pre-written.
+
+| Gate condition | Verdict (2026-06-15) | Gate-blocking? |
+|---|---|---|
+| **Native execution path** (M-301/302/303) | ✅ **MET (build + measured).** M-301 compiles+runs the bit/trit kernel subset to a native artifact; M-302 passes on the kernel corpus **and** catches a deliberately divergent lowering (the discrimination test — guard 7); M-303's E1 is **measured** (native-vs-interp, honestly captioned), and compute throughput is now genuinely measured over runtime data (M-360 §3 packed-ternary kernels ≈1.13–1.67× vs scalar; M-340 §4 weight-specialization ≈10.7×) — no "within an agreed target" claim. | **yes — satisfied** |
+| **Matured toolchain** (M-310/311/312) | 🟡 **MET except document sync.** M-311 (build-system gate + content-addressed `BuildCertificate`, forge-proof deserialize) and M-312 (request-addressed `BuildCache`, demonstrably reuses a prior cert; a weakened obligation misses) ship with tests — **met**. M-310 ships structured diagnostics (`FeedbackSummary`) + the LSP **wire protocol** (JSON-RPC framing, `publishDiagnostics`, lifecycle) with tests — the **diagnostics** condition is met; **document sync** is the honest residual (needs the text→`Node` path). | **yes — residual R1** |
+| **L1 surface** (M-320 + RFC-0007) | 🟡 **MET in prototype; ratification sequenced.** M-320 lands in `mycelium-l1` with tests (literal + nested `match`, Maranget usefulness with witnesses, the decision-tree compiler) — **met**. RFC-0007 is **presented**, and the L0-`Match` revision it needs is **ratified as a decision** (RFC-0011, staged r3). The maintainer has **directed RFC-0006 + RFC-0007 be completed and ratified** before core-lang impl — so full ratification is **sequenced** (residual R2). Concrete syntax stays KC-2-gated (unchanged). | **yes — residual R2** |
+
+**Overall verdict (honest, VR-5): the gate is *substantially met but not yet fully closed*.** The
+keystone native-execution-path condition is fully met and measured; the matured-toolchain and
+L1-surface conditions are met except for two **gate-relevant residuals** (not stretch — both are named
+in the gate), each now sequenced with an owner and an order:
+
+- **R1 — M-310 document sync.** Blocked on the text→`Node` path, which is the RFC-0011 enactment
+  (`Match`/`Construct` → L0 + the parser→checker→L0 pipeline). Closes in the **core-lang step**.
+- **R2 — RFC-0006 + RFC-0007 completed and ratified.** Maintainer-directed; **sequenced before**
+  core-lang impl (after the exit-gate assembly and the M-360 SIMD increment).
+
+So `docs/planning/phase-3.md` stays **Living draft** (not "exit-gate met"): the build order to close it
+is **M-360 SIMD + true-TL2 → complete + ratify RFC-0006/0007 → enact RFC-0011 r3 + M-320 wiring (closes
+R1) → re-assert the gate**. Everything else in the gate is met; nothing here upgrades a verdict beyond
+the checked run that established it.
 
 > The §6 gate is itself a **proposed** scope decision (what counts as "Phase-3 done" given two
-> external blockers). It is recorded here for the maintainer to ratify or adjust; it is not asserted
-> as met.
+> external blockers). It is recorded here for the maintainer to ratify or adjust; §6.1 fills it at the
+> established strength but does **not** assert the phase closed — two named residuals remain.
 
 ---
 
@@ -459,6 +486,50 @@ established strength.
   M-360 increment. No guarantee upgraded; the E1 number is whatever was measured (VR-5 / G3). The
   `unsafe` fn-pointer call carries a `// SAFETY:` justification under ADR-014 (the bounds checks
   discharge the in-range obligation).
+- **Delivered (hand-vectorized SIMD — I2_S).** New `mycelium-mlir::simd`: a **hand-vectorized** I2_S
+  dot kernel (`i64 @myc_bitnet_dot_simd(ptr %w, ptr %x, i64 %n)`) that unpacks + multiply-accumulates
+  **8 trits/iteration** with LLVM vector types — broadcast the two packed bytes across 8 lanes
+  (`shufflevector` mask `<0,0,0,0,1,1,1,1>`), bring each lane's 2-bit code to bit 0 (`lshr` by the
+  constant vector `<0,2,4,6,0,2,4,6>`), mask `& 3`, `− 1` to the signed weight, `mul <8 x i32>` with
+  the contiguous activations, widen, accumulate into an `<8 x i64>` phi, then horizontally reduce
+  (`@llvm.vector.reduce.add.v8i64`) and a **scalar epilogue** finishes the `n mod 8` tail. Every vector
+  op is visible in the emitted IR (no opaque pass — FR-C3 / RFC-0004 §6); the vector loads carry
+  explicit `align 1`/`align 4` so a sub-vector-aligned offset is a legal unaligned load. It reuses
+  `BitnetDotKernel`'s bounds-checked `call` (same C signature + I2_S density model — a
+  `pub(crate) from_loaded` ctor; DRY), so a short buffer is still an explicit refusal. **The vector
+  unpack is correctness-critical, so it is differential-checked**: `tests/simd_differential.rs` runs
+  the SIMD kernel against the **scalar kernel as the oracle** over a corpus bracketing the 8-lane width
+  and the tail (n ∈ {0,1,7,8,9,15,16,17,31,33,64,255,256,257,1000}) and validates each pair **through
+  the shared M-210 checker** (`ObservationalEquiv`/`Exact`), with a mismatched-buffer discrimination
+  test (guard 7). `cargo xtask e1` **§5** times SIMD vs scalar over the same runtime buffer (indicative
+  ≈1.2× — honest: clang already auto-vectorizes the scalar loop at `-O2`, so the hand-vectorized gain
+  is real-but-modest; as-measured, no target pre-written). **Scope (VR-5/G3):** **I2_S only** this
+  increment; TL1/TL2 vectorized unpacks are next. No parity with bitnet.cpp's AVX2/AVX512 LUT kernels
+  is claimed; same exact dot product, no guarantee upgraded; the scalar kernels stay the oracle.
+- **Delivered (true 1.67-b/w TL2 layout — closes A5-08).** `mycelium-mlir::pack` now realizes `TL2` as
+  the **true bitnet.cpp layout**: 3 trits → a **5-bit LUT-index** code (`c = d₀ + 3·d₁ + 9·d₂ ∈
+  [0,27)`), bit-packed as a contiguous 5-bit-field stream ⇒ **1.67 b/w** (`5/3`). This is *less* dense
+  than the `FiveTritPerByte` base-3 reference (1.6 b/w) **on purpose** — the 5-bit index is directly
+  LUT-addressable (the "TL" = ternary lookup), the trade bitnet.cpp makes for fast decode. The prior
+  placeholder (which packed TL2 identically to `FiveTritPerByte` at 1.6 b/w) is retired, so the two are
+  now genuinely distinct densities; `needed_bytes(scheme, count)` is the new shared bound model
+  (`⌈5·⌈count/3⌉/8⌉` for TL2). The native TL2 **dot kernel** (`bitnet`) decodes the bitstream inline —
+  group `g = i/3`, position `p = i%3`, 5-bit code at bit offset `5g`, `digit = (code / 3ᵖ) mod 3` — with
+  a **branch-free bounds-clamped 2-byte window** (the second byte index is clamped to `needed − 1`,
+  computed from `n`, so the final group's read never goes OOB even when its field fits in one byte; the
+  spilled high bits are masked off by `& 31`). It is **oracle-checked across widths** (the existing
+  `jit_dot_matches_reference_all_schemes` over n up to 1000 now exercises the new layout) and the
+  bound is a `tl2_uses_the_true_167_bitstream_bound` refusal test. The selector cost model
+  (`packing_bits_per_element(Tl2) = 1.67` in `mycelium-select`) now **matches** the codec — **A5-08 is
+  resolved**; the notes in `pack.rs` and `mycelium-select` are updated from "stand-in / inert
+  discrepancy" to "resolved". E1 §3 times the true TL2 kernel over runtime data (≈1.25× vs the scalar
+  baseline — honestly *slower per-element* than I2_S, since the bitstream decode is more work than a
+  byte-aligned 2-bit extract; as-measured). New `pack` property tests pin the 1.67 b/w density
+  (`tl2_realizes_the_true_167_bits_per_weight`) and the TL2≠`FiveTritPerByte` layout distinctness.
+  **Honest scope (VR-5):** this realizes the bitnet.cpp TL2 *density and 5-bit-LUT-index semantics*;
+  the exact upstream byte/bit ordering of bitnet.cpp's internal buffer is **not** claimed byte-identical
+  (verifying that needs the upstream source) — the codec is self-consistent (round-trip identity) and
+  oracle-checked, which is what the value semantics + the differential require.
 
 ### 9.9 M-320 — L1 nested patterns + Maranget usefulness · Batch K · P1 · in progress 2026-06-15
 
@@ -500,8 +571,106 @@ established strength.
   so it does not yet run programs. The compilation algorithm is real and checked; the L0 emission is
   the remaining step. No guarantee touched.
 
+### 9.10 M-340 — JIT runtime specialization (weight-specialized dot kernel) · Batch L · P2 · in progress 2026-06-15
+
+- **Goal (from §2 / issues.yaml #93).** Add a **runtime-specialization layer over the lowering** and
+  record an honest speedup (no pre-written target), validated through the shared M-210 checker
+  (NFR-7). The first M-340 increment landed the in-process `dlopen` JIT path; this adds the classic
+  JIT win — specialize on data known *at JIT time*.
+- **Delivered.** New `mycelium-mlir::specialize`: `emit_specialized_dot_ir(weights)` emits a
+  **weight-specialized** ternary dot kernel `i64 @myc_bitnet_dot_spec(ptr %x)` with the (runtime-known)
+  weight vector **baked in as constants**. Because the weights are compile-time-constant *in the JIT'd
+  kernel*, the optimiser (a) **drops the unpack entirely** (no packed-byte load / shift / mask /
+  `code−1`), (b) **elides every zero-weight lane** — a `0` weight's activation load + multiply simply
+  do not appear in the emitted IR (the model's sparsity becomes inspectable, FR-C3), and (c)
+  **strength-reduces the ±1 multiply** to a single `add`/`sub`. The only runtime argument is the
+  activation pointer; the length and weights are compiled in. `compile_specialized_dot` JIT-compiles
+  it (`clang -shared -O2`) and loads it via the M-340 dynamic loader; `SpecializedDotKernel::call`
+  takes **no weight argument** (you cannot run it against weights it was not built for — misuse is
+  unrepresentable, never a silent stale-weights run) and **bounds-checks** the activation buffer
+  against the baked lane count (a short buffer is an explicit `AotError::Run`, never an OOB read).
+  `nonzero()` exposes the surviving-lane count (EXPLAIN/inspection).
+- **Validation (NFR-7).** `tests/specialize_differential.rs`: the specialized kernel and the generic
+  runtime-pointer kernel (`compile_bitnet_dot_for`) are run over the same activations and validated
+  as observationally equivalent **through the single shared M-210 checker**
+  (`check(.., ObservationalEquiv, Certificate::exact(), Observational) ⇒ Validated{Exact}`) — the same
+  checker the AOT/JIT differentials use — plus a discrimination test that specializes on *negated*
+  weights and confirms the checker reports `NotValidated` (guard 7, so a pass is meaningful). Module
+  tests pin the IR shape (zero lanes elided — mutant-witnessed against loading an elided lane), the
+  all-zero → `ret i64 0` kernel, determinism, oracle agreement over several widths, and the
+  short-buffer refusal.
+- **Honest speedup (E1 §4 / VR-5).** `cargo xtask e1` gains **§4**: it times the specialized kernel
+  vs the generic kernel over the *same* runtime activation buffer (both still take runtime activation
+  pointers — no constant folding, so the compute is real), gated by an oracle cross-check before
+  timing. Indicative single run (containerized x86-64, `n = 4096`, ~66 % dense weights): generic
+  ≈ 3.9 µs/call, specialized ≈ 0.36 µs/call — **≈ 10.7× as measured**, driven by dropping the unpack,
+  eliding the zero lanes, and `-O2` vectorization of the straight-line adds/subs. The number is
+  reported **as-measured**; no target is pre-written, and the result is sparsity- and machine-dependent.
+- **Honesty / scope.** No guarantee upgraded — the specialized kernel computes the *same exact* dot
+  product (both `Exact` integer arithmetic). The weights are honest **runtime data** baked at JIT
+  time (the inference shape: weights fixed, activations vary), not a constant-folded closed kernel.
+  Shares the dot semantics + the M-340 loader with the generic kernel (DRY); the specialization
+  applies to the BitNet dot kernel today and generalizes to other runtime-fixed operands later.
+
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-360 true 1.67-b/w TL2 layout — closes A5-08):** `mycelium-mlir::pack` now realizes
+  `TL2` as the **true bitnet.cpp layout** — 3 trits → a 5-bit LUT-index (`c = d₀+3d₁+9d₂ ∈ [0,27)`),
+  bit-packed as a contiguous 5-bit-field stream ⇒ **1.67 b/w** (`5/3`), distinct from the
+  `FiveTritPerByte` 1.6-b/w base-3 reference (the prior placeholder that made them coincide is retired).
+  `needed_bytes(scheme, count)` is the new shared bound model. The native TL2 **dot kernel**
+  (`bitnet`) decodes the bitstream with a **bounds-clamped 2-byte window** (the second byte index is
+  branch-free-clamped to the last valid byte, so the final group's read never goes OOB), oracle-checked
+  across widths (`jit_dot_matches_reference_all_schemes`). The selector cost model
+  (`packing_bits_per_element(Tl2) = 1.67`) now **matches** the codec — **A5-08 resolved** (the note in
+  `pack.rs` + `mycelium-select` updated). E1 §3 times the true TL2 kernel (measured ≈1.25× vs scalar,
+  honestly slower per-elem than I2_S — the bitstream decode is more work, as expected). New property
+  tests pin the 1.67 b/w density and TL2≠FiveTritPerByte distinctness. **Honest scope (VR-5):** realizes
+  the bitnet.cpp TL2 *density + 5-bit-LUT-index semantics*; exact upstream byte/bit ordering not claimed
+  byte-identical (needs the source to verify) — codec self-consistent + oracle-checked. §2 M-360 row +
+  §9.8 updated.
+- **2026-06-15 (M-360 hand-vectorized SIMD — I2_S, first SIMD increment):** new `mycelium-mlir::simd`
+  emits an 8-wide hand-vectorized I2_S dot kernel (vector-IR unpack: `shufflevector` byte-broadcast +
+  per-lane `lshr` + `mul <8 x i32>` + `@llvm.vector.reduce.add.v8i64`, scalar tail for `n mod 8`),
+  reusing `BitnetDotKernel`'s bounds-checked `call` (`from_loaded` ctor, DRY). The correctness-critical
+  vector unpack is differential-checked against the **scalar kernel as the oracle** through the shared
+  M-210 checker over a width/tail corpus (`tests/simd_differential.rs`), with a discrimination test
+  (guard 7). `cargo xtask e1` §5 times SIMD vs scalar (≈1.2×, as-measured; clang already
+  auto-vectorizes the scalar `-O2` loop). §2 M-360 row + §9.8 updated. **Scope:** I2_S only; TL1/TL2
+  SIMD + the true 1.67-b/w TL2 layout (A5-08) next; no bitnet.cpp AVX parity claimed; same exact dot,
+  no guarantee upgraded (VR-5/G3).
+- **2026-06-15 (Phase-3 exit-gate assembly — §6.1 verdict fill, VR-5):** re-read §6 against the landed
+  work and filled each gate condition at the strength a checked run established. **Native execution
+  path** ✅ met + measured (M-301/302/303; compute throughput now real via M-360 §3 + M-340 §4).
+  **Matured toolchain** 🟡 met except **document sync** (M-311/312 done; M-310 diagnostics+wire done) —
+  residual **R1**, blocked on the RFC-0011 text→`Node` enactment. **L1 surface** 🟡 met in prototype
+  (M-320) with the L0-`Match` revision **ratified** (RFC-0011 staged r3); **RFC-0006/0007 full
+  ratification sequenced** (maintainer-directed) — residual **R2**. Overall: **substantially met, not
+  yet closed**; doc stays *Living draft*. Close-out order: **M-360 SIMD + true-TL2 → ratify
+  RFC-0006/0007 → enact RFC-0011 r3 + M-320 wiring (closes R1) → re-assert the gate.** No verdict
+  upgraded beyond its checked basis.
+- **2026-06-15 (keystone — RFC-0011 L0 `Match` / L1-in-Core-IR ratified as a decision; enactment
+  sequenced):** authored `docs/rfcs/RFC-0011-L0-Match-and-L1-in-Core-IR.md` — the *normative* keystone
+  both M-320's remaining half (emit decision-tree leaves as real L0 nodes) and M-310's document sync ride
+  on — and the maintainer **ratified the staged path** (RFC-0001 r3 = data-and-matching core:
+  `Construct`, flat `Match`, content-addressed registry, WF6/WF7/WF8; flat `Match` as the kernel node,
+  Maranget tree untrusted; `Lam/App/Fix` deferred to r4). It is the **named RFC-0001 revision** (RFC-0006 §4.4 step 2 /
+  RFC-0007 §9). **Decision recorded, not yet enacted:** RFC-0011 depends on RFC-0007, and the maintainer
+  directed that **RFC-0006 + RFC-0007 be completed and ratified first**, so the RFC-0001 r2 → r3 text-fold,
+  the RFC-0007 §4.6 narrowing, and the M-320 wiring land together as the core-lang step — **after** the
+  Phase-3 exit-gate assembly → M-360 SIMD → RFC-0006/0007 ratification. RFC-0001 stays **r2/frozen** and
+  the prototype keeps returning `Residual` until then (no grounding inversion). Registered in the RFC
+  README + Doc-Index. M-320 row note points the remaining half at RFC-0011.
+- **2026-06-15 (M-340 runtime specialization — weight-specialized dot kernel; honest ≈10.7× E1 §4
+  speedup):** new `mycelium-mlir::specialize` bakes the runtime-known weight vector into the ternary
+  dot kernel as constants (`i64 @myc_bitnet_dot_spec(ptr %x)`), so the optimiser drops the unpack,
+  elides the zero lanes, and strength-reduces ±1 to add/sub. Validated generic↔specialized through the
+  shared M-210 checker (`ObservationalEquiv`/`Exact`) with a negated-weights discrimination test
+  (`tests/specialize_differential.rs`); `cargo xtask e1` §4 times specialized-vs-generic over the same
+  runtime activations and reports the speedup **as-measured** (no target pre-written). The call site
+  takes no weight argument (stale-weights misuse unrepresentable) and bounds-checks the activation
+  buffer (no OOB). §2 M-340 row updated, §9.10 added. **Scope:** same exact dot product, no guarantee
+  upgraded; weights are runtime data baked at JIT time, activations stay runtime pointers (VR-5/G3).
 - **2026-06-15 (M-320 Maranget decision-tree compiler — the codegen half):** new
   `mycelium-l1::decision` compiles a checked nested-pattern match into a flat `switch`/`leaf` `Tree`
   over occurrences (Maranget 2008) — column heuristic, ctor/literal specialization, `default` only when

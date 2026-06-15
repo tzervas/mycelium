@@ -17,7 +17,8 @@
 //! kernel E1 (`cargo xtask e1`) needs to finally report a compute-throughput number.
 //!
 //! **Scope / honesty.** All three bitnet packings — **I2_S** (the RFC-0004 §5 default: 2-bit,
-//! 4 trits/byte), **TL1** (2-bit, rotated LUT), and **TL2** (base-3, 5 trits/byte) — each as a
+//! 4 trits/byte), **TL1** (2-bit, rotated LUT), and **TL2** (true 1.67 b/w: 3 trits → a 5-bit
+//! LUT-index, bit-packed) — each as a
 //! **scalar** (non-SIMD) loop with the unpack inlined per [`PackScheme`]. Every scheme's kernel is
 //! differential-checked against [`ternary_dot_ref`] (the obvious Rust oracle, decoding the *same*
 //! packing through `pack::pack_trits`) so the in-IR unpack is verified, not asserted. What is
@@ -39,17 +40,6 @@ use crate::pack::pack_trits;
 /// 4 trits/byte, `rot = 0` so a code `c ∈ {0,1,2}` is the base-3 digit and the signed weight is
 /// `c − 1`).
 pub const KERNEL_SCHEME: PackScheme = PackScheme::I2S;
-
-/// Trits packed per byte under `scheme` — the kernel's bounds model (mirrors `pack::group_size`,
-/// kept local so the bounds check and the emitted GEP stride agree). Only the three bitnet packings
-/// (I2_S/TL1/TL2) have kernels; any other scheme is rejected by [`emit_bitnet_dot_ir_for`].
-fn trits_per_byte(scheme: PackScheme) -> usize {
-    match scheme {
-        PackScheme::I2S | PackScheme::Tl1 => 4,
-        PackScheme::Tl2 => 5,
-        _ => 1,
-    }
-}
 
 /// The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the
 /// JIT kernel must reproduce. `digit` is the balanced-ternary signed value (`mycelium_core::ternary`).
@@ -115,23 +105,49 @@ pub fn emit_bitnet_dot_ir_for(scheme: PackScheme) -> Result<String, AotError> {
             "  %digit64 = sext i32 %digit to i64\n",
         )
         .to_string(),
-        // TL2: base-3, 5 trits/byte, digit at position p = (byte / 3^p) mod 3 (TL2 keeps d01 order),
-        // signed weight = digit − 1. 3^p for p ∈ {0..4} = {1,3,9,27,81} via a select chain.
+        // TL2 (true bitnet.cpp 1.67 b/w): 3 trits → a 5-bit LUT-index code, bit-packed. Trit i is at
+        // group g = i/3, position p = i%3, bit offset 5·g; the code = (5-bit field), digit =
+        // (code / 3ᵖ) mod 3, signed weight = digit − 1. The 5-bit field can straddle two bytes, so we
+        // read a 2-byte window; the second byte index is **clamped to the last valid byte** (needed −
+        // 1, computed from n) so the read never goes out of bounds even for the final group, whose
+        // field fits in one byte (the spilled high bits are masked off by `& 31`).
         PackScheme::Tl2 => concat!(
-            "  %bi = udiv i64 %i, 5\n", // byte index = i / 5
-            "  %wp = getelementptr i8, ptr %w, i64 %bi\n",
-            "  %byte = load i8, ptr %wp\n",
-            "  %byte64 = zext i8 %byte to i64\n",
-            "  %pos = urem i64 %i, 5\n", // digit position within the byte
-            "  %is0 = icmp eq i64 %pos, 0\n",
-            "  %is1 = icmp eq i64 %pos, 1\n",
-            "  %is2 = icmp eq i64 %pos, 2\n",
-            "  %is3 = icmp eq i64 %pos, 3\n",
-            "  %dv3 = select i1 %is3, i64 27, i64 81\n", // 3^p lookup (default p=4 ⇒ 81)
-            "  %dv2 = select i1 %is2, i64 9, i64 %dv3\n",
-            "  %dv1 = select i1 %is1, i64 3, i64 %dv2\n",
-            "  %div = select i1 %is0, i64 1, i64 %dv1\n",
-            "  %q = udiv i64 %byte64, %div\n",
+            // needed = ⌈5·⌈n/3⌉ / 8⌉; lastbyte = needed − 1 (loop-invariant; LICM hoists it).
+            "  %np2 = add i64 %n, 2\n",
+            "  %grpcount = udiv i64 %np2, 3\n",
+            "  %totbits = mul i64 %grpcount, 5\n",
+            "  %totbitsp7 = add i64 %totbits, 7\n",
+            "  %needed = udiv i64 %totbitsp7, 8\n",
+            "  %lastbyte = sub i64 %needed, 1\n",
+            // this trit's group / position / bit offset
+            "  %grp = udiv i64 %i, 3\n",
+            "  %pos = urem i64 %i, 3\n",
+            "  %bitoff = mul i64 %grp, 5\n",
+            "  %byteidx = udiv i64 %bitoff, 8\n",
+            "  %shift = urem i64 %bitoff, 8\n",
+            // second byte index, clamped to lastbyte (branch-free)
+            "  %idx1raw = add i64 %byteidx, 1\n",
+            "  %inrange = icmp ult i64 %idx1raw, %lastbyte\n",
+            "  %idx1 = select i1 %inrange, i64 %idx1raw, i64 %lastbyte\n",
+            // load the 2-byte window and extract the 5-bit code
+            "  %bp0 = getelementptr i8, ptr %w, i64 %byteidx\n",
+            "  %b0 = load i8, ptr %bp0\n",
+            "  %bp1 = getelementptr i8, ptr %w, i64 %idx1\n",
+            "  %b1 = load i8, ptr %bp1\n",
+            "  %b0w = zext i8 %b0 to i16\n",
+            "  %b1w = zext i8 %b1 to i16\n",
+            "  %b1hi = shl i16 %b1w, 8\n",
+            "  %window = or i16 %b0w, %b1hi\n",
+            "  %shift16 = trunc i64 %shift to i16\n",
+            "  %wsh = lshr i16 %window, %shift16\n",
+            "  %code16 = and i16 %wsh, 31\n",
+            "  %code = zext i16 %code16 to i64\n",
+            // digit = (code / 3^pos) mod 3, 3^pos ∈ {1,3,9} for pos ∈ {0,1,2}
+            "  %isp0 = icmp eq i64 %pos, 0\n",
+            "  %isp1 = icmp eq i64 %pos, 1\n",
+            "  %dvA = select i1 %isp1, i64 3, i64 9\n",
+            "  %div = select i1 %isp0, i64 1, i64 %dvA\n",
+            "  %q = udiv i64 %code, %div\n",
             "  %d01 = urem i64 %q, 3\n",      // base-3 digit ∈ {0,1,2}
             "  %digit64 = sub i64 %d01, 1\n", // signed weight ∈ {-1,0,1}
         )
@@ -183,6 +199,24 @@ pub struct BitnetDotKernel {
 }
 
 impl BitnetDotKernel {
+    /// Wrap an already-compiled + loaded `i64 myc_*(ptr %w, ptr %x, i64 %n)` artifact. `pub(crate)`
+    /// so a sibling codegen module (the M-360 SIMD kernel) reuses this struct's bounds-checked
+    /// [`call`](Self::call) instead of re-rolling the FFI — the SIMD kernel has the identical C
+    /// signature and `scheme` bounds model, only a different (hand-vectorized) body + symbol.
+    pub(crate) fn from_loaded(
+        dir: TmpDir,
+        lib: Lib,
+        fptr: *mut c_void,
+        scheme: PackScheme,
+    ) -> Self {
+        Self {
+            _dir: dir,
+            _lib: lib,
+            fptr,
+            scheme,
+        }
+    }
+
     /// The packing this kernel decodes inline.
     #[must_use]
     pub fn scheme(&self) -> PackScheme {
@@ -191,15 +225,16 @@ impl BitnetDotKernel {
 
     /// Run the kernel over `packed_weights` (packed under [`scheme`](Self::scheme)) and
     /// `activations`, summing the first `n` ternary products. The lengths are checked against `n`
-    /// (≥ `n.div_ceil(trits_per_byte)` weight bytes, ≥ `n` activations) so the native loads are
-    /// always in bounds — a short buffer is an explicit [`AotError`], never an out-of-bounds read.
+    /// (≥ `pack::needed_bytes(scheme, n)` weight bytes — `n.div_ceil(4)` for I2_S/TL1, the 5-bit
+    /// bitstream length for TL2 — and ≥ `n` activations) so the native loads are always in bounds —
+    /// a short buffer is an explicit [`AotError`], never an out-of-bounds read.
     pub fn call(
         &self,
         packed_weights: &[u8],
         activations: &[i32],
         n: usize,
     ) -> Result<i64, AotError> {
-        let need_bytes = n.div_ceil(trits_per_byte(self.scheme));
+        let need_bytes = crate::pack::needed_bytes(self.scheme, n);
         if packed_weights.len() < need_bytes {
             return Err(AotError::Run(format!(
                 "packed weights too short: need {need_bytes} bytes for {n} trits, got {}",
@@ -214,9 +249,10 @@ impl BitnetDotKernel {
         }
         let n_i64 = i64::try_from(n).map_err(|_| AotError::Run(format!("n too large: {n}")))?;
         // SAFETY: `fptr` is the address `dlsym` returned for the `i64 myc_bitnet_dot(ptr,ptr,i64)` we
-        // emitted and compiled, so the `extern "C"` type matches. The bounds checks above guarantee
-        // the kernel reads only `w[0..ceil(n/4)]` and `x[0..n]`, both in-bounds for the slices. The
-        // library stays loaded for the call (`_lib`).
+        // emitted and compiled, so the `extern "C"` type matches. The bounds check above guarantees
+        // the kernel reads only `w[0..needed_bytes(scheme, n)]` and `x[0..n]`, both in-bounds for the
+        // slices (the TL2 kernel clamps its 2-byte window read to the last valid byte). The library
+        // stays loaded for the call (`_lib`).
         #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
         let sum = unsafe {
             let kernel: extern "C" fn(*const u8, *const i32, i64) -> i64 =
@@ -379,10 +415,11 @@ mod tests {
         assert!(tl1.contains("urem i32 %c1, 3")); // TL1 inverts rot=2: d01 = (code+1) mod 3
         assert!(tl1.contains("(Tl1; M-360)"));
         let tl2 = emit_bitnet_dot_ir_for(PackScheme::Tl2).unwrap();
-        assert!(tl2.contains("udiv i64 %i, 5")); // TL2 is 5 trits/byte
-        assert!(tl2.contains("select i1 %is0, i64 1, i64")); // the 3^p divisor lookup
-        assert!(tl2.contains("urem i64 %q, 3"));
-        // Deterministic per scheme.
+        assert!(tl2.contains("udiv i64 %i, 3")); // TL2 (true 1.67 b/w): 3 trits per 5-bit group
+        assert!(tl2.contains("and i16 %wsh, 31")); // extract the 5-bit LUT-index code
+        assert!(tl2.contains("select i1 %inrange")); // the clamped 2-byte window read (no OOB)
+        assert!(tl2.contains("urem i64 %q, 3")); // digit = (code / 3^pos) mod 3
+                                                 // Deterministic per scheme.
         assert_eq!(tl2, emit_bitnet_dot_ir_for(PackScheme::Tl2).unwrap());
     }
 
@@ -427,26 +464,34 @@ mod tests {
     }
 
     #[test]
-    fn tl2_bounds_use_five_trits_per_byte() {
-        // TL2 packs 5 trits/byte, so the weight-buffer bound is n.div_ceil(5), not /4. A buffer that
-        // is long enough for I2_S but short for TL2 must still be accepted under TL2's looser bound.
+    fn tl2_uses_the_true_167_bitstream_bound() {
+        // TL2 is the true bitnet.cpp 1.67-b/w layout: 3 trits → 5 bits, bit-packed. 10 trits → 4
+        // groups → 20 bits → 3 bytes (not the old 2-byte 5/byte placeholder). The kernel decodes the
+        // bitstream and a too-short buffer is still an explicit refusal.
         let kernel = match compile_bitnet_dot_for(PackScheme::Tl2) {
             Ok(k) => k,
             Err(AotError::ToolchainMissing(_)) => return,
             Err(e) => panic!("compile failed: {e}"),
         };
         assert_eq!(kernel.scheme(), PackScheme::Tl2);
-        let n = 10; // 10 trits → 2 bytes under TL2 (5/byte)
+        let n = 10;
         let w = weights(n);
         let x = activations(n);
         let packed = pack_trits(&w, PackScheme::Tl2);
-        assert_eq!(packed.len(), 2);
+        assert_eq!(
+            packed.len(),
+            3,
+            "10 trits → ⌈5·⌈10/3⌉/8⌉ = 3 bytes at 1.67 b/w"
+        );
         assert_eq!(
             kernel.call(&packed, &x, n).unwrap(),
             ternary_dot_ref(&w, &x)
         );
-        // One byte cannot hold 10 TL2 trits → explicit refusal.
-        assert!(matches!(kernel.call(&[0u8], &x, n), Err(AotError::Run(_))));
+        // Two bytes cannot hold 10 TL2 trits (need 3) → explicit refusal, never an OOB read.
+        assert!(matches!(
+            kernel.call(&[0u8, 0u8], &x, n),
+            Err(AotError::Run(_))
+        ));
     }
 
     #[test]
