@@ -92,10 +92,10 @@ completed. Readiness is relative to the corpus + landed Phase-1/2 deps.
 | **M-301** Direct-LLVM-IR AOT backend (kernel subset) | E3-7 (prereq) | P1 | M-150, M-110 | RFC-0004 §2 / ADR-007/009 | **Done (2026-06-15)** — bit subset + `trit.neg` + trit *carry arithmetic* (`add/sub/mul`, ripple-carry/shifted-accumulate, runtime-overflow read-back); shared by AOT + JIT |
 | **M-302** interp↔native differential (extend M-151) | E3-7 (prereq) | P1 | M-301, M-151 | NFR-7 / VR-4 / RR-12 | **Done (2026-06-15)** — `tests/native_differential.rs` (bit subset; toolchain-gated skip) |
 | **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | **Done (2026-06-15)** — `cargo xtask e1` §2 measures native AOT vs interp; compute throughput now measured over runtime data in §3 (M-360) |
-| **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()`; **LSP wire protocol** (`wire`: JSON-RPC `Content-Length` framing, `publishDiagnostics` mapping, `initialize`/`shutdown`/`exit` lifecycle). Remaining: **document sync** (needs a text→`Node` path — L1, M-320) |
+| **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()`; **LSP wire protocol** (`wire`: JSON-RPC `Content-Length` framing, `publishDiagnostics` mapping, `initialize`/`shutdown`/`exit` lifecycle). **Text→`Node` blocker cleared** (RFC-0011 r3 enacted — the parser→checker→elaborate→L0 pipeline now reaches data/matching). Remaining: the `didOpen`/`didChange` **document sync** wiring on that pipeline (no longer gate-blocking — R1 closed) |
 | **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | **Done (2026-06-15)** — `mycelium-build` crate (decide + content-addressed `BuildCertificate`) |
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | **Done (2026-06-15)** — `mycelium-build::cache` (`BuildCache`, request-addressed) |
-| **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses) + the **Maranget decision-tree compiler** (the codegen half — `decision`: occurrences + `switch`/`leaf` tree, verified against the reference matcher, wired into `checkty` as a Fail-free cross-check). Remaining: emit tree leaves as **L0 kernel nodes** — **RFC-0011 ratified** (RFC-0001 r3: `Construct` + flat `Match` into L0, staged; flat `Match` is the kernel node). Enactment (r3 text-fold + the wiring) sequenced as the **core-lang step after RFC-0006/0007 are completed + ratified**; RFC-0001 stays r2/frozen until then |
+| **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **Done (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses) + the **Maranget decision-tree compiler**, and now the **codegen half lands in L0**: `elab` emits the tree's leaves as **kernel `Construct`/flat `Match` nodes** (RFC-0011 r3 enacted; RFC-0001 → r3). The M-110 interpreter evaluates them and the M-210 differential covers the data fragment (L1-eval ≡ elaborate→L0-interp, mutant-witness). `Lam/App/Fix` → r4 |
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
 | **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`), NFR-7 checked; **+ runtime-specialization layer** (`mycelium-mlir::specialize`): bakes the runtime-known weight vector into the dot kernel (zero lanes elided, unpack dropped, ±1 → add/sub), validated generic↔specialized through the shared M-210 checker, E1 §4 records the **measured** speedup (no target pre-written) |
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **Design drafted (2026-06-15)** — RFC-0009 (convergence regime, `Empirical`-ceiling honesty, never-silent verdicts); prototype gated on ratification |
@@ -186,7 +186,7 @@ the phase; the gate is defined in §6 and verdicts are filled as tasks land.
 
 ---
 
-## 6. Phase-3 exit gate (proposed — **substantially met; two sequenced residuals**, §6.1)
+## 6. Phase-3 exit gate (proposed — **met; both residuals closed 2026-06-15**, §6.1)
 
 Phase 3 is large and partly exploratory/external-blocked, so the gate is scoped to the **buildable,
 local** deliverables; the exploratory/KC-2-gated epics (E3-1 projections, the E3-2 operational arm,
@@ -220,23 +220,24 @@ established; **gate-blocking** vs **stretch** is flagged, and no verdict is pre-
 | Gate condition | Verdict (2026-06-15) | Gate-blocking? |
 |---|---|---|
 | **Native execution path** (M-301/302/303) | ✅ **MET (build + measured).** M-301 compiles+runs the bit/trit kernel subset to a native artifact; M-302 passes on the kernel corpus **and** catches a deliberately divergent lowering (the discrimination test — guard 7); M-303's E1 is **measured** (native-vs-interp, honestly captioned), and compute throughput is now genuinely measured over runtime data (M-360 §3 packed-ternary kernels ≈1.13–1.67× vs scalar; M-340 §4 weight-specialization ≈10.7×) — no "within an agreed target" claim. | **yes — satisfied** |
-| **Matured toolchain** (M-310/311/312) | 🟡 **MET except document sync.** M-311 (build-system gate + content-addressed `BuildCertificate`, forge-proof deserialize) and M-312 (request-addressed `BuildCache`, demonstrably reuses a prior cert; a weakened obligation misses) ship with tests — **met**. M-310 ships structured diagnostics (`FeedbackSummary`) + the LSP **wire protocol** (JSON-RPC framing, `publishDiagnostics`, lifecycle) with tests — the **diagnostics** condition is met; **document sync** is the honest residual (needs the text→`Node` path). | **yes — residual R1** |
-| **L1 surface** (M-320 + RFC-0007) | 🟡 **MET in prototype; ratification sequenced.** M-320 lands in `mycelium-l1` with tests (literal + nested `match`, Maranget usefulness with witnesses, the decision-tree compiler) — **met**. RFC-0007 is **presented**, and the L0-`Match` revision it needs is **ratified as a decision** (RFC-0011, staged r3). The maintainer has **directed RFC-0006 + RFC-0007 be completed and ratified** before core-lang impl — so full ratification is **sequenced** (residual R2). Concrete syntax stays KC-2-gated (unchanged). | **yes — residual R2** |
+| **Matured toolchain** (M-310/311/312) | ✅ **MET — document sync unblocked (R1 closed 2026-06-15).** M-311 (build-system gate + content-addressed `BuildCertificate`, forge-proof deserialize) and M-312 (request-addressed `BuildCache`, demonstrably reuses a prior cert; a weakened obligation misses) ship with tests — **met**. M-310 ships structured diagnostics (`FeedbackSummary`) + the LSP **wire protocol** (JSON-RPC framing, `publishDiagnostics`, lifecycle). The **text→`Node` blocker is now cleared**: RFC-0011 r3 is enacted, so the parser→checker→**elaborate→L0** pipeline reaches data/matching programs (the differential ties L1-eval ≡ L0-interp) — the path real document sync rides on now exists. (The `didOpen`/`didChange` wiring itself is the remaining M-310 build task, no longer a *gate* residual.) | **no — R1 closed** |
+| **L1 surface** (M-320 + RFC-0007) | ✅ **MET — enacted (R2 ratified, then enacted 2026-06-15).** M-320 lands in `mycelium-l1` with tests (literal + nested `match`, Maranget usefulness with witnesses, the decision-tree compiler), and its remaining half — **emitting the tree's leaves as L0 kernel nodes** — is now done: `elab` lowers nested patterns to nested flat L0 `Match`/`Construct` (RFC-0011 r3). RFC-0006/0007 are **Accepted (r4)** and RFC-0011 is **r3 ENACTED** (RFC-0001 → r3). Concrete syntax stays KC-2-gated (unchanged). | **no — satisfied** |
 
-**Overall verdict (honest, VR-5): the gate is *substantially met but not yet fully closed*.** The
-keystone native-execution-path condition is fully met and measured; the matured-toolchain and
-L1-surface conditions are met except for two **gate-relevant residuals** (not stretch — both are named
-in the gate), each now sequenced with an owner and an order:
+**Overall verdict (honest, VR-5): both gate residuals are now closed — the gate is met pending a
+maintainer re-assertion.** The keystone native-execution-path condition is fully met and measured;
+the matured-toolchain and L1-surface conditions are now also met, both prior residuals discharged:
 
-- **R1 — M-310 document sync.** Blocked on the text→`Node` path, which is the RFC-0011 enactment
-  (`Match`/`Construct` → L0 + the parser→checker→L0 pipeline). Closes in the **core-lang step**.
-- **R2 — RFC-0006 + RFC-0007 completed and ratified.** Maintainer-directed; **sequenced before**
-  core-lang impl (after the exit-gate assembly and the M-360 SIMD increment).
+- **R1 — M-310 document sync → CLOSED (2026-06-15).** The text→`Node` blocker was the RFC-0011
+  enactment; it is done — `Construct`/`Match` are L0 nodes and the parser→checker→**elaborate→L0**
+  pipeline reaches data/matching programs (the M-210 differential ties L1-eval ≡ L0-interp). The
+  remaining `didOpen`/`didChange` LSP wiring is an ordinary M-310 build task, not a gate residual.
+- **R2 — RFC-0006 + RFC-0007 completed and ratified → DONE (2026-06-15).** Both Accepted (r4); RFC-0011
+  is **r3 ENACTED** and RFC-0001 is **r3**.
 
-So `docs/planning/phase-3.md` stays **Living draft** (not "exit-gate met"): the build order to close it
-is **M-360 SIMD + true-TL2 → complete + ratify RFC-0006/0007 → enact RFC-0011 r3 + M-320 wiring (closes
-R1) → re-assert the gate**. Everything else in the gate is met; nothing here upgrades a verdict beyond
-the checked run that established it.
+The build order is now complete: **M-360 SIMD + true-TL2 → ratify RFC-0006/0007 → enact RFC-0011 r3 +
+M-320 wiring (closed R1) → re-assert the gate.** With R1 + R2 closed, the §6 exit gate is **ready for a
+maintainer re-assertion** (`Living draft → exit-gate met`); nothing here upgrades a verdict beyond the
+checked run that established it (497 workspace tests; the data-fragment differential).
 
 > The §6 gate is itself a **proposed** scope decision (what counts as "Phase-3 done" given two
 > external blockers). It is recorded here for the maintainer to ratify or adjust; §6.1 fills it at the

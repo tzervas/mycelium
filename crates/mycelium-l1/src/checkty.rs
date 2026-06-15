@@ -125,7 +125,7 @@ fn prelude() -> DataInfo {
 /// Resolve a surface [`TypeRef`] to a v0 [`Ty`]. Generic instantiations and VSA types are
 /// explicit "deferred" refusals in v0 (RFC-0007 §4.4), never guesses. The guarantee index is
 /// *allowed* and returned alongside (checked dynamically at stage 0 — RFC-0007 §4.3).
-fn resolve_ty(
+pub(crate) fn resolve_ty(
     site: &str,
     types: &BTreeMap<String, DataInfo>,
     t: &TypeRef,
@@ -529,7 +529,7 @@ impl Cx<'_> {
         let mut result: Option<Ty> = None;
         for arm in arms {
             // Type the (possibly nested) pattern against the scrutinee type, collecting its binders.
-            let mut binds: Vec<(String, Ty)> = Vec::new();
+            let mut binds: Vec<(String, Ty, Vec<usize>)> = Vec::new();
             let pat = self.check_pattern(&arm.pattern, &sty, &mut binds)?;
             self.check_linear(&binds)?;
             // Redundancy (W7): an arm covered by the earlier rows is unreachable.
@@ -543,8 +543,8 @@ impl Cx<'_> {
             }
             // Type the body with the pattern's binders in scope.
             let depth = scope.len();
-            for b in &binds {
-                scope.push(b.clone());
+            for (name, ty, _occ) in &binds {
+                scope.push((name.clone(), ty.clone()));
             }
             let bty = self.infer(scope, &arm.body)?;
             scope.truncate(depth);
@@ -583,78 +583,24 @@ impl Cx<'_> {
         result.map_or_else(|| self.err("a match needs at least one arm"), Ok)
     }
 
-    /// Type-check `pat` against `expected`, accumulating its binders (`name: ty`) into `binds`, and
-    /// return the normalized [`crate::usefulness::Pat`] for the coverage matrix. Nested constructor
-    /// and literal patterns are checked recursively (RFC-0007 §4.7); a binder becomes a wildcard for
-    /// coverage (it refines nothing), a nullary constructor an empty `Ctor`.
+    /// Type-check `pat` against `expected`, accumulating its binders (`name: ty @ occurrence`) into
+    /// `binds`, and return the normalized [`crate::usefulness::Pat`] for the coverage matrix.
+    /// Delegates to the free [`normalize_pattern`] (shared with the elaborator), starting at the root
+    /// occurrence `[]`.
     fn check_pattern(
         &self,
         pat: &Pattern,
         expected: &Ty,
-        binds: &mut Vec<(String, Ty)>,
+        binds: &mut Vec<(String, Ty, Vec<usize>)>,
     ) -> Result<crate::usefulness::Pat, CheckError> {
-        use crate::usefulness::Pat;
-        match pat {
-            Pattern::Wildcard => Ok(Pat::Wild),
-            Pattern::Ident(n) => {
-                // A bare name is a nullary-constructor alternative iff it names one of the expected
-                // data type's constructors; otherwise it binds the whole position.
-                if let Ty::Data(tn) = expected {
-                    let d = self.types.get(tn).expect("registered data type");
-                    if let Some(c) = d.ctors.iter().find(|c| c.name == *n) {
-                        if !c.fields.is_empty() {
-                            return self.err(format!(
-                                "constructor pattern `{n}` must bind its {} field(s) (W7)",
-                                c.fields.len()
-                            ));
-                        }
-                        return Ok(Pat::Ctor(n.clone(), vec![]));
-                    }
-                }
-                binds.push((n.clone(), expected.clone()));
-                Ok(Pat::Wild)
-            }
-            Pattern::Ctor(n, subs) => {
-                let Ty::Data(tn) = expected else {
-                    return self.err(format!(
-                        "constructor pattern `{n}` on a {expected} scrutinee — match a literal or `_`"
-                    ));
-                };
-                let d = self.types.get(tn).expect("registered data type").clone();
-                let Some(c) = d.ctors.iter().find(|c| c.name == *n) else {
-                    return self.err(format!("`{n}` is not a constructor of {tn}"));
-                };
-                if subs.len() != c.fields.len() {
-                    return self.err(format!(
-                        "pattern `{n}` binds {} of {} field(s) (W7: exactly the arity)",
-                        subs.len(),
-                        c.fields.len()
-                    ));
-                }
-                let mut out = Vec::with_capacity(subs.len());
-                for (sub, fty) in subs.iter().zip(&c.fields) {
-                    out.push(self.check_pattern(sub, fty, binds)?);
-                }
-                Ok(Pat::Ctor(n.clone(), out))
-            }
-            Pattern::Lit(lit) => {
-                let lty = self.lit_ty(lit)?;
-                if lty != *expected {
-                    return self.err(format!(
-                        "literal pattern has type {lty} but the scrutinee is {expected} \
-                         (W7: a literal arm must match the scrutinee's repr and width)"
-                    ));
-                }
-                Ok(Pat::Lit(literal_key(lit)))
-            }
-        }
+        normalize_pattern(self.types, self.site, pat, expected, &[], binds)
     }
 
     /// A pattern must bind each name at most once (linearity) — a repeated binder is ambiguous, so it
     /// is an explicit error rather than a silent last-wins.
-    fn check_linear(&self, binds: &[(String, Ty)]) -> Result<(), CheckError> {
-        for (i, (n, _)) in binds.iter().enumerate() {
-            if binds[..i].iter().any(|(m, _)| m == n) {
+    fn check_linear(&self, binds: &[(String, Ty, Vec<usize>)]) -> Result<(), CheckError> {
+        for (i, (n, _, _)) in binds.iter().enumerate() {
+            if binds[..i].iter().any(|(m, _, _)| m == n) {
                 return self.err(format!(
                     "pattern binds `{n}` more than once (bindings must be linear)"
                 ));
@@ -667,29 +613,145 @@ impl Cx<'_> {
     /// digit count, a ternary literal's trit count its width. Bare integers and lists need
     /// context v0 does not yet give them → explicit refusal, never a cross-family default.
     fn lit_ty(&self, l: &Literal) -> Result<Ty, CheckError> {
-        match l {
-            Literal::Bin(s) => {
-                let n = s.chars().filter(|c| *c == '0' || *c == '1').count();
-                if n == 0 {
-                    return self.err("empty binary literal");
-                }
-                Ok(Ty::Binary(u32::try_from(n).expect("digit count fits u32")))
+        lit_ty_of(self.site, l)
+    }
+}
+
+/// The literal-typing rule (Q6), as a free function so the elaborator can reuse it without a
+/// checking context. A literal *is* its representation (width = digit count); bare integers and
+/// lists are explicit refusals.
+pub(crate) fn lit_ty_of(site: &str, l: &Literal) -> Result<Ty, CheckError> {
+    match l {
+        Literal::Bin(s) => {
+            let n = s.chars().filter(|c| *c == '0' || *c == '1').count();
+            if n == 0 {
+                return Err(CheckError::new(site, "empty binary literal"));
             }
-            Literal::Trit(s) => {
-                if s.is_empty() {
-                    return self.err("empty ternary literal");
-                }
-                Ok(Ty::Ternary(
-                    u32::try_from(s.len()).expect("trit count fits u32"),
-                ))
+            Ok(Ty::Binary(u32::try_from(n).expect("digit count fits u32")))
+        }
+        Literal::Trit(s) => {
+            if s.is_empty() {
+                return Err(CheckError::new(site, "empty ternary literal"));
             }
-            Literal::Int(_) => self.err(
-                "a bare integer literal has no representation family (no cross-family defaulting, \
-                 Q6) — write a binary/ternary literal or an ascribed Dense element",
-            ),
-            Literal::List(_) => self.err("list literals are deferred in v0 (Dense construction)"),
+            Ok(Ty::Ternary(
+                u32::try_from(s.len()).expect("trit count fits u32"),
+            ))
+        }
+        Literal::Int(_) => Err(CheckError::new(
+            site,
+            "a bare integer literal has no representation family (no cross-family defaulting, \
+             Q6) — write a binary/ternary literal or an ascribed Dense element",
+        )),
+        Literal::List(_) => Err(CheckError::new(
+            site,
+            "list literals are deferred in v0 (Dense construction)",
+        )),
+    }
+}
+
+/// Normalize a surface [`Pattern`] against its `expected` type into a [`crate::usefulness::Pat`]
+/// (the coverage-matrix shape), collecting its binders as `(name, type, occurrence)` — the
+/// **occurrence** is the path of field indices from the scrutinee root to the binder's position.
+/// Shared by the checker (`Cx::check_pattern`, occurrence `[]`) and the **elaborator** (which needs
+/// the matrix + the binder occurrences to lower a `match` to flat L0 `Match`/binders — RFC-0011
+/// §4.4). Nested constructor/literal patterns recurse (RFC-0007 §4.7); a binder is a wildcard for
+/// coverage (it refines nothing), a nullary constructor an empty `Ctor`.
+pub(crate) fn normalize_pattern(
+    types: &BTreeMap<String, DataInfo>,
+    site: &str,
+    pat: &Pattern,
+    expected: &Ty,
+    occ: &[usize],
+    binds: &mut Vec<(String, Ty, Vec<usize>)>,
+) -> Result<crate::usefulness::Pat, CheckError> {
+    use crate::usefulness::Pat;
+    match pat {
+        Pattern::Wildcard => Ok(Pat::Wild),
+        Pattern::Ident(n) => {
+            // A bare name is a nullary-constructor alternative iff it names one of the expected
+            // data type's constructors; otherwise it binds the whole position (at this occurrence).
+            if let Ty::Data(tn) = expected {
+                let d = types.get(tn).expect("registered data type");
+                if let Some(c) = d.ctors.iter().find(|c| c.name == *n) {
+                    if !c.fields.is_empty() {
+                        return Err(CheckError::new(
+                            site,
+                            format!(
+                                "constructor pattern `{n}` must bind its {} field(s) (W7)",
+                                c.fields.len()
+                            ),
+                        ));
+                    }
+                    return Ok(Pat::Ctor(n.clone(), vec![]));
+                }
+            }
+            binds.push((n.clone(), expected.clone(), occ.to_vec()));
+            Ok(Pat::Wild)
+        }
+        Pattern::Ctor(n, subs) => {
+            let Ty::Data(tn) = expected else {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "constructor pattern `{n}` on a {expected} scrutinee — match a literal or `_`"
+                    ),
+                ));
+            };
+            let d = types.get(tn).expect("registered data type").clone();
+            let Some(c) = d.ctors.iter().find(|c| c.name == *n) else {
+                return Err(CheckError::new(
+                    site,
+                    format!("`{n}` is not a constructor of {tn}"),
+                ));
+            };
+            if subs.len() != c.fields.len() {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "pattern `{n}` binds {} of {} field(s) (W7: exactly the arity)",
+                        subs.len(),
+                        c.fields.len()
+                    ),
+                ));
+            }
+            let mut out = Vec::with_capacity(subs.len());
+            for (i, (sub, fty)) in subs.iter().zip(&c.fields).enumerate() {
+                let mut child = occ.to_vec();
+                child.push(i);
+                out.push(normalize_pattern(types, site, sub, fty, &child, binds)?);
+            }
+            Ok(Pat::Ctor(n.clone(), out))
+        }
+        Pattern::Lit(lit) => {
+            let lty = lit_ty_of(site, lit)?;
+            if lty != *expected {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "literal pattern has type {lty} but the scrutinee is {expected} \
+                         (W7: a literal arm must match the scrutinee's repr and width)"
+                    ),
+                ));
+            }
+            Ok(Pat::Lit(literal_key(lit)))
         }
     }
+}
+
+/// Re-infer an expression's type against a checked [`Env`] (the elaborator needs the scrutinee type
+/// to lower a `match`, and a `let`-bound's type to track its scope — RFC-0011). The program is
+/// already checked, so this recomputes a type the checker validated; it does not re-litigate errors.
+pub(crate) fn infer_type(
+    env: &Env,
+    scope: &mut Vec<(String, Ty)>,
+    e: &Expr,
+) -> Result<Ty, CheckError> {
+    let cx = Cx {
+        site: "<elaborate>",
+        types: &env.types,
+        fns: &env.fns,
+    };
+    cx.infer(scope, e)
 }
 
 /// A canonical key for de-duplicating literal patterns (M-320): normalize away `_` separators so

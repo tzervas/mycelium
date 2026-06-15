@@ -20,7 +20,7 @@
 use core::fmt::Write as _;
 
 use crate::meta::PackScheme;
-use crate::node::Node;
+use crate::node::{Alt, Node};
 use crate::repr::{Repr, ScalarKind, SparsityClass};
 use crate::value::{Payload, Trit, Value};
 use crate::{GuaranteeStrength, PhysicalLayout};
@@ -221,6 +221,61 @@ fn write_canon(
             let _ = writeln!(s, "swap -> {} @{}", render_repr(target), short_hash(policy));
             write_canon(src, depth + 1, scope, counter, s);
         }
+        Node::Construct { ctor, args } => {
+            let _ = writeln!(s, "construct {ctor}");
+            for a in args {
+                write_canon(a, depth + 1, scope, counter, s);
+            }
+        }
+        Node::Match {
+            scrutinee,
+            alts,
+            default,
+        } => {
+            let _ = writeln!(s, "match");
+            write_canon(scrutinee, depth + 1, scope, counter, s);
+            for alt in alts {
+                indent(depth, s);
+                match alt {
+                    Alt::Ctor {
+                        ctor,
+                        binders,
+                        body,
+                    } => {
+                        // α-normalize the binder names to v0, v1, … in binding order (the canonical
+                        // dump never leaks source names — §4.8).
+                        let canon: Vec<String> = (0..binders.len())
+                            .map(|_| {
+                                let c = format!("v{counter}");
+                                *counter += 1;
+                                c
+                            })
+                            .collect();
+                        let _ = writeln!(s, "alt {ctor} ({})", canon.join(" "));
+                        let mark = scope.len();
+                        for (orig, c) in binders.iter().zip(&canon) {
+                            scope.push((orig.clone(), c.clone()));
+                        }
+                        write_canon(body, depth + 1, scope, counter, s);
+                        scope.truncate(mark);
+                    }
+                    Alt::Lit { value, body } => {
+                        let _ = writeln!(s, "alt-lit {}", render_const(value));
+                        write_canon(body, depth + 1, scope, counter, s);
+                    }
+                }
+            }
+            indent(depth, s);
+            match default {
+                Some(d) => {
+                    let _ = writeln!(s, "default");
+                    write_canon(d, depth + 1, scope, counter, s);
+                }
+                None => {
+                    let _ = writeln!(s, "no-default");
+                }
+            }
+        }
     }
 }
 
@@ -259,6 +314,47 @@ fn write_core(node: &Node, depth: usize, s: &mut String) {
         } => {
             let _ = writeln!(s, "swap -> {} @{}", render_repr(target), short_hash(policy));
             write_core(src, depth + 1, s);
+        }
+        Node::Construct { ctor, args } => {
+            let _ = writeln!(s, "construct {ctor}");
+            for a in args {
+                write_core(a, depth + 1, s);
+            }
+        }
+        Node::Match {
+            scrutinee,
+            alts,
+            default,
+        } => {
+            let _ = writeln!(s, "match");
+            write_core(scrutinee, depth + 1, s);
+            for alt in alts {
+                indent(depth, s);
+                match alt {
+                    Alt::Ctor {
+                        ctor,
+                        binders,
+                        body,
+                    } => {
+                        let _ = writeln!(s, "alt {ctor} ({})", binders.join(" "));
+                        write_core(body, depth + 1, s);
+                    }
+                    Alt::Lit { value, body } => {
+                        let _ = writeln!(s, "alt-lit {}", render_const(value));
+                        write_core(body, depth + 1, s);
+                    }
+                }
+            }
+            indent(depth, s);
+            match default {
+                Some(d) => {
+                    let _ = writeln!(s, "default");
+                    write_core(d, depth + 1, s);
+                }
+                None => {
+                    let _ = writeln!(s, "no-default");
+                }
+            }
         }
     }
 }
@@ -332,6 +428,13 @@ pub struct Anf {
 
 /// Lower a Core IR node into A-normal form (flatten nested `Op`/`Swap`/`Let` to a linear binding
 /// list). Pure and deterministic; `Meta` rides along on `Const` bindings (WF5).
+///
+/// **Repr-only (r3, RFC-0011 §4.4 Q5).** The ANF substrate / AOT path covers the representation
+/// fragment; the r3 data-and-matching nodes (`Construct`/`Match`) are **interpreter-first** and have
+/// no ANF lowering yet. They never reach here: the M-210 differential runs the data fragment as
+/// *L1-eval ≡ L0-interp* (AOT "where reachable"), and [`crate::Node::is_aot_lowerable`] lets a
+/// caller filter them out explicitly before lowering. Reaching the data arms below is therefore an
+/// upstream-contract violation (a loud panic, never a silent mis-lowering).
 #[must_use]
 pub fn lower_to_anf(node: &Node) -> Anf {
     let mut b = Vec::new();
@@ -401,6 +504,13 @@ fn flatten(node: &Node, out: &mut Vec<Binding>, next: &mut usize) -> Atom {
             });
             name
         }
+        // r3 (RFC-0011 §4.4 Q5): the data nodes are interpreter-first and have no ANF lowering. A
+        // caller must filter them out (Node::is_aot_lowerable) before lowering; reaching here is an
+        // upstream-contract break, surfaced loudly rather than mis-lowered silently (never-silent).
+        Node::Construct { .. } | Node::Match { .. } => unreachable!(
+            "Construct/Match have no AOT/ANF lowering in r3 (RFC-0011 Q5); they run on the \
+             reference interpreter — filter with Node::is_aot_lowerable before lowering"
+        ),
     }
 }
 

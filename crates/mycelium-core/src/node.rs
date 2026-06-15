@@ -9,12 +9,18 @@
 //!        | Let   { id: VarId, bound: Node, body: Node }
 //!        | Op    { prim: Prim, args: [Node] }          (* paradigm-specific primitive *)
 //!        | Swap  { src: Node, target: Repr, policy: PolicyRef }  (* the ONLY Repr-changing node *)
+//!        | Construct { ctor: CtorRef, args: [Node] }            (* NEW (r3): saturated, W6 *)
+//!        | Match { scrutinee: Node, alts: [Alt], default: Option<Node> } (* NEW (r3): flat, W7 *)
 //! ```
 //!
 //! Well-formedness (RFC-0001 §4.5): **WF1** every change of a value's `Repr` is a [`Node::Swap`];
 //! **WF2** every [`Node::Swap`] carries a [`PolicyRef`] — enforced *by construction* here, since
-//! the `policy` field is mandatory.
+//! the `policy` field is mandatory. The r3 nodes carry **WF6** (`Construct` saturation), **WF7**
+//! (flat, checked-exhaustive `Match`), and **WF8** (no `Swap` introduced through a `Match`/`Construct`
+//! elaboration); WF6/WF7 coverage is *checked* above the kernel (the M-320 usefulness analysis +
+//! the data registry [`crate::data::DataRegistry`]), never assumed here (RFC-0011 §4.3).
 
+use crate::data::CtorRef;
 use crate::id::ContentHash;
 use crate::repr::Repr;
 use crate::value::Value;
@@ -58,6 +64,52 @@ pub enum Node {
         /// The policy that chose/justified the swap.
         policy: PolicyRef,
     },
+    /// A saturated constructor application (RFC-0011 §4.1, r3): builds a data value. SC-3-transparent
+    /// (Repr-transparent — no `Swap`). `args.len()` must equal the constructor's field count (WF6);
+    /// saturation is *checked* against the data registry above the kernel.
+    Construct {
+        /// The constructor (`#T#i`).
+        ctor: CtorRef,
+        /// The field expressions, in declaration order (saturated, WF6).
+        args: Vec<Node>,
+    },
+    /// A **flat** pattern match (RFC-0011 §4.1, r3): one scrutinee, single-level constructor/literal
+    /// alternatives, at most one default. Coverage is *checked* (WF7), never assumed; the Maranget
+    /// decision tree that lowers nested surface patterns to this flat form stays an untrusted
+    /// artifact above the kernel (RFC-0011 §4.4).
+    Match {
+        /// The value being scrutinised.
+        scrutinee: Box<Node>,
+        /// The alternatives, tried first-match, left-to-right.
+        alts: Vec<Alt>,
+        /// The catch-all branch, taken when no alternative matches.
+        default: Option<Box<Node>>,
+    },
+}
+
+/// One alternative of a flat [`Node::Match`] (RFC-0011 §4.1): a constructor arm (binding exactly the
+/// constructor's arity) or a literal arm (over the non-enumerated `Binary{n}`/`Ternary{m}` domain).
+#[derive(Debug, Clone, PartialEq)]
+pub enum Alt {
+    /// A constructor arm: matches a data value of constructor `ctor`, binding its fields to `binders`
+    /// (exactly the constructor's arity — WF7), left-to-right.
+    Ctor {
+        /// The constructor matched (`#T#i`).
+        ctor: CtorRef,
+        /// The field binders, in declaration order (length == the constructor's arity).
+        binders: Vec<VarId>,
+        /// The arm body, in scope of `binders`.
+        body: Node,
+    },
+    /// A literal arm: matches a representation value equal (repr + payload) to `value`. Because the
+    /// `Binary{n}`/`Ternary{m}` domain is not enumerated, a `Match` carrying literal arms must also
+    /// carry a `default` (WF7) — checked above the kernel.
+    Lit {
+        /// The literal value to match (a `Binary{n}`/`Ternary{m}` constant).
+        value: Value,
+        /// The arm body.
+        body: Node,
+    },
 }
 
 impl Node {
@@ -65,6 +117,22 @@ impl Node {
     #[must_use]
     pub fn is_repr_changing(&self) -> bool {
         matches!(self, Node::Swap { .. })
+    }
+
+    /// Whether this whole node is in the **AOT-lowerable** (representation-only) fragment — i.e. it
+    /// contains no r3 data node (`Construct`/`Match`). The AOT/ANF path is repr-only in r3
+    /// (RFC-0011 §4.4 Q5); a caller filters with this before [`crate::lower::lower_to_anf`], and the
+    /// data fragment runs on the reference interpreter instead (the M-210 differential is L1-eval ≡
+    /// L0-interp there). Honest: a `false` here is *why* a program is interpreter-only, not a gap.
+    #[must_use]
+    pub fn is_aot_lowerable(&self) -> bool {
+        match self {
+            Node::Const(_) | Node::Var(_) => true,
+            Node::Let { bound, body, .. } => bound.is_aot_lowerable() && body.is_aot_lowerable(),
+            Node::Op { args, .. } => args.iter().all(Node::is_aot_lowerable),
+            Node::Swap { src, .. } => src.is_aot_lowerable(),
+            Node::Construct { .. } | Node::Match { .. } => false,
+        }
     }
 }
 

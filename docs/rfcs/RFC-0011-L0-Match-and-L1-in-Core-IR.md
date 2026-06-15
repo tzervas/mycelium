@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0011 |
-| **Status** | **Accepted — decision only; enactment sequenced** (ratified 2026-06-15: maintainer chose the **staged** path — r3 = data-and-matching core, flat `Match`; `Lam/App/Fix` deferred to r4. **Enactment is deferred**, not done here: RFC-0011 depends on RFC-0007, and the maintainer directed that **RFC-0006 + RFC-0007 be completed and ratified first**. So the RFC-0001 r2 → r3 text-fold (§4.1/§4.3), the RFC-0007 §4.6 narrowing, and the M-320 elaborator wiring land **together as the core-lang step**, *after* the Phase-3 exit-gate assembly → M-360 SIMD → RFC-0006/0007 ratification. RFC-0001 stays **r2/frozen** until then. Append-only.) |
+| **Status** | **Accepted — r3 ENACTED** (2026-06-15: the staged r3 — data-and-matching core, flat `Match` — is now **folded into RFC-0001 (r3) and implemented in lockstep**. The §4.1–4.3 diff below is in force: `Construct` + flat `Match` + the content-addressed data registry + WF6/WF7/WF8 are L0 Core IR; the §4.6 `Residual` is narrowed for data/matching (RFC-0007 §4.6 note added); the M-320 elaborator now emits `Match`/`Construct`, the M-110 interpreter evaluates them, and the M-210 differential covers the data fragment (L1-eval ≡ elaborate→L0-interp). `Lam/App/Fix` remain the named **r4**. The prior "decision only; enactment sequenced" status is superseded by this entry — append-only.) |
 | **Type** | Foundational / normative (once Accepted) |
 | **Date** | 2026-06-15 |
 | **Depends on** | RFC-0001 §4.5/§4.6 (frozen Core IR, WF1–WF5, content-addressing); RFC-0006 §3/§4.4 step 2 (layering; the named revision); RFC-0007 §4.1–4.6 (the L1 calculus this folds in: terms, registry, typing, the §4.6 fragment restriction this retires); ADR-003 (Unison identity); `crates/mycelium-l1` (the non-normative prototype: `usefulness`, `decision`, `checkty`, `elab`) |
@@ -284,6 +284,23 @@ backend grows data support.
 
 ## Meta — changelog
 
+- **2026-06-15 — r3 ENACTED (the §4.7 steps 2–3, performed in lockstep).** With RFC-0006/0007
+  ratified, the staged r3 is now **folded and implemented together** (spec never leads code): (2)
+  **RFC-0001 r2 → r3** — §4.5 gains `Construct` + flat `Match` + `Alt` (supersedes the r2 grammar) +
+  WF6/WF7/WF8; §4.6 gains the content-addressed data registry Σ (`CtorRef = #T#i`, Unison
+  self-recursive placeholder hashing; mutual recursion deferred to r4); §4.2 gains `Datum` + the
+  runtime sum `CoreValue` (a **sibling** type — `Value` unchanged — with a **meet-summary guarantee,
+  no bound**, the one genuinely-open value-model choice, maintainer-confirmed); §4.7 gains the datum
+  guarantee addendum. RFC-0007 §4.6 gets the `Residual`-narrowing note. (3) The wiring lands:
+  `mycelium-core` (registry, `Datum`/`CoreValue`, the nodes, content-addressing/serialization,
+  AOT-repr-only `is_aot_lowerable` per Q5), `mycelium-interp` (`Construct`/`Match` small-step +
+  `eval_core`, the `Exact`-scrutinee meet identity + the explicit non-`Exact` refusal), and
+  `mycelium-l1::elab` (the M-320 Maranget tree lowering nested patterns to nested flat L0 `Match`,
+  `if`→Bool-match; App/Fix/`for` stay `Residual`, r4). The **M-210 differential** extends to the
+  data fragment (L1-eval ≡ elaborate→L0-interp on the `CoreValue` observable, via `L1Value::to_core`,
+  with a mutant-witness) — closing **M-310's** text→`Node` blocker (residual R1) and **M-320's**
+  decision-tree-leaf emission. 497 workspace tests pass. r4 (`Lam/App/Fix`) remains the named future
+  revision.
 - **2026-06-15 — Accepted (decision recorded; enactment sequenced).** The maintainer chose the
   **staged** path (this RFC's recommendation): **RFC-0001 r3** = the data-and-matching core
   (`Construct` + flat `Match` + the content-addressed registry, with WF6/WF7/WF8), `Lam/App/Fix`

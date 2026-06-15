@@ -164,6 +164,14 @@ M-150 AOT path must agree on the observable, validated through the M-210 shared 
 *full* answer — adding the five L1 nodes to the Core IR with their own WF rules — is the planned
 RFC-0001 revision (RFC-0006 §4.4 step 2) and supersedes §4.6's fragment restriction when it lands.
 
+> **Narrowed by RFC-0001 r3 (RFC-0011, enacted 2026-06-15).** The `Residual` refusal is **retired for
+> data construction and matching**: `Construct` and the flat `Match` are now L0 Core IR nodes, so a
+> non-recursive program that builds/matches data **elaborates** (the M-320 Maranget tree lowers nested
+> patterns to the flat kernel `Match`; `if` desugars to a `Bool` match). The fragment restriction
+> therefore *narrows*, it does not vanish — `App`/`Fix` (and `for`, a structural `Fix`) keep returning
+> `Residual` until **r4**. The differential obligation now also covers the data/matching fragment
+> (L1-eval ≡ elaborate→L0-interp); the AOT path stays repr-only in r3 (RFC-0011 §4.4 Q5).
+
 ### 4.7 Memory-safety semantics (LR-9)
 
 L1 runtime values are **immutable and acyclic by construction**: recursion is through
@@ -313,6 +321,13 @@ revisions / KC-2-gated.*
 
 ## Meta — changelog
 
+- **2026-06-15 — §4.6 `Residual` narrowed (RFC-0001 r3 / RFC-0011 enacted; editorial, append-only).**
+  Added the §4.6 note recording that the planned RFC-0001 revision has landed for **data and matching**:
+  `Construct` + flat `Match` are now L0 Core IR nodes, so those programs **elaborate** (the M-320
+  Maranget tree lowers nested patterns to the flat kernel `Match`) instead of returning `Residual`. The
+  fragment restriction *narrows* — `App`/`Fix`/`for` keep returning `Residual` until r4. No calculus
+  content changed; this records the consequence of the RFC-0011 enactment on §4.6's wording (RFC-0011
+  §4.4 / RFC-0001 r3).
 - **2026-06-15 (r4) — Accepted (maintainer sign-off).** Moved `Draft → Accepted` with the **§10
   carve-out**: ratified = the v0 calculus §4.1–4.8 (ten-node budget, registry, stage-0 dynamic
   guarantee check, the `matured` totality gate, evaluation-complete-fragment elaboration, acyclicity,

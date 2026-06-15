@@ -175,6 +175,46 @@ fn walk<'a>(node: &'a Node, prefix: &str, scope: &mut Vec<&'a str>, out: &mut Ve
             }
             walk(src, &at, scope, out);
         }
+        // r3 (RFC-0011): the data nodes are Repr-transparent (WF8 — no swap to lint), so the walk
+        // just descends; a `Match` constructor arm binds its field variables for the body's scope
+        // (so a binder use is not mis-flagged as a free variable).
+        Node::Construct { ctor, args } => {
+            let at = here(prefix, &format!("construct {ctor}"));
+            for a in args {
+                walk(a, &at, scope, out);
+            }
+        }
+        Node::Match {
+            scrutinee,
+            alts,
+            default,
+        } => {
+            let at = here(prefix, "match");
+            walk(scrutinee, &at, scope, out);
+            for alt in alts {
+                match alt {
+                    mycelium_core::Alt::Ctor {
+                        ctor,
+                        binders,
+                        body,
+                    } => {
+                        let arm_at = here(&at, &format!("alt {ctor}"));
+                        let mark = scope.len();
+                        for b in binders {
+                            scope.push(b);
+                        }
+                        walk(body, &arm_at, scope, out);
+                        scope.truncate(mark);
+                    }
+                    mycelium_core::Alt::Lit { body, .. } => {
+                        walk(body, &here(&at, "alt-lit"), scope, out);
+                    }
+                }
+            }
+            if let Some(d) = default {
+                walk(d, &here(&at, "default"), scope, out);
+            }
+        }
     }
 }
 

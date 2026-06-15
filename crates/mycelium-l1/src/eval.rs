@@ -21,7 +21,7 @@
 //!   never panics or defaults (S5/G2).
 
 use mycelium_cert::BinaryTernarySwapEngine;
-use mycelium_core::{GuaranteeStrength, Value};
+use mycelium_core::{CoreValue, DataRegistry, Datum, GuaranteeStrength, Value};
 use mycelium_interp::{EvalError as KernelError, PrimRegistry, SwapEngine};
 
 use crate::ast::{Expr, Literal, Pattern, Strength};
@@ -53,6 +53,30 @@ impl L1Value {
         match self {
             L1Value::Repr(v) => Some(v),
             L1Value::Data { .. } => None,
+        }
+    }
+
+    /// Project this L1 value onto the L0 [`CoreValue`] domain, resolving each constructor's
+    /// name-keyed identity (`ty`/`ctor`) to its content-addressed `#T#i` [`mycelium_core::CtorRef`]
+    /// through `registry` — the **same** registry the elaborator built (RFC-0011 §4.3). This is the
+    /// bridge that makes the M-210 differential meaningful on the data fragment: an L1-eval result
+    /// and an elaborate→L0-interp result become comparable *as the same L0 value* (NFR-7). The data
+    /// guarantee is the meet-summary [`Datum::new`] computes from the fields, identical on both
+    /// paths. Returns `None` if a constructor is not in the registry (outside the r3 fragment).
+    #[must_use]
+    pub fn to_core(&self, env: &crate::checkty::Env, registry: &DataRegistry) -> Option<CoreValue> {
+        match self {
+            L1Value::Repr(v) => Some(CoreValue::Repr(v.clone())),
+            L1Value::Data { ty, ctor, fields } => {
+                let decl = env.types.get(ty)?;
+                let index = decl.ctors.iter().position(|c| c.name == *ctor)?;
+                let ctor_ref = registry.ctor_ref(ty, u32::try_from(index).ok()?)?;
+                let core_fields = fields
+                    .iter()
+                    .map(|f| f.to_core(env, registry))
+                    .collect::<Option<Vec<_>>>()?;
+                Some(CoreValue::Data(Datum::new(ctor_ref, core_fields)))
+            }
         }
     }
 }

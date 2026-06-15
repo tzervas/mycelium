@@ -4,7 +4,7 @@
 |---|---|
 | **RFC** | 0001 |
 | **Title** | Core IR & Metadata Schema |
-| **Status** | **Accepted** (r2 — §4.3 `Bound` grammar revised per **ADR-011**; supersedes r1) |
+| **Status** | **Accepted** (r3 — folds the L1 **data-and-matching core** into the frozen kernel per **RFC-0011** (enacted 2026-06-15): the §4.5 grammar gains `Construct` + flat `Match` + `Alt`, §4.6 gains the content-addressed **data registry Σ** (`CtorRef = #T#i`), §4.2 gains the **data value `Datum`** + runtime sum `CoreValue`, §4.5 gains **WF6/WF7/WF8**, and §4.7 gains the **datum guarantee-summary** addendum. **Supersedes the r2 §4.5 node grammar** (append-only). `Lam/App/Fix` remain a named **r4** revision. r2 (§4.3 `Bound`, ADR-011) and r1 stand.) |
 | **Type** | Foundational / normative |
 | **Date** | June 08, 2026 |
 | **Depends on** | *Mycelium Project Foundation* (r3): FR-M1/M3/M4/M5/M8, FR-S2, NFR-3/6/7, VR-1/2/3/4/5, SC-3/4, ADR-001/002/003/006/008 |
@@ -124,6 +124,29 @@ Value<R: Repr> = {
 
 The static type is `Value<R>`; `meta` is runtime data. The split between what is in the type vs. in `meta` is normative (§4.4). `Payload` encodings are representation-specific and defined per paradigm (binary words; trit sequences; scalar arrays; hypervector storage — sparse index/value pairs or dense arrays).
 
+> **r3 — the data value `Datum` and the runtime sum `CoreValue` (RFC-0011 §4.6).** A `Construct`
+> node (§4.5) produces an **algebraic data value** — a constructor tag (`CtorRef = #T#i`, §4.6) plus
+> field values — which is **not** one of the four paradigm `Repr` kinds (those stay closed, §4.1;
+> r3 adds *term nodes* + a *data registry*, not a fifth kind). A datum is therefore a distinct
+> category of value, so the runtime value the interpreter yields is the **sum**:
+>
+> ```text
+> CoreValue ::= Repr(Value<R>)                                   // a representation value (unchanged)
+>             | Data(Datum)
+> Datum      = { ctor: CtorRef, fields: [CoreValue], guarantee: GuaranteeStrength }   // meet-summary
+> ```
+>
+> **Decision (maintainer-confirmed 2026-06-15): `Value<R>` is unchanged.** A datum is a *sibling*
+> type, not a re-shaping of `Value` into a `Repr | Data` sum — data values arise **only** as
+> `Construct`/`Match` results (never as `Const` literals in r3), so the smaller, isolated change is
+> the KISS/YAGNI/KC-3 choice (the alternative rewrites every representation-value call site for a
+> uniformity r3 does not use). The datum's `guarantee` is a **meet-summary** (§4.7); it carries **no
+> `Bound`** — bounds live on the leaf representation values it contains. A datum **content-addresses**
+> over `ctor ‖ fields` (the summary is dynamic, excluded — §4.6) and **serializes** as
+> `[CtorRef] ‖ [fields]` (the summary recomputed from fields on read, never trusted from the wire —
+> §4.8). This mirrors the L1 prototype's `L1Value` (`crates/mycelium-l1::eval`) so L1-eval and
+> L0-interp agree on the data fragment (NFR-7).
+
 ### 4.3 Metadata schema (`Meta`)
 
 ```text
@@ -185,7 +208,22 @@ Node ::= Const { value: Value }
        | Let   { id: VarId, bound: Node, body: Node }
        | Op    { prim: Prim, args: [Node] }                    // paradigm-specific primitive
        | Swap  { src: Node, target: Repr, policy: PolicyRef }  // the ONLY Repr-changing node
+       | Construct { ctor: CtorRef, args: [Node] }             // r3 (RFC-0011): saturated; SC-3-transparent
+       | Match     { scrutinee: Node, alts: [Alt], default: Option<Node> }   // r3: flat
+
+Alt      ::= { ctor: CtorRef, binders: [VarId], body: Node }   // constructor arm
+           | { lit:  Value,   body: Node }                     // literal arm — Binary{n}/Ternary{m}
+CtorRef  ::= "#" DeclHash "#" Nat                              // Unison #T#i — §4.6, RFC-0007 §4.2
 ```
+
+> **r3 (RFC-0011, enacted) — `Construct` + flat `Match`.** The grammar gains the two L1
+> data-and-matching forms (this **supersedes the r2 five-node grammar**, append-only). `Construct`
+> builds a data value (§4.2); the flat `Match` (one scrutinee, single-level constructor/literal
+> alternatives, at most one `default`) scrutinises one. Nested surface patterns are compiled to the
+> flat form by the **untrusted** M-320 Maranget decision tree *above* the kernel (RFC-0011 §4.4) —
+> the trusted node is the flat `Match` RFC-0007 already typed (`T-Match`). `Lam/App/Fix` are **not**
+> added in r3 (named r4); a `Match`/`Construct` whose body needs them stays an elaboration `Residual`
+> (the fragment restriction *narrows*, RFC-0007 §4.6).
 
 **Typing judgment.** `Γ ⊢ e : Value<R>`, where `R: Repr`. Selected rules:
 
@@ -199,6 +237,9 @@ Node ::= Const { value: Value }
 - **WF3.** Every result with `guarantee != Exact` carries a `bound` consistent with M-I2/3/4. *(VR-3)*
 - **WF4.** Every node is content-addressable: its hash is a pure function of its normalized structure and types (§4.6). *(FR-S2)*
 - **WF5.** Lowering preserves `Meta` semantics (the lowering contract; *asserted* here, *enforced* in RFC-0004). *(FR-M5; dimensional persistence)*
+- **WF6 (r3 — saturation).** A `Construct{ctor, args}` is fully applied: `len(args)` = the constructor's field count. Partial construction is *not* an L0 form (it needs `Lam`, r4) — an under-applied constructor is an explicit error, never a curried value. *(RFC-0011 §4.3; RFC-0007 W6.)*
+- **WF7 (r3 — flat, checked-exhaustive match).** Every `Match` alternative binds exactly the constructor's arity; each constructor appears at most once; a `Match` with no `default` **must** cover every constructor of the scrutinee's type, and a literal `Match` (over the non-enumerated `Binary{n}`/`Ternary{m}` domain) **must** carry a `default`. Coverage is *checked, never assumed* (LR-1; the M-320 `usefulness` analysis, re-verified `Fail`-free against the Maranget tree at the kernel boundary). *(RFC-0011 §4.3; RFC-0007 W7.)*
+- **WF8 (r3 — no silent swap through elaboration).** No elaboration step that produces `Match`/`Construct` may introduce a `Swap`; representation changes stay lexically written (S1/SC-3). *(RFC-0011 §4.3; RFC-0007 W8.)*
 
 ### 4.6 Content-addressing
 
@@ -213,6 +254,22 @@ hash(def) = H( normalize(structure(def)) ‖ types_with_repr(def) ‖ static_con
 
 Consequence: two definitions differing only in representation paradigm have different hashes; a definition and its reformatting have the *same* hash (formatting is a projection, ADR-003; §4.8). Provenance references *are* content hashes, forming an acyclic derivation DAG (`Provenance ::= Root | Derived{ op: ContentHash, inputs: [ProvenanceRef] }`).
 
+> **r3 (RFC-0011 §4.2) — the data registry `Σ`.** Content-addressing extends with a registry of
+> **data declarations**, exactly the RFC-0007 §4.2 scheme:
+> - A declaration `type T<a…> = C₁(τ…) | … | Cₙ(τ…)` is a **registry entry**, content-addressed over
+>   its α-normalized structure — **constructor order significant; field types (incl. `Repr`)
+>   significant; names are not identity** (ADR-003). A constructor reference is `CtorRef = #T#i`
+>   (declaration hash ‖ constructor index).
+> - **Self-recursive** declarations hash their own occurrences as a **cycle placeholder** (Unison):
+>   `Nat = Z | S(Nat)`'s `S` field is a back-reference, encoded as a placeholder, never the circular
+>   final hash. *Mutually-recursive* groups hash as one cycle unit (one hashing unit, members ordered
+>   by their placeholder-substituted hashes) — implemented structurally but **deferred/untested until
+>   r4** (R7-Q3; the L1 prototype accepts only self-recursion), an honest scope line.
+> - The registry is **environment, not term** (RFC-0007 §6): declarations are *not* L0 nodes, so the
+>   term grammar does not grow per data type, and **WF4 is preserved** — a `Construct`/`Match` node
+>   hashes over its structure **plus the `CtorRef` hashes it mentions** (de Bruijn binders for
+>   `Match` arms; the literal `Value` for a literal arm).
+
 ### 4.7 Guarantee lattice & bound composition
 
 **Lattice (normative).** `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`, with `meet` = weakest. For an operation `f` with intrinsic guarantee `g_f` over inputs `v_1..v_n`:
@@ -222,6 +279,20 @@ guarantee(result) = meet(guarantee(v_1), …, guarantee(v_n), g_f)
 ```
 
 This is monotone-downward: no operation can produce a result stronger than its weakest input or than its own intrinsic guarantee (the formal heart of ADR-001 at the value level).
+
+> **r3 (RFC-0011 §4.6) — the datum guarantee-summary addendum.** A data value (`Datum`, §4.2) carries
+> a single `GuaranteeStrength` **summary** and **no `Bound`**. M-I1 (`guarantee≠Exact ⟺ bound`) is an
+> invariant of *representation* values — where the bound quantifies *that value's* approximation — not
+> of structural composites: a datum is not itself an approximation, so its summary is a *derived
+> disclosure* and the quantitative bounds that justify a non-`Exact` summary live on the **leaf
+> representation values** it contains (drillable via provenance/EXPLAIN). Propagation (maintainer-confirmed):
+> - **`Construct`** `#T#i(e₁…eₙ)`: `summary = meet(guarantee(v₁)…guarantee(vₙ))`, intrinsic `Exact`
+>   (construction adds no error) — all-`Exact` fields → `Exact`, consistent with M-I1.
+> - **`Match`**: the result is the chosen arm's body **met against the scrutinee's** guarantee. For the
+>   **reachable r3 fragment** (data built from `Exact` `Binary`/`Ternary` leaves) the scrutinee is
+>   `Exact`, so the meet is the identity. A **non-`Exact` data scrutinee** is the explicit r3 boundary:
+>   the interpreter **refuses** (never a fabricated bound for a composite of mixed-paradigm leaves) and
+>   the full degrade-a-repr-result-by-summary semantics is deferred — honest, never silent (VR-5).
 
 **Bound composition (now concrete per ADR-010, Accepted).** Approximate `bound`s compose under three normative properties — **Soundness** (a true bound on deviation from the ideal-real spec), **Monotonicity** (never tighter than inputs justify), **Determinism** (identical inputs → identical composed bounds, so bounds are content-addressable). The arithmetic is supplied by **ADR-010's two kernels**: an `ErrorBound` kernel composing ε via **affine arithmetic** (Daisy/FloVer style), and a `ProbBound` kernel composing δ via the **union bound** (with apRHL-style couplings for relational certificates). The two do **not** share one algebra (a settled negative result, ADR-010/T0.1c); they meet at the shared certificate `{ε, δ, strength}`, and `strength` composes by `meet` as above. The one sanctioned cross-kernel inference is accuracy→probability (an `ErrorBound` may feed a `ProbBound`). Composed approximate results carry `Proven`/`Empirical` per the cited-theorem-with-checked-instantiation pattern — they no longer default to `Declared`.
 
@@ -279,6 +350,7 @@ A fifth paradigm kind (e.g., a future native-ternary-hardware representation, or
 - **r0 (initial draft):** initial Core IR & metadata schema; refines Foundation §5.2; introduces the four-point guarantee lattice and honesty-propagation rule; fixes the bound-composition *contract* and defers its arithmetic to ADR-010.
 - **r1 (solidified, this version):** **Accepted.** Packing moved from metadata to **schedule-staged** (§4.1, per DN-01 + T1.4); sparsity-as-static-refinement **resolved** (§4.4); §4.7 bound composition made **concrete** via ADR-010's two kernels (Accepted); §8 unresolved questions resolved with pointers. Remaining: the full term language, and the one confirming Liquid-Haskell `bundle` probe.
 - **r2 (this revision):** **Accepted.** §4.3 — `BoundBasis` factored out to a required companion of *every* `Bound` (r1 attached it to `CapacityBound` only), per **ADR-011**, reconciling the grammar with invariants M-I2/M-I3/M-I4 and RFC-0002 §3; `NormKind` registry enumerated `L1|L2|Linf|Rel`. **Supersedes** the r1 §4.3 `Bound` grammar. Surfaced as OQ-3/OQ-4 during M-010 schema ratification (#5).
+- **r3 (2026-06-15) — Accepted (the RFC-0011 fold, *enacted in lockstep with the code*).** Folds the L1 **data-and-matching core** into the frozen kernel (the named revision, RFC-0006 §4.4 step 2 / RFC-0007 §9; staged ahead of an r4 that adds `Lam/App/Fix`): **§4.5** gains `Construct` + flat `Match` + `Alt` (**supersedes the r2 five-node grammar**) and **WF6/WF7/WF8**; **§4.6** gains the content-addressed **data registry Σ** (`CtorRef = #T#i`, Unison self-recursive placeholder hashing; mutual recursion implemented-but-deferred to r4 per R7-Q3); **§4.2** gains the **data value `Datum`** and the runtime sum **`CoreValue`** (maintainer decision: a *sibling* type — `Value<R>` unchanged — and a **meet-summary guarantee with no bound**); **§4.7** gains the datum guarantee-summary addendum. Enacted in `mycelium-core` (the registry, `Datum`/`CoreValue`, the nodes, content-addressing/serialization), `mycelium-interp` (`Construct`/`Match` evaluation, `eval_core`), and `mycelium-l1::elab` (Maranget→flat-`Match` lowering); validated by the M-210 differential (L1-eval ≡ elaborate→L0-interp on the data fragment). The four paradigm kinds stay closed (§4.1) and `Swap` semantics are unchanged (WF8). r2 (§4.3 `Bound`) and r1 stand. **Verifies:** FR-M1/M3, NFR-7, VR-3/VR-5, SC-3, LR-1; ADR-003. **How:** 497 workspace tests + the data-fragment differential with a mutant-witness.
 - Maintain as append-only with status transitions (Draft → Accepted → Superseded), mirroring the ADR discipline (Foundation Meta).
 - On acceptance, add a one-line forward-pointer in Foundation §5.2 noting that RFC-0001 supersedes that sketch's packing placement, to prevent divergence.
 - Re-validate §4.7 once ADR-010 is ratified; promote composed-result default from `Declared` to the foundation's actual composition rules.

@@ -8,6 +8,58 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (Phase 3 — RFC-0004 r2: interpreted↔compiled continuum + build-target profiles; additive)
+- **RFC-0004 gains §9 (the interpreted↔compiled continuum + build-target profiles) and §10 (open
+  questions) — additive, changing no r1 decision (append-only).** Records the maintainer's execution
+  direction (2026-06-15): **interpret freely during development (zero build step, the reference
+  interpreter is the meaning), compile what is ready, never be forced into a heavyweight build, never
+  recompile what has not changed.** §9 makes explicit that execution is a *per-definition continuum*
+  (not interpreted-vs-compiled), that mixed interpreted + compiled stable components coexist in one run
+  (same L0 `CoreValue` semantics, §3 checker guarantees agreement), and that **incremental compilation
+  is "for free" from content-addressing** (ADR-003 — a definition's hash is its identity, so a compiled
+  artifact is never stale; M-311/M-312 already realize the cache). The **build-target profiles** are
+  normative and flexible: `interpret` (default), `build --slim <os>-<arch>` (one target), `build
+  --target <list>` (a chosen subset), `build --fat` (all supported targets, universal) — **fat
+  multi-target is first-class but optional, supported from the start**, the slim/selective/fat artifacts
+  share one format (a content-addressed per-`(os,arch,cpu-features)` variant table), and runtime variant
+  dispatch is **never-silent** (an unmatched host falls back to the interpreter or refuses explicitly,
+  never runs a wrong-target variant — the M-360 SIMD feature-dispatch generalized). Cross-target rides
+  §2's MLIR→LLVM path and stays **host-only until that backend lands** (honest deferral). §10 flags the
+  genuinely-new, undesigned items: the interpreted↔compiled **ABI** (OQ-1), **hot-inject** of recompiled
+  definitions into a running image (OQ-2; the M-340 `dlopen` JIT is the seed), the **fat-artifact
+  packaging format** (OQ-3), and target-set-as-RFC-0005-policy (OQ-4). (RFC-0004 r2 Meta)
+
+### Changed (Phase 3 — RFC-0011 r3 ENACTED: data + flat `Match` in L0; RFC-0001 → r3; M-320/M-310)
+- **The L1 data-and-matching core is now folded into the frozen Core IR and implemented in lockstep
+  (RFC-0011 r3, enacting the named RFC-0001 revision).** `Construct` + the flat `Match` are L0 Core IR
+  nodes, so a non-recursive program that builds/matches data reaches the trusted reference interpreter
+  and the M-210 differential — closing the text→`Node` gap that blocked **M-310** document sync
+  (gate residual **R1 closed**) and dead-ended **M-320**'s decision-tree compiler.
+  - **RFC-0001 r2 → r3** (append-only; **supersedes the r2 §4.5 grammar**): §4.5 gains `Construct` +
+    flat `Match` + `Alt` and **WF6/WF7/WF8**; §4.6 gains the content-addressed **data registry Σ**
+    (`CtorRef = #T#i`, Unison self-recursive placeholder hashing; mutual recursion implemented but
+    deferred to r4 per R7-Q3); §4.2 gains the **data value `Datum`** + the runtime sum **`CoreValue`**;
+    §4.7 gains the **datum guarantee-summary** addendum. RFC-0011 → **Accepted, r3 ENACTED**; RFC-0007
+    §4.6's `Residual` is **narrowed** (retired for data/matching; `App`/`Fix`/`for` stay `Residual`, r4).
+  - **The one genuinely-open value-model choice (maintainer-confirmed):** `Datum` is a **sibling** type —
+    `Value<R>` is unchanged, *not* refactored into a `Repr | Data` sum — and carries a **meet-summary
+    guarantee with no `Bound`** (bounds stay on the leaf representation values; an addendum to §4.7). The
+    smaller, isolated change honors KC-3/KISS/YAGNI (data values arise only as `Construct`/`Match`
+    results, never as `Const` literals in r3).
+  - **Code:** `mycelium-core` (the registry, `Datum`/`CoreValue`, the nodes, content-addressing +
+    canonical dump; AOT stays repr-only via `Node::is_aot_lowerable`, RFC-0011 §4.4 Q5);
+    `mycelium-interp` (small-step `Construct`/`Match` + `eval_core`; `Construct` = `meet(fields)`;
+    `Match` meet is identity for `Exact` scrutinees and an **explicit refusal** for a non-`Exact` data
+    scrutinee — never a fabricated bound); `mycelium-l1::elab` (the M-320 Maranget tree lowers nested
+    patterns to nested flat L0 `Match`, binding all constructor fields; `if` → `Bool` match).
+  - **Verified (NFR-7):** the M-210 differential extends to the data fragment — **L1-eval ≡
+    elaborate→L0-interp** on the `CoreValue` observable (`L1Value::to_core` bridges name-keyed →
+    `#T#i`), with a mutant-witness; the M-310/M-320 phase-3 rows and §6.1 exit-gate verdict updated
+    (R1 + R2 closed). 497 workspace tests pass; clippy clean; `cargo fmt` applied.
+  - **Honesty/scope (VR-5):** `Lam/App/Fix` remain the named **r4** revision (full L1-in-Core-IR,
+    R7-Q1/Q3); the AOT path and mutual-recursion cycle-ordering are explicit, flagged deferrals — not
+    silent gaps. (RFC-0001 r3 / RFC-0011 / RFC-0007 §4.6 Meta)
+
 ### Changed (Phase 3 — RFC-0006 & RFC-0007 ratified, Draft → Accepted r4; maintainer sign-off)
 - **RFC-0006 (surface/term-layering) and RFC-0007 (L1 kernel calculus) are now Accepted (r4), with a
   scoped §10 carve-out.** A completion-review found **no missing normative content** in the
