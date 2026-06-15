@@ -88,7 +88,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 
 | Task | Epic | Pri | Depends on | Maps to | Readiness |
 |---|---|---|---|---|---|
-| **M-301** Direct-LLVM-IR AOT backend (kernel subset) | E3-7 (prereq) | P1 | M-150, M-110 | RFC-0004 §2 / ADR-007/009 | **Ready (local)** — LLVM 18 present |
+| **M-301** Direct-LLVM-IR AOT backend (kernel subset) | E3-7 (prereq) | P1 | M-150, M-110 | RFC-0004 §2 / ADR-007/009 | **In progress (2026-06-15)** — bit subset landed (`mycelium-mlir::llvm`); trit subset is the next slice |
 | **M-302** interp↔native differential (extend M-151) | E3-7 (prereq) | P1 | M-301, M-151 | NFR-7 / VR-4 / RR-12 | Ready after M-301 |
 | **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | Ready after M-302 |
 | **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | Ready (local) |
@@ -242,8 +242,41 @@ established strength.
 
 ---
 
+## 9. Per-task detail (filled as tasks land)
+
+### 9.1 M-301 — Direct-LLVM-IR AOT backend (bit subset) · Batch J · P1 · in progress 2026-06-15
+
+- **Goal (from §2 / issues.yaml).** A genuinely compiled native artifact for the kernel subset via
+  the RFC-0004 §2 direct-LLVM fallback (libMLIR absent; LLVM 18 present), each stage dumpable,
+  unsupported ops an explicit refusal.
+- **Delivered (first slice — bit subset).** `mycelium-mlir::llvm`: `emit_llvm_ir(node)` lowers the
+  `mycelium-core::lower` ANF for the **bit subset** (`core.id`, `bit.not/and/or/xor` over
+  `Binary{w}`) to **textual LLVM IR** — one SSA op per output bit (`xor i32 x, 1` for `not`;
+  `and`/`or`/`xor i32` for the binops), result bits written via `@putchar` as a `'0'`/`'1'` line
+  (no opaque pass — RFC-0004 §6, deterministic). `compile_and_run(node)` drives `llc -filetype=obj`
+  then `clang` to a native executable, runs it, parses stdout, and reconstructs an **`Exact`**
+  `Binary{w}` `Value` (bit ops are exact; approximate inputs are out of subset). Everything outside
+  the subset is an explicit `AotError` — `UnsupportedRepr` (non-`Binary`), `UnsupportedPrim`
+  (`trit.*`), `UnsupportedNode` (swap), `WidthMismatch` — and `llc`/`clang` absence is a **skippable**
+  `ToolchainMissing` (the house "skip gracefully" idiom), so the compiled smoke test no-ops where
+  the toolchain is missing rather than failing.
+- **Tests (`llvm::tests`).** Emit shape + determinism; the four refusals (each with a mutant-witness
+  comment — guard 7); a width-mismatch refusal; and the compiled `native_bit_not_matches_interpreter`
+  roundtrip (toolchain-gated) asserting the native payload equals the complemented input (mutant:
+  an `or`/`and` mis-lowering would diverge).
+- **Honesty / scope.** The MLIR `ternary`-dialect lowering stays the **eventual** path (`dialect::emit`
+  is its dumpable skeleton) and is **deferred** until libMLIR exists (RR-N1). The **trit subset**
+  (balanced-ternary carry chains) is the next M-301 slice; it is refused here, not half-lowered. No
+  guarantee is upgraded: the reconstructed `Value` is `Exact` only because the bit ops are exact and
+  the subset refuses approximate inputs (VR-5).
+
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-301 bit-subset slice lands):** the direct-LLVM-IR AOT backend
+  (`mycelium-mlir::llvm`) compiles the bit subset to native code via `llc`/`clang` and reads the
+  result back — the first *compiled* execution path (RFC-0004 §2 direct-LLVM fallback). §2 M-301 row
+  → in progress; §9.1 per-task detail added. Next: M-301 trit slice, then the M-302 interp↔native
+  differential and the M-303 E1 verdict.
 - **2026-06-15 (initial scoping cut):** authored the Phase-3 plan. Decomposes epics #35–#41
   (E3-1…E3-7) into `M-3xx` build tasks (§2), records the batch/parallelization plan (§3) with the
   **native execution path as the keystone** (§1, §4), the Phase-2→3 KC re-run (§5), a **proposed**

@@ -1,24 +1,31 @@
-//! `mycelium-mlir` — the MLIR→LLVM AOT path: a **ternary-dialect skeleton** (M-150; RFC-0004 §2/§6;
-//! ADR-007; T1.5).
+//! `mycelium-mlir` — the AOT path: a textual **ternary-dialect skeleton** (M-150) plus a
+//! **direct-LLVM-IR backend** that genuinely compiles the bit subset to native code (M-301;
+//! RFC-0004 §2/§6; ADR-007/009; T1.5; phase-3.md §1).
 //!
-//! **Scope / honesty.** A real backend binds libMLIR (C++) and emits LLVM IR → native; that is not
-//! buildable in this Rust-only environment, and is **deferred** (Phase 3 matures it; ADR-009). What
-//! lands here is the honest skeleton:
+//! **Scope / honesty.** The ratified AOT path is `MLIR → LLVM` (RFC-0004 §2), but libMLIR (C++) is
+//! absent in this environment; the full `ternary`-dialect → `arith`/`vector` → LLVM lowering is
+//! therefore **deferred** (Phase 3 matures it once libMLIR is provisioned; ADR-009). What lands here:
 //!
 //! - [`dialect::emit`] — a **textual** ternary-dialect rendering of the lowered IR
 //!   (`mycelium-core::lower` A-normal form): one dialect op per binding, every value/attr visible.
-//!   This is the *per-stage-dumpable, no-opaque-pass* anchor (RFC-0004 §6) — text, not native code.
-//! - [`aot::run`] — the **runnable artifact for the subset**: an independent **big-step env-machine**
-//!   that *executes the lowered ANF directly* (sequential binding evaluation), as opposed to the
-//!   reference interpreter's small-step substitution (M-110). It models the compiled path's
-//!   semantics so the interp↔AOT differential (M-151) is a genuine *two-path* check (NFR-7): the
-//!   paths differ in IR shape and evaluation strategy, sharing only the trusted primitive/swap
-//!   semantics, so the differential catches lowering/scheduling/ordering divergence.
+//!   This is the *per-stage-dumpable, no-opaque-pass* anchor (RFC-0004 §6) — text, not native code,
+//!   and the dumpable skeleton of the eventual MLIR path.
+//! - [`aot::run`] — the **env-machine** runnable model: an independent big-step evaluator over the
+//!   lowered ANF (sequential binding evaluation) vs the reference interpreter's small-step
+//!   substitution (M-110). A genuine *two-path* check for the interp↔AOT differential (M-151/NFR-7).
+//! - [`llvm::compile_and_run`] — the **compiled native artifact** (M-301; RFC-0004 §2's *direct-LLVM
+//!   fallback*): for the bit subset it emits textual LLVM IR ([`llvm::emit_llvm_ir`], one SSA op per
+//!   output bit), drives `llc` + `clang` to a real executable, runs it, and reads the result back.
+//!   This is a *third, compiled* execution path; everything outside the bit subset is an explicit
+//!   [`llvm::AotError`] refusal (never silent), with `llc`/`clang` absence reported as a skippable
+//!   `ToolchainMissing`. The interp↔native differential (M-302) checks it against the interpreter.
 
 pub mod aot;
 pub mod dialect;
+pub mod llvm;
 pub mod pack;
 
 pub use aot::{run, run_with_layout};
 pub use dialect::emit;
+pub use llvm::{compile_and_run, emit_llvm_ir, AotError};
 pub use pack::{pack_trits, relayout_trits, unpack_trits};

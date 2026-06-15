@@ -8,6 +8,17 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — native execution path, M-301 bit-subset slice)
+- **`mycelium-mlir::llvm`** — a **direct-LLVM-IR AOT backend** that genuinely compiles the kernel
+  **bit subset** (`core.id`, `bit.not/and/or/xor` over `Binary{w}`) to native code. `emit_llvm_ir`
+  renders textual LLVM IR (one SSA op per output bit — no opaque pass, RFC-0004 §6); `compile_and_run`
+  drives `llc` + `clang` to a real executable, runs it, and reads the result back as an `Exact`
+  `Binary{w}` value. This is the first *compiled* execution path (RFC-0004 §2's direct-LLVM fallback;
+  libMLIR absent, LLVM 18 present — the MLIR dialect lowering stays deferred, RR-N1). Everything
+  outside the subset is an explicit `AotError` refusal (never silent); `llc`/`clang` absence is a
+  skippable `ToolchainMissing`. Tests cover emit shape/determinism, four mutant-witnessed refusals, a
+  width-mismatch refusal, and a toolchain-gated native↔interpreter roundtrip. (phase-3.md §9.1)
+
 ### Added (Phase-3 planning — scoping cut)
 - **`docs/planning/phase-3.md`** (Living draft): scopes the Phase-3 epics #35–#41 (`E3-1…E3-7`) into
   `M-3xx` build tasks. Records the batch/parallelization plan with the **native execution path as the
