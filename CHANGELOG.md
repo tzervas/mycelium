@@ -9,6 +9,24 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Fixed (deep-review remediation — Wave 1)
+- **WS4 — `mycelium-l1` soundness + parser hardening (findings A4-01 H7, A4-02 H8; advances S5/G2,
+  RFC-0007 §4.5).**
+  - **Totality soundness (H7):** the structural totality checker classified a non-terminating
+    function as `Total` and admitted it as `matured`, because a `Match` arm binder reusing an outer
+    "smaller-than" variable's name was never dropped — stale smallness leaked into the arm body and a
+    non-decreasing recursive call looked structural (`f(n,p)=match n{Z=>Z,S(m)=>match p{Z=>Z,S(m)=>
+    f(m,p)}}` diverges yet was accepted). `descend_walk` now drops every binder a pattern introduces
+    (recursively) for the arm body and restores it after, re-adding only the genuinely-smaller
+    constructor sub-binders — mirroring the existing `Let`/`For` discipline.
+  - **Parser DoS (H8):** the recursive-descent parser had no depth guard, so crafted deeply-nested
+    input overflowed the host stack and aborted `myc-check` (the M-002 oracle) instead of returning
+    an error. `parse_expr` is now depth-guarded (`MAX_EXPR_DEPTH = 256`), returning an explicit
+    `ParseError`; bounding the parser bounds the AST depth, protecting the downstream
+    typechecker/totality/elaborator passes transitively.
+  - Regression tests for both (the divergent witness is `Partial` + `matured` refused; 2000-deep
+    input returns `Err`, not a crash), each citing its finding ID as a mutant-witness.
+  - Remaining WS4 (tracked): A4-03 (charge eval depth per call-frame), A4-04 (`Wf`-error-path test),
+    and switching the reject corpus from `is_err()` to per-file expected-error-substring assertions.
 - **WS2 — `mycelium-core` contract integrity (findings A6-02, B2-03, A1-01, A1-02, A1-03;
   advances M-I1…M-I4, the schema contract).** The JSON schema is now enforced on the Rust side too,
   closing the tampered-manifest vector:

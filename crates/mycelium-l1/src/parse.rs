@@ -10,10 +10,22 @@ use crate::error::ParseError;
 use crate::lexer::lex;
 use crate::token::{Pos, ScalarTok, Spanned, StrengthTok, Tok};
 
+/// Maximum nesting depth of the expression grammar. Crafted deeply-nested input would otherwise
+/// drive the recursive-descent parser (and, over the resulting AST, the typechecker / totality
+/// checker / elaborator) into unbounded host-stack recursion and abort the process — `myc-check` is
+/// the M-002 oracle and must return an explicit error, never crash (A4-02/B2-01). The limit is well
+/// above any realistic L1 program and far below the host stack budget. Bounding the parser bounds
+/// the AST depth, so the downstream passes are protected transitively.
+const MAX_EXPR_DEPTH: u32 = 256;
+
 /// Parse a complete `colony` program from source.
 pub fn parse(src: &str) -> Result<Colony, ParseError> {
     let toks = lex(src)?;
-    let mut p = Parser { toks, i: 0 };
+    let mut p = Parser {
+        toks,
+        i: 0,
+        depth: 0,
+    };
     let colony = p.parse_colony()?;
     p.expect(&Tok::Eof, "end of input")?;
     Ok(colony)
@@ -22,6 +34,8 @@ pub fn parse(src: &str) -> Result<Colony, ParseError> {
 struct Parser {
     toks: Vec<Spanned>,
     i: usize,
+    /// Current expression-nesting depth, bounded by [`MAX_EXPR_DEPTH`] (A4-02).
+    depth: u32,
 }
 
 impl Parser {
@@ -349,7 +363,23 @@ impl Parser {
 
     // ---- expressions ----
 
+    /// Depth-guarded entry to the expression grammar: refuses to recurse past [`MAX_EXPR_DEPTH`]
+    /// with an explicit error rather than overflowing the host stack on crafted nesting (A4-02).
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
+        self.depth += 1;
+        if self.depth > MAX_EXPR_DEPTH {
+            self.depth -= 1;
+            return Err(ParseError::new(
+                self.pos(),
+                format!("expression nests deeper than the limit of {MAX_EXPR_DEPTH} — refusing to recurse"),
+            ));
+        }
+        let r = self.parse_expr_inner();
+        self.depth -= 1;
+        r
+    }
+
+    fn parse_expr_inner(&mut self) -> Result<Expr, ParseError> {
         self.teach_imperative()?;
         match self.cur() {
             Tok::Let => self.parse_let(),

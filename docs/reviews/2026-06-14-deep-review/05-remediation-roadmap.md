@@ -133,6 +133,15 @@ A3-07, A3-08, A3-09, A3-10.
 - **Verify:** `tests/matrix.rs` re-pinned to the reconciled table; a Proven-capacity probe on a
   non-bipolar/duplicate input now refused.
 
+### WS4 — L1 soundness + parser hardening · effort M · risk medium · **H7/H8 LANDED**
+
+> **Status (2026-06-15):** both Highs done. H7 — totality checker drops shadowed match-arm binders
+> (the divergent witness is now `Partial`, `matured` refused). H8 — `parse_expr` depth-guarded
+> (`MAX_EXPR_DEPTH = 256`), so crafted deep input returns a `ParseError` instead of crashing
+> `myc-check`; bounds the AST depth, protecting the downstream passes. Regression tests with
+> mutant-witnesses; workspace tests / clippy / fmt green. **Remaining:** A4-03 (per-frame eval
+> depth), A4-04 (`Wf`-path test), reject-corpus per-file expected-substring assertions.
+
 ### WS4 — L1 soundness + parser hardening · effort M · risk medium
 
 Findings: **H7** (A4-01), **H8** (A4-02/B2-01), A4-03, A4-04, plus the reject-corpus

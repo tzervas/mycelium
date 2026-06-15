@@ -91,6 +91,29 @@ fn shadowing_rebind_does_not_leak_smallness() {
 }
 
 #[test]
+fn deeply_nested_input_is_refused_not_a_crash() {
+    // A4-02/B2-01 regression: unbounded recursive descent would overflow the host stack and abort
+    // the process (SIGABRT) on crafted nesting. The depth guard turns that into an explicit
+    // ParseError, well before any crash. Mutant-witness: removing the MAX_EXPR_DEPTH guard in
+    // parse_expr makes 2000-deep input abort instead of returning Err.
+    let deep = format!(
+        "colony d\nfn f(x: Binary{{8}}) -> Binary{{8}} = {}x{}",
+        "(".repeat(2000),
+        ")".repeat(2000)
+    );
+    let err = parse(&deep).expect_err("deep nesting must be refused, not crash");
+    assert!(err.message.contains("nests deeper"), "got: {}", err.message);
+
+    // A modest nesting still parses.
+    let shallow = format!(
+        "colony d\nfn f(x: Binary{{8}}) -> Binary{{8}} = {}x{}",
+        "(".repeat(50),
+        ")".repeat(50)
+    );
+    assert!(parse(&shallow).is_ok());
+}
+
+#[test]
 fn wild_is_denied_by_default() {
     let src = "colony d\nfn f(x: Binary{8}) -> Binary{8} = wild { x }";
     let err = check(src).unwrap_err();
