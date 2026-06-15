@@ -68,7 +68,14 @@ at A3-08/A3-09). The roadmap targets exactly those.
    workflow), so it does not violate the manual-CI policy — but record the choice explicitly.
    Pin `npx markdownlint-cli2` to a version (B1-02) at the same time.
 
-## Code enumeration / call-and-dependency mapping (developer-requested workflow tool)
+## Code enumeration / call-and-dependency mapping (developer-requested workflow tool) · **LANDED**
+
+> **Status (2026-06-15):** implemented. `just map` (advisory, `scripts/map.sh`) and the `just api`
+> surface gate (`scripts/checks/api.sh`, wired into `just check`) + `just api-baseline` are in;
+> installer pulls the tools best-effort; all skip gracefully (the tools are absent in the current
+> environment, so they no-op until provisioned and baselines are generated). Function-level call
+> graphs remain a rust-analyzer / `cargo-call-stack` job; the Mycelium-lang forward note is still
+> the Phase-3 plan.
 
 *Effort: low–medium; value: medium.* A workflow aid to enumerate/trace/map functionality, calls,
 paths, and routing. Two layers, both skip-if-missing per the existing tooling idiom:

@@ -47,6 +47,16 @@ test:
     @bash scripts/checks/test.sh
 proofs:
     @bash scripts/checks/proofs.sh
+api:
+    @bash scripts/checks/api.sh
+
+# --- code map / observability (advisory; not gating) ---
+# Generate code maps (crate deps, module structure, rustdoc incl. private) under target/map/.
+map:
+    @bash scripts/map.sh
+# (Re)generate the committed public-API snapshots under docs/spec/api/ after an intended change.
+api-baseline:
+    @bash scripts/api-baseline.sh
 
 # --- pre-commit (optional, easy DX) ---
 # Install the git hooks so `just check`-equivalent runs on every commit.

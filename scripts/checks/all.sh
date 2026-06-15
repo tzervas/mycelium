@@ -4,7 +4,7 @@
 source "${BASH_SOURCE%/*}/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 
-checks=(structured shell markdown links schema grammar spell secrets format lint test proofs)
+checks=(structured shell markdown links schema grammar spell secrets format lint test proofs api)
 failed=()
 for c in "${checks[@]}"; do
   if ! bash "$REPO_ROOT/scripts/checks/$c.sh"; then failed+=("$c"); fi

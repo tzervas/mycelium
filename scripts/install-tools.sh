@@ -32,5 +32,20 @@ fi
 if have gitleaks; then ok "gitleaks present"
 else skip "gitleaks not installed (optional; secrets.sh has a fallback)"; fi
 
+# Code-map / API-surface tools (optional). `cargo public-api` (the `just api` gate) drives a
+# nightly rustdoc — used only to introspect the surface, not to build the MSRV-pinned artifact.
+# Graphviz (`dot`) renders the `just map` graphs; install it via your system package manager.
+if have cargo; then
+  for t in cargo-modules cargo-depgraph cargo-public-api; do
+    if cargo "${t#cargo-}" --help >/dev/null 2>&1; then ok "cargo: $t present"
+    elif cargo install --quiet "$t" 2>/dev/null; then ok "cargo install: $t"
+    else skip "cargo: $t (install failed or offline; \`just map\`/\`just api\` will skip it)"; fi
+  done
+else
+  skip "no cargo — skipped code-map tools"
+fi
+if have dot; then ok "graphviz (dot) present"
+else skip "graphviz (dot) absent — \`just map\` writes .dot sources"; fi
+
 echo
 ok "setup done — run \`just check\`"

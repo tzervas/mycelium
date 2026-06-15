@@ -54,6 +54,18 @@ corpus, not released software. Versioning will begin when the kernel does.
   code tag changes** — `mycelium-vsa::matrix.rs` / `tests/matrix.rs` already followed the Net line;
   the non-citable "issue #61" rationale in the code comment is replaced by the §4.1 citation.
 
+### Added (developer tooling — code enumeration / mapping)
+- **`just map`** (advisory; `scripts/map.sh`): generates a crate-to-crate dependency graph
+  (`cargo depgraph` → Graphviz, `cargo tree` fallback), per-crate module/item structure
+  (`cargo modules`), and rustdoc including private items, under `target/map/` + `target/doc/`. Not
+  part of `just check`. Function-level call graphs in Rust are partial (trait dispatch / generics) —
+  use rust-analyzer's call hierarchy or `cargo-call-stack` for those.
+- **`just api` / `just api-baseline`** (`scripts/checks/api.sh`, `scripts/api-baseline.sh`): a
+  public-API **surface gate** wired into `just check`. It diffs each crate's surface against a
+  committed snapshot (`docs/spec/api/<crate>.txt`) and fails on an unreviewed change — a guardrail
+  for KC-3 and the A2-05 private-fields work. All tools are optional and **skip gracefully** when
+  absent (installer adds them best-effort); snapshots are bootstrapped with `just api-baseline`.
+
 ### Added (advisory review artifact)
 - **Deep review (2026-06):** `docs/reviews/2026-06-14-deep-review/` — a four-stage advisory
   review (correctness + test-quality, security audit, quality/style vs the house rules, and a
