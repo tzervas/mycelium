@@ -32,6 +32,18 @@ corpus, not released software. Versioning will begin when the kernel does.
   `atoms()`/`dim()` accessors; four resonator `VsaError` variants. **Nothing new in the kernel** beyond
   the r4 additive manifest metadata fields. (phase-3.md §2 / Meta)
 
+### Added (Phase 3 — RFC-0010 decode-methodology selection design, M-350 needs-design)
+- **`docs/rfcs/RFC-0010-Decode-Methodology-Selection.md`** (Draft): the design artifact for choosing a
+  **decode methodology** as a **third site of the one RFC-0005 selection mechanism** (no parallel
+  selector — DRY/SoC). A content-addressed, `EXPLAIN`-mandatory decision table over **exact** metadata
+  (`F`, `∏kᵢ`, `d`, model, `ResonatorProfile` membership) routes among
+  `{ BruteForceExact (Exact), Resonator{Hebbian} (Empirical), Refuse }`, with the **guarantee tag read
+  off the chosen arm** (VR-5) and out-of-regime / non-identifiable inputs an explicit refusal
+  (never-silent — G2). Records the §10.3 finding that the **cleanup-variant axis collapses to one
+  winner (Hebbian)** inside the validated envelope, so cleanup-selection is **deferred** (YAGNI) with a
+  concrete re-open trigger. **No code; nothing in the kernel.** Registered in the Doc-Index + RFC index;
+  design gated on ratification. (phase-3.md §2 / Meta)
+
 ### Changed (Phase 3 — resonator operational-capacity wall breached, §10.3 cleanup ablation, M-350)
 - **`MAPI_RESONATOR_PROFILE` widened `F≤3, k≤8, ∏k≤512` → `F≤3, k≤16, ∏k≤4096, d≥4096`** by fixing the
   cleanup dynamics, **not** by loosening the honesty contract. The original softmax cleanup fed the
