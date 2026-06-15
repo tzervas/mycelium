@@ -18,6 +18,8 @@ An RFC is a detailed, normative design of a subsystem that multiple decisions pl
 | 0006 | Surface Language, Grammar & Term-Language Layering | **Draft** | RFC-0001 §4.5; ADR-003/006/007; KC-2/KC-3; RR-3; SPEC §10.1/§10.2 |
 | 0007 | The L1 Kernel Calculus | **Draft** | RFC-0006; RFC-0001 §4.5/§4.6; RFC-0004 §4; ADR-003; T3.1/T3.4 |
 | 0008 | Runtime & Concurrency Execution Model | **Draft** | RFC-0004 (extends, per-node model unchanged); RFC-0001/0002/0005/0006/0007; ADR-012 §7.3; T4.1–T4.6 |
+| 0009 | Resonator-Network Factorization | Accepted | RFC-0003 §6; RFC-0001; FR-C2/G2/G4; RR-5/VR-5 (M-350) |
+| 0010 | Decode-Methodology Selection | **Draft** | RFC-0005 (same selection mechanism, third site); RFC-0009 (§10.3 matrix + regime gate); RFC-0003; G2/G4/VR-5 |
 
 Cross-cutting machinery (decided across RFCs): **one** certificate checker (RFC-0002 ⇄ RFC-0004), **one** selection mechanism (RFC-0002 ⇄ RFC-0004), and **two** bound kernels meeting at one shared certificate (ADR-010 → RFC-0001/0002/0003). See `../Doc-Index.md` for the dependency DAG.
 

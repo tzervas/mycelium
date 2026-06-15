@@ -64,9 +64,27 @@ fn kind_of(repr: &Repr) -> ParadigmKind {
     }
 }
 
+/// The **exact decode facts** the RFC-0010 decode site queries — generic integers/booleans about a
+/// factorization request, *not* VSA types (this crate stays `mycelium-core`-only). All are exact: the
+/// factor count, the operational capacity `∏ᵢ kᵢ` (saturating), the dimension, and whether the request
+/// sits inside the resonator's validated regime (the `mycelium-vsa` adapter precomputes `in_regime`
+/// from `ResonatorProfile::check` — a fact about the inputs, like sparsity, not a sampled estimate).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DecodeFacts {
+    /// The factor count `F` (number of codebooks).
+    pub factors: u32,
+    /// The operational capacity `∏ᵢ kᵢ` (saturating product of the codebook sizes).
+    pub capacity: u128,
+    /// The hypervector dimension `d`.
+    pub dim: u32,
+    /// Whether the request is inside the resonator's validated `{F, ∏kᵢ, d}` regime.
+    pub in_regime: bool,
+}
+
 /// The **queryable inputs** a policy may inspect — drawn from a value's [`Repr`] + [`Meta`]
 /// (RFC-0005 §2: bounds, `dtype`, sparsity class, guarantee; *exact* metadata, never sampled
-/// estimates). Serializable so an [`Explanation`] can carry exactly what was considered.
+/// estimates), plus the optional [`DecodeFacts`] for the RFC-0010 decode site. Serializable so an
+/// [`Explanation`] can carry exactly what was considered.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SelectionInputs {
     /// The source representation.
@@ -77,10 +95,13 @@ pub struct SelectionInputs {
     pub bound: Option<Bound>,
     /// Measured sparsity, if recorded.
     pub sparsity: Option<SparsityObs>,
+    /// The decode-site facts (RFC-0010), absent for the swap/packing sites.
+    #[serde(default)]
+    pub decode: Option<DecodeFacts>,
 }
 
 impl SelectionInputs {
-    /// The queryable projection of a `(Repr, Meta)` pair.
+    /// The queryable projection of a `(Repr, Meta)` pair (no decode facts — swap/packing sites).
     #[must_use]
     pub fn from_meta(src: Repr, meta: &Meta) -> Self {
         SelectionInputs {
@@ -88,6 +109,7 @@ impl SelectionInputs {
             guarantee: meta.guarantee(),
             bound: meta.bound().cloned(),
             sparsity: meta.sparsity(),
+            decode: None,
         }
     }
 
@@ -95,6 +117,13 @@ impl SelectionInputs {
     #[must_use]
     pub fn of_value(v: &Value) -> Self {
         Self::from_meta(v.repr().clone(), v.meta())
+    }
+
+    /// Attach decode-site facts (RFC-0010) for the [`select_decode_method`] adapter.
+    #[must_use]
+    pub fn with_decode(mut self, facts: DecodeFacts) -> Self {
+        self.decode = Some(facts);
+        self
     }
 }
 
@@ -117,6 +146,14 @@ pub enum Predicate {
     ErrorEpsAtMost(f64),
     /// The source is a `Vsa` with a declared `Sparse` class.
     DeclaredSparse,
+    /// (Decode site, RFC-0010) the operational capacity `∏ᵢ kᵢ` is at most this — the enumeration
+    /// budget that makes brute force tractable. `false` when there are no decode facts.
+    CapacityAtMost(u128),
+    /// (Decode site, RFC-0010) the factor count `F` is at most this. `false` when no decode facts.
+    FactorsAtMost(u32),
+    /// (Decode site, RFC-0010) the request is inside the resonator's validated regime. `false` when
+    /// there are no decode facts (the predicate asks for *present* in-regime evidence).
+    InResonatorRegime,
     /// Conjunction.
     All(Vec<Predicate>),
     /// Disjunction.
@@ -148,6 +185,13 @@ impl Predicate {
                     ..
                 }
             ),
+            Predicate::CapacityAtMost(c) => {
+                matches!(inputs.decode, Some(d) if d.capacity <= *c)
+            }
+            Predicate::FactorsAtMost(f) => {
+                matches!(inputs.decode, Some(d) if d.factors <= *f)
+            }
+            Predicate::InResonatorRegime => matches!(inputs.decode, Some(d) if d.in_regime),
             Predicate::All(ps) => ps.iter().all(|p| p.eval(inputs)),
             Predicate::Any(ps) => ps.iter().any(|p| p.eval(inputs)),
             Predicate::Not(p) => !p.eval(inputs),
@@ -169,18 +213,39 @@ impl Predicate {
             | Predicate::SrcKindIs(_)
             | Predicate::DtypeIs(_)
             | Predicate::GuaranteeAtLeast(_)
-            | Predicate::DeclaredSparse => true,
+            | Predicate::DeclaredSparse
+            | Predicate::CapacityAtMost(_)
+            | Predicate::FactorsAtMost(_)
+            | Predicate::InResonatorRegime => true,
         }
     }
 }
 
-/// A selectable candidate — the two RFC-0005 §4 sites share one vocabulary (one mechanism).
+/// A decode methodology — the **third** RFC-0005 §4 site (RFC-0010): how a value is decoded back to
+/// its constituents. An abstract tag (no VSA types leak into this core-only crate); the
+/// `mycelium-vsa` executor maps it to the concrete decode (brute-force enumeration / resonator loop /
+/// refusal) and reads the guarantee tag off the chosen arm (RFC-0010 §4.4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DecodeMethod {
+    /// Exhaustive enumeration of all `∏ᵢ kᵢ` codebook combinations — `Exact` (it *is* the
+    /// brute-force oracle), tractable only when the operational capacity is small.
+    BruteForceExact,
+    /// The iterative resonator loop (RFC-0009) — `Empirical`, only inside its validated regime.
+    Resonator,
+    /// Neither applies (too big to enumerate *and* outside the resonator regime): an explicit
+    /// refusal, never a silent best-effort guess (G2).
+    Refuse,
+}
+
+/// A selectable candidate — the three RFC-0005 §4 sites share one vocabulary (one mechanism).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Candidate {
     /// A swap-target representation (the RFC-0002 site).
     Repr(Repr),
     /// A packing scheme (the RFC-0004 §5 site; consumed by E2-7/M-250).
     Packing(PackScheme),
+    /// A decode methodology (the RFC-0010 site; executed by `mycelium-vsa`).
+    Decode(DecodeMethod),
 }
 
 /// What a matched rule does.
@@ -270,6 +335,15 @@ impl CostModel {
         let bits = match candidate {
             Candidate::Repr(r) => repr_storage_bits(r),
             Candidate::Packing(s) => packing_bits_per_element(*s) * src_elements(&inputs.src),
+            // Decode site (RFC-0010 §4.3): the cost is the real operation count, not storage bits.
+            // Brute force enumerates all `∏ᵢ kᵢ` combinations (its cost *grows* with capacity — why it
+            // is chosen only when capacity is small); the resonator is iterative and
+            // capacity-independent, and `Refuse` does no work — both 0. The decode table decides by
+            // explicit predicate arms (not `Cheapest`), so this only fills the EXPLAIN cost lines.
+            Candidate::Decode(m) => match m {
+                DecodeMethod::BruteForceExact => inputs.decode.map_or(0.0, |d| d.capacity as f64),
+                DecodeMethod::Resonator | DecodeMethod::Refuse => 0.0,
+            },
         };
         self.storage_weight * bits
     }
@@ -626,6 +700,25 @@ pub fn select_packing(
         other => Err(SelectError::WrongSiteKind {
             chosen: other,
             site: "packing",
+        }),
+    }
+}
+
+/// Decode-method site adapter (RFC-0005 §4 site 3; RFC-0010): the chosen candidate must be a
+/// [`DecodeMethod`] — anything else is an explicit [`SelectError::WrongSiteKind`]. The `mycelium-vsa`
+/// executor consumes the returned method (and the mandatory [`Explanation`]) and runs the matching
+/// decode, reading the guarantee tag off the chosen arm (RFC-0010 §4.4).
+pub fn select_decode_method(
+    policy: &SelectionPolicy,
+    inputs: &SelectionInputs,
+    forced: Option<usize>,
+) -> Result<(DecodeMethod, Explanation), SelectError> {
+    let (chosen, explanation) = select(policy, inputs, forced)?;
+    match chosen {
+        Candidate::Decode(m) => Ok((m, explanation)),
+        other => Err(SelectError::WrongSiteKind {
+            chosen: other,
+            site: "decode-method",
         }),
     }
 }

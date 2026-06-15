@@ -35,16 +35,32 @@ use mycelium_core::{Bound, BoundBasis, BoundKind};
 
 use crate::{CleanupMemory, Match, VsaError, VsaModel};
 
-/// Per-slot cleanup projection (RFC-0009 §3 / §9 Q2). `Softmax` is the default resonator cleanup.
+/// Per-slot cleanup projection (RFC-0009 §3 / §9 Q2 / §10.3 ablation).
+///
+/// The `*Sign` / `Hebbian` variants **bipolarize** the estimate (`x̂ ← sign(·)`) so the explain-away
+/// product `g_{j≠i} x̂ⱼ` stays on the `±1` alphabet — making the unbind *exact* (MAP-I self-inverse on
+/// `±1`) instead of compounding real-valued crosstalk through the product of `F−1` noisy real vectors.
+/// This is the §10.3-measured fix that breaches the operational-capacity wall (Frady et al. 2020 apply
+/// a sign nonlinearity to the bipolar resonator estimate; `Softmax`/`ArgMax` alone collapse as `∏k → d`).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Cleanup {
     /// Softmax-weighted superposition `Σⱼ softmax(β·simⱼ)·cᵢ,ⱼ` over the codebook (smoother dynamics).
+    /// Real-valued output — the original prototype default; collapses past the wall (`∏k → d`).
     Softmax {
         /// Inverse temperature `β > 0` — larger sharpens toward the arg-max atom.
         beta: f64,
     },
     /// Winner-take-all: the single arg-max atom ([`CleanupMemory::cleanup`]).
     ArgMax,
+    /// Bipolarized softmax: `sign(Σⱼ softmax(β·simⱼ)·cᵢ,ⱼ)`. Keeps the smooth softmax weighting but
+    /// projects the estimate back to `±1` before re-binding (§10.3 variant 1).
+    SoftmaxSign {
+        /// Inverse temperature `β > 0` for the softmax weights, sharpening toward the arg-max atom.
+        beta: f64,
+    },
+    /// Frady's standard bipolar resonator cleanup: `sign(Σⱼ simⱼ·cᵢ,ⱼ)` — the similarity-weighted
+    /// (Hebbian / `Cᵀ C`) superposition projected to `±1`. No temperature (§10.3 variant 3).
+    Hebbian,
 }
 
 /// Initialisation strategy (RFC-0009 §9 Q1). Default is the uniform codebook superposition.
@@ -79,12 +95,15 @@ pub struct ResonatorParams {
 }
 
 impl ResonatorParams {
-    /// The recommended MAP-I defaults (softmax β=6, uniform seeded init, τ_lock=0.9, conf≥0.3,
-    /// margin≥0.1) — the knob values the [`MAPI_RESONATOR_PROFILE`] trials validate and record.
+    /// The recommended MAP-I defaults (Hebbian bipolar cleanup, uniform superposition init, τ_lock=0.9,
+    /// conf≥0.3, margin≥0.1) — the knob values the [`MAPI_RESONATOR_PROFILE`] trials validate and record.
+    /// [`Cleanup::Hebbian`] (`sign(Σⱼ simⱼ·cⱼ)`) is the §10.3-measured wall-breach: it keeps the
+    /// explain-away on `±1`, so the MAP-I unbind stays exact and the F=3,k=16 (∏k=4096) regime recovers
+    /// where the original softmax cleanup collapsed (RFC-0009 §10.3 ablation; changelog footer).
     #[must_use]
     pub fn mapi_default(iteration_budget: u64, seed: u64) -> Self {
         ResonatorParams {
-            cleanup: Cleanup::Softmax { beta: 6.0 },
+            cleanup: Cleanup::Hebbian,
             init: Init::UniformSuperposition,
             tau_lock: 0.9,
             confidence_threshold: 0.3,
@@ -239,21 +258,29 @@ impl ResonatorProfile {
     }
 }
 
-/// The first trial-validated MAP-I regime (RFC-0009 §9 Q4 / §10.2). The regime is fixed here; `delta`
+/// The trial-validated MAP-I regime (RFC-0009 §9 Q4 / §10.2 / §10.3). The regime is fixed here; `delta`
 /// is **set from the measured trial rate** in `tests/resonator_profile.rs`, never asserted ahead of
 /// the run (VR-5). Conservative ceiling: 0/`trials` failures ⇒ `δ ≤ 0.01` is an honest bound.
+///
+/// **Wall breached (§10.3 cleanup ablation).** The original softmax cleanup collapsed at `∏k → d`
+/// (F=3,k=16 ≈100% failure even at d=8192). Switching the per-slot cleanup to the **Hebbian bipolar**
+/// projection `sign(Σⱼ simⱼ·cⱼ)` ([`Cleanup::Hebbian`]) keeps the explain-away on the `±1` alphabet, so
+/// the MAP-I unbind stays exact — and F=3,k=16 (∏k=4096) now recovers with **0/300** failures at
+/// d=4096. The validated envelope widens from `k≤8, ∏k≤512` to **`k≤16, ∏k≤4096`** at this measured δ.
 pub const MAPI_RESONATOR_PROFILE: ResonatorProfile = ResonatorProfile {
     max_factors: 3,
-    max_codebook: 8,
-    max_capacity: 512, // 8³ — the operational capacity ∏ᵢ kᵢ
+    max_codebook: 16,
+    max_capacity: 4096, // 16³ — the operational capacity ∏ᵢ kᵢ
     min_dim: 4096,
     delta: 0.02,
     trials: 1_000,
-    method: "Monte-Carlo exact-tuple recovery vs brute-force oracle (MAP-I bipolar; softmax cleanup \
-             β=6, τ_lock=0.9, uniform superposition init, budget 50; F≤3, k≤8, ∏k≤512, d≥4096; worst \
-             corner F=3,k=8,d=4096 measured 6/1000=0.006 ⇒ δ=0.02 conservative ceiling — tightens to \
-             ~1e-3 at d≥8192. Operational wall (boundary data): ∏k≈d fails — F=3,k=16 (∏=4096) ≈100% \
-             even at d=8192, so k≤8 is the validated edge for F=3 at these knobs (RFC-0009 §9 Q4/Q6)",
+    method: "Monte-Carlo exact-tuple recovery vs brute-force oracle (MAP-I bipolar; Hebbian bipolar \
+             cleanup sign(Σⱼ simⱼ·cⱼ), τ_lock=0.9, uniform superposition init, budget 50; F≤3, k≤16, \
+             ∏k≤4096, d≥4096; worst corner F=3,k=16,d=4096 measured 0/1000 ⇒ δ=0.02 conservative \
+             ceiling. §10.3 wall-breach: the prior softmax-β=6 cleanup collapsed here (≈100% fail), \
+             fixed by bipolarizing the estimate so the explain-away stays on ±1. Boundary data beyond \
+             the envelope: F=3,k=32 (∏=32768) needs d≥16384 (0.005) — not validated at d=8192 (0.085); \
+             SoftmaxSign does NOT breach the wall, ArgMax only partially (RFC-0009 §9 Q4/Q6, §10.3)",
 };
 
 /// Factorize `s` into one atom per slot of `codebooks`, running the RFC-0009 §3 loop with `params`.
@@ -478,23 +505,54 @@ fn cleanup_slot<M: VsaModel>(
                 .map(|(_, a)| a.to_vec())
                 .ok_or(VsaError::EmptyCodebook)
         }
-        Cleanup::Softmax { beta } => {
-            // Numerically stable softmax over the per-atom similarities, then Σⱼ wⱼ·cᵢ,ⱼ.
-            let sims: Vec<f64> = cb.atoms().map(|(_, a)| model.similarity(r, a)).collect();
-            let max = sims.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-            let exps: Vec<f64> = sims.iter().map(|&s| ((s - max) * beta).exp()).collect();
-            let sum: f64 = exps.iter().sum();
+        Cleanup::Softmax { beta } => Ok(softmax_superposition(model, cb, r, beta)),
+        Cleanup::SoftmaxSign { beta } => {
+            // §10.3 variant 1: bipolarize the softmax estimate so the explain-away stays on ±1.
+            Ok(bipolarize(&softmax_superposition(model, cb, r, beta)))
+        }
+        Cleanup::Hebbian => {
+            // §10.3 variant 3: Frady's bipolar cleanup `sign(Σⱼ simⱼ·cᵢ,ⱼ)` — the similarity-weighted
+            // (Cᵀ C) superposition, projected to ±1. Linear weights (no softmax temperature).
             let mut acc = vec![0.0_f64; cb.dim() as usize];
-            // sum is ≥ 1 (the max term contributes exp(0) = 1), so the division is safe.
-            for ((_, atom), e) in cb.atoms().zip(exps.iter()) {
-                let w = e / sum;
+            for (_, atom) in cb.atoms() {
+                let w = model.similarity(r, atom);
                 for (a, &x) in acc.iter_mut().zip(atom) {
                     *a += w * x;
                 }
             }
-            Ok(acc)
+            Ok(bipolarize(&acc))
         }
     }
+}
+
+/// The softmax-weighted codebook superposition `Σⱼ softmax(β·simⱼ)·cᵢ,ⱼ` (numerically stable).
+fn softmax_superposition<M: VsaModel>(
+    model: &M,
+    cb: &CleanupMemory,
+    r: &[f64],
+    beta: f64,
+) -> Vec<f64> {
+    let sims: Vec<f64> = cb.atoms().map(|(_, a)| model.similarity(r, a)).collect();
+    let max = sims.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let exps: Vec<f64> = sims.iter().map(|&s| ((s - max) * beta).exp()).collect();
+    let sum: f64 = exps.iter().sum();
+    let mut acc = vec![0.0_f64; cb.dim() as usize];
+    // sum is ≥ 1 (the max term contributes exp(0) = 1), so the division is safe.
+    for ((_, atom), e) in cb.atoms().zip(exps.iter()) {
+        let w = e / sum;
+        for (a, &x) in acc.iter_mut().zip(atom) {
+            *a += w * x;
+        }
+    }
+    acc
+}
+
+/// Project a real-valued estimate onto the bipolar `±1` alphabet (`sign`, with `sign(0) = +1` for a
+/// deterministic tie-break). Keeping the estimate bipolar makes the MAP-I explain-away exact (§10.3).
+fn bipolarize(v: &[f64]) -> Vec<f64> {
+    v.iter()
+        .map(|&x| if x >= 0.0 { 1.0 } else { -1.0 })
+        .collect()
 }
 
 /// Decode each slot's current estimate to its top codebook atom (`ι` + confidence + margin).
@@ -691,20 +749,22 @@ mod tests {
     #[test]
     fn profile_check_refuses_outside_regime() {
         let p = &MAPI_RESONATOR_PROFILE;
-        // In regime: F≤3, k≤8, ∏k≤512, d≥4096.
+        // In regime: F≤3, k≤16, ∏k≤4096, d≥4096 (the §10.3 widened envelope).
         assert!(p.check(2, &[8, 8], 4096).is_ok());
         assert!(p.check(3, &[8, 8, 8], 4096).is_ok());
-        // Too many factors / too-large codebook / dimension all refuse explicitly.
+        assert!(p.check(3, &[16, 8, 8], 4096).is_ok()); // k=16 is now in regime (∏=1024)
+        assert!(p.check(3, &[16, 16, 16], 4096).is_ok()); // the new edge: ∏=4096 = max_capacity
+                                                          // Too many factors / too-large codebook / too-small dimension all refuse explicitly.
         assert!(matches!(
-            p.check(4, &[8, 8, 8, 8], 4096),
+            p.check(4, &[16, 16, 16, 16], 4096),
             Err(VsaError::OutsideEmpiricalProfile { .. })
         ));
         assert!(matches!(
-            p.check(3, &[16, 8, 8], 4096),
+            p.check(3, &[32, 8, 8], 4096), // k=32 is past the validated edge
             Err(VsaError::OutsideEmpiricalProfile { .. })
         ));
         assert!(matches!(
-            p.check(3, &[8, 8, 8], 1024),
+            p.check(3, &[16, 16, 16], 1024),
             Err(VsaError::OutsideEmpiricalProfile { .. })
         ));
         // The bound it backs is Empirical, never stronger.

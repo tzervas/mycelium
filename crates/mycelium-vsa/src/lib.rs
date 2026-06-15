@@ -19,6 +19,7 @@
 pub mod bsc;
 pub mod capacity;
 pub mod cleanup;
+pub mod decode_select;
 pub mod fhrr;
 pub mod hrr;
 pub mod mapb;
@@ -31,12 +32,16 @@ pub(crate) mod wrap;
 
 pub use bsc::Bsc;
 pub use cleanup::{CleanupMemory, Match};
+pub use decode_select::{
+    decode_method_policy, explain_decode_method, reconstruct_factors_auto, DecodeMethod,
+    DecodeSelection, Explanation, DEFAULT_ENUM_BUDGET,
+};
 pub use fhrr::Fhrr;
 pub use hrr::Hrr;
 pub use mapb::MapB;
 pub use mapi::MapI;
 pub use matrix::{matrix_tag, RFC0003_MATRIX};
-pub use recon::{reconstruct_factors, reconstruct_role};
+pub use recon::{reconstruct_factors, reconstruct_factors_selected, reconstruct_role};
 pub use resonator::{
     factorize, Cleanup, Factorization, Init, IterationRecord, ResonatorParams, ResonatorProfile,
     ResonatorTrace, StopReason, MAPI_RESONATOR_PROFILE,
@@ -179,6 +184,21 @@ pub enum VsaError {
         /// The full run trace.
         trace: Box<crate::resonator::ResonatorTrace>,
     },
+    /// The decode-method selector (RFC-0010) chose `Refuse`, or a forced arm hit the honesty floor:
+    /// the request is too large to enumerate **and** outside the resonator regime (or a forced
+    /// `BruteForceExact` exceeds the enumeration budget / a forced `Resonator` is out of regime). An
+    /// explicit refusal, never a silent best-effort decode (RFC-0010 §4.4/§4.5; G2).
+    DecodeRefused {
+        /// Why the decode was refused (which arm, which gate failed).
+        detail: String,
+    },
+    /// A brute-force `Exact` decode (RFC-0010) found the instance **non-identifiable**: the true tuple
+    /// is not the *unique* global arg-max, so no `Exact` factor set can be claimed (a coin-flip between
+    /// tied tuples is exactly what `Exact` forbids). Refused, never guessed (RFC-0010 §4.4; G2).
+    NonIdentifiable {
+        /// The runner-up combination's similarity (tied with, or above, the apparent best).
+        runner_up_similarity: f64,
+    },
     /// A constructed result violated a Core IR invariant.
     Wf(mycelium_core::WfError),
 }
@@ -264,6 +284,15 @@ impl core::fmt::Display for VsaError {
             } => write!(
                 f,
                 "resonator slot {slot} margin {margin} is below the threshold {threshold} (ambiguous)"
+            ),
+            VsaError::DecodeRefused { detail } => {
+                write!(f, "decode-method selection refused: {detail}")
+            }
+            VsaError::NonIdentifiable {
+                runner_up_similarity,
+            } => write!(
+                f,
+                "brute-force decode found the instance non-identifiable (runner-up similarity {runner_up_similarity}); no Exact factorization"
             ),
             VsaError::Wf(e) => write!(f, "well-formedness violation: {e}"),
         }

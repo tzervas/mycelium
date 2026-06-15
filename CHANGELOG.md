@@ -32,6 +32,80 @@ corpus, not released software. Versioning will begin when the kernel does.
   `atoms()`/`dim()` accessors; four resonator `VsaError` variants. **Nothing new in the kernel** beyond
   the r4 additive manifest metadata fields. (phase-3.md §2 / Meta)
 
+### Added (Phase 3 — RFC-0010 follow-ups: enum_budget crossover + Value-level wiring, M-350)
+- **`enum_budget` crossover measured (RFC-0010 §8).** A wall-clock instrument
+  (`tests/decode_select.rs::decode_method_enum_budget_crossover`, `#[ignore]`d) times brute force vs the
+  resonator per decode across `{F, k, d}`: the **cost-parity crossover is `∏k ≈ 100–128`** (d-independent
+  — both scale with `d`); brute force is cheaper only for `∏k ≲ 64` and costs **≈19×** the resonator at
+  the regime edge `∏k=4096` (≈76 ms vs ≈4 ms, d=4096). So `DEFAULT_ENUM_BUDGET = max_capacity` (4096) is
+  **guarantee-maximal** (always `Exact` in-regime, bounded ≤ ≈157 ms at d=8192), *not* latency-minimal
+  (≈128) — recorded as-measured (VR-5); the default value is a guarantee-vs-latency policy call, exposed
+  per call and surfaced in the EXPLAIN cost lines. `DEFAULT_ENUM_BUDGET`'s doc carries the trade.
+- **Value-level auto-selected decode** — `mycelium-vsa::reconstruct_factors_selected` routes a
+  `Resonator` manifest through the RFC-0010 selector (instead of always running the resonator),
+  returning a `DecodeSelection` with the **tag read off the chosen arm**. Unlike `reconstruct_factors`,
+  it does **not** pre-gate on the resonator profile — a brute-forceable instance *outside* the resonator
+  regime (e.g. `F=4, k=8`, ∏=4096, which the plain decode refuses) is recovered **exactly** by brute
+  force (RFC-0010 §4.4). Shared manifest→`ResonatorParams` reading refactored into a helper (DRY). Four
+  new `recon` tests (brute-Exact, resonator-Empirical, the F=4 capability gain, non-resonator rejection).
+  (phase-3.md §2 / Meta)
+
+### Added (Phase 3 — RFC-0010 decode-methodology selector prototype, M-350)
+- **`mycelium-vsa::decode_select`** — the RFC-0010 decode-methodology selector, reusing the **one**
+  RFC-0005 selection mechanism as a **third site** (no parallel selector). `reconstruct_factors_auto`
+  routes a factorization request among `{ BruteForceExact, Resonator, Refuse }` by an ordered decision
+  table over **exact** facts (`F`, `∏kᵢ`, `d`, `ResonatorProfile` membership), runs the chosen arm, and
+  returns the recovered factors with the **guarantee tag read off the arm** — brute-force enumeration is
+  **`Exact`** (identifiability-checked against ties), the resonator is **`Empirical`**, else an explicit
+  `VsaError::DecodeRefused`. Every selection emits the mandatory EXPLAIN (`explain_decode_method` is the
+  pure, no-execution form). `DecodeMethodPolicy` is content-addressed (`enum_budget` is part of its
+  identity).
+- **Honesty floor enforced (RFC-0010 §4.5).** A forced `BruteForceExact` beyond `enum_budget`, a forced
+  `BruteForceExact` on a non-identifiable instance (`VsaError::NonIdentifiable`), and a forced
+  `Resonator` out of regime all still **refuse** — a first-class override cannot escape the floor or
+  upgrade a tag (VR-5). The `mycelium-core::recon` `≤Empirical` ceiling is untouched.
+- **Mechanism extended additively** (`mycelium-select`, core-only): an abstract `DecodeMethod`
+  candidate, the `DecodeFacts` queryable facts, the `CapacityAtMost`/`FactorsAtMost`/`InResonatorRegime`
+  predicates, and the `select_decode_method` adapter. `mycelium-vsa` now depends on `mycelium-select`
+  (acyclic — `mycelium-select` is `mycelium-core`-only).
+- **Honest finding recorded.** With `DEFAULT_ENUM_BUDGET = MAPI_RESONATOR_PROFILE.max_capacity` (4096),
+  *every* in-regime request is also enumerable, so the brute-force `Exact` arm dominates the **entire**
+  validated regime (never take `Empirical` when `Exact` is cheaply available) — the resonator arm
+  becomes load-bearing only at a tighter budget (latency) or once the validated capacity grows beyond
+  the enumeration budget. The `enum_budget` wall-clock crossover stays the RFC-0010 §8 open question.
+  (phase-3.md §2 / Meta)
+
+### Added (Phase 3 — RFC-0010 decode-methodology selection design, M-350 needs-design)
+- **`docs/rfcs/RFC-0010-Decode-Methodology-Selection.md`** (Draft): the design artifact for choosing a
+  **decode methodology** as a **third site of the one RFC-0005 selection mechanism** (no parallel
+  selector — DRY/SoC). A content-addressed, `EXPLAIN`-mandatory decision table over **exact** metadata
+  (`F`, `∏kᵢ`, `d`, model, `ResonatorProfile` membership) routes among
+  `{ BruteForceExact (Exact), Resonator{Hebbian} (Empirical), Refuse }`, with the **guarantee tag read
+  off the chosen arm** (VR-5) and out-of-regime / non-identifiable inputs an explicit refusal
+  (never-silent — G2). Records the §10.3 finding that the **cleanup-variant axis collapses to one
+  winner (Hebbian)** inside the validated envelope, so cleanup-selection is **deferred** (YAGNI) with a
+  concrete re-open trigger. **No code; nothing in the kernel.** Registered in the Doc-Index + RFC index;
+  design gated on ratification. (phase-3.md §2 / Meta)
+
+### Changed (Phase 3 — resonator operational-capacity wall breached, §10.3 cleanup ablation, M-350)
+- **`MAPI_RESONATOR_PROFILE` widened `F≤3, k≤8, ∏k≤512` → `F≤3, k≤16, ∏k≤4096, d≥4096`** by fixing the
+  cleanup dynamics, **not** by loosening the honesty contract. The original softmax cleanup fed the
+  *real-valued* superposition straight into the next bind, so crosstalk compounded through the
+  elementwise product of `F−1` noisy real vectors — the prototype collapsed as `∏k → d`. The §10.3
+  ablation (`tests/resonator_profile.rs::resonator_cleanup_ablation`, `#[ignore]`d) measured four
+  cleanups at the wall; the **Hebbian bipolar** projection `sign(Σⱼ simⱼ·cⱼ)` (Frady et al. 2020) keeps
+  the explain-away on the `±1` alphabet, so the MAP-I unbind stays *exact*. Measured at F=3,k=16
+  (∏=4096): **softmax 300/300 fail → Hebbian 0/300** at d=4096; the canonical 1000-trial gate now
+  validates the F=3/k=16/d=4096 worst corner at **0/1000 ⇒ δ=0.02** conservative ceiling. New
+  `Cleanup::Hebbian` (the validated default) + `Cleanup::SoftmaxSign`; `ResonatorParams::mapi_default`
+  and the unspecified-manifest decode path adopt Hebbian (the kernel `CleanupShape` is unchanged —
+  Hebbian lives only in `mycelium-vsa`).
+- **Honest boundary recorded.** `SoftmaxSign` does **not** breach the wall (sign of a sharp softmax ≈ a
+  noisy arg-max); `ArgMax` only partially (brittle at the tight d=4096 corner). F=3,k=32 (∏=32768) is
+  left **outside** the validated envelope: 0.085 at d=8192 (not tight), 0.005 only at d≥16384 — recorded
+  as boundary data, not claimed. F=3,k=16 added to the brute-force oracle. Tag stays **`Empirical`,
+  MAP-I only, never `Proven`**. (phase-3.md §2 / Meta)
+
 ### Changed (Phase 3 — resonator validated regime widened + operational-capacity map, M-350)
 - **`MAPI_RESONATOR_PROFILE` widened `F≤2, ∏k≤64` → `F≤3, k≤8, ∏k≤512, d≥4096`** with a **measured**
   δ. A staged capacity sweep (`tests/resonator_profile.rs::resonator_capacity_sweep`, `#[ignore]`d)

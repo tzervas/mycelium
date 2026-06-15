@@ -13,7 +13,8 @@ use mycelium_vsa::{
 };
 
 /// The canonical knobs the profile validates and records (kept in sync with the const's `method`).
-const PROFILE_BETA: f64 = 6.0;
+/// The adopted cleanup is the §10.3 wall-breach [`Cleanup::Hebbian`] (`sign(Σⱼ simⱼ·cⱼ)`).
+const PROFILE_CLEANUP: Cleanup = Cleanup::Hebbian;
 const PROFILE_BUDGET: u64 = 50;
 
 struct Lcg(u64);
@@ -42,15 +43,15 @@ impl Lcg {
 }
 
 /// One trial: build `f` fresh codebooks of `k` bipolar atoms at `dim`, pick a true tuple, bind it,
-/// factorize (softmax β, iteration budget), and return `true` iff the resonator recovers **exactly**
-/// the true tuple. A wrong-fixed-point `Ok`, an oscillation/budget error, or a below-gate refusal all
-/// count as failure (RFC-0009 §5.3/§6).
+/// factorize (the given `cleanup`, iteration budget), and return `true` iff the resonator recovers
+/// **exactly** the true tuple. A wrong-fixed-point `Ok`, an oscillation/budget error, or a below-gate
+/// refusal all count as failure (RFC-0009 §5.3/§6).
 fn recovery_fails(
     model: &MapI,
     f: usize,
     k: usize,
     dim: u32,
-    beta: f64,
+    cleanup: Cleanup,
     budget: u64,
     lcg: &mut Lcg,
 ) -> bool {
@@ -75,19 +76,19 @@ fn recovery_fails(
         s = model.bind(&s, &atoms[slot][truth[slot]]).unwrap();
     }
     let mut params = ResonatorParams::mapi_default(budget, lcg.next_u64());
-    params.cleanup = Cleanup::Softmax { beta };
+    params.cleanup = cleanup;
     match factorize(model, &s, &mems, &params) {
         Ok(out) => (0..f).any(|i| out.factors[i].index != truth[i]),
         Err(_) => true,
     }
 }
 
-/// Measure the exact-recovery failure rate over `trials` at a `{f, k, dim}` point with `beta`/`budget`.
+/// Measure the exact-recovery failure rate over `trials` at a `{f, k, dim}` point with `cleanup`/`budget`.
 fn measure_rate(
     f: usize,
     k: usize,
     dim: u32,
-    beta: f64,
+    cleanup: Cleanup,
     budget: u64,
     trials: u64,
     salt: u64,
@@ -96,7 +97,7 @@ fn measure_rate(
     let mut failures = 0u64;
     for trial in 0..trials {
         let mut lcg = Lcg::new(salt ^ trial);
-        if recovery_fails(&model, f, k, dim, beta, budget, &mut lcg) {
+        if recovery_fails(&model, f, k, dim, cleanup, budget, &mut lcg) {
             failures += 1;
         }
     }
@@ -112,14 +113,14 @@ fn mapi_resonator_profile_holds_over_declared_trials() {
         p.max_factors,
         p.max_codebook,
         p.min_dim,
-        PROFILE_BETA,
+        PROFILE_CLEANUP,
         PROFILE_BUDGET,
         p.trials,
         0x8E50_0000,
     );
     // Transparency: the measured rate is the evidence the const's δ records (run with --nocapture).
     eprintln!(
-        "resonator profile worst point (F={}, k={}, d={}, β={PROFILE_BETA}): {failures}/{} failures, rate={rate} (δ={})",
+        "resonator profile worst point (F={}, k={}, d={}, cleanup={PROFILE_CLEANUP:?}): {failures}/{} failures, rate={rate} (δ={})",
         p.max_factors, p.max_codebook, p.min_dim, p.trials, p.delta
     );
     assert!(
@@ -157,9 +158,48 @@ fn resonator_capacity_sweep() {
     eprintln!("F    k    ∏k        d       β     budget trials  fails  rate");
     for &(f, k, dim, beta, budget, trials, salt) in points {
         let prod: u128 = (0..f).map(|_| k as u128).product();
-        let (fails, rate) = measure_rate(f, k, dim, beta, budget, trials, salt);
+        let (fails, rate) =
+            measure_rate(f, k, dim, Cleanup::Softmax { beta }, budget, trials, salt);
         eprintln!(
             "{f:<4} {k:<4} {prod:<9} {dim:<7} {beta:<5} {budget:<6} {trials:<7} {fails:<6} {rate}"
         );
+    }
+}
+
+/// **§10.3 cleanup ablation — the wall-breach measurement.** Compares the four cleanup variants at the
+/// corners where `Softmax` collapses (`∏k → d`): F=3, k∈{16,32}, d∈{4096,8192,16384}. The bipolarizing
+/// variants (`SoftmaxSign`, `Hebbian`) keep the explain-away on the `±1` alphabet, so the MAP-I unbind
+/// stays exact instead of compounding real-valued crosstalk — the hypothesis this run tests. The
+/// evidence here (failure rate per variant per corner) is what justifies any widening of
+/// `MAPI_RESONATOR_PROFILE`; a variant that does *not* move the wall is recorded too (honest boundary,
+/// VR-5). Run manually: `--ignored --nocapture`.
+#[test]
+#[ignore = "cleanup-ablation instrument: heavy; run manually with --ignored --nocapture"]
+fn resonator_cleanup_ablation() {
+    // The wall corners (F=3) plus the in-regime F=3,k=8 control, at the budgets the variants get.
+    // (F, k, d, budget, trials, salt)
+    let corners: &[(usize, usize, u32, u64, u64, u64)] = &[
+        (3, 8, 4096, 50, 300, 0xA_0001),
+        (3, 16, 4096, 50, 300, 0xA_0002),
+        (3, 16, 8192, 50, 300, 0xA_0003),
+        (3, 16, 16384, 50, 300, 0xA_0004),
+        (3, 32, 8192, 80, 200, 0xA_0005),
+        (3, 32, 16384, 80, 200, 0xA_0006),
+    ];
+    let variants: &[(&str, Cleanup)] = &[
+        ("Softmax{6}", Cleanup::Softmax { beta: 6.0 }),
+        ("SoftmaxSign{6}", Cleanup::SoftmaxSign { beta: 6.0 }),
+        ("Hebbian", Cleanup::Hebbian),
+        ("ArgMax", Cleanup::ArgMax),
+    ];
+    eprintln!("variant         F    k    ∏k        d       budget trials  fails  rate");
+    for &(name, cleanup) in variants {
+        for &(f, k, dim, budget, trials, salt) in corners {
+            let prod: u128 = (0..f).map(|_| k as u128).product();
+            let (fails, rate) = measure_rate(f, k, dim, cleanup, budget, trials, salt);
+            eprintln!(
+                "{name:<15} {f:<4} {k:<4} {prod:<9} {dim:<7} {budget:<6} {trials:<7} {fails:<6} {rate}"
+            );
+        }
     }
 }
