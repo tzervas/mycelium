@@ -8,6 +8,37 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (Phase 3 — RFC-0011 r3 ENACTED: data + flat `Match` in L0; RFC-0001 → r3; M-320/M-310)
+- **The L1 data-and-matching core is now folded into the frozen Core IR and implemented in lockstep
+  (RFC-0011 r3, enacting the named RFC-0001 revision).** `Construct` + the flat `Match` are L0 Core IR
+  nodes, so a non-recursive program that builds/matches data reaches the trusted reference interpreter
+  and the M-210 differential — closing the text→`Node` gap that blocked **M-310** document sync
+  (gate residual **R1 closed**) and dead-ended **M-320**'s decision-tree compiler.
+  - **RFC-0001 r2 → r3** (append-only; **supersedes the r2 §4.5 grammar**): §4.5 gains `Construct` +
+    flat `Match` + `Alt` and **WF6/WF7/WF8**; §4.6 gains the content-addressed **data registry Σ**
+    (`CtorRef = #T#i`, Unison self-recursive placeholder hashing; mutual recursion implemented but
+    deferred to r4 per R7-Q3); §4.2 gains the **data value `Datum`** + the runtime sum **`CoreValue`**;
+    §4.7 gains the **datum guarantee-summary** addendum. RFC-0011 → **Accepted, r3 ENACTED**; RFC-0007
+    §4.6's `Residual` is **narrowed** (retired for data/matching; `App`/`Fix`/`for` stay `Residual`, r4).
+  - **The one genuinely-open value-model choice (maintainer-confirmed):** `Datum` is a **sibling** type —
+    `Value<R>` is unchanged, *not* refactored into a `Repr | Data` sum — and carries a **meet-summary
+    guarantee with no `Bound`** (bounds stay on the leaf representation values; an addendum to §4.7). The
+    smaller, isolated change honors KC-3/KISS/YAGNI (data values arise only as `Construct`/`Match`
+    results, never as `Const` literals in r3).
+  - **Code:** `mycelium-core` (the registry, `Datum`/`CoreValue`, the nodes, content-addressing +
+    canonical dump; AOT stays repr-only via `Node::is_aot_lowerable`, RFC-0011 §4.4 Q5);
+    `mycelium-interp` (small-step `Construct`/`Match` + `eval_core`; `Construct` = `meet(fields)`;
+    `Match` meet is identity for `Exact` scrutinees and an **explicit refusal** for a non-`Exact` data
+    scrutinee — never a fabricated bound); `mycelium-l1::elab` (the M-320 Maranget tree lowers nested
+    patterns to nested flat L0 `Match`, binding all constructor fields; `if` → `Bool` match).
+  - **Verified (NFR-7):** the M-210 differential extends to the data fragment — **L1-eval ≡
+    elaborate→L0-interp** on the `CoreValue` observable (`L1Value::to_core` bridges name-keyed →
+    `#T#i`), with a mutant-witness; the M-310/M-320 phase-3 rows and §6.1 exit-gate verdict updated
+    (R1 + R2 closed). 497 workspace tests pass; clippy clean; `cargo fmt` applied.
+  - **Honesty/scope (VR-5):** `Lam/App/Fix` remain the named **r4** revision (full L1-in-Core-IR,
+    R7-Q1/Q3); the AOT path and mutual-recursion cycle-ordering are explicit, flagged deferrals — not
+    silent gaps. (RFC-0001 r3 / RFC-0011 / RFC-0007 §4.6 Meta)
+
 ### Changed (Phase 3 — RFC-0006 & RFC-0007 ratified, Draft → Accepted r4; maintainer sign-off)
 - **RFC-0006 (surface/term-layering) and RFC-0007 (L1 kernel calculus) are now Accepted (r4), with a
   scoped §10 carve-out.** A completion-review found **no missing normative content** in the
