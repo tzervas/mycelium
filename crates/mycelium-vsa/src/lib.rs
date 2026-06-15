@@ -25,6 +25,7 @@ pub mod mapb;
 pub mod mapi;
 pub mod matrix;
 pub mod recon;
+pub mod resonator;
 pub mod sbc;
 pub(crate) mod wrap;
 
@@ -35,7 +36,11 @@ pub use hrr::Hrr;
 pub use mapb::MapB;
 pub use mapi::MapI;
 pub use matrix::{matrix_tag, RFC0003_MATRIX};
-pub use recon::reconstruct_role;
+pub use recon::{reconstruct_factors, reconstruct_role};
+pub use resonator::{
+    factorize, Cleanup, Factorization, Init, IterationRecord, ResonatorParams, ResonatorProfile,
+    ResonatorTrace, StopReason, MAPI_RESONATOR_PROFILE,
+};
 pub use sbc::Sbc;
 
 use mycelium_core::{Bound, BoundBasis, BoundKind, GuaranteeStrength};
@@ -135,6 +140,45 @@ pub enum VsaError {
         /// The manifest's threshold.
         threshold: f64,
     },
+    /// A resonator factorization reached its iteration budget without a clean discrete fixed point —
+    /// an explicit non-convergence verdict, never a returned factor set (RFC-0009 §6; G2). The
+    /// inspectable run trace is attached (boxed to keep the error enum small).
+    ResonatorBudgetExhausted {
+        /// The full run trace (stop reason, similarity trajectory, final decode).
+        trace: Box<crate::resonator::ResonatorTrace>,
+    },
+    /// A resonator factorization entered a limit cycle on the decoded index tuple `ι` — surfaced
+    /// explicitly, never run to budget silently (RFC-0009 §3/§6; §8.1 P3).
+    ResonatorOscillating {
+        /// The full run trace (the `StopReason::Oscillating` records the cycle period).
+        trace: Box<crate::resonator::ResonatorTrace>,
+    },
+    /// A resonator factorization converged, but some slot's confidence fell below the requested
+    /// threshold — "converged ≠ correct"; refused, never a silent low-confidence guess (RFC-0009
+    /// §5.4; §8.1 P5).
+    ResonatorBelowConfidence {
+        /// The offending factor slot.
+        slot: usize,
+        /// The achieved confidence.
+        confidence: f64,
+        /// The requested threshold.
+        threshold: f64,
+        /// The full run trace.
+        trace: Box<crate::resonator::ResonatorTrace>,
+    },
+    /// A resonator factorization converged, but some slot's margin (top minus runner-up) fell below
+    /// the requested threshold — an explicit ambiguity refusal, never a coin-flip between near-tied
+    /// atoms (RFC-0009 §5.4 / §9 Q5).
+    ResonatorBelowMargin {
+        /// The offending factor slot.
+        slot: usize,
+        /// The achieved margin.
+        margin: f64,
+        /// The requested threshold.
+        threshold: f64,
+        /// The full run trace.
+        trace: Box<crate::resonator::ResonatorTrace>,
+    },
     /// A constructed result violated a Core IR invariant.
     Wf(mycelium_core::WfError),
 }
@@ -192,6 +236,34 @@ impl core::fmt::Display for VsaError {
             } => write!(
                 f,
                 "cleanup confidence {confidence} is below the manifest threshold {threshold}"
+            ),
+            VsaError::ResonatorBudgetExhausted { trace } => write!(
+                f,
+                "resonator did not converge within the iteration budget ({} sweeps)",
+                trace.iterations
+            ),
+            VsaError::ResonatorOscillating { trace } => write!(
+                f,
+                "resonator oscillated (decoded index tuple recurred) after {} sweeps",
+                trace.iterations
+            ),
+            VsaError::ResonatorBelowConfidence {
+                slot,
+                confidence,
+                threshold,
+                ..
+            } => write!(
+                f,
+                "resonator slot {slot} confidence {confidence} is below the threshold {threshold}"
+            ),
+            VsaError::ResonatorBelowMargin {
+                slot,
+                margin,
+                threshold,
+                ..
+            } => write!(
+                f,
+                "resonator slot {slot} margin {margin} is below the threshold {threshold} (ambiguous)"
             ),
             VsaError::Wf(e) => write!(f, "well-formedness violation: {e}"),
         }

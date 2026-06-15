@@ -26,7 +26,9 @@ pub use guarantee::GuaranteeStrength;
 pub use id::ContentHash;
 pub use meta::{Meta, PackScheme, PhysicalLayout, Provenance, SparsityObs};
 pub use node::{Node, PolicyRef, Prim, VarId};
-pub use recon::{DecodeProcedure, DecodeSpec, Recipe, ReconInfo, ReconMode};
+pub use recon::{
+    CleanupShape, DecodeProcedure, DecodeSpec, InitStrategy, Recipe, ReconInfo, ReconMode,
+};
 pub use repr::{Repr, ScalarKind, SparsityClass};
 pub use value::{Payload, Trit, Value};
 

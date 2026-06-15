@@ -64,6 +64,21 @@ impl CleanupMemory {
         self.items.is_empty()
     }
 
+    /// Dimensionality of the stored atoms.
+    #[must_use]
+    pub fn dim(&self) -> u32 {
+        self.dim
+    }
+
+    /// The codebook atoms in index order, as `(label, atom)` pairs. Read-only — needed by the
+    /// resonator's softmax-superposition cleanup, which forms `Σⱼ wⱼ·cᵢ,ⱼ` over the raw atoms
+    /// (a projection `CleanupMemory::cleanup` alone cannot express). Mirrors `len`/`is_empty`.
+    pub fn atoms(&self) -> impl Iterator<Item = (&str, &[f64])> {
+        self.items
+            .iter()
+            .map(|(label, atom)| (label.as_str(), atom.as_slice()))
+    }
+
     /// Clean up `query` against the codebook using `model`'s similarity: return the best-matching
     /// item with its confidence and margin, or `None` if the memory is empty or `query`'s length
     /// disagrees with `dim`. Never coerces silently — a low confidence/margin is *reported*, not
