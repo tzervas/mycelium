@@ -9,6 +9,14 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Fixed (deep-review remediation — Wave 1)
+- **WS5 — `mycelium-select` content-addressing integrity (finding A5-01/B2-02 H9; advances
+  RFC-0005 §3).** `SelectionPolicy::new` (and, via it, `Deserialize`) now rejects a rule predicate
+  carrying a **non-finite `f64` literal** (`Predicate::literals_finite`, recursing through
+  `All`/`Any`/`Not`), with a new `PolicyError::BadPredicateLiteral`. `NaN` and `±∞` both serialize
+  to JSON `null`, so two materially different policies (`eps ≤ NaN`, never-matches, vs `eps ≤ ∞`,
+  always-matches) would otherwise hash to the **same** `policy_ref` — collapsing the audit anchor
+  recorded in `Meta.policy_used`. Regression test asserts all three non-finite forms are refused
+  (and nesting is checked), citing A5-01 as its mutant-witness.
 - **WS4 — `mycelium-l1` soundness + parser hardening (findings A4-01 H7, A4-02 H8; advances S5/G2,
   RFC-0007 §4.5).**
   - **Totality soundness (H7):** the structural totality checker classified a non-terminating

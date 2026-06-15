@@ -160,6 +160,14 @@ assertion-strength weakness.
 - **Verify:** the divergent witnesses are now `Partial`; deep-nesting input returns exit-2, not
   SIGABRT; reject corpus fails if a file rejects for the wrong reason.
 
+### WS5 — Selection integrity · effort S · risk low · **H9 LANDED; Lows remaining**
+
+> **Status (2026-06-15):** the High (H9) is done — `SelectionPolicy::new` rejects non-finite
+> predicate `f64` literals (`PolicyError::BadPredicateLiteral`), restoring `policy_ref` injectivity;
+> regression test with mutant-witness. **Remaining:** A5-02 (non-ternary layout refusal), A5-03
+> (`unpack_trits` Result/assert), A5-05 (vacuous sweep assert), A5-06 (false comment), A5-07 (pin
+> eps constants), A5-08 (nit).
+
 ### WS5 — Selection integrity · effort S · risk low
 
 Findings: **H9** (A5-01/B2-02), A5-02, A5-03, A5-05, A5-06, A5-07, A5-08.

@@ -153,6 +153,25 @@ impl Predicate {
             Predicate::Not(p) => !p.eval(inputs),
         }
     }
+
+    /// True iff every floating-point literal in the predicate tree is finite (A5-01/B2-02). A
+    /// non-finite `ErrorEpsAtMost` literal serializes to JSON `null`, so two materially different
+    /// policies (e.g. `eps ≤ NaN`, which never matches, vs `eps ≤ +∞`, which always matches) would
+    /// hash to the **same** content-addressed `policy_ref` — breaking the audit anchor recorded in
+    /// `Meta.policy_used` (RFC-0005 §3). [`SelectionPolicy::new`] rejects a policy that violates this.
+    #[must_use]
+    pub fn literals_finite(&self) -> bool {
+        match self {
+            Predicate::ErrorEpsAtMost(x) => x.is_finite(),
+            Predicate::All(ps) | Predicate::Any(ps) => ps.iter().all(Predicate::literals_finite),
+            Predicate::Not(p) => p.literals_finite(),
+            Predicate::Always
+            | Predicate::SrcKindIs(_)
+            | Predicate::DtypeIs(_)
+            | Predicate::GuaranteeAtLeast(_)
+            | Predicate::DeclaredSparse => true,
+        }
+    }
 }
 
 /// A selectable candidate — the two RFC-0005 §4 sites share one vocabulary (one mechanism).
@@ -263,6 +282,9 @@ pub enum PolicyError {
     },
     /// The cost weight is non-finite or non-positive.
     BadCost,
+    /// A rule predicate carries a non-finite `f64` literal (e.g. `ErrorEpsAtMost(NaN/∞)`), which
+    /// would collide distinct policies under content addressing (A5-01).
+    BadPredicateLiteral,
 }
 
 impl core::fmt::Display for PolicyError {
@@ -276,6 +298,12 @@ impl core::fmt::Display for PolicyError {
                 )
             }
             PolicyError::BadCost => write!(f, "cost weight must be finite and > 0"),
+            PolicyError::BadPredicateLiteral => {
+                write!(
+                    f,
+                    "predicate float literals must be finite (else policy refs collide)"
+                )
+            }
         }
     }
 }
@@ -338,6 +366,9 @@ impl SelectionPolicy {
             });
         }
         for r in &rules {
+            if !r.when.literals_finite() {
+                return Err(PolicyError::BadPredicateLiteral);
+            }
             if let Action::Choose(i) = r.action {
                 if !in_range(i) {
                     return Err(PolicyError::IndexOutOfRange { index: i });

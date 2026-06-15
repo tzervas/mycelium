@@ -345,3 +345,56 @@ fn site_adapters_share_one_mechanism() {
         })
     ));
 }
+
+/// A5-01/B2-02 regression: non-finite predicate `f64` literals are refused at construction, so two
+/// materially different policies cannot collide on one content-addressed `policy_ref` (NaN and +∞
+/// both serialize to JSON `null`). Mutant-witness: removing the `literals_finite` check in
+/// `SelectionPolicy::new` lets these construct (and `eps ≤ NaN` vs `eps ≤ ∞` then share a ref).
+#[test]
+fn non_finite_predicate_literals_are_refused() {
+    let with_eps = |eps: f64| {
+        SelectionPolicy::new(
+            "p",
+            vec![Candidate::Repr(Repr::Dense {
+                dim: 4,
+                dtype: ScalarKind::F32,
+            })],
+            vec![Rule {
+                when: Predicate::ErrorEpsAtMost(eps),
+                action: Action::Choose(0),
+            }],
+            0,
+            unit_cost(),
+        )
+    };
+    assert_eq!(
+        with_eps(f64::NAN).unwrap_err(),
+        PolicyError::BadPredicateLiteral
+    );
+    assert_eq!(
+        with_eps(f64::INFINITY).unwrap_err(),
+        PolicyError::BadPredicateLiteral
+    );
+    assert_eq!(
+        with_eps(f64::NEG_INFINITY).unwrap_err(),
+        PolicyError::BadPredicateLiteral
+    );
+    // Finite is fine; the check recurses through Not/Any/All.
+    assert!(with_eps(0.01).is_ok());
+    let nested = SelectionPolicy::new(
+        "p",
+        vec![Candidate::Repr(Repr::Dense {
+            dim: 4,
+            dtype: ScalarKind::F32,
+        })],
+        vec![Rule {
+            when: Predicate::Not(Box::new(Predicate::Any(vec![Predicate::ErrorEpsAtMost(
+                f64::NAN,
+            )]))),
+            action: Action::Choose(0),
+        }],
+        0,
+        unit_cost(),
+    );
+    assert_eq!(nested.unwrap_err(), PolicyError::BadPredicateLiteral);
+}
