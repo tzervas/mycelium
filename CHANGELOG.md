@@ -8,6 +8,30 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — resonator-network factorization prototype, M-350; RFC-0009 §10.2)
+- **`mycelium-vsa::resonator`** — the RFC-0009 §3 factorization loop over any `VsaModel`
+  (MAP-I-first), recovering the unknown factors of a bind product `s = x₁ ⊛ … ⊛ x_F`. Parallel /
+  Jacobi **snapshot** update (§8.1 P6); softmax-superposition or arg-max cleanup (§9 Q2); uniform /
+  seeded init (§9 Q1); convergence **and** oscillation decided on the **discrete top-atom index tuple
+  `ι`** (§8.1 P3), bounded by the iteration budget. Deterministic via an in-crate LCG (no `rand`).
+- **Never-silent honesty made structural (RFC-0009 §5.4/§6).** `factorize` returns a `Factorization`
+  **only** on a clean `Converged` verdict that clears `τ_lock` + per-slot confidence + margin;
+  `BudgetExhausted`, `Oscillating`, below-confidence, and below-margin are explicit `VsaError`s
+  carrying the inspectable `ResonatorTrace` ("converged ≠ correct").
+- **`ResonatorProfile` + `MAPI_RESONATOR_PROFILE`** — the `{F, ∏kᵢ, d}` regime gate
+  (`check` → `OutsideEmpiricalProfile`; `bound` → `EmpiricalFit`), distinct from the bundle
+  `EmpiricalProfile` (§5.2/§9 Q4). First regime `F≤2, k≤8, ∏k≤64, d≥4096`.
+- **Trial-validated δ, oracle-measured.** `tests/resonator_oracle.rs` asserts **exact-tuple recovery**
+  against a brute-force oracle (+ an exhaustive-argmax identifiability check);
+  `tests/resonator_profile.rs` runs exactly `trials` (1000) at the worst point, scoring exact recovery
+  (not self-reported convergence — §8.1 P5): **measured 0/1000 ⇒ δ=0.01** conservative ceiling, the
+  test that *earns* the `Empirical` tag (VR-5).
+- **Value-level decode.** `mycelium-vsa::reconstruct_factors` mirrors `reconstruct_role`: reads the r4
+  `Resonator` manifest params, gates on the profile, runs the loop. Tag is **`Empirical`, MAP-I only,
+  never `Proven`** (schema-enforced); sparse/HRR/FHRR deferred (§9 Q6). Additive `CleanupMemory`
+  `atoms()`/`dim()` accessors; four resonator `VsaError` variants. **Nothing new in the kernel** beyond
+  the r4 additive manifest metadata fields. (phase-3.md §2 / Meta)
+
 ### Added (Phase 3 — RFC-0009 resonator-network factorization design, M-350 needs-design)
 - **`docs/rfcs/RFC-0009-Resonator-Network-Factorization.md`** (Draft): the *needs-design* deliverable
   for M-350 — fixes the convergence regime and the honest guarantee **before** any factorization code
