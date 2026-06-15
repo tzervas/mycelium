@@ -190,9 +190,14 @@ profile δ, or the recon schema; no learned/statistics-driven costing (RFC-0005 
 
 ## 8. Unresolved questions
 
-- **`enum_budget` crossover.** The `∏k` (and `d`) at which brute-force enumeration stops being the
-  cheaper *and* tractable choice — to be **measured** (a wall-clock sweep, like the §10.3 instrument),
-  then recorded; never asserted.
+- **`enum_budget` crossover — *measured* (2026-06-15).** The wall-clock sweep
+  (`tests/decode_select.rs::decode_method_enum_budget_crossover`) puts the **cost-parity crossover at
+  `∏k ≈ 100–128`**, d-independent (both methods scale with `d`): brute force is cheaper only for
+  `∏k ≲ 64`; at the validated edge `∏k=4096` it costs ≈ **19×** the resonator (≈76 ms vs ≈4 ms at
+  d=4096) for the `Exact`-over-`Empirical` upgrade. This turns the open question into a **policy** one:
+  `DEFAULT_ENUM_BUDGET` is currently *guarantee-maximal* (= `max_capacity` = 4096 ⇒ always `Exact`
+  in-regime, bounded ≤ ≈157 ms at d=8192); a *cost-optimal* default would be ≈128. The knob is exposed
+  per call and the choice is the maintainer's; the EXPLAIN cost lines surface the trade.
 - **Identifiability precheck cost.** Arm 1 gets identifiability for free; should arm 2 (resonator) also
   run a cheap identifiability precheck so a `Refuse` distinguishes "ambiguous instance" from "resonator
   miss"? (Leans yes for `EXPLAIN` quality; costs `∏k` — only affordable in the arm-1 regime.)
@@ -254,3 +259,18 @@ profile δ, or the recon schema; no learned/statistics-driven costing (RFC-0005 
   pushing the resonator's validated capacity well beyond what is cheaply enumerable is what makes the
   `Empirical` arm load-bearing. No kernel change; cleanup-variant selection still deferred (§8). RFC
   stays **Accepted**; honesty contract unchanged.
+- **2026-06-15 — `enum_budget` crossover measured + Value-level wiring (M-350; informative).** Two
+  follow-ups. **(A) §8 crossover, now measured.** The wall-clock instrument
+  (`tests/decode_select.rs::decode_method_enum_budget_crossover`) times brute force vs the resonator
+  per decode across `{F, k, d}`: the **cost-parity crossover is `∏k ≈ 100–128`** (d-independent), brute
+  force cheaper only for `∏k ≲ 64`, and **≈19× more expensive at the regime edge `∏k=4096`** (≈76 ms vs
+  ≈4 ms, d=4096) — so the default `enum_budget = max_capacity` is *guarantee-maximal* (always `Exact`
+  in-regime), not *latency-minimal* (≈128). The number is recorded; the default value stays the
+  maintainer's policy call (the §8 question is now a guarantee-vs-latency trade, not an unknown).
+  **(C) Value-level wiring.** `mycelium-vsa::reconstruct_factors_selected` routes a `Resonator` manifest
+  through the selector instead of always running the resonator — a small `∏k` is upgraded to brute-force
+  `Exact`, an in-regime request runs the `Empirical` resonator, else an explicit refusal. It does **not**
+  pre-gate on the resonator profile, so a brute-forceable instance *outside* the resonator regime (e.g.
+  `F=4, k=8`, ∏=4096 — which the plain `reconstruct_factors` refuses) is recovered **exactly** (RFC-0010
+  §4.4: brute force is `Exact` for any factor count). Tag still read off the arm; recon `≤Empirical`
+  ceiling untouched. RFC stays **Accepted**; honesty contract unchanged.

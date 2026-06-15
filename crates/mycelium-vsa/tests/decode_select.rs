@@ -6,8 +6,8 @@
 
 use mycelium_core::GuaranteeStrength;
 use mycelium_vsa::{
-    decode_method_policy, explain_decode_method, reconstruct_factors_auto, CleanupMemory,
-    DecodeMethod, MapI, ResonatorParams, VsaError, VsaModel, DEFAULT_ENUM_BUDGET,
+    decode_method_policy, explain_decode_method, factorize, reconstruct_factors_auto,
+    CleanupMemory, DecodeMethod, MapI, ResonatorParams, VsaError, VsaModel, DEFAULT_ENUM_BUDGET,
 };
 
 const D: u32 = 4096;
@@ -231,4 +231,86 @@ fn empty_and_mismatched_inputs_are_explicit() {
         reconstruct_factors_auto(&model, &s, &[wrong], &params(), DEFAULT_ENUM_BUDGET, None),
         Err(VsaError::DimMismatch { .. })
     ));
+}
+
+/// Build `f` codebooks of `k` bipolar atoms at dimension `dim`, plus the product `s` of slot-0 atoms.
+fn instance_at(dim: u32, f: usize, k: usize, seed: u64) -> (Vec<CleanupMemory>, Vec<f64>) {
+    let mut lcg = Lcg::new(seed);
+    let mut mems = Vec::with_capacity(f);
+    let mut first = Vec::with_capacity(f);
+    for i in 0..f {
+        let mut c = CleanupMemory::new(dim);
+        for j in 0..k {
+            let a = lcg.bipolar(dim);
+            if j == 0 {
+                first.push(a.clone());
+            }
+            c.insert(format!("{i}:{j}"), a).unwrap();
+        }
+        mems.push(c);
+    }
+    let model = MapI::new(dim);
+    let mut s = first[0].clone();
+    for a in &first[1..] {
+        s = model.bind(&s, a).unwrap();
+    }
+    (mems, s)
+}
+
+/// **§8 instrument — the `enum_budget` wall-clock crossover.** Times the two tractable decode methods
+/// per call across `{F, k, d}` (RFC-0010 §4.3/§8): brute-force enumeration grows with `∏ᵢ kᵢ`, the
+/// resonator is iterative (≈ `budget·F·Σkᵢ·d`, capacity-independent), so the crossover is the `∏k` at
+/// which brute force stops being the cheaper *and* `Exact` choice. The brute-force timing forces the
+/// enumeration (budget = MAX); the resonator timing calls `factorize` directly (so it is measured even
+/// out of regime). Run manually: `--ignored --nocapture`. The number it prints is the evidence behind
+/// `DEFAULT_ENUM_BUDGET` and the §8 open question — measured, not asserted (VR-5).
+#[test]
+#[ignore = "crossover instrument: heavy; run manually with --ignored --nocapture"]
+fn decode_method_enum_budget_crossover() {
+    use std::time::Instant;
+    let reps = 5u32;
+    // (F, k, d) sweeping ∏k across and well past the validated edge (4096).
+    let points: &[(usize, usize, u32)] = &[
+        (2, 8, 4096),  // ∏=64
+        (3, 8, 4096),  // ∏=512
+        (2, 16, 4096), // ∏=256
+        (3, 16, 4096), // ∏=4096  (the validated edge)
+        (3, 16, 8192), // ∏=4096 at larger d
+        (4, 16, 8192), // ∏=65536 (past the regime; brute force still exact)
+        (3, 32, 8192), // ∏=32768
+        (4, 32, 8192), // ∏=1048576 (deep — brute force dominates the cost)
+    ];
+    eprintln!("F   k    ∏k         d      brute_us    reson_us    cheaper");
+    for &(f, k, dim) in points {
+        let prod: u128 = (0..f).map(|_| k as u128).product();
+        let (mems, s) = instance_at(dim, f, k, 0xC_0FFEE ^ (prod as u64) ^ u64::from(dim));
+        let model = MapI::new(dim);
+        let params = ResonatorParams::mapi_default(50, 0xBEEF);
+
+        let t0 = Instant::now();
+        for _ in 0..reps {
+            let _ = reconstruct_factors_auto(
+                &model,
+                &s,
+                &mems,
+                &params,
+                u128::MAX,
+                Some(DecodeMethod::BruteForceExact),
+            );
+        }
+        let brute_us = t0.elapsed().as_micros() / u128::from(reps);
+
+        let t1 = Instant::now();
+        for _ in 0..reps {
+            let _ = factorize(&model, &s, &mems, &params);
+        }
+        let reson_us = t1.elapsed().as_micros() / u128::from(reps);
+
+        let cheaper = if brute_us <= reson_us {
+            "brute"
+        } else {
+            "resonator"
+        };
+        eprintln!("{f:<3} {k:<4} {prod:<10} {dim:<6} {brute_us:<11} {reson_us:<11} {cheaper}");
+    }
 }

@@ -41,7 +41,7 @@ pub use hrr::Hrr;
 pub use mapb::MapB;
 pub use mapi::MapI;
 pub use matrix::{matrix_tag, RFC0003_MATRIX};
-pub use recon::{reconstruct_factors, reconstruct_role};
+pub use recon::{reconstruct_factors, reconstruct_factors_selected, reconstruct_role};
 pub use resonator::{
     factorize, Cleanup, Factorization, Init, IterationRecord, ResonatorParams, ResonatorProfile,
     ResonatorTrace, StopReason, MAPI_RESONATOR_PROFILE,

@@ -38,9 +38,18 @@ pub use mycelium_select::{DecodeMethod, Explanation};
 
 /// The default enumeration budget: brute force is chosen when `∏ᵢ kᵢ ≤` this. Set to the widened
 /// resonator capacity edge ([`MAPI_RESONATOR_PROFILE`]'s `max_capacity` = 4096) so that *every*
-/// in-regime request small enough to enumerate gets the stronger **`Exact`** decode, and the resonator
-/// carries only the genuinely-intractable corners. Recorded in (and hashed into) the policy identity —
-/// a different budget is a different `PolicyRef` (RFC-0010 §4.3).
+/// in-regime request gets the **strongest honest guarantee available** — the `Exact` brute-force
+/// decode — and the resonator carries only the genuinely-intractable corners. Recorded in (and hashed
+/// into) the policy identity — a different budget is a different `PolicyRef` (RFC-0010 §4.3).
+///
+/// **This default is guarantee-maximal, not latency-minimal.** The §8 wall-clock instrument
+/// (`tests/decode_select.rs::decode_method_enum_budget_crossover`) measured the *cost-parity*
+/// crossover at **`∏k ≈ 100–128`** (d-independent — both methods scale with `d`): brute force is
+/// cheaper only for `∏k ≲ 64`, and at the regime edge `∏k=4096` it costs ≈ **19×** the resonator
+/// (≈76 ms vs ≈4 ms at d=4096) to buy the `Exact` tag over the `Empirical` one. A latency-sensitive
+/// caller passes a smaller budget (≈128 ⇒ cost-optimal); a caller wanting `Exact` past the regime
+/// (e.g. an `F=4` enumerable instance) passes a larger one. The knob is the policy; the EXPLAIN cost
+/// lines surface the trade per call (RFC-0010 §8).
 pub const DEFAULT_ENUM_BUDGET: u128 = MAPI_RESONATOR_PROFILE.max_capacity;
 
 /// The candidate-index convention of [`decode_method_policy`] (brute-force, resonator, refuse).

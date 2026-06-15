@@ -32,6 +32,24 @@ corpus, not released software. Versioning will begin when the kernel does.
   `atoms()`/`dim()` accessors; four resonator `VsaError` variants. **Nothing new in the kernel** beyond
   the r4 additive manifest metadata fields. (phase-3.md §2 / Meta)
 
+### Added (Phase 3 — RFC-0010 follow-ups: enum_budget crossover + Value-level wiring, M-350)
+- **`enum_budget` crossover measured (RFC-0010 §8).** A wall-clock instrument
+  (`tests/decode_select.rs::decode_method_enum_budget_crossover`, `#[ignore]`d) times brute force vs the
+  resonator per decode across `{F, k, d}`: the **cost-parity crossover is `∏k ≈ 100–128`** (d-independent
+  — both scale with `d`); brute force is cheaper only for `∏k ≲ 64` and costs **≈19×** the resonator at
+  the regime edge `∏k=4096` (≈76 ms vs ≈4 ms, d=4096). So `DEFAULT_ENUM_BUDGET = max_capacity` (4096) is
+  **guarantee-maximal** (always `Exact` in-regime, bounded ≤ ≈157 ms at d=8192), *not* latency-minimal
+  (≈128) — recorded as-measured (VR-5); the default value is a guarantee-vs-latency policy call, exposed
+  per call and surfaced in the EXPLAIN cost lines. `DEFAULT_ENUM_BUDGET`'s doc carries the trade.
+- **Value-level auto-selected decode** — `mycelium-vsa::reconstruct_factors_selected` routes a
+  `Resonator` manifest through the RFC-0010 selector (instead of always running the resonator),
+  returning a `DecodeSelection` with the **tag read off the chosen arm**. Unlike `reconstruct_factors`,
+  it does **not** pre-gate on the resonator profile — a brute-forceable instance *outside* the resonator
+  regime (e.g. `F=4, k=8`, ∏=4096, which the plain decode refuses) is recovered **exactly** by brute
+  force (RFC-0010 §4.4). Shared manifest→`ResonatorParams` reading refactored into a helper (DRY). Four
+  new `recon` tests (brute-Exact, resonator-Empirical, the F=4 capability gain, non-resonator rejection).
+  (phase-3.md §2 / Meta)
+
 ### Added (Phase 3 — RFC-0010 decode-methodology selector prototype, M-350)
 - **`mycelium-vsa::decode_select`** — the RFC-0010 decode-methodology selector, reusing the **one**
   RFC-0005 selection mechanism as a **third site** (no parallel selector). `reconstruct_factors_auto`
