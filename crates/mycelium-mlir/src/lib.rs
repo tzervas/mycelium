@@ -21,12 +21,16 @@
 //!   `ToolchainMissing`. The interp↔native differential (M-302) checks it against the interpreter.
 
 pub mod aot;
+pub mod bitnet;
 pub mod dialect;
 pub mod jit;
 pub mod llvm;
 pub mod pack;
 
 pub use aot::{run, run_with_layout};
+pub use bitnet::{
+    compile_bitnet_dot, emit_bitnet_dot_ir, jit_ternary_dot, ternary_dot_ref, BitnetDotKernel,
+};
 pub use dialect::emit;
 pub use jit::{compile_so, jit_run, JitArtifact};
 pub use llvm::{compile, compile_and_run, emit_llvm_ir, AotError, CompiledArtifact};

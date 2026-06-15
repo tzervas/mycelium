@@ -12,10 +12,14 @@
 //! evaluation-complete fragment to closed L0 terms — refusing everything else with an explicit
 //! `Residual`, never a partial artifact. The three-way differential (L1-eval ↔ elaborate→L0-interp
 //! ↔ AOT, validated through the M-210 shared checker) lives in `tests/differential.rs` (NFR-7).
-//! `match` covers data types *and* `Binary`/`Ternary` literal patterns (M-320): a literal arm fires
-//! on `repr + payload` equality, and because the value domain (2ⁿ/3ᵐ) is never enumerated, a literal
-//! match **requires** a `_`/binder default (W7 — coverage is never assumed). Still ahead: nested
-//! patterns / the Maranget match compiler and full L1-in-Core-IR (the RFC-0001 revision).
+//! `match` covers data types and `Binary`/`Ternary` literal patterns *and* **nested** patterns
+//! (M-320): a literal arm fires on `repr + payload` equality, and coverage is decided by the
+//! **Maranget usefulness** algorithm ([`usefulness`]) — exhaustiveness (a `_` must not be useful; its
+//! witness names a concrete missing case) and redundancy (an arm covered by earlier rows is
+//! unreachable) are both *checked* (W7 — never assumed; a `Binary`/`Ternary` value domain is never
+//! enumerated, so a literal match still needs a `_`/binder default). The Maranget *compilation* to the
+//! flat kernel `Match` (RFC-0007 §3, the elaborator/L0 path) lands with full L1-in-Core-IR (the
+//! RFC-0001 revision).
 //!
 //! Honesty: every malformed input is an explicit [`ParseError`] with a source position — the
 //! parser never panics and never silently accepts (S5/G2). The lexer disambiguates the one tricky
@@ -31,6 +35,7 @@ pub mod lexer;
 pub mod parse;
 pub mod token;
 pub mod totality;
+pub(crate) mod usefulness;
 
 pub use ast::Colony;
 pub use checkty::{check_colony, CheckError, Env, Ty};

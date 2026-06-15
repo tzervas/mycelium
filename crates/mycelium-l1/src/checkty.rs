@@ -501,6 +501,14 @@ impl Cx<'_> {
         Ok(aty)
     }
 
+    /// Type a `match` over a data, `Binary`, or `Ternary` scrutinee with **nested** patterns
+    /// (RFC-0007 §4.4/§4.7). Each arm's pattern is checked against the scrutinee type (binders enter
+    /// scope at their field types), the arm bodies must agree, and coverage is decided by the
+    /// **Maranget usefulness** algorithm ([`crate::usefulness`]): the match must be **exhaustive**
+    /// (a `_` is not useful — otherwise the witness names a missing case) and every arm must be
+    /// **reachable** (an arm covered by the earlier ones is a redundancy error). This unifies the data
+    /// match and the M-320 literal match: a `Binary`/`Ternary` value domain is never enumerated, so a
+    /// literal match still needs a `_`/binder default (W7 — coverage is checked, never assumed).
     fn infer_match(
         &self,
         scope: &mut Vec<(String, Ty)>,
@@ -508,186 +516,136 @@ impl Cx<'_> {
         arms: &[crate::ast::Arm],
     ) -> Result<Ty, CheckError> {
         let sty = self.infer(scope, scrutinee)?;
-        let tname = match &sty {
-            Ty::Data(t) => t.clone(),
-            // Binary/Ternary scrutinees match against literal patterns (M-320; RFC-0007 §4.4/§4.5).
-            Ty::Binary(_) | Ty::Ternary(_) => return self.infer_literal_match(scope, &sty, arms),
-            other => {
-                return self.err(format!(
-                    "match scrutinee must be a data, Binary, or Ternary type, got {other}"
-                ))
-            }
-        };
-        let d = self.types.get(&tname).expect("registered").clone();
-        let mut covered = vec![false; d.ctors.len()];
-        let mut has_default = false;
+        if !matches!(sty, Ty::Data(_) | Ty::Binary(_) | Ty::Ternary(_)) {
+            return self.err(format!(
+                "match scrutinee must be a data, Binary, or Ternary type, got {sty}"
+            ));
+        }
+        if arms.is_empty() {
+            return self.err("a match needs at least one arm");
+        }
+        let col = [sty.clone()];
+        let mut rows: Vec<Vec<crate::usefulness::Pat>> = Vec::new();
         let mut result: Option<Ty> = None;
         for arm in arms {
-            if has_default {
-                return self.err("arms after a wildcard/binder default are unreachable (W7)");
+            // Type the (possibly nested) pattern against the scrutinee type, collecting its binders.
+            let mut binds: Vec<(String, Ty)> = Vec::new();
+            let pat = self.check_pattern(&arm.pattern, &sty, &mut binds)?;
+            self.check_linear(&binds)?;
+            // Redundancy (W7): an arm covered by the earlier rows is unreachable.
+            if crate::usefulness::useful(self.types, &rows, std::slice::from_ref(&pat), &col)
+                .is_none()
+            {
+                return self.err(
+                    "this arm is unreachable — earlier arms already cover it (W7: every arm must \
+                     be reachable)",
+                );
             }
-            let pushed = match &arm.pattern {
-                Pattern::Wildcard => {
-                    has_default = true;
-                    0
+            // Type the body with the pattern's binders in scope.
+            let depth = scope.len();
+            for b in &binds {
+                scope.push(b.clone());
+            }
+            let bty = self.infer(scope, &arm.body)?;
+            scope.truncate(depth);
+            match &result {
+                None => result = Some(bty),
+                Some(r) if *r != bty => {
+                    return self.err(format!("match arms disagree: {r} vs {bty}"))
                 }
-                Pattern::Ident(n) => {
-                    // A bare name is a nullary-ctor alternative if it names one, else a binder
-                    // default (binds the scrutinee).
-                    if let Some(i) = d.ctors.iter().position(|c| c.name == *n) {
-                        if !d.ctors[i].fields.is_empty() {
+                Some(_) => {}
+            }
+            rows.push(vec![pat]);
+        }
+        // Exhaustiveness (W7): a wildcard must not be useful — else its witness is a missing case.
+        if let Some(witness) =
+            crate::usefulness::useful(self.types, &rows, &[crate::usefulness::Pat::Wild], &col)
+        {
+            return self.err(format!(
+                "non-exhaustive match on {sty}: missing {} (W7 — coverage is checked, never assumed)",
+                crate::usefulness::render(&witness[0])
+            ));
+        }
+        result.map_or_else(|| self.err("a match needs at least one arm"), Ok)
+    }
+
+    /// Type-check `pat` against `expected`, accumulating its binders (`name: ty`) into `binds`, and
+    /// return the normalized [`crate::usefulness::Pat`] for the coverage matrix. Nested constructor
+    /// and literal patterns are checked recursively (RFC-0007 §4.7); a binder becomes a wildcard for
+    /// coverage (it refines nothing), a nullary constructor an empty `Ctor`.
+    fn check_pattern(
+        &self,
+        pat: &Pattern,
+        expected: &Ty,
+        binds: &mut Vec<(String, Ty)>,
+    ) -> Result<crate::usefulness::Pat, CheckError> {
+        use crate::usefulness::Pat;
+        match pat {
+            Pattern::Wildcard => Ok(Pat::Wild),
+            Pattern::Ident(n) => {
+                // A bare name is a nullary-constructor alternative iff it names one of the expected
+                // data type's constructors; otherwise it binds the whole position.
+                if let Ty::Data(tn) = expected {
+                    let d = self.types.get(tn).expect("registered data type");
+                    if let Some(c) = d.ctors.iter().find(|c| c.name == *n) {
+                        if !c.fields.is_empty() {
                             return self.err(format!(
                                 "constructor pattern `{n}` must bind its {} field(s) (W7)",
-                                d.ctors[i].fields.len()
+                                c.fields.len()
                             ));
                         }
-                        self.mark(&mut covered, i, n)?;
-                        0
-                    } else {
-                        has_default = true;
-                        scope.push((n.clone(), sty.clone()));
-                        1
+                        return Ok(Pat::Ctor(n.clone(), vec![]));
                     }
                 }
-                Pattern::Ctor(n, subs) => {
-                    let Some(i) = d.ctors.iter().position(|c| c.name == *n) else {
-                        return self.err(format!("`{n}` is not a constructor of {tname}"));
-                    };
-                    let fields = &d.ctors[i].fields;
-                    if subs.len() != fields.len() {
-                        return self.err(format!(
-                            "pattern `{n}` binds {} of {} field(s) (W7: exactly the arity)",
-                            subs.len(),
-                            fields.len()
-                        ));
-                    }
-                    self.mark(&mut covered, i, n)?;
-                    let mut pushed = 0;
-                    for (sub, fty) in subs.iter().zip(fields) {
-                        match sub {
-                            Pattern::Ident(b) if self.ctor(b).is_none() => {
-                                scope.push((b.clone(), fty.clone()));
-                                pushed += 1;
-                            }
-                            Pattern::Wildcard => {}
-                            _ => {
-                                return self.err(
-                                    "nested patterns are an L2 concern; W7 match is flat — bind \
-                                     fields to names and match again",
-                                )
-                            }
-                        }
-                    }
-                    pushed
-                }
-                Pattern::Lit(_) => {
-                    return self.err("literal patterns are deferred in v0 (match on data types)")
-                }
-            };
-            let bty = self.infer(scope, &arm.body)?;
-            for _ in 0..pushed {
-                scope.pop();
+                binds.push((n.clone(), expected.clone()));
+                Ok(Pat::Wild)
             }
-            match &result {
-                None => result = Some(bty),
-                Some(r) if *r != bty => {
-                    return self.err(format!("match arms disagree: {r} vs {bty}"))
-                }
-                Some(_) => {}
-            }
-        }
-        if !has_default && covered.iter().any(|c| !c) {
-            let missing: Vec<&str> = d
-                .ctors
-                .iter()
-                .zip(&covered)
-                .filter(|(_, c)| !**c)
-                .map(|(c, _)| c.name.as_str())
-                .collect();
-            return self.err(format!(
-                "non-exhaustive match on {tname}: missing {} (W7 — coverage is checked, never assumed)",
-                missing.join(", ")
-            ));
-        }
-        result.map_or_else(|| self.err("a match needs at least one arm"), Ok)
-    }
-
-    /// Type a `match` whose scrutinee is `Binary{n}`/`Ternary{m}` — literal patterns plus a
-    /// **mandatory** `_`/binder default (M-320). The value domain (2ⁿ / 3ᵐ) is *not* enumerated, so
-    /// coverage is never assumed: a literal match without a default is non-exhaustive and refused
-    /// (W7). Duplicate literals and arms after a default are redundancy errors. Each literal arm must
-    /// have exactly the scrutinee's repr and width; a constructor pattern here is a type error.
-    fn infer_literal_match(
-        &self,
-        scope: &mut Vec<(String, Ty)>,
-        sty: &Ty,
-        arms: &[crate::ast::Arm],
-    ) -> Result<Ty, CheckError> {
-        let mut seen: Vec<String> = Vec::new();
-        let mut has_default = false;
-        let mut result: Option<Ty> = None;
-        for arm in arms {
-            if has_default {
-                return self.err("arms after a wildcard/binder default are unreachable (W7)");
-            }
-            let mut pushed = 0;
-            match &arm.pattern {
-                Pattern::Wildcard => has_default = true,
-                Pattern::Ident(n) => {
-                    // Binary/Ternary have no nullary constructors, so a bare name is a binder
-                    // default — it binds the whole scrutinee (and ends coverage).
-                    has_default = true;
-                    scope.push((n.clone(), sty.clone()));
-                    pushed = 1;
-                }
-                Pattern::Lit(lit) => {
-                    let lty = self.lit_ty(lit)?;
-                    if lty != *sty {
-                        return self.err(format!(
-                            "literal pattern has type {lty} but the scrutinee is {sty} \
-                             (W7: a literal arm must match the scrutinee's repr and width)"
-                        ));
-                    }
-                    let key = literal_key(lit);
-                    if seen.contains(&key) {
-                        return self.err("duplicate literal pattern (W7 — redundant arm)");
-                    }
-                    seen.push(key);
-                }
-                Pattern::Ctor(n, _) => {
+            Pattern::Ctor(n, subs) => {
+                let Ty::Data(tn) = expected else {
                     return self.err(format!(
-                        "constructor pattern `{n}` on a {sty} scrutinee — match a literal or `_`"
-                    ))
+                        "constructor pattern `{n}` on a {expected} scrutinee — match a literal or `_`"
+                    ));
+                };
+                let d = self.types.get(tn).expect("registered data type").clone();
+                let Some(c) = d.ctors.iter().find(|c| c.name == *n) else {
+                    return self.err(format!("`{n}` is not a constructor of {tn}"));
+                };
+                if subs.len() != c.fields.len() {
+                    return self.err(format!(
+                        "pattern `{n}` binds {} of {} field(s) (W7: exactly the arity)",
+                        subs.len(),
+                        c.fields.len()
+                    ));
                 }
-            }
-            let bty = self.infer(scope, &arm.body)?;
-            for _ in 0..pushed {
-                scope.pop();
-            }
-            match &result {
-                None => result = Some(bty),
-                Some(r) if *r != bty => {
-                    return self.err(format!("match arms disagree: {r} vs {bty}"))
+                let mut out = Vec::with_capacity(subs.len());
+                for (sub, fty) in subs.iter().zip(&c.fields) {
+                    out.push(self.check_pattern(sub, fty, binds)?);
                 }
-                Some(_) => {}
+                Ok(Pat::Ctor(n.clone(), out))
+            }
+            Pattern::Lit(lit) => {
+                let lty = self.lit_ty(lit)?;
+                if lty != *expected {
+                    return self.err(format!(
+                        "literal pattern has type {lty} but the scrutinee is {expected} \
+                         (W7: a literal arm must match the scrutinee's repr and width)"
+                    ));
+                }
+                Ok(Pat::Lit(literal_key(lit)))
             }
         }
-        if !has_default {
-            return self.err(format!(
-                "non-exhaustive match on {sty}: a literal match needs a `_` or binder default \
-                 (W7 — the {sty} value domain is not enumerated, so coverage is never assumed)"
-            ));
-        }
-        result.map_or_else(|| self.err("a match needs at least one arm"), Ok)
     }
 
-    fn mark(&self, covered: &mut [bool], i: usize, name: &str) -> Result<(), CheckError> {
-        if covered[i] {
-            return self.err(format!(
-                "duplicate alternative for constructor `{name}` (W7)"
-            ));
+    /// A pattern must bind each name at most once (linearity) — a repeated binder is ambiguous, so it
+    /// is an explicit error rather than a silent last-wins.
+    fn check_linear(&self, binds: &[(String, Ty)]) -> Result<(), CheckError> {
+        for (i, (n, _)) in binds.iter().enumerate() {
+            if binds[..i].iter().any(|(m, _)| m == n) {
+                return self.err(format!(
+                    "pattern binds `{n}` more than once (bindings must be linear)"
+                ));
+            }
         }
-        covered[i] = true;
         Ok(())
     }
 

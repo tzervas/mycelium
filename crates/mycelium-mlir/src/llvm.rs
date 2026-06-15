@@ -12,10 +12,18 @@
 //! *compiled*, execution path; the interp↔native differential (M-302) checks it against the
 //! reference interpreter (NFR-7/RR-12).
 //!
-//! **Deliberately out of subset (explicit refusals, never silent — G2):** balanced-ternary **carry
-//! arithmetic** (`trit.add/sub/mul` — the re-encode/overflow handling is the next M-301 slice),
-//! swaps, and Dense/VSA representations. Each is an explicit [`AotError`]. The MLIR dialect path
-//! stays the eventual home (`dialect::emit` is its dumpable skeleton), deferred until libMLIR exists.
+//! **Trit carry arithmetic (M-301 trit slice).** `trit.add/sub/mul` over `Ternary{m}` are lowered as
+//! **ripple-carry** / **shifted-accumulate** IR that mirrors `mycelium_core::ternary` digit-for-digit
+//! (`s + 4`, then `srem 3 − 1` for the balanced digit and `sdiv 3 − 1` for the carry — euclidean by
+//! construction because `s + 4 ≥ 1`). Fixed-width overflow (a non-zero final carry, or non-zero high
+//! trits of a product) is **detected at runtime** and signalled through the **read-back protocol**:
+//! an out-of-range result prints the [`OVERFLOW_SENTINEL`] line (AOT) / returns a non-zero status
+//! (JIT) and surfaces as an explicit [`AotError::Overflow`] — never a silent wrap (SC-3; G2). This
+//! matches the interpreter's `EvalError::Overflow` so the M-302 differential stays honest.
+//!
+//! **Deliberately out of subset (explicit refusals, never silent — G2):** swaps and Dense/VSA
+//! representations. Each is an explicit [`AotError`]. The MLIR dialect path stays the eventual home
+//! (`dialect::emit` is its dumpable skeleton), deferred until libMLIR exists.
 
 use std::collections::HashMap;
 use std::fmt;
@@ -58,7 +66,16 @@ pub enum AotError {
     Parse(String),
     /// Reconstructing the result [`Value`] failed its well-formedness check.
     Wf(String),
+    /// A balanced-ternary arithmetic result left the fixed `m`-trit range — the native path computed
+    /// the overflow at runtime and signalled it through the read-back protocol (matches the
+    /// interpreter's `EvalError::Overflow`; never a silent wrap, SC-3/G2).
+    Overflow(String),
 }
+
+/// The single byte the native artifact prints (AOT) when a fixed-width trit-arithmetic result
+/// overflows the `m`-trit range. Chosen because it is **not** a valid element char (`'0'`/`'1'` for
+/// bits, `'-'`/`'0'`/`'+'` for trits), so it can never be confused with a result line.
+pub(crate) const OVERFLOW_SENTINEL: u8 = b'!';
 
 impl fmt::Display for AotError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -75,6 +92,7 @@ impl fmt::Display for AotError {
             AotError::Run(e) => write!(f, "native run failed: {e}"),
             AotError::Parse(e) => write!(f, "native output parse failed: {e}"),
             AotError::Wf(e) => write!(f, "result not well-formed: {e}"),
+            AotError::Overflow(e) => write!(f, "balanced-ternary overflow: {e}"),
         }
     }
 }
@@ -118,6 +136,10 @@ pub(crate) struct Lowered {
     pub(crate) body: String,
     pub(crate) result: Lane,
     pub(crate) ssa: Ssa,
+    /// The combined runtime overflow flag — an `i1` SSA register that is the OR of every
+    /// trit-arithmetic op's overflow condition, or `None` for a program that cannot overflow (no
+    /// `trit.add/sub/mul`). The AOT/JIT emitters branch on it to drive the read-back protocol.
+    pub(crate) overflow: Option<String>,
 }
 
 /// Emit the `i32` ASCII char code for one result element of `kind` (operand `v`), returning the SSA
@@ -207,6 +229,11 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
     let mut env: HashMap<Atom, Lane> = HashMap::new();
     let mut ssa = Ssa(0);
     let mut body = String::new();
+    // The per-op overflow `i1` registers, accumulated across the program. Any trit-arithmetic op
+    // pushes its overflow condition here; the interpreter errors on the *first* overflow, so the
+    // native path being conservative (OR of all of them ⇒ one explicit `Overflow`) gives the same
+    // verdict — we never read the meaningless result either way.
+    let mut flags: Vec<String> = Vec::new();
 
     for b in anf.bindings() {
         let lane = match &b.rhs {
@@ -217,7 +244,7 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                     .iter()
                     .map(|a| lookup(&env, a))
                     .collect::<Result<_, _>>()?;
-                emit_op(prim, &operands, &mut ssa, &mut body)?
+                emit_op(prim, &operands, &mut ssa, &mut body, &mut flags)?
             }
             Rhs::Swap { target, .. } => {
                 return Err(AotError::UnsupportedNode(format!(
@@ -229,7 +256,14 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
     }
 
     let result = lookup(&env, anf.result())?.clone();
-    Ok(Lowered { body, result, ssa })
+    // Fold the per-op overflow flags into one `i1` (left-associative `or` chain), or `None`.
+    let overflow = fold_or(&flags, &mut ssa, &mut body);
+    Ok(Lowered {
+        body,
+        result,
+        ssa,
+        overflow,
+    })
 }
 
 /// Emit textual LLVM IR for the bit/trit-subset program `node` — a `main` that computes the result
@@ -241,22 +275,47 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
         body,
         result,
         mut ssa,
+        overflow,
     } = lower_program(node)?;
     let mut out = String::from("; mycelium direct-LLVM AOT (bit/trit subset; M-301)\n");
     out.push_str("declare i32 @putchar(i32)\n\n");
     out.push_str("define i32 @main() {\nentry:\n");
     out.push_str(&body);
-    // Emit each result element as its ASCII char (one op per element — a transparent rendering of
-    // the computed lane, no opaque pass, RFC-0004 §6), then a trailing newline.
-    for v in &result.vals {
-        let c = emit_char_code(result.kind, v, &mut ssa, &mut out);
+    match overflow {
+        // No trit arithmetic ⇒ no overflow path; emit the result line straight-line (unchanged IR).
+        None => emit_result_line(result.kind, &result.vals, &mut ssa, &mut out),
+        // Overflow possible ⇒ branch on the runtime flag: print the sentinel line on overflow, the
+        // result line otherwise (the read-back protocol — never a silent wrap, G2).
+        Some(ovf) => {
+            let _ = writeln!(&mut out, "  br i1 {ovf}, label %ovf, label %ok");
+            out.push_str("ovf:\n");
+            let s = ssa.fresh();
+            let _ = writeln!(
+                &mut out,
+                "  {s} = call i32 @putchar(i32 {})",
+                OVERFLOW_SENTINEL
+            );
+            let snl = ssa.fresh();
+            let _ = writeln!(&mut out, "  {snl} = call i32 @putchar(i32 10)");
+            out.push_str("  ret i32 0\nok:\n");
+            emit_result_line(result.kind, &result.vals, &mut ssa, &mut out);
+        }
+    }
+    out.push_str("}\n");
+    Ok(out)
+}
+
+/// Emit each result element as its ASCII char via `@putchar` (one op per element — a transparent
+/// rendering of the computed lane, no opaque pass, RFC-0004 §6), then a trailing newline and `ret`.
+fn emit_result_line(kind: LaneKind, vals: &[Operand], ssa: &mut Ssa, out: &mut String) {
+    for v in vals {
+        let c = emit_char_code(kind, v, ssa, out);
         let p = ssa.fresh();
-        let _ = writeln!(&mut out, "  {p} = call i32 @putchar(i32 {c})");
+        let _ = writeln!(out, "  {p} = call i32 @putchar(i32 {c})");
     }
     let nl = ssa.fresh();
-    let _ = writeln!(&mut out, "  {nl} = call i32 @putchar(i32 10)");
-    out.push_str("  ret i32 0\n}\n");
-    Ok(out)
+    let _ = writeln!(out, "  {nl} = call i32 @putchar(i32 10)");
+    out.push_str("  ret i32 0\n");
 }
 
 /// The result shape (lane kind + element count) of the program — **derived from the actual
@@ -312,12 +371,15 @@ fn require_kind(prim: &str, got: LaneKind, want: LaneKind) -> Result<(), AotErro
     }
 }
 
-/// Emit the elementwise LLVM IR for one bit/trit-subset op, returning the result lane.
+/// Emit the LLVM IR for one bit/trit-subset op, returning the result lane. Trit-arithmetic ops also
+/// push their runtime overflow `i1` register(s) onto `flags` (the caller folds them into the
+/// program-level overflow flag that drives the read-back protocol).
 fn emit_op(
     prim: &str,
     operands: &[&Lane],
     ssa: &mut Ssa,
     body: &mut String,
+    flags: &mut Vec<String>,
 ) -> Result<Lane, AotError> {
     match prim {
         // Identity passes the lane through unchanged, any kind (M-I1 passthrough).
@@ -349,13 +411,201 @@ fn emit_op(
             require_kind(prim, a.kind, LaneKind::Ternary)?;
             Ok(map1(a, ssa, body, |x, r| format!("  {r} = sub i32 0, {x}")))
         }
-        // Trit arithmetic with carry/overflow (add/sub/mul) is the next M-301 slice — refused
-        // explicitly here, never half-lowered (G2).
-        "trit.add" | "trit.sub" | "trit.mul" => Err(AotError::UnsupportedPrim(format!(
-            "{prim}: balanced-ternary carry arithmetic is the next M-301 slice (not yet lowered)"
-        ))),
+        // Balanced-ternary addition: a fixed-width ripple-carry over the trits (LSB→MSB), with a
+        // runtime overflow flag (non-zero final carry ⇒ out of m-trit range). Mirrors
+        // `mycelium_core::ternary::add` digit-for-digit.
+        "trit.add" => {
+            let (a, b) = arity2(prim, operands)?;
+            require_kind(prim, a.kind, LaneKind::Ternary)?;
+            require_kind(prim, b.kind, LaneKind::Ternary)?;
+            require_width(prim, a, b)?;
+            let (lane, ovf) = emit_trit_add(&a.vals, &b.vals, ssa, body);
+            flags.push(ovf);
+            Ok(lane)
+        }
+        // Subtraction `a − b` = `add(a, neg(b))`: negate `b`'s trits, then the same ripple adder.
+        "trit.sub" => {
+            let (a, b) = arity2(prim, operands)?;
+            require_kind(prim, a.kind, LaneKind::Ternary)?;
+            require_kind(prim, b.kind, LaneKind::Ternary)?;
+            require_width(prim, a, b)?;
+            let neg_b = map1(b, ssa, body, |x, r| format!("  {r} = sub i32 0, {x}"));
+            let (lane, ovf) = emit_trit_add(&a.vals, &neg_b.vals, ssa, body);
+            flags.push(ovf);
+            Ok(lane)
+        }
+        // Multiplication: shifted accumulation in a 2m-trit buffer (mirrors
+        // `mycelium_core::ternary::mul`), then overflow iff any high trit is non-zero. Each `b` digit
+        // scales `a` by an `i32 mul` (the digit is ±1/0, so this is exactly ±a / 0 per position).
+        "trit.mul" => {
+            let (a, b) = arity2(prim, operands)?;
+            require_kind(prim, a.kind, LaneKind::Ternary)?;
+            require_kind(prim, b.kind, LaneKind::Ternary)?;
+            require_width(prim, a, b)?;
+            let (lane, ovfs) = emit_trit_mul(&a.vals, &b.vals, ssa, body);
+            flags.extend(ovfs);
+            Ok(lane)
+        }
         other => Err(AotError::UnsupportedPrim(other.to_owned())),
     }
+}
+
+/// Require two lanes to have equal element count, else an explicit [`AotError::WidthMismatch`].
+fn require_width(prim: &str, a: &Lane, b: &Lane) -> Result<(), AotError> {
+    if a.vals.len() == b.vals.len() {
+        Ok(())
+    } else {
+        Err(AotError::WidthMismatch {
+            prim: prim.to_owned(),
+            a: a.vals.len(),
+            b: b.vals.len(),
+        })
+    }
+}
+
+/// Emit a fixed-width balanced-ternary ripple-carry add over MSB-first trit operands `a`/`b` (equal
+/// length, caller-checked). Returns the sum lane (MSB-first) and an `i1` register that is set iff the
+/// final carry is non-zero (overflow). Each digit follows `mycelium_core::ternary::add`: with
+/// `x = aᵢ + bᵢ + carry + 4` (always ≥ 1 so `srem`/`sdiv` are euclidean), the balanced digit is
+/// `x srem 3 − 1` and the next carry is `x sdiv 3 − 1`.
+fn emit_trit_add(a: &[Operand], b: &[Operand], ssa: &mut Ssa, body: &mut String) -> (Lane, String) {
+    let m = a.len();
+    let mut carry = "0".to_owned();
+    let mut sum_lsb: Vec<Operand> = Vec::with_capacity(m);
+    // Process least-significant first (the tail of the MSB-first strings).
+    for i in (0..m).rev() {
+        let (digit, next_carry) = emit_trit_add_step(&a[i], &b[i], &carry, ssa, body);
+        sum_lsb.push(digit);
+        carry = next_carry;
+    }
+    // Overflow iff the final carry out of the most-significant trit is non-zero.
+    let ovf = ssa.fresh();
+    let _ = writeln!(body, "  {ovf} = icmp ne i32 {carry}, 0");
+    let vals: Vec<Operand> = sum_lsb.into_iter().rev().collect(); // back to MSB-first
+    (
+        Lane {
+            kind: LaneKind::Ternary,
+            vals,
+        },
+        ovf,
+    )
+}
+
+/// One balanced-ternary add step: given operand trits `a`/`b` and the incoming `carry` (all `i32` in
+/// `{−1,0,1}`), emit the digit + outgoing carry. Returns `(digit_reg, carry_reg)`.
+fn emit_trit_add_step(
+    a: &str,
+    b: &str,
+    carry: &str,
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> (String, String) {
+    let s1 = ssa.fresh();
+    let _ = writeln!(body, "  {s1} = add i32 {a}, {b}");
+    let s2 = ssa.fresh();
+    let _ = writeln!(body, "  {s2} = add i32 {s1}, {carry}");
+    // x = s + 4 ∈ [1,7], strictly positive ⇒ srem/sdiv coincide with euclidean rem/div by 3.
+    let x = ssa.fresh();
+    let _ = writeln!(body, "  {x} = add i32 {s2}, 4");
+    let rem = ssa.fresh();
+    let _ = writeln!(body, "  {rem} = srem i32 {x}, 3");
+    let digit = ssa.fresh();
+    let _ = writeln!(body, "  {digit} = sub i32 {rem}, 1");
+    let q = ssa.fresh();
+    let _ = writeln!(body, "  {q} = sdiv i32 {x}, 3");
+    let next_carry = ssa.fresh();
+    let _ = writeln!(body, "  {next_carry} = sub i32 {q}, 1");
+    (digit, next_carry)
+}
+
+/// Emit fixed-width balanced-ternary multiplication over MSB-first trit operands `a`/`b` (equal
+/// length, caller-checked). Mirrors `mycelium_core::ternary::mul`: shifted accumulation of `±a` into
+/// a 2m-trit buffer, returning the low `m` trits (MSB-first) and the overflow `i1` flags — one per
+/// non-zero high trit, plus each accumulation's carry (provably zero, OR-ed in as an honest net).
+fn emit_trit_mul(
+    a: &[Operand],
+    b: &[Operand],
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> (Lane, Vec<String>) {
+    let m = a.len();
+    if m == 0 {
+        return (
+            Lane {
+                kind: LaneKind::Ternary,
+                vals: Vec::new(),
+            },
+            Vec::new(),
+        );
+    }
+    let wide = 2 * m;
+    // LSB-first views of the operands and a 2m-wide accumulator initialised to zero.
+    let a_lsb: Vec<&Operand> = a.iter().rev().collect();
+    let b_lsb: Vec<&Operand> = b.iter().rev().collect();
+    let mut acc: Vec<Operand> = vec!["0".to_owned(); wide];
+    let mut flags: Vec<String> = Vec::new();
+
+    for (k, &bk) in b_lsb.iter().enumerate() {
+        // Partial = (a scaled by digit bk) shifted left by k, in a 2m-wide LSB-first buffer. The
+        // digit is ±1/0, so `aⱼ * bk` is exactly ±aⱼ / 0 — the per-digit factor, no carry yet.
+        let mut partial: Vec<Operand> = vec!["0".to_owned(); wide];
+        for (j, &aj) in a_lsb.iter().enumerate() {
+            let p = ssa.fresh();
+            let _ = writeln!(body, "  {p} = mul i32 {aj}, {bk}");
+            partial[k + j] = p;
+        }
+        let (next_acc, carry) = emit_ripple_add_lsb(&acc, &partial, ssa, body);
+        acc = next_acc;
+        // The 2m-wide sum cannot truly overflow for m-trit operands; OR the carry in anyway so a
+        // codegen slip can never pass silently (honest net, never a fabricated guarantee).
+        let c = ssa.fresh();
+        let _ = writeln!(body, "  {c} = icmp ne i32 {carry}, 0");
+        flags.push(c);
+    }
+    // The product fits in m trits iff the high half (positions [m, 2m)) is all zero.
+    for hi in &acc[m..] {
+        let f = ssa.fresh();
+        let _ = writeln!(body, "  {f} = icmp ne i32 {hi}, 0");
+        flags.push(f);
+    }
+    let vals: Vec<Operand> = acc[..m].iter().rev().cloned().collect(); // low m trits, MSB-first
+    (
+        Lane {
+            kind: LaneKind::Ternary,
+            vals,
+        },
+        flags,
+    )
+}
+
+/// Ripple-carry add over two equal-length **LSB-first** trit-operand vectors. Returns the sum
+/// (LSB-first) and the final carry register. The shared inner adder for [`emit_trit_mul`].
+fn emit_ripple_add_lsb(
+    a: &[Operand],
+    b: &[Operand],
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> (Vec<Operand>, String) {
+    let mut carry = "0".to_owned();
+    let mut sum: Vec<Operand> = Vec::with_capacity(a.len());
+    for (ai, bi) in a.iter().zip(b) {
+        let (digit, next_carry) = emit_trit_add_step(ai, bi, &carry, ssa, body);
+        sum.push(digit);
+        carry = next_carry;
+    }
+    (sum, carry)
+}
+
+/// Fold a list of `i1` overflow flags into one (`or i1` chain), or `None` if empty. Deterministic.
+fn fold_or(flags: &[String], ssa: &mut Ssa, body: &mut String) -> Option<String> {
+    let mut it = flags.iter();
+    let mut acc = it.next()?.clone();
+    for f in it {
+        let r = ssa.fresh();
+        let _ = writeln!(body, "  {r} = or i1 {acc}, {f}");
+        acc = r;
+    }
+    Some(acc)
 }
 
 /// Emit one IR instruction per element of `a`, returning the result lane (same kind as `a`).
@@ -448,6 +698,14 @@ impl CompiledArtifact {
         let stdout = String::from_utf8(output.stdout)
             .map_err(|e| AotError::Parse(format!("non-utf8 output: {e}")))?;
         let line = stdout.lines().next().unwrap_or("");
+        // Read-back protocol: the sentinel line means the native arithmetic overflowed the m-trit
+        // range — an explicit error, never a silently-wrapped result (matches `EvalError::Overflow`).
+        if line.as_bytes() == [OVERFLOW_SENTINEL] {
+            return Err(AotError::Overflow(format!(
+                "fixed-width result out of {}-trit range",
+                self.width
+            )));
+        }
         decode_result(self.kind, self.width, line.chars())
     }
 }
@@ -608,21 +866,63 @@ mod tests {
         assert!(emit_llvm_ir(&Node::Const(v)).is_ok());
     }
 
-    #[test]
-    fn refuses_trit_arithmetic_as_next_slice() {
-        // Mutant-witness: lowering trit.add/sub/mul without the carry/overflow handling would
-        // silently mis-compute; they must refuse explicitly until that slice lands.
-        let t = ternary(vec![Trit::Pos, Trit::Zero]);
-        for prim in ["trit.add", "trit.sub", "trit.mul"] {
-            let prog = Node::Op {
-                prim: prim.into(),
-                args: vec![Node::Const(t.clone()), Node::Const(t.clone())],
-            };
-            assert!(
-                matches!(emit_llvm_ir(&prog), Err(AotError::UnsupportedPrim(_))),
-                "{prim} must refuse as the next slice"
-            );
+    fn binop(prim: &str, a: Vec<Trit>, b: Vec<Trit>) -> Node {
+        Node::Op {
+            prim: prim.into(),
+            args: vec![Node::Const(ternary(a)), Node::Const(ternary(b))],
         }
+    }
+
+    #[test]
+    fn trit_add_emits_ripple_carry_ir() {
+        // Mutant-witness: a non-carry (elementwise) add would not emit the srem/sdiv-by-3 balancing
+        // or the icmp overflow flag the read-back protocol branches on.
+        let ir = emit_llvm_ir(&binop(
+            "trit.add",
+            vec![Trit::Pos, Trit::Neg, Trit::Neg],
+            vec![Trit::Zero, Trit::Pos, Trit::Pos],
+        ))
+        .unwrap();
+        assert!(ir.contains("srem i32") && ir.contains("sdiv i32")); // balanced-digit normalisation
+        assert!(ir.contains("icmp ne i32")); // overflow flag
+        assert!(ir.contains("br i1")); // read-back branch
+        assert!(ir.contains("putchar(i32 33)")); // overflow sentinel '!'
+    }
+
+    #[test]
+    fn arithmetic_emission_is_deterministic() {
+        let p = binop(
+            "trit.mul",
+            vec![Trit::Zero, Trit::Pos, Trit::Neg],
+            vec![Trit::Zero, Trit::Pos, Trit::Zero],
+        );
+        assert_eq!(emit_llvm_ir(&p), emit_llvm_ir(&p));
+    }
+
+    #[test]
+    fn refuses_arithmetic_width_mismatch() {
+        // Mutant-witness: dropping the width check would emit a ragged ripple-carry.
+        let prog = binop("trit.add", vec![Trit::Pos, Trit::Zero], vec![Trit::Pos]);
+        assert!(matches!(
+            emit_llvm_ir(&prog),
+            Err(AotError::WidthMismatch { .. })
+        ));
+    }
+
+    #[test]
+    fn refuses_bit_arithmetic_on_binary_lane() {
+        // Mutant-witness: dropping require_kind would let trit.add ripple over a binary lane.
+        let prog = Node::Op {
+            prim: "trit.add".into(),
+            args: vec![
+                Node::Const(binary(vec![true, false])),
+                Node::Const(binary(vec![false, true])),
+            ],
+        };
+        assert!(matches!(
+            emit_llvm_ir(&prog),
+            Err(AotError::UnsupportedPrim(_))
+        ));
     }
 
     #[test]
@@ -698,6 +998,96 @@ mod tests {
                 assert_eq!(v.repr(), &Repr::Ternary { trits: 3 });
             }
             Err(AotError::ToolchainMissing(_)) => { /* environment skip */ }
+            Err(e) => panic!("unexpected AOT error: {e}"),
+        }
+    }
+
+    #[test]
+    fn native_trit_add_matches_oracle() {
+        // 5 + 4 = 9 in 3 trits: [+,-,-] + [0,+,+] = [+,0,0]. Mutant-witness: a missing carry would
+        // yield the elementwise (wrong) sum, and a wrong balancing constant would mis-encode.
+        let prog = binop(
+            "trit.add",
+            vec![Trit::Pos, Trit::Neg, Trit::Neg],
+            vec![Trit::Zero, Trit::Pos, Trit::Pos],
+        );
+        match compile_and_run(&prog) {
+            Ok(v) => assert_eq!(
+                v.payload(),
+                &Payload::Trits(vec![Trit::Pos, Trit::Zero, Trit::Zero])
+            ),
+            Err(AotError::ToolchainMissing(_)) => {}
+            Err(e) => panic!("unexpected AOT error: {e}"),
+        }
+    }
+
+    #[test]
+    fn native_trit_sub_matches_oracle() {
+        // 9 - 4 = 5 in 3 trits: [+,0,0] - [0,+,+] = [+,-,-].
+        let prog = binop(
+            "trit.sub",
+            vec![Trit::Pos, Trit::Zero, Trit::Zero],
+            vec![Trit::Zero, Trit::Pos, Trit::Pos],
+        );
+        match compile_and_run(&prog) {
+            Ok(v) => assert_eq!(
+                v.payload(),
+                &Payload::Trits(vec![Trit::Pos, Trit::Neg, Trit::Neg])
+            ),
+            Err(AotError::ToolchainMissing(_)) => {}
+            Err(e) => panic!("unexpected AOT error: {e}"),
+        }
+    }
+
+    #[test]
+    fn native_trit_mul_matches_oracle() {
+        // 2 * 3 = 6 in 3 trits: [0,+,-] * [0,+,0] = [+,-,0]. Mutant-witness: a wrong shift in the
+        // shifted-accumulate, or reading the high (overflow) half, would diverge.
+        let prog = binop(
+            "trit.mul",
+            vec![Trit::Zero, Trit::Pos, Trit::Neg],
+            vec![Trit::Zero, Trit::Pos, Trit::Zero],
+        );
+        match compile_and_run(&prog) {
+            Ok(v) => assert_eq!(
+                v.payload(),
+                &Payload::Trits(vec![Trit::Pos, Trit::Neg, Trit::Zero])
+            ),
+            Err(AotError::ToolchainMissing(_)) => {}
+            Err(e) => panic!("unexpected AOT error: {e}"),
+        }
+    }
+
+    #[test]
+    fn native_trit_add_overflow_is_explicit() {
+        // 4 + 4 = 8 in 2 trits (max magnitude 4) overflows. The native path must report it through
+        // the read-back protocol — an explicit Overflow, never a silent wrap. Mutant-witness:
+        // dropping the final-carry flag would print a wrapped result instead.
+        let prog = binop(
+            "trit.add",
+            vec![Trit::Pos, Trit::Pos],
+            vec![Trit::Pos, Trit::Pos],
+        );
+        match compile_and_run(&prog) {
+            Ok(v) => panic!("overflow must not produce a value, got {:?}", v.payload()),
+            Err(AotError::Overflow(_)) => { /* expected */ }
+            Err(AotError::ToolchainMissing(_)) => {}
+            Err(e) => panic!("unexpected AOT error: {e}"),
+        }
+    }
+
+    #[test]
+    fn native_trit_mul_overflow_is_explicit() {
+        // 4 * 4 = 16 in 2 trits overflows (high trits non-zero).
+        let prog = binop(
+            "trit.mul",
+            vec![Trit::Pos, Trit::Pos],
+            vec![Trit::Pos, Trit::Pos],
+        );
+        match compile_and_run(&prog) {
+            Ok(v) => panic!("overflow must not produce a value, got {:?}", v.payload()),
+            Err(AotError::Overflow(_)) => {}
+            Err(AotError::ToolchainMissing(_)) => {}
             Err(e) => panic!("unexpected AOT error: {e}"),
         }
     }

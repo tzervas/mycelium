@@ -8,6 +8,65 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — RFC-0009 resonator-network factorization design, M-350 needs-design)
+- **`docs/rfcs/RFC-0009-Resonator-Network-Factorization.md`** (Draft): the *needs-design* deliverable
+  for M-350 — fixes the convergence regime and the honest guarantee **before** any factorization code
+  is built (RR-5/G4). Specifies the iterative resonator update over the existing `VsaModel`
+  bind/unbind/cleanup (Frady et al. 2020); a **probabilistic-only** contract (basis capped at
+  `Empirical`/`Declared`, **never** `Proven`; the `mycelium-core::recon` `Resonator` schema already
+  enforces this ceiling, FR-C2), with the operational regime `{F, kᵢ, d}` as a checked
+  `EmpiricalProfile` side-condition; never-silent termination (bounded budget;
+  `BudgetExhausted`/`Oscillating` are explicit verdicts, never a wrapped result); full
+  reification/`EXPLAIN`; and the open design questions. Prior art (`embeddenator-retrieval`/`-vsa`)
+  flagged to mine, not copy. **No code; nothing in the kernel.** Registered in the Doc-Index;
+  prototype gated on ratification. (phase-3.md §2 / Meta)
+
+### Added (Phase 3 — L1 nested patterns + Maranget usefulness, M-320)
+- **`mycelium-l1::usefulness`** — Maranget's usefulness algorithm `U(P, q)` over a typed pattern
+  matrix (Maranget 2007), witness-returning. L1 `match` now supports **nested** constructor/literal
+  patterns, with coverage *checked* (W7): **exhaustiveness** (a `_` must not be useful — the witness
+  names a concrete missing case, e.g. `S(Z)`, reported verbatim) and **redundancy** (an arm covered by
+  the earlier rows is unreachable, subsuming the M-320 duplicate-literal check).
+- **Checker + evaluator + totality** lifted from flat to nested: a recursive, type-directed
+  `check_pattern` (binders typed by field type, linearity enforced); a unified `infer_match` (data +
+  `Binary`/`Ternary`); a recursive `try_match` in the evaluator; and structural-descent smallness
+  seeded from **nested** sub-binders (so `S(S(m)) → m` descends and admits `matured`).
+- **Scope/honesty:** RFC-0007 is **Draft** and the prototype non-normative; this is the analysis half.
+  The Maranget *decision-tree compilation to the flat kernel `Match`* (Maranget 2008; RFC-0007 §3) is
+  the elaborator/L0 path and lands with full L1-in-Core-IR. Coverage stays checked, no guarantee
+  touched. (phase-3.md §2 / §9.9 / Meta)
+
+### Added (Phase 3 — BitNet packed-ternary acceleration, M-360 first increment; closes the open E1 compute-throughput item)
+- **`mycelium-mlir::bitnet`** — the canonical BitNet **ternary multiply-accumulate**
+  (`y = Σ digit(wᵢ)·xᵢ`, ternary weights · integer activations) emitted as **inspectable** LLVM IR
+  (`i64 @myc_bitnet_dot(ptr %w, ptr %x, i64 %n)`: load the packed I2_S byte, extract the 2-bit code,
+  signed weight `code−1`, multiply-add — one transparent op per loop-body step, FR-C3 "metadata, not
+  hidden lowering"). JIT-compiled (`clang -shared -O2`) and called **in-process over runtime-pointer
+  buffers** via the M-340 dynamic loader (refactored into a reusable `dlopen_path`/`Lib::sym`).
+  Differential-checked against the Rust oracle (`ternary_dot_ref`) over several widths; bounds-checked
+  so a short buffer is an explicit `AotError`, never an out-of-bounds read.
+- **`cargo xtask e1` §3 now measures genuine packed-ternary compute throughput.** Because the kernel's
+  weight/activation buffers are runtime arguments (not baked-in constants), the optimiser cannot fold
+  the computation — so §3 times real unpack-compute over `n = 4096` elements against a hand-written
+  Rust scalar baseline doing the identical I2_S work. This resolves §2's constant-fold/spawn caveat
+  that had blocked the compute-throughput verdict. **Scope/honesty:** I2_S + scalar only — no
+  bitnet.cpp SIMD parity claimed, TL1/TL2 are the next increments; the E1 number is measured, not
+  pre-written (VR-5 / G3). (phase-3.md §2 / §9.8 / Meta)
+
+### Added (Phase 3 — native trit carry arithmetic `add/sub/mul`, M-301 done)
+- **`mycelium-mlir` now lowers balanced-ternary carry arithmetic over `Ternary{m}`.** `trit.add` is a
+  fixed-width **ripple-carry** (LSB→MSB; balanced digit `x srem 3 − 1` and carry `x sdiv 3 − 1` with
+  `x = aᵢ+bᵢ+carry+4 ≥ 1`, so the LLVM `srem`/`sdiv` are euclidean), `trit.sub = add(a, neg b)`, and
+  `trit.mul` is **shifted accumulation** in a 2m-trit buffer (each `b` digit scales `a` via `i32 mul`,
+  the digit being ±1/0). Each mirrors `mycelium-core::ternary` digit-for-digit.
+- **Fixed-width overflow is detected at runtime and never wraps silently (SC-3/G2).** A non-zero final
+  carry (add/sub) or non-zero product high trit (mul) sets an `i1` flag carried through an extended
+  **read-back protocol**: the AOT artifact prints a `'!'` sentinel line and the JIT kernel — now
+  `i32 @myc_kernel(ptr)` — returns a non-zero status, both surfaced as an explicit `AotError::Overflow`
+  matching the interpreter's `EvalError::Overflow`. The M-302 (native) and M-340 (JIT) differential
+  corpora gain in-range add/sub/mul + a nested `(5+4)−4`, plus an overflow-parity test. **Completes
+  M-301** (last open slice). (phase-3.md §2 / §9.1 / Meta)
+
 ### Added (Phase 3 — native-ternary forward-compat map, M-370)
 - **`docs/notes/Native-Ternary-Forward-Compat.md`** (Living note): documents the **ternary
   value-semantics contract** and the forward map from today's emulated-on-binary packing to a future

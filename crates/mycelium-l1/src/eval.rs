@@ -481,130 +481,81 @@ impl<'e> Evaluator<'e> {
         arms: &[crate::ast::Arm],
     ) -> Result<L1Value, L1Error> {
         let sv = self.eval(fuel, depth, site, scope, scrutinee)?;
-        let (ty, ctor, fields) = match sv {
-            L1Value::Data { ty, ctor, fields } => (ty, ctor, fields),
-            // A Binary/Ternary scrutinee matches literal patterns (M-320). The typechecker has
-            // already required a default and matching widths, so this path runs only checked code.
-            L1Value::Repr(value) => {
-                return self.eval_literal_match(fuel, depth, site, scope, arms, value)
-            }
-        };
+        // The checker has verified exhaustiveness, redundancy, types, and arity (W7), so the first
+        // arm whose (possibly nested) pattern matches fires. The trailing `Stuck` is unreachable for
+        // checked programs but kept as the honest never-silent fallback (G2).
         for arm in arms {
-            match &arm.pattern {
-                Pattern::Wildcard => return self.eval(fuel, depth, site, scope, &arm.body),
-                Pattern::Ident(n) => {
-                    // A nullary-constructor alternative of the scrutinee's type, or a binder
-                    // default — same resolution the typechecker performed (W7).
-                    let is_ctor = self
-                        .env
-                        .types
-                        .get(&ty)
-                        .is_some_and(|d| d.ctors.iter().any(|c| c.name == *n));
-                    if is_ctor {
-                        if *n == ctor {
-                            return self.eval(fuel, depth, site, scope, &arm.body);
-                        }
-                    } else {
-                        scope.push((
-                            n.clone(),
-                            L1Value::Data {
-                                ty: ty.clone(),
-                                ctor: ctor.clone(),
-                                fields: fields.clone(),
-                            },
-                        ));
-                        let r = self.eval(fuel, depth, site, scope, &arm.body);
-                        scope.pop();
-                        return r;
-                    }
-                }
-                Pattern::Ctor(n, subs) => {
-                    if *n != ctor {
-                        continue;
-                    }
-                    let mut pushed = 0;
-                    for (sub, fv) in subs.iter().zip(&fields) {
-                        match sub {
-                            Pattern::Ident(b) if self.env.ctor(b).is_none() => {
-                                scope.push((b.clone(), fv.clone()));
-                                pushed += 1;
-                            }
-                            Pattern::Wildcard | Pattern::Ident(_) => {}
-                            Pattern::Ctor(..) | Pattern::Lit(_) => {
-                                return Err(L1Error::Unsupported {
-                                    site: site.to_owned(),
-                                    what:
-                                        "nested/literal patterns are refused in v0 (W7 flat match)"
-                                            .to_owned(),
-                                })
-                            }
-                        }
-                    }
-                    let r = self.eval(fuel, depth, site, scope, &arm.body);
-                    for _ in 0..pushed {
-                        scope.pop();
-                    }
-                    return r;
-                }
-                Pattern::Lit(_) => {
-                    return Err(L1Error::Unsupported {
-                        site: site.to_owned(),
-                        what: "literal patterns are deferred in v0".to_owned(),
-                    })
-                }
+            let mut binds: Vec<(String, L1Value)> = Vec::new();
+            if self.try_match(site, &arm.pattern, &sv, &mut binds)? {
+                let mark = scope.len();
+                scope.extend(binds);
+                let r = self.eval(fuel, depth, site, scope, &arm.body);
+                scope.truncate(mark);
+                return r;
             }
         }
         Err(L1Error::Stuck {
             site: site.to_owned(),
-            why: format!("no arm matched constructor `{ctor}` of `{ty}` (W7 coverage)"),
+            why: "no arm matched the scrutinee (W7 — the checker requires coverage)".to_owned(),
         })
     }
 
-    /// Evaluate a `match` whose scrutinee is a `Binary`/`Ternary` value against literal patterns
-    /// (M-320). A literal arm fires on `repr + payload` equality (reusing [`crate::elab::lit_value`]
-    /// as the single literal interpretation); a `_`/binder default always fires (the binder binds
-    /// the scrutinee). The trailing `Stuck` is unreachable for checked programs (the checker mandates
-    /// a default) but kept as the honest never-silent fallback (G2).
-    fn eval_literal_match(
+    /// Try to match `val` against `pat`, accumulating the pattern's binders into `binds`
+    /// (left-to-right, recursively for nested patterns). Returns whether it matched; on a partial
+    /// nested failure the caller discards `binds`, so no rollback is needed. The
+    /// constructor/literal/binder resolution mirrors the typechecker's `check_pattern` exactly, so a
+    /// checked program never gets stuck (RFC-0007 §4.7).
+    fn try_match(
         &self,
-        fuel: &mut u64,
-        depth: u32,
         site: &str,
-        scope: &mut Vec<(String, L1Value)>,
-        arms: &[crate::ast::Arm],
-        value: mycelium_core::Value,
-    ) -> Result<L1Value, L1Error> {
-        for arm in arms {
-            match &arm.pattern {
-                Pattern::Wildcard => return self.eval(fuel, depth, site, scope, &arm.body),
-                Pattern::Ident(n) => {
-                    scope.push((n.clone(), L1Value::Repr(value.clone())));
-                    let r = self.eval(fuel, depth, site, scope, &arm.body);
-                    scope.pop();
-                    return r;
+        pat: &Pattern,
+        val: &L1Value,
+        binds: &mut Vec<(String, L1Value)>,
+    ) -> Result<bool, L1Error> {
+        match pat {
+            Pattern::Wildcard => Ok(true),
+            // A bare name is a nullary-constructor alternative iff it names one of the value's data
+            // type's constructors; otherwise it binds the whole value.
+            Pattern::Ident(n) => match val {
+                L1Value::Data { ty, ctor, .. }
+                    if self
+                        .env
+                        .types
+                        .get(ty)
+                        .is_some_and(|d| d.ctors.iter().any(|c| c.name == *n)) =>
+                {
+                    Ok(ctor == n)
                 }
-                Pattern::Lit(lit) => {
+                _ => {
+                    binds.push((n.clone(), val.clone()));
+                    Ok(true)
+                }
+            },
+            Pattern::Ctor(n, subs) => match val {
+                L1Value::Data { ctor, fields, .. } => {
+                    if ctor != n {
+                        return Ok(false);
+                    }
+                    for (sub, fv) in subs.iter().zip(fields) {
+                        if !self.try_match(site, sub, fv, binds)? {
+                            return Ok(false);
+                        }
+                    }
+                    Ok(true)
+                }
+                L1Value::Repr(_) => Ok(false),
+            },
+            Pattern::Lit(lit) => match val {
+                L1Value::Repr(v) => {
                     let lv = crate::elab::lit_value(site, lit).map_err(|e| L1Error::Stuck {
                         site: site.to_owned(),
                         why: format!("malformed literal pattern: {e}"),
                     })?;
-                    if lv.repr() == value.repr() && lv.payload() == value.payload() {
-                        return self.eval(fuel, depth, site, scope, &arm.body);
-                    }
+                    Ok(lv.repr() == v.repr() && lv.payload() == v.payload())
                 }
-                Pattern::Ctor(..) => {
-                    return Err(L1Error::Unsupported {
-                        site: site.to_owned(),
-                        what: "constructor pattern on a Binary/Ternary scrutinee".to_owned(),
-                    })
-                }
-            }
+                L1Value::Data { .. } => Ok(false),
+            },
         }
-        Err(L1Error::Stuck {
-            site: site.to_owned(),
-            why: "no literal arm matched the scrutinee (W7 — the checker requires a default)"
-                .to_owned(),
-        })
     }
 
     /// First-order application: user functions, saturated constructors (W6), and prims — split
@@ -749,6 +700,54 @@ mod tests {
         );
     }
 
+    // --- nested patterns (Maranget) ----------------------------------------------------------
+
+    const NAT: &str = "colony d\ntype Nat = Z | S(Nat)\n";
+
+    #[test]
+    fn nested_pattern_match_evaluates() {
+        // pred2 uses depth-2 nested patterns (S(Z), S(S(m))) and is exhaustive (Z | S(Z) | S(S(_))).
+        // Mutant-witness: a flat-only matcher could not bind `m` under two constructors; pred2 of
+        // S(S(S(Z))) must peel two S's to yield S(Z).
+        let src = format!(
+            "{NAT}fn pred2(n: Nat) -> Nat = match n {{ Z => Z, S(Z) => Z, S(S(m)) => m }}\n\
+             fn main() -> Nat = pred2(S(S(S(Z))))"
+        );
+        assert_eq!(
+            run(&src).expect("evaluates"),
+            L1Value::Data {
+                ty: "Nat".into(),
+                ctor: "S".into(),
+                fields: vec![L1Value::Data {
+                    ty: "Nat".into(),
+                    ctor: "Z".into(),
+                    fields: vec![]
+                }]
+            }
+        );
+    }
+
+    #[test]
+    fn nested_match_falls_through_to_the_right_arm() {
+        // S(Z) selects the middle arm (not S(S(m))) — the nested matcher discriminates by depth.
+        let src = format!(
+            "{NAT}fn pred2(n: Nat) -> Nat = match n {{ Z => Z, S(Z) => S(Z), S(S(m)) => m }}\n\
+             fn main() -> Nat = pred2(S(Z))"
+        );
+        assert_eq!(
+            run(&src).expect("evaluates"),
+            L1Value::Data {
+                ty: "Nat".into(),
+                ctor: "S".into(),
+                fields: vec![L1Value::Data {
+                    ty: "Nat".into(),
+                    ctor: "Z".into(),
+                    fields: vec![]
+                }]
+            }
+        );
+    }
+
     // --- M-320: literal-pattern match over Binary/Ternary scrutinees -------------------------
 
     const CLASSIFY: &str = "colony d\nfn classify(b: Binary{4}) -> Ternary{1} = \
@@ -791,15 +790,13 @@ mod tests {
 
     #[test]
     fn duplicate_literal_pattern_is_rejected() {
-        // Mutant-witness: dropping the dedupe would silently accept a redundant arm (W7).
+        // Mutant-witness: a duplicate literal arm is a redundant (unreachable) arm — the Maranget
+        // usefulness check must reject it, never silently accept it (W7). `0b0000` and `0b00_00` are
+        // the same literal (the `_` separator is canonicalized away), so the second is unreachable.
         let src = "colony d\nfn classify(b: Binary{4}) -> Ternary{1} = \
             match b { 0b0000 => <0>, 0b00_00 => <+>, _ => <-> }\nfn main() -> Ternary{1} = classify(0b0000)";
         let err = check_colony(&parse(src).expect("parses")).expect_err("must reject");
-        assert!(
-            err.message.contains("duplicate literal"),
-            "got: {}",
-            err.message
-        );
+        assert!(err.message.contains("unreachable"), "got: {}", err.message);
     }
 
     #[test]

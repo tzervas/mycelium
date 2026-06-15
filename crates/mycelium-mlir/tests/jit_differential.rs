@@ -51,6 +51,21 @@ fn corpus() -> Vec<Node> {
                 Trit::Pos,
             ]))],
         },
+        // M-301 trit carry arithmetic (in range): add 5+4=9 and mul 2*3=6 over 3 trits, in-process.
+        Node::Op {
+            prim: "trit.add".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Pos, Trit::Neg, Trit::Neg])),
+                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Pos])),
+            ],
+        },
+        Node::Op {
+            prim: "trit.mul".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Neg])),
+                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Zero])),
+            ],
+        },
     ]
 }
 

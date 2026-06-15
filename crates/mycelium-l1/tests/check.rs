@@ -40,6 +40,54 @@ fn exhaustive_match_checks_and_nonexhaustive_is_refused() {
     );
 }
 
+const NAT: &str = "colony d\ntype Nat = Z | S(Nat)\n";
+
+#[test]
+fn nested_pattern_match_typechecks() {
+    // Depth-2 nested patterns, exhaustive (Z | S(Z) | S(S(_))). The binder `m` is in scope at the
+    // S(S(m)) arm with type Nat.
+    let ok =
+        format!("{NAT}fn pred2(n: Nat) -> Nat = match n {{ Z => Z, S(Z) => Z, S(S(m)) => m }}");
+    assert!(check(&ok).is_ok(), "{:?}", check(&ok));
+}
+
+#[test]
+fn nested_nonexhaustive_match_reports_a_precise_witness() {
+    // Z | S(S(m)) misses S(Z) — the Maranget witness names the missing nested case exactly.
+    let bad = format!("{NAT}fn f(n: Nat) -> Nat = match n {{ Z => Z, S(S(m)) => m }}");
+    let err = check(&bad).unwrap_err();
+    assert!(
+        err.message.contains("non-exhaustive"),
+        "got: {}",
+        err.message
+    );
+    assert!(
+        err.message.contains("S(Z)"),
+        "witness must name the missing case, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn nested_redundant_arm_is_unreachable() {
+    // After Z and S(m), the nested arm S(Z) is already covered ⇒ unreachable (W7 redundancy).
+    let bad = format!("{NAT}fn f(n: Nat) -> Nat = match n {{ Z => Z, S(m) => m, S(Z) => Z }}");
+    let err = check(&bad).unwrap_err();
+    assert!(err.message.contains("unreachable"), "got: {}", err.message);
+}
+
+#[test]
+fn nested_binder_drives_structural_descent_for_matured() {
+    // A recursion descending through a *nested* pattern binder (S(S(m)) → m) is structurally smaller,
+    // so the totality checker must classify it Total and admit `matured` (the depth-2 descent the
+    // extended smallness tracking now recognizes).
+    let ok = format!(
+        "{NAT}matured fn half(n: Nat) -> Nat = \
+         match n {{ Z => Z, S(Z) => Z, S(S(m)) => S(half(m)) }}"
+    );
+    assert!(check(&ok).is_ok(), "{:?}", check(&ok));
+}
+
 #[test]
 fn structural_recursion_is_total_and_gates_matured() {
     // A structurally-decreasing self-recursion over a Peano-like type is classified Total.
