@@ -128,30 +128,30 @@ fn error_bound_scalar_is_sound() {
         let dy = rng.unit() * ey;
 
         // add: |dx + dy| <= eps_add (both sides; A2-07 fix — was only the positive side).
-        assert!((dx + dy).abs() <= bx.add(&by).unwrap().eps);
+        assert!((dx + dy).abs() <= bx.add(&by).unwrap().eps());
         // sub: |dx - dy| <= eps_sub
-        assert!((dx - dy).abs() <= bx.sub(&by).unwrap().eps);
+        assert!((dx - dy).abs() <= bx.sub(&by).unwrap().eps());
         // scale
         let c = rng.unit() * 3.0;
-        assert!((c * dx).abs() <= bx.scale(c).eps);
+        assert!((c * dx).abs() <= bx.scale(c).eps());
         // mul about centers x0,y0: |(x0+dx)(y0+dy) - x0 y0| <= eps_mul
         let x0 = rng.unit() * 6.0;
         let y0 = rng.unit() * 6.0;
         let true_dev = ((x0 + dx) * (y0 + dy) - x0 * y0).abs();
-        assert!(true_dev <= bx.mul(&by, x0, y0).unwrap().eps);
+        assert!(true_dev <= bx.mul(&by, x0, y0).unwrap().eps());
     }
 }
 
 /// **Outward rounding (A2-01 / C1-01 regression; mutant-witness).** A composition whose real sum is
 /// not representable must yield an `eps` *strictly greater* than the round-to-nearest sum — otherwise
 /// the `Proven` tag `compose_error_bound` attaches would not be backed. Reverting `ErrorBound::add`
-/// to `self.eps + other.eps` (plain RN) makes this fail.
+/// to `self.eps() + other.eps()` (plain RN) makes this fail.
 #[test]
 fn error_bound_add_rounds_outward() {
     // 1.0 and 2^-54: their real sum is unrepresentable and rounds to exactly 1.0 under RN.
     let a = ErrorBound::new(1.0, NormKind::Linf).unwrap();
     let b = ErrorBound::new(2f64.powi(-54), NormKind::Linf).unwrap();
-    let composed = a.add(&b).unwrap().eps;
+    let composed = a.add(&b).unwrap().eps();
     assert!(
         composed > 1.0,
         "composed eps {composed} did not round outward above the RN sum 1.0"
@@ -159,7 +159,7 @@ fn error_bound_add_rounds_outward() {
     assert!(composed >= 1.0 + 2f64.powi(-54));
     // Exact composition is preserved: 0 + 0 stays exactly 0 (Exact ⊕ Exact is not inflated).
     let zero = ErrorBound::exact(NormKind::Linf);
-    assert_eq!(zero.add(&zero).unwrap().eps, 0.0);
+    assert_eq!(zero.add(&zero).unwrap().eps(), 0.0);
 }
 
 /// **Monotonicity.** Raising any input `eps` can only raise the composed `eps`.
@@ -173,8 +173,8 @@ fn error_bound_is_monotone() {
         let lo = ErrorBound::new(ex, NormKind::L2).unwrap();
         let hi = ErrorBound::new(ex + bump, NormKind::L2).unwrap();
         let y = ErrorBound::new(ey, NormKind::L2).unwrap();
-        assert!(hi.add(&y).unwrap().eps >= lo.add(&y).unwrap().eps);
-        assert!(hi.mul(&y, 2.0, 3.0).unwrap().eps >= lo.mul(&y, 2.0, 3.0).unwrap().eps);
+        assert!(hi.add(&y).unwrap().eps() >= lo.add(&y).unwrap().eps());
+        assert!(hi.mul(&y, 2.0, 3.0).unwrap().eps() >= lo.mul(&y, 2.0, 3.0).unwrap().eps());
     }
 }
 
@@ -241,7 +241,7 @@ fn union_bound_is_sound() {
     let deltas = [0.01, 0.02, 0.05];
     let bounds: Vec<ProbBound> = deltas.iter().map(|d| ProbBound::new(*d).unwrap()).collect();
     let claimed = ProbBound::union(&bounds);
-    assert!(claimed.delta <= 1.0);
+    assert!(claimed.delta() <= 1.0);
     let mut failures = 0u64;
     let n = 200_000u64;
     for _ in 0..n {
@@ -255,9 +255,9 @@ fn union_bound_is_sound() {
     let empirical = failures as f64 / n as f64;
     // Union bound must over-estimate the true "any fails" probability.
     assert!(
-        claimed.delta + 0.01 >= empirical,
+        claimed.delta() + 0.01 >= empirical,
         "union {} < emp {empirical}",
-        claimed.delta
+        claimed.delta()
     );
 }
 
@@ -267,8 +267,8 @@ fn union_bound_is_monotone_and_saturates() {
     let a = ProbBound::new(0.4).unwrap();
     let b = ProbBound::new(0.4).unwrap();
     let c = ProbBound::new(0.9).unwrap();
-    assert!(a.or(&b).delta >= a.delta);
-    assert_eq!(a.or(&b).or(&c).delta, 1.0); // 0.4+0.4+0.9 -> clamp to 1
+    assert!(a.or(&b).delta() >= a.delta());
+    assert_eq!(a.or(&b).or(&c).delta(), 1.0); // 0.4+0.4+0.9 -> clamp to 1
 }
 
 /// **Determinism.** Same δ inputs → same union; empty union is `certain`.
@@ -288,11 +288,11 @@ fn aprhl_seq_composes() {
     let j1 = ApRhlJudgment::new(0.5, 0.01).unwrap();
     let j2 = ApRhlJudgment::new(0.3, 0.02).unwrap();
     let seq = j1.seq(&j2);
-    assert!((seq.eps - 0.8).abs() < 1e-12);
-    assert!((seq.delta - 0.03).abs() < 1e-12);
+    assert!((seq.eps() - 0.8).abs() < 1e-12);
+    assert!((seq.delta() - 0.03).abs() < 1e-12);
     // Saturation at δ = 1.
     let big = ApRhlJudgment::new(0.0, 0.7).unwrap();
-    assert_eq!(big.seq(&big).delta, 1.0);
+    assert_eq!(big.seq(&big).delta(), 1.0);
 }
 
 // --- tier-i checker ----------------------------------------------------------------------------
@@ -306,7 +306,7 @@ fn checker_rejects_too_tight_claims() {
     let inputs = [x, y];
     // Sound re-derivation of add = 5.0.
     let recomputed = recompute_error(&inputs, ErrorOp::Add).unwrap();
-    assert!((recomputed.eps - 5.0).abs() < 1e-12);
+    assert!((recomputed.eps() - 5.0).abs() < 1e-12);
 
     // Exact claim: valid.
     let exact_claim = ErrorBound::new(5.0, NormKind::Linf).unwrap();
@@ -358,7 +358,7 @@ fn checker_is_not_vacuous_for_tiny_bounds() {
     let y = ErrorBound::new(2.5e-13, NormKind::Linf).unwrap();
     let inputs = [x, y];
     let recomputed = recompute_error(&inputs, ErrorOp::Add).unwrap();
-    assert!(recomputed.eps >= 5e-13);
+    assert!(recomputed.eps() >= 5e-13);
     // Claiming exactness (eps = 0) for an approximate result must be rejected.
     let zero_claim = ErrorBound::new(0.0, NormKind::Linf).unwrap();
     assert!(matches!(

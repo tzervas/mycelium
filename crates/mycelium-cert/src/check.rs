@@ -302,15 +302,15 @@ fn check_bounded(
     if b.repr() != target {
         return mismatch("certificate target repr does not match artifact B");
     }
-    if claimed.strength == GuaranteeStrength::Exact {
+    if claimed.strength() == GuaranteeStrength::Exact {
         return mismatch("a bounded claim cannot be Exact — Exact means no bound (M-I1)");
     }
     // VR-5: the claim may be *weaker* than the evidence's basis, never stronger.
     let evidence_strength = basis_strength(&bound.basis);
-    if claimed.strength.rank() < evidence_strength.rank() {
+    if claimed.strength().rank() < evidence_strength.rank() {
         return mismatch(format!(
             "claimed strength {:?} upgrades past the certificate basis ({evidence_strength:?}) — VR-5",
-            claimed.strength
+            claimed.strength()
         ));
     }
     // δ certificates (the M-231 Dense↔VSA class) discharge by deterministic re-derivation; ε
@@ -320,7 +320,7 @@ fn check_bounded(
             return check_bounded_prob(a, b, target, policy_used, cert_delta, claimed);
         }
         BoundKind::Error { eps, norm } => {
-            if claimed.delta != 0.0 {
+            if claimed.delta() != 0.0 {
                 return mismatch("an ε certificate carries no δ side");
             }
             (eps, norm)
@@ -346,7 +346,7 @@ fn check_bounded(
     let Some(cert_eb) = ErrorBound::new(cert_eps, norm) else {
         return mismatch("certificate ε is not a well-formed bound");
     };
-    let Some(claimed_eb) = ErrorBound::new(claimed.eps, norm) else {
+    let Some(claimed_eb) = ErrorBound::new(claimed.eps(), norm) else {
         return mismatch("claimed ε is not a well-formed bound");
     };
     // Tier-i (1): the certificate must cover the measured instance. A single-input `Add`
@@ -380,7 +380,7 @@ fn check_bounded(
         CheckOutcome::Malformed => return incomplete("tier-i re-derivation was malformed"),
     }
     CheckVerdict::Validated {
-        strength: claimed.strength,
+        strength: claimed.strength(),
     }
 }
 
@@ -399,11 +399,11 @@ fn check_bounded_prob(
     cert_delta: f64,
     claimed: Certificate,
 ) -> CheckVerdict {
-    if claimed.eps != 0.0 {
+    if claimed.eps() != 0.0 {
         return mismatch("a δ certificate carries no ε side");
     }
     let (Some(cert_pb), Some(claimed_pb)) =
-        (ProbBound::new(cert_delta), ProbBound::new(claimed.delta))
+        (ProbBound::new(cert_delta), ProbBound::new(claimed.delta()))
     else {
         return mismatch("certificate/claimed δ is not a well-formed probability");
     };
@@ -443,17 +443,17 @@ fn check_bounded_prob(
                 bound: ref rebound, ..
             } = rcert
             {
-                if claimed.strength.rank() < basis_strength(&rebound.basis).rank() {
+                if claimed.strength().rank() < basis_strength(&rebound.basis).rank() {
                     return mismatch(format!(
                         "claimed strength {:?} upgrades past the re-derived basis ({:?}) — VR-5",
-                        claimed.strength,
+                        claimed.strength(),
                         basis_strength(&rebound.basis)
                     ));
                 }
             }
             if rv.payload() == b.payload() {
                 CheckVerdict::Validated {
-                    strength: claimed.strength,
+                    strength: claimed.strength(),
                 }
             } else {
                 diverged("re-derived payload differs from B — B is not the swap of A")

@@ -155,17 +155,47 @@ pub fn accuracy_to_probability(acc: ErrorBound, tau: f64, acc_delta: f64) -> Opt
 
 /// The shared certificate both kernels reduce to (ADR-010 §3): an ε side, a δ side, and a `strength`
 /// tag that composes by `meet`. Serializes as `{ "eps", "delta", "strength" }`.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Certificate {
-    /// The ε-magnitude side (`0` if no error component).
-    pub eps: f64,
-    /// The δ failure-probability side (`0` if no probabilistic component).
-    pub delta: f64,
-    /// The honest guarantee strength (`meet` of contributors).
-    pub strength: GuaranteeStrength,
+    pub(crate) eps: f64,
+    pub(crate) delta: f64,
+    pub(crate) strength: GuaranteeStrength,
+}
+
+/// Validating `Deserialize`: wire certificates route through [`Certificate::new`], so an
+/// out-of-range `eps`/`delta` is rejected on the way in, never silently trusted (A2-05). Fields are
+/// private; the only constructors are the validating `new`/`from_*`/`exact`.
+impl<'de> Deserialize<'de> for Certificate {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        struct Wire {
+            eps: f64,
+            delta: f64,
+            strength: GuaranteeStrength,
+        }
+        let w = Wire::deserialize(deserializer)?;
+        Certificate::new(w.eps, w.delta, w.strength)
+            .ok_or_else(|| serde::de::Error::custom("certificate eps/delta out of range"))
+    }
 }
 
 impl Certificate {
+    /// The ε-magnitude side (`0` if no error component).
+    #[must_use]
+    pub fn eps(&self) -> f64 {
+        self.eps
+    }
+    /// The δ failure-probability side (`0` if no probabilistic component).
+    #[must_use]
+    pub fn delta(&self) -> f64 {
+        self.delta
+    }
+    /// The honest guarantee strength (`meet` of contributors).
+    #[must_use]
+    pub fn strength(&self) -> GuaranteeStrength {
+        self.strength
+    }
+
     /// A well-formed certificate, or `None` if `eps`/`delta` are out of range (never silent).
     #[must_use]
     pub fn new(eps: f64, delta: f64, strength: GuaranteeStrength) -> Option<Self> {
@@ -249,9 +279,23 @@ fn min_empirical_trials(bases: &[&BoundBasis]) -> u64 {
 fn composed_basis(strength: GuaranteeStrength, bases: &[&BoundBasis]) -> Option<BoundBasis> {
     match strength {
         GuaranteeStrength::Exact => None,
-        GuaranteeStrength::Proven => Some(BoundBasis::ProvenThm {
-            citation: AFFINE_CITATION.to_owned(),
-        }),
+        GuaranteeStrength::Proven => {
+            // Preserve the contributing theorems' provenance rather than collapsing to the bare
+            // affine citation (A2-09): cite affine-arithmetic composition *over* the input theorems.
+            let inputs: Vec<&str> = bases
+                .iter()
+                .filter_map(|b| match b {
+                    BoundBasis::ProvenThm { citation } => Some(citation.as_str()),
+                    _ => None,
+                })
+                .collect();
+            let citation = if inputs.is_empty() {
+                AFFINE_CITATION.to_owned()
+            } else {
+                format!("{AFFINE_CITATION} over [{}]", inputs.join("; "))
+            };
+            Some(BoundBasis::ProvenThm { citation })
+        }
         GuaranteeStrength::Empirical => Some(BoundBasis::EmpiricalFit {
             trials: min_empirical_trials(bases),
             method: COMPOSED_METHOD.to_owned(),

@@ -14,11 +14,17 @@
 /// (`BoundKind::Probability`).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ProbBound {
-    /// Failure probability, always in `[0, 1]`.
-    pub delta: f64,
+    pub(crate) delta: f64,
 }
 
 impl ProbBound {
+    /// Failure probability, always in `[0, 1]`. (Field is private so the range invariant cannot be
+    /// bypassed by direct construction — A2-05.)
+    #[must_use]
+    pub fn delta(&self) -> f64 {
+        self.delta
+    }
+
     /// The certain bound (`δ == 0`, never fails) — the identity of [`union`](Self::union).
     #[must_use]
     pub const fn certain() -> Self {
@@ -61,13 +67,23 @@ impl ProbBound {
 /// certificates (the relational path), distinct from the scalar [`ProbBound`] union path.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ApRhlJudgment {
-    /// The log privacy factor `ε ≥ 0` (the factor is `e^ε`).
-    pub eps: f64,
-    /// The additive slack `δ ∈ [0, 1]`.
-    pub delta: f64,
+    pub(crate) eps: f64,
+    pub(crate) delta: f64,
 }
 
 impl ApRhlJudgment {
+    /// The log privacy factor `ε ≥ 0` (the factor is `e^ε`).
+    #[must_use]
+    pub fn eps(&self) -> f64 {
+        self.eps
+    }
+
+    /// The additive slack `δ ∈ [0, 1]`.
+    #[must_use]
+    pub fn delta(&self) -> f64 {
+        self.delta
+    }
+
     /// A well-formed judgment, or `None` on a negative/non-finite `ε` or `δ ∉ [0, 1]`.
     #[must_use]
     pub fn new(eps: f64, delta: f64) -> Option<Self> {

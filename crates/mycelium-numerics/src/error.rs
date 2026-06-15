@@ -214,16 +214,31 @@ impl AffineForm {
 
 /// A scalar ε-magnitude bound `{eps ≥ 0, norm}` — the [`AffineForm::radius`] projection that travels
 /// in a [`mycelium_core::Bound`] (`BoundKind::Error`). Compositions are the conservative (worst-case)
-/// projections used when only magnitudes are available.
+/// projections used when only magnitudes are available. Fields are **private** so a bound can only be
+/// built via [`new`](Self::new)/[`exact`](Self::exact) or the outward-rounded compositions — a tight,
+/// under-rounded `eps` cannot be injected by direct construction (A2-05; keeps A2-01 structural).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ErrorBound {
-    /// Error magnitude (`>= 0`, finite).
-    pub eps: f64,
-    /// The norm `eps` is measured in.
-    pub norm: NormKind,
+    // `pub(crate)`: the kernel's own modules compose these directly, but **external** crates cannot
+    // name the fields — so a tight, under-rounded bound cannot be injected by struct construction;
+    // they must go through `new`/`exact`/the outward-rounded compositions, or the accessors (A2-05).
+    pub(crate) eps: f64,
+    pub(crate) norm: NormKind,
 }
 
 impl ErrorBound {
+    /// The error magnitude (`>= 0`, finite).
+    #[must_use]
+    pub fn eps(&self) -> f64 {
+        self.eps
+    }
+
+    /// The norm `eps` is measured in.
+    #[must_use]
+    pub fn norm(&self) -> NormKind {
+        self.norm
+    }
+
     /// An exact bound (`eps == 0`) in `norm` — the identity of [`add`](Self::add).
     #[must_use]
     pub const fn exact(norm: NormKind) -> Self {
