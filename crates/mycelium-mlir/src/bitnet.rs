@@ -132,7 +132,7 @@ pub fn emit_bitnet_dot_ir_for(scheme: PackScheme) -> Result<String, AotError> {
             "  %dv1 = select i1 %is1, i64 3, i64 %dv2\n",
             "  %div = select i1 %is0, i64 1, i64 %dv1\n",
             "  %q = udiv i64 %byte64, %div\n",
-            "  %d01 = urem i64 %q, 3\n",       // base-3 digit ∈ {0,1,2}
+            "  %d01 = urem i64 %q, 3\n",      // base-3 digit ∈ {0,1,2}
             "  %digit64 = sub i64 %d01, 1\n", // signed weight ∈ {-1,0,1}
         )
         .to_string(),
@@ -284,11 +284,7 @@ pub fn jit_ternary_dot_for(
     scheme: PackScheme,
 ) -> Result<i64, AotError> {
     let packed = pack_trits(weights, scheme);
-    compile_bitnet_dot_for(scheme)?.call(
-        &packed,
-        activations,
-        weights.len().min(activations.len()),
-    )
+    compile_bitnet_dot_for(scheme)?.call(&packed, activations, weights.len().min(activations.len()))
 }
 
 #[cfg(test)]
@@ -445,7 +441,10 @@ mod tests {
         let x = activations(n);
         let packed = pack_trits(&w, PackScheme::Tl2);
         assert_eq!(packed.len(), 2);
-        assert_eq!(kernel.call(&packed, &x, n).unwrap(), ternary_dot_ref(&w, &x));
+        assert_eq!(
+            kernel.call(&packed, &x, n).unwrap(),
+            ternary_dot_ref(&w, &x)
+        );
         // One byte cannot hold 10 TL2 trits → explicit refusal.
         assert!(matches!(kernel.call(&[0u8], &x, n), Err(AotError::Run(_))));
     }

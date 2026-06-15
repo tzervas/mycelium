@@ -128,8 +128,8 @@ pub fn read_message<R: BufRead>(reader: &mut R) -> io::Result<Option<Value>> {
     })?;
     let mut buf = vec![0u8; len];
     reader.read_exact(&mut buf)?;
-    let value = serde_json::from_slice(&buf)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    let value =
+        serde_json::from_slice(&buf).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
     Ok(Some(value))
 }
 
@@ -161,7 +161,10 @@ fn error_response(id: Value, code: i64, message: &str) -> Value {
 /// once the L1 surface lands.
 pub fn serve<R: BufRead, W: Write>(reader: &mut R, writer: &mut W) -> io::Result<()> {
     while let Some(msg) = read_message(reader)? {
-        let method = msg.get("method").and_then(Value::as_str).unwrap_or_default();
+        let method = msg
+            .get("method")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
         let id = msg.get("id").cloned();
         match (method, id) {
             ("initialize", Some(id)) => write_message(writer, &response(id, initialize_result()))?,

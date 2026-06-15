@@ -135,7 +135,9 @@ fn compile_rows(
     let complete = match &ty0 {
         Ty::Data(n) => types.get(n).is_some_and(|d| {
             // Iterate constructors in signature order for a stable, complete switch.
-            d.ctors.iter().all(|ci| ctor_heads.iter().any(|(m, _)| *m == ci.name))
+            d.ctors
+                .iter()
+                .all(|ci| ctor_heads.iter().any(|(m, _)| *m == ci.name))
         }),
         // Binary/Ternary value domains are never enumerated — always need a default.
         _ => false,
@@ -383,7 +385,9 @@ mod tests {
             (Pat::Wild, _) => true,
             (Pat::Lit(k), Pat::Lit(j)) => k == j,
             (Pat::Ctor(n, ps), Pat::Ctor(m, vs)) => {
-                n == m && ps.len() == vs.len() && ps.iter().zip(vs).all(|(p, v)| matches_value(p, v))
+                n == m
+                    && ps.len() == vs.len()
+                    && ps.iter().zip(vs).all(|(p, v)| matches_value(p, v))
             }
             _ => false,
         }
@@ -427,7 +431,10 @@ mod tests {
             } => {
                 assert_eq!(occurrence, &Vec::<usize>::new());
                 assert_eq!(cases.len(), 2);
-                assert!(default.is_none(), "complete data signature needs no default");
+                assert!(
+                    default.is_none(),
+                    "complete data signature needs no default"
+                );
             }
             other => panic!("expected a switch, got {other:?}"),
         }
@@ -445,7 +452,13 @@ mod tests {
             ctor("S", vec![ctor("S", vec![Pat::Wild])]),
         ];
         let matrix: Vec<Vec<Pat>> = arms.iter().cloned().map(|p| vec![p]).collect();
-        let tree = compile(&t, &matrix, &[0, 1, 2], &[vec![]], &[Ty::Data("Nat".into())]);
+        let tree = compile(
+            &t,
+            &matrix,
+            &[0, 1, 2],
+            &[vec![]],
+            &[Ty::Data("Nat".into())],
+        );
         assert_agrees(&arms, &tree, 5);
         // Spot-check the arm selection directly.
         assert_eq!(eval_tree(&tree, &nat(0)), Some(0));
@@ -466,7 +479,13 @@ mod tests {
             ctor("Z", vec![]),
         ];
         let matrix: Vec<Vec<Pat>> = arms.iter().cloned().map(|p| vec![p]).collect();
-        let tree = compile(&t, &matrix, &[0, 1, 2], &[vec![]], &[Ty::Data("Nat".into())]);
+        let tree = compile(
+            &t,
+            &matrix,
+            &[0, 1, 2],
+            &[vec![]],
+            &[Ty::Data("Nat".into())],
+        );
         assert_eq!(eval_tree(&tree, &nat(1)), Some(0)); // S(Z) → first arm S(_), never the shadowed arm 1
         assert_agrees(&arms, &tree, 4);
     }
@@ -482,7 +501,10 @@ mod tests {
         match &tree {
             Tree::Switch { cases, default, .. } => {
                 assert_eq!(cases.len(), 1);
-                assert!(default.is_some(), "open literal domain always needs a default");
+                assert!(
+                    default.is_some(),
+                    "open literal domain always needs a default"
+                );
             }
             other => panic!("expected a switch, got {other:?}"),
         }

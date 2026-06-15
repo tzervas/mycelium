@@ -28,6 +28,7 @@
 
 pub mod ast;
 pub mod checkty;
+pub(crate) mod decision;
 pub mod elab;
 pub mod error;
 pub mod eval;
@@ -35,7 +36,6 @@ pub mod lexer;
 pub mod parse;
 pub mod token;
 pub mod totality;
-pub(crate) mod decision;
 pub(crate) mod usefulness;
 
 pub use ast::Colony;
