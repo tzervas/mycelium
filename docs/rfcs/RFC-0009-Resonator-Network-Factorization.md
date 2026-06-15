@@ -59,9 +59,18 @@ stop:    converged   iff the decoded index tuple ι is unchanged for one full sw
                           top-similarity ≥ τ_lock (a discrete fixed point — NOT real-valued
                           vector-stability, §8.1 P3); OR
          exhausted   iff t reaches the manifest iteration_budget (RFC-0003 §6: ≥ 1); OR
-         oscillating iff a previously-seen *index tuple* ι recurs within a bounded history window
-                          (discrete cycle detection — the real-valued state rarely recurs bit-exactly
-                          under softmax cleanup, so cycles must be detected on ι, §8.1 P3/§9 Q3)
+         oscillating iff a *distinct* previously-seen index tuple ι recurs within a bounded history
+                          window — a genuine limit cycle of period ≥ 2 (the immediately preceding ι is
+                          excluded; a *stationary* ι is handled below). Discrete cycle detection: the
+                          real-valued state rarely recurs bit-exactly under softmax cleanup, so cycles
+                          must be detected on ι (§8.1 P3/§9 Q3); OR
+         stalled     iff ι is stationary (== the previous sweep's ι) but its lock bottleneck — the
+                          *minimum* per-slot top-similarity — stops improving (no gain for a small
+                          fixed patience of sweeps) before every slot reaches τ_lock. A stationary ι
+                          whose confidence is *still rising* is NOT a stall and NOT a cycle: the loop
+                          keeps iterating toward lock (the discrete ι goes stationary before the
+                          real-valued estimate finishes sharpening, so a single recurrence must not be
+                          read as a limit cycle — the M-350 premature-abort correction, §8.1 P3).
 ```
 
 `cleanup_i(r)` scores `r` against every atom of `Cᵢ` by the model's `similarity` and returns a
@@ -254,12 +263,18 @@ deliberately left to be *fit by trials* rather than asserted (VR-5), and are fla
   `temperature`); the *value* of `β` is a regime-dependent knob **fit by the §10 trials, not asserted**,
   and recorded per-profile. Full superposition over the codebook is the reference; any top-k truncation
   (as in `embeddenator-vsa`, top-8) is an explicit, recorded approximation, not the default.
-- **Q3 — Convergence & oscillation detection. → Resolved: discrete index-tuple, bounded window.**
-  Convergence = the decoded index tuple `ι` (§3) unchanged for one full sweep **and** every slot's
-  top-similarity ≥ `τ_lock`. Oscillation = recurrence of a previously-seen `ι` within a bounded history
-  window (default window = the iteration budget, i.e. remember every tuple seen this run; a smaller ring
-  buffer is a recorded approximation). Detection is on the **discrete tuple**, never the real-valued
-  state (§8.1 P3). `τ_lock` is a manifest threshold; its default is trial-fit alongside `β`.
+- **Q3 — Convergence & oscillation detection. → Resolved: discrete index-tuple, bounded window
+  (premature-abort corrected, M-350).** Convergence = the decoded index tuple `ι` (§3) unchanged for one
+  full sweep **and** every slot's top-similarity ≥ `τ_lock`. Oscillation = recurrence of a *distinct*
+  previously-seen `ι` within a bounded history window — a **genuine limit cycle of period ≥ 2**; the
+  immediately preceding tuple is excluded so a *stationary* `ι` is not read as a 1-cycle. A stationary
+  `ι` that has not yet locked is **not** an oscillation: its real-valued estimate may still be sharpening,
+  so the loop keeps iterating while the lock bottleneck (min per-slot top-similarity) climbs, and refuses
+  only once that climb plateaus — the explicit **`Stalled`** verdict (a stuck fixed point, still
+  never-silent). The default window = the iteration budget (remember every tuple seen this run; a smaller
+  ring buffer is a recorded approximation). Detection is on the **discrete tuple**, never the real-valued
+  state (§8.1 P3) — but the *stall* test reads the confidence trajectory to tell a stationary-but-still-
+  improving tuple from a true plateau. `τ_lock` is a manifest threshold; its default is trial-fit alongside `β`.
 - **Q4 — Deriving `δ`. → Resolved: oracle-measured, over a `{F, ∏kᵢ, d}` grid.** The trial harness
   draws random factor tuples from the codebooks, binds them, factorizes, and scores **exact recovery of
   the true tuple against the brute-force oracle** (§11) — *not* self-reported convergence (§8.1 P5). `δ`
@@ -369,3 +384,22 @@ deliberately left to be *fit by trials* rather than asserted (VR-5), and are fla
   `CleanupShape` schema is unchanged; the unspecified-manifest decode path adopts the Hebbian default).
   Tag stays `Empirical`, MAP-I only, never `Proven`; the never-silent verdicts and the §5/§6 contract are
   unchanged. RFC stays **Accepted** — only the prototype's *validated envelope* is updated.
+- **2026-06-15 — §3 loop premature-abort fixed (M-350; informative).** While wiring RFC-0010, the §3
+  loop was observed refusing *recoverable* instances: it decided oscillation on **any** recurrence of the
+  decoded index tuple `ι`, so a tuple that had gone **stationary on `ι` while its per-slot confidence was
+  still climbing** toward `τ_lock` recurred in the history at distance 1 and was mislabelled
+  `Oscillating{period:1}` (observed at F=3,k=16, Hebbian, d=4096: the correct tuple decoded at iter 2
+  with slot similarities `[1.0, 0.998, 0.72↗]`, aborted before the third slot could lock). The discrete
+  `ι` alone cannot tell a *stationary-but-still-sharpening* estimate from a true limit cycle. **Fix:** a
+  **genuine limit cycle** is now a recurrence of a *distinct* earlier tuple (`period ≥ 2`, the immediately
+  preceding tuple excluded) and still refuses as `Oscillating`; a **stationary** tuple (`ι` == the
+  previous sweep's) instead keeps iterating while the lock bottleneck (min per-slot top-similarity) is
+  still rising, and refuses only once that climb plateaus below `τ_lock` for `STALL_PATIENCE` sweeps —
+  a new explicit `StopReason::Stalled` / `VsaError::ResonatorStalled` verdict (a stuck fixed point, still
+  **never-silent**, carrying the trace for EXPLAIN). **Measured:** F=3,k=16 went **1/300 → 0/300** on the
+  seed that exhibited the abort; the canonical 1000-trial gate stays **0/1000 ⇒ δ=0.02** — the gate's
+  worst corner was already 0/1000, so the conservative ceiling is **unchanged** (no unmotivated tightening
+  of the bound; VR-5). The §10.3 ablation/capacity sweeps re-ran with no regression. Tag stays
+  `Empirical`, MAP-I only, never `Proven`; only a clean `Converged` clearing `τ_lock` + confidence +
+  margin yields factors (§5/§6 contract unchanged). RFC stays **Accepted** — only the prototype's loop
+  semantics are corrected; the honesty contract is untouched.

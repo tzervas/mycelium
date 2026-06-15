@@ -152,10 +152,19 @@ pub enum VsaError {
         /// The full run trace (stop reason, similarity trajectory, final decode).
         trace: Box<crate::resonator::ResonatorTrace>,
     },
-    /// A resonator factorization entered a limit cycle on the decoded index tuple `ι` — surfaced
-    /// explicitly, never run to budget silently (RFC-0009 §3/§6; §8.1 P3).
+    /// A resonator factorization entered a **genuine limit cycle** (period ≥ 2) on the decoded index
+    /// tuple `ι` — surfaced explicitly, never run to budget silently (RFC-0009 §3/§6; §8.1 P3).
     ResonatorOscillating {
         /// The full run trace (the `StopReason::Oscillating` records the cycle period).
+        trace: Box<crate::resonator::ResonatorTrace>,
+    },
+    /// A resonator factorization reached a **stationary tuple that plateaued below `τ_lock`**: `ι`
+    /// stopped changing and its per-slot similarity stopped climbing before every slot locked — a
+    /// stuck fixed point, refused explicitly rather than returned as factors (RFC-0009 §3/§6). This
+    /// is distinct from a real cycle (`ResonatorOscillating`); the M-350 fix keeps a *still-climbing*
+    /// stationary tuple iterating toward lock instead of aborting it.
+    ResonatorStalled {
+        /// The full run trace (the `StopReason::Stalled` records the stationary-sweep count).
         trace: Box<crate::resonator::ResonatorTrace>,
     },
     /// A resonator factorization converged, but some slot's confidence fell below the requested
@@ -264,7 +273,12 @@ impl core::fmt::Display for VsaError {
             ),
             VsaError::ResonatorOscillating { trace } => write!(
                 f,
-                "resonator oscillated (decoded index tuple recurred) after {} sweeps",
+                "resonator oscillated (decoded index tuple entered a limit cycle) after {} sweeps",
+                trace.iterations
+            ),
+            VsaError::ResonatorStalled { trace } => write!(
+                f,
+                "resonator stalled (decoded index tuple stationary but below τ_lock) after {} sweeps",
                 trace.iterations
             ),
             VsaError::ResonatorBelowConfidence {

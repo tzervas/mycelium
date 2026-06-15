@@ -15,9 +15,9 @@
 //! - **Never silent.** A non-converging run **cannot hang** (the iteration budget caps work) and is
 //!   **never** returned as an answer: [`factorize`] yields [`Factorization`] **only** on a clean
 //!   [`StopReason::Converged`] verdict that also clears the per-slot confidence and margin thresholds.
-//!   `BudgetExhausted`, `Oscillating`, below-confidence, and below-margin are explicit errors that
-//!   carry the inspectable [`ResonatorTrace`] (so `EXPLAIN` works on failure too). "Converged ≠
-//!   correct" — a resonator can reach a *wrong* fixed point, which the brute-force differential oracle
+//!   `BudgetExhausted`, `Oscillating`, `Stalled`, below-confidence, and below-margin are explicit
+//!   errors that carry the inspectable [`ResonatorTrace`] (so `EXPLAIN` works on failure too).
+//!   "Converged ≠ correct" — a resonator can reach a *wrong* fixed point, which the brute-force oracle
 //!   (`tests/resonator_oracle.rs`) and the trial-validated [`ResonatorProfile`] are what keep honest.
 //! - **Deterministic.** Given the params + seed, a run is reproducible (no `rand`; a tiny in-crate
 //!   LCG seeds initialisation) — the §8.1 P1 correction over the prior art.
@@ -27,13 +27,30 @@
 //! §8.1 P6): `rᵢ = unbind(s, ⊛_{j≠i} x̂ⱼ)`; `x̂ᵢ ← cleanup_i(rᵢ)`. Convergence and oscillation are
 //! decided on the **discrete per-slot top-atom index tuple `ι`** (§8.1 P3), never the real-valued
 //! vector: converged iff `ι` is unchanged for a full sweep AND every slot's similarity ≥ `τ_lock`;
-//! oscillating iff a previously-seen `ι` recurs.
+//! oscillating iff a *distinct* previously-seen `ι` recurs (a period-≥2 limit cycle). A **stationary**
+//! tuple (`ι` == the previous sweep's) is not, on its own, a cycle — its real-valued estimate may
+//! still be sharpening, so the loop keeps iterating while the lock bottleneck (min per-slot
+//! similarity) climbs and only refuses (`Stalled`) once that climb plateaus below `τ_lock` for
+//! [`STALL_PATIENCE`] sweeps. This is the M-350 premature-abort fix: the prior code conflated a
+//! stationary-but-still-improving tuple with a genuine limit cycle and aborted it as `Oscillating`.
 
 use std::collections::VecDeque;
 
 use mycelium_core::{Bound, BoundBasis, BoundKind};
 
 use crate::{CleanupMemory, Match, VsaError, VsaModel};
+
+/// Minimum gain in the **min** per-slot top-similarity (the lock bottleneck) for a stationary sweep
+/// to count as *still improving toward `τ_lock`* rather than plateaued (RFC-0009 §3/§6; M-350). A
+/// genuinely converging tuple climbs by far more than this per sweep; once the climb falls below it
+/// for [`STALL_PATIENCE`] consecutive sweeps the tuple is declared [`StopReason::Stalled`].
+const STALL_MIN_GAIN: f64 = 1e-3;
+
+/// Consecutive stationary sweeps with no [`STALL_MIN_GAIN`] improvement before a stationary tuple is
+/// refused as [`StopReason::Stalled`]. Small (a stationary bipolar fixed point is frozen, so the
+/// plateau is detected within a couple of sweeps), but > 0 so a one-sweep pause in the climb does not
+/// abort a tuple that then resumes rising (the M-350 premature-abort fix; RFC-0009 §3/§6).
+const STALL_PATIENCE: u64 = 4;
 
 /// Per-slot cleanup projection (RFC-0009 §3 / §9 Q2 / §10.3 ablation).
 ///
@@ -121,11 +138,25 @@ pub enum StopReason {
     /// `ι` unchanged for a full sweep AND every slot's top-similarity ≥ `τ_lock` (a discrete fixed
     /// point). The only verdict that can yield factors.
     Converged,
-    /// A previously-seen `ι` recurred (`period` = sweeps back to the recurrence). `period == 1` is a
-    /// stationary tuple that never reached `τ_lock` (stuck); `period ≥ 2` is a genuine limit cycle.
+    /// A **genuine limit cycle** (`period ≥ 2`): a previously-seen `ι` *other than the immediately
+    /// preceding one* recurred, so the network is alternating between distinct tuples (`period` =
+    /// shortest distance, in sweeps, back to the matching earlier tuple). A *stationary* tuple
+    /// (`ι` == the previous sweep's `ι`) is **not** an oscillation — it is handled separately: it
+    /// keeps iterating while its confidence is still climbing toward `τ_lock`, and only refuses as
+    /// [`StopReason::Stalled`] once that climb plateaus (RFC-0009 §3/§6; §8.1 P3).
     Oscillating {
-        /// Distance (in sweeps) back to the matching earlier tuple.
+        /// Shortest distance (in sweeps, `≥ 2`) back to the matching earlier tuple.
         period: usize,
+    },
+    /// A **stationary tuple that plateaued below `τ_lock`**: `ι` stopped changing but its per-slot
+    /// top-similarity stopped improving (no min-confidence gain ≥ `STALL_MIN_GAIN` for
+    /// `STALL_PATIENCE` consecutive sweeps) before every slot reached `τ_lock`. This is a genuine
+    /// stuck fixed point — an explicit refusal, never returned as factors (RFC-0009 §6; never-silent).
+    /// Distinguished from [`StopReason::Oscillating`] (a real cycle) and from a *still-improving*
+    /// stationary tuple (which keeps iterating toward lock — the M-350 premature-abort fix).
+    Stalled {
+        /// Consecutive stationary sweeps without a confidence gain before the refusal.
+        sweeps: u64,
     },
     /// The iteration budget was reached with `ι` still changing every sweep.
     BudgetExhausted,
@@ -288,7 +319,8 @@ pub const MAPI_RESONATOR_PROFILE: ResonatorProfile = ResonatorProfile {
 /// Returns a [`Factorization`] **only** on a clean [`StopReason::Converged`] verdict whose every slot
 /// clears `τ_lock` (during the loop) and the `confidence_threshold`/`margin_threshold` (at the end).
 /// Every other outcome is an explicit error carrying the [`ResonatorTrace`]:
-/// [`VsaError::ResonatorBudgetExhausted`], [`VsaError::ResonatorOscillating`],
+/// [`VsaError::ResonatorBudgetExhausted`], [`VsaError::ResonatorOscillating`] (a genuine period-≥2
+/// limit cycle), [`VsaError::ResonatorStalled`] (a stationary tuple that plateaued below `τ_lock`),
 /// [`VsaError::ResonatorBelowConfidence`], [`VsaError::ResonatorBelowMargin`]. Input problems (empty
 /// codebook list / empty codebook / dim mismatch / zero budget) are the usual explicit errors.
 pub fn factorize<M: VsaModel>(
@@ -324,6 +356,9 @@ pub fn factorize<M: VsaModel>(
             Ok(Factorization { factors, trace })
         }
         StopReason::Oscillating { .. } => Err(VsaError::ResonatorOscillating {
+            trace: Box::new(trace),
+        }),
+        StopReason::Stalled { .. } => Err(VsaError::ResonatorStalled {
             trace: Box::new(trace),
         }),
         StopReason::BudgetExhausted => Err(VsaError::ResonatorBudgetExhausted {
@@ -376,6 +411,12 @@ pub(crate) fn run_loop<M: VsaModel>(
     let mut trajectory: Vec<IterationRecord> = Vec::new();
     let mut prev_indices: Option<Vec<usize>> = None;
     let mut updates_done: u64 = 0;
+    // Stall tracking for a *stationary* tuple (ι == prev): the best min-confidence seen during the
+    // current stationary streak (a monotone ratchet) and how many consecutive sweeps it has failed to
+    // beat by STALL_MIN_GAIN. A stationary tuple is only refused (Stalled) once the climb plateaus —
+    // never on the first recurrence, so a still-improving correct tuple is no longer aborted (M-350).
+    let mut stall_best = f64::NEG_INFINITY;
+    let mut stall_streak: u64 = 0;
 
     loop {
         // Decode the current estimates: ι + per-slot confidence/margin (§3 discrete decode).
@@ -390,26 +431,55 @@ pub(crate) fn run_loop<M: VsaModel>(
             margins: margins.clone(),
         });
 
-        // Converged: ι unchanged for a full sweep AND every slot locked (§3 / §8.1 P3).
         let locked = confidences.iter().all(|&c| c >= params.tau_lock);
-        if prev_indices.as_ref() == Some(&indices) && locked {
-            return Ok(ResonatorTrace {
-                stop: StopReason::Converged,
-                iterations: updates_done,
-                trajectory,
-                final_decode: decode,
-            });
-        }
-        // Oscillating: a previously-seen ι recurs (history holds prev, so an unlocked stationary
-        // tuple surfaces as period 1; a genuine cycle as period ≥ 2). Checked after convergence.
-        if let Some(pos) = history.iter().position(|h| h == &indices) {
-            let period = history.len() - pos;
-            return Ok(ResonatorTrace {
-                stop: StopReason::Oscillating { period },
-                iterations: updates_done,
-                trajectory,
-                final_decode: decode,
-            });
+        let stationary = prev_indices.as_ref() == Some(&indices);
+        if stationary {
+            // Converged: ι unchanged for a full sweep AND every slot locked (§3 / §8.1 P3).
+            if locked {
+                return Ok(ResonatorTrace {
+                    stop: StopReason::Converged,
+                    iterations: updates_done,
+                    trajectory,
+                    final_decode: decode,
+                });
+            }
+            // Stationary but not yet locked. The tuple stopped *moving*, but its real-valued estimate
+            // may still be sharpening — so this is NOT a limit cycle. Keep iterating while the lock
+            // bottleneck (min per-slot top-similarity) is still climbing; only refuse once that climb
+            // plateaus for STALL_PATIENCE sweeps (genuine stuck fixed point — never-silent, §6).
+            let min_conf = confidences.iter().copied().fold(f64::INFINITY, f64::min);
+            if min_conf > stall_best + STALL_MIN_GAIN {
+                stall_best = min_conf;
+                stall_streak = 0;
+            } else {
+                stall_streak += 1;
+                if stall_streak >= STALL_PATIENCE {
+                    return Ok(ResonatorTrace {
+                        stop: StopReason::Stalled {
+                            sweeps: stall_streak,
+                        },
+                        iterations: updates_done,
+                        trajectory,
+                        final_decode: decode,
+                    });
+                }
+            }
+        } else {
+            // ι changed this sweep. A recurrence of any *earlier* tuple (the immediately preceding one
+            // is excluded — it differs by construction) is a genuine limit cycle of period ≥ 2; the
+            // shortest such distance is the nearest (rposition) match (§3/§8.1 P3/§9 Q3).
+            if let Some(pos) = history.iter().rposition(|h| h == &indices) {
+                let period = history.len() - pos;
+                return Ok(ResonatorTrace {
+                    stop: StopReason::Oscillating { period },
+                    iterations: updates_done,
+                    trajectory,
+                    final_decode: decode,
+                });
+            }
+            // A fresh tuple resets the stall ratchet — the plateau is measured per stationary streak.
+            stall_best = f64::NEG_INFINITY;
+            stall_streak = 0;
         }
         history.push_back(indices.clone());
         if history.len() > window {
@@ -706,11 +776,14 @@ mod tests {
     }
 
     #[test]
-    fn stall_below_lock_is_oscillating_not_an_answer() {
-        // With an unreachable τ_lock (cosine ≤ 1 < 1.5) the decode stabilises (ι == prev) but never
-        // "locks", so the stationary tuple recurs in the history and surfaces as Oscillating{period:1}
-        // — an explicit verdict carrying the trace, never a returned factor set. This exercises the
-        // same recurrence mechanism that detects a genuine period-≥2 limit cycle (§3/§6/§8.1 P3).
+    fn stall_below_lock_is_stalled_not_an_answer() {
+        // With an unreachable τ_lock (cosine ≤ 1 < 1.5) the decode stabilises (ι == prev) and its
+        // confidence climbs to the genuine fixed point, then plateaus there — below the impossible
+        // lock. The loop keeps iterating while the min-confidence is still rising (the M-350 fix: a
+        // stationary-but-improving tuple is NOT aborted), and only once the climb plateaus for
+        // STALL_PATIENCE sweeps does it refuse with the explicit StopReason::Stalled verdict —
+        // carrying the trace, never a returned factor set, and distinct from a genuine period-≥2
+        // limit cycle (§3/§6/§8.1 P3). Updated from the prior Oscillating{period:1} semantics.
         let model = MapI::new(D);
         let (c0, a0) = codebook(8, 110);
         let (c1, a1) = codebook(8, 120);
@@ -718,11 +791,55 @@ mod tests {
         let mut p = params();
         p.tau_lock = 1.5; // impossible for a cosine
         match factorize(&model, &s, &[c0, c1], &p) {
-            Err(VsaError::ResonatorOscillating { trace }) => {
-                assert!(matches!(trace.stop, StopReason::Oscillating { .. }));
+            Err(VsaError::ResonatorStalled { trace }) => {
+                assert!(matches!(trace.stop, StopReason::Stalled { sweeps } if sweeps >= 1));
             }
-            other => panic!("expected ResonatorOscillating, got {other:?}"),
+            other => panic!("expected ResonatorStalled, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn stationary_but_improving_tuple_converges_not_aborted() {
+        // M-350 regression: the §3 loop must NOT abort a tuple that has gone stationary on ι while its
+        // per-slot confidence is still climbing toward τ_lock. Before the fix, the second sweep at the
+        // correct tuple recurred in the history and was mislabelled Oscillating{period:1}; now the loop
+        // keeps iterating and locks. We reproduce the observed premature-abort instance (F=3, k=16,
+        // d=4096, Hebbian) with the sequential generator the profile/recon tests use (one LCG seeded
+        // once, slot by slot) at the seed that exhibited it — slot 2 sat at ~0.72 ↗ when the old code
+        // aborted. The fix must yield a clean Converged that recovers the exact true tuple.
+        const KSEED: u64 = 0x1234 ^ 104;
+        let model = MapI::new(D);
+        let mut lcg = Lcg::new(KSEED);
+        let (f, k) = (3usize, 16usize);
+        let mut mems = Vec::with_capacity(f);
+        let mut atoms: Vec<Vec<Vec<f64>>> = Vec::with_capacity(f);
+        for i in 0..f {
+            let mut mem = CleanupMemory::new(D);
+            let mut slot = Vec::with_capacity(k);
+            for j in 0..k {
+                let a = lcg.bipolar(D);
+                mem.insert(format!("{i}:{j}"), a.clone()).unwrap();
+                slot.push(a);
+            }
+            mems.push(mem);
+            atoms.push(slot);
+        }
+        let truth: Vec<usize> = (0..f)
+            .map(|_| (lcg.next_u64() % k as u64) as usize)
+            .collect();
+        let mut s = atoms[0][truth[0]].clone();
+        for slot in 1..f {
+            s = model.bind(&s, &atoms[slot][truth[slot]]).unwrap();
+        }
+        let mut p = ResonatorParams::mapi_default(50, lcg.next_u64());
+        p.cleanup = Cleanup::Hebbian;
+        let out = factorize(&model, &s, &mems, &p).expect("rising stationary tuple now converges");
+        assert_eq!(out.trace.stop, StopReason::Converged);
+        let got: Vec<usize> = out.factors.iter().map(|m| m.index).collect();
+        assert_eq!(
+            got, truth,
+            "recovers the exact true tuple it was aborting on"
+        );
     }
 
     #[test]

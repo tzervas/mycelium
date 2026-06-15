@@ -22,6 +22,24 @@ corpus, not released software. Versioning will begin when the kernel does.
   in `docs/Doc-Index.md` and the ADR index; RFC-0010 §8's `enum_budget` open question marked **resolved**
   (append-only footer).
 
+### Fixed (Phase 3 — resonator premature-abort, M-350; RFC-0009 §3/§6)
+- **Resonator no longer aborts a still-converging tuple as an oscillation.** The §3 loop decided
+  oscillation on *any* recurrence of the decoded index tuple `ι`, so a tuple that had gone **stationary
+  on `ι` while its per-slot confidence was still climbing** toward `τ_lock` (e.g. F=3,k=16, Hebbian,
+  d=4096: the correct tuple at iter 2 with slot similarities `[1.0, 0.998, 0.72↗]`) recurred in the
+  history at distance 1 and was mislabelled `Oscillating{period:1}` — a recoverable instance refused.
+  The fix splits the two cases the discrete `ι` alone conflated: a **genuine limit cycle** (a *distinct*
+  earlier tuple recurs ⇒ `period ≥ 2`) still refuses as `Oscillating`; a **stationary tuple** keeps
+  iterating while the lock bottleneck (min per-slot similarity) is still rising and only refuses, with
+  the new explicit `StopReason::Stalled` / `VsaError::ResonatorStalled` verdict, once that climb
+  plateaus below `τ_lock` for `STALL_PATIENCE` sweeps (genuine stuck fixed point — **never-silent
+  preserved**). Net effect: F=3,k=16 went **1/300 → 0/300** on the seed that exhibited the abort; the
+  canonical 1000-trial gate stays **0/1000 ⇒ δ=0.02** (the gate's worst corner was already 0/1000, so
+  the conservative ceiling is **unchanged** — no unmotivated tightening, VR-5). Tag stays **`Empirical`,
+  MAP-I only, never `Proven`**; only a clean `Converged` clearing `τ_lock` + confidence + margin yields
+  factors. The prior `stall_below_lock_*` unit test was updated (not deleted) to assert the new `Stalled`
+  verdict; a regression test pins the exact previously-aborting instance to `Converged`. (phase-3.md §2 / Meta)
+
 ### Added (Phase 3 — resonator-network factorization prototype, M-350; RFC-0009 §10.2)
 - **`mycelium-vsa::resonator`** — the RFC-0009 §3 factorization loop over any `VsaModel`
   (MAP-I-first), recovering the unknown factors of a bind product `s = x₁ ⊛ … ⊛ x_F`. Parallel /
