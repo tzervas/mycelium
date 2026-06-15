@@ -182,7 +182,9 @@ fn payload_matches(repr: &Repr, payload: &Payload) -> bool {
 }
 
 /// The wire projection of [`Value`] (`value.schema.json`): `[Repr] ‖ [Meta] ‖ [payload]`.
+/// `deny_unknown_fields` enforces the schema's `additionalProperties: false` (A6-02).
 #[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct ValueWire {
     repr: Repr,
     payload: Payload,

@@ -186,8 +186,10 @@ impl ReconInfo {
 }
 
 /// The wire projection (`reconstruction-manifest.schema.json`): `recipe` is omitted when absent
-/// (the `IndexedRetrieval` form); `Deserialize` re-runs the invariants.
+/// (the `IndexedRetrieval` form); `Deserialize` re-runs the invariants. `deny_unknown_fields`
+/// enforces the schema's `additionalProperties: false` (A6-02).
 #[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct ReconWire {
     mode: ReconMode,
     model: String,

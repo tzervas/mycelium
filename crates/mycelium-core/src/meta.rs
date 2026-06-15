@@ -210,8 +210,12 @@ impl Meta {
 
 /// The wire projection of [`Meta`] (`meta.schema.json`). Optional fields are omitted when absent
 /// (so `Exact` emits no `bound`, satisfying M-I1's presence model); on the way back in, `null` and
-/// absent both decode to `None`. `reconstruction` (RFC-0003 §6) is deferred (M-130) and not carried.
+/// absent both decode to `None`. `reconstruction` (RFC-0003 §6) **is** carried (serialized when
+/// present, re-validated on the way in). `deny_unknown_fields` makes the schema's
+/// `additionalProperties: false` a real contract — an unknown wire field is rejected, not silently
+/// dropped (A6-02/B2-03).
 #[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct MetaWire {
     provenance: Provenance,
     guarantee: GuaranteeStrength,

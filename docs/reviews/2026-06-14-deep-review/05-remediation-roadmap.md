@@ -78,6 +78,14 @@ A2-07, A2-08, A2-09.
 - **Verify:** the WS1 regression suite + re-run A2 probes at ulp scale (the gap A2-07 flagged);
   `cargo test -p mycelium-numerics` green.
 
+### WS2 — Contract / schema integrity (core) · effort M · risk low · **H11 LANDED; Mediums/nits remaining**
+
+> **Status (2026-06-15):** the High (H11) is done — `deny_unknown_fields` on the wire structs and
+> `Bound::well_formed` extended to finiteness + basis constraints (`EmpiricalFit.trials ≥ 1`, named
+> method/citation), with unit + wire-tamper regression tests; A1-01/A1-02/A1-03 closed. **Remaining:**
+> A6-03 (broaden schema-example pinning), A6-06 (recon schema↔Rust reconciliation), A6-08, A6-09,
+> A1-04, A1-05.
+
 ### WS2 — Contract / schema integrity (core) · effort M · risk low
 
 Makes the JSON schema an enforced contract on both sides and closes the tamper vectors. Findings:

@@ -9,6 +9,23 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Fixed (deep-review remediation — Wave 1)
+- **WS2 — `mycelium-core` contract integrity (findings A6-02, B2-03, A1-01, A1-02, A1-03;
+  advances M-I1…M-I4, the schema contract).** The JSON schema is now enforced on the Rust side too,
+  closing the tampered-manifest vector:
+  - `#[serde(deny_unknown_fields)]` on `ValueWire`/`MetaWire`/`ReconWire`, so an unknown wire field
+    is **rejected**, not silently dropped — `additionalProperties: false` is now a real contract on
+    both sides (A6-02). (`Bound` uses `#[serde(flatten)]`, which serde cannot combine with
+    `deny_unknown_fields`; its integrity is enforced by `well_formed` below instead.)
+  - `Bound::well_formed` now also checks **finiteness** (an infinite ε/crosstalk is a vacuous bound,
+    A1-02) and the **basis constraints** — an `EmpiricalFit` must rest on `trials ≥ 1` with a named
+    method, a `ProvenThm` must name its citation — so an evidence-free `Empirical` tag (`trials: 0`)
+    is refused on deserialize (A6-02/B2-03). Fixed the stale `MetaWire` doc claiming `reconstruction`
+    is "not carried" (A1-01/A6-07).
+  - New unit tests (`bound.rs`) and wire-tamper regression tests (`serde_roundtrip.rs`), each citing
+    its finding ID as a mutant-witness (A1-03).
+  - Remaining WS2 (tracked, not yet done): A6-03 (broaden the emit-then-validate schema pinning to
+    one example per enum/basis/layout), A6-06 (recon schema↔Rust conditional reconciliation), A6-08
+    (sparsity `WfError` variant), A6-09 (cert `params` schema drift), A1-04/A1-05 (nits).
 - **WS1 — `mycelium-numerics` honesty hardening (findings A2-01, A2-02, A2-03, A2-04, A2-06,
   A2-07, A2-08; advances VR-3/VR-5, SC-2).** A `Proven`/`Empirical` ε or δ that travels in a
   `Bound` is now a *true* upper bound under floating point, closing the headline honesty hole where
