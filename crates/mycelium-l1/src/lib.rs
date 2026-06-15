@@ -35,6 +35,7 @@ pub mod lexer;
 pub mod parse;
 pub mod token;
 pub mod totality;
+pub(crate) mod decision;
 pub(crate) mod usefulness;
 
 pub use ast::Colony;

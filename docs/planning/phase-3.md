@@ -95,7 +95,7 @@ completed. Readiness is relative to the corpus + landed Phase-1/2 deps.
 | **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()`; **LSP wire protocol** (`wire`: JSON-RPC `Content-Length` framing, `publishDiagnostics` mapping, `initialize`/`shutdown`/`exit` lifecycle). Remaining: **document sync** (needs a text→`Node` path — L1, M-320) |
 | **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | **Done (2026-06-15)** — `mycelium-build` crate (decide + content-addressed `BuildCertificate`) |
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | **Done (2026-06-15)** — `mycelium-build::cache` (`BuildCache`, request-addressed) |
-| **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses; recursive matcher; nested structural descent); **RFC ratification is maintainer's** |
+| **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses) + the **Maranget decision-tree compiler** (the codegen half — `decision`: occurrences + `switch`/`leaf` tree, verified against the reference matcher, wired into `checkty` as a Fail-free cross-check). Remaining: emit tree leaves as **L0 kernel nodes** (gated on the RFC-0001 L0 revision). **RFC ratification is maintainer's** |
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
 | **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`); NFR-7 checked |
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **Design drafted (2026-06-15)** — RFC-0009 (convergence regime, `Empirical`-ceiling honesty, never-silent verdicts); prototype gated on ratification |
@@ -481,13 +481,36 @@ established strength.
   redundancy, nested structural descent gates `matured`); evaluator end-to-end (`pred2` over depth-2
   `Nat` selects and binds correctly). All existing flat-match tests still pass.
 - **Honesty / scope.** RFC-0007 is **Draft** and the prototype **non-normative**; this advances the
-  surface checker + reference evaluator. The Maranget *decision-tree compilation to the flat kernel
-  `Match`* (Maranget 2008; RFC-0007 §3 — "compiled away by the elaborator") is the **analysis half**
-  here; the codegen half lands with full L1-in-Core-IR (the RFC-0001 revision). Coverage stays
-  *checked*, never assumed (W7); no guarantee is touched.
+  surface checker + reference evaluator. The Maranget *usefulness analysis* (Maranget 2007) is the
+  analysis half; the **decision-tree compilation** (Maranget 2008; RFC-0007 §3 — "compiled away by the
+  elaborator") now lands too (next increment). Coverage stays *checked*, never assumed (W7); no
+  guarantee is touched.
+- **Delivered (decision-tree compiler — the codegen half).** New `mycelium-l1::decision`: the Maranget
+  2008 compilation of a checked nested-pattern match into a flat `Tree` of `switch`/`leaf` nodes over
+  **occurrences** (paths into the scrutinee) — the left-to-right column heuristic, constructor/literal
+  specialization, and a `default` exactly when a column's signature is incomplete or its domain is open
+  (`Binary`/`Ternary`). It is **verified**, not asserted: a test-only tree evaluator (`eval_tree` over
+  concrete `Pat` values) is checked to agree with a reference matcher on every `Nat` value up to a
+  depth (a wrong column choice or specialization would diverge), plus first-match-on-overlap and the
+  literal-needs-a-default shape. It is **wired into `checkty`**: after exhaustiveness passes,
+  `infer_match` compiles the match and confirms the tree is `has_reachable_fail`-free — an exhaustive
+  match must compile to total coverage, so usefulness and the compiler must agree (defense in depth,
+  never silent). **Scope (VR-5):** the tree is an internal analysis/IR artifact — its leaves are **not
+  yet emitted as L0 kernel nodes** (L0 has no `Match`; that is the RFC-0001 revision, RFC-0007 §4.6),
+  so it does not yet run programs. The compilation algorithm is real and checked; the L0 emission is
+  the remaining step. No guarantee touched.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-320 Maranget decision-tree compiler — the codegen half):** new
+  `mycelium-l1::decision` compiles a checked nested-pattern match into a flat `switch`/`leaf` `Tree`
+  over occurrences (Maranget 2008) — column heuristic, ctor/literal specialization, `default` only when
+  a signature is incomplete or open. Verified by a test-only tree evaluator agreeing with the reference
+  matcher over `Nat` values (first-match-on-overlap; literal-needs-default shape), and wired into
+  `checkty::infer_match` as a `Fail`-free cross-check of exhaustiveness (usefulness and the compiler
+  must agree, never silent). §2 M-320 row + §9.9 updated. **Scope:** the tree is an internal IR
+  artifact — emitting its leaves as L0 kernel nodes awaits the RFC-0001 L0 revision (RFC-0007 §4.6); no
+  guarantee touched (VR-5).
 - **2026-06-15 (M-310 LSP wire protocol — stdio JSON-RPC + LSP-shaped diagnostics):** new
   `mycelium-lsp::wire` wraps the M-140 feedback facade in the LSP transport — `Content-Length`
   message framing (`read_message`/`write_message`; clean EOF vs explicit truncated-frame error), the

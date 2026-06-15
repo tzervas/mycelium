@@ -8,6 +8,26 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — L1 Maranget decision-tree compiler, M-320; E3-3; RFC-0007 §3/§4.4)
+- **`mycelium-l1::decision` — the codegen half of the Maranget pipeline.** Compiles a checked
+  nested-pattern `match` into a flat decision `Tree` of `switch`/`leaf` nodes over **occurrences**
+  (paths into the scrutinee) — Maranget 2008's "good decision trees": a left-to-right column heuristic
+  (rotate the first non-wildcard column to the front), constructor/literal specialization, and a
+  `default` branch **exactly** when a column's signature is incomplete (a data type missing
+  constructors) or its domain is open (`Binary`/`Ternary`, never enumerated). This is RFC-0007 §3's
+  "patterns compiled away by the elaborator", as the analysis-level IR. **Verified, not asserted:** a
+  test-only tree evaluator (`eval_tree` over concrete `Pat` values) is checked to agree with a
+  reference matcher on every `Nat` value up to a depth (a wrong column choice / specialization would
+  diverge), plus first-match-on-overlap and the literal-needs-a-default shape. **Wired into the
+  checker:** `checkty::infer_match`, after exhaustiveness passes, compiles the match and confirms the
+  tree is `has_reachable_fail`-free — an exhaustive match must compile to total coverage, so the
+  usefulness analysis (Maranget 2007) and the tree compiler must agree (defense in depth; an internal
+  disagreement is an explicit error, never silent). **Honesty/scope (VR-5):** the tree's leaves are
+  **not yet emitted as L0 Core IR** — L0 has no `Match` node, and adding one is the planned RFC-0001
+  revision (RFC-0007 §4.6); the compilation algorithm is real and checked, and the L0 emission is the
+  remaining step. No guarantee is touched; RFC-0006/0007 ratification stays the maintainer's
+  append-only decision. (phase-3.md §2 / §9.9 / Meta)
+
 ### Added (Phase 3 — LSP wire protocol, M-310; E3-3; FR-S5 / SC-5)
 - **`mycelium-lsp::wire` wraps the feedback facade in the LSP transport.** The byte-level JSON-RPC 2.0
   codec — `read_message`/`write_message` with `Content-Length` header framing (a clean inter-message
