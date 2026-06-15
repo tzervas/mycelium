@@ -99,7 +99,7 @@ completed. Readiness is relative to the corpus + landed Phase-1/2 deps.
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
 | **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`), NFR-7 checked; **+ runtime-specialization layer** (`mycelium-mlir::specialize`): bakes the runtime-known weight vector into the dot kernel (zero lanes elided, unpack dropped, ±1 → add/sub), validated generic↔specialized through the shared M-210 checker, E1 §4 records the **measured** speedup (no target pre-written) |
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **Design drafted (2026-06-15)** — RFC-0009 (convergence regime, `Empirical`-ceiling honesty, never-silent verdicts); prototype gated on ratification |
-| **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | **In progress (2026-06-15)** — runtime-data dot kernels for **all three** bitnet packings (I2_S/TL1/TL2; in-process JIT, inspectable per-scheme unpack IR), each oracle-checked; E1 §3 compute-throughput measured. **+ hand-vectorized SIMD** (`mycelium-mlir::simd`, 8-wide I2_S, vector-IR unpack) differential-checked against the scalar oracle through the shared M-210 checker (corpus brackets width+tail), E1 §5 measured. Remaining: TL1/TL2 SIMD + the **true 1.67-b/w TL2 layout** (closes A5-08) |
+| **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | **In progress (2026-06-15)** — runtime-data dot kernels for **all three** bitnet packings (I2_S/TL1/TL2; in-process JIT, inspectable per-scheme unpack IR), each oracle-checked; E1 §3 measured. **+ hand-vectorized SIMD** (`mycelium-mlir::simd`, 8-wide I2_S, vector-IR unpack) differential-checked against the scalar oracle through the shared M-210 checker, E1 §5 measured. **+ true 1.67-b/w TL2** (`pack`: 3 trits → 5-bit LUT-index bitstream; the dot kernel decodes it with a bounds-clamped 2-byte window) — **closes A5-08** (codec now matches the selector cost model). Remaining: TL1/TL2 vectorized SIMD unpacks |
 | **M-370** Native-ternary forward-compat mapping (+ stub target) | E3-7 | P2 | M-150, M-301 | R7 | **Done (2026-06-15)** — `docs/notes/Native-Ternary-Forward-Compat.md`; dialect = stub target |
 | **M-380** Semantic-level projection framework | E3-1 | P2 | E3-3 | FR-C1 / G11 | **needs-design**; *KC-2-contingent* |
 | **M-002** KC-2 LLM-leverage run (carried; gates E3-1 + concrete syntax) | E4 | P0 | M-020 (harness landed) | SC-5b / G10 / KC-2 | **Blocked (external)** — needs LLM API |
@@ -504,9 +504,32 @@ the checked run that established it.
   test (guard 7). `cargo xtask e1` **§5** times SIMD vs scalar over the same runtime buffer (indicative
   ≈1.2× — honest: clang already auto-vectorizes the scalar loop at `-O2`, so the hand-vectorized gain
   is real-but-modest; as-measured, no target pre-written). **Scope (VR-5/G3):** **I2_S only** this
-  increment; TL1/TL2 vectorized unpacks and the **true 1.67-b/w TL2 layout** (A5-08) are next. No
-  parity with bitnet.cpp's AVX2/AVX512 LUT kernels is claimed; same exact dot product, no guarantee
-  upgraded; the scalar kernels stay the oracle.
+  increment; TL1/TL2 vectorized unpacks are next. No parity with bitnet.cpp's AVX2/AVX512 LUT kernels
+  is claimed; same exact dot product, no guarantee upgraded; the scalar kernels stay the oracle.
+- **Delivered (true 1.67-b/w TL2 layout — closes A5-08).** `mycelium-mlir::pack` now realizes `TL2` as
+  the **true bitnet.cpp layout**: 3 trits → a **5-bit LUT-index** code (`c = d₀ + 3·d₁ + 9·d₂ ∈
+  [0,27)`), bit-packed as a contiguous 5-bit-field stream ⇒ **1.67 b/w** (`5/3`). This is *less* dense
+  than the `FiveTritPerByte` base-3 reference (1.6 b/w) **on purpose** — the 5-bit index is directly
+  LUT-addressable (the "TL" = ternary lookup), the trade bitnet.cpp makes for fast decode. The prior
+  placeholder (which packed TL2 identically to `FiveTritPerByte` at 1.6 b/w) is retired, so the two are
+  now genuinely distinct densities; `needed_bytes(scheme, count)` is the new shared bound model
+  (`⌈5·⌈count/3⌉/8⌉` for TL2). The native TL2 **dot kernel** (`bitnet`) decodes the bitstream inline —
+  group `g = i/3`, position `p = i%3`, 5-bit code at bit offset `5g`, `digit = (code / 3ᵖ) mod 3` — with
+  a **branch-free bounds-clamped 2-byte window** (the second byte index is clamped to `needed − 1`,
+  computed from `n`, so the final group's read never goes OOB even when its field fits in one byte; the
+  spilled high bits are masked off by `& 31`). It is **oracle-checked across widths** (the existing
+  `jit_dot_matches_reference_all_schemes` over n up to 1000 now exercises the new layout) and the
+  bound is a `tl2_uses_the_true_167_bitstream_bound` refusal test. The selector cost model
+  (`packing_bits_per_element(Tl2) = 1.67` in `mycelium-select`) now **matches** the codec — **A5-08 is
+  resolved**; the notes in `pack.rs` and `mycelium-select` are updated from "stand-in / inert
+  discrepancy" to "resolved". E1 §3 times the true TL2 kernel over runtime data (≈1.25× vs the scalar
+  baseline — honestly *slower per-element* than I2_S, since the bitstream decode is more work than a
+  byte-aligned 2-bit extract; as-measured). New `pack` property tests pin the 1.67 b/w density
+  (`tl2_realizes_the_true_167_bits_per_weight`) and the TL2≠`FiveTritPerByte` layout distinctness.
+  **Honest scope (VR-5):** this realizes the bitnet.cpp TL2 *density and 5-bit-LUT-index semantics*;
+  the exact upstream byte/bit ordering of bitnet.cpp's internal buffer is **not** claimed byte-identical
+  (verifying that needs the upstream source) — the codec is self-consistent (round-trip identity) and
+  oracle-checked, which is what the value semantics + the differential require.
 
 ### 9.9 M-320 — L1 nested patterns + Maranget usefulness · Batch K · P1 · in progress 2026-06-15
 
@@ -591,6 +614,21 @@ the checked run that established it.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-360 true 1.67-b/w TL2 layout — closes A5-08):** `mycelium-mlir::pack` now realizes
+  `TL2` as the **true bitnet.cpp layout** — 3 trits → a 5-bit LUT-index (`c = d₀+3d₁+9d₂ ∈ [0,27)`),
+  bit-packed as a contiguous 5-bit-field stream ⇒ **1.67 b/w** (`5/3`), distinct from the
+  `FiveTritPerByte` 1.6-b/w base-3 reference (the prior placeholder that made them coincide is retired).
+  `needed_bytes(scheme, count)` is the new shared bound model. The native TL2 **dot kernel**
+  (`bitnet`) decodes the bitstream with a **bounds-clamped 2-byte window** (the second byte index is
+  branch-free-clamped to the last valid byte, so the final group's read never goes OOB), oracle-checked
+  across widths (`jit_dot_matches_reference_all_schemes`). The selector cost model
+  (`packing_bits_per_element(Tl2) = 1.67`) now **matches** the codec — **A5-08 resolved** (the note in
+  `pack.rs` + `mycelium-select` updated). E1 §3 times the true TL2 kernel (measured ≈1.25× vs scalar,
+  honestly slower per-elem than I2_S — the bitstream decode is more work, as expected). New property
+  tests pin the 1.67 b/w density and TL2≠FiveTritPerByte distinctness. **Honest scope (VR-5):** realizes
+  the bitnet.cpp TL2 *density + 5-bit-LUT-index semantics*; exact upstream byte/bit ordering not claimed
+  byte-identical (needs the source to verify) — codec self-consistent + oracle-checked. §2 M-360 row +
+  §9.8 updated.
 - **2026-06-15 (M-360 hand-vectorized SIMD — I2_S, first SIMD increment):** new `mycelium-mlir::simd`
   emits an 8-wide hand-vectorized I2_S dot kernel (vector-IR unpack: `shufflevector` byte-broadcast +
   per-lane `lshr` + `mul <8 x i32>` + `@llvm.vector.reduce.add.v8i64`, scalar tail for `n mod 8`),

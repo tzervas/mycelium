@@ -138,12 +138,12 @@ pub fn run() {
              runtime-known weights in (zero lanes elided, unpack dropped) measured a further speedup \
              over the generic kernel on the same runtime activations. §5 adds a **hand-vectorized \
              (SIMD) I2_S kernel** (8 trits/iteration via vector IR), differential-checked against the \
-             scalar oracle and measured against it. Still open (honest, VR-5/G3): the SIMD path is \
-             **I2_S only** (TL1/TL2 vectorized unpacks next) and is not claimed at parity with \
-             bitnet.cpp's AVX2/AVX512 LUT kernels; and the true 1.67-b/w bitnet.cpp **TL2 layout** — \
-             the current TL2 kernel decodes the 1.6-b/w base-3 placeholder codec (A5-08), inert for \
-             selection but not yet the published layout. No perf claim is pre-written; the numbers \
-             above are whatever was measured."
+             scalar oracle and measured against it. **TL2** now decodes the **true bitnet.cpp 1.67-b/w \
+             layout** (3 trits → a 5-bit LUT-index bitstream; A5-08 resolved — the codec matches the \
+             selector cost model, the 1.6-b/w placeholder is retired). Still open (honest, VR-5/G3): \
+             the SIMD path is **I2_S only** (TL1/TL2 vectorized unpacks next) and is not claimed at \
+             parity with bitnet.cpp's AVX2/AVX512 LUT kernels. No perf claim is pre-written; the \
+             numbers above are whatever was measured."
         );
     } else {
         println!(
@@ -420,9 +420,18 @@ fn scalar_packed_dot(packed: &[u8], activations: &[i32], n: usize, scheme: PackS
                 i64::from((code + 1) % 3) - 1
             }
             PackScheme::Tl2 => {
+                // True bitnet.cpp 1.67 b/w: 3 trits → 5-bit code, bit-packed. Mirrors
+                // `mycelium_mlir::pack::unpack_tl2` (and the in-IR TL2 kernel unpack).
+                let g = i / 3;
                 #[allow(clippy::cast_possible_truncation)]
-                let p = (i % 5) as u32;
-                let d = (packed[i / 5] / 3u8.pow(p)) % 3;
+                let p = (i % 3) as u32;
+                let bit_off = 5 * g;
+                let byte = bit_off / 8;
+                let shift = bit_off % 8;
+                let lo = u16::from(packed[byte]);
+                let hi = u16::from(packed.get(byte + 1).copied().unwrap_or(0));
+                let code = u32::from(((lo | (hi << 8)) >> shift) & 0x1F);
+                let d = (code / 3u32.pow(p)) % 3;
                 i64::from(d) - 1
             }
             _ => unreachable!("E1 §3 only times the three bitnet packings"),

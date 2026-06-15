@@ -8,6 +8,28 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (Phase 3 — true bitnet.cpp 1.67-b/w TL2 layout closes A5-08, M-360; E3-6; RFC-0004 §5)
+- **`mycelium-mlir::pack` now realizes `TL2` as the true bitnet.cpp layout (1.67 b/w).** The prior
+  `TL2` was a placeholder that packed identically to the `FiveTritPerByte` base-3 reference (5
+  trits/byte ⇒ 1.6 b/w), while the selector cost model priced TL2 at the published **1.67 b/w** — the
+  A5-08 discrepancy. `TL2` is now the real layout: **3 trits → a 5-bit LUT-index** (`c = d₀+3·d₁+9·d₂
+  ∈ [0,27)`), bit-packed as a contiguous 5-bit-field stream ⇒ `5/3 ≈ 1.67` b/w — *less* dense than the
+  1.6-b/w base-3 reference on purpose (the 5-bit index is directly LUT-addressable, bitnet's fast-decode
+  trade). The two schemes are now genuinely distinct densities; a new shared `needed_bytes(scheme,
+  count)` bound model (`⌈5·⌈count/3⌉/8⌉` for TL2) replaces the per-byte assumption. The native TL2
+  **dot kernel** (`mycelium-mlir::bitnet`) decodes the bitstream inline (`digit = (code / 3ᵖ) mod 3`)
+  with a **branch-free bounds-clamped 2-byte window** — the second byte index is clamped to the last
+  valid byte (computed from `n`), so the final group's read never goes out of bounds even when its
+  5-bit field fits in one byte (spilled bits masked off by `& 31`). Oracle-checked across widths
+  (`jit_dot_matches_reference_all_schemes`); the bound is a refusal test; new `pack` property tests pin
+  the 1.67 b/w density and the TL2≠`FiveTritPerByte` distinctness. The selector cost model now **matches**
+  the codec — **A5-08 resolved** (the notes in `pack.rs` and `mycelium-select` updated from "stand-in /
+  inert discrepancy" to "resolved"). `cargo xtask e1` §3 times the true TL2 kernel (≈1.25× vs scalar —
+  honestly *slower per-element* than I2_S, the bitstream decode being more work; as-measured).
+  **Honesty/scope (VR-5):** realizes the bitnet.cpp TL2 *density + 5-bit-LUT-index semantics*; the exact
+  upstream byte/bit ordering is not claimed byte-identical (needs the source to verify) — the codec is
+  self-consistent (round-trip identity) and oracle-checked. (phase-3.md §2 / §9.8 / Meta)
+
 ### Added (Phase 3 — BitNet hand-vectorized SIMD kernel, M-360; E3-6; FR-C3 / G3; RFC-0004 §5/§8)
 - **`mycelium-mlir::simd` — a hand-vectorized (8-wide) I2_S packed-ternary dot kernel.** The scalar
   BitNet kernels decode one trit per loop step; this emits `i64 @myc_bitnet_dot_simd(ptr %w, ptr %x,
