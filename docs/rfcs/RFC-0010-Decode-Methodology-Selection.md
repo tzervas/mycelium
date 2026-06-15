@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0010 |
-| **Status** | **Draft** |
+| **Status** | **Accepted** |
 | **Type** | Foundational / normative |
 | **Date** | June 15, 2026 |
 | **Depends on** | RFC-0005 (the `SelectionPolicy` decision-table mechanism + mandatory `EXPLAIN`); RFC-0009 (the resonator decode + the `ResonatorProfile` regime gate + the §10.3 measured matrix); RFC-0003 (the VSA guarantee matrix + `DecodeProcedure`); RFC-0001 (`Meta`, guarantee lattice, content-addressing); **G2**, **G4**, **VR-5**; cross-cutting tension **D** |
@@ -226,3 +226,16 @@ profile δ, or the recon schema; no learned/statistics-driven costing (RFC-0005 
   `mycelium-select` + `mycelium-vsa` glue; the recon schema's `≤Empirical` ceiling is untouched).
   Satisfies the *needs-design* gate: the regime + honest contract are fixed before any selector is
   built (RR-5/G4). Status **Draft** — recommendations pending maintainer ratification.
+- **2026-06-15 — Accepted (ratified).** Maintainer ratifies the design above (Draft → Accepted,
+  append-only). Authorises the prototype: extend the **one** RFC-0005 selection mechanism additively
+  to a **third site** — an abstract `DecodeMethod` candidate `{ BruteForceExact, Resonator, Refuse }`,
+  decode queryable facts (`F`, `∏kᵢ`, `d`, `in_regime`) on `SelectionInputs`, the predicates
+  (`CapacityAtMost`, `FactorsAtMost`, `InResonatorRegime`), and a `select_decode_method` site adapter
+  (`mycelium-select`, core-only — the facts are generic integers/booleans, no VSA types leak in) — plus
+  the `mycelium-vsa` executor that computes the facts (`∏kᵢ`; `MAPI_RESONATOR_PROFILE::check` for
+  `in_regime`), routes through `select`, and runs the chosen arm with the **tag read off the arm**
+  (brute-force `Exact` + identifiability, resonator `Empirical`, else `Refuse`). The honesty floor is
+  enforced in the executor: a forced `BruteForceExact` beyond the enumeration budget, or on a
+  non-identifiable instance, still `Refuse`s; a forced `Resonator` out of regime still `Refuse`s. No
+  kernel change (the recon `≤Empirical` ceiling is untouched); cleanup-variant selection stays deferred
+  (§8). Honesty contract unchanged.

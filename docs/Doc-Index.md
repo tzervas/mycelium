@@ -31,7 +31,7 @@
 | **Research Record 04 (T4.1–T4.6)** | evidence base (pass 4): concurrency, merge/mesh, mobility/placement, durability, failure, mode switching | Recorded → `research/04-runtime-concurrency-RECORD.md` |
 | **RFC-0008 — Runtime & Concurrency Execution Model** | RT1–RT7 runtime invariants; deterministic-fragment-first; placement as the third policy site; lawful fusion; honest probabilistic guarantees; Runtime vocabulary grounded but reserved | **Draft** |
 | **RFC-0009 — Resonator-Network Factorization** | opt-in VSA factorization of bind products into unknown codebook factors; iterative resonator loop; probabilistic-only (`Empirical` ceiling, never `Proven`); never-silent termination verdicts; reuses `VsaModel`/cleanup/`EmpiricalProfile` (M-350) | **Accepted** (ratified 2026-06-15; prototype building) |
-| **RFC-0010 — Decode-Methodology Selection** | choose the decode methodology (brute-force `Exact` vs resonator `Empirical` vs refuse) as a third site of the one RFC-0005 selection mechanism; reified, `EXPLAIN`-mandatory decision table over exact metadata; guarantee tag read off the chosen arm; cleanup-variant selection deferred (Hebbian dominates) (M-350) | **Draft** (design only; pending ratification) |
+| **RFC-0010 — Decode-Methodology Selection** | choose the decode methodology (brute-force `Exact` vs resonator `Empirical` vs refuse) as a third site of the one RFC-0005 selection mechanism; reified, `EXPLAIN`-mandatory decision table over exact metadata; guarantee tag read off the chosen arm; cleanup-variant selection deferred (Hebbian dominates) (M-350) | **Accepted** (ratified 2026-06-15; prototype building) |
 | **ADR-013 — `spore` Is the Deployable Unit** | spore = content-addressed code+values+metadata; the RFC-0003 manifest is one component; `spore(v)` is the degenerate case | **Accepted** |
 
 ## 2. Dependency DAG
@@ -45,7 +45,7 @@ ADR-010 ─► RFC-0001 §4.7,  RFC-0002 (swap bounds),  RFC-0003 (VSA bounds)
 
 Shared machinery (decided):
   • ONE certificate checker   ⇄  RFC-0002 (swaps) & RFC-0004 (interp-vs-compiled)
-  • ONE selection mechanism   ⇄  RFC-0002 (swap target) & RFC-0004 (packing schedule)
+  • ONE selection mechanism   ⇄  RFC-0002 (swap target), RFC-0004 (packing schedule) & RFC-0010 (decode method)
   • TWO bound kernels (ε, δ)  ⇄  ADR-010 → RFC-0001/0002/0003   (one shared certificate)
 ```
 
