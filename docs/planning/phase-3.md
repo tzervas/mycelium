@@ -99,7 +99,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 | **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`); NFR-7 checked |
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **needs-design** |
 | **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | Ready after native path |
-| **M-370** Native-ternary forward-compat mapping (+ stub target) | E3-7 | P2 | M-150, M-301 | R7 | Ready after native path |
+| **M-370** Native-ternary forward-compat mapping (+ stub target) | E3-7 | P2 | M-150, M-301 | R7 | **Done (2026-06-15)** — `docs/notes/Native-Ternary-Forward-Compat.md`; dialect = stub target |
 | **M-380** Semantic-level projection framework | E3-1 | P2 | E3-3 | FR-C1 / G11 | **needs-design**; *KC-2-contingent* |
 | **M-002** KC-2 LLM-leverage run (carried; gates E3-1 + concrete syntax) | E4 | P0 | M-020 (harness landed) | SC-5b / G10 / KC-2 | **Blocked (external)** — needs LLM API |
 
@@ -392,6 +392,13 @@ established strength.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-370 native-ternary forward-compat map):** authored
+  `docs/notes/Native-Ternary-Forward-Compat.md` — the ternary value-semantics contract (§1), the
+  emulated-on-binary → native 3-state mapping with the `ternary` dialect (`dialect::emit`) as the
+  **stub target** (§2), the R7 portability guarantee (§3), and the deferred native
+  arithmetic/layout items (§4). Documentation + stub only; **no 3-state backend built** (ADR-005 /
+  VR-5). §2 M-370 row → done; registered in the Doc-Index. **E3-7 (native-ternary forward-compat) is
+  now complete at the documentation level** (M-150 + M-301 native path + M-370 map).
 - **2026-06-15 (M-340 in-process JIT — first increment, uses ADR-014):** `mycelium-mlir::jit` emits
   the kernel as `void @myc_kernel(ptr)`, compiles it to a shared object (`clang -shared`), and calls
   it **in-process** via `dlopen`/`dlsym` — the **first intentional `unsafe` FFI under ADR-014**

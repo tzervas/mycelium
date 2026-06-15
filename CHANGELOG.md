@@ -8,6 +8,15 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — native-ternary forward-compat map, M-370)
+- **`docs/notes/Native-Ternary-Forward-Compat.md`** (Living note): documents the **ternary
+  value-semantics contract** and the forward map from today's emulated-on-binary packing to a future
+  3-state hardware backend, with the `ternary` dialect (`mycelium-mlir::dialect`) as the **stub
+  target** and the R7 portability guarantee (what a native backend must keep invariant — values, the
+  selection mechanism, the honesty rule, interpreter-as-reference). Documentation + stub only; **no
+  3-state backend built** (ADR-005 / VR-5). Registered in the Doc-Index. Completes E3-7 at the
+  documentation level.
+
 ### Added (Phase 3 — in-process JIT, M-340; first intentional unsafe under ADR-014)
 - **`mycelium-mlir::jit`** — an in-process JIT: emits the kernel as `void @myc_kernel(ptr)`, compiles
   it to a shared object (`clang -shared`), and calls it **in-process** via `dlopen`/`dlsym` (the
