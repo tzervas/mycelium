@@ -6,9 +6,10 @@
     "status": "ratified",
     "task": "M-010",
     "source": "RFC-0003 §6",
-    "ratified_against": "RFC-0003 (Accepted) §6 Reconstruction manifest",
+    "ratified_against": "RFC-0003 (Accepted r4) §6/§6.1 Reconstruction manifest",
     "ratified_on": "2026-06-09",
-    "$comment": "Factorization (resonator networks) is Phase-3 exploratory and probabilistic-only (FR-C2); when present, `decode` carries the factor structure + iteration budget and `bound.strength` MUST NOT exceed Empirical."
+    "revised_on": "2026-06-15",
+    "$comment": "Factorization (resonator networks) is Phase-3 exploratory and probabilistic-only (FR-C2); when present, `decode` carries the factor structure + iteration budget and `bound.strength` MUST NOT exceed Empirical. r4 (per RFC-0009): `decode` gains optional, additive resonator params (cleanup/beta/tau_lock/init/seed) and the Resonator procedure now REQUIRES factors + iteration_budget (matching the Rust ReconInfo::new contract). Metadata-only; no guarantee change."
   },
   "$defs": {
     "ContentHash": {
@@ -54,12 +55,17 @@
     "decode": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Decoding procedure + params: a cleanup threshold (indexed) or a resonator factor structure + iteration budget (compositional).",
+      "description": "Decoding procedure + params: a cleanup threshold (indexed) or a resonator factor structure + iteration budget (compositional). r4: optional resonator params (cleanup/beta/tau_lock/init/seed) per RFC-0009 §4 — additive, metadata-only.",
       "properties": {
         "procedure": { "type": "string", "enum": ["Cleanup", "Resonator"] },
         "cleanup_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
         "factors": { "type": "array", "items": { "$ref": "#/$defs/ContentHash" } },
-        "iteration_budget": { "type": "integer", "minimum": 1 }
+        "iteration_budget": { "type": "integer", "minimum": 1 },
+        "cleanup": { "type": "string", "enum": ["Softmax", "ArgMax"], "description": "Resonator per-slot cleanup projection (RFC-0009 §3/§9 Q2). Default Softmax." },
+        "beta": { "type": "number", "exclusiveMinimum": 0, "description": "Softmax inverse-temperature β > 0 (RFC-0009 §9 Q2); meaningful when cleanup == Softmax." },
+        "tau_lock": { "type": "number", "minimum": 0, "maximum": 1, "description": "Per-slot top-similarity lock threshold for the convergence verdict (RFC-0009 §3)." },
+        "init": { "type": "string", "enum": ["UniformSuperposition", "SeededGuess"], "description": "Resonator initialisation strategy (RFC-0009 §9 Q1). Default UniformSuperposition." },
+        "seed": { "type": "integer", "minimum": 0, "description": "Initialisation seed for reproducibility (RFC-0009 §6)." }
       },
       "required": ["procedure"]
     },
@@ -82,6 +88,16 @@
       },
       "then": {
         "properties": { "decode": { "required": ["procedure", "cleanup_threshold"] } }
+      }
+    },
+    {
+      "$comment": "r4 (RFC-0009): the Resonator decode procedure REQUIRES `factors` + `iteration_budget` — matching the Rust contract (ReconInfo::new rejects a Resonator spec lacking either). The resonator params (cleanup/beta/tau_lock/init/seed) stay optional and are range-checked unconditionally by their `decode` property definitions.",
+      "if": {
+        "properties": { "decode": { "properties": { "procedure": { "const": "Resonator" } }, "required": ["procedure"] } },
+        "required": ["decode"]
+      },
+      "then": {
+        "properties": { "decode": { "required": ["procedure", "factors", "iteration_budget"] } }
       }
     }
   ]

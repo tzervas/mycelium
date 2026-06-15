@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0003 |
-| **Status** | **Accepted (r3)** (r2 scope note per ADR-013; r3 §4.1 erratum reconciling the permute / bind-unbind tags with the §4 "Net") |
+| **Status** | **Accepted (r4)** (r2 scope note per ADR-013; r3 §4.1 erratum reconciling the permute / bind-unbind tags with the §4 "Net"; r4 §6.1 resonator decode params, additive, per RFC-0009) |
 | **Type** | Foundational / normative |
 | **Date** | June 08, 2026 |
 | **Depends on** | RFC-0001 (`VSA` Repr kind, `Hypervector` slot, `ModelId` registry, `CapacityBound`/`CrosstalkBound`, lattice); ADR-008 (VSA optional submodule); ADR-010 (bound kernels); Research Findings **T0.2**, **T1.2**, **T1.3**, **T2.2**, **T2.6** |
@@ -96,6 +96,29 @@ Distinguish, explicitly and inspectably:
 > (`reconstruction-manifest`, unchanged), or guarantees changes — only the term's scope is
 > reconciled so the narrow and broad senses cannot silently diverge (ADR-012 §7.4).
 
+### 6.1 Resonator decode parameters (r4 — additive, per RFC-0009)
+
+RFC-0009 (Accepted) specifies the resonator factorization semantics and, per its §4, records the
+decode-side parameters in this manifest so a run is reproducible. The `decode` object (the
+`DecodeSpec` the kernel carries — §2 "its metadata fields") gains, for `procedure == "Resonator"`
+only, these **optional, additive** fields:
+
+- `cleanup` — `"Softmax" | "ArgMax"`, the per-slot cleanup projection (default `Softmax`).
+- `beta` — the softmax inverse-temperature `β > 0` (required-meaningful only when `cleanup == Softmax`).
+- `tau_lock` — the per-slot top-similarity lock threshold `∈ [0, 1]` for the convergence verdict.
+- `init` — `"UniformSuperposition" | "SeededGuess"`, the initialisation strategy (default uniform).
+- `seed` — `u64 ≥ 0`, the initialisation seed (determinism — RFC-0009 §6).
+
+This is a **metadata-only** extension: it adds inspectable fields to the manifest record the kernel
+already carries (§2), and changes **no** kernel logic, algebra, swap machinery, or guarantee. The
+existing invariants are unchanged and still enforced by `ReconInfo::new`/the schema: a `Resonator`
+decode still requires non-empty `factors` + `iteration_budget ≥ 1`, and its bound basis **must not
+exceed `Empirical`** (probabilistic-only, FR-C2). Out-of-range parameters are an explicit
+`MalformedReconstruction`, never silently accepted (the never-silent rule, G2). The thresholds the
+*decoder* applies beyond the schema (confidence, ambiguity-margin, oscillation window) live in the
+submodule's `ResonatorParams`, not the kernel; promoting any of those into the manifest is a future
+decision, not this revision.
+
 ## 7. Implementation note (T2.6)
 Build the VSA submodule in Rust (no production-grade Rust VSA library exists; torchhd is Python — port its well-documented operation set as the reference). Reuse the `balanced-ternary` crate for trit storage / 5-trit-per-byte & 40-trit packings; evaluate the early "bitsliced ternary + VSA" crate as a reference. Implement MAP/BSC/HRR/FHRR/sparse with the §4 tags.
 
@@ -104,6 +127,16 @@ Provides `bind/unbind/...` as RFC-0001 prims over `VSA`; populates `Meta.bound` 
 
 ## Meta — changelog
 
+- **2026-06-15 (r4) — §6.1 resonator decode parameters (additive, per RFC-0009).** RFC-0009 is
+  Accepted; its §4 records the resonator decode parameters in this manifest. Add the optional,
+  additive `decode` fields for `procedure == "Resonator"` — `cleanup` (`Softmax`/`ArgMax`), `beta`
+  (`> 0`), `tau_lock` (`∈ [0,1]`), `init` (`UniformSuperposition`/`SeededGuess`), `seed` (`u64`) — to
+  `DecodeSpec` and `reconstruction-manifest.schema.json`, with out-of-range values an explicit
+  `MalformedReconstruction` (G2). **Metadata-only** (§2): no kernel logic/algebra/guarantee change; the
+  `Resonator` invariants (non-empty `factors`, `iteration_budget ≥ 1`, basis ≤ `Empirical`,
+  probabilistic-only FR-C2) are unchanged. Also tightens the JSON schema to *require* `factors` +
+  `iteration_budget` for `Resonator` (it previously under-enforced vs. the Rust contract). Append-only;
+  the r3 §4.1 erratum and all §4 tags are unchanged.
 - **2026-06-15 (r3) — §4.1 erratum.** Reconcile the §4 guarantee-tag table with its own "Net" line on
   two entries, on a checked algebraic basis: `permute` is `Exact` for all models (the table's "Proven"
   conflated the operation with sequence-decoding error growth, which belongs to `bundle`/`unbind`);

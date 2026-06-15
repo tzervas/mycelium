@@ -35,6 +35,12 @@ corpus, not released software. Versioning will begin when the kernel does.
   acknowledged-experimental / not-yet-working — mined for problem-discovery only, with no evidential
   weight for any guarantee or convergence regime (VR-5). Still **no code; nothing in the kernel.**
   (phase-3.md §2 / Meta)
+- **RFC-0009 ratified — Draft → Accepted (M-350).** Maintainer ratifies the contract; status
+  `Accepted` (append-only). Authorises the §10.2 prototype (next: the `mycelium-vsa::resonator` MAP-I
+  loop + `ResonatorProfile` + brute-force oracle + Value-level `reconstruct_factors()` decode). The
+  decode-side manifest params (`cleanup`/`init`/`τ_lock`/`β`/`seed`) land as additive `DecodeSpec`
+  metadata fields via the append-only **RFC-0003 r4** revision — additive metadata only, no kernel
+  logic/guarantee change, ≤`Empirical` ceiling preserved (RFC-0003 §2; KC-3). (phase-3.md §2 / Meta)
 
 ### Added (Phase 3 — L1 nested patterns + Maranget usefulness, M-320)
 - **`mycelium-l1::usefulness`** — Maranget's usefulness algorithm `U(P, q)` over a typed pattern

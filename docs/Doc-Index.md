@@ -20,7 +20,7 @@
 | **Example Programs Reference (v0.2)** | 20 worked examples demonstrating the lexicon and surface syntax against RFC-0001 semantics | **Draft** (grounding notes appended) |
 | **Native-Ternary Forward-Compat (M-370)** | forward map: the ternary value-semantics contract → a future 3-state HW backend; the `ternary` dialect as the stub target (ADR-005 / R7) | **Living note** (2026-06-15) — doc + stub, no backend built |
 | **RFC-0002 — Swap Certificate & Split Regime** | certificate, legal pairs, bijection semantics, shared checker | **Accepted** |
-| **RFC-0003 — VSA Submodule Boundary** | boundary, guarantee matrix, sparsity refinement, manifest | **Accepted (r2)** — r2 `spore` scope note per ADR-013 |
+| **RFC-0003 — VSA Submodule Boundary** | boundary, guarantee matrix, sparsity refinement, manifest | **Accepted (r4)** — r3 §4.1 erratum; r4 §6 resonator decode params (RFC-0009) |
 | **RFC-0004 — Execution Model & "Stable Component"** | MLIR backbone, shared checker, schedule-staged packing | **Accepted** |
 | **RFC-0005 — Selection-Policy Language** | total cost-based policy + EXPLAIN | **Accepted** |
 | **RFC-0006 — Surface Language & Term-Language Layering** | L0–L3 layering, syntactic honesty invariants, Rust-class-and-beyond capability targets; concrete syntax KC-2-gated | **Draft** |
@@ -30,7 +30,7 @@
 | **ADR-012 — Layered Lexicon & Fungal Runtime Model** | three-tier lexicon + an (aspirational) distributed fungal runtime vocabulary | **Proposed** (architect review notes appended §7; the runtime model is now drafted as RFC-0008, grounded by research Pass 4) |
 | **Research Record 04 (T4.1–T4.6)** | evidence base (pass 4): concurrency, merge/mesh, mobility/placement, durability, failure, mode switching | Recorded → `research/04-runtime-concurrency-RECORD.md` |
 | **RFC-0008 — Runtime & Concurrency Execution Model** | RT1–RT7 runtime invariants; deterministic-fragment-first; placement as the third policy site; lawful fusion; honest probabilistic guarantees; Runtime vocabulary grounded but reserved | **Draft** |
-| **RFC-0009 — Resonator-Network Factorization** | opt-in VSA factorization of bind products into unknown codebook factors; iterative resonator loop; probabilistic-only (`Empirical` ceiling, never `Proven`); never-silent termination verdicts; reuses `VsaModel`/cleanup/`EmpiricalProfile` (M-350 needs-design) | **Draft** |
+| **RFC-0009 — Resonator-Network Factorization** | opt-in VSA factorization of bind products into unknown codebook factors; iterative resonator loop; probabilistic-only (`Empirical` ceiling, never `Proven`); never-silent termination verdicts; reuses `VsaModel`/cleanup/`EmpiricalProfile` (M-350) | **Accepted** (ratified 2026-06-15; prototype building) |
 | **ADR-013 — `spore` Is the Deployable Unit** | spore = content-addressed code+values+metadata; the RFC-0003 manifest is one component; `spore(v)` is the degenerate case | **Accepted** |
 
 ## 2. Dependency DAG

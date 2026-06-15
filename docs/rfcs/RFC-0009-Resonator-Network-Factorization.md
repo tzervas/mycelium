@@ -3,8 +3,8 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0009 |
-| **Status** | **Draft** (Phase-3 exploratory design; ratification is the maintainer's) |
-| **Type** | Foundational / normative (once Accepted) — opt-in VSA submodule feature |
+| **Status** | **Accepted** (Phase-3 exploratory design; ratified by the maintainer 2026-06-15 — prototype building) |
+| **Type** | Foundational / normative — opt-in VSA submodule feature |
 | **Date** | June 15, 2026 |
 | **Depends on** | RFC-0003 (VSA submodule boundary, `VsaModel`, guarantee matrix, reconstruction manifest §6); RFC-0001 (`VSA` Repr, `Hypervector`, `CrosstalkBound`, lattice); ADR-008 (VSA optional submodule); ADR-010/011 (bound kernels, `BoundBasis`) |
 | **Grounding** | **FR-C2**, **G4**, **G7**, **RR-5**; RFC-0003 §6; research **T0.2 / T1.2 / T2.2** |
@@ -21,8 +21,12 @@ are known and a brute-force search over `∏ᵢ |Cᵢ|` combinations is intracta
 This feature is **Phase-3 exploratory**, **opt-in**, **probabilistic-only**, and **never in the
 kernel** (FR-C2; KC-3). It lives entirely in the VSA submodule (`mycelium-vsa`) behind the existing
 `DecodeProcedure::Resonator` reconstruction mode (RFC-0003 §6), whose schema already **enforces** the
-probabilistic-only ceiling in the type (`mycelium-core::recon`, A6 checks). Nothing here changes the
-kernel, the swap machinery, or any existing guarantee.
+probabilistic-only ceiling in the type (`mycelium-core::recon`, A6 checks). The decode-side parameters
+this RFC adds to the manifest (§4 — `cleanup`/`init`/`τ_lock`/`β`/`seed`) land as **additive metadata
+fields** on `DecodeSpec` via the append-only **RFC-0003 r4** revision: the kernel carries its *metadata
+fields* (RFC-0003 §2), so growing the manifest record does **not** change the kernel's logic, algebra,
+swap machinery, guarantees, or the ≤`Empirical` ceiling (KC-3 preserved). Nothing here adds kernel
+*behaviour*.
 
 **Out of scope.** Learning/initialising the codebooks (assumed given, content-addressed per the
 manifest); factoring products whose factors are *not* in a codebook; any `Proven` convergence claim
@@ -331,3 +335,10 @@ deliberately left to be *fit by trials* rather than asserted (VR-5), and are fla
   only and lends **no** evidential weight to any guarantee or convergence regime (§8 note; VR-5). Status
   stays **Draft**; honesty contract unchanged (Empirical ceiling, never `Proven`, never silent); no
   code; nothing in the kernel.
+- **2026-06-15 — Accepted (ratified).** Maintainer ratifies the contract above (Draft → Accepted,
+  append-only). Authorises the §10.2 prototype: the `mycelium-vsa::resonator` MAP-I loop, the
+  trial-validated `ResonatorProfile`, the brute-force differential oracle, and the Value-level
+  `reconstruct_factors()` decode. The decode-side manifest parameters (§4) land as additive
+  `DecodeSpec` metadata fields via the append-only **RFC-0003 r4** revision — additive metadata only,
+  no kernel logic/guarantee change, ≤`Empirical` ceiling preserved (§1; RFC-0003 §2; KC-3). Honesty
+  contract unchanged.

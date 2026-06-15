@@ -53,6 +53,25 @@ pub enum DecodeProcedure {
     Resonator,
 }
 
+/// The per-slot cleanup projection a resonator decode uses (RFC-0003 §6.1; RFC-0009 §3/§9 Q2).
+/// A metadata-only manifest field — the submodule implements the projection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CleanupShape {
+    /// Softmax-weighted superposition over the codebook (the standard resonator cleanup).
+    Softmax,
+    /// Winner-take-all: the single arg-max atom.
+    ArgMax,
+}
+
+/// The resonator initialisation strategy (RFC-0003 §6.1; RFC-0009 §9 Q1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum InitStrategy {
+    /// Equal-weight superposition of all codebook atoms per slot (the Frady "uniform" start).
+    UniformSuperposition,
+    /// A single seeded codebook atom per slot.
+    SeededGuess,
+}
+
 /// Decoding procedure + parameters: a cleanup threshold (indexed/cleanup) or a resonator factor
 /// structure + iteration budget (RFC-0003 §6). Optional fields are omitted from the wire form
 /// when absent, matching the schema.
@@ -69,6 +88,21 @@ pub struct DecodeSpec {
     /// Resonator iteration budget (required for `Resonator`; ≥ 1).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub iteration_budget: Option<u64>,
+    /// Resonator per-slot cleanup projection (RFC-0003 §6.1; `Resonator` only). Default `Softmax`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cleanup: Option<CleanupShape>,
+    /// Softmax inverse-temperature `β > 0` (RFC-0003 §6.1; meaningful when `cleanup == Softmax`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub beta: Option<f64>,
+    /// Per-slot top-similarity lock threshold `∈ [0, 1]` for the convergence verdict (RFC-0003 §6.1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tau_lock: Option<f64>,
+    /// Resonator initialisation strategy (RFC-0003 §6.1). Default `UniformSuperposition`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub init: Option<InitStrategy>,
+    /// Initialisation seed for reproducibility (RFC-0003 §6.1; RFC-0009 §6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seed: Option<u64>,
 }
 
 /// The reconstruction manifest. Fields are private; the only constructor, [`ReconInfo::new`],
@@ -142,6 +176,21 @@ impl ReconInfo {
                 // so the Rust contract matches the schema's range constraint on the optional field.
                 if let Some(t) = decode.cleanup_threshold {
                     if !(0.0..=1.0).contains(&t) {
+                        return Err(WfError::MalformedReconstruction);
+                    }
+                }
+                // r4 (RFC-0003 §6.1 / RFC-0009 §4): the resonator decode params are optional and
+                // additive, but range-checked *whenever present* — an out-of-range value is an
+                // explicit rejection, never silently accepted (G2). `cleanup`/`init` are enums, so
+                // the type already constrains them; only the numeric knobs need bounding.
+                if let Some(beta) = decode.beta {
+                    // Softmax inverse-temperature must be finite and strictly positive.
+                    if !beta.is_finite() || beta <= 0.0 {
+                        return Err(WfError::MalformedReconstruction);
+                    }
+                }
+                if let Some(tau) = decode.tau_lock {
+                    if !(0.0..=1.0).contains(&tau) {
                         return Err(WfError::MalformedReconstruction);
                     }
                 }
@@ -268,6 +317,11 @@ mod tests {
             cleanup_threshold: Some(0.2),
             factors: None,
             iteration_budget: None,
+            cleanup: None,
+            beta: None,
+            tau_lock: None,
+            init: None,
+            seed: None,
         }
     }
 
@@ -325,6 +379,11 @@ mod tests {
                 cleanup_threshold: None,
                 factors: Some(vec![operation_hash("factor")]),
                 iteration_budget: Some(100),
+                cleanup: None,
+                beta: None,
+                tau_lock: None,
+                init: None,
+                seed: None,
             },
             proven,
         );
@@ -352,6 +411,11 @@ mod tests {
                 cleanup_threshold: None,
                 factors: Some(vec![operation_hash("factor")]),
                 iteration_budget: Some(100),
+                cleanup: None,
+                beta: None,
+                tau_lock: None,
+                init: None,
+                seed: None,
             },
             declared,
         );
@@ -374,6 +438,11 @@ mod tests {
                 cleanup_threshold: Some(1.5), // out of [0, 1]
                 factors: Some(vec![operation_hash("factor")]),
                 iteration_budget: Some(100),
+                cleanup: None,
+                beta: None,
+                tau_lock: None,
+                init: None,
+                seed: None,
             },
             empirical_bound(),
         );
@@ -390,10 +459,131 @@ mod tests {
                 cleanup_threshold: Some(0.4),
                 factors: Some(vec![operation_hash("factor")]),
                 iteration_budget: Some(100),
+                cleanup: None,
+                beta: None,
+                tau_lock: None,
+                init: None,
+                seed: None,
             },
             empirical_bound(),
         );
         assert!(ok.is_ok());
+    }
+
+    /// r4 (RFC-0003 §6.1): the optional resonator params are range-checked whenever present —
+    /// `beta > 0` (finite) and `tau_lock ∈ [0, 1]`. An out-of-range value is an explicit rejection,
+    /// never silently accepted (G2); an in-range set (and the all-`None` default) is accepted.
+    #[test]
+    fn resonator_range_checks_optional_params() {
+        let spec = |cleanup, beta, tau_lock, init, seed| DecodeSpec {
+            procedure: DecodeProcedure::Resonator,
+            cleanup_threshold: None,
+            factors: Some(vec![operation_hash("factor")]),
+            iteration_budget: Some(100),
+            cleanup,
+            beta,
+            tau_lock,
+            init,
+            seed,
+        };
+        let build = |d| {
+            ReconInfo::new(
+                ReconMode::IndexedRetrieval,
+                "MAP-I",
+                1024,
+                vec![operation_hash("codebook")],
+                None,
+                d,
+                empirical_bound(),
+            )
+        };
+        // A fully-specified, in-range param set is accepted.
+        let ok = build(spec(
+            Some(CleanupShape::Softmax),
+            Some(4.0),
+            Some(0.9),
+            Some(InitStrategy::UniformSuperposition),
+            Some(7),
+        ));
+        assert!(ok.is_ok(), "{ok:?}");
+        // The all-None default (params omitted) is accepted — the fields are additive.
+        assert!(build(spec(None, None, None, None, None)).is_ok());
+        // β must be finite and strictly positive.
+        for bad_beta in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+            assert_eq!(
+                build(spec(None, Some(bad_beta), None, None, None)).unwrap_err(),
+                WfError::MalformedReconstruction,
+                "beta={bad_beta} must be rejected"
+            );
+        }
+        // τ_lock must lie in [0, 1].
+        for bad_tau in [-0.1, 1.5, f64::NAN] {
+            assert_eq!(
+                build(spec(None, None, Some(bad_tau), None, None)).unwrap_err(),
+                WfError::MalformedReconstruction,
+                "tau_lock={bad_tau} must be rejected"
+            );
+        }
+    }
+
+    /// The new resonator params survive the wire round-trip and are omitted when absent (matching
+    /// the schema's optional fields).
+    #[test]
+    fn resonator_params_round_trip_on_the_wire() {
+        let info = ReconInfo::new(
+            ReconMode::IndexedRetrieval,
+            "MAP-I",
+            1024,
+            vec![operation_hash("codebook")],
+            None,
+            DecodeSpec {
+                procedure: DecodeProcedure::Resonator,
+                cleanup_threshold: None,
+                factors: Some(vec![operation_hash("factor")]),
+                iteration_budget: Some(50),
+                cleanup: Some(CleanupShape::Softmax),
+                beta: Some(3.5),
+                tau_lock: Some(0.85),
+                init: Some(InitStrategy::UniformSuperposition),
+                seed: Some(42),
+            },
+            empirical_bound(),
+        )
+        .unwrap();
+        let json = serde_json::to_value(&info).unwrap();
+        assert_eq!(json["decode"]["cleanup"], "Softmax");
+        assert_eq!(json["decode"]["beta"], 3.5);
+        assert_eq!(json["decode"]["tau_lock"], 0.85);
+        assert_eq!(json["decode"]["init"], "UniformSuperposition");
+        assert_eq!(json["decode"]["seed"], 42);
+        let back: ReconInfo = serde_json::from_value(json).unwrap();
+        assert_eq!(back, info);
+        // Absent params are omitted from the wire form.
+        let bare = serde_json::to_value(
+            ReconInfo::new(
+                ReconMode::IndexedRetrieval,
+                "MAP-I",
+                1024,
+                vec![operation_hash("codebook")],
+                None,
+                DecodeSpec {
+                    procedure: DecodeProcedure::Resonator,
+                    cleanup_threshold: None,
+                    factors: Some(vec![operation_hash("factor")]),
+                    iteration_budget: Some(50),
+                    cleanup: None,
+                    beta: None,
+                    tau_lock: None,
+                    init: None,
+                    seed: None,
+                },
+                empirical_bound(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert!(bare["decode"].get("beta").is_none(), "absent beta omitted");
+        assert!(bare["decode"].get("seed").is_none(), "absent seed omitted");
     }
 
     #[test]
