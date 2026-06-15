@@ -8,6 +8,23 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — BitNet packed-ternary acceleration, M-360 first increment; closes the open E1 compute-throughput item)
+- **`mycelium-mlir::bitnet`** — the canonical BitNet **ternary multiply-accumulate**
+  (`y = Σ digit(wᵢ)·xᵢ`, ternary weights · integer activations) emitted as **inspectable** LLVM IR
+  (`i64 @myc_bitnet_dot(ptr %w, ptr %x, i64 %n)`: load the packed I2_S byte, extract the 2-bit code,
+  signed weight `code−1`, multiply-add — one transparent op per loop-body step, FR-C3 "metadata, not
+  hidden lowering"). JIT-compiled (`clang -shared -O2`) and called **in-process over runtime-pointer
+  buffers** via the M-340 dynamic loader (refactored into a reusable `dlopen_path`/`Lib::sym`).
+  Differential-checked against the Rust oracle (`ternary_dot_ref`) over several widths; bounds-checked
+  so a short buffer is an explicit `AotError`, never an out-of-bounds read.
+- **`cargo xtask e1` §3 now measures genuine packed-ternary compute throughput.** Because the kernel's
+  weight/activation buffers are runtime arguments (not baked-in constants), the optimiser cannot fold
+  the computation — so §3 times real unpack-compute over `n = 4096` elements against a hand-written
+  Rust scalar baseline doing the identical I2_S work. This resolves §2's constant-fold/spawn caveat
+  that had blocked the compute-throughput verdict. **Scope/honesty:** I2_S + scalar only — no
+  bitnet.cpp SIMD parity claimed, TL1/TL2 are the next increments; the E1 number is measured, not
+  pre-written (VR-5 / G3). (phase-3.md §2 / §9.8 / Meta)
+
 ### Added (Phase 3 — native trit carry arithmetic `add/sub/mul`, M-301 done)
 - **`mycelium-mlir` now lowers balanced-ternary carry arithmetic over `Ternary{m}`.** `trit.add` is a
   fixed-width **ripple-carry** (LSB→MSB; balanced digit `x srem 3 − 1` and carry `x sdiv 3 − 1` with

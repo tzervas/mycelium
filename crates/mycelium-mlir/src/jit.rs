@@ -95,20 +95,15 @@ impl JitArtifact {
     /// Call the kernel in-process (`dlopen` → `dlsym` → call) and read the result back as an `Exact`
     /// `Value`. Returns an explicit [`AotError`] on any FFI failure — never a silent/garbage result.
     pub fn call(&self) -> Result<Value, AotError> {
-        let so = CString::new(path(&self.so)?)
-            .map_err(|e| AotError::Run(format!("so path has interior NUL: {e}")))?;
-        let sym = CString::new("myc_kernel").expect("static symbol name");
-
-        let handle = open_lib(&so)?;
-        let _lib = Lib(handle); // dlclose on drop
-        let fptr = lookup_sym(handle, &sym)?;
+        let lib = dlopen_path(&self.so)?; // dlclose on drop
+        let fptr = lib.sym("myc_kernel")?;
 
         let mut buf = vec![0u8; self.width];
         // SAFETY: `fptr` is the address `dlsym` returned for the `i32 myc_kernel(ptr)` we just
         // emitted and compiled, so the `extern "C" fn(*mut u8) -> i32` type matches; `buf` is exactly
         // `self.width` bytes and the kernel writes one byte per result element (`self.width` total)
         // only on the ok path, so the write is in-bounds. The library stays loaded for the call
-        // (`_lib`).
+        // (`lib`).
         #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
         let status = unsafe {
             let kernel: extern "C" fn(*mut u8) -> i32 = std::mem::transmute(fptr);
@@ -126,8 +121,17 @@ impl JitArtifact {
     }
 }
 
-/// A loaded shared library that `dlclose`s itself on drop.
-struct Lib(*mut c_void);
+/// A loaded shared library that `dlclose`s itself on drop. `pub(crate)` so other in-crate JIT kernels
+/// (e.g. the M-360 BitNet dot kernel) reuse the same dynamic-loader rather than re-rolling the FFI.
+pub(crate) struct Lib(*mut c_void);
+impl Lib {
+    /// Resolve `symbol` in this library to a raw function/data address (an explicit error if absent).
+    pub(crate) fn sym(&self, symbol: &str) -> Result<*mut c_void, AotError> {
+        let name = CString::new(symbol)
+            .map_err(|e| AotError::Run(format!("symbol name has interior NUL: {e}")))?;
+        lookup_sym(self.0, &name)
+    }
+}
 impl Drop for Lib {
     fn drop(&mut self) {
         // SAFETY: `self.0` is a handle returned by `dlopen` and not closed elsewhere; closing it
@@ -137,6 +141,14 @@ impl Drop for Lib {
             dlclose(self.0);
         }
     }
+}
+
+/// `dlopen` a shared object by path, returning a [`Lib`] that closes it on drop. The reusable loader
+/// shared by [`JitArtifact`] and the M-360 BitNet kernel.
+pub(crate) fn dlopen_path(so: &std::path::Path) -> Result<Lib, AotError> {
+    let cpath = CString::new(path(so)?)
+        .map_err(|e| AotError::Run(format!("so path has interior NUL: {e}")))?;
+    Ok(Lib(open_lib(&cpath)?))
 }
 
 fn open_lib(so: &CString) -> Result<*mut c_void, AotError> {

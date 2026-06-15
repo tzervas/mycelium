@@ -90,7 +90,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 |---|---|---|---|---|---|
 | **M-301** Direct-LLVM-IR AOT backend (kernel subset) | E3-7 (prereq) | P1 | M-150, M-110 | RFC-0004 §2 / ADR-007/009 | **Done (2026-06-15)** — bit subset + `trit.neg` + trit *carry arithmetic* (`add/sub/mul`, ripple-carry/shifted-accumulate, runtime-overflow read-back); shared by AOT + JIT |
 | **M-302** interp↔native differential (extend M-151) | E3-7 (prereq) | P1 | M-301, M-151 | NFR-7 / VR-4 / RR-12 | **Done (2026-06-15)** — `tests/native_differential.rs` (bit subset; toolchain-gated skip) |
-| **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | **Done (2026-06-15)** — `cargo xtask e1` §2 measures native AOT vs interp; compute-throughput verdict still pending in-process exec |
+| **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | **Done (2026-06-15)** — `cargo xtask e1` §2 measures native AOT vs interp; compute throughput now measured over runtime data in §3 (M-360) |
 | **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()` |
 | **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | **Done (2026-06-15)** — `mycelium-build` crate (decide + content-addressed `BuildCertificate`) |
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | **Done (2026-06-15)** — `mycelium-build::cache` (`BuildCache`, request-addressed) |
@@ -98,7 +98,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
 | **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`); NFR-7 checked |
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **needs-design** |
-| **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | Ready after native path |
+| **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | **In progress (2026-06-15)** — I2_S runtime-data dot kernel (in-process JIT, inspectable IR), oracle-checked; E1 §3 compute-throughput now measured. TL1/TL2 + SIMD next |
 | **M-370** Native-ternary forward-compat mapping (+ stub target) | E3-7 | P2 | M-150, M-301 | R7 | **Done (2026-06-15)** — `docs/notes/Native-Ternary-Forward-Compat.md`; dialect = stub target |
 | **M-380** Semantic-level projection framework | E3-1 | P2 | E3-3 | FR-C1 / G11 | **needs-design**; *KC-2-contingent* |
 | **M-002** KC-2 LLM-leverage run (carried; gates E3-1 + concrete syntax) | E4 | P0 | M-020 (harness landed) | SC-5b / G10 / KC-2 | **Blocked (external)** — needs LLM API |
@@ -409,8 +409,50 @@ established strength.
   source spans, so "structured positions" are the navigable breadcrumb path (source line/col live in
   the L1 surface, a later step). The stdio LSP wire protocol remains the mechanical wrapping step.
 
+### 9.8 M-360 — BitNet packed-ternary acceleration (first increment) · Batch L · P2 · in progress 2026-06-15
+
+- **Goal (from §2 / issues.yaml).** BitNet-class packed-ternary acceleration (I2_S/TL1/TL2) exposed as
+  inspectable metadata, not hidden lowering (FR-C3 / NFR-4 / G3); the runtime-input kernel the E1
+  compute-throughput verdict needs (RFC-0004 §5/§8).
+- **Delivered (I2_S dot kernel).** `mycelium-mlir::bitnet` emits the canonical BitNet **ternary
+  multiply-accumulate** — `y = Σ digit(wᵢ)·xᵢ`, weights ternary, activations integer — as **textual,
+  inspectable LLVM IR** (`i64 @myc_bitnet_dot(ptr %w, ptr %x, i64 %n)`: load the packed I2_S byte,
+  extract the 2-bit code at lane `i&3`, signed weight `code−1`, load the activation, multiply-add into
+  an `i64`; one transparent op per loop-body step — RFC-0004 §6). It is JIT-compiled (`clang -shared
+  -O2`) and called **in-process** via the M-340 dynamic loader (refactored into a reusable
+  `dlopen_path`/`Lib::sym`), over weight/activation buffers passed as **runtime pointers**. Bounds are
+  checked against `n` (≥ `n.div_ceil(4)` weight bytes, ≥ `n` activations) so the native loads are
+  always in-range — a short buffer is an explicit `AotError`, never an OOB read.
+- **Why it closes the open E1 item.** The M-301/M-303/M-340 kernels bake inputs in as constants, so
+  `clang` constant-folds the compute and the measured time is call/spawn overhead (honestly captioned,
+  never claimed as throughput). Here the buffers are *arguments* — the optimiser cannot fold them — so
+  `cargo xtask e1` **§3** times **genuine packed-ternary compute** over `n = 4096` runtime elements,
+  against a hand-written Rust scalar baseline doing the *identical* I2_S unpack-compute (apples to
+  apples). The §2 constant-fold/spawn caveat is resolved; the verdict reports the measured number.
+- **Tests (`bitnet::tests`).** IR inspectability + determinism; the semantic oracle pinned on a
+  hand-computed dot; `jit_dot_matches_reference` over `n ∈ {1,4,5,7,64,256,1000}` (mutant-witness: a
+  wrong shift/mask or `code` vs `code−1` diverges); compile-once/call-many consistency; and short-buffer
+  refusals (mutant-witness: dropping the bounds checks would read OOB). All toolchain-gated skips.
+- **Honesty / scope.** First increment only: **I2_S** (the RFC-0004 §5 default), a **scalar** loop. No
+  parity with bitnet.cpp's hand-tuned SIMD is claimed, and TL1/TL2 are not yet lowered — the next
+  M-360 increments. No guarantee is upgraded; the kernel is checked against the obvious oracle, the E1
+  number is whatever was measured (VR-5 / G3). The `unsafe` fn-pointer call carries a `// SAFETY:`
+  justification under ADR-014 (the bounds checks discharge the in-range obligation).
+
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-360 first increment — BitNet I2_S runtime-data dot kernel; closes the open E1
+  compute-throughput item):** new `mycelium-mlir::bitnet` emits the canonical BitNet ternary
+  multiply-accumulate (`Σ digit(wᵢ)·xᵢ`) as inspectable LLVM IR (`i64 @myc_bitnet_dot(ptr,ptr,i64)`:
+  load packed I2_S byte → extract 2-bit code → signed weight `code−1` → multiply-add), JIT-compiles it
+  (`clang -shared -O2`), and calls it **in-process over runtime-pointer buffers** (M-340 loader,
+  refactored into reusable `dlopen_path`/`Lib::sym`). Because the inputs are arguments, not baked-in
+  constants, `cargo xtask e1` gains **§3** measuring **genuine packed-ternary compute** (n=4096) vs a
+  hand-written Rust scalar baseline doing the identical unpack-compute — the runtime-input kernel that
+  resolves §2's constant-fold/spawn caveat. Differential-checked against the Rust oracle over several
+  widths; bounds-checked (short buffer → explicit `AotError`, never OOB). §2 M-360 row → in progress,
+  §9.8 added, M-303 row note updated. **Scope/honesty:** I2_S + scalar only; no bitnet.cpp SIMD parity
+  claimed, TL1/TL2 next; E1 number is measured, not pre-written (VR-5/G3).
 - **2026-06-15 (M-301 trit slice — carry arithmetic `add/sub/mul`, M-301 done):** the direct-LLVM
   backend now lowers balanced-ternary **carry arithmetic** over `Ternary{m}`: `trit.add` as a
   fixed-width **ripple-carry** (LSB→MSB, balanced digit `x srem 3 − 1` / carry `x sdiv 3 − 1` with
