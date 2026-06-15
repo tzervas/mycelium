@@ -6,7 +6,7 @@
 | **Owns** | the concrete, issue-coupled decomposition of the Phase-2 epics (#28–#34) into `M-2xx` build tasks |
 | **Source of truth above this doc** | `docs/Mycelium_Project_Foundation.md` §6 (roadmap), `docs/spec/SPECIFICATION.md` §10 (open build items 10.7–10.10), `tools/github/issues.yaml` + `idmap.tsv` (task ids), ADR-010/011 + RFC-0001…0005 + DN-01 (design corpus, all Accepted/Resolved) |
 | **Mirrors** | the GitHub board: every task carries its issue number from `tools/github/idmap.tsv` |
-| **Companion docs** | `phase-1.md` (predecessor, exit gate met at build level 2026-06-09); `phase-0.md`; `phase-3.md` (forthcoming, epics #35–#41) |
+| **Companion docs** | `phase-1.md` (predecessor, exit gate met at build level 2026-06-09); `phase-0.md`; `phase-3.md` (Living draft — epics #35–#41 decomposed into `M-3xx`) |
 
 > **Grounding discipline.** This is a planning artifact, not a normative one. It cites the corpus
 > (`FR/NFR/VR/SC/KC`, `RFC-xxxx §`, `ADR-0xx`, `Tx.y`, `G#`, `RR-#`) for every claim about *what* is

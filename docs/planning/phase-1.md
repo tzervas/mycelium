@@ -6,7 +6,7 @@
 | **Owns** | the concrete, issue-coupled expansion of Foundation §6 "Phase 1 — Minimal viable core (kernel)" |
 | **Source of truth above this doc** | `docs/Mycelium_Project_Foundation.md` §6 (roadmap), `docs/spec/SPECIFICATION.md` §10 (open build items), `tools/github/issues.yaml` (task ids), RFC-0001…0005 + ADR-007…011 + DN-01 (design corpus, all Accepted/Resolved) |
 | **Mirrors** | the GitHub board: every task here carries its issue number from `tools/github/idmap.tsv` |
-| **Companion docs** | `phase-0.md` (predecessor, gate closed except KC-2); `phase-2.md`/`phase-3.md` (forthcoming) |
+| **Companion docs** | `phase-0.md` (predecessor, gate closed except KC-2); `phase-2.md` (exit-gate met); `phase-3.md` (Living draft) |
 
 > **Grounding discipline.** This is a planning artifact, not a normative one. It cites the corpus
 > (`FR/NFR/VR/SC/KC`, `RFC-xxxx §`, `ADR-0xx`, `Tx.y`, `G#`) for every claim about *what* is

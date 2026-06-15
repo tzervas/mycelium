@@ -8,6 +8,20 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase-3 planning — scoping cut)
+- **`docs/planning/phase-3.md`** (Living draft): scopes the Phase-3 epics #35–#41 (`E3-1…E3-7`) into
+  `M-3xx` build tasks. Records the batch/parallelization plan with the **native execution path as the
+  keystone** (it unblocks E1 + JIT/BitNet/native-ternary), the Phase-2→3 KC-1…KC-4 re-run, a
+  **proposed** exit gate scoped to the buildable/local deliverables (exploratory + KC-2-gated epics
+  tracked as honest out-of-gate stretch), and the risk register. **No exit gate claimed.** New risk
+  **RR-N1**: the env has LLVM 18 but **no libMLIR**, so the realized first native step is a
+  **direct-LLVM-IR AOT backend** (the RFC-0004 §2 fallback) with the MLIR dialect path deferred — a
+  sequencing decision flagged for maintainer ratification, not silently adopted. KC-2 (LLM API) and
+  the MLIR path (libMLIR) are named as the two external blockers.
+- **`tools/github/issues.yaml`**: the Phase-3 epics decomposed into `M-301…M-380` child tasks
+  (issue numbers pending bootstrap). Companion-doc references in `phase-0/1/2.md` updated
+  (`phase-3.md` is no longer "forthcoming").
+
 ### Fixed (deep-review remediation — Medium/Low/Nit tail; all findings now closed)
 - The remaining **Medium/Low/Nit** findings across every workstream are resolved (one commit per
   area), completing the review's Gate-A list — **0 findings now open**:

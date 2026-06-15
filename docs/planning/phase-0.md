@@ -6,7 +6,7 @@
 | **Owns** | the concrete, issue-coupled expansion of Foundation §6 "Phase 0 — Feasibility probes & foundational specs" |
 | **Source of truth above this doc** | `docs/Mycelium_Project_Foundation.md` §6 (roadmap), `tools/github/issues.yaml` (task ids), RFC-0001…0005 + ADR-010 + DN-01 (design corpus, all Accepted/Resolved) |
 | **Mirrors** | the GitHub board: every task here carries its issue number from `tools/github/idmap.tsv` |
-| **Companion docs** | `phase-1.md` … `phase-3.md` (forthcoming; decomposed when each phase gate opens) |
+| **Companion docs** | `phase-1.md` … `phase-3.md` (all in-repo; each decomposed when its phase gate opens) |
 
 > **Grounding discipline.** This is a planning artifact, not a normative one. It cites the
 > corpus (`FR/NFR/VR/SC/KC`, `RFC-xxxx §`, `ADR-0xx`, `Tx.y`, `G#`) for every claim about *what*
