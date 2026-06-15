@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0004 |
-| **Status** | **Accepted** (solidified from the research pass) |
+| **Status** | **Accepted** (r2 — adds **§9** the *interpreted↔compiled continuum* + **build-target profiles** (`interpret` / `build --slim` / `build --target …` / `build --fat`) and **§10** open questions; **additive**, changes no r1 decision — append-only) |
 | **Type** | Foundational / normative |
 | **Date** | June 08, 2026 |
 | **Depends on** | RFC-0001 (WF5 metadata-preservation, `ExecutionMode`, `Meta.physical`); ADR-009 (hybrid execution, interpreter-as-reference); DN-01 (schedule-staged packing, Resolved); Research Findings **T1.1**, **T1.4**, **T1.5** |
@@ -46,3 +46,43 @@ Honors RFC-0001 WF5, `ExecutionMode`, `Meta.physical`. Shares the §3 checker wi
 ## 8. Residual experiments
 - **E1:** confirm staged packing reaches hand-packed perf for the 5-scheme set (expected easy per T1.4).
 - **E3:** confirm a wrong `Meta.physical`/schedule tag is caught by the NFR-7 reference-equivalence check (expected: yes).
+
+## 9. The interpreted↔compiled continuum & build-target profiles (r2) — normative
+
+This section makes explicit the *developer-facing* shape of §2/§4: a program is not "interpreted" **or** "compiled" — it lives on a **continuum**, per definition, and the developer chooses how much to compile and for which targets. The goal (maintainer direction, 2026-06-15): **interpret freely during development at a perf cost; compile what is ready; never be forced into a heavyweight build; and never recompile what has not changed.**
+
+### 9.1 The continuum (restates §2/§4; no new decision)
+- **The interpreter is always available and is the meaning** (§2; ADR-009): a definition runs with **zero build step**. This is the dev default — rapid iteration on whatever is in flux.
+- **Compilation is per *definition*, gated by the §4 stable-component check** — *not* per file, per crate, or per program. A definition is AOT-eligible when it is content-addressed + hash-frozen, spec-ratified, and its obligations are discharged (§4). Marking-stable stays a deliberate act.
+- **Mixed execution is the normal case, not a special mode.** Compiled stable components and still-interpreted definitions **coexist in one run**: both speak the same L0 `CoreValue` semantics (RFC-0001 §4.2 r3), and the §3 checker guarantees they agree (NFR-7). A call from interpreted code into a compiled component (or back) crosses no semantic boundary — only a performance one.
+- **Incrementality is "for free" from content-addressing (ADR-003), not a separate build system.** A definition's identity *is* its content hash, so a compiled artifact keyed by that hash is **never stale** and is reused across runs and machines without dependency bookkeeping. A build recompiles exactly the changed definitions and their hash-reachable dependents — nothing more. (The M-311/M-312 `mycelium-build` content-addressed `BuildCertificate`/cache is this mechanism; the RFC-0001 r3 registry Σ extends the same hash-identity to data declarations.)
+
+### 9.2 Build-target profiles (normative)
+A build's **target set** is an explicit, flexible choice — opt-in to breadth, never forced to it. The profiles (the `mycelium-build` surface; spellings illustrative, KC-2-gated like all surface syntax):
+
+| Profile | Target set | Use |
+|---|---|---|
+| `interpret` (default) | none (runs on the reference interpreter) | active development; rapid iteration |
+| `build --slim <os>-<arch>` | **exactly one** `(os, arch)` | a release for one platform — smallest artifact |
+| `build --target <os>-<arch>[,…]` | a **chosen subset** of `(os, arch)` pairs | "support these two arches on these two OSes" — exactly as many as wanted |
+| `build --fat` | **all supported** targets (universal) | one artifact that runs everywhere — the full multi-target build |
+
+- **`--fat` is a first-class, supported-from-the-start option, not the mandatory path.** A developer who wants universal support gets it in one command; a developer who wants one or two targets pays only for those. The model never boxes anyone into the full-fat build.
+- **`--slim` and `--target` are the same artifact shape as `--fat` with fewer variants** (§9.3) — there is one artifact format, parameterized by its target set, so moving from slim → selective → fat is a build-flag change, not a re-architecture.
+- **Orthogonal to the §4 gate:** the target set says *for which platforms*; the stable-component gate says *which definitions are compiled at all*. A build compiles the stable-eligible (or developer-selected) definitions, each for the chosen target set; everything else stays interpreted.
+
+### 9.3 The fat (multi-target) artifact & runtime dispatch
+- A **fat artifact** carries, per compiled definition, the per-`(os, arch[, cpu-features])` code variants in a **content-addressed variant table**. A `--slim`/`--target` artifact is the identical structure with only the selected variants present.
+- At load/run time the runtime **detects the host `(os, arch, cpu-features)` and selects the matching variant** — the in-tree precedent is the **M-360 I2_S SIMD runtime feature-dispatch** (a kernel choosing its implementation by detected CPU features), generalized to the platform triple.
+- **Never-silent (G2/SC-3):** if the running host matches **no** present variant, the runtime takes the explicit fallback — run that definition on the **interpreter** if it is in the image, else **refuse with an explicit error**. It must *never* run a variant built for the wrong target. Variant selection is inspectable (EXPLAIN-able) like every other selection in the system.
+- **Cross-target compilation rides §2's MLIR→LLVM path** (LLVM gives the cross-targets, Rust-style). Until the native libMLIR/LLVM backend lands (deferred, §2 / phase-2.md), `build` is **host-target only** and `--fat`/`--target` for non-host triples is an explicit "not yet built" refusal, never a silent host-only build mislabeled as fat.
+
+## 10. Open questions (r2) — flagged, not yet decided
+- **OQ-1 — the interpreted↔compiled ABI.** In-process today, interpreted and compiled code share Rust value types; a **persistent compiled-artifact store** (reused across processes/machines) needs a **stable serialized value + call ABI** at the boundary. Couples to RFC-0001 §4.8 serialization. Its own design (likely an ADR).
+- **OQ-2 — hot inject of recompiled definitions into a running image.** "Compile only the changed definitions and inject them without recompiling/relinking the whole binary." Realistic on the content-addressed foundation (the **M-340 in-process `dlopen` JIT** is the seed: content-addressed dynamic linking + variant selection), but a **reliable, robust** version needs OQ-1's ABI + a versioned dynamic-link story. High-value, explicitly deferred — not promised until designed.
+- **OQ-3 — fat-artifact packaging format.** The content-addressed multi-target variant store (§9.3) is a concrete format that needs specifying (manifest, dedup of shared variants, signing/cert linkage to the §4 `BuildCertificate`).
+- **OQ-4 — target-set selection as policy.** Whether `--target`/`--fat` selection should be expressible through the RFC-0005 selection-policy mechanism (one mechanism, now three sites) or stay a build-flag. Lean: build-flag first, policy later if it earns it.
+
+## Meta — changelog
+- **r1 (initial):** **Accepted.** §2 backend (MLIR→LLVM), §3 single shared checker, §4 stable-component gate, §5 schedule-staged packing, §6 inspectability, §7 interfaces, §8 residual experiments.
+- **r2 (2026-06-15):** **Accepted (additive — changes no r1 decision).** Adds **§9** (the interpreted↔compiled continuum made explicit + the **build-target profiles** `interpret`/`--slim`/`--target`/`--fat`, with fat multi-target as a first-class-but-optional path and never-silent runtime variant dispatch) and **§10** open questions (the interpreted↔compiled ABI, hot-inject of recompiled definitions, the fat-artifact packaging format, target-set-as-policy). Records the maintainer's interpret-for-dev / compile-when-ready / flexible-multi-target direction (2026-06-15) on the existing §2/§4 + ADR-003/ADR-009 foundation; the cross-target capability remains gated on the deferred MLIR→LLVM backend (§2). Append-only; maintain status transitions as the ADR/RFC discipline (Draft → Accepted → Superseded).

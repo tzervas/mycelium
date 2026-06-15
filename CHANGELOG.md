@@ -8,6 +8,27 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (Phase 3 — RFC-0004 r2: interpreted↔compiled continuum + build-target profiles; additive)
+- **RFC-0004 gains §9 (the interpreted↔compiled continuum + build-target profiles) and §10 (open
+  questions) — additive, changing no r1 decision (append-only).** Records the maintainer's execution
+  direction (2026-06-15): **interpret freely during development (zero build step, the reference
+  interpreter is the meaning), compile what is ready, never be forced into a heavyweight build, never
+  recompile what has not changed.** §9 makes explicit that execution is a *per-definition continuum*
+  (not interpreted-vs-compiled), that mixed interpreted + compiled stable components coexist in one run
+  (same L0 `CoreValue` semantics, §3 checker guarantees agreement), and that **incremental compilation
+  is "for free" from content-addressing** (ADR-003 — a definition's hash is its identity, so a compiled
+  artifact is never stale; M-311/M-312 already realize the cache). The **build-target profiles** are
+  normative and flexible: `interpret` (default), `build --slim <os>-<arch>` (one target), `build
+  --target <list>` (a chosen subset), `build --fat` (all supported targets, universal) — **fat
+  multi-target is first-class but optional, supported from the start**, the slim/selective/fat artifacts
+  share one format (a content-addressed per-`(os,arch,cpu-features)` variant table), and runtime variant
+  dispatch is **never-silent** (an unmatched host falls back to the interpreter or refuses explicitly,
+  never runs a wrong-target variant — the M-360 SIMD feature-dispatch generalized). Cross-target rides
+  §2's MLIR→LLVM path and stays **host-only until that backend lands** (honest deferral). §10 flags the
+  genuinely-new, undesigned items: the interpreted↔compiled **ABI** (OQ-1), **hot-inject** of recompiled
+  definitions into a running image (OQ-2; the M-340 `dlopen` JIT is the seed), the **fat-artifact
+  packaging format** (OQ-3), and target-set-as-RFC-0005-policy (OQ-4). (RFC-0004 r2 Meta)
+
 ### Changed (Phase 3 — RFC-0011 r3 ENACTED: data + flat `Match` in L0; RFC-0001 → r3; M-320/M-310)
 - **The L1 data-and-matching core is now folded into the frozen Core IR and implemented in lockstep
   (RFC-0011 r3, enacting the named RFC-0001 revision).** `Construct` + the flat `Match` are L0 Core IR
