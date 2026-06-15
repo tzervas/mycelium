@@ -310,11 +310,12 @@ fn packing_bits_per_element(scheme: PackScheme) -> f64 {
         PackScheme::TwoBitPerTrit | PackScheme::I2S | PackScheme::Tl1 => 2.0,
         PackScheme::FiveTritPerByte => 1.6,
         // A5-08: this cost prices TL2 at the *published* 1.67 b/w (RFC-0004 §5 / DN-01), but the
-        // stand-in codec in `mycelium-mlir::pack` currently realizes TL2 as a base-3 5-trits/byte
-        // packing — i.e. the same 1.6 b/w as `FiveTritPerByte`. The discrepancy is intentional and
-        // inert for selection (both 1.6 and 1.67 are < 2.0, so TL2 wins the exhaustive cheapest
-        // either way), and is to be reconciled when the native bitnet.cpp TL2 kernel lands. See the
-        // matching note in `mycelium-mlir/src/pack.rs`.
+        // stand-in codec in `mycelium-mlir::pack` realizes TL2 as a base-3 5-trits/byte packing —
+        // i.e. the same 1.6 b/w as `FiveTritPerByte`. The discrepancy is intentional and inert for
+        // selection (both 1.6 and 1.67 are < 2.0, so TL2 wins the exhaustive cheapest either way).
+        // The M-360 native TL2 dot kernel decodes that placeholder codec, so it does *not* resolve
+        // this: aligning to the true 1.67-b/w bitnet.cpp layout is tied to the M-360 real-layout /
+        // SIMD increment. See the matching note in `mycelium-mlir/src/pack.rs`.
         PackScheme::Tl2 => 1.67,
     }
 }

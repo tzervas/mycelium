@@ -8,6 +8,74 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — L1 Maranget decision-tree compiler, M-320; E3-3; RFC-0007 §3/§4.4)
+- **`mycelium-l1::decision` — the codegen half of the Maranget pipeline.** Compiles a checked
+  nested-pattern `match` into a flat decision `Tree` of `switch`/`leaf` nodes over **occurrences**
+  (paths into the scrutinee) — Maranget 2008's "good decision trees": a left-to-right column heuristic
+  (rotate the first non-wildcard column to the front), constructor/literal specialization, and a
+  `default` branch **exactly** when a column's signature is incomplete (a data type missing
+  constructors) or its domain is open (`Binary`/`Ternary`, never enumerated). This is RFC-0007 §3's
+  "patterns compiled away by the elaborator", as the analysis-level IR. **Verified, not asserted:** a
+  test-only tree evaluator (`eval_tree` over concrete `Pat` values) is checked to agree with a
+  reference matcher on every `Nat` value up to a depth (a wrong column choice / specialization would
+  diverge), plus first-match-on-overlap and the literal-needs-a-default shape. **Wired into the
+  checker:** `checkty::infer_match`, after exhaustiveness passes, compiles the match and confirms the
+  tree is `has_reachable_fail`-free — an exhaustive match must compile to total coverage, so the
+  usefulness analysis (Maranget 2007) and the tree compiler must agree (defense in depth; an internal
+  disagreement is an explicit error, never silent). **Honesty/scope (VR-5):** the tree's leaves are
+  **not yet emitted as L0 Core IR** — L0 has no `Match` node, and adding one is the planned RFC-0001
+  revision (RFC-0007 §4.6); the compilation algorithm is real and checked, and the L0 emission is the
+  remaining step. No guarantee is touched; RFC-0006/0007 ratification stays the maintainer's
+  append-only decision. (phase-3.md §2 / §9.9 / Meta)
+
+### Added (Phase 3 — LSP wire protocol, M-310; E3-3; FR-S5 / SC-5)
+- **`mycelium-lsp::wire` wraps the feedback facade in the LSP transport.** The byte-level JSON-RPC 2.0
+  codec — `read_message`/`write_message` with `Content-Length` header framing (a clean inter-message
+  EOF returns `None`; a truncated body / missing or invalid `Content-Length` / non-JSON body is an
+  explicit `io::Error`, never a silent partial read) — plus the `Diagnostic` → LSP-`Diagnostic` mapping
+  (spec `DiagnosticSeverity`: Error→1, Warning→2), the `textDocument/publishDiagnostics` notification
+  builder, and a minimal `serve` lifecycle loop (`initialize` → capabilities + `serverInfo`,
+  `shutdown` → null result, `exit` → stop; any other **request** → JSON-RPC `MethodNotFound` -32601,
+  never silence; unknown notifications ignored). New dependency: the workspace-pinned `serde_json`.
+  **Honesty/scope (VR-5):** not a document-syncing server — the facade analyzes Core IR `Node`s, not
+  source text, so the server advertises `TextDocumentSyncKind.None` and the diagnostic `range` is a
+  **zero placeholder** with the navigable location carried in `data.breadcrumb`; real source spans and
+  `didOpen`/`didChange` sync arrive with the L1 surface (M-320), and the wire layer carries them
+  without a protocol change. Seven tests (framing round-trip incl. back-to-back, clean-EOF,
+  truncated-body refusal, severity mapping, `publishDiagnostics` shape, the scripted-client lifecycle,
+  the unknown-request refusal). (phase-3.md §2 / §9.7 / Meta)
+
+### Added (Phase 3 — BitNet TL1/TL2 packed-ternary kernels, M-360; E3-6; RFC-0004 §5/§8)
+- **`mycelium-mlir::bitnet` now covers all three bitnet packings.** The I2_S-only dot kernel
+  generalised to `emit_bitnet_dot_ir_for(scheme)`: **TL1** inverts the rot=2 code LUT
+  (`d01 = (code+1) mod 3`, signed weight `d01−1`) and **TL2** decodes the base-3 5-trits/byte packing
+  (`digit = (byte / 3ᵖ) mod 3` with the `3ᵖ ∈ {1,3,9,27,81}` divisor chosen by an inline select-chain),
+  each a scalar loop with the scheme-specific unpack inlined and **inspectable** in the emitted LLVM IR
+  (no opaque pass — RFC-0004 §6 / FR-C3). `BitnetDotKernel` carries its `PackScheme`, so the
+  weight-buffer bounds check tracks the packing density (`n.div_ceil(4)` for I2_S/TL1, `/5` for TL2) —
+  a short buffer stays an explicit `AotError`, never an OOB read. A non-bitnet `PackScheme` (Unpacked /
+  TwoBitPerTrit / FiveTritPerByte) is the new explicit `AotError::UnsupportedScheme` refusal, never a
+  silent misdecode. Each kernel is **differential-checked** against the packing-independent oracle
+  `ternary_dot_ref` over the same `pack_trits` packing (`jit_dot_matches_reference_all_schemes`, n up to
+  1000; the JIT actually compiled+ran here, matching all three). The **E1 §3** harness
+  (`cargo xtask e1`) now times **all three** packings in-process over runtime data, each against a
+  hand-written scalar baseline doing the identical per-scheme unpack (measured here: JIT beats scalar
+  1.69× I2_S / 1.31× TL1 / 1.15× TL2 — whatever was measured, no pre-written claim, VR-5). The
+  **A5-08** cross-reference notes (`mycelium-mlir::pack`, `mycelium-select`) are refined: the scalar
+  TL2 kernel decodes the **1.6-b/w placeholder codec**, so it does *not* resolve the published
+  1.67-b/w TL2 discrepancy (still inert for selection) — aligning to bitnet.cpp's true TL2 layout is
+  now explicitly tied to the **real-layout / SIMD** increment, not the scalar kernel. **Honesty/scope:**
+  scalar loops only — no parity with bitnet.cpp's hand-tuned **SIMD** is claimed (the next M-360
+  increment); no guarantee is upgraded (VR-5/G3). (phase-3.md §2 / §9.8 / Meta)
+
+### Added (Phase 3 — board sync: Phase-2 issues closed, Phase-3 M-3xx bootstrapped)
+- **Tracker hygiene only.** Closed the completed Phase-2 epics (E2-1…E2-7, #28–34) and tasks
+  (M-230…M-260, #58–65) as *completed* with grounding comments (CHANGELOG Batch G/H; Phase-2 exit gate
+  met 2026-06-12). Created the Phase-3 M-3xx build tasks (#86–#98) from `tools/github/issues.yaml`,
+  linked as sub-issues under E3-1…E3-7, closed the six shipped ones (M-301/302/303/311/312/370). Updated
+  `tools/github/idmap.tsv` (M-301→#86 … M-380→#98) and `docs/planning/phase-3.md` §2/§8/Meta. No code or
+  corpus-normative change.
+
 ### Added (Phase 3 — decode `enum_budget` default ratified, M-350; ADR-015; RFC-0010 §8)
 - **`docs/adr/ADR-015-decode-enum-budget-default.md`** (Accepted): ratifies the RFC-0010 decode-selector
   default **`DEFAULT_ENUM_BUDGET = 4096`** (= `MAPI_RESONATOR_PROFILE.max_capacity`), the

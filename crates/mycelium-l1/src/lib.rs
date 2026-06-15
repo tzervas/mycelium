@@ -28,6 +28,7 @@
 
 pub mod ast;
 pub mod checkty;
+pub(crate) mod decision;
 pub mod elab;
 pub mod error;
 pub mod eval;

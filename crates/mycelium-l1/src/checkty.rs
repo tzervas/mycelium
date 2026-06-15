@@ -566,6 +566,20 @@ impl Cx<'_> {
                 crate::usefulness::render(&witness[0])
             ));
         }
+        // Codegen half (M-320; RFC-0007 §3, "compiled away by the elaborator"): compile the checked
+        // match to a Maranget decision tree and confirm it is **Fail-free** — an exhaustive match must
+        // compile to total coverage, so the usefulness analysis and the tree compiler must agree
+        // (defense in depth; never silent if they don't). The tree is the flat-tests form; emitting
+        // its leaves as L0 kernel nodes awaits the RFC-0001 revision (RFC-0007 §4.6).
+        let arm_ix: Vec<usize> = (0..rows.len()).collect();
+        let occ = [Vec::<usize>::new()];
+        let tree = crate::decision::compile(self.types, &rows, &arm_ix, &occ, &col);
+        if crate::decision::has_reachable_fail(&tree) {
+            return self.err(
+                "internal: an exhaustive match compiled to a decision tree with a reachable Fail \
+                 (the usefulness check and the Maranget compiler disagree — report this)",
+            );
+        }
         result.map_or_else(|| self.err("a match needs at least one arm"), Ok)
     }
 

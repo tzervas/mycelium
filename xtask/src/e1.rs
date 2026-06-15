@@ -16,12 +16,13 @@
 //!    (process spawn + run — spawn-dominated for the trivial kernel, captioned as such), and the
 //!    reference **interpreter** per-eval cost, for a bit-subset program. Real numbers, honestly
 //!    bounded; skips when `llc`/`clang` are absent.
-//! 3. **Packed-ternary compute over runtime data** (M-360) — the BitNet I2_S dot kernel
-//!    (`mycelium_mlir::compile_bitnet_dot`) run **in-process** over weight/activation buffers passed
-//!    as *runtime pointers*. Because the inputs are not baked-in constants the optimiser cannot fold
-//!    the computation away, so this is the first section that times **genuine unpack-compute** (vs §2's
-//!    spawn/fold overhead) — the runtime-input kernel the compute-throughput verdict needed. Reported
-//!    against the in-Rust scalar oracle; skips when `clang` is absent.
+//! 3. **Packed-ternary compute over runtime data** (M-360) — the BitNet dot kernels for **all three**
+//!    bitnet packings (I2_S/TL1/TL2; `mycelium_mlir::compile_bitnet_dot_for`) run **in-process** over
+//!    weight/activation buffers passed as *runtime pointers*. Because the inputs are not baked-in
+//!    constants the optimiser cannot fold the computation away, so this is the first section that times
+//!    **genuine unpack-compute** (vs §2's spawn/fold overhead) — the runtime-input kernel the
+//!    compute-throughput verdict needed. Each scheme is reported against a hand-written Rust scalar
+//!    baseline doing the identical per-scheme unpack; skips when `clang` is absent.
 //!
 //! No benchmarking dependency (house style): a warmup pass, then the minimum mean over several
 //! batches. Run with `--release` (`cargo run --release -p xtask -- e1`); a debug build is refused.
@@ -32,7 +33,7 @@ use std::time::Instant;
 use mycelium_core::{Meta, Node, PackScheme, Payload, Provenance, Repr, Trit, Value};
 use mycelium_interp::{IdentitySwapEngine, Interpreter, PrimRegistry};
 use mycelium_mlir::pack::{pack_trits, unpack_trits};
-use mycelium_mlir::{compile, compile_bitnet_dot, ternary_dot_ref, AotError};
+use mycelium_mlir::{compile, compile_bitnet_dot_for, ternary_dot_ref, AotError};
 
 const BATCHES: usize = 5;
 
@@ -113,13 +114,15 @@ pub fn run() {
     if measured_compute {
         println!(
             "\nE1 verdict: packed-ternary **compute throughput is now measured over runtime data** \
-             (M-360, I2_S) — the constant-fold/spawn caveat that blocked §2 is gone: the BitNet dot \
-             kernel takes its weight/activation buffers as runtime pointers and runs in-process, so \
-             §3 times genuine unpack-compute, not call overhead. Reported against a hand-written Rust \
-             scalar baseline doing the identical I2_S unpack-compute. Still open (honest, VR-5/G3): \
-             parity with bitnet.cpp's hand-tuned \
-             SIMD kernels, and the TL1/TL2 packings — the next M-360 increments. No perf claim is \
-             pre-written; the number above is whatever was measured."
+             (M-360) for **all three** bitnet packings (I2_S/TL1/TL2) — the constant-fold/spawn \
+             caveat that blocked §2 is gone: each BitNet dot kernel takes its weight/activation \
+             buffers as runtime pointers and runs in-process, so §3 times genuine unpack-compute, not \
+             call overhead. Reported against hand-written Rust scalar baselines doing the identical \
+             per-scheme unpack-compute. Still open (honest, VR-5/G3): parity with bitnet.cpp's \
+             hand-tuned **SIMD** kernels (the next M-360 increment), and the true 1.67-b/w bitnet.cpp \
+             **TL2 layout** — the current TL2 kernel decodes the 1.6-b/w base-3 placeholder codec \
+             (A5-08), inert for selection but not yet the published layout. No perf claim is \
+             pre-written; the numbers above are whatever was measured."
         );
     } else {
         println!(
@@ -131,89 +134,121 @@ pub fn run() {
     }
 }
 
+/// The three bitnet packings E1 §3 times (each has a native kernel since M-360).
+const BITNET_KERNELS: [(&str, PackScheme); 3] = [
+    ("I2_S", PackScheme::I2S),
+    ("TL1 ", PackScheme::Tl1),
+    ("TL2 ", PackScheme::Tl2),
+];
+
 /// E1 §3 (M-360): time the **packed-ternary dot kernel over runtime data** in-process against the
-/// Rust scalar oracle. Because the buffers are runtime pointers the kernel cannot constant-fold, so
-/// this measures genuine unpack-compute — the number §2 could not honestly report. Returns whether a
-/// measurement was taken (false ⇒ `clang` absent, skipped). Skips gracefully.
+/// Rust scalar oracle, for **all three** bitnet packings (I2_S/TL1/TL2). Because the buffers are
+/// runtime pointers the kernel cannot constant-fold, so this measures genuine unpack-compute — the
+/// number §2 could not honestly report. Returns whether a measurement was taken (false ⇒ `clang`
+/// absent, skipped). Skips gracefully.
 fn bitnet_section(weights: &[Trit], dim: usize) -> bool {
-    println!("\n== E1 §3: packed-ternary dot kernel over runtime data (I2_S, M-360) ==");
+    println!("\n== E1 §3: packed-ternary dot kernel over runtime data (I2_S/TL1/TL2, M-360) ==");
 
-    let kernel = match compile_bitnet_dot() {
-        Ok(k) => k,
-        Err(AotError::ToolchainMissing(tool)) => {
-            println!("  skip: native toolchain absent ({tool}) — install clang to measure.");
-            return false;
-        }
-        Err(e) => {
-            eprintln!("  BitNet kernel compile failed: {e}");
-            return false;
-        }
-    };
-
-    // Runtime buffers: I2_S-packed ternary weights + a deterministic int activation vector. Passed as
-    // pointers, so neither the kernel nor the oracle below can be constant-folded away.
-    let packed = pack_trits(weights, PackScheme::I2S);
     let acts = activations(dim);
-
-    // Correctness gate before timing: the JIT kernel must agree with the semantic oracle (on the
-    // unpacked weights) *and* with the fair scalar baseline (on the same packed buffer).
-    let jit_sum = kernel.call(&packed, &acts, dim).expect("kernel runs");
+    // The semantic oracle is packing-independent (operates on the unpacked weights), so every
+    // scheme's kernel must hit the same sum — a cross-scheme correctness gate before any timing.
     let oracle_sum = ternary_dot_ref(weights, &acts);
-    let baseline_sum = scalar_packed_dot(&packed, &acts, dim);
-    assert_eq!(
-        jit_sum, oracle_sum,
-        "E1 §3: JIT kernel disagrees with the semantic oracle — refusing to time a wrong kernel"
-    );
-    assert_eq!(
-        jit_sum, baseline_sum,
-        "E1 §3: scalar baseline disagrees with the oracle"
-    );
+    let mut measured_any = false;
 
-    // Apples-to-apples: both the JIT and the baseline do the **full I2_S unpack-compute** over the
-    // same packed runtime buffer, so the ratio reflects compiled-kernel vs hand-written scalar Rust
-    // on identical work (the E1 "reaches hand-packed perf" question), not an unpack-cost asymmetry.
-    let iters = 5_000u32;
-    let jit_ns = bench(iters, || {
-        black_box(
-            kernel
-                .call(black_box(&packed), black_box(&acts), dim)
-                .expect("kernel"),
+    for (name, scheme) in BITNET_KERNELS {
+        let kernel = match compile_bitnet_dot_for(scheme) {
+            Ok(k) => k,
+            Err(AotError::ToolchainMissing(tool)) => {
+                println!("  skip: native toolchain absent ({tool}) — install clang to measure.");
+                return measured_any;
+            }
+            Err(e) => {
+                eprintln!("  {name} BitNet kernel compile failed: {e}");
+                continue;
+            }
+        };
+
+        // Runtime buffers: scheme-packed ternary weights, passed as pointers so neither the kernel
+        // nor the baseline below can be constant-folded away.
+        let packed = pack_trits(weights, scheme);
+
+        // Correctness gate before timing: the JIT kernel must agree with the semantic oracle *and*
+        // with the fair scalar baseline doing the same scheme's unpack-compute on the same buffer.
+        let jit_sum = kernel.call(&packed, &acts, dim).expect("kernel runs");
+        let baseline_sum = scalar_packed_dot(&packed, &acts, dim, scheme);
+        assert_eq!(
+            jit_sum, oracle_sum,
+            "E1 §3 [{name}]: JIT kernel disagrees with the semantic oracle — refusing to time a wrong kernel"
         );
-    });
-    let base_ns = bench(iters, || {
-        black_box(scalar_packed_dot(black_box(&packed), black_box(&acts), dim));
-    });
+        assert_eq!(
+            jit_sum, baseline_sum,
+            "E1 §3 [{name}]: scalar baseline disagrees with the oracle"
+        );
 
-    #[allow(clippy::cast_precision_loss)]
-    let (jit_per, base_per) = (jit_ns / dim as f64, base_ns / dim as f64);
-    println!(
-        "  JIT packed-ternary dot (in-process)     : {jit_ns:>12.0} ns   {jit_per:>6.3} ns/elem"
-    );
-    println!(
-        "  Rust scalar baseline (same unpack-work) : {base_ns:>12.0} ns   {base_per:>6.3} ns/elem"
-    );
-    if jit_ns > 0.0 {
+        // Apples-to-apples: both the JIT and the baseline do the **full unpack-compute** for this
+        // scheme over the same packed runtime buffer, so the ratio reflects compiled-kernel vs
+        // hand-written scalar Rust on identical work, not an unpack-cost asymmetry.
+        let iters = 5_000u32;
+        let jit_ns = bench(iters, || {
+            black_box(
+                kernel
+                    .call(black_box(&packed), black_box(&acts), dim)
+                    .expect("kernel"),
+            );
+        });
+        let base_ns = bench(iters, || {
+            black_box(scalar_packed_dot(
+                black_box(&packed),
+                black_box(&acts),
+                dim,
+                scheme,
+            ));
+        });
+
+        #[allow(clippy::cast_precision_loss)]
+        let (jit_per, base_per) = (jit_ns / dim as f64, base_ns / dim as f64);
+        let ratio = if jit_ns > 0.0 { base_ns / jit_ns } else { 0.0 };
         println!(
-            "  ratio (baseline / jit)                  : {:>12.2}x",
-            base_ns / jit_ns
+            "  {name}  JIT {jit_ns:>10.0} ns ({jit_per:>5.3} ns/elem)   scalar {base_ns:>10.0} ns \
+             ({base_per:>5.3} ns/elem)   ratio {ratio:>5.2}x"
+        );
+        measured_any = true;
+    }
+
+    if measured_any {
+        println!(
+            "  note: each row does the full per-scheme unpack-compute over the same runtime buffer \
+             (no constant folding) — genuine compute throughput across all three packings."
         );
     }
-    println!(
-        "  note: both do the full I2_S unpack-compute over the same runtime buffer (no constant \
-         folding) — genuine compute throughput, the number §2 could not isolate."
-    );
-    true
+    measured_any
 }
 
-/// A hand-written scalar Rust baseline doing the **same** I2_S unpack-compute as the JIT kernel over a
-/// packed weight buffer — the apples-to-apples comparison point for E1 §3. Decodes each 2-bit code,
-/// forms the signed weight `code − 1`, and accumulates `weight·activation`.
-fn scalar_packed_dot(packed: &[u8], activations: &[i32], n: usize) -> i64 {
+/// A hand-written scalar Rust baseline doing the **same** unpack-compute as the JIT kernel for
+/// `scheme` over a packed weight buffer — the apples-to-apples comparison point for E1 §3. Mirrors
+/// each scheme's in-IR decode: I2_S `code − 1`; TL1 inverts the rot=2 LUT (`(code+1) mod 3 − 1`);
+/// TL2 reads the base-3 digit `(byte / 3ᵖ) mod 3 − 1`.
+fn scalar_packed_dot(packed: &[u8], activations: &[i32], n: usize, scheme: PackScheme) -> i64 {
     let mut acc: i64 = 0;
     for i in 0..n {
-        let byte = packed[i >> 2];
-        let code = i64::from((byte >> ((i & 3) * 2)) & 0b11);
-        acc += (code - 1) * i64::from(activations[i]);
+        let digit = match scheme {
+            PackScheme::I2S => {
+                let code = i64::from((packed[i >> 2] >> ((i & 3) * 2)) & 0b11);
+                code - 1
+            }
+            PackScheme::Tl1 => {
+                let code = u32::from((packed[i >> 2] >> ((i & 3) * 2)) & 0b11);
+                i64::from((code + 1) % 3) - 1
+            }
+            PackScheme::Tl2 => {
+                #[allow(clippy::cast_possible_truncation)]
+                let p = (i % 5) as u32;
+                let d = (packed[i / 5] / 3u8.pow(p)) % 3;
+                i64::from(d) - 1
+            }
+            _ => unreachable!("E1 §3 only times the three bitnet packings"),
+        };
+        acc += digit * i64::from(activations[i]);
     }
     acc
 }

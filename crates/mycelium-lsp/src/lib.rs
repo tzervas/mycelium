@@ -10,9 +10,13 @@
 pub mod feedback;
 pub mod fmt;
 pub mod lint;
+pub mod wire;
 
 pub use feedback::{
     analyze, analyze_with, ExplainSite, Feedback, FeedbackSummary, GuaranteeAnnotation, SwapSite,
 };
 pub use fmt::format;
 pub use lint::{has_errors, lint, Diagnostic, Severity};
+pub use wire::{
+    publish_diagnostics_notification, read_message, serve, to_lsp_diagnostic, write_message,
+};

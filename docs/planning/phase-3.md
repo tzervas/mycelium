@@ -82,23 +82,24 @@ the kernel subset, validated against the interpreter (NFR-7). So the native path
 
 ## 2. The Phase-3 task set (proposed decomposition & readiness)
 
-The epics decompose into `M-3xx` build tasks below. **Issue numbers are pending** — these tasks are
-not yet created on the board; the `idmap.tsv` join lands when they are bootstrapped from
-`issues.yaml` (§8). Readiness is relative to the corpus + landed Phase-1/2 deps.
+The epics decompose into `M-3xx` build tasks below. **Issues created 2026-06-15** — the M-3xx tasks
+are now on the board as **#86–#98**, linked as sub-issues of the E3-1…E3-7 epics (#35–#41), with the
+`idmap.tsv` join landed (§8); the six already-shipped tasks (M-301/302/303/311/312/370) are closed as
+completed. Readiness is relative to the corpus + landed Phase-1/2 deps.
 
 | Task | Epic | Pri | Depends on | Maps to | Readiness |
 |---|---|---|---|---|---|
 | **M-301** Direct-LLVM-IR AOT backend (kernel subset) | E3-7 (prereq) | P1 | M-150, M-110 | RFC-0004 §2 / ADR-007/009 | **Done (2026-06-15)** — bit subset + `trit.neg` + trit *carry arithmetic* (`add/sub/mul`, ripple-carry/shifted-accumulate, runtime-overflow read-back); shared by AOT + JIT |
 | **M-302** interp↔native differential (extend M-151) | E3-7 (prereq) | P1 | M-301, M-151 | NFR-7 / VR-4 / RR-12 | **Done (2026-06-15)** — `tests/native_differential.rs` (bit subset; toolchain-gated skip) |
 | **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | **Done (2026-06-15)** — `cargo xtask e1` §2 measures native AOT vs interp; compute throughput now measured over runtime data in §3 (M-360) |
-| **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()` |
+| **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()`; **LSP wire protocol** (`wire`: JSON-RPC `Content-Length` framing, `publishDiagnostics` mapping, `initialize`/`shutdown`/`exit` lifecycle). Remaining: **document sync** (needs a text→`Node` path — L1, M-320) |
 | **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | **Done (2026-06-15)** — `mycelium-build` crate (decide + content-addressed `BuildCertificate`) |
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | **Done (2026-06-15)** — `mycelium-build::cache` (`BuildCache`, request-addressed) |
-| **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses; recursive matcher; nested structural descent); **RFC ratification is maintainer's** |
+| **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses) + the **Maranget decision-tree compiler** (the codegen half — `decision`: occurrences + `switch`/`leaf` tree, verified against the reference matcher, wired into `checkty` as a Fail-free cross-check). Remaining: emit tree leaves as **L0 kernel nodes** (gated on the RFC-0001 L0 revision). **RFC ratification is maintainer's** |
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
 | **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`); NFR-7 checked |
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **Design drafted (2026-06-15)** — RFC-0009 (convergence regime, `Empirical`-ceiling honesty, never-silent verdicts); prototype gated on ratification |
-| **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | **In progress (2026-06-15)** — I2_S runtime-data dot kernel (in-process JIT, inspectable IR), oracle-checked; E1 §3 compute-throughput now measured. TL1/TL2 + SIMD next |
+| **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | **In progress (2026-06-15)** — runtime-data dot kernels for **all three** bitnet packings (I2_S/TL1/TL2; in-process JIT, inspectable per-scheme unpack IR), each oracle-checked; E1 §3 compute-throughput measured (I2_S). **SIMD** next |
 | **M-370** Native-ternary forward-compat mapping (+ stub target) | E3-7 | P2 | M-150, M-301 | R7 | **Done (2026-06-15)** — `docs/notes/Native-Ternary-Forward-Compat.md`; dialect = stub target |
 | **M-380** Semantic-level projection framework | E3-1 | P2 | E3-3 | FR-C1 / G11 | **needs-design**; *KC-2-contingent* |
 | **M-002** KC-2 LLM-leverage run (carried; gates E3-1 + concrete syntax) | E4 | P0 | M-020 (harness landed) | SC-5b / G10 / KC-2 | **Blocked (external)** — needs LLM API |
@@ -234,9 +235,10 @@ established strength.
 - **Append-only with status transitions**, mirroring the ADR/RFC discipline: this file moves
   `Living draft → exit-gate met` only when the §6 gate is met; task rows update in place as their
   issues progress, but gate verdicts (§5) and the E1 perf number never pre-record an upgrade.
-- **Every task row will carry its issue number** once the `M-3xx` tasks are bootstrapped from
-  `issues.yaml` into the board (`idmap.tsv` is the join key) — until then they are marked
-  *issue pending* (§2).
+- **The `M-3xx` tasks are bootstrapped onto the board** (#86–#98, 2026-06-15) from `issues.yaml`,
+  linked under the E3-1…E3-7 epics, with `idmap.tsv` carrying the join (M-301→#86 … M-380→#98); shipped
+  tasks are closed as completed. The Phase-2 epics/tasks (#28–34, #58–65) are closed as completed at the
+  same sync.
 - **The two external blockers are named, not hidden** (KC-2 needs an LLM API; the MLIR path needs
   libMLIR) — each is sequenced as an out-of-gate probe with an honest "not established" verdict.
 
@@ -407,7 +409,20 @@ established strength.
   mutant-witness; the breadcrumb-path split).
 - **Honesty / scope.** Severity stays `Error`/`Warning` (the existing lattice); the L0 Core IR has no
   source spans, so "structured positions" are the navigable breadcrumb path (source line/col live in
-  the L1 surface, a later step). The stdio LSP wire protocol remains the mechanical wrapping step.
+  the L1 surface, a later step).
+- **Delivered (second increment — LSP wire protocol).** `mycelium-lsp::wire`: the byte-level JSON-RPC
+  codec (`read_message`/`write_message` with `Content-Length` header framing — clean EOF vs an
+  explicit error on a truncated frame, never a silent drop), the `Diagnostic` → LSP-`Diagnostic`
+  mapping with the spec `DiagnosticSeverity` codes (Error→1, Warning→2) and the
+  `textDocument/publishDiagnostics` notification builder, and a minimal [`serve`] lifecycle loop
+  (`initialize` → capabilities + `serverInfo`, `shutdown` → null, `exit` → stop; any other request →
+  JSON-RPC `MethodNotFound`, never silence). New dep: the workspace-pinned `serde_json`. Seven tests
+  (framing round-trip + many, clean-EOF, truncated-body error, severity mapping, `publishDiagnostics`
+  shape, the scripted-client lifecycle, the unknown-request refusal). **Honest scope (VR-5):** not a
+  document-syncing server — the facade analyzes Core IR `Node`s, not text, so the server advertises
+  `TextDocumentSyncKind.None` and the diagnostic `range` is a **zero placeholder** with the navigable
+  location in `data.breadcrumb`. Real spans + `didOpen`/`didChange` sync arrive with the L1 surface
+  (M-320); the wire layer carries them without a protocol change.
 
 ### 9.8 M-360 — BitNet packed-ternary acceleration (first increment) · Batch L · P2 · in progress 2026-06-15
 
@@ -433,11 +448,17 @@ established strength.
   hand-computed dot; `jit_dot_matches_reference` over `n ∈ {1,4,5,7,64,256,1000}` (mutant-witness: a
   wrong shift/mask or `code` vs `code−1` diverges); compile-once/call-many consistency; and short-buffer
   refusals (mutant-witness: dropping the bounds checks would read OOB). All toolchain-gated skips.
-- **Honesty / scope.** First increment only: **I2_S** (the RFC-0004 §5 default), a **scalar** loop. No
-  parity with bitnet.cpp's hand-tuned SIMD is claimed, and TL1/TL2 are not yet lowered — the next
-  M-360 increments. No guarantee is upgraded; the kernel is checked against the obvious oracle, the E1
-  number is whatever was measured (VR-5 / G3). The `unsafe` fn-pointer call carries a `// SAFETY:`
-  justification under ADR-014 (the bounds checks discharge the in-range obligation).
+- **Honesty / scope.** **All three** bitnet packings now have a kernel — I2_S (rot=0), TL1 (rot=2
+  inverted via `d01 = (code+1) mod 3`), and TL2 (base-3, 5 trits/byte, `digit = (byte / 3ᵖ) mod 3`
+  via a select-chain `3ᵖ` lookup) — each a **scalar** loop with the unpack inlined and visible in the
+  emitted IR (`emit_bitnet_dot_ir_for(scheme)`; a non-bitnet scheme is an explicit
+  `AotError::UnsupportedScheme`, never a silent misdecode). Each is differential-checked against the
+  packing-independent oracle `ternary_dot_ref` over the *same* `pack_trits` packing, so the in-IR
+  unpack is verified. The kernel's weight-buffer bound tracks the scheme density (`n.div_ceil(4)` for
+  I2_S/TL1, `/5` for TL2). **Not** claimed: parity with bitnet.cpp's hand-tuned **SIMD** — the next
+  M-360 increment. No guarantee upgraded; the E1 number is whatever was measured (VR-5 / G3). The
+  `unsafe` fn-pointer call carries a `// SAFETY:` justification under ADR-014 (the bounds checks
+  discharge the in-range obligation).
 
 ### 9.9 M-320 — L1 nested patterns + Maranget usefulness · Batch K · P1 · in progress 2026-06-15
 
@@ -460,13 +481,71 @@ established strength.
   redundancy, nested structural descent gates `matured`); evaluator end-to-end (`pred2` over depth-2
   `Nat` selects and binds correctly). All existing flat-match tests still pass.
 - **Honesty / scope.** RFC-0007 is **Draft** and the prototype **non-normative**; this advances the
-  surface checker + reference evaluator. The Maranget *decision-tree compilation to the flat kernel
-  `Match`* (Maranget 2008; RFC-0007 §3 — "compiled away by the elaborator") is the **analysis half**
-  here; the codegen half lands with full L1-in-Core-IR (the RFC-0001 revision). Coverage stays
-  *checked*, never assumed (W7); no guarantee is touched.
+  surface checker + reference evaluator. The Maranget *usefulness analysis* (Maranget 2007) is the
+  analysis half; the **decision-tree compilation** (Maranget 2008; RFC-0007 §3 — "compiled away by the
+  elaborator") now lands too (next increment). Coverage stays *checked*, never assumed (W7); no
+  guarantee is touched.
+- **Delivered (decision-tree compiler — the codegen half).** New `mycelium-l1::decision`: the Maranget
+  2008 compilation of a checked nested-pattern match into a flat `Tree` of `switch`/`leaf` nodes over
+  **occurrences** (paths into the scrutinee) — the left-to-right column heuristic, constructor/literal
+  specialization, and a `default` exactly when a column's signature is incomplete or its domain is open
+  (`Binary`/`Ternary`). It is **verified**, not asserted: a test-only tree evaluator (`eval_tree` over
+  concrete `Pat` values) is checked to agree with a reference matcher on every `Nat` value up to a
+  depth (a wrong column choice or specialization would diverge), plus first-match-on-overlap and the
+  literal-needs-a-default shape. It is **wired into `checkty`**: after exhaustiveness passes,
+  `infer_match` compiles the match and confirms the tree is `has_reachable_fail`-free — an exhaustive
+  match must compile to total coverage, so usefulness and the compiler must agree (defense in depth,
+  never silent). **Scope (VR-5):** the tree is an internal analysis/IR artifact — its leaves are **not
+  yet emitted as L0 kernel nodes** (L0 has no `Match`; that is the RFC-0001 revision, RFC-0007 §4.6),
+  so it does not yet run programs. The compilation algorithm is real and checked; the L0 emission is
+  the remaining step. No guarantee touched.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-320 Maranget decision-tree compiler — the codegen half):** new
+  `mycelium-l1::decision` compiles a checked nested-pattern match into a flat `switch`/`leaf` `Tree`
+  over occurrences (Maranget 2008) — column heuristic, ctor/literal specialization, `default` only when
+  a signature is incomplete or open. Verified by a test-only tree evaluator agreeing with the reference
+  matcher over `Nat` values (first-match-on-overlap; literal-needs-default shape), and wired into
+  `checkty::infer_match` as a `Fail`-free cross-check of exhaustiveness (usefulness and the compiler
+  must agree, never silent). §2 M-320 row + §9.9 updated. **Scope:** the tree is an internal IR
+  artifact — emitting its leaves as L0 kernel nodes awaits the RFC-0001 L0 revision (RFC-0007 §4.6); no
+  guarantee touched (VR-5).
+- **2026-06-15 (M-310 LSP wire protocol — stdio JSON-RPC + LSP-shaped diagnostics):** new
+  `mycelium-lsp::wire` wraps the M-140 feedback facade in the LSP transport — `Content-Length`
+  message framing (`read_message`/`write_message`; clean EOF vs explicit truncated-frame error), the
+  `Diagnostic`→LSP-`Diagnostic` mapping (spec severity codes; zero-range placeholder + breadcrumb in
+  `data` since L0 has no spans), the `textDocument/publishDiagnostics` notification builder, and a
+  minimal `serve` lifecycle (`initialize`/`shutdown`/`exit`; other requests → `MethodNotFound`, never
+  silent). Adds the workspace-pinned `serde_json`. 7 tests. §2 M-310 row + §9.7 updated. **Scope:**
+  not a document-syncing server yet — text→`Node` sync needs the L1 surface (M-320); honestly
+  advertised as `TextDocumentSyncKind.None` (VR-5).
+- **2026-06-15 (M-360 follow-ups — E1 §3 all-three + A5-08 reconciliation):** `cargo xtask e1` §3
+  now times **all three** bitnet packings in-process over runtime data (I2_S/TL1/TL2), each vs a
+  hand-written scalar baseline doing the identical per-scheme unpack (measured: JIT beats scalar
+  ≈1.69×/1.31×/1.15×; reported as-measured, VR-5). Re-exported `compile_bitnet_dot_for` /
+  `emit_bitnet_dot_ir_for` / `jit_ternary_dot_for`. The **A5-08** notes in `mycelium-mlir::pack` and
+  `mycelium-select` are refined to record that the scalar TL2 kernel decodes the 1.6-b/w *placeholder*
+  codec — it does **not** resolve the published 1.67-b/w discrepancy (inert for selection); the true
+  bitnet.cpp TL2 layout is tied to the **real-layout / SIMD** increment, kept flagged not silent.
+- **2026-06-15 (M-360 TL1/TL2 kernels — full bitnet packing breadth):** `mycelium-mlir::bitnet`
+  generalised from I2_S-only to `emit_bitnet_dot_ir_for(scheme)` covering **all three** bitnet
+  packings — TL1 inverts the rot=2 LUT (`d01 = (code+1) mod 3`), TL2 decodes base-3 5-trits/byte
+  (`digit = (byte / 3ᵖ) mod 3` via a select-chain divisor lookup) — each a scalar loop with the
+  scheme-specific unpack inlined and inspectable; a non-bitnet scheme is an explicit
+  `AotError::UnsupportedScheme`. `BitnetDotKernel` now carries its scheme so the weight-buffer bound
+  tracks density (`/4` vs `/5`). All three are differential-checked against the packing-independent
+  oracle (`jit_dot_matches_reference_all_schemes`, n up to 1000) — clang present, so the kernels
+  actually ran and matched. §2 M-360 row + §9.8 updated; SIMD is the remaining increment. **Scope:**
+  scalar only, no bitnet.cpp SIMD parity claimed (VR-5/G3).
+- **2026-06-15 (board sync — Phase-2 closed, Phase-3 tasks bootstrapped):** synced the GitHub board to
+  the corpus. Closed the completed **Phase-2** epics (E2-1…E2-7, #28–34) and tasks (M-230…M-260, #58–65)
+  as *completed*, each with a grounding comment citing where it landed (CHANGELOG Batch G/H; Phase-2
+  exit gate met 2026-06-12). Created the **Phase-3** M-3xx tasks from `issues.yaml` as **#86–#98**,
+  linked as sub-issues under E3-1…E3-7 (#35–41); closed the six shipped ones
+  (M-301/302/303/311/312/370) as completed, left the in-progress / needs-design / blocked ones open
+  with status-annotated bodies. Updated `tools/github/idmap.tsv` (M-301→#86 … M-380→#98) and §2/§8
+  above. Tracker hygiene only — no code or corpus-normative change.
 - **2026-06-15 (M-350 needs-design — RFC-0009 resonator-network factorization drafted):** authored
   `docs/rfcs/RFC-0009-Resonator-Network-Factorization.md` — the *needs-design* deliverable for M-350
   (document the convergence regime + bounds **before** building, per RR-5/G4). Fixes: the iterative

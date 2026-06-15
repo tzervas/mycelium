@@ -147,6 +147,7 @@ dependencies = [
  "mycelium-core",
  "mycelium-interp",
  "mycelium-select",
+ "serde_json",
 ]
 
 [[package]]
