@@ -36,6 +36,13 @@ impl SwapEngine for IdentitySwapEngine {
         }
         // Same representation → identity. The value is unchanged; metadata records that it was
         // produced by a swap (policy_used set, ADR-006) and keeps the source's guarantee/bound.
+        //
+        // The `EvalError::Wf` arms below are *defensive*, not reachable from the public API via
+        // this engine (A4-04): the guarantee/bound are copied verbatim from the already-validated
+        // `src.meta()` (so the M-I1 coupling still holds, and `policy_used` is independent of it),
+        // and the repr/payload are `src`'s own (so payload↔repr still agrees). They remain explicit
+        // errors so a *custom* `SwapEngine` reusing this pattern — or a future change that derives
+        // rather than copies the meta — refuses honestly rather than panicking (G2).
         let src_meta = src.meta();
         let meta = Meta::new(
             Provenance::Derived {

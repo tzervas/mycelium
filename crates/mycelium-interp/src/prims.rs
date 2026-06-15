@@ -125,6 +125,14 @@ fn compose_result(
     } else {
         compose_approx(prim, inputs, rule)?
     };
+    // The `EvalError::Wf` arms below are *defensive*, not reachable from the public API with the
+    // built-in prims (A4-04). `compose_approx` only ever pairs a non-`Exact` strength with a
+    // present `Bound` (and `Exact` with `None`), so `Meta::new`'s M-I1 coupling check passes; and
+    // every built-in produces a `payload` whose length matches the cloned input `repr`, so
+    // `Value::new`'s payload↔repr check passes. They stay as explicit errors so that a *future*
+    // prim (or a custom `PrimRegistry` registered via `Interpreter::new`) whose output is
+    // internally inconsistent refuses honestly rather than panicking (G2 — never silent, never a
+    // crash on constructed input).
     let meta = Meta::new(provenance, guarantee, bound, None, None, None).map_err(EvalError::Wf)?;
     Value::new(repr, payload, meta).map_err(EvalError::Wf)
 }
