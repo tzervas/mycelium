@@ -20,6 +20,18 @@ corpus, not released software. Versioning will begin when the kernel does.
   reification/`EXPLAIN`; and the open design questions. Prior art (`embeddenator-retrieval`/`-vsa`)
   flagged to mine, not copy. **No code; nothing in the kernel.** Registered in the Doc-Index;
   prototype gated on ratification. (phase-3.md §2 / Meta)
+- **RFC-0009 Draft revision — prior-art mining (M-350).** Read the reference implementations
+  (`embeddenator-vsa::resonator`, `embeddenator-retrieval::core::resonator`) and folded the findings
+  back into the contract while keeping status **Draft** and the honesty contract intact. New **§8.1**
+  documents seven concrete pitfalls (unseeded init; an unbacked "self-inverse" on the *lossy*
+  sparse-ternary bind; no oscillation detection + a wrong cosine-to-previous convergence test; no
+  regime/`δ`; a wrong fixed point returned as an answer with no correctness test; in-place Gauss-Seidel
+  rather than parallel update; silent zero-fill fabrication). **§9 open questions resolved as
+  recommendations** (uniform seeded init; softmax default, `β = 1/temperature` trial-fit; discrete
+  index-tuple convergence + bounded-window cycle detection; oracle-measured `δ` over a `{F, ∏kᵢ, d}`
+  `ResonatorProfile`; confidence **+ margin** refusal via `CleanupMemory`; MAP-I-first, sparse/HRR/FHRR
+  `Declared` not `Empirical`). Tightened §3/§5/§6 accordingly ("converged ≠ correct"; only a clean
+  `Converged` verdict yields factors). Still **no code; nothing in the kernel.** (phase-3.md §2 / Meta)
 
 ### Added (Phase 3 — L1 nested patterns + Maranget usefulness, M-320)
 - **`mycelium-l1::usefulness`** — Maranget's usefulness algorithm `U(P, q)` over a typed pattern
