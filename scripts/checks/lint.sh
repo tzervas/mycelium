@@ -5,9 +5,11 @@ cd "$REPO_ROOT" || exit 1
 section "lint"
 rc=0
 
-# Rust — clippy, warnings are errors (CONTRIBUTING: `clippy -D warnings`).
+# Rust — clippy, warnings are errors (CONTRIBUTING: `clippy -D warnings`), EXCEPT `unsafe_code`,
+# which ADR-014 makes permitted-but-warned: `-A unsafe_code` exempts only that lint so intentional,
+# justified unsafe (e.g. FFI/JIT) passes the gate while every *other* warning stays a hard error.
 if [[ -f Cargo.toml ]] && have cargo; then
-  if cargo clippy --all-targets --all-features -- -D warnings; then ok "cargo clippy -D warnings"
+  if cargo clippy --all-targets --all-features -- -D warnings -A unsafe_code; then ok "cargo clippy -D warnings (unsafe_code warned, not gated — ADR-014)"
   else fail "clippy findings"; rc=1; fi
 else
   skip "rust: no Cargo.toml or cargo"

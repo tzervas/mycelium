@@ -18,6 +18,7 @@
 | **DN-03 — Lexicon Amendment: Surface Additions & Runtime Names (one name each)** | amends DN-02: adopt `consume`/`grow`, decline `embody` (keep `impl`), reserve `for`; **one name per term** (flat — rejects ADR-012 §7.6's canonical+alias scheme); the single Runtime names (`hypha`/`fuse`/`xloc`/`cyst`/`graft`/`forage`/`backbone`/`mesh`/`tier`/`reclaim`) | **Resolved** (2026-06-10) |
 | **Lexicon Reference (v0.4)** | the three-tier vocabulary catalog (Surface/Runtime/Formal) with short mnemonic forms; extends DN-02 | **Draft** (review notes in ADR-012 §7) |
 | **Example Programs Reference (v0.2)** | 20 worked examples demonstrating the lexicon and surface syntax against RFC-0001 semantics | **Draft** (grounding notes appended) |
+| **Native-Ternary Forward-Compat (M-370)** | forward map: the ternary value-semantics contract → a future 3-state HW backend; the `ternary` dialect as the stub target (ADR-005 / R7) | **Living note** (2026-06-15) — doc + stub, no backend built |
 | **RFC-0002 — Swap Certificate & Split Regime** | certificate, legal pairs, bijection semantics, shared checker | **Accepted** |
 | **RFC-0003 — VSA Submodule Boundary** | boundary, guarantee matrix, sparsity refinement, manifest | **Accepted (r2)** — r2 `spore` scope note per ADR-013 |
 | **RFC-0004 — Execution Model & "Stable Component"** | MLIR backbone, shared checker, schedule-staged packing | **Accepted** |

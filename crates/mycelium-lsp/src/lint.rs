@@ -43,6 +43,20 @@ pub struct Diagnostic {
     pub message: String,
 }
 
+impl Diagnostic {
+    /// The breadcrumb [`Self::at`] as a structured, navigable path (split on `/`) — so a client can
+    /// locate the offending node step-by-step rather than parsing the string (M-310). An empty
+    /// breadcrumb (the program root) yields an empty path.
+    #[must_use]
+    pub fn path(&self) -> Vec<&str> {
+        if self.at.is_empty() {
+            Vec::new()
+        } else {
+            self.at.split('/').collect()
+        }
+    }
+}
+
 /// Lint a (closed) Core IR program, returning all findings in deterministic traversal order.
 #[must_use]
 pub fn lint(node: &Node) -> Vec<Diagnostic> {
@@ -307,5 +321,23 @@ mod tests {
             body: Box::new(Node::Var("y".into())),
         };
         assert_eq!(codes(&lint(&node)), vec!["free-variable"]);
+    }
+
+    #[test]
+    fn diagnostic_path_is_the_navigable_breadcrumb() {
+        // M-310: the `at` breadcrumb splits into a structured, navigable path.
+        let d = Diagnostic {
+            code: "x",
+            severity: Severity::Warning,
+            at: "let a/swap/op f".to_owned(),
+            message: String::new(),
+        };
+        assert_eq!(d.path(), vec!["let a", "swap", "op f"]);
+        // An empty breadcrumb (the program root) yields an empty path, not `[""]`.
+        let root = Diagnostic {
+            at: String::new(),
+            ..d.clone()
+        };
+        assert!(root.path().is_empty());
     }
 }

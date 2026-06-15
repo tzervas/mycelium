@@ -14,6 +14,7 @@ members = [
     "crates/mycelium-mlir",
     "crates/mycelium-cert",
     "crates/mycelium-lsp",
+    "crates/mycelium-build",
     "xtask",
 ]
 
@@ -24,7 +25,13 @@ license = "MIT"
 repository = "https://github.com/tzervas/mycelium"
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+# ADR-014: `unsafe` is permitted-but-warned (not forbidden). Plain `cargo build`/`cargo test`
+# (dev/test) warn at every unsafe site — the caution incentive — and still compile/run; the
+# `just check` lint gate exempts only this lint (`-A unsafe_code`) so intentional, justified unsafe
+# passes CI; a site silences the dev warning for production release with
+# `#[cfg_attr(not(debug_assertions), allow(unsafe_code))]` + a mandatory `// SAFETY:` comment.
+# Trusted-base crates should stay unsafe-free (may re-pin `unsafe_code = "forbid"` per-crate).
+unsafe_code = "warn"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }

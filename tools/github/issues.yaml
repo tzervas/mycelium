@@ -348,3 +348,125 @@ issues:
     depends_on: [M-150, E2-7]
     body: |
       EPIC (R7). Documented mapping from the ternary value-semantics contract to a future 3-state hardware backend; stubbed dialect target.
+
+  # ---------------- Phase 3 (M-3xx build tasks; decomposed 2026-06-15, docs/planning/phase-3.md) ----------------
+  # Batch J — native execution path (keystone). Direct-LLVM AOT first; MLIR deferred (libMLIR absent) — RFC-0004 §2 fallback, RR-N1.
+  - id: M-301
+    title: "M-301 — Direct-LLVM-IR AOT backend (kernel subset)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:execution, priority:P1]
+    depends_on: [M-150, M-110]
+    body: |
+      Emit textual LLVM IR for the kernel subset (bit/trit ops + consts over the lowered ANF), compile via llc + clang to a native artifact, run it, read back the result Value (RFC-0004 §2 direct-LLVM fallback; ADR-007/009). Each stage dumpable (no opaque pass). The MLIR ternary-dialect lowering stays the eventual path (textual emitter is its skeleton) and is deferred until libMLIR is provisioned.
+      Acceptance: a Core IR kernel-subset program compiles to native and runs; the emitted IR is dumpable; unsupported ops are an explicit refusal (never silent).
+
+  - id: M-302
+    title: "M-302 — interp<->native differential (extend M-151)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:verification, area:execution, priority:P1]
+    depends_on: [M-301, M-151]
+    body: |
+      Extend the M-151 differential so the kernel corpus runs under the interpreter AND the real compiled native artifact, asserting observable equivalence through the M-210 ObservationalEquiv checker; a deliberately divergent lowering must be caught (NFR-7; VR-4; RR-12; mutant-witness convention).
+      Acceptance: corpus passes both paths; a mislabeled/divergent lowering fails the checker.
+
+  - id: M-303
+    title: "M-303 — E1 perf verdict on the native path"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:verification, area:execution, priority:P1]
+    depends_on: [M-301, M-302]
+    body: |
+      Replace the cargo xtask e1 stub's "not established" with a measured native-vs-interpreter number on the kernel subset (E1; NFR-4). Honest caption: a real measurement, not "within an agreed target" unless one is ratified (VR-5). Refuses to measure a debug build.
+      Acceptance: a recorded native/interp ratio with caveats; the E1 verdict moves from "not established" to "measured".
+
+  # Batch K — toolchain & surface (parallel to J, local). RFC-0006/0007 ratification is the maintainer's; concrete syntax KC-2-gated.
+  - id: M-310
+    title: "M-310 — Full-LSP maturation (rich diagnostics)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P1]
+    depends_on: [M-140, M-141]
+    body: |
+      Mature the M-140 LSP skeleton: rich diagnostics over the existing artifact kinds (swap certs, EXPLAIN, stage dumps, bound tags), structured positions, severity levels (§5.6-5.8; SC-5).
+      Acceptance: diagnostics carry positions + severities; tests pin representative cases.
+
+  - id: M-311
+    title: "M-311 — Build-system: stable/experimental management + certificate artifacts"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P1]
+    depends_on: [M-150]
+    body: |
+      A build-system layer distinguishing stable components (content-addressed + spec-ratified + verification-passed -> AOT-eligible, RFC-0004 §4) from experimental (interpreted/JIT); emits certificate artifacts per build (ADR-003).
+      Acceptance: a stable component is AOT-routed, an experimental one interpreted; certificates emitted and addressable.
+
+  - id: M-312
+    title: "M-312 — Content-addressed build cache"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P2]
+    depends_on: [M-311]
+    body: |
+      Cache build outputs + certificates keyed by content hash (ADR-003); a re-build of an unchanged definition reuses the cached certificate.
+      Acceptance: an unchanged definition's second build is a cache hit reusing the prior certificate.
+
+  - id: M-320
+    title: "M-320 — L1 term-language extension (interpreter/prototype)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:language, priority:P1]
+    depends_on: [M-110]
+    body: |
+      Extend the mycelium-l1 prototype's term language per RFC-0007 §§3-4 (the L1 kernel calculus), with tests. RFC-0006/0007 ratification (Draft -> Accepted) is a MAINTAINER decision recorded append-only; concrete syntax stays KC-2-gated (RFC-0006 status).
+      Acceptance: extended terms elaborate + evaluate in the prototype with tests; ratification is presented, not unilaterally flipped.
+
+  # Batch L — acceleration & execution breadth (depends J).
+  - id: M-340
+    title: "M-340 — JIT path (shared lowering + runtime specialization)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:execution, priority:P2]
+    depends_on: [M-301]
+    body: |
+      A JIT execution path reusing the M-301 lowering with runtime specialization for dynamic/long-running VSA pipelines (ADR-009; E3-4). Validated against the interpreter via the same TV machinery (NFR-7; RR-12).
+      Acceptance: NFR-7 equivalence on the corpus + a recorded speedup (honest; no pre-written target).
+
+  - id: M-350
+    title: "M-350 — Resonator-network factorization (opt-in, probabilistic)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:vsa, priority:P2, status:needs-design]
+    depends_on: [M-204, M-260]
+    body: |
+      Resonator factorization for unknown-factor VSA products: per-factor codebooks + approximate inverse + iterative cleanup; PROBABILISTIC-ONLY guarantee; NEVER in core (FR-C2/G4; RFC-0003 §6; the M-260 manifest already enforces the Resonator probabilistic-only ceiling).
+      Acceptance (needs-design first): a documented convergence regime + bounds; a NoConverge result is explicit, never a fabricated factorization.
+
+  - id: M-360
+    title: "M-360 — Production packed-ternary acceleration"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:execution, priority:P2]
+    depends_on: [M-250, M-301]
+    body: |
+      Production acceleration paths over the Phase-2 packing selector baseline (FR-C3/G3): real pack/unpack/compute kernels for I2_S/TL1/TL2 wired into the native path, packing exposed as inspectable meta.physical (NFR-1/NFR-4), not hidden lowering.
+      Acceptance: a packed-ternary kernel runs natively with the layout recorded + inspectable; within ~0.01 PPL / 0.1% of full precision (Phase-2 E2-7 exit criterion).
+
+  - id: M-370
+    title: "M-370 — Native-ternary forward-compat mapping (+ stub target)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:docs, area:execution, priority:P2]
+    depends_on: [M-150, M-301]
+    body: |
+      Document the mapping from the ternary value-semantics contract to a future 3-state hardware backend (R7; E3-7); a stubbed dialect target showing the forward path. Documentation + stub, not a real HW backend.
+      Acceptance: a written forward-compat mapping + a stub target the lowering can name.
+
+  # Batch M — exploratory (depends numerics/recon + KC-2).
+  - id: M-380
+    title: "M-380 — Semantic-level projection framework"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:needs-design]
+    depends_on: [E3-3]
+    body: |
+      Multiple human/machine projections of the same content-addressed artifact, beyond MPS notational projections (FR-C1/G11). EXPLORATORY + KC-2-CONTINGENT; the content-addressed IR + EXPLAIN dumps are the existing projection substrate.
+      Acceptance (needs-design first): a projection ergonomics study; contingent on the KC-2 verdict.
+
+  - id: M-330
+    title: "M-330 — AI co-authoring loop (generate -> feedback -> self-correct)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P1]
+    depends_on: [M-310]
+    body: |
+      A generate -> semantic-feedback -> self-correct loop over the LSP surface, operationalizing SC-5b (NFR-2; Area 6; E3-2). The harness is local; the RUN needs LLM API access (KC-2-adjacent).
+      Acceptance: the loop runs against the LSP feedback channel; the live LLM run is gated on API access (honest "not established" until then).

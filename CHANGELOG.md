@@ -8,6 +8,126 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — native-ternary forward-compat map, M-370)
+- **`docs/notes/Native-Ternary-Forward-Compat.md`** (Living note): documents the **ternary
+  value-semantics contract** and the forward map from today's emulated-on-binary packing to a future
+  3-state hardware backend, with the `ternary` dialect (`mycelium-mlir::dialect`) as the **stub
+  target** and the R7 portability guarantee (what a native backend must keep invariant — values, the
+  selection mechanism, the honesty rule, interpreter-as-reference). Documentation + stub only; **no
+  3-state backend built** (ADR-005 / VR-5). Registered in the Doc-Index. Completes E3-7 at the
+  documentation level.
+
+### Added (Phase 3 — in-process JIT, M-340; first intentional unsafe under ADR-014)
+- **`mycelium-mlir::jit`** — an in-process JIT: emits the kernel as `void @myc_kernel(ptr)`, compiles
+  it to a shared object (`clang -shared`), and calls it **in-process** via `dlopen`/`dlsym` (the
+  first intentional `unsafe` FFI under ADR-014 — justified `// SAFETY:` comments +
+  `#[cfg_attr(not(debug_assertions), allow(unsafe_code))]`, **no new dependency**). Reuses the same
+  `lower_program` + element encode/decode as the AOT path, so it agrees with the interpreter through
+  the shared M-210 `ObservationalEquiv` checker (`tests/jit_differential.rs`, NFR-7). Removes the
+  process-spawn overhead of the M-303 AOT path; skips gracefully when `clang` is absent. **Honest
+  E1:** the closed kernel constant-folds, so a calibrated compute-throughput verdict still needs
+  runtime-input kernels (M-360) — not pre-written (VR-5). (phase-3.md §2 / Meta)
+
+### Added (Phase 3 — native AOT trit slice `trit.neg`, M-301)
+- **`mycelium-mlir::llvm` is now kind-aware** (a `Lane` carries `Binary{w}` *or* `Ternary{m}`): the
+  direct-LLVM backend lowers **`trit.neg`** over `Ternary{m}` end-to-end (digit-wise `0 - x` — exact,
+  no carry), printing ternary output as `'-'`/`'0'`/`'+'` via a branch-free `select` chain (still one
+  op per element) and reading it back into a `Ternary{m}` value. The parse shape is derived from the
+  actual lowering (`lower_program` is the single source of truth for `emit_llvm_ir` + `result_shape`).
+  The M-302 differential corpus gains two trit-`neg` programs (compiled + checked). `trit.add/sub/mul`
+  (balanced-ternary carry arithmetic) and `bit.*`/`trit.*` on the wrong lane kind are explicit
+  refusals (G2). (phase-3.md §2 / Meta)
+
+### Changed (decision — ADR-014: `unsafe` policy relaxed from `forbid` to permitted-but-warned)
+- **`unsafe_code` is now `"warn"` workspace-wide (was `"forbid"`).** `unsafe` is permitted when
+  explicit and justified: it **warns** in `cargo build`/`cargo test` (the caution incentive) and
+  still compiles/runs, the `just check` lint gate exempts only this lint (`scripts/checks/lint.sh`
+  now runs `clippy -- -D warnings -A unsafe_code`, every *other* warning still a hard error), and a
+  site silences the dev warning **for production release** with
+  `#[cfg_attr(not(debug_assertions), allow(unsafe_code))]` + a mandatory `// SAFETY:` comment.
+  Recorded as **ADR-014** (append-only; amends the M-091 lint policy). Enables in-process JIT/FFI
+  (M-340) via raw `extern "C"` `dlopen`/`dlsym` with no new dependency. The trusted-base crates stay
+  unsafe-free. CONTRIBUTING + the ADR index updated.
+
+### Added (Phase 3 — LSP maturation: structured feedback summary, M-310)
+- **`mycelium-lsp::FeedbackSummary`** (`Feedback::summary()`): a structured roll-up of an analysis —
+  per-artifact-kind counts, the Error/Warning breakdown, the worst severity, and `is_clean()` — the
+  at-a-glance health signal an AI co-author's feedback loop (SC-5b/E3-2) or an IDE status line
+  consumes without re-walking the channels. Adds `Diagnostic::path()` (the `at` breadcrumb as a
+  navigable `Vec<&str>`). Two tests incl. a worst-severity mutant-witness. (phase-3.md §9.7)
+
+### Added (Phase 3 — content-addressed build cache, M-312)
+- **`mycelium-build::cache`** — `BuildCache` caches `BuildCertificate`s by **build-request** content
+  address: the key folds the component's identity hash with every decision input (spec ratification,
+  the three obligations, the `promote` flag), so an unchanged request is a `Hit` reusing the prior
+  certificate and any change in verification state is a `Miss` that re-decides — never a stale hit
+  (G2). Three tests incl. the weakened-obligation `Aot → Interpreted` miss (mutant-witnessed).
+  (phase-3.md §9.6)
+
+### Added (Phase 3 — build-system stable-component gate, M-311)
+- **`mycelium-build`** (new crate, outside the trusted kernel — KC-3): makes the RFC-0004 §4
+  stable/experimental gate executable. `check_eligibility` runs the automatic §4 checks (spec
+  ratified + obligations discharged) with specific blocking reasons; `decide(component, promote)`
+  routes to **AOT only for an eligible, explicitly promoted** component (promotion is deliberate,
+  §4) and refuses promotion of an ineligible one (never a silent AOT). Emits a content-addressed
+  `BuildCertificate` (`cert_ref`, BLAKE3) with private fields and a re-validating `Deserialize`
+  (`deny_unknown_fields`) so a forged `Aot` certificate is rejected on deserialize. Seven tests incl.
+  forged-AOT + unknown-field rejection. (phase-3.md §9.5)
+
+### Added (Phase 3 — L1 literal-pattern `match`, M-320)
+- **`mycelium-l1`**: `match` now covers `Binary{n}`/`Ternary{m}` scrutinees with **literal patterns**,
+  not just data types (the explicitly-deferred v0 gap). `checkty::infer_literal_match` enforces
+  repr+width-matching literal arms, rejects duplicate literals, and **requires** a `_`/binder default
+  (the 2ⁿ/3ᵐ domain is never enumerated — W7 coverage is never assumed); `eval::eval_literal_match`
+  fires an arm on `repr + payload` equality. Elaboration is unchanged (the `Match` family already
+  lowers to `Residual`). Five tests incl. three mutant-witnessed refusals. RFC-0007 ratification is
+  presented, not flipped — that stays the maintainer's append-only decision (concrete syntax remains
+  KC-2-gated). (phase-3.md §9.4)
+
+### Added (Phase 3 — E1 native-path measurement, M-303)
+- **`cargo xtask e1` §2** now measures the native AOT path against the interpreter (M-303): one-time
+  AOT compile cost, warm native per-invocation (process spawn + run), and interpreter per-eval, for a
+  bit-subset program. The E1 verdict moves from "no native path (stub)" to **native path established
+  and measured** — the *compute-throughput* verdict ("reaches hand-packed perf") stays honestly NOT
+  established, now with a precise reason: the standalone tiny-kernel artifact is process-spawn-bound
+  and constant-folds, so it needs in-process execution (JIT/FFI — M-340 / deferred libMLIR). Adds the
+  `compile` / `CompiledArtifact::run` compile-once/run-many split to `mycelium-mlir::llvm` (with
+  `compile_and_run` as the wrapper). **Batch J (M-301→M-302→M-303) complete at the task level.**
+  (phase-3.md §9.3)
+
+### Added (Phase 3 — interp↔native differential, M-302)
+- **`mycelium-mlir/tests/native_differential.rs`** — extends the M-151 differential to the *compiled*
+  path: a bit-subset corpus runs under the reference interpreter and `compile_and_run`, asserting
+  observable `(repr, payload, guarantee)` equality **and** validation through the single shared M-210
+  `ObservationalEquiv` checker (NFR-7/VR-4/RR-12). A discrimination test confirms the differential is
+  non-vacuous (two different programs → `NotValidated`). Skips gracefully when `llc`/`clang` are
+  absent. (phase-3.md §9.2)
+
+### Added (Phase 3 — native execution path, M-301 bit-subset slice)
+- **`mycelium-mlir::llvm`** — a **direct-LLVM-IR AOT backend** that genuinely compiles the kernel
+  **bit subset** (`core.id`, `bit.not/and/or/xor` over `Binary{w}`) to native code. `emit_llvm_ir`
+  renders textual LLVM IR (one SSA op per output bit — no opaque pass, RFC-0004 §6); `compile_and_run`
+  drives `llc` + `clang` to a real executable, runs it, and reads the result back as an `Exact`
+  `Binary{w}` value. This is the first *compiled* execution path (RFC-0004 §2's direct-LLVM fallback;
+  libMLIR absent, LLVM 18 present — the MLIR dialect lowering stays deferred, RR-N1). Everything
+  outside the subset is an explicit `AotError` refusal (never silent); `llc`/`clang` absence is a
+  skippable `ToolchainMissing`. Tests cover emit shape/determinism, four mutant-witnessed refusals, a
+  width-mismatch refusal, and a toolchain-gated native↔interpreter roundtrip. (phase-3.md §9.1)
+
+### Added (Phase-3 planning — scoping cut)
+- **`docs/planning/phase-3.md`** (Living draft): scopes the Phase-3 epics #35–#41 (`E3-1…E3-7`) into
+  `M-3xx` build tasks. Records the batch/parallelization plan with the **native execution path as the
+  keystone** (it unblocks E1 + JIT/BitNet/native-ternary), the Phase-2→3 KC-1…KC-4 re-run, a
+  **proposed** exit gate scoped to the buildable/local deliverables (exploratory + KC-2-gated epics
+  tracked as honest out-of-gate stretch), and the risk register. **No exit gate claimed.** New risk
+  **RR-N1**: the env has LLVM 18 but **no libMLIR**, so the realized first native step is a
+  **direct-LLVM-IR AOT backend** (the RFC-0004 §2 fallback) with the MLIR dialect path deferred — a
+  sequencing decision flagged for maintainer ratification, not silently adopted. KC-2 (LLM API) and
+  the MLIR path (libMLIR) are named as the two external blockers.
+- **`tools/github/issues.yaml`**: the Phase-3 epics decomposed into `M-301…M-380` child tasks
+  (issue numbers pending bootstrap). Companion-doc references in `phase-0/1/2.md` updated
+  (`phase-3.md` is no longer "forthcoming").
+
 ### Fixed (deep-review remediation — Medium/Low/Nit tail; all findings now closed)
 - The remaining **Medium/Low/Nit** findings across every workstream are resolved (one commit per
   area), completing the review's Gate-A list — **0 findings now open**:

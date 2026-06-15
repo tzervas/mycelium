@@ -1,8 +1,8 @@
 //! `xtask` — repo automation entrypoint (run via `cargo xtask <task>`).
 //!
 //! Tasks: `kc4` — the KC-4 per-swap certificate-check overhead measurement (M-212); `e1` — the E1
-//! staged-packing perf-harness stub (M-250). Further tasks (codegen, schema sync, proof drivers)
-//! land as needed.
+//! perf harness (M-250 staged-packing codec + M-303 native AOT path vs interpreter). Further tasks
+//! (codegen, schema sync, proof drivers) land as needed.
 
 mod e1;
 mod kc4;
@@ -15,7 +15,7 @@ fn main() {
         None | Some("help") => {
             eprintln!(
                 "xtask tasks:\n  kc4   KC-4 per-swap cert-check overhead (run with --release)\n  \
-                 e1    E1 staged-packing codec perf stub (run with --release)"
+                 e1    E1 perf harness: packing codec + native AOT vs interp (run with --release)"
             );
         }
         Some(other) => {

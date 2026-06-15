@@ -11,6 +11,8 @@ pub mod feedback;
 pub mod fmt;
 pub mod lint;
 
-pub use feedback::{analyze, analyze_with, ExplainSite, Feedback, GuaranteeAnnotation, SwapSite};
+pub use feedback::{
+    analyze, analyze_with, ExplainSite, Feedback, FeedbackSummary, GuaranteeAnnotation, SwapSite,
+};
 pub use fmt::format;
 pub use lint::{has_errors, lint, Diagnostic, Severity};
