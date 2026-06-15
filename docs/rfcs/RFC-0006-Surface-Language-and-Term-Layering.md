@@ -250,8 +250,65 @@ meet"); certified-swap combinators as first-class values; an LLM-facing canonica
 (KC-2's "beyond" case) where the *same* content-addressed definitions render differently for
 human and machine co-authors (FR-S5's dual intelligibility).
 
+## 10. Ratification readiness (completion-review 2026-06-15 — **proposed carve-out, NOT yet Accepted**)
+
+A completion-review pass for ratification (maintainer directive: *complete and ratify RFC-0006/0007
+before the core-language implementation*). This RFC is a mature deliberation artifact; the review
+finds **no missing normative content** in its KC-2-independent scope — the positions in §8 are
+researched and the dependent designs have since landed. What follows is the **proposed split** of
+what would move `Draft → Accepted` vs what stays explicitly gated. **It is presented for maintainer
+sign-off; this pass does not flip the status** (the §8 positions and §3/§4 normative content stay
+Draft until the maintainer accepts).
+
+**Ratifiable now (KC-2-independent — RFC-0006 §4.4 step 1).** The load-bearing, evidence-grounded
+content that nothing else blocks on:
+
+- **§3 layering** (L0–L3; only L0/L1 trusted) and **§4.1 invariants S1–S6** (never-silent swap,
+  honest tags surface, content-addressed identity, inspectable elaboration, explicit partiality, and
+  the foundational **S6 AI-independence**) — restatements of committed corpus rules at the language
+  level; no open question.
+- **§4.2 capability targets LR-1…LR-9** (the "Rust-class and beyond" requirements, incl. **LR-9**
+  memory-safety-by-construction) — requirements, not mechanisms; the *outcomes* are committed.
+- **§4.3 grammar/spec discipline** (EBNF-in-spec + machine-readable grammar artifact + accept/reject
+  conformance corpus per layer) — already realized in `docs/spec/grammar/`.
+- **§8 positions Q2, Q4, Q5, Q7** — these are **now realized** by the dependent designs (so the
+  positions are no longer merely "awaiting ratification", they are discharged): **Q2** L1 node budget
+  with declarations-as-registry → RFC-0007 §4.1/§4.2 (and the `Match`-into-L0 path → **RFC-0011**, the
+  ratified staged r3); **Q4** divergence-only effect tracking → RFC-0007 §4.5; **Q5** affine
+  `Resource` hook, ownership-not-applicable → RFC-0007 §4.7; **Q7** "checked total" = CakeML clock
+  quantification → RFC-0007 §4.5. Ratifying RFC-0006 ratifies these positions as the committed
+  direction.
+
+**Stays gated / deferred (explicit, honest — must NOT be read as ratified).**
+
+- **Concrete L3 surface syntax — KC-2-gated (Q1; the one deliberate deferral).** Blocked on M-002
+  (#3), LLM-API-external. The Q1 experiment is *designed* (T3.6) but unrun; its verdict picks text /
+  projections / embedded DSL. Also gated: **Q6** concrete literal suffix/annotation spelling, and the
+  **Q8** `unsafe`-class L3 spelling (a DN/KC-2 matter). Ratifying RFC-0006 ratifies the layering and
+  the *deferral itself*, never a syntax.
+- **Stage-1 static guarantee grading (Q3).** The graded-coeffect mechanism is *positioned* (T3.2) but
+  its load-bearing open sub-decision — **whether implicit flows taint** (a `pc`-like index vs data
+  lineage only) — is a genuine open **normative decision for the grading RFC** (a revision of
+  RFC-0007 §4.3), not ratified here. v0 stays runtime-tag-checked (RFC-0007 §4.3).
+- **Q8 reclamation mechanism details.** The *outcome* (no leaks in safe code, LR-9) is committed;
+  Perceus-as-default + cycle handling + region inference are implementation/mechanism choices
+  refined later (T3.5), not blocking this ratification.
+
+**Proposed status line on acceptance:** *Accepted — layering, invariants (S1–S6), capability targets
+(LR-1…LR-9), grammar discipline, and the §8 Q2/Q4/Q5/Q7 positions; concrete L3 syntax (Q1/Q6) stays
+KC-2-gated and stage-1 grading (Q3) stays open for the grading RFC.* Maintainer to confirm or adjust.
+
 ## Meta — changelog
 
+- **2026-06-15 (r4) — Draft, completion-review for ratification (maintainer directive; NOT yet
+  Accepted).** Added **§10 Ratification readiness** — the proposed `Draft → Accepted` carve-out for
+  maintainer sign-off: ratifiable now = §3 layering, §4.1 invariants S1–S6, §4.2 capability targets
+  LR-1…LR-9, §4.3 grammar discipline, and the §8 positions Q2/Q4/Q5/Q7 (**now realized** by RFC-0007
+  §4.1–4.7 and the ratified **RFC-0011** staged-r3 `Match`-into-L0 decision); stays gated = concrete
+  L3 syntax (Q1/Q6, KC-2/M-002-external), the `unsafe` L3 spelling (Q8), and stage-1 static grading
+  (Q3, incl. the open implicit-flows decision). **Status stays Draft**: this pass makes the ratification
+  scope crisp and presents it; the maintainer performs the `Draft → Accepted` transition (append-only).
+  No normative content changed — §10 is a readiness map, not a new design.
 - **2026-06-10 (r3) — Draft, two foundational requirements added (maintainer direction).**
   **S6 (self-sufficiency / AI-independence):** Mycelium is a complete SWE programming language
   runnable with no AI/LLM in the loop — models are an optional co-authoring convenience, never a
