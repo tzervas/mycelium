@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0003 |
-| **Status** | **Accepted (r2)** (solidified from the research pass; r2 scope note per ADR-013) |
+| **Status** | **Accepted (r3)** (r2 scope note per ADR-013; r3 §4.1 erratum reconciling the permute / bind-unbind tags with the §4 "Net") |
 | **Type** | Foundational / normative |
 | **Date** | June 08, 2026 |
 | **Depends on** | RFC-0001 (`VSA` Repr kind, `Hypervector` slot, `ModelId` registry, `CapacityBound`/`CrosstalkBound`, lattice); ADR-008 (VSA optional submodule); ADR-010 (bound kernels); Research Findings **T0.2**, **T1.2**, **T1.3**, **T2.2**, **T2.6** |
@@ -30,6 +30,45 @@ Honest tags per the literature (proven = non-asymptotic concentration bounds; em
 | **Sparse / block codes** (k-active) | algebraic part **Proven** | **Proven** via Bloom / Counting-Bloom analysis (Clarkson Thms 22–23; first rigorous set-*intersection*) | **Proven** |
 
 Net: `bind`/`unbind` (MAP, BSC) and `permute` (all) are **Exact/algebraic**; `bundle` is **Proven** for MAP-I, sparse/Bloom, on-expectation BSC, and **Empirical** for HRR/FHRR; **HRR/FHRR `unbind` is Empirical and is the residual weak link.** Binding arity k blows up capacity super-exponentially → deep compositions cannot honestly carry tight Proven bounds.
+
+> ⚠️ **The table cells above are superseded for two entries by the §4.1 erratum (r3):** the `permute`
+> column is **`Exact`** for every model (not `Proven`), and the HRR/FHRR **bind/unbind** cell splits
+> into **bind `Exact`, unbind `Empirical`**. The cells are preserved as written (append-only); §4.1 is
+> the authoritative reading and is what `mycelium-vsa` implements.
+
+### 4.1 Erratum (r3) — `permute` is `Exact`; HRR/FHRR `bind` is `Exact`, `unbind` is `Empirical`
+
+The §4 table (r2) contradicts its own **Net** line on two entries, and the contradiction surfaced
+during the 2026-06 code review (finding A3-01/A3-02): the code (`mycelium-vsa::matrix.rs`) follows the
+Net line, the table cells say otherwise. This erratum resolves the contradiction **in favour of the
+Net line**, on a checked algebraic basis (the honesty rule forbids ratifying a stronger tag without
+one — here the *weaker-or-equal*, more honest reading is the algebraically exact one):
+
+- **`permute` is `Exact` for all models.** Permutation is a *fixed coordinate permutation* (typically
+  a circular shift): a bijection on the hypervector that preserves the alphabet (it relabels
+  components, never altering ±1 / bit / real / complex values) and is exactly invertible by the
+  inverse permutation. It introduces **no** approximation, so it is `Exact`/algebraic — like `neg` or
+  a relabeling. The table's "**Proven**; error grows quadratically in sequence length (Clarkson Thm
+  9)" conflated the *operation* with **sequence-decoding error growth**: the quadratic error is a
+  property of *retrieving an item from a permutation-encoded, bundled sequence* (a `bundle` + repeated
+  `permute` + `unbind`/cleanup composition), arising from the **bundle** superposition crosstalk — not
+  from the `permute` step. That composition error remains governed by the `bundle`/`unbind` cells
+  (unchanged); the `permute` operation in isolation is `Exact`. Basis: research **T1.2** ("permute
+  Exact everywhere") and the bijection argument above.
+
+- **HRR/FHRR `bind` is `Exact`; `unbind` is `Empirical`.** The r2 cell lumped bind and unbind as "at
+  most `Empirical` (single-factor)". But `bind` (circular convolution for HRR; elementwise complex
+  multiplication for FHRR) is a deterministic, exact algebraic operation; the lossy part is **`unbind`**
+  — the *approximate inverse* that is not self-inverse and needs cleanup, which stays `Empirical` and
+  remains "the residual weak link" exactly as the Net line says (RR-13, unchanged). Splitting the
+  cell makes the per-operation tag honest (VR-5): the operation that is exact is tagged `Exact`, the
+  operation that is lossy is tagged `Empirical`. (This supersedes the prior, non-citable "issue #61"
+  rationale that the code comment referenced.)
+
+Unchanged by this erratum: every `bundle` tag, the BSC "Proven on expectation" qualifier, the
+HRR/FHRR `unbind` `Empirical` weak link, and the capacity-bound side-conditions (§5). The per-model ×
+per-op tags asserted in `mycelium-vsa/tests/matrix.rs` are the authoritative encoding of this
+corrected matrix.
 
 ## 5. Sparsity placement (T1.3) — resolved; feeds RFC-0001
 - **Declared sparsity *class*** (`Sparse{max_active:k}`) is a **static refinement** `{v | activeCount v ≤ k}`, SMT-discharged exactly as Liquid Haskell checks length/bounds. **Feasible today.**
@@ -65,6 +104,14 @@ Provides `bind/unbind/...` as RFC-0001 prims over `VSA`; populates `Meta.bound` 
 
 ## Meta — changelog
 
+- **2026-06-15 (r3) — §4.1 erratum.** Reconcile the §4 guarantee-tag table with its own "Net" line on
+  two entries, on a checked algebraic basis: `permute` is `Exact` for all models (the table's "Proven"
+  conflated the operation with sequence-decoding error growth, which belongs to `bundle`/`unbind`);
+  and the HRR/FHRR bind/unbind cell splits into bind `Exact` (exact algebraic op) / unbind `Empirical`
+  (the lossy approximate inverse — the residual weak link, unchanged). Table cells preserved
+  (append-only); §4.1 is authoritative. Aligns the normative matrix with `mycelium-vsa::matrix.rs` /
+  `tests/matrix.rs`. Resolves review findings A3-01/A3-02 (H4/H5). No code tag changes (the code
+  already followed the Net line); supersedes the non-citable "issue #61" rationale.
 - **2026-06-10 (r2) — scope note (ADR-013).** `spore` = the content-addressed deployable unit;
   this RFC's reconstruction manifest is one component of it; `spore(v)` is the degenerate
   single-value case. Manifest contents/schema unchanged. Resolves ADR-012 §7.4.

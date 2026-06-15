@@ -16,9 +16,10 @@
 //!   [`VsaError::NestedBundleUnsupported`](crate::VsaError)); permute `Exact`.
 //! - **BSC** — XOR bind/unbind `Exact`; bundle `Proven` **on expectation** (Heim / Yi & Achour —
 //!   weaker than w.p. ≥ 1−δ, tagged accordingly in the docs); circular-shift permute `Exact`.
-//! - **HRR / FHRR** — bind algebraic `Exact` (issue #61); **unbind the residual `Empirical`
-//!   weak link** (not self-inverse, needs cleanup; at most `Empirical` single-factor); bundle
-//!   `Empirical` (Gaussian/asymptotic); permute `Exact`.
+//! - **HRR / FHRR** — bind algebraic `Exact` (RFC-0003 §4.1 erratum, r3: `bind` is the exact
+//!   algebraic op — convolution / complex product — while `unbind` is the lossy one); **unbind the
+//!   residual `Empirical` weak link** (not self-inverse, needs cleanup; at most `Empirical`
+//!   single-factor); bundle `Empirical` (Gaussian/asymptotic); permute `Exact`.
 //! - **SBC (sparse)** — algebraic part `Proven`; bundle `Proven` via the Bloom / Counting-Bloom
 //!   analysis (Clarkson Thms 22–23); permute `Exact`.
 

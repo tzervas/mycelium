@@ -96,17 +96,21 @@ Makes the JSON schema an enforced contract on both sides and closes the tamper v
 - **Verify:** the schema round-trip/emit-validate test + the A6/A1 probes (extra-fields,
   `EmpiricalFit{trials:0}`, tag-rename) now rejected.
 
-### WS3 — VSA tag honesty + RFC-0003 reconciliation · effort M · risk medium · **has a decision**
+### WS3 — VSA tag honesty + RFC-0003 reconciliation · effort M · risk medium · **decision settled; erratum LANDED**
 
 Findings: **H4** (A3-01/C1-03), **H5** (A3-02), **H6** (A3-03/C1-02), A3-04, A3-05, A3-06/C1-04,
 A3-07, A3-08, A3-09, A3-10.
 
-> **Decision required (append-only, normative).** RFC-0003 §4's *table* (Proven permute) and its
-> *Net* prose (Exact permute) contradict each other, and the code took the stronger reading
-> (H4/H5). Two honest resolutions: **(a)** issue an append-only RFC-0003 erratum/r3 ratifying the
-> Exact reading with a cited basis (if the algebraic argument holds), then keep the code; or
-> **(b)** downgrade the code tags to match the table until a basis lands. This must be settled
-> *before* the code change — it routes through the `docs-review`/`changelog` discipline.
+> **Decision settled (2026-06-15): option (a) — erratum ratifying Exact, keep the code.** RFC-0003 is
+> now Accepted **(r3)** with a §4.1 erratum (append-only) grounding `permute = Exact` for all models
+> and the HRR/FHRR `bind Exact` / `unbind Empirical` split on a checked algebraic basis. This closes
+> **H4 and H5** with no code tag change (the code already matched the Net line); the code comment's
+> non-citable "issue #61" rationale was replaced by the §4.1 citation.
+>
+> **Remaining WS3 (code):** **H6** (A3-03/C1-02, `Proven` capacity must check bipolar-alphabet +
+> distinct-item side-conditions), A3-04 (MAP-I/MAP-B bind alphabet checks), A3-05 (`Bundle.hs` header
+> vs README), A3-06/C1-04 (on-expectation `Proven` qualifier), A3-07 (`EmptyCodebook` variant),
+> A3-08/09/10 (test gaps).
 
 - After the decision: realign `matrix.rs` (or the RFC) so code and the normative table agree
   cell-by-cell; ground or remove the "issue #61" citation (H5).

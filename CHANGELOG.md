@@ -37,6 +37,17 @@ corpus, not released software. Versioning will begin when the kernel does.
     citation provenance, Nit). The outward-rounding guarantee holds for all current call paths,
     which construct these types via `new`/`exact`/the composition methods.
 
+### Changed (deep-review remediation — Wave 1)
+- **RFC-0003 → Accepted (r3): §4.1 erratum** reconciling the §4 guarantee-tag table with its own
+  "Net" line, resolving review findings **A3-01 / A3-02 (H4/H5)**. On a checked algebraic basis:
+  `permute` is `Exact` for every model (the table's "Proven" conflated the permutation *operation* —
+  an exactly-invertible coordinate shift — with sequence-decoding error growth, which belongs to the
+  `bundle`/`unbind` path), and the HRR/FHRR bind/unbind cell splits into bind `Exact` (exact algebraic
+  convolution / complex product) and unbind `Empirical` (the lossy approximate inverse — the residual
+  weak link, unchanged). Append-only: the r2 table cells are preserved, §4.1 is authoritative. **No
+  code tag changes** — `mycelium-vsa::matrix.rs` / `tests/matrix.rs` already followed the Net line;
+  the non-citable "issue #61" rationale in the code comment is replaced by the §4.1 citation.
+
 ### Added (advisory review artifact)
 - **Deep review (2026-06):** `docs/reviews/2026-06-14-deep-review/` — a four-stage advisory
   review (correctness + test-quality, security audit, quality/style vs the house rules, and a
