@@ -54,7 +54,12 @@ Nine workstreams, each an independently-reviewable PR. Every workstream ships it
 regression test that fails without the fix** (the "mutant-witness" discipline from Stage D) and
 re-runs the relevant Stage-A probes to confirm the previously-MISSED mutants are now caught.
 
-### WS1 — Numerics honesty hardening (trusted base) · effort M · risk low
+### WS1 — Numerics honesty hardening (trusted base) · effort M · risk low · **LANDED (Wave 1)**
+
+> **Status (2026-06-15):** implemented and merged on the working branch. A2-01/02/03/04/06/07/08
+> done with regression tests (each citing its finding ID as a mutant-witness); workspace tests,
+> `clippy -D warnings`, and `fmt` green. **Deferred (tracked):** A2-05 (private kernel-type fields —
+> a cross-crate API change, kept out of the rounding fix) and A2-09 (citation provenance, Nit).
 
 The single most on-theme workstream; it repairs the trusted-base checker the whole honesty story
 rests on. Findings: **H1** (A2-01/C1-01), **H2** (A2-02), **H3** (A2-03), A2-04, A2-05, A2-06,

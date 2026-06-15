@@ -22,6 +22,7 @@
 pub mod cert;
 pub mod error;
 pub mod prob;
+mod round;
 
 pub use cert::{
     accuracy_to_probability, basis_strength, check_error_claim, check_union_claim,

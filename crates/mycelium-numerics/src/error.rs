@@ -3,24 +3,41 @@
 //! ε-magnitude bounds compose through **affine arithmetic** (the ADR-010 §1 choice — sound,
 //! compositional, *correlation-aware*; the Daisy/Rosa + FloVer lineage). The semantic domain is the
 //! [`AffineForm`] `x̂ = x₀ + Σ xᵢ·εᵢ` over noise symbols `εᵢ ∈ [−1, +1]`; its **radius** `Σ|xᵢ|` is the
-//! sound ε on the deviation from the central value. Linear ops (`add`/`sub`/`neg`/`scale`) are
-//! *exact* on the form (shared noise symbols cancel — the correlation awareness); `mul` is nonlinear,
-//! so its second-order remainder is over-approximated onto a fresh noise symbol.
+//! sound ε on the deviation from the central value. Linear ops (`add`/`sub`/`neg`/`scale`) are exact
+//! in their *algebraic structure* (shared noise symbols cancel — the correlation awareness); `mul` is
+//! nonlinear, so its second-order remainder is over-approximated onto a fresh noise symbol.
+//!
+//! **The compositions are computed in f64, and a `Proven` ε that travels in a bound must be a *true*
+//! upper bound** — so every bound-increasing quantity is rounded **outward** (the [`crate::round`]
+//! helpers), and each operation folds the magnitude of its own floating-point round-off into the
+//! reserved [`ROUNDOFF_SYM`] term so [`AffineForm::radius`] stays a sound enclosure under f64
+//! arithmetic (WS1; A2-01). An operation that is exact in f64 (e.g. integer sums, power-of-two
+//! scales) adds no round-off term, so an exact composition stays exact.
 //!
 //! The scalar [`ErrorBound`] `{eps, norm}` is the projection that travels in a [`mycelium_core::Bound`]
 //! (`BoundKind::Error`). Its compositions are the *conservative* (worst-case, correlation-free)
 //! projections used when only the magnitudes — not the affine structure — are available (the
-//! interpreter's case, M-204). All three normative composition properties hold: **Soundness**
-//! (the composed `eps` is a true upper bound on the deviation), **Monotonicity** (never tighter than
-//! the inputs justify), **Determinism** (identical inputs → identical `eps`).
+//! interpreter's case, M-204), likewise outward-rounded. All three normative composition properties
+//! hold: **Soundness** (the composed `eps` is a true upper bound on the deviation, including f64
+//! round-off), **Monotonicity** (never tighter than the inputs justify), **Determinism** (identical
+//! inputs → identical `eps`).
 
 use std::collections::BTreeMap;
 
 use mycelium_core::NormKind;
 
+use crate::round;
+
 /// A noise-symbol identifier. Distinct symbols model *independent* uncertainty sources; a shared
 /// symbol models a *correlated* one (the affine-arithmetic advantage over interval arithmetic).
 pub type NoiseSym = u64;
+
+/// The reserved noise symbol carrying the **accumulated floating-point round-off of the affine
+/// operations themselves** (WS1; A2-01). Each op folds the magnitude of its own center/coefficient
+/// rounding here, so [`AffineForm::radius`] stays a sound enclosure under f64 rounding. It is never a
+/// user symbol — callers must not pass `u64::MAX` to [`AffineForm::uncertain`] or as a `mul` fresh
+/// symbol.
+pub const ROUNDOFF_SYM: NoiseSym = u64::MAX;
 
 /// An affine form `x₀ + Σ xᵢ·εᵢ` with noise symbols `εᵢ ∈ [−1, +1]` (ADR-010 §1). The
 /// **concretization** is the interval `[x₀ − radius, x₀ + radius]` with `radius = Σ|xᵢ|`; linear
@@ -43,15 +60,25 @@ impl AffineForm {
         }
     }
 
-    /// `center ± |radius|` carried on a single noise symbol `sym`. A non-positive or non-finite
-    /// `radius` collapses to the [`constant`](Self::constant) (no uncertainty term stored).
+    /// `center ± radius` carried on a single noise symbol `sym`, or `None` if `center` is non-finite,
+    /// `radius` is non-finite, or `radius` is negative — an out-of-range uncertainty is an explicit
+    /// refusal, **never** a silent collapse to an exact form (house rule 2; A2-03). A `radius` of
+    /// exactly `0` is the [`constant`](Self::constant) (no term stored). `sym` must not be
+    /// [`ROUNDOFF_SYM`].
     #[must_use]
-    pub fn uncertain(center: f64, sym: NoiseSym, radius: f64) -> Self {
+    pub fn uncertain(center: f64, sym: NoiseSym, radius: f64) -> Option<Self> {
+        if !center.is_finite() || !radius.is_finite() || radius < 0.0 {
+            return None;
+        }
+        debug_assert_ne!(
+            sym, ROUNDOFF_SYM,
+            "ROUNDOFF_SYM is reserved for accumulated round-off"
+        );
         let mut terms = BTreeMap::new();
-        if radius.is_finite() && radius > 0.0 {
+        if radius > 0.0 {
             terms.insert(sym, radius);
         }
-        AffineForm { center, terms }
+        Some(AffineForm { center, terms })
     }
 
     /// The central value `x₀`.
@@ -60,10 +87,15 @@ impl AffineForm {
         self.center
     }
 
-    /// The total deviation `radius = Σ|xᵢ|` — the sound ε on `|value − center|` (ADR-010 §1).
+    /// The total deviation `radius = Σ|xᵢ|` — the sound ε on `|value − center|` (ADR-010 §1). The sum
+    /// is accumulated with **outward rounding** (A2-01), so the returned radius is never below the
+    /// real Σ|xᵢ|; it includes the [`ROUNDOFF_SYM`] term carrying the operations' own round-off.
     #[must_use]
     pub fn radius(&self) -> f64 {
-        self.terms.values().map(|c| c.abs()).sum()
+        self.terms
+            .values()
+            .map(|c| c.abs())
+            .fold(0.0, round::add_up)
     }
 
     /// Evaluate the form at a noise assignment `ε(sym) ∈ [−1, +1]`. Used to *check* soundness: for a
@@ -100,14 +132,21 @@ impl AffineForm {
         }
     }
 
-    /// Addition — *exact* on the form: shared noise symbols combine (correlated uncertainty cancels),
-    /// independent ones accumulate.
+    /// Addition — *exact* on the form's structure (shared noise symbols combine, so correlated
+    /// uncertainty cancels), with the new center's own f64 round-off folded into [`ROUNDOFF_SYM`] so
+    /// the concretization stays a sound enclosure (A2-01). When the center sum is exact the round-off
+    /// is `0` and no term is added.
     #[must_use]
     pub fn add(&self, other: &AffineForm) -> Self {
         let mut terms = self.terms.clone();
         for (sym, coeff) in &other.terms {
             Self::accumulate(&mut terms, *sym, *coeff);
         }
+        Self::accumulate(
+            &mut terms,
+            ROUNDOFF_SYM,
+            round::add_err(self.center, other.center).abs(),
+        );
         AffineForm {
             center: self.center + other.center,
             terms,
@@ -120,16 +159,21 @@ impl AffineForm {
         self.add(&other.neg())
     }
 
-    /// Scaling by an exact constant — exact (`c·x̂`).
+    /// Scaling by a constant `c` (`c·x̂`), with the round-off of the center and each scaled
+    /// coefficient folded into [`ROUNDOFF_SYM`] (A2-01). Exact (no round-off term) when every product
+    /// is exact — e.g. scaling by a power of two.
     #[must_use]
     pub fn scale(&self, c: f64) -> Self {
+        let mut terms = BTreeMap::new();
+        let mut roundoff = round::mul_err(c, self.center).abs();
+        for (sym, coeff) in &self.terms {
+            roundoff = round::add_up(roundoff, round::mul_err(c, *coeff).abs());
+            Self::accumulate(&mut terms, *sym, c * coeff);
+        }
+        Self::accumulate(&mut terms, ROUNDOFF_SYM, roundoff);
         AffineForm {
             center: c * self.center,
-            terms: self
-                .terms
-                .iter()
-                .map(|(s, coeff)| (*s, c * coeff))
-                .collect(),
+            terms,
         }
     }
 
@@ -140,17 +184,27 @@ impl AffineForm {
     /// operand.
     #[must_use]
     pub fn mul(&self, other: &AffineForm, fresh: NoiseSym) -> Self {
+        debug_assert!(
+            !self.terms.contains_key(&fresh) && !other.terms.contains_key(&fresh),
+            "AffineForm::mul: fresh symbol {fresh} already appears in an operand (A2-06)"
+        );
+        debug_assert_ne!(fresh, ROUNDOFF_SYM, "fresh symbol must not be ROUNDOFF_SYM");
         let mut terms: BTreeMap<NoiseSym, f64> = BTreeMap::new();
-        // Linear part: x0·(other terms) + y0·(self terms).
+        // Linear part: x0·(other terms) + y0·(self terms), tracking each product's round-off.
+        let mut roundoff = round::mul_err(self.center, other.center).abs();
         for (sym, coeff) in &other.terms {
+            roundoff = round::add_up(roundoff, round::mul_err(self.center, *coeff).abs());
             Self::accumulate(&mut terms, *sym, self.center * coeff);
         }
         for (sym, coeff) in &self.terms {
+            roundoff = round::add_up(roundoff, round::mul_err(other.center, *coeff).abs());
             Self::accumulate(&mut terms, *sym, other.center * coeff);
         }
-        // Second-order remainder onto the fresh symbol.
-        let remainder = self.radius() * other.radius();
+        // Second-order remainder (outward-rounded) onto the caller's fresh symbol; the linear
+        // products' own f64 round-off goes to the reserved channel so the form stays sound (A2-01).
+        let remainder = round::mul_up(self.radius(), other.radius());
         Self::accumulate(&mut terms, fresh, remainder);
+        Self::accumulate(&mut terms, ROUNDOFF_SYM, roundoff);
         AffineForm {
             center: self.center * other.center,
             terms,
@@ -183,11 +237,12 @@ impl ErrorBound {
     }
 
     /// `eps(x ± y) = eps(x) + eps(y)` — the affine-`add` projection (1-Lipschitz; ℓ-norm triangle
-    /// inequality). Sound and monotone. `None` if the norms differ (no silent norm coercion).
+    /// inequality). Sound and monotone; the sum is **rounded outward** so the composed bound is never
+    /// below the real `eps(x) + eps(y)` (A2-01). `None` if the norms differ (no silent norm coercion).
     #[must_use]
     pub fn add(&self, other: &ErrorBound) -> Option<Self> {
         (self.norm == other.norm).then_some(ErrorBound {
-            eps: self.eps + other.eps,
+            eps: round::add_up(self.eps, other.eps),
             norm: self.norm,
         })
     }
@@ -204,22 +259,29 @@ impl ErrorBound {
         *self
     }
 
-    /// `eps(c·x) = |c|·eps(x)` — exact scaling.
+    /// `eps(c·x) = |c|·eps(x)` — scaling, **rounded outward** (A2-01).
     #[must_use]
     pub fn scale(&self, c: f64) -> Self {
         ErrorBound {
-            eps: c.abs() * self.eps,
+            eps: round::mul_up(c.abs(), self.eps),
             norm: self.norm,
         }
     }
 
     /// `eps(x·y) ≤ |x₀|·eps(y) + |y₀|·eps(x) + eps(x)·eps(y)` — sound first-order error propagation
-    /// for a product about central magnitudes `x0_mag = |x₀|`, `y0_mag = |y₀|`. `None` if the norms
-    /// differ.
+    /// for a product about central magnitudes `x0_mag = |x₀|`, `y0_mag = |y₀|`. Every product and sum
+    /// is **rounded outward** so the composed bound stays a true upper bound (A2-01). `None` if the
+    /// norms differ.
     #[must_use]
     pub fn mul(&self, other: &ErrorBound, x0_mag: f64, y0_mag: f64) -> Option<Self> {
-        (self.norm == other.norm).then_some(ErrorBound {
-            eps: x0_mag.abs() * other.eps + y0_mag.abs() * self.eps + self.eps * other.eps,
+        if self.norm != other.norm {
+            return None;
+        }
+        let xy = round::mul_up(x0_mag.abs(), other.eps);
+        let yx = round::mul_up(y0_mag.abs(), self.eps);
+        let ee = round::mul_up(self.eps, other.eps);
+        Some(ErrorBound {
+            eps: round::add_up(round::add_up(xy, yx), ee),
             norm: self.norm,
         })
     }

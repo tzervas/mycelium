@@ -8,6 +8,35 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (deep-review remediation — Wave 1)
+- **WS1 — `mycelium-numerics` honesty hardening (findings A2-01, A2-02, A2-03, A2-04, A2-06,
+  A2-07, A2-08; advances VR-3/VR-5, SC-2).** A `Proven`/`Empirical` ε or δ that travels in a
+  `Bound` is now a *true* upper bound under floating point, closing the headline honesty hole where
+  `compose_error_bound` emitted `ProvenThm` on round-to-nearest f64 that could fall below the real
+  bound:
+  - New private `round` module: directed (outward) rounding (`add_up`/`mul_up`) via the Knuth/Møller
+    two-sum and an FMA, rounding a bound-increasing result up **only when IEEE actually rounded
+    down** — so an exact composition (e.g. `Exact ⊕ Exact`) stays exactly `0` and is not silently
+    inflated to "approximate".
+  - Every ε/δ composition rounds outward: `ErrorBound::{add,scale,mul}`, `AffineForm::radius`, the
+    `mul` second-order remainder, `ProbBound::union`, and `ApRhlJudgment::seq`. Each `AffineForm`
+    op also folds the magnitude of its own center/coefficient round-off into a reserved
+    `ROUNDOFF_SYM`, so `radius` is a sound enclosure under f64 (A2-01).
+  - The tier-i checker's tolerance is now **relative** (a few ULPs of the re-derivation) instead of
+    an absolute `1e-12` that was vacuous for tiny bounds — a claim of `eps = 0` against a re-derived
+    `~5e-13` is now correctly **rejected** (A2-02).
+  - `AffineForm::uncertain` returns `Option`, refusing a non-finite center / non-finite or negative
+    radius instead of silently collapsing infinite uncertainty to an exact form (A2-03, house rule
+    2); `compose_error_bound` re-validates the composed magnitude and refuses an overflow to
+    non-finite rather than emitting a fabricated `inf` bound (A2-04); `AffineForm::mul`
+    `debug_assert`s its fresh-symbol precondition (A2-06).
+  - Property tests strengthened to assert with **zero slack** over both deviation signs (A2-07) and
+    new regression/refusal tests added, each citing the finding ID as its mutant-witness (A2-08).
+  - Deferred within WS1 (tracked, not yet done): A2-05 (make the kernel-type fields private — a
+    cross-crate API change, kept separate from this rounding fix) and A2-09 (composed-`Proven`
+    citation provenance, Nit). The outward-rounding guarantee holds for all current call paths,
+    which construct these types via `new`/`exact`/the composition methods.
+
 ### Added (advisory review artifact)
 - **Deep review (2026-06):** `docs/reviews/2026-06-14-deep-review/` — a four-stage advisory
   review (correctness + test-quality, security audit, quality/style vs the house rules, and a

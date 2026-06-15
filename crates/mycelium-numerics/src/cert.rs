@@ -22,8 +22,18 @@ use crate::prob::ProbBound;
 const AFFINE_CITATION: &str = "ADR-010 §1 affine-arithmetic ε-composition (Daisy/Rosa; FloVer)";
 /// Method tag for an `Empirical` composed ε bound (the weakest contributing basis was a fit).
 const COMPOSED_METHOD: &str = "composed (ADR-010 §1 affine ε)";
-/// Absolute slack when comparing a claimed bound to the re-derivation (floating-point headroom).
-const CHECK_TOL: f64 = 1e-12;
+/// **Relative** slack when comparing a claimed bound to the re-derivation, scaled to the re-derived
+/// magnitude (a few ULPs). The re-derivation is itself outward-rounded (A2-01), so this only absorbs
+/// a producer's last-ULP rounding — and, being relative, it stays meaningful for tiny bounds where
+/// the previous absolute `1e-12` made the check vacuous (A2-02): a claim of `eps = 0` against a
+/// re-derived `5e-13` is now correctly rejected.
+const CHECK_REL_TOL: f64 = 8.0 * f64::EPSILON;
+
+/// The slack permitted for a claim against a sound re-derivation `recomputed`: a few ULPs of the
+/// re-derived magnitude (zero when the re-derivation is exactly `0`, so an exact claim must match).
+fn check_slack(recomputed: f64) -> f64 {
+    recomputed.abs() * CHECK_REL_TOL
+}
 
 /// The error-kernel operation a composition records — re-evaluated by the tier-i checker and used by
 /// the interpreter's [`compose_error_bound`] (M-204). Magnitudes for the nonlinear `Mul` are the
@@ -103,7 +113,7 @@ pub fn check_error_claim(inputs: &[ErrorBound], op: ErrorOp, claimed: ErrorBound
     if recomputed.norm != claimed.norm {
         return CheckOutcome::Malformed;
     }
-    if claimed.eps + CHECK_TOL >= recomputed.eps {
+    if claimed.eps + check_slack(recomputed.eps) >= recomputed.eps {
         CheckOutcome::Valid
     } else {
         CheckOutcome::Rejected {
@@ -118,7 +128,7 @@ pub fn check_error_claim(inputs: &[ErrorBound], op: ErrorOp, claimed: ErrorBound
 #[must_use]
 pub fn check_union_claim(inputs: &[ProbBound], claimed: ProbBound) -> CheckOutcome {
     let recomputed = ProbBound::union(inputs);
-    if claimed.delta + CHECK_TOL >= recomputed.delta {
+    if claimed.delta + check_slack(recomputed.delta) >= recomputed.delta {
         CheckOutcome::Valid
     } else {
         CheckOutcome::Rejected {
@@ -272,6 +282,9 @@ pub fn compose_error_bound(inputs: &[&Bound], op: ErrorOp) -> Option<ComposedBou
     let errors: Option<Vec<ErrorBound>> = inputs.iter().map(|b| bound_as_error(b)).collect();
     let errors = errors?;
     let composed = recompute_error(&errors, op)?;
+    // Re-validate the composed magnitude: a composition that overflows to non-finite is refused, not
+    // emitted as a fabricated bound (A2-04).
+    let composed = ErrorBound::new(composed.eps, composed.norm)?;
 
     let bases: Vec<&BoundBasis> = inputs.iter().map(|b| &b.basis).collect();
     let strength = bases

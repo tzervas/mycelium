@@ -31,14 +31,19 @@ impl ProbBound {
         (delta.is_finite() && (0.0..=1.0).contains(&delta)).then_some(ProbBound { delta })
     }
 
-    /// The **union bound**: `P(⋃ Eᵢ) ≤ min(1, Σ δᵢ)` (ADR-010 §2). Saturates at 1 (a sound
-    /// over-approximation — probabilities never exceed 1). Empty input ⇒ [`certain`](Self::certain).
+    /// The **union bound**: `P(⋃ Eᵢ) ≤ min(1, Σ δᵢ)` (ADR-010 §2). The sum is accumulated with
+    /// **outward rounding** so the composed δ is never below the real Σδᵢ (A2-01), then saturates at 1
+    /// (a sound over-approximation — probabilities never exceed 1). Empty input ⇒
+    /// [`certain`](Self::certain).
     #[must_use]
     pub fn union<'a, I>(bounds: I) -> Self
     where
         I: IntoIterator<Item = &'a ProbBound>,
     {
-        let sum: f64 = bounds.into_iter().map(|b| b.delta).sum();
+        let sum = bounds
+            .into_iter()
+            .map(|b| b.delta)
+            .fold(0.0, crate::round::add_up);
         ProbBound {
             delta: sum.min(1.0),
         }
@@ -76,8 +81,8 @@ impl ApRhlJudgment {
     #[must_use]
     pub fn seq(&self, next: &ApRhlJudgment) -> Self {
         ApRhlJudgment {
-            eps: self.eps + next.eps,
-            delta: (self.delta + next.delta).min(1.0),
+            eps: crate::round::add_up(self.eps, next.eps),
+            delta: crate::round::add_up(self.delta, next.delta).min(1.0),
         }
     }
 }
