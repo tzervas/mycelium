@@ -89,7 +89,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 | Task | Epic | Pri | Depends on | Maps to | Readiness |
 |---|---|---|---|---|---|
 | **M-301** Direct-LLVM-IR AOT backend (kernel subset) | E3-7 (prereq) | P1 | M-150, M-110 | RFC-0004 §2 / ADR-007/009 | **In progress (2026-06-15)** — bit subset landed (`mycelium-mlir::llvm`); trit subset is the next slice |
-| **M-302** interp↔native differential (extend M-151) | E3-7 (prereq) | P1 | M-301, M-151 | NFR-7 / VR-4 / RR-12 | Ready after M-301 |
+| **M-302** interp↔native differential (extend M-151) | E3-7 (prereq) | P1 | M-301, M-151 | NFR-7 / VR-4 / RR-12 | **Done (2026-06-15)** — `tests/native_differential.rs` (bit subset; toolchain-gated skip) |
 | **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | Ready after M-302 |
 | **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | Ready (local) |
 | **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | Ready (local) |
@@ -270,8 +270,32 @@ established strength.
   guarantee is upgraded: the reconstructed `Value` is `Exact` only because the bit ops are exact and
   the subset refuses approximate inputs (VR-5).
 
+### 9.2 M-302 — interp↔native differential · Batch J · P1 · done 2026-06-15
+
+- **Goal (from §2 / issues.yaml).** Extend the M-151 differential so the kernel corpus runs under
+  the interpreter **and** the real compiled native artifact, asserting observable equivalence through
+  the M-210 checker; a divergent lowering must be caught (NFR-7/VR-4/RR-12).
+- **Delivered.** `crates/mycelium-mlir/tests/native_differential.rs`: a small deterministic
+  **bit-subset** corpus (const, `core.id`, `let`/`var`, `bit.not/and/or/xor`, a nested
+  `not(a xor b)`) is run through the M-110 reference interpreter and
+  `mycelium_mlir::compile_and_run` (the M-301 compiled path), asserting the observable
+  `(repr, payload, guarantee)` matches **and** the pair validates through
+  `check(.., ObservationalEquiv, Certificate::exact(), Observational)` — the same shared TV checker
+  the M-151 env-machine differential uses. A second test compiles two different programs
+  (`not(A)` vs `id(A)`) and asserts the checker reports `NotValidated` — the differential
+  discriminates, so a pass is meaningful (guard 7, mutant-witness comments inline). Both tests
+  **skip** on `AotError::ToolchainMissing` (no `llc`/`clang`), never a false failure.
+- **Honesty / scope.** Scoped to the bit subset (what M-301 lowers today); the trit subset joins the
+  corpus when M-301's trit slice lands. The env-machine M-151 differential is unchanged and still
+  covers the full corpus (swaps/trits) — M-302 *adds* the compiled-artifact path, it does not
+  replace it.
+
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-302 interp↔native differential lands):** the compiled M-301 path is now checked
+  against the reference interpreter on the bit-subset corpus through the single shared M-210 checker
+  (`tests/native_differential.rs`), with a discrimination test and graceful toolchain-absent skips.
+  §2 M-302 row → done; §9.2 added. Next: M-303 E1 perf verdict on the native path.
 - **2026-06-15 (M-301 bit-subset slice lands):** the direct-LLVM-IR AOT backend
   (`mycelium-mlir::llvm`) compiles the bit subset to native code via `llc`/`clang` and reads the
   result back — the first *compiled* execution path (RFC-0004 §2 direct-LLVM fallback). §2 M-301 row

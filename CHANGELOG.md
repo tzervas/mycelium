@@ -8,6 +8,14 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — interp↔native differential, M-302)
+- **`mycelium-mlir/tests/native_differential.rs`** — extends the M-151 differential to the *compiled*
+  path: a bit-subset corpus runs under the reference interpreter and `compile_and_run`, asserting
+  observable `(repr, payload, guarantee)` equality **and** validation through the single shared M-210
+  `ObservationalEquiv` checker (NFR-7/VR-4/RR-12). A discrimination test confirms the differential is
+  non-vacuous (two different programs → `NotValidated`). Skips gracefully when `llc`/`clang` are
+  absent. (phase-3.md §9.2)
+
 ### Added (Phase 3 — native execution path, M-301 bit-subset slice)
 - **`mycelium-mlir::llvm`** — a **direct-LLVM-IR AOT backend** that genuinely compiles the kernel
   **bit subset** (`core.id`, `bit.not/and/or/xor` over `Binary{w}`) to native code. `emit_llvm_ir`
