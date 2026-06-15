@@ -7,10 +7,13 @@
 use std::collections::BTreeMap;
 
 use mycelium_core::{
-    Bound, BoundKind, DecodeProcedure, DecodeSpec, GuaranteeStrength, Meta, Payload, Provenance,
-    Recipe, ReconInfo, ReconMode, Repr, SparsityClass, Value,
+    Bound, BoundBasis, BoundKind, CleanupShape, DecodeProcedure, DecodeSpec, GuaranteeStrength,
+    InitStrategy, Meta, Payload, Provenance, Recipe, ReconInfo, ReconMode, Repr, SparsityClass,
+    Value,
 };
-use mycelium_vsa::{capacity, reconstruct_role, CleanupMemory, MapI, VsaError};
+use mycelium_vsa::{
+    capacity, reconstruct_factors, reconstruct_role, CleanupMemory, MapI, StopReason, VsaError,
+};
 
 const D: u32 = 2048; // ≥ requiredDim(2, 1e-2) — the record bundles two bound pairs
 const DELTA: f64 = 1e-2;
@@ -259,5 +262,143 @@ fn indexed_manifests_and_weak_retrievals_refuse_explicitly() {
     assert!(matches!(
         reconstruct_role(&model, &strict, &record, "color", &wrong_role, &memory),
         Err(VsaError::BelowCleanupThreshold { .. })
+    ));
+}
+
+// --- Resonator decode (RFC-0009; M-350) ---------------------------------------------------------
+
+const DR: u32 = 4096; // ≥ MAPI_RESONATOR_PROFILE.min_dim
+
+/// A deterministic bipolar atom at the resonator dimension.
+fn atom_r(seed: u64) -> Vec<f64> {
+    let mut s = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1);
+    (0..DR)
+        .map(|_| {
+            s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            if (s >> 63) & 1 == 1 {
+                1.0
+            } else {
+                -1.0
+            }
+        })
+        .collect()
+}
+
+fn hv_value_r(data: Vec<f64>) -> Value {
+    Value::new(
+        Repr::Vsa {
+            model: "MAP-I".to_owned(),
+            dim: DR,
+            sparsity: SparsityClass::Dense,
+        },
+        Payload::Hypervector(data),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+fn resonator_bound() -> Bound {
+    Bound {
+        kind: BoundKind::Probability { delta: 0.01 },
+        basis: BoundBasis::EmpiricalFit {
+            trials: 1_000,
+            method: "resonator profile".to_owned(),
+        },
+    }
+}
+
+/// End-to-end: a `Resonator` manifest (with the r4 decode params) factorizes a known two-factor bind
+/// product into the right codebook atoms, gated by the trial-validated profile (RFC-0009; §10.2/§11).
+#[test]
+fn resonator_decode_recovers_factors_end_to_end() {
+    let model = MapI::new(DR);
+
+    // Two codebooks of 8 bipolar atoms each (the in-regime point F=2, k=8, d=4096).
+    let mut c0 = CleanupMemory::new(DR);
+    let mut c1 = CleanupMemory::new(DR);
+    let mut a0 = Vec::new();
+    let mut a1 = Vec::new();
+    for j in 0..8u64 {
+        let x = atom_r(1000 + j);
+        let y = atom_r(2000 + j);
+        c0.insert(format!("c0:{j}"), x.clone()).unwrap();
+        c1.insert(format!("c1:{j}"), y.clone()).unwrap();
+        a0.push(x);
+        a1.push(y);
+    }
+    // True tuple (3, 5); the product s = x₃ ⊛ y₅.
+    let x3 = hv_value_r(a0[3].clone());
+    let y5 = hv_value_r(a1[5].clone());
+    let record = model.bind_values(&x3, &y5).unwrap();
+
+    // A Resonator manifest carrying the r4 decode params (codebooks referenced by content hash).
+    let manifest = ReconInfo::new(
+        ReconMode::IndexedRetrieval,
+        "MAP-I",
+        DR,
+        vec![record.content_hash()], // manifest codebook refs (content-addressed)
+        None,
+        DecodeSpec {
+            procedure: DecodeProcedure::Resonator,
+            cleanup_threshold: None,
+            factors: Some(vec![x3.content_hash(), y5.content_hash()]),
+            iteration_budget: Some(50),
+            cleanup: Some(CleanupShape::Softmax),
+            beta: Some(6.0),
+            tau_lock: Some(0.9),
+            init: Some(InitStrategy::UniformSuperposition),
+            seed: Some(7),
+        },
+        resonator_bound(),
+    )
+    .unwrap();
+
+    let out = reconstruct_factors(&model, &manifest, &record, &[c0, c1]).expect("recovers factors");
+    assert_eq!(out.trace.stop, StopReason::Converged);
+    assert_eq!(out.factors[0].index, 3);
+    assert_eq!(out.factors[1].index, 5);
+}
+
+/// An out-of-regime request (F = 3 > the profile's max_factors) is an explicit refusal, never a
+/// stretched tag (RFC-0009 §5.2). The profile gate fires before the loop runs.
+#[test]
+fn resonator_decode_refuses_out_of_regime() {
+    let model = MapI::new(DR);
+    let codebooks: Vec<CleanupMemory> = (0..3)
+        .map(|i| {
+            let mut c = CleanupMemory::new(DR);
+            for j in 0..8u64 {
+                c.insert(format!("{i}:{j}"), atom_r(7000 + i * 100 + j))
+                    .unwrap();
+            }
+            c
+        })
+        .collect();
+    let record = hv_value_r(atom_r(1));
+    let manifest = ReconInfo::new(
+        ReconMode::IndexedRetrieval,
+        "MAP-I",
+        DR,
+        vec![record.content_hash()],
+        None,
+        DecodeSpec {
+            procedure: DecodeProcedure::Resonator,
+            cleanup_threshold: None,
+            factors: Some(vec![record.content_hash()]),
+            iteration_budget: Some(50),
+            cleanup: None,
+            beta: None,
+            tau_lock: None,
+            init: None,
+            seed: None,
+        },
+        resonator_bound(),
+    )
+    .unwrap();
+    assert!(matches!(
+        reconstruct_factors(&model, &manifest, &record, &codebooks),
+        Err(VsaError::OutsideEmpiricalProfile { .. })
     ));
 }

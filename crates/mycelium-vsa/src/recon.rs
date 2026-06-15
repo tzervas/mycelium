@@ -9,9 +9,10 @@
 //! confidence/margin, thresholded against the manifest's own `cleanup_threshold` — a
 //! below-threshold retrieval is an explicit error, never a silent low-quality answer (G2).
 
-use mycelium_core::{DecodeProcedure, ReconInfo, ReconMode, Value};
+use mycelium_core::{CleanupShape, DecodeProcedure, InitStrategy, ReconInfo, ReconMode, Value};
 
-use crate::{CleanupMemory, Match, VsaError, VsaModel};
+use crate::resonator::{self, Cleanup, Factorization, Init, ResonatorParams};
+use crate::{CleanupMemory, Match, VsaError, VsaModel, MAPI_RESONATOR_PROFILE};
 
 /// Compositionally reconstruct the filler bound under `role` inside `record`, following the
 /// manifest: requires a `CompositionalReconstruction` manifest with a `Cleanup` decode whose
@@ -68,6 +69,68 @@ pub fn reconstruct_role<M: VsaModel>(
         });
     }
     Ok(hit)
+}
+
+/// Factorize `record` — a bind product `s = x₁ ⊛ … ⊛ x_F` — into one codebook atom per slot, following
+/// a **`Resonator`** manifest (RFC-0009; M-350). Mirrors [`reconstruct_role`] for the resonator decode:
+/// it checks the model/dim, requires `DecodeProcedure::Resonator`, reads the iteration budget + the
+/// optional decode params (`cleanup`/`beta`/`tau_lock`/`init`/`seed`, RFC-0003 §6.1) into a
+/// [`ResonatorParams`], **gates on the trial-validated [`MAPI_RESONATOR_PROFILE`]** (an out-of-regime
+/// request is an explicit [`VsaError::OutsideEmpiricalProfile`], never a stretched tag — RFC-0009 §5.2),
+/// then runs [`resonator::factorize`]. The decoder-side thresholds not carried by the kernel manifest
+/// (confidence, ambiguity-margin, oscillation window — RFC-0003 §6.1) take their `ResonatorParams`
+/// defaults. Codebook resolution (`ContentHash` → [`CleanupMemory`]) is caller-provided, exactly as
+/// `reconstruct_role` takes its `memory` — the `codebooks` are one cleanup memory per factor slot.
+///
+/// The honesty contract is [`resonator::factorize`]'s: a [`Factorization`] is returned **only** on a
+/// clean `Converged` verdict clearing every gate; non-convergence, oscillation, and below-threshold are
+/// explicit errors carrying the trace. The guarantee is `Empirical` (the profile's
+/// [`bound`](crate::ResonatorProfile::bound)), never `Proven` (schema-enforced, `mycelium-core::recon`).
+pub fn reconstruct_factors<M: VsaModel>(
+    model: &M,
+    manifest: &ReconInfo,
+    record: &Value,
+    codebooks: &[CleanupMemory],
+) -> Result<Factorization, VsaError> {
+    if manifest.model() != model.model_id() {
+        return Err(VsaError::NotThisModel {
+            expected: model.model_id(),
+        });
+    }
+    let decode = manifest.decode();
+    // This executor is the resonator decode; a non-resonator manifest is the wrong procedure for it.
+    let iteration_budget = match (decode.procedure, decode.iteration_budget) {
+        (DecodeProcedure::Resonator, Some(b)) => b,
+        _ => return Err(VsaError::NotCompositional),
+    };
+
+    // Map the manifest's (additive) decode params onto ResonatorParams; absent params take the
+    // recommended MAP-I defaults (RFC-0003 §6.1). The numeric ranges were already checked by
+    // `ReconInfo::new`, so we only translate here.
+    let mut params = ResonatorParams::mapi_default(iteration_budget, decode.seed.unwrap_or(0));
+    params.cleanup = match decode.cleanup {
+        Some(CleanupShape::ArgMax) => Cleanup::ArgMax,
+        // Softmax (explicit or default): use the manifest β when present, else the default.
+        _ => Cleanup::Softmax {
+            beta: decode.beta.unwrap_or(match params.cleanup {
+                Cleanup::Softmax { beta } => beta,
+                Cleanup::ArgMax => 6.0,
+            }),
+        },
+    };
+    if let Some(tau) = decode.tau_lock {
+        params.tau_lock = tau;
+    }
+    if let Some(InitStrategy::SeededGuess) = decode.init {
+        params.init = Init::SeededGuess;
+    }
+
+    // Gate on the validated regime BEFORE running — out-of-regime is an explicit refusal (§5.2).
+    let sizes: Vec<usize> = codebooks.iter().map(CleanupMemory::len).collect();
+    MAPI_RESONATOR_PROFILE.check(codebooks.len(), &sizes, manifest.dim())?;
+
+    let s = hv_payload(model, manifest.dim(), record)?;
+    resonator::factorize(model, s, codebooks, &params)
 }
 
 fn hv_payload<'a, M: VsaModel>(model: &M, dim: u32, v: &'a Value) -> Result<&'a [f64], VsaError> {
