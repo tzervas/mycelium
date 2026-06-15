@@ -15,11 +15,47 @@
 //!   distinguished by digit order.
 //! - `Unpacked` — 1 trit/byte.
 //!
+//! **A5-08 stand-in note.** This base-3 `TL2` is a placeholder: at 5 trits/byte it realizes 1.6
+//! b/w, whereas the published bitnet.cpp TL2 figure (and the selector's cost model in
+//! `mycelium-select`) is **1.67 b/w**. The discrepancy is inert for *selection* (both are < 2.0, so
+//! TL2 still wins the exhaustive cheapest) and is to be reconciled when the native TL2 kernel lands;
+//! see the matching note on `packing_bits_per_element` in `mycelium-select/src/lib.rs`.
+//!
 //! Decoding is **total** (never panics): an out-of-range code/byte folds `mod 3`, so reading a
 //! buffer under a mismatched scheme yields *some* trit sequence deterministically — a misread, not
 //! a crash. Round-trip under the *same* scheme is the identity ([`pack_trits`] ∘ [`unpack_trits`]).
 
 use mycelium_core::{PackScheme, Trit};
+
+/// A packing-codec error. A short buffer is **explicit** (A5-03): `unpack_trits` never silently
+/// truncates to fewer trits than requested — a buffer that cannot hold `count` trits under the
+/// scheme's density is the diagnostic [`PackError::BufferTooShort`], not a quiet partial decode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PackError {
+    /// The byte buffer is too short to decode `count` trits under `scheme`: `count` needs at least
+    /// `needed` bytes (`count.div_ceil(trits_per_byte)`) but only `got` were supplied.
+    BufferTooShort {
+        /// The trit count requested.
+        count: usize,
+        /// The minimum bytes the scheme requires for `count` trits.
+        needed: usize,
+        /// The bytes actually supplied.
+        got: usize,
+    },
+}
+
+impl core::fmt::Display for PackError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            PackError::BufferTooShort { count, needed, got } => write!(
+                f,
+                "buffer too short to decode {count} trits: need {needed} bytes, got {got}"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for PackError {}
 
 /// Trits-per-byte for `scheme` (the packing density's structural form).
 fn group_size(scheme: PackScheme) -> usize {
@@ -101,12 +137,27 @@ pub fn pack_trits(trits: &[Trit], scheme: PackScheme) -> Vec<u8> {
     bytes
 }
 
-/// Decode `count` trits from `bytes` under `scheme`. **Total**: a code/byte outside the scheme's
-/// valid range folds `mod 3`, so reading a buffer packed under a *different* scheme yields a
-/// deterministic (wrong) trit sequence — the misread, never a panic.
-#[must_use]
-pub fn unpack_trits(bytes: &[u8], scheme: PackScheme, count: usize) -> Vec<Trit> {
+/// Decode `count` trits from `bytes` under `scheme`. A code/byte outside the scheme's valid range
+/// folds `mod 3`, so reading a buffer packed under a *different* scheme yields a deterministic
+/// (wrong) trit sequence — the misread, never a panic.
+///
+/// A buffer too short for `count` trits is the explicit [`PackError::BufferTooShort`] (A5-03):
+/// the codec never silently returns fewer trits than requested. When the buffer is long enough,
+/// decoding cannot fail.
+pub fn unpack_trits(
+    bytes: &[u8],
+    scheme: PackScheme,
+    count: usize,
+) -> Result<Vec<Trit>, PackError> {
     let g = group_size(scheme);
+    let needed = count.div_ceil(g);
+    if bytes.len() < needed {
+        return Err(PackError::BufferTooShort {
+            count,
+            needed,
+            got: bytes.len(),
+        });
+    }
     let mut out = Vec::with_capacity(count);
     'outer: for (bi, &byte) in bytes.iter().enumerate() {
         for i in 0..g {
@@ -130,7 +181,7 @@ pub fn unpack_trits(bytes: &[u8], scheme: PackScheme, count: usize) -> Vec<Trit>
             out.push(trit);
         }
     }
-    out
+    Ok(out)
 }
 
 /// Re-materialize trits through a pack-then-read round-trip where the buffer is **packed as**
@@ -139,8 +190,16 @@ pub fn unpack_trits(bytes: &[u8], scheme: PackScheme, count: usize) -> Vec<Trit>
 /// soundness hazard the E3 differential catches (RFC-0004 §8; NFR-7).
 #[must_use]
 pub fn relayout_trits(trits: &[Trit], packed_as: PackScheme, read_as: PackScheme) -> Vec<Trit> {
-    let bytes = pack_trits(trits, packed_as);
+    let mut bytes = pack_trits(trits, packed_as);
+    // A denser `packed_as` (5 trits/byte) emits fewer bytes than a sparser `read_as` (4 trits/byte)
+    // needs for the same count; zero-pad to the bytes `read_as` requires so the read is the modeled
+    // misread (a wrong layout tag over the *same* buffer, zero-extended) — never an explicit short.
+    let needed = trits.len().div_ceil(group_size(read_as));
+    if bytes.len() < needed {
+        bytes.resize(needed, 0);
+    }
     unpack_trits(&bytes, read_as, trits.len())
+        .expect("buffer zero-padded to read_as's required length, so the read cannot be short")
 }
 
 #[cfg(test)]
@@ -177,7 +236,7 @@ mod tests {
     fn round_trip_is_identity_under_the_same_scheme() {
         for s in ALL_SCHEMES {
             let t = sample();
-            let back = unpack_trits(&pack_trits(&t, s), s, t.len());
+            let back = unpack_trits(&pack_trits(&t, s), s, t.len()).unwrap();
             assert_eq!(back, t, "scheme {s:?} must round-trip losslessly");
             // relayout with a matching tag is the identity.
             assert_eq!(relayout_trits(&t, s, s), t);
@@ -213,10 +272,40 @@ mod tests {
 
     #[test]
     fn decoding_is_total_on_arbitrary_bytes() {
-        // Reading arbitrary bytes (e.g. a TL2 buffer under a 2-bit scheme) never panics.
+        // Reading arbitrary bytes (e.g. a TL2 buffer under a 2-bit scheme) never panics, as long as
+        // the buffer is long enough for the requested count. The sparsest scheme is `Unpacked` at
+        // 1 trit/byte, so 5 bytes supply at least 5 trits under *every* scheme; request 5 so the
+        // length precondition holds across the board (A5-03 makes a short buffer an explicit error,
+        // not a panic or a silent truncation — exercised separately below).
         let bytes = [0xFF, 0x00, 0xAB, 0x7C, 242];
         for s in ALL_SCHEMES {
-            let _ = unpack_trits(&bytes, s, 9);
+            let _ = unpack_trits(&bytes, s, 5).unwrap();
         }
+    }
+
+    #[test]
+    fn a_short_buffer_is_an_explicit_error_not_a_silent_truncation() {
+        // A5-03 mutant-witness: before the fix `unpack_trits` silently returned fewer trits than
+        // requested when `bytes` was too short. Now it is an explicit `BufferTooShort`.
+        // I2S packs 4 trits/byte: 1 byte holds at most 4 trits, so asking for 5 must refuse.
+        assert_eq!(
+            unpack_trits(&[0u8], PackScheme::I2S, 5),
+            Err(PackError::BufferTooShort {
+                count: 5,
+                needed: 2,
+                got: 1,
+            })
+        );
+        // An empty buffer cannot supply even one trit.
+        assert_eq!(
+            unpack_trits(&[], PackScheme::Tl2, 1),
+            Err(PackError::BufferTooShort {
+                count: 1,
+                needed: 1,
+                got: 0,
+            })
+        );
+        // The exact-fit boundary succeeds (no off-by-one refusal): 2 bytes hold 8 trits under I2S.
+        assert!(unpack_trits(&[0u8, 0u8], PackScheme::I2S, 8).is_ok());
     }
 }

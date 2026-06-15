@@ -453,6 +453,16 @@ mod tests {
     use super::*;
 
     #[test]
+    fn op_rel_eps_constants_match_their_cited_formulas() {
+        // A5-07: pin the disclosed per-op ε to the exact formulas of their ProvenThm citation, so
+        // the literals cannot silently drift from `F32_OP_CITATION`/`BF16_OP_CITATION` (VR-5).
+        // F32: single-rounding unit roundoff u = β^(1−p)/2 = 2⁻²⁴ (IEEE binary32, p = 24).
+        assert_eq!(F32_OP_REL_EPS, 2f64.powi(-24));
+        // BF16: two-rounding composition u₁ + u₂ + u₁u₂ ≤ 2⁻⁸ + 2⁻²³ (the disclosed slack bound).
+        assert_eq!(BF16_OP_REL_EPS, 2f64.powi(-8) + 2f64.powi(-23));
+    }
+
+    #[test]
     fn unsupported_dtypes_are_explicit() {
         assert_eq!(
             DenseSpace::new(4, ScalarKind::F64),

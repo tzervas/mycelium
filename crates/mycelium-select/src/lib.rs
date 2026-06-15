@@ -244,6 +244,12 @@ fn packing_bits_per_element(scheme: PackScheme) -> f64 {
         PackScheme::Unpacked => 8.0,
         PackScheme::TwoBitPerTrit | PackScheme::I2S | PackScheme::Tl1 => 2.0,
         PackScheme::FiveTritPerByte => 1.6,
+        // A5-08: this cost prices TL2 at the *published* 1.67 b/w (RFC-0004 §5 / DN-01), but the
+        // stand-in codec in `mycelium-mlir::pack` currently realizes TL2 as a base-3 5-trits/byte
+        // packing — i.e. the same 1.6 b/w as `FiveTritPerByte`. The discrepancy is intentional and
+        // inert for selection (both 1.6 and 1.67 are < 2.0, so TL2 wins the exhaustive cheapest
+        // either way), and is to be reconciled when the native bitnet.cpp TL2 kernel lands. See the
+        // matching note in `mycelium-mlir/src/pack.rs`.
         PackScheme::Tl2 => 1.67,
     }
 }
@@ -473,6 +479,15 @@ pub enum SelectError {
         /// The site that refused it.
         site: &'static str,
     },
+    /// A trit-packed layout was requested for a non-ternary source `Repr` (A5-02). A
+    /// [`PhysicalLayout::TritPacked`] record only describes how *trits* sit in bytes (RFC-0004 §5;
+    /// DN-01); recording it onto a `Binary`/`Dense`/`Vsa` value's `Meta` would be a silent, latent
+    /// mis-tag (a layout that contradicts its own representation). The packing site refuses it
+    /// rather than producing the unsound record.
+    NonTernarySource {
+        /// The source `Repr` that does not admit a trit packing.
+        src: Repr,
+    },
 }
 
 impl core::fmt::Display for SelectError {
@@ -486,6 +501,12 @@ impl core::fmt::Display for SelectError {
             }
             SelectError::WrongSiteKind { chosen, site } => {
                 write!(f, "candidate {chosen:?} does not fit the {site} site")
+            }
+            SelectError::NonTernarySource { src } => {
+                write!(
+                    f,
+                    "a trit-packed layout cannot describe a non-ternary source {src:?}"
+                )
             }
         }
     }
@@ -537,6 +558,11 @@ pub fn select(
     };
     let chosen = policy.candidates[chosen_index].clone();
     let explanation = Explanation {
+        // A5-08 (perf nit): `policy_ref()` recomputes the policy's content address — a full
+        // serialize + hash — on *every* `select` call, even though the policy is immutable for the
+        // life of a `&SelectionPolicy`. Acceptable at the current scale (a ~5-candidate table), but
+        // a memoized/cached ref (compute once at construction) is the obvious win if `select` ever
+        // lands on a hot path. Behavior-neutral; left as a deliberate note, not changed here.
         policy: policy.policy_ref(),
         policy_name: policy.name.clone(),
         inputs: inputs.clone(),
@@ -712,11 +738,22 @@ pub fn bitnet_packing_policy() -> SelectionPolicy {
 /// picks a candidate by index (e.g. `Some(0)` forces `I2_S`); out of range is an explicit
 /// [`SelectError::OverrideOutOfRange`]. A non-`Packing` candidate at this site is the explicit
 /// [`SelectError::WrongSiteKind`] (`select_packing`'s contract) — never a coercion.
+///
+/// The produced layout is always a [`PhysicalLayout::TritPacked`], which only describes a *ternary*
+/// value's byte layout (RFC-0004 §5; DN-01). Recording it for a non-`Ternary` source would be a
+/// silent latent mis-tag, so a non-ternary `inputs.src` is the explicit
+/// [`SelectError::NonTernarySource`] (A5-02 well-formedness) — checked before selection, never a
+/// layout that contradicts its own representation.
 pub fn select_layout(
     policy: &SelectionPolicy,
     inputs: &SelectionInputs,
     forced: Option<usize>,
 ) -> Result<(PhysicalLayout, Explanation), SelectError> {
+    if !matches!(inputs.src, Repr::Ternary { .. }) {
+        return Err(SelectError::NonTernarySource {
+            src: inputs.src.clone(),
+        });
+    }
     let (scheme, explanation) = select_packing(policy, inputs, forced)?;
     Ok((layout_of(scheme), explanation))
 }
@@ -725,6 +762,9 @@ pub fn select_layout(
 /// onto a returned `Meta` (M-I5 lossless via [`Meta::with_physical`]), returning the updated `Meta`
 /// and the EXPLAIN trace. The src `Repr` drives the cost model's element count; the layout record
 /// is the schedule artifact, not a type change.
+///
+/// A non-`Ternary` `src` is the explicit [`SelectError::NonTernarySource`] (A5-02): a trit-packed
+/// layout cannot honestly describe a non-ternary value, so no mis-tagged `Meta` is ever produced.
 pub fn record_packing_layout(
     policy: &SelectionPolicy,
     src: &Repr,
