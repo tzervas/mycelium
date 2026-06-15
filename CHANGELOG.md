@@ -8,6 +8,21 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — L1 nested patterns + Maranget usefulness, M-320)
+- **`mycelium-l1::usefulness`** — Maranget's usefulness algorithm `U(P, q)` over a typed pattern
+  matrix (Maranget 2007), witness-returning. L1 `match` now supports **nested** constructor/literal
+  patterns, with coverage *checked* (W7): **exhaustiveness** (a `_` must not be useful — the witness
+  names a concrete missing case, e.g. `S(Z)`, reported verbatim) and **redundancy** (an arm covered by
+  the earlier rows is unreachable, subsuming the M-320 duplicate-literal check).
+- **Checker + evaluator + totality** lifted from flat to nested: a recursive, type-directed
+  `check_pattern` (binders typed by field type, linearity enforced); a unified `infer_match` (data +
+  `Binary`/`Ternary`); a recursive `try_match` in the evaluator; and structural-descent smallness
+  seeded from **nested** sub-binders (so `S(S(m)) → m` descends and admits `matured`).
+- **Scope/honesty:** RFC-0007 is **Draft** and the prototype non-normative; this is the analysis half.
+  The Maranget *decision-tree compilation to the flat kernel `Match`* (Maranget 2008; RFC-0007 §3) is
+  the elaborator/L0 path and lands with full L1-in-Core-IR. Coverage stays checked, no guarantee
+  touched. (phase-3.md §2 / §9.9 / Meta)
+
 ### Added (Phase 3 — BitNet packed-ternary acceleration, M-360 first increment; closes the open E1 compute-throughput item)
 - **`mycelium-mlir::bitnet`** — the canonical BitNet **ternary multiply-accumulate**
   (`y = Σ digit(wᵢ)·xᵢ`, ternary weights · integer activations) emitted as **inspectable** LLVM IR

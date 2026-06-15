@@ -202,11 +202,17 @@ fn descend_walk(
                 let mut added = Vec::new();
                 if scrut_small {
                     if let Pattern::Ctor(_, subs) = pattern {
+                        // Every binder under a constructor of a smaller-or-equal scrutinee is itself
+                        // strictly smaller — including binders nested under further constructors
+                        // (e.g. `m` in `S(S(m))`), so structural descent works through nested
+                        // patterns, not just one level deep.
+                        let mut nested = Vec::new();
                         for s in subs {
-                            if let Pattern::Ident(b) = s {
-                                if smaller.insert(b.clone()) {
-                                    added.push(b.clone());
-                                }
+                            pattern_binders(s, &mut nested);
+                        }
+                        for b in nested {
+                            if smaller.insert(b.clone()) {
+                                added.push(b);
                             }
                         }
                     }

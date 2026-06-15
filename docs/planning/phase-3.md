@@ -94,7 +94,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 | **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()` |
 | **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | **Done (2026-06-15)** — `mycelium-build` crate (decide + content-addressed `BuildCertificate`) |
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | **Done (2026-06-15)** — `mycelium-build::cache` (`BuildCache`, request-addressed) |
-| **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` landed; **RFC ratification is maintainer's** |
+| **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses; recursive matcher; nested structural descent); **RFC ratification is maintainer's** |
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
 | **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`); NFR-7 checked |
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **needs-design** |
@@ -439,8 +439,46 @@ established strength.
   number is whatever was measured (VR-5 / G3). The `unsafe` fn-pointer call carries a `// SAFETY:`
   justification under ADR-014 (the bounds checks discharge the in-range obligation).
 
+### 9.9 M-320 — L1 nested patterns + Maranget usefulness · Batch K · P1 · in progress 2026-06-15
+
+- **Goal (from §2 / RFC-0007 §4.4/§4.7).** Lift the flat-match restriction so L1 `match` supports
+  **nested** constructor/literal patterns, with exhaustiveness and redundancy *checked* (W7) — the
+  L1 doc's named big item.
+- **Delivered.** New `mycelium-l1::usefulness`: the Maranget usefulness algorithm `U(P, q)` over a
+  typed pattern matrix (Maranget 2007), returning a **witness** when useful. Two derived checks drive
+  the typechecker — **exhaustiveness** (a `_` must not be useful; its witness is a concrete missing
+  case, e.g. `S(Z)`, reported verbatim) and **redundancy** (an arm covered by the earlier rows is
+  unreachable; this subsumes the M-320 duplicate-literal check). `checkty` gained a recursive,
+  type-directed `check_pattern` (nested ctor/literal patterns, binders typed by field type, linearity)
+  and a unified `infer_match` (data + `Binary`/`Ternary`, no more flat-only refusal). The evaluator's
+  `try_match` matches nested patterns recursively (binders bound left-to-right; a partial nested
+  failure simply falls through). The totality checker now seeds smallness from **nested** sub-binders
+  of a smaller scrutinee (`S(S(m)) → m` descends), so structural recursion through nested patterns is
+  admissible for `matured`.
+- **Tests.** `usefulness` unit tests (flat/nested exhaustiveness, deep witness `S(S(_))`, redundancy,
+  literal-needs-default); checker tests (nested typechecks, precise missing-witness `S(Z)`, nested
+  redundancy, nested structural descent gates `matured`); evaluator end-to-end (`pred2` over depth-2
+  `Nat` selects and binds correctly). All existing flat-match tests still pass.
+- **Honesty / scope.** RFC-0007 is **Draft** and the prototype **non-normative**; this advances the
+  surface checker + reference evaluator. The Maranget *decision-tree compilation to the flat kernel
+  `Match`* (Maranget 2008; RFC-0007 §3 — "compiled away by the elaborator") is the **analysis half**
+  here; the codegen half lands with full L1-in-Core-IR (the RFC-0001 revision). Coverage stays
+  *checked*, never assumed (W7); no guarantee is touched.
+
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-320 nested patterns — Maranget usefulness; exhaustiveness/redundancy with
+  witnesses):** L1 `match` now supports **nested** constructor/literal patterns. New
+  `mycelium-l1::usefulness` implements Maranget's `U(P, q)` over a typed pattern matrix (witness-
+  returning); the typechecker derives **exhaustiveness** (a `_` must not be useful — the witness names
+  a concrete missing case like `S(Z)`) and **redundancy** (an arm covered by earlier rows is
+  unreachable, subsuming the duplicate-literal check) from it. `check_pattern` checks nested patterns
+  type-directed (binders typed by field type, linearity enforced); the evaluator's `try_match` matches
+  nested patterns recursively; the totality checker seeds smallness from nested sub-binders so
+  `S(S(m)) → m` descends (admits `matured`). §2 M-320 row updated, §9.9 added. **Scope/honesty:**
+  RFC-0007 is Draft / prototype non-normative; this is the analysis half — Maranget *compilation* to
+  the flat kernel `Match` (the elaborator/L0 path) lands with full L1-in-Core-IR. Coverage stays
+  checked (W7), no guarantee touched.
 - **2026-06-15 (M-360 first increment — BitNet I2_S runtime-data dot kernel; closes the open E1
   compute-throughput item):** new `mycelium-mlir::bitnet` emits the canonical BitNet ternary
   multiply-accumulate (`Σ digit(wᵢ)·xᵢ`) as inspectable LLVM IR (`i64 @myc_bitnet_dot(ptr,ptr,i64)`:
