@@ -8,6 +8,30 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — BitNet hand-vectorized SIMD kernel, M-360; E3-6; FR-C3 / G3; RFC-0004 §5/§8)
+- **`mycelium-mlir::simd` — a hand-vectorized (8-wide) I2_S packed-ternary dot kernel.** The scalar
+  BitNet kernels decode one trit per loop step; this emits `i64 @myc_bitnet_dot_simd(ptr %w, ptr %x,
+  i64 %n)` that unpacks + multiply-accumulates **8 trits per iteration** with LLVM vector types:
+  broadcast the two packed bytes across 8 lanes (`shufflevector` mask `<0,0,0,0,1,1,1,1>`), bring each
+  lane's 2-bit code to bit 0 (`lshr` by the constant vector `<0,2,4,6,0,2,4,6>`), `& 3` → code, `− 1`
+  → signed weight, `mul <8 x i32>` with the contiguous activations, widen + accumulate into an
+  `<8 x i64>` phi, then horizontally reduce (`@llvm.vector.reduce.add.v8i64`) with a **scalar epilogue**
+  for the `n mod 8` tail. Every vector op is visible in the emitted IR (no opaque pass — FR-C3 /
+  RFC-0004 §6); the vector loads carry explicit `align 1`/`align 4`. It reuses `BitnetDotKernel`'s
+  bounds-checked `call` (a `pub(crate) from_loaded` ctor — DRY; same C signature + I2_S density model),
+  so a short buffer is still an explicit refusal, never an OOB read. **The vector unpack is
+  correctness-critical, so it is differential-checked against the scalar kernel as the oracle** —
+  `tests/simd_differential.rs` runs a corpus bracketing the 8-lane width and the tail
+  (n ∈ {0,1,7,8,9,15,16,17,31,33,64,255,256,257,1000}) and validates each scalar↔SIMD pair **through
+  the single shared M-210 checker** (`ObservationalEquiv`/`Exact`), with a mismatched-buffer
+  discrimination test (guard 7) so a green pass is not vacuous. `cargo xtask e1` **§5** times SIMD vs
+  scalar over the same runtime buffer (indicative ≈1.2× — honest: clang already auto-vectorizes the
+  scalar `-O2` loop, so the hand-vectorized gain is real-but-modest; as-measured, no target
+  pre-written). **Scope/honesty (VR-5/G3):** **I2_S only** this increment (TL1/TL2 vectorized unpacks,
+  plus the true 1.67-b/w bitnet.cpp **TL2 layout** that closes A5-08, are next); no parity with bitnet.cpp's
+  AVX2/AVX512 LUT kernels is claimed; same exact dot product, no guarantee upgraded; the scalar kernels
+  stay the oracle. (phase-3.md §2 / §9.8 / Meta)
+
 ### Added (Phase 3 — RFC-0011 the keystone: L0 `Match` / L1-in-Core-IR, ratified-decision; M-320/M-310)
 - **`docs/rfcs/RFC-0011-L0-Match-and-L1-in-Core-IR.md` (Accepted — decision; enactment sequenced) — the named RFC-0001 revision.**
   The L0 Core IR is frozen at five nodes (`Const/Var/Let/Op/Swap`); RFC-0007 designed five L1 nodes but

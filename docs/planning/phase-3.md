@@ -99,7 +99,7 @@ completed. Readiness is relative to the corpus + landed Phase-1/2 deps.
 | **M-330** AI co-authoring loop (generate→feedback→fix) | E3-2 | P1 | M-140, E2-6 | NFR-2 / SC-5b | Harness local; **run needs LLM API** (KC-2-adjacent) |
 | **M-340** JIT path (shares lowering + runtime specialization) | E3-4 | P2 | M-301, ADR-014 | ADR-009 / RR-12 | **In progress (2026-06-15)** — in-process `dlopen` JIT (`mycelium-mlir::jit`), NFR-7 checked; **+ runtime-specialization layer** (`mycelium-mlir::specialize`): bakes the runtime-known weight vector into the dot kernel (zero lanes elided, unpack dropped, ±1 → add/sub), validated generic↔specialized through the shared M-210 checker, E1 §4 records the **measured** speedup (no target pre-written) |
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **Design drafted (2026-06-15)** — RFC-0009 (convergence regime, `Empirical`-ceiling honesty, never-silent verdicts); prototype gated on ratification |
-| **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | **In progress (2026-06-15)** — runtime-data dot kernels for **all three** bitnet packings (I2_S/TL1/TL2; in-process JIT, inspectable per-scheme unpack IR), each oracle-checked; E1 §3 compute-throughput measured (I2_S). **SIMD** next |
+| **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | **In progress (2026-06-15)** — runtime-data dot kernels for **all three** bitnet packings (I2_S/TL1/TL2; in-process JIT, inspectable per-scheme unpack IR), each oracle-checked; E1 §3 compute-throughput measured. **+ hand-vectorized SIMD** (`mycelium-mlir::simd`, 8-wide I2_S, vector-IR unpack) differential-checked against the scalar oracle through the shared M-210 checker (corpus brackets width+tail), E1 §5 measured. Remaining: TL1/TL2 SIMD + the **true 1.67-b/w TL2 layout** (closes A5-08) |
 | **M-370** Native-ternary forward-compat mapping (+ stub target) | E3-7 | P2 | M-150, M-301 | R7 | **Done (2026-06-15)** — `docs/notes/Native-Ternary-Forward-Compat.md`; dialect = stub target |
 | **M-380** Semantic-level projection framework | E3-1 | P2 | E3-3 | FR-C1 / G11 | **needs-design**; *KC-2-contingent* |
 | **M-002** KC-2 LLM-leverage run (carried; gates E3-1 + concrete syntax) | E4 | P0 | M-020 (harness landed) | SC-5b / G10 / KC-2 | **Blocked (external)** — needs LLM API |
@@ -486,6 +486,27 @@ the checked run that established it.
   M-360 increment. No guarantee upgraded; the E1 number is whatever was measured (VR-5 / G3). The
   `unsafe` fn-pointer call carries a `// SAFETY:` justification under ADR-014 (the bounds checks
   discharge the in-range obligation).
+- **Delivered (hand-vectorized SIMD — I2_S).** New `mycelium-mlir::simd`: a **hand-vectorized** I2_S
+  dot kernel (`i64 @myc_bitnet_dot_simd(ptr %w, ptr %x, i64 %n)`) that unpacks + multiply-accumulates
+  **8 trits/iteration** with LLVM vector types — broadcast the two packed bytes across 8 lanes
+  (`shufflevector` mask `<0,0,0,0,1,1,1,1>`), bring each lane's 2-bit code to bit 0 (`lshr` by the
+  constant vector `<0,2,4,6,0,2,4,6>`), mask `& 3`, `− 1` to the signed weight, `mul <8 x i32>` with
+  the contiguous activations, widen, accumulate into an `<8 x i64>` phi, then horizontally reduce
+  (`@llvm.vector.reduce.add.v8i64`) and a **scalar epilogue** finishes the `n mod 8` tail. Every vector
+  op is visible in the emitted IR (no opaque pass — FR-C3 / RFC-0004 §6); the vector loads carry
+  explicit `align 1`/`align 4` so a sub-vector-aligned offset is a legal unaligned load. It reuses
+  `BitnetDotKernel`'s bounds-checked `call` (same C signature + I2_S density model — a
+  `pub(crate) from_loaded` ctor; DRY), so a short buffer is still an explicit refusal. **The vector
+  unpack is correctness-critical, so it is differential-checked**: `tests/simd_differential.rs` runs
+  the SIMD kernel against the **scalar kernel as the oracle** over a corpus bracketing the 8-lane width
+  and the tail (n ∈ {0,1,7,8,9,15,16,17,31,33,64,255,256,257,1000}) and validates each pair **through
+  the shared M-210 checker** (`ObservationalEquiv`/`Exact`), with a mismatched-buffer discrimination
+  test (guard 7). `cargo xtask e1` **§5** times SIMD vs scalar over the same runtime buffer (indicative
+  ≈1.2× — honest: clang already auto-vectorizes the scalar loop at `-O2`, so the hand-vectorized gain
+  is real-but-modest; as-measured, no target pre-written). **Scope (VR-5/G3):** **I2_S only** this
+  increment; TL1/TL2 vectorized unpacks and the **true 1.67-b/w TL2 layout** (A5-08) are next. No
+  parity with bitnet.cpp's AVX2/AVX512 LUT kernels is claimed; same exact dot product, no guarantee
+  upgraded; the scalar kernels stay the oracle.
 
 ### 9.9 M-320 — L1 nested patterns + Maranget usefulness · Batch K · P1 · in progress 2026-06-15
 
@@ -570,6 +591,16 @@ the checked run that established it.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-360 hand-vectorized SIMD — I2_S, first SIMD increment):** new `mycelium-mlir::simd`
+  emits an 8-wide hand-vectorized I2_S dot kernel (vector-IR unpack: `shufflevector` byte-broadcast +
+  per-lane `lshr` + `mul <8 x i32>` + `@llvm.vector.reduce.add.v8i64`, scalar tail for `n mod 8`),
+  reusing `BitnetDotKernel`'s bounds-checked `call` (`from_loaded` ctor, DRY). The correctness-critical
+  vector unpack is differential-checked against the **scalar kernel as the oracle** through the shared
+  M-210 checker over a width/tail corpus (`tests/simd_differential.rs`), with a discrimination test
+  (guard 7). `cargo xtask e1` §5 times SIMD vs scalar (≈1.2×, as-measured; clang already
+  auto-vectorizes the scalar `-O2` loop). §2 M-360 row + §9.8 updated. **Scope:** I2_S only; TL1/TL2
+  SIMD + the true 1.67-b/w TL2 layout (A5-08) next; no bitnet.cpp AVX parity claimed; same exact dot,
+  no guarantee upgraded (VR-5/G3).
 - **2026-06-15 (Phase-3 exit-gate assembly — §6.1 verdict fill, VR-5):** re-read §6 against the landed
   work and filled each gate condition at the strength a checked run established. **Native execution
   path** ✅ met + measured (M-301/302/303; compute throughput now real via M-360 §3 + M-340 §4).

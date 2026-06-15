@@ -183,6 +183,24 @@ pub struct BitnetDotKernel {
 }
 
 impl BitnetDotKernel {
+    /// Wrap an already-compiled + loaded `i64 myc_*(ptr %w, ptr %x, i64 %n)` artifact. `pub(crate)`
+    /// so a sibling codegen module (the M-360 SIMD kernel) reuses this struct's bounds-checked
+    /// [`call`](Self::call) instead of re-rolling the FFI — the SIMD kernel has the identical C
+    /// signature and `scheme` bounds model, only a different (hand-vectorized) body + symbol.
+    pub(crate) fn from_loaded(
+        dir: TmpDir,
+        lib: Lib,
+        fptr: *mut c_void,
+        scheme: PackScheme,
+    ) -> Self {
+        Self {
+            _dir: dir,
+            _lib: lib,
+            fptr,
+            scheme,
+        }
+    }
+
     /// The packing this kernel decodes inline.
     #[must_use]
     pub fn scheme(&self) -> PackScheme {

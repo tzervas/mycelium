@@ -7,7 +7,7 @@
 //! ADR-009); a standalone tiny-kernel artifact compiled here is process-spawn-bound (and constant
 //! inputs constant-fold), so this harness does **not** pronounce "reaches hand-packed perf" (VR-5).
 //!
-//! What it honestly measures, in three sections:
+//! What it honestly measures, in five sections:
 //! 1. **Codec cost** — `pack`/`unpack` round-trip throughput per scheme over the `mycelium_mlir::pack`
 //!    codec the E3 differential (M-251) exercises. The build-phase confirmation that staging is
 //!    cheap to *materialize*.
@@ -28,6 +28,10 @@
 //!    the optimiser drops the unpack and elides the zero lanes, timed against the generic §3 kernel
 //!    over the *same* runtime activation buffer. Both still take runtime activation pointers (no
 //!    constant folding), so the ratio is honest compute-vs-compute; reported as-measured (VR-5).
+//! 5. **Hand-vectorized (SIMD) kernel** (M-360) — the 8-wide I2_S dot kernel
+//!    (`mycelium_mlir::compile_bitnet_dot_simd`) vs the scalar JIT kernel over the same runtime
+//!    buffer; the SIMD unpack is differential-checked against the scalar oracle. Ratio as-measured
+//!    (VR-5); I2_S only this increment.
 //!
 //! No benchmarking dependency (house style): a warmup pass, then the minimum mean over several
 //! batches. Run with `--release` (`cargo run --release -p xtask -- e1`); a debug build is refused.
@@ -39,7 +43,8 @@ use mycelium_core::{Meta, Node, PackScheme, Payload, Provenance, Repr, Trit, Val
 use mycelium_interp::{IdentitySwapEngine, Interpreter, PrimRegistry};
 use mycelium_mlir::pack::{pack_trits, unpack_trits};
 use mycelium_mlir::{
-    compile, compile_bitnet_dot_for, compile_specialized_dot, ternary_dot_ref, AotError,
+    compile, compile_bitnet_dot_for, compile_bitnet_dot_simd, compile_specialized_dot,
+    ternary_dot_ref, AotError,
 };
 
 const BATCHES: usize = 5;
@@ -120,6 +125,8 @@ pub fn run() {
 
     specialize_section(&buf, DIM);
 
+    simd_section(&buf, DIM);
+
     if measured_compute {
         println!(
             "\nE1 verdict: packed-ternary **compute throughput is now measured over runtime data** \
@@ -127,14 +134,16 @@ pub fn run() {
              caveat that blocked §2 is gone: each BitNet dot kernel takes its weight/activation \
              buffers as runtime pointers and runs in-process, so §3 times genuine unpack-compute, not \
              call overhead. Reported against hand-written Rust scalar baselines doing the identical \
-             per-scheme unpack-compute. Still open (honest, VR-5/G3): parity with bitnet.cpp's \
-             hand-tuned **SIMD** kernels (the next M-360 increment), and the true 1.67-b/w bitnet.cpp \
-             **TL2 layout** — the current TL2 kernel decodes the 1.6-b/w base-3 placeholder codec \
-             (A5-08), inert for selection but not yet the published layout. §4 adds the M-340 JIT \
-             runtime-specialization layer: baking the runtime-known weights in (zero lanes elided, \
-             unpack dropped) measured a further speedup over the generic kernel on the same runtime \
-             activations — as-measured, no target pre-written. No perf claim is pre-written; the \
-             numbers above are whatever was measured."
+             per-scheme unpack-compute. §4 adds the M-340 JIT runtime-specialization layer: baking the \
+             runtime-known weights in (zero lanes elided, unpack dropped) measured a further speedup \
+             over the generic kernel on the same runtime activations. §5 adds a **hand-vectorized \
+             (SIMD) I2_S kernel** (8 trits/iteration via vector IR), differential-checked against the \
+             scalar oracle and measured against it. Still open (honest, VR-5/G3): the SIMD path is \
+             **I2_S only** (TL1/TL2 vectorized unpacks next) and is not claimed at parity with \
+             bitnet.cpp's AVX2/AVX512 LUT kernels; and the true 1.67-b/w bitnet.cpp **TL2 layout** — \
+             the current TL2 kernel decodes the 1.6-b/w base-3 placeholder codec (A5-08), inert for \
+             selection but not yet the published layout. No perf claim is pre-written; the numbers \
+             above are whatever was measured."
         );
     } else {
         println!(
@@ -313,6 +322,84 @@ fn specialize_section(weights: &[Trit], dim: usize) {
         "  note: the specialized kernel takes no weight argument (only the runtime activation \
          pointer) — the model's weights are baked in, so the optimiser elides the unpack and the \
          zero lanes. Speedup reported as-measured (VR-5)."
+    );
+}
+
+/// E1 §5 (M-360): time the **hand-vectorized (SIMD)** I2_S dot kernel against the scalar JIT kernel
+/// over the *same* runtime buffers. Both take runtime pointers (no constant folding), so the ratio is
+/// honest compiled-vector vs compiled-scalar on identical work; reported as-measured (no pre-written
+/// target, VR-5). Skips gracefully when `clang` is absent.
+fn simd_section(weights: &[Trit], dim: usize) {
+    println!(
+        "\n== E1 §5: hand-vectorized (SIMD) vs scalar I2_S dot kernel over runtime data (M-360) =="
+    );
+
+    let acts = activations(dim);
+    let oracle_sum = ternary_dot_ref(weights, &acts);
+    let packed = pack_trits(weights, PackScheme::I2S);
+
+    let scalar = match compile_bitnet_dot_for(PackScheme::I2S) {
+        Ok(k) => k,
+        Err(AotError::ToolchainMissing(tool)) => {
+            println!("  skip: native toolchain absent ({tool}) — install clang to measure.");
+            return;
+        }
+        Err(e) => {
+            eprintln!("  scalar kernel compile failed: {e}");
+            return;
+        }
+    };
+    let simd = match compile_bitnet_dot_simd() {
+        Ok(k) => k,
+        Err(AotError::ToolchainMissing(_)) => return,
+        Err(e) => {
+            eprintln!("  SIMD kernel compile failed: {e}");
+            return;
+        }
+    };
+
+    // Correctness gate before timing: both compiled paths must agree with the oracle.
+    let scalar_sum = scalar.call(&packed, &acts, dim).expect("scalar runs");
+    let simd_sum = simd.call(&packed, &acts, dim).expect("SIMD runs");
+    assert_eq!(
+        scalar_sum, oracle_sum,
+        "E1 §5: scalar kernel disagrees with the oracle — refusing to time a wrong kernel"
+    );
+    assert_eq!(
+        simd_sum, oracle_sum,
+        "E1 §5: SIMD kernel disagrees with the oracle — refusing to time a wrong kernel"
+    );
+
+    let iters = 5_000u32;
+    let scalar_ns = bench(iters, || {
+        black_box(
+            scalar
+                .call(black_box(&packed), black_box(&acts), dim)
+                .expect("scalar"),
+        );
+    });
+    let simd_ns = bench(iters, || {
+        black_box(
+            simd.call(black_box(&packed), black_box(&acts), dim)
+                .expect("simd"),
+        );
+    });
+
+    #[allow(clippy::cast_precision_loss)]
+    let (scalar_per, simd_per) = (scalar_ns / dim as f64, simd_ns / dim as f64);
+    let ratio = if simd_ns > 0.0 {
+        scalar_ns / simd_ns
+    } else {
+        0.0
+    };
+    println!(
+        "  scalar {scalar_ns:>10.0} ns ({scalar_per:>5.3} ns/elem)   SIMD (8-wide) {simd_ns:>10.0} ns \
+         ({simd_per:>5.3} ns/elem)   speedup {ratio:>5.2}x"
+    );
+    println!(
+        "  note: both decode the same I2_S runtime buffer; the SIMD kernel unpacks 8 trits/iteration \
+         via vector IR (shuffle + per-lane shift), scalar one. Speedup as-measured (VR-5); I2_S only \
+         this increment (TL1/TL2 SIMD + true-TL2 layout next)."
     );
 }
 
