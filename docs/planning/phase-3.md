@@ -82,9 +82,10 @@ the kernel subset, validated against the interpreter (NFR-7). So the native path
 
 ## 2. The Phase-3 task set (proposed decomposition & readiness)
 
-The epics decompose into `M-3xx` build tasks below. **Issue numbers are pending** — these tasks are
-not yet created on the board; the `idmap.tsv` join lands when they are bootstrapped from
-`issues.yaml` (§8). Readiness is relative to the corpus + landed Phase-1/2 deps.
+The epics decompose into `M-3xx` build tasks below. **Issues created 2026-06-15** — the M-3xx tasks
+are now on the board as **#86–#98**, linked as sub-issues of the E3-1…E3-7 epics (#35–#41), with the
+`idmap.tsv` join landed (§8); the six already-shipped tasks (M-301/302/303/311/312/370) are closed as
+completed. Readiness is relative to the corpus + landed Phase-1/2 deps.
 
 | Task | Epic | Pri | Depends on | Maps to | Readiness |
 |---|---|---|---|---|---|
@@ -234,9 +235,10 @@ established strength.
 - **Append-only with status transitions**, mirroring the ADR/RFC discipline: this file moves
   `Living draft → exit-gate met` only when the §6 gate is met; task rows update in place as their
   issues progress, but gate verdicts (§5) and the E1 perf number never pre-record an upgrade.
-- **Every task row will carry its issue number** once the `M-3xx` tasks are bootstrapped from
-  `issues.yaml` into the board (`idmap.tsv` is the join key) — until then they are marked
-  *issue pending* (§2).
+- **The `M-3xx` tasks are bootstrapped onto the board** (#86–#98, 2026-06-15) from `issues.yaml`,
+  linked under the E3-1…E3-7 epics, with `idmap.tsv` carrying the join (M-301→#86 … M-380→#98); shipped
+  tasks are closed as completed. The Phase-2 epics/tasks (#28–34, #58–65) are closed as completed at the
+  same sync.
 - **The two external blockers are named, not hidden** (KC-2 needs an LLM API; the MLIR path needs
   libMLIR) — each is sequenced as an out-of-gate probe with an honest "not established" verdict.
 
@@ -467,6 +469,14 @@ established strength.
 
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (board sync — Phase-2 closed, Phase-3 tasks bootstrapped):** synced the GitHub board to
+  the corpus. Closed the completed **Phase-2** epics (E2-1…E2-7, #28–34) and tasks (M-230…M-260, #58–65)
+  as *completed*, each with a grounding comment citing where it landed (CHANGELOG Batch G/H; Phase-2
+  exit gate met 2026-06-12). Created the **Phase-3** M-3xx tasks from `issues.yaml` as **#86–#98**,
+  linked as sub-issues under E3-1…E3-7 (#35–41); closed the six shipped ones
+  (M-301/302/303/311/312/370) as completed, left the in-progress / needs-design / blocked ones open
+  with status-annotated bodies. Updated `tools/github/idmap.tsv` (M-301→#86 … M-380→#98) and §2/§8
+  above. Tracker hygiene only — no code or corpus-normative change.
 - **2026-06-15 (M-350 needs-design — RFC-0009 resonator-network factorization drafted):** authored
   `docs/rfcs/RFC-0009-Resonator-Network-Factorization.md` — the *needs-design* deliverable for M-350
   (document the convergence regime + bounds **before** building, per RR-5/G4). Fixes: the iterative
