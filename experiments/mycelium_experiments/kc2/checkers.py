@@ -114,10 +114,35 @@ class BaselineChecker:
        disposable sandbox (container/VM) — running it directly would execute arbitrary generated
        code. This is a documented operational requirement of the eventual M-002 run, not a
        property this class can provide.
+
+    To keep that requirement **structural** (A6-10/B2-04) rather than a docstring footnote, the
+    in-process `exec` is gated behind ``allow_untrusted``, which defaults to ``False``. A default
+    :class:`BaselineChecker` *refuses* to run any source — :meth:`check` returns an explicit
+    error :class:`CheckResult` instead of silently executing it. Running real (trusted) fixtures,
+    or scoring generated output inside a sandbox, is then a deliberate, visible opt-in
+    (``BaselineChecker(allow_untrusted=True)``) at the call site — never an accident.
     """
 
+    def __init__(self, *, allow_untrusted: bool = False) -> None:
+        self._allow_untrusted = allow_untrusted
+
     def check(self, source: str, task: Task) -> CheckResult:
-        """Check `source` defines `main()` returning the task's expected result shape."""
+        """Check `source` defines `main()` returning the task's expected result shape.
+
+        Refuses (returns an explicit non-passing :class:`CheckResult`, never silently) unless this
+        checker was constructed with ``allow_untrusted=True`` — running arbitrary source in-process
+        must be a deliberate choice made where the sandbox guarantees live.
+        """
+        if not self._allow_untrusted:
+            return CheckResult(
+                syntactically_valid=False,
+                passes=False,
+                diagnostic=(
+                    "refusing to exec baseline source: in-process execution is disabled by "
+                    "default — construct BaselineChecker(allow_untrusted=True) at a call site "
+                    "that owns the sandbox guarantee (see class docstring)"
+                ),
+            )
         try:
             ast.parse(source)
         except SyntaxError as e:

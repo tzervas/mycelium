@@ -35,10 +35,24 @@ def test_every_reference_mycelium_solution_passes(myc_checker: MyceliumChecker) 
 
 def test_every_reference_baseline_solution_passes() -> None:
     """Well-posedness: each task is solvable in the Python-embedded DSL."""
-    checker = BaselineChecker()
+    # Trusted repo fixtures — deliberate opt-in to in-process exec (A6-10/B2-04).
+    checker = BaselineChecker(allow_untrusted=True)
     for task in TASKS:
         result = checker.check(task.reference_baseline, task)
         assert result.passes, f"{task.id}: {result.diagnostic}"
+
+
+def test_default_baseline_checker_refuses_untrusted_exec() -> None:
+    """A6-10/B2-04 regression: a default ``BaselineChecker`` must *refuse* to ``exec`` source —
+    in-process execution is a deliberate, visible opt-in, never an accident. Mutant-witness:
+    dropping the ``allow_untrusted`` guard would let this benign source run and pass instead of
+    returning an explicit refusal diagnostic."""
+    task = TASKS[0]
+    checker = BaselineChecker()  # no opt-in: must refuse, not execute
+    result = checker.check(task.reference_baseline, task)
+    assert not result.passes
+    assert not result.syntactically_valid
+    assert "refusing to exec" in result.diagnostic
 
 
 def test_reference_baseline_values_match_expected() -> None:
@@ -87,7 +101,7 @@ def test_the_mycelium_checker_separates_syntax_from_typecheck(
 def test_edit_to_fix_loop_counts_iterations_and_feeds_back() -> None:
     """A generator that fixes its program on the second attempt scores iterations == 2."""
     task = TASKS[0]
-    checker = BaselineChecker()
+    checker = BaselineChecker(allow_untrusted=True)
     generator = StaticGenerator(
         scripts={
             (task.id, "baseline"): (
@@ -108,7 +122,7 @@ def test_edit_to_fix_loop_counts_iterations_and_feeds_back() -> None:
 
 def test_a_never_passing_task_consumes_the_budget() -> None:
     task = TASKS[0]
-    checker = BaselineChecker()
+    checker = BaselineChecker(allow_untrusted=True)
     generator = StaticGenerator(scripts={(task.id, "baseline"): ("def main(:\n",)})
     report = run_arm(generator, checker, "baseline", tasks=[task], max_iters=3)
     (outcome,) = report.outcomes

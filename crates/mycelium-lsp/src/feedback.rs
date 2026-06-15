@@ -45,8 +45,10 @@ pub struct SwapSite {
     pub at: String,
     /// The target representation.
     pub target: Repr,
-    /// The emitted certificate, or `None` when the source is not a statically-known value or the
-    /// pair is not supported (the reason is surfaced as a diagnostic, never silent).
+    /// The emitted certificate, or `None` when the source is not a statically-known value (so no
+    /// certificate *can* be derived here), or when the swap is statically known but failed or has
+    /// no implemented certifier. In the latter two cases the reason is surfaced as a diagnostic
+    /// (`swap-error` / `unsupported-swap-pair`) — `None` is never silent for a known source.
     pub certificate: Option<SwapCertificate>,
 }
 
@@ -177,7 +179,23 @@ fn collect(node: &Node, prefix: &str, cx: &mut Collect<'_>) {
                             });
                             None
                         }
-                        None => None,
+                        // The source is a statically-known value, but this swap pair has no
+                        // implemented certifier yet (e.g. Binary→Dense). That is *not* the same as
+                        // "source not statically known" — silently returning `None` would hide a
+                        // missing-coverage gap. Surface it explicitly (never silent).
+                        None => {
+                            cx.diags.push(Diagnostic {
+                                code: "unsupported-swap-pair",
+                                severity: crate::lint::Severity::Error,
+                                at: at.clone(),
+                                message: format!(
+                                    "no certified swap is implemented for {:?} → {target:?}; the \
+                                     certificate channel is empty for this site (not silent)",
+                                    v.repr()
+                                ),
+                            });
+                            None
+                        }
                     }
                 }
                 _ => None,
