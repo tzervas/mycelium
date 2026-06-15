@@ -25,7 +25,7 @@ use mycelium_core::lower::{self, Stage};
 use mycelium_core::{Bound, GuaranteeStrength, Node, Repr};
 use mycelium_select::{explain, Candidate, Explanation, PolicyRegistry, SelectionInputs};
 
-use crate::lint::{self, Diagnostic};
+use crate::lint::{self, Diagnostic, Severity};
 
 /// A per-value honesty annotation: where it is, its guarantee tag, and its bound (if approximate).
 #[derive(Debug, Clone, PartialEq)]
@@ -75,6 +75,71 @@ pub struct Feedback {
     /// (5) Selection EXPLAIN traces (M-221) — one per swap site whose `PolicyRef` resolves in the
     /// registry handed to [`analyze_with`]; empty under plain [`analyze`].
     pub explanations: Vec<ExplainSite>,
+}
+
+/// A structured, at-a-glance rollup of a [`Feedback`] (M-310): per-artifact-kind counts and the
+/// diagnostic severity breakdown, plus the worst severity present. This is the machine-navigable
+/// health signal an AI co-author's feedback loop (SC-5b / E3-2) or an IDE status line consumes
+/// without re-walking the channels — the "rich diagnostics" maturation of the M-140 facade.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FeedbackSummary {
+    /// Count of `Error`-severity diagnostics.
+    pub errors: usize,
+    /// Count of `Warning`-severity diagnostics.
+    pub warnings: usize,
+    /// Count of per-value guarantee annotations (kind 3).
+    pub guarantees: usize,
+    /// Count of swap sites (kind 2).
+    pub swaps: usize,
+    /// Count of lowering-stage dumps (kind 4).
+    pub stages: usize,
+    /// Count of selection EXPLAIN traces (kind 5).
+    pub explanations: usize,
+    /// The worst diagnostic severity present, if any (`Error` outranks `Warning`).
+    pub worst: Option<Severity>,
+}
+
+impl FeedbackSummary {
+    /// Clean = no `Error`-severity diagnostics — the gate [`crate::lint::has_errors`] checks, lifted
+    /// to the whole feedback surface.
+    #[must_use]
+    pub fn is_clean(&self) -> bool {
+        self.errors == 0
+    }
+}
+
+impl Feedback {
+    /// Summarize this feedback into a [`FeedbackSummary`] (M-310). Deterministic.
+    #[must_use]
+    pub fn summary(&self) -> FeedbackSummary {
+        let errors = self
+            .diagnostics
+            .iter()
+            .filter(|d| d.severity == Severity::Error)
+            .count();
+        let warnings = self
+            .diagnostics
+            .iter()
+            .filter(|d| d.severity == Severity::Warning)
+            .count();
+        // `Error` outranks `Warning`; `None` when there are no diagnostics.
+        let worst = if errors > 0 {
+            Some(Severity::Error)
+        } else if warnings > 0 {
+            Some(Severity::Warning)
+        } else {
+            None
+        };
+        FeedbackSummary {
+            errors,
+            warnings,
+            guarantees: self.guarantees.len(),
+            swaps: self.swaps.len(),
+            stages: self.stages.len(),
+            explanations: self.explanations.len(),
+            worst,
+        }
+    }
 }
 
 /// Analyze a Core IR program and return the feedback artifact kinds over one surface. EXPLAIN

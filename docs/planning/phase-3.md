@@ -91,7 +91,7 @@ not yet created on the board; the `idmap.tsv` join lands when they are bootstrap
 | **M-301** Direct-LLVM-IR AOT backend (kernel subset) | E3-7 (prereq) | P1 | M-150, M-110 | RFC-0004 §2 / ADR-007/009 | **In progress (2026-06-15)** — bit subset landed (`mycelium-mlir::llvm`); trit subset is the next slice |
 | **M-302** interp↔native differential (extend M-151) | E3-7 (prereq) | P1 | M-301, M-151 | NFR-7 / VR-4 / RR-12 | **Done (2026-06-15)** — `tests/native_differential.rs` (bit subset; toolchain-gated skip) |
 | **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | **Done (2026-06-15)** — `cargo xtask e1` §2 measures native AOT vs interp; compute-throughput verdict still pending in-process exec |
-| **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | Ready (local) |
+| **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()` |
 | **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | **Done (2026-06-15)** — `mycelium-build` crate (decide + content-addressed `BuildCertificate`) |
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | **Done (2026-06-15)** — `mycelium-build::cache` (`BuildCache`, request-addressed) |
 | **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **In progress (2026-06-15)** — literal-pattern `match` landed; **RFC ratification is maintainer's** |
@@ -374,8 +374,29 @@ established strength.
   definition" only hits when its obligations are also unchanged. **Batch K's gate items (M-310 LSP
   pending, M-311 + M-312 done) advance the matured-toolchain exit condition.**
 
+### 9.7 M-310 — Full-LSP maturation: structured summary + navigable positions · Batch K · P1 · in progress 2026-06-15
+
+- **Goal (from §2 / issues.yaml).** Mature the M-140 LSP skeleton: rich diagnostics over the
+  existing artifact kinds with structured positions and severity levels (§5.6–5.8; SC-5).
+- **Delivered (first increment).** `mycelium-lsp::FeedbackSummary` (via `Feedback::summary()`): a
+  structured roll-up of the analysis — per-artifact-kind counts (guarantees / swaps / stages /
+  explanations), the `Error`/`Warning` diagnostic breakdown, the **worst** severity present, and an
+  `is_clean()` predicate. This is the at-a-glance health signal an AI co-author's feedback loop
+  (SC-5b / E3-2, whose *run* is LLM-blocked) or an IDE status line consumes without re-walking the
+  channels. Plus `Diagnostic::path()`: the `at` breadcrumb as a structured, navigable `Vec<&str>`
+  (empty at the root, never `[""]`). Two tests (summary roll-up incl. the worst-severity
+  mutant-witness; the breadcrumb-path split).
+- **Honesty / scope.** Severity stays `Error`/`Warning` (the existing lattice); the L0 Core IR has no
+  source spans, so "structured positions" are the navigable breadcrumb path (source line/col live in
+  the L1 surface, a later step). The stdio LSP wire protocol remains the mechanical wrapping step.
+
 ## Meta — changelog & maintenance
 
+- **2026-06-15 (M-310 first increment — structured feedback summary + navigable positions):**
+  `Feedback::summary()` rolls up artifact-kind counts + worst severity (`FeedbackSummary`);
+  `Diagnostic::path()` exposes the navigable breadcrumb. §2 M-310 row → in progress; §9.7 added.
+  **Batch K's matured-toolchain trio (M-310 / M-311 / M-312) now all have substantive local
+  progress** — the §6 matured-toolchain exit condition is materially advanced.
 - **2026-06-15 (M-312 content-addressed build cache lands):** `mycelium-build::cache::BuildCache`
   caches certificates by build-request content address (component identity + decision inputs); an
   unchanged request hits and reuses the certificate, a changed verification state misses (never a

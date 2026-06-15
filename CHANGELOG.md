@@ -8,6 +8,13 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — LSP maturation: structured feedback summary, M-310)
+- **`mycelium-lsp::FeedbackSummary`** (`Feedback::summary()`): a structured roll-up of an analysis —
+  per-artifact-kind counts, the Error/Warning breakdown, the worst severity, and `is_clean()` — the
+  at-a-glance health signal an AI co-author's feedback loop (SC-5b/E3-2) or an IDE status line
+  consumes without re-walking the channels. Adds `Diagnostic::path()` (the `at` breadcrumb as a
+  navigable `Vec<&str>`). Two tests incl. a worst-severity mutant-witness. (phase-3.md §9.7)
+
 ### Added (Phase 3 — content-addressed build cache, M-312)
 - **`mycelium-build::cache`** — `BuildCache` caches `BuildCertificate`s by **build-request** content
   address: the key folds the component's identity hash with every decision input (spec ratification,

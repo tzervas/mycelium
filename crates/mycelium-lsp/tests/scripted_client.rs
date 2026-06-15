@@ -70,6 +70,39 @@ fn facade_exposes_all_four_artifact_kinds() {
     assert!(!fb.stages[0].text.is_empty() && !fb.stages[1].text.is_empty());
 }
 
+/// M-310: the structured `summary` rolls up the artifact-kind counts and the worst severity — the
+/// at-a-glance health signal an AI co-author's feedback loop or an IDE status line consumes.
+#[test]
+fn summary_rolls_up_counts_and_worst_severity() {
+    // A clean program: counts match the channels, no diagnostics, worst is None.
+    let clean = analyze(&swap_program()).summary();
+    assert_eq!(clean.errors, 0);
+    assert_eq!(clean.swaps, 1);
+    assert_eq!(clean.guarantees, 2);
+    assert_eq!(clean.stages, 2);
+    assert!(clean.is_clean());
+    assert_eq!(clean.worst, None);
+
+    // A program with an out-of-range swap: the summary reports the error and worst = Error.
+    // Mutant-witness: if `summary` miscounted severities (or `worst` ignored Error), is_clean()
+    // would stay true here.
+    let all_plus = Value::new(
+        Repr::Ternary { trits: 6 },
+        Payload::Trits(vec![mycelium_core::Trit::Pos; 6]),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap();
+    let bad = analyze(&Node::Swap {
+        src: Box::new(Node::Const(all_plus)),
+        target: Repr::Binary { width: 8 },
+        policy: policy(),
+    })
+    .summary();
+    assert!(bad.errors >= 1);
+    assert!(!bad.is_clean());
+    assert_eq!(bad.worst, Some(Severity::Error));
+}
+
 /// A client linting a sloppy program sees the diagnostics channel light up.
 #[test]
 fn diagnostics_channel_surfaces_invariant_violations() {
