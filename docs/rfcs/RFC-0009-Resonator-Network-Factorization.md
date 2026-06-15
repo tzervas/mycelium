@@ -172,6 +172,15 @@ retrieval and resonator for holographic engrams") and the sparse-ternary VSA ops
 are outside this RFC's verified basis (not read at authoring time); the prototype task (below) reads
 them.
 
+> **Status of the prior art (maintainer caveat).** `embeddenator` is **acknowledged-experimental and
+> not a working VSA / holographic-storage system** — it surfaced and *partially* addressed the right
+> problems but needs major rework before any part of it functions correctly. So it is mined here for
+> **problem discovery** only: the §8.1 findings are predominantly *negative* lessons (what breaks), and
+> the few structurally-reasonable parts carry **no evidential weight** for any guarantee, convergence
+> regime, or correctness claim. In particular, **nothing about where a resonator actually converges can
+> be inferred from it** (it has no validated regime — §8.1 P4); the §9 Q4 grid is a recommendation to be
+> *measured by trials*, not a number borrowed from the prior art (VR-5).
+
 ### 8.1 Findings from the reference implementations (M-350 mining — informative)
 
 The two implementations were read (`embeddenator-vsa::resonator` — the fuller Frady-style network with
@@ -215,11 +224,12 @@ necessary by getting these things wrong. Concrete pitfalls (P-numbers referenced
   resort** — i.e. it silently fabricates data when it has nothing. The antithesis of never-silent;
   out of scope here, but a sharp reminder of the failure mode §6 exists to prevent.
 
-What they get **right** and is worth keeping: bounded iteration; the soft-cleanup as a softmax-weighted
-superposition with a temperature (= 1/β) and an optional top-k truncation (`embeddenator-vsa`); a
-per-slot candidate list with similarities (the raw material for the confidence/margin contract); and
-the basic §3 loop shape. None of it carries a guarantee tag, so all of it must re-earn its tag under §5
-(VR-5).
+What is **structurally reasonable** and worth keeping as a *starting shape* (not as validated evidence):
+bounded iteration; the soft-cleanup as a softmax-weighted superposition with a temperature (= 1/β) and
+an optional top-k truncation (`embeddenator-vsa`); a per-slot candidate list with similarities (the raw
+material for the confidence/margin contract); and the basic §3 loop shape. None of it is verified and
+none carries a guarantee tag, so all of it must re-earn its tag under §5 from Mycelium's own trials
+(VR-5) — the prior art is scaffolding for the prototype, never a basis for a claim.
 
 ## 9. Open design questions — proposed resolutions (pending ratification)
 
@@ -316,5 +326,8 @@ deliberately left to be *fit by trials* rather than asserted (VR-5), and are fla
   sparse/HRR/FHRR `Declared` not `Empirical` (Q6). Tightened **§3** (parallel/Jacobi snapshot update;
   discrete-tuple decode + cycle detection), **§5** (regime as `{F, ∏kᵢ, d}`; `δ` = oracle-measured
   correctness, "converged ≠ correct"; margin-based ambiguity refusal), and **§6** (only a clean
-  `Converged` verdict yields factors; seeded determinism). Status stays **Draft**; honesty contract
-  unchanged (Empirical ceiling, never `Proven`, never silent); no code; nothing in the kernel.
+  `Converged` verdict yields factors; seeded determinism). Recorded the maintainer caveat that
+  `embeddenator` is acknowledged-experimental / not-yet-working, so it is mined for problem-discovery
+  only and lends **no** evidential weight to any guarantee or convergence regime (§8 note; VR-5). Status
+  stays **Draft**; honesty contract unchanged (Empirical ceiling, never `Proven`, never silent); no
+  code; nothing in the kernel.

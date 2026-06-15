@@ -31,7 +31,10 @@ corpus, not released software. Versioning will begin when the kernel does.
   index-tuple convergence + bounded-window cycle detection; oracle-measured `δ` over a `{F, ∏kᵢ, d}`
   `ResonatorProfile`; confidence **+ margin** refusal via `CleanupMemory`; MAP-I-first, sparse/HRR/FHRR
   `Declared` not `Empirical`). Tightened §3/§5/§6 accordingly ("converged ≠ correct"; only a clean
-  `Converged` verdict yields factors). Still **no code; nothing in the kernel.** (phase-3.md §2 / Meta)
+  `Converged` verdict yields factors). Records the maintainer caveat that `embeddenator` is
+  acknowledged-experimental / not-yet-working — mined for problem-discovery only, with no evidential
+  weight for any guarantee or convergence regime (VR-5). Still **no code; nothing in the kernel.**
+  (phase-3.md §2 / Meta)
 
 ### Added (Phase 3 — L1 nested patterns + Maranget usefulness, M-320)
 - **`mycelium-l1::usefulness`** — Maranget's usefulness algorithm `U(P, q)` over a typed pattern
