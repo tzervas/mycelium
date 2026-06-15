@@ -8,6 +8,25 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3 — RFC-0011 the keystone: L0 `Match` / L1-in-Core-IR, surfaced for ratification; M-320/M-310)
+- **`docs/rfcs/RFC-0011-L0-Match-and-L1-in-Core-IR.md` (Draft) proposes the named RFC-0001 revision.**
+  The L0 Core IR is frozen at five nodes (`Const/Var/Let/Op/Swap`); RFC-0007 designed five L1 nodes but
+  stopped short of putting them *into* L0 (its §4.6 elaboration covers only the evaluation-complete
+  fragment, the rest is an explicit `Residual`). RFC-0006 §4.4 step 2 and RFC-0007 §9 name the missing
+  step — "add the L1 node set to the Core IR" — and **this is that proposal.** It is the keystone for two
+  stalled half-tasks: **M-320** (emit Maranget decision-tree leaves as real L0 nodes — blocked because L0
+  has no matching node) and **M-310** (document sync — blocked because there is no text→`Node` path for
+  matching/data). The RFC recommends a **staged** revision — **RFC-0001 r3** = the data-and-matching core
+  (`Construct` + flat `Match` + a content-addressed data registry, with new kernel WF6/WF7/WF8 lifting
+  RFC-0007's W6/W7/W8), staged ahead of an **r4** that adds `Lam/App/Fix` — so the five-node kernel grows
+  in two auditable steps (KC-3). It recommends the **flat `Match`** as the kernel node (the M-320 Maranget
+  tree stays the *untrusted, inspectable* compilation artifact above the kernel, per RFC-0007 §6), and
+  records the two alternatives a maintainer might prefer (a low-level `Switch`/`Leaf` kernel form; the
+  one-shot five-node fold). **Append-only, frozen-L0 not flipped (VR-5):** drafting the RFC does **not**
+  change RFC-0001's status, bump it to r3, or land the elaborator wiring — ratification, the r3 bump, and
+  the wiring are the maintainer's append-only decision (RFC-0011 §4.7), and the prototype keeps returning
+  `Residual` until then. Registered in the RFC README index and the Doc-Index. (phase-3.md §9.9 keystone)
+
 ### Added (Phase 3 — JIT runtime specialization, M-340; E3-4; ADR-009/ADR-014; RFC-0004 §5/§8)
 - **`mycelium-mlir::specialize` — a weight-specialized ternary dot kernel (the classic JIT win).**
   The generic BitNet dot kernel (M-360) reads its weight buffer as a runtime pointer and re-unpacks it
