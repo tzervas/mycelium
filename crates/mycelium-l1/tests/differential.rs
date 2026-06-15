@@ -15,8 +15,9 @@
 //! `FuelExhausted`, never a hang (§4.5).
 
 use mycelium_cert::{check, BinaryTernarySwapEngine, CheckVerdict, Evidence, RefinementRelation};
-use mycelium_core::{GuaranteeStrength, Payload, Repr, Value};
+use mycelium_core::{CoreValue, GuaranteeStrength, Payload, Repr, Value};
 use mycelium_interp::{Interpreter, PrimRegistry};
+use mycelium_l1::elab::build_registry;
 use mycelium_l1::{check_colony, elaborate, parse, ElabError, Evaluator, L1Error};
 use mycelium_numerics::Certificate;
 
@@ -111,6 +112,121 @@ fn l1_eval_l0_interp_and_aot_agree_on_the_fragment() {
             );
         }
     }
+}
+
+/// The **data-and-matching fragment** (RFC-0011 r3): with `Construct`/`Match` now L0 nodes, a
+/// non-recursive program that builds/matches data elaborates to a closed L0 term. The obligation is
+/// **L1-eval ≡ elaborate→L0-interp** on the L0 [`CoreValue`] observable (the AOT path stays
+/// repr-only in r3 — Q5). The L1 evaluator's name-keyed data value is bridged onto the elaborated
+/// value's content-addressed `#T#i` identity through the *same* registry (`L1Value::to_core`), so a
+/// divergence in either machinery — the big-step `try_match` or the Maranget→flat-`Match` lowering —
+/// is caught.
+fn data_corpus() -> Vec<&'static str> {
+    vec![
+        // a flat data match returning a repr value
+        "colony d\ntype Sign = Neg | Zero | Pos\n\
+         fn label(s: Sign) -> Ternary{1} = match s { Neg => <->, Zero => <0>, _ => <+> }\n\
+         fn main() -> Ternary{1} = label(Zero)",
+        // a data RESULT (the program evaluates to a datum)
+        "colony d\ntype Nat = Z | S(Nat)\nfn main() -> Nat = S(S(Z))",
+        // nested patterns (Maranget) returning a datum
+        "colony d\ntype Nat = Z | S(Nat)\n\
+         fn pred2(n: Nat) -> Nat = match n { Z => Z, S(Z) => Z, S(S(m)) => m }\n\
+         fn main() -> Nat = pred2(S(S(S(Z))))",
+        // a literal-pattern match over a Binary scrutinee
+        "colony d\nfn classify(b: Binary{4}) -> Ternary{1} = \
+         match b { 0b0000 => <0>, 0b1111 => <+>, _ => <-> }\n\
+         fn main() -> Ternary{1} = classify(0b1111)",
+        // a data value with a repr field, destructured (binds a field, runs a prim on it)
+        "colony d\ntype Box = Mk(Binary{8})\n\
+         fn flip(x: Box) -> Binary{8} = match x { Mk(b) => not(b) }\n\
+         fn main() -> Binary{8} = flip(Mk(0b1010_1010))",
+        // `if` desugaring to a Bool match
+        "colony d\nfn pick(b: Bool) -> Binary{8} = if b then 0b1111_1111 else 0b0000_0000\n\
+         fn main() -> Binary{8} = pick(True)",
+        // a constructed result carrying a computed repr field
+        "colony d\ntype Box = Mk(Binary{8})\nfn main() -> Box = Mk(not(0b0000_1111))",
+    ]
+}
+
+#[test]
+fn l1_eval_and_l0_interp_agree_on_the_data_fragment() {
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(BinaryTernarySwapEngine),
+    );
+    for (i, src) in data_corpus().iter().enumerate() {
+        let env = check_colony(&parse(src).expect("parses")).expect("checks");
+        let registry = build_registry(&env).expect("the data registry builds");
+
+        // Path 1: the L1 fuel-guarded evaluator, projected onto the L0 CoreValue domain.
+        let l1 = Evaluator::new(&env)
+            .call("main", vec![])
+            .unwrap_or_else(|e| panic!("program #{i}: L1-eval failed: {e}"));
+        let l1_core = l1
+            .to_core(&env, &registry)
+            .unwrap_or_else(|| panic!("program #{i}: L1 result is outside the r3 data fragment"));
+
+        // Path 2: elaborate to L0, run on the reference interpreter (eval_core spans repr + data).
+        let node = elaborate(&env, "main")
+            .unwrap_or_else(|e| panic!("program #{i}: must be in the r3 fragment: {e}"));
+        let l0_core = interp
+            .eval_core(&node)
+            .unwrap_or_else(|e| panic!("program #{i}: L0-interp failed: {e}"));
+
+        // The two paths must agree on the whole L0 value — constructor identity, fields, and the
+        // meet-summary guarantee (for a datum) or repr+payload+guarantee (for a repr value).
+        assert_eq!(
+            l1_core, l0_core,
+            "program #{i} diverged: L1-eval vs elaborate→L0-interp"
+        );
+        assert_eq!(
+            l1_core.guarantee(),
+            l0_core.guarantee(),
+            "program #{i}: guarantee summaries disagree"
+        );
+
+        // Where the result is a representation value, the shared M-210 TV checker validates the pair
+        // too (the same checker the repr fragment uses) — defense in depth, never a bespoke compare.
+        if let (CoreValue::Repr(a), CoreValue::Repr(b)) = (&l1_core, &l0_core) {
+            assert_eq!(
+                check(
+                    a,
+                    b,
+                    RefinementRelation::ObservationalEquiv,
+                    Certificate::exact(),
+                    &Evidence::Observational,
+                ),
+                CheckVerdict::Validated {
+                    strength: GuaranteeStrength::Exact
+                },
+                "program #{i}: the shared checker must validate the repr-result pair"
+            );
+        }
+    }
+}
+
+/// A **mutant-witness** for the elaboration: a deliberately wrong elaboration must be caught by the
+/// differential. We construct a divergence directly — two structurally different data programs whose
+/// L0 values must *not* compare equal — confirming the data comparison discriminates (a vacuous
+/// `assert_eq!` that always passed would be the bug this guards against).
+#[test]
+fn the_data_differential_distinguishes_divergent_elaborations() {
+    let env = |src| check_colony(&parse(src).unwrap()).unwrap();
+    let reg = |e: &mycelium_l1::Env| build_registry(e).unwrap();
+    let e1 = env("colony d\ntype Nat = Z | S(Nat)\nfn main() -> Nat = S(Z)");
+    let e2 = env("colony d\ntype Nat = Z | S(Nat)\nfn main() -> Nat = S(S(Z))");
+    let a = Evaluator::new(&e1)
+        .call("main", vec![])
+        .unwrap()
+        .to_core(&e1, &reg(&e1))
+        .unwrap();
+    let b = Evaluator::new(&e2)
+        .call("main", vec![])
+        .unwrap()
+        .to_core(&e2, &reg(&e2))
+        .unwrap();
+    assert_ne!(a, b, "S(Z) and S(S(Z)) must be distinct L0 data values");
 }
 
 /// Sanity: the harness discriminates — the shared checker explicitly rejects a genuinely

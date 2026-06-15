@@ -10,6 +10,8 @@
 pub mod binary;
 pub mod bound;
 pub mod content;
+pub mod data;
+pub mod datum;
 pub mod guarantee;
 pub mod id;
 pub mod lower;
@@ -22,10 +24,15 @@ pub mod value;
 
 pub use bound::{Bound, BoundBasis, BoundKind, NormKind};
 pub use content::{operation_hash, Names};
+pub use data::{
+    CtorDecl, CtorRef, CtorSpec, DataDecl, DataRegistry, DeclSpec, FieldSpec, FieldTy,
+    RegistryError,
+};
+pub use datum::{CoreValue, Datum};
 pub use guarantee::GuaranteeStrength;
 pub use id::ContentHash;
 pub use meta::{Meta, PackScheme, PhysicalLayout, Provenance, SparsityObs};
-pub use node::{Node, PolicyRef, Prim, VarId};
+pub use node::{Alt, Node, PolicyRef, Prim, VarId};
 pub use recon::{
     CleanupShape, DecodeProcedure, DecodeSpec, InitStrategy, Recipe, ReconInfo, ReconMode,
 };

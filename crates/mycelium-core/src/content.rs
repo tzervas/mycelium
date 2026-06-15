@@ -26,12 +26,12 @@
 use std::collections::HashMap;
 
 use crate::id::ContentHash;
-use crate::node::{Node, VarId};
+use crate::node::{Alt, Node, VarId};
 use crate::repr::{Repr, ScalarKind, SparsityClass};
 use crate::value::{Payload, Trit, Value};
 
 /// Domain-separation tags — one byte per syntactic form, so the framing is injective across kinds.
-mod tag {
+pub(crate) mod tag {
     pub const VAR_BOUND: u8 = 0x01;
     pub const VAR_FREE: u8 = 0x02;
     pub const CONST: u8 = 0x03;
@@ -51,41 +51,58 @@ mod tag {
 
     pub const SPARSITY_DENSE: u8 = 0x30;
     pub const SPARSITY_SPARSE: u8 = 0x31;
+
+    // r3 (RFC-0001 §4.3/§4.5, RFC-0011): the data registry Σ + the Construct/Match nodes.
+    // (0x07 is the standalone `operation_hash` PRIM tag — kept distinct here.)
+    pub const CONSTRUCT: u8 = 0x08;
+    pub const MATCH: u8 = 0x09;
+    pub const ALT_CTOR: u8 = 0x40;
+    pub const ALT_LIT: u8 = 0x41;
+    pub const MATCH_DEFAULT: u8 = 0x42;
+    pub const MATCH_NO_DEFAULT: u8 = 0x43;
+
+    pub const DATADECL: u8 = 0x50;
+    pub const CTOR_DECL: u8 = 0x51;
+    pub const FIELD_REPR: u8 = 0x52;
+    pub const FIELD_DATA: u8 = 0x53; // an out-of-cycle data field: continues with the decl hash
+    pub const FIELD_CYCLE: u8 = 0x54; // an in-cycle data field: continues with a placeholder index
+    pub const CTOR_REF: u8 = 0x55;
+    pub const DATUM: u8 = 0x56;
 }
 
 /// A canonical, injective, metadata-free byte encoder feeding a [`blake3::Hasher`]. Every write is
 /// either a fixed-width integer or a length-prefixed blob, so no two distinct structures share an
 /// encoding.
-struct Canon {
+pub(crate) struct Canon {
     h: blake3::Hasher,
 }
 
 impl Canon {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Canon {
             h: blake3::Hasher::new(),
         }
     }
 
-    fn tag(&mut self, t: u8) {
+    pub(crate) fn tag(&mut self, t: u8) {
         self.h.update(&[t]);
     }
 
-    fn u32(&mut self, n: u32) {
+    pub(crate) fn u32(&mut self, n: u32) {
         self.h.update(&n.to_le_bytes());
     }
 
-    fn u64(&mut self, n: u64) {
+    pub(crate) fn u64(&mut self, n: u64) {
         self.h.update(&n.to_le_bytes());
     }
 
     /// A length-prefixed byte blob (the prefix makes the framing injective).
-    fn blob(&mut self, bytes: &[u8]) {
+    pub(crate) fn blob(&mut self, bytes: &[u8]) {
         self.u64(bytes.len() as u64);
         self.h.update(bytes);
     }
 
-    fn str(&mut self, s: &str) {
+    pub(crate) fn str(&mut self, s: &str) {
         self.blob(s.as_bytes());
     }
 
@@ -95,10 +112,23 @@ impl Canon {
         self.h.update(&x.to_bits().to_le_bytes());
     }
 
-    fn finish(self) -> ContentHash {
+    pub(crate) fn finish(self) -> ContentHash {
         let hex = self.h.finalize().to_hex();
         // BLAKE3 hex is 64 lowercase [0-9a-f] chars — always a well-formed digest.
         ContentHash::from_parts("blake3", hex.as_str()).expect("blake3 hex is a valid digest")
+    }
+
+    /// Absorb a [`ContentHash`] (e.g. a referenced data-declaration hash) as a length-prefixed blob.
+    pub(crate) fn hash(&mut self, h: &ContentHash) {
+        self.str(h.as_str());
+    }
+
+    /// Absorb a [`CtorRef`](crate::data::CtorRef): its declaration hash and constructor index. The
+    /// constructor *name* is not identity-bearing (ADR-003) — only the `#T#i` pair is.
+    pub(crate) fn ctor_ref(&mut self, c: &crate::data::CtorRef) {
+        self.tag(tag::CTOR_REF);
+        self.hash(c.decl());
+        self.u32(c.index());
     }
 }
 
@@ -109,7 +139,7 @@ impl Canon {
         self.h.update(&[k.tag()]);
     }
 
-    fn repr(&mut self, r: &Repr) {
+    pub(crate) fn repr(&mut self, r: &Repr) {
         match r {
             Repr::Binary { width } => {
                 self.tag(tag::REPR_BINARY);
@@ -183,7 +213,7 @@ impl Canon {
 
     /// The identity-bearing part of a value: its `Repr` (type, incl. paradigm) and its literal
     /// payload. `Meta` is dynamic metadata and is deliberately excluded (RFC-0001 §4.6).
-    fn value(&mut self, v: &Value) {
+    pub(crate) fn value(&mut self, v: &Value) {
         self.repr(v.repr());
         self.payload(v.payload());
     }
@@ -233,6 +263,54 @@ impl Canon {
                 self.node(src, scope);
                 self.repr(target); // the target type is part of the static contract
                 self.str(policy.as_str()); // and so is the policy reference (RFC-0005)
+            }
+            Node::Construct { ctor, args } => {
+                self.tag(tag::CONSTRUCT);
+                self.ctor_ref(ctor); // the constructor identity (#T#i) is identity-bearing
+                self.u64(args.len() as u64);
+                for a in args {
+                    self.node(a, scope);
+                }
+            }
+            Node::Match {
+                scrutinee,
+                alts,
+                default,
+            } => {
+                self.tag(tag::MATCH);
+                self.node(scrutinee, scope);
+                self.u64(alts.len() as u64);
+                for alt in alts {
+                    match alt {
+                        Alt::Ctor {
+                            ctor,
+                            binders,
+                            body,
+                        } => {
+                            self.tag(tag::ALT_CTOR);
+                            self.ctor_ref(ctor);
+                            // Binder *names* are not hashed (α-normalised); their count + positions
+                            // are, via the de Bruijn scope the body is hashed under.
+                            self.u64(binders.len() as u64);
+                            let mark = scope.len();
+                            scope.extend(binders.iter().cloned());
+                            self.node(body, scope);
+                            scope.truncate(mark);
+                        }
+                        Alt::Lit { value, body } => {
+                            self.tag(tag::ALT_LIT);
+                            self.value(value); // the literal is identity-bearing (repr + payload)
+                            self.node(body, scope);
+                        }
+                    }
+                }
+                match default {
+                    Some(d) => {
+                        self.tag(tag::MATCH_DEFAULT);
+                        self.node(d, scope);
+                    }
+                    None => self.tag(tag::MATCH_NO_DEFAULT),
+                }
             }
         }
     }

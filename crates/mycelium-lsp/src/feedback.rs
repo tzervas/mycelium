@@ -294,5 +294,34 @@ fn collect(node: &Node, prefix: &str, cx: &mut Collect<'_>) {
             });
             collect(src, &at, cx);
         }
+        // r3 (RFC-0011): the data nodes are Repr-transparent (no swap, WF8) — the feedback walk
+        // simply recurses into their children so guarantee/swap/EXPLAIN sites beneath them surface.
+        Node::Construct { ctor, args } => {
+            let at = here(prefix, &format!("construct {ctor}"));
+            for a in args {
+                collect(a, &at, cx);
+            }
+        }
+        Node::Match {
+            scrutinee,
+            alts,
+            default,
+        } => {
+            let at = here(prefix, "match");
+            collect(scrutinee, &at, cx);
+            for alt in alts {
+                match alt {
+                    mycelium_core::Alt::Ctor { ctor, body, .. } => {
+                        collect(body, &here(&at, &format!("alt {ctor}")), cx);
+                    }
+                    mycelium_core::Alt::Lit { body, .. } => {
+                        collect(body, &here(&at, "alt-lit"), cx);
+                    }
+                }
+            }
+            if let Some(d) = default {
+                collect(d, &here(&at, "default"), cx);
+            }
+        }
     }
 }

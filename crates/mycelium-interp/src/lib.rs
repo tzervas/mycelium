@@ -39,6 +39,38 @@
 //! its provenance is `Derived{ op, inputs }` over content hashes (RFC-0001 §4.6). A `Var` that is
 //! free (an open term) is **stuck** — an explicit [`EvalError::FreeVariable`], not a silent default.
 //!
+//! # Algebraic data (r3 — RFC-0001 §4.5 / RFC-0011)
+//! Two more node families evaluate here, mirroring the L1 evaluator's `try_match` so L1-eval and
+//! L0-interp agree (NFR-7):
+//!
+//! ```text
+//!  (E-Con-Arg)    argᵢ ⟶ argᵢ'      (args 0..i are values, i leftmost non-value)
+//!                 ─────────────────────────────────────────────────────
+//!                 Construct{c, [..,argᵢ,..]} ⟶ Construct{c, [..,argᵢ',..]}
+//!
+//!  (E-Con-Value)  every arg is a value  ⇒  Construct{c, [v…]} is a NORMAL FORM (a data value)
+//!
+//!  (E-Match-Scrut) s ⟶ s'
+//!                  ─────────────────────────────────────────────
+//!                  Match{s, alts, d} ⟶ Match{s', alts, d}
+//!
+//!  (E-Match-Sel)  s is a value, first-matching alt/default selects body, binders ↦ fields
+//!                 ─────────────────────────────────────────────  (scrutinee guarantee Exact)
+//!                 Match{s, alts, d} ⟶ body[binders ↦ fields]
+//! ```
+//!
+//! A `Construct` whose arguments are all values is itself a value (a data value, GHC-Core style); at
+//! the `eval` boundary it reads off as a [`mycelium_core::Datum`]. `Match` selects the first
+//! matching alternative (constructor arm on `CtorRef` identity; literal arm on `repr+payload`
+//! equality), binds its fields left-to-right, and defaults on no match (the checker proves coverage,
+//! WF7; a genuine no-match is an explicit [`EvalError::NonExhaustiveMatch`]). **Guarantee meet
+//! (RFC-0011 §4.6):** a `Match` result is met with the scrutinee's guarantee — for the *reachable r3
+//! fragment* the scrutinee is `Exact`, so the meet is the identity; a **non-`Exact` data scrutinee**
+//! is the explicit r3 boundary [`EvalError::GuaranteeMeetUnsupported`] (degrading a precise
+//! per-value bound by a composite *summary* would force fabricating a bound — refused, never
+//! silent). `Construct` itself takes the meet of its fields' guarantees (in the [`mycelium_core::Datum`]
+//! summary).
+//!
 //! # What is *not* here (by scope)
 //! Balanced-ternary **arithmetic** with an integer oracle is **M-111**; the certified binary↔ternary
 //! **swap** is **M-120** (this crate ships only the trivial identity swap,
@@ -49,7 +81,7 @@
 pub mod prims;
 pub mod swap;
 
-use mycelium_core::{Node, Repr, Value, WfError};
+use mycelium_core::{Alt, CoreValue, Datum, GuaranteeStrength, Node, Repr, Value, WfError};
 
 pub use prims::PrimRegistry;
 pub use swap::{IdentitySwapEngine, SwapEngine};
@@ -107,6 +139,28 @@ pub enum EvalError {
     Swap(String),
     /// A constructed result violated a Core IR well-formedness invariant (RFC-0001 §4.3/§4.5).
     Wf(WfError),
+    /// A `Match` reduced with no alternative matching and no `default` (RFC-0011 §4.3 WF7). The
+    /// checker proves coverage above the kernel, so this is unreachable for checked programs — kept
+    /// as the explicit never-silent fallback (G2), never a panic or a silent default.
+    NonExhaustiveMatch,
+    /// A `Construct`/`Match` node was malformed against the data fragment (an arity mismatch the
+    /// checker should have caught, a non-saturated constructor — WF6/WF7). Explicit, never a guess.
+    DataMalformed {
+        /// What was malformed, and why.
+        why: String,
+    },
+    /// The r3 boundary (RFC-0011 §4.6): a `Match` on a **non-`Exact` data scrutinee` would have to
+    /// fold the scrutinee's composite *summary* guarantee into the result. Realising that without
+    /// fabricating a bound is deferred (the reachable r3 fragment is `Exact`). Refused explicitly,
+    /// never silently dropped.
+    GuaranteeMeetUnsupported {
+        /// The scrutinee's (non-`Exact`) summary guarantee.
+        scrutinee: GuaranteeStrength,
+    },
+    /// [`Interpreter::eval`] was asked for a representation [`Value`] but the program evaluated to a
+    /// **data value** ([`mycelium_core::Datum`]). Use [`Interpreter::eval_core`] for the data
+    /// fragment. Explicit, so a repr-only caller never silently mishandles a datum.
+    DataResult,
 }
 
 impl core::fmt::Display for EvalError {
@@ -134,6 +188,21 @@ impl core::fmt::Display for EvalError {
             EvalError::FuelExhausted => write!(f, "evaluation exceeded its step budget"),
             EvalError::Swap(msg) => write!(f, "swap failed: {msg}"),
             EvalError::Wf(e) => write!(f, "well-formedness violation: {e}"),
+            EvalError::NonExhaustiveMatch => write!(
+                f,
+                "match had no matching alternative and no default (WF7 — the checker requires \
+                 coverage)"
+            ),
+            EvalError::DataMalformed { why } => write!(f, "malformed data node: {why}"),
+            EvalError::GuaranteeMeetUnsupported { scrutinee } => write!(
+                f,
+                "match on a non-Exact data scrutinee ({scrutinee:?}): the guarantee-meet through \
+                 Match is deferred in r3 (RFC-0011 §4.6) — the reachable fragment is Exact"
+            ),
+            EvalError::DataResult => write!(
+                f,
+                "the program evaluated to a data value; use eval_core for the data fragment"
+            ),
         }
     }
 }
@@ -248,24 +317,166 @@ impl Interpreter {
                     policy: policy.clone(),
                 }))),
             },
+
+            Node::Construct { ctor, args } => {
+                // (E-Con-Arg): reduce the leftmost non-value argument, if any.
+                for (i, arg) in args.iter().enumerate() {
+                    if let Step::Next(arg2) = self.step(arg)? {
+                        let mut next = args.clone();
+                        next[i] = *arg2;
+                        return Ok(Step::Next(Box::new(Node::Construct {
+                            ctor: ctor.clone(),
+                            args: next,
+                        })));
+                    }
+                }
+                // (E-Con-Value): all arguments are values → this Construct is a normal form.
+                Ok(Step::Value)
+            }
+
+            Node::Match {
+                scrutinee,
+                alts,
+                default,
+            } => match self.step(scrutinee)? {
+                // (E-Match-Scrut): reduce the scrutinee to a value first.
+                Step::Next(s2) => Ok(Step::Next(Box::new(Node::Match {
+                    scrutinee: s2,
+                    alts: alts.clone(),
+                    default: default.clone(),
+                }))),
+                // (E-Match-Sel): the scrutinee is a value → select the arm and meet the guarantee.
+                Step::Value => {
+                    // The Match result is met with the scrutinee's guarantee (RFC-0011 §4.6). For the
+                    // reachable r3 fragment the scrutinee is Exact, so the meet is the identity; a
+                    // non-Exact data scrutinee is the explicit r3 boundary (never a fabricated bound).
+                    let g = guarantee_of_value(scrutinee)?;
+                    if g != GuaranteeStrength::Exact {
+                        return Err(EvalError::GuaranteeMeetUnsupported { scrutinee: g });
+                    }
+                    let body = select_arm(scrutinee, alts, default.as_deref())?;
+                    Ok(Step::Next(Box::new(body)))
+                }
+            },
         }
     }
 
-    /// Evaluate `node` to a value by iterating [`step`](Self::step) to a normal form. Returns the
-    /// resulting [`Value`], or an [`EvalError`] (including [`EvalError::FuelExhausted`] if the step
-    /// budget is exceeded).
+    /// Evaluate `node` to a **representation** value by iterating [`step`](Self::step) to a normal
+    /// form. Returns the resulting [`Value`], or an [`EvalError`] (including
+    /// [`EvalError::FuelExhausted`] if the budget is exceeded, or [`EvalError::DataResult`] if the
+    /// program evaluates to a data value — use [`eval_core`](Self::eval_core) for the data fragment).
     pub fn eval(&self, node: &Node) -> Result<Value, EvalError> {
+        match self.eval_core(node)? {
+            CoreValue::Repr(v) => Ok(v),
+            CoreValue::Data(_) => Err(EvalError::DataResult),
+        }
+    }
+
+    /// Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data
+    /// fragment, RFC-0011). Iterates [`step`](Self::step) to a normal form and reads it off: a
+    /// `Const` is a representation value; a saturated `Construct` of values is a [`Datum`] (its
+    /// meet-summary guarantee computed from its fields). This is the path the M-210 differential
+    /// runs for matching/data, against the L1 evaluator (NFR-7).
+    pub fn eval_core(&self, node: &Node) -> Result<CoreValue, EvalError> {
         let mut current = node.clone();
         let mut fuel = self.fuel;
         loop {
             match self.step(&current)? {
-                Step::Value => return Ok(as_const(&current)?.clone()),
+                Step::Value => return node_to_core_value(&current),
                 Step::Next(next) => {
                     fuel = fuel.checked_sub(1).ok_or(EvalError::FuelExhausted)?;
                     current = *next;
                 }
             }
         }
+    }
+}
+
+/// Read a normal-form node off as a [`CoreValue`]: a `Const` is a representation value; a saturated
+/// `Construct` of values is a [`Datum`] (the meet-summary computed by [`Datum::new`]). Any other
+/// node is not a normal form — an explicit error, never a silent default.
+fn node_to_core_value(node: &Node) -> Result<CoreValue, EvalError> {
+    match node {
+        Node::Const(v) => Ok(CoreValue::Repr(v.clone())),
+        Node::Construct { ctor, args } => {
+            let fields = args
+                .iter()
+                .map(node_to_core_value)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(CoreValue::Data(Datum::new(ctor.clone(), fields)))
+        }
+        Node::Var(x) => Err(EvalError::FreeVariable(x.clone())),
+        _ => Err(EvalError::DataMalformed {
+            why: "evaluation ended on a non-normal-form node".to_owned(),
+        }),
+    }
+}
+
+/// The guarantee of a **value** node (a `Const` or a saturated `Construct`): the representation
+/// value's own `Meta.guarantee`, or the `meet`-summary of a data value's fields (RFC-0011 §4.6).
+fn guarantee_of_value(node: &Node) -> Result<GuaranteeStrength, EvalError> {
+    match node {
+        Node::Const(v) => Ok(v.meta().guarantee()),
+        Node::Construct { args, .. } => {
+            let mut g = GuaranteeStrength::Exact;
+            for a in args {
+                g = g.meet(guarantee_of_value(a)?);
+            }
+            Ok(g)
+        }
+        Node::Var(x) => Err(EvalError::FreeVariable(x.clone())),
+        _ => Err(EvalError::DataMalformed {
+            why: "match scrutinee did not reduce to a value".to_owned(),
+        }),
+    }
+}
+
+/// Select the first-matching `Match` alternative (or the default) and return its binder-substituted
+/// body (RFC-0011 §4.6; mirrors the L1 evaluator's `try_match`). A constructor arm matches a
+/// `Construct` of the same [`CtorRef`](mycelium_core::CtorRef), binding its fields left-to-right; a
+/// literal arm matches a `Const` equal on `repr+payload`. No match + no default is an explicit
+/// [`EvalError::NonExhaustiveMatch`].
+fn select_arm(scrutinee: &Node, alts: &[Alt], default: Option<&Node>) -> Result<Node, EvalError> {
+    for alt in alts {
+        match alt {
+            Alt::Ctor {
+                ctor,
+                binders,
+                body,
+            } => {
+                if let Node::Construct { ctor: c2, args } = scrutinee {
+                    if c2 == ctor {
+                        if binders.len() != args.len() {
+                            return Err(EvalError::DataMalformed {
+                                why: format!(
+                                    "constructor arm binds {} of {} field(s) (WF6/WF7)",
+                                    binders.len(),
+                                    args.len()
+                                ),
+                            });
+                        }
+                        // Bind fields left-to-right; the args are closed values, so substitution is
+                        // capture-free (the same property the Const substitution relies on).
+                        let mut b = body.clone();
+                        for (binder, arg) in binders.iter().zip(args) {
+                            b = subst(&b, binder, arg);
+                        }
+                        return Ok(b);
+                    }
+                }
+            }
+            Alt::Lit { value, body } => {
+                if let Node::Const(v) = scrutinee {
+                    if v.repr() == value.repr() && v.payload() == value.payload() {
+                        return Ok(body.clone());
+                    }
+                }
+            }
+        }
+    }
+    match default {
+        Some(d) => Ok(d.clone()),
+        None => Err(EvalError::NonExhaustiveMatch),
     }
 }
 
@@ -321,5 +532,295 @@ fn subst(node: &Node, var: &str, value: &Node) -> Node {
             target: target.clone(),
             policy: policy.clone(),
         },
+        Node::Construct { ctor, args } => Node::Construct {
+            ctor: ctor.clone(),
+            args: args.iter().map(|a| subst(a, var, value)).collect(),
+        },
+        Node::Match {
+            scrutinee,
+            alts,
+            default,
+        } => Node::Match {
+            scrutinee: Box::new(subst(scrutinee, var, value)),
+            alts: alts
+                .iter()
+                .map(|alt| match alt {
+                    Alt::Ctor {
+                        ctor,
+                        binders,
+                        body,
+                    } => Alt::Ctor {
+                        ctor: ctor.clone(),
+                        binders: binders.clone(),
+                        // Shadowing: an arm binder that re-binds `var` blocks substitution in its body.
+                        body: if binders.iter().any(|b| b == var) {
+                            body.clone()
+                        } else {
+                            subst(body, var, value)
+                        },
+                    },
+                    Alt::Lit { value: lit, body } => Alt::Lit {
+                        value: lit.clone(),
+                        body: subst(body, var, value),
+                    },
+                })
+                .collect(),
+            default: default.as_ref().map(|d| Box::new(subst(d, var, value))),
+        },
     }
+}
+
+#[cfg(test)]
+mod data_tests {
+    //! The r3 data fragment at the L0 boundary (RFC-0011): `Construct`/`Match` evaluation, the
+    //! meet-summary guarantee, and the never-silent refusals. These pin the L0 semantics
+    //! independently of the L1 elaborator (the L1↔L0 agreement is the M-210 differential).
+    use super::*;
+    use mycelium_core::{
+        Bound, BoundBasis, BoundKind, CtorRef, CtorSpec, DataRegistry, DeclSpec, FieldSpec, Meta,
+        NormKind, Payload, Provenance, Repr, Value,
+    };
+    use std::collections::BTreeMap;
+
+    /// `type Nat = Z | S(Nat)` plus `type Box = Mk(Binary{8})`.
+    fn registry() -> DataRegistry {
+        let mut m = BTreeMap::new();
+        m.insert(
+            "Nat".to_owned(),
+            DeclSpec {
+                ctors: vec![
+                    CtorSpec { fields: vec![] },
+                    CtorSpec {
+                        fields: vec![FieldSpec::Data("Nat".to_owned())],
+                    },
+                ],
+            },
+        );
+        m.insert(
+            "Box".to_owned(),
+            DeclSpec {
+                ctors: vec![CtorSpec {
+                    fields: vec![FieldSpec::Repr(Repr::Binary { width: 8 })],
+                }],
+            },
+        );
+        DataRegistry::build(&m).unwrap()
+    }
+
+    fn z(reg: &DataRegistry) -> Node {
+        Node::Construct {
+            ctor: reg.ctor_ref("Nat", 0).unwrap(),
+            args: vec![],
+        }
+    }
+    fn s(reg: &DataRegistry, inner: Node) -> Node {
+        Node::Construct {
+            ctor: reg.ctor_ref("Nat", 1).unwrap(),
+            args: vec![inner],
+        }
+    }
+    fn byte(g: GuaranteeStrength) -> Value {
+        let meta = if g == GuaranteeStrength::Exact {
+            Meta::exact(Provenance::Root)
+        } else {
+            Meta::new(
+                Provenance::Root,
+                g,
+                Some(Bound {
+                    kind: BoundKind::Error {
+                        eps: 0.1,
+                        norm: NormKind::Linf,
+                    },
+                    basis: BoundBasis::EmpiricalFit {
+                        trials: 1,
+                        method: "m".into(),
+                    },
+                }),
+                None,
+                None,
+                None,
+            )
+            .unwrap()
+        };
+        Value::new(
+            Repr::Binary { width: 8 },
+            Payload::Bits(vec![false; 8]),
+            meta,
+        )
+        .unwrap()
+    }
+
+    fn datum(reg: &DataRegistry, ty: &str, i: u32, fields: Vec<CoreValue>) -> CoreValue {
+        CoreValue::Data(Datum::new(reg.ctor_ref(ty, i).unwrap(), fields))
+    }
+
+    #[test]
+    fn construct_evaluates_to_a_datum() {
+        let reg = registry();
+        let interp = Interpreter::default();
+        // S(S(Z)) ⟶ the data value S(S(Z)).
+        let node = s(&reg, s(&reg, z(&reg)));
+        let v = interp.eval_core(&node).expect("evaluates");
+        assert_eq!(
+            v,
+            datum(
+                &reg,
+                "Nat",
+                1,
+                vec![datum(&reg, "Nat", 1, vec![datum(&reg, "Nat", 0, vec![])])]
+            )
+        );
+    }
+
+    #[test]
+    fn eval_on_a_data_result_is_an_explicit_refusal() {
+        // The repr-only `eval` must refuse a data result explicitly (never silently mishandle it).
+        let reg = registry();
+        let err = Interpreter::default().eval(&z(&reg)).unwrap_err();
+        assert_eq!(err, EvalError::DataResult);
+    }
+
+    #[test]
+    fn match_selects_the_constructor_arm_and_binds_fields() {
+        // match S(Z) { Z => Z, S(m) => m } ⟶ Z   (the S arm binds m = Z).
+        let reg = registry();
+        let node = Node::Match {
+            scrutinee: Box::new(s(&reg, z(&reg))),
+            alts: vec![
+                Alt::Ctor {
+                    ctor: reg.ctor_ref("Nat", 0).unwrap(),
+                    binders: vec![],
+                    body: z(&reg),
+                },
+                Alt::Ctor {
+                    ctor: reg.ctor_ref("Nat", 1).unwrap(),
+                    binders: vec!["m".to_owned()],
+                    body: Node::Var("m".to_owned()),
+                },
+            ],
+            default: None,
+        };
+        let v = Interpreter::default().eval_core(&node).expect("evaluates");
+        assert_eq!(v, datum(&reg, "Nat", 0, vec![]));
+    }
+
+    #[test]
+    fn match_picks_the_first_matching_arm_not_a_later_one() {
+        // Mutant-witness: matching Z must take the Z arm, not the S arm or the default.
+        let reg = registry();
+        let node = Node::Match {
+            scrutinee: Box::new(z(&reg)),
+            alts: vec![Alt::Ctor {
+                ctor: reg.ctor_ref("Nat", 0).unwrap(),
+                binders: vec![],
+                body: s(&reg, z(&reg)), // Z arm yields S(Z) so we can tell which arm fired
+            }],
+            default: Some(Box::new(z(&reg))),
+        };
+        let v = Interpreter::default().eval_core(&node).expect("evaluates");
+        assert_eq!(
+            v,
+            datum(&reg, "Nat", 1, vec![datum(&reg, "Nat", 0, vec![])])
+        );
+    }
+
+    #[test]
+    fn literal_arm_matches_on_repr_and_payload() {
+        // match Mk(0b1111_1111) { Mk(b) => match b { 0b1111_1111 => Z, _ => S(Z) } }
+        let reg = registry();
+        let all_ones = Value::new(
+            Repr::Binary { width: 8 },
+            Payload::Bits(vec![true; 8]),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap();
+        let inner_match = Node::Match {
+            scrutinee: Box::new(Node::Var("b".to_owned())),
+            alts: vec![Alt::Lit {
+                value: all_ones.clone(),
+                body: z(&reg),
+            }],
+            default: Some(Box::new(s(&reg, z(&reg)))),
+        };
+        let node = Node::Match {
+            scrutinee: Box::new(Node::Construct {
+                ctor: reg.ctor_ref("Box", 0).unwrap(),
+                args: vec![Node::Const(all_ones)],
+            }),
+            alts: vec![Alt::Ctor {
+                ctor: reg.ctor_ref("Box", 0).unwrap(),
+                binders: vec!["b".to_owned()],
+                body: inner_match,
+            }],
+            default: None,
+        };
+        let v = Interpreter::default().eval_core(&node).expect("evaluates");
+        assert_eq!(v, datum(&reg, "Nat", 0, vec![])); // the 0b1111_1111 literal arm fired → Z
+    }
+
+    #[test]
+    fn no_match_and_no_default_is_an_explicit_non_exhaustive_error() {
+        // Mutant-witness: a Match with a non-covering alt set and no default must refuse, not hang
+        // or default silently (WF7 is the checker's job, but the kernel never silently assumes it).
+        let reg = registry();
+        let node = Node::Match {
+            scrutinee: Box::new(s(&reg, z(&reg))),
+            alts: vec![Alt::Ctor {
+                ctor: reg.ctor_ref("Nat", 0).unwrap(), // only Z covered; scrutinee is S(Z)
+                binders: vec![],
+                body: z(&reg),
+            }],
+            default: None,
+        };
+        assert_eq!(
+            Interpreter::default().eval_core(&node).unwrap_err(),
+            EvalError::NonExhaustiveMatch
+        );
+    }
+
+    #[test]
+    fn construct_summary_guarantee_is_the_meet_of_fields() {
+        // Mk(Empirical byte) → an Empirical data value (honesty degrades — RFC-0011 §4.6).
+        let reg = registry();
+        let node = Node::Construct {
+            ctor: reg.ctor_ref("Box", 0).unwrap(),
+            args: vec![Node::Const(byte(GuaranteeStrength::Empirical))],
+        };
+        let v = Interpreter::default().eval_core(&node).expect("evaluates");
+        assert_eq!(v.guarantee(), GuaranteeStrength::Empirical);
+    }
+
+    #[test]
+    fn matching_a_non_exact_data_scrutinee_is_the_explicit_r3_boundary() {
+        // match Mk(Empirical) { Mk(b) => b } — the scrutinee's summary is Empirical, so the
+        // guarantee-meet through Match is the explicit r3 deferral (never a fabricated bound).
+        let reg = registry();
+        let node = Node::Match {
+            scrutinee: Box::new(Node::Construct {
+                ctor: reg.ctor_ref("Box", 0).unwrap(),
+                args: vec![Node::Const(byte(GuaranteeStrength::Empirical))],
+            }),
+            alts: vec![Alt::Ctor {
+                ctor: reg.ctor_ref("Box", 0).unwrap(),
+                binders: vec!["b".to_owned()],
+                body: Node::Var("b".to_owned()),
+            }],
+            default: None,
+        };
+        assert_eq!(
+            Interpreter::default().eval_core(&node).unwrap_err(),
+            EvalError::GuaranteeMeetUnsupported {
+                scrutinee: GuaranteeStrength::Empirical
+            }
+        );
+    }
+
+    #[test]
+    fn an_aot_lowerable_check_excludes_data_nodes() {
+        let reg = registry();
+        assert!(!z(&reg).is_aot_lowerable());
+        assert!(Node::Const(byte(GuaranteeStrength::Exact)).is_aot_lowerable());
+    }
+
+    fn _unused(_: CtorRef) {}
 }
