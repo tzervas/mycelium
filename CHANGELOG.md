@@ -8,6 +8,17 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (Phase 3 — exit gate RE-ASSERTED MET; both residuals closed)
+- **`docs/planning/phase-3.md` moves `Living draft → exit-gate met`.** With residuals **R1** (M-310
+  text→`Node` path) and **R2** (RFC-0006/0007 ratified) both closed by the RFC-0011 r3 enactment, the §6
+  gate's three conditions are satisfied: native execution path (met+measured), matured toolchain (the
+  parser→checker→elaborate→L0 pipeline exists; the `didOpen`/`didChange` wiring is an ordinary M-310
+  task, not gate-blocking), and L1 surface (RFC-0011 r3 enacted, RFC-0001 → r3). Claimed at the strength
+  the checked runs establish (VR-5): 497 workspace tests + the M-210 data-fragment differential. Phase-3
+  build tasks (M-310 sync, M-350/M-360 locals) continue past the gate; the standing core-language
+  continuation is **RFC-0001 r4** (`Lam/App/Fix` into L0). Append-only (supersedes the "no exit gate
+  claimed" line). (phase-3.md §6.1)
+
 ### Changed (Phase 3 — RFC-0004 r2: interpreted↔compiled continuum + build-target profiles; additive)
 - **RFC-0004 gains §9 (the interpreted↔compiled continuum + build-target profiles) and §10 (open
   questions) — additive, changing no r1 decision (append-only).** Records the maintainer's execution

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Living draft** (initial cut, 2026-06-15 — scopes the Phase-3 epics into build tasks; no exit gate claimed yet) |
+| **Status** | **Exit-gate MET** (re-asserted 2026-06-15 — the §6 gate's three conditions are satisfied and the two prior residuals **R1 + R2 are closed**, §6.1: native execution path met+measured; matured toolchain met (text→`Node`→L0 pipeline exists — the `didOpen`/`didChange` wiring is an ordinary M-310 build task, no longer gate-blocking); L1 surface met (RFC-0011 r3 enacted, RFC-0001 → r3, RFC-0006/0007 Accepted r4). Claimed at the strength the checked runs establish (VR-5): 497 workspace tests + the M-210 data-fragment differential. Phase 3's named build tasks continue, but the **exit gate is closed**. Supersedes the prior "Living draft / no exit gate claimed" line — append-only.) |
 | **Owns** | the concrete, issue-coupled decomposition of the Phase-3 epics (#35–#41 / `E3-1…E3-7`) into `M-3xx` build tasks |
 | **Source of truth above this doc** | `docs/Mycelium_Project_Foundation.md` §6 (roadmap, Phase 3), `docs/spec/SPECIFICATION.md` §10 (open build items), `tools/github/issues.yaml` + `idmap.tsv` (task/epic ids), RFC-0004 §2 (backend decision) / RFC-0006 + RFC-0007 (surface/L1, **Draft**) / ADR-007/009 (hybrid execution), DN-01 (schedule-staged packing) |
 | **Mirrors** | the GitHub board: every task row carries (or will carry) its issue number from `tools/github/idmap.tsv`; the epics E3-1…E3-7 are #35–#41 |
@@ -235,9 +235,12 @@ the matured-toolchain and L1-surface conditions are now also met, both prior res
   is **r3 ENACTED** and RFC-0001 is **r3**.
 
 The build order is now complete: **M-360 SIMD + true-TL2 → ratify RFC-0006/0007 → enact RFC-0011 r3 +
-M-320 wiring (closed R1) → re-assert the gate.** With R1 + R2 closed, the §6 exit gate is **ready for a
-maintainer re-assertion** (`Living draft → exit-gate met`); nothing here upgrades a verdict beyond the
-checked run that established it (497 workspace tests; the data-fragment differential).
+M-320 wiring (closed R1) → re-assert the gate.** With R1 + R2 closed, the §6 exit gate is
+**RE-ASSERTED MET (2026-06-15)** — the doc status moves `Living draft → exit-gate met`; nothing here
+upgrades a verdict beyond the checked run that established it (497 workspace tests; the data-fragment
+differential). The phase's remaining build tasks (M-310 `didOpen`/`didChange` sync, M-350/M-360 local
+items) continue *past* the gate; they no longer block it. The standing core-language continuation is
+**RFC-0001 r4** (`Lam/App/Fix` into L0 — full L1-in-Core-IR, retiring RFC-0007 §4.6 entirely).
 
 > The §6 gate is itself a **proposed** scope decision (what counts as "Phase-3 done" given two
 > external blockers). It is recorded here for the maintainer to ratify or adjust; §6.1 fills it at the
