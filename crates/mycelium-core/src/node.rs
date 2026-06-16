@@ -85,6 +85,38 @@ pub enum Node {
         /// The catch-all branch, taken when no alternative matches.
         default: Option<Box<Node>>,
     },
+    /// A **lambda abstraction** (RFC-0001 r4; RFC-0007 §4.1 `Lam`): binds one `param` in `body`. A
+    /// `Lam` node *is* a function value (a normal form). The v0 surface is first-order, so an
+    /// elaborated `Lam` is **closed** (free only in `param` + global/`Fix` names) — no captured
+    /// environment (RFC-0007 §4.7: recursion is through definitions, never heap closures). Multiple
+    /// arguments are curried (`λx. λy. …`). The param *type* is checked above the kernel and is **not**
+    /// an L0 node field (like `Let`, the post-typecheck core is untyped — identity is structural).
+    Lam {
+        /// The bound parameter.
+        param: VarId,
+        /// The body, in scope of `param`.
+        body: Box<Node>,
+    },
+    /// **Application** (RFC-0001 r4; RFC-0007 §4.1 `App`): apply `func` to `arg`, call-by-value. A
+    /// saturated multi-arg call is a left-nested chain `App(App(f, a), b)`.
+    App {
+        /// The function being applied (reduces to a `Lam`).
+        func: Box<Node>,
+        /// The argument.
+        arg: Box<Node>,
+    },
+    /// **General recursion** (RFC-0001 r4; RFC-0007 §4.1 `Fix`; R7-Q1 — a node, not a recursive-`Let`
+    /// flag). `Fix{name, body}` binds `name` to the whole `Fix` in `body` (self-reference), and
+    /// unfolds by substitution — `Fix(f, e) ⟶ e[f ↦ Fix(f, e)]` — under the interpreter's fuel clock
+    /// (so a non-productive recursion is an explicit budget exhaustion, never a hang; RFC-0007 §4.5,
+    /// CakeML). Mutual-recursion `Fix` *groups* are deferred to a later step (R7-Q3); v0 elaborates
+    /// only self-recursion.
+    Fix {
+        /// The self-reference name bound in `body`.
+        name: VarId,
+        /// The recursive body (typically a `Lam`).
+        body: Box<Node>,
+    },
 }
 
 /// One alternative of a flat [`Node::Match`] (RFC-0011 §4.1): a constructor arm (binding exactly the
@@ -131,7 +163,10 @@ impl Node {
             Node::Let { bound, body, .. } => bound.is_aot_lowerable() && body.is_aot_lowerable(),
             Node::Op { args, .. } => args.iter().all(Node::is_aot_lowerable),
             Node::Swap { src, .. } => src.is_aot_lowerable(),
+            // r3 data nodes + r4 function/recursion nodes are interpreter-first (RFC-0011 §4.4 Q5;
+            // RFC-0001 r4 keeps the AOT subset repr-only until the backend grows them).
             Node::Construct { .. } | Node::Match { .. } => false,
+            Node::Lam { .. } | Node::App { .. } | Node::Fix { .. } => false,
         }
     }
 }

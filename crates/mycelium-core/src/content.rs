@@ -68,6 +68,11 @@ pub(crate) mod tag {
     pub const FIELD_CYCLE: u8 = 0x54; // an in-cycle data field: continues with a placeholder index
     pub const CTOR_REF: u8 = 0x55;
     pub const DATUM: u8 = 0x56;
+
+    // r4 (RFC-0001 r4; RFC-0007 §4.1): the function/recursion nodes.
+    pub const LAM: u8 = 0x0a;
+    pub const APP: u8 = 0x0b;
+    pub const FIX: u8 = 0x0c;
 }
 
 /// A canonical, injective, metadata-free byte encoder feeding a [`blake3::Hasher`]. Every write is
@@ -311,6 +316,25 @@ impl Canon {
                     }
                     None => self.tag(tag::MATCH_NO_DEFAULT),
                 }
+            }
+            Node::Lam { param, body } => {
+                // The param name is α-normalised (de Bruijn); identity is over the body structure.
+                self.tag(tag::LAM);
+                scope.push(param.clone());
+                self.node(body, scope);
+                scope.pop();
+            }
+            Node::App { func, arg } => {
+                self.tag(tag::APP);
+                self.node(func, scope);
+                self.node(arg, scope);
+            }
+            Node::Fix { name, body } => {
+                // The self-reference name is α-normalised (de Bruijn); the body sees it in scope.
+                self.tag(tag::FIX);
+                scope.push(name.clone());
+                self.node(body, scope);
+                scope.pop();
             }
         }
     }
