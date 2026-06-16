@@ -500,3 +500,12 @@ issues:
     body: |
       The content-addressed identity of a Fix-group is done; the surface -> Fix-group elaboration + the totality checker's mutual-descent classification remain (currently an explicit ElabError::Residual). DESIGN the Fix-group node/encoding first (does L0 need a Fix-group node, or do nested Fixes + the cycle registry suffice?) and present a frozen-spec change (likely an RFC-0001 revision) before folding, then enact + extend the differential.
       Acceptance: mutual recursion elaborates (no Residual) and agrees across the differential paths; the totality checker classifies mutual descent.
+
+  - id: M-344
+    title: "M-344 — RFC-0012: Ambient Representation (paradigm defaults + scoped overrides)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:design, area:toolchain, priority:P2, status:needs-design]
+    depends_on: [M-310]
+    body: |
+      RFC-0012 (Draft, 2026-06-16): a surface-only declared, scoped, paradigm-only representation default + scoped override/conversion blocks, to offset honesty's verbosity (tension A) without a black box. Two normative invariants: the ambient emits no Swap (I1); resolution is observationally the identity (I2, identical L0 ⟹ identical hash), defended by a meaning-preservation differential (NFR-7). Cross-paradigm edges stay explicit swaps; a missing one is an explicit MissingConversion. Kernel untouched (KC-3); exported signatures are concrete reprs (ADR-016).
+      Acceptance (design-first): RFC-0012 Draft presented; on ratification, wire the resolution pass + the never-silent checks + M-142/LSP rendering + the §4.6 differential into mycelium-l1. R12-Q1..Q4 open.

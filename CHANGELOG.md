@@ -8,6 +8,23 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — RFC-0012 Draft: ambient representation & scoped overrides, M-344)
+- **RFC-0012 (Draft) — a surface-only, declared, scoped, *paradigm-only* representation default +
+  scoped override/conversion blocks** (`docs/rfcs/RFC-0012-…`), to offset honesty's verbosity (tension
+  A) while refusing black boxes. The honest core is two **normative invariants**: **(I1)** the ambient
+  emits no `Swap` (it fills an *omitted paradigm* + bare-literal encoding only — conversions stay
+  author-written, WF1/WF2); **(I2)** resolution is observationally the identity — a program with the
+  ambient and its longhand twin elaborate to *identical* L0 ⟹ identical content hash (RFC-0001 §4.6),
+  defended by a meaning-preservation differential (NFR-7/M-210). Forbids the two black-box failure modes
+  (repr-inference-from-usage; silent conversion insertion); cross-paradigm edges stay explicit `swap`s
+  and a missing one is an explicit `MissingConversion` refusal (G2). The **trusted kernel is untouched**
+  (KC-3) — L0's frozen node set does not change; this is RFC-0006 surface/term-layer sugar that
+  elaborates away. Cross-module: exported signatures are concrete L0 reprs (ADR-016 boundary), so the
+  ambient never leaks across modules. Per maintainer direction (2026-06-16): **paradigm-only**
+  granularity, **full v0 scope** (defaults + overrides). **No code, no RFC-0001 change** — Draft is the
+  present-before-fold step; ratification + wiring are the maintainer's append-only decision. RFC README +
+  Doc-Index updated; issue M-344 (#106) added to `idmap.tsv` / `issues.yaml`.
+
 ### Changed (Phase 4 — ADR-016 + ADR-017 RATIFIED: Proposed → Accepted)
 - **ADR-016 + ADR-017 ratified (Proposed → Accepted, 2026-06-16; append-only).** Maintainer gate
   cleared — no change to either decision. ADR-016 fixes the interpreted↔compiled ABI (dispatch by
