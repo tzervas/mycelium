@@ -43,6 +43,18 @@ bash tools/github/termux-setup.sh --skip-install --skip-gpg   # re-run, auth+boo
 Flags: `--repo`, `--repo-dir`, `--no-gpg-passphrase`, `--skip-install`, `--skip-gpg`,
 `--skip-issues`, `--dry-run-issues`, `--help`.
 
+**Already provisioned (`gh` authed), just re-syncing the PM state?** Skip the full setup and run
+the one idempotent gap-closer directly:
+
+```sh
+bash tools/github/gh-sync-all.sh            # preflight → labels + milestones → absent issues + idmap
+bash tools/github/gh-sync-all.sh --dry-run  # preview issue creation, no repo writes
+```
+
+It reconciles the repo with `issues.yaml`/`labels.json`/`milestones.json` (a `manifest-check.py`
+preflight fails fast if an issue references a label/milestone the manifests don't define — so a
+missing label can't silently leave issues uncreated). Rerun any time a manifest gains entries.
+
 ## Security model (house rules: never-silent, no black boxes, KISS)
 
 - **No secrets in the repo, ever.** Your GPG *private* key stays on the device; only the

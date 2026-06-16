@@ -15,6 +15,12 @@ whole bootstrap (packages, git identity, GPG signing key, `gh` auth, then
 gh-driven local analogue of Steps 1–2 below (idempotent create + milestone + `idmap.tsv`);
 Step 4 (dependency/sub-issue linking) still needs an MCP/GraphQL pass.
 
+**Already provisioned, just closing gaps?** `bash tools/github/gh-sync-all.sh` is the single
+idempotent command that reconciles the repo with the manifests — preflight (`manifest-check.py`)
+→ labels + milestones (`gh-bootstrap-local.sh`) → absent issues + assignment + `idmap.tsv`
+(`gh-issues-sync.py`). Rerun it whenever `issues.yaml`/`labels.json`/`milestones.json` gains
+entries; nothing is duplicated. (Still Steps 1–2 only; Step 4 remains the MCP/GraphQL pass.)
+
 ## Tool / capability matrix
 
 | Task | Tool | MCP can do it? |

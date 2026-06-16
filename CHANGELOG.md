@@ -8,6 +8,46 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-16: typed SPSC channels — the RT2 communicating fragment, M-357 follow-on)
+- **`crates/mycelium-mlir/src/channel.rs`** — the Kahn-deterministic *communicating* half of the RFC-0008
+  RT2 fragment (§4.3), extending the landed fork/join runtime. **Typed single-producer/single-consumer
+  channels**: `Network::channel` returns an affine `Sender`/`Receiver` pair (neither `Clone` — SPSC by
+  construction, RT1) over a buffer of **explicit, finite** capacity (`NonZeroUsize` — no unbounded silent
+  buffer, RT7's spirit on queues). **Demand-signalled backpressure**: `try_send` on a full buffer returns
+  `Full(v)` handing the value back (never dropped); the producer yields and is re-polled as the consumer
+  drains. **Explicit close**: dropping the `Sender` lets the `Receiver` drain then see `Closed`
+  (end-of-stream, never a hang); a send to a hung-up receiver is `Disconnected(v)` (G2, never a silent
+  drop). A new **`Scope::run_dataflow(order, progress)`** (in `runtime.rs`) schedules communicating tasks
+  and surfaces a stalled network as an explicit **`Deadlock { parked }`** — never a silent hang (the
+  cooperative scheduler cannot block). Determinism is verified by a **Kahn-determinism differential**: the
+  same network under two distinct fair schedules (`SweepOrder::Ascending`/`Descending`) yields identical
+  outcomes + transcripts (T4.1) — tagged **`Empirical`** (the differential is the evidence) with Kahn T4.1
+  cited, **not** `Proven` (no mechanized proof in-repo; VR-5). Deferred (honest boundary): multi-source
+  `select`/`merge` (RT3), session/protocol typing beyond the §4.3 hook, zero-capacity rendezvous,
+  `xloc`/`mesh` (R2). No kernel change (KC-3); no `unsafe`. RFC-0008 §4.6 staging note + Meta-changelog
+  updated (append-only). `just check` green.
+
+### Fixed (2026-06-16: PM manifest drift — labels.json out of sync with issues.yaml)
+- **`tools/github/labels.json`** was missing three labels that `issues.yaml` already uses —
+  **`type:design`** (12 issues), **`priority:P3`** (11 issues), and **`area:language`** (1). Because
+  `gh issue create --label <name>` errors on a label the bootstrap never created, this silently stalled
+  issue creation: the five staged Phase-7/8 issues (**M-358/359/361/362/363**) were not created on the
+  prior run. Added the three labels (matching the existing color/description style) so a sync run creates
+  them first, then the issues that reference them.
+
+### Added (2026-06-16: one-command PM gap-closer + manifest preflight)
+- **`tools/github/gh-sync-all.sh`** — a single **idempotent** command that reconciles the repo with the
+  manifests in one pass: a preflight, then `gh-bootstrap-local.sh` (labels + milestones), then
+  `gh-issues-sync.py` (create absent issues + assign milestones + append `idmap.tsv`). Safe to rerun any
+  time `issues.yaml`/`labels.json`/`milestones.json` gains entries; nothing is duplicated. Supports
+  `--dry-run` (preview issue creation, no repo writes).
+- **`tools/github/manifest-check.py`** — the preflight: every label/milestone `issues.yaml` references
+  must be **defined** in `labels.json`/`milestones.json`, else an explicit fail-fast error (the
+  never-silent rule, G2 — a missing label can no longer silently leave issues uncreated). Reverse drift
+  (a defined-but-unused manifest entry) is an advisory note only.
+- Docs updated to make `gh-sync-all.sh` the canonical re-sync entrypoint: `MILESTONES.md`,
+  `mcp-bootstrap.md`, `termux-bootstrap.md`. The two component scripts stay single-purpose.
+
 ### Added (2026-06-16: mobile/Termux GitHub bootstrap — phone-autonomous PM)
 - **`tools/github/termux-setup.sh`** + **`tools/github/gh-issues-sync.py`** + **`termux-bootstrap.md`**.
   A single, ordered, **idempotent** path to run the *whole* GitHub project-management bootstrap from an

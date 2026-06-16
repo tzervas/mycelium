@@ -11,19 +11,32 @@ machine-consumed sources are alongside it.
 - **`labels.json`** — the `phase:N` (and other) labels, created with colors/descriptions.
 - **`issues.yaml`** — each task carries a `milestone:` field (its exact `milestones.json` title) and a
   `phase:N` label; this is the **per-issue assignment** source of truth.
-- **`gh-bootstrap-local.sh`** — run **locally with `gh`**, it creates any missing milestone/label, then
-  ensures the issues exist and **assigns each issue's milestone**. Idempotent (create-if-absent).
+- **`gh-bootstrap-local.sh`** — run **locally with `gh`**, it creates any missing milestone/label.
+  Idempotent (label = create-or-update; milestone = create-if-absent).
+- **`gh-issues-sync.py`** — creates any **absent issue** (with its labels), assigns each milestone by
+  title, and **appends** new rows to `idmap.tsv`. Idempotent (create-absent-by-title).
+- **`gh-sync-all.sh`** — the **single command** that runs the whole reconciliation: a manifest
+  preflight, then `gh-bootstrap-local.sh` (labels + milestones), then `gh-issues-sync.py` (issues +
+  assignment + idmap). Use this to close gaps after editing any manifest.
+- **`manifest-check.py`** — the preflight: every label/milestone `issues.yaml` references must be
+  defined in `labels.json`/`milestones.json`, else an explicit error (a missing label would otherwise
+  make `gh issue create --label …` fail mid-run — never-silent, G2).
 
 > **Why local `gh` and not the agent:** the GitHub **MCP server cannot create milestones or
 > colored/described labels** (it can only *assign* an issue to a milestone that already exists, by
 > number). So milestone/label creation is split to `gh-bootstrap-local.sh`. `idmap.tsv` records the
-> issue-id map; milestones are assigned by the script, not by the MCP runner.
+> issue-id map; milestones are assigned by `gh-issues-sync.py`, not by the MCP runner.
 
-To create every milestone + label and assign every issue in one pass:
+To reconcile the repo with every manifest (milestones + labels + issues + assignments) in **one
+idempotent pass** — safe to rerun any time a manifest gains entries:
 
 ```sh
-bash tools/github/gh-bootstrap-local.sh          # needs `gh` authenticated to tzervas/mycelium
+bash tools/github/gh-sync-all.sh                 # needs `gh` authenticated to tzervas/mycelium
+bash tools/github/gh-sync-all.sh --dry-run       # preview issue creation, no repo writes
 ```
+
+(`gh-bootstrap-local.sh` on its own still creates only labels + milestones — `gh-sync-all.sh` is the
+labels-then-milestones-then-issues superset.)
 
 ## The milestone ladder
 
