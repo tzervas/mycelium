@@ -16,7 +16,7 @@ use std::io::Read;
 use std::process::ExitCode;
 
 use mycelium_l1::ast::{Item, TypeRef};
-use mycelium_l1::{check_colony, parse};
+use mycelium_l1::{check_nodule, parse};
 
 /// Render a declared return type the way the surface writes it (for `--expect-main`).
 fn render_type(t: &TypeRef) -> String {
@@ -121,7 +121,7 @@ fn main() -> ExitCode {
     };
 
     // Syntactic validity: an explicit ParseError, never a panic (S5/G2).
-    let colony = match parse(&src) {
+    let nodule = match parse(&src) {
         Ok(c) => c,
         Err(e) => {
             println!("parse-error: {e}");
@@ -130,14 +130,14 @@ fn main() -> ExitCode {
     };
 
     // Type-check pass: every refusal is an explicit CheckError (RFC-0007 §4.4/§4.5).
-    if let Err(e) = check_colony(&colony) {
+    if let Err(e) = check_nodule(&nodule) {
         println!("check-error: {e}");
         return ExitCode::from(3);
     }
 
     // Task conformance: the declared entry signature must match, when asked for.
     if let Some(expected) = expect_main {
-        let found = colony.items.iter().find_map(|i| match i {
+        let found = nodule.items.iter().find_map(|i| match i {
             Item::Fn(f) if f.sig.name == "main" => Some(f),
             _ => None,
         });

@@ -94,7 +94,7 @@ static unit than the reused `colony` was.
 | Term | Layer | Role | Relationship | Status |
 |---|---|---|---|---|
 | `phylum` | Static | Library / subsystem (content-addressed, versioned) | Contains one or more `nodule`s | **Reserved** (this note); activates with its construct (RFC-0006) |
-| `nodule` | Static | Basic static organizational unit (defs/types/impls) | Lives inside a `phylum` | **Ratified**; supersedes static `colony` — migration M-358 |
+| `nodule` | Static | Basic static organizational unit (defs/types/impls) | Lives inside a `phylum` | **Ratified**; supersedes static `colony` — migration M-358 **executed 2026-06-16** |
 | `colony` | Dynamic | Runtime grouping of active `hypha` | Contains running `hypha`; supervised by `reclaim` (RFC-0008 §4.7) | **Reserved/ratified**; realized by `mycelium-mlir::runtime` (§5) |
 | `hypha` | Dynamic | Single concurrent execution unit | Lives in a `colony` | Already ratified (DN-03 §4; RFC-0008 §4.5) |
 | `spore` | Deploy | Published artifact of a `phylum` | The deployable form of a phylum (ADR-013) | Already ratified (DN-02 §2) |
@@ -155,6 +155,18 @@ hashable unit with a public surface), consistent with the existing content-addre
 
 ## Meta — changelog & maintenance
 
+- **2026-06-16 — M-358 executed (the keyword migration).** The static surface keyword `colony` → `nodule`
+  migration this note required is **done**: the lexer/token/parser/AST/checker/elaborator
+  (`crates/mycelium-l1`), the LSP surface (`crates/mycelium-lsp`), the grammar oracle
+  (`docs/spec/grammar/mycelium.ebnf` + README), and the full accept/reject conformance corpus now spell the
+  static unit `nodule`. `phylum` (library grouping) and `colony` (now the RFC-0008 §4.7 dynamic grouping)
+  are added as **reserved-not-active** keywords (they lex as keywords — never silent identifiers — but no
+  L1 construct consumes them, so neither opens a program; `conformance/reject/10`). The §6 `// nodule:`
+  header marker is recognised by `mycelium_l1::parse_nodule_header` and wired into the M-141 linter
+  (`lint_nodule_header`) and the M-142 surface formatter (the marker is preserved across a canonical
+  re-print). **No semantic change** — content-addressed identity is over elaborated L0, never the surface
+  keyword (ADR-003); the conformance corpus and `scripts/checks/all.sh` are green. Append-only; this records
+  execution and supersedes nothing.
 - **2026-06-16 — Supplement: open questions resolved (§6).** The maintainer's updated proposal resolves
   DN-06's open questions: **(a) on-disk naming** — a nodule is declared by a **header comment**
   (`// nodule: <name>`, or bare `// nodule`) on the first non-blank line, **never** in the filename/path

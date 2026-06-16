@@ -3,11 +3,11 @@
 //! becoming a black box. This module is the enactment's honest core.
 //!
 //! # The architecture: a surface→surface "expand to longhand" pass
-//! [`resolve`] rewrites a parsed [`Colony`] into its **longhand twin**: every paradigm-less repr
+//! [`resolve`] rewrites a parsed [`Nodule`] into its **longhand twin**: every paradigm-less repr
 //! `{…}` is replaced by the concrete `P{…}` of the enclosing ambient, every `with paradigm` block
 //! is stripped (after filling its interior tags), and every bare decimal under an ambient is tagged
 //! [`Literal::AmbientInt`] (its *width* is resolved later, by the checker, from context — §4.3).
-//! The **unchanged** `check_colony → elaborate` pipeline then runs on the twin. This makes
+//! The **unchanged** `check_nodule → elaborate` pipeline then runs on the twin. This makes
 //! RFC-0012's two normative invariants true *by construction*:
 //!
 //! - **(I1) the ambient emits no `Swap`** — resolution only fills tags/encodings; it has no rule
@@ -24,7 +24,7 @@
 //!   paradigm (e.g. `{8}` under a `Dense` ambient) — never a coerced guess.
 //! - [`AmbientError::BareDecimalNoEncoding`] — a bare decimal under a `Dense`/`VSA` ambient (those
 //!   paradigms have no bare-decimal encoding).
-//! - [`AmbientError::MultipleDefaults`] — two colony-scope `default paradigm` declarations.
+//! - [`AmbientError::MultipleDefaults`] — two nodule-scope `default paradigm` declarations.
 //!
 //! The cross-paradigm `MissingConversion` refusal (§4.4) and the bare-decimal `UnresolvedWidth`
 //! refusal (§4.3) need *types*, so they live in the checker ([`crate::checkty`]); they are the
@@ -40,14 +40,14 @@
 //! (RFC-0001 §4.6) and is fully recoverable here. See the RFC-0012 changelog (append-only).
 
 use crate::ast::{
-    AmbientParams, Arm, BaseType, Colony, Ctor, Expr, FnDecl, FnSig, Item, Literal, Paradigm,
+    AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, Item, Literal, Nodule, Paradigm,
     Param, Pattern, Scalar, Sparsity, TraitDecl, TypeDecl, TypeRef,
 };
 
 /// A never-silent refusal from the resolution pass (§4.3/§4.4) — always explicit, never a guess.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AmbientError {
-    /// Two colony-scope `default paradigm` declarations — the outer frame is ambiguous.
+    /// Two nodule-scope `default paradigm` declarations — the outer frame is ambiguous.
     MultipleDefaults {
         /// The first declared paradigm.
         first: Paradigm,
@@ -84,7 +84,7 @@ impl core::fmt::Display for AmbientError {
         match self {
             AmbientError::MultipleDefaults { first, second } => write!(
                 f,
-                "two `default paradigm` declarations (`{first}` then `{second}`) — a colony has one \
+                "two `default paradigm` declarations (`{first}` then `{second}`) — a nodule has one \
                  outer ambient (RFC-0012 §4.2); nest a `with paradigm` block for a local override"
             ),
             AmbientError::UnresolvedAmbient { site } => write!(
@@ -128,31 +128,31 @@ pub struct ResolutionNote {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Resolved {
     /// The longhand twin (paradigm-less forms filled; `with` blocks stripped; bare decimals tagged).
-    pub colony: Colony,
+    pub nodule: Nodule,
     /// One note per ambient fill (provenance / EXPLAIN; §4.3).
     pub notes: Vec<ResolutionNote>,
 }
 
-/// Resolve a parsed [`Colony`] to its longhand twin (RFC-0012 §4.3/§4.4). Identity on a program
+/// Resolve a parsed [`Nodule`] to its longhand twin (RFC-0012 §4.3/§4.4). Identity on a program
 /// that uses no ambient — the feature is purely additive (opt-in), so every pre-RFC-0012 program
 /// passes through unchanged.
 ///
 /// # Errors
 /// Returns an [`AmbientError`] for any never-silent refusal (unresolved/unshaped ambient, a bare
-/// decimal with no encoding, or a duplicate colony default).
-pub fn resolve(colony: &Colony) -> Result<Colony, AmbientError> {
-    resolve_report(colony).map(|r| r.colony)
+/// decimal with no encoding, or a duplicate nodule default).
+pub fn resolve(nodule: &Nodule) -> Result<Nodule, AmbientError> {
+    resolve_report(nodule).map(|r| r.nodule)
 }
 
 /// Like [`resolve`], but also returns the provenance trace ([`ResolutionNote`]s) for EXPLAIN (§4.3).
 ///
 /// # Errors
 /// See [`resolve`].
-pub fn resolve_report(colony: &Colony) -> Result<Resolved, AmbientError> {
-    // The colony-scope ambient: at most one `default paradigm`, the outermost frame. It governs all
+pub fn resolve_report(nodule: &Nodule) -> Result<Resolved, AmbientError> {
+    // The nodule-scope ambient: at most one `default paradigm`, the outermost frame. It governs all
     // signature types and is the base expression ambient.
     let mut default: Option<Paradigm> = None;
-    for item in &colony.items {
+    for item in &nodule.items {
         if let Item::Default(p) = item {
             if let Some(first) = default {
                 return Err(AmbientError::MultipleDefaults { first, second: *p });
@@ -162,8 +162,8 @@ pub fn resolve_report(colony: &Colony) -> Result<Resolved, AmbientError> {
     }
 
     let mut r = Resolver { notes: Vec::new() };
-    let mut items = Vec::with_capacity(colony.items.len());
-    for item in &colony.items {
+    let mut items = Vec::with_capacity(nodule.items.len());
+    for item in &nodule.items {
         match item {
             // The default declaration is consumed (it is metadata for resolution, not a runtime
             // item); the longhand twin carries no ambient.
@@ -175,24 +175,24 @@ pub fn resolve_report(colony: &Colony) -> Result<Resolved, AmbientError> {
         }
     }
     Ok(Resolved {
-        colony: Colony {
-            path: colony.path.clone(),
+        nodule: Nodule {
+            path: nodule.path.clone(),
             items,
         },
         notes: r.notes,
     })
 }
 
-/// Render a (resolved or partly-resolved) [`Colony`] back to canonical surface text — the M-142/LSP
+/// Render a (resolved or partly-resolved) [`Nodule`] back to canonical surface text — the M-142/LSP
 /// **"expand ambient"** projection (RFC-0012 §5; R12-Q3). Fed the fully-resolved twin (post-checker,
 /// so bare decimals are concrete literals), it prints the exact longhand a reader would write; fed
-/// the type-form-resolved colony, it still shows every resolved *paradigm* (an `AmbientInt` renders
+/// the type-form-resolved nodule, it still shows every resolved *paradigm* (an `AmbientInt` renders
 /// as its decimal with a paradigm note, since its width is the checker's to fill).
 #[must_use]
-pub fn expand_to_source(colony: &Colony) -> String {
+pub fn expand_to_source(nodule: &Nodule) -> String {
     let mut out = String::new();
-    out.push_str(&format!("colony {}\n", path_str(&colony.path)));
-    for item in &colony.items {
+    out.push_str(&format!("nodule {}\n", path_str(&nodule.path)));
+    for item in &nodule.items {
         out.push('\n');
         match item {
             Item::Use(p) => out.push_str(&format!("use {}\n", path_str(p))),
@@ -261,7 +261,7 @@ impl Resolver {
 
     fn fn_decl(&mut self, amb: Option<Paradigm>, fd: &FnDecl) -> Result<FnDecl, AmbientError> {
         let sig = self.fn_sig(amb, &fd.sig)?;
-        // The function body resolves under the colony ambient as its base frame; `with paradigm`
+        // The function body resolves under the nodule ambient as its base frame; `with paradigm`
         // blocks nest *inside* it. Signatures (above) never see a block-scope override.
         let body = self.expr(amb, &fd.sig.name, &fd.body)?;
         Ok(FnDecl {
@@ -710,7 +710,7 @@ fn print_literal(l: &Literal) -> String {
         Literal::Trit(s) => format!("<{s}>"),
         Literal::Int(i) => format!("{i}"),
         // A still-unresolved ambient decimal: show the decimal + its resolved paradigm (the width is
-        // the checker's to fill — this only appears when expanding a type-form-only colony).
+        // the checker's to fill — this only appears when expanding a type-form-only nodule).
         Literal::AmbientInt(p, i) => format!("{i} /* {p} (width from context) */"),
         Literal::List(es) => {
             let s: Vec<String> = es.iter().map(print_expr).collect();
@@ -724,22 +724,22 @@ mod tests {
     use super::*;
     use crate::parse;
 
-    fn colony(src: &str) -> Colony {
+    fn nodule(src: &str) -> Nodule {
         parse(src).expect("parses")
     }
 
     #[test]
     fn no_ambient_is_the_identity() {
-        let c = colony("colony d\nfn main() -> Binary{8} = not(0b1011_0010)");
+        let c = nodule("nodule d\nfn main() -> Binary{8} = not(0b1011_0010)");
         assert_eq!(resolve(&c).unwrap(), c);
     }
 
     #[test]
     fn a_paradigm_less_repr_is_filled_and_traced() {
-        let c = colony("colony d\ndefault paradigm Binary\nfn main() -> {8} = 0b1011_0010");
+        let c = nodule("nodule d\ndefault paradigm Binary\nfn main() -> {8} = 0b1011_0010");
         let r = resolve_report(&c).unwrap();
         // The `default` item is stripped; the return type is now concrete.
-        assert!(!r.colony.items.iter().any(|i| matches!(i, Item::Default(_))));
+        assert!(!r.nodule.items.iter().any(|i| matches!(i, Item::Default(_))));
         // A provenance note records the fill (EXPLAIN: "where did this paradigm come from?").
         assert!(
             r.notes
@@ -752,8 +752,8 @@ mod tests {
 
     #[test]
     fn a_with_block_is_stripped_to_its_body() {
-        let c = colony(
-            "colony d\nfn main() -> Ternary{6} = with paradigm Ternary { swap(0b1011_0010, to: {6}, policy: rt) }",
+        let c = nodule(
+            "nodule d\nfn main() -> Ternary{6} = with paradigm Ternary { swap(0b1011_0010, to: {6}, policy: rt) }",
         );
         let r = resolve(&c).unwrap();
         let Some(Item::Fn(fd)) = r.items.iter().find(|i| matches!(i, Item::Fn(_))) else {
@@ -765,8 +765,8 @@ mod tests {
 
     #[test]
     fn multiple_defaults_are_refused() {
-        let c = colony(
-            "colony d\ndefault paradigm Binary\ndefault paradigm Ternary\nfn main() -> {8} = 0b1011_0010",
+        let c = nodule(
+            "nodule d\ndefault paradigm Binary\ndefault paradigm Ternary\nfn main() -> {8} = 0b1011_0010",
         );
         assert!(matches!(
             resolve(&c),
@@ -776,7 +776,7 @@ mod tests {
 
     #[test]
     fn a_shape_mismatch_is_refused() {
-        let c = colony("colony d\ndefault paradigm Ternary\nfn main() -> {4, F32} = <0+-->");
+        let c = nodule("nodule d\ndefault paradigm Ternary\nfn main() -> {4, F32} = <0+-->");
         assert!(matches!(
             resolve(&c),
             Err(AmbientError::ParadigmShapeMismatch { .. })

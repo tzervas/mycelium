@@ -154,8 +154,9 @@ on-brand replacement for the generic "module" (the phonetic bridge module→nodu
 Content-addressed (ADR-003). Surface tier (L2). **File/dir convention (DN-06):** a file's nodule status
 is declared in a **header comment**, *not* in the filename/path (which stay conventional — no `nodule`
 bloat). **Defining doc:** DN-06; RFC-0006 (L2 surface). **History:** replaces DN-02's static `colony`;
-the keyword migration is M-358 (until then `colony` is the deprecated spelling). *Usage:* `// nodule:
-geometry.shapes` as the first line of a source file.
+the keyword migration (lexer/parser/AST/grammar/conformance) was **executed by M-358 (2026-06-16)** — the
+L1 surface keyword is now `nodule`, and `phylum`/`colony` are reserved-not-active. *Usage:* `// nodule:
+geometry.shapes` as the first line of a source file (recognised by `mycelium_l1::parse_nodule_header`).
 
 ### 2.15 `phylum` ⟂
 A **content-addressed, versioned, library-scale** static unit: a coherent collection of `nodule`s with

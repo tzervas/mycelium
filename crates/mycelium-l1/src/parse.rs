@@ -3,7 +3,7 @@
 //! (never a panic, never a silent accept — S5/G2). v0 covers the L1-facing core.
 
 use crate::ast::{
-    AmbientParams, Arm, BaseType, Colony, Ctor, Expr, FnDecl, FnSig, Item, Literal, Paradigm,
+    AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, Item, Literal, Nodule, Paradigm,
     Param, Path, Pattern, Scalar, Sparsity, Strength, TraitDecl, TypeDecl, TypeRef,
 };
 use crate::error::ParseError;
@@ -18,17 +18,17 @@ use crate::token::{Pos, ScalarTok, Spanned, StrengthTok, Tok};
 /// the AST depth, so the downstream passes are protected transitively.
 const MAX_EXPR_DEPTH: u32 = 256;
 
-/// Parse a complete `colony` program from source.
-pub fn parse(src: &str) -> Result<Colony, ParseError> {
+/// Parse a complete `nodule` program from source.
+pub fn parse(src: &str) -> Result<Nodule, ParseError> {
     let toks = lex(src)?;
     let mut p = Parser {
         toks,
         i: 0,
         depth: 0,
     };
-    let colony = p.parse_colony()?;
+    let nodule = p.parse_nodule()?;
     p.expect(&Tok::Eof, "end of input")?;
-    Ok(colony)
+    Ok(nodule)
 }
 
 struct Parser {
@@ -108,14 +108,14 @@ impl Parser {
 
     // ---- items ----
 
-    fn parse_colony(&mut self) -> Result<Colony, ParseError> {
-        self.expect(&Tok::Colony, "a `colony` header to open the program")?;
+    fn parse_nodule(&mut self) -> Result<Nodule, ParseError> {
+        self.expect(&Tok::Nodule, "a `nodule` header to open the program")?;
         let path = self.parse_path()?;
         let mut items = Vec::new();
         while !self.at(&Tok::Eof) {
             items.push(self.parse_item()?);
         }
-        Ok(Colony { path, items })
+        Ok(Nodule { path, items })
     }
 
     fn parse_item(&mut self) -> Result<Item, ParseError> {

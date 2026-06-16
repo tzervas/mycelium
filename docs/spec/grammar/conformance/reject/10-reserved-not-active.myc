@@ -1,0 +1,4 @@
+// rejected: 'phylum' is a reserved word (the library grouping, DN-06) that is not yet an active
+// construct, so it does not open a program — only `nodule` does. 'colony' (the dynamic runtime
+// grouping, RFC-0008 §4.7) is reserved the same way.
+phylum signals.demo

@@ -1,5 +1,5 @@
 // exercises: representation-typed literals (compact balanced-ternary, list, type args)
-colony literals
+nodule literals
 
 fn samples() -> List<Ternary{6}> =
     [ <+0--0+>, <000000>, <------> ]

@@ -49,8 +49,8 @@ fn accept_corpus_all_parses() {
 /// new fixture lacks one, so the table cannot silently fall behind the corpus.
 const REJECT_EXPECTED: &[(&str, &str)] = &[
     (
-        "01-no-colony-header.myc",
-        "expected a `colony` header to open the program",
+        "01-no-nodule-header.myc",
+        "expected a `nodule` header to open the program",
     ),
     ("02-swap-missing-policy.myc", "a swap is never silent"),
     ("03-unclosed-brace.myc", "expected `}` to close the match"),
@@ -62,12 +62,16 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
     ("06-missing-arrow.myc", "expected `->` and a result type"),
     (
         "07-empty.myc",
-        "expected a `colony` header to open the program",
+        "expected a `nodule` header to open the program",
     ),
     ("08-imperative-while.myc", "`while` is not a Mycelium form"),
     (
         "09-default-missing-paradigm.myc",
         "expected `paradigm` after `default`",
+    ),
+    (
+        "10-reserved-not-active.myc",
+        "expected a `nodule` header to open the program",
     ),
 ];
 

@@ -1,5 +1,5 @@
 // rejected: unbalanced brace — the match block is never closed
-colony bad
+nodule bad
 
 fn f(s: Sign) -> Sign =
     match s {

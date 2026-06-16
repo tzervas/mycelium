@@ -1,7 +1,7 @@
-// exercises: ambient representation (RFC-0012; M-344) — a colony-scope `default paradigm`, a
+// exercises: ambient representation (RFC-0012; M-344) — a nodule-scope `default paradigm`, a
 // paradigm-less repr `{N}` in signatures, a `with paradigm` override block, and a bare decimal
 // that adopts the ambient paradigm (width from the checked context)
-colony signals.ambient
+nodule signals.ambient
 default paradigm Binary
 
 fn mask(x: {8}, m: {8}) -> {8} =

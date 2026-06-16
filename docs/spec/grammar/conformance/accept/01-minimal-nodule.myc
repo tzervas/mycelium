@@ -1,4 +1,4 @@
-// exercises: colony header + use import
-colony signals.demo
+// exercises: nodule header + use import
+nodule signals.demo
 
 use core.binary

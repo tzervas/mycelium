@@ -1,5 +1,5 @@
 // exercises: trait declaration (a set of fn signatures) with a type parameter
-colony algebra
+nodule algebra
 
 trait Negate<T> {
     fn negate(x: T) -> T

@@ -16,12 +16,21 @@ impl core::fmt::Display for Pos {
 }
 
 /// A lexical token. Keyword variants are the ratified DN-02 reserved words; an identifier that
-/// matches a reserved word lexes as the keyword (so using e.g. `colony` as a name is a parse
+/// matches a reserved word lexes as the keyword (so using e.g. `nodule` as a name is a parse
 /// error, never a silent shadow — `reject/05`).
 #[derive(Debug, Clone, PartialEq)]
 pub enum Tok {
-    // --- structural keywords (DN-02) ---
-    /// `colony` — module/namespace (themed).
+    // --- structural keywords (DN-02; nodule per DN-06) ---
+    /// `nodule` — the basic static organizational unit (themed; DN-06, supersedes static `colony`).
+    Nodule,
+    /// `phylum` — the library-scale static grouping above `nodule` (DN-06). **Reserved, not yet
+    /// active**: it lexes as a keyword (so it is never a silent identifier) but no construct consumes
+    /// it yet, so it cannot open a program (RFC-0006 §4.3; its construct lands later).
+    Phylum,
+    /// `colony` — the **dynamic** runtime grouping of active `hypha` (DN-06 §2; RFC-0008 §4.7),
+    /// reassigned from its former static meaning. **Reserved, not yet active** at the L1 surface:
+    /// it lexes as a keyword (never a silent identifier) but no L1 construct consumes it; the
+    /// realization lives in `mycelium-mlir::runtime` (M-357).
     Colony,
     /// `use` — import (conventional).
     Use,
@@ -49,7 +58,7 @@ pub enum Tok {
     For,
     /// `swap` — the never-silent representation change (native corpus term).
     Swap,
-    /// `default` — opens a colony-scope ambient declaration (`default paradigm P`; RFC-0012 §4.2).
+    /// `default` — opens a nodule-scope ambient declaration (`default paradigm P`; RFC-0012 §4.2).
     Default,
     /// `paradigm` — the ambient granularity keyword (`default paradigm P` / `with paradigm P`).
     Paradigm,
@@ -168,6 +177,10 @@ pub struct Spanned {
 #[must_use]
 pub fn keyword(word: &str) -> Option<Tok> {
     Some(match word {
+        "nodule" => Tok::Nodule,
+        // Reserved, not yet active (DN-06): they lex as keywords so they can never be silent
+        // identifiers, but no L1 construct consumes them yet (a never-silent reservation, G2).
+        "phylum" => Tok::Phylum,
         "colony" => Tok::Colony,
         "use" => Tok::Use,
         "type" => Tok::Type,

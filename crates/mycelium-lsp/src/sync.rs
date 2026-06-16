@@ -9,7 +9,7 @@
 //!   declaration (the checker tracks the failing *function* but not yet the failing *sub-expression*
 //!   span — flagged, not fabricated: the precise sub-span awaits the checker carrying spans), with
 //!   the function name in `data.breadcrumb`;
-//! - a **clean** colony yields **no** diagnostics.
+//! - a **clean** nodule yields **no** diagnostics.
 //!
 //! The parser is fail-fast (one error at a time); a recovering parser that reports many diagnostics
 //! at once is a later refinement — recorded, not silently implied.
@@ -18,7 +18,7 @@ use std::collections::BTreeMap;
 
 use serde_json::{json, Value};
 
-use mycelium_l1::{check_colony, parse, CheckError, ParseError};
+use mycelium_l1::{check_nodule, parse, CheckError, ParseError};
 
 use crate::wire::SERVER_NAME;
 
@@ -65,13 +65,13 @@ impl DocumentStore {
 }
 
 /// Analyze a document's source through the text → `Node` pipeline and return its LSP diagnostics
-/// (JSON). `parse` failure → one ranged syntax diagnostic; `check_colony` failure → one
-/// function-located type diagnostic; a clean colony → no diagnostics.
+/// (JSON). `parse` failure → one ranged syntax diagnostic; `check_nodule` failure → one
+/// function-located type diagnostic; a clean nodule → no diagnostics.
 #[must_use]
 pub fn source_diagnostics(text: &str) -> Vec<Value> {
     match parse(text) {
         Err(pe) => vec![parse_error_diagnostic(&pe)],
-        Ok(colony) => match check_colony(&colony) {
+        Ok(nodule) => match check_nodule(&nodule) {
             Err(ce) => vec![check_error_diagnostic(text, &ce)],
             Ok(_env) => Vec::new(),
         },
@@ -147,15 +147,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_clean_colony_has_no_diagnostics() {
-        let src = "colony d\nfn main() -> Binary{8} = not(0b1011_0010)";
+    fn a_clean_nodule_has_no_diagnostics() {
+        let src = "nodule d\nfn main() -> Binary{8} = not(0b1011_0010)";
         assert!(source_diagnostics(src).is_empty());
     }
 
     #[test]
     fn a_parse_error_is_ranged_at_the_real_position() {
         // A missing policy on a swap is a parse error with a real position.
-        let src = "colony demo\nfn f(x: Binary{8}) -> Ternary{6} = swap(x, to: Ternary{6})";
+        let src = "nodule demo\nfn f(x: Binary{8}) -> Ternary{6} = swap(x, to: Ternary{6})";
         let diags = source_diagnostics(src);
         assert_eq!(diags.len(), 1);
         assert_eq!(diags[0]["code"], "parse");
@@ -167,7 +167,7 @@ mod tests {
     #[test]
     fn a_type_error_is_located_at_its_function_with_a_breadcrumb() {
         // `add` over Binary is a type error (it expects Ternary) — a check diagnostic at `fn bad`.
-        let src = "colony d\nfn bad() -> Binary{8} = add(0b0000_0001, 0b0000_0010)";
+        let src = "nodule d\nfn bad() -> Binary{8} = add(0b0000_0001, 0b0000_0010)";
         let diags = source_diagnostics(src);
         assert_eq!(diags.len(), 1);
         assert_eq!(diags[0]["code"], "check");
@@ -180,10 +180,10 @@ mod tests {
     fn the_store_tracks_open_and_closed_documents() {
         let mut store = DocumentStore::new();
         assert!(store.is_empty());
-        store.set("mem://a", "colony d");
-        assert_eq!(store.text("mem://a"), Some("colony d"));
-        store.set("mem://a", "colony d2"); // didChange replaces (full sync)
-        assert_eq!(store.text("mem://a"), Some("colony d2"));
+        store.set("mem://a", "nodule d");
+        assert_eq!(store.text("mem://a"), Some("nodule d"));
+        store.set("mem://a", "nodule d2"); // didChange replaces (full sync)
+        assert_eq!(store.text("mem://a"), Some("nodule d2"));
         store.remove("mem://a");
         assert!(store.is_empty());
     }
@@ -192,7 +192,7 @@ mod tests {
     fn publish_for_source_has_the_lsp_notification_shape() {
         let note = publish_for_source(
             "mem://demo",
-            "colony d\nfn main() -> Binary{8} = 0b0000_0000",
+            "nodule d\nfn main() -> Binary{8} = 0b0000_0000",
         );
         assert_eq!(note["method"], "textDocument/publishDiagnostics");
         assert_eq!(note["params"]["uri"], "mem://demo");

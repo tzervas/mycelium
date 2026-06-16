@@ -5,10 +5,10 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Path(pub Vec<String>);
 
-/// A whole program: a `colony` header and its items.
+/// A whole program: a `nodule` header and its items.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Colony {
-    /// The colony's dotted name.
+pub struct Nodule {
+    /// The nodule's dotted name.
     pub path: Path,
     /// Top-level items.
     pub items: Vec<Item>,
@@ -64,7 +64,7 @@ pub enum AmbientParams {
 pub enum Item {
     /// `use path`.
     Use(Path),
-    /// `default paradigm P` — the colony-scope ambient (RFC-0012 §4.2). At most one per colony; the
+    /// `default paradigm P` — the nodule-scope ambient (RFC-0012 §4.2). At most one per nodule; the
     /// outermost ambient frame. Consumed (stripped) by the resolution pass ([`crate::ambient`]).
     Default(Paradigm),
     /// A data-type declaration.

@@ -87,13 +87,13 @@ def test_the_mycelium_checker_separates_syntax_from_typecheck(
 ) -> None:
     """M-002 measures syntactic validity and type-check pass separately — so must the oracle."""
     task = TASKS[0]
-    unparsable = myc_checker.check("colony bench\nfn main() -> Binary{8} = (", task)
+    unparsable = myc_checker.check("nodule bench\nfn main() -> Binary{8} = (", task)
     assert not unparsable.syntactically_valid
     assert not unparsable.passes
-    ill_typed = myc_checker.check("colony bench\nfn main() -> Binary{8} = nope(0b1)", task)
+    ill_typed = myc_checker.check("nodule bench\nfn main() -> Binary{8} = nope(0b1)", task)
     assert ill_typed.syntactically_valid
     assert not ill_typed.passes
-    wrong_task = myc_checker.check("colony bench\nfn main() -> Binary{4} = 0b1010", task)
+    wrong_task = myc_checker.check("nodule bench\nfn main() -> Binary{4} = 0b1010", task)
     assert wrong_task.syntactically_valid
     assert not wrong_task.passes, "a well-typed program that ignores the task must not pass"
 
@@ -138,7 +138,7 @@ def test_metrics_are_first_attempt_based(myc_checker: MyceliumChecker) -> None:
     scripts = {
         # Task 1: broken first, fixed second → counts against first-attempt rates.
         (tasks[0].id, "mycelium"): (
-            "colony bench\nfn main() -> Binary{8} = (",
+            "nodule bench\nfn main() -> Binary{8} = (",
             tasks[0].reference_mycelium,
         ),
         # Task 2: right first time.

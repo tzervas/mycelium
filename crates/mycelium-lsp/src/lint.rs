@@ -72,6 +72,28 @@ pub fn has_errors(diags: &[Diagnostic]) -> bool {
     diags.iter().any(|d| d.severity == Severity::Error)
 }
 
+/// The **source-text** companion lint (M-141; DN-06 §6): recognise the `// nodule:` header marker
+/// on a document's first non-blank line and surface a malformed *named* marker as an explicit
+/// `Error` (never silently dropped — G2). A well-formed marker (or its absence) yields nothing;
+/// this is a *recogniser*, not a requirement (a file need not declare a nodule). The Core-IR [`lint`]
+/// runs over the elaborated program; this runs over raw text, where the comment marker lives.
+#[must_use]
+pub fn lint_nodule_header(src: &str) -> Vec<Diagnostic> {
+    match mycelium_l1::parse_nodule_header(src) {
+        Ok(_) => Vec::new(),
+        Err(e) => vec![Diagnostic {
+            code: "nodule-header",
+            severity: Severity::Error,
+            at: format!("line {}", e.line),
+            message: format!(
+                "malformed `// nodule:` header marker (DN-06 §6): {} — a near-miss marker is \
+                 flagged, never silently ignored (G2)",
+                e.message
+            ),
+        }],
+    }
+}
+
 fn paradigm(repr: &Repr) -> &'static str {
     match repr {
         Repr::Binary { .. } => "binary",
@@ -394,6 +416,26 @@ mod tests {
             body: Box::new(Node::Var("y".into())),
         };
         assert_eq!(codes(&lint(&node)), vec!["free-variable"]);
+    }
+
+    // --- nodule-header (M-141 source-text companion; DN-06 §6) ---
+
+    #[test]
+    fn nodule_header_clean_on_valid_or_absent_marker() {
+        assert!(
+            lint_nodule_header("// nodule: geometry.shapes\nnodule geometry.shapes\n").is_empty()
+        );
+        assert!(lint_nodule_header("// nodule\nnodule g\n").is_empty());
+        assert!(lint_nodule_header("nodule g\nfn f() -> Binary{8} = 0b0").is_empty());
+    }
+
+    #[test]
+    fn nodule_header_fires_on_malformed_named_marker() {
+        let d = lint_nodule_header("// nodule: 9bad\n");
+        assert_eq!(codes(&d), vec!["nodule-header"]);
+        assert_eq!(d[0].severity, Severity::Error);
+        assert!(has_errors(&d));
+        assert!(!lint_nodule_header("// nodule:\n").is_empty());
     }
 
     #[test]

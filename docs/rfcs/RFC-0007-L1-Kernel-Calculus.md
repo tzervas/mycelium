@@ -33,7 +33,7 @@ rules layered on.
 
 ## 3. Guide-level explanation
 
-A surface program (a `colony`) declares data types, traits, and functions. Elaboration turns
+A surface program (a `nodule`) declares data types, traits, and functions. Elaboration turns
 those into: **registry entries** (one content-addressed declaration per data type, `#type#c` per
 constructor) and **kernel terms** (one per function body) over exactly ten node kinds:
 

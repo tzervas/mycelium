@@ -1,4 +1,4 @@
 // rejected: a trit literal contains a glyph outside {+, 0, -}
-colony bad
+nodule bad
 
 fn f() -> Ternary{3} = <+x->

@@ -8,6 +8,27 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (2026-06-16: DN-06 lexicon migration — static keyword `colony` → `nodule`, M-358)
+- **The L1 surface keyword `colony` is now `nodule`** (DN-06, Resolved 2026-06-16) — a pure, mechanical
+  rename across the lexer/token/parser/AST/checker/elaborator (`crates/mycelium-l1`), the LSP toolchain
+  surface (`crates/mycelium-lsp`), the normative grammar oracle (`docs/spec/grammar/mycelium.ebnf` +
+  README), and the **full accept/reject conformance corpus** (the `01-minimal-*`/`01-no-*-header` fixtures
+  renamed accordingly). **No semantic change**: content-addressed identity is computed over elaborated L0,
+  never the surface keyword or a Rust type name (ADR-003), so every definition's content hash is unchanged.
+- **`phylum` and `colony` are now reserved-not-active keywords.** `phylum` (the library-scale grouping
+  above nodules) and `colony` (reassigned to the RFC-0008 §4.7 **dynamic** runtime grouping of `hypha`)
+  lex as keywords — so they can never be silent identifiers — but no L1 construct consumes them yet, so
+  neither opens a program (new `conformance/reject/10-reserved-not-active.myc`; G2).
+- **The `// nodule:` header marker (DN-06 §6) is wired in.** New `mycelium_l1::parse_nodule_header`
+  recognises the first-non-blank-line marker (`// nodule: <dotted.name>` or bare `// nodule`); a near-miss
+  *named* marker (empty/ill-formed name) is an **explicit** error, never silently dropped (G2). The M-141
+  linter surfaces a malformed marker (`lint_nodule_header`) and the M-142 surface formatter preserves a
+  valid one across a canonical re-print. The structured `// @key:` header + `mycelium-proj.toml` manifest
+  layer on top of this (M-359).
+- **Honesty/grounding:** DN-02 §2's `colony = module` line stays superseded by DN-06 (append-only); the
+  Glossary, Lexicon-Reference, grammar README, and DN-06 changelog are updated to record execution.
+  `scripts/checks/all.sh` green (incl. the conformance gate).
+
 ### Added (2026-06-16: typed SPSC channels — the RT2 communicating fragment, M-357 follow-on)
 - **`crates/mycelium-mlir/src/channel.rs`** — the Kahn-deterministic *communicating* half of the RFC-0008
   RT2 fragment (§4.3), extending the landed fork/join runtime. **Typed single-producer/single-consumer
