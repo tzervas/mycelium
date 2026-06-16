@@ -8,6 +8,29 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-16: `mycfmt` formatter contract — design, M-364)
+- **`docs/spec/Mycfmt-Formatter-Contract.md`** (**Proposed**) — the M-364 formatter contract, design-first
+  (present before folding). Pins `mycfmt` (the standalone canonical formatter — M-142 grows up) as an
+  **identity-preserving projection** (RFC-0001 §4.6/§4.8; ADR-003 — formatting never changes a definition's
+  content-addressed identity) with three **checked** invariants: **C1** identity-preservation (the
+  load-bearing one — an `EXPLAIN` *identity receipt* shows the content hash unchanged, and a run that
+  cannot is a refusal, not a write), **C2** idempotence (byte-for-byte fixed point), **C3**
+  header-preservation (the DN-06 `// nodule:` marker + the M-359 `// @key:` structured header, re-emitted
+  canonically; a malformed header is an explicit error, never a silent drop — G2/VR-5). Defines the
+  never-silent error model (parse/header/out-of-scope exits; **no partial or garbled rewrite**, G2), the
+  hand-rolled CLI + exit codes (**no new dependency**), `[toolchain].format` reading (the M-359 table's
+  first consumer), and the honest v0 **round-trip-safe scope boundary** — `mycfmt` formats only the fragment
+  where `parse ∘ print ∘ parse` is the identity (checked on `grammar/conformance/accept/`) and **refuses**
+  the rest (exit 4) rather than risk identity. Architecture: a new above-the-kernel `mycelium-fmt` crate
+  over already-landed M-142/M-358/M-359 primitives (KC-3). No `mycfmt` code lands until the contract is
+  acknowledged.
+
+### Changed (2026-06-16: M-361 children created + wired — PM)
+- **M-364…M-368 created on GitHub and wired as sub-issues of M-361 (#132)** via the staged
+  `tools/github/issues.yaml` (gated `gh-sync-all.sh` run): **M-364** #136, **M-365** #137, **M-366** #138,
+  **M-367** #139, **M-368** #140. `tools/github/idmap.tsv` appended (task → number → REST db-id). The
+  Phase-8 milestone + `phase:8` label are assigned. No code (bookkeeping).
+
 ### Changed (2026-06-16: M-361 Phase-8 toolchain epic decomposed — staged, PM)
 - **M-361 decomposed into five per-tool children** (the epic body's named tools), staged in
   `tools/github/issues.yaml` as sub-issues of M-361: **M-364** (`mycfmt` formatter — M-142 grows up),
