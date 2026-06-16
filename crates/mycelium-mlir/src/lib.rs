@@ -60,7 +60,7 @@ pub use inject::{recompile_closure, Image, InjectError, Resolution};
 pub use jit::{compile_so, jit_run, JitArtifact};
 pub use llvm::{compile, compile_and_run, emit_llvm_ir, AotError, CompiledArtifact};
 pub use pack::{pack_trits, relayout_trits, unpack_trits};
-pub use runtime::{Poll, Scope, Task, TaskCtx};
+pub use runtime::{Colony, Poll, Scope, Task, TaskCtx};
 pub use simd::{compile_bitnet_dot_simd, emit_bitnet_dot_simd_ir};
 pub use specialize::{
     compile_specialized_dot, emit_specialized_dot_ir, jit_specialized_dot, SpecializedDotKernel,

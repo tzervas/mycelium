@@ -74,6 +74,13 @@ pub struct Scope<T, E> {
     cancel: CancelToken,
 }
 
+/// A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of
+/// concurrent tasks under a shared scope + supervision). The structured-concurrency [`Scope`] *is*
+/// this concept; `Colony` is the ratified surface vocabulary adopted going forward (DN-06; RFC-0008
+/// §4.7). The static `colony` keyword (DN-02) migrates to `nodule` under M-358, freeing the term for
+/// this dynamic meaning.
+pub type Colony<T, E> = Scope<T, E>;
+
 impl<T, E> Default for Scope<T, E> {
     fn default() -> Self {
         Scope {

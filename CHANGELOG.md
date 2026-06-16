@@ -8,6 +8,23 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (DN-06 — 2026-06-16: static-organization & dynamic-grouping lexicon — `phylum` / `nodule` / `colony`)
+- **DN-06 ratified** (maintainer-directed), introducing on-brand terms for static organization and
+  deconflicting a real collision: **`phylum`** (content-addressed **library-scale** unit) and
+  **`nodule`** (the **basic** static unit, replacing the generic "module") for static organization, and
+  **`colony`** reassigned to the **dynamic** runtime grouping of active `hypha` (RFC-0008 §4.7). The
+  reassignment **supersedes DN-02 §2's `colony` = module** line (append-only — DN-02's changelog records
+  it; `phylum`/`nodule` had no prior use, so only `colony` collided). Justified by the DN-02 three-test
+  gate: `colony` on a *living, supervised grouping of tasks* is a higher-fidelity T-map than on a static
+  file, and `nodule` beats the generic "module" for the static unit.
+- **Adopted going forward:** the RFC-0008 §4.7 structured scope is realized as `mycelium-mlir::runtime`'s
+  **`Colony`** (alias of the structured `Scope`). The **surface keyword migration** `colony` → `nodule`
+  (the L1 lexer/parser/AST/checker — ~226 refs — plus the grammar EBNF + LR(1) oracle + the 23-file
+  conformance corpus) is a pure rename + two reserved additions (`phylum`/`colony`), tracked as **M-358**
+  and staged (the grammar contract moves in one auditable change). Until executed, `colony` is the
+  deprecated spelling of `nodule`. RFC-0006 + RFC-0008 carry append-only forward-references; `phylum`
+  and `colony` are reserved-not-active until their constructs land.
+
 ### Changed (RFC-0008 — 2026-06-16: Runtime & Concurrency Execution Model ratified `Draft → Accepted`)
 - **RFC-0008 ratified `Draft → Accepted`** (maintainer): the seven runtime invariants **RT1–RT7** and
   the §4 model are now **normative** (the Runtime-tier grounding ADR-012 §7.3 required). Ratification

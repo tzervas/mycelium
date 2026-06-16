@@ -251,7 +251,10 @@ This section lifts RFC-0014's deliberately-fixed **single-task v0 boundary** (RF
 RT1–RT7 model. It is the **composition contract** the R1 runtime (and its tasks) obey; it adds **no L0
 node** and does not change the sequential trusted base (RT2; KC-3). The composition primitives are
 enacted now (M-356, `mycelium_interp::supervise`) so the R1 scheduler (M-357) is built *against* them;
-the scheduler itself is not specified here (R8-Q1).
+the scheduler itself is not specified here (R8-Q1). The structured **scope** that groups a set of
+cooperating `hypha` under shared cancellation + supervision is a **`colony`** (DN-06) — the dynamic
+runtime grouping; the term was reassigned from its DN-02 static meaning (which moves to `nodule`) now
+that there is a genuine living grouping for it to name.
 
 Four compositions, each **additive over the explicit error** (RFC-0014 I1) and **declared + bounded**
 (I3/I4) — never a silent stop, never an unbounded cascade:
@@ -369,6 +372,12 @@ substrate (the RFC-0004 backend story, distributed).
 
 ## Meta — changelog
 
+- **2026-06-16 — `colony` (dynamic runtime grouping) adopted (DN-06).** §4.7's structured scope of
+  cooperating `hypha` is named a **`colony`** — the DN-06 dynamic grouping. The term was reassigned
+  from DN-02's static "module" meaning (which moves to `nodule`, with `phylum` as the library level)
+  now that the runtime has a genuine living grouping to name. The v0 realization is
+  `mycelium-mlir::runtime` (the `Colony` alias of the structured `Scope`). Reserved/not-active as
+  surface syntax; the static keyword migration is M-358. Append-only.
 - **2026-06-16 — R1 v0 slice landed: deterministic fork/join executor + RT2 differential (M-357).** The
   first runtime slice over the §4.7 primitives — the maintainer-chosen minimal scope (fork/join + the
   differential; typed channels deferred). `mycelium-mlir::runtime` (the scheduler lives **outside** the

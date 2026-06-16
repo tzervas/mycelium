@@ -297,6 +297,12 @@ KC-2-gated and stage-1 grading (Q3) stays open for the grading RFC.*
 
 ## Meta — changelog
 
+- **2026-06-16 — static-organization lexicon revised (DN-06).** The basic static unit (DN-02's
+  `colony`, "module / namespace of definitions") is renamed **`nodule`**, with **`phylum`** added as
+  the content-addressed **library-scale** level above it; the term `colony` is reassigned to the
+  RFC-0008 §4.7 **dynamic** runtime grouping of `hypha`. This supersedes DN-02 §2's `colony` line
+  (append-only). The surface keyword migration (`colony` → `nodule`, grammar + conformance included)
+  is tracked as **M-358**; `phylum` is reserved-not-active until its construct lands. See DN-06.
 - **2026-06-15 (r4) — Accepted (maintainer sign-off).** Moved `Draft → Accepted` with the **§10
   carve-out**: ratified = §3 layering, §4.1 invariants S1–S6, §4.2 capability targets LR-1…LR-9, §4.3
   grammar discipline, and the §8 positions Q2/Q4/Q5/Q7 (realized by RFC-0007 §4.1–4.7 and the ratified
