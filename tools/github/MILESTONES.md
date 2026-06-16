@@ -36,11 +36,14 @@ bash tools/github/gh-bootstrap-local.sh          # needs `gh` authenticated to t
 | 4 | Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion | active (cut 2026-06-16) | The interp↔compiled ABI (ADR-016) + hot-inject/recompile (ADR-017); AOT env-machine completion over the full v0 calculus + stack-robustness/dynamic budgets (M-342/347/349, DN-05); mutual recursion (M-343, RFC-0001 r5); ambient (M-344, RFC-0012); diagnostics + recovery (M-345, RFC-0013/0014); stdlib roadmap (M-346). Gate: NFR-7 three-way differential across the calculus; budgets explicit/never-silent (G2); kernel small (KC-3). |
 | 5 | Self-Hosting & Core Library | **anticipated** (not yet ratified) | Write the stdlib + diagnostics/recovery runtime in Mycelium-lang itself (dogfooding; "free of other languages"): decompose the M-346 stdlib epic; self-host RFC-0013/0014. Gate: a stdlib module self-hosts with the guarantee/EXPLAIN contract every op must meet (G2, VR-5, KC-3, ADR-003). |
 | 6 | Native Acceleration & Deployment | **anticipated** (not yet ratified) | Native MLIR→LLVM codegen for the full calculus incl. data/closure (M-348, RFC-0004 §2, ADR-009); BitNet / native-ternary acceleration; deployable Spore units (ADR-013); production hardening. Gate: native NFR-7 differential + speedup; deployable Spore (VR-4 no-opaque-lowering). |
+| 7 | Runtime & Concurrency Execution Model (RFC-0008) | **anticipated** (not yet ratified) | The runtime/concurrency track the RFC-0013/0014 work pointed to: RFC-0008 ratification of RT1–RT7 (M-355); lifting RFC-0014's single-task boundary to per-task budgets, cancellation, and `reclaim` bounded-cascade supervision (M-356, RFC-0014 §8 / the Erlang-OTP grounding in Research Record 05); the RT2 deterministic-fragment runtime + reference-sequentialization differential (M-357, RFC-0008 §4.7). The §4.5 vocabulary (hypha/fuse/xloc/cyst/graft/forage/backbone/mesh/tier/reclaim) decomposes at the Phase-7 gate. Sequencing vs Phases 5–6 is a gate decision (may precede self-hosting). Gate: RFC-0008 Accepted; RT2 differential holds (NFR-7-equiv); guarantees tagged honestly (RT5/VR-5); kernel small (KC-3). |
 
-Phases 0–4 are in `milestones.json` as active milestones. Phases 5–6 are **forward roadmap anchors**:
+Phases 0–4 are in `milestones.json` as active milestones. Phases 5–7 are **forward roadmap anchors**:
 they are also created (as empty milestones) so future issues have a home, but their scope is **not yet
-ratified** — it firms up at the preceding phase gate, and the descriptions say so. Removing them from
-`milestones.json` before a run simply skips creating them; the assignment of current issues is unaffected.
+ratified** — it firms up at the preceding phase gate, and the descriptions say so. **Phase 7** (Runtime &
+Concurrency, RFC-0008) is the newest such anchor (2026-06-16); its sequencing relative to Phases 5–6 is a
+gate decision (the runtime track may precede self-hosting). Removing any anchor from `milestones.json`
+before a run simply skips creating it; the assignment of current issues is unaffected.
 
 ## Task → milestone assignment
 
@@ -53,9 +56,10 @@ the summary (counts as of 2026-06-16):
 | 1 | minimal viable core — kernel, interpreter, binary/ternary, first swap, LSP | 17 |
 | 2 | full unification + verified swaps — Dense/VSA, numerics checker, selection/packing | 7 |
 | 3 | tooling/projections/acceleration — M-1xx/M-2xx/M-3xx build tasks, M-350 | 20 |
-| 4 | ABI/hot-inject/AOT-completion — M-341/342/343/344/345/346/347/348/349 + M-352 | 10 |
+| 4 | ABI/hot-inject/AOT-completion — M-341/342/343/344/345/346/347/348/349 + M-352; RFC-0008 integration M-353/354 | 12 |
 | 5 | (anticipated) self-hosting + stdlib — decomposed from M-346 at the Phase-4 gate | — |
 | 6 | (anticipated) native acceleration + deployment — M-348 native path, Spore | — |
+| 7 | (anticipated) runtime & concurrency (RFC-0008) — M-355 ratify, M-356 concurrency/supervision, M-357 RT2 differential; §4.5 vocabulary decomposes at the gate | 3 |
 
 A task moves phases by editing its `milestone:` + `phase:N` label in `issues.yaml` (then re-running the
 bootstrap, which is idempotent). Keep the `milestone:` string byte-identical to the `milestones.json`
@@ -66,12 +70,23 @@ title or the script will create a duplicate.
 - **Foundation §6 (Deliverables Roadmap)** ratifies Phases 0–3 and their gates.
 - **Phase 4** was cut 2026-06-16 for the enacted M-34x work (ADR-016/017; RFC-0001 r5; RFC-0012/0013/0014;
   DN-05) — see `issues.yaml` "# Phase 4 (M-34x)".
-- **Phases 5–6** are anticipated anchors grounded in existing corpus intent: self-hosting / stdlib
-  (M-346; DN-04 §3; RFC-0013 §4.8 / RFC-0014 §9), and the native path (M-348; RFC-0004 §2; ADR-009;
-  ADR-013 Spore) — **not** new ratified roadmap, and marked so.
+- **Phases 5–7** are anticipated anchors grounded in existing corpus intent: self-hosting / stdlib
+  (M-346; DN-04 §3; RFC-0013 §4.8 / RFC-0014 §9); the native path (M-348; RFC-0004 §2; ADR-009;
+  ADR-013 Spore); and the **runtime & concurrency** track (Phase 7) grounded in RFC-0008 (RT1–RT7;
+  ADR-012 §7.3; Research Record 04), the RFC-0014 §8 concurrency deferral, and RFC-0008 §4.7's "RT2
+  runtime as the natural successor to the L1 track" — **not** new ratified roadmap, and marked so.
 
 ## Meta — changelog
 
+- **2026-06-16 — Phase 7 added (RFC-0008 integration roadmap).** Added the RFC-0008 integration tasks to
+  the bootstrap mapping: **M-353** (unify the effect-budget mechanism — RFC-0014 §4.8) and **M-354**
+  (diagnostic route targets ↔ observability sinks — RFC-0013 §8) join the **active Phase 4** (shovel-ready
+  over already-landed machinery, no RFC-0008 ratification needed); a new **anticipated Phase 7 — Runtime &
+  Concurrency Execution Model (RFC-0008)** anchors **M-355** (RFC-0008 RT1–RT7 ratification), **M-356**
+  (RFC-0014 concurrency: per-task budgets, cancellation, `reclaim` bounded-cascade supervision), and
+  **M-357** (RT2 deterministic-fragment runtime + sequentialization differential). `milestones.json`
+  (Phase 7), `labels.json` (phase:5/6/7), `issues.yaml` (M-353..M-357), and the ladder/summary/grounding
+  tables updated; idmap recorded on filing. Phase-7 sequencing vs Phases 5–6 is a gate decision. Append-only.
 - **2026-06-16 — Created.** Captures the full milestone ladder (Phases 0–4 active + 5–6 as anticipated
   forward anchors) in one human-readable map alongside the machine sources (`milestones.json`,
   `labels.json`, `issues.yaml`), so a single `gh-bootstrap-local.sh` run creates every milestone + label

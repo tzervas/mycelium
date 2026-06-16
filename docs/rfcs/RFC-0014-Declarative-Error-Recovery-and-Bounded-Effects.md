@@ -3,12 +3,12 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0014 |
-| **Status** | **Draft (Proposed)** (drafted 2026-06-16; the isolated recovery subsystem RFC-0013 §8/§9 deferred — maintainer direction captured, design open for ratification) |
+| **Status** | **Accepted — Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design and all §8 dispositions are normative. **Enacted 2026-06-16 — M-352** (#116): the reified recovery subsystem — the result-sum error value, the closed recovery-action set, the registry-shared `on <ErrorClass> => <action>` recovery policy, declared + budgeted effects with a graceful `EffectBudgetExhausted`, the no-undeclared-effect check, and the never-silent `handle` (every error recovered or re-propagated, never dropped) — is code in `crates/mycelium-lsp/src/recover`; the L0-`Match`-over-error-sums lowering target is differentially verified in `mycelium-l1` (no new kernel node, KC-3). Wiring effect-budget enforcement into the AOT env-machine is the RFC-0008 integration (tracked, not v0).) |
 | **Type** | Foundational / normative (once Accepted) — a **separable** surface + runtime subsystem; minimal/no kernel change (KC-3) |
 | **Date** | 2026-06-16 |
 | **Feeds** | RFC-0006 (the optional recovery/effect surface); RFC-0008 (runtime — where effect budgets are enforced, alongside fuel/depth); RFC-0013 (the diagnostic *presentation* of an error this RFC *acts on*); the stdlib (a `result`/`effect` module candidate, M-346) |
 | **Depends on** | RFC-0001 (errors are explicit `Option`/error/refusal *values*; `CheckVerdict::NotValidated` carries reason + fallback); RFC-0013 (sibling — shared error-class registry + reified-policy pattern; this RFC is the recovery concern RFC-0013 §4.4/§8 deferred); RFC-0005 / ADR-006 (the reified, inspectable, content-addressed policy pattern); RFC-0006 (surface/term-layer, KC-2-gated syntax); RFC-0004 §4 / RFC-0007 §4.5 / M-347 / DN-05 (the **budget discipline** — fuel clock, control-stack depth ceiling, dynamically-resolved budgets — that bounded effects generalise); G2 (never-silent), VR-5 (honest, downgrade-only guarantees), KC-3 (small kernel), SC-3 (transparent control), NFR-2 / SC-5b (semantic feedback), NFR-7 (differential) |
-| **Tracks** | (new milestone — *declarative recovery & bounded effects*; to be filed. Lineage: DN04-Q1 deferred half → RFC-0013 §8/§9 → here) |
+| **Tracks** | M-352 (#116). Lineage: DN04-Q1 deferred half → RFC-0013 §8/§9 → here |
 
 ---
 
@@ -247,10 +247,10 @@ never opaque or ambient; it is a declaration you can read, diff, and trace.
   budgets already live (RFC-0004/0008 execution, DN-05 budget resolution) — *outside* the trusted kernel
   calculus. So adding (or later changing) recovery cannot destabilise the kernel, the differential, or the
   diagnostics layer.
-- **Design goal: minimal/no new L0 node.** v0 aims for **zero** new L0 nodes (recovery = error sums +
-  `Match` + runtime budget policy). Whether effect-budget enforcement needs *any* kernel-visible hook, or is
-  entirely a runtime/checker concern, is an explicit open question (§8) — the bias is to keep it out of the
-  kernel (KC-3), mirroring how the totality checker lives outside the trusted base.
+- **Design goal: minimal/no new L0 node.** v0 has **zero** new L0 nodes (recovery = error sums +
+  `Match` + runtime budget policy). Whether effect-budget enforcement needs *any* kernel-visible hook is
+  **resolved** (§8, maintainer 2026-06-16): **none** — it is entirely a runtime/checker concern (KC-3),
+  mirroring how the totality checker lives outside the trusted base.
 
 ### 4.9 Relationship to RFC-0013 (presentation vs. recovery)
 
@@ -305,9 +305,13 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
 
 ## 7. Prior art
 
-> These are **design inspirations**, recorded honestly; they are **not yet traced to the research corpus**
-> (`research/`). Folding them into the evidence base (or refuting them) is an explicit task before
-> ratification (§8) — this Draft does not claim them as established Mycelium grounding.
+> These were recorded as **design inspirations** at drafting; **as of 2026-06-16 they are traced into
+> the evidence base** — see **Research Record 05** (`research/05-error-recovery-and-bounded-effects-RECORD.md`,
+> findings T5.1–T5.6), which discharges the §8 grounding obligation. The strongest claims (bounded
+> cascades, the budget generalisation) rest on *verified* grounding (Erlang/OTP max-restart-intensity;
+> Mycelium's own ratified fuel/depth/DN-05 budgets); the substrate and effect-reification postures are
+> grounded with honest *deltas* (Mycelium's never-silent rule is stricter than Result/`?`; v0 takes only
+> a coarse bounded subset of algebraic effects, not general resumable handlers).
 
 - **Result/`?` error values** (Rust, Swift, Go) — errors as explicit, propagating values matched at explicit
   sites; the substrate posture (§4.1/§4.3). Mycelium's never-silent rule is stricter (no silent drop).
@@ -326,25 +330,68 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
 
 ## 8. Unresolved questions
 
-- **Effect mechanism (genuinely open).** Declared effect *annotations* (rows/sets on signatures) vs.
-  *capabilities* (effect granted by a passed token) vs. a hybrid. v0 leans annotations (coarse set), but the
-  choice is open and shapes the surface (RFC-0006) — must be decided before ratification.
-- **Any kernel-visible hook? (§4.8).** Whether effect-budget enforcement is *entirely* a runtime/checker
-  concern (the KC-3-preferred bias — **zero** new L0 nodes) or needs a kernel-visible marker. Open; the
-  design goal is none.
-- **Budget vocabulary & composition.** The concrete set of budgets (`max_attempts`, `max_depth`, memory
-  ceiling, time/fuel) and how they **compose** with the existing `Fix` fuel clock and M-347 depth ceiling
-  (one budget space or several?) — left to the RFC-0004/0008 + DN-05 integration.
-- **Effect inference vs. manual declaration.** v0 = manual (explicit is honest); whether to infer/propagate
-  declared effects (ergonomics) without letting an effect become implicit is open (§9).
-- **Recovery-action set.** The closed v0 set (`fallback`/`retry`/`escalate`/`cleanup_then_propagate`) — is
-  it complete? Are user-defined recovery actions admitted, and if so how do they stay bounded + never-silent?
-- **Concurrency interaction (RFC-0008).** How effects, budgets, and recovery compose across tasks
-  (cancellation, failure propagation, per-task budgets) — deferred to the RFC-0008 integration.
-- **Handler composition & re-entrancy.** Nested handlers, cascade ordering, and whether a handler may itself
-  be effectful (and thus budgeted) — open; the bias is that a handler's effects are declared + bounded like
-  any other.
-- **Research grounding (§7).** Tracing the prior art into `research/` (or refuting it) before Accepted.
+- **Effect mechanism — RESOLVED (maintainer, 2026-06-16): declared annotations (coarse set).** v0 uses
+  **declared effect annotations** — a coarse effect *set* on a signature (§4.5 I3) — not capabilities and
+  not a hybrid. Rationale: it is the simplest mechanism that delivers "no unknown side effects" (KISS/YAGNI),
+  matches the §4.5 draft, and keeps the surface (RFC-0006) small. Capabilities (passed tokens) and richer
+  effect typing remain recorded **future possibilities** (§9), explicitly *additive* — they may extend, never
+  weaken, I3–I5.
+- **Any kernel-visible hook? — RESOLVED (maintainer, 2026-06-16): none.** Effect-budget enforcement is
+  **entirely a runtime/checker concern** — **zero** new L0 nodes (KC-3). Recovery elaborates to L0 `Match`
+  over error sums (§4.3); budget enforcement lives where fuel/depth budgets already live (RFC-0004/0008,
+  DN-05, §4.8), *outside* the trusted kernel — mirroring how the totality checker lives outside the trusted
+  base. The trusted kernel gains no effect/budget marker.
+- **Budget vocabulary & composition — RESOLVED (maintainer, 2026-06-16): separate named budgets, one
+  enforcement mechanism.** Each effect kind keeps its **own named, `EXPLAIN`-able budget** (`retry`'s
+  `max_attempts`, `cascade`'s `max_depth`, `alloc`'s memory ceiling, a `time`-bearing effect's fuel-style
+  clock — distinct vocabulary, not collapsed into one number), but **all are resolved and enforced by the
+  single existing budget machinery** that already clocks the `Fix`/`FixGroup` fuel and the M-347 depth
+  ceiling and resolves DN-05 dynamic budgets. So effect budgets *compose alongside* fuel + depth in the same
+  runtime/DN-05 plumbing (shared mechanism), rather than coupling those established clocks into one shared
+  budget abstraction. Each overrun is its own explicit, graceful `EffectBudgetExhausted` (§4.5 I4).
+- **Effect inference vs. manual declaration — RESOLVED v0 (maintainer, 2026-06-16).**
+  v0 is **manual declaration only** — explicit is honest, no inference (an effect set is *written* on
+  the signature). To keep that from being a correctness hole rather than just verbose, the checker
+  **composes declared effects as a *check*, not an inference**: a definition calling an effectful
+  callee must itself declare (a superset of) the callee's effects, or it is an explicit
+  `UndeclaredEffect` error (I3). That is *checking* that declared effects compose up the call graph —
+  it never *infers* (synthesises) an undeclared effect, so an effect can still never become implicit.
+  Computing a minimal effect set (true inference) is deferred to §9; the v0 line is **manual-declare +
+  compositional-check**.
+- **Recovery-action set — RESOLVED v0 (maintainer, 2026-06-16).** The v0 set is
+  **closed and complete for v0**: `fallback(value)` (recover — explicit, honestly-tagged value, I2),
+  `retry(<=N)` (re-attempt — bounded, I4), `escalate(class')` (transform + re-propagate), and
+  `cleanup_then_propagate(effect)` (act, then let the error continue — additive). These cover the four
+  canonical error-driven behaviours, and **each is provably never-silent** (every action yields either
+  an explicit success or a re-propagated error — I1) **and bounded** (the only re-attempting action,
+  `retry`, carries `<=N`). **User-defined recovery actions are NOT admitted in v0** (YAGNI) — they are a
+  §9 future. When added, a user action is a function `Err(ε) -> Result<τ>` that **must** be total over
+  the error's cases (I1) and **declare + bound** any effect it performs (I3/I4) — i.e. it inherits the
+  same obligations as the built-in set; it is never a privileged escape hatch.
+- **Concurrency interaction (RFC-0008) — DEFERRED with a v0 boundary fixed (maintainer, 2026-06-16).**
+  v0 recovery/effects are **single-task / synchronous**: budgets are per-evaluation (the
+  same scope the `Fix` fuel clock already uses), and there is **no cross-task effect or cascade** in v0
+  (no spooky action across tasks — there are no tasks yet). The genuinely-open composition (per-task
+  budgets, cancellation, cross-task failure propagation) is **RFC-0008's** design, and it must compose
+  **additively**: a task failure is an explicit error subject to I1, a per-task budget overrun is an
+  in-that-task `EffectBudgetExhausted`. Fixing the v0 boundary now makes the deferral *safe* (v0 cannot
+  accidentally admit an unbounded cross-task cascade) rather than merely postponed.
+- **Handler composition & re-entrancy — RESOLVED v0 (maintainer, 2026-06-16).**
+  - **Nesting is lexical and deterministic.** Handlers nest like `Match`: the **innermost** handling
+    site whose pattern matches an error handles it; an unmatched case **re-propagates** to the next
+    enclosing site (never dropped — I1). No ambiguity, no ordering surprises.
+  - **A handler may itself be effectful — and is then declared + budgeted like any other code** (I3/I4):
+    a handler is *not* a privileged effect-free or budget-free zone (a `cleanup_then_propagate` that
+    allocates declares `alloc(<=…)`).
+  - **A cascade (a handler that triggers a further error) is bounded by an explicit `cascade(max_depth)`
+    budget** (I4/I5); overrun is `EffectBudgetExhausted`, never unbounded handler recursion. Cascade
+    *ordering* is just the deterministic innermost-first propagation above.
+  - This makes composition deterministic, never-silent, and bounded with **no machinery beyond** the
+    declared + budgeted-effects discipline already in §4.5.
+- **Research grounding (§7) — DONE (2026-06-16).** The prior art is traced into `research/` (Research
+  Record 05, T5.1–T5.6), discharging this obligation; the externals were verified by web search and the
+  in-repo budget precedent confirmed. The *remaining* open questions above are design choices, not
+  grounding gaps.
 
 ## 9. Future possibilities
 
@@ -362,6 +409,55 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
 
 ## Meta — changelog
 
+- **2026-06-16 — Accepted + Enacted (M-352).** Maintainer ratified `Draft → Accepted` (approving the
+  draft and all §8 dispositions — the four proposed v0 dispositions below move from *sign-off pending* to
+  normative) and approved proceeding. The §4 design is enacted as a **separable, tooling-layer** subsystem
+  in `crates/mycelium-lsp/src/recover` (no kernel change — KC-3, zero new L0 nodes; no Python — ADR-007):
+  `error` (the result-sum `Outcome` over a structured error reusing RFC-0013's shared `ClassRegistry` —
+  X1, no `eval`); `effect` (the closed `EffectKind` set + per-kind named `EffectBudget`, the `Budgets`
+  ledger whose overrun is an explicit, graceful `EffectBudgetExhausted` — I4, and the compositional
+  `check_effects` no-undeclared-effect check — I3); `policy` (the reified `on <ErrorClass> => <action>`
+  recovery policy, closed action set `fallback`/`retry`/`escalate`/`cleanup_then_propagate`,
+  content-addressed `PolicyRef`); and `handle` (the never-silent driver — every error is **recovered**
+  with an honestly-tagged value or **re-propagated**, never dropped — I1; a fallback carries an honest,
+  downgrade-only guarantee — I2/VR-5). Verified by `crates/mycelium-lsp/tests/recover.rs` (RFC-0014 §5):
+  the central **never-silent recovery invariant** (a corpus of errors × every action yields Recovered or
+  Propagated, never a drop — I1), the **bounded-overrun-is-explicit** test (a budgeted effect overrun is
+  `EffectBudgetExhausted`, never a hang/OOM — I4), the **no-undeclared-effect** test (I3), the
+  **honest-guarantee** test (I2/VR-5), and the **opt-in default scope** test (I5). The
+  **L0-`Match`-over-error-sums** lowering target — "recovery introduces no new kernel node" — is
+  differentially verified in `mycelium-l1` (`recovery_match_over_a_result_sum_agrees_three_ways`):
+  a `Result = Ok | Err` match runs identically on L1-eval ≡ elaborate→L0-interp ≡ AOT (NFR-7).
+  **Out of v0 scope (honest boundary):** wiring the `Budgets` ledger into the AOT env-machine's runtime
+  budget resolver is the RFC-0008 integration (the §4.8 boundary), tracked separately; v0 delivers the
+  reified mechanism + semantics + invariants. `just check` green. Append-only.
+- **2026-06-16 — Remaining §8 questions given proposed v0 dispositions (sign-off pending; still
+  Draft).** At the maintainer's direction (draft the remaining answers before any code), the four §8
+  questions left after the three gating decisions now carry concrete **proposed v0 dispositions**,
+  marked *maintainer sign-off pending* (append-only — these are proposals, not yet Accepted decisions):
+  (1) **effect inference** = *manual-declare + compositional-check* (the checker requires a caller to
+  declare a superset of its callee's effects — `UndeclaredEffect` otherwise — but never *infers* an
+  undeclared effect; true minimal-set inference deferred to §9); (2) **recovery-action set** = the
+  *closed* v0 set `fallback`/`retry`/`escalate`/`cleanup_then_propagate` (each provably never-silent +
+  bounded; user-defined actions are a §9 future and would inherit I1/I3/I4); (3) **concurrency** =
+  *deferred to RFC-0008* with a v0 boundary fixed now (single-task / synchronous; per-evaluation
+  budgets; no cross-task cascade — so the deferral is safe, not merely postponed); (4) **handler
+  composition** = *lexical innermost-first* (unmatched re-propagates, never drops — I1), a handler's own
+  effects are declared + budgeted like any code, and a cascade is bounded by `cascade(max_depth)`
+  (overrun → `EffectBudgetExhausted`) — all with no machinery beyond §4.5. With these + the §7 prior-art
+  tracing (Record 05) done, the RFC is **ready for a Draft→Accepted decision**; **no code lands until
+  Accepted** (RFC-0014's gate). Append-only.
+- **2026-06-16 — Three §8 design questions resolved (maintainer; still Draft).** The maintainer settled
+  the three questions that gate any recovery/effects code, all on the KC-3/KISS-aligned options: (1)
+  **effect mechanism = declared annotations, coarse set** (not capabilities, not hybrid — capabilities/
+  effect-rows stay additive future possibilities, §9); (2) **no kernel-visible hook** — effect-budget
+  enforcement is entirely a runtime/checker concern, zero new L0 nodes (§4.8); (3) **separate named budgets,
+  one enforcement mechanism** — each effect kind keeps its own `EXPLAIN`-able budget vocabulary but all are
+  resolved/enforced by the existing DN-05 budget machinery that already clocks `Fix`/`FixGroup` fuel and the
+  M-347 depth ceiling (composed alongside, not collapsed into one number). §8/§4.8 and the status line record
+  the dispositions. The RFC **stays Draft** — the remaining §8 questions (recovery-action set, effect
+  inference, concurrency, handler composition) and the §7 prior-art tracing into `research/` are still open
+  before Accepted; **no code lands until then.** Append-only.
 - **2026-06-16 — Draft (Proposed).** Created at the maintainer's request to capture the **declarative error
   recovery & bounded-effects** subsystem that RFC-0013 §8/§9 deferred (the DN04-Q1 recovery half). Designs
   three pillars: **errors-as-propagating-values** (the RFC-0001 substrate; G2), **explicit declarative

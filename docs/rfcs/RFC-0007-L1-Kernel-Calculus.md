@@ -142,6 +142,17 @@ Every definition is classified **`total`** or **`partial`** by the totality chec
 - a self-recursive definition is `total` iff every recursive call passes, in some fixed argument
   position, a **strict structural piece** of that parameter (a binder bound by a `Match` on the
   parameter or on one of its pieces) — Foetus-style structural descent;
+- a **mutually-recursive group** (a strongly-connected component of the call graph, the
+  `FixGroup` of RFC-0001 r5 / R7-Q3) is `total` iff there is a **mutual structural descent**: an
+  assignment of one designated argument position `p(f)` to each member `f` such that *every* call
+  from any member `f` to any member `g` passes, in `g`'s position `p(g)`, a **strict structural
+  piece** of `f`'s parameter `p(f)` (smallness seeded by a `Match` on `p(f)` or its pieces, the
+  same transitive notion as self-descent). This is sound by a single well-founded measure: along
+  any path through the group the structural size of the designated argument strictly decreases at
+  every call, so no infinite call path exists. Self-recursion is the size-1 case (the group is one
+  member; `p(f)` ranges over its positions). The search over position assignments is bounded; a
+  group too large to search, or one whose well-foundedness this structural criterion cannot
+  witness, stays `partial` (incompleteness is honest — never an unsound `total`);
 - everything else is `partial` — an honest classification, not an error.
 
 **"Checked total" formally** = the reference interpreter terminates on it *for every sufficiently
@@ -324,6 +335,18 @@ revisions / KC-2-gated.*
 
 ## Meta — changelog
 
+- **2026-06-16 — §4.5 mutual-descent classification (M-343 loose end; R7-Q3 fully resolved;
+  append-only, completeness-only).** Extends the totality checker's §4.5 classification from
+  self-descent only to **mutual structural descent** over a `FixGroup` (RFC-0001 r5): a
+  mutually-recursive group is `total` iff a per-member designated argument position descends on
+  every inter-member call (one well-founded measure). Self-recursion becomes the size-1 case. This
+  closes the half of #105 (R7-Q3) that landed the `FixGroup` elaboration + three-way differential
+  but left every mutual group conservatively `partial`; e.g. a `ping`/`pong` pair is now classified
+  `total` (admits `matured`), while a non-productive mutual cycle stays `partial`. **No calculus
+  content changed** and **soundness is unchanged** — the checker still only ever *gates `matured`,
+  never meaning* (the runtime is fuel/`FixGroup`-clocked regardless); this only widens the set of
+  groups recognized `total`, never relaxes the bar (incomplete-but-honest: a group the structural
+  criterion cannot witness stays `partial`). Enacted in `crates/mycelium-l1::totality`.
 - **2026-06-15 — §4.6 `Residual` retired for self-recursion; R7-Q1 resolved, R7-Q3 partially resolved
   (RFC-0001 r4 enacted; editorial, append-only).** `Lam`/`App`/`Fix` are now L0 Core IR nodes, so
   functions + self-recursion + `for` elaborate (only mutual recursion + dynamic guarantee indices stay

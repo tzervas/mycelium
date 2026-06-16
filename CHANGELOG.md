@@ -8,6 +8,86 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — 2026-06-16: M-352 / RFC-0014 declarative recovery & bounded effects, accepted + enacted)
+- **RFC-0014 ratified `Draft → Accepted`** (maintainer; all §8 dispositions normative) and **M-352
+  enacted** as a **separable, tooling-layer** subsystem in `crates/mycelium-lsp/src/recover` (**no kernel
+  change** — KC-3, zero new L0 nodes; no Python, ADR-007). Three pillars: **errors-as-propagating-values**
+  (`Outcome` over a `StructuredError` whose class is registry-resolved — shares RFC-0013's registry, X1);
+  **explicit declarative recovery** — the never-silent `handle` applies a reified
+  `on <ErrorClass> => <action>` policy (RFC-0005 pattern; content-addressed `PolicyRef`; closed action set
+  `fallback`/`retry`/`escalate`/`cleanup_then_propagate`) and yields a `Resolution` that is **always**
+  *recovered* or *re-propagated* — there is no "dropped" variant (I1 enforced by the type); and
+  **declared, bounded effects** (`EffectKind` set, per-kind `EffectBudget`, the `Budgets` ledger whose
+  overrun is a graceful `EffectBudgetExhausted` — I4, and a compositional `check_effects` no-undeclared
+  -effect check — I3). A substituted fallback is honestly `Declared`, never upgraded (I2/VR-5).
+- **Verified** by `crates/mycelium-lsp/tests/recover.rs` (RFC-0014 §5): the central **never-silent
+  recovery invariant** (every action leaves the error recovered or propagated, never dropped — I1), the
+  **bounded-overrun-is-explicit** test (`EffectBudgetExhausted`, never a hang/OOM — I4), the **opt-in
+  default-scope** test (an undeclared effect can't run — I5), the **no-undeclared-effect** test (I3), the
+  **honest-guarantee** test (I2/VR-5), and the shared-registry / no-`eval` discipline (X1). The
+  **L0-`Match`-over-error-sums lowering target** — "recovery adds no new kernel node" — is differentially
+  verified in `mycelium-l1` (`recovery_match_over_a_result_sum_agrees_three_ways`: L1-eval ≡ L0-interp ≡
+  AOT; NFR-7). **Out of v0 scope (honest boundary):** wiring the `Budgets` ledger into the AOT
+  env-machine's runtime budget resolver is the RFC-0008 integration (§4.8). `just check` green. Advances
+  SC-3, G2, VR-5, NFR-2/SC-5b. RFC-0014 status → **Accepted — Enacted**; **M-352 (#116)** closed.
+
+### Added (Phase 4 — 2026-06-16: M-345 / RFC-0013 structured diagnostics, enacted)
+- **M-345 — RFC-0013 structured diagnostics & reified error policy: enacted** in
+  `crates/mycelium-lsp/src/diagnostics` (tooling layer; **no kernel change**, KC-3; no Python, ADR-007).
+  Four parts: the **error-class registry** (names looked up, **never `eval`-ed** — §4.5 X1; v0 classes
+  from the existing lint codes + `SwapError` family + `NotValidated`); the **content-addressed
+  diagnostic record** with a BLAKE3 `content_id` and a **dual human + JSON projection** that round-trips
+  (G11, §4.3), graded `minimal`/`medium`/`detailed` **levels** with an **allowlisted** detailed tier
+  (§4.5 X2), and the never-silent **`present`** renderer that returns the explicit error **unchanged**
+  alongside the presentation (§4.1 I1); the reified **`on <ErrorClass> => {message, tags, level,
+  route}` policy** (RFC-0005 pattern; content-addressed `PolicyRef`; presentation/routing only — I4),
+  with a `PolicyFile` projection that re-validates classes through the registry (file-as-projection,
+  §4.7); and the **representation-crossing audit view** (§4.6; routed from RFC-0012 R12-Q2) — every
+  `swap` + from/to repr + honesty bound **read off the certificate and never upgraded** (VR-5),
+  location-independent (I5).
+- **Verified** by `crates/mycelium-lsp/tests/diagnostics.rs` (RFC-0013 §5): the central **never-silent
+  invariant** (a battery of policies — routed / message-override / minimal-level / unrelated — all leave
+  the error propagating; I1/I2/I4), round-trip projection (I3), registry / no-`eval` (X1, incl.
+  whole-file rejection on an unknown class), the detailed-tier allowlist (X2, a secret-bearing field
+  never reaches the record or its rendering), and the audit view (I5/VR-5, incl. an underivable crossing
+  reporting `unknown`, never `Exact`). `just check` green. Advances NFR-2 / SC-5b and the M-330 AI
+  co-author loop. RFC-0013 status → **Accepted — Enacted**.
+
+### Changed (Phase 4 — 2026-06-16: ratifications, RFC-0014 design decisions, M-343 totality completion)
+- **RFC-0013 — Structured Diagnostics & Reified Error Policy: `Draft (Proposed) → Accepted`** (maintainer
+  sign-off). No design content changed on acceptance; the §4 invariants I1–I5 and the §4.5 exclusions
+  X1–X3 are now normative. Unblocks the **M-345** Rust tooling-layer build (`mycelium-lsp`/`xtask`; no
+  kernel change). Verified by the central never-silent invariant test (I1/I2/I4) + round-trip / registry /
+  allowlist / audit-view tests.
+- **RFC-0014 — remaining §8 questions given proposed v0 dispositions** (maintainer sign-off pending; RFC
+  stays Draft, no code yet): effect inference = *manual-declare + compositional-check* (caller must
+  declare a superset of callee effects — `UndeclaredEffect` otherwise — but the checker never infers an
+  undeclared effect); recovery-action set = the *closed* v0 set
+  `fallback`/`retry`/`escalate`/`cleanup_then_propagate` (each never-silent + bounded; user actions a §9
+  future inheriting I1/I3/I4); concurrency = *deferred to RFC-0008* with a single-task v0 boundary fixed
+  now (per-evaluation budgets, no cross-task cascade — deferral is safe); handler composition = *lexical
+  innermost-first* (unmatched re-propagates, never drops), handler effects declared + budgeted like any
+  code, cascades bounded by `cascade(max_depth)`. With the §7 prior-art tracing done, RFC-0014 is **ready
+  for a Draft→Accepted decision**.
+- **RFC-0014 — three §8 design questions resolved** (maintainer; RFC stays Draft): effect mechanism =
+  **declared annotations, coarse set** (capabilities/effect-rows additive futures only); **no
+  kernel-visible hook** — effect-budget enforcement is entirely runtime/checker, **zero new L0 nodes**
+  (KC-3); **separate named budgets over one enforcement mechanism** — each effect kind keeps its own
+  `EXPLAIN`-able budget, all resolved/enforced by the existing DN-05 plumbing that already clocks `Fix`/
+  `FixGroup` fuel and the M-347 depth ceiling (composed alongside, not collapsed). No code until Accepted.
+- **RFC-0014 prior art traced into `research/`** — new **Research Record 05** (T5.1–T5.6) grounds
+  Result/`?`, algebraic effects (Koka/Eff/OCaml 5), **Erlang/OTP bounded supervision** (verified:
+  max-restart-intensity, defaults 1/5s), structured-concurrency cancellation, capabilities, and Mycelium's
+  own fuel/depth/DN-05 budget idiom — discharging the §7/§8 grounding obligation (honest deltas + novelty
+  flags recorded). RFC-0014 §7/§8 + status line updated to reflect the resolutions and the tracing.
+- **M-343 — mutual-descent totality classification (R7-Q3 loose end closed).** The `FixGroup` elaboration +
+  three-way differential had landed, but the structural totality checker still classified *every* mutual
+  group `Partial`. Extends `crates/mycelium-l1::totality` from self-descent to **mutual structural descent**
+  over a call-graph SCC: a group is `Total` iff a per-member designated argument position descends on every
+  inter-member call (one well-founded measure; bounded position-assignment search). Sound — only adds
+  justified `Total` verdicts; gates `matured`, never meaning (G2; runtime stays fuel-clocked). RFC-0007 §4.5
+  revised (append-only); ping/pong now `Total`, a non-productive cycle stays `Partial`.
+
 ### Added (Phase 4 — RFC-0014: declarative error recovery & bounded effects, drafted)
 - **RFC-0014 — Declarative Error Recovery & Bounded Effects (Draft (Proposed)).** Designs the isolated
   recovery subsystem RFC-0013 §8/§9 deferred (the DN04-Q1 recovery half) — a way for errors to **bubble**

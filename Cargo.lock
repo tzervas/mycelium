@@ -143,11 +143,13 @@ dependencies = [
 name = "mycelium-lsp"
 version = "0.0.0"
 dependencies = [
+ "blake3",
  "mycelium-cert",
  "mycelium-core",
  "mycelium-interp",
  "mycelium-l1",
  "mycelium-select",
+ "serde",
  "serde_json",
 ]
 

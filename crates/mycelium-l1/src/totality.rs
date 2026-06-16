@@ -7,8 +7,20 @@
 //! - self-recursion where *every* recursive call passes, in some fixed argument position, a
 //!   variable **structurally smaller** than that parameter (bound by a `Match` alternative on the
 //!   parameter or on an already-smaller variable — descent is transitive) → **Total**;
-//! - anything else (including mutual recursion, R7-Q3) → **Partial** — an honest classification,
-//!   not an error.
+//! - **mutual recursion** (a `FixGroup` / strongly-connected call-graph component, RFC-0001 r5,
+//!   R7-Q3) where there is a **mutual structural descent**: a designated argument position `p(f)`
+//!   for each member `f` such that *every* call from a member `f` to a member `g` passes, in `g`'s
+//!   position `p(g)`, a variable structurally smaller than `f`'s parameter `p(f)` → **Total**.
+//!   Self-recursion is the size-1 case. Sound by one well-founded measure: the structural size of
+//!   the designated argument strictly decreases at every call along any path through the group, so
+//!   no infinite call path exists;
+//! - anything else (a non-productive cycle, a group too large to search, or one this structural
+//!   criterion cannot witness) → **Partial** — an honest, incomplete classification, not an error.
+//!
+//! The checker is **sound, not complete**: it never classifies a non-terminating group `Total`
+//! (that would mis-grant `matured`), but it may leave a terminating group `Partial`. Widening it
+//! (here, from self- to mutual-descent) only ever *adds* `Total` verdicts that the well-founded
+//! measure justifies — it never relaxes the bar.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -23,6 +35,11 @@ pub enum Totality {
     Partial,
 }
 
+/// A bound on the position-assignment search for a mutual group (∏ of member arities). Beyond it
+/// the group stays `Partial` — sound (we never *over*-classify), just incomplete, and well past any
+/// realistic hand-written mutual cycle.
+const MAX_ASSIGNMENTS: usize = 4096;
+
 /// Classify every function in the table.
 #[must_use]
 pub fn classify_all(fns: &BTreeMap<String, FnDecl>) -> BTreeMap<String, Totality> {
@@ -34,21 +51,51 @@ pub fn classify_all(fns: &BTreeMap<String, FnDecl>) -> BTreeMap<String, Totality
         calls.insert(name, out);
     }
     let mut result = BTreeMap::new();
-    for (name, fd) in fns {
-        let self_rec = calls[name.as_str()].contains(name);
-        let mutual = calls[name.as_str()]
-            .iter()
-            .any(|callee| callee != name && reaches(callee, name, &calls));
-        // Total iff non-recursive, or self-recursive (not mutual) with structural descent.
-        // Mutual recursion (R7-Q3) stays Partial — an honest deferral, not an error.
-        let t = if !mutual && (!self_rec || descends(fd)) {
+    for scc in strongly_connected(fns, &calls) {
+        // A component is recursive iff it has > 1 member (necessarily a cycle) or its single member
+        // calls itself directly. A non-recursive definition is `Total` with no descent obligation.
+        let recursive = scc.len() > 1 || calls[scc[0].as_str()].contains(&scc[0]);
+        let total = !recursive || group_descends(&scc, fns);
+        let t = if total {
             Totality::Total
         } else {
             Totality::Partial
         };
-        result.insert(name.clone(), t);
+        for name in scc {
+            result.insert(name, t);
+        }
     }
     result
+}
+
+/// Partition the functions into strongly-connected components of the call graph (each is a
+/// `FixGroup`, RFC-0001 r5). Two functions share a component iff they are mutually reachable;
+/// that relation is an equivalence, so a greedy grouping yields the full components. Deterministic
+/// (iteration follows the `BTreeMap` key order).
+fn strongly_connected(
+    fns: &BTreeMap<String, FnDecl>,
+    calls: &BTreeMap<&str, BTreeSet<String>>,
+) -> Vec<Vec<String>> {
+    let mut assigned: BTreeSet<&str> = BTreeSet::new();
+    let mut sccs = Vec::new();
+    for name in fns.keys() {
+        if assigned.contains(name.as_str()) {
+            continue;
+        }
+        let mut group = vec![name.clone()];
+        assigned.insert(name);
+        for other in fns.keys() {
+            if assigned.contains(other.as_str()) {
+                continue;
+            }
+            if reaches(name, other, calls) && reaches(other, name, calls) {
+                group.push(other.clone());
+                assigned.insert(other);
+            }
+        }
+        sccs.push(group);
+    }
+    sccs
 }
 
 /// Does `from` reach `target` through the call graph (cycle detection for mutual recursion)?
@@ -124,65 +171,80 @@ fn walk(e: &Expr, f: &mut impl FnMut(&Expr)) {
     }
 }
 
-/// Structural-descent check for a self-recursive `fd`: there must exist a parameter position `i`
-/// such that **every** recursive call's `i`-th argument is a variable strictly smaller than
-/// parameter `i` (smallness is seeded by `Match`-alternative binders and is transitive).
-fn descends(fd: &FnDecl) -> bool {
-    let params: Vec<&str> = fd
-        .sig
-        .value_params
-        .iter()
-        .map(|p| p.name.as_str())
-        .collect();
-    (0..params.len()).any(|i| check_position(fd, &params, i))
+/// A mutual group (size ≥ 1) descends iff some assignment of one designated argument position to
+/// each member makes *every* inter-member call structural (§4.5). Searches the bounded product of
+/// member arities. The size-1 case is exactly self-descent: the one member ranges over its
+/// positions, and the only group member it can call is itself.
+fn group_descends(scc: &[String], fns: &BTreeMap<String, FnDecl>) -> bool {
+    let members: Vec<&FnDecl> = scc.iter().map(|n| &fns[n]).collect();
+    let arities: Vec<usize> = members.iter().map(|fd| fd.sig.value_params.len()).collect();
+    // A nullary member has no parameter to descend on, so this structural criterion cannot witness
+    // the group total — honestly `Partial`.
+    if arities.contains(&0) {
+        return false;
+    }
+    let combos: usize = arities.iter().product();
+    if combos > MAX_ASSIGNMENTS {
+        return false;
+    }
+    // Each candidate is a mixed-radix index over the member arities: digit k chooses the designated
+    // position of member k.
+    (0..combos).any(|mut rem| {
+        let mut pos = BTreeMap::new();
+        for (fd, &arity) in members.iter().zip(&arities) {
+            pos.insert(fd.sig.name.as_str(), rem % arity);
+            rem /= arity;
+        }
+        assignment_descends(&members, &pos)
+    })
 }
 
-fn check_position(fd: &FnDecl, params: &[&str], i: usize) -> bool {
-    // smaller[v] = v is strictly structurally smaller than params[i].
-    let mut ok = true;
-    descend_walk(
-        &fd.body,
-        &fd.sig.name,
-        params[i],
-        i,
-        &mut BTreeSet::new(),
-        &mut ok,
-    );
-    ok
+/// Check one position assignment: every member's body, walked with that member's designated
+/// parameter as the descent measure, makes every call to a group member pass a strictly-smaller
+/// argument in the **callee's** designated position.
+fn assignment_descends(members: &[&FnDecl], pos: &BTreeMap<&str, usize>) -> bool {
+    members.iter().all(|fd| {
+        let param = fd.sig.value_params[pos[fd.sig.name.as_str()]].name.as_str();
+        let mut ok = true;
+        descend_walk(&fd.body, pos, param, &mut BTreeSet::new(), &mut ok);
+        ok
+    })
 }
 
-/// Walk tracking the set of variables smaller-than the designated parameter; check every
-/// recursive call. `smaller` grows at `Match` alternatives whose scrutinee is the parameter or an
-/// already-smaller variable.
+/// Walk tracking the set of variables smaller-than the designated parameter; check every call to a
+/// group member. `smaller` grows at `Match` alternatives whose scrutinee is the parameter or an
+/// already-smaller variable. `pos` maps each group member to the argument position that must
+/// receive a smaller variable on a call to it.
 fn descend_walk(
     e: &Expr,
-    fname: &str,
+    pos: &BTreeMap<&str, usize>,
     param: &str,
-    pos: usize,
     smaller: &mut BTreeSet<String>,
     ok: &mut bool,
 ) {
     match e {
         Expr::App { head, args } => {
             if let Expr::Path(p) = head.as_ref() {
-                if p.0.len() == 1 && p.0[0] == fname {
-                    // A recursive call: its pos-th argument must be a smaller variable.
-                    let good = args.get(pos).is_some_and(|a| match a {
-                        Expr::Path(v) => v.0.len() == 1 && smaller.contains(&v.0[0]),
-                        _ => false,
-                    });
-                    if !good {
-                        *ok = false;
+                if p.0.len() == 1 {
+                    if let Some(&tpos) = pos.get(p.0[0].as_str()) {
+                        // A call to a group member: its designated argument must be a smaller var.
+                        let good = args.get(tpos).is_some_and(|a| match a {
+                            Expr::Path(v) => v.0.len() == 1 && smaller.contains(&v.0[0]),
+                            _ => false,
+                        });
+                        if !good {
+                            *ok = false;
+                        }
                     }
                 }
             }
-            descend_walk(head, fname, param, pos, smaller, ok);
+            descend_walk(head, pos, param, smaller, ok);
             for a in args {
-                descend_walk(a, fname, param, pos, smaller, ok);
+                descend_walk(a, pos, param, smaller, ok);
             }
         }
         Expr::Match { scrutinee, arms } => {
-            descend_walk(scrutinee, fname, param, pos, smaller, ok);
+            descend_walk(scrutinee, pos, param, smaller, ok);
             let scrut_small = match scrutinee.as_ref() {
                 Expr::Path(p) if p.0.len() == 1 => p.0[0] == param || smaller.contains(&p.0[0]),
                 _ => false,
@@ -220,7 +282,7 @@ fn descend_walk(
                         }
                     }
                 }
-                descend_walk(body, fname, param, pos, smaller, ok);
+                descend_walk(body, pos, param, smaller, ok);
                 for b in added {
                     smaller.remove(&b);
                 }
@@ -232,18 +294,18 @@ fn descend_walk(
         Expr::Let {
             bound, body, name, ..
         } => {
-            descend_walk(bound, fname, param, pos, smaller, ok);
+            descend_walk(bound, pos, param, smaller, ok);
             // A rebinding shadows; conservatively drop smallness for the shadowed name.
             let was = smaller.remove(name);
-            descend_walk(body, fname, param, pos, smaller, ok);
+            descend_walk(body, pos, param, smaller, ok);
             if was {
                 smaller.insert(name.clone());
             }
         }
         Expr::If { cond, conseq, alt } => {
-            descend_walk(cond, fname, param, pos, smaller, ok);
-            descend_walk(conseq, fname, param, pos, smaller, ok);
-            descend_walk(alt, fname, param, pos, smaller, ok);
+            descend_walk(cond, pos, param, smaller, ok);
+            descend_walk(conseq, pos, param, smaller, ok);
+            descend_walk(alt, pos, param, smaller, ok);
         }
         Expr::For {
             x,
@@ -252,12 +314,12 @@ fn descend_walk(
             init,
             body,
         } => {
-            descend_walk(xs, fname, param, pos, smaller, ok);
-            descend_walk(init, fname, param, pos, smaller, ok);
+            descend_walk(xs, pos, param, smaller, ok);
+            descend_walk(init, pos, param, smaller, ok);
             // The binders shadow; conservatively drop smallness for the shadowed names.
             let had_x = smaller.remove(x);
             let had_acc = smaller.remove(acc);
-            descend_walk(body, fname, param, pos, smaller, ok);
+            descend_walk(body, pos, param, smaller, ok);
             if had_x {
                 smaller.insert(x.clone());
             }
@@ -265,10 +327,10 @@ fn descend_walk(
                 smaller.insert(acc.clone());
             }
         }
-        Expr::Swap { value, .. } => descend_walk(value, fname, param, pos, smaller, ok),
-        Expr::WithParadigm { body, .. } => descend_walk(body, fname, param, pos, smaller, ok),
-        Expr::Wild(b) | Expr::Spore(b) => descend_walk(b, fname, param, pos, smaller, ok),
-        Expr::Ascribe(b, _) => descend_walk(b, fname, param, pos, smaller, ok),
+        Expr::Swap { value, .. } => descend_walk(value, pos, param, smaller, ok),
+        Expr::WithParadigm { body, .. } => descend_walk(body, pos, param, smaller, ok),
+        Expr::Wild(b) | Expr::Spore(b) => descend_walk(b, pos, param, smaller, ok),
+        Expr::Ascribe(b, _) => descend_walk(b, pos, param, smaller, ok),
         Expr::Path(_) | Expr::Lit(_) => {}
     }
 }
