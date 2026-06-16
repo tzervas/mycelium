@@ -8,6 +8,33 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — M-345: RFC-0013 structured diagnostics & reified error policy, drafted from DN-04)
+- **RFC-0013 — Structured Diagnostics & Reified Error-Handling Policy (Draft (Proposed)).** Turns the
+  DynEL-inspired DN-04 direction into a ratifiable, **tooling-layer** design with **no kernel change**
+  (KC-3) and **no Python** (ADR-007 Rust-first; DynEL is reference-only). Imports three contracts —
+  **graded context levels** (verbosity over EXPLAIN / `FeedbackSummary` / `NotValidatedReason`), **dual
+  human + JSON projection** of one content-addressed diagnostic (G11), and a **reified per-definition
+  error-handling policy** `on <ErrorClass> => {message, tags, level, route}` in the RFC-0005/ADR-006
+  pattern — and **normatively excludes** three anti-patterns (config-string `eval` → registry lookup;
+  wholesale env/locals dump → an allowlisted detailed tier; `logger.catch` swallowing → additive over a
+  still-propagating error). Governing invariant: **a diagnostic is additive presentation over an
+  explicit error, never a substitute** (G2 never-silent).
+- **DN04-Q1 resolved → presentation/routing only for v0.** A policy shapes message/tags/level/route; the
+  explicit error/`Option`/refusal **still propagates** unchanged. **Declarative recovery is deferred** to
+  a separate future RFC, with the maintainer's constraints recorded (RFC-0013 §8/§9): an **isolated,
+  separable** subsystem (SoC, bounded blast radius) with **explicit, declared, bounded** effect
+  semantics (errors-as-values / reified effect handlers — errors propagate/bubble and can *trigger*
+  functionality; effects and cascades are allowed *when explicitly declared/implemented* so they stay
+  known and bounded — the enemy is *unintended/unknown/unbounded* effects, not effects per se), always
+  **additive over** the explicit error. DN04-Q2 = free-form
+  string tags (v0); DN04-Q3 = file is a projection of the canonical declaration; DN04-Q5 = standalone RFC
+  now (stdlib graduation, M-346, a future option).
+- **Carries the representation-crossing audit view** routed here from RFC-0012 R12-Q2 / M-351: a
+  location-independent view enumerating every `swap` with its honesty bound (Exact/Proven/Empirical/
+  Declared, never upgraded — VR-5) and selection policy. Advances NFR-2 / SC-5b (semantic feedback) +
+  the AI co-author loop (M-330). DN-04 status updated (now feeds RFC-0013); RFC index updated. No code
+  lands with the draft — ratification is the maintainer's append-only decision.
+
 ### Added (Phase 4 — M-343: mutual recursion in the L0 calculus; RFC-0001 r5, R7-Q3 resolved)
 - **`FixGroup` — one new L0 node for mutual recursion** (RFC-0001 r5; the n-way generalisation of
   `Fix`). `FixGroup{defs, body}` binds a strongly-connected call group simultaneously (each definition

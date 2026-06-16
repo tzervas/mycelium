@@ -22,6 +22,7 @@ An RFC is a detailed, normative design of a subsystem that multiple decisions pl
 | 0010 | Decode-Methodology Selection | **Draft** | RFC-0005 (same selection mechanism, third site); RFC-0009 (§10.3 matrix + regime gate); RFC-0003; G2/G4/VR-5 |
 | 0011 | L0 `Match` & the L1-in-Core-IR Revision | **Accepted** (decision; enactment sequenced after RFC-0006/0007 ratification) | RFC-0001 §4.5/§4.6 (r3 revision); RFC-0006 §4.4 step 2; RFC-0007 §4.1–4.6; ADR-003; M-320 |
 | 0012 | Ambient Representation: Declared Paradigm Defaults & Scoped Overrides | **Accepted** (design normative; enactment gated — M-344) | RFC-0006 (surface/term-layer; no kernel change); RFC-0005/ADR-006 (reified selection); RFC-0001 §4.5/§4.6 (content-addressing); ADR-016 (cross-module ABI); G2/KC-3/tension A; NFR-7 |
+| 0013 | Structured Diagnostics & Reified Error-Handling Policy | **Draft** (presentation/routing only; recovery deferred — M-345) | DN-04 (basis); RFC-0005/ADR-006 (reified-policy pattern); RFC-0006 (optional surface); RFC-0008 (observability home); RFC-0001/0002 (the never-silent errors it presents); G2/G11/NFR-2/KC-3; ADR-007 |
 
 Cross-cutting machinery (decided across RFCs): **one** certificate checker (RFC-0002 ⇄ RFC-0004), **one** selection mechanism (RFC-0002 ⇄ RFC-0004), and **two** bound kernels meeting at one shared certificate (ADR-010 → RFC-0001/0002/0003). See `../Doc-Index.md` for the dependency DAG.
 
