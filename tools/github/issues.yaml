@@ -498,8 +498,17 @@ issues:
     labels: [phase:3, type:design, area:execution, priority:P1, status:needs-design]
     depends_on: [M-342]
     body: |
-      Surfaced by M-342: the AOT env-machine evaluates object recursion on the HOST call stack (O(depth)); the fuel clock bounds productive work (explicit FuelExhausted, never a hang) but depth beyond the host stack aborts. Investigate + improve before venturing further on the execution path (maintainer-prioritized). Candidates: explicit control stack / trampoline (O(1) host stack, iterative), tail-call detection, defunctionalized CPS, shared/persistent environments (Rc) instead of per-call clone, and carry the lessons into the native MLIR->LLVM path. Constraints: never-silent (a depth/budget limit is an explicit error, never a hang OR an abort), no black boxes, M-210 differential still holds (NFR-7).
-      Acceptance (design-first): an investigation note comparing techniques vs Mycelium's constraints + a recommended approach (present before folding), then implement so deep recursion is a graceful explicit limit and the differential still holds.
+      Surfaced by M-342: the AOT env-machine evaluates object recursion on the HOST call stack (O(depth)); the fuel clock bounds productive work (explicit FuelExhausted, never a hang) but depth beyond the host stack aborts. DN-05 records the design + empirical grounding (xtask recursion-probe: env-machine aborts at ~600 Fix-unfolds vs the interpreter's O(1) stack). Maintainer-set priority: (1) bank native MLIR->LLVM stack-robustness as a design requirement [libMLIR-gated, M-348]; (2) explicit control stack / trampoline [near-term buildable, makes never-silent total]; (3) tail-call detection [cautious, optional, on top of #2, KC-3/YAGNI]. Constraints: never-silent (a limit is an explicit error, never a hang OR abort), no black boxes, M-210 differential holds (NFR-7).
+      Acceptance (design-first): DN-05 presented; then implement #2 (trampoline) so deep recursion is a graceful explicit limit (re-measured by recursion-probe), with #1 banked for the native path and #3 gated on measurement.
+
+  - id: M-348
+    title: "M-348 — Provision libMLIR (desktop/WSL) to unblock the native MLIR->LLVM path"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:design, area:execution, priority:P2, status:blocked]
+    depends_on: [M-301]
+    body: |
+      The MLIR->LLVM native AOT path (RFC-0004 §2, ADR-009) is gated on libMLIR, absent in the current environment. Maintainer intends to provision it near-term (Windows/Claude Code desktop, or via WSL) to unblock native dialect lowering / cross-target codegen, the native data/closure codegen M-342 left as UnsupportedNode, and DN-05 #1 (stack-robust recursion designed into the native path). Verdicts needing it stay honestly "not established" (VR-5) until present.
+      Acceptance: libMLIR provisioned + a first native lowering increment runs; no code until the toolchain is present.
 
   - id: M-343
     title: "M-343 — Mutual recursion: full elaboration (R7-Q3 remaining half)"

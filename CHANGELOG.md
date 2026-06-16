@@ -8,6 +8,20 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — DN-05 + recursion-probe: AOT recursion stack-robustness strategy, M-347/M-348)
+- **DN-05 (Draft) — AOT recursion execution strategy, empirically grounded.** Investigates making the
+  M-342 env-machine recursion stack-robust *without bloat*. New `xtask recursion-probe` **measures**
+  (not presumes) the limitation: the AOT env-machine aborts (host-stack overflow) at **~600**
+  `Fix`-unfolds, while the reference interpreter is graceful at fuel 5 000 000 in **O(1)** host stack
+  (a tiny-AST `spin`, abort depth found by binary-searching fuel in subprocesses; re-runnable). Records
+  the maintainer-set priority: **(1)** bank native MLIR→LLVM stack-robustness as a design requirement
+  (libMLIR-gated; provisioning is near-term via desktop/WSL — **M-348** #110); **(2)** an explicit
+  control stack / **trampoline** in the env-machine (near-term buildable; turns the abort into an
+  explicit budget/limit — makes never-silent **total** for the AOT path); **(3)** **tail-call
+  detection** — cautious, optional, on top of #2, only if it earns its keep (KC-3/KISS/YAGNI). The
+  trusted interpreter stays the base for deep recursion until #2 lands; the M-210 differential must
+  still hold (NFR-7). Tracked M-347 (#109, P1) + M-348 (#110). Design-first — no fix lands with the note.
+
 ### Added (Phase 4 — M-342: AOT path extended to the data + recursion fragment; RFC-0011 §4.4 Q5 closed)
 - **The AOT `aot::run` env-machine now covers the full v0 calculus (M-342).** `mycelium-core::lower`
   gains ANF for the r3/r4 nodes — `Construct`/`App` (flat) and `Lam`/`Fix`/`Match` (with **nested ANF
