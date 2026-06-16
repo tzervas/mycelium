@@ -6,16 +6,19 @@
 
 mod e1;
 mod kc4;
+mod recursion_probe;
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("kc4") => kc4::run(),
         Some("e1") => e1::run(),
+        Some("recursion-probe") => recursion_probe::run(),
         None | Some("help") => {
             eprintln!(
                 "xtask tasks:\n  kc4   KC-4 per-swap cert-check overhead (run with --release)\n  \
-                 e1    E1 perf harness: packing codec + native AOT vs interp (run with --release)"
+                 e1    E1 perf harness: packing codec + native AOT vs interp (run with --release)\n  \
+                 recursion-probe  empirical AOT recursion stack-robustness (DN-05 / M-347)"
             );
         }
         Some(other) => {

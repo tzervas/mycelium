@@ -159,6 +159,14 @@ pub enum EvalError {
     },
     /// Evaluation exceeded its step budget (a non-termination guard).
     FuelExhausted,
+    /// Evaluation exceeded its **control-stack depth** budget — the space analogue of `FuelExhausted`
+    /// (M-347): the AOT env-machine (a trampoline over an explicit heap control stack) refuses past a
+    /// depth ceiling with this **explicit, graceful** error rather than growing memory unboundedly /
+    /// aborting. Never silent. The reference interpreter is O(1)-stack and does not raise this.
+    DepthLimit {
+        /// The control-stack depth ceiling that was hit.
+        limit: usize,
+    },
     /// A swap engine reported a failure (e.g. an illegal pair or an out-of-range conversion). The
     /// message comes from the engine; it is always explicit, never a silent coercion.
     Swap(String),
@@ -219,6 +227,12 @@ impl core::fmt::Display for EvalError {
                 )
             }
             EvalError::FuelExhausted => write!(f, "evaluation exceeded its step budget"),
+            EvalError::DepthLimit { limit } => {
+                write!(
+                    f,
+                    "evaluation exceeded its control-stack depth budget ({limit})"
+                )
+            }
             EvalError::Swap(msg) => write!(f, "swap failed: {msg}"),
             EvalError::Wf(e) => write!(f, "well-formedness violation: {e}"),
             EvalError::NonExhaustiveMatch => write!(
@@ -914,9 +928,12 @@ mod data_tests {
     }
 
     #[test]
-    fn an_aot_lowerable_check_excludes_data_nodes() {
+    fn aot_lowerable_now_spans_the_data_fragment() {
+        // M-342 (RFC-0011 §4.4 Q5 closed): the AOT env-machine covers the data fragment, so a
+        // Construct is AOT-lowerable too (it runs on the three-way differential, not just the repr
+        // path). The predicate is now total over the v0 node set.
         let reg = registry();
-        assert!(!z(&reg).is_aot_lowerable());
+        assert!(z(&reg).is_aot_lowerable());
         assert!(Node::Const(byte(GuaranteeStrength::Exact)).is_aot_lowerable());
     }
 
@@ -1099,8 +1116,10 @@ mod r4_tests {
     }
 
     #[test]
-    fn lam_app_fix_are_not_aot_lowerable() {
+    fn lam_app_fix_are_now_aot_lowerable() {
+        // M-342: the recursion fragment (Lam/App/Fix/Match/Construct) lowers to ANF and runs on the
+        // AOT env-machine, so a recursive definition is AOT-lowerable (three-way differential).
         let r = nat();
-        assert!(!drop_(&r).is_aot_lowerable());
+        assert!(drop_(&r).is_aot_lowerable());
     }
 }

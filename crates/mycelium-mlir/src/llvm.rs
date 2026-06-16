@@ -255,6 +255,23 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                     "swap to {target:?} (the subset is straight-line bit/trit ops; M-301)"
                 )));
             }
+            // The native LLVM backend stays the **bit/trit subset** (VR-5): the data + recursion
+            // fragment (Construct/App/Lam/Fix/Match) needs heap/closure codegen, deferred to the
+            // MLIR→LLVM backend (RFC-0004 §2). It runs on the `aot::run` env-machine instead — the
+            // path the three-way differential exercises for these nodes. Explicit refusal, never a
+            // silent mis-lowering (G2).
+            Rhs::Construct { .. }
+            | Rhs::App { .. }
+            | Rhs::Lam { .. }
+            | Rhs::Fix { .. }
+            | Rhs::Match { .. } => {
+                return Err(AotError::UnsupportedNode(
+                    "data/recursion node (Construct/App/Lam/Fix/Match): the native LLVM subset is \
+                     bit/trit only; these run on the AOT env-machine (M-342), native codegen \
+                     deferred to the MLIR→LLVM backend"
+                        .to_owned(),
+                ));
+            }
         };
         env.insert(b.name.clone(), lane);
     }

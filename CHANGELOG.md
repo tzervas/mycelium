@@ -8,6 +8,135 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (Phase 4 — M-347: AOT env-machine made stack-robust via a trampoline; DN-05 #2 enacted)
+- **`mycelium-mlir::aot` rewritten as a trampoline over an explicit heap control stack
+  (`eval_machine`).** Object-level recursion now lives on the **heap**, so the env-machine uses **O(1)
+  host stack** — matching the reference interpreter. Deep recursion is bounded by **two explicit,
+  graceful budgets**: `fuel` (Fix unfolds; time → `EvalError::FuelExhausted`) and a **control-stack
+  depth ceiling** (space → new `EvalError::DepthLimit { limit }`) — **never a host-stack abort, never a
+  hang** (G2). `run_core_with_budget(fuel, max_depth)` exposes both; `run`/`run_core`/`run_core_with_fuel`
+  unchanged. **Empirically confirmed** (`xtask recursion-probe`, re-run): the env-machine is graceful at
+  every fuel to 5 000 000 (`FuelExhausted` ≤200k, `DepthLimit{200000}` ≥250k) — the pre-fix ~600-unfold
+  abort (DN-05 §1.1) is **gone**. The three-way differential (L1≡L0≡AOT) is unchanged (NFR-7 holds).
+  **RFC-0004 §2** now banks the matching **normative requirement** for the native MLIR→LLVM path
+  (stack-robustness designed in, not retrofitted — DN-05 #1; libMLIR provisioning is M-348). The
+  *dynamic* depth budget (derive `max_depth` from headroom) stays the deferred policy (DN-05 §2.4 /
+  DN05-Q5); the fixed 200 000 default is conservative + configurable.
+
+### Added (Phase 4 — DN-05 + recursion-probe: AOT recursion stack-robustness strategy, M-347/M-348)
+- **DN-05 (Draft) — AOT recursion execution strategy, empirically grounded.** Investigates making the
+  M-342 env-machine recursion stack-robust *without bloat*. New `xtask recursion-probe` **measures**
+  (not presumes) the limitation: the AOT env-machine aborts (host-stack overflow) at **~600**
+  `Fix`-unfolds, while the reference interpreter is graceful at fuel 5 000 000 in **O(1)** host stack
+  (a tiny-AST `spin`, abort depth found by binary-searching fuel in subprocesses; re-runnable). Records
+  the maintainer-set priority: **(1)** bank native MLIR→LLVM stack-robustness as a design requirement
+  (libMLIR-gated; provisioning is near-term via desktop/WSL — **M-348** #110); **(2)** an explicit
+  control stack / **trampoline** in the env-machine (near-term buildable; turns the abort into an
+  explicit budget/limit — makes never-silent **total** for the AOT path); **(3)** **tail-call
+  detection** — cautious, optional, on top of #2, only if it earns its keep (KC-3/KISS/YAGNI). Plus
+  **§2.4: the limit must be *dynamic*** — detect stack/heap headroom + per-frame cost at runtime and
+  derive the safe depth (the ~14 KB/unfold cost varies by build/platform, so a static constant is the
+  wrong knob), behind a small `DepthBudget` trait with a conservative static fallback, `EXPLAIN`-able
+  basis, and an explicit error (never an abort/hang/black box). The trusted interpreter stays the base
+  for deep recursion until #2 lands; the M-210 differential must still hold (NFR-7). Tracked M-347
+  (#109, P1) + M-348 (#110). Design-first — no fix lands with the note.
+
+### Added (Phase 4 — M-342: AOT path extended to the data + recursion fragment; RFC-0011 §4.4 Q5 closed)
+- **The AOT `aot::run` env-machine now covers the full v0 calculus (M-342).** `mycelium-core::lower`
+  gains ANF for the r3/r4 nodes — `Construct`/`App` (flat) and `Lam`/`Fix`/`Match` (with **nested ANF
+  blocks** evaluated lazily, a single program-wide temp counter keeping temps globally unique) — and
+  `mycelium-mlir::aot` becomes a big-step **environment machine** with closures (capturing their env),
+  call-by-value `App`, fuel-clocked `Fix` unfolding, `Construct`→`Datum`, and arm-selecting `Match`.
+  `run_core` returns a `CoreValue` (repr **or** datum); `run` keeps the repr-`Value` signature.
+- **The three-way differential now spans the full calculus.** `mycelium-l1`'s data/recursion corpus
+  (data, nested matches, self-recursion, `for`-folds) is checked **L1-eval ≡ L0-interp ≡ AOT** on the
+  L0 `CoreValue`, with the shared **M-210** checker validating each repr-result pair (NFR-7). Closes
+  RFC-0011 §4.4 **Q5**; `Node::is_aot_lowerable` is now total over the v0 node set.
+- **Honest scope (VR-5).** The *native* direct-LLVM backend stays the **bit/trit subset** — the data +
+  recursion nodes are an explicit `UnsupportedNode` refusal there (data/closure native codegen is the
+  deferred MLIR→LLVM work). The env-machine uses the **host call stack** for object recursion (the
+  fuel clock bounds *productive work* — a non-productive recursion is an explicit `FuelExhausted`,
+  never a hang — but depth beyond the host stack aborts); the trusted base for deep recursion remains
+  the O(1)-stack interpreter. A follow-on, **M-347** (#109), tracks making the env-machine recursion
+  stack-robust / more efficient.
+
+### Changed (Phase 4 — RFC-0012 RATIFIED: Draft → Accepted)
+- **RFC-0012 ratified (Draft → Accepted, 2026-06-16; append-only).** The ambient-representation
+  design (§4) is now the normative surface contract: the two invariants (I1 the ambient emits no
+  `Swap`; I2 resolution is observationally the identity) and the never-silent override /
+  `MissingConversion` rule are in force. The kernel is unaffected (KC-3 — RFC-0001's frozen node set
+  is untouched). **No code lands with acceptance** — the elaborator/checker wiring is the gated
+  follow-on **M-344** (#106): the resolution pass, the never-silent refusals, M-142/LSP "expand
+  ambient" rendering, and the §4.6 meaning-preservation differential. RFC README + Doc-Index updated.
+
+### Added (Phase 4 — roadmap: Mycelium core library / stdlib, M-346)
+- **M-346 (#108) — core-library / stdlib roadmap anchor.** Records the maintainer's goal of a solid
+  core-library feature set for usability, to be decomposed once the surface language is self-hosting
+  (dogfooding; free of other *languages*). Inherits the non-negotiable principles (never-silent G2,
+  honest per-op guarantee tags, no black boxes/EXPLAIN, small kernel KC-3 — stdlib lives *above* it,
+  content-addressed ADR-003; Rust-first ADR-007 now → Mycelium-lang eventually). Seeds: `diagnostics`
+  (DN-04), collections, numerics helpers, VSA/encoding utils, I/O + wire-form serialization. No code;
+  draft a Core Library RFC near self-hosting and present before folding.
+
+### Added (Phase 4 — DN-04 Draft: optional structured diagnostics, DynEL-inspired, M-345)
+- **DN-04 (Draft) — evaluate DynEL's (`gitlab:albedo_black/DynEL`) feature set as *opt-in* structured
+  diagnostics** (`docs/notes/DN-04-…`). Source read (maintainer-supplied zip). **Governing
+  constraint:** diagnostics are *additive presentation* over Mycelium's explicit, reasoned errors —
+  **never a substitute** for a never-silent error/`Option`/`CheckVerdict::NotValidated` (G2). Imports
+  the *contracts* — graded context levels (minimal/medium/detailed), human + machine-readable (JSON)
+  output as two **projections** of one content-addressed diagnostic (G11/M-380), and a **reified
+  per-definition error-handling policy** `{exceptions, custom_message, tags}` (the RFC-0005 pattern;
+  ADR-006) — and explicitly **excludes** DynEL's three anti-patterns: `eval`-on-config (code
+  execution), full `os.environ` dump at the detailed level (secret leakage), and `logger.catch`
+  exception-swallowing (a never-silent violation). **Rust-first (ADR-007): no Python added** — DynEL
+  is reference-only; the feature is a Rust tooling-layer renderer (kernel untouched, KC-3), **eventually
+  self-hosted in Mycelium-lang** (dogfooding; free of other *languages*). Tracked as M-345 (#107);
+  Doc-Index + `idmap.tsv` / `issues.yaml` updated.
+
+### Added (Phase 4 — RFC-0012 Draft: ambient representation & scoped overrides, M-344)
+- **RFC-0012 (Draft) — a surface-only, declared, scoped, *paradigm-only* representation default +
+  scoped override/conversion blocks** (`docs/rfcs/RFC-0012-…`), to offset honesty's verbosity (tension
+  A) while refusing black boxes. The honest core is two **normative invariants**: **(I1)** the ambient
+  emits no `Swap` (it fills an *omitted paradigm* + bare-literal encoding only — conversions stay
+  author-written, WF1/WF2); **(I2)** resolution is observationally the identity — a program with the
+  ambient and its longhand twin elaborate to *identical* L0 ⟹ identical content hash (RFC-0001 §4.6),
+  defended by a meaning-preservation differential (NFR-7/M-210). Forbids the two black-box failure modes
+  (repr-inference-from-usage; silent conversion insertion); cross-paradigm edges stay explicit `swap`s
+  and a missing one is an explicit `MissingConversion` refusal (G2). The **trusted kernel is untouched**
+  (KC-3) — L0's frozen node set does not change; this is RFC-0006 surface/term-layer sugar that
+  elaborates away. Cross-module: exported signatures are concrete L0 reprs (ADR-016 boundary), so the
+  ambient never leaks across modules. Per maintainer direction (2026-06-16): **paradigm-only**
+  granularity, **full v0 scope** (defaults + overrides). **No code, no RFC-0001 change** — Draft is the
+  present-before-fold step; ratification + wiring are the maintainer's append-only decision. RFC README +
+  Doc-Index updated; issue M-344 (#106) added to `idmap.tsv` / `issues.yaml`.
+
+### Changed (Phase 4 — ADR-016 + ADR-017 RATIFIED: Proposed → Accepted)
+- **ADR-016 + ADR-017 ratified (Proposed → Accepted, 2026-06-16; append-only).** Maintainer gate
+  cleared — no change to either decision. ADR-016 fixes the interpreted↔compiled ABI (dispatch by
+  content hash; the RFC-0001 §4.8 wire form as the canonical value boundary); ADR-017 fixes
+  hot-inject (hash-keyed dispatch + content-addressed dynamic linking, immutable-by-construction).
+  ADR README + Doc-Index status updated to Accepted; the RFC-0004 §10 OQ-1/OQ-2 pointers stand.
+
+### Added (Phase 4 — M-341: the in-process hot-inject prototype on the M-340 JIT)
+- **`mycelium-mlir` gains the `inject` module — ADR-017's named first build step (ADR-016 call ABI).**
+  An `Image` holds a `ContentHash → entry` dispatch table over the M-340 `dlopen` JIT:
+  - **a call resolves to a compiled entry if present, else interprets** the registered definition
+    (the RFC-0004 §9.1 continuum); a hash with neither is an explicit `InjectError::DispatchMiss`,
+    never a silent guess (G2/SC-3) — and `resolve` makes the dispatch decision `EXPLAIN`-able;
+  - **`inject` loads a content-addressed unit and registers a new `hash → entry`**, never mutating a
+    live entry (publish-once; an edit is a new hash under a new entry — the atomicity hazard
+    dissolves, ADR-017 decision 4);
+  - **`recompile_closure`** computes the changed dependency-closure by hash reachability over the
+    dependency graph — the recompile set, with no AST/file diff (decision 3).
+  **Verified (NFR-7):** the injected-compiled path is observationally equivalent to the reference
+  interpreter through the shared **M-210** TV checker (`ObservationalEquiv`); the safety argument is
+  exercised under test — an in-flight call to the old hash finishes on old code while a new caller
+  dispatches to the new hash (`tests/inject_hotswap.rs`). **Honest scope (VR-5):** in-process proof
+  only; a unit is a *closed* bit/trit-subset program and the call boundary is the call ABI restricted
+  to nullary units — the args-carrying value ABI (RFC-0001 §4.8 wire form) and cross-process / native
+  units (RFC-0004 §2 / §10 OQ-3) stay deferred. New issues M-341 (#103), M-342 (#104, AOT-fragment
+  extension), M-343 (#105, mutual-recursion elaboration) created + added to `idmap.tsv` / `issues.yaml`.
+
 ### Added (Phase 4 — ADR-016 + ADR-017 Proposed: the interpreted↔compiled ABI + hot-inject)
 - **ADR-016 (Proposed) — the interpreted↔compiled ABI (RFC-0004 §10 OQ-1).** Dispatch a compiled
   stable component by its **content hash** (versioning is free, staleness structurally impossible —

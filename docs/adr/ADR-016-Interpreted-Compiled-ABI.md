@@ -4,7 +4,7 @@
 |---|---|
 | **ADR** | 016 |
 | **Title** | The boundary between interpreted L0 and compiled stable components: dispatch a compiled definition by its **content hash**, and cross values in the **self-describing wire form** (RFC-0001 §4.8), with a zero-copy fast-path as a later optimization |
-| **Status** | **Proposed** (drafted 2026-06-16; enacts RFC-0004 r2 §10 **OQ-1**) |
+| **Status** | **Accepted** (drafted 2026-06-16; ratified 2026-06-16; enacts RFC-0004 r2 §10 **OQ-1**) |
 | **Date** | 2026-06-16 |
 | **Depends on** | RFC-0004 §4 (stable-component gate) / §9 (interpreted↔compiled continuum) / §10 OQ-1; RFC-0001 §4.6 (content-addressing) / §4.8 (self-describing wire form); ADR-003 (Unison identity); ADR-007 (Rust trusted base); ADR-009 (hybrid execution); M-340 (in-process JIT) |
 | **Resolves** | RFC-0004 §10 **OQ-1** (the interpreted↔compiled ABI) |
@@ -105,3 +105,10 @@ measurement-driven decision).
   makes versioning/staleness dissolve) and ADR-007/009 (the boundary is toolchain, not kernel).
   Codegen deferred to the MLIR→LLVM backend (RFC-0004 §2). Awaiting maintainer ratification
   (Proposed → Accepted). Append-only.
+- **2026-06-16 — Accepted.** Maintainer ratification (Proposed → Accepted). No change to the
+  decision: the call ABI dispatches by content hash and the value ABI is the RFC-0001 §4.8
+  self-describing wire form (canonical), with the zero-copy fast-path as a later validated
+  optimization. This unblocks ADR-017's in-process hot-inject prototype, which builds the hash-keyed
+  dispatch table this ADR defines (the prototype's closed-program call boundary is the call ABI
+  restricted to nullary units; the args-carrying value boundary lands with the MLIR→LLVM backend —
+  honest deferral, VR-5). Append-only.

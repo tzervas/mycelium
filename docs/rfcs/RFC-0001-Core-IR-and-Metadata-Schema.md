@@ -147,6 +147,8 @@ The static type is `Value<R>`; `meta` is runtime data. The split between what is
 > §4.8). This mirrors the L1 prototype's `L1Value` (`crates/mycelium-l1::eval`) so L1-eval and
 > L0-interp agree on the data fragment (NFR-7).
 
+<!-- -->
+
 > **r4 — the function value model (RFC-0007 §4.1; maintainer-confirmed 2026-06-15).** A `Lam` node
 > (§4.5) is a **function value** — a normal form, exactly as a saturated `Construct` is a data value.
 > **The v0 surface is first-order** (top-level named functions, W6-saturated calls, no nested lambdas
@@ -255,6 +257,8 @@ CtorRef  ::= "#" DeclHash "#" Nat                              // Unison #T#i �
 > mis-gate packaging but **never change meaning**); the structural totality checker, *outside* the
 > kernel, keeps gating `matured ⟹ total` (RFC-0004 §4). r4 makes the fuel-clocked L0 `Fix` the trusted
 > definition that gate sits on; no new mechanism.
+
+<!-- -->
 
 > **r3 (RFC-0011, enacted) — `Construct` + flat `Match`.** The grammar gains the two L1
 > data-and-matching forms (this **supersedes the r2 five-node grammar**, append-only). `Construct`

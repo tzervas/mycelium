@@ -272,8 +272,12 @@ No new sources; this RFC is a *merge proposal*, not new design (T3.1).
   maintainer to ratify as kernel WF, not just prototype behavior.
 - **Q4 (deferred to r4, not this RFC).** R7-Q1 (`Fix` vs recursive-`Let`), R7-Q3 (mutual recursion), and the
   `matured`-gate/recursion-in-L0 interaction (RFC-0007 §4.5).
-- **Q5 (AOT reach).** Whether the r3 matching/data fragment is in the direct-LLVM backend's subset (M-301)
-  or stays interpreter-only at first — a sequencing question for the M-320 wiring, not a normative one.
+- **Q5 (AOT reach). RESOLVED (M-342, 2026-06-16).** The data + recursion fragment
+  (`Construct`/`Match`/`Lam`/`App`/`Fix`) now lowers to ANF and runs on the `aot::run` **env-machine**,
+  so the three-way differential (L1-eval ≡ L0-interp ≡ AOT) spans the full v0 calculus. The *native
+  direct-LLVM* backend stays the bit/trit subset and refuses the rest with an explicit `UnsupportedNode`
+  (VR-5) — data/closure native codegen is the deferred MLIR→LLVM work. (A follow-on, M-347, tracks
+  making the env-machine's recursion stack-robust / more efficient.)
 
 ## 9. Future possibilities
 

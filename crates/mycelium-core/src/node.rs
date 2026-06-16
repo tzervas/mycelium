@@ -151,11 +151,14 @@ impl Node {
         matches!(self, Node::Swap { .. })
     }
 
-    /// Whether this whole node is in the **AOT-lowerable** (representation-only) fragment — i.e. it
-    /// contains no r3 data node (`Construct`/`Match`). The AOT/ANF path is repr-only in r3
-    /// (RFC-0011 §4.4 Q5); a caller filters with this before [`crate::lower::lower_to_anf`], and the
-    /// data fragment runs on the reference interpreter instead (the M-210 differential is L1-eval ≡
-    /// L0-interp there). Honest: a `false` here is *why* a program is interpreter-only, not a gap.
+    /// Whether this whole node is in the **AOT-lowerable** fragment — i.e. it lowers to ANF and runs
+    /// on the AOT path. As of M-342 (RFC-0011 §4.4 Q5 closed) the AOT `aot::run` env-machine covers
+    /// the **whole v0 calculus** — `Const/Var/Let/Op/Swap` *and* the r3/r4 data + recursion nodes
+    /// (`Construct`/`Match`/`Lam`/`App`/`Fix`) — so every well-formed v0 node is AOT-lowerable, and the
+    /// three-way differential (L1-eval ≡ L0-interp ≡ AOT) spans the full calculus. (The *native LLVM*
+    /// backend stays the bit/trit subset and refuses the rest with an explicit `UnsupportedNode`,
+    /// VR-5; that refusal lives in `mycelium-mlir::llvm`, not here.) Retained as the structural
+    /// predicate; it is now total over the v0 node set.
     #[must_use]
     pub fn is_aot_lowerable(&self) -> bool {
         match self {
@@ -163,10 +166,20 @@ impl Node {
             Node::Let { bound, body, .. } => bound.is_aot_lowerable() && body.is_aot_lowerable(),
             Node::Op { args, .. } => args.iter().all(Node::is_aot_lowerable),
             Node::Swap { src, .. } => src.is_aot_lowerable(),
-            // r3 data nodes + r4 function/recursion nodes are interpreter-first (RFC-0011 §4.4 Q5;
-            // RFC-0001 r4 keeps the AOT subset repr-only until the backend grows them).
-            Node::Construct { .. } | Node::Match { .. } => false,
-            Node::Lam { .. } | Node::App { .. } | Node::Fix { .. } => false,
+            Node::Construct { args, .. } => args.iter().all(Node::is_aot_lowerable),
+            Node::Match {
+                scrutinee,
+                alts,
+                default,
+            } => {
+                scrutinee.is_aot_lowerable()
+                    && alts.iter().all(|a| match a {
+                        Alt::Ctor { body, .. } | Alt::Lit { body, .. } => body.is_aot_lowerable(),
+                    })
+                    && default.as_deref().is_none_or(Node::is_aot_lowerable)
+            }
+            Node::Lam { body, .. } | Node::Fix { body, .. } => body.is_aot_lowerable(),
+            Node::App { func, arg } => func.is_aot_lowerable() && arg.is_aot_lowerable(),
         }
     }
 }
