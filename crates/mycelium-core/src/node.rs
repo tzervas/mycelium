@@ -117,6 +117,25 @@ pub enum Node {
         /// The recursive body (typically a `Lam`).
         body: Box<Node>,
     },
+    /// **Mutual recursion** — a binding group (RFC-0001 r5; R7-Q3). `FixGroup{defs, body}` binds every
+    /// `defs[i].0` to `defs[i].1` **simultaneously**: each definition *and* `body` see all the group's
+    /// names, so two functions can call each other. It is the n-way generalisation of [`Node::Fix`]
+    /// (the n=1 self-recursion case); the elaborator emits a `FixGroup` only for a strongly-connected
+    /// call group of **≥2** functions and leaves direct self-recursion on `Fix` (so the simpler node's
+    /// semantics and tests are untouched). Like `Fix`, it unfolds by substitution under the
+    /// interpreter's fuel clock — never a hang. Reduction has two cases (mirroring `Fix`'s single
+    /// unfold): a **focus** `FixGroup(defs, fᵢ)` unfolds to `defs[i][fⱼ ↦ FixGroup(defs, fⱼ)]` (the
+    /// member's definition with the group re-bound), and a **continuation** `FixGroup(defs, e)` (with
+    /// `e` not a bare member name) unfolds to `e[fⱼ ↦ FixGroup(defs, fⱼ)]`. The member names are
+    /// `%`-fresh (no surface capture), and the group **binds** all of them — substitution shadows
+    /// them, so the per-member focus thunks stay intact across the unfold.
+    FixGroup {
+        /// The mutually-recursive bindings `(name, definition)`, each typically a `Lam`. Order is the
+        /// elaborator's callee-stable order; identity is over the α-normalised group (content hash).
+        defs: Vec<(VarId, Box<Node>)>,
+        /// The continuation, in scope of every bound name in `defs`.
+        body: Box<Node>,
+    },
 }
 
 /// One alternative of a flat [`Node::Match`] (RFC-0011 §4.1): a constructor arm (binding exactly the
@@ -179,6 +198,9 @@ impl Node {
                     && default.as_deref().is_none_or(Node::is_aot_lowerable)
             }
             Node::Lam { body, .. } | Node::Fix { body, .. } => body.is_aot_lowerable(),
+            Node::FixGroup { defs, body } => {
+                defs.iter().all(|(_, d)| d.is_aot_lowerable()) && body.is_aot_lowerable()
+            }
             Node::App { func, arg } => func.is_aot_lowerable() && arg.is_aot_lowerable(),
         }
     }

@@ -3,6 +3,7 @@
   { "name": "phase:1", "color": "1D76DB", "description": "Phase 1 — Minimal Viable Core" },
   { "name": "phase:2", "color": "5319E7", "description": "Phase 2 — Full Unification & Verified Swaps" },
   { "name": "phase:3", "color": "B60205", "description": "Phase 3 — Tooling, Projections & Acceleration" },
+  { "name": "phase:4", "color": "D93F0B", "description": "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion" },
   { "name": "type:feature", "color": "A2EEEF", "description": "New capability" },
   { "name": "type:spec", "color": "C5DEF5", "description": "Specification / schema" },
   { "name": "type:research", "color": "D4C5F9", "description": "Experiment / investigation" },

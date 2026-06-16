@@ -298,6 +298,27 @@ fn write_canon(
             write_canon(body, depth + 1, scope, counter, s);
             scope.pop();
         }
+        Node::FixGroup { defs, body } => {
+            let _ = writeln!(s, "fixgroup");
+            // α-normalise every member name first — the group binds them all mutually, so each is in
+            // scope for every definition and the continuation (the canonical dump never leaks names).
+            let mark = scope.len();
+            for (name, _) in defs {
+                let canon = format!("v{counter}");
+                *counter += 1;
+                scope.push((name.clone(), canon));
+            }
+            for (i, (_, def)) in defs.iter().enumerate() {
+                let canon = scope[mark + i].1.clone();
+                indent(depth + 1, s);
+                let _ = writeln!(s, "def {canon} =>");
+                write_canon(def, depth + 2, scope, counter, s);
+            }
+            indent(depth + 1, s);
+            let _ = writeln!(s, "in");
+            write_canon(body, depth + 1, scope, counter, s);
+            scope.truncate(mark);
+        }
     }
 }
 
@@ -391,6 +412,17 @@ fn write_core(node: &Node, depth: usize, s: &mut String) {
             let _ = writeln!(s, "fix {name} =>");
             write_core(body, depth + 1, s);
         }
+        Node::FixGroup { defs, body } => {
+            let _ = writeln!(s, "fixgroup");
+            for (name, def) in defs {
+                indent(depth + 1, s);
+                let _ = writeln!(s, "def {name} =>");
+                write_core(def, depth + 2, s);
+            }
+            indent(depth + 1, s);
+            let _ = writeln!(s, "in");
+            write_core(body, depth + 1, s);
+        }
     }
 }
 
@@ -470,6 +502,18 @@ pub enum Rhs {
         name: VarId,
         /// The recursive body, lowered to a nested block.
         body: Anf,
+    },
+    /// One member of a **mutual-recursion group** (RFC-0001 r5; [`Node::FixGroup`]). Lowering emits
+    /// one such binding per member, each carrying the whole group's lowered definitions (`defs`) plus
+    /// `which` member it is; the env-machine binds it to a suspension that, on application, re-binds
+    /// every member name to its own focus suspension (so siblings can call each other) and enters
+    /// `which`'s body — the env analogue of the interpreter's focus unfold, under the fuel clock.
+    FixGroup {
+        /// All members of the group `(name, lowered definition)` — shared by every member binding so
+        /// each can resolve its siblings on unfold.
+        defs: Vec<(VarId, Anf)>,
+        /// Which member name this binding resolves to.
+        which: VarId,
     },
     /// A flat pattern match (RFC-0011 §4.1): a scrutinee atom, single-level alternatives whose bodies
     /// are **nested** ANF blocks (evaluated only when selected), and at most one default block.
@@ -652,6 +696,26 @@ fn flatten(node: &Node, out: &mut Vec<Binding>, next: &mut usize) -> Atom {
             });
             name
         }
+        Node::FixGroup { defs, body } => {
+            // Lower every member definition to a nested block, then emit one `Rhs::FixGroup` binding
+            // per member (each carrying the whole group). The member names are `Named` atoms, so the
+            // continuation — and each sibling body — resolves them directly from the environment.
+            let lowered: Vec<(VarId, Anf)> = defs
+                .iter()
+                .map(|(name, def)| (name.clone(), lower_block(def, next)))
+                .collect();
+            for (name, _) in defs {
+                out.push(Binding {
+                    name: Atom::Named(name.clone()),
+                    rhs: Rhs::FixGroup {
+                        defs: lowered.clone(),
+                        which: name.clone(),
+                    },
+                    layout: None,
+                });
+            }
+            flatten(body, out, next)
+        }
         Node::Fix { name: fname, body } => {
             let body = lower_block(body, next);
             let name = Atom::Temp(fresh(next));
@@ -756,6 +820,14 @@ fn write_rhs(rhs: &Rhs, depth: usize, s: &mut String) {
         Rhs::Fix { name, body } => {
             let _ = writeln!(s, "fix {name} =>");
             body.write_block(depth + 1, s);
+        }
+        Rhs::FixGroup { defs, which } => {
+            let names: Vec<&str> = defs.iter().map(|(n, _)| n.as_str()).collect();
+            let _ = writeln!(s, "fixgroup-member {which} of ({})", names.join(", "));
+            for (name, body) in defs {
+                let _ = writeln!(s, "{}def {name} =>", "  ".repeat(depth + 1));
+                body.write_block(depth + 2, s);
+            }
         }
         Rhs::Match {
             scrutinee,

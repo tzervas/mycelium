@@ -86,6 +86,17 @@ enum AotVal {
         body: Rc<Anf>,
         env: Env,
     },
+    /// A mutual-recursion group member (RFC-0001 r5): on application it re-binds every member name to
+    /// its own suspension (so siblings can call each other) and enters `which`'s body, under the fuel
+    /// clock — the env-machine analogue of the interpreter's `FixGroup` focus unfold.
+    FixGroup {
+        /// All members of the group, shared across the per-member suspensions.
+        defs: Rc<Vec<(String, Anf)>>,
+        /// Which member this suspension resolves to on application.
+        which: String,
+        /// The environment captured at the group's binding site.
+        env: Env,
+    },
 }
 
 type Env = HashMap<Atom, AotVal>;
@@ -102,7 +113,9 @@ fn lookup(env: &Env, a: &Atom) -> Result<AotVal, EvalError> {
 fn as_core(v: AotVal) -> Result<CoreValue, EvalError> {
     match v {
         AotVal::Core(cv) => Ok(cv),
-        AotVal::Closure { .. } | AotVal::Fix { .. } => Err(EvalError::FunctionResult),
+        AotVal::Closure { .. } | AotVal::Fix { .. } | AotVal::FixGroup { .. } => {
+            Err(EvalError::FunctionResult)
+        }
     }
 }
 
@@ -115,9 +128,11 @@ fn as_repr_value(v: AotVal) -> Result<Value, EvalError> {
             why: "a primitive/swap operand reduced to a data value, not a representation value"
                 .to_owned(),
         }),
-        AotVal::Closure { .. } | AotVal::Fix { .. } => Err(EvalError::DataMalformed {
-            why: "a primitive/swap operand reduced to a function value".to_owned(),
-        }),
+        AotVal::Closure { .. } | AotVal::Fix { .. } | AotVal::FixGroup { .. } => {
+            Err(EvalError::DataMalformed {
+                why: "a primitive/swap operand reduced to a function value".to_owned(),
+            })
+        }
     }
 }
 
@@ -224,6 +239,30 @@ fn enter_apply(
             };
             let mut unfold_env = env;
             unfold_env.insert(Atom::Named(name), selfval);
+            Ok((body, unfold_env))
+        }
+        AotVal::FixGroup { defs, which, env } => {
+            *fuel = fuel.checked_sub(1).ok_or(EvalError::FuelExhausted)?;
+            stack.push(Frame::ApplyThen { arg, cont: ret });
+            // Re-bind every member name to its own focus suspension (so a sibling call resolves the
+            // whole group), then enter the focused member's body — mirrors the interpreter's
+            // `FixGroup` focus unfold under the same fuel clock.
+            let mut unfold_env = env.clone();
+            for (member, _) in defs.iter() {
+                unfold_env.insert(
+                    Atom::Named(member.clone()),
+                    AotVal::FixGroup {
+                        defs: Rc::clone(&defs),
+                        which: member.clone(),
+                        env: env.clone(),
+                    },
+                );
+            }
+            let body = defs
+                .iter()
+                .find(|(n, _)| *n == which)
+                .map(|(_, b)| Rc::new(b.clone()))
+                .ok_or(EvalError::FreeVariable(which))?;
             Ok((body, unfold_env))
         }
         AotVal::Core(_) => Err(EvalError::ApplyNonFunction),
@@ -386,6 +425,14 @@ fn eval_machine(
                     AotVal::Fix {
                         name: fname.clone(),
                         body: Rc::new(body.clone()),
+                        env: env.clone(),
+                    },
+                ),
+                Rhs::FixGroup { defs, which } => Step::Bind(
+                    name,
+                    AotVal::FixGroup {
+                        defs: Rc::new(defs.clone()),
+                        which: which.clone(),
                         env: env.clone(),
                     },
                 ),

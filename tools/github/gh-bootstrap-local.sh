@@ -15,6 +15,10 @@
 # or after the issues exist. It emits a milestone title->number map that the MCP runner
 # consumes to assign milestones to the already-created issues.
 #
+# Milestone map (human-readable overview of all current + anticipated milestones and the
+# task->milestone assignment): MILESTONES.md. Sources: milestones.json (created here),
+# labels.json (created here), issues.yaml (each task's `milestone:` is assigned here).
+#
 # Requires: gh (authenticated to the repo owner), jq.
 # Idempotent: `gh label create --force` creates-or-updates; milestones are created only
 #             when the title is absent.

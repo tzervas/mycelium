@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0012 |
-| **Status** | **Accepted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design is normative. Enactment — the resolution pass + the never-silent checks + M-142/LSP rendering + the §4.6 differential — is the gated follow-on M-344; no code lands with ratification.) |
+| **Status** | **Accepted — Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design is normative. **Enacted 2026-06-16 — M-344** (#106): the resolution pass, the never-silent `UnresolvedAmbient`/`ParadigmShapeMismatch`/`MissingConversion` checks, bare-decimal width-from-context, the M-142/LSP "expand ambient" rendering, and the §4.6 differential are code in `mycelium-l1`/`mycelium-lsp`. See the changelog for the enactment clarifications, incl. the surface-layer provenance realization and the R12-Q1..Q4 dispositions.) |
 | **Type** | Foundational / normative (once Accepted) — surface/term-layer feature; no kernel change |
 | **Date** | 2026-06-16 |
 | **Depends on** | RFC-0006 §3/§4 (surface language & term-layering — this is a surface-layer feature); RFC-0005 (selection-policy language — the ambient is a reified selection); RFC-0001 §4.5/§4.6 (Core IR; content-addressing / names-as-metadata; WF1/WF2 swap-only repr change); RFC-0007 §4.6 (the elaboration this rides); ADR-006 (selections are reified, inspectable artifacts); ADR-016 (the cross-module ABI is concrete hashes/reprs); G2 (never-silent); tension **A** (the verbosity cost of honesty); KC-3 (small kernel); NFR-7 (the differential) |
@@ -209,23 +209,41 @@ annotation resolved to. No ambient declaration can upgrade a guarantee (VR-5).
 
 ## 8. Unresolved questions
 
-- **R12-Q1 — bare-literal width.** v0 takes width from the checked context and errors otherwise (no
-  default width). Should a later revision allow an optional ambient *width* too (drifting toward the
-  whole-`Repr` default of §6)? Deferred.
-- **R12-Q2 — override conversion selection.** Must the boundary `swap` be fully written, or may an
-  override block opt into the RFC-0005 selection machinery to *choose* the conversion policy (still
-  reified/EXPLAIN-able, still never-silent)? v0: fully written; the policy-driven form is a candidate
-  follow-on.
-- **R12-Q3 — canonical form.** Does the M-142 canonical formatter render *expanded* (longhand) or
-  *ambient* form? Identity is over expanded L0 regardless (§4.3 I2); this is a presentation choice.
-- **R12-Q4 — VSA paradigm ambient (RFC-0003).** A module may `default paradigm Vsa`, but VSA params
-  (model/dim/sparsity) are mandatory and the submodule boundary is opt-in; confirm the interaction is
-  just "paradigm tag elided, params explicit," with no change to the RFC-0003 boundary.
+- **R12-Q1 — bare-literal width.** *Resolved 2026-06-16 (M-351) — no further change; see changelog.*
+  v0 takes width from the checked context and errors otherwise (no default width). A per-use size is
+  already statable with no new sugar via a paradigm-less ascription (`e : {N}` — ambient paradigm +
+  explicit width); the maintainer kept sizes explicit per-use (no ambient default width, no `u8`/`f64`
+  suffix — the latter would import signed/dtype affordances the kernel does not provide). The optional
+  ambient *width* / whole-`Repr` axis remains a recorded future possibility (§9), not adopted.
+- **R12-Q2 — override conversion selection & boundary.** *Resolved 2026-06-16 (M-351) — crossings stay
+  at **swap sites**; no further ambient change; see changelog.* No default swap policy (rejected). After
+  evaluating **swap sites** vs **`with paradigm` block edges** against the language's intention (fluid,
+  paradigm-agnostic traversal — "work across/between/with all paradigms with ease"), the maintainer
+  chose **swap sites**: a `swap` is a free, first-class, *anywhere* crossing, and `with paradigm` stays
+  **pure tag-scoping** (one concern each — SoC). Block edges would buy *auditability* only by
+  *constraining* where crossings live (forbidding mid-body swaps), which taxes the very interleaving the
+  language is for; the same auditability is bought without that cost by **observability tooling
+  (M-345 / RFC-0008)** — a location-independent "every representation crossing + its honesty bound"
+  view. The safety property is already total (explicit `swap`/G2, `MissingConversion`, ADR-016
+  cross-module reprs). The *enforced block-edge boundary* is recorded as an **optional future
+  discipline** (§9), to adopt only if a concrete need for enforced locality appears (not the default).
+  The policy-driven (RFC-0005 decision-table) override form likewise stays a future possibility (§9),
+  gated on RFC-0005 policy-objects being wired into `mycelium-l1`.
+- **R12-Q3 — canonical form.** *Resolved 2026-06-16 (M-344).* The M-142/LSP projection renders the
+  *expanded* (longhand) form on demand; identity is over expanded L0 regardless (§4.3 I2).
+- **R12-Q4 — VSA paradigm ambient (RFC-0003).** *Resolved 2026-06-16 (M-344).* `default paradigm VSA`
+  elides only the paradigm tag; VSA params (model/dim/sparsity) stay mandatory/explicit; a bare decimal
+  under a `VSA`/`Dense` ambient has no encoding and is refused. No change to the RFC-0003 boundary.
 
 ## 9. Future possibilities
 
 - A **per-axis default set** (paradigm, then dtype, then dims) layering toward the whole-`Repr` default,
   each axis independently defaultable and independently overridable.
+- **Enforced block-edge crossing boundary** (R12-Q2, considered and *not* adopted 2026-06-16): make the
+  `with paradigm` block the declared/collected site of an excursion's entry/exit crossings and forbid
+  mid-body crossings, for auditability/locality. Deferred because it constrains the fluid traversal that
+  is the language's purpose; the auditability it targets is instead delivered location-independently by
+  observability tooling (M-345 / RFC-0008 — a "representation-crossing + honesty-bound" report).
 - **Policy-driven override boundaries** (R12-Q2) sharing the RFC-0005 decision-table mechanism.
 - **LSP "expand/collapse ambient"** as a first-class projection (RR/G11; M-380), since the resolved and
   elided forms are two projections of the same content-addressed L0.
@@ -255,3 +273,72 @@ annotation resolved to. No ambient declaration can upgrade a guarantee (VR-5).
   M-142/LSP "expand ambient" rendering, and the §4.6 meaning-preservation differential. Open questions
   R12-Q1..Q4 remain (bare-literal width, policy-driven override boundaries, canonical-form choice, VSA
   interaction). Append-only.
+- **2026-06-16 — Enacted (M-344, #106).** The §4 design is now code in `mycelium-l1`
+  (`ambient` module) and `mycelium-lsp` (`expand`). The chosen architecture realizes the invariants
+  *by construction*: resolution is a **surface→surface "expand to longhand" pass**
+  (`ambient::resolve : Colony → Colony`) that fills omitted paradigm tags, strips `with paradigm`
+  blocks, and tags bare decimals; the **unchanged** `check_colony → elaborate` pipeline then runs on
+  the twin — so `elaborate(p) = elaborate(resolve(p))` (I2) holds without a parallel implementation,
+  and I1 holds because the pass has no rule that inserts a `Swap`. The §4.6 differential
+  (`tests/ambient.rs`) proves I2 as identical elaborated **content hash** over `(ambient, longhand)`
+  pairs, plus observational equivalence where runnable. The three never-silent refusals are enacted:
+  `UnresolvedAmbient` and `ParadigmShapeMismatch` in the resolution pass; **`MissingConversion`** as a
+  sharpening of the checker's existing cross-paradigm value-edge mismatch (it names from/to and points
+  at writing an explicit `swap`) — a same-paradigm width mismatch keeps the plain wording. The feature
+  is **opt-in** (no-ambient programs resolve to themselves). Surface additions are reserved keywords
+  `default`/`paradigm`/`with`, the paradigm-less repr `{…}`, and `default paradigm` / `with paradigm`
+  (grammar + conformance corpus updated). **Kernel untouched** (KC-3).
+
+  **Enactment clarifications (append-only, not revisions of §4):**
+  - **Provenance realization (§4.3).** The §4.3 line "elaborated nodes carry provenance
+    `AmbientDefault { site }`" is realized at the **surface/resolution layer** — `resolve_report`
+    returns a `ResolutionNote` per fill (the EXPLAIN answer "where did this paradigm come from?"),
+    and `expand_to_source` renders the resolved longhand — rather than as a new
+    `mycelium_core::Provenance` variant. Rationale: a core variant would change a **frozen data-contract
+    schema** (`provenance.schema.json`) for metadata that is **not hashed** (RFC-0001 §4.6, so I2 is
+    unaffected either way) and is **fully recoverable** at the surface. This keeps the kernel and its
+    schemas untouched (KC-3) and is the more honest, lower-blast-radius realization of the *same*
+    EXPLAIN obligation.
+  - **R12-Q1 (bare-literal width) — v0 rule enacted; width-default extension still deferred.** Per the
+    maintainer (2026-06-16), v0 implements **width-from-context** now: the checker is bidirectional and
+    a bare decimal takes its width from an ascription / parameter-return-field type / a concrete sibling
+    operand of a width-preserving prim; an undetermined width is an explicit `UnresolvedWidth` (never a
+    default width). The *optional ambient width* axis (§9) remains a future possibility.
+  - **R12-Q2 (override conversion selection) — v0 = fully-written swaps** (enacted as designed); the
+    policy-driven (RFC-0005-selected) boundary stays a candidate follow-on.
+  - **R12-Q3 (canonical form) — resolved.** The M-142/LSP projection renders the **expanded (longhand)**
+    form on demand; content-addressed identity is over the expanded L0 regardless (§4.3 I2), so
+    "expanded" is the canonical reading and the elided form is a pure presentation convenience.
+  - **R12-Q4 (VSA paradigm ambient) — resolved/confirmed.** `default paradigm VSA` elides only the
+    **paradigm tag**; VSA params (model/dim/sparsity) stay mandatory and explicit; a *bare decimal* under
+    a `VSA` (or `Dense`) ambient has no encoding and is an explicit refusal. No change to the RFC-0003
+    submodule boundary.
+- **2026-06-16 — R12-Q1 & R12-Q2 resolved (M-351, #114): no further ambient change.** After weighing
+  developer QoL vs scope/stability/security with the maintainer, both deferred extensions resolve to
+  **no new ambient surface** — the M-344 baseline already meets the need honestly:
+  - **R12-Q1 (per-use size) → no new sugar.** A paradigm-less **ascription** `e : {N}` already states an
+    explicit size at the use site with the paradigm from the central default (tested:
+    `tests/ambient.rs::a_paradigm_less_ascription_states_the_per_use_size`), so a context-free bare
+    decimal is sizable without a surrounding annotation, and it elaborates identically to longhand (I2).
+    Sizes stay explicit (the v0 honesty principle); **no ambient default width** and **no `u8`/`f64`
+    literal suffix** — the suffix was rejected because it imports signedness/dtype affordances the kernel
+    does not provide (v0 `Binary` is unsigned; no two's-complement `iN`; `f64` is a *Dense* dtype, not a
+    width), a false-affordance footgun, and it does not generalize across the four paradigms. A
+    paradigm-agnostic `:N` shorthand remains a possible *sugar* (§9) iff terseness later earns it
+    (KISS/YAGNI).
+  - **R12-Q2 (paradigm-boundary swaps) → crossings stay at swap sites; auditability routed to M-345.**
+    No default swap policy (rejected). **Swap sites** vs **`with paradigm` block edges** were evaluated
+    against the language's intention (fluid, paradigm-agnostic traversal): swap sites win — a `swap` is
+    a free, first-class, anywhere crossing and `with paradigm` stays pure tag-scoping (SoC), maximizing
+    the ease of working *across/between/with* paradigms. Block edges add only **auditability**, and only
+    by *constraining* where crossings may live (forbidding mid-body swaps), which fights interleaving;
+    the same auditability is delivered without that cost by **observability tooling (M-345 → DN-04 /
+    RFC-0008)** — a location-independent "every representation crossing + its honesty bound" view, where
+    swaps are exactly where lossy/precision-changing conversions live. The safety baseline was already
+    total (explicit `swap`/G2, `MissingConversion`, ADR-016). The *enforced block-edge boundary* is now
+    a recorded **optional future discipline** (§9), not adopted; the RFC-0005 decision-table form stays
+    a future possibility gated on RFC-0005 policy-objects in `mycelium-l1`.
+
+  Net: **M-351 closes with no new ambient code** — R12-Q1 and R12-Q2 both resolve to the M-344 baseline
+  plus the honesty rule; the one genuinely-new idea (representation-crossing auditability) is handed to
+  M-345. Append-only.

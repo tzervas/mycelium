@@ -18,7 +18,7 @@ use mycelium_cert::{check, BinaryTernarySwapEngine, CheckVerdict, Evidence, Refi
 use mycelium_core::{CoreValue, GuaranteeStrength, Payload, Repr, Value};
 use mycelium_interp::{Interpreter, PrimRegistry};
 use mycelium_l1::elab::build_registry;
-use mycelium_l1::{check_colony, elaborate, parse, ElabError, Evaluator, L1Error};
+use mycelium_l1::{check_colony, elaborate, parse, Evaluator, L1Error};
 use mycelium_numerics::Certificate;
 
 type Observable<'a> = (&'a Repr, &'a Payload, GuaranteeStrength);
@@ -165,6 +165,29 @@ fn data_corpus() -> Vec<&'static str> {
          fn drop_(n: Nat) -> Nat = match n { Z => Z, S(m) => drop_(m) }\n\
          fn twice_drop(n: Nat) -> Nat = drop_(drop_(n))\n\
          fn main() -> Nat = twice_drop(S(S(Z)))",
+        // --- r5: mutual recursion (FixGroup), M-343 ---
+        // a mutually-recursive pair returning a datum: ping(SS Z) ⟶ pong(S Z) ⟶ ping(Z) ⟶ Z
+        "colony d\ntype Nat = Z | S(Nat)\n\
+         fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
+         fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }\n\
+         fn main() -> Nat = ping(S(S(Z)))",
+        // mutual recursion over a Bool result (even/odd): even(SSS Z) ⟶ odd(SS Z) ⟶ … ⟶ False
+        "colony d\ntype Nat = Z | S(Nat)\n\
+         fn even(n: Nat) -> Bool = match n { Z => True, S(m) => odd(m) }\n\
+         fn odd(n: Nat) -> Bool = match n { Z => False, S(m) => even(m) }\n\
+         fn main() -> Bool = even(S(S(S(Z))))",
+        // mutual recursion that BUILDS data on the way back (constructive through the group):
+        // f(SSS Z) ⟶ S(g(SS Z)) ⟶ S(f(S Z)) ⟶ S(S(g(Z))) ⟶ S(S(Z))
+        "colony d\ntype Nat = Z | S(Nat)\n\
+         fn f(n: Nat) -> Nat = match n { Z => Z, S(m) => S(g(m)) }\n\
+         fn g(n: Nat) -> Nat = match n { Z => Z, S(m) => f(m) }\n\
+         fn main() -> Nat = f(S(S(S(Z))))",
+        // a three-function mutual cycle (f → g → h → f) returning a datum
+        "colony d\ntype Nat = Z | S(Nat)\n\
+         fn f3(n: Nat) -> Nat = match n { Z => Z, S(m) => g3(m) }\n\
+         fn g3(n: Nat) -> Nat = match n { Z => Z, S(m) => h3(m) }\n\
+         fn h3(n: Nat) -> Nat = match n { Z => Z, S(m) => f3(m) }\n\
+         fn main() -> Nat = f3(S(S(S(S(Z)))))",
     ]
 }
 
@@ -312,29 +335,50 @@ fn self_recursion_elaborates_and_agrees() {
     );
 }
 
-/// The new r4 boundary: **mutual recursion** elaborates to an explicit `Residual` (deferred, R7-Q3)
-/// while the L1 evaluator still runs it — the §4.6 split, both halves honest.
+/// **M-343 (R7-Q3):** mutual recursion now elaborates to a `FixGroup`, and all three paths agree —
+/// L1-eval ≡ elaborate→L0-interp ≡ AOT — on a mutually-recursive program. (Was the r4 boundary where
+/// elaboration refused with a `Residual`; M-343 enacts it.) The broader corpus coverage is in
+/// `l1_eval_l0_interp_and_aot_agree_on_the_data_and_recursion_fragment`; this pins the named case.
 #[test]
-fn mutual_recursion_refuses_elaboration_but_l1_eval_runs() {
+fn mutual_recursion_elaborates_and_all_three_paths_agree() {
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
     let src = "colony d\ntype Nat = Z | S(Nat)\n\
                fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
                fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }\n\
                fn main() -> Nat = ping(S(S(Z)))";
     let env = check_colony(&parse(src).unwrap()).unwrap();
-    // Mutual recursion → explicit Residual (deferred).
-    assert!(matches!(
-        elaborate(&env, "main"),
-        Err(ElabError::Residual { .. })
-    ));
-    // …and the L1 evaluator still runs it to a value within fuel.
-    let v = Evaluator::new(&env).call("main", vec![]).expect("runs");
+    let registry = build_registry(&env).unwrap();
+
+    // Mutual recursion now elaborates (no Residual) — it lowers to a FixGroup.
+    let node = elaborate(&env, "main").expect("mutual recursion elaborates to a FixGroup (M-343)");
+
+    let l1 = Evaluator::new(&env)
+        .call("main", vec![])
+        .unwrap()
+        .to_core(&env, &registry)
+        .unwrap();
+    let l0 = Interpreter::default()
+        .eval_core(&node)
+        .expect("L0-interp runs the FixGroup");
+    let aot = mycelium_mlir::run_core(&node, &prims, &engine).expect("AOT runs the FixGroup");
+
     assert_eq!(
-        v,
-        mycelium_l1::L1Value::Data {
-            ty: "Nat".into(),
-            ctor: "Z".into(),
-            fields: vec![]
-        }
+        l1, l0,
+        "L1-eval vs elaborate→L0-interp diverged on mutual recursion"
+    );
+    assert_eq!(
+        l0, aot,
+        "L0-interp vs AOT env-machine diverged on mutual recursion"
+    );
+    // ping(S(S(Z))) ⟶ pong(S(Z)) ⟶ ping(Z) ⟶ Z (a nullary datum).
+    assert_eq!(
+        l0,
+        mycelium_core::CoreValue::Data(mycelium_core::Datum::new(
+            registry.ctor_ref("Nat", 0).unwrap(),
+            vec![]
+        )),
+        "the result must be Nat::Z"
     );
 }
 

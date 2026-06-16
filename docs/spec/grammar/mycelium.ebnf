@@ -18,11 +18,19 @@ program        ::= colony_header item*
 colony_header  ::= 'colony' path
 
 item           ::= use_item
+                 | default_item
                  | type_item
                  | trait_item
                  | fn_item
 
 use_item       ::= 'use' path
+
+/* default paradigm: the colony-scope ambient (RFC-0012 §4.2; enacted M-344). At most one per
+ * colony — the outermost ambient frame. It supplies an OMITTED paradigm for paradigm-less reprs
+ * and bare decimals; it never inserts a swap (I1) and elaborates to the same L0 as the longhand
+ * twin (I2). `default`/`paradigm`/`with` are reserved (DN-02 surface additions). */
+default_item   ::= 'default' 'paradigm' paradigm
+paradigm       ::= 'Binary' | 'Ternary' | 'Dense' | 'VSA'
 
 /* Algebraic data type (LR-1): a sum of constructors, each with optional positional fields. */
 type_item      ::= 'type' Ident type_params? '=' constructor ('|' constructor)*
@@ -46,6 +54,12 @@ base_type      ::= 'Binary'  '{' Int '}'
                  | 'VSA'     '{' Ident ',' Int ',' sparsity '}'
                  | 'Substrate' '{' Ident '}'                  /* affine external resource (LR-8) */
                  | Ident type_args?                           /* named type or type variable */
+                 | '{' ambient_params '}'                     /* paradigm-less repr (RFC-0012 §4.2) */
+/* A paradigm-less repr writes the size/shape only; the enclosing ambient supplies the paradigm.
+ * An ill-fitting shape is an explicit ParadigmShapeMismatch; no ambient is an UnresolvedAmbient. */
+ambient_params ::= Int                                        /* Binary width / Ternary trit count */
+                 | Int ',' scalar                             /* Dense shape */
+                 | Ident ',' Int ',' sparsity                 /* VSA shape */
 type_args      ::= '<' type_ref (',' type_ref)* '>'
 sparsity       ::= 'Dense' | 'Sparse' '{' Int '}'
 scalar         ::= 'F16' | 'BF16' | 'F32' | 'F64'
@@ -57,9 +71,15 @@ expr           ::= let_expr
                  | match_expr
                  | for_expr
                  | swap_expr
+                 | with_expr
                  | wild_expr
                  | spore_expr
                  | app_expr
+
+/* with paradigm: a block-scope ambient override (RFC-0012 §4.4; M-344). Not a conversion — it
+ * fills the interior tags and elaborates away; a cross-paradigm edge in/out of the block needs an
+ * explicit swap, and an unbridged one is a never-silent MissingConversion. */
+with_expr      ::= 'with' 'paradigm' paradigm '{' expr '}'
 
 let_expr       ::= 'let' Ident (':' type_ref)? '=' expr 'in' expr
 if_expr        ::= 'if' expr 'then' expr 'else' expr
@@ -94,7 +114,10 @@ primary        ::= literal
 
 path           ::= Ident ('.' Ident)*
 
-/* Literals — representation-typed, universal-until-elaboration, no cross-family defaulting (Q6). */
+/* Literals — representation-typed, universal-until-elaboration. A tagged literal (BinLit/TritLit)
+ * names its paradigm; a bare Int has no representation family on its own (Q6) UNLESS an ambient is
+ * in scope, in which case it adopts the ambient paradigm and takes its width from the checked
+ * context, else an explicit UnresolvedWidth (RFC-0012 §4.3; M-344). */
 literal        ::= BinLit | TritLit | Int | ListLit
 ListLit        ::= '[' (expr (',' expr)*)? ']'
 

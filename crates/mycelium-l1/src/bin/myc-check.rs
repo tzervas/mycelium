@@ -50,6 +50,28 @@ fn render_type(t: &TypeRef) -> String {
                 format!("{n}<{}>", inner.join(", "))
             }
         }
+        // A paradigm-less repr is shown verbatim; `--expect-main` compares the *declared* signature
+        // textually, before ambient resolution. Resolved forms are reported by "expand ambient".
+        BaseType::Ambient(params) => match params {
+            mycelium_l1::ast::AmbientParams::Size(n) => format!("{{{n}}}"),
+            mycelium_l1::ast::AmbientParams::Dense(d, s) => format!(
+                "{{{d}, {}}}",
+                match s {
+                    Scalar::F16 => "F16",
+                    Scalar::Bf16 => "BF16",
+                    Scalar::F32 => "F32",
+                    Scalar::F64 => "F64",
+                }
+            ),
+            mycelium_l1::ast::AmbientParams::Vsa {
+                model,
+                dim,
+                sparsity,
+            } => match sparsity {
+                Sparsity::Dense => format!("{{{model}, {dim}, Dense}}"),
+                Sparsity::Sparse(k) => format!("{{{model}, {dim}, Sparse{{{k}}}}}"),
+            },
+        },
     };
     match t.guarantee {
         None => base,

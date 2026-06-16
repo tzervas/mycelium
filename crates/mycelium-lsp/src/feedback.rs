@@ -332,5 +332,12 @@ fn collect(node: &Node, prefix: &str, cx: &mut Collect<'_>) {
             collect(arg, &at, cx);
         }
         Node::Fix { body, .. } => collect(body, &here(prefix, "fix"), cx),
+        Node::FixGroup { defs, body } => {
+            let at = here(prefix, "fixgroup");
+            for (name, def) in defs {
+                collect(def, &here(&at, &format!("def {name}")), cx);
+            }
+            collect(body, &at, cx);
+        }
     }
 }

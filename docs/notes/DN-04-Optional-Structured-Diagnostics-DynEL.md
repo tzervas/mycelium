@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-04 |
-| **Status** | **Draft — investigation done, direction open** (2026-06-16). A design *direction* to evaluate, not a decision. **DynEL source read** (maintainer-supplied zip, `DynEL-main`) — findings in §6. |
+| **Status** | **Draft — direction ratified into RFC-0013** (2026-06-16, M-345). Investigation done; **DynEL source read** (maintainer-supplied zip, `DynEL-main`) — findings in §6. The direction is now drafted as **RFC-0013** (Draft (Proposed)); DN04-Q1 resolved to **presentation/routing only** for v0 (recovery deferred). This note stays the design *basis*; it moves to `Resolved` when RFC-0013 is Accepted. |
 | **Feeds** | RFC-0005 (selection-policy pattern — the reification model for declarative error-handling policies); RFC-0006 (optional surface for error handling); RFC-0008 (runtime/observability); the LSP feedback facade (M-140/M-310 `FeedbackSummary`); the never-silent error/refusal surface (RFC-0001/0002 `Option`/error, `CheckVerdict::NotValidated`); G2 (never-silent), G11 (multiple projections), NFR-2 (semantic feedback), KC-3 (small kernel); the security posture (`/security-review`: no `eval`, least-privilege, no secret leakage) |
 | **Source** | DynEL — `gitlab:albedo_black/DynEL` (read from the maintainer's `DynEL-main` zip, 2026-06-16): a WIP Python structured/formatted error-logging wrapper over Loguru. ~219 LOC single module (`src/dynel/dynel.py`) + JSON/YAML/TOML config + tests. Maintainer wants its **feature set available as *optional* ways to handle errors/logging in Mycelium.** |
 | **Question** | Which DynEL capabilities map cleanly onto Mycelium's existing never-silent / EXPLAIN / provenance surfaces as **opt-in** features, and what are the constraints that keep them from eroding the honesty rules? |
@@ -145,3 +145,21 @@ RFC-0005-style reified error-handling policy — present before folding.
   **Rust** (no Python added — ADR-007 Rust-first; DynEL is reference-only), and **eventually
   self-hosted in Mycelium-lang** as part of the dogfooding goal of being free of *other languages*
   (not repos). Append-only; not yet resolved. Tracked as M-345 (#107).
+- **2026-06-16 — Ratified into RFC-0013 (M-345).** This note's direction is now a drafted RFC,
+  **RFC-0013 — Structured Diagnostics & Reified Error-Handling Policy** (Draft (Proposed)). The
+  maintainer's decisions are recorded there: **DN04-Q1 = presentation/routing only** for v0 (a reified
+  `on <ErrorClass> => {message, tags, level, route}` policy shapes the diagnostic while the explicit
+  error **still propagates** — G2); **DN04-Q2 = free-form string tags** for v0 (typed tags future);
+  **DN04-Q3 = file is a projection** of the canonical content-addressed declaration; **DN04-Q4 = Rust
+  tooling layer, no kernel logging dep** (KC-3); **DN04-Q5 = standalone RFC now**, stdlib graduation
+  (M-346) a future option. The three good contracts (graded levels / dual human+JSON projection /
+  reified per-definition policy) are imported and the three anti-patterns (config `eval` / env-dump /
+  `logger.catch` swallowing) are normatively excluded. **Declarative recovery** (the deferred half of
+  DN04-Q1) is recorded in RFC-0013 §8/§9 with the maintainer's constraints: an **isolated, separable**
+  subsystem (SoC, bounded blast radius) with **explicit, declared, bounded** effect semantics
+  (errors-as-values / reified effect handlers — propagate/bubble and *trigger* functionality; effects
+  and cascades are allowed *when explicitly declared/implemented* so they stay known and bounded — the
+  enemy is *unintended/unknown/unbounded* effects, not effects per se; default tightly scoped, opt into
+  broader behaviour explicitly), **additive over** the explicit error (never substitutive). RFC-0013
+  also carries the
+  representation-crossing audit view routed from RFC-0012 R12-Q2 / M-351. Append-only.

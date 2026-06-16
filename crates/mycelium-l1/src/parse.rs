@@ -3,8 +3,8 @@
 //! (never a panic, never a silent accept — S5/G2). v0 covers the L1-facing core.
 
 use crate::ast::{
-    Arm, BaseType, Colony, Ctor, Expr, FnDecl, FnSig, Item, Literal, Param, Path, Pattern, Scalar,
-    Sparsity, Strength, TraitDecl, TypeDecl, TypeRef,
+    AmbientParams, Arm, BaseType, Colony, Ctor, Expr, FnDecl, FnSig, Item, Literal, Paradigm,
+    Param, Path, Pattern, Scalar, Sparsity, Strength, TraitDecl, TypeDecl, TypeRef,
 };
 use crate::error::ParseError;
 use crate::lexer::lex;
@@ -124,11 +124,31 @@ impl Parser {
                 self.bump();
                 Ok(Item::Use(self.parse_path()?))
             }
+            Tok::Default => {
+                self.bump();
+                self.expect(&Tok::Paradigm, "`paradigm` after `default` (RFC-0012 §4.2)")?;
+                Ok(Item::Default(self.parse_paradigm()?))
+            }
             Tok::Type => self.parse_type_decl().map(Item::Type),
             Tok::Trait => self.parse_trait_decl().map(Item::Trait),
             Tok::Matured | Tok::Fn => self.parse_fn_decl().map(Item::Fn),
-            _ => self.err("a top-level item (`use`, `type`, `trait`, `fn`, or `matured fn`)"),
+            _ => self.err(
+                "a top-level item (`use`, `default paradigm`, `type`, `trait`, `fn`, or `matured fn`)",
+            ),
         }
+    }
+
+    /// A bare paradigm tag (`Binary|Ternary|Dense|VSA`) for an ambient declaration (RFC-0012 §4.2).
+    fn parse_paradigm(&mut self) -> Result<Paradigm, ParseError> {
+        let p = match self.cur() {
+            Tok::Binary => Paradigm::Binary,
+            Tok::Ternary => Paradigm::Ternary,
+            Tok::Dense => Paradigm::Dense,
+            Tok::Vsa => Paradigm::Vsa,
+            _ => return self.err("a paradigm (`Binary|Ternary|Dense|VSA`)"),
+        };
+        self.bump();
+        Ok(p)
     }
 
     fn parse_type_decl(&mut self) -> Result<TypeDecl, ParseError> {
@@ -293,8 +313,49 @@ impl Parser {
                 let args = self.parse_type_args_opt()?;
                 Ok(BaseType::Named(s, args))
             }
+            // A paradigm-less repr `{ … }` (RFC-0012 §4.2): the paradigm is supplied later by the
+            // enclosing ambient; only the size/shape is written here. The shape (single size vs
+            // Dense `{N, scalar}` vs VSA `{model, dim, sparsity}`) is disambiguated by lookahead;
+            // whether it *fits* the ambient paradigm is the resolution pass's never-silent check.
+            Tok::LBrace => self.parse_ambient_repr().map(BaseType::Ambient),
             _ => self.err("a type"),
         }
+    }
+
+    /// Parse a paradigm-less repr's params `{ … }` into [`AmbientParams`] (RFC-0012 §4.2). The
+    /// leading token disambiguates: an `Int` opens a size (`{N}`) or a Dense shape (`{N, scalar}`);
+    /// an `Ident` opens a VSA shape (`{model, dim, sparsity}`).
+    fn parse_ambient_repr(&mut self) -> Result<AmbientParams, ParseError> {
+        self.expect(&Tok::LBrace, "`{` to open the paradigm-less repr")?;
+        let params = match self.cur() {
+            Tok::Int(_) => {
+                let n = self.u32_lit()?;
+                if self.eat(&Tok::Comma) {
+                    let scalar = self.parse_scalar()?;
+                    AmbientParams::Dense(n, scalar)
+                } else {
+                    AmbientParams::Size(n)
+                }
+            }
+            Tok::Ident(_) => {
+                let model = self.ident()?;
+                self.expect(&Tok::Comma, "`,` after the VSA model")?;
+                let dim = self.u32_lit()?;
+                self.expect(&Tok::Comma, "`,` before the sparsity")?;
+                let sparsity = self.parse_sparsity()?;
+                AmbientParams::Vsa {
+                    model,
+                    dim,
+                    sparsity,
+                }
+            }
+            _ => {
+                return self
+                    .err("a paradigm-less repr param (a size `{N}`, `{N, scalar}`, or VSA shape)")
+            }
+        };
+        self.expect(&Tok::RBrace, "`}` to close the paradigm-less repr")?;
+        Ok(params)
     }
 
     fn braced_u32(&mut self) -> Result<u32, ParseError> {
@@ -387,6 +448,7 @@ impl Parser {
             Tok::Match => self.parse_match(),
             Tok::For => self.parse_for(),
             Tok::Swap => self.parse_swap(),
+            Tok::With => self.parse_with_paradigm(),
             Tok::Wild => self.parse_wild(),
             Tok::Spore => self.parse_spore(),
             _ => self.parse_app(),
@@ -558,6 +620,19 @@ impl Parser {
             target,
             policy,
         })
+    }
+
+    /// `with paradigm P { e }` — a block-scope ambient override (RFC-0012 §4.4). Not a conversion:
+    /// the resolution pass fills the interior tags and strips the block; an unbridged cross-paradigm
+    /// edge is a never-silent `MissingConversion`.
+    fn parse_with_paradigm(&mut self) -> Result<Expr, ParseError> {
+        self.expect(&Tok::With, "`with`")?;
+        self.expect(&Tok::Paradigm, "`paradigm` after `with` (RFC-0012 §4.4)")?;
+        let paradigm = self.parse_paradigm()?;
+        self.expect(&Tok::LBrace, "`{` to open the `with paradigm` block")?;
+        let body = Box::new(self.parse_expr()?);
+        self.expect(&Tok::RBrace, "`}` to close the `with paradigm` block")?;
+        Ok(Expr::WithParadigm { paradigm, body })
     }
 
     fn parse_wild(&mut self) -> Result<Expr, ParseError> {

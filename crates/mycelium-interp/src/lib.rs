@@ -447,6 +447,30 @@ impl Interpreter {
                 let unfolded = subst(body, name, node);
                 Ok(Step::Next(Box::new(unfolded)))
             }
+
+            // (E-FixGroup): mutual recursion (RFC-0001 r5; R7-Q3). A *focus* `FixGroup(defs, fᵢ)`
+            // (body is a bare member name) unfolds to that member's definition; any other body is the
+            // *continuation*. Either way every member name is substituted by its own focus thunk, so
+            // siblings remain mutually recursive across the unfold (subst shadows the group's names,
+            // so the freshly-placed thunks are not re-substituted). Always a redex like `Fix`, under
+            // the same fuel clock — a non-productive group exhausts fuel explicitly, never hangs.
+            Node::FixGroup { defs, body } => {
+                let target: Node = match body.as_ref() {
+                    Node::Var(v) => defs
+                        .iter()
+                        .find(|(name, _)| name == v)
+                        .map_or_else(|| (**body).clone(), |(_, d)| (**d).clone()),
+                    _ => (**body).clone(),
+                };
+                let unfolded = defs.iter().fold(target, |acc, (name, _)| {
+                    let focus = Node::FixGroup {
+                        defs: defs.clone(),
+                        body: Box::new(Node::Var(name.clone())),
+                    };
+                    subst(&acc, name, &focus)
+                });
+                Ok(Step::Next(Box::new(unfolded)))
+            }
         }
     }
 
@@ -679,6 +703,21 @@ fn subst(node: &Node, var: &str, value: &Node) -> Node {
                 Box::new(subst(body, var, value))
             },
         },
+        // A `FixGroup` binds *every* member name; substitution shadows when `var` is one of them
+        // (the group rebinds it), otherwise it descends into each definition and the continuation.
+        Node::FixGroup { defs, body } => {
+            if defs.iter().any(|(name, _)| name == var) {
+                node.clone()
+            } else {
+                Node::FixGroup {
+                    defs: defs
+                        .iter()
+                        .map(|(name, d)| (name.clone(), Box::new(subst(d, var, value))))
+                        .collect(),
+                    body: Box::new(subst(body, var, value)),
+                }
+            }
+        }
     }
 }
 

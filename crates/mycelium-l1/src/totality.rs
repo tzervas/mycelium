@@ -109,6 +109,9 @@ fn walk(e: &Expr, f: &mut impl FnMut(&Expr)) {
             walk(body, f);
         }
         Expr::Swap { value, .. } => walk(value, f),
+        // `with paradigm` is pure surface scoping (stripped by resolution before this runs); recurse
+        // transparently into the body in case totality is consulted on an unresolved tree.
+        Expr::WithParadigm { body, .. } => walk(body, f),
         Expr::Wild(b) | Expr::Spore(b) => walk(b, f),
         Expr::App { head, args } => {
             walk(head, f);
@@ -263,6 +266,7 @@ fn descend_walk(
             }
         }
         Expr::Swap { value, .. } => descend_walk(value, fname, param, pos, smaller, ok),
+        Expr::WithParadigm { body, .. } => descend_walk(body, fname, param, pos, smaller, ok),
         Expr::Wild(b) | Expr::Spore(b) => descend_walk(b, fname, param, pos, smaller, ok),
         Expr::Ascribe(b, _) => descend_walk(b, fname, param, pos, smaller, ok),
         Expr::Path(_) | Expr::Lit(_) => {}

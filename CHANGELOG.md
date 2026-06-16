@@ -8,6 +8,141 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — RFC-0014: declarative error recovery & bounded effects, drafted)
+- **RFC-0014 — Declarative Error Recovery & Bounded Effects (Draft (Proposed)).** Designs the isolated
+  recovery subsystem RFC-0013 §8/§9 deferred (the DN04-Q1 recovery half) — a way for errors to **bubble**
+  and **trigger functionality** (fallback, retry, cleanup, escalation), as a **separable** subsystem with
+  a bounded blast radius. Three pillars: **errors-as-propagating-values** (the RFC-0001 substrate, G2);
+  **explicit declarative recovery** (an explicit handling site that elaborates to L0 `Match` — **KC-3, no
+  new kernel node** — plus a reified RFC-0005-pattern `on <ErrorClass> => <action>` recovery policy); and
+  **declared, bounded effects** (effects named on signatures so there are no unknown side effects; every
+  unbounded effect carries an explicit budget and overruns *gracefully* as `EffectBudgetExhausted` — the
+  direct generalisation of the `Fix`/`FixGroup` fuel clock, the M-347 depth ceiling, and DN-05 budgets).
+- **Records the maintainer's governing discipline:** effects and even cascades are allowed **when
+  explicitly declared and implemented** so they stay *known and bounded* — the enemy is
+  *unintended/unknown/unbounded* effects (memory explosion, runaway cascade, spooky action), not effects
+  per se; default tightly scoped, broader opt-in by explicit declaration; recovery is **additive over**
+  the explicit error (never silent — G2; never fabricates or upgrades a guarantee — VR-5). Isolation:
+  budget enforcement lives with RFC-0004/0008/DN-05, **not** the kernel; clean **RFC-0013 split**
+  (presentation vs. recovery; shared registry/pattern; RFC-0014 does not weaken RFC-0013's I1).
+- Prior art (Result/`?`, algebraic effects, **Erlang/OTP bounded supervision**, structured-concurrency
+  cancellation, capabilities, Mycelium's own budget idiom) recorded as **design inspiration not yet traced
+  to `research/`** (a pre-ratification task). Many design choices (effect mechanism, budget vocabulary, any
+  kernel hook) are **explicit open questions** — no code lands with the draft; ratification + a tracking
+  milestone are the maintainer's. RFC index + RFC-0013 §8/§9 cross-refs updated. Advances SC-3, G2, VR-5,
+  NFR-2/SC-5b.
+
+### Added (Phase 4 — M-345: RFC-0013 structured diagnostics & reified error policy, drafted from DN-04)
+- **RFC-0013 — Structured Diagnostics & Reified Error-Handling Policy (Draft (Proposed)).** Turns the
+  DynEL-inspired DN-04 direction into a ratifiable, **tooling-layer** design with **no kernel change**
+  (KC-3) and **no Python** (ADR-007 Rust-first; DynEL is reference-only). Imports three contracts —
+  **graded context levels** (verbosity over EXPLAIN / `FeedbackSummary` / `NotValidatedReason`), **dual
+  human + JSON projection** of one content-addressed diagnostic (G11), and a **reified per-definition
+  error-handling policy** `on <ErrorClass> => {message, tags, level, route}` in the RFC-0005/ADR-006
+  pattern — and **normatively excludes** three anti-patterns (config-string `eval` → registry lookup;
+  wholesale env/locals dump → an allowlisted detailed tier; `logger.catch` swallowing → additive over a
+  still-propagating error). Governing invariant: **a diagnostic is additive presentation over an
+  explicit error, never a substitute** (G2 never-silent).
+- **DN04-Q1 resolved → presentation/routing only for v0.** A policy shapes message/tags/level/route; the
+  explicit error/`Option`/refusal **still propagates** unchanged. **Declarative recovery is deferred** to
+  a separate future RFC, with the maintainer's constraints recorded (RFC-0013 §8/§9): an **isolated,
+  separable** subsystem (SoC, bounded blast radius) with **explicit, declared, bounded** effect
+  semantics (errors-as-values / reified effect handlers — errors propagate/bubble and can *trigger*
+  functionality; effects and cascades are allowed *when explicitly declared/implemented* so they stay
+  known and bounded — the enemy is *unintended/unknown/unbounded* effects, not effects per se), always
+  **additive over** the explicit error. DN04-Q2 = free-form
+  string tags (v0); DN04-Q3 = file is a projection of the canonical declaration; DN04-Q5 = standalone RFC
+  now (stdlib graduation, M-346, a future option).
+- **Carries the representation-crossing audit view** routed here from RFC-0012 R12-Q2 / M-351: a
+  location-independent view enumerating every `swap` with its honesty bound (Exact/Proven/Empirical/
+  Declared, never upgraded — VR-5) and selection policy. Advances NFR-2 / SC-5b (semantic feedback) +
+  the AI co-author loop (M-330). DN-04 status updated (now feeds RFC-0013); RFC index updated. No code
+  lands with the draft — ratification is the maintainer's append-only decision.
+
+### Added (Phase 4 — M-343: mutual recursion in the L0 calculus; RFC-0001 r5, R7-Q3 resolved)
+- **`FixGroup` — one new L0 node for mutual recursion** (RFC-0001 r5; the n-way generalisation of
+  `Fix`). `FixGroup{defs, body}` binds a strongly-connected call group simultaneously (each definition
+  and the continuation see all the group's names), so two functions can call each other. The
+  elaborator (`mycelium-l1::elab`) now decomposes the reachable call graph into SCCs (Tarjan,
+  callee-first) and lowers a self-recursive singleton to `Fix` and a group of ≥2 to a `FixGroup`;
+  **mutual recursion is no longer an `ElabError::Residual`** — a structurally v0 program no longer
+  residualises on recursion at all (only a dynamic `@ guarantee` index does). The node carries **no
+  captured environment** and unfolds by substitution under the **same fuel clock** as `Fix` (a *focus*
+  member-name unfold + a *continuation* unfold; the group binds all member names so substitution
+  shadows them) — a non-productive group is an explicit budget exhaustion, never a hang.
+- **Enacted across the trusted base and the AOT path, in lockstep:** `mycelium-core` (node +
+  `is_aot_lowerable` + content-addressing + the canonical/core/ANF formatters + `Rhs::FixGroup`),
+  `mycelium-interp` (the two-case unfold + capture-avoiding `subst`), `mycelium-mlir::aot` (the
+  env-machine `FixGroup` suspension + unfold; the native-LLVM subset refuses it with `UnsupportedNode`
+  like the rest of the data/recursion fragment, VR-5), and the dialect/LSP walkers.
+- **Verified by the three-way M-210 differential** (L1-eval ≡ elaborate→L0-interp ≡ AOT) extended with
+  mutually-recursive programs — ping/pong, even/odd over a Bool result, a constructive group that
+  builds data on the way back, and a three-function cycle — plus a `FixGroup`-lowering witness. Resolves
+  **R7-Q3** (the cycle *identity* was fixed in RFC-0001 r4; the matching *node* lands now). Full
+  `cargo test` green. (NFR-7, VR-5, SC-3, LR-1; KC-3 — the kernel grows by exactly one deliberate,
+  ratified node.)
+
+### Decided (Phase 4 — M-351: RFC-0012 R12-Q1 & R12-Q2 resolved; no new ambient code)
+- **R12-Q1 (per-use size) → no new sugar.** A paradigm-less **ascription** `e : {N}` already states an
+  explicit size at the use site with the paradigm from the central `default` (now tested:
+  `mycelium-l1/tests/ambient.rs::a_paradigm_less_ascription_states_the_per_use_size`), so a context-free
+  bare decimal is sizable without a surrounding annotation and elaborates identically to longhand (I2).
+  **Sizes stay explicit** (no ambient default width); a `u8`/`f64` literal suffix was **rejected**
+  (imports signed/dtype affordances the kernel does not provide — v0 `Binary` is unsigned, no `iN`,
+  `f64` is a Dense dtype not a width — a false-affordance footgun that also fails to generalize across
+  the four paradigms). A paradigm-agnostic `:N` shorthand stays a possible future sugar iff terseness
+  earns it (KISS/YAGNI).
+- **R12-Q2 (paradigm-boundary swaps) → crossings stay at swap sites.** No default swap policy. **Swap
+  sites** vs **`with paradigm` block edges** were weighed against the language's intention (fluid,
+  paradigm-agnostic traversal): swap sites win — a `swap` is a free, first-class *anywhere* crossing and
+  `with paradigm` stays pure tag-scoping (SoC), so safety stays total (explicit `swap`/G2,
+  `MissingConversion`, ADR-016) while traversal stays maximally easy. Block edges would add only
+  *auditability*, and only by constraining where crossings may live (forbidding mid-body swaps) — so the
+  *boundary-audit* idea is **routed to observability tooling (M-345 → DN-04 / RFC-0008)** as a
+  location-independent "every representation crossing + its honesty bound" view, where lossy conversions
+  live. The enforced block-edge boundary is recorded as an optional future discipline (RFC-0012 §9, not
+  adopted); the RFC-0005 decision-table form stays gated on RFC-0005 policy-objects in `mycelium-l1`.
+  **M-351 (#114) closes with no new ambient surface.**
+
+### Added (Phase 4 — M-344: enact RFC-0012 ambient representation; surface-only, never a black box)
+- **`mycelium-l1::ambient` — the ambient resolution pass (RFC-0012 §4.3/§4.4 enacted).** A *declared,
+  scoped, paradigm-only* default (`default paradigm P`) plus block-scope overrides
+  (`with paradigm P { … }`) and a paradigm-less repr `{N}` / `{N, scalar}` / `{model, dim, sparsity}`,
+  to offset honesty's verbosity (tension **A**) **without** a black box. Realized as a **surface→surface
+  "expand to longhand" pass**: `resolve(Colony) → Colony` fills omitted paradigm tags, strips
+  `with paradigm` blocks, and tags bare decimals, then the **unchanged** `check → elaborate` pipeline
+  runs — so the two normative invariants hold *by construction*: **(I1)** the ambient inserts no `Swap`
+  (it only fills tags/encodings — conversions stay author-written), and **(I2)** resolution is
+  observationally the identity (`elaborate(p) = elaborate(resolve(p))`, identical content hash;
+  RFC-0001 §4.6). The feature is **opt-in**: a program with no ambient resolves to itself unchanged.
+- **Bare-decimal width-from-context (RFC-0012 §4.3; the maintainer-chosen v0 scope).** The checker is
+  now **bidirectional**: a bare decimal under an ambient adopts the paradigm's encoding and takes its
+  **width from the checked context** (an ascription, a parameter/return/field type, or a concrete
+  sibling operand of a width-preserving prim). Where the width is **not** determined, it is an explicit
+  **`UnresolvedWidth`** refusal — *never a built-in default width*. `Binary` unsigned and `Ternary`
+  balanced encodings are range-checked (an overflow is an explicit refusal, never a silent wrap).
+- **Three never-silent refusals (no black box; G2).** `UnresolvedAmbient` (a `{…}` with no enclosing
+  ambient — no implicit global fallback), `ParadigmShapeMismatch` (a shape that does not fit the ambient
+  paradigm — never coerced), and `MissingConversion` (a cross-paradigm value edge — the checker’s
+  cross-paradigm mismatch is sharpened to name from/to + point at writing an explicit `swap`).
+  Bare decimals under `Dense`/`VSA` (no bare-decimal encoding) and a duplicate colony `default` are
+  refused too.
+- **"Expand ambient" projection (M-142/LSP; RFC-0012 §5).** `mycelium-l1::expand_to_source` +
+  `mycelium-lsp::expand_ambient` render a document's fully-resolved **longhand twin** on demand (the
+  elided default is never *hidden*, only *elided*); a parse/check failure is reported, never a partial
+  render. Provenance for "where did this paradigm come from?" is recorded at the **surface/resolution
+  layer** (`ResolutionNote` via `resolve_report`) rather than as a new core `Provenance` variant — that
+  would change a frozen data-contract schema for metadata that is not hashed (KC-3; see the RFC-0012
+  changelog).
+- **The RFC-0012 §4.6 meaning-preservation differential (NFR-7; `tests/ambient.rs`).** A corpus of
+  `(ambient program, explicit longhand twin)` pairs asserts **identical elaborated content hash** (I2)
+  and identical observed value where runnable; the never-silent refusals are each tested as explicit
+  errors. **Grammar + conformance**: `mycelium.ebnf` gains `default paradigm` / `with paradigm` / the
+  paradigm-less repr, with a new accept fixture (`12-ambient-representation.myc`) and reject fixture
+  (`09-default-missing-paradigm.myc`). **Kernel untouched** (KC-3 — L0's frozen node set is unchanged;
+  this is RFC-0006 surface sugar that elaborates away). RFC-0012 (Accepted) → **Enacted**; R12-Q3/Q4
+  resolved, R12-Q1/Q2 partially (v0 enacted, extensions deferred).
+
 ### Added (Phase 4 — M-349: dynamic depth budget for the AOT env-machine; DN-05 §2.4 / DN05-Q5 enacted)
 - **`mycelium-mlir::budget` — a `DepthBudget` trait that resolves the env-machine's control-stack
   ceiling *dynamically*, with an `EXPLAIN`-able basis (DN05-Q5 resolved).** With the M-347 trampoline

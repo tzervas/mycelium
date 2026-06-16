@@ -49,6 +49,12 @@ pub enum Tok {
     For,
     /// `swap` — the never-silent representation change (native corpus term).
     Swap,
+    /// `default` — opens a colony-scope ambient declaration (`default paradigm P`; RFC-0012 §4.2).
+    Default,
+    /// `paradigm` — the ambient granularity keyword (`default paradigm P` / `with paradigm P`).
+    Paradigm,
+    /// `with` — opens a block-scope ambient override (`with paradigm P { … }`; RFC-0012 §4.4).
+    With,
     /// `wild` — the denied-by-default unsafe block (themed).
     Wild,
     /// `spore` — reconstruction-manifest construction (themed).
@@ -176,6 +182,9 @@ pub fn keyword(word: &str) -> Option<Tok> {
         "match" => Tok::Match,
         "for" => Tok::For,
         "swap" => Tok::Swap,
+        "default" => Tok::Default,
+        "paradigm" => Tok::Paradigm,
+        "with" => Tok::With,
         "wild" => Tok::Wild,
         "spore" => Tok::Spore,
         "to" => Tok::To,

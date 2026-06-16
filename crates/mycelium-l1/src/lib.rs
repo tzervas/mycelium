@@ -26,6 +26,7 @@
 //! token (`<` opening a ternary literal vs a type-argument list) by lookahead, and a malformed
 //! ternary literal is an explicit error, not a silent truncation.
 
+pub mod ambient;
 pub mod ast;
 pub mod checkty;
 pub(crate) mod decision;
@@ -38,8 +39,9 @@ pub mod token;
 pub mod totality;
 pub(crate) mod usefulness;
 
+pub use ambient::{expand_to_source, resolve, resolve_report, AmbientError, Resolved};
 pub use ast::Colony;
-pub use checkty::{check_colony, CheckError, Env, Ty};
+pub use checkty::{check_and_resolve, check_colony, CheckError, Env, Ty};
 pub use elab::{elaborate, ElabError};
 pub use error::ParseError;
 pub use eval::{Evaluator, L1Error, L1Value};

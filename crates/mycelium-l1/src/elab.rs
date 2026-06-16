@@ -1,10 +1,10 @@
 //! **Elaboration to the L0 Core IR** (RFC-0007 §4.6, **retired by RFC-0001 r4**). The
 //! evaluation-complete fragment is now the **whole v0 calculus**: representation ops (L0), data +
-//! matching (r3, `Construct`/flat `Match`), and **functions + recursion** (r4, `Lam`/`App`/`Fix`).
-//! So a self-recursive, data-building, matching program elaborates to a closed L0 term. The only
-//! explicit [`ElabError::Residual`]s left are **mutual recursion** (deferred, R7-Q3) and a **dynamic
-//! guarantee index** `@ g` (RFC-0007 §4.3, stage 0) — never a partial artifact; those run on the L1
-//! fuel-guarded evaluator ([`crate::eval`]) instead.
+//! matching (r3, `Construct`/flat `Match`), and **functions + recursion** (r4/r5,
+//! `Lam`/`App`/`Fix`/`FixGroup`). So a self- *or* mutually-recursive, data-building, matching program
+//! elaborates to a closed L0 term. The only explicit [`ElabError::Residual`] left for a structurally
+//! v0 program is a **dynamic guarantee index** `@ g` (RFC-0007 §4.3, stage 0) — never a partial
+//! artifact; that runs on the L1 fuel-guarded evaluator ([`crate::eval`]) instead.
 //!
 //! This module also owns the shared surface→kernel bridge the evaluator reuses, so the two
 //! execution paths cannot drift on the basics: literal values ([`lit_value`]), representation
@@ -19,12 +19,14 @@
 //! field variables. `if` desugars to a `Match` on the prelude `Bool`. WF7 coverage is the checker's
 //! (the tree is verified `Fail`-free before lowering — defense in depth, never silent).
 //!
-//! # How recursion lowers (RFC-0001 r4)
-//! Each reachable **self-recursive** function is bound once as `let f = Fix(f, λparams. body)`
-//! (callee-first), and a call to it becomes a curried `App` on its `Fix` variable; every **other**
-//! call still inlines (the non-recursive call graph is acyclic). `for` desugars to a synthesized
-//! self-recursive `Fix` fold over the linear spine (RFC-0007 §4.8). **Mutual recursion** (a cycle
-//! through ≥2 distinct functions) is an explicit `Residual` (deferred, R7-Q3).
+//! # How recursion lowers (RFC-0001 r4/r5)
+//! The reachable call graph is decomposed into strongly-connected components (Tarjan), bound
+//! **callee-first**. A **self-recursive singleton** is bound once as `let f = Fix(f, λparams. body)`;
+//! a **mutually-recursive group** of ≥2 functions (M-343; R7-Q3) is bound as a single
+//! `FixGroup{[(f, λ…), (g, λ…), …]}` whose members are all mutually in scope. A call to any recursive
+//! function becomes a curried `App` on its recursion variable; every **other** call still inlines
+//! (the residual non-recursive call graph is acyclic). `for` desugars to a synthesized self-recursive
+//! `Fix` fold over the linear spine (RFC-0007 §4.8).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -126,6 +128,11 @@ pub fn lit_value(site: &str, l: &Literal) -> Result<Value, ElabError> {
             site,
             "a bare integer literal has no representation family (Q6)",
         ),
+        Literal::AmbientInt(_, _) => residual(
+            site,
+            "internal: an unresolved ambient bare decimal reached elaboration — the checker \
+             resolves its width before the L0 bridge runs (RFC-0012 §4.3)",
+        ),
         Literal::List(_) => residual(site, "list literals are deferred in v0"),
     }
 }
@@ -153,6 +160,11 @@ pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
         BaseType::Named(name, _) => residual(
             site,
             format!("`{name}` is not a representation type — no kernel Repr"),
+        ),
+        BaseType::Ambient(_) => residual(
+            site,
+            "internal: an unresolved paradigm-less repr `{…}` reached elaboration — the ambient \
+             resolution pass fills it first (RFC-0012 §4.3)",
         ),
     }
 }
@@ -183,9 +195,9 @@ type Binding = (String, String, Ty);
 /// (r3) and now **functions + recursion** (`Lam`/`App`/`Fix`). Each reachable **self-recursive**
 /// function is bound once as `let f = Fix(f, λparams. body)` (callee-first), and a call to it
 /// elaborates to a curried `App`; every other call still inlines (the non-recursive call graph is
-/// acyclic). **Mutual recursion** is an explicit `Residual` (deferred — R7-Q3). Still `Residual`: a
-/// dynamic guarantee index `@ g` (RFC-0007 §4.3, stage 0). On success the result is a closed L0 term
-/// whose evaluation must agree with the L1 evaluator (NFR-7; the M-210 differential).
+/// acyclic). **Mutual recursion** lowers to a `FixGroup` (RFC-0001 r5; M-343 — R7-Q3). Still
+/// `Residual`: a dynamic guarantee index `@ g` (RFC-0007 §4.3, stage 0). On success the result is a
+/// closed L0 term whose evaluation must agree with the L1 evaluator (NFR-7; the M-210 differential).
 pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
     let Some(fd) = env.fns.get(entry) else {
         return Err(ElabError::UnknownFn(entry.to_owned()));
@@ -207,47 +219,81 @@ pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
         );
     }
     let registry = build_registry(env)?;
-    // The reachable self-recursive functions, callee-first; mutual recursion is refused here.
-    let rec_order = recursive_order(env, entry)?;
+    // The recursive strongly-connected components of the reachable call graph, callee-first (Tarjan).
+    // A self-recursive singleton stays a `Fix`; a group of ≥2 mutually-recursive functions becomes a
+    // `FixGroup` (RFC-0001 r5; M-343 enacts mutual recursion — R7-Q3).
+    let sccs = recursive_sccs(env, entry)?;
     let mut el = Elab {
         env,
         registry,
         fresh: 0,
         rec: BTreeMap::new(),
     };
-    // Assign each recursive function a kernel Fix variable (in scope for every recursive body and
-    // the entry body), then elaborate each Fix(λparams. body) and the entry, and wrap callee-first.
-    for f in &rec_order {
-        let kf = el.fresh(f);
-        el.rec.insert(f.clone(), kf);
+    // Every member of a recursive SCC gets a kernel recursion variable — in scope for every recursive
+    // body (its own SCC and any callee SCC) and the entry body.
+    for scc in &sccs {
+        for f in scc {
+            let kf = el.fresh(f);
+            el.rec.insert(f.clone(), kf);
+        }
     }
-    let mut fixes: Vec<(String, Node)> = Vec::with_capacity(rec_order.len());
-    for f in &rec_order {
-        let kf = el.rec[f].clone();
-        let fix = el.elab_recursive_fn(f, &kf)?;
-        fixes.push((kf, fix));
+    // Elaborate each SCC's binding, callee-first: a singleton self-recursion is a `Fix`; a group is a
+    // `FixGroup` over the members' curried lambdas (each member sees every name in the group).
+    let mut binders: Vec<RecBinding> = Vec::with_capacity(sccs.len());
+    for scc in &sccs {
+        if scc.len() == 1 {
+            let f = &scc[0];
+            let kf = el.rec[f].clone();
+            let fix = Box::new(el.elab_recursive_fn(f, &kf)?);
+            binders.push(RecBinding::Single { var: kf, fix });
+        } else {
+            let mut defs: Vec<(String, Box<Node>)> = Vec::with_capacity(scc.len());
+            for f in scc {
+                let kf = el.rec[f].clone();
+                defs.push((kf, Box::new(el.elab_fn_lam(f)?)));
+            }
+            binders.push(RecBinding::Group(defs));
+        }
     }
     let mut stack = vec![entry.to_owned()];
     let entry_body = el.expr(&mut stack, &[], &fd.body)?;
-    // `fixes` is callee-first; fold in reverse so the first (callee) Let ends up outermost.
-    let node = fixes
+    // `binders` is callee-first; fold in reverse so the first (callee) binding ends up outermost.
+    let node = binders
         .into_iter()
         .rev()
-        .fold(entry_body, |acc, (kf, fix)| Node::Let {
-            id: kf,
-            bound: Box::new(fix),
-            body: Box::new(acc),
+        .fold(entry_body, |acc, b| match b {
+            RecBinding::Single { var, fix } => Node::Let {
+                id: var,
+                bound: fix,
+                body: Box::new(acc),
+            },
+            RecBinding::Group(defs) => Node::FixGroup {
+                defs,
+                body: Box::new(acc),
+            },
         });
     Ok(node)
 }
 
-/// The reachable **self-recursive** functions from `entry`, ordered **callee-first** (a recursive
-/// function that calls another recursive function is bound *inside* it). **Mutual recursion** — a
-/// call cycle through two or more *distinct* functions — is an explicit [`ElabError::Residual`]
-/// (deferred, R7-Q3); only direct self-recursion is enacted in v0. A function is "reachable" if the
-/// entry calls it (transitively); "self-recursive" if its own body calls it.
-fn recursive_order(env: &Env, entry: &str) -> Result<Vec<String>, ElabError> {
-    // BFS the reachable functions.
+/// One recursive binding the entry body is wrapped in: a self-recursive singleton (`Fix`, bound via
+/// `Let`) or a mutually-recursive group (`FixGroup`). Built callee-first; see [`elaborate`].
+enum RecBinding {
+    /// A self-recursive function: its kernel variable and the `Fix` node bound to it (boxed — the
+    /// `Group` variant is pointer-sized, so an unboxed `Node` here would unbalance the enum).
+    Single { var: String, fix: Box<Node> },
+    /// A mutually-recursive group: `(member variable, curried lambda)` pairs, all mutually in scope.
+    Group(Vec<(String, Box<Node>)>),
+}
+
+/// The **recursive** strongly-connected components of the reachable call graph, **callee-first**
+/// (a callee SCC is bound *outside* its callers). A self-recursive singleton (`{f}` with a self-call)
+/// and a mutual group (≥2 functions in a cycle) are both recursive SCCs; a function in no cycle
+/// inlines and is **not** returned. Computed with Tarjan's algorithm — which finalises each SCC only
+/// after all its successor (callee) SCCs, i.e. in reverse-topological = callee-first order. Roots,
+/// successors, and each SCC's members are visited/sorted deterministically so the lowering (and thus
+/// the content hash) is reproducible. A function is "reachable" if the entry transitively calls it.
+fn recursive_sccs(env: &Env, entry: &str) -> Result<Vec<Vec<String>>, ElabError> {
+    // BFS the reachable functions (sorted via the BTreeSet).
     let mut reachable: BTreeSet<String> = BTreeSet::new();
     let mut frontier = vec![entry.to_owned()];
     while let Some(f) = frontier.pop() {
@@ -262,82 +308,82 @@ fn recursive_order(env: &Env, entry: &str) -> Result<Vec<String>, ElabError> {
             }
         }
     }
-    // Self-recursive = a function whose body calls itself.
-    let rec: BTreeSet<String> = reachable
-        .iter()
-        .filter(|f| calls_in_fn(&env.fns[*f].body).contains(*f))
-        .cloned()
-        .collect();
-    // Refuse mutual recursion: any cycle among *distinct* reachable functions. Detect via DFS over
-    // the call graph with self-loops ignored; a back-edge to a node on the current path is mutual.
-    detect_mutual_recursion(env, &reachable)?;
-    // Order rec functions callee-first over their (acyclic, since no mutual recursion) inter-calls.
-    let mut order: Vec<String> = Vec::new();
-    let mut visited: BTreeSet<String> = BTreeSet::new();
-    fn visit(
-        env: &Env,
-        f: &str,
-        rec: &BTreeSet<String>,
-        visited: &mut BTreeSet<String>,
-        order: &mut Vec<String>,
-    ) {
-        if !visited.insert(f.to_owned()) {
-            return;
-        }
-        for callee in calls_in_fn(&env.fns[f].body) {
-            if callee != f && rec.contains(&callee) {
-                visit(env, &callee, rec, visited, order);
-            }
-        }
-        if rec.contains(f) {
-            order.push(f.to_owned());
-        }
-    }
-    for f in &rec {
-        visit(env, f, &rec, &mut visited, &mut order);
-    }
-    Ok(order)
-}
 
-/// Refuse a mutual-recursion cycle (≥2 distinct functions) with an explicit `Residual` (R7-Q3,
-/// deferred). Self-loops (direct recursion) are allowed and ignored here.
-fn detect_mutual_recursion(env: &Env, reachable: &BTreeSet<String>) -> Result<(), ElabError> {
-    let mut on_path: BTreeSet<String> = BTreeSet::new();
-    let mut done: BTreeSet<String> = BTreeSet::new();
-    fn dfs(
-        env: &Env,
-        f: &str,
-        on_path: &mut BTreeSet<String>,
-        done: &mut BTreeSet<String>,
-    ) -> Result<(), ElabError> {
-        on_path.insert(f.to_owned());
-        for callee in calls_in_fn(&env.fns[f].body) {
-            if callee == f || !env.fns.contains_key(&callee) {
-                continue; // self-loop is direct recursion (fine); non-fns handled elsewhere
-            }
-            if on_path.contains(&callee) {
-                return residual(
-                    f,
-                    format!(
-                        "`{f}` and `{callee}` are mutually recursive — mutual recursion is deferred \
-                         to a later step (R7-Q3); only self-recursion elaborates in v0"
-                    ),
-                );
-            }
-            if !done.contains(&callee) {
-                dfs(env, &callee, on_path, done)?;
+    // Tarjan's SCC over the reachable call graph.
+    struct Tarjan<'e> {
+        env: &'e Env,
+        reachable: &'e BTreeSet<String>,
+        index: usize,
+        idx: BTreeMap<String, usize>,
+        low: BTreeMap<String, usize>,
+        on_stack: BTreeSet<String>,
+        stack: Vec<String>,
+        out: Vec<Vec<String>>,
+    }
+    // The reachable function callees of `f`, sorted and unique (BTreeSet) for a deterministic walk.
+    fn successors(env: &Env, reachable: &BTreeSet<String>, f: &str) -> BTreeSet<String> {
+        calls_in_fn(&env.fns[f].body)
+            .into_iter()
+            .filter(|c| reachable.contains(c) && env.fns.contains_key(c))
+            .collect()
+    }
+    fn strongconnect(t: &mut Tarjan, v: &str) {
+        t.idx.insert(v.to_owned(), t.index);
+        t.low.insert(v.to_owned(), t.index);
+        t.index += 1;
+        t.stack.push(v.to_owned());
+        t.on_stack.insert(v.to_owned());
+        for w in successors(t.env, t.reachable, v) {
+            if !t.idx.contains_key(&w) {
+                strongconnect(t, &w);
+                let lw = t.low[&w];
+                let lv = t.low.get_mut(v).expect("v indexed");
+                *lv = (*lv).min(lw);
+            } else if t.on_stack.contains(&w) {
+                let iw = t.idx[&w];
+                let lv = t.low.get_mut(v).expect("v indexed");
+                *lv = (*lv).min(iw);
             }
         }
-        on_path.remove(f);
-        done.insert(f.to_owned());
-        Ok(())
-    }
-    for f in reachable {
-        if !done.contains(f) {
-            dfs(env, f, &mut on_path, &mut done)?;
+        if t.low[v] == t.idx[v] {
+            let mut scc: Vec<String> = Vec::new();
+            loop {
+                let w = t.stack.pop().expect("stack non-empty while popping an SCC");
+                t.on_stack.remove(&w);
+                let is_root = w == v;
+                scc.push(w);
+                if is_root {
+                    break;
+                }
+            }
+            scc.sort(); // deterministic member order (group binding order is observable in the hash)
+            t.out.push(scc);
         }
     }
-    Ok(())
+    let mut t = Tarjan {
+        env,
+        reachable: &reachable,
+        index: 0,
+        idx: BTreeMap::new(),
+        low: BTreeMap::new(),
+        on_stack: BTreeSet::new(),
+        stack: Vec::new(),
+        out: Vec::new(),
+    };
+    for f in &reachable {
+        if !t.idx.contains_key(f) {
+            strongconnect(&mut t, f);
+        }
+    }
+
+    // Keep only the *recursive* SCCs (a multi-member group, or a self-looping singleton), preserving
+    // Tarjan's callee-first order.
+    let sccs = t
+        .out
+        .into_iter()
+        .filter(|scc| scc.len() > 1 || calls_in_fn(&env.fns[&scc[0]].body).contains(&scc[0]))
+        .collect();
+    Ok(sccs)
 }
 
 /// The set of function/constructor/prim names a body calls (single-segment heads + bare paths). A
@@ -382,6 +428,7 @@ fn collect_calls(e: &Expr, out: &mut BTreeSet<String>) {
             collect_calls(body, out);
         }
         Expr::Swap { value, .. } => collect_calls(value, out),
+        Expr::WithParadigm { body, .. } => collect_calls(body, out),
         Expr::Wild(inner) | Expr::Spore(inner) | Expr::Ascribe(inner, _) => {
             collect_calls(inner, out);
         }
@@ -570,6 +617,11 @@ impl Elab<'_> {
                     policy: policy_name_ref(policy),
                 })
             }
+            Expr::WithParadigm { .. } => residual(
+                site,
+                "internal: a `with paradigm` block reached elaboration — the ambient resolution \
+                 pass strips it (RFC-0012 §4.4)",
+            ),
             Expr::Wild(_) => residual(site, "`wild` is denied by default (LR-9)"),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
             Expr::Ascribe(inner, t) => {
@@ -802,8 +854,9 @@ impl Elab<'_> {
     }
 
     /// Elaborate an application: prims become `Op` nodes; saturated constructors become `Construct`
-    /// nodes; user-function calls **inline** (the fragment's call graph is acyclic, so inlining
-    /// terminates); recursion is an explicit `Residual` (Fix, r4).
+    /// nodes; a call to a recursive function (in `self.rec`) becomes a curried `App` on its recursion
+    /// variable (`Fix`/`FixGroup`), and every **other** user-function call **inlines** (the residual
+    /// non-recursive call graph is acyclic, so inlining terminates).
     fn app(
         &mut self,
         stack: &mut Vec<String>,
@@ -836,14 +889,16 @@ impl Elab<'_> {
         }
 
         if let Some(fd) = self.env.fns.get(name) {
-            // A non-recursive call inlines; a cycle here would be mutual recursion (refused up front
-            // in `recursive_order`) — keep an explicit guard as defense in depth, never a silent loop.
+            // A non-recursive call inlines. Any function in a cycle (self or mutual) is in `self.rec`
+            // and was handled by the recursion-variable branch above, so reaching here while `name`
+            // is on the inline stack would mean a cycle escaped SCC detection — keep an explicit
+            // guard as defense in depth (an internal invariant), never a silent inline loop.
             if stack.iter().any(|f| f == name) {
                 return residual(
                     site,
                     format!(
-                        "`{name}` is in a call cycle that did not resolve to a self-recursive `Fix` \
-                         — mutual recursion is deferred (R7-Q3)"
+                        "`{name}` is in a call cycle that was not registered as recursive — internal \
+                         elaboration invariant (every cycle should lower to `Fix`/`FixGroup`)"
                     ),
                 );
             }
@@ -925,10 +980,21 @@ impl Elab<'_> {
     }
 
     /// Elaborate a reachable **self-recursive** function `fname` to `Fix(kf, λparams. body)` — the
-    /// closed form r4 uses for recursion (RFC-0007 §4.1; the v0 surface is first-order, so the body
-    /// is closed except for its params, `kf`, and the other recursive functions in scope). Params
-    /// are curried (`λp1. … λpn.`).
+    /// closed form r4 uses for direct recursion (RFC-0007 §4.1; the v0 surface is first-order, so the
+    /// body is closed except for its params, `kf`, and the other recursive functions in scope).
     fn elab_recursive_fn(&mut self, fname: &str, kf: &str) -> Result<Node, ElabError> {
+        Ok(Node::Fix {
+            name: kf.to_owned(),
+            body: Box::new(self.elab_fn_lam(fname)?),
+        })
+    }
+
+    /// Elaborate `fname` to its curried lambda `λp1. … λpn. body` (params `p1` outermost), with the
+    /// body in scope of the params and **every** recursion variable in `self.rec` (its own name plus
+    /// any sibling in its group). This is the recursion-variable-agnostic core shared by
+    /// [`Self::elab_recursive_fn`] (which wraps it in a `Fix`) and the `FixGroup` group lowering
+    /// (which binds the lambdas of a mutually-recursive SCC together — RFC-0001 r5).
+    fn elab_fn_lam(&mut self, fname: &str) -> Result<Node, ElabError> {
         let fd = self.env.fns[fname].clone();
         if let Some(g) = fd.sig.ret.guarantee {
             return residual(
@@ -961,17 +1027,13 @@ impl Elab<'_> {
         let mut stack = vec![fname.to_owned()];
         let body = self.expr(&mut stack, &scope, &fd.body)?;
         // Curry: λp1. λp2. … body (p1 outermost).
-        let lam = param_kvars
+        Ok(param_kvars
             .into_iter()
             .rev()
             .fold(body, |acc, kp| Node::Lam {
                 param: kp,
                 body: Box::new(acc),
-            });
-        Ok(Node::Fix {
-            name: kf.to_owned(),
-            body: Box::new(lam),
-        })
+            }))
     }
 
     /// Elaborate `for x in xs, acc = init => body` to its synthesized self-recursive fold (RFC-0007
@@ -1266,18 +1328,51 @@ mod tests {
         assert_eq!(err, mycelium_interp::EvalError::FuelExhausted);
     }
 
+    /// Whether `n` contains a `FixGroup` anywhere (the mutual-recursion lowering — M-343).
+    fn contains_fixgroup(n: &Node) -> bool {
+        match n {
+            Node::FixGroup { .. } => true,
+            Node::Let { bound, body, .. } => contains_fixgroup(bound) || contains_fixgroup(body),
+            Node::Fix { body, .. } | Node::Lam { body, .. } => contains_fixgroup(body),
+            Node::App { func, arg } => contains_fixgroup(func) || contains_fixgroup(arg),
+            Node::Op { args, .. } | Node::Construct { args, .. } => {
+                args.iter().any(contains_fixgroup)
+            }
+            Node::Swap { src, .. } => contains_fixgroup(src),
+            Node::Match {
+                scrutinee,
+                alts,
+                default,
+            } => {
+                contains_fixgroup(scrutinee)
+                    || alts.iter().any(|a| match a {
+                        Alt::Ctor { body, .. } | Alt::Lit { body, .. } => contains_fixgroup(body),
+                    })
+                    || default.as_deref().is_some_and(contains_fixgroup)
+            }
+            Node::Const(_) | Node::Var(_) => false,
+        }
+    }
+
     #[test]
-    fn mutual_recursion_is_an_explicit_residual() {
-        // R7-Q3: mutual recursion is deferred — an explicit Residual, never a silent loop.
+    fn mutual_recursion_now_elaborates_to_a_fixgroup_and_runs() {
+        // M-343 (R7-Q3): a mutually-recursive group (ping/pong) lowers to a `FixGroup` and runs on
+        // the reference interpreter — ping(S(Z)) ⟶ pong(Z) ⟶ Z. (Previously an explicit Residual.)
         let env = env("colony d\ntype Nat = Z | S(Nat)\n\
              fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
              fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }\n\
              fn main() -> Nat = ping(S(Z))");
-        let err = elaborate(&env, "main").unwrap_err();
-        let ElabError::Residual { what, .. } = &err else {
-            panic!("expected Residual, got {err:?}");
-        };
-        assert!(what.contains("mutual"), "got: {what}");
+        let node = elaborate(&env, "main").expect("mutual recursion elaborates to a FixGroup");
+        assert!(
+            contains_fixgroup(&node),
+            "the mutual-recursion lowering must use a FixGroup node"
+        );
+        let v = mycelium_interp::Interpreter::default()
+            .with_fuel(10_000)
+            .eval_core(&node)
+            .expect("the FixGroup runs to a value");
+        let d = v.as_data().expect("a Nat data value");
+        assert_eq!(d.fields().len(), 0, "ping(S(Z)) = pong(Z) = Z (nullary)");
     }
 
     #[test]

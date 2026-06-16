@@ -7,12 +7,14 @@
 //! This is a *toolchain* crate, deliberately kept out of the small auditable kernel (KC-3): it
 //! depends on `mycelium-core`/`-interp`/`-cert`/`-select` but nothing depends on it.
 
+pub mod expand;
 pub mod feedback;
 pub mod fmt;
 pub mod lint;
 pub mod sync;
 pub mod wire;
 
+pub use expand::expand_ambient;
 pub use feedback::{
     analyze, analyze_with, ExplainSite, Feedback, FeedbackSummary, GuaranteeAnnotation, SwapSite,
 };

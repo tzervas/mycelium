@@ -472,12 +472,14 @@ issues:
       Acceptance: the loop runs against the LSP feedback channel; the live LLM run is gated on API access (honest "not established" until then).
 
 # Phase 4 (M-34x) — the interpreted<->compiled ABI + hot-inject + AOT-fragment completion. Created
-# 2026-06-16; gated on ADR-016/017 (Accepted 2026-06-16). No phase:4 label/milestone yet — labelled
-# phase:3 area:execution for tracker continuity until a Phase-4 milestone is cut.
+# 2026-06-16; gated on ADR-016/017 (Accepted 2026-06-16). The Phase-4 milestone + phase:4 label are now
+# cut (milestones.json / labels.json, 2026-06-16); these tasks are tagged phase:4 / "Phase 4 — …".
+# NOTE (2026-06-16): GitHub milestones are created by `gh-bootstrap-local.sh` (local `gh`); the GitHub
+# MCP server cannot create them. Run that script to create the five milestones and assign every issue.
   - id: M-341
     title: "M-341 — In-process hot-inject prototype (ADR-016/017)"
-    milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:execution, priority:P2]
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:feature, area:execution, priority:P2]
     depends_on: [M-340]
     body: |
       ADR-017's named first build step on the M-340 dlopen JIT (ADR-016 call ABI): a ContentHash -> entry dispatch table (mycelium-mlir::inject::Image); a call resolves to a compiled entry if present, else interprets (never a silent miss); inject = load a content-addressed unit + register a new hash -> entry (never mutates a live entry); the recompile set is the changed dependency-closure by hash reachability (recompile_closure).
@@ -485,8 +487,8 @@ issues:
 
   - id: M-342
     title: "M-342 — Extend the AOT path to the data + recursion fragment (RFC-0011 Q5)"
-    milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:execution, priority:P2]
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:feature, area:execution, priority:P2]
     depends_on: [M-301, M-340]
     body: |
       Bring Construct/Match/Lam/App/Fix into mycelium-core::lower (ANF) + the mycelium-mlir AOT env-machine so is_aot_lowerable admits the data + recursion fragment, and extend the three-way differential (L1-eval == L0-interp == AOT) to the full v0 calculus. Closes RFC-0011 §4.4 Q5. Native LLVM stays bit/trit only (explicit UnsupportedNode; VR-5). LANDED 2026-06-16.
@@ -494,8 +496,8 @@ issues:
 
   - id: M-347
     title: "M-347 — Investigate + improve AOT env-machine recursion (stack-robustness / efficiency)"
-    milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:design, area:execution, priority:P1, status:needs-design]
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:design, area:execution, priority:P1, status:needs-design]
     depends_on: [M-342]
     body: |
       Surfaced by M-342: the AOT env-machine evaluates object recursion on the HOST call stack (O(depth)); the fuel clock bounds productive work (explicit FuelExhausted, never a hang) but depth beyond the host stack aborts. DN-05 records the design + empirical grounding (xtask recursion-probe: env-machine aborts at ~600 Fix-unfolds vs the interpreter's O(1) stack). Maintainer-set priority: (1) bank native MLIR->LLVM stack-robustness as a design requirement [libMLIR-gated, M-348]; (2) explicit control stack / trampoline [near-term buildable, makes never-silent total]; (3) tail-call detection [cautious, optional, on top of #2, KC-3/YAGNI]. Constraints: never-silent (a limit is an explicit error, never a hang OR abort), no black boxes, M-210 differential holds (NFR-7).
@@ -504,8 +506,8 @@ issues:
 
   - id: M-349
     title: "M-349 — Dynamic depth budget for the AOT env-machine (DN-05 §2.4 / DN05-Q5)"
-    milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:execution, priority:P1, status:done]
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:feature, area:execution, priority:P1, status:done]
     depends_on: [M-347]
     body: |
       DN05-Q5: the M-347 trampoline put the control stack on the heap, so the depth ceiling must be a DYNAMIC policy over memory headroom, not a magic constant (a fixed value is too timid on a large host, too bold on a small one). Resolve it cleanly + cautiously (KC-3/YAGNI), with minimal unsafe (ADR-014).
@@ -514,8 +516,8 @@ issues:
 
   - id: M-348
     title: "M-348 — Provision libMLIR (desktop/WSL) to unblock the native MLIR->LLVM path"
-    milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:design, area:execution, priority:P2, status:blocked]
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:design, area:execution, priority:P2, status:blocked]
     depends_on: [M-301]
     body: |
       The MLIR->LLVM native AOT path (RFC-0004 §2, ADR-009) is gated on libMLIR, absent in the current environment. Maintainer intends to provision it near-term (Windows/Claude Code desktop, or via WSL) to unblock native dialect lowering / cross-target codegen, the native data/closure codegen M-342 left as UnsupportedNode, and DN-05 #1 (stack-robust recursion designed into the native path). Verdicts needing it stay honestly "not established" (VR-5) until present.
@@ -523,8 +525,8 @@ issues:
 
   - id: M-343
     title: "M-343 — Mutual recursion: full elaboration (R7-Q3 remaining half)"
-    milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:execution, priority:P2, status:needs-design]
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:feature, area:execution, priority:P2, status:done]
     depends_on: [M-342]
     body: |
       The content-addressed identity of a Fix-group is done; the surface -> Fix-group elaboration + the totality checker's mutual-descent classification remain (currently an explicit ElabError::Residual). DESIGN the Fix-group node/encoding first (does L0 need a Fix-group node, or do nested Fixes + the cycle registry suffice?) and present a frozen-spec change (likely an RFC-0001 revision) before folding, then enact + extend the differential.
@@ -532,8 +534,8 @@ issues:
 
   - id: M-344
     title: "M-344 — RFC-0012: Ambient Representation (paradigm defaults + scoped overrides)"
-    milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:design, area:toolchain, priority:P2, status:needs-design]
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:design, area:toolchain, priority:P2, status:done]
     depends_on: [M-310]
     body: |
       RFC-0012 (Draft, 2026-06-16): a surface-only declared, scoped, paradigm-only representation default + scoped override/conversion blocks, to offset honesty's verbosity (tension A) without a black box. Two normative invariants: the ambient emits no Swap (I1); resolution is observationally the identity (I2, identical L0 ⟹ identical hash), defended by a meaning-preservation differential (NFR-7). Cross-paradigm edges stay explicit swaps; a missing one is an explicit MissingConversion. Kernel untouched (KC-3); exported signatures are concrete reprs (ADR-016).
@@ -541,8 +543,8 @@ issues:
 
   - id: M-345
     title: "M-345 — DN-04: optional structured diagnostics / error-handling (DynEL-inspired)"
-    milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:design, area:toolchain, priority:P3, status:needs-design]
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:design, area:toolchain, priority:P3, status:in-progress]
     depends_on: [M-310]
     body: |
       DN-04 (Draft, 2026-06-16): evaluate DynEL's (gitlab:albedo_black/DynEL) feature set as OPTIONAL structured/graded/dual-format diagnostics over Mycelium's existing explicit errors. Governing constraint: diagnostics are additive presentation, never a substitute for a never-silent error (G2). Import the contracts (graded levels; human+JSON projections; reified per-fn {exceptions, custom_message, tags} a la RFC-0005); EXCLUDE the anti-patterns (eval-on-config, os.environ dump, logger.catch swallowing) per the security posture. Rust-first (no Python; ADR-007), eventually self-hosted in Mycelium-lang. Tooling-layer home; kernel takes no logging dep (KC-3).
@@ -550,9 +552,18 @@ issues:
 
   - id: M-346
     title: "M-346 — Mycelium core library / stdlib (roadmap epic)"
-    milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:design, area:toolchain, priority:P3, status:needs-design]
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:design, area:toolchain, priority:P3, status:needs-design]
     depends_on: [M-310]
     body: |
       Roadmap anchor for a core library / standard library — the feature set that makes Mycelium usable, not just a substrate+kernel. Decomposed once the surface language is self-hosting enough to write stdlib modules in Mycelium itself (dogfooding; free of other languages). Principles inherited and non-negotiable: never-silent (G2), honest per-op guarantee tags, no black boxes / EXPLAIN, small auditable kernel (stdlib lives above it, KC-3), content-addressed (ADR-003); Rust-first now (ADR-007), Mycelium-lang eventually. Early candidate modules: diagnostics (DN-04/M-345), collections, numerics helpers (ADR-010), VSA/encoding utils (RFC-0003), I/O + serialization (RFC-0001 §4.8).
       Acceptance (roadmap): when self-hosting is close, draft a Core Library RFC (scope, module boundaries, the guarantee/EXPLAIN contract every stdlib op must meet, Rust->Mycelium migration) and decompose into per-module tasks. Present before folding.
+
+  - id: M-352
+    title: "M-352 — RFC-0014: Declarative error recovery & bounded effects"
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:design, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-345]
+    body: |
+      RFC-0014 (Draft, 2026-06-16): the isolated declarative error-recovery + bounded-effects subsystem RFC-0013 §8/§9 deferred (the DN04-Q1 recovery half). Errors propagate/bubble and can TRIGGER functionality (fallback, retry, cleanup, escalation) via an explicit handling site (elaborates to L0 Match — KC-3, no new kernel node) + a reified RFC-0005-pattern `on <ErrorClass> => <action>` policy. Effects are DECLARED on signatures (no unknown side effects) and BOUNDED by explicit budgets (EffectBudgetExhausted is graceful — the generalisation of the Fix/FixGroup fuel clock, M-347 depth ceiling, DN-05 budgets). Maintainer discipline: effects/cascades allowed WHEN explicitly declared/implemented so they stay known+bounded; the enemy is unintended/unknown/unbounded effects; default tightly scoped, broader opt-in by explicit declaration; always additive over the explicit error (never-silent G2; never fabricates/upgrades a guarantee, VR-5). Separable subsystem: budget enforcement lives with RFC-0004/0008/DN-05, not the kernel; clean RFC-0013 split (presentation vs recovery), does not weaken RFC-0013 I1.
+      Acceptance (design-first): RFC-0014 Draft presented (2026-06-16). Open before folding: the effect mechanism (annotations vs capabilities), the budget vocabulary + composition with the Fix fuel clock / M-347 depth ceiling, any kernel-visible hook (bias: none, KC-3), and tracing the prior art (Result/?, algebraic effects, Erlang/OTP bounded supervision) into research/. No code until ratified.
