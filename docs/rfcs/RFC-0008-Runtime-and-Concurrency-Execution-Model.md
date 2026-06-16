@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0008 |
-| **Status** | **Draft** (the Runtime-tier grounding ADR-012 §7.3 required; ratification is the maintainer's) |
+| **Status** | **Accepted** (2026-06-16 — maintainer sign-off; the Runtime-tier grounding ADR-012 §7.3 required. RT1–RT7 and the §4 model are now **normative**. Enactment is staged: the budget-unification slice (RFC-0014 §4.8) landed as **M-353**; the route → observability-sink binding (RFC-0013 §8) as **M-354**; the §4.7 **concurrency-composition** primitives — per-task budgets, cancellation, cross-task propagation, `reclaim` bounded-cascade supervision — as **M-356**. The R1 runtime's **v0 slice** — a deterministic fork/join executor + the RT2 sequentialization differential — landed as **M-357** (`mycelium-mlir::runtime`); typed channels + the full scheduler are the next R1 slice.) |
 | **Type** | Foundational / normative (once Accepted) |
 | **Date** | June 10, 2026 |
 | **Depends on** | RFC-0004 (single-node execution model — **extended, not changed**); RFC-0001 (Value/`Meta`/guarantee lattice, WF1–WF5); RFC-0005 (the one selection mechanism + EXPLAIN); RFC-0006 (S1–S6, LR-4/LR-8/LR-9); RFC-0007 (totality / `matured`); RFC-0002 (`ProbabilityBound`, ADR-010 δ-kernel); ADR-012 §7.3 (the gap this fills); DN-02 (naming law); research **T4.1–T4.6** (`research/04-runtime-concurrency-RECORD.md`) |
@@ -236,11 +236,60 @@ Examples using them remain illustrations of intent (ADR-012 §7.3's marking stan
 
 - **R0 (this RFC):** the model and invariants. No syntax, no implementation obligation.
 - **R1 (single node):** structured concurrency + deterministic channels in the runtime, behind
-  the RT2 reference-sequentialization differential. The natural successor to the L1 track.
+  the RT2 reference-sequentialization differential. The natural successor to the L1 track. *(v0 slice
+  landed, M-357: a deterministic fork/join executor over pure tasks — `Scope`/`Task`, RT7 join, per-task
+  budgets + cooperative cancellation — with the RT2 sequentialization differential green over both a toy
+  corpus and the real env-machine; typed SPSC channels are the next slice.)*
 - **R2 (distribution):** `xloc`, `mesh`, `cyst`s — each construct landing with its
   honest bounds (RT5) and its differential/TV obligations.
 
 R1 before R2 is load-bearing: every R2 guarantee is stated against R1's deterministic core.
+
+### 4.7 Concurrency composition: per-task budgets, cancellation & bounded-cascade supervision
+
+This section lifts RFC-0014's deliberately-fixed **single-task v0 boundary** (RFC-0014 §8) onto the
+RT1–RT7 model. It is the **composition contract** the R1 runtime (and its tasks) obey; it adds **no L0
+node** and does not change the sequential trusted base (RT2; KC-3). The composition primitives are
+enacted now (M-356, `mycelium_interp::supervise`) so the R1 scheduler (M-357) is built *against* them;
+the scheduler itself is not specified here (R8-Q1). The structured **scope** that groups a set of
+cooperating `hypha` under shared cancellation + supervision is a **`colony`** (DN-06) — the dynamic
+runtime grouping; the term was reassigned from its DN-02 static meaning (which moves to `nodule`) now
+that there is a genuine living grouping for it to name.
+
+Four compositions, each **additive over the explicit error** (RFC-0014 I1) and **declared + bounded**
+(I3/I4) — never a silent stop, never an unbounded cascade:
+
+- **(C1) Per-task budgets.** Each task carries its **own** effect-budget ledger
+  (the `Budgets` mechanism, M-353) — the *same* mechanism as the single-task case, instanced per task. A
+  per-task overrun is an **in-that-task** `EffectBudgetExhausted` on the unified runtime refusal channel
+  (`EvalError::EffectBudget`), not a global one: one task overrunning its `retry`/`alloc`/`cascade`
+  budget cannot exhaust another's. (RFC-0014 §8 disposition: "a per-task budget overrun is an
+  in-that-task `EffectBudgetExhausted`.")
+- **(C2) Cooperative cancellation (RT7).** Cancellation is a **cooperative token** a task observes at
+  its budget-check points (the cadence it already checks fuel/depth) — **never preemptive**, so a task
+  cannot be stopped mid-step in a way that drops an in-flight explicit outcome. Observing a cancelled
+  token yields an explicit, **additive** `Cancelled` outcome (I1). Cancellation propagates **down the
+  structured scope tree** (RT7): cancelling a scope cancels its children; a scope does not exit until
+  every child has completed, failed, or observed cancellation.
+- **(C3) Cross-task failure propagation (RT4).** A task resolves to exactly one **explicit**
+  `TaskOutcome` — `Done` / `Failed` / `BudgetExhausted` / `Cancelled` — with **no silent/dropped
+  variant**, so a child's failure is a value the parent scope *must* act on; it can never be silently
+  treated as success (I1 across the task boundary). Local and remote task failures are *different types*
+  (RT4); v0 is single-node, so this is the local case, with the remote case its R2 successor.
+- **(C4) `reclaim` bounded-cascade supervision (RT4/RT7).** A supervisor restarts a failed child under
+  a cascade bounded on **both axes** (the combined disposition): a **total** restart cap (the RFC-0014
+  `cascade` effect budget — M-353) **and** a **windowed max-restart-intensity** (at most *N* restarts
+  within *W* **logical** ticks — Erlang/OTP, Research Record 05 **T5.3**). Exceeding *either* is an
+  explicit **escalation** (the supervisor's own failure, propagated per C3) — a **declared, bounded
+  cascade**, never an unbounded restart storm. v0 uses a **logical clock** (a deterministic monotonic
+  counter the supervisor advances), *not* wall-clock time; physical/hybrid clocks for real time are
+  **R8-Q3**, deferred — so the intensity bound is honest and deterministic now, and gains real-time
+  semantics only when R8-Q3 lands.
+
+**What v0 does *not* include (honest boundary):** an actual **task scheduler / executor** — the running
+of tasks, their placement (`forage`, RT3), and the RT2 reference-sequentialization differential are the
+R1 runtime (M-357), built on these primitives. This section fixes the *composition semantics* so that
+the scheduler, when it lands, cannot reintroduce a silent stop or an unbounded cascade.
 
 ## 5. Drawbacks
 
@@ -323,6 +372,56 @@ substrate (the RFC-0004 backend story, distributed).
 
 ## Meta — changelog
 
+- **2026-06-16 — `colony` (dynamic runtime grouping) adopted (DN-06).** §4.7's structured scope of
+  cooperating `hypha` is named a **`colony`** — the DN-06 dynamic grouping. The term was reassigned
+  from DN-02's static "module" meaning (which moves to `nodule`, with `phylum` as the library level)
+  now that the runtime has a genuine living grouping to name. The v0 realization is
+  `mycelium-mlir::runtime` (the `Colony` alias of the structured `Scope`). Reserved/not-active as
+  surface syntax; the static keyword migration is M-358. Append-only.
+- **2026-06-16 — R1 v0 slice landed: deterministic fork/join executor + RT2 differential (M-357).** The
+  first runtime slice over the §4.7 primitives — the maintainer-chosen minimal scope (fork/join + the
+  differential; typed channels deferred). `mycelium-mlir::runtime` (the scheduler lives **outside** the
+  kernel — RT2; KC-3): a structured-concurrency `Scope` (RT7 — every child joined, no orphan) over
+  cooperative `Task`s, each carrying its own `Budgets` ledger + the shared `CancelToken` (M-356 C1/C2),
+  with a `run_sequential` reference and a deterministic `run_interleaved` round-robin. Verified by the
+  **RT2 sequentialization differential**: interleaved ≡ sequential over a toy corpus (an interleave
+  trace proves non-triviality) **and over the real env-machine** (tasks running `run_core_with_effects`
+  on `bit.not` L0 programs; each scheduled outcome equals the standalone evaluation — no new meaning,
+  NFR-7/KC-3), plus RT7 scope-cancellation (every pending child → explicit additive `Cancelled`, all
+  joined) and C1 per-task budget isolation (one task's overrun never exhausts a sibling). The next R1
+  slice is typed single-producer/single-consumer **channels** (the Kahn-deterministic communicating
+  half, §4.3) then §4.5 vocabulary activation. `just check` green. Append-only.
+- **2026-06-16 — §4.7 concurrency composition added + composition primitives enacted (M-356).** Lifts
+  RFC-0014's single-task v0 boundary (§8) onto RT1–RT7 as a **frozen composition contract** (presented
+  before folding, per design-first): **(C1)** per-task budgets — each task instances its own M-353
+  ledger; an overrun is an in-that-task `EvalError::EffectBudget`, never global; **(C2)** cooperative,
+  additive cancellation observed at budget-check points (never preemptive; scope-tree propagation, RT7);
+  **(C3)** cross-task failure propagation via an explicit `TaskOutcome` with no silent/dropped variant
+  (I1 across the boundary, RT4); **(C4)** `reclaim` bounded-cascade supervision bounded on **both** a
+  total `cascade` budget (M-353) **and** a windowed max-restart-intensity over a **logical clock**
+  (Erlang/OTP, Record 05 T5.3; wall-clock deferred to R8-Q3) — exceeding either is an explicit
+  escalation, a declared bounded cascade, never a storm. Enacted as **scheduler-independent** primitives
+  in `mycelium_interp::supervise` (`CancelToken`/`TaskOutcome`/`RestartIntensity`/`Supervisor` —
+  **no L0 node**, the trusted base stays sequential; KC-3), verified there + composed with the recovery
+  driver in `mycelium-lsp/tests/recover.rs`. The **task scheduler/executor and the RT2
+  sequentialization differential are explicitly *not* here** — they are the R1 runtime (M-357), built on
+  these primitives. `just check` green. Append-only.
+- **2026-06-16 — Accepted.** Maintainer ratified `Draft → Accepted`: RT1–RT7 and the §4 model are
+  now **normative** (the Runtime-tier grounding ADR-012 §7.3 required). Ratification opens the runtime
+  track in staged slices — *separate named budgets, one enforcement mechanism*, then concurrency:
+  (1) the **budget-unification slice** (RFC-0014 §4.8) lands first as M-353 — the recovery `Budgets`
+  ledger is lifted into `mycelium-interp` (the shared budget-resolution surface both the env-machine
+  and the recovery driver consume) and an effect overrun routes through
+  `mycelium_interp::EvalError::EffectBudget`, the effect sibling of `FuelExhausted`/`DepthLimit` on the
+  one runtime refusal channel — needing **no** RT1–RT7 commitment and **no** kernel hook (KC-3; the
+  ledger lives where fuel/depth live); (2) the **route → observability-sink** binding (RFC-0013 §8)
+  lands next as M-354, honouring RT5 (sink delivery guarantees tagged on the lattice) and I1 (routing
+  never gates propagation); (3) the **concurrency/supervision** track — lifting RFC-0014's single-task
+  v0 boundary to per-task budgets, cancellation, cross-task failure propagation, and bounded cascades
+  under `reclaim` supervision (RT4/RT7; the Erlang/OTP max-restart-intensity grounding, Research Record
+  05 T5.3) — is the §4.7 revision, M-355, presented as a frozen-spec change before folding. The
+  vocabulary stays **reserved, not active syntax** (§4.5 status rule unchanged) until the implementation
+  RFCs land. Append-only.
 - **2026-06-10 — Draft.** Initial draft from Research Pass 4 (T4.1–T4.6): the RT1–RT7 runtime
   invariants extending S1–S6 to concurrency/distribution; deterministic-fragment-first posture
   with sequential reference semantics (NFR-7 extended); placement as the third RFC-0005 site;

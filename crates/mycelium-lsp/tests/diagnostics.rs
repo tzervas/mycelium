@@ -8,7 +8,7 @@
 use mycelium_core::{GuaranteeStrength, Meta, Node, Payload, Provenance, Repr, Value};
 use mycelium_lsp::diagnostics::{
     present, AuditView, ClassRegistry, DiagnosticPolicy, DiagnosticRecord, Level, ReasonedError,
-    Rule,
+    Route, Rule,
 };
 
 fn registry() -> ClassRegistry {
@@ -288,4 +288,89 @@ fn audit_view_reports_from_to_and_policy_per_crossing() {
     assert_eq!(c.from, Some(Repr::Binary { width: 8 }));
     assert_eq!(c.to, Repr::Ternary { trits: 6 });
     assert_eq!(c.policy, "blake3:po1icy_Ref00");
+}
+
+// --- M-354 / RFC-0013 §8: route targets ↔ RFC-0008 observability sinks ---
+
+#[test]
+fn never_silent_across_every_closed_route() {
+    // I1 re-run across the closed v0 route set: routing the error to ANY sink (including the null sink)
+    // leaves it propagating unchanged, and every route resolves to an RFC-0008 sink binding.
+    let reg = registry();
+    let err = an_error(&reg);
+    for route in Route::all() {
+        let mut policy = DiagnosticPolicy::new();
+        policy
+            .on(&reg, "SwapOutOfRange", Rule::new().route_to(route))
+            .unwrap();
+        let p = present(err.clone(), Some(&policy));
+        // The error still surfaces unchanged — routing never gates propagation (I1).
+        assert_eq!(
+            p.error, err,
+            "route {route} must not affect propagation (I1)"
+        );
+        // The record's route resolves to its RFC-0008 sink binding (closed set; M-354).
+        let binding = p
+            .diagnostic
+            .sink()
+            .expect("a route was set")
+            .expect("a closed-set route resolves");
+        assert_eq!(binding.route, route);
+        assert!(binding.sink.starts_with("rfc0008."));
+    }
+}
+
+#[test]
+fn sink_delivery_guarantees_are_honest_never_upgraded() {
+    // RT5/VR-5: no sink claims a delivery guarantee stronger than `Declared` in v0; the null sink does
+    // not deliver (and says so); the mesh sink is probabilistic and carries a real declared δ bound.
+    for route in Route::all() {
+        let binding = route.binding();
+        match binding.delivery.guarantee() {
+            Some(g) => assert_eq!(
+                g,
+                GuaranteeStrength::Declared,
+                "{route} over-claims its delivery guarantee (VR-5)"
+            ),
+            None => assert!(
+                !binding.delivery.delivers(),
+                "{route}: only a non-delivering sink may make no delivery claim"
+            ),
+        }
+    }
+    assert!(
+        !Route::Null.binding().delivery.delivers(),
+        "the null sink honestly reports non-delivery (RT5)"
+    );
+    let mesh = Route::Mesh.binding();
+    assert!(
+        mesh.delivery
+            .probability_bound()
+            .is_some_and(|b| b.well_formed()),
+        "the mesh sink carries a well-formed probabilistic delivery bound (RT5)"
+    );
+}
+
+#[test]
+fn an_unknown_route_is_explicit_and_does_not_gate_propagation() {
+    // A free-form route outside the closed set is an explicit UnknownRoute at sink-resolution — never a
+    // silent misroute — and the error it would have presented still propagates unchanged (I1).
+    let reg = registry();
+    let err = an_error(&reg);
+    let mut policy = DiagnosticPolicy::new();
+    policy
+        .on(
+            &reg,
+            "SwapOutOfRange",
+            Rule::new().route("diagnostics_channel"),
+        )
+        .unwrap();
+    let p = present(err.clone(), Some(&policy));
+    assert_eq!(
+        p.error, err,
+        "an unknown route must not gate propagation (I1)"
+    );
+    let resolved = p.diagnostic.sink().expect("a route string was set");
+    let unknown = resolved.expect_err("an out-of-set route is explicit, never silent");
+    assert_eq!(unknown.route, "diagnostics_channel");
 }

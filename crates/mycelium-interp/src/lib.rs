@@ -103,12 +103,18 @@
 //! RFC. Composing an *approximate* input is refused until the ADR-010 bound kernels land (Phase 2 /
 //! E2-4).
 
+pub mod budget;
 pub mod prims;
+pub mod supervise;
 pub mod swap;
 
 use mycelium_core::{Alt, CoreValue, Datum, GuaranteeStrength, Node, Repr, Value, WfError};
 
+pub use budget::{Budgets, EffectBudget, EffectBudgetExhausted, EffectKind};
 pub use prims::PrimRegistry;
+pub use supervise::{
+    CancelToken, Cancelled, Escalation, RestartIntensity, Supervisor, TaskOutcome,
+};
 pub use swap::{IdentitySwapEngine, SwapEngine};
 
 /// The result of one small-step attempt on a node.
@@ -167,6 +173,14 @@ pub enum EvalError {
         /// The control-stack depth ceiling that was hit.
         limit: usize,
     },
+    /// A declared **effect budget** was exceeded — the effect analogue of `FuelExhausted` (time) and
+    /// `DepthLimit` (space) (RFC-0014 §4.5 I4). A bounded effect (retry/cascade/alloc/time) overruns
+    /// its *named* budget **gracefully**: the runtime refuses with this explicit error rather than
+    /// hanging or OOM-ing, exactly as a runaway recursion does. **One enforcement mechanism over
+    /// separate named budgets** (RFC-0014 §8): the recovery [`Budgets`] ledger and the env-machine
+    /// share this channel (RFC-0014 §4.8). Lives at the runtime/checker layer; introduces no L0 node
+    /// (KC-3). Never silent (G2).
+    EffectBudget(EffectBudgetExhausted),
     /// A swap engine reported a failure (e.g. an illegal pair or an out-of-range conversion). The
     /// message comes from the engine; it is always explicit, never a silent coercion.
     Swap(String),
@@ -204,6 +218,15 @@ pub enum EvalError {
     FunctionResult,
 }
 
+impl From<EffectBudgetExhausted> for EvalError {
+    /// Route a bounded-effect overrun onto the unified runtime refusal channel (RFC-0014 §4.8): the
+    /// env-machine and the recovery driver share this conversion so an effect overrun surfaces exactly
+    /// as `FuelExhausted`/`DepthLimit` do — explicit and graceful, never a hang.
+    fn from(e: EffectBudgetExhausted) -> Self {
+        EvalError::EffectBudget(e)
+    }
+}
+
 impl core::fmt::Display for EvalError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -233,6 +256,7 @@ impl core::fmt::Display for EvalError {
                     "evaluation exceeded its control-stack depth budget ({limit})"
                 )
             }
+            EvalError::EffectBudget(e) => write!(f, "{e}"),
             EvalError::Swap(msg) => write!(f, "swap failed: {msg}"),
             EvalError::Wf(e) => write!(f, "well-formedness violation: {e}"),
             EvalError::NonExhaustiveMatch => write!(

@@ -34,9 +34,9 @@ use mycelium_core::lower::{self, Anf, AnfAlt, Atom, Rhs};
 use mycelium_core::{
     CoreValue, Datum, GuaranteeStrength, Node, PackScheme, Payload, PhysicalLayout, Repr, Value,
 };
-use mycelium_interp::{EvalError, PrimRegistry, SwapEngine};
+use mycelium_interp::{Budgets, EffectKind, EvalError, PrimRegistry, SwapEngine};
 
-use crate::budget::{AutoDepthBudget, DepthBudget, DepthResolution};
+use crate::budget::{AutoDepthBudget, DepthBudget, DepthResolution, DEFAULT_PER_FRAME_BYTES};
 use crate::pack;
 
 /// The default fuel for the env-machine's `Fix` clock — generous; the guard is against a
@@ -171,9 +171,35 @@ pub fn run_core_with_budget(
     fuel: u64,
     max_depth: usize,
 ) -> Result<CoreValue, EvalError> {
+    // The default entry carries an *empty* effect ledger: no `alloc` effect budget is declared, so the
+    // depth ceiling remains the sole space guard (identical pre-RFC-0014-§4.8 behaviour).
+    run_core_with_effects(node, prims, swap, fuel, max_depth, &mut Budgets::new())
+}
+
+/// [`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine
+/// (RFC-0014 §4.8 — completing the deferred integration). The ledger is the *same*
+/// [`mycelium_interp::Budgets`] the recovery driver consumes, and an overrun surfaces as
+/// [`EvalError::EffectBudget`] — the effect sibling of `FuelExhausted`/`DepthLimit`, on the **one
+/// runtime refusal channel** (RFC-0014 §8: separate named budgets, one enforcement mechanism).
+///
+/// v0 L0 has **no effect node** (KC-3 — no kernel hook), so the machine spends only the budgets that
+/// correspond to costs it *intrinsically* incurs: a declared **`alloc`** budget is charged
+/// [`DEFAULT_PER_FRAME_BYTES`] per control-stack frame, at the same frame-push site the depth ceiling
+/// guards — making the `alloc` effect budget the **opt-in** sibling of the DN-05 depth ceiling. Absent
+/// (the default empty ledger) ⇒ no charge ⇒ unchanged behaviour (I5: a broader bound is opt-in). The
+/// `retry`/`cascade` budgets are spent by the recovery *driver* over this same ledger and channel; the
+/// concurrency wave (RFC-0008) layers *per-task* ledgers on this seam.
+pub fn run_core_with_effects(
+    node: &Node,
+    prims: &PrimRegistry,
+    swap: &dyn SwapEngine,
+    fuel: u64,
+    max_depth: usize,
+    budgets: &mut Budgets,
+) -> Result<CoreValue, EvalError> {
     let top = Rc::new(lower::lower_to_anf(node));
     let mut fuel = fuel;
-    let result = eval_machine(top, Env::new(), prims, swap, &mut fuel, max_depth)?;
+    let result = eval_machine(top, Env::new(), prims, swap, &mut fuel, max_depth, budgets)?;
     as_core(result)
 }
 
@@ -218,9 +244,17 @@ fn enter_apply(
     stack: &mut Vec<Frame>,
     fuel: &mut u64,
     max_depth: usize,
+    budgets: &mut Budgets,
 ) -> Result<(Rc<Anf>, Env), EvalError> {
     if stack.len() >= max_depth {
         return Err(EvalError::DepthLimit { limit: max_depth });
+    }
+    // A declared `alloc` effect budget bounds the control-stack *memory* — charged per frame at the
+    // DN-05 per-frame rate, the opt-in sibling of the depth ceiling (RFC-0014 §4.8). Absent ⇒ skip
+    // (the depth ceiling is the default space guard). An overrun is the unified, graceful
+    // `EvalError::EffectBudget` (`?` converts via `From<EffectBudgetExhausted>`) — never an OOM.
+    if budgets.remaining(&EffectKind::Alloc).is_some() {
+        budgets.consume(EffectKind::Alloc, DEFAULT_PER_FRAME_BYTES)?;
     }
     match f {
         AotVal::Closure { param, body, env } => {
@@ -341,6 +375,7 @@ fn eval_machine(
     swap: &dyn SwapEngine,
     fuel: &mut u64,
     max_depth: usize,
+    budgets: &mut Budgets,
 ) -> Result<AotVal, EvalError> {
     let mut block = top;
     let mut env = top_env;
@@ -363,7 +398,8 @@ fn eval_machine(
                 Some(Frame::ApplyThen { arg, cont }) => {
                     // The returned value is the unfolded closure; apply it to the saved arg (its
                     // result flows to `cont`, the frame enter_apply pushes).
-                    let (nb, ne) = enter_apply(val, arg, cont, &mut stack, fuel, max_depth)?;
+                    let (nb, ne) =
+                        enter_apply(val, arg, cont, &mut stack, fuel, max_depth, budgets)?;
                     block = nb;
                     env = ne;
                     idx = 0;
@@ -445,7 +481,7 @@ fn eval_machine(
                         env: std::mem::take(&mut env),
                         name,
                     };
-                    let (nb, ne) = enter_apply(f, a, ret, &mut stack, fuel, max_depth)?;
+                    let (nb, ne) = enter_apply(f, a, ret, &mut stack, fuel, max_depth, budgets)?;
                     Step::Switch(nb, ne)
                 }
                 Rhs::Match {
@@ -530,7 +566,7 @@ pub fn run_with_layout(
 mod tests {
     use super::*;
     use mycelium_core::{Meta, Payload, Provenance, Repr};
-    use mycelium_interp::IdentitySwapEngine;
+    use mycelium_interp::{EffectBudget, IdentitySwapEngine};
 
     fn byte() -> Value {
         Value::new(
@@ -637,6 +673,49 @@ mod tests {
             &IdentitySwapEngine,
             1_000_000, // fuel ≫ depth, so the depth ceiling bites first
             64,
+        );
+        assert_eq!(r, Err(EvalError::DepthLimit { limit: 64 }));
+    }
+
+    #[test]
+    fn a_declared_alloc_effect_budget_overruns_gracefully_at_runtime() {
+        // RFC-0014 §4.8 (completed): the recovery `Budgets` ledger is now wired into the env-machine's
+        // budget enforcement. A declared `alloc` effect budget bounds control-stack *memory* (the
+        // opt-in sibling of the depth ceiling) and an overrun is the unified, graceful
+        // `EvalError::EffectBudget` — the runtime-path extension of the RFC-0014 I4 bounded-overrun
+        // test, on the *same* channel as `FuelExhausted`/`DepthLimit`, never an OOM/hang.
+        let frames = 10u64; // allow 10 frames' worth of alloc, then the 11th frame overruns
+        let mut budgets =
+            Budgets::new().with(EffectBudget::Bytes(frames * DEFAULT_PER_FRAME_BYTES));
+        let r = run_core_with_effects(
+            &spin(),
+            &PrimRegistry::with_builtins(),
+            &IdentitySwapEngine,
+            1_000_000, // fuel ≫ alloc budget
+            1_000_000, // depth ceiling ≫ alloc budget, so the *effect* budget bites first
+            &mut budgets,
+        );
+        match r {
+            Err(EvalError::EffectBudget(e)) => {
+                assert_eq!(e.kind, EffectKind::Alloc);
+                assert_eq!(e.requested, DEFAULT_PER_FRAME_BYTES);
+                assert_eq!(e.remaining, 0);
+            }
+            other => panic!("expected a graceful EffectBudget overrun, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn an_absent_alloc_budget_leaves_runtime_behaviour_unchanged() {
+        // I5 (opt-in): the default empty ledger declares no `alloc` budget, so the env-machine charges
+        // nothing and the depth ceiling remains the sole space guard — identical to pre-§4.8 behaviour.
+        let r = run_core_with_effects(
+            &spin(),
+            &PrimRegistry::with_builtins(),
+            &IdentitySwapEngine,
+            1_000_000,
+            64,
+            &mut Budgets::new(),
         );
         assert_eq!(r, Err(EvalError::DepthLimit { limit: 64 }));
     }

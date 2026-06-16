@@ -434,6 +434,42 @@ fn recovery_match_over_a_result_sum_agrees_three_ways() {
     );
 }
 
+/// **M-353 (RFC-0014 §4.8):** wiring the recovery `Budgets` ledger into the env-machine must be
+/// **meaning-preserving** (NFR-7). The same recovery match, run through the env-machine with an *ample*
+/// effect ledger threaded (`run_core_with_effects`), produces the identical observable as the plain
+/// `run_core` / L0-interp paths — the §4.8 budget plumbing perturbs *nothing* when budgets suffice; it
+/// only adds the explicit, graceful `EffectBudget` refusal at an overrun (tested on the runtime path in
+/// `mycelium-mlir`). This pins the L0 touch-point of the integration to the three-way differential.
+#[test]
+fn the_effect_ledger_is_meaning_preserving_on_the_recovery_match() {
+    use mycelium_interp::{Budgets, EffectBudget};
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
+    let src = "colony d\n\
+               type Result = Ok(Binary{8}) | Err(Binary{8})\n\
+               fn recover(r: Result) -> Binary{8} = match r { Ok(v) => v, Err(e) => 0b0000_0000 }\n\
+               fn main() -> Binary{8} = recover(Err(0b1111_1111))";
+    let env = check_colony(&parse(src).unwrap()).unwrap();
+    let node = elaborate(&env, "main").unwrap();
+
+    let plain = mycelium_mlir::run_core(&node, &prims, &engine).unwrap();
+    // An ample `alloc` budget — never overruns on this shallow match — must not change the observable.
+    let mut budgets = Budgets::new().with(EffectBudget::Bytes(1 << 30));
+    let with_ledger = mycelium_mlir::run_core_with_effects(
+        &node,
+        &prims,
+        &engine,
+        1_000_000,
+        1_000_000,
+        &mut budgets,
+    )
+    .unwrap();
+    assert_eq!(
+        plain, with_ledger,
+        "threading an ample effect ledger must be observable-transparent (NFR-7)"
+    );
+}
+
 /// A `Partial`-classified unproductive recursion: still runnable, but the clock is the guard —
 /// an explicit `FuelExhausted`, never a hang (§4.5).
 #[test]

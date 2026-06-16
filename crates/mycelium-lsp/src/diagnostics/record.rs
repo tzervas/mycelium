@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use super::policy::DiagnosticPolicy;
 use super::registry::ClassName;
+use super::sink::{Route, SinkBinding, UnknownRoute};
 
 /// A graded context **level** — a verbosity knob over *one* truth (§4.2). Ordered
 /// `Minimal < Medium < Detailed`; raising it shows *more of* a diagnostic, never *whether* the
@@ -217,6 +218,18 @@ impl Canon {
 }
 
 impl DiagnosticRecord {
+    /// Resolve this diagnostic's `route` to its RFC-0008 [`SinkBinding`] (M-354, RFC-0013 §8).
+    /// `None` when no route is set; `Some(Err(_))` when the route string is not in the closed v0 set
+    /// (an explicit [`UnknownRoute`], never a silent misroute). This is the **sink-dispatch** point and
+    /// it lives **outside** [`present`] — so routing (or a failed route resolution) can never gate the
+    /// error's propagation (I1): the error has already surfaced unchanged in [`Presentation::error`].
+    #[must_use]
+    pub fn sink(&self) -> Option<Result<SinkBinding, UnknownRoute>> {
+        self.route
+            .as_deref()
+            .map(|r| Route::resolve(r).map(Route::binding))
+    }
+
     /// The **content address** of this diagnostic (§4.3; ADR-003) — a deterministic BLAKE3 over its
     /// canonical fields. Identity-stable: the same diagnostic content always hashes the same, so the
     /// human and JSON projections share it (I3).

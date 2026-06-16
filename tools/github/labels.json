@@ -7,6 +7,7 @@
   { "name": "phase:5", "color": "C2E0C6", "description": "Phase 5 — Self-Hosting & Core Library (anticipated)" },
   { "name": "phase:6", "color": "BFDADC", "description": "Phase 6 — Native Acceleration & Deployment (anticipated)" },
   { "name": "phase:7", "color": "FEF2C0", "description": "Phase 7 — Runtime & Concurrency Execution Model / RFC-0008 (anticipated)" },
+  { "name": "phase:8", "color": "D4C5F9", "description": "Phase 8 — Toolchain & Release Engineering (anticipated)" },
   { "name": "type:feature", "color": "A2EEEF", "description": "New capability" },
   { "name": "type:spec", "color": "C5DEF5", "description": "Specification / schema" },
   { "name": "type:research", "color": "D4C5F9", "description": "Experiment / investigation" },
@@ -28,5 +29,6 @@
   { "name": "priority:P2", "color": "C2E0C6", "description": "Nice-to-have / later" },
   { "name": "status:blocked", "color": "E99695", "description": "Blocked by a dependency" },
   { "name": "status:needs-design", "color": "F9D0C4", "description": "Needs design before implementation" },
+  { "name": "status:done", "color": "0E8A16", "description": "Completed and verified" },
   { "name": "good-first-issue", "color": "7057FF", "description": "Good entry point" }
 ]

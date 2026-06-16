@@ -312,9 +312,21 @@ invariants I1–I5 are verified, when the tooling lands, by:
 - **Registry scope (genuinely open).** The exact membership and extension discipline of the error-class
   registry (§4.5) — which classes are nameable, and how a downstream module registers its own — is left
   open for the implementation task; v0 requires only that resolution is registry-based, never `eval`-based.
-- **Route targets (genuinely open).** The concrete set of `route` targets (§4.4) and how they compose with
-  RFC-0008's runtime/observability sinks is left to the RFC-0008 integration; v0 requires only that routing
-  never affects propagation (I1).
+- **Route targets — RESOLVED (M-354, RFC-0008 Accepted; maintainer 2026-06-16).** The concrete `route`
+  set (§4.4) is now a **closed v0 vocabulary** bound to RFC-0008 observability sinks, each with an
+  **honest delivery guarantee** on the lattice (RT5): **`stream`** (the in-process diagnostic feed
+  RFC-0008 hosts — §4.8 Feeds; synchronous, `Declared`), **`audit`** (the durable §4.6 audit store;
+  `Declared`), **`log`** (best-effort textual; `Declared`), **`null`** (intentionally discarded — and
+  honestly reports *not delivered*, never a "fire and forget" claimed reliable), and **`mesh`** (the
+  RFC-0008 §4.3 gossip overlay — *probabilistic*, carrying a declared `ProbabilityBound` δ; `Declared`
+  in v0, upgraded to Empirical/Proven only with a checked convergence basis per T4.2 — VR-5). Resolution
+  is **checked** against the closed set (the §4.5 X1 "looked up, never evaluated" discipline applied to
+  routes): an out-of-set route string is an explicit `UnknownRoute`, never a silent misroute — and
+  because sink-resolution lives **outside** `present` (the dispatch point, `DiagnosticRecord::sink`),
+  routing (or a failed resolution) **never gates propagation** (I1, re-verified across every closed
+  route). Enacted in `crates/mycelium-lsp/src/diagnostics/sink.rs` (tooling layer; no kernel logging
+  dependency — KC-3). The diagnostic stream "lives" in RFC-0008 (§4.8 Feeds); these bindings name the
+  honest contract the runtime's transports satisfy.
 
 ## 9. Future possibilities
 
@@ -330,6 +342,12 @@ invariants I1–I5 are verified, when the tooling lands, by:
   error (never-silent G2, totality). This is now designed in its **own RFC — RFC-0014 (Declarative Error
   Recovery & Bounded Effects)** — which supersedes this RFC's §4.4 *scope boundary* for the recovery
   concern (append-only) without weakening I1; see §8 DN04-Q1 for the maintainer's recorded constraints.
+- **Automatic baseline diagnostics & logging** (DynEL's *automated baseline* intent): a zero-config
+  baseline diagnostic/logging policy **auto-derived** from the structured mapping (this RFC's registry +
+  routes + RFC-0014's declared effects) and **auto-applied** (wrapping for logging/QoL), with a ladder to
+  light overrides → fully manual. Safe to auto-apply *because* this RFC's presentation is additive and
+  never changes control flow (I1); designed in its own RFC — **RFC-0015 (Automatic Baseline Diagnostics &
+  Recovery)** — which generates/applies this RFC's policies without weakening I1 (append-only). Tracked M-362.
 - **Stdlib graduation** (DN04-Q5 / M-346): a self-contained `diagnostics` core-library module — a clean
   first stdlib citizen and dogfooding target.
 - **Self-hosting** (DN-04 §3): the renderer eventually written in Mycelium-lang, consuming Mycelium's own
@@ -339,6 +357,20 @@ invariants I1–I5 are verified, when the tooling lands, by:
 
 ## Meta — changelog
 
+- **2026-06-16 — §8 route targets resolved + bound to RFC-0008 sinks (M-354; RFC-0008 Accepted).** The
+  last genuinely-open §8 question — the concrete `route` set and how it composes with RFC-0008's
+  observability sinks — is **resolved**: a **closed v0 route vocabulary** (`stream`/`audit`/`log`/
+  `null`/`mesh`) bound to RFC-0008 sinks, each carrying an **honest delivery guarantee** on the lattice
+  (RT5) — synchronous/durable/best-effort are `Declared`, the `null` sink honestly reports *not
+  delivered* (never a fire-and-forget claimed reliable), and the `mesh` sink is *probabilistic* with a
+  declared `ProbabilityBound` δ (upgraded only with a checked convergence basis — VR-5/T4.2). Resolution
+  is **checked** against the closed set (X1 applied to routes; an out-of-set route is an explicit
+  `UnknownRoute`, never silent) and lives **outside** `present` (`DiagnosticRecord::sink`), so routing —
+  or a failed resolution — **never gates propagation** (I1, re-verified across every route). Enacted in
+  `crates/mycelium-lsp/src/diagnostics/sink.rs` (tooling layer; no kernel logging dependency — KC-3),
+  verified in `tests/diagnostics.rs` (never-silent across every closed route; honest sink guarantees;
+  explicit unknown-route). With this, **all RFC-0013 §8 deferrals tied to RFC-0008 are discharged.**
+  `just check` green. Append-only.
 - **2026-06-16 — Enacted (M-345).** The §4 design is code in `crates/mycelium-lsp/src/diagnostics`
   (tooling layer; no kernel dependency — KC-3; no Python — ADR-007): `registry` (the error-class
   registry — names looked up, never `eval`-ed, X1; v0 classes seeded from the existing lint codes +

@@ -17,6 +17,9 @@
 //!   [`present`] renderer (§4.1: the error is returned **unchanged** alongside the presentation, I1).
 //! - [`policy`] — the reified `on <ErrorClass> => {message, tags, level, route}` policy (RFC-0005
 //!   pattern; content-addressed `PolicyRef`), presentation/routing **only** (§4.4 I4).
+//! - [`sink`] — the **closed v0 route vocabulary** ([`Route`]) and its binding to RFC-0008
+//!   observability sinks, each with an **honest delivery guarantee** on the lattice (RT5; M-354,
+//!   RFC-0013 §8). Routing never gates propagation (I1).
 //! - [`audit`] — the **representation-crossing audit view** (§4.6; routed from RFC-0012 R12-Q2): every
 //!   `swap` + its honesty bound (read off, **never upgraded** — VR-5) + its policy, location-independent.
 
@@ -24,6 +27,7 @@ pub mod audit;
 pub mod policy;
 pub mod record;
 pub mod registry;
+pub mod sink;
 
 pub use audit::{AuditView, Crossing};
 pub use policy::{DiagnosticPolicy, PolicyFile, Rule};
@@ -31,3 +35,4 @@ pub use record::{
     present, DiagnosticRecord, Level, Presentation, ReasonedError, DETAILED_ALLOWLIST,
 };
 pub use registry::{ClassName, ClassRegistry, UnknownClass};
+pub use sink::{Delivery, Route, SinkBinding, UnknownRoute};

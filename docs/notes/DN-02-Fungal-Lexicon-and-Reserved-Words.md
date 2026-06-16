@@ -162,6 +162,13 @@ Until ratified, the L1 prototype uses this set **provisionally** and flags it as
 
 ## Meta — changelog & maintenance
 
+- **2026-06-16 — §2 `colony` line superseded by DN-06 (append-only).** DN-06 reassigns **`colony`**
+  from its §2 static meaning ("Module / namespace of definitions") to a **dynamic runtime grouping of
+  `hypha`** (RFC-0008 §4.7), moving the static role to the new term **`nodule`** (the basic unit) with
+  **`phylum`** as the library-scale level above it. This supersedes the §2 `colony` row only; the rest
+  of DN-02 stands. Justification: a higher-fidelity T-map now that RFC-0008 has a genuine dynamic
+  grouping (DN-06 §3). The keyword migration is tracked as M-358. *Supersede-don't-edit:* §2's text is
+  left intact above, superseded by reference per DN-02's own append-only law.
 - **2026-06-10 — Draft.** Initial proposal: the naming law (three-test gate from maintainer
   direction), the themed set, the conventional-kept set, literals/operators, the `wild` unsafe
   boundary, and seven flagged judgment calls (§7). Language name = Mycelium (shared).

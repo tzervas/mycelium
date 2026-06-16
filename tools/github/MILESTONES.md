@@ -36,7 +36,7 @@ bash tools/github/gh-bootstrap-local.sh          # needs `gh` authenticated to t
 | 4 | Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion | active (cut 2026-06-16) | The interp↔compiled ABI (ADR-016) + hot-inject/recompile (ADR-017); AOT env-machine completion over the full v0 calculus + stack-robustness/dynamic budgets (M-342/347/349, DN-05); mutual recursion (M-343, RFC-0001 r5); ambient (M-344, RFC-0012); diagnostics + recovery (M-345, RFC-0013/0014); stdlib roadmap (M-346). Gate: NFR-7 three-way differential across the calculus; budgets explicit/never-silent (G2); kernel small (KC-3). |
 | 5 | Self-Hosting & Core Library | **anticipated** (not yet ratified) | Write the stdlib + diagnostics/recovery runtime in Mycelium-lang itself (dogfooding; "free of other languages"): decompose the M-346 stdlib epic; self-host RFC-0013/0014. Gate: a stdlib module self-hosts with the guarantee/EXPLAIN contract every op must meet (G2, VR-5, KC-3, ADR-003). |
 | 6 | Native Acceleration & Deployment | **anticipated** (not yet ratified) | Native MLIR→LLVM codegen for the full calculus incl. data/closure (M-348, RFC-0004 §2, ADR-009); BitNet / native-ternary acceleration; deployable Spore units (ADR-013); production hardening. Gate: native NFR-7 differential + speedup; deployable Spore (VR-4 no-opaque-lowering). |
-| 7 | Runtime & Concurrency Execution Model (RFC-0008) | **anticipated** (not yet ratified) | The runtime/concurrency track the RFC-0013/0014 work pointed to: RFC-0008 ratification of RT1–RT7 (M-355); lifting RFC-0014's single-task boundary to per-task budgets, cancellation, and `reclaim` bounded-cascade supervision (M-356, RFC-0014 §8 / the Erlang-OTP grounding in Research Record 05); the RT2 deterministic-fragment runtime + reference-sequentialization differential (M-357, RFC-0008 §4.7). The §4.5 vocabulary (hypha/fuse/xloc/cyst/graft/forage/backbone/mesh/tier/reclaim) decomposes at the Phase-7 gate. Sequencing vs Phases 5–6 is a gate decision (may precede self-hosting). Gate: RFC-0008 Accepted; RT2 differential holds (NFR-7-equiv); guarantees tagged honestly (RT5/VR-5); kernel small (KC-3). |
+| 7 | Runtime & Concurrency Execution Model (RFC-0008) | **active** (RFC-0008 **Accepted** 2026-06-16) | RFC-0008 ratified RT1–RT7 (M-355 ✓); RFC-0014's single-task boundary lifted to per-task budgets, cancellation, and `reclaim` bounded-cascade supervision (M-356 ✓, RFC-0008 §4.7 / Erlang-OTP grounding, Research Record 05); the RT2 deterministic fork/join runtime + sequentialization differential v0 (M-357 ✓; typed channels = next slice); and the **DN-06 lexicon migration** — static keyword `colony` → `nodule`, introduce `phylum`, free `colony` for the dynamic grouping (M-358, staged). The §4.5 vocabulary (hypha/fuse/xloc/cyst/graft/forage/backbone/mesh/tier/reclaim) decomposes at the Phase-7 gate. Gate: RFC-0008 Accepted ✓; RT2 differential holds (NFR-7-equiv) ✓; guarantees tagged honestly (RT5/VR-5); kernel small (KC-3). |
 
 Phases 0–4 are in `milestones.json` as active milestones. Phases 5–7 are **forward roadmap anchors**:
 they are also created (as empty milestones) so future issues have a home, but their scope is **not yet
@@ -59,7 +59,8 @@ the summary (counts as of 2026-06-16):
 | 4 | ABI/hot-inject/AOT-completion — M-341/342/343/344/345/346/347/348/349 + M-352; RFC-0008 integration M-353/354 | 12 |
 | 5 | (anticipated) self-hosting + stdlib — decomposed from M-346 at the Phase-4 gate | — |
 | 6 | (anticipated) native acceleration + deployment — M-348 native path, Spore | — |
-| 7 | (anticipated) runtime & concurrency (RFC-0008) — M-355 ratify, M-356 concurrency/supervision, M-357 RT2 differential; §4.5 vocabulary decomposes at the gate | 3 |
+| 7 | runtime & concurrency (RFC-0008, **Accepted**) — M-355 ratify ✓, M-356 concurrency/supervision ✓, M-357 RT2 differential ✓; M-358 lexicon migration + M-359 structured nodule header/manifest staged; §4.5 vocabulary decomposes at the gate | 5 |
+| 8 | (anticipated) toolchain & release engineering — the full-fat suite (format/correctness/lint+fix/security) + packaging; M-361 epic anchor, M-359 metadata substrate | 1 |
 
 A task moves phases by editing its `milestone:` + `phase:N` label in `issues.yaml` (then re-running the
 bootstrap, which is idempotent). Keep the `milestone:` string byte-identical to the `milestones.json`
@@ -78,6 +79,14 @@ title or the script will create a duplicate.
 
 ## Meta — changelog
 
+- **2026-06-16 — Phase 8 added + Phase 7 reconciled.** New **Phase 8 — Toolchain & Release Engineering**
+  (anticipated) for the maintainer's "full-fat" toolchain (format / correctness / lint+fix / security +
+  packaging), anchored by **M-361** (epic) with **M-359** (the structured nodule header + `mycelium-proj.toml`
+  manifest, Proposed) as its metadata substrate. Phase 7 reconciled: **M-355/356/357 done** (RFC-0008
+  Accepted; single-task boundary lifted; the RT2 fork/join runtime + sequentialization differential v0),
+  **M-358** (DN-06 lexicon migration) and **M-359** staged. `milestones.json` (Phase 8), `labels.json`
+  (`phase:8`), `issues.yaml` (M-359, M-361; M-357 status→done), and the ladder/summary updated. Phase-8
+  sequencing firms at a later gate. Append-only; idmap recorded on the next bootstrap run.
 - **2026-06-16 — Phase 7 added (RFC-0008 integration roadmap).** Added the RFC-0008 integration tasks to
   the bootstrap mapping: **M-353** (unify the effect-budget mechanism — RFC-0014 §4.8) and **M-354**
   (diagnostic route targets ↔ observability sinks — RFC-0013 §8) join the **active Phase 4** (shovel-ready

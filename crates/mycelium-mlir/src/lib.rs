@@ -40,10 +40,13 @@ pub mod inject;
 pub mod jit;
 pub mod llvm;
 pub mod pack;
+pub mod runtime;
 pub mod simd;
 pub mod specialize;
 
-pub use aot::{default_depth_budget, run, run_core, run_core_with_fuel, run_with_layout};
+pub use aot::{
+    default_depth_budget, run, run_core, run_core_with_effects, run_core_with_fuel, run_with_layout,
+};
 pub use bitnet::{
     compile_bitnet_dot, compile_bitnet_dot_for, emit_bitnet_dot_ir, emit_bitnet_dot_ir_for,
     jit_ternary_dot, jit_ternary_dot_for, ternary_dot_ref, BitnetDotKernel,
@@ -57,6 +60,7 @@ pub use inject::{recompile_closure, Image, InjectError, Resolution};
 pub use jit::{compile_so, jit_run, JitArtifact};
 pub use llvm::{compile, compile_and_run, emit_llvm_ir, AotError, CompiledArtifact};
 pub use pack::{pack_trits, relayout_trits, unpack_trits};
+pub use runtime::{Colony, Poll, Scope, Task, TaskCtx};
 pub use simd::{compile_bitnet_dot_simd, emit_bitnet_dot_simd_ir};
 pub use specialize::{
     compile_specialized_dot, emit_specialized_dot_ir, jit_specialized_dot, SpecializedDotKernel,

@@ -34,8 +34,10 @@ use std::fmt;
 /// Conservative per-frame heap estimate (bytes). Each control-stack `Frame` is a few machine words
 /// plus a captured environment (a `HashMap` whose size depends on the program); 1 KiB
 /// **over**-counts the common case on purpose — under-shooting the affordable depth is the safe
-/// direction (refuse early, never OOM). `Declared`, caller-overridable.
-const DEFAULT_PER_FRAME_BYTES: u64 = 1024;
+/// direction (refuse early, never OOM). `Declared`, caller-overridable. Public so the env-machine can
+/// charge a declared `alloc` effect budget at the same per-frame rate (RFC-0014 §4.8 — the effect
+/// budget is the opt-in sibling of this depth ceiling, both reasoning in per-frame bytes).
+pub const DEFAULT_PER_FRAME_BYTES: u64 = 1024;
 /// Fraction of detected headroom to actually spend, as a percent. 70 % leaves a generous reserve for
 /// everything else the process holds (the env maps the frames point at, the result, allocator slack).
 const DEFAULT_MARGIN_PCT: u8 = 70;

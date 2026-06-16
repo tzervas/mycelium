@@ -8,6 +8,167 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-16: narrative capture + automated-authoring intent, initial capture)
+- **`docs/notes/Narrative-Capture-and-Authoring.md` (Living)** + the seeded **`docs/devlog/`** append-only
+  narrative layer. Captures the maintainer's intent to record enough development narrative — decisions,
+  **struggles, problems solved, the how and why** — to enable **partially-to-fully automated** authoring
+  of project **blog** posts, a **language book**, and a **reference manual**, distributed **free** in
+  digital formats. Notes that the honesty rule already makes the corpus a grounded, cited, append-only
+  narrative (~80% of the raw material); the one gap (the struggle / problem-solving *how*) is filled by a
+  lightweight `docs/devlog/` (first entry: `2026-06-16-rfc0008-integration-wave.md`, a worked example).
+  All three outputs are **synthesis from the cited corpus** under the same discipline as the language —
+  grounded/cited (no hallucination), projection-not-parallel-truth (no drift — ADR-003),
+  human-in-the-loop, append-only provenance. Full pipeline design + tooling is a fresh session, tracked
+  **M-363** (Phase 8). Registered in `Doc-Index.md`.
+- **Added (future-planning):** a fourth output — **fully-automated documentation + API reference** (the
+  most automatable: pure projection from code + schemas + the M-359 nodule-header metadata; rustdoc-first,
+  Mycelium-lang doc-comments later; shipped free + served live/LSP-hover) — and a **format quality bar**
+  (note §4.1): "clean · presentable · legible · intelligible · digestible" made a **checkable** contract
+  (one consistent template; index→detail navigation; progressive-disclosure graded depth reusing
+  RFC-0013's levels; checked inline examples; dual human/machine projection — G11; legibility/accessibility
+  by construction; **undocumented is flagged, never invented** — the doc analogue of never-silent G2).
+
+### Added (RFC-0015 — 2026-06-16: Automatic Baseline Diagnostics & Recovery, Draft)
+- **RFC-0015 (Draft, Proposed)** captures the DynEL **automated-baseline** design point the maintainer
+  added to the roadmap: an **automation layer over RFC-0013/0014** that auto-derives a zero-config
+  **baseline** diagnostic/logging policy from the language's structured mapping (registry + routes +
+  declared effects), **auto-applies** it (wrapping for logging/QoL), and offers a ladder of *light*
+  overrides → *fully manual*. The load-bearing **honesty boundary** is fixed up front: automatic =
+  **additive presentation/logging only** (safe because RFC-0013 never changes control flow — I1);
+  **automatic recovery is opt-in, declared, bounded** (no implicit control-flow change — RFC-0014
+  I3/I4/I5); the baseline is a **reified, `EXPLAIN`-able** policy (no black box — SC-3); the derivation is
+  a **total, inspectable** function of the mapping, not learned (VR-5/RFC-0005). Tooling-layer; no kernel
+  change (KC-3). Forward-pointed from RFC-0013 §9 + RFC-0014 §9; registered in `Doc-Index.md`; tracked
+  **M-362**. **No code** — design point only.
+
+### Changed (DN-06 — 2026-06-16: static-organization & dynamic-grouping lexicon — `phylum` / `nodule` / `colony`)
+- **DN-06 ratified** (maintainer-directed), introducing on-brand terms for static organization and
+  deconflicting a real collision: **`phylum`** (content-addressed **library-scale** unit) and
+  **`nodule`** (the **basic** static unit, replacing the generic "module") for static organization, and
+  **`colony`** reassigned to the **dynamic** runtime grouping of active `hypha` (RFC-0008 §4.7). The
+  reassignment **supersedes DN-02 §2's `colony` = module** line (append-only — DN-02's changelog records
+  it; `phylum`/`nodule` had no prior use, so only `colony` collided). Justified by the DN-02 three-test
+  gate: `colony` on a *living, supervised grouping of tasks* is a higher-fidelity T-map than on a static
+  file, and `nodule` beats the generic "module" for the static unit.
+- **Supplement (DN-06 §6 resolved):** a `nodule` is declared by a **header comment**
+  (`// nodule: <name>`, or bare `// nodule`) on the first non-blank line — **not** in the filename/path
+  (paths stay conventional; no `nodule` bloat). RFCs/docs use `nodule` for "module" going forward. A
+  **dedicated `docs/Glossary.md`** is created — a summarized **Index** over a detailed **Glossary**
+  (the fungal lexicon + honesty/architecture concepts), each entry citing its normative source, maintained
+  separately from the RFCs (registered in `Doc-Index.md`). The header-comment convention folds into M-358.
+- **Proposed — structured nodule header + `mycelium-proj.toml` manifest (`docs/spec/Nodule-Header-and-Project-Manifest.md`).**
+  At the maintainer's preference for a *structured* header carrying useful metadata (license, authors,
+  first/last dates, version) on a nodule/phylum **root**, with **subnodules inheriting** top-down: a
+  closed-key in-file header (`// @key: value`), a `mycelium-proj.toml` manifest (the pyproject/Cargo analogue,
+  scoped for Mycelium), and explicit `EXPLAIN`-able inheritance (in-file → nodule-root → `mycelium-proj.toml`).
+  Honesty-aligned: **metadata is not identity** (the content hash stays canonical — ADR-003), no ambient
+  metadata (unknown keys/conflicts are explicit errors — G2), declared-only license/version (VR-5),
+  tooling-layer (KC-3). **Proposed** — the format choices (§7) are flagged for sign-off; no code lands
+  until ratified. Records the long-term **full-fat toolchain** as the new anticipated **Phase 8** (epic
+  **M-361**); the schema's enactment is **M-359**.
+- **Adopted going forward:** the RFC-0008 §4.7 structured scope is realized as `mycelium-mlir::runtime`'s
+  **`Colony`** (alias of the structured `Scope`). The **surface keyword migration** `colony` → `nodule`
+  (the L1 lexer/parser/AST/checker — ~226 refs — plus the grammar EBNF + LR(1) oracle + the 23-file
+  conformance corpus) is a pure rename + two reserved additions (`phylum`/`colony`), tracked as **M-358**
+  and staged (the grammar contract moves in one auditable change). Until executed, `colony` is the
+  deprecated spelling of `nodule`. RFC-0006 + RFC-0008 carry append-only forward-references; `phylum`
+  and `colony` are reserved-not-active until their constructs land.
+
+### Changed (RFC-0008 — 2026-06-16: Runtime & Concurrency Execution Model ratified `Draft → Accepted`)
+- **RFC-0008 ratified `Draft → Accepted`** (maintainer): the seven runtime invariants **RT1–RT7** and
+  the §4 model are now **normative** (the Runtime-tier grounding ADR-012 §7.3 required). Ratification
+  opens the runtime track in staged slices: the **budget-unification slice** (RFC-0014 §4.8 — M-353,
+  below) and the **route → observability-sink** binding (RFC-0013 §8 — M-354) needed no RT1–RT7
+  commitment and proceed first; the **concurrency/supervision** track (RFC-0014 single-task boundary
+  lifted — per-task budgets, cancellation, cross-task propagation, `reclaim` bounded cascades; RT4/RT7 —
+  M-355/M-356) is the §4.7 revision, presented frozen-spec before folding. The §4.5 runtime vocabulary
+  stays **reserved, not active syntax** until the implementation RFCs land.
+
+### Added (RFC-0008 R1 — 2026-06-16: M-357 v0 / deterministic fork/join executor + RT2 differential)
+- **M-357 (v0 slice) — the RT2 deterministic fork/join runtime over the §4.7 primitives.** The
+  maintainer-chosen minimal scope (fork/join + the differential; typed channels deferred to the next
+  slice): `crates/mycelium-mlir/src/runtime.rs` — a structured-concurrency `Scope` (RT7: every child is
+  **joined**, none orphaned) over cooperative `Task`s, each carrying its **own** `Budgets` ledger and the
+  shared `CancelToken` (M-356 C1/C2). Two strategies — `run_sequential` (the reference) and a
+  deterministic `run_interleaved` round-robin — that the RT2 guarantee makes observationally equal over
+  **pure** tasks (RT1). The scheduler lives **outside** the kernel (RT2; the trusted evaluator stays
+  sequential — KC-3).
+- **Verified** (module tests): the **RT2 sequentialization differential** — `run_interleaved` ≡
+  `run_sequential` over a counter corpus (with an interleave trace proving the schedules genuinely
+  differ) **and over the real env-machine** (tasks running `run_core_with_effects` on `bit.not` L0
+  programs; each scheduled outcome equals the standalone `run_core` evaluation — no new meaning,
+  NFR-7/KC-3); **RT7** scope-cancellation (cancelling the scope → every pending child resolves to an
+  explicit additive `Cancelled`, all joined, none leaked); and **C1** per-task budget isolation (one
+  task overrunning its `alloc` budget never exhausts a sibling's). `just check` green. The next R1 slice
+  is typed SPSC **channels** (the Kahn-deterministic communicating half). **M-357 (#122)**.
+
+### Added (RFC-0008 §4.7 — 2026-06-16: M-356 / concurrency composition primitives, single-task boundary lifted)
+- **M-356 — RFC-0014's single-task boundary lifted onto RFC-0008 (§4.7 added; §8 concurrency deferral
+  resolved).** A **frozen-spec** (presented before folding): RFC-0008 **§4.7** specifies four
+  compositions, each additive over the explicit error (I1) and declared + bounded (I3/I4) — **(C1)**
+  per-task budgets (each task instances its own M-353 ledger; an overrun is an *in-that-task*
+  `EvalError::EffectBudget`, never global); **(C2)** cooperative, **additive** cancellation observed at
+  budget-check points (an explicit `Cancelled`, never preemptive; scope-tree propagation, RT7);
+  **(C3)** cross-task failure propagation via an explicit `TaskOutcome` with **no silent/dropped
+  variant** (I1 across the task boundary, RT4); **(C4)** `reclaim` **bounded-cascade** supervision
+  bounded on **both** a total `cascade` effect budget (M-353) **and** a windowed max-restart-intensity
+  over a **logical clock** (Erlang/OTP, Research Record 05 T5.3; wall-clock deferred to R8-Q3) —
+  exceeding either an explicit escalation, never a storm.
+- **Enacted** as **scheduler-independent** primitives in `mycelium_interp::supervise`
+  (`CancelToken` / `TaskOutcome` / `RestartIntensity` / `Supervisor` / `Escalation`) — **no L0 node**,
+  the trusted base stays sequential (RT2; KC-3) — verified there and composed with the recovery driver
+  in `crates/mycelium-lsp/tests/recover.rs` (cancellation is explicit + additive; a task failure
+  propagates explicitly; a supervised restart storm is bounded on both axes; a per-task budget overrun
+  is an in-that-task refusal). The actual **task scheduler/executor and the RT2 sequentialization
+  differential are explicitly *not* here** — they are RFC-0008 R1 (**M-357**), built on these
+  primitives. `just check` green. Advances G2, VR-5, SC-3. RFC-0014 §8 concurrency deferral **resolved**.
+  **M-356 (#121)**.
+
+### Added (Phase 4 — 2026-06-16: M-354 / RFC-0013 §8 diagnostic routes ↔ RFC-0008 observability sinks)
+- **M-354 — the diagnostic `route` set closed and bound to RFC-0008 sinks (RFC-0013 §8 resolved).** A
+  **closed v0 route vocabulary** — `stream` / `audit` / `log` / `null` / `mesh` — in
+  `crates/mycelium-lsp/src/diagnostics/sink.rs`, each bound to an `rfc0008.*` observability sink with an
+  **honest delivery guarantee** on the lattice (RT5): `stream` (in-process synchronous), `audit`
+  (durable), and `log` (best-effort) are `Declared`; **`null` honestly reports *not delivered*** (never
+  a "fire and forget" claimed reliable); **`mesh` is probabilistic**, carrying a declared
+  `ProbabilityBound` δ (upgraded to Empirical/Proven only with a checked convergence basis — VR-5/T4.2).
+  Route resolution is **checked** against the closed set (the §4.5 X1 "looked up, never evaluated"
+  discipline applied to routes — an out-of-set route is an explicit `UnknownRoute`, never a silent
+  misroute) and lives **outside** `present` (`DiagnosticRecord::sink` is the dispatch point), so routing
+  — or a failed resolution — **never gates propagation** (I1). A typed `Rule::route_to(Route)` setter is
+  the checked path; the free-form `route(String)` remains the on-the-wire projection. Tooling layer only;
+  **no kernel logging dependency** (KC-3).
+- **Verified** by `crates/mycelium-lsp/tests/diagnostics.rs`: **never-silent across every closed route**
+  (I1 re-run per route — the error still propagates, each route resolves to its sink), **honest sink
+  guarantees** (no sink over-claims `Declared`; the null sink does not deliver; the mesh sink carries a
+  well-formed δ — RT5/VR-5), and an **explicit unknown route** (an out-of-set route string surfaces
+  `UnknownRoute` without gating propagation). `just check` green. Completes the RFC-0013 §8
+  route-targets/observability deferral; advances NFR-2/SC-5b. **M-354 (#119)**.
+
+### Added (Phase 4 — 2026-06-16: M-353 / RFC-0014 §4.8 effect-budget unification, enacted)
+- **M-353 — effect budgets unified with the runtime's fuel/depth clocks (RFC-0014 §4.8 completed).** The
+  recovery `Budgets` ledger — previously a tooling-only reified mechanism — is **lifted into
+  `mycelium-interp`** (`mycelium_interp::budget`: `EffectKind`/`EffectBudget`/`EffectBudgetExhausted`/
+  `Budgets`), the **shared budget-resolution surface** both the AOT env-machine (`mycelium-mlir`) and the
+  recovery driver (`mycelium-lsp`) depend on — placed to avoid a crate cycle and to sit where the fuel
+  clock already lives (**no kernel change** — KC-3, **no** new L0 node, **no** kernel hook). An effect
+  overrun now routes through **`mycelium_interp::EvalError::EffectBudget`** — the effect sibling of
+  `FuelExhausted` (time) / `DepthLimit` (space) on the **one runtime refusal channel** (the ratified §8
+  disposition: *separate named budgets, one enforcement mechanism*): a budgeted effect overruns
+  **gracefully at runtime exactly as a runaway recursion does**, never a hang/OOM (I4). The env-machine
+  threads the same ledger (`run_core_with_effects`) and charges a declared **`alloc`** budget per
+  control-stack frame — the **opt-in** sibling of the DN-05 depth ceiling (same per-frame-bytes basis);
+  an absent budget (the default) leaves behaviour identical (I5). `recover::effect` re-exports the moved
+  types (RFC-0014's enacted API is unchanged) and keeps the *checker* half (`check_effects`/
+  `UndeclaredEffect` — I3) in the tooling layer.
+- **Verified:** the **bounded-overrun-is-explicit test extended to the runtime path** (`mycelium-mlir`:
+  `a_declared_alloc_effect_budget_overruns_gracefully_at_runtime` → `EvalError::EffectBudget`, and
+  `an_absent_alloc_budget_leaves_runtime_behaviour_unchanged`), plus a **meaning-preserving three-way
+  differential** where it touches L0 (`mycelium-l1`:
+  `the_effect_ledger_is_meaning_preserving_on_the_recovery_match` — threading an ample ledger is
+  observable-transparent on the recovery `Match`; NFR-7). `just check` green. Completes the RFC-0014 §4.8
+  deferral; advances G2, VR-5, SC-3. **M-353 (#118)**.
+
 ### Added (Phase 4 — 2026-06-16: M-352 / RFC-0014 declarative recovery & bounded effects, accepted + enacted)
 - **RFC-0014 ratified `Draft → Accepted`** (maintainer; all §8 dispositions normative) and **M-352
   enacted** as a **separable, tooling-layer** subsystem in `crates/mycelium-lsp/src/recover` (**no kernel
