@@ -9,6 +9,12 @@ tools directly. It fills the gaps a model **can** fill over MCP; the gaps it **c
 > label-management or milestone-creation tool**. So labels-with-colors and milestones are
 > created locally with `gh`; everything else is done here over MCP.
 
+**No MCP session? Run it from a phone.** `termux-bootstrap.md` + `termux-setup.sh` drive the
+whole bootstrap (packages, git identity, GPG signing key, `gh` auth, then
+`gh-bootstrap-local.sh` + `gh-issues-sync.py`) from Termux. `gh-issues-sync.py` is the
+gh-driven local analogue of Steps 1–2 below (idempotent create + milestone + `idmap.tsv`);
+Step 4 (dependency/sub-issue linking) still needs an MCP/GraphQL pass.
+
 ## Tool / capability matrix
 
 | Task | Tool | MCP can do it? |

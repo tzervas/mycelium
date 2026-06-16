@@ -8,6 +8,22 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-16: mobile/Termux GitHub bootstrap — phone-autonomous PM)
+- **`tools/github/termux-setup.sh`** + **`tools/github/gh-issues-sync.py`** + **`termux-bootstrap.md`**.
+  A single, ordered, **idempotent** path to run the *whole* GitHub project-management bootstrap from an
+  Android phone (Termux) with nothing pre-configured: installs packages from the package manager (no
+  `curl | bash`), sets the git identity, generates a passphrase-protected **GPG signing key** and uploads
+  only the **public** key, authenticates `gh` (browser/device OAuth or a supplied token, held by `gh` —
+  never committed), then chains `gh-bootstrap-local.sh` (labels + milestones) into the new
+  `gh-issues-sync.py`. The Python helper is the **gh-driven local analogue of `mcp-bootstrap.md` Steps
+  1–2** — it closes the one gap that previously needed a model+MCP session (issue *creation*): snapshot
+  issues by title, create only the absent ones with labels, assign milestones by title, and **append**
+  (never rewrite) new `task_id → number → db_id` rows to `idmap.tsv`. Honesty-aligned: never-silent (every
+  step announced; conflicts/missing milestones are explicit), no black boxes, no secrets in the repo
+  (private GPG key stays on-device; token in `gh` config; credential helper, not token-in-URL). Scope
+  boundary matches `gh-bootstrap-local.sh`: dependency/sub-issue linking (Step 4) still needs an
+  MCP/GraphQL pass. `shellcheck`/`ruff` clean.
+
 ### Added (2026-06-16: narrative capture + automated-authoring intent, initial capture)
 - **`docs/notes/Narrative-Capture-and-Authoring.md` (Living)** + the seeded **`docs/devlog/`** append-only
   narrative layer. Captures the maintainer's intent to record enough development narrative — decisions,
