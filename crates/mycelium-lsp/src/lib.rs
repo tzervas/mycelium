@@ -7,6 +7,7 @@
 //! This is a *toolchain* crate, deliberately kept out of the small auditable kernel (KC-3): it
 //! depends on `mycelium-core`/`-interp`/`-cert`/`-select` but nothing depends on it.
 
+pub mod baseline;
 pub mod diagnostics;
 pub mod expand;
 pub mod feedback;
@@ -16,6 +17,10 @@ pub mod recover;
 pub mod sync;
 pub mod wire;
 
+pub use baseline::{
+    baseline_for_class, derive_baseline, derive_baseline_for, explain_baseline, recovery_profile,
+    BaselineRule, RecoveryProfile, RESILIENT_MAX_ATTEMPTS,
+};
 pub use diagnostics::{
     present, AuditView, ClassRegistry, Crossing, DiagnosticPolicy, DiagnosticRecord, Level,
     Presentation, ReasonedError, Rule, UnknownClass,

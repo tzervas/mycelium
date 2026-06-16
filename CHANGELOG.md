@@ -8,6 +8,28 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-16: RFC-0015 automatic baseline diagnostics & recovery, M-362)
+- **RFC-0015 ratified `Draft → Accepted`** and enacted. Prior art (DynEL, Rust `tracing`/`log`, Erlang/OTP,
+  Python `logging`, structured-logging) traced into **`research/06-automatic-baseline-diagnostics-RECORD.md`**
+  (findings **T6.1–T6.5**, discharging the §7 grounding obligation); the four §8 questions **resolved**.
+- **`crates/mycelium-lsp/src/baseline.rs`** — the automation layer *over* RFC-0013 (presentation) +
+  RFC-0014 (recovery), honest by construction (the §4.1 boundary A1–A4):
+  - **`derive_baseline` / `derive_baseline_for`** — auto-derive a zero-config baseline `DiagnosticPolicy`
+    from the error-class registry via a **total, inspectable closed `class → (level, route)` table**
+    (`baseline_for_class`), optionally scoped per-definition by its **declared effect** classes. The result
+    is presentation-only — structurally incapable of changing control flow (A1/I1) — content-addressed,
+    and tagged `baseline`.
+  - **`explain_baseline`** — the `EXPLAIN`: every class with its derived level/route + **rationale** (A3;
+    "what baseline applied here, and why?").
+  - **`recovery_profile`** + **`RecoveryProfile`** (`strict` / `resilient`) — the **closed, opt-in,
+    bounded** recovery set (A2): `strict` propagates everything; `resilient` applies bounded `retry(≤3)`
+    (`RESILIENT_MAX_ATTEMPTS`) to the **explicitly-supplied** classes only (RFC-0014 I4/I5). Recovery is
+    **never** auto-applied — it is produced only on explicit request.
+- **Honesty boundary, as tests:** A1 (a baseline can never suppress an error — `present` returns it
+  unchanged), A2 (recovery bounded + opt-in), A3 (content-addressed + EXPLAIN-able), A4 (derivation is a
+  total, deterministic function of the registry — every class covered). No new error mechanism; no kernel
+  change (KC-3). `scripts/checks/all.sh` green.
+
 ### Added (2026-06-16: structured nodule header + project manifest, M-359)
 - **`crates/mycelium-proj`** — the project-metadata layer (KC-3, above the kernel) enacting the
   *Nodule-Header-and-Project-Manifest* spec (**Accepted** 2026-06-16; the three §7 format choices ratified
