@@ -284,6 +284,13 @@ backend grows data support.
 
 ## Meta — changelog
 
+- **2026-06-15 — the §4.5 r4 sketch is now REALIZED in RFC-0001 r4 (note; append-only).** The named
+  follow-on this RFC sketched (§4.5: `Lam`/`App`/`Fix` into L0, retiring §4.6 entirely) is enacted as
+  **RFC-0001 r4** — R7-Q1 resolved (a `Fix` node), R7-Q3's content-addressed cycle *identity* fixed
+  (elaboration of mutual recursion still deferred), and the `matured`-gate/recursion interaction
+  restated (the interpreter clocks every `Fix`; the gate is packaging, never meaning). With r4,
+  RFC-0007 §4.6's `Residual` is retired for the whole v0 calculus except mutual recursion + dynamic
+  guarantee indices. This RFC's own scope (the r3 data-and-matching fold) is unchanged.
 - **2026-06-15 — r3 ENACTED (the §4.7 steps 2–3, performed in lockstep).** With RFC-0006/0007
   ratified, the staged r3 is now **folded and implemented together** (spec never leads code): (2)
   **RFC-0001 r2 → r3** — §4.5 gains `Construct` + flat `Match` + `Alt` (supersedes the r2 grammar) +

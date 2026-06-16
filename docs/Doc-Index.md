@@ -12,7 +12,7 @@
 | **Prior-Art Survey & Synthesis** | evidence base (pass 1) | Recorded → `research/01-prior-art-survey-RECORD.md` (full narrative is a conversation artifact) |
 | **Research Findings (T0/T1/T2)** | evidence base (pass 2) | Recorded → `research/02-research-findings-RECORD.md` (full narrative is a conversation artifact) |
 | **Project Foundation (r3)** | charter, scope, requirements, ADR-001…010, roadmap, risks | **Living — updated** |
-| **RFC-0001 — Core IR & Metadata Schema** | value model, `Repr`, `Meta`, guarantee lattice, content-addressing; **r3** adds the data registry Σ, `Datum`/`CoreValue`, `Construct`/flat `Match`, WF6/WF7/WF8 (RFC-0011 fold) | **Accepted (r3)** |
+| **RFC-0001 — Core IR & Metadata Schema** | value model, `Repr`, `Meta`, guarantee lattice, content-addressing; **r3** adds data (registry Σ, `Datum`/`CoreValue`, `Construct`/flat `Match`, WF6/WF7/WF8); **r4** adds `Lam`/`App`/`Fix` (full L1-in-Core-IR; closed-closure value model; R7-Q1/Q3) | **Accepted (r4)** |
 | **DN-01 — Packing Placement** | tradeoff study → schedule-staged decision | **Resolved → folded into RFC-0001 §4.1 + RFC-0004 §5** |
 | **DN-02 — Fungal Lexicon & Reserved Words** | the naming law + ratified surface vocabulary (themed vs conventional) feeding RFC-0006's grammar | **Resolved** (ratified 2026-06-10) |
 | **DN-03 — Lexicon Amendment: Surface Additions & Runtime Names (one name each)** | amends DN-02: adopt `consume`/`grow`, decline `embody` (keep `impl`), reserve `for`; **one name per term** (flat — rejects ADR-012 §7.6's canonical+alias scheme); the single Runtime names (`hypha`/`fuse`/`xloc`/`cyst`/`graft`/`forage`/`backbone`/`mesh`/`tier`/`reclaim`) | **Resolved** (2026-06-10) |
@@ -39,7 +39,7 @@
 ## 2. Dependency DAG
 
 ```
-Survey ─► Foundation(r3) ─► RFC-0001 (r3) ─► { RFC-0002, RFC-0003, RFC-0004 (r2), RFC-0005, RFC-0006 (Accepted r4) ─► RFC-0007 (Accepted r4) ─► RFC-0011 (Accepted; r3 ENACTED) }
+Survey ─► Foundation(r3) ─► RFC-0001 (r4) ─► { RFC-0002, RFC-0003, RFC-0004 (r2), RFC-0005, RFC-0006 (Accepted r4) ─► RFC-0007 (Accepted r4) ─► RFC-0011 (Accepted; r3 ENACTED → r4 in RFC-0001) }
                                │
                                └─► DN-01 (Resolved) ─► RFC-0001 §4.1, RFC-0004 §5
 

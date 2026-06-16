@@ -8,6 +8,31 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (Phase 4 — RFC-0001 r4 ENACTED: Lam/App/Fix in L0; full L1-in-Core-IR)
+- **Functions + general recursion are folded into the trusted Core IR (RFC-0001 r4), completing
+  L1-in-Core-IR and retiring RFC-0007 §4.6's `Residual` for self-recursion entirely.** A
+  self-recursive, data-building, matching program now elaborates to a closed L0 term and runs on the
+  trusted reference interpreter + the M-210 differential.
+  - **RFC-0001 r3 → r4** (append-only; **supersedes the r3 §4.5 grammar**): §4.5 gains `Lam` + `App` +
+    `Fix` (RFC-0007 §4.1; **R7-Q1 resolved — a `Fix` node**); §4.2 gains the **function value model**
+    (maintainer-confirmed: the v0 surface is first-order, so `Lam`/`App`/`Fix` are **closed** —
+    application is capture-free substitution, **no environment-capturing closure value**, honoring
+    §4.7; capturing closures + partial application are a named later revision); §4.6's **cycle-ordering
+    is finished** (**R7-Q3 for identity** — a mutually-recursive declaration group now content-addresses
+    canonically + name-independently). RFC-0007 §4.6 `Residual` retired except mutual recursion +
+    dynamic guarantee indices; the `matured` totality gate (RFC-0007 §4.5) restated unchanged (the
+    interpreter clocks every `Fix` — a mis-classification gates packaging, never meaning).
+  - **Code:** `mycelium-core` (the three nodes + content-addressing + the canonical
+    `canonical_cycle_order`); `mycelium-interp` (small-step β-reduction CBV; `Fix` unfolds by
+    substitution under the fuel clock → non-productive recursion is an explicit `FuelExhausted`, never
+    a hang; applying a non-function / a bare-function result are explicit refusals);
+    `mycelium-l1::elab` (each reachable self-recursive function → `let f = Fix(f, λparams. body)`,
+    calls → curried `App`, non-recursive calls still inline; `for` → a synthesized self-recursive
+    `Fix` fold; **mutual recursion** → explicit `Residual`, deferred R7-Q3); `mycelium-lsp` walks.
+  - **Verified (NFR-7):** the M-210 differential extends to the recursive + `for` fragment (L1-eval ≡
+    elaborate→L0-interp on the `CoreValue` observable), with a mutual-recursion-refuses witness. 509
+    workspace tests pass; clippy clean; `cargo fmt` applied. (RFC-0001 r4 / RFC-0007 §4.6/§8 Meta)
+
 ### Changed (Phase 3 — exit gate RE-ASSERTED MET; both residuals closed)
 - **`docs/planning/phase-3.md` moves `Living draft → exit-gate met`.** With residuals **R1** (M-310
   text→`Node` path) and **R2** (RFC-0006/0007 ratified) both closed by the RFC-0011 r3 enactment, the §6

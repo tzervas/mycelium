@@ -4,7 +4,7 @@
 |---|---|
 | **RFC** | 0001 |
 | **Title** | Core IR & Metadata Schema |
-| **Status** | **Accepted** (r3 — folds the L1 **data-and-matching core** into the frozen kernel per **RFC-0011** (enacted 2026-06-15): the §4.5 grammar gains `Construct` + flat `Match` + `Alt`, §4.6 gains the content-addressed **data registry Σ** (`CtorRef = #T#i`), §4.2 gains the **data value `Datum`** + runtime sum `CoreValue`, §4.5 gains **WF6/WF7/WF8**, and §4.7 gains the **datum guarantee-summary** addendum. **Supersedes the r2 §4.5 node grammar** (append-only). `Lam/App/Fix` remain a named **r4** revision. r2 (§4.3 `Bound`, ADR-011) and r1 stand.) |
+| **Status** | **Accepted** (r4 — completes **L1-in-Core-IR** (enacted 2026-06-15): the §4.5 grammar gains `Lam` + `App` + `Fix` (RFC-0007 §4.1; R7-Q1 — a `Fix` node), §4.2 gains the **function value model** (closed `Lam`/`App`/`Fix` by substitution — no captured-environment closure, the v0 surface being first-order), and the **content-addressed cycle-ordering** (§4.6) is finished so mutually-recursive declaration groups hash canonically (R7-Q3 for identity). **Retires RFC-0007 §4.6's `Residual` for self-recursion entirely** (mutual recursion stays a deferred elaboration step). **Supersedes the r3 §4.5 node grammar** (append-only). r3 (data + flat `Match`, RFC-0011), r2 (§4.3 `Bound`, ADR-011), r1 stand.) |
 | **Type** | Foundational / normative |
 | **Date** | June 08, 2026 |
 | **Depends on** | *Mycelium Project Foundation* (r3): FR-M1/M3/M4/M5/M8, FR-S2, NFR-3/6/7, VR-1/2/3/4/5, SC-3/4, ADR-001/002/003/006/008 |
@@ -147,6 +147,27 @@ The static type is `Value<R>`; `meta` is runtime data. The split between what is
 > §4.8). This mirrors the L1 prototype's `L1Value` (`crates/mycelium-l1::eval`) so L1-eval and
 > L0-interp agree on the data fragment (NFR-7).
 
+> **r4 — the function value model (RFC-0007 §4.1; maintainer-confirmed 2026-06-15).** A `Lam` node
+> (§4.5) is a **function value** — a normal form, exactly as a saturated `Construct` is a data value.
+> **The v0 surface is first-order** (top-level named functions, W6-saturated calls, no nested lambdas
+> capturing locals, no partial application), so every elaborated `Lam` is **closed** (free only in its
+> parameter, the `Fix` self-name, and globals). The decisive consequence:
+> - **No environment-capturing closure value.** `App` reduces by **substitution** (the interpreter's
+>   existing capture-free substitution), and `Fix` unfolds by substitution under the fuel clock —
+>   `Fix(f,e) ⟶ e[f ↦ Fix(f,e)]`. This keeps the substitution interpreter intact and honors §4.7
+>   (recursion is through *definitions*, content-addressed, never a heap closure).
+> - **Identity is structural.** A `Lam`/`Fix` carries **no type annotation** in the L0 node (like
+>   `Let`; the post-typecheck core is untyped — the checker holds the types). Content-addressing is over
+>   the body under a de Bruijn binder (§4.6). The one accepted consequence: two structurally-identical
+>   closed lambdas of *different* param types (e.g. a bare identity at two widths) collide — a
+>   defensible α-equivalence, not a correctness issue (the interpreter needs no types).
+> - **Functions are not observable v0 results.** A `Lam`/`App`/`Fix` is intermediate; a v0 entry
+>   returns a representation or data value (the first-order surface has no function-typed `main`), so a
+>   bare-function result is an explicit refusal, never a silent observable.
+>
+> Capturing closures + partial application are a **named later revision** (when the surface gains
+> first-class functions); they would add a captured-environment closure value then.
+
 ### 4.3 Metadata schema (`Meta`)
 
 ```text
@@ -210,11 +231,30 @@ Node ::= Const { value: Value }
        | Swap  { src: Node, target: Repr, policy: PolicyRef }  // the ONLY Repr-changing node
        | Construct { ctor: CtorRef, args: [Node] }             // r3 (RFC-0011): saturated; SC-3-transparent
        | Match     { scrutinee: Node, alts: [Alt], default: Option<Node> }   // r3: flat
+       | Lam   { param: VarId, body: Node }                    // r4 (RFC-0007 §4.1): a function value
+       | App   { func: Node, arg: Node }                       // r4: application (curried, CBV)
+       | Fix   { name: VarId, body: Node }                     // r4: general recursion (R7-Q1: a node)
 
 Alt      ::= { ctor: CtorRef, binders: [VarId], body: Node }   // constructor arm
            | { lit:  Value,   body: Node }                     // literal arm — Binary{n}/Ternary{m}
 CtorRef  ::= "#" DeclHash "#" Nat                              // Unison #T#i — §4.6, RFC-0007 §4.2
 ```
+
+> **r4 (enacted) — `Lam` + `App` + `Fix` (RFC-0007 §4.1).** The grammar gains the three function /
+> recursion forms (this **supersedes the r3 grammar**, append-only), **retiring RFC-0007 §4.6's
+> elaboration `Residual` for self-recursion entirely**. `Lam` is a closed function value (§4.2); `App`
+> is curried call-by-value application; `Fix` (R7-Q1 — a node, not a recursive-`Let` flag) is general
+> recursion that unfolds by substitution under the interpreter's fuel clock (a non-productive recursion
+> is an explicit budget exhaustion, never a hang — RFC-0007 §4.5, CakeML). Param/self-name binders are
+> α-normalized (de Bruijn) for identity; there is no type annotation on the node (the checker holds the
+> types, like `Let`). **Mutual recursion** (`Fix` *groups* through ≥2 distinct definitions) stays a
+> deferred *elaboration* step (R7-Q3) — its content-addressed *identity* is fixed now (§4.6).
+>
+> **The `matured` totality gate (RFC-0007 §4.5) is unchanged** — restated for the recursion-in-L0
+> interaction: the interpreter **clocks every `Fix`** (so a wrong/aggressive totality checker can
+> mis-gate packaging but **never change meaning**); the structural totality checker, *outside* the
+> kernel, keeps gating `matured ⟹ total` (RFC-0004 §4). r4 makes the fuel-clocked L0 `Fix` the trusted
+> definition that gate sits on; no new mechanism.
 
 > **r3 (RFC-0011, enacted) — `Construct` + flat `Match`.** The grammar gains the two L1
 > data-and-matching forms (this **supersedes the r2 five-node grammar**, append-only). `Construct`
@@ -262,9 +302,12 @@ Consequence: two definitions differing only in representation paradigm have diff
 >   (declaration hash ‖ constructor index).
 > - **Self-recursive** declarations hash their own occurrences as a **cycle placeholder** (Unison):
 >   `Nat = Z | S(Nat)`'s `S` field is a back-reference, encoded as a placeholder, never the circular
->   final hash. *Mutually-recursive* groups hash as one cycle unit (one hashing unit, members ordered
->   by their placeholder-substituted hashes) — implemented structurally but **deferred/untested until
->   r4** (R7-Q3; the L1 prototype accepts only self-recursion), an honest scope line.
+>   final hash. *Mutually-recursive* groups hash as one cycle unit, **members ordered canonically by
+>   their placeholder-substituted hashes** — the Unison recipe, **finished in r4** (R7-Q3 for
+>   identity): a mutually-recursive group now content-addresses deterministically and
+>   *name-independently*. (The surface→registry *elaboration* of mutual recursion stays deferred — the
+>   L1 prototype accepts only self-recursion — but the *identity* is fixed now, so growing the surface
+>   later does not change existing hashes.)
 > - The registry is **environment, not term** (RFC-0007 §6): declarations are *not* L0 nodes, so the
 >   term grammar does not grow per data type, and **WF4 is preserved** — a `Construct`/`Match` node
 >   hashes over its structure **plus the `CtorRef` hashes it mentions** (de Bruijn binders for
@@ -351,6 +394,7 @@ A fifth paradigm kind (e.g., a future native-ternary-hardware representation, or
 - **r1 (solidified, this version):** **Accepted.** Packing moved from metadata to **schedule-staged** (§4.1, per DN-01 + T1.4); sparsity-as-static-refinement **resolved** (§4.4); §4.7 bound composition made **concrete** via ADR-010's two kernels (Accepted); §8 unresolved questions resolved with pointers. Remaining: the full term language, and the one confirming Liquid-Haskell `bundle` probe.
 - **r2 (this revision):** **Accepted.** §4.3 — `BoundBasis` factored out to a required companion of *every* `Bound` (r1 attached it to `CapacityBound` only), per **ADR-011**, reconciling the grammar with invariants M-I2/M-I3/M-I4 and RFC-0002 §3; `NormKind` registry enumerated `L1|L2|Linf|Rel`. **Supersedes** the r1 §4.3 `Bound` grammar. Surfaced as OQ-3/OQ-4 during M-010 schema ratification (#5).
 - **r3 (2026-06-15) — Accepted (the RFC-0011 fold, *enacted in lockstep with the code*).** Folds the L1 **data-and-matching core** into the frozen kernel (the named revision, RFC-0006 §4.4 step 2 / RFC-0007 §9; staged ahead of an r4 that adds `Lam/App/Fix`): **§4.5** gains `Construct` + flat `Match` + `Alt` (**supersedes the r2 five-node grammar**) and **WF6/WF7/WF8**; **§4.6** gains the content-addressed **data registry Σ** (`CtorRef = #T#i`, Unison self-recursive placeholder hashing; mutual recursion implemented-but-deferred to r4 per R7-Q3); **§4.2** gains the **data value `Datum`** and the runtime sum **`CoreValue`** (maintainer decision: a *sibling* type — `Value<R>` unchanged — and a **meet-summary guarantee with no bound**); **§4.7** gains the datum guarantee-summary addendum. Enacted in `mycelium-core` (the registry, `Datum`/`CoreValue`, the nodes, content-addressing/serialization), `mycelium-interp` (`Construct`/`Match` evaluation, `eval_core`), and `mycelium-l1::elab` (Maranget→flat-`Match` lowering); validated by the M-210 differential (L1-eval ≡ elaborate→L0-interp on the data fragment). The four paradigm kinds stay closed (§4.1) and `Swap` semantics are unchanged (WF8). r2 (§4.3 `Bound`) and r1 stand. **Verifies:** FR-M1/M3, NFR-7, VR-3/VR-5, SC-3, LR-1; ADR-003. **How:** 497 workspace tests + the data-fragment differential with a mutant-witness.
+- **r4 (2026-06-15) — Accepted (completes L1-in-Core-IR, *enacted in lockstep*).** Adds the function / recursion forms (RFC-0007 §4.1; RFC-0011 §4.5's named r4), **retiring RFC-0007 §4.6's `Residual` for self-recursion entirely**: **§4.5** gains `Lam` + `App` + `Fix` (**supersedes the r3 grammar**; R7-Q1 — a `Fix` node); **§4.2** gains the **function value model** (maintainer decision: closed `Lam`/`App`/`Fix` by substitution — the v0 surface is first-order, so **no captured-environment closure value**; capturing closures + partial application are a named later revision); **§4.6**'s cycle-ordering is **finished** (R7-Q3 for identity — a mutually-recursive declaration group now content-addresses canonically + name-independently). The `matured` totality gate (RFC-0007 §4.5) is restated, unchanged: the interpreter clocks every `Fix`, so a mis-classification gates packaging, never meaning. Enacted in `mycelium-core` (the three nodes + the canonical cycle ordering), `mycelium-interp` (β-reduction + `Fix` unfolding under the fuel clock), and `mycelium-l1::elab` (self-recursion → `Fix`, calls → curried `App`, `for` → a synthesized `Fix` fold; **mutual recursion** → explicit `Residual`, deferred R7-Q3). Validated by the M-210 differential extended to the recursive + `for` fragment. **Verifies:** NFR-7, VR-5, SC-3, LR-1; RFC-0007 §4.1/§4.5; ADR-003. **How:** 509 workspace tests + the recursive differential with a mutual-recursion-refuses witness.
 - Maintain as append-only with status transitions (Draft → Accepted → Superseded), mirroring the ADR discipline (Foundation Meta).
 - On acceptance, add a one-line forward-pointer in Foundation §5.2 noting that RFC-0001 supersedes that sketch's packing placement, to prevent divergence.
 - Re-validate §4.7 once ADR-010 is ratified; promote composed-result default from `Declared` to the foundation's actual composition rules.
