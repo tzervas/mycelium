@@ -20,6 +20,13 @@ corpus, not released software. Versioning will begin when the kernel does.
   grounded/cited (no hallucination), projection-not-parallel-truth (no drift — ADR-003),
   human-in-the-loop, append-only provenance. Full pipeline design + tooling is a fresh session, tracked
   **M-363** (Phase 8). Registered in `Doc-Index.md`.
+- **Added (future-planning):** a fourth output — **fully-automated documentation + API reference** (the
+  most automatable: pure projection from code + schemas + the M-359 nodule-header metadata; rustdoc-first,
+  Mycelium-lang doc-comments later; shipped free + served live/LSP-hover) — and a **format quality bar**
+  (note §4.1): "clean · presentable · legible · intelligible · digestible" made a **checkable** contract
+  (one consistent template; index→detail navigation; progressive-disclosure graded depth reusing
+  RFC-0013's levels; checked inline examples; dual human/machine projection — G11; legibility/accessibility
+  by construction; **undocumented is flagged, never invented** — the doc analogue of never-silent G2).
 
 ### Added (RFC-0015 — 2026-06-16: Automatic Baseline Diagnostics & Recovery, Draft)
 - **RFC-0015 (Draft, Proposed)** captures the DynEL **automated-baseline** design point the maintainer

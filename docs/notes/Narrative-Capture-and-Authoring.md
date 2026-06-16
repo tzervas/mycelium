@@ -65,8 +65,41 @@ auto-publish):
   reader-facing projection of the **RFC reference-level designs + grammar + schemas + the lexicon**. A
   *projection of* the spec (like RFC-0013's "a file is a projection of the canonical declaration"), so it
   cannot drift from the corpus — regenerated, not hand-maintained in parallel.
+- **(d) Documentation & API reference — *fully* automated.** The most automatable output, because it is
+  *pure projection from the code + schemas + metadata*, with no interpretive layer: per-`nodule`/`phylum`
+  API docs generated from the **doc-comments + the structured nodule header** (M-359 — `@summary`,
+  `@version`, `@license`, authors), the **JSON schemas** (`docs/spec/schemas/`), and the public surface a
+  `mycelium-proj.toml` declares. Rust-first now (`rustdoc` over the crates), Mycelium-lang's own
+  doc-comments later (dogfooding). **Fully automated** is the *goal* here (the source is already
+  normative); the only human gate is reviewing the *generator/templates*, not each page.
 
-Both the book and the manual **ship free with the language** in digital formats (HTML/PDF/EPUB).
+Outputs (b)–(d) **ship free with the language** in digital formats (HTML/PDF/EPUB); (d) is also served
+live (a browsable site, in-editor hover via the LSP).
+
+### 4.1 Format & quality bar (clean · presentable · legible · intelligible · digestible)
+
+Generation is necessary but **not sufficient** — generated docs are infamously ugly, and "fully
+automated" is worthless if the result is unreadable. The output must clear a deliberate quality bar, and
+that bar is itself a *checkable contract* (the toolchain, M-361, can lint it), not a hope:
+
+- **One consistent, reviewed template.** A single predictable structure and visual language across blog /
+  book / manual / API ref — a reader learns the shape once.
+- **Navigable: index → detail, always.** The `Doc-Index` / `Glossary` "summarized index that points into
+  the detail" pattern, applied everywhere; every page reachable in a few clicks; a search index.
+- **Progressive disclosure (graded depth).** Reuse RFC-0013's `minimal / medium / detailed` **level**
+  idea for *docs*: a reader picks how deep to go — a one-line summary, the working explanation, or the
+  full normative detail — over *one* truth, never three divergent ones.
+- **Worked examples inline.** Every concept carries a runnable example (the Example Programs Reference is
+  the source); examples are *checked* (they compile/run), so the docs can't rot.
+- **Dual human + machine projection (G11).** Human formats (HTML/PDF/EPUB) *and* a structured machine form
+  (JSON/JSONL) for search/tooling/LSP hover — two renderers of one content-addressed truth (RFC-0013's
+  posture), sharing identity (ADR-003), so links are stable and never dead.
+- **Legible by construction.** Readable typography, real code highlighting, accessible semantic HTML (alt
+  text, headings, contrast), responsive layout. Legibility is part of "honest" — a true statement nobody
+  can read isn't communicated.
+- **Honest like the rest (never-silent for docs).** A missing/undocumented item is **flagged**, never
+  papered over with invented prose; an API doc statement traces to the code/spec it projects (no
+  hallucinated descriptions). "Undocumented" is an explicit, visible state — the doc analogue of G2.
 
 ## 5. Honesty constraints on automated authoring (non-negotiable)
 
@@ -95,6 +128,15 @@ The automation is held to the **same** rules as the language it documents:
 
 ## Meta — changelog
 
+- **2026-06-16 — Added fully-automated docs + API reference + the format quality bar.** Per the
+  maintainer's future-planning addition: a fourth output **(d) Documentation & API reference — *fully*
+  automated** (the most automatable, pure projection from code + schemas + the M-359 nodule-header
+  metadata; rustdoc now, Mycelium-lang doc-comments later; shipped free + served live/LSP-hover), and a
+  new **§4.1 Format & quality bar** making "clean · presentable · legible · intelligible · digestible" a
+  *checkable* contract (one consistent template; index→detail navigation; progressive-disclosure graded
+  depth reusing RFC-0013's levels; checked inline examples; dual human/machine projection — G11/ADR-003;
+  legibility/accessibility by construction; and "undocumented is flagged, never invented" — the doc
+  analogue of never-silent G2). Folded into M-363. Append-only.
 - **2026-06-16 — Created (initial capture).** Records the maintainer's intent (2026-06-16) to capture
   enough development narrative — decisions, struggles, problems solved, the how **and** why — to enable
   **partially-to-fully automated** authoring of project **blog** posts, a **language book**, and a
