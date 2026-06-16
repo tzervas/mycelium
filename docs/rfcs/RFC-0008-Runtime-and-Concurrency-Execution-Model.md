@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0008 |
-| **Status** | **Accepted** (2026-06-16 — maintainer sign-off; the Runtime-tier grounding ADR-012 §7.3 required. RT1–RT7 and the §4 model are now **normative**. Enactment is staged: the budget-unification slice — RFC-0014 §4.8 — landed first (M-353); the concurrency/supervision track — per-task budgets, cancellation, cross-task propagation, `reclaim` — is the §4.7 revision in progress, M-355.) |
+| **Status** | **Accepted** (2026-06-16 — maintainer sign-off; the Runtime-tier grounding ADR-012 §7.3 required. RT1–RT7 and the §4 model are now **normative**. Enactment is staged: the budget-unification slice (RFC-0014 §4.8) landed as **M-353**; the route → observability-sink binding (RFC-0013 §8) as **M-354**; the §4.7 **concurrency-composition** primitives — per-task budgets, cancellation, cross-task propagation, `reclaim` bounded-cascade supervision — as **M-356**. The task **scheduler/executor + the RT2 sequentialization differential** are the R1 runtime, **M-357** (next).) |
 | **Type** | Foundational / normative (once Accepted) |
 | **Date** | June 10, 2026 |
 | **Depends on** | RFC-0004 (single-node execution model — **extended, not changed**); RFC-0001 (Value/`Meta`/guarantee lattice, WF1–WF5); RFC-0005 (the one selection mechanism + EXPLAIN); RFC-0006 (S1–S6, LR-4/LR-8/LR-9); RFC-0007 (totality / `matured`); RFC-0002 (`ProbabilityBound`, ADR-010 δ-kernel); ADR-012 §7.3 (the gap this fills); DN-02 (naming law); research **T4.1–T4.6** (`research/04-runtime-concurrency-RECORD.md`) |
