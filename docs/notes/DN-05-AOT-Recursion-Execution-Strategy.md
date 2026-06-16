@@ -143,11 +143,20 @@ This sequencing fixes the *correctness* hazard (the abort) with one contained ch
   (a property on the IR) or in the env-machine loop? Prefer the loop (keeps the IR unbloated).
 - **DN05-Q4 — native limit shape.** What is the native path's explicit deep-recursion error
   (segmented-stack overflow → trap → error), and does it share the env-machine's limit semantics?
-- **DN05-Q5 — dynamic budget mechanism (§2.4).** How is "safe depth" detected *cleanly and
-  cross-platform* (Linux/macOS `getrlimit`/`pthread`; Windows differs) without bloat or fragile
-  `unsafe`? What safety margin, how is the per-frame cost calibrated (compile-time constant vs a tiny
-  runtime probe), and is the budget re-evaluated per call or once per thread? The `DepthBudget` trait +
-  conservative fallback is the shape; the detection backend is the open part.
+- **DN05-Q5 — dynamic budget mechanism (§2.4). → Resolved (2026-06-16, M-349).** Enacted in
+  `mycelium-mlir::budget`. **Resource:** post-trampoline the control stack is on the **heap**, so the
+  budget is a policy over **memory** (not host stack); the ceiling is derived from detected *memory
+  headroom*. **Detection:** **zero-`unsafe`, pure-`std` `/proc`** (Linux) — `MemAvailable`
+  (`/proc/meminfo`), capped by a finite `RLIMIT_AS` (`/proc/self/limits`); no FFI, no SP-reading, so
+  ADR-014's "minimal `unsafe`" is satisfied with *none*. Non-Linux / parse-failure ⇒ the conservative
+  static fallback (the prior 200 000), never a guess. **Margin & calibration:** 70 % of headroom ÷ a
+  **conservative compile-time per-frame estimate** (1 KiB — deliberately over-counts so the depth
+  *under*-shoots affordable memory; `Declared`, caller-overridable — *not* a runtime probe, KISS),
+  clamped to `[10 000, 2 000 000]`. **Cadence:** resolved **per `run_core` call** (a couple of small
+  file reads — cheap; no per-unfold cost). **EXPLAIN:** the chosen ceiling + its basis are an
+  inspectable `DepthResolution`/`DepthBasis` (`aot::default_depth_budget`), so it is never an opaque
+  constant (G2). *Windows/macOS detection and cgroup-limit awareness remain honest follow-ups (static
+  fallback today); native-path **stack** detection is DN05-Q4 / M-348, reusing this trait.*
 
 ## 6. Honest scope (VR-5)
 
@@ -188,3 +197,18 @@ AOT env-machine is a bounded-depth differential path — stated, not hidden.
   Priority **#1** (native managed stack) is banked as a normative requirement in RFC-0004 §2; the
   **§2.4 dynamic** budget (derive `max_depth` from headroom) remains the deferred policy (DN05-Q5) —
   the fixed 200 000 default is conservative and configurable. Append-only.
+- **2026-06-16 — §2.4 dynamic budget ENACTED (DN05-Q5 resolved, M-349).** `mycelium-mlir::budget`: a
+  small `DepthBudget` trait → `DepthResolution { max_depth, basis }`. The default `AutoDepthBudget`
+  derives the env-machine's control-stack ceiling from **detected memory headroom** (the honest
+  post-trampoline resource — the control stack is on the heap): `MemAvailable` capped by a finite
+  `RLIMIT_AS`, read via **pure-`std` `/proc`** (Linux) — **zero `unsafe`** (ADR-014 satisfied with
+  none), spend 70 % ÷ a conservative 1 KiB/frame estimate, clamp to `[10 000, 2 000 000]`. Non-Linux /
+  any failure ⇒ the conservative static fallback (200 000), never a guess. The basis is `EXPLAIN`-able
+  (`DepthBasis` `Display`; `aot::default_depth_budget`; surfaced by `xtask recursion-probe`) — no black
+  box (G2); the limit stays an explicit `EvalError::DepthLimit` — never an abort/hang. `run_core` now
+  resolves it dynamically; `run_core_with_budget` keeps the explicit override. Measured on this host
+  (`recursion-probe`): `MemAvailable` ≈ 15.99 GB → raw ≈ 10.9M, clamped to the 2 000 000 ceiling (vs
+  the prior fixed 200 000) — and a constrained host tightens *below* the fallback (unit-tested at 256
+  MiB ⇒ ≈ 183k). A property test bounds the derivation (`[floor, ceil]`, monotone in headroom) for all
+  inputs incl. saturation. The trusted interpreter is unchanged; the three-way differential holds
+  (NFR-7). Per-frame cost is `Declared`/over-counted (VR-5), not `Proven`. Append-only.
