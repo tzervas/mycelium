@@ -8,6 +8,18 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 3/4 — M-310 real LSP document sync, on the now-complete text→Node→L0 pipeline)
+- **`mycelium-lsp` gains real document sync (`sync` module + `serve` wiring).** With the surface→L0
+  pipeline complete (RFC-0011 r3 / RFC-0001 r4), the LSP server now handles
+  `textDocument/didOpen`/`didChange`/`didClose` (full sync — `TextDocumentSyncKind.Full`, advertised
+  in `initialize`), re-analyzing the whole document through **parse → check** on each edit and pushing
+  `textDocument/publishDiagnostics` (cleared on a clean edit / close). **Honest spans (VR-5):** a
+  *parse* diagnostic carries a **real** `line:col` range (the lexer's `Pos`); a *check* diagnostic is
+  located at its `fn <name>` declaration with the function name in `data.breadcrumb` (the checker
+  tracks the failing function, not yet the failing sub-expression span — flagged, never fabricated).
+  `mycelium-lsp` now depends on `mycelium-l1` for the text→`Node` path (no cycle). Closes the M-310
+  residual that the RFC-0011 enactment unblocked; phase-3 M-310 row → Done. 515 workspace tests pass.
+
 ### Changed (Phase 4 — RFC-0001 r4 ENACTED: Lam/App/Fix in L0; full L1-in-Core-IR)
 - **Functions + general recursion are folded into the trusted Core IR (RFC-0001 r4), completing
   L1-in-Core-IR and retiring RFC-0007 §4.6's `Residual` for self-recursion entirely.** A

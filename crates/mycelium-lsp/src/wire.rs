@@ -8,12 +8,15 @@
 //! `DiagnosticSeverity` codes, the `textDocument/publishDiagnostics` notification builder, and a
 //! minimal [`serve`] lifecycle loop (`initialize` → capabilities, `shutdown`/`exit`).
 //!
-//! What it deliberately is **not** (honest scope, VR-5): a document-syncing server. The facade
-//! analyzes **Core IR nodes**, not source text — there is no text → `Node` path yet, so the server
-//! advertises `TextDocumentSyncKind.None` and the diagnostic `range` is a **zero placeholder** with
-//! the navigable location carried as the structured breadcrumb in `data.breadcrumb`. Real source
-//! spans (and `didOpen`/`didChange` document sync) arrive with the L1 surface (M-320); this layer is
-//! ready to carry them without a protocol change.
+//! Since M-310's document-sync step (RFC-0011 r3 / RFC-0001 r4 gave the surface a text → `Node`
+//! path), [`serve`] is a **document-syncing server**: it advertises `TextDocumentSyncKind.Full`,
+//! handles `didOpen`/`didChange`/`didClose`, and pushes diagnostics computed through
+//! [`crate::sync`] (parse → check). **Honest about spans (VR-5):** a *parse* diagnostic carries a
+//! **real** `line:col` range from the lexer; a *check* diagnostic is located at its function's
+//! `fn <name>` declaration (the checker tracks the failing function, not yet the failing
+//! sub-expression span — flagged, never fabricated) with the function name in `data.breadcrumb`. The
+//! facade's node-analysis diagnostics ([`to_lsp_diagnostic`]) still use the zero-range + breadcrumb
+//! shape (they analyze Core IR nodes, which carry no spans).
 
 use std::io::{self, BufRead, Write};
 
@@ -79,14 +82,15 @@ pub fn publish_diagnostics_notification(uri: &str, feedback: &Feedback) -> Value
     })
 }
 
-/// The `initialize` result: the server's advertised capabilities. Honestly minimal —
-/// `textDocumentSync: 0` (`TextDocumentSyncKind.None`) because there is no text → `Node` path yet
-/// (the facade analyzes Core IR nodes); diagnostics are pushed via [`publish_diagnostics_notification`].
+/// The `initialize` result: the server's advertised capabilities. Now that the text → `Node`
+/// pipeline exists (M-310; RFC-0011 r3 / RFC-0001 r4), the server advertises **`textDocumentSync: 1`**
+/// (`TextDocumentSyncKind.Full`) — it re-analyzes the whole document on each edit ([`crate::sync`])
+/// and pushes diagnostics via [`publish_diagnostics_notification`] / `crate::sync::publish_for_source`.
 #[must_use]
 pub fn initialize_result() -> Value {
     json!({
         "capabilities": {
-            "textDocumentSync": 0,
+            "textDocumentSync": 1,
         },
         "serverInfo": { "name": SERVER_NAME, "version": env!("CARGO_PKG_VERSION") },
     })
@@ -149,17 +153,17 @@ fn error_response(id: Value, code: i64, message: &str) -> Value {
     json!({ "jsonrpc": "2.0", "id": id, "error": { "code": code, "message": message } })
 }
 
-/// Drive the minimal LSP lifecycle over `reader`/`writer` (stdio in the real server): answer
-/// `initialize` with [`initialize_result`], acknowledge `shutdown` with a null result, stop on
-/// `exit`, and reply to any other **request** (a message carrying an `id`) with JSON-RPC
-/// `MethodNotFound` (-32601) — never silently. Unknown **notifications** (no `id`) are ignored, as
-/// the protocol requires. Returns when the stream ends or `exit` is received.
+/// Drive the LSP lifecycle **with document sync** (M-310) over `reader`/`writer` (stdio in the real
+/// server): answer `initialize` with [`initialize_result`], acknowledge `shutdown`, stop on `exit`,
+/// reply to any other **request** (a message carrying an `id`) with JSON-RPC `MethodNotFound`
+/// (-32601) — never silently — and ignore unknown notifications, as the protocol requires.
 ///
-/// This is the handshake skeleton: it does not yet synchronize documents (no text → `Node` path —
-/// see the module note), so it does not, on its own, emit diagnostics. The
-/// [`publish_diagnostics_notification`] builder is the channel the document path will push through
-/// once the L1 surface lands.
+/// On `textDocument/didOpen` and `didChange` (full sync) it stores the document's text and **pushes
+/// a `textDocument/publishDiagnostics`** computed through the text → `Node` pipeline
+/// ([`crate::sync::source_diagnostics`]: parse → check); `didClose` drops the document and clears its
+/// diagnostics. Returns when the stream ends or `exit` is received.
 pub fn serve<R: BufRead, W: Write>(reader: &mut R, writer: &mut W) -> io::Result<()> {
+    let mut store = crate::sync::DocumentStore::new();
     while let Some(msg) = read_message(reader)? {
         let method = msg
             .get("method")
@@ -170,6 +174,35 @@ pub fn serve<R: BufRead, W: Write>(reader: &mut R, writer: &mut W) -> io::Result
             ("initialize", Some(id)) => write_message(writer, &response(id, initialize_result()))?,
             ("shutdown", Some(id)) => write_message(writer, &response(id, Value::Null))?,
             ("exit", _) => break,
+
+            // --- document sync (notifications; M-310) ---
+            ("textDocument/didOpen", _) => {
+                if let Some((uri, text)) = did_open_params(&msg) {
+                    store.set(uri.clone(), text.clone());
+                    write_message(writer, &crate::sync::publish_for_source(&uri, &text))?;
+                }
+            }
+            ("textDocument/didChange", _) => {
+                if let Some((uri, text)) = did_change_params(&msg) {
+                    store.set(uri.clone(), text.clone());
+                    write_message(writer, &crate::sync::publish_for_source(&uri, &text))?;
+                }
+            }
+            ("textDocument/didClose", _) => {
+                if let Some(uri) = doc_uri(&msg) {
+                    store.remove(&uri);
+                    // Clear the document's diagnostics (an empty list, per LSP).
+                    write_message(
+                        writer,
+                        &serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "method": "textDocument/publishDiagnostics",
+                            "params": { "uri": uri, "diagnostics": [] },
+                        }),
+                    )?;
+                }
+            }
+
             // Any other request must get a response (never a silent hang); -32601 = MethodNotFound.
             (other, Some(id)) => write_message(
                 writer,
@@ -180,6 +213,33 @@ pub fn serve<R: BufRead, W: Write>(reader: &mut R, writer: &mut W) -> io::Result
         }
     }
     Ok(())
+}
+
+/// `params.textDocument.uri` of a document notification.
+fn doc_uri(msg: &Value) -> Option<String> {
+    msg.get("params")?
+        .get("textDocument")?
+        .get("uri")?
+        .as_str()
+        .map(str::to_owned)
+}
+
+/// `(uri, text)` from a `didOpen` notification (`params.textDocument.{uri, text}`).
+fn did_open_params(msg: &Value) -> Option<(String, String)> {
+    let td = msg.get("params")?.get("textDocument")?;
+    let uri = td.get("uri")?.as_str()?.to_owned();
+    let text = td.get("text")?.as_str()?.to_owned();
+    Some((uri, text))
+}
+
+/// `(uri, full text)` from a `didChange` notification under **full sync**: the whole document is the
+/// last content change's `text` (`params.contentChanges[..].text`); the uri is
+/// `params.textDocument.uri`.
+fn did_change_params(msg: &Value) -> Option<(String, String)> {
+    let uri = doc_uri(msg)?;
+    let changes = msg.get("params")?.get("contentChanges")?.as_array()?;
+    let text = changes.last()?.get("text")?.as_str()?.to_owned();
+    Some((uri, text))
 }
 
 #[cfg(test)]
@@ -278,11 +338,55 @@ mod tests {
         let init = read_message(&mut rout).unwrap().unwrap();
         assert_eq!(init["id"], 1);
         assert_eq!(init["result"]["serverInfo"]["name"], SERVER_NAME);
-        assert_eq!(init["result"]["capabilities"]["textDocumentSync"], 0);
+        assert_eq!(init["result"]["capabilities"]["textDocumentSync"], 1); // Full (M-310)
         let shut = read_message(&mut rout).unwrap().unwrap();
         assert_eq!(shut["id"], 2);
         assert_eq!(shut["result"], Value::Null);
         // Nothing after the shutdown response (exit produced no message).
+        assert_eq!(read_message(&mut rout).unwrap(), None);
+    }
+
+    #[test]
+    fn serve_publishes_diagnostics_on_did_open_and_did_change() {
+        // didOpen a colony with a type error → a `check` diagnostic; didChange to a clean colony →
+        // the diagnostics clear. The mutant-witness: a server ignoring didChange would keep stale
+        // diagnostics (this asserts the second publish is empty).
+        let mut input = Vec::new();
+        write_message(
+            &mut input,
+            &json!({
+                "jsonrpc": "2.0", "method": "textDocument/didOpen",
+                "params": { "textDocument": {
+                    "uri": "mem://x", "languageId": "mycelium", "version": 1,
+                    "text": "colony d\nfn bad() -> Binary{8} = add(0b0000_0001, 0b0000_0010)"
+                }}
+            }),
+        )
+        .unwrap();
+        write_message(
+            &mut input,
+            &json!({
+                "jsonrpc": "2.0", "method": "textDocument/didChange",
+                "params": {
+                    "textDocument": { "uri": "mem://x", "version": 2 },
+                    "contentChanges": [ { "text": "colony d\nfn main() -> Binary{8} = not(0b0000_0001)" } ]
+                }
+            }),
+        )
+        .unwrap();
+        write_message(&mut input, &json!({ "jsonrpc": "2.0", "method": "exit" })).unwrap();
+
+        let mut reader = Cursor::new(input);
+        let mut out = Vec::new();
+        serve(&mut reader, &mut out).unwrap();
+
+        let mut rout = Cursor::new(out);
+        let open = read_message(&mut rout).unwrap().unwrap();
+        assert_eq!(open["method"], "textDocument/publishDiagnostics");
+        assert_eq!(open["params"]["uri"], "mem://x");
+        assert_eq!(open["params"]["diagnostics"][0]["code"], "check");
+        let change = read_message(&mut rout).unwrap().unwrap();
+        assert_eq!(change["params"]["diagnostics"], json!([])); // cleared on the clean edit
         assert_eq!(read_message(&mut rout).unwrap(), None);
     }
 

@@ -146,6 +146,7 @@ dependencies = [
  "mycelium-cert",
  "mycelium-core",
  "mycelium-interp",
+ "mycelium-l1",
  "mycelium-select",
  "serde_json",
 ]
