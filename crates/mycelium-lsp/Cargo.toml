@@ -24,3 +24,10 @@ mycelium-l1 = { path = "../mycelium-l1" }
 # The LSP wire protocol (M-310): JSON-RPC 2.0 framing + LSP-shaped diagnostics over stdio. The same
 # pinned serde_json the rest of the workspace uses (mycelium-core/-cert/-select/...).
 serde_json = "1"
+# M-345 / RFC-0013 structured diagnostics: the diagnostic record + reified error-handling policy
+# derive (de)serialization for the dual human/JSON projection (G11) and the file-as-projection of the
+# canonical content-addressed declaration (RFC-0013 §4.7). Same pinned serde the workspace uses.
+serde = { version = "1", features = ["derive"] }
+# Content-addressing the diagnostic record + policy (RFC-0013 §4.3/§4.4; ADR-003) — the same BLAKE3
+# the kernel uses for `ContentHash`, here in the tooling layer (no kernel dependency added; KC-3).
+blake3 = "1"

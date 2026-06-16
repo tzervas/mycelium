@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0013 |
-| **Status** | **Accepted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design is normative. Implementation (M-345) is the Rust tooling-layer build — `mycelium-lsp` / `xtask`, no kernel change.) |
+| **Status** | **Accepted — Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design is normative. **Enacted 2026-06-16 — M-345** (#107): the error-class registry (no `eval`, §4.5 X1), the content-addressed diagnostic record with dual human/JSON round-trip projection (G11, §4.3), graded levels with the allowlisted detailed tier (§4.5 X2), the reified `on <ErrorClass> => {…}` policy with content-addressed `PolicyRef` (§4.4), and the representation-crossing audit view (§4.6) are code in `crates/mycelium-lsp/src/diagnostics`. Verified by the §5 suite incl. the central never-silent invariant test. No kernel change (KC-3).) |
 | **Type** | Foundational / normative (once Accepted) — tooling/observability-layer feature; no kernel change |
 | **Date** | 2026-06-16 |
 | **Feeds** | RFC-0008 (runtime/observability — the diagnostic stream lives here); the AI co-author loop (M-330); the stdlib `diagnostics` candidate (M-346) |
@@ -339,6 +339,23 @@ invariants I1–I5 are verified, when the tooling lands, by:
 
 ## Meta — changelog
 
+- **2026-06-16 — Enacted (M-345).** The §4 design is code in `crates/mycelium-lsp/src/diagnostics`
+  (tooling layer; no kernel dependency — KC-3; no Python — ADR-007): `registry` (the error-class
+  registry — names looked up, never `eval`-ed, X1; v0 classes seeded from the existing lint codes +
+  `SwapError` family + `NotValidated`); `record` (the content-addressed `DiagnosticRecord`, BLAKE3
+  `content_id`, the dual human/JSON projection that round-trips, the graded `Level`s with the
+  `DETAILED_ALLOWLIST` detailed tier — X2, and the never-silent `present` renderer that returns the
+  error **unchanged** alongside the presentation — I1); `policy` (the reified `on <ErrorClass> =>
+  {message, tags, level, route}` policy, content-addressed `PolicyRef`, presentation/routing-only — I4,
+  plus a `PolicyFile` projection that re-validates classes through the registry — §4.7); and `audit`
+  (the representation-crossing audit view — every `swap` + from/to repr + honesty bound read off the
+  certificate and never upgraded — VR-5, location-independent — I5). Verified by `tests/diagnostics.rs`
+  (the §5 suite): the central **never-silent invariant** test (a battery of policies, incl. routed /
+  message-override / minimal-level, all leave the error propagating — I1/I2/I4), the round-trip
+  projection test (I3), the registry / no-`eval` test (X1, incl. whole-file rejection on an unknown
+  class), the allowlist test (X2, a secret-bearing field never reaches the record or its rendering),
+  and the audit-view tests (I5/VR-5, incl. an underivable crossing reporting `unknown`, never `Exact`).
+  `just check` green. Append-only.
 - **2026-06-16 — Accepted (maintainer sign-off).** Moved `Draft (Proposed) → Accepted`; the §4
   design (I1–I5, the §4.5 exclusions X1–X3) is normative. No design content changed on acceptance —
   the maintainer ratified the v0 scope exactly as drafted: presentation/routing only (recovery stays

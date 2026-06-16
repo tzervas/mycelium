@@ -8,6 +8,28 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — 2026-06-16: M-345 / RFC-0013 structured diagnostics, enacted)
+- **M-345 — RFC-0013 structured diagnostics & reified error policy: enacted** in
+  `crates/mycelium-lsp/src/diagnostics` (tooling layer; **no kernel change**, KC-3; no Python, ADR-007).
+  Four parts: the **error-class registry** (names looked up, **never `eval`-ed** — §4.5 X1; v0 classes
+  from the existing lint codes + `SwapError` family + `NotValidated`); the **content-addressed
+  diagnostic record** with a BLAKE3 `content_id` and a **dual human + JSON projection** that round-trips
+  (G11, §4.3), graded `minimal`/`medium`/`detailed` **levels** with an **allowlisted** detailed tier
+  (§4.5 X2), and the never-silent **`present`** renderer that returns the explicit error **unchanged**
+  alongside the presentation (§4.1 I1); the reified **`on <ErrorClass> => {message, tags, level,
+  route}` policy** (RFC-0005 pattern; content-addressed `PolicyRef`; presentation/routing only — I4),
+  with a `PolicyFile` projection that re-validates classes through the registry (file-as-projection,
+  §4.7); and the **representation-crossing audit view** (§4.6; routed from RFC-0012 R12-Q2) — every
+  `swap` + from/to repr + honesty bound **read off the certificate and never upgraded** (VR-5),
+  location-independent (I5).
+- **Verified** by `crates/mycelium-lsp/tests/diagnostics.rs` (RFC-0013 §5): the central **never-silent
+  invariant** (a battery of policies — routed / message-override / minimal-level / unrelated — all leave
+  the error propagating; I1/I2/I4), round-trip projection (I3), registry / no-`eval` (X1, incl.
+  whole-file rejection on an unknown class), the detailed-tier allowlist (X2, a secret-bearing field
+  never reaches the record or its rendering), and the audit view (I5/VR-5, incl. an underivable crossing
+  reporting `unknown`, never `Exact`). `just check` green. Advances NFR-2 / SC-5b and the M-330 AI
+  co-author loop. RFC-0013 status → **Accepted — Enacted**.
+
 ### Changed (Phase 4 — 2026-06-16: ratifications, RFC-0014 design decisions, M-343 totality completion)
 - **RFC-0013 — Structured Diagnostics & Reified Error Policy: `Draft (Proposed) → Accepted`** (maintainer
   sign-off). No design content changed on acceptance; the §4 invariants I1–I5 and the §4.5 exclusions
