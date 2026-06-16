@@ -8,6 +8,15 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (2026-06-16: M-361 Phase-8 toolchain epic decomposed — staged, PM)
+- **M-361 decomposed into five per-tool children** (the epic body's named tools), staged in
+  `tools/github/issues.yaml` as sub-issues of M-361: **M-364** (`mycfmt` formatter — M-142 grows up),
+  **M-365** (correctness/type-check driver — `myc-check` grows up), **M-366** (lint + auto-fix, incl. the
+  RFC-0015 baseline "class only logged" lint + the M-363 §4.1 doc quality-bar lint), **M-367** (security
+  checks as tooling — secrets/supply-chain/`wild`-audit), **M-368** (packaging/publishing:
+  `mycelium-proj.toml` → spore, ADR-013). `manifest-check.py` passes (78 issues); MILESTONES + idmap note
+  the gated-sync creation at the Phase-8 gate (the established staging → `gh-sync-all.sh` flow). No code.
+
 ### Added (2026-06-16: narrative & automated-authoring pipeline — design, M-363)
 - **`docs/spec/Narrative-Authoring-Pipeline.md`** (**Proposed**) — the M-363 pipeline design (design-first;
   **ratify before building**): a **one content-addressed doc IR → many renderers** architecture

@@ -59,8 +59,8 @@ ground is **flagged "undocumented," never invented** (§6 / G2). v0 generators:
   doc-comments later — dogfooding), the JSON schemas (`docs/spec/schemas/`), and the M-359 nodule
   headers/manifest; emits api-item IR nodes (signature + `@summary` + provenance). Missing doc-comment →
   an explicit "undocumented" node (not blank, not invented).
-- **`gen-manual` (output c, projection).** Projects the RFC *Reference-level* sections + the grammar EBNF
-  + the schemas + the Glossary into a normative manual IR; cross-references resolve to content addresses.
+- **`gen-manual` (output c, projection).** Projects the RFC *Reference-level* sections, the grammar EBNF,
+  the schemas, and the Glossary into a normative manual IR; cross-references resolve to content addresses.
 - **`gen-book` (output b, projection + light interpretation).** Sequences the RFC *Guide-level* sections,
   the Example Programs Reference, and the Glossary into a learner ordering; the interpretive glue is
   draft-then-review.
@@ -98,8 +98,8 @@ build pins the template content hash into each artifact (provenance, §6).
 
 ## 7. Placement in the toolchain (M-361)
 
-The pipeline is a **tool in the full-fat suite** (M-361), above the kernel (KC-3): it consumes the corpus
-+ code + schemas + M-359 metadata and emits artifacts + the quality-bar lint result. It runs in CI parity
+The pipeline is a **tool in the full-fat suite** (M-361), above the kernel (KC-3): it consumes the corpus,
+the code, the schemas, and M-359 metadata, and emits artifacts plus the quality-bar lint result. It runs in CI parity
 (`scripts/checks/`): the apiref/manual/book builds and the §4.1 lint are advisory in the design phase and
 become a release gate when the language ships free with its docs. Rust-first now (rustdoc over the
 crates); Mycelium-lang self-hosted doc-comments later.

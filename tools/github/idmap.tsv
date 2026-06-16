@@ -101,3 +101,5 @@ M-359	131	4677946202
 M-361	132	4677946623
 M-362	133	4677946993
 M-363	134	4677947454
+# M-361 decomposition (M-364..M-368) staged in issues.yaml 2026-06-16; numbers assigned on the next
+# gh-sync-all.sh run at the Phase-8 gate (sub-issues of M-361 #132).
