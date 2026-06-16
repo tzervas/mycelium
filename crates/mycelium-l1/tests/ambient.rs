@@ -11,11 +11,11 @@
 
 use mycelium_core::ContentHash;
 use mycelium_interp::Interpreter;
-use mycelium_l1::{check_and_resolve, check_colony, elaborate, expand_to_source, parse, resolve};
+use mycelium_l1::{check_and_resolve, check_nodule, elaborate, expand_to_source, parse, resolve};
 
 /// Elaborate `src`'s `main` to L0 and return its content hash (the identity that I2 preserves).
 fn elaborated_hash(src: &str) -> ContentHash {
-    let env = check_colony(&parse(src).unwrap_or_else(|e| panic!("parse `{src}`: {e}")))
+    let env = check_nodule(&parse(src).unwrap_or_else(|e| panic!("parse `{src}`: {e}")))
         .unwrap_or_else(|e| panic!("check `{src}`: {e}"));
     let node = elaborate(&env, "main").unwrap_or_else(|e| panic!("elaborate `{src}`: {e}"));
     node.content_hash()
@@ -26,39 +26,39 @@ fn pairs() -> Vec<(&'static str, &'static str)> {
     vec![
         // Paradigm-less return + tagged-literal body (the dominant repetition killer).
         (
-            "colony d\ndefault paradigm Binary\nfn main() -> {8} = xor(0b1111_0000, 0b0000_1111)",
-            "colony d\nfn main() -> Binary{8} = xor(0b1111_0000, 0b0000_1111)",
+            "nodule d\ndefault paradigm Binary\nfn main() -> {8} = xor(0b1111_0000, 0b0000_1111)",
+            "nodule d\nfn main() -> Binary{8} = xor(0b1111_0000, 0b0000_1111)",
         ),
         // A bare decimal whose width comes from the return type (5 = 0b0000_0101).
         (
-            "colony d\ndefault paradigm Binary\nfn main() -> {8} = 5",
-            "colony d\nfn main() -> Binary{8} = 0b0000_0101",
+            "nodule d\ndefault paradigm Binary\nfn main() -> {8} = 5",
+            "nodule d\nfn main() -> Binary{8} = 0b0000_0101",
         ),
         // A bare decimal under a Ternary ambient (5 = balanced ternary 0+-- at width 4).
         (
-            "colony d\ndefault paradigm Ternary\nfn main() -> {4} = 5",
-            "colony d\nfn main() -> Ternary{4} = <0+-->",
+            "nodule d\ndefault paradigm Ternary\nfn main() -> {4} = 5",
+            "nodule d\nfn main() -> Ternary{4} = <0+-->",
         ),
         // Paradigm-less parameter + return through a call.
         (
-            "colony d\ndefault paradigm Binary\nfn flip(x: {8}) -> {8} = not(x)\nfn main() -> {8} = flip(0b1010_1010)",
-            "colony d\nfn flip(x: Binary{8}) -> Binary{8} = not(x)\nfn main() -> Binary{8} = flip(0b1010_1010)",
+            "nodule d\ndefault paradigm Binary\nfn flip(x: {8}) -> {8} = not(x)\nfn main() -> {8} = flip(0b1010_1010)",
+            "nodule d\nfn flip(x: Binary{8}) -> Binary{8} = not(x)\nfn main() -> Binary{8} = flip(0b1010_1010)",
         ),
         // A bare decimal as a call argument (width from the parameter type; 170 = 0b1010_1010).
         (
-            "colony d\ndefault paradigm Binary\nfn flip(x: {8}) -> {8} = not(x)\nfn main() -> {8} = flip(170)",
-            "colony d\nfn flip(x: Binary{8}) -> Binary{8} = not(x)\nfn main() -> Binary{8} = flip(0b1010_1010)",
+            "nodule d\ndefault paradigm Binary\nfn flip(x: {8}) -> {8} = not(x)\nfn main() -> {8} = flip(170)",
+            "nodule d\nfn flip(x: Binary{8}) -> Binary{8} = not(x)\nfn main() -> Binary{8} = flip(0b1010_1010)",
         ),
         // A `with paradigm` override block + a paradigm-less swap target — the block is pure scoping
         // and elaborates away (I1: the swap is the author's, not the ambient's).
         (
-            "colony d\ndefault paradigm Binary\nfn main() -> Ternary{6} = with paradigm Ternary { swap(0b1011_0010, to: {6}, policy: rt) }",
-            "colony d\nfn main() -> Ternary{6} = swap(0b1011_0010, to: Ternary{6}, policy: rt)",
+            "nodule d\ndefault paradigm Binary\nfn main() -> Ternary{6} = with paradigm Ternary { swap(0b1011_0010, to: {6}, policy: rt) }",
+            "nodule d\nfn main() -> Ternary{6} = swap(0b1011_0010, to: Ternary{6}, policy: rt)",
         ),
         // A bare-decimal operand whose width is pinned by the *other* operand (concrete anchor).
         (
-            "colony d\ndefault paradigm Binary\nfn main() -> {8} = xor(0b1111_0000, 15)",
-            "colony d\nfn main() -> Binary{8} = xor(0b1111_0000, 0b0000_1111)",
+            "nodule d\ndefault paradigm Binary\nfn main() -> {8} = xor(0b1111_0000, 15)",
+            "nodule d\nfn main() -> Binary{8} = xor(0b1111_0000, 0b0000_1111)",
         ),
     ]
 }
@@ -81,7 +81,7 @@ fn the_twins_observe_the_identical_value() {
     let interp = Interpreter::default();
     for (ambient, longhand) in pairs() {
         let run = |src: &str| {
-            let env = check_colony(&parse(src).unwrap()).unwrap();
+            let env = check_nodule(&parse(src).unwrap()).unwrap();
             let node = elaborate(&env, "main").unwrap();
             interp
                 .eval(&node)
@@ -107,7 +107,7 @@ fn the_twins_observe_the_identical_value() {
 fn expand_ambient_renders_a_faithful_longhand_twin() {
     // The M-142/LSP "expand ambient" projection: rendering the resolved twin to source and
     // re-elaborating it reproduces the original program's L0 (RFC-0012 §5).
-    let ambient = "colony d\ndefault paradigm Binary\nfn flip(x: {8}) -> {8} = not(x)\nfn main() -> {8} = flip(5)";
+    let ambient = "nodule d\ndefault paradigm Binary\nfn flip(x: {8}) -> {8} = not(x)\nfn main() -> {8} = flip(5)";
     let (_, twin) = check_and_resolve(&parse(ambient).unwrap()).expect("checks");
     let rendered = expand_to_source(&twin);
     assert!(
@@ -129,7 +129,7 @@ fn expand_ambient_renders_a_faithful_longhand_twin() {
 #[test]
 fn a_program_with_no_ambient_is_untouched() {
     // The feature is opt-in: resolution is the identity on a pre-RFC-0012 program.
-    let src = "colony d\nfn main() -> Binary{8} = not(0b1011_0010)";
+    let src = "nodule d\nfn main() -> Binary{8} = not(0b1011_0010)";
     let resolved = resolve(&parse(src).unwrap()).expect("resolves");
     assert_eq!(
         resolved,
@@ -146,8 +146,8 @@ fn a_paradigm_less_ascription_states_the_per_use_size() {
     // elaborates identically to the fully-tagged longhand (I2). Sizes stay explicit; no default
     // width (the v0 honesty principle is preserved).
     assert_eq!(
-        elaborated_hash("colony d\ndefault paradigm Binary\nfn main() -> Binary{8} = (5 : {8})"),
-        elaborated_hash("colony d\nfn main() -> Binary{8} = (0b0000_0101 : Binary{8})"),
+        elaborated_hash("nodule d\ndefault paradigm Binary\nfn main() -> Binary{8} = (5 : {8})"),
+        elaborated_hash("nodule d\nfn main() -> Binary{8} = (0b0000_0101 : Binary{8})"),
         "a `: {{N}}` ascription must pin the per-use size identically to longhand (R12-Q1)"
     );
 }
@@ -155,21 +155,21 @@ fn a_paradigm_less_ascription_states_the_per_use_size() {
 // --- never-silent refusals (§4.3/§4.4) -----------------------------------------------------------
 
 fn check_err(src: &str) -> String {
-    check_colony(&parse(src).expect("parses"))
+    check_nodule(&parse(src).expect("parses"))
         .expect_err("must refuse")
         .message
 }
 
 #[test]
 fn a_paradigm_less_repr_with_no_ambient_is_unresolved_ambient() {
-    let msg = check_err("colony d\nfn main() -> {8} = 0b1011_0010");
+    let msg = check_err("nodule d\nfn main() -> {8} = 0b1011_0010");
     assert!(msg.contains("no enclosing ambient"), "got: {msg}");
 }
 
 #[test]
 fn a_shape_that_does_not_fit_the_ambient_is_a_paradigm_shape_mismatch() {
     // `{8}` (a single size) cannot fill a `Dense` ambient (which needs `{dim, scalar}`).
-    let msg = check_err("colony d\ndefault paradigm Dense\nfn main() -> {8} = 0b1011_0010");
+    let msg = check_err("nodule d\ndefault paradigm Dense\nfn main() -> {8} = 0b1011_0010");
     assert!(
         msg.contains("does not fit the `Dense` ambient"),
         "got: {msg}"
@@ -178,7 +178,7 @@ fn a_shape_that_does_not_fit_the_ambient_is_a_paradigm_shape_mismatch() {
 
 #[test]
 fn a_bare_decimal_under_dense_has_no_encoding() {
-    let msg = check_err("colony d\ndefault paradigm Dense\nfn main() -> Dense{4, F32} = 5");
+    let msg = check_err("nodule d\ndefault paradigm Dense\nfn main() -> Dense{4, F32} = 5");
     assert!(msg.contains("no `Dense` encoding"), "got: {msg}");
 }
 
@@ -186,7 +186,7 @@ fn a_bare_decimal_under_dense_has_no_encoding() {
 fn a_bare_decimal_with_no_width_context_is_unresolved_width() {
     // A swap *source* is unconstrained by the target, so a bare decimal there has no width.
     let msg = check_err(
-        "colony d\ndefault paradigm Binary\nfn main() -> Ternary{6} = swap(5, to: Ternary{6}, policy: rt)",
+        "nodule d\ndefault paradigm Binary\nfn main() -> Ternary{6} = swap(5, to: Ternary{6}, policy: rt)",
     );
     assert!(msg.contains("UnresolvedWidth"), "got: {msg}");
 }
@@ -194,7 +194,7 @@ fn a_bare_decimal_with_no_width_context_is_unresolved_width() {
 #[test]
 fn a_cross_paradigm_edge_is_a_missing_conversion() {
     // A Binary body where Ternary is required — never silently converted.
-    let msg = check_err("colony d\ndefault paradigm Binary\nfn main() -> Ternary{6} = 0b1011_0010");
+    let msg = check_err("nodule d\ndefault paradigm Binary\nfn main() -> Ternary{6} = 0b1011_0010");
     assert!(
         msg.contains("MissingConversion") && msg.contains("swap"),
         "got: {msg}"
@@ -202,9 +202,9 @@ fn a_cross_paradigm_edge_is_a_missing_conversion() {
 }
 
 #[test]
-fn two_colony_defaults_are_refused() {
+fn two_nodule_defaults_are_refused() {
     let msg = check_err(
-        "colony d\ndefault paradigm Binary\ndefault paradigm Ternary\nfn main() -> {8} = 0b1011_0010",
+        "nodule d\ndefault paradigm Binary\ndefault paradigm Ternary\nfn main() -> {8} = 0b1011_0010",
     );
     assert!(msg.contains("two `default paradigm`"), "got: {msg}");
 }
@@ -212,6 +212,6 @@ fn two_colony_defaults_are_refused() {
 #[test]
 fn an_overflowing_bare_decimal_is_refused_not_wrapped() {
     // 300 does not fit Binary{8} — an explicit refusal, never a silent wrap (RFC-0012 §4.3).
-    let msg = check_err("colony d\ndefault paradigm Binary\nfn main() -> {8} = 300");
+    let msg = check_err("nodule d\ndefault paradigm Binary\nfn main() -> {8} = 300");
     assert!(msg.contains("does not fit"), "got: {msg}");
 }

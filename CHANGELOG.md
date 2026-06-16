@@ -8,6 +8,99 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (2026-06-16: M-361 Phase-8 toolchain epic decomposed — staged, PM)
+- **M-361 decomposed into five per-tool children** (the epic body's named tools), staged in
+  `tools/github/issues.yaml` as sub-issues of M-361: **M-364** (`mycfmt` formatter — M-142 grows up),
+  **M-365** (correctness/type-check driver — `myc-check` grows up), **M-366** (lint + auto-fix, incl. the
+  RFC-0015 baseline "class only logged" lint + the M-363 §4.1 doc quality-bar lint), **M-367** (security
+  checks as tooling — secrets/supply-chain/`wild`-audit), **M-368** (packaging/publishing:
+  `mycelium-proj.toml` → spore, ADR-013). `manifest-check.py` passes (78 issues); MILESTONES + idmap note
+  the gated-sync creation at the Phase-8 gate (the established staging → `gh-sync-all.sh` flow). No code.
+
+### Added (2026-06-16: narrative & automated-authoring pipeline — design, M-363)
+- **`docs/spec/Narrative-Authoring-Pipeline.md`** (**Proposed**) — the M-363 pipeline design (design-first;
+  **ratify before building**): a **one content-addressed doc IR → many renderers** architecture
+  (HTML/PDF/EPUB + machine JSON, so all formats share identity — ADR-003/G11, no drift); four projection
+  generators (apiref/manual/book/blog) with their corpus sources; one reviewed template (the human gate
+  for the fully-automated outputs); and the **§4.1 quality bar as a checkable 8-point lint** — single
+  template, navigability, progressive disclosure (RFC-0013 levels), **checked examples** (a stale example
+  fails the build — never-silent for docs, G2), no dead xrefs, dual-projection parity, **no hallucinated
+  prose / undocumented-is-flagged**, legibility/accessibility. Placed in the M-361 toolchain (KC-3). The
+  build stack + format/versioning choices are **flagged for ratification (§8); no pipeline code lands until
+  ratified.**
+- **`research/07-narrative-authoring-pipeline-RECORD.md`** — prior art (rustdoc/docs.rs, mdBook, Sphinx/MyST,
+  Antora, literate programming, Pandoc/Typst, spec-generated manuals) traced as **T7.1–T7.7**, grounding the
+  design (the no-drift, checked-examples, one-IR-many-renderers decisions).
+
+### Added (2026-06-16: RFC-0015 automatic baseline diagnostics & recovery, M-362)
+- **RFC-0015 ratified `Draft → Accepted`** and enacted. Prior art (DynEL, Rust `tracing`/`log`, Erlang/OTP,
+  Python `logging`, structured-logging) traced into **`research/06-automatic-baseline-diagnostics-RECORD.md`**
+  (findings **T6.1–T6.5**, discharging the §7 grounding obligation); the four §8 questions **resolved**.
+- **`crates/mycelium-lsp/src/baseline.rs`** — the automation layer *over* RFC-0013 (presentation) +
+  RFC-0014 (recovery), honest by construction (the §4.1 boundary A1–A4):
+  - **`derive_baseline` / `derive_baseline_for`** — auto-derive a zero-config baseline `DiagnosticPolicy`
+    from the error-class registry via a **total, inspectable closed `class → (level, route)` table**
+    (`baseline_for_class`), optionally scoped per-definition by its **declared effect** classes. The result
+    is presentation-only — structurally incapable of changing control flow (A1/I1) — content-addressed,
+    and tagged `baseline`.
+  - **`explain_baseline`** — the `EXPLAIN`: every class with its derived level/route + **rationale** (A3;
+    "what baseline applied here, and why?").
+  - **`recovery_profile`** + **`RecoveryProfile`** (`strict` / `resilient`) — the **closed, opt-in,
+    bounded** recovery set (A2): `strict` propagates everything; `resilient` applies bounded `retry(≤3)`
+    (`RESILIENT_MAX_ATTEMPTS`) to the **explicitly-supplied** classes only (RFC-0014 I4/I5). Recovery is
+    **never** auto-applied — it is produced only on explicit request.
+- **Honesty boundary, as tests:** A1 (a baseline can never suppress an error — `present` returns it
+  unchanged), A2 (recovery bounded + opt-in), A3 (content-addressed + EXPLAIN-able), A4 (derivation is a
+  total, deterministic function of the registry — every class covered). No new error mechanism; no kernel
+  change (KC-3). `scripts/checks/all.sh` green.
+
+### Added (2026-06-16: structured nodule header + project manifest, M-359)
+- **`crates/mycelium-proj`** — the project-metadata layer (KC-3, above the kernel) enacting the
+  *Nodule-Header-and-Project-Manifest* spec (**Accepted** 2026-06-16; the three §7 format choices ratified
+  by the maintainer: header sigil `// @key: value`; the v0 key set extended with `repository`/`keywords`/
+  `deprecated`; `@updated` author-maintained):
+  - **`header`** — the structured nodule header parser: the `// @key: value` lines (closed 9-key v0 set)
+    over the `// nodule:` marker (reuses M-358's `parse_nodule_header`). An **unknown** key, a
+    **duplicate** key, or a **malformed** value (non-SPDX `@license`, non-ISO `@since`/`@updated`,
+    ill-formed `@version`, non-URL `@repository`) is an **explicit** error, never silently ignored or
+    guessed (G2 / VR-5 — checked, never fabricated).
+  - **`manifest`** — `mycelium-proj.toml`, read by a **minimal, no-new-dependency TOML-subset** reader
+    (the workspace keeps its deps few/vetted; adding a full TOML crate would be an ADR). It is honestly a
+    subset — strings/arrays/inline-tables/booleans, single-line values — and an out-of-subset construct is
+    an explicit error (G2). The closed `[project]` table is typed + validated; optional tables are accepted
+    but not yet interpreted (M-361).
+  - **`resolve`** — top-down inheritance (`in-file > manifest`) with **per-field provenance** and an
+    **`EXPLAIN`**, so a field's effective value *and source* are never ambient (G2). A local value
+    overrides the manifest (an allowed override, not a conflict; spec §4).
+- **`mycelium-lsp::lint_structured_header`** (M-141) surfaces a malformed header as a `Diagnostic`.
+- **Schemas** `docs/spec/schemas/{nodule-header,mycelium-proj}.schema.json` + valid/invalid examples
+  (the SPDX-membership and calendar-date-range checks live in code, recorded in each schema's
+  `x-mycelium.$comment` per the schemas-README rule). End-to-end conformance fixtures in
+  `crates/mycelium-proj/tests/`.
+- **Honesty/identity:** metadata is **not** identity — nothing here perturbs a content hash (ADR-003).
+  No kernel change (KC-3). `scripts/checks/all.sh` green (incl. the JSON-schema gate).
+
+### Changed (2026-06-16: DN-06 lexicon migration — static keyword `colony` → `nodule`, M-358)
+- **The L1 surface keyword `colony` is now `nodule`** (DN-06, Resolved 2026-06-16) — a pure, mechanical
+  rename across the lexer/token/parser/AST/checker/elaborator (`crates/mycelium-l1`), the LSP toolchain
+  surface (`crates/mycelium-lsp`), the normative grammar oracle (`docs/spec/grammar/mycelium.ebnf` +
+  README), and the **full accept/reject conformance corpus** (the `01-minimal-*`/`01-no-*-header` fixtures
+  renamed accordingly). **No semantic change**: content-addressed identity is computed over elaborated L0,
+  never the surface keyword or a Rust type name (ADR-003), so every definition's content hash is unchanged.
+- **`phylum` and `colony` are now reserved-not-active keywords.** `phylum` (the library-scale grouping
+  above nodules) and `colony` (reassigned to the RFC-0008 §4.7 **dynamic** runtime grouping of `hypha`)
+  lex as keywords — so they can never be silent identifiers — but no L1 construct consumes them yet, so
+  neither opens a program (new `conformance/reject/10-reserved-not-active.myc`; G2).
+- **The `// nodule:` header marker (DN-06 §6) is wired in.** New `mycelium_l1::parse_nodule_header`
+  recognises the first-non-blank-line marker (`// nodule: <dotted.name>` or bare `// nodule`); a near-miss
+  *named* marker (empty/ill-formed name) is an **explicit** error, never silently dropped (G2). The M-141
+  linter surfaces a malformed marker (`lint_nodule_header`) and the M-142 surface formatter preserves a
+  valid one across a canonical re-print. The structured `// @key:` header + `mycelium-proj.toml` manifest
+  layer on top of this (M-359).
+- **Honesty/grounding:** DN-02 §2's `colony = module` line stays superseded by DN-06 (append-only); the
+  Glossary, Lexicon-Reference, grammar README, and DN-06 changelog are updated to record execution.
+  `scripts/checks/all.sh` green (incl. the conformance gate).
+
 ### Added (2026-06-16: typed SPSC channels — the RT2 communicating fragment, M-357 follow-on)
 - **`crates/mycelium-mlir/src/channel.rs`** — the Kahn-deterministic *communicating* half of the RFC-0008
   RT2 fragment (§4.3), extending the landed fork/join runtime. **Typed single-producer/single-consumer

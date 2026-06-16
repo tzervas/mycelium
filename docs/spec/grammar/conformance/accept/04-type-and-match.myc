@@ -1,5 +1,5 @@
 // exercises: sum-type declaration + exhaustive match with constructor and wildcard patterns
-colony shapes
+nodule shapes
 
 type Sign = Neg | Zero | Pos
 

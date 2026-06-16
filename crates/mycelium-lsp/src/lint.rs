@@ -72,6 +72,50 @@ pub fn has_errors(diags: &[Diagnostic]) -> bool {
     diags.iter().any(|d| d.severity == Severity::Error)
 }
 
+/// The **source-text** companion lint (M-141; DN-06 §6): recognise the `// nodule:` header marker
+/// on a document's first non-blank line and surface a malformed *named* marker as an explicit
+/// `Error` (never silently dropped — G2). A well-formed marker (or its absence) yields nothing;
+/// this is a *recogniser*, not a requirement (a file need not declare a nodule). The Core-IR [`lint`]
+/// runs over the elaborated program; this runs over raw text, where the comment marker lives.
+#[must_use]
+pub fn lint_nodule_header(src: &str) -> Vec<Diagnostic> {
+    match mycelium_l1::parse_nodule_header(src) {
+        Ok(_) => Vec::new(),
+        Err(e) => vec![Diagnostic {
+            code: "nodule-header",
+            severity: Severity::Error,
+            at: format!("line {}", e.line),
+            message: format!(
+                "malformed `// nodule:` header marker (DN-06 §6): {} — a near-miss marker is \
+                 flagged, never silently ignored (G2)",
+                e.message
+            ),
+        }],
+    }
+}
+
+/// The **structured-header** lint (M-141; M-359 / spec §3): parse the `// @key: value` header and
+/// surface any malformed marker, unknown/duplicate key, or bad value (non-SPDX `@license`, non-ISO
+/// `@since`/`@updated`, ill-formed `@version`) as an explicit `Error` — never silently ignored (G2).
+/// A well-formed header (or a file with none) yields nothing. Supersedes the bare-marker
+/// [`lint_nodule_header`] when the richer M-359 metadata is wanted; both run over raw text.
+#[must_use]
+pub fn lint_structured_header(src: &str) -> Vec<Diagnostic> {
+    match mycelium_proj::parse_header(src) {
+        Ok(_) => Vec::new(),
+        Err(e) => vec![Diagnostic {
+            code: "nodule-header",
+            severity: Severity::Error,
+            at: format!("line {}", e.line),
+            message: format!(
+                "malformed nodule header (DN-06 §6 / M-359 spec §3): {} — a header defect is flagged, \
+                 never silently ignored (G2)",
+                e.message
+            ),
+        }],
+    }
+}
+
 fn paradigm(repr: &Repr) -> &'static str {
     match repr {
         Repr::Binary { .. } => "binary",
@@ -394,6 +438,47 @@ mod tests {
             body: Box::new(Node::Var("y".into())),
         };
         assert_eq!(codes(&lint(&node)), vec!["free-variable"]);
+    }
+
+    // --- nodule-header (M-141 source-text companion; DN-06 §6) ---
+
+    #[test]
+    fn nodule_header_clean_on_valid_or_absent_marker() {
+        assert!(
+            lint_nodule_header("// nodule: geometry.shapes\nnodule geometry.shapes\n").is_empty()
+        );
+        assert!(lint_nodule_header("// nodule\nnodule g\n").is_empty());
+        assert!(lint_nodule_header("nodule g\nfn f() -> Binary{8} = 0b0").is_empty());
+    }
+
+    #[test]
+    fn nodule_header_fires_on_malformed_named_marker() {
+        let d = lint_nodule_header("// nodule: 9bad\n");
+        assert_eq!(codes(&d), vec!["nodule-header"]);
+        assert_eq!(d[0].severity, Severity::Error);
+        assert!(has_errors(&d));
+        assert!(!lint_nodule_header("// nodule:\n").is_empty());
+    }
+
+    #[test]
+    fn structured_header_checks_keys_and_values() {
+        // Clean on a valid structured header and on a file with no header.
+        assert!(lint_structured_header(
+            "// nodule: g\n// @license: MIT\n// @updated: 2026-06-16\n"
+        )
+        .is_empty());
+        assert!(lint_structured_header("fn f() -> Binary{8} = 0b0").is_empty());
+        // Fires on an unknown key, a bad SPDX license, and a non-ISO date (G2).
+        assert_eq!(
+            codes(&lint_structured_header("// nodule: g\n// @bogus: x\n")),
+            vec!["nodule-header"]
+        );
+        assert!(has_errors(&lint_structured_header(
+            "// nodule: g\n// @license: Nope\n"
+        )));
+        assert!(has_errors(&lint_structured_header(
+            "// nodule: g\n// @since: 2026-13-99\n"
+        )));
     }
 
     #[test]

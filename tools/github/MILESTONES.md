@@ -92,6 +92,17 @@ title or the script will create a duplicate.
 
 ## Meta — changelog
 
+- **2026-06-16 — M-361 decomposed into per-tool children (staged).** The Phase-8 toolchain epic **M-361**
+  is decomposed into the five per-tool tasks its body names — **M-364** (`mycfmt` formatter), **M-365**
+  (correctness/type-check driver), **M-366** (lint + auto-fix, incl. the RFC-0015 baseline lint + the
+  M-363 §4.1 doc quality-bar lint), **M-367** (security checks as tooling), **M-368** (packaging/publishing:
+  `mycelium-proj.toml` → spore, ADR-013) — **staged in `issues.yaml`** (sub-issues of M-361; `phase:8` +
+  the Phase 8 milestone already exist). `manifest-check.py` passes (78 issues). GitHub issues + sub-issue
+  links to M-361 (#132) are created **at the Phase-8 gate** via `gh-sync-all.sh` (the established
+  staging→gated-sync flow; the MCP cannot create milestones/colored labels). idmap records the numbers on
+  that run. Also reconciled this session: **M-358/M-359 enacted** (DN-06 lexicon migration; the structured
+  nodule header + `mycelium-proj` crate, spec **Accepted**) and **M-362 enacted** (RFC-0015 **Accepted** —
+  auto-baseline diagnostics/recovery), **M-363 designed** (authoring pipeline spec **Proposed**). Append-only.
 - **2026-06-16 — Phase 8 added + Phase 7 reconciled.** New **Phase 8 — Toolchain & Release Engineering**
   (anticipated) for the maintainer's "full-fat" toolchain (format / correctness / lint+fix / security +
   packaging), anchored by **M-361** (epic) with **M-359** (the structured nodule header + `mycelium-proj.toml`

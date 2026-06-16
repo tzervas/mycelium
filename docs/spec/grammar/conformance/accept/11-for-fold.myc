@@ -1,5 +1,5 @@
 // exercises: bounded iteration (`for` fold over a linearly recursive data value; RFC-0007 §4.8)
-colony folds
+nodule folds
 
 type Bytes = End | More(Binary{8}, Bytes)
 

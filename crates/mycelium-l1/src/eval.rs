@@ -692,12 +692,12 @@ fn unsupported(site: &str, e: &ElabError) -> L1Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::checkty::check_colony;
+    use crate::checkty::check_nodule;
     use crate::parse;
     use mycelium_core::Payload;
 
     fn env(src: &str) -> Env {
-        check_colony(&parse(src).expect("parses")).expect("checks")
+        check_nodule(&parse(src).expect("parses")).expect("checks")
     }
 
     fn run(src: &str) -> Result<L1Value, L1Error> {
@@ -707,7 +707,7 @@ mod tests {
 
     #[test]
     fn literals_lets_and_prims_evaluate() {
-        let v = run("colony d\nfn main() -> Binary{8} = let a = 0b1010_1010 in not(a)")
+        let v = run("nodule d\nfn main() -> Binary{8} = let a = 0b1010_1010 in not(a)")
             .expect("evaluates");
         let L1Value::Repr(v) = v else { panic!("repr") };
         assert_eq!(
@@ -720,7 +720,7 @@ mod tests {
     #[test]
     fn data_match_and_if_evaluate() {
         let v = run(
-            "colony d\ntype Sign = Neg | Zero | Pos\nfn label(s: Sign) -> Ternary{1} =\n  match s { Neg => <->, Zero => <0>, _ => <+> }\nfn main() -> Ternary{1} = label(Zero)",
+            "nodule d\ntype Sign = Neg | Zero | Pos\nfn label(s: Sign) -> Ternary{1} =\n  match s { Neg => <->, Zero => <0>, _ => <+> }\nfn main() -> Ternary{1} = label(Zero)",
         )
         .expect("evaluates");
         let L1Value::Repr(v) = v else { panic!("repr") };
@@ -732,7 +732,7 @@ mod tests {
 
     // --- nested patterns (Maranget) ----------------------------------------------------------
 
-    const NAT: &str = "colony d\ntype Nat = Z | S(Nat)\n";
+    const NAT: &str = "nodule d\ntype Nat = Z | S(Nat)\n";
 
     #[test]
     fn nested_pattern_match_evaluates() {
@@ -780,7 +780,7 @@ mod tests {
 
     // --- M-320: literal-pattern match over Binary/Ternary scrutinees -------------------------
 
-    const CLASSIFY: &str = "colony d\nfn classify(b: Binary{4}) -> Ternary{1} = \
+    const CLASSIFY: &str = "nodule d\nfn classify(b: Binary{4}) -> Ternary{1} = \
         match b { 0b0000 => <0>, 0b1111 => <+>, _ => <-> }\n\
         fn main() -> Ternary{1} = classify(0b1111)";
 
@@ -808,9 +808,9 @@ mod tests {
     fn literal_match_without_a_default_is_non_exhaustive() {
         // Mutant-witness: dropping the mandatory-default check would let a literal match silently
         // assume coverage of the 2^4 domain (W7 violation).
-        let src = "colony d\nfn classify(b: Binary{4}) -> Ternary{1} = \
+        let src = "nodule d\nfn classify(b: Binary{4}) -> Ternary{1} = \
             match b { 0b0000 => <0>, 0b1111 => <+> }\nfn main() -> Ternary{1} = classify(0b1111)";
-        let err = check_colony(&parse(src).expect("parses")).expect_err("must reject");
+        let err = check_nodule(&parse(src).expect("parses")).expect_err("must reject");
         assert!(
             err.message.contains("non-exhaustive"),
             "got: {}",
@@ -823,9 +823,9 @@ mod tests {
         // Mutant-witness: a duplicate literal arm is a redundant (unreachable) arm — the Maranget
         // usefulness check must reject it, never silently accept it (W7). `0b0000` and `0b00_00` are
         // the same literal (the `_` separator is canonicalized away), so the second is unreachable.
-        let src = "colony d\nfn classify(b: Binary{4}) -> Ternary{1} = \
+        let src = "nodule d\nfn classify(b: Binary{4}) -> Ternary{1} = \
             match b { 0b0000 => <0>, 0b00_00 => <+>, _ => <-> }\nfn main() -> Ternary{1} = classify(0b0000)";
-        let err = check_colony(&parse(src).expect("parses")).expect_err("must reject");
+        let err = check_nodule(&parse(src).expect("parses")).expect_err("must reject");
         assert!(err.message.contains("unreachable"), "got: {}", err.message);
     }
 
@@ -833,9 +833,9 @@ mod tests {
     fn literal_pattern_width_must_match_the_scrutinee() {
         // Mutant-witness: dropping the width check would let a 2-bit literal match a Binary{4}
         // scrutinee — a payload-length mismatch that could never fire (or panic downstream).
-        let src = "colony d\nfn classify(b: Binary{4}) -> Ternary{1} = \
+        let src = "nodule d\nfn classify(b: Binary{4}) -> Ternary{1} = \
             match b { 0b00 => <0>, _ => <-> }\nfn main() -> Ternary{1} = classify(0b0000)";
-        let err = check_colony(&parse(src).expect("parses")).expect_err("must reject");
+        let err = check_nodule(&parse(src).expect("parses")).expect_err("must reject");
         assert!(
             err.message.contains("literal pattern has type"),
             "got: {}",
@@ -847,7 +847,7 @@ mod tests {
     fn structural_recursion_terminates_within_fuel() {
         // `drop_` is classified Total (structural descent) — and indeed terminates.
         let v = run(
-            "colony d\ntype Nat = Z | S(Nat)\nfn drop_(n: Nat) -> Nat = match n { Z => Z, S(m) => drop_(m) }\nfn main() -> Nat = drop_(S(S(Z)))",
+            "nodule d\ntype Nat = Z | S(Nat)\nfn drop_(n: Nat) -> Nat = match n { Z => Z, S(m) => drop_(m) }\nfn main() -> Nat = drop_(S(S(Z)))",
         )
         .expect("terminates");
         assert_eq!(
@@ -864,7 +864,7 @@ mod tests {
     fn an_unproductive_recursion_is_an_explicit_fuel_exhaustion() {
         // With the clock tighter than the depth guard, the *semantic* budget trips first.
         let env = env(
-            "colony d\ntype Nat = Z | S(Nat)\nfn spin(n: Nat) -> Nat = spin(n)\nfn main() -> Nat = spin(Z)",
+            "nodule d\ntype Nat = Z | S(Nat)\nfn spin(n: Nat) -> Nat = spin(n)\nfn main() -> Nat = spin(Z)",
         );
         let err = Evaluator::new(&env)
             .with_fuel(50)
@@ -877,7 +877,7 @@ mod tests {
     fn deep_recursion_trips_the_host_stack_guard_explicitly() {
         // With ample fuel, the depth guard refuses explicitly — never a host stack overflow.
         let env = env(
-            "colony d\ntype Nat = Z | S(Nat)\nfn spin(n: Nat) -> Nat = spin(n)\nfn main() -> Nat = spin(Z)",
+            "nodule d\ntype Nat = Z | S(Nat)\nfn spin(n: Nat) -> Nat = spin(n)\nfn main() -> Nat = spin(Z)",
         );
         let err = Evaluator::new(&env).call("main", vec![]).unwrap_err();
         assert!(
@@ -899,7 +899,7 @@ mod tests {
         for _ in 0..200 {
             expr = format!("not({expr})");
         }
-        let deep_env = env(&format!("colony d\nfn main() -> Binary{{8}} = {expr}"));
+        let deep_env = env(&format!("nodule d\nfn main() -> Binary{{8}} = {expr}"));
         let err = Evaluator::new(&deep_env).call("main", vec![]).unwrap_err();
         assert!(
             matches!(
@@ -913,7 +913,7 @@ mod tests {
 
         // And the same nest within the depth budget evaluates fine (200 nested `not`s exceed 64;
         // a small nest does not) — confirming the guard refuses *only* genuine over-nesting.
-        let shallow = env("colony d\nfn main() -> Binary{8} = not(not(0b0000_0001))");
+        let shallow = env("nodule d\nfn main() -> Binary{8} = not(not(0b0000_0001))");
         Evaluator::new(&shallow)
             .call("main", vec![])
             .expect("a shallow nest is well within the depth budget");
@@ -923,7 +923,7 @@ mod tests {
     fn a_for_fold_evaluates_head_to_tail() {
         // checksum(More(0b1111_0000, More(0b0000_1111, End))) = 0b1111_1111 (xor-fold).
         let v = run(
-            "colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
+            "nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
              fn checksum(bs: Bytes) -> Binary{8} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
              fn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))",
         )
@@ -935,7 +935,7 @@ mod tests {
     #[test]
     fn a_for_fold_over_nil_is_the_initial_accumulator() {
         let v = run(
-            "colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
+            "nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
              fn checksum(bs: Bytes) -> Binary{8} =\n    for b in bs, acc = 0b1010_1010 => xor(acc, b)\n\
              fn main() -> Binary{8} = checksum(End)",
         )
@@ -953,7 +953,7 @@ mod tests {
         // spine walk is iterative and must not (RFC-0007 §4.8). The list value is built
         // programmatically — a 200-deep nested *expression* would itself be depth-guarded.
         let env = env(
-            "colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
+            "nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
              fn checksum(bs: Bytes) -> Binary{8} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)",
         );
         let byte = || {
@@ -990,7 +990,7 @@ mod tests {
     fn the_certified_swap_runs_and_a_weakening_assertion_passes() {
         // The in-range binary→ternary swap is Exact; asserting `@ Proven` weakens — allowed.
         let v = run(
-            "colony d\nfn main() -> Ternary{6} @ Proven = swap(0b0000_0010, to: Ternary{6}, policy: rt)",
+            "nodule d\nfn main() -> Ternary{6} @ Proven = swap(0b0000_0010, to: Ternary{6}, policy: rt)",
         )
         .expect("evaluates");
         let L1Value::Repr(v) = v else { panic!("repr") };
@@ -1020,7 +1020,7 @@ mod tests {
             .expect("well-formed meta"),
         )
         .expect("well-formed value");
-        let env = env("colony d\nfn main() -> Binary{8} = 0b0000_0000");
+        let env = env("nodule d\nfn main() -> Binary{8} = 0b0000_0000");
         let ev = Evaluator::new(&env);
         let err = ev
             .assert_guarantee("t", &L1Value::Repr(declared), Strength::Exact)
@@ -1031,12 +1031,12 @@ mod tests {
     #[test]
     fn wild_and_unknown_names_are_explicit_refusals() {
         // `wild` never reaches evaluation through the checker; drive the evaluator directly on an
-        // unchecked colony to confirm the refusal is the evaluator's own, not just the checker's.
-        let colony =
-            parse("colony d\nfn main() -> Binary{8} = wild { foreign(0b0000_0001) }").unwrap();
+        // unchecked nodule to confirm the refusal is the evaluator's own, not just the checker's.
+        let nodule =
+            parse("nodule d\nfn main() -> Binary{8} = wild { foreign(0b0000_0001) }").unwrap();
         let env = Env {
             types: std::collections::BTreeMap::new(),
-            fns: colony
+            fns: nodule
                 .items
                 .iter()
                 .filter_map(|i| match i {

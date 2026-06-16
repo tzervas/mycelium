@@ -676,3 +676,46 @@ issues:
     depends_on: [M-346]
     body: |
       Capture enough development narrative — decisions, struggles, problems solved, the how AND the why — to enable PARTIALLY-TO-FULLY AUTOMATED authoring of (1) project BLOG posts, (2) a full LANGUAGE BOOK, (3) a LANGUAGE REFERENCE MANUAL, and (4) FULLY-AUTOMATED documentation + API reference, distributed FREE with the language in digital formats (HTML/PDF/EPUB) and served live (browsable site + LSP hover). Initial capture is done (docs/notes/Narrative-Capture-and-Authoring.md — intent, data model, capture discipline, honesty constraints, the §4.1 format/quality bar; plus the seeded docs/devlog/ append-only narrative layer that fills the one gap the formal docs leave: the struggle / problem-solving "how"). The honesty rule already makes the corpus a grounded, cited, append-only narrative (~80% of the raw material). Output (4) docs/API ref is the MOST automatable (pure PROJECTION from code + schemas + the M-359 nodule-header metadata, no interpretive layer), so FULLY automated is the goal there; rustdoc-first now, Mycelium-lang doc-comments later (dogfooding). All outputs are SYNTHESIS FROM THE CITED CORPUS under the same discipline as the language: grounded + cited (no hallucination — the prose analogue of never-silent G2; "undocumented is FLAGGED, never invented"), projection-not-parallel-truth (generated from the RFCs/specs/code so they cannot drift — ADR-003), human-in-the-loop for interpretive narrative (draft-then-review; for pure projection the human gate is the generator/templates, not each page), append-only provenance. CRITICAL: the output must clear a CHECKABLE QUALITY BAR (§4.1) — clean/presentable/legible/intelligible/digestible: one consistent template, index->detail navigation, progressive-disclosure graded depth (reuse RFC-0013 levels), checked inline examples, dual human/machine projection (G11), legibility/accessibility by construction. Acceptance (design-first, fresh session): trace prior art (rustdoc/docs.rs, docs-as-code, literate programming, mdBook/Sphinx/Antora, spec-generated manuals), design the generators + templates + the HTML/PDF/EPUB build + the quality-bar lint, place it in the Phase-8 toolchain (M-361), then ratify before building. No kernel change (KC-3); tooling/docs layer only.
+
+  # ── M-361 decomposition (per-tool children) — STAGED 2026-06-16 ───────────────────────────────────
+  # The M-361 epic "decomposes into per-tool tasks at its gate". These are the five per-tool children the
+  # epic body names (formatter / correctness / lint+fix / security / packaging). Staged here (the
+  # authoritative planning source) so the decomposition is reviewable + version-controlled; GitHub issues
+  # + sub-issue links to M-361 (#132) are created at the Phase-8 gate via gh-sync-all.sh (the MCP cannot
+  # create milestones/colored labels; phase:8 + the Phase 8 milestone already exist). Sequencing firms at
+  # the gate. Each is design-needed before build (status:needs-design), priority P3 (out-of-gate).
+  - id: M-364
+    title: "M-364 — `mycfmt`: the standalone canonical formatter (M-142 grows up)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:design, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-142, M-358, M-361]
+    body: |
+      Sub-issue of M-361. Grow the M-142 canonical formatter (today: the Core-IR α-normalizing dump + the surface `expand_to_source` printer in mycelium-lsp/mycelium-l1) into a standalone `mycfmt` CLI over `.myc` sources: idempotent canonical formatting that PRESERVES the DN-06 `// nodule:` header marker + the M-359 structured `// @key:` header (M-358/M-359), never changes content-addressed identity (ADR-003 — formatting is a projection, RFC-0001 §4.8), and is EXPLAIN-able about any normalization it applies (no black box). Reads the `[toolchain].format` pin from `mycelium-proj.toml` (M-359). Honesty: a file it cannot parse is an explicit error, never a partial/garbled rewrite (G2). No kernel change (KC-3). Acceptance (design-first): the formatter contract + idempotence/identity-preservation tests before folding.
+  - id: M-365
+    title: "M-365 — toolchain correctness / type-check driver (`myc-check` grows up)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:design, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-361]
+    body: |
+      Sub-issue of M-361. The toolchain-grade correctness/type-checking entry point: grow the `myc-check` prototype (mycelium-l1) + the M-210 shared TV checker into a project-aware driver that checks a whole `phylum`/program (resolving the `mycelium-proj.toml` surface + dependencies, M-359), reports every refusal as an RFC-0013 structured diagnostic (routed via the M-362 baseline), and exits non-zero on any error (CI-usable). Honest per-op guarantees preserved (VR-5); a `NotValidated`/`TypeMismatch`/`UnresolvedName` is explicit, never silent (G2). Lives above the kernel (KC-3). Acceptance (design-first): the driver's project-resolution + diagnostic-aggregation contract before folding.
+  - id: M-366
+    title: "M-366 — lint + auto-fix (RFC-0013/0014/0015 diagnostics surfaced as actionable fixes) + the §4.1 doc quality-bar lint"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:design, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-345, M-352, M-362, M-363, M-361]
+    body: |
+      Sub-issue of M-361. The error/issue checking AND auto-fixing tool: surface the M-141 invariant lints + the RFC-0013 diagnostics + the RFC-0015 auto-baseline "this class is only logged — add a handler?" lint (RFC-0015 §9) as ACTIONABLE fixes, and offer RFC-0014 recovery scaffolds (an explicit handler skeleton — never an implicit control-flow change; A2/I5). Also hosts the M-363 §4.1 documentation quality-bar lint (the 8 checks over the doc IR — checked examples, undocumented-is-flagged, dual-projection parity, …). Every fix is a reified, inspectable, opt-in edit (no silent rewrite; G2). No kernel change (KC-3). Acceptance (design-first): the fix model (suggest vs apply; the opt-in boundary) before folding.
+  - id: M-367
+    title: "M-367 — security checks as tooling (secrets / supply-chain / `wild`-audit)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:design, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-361]
+    body: |
+      Sub-issue of M-361. The /security-review posture as a tool: secret scanning, supply-chain checks (pinned deps, lockfile integrity, no `curl|bash`), and a `wild`-block audit (LR-9/S6 — every denied-by-default unsafe region is inventoried + justified). Reuses the existing scripts/checks/{secrets,deny}.sh discipline, lifted into the full-fat suite with honest, EXPLAIN-able findings (a flagged item cites why; G2). Adding any new external dependency stays a decision (ADR), not a build detail. No kernel change (KC-3). Acceptance (design-first): the check set + severity/honesty contract before folding.
+  - id: M-368
+    title: "M-368 — packaging & publishing: `mycelium-proj.toml` → spore (ADR-013)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:design, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-359, M-361]
+    body: |
+      Sub-issue of M-361. The packaging/metadata + publishing layer: consume the M-359 `mycelium-proj.toml` manifest (the `[spore]`/`[surface]`/`[dependencies]` tables M-359 accepts-but-does-not-yet-interpret) to build a `spore` — the content-addressed, deployable artifact of a `phylum`/program (ADR-013; the germinates-into-a-colony unit, DN-06/Glossary). Content-addressed identity is canonical (ADR-003); metadata is not identity. Honest: a missing/ambiguous publish input is an explicit error, never a guessed default (G2). No kernel change (KC-3). Acceptance (design-first): the spore build + dependency-resolution contract before folding.

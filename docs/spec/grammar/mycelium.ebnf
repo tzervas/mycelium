@@ -7,15 +7,22 @@
  * by this grammar, every reject/ program does not.
  *
  * Vocabulary is the ratified DN-02 set (Resolved 2026-06-10) plus `for` (RFC-0007 §4.8 r2;
- * recorded in DN-03). Themed keywords: colony, substrate, spore, matured, wild. Conventional:
- * use, type, trait, fn, let, in, if, then, else, match, for, swap.
+ * recorded in DN-03) and the DN-06 static-organization lexicon (Resolved 2026-06-16): `nodule`
+ * replaces the former static keyword `colony`. Themed keywords: nodule, substrate, spore, matured,
+ * wild. Conventional: use, type, trait, fn, let, in, if, then, else, match, for, swap.
+ *
+ * RESERVED, NOT YET ACTIVE (DN-06): `phylum` (the library-scale grouping above nodules) and
+ * `colony` (the dynamic runtime grouping of `hypha`, RFC-0008 §4.7) are reserved words — they lex
+ * as keywords (so they are never silent identifiers) but no production consumes them yet, so neither
+ * opens a program (see conformance/reject/10). They activate when their constructs land.
+ *
  * This is v0 — it covers the L1-facing core (RFC-0006 §3 L1); abstraction/recursion typing,
  * the full trait/guild machinery (LR-2), and L2 sugar layer above it.
  *)
 
-program        ::= colony_header item*
+program        ::= nodule_header item*
 
-colony_header  ::= 'colony' path
+nodule_header  ::= 'nodule' path
 
 item           ::= use_item
                  | default_item
@@ -25,8 +32,8 @@ item           ::= use_item
 
 use_item       ::= 'use' path
 
-/* default paradigm: the colony-scope ambient (RFC-0012 §4.2; enacted M-344). At most one per
- * colony — the outermost ambient frame. It supplies an OMITTED paradigm for paradigm-less reprs
+/* default paradigm: the nodule-scope ambient (RFC-0012 §4.2; enacted M-344). At most one per
+ * nodule — the outermost ambient frame. It supplies an OMITTED paradigm for paradigm-less reprs
  * and bare decimals; it never inserts a swap (I1) and elaborates to the same L0 as the longhand
  * twin (I2). `default`/`paradigm`/`with` are reserved (DN-02 surface additions). */
 default_item   ::= 'default' 'paradigm' paradigm

@@ -95,4 +95,11 @@ M-354	119	4676056480
 M-355	120	4676057851
 M-356	121	4676058388
 M-357	122	4676058890
-# M-358 (DN-06 lexicon migration) staged in issues.yaml 2026-06-16; number assigned on the next bootstrap run.
+# Phase 7 (M-358/M-359/M-362) + Phase 8 (M-361/M-363) — created 2026-06-16 via gh-sync-all.sh.
+M-358	130	4677945771
+M-359	131	4677946202
+M-361	132	4677946623
+M-362	133	4677946993
+M-363	134	4677947454
+# M-361 decomposition (M-364..M-368) staged in issues.yaml 2026-06-16; numbers assigned on the next
+# gh-sync-all.sh run at the Phase-8 gate (sub-issues of M-361 #132).

@@ -63,7 +63,7 @@ impl core::fmt::Display for ElabError {
                 "`{site}` is outside the evaluation-complete fragment (RFC-0007 §4.6): {what} — \
                  run it on the L1 evaluator"
             ),
-            ElabError::UnknownFn(name) => write!(f, "no function `{name}` in the checked colony"),
+            ElabError::UnknownFn(name) => write!(f, "no function `{name}` in the checked nodule"),
         }
     }
 }
@@ -189,7 +189,7 @@ pub fn policy_name_ref(policy: &Path) -> PolicyRef {
 /// inference pass over the whole body.
 type Binding = (String, String, Ty);
 
-/// Elaborate the nullary function `entry` of a checked colony to a closed L0 [`Node`].
+/// Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`].
 ///
 /// As of RFC-0001 r4 the evaluation-complete fragment is the **whole v0 calculus**: data + matching
 /// (r3) and now **functions + recursion** (`Lam`/`App`/`Fix`). Each reachable **self-recursive**
@@ -1260,17 +1260,17 @@ fn lit_key_to_value(site: &str, key: &str) -> Result<Value, ElabError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::checkty::check_colony;
+    use crate::checkty::check_nodule;
     use crate::parse;
 
     fn env(src: &str) -> Env {
-        check_colony(&parse(src).expect("parses")).expect("checks")
+        check_nodule(&parse(src).expect("parses")).expect("checks")
     }
 
     #[test]
     fn a_const_let_op_swap_body_elaborates_closed() {
         let env = env(
-            "colony d\nfn main() -> Ternary{6} =\n  let a = 0b1011_0010 in swap(not(a), to: Ternary{6}, policy: rt)",
+            "nodule d\nfn main() -> Ternary{6} =\n  let a = 0b1011_0010 in swap(not(a), to: Ternary{6}, policy: rt)",
         );
         let node = elaborate(&env, "main").expect("in the fragment");
         // Closed: the interpreter must not hit a free variable.
@@ -1287,7 +1287,7 @@ mod tests {
     #[test]
     fn a_call_is_inlined_acyclically() {
         let env = env(
-            "colony d\nfn flip(x: Binary{8}) -> Binary{8} = not(x)\nfn main() -> Binary{8} = flip(flip(0b1010_1010))",
+            "nodule d\nfn flip(x: Binary{8}) -> Binary{8} = not(x)\nfn main() -> Binary{8} = flip(flip(0b1010_1010))",
         );
         let node = elaborate(&env, "main").expect("acyclic calls inline");
         let v = mycelium_interp::Interpreter::default()
@@ -1304,7 +1304,7 @@ mod tests {
     fn self_recursion_now_elaborates_to_fix_and_runs() {
         // r4: a self-recursive function elaborates to a Fix and runs on the interpreter.
         // drop_(S(S(Z))) ⟶ Z.
-        let env = env("colony d\ntype Nat = Z | S(Nat)\n\
+        let env = env("nodule d\ntype Nat = Z | S(Nat)\n\
              fn drop_(n: Nat) -> Nat = match n { Z => Z, S(m) => drop_(m) }\n\
              fn main() -> Nat = drop_(S(S(Z)))");
         let node = elaborate(&env, "main").expect("self-recursion elaborates in r4");
@@ -1318,7 +1318,7 @@ mod tests {
     fn an_unproductive_recursion_elaborates_then_exhausts_fuel() {
         // A non-terminating recursion still elaborates (it is in the fragment now) but the fuel clock
         // makes its evaluation an explicit refusal, never a hang (RFC-0007 §4.5).
-        let env = env("colony d\nfn spin(x: Binary{8}) -> Binary{8} = spin(x)\n\
+        let env = env("nodule d\nfn spin(x: Binary{8}) -> Binary{8} = spin(x)\n\
              fn main() -> Binary{8} = spin(0b0000_0001)");
         let node = elaborate(&env, "main").expect("recursion elaborates in r4");
         let err = mycelium_interp::Interpreter::default()
@@ -1358,7 +1358,7 @@ mod tests {
     fn mutual_recursion_now_elaborates_to_a_fixgroup_and_runs() {
         // M-343 (R7-Q3): a mutually-recursive group (ping/pong) lowers to a `FixGroup` and runs on
         // the reference interpreter — ping(S(Z)) ⟶ pong(Z) ⟶ Z. (Previously an explicit Residual.)
-        let env = env("colony d\ntype Nat = Z | S(Nat)\n\
+        let env = env("nodule d\ntype Nat = Z | S(Nat)\n\
              fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
              fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }\n\
              fn main() -> Nat = ping(S(Z))");
@@ -1380,7 +1380,7 @@ mod tests {
         // r3: `match` is no longer Residual — it lowers to a flat L0 Match and runs on the
         // reference interpreter. `match Pos { Neg => <->, Zero => <0>, _ => <+> }` ⟶ <+>.
         let env = env(
-            "colony d\ntype Sign = Neg | Zero | Pos\nfn main() -> Ternary{1} =\n  match Pos { Neg => <->, Zero => <0>, _ => <+> }",
+            "nodule d\ntype Sign = Neg | Zero | Pos\nfn main() -> Ternary{1} =\n  match Pos { Neg => <->, Zero => <0>, _ => <+> }",
         );
         let node = elaborate(&env, "main").expect("match elaborates in r3");
         let v = mycelium_interp::Interpreter::default()
@@ -1392,7 +1392,7 @@ mod tests {
     #[test]
     fn a_data_value_now_elaborates_to_construct() {
         // A program returning a data value elaborates to Construct (via eval_core).
-        let env = env("colony d\ntype Nat = Z | S(Nat)\nfn main() -> Nat = S(Z)");
+        let env = env("nodule d\ntype Nat = Z | S(Nat)\nfn main() -> Nat = S(Z)");
         let node = elaborate(&env, "main").expect("Construct elaborates in r3");
         let v = mycelium_interp::Interpreter::default()
             .eval_core(&node)
@@ -1405,7 +1405,7 @@ mod tests {
     fn an_if_desugars_to_a_bool_match() {
         // `if` lowers to a Match on the prelude Bool — exercises the True/False registry path.
         let env = env(
-            "colony d\nfn pick(b: Bool) -> Binary{8} = if b then 0b1111_1111 else 0b0000_0000\n\
+            "nodule d\nfn pick(b: Bool) -> Binary{8} = if b then 0b1111_1111 else 0b0000_0000\n\
              fn main() -> Binary{8} = pick(True)",
         );
         let node = elaborate(&env, "main").expect("if elaborates in r3");
@@ -1419,7 +1419,7 @@ mod tests {
     fn a_nested_pattern_match_elaborates_and_runs() {
         // pred2 uses depth-2 nested patterns; the Maranget tree lowers them to nested flat L0 Matches.
         // pred2(S(S(S(Z)))) ⟶ S(Z).
-        let env = env("colony d\ntype Nat = Z | S(Nat)\n\
+        let env = env("nodule d\ntype Nat = Z | S(Nat)\n\
              fn pred2(n: Nat) -> Nat = match n { Z => Z, S(Z) => Z, S(S(m)) => m }\n\
              fn main() -> Nat = pred2(S(S(S(Z))))");
         let node = elaborate(&env, "main").expect("nested match elaborates in r3");
@@ -1438,7 +1438,7 @@ mod tests {
     #[test]
     fn a_guarantee_index_is_an_explicit_residual() {
         let env = env(
-            "colony d\nfn main() -> Ternary{6} @ Proven = swap(0b0000_0010, to: Ternary{6}, policy: rt)",
+            "nodule d\nfn main() -> Ternary{6} @ Proven = swap(0b0000_0010, to: Ternary{6}, policy: rt)",
         );
         let err = elaborate(&env, "main").unwrap_err();
         let ElabError::Residual { what, .. } = &err else {
@@ -1451,7 +1451,7 @@ mod tests {
     fn a_for_fold_now_elaborates_to_a_fix_fold_and_runs() {
         // r4: `for` desugars to a synthesized self-recursive Fix fold and runs. A 2-element xor-fold
         // of 0b1111_0000 and 0b0000_1111 from 0 is 0b1111_1111.
-        let env = env("colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
+        let env = env("nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
              fn checksum(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
              fn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))");
         let node = elaborate(&env, "main").expect("`for` elaborates in r4");
@@ -1463,7 +1463,7 @@ mod tests {
 
     #[test]
     fn a_for_fold_over_nil_is_the_initial_accumulator() {
-        let env = env("colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
+        let env = env("nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
              fn checksum(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b1010_1010 => xor(acc, b)\n\
              fn main() -> Binary{8} = checksum(End)");
         let node = elaborate(&env, "main").expect("`for` elaborates in r4");
@@ -1478,7 +1478,7 @@ mod tests {
 
     #[test]
     fn the_entry_must_be_nullary() {
-        let env = env("colony d\nfn id(x: Binary{8}) -> Binary{8} = x");
+        let env = env("nodule d\nfn id(x: Binary{8}) -> Binary{8} = x");
         let err = elaborate(&env, "id").unwrap_err();
         assert!(matches!(err, ElabError::Residual { .. }));
     }

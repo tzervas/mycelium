@@ -1,4 +1,5 @@
-// rejected: 'colony' is a reserved word and cannot be used as an identifier
-colony bad
+// rejected: 'nodule' is a reserved word and cannot be used as an identifier (so are the reserved
+// 'phylum'/'colony'; DN-06)
+nodule bad
 
-fn colony(x: Binary{8}) -> Binary{8} = x
+fn nodule(x: Binary{8}) -> Binary{8} = x

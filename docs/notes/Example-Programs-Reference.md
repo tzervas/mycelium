@@ -9,10 +9,10 @@ This document demonstrates the lexicon in realistic code. Examples progress from
 
 ## Common Use Cases
 
-### 1. Defining a Colony with Types, Embody, and Grow
+### 1. Defining a Nodule with Types, Embody, and Grow
 
 ```mycelium
-colony linear_algebra {
+nodule linear_algebra {
 
     type Vector {
         data: Dense{dim: 1024, dtype: F32},

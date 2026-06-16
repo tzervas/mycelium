@@ -1,17 +1,17 @@
 //! L1 static checking (RFC-0007 §4.4/§4.5): the monomorphic typechecker, the structural totality
 //! checker, and the `matured ⟹ total` gate. Every refusal is an explicit `CheckError`.
 
-use mycelium_l1::{check_colony, parse, Totality};
+use mycelium_l1::{check_nodule, parse, Totality};
 
 fn check(src: &str) -> Result<mycelium_l1::Env, mycelium_l1::CheckError> {
-    let colony = parse(src).expect("parses");
-    check_colony(&colony)
+    let nodule = parse(src).expect("parses");
+    check_nodule(&nodule)
 }
 
 #[test]
 fn well_typed_swap_fn_checks() {
     let env = check(
-        "colony d\nfn widen(x: Binary{8}) -> Ternary{6} = swap(x, to: Ternary{6}, policy: rt)",
+        "nodule d\nfn widen(x: Binary{8}) -> Ternary{6} = swap(x, to: Ternary{6}, policy: rt)",
     )
     .expect("checks");
     assert_eq!(env.totality["widen"], Totality::Total);
@@ -23,7 +23,7 @@ fn type_mismatch_is_explicit() {
     // edge is sharpened from a generic mismatch to an explicit `MissingConversion` that names the
     // from/to reprs and points at writing a `swap` — still never-silent, now more actionable.
     let err =
-        check("colony d\nfn f(x: Binary{8}) -> Binary{8} = swap(x, to: Ternary{6}, policy: rt)")
+        check("nodule d\nfn f(x: Binary{8}) -> Binary{8} = swap(x, to: Ternary{6}, policy: rt)")
             .unwrap_err();
     assert!(
         err.message.contains("MissingConversion") && err.message.contains("swap"),
@@ -36,7 +36,7 @@ fn type_mismatch_is_explicit() {
 fn same_paradigm_width_mismatch_is_a_plain_type_error() {
     // A same-paradigm mismatch (two Binary widths) is *not* a MissingConversion — no conversion
     // would bridge it — so it keeps the plain "type" wording (RFC-0012 §4.4 boundary).
-    let err = check("colony d\nfn f(x: Binary{8}) -> Binary{6} = not(x)").unwrap_err();
+    let err = check("nodule d\nfn f(x: Binary{8}) -> Binary{6} = not(x)").unwrap_err();
     assert!(
         err.message.contains("type") && !err.message.contains("MissingConversion"),
         "got: {}",
@@ -46,10 +46,10 @@ fn same_paradigm_width_mismatch_is_a_plain_type_error() {
 
 #[test]
 fn exhaustive_match_checks_and_nonexhaustive_is_refused() {
-    let ok = "colony d\ntype Sign = Neg | Zero | Pos\nfn f(s: Sign) -> Sign = match s { Neg => s, Zero => s, Pos => s }";
+    let ok = "nodule d\ntype Sign = Neg | Zero | Pos\nfn f(s: Sign) -> Sign = match s { Neg => s, Zero => s, Pos => s }";
     assert!(check(ok).is_ok());
 
-    let bad = "colony d\ntype Sign = Neg | Zero | Pos\nfn f(s: Sign) -> Sign = match s { Neg => s, Pos => s }";
+    let bad = "nodule d\ntype Sign = Neg | Zero | Pos\nfn f(s: Sign) -> Sign = match s { Neg => s, Pos => s }";
     let err = check(bad).unwrap_err();
     assert!(
         err.message.contains("non-exhaustive"),
@@ -58,7 +58,7 @@ fn exhaustive_match_checks_and_nonexhaustive_is_refused() {
     );
 }
 
-const NAT: &str = "colony d\ntype Nat = Z | S(Nat)\n";
+const NAT: &str = "nodule d\ntype Nat = Z | S(Nat)\n";
 
 #[test]
 fn nested_pattern_match_typechecks() {
@@ -109,7 +109,7 @@ fn nested_binder_drives_structural_descent_for_matured() {
 #[test]
 fn structural_recursion_is_total_and_gates_matured() {
     // A structurally-decreasing self-recursion over a Peano-like type is classified Total.
-    let src = "colony d\n\
+    let src = "nodule d\n\
                type Nat = Z | S(Nat)\n\
                matured fn count(n: Nat) -> Nat = match n { Z => n, S(m) => count(m) }";
     let env = check(src).expect("checks");
@@ -120,7 +120,7 @@ fn structural_recursion_is_total_and_gates_matured() {
 fn non_decreasing_recursion_cannot_be_matured() {
     // The recursive call passes the parameter unchanged → not structurally smaller → Partial,
     // so `matured` is refused (RFC-0007 §4.5).
-    let src = "colony d\n\
+    let src = "nodule d\n\
                type Nat = Z | S(Nat)\n\
                matured fn spin(n: Nat) -> Nat = match n { Z => n, S(m) => spin(n) }";
     let err = check(src).unwrap_err();
@@ -130,7 +130,7 @@ fn non_decreasing_recursion_cannot_be_matured() {
 #[test]
 fn non_decreasing_recursion_is_allowed_when_not_matured() {
     // Same body without `matured` checks fine — partiality is an honest classification, not an error.
-    let src = "colony d\n\
+    let src = "nodule d\n\
                type Nat = Z | S(Nat)\n\
                fn spin(n: Nat) -> Nat = match n { Z => n, S(m) => spin(n) }";
     let env = check(src).expect("checks");
@@ -146,12 +146,12 @@ fn shadowing_rebind_does_not_leak_smallness() {
     // of the outer `m` leaks in, `f` is wrongly classified Total, and the `matured` form below is
     // wrongly accepted.
     let body = "match n { Z => Z, S(m) => match p { Z => Z, S(m) => f(m, p) } }";
-    let src = format!("colony d\ntype Nat = Z | S(Nat)\nfn f(n: Nat, p: Nat) -> Nat = {body}");
+    let src = format!("nodule d\ntype Nat = Z | S(Nat)\nfn f(n: Nat, p: Nat) -> Nat = {body}");
     let env = check(&src).expect("checks");
     assert_eq!(env.totality["f"], Totality::Partial);
 
     let matured =
-        format!("colony d\ntype Nat = Z | S(Nat)\nmatured fn f(n: Nat, p: Nat) -> Nat = {body}");
+        format!("nodule d\ntype Nat = Z | S(Nat)\nmatured fn f(n: Nat, p: Nat) -> Nat = {body}");
     let err = check(&matured).unwrap_err();
     assert!(err.message.contains("matured"), "got: {}", err.message);
 }
@@ -162,7 +162,7 @@ fn shadowing_rebind_does_not_leak_smallness() {
 fn mutual_recursion_with_structural_descent_is_total() {
     // ping/pong descend on position 0 across the group, so the FixGroup is `Total` and `matured`
     // is admissible — the M-343 loose end: before mutual-descent classification this was `Partial`.
-    let src = "colony d\ntype Nat = Z | S(Nat)\n\
+    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
                fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
                fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }";
     let env = check(src).expect("checks");
@@ -170,7 +170,7 @@ fn mutual_recursion_with_structural_descent_is_total() {
     assert_eq!(env.totality["pong"], Totality::Total);
 
     // The whole group may therefore be `matured`.
-    let matured = "colony d\ntype Nat = Z | S(Nat)\n\
+    let matured = "nodule d\ntype Nat = Z | S(Nat)\n\
                    matured fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
                    matured fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }";
     check(matured).expect("a totally-descending mutual group admits `matured`");
@@ -181,14 +181,14 @@ fn non_productive_mutual_cycle_is_partial() {
     // `a(n) = b(n)` / `b(n) = a(n)` never decreases anything — an unproductive cycle. Honest
     // `Partial` (still runnable, fuel-clocked), and `matured` is refused. Mutant-witness: a checker
     // that classified *any* mutual group `Total` would wrongly mature this non-terminating pair.
-    let src = "colony d\ntype Nat = Z | S(Nat)\n\
+    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
                fn a(n: Nat) -> Nat = b(n)\n\
                fn b(n: Nat) -> Nat = a(n)";
     let env = check(src).expect("checks");
     assert_eq!(env.totality["a"], Totality::Partial);
     assert_eq!(env.totality["b"], Totality::Partial);
 
-    let matured = "colony d\ntype Nat = Z | S(Nat)\n\
+    let matured = "nodule d\ntype Nat = Z | S(Nat)\n\
                    matured fn a(n: Nat) -> Nat = b(n)\n\
                    fn b(n: Nat) -> Nat = a(n)";
     let err = check(matured).unwrap_err();
@@ -199,7 +199,7 @@ fn non_productive_mutual_cycle_is_partial() {
 fn partial_descent_in_a_mutual_group_is_partial() {
     // Descent must hold on *every* inter-member call. Here `ping` decreases but `pong` re-calls
     // `ping(n)` with the parameter unchanged, so no assignment witnesses descent → `Partial`.
-    let src = "colony d\ntype Nat = Z | S(Nat)\n\
+    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
                fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
                fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(n) }";
     let env = check(src).expect("checks");
@@ -210,7 +210,7 @@ fn partial_descent_in_a_mutual_group_is_partial() {
 #[test]
 fn three_function_mutual_cycle_descends() {
     // f → g → h → f, each peeling one constructor: a productive 3-cycle is `Total`.
-    let src = "colony d\ntype Nat = Z | S(Nat)\n\
+    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
                fn f(n: Nat) -> Nat = match n { Z => Z, S(m) => g(m) }\n\
                fn g(n: Nat) -> Nat = match n { Z => Z, S(m) => h(m) }\n\
                fn h(n: Nat) -> Nat = match n { Z => Z, S(m) => f(m) }";
@@ -225,7 +225,7 @@ fn mutual_descent_on_different_argument_positions() {
     // The designated descent position can differ per member: `f` descends on position 0, `g` on
     // position 1. This exercises the position-assignment search (not just a single shared index),
     // and is `Total` because the structural size strictly decreases around the whole cycle.
-    let src = "colony d\ntype Nat = Z | S(Nat)\n\
+    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
                fn f(a: Nat, b: Nat) -> Nat = match a { Z => b, S(m) => g(b, m) }\n\
                fn g(x: Nat, y: Nat) -> Nat = match y { Z => x, S(k) => f(k, x) }";
     let env = check(src).expect("checks");
@@ -240,7 +240,7 @@ fn deeply_nested_input_is_refused_not_a_crash() {
     // ParseError, well before any crash. Mutant-witness: removing the MAX_EXPR_DEPTH guard in
     // parse_expr makes 2000-deep input abort instead of returning Err.
     let deep = format!(
-        "colony d\nfn f(x: Binary{{8}}) -> Binary{{8}} = {}x{}",
+        "nodule d\nfn f(x: Binary{{8}}) -> Binary{{8}} = {}x{}",
         "(".repeat(2000),
         ")".repeat(2000)
     );
@@ -249,7 +249,7 @@ fn deeply_nested_input_is_refused_not_a_crash() {
 
     // A modest nesting still parses.
     let shallow = format!(
-        "colony d\nfn f(x: Binary{{8}}) -> Binary{{8}} = {}x{}",
+        "nodule d\nfn f(x: Binary{{8}}) -> Binary{{8}} = {}x{}",
         "(".repeat(50),
         ")".repeat(50)
     );
@@ -258,21 +258,21 @@ fn deeply_nested_input_is_refused_not_a_crash() {
 
 #[test]
 fn wild_is_denied_by_default() {
-    let src = "colony d\nfn f(x: Binary{8}) -> Binary{8} = wild { x }";
+    let src = "nodule d\nfn f(x: Binary{8}) -> Binary{8} = wild { x }";
     let err = check(src).unwrap_err();
     assert!(err.message.contains("wild"), "got: {}", err.message);
 }
 
 #[test]
 fn generics_are_an_explicit_deferral_not_a_guess() {
-    let src = "colony d\ntype Box<T> = Wrap(T)";
+    let src = "nodule d\ntype Box<T> = Wrap(T)";
     let err = check(src).unwrap_err();
     assert!(err.message.contains("deferred"), "got: {}", err.message);
 }
 
 // --- bounded iteration (RFC-0007 §4.8, r2) ---
 
-const BYTES: &str = "colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n";
+const BYTES: &str = "nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n";
 
 #[test]
 fn a_for_fold_typechecks_and_is_total() {
@@ -288,7 +288,7 @@ fn a_for_fold_typechecks_and_is_total() {
 fn for_over_a_non_linear_type_is_an_explicit_refusal() {
     // A branching (tree) type is outside the v0 linear-recursion shape.
     let err = check(
-        "colony d\ntype Tree = Leaf | Node(Tree, Tree)\nfn f(t: Tree) -> Binary{8} =\n    for x in t, acc = 0b0000_0000 => acc",
+        "nodule d\ntype Tree = Leaf | Node(Tree, Tree)\nfn f(t: Tree) -> Binary{8} =\n    for x in t, acc = 0b0000_0000 => acc",
     )
     .unwrap_err();
     assert!(
@@ -309,7 +309,7 @@ fn for_body_must_yield_the_accumulator_type() {
 
 #[test]
 fn for_over_a_repr_value_is_an_explicit_refusal() {
-    let err = check("colony d\nfn f(x: Binary{8}) -> Binary{8} = for b in x, acc = x => acc")
+    let err = check("nodule d\nfn f(x: Binary{8}) -> Binary{8} = for b in x, acc = x => acc")
         .unwrap_err();
     assert!(err.message.contains("data value"), "got: {}", err.message);
 }
@@ -317,14 +317,14 @@ fn for_over_a_repr_value_is_an_explicit_refusal() {
 #[test]
 fn imperative_words_get_teaching_diagnostics() {
     // Juxtaposition (`while x`) was never valid syntax — the parse error teaches (§4.8).
-    let perr = parse("colony d\nfn f(x: Binary{8}) -> Binary{8} = while x").unwrap_err();
+    let perr = parse("nodule d\nfn f(x: Binary{8}) -> Binary{8} = while x").unwrap_err();
     assert!(
         perr.message.contains("for x in xs"),
         "got: {}",
         perr.message
     );
     // Call-shaped use fails name resolution — the check error teaches too.
-    let cerr = check("colony d\nfn f(x: Binary{8}) -> Binary{8} = loop(x)").unwrap_err();
+    let cerr = check("nodule d\nfn f(x: Binary{8}) -> Binary{8} = loop(x)").unwrap_err();
     assert!(
         cerr.message.contains("not a Mycelium form"),
         "got: {}",

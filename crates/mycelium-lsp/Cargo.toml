@@ -21,6 +21,9 @@ mycelium-select = { path = "../mycelium-select" }
 # Document sync (M-310): the text → Node pipeline (parse → check → elaborate) the LSP server runs on
 # `didOpen`/`didChange`. The L1 surface prototype, now that RFC-0011 r3 / RFC-0001 r4 are enacted.
 mycelium-l1 = { path = "../mycelium-l1" }
+# M-359 project metadata: the structured nodule header + manifest + inheritance, so the linter can
+# check the header (unknown key / bad SPDX / non-ISO date = explicit error, G2). Above the kernel (KC-3).
+mycelium-proj = { path = "../mycelium-proj" }
 # The LSP wire protocol (M-310): JSON-RPC 2.0 framing + LSP-shaped diagnostics over stdio. The same
 # pinned serde_json the rest of the workspace uses (mycelium-core/-cert/-select/...).
 serde_json = "1"

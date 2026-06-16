@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0015 |
-| **Status** | **Draft (Proposed)** (2026-06-16 — captures the DynEL "automated baseline" design point on the roadmap; ratification + enactment is M-362) |
+| **Status** | **Accepted** (2026-06-16 — §8 resolved against the prior-art grounding in `research/06-…`; enacted by M-362 in `crates/mycelium-lsp/src/baseline.rs`) |
 | **Type** | Foundational / normative (once Accepted) — a **tooling-layer automation** over RFC-0013/0014; minimal/no kernel change (KC-3) |
 | **Feeds** | RFC-0006 (the optional surface for opting in/out); the stdlib (M-346); the toolchain (M-361) |
 | **Depends on** | RFC-0013 (presentation — the additive substrate the auto-baseline applies); RFC-0014 (declarative recovery & bounded effects — the opt-in control layer); RFC-0005/ADR-006 (reified, content-addressed, EXPLAIN-able policies); RFC-0008 §4.8/RFC-0013 §8 (the observability sinks routes bind to); G2 (never-silent), VR-5, KC-3, NFR-2/SC-5b |
@@ -93,7 +93,16 @@ weaken their invariants: the auto-baseline is RFC-0013 presentation (additive, I
 RFC-0014 (declared/bounded/opt-in, I3/I4/I5). Remove RFC-0015 and the explicit substrate is unchanged —
 the automation is a *convenience layer*, not a new semantics.
 
-## 5. Verification (direction)
+## 5. Verification (enacted, M-362)
+
+Enacted in `crates/mycelium-lsp/src/baseline.rs` with the obligations below discharged as tests:
+**(A1/I1)** the derived baseline is a `DiagnosticPolicy` — presentation only, structurally incapable of
+control flow — and `present()` over it still renders the error at every level (a baseline can never
+suppress); **(A2/I4/I5)** the `resilient` profile's `Retry` is bounded (`≤3`) and `strict` is empty
+(propagate-all), and a profile only acts on the **explicitly supplied** classes (opt-in); **(A3)** the
+derived policy is content-addressed (`content_id`) and `EXPLAIN`-able (`explain_baseline`); **(A4)** the
+derivation is a **total** function of the registry (every known class gets a rule; deterministic).
+Original direction retained for reference:
 
 When enacted: the auto-baseline preserves **never-silent (I1)** across every auto-wrapped definition (the
 RFC-0013 invariant test, now over auto-derived policies — a baseline can never suppress an error); any
@@ -116,19 +125,29 @@ change — the RFC-0014 tests, over profiles); the **derived policy is content-a
 DynEL (the automated-baseline + dynamic-application inspiration; DN-04); Rust's `tracing`/`log` + default
 subscribers (zero-config logging that's still explicit); Erlang/OTP default loggers + SASL reports
 (baseline supervision/logging with opt-in customization); Python `logging.basicConfig` (the zero-config
-baseline, minus the honesty discipline); structured-logging frameworks (auto-context). Full tracing into
-`research/` is a pre-ratification task (as for RFC-0013/0014).
+baseline, minus the honesty discipline); structured-logging frameworks (auto-context). **Traced into the
+evidence base** as **T6.1–T6.5** in `research/06-automatic-baseline-diagnostics-RECORD.md` (the
+pre-ratification grounding obligation, discharged): OTP is the strongest basis for A2 (recovery
+default-off, declared, bounded); Python `logging.basicConfig` is the *cautionary* case (ambient global
+config that silently no-ops) that A4/§8-Q1 explicitly avoids.
 
-## 8. Unresolved questions
+## 8. Resolved questions (2026-06-16, M-362; grounded in `research/06-…`)
 
-- **The derivation function.** The exact baseline mapping (class → level/route, definition → wrapped
-  presentation) — closed default set, and how a `phylum` (the M-359 manifest) configures it.
-- **Auto-recovery profiles.** The closed set of named, opt-in, bounded recovery profiles (e.g.
-  `resilient`/`strict`) and their declaration surface (RFC-0006, KC-2-gated).
-- **Scope of auto-wrapping.** Per-definition vs per-`nodule` vs per-`phylum`; default-on vs default-off
-  (bias: presentation default-on — A1 makes it safe; recovery default-off — A2).
-- **Self-hosting & toolchain.** How the auto-baseline integrates with the M-361 toolchain (lint
-  "unhandled class with no baseline route") and the M-346 stdlib.
+- **(Q1) The derivation function — RESOLVED.** A **total, inspectable** function: a **closed default
+  `class → (level, route)` table** (with a documented, safe fallback for any other registered class —
+  `Stream`/`Minimal`), scoped per-definition by the **declared effect set** (the classes it can raise).
+  Materialized per-target and `EXPLAIN`-able (never an ambient global default — the Python-`basicConfig`
+  anti-pattern, T6.4). Enacted as `baseline::derive_baseline` / `derive_baseline_for`.
+- **(Q2) Auto-recovery profiles — RESOLVED.** A **closed v0 set**: `strict` (propagate-all — the honest
+  default) and `resilient` (bounded `retry(≤3)` on the **declared** applicable classes). Each is an
+  RFC-0014 `RecoveryPolicy` (no new mechanism), bounded (I4) and opt-in (the developer picks the profile
+  *and* the classes — I5). Grounded in OTP's bounded-restart supervision (T6.3). Enacted as
+  `baseline::recovery_profile`.
+- **(Q3) Scope + defaults — RESOLVED.** **Presentation default-on** (additive — A1 makes it safe);
+  **recovery default-off** (A2 — opt-in). Auto-wrap is **per-definition** in v0 (scoped by declared
+  effects); per-`nodule`/per-`phylum` configuration rides the M-359 manifest inheritance (§9, future).
+- **(Q4) Toolchain/stdlib integration — DIRECTION SET.** The M-361 lint "class is only logged, no
+  handler" and the M-346 stdlib defaults **consume** the derived baseline; named here, enacted there.
 
 ## 9. Future possibilities
 
@@ -140,6 +159,14 @@ baseline, minus the honesty discipline); structured-logging frameworks (auto-con
 
 ## Meta — changelog
 
+- **2026-06-16 — Accepted + enacted (M-362).** Prior art traced into `research/06-…` (T6.1–T6.5,
+  discharging the §7 grounding obligation); the four §8 questions **resolved** (the derivation function:
+  a total, inspectable closed `class → (level, route)` table scoped by declared effects; the closed
+  opt-in bounded recovery-profile set `strict`/`resilient`; presentation default-on / recovery default-off,
+  per-definition scope; toolchain/stdlib direction). Status **Draft → Accepted**. Enacted in
+  `crates/mycelium-lsp/src/baseline.rs`: `derive_baseline`/`derive_baseline_for` (the auto-derived,
+  content-addressed, `EXPLAIN`-able `DiagnosticPolicy`), `recovery_profile` (the opt-in bounded RFC-0014
+  profiles), with the A1–A4 obligations as tests. No kernel change (KC-3). Append-only.
 - **2026-06-16 — Draft (Proposed).** Captures the DynEL "automated baseline error handling + logging"
   design point the maintainer added to the roadmap: an **automation layer over RFC-0013/0014** that
   auto-derives a zero-config **baseline** diagnostic/logging policy from the language's structured mapping

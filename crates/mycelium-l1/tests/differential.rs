@@ -18,7 +18,7 @@ use mycelium_cert::{check, BinaryTernarySwapEngine, CheckVerdict, Evidence, Refi
 use mycelium_core::{CoreValue, GuaranteeStrength, Payload, Repr, Value};
 use mycelium_interp::{Interpreter, PrimRegistry};
 use mycelium_l1::elab::build_registry;
-use mycelium_l1::{check_colony, elaborate, parse, Evaluator, L1Error};
+use mycelium_l1::{check_nodule, elaborate, parse, Evaluator, L1Error};
 use mycelium_numerics::Certificate;
 
 type Observable<'a> = (&'a Repr, &'a Payload, GuaranteeStrength);
@@ -32,23 +32,23 @@ fn observable(v: &Value) -> Observable<'_> {
 fn corpus() -> Vec<&'static str> {
     vec![
         // bare literal
-        "colony d\nfn main() -> Binary{8} = 0b1011_0010",
+        "nodule d\nfn main() -> Binary{8} = 0b1011_0010",
         // let / var
-        "colony d\nfn main() -> Binary{8} = let a = 0b1011_0010 in a",
+        "nodule d\nfn main() -> Binary{8} = let a = 0b1011_0010 in a",
         // unary + binary bit ops
-        "colony d\nfn main() -> Binary{8} = not(0b1011_0010)",
-        "colony d\nfn main() -> Binary{8} = xor(0b1011_0010, 0b1111_1111)",
+        "nodule d\nfn main() -> Binary{8} = not(0b1011_0010)",
+        "nodule d\nfn main() -> Binary{8} = xor(0b1011_0010, 0b1111_1111)",
         // balanced-ternary arithmetic (in range — never a silent wrap)
-        "colony d\nfn main() -> Ternary{4} = add(<00+->, <0+0->)",
-        "colony d\nfn main() -> Ternary{4} = mul(<00+0>, <00-0>)",
+        "nodule d\nfn main() -> Ternary{4} = add(<00+->, <0+0->)",
+        "nodule d\nfn main() -> Ternary{4} = mul(<00+0>, <00-0>)",
         // the certified binary→ternary swap
-        "colony d\nfn main() -> Ternary{6} = swap(0b1011_0010, to: Ternary{6}, policy: rt)",
+        "nodule d\nfn main() -> Ternary{6} = swap(0b1011_0010, to: Ternary{6}, policy: rt)",
         // a call, inlined (acyclic call graph)
-        "colony d\nfn flip(x: Binary{8}) -> Binary{8} = not(x)\nfn main() -> Binary{8} = flip(flip(0b1010_1010))",
+        "nodule d\nfn flip(x: Binary{8}) -> Binary{8} = not(x)\nfn main() -> Binary{8} = flip(flip(0b1010_1010))",
         // round-trip swap through a let
-        "colony d\nfn main() -> Binary{8} =\n  let b = 0b0010_1010 in swap(swap(b, to: Ternary{6}, policy: rt), to: Binary{8}, policy: rt)",
+        "nodule d\nfn main() -> Binary{8} =\n  let b = 0b0010_1010 in swap(swap(b, to: Ternary{6}, policy: rt), to: Binary{8}, policy: rt)",
         // an op feeding a swap, through a helper
-        "colony d\nfn widen(x: Binary{8}) -> Ternary{6} = swap(not(x), to: Ternary{6}, policy: rt)\nfn main() -> Ternary{6} = widen(0b1011_0010)",
+        "nodule d\nfn widen(x: Binary{8}) -> Ternary{6} = swap(not(x), to: Ternary{6}, policy: rt)\nfn main() -> Ternary{6} = widen(0b1011_0010)",
     ]
 }
 
@@ -62,7 +62,7 @@ fn l1_eval_l0_interp_and_aot_agree_on_the_fragment() {
     let engine = BinaryTernarySwapEngine;
 
     for (i, src) in corpus().iter().enumerate() {
-        let env = check_colony(&parse(src).expect("parses")).expect("checks");
+        let env = check_nodule(&parse(src).expect("parses")).expect("checks");
 
         // Path 1: the L1 fuel-guarded evaluator.
         let l1 = Evaluator::new(&env)
@@ -125,65 +125,65 @@ fn l1_eval_l0_interp_and_aot_agree_on_the_fragment() {
 fn data_corpus() -> Vec<&'static str> {
     vec![
         // a flat data match returning a repr value
-        "colony d\ntype Sign = Neg | Zero | Pos\n\
+        "nodule d\ntype Sign = Neg | Zero | Pos\n\
          fn label(s: Sign) -> Ternary{1} = match s { Neg => <->, Zero => <0>, _ => <+> }\n\
          fn main() -> Ternary{1} = label(Zero)",
         // a data RESULT (the program evaluates to a datum)
-        "colony d\ntype Nat = Z | S(Nat)\nfn main() -> Nat = S(S(Z))",
+        "nodule d\ntype Nat = Z | S(Nat)\nfn main() -> Nat = S(S(Z))",
         // nested patterns (Maranget) returning a datum
-        "colony d\ntype Nat = Z | S(Nat)\n\
+        "nodule d\ntype Nat = Z | S(Nat)\n\
          fn pred2(n: Nat) -> Nat = match n { Z => Z, S(Z) => Z, S(S(m)) => m }\n\
          fn main() -> Nat = pred2(S(S(S(Z))))",
         // a literal-pattern match over a Binary scrutinee
-        "colony d\nfn classify(b: Binary{4}) -> Ternary{1} = \
+        "nodule d\nfn classify(b: Binary{4}) -> Ternary{1} = \
          match b { 0b0000 => <0>, 0b1111 => <+>, _ => <-> }\n\
          fn main() -> Ternary{1} = classify(0b1111)",
         // a data value with a repr field, destructured (binds a field, runs a prim on it)
-        "colony d\ntype Box = Mk(Binary{8})\n\
+        "nodule d\ntype Box = Mk(Binary{8})\n\
          fn flip(x: Box) -> Binary{8} = match x { Mk(b) => not(b) }\n\
          fn main() -> Binary{8} = flip(Mk(0b1010_1010))",
         // `if` desugaring to a Bool match
-        "colony d\nfn pick(b: Bool) -> Binary{8} = if b then 0b1111_1111 else 0b0000_0000\n\
+        "nodule d\nfn pick(b: Bool) -> Binary{8} = if b then 0b1111_1111 else 0b0000_0000\n\
          fn main() -> Binary{8} = pick(True)",
         // a constructed result carrying a computed repr field
-        "colony d\ntype Box = Mk(Binary{8})\nfn main() -> Box = Mk(not(0b0000_1111))",
+        "nodule d\ntype Box = Mk(Binary{8})\nfn main() -> Box = Mk(not(0b0000_1111))",
         // --- r4: functions + recursion (Lam/App/Fix), now in the fragment ---
         // self-recursion returning a datum (Fix + App + Match)
-        "colony d\ntype Nat = Z | S(Nat)\n\
+        "nodule d\ntype Nat = Z | S(Nat)\n\
          fn drop_(n: Nat) -> Nat = match n { Z => Z, S(m) => drop_(m) }\n\
          fn main() -> Nat = drop_(S(S(S(Z))))",
         // self-recursion building data on the way back (a recursive copy)
-        "colony d\ntype Nat = Z | S(Nat)\n\
+        "nodule d\ntype Nat = Z | S(Nat)\n\
          fn copy(n: Nat) -> Nat = match n { Z => Z, S(m) => S(copy(m)) }\n\
          fn main() -> Nat = copy(S(S(Z)))",
         // a `for` fold over a list spine (desugars to a synthesized Fix fold)
-        "colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
+        "nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
          fn checksum(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
          fn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))",
         // a recursive helper called by a non-recursive one (inlining + Fix coexist)
-        "colony d\ntype Nat = Z | S(Nat)\n\
+        "nodule d\ntype Nat = Z | S(Nat)\n\
          fn drop_(n: Nat) -> Nat = match n { Z => Z, S(m) => drop_(m) }\n\
          fn twice_drop(n: Nat) -> Nat = drop_(drop_(n))\n\
          fn main() -> Nat = twice_drop(S(S(Z)))",
         // --- r5: mutual recursion (FixGroup), M-343 ---
         // a mutually-recursive pair returning a datum: ping(SS Z) ⟶ pong(S Z) ⟶ ping(Z) ⟶ Z
-        "colony d\ntype Nat = Z | S(Nat)\n\
+        "nodule d\ntype Nat = Z | S(Nat)\n\
          fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
          fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }\n\
          fn main() -> Nat = ping(S(S(Z)))",
         // mutual recursion over a Bool result (even/odd): even(SSS Z) ⟶ odd(SS Z) ⟶ … ⟶ False
-        "colony d\ntype Nat = Z | S(Nat)\n\
+        "nodule d\ntype Nat = Z | S(Nat)\n\
          fn even(n: Nat) -> Bool = match n { Z => True, S(m) => odd(m) }\n\
          fn odd(n: Nat) -> Bool = match n { Z => False, S(m) => even(m) }\n\
          fn main() -> Bool = even(S(S(S(Z))))",
         // mutual recursion that BUILDS data on the way back (constructive through the group):
         // f(SSS Z) ⟶ S(g(SS Z)) ⟶ S(f(S Z)) ⟶ S(S(g(Z))) ⟶ S(S(Z))
-        "colony d\ntype Nat = Z | S(Nat)\n\
+        "nodule d\ntype Nat = Z | S(Nat)\n\
          fn f(n: Nat) -> Nat = match n { Z => Z, S(m) => S(g(m)) }\n\
          fn g(n: Nat) -> Nat = match n { Z => Z, S(m) => f(m) }\n\
          fn main() -> Nat = f(S(S(S(Z))))",
         // a three-function mutual cycle (f → g → h → f) returning a datum
-        "colony d\ntype Nat = Z | S(Nat)\n\
+        "nodule d\ntype Nat = Z | S(Nat)\n\
          fn f3(n: Nat) -> Nat = match n { Z => Z, S(m) => g3(m) }\n\
          fn g3(n: Nat) -> Nat = match n { Z => Z, S(m) => h3(m) }\n\
          fn h3(n: Nat) -> Nat = match n { Z => Z, S(m) => f3(m) }\n\
@@ -200,7 +200,7 @@ fn l1_eval_l0_interp_and_aot_agree_on_the_data_and_recursion_fragment() {
     let prims = PrimRegistry::with_builtins();
     let engine = BinaryTernarySwapEngine;
     for (i, src) in data_corpus().iter().enumerate() {
-        let env = check_colony(&parse(src).expect("parses")).expect("checks");
+        let env = check_nodule(&parse(src).expect("parses")).expect("checks");
         let registry = build_registry(&env).expect("the data registry builds");
 
         // Path 1: the L1 fuel-guarded evaluator, projected onto the L0 CoreValue domain.
@@ -268,10 +268,10 @@ fn l1_eval_l0_interp_and_aot_agree_on_the_data_and_recursion_fragment() {
 /// `assert_eq!` that always passed would be the bug this guards against).
 #[test]
 fn the_data_differential_distinguishes_divergent_elaborations() {
-    let env = |src| check_colony(&parse(src).unwrap()).unwrap();
+    let env = |src| check_nodule(&parse(src).unwrap()).unwrap();
     let reg = |e: &mycelium_l1::Env| build_registry(e).unwrap();
-    let e1 = env("colony d\ntype Nat = Z | S(Nat)\nfn main() -> Nat = S(Z)");
-    let e2 = env("colony d\ntype Nat = Z | S(Nat)\nfn main() -> Nat = S(S(Z))");
+    let e1 = env("nodule d\ntype Nat = Z | S(Nat)\nfn main() -> Nat = S(Z)");
+    let e2 = env("nodule d\ntype Nat = Z | S(Nat)\nfn main() -> Nat = S(S(Z))");
     let a = Evaluator::new(&e1)
         .call("main", vec![])
         .unwrap()
@@ -289,9 +289,9 @@ fn the_data_differential_distinguishes_divergent_elaborations() {
 /// divergent pair, so a passing differential is meaningful, not vacuous.
 #[test]
 fn the_differential_distinguishes_different_programs() {
-    let env = |src| check_colony(&parse(src).unwrap()).unwrap();
-    let e1 = env("colony d\nfn main() -> Binary{8} = 0b1011_0010");
-    let e2 = env("colony d\nfn main() -> Binary{8} = 0b1111_1111");
+    let env = |src| check_nodule(&parse(src).unwrap()).unwrap();
+    let e1 = env("nodule d\nfn main() -> Binary{8} = 0b1011_0010");
+    let e2 = env("nodule d\nfn main() -> Binary{8} = 0b1111_1111");
     let a = Evaluator::new(&e1).call("main", vec![]).unwrap();
     let b = Evaluator::new(&e2).call("main", vec![]).unwrap();
     let verdict = check(
@@ -312,10 +312,10 @@ fn the_differential_distinguishes_different_programs() {
 /// the L1 evaluator too; the two paths agree on the L0 value.
 #[test]
 fn self_recursion_elaborates_and_agrees() {
-    let src = "colony d\ntype Nat = Z | S(Nat)\n\
+    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
                fn drop_(n: Nat) -> Nat = match n { Z => Z, S(m) => drop_(m) }\n\
                fn main() -> Nat = drop_(S(S(Z)))";
-    let env = check_colony(&parse(src).unwrap()).unwrap();
+    let env = check_nodule(&parse(src).unwrap()).unwrap();
     let registry = build_registry(&env).unwrap();
     assert_eq!(env.totality["drop_"], mycelium_l1::Totality::Total);
 
@@ -343,11 +343,11 @@ fn self_recursion_elaborates_and_agrees() {
 fn mutual_recursion_elaborates_and_all_three_paths_agree() {
     let prims = PrimRegistry::with_builtins();
     let engine = BinaryTernarySwapEngine;
-    let src = "colony d\ntype Nat = Z | S(Nat)\n\
+    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
                fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
                fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }\n\
                fn main() -> Nat = ping(S(S(Z)))";
-    let env = check_colony(&parse(src).unwrap()).unwrap();
+    let env = check_nodule(&parse(src).unwrap()).unwrap();
     let registry = build_registry(&env).unwrap();
 
     // The mutually-recursive group structurally descends on position 0, so the totality checker
@@ -398,11 +398,11 @@ fn recovery_match_over_a_result_sum_agrees_three_ways() {
     let engine = BinaryTernarySwapEngine;
     // Written in the existing data+match surface (no new syntax) — the lowering target of a recovery
     // handling site: match the result sum, recover the `Err` case with an explicit fallback.
-    let src = "colony d\n\
+    let src = "nodule d\n\
                type Result = Ok(Binary{8}) | Err(Binary{8})\n\
                fn recover(r: Result) -> Binary{8} = match r { Ok(v) => v, Err(e) => 0b0000_0000 }\n\
                fn main() -> Binary{8} = recover(Err(0b1111_1111))";
-    let env = check_colony(&parse(src).unwrap()).unwrap();
+    let env = check_nodule(&parse(src).unwrap()).unwrap();
     let registry = build_registry(&env).unwrap();
     let node = elaborate(&env, "main").expect("a recovery match elaborates (no new kernel node)");
 
@@ -445,11 +445,11 @@ fn the_effect_ledger_is_meaning_preserving_on_the_recovery_match() {
     use mycelium_interp::{Budgets, EffectBudget};
     let prims = PrimRegistry::with_builtins();
     let engine = BinaryTernarySwapEngine;
-    let src = "colony d\n\
+    let src = "nodule d\n\
                type Result = Ok(Binary{8}) | Err(Binary{8})\n\
                fn recover(r: Result) -> Binary{8} = match r { Ok(v) => v, Err(e) => 0b0000_0000 }\n\
                fn main() -> Binary{8} = recover(Err(0b1111_1111))";
-    let env = check_colony(&parse(src).unwrap()).unwrap();
+    let env = check_nodule(&parse(src).unwrap()).unwrap();
     let node = elaborate(&env, "main").unwrap();
 
     let plain = mycelium_mlir::run_core(&node, &prims, &engine).unwrap();
@@ -474,9 +474,9 @@ fn the_effect_ledger_is_meaning_preserving_on_the_recovery_match() {
 /// an explicit `FuelExhausted`, never a hang (§4.5).
 #[test]
 fn a_partial_program_exhausts_fuel_explicitly() {
-    let src = "colony d\ntype Nat = Z | S(Nat)\n\
+    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
                fn spin(n: Nat) -> Nat = spin(n)\nfn main() -> Nat = spin(Z)";
-    let env = check_colony(&parse(src).unwrap()).unwrap();
+    let env = check_nodule(&parse(src).unwrap()).unwrap();
     assert_eq!(env.totality["spin"], mycelium_l1::Totality::Partial);
     let err = Evaluator::new(&env)
         .with_fuel(50)

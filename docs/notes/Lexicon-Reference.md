@@ -25,7 +25,7 @@ This document is the single source of truth for terminology in the Mycelium prog
 
 | Tier        | Purpose                              | Theming Approach                  | Typical User                  | Example Terms                  |
 |-------------|--------------------------------------|-----------------------------------|-------------------------------|--------------------------------|
-| **Surface** | Daily surface syntax & keywords      | Conservative (three-test gate)    | All developers                | `colony`, `consume`, `grow`    |
+| **Surface** | Daily surface syntax & keywords      | Conservative (three-test gate)    | All developers                | `nodule`, `consume`, `grow`    |
 | **Runtime** | Runtime primitives & architecture    | Themed, name-stable (DN-03)       | Systems & runtime developers  | `hypha`, `fuse`, `xloc`, `cyst`|
 | **Formal**  | Formal semantics & Core IR           | Technical / conventional          | Language designers & compilers| `Repr`, `GuaranteeStrength`    |
 
@@ -56,7 +56,8 @@ This document is the single source of truth for terminology in the Mycelium prog
 
 | Short Form | Full Term   | Definition | Mnemonic & Rationale | Behaviors | Example |
 |------------|-------------|------------|----------------------|-----------|---------|
-| `colony`   | Colony      | A bounded, self-sustaining unit of definitions and behavior. | A fungal colony is a living network of hyphae working together. | Owns definitions, controls visibility, participates in the larger network. | `colony math { fn add(...) }` |
+| `nodule`   | Nodule      | The basic static unit of definitions and behavior (replaces the generic "module"). | A nodule is a small, self-contained growth — a bounded unit of definitions. | Owns definitions, controls visibility, lives inside a `phylum`. | `nodule math { fn add(...) }` |
+| `colony`   | Colony      | A **dynamic** runtime grouping of active `hypha` (reassigned from the former static meaning; DN-06). | A colony is a living group of cooperating organisms — running tasks under a shared scope. | Runtime grouping/supervision (RFC-0008 §4.7); reserved-not-active at the L1 surface. | `colony` of `hypha` supervised by `reclaim` |
 | `spore`    | Spore       | An immutable, verifiable, self-contained artifact of code + state + metadata that can germinate into execution. | A biological spore carries everything needed to regrow the organism. | Content-addressed, signed, dispersible. Supports lightweight and durable variants. | `let s = spore { ... }; germinate(s)` |
 | `consume`  | Consume     | Acquire and take exclusive ownership of a linear/affine resource. | A fungus consumes substrate exactly once to grow. | Enforces single-use semantics via the type system. | `let res = consume(substrate);` |
 | `grow`     | Grow        | Automatically generate or extend behavior on a type. | The system *grows* new capabilities, like fungal extension. | Used for derive-like and generative features. | `grow Debug for Point;` |

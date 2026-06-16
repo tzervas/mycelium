@@ -34,17 +34,19 @@ pub mod elab;
 pub mod error;
 pub mod eval;
 pub mod lexer;
+pub mod nodule;
 pub mod parse;
 pub mod token;
 pub mod totality;
 pub(crate) mod usefulness;
 
 pub use ambient::{expand_to_source, resolve, resolve_report, AmbientError, Resolved};
-pub use ast::Colony;
-pub use checkty::{check_and_resolve, check_colony, CheckError, Env, Ty};
+pub use ast::Nodule;
+pub use checkty::{check_and_resolve, check_nodule, CheckError, Env, Ty};
 pub use elab::{elaborate, ElabError};
 pub use error::ParseError;
 pub use eval::{Evaluator, L1Error, L1Value};
+pub use nodule::{parse_nodule_header, NoduleHeader, NoduleHeaderError};
 pub use parse::parse;
 pub use totality::Totality;
 
@@ -54,12 +56,12 @@ mod tests {
     use crate::ast::{BaseType, Expr, Item, Literal};
 
     #[test]
-    fn parses_a_colony_with_a_swap() {
-        let src = "colony demo\nfn f(x: Binary{8}) -> Ternary{6} =\n  swap(x, to: Ternary{6}, policy: rt)";
-        let colony = parse(src).expect("parses");
-        assert_eq!(colony.path.0, vec!["demo"]);
-        assert_eq!(colony.items.len(), 1);
-        let Item::Fn(f) = &colony.items[0] else {
+    fn parses_a_nodule_with_a_swap() {
+        let src = "nodule demo\nfn f(x: Binary{8}) -> Ternary{6} =\n  swap(x, to: Ternary{6}, policy: rt)";
+        let nodule = parse(src).expect("parses");
+        assert_eq!(nodule.path.0, vec!["demo"]);
+        assert_eq!(nodule.items.len(), 1);
+        let Item::Fn(f) = &nodule.items[0] else {
             panic!("expected a fn item");
         };
         assert!(!f.matured);
@@ -70,29 +72,40 @@ mod tests {
     #[test]
     fn a_swap_without_policy_is_an_explicit_error() {
         // S1/WF2: the policy is mandatory; its absence is a diagnostic, never a silent accept.
-        let src = "colony demo\nfn f(x: Binary{8}) -> Ternary{6} = swap(x, to: Ternary{6})";
+        let src = "nodule demo\nfn f(x: Binary{8}) -> Ternary{6} = swap(x, to: Ternary{6})";
         let err = parse(src).unwrap_err();
         assert!(err.message.contains("policy"), "got: {}", err.message);
     }
 
     #[test]
     fn a_reserved_word_is_not_a_usable_identifier() {
-        let src = "colony demo\nfn colony(x: Binary{8}) -> Binary{8} = x";
+        let src = "nodule demo\nfn nodule(x: Binary{8}) -> Binary{8} = x";
         assert!(parse(src).is_err());
     }
 
     #[test]
+    fn phylum_and_colony_are_reserved_not_active() {
+        // DN-06: `phylum` (library grouping) and `colony` (dynamic runtime grouping) are reserved
+        // keywords — they lex as keywords (so never silent identifiers) but no L1 construct consumes
+        // them yet, so neither opens a program and neither is a usable identifier (G2).
+        assert!(parse("phylum signals\n").is_err());
+        assert!(parse("colony signals\n").is_err());
+        assert!(parse("nodule demo\nfn phylum() -> Binary{8} = 0b0").is_err());
+        assert!(parse("nodule demo\nfn f(colony: Binary{8}) -> Binary{8} = colony").is_err());
+    }
+
+    #[test]
     fn a_malformed_ternary_literal_is_explicit() {
-        let src = "colony demo\nfn f() -> Ternary{3} = <+x->";
+        let src = "nodule demo\nfn f() -> Ternary{3} = <+x->";
         let err = parse(src).unwrap_err();
         assert!(err.message.contains("non-trit"), "got: {}", err.message);
     }
 
     #[test]
     fn matured_and_literals_parse() {
-        let src = "colony demo\nmatured fn k() -> Binary{8} = 0b1011_0010";
-        let colony = parse(src).unwrap();
-        let Item::Fn(f) = &colony.items[0] else {
+        let src = "nodule demo\nmatured fn k() -> Binary{8} = 0b1011_0010";
+        let nodule = parse(src).unwrap();
+        let Item::Fn(f) = &nodule.items[0] else {
             panic!("fn");
         };
         assert!(f.matured);

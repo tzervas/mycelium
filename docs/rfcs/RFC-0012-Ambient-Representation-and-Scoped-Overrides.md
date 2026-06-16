@@ -52,7 +52,7 @@ blocks.
 ## 3. Guide-level explanation
 
 ```text
-colony image
+nodule image
 default paradigm Binary            -- the ambient: omitted paradigms are Binary (paradigm only)
 
 fn mask(x: {8}, m: {8}) -> {8} =   -- {8} ≡ Binary{8} from the ambient; widths stay explicit
@@ -101,7 +101,7 @@ fixes width/dim/dtype/model/sparsity; those remain explicit at every use (the v0
 
 ### 4.2 Surface additions (RFC-0006 grammar)
 
-1. `default paradigm P` — a declaration, valid at colony scope and block scope.
+1. `default paradigm P` — a declaration, valid at nodule scope and block scope.
 2. `{ <params> }` — the **paradigm-less repr**: the ambient paradigm `P` combined with the written
    `<params>` (whose shape must be `P`'s shape) yields the concrete `Repr`. Equivalent longhand:
    `P{<params>}`.
@@ -276,8 +276,8 @@ annotation resolved to. No ambient declaration can upgrade a guarantee (VR-5).
 - **2026-06-16 — Enacted (M-344, #106).** The §4 design is now code in `mycelium-l1`
   (`ambient` module) and `mycelium-lsp` (`expand`). The chosen architecture realizes the invariants
   *by construction*: resolution is a **surface→surface "expand to longhand" pass**
-  (`ambient::resolve : Colony → Colony`) that fills omitted paradigm tags, strips `with paradigm`
-  blocks, and tags bare decimals; the **unchanged** `check_colony → elaborate` pipeline then runs on
+  (`ambient::resolve : Nodule → Nodule`) that fills omitted paradigm tags, strips `with paradigm`
+  blocks, and tags bare decimals; the **unchanged** `check_nodule → elaborate` pipeline then runs on
   the twin — so `elaborate(p) = elaborate(resolve(p))` (I2) holds without a parallel implementation,
   and I1 holds because the pass has no rule that inserts a `Swap`. The §4.6 differential
   (`tests/ambient.rs`) proves I2 as identical elaborated **content hash** over `(ambient, longhand)`

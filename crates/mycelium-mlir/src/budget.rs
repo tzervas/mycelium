@@ -82,7 +82,7 @@ pub struct DepthResolution {
 pub enum StaticReason {
     /// No `/proc` memory detection on this platform (only Linux is wired) — honestly deferred.
     UnsupportedPlatform,
-    /// `/proc` was unreadable or unparseable — never guess; fall back.
+    /// `/proc` was unreadable or unparsable — never guess; fall back.
     DetectionFailed,
     /// The caller asked for a fixed budget explicitly ([`StaticDepthBudget`]).
     Explicit,
@@ -129,7 +129,7 @@ impl fmt::Display for DepthResolution {
                     StaticReason::UnsupportedPlatform => {
                         "no /proc memory detection on this platform"
                     }
-                    StaticReason::DetectionFailed => "/proc headroom unreadable/unparseable",
+                    StaticReason::DetectionFailed => "/proc headroom unreadable/unparsable",
                     StaticReason::Explicit => "caller-specified fixed budget",
                 };
                 write!(f, "max_depth={} (static fallback: {why})", self.max_depth)

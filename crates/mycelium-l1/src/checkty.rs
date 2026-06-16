@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 use crate::ambient::AmbientError;
 use crate::ast::{
-    BaseType, Colony, Expr, FnDecl, Item, Literal, Paradigm, Path, Pattern, Scalar, Strength,
+    BaseType, Expr, FnDecl, Item, Literal, Nodule, Paradigm, Path, Pattern, Scalar, Strength,
     TypeDecl, TypeRef,
 };
 
@@ -22,7 +22,7 @@ pub enum Ty {
     /// `Dense{d, s}`.
     Dense(u32, Scalar),
     /// A registered data type, by name (content addressing of declarations: RFC-0007 §4.2;
-    /// the prototype keys by name since v0 is single-colony).
+    /// the prototype keys by name since v0 is single-nodule).
     Data(String),
     /// `Substrate{tag}` — the affine external-resource kind (LR-8). No value forms exist in v0.
     Substrate(String),
@@ -74,7 +74,7 @@ impl From<AmbientError> for CheckError {
             AmbientError::UnresolvedAmbient { site }
             | AmbientError::ParadigmShapeMismatch { site, .. }
             | AmbientError::BareDecimalNoEncoding { site, .. } => site.clone(),
-            AmbientError::MultipleDefaults { .. } => "<colony>".to_owned(),
+            AmbientError::MultipleDefaults { .. } => "<nodule>".to_owned(),
         };
         CheckError {
             site,
@@ -101,7 +101,7 @@ pub struct DataInfo {
     pub ctors: Vec<CtorInfo>,
 }
 
-/// The checked program environment: registry + function table. Built by [`check_colony`]; the
+/// The checked program environment: registry + function table. Built by [`check_nodule`]; the
 /// evaluator and elaborator consume it (so nothing runs unchecked).
 #[derive(Debug, Clone)]
 pub struct Env {
@@ -186,7 +186,7 @@ pub(crate) fn resolve_ty(
     Ok((base, t.guarantee))
 }
 
-/// Check a whole colony: build the registry (prelude + declarations), then type every function
+/// Check a whole nodule: build the registry (prelude + declarations), then type every function
 /// body against its signature, classify totality, and enforce the `matured ⟹ total` gate
 /// (RFC-0007 §4.5). Returns the checked [`Env`].
 ///
@@ -194,16 +194,16 @@ pub(crate) fn resolve_ty(
 /// ([`crate::ambient::resolve`]) — paradigm-less reprs are filled, `with paradigm` blocks stripped,
 /// bare decimals tagged — so the checker only ever sees fully-explicit (longhand) forms. A program
 /// using no ambient is unchanged (resolution is identity).
-pub fn check_colony(colony: &Colony) -> Result<Env, CheckError> {
-    check_and_resolve(colony).map(|(env, _)| env)
+pub fn check_nodule(nodule: &Nodule) -> Result<Env, CheckError> {
+    check_and_resolve(nodule).map(|(env, _)| env)
 }
 
-/// Like [`check_colony`], but also returns the **fully-resolved longhand twin** of the program
+/// Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program
 /// (paradigm tags filled *and* bare-decimal widths resolved from context) — the source the M-142/LSP
-/// "expand ambient" projection renders (RFC-0012 §5). The returned [`Colony`] elaborates to the
+/// "expand ambient" projection renders (RFC-0012 §5). The returned [`Nodule`] elaborates to the
 /// identical L0 (and content hash) as the original (I2; RFC-0012 §4.3).
-pub fn check_and_resolve(colony: &Colony) -> Result<(Env, Colony), CheckError> {
-    let resolved = crate::ambient::resolve(colony)?;
+pub fn check_and_resolve(nodule: &Nodule) -> Result<(Env, Nodule), CheckError> {
+    let resolved = crate::ambient::resolve(nodule)?;
     let env = check_resolved(&resolved)?;
     // Rebuild the twin with the checker-resolved fn bodies (bare-decimal widths now concrete).
     let mut items = Vec::with_capacity(resolved.items.len());
@@ -220,21 +220,21 @@ pub fn check_and_resolve(colony: &Colony) -> Result<(Env, Colony), CheckError> {
             other => items.push(other.clone()),
         }
     }
-    let twin = Colony {
+    let twin = Nodule {
         path: resolved.path.clone(),
         items,
     };
     Ok((env, twin))
 }
 
-/// The core checker, run on an already ambient-resolved colony.
-fn check_resolved(colony: &Colony) -> Result<Env, CheckError> {
+/// The core checker, run on an already ambient-resolved nodule.
+fn check_resolved(nodule: &Nodule) -> Result<Env, CheckError> {
     let mut types = BTreeMap::new();
     let p = prelude();
     types.insert(p.name.clone(), p);
 
     // Pass 1: register data declarations (so they can reference each other).
-    for item in &colony.items {
+    for item in &nodule.items {
         if let Item::Type(td) = item {
             if !td.params.is_empty() {
                 return Err(CheckError::new(
@@ -255,7 +255,7 @@ fn check_resolved(colony: &Colony) -> Result<Env, CheckError> {
             );
         }
     }
-    for item in &colony.items {
+    for item in &nodule.items {
         if let Item::Type(td) = item {
             let ctors = resolve_ctors(&types, td)?;
             types.get_mut(&td.name).expect("registered above").ctors = ctors;
@@ -264,7 +264,7 @@ fn check_resolved(colony: &Colony) -> Result<Env, CheckError> {
 
     // Pass 2: collect functions (signatures must resolve).
     let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();
-    for item in &colony.items {
+    for item in &nodule.items {
         match item {
             Item::Fn(fd) => {
                 if !fd.sig.params.is_empty() {
@@ -450,7 +450,7 @@ impl Cx<'_> {
     ) -> Result<(Ty, Expr), CheckError> {
         if p.0.len() != 1 {
             return self.err(format!(
-                "dotted path `{}` does not resolve in v0 (single-colony)",
+                "dotted path `{}` does not resolve in v0 (single-nodule)",
                 p.0.join(".")
             ));
         }

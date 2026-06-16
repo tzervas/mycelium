@@ -348,7 +348,7 @@ mod tests {
 
     #[test]
     fn serve_publishes_diagnostics_on_did_open_and_did_change() {
-        // didOpen a colony with a type error → a `check` diagnostic; didChange to a clean colony →
+        // didOpen a nodule with a type error → a `check` diagnostic; didChange to a clean nodule →
         // the diagnostics clear. The mutant-witness: a server ignoring didChange would keep stale
         // diagnostics (this asserts the second publish is empty).
         let mut input = Vec::new();
@@ -358,7 +358,7 @@ mod tests {
                 "jsonrpc": "2.0", "method": "textDocument/didOpen",
                 "params": { "textDocument": {
                     "uri": "mem://x", "languageId": "mycelium", "version": 1,
-                    "text": "colony d\nfn bad() -> Binary{8} = add(0b0000_0001, 0b0000_0010)"
+                    "text": "nodule d\nfn bad() -> Binary{8} = add(0b0000_0001, 0b0000_0010)"
                 }}
             }),
         )
@@ -369,7 +369,7 @@ mod tests {
                 "jsonrpc": "2.0", "method": "textDocument/didChange",
                 "params": {
                     "textDocument": { "uri": "mem://x", "version": 2 },
-                    "contentChanges": [ { "text": "colony d\nfn main() -> Binary{8} = not(0b0000_0001)" } ]
+                    "contentChanges": [ { "text": "nodule d\nfn main() -> Binary{8} = not(0b0000_0001)" } ]
                 }
             }),
         )
