@@ -4,7 +4,7 @@
 |---|---|
 | **ADR** | 017 |
 | **Title** | Inject newly-compiled definitions into a running image without recompiling/relinking the whole binary, via a hash-keyed dispatch table + content-addressed dynamic linking — safe because definitions are immutable (a change is a new hash, never an in-place mutation) |
-| **Status** | **Proposed** (drafted 2026-06-16; enacts RFC-0004 r2 §10 **OQ-2**) |
+| **Status** | **Accepted** (drafted 2026-06-16; ratified 2026-06-16; enacts RFC-0004 r2 §10 **OQ-2**) |
 | **Date** | 2026-06-16 |
 | **Depends on** | ADR-016 (the interpreted↔compiled ABI this rides); RFC-0004 §9 (the continuum) / §10 OQ-2; RFC-0001 §4.6 (content-addressing) / §4.7-equivalent immutability; ADR-003 (Unison identity); ADR-009 (hybrid execution); M-340 (in-process `dlopen` JIT — the seed) |
 | **Resolves** | RFC-0004 §10 **OQ-2** (hot-inject of recompiled definitions) |
@@ -97,3 +97,12 @@ honest deferral, not a shipped capability.
   dependency-closure** by hash reachability. The M-340 `dlopen` JIT is the prototype substrate;
   native codegen + the cross-process unit format are deferred. Awaiting maintainer ratification
   (Proposed → Accepted). Append-only.
+- **2026-06-16 — Accepted.** Maintainer ratification (Proposed → Accepted). No change to the
+  mechanism or its safety argument. This gates and is realized by the **in-process hot-inject
+  prototype** (`mycelium-mlir::inject`, M-341): a `ContentHash → entry` dispatch table over the
+  M-340 `dlopen` JIT — a call resolves to a compiled entry if present, else interprets (the
+  continuum); injection loads a content-addressed unit and registers a new `hash → entry`, never
+  mutating a live entry; the recompile set is the changed dependency-closure computed by hash
+  reachability; and the injected-compiled path is checked observationally equivalent to the
+  interpreter through the M-210 checker (NFR-7). Cross-process / native units stay deferred
+  (MLIR→LLVM; §10 OQ-3) — honest scope, VR-5. Append-only.
