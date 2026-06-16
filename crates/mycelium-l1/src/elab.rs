@@ -126,6 +126,11 @@ pub fn lit_value(site: &str, l: &Literal) -> Result<Value, ElabError> {
             site,
             "a bare integer literal has no representation family (Q6)",
         ),
+        Literal::AmbientInt(_, _) => residual(
+            site,
+            "internal: an unresolved ambient bare decimal reached elaboration — the checker \
+             resolves its width before the L0 bridge runs (RFC-0012 §4.3)",
+        ),
         Literal::List(_) => residual(site, "list literals are deferred in v0"),
     }
 }
@@ -153,6 +158,11 @@ pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
         BaseType::Named(name, _) => residual(
             site,
             format!("`{name}` is not a representation type — no kernel Repr"),
+        ),
+        BaseType::Ambient(_) => residual(
+            site,
+            "internal: an unresolved paradigm-less repr `{…}` reached elaboration — the ambient \
+             resolution pass fills it first (RFC-0012 §4.3)",
         ),
     }
 }
@@ -382,6 +392,7 @@ fn collect_calls(e: &Expr, out: &mut BTreeSet<String>) {
             collect_calls(body, out);
         }
         Expr::Swap { value, .. } => collect_calls(value, out),
+        Expr::WithParadigm { body, .. } => collect_calls(body, out),
         Expr::Wild(inner) | Expr::Spore(inner) | Expr::Ascribe(inner, _) => {
             collect_calls(inner, out);
         }
@@ -570,6 +581,11 @@ impl Elab<'_> {
                     policy: policy_name_ref(policy),
                 })
             }
+            Expr::WithParadigm { .. } => residual(
+                site,
+                "internal: a `with paradigm` block reached elaboration — the ambient resolution \
+                 pass strips it (RFC-0012 §4.4)",
+            ),
             Expr::Wild(_) => residual(site, "`wild` is denied by default (LR-9)"),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
             Expr::Ascribe(inner, t) => {

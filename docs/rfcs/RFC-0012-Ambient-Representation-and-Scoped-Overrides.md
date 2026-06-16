@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0012 |
-| **Status** | **Accepted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design is normative. Enactment — the resolution pass + the never-silent checks + M-142/LSP rendering + the §4.6 differential — is the gated follow-on M-344; no code lands with ratification.) |
+| **Status** | **Accepted — Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design is normative. **Enacted 2026-06-16 — M-344** (#106): the resolution pass, the never-silent `UnresolvedAmbient`/`ParadigmShapeMismatch`/`MissingConversion` checks, bare-decimal width-from-context, the M-142/LSP "expand ambient" rendering, and the §4.6 differential are code in `mycelium-l1`/`mycelium-lsp`. See the changelog for the enactment clarifications, incl. the surface-layer provenance realization and the R12-Q1..Q4 dispositions.) |
 | **Type** | Foundational / normative (once Accepted) — surface/term-layer feature; no kernel change |
 | **Date** | 2026-06-16 |
 | **Depends on** | RFC-0006 §3/§4 (surface language & term-layering — this is a surface-layer feature); RFC-0005 (selection-policy language — the ambient is a reified selection); RFC-0001 §4.5/§4.6 (Core IR; content-addressing / names-as-metadata; WF1/WF2 swap-only repr change); RFC-0007 §4.6 (the elaboration this rides); ADR-006 (selections are reified, inspectable artifacts); ADR-016 (the cross-module ABI is concrete hashes/reprs); G2 (never-silent); tension **A** (the verbosity cost of honesty); KC-3 (small kernel); NFR-7 (the differential) |
@@ -255,3 +255,43 @@ annotation resolved to. No ambient declaration can upgrade a guarantee (VR-5).
   M-142/LSP "expand ambient" rendering, and the §4.6 meaning-preservation differential. Open questions
   R12-Q1..Q4 remain (bare-literal width, policy-driven override boundaries, canonical-form choice, VSA
   interaction). Append-only.
+- **2026-06-16 — Enacted (M-344, #106).** The §4 design is now code in `mycelium-l1`
+  (`ambient` module) and `mycelium-lsp` (`expand`). The chosen architecture realizes the invariants
+  *by construction*: resolution is a **surface→surface "expand to longhand" pass**
+  (`ambient::resolve : Colony → Colony`) that fills omitted paradigm tags, strips `with paradigm`
+  blocks, and tags bare decimals; the **unchanged** `check_colony → elaborate` pipeline then runs on
+  the twin — so `elaborate(p) = elaborate(resolve(p))` (I2) holds without a parallel implementation,
+  and I1 holds because the pass has no rule that inserts a `Swap`. The §4.6 differential
+  (`tests/ambient.rs`) proves I2 as identical elaborated **content hash** over `(ambient, longhand)`
+  pairs, plus observational equivalence where runnable. The three never-silent refusals are enacted:
+  `UnresolvedAmbient` and `ParadigmShapeMismatch` in the resolution pass; **`MissingConversion`** as a
+  sharpening of the checker's existing cross-paradigm value-edge mismatch (it names from/to and points
+  at writing an explicit `swap`) — a same-paradigm width mismatch keeps the plain wording. The feature
+  is **opt-in** (no-ambient programs resolve to themselves). Surface additions are reserved keywords
+  `default`/`paradigm`/`with`, the paradigm-less repr `{…}`, and `default paradigm` / `with paradigm`
+  (grammar + conformance corpus updated). **Kernel untouched** (KC-3).
+
+  **Enactment clarifications (append-only, not revisions of §4):**
+  - **Provenance realization (§4.3).** The §4.3 line "elaborated nodes carry provenance
+    `AmbientDefault { site }`" is realized at the **surface/resolution layer** — `resolve_report`
+    returns a `ResolutionNote` per fill (the EXPLAIN answer "where did this paradigm come from?"),
+    and `expand_to_source` renders the resolved longhand — rather than as a new
+    `mycelium_core::Provenance` variant. Rationale: a core variant would change a **frozen data-contract
+    schema** (`provenance.schema.json`) for metadata that is **not hashed** (RFC-0001 §4.6, so I2 is
+    unaffected either way) and is **fully recoverable** at the surface. This keeps the kernel and its
+    schemas untouched (KC-3) and is the more honest, lower-blast-radius realization of the *same*
+    EXPLAIN obligation.
+  - **R12-Q1 (bare-literal width) — v0 rule enacted; width-default extension still deferred.** Per the
+    maintainer (2026-06-16), v0 implements **width-from-context** now: the checker is bidirectional and
+    a bare decimal takes its width from an ascription / parameter-return-field type / a concrete sibling
+    operand of a width-preserving prim; an undetermined width is an explicit `UnresolvedWidth` (never a
+    default width). The *optional ambient width* axis (§9) remains a future possibility.
+  - **R12-Q2 (override conversion selection) — v0 = fully-written swaps** (enacted as designed); the
+    policy-driven (RFC-0005-selected) boundary stays a candidate follow-on.
+  - **R12-Q3 (canonical form) — resolved.** The M-142/LSP projection renders the **expanded (longhand)**
+    form on demand; content-addressed identity is over the expanded L0 regardless (§4.3 I2), so
+    "expanded" is the canonical reading and the elided form is a pure presentation convenience.
+  - **R12-Q4 (VSA paradigm ambient) — resolved/confirmed.** `default paradigm VSA` elides only the
+    **paradigm tag**; VSA params (model/dim/sparsity) stay mandatory and explicit; a *bare decimal* under
+    a `VSA` (or `Dense`) ambient has no encoding and is an explicit refusal. No change to the RFC-0003
+    submodule boundary.

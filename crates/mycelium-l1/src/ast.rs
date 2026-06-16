@@ -14,11 +14,59 @@ pub struct Colony {
     pub items: Vec<Item>,
 }
 
+/// A representation **paradigm** tag (RFC-0001 §4.2): the granularity of the RFC-0012 ambient. The
+/// ambient supplies an *omitted paradigm*; widths/dims/dtypes/models stay explicit (the v0 scope).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Paradigm {
+    /// `Binary`.
+    Binary,
+    /// `Ternary`.
+    Ternary,
+    /// `Dense`.
+    Dense,
+    /// `VSA`.
+    Vsa,
+}
+
+impl core::fmt::Display for Paradigm {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            Paradigm::Binary => "Binary",
+            Paradigm::Ternary => "Ternary",
+            Paradigm::Dense => "Dense",
+            Paradigm::Vsa => "VSA",
+        })
+    }
+}
+
+/// The written params of a **paradigm-less repr** `{ … }` (RFC-0012 §4.2): the size/shape is still
+/// written explicitly; only the paradigm is supplied by the enclosing ambient. The shape must fit
+/// the ambient paradigm or resolution is an explicit `ParadigmShapeMismatch` (never a coerced guess).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AmbientParams {
+    /// `{N}` — a single size (a `Binary` width or a `Ternary` trit count).
+    Size(u32),
+    /// `{N, scalar}` — a `Dense` shape.
+    Dense(u32, Scalar),
+    /// `{model, dim, sparsity}` — a `VSA` shape.
+    Vsa {
+        /// Model id.
+        model: String,
+        /// Dimension.
+        dim: u32,
+        /// Declared sparsity.
+        sparsity: Sparsity,
+    },
+}
+
 /// A top-level item.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Item {
     /// `use path`.
     Use(Path),
+    /// `default paradigm P` — the colony-scope ambient (RFC-0012 §4.2). At most one per colony; the
+    /// outermost ambient frame. Consumed (stripped) by the resolution pass ([`crate::ambient`]).
+    Default(Paradigm),
     /// A data-type declaration.
     Type(TypeDecl),
     /// A trait declaration.
@@ -122,6 +170,11 @@ pub enum BaseType {
     Substrate(String),
     /// A named type or type variable, with optional type arguments.
     Named(String, Vec<TypeRef>),
+    /// A **paradigm-less repr** `{ <params> }` (RFC-0012 §4.2). Produced only by the parser; the
+    /// resolution pass ([`crate::ambient`]) replaces it with the concrete paradigm from the
+    /// enclosing ambient, or refuses (`UnresolvedAmbient`/`ParadigmShapeMismatch`). It never
+    /// survives into the checker (defense-in-depth: a residual one is an explicit internal refusal).
+    Ambient(AmbientParams),
 }
 
 /// Declared sparsity of a VSA type.
@@ -213,6 +266,17 @@ pub enum Expr {
         /// The policy reference.
         policy: Path,
     },
+    /// `with paradigm P { body }` — a block establishing a nested ambient over `body` (RFC-0012
+    /// §4.4). It is **not** a conversion (it inserts no `Swap`, I1): a value crossing the boundary
+    /// whose paradigm differs needs an explicit `swap`, and an unbridged edge is a never-silent
+    /// `MissingConversion` refusal. The resolution pass strips it to just `body` after filling the
+    /// interior tags; it never survives into the checker.
+    WithParadigm {
+        /// The interior ambient paradigm.
+        paradigm: Paradigm,
+        /// The block body.
+        body: Box<Expr>,
+    },
     /// `wild { body }` — the denied-by-default unsafe block (LR-9).
     Wild(Box<Expr>),
     /// `spore(value)` — reconstruction-manifest construction.
@@ -263,6 +327,12 @@ pub enum Literal {
     Trit(String),
     /// A decimal integer.
     Int(i64),
+    /// A **bare decimal under an ambient** (RFC-0012 §4.3): the paradigm is supplied by the
+    /// enclosing ambient; the *width* comes from the checked context. Produced only by the
+    /// resolution pass ([`crate::ambient`]) from an [`Literal::Int`]; the checker resolves the
+    /// width and rewrites it to a concrete [`Literal::Bin`]/[`Literal::Trit`], or refuses with an
+    /// explicit `UnresolvedWidth` (never a built-in default). It never reaches elaboration.
+    AmbientInt(Paradigm, i64),
     /// A list literal `[e, …]`.
     List(Vec<Expr>),
 }

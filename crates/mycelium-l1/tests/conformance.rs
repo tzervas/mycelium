@@ -65,6 +65,10 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "expected a `colony` header to open the program",
     ),
     ("08-imperative-while.myc", "`while` is not a Mycelium form"),
+    (
+        "09-default-missing-paradigm.myc",
+        "expected `paradigm` after `default`",
+    ),
 ];
 
 #[test]

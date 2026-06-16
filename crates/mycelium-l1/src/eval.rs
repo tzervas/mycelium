@@ -399,6 +399,12 @@ impl<'e> Evaluator<'e> {
                 Ok(out)
             }
 
+            Expr::WithParadigm { .. } => Err(L1Error::Unsupported {
+                site: site.to_owned(),
+                what: "internal: a `with paradigm` block reached the evaluator — the ambient \
+                       resolution pass strips it (RFC-0012 §4.4)"
+                    .to_owned(),
+            }),
             Expr::Wild(_) => Err(L1Error::Unsupported {
                 site: site.to_owned(),
                 what: "`wild` is denied by default (LR-9): no host FFI capability exists in v0"

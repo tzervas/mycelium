@@ -8,6 +8,45 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — M-344: enact RFC-0012 ambient representation; surface-only, never a black box)
+- **`mycelium-l1::ambient` — the ambient resolution pass (RFC-0012 §4.3/§4.4 enacted).** A *declared,
+  scoped, paradigm-only* default (`default paradigm P`) plus block-scope overrides
+  (`with paradigm P { … }`) and a paradigm-less repr `{N}` / `{N, scalar}` / `{model, dim, sparsity}`,
+  to offset honesty's verbosity (tension **A**) **without** a black box. Realized as a **surface→surface
+  "expand to longhand" pass**: `resolve(Colony) → Colony` fills omitted paradigm tags, strips
+  `with paradigm` blocks, and tags bare decimals, then the **unchanged** `check → elaborate` pipeline
+  runs — so the two normative invariants hold *by construction*: **(I1)** the ambient inserts no `Swap`
+  (it only fills tags/encodings — conversions stay author-written), and **(I2)** resolution is
+  observationally the identity (`elaborate(p) = elaborate(resolve(p))`, identical content hash;
+  RFC-0001 §4.6). The feature is **opt-in**: a program with no ambient resolves to itself unchanged.
+- **Bare-decimal width-from-context (RFC-0012 §4.3; the maintainer-chosen v0 scope).** The checker is
+  now **bidirectional**: a bare decimal under an ambient adopts the paradigm's encoding and takes its
+  **width from the checked context** (an ascription, a parameter/return/field type, or a concrete
+  sibling operand of a width-preserving prim). Where the width is **not** determined, it is an explicit
+  **`UnresolvedWidth`** refusal — *never a built-in default width*. `Binary` unsigned and `Ternary`
+  balanced encodings are range-checked (an overflow is an explicit refusal, never a silent wrap).
+- **Three never-silent refusals (no black box; G2).** `UnresolvedAmbient` (a `{…}` with no enclosing
+  ambient — no implicit global fallback), `ParadigmShapeMismatch` (a shape that does not fit the ambient
+  paradigm — never coerced), and `MissingConversion` (a cross-paradigm value edge — the checker’s
+  cross-paradigm mismatch is sharpened to name from/to + point at writing an explicit `swap`).
+  Bare decimals under `Dense`/`VSA` (no bare-decimal encoding) and a duplicate colony `default` are
+  refused too.
+- **"Expand ambient" projection (M-142/LSP; RFC-0012 §5).** `mycelium-l1::expand_to_source` +
+  `mycelium-lsp::expand_ambient` render a document's fully-resolved **longhand twin** on demand (the
+  elided default is never *hidden*, only *elided*); a parse/check failure is reported, never a partial
+  render. Provenance for "where did this paradigm come from?" is recorded at the **surface/resolution
+  layer** (`ResolutionNote` via `resolve_report`) rather than as a new core `Provenance` variant — that
+  would change a frozen data-contract schema for metadata that is not hashed (KC-3; see the RFC-0012
+  changelog).
+- **The RFC-0012 §4.6 meaning-preservation differential (NFR-7; `tests/ambient.rs`).** A corpus of
+  `(ambient program, explicit longhand twin)` pairs asserts **identical elaborated content hash** (I2)
+  and identical observed value where runnable; the never-silent refusals are each tested as explicit
+  errors. **Grammar + conformance**: `mycelium.ebnf` gains `default paradigm` / `with paradigm` / the
+  paradigm-less repr, with a new accept fixture (`12-ambient-representation.myc`) and reject fixture
+  (`09-default-missing-paradigm.myc`). **Kernel untouched** (KC-3 — L0's frozen node set is unchanged;
+  this is RFC-0006 surface sugar that elaborates away). RFC-0012 (Accepted) → **Enacted**; R12-Q3/Q4
+  resolved, R12-Q1/Q2 partially (v0 enacted, extensions deferred).
+
 ### Added (Phase 4 — M-349: dynamic depth budget for the AOT env-machine; DN-05 §2.4 / DN05-Q5 enacted)
 - **`mycelium-mlir::budget` — a `DepthBudget` trait that resolves the env-machine's control-stack
   ceiling *dynamically*, with an `EXPLAIN`-able basis (DN05-Q5 resolved).** With the M-347 trampoline

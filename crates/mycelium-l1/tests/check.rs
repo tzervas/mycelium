@@ -19,11 +19,29 @@ fn well_typed_swap_fn_checks() {
 
 #[test]
 fn type_mismatch_is_explicit() {
-    // body is Ternary{6}, signature says Binary{8}.
+    // body is Ternary{6}, signature says Binary{8}. As of M-344 (RFC-0012 §4.4) a *cross-paradigm*
+    // edge is sharpened from a generic mismatch to an explicit `MissingConversion` that names the
+    // from/to reprs and points at writing a `swap` — still never-silent, now more actionable.
     let err =
         check("colony d\nfn f(x: Binary{8}) -> Binary{8} = swap(x, to: Ternary{6}, policy: rt)")
             .unwrap_err();
-    assert!(err.message.contains("type"), "got: {}", err.message);
+    assert!(
+        err.message.contains("MissingConversion") && err.message.contains("swap"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn same_paradigm_width_mismatch_is_a_plain_type_error() {
+    // A same-paradigm mismatch (two Binary widths) is *not* a MissingConversion — no conversion
+    // would bridge it — so it keeps the plain "type" wording (RFC-0012 §4.4 boundary).
+    let err = check("colony d\nfn f(x: Binary{8}) -> Binary{6} = not(x)").unwrap_err();
+    assert!(
+        err.message.contains("type") && !err.message.contains("MissingConversion"),
+        "got: {}",
+        err.message
+    );
 }
 
 #[test]
