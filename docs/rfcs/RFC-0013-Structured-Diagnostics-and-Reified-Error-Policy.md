@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0013 |
-| **Status** | **Draft (Proposed)** (drafted 2026-06-16; ratifies the DN-04 direction — maintainer sign-off pending) |
+| **Status** | **Accepted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design is normative. Implementation (M-345) is the Rust tooling-layer build — `mycelium-lsp` / `xtask`, no kernel change.) |
 | **Type** | Foundational / normative (once Accepted) — tooling/observability-layer feature; no kernel change |
 | **Date** | 2026-06-16 |
 | **Feeds** | RFC-0008 (runtime/observability — the diagnostic stream lives here); the AI co-author loop (M-330); the stdlib `diagnostics` candidate (M-346) |
@@ -339,6 +339,16 @@ invariants I1–I5 are verified, when the tooling lands, by:
 
 ## Meta — changelog
 
+- **2026-06-16 — Accepted (maintainer sign-off).** Moved `Draft (Proposed) → Accepted`; the §4
+  design (I1–I5, the §4.5 exclusions X1–X3) is normative. No design content changed on acceptance —
+  the maintainer ratified the v0 scope exactly as drafted: presentation/routing only (recovery stays
+  deferred to RFC-0014), free-form string tags, Rust tooling-layer only (no kernel logging dep, no
+  Python), file-as-projection, and the representation-crossing audit view (RFC-0012 R12-Q2 / M-351).
+  Unblocks **M-345 (#107)**: the Rust build in `mycelium-lsp` / `xtask` (content-addressed diagnostic
+  record + dual human/JSON round-trip projection, graded levels with the allowlisted detailed tier,
+  the reified `on <ErrorClass> => {…}` policy over the error-class registry, and the audit view),
+  verified by the central never-silent invariant test (I1/I2/I4) plus the round-trip / registry /
+  allowlist / audit-view tests (§5). Append-only.
 - **2026-06-16 — Draft (Proposed).** Created from DN-04 (M-345, #107) — turns the DynEL-inspired
   structured-diagnostics direction into a ratifiable design. Imports the three DN-04 contracts (graded
   context **levels** as verbosity over EXPLAIN/`FeedbackSummary`/`NotValidatedReason`; **dual human + JSON

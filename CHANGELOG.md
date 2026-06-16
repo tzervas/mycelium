@@ -8,6 +8,31 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (Phase 4 — 2026-06-16: ratifications, RFC-0014 design decisions, M-343 totality completion)
+- **RFC-0013 — Structured Diagnostics & Reified Error Policy: `Draft (Proposed) → Accepted`** (maintainer
+  sign-off). No design content changed on acceptance; the §4 invariants I1–I5 and the §4.5 exclusions
+  X1–X3 are now normative. Unblocks the **M-345** Rust tooling-layer build (`mycelium-lsp`/`xtask`; no
+  kernel change). Verified by the central never-silent invariant test (I1/I2/I4) + round-trip / registry /
+  allowlist / audit-view tests.
+- **RFC-0014 — three §8 design questions resolved** (maintainer; RFC stays Draft): effect mechanism =
+  **declared annotations, coarse set** (capabilities/effect-rows additive futures only); **no
+  kernel-visible hook** — effect-budget enforcement is entirely runtime/checker, **zero new L0 nodes**
+  (KC-3); **separate named budgets over one enforcement mechanism** — each effect kind keeps its own
+  `EXPLAIN`-able budget, all resolved/enforced by the existing DN-05 plumbing that already clocks `Fix`/
+  `FixGroup` fuel and the M-347 depth ceiling (composed alongside, not collapsed). No code until Accepted.
+- **RFC-0014 prior art traced into `research/`** — new **Research Record 05** (T5.1–T5.6) grounds
+  Result/`?`, algebraic effects (Koka/Eff/OCaml 5), **Erlang/OTP bounded supervision** (verified:
+  max-restart-intensity, defaults 1/5s), structured-concurrency cancellation, capabilities, and Mycelium's
+  own fuel/depth/DN-05 budget idiom — discharging the §7/§8 grounding obligation (honest deltas + novelty
+  flags recorded). RFC-0014 §7/§8 + status line updated to reflect the resolutions and the tracing.
+- **M-343 — mutual-descent totality classification (R7-Q3 loose end closed).** The `FixGroup` elaboration +
+  three-way differential had landed, but the structural totality checker still classified *every* mutual
+  group `Partial`. Extends `crates/mycelium-l1::totality` from self-descent to **mutual structural descent**
+  over a call-graph SCC: a group is `Total` iff a per-member designated argument position descends on every
+  inter-member call (one well-founded measure; bounded position-assignment search). Sound — only adds
+  justified `Total` verdicts; gates `matured`, never meaning (G2; runtime stays fuel-clocked). RFC-0007 §4.5
+  revised (append-only); ping/pong now `Total`, a non-productive cycle stays `Partial`.
+
 ### Added (Phase 4 — RFC-0014: declarative error recovery & bounded effects, drafted)
 - **RFC-0014 — Declarative Error Recovery & Bounded Effects (Draft (Proposed)).** Designs the isolated
   recovery subsystem RFC-0013 §8/§9 deferred (the DN04-Q1 recovery half) — a way for errors to **bubble**
