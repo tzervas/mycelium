@@ -363,8 +363,14 @@ fn mutual_recursion_elaborates_and_all_three_paths_agree() {
         .expect("L0-interp runs the FixGroup");
     let aot = mycelium_mlir::run_core(&node, &prims, &engine).expect("AOT runs the FixGroup");
 
-    assert_eq!(l1, l0, "L1-eval vs elaborate→L0-interp diverged on mutual recursion");
-    assert_eq!(l0, aot, "L0-interp vs AOT env-machine diverged on mutual recursion");
+    assert_eq!(
+        l1, l0,
+        "L1-eval vs elaborate→L0-interp diverged on mutual recursion"
+    );
+    assert_eq!(
+        l0, aot,
+        "L0-interp vs AOT env-machine diverged on mutual recursion"
+    );
     // ping(S(S(Z))) ⟶ pong(S(Z)) ⟶ ping(Z) ⟶ Z (a nullary datum).
     assert_eq!(
         l0,

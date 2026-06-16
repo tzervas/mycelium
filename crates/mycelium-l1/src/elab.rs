@@ -244,7 +244,7 @@ pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
         if scc.len() == 1 {
             let f = &scc[0];
             let kf = el.rec[f].clone();
-            let fix = el.elab_recursive_fn(f, &kf)?;
+            let fix = Box::new(el.elab_recursive_fn(f, &kf)?);
             binders.push(RecBinding::Single { var: kf, fix });
         } else {
             let mut defs: Vec<(String, Box<Node>)> = Vec::with_capacity(scc.len());
@@ -264,7 +264,7 @@ pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
         .fold(entry_body, |acc, b| match b {
             RecBinding::Single { var, fix } => Node::Let {
                 id: var,
-                bound: Box::new(fix),
+                bound: fix,
                 body: Box::new(acc),
             },
             RecBinding::Group(defs) => Node::FixGroup {
@@ -278,8 +278,9 @@ pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
 /// One recursive binding the entry body is wrapped in: a self-recursive singleton (`Fix`, bound via
 /// `Let`) or a mutually-recursive group (`FixGroup`). Built callee-first; see [`elaborate`].
 enum RecBinding {
-    /// A self-recursive function: its kernel variable and the `Fix` node bound to it.
-    Single { var: String, fix: Node },
+    /// A self-recursive function: its kernel variable and the `Fix` node bound to it (boxed — the
+    /// `Group` variant is pointer-sized, so an unboxed `Node` here would unbalance the enum).
+    Single { var: String, fix: Box<Node> },
     /// A mutually-recursive group: `(member variable, curried lambda)` pairs, all mutually in scope.
     Group(Vec<(String, Box<Node>)>),
 }
@@ -380,9 +381,7 @@ fn recursive_sccs(env: &Env, entry: &str) -> Result<Vec<Vec<String>>, ElabError>
     let sccs = t
         .out
         .into_iter()
-        .filter(|scc| {
-            scc.len() > 1 || calls_in_fn(&env.fns[&scc[0]].body).contains(&scc[0])
-        })
+        .filter(|scc| scc.len() > 1 || calls_in_fn(&env.fns[&scc[0]].body).contains(&scc[0]))
         .collect();
     Ok(sccs)
 }
