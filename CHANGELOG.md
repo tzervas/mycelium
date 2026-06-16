@@ -8,6 +8,25 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — M-342: AOT path extended to the data + recursion fragment; RFC-0011 §4.4 Q5 closed)
+- **The AOT `aot::run` env-machine now covers the full v0 calculus (M-342).** `mycelium-core::lower`
+  gains ANF for the r3/r4 nodes — `Construct`/`App` (flat) and `Lam`/`Fix`/`Match` (with **nested ANF
+  blocks** evaluated lazily, a single program-wide temp counter keeping temps globally unique) — and
+  `mycelium-mlir::aot` becomes a big-step **environment machine** with closures (capturing their env),
+  call-by-value `App`, fuel-clocked `Fix` unfolding, `Construct`→`Datum`, and arm-selecting `Match`.
+  `run_core` returns a `CoreValue` (repr **or** datum); `run` keeps the repr-`Value` signature.
+- **The three-way differential now spans the full calculus.** `mycelium-l1`'s data/recursion corpus
+  (data, nested matches, self-recursion, `for`-folds) is checked **L1-eval ≡ L0-interp ≡ AOT** on the
+  L0 `CoreValue`, with the shared **M-210** checker validating each repr-result pair (NFR-7). Closes
+  RFC-0011 §4.4 **Q5**; `Node::is_aot_lowerable` is now total over the v0 node set.
+- **Honest scope (VR-5).** The *native* direct-LLVM backend stays the **bit/trit subset** — the data +
+  recursion nodes are an explicit `UnsupportedNode` refusal there (data/closure native codegen is the
+  deferred MLIR→LLVM work). The env-machine uses the **host call stack** for object recursion (the
+  fuel clock bounds *productive work* — a non-productive recursion is an explicit `FuelExhausted`,
+  never a hang — but depth beyond the host stack aborts); the trusted base for deep recursion remains
+  the O(1)-stack interpreter. A follow-on, **M-347** (#109), tracks making the env-machine recursion
+  stack-robust / more efficient.
+
 ### Changed (Phase 4 — RFC-0012 RATIFIED: Draft → Accepted)
 - **RFC-0012 ratified (Draft → Accepted, 2026-06-16; append-only).** The ambient-representation
   design (§4) is now the normative surface contract: the two invariants (I1 the ambient emits no

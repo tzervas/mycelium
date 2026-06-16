@@ -914,9 +914,12 @@ mod data_tests {
     }
 
     #[test]
-    fn an_aot_lowerable_check_excludes_data_nodes() {
+    fn aot_lowerable_now_spans_the_data_fragment() {
+        // M-342 (RFC-0011 §4.4 Q5 closed): the AOT env-machine covers the data fragment, so a
+        // Construct is AOT-lowerable too (it runs on the three-way differential, not just the repr
+        // path). The predicate is now total over the v0 node set.
         let reg = registry();
-        assert!(!z(&reg).is_aot_lowerable());
+        assert!(z(&reg).is_aot_lowerable());
         assert!(Node::Const(byte(GuaranteeStrength::Exact)).is_aot_lowerable());
     }
 
@@ -1099,8 +1102,10 @@ mod r4_tests {
     }
 
     #[test]
-    fn lam_app_fix_are_not_aot_lowerable() {
+    fn lam_app_fix_are_now_aot_lowerable() {
+        // M-342: the recursion fragment (Lam/App/Fix/Match/Construct) lowers to ANF and runs on the
+        // AOT env-machine, so a recursive definition is AOT-lowerable (three-way differential).
         let r = nat();
-        assert!(!drop_(&r).is_aot_lowerable());
+        assert!(drop_(&r).is_aot_lowerable());
     }
 }

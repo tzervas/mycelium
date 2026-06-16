@@ -19,8 +19,9 @@
 
 use core::fmt::Write as _;
 
+use crate::data::CtorRef;
 use crate::meta::PackScheme;
-use crate::node::{Alt, Node};
+use crate::node::{Alt, Node, VarId};
 use crate::repr::{Repr, ScalarKind, SparsityClass};
 use crate::value::{Payload, Trit, Value};
 use crate::{GuaranteeStrength, PhysicalLayout};
@@ -439,6 +440,70 @@ pub enum Rhs {
         /// The selection policy reference (RFC-0005).
         policy: crate::ContentHash,
     },
+    /// A saturated constructor application (RFC-0011 §4.1): builds a data value from field atoms.
+    Construct {
+        /// The constructor (`#T#i`).
+        ctor: CtorRef,
+        /// The field operands, in declaration order (saturated, WF6).
+        args: Vec<Atom>,
+    },
+    /// Application of a function atom to an argument atom (RFC-0001 r4; call-by-value).
+    App {
+        /// The function operand (resolves to a closure).
+        func: Atom,
+        /// The argument operand.
+        arg: Atom,
+    },
+    /// A lambda abstraction (RFC-0001 r4) — a **closure** value. Its body is a **nested** ANF block
+    /// evaluated only on application (lazily), so the linear binding list stays acyclic.
+    Lam {
+        /// The bound parameter (a `Named` atom inside `body`).
+        param: VarId,
+        /// The body, lowered to a nested block (shares the program-wide temp counter, so its temps
+        /// never collide with the enclosing scope).
+        body: Anf,
+    },
+    /// General recursion (RFC-0001 r4) — its body (typically a [`Rhs::Lam`]) is a nested ANF block;
+    /// the env-machine unfolds it under a fuel clock on application.
+    Fix {
+        /// The self-reference name bound in `body`.
+        name: VarId,
+        /// The recursive body, lowered to a nested block.
+        body: Anf,
+    },
+    /// A flat pattern match (RFC-0011 §4.1): a scrutinee atom, single-level alternatives whose bodies
+    /// are **nested** ANF blocks (evaluated only when selected), and at most one default block.
+    Match {
+        /// The scrutinised operand.
+        scrutinee: Atom,
+        /// The alternatives, tried first-match, left-to-right.
+        alts: Vec<AnfAlt>,
+        /// The catch-all block, taken when no alternative matches.
+        default: Option<Anf>,
+    },
+}
+
+/// One alternative of a lowered [`Rhs::Match`] — the ANF analogue of [`crate::node::Alt`], with the
+/// arm body lowered to a nested block.
+#[derive(Debug, Clone, PartialEq)]
+pub enum AnfAlt {
+    /// A constructor arm: matches a data value of `ctor`, binding its fields to `binders`
+    /// (left-to-right, exactly the constructor's arity — WF7).
+    Ctor {
+        /// The constructor matched (`#T#i`).
+        ctor: CtorRef,
+        /// The field binders (`Named` atoms inside `body`).
+        binders: Vec<VarId>,
+        /// The arm body, lowered to a nested block (in scope of `binders`).
+        body: Anf,
+    },
+    /// A literal arm: matches a representation value equal (repr + payload) to `value`.
+    Lit {
+        /// The literal value to match.
+        value: Value,
+        /// The arm body, lowered to a nested block.
+        body: Anf,
+    },
 }
 
 /// One lowered binding: a name, its right-hand side, and (where statically known) its scheduled
@@ -454,26 +519,36 @@ pub struct Binding {
 }
 
 /// A flattened (A-normal-form) lowering of a Core IR node.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Anf {
     bindings: Vec<Binding>,
     result: Atom,
 }
 
-/// Lower a Core IR node into A-normal form (flatten nested `Op`/`Swap`/`Let` to a linear binding
-/// list). Pure and deterministic; `Meta` rides along on `Const` bindings (WF5).
+/// Lower a Core IR node into A-normal form (flatten nested nodes to a linear binding list). Pure and
+/// deterministic; `Meta` rides along on `Const` bindings (WF5).
 ///
-/// **Repr-only (r3, RFC-0011 §4.4 Q5).** The ANF substrate / AOT path covers the representation
-/// fragment; the r3 data-and-matching nodes (`Construct`/`Match`) are **interpreter-first** and have
-/// no ANF lowering yet. They never reach here: the M-210 differential runs the data fragment as
-/// *L1-eval ≡ L0-interp* (AOT "where reachable"), and [`crate::Node::is_aot_lowerable`] lets a
-/// caller filter them out explicitly before lowering. Reaching the data arms below is therefore an
-/// upstream-contract violation (a loud panic, never a silent mis-lowering).
+/// **Full v0 calculus (RFC-0011 §4.4 Q5 closed; M-342).** The ANF substrate / AOT env-machine path
+/// covers the whole v0 calculus: `Const/Var/Let/Op/Swap` plus the r3/r4 data + recursion nodes
+/// (`Construct`/`Match`/`Lam`/`App`/`Fix`). Body-bearing nodes (`Lam`/`Fix` bodies, `Match` arm/default
+/// bodies) lower to **nested** ANF blocks evaluated lazily by the env-machine (so the binding list
+/// stays acyclic and arms/closures are not eagerly run); a single program-wide temp counter keeps
+/// every `Temp` globally unique, so a nested scope can never shadow an enclosing temp.
+///
+/// The native LLVM backend (`mycelium-mlir::llvm`) remains the **bit/trit subset** and refuses
+/// data/closure nodes with an explicit `UnsupportedNode` (VR-5); this ANF + the `aot::run` env-machine
+/// are the path the three-way differential exercises on the full calculus.
 #[must_use]
 pub fn lower_to_anf(node: &Node) -> Anf {
-    let mut b = Vec::new();
     let mut next = 0usize;
-    let result = flatten(node, &mut b, &mut next);
+    lower_block(node, &mut next)
+}
+
+/// Lower a (sub-)expression to its own ANF block, **sharing** the program-wide temp counter `next`
+/// so temps stay globally unique across nested blocks (closure/arm bodies).
+fn lower_block(node: &Node, next: &mut usize) -> Anf {
+    let mut b = Vec::new();
+    let result = flatten(node, &mut b, next);
     Anf {
         bindings: b,
         result,
@@ -538,20 +613,95 @@ fn flatten(node: &Node, out: &mut Vec<Binding>, next: &mut usize) -> Atom {
             });
             name
         }
-        // r3 data nodes + r4 function/recursion nodes are interpreter-first and have no ANF lowering
-        // (RFC-0011 §4.4 Q5; RFC-0001 r4). A caller must filter them out (Node::is_aot_lowerable)
-        // before lowering; reaching here is an upstream-contract break, surfaced loudly rather than
-        // mis-lowered silently (never-silent).
-        Node::Construct { .. }
-        | Node::Match { .. }
-        | Node::Lam { .. }
-        | Node::App { .. }
-        | Node::Fix { .. } => {
-            unreachable!(
-                "Construct/Match/Lam/App/Fix have no AOT/ANF lowering yet (RFC-0011 Q5; RFC-0001 \
-                 r4); they run on the reference interpreter — filter with Node::is_aot_lowerable \
-                 before lowering"
-            )
+        Node::Construct { ctor, args } => {
+            let atoms: Vec<Atom> = args.iter().map(|a| flatten(a, out, next)).collect();
+            let name = Atom::Temp(fresh(next));
+            out.push(Binding {
+                name: name.clone(),
+                rhs: Rhs::Construct {
+                    ctor: ctor.clone(),
+                    args: atoms,
+                },
+                layout: None, // a datum is not a representation value — no physical layout.
+            });
+            name
+        }
+        Node::App { func, arg } => {
+            let f = flatten(func, out, next);
+            let a = flatten(arg, out, next);
+            let name = Atom::Temp(fresh(next));
+            out.push(Binding {
+                name: name.clone(),
+                rhs: Rhs::App { func: f, arg: a },
+                layout: None,
+            });
+            name
+        }
+        Node::Lam { param, body } => {
+            // The body is a nested block, not flattened into the current one: a closure body runs
+            // only on application (lazy). The shared `next` keeps its temps globally unique.
+            let body = lower_block(body, next);
+            let name = Atom::Temp(fresh(next));
+            out.push(Binding {
+                name: name.clone(),
+                rhs: Rhs::Lam {
+                    param: param.clone(),
+                    body,
+                },
+                layout: None,
+            });
+            name
+        }
+        Node::Fix { name: fname, body } => {
+            let body = lower_block(body, next);
+            let name = Atom::Temp(fresh(next));
+            out.push(Binding {
+                name: name.clone(),
+                rhs: Rhs::Fix {
+                    name: fname.clone(),
+                    body,
+                },
+                layout: None,
+            });
+            name
+        }
+        Node::Match {
+            scrutinee,
+            alts,
+            default,
+        } => {
+            let s = flatten(scrutinee, out, next);
+            // Each arm/default body is a nested block (evaluated only when selected, never eagerly).
+            let alts: Vec<AnfAlt> = alts
+                .iter()
+                .map(|alt| match alt {
+                    Alt::Ctor {
+                        ctor,
+                        binders,
+                        body,
+                    } => AnfAlt::Ctor {
+                        ctor: ctor.clone(),
+                        binders: binders.clone(),
+                        body: lower_block(body, next),
+                    },
+                    Alt::Lit { value, body } => AnfAlt::Lit {
+                        value: value.clone(),
+                        body: lower_block(body, next),
+                    },
+                })
+                .collect();
+            let default = default.as_ref().map(|d| lower_block(d, next));
+            let name = Atom::Temp(fresh(next));
+            out.push(Binding {
+                name: name.clone(),
+                rhs: Rhs::Match {
+                    scrutinee: s,
+                    alts,
+                    default,
+                },
+                layout: None,
+            });
+            name
         }
     }
 }
@@ -565,41 +715,109 @@ fn render_layout(l: PhysicalLayout) -> String {
     }
 }
 
+/// Render one lowered RHS into `s`, leaving the cursor at the end of its text (no trailing newline).
+/// Flat RHSs render inline; body-bearing RHSs render a header then their nested block(s) indented.
+fn write_rhs(rhs: &Rhs, depth: usize, s: &mut String) {
+    match rhs {
+        Rhs::Const(v) => {
+            let _ = write!(s, "{}", render_const(v));
+        }
+        Rhs::Alias(a) => {
+            let _ = write!(s, "{}", a.render());
+        }
+        Rhs::Op { prim, args } => {
+            let a: Vec<String> = args.iter().map(Atom::render).collect();
+            let _ = write!(s, "op {prim} {}", a.join(" "));
+        }
+        Rhs::Swap {
+            src,
+            target,
+            policy,
+        } => {
+            let _ = write!(
+                s,
+                "swap {} -> {} @{}",
+                src.render(),
+                render_repr(target),
+                short_hash(policy)
+            );
+        }
+        Rhs::Construct { ctor, args } => {
+            let a: Vec<String> = args.iter().map(Atom::render).collect();
+            let _ = write!(s, "construct {ctor} {}", a.join(" "));
+        }
+        Rhs::App { func, arg } => {
+            let _ = write!(s, "app {} {}", func.render(), arg.render());
+        }
+        Rhs::Lam { param, body } => {
+            let _ = writeln!(s, "lam {param} =>");
+            body.write_block(depth + 1, s);
+        }
+        Rhs::Fix { name, body } => {
+            let _ = writeln!(s, "fix {name} =>");
+            body.write_block(depth + 1, s);
+        }
+        Rhs::Match {
+            scrutinee,
+            alts,
+            default,
+        } => {
+            let _ = writeln!(s, "match {}", scrutinee.render());
+            let pad = "  ".repeat(depth + 1);
+            for alt in alts {
+                match alt {
+                    AnfAlt::Ctor {
+                        ctor,
+                        binders,
+                        body,
+                    } => {
+                        let _ = writeln!(s, "{pad}alt {ctor} ({}) =>", binders.join(" "));
+                        body.write_block(depth + 2, s);
+                    }
+                    AnfAlt::Lit { value, body } => {
+                        let _ = writeln!(s, "{pad}alt-lit {} =>", render_const(value));
+                        body.write_block(depth + 2, s);
+                    }
+                }
+                s.push('\n');
+            }
+            match default {
+                Some(d) => {
+                    let _ = writeln!(s, "{pad}default =>");
+                    d.write_block(depth + 2, s);
+                }
+                None => {
+                    let _ = write!(s, "{pad}no-default");
+                }
+            }
+        }
+    }
+}
+
 impl Anf {
-    /// The canonical, diffable dump of the substrate stage (SC-4).
+    /// The canonical, diffable dump of the substrate stage (SC-4). Nested blocks (closure/recursion
+    /// bodies, match arms) render indented; the flat-fragment output is unchanged.
     #[must_use]
     pub fn dump(&self) -> String {
-        let mut s = String::from("substrate {\n");
+        let mut s = String::new();
+        self.write_block(0, &mut s);
+        s
+    }
+
+    fn write_block(&self, depth: usize, s: &mut String) {
+        let pad = "  ".repeat(depth);
+        let inner = "  ".repeat(depth + 1);
+        let _ = writeln!(s, "{pad}substrate {{");
         for b in &self.bindings {
-            let rhs = match &b.rhs {
-                Rhs::Const(v) => render_const(v),
-                Rhs::Alias(a) => a.render(),
-                Rhs::Op { prim, args } => {
-                    let a: Vec<String> = args.iter().map(Atom::render).collect();
-                    format!("op {prim} {}", a.join(" "))
-                }
-                Rhs::Swap {
-                    src,
-                    target,
-                    policy,
-                } => {
-                    format!(
-                        "swap {} -> {} @{}",
-                        src.render(),
-                        render_repr(target),
-                        short_hash(policy)
-                    )
-                }
-            };
-            let _ = write!(s, "  {} = {rhs}", b.name.render());
+            let _ = write!(s, "{inner}{} = ", b.name.render());
+            write_rhs(&b.rhs, depth + 1, s);
             if let Some(l) = b.layout {
                 let _ = write!(s, "    ; layout={}", render_layout(l));
             }
             s.push('\n');
         }
-        let _ = writeln!(s, "  result {}", self.result.render());
-        s.push('}');
-        s
+        let _ = writeln!(s, "{inner}result {}", self.result.render());
+        let _ = write!(s, "{pad}}}");
     }
 
     /// Number of bindings (for tests/tooling).

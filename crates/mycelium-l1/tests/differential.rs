@@ -114,13 +114,14 @@ fn l1_eval_l0_interp_and_aot_agree_on_the_fragment() {
     }
 }
 
-/// The **data-and-matching fragment** (RFC-0011 r3): with `Construct`/`Match` now L0 nodes, a
-/// non-recursive program that builds/matches data elaborates to a closed L0 term. The obligation is
-/// **L1-eval ≡ elaborate→L0-interp** on the L0 [`CoreValue`] observable (the AOT path stays
-/// repr-only in r3 — Q5). The L1 evaluator's name-keyed data value is bridged onto the elaborated
-/// value's content-addressed `#T#i` identity through the *same* registry (`L1Value::to_core`), so a
-/// divergence in either machinery — the big-step `try_match` or the Maranget→flat-`Match` lowering —
-/// is caught.
+/// The **data + recursion fragment** (RFC-0011 r3/r4): with `Construct`/`Match`/`Lam`/`App`/`Fix` now
+/// L0 nodes, a program that builds/matches data and recurses elaborates to a closed L0 term. As of
+/// **M-342 (Q5 closed)** the obligation is the full three-way differential **L1-eval ≡
+/// elaborate→L0-interp ≡ AOT** on the L0 [`CoreValue`] observable — the AOT `aot::run_core`
+/// env-machine now covers the data + recursion fragment (it was repr-only in r3). The L1 evaluator's
+/// name-keyed data value is bridged onto the elaborated value's content-addressed `#T#i` identity
+/// through the *same* registry (`L1Value::to_core`), so a divergence in any of the three machineries —
+/// the big-step `try_match`, the Maranget→flat-`Match` lowering, or the ANF env-machine — is caught.
 fn data_corpus() -> Vec<&'static str> {
     vec![
         // a flat data match returning a repr value
@@ -168,11 +169,13 @@ fn data_corpus() -> Vec<&'static str> {
 }
 
 #[test]
-fn l1_eval_and_l0_interp_agree_on_the_data_fragment() {
+fn l1_eval_l0_interp_and_aot_agree_on_the_data_and_recursion_fragment() {
     let interp = Interpreter::new(
         PrimRegistry::with_builtins(),
         Box::new(BinaryTernarySwapEngine),
     );
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
     for (i, src) in data_corpus().iter().enumerate() {
         let env = check_colony(&parse(src).expect("parses")).expect("checks");
         let registry = build_registry(&env).expect("the data registry builds");
@@ -187,39 +190,51 @@ fn l1_eval_and_l0_interp_agree_on_the_data_fragment() {
 
         // Path 2: elaborate to L0, run on the reference interpreter (eval_core spans repr + data).
         let node = elaborate(&env, "main")
-            .unwrap_or_else(|e| panic!("program #{i}: must be in the r3 fragment: {e}"));
+            .unwrap_or_else(|e| panic!("program #{i}: must be in the r3/r4 fragment: {e}"));
         let l0_core = interp
             .eval_core(&node)
             .unwrap_or_else(|e| panic!("program #{i}: L0-interp failed: {e}"));
 
-        // The two paths must agree on the whole L0 value — constructor identity, fields, and the
+        // Path 3: the same L0 term through the AOT env-machine (M-342) — now spans data + recursion.
+        let aot_core = mycelium_mlir::run_core(&node, &prims, &engine)
+            .unwrap_or_else(|e| panic!("program #{i}: AOT run_core failed: {e}"));
+
+        // All three paths must agree on the whole L0 value — constructor identity, fields, and the
         // meet-summary guarantee (for a datum) or repr+payload+guarantee (for a repr value).
         assert_eq!(
             l1_core, l0_core,
             "program #{i} diverged: L1-eval vs elaborate→L0-interp"
         );
         assert_eq!(
+            l0_core, aot_core,
+            "program #{i} diverged: L0-interp vs AOT env-machine"
+        );
+        assert_eq!(
             l1_core.guarantee(),
-            l0_core.guarantee(),
-            "program #{i}: guarantee summaries disagree"
+            aot_core.guarantee(),
+            "program #{i}: guarantee summaries disagree (L1 vs AOT)"
         );
 
-        // Where the result is a representation value, the shared M-210 TV checker validates the pair
+        // Where the result is a representation value, the shared M-210 TV checker validates each pair
         // too (the same checker the repr fragment uses) — defense in depth, never a bespoke compare.
-        if let (CoreValue::Repr(a), CoreValue::Repr(b)) = (&l1_core, &l0_core) {
-            assert_eq!(
-                check(
-                    a,
-                    b,
-                    RefinementRelation::ObservationalEquiv,
-                    Certificate::exact(),
-                    &Evidence::Observational,
-                ),
-                CheckVerdict::Validated {
-                    strength: GuaranteeStrength::Exact
-                },
-                "program #{i}: the shared checker must validate the repr-result pair"
-            );
+        if let (CoreValue::Repr(a), CoreValue::Repr(b), CoreValue::Repr(c)) =
+            (&l1_core, &l0_core, &aot_core)
+        {
+            for (x, y, pair) in [(a, b, "L1↔interp"), (b, c, "interp↔AOT")] {
+                assert_eq!(
+                    check(
+                        x,
+                        y,
+                        RefinementRelation::ObservationalEquiv,
+                        Certificate::exact(),
+                        &Evidence::Observational,
+                    ),
+                    CheckVerdict::Validated {
+                        strength: GuaranteeStrength::Exact
+                    },
+                    "program #{i}: the shared checker must validate the {pair} repr-result pair"
+                );
+            }
         }
     }
 }

@@ -7,7 +7,7 @@
 
 use core::fmt::Write as _;
 
-use mycelium_core::lower::{self, Rhs};
+use mycelium_core::lower::{self, Anf, AnfAlt, Rhs};
 use mycelium_core::{Node, Payload, Repr, Trit};
 
 fn repr_attr(repr: &Repr) -> String {
@@ -36,54 +36,154 @@ fn payload_attr(p: &Payload) -> String {
 }
 
 /// Emit the textual `ternary`-dialect module for `node` (one op per lowered binding). Deterministic.
+///
+/// The data + recursion fragment (`Construct`/`App`/`Lam`/`Fix`/`Match`, M-342) renders as dialect
+/// ops too, with body-bearing ops (closures, match arms) carrying their nested block as a textual
+/// **region** — a faithful skeleton, not a silent flatten. This is the dumpable shape of the eventual
+/// MLIR path; the executable path for these nodes is the `aot::run` env-machine.
 #[must_use]
 pub fn emit(node: &Node) -> String {
     let anf = lower::lower_to_anf(node);
     let mut s = String::from("module {\n  func.func @kernel() -> !myc.value {\n");
+    emit_block(&anf, 2, &mut s);
+    s.push_str("  }\n}");
+    s
+}
+
+/// Emit one ANF block's ops + terminator at indent `depth` (in 2-space units). Recursive: nested
+/// regions (closure/recursion bodies, match arms) emit at a deeper indent.
+fn emit_block(anf: &Anf, depth: usize, s: &mut String) {
+    let pad = "  ".repeat(depth);
     for b in anf.bindings() {
         let name = b.name.render();
-        let line = match &b.rhs {
-            Rhs::Const(v) => format!(
-                "\"ternary.const\"() {{repr = \"{}\", value = \"{}\", guarantee = \"{:?}\"}} : () -> !myc.value",
-                repr_attr(v.repr()),
-                payload_attr(v.payload()),
-                v.meta().guarantee()
-            ),
-            Rhs::Alias(a) => {
-                format!("\"ternary.alias\"({}) : (!myc.value) -> !myc.value", a.render())
-            }
-            Rhs::Op { prim, args } => {
-                let operands: Vec<String> = args.iter().map(mycelium_core::lower::Atom::render).collect();
-                format!(
-                    "\"ternary.op\"({}) {{prim = \"{prim}\"}} : ({}) -> !myc.value",
-                    operands.join(", "),
-                    vec!["!myc.value"; operands.len()].join(", ")
-                )
-            }
-            Rhs::Swap {
-                src,
-                target,
-                policy,
-            } => format!(
-                "\"ternary.swap\"({}) {{target = \"{}\", policy = \"{}\"}} : (!myc.value) -> !myc.value",
-                src.render(),
-                repr_attr(target),
-                policy.as_str()
-            ),
-        };
         let layout = b
             .layout
             .map(|l| format!("  // layout = {l:?}"))
             .unwrap_or_default();
-        let _ = writeln!(s, "    {name} = {line}{layout}");
+        let _ = write!(s, "{pad}{name} = ");
+        emit_op(&b.rhs, depth, s);
+        let _ = writeln!(s, "{layout}");
     }
     let _ = writeln!(
         s,
-        "    \"func.return\"({}) : (!myc.value) -> ()",
+        "{pad}\"func.return\"({}) : (!myc.value) -> ()",
         anf.result().render()
     );
-    s.push_str("  }\n}");
-    s
+}
+
+/// Emit one lowered RHS as a dialect op (no trailing newline). Body-bearing ops embed nested regions.
+fn emit_op(rhs: &Rhs, depth: usize, s: &mut String) {
+    let pad = "  ".repeat(depth);
+    match rhs {
+        Rhs::Const(v) => {
+            let _ = write!(
+                s,
+                "\"ternary.const\"() {{repr = \"{}\", value = \"{}\", guarantee = \"{:?}\"}} : () -> !myc.value",
+                repr_attr(v.repr()),
+                payload_attr(v.payload()),
+                v.meta().guarantee()
+            );
+        }
+        Rhs::Alias(a) => {
+            let _ = write!(
+                s,
+                "\"ternary.alias\"({}) : (!myc.value) -> !myc.value",
+                a.render()
+            );
+        }
+        Rhs::Op { prim, args } => {
+            let operands: Vec<String> = args
+                .iter()
+                .map(mycelium_core::lower::Atom::render)
+                .collect();
+            let _ = write!(
+                s,
+                "\"ternary.op\"({}) {{prim = \"{prim}\"}} : ({}) -> !myc.value",
+                operands.join(", "),
+                vec!["!myc.value"; operands.len()].join(", ")
+            );
+        }
+        Rhs::Swap {
+            src,
+            target,
+            policy,
+        } => {
+            let _ = write!(
+                s,
+                "\"ternary.swap\"({}) {{target = \"{}\", policy = \"{}\"}} : (!myc.value) -> !myc.value",
+                src.render(),
+                repr_attr(target),
+                policy.as_str()
+            );
+        }
+        Rhs::Construct { ctor, args } => {
+            let operands: Vec<String> = args
+                .iter()
+                .map(mycelium_core::lower::Atom::render)
+                .collect();
+            let _ = write!(
+                s,
+                "\"myc.construct\"({}) {{ctor = \"{ctor}\"}} : ({}) -> !myc.value",
+                operands.join(", "),
+                vec!["!myc.value"; operands.len()].join(", ")
+            );
+        }
+        Rhs::App { func, arg } => {
+            let _ = write!(
+                s,
+                "\"myc.app\"({}, {}) : (!myc.value, !myc.value) -> !myc.value",
+                func.render(),
+                arg.render()
+            );
+        }
+        Rhs::Lam { param, body } => {
+            let _ = writeln!(s, "\"myc.lam\"() ({{  // param = \"{param}\"");
+            emit_block(body, depth + 1, s);
+            let _ = write!(s, "{pad}}}) : () -> !myc.value");
+        }
+        Rhs::Fix { name, body } => {
+            let _ = writeln!(s, "\"myc.fix\"() ({{  // self = \"{name}\"");
+            emit_block(body, depth + 1, s);
+            let _ = write!(s, "{pad}}}) : () -> !myc.value");
+        }
+        Rhs::Match {
+            scrutinee,
+            alts,
+            default,
+        } => {
+            let _ = writeln!(s, "\"myc.match\"({}) (", scrutinee.render());
+            for alt in alts {
+                match alt {
+                    AnfAlt::Ctor {
+                        ctor,
+                        binders,
+                        body,
+                    } => {
+                        let _ = writeln!(s, "{pad}  {{  // alt {ctor} ({})", binders.join(" "));
+                        emit_block(body, depth + 2, s);
+                        let _ = writeln!(s, "{pad}  }},");
+                    }
+                    AnfAlt::Lit { value, body } => {
+                        let _ =
+                            writeln!(s, "{pad}  {{  // alt-lit {}", payload_attr(value.payload()));
+                        emit_block(body, depth + 2, s);
+                        let _ = writeln!(s, "{pad}  }},");
+                    }
+                }
+            }
+            match default {
+                Some(d) => {
+                    let _ = writeln!(s, "{pad}  {{  // default");
+                    emit_block(d, depth + 2, s);
+                    let _ = writeln!(s, "{pad}  }}");
+                }
+                None => {
+                    let _ = writeln!(s, "{pad}  // no-default");
+                }
+            }
+            let _ = write!(s, "{pad}) : (!myc.value) -> !myc.value");
+        }
+    }
 }
 
 #[cfg(test)]

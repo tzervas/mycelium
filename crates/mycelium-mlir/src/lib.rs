@@ -37,7 +37,7 @@ pub mod pack;
 pub mod simd;
 pub mod specialize;
 
-pub use aot::{run, run_with_layout};
+pub use aot::{run, run_core, run_core_with_fuel, run_with_layout};
 pub use bitnet::{
     compile_bitnet_dot, compile_bitnet_dot_for, emit_bitnet_dot_ir, emit_bitnet_dot_ir_for,
     jit_ternary_dot, jit_ternary_dot_for, ternary_dot_ref, BitnetDotKernel,

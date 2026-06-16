@@ -489,8 +489,17 @@ issues:
     labels: [phase:3, type:feature, area:execution, priority:P2]
     depends_on: [M-301, M-340]
     body: |
-      Bring Construct/Match/Lam/App/Fix into mycelium-core::lower (ANF) + the mycelium-mlir AOT/JIT path so is_aot_lowerable admits the data + recursion fragment, and extend the three-way differential (L1-eval == L0-interp == AOT) to the full v0 calculus. Closes RFC-0011 §4.4 Q5; exercises the value/closure ABI (ADR-016) concretely. Not gated.
-      Acceptance: the data_corpus runs on all three paths, validated through the shared M-210 checker; honest where a node stays deferred (VR-5).
+      Bring Construct/Match/Lam/App/Fix into mycelium-core::lower (ANF) + the mycelium-mlir AOT env-machine so is_aot_lowerable admits the data + recursion fragment, and extend the three-way differential (L1-eval == L0-interp == AOT) to the full v0 calculus. Closes RFC-0011 §4.4 Q5. Native LLVM stays bit/trit only (explicit UnsupportedNode; VR-5). LANDED 2026-06-16.
+      Acceptance: the data_corpus (incl. recursion + for-folds) runs on all three paths, validated through the shared M-210 checker; honest where a node stays deferred (VR-5). Follow-on M-347 (env-machine recursion stack-robustness).
+
+  - id: M-347
+    title: "M-347 — Investigate + improve AOT env-machine recursion (stack-robustness / efficiency)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:design, area:execution, priority:P1, status:needs-design]
+    depends_on: [M-342]
+    body: |
+      Surfaced by M-342: the AOT env-machine evaluates object recursion on the HOST call stack (O(depth)); the fuel clock bounds productive work (explicit FuelExhausted, never a hang) but depth beyond the host stack aborts. Investigate + improve before venturing further on the execution path (maintainer-prioritized). Candidates: explicit control stack / trampoline (O(1) host stack, iterative), tail-call detection, defunctionalized CPS, shared/persistent environments (Rc) instead of per-call clone, and carry the lessons into the native MLIR->LLVM path. Constraints: never-silent (a depth/budget limit is an explicit error, never a hang OR an abort), no black boxes, M-210 differential still holds (NFR-7).
+      Acceptance (design-first): an investigation note comparing techniques vs Mycelium's constraints + a recommended approach (present before folding), then implement so deep recursion is a graceful explicit limit and the differential still holds.
 
   - id: M-343
     title: "M-343 — Mutual recursion: full elaboration (R7-Q3 remaining half)"
