@@ -156,6 +156,83 @@ fn shadowing_rebind_does_not_leak_smallness() {
     assert!(err.message.contains("matured"), "got: {}", err.message);
 }
 
+// --- mutual-descent classification (RFC-0007 §4.5; M-343 / R7-Q3 loose end) ---
+
+#[test]
+fn mutual_recursion_with_structural_descent_is_total() {
+    // ping/pong descend on position 0 across the group, so the FixGroup is `Total` and `matured`
+    // is admissible — the M-343 loose end: before mutual-descent classification this was `Partial`.
+    let src = "colony d\ntype Nat = Z | S(Nat)\n\
+               fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
+               fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }";
+    let env = check(src).expect("checks");
+    assert_eq!(env.totality["ping"], Totality::Total);
+    assert_eq!(env.totality["pong"], Totality::Total);
+
+    // The whole group may therefore be `matured`.
+    let matured = "colony d\ntype Nat = Z | S(Nat)\n\
+                   matured fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
+                   matured fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }";
+    check(matured).expect("a totally-descending mutual group admits `matured`");
+}
+
+#[test]
+fn non_productive_mutual_cycle_is_partial() {
+    // `a(n) = b(n)` / `b(n) = a(n)` never decreases anything — an unproductive cycle. Honest
+    // `Partial` (still runnable, fuel-clocked), and `matured` is refused. Mutant-witness: a checker
+    // that classified *any* mutual group `Total` would wrongly mature this non-terminating pair.
+    let src = "colony d\ntype Nat = Z | S(Nat)\n\
+               fn a(n: Nat) -> Nat = b(n)\n\
+               fn b(n: Nat) -> Nat = a(n)";
+    let env = check(src).expect("checks");
+    assert_eq!(env.totality["a"], Totality::Partial);
+    assert_eq!(env.totality["b"], Totality::Partial);
+
+    let matured = "colony d\ntype Nat = Z | S(Nat)\n\
+                   matured fn a(n: Nat) -> Nat = b(n)\n\
+                   fn b(n: Nat) -> Nat = a(n)";
+    let err = check(matured).unwrap_err();
+    assert!(err.message.contains("matured"), "got: {}", err.message);
+}
+
+#[test]
+fn partial_descent_in_a_mutual_group_is_partial() {
+    // Descent must hold on *every* inter-member call. Here `ping` decreases but `pong` re-calls
+    // `ping(n)` with the parameter unchanged, so no assignment witnesses descent → `Partial`.
+    let src = "colony d\ntype Nat = Z | S(Nat)\n\
+               fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
+               fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(n) }";
+    let env = check(src).expect("checks");
+    assert_eq!(env.totality["ping"], Totality::Partial);
+    assert_eq!(env.totality["pong"], Totality::Partial);
+}
+
+#[test]
+fn three_function_mutual_cycle_descends() {
+    // f → g → h → f, each peeling one constructor: a productive 3-cycle is `Total`.
+    let src = "colony d\ntype Nat = Z | S(Nat)\n\
+               fn f(n: Nat) -> Nat = match n { Z => Z, S(m) => g(m) }\n\
+               fn g(n: Nat) -> Nat = match n { Z => Z, S(m) => h(m) }\n\
+               fn h(n: Nat) -> Nat = match n { Z => Z, S(m) => f(m) }";
+    let env = check(src).expect("checks");
+    assert_eq!(env.totality["f"], Totality::Total);
+    assert_eq!(env.totality["g"], Totality::Total);
+    assert_eq!(env.totality["h"], Totality::Total);
+}
+
+#[test]
+fn mutual_descent_on_different_argument_positions() {
+    // The designated descent position can differ per member: `f` descends on position 0, `g` on
+    // position 1. This exercises the position-assignment search (not just a single shared index),
+    // and is `Total` because the structural size strictly decreases around the whole cycle.
+    let src = "colony d\ntype Nat = Z | S(Nat)\n\
+               fn f(a: Nat, b: Nat) -> Nat = match a { Z => b, S(m) => g(b, m) }\n\
+               fn g(x: Nat, y: Nat) -> Nat = match y { Z => x, S(k) => f(k, x) }";
+    let env = check(src).expect("checks");
+    assert_eq!(env.totality["f"], Totality::Total);
+    assert_eq!(env.totality["g"], Totality::Total);
+}
+
 #[test]
 fn deeply_nested_input_is_refused_not_a_crash() {
     // A4-02/B2-01 regression: unbounded recursive descent would overflow the host stack and abort

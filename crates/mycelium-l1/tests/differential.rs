@@ -350,6 +350,11 @@ fn mutual_recursion_elaborates_and_all_three_paths_agree() {
     let env = check_colony(&parse(src).unwrap()).unwrap();
     let registry = build_registry(&env).unwrap();
 
+    // The mutually-recursive group structurally descends on position 0, so the totality checker
+    // classifies it `Total` (M-343 / R7-Q3 mutual-descent classification, RFC-0007 §4.5).
+    assert_eq!(env.totality["ping"], mycelium_l1::Totality::Total);
+    assert_eq!(env.totality["pong"], mycelium_l1::Totality::Total);
+
     // Mutual recursion now elaborates (no Residual) — it lowers to a FixGroup.
     let node = elaborate(&env, "main").expect("mutual recursion elaborates to a FixGroup (M-343)");
 
