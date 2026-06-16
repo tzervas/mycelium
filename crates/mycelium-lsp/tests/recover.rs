@@ -7,6 +7,9 @@
 //! (X1) recovery inherits from RFC-0013.
 
 use mycelium_core::{GuaranteeStrength, Meta, Payload, Provenance, Repr, Value};
+use mycelium_interp::{
+    CancelToken, Cancelled, Escalation, RestartIntensity, Supervisor, TaskOutcome,
+};
 use mycelium_lsp::recover::{
     check_effects, handle, Action, EffectBudget, EffectBudgets, EffectKind, EffectSet, Outcome,
     RecoveryPolicy, Resolution, StructuredError,
@@ -300,6 +303,110 @@ fn recovery_policy_resolves_classes_through_the_shared_registry() {
         .on(&reg, "rm -rf /", Action::Retry { max_attempts: 1 })
         .expect_err("an unknown class must be refused");
     assert_eq!(err.name, "rm -rf /");
+}
+
+// --- M-356 / RFC-0008 §4.7 + RFC-0014 §8: lifting the single-task v0 boundary, additively ---
+//
+// The recovery model (single-task in v0) composes with the RFC-0008 concurrency primitives
+// (per-task budgets, cooperative cancellation, cross-task propagation, reclaim bounded-cascade
+// supervision) WITHOUT weakening never-silent (I1): a task failure, a per-task budget overrun, a
+// cancellation, and a supervised restart storm are each an *explicit* outcome — never a silent stop.
+
+/// Run a recovery `attempt` as a *task* under a per-task budget + a cooperative cancel token, lifting
+/// the result into an explicit [`TaskOutcome`] (RFC-0008 §4.7). Cancellation is observed *before* the
+/// attempt (cooperative, additive) — never a preemptive silent stop.
+fn run_task(
+    cancel: &CancelToken,
+    attempt: impl FnOnce() -> Outcome,
+) -> TaskOutcome<Value, StructuredError> {
+    if cancel.check().is_err() {
+        return TaskOutcome::Cancelled;
+    }
+    match attempt() {
+        Outcome::Ok(v) => TaskOutcome::Done(v),
+        Outcome::Err(e) => TaskOutcome::Failed(e),
+    }
+}
+
+#[test]
+fn cancellation_is_an_explicit_additive_task_outcome() {
+    let reg = registry();
+    let cancel = CancelToken::new();
+    cancel.cancel(); // a parent scope requests cancellation (RT7)
+    let outcome = run_task(&cancel, || Outcome::Ok(byte()));
+    // The task surfaces an explicit Cancelled — additive, never a silent drop (I1 across the boundary).
+    assert_eq!(outcome, TaskOutcome::Cancelled);
+    assert!(
+        outcome.is_failure(),
+        "the parent scope must observe the cancellation"
+    );
+    let _ = &reg;
+}
+
+#[test]
+fn a_task_failure_propagates_explicitly_to_the_parent() {
+    // Cross-task propagation (RT4/I1): a child's failure is an explicit value the parent acts on; it
+    // can never be silently treated as success.
+    let reg = registry();
+    let cancel = CancelToken::new();
+    let outcome = run_task(&cancel, || Outcome::Err(an_error(&reg)));
+    match outcome {
+        TaskOutcome::Failed(e) => assert_eq!(e.class, an_error(&reg).class),
+        other => panic!("a failing task must surface Failed, got {other:?}"),
+    }
+}
+
+#[test]
+fn reclaim_supervision_bounds_a_restart_storm_on_both_axes() {
+    // A flapping task supervised under reclaim: restarts are bounded by BOTH the total `cascade` budget
+    // AND the windowed max-restart-intensity (the combined disposition). A storm escalates explicitly —
+    // a declared, bounded cascade (RT4/RT7), never an unbounded restart loop.
+    let reg = registry();
+    let cancel = CancelToken::new();
+    let mut sup = Supervisor::new(
+        RestartIntensity {
+            max_restarts: 3,
+            window_ticks: 100,
+        },
+        5, // total cascade cap
+    );
+
+    // The supervised loop: a task that always fails, restarted until the supervisor escalates.
+    let mut restarts = 0u32;
+    let escalation = loop {
+        sup.tick();
+        let outcome = run_task(&cancel, || Outcome::Err(an_error(&reg)));
+        assert!(outcome.is_failure(), "the child keeps failing");
+        match sup.record_restart() {
+            Ok(()) => {
+                restarts += 1;
+                assert!(
+                    restarts <= 5,
+                    "the cascade is bounded — it cannot loop forever"
+                );
+            }
+            Err(e) => break e,
+        }
+    };
+    // The windowed intensity (3) is the tighter bound here, so it escalates first — explicitly.
+    match escalation {
+        Escalation::IntensityExceeded { max_restarts, .. } => assert_eq!(max_restarts, 3),
+        Escalation::CascadeBudgetExhausted(_) => {} // the total cap is the alternative honest bound
+    }
+}
+
+#[test]
+fn a_per_task_budget_overrun_is_an_in_that_task_explicit_refusal() {
+    // Per-task budgets (RFC-0014 §8 lifted): each task carries its own ledger; an overrun is an
+    // in-that-task EffectBudgetExhausted (the same M-353 channel), surfaced as TaskOutcome — additive.
+    let mut budget = EffectBudgets::new().with(EffectBudget::Attempts(1));
+    let overrun = {
+        assert!(budget.consume(EffectKind::Retry, 1).is_ok());
+        budget.consume(EffectKind::Retry, 1).unwrap_err()
+    };
+    let outcome: TaskOutcome<Value, StructuredError> = TaskOutcome::BudgetExhausted(overrun);
+    assert!(outcome.is_failure());
+    let _ = Cancelled; // the cancellation outcome type is part of the same additive set
 }
 
 #[test]

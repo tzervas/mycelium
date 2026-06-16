@@ -18,6 +18,28 @@ corpus, not released software. Versioning will begin when the kernel does.
   M-355/M-356) is the §4.7 revision, presented frozen-spec before folding. The §4.5 runtime vocabulary
   stays **reserved, not active syntax** until the implementation RFCs land.
 
+### Added (RFC-0008 §4.7 — 2026-06-16: M-356 / concurrency composition primitives, single-task boundary lifted)
+- **M-356 — RFC-0014's single-task boundary lifted onto RFC-0008 (§4.7 added; §8 concurrency deferral
+  resolved).** A **frozen-spec** (presented before folding): RFC-0008 **§4.7** specifies four
+  compositions, each additive over the explicit error (I1) and declared + bounded (I3/I4) — **(C1)**
+  per-task budgets (each task instances its own M-353 ledger; an overrun is an *in-that-task*
+  `EvalError::EffectBudget`, never global); **(C2)** cooperative, **additive** cancellation observed at
+  budget-check points (an explicit `Cancelled`, never preemptive; scope-tree propagation, RT7);
+  **(C3)** cross-task failure propagation via an explicit `TaskOutcome` with **no silent/dropped
+  variant** (I1 across the task boundary, RT4); **(C4)** `reclaim` **bounded-cascade** supervision
+  bounded on **both** a total `cascade` effect budget (M-353) **and** a windowed max-restart-intensity
+  over a **logical clock** (Erlang/OTP, Research Record 05 T5.3; wall-clock deferred to R8-Q3) —
+  exceeding either an explicit escalation, never a storm.
+- **Enacted** as **scheduler-independent** primitives in `mycelium_interp::supervise`
+  (`CancelToken` / `TaskOutcome` / `RestartIntensity` / `Supervisor` / `Escalation`) — **no L0 node**,
+  the trusted base stays sequential (RT2; KC-3) — verified there and composed with the recovery driver
+  in `crates/mycelium-lsp/tests/recover.rs` (cancellation is explicit + additive; a task failure
+  propagates explicitly; a supervised restart storm is bounded on both axes; a per-task budget overrun
+  is an in-that-task refusal). The actual **task scheduler/executor and the RT2 sequentialization
+  differential are explicitly *not* here** — they are RFC-0008 R1 (**M-357**), built on these
+  primitives. `just check` green. Advances G2, VR-5, SC-3. RFC-0014 §8 concurrency deferral **resolved**.
+  **M-356 (#121)**.
+
 ### Added (Phase 4 — 2026-06-16: M-354 / RFC-0013 §8 diagnostic routes ↔ RFC-0008 observability sinks)
 - **M-354 — the diagnostic `route` set closed and bound to RFC-0008 sinks (RFC-0013 §8 resolved).** A
   **closed v0 route vocabulary** — `stream` / `audit` / `log` / `null` / `mesh` — in

@@ -105,12 +105,16 @@
 
 pub mod budget;
 pub mod prims;
+pub mod supervise;
 pub mod swap;
 
 use mycelium_core::{Alt, CoreValue, Datum, GuaranteeStrength, Node, Repr, Value, WfError};
 
 pub use budget::{Budgets, EffectBudget, EffectBudgetExhausted, EffectKind};
 pub use prims::PrimRegistry;
+pub use supervise::{
+    CancelToken, Cancelled, Escalation, RestartIntensity, Supervisor, TaskOutcome,
+};
 pub use swap::{IdentitySwapEngine, SwapEngine};
 
 /// The result of one small-step attempt on a node.

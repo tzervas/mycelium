@@ -368,14 +368,29 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
   §9 future. When added, a user action is a function `Err(ε) -> Result<τ>` that **must** be total over
   the error's cases (I1) and **declare + bound** any effect it performs (I3/I4) — i.e. it inherits the
   same obligations as the built-in set; it is never a privileged escape hatch.
-- **Concurrency interaction (RFC-0008) — DEFERRED with a v0 boundary fixed (maintainer, 2026-06-16).**
-  v0 recovery/effects are **single-task / synchronous**: budgets are per-evaluation (the
-  same scope the `Fix` fuel clock already uses), and there is **no cross-task effect or cascade** in v0
-  (no spooky action across tasks — there are no tasks yet). The genuinely-open composition (per-task
-  budgets, cancellation, cross-task failure propagation) is **RFC-0008's** design, and it must compose
-  **additively**: a task failure is an explicit error subject to I1, a per-task budget overrun is an
-  in-that-task `EffectBudgetExhausted`. Fixing the v0 boundary now makes the deferral *safe* (v0 cannot
-  accidentally admit an unbounded cross-task cascade) rather than merely postponed.
+- **Concurrency interaction (RFC-0008) — RESOLVED in RFC-0008 §4.7 (M-356, 2026-06-16); single-task v0
+  boundary now LIFTED, additively.** The deferral below fixed a *safe* single-task boundary; **RFC-0008
+  §4.7** now lifts it without weakening any invariant here. The composition (designed there, enacted as
+  scheduler-independent primitives in `mycelium_interp::supervise`): **per-task budgets** — each task
+  instances its own M-353 ledger, so an overrun is an *in-that-task* `EffectBudgetExhausted` (I4), never
+  global; **cooperative cancellation** — observed at budget-check points, an explicit *additive*
+  `Cancelled` (I1), never preemptive; **cross-task failure propagation** — an explicit `TaskOutcome`
+  with no silent/dropped variant, so a child failure is a value the parent must act on (I1 across the
+  boundary); and **`reclaim` bounded-cascade supervision** — a restart storm bounded on **both** the
+  `cascade` effect budget (I4/I5) **and** a windowed max-restart-intensity (logical clock; Erlang/OTP,
+  Research Record 05 T5.3), exceeding either an explicit escalation (a declared, bounded cascade — I5),
+  never unbounded. The actual task **scheduler** and the RT2 differential are RFC-0008 R1 (M-357), built
+  on these primitives. *Everything stays additive over the explicit error (I1) and declared + bounded
+  (I3/I4): no spooky cross-task action, no unbounded cascade.* The original (now-superseded) deferral is
+  preserved below, append-only.
+  - *(superseded 2026-06-16 — original deferral)* v0 recovery/effects are **single-task / synchronous**:
+    budgets are per-evaluation (the same scope the `Fix` fuel clock already uses), and there is **no
+    cross-task effect or cascade** in v0 (no spooky action across tasks — there are no tasks yet). The
+    genuinely-open composition (per-task budgets, cancellation, cross-task failure propagation) is
+    **RFC-0008's** design, and it must compose **additively**: a task failure is an explicit error
+    subject to I1, a per-task budget overrun is an in-that-task `EffectBudgetExhausted`. Fixing the v0
+    boundary now makes the deferral *safe* (v0 cannot accidentally admit an unbounded cross-task
+    cascade) rather than merely postponed.
 - **Handler composition & re-entrancy — RESOLVED v0 (maintainer, 2026-06-16).**
   - **Nesting is lexical and deterministic.** Handlers nest like `Match`: the **innermost** handling
     site whose pattern matches an error handles it; an unmatched case **re-propagates** to the next
@@ -409,6 +424,18 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
 
 ## Meta — changelog
 
+- **2026-06-16 — §8 concurrency deferral RESOLVED; single-task boundary lifted (M-356; RFC-0008 §4.7).**
+  The §8 concurrency interaction — the last RFC-0008-tied deferral — is resolved in **RFC-0008 §4.7**:
+  per-task budgets (each task instances its own M-353 ledger; an overrun is an *in-that-task*
+  `EffectBudgetExhausted`), cooperative **additive** cancellation (an explicit `Cancelled`, never
+  preemptive — I1), cross-task failure propagation via an explicit `TaskOutcome` with no silent/dropped
+  variant (I1 across the boundary), and `reclaim` **bounded-cascade** supervision bounded on *both* the
+  `cascade` effect budget (I4/I5) and a windowed max-restart-intensity (logical clock; Erlang/OTP,
+  Record 05 T5.3) — exceeding either an explicit escalation, never a storm. Enacted as
+  scheduler-independent primitives in `mycelium_interp::supervise` (no L0 node — KC-3; the trusted base
+  stays sequential), composed with the recovery driver in `tests/recover.rs`. Everything stays additive
+  over the explicit error (I1) and declared + bounded (I3/I4). The task **scheduler** + RT2 differential
+  are RFC-0008 R1 (M-357). `just check` green. Append-only.
 - **2026-06-16 — §4.8 integration completed (M-353; RFC-0008 Accepted).** The deferred half of §4.8 —
   *wiring the `Budgets` ledger into the runtime/AOT env-machine's budget enforcement* — is enacted. The
   ledger primitive (`EffectKind`/`EffectBudget`/`EffectBudgetExhausted`/`Budgets`) is **lifted into

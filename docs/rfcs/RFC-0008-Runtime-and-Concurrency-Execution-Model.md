@@ -242,6 +242,49 @@ Examples using them remain illustrations of intent (ADR-012 §7.3's marking stan
 
 R1 before R2 is load-bearing: every R2 guarantee is stated against R1's deterministic core.
 
+### 4.7 Concurrency composition: per-task budgets, cancellation & bounded-cascade supervision
+
+This section lifts RFC-0014's deliberately-fixed **single-task v0 boundary** (RFC-0014 §8) onto the
+RT1–RT7 model. It is the **composition contract** the R1 runtime (and its tasks) obey; it adds **no L0
+node** and does not change the sequential trusted base (RT2; KC-3). The composition primitives are
+enacted now (M-356, `mycelium_interp::supervise`) so the R1 scheduler (M-357) is built *against* them;
+the scheduler itself is not specified here (R8-Q1).
+
+Four compositions, each **additive over the explicit error** (RFC-0014 I1) and **declared + bounded**
+(I3/I4) — never a silent stop, never an unbounded cascade:
+
+- **(C1) Per-task budgets.** Each task carries its **own** effect-budget ledger
+  (the `Budgets` mechanism, M-353) — the *same* mechanism as the single-task case, instanced per task. A
+  per-task overrun is an **in-that-task** `EffectBudgetExhausted` on the unified runtime refusal channel
+  (`EvalError::EffectBudget`), not a global one: one task overrunning its `retry`/`alloc`/`cascade`
+  budget cannot exhaust another's. (RFC-0014 §8 disposition: "a per-task budget overrun is an
+  in-that-task `EffectBudgetExhausted`.")
+- **(C2) Cooperative cancellation (RT7).** Cancellation is a **cooperative token** a task observes at
+  its budget-check points (the cadence it already checks fuel/depth) — **never preemptive**, so a task
+  cannot be stopped mid-step in a way that drops an in-flight explicit outcome. Observing a cancelled
+  token yields an explicit, **additive** `Cancelled` outcome (I1). Cancellation propagates **down the
+  structured scope tree** (RT7): cancelling a scope cancels its children; a scope does not exit until
+  every child has completed, failed, or observed cancellation.
+- **(C3) Cross-task failure propagation (RT4).** A task resolves to exactly one **explicit**
+  `TaskOutcome` — `Done` / `Failed` / `BudgetExhausted` / `Cancelled` — with **no silent/dropped
+  variant**, so a child's failure is a value the parent scope *must* act on; it can never be silently
+  treated as success (I1 across the task boundary). Local and remote task failures are *different types*
+  (RT4); v0 is single-node, so this is the local case, with the remote case its R2 successor.
+- **(C4) `reclaim` bounded-cascade supervision (RT4/RT7).** A supervisor restarts a failed child under
+  a cascade bounded on **both axes** (the combined disposition): a **total** restart cap (the RFC-0014
+  `cascade` effect budget — M-353) **and** a **windowed max-restart-intensity** (at most *N* restarts
+  within *W* **logical** ticks — Erlang/OTP, Research Record 05 **T5.3**). Exceeding *either* is an
+  explicit **escalation** (the supervisor's own failure, propagated per C3) — a **declared, bounded
+  cascade**, never an unbounded restart storm. v0 uses a **logical clock** (a deterministic monotonic
+  counter the supervisor advances), *not* wall-clock time; physical/hybrid clocks for real time are
+  **R8-Q3**, deferred — so the intensity bound is honest and deterministic now, and gains real-time
+  semantics only when R8-Q3 lands.
+
+**What v0 does *not* include (honest boundary):** an actual **task scheduler / executor** — the running
+of tasks, their placement (`forage`, RT3), and the RT2 reference-sequentialization differential are the
+R1 runtime (M-357), built on these primitives. This section fixes the *composition semantics* so that
+the scheduler, when it lands, cannot reintroduce a silent stop or an unbounded cascade.
+
 ## 5. Drawbacks
 
 - **Determinism-first costs expressiveness up front.** Racy, latency-hiding idioms (speculative
@@ -323,6 +366,21 @@ substrate (the RFC-0004 backend story, distributed).
 
 ## Meta — changelog
 
+- **2026-06-16 — §4.7 concurrency composition added + composition primitives enacted (M-356).** Lifts
+  RFC-0014's single-task v0 boundary (§8) onto RT1–RT7 as a **frozen composition contract** (presented
+  before folding, per design-first): **(C1)** per-task budgets — each task instances its own M-353
+  ledger; an overrun is an in-that-task `EvalError::EffectBudget`, never global; **(C2)** cooperative,
+  additive cancellation observed at budget-check points (never preemptive; scope-tree propagation, RT7);
+  **(C3)** cross-task failure propagation via an explicit `TaskOutcome` with no silent/dropped variant
+  (I1 across the boundary, RT4); **(C4)** `reclaim` bounded-cascade supervision bounded on **both** a
+  total `cascade` budget (M-353) **and** a windowed max-restart-intensity over a **logical clock**
+  (Erlang/OTP, Record 05 T5.3; wall-clock deferred to R8-Q3) — exceeding either is an explicit
+  escalation, a declared bounded cascade, never a storm. Enacted as **scheduler-independent** primitives
+  in `mycelium_interp::supervise` (`CancelToken`/`TaskOutcome`/`RestartIntensity`/`Supervisor` —
+  **no L0 node**, the trusted base stays sequential; KC-3), verified there + composed with the recovery
+  driver in `mycelium-lsp/tests/recover.rs`. The **task scheduler/executor and the RT2
+  sequentialization differential are explicitly *not* here** — they are the R1 runtime (M-357), built on
+  these primitives. `just check` green. Append-only.
 - **2026-06-16 — Accepted.** Maintainer ratified `Draft → Accepted`: RT1–RT7 and the §4 model are
   now **normative** (the Runtime-tier grounding ADR-012 §7.3 required). Ratification opens the runtime
   track in staged slices — *separate named budgets, one enforcement mechanism*, then concurrency:
