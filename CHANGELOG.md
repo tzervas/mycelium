@@ -8,6 +8,27 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (2026-06-16: PM manifest drift — labels.json out of sync with issues.yaml)
+- **`tools/github/labels.json`** was missing three labels that `issues.yaml` already uses —
+  **`type:design`** (12 issues), **`priority:P3`** (11 issues), and **`area:language`** (1). Because
+  `gh issue create --label <name>` errors on a label the bootstrap never created, this silently stalled
+  issue creation: the five staged Phase-7/8 issues (**M-358/359/361/362/363**) were not created on the
+  prior run. Added the three labels (matching the existing color/description style) so a sync run creates
+  them first, then the issues that reference them.
+
+### Added (2026-06-16: one-command PM gap-closer + manifest preflight)
+- **`tools/github/gh-sync-all.sh`** — a single **idempotent** command that reconciles the repo with the
+  manifests in one pass: a preflight, then `gh-bootstrap-local.sh` (labels + milestones), then
+  `gh-issues-sync.py` (create absent issues + assign milestones + append `idmap.tsv`). Safe to rerun any
+  time `issues.yaml`/`labels.json`/`milestones.json` gains entries; nothing is duplicated. Supports
+  `--dry-run` (preview issue creation, no repo writes).
+- **`tools/github/manifest-check.py`** — the preflight: every label/milestone `issues.yaml` references
+  must be **defined** in `labels.json`/`milestones.json`, else an explicit fail-fast error (the
+  never-silent rule, G2 — a missing label can no longer silently leave issues uncreated). Reverse drift
+  (a defined-but-unused manifest entry) is an advisory note only.
+- Docs updated to make `gh-sync-all.sh` the canonical re-sync entrypoint: `MILESTONES.md`,
+  `mcp-bootstrap.md`, `termux-bootstrap.md`. The two component scripts stay single-purpose.
+
 ### Added (2026-06-16: mobile/Termux GitHub bootstrap — phone-autonomous PM)
 - **`tools/github/termux-setup.sh`** + **`tools/github/gh-issues-sync.py`** + **`termux-bootstrap.md`**.
   A single, ordered, **idempotent** path to run the *whole* GitHub project-management bootstrap from an
