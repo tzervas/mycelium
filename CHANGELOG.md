@@ -8,6 +8,25 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-16: typed SPSC channels — the RT2 communicating fragment, M-357 follow-on)
+- **`crates/mycelium-mlir/src/channel.rs`** — the Kahn-deterministic *communicating* half of the RFC-0008
+  RT2 fragment (§4.3), extending the landed fork/join runtime. **Typed single-producer/single-consumer
+  channels**: `Network::channel` returns an affine `Sender`/`Receiver` pair (neither `Clone` — SPSC by
+  construction, RT1) over a buffer of **explicit, finite** capacity (`NonZeroUsize` — no unbounded silent
+  buffer, RT7's spirit on queues). **Demand-signalled backpressure**: `try_send` on a full buffer returns
+  `Full(v)` handing the value back (never dropped); the producer yields and is re-polled as the consumer
+  drains. **Explicit close**: dropping the `Sender` lets the `Receiver` drain then see `Closed`
+  (end-of-stream, never a hang); a send to a hung-up receiver is `Disconnected(v)` (G2, never a silent
+  drop). A new **`Scope::run_dataflow(order, progress)`** (in `runtime.rs`) schedules communicating tasks
+  and surfaces a stalled network as an explicit **`Deadlock { parked }`** — never a silent hang (the
+  cooperative scheduler cannot block). Determinism is verified by a **Kahn-determinism differential**: the
+  same network under two distinct fair schedules (`SweepOrder::Ascending`/`Descending`) yields identical
+  outcomes + transcripts (T4.1) — tagged **`Empirical`** (the differential is the evidence) with Kahn T4.1
+  cited, **not** `Proven` (no mechanized proof in-repo; VR-5). Deferred (honest boundary): multi-source
+  `select`/`merge` (RT3), session/protocol typing beyond the §4.3 hook, zero-capacity rendezvous,
+  `xloc`/`mesh` (R2). No kernel change (KC-3); no `unsafe`. RFC-0008 §4.6 staging note + Meta-changelog
+  updated (append-only). `just check` green.
+
 ### Fixed (2026-06-16: PM manifest drift — labels.json out of sync with issues.yaml)
 - **`tools/github/labels.json`** was missing three labels that `issues.yaml` already uses —
   **`type:design`** (12 issues), **`priority:P3`** (11 issues), and **`area:language`** (1). Because

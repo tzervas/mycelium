@@ -239,7 +239,9 @@ Examples using them remain illustrations of intent (ADR-012 §7.3's marking stan
   the RT2 reference-sequentialization differential. The natural successor to the L1 track. *(v0 slice
   landed, M-357: a deterministic fork/join executor over pure tasks — `Scope`/`Task`, RT7 join, per-task
   budgets + cooperative cancellation — with the RT2 sequentialization differential green over both a toy
-  corpus and the real env-machine; typed SPSC channels are the next slice.)*
+  corpus and the real env-machine. The **communicating half** then landed as `mycelium-mlir::channel`:
+  typed SPSC channels with bounded demand-signalled backpressure + explicit close, scheduled by
+  `Scope::run_dataflow` with explicit deadlock, under the Kahn-determinism differential — §4.3.)*
 - **R2 (distribution):** `xloc`, `mesh`, `cyst`s — each construct landing with its
   honest bounds (RT5) and its differential/TV obligations.
 
@@ -372,6 +374,25 @@ substrate (the RFC-0004 backend story, distributed).
 
 ## Meta — changelog
 
+- **2026-06-16 — R1 v0 slice extended: typed SPSC channels + the Kahn-determinism differential
+  (M-357 follow-on).** The *communicating* half of the RT2 fragment (§4.3) lands as
+  `mycelium-mlir::channel` (outside the kernel; KC-3): typed single-producer/single-consumer channels
+  (`Network::channel` → affine `Sender`/`Receiver`, neither `Clone` — SPSC by construction, RT1) with
+  an **explicit, finite** capacity (`NonZeroUsize` — no unbounded silent buffer, RT7's spirit on
+  queues) and **demand-signalled backpressure** (`try_send` on a full buffer returns `Full(v)`, the
+  value handed back, never dropped; the producer yields and is re-polled as the consumer drains).
+  Close is explicit (dropping the `Sender` → the `Receiver` drains then sees `Closed`, end-of-stream,
+  never a hang); a send to a hung-up receiver is `Disconnected(v)` (G2). A new
+  `Scope::run_dataflow(order, progress)` schedules communicating tasks and surfaces a stalled network
+  as an explicit `Deadlock { parked }` — never a silent hang (the cooperative scheduler cannot block).
+  The **RT2 obligation for communicating tasks** is verified by a Kahn-determinism differential: the
+  same network under two distinct fair schedules (`SweepOrder::Ascending`/`Descending`) yields
+  identical per-task outcomes + channel transcripts (T4.1). That determinism is tagged **`Empirical`**
+  (the differential is the evidence) with Kahn T4.1 cited as the basis — **not** `Proven` (no
+  mechanized proof in-repo; VR-5). Deferred (honest boundary): multi-source `select`/`merge` (RT3);
+  session/protocol typing beyond the §4.3 hook; zero-capacity rendezvous; `xloc`/`mesh` (R2). No
+  kernel change; no `unsafe` (single-threaded cooperative ⇒ `RefCell` borrows never overlap a yield).
+  `just check` green. Append-only.
 - **2026-06-16 — `colony` (dynamic runtime grouping) adopted (DN-06).** §4.7's structured scope of
   cooperating `hypha` is named a **`colony`** — the DN-06 dynamic grouping. The term was reassigned
   from DN-02's static "module" meaning (which moves to `nodule`, with `phylum` as the library level)

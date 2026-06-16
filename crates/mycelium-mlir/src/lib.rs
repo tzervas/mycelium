@@ -35,6 +35,7 @@
 pub mod aot;
 pub mod bitnet;
 pub mod budget;
+pub mod channel;
 pub mod dialect;
 pub mod inject;
 pub mod jit;
@@ -55,12 +56,13 @@ pub use budget::{
     AutoDepthBudget, DepthBasis, DepthBudget, DepthResolution, MemSource, StaticDepthBudget,
     StaticReason, STATIC_FALLBACK_DEPTH,
 };
+pub use channel::{Network, Receiver, Sender, TryRecv, TrySend};
 pub use dialect::emit;
 pub use inject::{recompile_closure, Image, InjectError, Resolution};
 pub use jit::{compile_so, jit_run, JitArtifact};
 pub use llvm::{compile, compile_and_run, emit_llvm_ir, AotError, CompiledArtifact};
 pub use pack::{pack_trits, relayout_trits, unpack_trits};
-pub use runtime::{Colony, Poll, Scope, Task, TaskCtx};
+pub use runtime::{Colony, Deadlock, Poll, Scope, SweepOrder, Task, TaskCtx};
 pub use simd::{compile_bitnet_dot_simd, emit_bitnet_dot_simd_ir};
 pub use specialize::{
     compile_specialized_dot, emit_specialized_dot_ir, jit_specialized_dot, SpecializedDotKernel,

@@ -18,11 +18,13 @@
 //!   NFR-7-extension RFC-0008 §4.6 names — verified by [`tests`] across an interleaving corpus and a
 //!   real-L0-evaluation corpus (each task runs the env-machine).
 //!
-//! ## What does **not** land here (honest boundary)
-//! Typed single-producer/single-consumer **channels** (the other half of the RT2 fragment, the Kahn
-//! determinism for *communicating* tasks) are the next slice; nondeterministic forms (`select`,
-//! placement) stay RT3 constructs with reified policies — out of scope. With no channels, the fragment
-//! is pure fork/join and its sequentialization is exactly the spawn-order sequential run.
+//! ## What this module covers, and what its sibling does
+//! This module is the pure **fork/join** half: with no channels, the fragment's sequentialization is
+//! exactly the spawn-order sequential run ([`Scope::run_sequential`] vs [`Scope::run_interleaved`]).
+//! The **communicating** half — typed single-producer/single-consumer channels (the Kahn determinism
+//! for tasks that talk) — landed in [`crate::channel`], driven by [`Scope::run_dataflow`] over a
+//! [`channel::Network`](crate::channel::Network). Nondeterministic forms (`select`, placement) stay
+//! RT3 constructs with reified policies — out of scope.
 
 use mycelium_interp::{Budgets, CancelToken, TaskOutcome};
 
@@ -72,6 +74,28 @@ struct Child<T, E> {
 pub struct Scope<T, E> {
     children: Vec<Child<T, E>>,
     cancel: CancelToken,
+}
+
+/// The order a **dataflow** sweep visits still-pending children. Two *distinct* deterministic fair
+/// schedules; the Kahn-determinism differential (§4.3) asserts they yield identical per-task
+/// outcomes **and** identical channel transcripts (T4.1 — a network of deterministic processes over
+/// blocking single-reader channels is itself deterministic, regardless of the fair schedule).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SweepOrder {
+    /// Visit pending children by ascending index.
+    Ascending,
+    /// Visit pending children by descending index.
+    Descending,
+}
+
+/// A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a
+/// channel and none can advance. An **explicit refusal**, never a silent hang (G2): the cooperative
+/// scheduler cannot block, so a stuck communicating network is surfaced as data. Lists the parked
+/// child indices (the blocked set), so the deadlock is inspectable (no black box — SC-3).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Deadlock {
+    /// The still-pending child indices when progress stalled.
+    pub parked: Vec<usize>,
 }
 
 /// A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of
@@ -170,6 +194,69 @@ impl<T, E> Scope<T, E> {
             }
         }
         self.join()
+    }
+
+    /// The **dataflow run** (RFC-0008 §4.3): round-robin one step per still-pending child in `order`,
+    /// for **communicating** tasks that may park on typed SPSC channels. Unlike
+    /// [`run_sequential`](Scope::run_sequential), it must *not* poll any one child to completion —
+    /// a consumer spawned before its producer would otherwise block forever — so it interleaves and
+    /// detects a stalled network explicitly.
+    ///
+    /// `progress` reports a monotone count of work done *outside* the tasks' own resolution — i.e. the
+    /// number of successful channel sends/recvs across the network ([`channel::Network::epoch`]). A
+    /// sweep counts as progress if **either** a task resolved **or** `progress` advanced. A full sweep
+    /// with neither, while children remain pending, is a [`Deadlock`] — an explicit error, never a
+    /// silent hang (G2). Because the schedule is a fixed function of `order` and the tasks share no
+    /// mutable state but the channels (RT1), two different `order`s yield the same outcomes — the Kahn
+    /// determinism the differential checks.
+    ///
+    /// [`channel::Network::epoch`]: crate::channel::Network::epoch
+    pub fn run_dataflow(
+        mut self,
+        order: SweepOrder,
+        progress: impl Fn() -> u64,
+    ) -> Result<Vec<TaskOutcome<T, E>>, Deadlock> {
+        let mut tick = 0u64;
+        let mut remaining = self.children.len();
+        while remaining > 0 {
+            let before = progress();
+            let mut advanced = false;
+            let n = self.children.len();
+            let sweep: Vec<usize> = match order {
+                SweepOrder::Ascending => (0..n).collect(),
+                SweepOrder::Descending => (0..n).rev().collect(),
+            };
+            for i in sweep {
+                if self.children[i].outcome.is_some() {
+                    continue;
+                }
+                tick += 1;
+                let child = &mut self.children[i];
+                let mut cx = TaskCtx {
+                    cancel: &self.cancel,
+                    budgets: &mut child.budgets,
+                    tick,
+                };
+                if let Poll::Ready(o) = child.task.poll(&mut cx) {
+                    child.outcome = Some(o);
+                    remaining -= 1;
+                    advanced = true;
+                }
+            }
+            // Progress = a task resolved this sweep OR a channel op advanced the network epoch. A full
+            // sweep with neither, while children remain, is a genuine deadlock (never a hang — G2).
+            if !advanced && progress() == before && remaining > 0 {
+                let parked = self
+                    .children
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, c)| c.outcome.is_none())
+                    .map(|(i, _)| i)
+                    .collect();
+                return Err(Deadlock { parked });
+            }
+        }
+        Ok(self.join())
     }
 
     /// Join: collect every child's resolved outcome in spawn order. A scope never returns with an
