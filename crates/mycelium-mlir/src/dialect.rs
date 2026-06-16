@@ -146,6 +146,14 @@ fn emit_op(rhs: &Rhs, depth: usize, s: &mut String) {
             emit_block(body, depth + 1, s);
             let _ = write!(s, "{pad}}}) : () -> !myc.value");
         }
+        Rhs::FixGroup { defs, which } => {
+            let _ = writeln!(s, "\"myc.fixgroup\"() ({{  // member = \"{which}\"");
+            for (member, body) in defs {
+                let _ = writeln!(s, "{pad}  // def \"{member}\"");
+                emit_block(body, depth + 1, s);
+            }
+            let _ = write!(s, "{pad}}}) : () -> !myc.value");
+        }
         Rhs::Match {
             scrutinee,
             alts,

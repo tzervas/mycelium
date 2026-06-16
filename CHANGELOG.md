@@ -8,6 +8,29 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — M-343: mutual recursion in the L0 calculus; RFC-0001 r5, R7-Q3 resolved)
+- **`FixGroup` — one new L0 node for mutual recursion** (RFC-0001 r5; the n-way generalisation of
+  `Fix`). `FixGroup{defs, body}` binds a strongly-connected call group simultaneously (each definition
+  and the continuation see all the group's names), so two functions can call each other. The
+  elaborator (`mycelium-l1::elab`) now decomposes the reachable call graph into SCCs (Tarjan,
+  callee-first) and lowers a self-recursive singleton to `Fix` and a group of ≥2 to a `FixGroup`;
+  **mutual recursion is no longer an `ElabError::Residual`** — a structurally v0 program no longer
+  residualises on recursion at all (only a dynamic `@ guarantee` index does). The node carries **no
+  captured environment** and unfolds by substitution under the **same fuel clock** as `Fix` (a *focus*
+  member-name unfold + a *continuation* unfold; the group binds all member names so substitution
+  shadows them) — a non-productive group is an explicit budget exhaustion, never a hang.
+- **Enacted across the trusted base and the AOT path, in lockstep:** `mycelium-core` (node +
+  `is_aot_lowerable` + content-addressing + the canonical/core/ANF formatters + `Rhs::FixGroup`),
+  `mycelium-interp` (the two-case unfold + capture-avoiding `subst`), `mycelium-mlir::aot` (the
+  env-machine `FixGroup` suspension + unfold; the native-LLVM subset refuses it with `UnsupportedNode`
+  like the rest of the data/recursion fragment, VR-5), and the dialect/LSP walkers.
+- **Verified by the three-way M-210 differential** (L1-eval ≡ elaborate→L0-interp ≡ AOT) extended with
+  mutually-recursive programs — ping/pong, even/odd over a Bool result, a constructive group that
+  builds data on the way back, and a three-function cycle — plus a `FixGroup`-lowering witness. Resolves
+  **R7-Q3** (the cycle *identity* was fixed in RFC-0001 r4; the matching *node* lands now). Full
+  `cargo test` green. (NFR-7, VR-5, SC-3, LR-1; KC-3 — the kernel grows by exactly one deliberate,
+  ratified node.)
+
 ### Decided (Phase 4 — M-351: RFC-0012 R12-Q1 & R12-Q2 resolved; no new ambient code)
 - **R12-Q1 (per-use size) → no new sugar.** A paradigm-less **ascription** `e : {N}` already states an
   explicit size at the use site with the paradigm from the central `default` (now tested:

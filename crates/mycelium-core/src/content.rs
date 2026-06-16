@@ -73,6 +73,7 @@ pub(crate) mod tag {
     pub const LAM: u8 = 0x0a;
     pub const APP: u8 = 0x0b;
     pub const FIX: u8 = 0x0c;
+    pub const FIXGROUP: u8 = 0x0d;
 }
 
 /// A canonical, injective, metadata-free byte encoder feeding a [`blake3::Hasher`]. Every write is
@@ -335,6 +336,22 @@ impl Canon {
                 scope.push(name.clone());
                 self.node(body, scope);
                 scope.pop();
+            }
+            Node::FixGroup { defs, body } => {
+                // The group binds all member names as one frame: each name is α-normalised (de
+                // Bruijn) and in scope for every definition and the continuation. The arity is part
+                // of the hash, so groups of different sizes never collide.
+                self.tag(tag::FIXGROUP);
+                self.u64(defs.len() as u64);
+                let mark = scope.len();
+                for (name, _) in defs {
+                    scope.push(name.clone());
+                }
+                for (_, d) in defs {
+                    self.node(d, scope);
+                }
+                self.node(body, scope);
+                scope.truncate(mark);
             }
         }
     }

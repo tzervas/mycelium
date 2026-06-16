@@ -234,6 +234,20 @@ fn walk<'a>(node: &'a Node, prefix: &str, scope: &mut Vec<&'a str>, out: &mut Ve
             walk(body, &at, scope, out);
             scope.pop();
         }
+        Node::FixGroup { defs, body } => {
+            // r5: the group binds every member name; they enter scope together for all definitions
+            // and the continuation (so a sibling use is not mis-flagged free). Repr-transparent.
+            let at = here(prefix, "fixgroup");
+            let mark = scope.len();
+            for (name, _) in defs {
+                scope.push(name);
+            }
+            for (name, def) in defs {
+                walk(def, &here(&at, &format!("def {name}")), scope, out);
+            }
+            walk(body, &at, scope, out);
+            scope.truncate(mark);
+        }
     }
 }
 
