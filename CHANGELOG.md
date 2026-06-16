@@ -8,6 +8,19 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-16: narrative capture + automated-authoring intent, initial capture)
+- **`docs/notes/Narrative-Capture-and-Authoring.md` (Living)** + the seeded **`docs/devlog/`** append-only
+  narrative layer. Captures the maintainer's intent to record enough development narrative — decisions,
+  **struggles, problems solved, the how and why** — to enable **partially-to-fully automated** authoring
+  of project **blog** posts, a **language book**, and a **reference manual**, distributed **free** in
+  digital formats. Notes that the honesty rule already makes the corpus a grounded, cited, append-only
+  narrative (~80% of the raw material); the one gap (the struggle / problem-solving *how*) is filled by a
+  lightweight `docs/devlog/` (first entry: `2026-06-16-rfc0008-integration-wave.md`, a worked example).
+  All three outputs are **synthesis from the cited corpus** under the same discipline as the language —
+  grounded/cited (no hallucination), projection-not-parallel-truth (no drift — ADR-003),
+  human-in-the-loop, append-only provenance. Full pipeline design + tooling is a fresh session, tracked
+  **M-363** (Phase 8). Registered in `Doc-Index.md`.
+
 ### Added (RFC-0015 — 2026-06-16: Automatic Baseline Diagnostics & Recovery, Draft)
 - **RFC-0015 (Draft, Proposed)** captures the DynEL **automated-baseline** design point the maintainer
   added to the roadmap: an **automation layer over RFC-0013/0014** that auto-derives a zero-config
