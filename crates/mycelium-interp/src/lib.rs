@@ -59,6 +59,31 @@
 //!                 Match{s, alts, d} ⟶ body[binders ↦ fields]
 //! ```
 //!
+//! # Functions & recursion (r4 — RFC-0001 r4 / RFC-0007 §4.1)
+//! Three more nodes complete L1-in-Core-IR, retiring the elaboration `Residual` entirely. The v0
+//! surface is first-order, so an elaborated `Lam` is **closed** (no captured environment) and
+//! application is capture-free substitution — the existing `subst` carries it:
+//!
+//! ```text
+//!  (E-Lam)        Lam{x, e} is a NORMAL FORM (a function value)
+//!
+//!  (E-App-Fun)    f ⟶ f'                  (E-App-Arg)  f value, a ⟶ a'
+//!                 ─────────────────────────             ────────────────────────────
+//!                 App{f, a} ⟶ App{f', a}               App{f, a} ⟶ App{f, a'}
+//!
+//!  (E-App-Beta)   ─────────────────────────────────────────────  (a is a value)
+//!                 App{Lam{x, e}, a} ⟶ e[x ↦ a]
+//!
+//!  (E-Fix)        ─────────────────────────────────────────────  (under the fuel clock)
+//!                 Fix{f, e} ⟶ e[f ↦ Fix{f, e}]
+//! ```
+//!
+//! `Fix` unfolds by substitution every step, so a non-productive recursion is an explicit
+//! [`EvalError::FuelExhausted`], never a hang (RFC-0007 §4.5, CakeML clock); the totality checker
+//! gates `matured` (packaging), never meaning. Applying a non-function is an explicit
+//! [`EvalError::ApplyNonFunction`]; a program that evaluates to a bare function is
+//! [`EvalError::FunctionResult`] (a v0 entry returns a repr/data value, not a function).
+//!
 //! A `Construct` whose arguments are all values is itself a value (a data value, GHC-Core style); at
 //! the `eval` boundary it reads off as a [`mycelium_core::Datum`]. `Match` selects the first
 //! matching alternative (constructor arm on `CtorRef` identity; literal arm on `repr+payload`
@@ -161,6 +186,14 @@ pub enum EvalError {
     /// **data value** ([`mycelium_core::Datum`]). Use [`Interpreter::eval_core`] for the data
     /// fragment. Explicit, so a repr-only caller never silently mishandles a datum.
     DataResult,
+    /// An `App` whose function position reduced to a **non-function** value (a `Const`/`Construct`,
+    /// not a `Lam`) — RFC-0001 r4. The checker proves applications are well-typed, so this is
+    /// unreachable for checked programs; kept as the explicit never-silent fallback (G2).
+    ApplyNonFunction,
+    /// The program evaluated to a **function value** (a bare `Lam`) — RFC-0001 r4. A v0 entry returns
+    /// a representation or data value, never a function (the first-order surface has no function-typed
+    /// results), so this is an explicit refusal rather than a silent or partial observable.
+    FunctionResult,
 }
 
 impl core::fmt::Display for EvalError {
@@ -202,6 +235,14 @@ impl core::fmt::Display for EvalError {
             EvalError::DataResult => write!(
                 f,
                 "the program evaluated to a data value; use eval_core for the data fragment"
+            ),
+            EvalError::ApplyNonFunction => write!(
+                f,
+                "applied a non-function value (the checker should have refused this application)"
+            ),
+            EvalError::FunctionResult => write!(
+                f,
+                "the program evaluated to a function value (a v0 entry returns a repr/data value)"
             ),
         }
     }
@@ -358,6 +399,40 @@ impl Interpreter {
                     Ok(Step::Next(Box::new(body)))
                 }
             },
+
+            // (E-Lam): a lambda abstraction is a normal form (a function value).
+            Node::Lam { .. } => Ok(Step::Value),
+
+            Node::App { func, arg } => match self.step(func)? {
+                // (E-App-Fun): reduce the function position to a value first.
+                Step::Next(f2) => Ok(Step::Next(Box::new(Node::App {
+                    func: f2,
+                    arg: arg.clone(),
+                }))),
+                Step::Value => match self.step(arg)? {
+                    // (E-App-Arg): then reduce the argument (call-by-value).
+                    Step::Next(a2) => Ok(Step::Next(Box::new(Node::App {
+                        func: func.clone(),
+                        arg: a2,
+                    }))),
+                    // (E-App-Beta): both are values → β-reduce. The function must be a Lam (the
+                    // checker proves this); applying any other value is an explicit refusal.
+                    Step::Value => match func.as_ref() {
+                        Node::Lam { param, body } => {
+                            Ok(Step::Next(Box::new(subst(body, param, arg))))
+                        }
+                        _ => Err(EvalError::ApplyNonFunction),
+                    },
+                },
+            },
+
+            // (E-Fix): unfold by substitution under the fuel clock — Fix(f, e) ⟶ e[f ↦ Fix(f, e)].
+            // Always a redex; a non-productive recursion exhausts fuel explicitly, never hangs
+            // (RFC-0007 §4.5, CakeML clock).
+            Node::Fix { name, body } => {
+                let unfolded = subst(body, name, node);
+                Ok(Step::Next(Box::new(unfolded)))
+            }
         }
     }
 
@@ -406,6 +481,8 @@ fn node_to_core_value(node: &Node) -> Result<CoreValue, EvalError> {
             Ok(CoreValue::Data(Datum::new(ctor.clone(), fields)))
         }
         Node::Var(x) => Err(EvalError::FreeVariable(x.clone())),
+        // A bare Lam normal form is a function value — not an observable v0 result (RFC-0001 r4).
+        Node::Lam { .. } => Err(EvalError::FunctionResult),
         _ => Err(EvalError::DataMalformed {
             why: "evaluation ended on a non-normal-form node".to_owned(),
         }),
@@ -566,6 +643,27 @@ fn subst(node: &Node, var: &str, value: &Node) -> Node {
                 })
                 .collect(),
             default: default.as_ref().map(|d| Box::new(subst(d, var, value))),
+        },
+        // r4: a Lam/Fix binder shadows `var` in its body; App substitutes into both positions.
+        Node::Lam { param, body } => Node::Lam {
+            param: param.clone(),
+            body: if param == var {
+                body.clone()
+            } else {
+                Box::new(subst(body, var, value))
+            },
+        },
+        Node::App { func, arg } => Node::App {
+            func: Box::new(subst(func, var, value)),
+            arg: Box::new(subst(arg, var, value)),
+        },
+        Node::Fix { name, body } => Node::Fix {
+            name: name.clone(),
+            body: if name == var {
+                body.clone()
+            } else {
+                Box::new(subst(body, var, value))
+            },
         },
     }
 }
@@ -823,4 +921,186 @@ mod data_tests {
     }
 
     fn _unused(_: CtorRef) {}
+}
+
+#[cfg(test)]
+mod r4_tests {
+    //! r4 functions + recursion at the L0 boundary (RFC-0001 r4): β-reduction, Fix unfolding under
+    //! the fuel clock, and the never-silent refusals. Pins the L0 semantics independently of the
+    //! elaborator (the L1↔L0 agreement is the M-210 differential).
+    use super::*;
+    use mycelium_core::{
+        CtorSpec, DataRegistry, DeclSpec, FieldSpec, Meta, Payload, Provenance, Repr, Value,
+    };
+    use std::collections::BTreeMap;
+
+    fn nat() -> DataRegistry {
+        let mut m = BTreeMap::new();
+        m.insert(
+            "Nat".to_owned(),
+            DeclSpec {
+                ctors: vec![
+                    CtorSpec { fields: vec![] },
+                    CtorSpec {
+                        fields: vec![FieldSpec::Data("Nat".to_owned())],
+                    },
+                ],
+            },
+        );
+        DataRegistry::build(&m).unwrap()
+    }
+    fn z(r: &DataRegistry) -> Node {
+        Node::Construct {
+            ctor: r.ctor_ref("Nat", 0).unwrap(),
+            args: vec![],
+        }
+    }
+    fn s(r: &DataRegistry, n: Node) -> Node {
+        Node::Construct {
+            ctor: r.ctor_ref("Nat", 1).unwrap(),
+            args: vec![n],
+        }
+    }
+    fn byte(bits: [bool; 8]) -> Node {
+        Node::Const(
+            Value::new(
+                Repr::Binary { width: 8 },
+                Payload::Bits(bits.to_vec()),
+                Meta::exact(Provenance::Root),
+            )
+            .unwrap(),
+        )
+    }
+
+    #[test]
+    fn beta_reduction_applies_a_closed_lambda() {
+        // (λx. not(x)) 0b0000_1111  ⟶  not(0b0000_1111) = 0b1111_0000
+        let lam = Node::Lam {
+            param: "x".into(),
+            body: Box::new(Node::Op {
+                prim: "bit.not".into(),
+                args: vec![Node::Var("x".into())],
+            }),
+        };
+        let app = Node::App {
+            func: Box::new(lam),
+            arg: Box::new(byte([false, false, false, false, true, true, true, true])),
+        };
+        let v = Interpreter::default().eval(&app).expect("runs");
+        assert_eq!(
+            v.payload(),
+            &Payload::Bits(vec![true, true, true, true, false, false, false, false])
+        );
+    }
+
+    #[test]
+    fn curried_application_reduces_left_to_right() {
+        // (λx. λy. xor(x, y)) a b
+        let lam = Node::Lam {
+            param: "x".into(),
+            body: Box::new(Node::Lam {
+                param: "y".into(),
+                body: Box::new(Node::Op {
+                    prim: "bit.xor".into(),
+                    args: vec![Node::Var("x".into()), Node::Var("y".into())],
+                }),
+            }),
+        };
+        let app = Node::App {
+            func: Box::new(Node::App {
+                func: Box::new(lam),
+                arg: Box::new(byte([true, true, true, true, false, false, false, false])),
+            }),
+            arg: Box::new(byte([false, false, false, false, true, true, true, true])),
+        };
+        let v = Interpreter::default().eval(&app).expect("runs");
+        assert_eq!(v.payload(), &Payload::Bits(vec![true; 8])); // xor of disjoint halves = all ones
+    }
+
+    /// `drop_ = Fix(f, λn. match n { Z => Z, S(m) => f m })` — structural recursion to Z.
+    fn drop_(r: &DataRegistry) -> Node {
+        Node::Fix {
+            name: "f".into(),
+            body: Box::new(Node::Lam {
+                param: "n".into(),
+                body: Box::new(Node::Match {
+                    scrutinee: Box::new(Node::Var("n".into())),
+                    alts: vec![
+                        Alt::Ctor {
+                            ctor: r.ctor_ref("Nat", 0).unwrap(),
+                            binders: vec![],
+                            body: z(r),
+                        },
+                        Alt::Ctor {
+                            ctor: r.ctor_ref("Nat", 1).unwrap(),
+                            binders: vec!["m".into()],
+                            body: Node::App {
+                                func: Box::new(Node::Var("f".into())),
+                                arg: Box::new(Node::Var("m".into())),
+                            },
+                        },
+                    ],
+                    default: None,
+                }),
+            }),
+        }
+    }
+
+    #[test]
+    fn fix_drives_structural_recursion_to_a_value() {
+        // drop_(S(S(S(Z)))) ⟶ Z
+        let r = nat();
+        let app = Node::App {
+            func: Box::new(drop_(&r)),
+            arg: Box::new(s(&r, s(&r, s(&r, z(&r))))),
+        };
+        let v = Interpreter::default().eval_core(&app).expect("terminates");
+        assert_eq!(v.as_data().expect("data").fields().len(), 0, "Z");
+    }
+
+    #[test]
+    fn an_unproductive_fix_exhausts_fuel_explicitly() {
+        // Fix(f, f) loops; the fuel clock makes it an explicit refusal, never a hang.
+        let spin = Node::Fix {
+            name: "f".into(),
+            body: Box::new(Node::Var("f".into())),
+        };
+        let err = Interpreter::default()
+            .with_fuel(100)
+            .eval_core(&spin)
+            .unwrap_err();
+        assert_eq!(err, EvalError::FuelExhausted);
+    }
+
+    #[test]
+    fn applying_a_non_function_is_an_explicit_refusal() {
+        // (0b…)(0b…) — applying a representation value is a type error the checker would catch.
+        let app = Node::App {
+            func: Box::new(byte([false; 8])),
+            arg: Box::new(byte([true; 8])),
+        };
+        assert_eq!(
+            Interpreter::default().eval_core(&app).unwrap_err(),
+            EvalError::ApplyNonFunction
+        );
+    }
+
+    #[test]
+    fn a_function_result_is_an_explicit_refusal() {
+        // A program that evaluates to a bare lambda is not an observable v0 result.
+        let lam = Node::Lam {
+            param: "x".into(),
+            body: Box::new(Node::Var("x".into())),
+        };
+        assert_eq!(
+            Interpreter::default().eval_core(&lam).unwrap_err(),
+            EvalError::FunctionResult
+        );
+    }
+
+    #[test]
+    fn lam_app_fix_are_not_aot_lowerable() {
+        let r = nat();
+        assert!(!drop_(&r).is_aot_lowerable());
+    }
 }

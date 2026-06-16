@@ -146,6 +146,24 @@ fn data_corpus() -> Vec<&'static str> {
          fn main() -> Binary{8} = pick(True)",
         // a constructed result carrying a computed repr field
         "colony d\ntype Box = Mk(Binary{8})\nfn main() -> Box = Mk(not(0b0000_1111))",
+        // --- r4: functions + recursion (Lam/App/Fix), now in the fragment ---
+        // self-recursion returning a datum (Fix + App + Match)
+        "colony d\ntype Nat = Z | S(Nat)\n\
+         fn drop_(n: Nat) -> Nat = match n { Z => Z, S(m) => drop_(m) }\n\
+         fn main() -> Nat = drop_(S(S(S(Z))))",
+        // self-recursion building data on the way back (a recursive copy)
+        "colony d\ntype Nat = Z | S(Nat)\n\
+         fn copy(n: Nat) -> Nat = match n { Z => Z, S(m) => S(copy(m)) }\n\
+         fn main() -> Nat = copy(S(S(Z)))",
+        // a `for` fold over a list spine (desugars to a synthesized Fix fold)
+        "colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
+         fn checksum(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
+         fn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))",
+        // a recursive helper called by a non-recursive one (inlining + Fix coexist)
+        "colony d\ntype Nat = Z | S(Nat)\n\
+         fn drop_(n: Nat) -> Nat = match n { Z => Z, S(m) => drop_(m) }\n\
+         fn twice_drop(n: Nat) -> Nat = drop_(drop_(n))\n\
+         fn main() -> Nat = twice_drop(S(S(Z)))",
     ]
 }
 
@@ -251,28 +269,49 @@ fn the_differential_distinguishes_different_programs() {
     );
 }
 
-/// Outside the fragment: elaboration refuses with an explicit `Residual` (never a partial
-/// artifact) while the L1 evaluator runs the program — the §4.6 split, both halves honest.
+/// r4: self-recursion is now **in** the fragment — it elaborates to a `Fix` and agrees with the L1
+/// evaluator (the differential corpus exercises this). A `Total`-classified recursion still runs on
+/// the L1 evaluator too; the two paths agree on the L0 value.
 #[test]
-fn outside_the_fragment_elaboration_refuses_and_l1_eval_runs() {
+fn self_recursion_elaborates_and_agrees() {
     let src = "colony d\ntype Nat = Z | S(Nat)\n\
                fn drop_(n: Nat) -> Nat = match n { Z => Z, S(m) => drop_(m) }\n\
                fn main() -> Nat = drop_(S(S(Z)))";
     let env = check_colony(&parse(src).unwrap()).unwrap();
+    let registry = build_registry(&env).unwrap();
+    assert_eq!(env.totality["drop_"], mycelium_l1::Totality::Total);
 
-    // Total by structural descent — so the totality classifier admits it…
+    // Recursion now elaborates (no Residual) — r4 retired the §4.6 refusal for self-recursion.
+    let node = elaborate(&env, "main").expect("self-recursion elaborates in r4");
+    let l0 = Interpreter::default()
+        .eval_core(&node)
+        .expect("L0-interp runs");
+    let l1 = Evaluator::new(&env)
+        .call("main", vec![])
+        .unwrap()
+        .to_core(&env, &registry)
+        .unwrap();
     assert_eq!(
-        env.totality["drop_"],
-        mycelium_l1::Totality::Total,
-        "structural descent classifies drop_ as Total"
+        l1, l0,
+        "L1-eval and elaborate→L0-interp agree on the recursive result (Z)"
     );
-    // …elaboration still refuses (recursion is Fix — outside the fragment)…
+}
+
+/// The new r4 boundary: **mutual recursion** elaborates to an explicit `Residual` (deferred, R7-Q3)
+/// while the L1 evaluator still runs it — the §4.6 split, both halves honest.
+#[test]
+fn mutual_recursion_refuses_elaboration_but_l1_eval_runs() {
+    let src = "colony d\ntype Nat = Z | S(Nat)\n\
+               fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
+               fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }\n\
+               fn main() -> Nat = ping(S(S(Z)))";
+    let env = check_colony(&parse(src).unwrap()).unwrap();
+    // Mutual recursion → explicit Residual (deferred).
     assert!(matches!(
         elaborate(&env, "main"),
         Err(ElabError::Residual { .. })
     ));
-    // …and the L1 evaluator runs it to a value within fuel ("checked total" = terminates for
-    // every sufficiently large fuel, §4.5).
+    // …and the L1 evaluator still runs it to a value within fuel.
     let v = Evaluator::new(&env).call("main", vec![]).expect("runs");
     assert_eq!(
         v,
@@ -280,8 +319,7 @@ fn outside_the_fragment_elaboration_refuses_and_l1_eval_runs() {
             ty: "Nat".into(),
             ctor: "Z".into(),
             fields: vec![]
-        },
-        "drop_(S(S(Z))) reduces to Z"
+        }
     );
 }
 

@@ -10,6 +10,7 @@
 pub mod feedback;
 pub mod fmt;
 pub mod lint;
+pub mod sync;
 pub mod wire;
 
 pub use feedback::{
@@ -17,6 +18,7 @@ pub use feedback::{
 };
 pub use fmt::format;
 pub use lint::{has_errors, lint, Diagnostic, Severity};
+pub use sync::{publish_for_source, source_diagnostics, DocumentStore};
 pub use wire::{
     publish_diagnostics_notification, read_message, serve, to_lsp_diagnostic, write_message,
 };

@@ -164,13 +164,14 @@ M-150 AOT path must agree on the observable, validated through the M-210 shared 
 *full* answer — adding the five L1 nodes to the Core IR with their own WF rules — is the planned
 RFC-0001 revision (RFC-0006 §4.4 step 2) and supersedes §4.6's fragment restriction when it lands.
 
-> **Narrowed by RFC-0001 r3 (RFC-0011, enacted 2026-06-15).** The `Residual` refusal is **retired for
-> data construction and matching**: `Construct` and the flat `Match` are now L0 Core IR nodes, so a
-> non-recursive program that builds/matches data **elaborates** (the M-320 Maranget tree lowers nested
-> patterns to the flat kernel `Match`; `if` desugars to a `Bool` match). The fragment restriction
-> therefore *narrows*, it does not vanish — `App`/`Fix` (and `for`, a structural `Fix`) keep returning
-> `Residual` until **r4**. The differential obligation now also covers the data/matching fragment
-> (L1-eval ≡ elaborate→L0-interp); the AOT path stays repr-only in r3 (RFC-0011 §4.4 Q5).
+> **Narrowed by RFC-0001 r3, then RETIRED by RFC-0001 r4 (enacted 2026-06-15).** The `Residual`
+> refusal is **gone for the whole v0 calculus**: r3 made `Construct` + flat `Match` L0 nodes (data +
+> matching elaborate; the M-320 Maranget tree lowers nested patterns; `if` → a `Bool` match), and r4
+> made `Lam`/`App`/`Fix` L0 nodes — so **functions, self-recursion, and `for`** (a synthesized
+> self-recursive `Fix` fold) now elaborate too. The only `Residual`s left are **mutual recursion** (a
+> deferred elaboration step, R7-Q3) and a **dynamic guarantee index** `@ g` (§4.3, stage 0). The
+> differential obligation now covers the data/matching **and** recursive fragments (L1-eval ≡
+> elaborate→L0-interp); the AOT path stays repr-only for now (RFC-0011 §4.4 Q5).
 
 ### 4.7 Memory-safety semantics (LR-9)
 
@@ -259,12 +260,14 @@ big-step trusted semantics); Maranget 2008 (match compilation). Full citations: 
 
 ## 8. Unresolved questions
 
-- **R7-Q1:** `Fix` node vs a recursive-`Let` flag (cosmetic at the hash level; pick at the
-  RFC-0001 revision).
+- **R7-Q1:** ~~`Fix` node vs a recursive-`Let` flag~~ → **resolved (RFC-0001 r4): a `Fix` node**
+  (RFC-0007 §4.1's typed form; maintainer-confirmed).
 - **R7-Q2:** the `Match` default's interaction with guarantee indices once stage-1 grading lands
   (does a default arm's body meet-degrade differently from named alternatives?).
-- **R7-Q3:** mutual recursion in v0 surface (the prototype accepts only self-recursion; groups
-  hash per §4.2 when they arrive).
+- **R7-Q3:** mutual recursion → **partially resolved (RFC-0001 r4):** the content-addressed *identity*
+  of a mutually-recursive group is fixed (the canonical cycle ordering, §4.2, is implemented); the
+  surface→registry/`Fix`-group *elaboration* stays deferred (the prototype accepts only
+  self-recursion). So the hashes will not move underneath the surface when it grows mutual recursion.
 - **R7-Q4:** the prim signature table `Π` — currently a fixed builtin table; should become
   declarations with their own content addresses.
 
@@ -321,6 +324,11 @@ revisions / KC-2-gated.*
 
 ## Meta — changelog
 
+- **2026-06-15 — §4.6 `Residual` retired for self-recursion; R7-Q1 resolved, R7-Q3 partially resolved
+  (RFC-0001 r4 enacted; editorial, append-only).** `Lam`/`App`/`Fix` are now L0 Core IR nodes, so
+  functions + self-recursion + `for` elaborate (only mutual recursion + dynamic guarantee indices stay
+  `Residual`). §4.6's note and §8's R7-Q1 (→ a `Fix` node) and R7-Q3 (→ canonical cycle *identity*
+  fixed; elaboration still deferred) updated to record the consequence. No calculus content changed.
 - **2026-06-15 — §4.6 `Residual` narrowed (RFC-0001 r3 / RFC-0011 enacted; editorial, append-only).**
   Added the §4.6 note recording that the planned RFC-0001 revision has landed for **data and matching**:
   `Construct` + flat `Match` are now L0 Core IR nodes, so those programs **elaborate** (the M-320

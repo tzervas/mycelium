@@ -215,6 +215,25 @@ fn walk<'a>(node: &'a Node, prefix: &str, scope: &mut Vec<&'a str>, out: &mut Ve
                 walk(d, &here(&at, "default"), scope, out);
             }
         }
+        // r4 (RFC-0001 r4): a Lam/Fix binder enters scope for its body (so a bound use is not
+        // mis-flagged as a free variable); App just descends. Repr-transparent (no swap to lint).
+        Node::Lam { param, body } => {
+            let at = here(prefix, &format!("lam {param}"));
+            scope.push(param);
+            walk(body, &at, scope, out);
+            scope.pop();
+        }
+        Node::App { func, arg } => {
+            let at = here(prefix, "app");
+            walk(func, &at, scope, out);
+            walk(arg, &at, scope, out);
+        }
+        Node::Fix { name, body } => {
+            let at = here(prefix, &format!("fix {name}"));
+            scope.push(name);
+            walk(body, &at, scope, out);
+            scope.pop();
+        }
     }
 }
 

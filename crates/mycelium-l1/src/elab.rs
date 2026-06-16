@@ -1,9 +1,10 @@
-//! **Elaboration to the L0 Core IR** (RFC-0007 §4.6, **narrowed by RFC-0011 r3**). The
-//! evaluation-complete fragment now reaches **algebraic data and matching**: `Construct` and the
-//! flat `Match` are L0 nodes (RFC-0001 r3), so a program that builds/matches data — but does not
-//! recurse (`Fix`) or call an unknown lambda (`App`) — elaborates to a closed L0 term. Anything
-//! still outside the fragment is an explicit [`ElabError::Residual`] — **never a partial artifact**;
-//! those programs run on the L1 fuel-guarded evaluator ([`crate::eval`]) instead.
+//! **Elaboration to the L0 Core IR** (RFC-0007 §4.6, **retired by RFC-0001 r4**). The
+//! evaluation-complete fragment is now the **whole v0 calculus**: representation ops (L0), data +
+//! matching (r3, `Construct`/flat `Match`), and **functions + recursion** (r4, `Lam`/`App`/`Fix`).
+//! So a self-recursive, data-building, matching program elaborates to a closed L0 term. The only
+//! explicit [`ElabError::Residual`]s left are **mutual recursion** (deferred, R7-Q3) and a **dynamic
+//! guarantee index** `@ g` (RFC-0007 §4.3, stage 0) — never a partial artifact; those run on the L1
+//! fuel-guarded evaluator ([`crate::eval`]) instead.
 //!
 //! This module also owns the shared surface→kernel bridge the evaluator reuses, so the two
 //! execution paths cannot drift on the basics: literal values ([`lit_value`]), representation
@@ -18,12 +19,14 @@
 //! field variables. `if` desugars to a `Match` on the prelude `Bool`. WF7 coverage is the checker's
 //! (the tree is verified `Fail`-free before lowering — defense in depth, never silent).
 //!
-//! v0 scope, all refusals still explicit:
-//! - recursion (`Fix`) and unknown application (`App`) have no L0 node yet (r4) — `Residual`;
-//! - `for` desugars to a structural `Fix` — `Residual` (RFC-0007 §4.8);
-//! - a guarantee index `@ g` is checked *dynamically* in v0 (RFC-0007 §4.3, stage 0) — `Residual`.
+//! # How recursion lowers (RFC-0001 r4)
+//! Each reachable **self-recursive** function is bound once as `let f = Fix(f, λparams. body)`
+//! (callee-first), and a call to it becomes a curried `App` on its `Fix` variable; every **other**
+//! call still inlines (the non-recursive call graph is acyclic). `for` desugars to a synthesized
+//! self-recursive `Fix` fold over the linear spine (RFC-0007 §4.8). **Mutual recursion** (a cycle
+//! through ≥2 distinct functions) is an explicit `Residual` (deferred, R7-Q3).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use mycelium_core::{
     operation_hash, Alt, CtorRef, CtorSpec, DataRegistry, DeclSpec, FieldSpec, Meta, Node, Payload,
@@ -176,11 +179,13 @@ type Binding = (String, String, Ty);
 
 /// Elaborate the nullary function `entry` of a checked colony to a closed L0 [`Node`].
 ///
-/// The fragment narrows as RFC-0011 r3 lands: **data construction and matching now elaborate** (to
-/// `Construct`/`Match` L0 nodes). Still outside the fragment, all explicit [`ElabError::Residual`]:
-/// recursion (`Fix`), unknown application (`App`), `for` (a structural `Fix`), and dynamic guarantee
-/// indices. On success the result is a closed L0 term whose evaluation must agree with the L1
-/// evaluator on the observable (NFR-7; RFC-0011 §4.4 — the M-210 differential).
+/// As of RFC-0001 r4 the evaluation-complete fragment is the **whole v0 calculus**: data + matching
+/// (r3) and now **functions + recursion** (`Lam`/`App`/`Fix`). Each reachable **self-recursive**
+/// function is bound once as `let f = Fix(f, λparams. body)` (callee-first), and a call to it
+/// elaborates to a curried `App`; every other call still inlines (the non-recursive call graph is
+/// acyclic). **Mutual recursion** is an explicit `Residual` (deferred — R7-Q3). Still `Residual`: a
+/// dynamic guarantee index `@ g` (RFC-0007 §4.3, stage 0). On success the result is a closed L0 term
+/// whose evaluation must agree with the L1 evaluator (NFR-7; the M-210 differential).
 pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
     let Some(fd) = env.fns.get(entry) else {
         return Err(ElabError::UnknownFn(entry.to_owned()));
@@ -202,13 +207,186 @@ pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
         );
     }
     let registry = build_registry(env)?;
+    // The reachable self-recursive functions, callee-first; mutual recursion is refused here.
+    let rec_order = recursive_order(env, entry)?;
     let mut el = Elab {
         env,
         registry,
         fresh: 0,
+        rec: BTreeMap::new(),
     };
+    // Assign each recursive function a kernel Fix variable (in scope for every recursive body and
+    // the entry body), then elaborate each Fix(λparams. body) and the entry, and wrap callee-first.
+    for f in &rec_order {
+        let kf = el.fresh(f);
+        el.rec.insert(f.clone(), kf);
+    }
+    let mut fixes: Vec<(String, Node)> = Vec::with_capacity(rec_order.len());
+    for f in &rec_order {
+        let kf = el.rec[f].clone();
+        let fix = el.elab_recursive_fn(f, &kf)?;
+        fixes.push((kf, fix));
+    }
     let mut stack = vec![entry.to_owned()];
-    el.expr(&mut stack, &[], &fd.body)
+    let entry_body = el.expr(&mut stack, &[], &fd.body)?;
+    // `fixes` is callee-first; fold in reverse so the first (callee) Let ends up outermost.
+    let node = fixes
+        .into_iter()
+        .rev()
+        .fold(entry_body, |acc, (kf, fix)| Node::Let {
+            id: kf,
+            bound: Box::new(fix),
+            body: Box::new(acc),
+        });
+    Ok(node)
+}
+
+/// The reachable **self-recursive** functions from `entry`, ordered **callee-first** (a recursive
+/// function that calls another recursive function is bound *inside* it). **Mutual recursion** — a
+/// call cycle through two or more *distinct* functions — is an explicit [`ElabError::Residual`]
+/// (deferred, R7-Q3); only direct self-recursion is enacted in v0. A function is "reachable" if the
+/// entry calls it (transitively); "self-recursive" if its own body calls it.
+fn recursive_order(env: &Env, entry: &str) -> Result<Vec<String>, ElabError> {
+    // BFS the reachable functions.
+    let mut reachable: BTreeSet<String> = BTreeSet::new();
+    let mut frontier = vec![entry.to_owned()];
+    while let Some(f) = frontier.pop() {
+        if !reachable.insert(f.clone()) {
+            continue;
+        }
+        if let Some(fd) = env.fns.get(&f) {
+            for callee in calls_in_fn(&fd.body) {
+                if env.fns.contains_key(&callee) {
+                    frontier.push(callee);
+                }
+            }
+        }
+    }
+    // Self-recursive = a function whose body calls itself.
+    let rec: BTreeSet<String> = reachable
+        .iter()
+        .filter(|f| calls_in_fn(&env.fns[*f].body).contains(*f))
+        .cloned()
+        .collect();
+    // Refuse mutual recursion: any cycle among *distinct* reachable functions. Detect via DFS over
+    // the call graph with self-loops ignored; a back-edge to a node on the current path is mutual.
+    detect_mutual_recursion(env, &reachable)?;
+    // Order rec functions callee-first over their (acyclic, since no mutual recursion) inter-calls.
+    let mut order: Vec<String> = Vec::new();
+    let mut visited: BTreeSet<String> = BTreeSet::new();
+    fn visit(
+        env: &Env,
+        f: &str,
+        rec: &BTreeSet<String>,
+        visited: &mut BTreeSet<String>,
+        order: &mut Vec<String>,
+    ) {
+        if !visited.insert(f.to_owned()) {
+            return;
+        }
+        for callee in calls_in_fn(&env.fns[f].body) {
+            if callee != f && rec.contains(&callee) {
+                visit(env, &callee, rec, visited, order);
+            }
+        }
+        if rec.contains(f) {
+            order.push(f.to_owned());
+        }
+    }
+    for f in &rec {
+        visit(env, f, &rec, &mut visited, &mut order);
+    }
+    Ok(order)
+}
+
+/// Refuse a mutual-recursion cycle (≥2 distinct functions) with an explicit `Residual` (R7-Q3,
+/// deferred). Self-loops (direct recursion) are allowed and ignored here.
+fn detect_mutual_recursion(env: &Env, reachable: &BTreeSet<String>) -> Result<(), ElabError> {
+    let mut on_path: BTreeSet<String> = BTreeSet::new();
+    let mut done: BTreeSet<String> = BTreeSet::new();
+    fn dfs(
+        env: &Env,
+        f: &str,
+        on_path: &mut BTreeSet<String>,
+        done: &mut BTreeSet<String>,
+    ) -> Result<(), ElabError> {
+        on_path.insert(f.to_owned());
+        for callee in calls_in_fn(&env.fns[f].body) {
+            if callee == f || !env.fns.contains_key(&callee) {
+                continue; // self-loop is direct recursion (fine); non-fns handled elsewhere
+            }
+            if on_path.contains(&callee) {
+                return residual(
+                    f,
+                    format!(
+                        "`{f}` and `{callee}` are mutually recursive — mutual recursion is deferred \
+                         to a later step (R7-Q3); only self-recursion elaborates in v0"
+                    ),
+                );
+            }
+            if !done.contains(&callee) {
+                dfs(env, &callee, on_path, done)?;
+            }
+        }
+        on_path.remove(f);
+        done.insert(f.to_owned());
+        Ok(())
+    }
+    for f in reachable {
+        if !done.contains(f) {
+            dfs(env, f, &mut on_path, &mut done)?;
+        }
+    }
+    Ok(())
+}
+
+/// The set of function/constructor/prim names a body calls (single-segment heads + bare paths). A
+/// superset filter — the caller intersects with `env.fns` to get function calls.
+fn calls_in_fn(body: &Expr) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    collect_calls(body, &mut out);
+    out
+}
+
+fn collect_calls(e: &Expr, out: &mut BTreeSet<String>) {
+    match e {
+        Expr::Path(p) => {
+            if p.0.len() == 1 {
+                out.insert(p.0[0].clone());
+            }
+        }
+        Expr::App { head, args } => {
+            collect_calls(head, out);
+            for a in args {
+                collect_calls(a, out);
+            }
+        }
+        Expr::Let { bound, body, .. } => {
+            collect_calls(bound, out);
+            collect_calls(body, out);
+        }
+        Expr::If { cond, conseq, alt } => {
+            collect_calls(cond, out);
+            collect_calls(conseq, out);
+            collect_calls(alt, out);
+        }
+        Expr::Match { scrutinee, arms } => {
+            collect_calls(scrutinee, out);
+            for arm in arms {
+                collect_calls(&arm.body, out);
+            }
+        }
+        Expr::For { xs, init, body, .. } => {
+            collect_calls(xs, out);
+            collect_calls(init, out);
+            collect_calls(body, out);
+        }
+        Expr::Swap { value, .. } => collect_calls(value, out),
+        Expr::Wild(inner) | Expr::Spore(inner) | Expr::Ascribe(inner, _) => {
+            collect_calls(inner, out);
+        }
+        Expr::Lit(_) => {}
+    }
 }
 
 /// Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's
@@ -265,12 +443,15 @@ fn scalar_kind(s: Scalar) -> ScalarKind {
     }
 }
 
-/// The elaboration context: the checked environment, the data registry `Σ`, and a fresh-name
-/// counter for inlining and match-binder introduction.
+/// The elaboration context: the checked environment, the data registry `Σ`, a fresh-name counter
+/// (for inlining + match/lambda binders), and the **recursion scope** — the reachable self-recursive
+/// functions mapped to their kernel `Fix` variables (RFC-0001 r4). A call to a name in `rec`
+/// elaborates to an `App` chain on its `Fix` var; every other function call still **inlines**.
 struct Elab<'e> {
     env: &'e Env,
     registry: DataRegistry,
     fresh: u32,
+    rec: BTreeMap<String, String>,
 }
 
 impl Elab<'_> {
@@ -314,6 +495,11 @@ impl Elab<'_> {
                     let name = &p.0[0];
                     if let Some((_, kvar, _)) = scope.iter().rev().find(|(s, _, _)| s == name) {
                         return Ok(Node::Var(kvar.clone()));
+                    }
+                    // A bare reference to a recursive function is its Fix variable (a nullary
+                    // recursive function `loop()` reached this way unfolds when forced — RFC-0001 r4).
+                    if let Some(kf) = self.rec.get(name) {
+                        return Ok(Node::Var(kf.clone()));
                     }
                     // A bare nullary constructor (Z, Nil, True, …) is a saturated Construct.
                     if self.env.ctor(name).is_some() {
@@ -359,11 +545,13 @@ impl Elab<'_> {
             }
             Expr::If { cond, conseq, alt } => self.elab_if(stack, scope, cond, conseq, alt),
             Expr::Match { scrutinee, arms } => self.elab_match(stack, scope, scrutinee, arms),
-            Expr::For { .. } => residual(
-                site,
-                "`for` elaborates to a structurally recursive fold (Fix) — outside the \
-                 evaluation-complete fragment (RFC-0007 §4.8)",
-            ),
+            Expr::For {
+                x,
+                xs,
+                acc,
+                init,
+                body,
+            } => self.elab_for(stack, scope, x, xs, acc, init, body),
             Expr::Swap {
                 value,
                 target,
@@ -633,13 +821,29 @@ impl Elab<'_> {
         }
         let name = &p.0[0];
 
+        // A call to a recursive function is a curried `App` on its `Fix` variable (RFC-0001 r4) —
+        // never inlined (that would loop). Arguments evaluate left-to-right (CBV).
+        if let Some(kf) = self.rec.get(name).cloned() {
+            let mut node = Node::Var(kf);
+            for a in args {
+                let karg = self.expr(stack, scope, a)?;
+                node = Node::App {
+                    func: Box::new(node),
+                    arg: Box::new(karg),
+                };
+            }
+            return Ok(node);
+        }
+
         if let Some(fd) = self.env.fns.get(name) {
-            // Recursion = a cycle through the call stack → Fix → outside the fragment.
+            // A non-recursive call inlines; a cycle here would be mutual recursion (refused up front
+            // in `recursive_order`) — keep an explicit guard as defense in depth, never a silent loop.
             if stack.iter().any(|f| f == name) {
                 return residual(
                     site,
                     format!(
-                        "`{name}` is recursive (Fix) — outside the evaluation-complete fragment"
+                        "`{name}` is in a call cycle that did not resolve to a self-recursive `Fix` \
+                         — mutual recursion is deferred (R7-Q3)"
                     ),
                 );
             }
@@ -718,6 +922,231 @@ impl Elab<'_> {
         }
 
         residual(site, format!("unknown function/constructor/prim `{name}`"))
+    }
+
+    /// Elaborate a reachable **self-recursive** function `fname` to `Fix(kf, λparams. body)` — the
+    /// closed form r4 uses for recursion (RFC-0007 §4.1; the v0 surface is first-order, so the body
+    /// is closed except for its params, `kf`, and the other recursive functions in scope). Params
+    /// are curried (`λp1. … λpn.`).
+    fn elab_recursive_fn(&mut self, fname: &str, kf: &str) -> Result<Node, ElabError> {
+        let fd = self.env.fns[fname].clone();
+        if let Some(g) = fd.sig.ret.guarantee {
+            return residual(
+                fname,
+                format!("`{fname}` asserts `@ {g:?}` on its result — checked dynamically in v0, no L0 form"),
+            );
+        }
+        let mut scope: Vec<Binding> = Vec::new();
+        let mut param_kvars: Vec<String> = Vec::new();
+        for p in &fd.sig.value_params {
+            if let Some(g) = p.ty.guarantee {
+                return residual(
+                    fname,
+                    format!(
+                        "`{fname}` parameter `{}` asserts `@ {g:?}` — checked dynamically in v0",
+                        p.name
+                    ),
+                );
+            }
+            let kp = self.fresh(&p.name);
+            let pty = resolve_ty(fname, &self.env.types, &p.ty)
+                .map(|(t, _)| t)
+                .map_err(|e| ElabError::Residual {
+                    site: fname.to_owned(),
+                    what: format!("could not resolve `{fname}`'s parameter type: {e}"),
+                })?;
+            scope.push((p.name.clone(), kp.clone(), pty));
+            param_kvars.push(kp);
+        }
+        let mut stack = vec![fname.to_owned()];
+        let body = self.expr(&mut stack, &scope, &fd.body)?;
+        // Curry: λp1. λp2. … body (p1 outermost).
+        let lam = param_kvars
+            .into_iter()
+            .rev()
+            .fold(body, |acc, kp| Node::Lam {
+                param: kp,
+                body: Box::new(acc),
+            });
+        Ok(Node::Fix {
+            name: kf.to_owned(),
+            body: Box::new(lam),
+        })
+    }
+
+    /// Elaborate `for x in xs, acc = init => body` to its synthesized self-recursive fold (RFC-0007
+    /// §4.8), as an inline `Fix` over the linearly-recursive spine type:
+    ///
+    /// ```text
+    /// App(App(Fix(fold, λs. λa. Match s {
+    ///            Nil          => a,
+    ///            Cons(x,rest) => App(App(fold, rest), body[acc↦a]) }),
+    ///         xs), init)
+    /// ```
+    ///
+    /// The nil/cons shape was already validated by the checker (`linear_elem_ty`); here we just read
+    /// off the element/spine field positions from the registry.
+    #[allow(clippy::too_many_arguments)]
+    fn elab_for(
+        &mut self,
+        stack: &mut Vec<String>,
+        scope: &[Binding],
+        x: &str,
+        xs: &Expr,
+        acc: &str,
+        init: &Expr,
+        body: &Expr,
+    ) -> Result<Node, ElabError> {
+        let site = stack.last().expect("non-empty").clone();
+        let sty = infer_type(self.env, &mut Self::ty_scope(scope), xs).map_err(|e| {
+            ElabError::Residual {
+                site: site.clone(),
+                what: format!("could not infer the `for` spine type: {e}"),
+            }
+        })?;
+        let Ty::Data(tname) = &sty else {
+            return residual(&site, format!("`for` spine is not a data type: {sty}"));
+        };
+        let d = self
+            .env
+            .types
+            .get(tname)
+            .ok_or_else(|| ElabError::Residual {
+                site: site.clone(),
+                what: format!("unknown type `{tname}`"),
+            })?
+            .clone();
+        // Find the nil constructor (no fields) and the cons constructor (one spine field of type
+        // `tname` + one element field).
+        let mut nil_name: Option<String> = None;
+        let mut cons: Option<(String, usize, usize, Ty)> = None; // (name, elem_idx, spine_idx, elem_ty)
+        for c in &d.ctors {
+            if c.fields.is_empty() {
+                nil_name = Some(c.name.clone());
+                continue;
+            }
+            let Some(spine_idx) = c
+                .fields
+                .iter()
+                .position(|f| matches!(f, Ty::Data(n) if n == tname))
+            else {
+                return residual(
+                    &site,
+                    format!("`for` constructor `{}` has no spine field", c.name),
+                );
+            };
+            let Some(elem_idx) = (0..c.fields.len()).find(|&i| i != spine_idx) else {
+                return residual(
+                    &site,
+                    format!("`for` constructor `{}` has no element field", c.name),
+                );
+            };
+            cons = Some((
+                c.name.clone(),
+                elem_idx,
+                spine_idx,
+                c.fields[elem_idx].clone(),
+            ));
+        }
+        let (Some(nil_name), Some((cons_name, _elem_idx, spine_idx, elem_ty))) = (nil_name, cons)
+        else {
+            return residual(
+                &site,
+                format!("`for` needs a nil + cons shape on `{tname}`"),
+            );
+        };
+        let aty = infer_type(self.env, &mut Self::ty_scope(scope), init).map_err(|e| {
+            ElabError::Residual {
+                site: site.clone(),
+                what: format!("could not infer the `for` accumulator type: {e}"),
+            }
+        })?;
+        let xs_node = self.expr(stack, scope, xs)?;
+        let init_node = self.expr(stack, scope, init)?;
+
+        // Fresh kernel vars for the synthesized fold.
+        let fold = self.fresh("fold");
+        let s_kv = self.fresh("s");
+        let a_kv = self.fresh("acc");
+        let elem_kv = self.fresh(x);
+        let spine_kv = self.fresh("rest");
+        let cons_arity = d
+            .ctors
+            .iter()
+            .find(|c| c.name == cons_name)
+            .expect("cons ctor present")
+            .fields
+            .len();
+        let binders: Vec<String> = (0..cons_arity)
+            .map(|i| {
+                if i == spine_idx {
+                    spine_kv.clone()
+                } else {
+                    elem_kv.clone()
+                }
+            })
+            .collect();
+
+        // The loop body, with `x` ↦ the element binder and `acc` ↦ the accumulator parameter.
+        let mut body_scope = scope.to_vec();
+        body_scope.push((x.to_owned(), elem_kv.clone(), elem_ty));
+        body_scope.push((acc.to_owned(), a_kv.clone(), aty));
+        let body_node = self.expr(stack, &body_scope, body)?;
+
+        let nil_ref = self
+            .ctor_ref(&nil_name)
+            .ok_or_else(|| ElabError::Residual {
+                site: site.clone(),
+                what: format!("`{nil_name}` is outside the r3 data registry"),
+            })?;
+        let cons_ref = self
+            .ctor_ref(&cons_name)
+            .ok_or_else(|| ElabError::Residual {
+                site: site.clone(),
+                what: format!("`{cons_name}` is outside the r3 data registry"),
+            })?;
+        // Cons arm body: App(App(fold, rest), body[acc↦a]).
+        let rec_call = Node::App {
+            func: Box::new(Node::App {
+                func: Box::new(Node::Var(fold.clone())),
+                arg: Box::new(Node::Var(spine_kv)),
+            }),
+            arg: Box::new(body_node),
+        };
+        let match_node = Node::Match {
+            scrutinee: Box::new(Node::Var(s_kv.clone())),
+            alts: vec![
+                Alt::Ctor {
+                    ctor: nil_ref,
+                    binders: vec![],
+                    body: Node::Var(a_kv.clone()),
+                },
+                Alt::Ctor {
+                    ctor: cons_ref,
+                    binders,
+                    body: rec_call,
+                },
+            ],
+            default: None,
+        };
+        let fix = Node::Fix {
+            name: fold,
+            body: Box::new(Node::Lam {
+                param: s_kv,
+                body: Box::new(Node::Lam {
+                    param: a_kv,
+                    body: Box::new(match_node),
+                }),
+            }),
+        };
+        // App(App(fix, xs), init) — walk the spine head-to-tail from the initial accumulator.
+        Ok(Node::App {
+            func: Box::new(Node::App {
+                func: Box::new(fix),
+                arg: Box::new(xs_node),
+            }),
+            arg: Box::new(init_node),
+        })
     }
 }
 
@@ -810,15 +1239,45 @@ mod tests {
     }
 
     #[test]
-    fn recursion_is_an_explicit_residual() {
-        let env = env(
-            "colony d\nfn spin(x: Binary{8}) -> Binary{8} = spin(x)\nfn main() -> Binary{8} = spin(0b0000_0001)",
-        );
+    fn self_recursion_now_elaborates_to_fix_and_runs() {
+        // r4: a self-recursive function elaborates to a Fix and runs on the interpreter.
+        // drop_(S(S(Z))) ⟶ Z.
+        let env = env("colony d\ntype Nat = Z | S(Nat)\n\
+             fn drop_(n: Nat) -> Nat = match n { Z => Z, S(m) => drop_(m) }\n\
+             fn main() -> Nat = drop_(S(S(Z)))");
+        let node = elaborate(&env, "main").expect("self-recursion elaborates in r4");
+        let v = mycelium_interp::Interpreter::default()
+            .eval_core(&node)
+            .expect("terminates");
+        assert_eq!(v.as_data().expect("data").fields().len(), 0, "Z");
+    }
+
+    #[test]
+    fn an_unproductive_recursion_elaborates_then_exhausts_fuel() {
+        // A non-terminating recursion still elaborates (it is in the fragment now) but the fuel clock
+        // makes its evaluation an explicit refusal, never a hang (RFC-0007 §4.5).
+        let env = env("colony d\nfn spin(x: Binary{8}) -> Binary{8} = spin(x)\n\
+             fn main() -> Binary{8} = spin(0b0000_0001)");
+        let node = elaborate(&env, "main").expect("recursion elaborates in r4");
+        let err = mycelium_interp::Interpreter::default()
+            .with_fuel(500)
+            .eval(&node)
+            .unwrap_err();
+        assert_eq!(err, mycelium_interp::EvalError::FuelExhausted);
+    }
+
+    #[test]
+    fn mutual_recursion_is_an_explicit_residual() {
+        // R7-Q3: mutual recursion is deferred — an explicit Residual, never a silent loop.
+        let env = env("colony d\ntype Nat = Z | S(Nat)\n\
+             fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
+             fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }\n\
+             fn main() -> Nat = ping(S(Z))");
         let err = elaborate(&env, "main").unwrap_err();
         let ElabError::Residual { what, .. } = &err else {
             panic!("expected Residual, got {err:?}");
         };
-        assert!(what.contains("recursive"), "got: {what}");
+        assert!(what.contains("mutual"), "got: {what}");
     }
 
     #[test]
@@ -894,15 +1353,32 @@ mod tests {
     }
 
     #[test]
-    fn a_for_fold_is_an_explicit_residual() {
-        // `for` desugars to Fix — outside the evaluation-complete fragment (RFC-0007 §4.8).
+    fn a_for_fold_now_elaborates_to_a_fix_fold_and_runs() {
+        // r4: `for` desugars to a synthesized self-recursive Fix fold and runs. A 2-element xor-fold
+        // of 0b1111_0000 and 0b0000_1111 from 0 is 0b1111_1111.
         let env = env("colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
-             fn main() -> Binary{8} = for b in End, acc = 0b0000_0000 => xor(acc, b)");
-        let err = elaborate(&env, "main").unwrap_err();
-        let ElabError::Residual { what, .. } = &err else {
-            panic!("expected Residual, got {err:?}");
-        };
-        assert!(what.contains("for"), "got: {what}");
+             fn checksum(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
+             fn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))");
+        let node = elaborate(&env, "main").expect("`for` elaborates in r4");
+        let v = mycelium_interp::Interpreter::default()
+            .eval(&node)
+            .expect("runs");
+        assert_eq!(v.payload(), &Payload::Bits(vec![true; 8]));
+    }
+
+    #[test]
+    fn a_for_fold_over_nil_is_the_initial_accumulator() {
+        let env = env("colony d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
+             fn checksum(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b1010_1010 => xor(acc, b)\n\
+             fn main() -> Binary{8} = checksum(End)");
+        let node = elaborate(&env, "main").expect("`for` elaborates in r4");
+        let v = mycelium_interp::Interpreter::default()
+            .eval(&node)
+            .expect("runs");
+        assert_eq!(
+            v.payload(),
+            &Payload::Bits(vec![true, false, true, false, true, false, true, false])
+        );
     }
 
     #[test]

@@ -18,6 +18,9 @@ mycelium-cert = { path = "../mycelium-cert" }
 # The EXPLAIN surfacing (M-221; SC-5): the facade re-derives selection explanations from a
 # PolicyRegistry so "why was this representation chosen?" is answerable in-editor (RFC-0005 §4).
 mycelium-select = { path = "../mycelium-select" }
+# Document sync (M-310): the text → Node pipeline (parse → check → elaborate) the LSP server runs on
+# `didOpen`/`didChange`. The L1 surface prototype, now that RFC-0011 r3 / RFC-0001 r4 are enacted.
+mycelium-l1 = { path = "../mycelium-l1" }
 # The LSP wire protocol (M-310): JSON-RPC 2.0 framing + LSP-shaped diagnostics over stdio. The same
 # pinned serde_json the rest of the workspace uses (mycelium-core/-cert/-select/...).
 serde_json = "1"

@@ -276,6 +276,27 @@ fn write_canon(
                 }
             }
         }
+        Node::Lam { param, body } => {
+            let canon = format!("v{counter}");
+            *counter += 1;
+            let _ = writeln!(s, "lam {canon} =>");
+            scope.push((param.clone(), canon));
+            write_canon(body, depth + 1, scope, counter, s);
+            scope.pop();
+        }
+        Node::App { func, arg } => {
+            let _ = writeln!(s, "app");
+            write_canon(func, depth + 1, scope, counter, s);
+            write_canon(arg, depth + 1, scope, counter, s);
+        }
+        Node::Fix { name, body } => {
+            let canon = format!("v{counter}");
+            *counter += 1;
+            let _ = writeln!(s, "fix {canon} =>");
+            scope.push((name.clone(), canon));
+            write_canon(body, depth + 1, scope, counter, s);
+            scope.pop();
+        }
     }
 }
 
@@ -355,6 +376,19 @@ fn write_core(node: &Node, depth: usize, s: &mut String) {
                     let _ = writeln!(s, "no-default");
                 }
             }
+        }
+        Node::Lam { param, body } => {
+            let _ = writeln!(s, "lam {param} =>");
+            write_core(body, depth + 1, s);
+        }
+        Node::App { func, arg } => {
+            let _ = writeln!(s, "app");
+            write_core(func, depth + 1, s);
+            write_core(arg, depth + 1, s);
+        }
+        Node::Fix { name, body } => {
+            let _ = writeln!(s, "fix {name} =>");
+            write_core(body, depth + 1, s);
         }
     }
 }
@@ -504,13 +538,21 @@ fn flatten(node: &Node, out: &mut Vec<Binding>, next: &mut usize) -> Atom {
             });
             name
         }
-        // r3 (RFC-0011 §4.4 Q5): the data nodes are interpreter-first and have no ANF lowering. A
-        // caller must filter them out (Node::is_aot_lowerable) before lowering; reaching here is an
-        // upstream-contract break, surfaced loudly rather than mis-lowered silently (never-silent).
-        Node::Construct { .. } | Node::Match { .. } => unreachable!(
-            "Construct/Match have no AOT/ANF lowering in r3 (RFC-0011 Q5); they run on the \
-             reference interpreter — filter with Node::is_aot_lowerable before lowering"
-        ),
+        // r3 data nodes + r4 function/recursion nodes are interpreter-first and have no ANF lowering
+        // (RFC-0011 §4.4 Q5; RFC-0001 r4). A caller must filter them out (Node::is_aot_lowerable)
+        // before lowering; reaching here is an upstream-contract break, surfaced loudly rather than
+        // mis-lowered silently (never-silent).
+        Node::Construct { .. }
+        | Node::Match { .. }
+        | Node::Lam { .. }
+        | Node::App { .. }
+        | Node::Fix { .. } => {
+            unreachable!(
+                "Construct/Match/Lam/App/Fix have no AOT/ANF lowering yet (RFC-0011 Q5; RFC-0001 \
+                 r4); they run on the reference interpreter — filter with Node::is_aot_lowerable \
+                 before lowering"
+            )
+        }
     }
 }
 

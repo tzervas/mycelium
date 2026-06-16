@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Living draft** (initial cut, 2026-06-15 — scopes the Phase-3 epics into build tasks; no exit gate claimed yet) |
+| **Status** | **Exit-gate MET** (re-asserted 2026-06-15 — the §6 gate's three conditions are satisfied and the two prior residuals **R1 + R2 are closed**, §6.1: native execution path met+measured; matured toolchain met (text→`Node`→L0 pipeline exists — the `didOpen`/`didChange` wiring is an ordinary M-310 build task, no longer gate-blocking); L1 surface met (RFC-0011 r3 enacted, RFC-0001 → r3, RFC-0006/0007 Accepted r4). Claimed at the strength the checked runs establish (VR-5): 497 workspace tests + the M-210 data-fragment differential. Phase 3's named build tasks continue, but the **exit gate is closed**. Supersedes the prior "Living draft / no exit gate claimed" line — append-only.) |
 | **Owns** | the concrete, issue-coupled decomposition of the Phase-3 epics (#35–#41 / `E3-1…E3-7`) into `M-3xx` build tasks |
 | **Source of truth above this doc** | `docs/Mycelium_Project_Foundation.md` §6 (roadmap, Phase 3), `docs/spec/SPECIFICATION.md` §10 (open build items), `tools/github/issues.yaml` + `idmap.tsv` (task/epic ids), RFC-0004 §2 (backend decision) / RFC-0006 + RFC-0007 (surface/L1, **Draft**) / ADR-007/009 (hybrid execution), DN-01 (schedule-staged packing) |
 | **Mirrors** | the GitHub board: every task row carries (or will carry) its issue number from `tools/github/idmap.tsv`; the epics E3-1…E3-7 are #35–#41 |
@@ -92,7 +92,7 @@ completed. Readiness is relative to the corpus + landed Phase-1/2 deps.
 | **M-301** Direct-LLVM-IR AOT backend (kernel subset) | E3-7 (prereq) | P1 | M-150, M-110 | RFC-0004 §2 / ADR-007/009 | **Done (2026-06-15)** — bit subset + `trit.neg` + trit *carry arithmetic* (`add/sub/mul`, ripple-carry/shifted-accumulate, runtime-overflow read-back); shared by AOT + JIT |
 | **M-302** interp↔native differential (extend M-151) | E3-7 (prereq) | P1 | M-301, M-151 | NFR-7 / VR-4 / RR-12 | **Done (2026-06-15)** — `tests/native_differential.rs` (bit subset; toolchain-gated skip) |
 | **M-303** E1 perf verdict on the native path | E3-7 (prereq) | P1 | M-301, M-302 | E1 / NFR-4 | **Done (2026-06-15)** — `cargo xtask e1` §2 measures native AOT vs interp; compute throughput now measured over runtime data in §3 (M-360) |
-| **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **In progress (2026-06-15)** — structured `FeedbackSummary` + navigable `Diagnostic::path()`; **LSP wire protocol** (`wire`: JSON-RPC `Content-Length` framing, `publishDiagnostics` mapping, `initialize`/`shutdown`/`exit` lifecycle). **Text→`Node` blocker cleared** (RFC-0011 r3 enacted — the parser→checker→elaborate→L0 pipeline now reaches data/matching). Remaining: the `didOpen`/`didChange` **document sync** wiring on that pipeline (no longer gate-blocking — R1 closed) |
+| **M-310** Full-LSP maturation (rich diagnostics) | E3-3 | P1 | M-140, M-141 | §5.6–5.8 / SC-5 | **Done (2026-06-16)** — structured `FeedbackSummary` + navigable `Diagnostic::path()`; **LSP wire protocol** (`wire`: JSON-RPC `Content-Length` framing, `publishDiagnostics`, `initialize`/`shutdown`/`exit`); and now **real document sync** (`sync`: `didOpen`/`didChange`/`didClose` over the parse→check→L0 pipeline, `TextDocumentSyncKind.Full`, `publishDiagnostics` on each edit). **Honest spans:** a *parse* diagnostic carries a real `line:col` range (lexer `Pos`); a *check* diagnostic is located at its `fn <name>` declaration with the function in `data.breadcrumb` (precise sub-expression spans await the checker carrying spans). |
 | **M-311** Build-system: stable/experimental + cert artifacts | E3-3 | P1 | RFC-0004 §4 | RFC-0004 §4 / ADR-003 | **Done (2026-06-15)** — `mycelium-build` crate (decide + content-addressed `BuildCertificate`) |
 | **M-312** Content-addressed build cache | E3-3 | P2 | M-311 | ADR-003 | **Done (2026-06-15)** — `mycelium-build::cache` (`BuildCache`, request-addressed) |
 | **M-320** L1 term-language extension (interpreter/prototype) | E3-3 / RFC-0007 | P1 | M-110, RFC-0007 | RFC-0007 §§3–4 | **Done (2026-06-15)** — literal-pattern `match` + **nested patterns** (Maranget usefulness: exhaustiveness/redundancy with witnesses) + the **Maranget decision-tree compiler**, and now the **codegen half lands in L0**: `elab` emits the tree's leaves as **kernel `Construct`/flat `Match` nodes** (RFC-0011 r3 enacted; RFC-0001 → r3). The M-110 interpreter evaluates them and the M-210 differential covers the data fragment (L1-eval ≡ elaborate→L0-interp, mutant-witness). `Lam/App/Fix` → r4 |
@@ -235,9 +235,12 @@ the matured-toolchain and L1-surface conditions are now also met, both prior res
   is **r3 ENACTED** and RFC-0001 is **r3**.
 
 The build order is now complete: **M-360 SIMD + true-TL2 → ratify RFC-0006/0007 → enact RFC-0011 r3 +
-M-320 wiring (closed R1) → re-assert the gate.** With R1 + R2 closed, the §6 exit gate is **ready for a
-maintainer re-assertion** (`Living draft → exit-gate met`); nothing here upgrades a verdict beyond the
-checked run that established it (497 workspace tests; the data-fragment differential).
+M-320 wiring (closed R1) → re-assert the gate.** With R1 + R2 closed, the §6 exit gate is
+**RE-ASSERTED MET (2026-06-15)** — the doc status moves `Living draft → exit-gate met`; nothing here
+upgrades a verdict beyond the checked run that established it (497 workspace tests; the data-fragment
+differential). The phase's remaining build tasks (M-310 `didOpen`/`didChange` sync, M-350/M-360 local
+items) continue *past* the gate; they no longer block it. The standing core-language continuation is
+**RFC-0001 r4** (`Lam/App/Fix` into L0 — full L1-in-Core-IR, retiring RFC-0007 §4.6 entirely).
 
 > The §6 gate is itself a **proposed** scope decision (what counts as "Phase-3 done" given two
 > external blockers). It is recorded here for the maintainer to ratify or adjust; §6.1 fills it at the

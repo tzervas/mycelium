@@ -8,6 +8,84 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — ADR-016 + ADR-017 Proposed: the interpreted↔compiled ABI + hot-inject)
+- **ADR-016 (Proposed) — the interpreted↔compiled ABI (RFC-0004 §10 OQ-1).** Dispatch a compiled
+  stable component by its **content hash** (versioning is free, staleness structurally impossible —
+  ADR-003: a change is a new hash, so an old compiled entry can never be applied to a changed
+  definition); cross `CoreValue`s in the **self-describing wire form** (RFC-0001 §4.8) as the canonical
+  value ABI, with a zero-copy fast-path as a *later, validated* optimization (robust/portable first).
+  Honesty crosses the boundary (`Meta`/guarantee travel with the value — WF5). The boundary is
+  toolchain, not kernel (KC-3); codegen deferred (MLIR→LLVM, RFC-0004 §2).
+- **ADR-017 (Proposed) — hot-inject recompiled definitions (RFC-0004 §10 OQ-2).** A hash-keyed
+  dispatch table (ADR-016) + content-addressed dynamic linking (the M-340 `dlopen` JIT is the seed):
+  inject = load a content-addressed unit + register `hash → entry`, **never** mutate running code. The
+  classic atomicity hazard **dissolves** because definitions are immutable — a change is a *new hash
+  under a new entry*, so in-flight calls finish on old code and new callers dispatch to new code; the
+  recompile set is **exactly the changed dependency-closure** by hash reachability (no AST diff). A
+  working in-process prototype on M-340 is the recommended first build step once ratified; native
+  codegen deferred. RFC-0004 §10 OQ-1/OQ-2 now point at the ADRs; ADR README + Doc-Index updated.
+
+### Added (Phase 4 — RFC-0004 §9.2/§9.3 reference impl: build-target profiles in mycelium-build)
+- **`mycelium-build` gains the `target` module — the build-target profiles (RFC-0004 r2 §9.2/§9.3),
+  orthogonal to the §4 stable-component gate.** `BuildProfile` = `Interpret` (no targets, dev default)
+  / `Slim(Target)` (one) / `Selective(set)` (a chosen subset) / `Fat` (all supported) — fat is
+  first-class but optional; `targets()` resolves each to a concrete `(os, arch)` set. Slim/selective/fat
+  share **one** artifact shape, a content-addressed per-target `VariantTable` (§9.3), with **never-silent
+  runtime dispatch** (`select(host)` → the host's variant or an explicit `DispatchMiss` the caller
+  resolves by interpreter fallback or refusal — never a wrong-target variant, G2/SC-3). **Honest scope
+  (VR-5):** `realizable_targets` admits only the **host** today — a non-host `--slim`/`--target`/`--fat`
+  is an explicit `BuildError::CrossTargetDeferred` (cross-target codegen awaits the MLIR→LLVM backend,
+  RFC-0004 §2), never a host-only build mislabeled as fat. This is the build-orchestration layer that is
+  *ready* for that backend, not the backend. (RFC-0004 §9; 15 build-crate tests)
+
+### Added (Phase 3/4 — M-310 real LSP document sync, on the now-complete text→Node→L0 pipeline)
+- **`mycelium-lsp` gains real document sync (`sync` module + `serve` wiring).** With the surface→L0
+  pipeline complete (RFC-0011 r3 / RFC-0001 r4), the LSP server now handles
+  `textDocument/didOpen`/`didChange`/`didClose` (full sync — `TextDocumentSyncKind.Full`, advertised
+  in `initialize`), re-analyzing the whole document through **parse → check** on each edit and pushing
+  `textDocument/publishDiagnostics` (cleared on a clean edit / close). **Honest spans (VR-5):** a
+  *parse* diagnostic carries a **real** `line:col` range (the lexer's `Pos`); a *check* diagnostic is
+  located at its `fn <name>` declaration with the function name in `data.breadcrumb` (the checker
+  tracks the failing function, not yet the failing sub-expression span — flagged, never fabricated).
+  `mycelium-lsp` now depends on `mycelium-l1` for the text→`Node` path (no cycle). Closes the M-310
+  residual that the RFC-0011 enactment unblocked; phase-3 M-310 row → Done. 515 workspace tests pass.
+
+### Changed (Phase 4 — RFC-0001 r4 ENACTED: Lam/App/Fix in L0; full L1-in-Core-IR)
+- **Functions + general recursion are folded into the trusted Core IR (RFC-0001 r4), completing
+  L1-in-Core-IR and retiring RFC-0007 §4.6's `Residual` for self-recursion entirely.** A
+  self-recursive, data-building, matching program now elaborates to a closed L0 term and runs on the
+  trusted reference interpreter + the M-210 differential.
+  - **RFC-0001 r3 → r4** (append-only; **supersedes the r3 §4.5 grammar**): §4.5 gains `Lam` + `App` +
+    `Fix` (RFC-0007 §4.1; **R7-Q1 resolved — a `Fix` node**); §4.2 gains the **function value model**
+    (maintainer-confirmed: the v0 surface is first-order, so `Lam`/`App`/`Fix` are **closed** —
+    application is capture-free substitution, **no environment-capturing closure value**, honoring
+    §4.7; capturing closures + partial application are a named later revision); §4.6's **cycle-ordering
+    is finished** (**R7-Q3 for identity** — a mutually-recursive declaration group now content-addresses
+    canonically + name-independently). RFC-0007 §4.6 `Residual` retired except mutual recursion +
+    dynamic guarantee indices; the `matured` totality gate (RFC-0007 §4.5) restated unchanged (the
+    interpreter clocks every `Fix` — a mis-classification gates packaging, never meaning).
+  - **Code:** `mycelium-core` (the three nodes + content-addressing + the canonical
+    `canonical_cycle_order`); `mycelium-interp` (small-step β-reduction CBV; `Fix` unfolds by
+    substitution under the fuel clock → non-productive recursion is an explicit `FuelExhausted`, never
+    a hang; applying a non-function / a bare-function result are explicit refusals);
+    `mycelium-l1::elab` (each reachable self-recursive function → `let f = Fix(f, λparams. body)`,
+    calls → curried `App`, non-recursive calls still inline; `for` → a synthesized self-recursive
+    `Fix` fold; **mutual recursion** → explicit `Residual`, deferred R7-Q3); `mycelium-lsp` walks.
+  - **Verified (NFR-7):** the M-210 differential extends to the recursive + `for` fragment (L1-eval ≡
+    elaborate→L0-interp on the `CoreValue` observable), with a mutual-recursion-refuses witness. 509
+    workspace tests pass; clippy clean; `cargo fmt` applied. (RFC-0001 r4 / RFC-0007 §4.6/§8 Meta)
+
+### Changed (Phase 3 — exit gate RE-ASSERTED MET; both residuals closed)
+- **`docs/planning/phase-3.md` moves `Living draft → exit-gate met`.** With residuals **R1** (M-310
+  text→`Node` path) and **R2** (RFC-0006/0007 ratified) both closed by the RFC-0011 r3 enactment, the §6
+  gate's three conditions are satisfied: native execution path (met+measured), matured toolchain (the
+  parser→checker→elaborate→L0 pipeline exists; the `didOpen`/`didChange` wiring is an ordinary M-310
+  task, not gate-blocking), and L1 surface (RFC-0011 r3 enacted, RFC-0001 → r3). Claimed at the strength
+  the checked runs establish (VR-5): 497 workspace tests + the M-210 data-fragment differential. Phase-3
+  build tasks (M-310 sync, M-350/M-360 locals) continue past the gate; the standing core-language
+  continuation is **RFC-0001 r4** (`Lam/App/Fix` into L0). Append-only (supersedes the "no exit gate
+  claimed" line). (phase-3.md §6.1)
+
 ### Changed (Phase 3 — RFC-0004 r2: interpreted↔compiled continuum + build-target profiles; additive)
 - **RFC-0004 gains §9 (the interpreted↔compiled continuum + build-target profiles) and §10 (open
   questions) — additive, changing no r1 decision (append-only).** Records the maintainer's execution

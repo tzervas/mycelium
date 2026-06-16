@@ -23,7 +23,12 @@ use mycelium_core::{operation_hash, ContentHash};
 use serde::{Deserialize, Deserializer, Serialize};
 
 pub mod cache;
+pub mod target;
 pub use cache::{BuildCache, CacheOutcome};
+pub use target::{
+    realizable_targets, supported_targets, Arch, BuildError, BuildProfile, DispatchMiss, Os,
+    Target, VariantTable,
+};
 
 /// The execution route a component takes (RFC-0004 §4 / ADR-009).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

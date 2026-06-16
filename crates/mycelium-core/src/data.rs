@@ -17,12 +17,12 @@
 //! back-reference, so it is encoded as a placeholder, never the (circular) final hash.
 //!
 //! # Scope (honesty)
-//! **Self-recursion is fully realised and tested** (`Nat`, `Bytes`, `List`-shaped types — the r3
-//! reachable fragment). **Mutual recursion** (a multi-member cycle) is **R7-Q3, deferred to
-//! RFC-0001 r4** (the L1 prototype accepts only self-recursion). The general cycle machinery below
-//! *handles* a multi-member group structurally, but its canonical member ordering is provisional
-//! (insertion-order tie-break) until r4 fixes the full Unison hash-ordering — flagged, never
-//! silently assumed.
+//! **Self-recursion is fully realised and tested** (`Nat`, `Bytes`, `List`-shaped types). **Mutual
+//! recursion** (a multi-member cycle) now content-addresses **canonically and name-independently**
+//! via [`canonical_cycle_order`] (the Unison recipe; R7-Q3 cycle-ordering closed in RFC-0001 r4).
+//! The surface→registry *elaboration* of mutual recursion stays deferred (the L1 prototype accepts
+//! only self-recursion), but the **identity** of a mutually-recursive group is now correct, not
+//! provisional — so when the surface grows mutual recursion, the hashes do not change underneath it.
 
 use std::collections::BTreeMap;
 
@@ -183,17 +183,25 @@ impl DataRegistry {
 
         // Process SCCs dependencies-first (the SCC list is already in reverse-topological order),
         // so every out-of-cycle data reference already has a hash when we encode a member.
-        for scc in &sccs {
+        for raw_scc in &sccs {
+            // r4 (R7-Q3): order the cycle's members **structurally, name-independently** — the Unison
+            // recipe — so a mutually-recursive group content-addresses deterministically regardless of
+            // declaration names (ADR-003). Each member's *local* hash is computed with all in-cycle
+            // references collapsed to a single shared placeholder (so the ordering can't depend on a
+            // not-yet-assigned index); members sort by that hash, with the (metadata) name as the only
+            // tie-break for the corner case of two structurally identical cyclic members. A singleton
+            // (the r3-reachable self-recursion case) is unaffected — one member, order trivial.
+            let scc = canonical_cycle_order(raw_scc, specs, &by_name);
+            let scc = &scc;
             let in_cycle: BTreeMap<&str, usize> = scc
                 .iter()
                 .enumerate()
                 .map(|(i, n)| (n.as_str(), i))
                 .collect();
 
-            // The group hash: encode each member's structure, in canonical (here: spec) order, with
+            // The group hash: encode each member's structure, in the canonical member order, with
             // in-cycle references as their placeholder index and out-of-cycle references as their
-            // (already computed) hash. A singleton self-loop is the common r3 case; multi-member
-            // ordering is provisional (R7-Q3, r4).
+            // (already computed) hash.
             let group_hash = {
                 let mut c = Canon::new();
                 c.tag(crate::content::tag::DATADECL);
@@ -273,6 +281,35 @@ impl DataRegistry {
     pub fn ctor_count(&self, ctor: &CtorRef) -> Option<usize> {
         self.decls.get(ctor.decl()).map(|d| d.ctors.len())
     }
+}
+
+/// The **canonical, name-independent order** of a strongly-connected declaration group (the Unison
+/// cycle recipe, RFC-0007 §4.2; R7-Q3). Each member is keyed by a *local* hash computed with all
+/// in-cycle references collapsed to one shared placeholder — so the ordering depends only on
+/// structure, never on a member's (not-yet-assigned) cycle index or its name. Members sort by that
+/// hash; the metadata name is the deterministic tie-break for the corner case of two structurally
+/// identical cyclic members. A singleton group is returned unchanged.
+fn canonical_cycle_order(
+    scc: &[String],
+    specs: &BTreeMap<String, DeclSpec>,
+    by_name: &BTreeMap<String, ContentHash>,
+) -> Vec<String> {
+    if scc.len() == 1 {
+        return scc.to_vec();
+    }
+    // All members map to the *same* placeholder (0) for the ordering pass — structure only.
+    let shared: BTreeMap<&str, usize> = scc.iter().map(|n| (n.as_str(), 0usize)).collect();
+    let mut keyed: Vec<(ContentHash, String)> = scc
+        .iter()
+        .map(|name| {
+            let mut c = Canon::new();
+            c.tag(crate::content::tag::DATADECL);
+            encode_decl(&mut c, &specs[name], &shared, by_name);
+            (c.finish(), name.clone())
+        })
+        .collect();
+    keyed.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+    keyed.into_iter().map(|(_, n)| n).collect()
 }
 
 /// Encode a declaration's identity-bearing structure into `c`: each constructor (order significant)
@@ -392,8 +429,9 @@ fn strongly_connected_components(specs: &BTreeMap<String, DeclSpec>) -> Vec<Vec<
                         break;
                     }
                 }
-                // Tarjan emits SCCs in reverse-topological order already. Sort members by name for a
-                // deterministic, provisional intra-cycle order (singletons are unaffected).
+                // Tarjan emits SCCs in reverse-topological order already. A by-name sort gives a
+                // deterministic *raw* order; the structural, name-independent canonical ordering is
+                // applied later in `build` via `canonical_cycle_order` (R7-Q3).
                 scc.sort();
                 self.out.push(scc);
             }
@@ -531,6 +569,49 @@ mod tests {
                 missing: "Forest".to_owned(),
             }
         );
+    }
+
+    #[test]
+    fn mutual_recursion_orders_canonically_and_name_independently() {
+        // type Tree = Leaf | Node(Forest);  type Forest = Empty | Cons(Tree, Forest)
+        // A mutually-recursive 2-cycle. Building it under two different *name* sets for the same
+        // structure must yield the same group identity (R7-Q3: names are not identity, ADR-003).
+        let mk = |t: &str, f: &str| {
+            let mut m = BTreeMap::new();
+            m.insert(
+                t.to_owned(),
+                DeclSpec {
+                    ctors: vec![
+                        CtorSpec { fields: vec![] },
+                        CtorSpec {
+                            fields: vec![FieldSpec::Data(f.to_owned())],
+                        },
+                    ],
+                },
+            );
+            m.insert(
+                f.to_owned(),
+                DeclSpec {
+                    ctors: vec![
+                        CtorSpec { fields: vec![] },
+                        CtorSpec {
+                            fields: vec![
+                                FieldSpec::Data(t.to_owned()),
+                                FieldSpec::Data(f.to_owned()),
+                            ],
+                        },
+                    ],
+                },
+            );
+            DataRegistry::build(&m).unwrap()
+        };
+        let a = mk("Tree", "Forest");
+        let b = mk("Arbol", "Bosque");
+        // The structurally-corresponding declarations collide across the renaming.
+        assert_eq!(a.decl_hash("Tree"), b.decl_hash("Arbol"));
+        assert_eq!(a.decl_hash("Forest"), b.decl_hash("Bosque"));
+        // Building twice is deterministic.
+        assert_eq!(a.decl_hash("Tree"), mk("Tree", "Forest").decl_hash("Tree"));
     }
 
     #[test]

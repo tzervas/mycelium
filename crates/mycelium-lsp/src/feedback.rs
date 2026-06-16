@@ -323,5 +323,14 @@ fn collect(node: &Node, prefix: &str, cx: &mut Collect<'_>) {
                 collect(d, &here(&at, "default"), cx);
             }
         }
+        // r4 (RFC-0001 r4): the function/recursion nodes are Repr-transparent — recurse into bodies
+        // so any guarantee/swap/EXPLAIN site beneath them still surfaces.
+        Node::Lam { body, .. } => collect(body, &here(prefix, "lam"), cx),
+        Node::App { func, arg } => {
+            let at = here(prefix, "app");
+            collect(func, &at, cx);
+            collect(arg, &at, cx);
+        }
+        Node::Fix { body, .. } => collect(body, &here(prefix, "fix"), cx),
     }
 }
