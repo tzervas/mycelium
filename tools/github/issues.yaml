@@ -470,3 +470,33 @@ issues:
     body: |
       A generate -> semantic-feedback -> self-correct loop over the LSP surface, operationalizing SC-5b (NFR-2; Area 6; E3-2). The harness is local; the RUN needs LLM API access (KC-2-adjacent).
       Acceptance: the loop runs against the LSP feedback channel; the live LLM run is gated on API access (honest "not established" until then).
+
+# Phase 4 (M-34x) — the interpreted<->compiled ABI + hot-inject + AOT-fragment completion. Created
+# 2026-06-16; gated on ADR-016/017 (Accepted 2026-06-16). No phase:4 label/milestone yet — labelled
+# phase:3 area:execution for tracker continuity until a Phase-4 milestone is cut.
+  - id: M-341
+    title: "M-341 — In-process hot-inject prototype (ADR-016/017)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:execution, priority:P2]
+    depends_on: [M-340]
+    body: |
+      ADR-017's named first build step on the M-340 dlopen JIT (ADR-016 call ABI): a ContentHash -> entry dispatch table (mycelium-mlir::inject::Image); a call resolves to a compiled entry if present, else interprets (never a silent miss); inject = load a content-addressed unit + register a new hash -> entry (never mutates a live entry); the recompile set is the changed dependency-closure by hash reachability (recompile_closure).
+      Acceptance: the safety argument under test (in-flight old hash finishes on old code while a new caller dispatches new) + interp == injected-compiled via the shared M-210 checker (NFR-7). In-process scope only; args-carrying value ABI + cross-process/native units deferred (VR-5). LANDED (first increment).
+
+  - id: M-342
+    title: "M-342 — Extend the AOT path to the data + recursion fragment (RFC-0011 Q5)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:execution, priority:P2]
+    depends_on: [M-301, M-340]
+    body: |
+      Bring Construct/Match/Lam/App/Fix into mycelium-core::lower (ANF) + the mycelium-mlir AOT/JIT path so is_aot_lowerable admits the data + recursion fragment, and extend the three-way differential (L1-eval == L0-interp == AOT) to the full v0 calculus. Closes RFC-0011 §4.4 Q5; exercises the value/closure ABI (ADR-016) concretely. Not gated.
+      Acceptance: the data_corpus runs on all three paths, validated through the shared M-210 checker; honest where a node stays deferred (VR-5).
+
+  - id: M-343
+    title: "M-343 — Mutual recursion: full elaboration (R7-Q3 remaining half)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:execution, priority:P2, status:needs-design]
+    depends_on: [M-342]
+    body: |
+      The content-addressed identity of a Fix-group is done; the surface -> Fix-group elaboration + the totality checker's mutual-descent classification remain (currently an explicit ElabError::Residual). DESIGN the Fix-group node/encoding first (does L0 need a Fix-group node, or do nested Fixes + the cycle registry suffice?) and present a frozen-spec change (likely an RFC-0001 revision) before folding, then enact + extend the differential.
+      Acceptance: mutual recursion elaborates (no Residual) and agrees across the differential paths; the totality checker classifies mutual descent.

@@ -8,6 +8,33 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (Phase 4 — ADR-016 + ADR-017 RATIFIED: Proposed → Accepted)
+- **ADR-016 + ADR-017 ratified (Proposed → Accepted, 2026-06-16; append-only).** Maintainer gate
+  cleared — no change to either decision. ADR-016 fixes the interpreted↔compiled ABI (dispatch by
+  content hash; the RFC-0001 §4.8 wire form as the canonical value boundary); ADR-017 fixes
+  hot-inject (hash-keyed dispatch + content-addressed dynamic linking, immutable-by-construction).
+  ADR README + Doc-Index status updated to Accepted; the RFC-0004 §10 OQ-1/OQ-2 pointers stand.
+
+### Added (Phase 4 — M-341: the in-process hot-inject prototype on the M-340 JIT)
+- **`mycelium-mlir` gains the `inject` module — ADR-017's named first build step (ADR-016 call ABI).**
+  An `Image` holds a `ContentHash → entry` dispatch table over the M-340 `dlopen` JIT:
+  - **a call resolves to a compiled entry if present, else interprets** the registered definition
+    (the RFC-0004 §9.1 continuum); a hash with neither is an explicit `InjectError::DispatchMiss`,
+    never a silent guess (G2/SC-3) — and `resolve` makes the dispatch decision `EXPLAIN`-able;
+  - **`inject` loads a content-addressed unit and registers a new `hash → entry`**, never mutating a
+    live entry (publish-once; an edit is a new hash under a new entry — the atomicity hazard
+    dissolves, ADR-017 decision 4);
+  - **`recompile_closure`** computes the changed dependency-closure by hash reachability over the
+    dependency graph — the recompile set, with no AST/file diff (decision 3).
+  **Verified (NFR-7):** the injected-compiled path is observationally equivalent to the reference
+  interpreter through the shared **M-210** TV checker (`ObservationalEquiv`); the safety argument is
+  exercised under test — an in-flight call to the old hash finishes on old code while a new caller
+  dispatches to the new hash (`tests/inject_hotswap.rs`). **Honest scope (VR-5):** in-process proof
+  only; a unit is a *closed* bit/trit-subset program and the call boundary is the call ABI restricted
+  to nullary units — the args-carrying value ABI (RFC-0001 §4.8 wire form) and cross-process / native
+  units (RFC-0004 §2 / §10 OQ-3) stay deferred. New issues M-341 (#103), M-342 (#104, AOT-fragment
+  extension), M-343 (#105, mutual-recursion elaboration) created + added to `idmap.tsv` / `issues.yaml`.
+
 ### Added (Phase 4 — ADR-016 + ADR-017 Proposed: the interpreted↔compiled ABI + hot-inject)
 - **ADR-016 (Proposed) — the interpreted↔compiled ABI (RFC-0004 §10 OQ-1).** Dispatch a compiled
   stable component by its **content hash** (versioning is free, staleness structurally impossible —

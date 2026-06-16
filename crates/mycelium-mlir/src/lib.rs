@@ -19,10 +19,18 @@
 //!   This is a *third, compiled* execution path; everything outside the bit subset is an explicit
 //!   [`llvm::AotError`] refusal (never silent), with `llc`/`clang` absence reported as a skippable
 //!   `ToolchainMissing`. The interp↔native differential (M-302) checks it against the interpreter.
+//! - [`inject::Image`] — the **in-process hot-inject** prototype (M-341; ADR-016/017): a hash-keyed
+//!   `ContentHash → entry` dispatch table over the M-340 JIT. A call resolves to a compiled entry if
+//!   present, else interprets (RFC-0004 §9 continuum); injection loads a content-addressed unit and
+//!   registers a *new* `hash → entry`, never mutating a live entry (immutability dissolves the
+//!   atomicity hazard); the recompile set is the changed dependency-closure by hash reachability
+//!   ([`inject::recompile_closure`]). The injected-compiled path is M-210-checked against the
+//!   interpreter (NFR-7).
 
 pub mod aot;
 pub mod bitnet;
 pub mod dialect;
+pub mod inject;
 pub mod jit;
 pub mod llvm;
 pub mod pack;
@@ -35,6 +43,7 @@ pub use bitnet::{
     jit_ternary_dot, jit_ternary_dot_for, ternary_dot_ref, BitnetDotKernel,
 };
 pub use dialect::emit;
+pub use inject::{recompile_closure, Image, InjectError, Resolution};
 pub use jit::{compile_so, jit_run, JitArtifact};
 pub use llvm::{compile, compile_and_run, emit_llvm_ir, AotError, CompiledArtifact};
 pub use pack::{pack_trits, relayout_trits, unpack_trits};
