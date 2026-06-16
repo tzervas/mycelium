@@ -25,7 +25,9 @@ pub use feedback::{
     analyze, analyze_with, ExplainSite, Feedback, FeedbackSummary, GuaranteeAnnotation, SwapSite,
 };
 pub use fmt::format;
-pub use lint::{has_errors, lint, lint_nodule_header, Diagnostic, Severity};
+pub use lint::{
+    has_errors, lint, lint_nodule_header, lint_structured_header, Diagnostic, Severity,
+};
 pub use recover::{
     check_effects, handle, EffectBudget, EffectBudgetExhausted, EffectKind, Outcome,
     RecoveryPolicy, Resolution, StructuredError, UndeclaredEffect as RecoverUndeclaredEffect,

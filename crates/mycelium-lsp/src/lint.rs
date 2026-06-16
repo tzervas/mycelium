@@ -94,6 +94,28 @@ pub fn lint_nodule_header(src: &str) -> Vec<Diagnostic> {
     }
 }
 
+/// The **structured-header** lint (M-141; M-359 / spec §3): parse the `// @key: value` header and
+/// surface any malformed marker, unknown/duplicate key, or bad value (non-SPDX `@license`, non-ISO
+/// `@since`/`@updated`, ill-formed `@version`) as an explicit `Error` — never silently ignored (G2).
+/// A well-formed header (or a file with none) yields nothing. Supersedes the bare-marker
+/// [`lint_nodule_header`] when the richer M-359 metadata is wanted; both run over raw text.
+#[must_use]
+pub fn lint_structured_header(src: &str) -> Vec<Diagnostic> {
+    match mycelium_proj::parse_header(src) {
+        Ok(_) => Vec::new(),
+        Err(e) => vec![Diagnostic {
+            code: "nodule-header",
+            severity: Severity::Error,
+            at: format!("line {}", e.line),
+            message: format!(
+                "malformed nodule header (DN-06 §6 / M-359 spec §3): {} — a header defect is flagged, \
+                 never silently ignored (G2)",
+                e.message
+            ),
+        }],
+    }
+}
+
 fn paradigm(repr: &Repr) -> &'static str {
     match repr {
         Repr::Binary { .. } => "binary",
@@ -436,6 +458,27 @@ mod tests {
         assert_eq!(d[0].severity, Severity::Error);
         assert!(has_errors(&d));
         assert!(!lint_nodule_header("// nodule:\n").is_empty());
+    }
+
+    #[test]
+    fn structured_header_checks_keys_and_values() {
+        // Clean on a valid structured header and on a file with no header.
+        assert!(lint_structured_header(
+            "// nodule: g\n// @license: MIT\n// @updated: 2026-06-16\n"
+        )
+        .is_empty());
+        assert!(lint_structured_header("fn f() -> Binary{8} = 0b0").is_empty());
+        // Fires on an unknown key, a bad SPDX license, and a non-ISO date (G2).
+        assert_eq!(
+            codes(&lint_structured_header("// nodule: g\n// @bogus: x\n")),
+            vec!["nodule-header"]
+        );
+        assert!(has_errors(&lint_structured_header(
+            "// nodule: g\n// @license: Nope\n"
+        )));
+        assert!(has_errors(&lint_structured_header(
+            "// nodule: g\n// @since: 2026-13-99\n"
+        )));
     }
 
     #[test]

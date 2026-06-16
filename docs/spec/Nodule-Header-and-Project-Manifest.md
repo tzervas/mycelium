@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Proposed** (2026-06-16 — maintainer requested a *structured* header + a project manifest; manifest filename `mycelium-proj.toml` ratified, remaining format choices flagged in §7) |
+| **Status** | **Accepted** (2026-06-16 — the §7 format choices are ratified by the maintainer: header sigil `// @key: value`; the v0 key set extended with `repository`/`keywords`/`deprecated`; `@updated` author-maintained. Enacted by M-359.) |
 | **Scope** | The structured in-file **nodule header**, the per-project **manifest** (`mycelium-proj.toml`), and the **top-down inheritance** that ties them together |
 | **Depends on** | DN-06 (`phylum`/`nodule`/`colony`); RFC-0006 (L2 surface); ADR-003 (content-addressing); the honesty rule / G2 (never-silent), VR-5, KC-3 |
 | **Feeds** | M-358 (lexicon migration + linter recognises the header); M-359 (this schema, enacted); M-361 (the full toolchain epic); M-346 (stdlib/packaging) |
@@ -48,6 +48,8 @@ license     = "Apache-2.0"        # SPDX identifier (checked against the SPDX li
 authors     = ["Tyler Zervas <…>"]
 since       = "2026-01-10"        # first publication (ISO-8601)
 summary     = "2D/3D geometry primitives and certified swaps."
+repository  = "https://github.com/example/geometry"   # source URL (inherited by headers)
+keywords    = ["geometry", "linear-algebra"]          # discovery tags (inherited by headers)
 lang        = "mycelium-0"        # the surface-language edition this project targets (MSRV-analogue)
 
 [surface]                          # for a phylum: the PUBLIC nodules it exports (else omitted)
@@ -80,11 +82,14 @@ metadata lines follow. Compact, greppable, one closed key set shared with the ma
 | Key | Meaning | Inherits? |
 |---|---|---|
 | `@version` | semver release label | from `project.version` |
-| `@license` | SPDX id | from `phylum.license` |
-| `@authors` | comma-separated | from `phylum.authors` |
-| `@since` | first publication (ISO date) | from `phylum.since` |
-| `@updated` | last update (ISO date) | **per-file** (not inherited — each file tracks its own) |
+| `@license` | SPDX id | from `project.license` |
+| `@authors` | comma-separated | from `project.authors` |
+| `@since` | first publication (ISO date) | from `project.since` |
+| `@updated` | last update (ISO date) | **per-file** (not inherited — each file tracks its own; author-maintained, §7.4) |
 | `@summary` | one-line description | none (per-file) |
+| `@repository` | source URL | from `project.repository` |
+| `@keywords` | comma-separated discovery tags | from `project.keywords` |
+| `@deprecated` | `true`/`false` or a reason string — flags the nodule superseded | **per-file** (not inherited — a nodule flags *itself*) |
 
 A **phylum/nodule root** carries the fuller header; a **subnodule** typically carries only the marker:
 
@@ -118,11 +123,12 @@ The **effective header** of a file is resolved most-specific-first, and is alway
 in-file @key  >  nearest ancestor nodule-root header  >  mycelium-proj.toml [project]  >  toolchain default
 ```
 
-- **Inherited fields** (`version`/`license`/`authors`/`since`): omit them in a subnodule and they take
-  the phylum value; set them to **override** locally (a local override that *narrows* — e.g. a stricter
-  license — is allowed; one that **conflicts** with the phylum in a disallowed way, e.g. a
-  license-incompatible value, is an **explicit error**, never silently applied).
-- **Per-file fields** (`@updated`, `@summary`): not inherited — each file owns them.
+- **Inherited fields** (`version`/`license`/`authors`/`since`/`repository`/`keywords`): omit them in a
+  subnodule and they take the phylum value; set them to **override** locally (a local override that
+  *narrows* — e.g. a stricter license — is allowed; one that **conflicts** with the phylum in a disallowed
+  way, e.g. a license-incompatible value, is an **explicit error**, never silently applied).
+- **Per-file fields** (`@updated`, `@summary`, `@deprecated`): not inherited — each file owns them (a
+  `@deprecated` flag marks *that* nodule superseded, never its children by inheritance).
 - **`EXPLAIN`-able (no black box).** The toolchain can print a file's *resolved* header annotated with
   each field's **source** (`local` / `nodule-root` / `mycelium-proj.toml`), so "where did this license come
   from?" is always answerable — the same no-ambient-metadata discipline G2 applies to errors.
@@ -162,15 +168,29 @@ are chosen above; please confirm or redirect (append-only either way):
    the *language project* manifest, and **not** `phylum.toml` — a project may be a library (`phylum`), a
    **program**, a **script**, or a small implementation; the `[project].kind` field records which. (The
    earlier `phylum.toml`/`mycelium.toml` candidates are superseded.)
-2. **Header sigil** — `// @key: value` (chosen: compact, greppable, colon-consistent with `// nodule:`).
-   Alt: a fenced block, or TOML-in-comment for a single parser.
-3. **Closed v0 key set** — `version`/`license`/`authors`/`since`/`updated`/`summary` (+ the `nodule:`
-   marker). Add/remove any? (e.g. `repository`, `keywords`, `deprecated`.)
-4. **`@updated` discipline** — per-file, author-maintained vs. tool-stamped on format. (Chosen:
-   author-maintained v0; a `mycfmt` auto-stamp is an additive M-361 option.)
+2. **Header sigil — RESOLVED: `// @key: value`** (maintainer, 2026-06-16). Compact, greppable,
+   colon-consistent with `// nodule:`, and parsed by a small hand-written line reader (no TOML dep in the
+   in-file header). The fenced-block and TOML-in-comment alternatives are superseded.
+3. **Closed v0 key set — RESOLVED (extended)** (maintainer, 2026-06-16): the base
+   `version`/`license`/`authors`/`since`/`updated`/`summary` **plus `repository`, `keywords`, and
+   `deprecated`** (9 keys), over the required `nodule:` marker. The set stays closed — an unknown `@key`
+   is an explicit lint error (G2); further keys are additive only by a later explicit decision.
+4. **`@updated` discipline — RESOLVED: author-maintained v0** (maintainer, 2026-06-16). The author owns
+   `@updated`; the toolchain only *checks* it is a valid ISO-8601 date (VR-5 — checked, never fabricated).
+   A `mycfmt` auto-stamp stays an additive M-361 option, deliberately out of v0.
 
 ## Meta — changelog
 
+- **2026-06-16 — Accepted; §7 choices ratified; enacted (M-359).** The maintainer ratified the three open
+  §7 choices: **(2) header sigil `// @key: value`**; **(3) the v0 key set extended** with `repository`,
+  `keywords`, and `deprecated` (9 keys over the `nodule:` marker, closed); **(4) `@updated`
+  author-maintained** (checked-not-stamped, VR-5). Status moves **Proposed → Accepted**. Enacted in code by
+  **M-359**: the `mycelium-proj` crate (structured-header parser + a minimal, auditable TOML-subset
+  manifest reader — adding **no new** external dependency, keeping the workspace's deps few and vetted —
+  plus the top-down inheritance resolver with per-field provenance and an `EXPLAIN`), JSON schemas
+  (`docs/spec/schemas/nodule-header.schema.json`, `mycelium-proj.schema.json`) + valid/invalid examples,
+  and the M-141 linter check (unknown key / bad SPDX / non-ISO date / malformed value = explicit error,
+  G2). Metadata is **not** identity — the content hash stays canonical (ADR-003). Append-only.
 - **2026-06-16 — Manifest filename RESOLVED + scope broadened.** The manifest is **`mycelium-proj.toml`**
   (maintainer) — recognised as the *language project* manifest, and not `phylum.toml`: a Mycelium project
   is not only a library (`phylum`) but may be a **program / script / small implementation**; the

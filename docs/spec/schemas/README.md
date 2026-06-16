@@ -24,6 +24,21 @@ Ratified per **M-010** ([#5](https://github.com/tzervas/mycelium/issues/5)); see
 | `policy` | `SelectionPolicy` + `PolicyRef` + mandatory EXPLAIN trace | RFC-0005 |
 | `reconstruction-manifest` | `ReconInfo` (indexed retrieval vs compositional reconstruction) | RFC-0003 §6 |
 
+### Toolchain metadata schemas (M-359)
+
+These project the **structured nodule header** + **project manifest** (DN-06 §6; the
+*Nodule-Header-and-Project-Manifest* spec, Accepted 2026-06-16). They are a *toolchain/metadata* layer
+(KC-3, above the kernel); metadata is **not** identity (ADR-003). Enacted by the `mycelium-proj` crate.
+
+| `<name>.schema.json` | Models | Source |
+|---|---|---|
+| `nodule-header` | the parsed `// nodule:` + `// @key:` structured header (closed v0 key set) | Nodule-Header spec §3 |
+| `mycelium-proj` | the `mycelium-proj.toml` manifest (`[project]` typed; optional tables loose) | Nodule-Header spec §2 |
+
+Two honesty-load-bearing checks live in **code** (`mycelium-proj`), recorded in each schema's
+`x-mycelium.$comment` per the rule below: SPDX-id *membership* (the regex only checks token shape) and
+calendar-date *range* (the regex only checks `YYYY-MM-DD` shape). Both are explicit parse-time errors (G2).
+
 ## Convention (enforced by `scripts/checks/schema.sh`)
 
 ```
