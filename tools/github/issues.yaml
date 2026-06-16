@@ -616,7 +616,7 @@ issues:
   - id: M-357
     title: "M-357 — RFC-0008 RT2 deterministic-fragment runtime + reference-sequentialization differential"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P3, status:needs-design]
+    labels: [phase:7, type:feature, area:execution, priority:P3, status:done]
     depends_on: [M-355, M-356]
     body: |
       Enact the RT2 deterministic concurrency fragment (the default forms over immutable values — hypha/fuse, §4.5) and its reference sequentialization, validated by the RT2 differential (the deterministic concurrent run ≡ its sequentialization; the NFR-7-equivalent obligation RFC-0008 §4.6/§4.7 names "the natural successor to the L1 track"). Nondeterministic forms stay RT3 constructs with named, reified policies (out of this task's scope). No kernel change (KC-3).
@@ -633,3 +633,25 @@ issues:
     depends_on: []
     body: |
       DN-06 (Resolved 2026-06-16) ratifies the static-organization / dynamic-grouping lexicon — `phylum` (library-scale), `nodule` (the basic unit, replacing the generic "module"), and `colony` reassigned from its DN-02 static meaning to the RFC-0008 §4.7 DYNAMIC runtime grouping of `hypha`. This task is the mechanical surface migration the reassignment requires (the DECISION is already ratified; this executes it): rename the L1 surface keyword `colony` → `nodule` across the lexer/token/parser/AST/checker/elaborator (~226 refs in crates/mycelium-l1), the grammar EBNF + LR(1) oracle + the 23-file accept/reject conformance corpus (docs/spec/grammar/), and the prototype binaries/tests; reserve `phylum` (the library grouping above nodules — reserved-not-active until its construct lands) and `colony` (dynamic; realized by mycelium-mlir::runtime's Colony). Keep it ONE auditable change (it alters the grammar contract): the reserved-word set + M-141 linter, the conformance fixtures, and the M-142 formatter spelling move together. No kernel change (KC-3); no semantic change — pure renaming + two reserved additions. Document singular/plural (phylum/phyla, nodule/nodules, colony/colonies, hypha/hyphae). Also wire the DN-06 §6 nodule HEADER-COMMENT convention into the linter/formatter: a file declares nodule status via `// nodule: <dotted.name>` (or bare `// nodule`) on the first non-blank line — NOT in the filename/path (paths stay conventional); the M-141 linter recognises it; content-addressed identity (ADR-003) stays canonical. Acceptance (design-first): present the rename map + grammar diff before folding; verify the full conformance corpus + just check green; the content-addressed identities are unchanged (a rename is not a semantic edit). Until executed, `colony` is the deprecated spelling of `nodule` (DN-06 §2).
+
+  # Phase 7 (M-359) — the STRUCTURED nodule header + phylum manifest schema (maintainer preference,
+  # 2026-06-16). Design-first: the spec is Proposed; format choices need sign-off before any code.
+  - id: M-359
+    title: "M-359 — Structured nodule header + phylum manifest (phylum.toml) + top-down inheritance"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:design, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-358]
+    body: |
+      The maintainer prefers a STRUCTURED nodule header over DN-06's minimal `// nodule:` marker: license, authors, first publication, last update, version — on a nodule/phylum ROOT, with subnodules INHERITING most fields top-down; plus a config form like Python UV's pyproject.toml but scoped for Mycelium. Designed in docs/spec/Nodule-Header-and-Phylum-Manifest.md (Proposed 2026-06-16): a closed-key in-file header (`// @key: value` — version/license/authors/since/updated/summary), a `phylum.toml` manifest (the pyproject/Cargo analogue), and explicit, EXPLAIN-able top-down inheritance (in-file > nodule-root > phylum.toml). Honesty-aligned: no ambient metadata (unknown keys/conflicts are explicit errors — G2), metadata is NOT identity (the content hash stays canonical — ADR-003), declared-only license/version (VR-5), tooling-layer (KC-3). Acceptance (design-first / maintainer-gated): ratify the §7 format choices (manifest filename `phylum.toml`; header sigil `// @key:`; the closed v0 key set; `@updated` discipline) BEFORE folding. Then enact: the header parser + manifest loader + inheritance resolver + an `EXPLAIN` of the resolved header, with a JSON schema under docs/spec/schemas/ and conformance fixtures; the M-141 linter recognises + checks the header (unknown key / bad SPDX / non-ISO date = explicit error). just check green. No kernel change.
+
+  # Phase 8 (M-361) — the FULL Mycelium toolchain epic (ANTICIPATED forward anchor). The maintainer
+  # (2026-06-16): a full-fat toolchain beyond LSP+interpreter+compiler — formatting, correctness,
+  # error/issue checking AND fixing, security checks — is a long-term PROD-RELEASE requirement.
+  # Decomposes into per-tool tasks at its gate, like the M-346 stdlib epic. Sequencing firms at the gate.
+  - id: M-361
+    title: "M-361 — Full Mycelium toolchain epic (format / correctness / lint+fix / security) — full-fat suite"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:design, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-346, M-359]
+    body: |
+      Roadmap anchor for the FULL Mycelium toolchain — the "full-fat suite" the maintainer names as a prod-release requirement (2026-06-16), beyond today's LSP + interpreter + AOT compiler: a formatter (mycfmt — M-142 grows up), correctness/type checking, error/issue checking AND auto-fixing (the RFC-0013 diagnostics + RFC-0014 recovery surfaced as actionable fixes), security checks (secrets/supply-chain/`wild`-block audit — the /security-review posture as tooling), and the packaging/metadata layer (the M-359 header/manifest + spore publishing). Principles inherited and non-negotiable: never-silent (G2), honest per-op guarantee tags, no black boxes / EXPLAIN, small auditable kernel (the toolchain lives ABOVE it — KC-3), content-addressed (ADR-003); Rust-first now (ADR-007), Mycelium-lang eventually (dogfooding). Full-fat = a release gate, not a v0 deliverable. Decomposes into per-tool tasks at its gate. Anticipated forward anchor (not yet ratified roadmap); marked so. Run gh-bootstrap-local.sh to create the Phase 8 milestone + phase:8 label and assign.

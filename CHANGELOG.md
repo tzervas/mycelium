@@ -23,6 +23,16 @@ corpus, not released software. Versioning will begin when the kernel does.
   **dedicated `docs/Glossary.md`** is created — a summarized **Index** over a detailed **Glossary**
   (the fungal lexicon + honesty/architecture concepts), each entry citing its normative source, maintained
   separately from the RFCs (registered in `Doc-Index.md`). The header-comment convention folds into M-358.
+- **Proposed — structured nodule header + `phylum.toml` manifest (`docs/spec/Nodule-Header-and-Phylum-Manifest.md`).**
+  At the maintainer's preference for a *structured* header carrying useful metadata (license, authors,
+  first/last dates, version) on a nodule/phylum **root**, with **subnodules inheriting** top-down: a
+  closed-key in-file header (`// @key: value`), a `phylum.toml` manifest (the pyproject/Cargo analogue,
+  scoped for Mycelium), and explicit `EXPLAIN`-able inheritance (in-file → nodule-root → `phylum.toml`).
+  Honesty-aligned: **metadata is not identity** (the content hash stays canonical — ADR-003), no ambient
+  metadata (unknown keys/conflicts are explicit errors — G2), declared-only license/version (VR-5),
+  tooling-layer (KC-3). **Proposed** — the format choices (§7) are flagged for sign-off; no code lands
+  until ratified. Records the long-term **full-fat toolchain** as the new anticipated **Phase 8** (epic
+  **M-361**); the schema's enactment is **M-359**.
 - **Adopted going forward:** the RFC-0008 §4.7 structured scope is realized as `mycelium-mlir::runtime`'s
   **`Colony`** (alias of the structured `Scope`). The **surface keyword migration** `colony` → `nodule`
   (the L1 lexer/parser/AST/checker — ~226 refs — plus the grammar EBNF + LR(1) oracle + the 23-file

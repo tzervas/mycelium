@@ -22,39 +22,39 @@ supersession — DN-02's append-only law). Reserved-not-active terms are marked 
 
 ## 1. Index
 
-Alphabetical; each links to its §2 detail. *(L)* = part of the fungal lexicon; *(H)* = honesty/
-architecture concept. **⟂** = reserved vocabulary, not yet active syntax.
+Alphabetical; the **Detail** column names each term's §2 subsection. *(L)* = part of the fungal lexicon;
+*(H)* = honesty/architecture concept. **⟂** = reserved vocabulary, not yet active syntax.
 
 | Term | One-line sense | Layer | Detail |
 |---|---|---|---|
-| `backbone` ⟂ *(L)* | a declared high-bandwidth transport path (placement artifact) | Runtime | [§2.1](#21-backbone) |
-| `colony` ⟂ *(L)* | a **dynamic** runtime grouping of active `hypha` | Runtime | [§2.2](#22-colony) |
-| `cyst` ⟂ *(L)* | a content-addressed checkpoint of a dormable computation | Runtime | [§2.3](#23-cyst) |
-| Declared *(H)* | weakest guarantee tag: asserted, always flagged | Formal | [§2.4](#24-the-guarantee-lattice) |
-| Empirical *(H)* | guarantee tag from trials (≥1, with a method) | Formal | [§2.4](#24-the-guarantee-lattice) |
-| EXPLAIN *(H)* | the mandate that selections/conversions are inspectable | Formal | [§2.5](#25-explain) |
-| Exact *(H)* | strongest guarantee tag: exact, no error | Formal | [§2.4](#24-the-guarantee-lattice) |
-| `forage` ⟂ *(L)* | adaptive placement as a reified RFC-0005 policy | Runtime | [§2.6](#26-forage) |
-| `fuse` ⟂ *(L)* | lawful state fusion: semilattice merge, meet-composed `Meta` | Runtime | [§2.7](#27-fuse) |
-| `graft` ⟂ *(L)* | a capability contract with external infrastructure | Runtime | [§2.8](#28-graft) |
-| guarantee lattice *(H)* | `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` | Formal | [§2.4](#24-the-guarantee-lattice) |
-| `hypha` ⟂ *(L)* | a single structurally-scoped concurrent execution unit | Runtime | [§2.9](#29-hypha) |
-| `matured` *(L)* | a promoted, stable, compiled-and-frozen definition | Surface | [§2.10](#210-matured) |
-| `mesh` ⟂ *(L)* | gossip/pub-sub overlay with honest probabilistic guarantees | Runtime | [§2.11](#211-mesh) |
-| `Meta` *(H)* | the metadata a `Value` carries (guarantee, provenance, …) | Formal | [§2.12](#212-meta-value-repr) |
-| never-silent (G2) *(H)* | no silent failure/swap; refusal is always explicit | Formal | [§2.13](#213-never-silent-g2) |
-| `nodule` *(L)* | the **basic** static unit (replaces "module") | Surface | [§2.14](#214-nodule) |
-| `phylum` ⟂ *(L)* | a content-addressed **library-scale** static unit | Surface | [§2.15](#215-phylum) |
-| Proven *(H)* | guarantee tag from a theorem with *checked* side-conditions | Formal | [§2.4](#24-the-guarantee-lattice) |
-| `reclaim` ⟂ *(L)* | supervision-tree reclamation of stale runtime units | Runtime | [§2.16](#216-reclaim) |
-| `Repr` *(H)* | a value's representation (binary/ternary/dense/VSA) | Formal | [§2.12](#212-meta-value-repr) |
-| `spore` *(L)* | a content-addressed deployable / reconstruction manifest | Deploy | [§2.17](#217-spore) |
-| `substrate` *(L)* | an affine external resource (consumed exactly once) | Surface | [§2.18](#218-substrate) |
-| `swap` *(L/H)* | a certified, never-silent representation change | Formal | [§2.19](#219-swap) |
-| `tier` ⟂ *(L)* | an execution-mode switch (interpreted ↔ native) | Runtime | [§2.20](#220-tier) |
-| `Value` *(H)* | an immutable `(Repr, Payload, Meta)` — the only thing that moves | Formal | [§2.12](#212-meta-value-repr) |
-| `wild` *(L)* | the denied-by-default unsafe block (FFI / raw memory) | Surface | [§2.21](#221-wild) |
-| `xloc` ⟂ *(L)* | explicit, fallible, `Meta`-preserving value movement | Runtime | [§2.22](#222-xloc) |
+| `backbone` ⟂ *(L)* | a declared high-bandwidth transport path (placement artifact) | Runtime | §2.1 |
+| `colony` ⟂ *(L)* | a **dynamic** runtime grouping of active `hypha` | Runtime | §2.2 |
+| `cyst` ⟂ *(L)* | a content-addressed checkpoint of a dormable computation | Runtime | §2.3 |
+| Declared *(H)* | weakest guarantee tag: asserted, always flagged | Formal | §2.4 |
+| Empirical *(H)* | guarantee tag from trials (≥1, with a method) | Formal | §2.4 |
+| EXPLAIN *(H)* | the mandate that selections/conversions are inspectable | Formal | §2.5 |
+| Exact *(H)* | strongest guarantee tag: exact, no error | Formal | §2.4 |
+| `forage` ⟂ *(L)* | adaptive placement as a reified RFC-0005 policy | Runtime | §2.6 |
+| `fuse` ⟂ *(L)* | lawful state fusion: semilattice merge, meet-composed `Meta` | Runtime | §2.7 |
+| `graft` ⟂ *(L)* | a capability contract with external infrastructure | Runtime | §2.8 |
+| guarantee lattice *(H)* | `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` | Formal | §2.4 |
+| `hypha` ⟂ *(L)* | a single structurally-scoped concurrent execution unit | Runtime | §2.9 |
+| `matured` *(L)* | a promoted, stable, compiled-and-frozen definition | Surface | §2.10 |
+| `mesh` ⟂ *(L)* | gossip/pub-sub overlay with honest probabilistic guarantees | Runtime | §2.11 |
+| `Meta` *(H)* | the metadata a `Value` carries (guarantee, provenance, …) | Formal | §2.12 |
+| never-silent (G2) *(H)* | no silent failure/swap; refusal is always explicit | Formal | §2.13 |
+| `nodule` *(L)* | the **basic** static unit (replaces "module") | Surface | §2.14 |
+| `phylum` ⟂ *(L)* | a content-addressed **library-scale** static unit | Surface | §2.15 |
+| Proven *(H)* | guarantee tag from a theorem with *checked* side-conditions | Formal | §2.4 |
+| `reclaim` ⟂ *(L)* | supervision-tree reclamation of stale runtime units | Runtime | §2.16 |
+| `Repr` *(H)* | a value's representation (binary/ternary/dense/VSA) | Formal | §2.12 |
+| `spore` *(L)* | a content-addressed deployable / reconstruction manifest | Deploy | §2.17 |
+| `substrate` *(L)* | an affine external resource (consumed exactly once) | Surface | §2.18 |
+| `swap` *(L/H)* | a certified, never-silent representation change | Formal | §2.19 |
+| `tier` ⟂ *(L)* | an execution-mode switch (interpreted ↔ native) | Runtime | §2.20 |
+| `Value` *(H)* | an immutable `(Repr, Payload, Meta)` — the only thing that moves | Formal | §2.12 |
+| `wild` *(L)* | the denied-by-default unsafe block (FFI / raw memory) | Surface | §2.21 |
+| `xloc` ⟂ *(L)* | explicit, fallible, `Meta`-preserving value movement | Runtime | §2.22 |
 
 **Plural/inflected forms** (prose only; the reserved word is the singular): `phylum`/**`phyla`**,
 `nodule`/`nodules`, `colony`/`colonies`, `hypha`/**`hyphae`**.

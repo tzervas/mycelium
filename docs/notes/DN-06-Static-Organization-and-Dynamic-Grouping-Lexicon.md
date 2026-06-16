@@ -126,12 +126,17 @@ hashable unit with a public surface), consistent with the existing content-addre
   **simple and conventional** — forcing `nodule` into paths is bloat/clunk for no gain (developers
   readily learn that `nodule` is Mycelium's word for "module"; the phonetic bridge module→nodule helps).
   This supersedes DN-06's earlier "flexible v0" disposition.
-  - **Header format (v0).** The declaration is a comment on the **first non-blank line** of a Mycelium
+  - **Header format.** The declaration is a comment on the **first non-blank line** of a Mycelium
     source file: **`// nodule: <dotted.name>`** (the name is the logical path within its `phylum`), or
-    the bare **`// nodule`** when an explicit name is not needed. Simple and greppable; a structured
-    form (additional `key: value` header lines) is an additive future option, never required. The
-    M-141 linter recognises the header; the content-addressed identity (ADR-003) remains the canonical
-    one — the header is an ergonomic declaration, not the source of identity.
+    the bare **`// nodule`** when an explicit name is not needed. The maintainer prefers a **structured**
+    header beyond this minimal marker — license, authors, first/last dates, version — on a nodule/phylum
+    **root**, with **subnodules inheriting** most fields top-down, plus a `phylum.toml` **manifest** (the
+    pyproject.toml analogue). That schema is designed in **`docs/spec/Nodule-Header-and-Phylum-Manifest.md`**
+    (Proposed, 2026-06-16): a closed-key `// @key: value` header, the manifest, and explicit
+    `EXPLAIN`-able inheritance — metadata is **not** identity (the content hash stays canonical, ADR-003),
+    unknown keys/conflicts are explicit errors (G2). The bare marker remains valid for a subnodule (the
+    rest inherits). The M-141 linter recognises the header; content-addressed identity (ADR-003) stays
+    canonical.
 - **"Module" → "nodule" in the corpus — RESOLVED.** RFCs and formal docs use **`nodule`** going forward
   in place of the generic "module"; existing occurrences migrate opportunistically (the surface *keyword*
   migration is the mechanical M-358).
