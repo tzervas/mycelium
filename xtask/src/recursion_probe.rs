@@ -74,14 +74,27 @@ fn run_one(mode: &str, fuel: u64) {
     }
 }
 
-/// Run one AOT trial as a subprocess; `true` if it exited gracefully (no host-stack abort).
-fn aot_trial_graceful(fuel: u64) -> bool {
+/// Run one AOT trial as a subprocess. Returns `(graceful, outcome)`: `graceful` is `true` iff the
+/// process exited cleanly (no host-stack abort); `outcome` is the worker's printed result line (the
+/// *actual* error — `DepthLimit` or `FuelExhausted` — or the abort signal), so the report is honest.
+fn aot_trial(fuel: u64) -> (bool, String) {
     let exe = std::env::current_exe().expect("current_exe");
-    Command::new(exe)
+    match Command::new(exe)
         .args(["recursion-probe", "run", "aot", &fuel.to_string()])
         .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+    {
+        Ok(o) if o.status.success() => {
+            let line = String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .last()
+                .unwrap_or("(no output)")
+                .trim()
+                .to_owned();
+            (true, line)
+        }
+        Ok(o) => (false, format!("ABORT (exit {:?})", o.status)),
+        Err(e) => (false, format!("spawn failed: {e}")),
+    }
 }
 
 pub fn run() {
@@ -117,15 +130,8 @@ pub fn run() {
     for &probe in &[
         1_000u64, 10_000, 50_000, 100_000, 250_000, 500_000, 1_000_000, 5_000_000,
     ] {
-        let ok = aot_trial_graceful(probe);
-        println!(
-            "  probe fuel {probe:>9}: {}",
-            if ok {
-                "graceful (FuelExhausted)"
-            } else {
-                "ABORT (stack overflow)"
-            }
-        );
+        let (ok, outcome) = aot_trial(probe);
+        println!("  probe fuel {probe:>9}: {outcome}");
         if ok {
             lo = probe;
         } else {
@@ -135,14 +141,19 @@ pub fn run() {
     }
 
     if hi == 0 {
-        println!("\nno abort observed up to the max probe — threshold is above the probed range.");
+        println!(
+            "\nEMPIRICAL RESULT (post-trampoline, M-347): no host-stack abort up to fuel {lo} — the \
+             AOT env-machine returns an explicit, graceful budget error (DepthLimit / FuelExhausted) \
+             at every depth, like the O(1)-stack interpreter. The ~600-unfold host-stack abort \
+             (DN-05 §1.1, pre-fix) is gone: object recursion now lives on the heap control stack."
+        );
         return;
     }
 
     // Binary-search between the last graceful (lo) and first crash (hi).
     while hi - lo > lo / 50 + 1 {
         let mid = lo + (hi - lo) / 2;
-        if aot_trial_graceful(mid) {
+        if aot_trial(mid).0 {
             lo = mid;
         } else {
             hi = mid;
@@ -150,13 +161,8 @@ pub fn run() {
     }
 
     println!(
-        "\nEMPIRICAL RESULT: the AOT env-machine recurses gracefully to ~{lo} Fix-unfolds and aborts \
-         (host-stack overflow) by ~{hi}."
-    );
-    println!(
-        "The interpreter is graceful at fuel {big} (≫ {hi}) in O(1) host stack — confirming the \
-         DN-05 motivation: the env-machine's depth is host-stack-bounded (an ABORT past ~{hi}), while \
-         the trusted interpreter is not. Fix: DN-05 #2 (trampoline) turns the abort into an explicit \
-         budget/limit."
+        "\nEMPIRICAL RESULT: the AOT env-machine recurses gracefully to ~{lo} unfolds and ABORTS \
+         (host-stack overflow) by ~{hi} — the pre-trampoline behaviour (DN-05 §1.1). The fix \
+         (DN-05 #2, M-347) replaces this abort with an explicit DepthLimit/FuelExhausted."
     );
 }

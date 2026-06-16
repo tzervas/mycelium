@@ -34,7 +34,12 @@ binary-searching the fuel in subprocesses). Result (2026-06-16, Linux host, main
 | Path | Outcome | Host stack |
 |---|---|---|
 | **Interpreter** (`eval_core`, fuel 5 000 000) | graceful `FuelExhausted` (~6 s) | **O(1)** — no crash at 5M |
-| **AOT env-machine** (`run_core_with_fuel`) | graceful to **~593** `Fix`-unfolds; **aborts (stack overflow) by ~601** | O(depth) |
+| **AOT env-machine, pre-trampoline** (`run_core_with_fuel`) | graceful to **~593** `Fix`-unfolds; **aborts (stack overflow) by ~601** | O(depth) |
+| **AOT env-machine, post-trampoline (#2 enacted, M-347)** | graceful at **every** fuel to 5 000 000 — `FuelExhausted` (≤200k) / `DepthLimit{200000}` (≥250k); **no abort** | **O(1)** |
+
+The post-fix row is the same `recursion-probe`, re-run after #2 landed: the ~600-unfold **abort is gone**
+— object recursion now lives on the heap control stack, so the env-machine matches the interpreter's
+O(1)-host-stack robustness and only ever returns an *explicit, graceful* budget error.
 
 Back-of-envelope from this: ~8 MB / ~600 unfolds ≈ **~14 KB of host stack per unfold** (this debug
 build; the chain is ~4 live frames/unfold). That cost is **build- and platform-dependent** (release
@@ -174,3 +179,12 @@ AOT env-machine is a bounded-depth differential path — stated, not hidden.
   guardrails (a small `DepthBudget` trait, conservative static fallback, `EXPLAIN`-able basis, an
   explicit error — never an abort/hang/black box; platform-specific `unsafe` kept minimal, ADR-014).
   Added DN05-Q5. Append-only.
+- **2026-06-16 — #2 ENACTED (trampoline).** `mycelium-mlir::aot` rewritten as a trampoline over an
+  explicit heap control stack (`eval_machine`): object recursion is O(1) host stack, deep recursion is
+  bounded by `fuel` (time → `FuelExhausted`) **and** a control-stack depth ceiling (space →
+  `EvalError::DepthLimit`, new variant), both explicit/graceful — never an abort. `run_core_with_budget`
+  exposes both budgets. Re-measured by `recursion-probe`: **no abort** to fuel 5 000 000 (was ~600),
+  matching the interpreter (§1.1 post-fix row). The three-way differential is unchanged (NFR-7 holds).
+  Priority **#1** (native managed stack) is banked as a normative requirement in RFC-0004 §2; the
+  **§2.4 dynamic** budget (derive `max_depth` from headroom) remains the deferred policy (DN05-Q5) —
+  the fixed 200 000 default is conservative and configurable. Append-only.

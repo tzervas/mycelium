@@ -500,6 +500,7 @@ issues:
     body: |
       Surfaced by M-342: the AOT env-machine evaluates object recursion on the HOST call stack (O(depth)); the fuel clock bounds productive work (explicit FuelExhausted, never a hang) but depth beyond the host stack aborts. DN-05 records the design + empirical grounding (xtask recursion-probe: env-machine aborts at ~600 Fix-unfolds vs the interpreter's O(1) stack). Maintainer-set priority: (1) bank native MLIR->LLVM stack-robustness as a design requirement [libMLIR-gated, M-348]; (2) explicit control stack / trampoline [near-term buildable, makes never-silent total]; (3) tail-call detection [cautious, optional, on top of #2, KC-3/YAGNI]. Constraints: never-silent (a limit is an explicit error, never a hang OR abort), no black boxes, M-210 differential holds (NFR-7).
       Acceptance (design-first): DN-05 presented; then implement #2 (trampoline) so deep recursion is a graceful explicit limit (re-measured by recursion-probe), with #1 banked for the native path and #3 gated on measurement.
+      #2 ENACTED 2026-06-16: aot rewritten as a trampoline (O(1) host stack); fuel + DepthLimit budgets, both graceful; recursion-probe confirms no abort to fuel 5e6 (was ~600); RFC-0004 §2 banks #1 for the native path (M-348). Dynamic budget (§2.4/DN05-Q5) + tail-call (#3) remain open.
 
   - id: M-348
     title: "M-348 — Provision libMLIR (desktop/WSL) to unblock the native MLIR->LLVM path"

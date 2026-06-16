@@ -8,6 +8,21 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (Phase 4 — M-347: AOT env-machine made stack-robust via a trampoline; DN-05 #2 enacted)
+- **`mycelium-mlir::aot` rewritten as a trampoline over an explicit heap control stack
+  (`eval_machine`).** Object-level recursion now lives on the **heap**, so the env-machine uses **O(1)
+  host stack** — matching the reference interpreter. Deep recursion is bounded by **two explicit,
+  graceful budgets**: `fuel` (Fix unfolds; time → `EvalError::FuelExhausted`) and a **control-stack
+  depth ceiling** (space → new `EvalError::DepthLimit { limit }`) — **never a host-stack abort, never a
+  hang** (G2). `run_core_with_budget(fuel, max_depth)` exposes both; `run`/`run_core`/`run_core_with_fuel`
+  unchanged. **Empirically confirmed** (`xtask recursion-probe`, re-run): the env-machine is graceful at
+  every fuel to 5 000 000 (`FuelExhausted` ≤200k, `DepthLimit{200000}` ≥250k) — the pre-fix ~600-unfold
+  abort (DN-05 §1.1) is **gone**. The three-way differential (L1≡L0≡AOT) is unchanged (NFR-7 holds).
+  **RFC-0004 §2** now banks the matching **normative requirement** for the native MLIR→LLVM path
+  (stack-robustness designed in, not retrofitted — DN-05 #1; libMLIR provisioning is M-348). The
+  *dynamic* depth budget (derive `max_depth` from headroom) stays the deferred policy (DN-05 §2.4 /
+  DN05-Q5); the fixed 200 000 default is conservative + configurable.
+
 ### Added (Phase 4 — DN-05 + recursion-probe: AOT recursion stack-robustness strategy, M-347/M-348)
 - **DN-05 (Draft) — AOT recursion execution strategy, empirically grounded.** Investigates making the
   M-342 env-machine recursion stack-robust *without bloat*. New `xtask recursion-probe` **measures**

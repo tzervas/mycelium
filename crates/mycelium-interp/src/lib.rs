@@ -159,6 +159,14 @@ pub enum EvalError {
     },
     /// Evaluation exceeded its step budget (a non-termination guard).
     FuelExhausted,
+    /// Evaluation exceeded its **control-stack depth** budget — the space analogue of `FuelExhausted`
+    /// (M-347): the AOT env-machine (a trampoline over an explicit heap control stack) refuses past a
+    /// depth ceiling with this **explicit, graceful** error rather than growing memory unboundedly /
+    /// aborting. Never silent. The reference interpreter is O(1)-stack and does not raise this.
+    DepthLimit {
+        /// The control-stack depth ceiling that was hit.
+        limit: usize,
+    },
     /// A swap engine reported a failure (e.g. an illegal pair or an out-of-range conversion). The
     /// message comes from the engine; it is always explicit, never a silent coercion.
     Swap(String),
@@ -219,6 +227,12 @@ impl core::fmt::Display for EvalError {
                 )
             }
             EvalError::FuelExhausted => write!(f, "evaluation exceeded its step budget"),
+            EvalError::DepthLimit { limit } => {
+                write!(
+                    f,
+                    "evaluation exceeded its control-stack depth budget ({limit})"
+                )
+            }
             EvalError::Swap(msg) => write!(f, "swap failed: {msg}"),
             EvalError::Wf(e) => write!(f, "well-formedness violation: {e}"),
             EvalError::NonExhaustiveMatch => write!(

@@ -15,15 +15,18 @@
 //! bit/trit subset and refuses the rest with an explicit `UnsupportedNode` — VR-5; data/closure
 //! codegen is the deferred MLIR→LLVM work.)
 //!
-//! **Honest limitation (VR-5).** Unlike the reference interpreter — which iterates `step` and so uses
-//! *O(1)* host stack regardless of object-level recursion depth — this env-machine uses the **host
-//! call stack** for object recursion (`Fix` unfolds nest Rust frames). The **fuel clock bounds
-//! productive work** (a non-productive recursion is an explicit [`EvalError::FuelExhausted`], never a
-//! hang), but recursion *deeper than the host stack allows* aborts rather than returning a graceful
-//! error. For the bounded-depth differential corpus this never arises; the **trusted** base for deep
-//! recursion remains the interpreter, and a stack-robust native path is the deferred MLIR→LLVM work.
+//! **Stack-robust (M-347).** The machine is a **trampoline** over an *explicit heap control stack*
+//! (`eval_machine`): `App`/`Match` push a continuation frame and switch blocks; a completed block
+//! returns its value, unwinding the stack. So object-level recursion lives on the **heap**, and the
+//! host call stack is **O(1)** — like the reference interpreter. Deep recursion is bounded by two
+//! **explicit, graceful** budgets — `fuel` (Fix unfolds; time → [`EvalError::FuelExhausted`]) and a
+//! control-stack depth ceiling (space → [`EvalError::DepthLimit`]) — never a host-stack abort and
+//! never a hang. (Empirically: pre-trampoline this aborted at ~600 unfolds; post-trampoline it is
+//! graceful — see `xtask recursion-probe`, DN-05 §1.1.) The depth ceiling is a fixed default here; a
+//! *dynamic* budget (derive it from detected headroom) is the deferred policy of DN-05 §2.4.
 
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use mycelium_core::lower::{self, Anf, AnfAlt, Atom, Rhs};
 use mycelium_core::{
@@ -38,17 +41,38 @@ use crate::pack;
 /// (mirrors the reference interpreter, RFC-0007 §4.5).
 const AOT_FUEL: u64 = 1_000_000;
 
+/// The default **control-stack depth** ceiling for the trampoline (M-347): the *space* analogue of
+/// fuel. The machine refuses past this with an explicit [`EvalError::DepthLimit`] — a graceful limit
+/// that bounds heap growth, never an OOM/abort. Deliberately a **fixed conservative default** here; a
+/// *dynamic* budget (derive it from detected memory/stack headroom) is the pluggable policy left open
+/// in DN-05 §2.4 / DN05-Q5 — not built now (KC-3/YAGNI: avoid platform-specific bloat).
+const AOT_MAX_DEPTH: usize = 200_000;
+
 /// A value in the AOT env-machine: a fully-evaluated [`CoreValue`] (repr value or datum), or a
 /// **closure** / **recursive suspension** for the r4 function fragment. Closures capture their
-/// defining environment by value (the v0 surface is first-order, so this is a finite capture).
+/// defining environment by value (the v0 surface is first-order, so this is a finite capture). Bodies
+/// are [`Rc`]-shared so closures/continuation frames don't clone the block tree.
+//
+// `CoreValue` is intentionally inlined (not boxed): it is the common case and on the hot evaluation
+// path, so boxing every value to equalise variant sizes would add an allocation per value. The size
+// asymmetry is an accepted, deliberate trade-off.
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone)]
 enum AotVal {
     /// A representation value or a datum (a normal form).
     Core(CoreValue),
     /// A lambda closure: parameter, body block, and the captured environment.
-    Closure { param: String, body: Anf, env: Env },
+    Closure {
+        param: String,
+        body: Rc<Anf>,
+        env: Env,
+    },
     /// A `Fix` suspension: unfolds on application under the fuel clock.
-    Fix { name: String, body: Anf, env: Env },
+    Fix {
+        name: String,
+        body: Rc<Anf>,
+        env: Env,
+    },
 }
 
 type Env = HashMap<Atom, AotVal>;
@@ -85,27 +109,42 @@ fn as_repr_value(v: AotVal) -> Result<Value, EvalError> {
 }
 
 /// Run a Core IR program through the AOT path to a [`CoreValue`] (the full v0 calculus — repr, data,
-/// and recursion; M-342). Lowers to ANF, then evaluates with a big-step environment machine (an
-/// independent path from the M-110 small-step interpreter — the NFR-7 two-path check).
+/// and recursion; M-342). Lowers to ANF, then evaluates with a **trampolined** environment machine
+/// (an explicit heap control stack — *O(1) host stack*, M-347), an independent path from the M-110
+/// small-step interpreter (the NFR-7 two-path check).
 pub fn run_core(
     node: &Node,
     prims: &PrimRegistry,
     swap: &dyn SwapEngine,
 ) -> Result<CoreValue, EvalError> {
-    run_core_with_fuel(node, prims, swap, AOT_FUEL)
+    run_core_with_budget(node, prims, swap, AOT_FUEL, AOT_MAX_DEPTH)
 }
 
-/// [`run_core`] with an explicit `Fix`-unfold budget. A non-productive recursion exhausts it as an
-/// explicit [`EvalError::FuelExhausted`] — never a hang (the never-silent termination guard).
+/// [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the default depth ceiling.
 pub fn run_core_with_fuel(
     node: &Node,
     prims: &PrimRegistry,
     swap: &dyn SwapEngine,
     fuel: u64,
 ) -> Result<CoreValue, EvalError> {
-    let anf = lower::lower_to_anf(node);
+    run_core_with_budget(node, prims, swap, fuel, AOT_MAX_DEPTH)
+}
+
+/// [`run_core`] with **both** budgets explicit (M-347): `fuel` bounds `Fix` unfolds (time), `max_depth`
+/// bounds the control-stack depth (space). Each overrun is an **explicit, graceful** error
+/// ([`EvalError::FuelExhausted`] / [`EvalError::DepthLimit`]) — never a hang and never a host-stack
+/// abort. (`max_depth` is a fixed budget here; deriving it *dynamically* from detected headroom is the
+/// deferred policy of DN-05 §2.4 / DN05-Q5.)
+pub fn run_core_with_budget(
+    node: &Node,
+    prims: &PrimRegistry,
+    swap: &dyn SwapEngine,
+    fuel: u64,
+    max_depth: usize,
+) -> Result<CoreValue, EvalError> {
+    let top = Rc::new(lower::lower_to_anf(node));
     let mut fuel = fuel;
-    let result = eval_block(&anf, Env::new(), prims, swap, &mut fuel)?;
+    let result = eval_machine(top, Env::new(), prims, swap, &mut fuel, max_depth)?;
     as_core(result)
 }
 
@@ -119,109 +158,73 @@ pub fn run(node: &Node, prims: &PrimRegistry, swap: &dyn SwapEngine) -> Result<V
     }
 }
 
-/// Evaluate one ANF block in `env`: bind each RHS in order, then return the result atom's value.
-fn eval_block(
-    anf: &Anf,
-    mut env: Env,
-    prims: &PrimRegistry,
-    swap: &dyn SwapEngine,
-    fuel: &mut u64,
-) -> Result<AotVal, EvalError> {
-    for b in anf.bindings() {
-        let v = eval_rhs(&b.rhs, &env, prims, swap, fuel)?;
-        env.insert(b.name.clone(), v);
-    }
-    lookup(&env, anf.result())
+/// A continuation: where to bind a returned value and resume. The reified caller context.
+struct Cont {
+    block: Rc<Anf>,
+    idx: usize,
+    env: Env,
+    name: Atom,
 }
 
-fn eval_rhs(
-    rhs: &Rhs,
-    env: &Env,
-    prims: &PrimRegistry,
-    swap: &dyn SwapEngine,
+/// A frame on the explicit **heap** control stack — what makes the machine O(1) host stack.
+// `ApplyThen` carries an inlined `AotVal` (see the note on `AotVal`); the size asymmetry with
+// `Resume` is the same accepted trade-off.
+#[allow(clippy::large_enum_variant)]
+enum Frame {
+    /// Bind the returned value to `name`, then resume `block` at `idx` in `env`.
+    Resume(Cont),
+    /// The returned value is a function; **apply** it to `arg`, then resume per the continuation.
+    /// (The two-step shape of a `Fix` application: unfold the body to a closure, then call it.)
+    ApplyThen { arg: AotVal, cont: Cont },
+}
+
+/// Enter an application `f arg` whose result should resume `ret`: push the right frame and return the
+/// `(block, env)` to evaluate next. Closures call their body; a `Fix` unfolds under the fuel clock
+/// (binding its name to itself) and re-applies. The depth ceiling is checked here (the only place the
+/// control stack grows on a call). Applying a non-function is an explicit refusal.
+fn enter_apply(
+    f: AotVal,
+    arg: AotVal,
+    ret: Cont,
+    stack: &mut Vec<Frame>,
     fuel: &mut u64,
-) -> Result<AotVal, EvalError> {
-    match rhs {
-        Rhs::Const(v) => Ok(AotVal::Core(CoreValue::Repr(v.clone()))),
-        Rhs::Alias(a) => lookup(env, a),
-        Rhs::Op { prim, args } => {
-            let vals: Vec<Value> = args
-                .iter()
-                .map(|a| as_repr_value(lookup(env, a)?))
-                .collect::<Result<_, _>>()?;
-            let refs: Vec<&Value> = vals.iter().collect();
-            let f = prims
-                .get(prim)
-                .ok_or_else(|| EvalError::UnknownPrim(prim.clone()))?;
-            Ok(AotVal::Core(CoreValue::Repr(f(prim, &refs)?)))
+    max_depth: usize,
+) -> Result<(Rc<Anf>, Env), EvalError> {
+    if stack.len() >= max_depth {
+        return Err(EvalError::DepthLimit { limit: max_depth });
+    }
+    match f {
+        AotVal::Closure { param, body, env } => {
+            stack.push(Frame::Resume(ret));
+            let mut call_env = env;
+            call_env.insert(Atom::Named(param), arg);
+            Ok((body, call_env))
         }
-        Rhs::Swap {
-            src,
-            target,
-            policy,
-        } => {
-            let s = as_repr_value(lookup(env, src)?)?;
-            Ok(AotVal::Core(CoreValue::Repr(
-                swap.swap(&s, target, policy)?,
-            )))
+        AotVal::Fix { name, body, env } => {
+            *fuel = fuel.checked_sub(1).ok_or(EvalError::FuelExhausted)?;
+            stack.push(Frame::ApplyThen { arg, cont: ret });
+            let selfval = AotVal::Fix {
+                name: name.clone(),
+                body: Rc::clone(&body),
+                env: env.clone(),
+            };
+            let mut unfold_env = env;
+            unfold_env.insert(Atom::Named(name), selfval);
+            Ok((body, unfold_env))
         }
-        Rhs::Construct { ctor, args } => {
-            let fields: Vec<CoreValue> = args
-                .iter()
-                .map(|a| as_core(lookup(env, a)?))
-                .collect::<Result<_, _>>()?;
-            Ok(AotVal::Core(CoreValue::Data(Datum::new(
-                ctor.clone(),
-                fields,
-            ))))
-        }
-        // A lambda captures the current environment (first-order ⇒ finite capture).
-        Rhs::Lam { param, body } => Ok(AotVal::Closure {
-            param: param.clone(),
-            body: body.clone(),
-            env: env.clone(),
-        }),
-        Rhs::Fix { name, body } => Ok(AotVal::Fix {
-            name: name.clone(),
-            body: body.clone(),
-            env: env.clone(),
-        }),
-        Rhs::App { func, arg } => {
-            let f = lookup(env, func)?;
-            let a = lookup(env, arg)?;
-            apply(f, a, prims, swap, fuel)
-        }
-        Rhs::Match {
-            scrutinee,
-            alts,
-            default,
-        } => {
-            let cv = as_core(lookup(env, scrutinee)?)?;
-            // r3 boundary (RFC-0011 §4.6): the guarantee-meet through Match is the identity only when
-            // the scrutinee is Exact; a non-Exact scrutinee is the explicit deferral (never a
-            // fabricated bound) — mirrors the reference interpreter.
-            if cv.guarantee() != GuaranteeStrength::Exact {
-                return Err(EvalError::GuaranteeMeetUnsupported {
-                    scrutinee: cv.guarantee(),
-                });
-            }
-            select_and_eval(&cv, alts, default.as_ref(), env, prims, swap, fuel)
-        }
+        AotVal::Core(_) => Err(EvalError::ApplyNonFunction),
     }
 }
 
-/// Select the first-matching arm (or default) of a lowered `Match` and evaluate its block, binding
-/// constructor fields left-to-right (mirrors the interpreter's `select_arm`). No match + no default
-/// is an explicit [`EvalError::NonExhaustiveMatch`] (the checker proves coverage above the kernel).
-fn select_and_eval(
+/// Select the first-matching arm (or default) of a lowered `Match`, returning the arm's block (as a
+/// fresh [`Rc`]) and the environment to evaluate it in (constructor fields bound left-to-right). No
+/// match + no default is an explicit [`EvalError::NonExhaustiveMatch`].
+fn select_arm(
     cv: &CoreValue,
     alts: &[AnfAlt],
     default: Option<&Anf>,
     env: &Env,
-    prims: &PrimRegistry,
-    swap: &dyn SwapEngine,
-    fuel: &mut u64,
-) -> Result<AotVal, EvalError> {
+) -> Result<(Rc<Anf>, Env), EvalError> {
     for alt in alts {
         match alt {
             AnfAlt::Ctor {
@@ -245,54 +248,185 @@ fn select_and_eval(
                             arm_env
                                 .insert(Atom::Named(binder.clone()), AotVal::Core(field.clone()));
                         }
-                        return eval_block(body, arm_env, prims, swap, fuel);
+                        return Ok((Rc::new(body.clone()), arm_env));
                     }
                 }
             }
             AnfAlt::Lit { value, body } => {
                 if let CoreValue::Repr(rv) = cv {
                     if rv.repr() == value.repr() && rv.payload() == value.payload() {
-                        return eval_block(body, env.clone(), prims, swap, fuel);
+                        return Ok((Rc::new(body.clone()), env.clone()));
                     }
                 }
             }
         }
     }
     match default {
-        Some(d) => eval_block(d, env.clone(), prims, swap, fuel),
+        Some(d) => Ok((Rc::new(d.clone()), env.clone())),
         None => Err(EvalError::NonExhaustiveMatch),
     }
 }
 
-/// Apply a function value to an argument. A closure runs its body in the captured environment with
-/// the parameter bound; a `Fix` **unfolds** under the fuel clock — `Fix(f,e)` evaluates `e` with `f`
-/// bound to the `Fix` itself, then applies the result (always a closure for the first-order surface).
-/// Applying a non-function is an explicit [`EvalError::ApplyNonFunction`].
-fn apply(
-    f: AotVal,
-    arg: AotVal,
+/// The result of evaluating one binding's RHS: bind a value and advance, or switch to a new block
+/// (a call / match descent) whose continuation is already on the stack.
+// `Bind` carries an inlined `AotVal` (see the note on `AotVal`) — same accepted size trade-off.
+#[allow(clippy::large_enum_variant)]
+enum Step {
+    Bind(Atom, AotVal),
+    Switch(Rc<Anf>, Env),
+}
+
+/// The trampoline: iterate over blocks with an explicit control stack, so object-level recursion
+/// uses **heap**, not the host call stack (O(1) host stack — the M-347 fix). `App`/`Match` push a
+/// continuation and switch blocks; a completed block returns its result value, unwinding the stack
+/// (an `ApplyThen` frame re-applies). Deep recursion is bounded by `fuel` (time) and `max_depth`
+/// (space) — both explicit graceful errors, never an abort.
+fn eval_machine(
+    top: Rc<Anf>,
+    top_env: Env,
     prims: &PrimRegistry,
     swap: &dyn SwapEngine,
     fuel: &mut u64,
+    max_depth: usize,
 ) -> Result<AotVal, EvalError> {
-    match f {
-        AotVal::Closure { param, body, env } => {
-            let mut call_env = env;
-            call_env.insert(Atom::Named(param), arg);
-            eval_block(&body, call_env, prims, swap, fuel)
+    let mut block = top;
+    let mut env = top_env;
+    let mut idx = 0usize;
+    let mut stack: Vec<Frame> = Vec::new();
+
+    loop {
+        if idx >= block.bindings().len() {
+            // Block complete: produce its result and resume the top control-stack frame.
+            let val = lookup(&env, block.result())?;
+            match stack.pop() {
+                None => return Ok(val),
+                Some(Frame::Resume(c)) => {
+                    let mut e = c.env;
+                    e.insert(c.name, val);
+                    block = c.block;
+                    env = e;
+                    idx = c.idx;
+                }
+                Some(Frame::ApplyThen { arg, cont }) => {
+                    // The returned value is the unfolded closure; apply it to the saved arg (its
+                    // result flows to `cont`, the frame enter_apply pushes).
+                    let (nb, ne) = enter_apply(val, arg, cont, &mut stack, fuel, max_depth)?;
+                    block = nb;
+                    env = ne;
+                    idx = 0;
+                }
+            }
+            continue;
         }
-        AotVal::Fix {
-            ref name,
-            ref body,
-            ref env,
-        } => {
-            *fuel = fuel.checked_sub(1).ok_or(EvalError::FuelExhausted)?;
-            let mut unfold_env = env.clone();
-            unfold_env.insert(Atom::Named(name.clone()), f.clone());
-            let unfolded = eval_block(body, unfold_env, prims, swap, fuel)?;
-            apply(unfolded, arg, prims, swap, fuel)
+
+        // Evaluate binding `idx`. Compute an owned `Step` inside a scope that borrows `block`, so we
+        // can reassign `block`/`env` afterwards without an outstanding borrow.
+        let step: Step = {
+            let binding = &block.bindings()[idx];
+            let name = binding.name.clone();
+            match &binding.rhs {
+                Rhs::Const(v) => Step::Bind(name, AotVal::Core(CoreValue::Repr(v.clone()))),
+                Rhs::Alias(a) => Step::Bind(name, lookup(&env, a)?),
+                Rhs::Op { prim, args } => {
+                    let vals: Vec<Value> = args
+                        .iter()
+                        .map(|a| as_repr_value(lookup(&env, a)?))
+                        .collect::<Result<_, _>>()?;
+                    let refs: Vec<&Value> = vals.iter().collect();
+                    let f = prims
+                        .get(prim)
+                        .ok_or_else(|| EvalError::UnknownPrim(prim.clone()))?;
+                    Step::Bind(name, AotVal::Core(CoreValue::Repr(f(prim, &refs)?)))
+                }
+                Rhs::Swap {
+                    src,
+                    target,
+                    policy,
+                } => {
+                    let s = as_repr_value(lookup(&env, src)?)?;
+                    Step::Bind(
+                        name,
+                        AotVal::Core(CoreValue::Repr(swap.swap(&s, target, policy)?)),
+                    )
+                }
+                Rhs::Construct { ctor, args } => {
+                    let fields: Vec<CoreValue> = args
+                        .iter()
+                        .map(|a| as_core(lookup(&env, a)?))
+                        .collect::<Result<_, _>>()?;
+                    Step::Bind(
+                        name,
+                        AotVal::Core(CoreValue::Data(Datum::new(ctor.clone(), fields))),
+                    )
+                }
+                Rhs::Lam { param, body } => Step::Bind(
+                    name,
+                    AotVal::Closure {
+                        param: param.clone(),
+                        body: Rc::new(body.clone()),
+                        env: env.clone(),
+                    },
+                ),
+                Rhs::Fix { name: fname, body } => Step::Bind(
+                    name,
+                    AotVal::Fix {
+                        name: fname.clone(),
+                        body: Rc::new(body.clone()),
+                        env: env.clone(),
+                    },
+                ),
+                Rhs::App { func, arg } => {
+                    let f = lookup(&env, func)?;
+                    let a = lookup(&env, arg)?;
+                    let ret = Cont {
+                        block: Rc::clone(&block),
+                        idx: idx + 1,
+                        env: std::mem::take(&mut env),
+                        name,
+                    };
+                    let (nb, ne) = enter_apply(f, a, ret, &mut stack, fuel, max_depth)?;
+                    Step::Switch(nb, ne)
+                }
+                Rhs::Match {
+                    scrutinee,
+                    alts,
+                    default,
+                } => {
+                    let cv = as_core(lookup(&env, scrutinee)?)?;
+                    // r3 boundary (RFC-0011 §4.6): the guarantee-meet through Match is the identity
+                    // only when the scrutinee is Exact; a non-Exact scrutinee is the explicit deferral
+                    // (never a fabricated bound) — mirrors the reference interpreter.
+                    if cv.guarantee() != GuaranteeStrength::Exact {
+                        return Err(EvalError::GuaranteeMeetUnsupported {
+                            scrutinee: cv.guarantee(),
+                        });
+                    }
+                    let (arm_block, arm_env) = select_arm(&cv, alts, default.as_ref(), &env)?;
+                    if stack.len() >= max_depth {
+                        return Err(EvalError::DepthLimit { limit: max_depth });
+                    }
+                    stack.push(Frame::Resume(Cont {
+                        block: Rc::clone(&block),
+                        idx: idx + 1,
+                        env: std::mem::take(&mut env),
+                        name,
+                    }));
+                    Step::Switch(arm_block, arm_env)
+                }
+            }
+        };
+
+        match step {
+            Step::Bind(name, v) => {
+                env.insert(name, v);
+                idx += 1;
+            }
+            Step::Switch(nb, ne) => {
+                block = nb;
+                env = ne;
+                idx = 0;
+            }
         }
-        AotVal::Core(_) => Err(EvalError::ApplyNonFunction),
     }
 }
 
@@ -395,11 +529,9 @@ mod tests {
         assert_eq!(out.payload(), &Payload::Bits(expected));
     }
 
-    #[test]
-    fn a_nonproductive_recursion_exhausts_fuel_not_hangs() {
-        // (fix f => λx. f x) byte — unfolds forever; the fuel clock makes it an explicit
-        // FuelExhausted, never a hang (the never-silent termination guard, mirroring the interpreter).
-        let node = Node::App {
+    /// `(fix f => λx. f x) c` — unfolds forever.
+    fn spin() -> Node {
+        Node::App {
             func: Box::new(Node::Fix {
                 name: "f".into(),
                 body: Box::new(Node::Lam {
@@ -411,13 +543,40 @@ mod tests {
                 }),
             }),
             arg: Box::new(Node::Const(byte())),
-        };
+        }
+    }
+
+    #[test]
+    fn a_nonproductive_recursion_is_an_explicit_budget_error_not_an_abort() {
+        // M-347: with the trampoline the env-machine is O(1) host stack, so even at a HUGE fuel this
+        // is a graceful explicit budget error (the depth ceiling or fuel — whichever first), never a
+        // host-stack abort and never a hang. (Pre-trampoline, fuel this large overflowed the stack.)
         let r = run_core_with_fuel(
-            &node,
+            &spin(),
             &PrimRegistry::with_builtins(),
             &IdentitySwapEngine,
-            32,
+            50_000_000,
         );
-        assert_eq!(r, Err(EvalError::FuelExhausted));
+        assert!(
+            matches!(
+                r,
+                Err(EvalError::DepthLimit { .. }) | Err(EvalError::FuelExhausted)
+            ),
+            "expected a graceful budget error, got {r:?}"
+        );
+    }
+
+    #[test]
+    fn the_depth_ceiling_is_an_explicit_graceful_error() {
+        // With a small control-stack ceiling and ample fuel, deep recursion hits the *depth* budget
+        // first — an explicit DepthLimit (the space analogue of fuel), never a host-stack abort.
+        let r = run_core_with_budget(
+            &spin(),
+            &PrimRegistry::with_builtins(),
+            &IdentitySwapEngine,
+            1_000_000, // fuel ≫ depth, so the depth ceiling bites first
+            64,
+        );
+        assert_eq!(r, Err(EvalError::DepthLimit { limit: 64 }));
     }
 }
