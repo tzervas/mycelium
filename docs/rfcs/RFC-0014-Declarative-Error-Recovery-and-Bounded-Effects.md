@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0014 |
-| **Status** | **Draft (Proposed)** (drafted 2026-06-16; the isolated recovery subsystem RFC-0013 §8/§9 deferred. **2026-06-16 — three §8 design questions resolved** by the maintainer: effect mechanism = *declared annotations, coarse set*; *no* kernel-visible hook (runtime/checker only, KC-3); *separate named budgets, one enforcement mechanism* (composed alongside fuel/depth in the DN-05 plumbing). Still Draft pending the remaining §8 questions and the §7 prior-art tracing into `research/` before Accepted. **No code until Accepted.**) |
+| **Status** | **Draft (Proposed)** (drafted 2026-06-16; the isolated recovery subsystem RFC-0013 §8/§9 deferred. **2026-06-16 — three §8 design questions resolved** by the maintainer: effect mechanism = *declared annotations, coarse set*; *no* kernel-visible hook (runtime/checker only, KC-3); *separate named budgets, one enforcement mechanism* (composed alongside fuel/depth in the DN-05 plumbing). **2026-06-16 — the remaining §8 questions now carry concrete *proposed v0 dispositions*** (recovery-action set closed; manual-declare + compositional-check for effects; single-task v0 boundary with concurrency deferred to RFC-0008; lexical/bounded handler composition) — **maintainer sign-off pending** — and the §7 prior-art tracing is **DONE** (Research Record 05). RFC-0014 is therefore **ready for a Draft→Accepted decision**. **No code until Accepted.**) |
 | **Type** | Foundational / normative (once Accepted) — a **separable** surface + runtime subsystem; minimal/no kernel change (KC-3) |
 | **Date** | 2026-06-16 |
 | **Feeds** | RFC-0006 (the optional recovery/effect surface); RFC-0008 (runtime — where effect budgets are enforced, alongside fuel/depth); RFC-0013 (the diagnostic *presentation* of an error this RFC *acts on*); the stdlib (a `result`/`effect` module candidate, M-346) |
@@ -349,15 +349,45 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
   ceiling and resolves DN-05 dynamic budgets. So effect budgets *compose alongside* fuel + depth in the same
   runtime/DN-05 plumbing (shared mechanism), rather than coupling those established clocks into one shared
   budget abstraction. Each overrun is its own explicit, graceful `EffectBudgetExhausted` (§4.5 I4).
-- **Effect inference vs. manual declaration.** v0 = manual (explicit is honest); whether to infer/propagate
-  declared effects (ergonomics) without letting an effect become implicit is open (§9).
-- **Recovery-action set.** The closed v0 set (`fallback`/`retry`/`escalate`/`cleanup_then_propagate`) — is
-  it complete? Are user-defined recovery actions admitted, and if so how do they stay bounded + never-silent?
-- **Concurrency interaction (RFC-0008).** How effects, budgets, and recovery compose across tasks
-  (cancellation, failure propagation, per-task budgets) — deferred to the RFC-0008 integration.
-- **Handler composition & re-entrancy.** Nested handlers, cascade ordering, and whether a handler may itself
-  be effectful (and thus budgeted) — open; the bias is that a handler's effects are declared + bounded like
-  any other.
+- **Effect inference vs. manual declaration — PROPOSED v0 (2026-06-16; maintainer sign-off pending).**
+  v0 is **manual declaration only** — explicit is honest, no inference (an effect set is *written* on
+  the signature). To keep that from being a correctness hole rather than just verbose, the checker
+  **composes declared effects as a *check*, not an inference**: a definition calling an effectful
+  callee must itself declare (a superset of) the callee's effects, or it is an explicit
+  `UndeclaredEffect` error (I3). That is *checking* that declared effects compose up the call graph —
+  it never *infers* (synthesises) an undeclared effect, so an effect can still never become implicit.
+  Computing a minimal effect set (true inference) is deferred to §9; the v0 line is **manual-declare +
+  compositional-check**.
+- **Recovery-action set — PROPOSED v0 (2026-06-16; maintainer sign-off pending).** The v0 set is
+  **closed and complete for v0**: `fallback(value)` (recover — explicit, honestly-tagged value, I2),
+  `retry(<=N)` (re-attempt — bounded, I4), `escalate(class')` (transform + re-propagate), and
+  `cleanup_then_propagate(effect)` (act, then let the error continue — additive). These cover the four
+  canonical error-driven behaviours, and **each is provably never-silent** (every action yields either
+  an explicit success or a re-propagated error — I1) **and bounded** (the only re-attempting action,
+  `retry`, carries `<=N`). **User-defined recovery actions are NOT admitted in v0** (YAGNI) — they are a
+  §9 future. When added, a user action is a function `Err(ε) -> Result<τ>` that **must** be total over
+  the error's cases (I1) and **declare + bound** any effect it performs (I3/I4) — i.e. it inherits the
+  same obligations as the built-in set; it is never a privileged escape hatch.
+- **Concurrency interaction (RFC-0008) — DEFERRED with a v0 boundary fixed (2026-06-16; sign-off
+  pending).** v0 recovery/effects are **single-task / synchronous**: budgets are per-evaluation (the
+  same scope the `Fix` fuel clock already uses), and there is **no cross-task effect or cascade** in v0
+  (no spooky action across tasks — there are no tasks yet). The genuinely-open composition (per-task
+  budgets, cancellation, cross-task failure propagation) is **RFC-0008's** design, and it must compose
+  **additively**: a task failure is an explicit error subject to I1, a per-task budget overrun is an
+  in-that-task `EffectBudgetExhausted`. Fixing the v0 boundary now makes the deferral *safe* (v0 cannot
+  accidentally admit an unbounded cross-task cascade) rather than merely postponed.
+- **Handler composition & re-entrancy — PROPOSED v0 (2026-06-16; maintainer sign-off pending).**
+  - **Nesting is lexical and deterministic.** Handlers nest like `Match`: the **innermost** handling
+    site whose pattern matches an error handles it; an unmatched case **re-propagates** to the next
+    enclosing site (never dropped — I1). No ambiguity, no ordering surprises.
+  - **A handler may itself be effectful — and is then declared + budgeted like any other code** (I3/I4):
+    a handler is *not* a privileged effect-free or budget-free zone (a `cleanup_then_propagate` that
+    allocates declares `alloc(<=…)`).
+  - **A cascade (a handler that triggers a further error) is bounded by an explicit `cascade(max_depth)`
+    budget** (I4/I5); overrun is `EffectBudgetExhausted`, never unbounded handler recursion. Cascade
+    *ordering* is just the deterministic innermost-first propagation above.
+  - This makes composition deterministic, never-silent, and bounded with **no machinery beyond** the
+    declared + budgeted-effects discipline already in §4.5.
 - **Research grounding (§7) — DONE (2026-06-16).** The prior art is traced into `research/` (Research
   Record 05, T5.1–T5.6), discharging this obligation; the externals were verified by web search and the
   in-repo budget precedent confirmed. The *remaining* open questions above are design choices, not
@@ -379,6 +409,22 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
 
 ## Meta — changelog
 
+- **2026-06-16 — Remaining §8 questions given proposed v0 dispositions (sign-off pending; still
+  Draft).** At the maintainer's direction (draft the remaining answers before any code), the four §8
+  questions left after the three gating decisions now carry concrete **proposed v0 dispositions**,
+  marked *maintainer sign-off pending* (append-only — these are proposals, not yet Accepted decisions):
+  (1) **effect inference** = *manual-declare + compositional-check* (the checker requires a caller to
+  declare a superset of its callee's effects — `UndeclaredEffect` otherwise — but never *infers* an
+  undeclared effect; true minimal-set inference deferred to §9); (2) **recovery-action set** = the
+  *closed* v0 set `fallback`/`retry`/`escalate`/`cleanup_then_propagate` (each provably never-silent +
+  bounded; user-defined actions are a §9 future and would inherit I1/I3/I4); (3) **concurrency** =
+  *deferred to RFC-0008* with a v0 boundary fixed now (single-task / synchronous; per-evaluation
+  budgets; no cross-task cascade — so the deferral is safe, not merely postponed); (4) **handler
+  composition** = *lexical innermost-first* (unmatched re-propagates, never drops — I1), a handler's own
+  effects are declared + budgeted like any code, and a cascade is bounded by `cascade(max_depth)`
+  (overrun → `EffectBudgetExhausted`) — all with no machinery beyond §4.5. With these + the §7 prior-art
+  tracing (Record 05) done, the RFC is **ready for a Draft→Accepted decision**; **no code lands until
+  Accepted** (RFC-0014's gate). Append-only.
 - **2026-06-16 — Three §8 design questions resolved (maintainer; still Draft).** The maintainer settled
   the three questions that gate any recovery/effects code, all on the KC-3/KISS-aligned options: (1)
   **effect mechanism = declared annotations, coarse set** (not capabilities, not hybrid — capabilities/

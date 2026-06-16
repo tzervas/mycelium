@@ -36,6 +36,16 @@ corpus, not released software. Versioning will begin when the kernel does.
   X1–X3 are now normative. Unblocks the **M-345** Rust tooling-layer build (`mycelium-lsp`/`xtask`; no
   kernel change). Verified by the central never-silent invariant test (I1/I2/I4) + round-trip / registry /
   allowlist / audit-view tests.
+- **RFC-0014 — remaining §8 questions given proposed v0 dispositions** (maintainer sign-off pending; RFC
+  stays Draft, no code yet): effect inference = *manual-declare + compositional-check* (caller must
+  declare a superset of callee effects — `UndeclaredEffect` otherwise — but the checker never infers an
+  undeclared effect); recovery-action set = the *closed* v0 set
+  `fallback`/`retry`/`escalate`/`cleanup_then_propagate` (each never-silent + bounded; user actions a §9
+  future inheriting I1/I3/I4); concurrency = *deferred to RFC-0008* with a single-task v0 boundary fixed
+  now (per-evaluation budgets, no cross-task cascade — deferral is safe); handler composition = *lexical
+  innermost-first* (unmatched re-propagates, never drops), handler effects declared + budgeted like any
+  code, cascades bounded by `cascade(max_depth)`. With the §7 prior-art tracing done, RFC-0014 is **ready
+  for a Draft→Accepted decision**.
 - **RFC-0014 — three §8 design questions resolved** (maintainer; RFC stays Draft): effect mechanism =
   **declared annotations, coarse set** (capabilities/effect-rows additive futures only); **no
   kernel-visible hook** — effect-budget enforcement is entirely runtime/checker, **zero new L0 nodes**
