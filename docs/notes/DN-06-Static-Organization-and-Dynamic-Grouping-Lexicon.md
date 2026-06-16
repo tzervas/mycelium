@@ -130,8 +130,8 @@ hashable unit with a public surface), consistent with the existing content-addre
     source file: **`// nodule: <dotted.name>`** (the name is the logical path within its `phylum`), or
     the bare **`// nodule`** when an explicit name is not needed. The maintainer prefers a **structured**
     header beyond this minimal marker — license, authors, first/last dates, version — on a nodule/phylum
-    **root**, with **subnodules inheriting** most fields top-down, plus a `phylum.toml` **manifest** (the
-    pyproject.toml analogue). That schema is designed in **`docs/spec/Nodule-Header-and-Phylum-Manifest.md`**
+    **root**, with **subnodules inheriting** most fields top-down, plus a `mycelium-proj.toml` **manifest** (the
+    pyproject.toml analogue). That schema is designed in **`docs/spec/Nodule-Header-and-Project-Manifest.md`**
     (Proposed, 2026-06-16): a closed-key `// @key: value` header, the manifest, and explicit
     `EXPLAIN`-able inheritance — metadata is **not** identity (the content hash stays canonical, ADR-003),
     unknown keys/conflicts are explicit errors (G2). The bare marker remains valid for a subnodule (the

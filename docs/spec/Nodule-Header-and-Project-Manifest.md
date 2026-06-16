@@ -1,9 +1,9 @@
-# Spec (Proposed) — Nodule Header & Phylum Manifest
+# Spec (Proposed) — Nodule Header & Project Manifest
 
 | Field | Value |
 |---|---|
-| **Status** | **Proposed** (2026-06-16 — maintainer requested a *structured* header + a manifest; format choices flagged for sign-off in §7) |
-| **Scope** | The structured in-file **nodule header**, the per-phylum **manifest** (`phylum.toml`), and the **top-down inheritance** that ties them together |
+| **Status** | **Proposed** (2026-06-16 — maintainer requested a *structured* header + a project manifest; manifest filename `mycelium-proj.toml` ratified, remaining format choices flagged in §7) |
+| **Scope** | The structured in-file **nodule header**, the per-project **manifest** (`mycelium-proj.toml`), and the **top-down inheritance** that ties them together |
 | **Depends on** | DN-06 (`phylum`/`nodule`/`colony`); RFC-0006 (L2 surface); ADR-003 (content-addressing); the honesty rule / G2 (never-silent), VR-5, KC-3 |
 | **Feeds** | M-358 (lexicon migration + linter recognises the header); M-359 (this schema, enacted); M-361 (the full toolchain epic); M-346 (stdlib/packaging) |
 
@@ -13,7 +13,7 @@ DN-06 fixed that a `nodule`'s status is declared in a **header comment, not a fi
 minimal v0 form (`// nodule: <name>`). The maintainer prefers a **structured** header carrying useful
 metadata in a clean, compact format — license, authors, first publication, last update, version — at
 least on a nodule/phylum **root**, with **subnodules inheriting** most of it top-down. This spec designs
-that: a closed-key **header schema**, a **`phylum.toml` manifest** (the pyproject.toml analogue, scoped
+that: a closed-key **header schema**, a **`mycelium-proj.toml` manifest** (the pyproject.toml analogue, scoped
 for Mycelium), and an **explicit, inspectable inheritance** model.
 
 Three house-rule commitments shape it:
@@ -26,24 +26,31 @@ Three house-rule commitments shape it:
 - **Small, opt-in, KISS (KC-3/YAGNI).** A subnodule needs only `// nodule: <name>`; everything else
   inherits. The closed key set is deliberately small; richer keys are additive, never silently admitted.
 
-## 2. The phylum manifest — `phylum.toml`
+## 2. The project manifest — `mycelium-proj.toml`
 
-The canonical, phylum-level metadata + dependencies + surface, in **TOML** (the pyproject/Cargo
-precedent — familiar, diffable, one well-known file per phylum root, not per-source bloat). It is the
+The canonical project-level metadata + dependencies + surface, in **TOML** (the pyproject/Cargo
+precedent — familiar, diffable, one well-known file per project root, not per-source bloat). It is the
 **default source** every nodule header inherits from.
 
+The filename is **`mycelium-proj.toml`** (maintainer, 2026-06-16): easily recognised as the *language
+project* manifest, and deliberately **not** `phylum.toml` — a Mycelium project is not only a library
+(a `phylum`); it may be a **program, a script, or a small implementation**. The `[project]` table's
+`kind` records which, so the manifest fits every project shape, and a tiny single-file **script** may
+even carry only a nodule header and skip the manifest entirely.
+
 ```toml
-# phylum.toml — the manifest of one phylum (the root of a library-scale unit).
-[phylum]
-name        = "geometry"          # the phylum name (dotted-root of its nodules)
+# mycelium-proj.toml — the manifest of one Mycelium project (library / program / script).
+[project]
+name        = "geometry"          # the project name (a phylum's dotted-root, or a program/script name)
+kind        = "phylum"            # "phylum" (library) | "program" | "script" — the project shape
 version     = "1.2.0"             # semver; a human release label over content hashes
 license     = "Apache-2.0"        # SPDX identifier (checked against the SPDX list)
 authors     = ["Tyler Zervas <…>"]
 since       = "2026-01-10"        # first publication (ISO-8601)
 summary     = "2D/3D geometry primitives and certified swaps."
-lang        = "mycelium-0"        # the surface-language edition this phylum targets (MSRV-analogue)
+lang        = "mycelium-0"        # the surface-language edition this project targets (MSRV-analogue)
 
-[surface]                          # the PUBLIC nodules this phylum exports (everything else is internal)
+[surface]                          # for a phylum: the PUBLIC nodules it exports (else omitted)
 exports     = ["geometry.shapes", "geometry.transform"]
 
 [dependencies]                     # other phyla — content-addressed (ADR-003): by hash AND a version req
@@ -53,13 +60,13 @@ numerics    = { phylum = "numerics", version = "^2", hash = "blake3:…" }
 format      = "mycfmt-0"           # formatter spelling/version
 lints       = "strict"             # lint profile
 
-[spore]                            # optional: how this phylum publishes as a deployable (ADR-013)
+[spore]                            # optional: how a phylum/program publishes as a deployable (ADR-013)
 include     = ["surface"]          # what germinates; defaults to the public surface
 ```
 
-Sections beyond `[phylum]` are optional; `[phylum]` is required for a phylum root. The manifest's
-filename `phylum.toml` is conventional (it names the *unit*, not a source file) — it does **not**
-violate DN-06's "no `nodule` in paths" rule.
+Only `[project]` (with `name`/`kind`) is required; the rest is optional and shape-dependent (`[surface]`
+is a phylum concern). The filename `mycelium-proj.toml` is conventional (it names the *project*, not a
+source file) — it does **not** violate DN-06's "no `nodule` in paths" rule.
 
 ## 3. The nodule header (in-file, structured, compact)
 
@@ -72,7 +79,7 @@ metadata lines follow. Compact, greppable, one closed key set shared with the ma
 
 | Key | Meaning | Inherits? |
 |---|---|---|
-| `@version` | semver release label | from `phylum.version` |
+| `@version` | semver release label | from `project.version` |
 | `@license` | SPDX id | from `phylum.license` |
 | `@authors` | comma-separated | from `phylum.authors` |
 | `@since` | first publication (ISO date) | from `phylum.since` |
@@ -108,7 +115,7 @@ value (e.g. a non-SPDX `@license`, a non-ISO `@updated`) is an explicit error, n
 The **effective header** of a file is resolved most-specific-first, and is always inspectable:
 
 ```
-in-file @key  >  nearest ancestor nodule-root header  >  phylum.toml [phylum]  >  toolchain default
+in-file @key  >  nearest ancestor nodule-root header  >  mycelium-proj.toml [project]  >  toolchain default
 ```
 
 - **Inherited fields** (`version`/`license`/`authors`/`since`): omit them in a subnodule and they take
@@ -117,7 +124,7 @@ in-file @key  >  nearest ancestor nodule-root header  >  phylum.toml [phylum]  >
   license-incompatible value, is an **explicit error**, never silently applied).
 - **Per-file fields** (`@updated`, `@summary`): not inherited — each file owns them.
 - **`EXPLAIN`-able (no black box).** The toolchain can print a file's *resolved* header annotated with
-  each field's **source** (`local` / `nodule-root` / `phylum.toml`), so "where did this license come
+  each field's **source** (`local` / `nodule-root` / `mycelium-proj.toml`), so "where did this license come
   from?" is always answerable — the same no-ambient-metadata discipline G2 applies to errors.
 - **Identity unaffected (ADR-003).** Resolution produces *associated metadata*; the nodule's content
   hash is over its definitions only. Two files with identical code but different `@updated` have the
@@ -151,8 +158,10 @@ enactment as **M-359**; the header-marker recognition rides with **M-358** (lint
 These are the consequential format choices; the rest of the spec follows from them. Sensible defaults
 are chosen above; please confirm or redirect (append-only either way):
 
-1. **Manifest filename** — `phylum.toml` (chosen: names the unit, TOML like Cargo/pyproject). Alt:
-   `mycelium.toml` (language-branded). 
+1. **Manifest filename — RESOLVED: `mycelium-proj.toml`** (maintainer, 2026-06-16). Easily recognised as
+   the *language project* manifest, and **not** `phylum.toml` — a project may be a library (`phylum`), a
+   **program**, a **script**, or a small implementation; the `[project].kind` field records which. (The
+   earlier `phylum.toml`/`mycelium.toml` candidates are superseded.)
 2. **Header sigil** — `// @key: value` (chosen: compact, greppable, colon-consistent with `// nodule:`).
    Alt: a fenced block, or TOML-in-comment for a single parser.
 3. **Closed v0 key set** — `version`/`license`/`authors`/`since`/`updated`/`summary` (+ the `nodule:`
@@ -162,10 +171,17 @@ are chosen above; please confirm or redirect (append-only either way):
 
 ## Meta — changelog
 
+- **2026-06-16 — Manifest filename RESOLVED + scope broadened.** The manifest is **`mycelium-proj.toml`**
+  (maintainer) — recognised as the *language project* manifest, and not `phylum.toml`: a Mycelium project
+  is not only a library (`phylum`) but may be a **program / script / small implementation**; the
+  `[project]` table (with `kind`) replaces `[phylum]` so the manifest fits every shape, and a tiny script
+  may carry only a nodule header. The doc is renamed to *Nodule Header & Project Manifest*. (§7 choice #1
+  resolved.) Append-only.
 - **2026-06-16 — Proposed.** Drafted at the maintainer's request for a *structured* nodule header (over
-  DN-06's minimal `// nodule:` marker): a closed-key in-file header (`// @key: value`), a `phylum.toml`
-  manifest (the pyproject/Cargo analogue, scoped for Mycelium), and an explicit, `EXPLAIN`-able top-down
-  inheritance (in-file → nodule-root → `phylum.toml`). Honesty-aligned: no ambient metadata (unknown
+  DN-06's minimal `// nodule:` marker): a closed-key in-file header (`// @key: value`), a `mycelium-proj.toml`
+  project manifest (the pyproject/Cargo analogue, scoped for Mycelium — library/program/script via
+  `[project].kind`), and an explicit, `EXPLAIN`-able top-down inheritance (in-file → nodule-root →
+  `mycelium-proj.toml`). Honesty-aligned: no ambient metadata (unknown
   keys/conflicts are explicit errors — G2), metadata is **not** identity (the content hash stays
   canonical — ADR-003), declared-only license/version (VR-5), tooling-layer (KC-3). Records the
   long-term full-fat toolchain as M-361 and this schema's enactment as M-359. Format choices (§7) are

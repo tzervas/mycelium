@@ -81,7 +81,7 @@ title or the script will create a duplicate.
 
 - **2026-06-16 — Phase 8 added + Phase 7 reconciled.** New **Phase 8 — Toolchain & Release Engineering**
   (anticipated) for the maintainer's "full-fat" toolchain (format / correctness / lint+fix / security +
-  packaging), anchored by **M-361** (epic) with **M-359** (the structured nodule header + `phylum.toml`
+  packaging), anchored by **M-361** (epic) with **M-359** (the structured nodule header + `mycelium-proj.toml`
   manifest, Proposed) as its metadata substrate. Phase 7 reconciled: **M-355/356/357 done** (RFC-0008
   Accepted; single-task boundary lifted; the RT2 fork/join runtime + sequentialization differential v0),
   **M-358** (DN-06 lexicon migration) and **M-359** staged. `milestones.json` (Phase 8), `labels.json`

@@ -8,6 +8,19 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (RFC-0015 — 2026-06-16: Automatic Baseline Diagnostics & Recovery, Draft)
+- **RFC-0015 (Draft, Proposed)** captures the DynEL **automated-baseline** design point the maintainer
+  added to the roadmap: an **automation layer over RFC-0013/0014** that auto-derives a zero-config
+  **baseline** diagnostic/logging policy from the language's structured mapping (registry + routes +
+  declared effects), **auto-applies** it (wrapping for logging/QoL), and offers a ladder of *light*
+  overrides → *fully manual*. The load-bearing **honesty boundary** is fixed up front: automatic =
+  **additive presentation/logging only** (safe because RFC-0013 never changes control flow — I1);
+  **automatic recovery is opt-in, declared, bounded** (no implicit control-flow change — RFC-0014
+  I3/I4/I5); the baseline is a **reified, `EXPLAIN`-able** policy (no black box — SC-3); the derivation is
+  a **total, inspectable** function of the mapping, not learned (VR-5/RFC-0005). Tooling-layer; no kernel
+  change (KC-3). Forward-pointed from RFC-0013 §9 + RFC-0014 §9; registered in `Doc-Index.md`; tracked
+  **M-362**. **No code** — design point only.
+
 ### Changed (DN-06 — 2026-06-16: static-organization & dynamic-grouping lexicon — `phylum` / `nodule` / `colony`)
 - **DN-06 ratified** (maintainer-directed), introducing on-brand terms for static organization and
   deconflicting a real collision: **`phylum`** (content-addressed **library-scale** unit) and
@@ -23,11 +36,11 @@ corpus, not released software. Versioning will begin when the kernel does.
   **dedicated `docs/Glossary.md`** is created — a summarized **Index** over a detailed **Glossary**
   (the fungal lexicon + honesty/architecture concepts), each entry citing its normative source, maintained
   separately from the RFCs (registered in `Doc-Index.md`). The header-comment convention folds into M-358.
-- **Proposed — structured nodule header + `phylum.toml` manifest (`docs/spec/Nodule-Header-and-Phylum-Manifest.md`).**
+- **Proposed — structured nodule header + `mycelium-proj.toml` manifest (`docs/spec/Nodule-Header-and-Project-Manifest.md`).**
   At the maintainer's preference for a *structured* header carrying useful metadata (license, authors,
   first/last dates, version) on a nodule/phylum **root**, with **subnodules inheriting** top-down: a
-  closed-key in-file header (`// @key: value`), a `phylum.toml` manifest (the pyproject/Cargo analogue,
-  scoped for Mycelium), and explicit `EXPLAIN`-able inheritance (in-file → nodule-root → `phylum.toml`).
+  closed-key in-file header (`// @key: value`), a `mycelium-proj.toml` manifest (the pyproject/Cargo analogue,
+  scoped for Mycelium), and explicit `EXPLAIN`-able inheritance (in-file → nodule-root → `mycelium-proj.toml`).
   Honesty-aligned: **metadata is not identity** (the content hash stays canonical — ADR-003), no ambient
   metadata (unknown keys/conflicts are explicit errors — G2), declared-only license/version (VR-5),
   tooling-layer (KC-3). **Proposed** — the format choices (§7) are flagged for sign-off; no code lands
