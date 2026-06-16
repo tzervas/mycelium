@@ -509,3 +509,21 @@ issues:
     body: |
       RFC-0012 (Draft, 2026-06-16): a surface-only declared, scoped, paradigm-only representation default + scoped override/conversion blocks, to offset honesty's verbosity (tension A) without a black box. Two normative invariants: the ambient emits no Swap (I1); resolution is observationally the identity (I2, identical L0 ⟹ identical hash), defended by a meaning-preservation differential (NFR-7). Cross-paradigm edges stay explicit swaps; a missing one is an explicit MissingConversion. Kernel untouched (KC-3); exported signatures are concrete reprs (ADR-016).
       Acceptance (design-first): RFC-0012 Draft presented; on ratification, wire the resolution pass + the never-silent checks + M-142/LSP rendering + the §4.6 differential into mycelium-l1. R12-Q1..Q4 open.
+
+  - id: M-345
+    title: "M-345 — DN-04: optional structured diagnostics / error-handling (DynEL-inspired)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:design, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-310]
+    body: |
+      DN-04 (Draft, 2026-06-16): evaluate DynEL's (gitlab:albedo_black/DynEL) feature set as OPTIONAL structured/graded/dual-format diagnostics over Mycelium's existing explicit errors. Governing constraint: diagnostics are additive presentation, never a substitute for a never-silent error (G2). Import the contracts (graded levels; human+JSON projections; reified per-fn {exceptions, custom_message, tags} a la RFC-0005); EXCLUDE the anti-patterns (eval-on-config, os.environ dump, logger.catch swallowing) per the security posture. Rust-first (no Python; ADR-007), eventually self-hosted in Mycelium-lang. Tooling-layer home; kernel takes no logging dep (KC-3).
+      Acceptance (design-first): DN-04 presented; next decide policy-vs-handler scope (DN04-Q1) + draft an RFC (feeds RFC-0008 observability + RFC-0005-style error policy) before folding. Early candidate stdlib module (M-346).
+
+  - id: M-346
+    title: "M-346 — Mycelium core library / stdlib (roadmap epic)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:design, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-310]
+    body: |
+      Roadmap anchor for a core library / standard library — the feature set that makes Mycelium usable, not just a substrate+kernel. Decomposed once the surface language is self-hosting enough to write stdlib modules in Mycelium itself (dogfooding; free of other languages). Principles inherited and non-negotiable: never-silent (G2), honest per-op guarantee tags, no black boxes / EXPLAIN, small auditable kernel (stdlib lives above it, KC-3), content-addressed (ADR-003); Rust-first now (ADR-007), Mycelium-lang eventually. Early candidate modules: diagnostics (DN-04/M-345), collections, numerics helpers (ADR-010), VSA/encoding utils (RFC-0003), I/O + serialization (RFC-0001 §4.8).
+      Acceptance (roadmap): when self-hosting is close, draft a Core Library RFC (scope, module boundaries, the guarantee/EXPLAIN contract every stdlib op must meet, Rust->Mycelium migration) and decompose into per-module tasks. Present before folding.

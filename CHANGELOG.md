@@ -8,6 +8,30 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — roadmap: Mycelium core library / stdlib, M-346)
+- **M-346 (#108) — core-library / stdlib roadmap anchor.** Records the maintainer's goal of a solid
+  core-library feature set for usability, to be decomposed once the surface language is self-hosting
+  (dogfooding; free of other *languages*). Inherits the non-negotiable principles (never-silent G2,
+  honest per-op guarantee tags, no black boxes/EXPLAIN, small kernel KC-3 — stdlib lives *above* it,
+  content-addressed ADR-003; Rust-first ADR-007 now → Mycelium-lang eventually). Seeds: `diagnostics`
+  (DN-04), collections, numerics helpers, VSA/encoding utils, I/O + wire-form serialization. No code;
+  draft a Core Library RFC near self-hosting and present before folding.
+
+### Added (Phase 4 — DN-04 Draft: optional structured diagnostics, DynEL-inspired, M-345)
+- **DN-04 (Draft) — evaluate DynEL's (`gitlab:albedo_black/DynEL`) feature set as *opt-in* structured
+  diagnostics** (`docs/notes/DN-04-…`). Source read (maintainer-supplied zip). **Governing
+  constraint:** diagnostics are *additive presentation* over Mycelium's explicit, reasoned errors —
+  **never a substitute** for a never-silent error/`Option`/`CheckVerdict::NotValidated` (G2). Imports
+  the *contracts* — graded context levels (minimal/medium/detailed), human + machine-readable (JSON)
+  output as two **projections** of one content-addressed diagnostic (G11/M-380), and a **reified
+  per-definition error-handling policy** `{exceptions, custom_message, tags}` (the RFC-0005 pattern;
+  ADR-006) — and explicitly **excludes** DynEL's three anti-patterns: `eval`-on-config (code
+  execution), full `os.environ` dump at the detailed level (secret leakage), and `logger.catch`
+  exception-swallowing (a never-silent violation). **Rust-first (ADR-007): no Python added** — DynEL
+  is reference-only; the feature is a Rust tooling-layer renderer (kernel untouched, KC-3), **eventually
+  self-hosted in Mycelium-lang** (dogfooding; free of other *languages*). Tracked as M-345 (#107);
+  Doc-Index + `idmap.tsv` / `issues.yaml` updated.
+
 ### Added (Phase 4 — RFC-0012 Draft: ambient representation & scoped overrides, M-344)
 - **RFC-0012 (Draft) — a surface-only, declared, scoped, *paradigm-only* representation default +
   scoped override/conversion blocks** (`docs/rfcs/RFC-0012-…`), to offset honesty's verbosity (tension
