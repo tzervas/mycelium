@@ -8,6 +8,19 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — RFC-0004 §9.2/§9.3 reference impl: build-target profiles in mycelium-build)
+- **`mycelium-build` gains the `target` module — the build-target profiles (RFC-0004 r2 §9.2/§9.3),
+  orthogonal to the §4 stable-component gate.** `BuildProfile` = `Interpret` (no targets, dev default)
+  / `Slim(Target)` (one) / `Selective(set)` (a chosen subset) / `Fat` (all supported) — fat is
+  first-class but optional; `targets()` resolves each to a concrete `(os, arch)` set. Slim/selective/fat
+  share **one** artifact shape, a content-addressed per-target `VariantTable` (§9.3), with **never-silent
+  runtime dispatch** (`select(host)` → the host's variant or an explicit `DispatchMiss` the caller
+  resolves by interpreter fallback or refusal — never a wrong-target variant, G2/SC-3). **Honest scope
+  (VR-5):** `realizable_targets` admits only the **host** today — a non-host `--slim`/`--target`/`--fat`
+  is an explicit `BuildError::CrossTargetDeferred` (cross-target codegen awaits the MLIR→LLVM backend,
+  RFC-0004 §2), never a host-only build mislabeled as fat. This is the build-orchestration layer that is
+  *ready* for that backend, not the backend. (RFC-0004 §9; 15 build-crate tests)
+
 ### Added (Phase 3/4 — M-310 real LSP document sync, on the now-complete text→Node→L0 pipeline)
 - **`mycelium-lsp` gains real document sync (`sync` module + `serve` wiring).** With the surface→L0
   pipeline complete (RFC-0011 r3 / RFC-0001 r4), the LSP server now handles
