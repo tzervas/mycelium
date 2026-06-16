@@ -300,8 +300,10 @@ invariants I1–I5 are verified, when the tooling lands, by:
     outcome), but it may not make the original refusal vanish unobserved. I1 (§4.1) is the line a recovery
     design must not cross without superseding this RFC (append-only).
 
-  How Mycelium admits this — surface, semantics, and the totality interaction — is an explicit open
-  question for a **separate** future RFC, not a v0 gap and not an extension of §4.4.
+  How Mycelium admits this — surface, semantics, and the totality interaction — is designed in the
+  **separate** RFC **RFC-0014 (Declarative Error Recovery & Bounded Effects)**, not a v0 gap here and not
+  an extension of §4.4. RFC-0014 does **not** weaken this RFC's I1 (it generalises *additive* from
+  presentation to control: a handler acts on the error explicitly and either recovers or re-propagates).
 - **DN04-Q2 (first-class tags) — future.** Tags are a free-form string set in v0 (§4.4). Whether they become
   a typed, queryable, content-addressed field on diagnostics/`Meta` (more useful, more honest, more spec) is
   recorded as a future possibility (§9).
@@ -325,8 +327,9 @@ invariants I1–I5 are verified, when the tooling lands, by:
   and even cascades are allowed *when explicitly declared and implemented*, so they stay known and
   bounded; the enemy is *unintended/unknown/unbounded* effects, not effects per se; default tightly
   scoped, opt into broader behaviour explicitly), *only* if it stays **additive over** the explicit
-  error (never-silent G2, totality). It would need its **own RFC** and would supersede this RFC's §4.4
-  scope (append-only) — see §8 DN04-Q1 for the maintainer's recorded constraints.
+  error (never-silent G2, totality). This is now designed in its **own RFC — RFC-0014 (Declarative Error
+  Recovery & Bounded Effects)** — which supersedes this RFC's §4.4 *scope boundary* for the recovery
+  concern (append-only) without weakening I1; see §8 DN04-Q1 for the maintainer's recorded constraints.
 - **Stdlib graduation** (DN04-Q5 / M-346): a self-contained `diagnostics` core-library module — a clean
   first stdlib citizen and dogfooding target.
 - **Self-hosting** (DN-04 §3): the renderer eventually written in Mycelium-lang, consuming Mycelium's own
@@ -343,7 +346,7 @@ invariants I1–I5 are verified, when the tooling lands, by:
   in the RFC-0005 pattern, content-addressed and `EXPLAIN`-able) and **excludes** the three anti-patterns
   found in the source (config-string `eval` → registry lookup; wholesale env/locals dump → allowlisted
   detailed tier; `logger.catch` swallowing → additive-over-a-still-propagating-error), per `/security-review`
-  + never-silent (G2). Records the maintainer's fixed decisions (2026-06-16): **DN04-Q1 = presentation /
+  and never-silent (G2). Records the maintainer's fixed decisions (2026-06-16): **DN04-Q1 = presentation /
   routing only** for v0 (a policy sets message/tags/level/route; the explicit error/`Option`/refusal STILL
   PROPAGATES — recovery is **deferred**, §8); **DN04-Q2 = free-form string tags** for v0 (typed tags future);
   implementation is **Rust, tooling-layer only** (`mycelium-lsp`/`xtask`; **no kernel logging dep**, KC-3,

@@ -8,6 +8,30 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — RFC-0014: declarative error recovery & bounded effects, drafted)
+- **RFC-0014 — Declarative Error Recovery & Bounded Effects (Draft (Proposed)).** Designs the isolated
+  recovery subsystem RFC-0013 §8/§9 deferred (the DN04-Q1 recovery half) — a way for errors to **bubble**
+  and **trigger functionality** (fallback, retry, cleanup, escalation), as a **separable** subsystem with
+  a bounded blast radius. Three pillars: **errors-as-propagating-values** (the RFC-0001 substrate, G2);
+  **explicit declarative recovery** (an explicit handling site that elaborates to L0 `Match` — **KC-3, no
+  new kernel node** — plus a reified RFC-0005-pattern `on <ErrorClass> => <action>` recovery policy); and
+  **declared, bounded effects** (effects named on signatures so there are no unknown side effects; every
+  unbounded effect carries an explicit budget and overruns *gracefully* as `EffectBudgetExhausted` — the
+  direct generalisation of the `Fix`/`FixGroup` fuel clock, the M-347 depth ceiling, and DN-05 budgets).
+- **Records the maintainer's governing discipline:** effects and even cascades are allowed **when
+  explicitly declared and implemented** so they stay *known and bounded* — the enemy is
+  *unintended/unknown/unbounded* effects (memory explosion, runaway cascade, spooky action), not effects
+  per se; default tightly scoped, broader opt-in by explicit declaration; recovery is **additive over**
+  the explicit error (never silent — G2; never fabricates or upgrades a guarantee — VR-5). Isolation:
+  budget enforcement lives with RFC-0004/0008/DN-05, **not** the kernel; clean **RFC-0013 split**
+  (presentation vs. recovery; shared registry/pattern; RFC-0014 does not weaken RFC-0013's I1).
+- Prior art (Result/`?`, algebraic effects, **Erlang/OTP bounded supervision**, structured-concurrency
+  cancellation, capabilities, Mycelium's own budget idiom) recorded as **design inspiration not yet traced
+  to `research/`** (a pre-ratification task). Many design choices (effect mechanism, budget vocabulary, any
+  kernel hook) are **explicit open questions** — no code lands with the draft; ratification + a tracking
+  milestone are the maintainer's. RFC index + RFC-0013 §8/§9 cross-refs updated. Advances SC-3, G2, VR-5,
+  NFR-2/SC-5b.
+
 ### Added (Phase 4 — M-345: RFC-0013 structured diagnostics & reified error policy, drafted from DN-04)
 - **RFC-0013 — Structured Diagnostics & Reified Error-Handling Policy (Draft (Proposed)).** Turns the
   DynEL-inspired DN-04 direction into a ratifiable, **tooling-layer** design with **no kernel change**
