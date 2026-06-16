@@ -19,6 +19,11 @@
 //!   This is a *third, compiled* execution path; everything outside the bit subset is an explicit
 //!   [`llvm::AotError`] refusal (never silent), with `llc`/`clang` absence reported as a skippable
 //!   `ToolchainMissing`. The interp↔native differential (M-302) checks it against the interpreter.
+//! - [`budget::DepthBudget`] — the **dynamic depth budget** for the env-machine's control stack
+//!   (DN-05 §2.4 / DN05-Q5): with the M-347 trampoline the control stack is on the heap, so the depth
+//!   ceiling is a *policy over memory headroom*, derived from detected `MemAvailable`/`RLIMIT_AS`
+//!   (zero-`unsafe`, pure-`std` `/proc`) with a conservative static fallback and an `EXPLAIN`-able
+//!   basis — never a magic constant, never an abort ([`aot::default_depth_budget`]).
 //! - [`inject::Image`] — the **in-process hot-inject** prototype (M-341; ADR-016/017): a hash-keyed
 //!   `ContentHash → entry` dispatch table over the M-340 JIT. A call resolves to a compiled entry if
 //!   present, else interprets (RFC-0004 §9 continuum); injection loads a content-addressed unit and
@@ -29,6 +34,7 @@
 
 pub mod aot;
 pub mod bitnet;
+pub mod budget;
 pub mod dialect;
 pub mod inject;
 pub mod jit;
@@ -37,10 +43,14 @@ pub mod pack;
 pub mod simd;
 pub mod specialize;
 
-pub use aot::{run, run_core, run_core_with_fuel, run_with_layout};
+pub use aot::{default_depth_budget, run, run_core, run_core_with_fuel, run_with_layout};
 pub use bitnet::{
     compile_bitnet_dot, compile_bitnet_dot_for, emit_bitnet_dot_ir, emit_bitnet_dot_ir_for,
     jit_ternary_dot, jit_ternary_dot_for, ternary_dot_ref, BitnetDotKernel,
+};
+pub use budget::{
+    AutoDepthBudget, DepthBasis, DepthBudget, DepthResolution, MemSource, StaticDepthBudget,
+    StaticReason, STATIC_FALLBACK_DEPTH,
 };
 pub use dialect::emit;
 pub use inject::{recompile_closure, Image, InjectError, Resolution};

@@ -22,8 +22,10 @@
 //! **explicit, graceful** budgets — `fuel` (Fix unfolds; time → [`EvalError::FuelExhausted`]) and a
 //! control-stack depth ceiling (space → [`EvalError::DepthLimit`]) — never a host-stack abort and
 //! never a hang. (Empirically: pre-trampoline this aborted at ~600 unfolds; post-trampoline it is
-//! graceful — see `xtask recursion-probe`, DN-05 §1.1.) The depth ceiling is a fixed default here; a
-//! *dynamic* budget (derive it from detected headroom) is the deferred policy of DN-05 §2.4.
+//! graceful — see `xtask recursion-probe`, DN-05 §1.1.) The depth ceiling is now resolved
+//! **dynamically** from detected memory headroom ([`crate::budget`], DN-05 §2.4 / DN05-Q5): with the
+//! control stack on the heap, the budget is a policy over memory, derived honestly and `EXPLAIN`-able,
+//! with a conservative static fallback. [`run_core_with_budget`] still takes an explicit ceiling.
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -34,6 +36,7 @@ use mycelium_core::{
 };
 use mycelium_interp::{EvalError, PrimRegistry, SwapEngine};
 
+use crate::budget::{AutoDepthBudget, DepthBudget, DepthResolution};
 use crate::pack;
 
 /// The default fuel for the env-machine's `Fix` clock — generous; the guard is against a
@@ -41,12 +44,22 @@ use crate::pack;
 /// (mirrors the reference interpreter, RFC-0007 §4.5).
 const AOT_FUEL: u64 = 1_000_000;
 
-/// The default **control-stack depth** ceiling for the trampoline (M-347): the *space* analogue of
+/// Resolve the **control-stack depth** ceiling for the trampoline (M-347): the *space* analogue of
 /// fuel. The machine refuses past this with an explicit [`EvalError::DepthLimit`] — a graceful limit
-/// that bounds heap growth, never an OOM/abort. Deliberately a **fixed conservative default** here; a
-/// *dynamic* budget (derive it from detected memory/stack headroom) is the pluggable policy left open
-/// in DN-05 §2.4 / DN05-Q5 — not built now (KC-3/YAGNI: avoid platform-specific bloat).
-const AOT_MAX_DEPTH: usize = 200_000;
+/// that bounds heap growth, never an OOM/abort. Resolved **dynamically** from detected memory
+/// headroom ([`crate::budget`], DN-05 §2.4 / DN05-Q5): a fixed constant is too timid on a large host
+/// and too bold on a small one, so the default policy derives it from `MemAvailable`/`RLIMIT_AS` with
+/// a conservative static fallback. The basis is `EXPLAIN`-able ([`default_depth_budget`]).
+fn resolve_max_depth() -> usize {
+    AutoDepthBudget::default().resolve().max_depth
+}
+
+/// The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no
+/// black box, G2). Exposed for tooling/diagnostics (the xtask probe, a future `EXPLAIN`) so the
+/// chosen limit and *why* are always inspectable, never an opaque magic number (DN-05 §2.4 / DN05-Q5).
+pub fn default_depth_budget() -> DepthResolution {
+    AutoDepthBudget::default().resolve()
+}
 
 /// A value in the AOT env-machine: a fully-evaluated [`CoreValue`] (repr value or datum), or a
 /// **closure** / **recursive suspension** for the r4 function fragment. Closures capture their
@@ -117,24 +130,25 @@ pub fn run_core(
     prims: &PrimRegistry,
     swap: &dyn SwapEngine,
 ) -> Result<CoreValue, EvalError> {
-    run_core_with_budget(node, prims, swap, AOT_FUEL, AOT_MAX_DEPTH)
+    run_core_with_budget(node, prims, swap, AOT_FUEL, resolve_max_depth())
 }
 
-/// [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the default depth ceiling.
+/// [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling.
 pub fn run_core_with_fuel(
     node: &Node,
     prims: &PrimRegistry,
     swap: &dyn SwapEngine,
     fuel: u64,
 ) -> Result<CoreValue, EvalError> {
-    run_core_with_budget(node, prims, swap, fuel, AOT_MAX_DEPTH)
+    run_core_with_budget(node, prims, swap, fuel, resolve_max_depth())
 }
 
 /// [`run_core`] with **both** budgets explicit (M-347): `fuel` bounds `Fix` unfolds (time), `max_depth`
 /// bounds the control-stack depth (space). Each overrun is an **explicit, graceful** error
 /// ([`EvalError::FuelExhausted`] / [`EvalError::DepthLimit`]) — never a hang and never a host-stack
-/// abort. (`max_depth` is a fixed budget here; deriving it *dynamically* from detected headroom is the
-/// deferred policy of DN-05 §2.4 / DN05-Q5.)
+/// abort. This is the **explicit override**: `max_depth` is whatever the caller passes; the
+/// `run_core`/`run_core_with_fuel` entries instead resolve it *dynamically* from detected memory
+/// headroom ([`crate::budget`], DN-05 §2.4 / DN05-Q5).
 pub fn run_core_with_budget(
     node: &Node,
     prims: &PrimRegistry,

@@ -8,6 +8,26 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — M-349: dynamic depth budget for the AOT env-machine; DN-05 §2.4 / DN05-Q5 enacted)
+- **`mycelium-mlir::budget` — a `DepthBudget` trait that resolves the env-machine's control-stack
+  ceiling *dynamically*, with an `EXPLAIN`-able basis (DN05-Q5 resolved).** With the M-347 trampoline
+  the control stack is on the **heap**, so the ceiling is honestly a policy over **memory**: the default
+  `AutoDepthBudget` reads detected headroom — `MemAvailable` (`/proc/meminfo`) capped by a finite
+  `RLIMIT_AS` (`/proc/self/limits`) — via **pure-`std` `/proc`** (Linux), spends 70 % ÷ a conservative
+  1 KiB/frame estimate, and clamps to `[10 000, 2 000 000]`. **Zero `unsafe`** (no FFI, no SP-reading —
+  ADR-014's "minimal unsafe" satisfied with *none*); non-Linux or any read/parse failure falls back to
+  the conservative static default (the prior `200 000`), **never a guess**. The resolved ceiling **and
+  its derivation** are an inspectable `DepthResolution`/`DepthBasis` (`Display`; `aot::default_depth_budget`;
+  printed by `xtask recursion-probe`) — no black box (G2); the limit itself stays an explicit
+  `EvalError::DepthLimit` (never an abort/hang). `run`/`run_core`/`run_core_with_fuel` now resolve it
+  dynamically; `run_core_with_budget` keeps the explicit override. **Measured** on this host: `MemAvailable`
+  ≈ 15.99 GB → raw ≈ 10.9M, clamped to the 2 000 000 ceiling (vs the old fixed 200 000); a constrained
+  host *tightens* below the fallback (unit-tested: 256 MiB ⇒ ≈ 183k). A **property test** bounds the
+  derivation (`[floor, ceil]`, monotone in headroom) for all inputs incl. saturation. Per-frame cost is a
+  `Declared` over-count (VR-5), not `Proven`. Trusted interpreter unchanged; three-way differential holds
+  (NFR-7). DN-05 §2.4 / **DN05-Q5 → Resolved**; native-path *stack* detection (DN05-Q4 / M-348) reuses the
+  trait.
+
 ### Changed (Phase 4 — M-347: AOT env-machine made stack-robust via a trampoline; DN-05 #2 enacted)
 - **`mycelium-mlir::aot` rewritten as a trampoline over an explicit heap control stack
   (`eval_machine`).** Object-level recursion now lives on the **heap**, so the env-machine uses **O(1)

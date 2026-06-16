@@ -109,6 +109,13 @@ pub fn run() {
 
     println!("== recursion-probe (DN-05 / M-347): empirical AOT recursion stack-robustness ==\n");
 
+    // The dynamically-resolved depth budget + its basis (DN-05 §2.4 / DN05-Q5) — EXPLAIN-able, never
+    // a magic constant. This is the ceiling the AOT env-machine will refuse past below.
+    println!(
+        "AOT depth budget: {}\n",
+        mycelium_mlir::default_depth_budget()
+    );
+
     // 1) The interpreter is O(1)-stack: graceful at large fuel (in-process — it cannot crash).
     let big = 5_000_000u64;
     let t = Instant::now();
