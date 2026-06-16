@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0014 |
-| **Status** | **Accepted — Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design and all §8 dispositions are normative. **Enacted 2026-06-16 — M-352** (#116): the reified recovery subsystem — the result-sum error value, the closed recovery-action set, the registry-shared `on <ErrorClass> => <action>` recovery policy, declared + budgeted effects with a graceful `EffectBudgetExhausted`, the no-undeclared-effect check, and the never-silent `handle` (every error recovered or re-propagated, never dropped) — is code in `crates/mycelium-lsp/src/recover`; the L0-`Match`-over-error-sums lowering target is differentially verified in `mycelium-l1` (no new kernel node, KC-3). Wiring effect-budget enforcement into the AOT env-machine is the RFC-0008 integration (tracked, not v0).) |
+| **Status** | **Accepted — Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design and all §8 dispositions are normative. **Enacted 2026-06-16 — M-352** (#116): the reified recovery subsystem — the result-sum error value, the closed recovery-action set, the registry-shared `on <ErrorClass> => <action>` recovery policy, declared + budgeted effects with a graceful `EffectBudgetExhausted`, the no-undeclared-effect check, and the never-silent `handle` (every error recovered or re-propagated, never dropped) — is code in `crates/mycelium-lsp/src/recover`; the L0-`Match`-over-error-sums lowering target is differentially verified in `mycelium-l1` (no new kernel node, KC-3). Wiring effect-budget enforcement into the AOT env-machine was the RFC-0008 integration — **completed in M-353** (§4.8 changelog entry; the ledger lifted into `mycelium-interp`, an overrun is `EvalError::EffectBudget`).) |
 | **Type** | Foundational / normative (once Accepted) — a **separable** surface + runtime subsystem; minimal/no kernel change (KC-3) |
 | **Date** | 2026-06-16 |
 | **Feeds** | RFC-0006 (the optional recovery/effect surface); RFC-0008 (runtime — where effect budgets are enforced, alongside fuel/depth); RFC-0013 (the diagnostic *presentation* of an error this RFC *acts on*); the stdlib (a `result`/`effect` module candidate, M-346) |
@@ -409,6 +409,26 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
 
 ## Meta — changelog
 
+- **2026-06-16 — §4.8 integration completed (M-353; RFC-0008 Accepted).** The deferred half of §4.8 —
+  *wiring the `Budgets` ledger into the runtime/AOT env-machine's budget enforcement* — is enacted. The
+  ledger primitive (`EffectKind`/`EffectBudget`/`EffectBudgetExhausted`/`Budgets`) is **lifted into
+  `mycelium-interp`** (`mycelium_interp::budget`), the common ancestor both the recovery subsystem
+  (`mycelium-lsp`) and the env-machine (`mycelium-mlir`) depend on — the *shared budget-resolution
+  surface* §8 anticipated, placed to avoid a crate cycle and to sit where the fuel clock already lives
+  (no kernel change — KC-3, **no** new L0 node, **no** kernel hook). An overrun now routes through
+  **`mycelium_interp::EvalError::EffectBudget`** — the effect sibling of `FuelExhausted`/`DepthLimit` on
+  the **one runtime refusal channel** (§8: *separate named budgets, one enforcement mechanism*): a
+  budgeted effect overruns *gracefully at runtime exactly as recursion does*, never a hang/OOM (I4). The
+  env-machine threads the *same* ledger (`run_core_with_effects`) and charges a declared **`alloc`**
+  budget per control-stack frame (the opt-in sibling of the DN-05 depth ceiling, same per-frame-bytes
+  basis) — absent ⇒ unchanged behaviour (I5 opt-in); the `retry`/`cascade` budgets are spent by the
+  recovery *driver* over that same ledger and channel. Verified: the **bounded-overrun-is-explicit test
+  extended to the runtime path** (`mycelium-mlir`: a declared `alloc` budget overruns as
+  `EvalError::EffectBudget`, an absent one leaves behaviour identical) and a **meaning-preserving
+  three-way differential** where it touches L0 (`mycelium-l1`: threading an ample ledger is
+  observable-transparent on the recovery `Match`, NFR-7). This **completes RFC-0014 §4.8**; the
+  *concurrency* composition (§8 — per-task ledgers on this seam) remains RFC-0008's, now in progress
+  (M-355). `just check` green. Append-only.
 - **2026-06-16 — Accepted + Enacted (M-352).** Maintainer ratified `Draft → Accepted` (approving the
   draft and all §8 dispositions — the four proposed v0 dispositions below move from *sign-off pending* to
   normative) and approved proceeding. The §4 design is enacted as a **separable, tooling-layer** subsystem

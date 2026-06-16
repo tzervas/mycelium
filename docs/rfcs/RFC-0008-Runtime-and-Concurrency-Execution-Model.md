@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0008 |
-| **Status** | **Draft** (the Runtime-tier grounding ADR-012 §7.3 required; ratification is the maintainer's) |
+| **Status** | **Accepted** (2026-06-16 — maintainer sign-off; the Runtime-tier grounding ADR-012 §7.3 required. RT1–RT7 and the §4 model are now **normative**. Enactment is staged: the budget-unification slice — RFC-0014 §4.8 — landed first (M-353); the concurrency/supervision track — per-task budgets, cancellation, cross-task propagation, `reclaim` — is the §4.7 revision in progress, M-355.) |
 | **Type** | Foundational / normative (once Accepted) |
 | **Date** | June 10, 2026 |
 | **Depends on** | RFC-0004 (single-node execution model — **extended, not changed**); RFC-0001 (Value/`Meta`/guarantee lattice, WF1–WF5); RFC-0005 (the one selection mechanism + EXPLAIN); RFC-0006 (S1–S6, LR-4/LR-8/LR-9); RFC-0007 (totality / `matured`); RFC-0002 (`ProbabilityBound`, ADR-010 δ-kernel); ADR-012 §7.3 (the gap this fills); DN-02 (naming law); research **T4.1–T4.6** (`research/04-runtime-concurrency-RECORD.md`) |
@@ -323,6 +323,22 @@ substrate (the RFC-0004 backend story, distributed).
 
 ## Meta — changelog
 
+- **2026-06-16 — Accepted.** Maintainer ratified `Draft → Accepted`: RT1–RT7 and the §4 model are
+  now **normative** (the Runtime-tier grounding ADR-012 §7.3 required). Ratification opens the runtime
+  track in staged slices — *separate named budgets, one enforcement mechanism*, then concurrency:
+  (1) the **budget-unification slice** (RFC-0014 §4.8) lands first as M-353 — the recovery `Budgets`
+  ledger is lifted into `mycelium-interp` (the shared budget-resolution surface both the env-machine
+  and the recovery driver consume) and an effect overrun routes through
+  `mycelium_interp::EvalError::EffectBudget`, the effect sibling of `FuelExhausted`/`DepthLimit` on the
+  one runtime refusal channel — needing **no** RT1–RT7 commitment and **no** kernel hook (KC-3; the
+  ledger lives where fuel/depth live); (2) the **route → observability-sink** binding (RFC-0013 §8)
+  lands next as M-354, honouring RT5 (sink delivery guarantees tagged on the lattice) and I1 (routing
+  never gates propagation); (3) the **concurrency/supervision** track — lifting RFC-0014's single-task
+  v0 boundary to per-task budgets, cancellation, cross-task failure propagation, and bounded cascades
+  under `reclaim` supervision (RT4/RT7; the Erlang/OTP max-restart-intensity grounding, Research Record
+  05 T5.3) — is the §4.7 revision, M-355, presented as a frozen-spec change before folding. The
+  vocabulary stays **reserved, not active syntax** (§4.5 status rule unchanged) until the implementation
+  RFCs land. Append-only.
 - **2026-06-10 — Draft.** Initial draft from Research Pass 4 (T4.1–T4.6): the RT1–RT7 runtime
   invariants extending S1–S6 to concurrency/distribution; deterministic-fragment-first posture
   with sequential reference semantics (NFR-7 extended); placement as the third RFC-0005 site;

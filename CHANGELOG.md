@@ -8,6 +8,40 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (RFC-0008 — 2026-06-16: Runtime & Concurrency Execution Model ratified `Draft → Accepted`)
+- **RFC-0008 ratified `Draft → Accepted`** (maintainer): the seven runtime invariants **RT1–RT7** and
+  the §4 model are now **normative** (the Runtime-tier grounding ADR-012 §7.3 required). Ratification
+  opens the runtime track in staged slices: the **budget-unification slice** (RFC-0014 §4.8 — M-353,
+  below) and the **route → observability-sink** binding (RFC-0013 §8 — M-354) needed no RT1–RT7
+  commitment and proceed first; the **concurrency/supervision** track (RFC-0014 single-task boundary
+  lifted — per-task budgets, cancellation, cross-task propagation, `reclaim` bounded cascades; RT4/RT7 —
+  M-355/M-356) is the §4.7 revision, presented frozen-spec before folding. The §4.5 runtime vocabulary
+  stays **reserved, not active syntax** until the implementation RFCs land.
+
+### Added (Phase 4 — 2026-06-16: M-353 / RFC-0014 §4.8 effect-budget unification, enacted)
+- **M-353 — effect budgets unified with the runtime's fuel/depth clocks (RFC-0014 §4.8 completed).** The
+  recovery `Budgets` ledger — previously a tooling-only reified mechanism — is **lifted into
+  `mycelium-interp`** (`mycelium_interp::budget`: `EffectKind`/`EffectBudget`/`EffectBudgetExhausted`/
+  `Budgets`), the **shared budget-resolution surface** both the AOT env-machine (`mycelium-mlir`) and the
+  recovery driver (`mycelium-lsp`) depend on — placed to avoid a crate cycle and to sit where the fuel
+  clock already lives (**no kernel change** — KC-3, **no** new L0 node, **no** kernel hook). An effect
+  overrun now routes through **`mycelium_interp::EvalError::EffectBudget`** — the effect sibling of
+  `FuelExhausted` (time) / `DepthLimit` (space) on the **one runtime refusal channel** (the ratified §8
+  disposition: *separate named budgets, one enforcement mechanism*): a budgeted effect overruns
+  **gracefully at runtime exactly as a runaway recursion does**, never a hang/OOM (I4). The env-machine
+  threads the same ledger (`run_core_with_effects`) and charges a declared **`alloc`** budget per
+  control-stack frame — the **opt-in** sibling of the DN-05 depth ceiling (same per-frame-bytes basis);
+  an absent budget (the default) leaves behaviour identical (I5). `recover::effect` re-exports the moved
+  types (RFC-0014's enacted API is unchanged) and keeps the *checker* half (`check_effects`/
+  `UndeclaredEffect` — I3) in the tooling layer.
+- **Verified:** the **bounded-overrun-is-explicit test extended to the runtime path** (`mycelium-mlir`:
+  `a_declared_alloc_effect_budget_overruns_gracefully_at_runtime` → `EvalError::EffectBudget`, and
+  `an_absent_alloc_budget_leaves_runtime_behaviour_unchanged`), plus a **meaning-preserving three-way
+  differential** where it touches L0 (`mycelium-l1`:
+  `the_effect_ledger_is_meaning_preserving_on_the_recovery_match` — threading an ample ledger is
+  observable-transparent on the recovery `Match`; NFR-7). `just check` green. Completes the RFC-0014 §4.8
+  deferral; advances G2, VR-5, SC-3. **M-353 (#118)**.
+
 ### Added (Phase 4 — 2026-06-16: M-352 / RFC-0014 declarative recovery & bounded effects, accepted + enacted)
 - **RFC-0014 ratified `Draft → Accepted`** (maintainer; all §8 dispositions normative) and **M-352
   enacted** as a **separable, tooling-layer** subsystem in `crates/mycelium-lsp/src/recover` (**no kernel

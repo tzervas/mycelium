@@ -576,11 +576,11 @@ issues:
   - id: M-353
     title: "M-353 — RFC-0008 integration: unify the effect-budget mechanism (RFC-0014 §4.8)"
     milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
-    labels: [phase:4, type:feature, area:execution, priority:P2, status:needs-design]
+    labels: [phase:4, type:feature, area:execution, priority:P2, status:done]
     depends_on: [M-352, M-349]
     body: |
       Wire the reified recovery effect-budget ledger (crates/mycelium-lsp/src/recover/effect.rs::Budgets) into the runtime so it composes with the DN-05 dynamic depth resolver (crates/mycelium-mlir/src/budget.rs) and the Fix/FixGroup fuel clock as ONE enforcement mechanism over SEPARATE named budgets (the ratified RFC-0014 §8 disposition). EffectBudgetExhausted must surface from the runtime/AOT env-machine on the SAME explicit-refusal path as mycelium_interp::EvalError::FuelExhausted / DepthLimit — graceful, never a hang/OOM (I4). No kernel change (KC-3); no kernel-visible budget hook (confirmed §8). Mind the dependency graph: recover lives in mycelium-lsp, the resolver in mycelium-mlir/-interp — pick the shared-primitive home that avoids a cycle (consider lifting a small shared budget-resolution surface) and keeps the kernel untouched.
-      Acceptance (design-first): present the wiring (a frozen-spec note; likely an RFC-0014 §4.8 enactment clarification, append-only) before folding. Verify: extend the RFC-0014 bounded-overrun test (I4) to the RUNTIME path and add the budgeted-effect program to the three-way differential where it touches L0 (NFR-7). Completes the RFC-0014 §4.8 deferral. just check green.
+      DONE (2026-06-16): the ledger primitive (EffectKind/EffectBudget/EffectBudgetExhausted/Budgets) is LIFTED into mycelium-interp::budget — the shared budget-resolution surface both the env-machine (mycelium-mlir) and the recovery driver (mycelium-lsp) depend on (no crate cycle; sits where the fuel clock lives; no kernel node — KC-3; no kernel hook). An overrun routes through mycelium_interp::EvalError::EffectBudget, the effect sibling of FuelExhausted/DepthLimit on the one runtime refusal channel. The env-machine threads the same ledger (run_core_with_effects) and charges a declared `alloc` budget per control-stack frame (opt-in sibling of the DN-05 depth ceiling); absent ⇒ unchanged behaviour (I5). Verified: bounded-overrun-is-explicit extended to the RUNTIME path (mycelium-mlir) + a meaning-preserving three-way differential on the recovery Match where it touches L0 (mycelium-l1, NFR-7). recover::effect re-exports the moved types (RFC-0014 API stable) and keeps the no-undeclared-effect checker (I3) in the tooling layer. Completes RFC-0014 §4.8. just check green.
   - id: M-354
     title: "M-354 — RFC-0008 integration: diagnostic route targets ↔ observability sinks (RFC-0013 §8)"
     milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
@@ -600,11 +600,11 @@ issues:
   - id: M-355
     title: "M-355 — RFC-0008 ratification: the runtime model (RT1–RT7) Draft → Accepted"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:design, area:execution, priority:P3, status:needs-design]
+    labels: [phase:7, type:design, area:execution, priority:P3, status:done]
     depends_on: []
     body: |
       RFC-0008 (Draft) is the Runtime-tier grounding ADR-012 §7.3 required: the seven runtime invariants RT1–RT7 (§4.1) — values move/state never shared (RT1), deterministic fragment default (RT2), nondeterminism reified/named/explained (RT3), partial failure explicit / no distribution transparency (RT4), runtime guarantees tagged on the lattice (RT5), fusion = lawful semilattice merge (RT6), structured lifetimes / no orphan hypha (RT7) — and the §4.5 vocabulary (hypha/fuse/xloc/cyst/graft/forage/backbone/mesh/tier/reclaim). This is the design-first gate before ANY runtime/concurrency code (M-356/M-357 depend on it). No kernel change anticipated (KC-3); honest probabilistic guarantees where applicable (RT5/VR-5).
-      Acceptance (design-first / maintainer-gated): present RFC-0008 for Draft → Accepted (or ratify the specific slice the dependent tasks need). Trace any prior art still untraced into research/ before Accepted. Append-only.
+      DONE (2026-06-16): maintainer ratified RFC-0008 Draft → Accepted — RT1–RT7 and the §4 model are now normative. The vocabulary stays reserved/not-active until the implementation RFCs land (§4.5 status rule). Ratification unblocks M-356 (concurrency/supervision) and M-357 (RT2 runtime); the budget-unification slice (M-353) and route→sink binding (M-354) needed no RT1–RT7 commitment and proceeded independently. Append-only.
   - id: M-356
     title: "M-356 — RFC-0014 concurrency: per-task budgets, cancellation & bounded-cascade supervision"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
