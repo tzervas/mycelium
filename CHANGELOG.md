@@ -8,6 +8,23 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — ADR-016 + ADR-017 Proposed: the interpreted↔compiled ABI + hot-inject)
+- **ADR-016 (Proposed) — the interpreted↔compiled ABI (RFC-0004 §10 OQ-1).** Dispatch a compiled
+  stable component by its **content hash** (versioning is free, staleness structurally impossible —
+  ADR-003: a change is a new hash, so an old compiled entry can never be applied to a changed
+  definition); cross `CoreValue`s in the **self-describing wire form** (RFC-0001 §4.8) as the canonical
+  value ABI, with a zero-copy fast-path as a *later, validated* optimization (robust/portable first).
+  Honesty crosses the boundary (`Meta`/guarantee travel with the value — WF5). The boundary is
+  toolchain, not kernel (KC-3); codegen deferred (MLIR→LLVM, RFC-0004 §2).
+- **ADR-017 (Proposed) — hot-inject recompiled definitions (RFC-0004 §10 OQ-2).** A hash-keyed
+  dispatch table (ADR-016) + content-addressed dynamic linking (the M-340 `dlopen` JIT is the seed):
+  inject = load a content-addressed unit + register `hash → entry`, **never** mutate running code. The
+  classic atomicity hazard **dissolves** because definitions are immutable — a change is a *new hash
+  under a new entry*, so in-flight calls finish on old code and new callers dispatch to new code; the
+  recompile set is **exactly the changed dependency-closure** by hash reachability (no AST diff). A
+  working in-process prototype on M-340 is the recommended first build step once ratified; native
+  codegen deferred. RFC-0004 §10 OQ-1/OQ-2 now point at the ADRs; ADR README + Doc-Index updated.
+
 ### Added (Phase 4 — RFC-0004 §9.2/§9.3 reference impl: build-target profiles in mycelium-build)
 - **`mycelium-build` gains the `target` module — the build-target profiles (RFC-0004 r2 §9.2/§9.3),
   orthogonal to the §4 stable-component gate.** `BuildProfile` = `Interpret` (no targets, dev default)
