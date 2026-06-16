@@ -8,6 +8,21 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-16: narrative & automated-authoring pipeline — design, M-363)
+- **`docs/spec/Narrative-Authoring-Pipeline.md`** (**Proposed**) — the M-363 pipeline design (design-first;
+  **ratify before building**): a **one content-addressed doc IR → many renderers** architecture
+  (HTML/PDF/EPUB + machine JSON, so all formats share identity — ADR-003/G11, no drift); four projection
+  generators (apiref/manual/book/blog) with their corpus sources; one reviewed template (the human gate
+  for the fully-automated outputs); and the **§4.1 quality bar as a checkable 8-point lint** — single
+  template, navigability, progressive disclosure (RFC-0013 levels), **checked examples** (a stale example
+  fails the build — never-silent for docs, G2), no dead xrefs, dual-projection parity, **no hallucinated
+  prose / undocumented-is-flagged**, legibility/accessibility. Placed in the M-361 toolchain (KC-3). The
+  build stack + format/versioning choices are **flagged for ratification (§8); no pipeline code lands until
+  ratified.**
+- **`research/07-narrative-authoring-pipeline-RECORD.md`** — prior art (rustdoc/docs.rs, mdBook, Sphinx/MyST,
+  Antora, literate programming, Pandoc/Typst, spec-generated manuals) traced as **T7.1–T7.7**, grounding the
+  design (the no-drift, checked-examples, one-IR-many-renderers decisions).
+
 ### Added (2026-06-16: RFC-0015 automatic baseline diagnostics & recovery, M-362)
 - **RFC-0015 ratified `Draft → Accepted`** and enacted. Prior art (DynEL, Rust `tracing`/`log`, Erlang/OTP,
   Python `logging`, structured-logging) traced into **`research/06-automatic-baseline-diagnostics-RECORD.md`**

@@ -128,6 +128,14 @@ The automation is held to the **same** rules as the language it documents:
 
 ## Meta — changelog
 
+- **2026-06-16 — Pipeline design landed (M-363, design-first).** The "later" of §6 is now designed:
+  `docs/spec/Narrative-Authoring-Pipeline.md` (**Proposed**) specifies the **one content-addressed doc IR
+  → many renderers** architecture (HTML/PDF/EPUB + machine JSON), the four projection generators
+  (apiref/manual/book/blog) with their corpus sources, one reviewed template, and the **§4.1 quality bar
+  as a checkable 8-point lint** (incl. *checked examples* and *undocumented-is-flagged*). Prior art traced
+  in `research/07-narrative-authoring-pipeline-RECORD.md` (T7.1–T7.7). The **build stack and format choices
+  are flagged for ratification — no pipeline code lands until ratified** (this note's §6 "ratification"
+  gate). Append-only.
 - **2026-06-16 — Added fully-automated docs + API reference + the format quality bar.** Per the
   maintainer's future-planning addition: a fourth output **(d) Documentation & API reference — *fully*
   automated** (the most automatable, pure projection from code + schemas + the M-359 nodule-header
