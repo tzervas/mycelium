@@ -8,6 +8,28 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Decided (Phase 4 — M-351: RFC-0012 R12-Q1 & R12-Q2 resolved; no new ambient code)
+- **R12-Q1 (per-use size) → no new sugar.** A paradigm-less **ascription** `e : {N}` already states an
+  explicit size at the use site with the paradigm from the central `default` (now tested:
+  `mycelium-l1/tests/ambient.rs::a_paradigm_less_ascription_states_the_per_use_size`), so a context-free
+  bare decimal is sizable without a surrounding annotation and elaborates identically to longhand (I2).
+  **Sizes stay explicit** (no ambient default width); a `u8`/`f64` literal suffix was **rejected**
+  (imports signed/dtype affordances the kernel does not provide — v0 `Binary` is unsigned, no `iN`,
+  `f64` is a Dense dtype not a width — a false-affordance footgun that also fails to generalize across
+  the four paradigms). A paradigm-agnostic `:N` shorthand stays a possible future sugar iff terseness
+  earns it (KISS/YAGNI).
+- **R12-Q2 (paradigm-boundary swaps) → crossings stay at swap sites.** No default swap policy. **Swap
+  sites** vs **`with paradigm` block edges** were weighed against the language's intention (fluid,
+  paradigm-agnostic traversal): swap sites win — a `swap` is a free, first-class *anywhere* crossing and
+  `with paradigm` stays pure tag-scoping (SoC), so safety stays total (explicit `swap`/G2,
+  `MissingConversion`, ADR-016) while traversal stays maximally easy. Block edges would add only
+  *auditability*, and only by constraining where crossings may live (forbidding mid-body swaps) — so the
+  *boundary-audit* idea is **routed to observability tooling (M-345 → DN-04 / RFC-0008)** as a
+  location-independent "every representation crossing + its honesty bound" view, where lossy conversions
+  live. The enforced block-edge boundary is recorded as an optional future discipline (RFC-0012 §9, not
+  adopted); the RFC-0005 decision-table form stays gated on RFC-0005 policy-objects in `mycelium-l1`.
+  **M-351 (#114) closes with no new ambient surface.**
+
 ### Added (Phase 4 — M-344: enact RFC-0012 ambient representation; surface-only, never a black box)
 - **`mycelium-l1::ambient` — the ambient resolution pass (RFC-0012 §4.3/§4.4 enacted).** A *declared,
   scoped, paradigm-only* default (`default paradigm P`) plus block-scope overrides

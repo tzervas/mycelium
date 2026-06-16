@@ -138,6 +138,20 @@ fn a_program_with_no_ambient_is_untouched() {
     );
 }
 
+#[test]
+fn a_paradigm_less_ascription_states_the_per_use_size() {
+    // R12-Q1 (resolved 2026-06-16, M-351): per-use size needs no new sugar — a paradigm-less
+    // ascription `e : {N}` already supplies the ambient paradigm + an explicit width at the use
+    // site, so a context-free bare decimal is sized without a surrounding annotation, and it
+    // elaborates identically to the fully-tagged longhand (I2). Sizes stay explicit; no default
+    // width (the v0 honesty principle is preserved).
+    assert_eq!(
+        elaborated_hash("colony d\ndefault paradigm Binary\nfn main() -> Binary{8} = (5 : {8})"),
+        elaborated_hash("colony d\nfn main() -> Binary{8} = (0b0000_0101 : Binary{8})"),
+        "a `: {{N}}` ascription must pin the per-use size identically to longhand (R12-Q1)"
+    );
+}
+
 // --- never-silent refusals (§4.3/§4.4) -----------------------------------------------------------
 
 fn check_err(src: &str) -> String {
