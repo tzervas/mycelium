@@ -17,6 +17,12 @@ corpus, not released software. Versioning will begin when the kernel does.
   it; `phylum`/`nodule` had no prior use, so only `colony` collided). Justified by the DN-02 three-test
   gate: `colony` on a *living, supervised grouping of tasks* is a higher-fidelity T-map than on a static
   file, and `nodule` beats the generic "module" for the static unit.
+- **Supplement (DN-06 §6 resolved):** a `nodule` is declared by a **header comment**
+  (`// nodule: <name>`, or bare `// nodule`) on the first non-blank line — **not** in the filename/path
+  (paths stay conventional; no `nodule` bloat). RFCs/docs use `nodule` for "module" going forward. A
+  **dedicated `docs/Glossary.md`** is created — a summarized **Index** over a detailed **Glossary**
+  (the fungal lexicon + honesty/architecture concepts), each entry citing its normative source, maintained
+  separately from the RFCs (registered in `Doc-Index.md`). The header-comment convention folds into M-358.
 - **Adopted going forward:** the RFC-0008 §4.7 structured scope is realized as `mycelium-mlir::runtime`'s
   **`Colony`** (alias of the structured `Scope`). The **surface keyword migration** `colony` → `nodule`
   (the L1 lexer/parser/AST/checker — ~226 refs — plus the grammar EBNF + LR(1) oracle + the 23-file

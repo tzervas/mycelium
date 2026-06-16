@@ -119,11 +119,29 @@ hashable unit with a public surface), consistent with the existing content-addre
   *reserved vocabulary* until their constructs land with typing + elaboration (RFC-0006 §4.3 / the
   RFC-0008 R1+R2 stages). `nodule` activates when M-358 swaps the keyword.
 
-## 6. Open questions
+## 6. Resolved dispositions (supplement, 2026-06-16)
 
-- **On-disk naming.** Should `nodule` be the file/directory convention on disk, or stay flexible?
-  *Disposition (v0): flexible* — the content-addressed identity is canonical (ADR-003); a
-  file/dir convention is an ergonomic layer, decided with the M-346 stdlib/packaging work, not here.
+- **On-disk naming — RESOLVED: header comment, not filename.** A file's status as a `nodule` is
+  declared in a **header comment**, **not** in the file/directory name. File and directory names stay
+  **simple and conventional** — forcing `nodule` into paths is bloat/clunk for no gain (developers
+  readily learn that `nodule` is Mycelium's word for "module"; the phonetic bridge module→nodule helps).
+  This supersedes DN-06's earlier "flexible v0" disposition.
+  - **Header format (v0).** The declaration is a comment on the **first non-blank line** of a Mycelium
+    source file: **`// nodule: <dotted.name>`** (the name is the logical path within its `phylum`), or
+    the bare **`// nodule`** when an explicit name is not needed. Simple and greppable; a structured
+    form (additional `key: value` header lines) is an additive future option, never required. The
+    M-141 linter recognises the header; the content-addressed identity (ADR-003) remains the canonical
+    one — the header is an ergonomic declaration, not the source of identity.
+- **"Module" → "nodule" in the corpus — RESOLVED.** RFCs and formal docs use **`nodule`** going forward
+  in place of the generic "module"; existing occurrences migrate opportunistically (the surface *keyword*
+  migration is the mechanical M-358).
+- **Terminology Glossary + Index — RESOLVED: a dedicated, separately-maintained document.** Unique
+  Mycelium terms get a **dedicated** reference (`docs/Glossary.md`), maintained **separately** rather
+  than embedded into every RFC. Per the maintainer's framing: an **Index** is the *summarized* layer
+  (one line per term, with pointers) and the **Glossary** is the *detailed* layer (definition,
+  relationships, defining doc, usage); **the Index points into the Glossary subsection.** Each entry is
+  a *synthesis* citing its normative source (RFC/ADR/DN) — on conflict the source wins. (Created
+  2026-06-16.)
 - **Singular/plural forms.** Documented: `phylum` / **`phyla`**, `nodule` / `nodules`, `colony` /
   `colonies`, `hypha` / **`hyphae`**. The reserved word is the singular; plurals are prose only
   (never identifiers reserved).
@@ -132,6 +150,14 @@ hashable unit with a public surface), consistent with the existing content-addre
 
 ## Meta — changelog & maintenance
 
+- **2026-06-16 — Supplement: open questions resolved (§6).** The maintainer's updated proposal resolves
+  DN-06's open questions: **(a) on-disk naming** — a nodule is declared by a **header comment**
+  (`// nodule: <name>`, or bare `// nodule`) on the first non-blank line, **never** in the filename/path
+  (paths stay conventional; supersedes the earlier "flexible v0"); **(b)** RFCs/docs use **`nodule`**
+  in place of "module" going forward; **(c)** a **dedicated, separately-maintained Glossary + Index** is
+  created (`docs/Glossary.md`) — a summarized Index pointing into a detailed Glossary, each entry citing
+  its normative source. Append-only; the §6 disposition replaces only DN-06's own prior "flexible"
+  on-disk answer.
 - **2026-06-16 — Resolved.** Maintainer directed capturing + ratifying the `phylum`/`nodule`/`colony`
   convention "after deconflicting any collision." Deconfliction: `phylum`/`nodule` are new (no
   collision); **`colony` collides with DN-02 §2's ratified `colony = module`** (226 code refs +
