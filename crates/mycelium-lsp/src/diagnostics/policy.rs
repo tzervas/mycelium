@@ -64,10 +64,19 @@ impl Rule {
         self.level = Some(l);
         self
     }
-    /// Set the route.
+    /// Set the route from a free-form string (the on-the-wire/`PolicyFile` projection form). Prefer
+    /// [`route_to`](Rule::route_to) for a route in the closed v0 set; a string that does not resolve to
+    /// a [`Route`](super::sink::Route) is an explicit [`UnknownRoute`](super::sink::UnknownRoute) at
+    /// sink-resolution time (never a silent misroute — RFC-0013 §8).
     #[must_use]
     pub fn route(mut self, r: impl Into<String>) -> Self {
         self.route = Some(r.into());
+        self
+    }
+    /// Set the route from the **closed v0** [`Route`](super::sink::Route) vocabulary (the checked path).
+    #[must_use]
+    pub fn route_to(mut self, r: super::sink::Route) -> Self {
+        self.route = Some(r.as_str().to_owned());
         self
     }
 }

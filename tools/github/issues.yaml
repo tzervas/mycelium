@@ -584,11 +584,11 @@ issues:
   - id: M-354
     title: "M-354 — RFC-0008 integration: diagnostic route targets ↔ observability sinks (RFC-0013 §8)"
     milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
-    labels: [phase:4, type:feature, area:toolchain, priority:P2, status:needs-design]
+    labels: [phase:4, type:feature, area:toolchain, priority:P2, status:done]
     depends_on: [M-345]
     body: |
       Close RFC-0013 §8's open route-targets question: define the closed v0 set of diagnostic `route` targets (crates/mycelium-lsp/src/diagnostics/record.rs + policy.rs) and bind each to an RFC-0008 runtime/observability sink. Honor I1 (routing NEVER gates propagation — re-run the never-silent invariant test across every route) and RT5 (a sink's delivery guarantee is tagged on the Exact⊐Proven⊐Empirical⊐Declared lattice and never upgraded — VR-5; no unguaranteed "fire and forget" claimed as reliable). The diagnostic stream lives in RFC-0008 (RFC-0013 §4.8 Feeds). Tooling layer only; no kernel logging dependency (KC-3).
-      Acceptance (design-first): present the route vocabulary + the route→sink mapping (maintainer decision; append-only RFC-0013/RFC-0008 note) before folding. Verify per RFC-0013 §5 (never-silent across routes) plus a sink-guarantee (RT5/VR-5) test. Completes the RFC-0013 §8 route-targets/observability deferral.
+      DONE (2026-06-16): closed v0 route vocabulary stream/audit/log/null/mesh (maintainer: 4-set then mesh) in crates/mycelium-lsp/src/diagnostics/sink.rs, each bound to an rfc0008.* sink with an honest Delivery guarantee on the lattice (synchronous/durable/best-effort = Declared; null = honestly NOT delivered; mesh = probabilistic with a declared ProbabilityBound δ, never upgraded without a checked basis — VR-5/T4.2/RT5). Route resolution is checked against the closed set (X1 applied to routes — an out-of-set route is an explicit UnknownRoute, never silent) and lives OUTSIDE present (DiagnosticRecord::sink), so routing/failed-resolution never gates propagation (I1). Verified in tests/diagnostics.rs: never-silent across every closed route, honest sink guarantees (RT5/VR-5), explicit unknown-route. RFC-0013 §8 route-targets RESOLVED; all §8 RFC-0008-tied deferrals discharged. just check green.
 
 # Phase 7 (M-355..M-357) — Runtime & Concurrency Execution Model (RFC-0008). ANTICIPATED (not yet
 # ratified); created 2026-06-16 as the forward home for the runtime/concurrency track the RFC-0013/0014

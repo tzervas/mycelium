@@ -18,6 +18,27 @@ corpus, not released software. Versioning will begin when the kernel does.
   M-355/M-356) is the §4.7 revision, presented frozen-spec before folding. The §4.5 runtime vocabulary
   stays **reserved, not active syntax** until the implementation RFCs land.
 
+### Added (Phase 4 — 2026-06-16: M-354 / RFC-0013 §8 diagnostic routes ↔ RFC-0008 observability sinks)
+- **M-354 — the diagnostic `route` set closed and bound to RFC-0008 sinks (RFC-0013 §8 resolved).** A
+  **closed v0 route vocabulary** — `stream` / `audit` / `log` / `null` / `mesh` — in
+  `crates/mycelium-lsp/src/diagnostics/sink.rs`, each bound to an `rfc0008.*` observability sink with an
+  **honest delivery guarantee** on the lattice (RT5): `stream` (in-process synchronous), `audit`
+  (durable), and `log` (best-effort) are `Declared`; **`null` honestly reports *not delivered*** (never
+  a "fire and forget" claimed reliable); **`mesh` is probabilistic**, carrying a declared
+  `ProbabilityBound` δ (upgraded to Empirical/Proven only with a checked convergence basis — VR-5/T4.2).
+  Route resolution is **checked** against the closed set (the §4.5 X1 "looked up, never evaluated"
+  discipline applied to routes — an out-of-set route is an explicit `UnknownRoute`, never a silent
+  misroute) and lives **outside** `present` (`DiagnosticRecord::sink` is the dispatch point), so routing
+  — or a failed resolution — **never gates propagation** (I1). A typed `Rule::route_to(Route)` setter is
+  the checked path; the free-form `route(String)` remains the on-the-wire projection. Tooling layer only;
+  **no kernel logging dependency** (KC-3).
+- **Verified** by `crates/mycelium-lsp/tests/diagnostics.rs`: **never-silent across every closed route**
+  (I1 re-run per route — the error still propagates, each route resolves to its sink), **honest sink
+  guarantees** (no sink over-claims `Declared`; the null sink does not deliver; the mesh sink carries a
+  well-formed δ — RT5/VR-5), and an **explicit unknown route** (an out-of-set route string surfaces
+  `UnknownRoute` without gating propagation). `just check` green. Completes the RFC-0013 §8
+  route-targets/observability deferral; advances NFR-2/SC-5b. **M-354 (#119)**.
+
 ### Added (Phase 4 — 2026-06-16: M-353 / RFC-0014 §4.8 effect-budget unification, enacted)
 - **M-353 — effect budgets unified with the runtime's fuel/depth clocks (RFC-0014 §4.8 completed).** The
   recovery `Budgets` ledger — previously a tooling-only reified mechanism — is **lifted into
