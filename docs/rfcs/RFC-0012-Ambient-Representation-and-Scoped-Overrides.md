@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0012 |
-| **Status** | **Draft** (2026-06-16) |
+| **Status** | **Accepted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design is normative. Enactment — the resolution pass + the never-silent checks + M-142/LSP rendering + the §4.6 differential — is the gated follow-on M-344; no code lands with ratification.) |
 | **Type** | Foundational / normative (once Accepted) — surface/term-layer feature; no kernel change |
 | **Date** | 2026-06-16 |
 | **Depends on** | RFC-0006 §3/§4 (surface language & term-layering — this is a surface-layer feature); RFC-0005 (selection-policy language — the ambient is a reified selection); RFC-0001 §4.5/§4.6 (Core IR; content-addressing / names-as-metadata; WF1/WF2 swap-only repr change); RFC-0007 §4.6 (the elaboration this rides); ADR-006 (selections are reified, inspectable artifacts); ADR-016 (the cross-module ABI is concrete hashes/reprs); G2 (never-silent); tension **A** (the verbosity cost of honesty); KC-3 (small kernel); NFR-7 (the differential) |
@@ -246,3 +246,12 @@ annotation resolved to. No ambient declaration can upgrade a guarantee (VR-5).
   ratification (Draft → Accepted) and the elaborator/checker wiring (the resolution pass, the
   `MissingConversion`/`UnresolvedAmbient`/`ParadigmShapeMismatch` checks, the M-142/LSP rendering, and
   the §4.6 differential) are the maintainer's append-only decision, presented here first. Append-only.
+- **2026-06-16 — Accepted.** Maintainer ratification (Draft → Accepted) — no change to the §4 design.
+  The two normative invariants (I1 the ambient emits no `Swap`; I2 resolution is observationally the
+  identity) and the never-silent override/`MissingConversion` rule are now in force as the surface
+  contract; the kernel is unaffected (KC-3 — RFC-0001's frozen node set is untouched). **No code lands
+  with this acceptance**: the elaborator/checker wiring is the gated follow-on **M-344** (#106) — the
+  resolution pass, the `MissingConversion`/`UnresolvedAmbient`/`ParadigmShapeMismatch` refusals, the
+  M-142/LSP "expand ambient" rendering, and the §4.6 meaning-preservation differential. Open questions
+  R12-Q1..Q4 remain (bare-literal width, policy-driven override boundaries, canonical-form choice, VSA
+  interaction). Append-only.

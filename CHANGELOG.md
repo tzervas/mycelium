@@ -8,6 +8,15 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (Phase 4 — RFC-0012 RATIFIED: Draft → Accepted)
+- **RFC-0012 ratified (Draft → Accepted, 2026-06-16; append-only).** The ambient-representation
+  design (§4) is now the normative surface contract: the two invariants (I1 the ambient emits no
+  `Swap`; I2 resolution is observationally the identity) and the never-silent override /
+  `MissingConversion` rule are in force. The kernel is unaffected (KC-3 — RFC-0001's frozen node set
+  is untouched). **No code lands with acceptance** — the elaborator/checker wiring is the gated
+  follow-on **M-344** (#106): the resolution pass, the never-silent refusals, M-142/LSP "expand
+  ambient" rendering, and the §4.6 meaning-preservation differential. RFC README + Doc-Index updated.
+
 ### Added (Phase 4 — roadmap: Mycelium core library / stdlib, M-346)
 - **M-346 (#108) — core-library / stdlib roadmap anchor.** Records the maintainer's goal of a solid
   core-library feature set for usability, to be decomposed once the surface language is self-hosting
