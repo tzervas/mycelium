@@ -18,9 +18,13 @@ corpus, not released software. Versioning will begin when the kernel does.
   (libMLIR-gated; provisioning is near-term via desktop/WSL — **M-348** #110); **(2)** an explicit
   control stack / **trampoline** in the env-machine (near-term buildable; turns the abort into an
   explicit budget/limit — makes never-silent **total** for the AOT path); **(3)** **tail-call
-  detection** — cautious, optional, on top of #2, only if it earns its keep (KC-3/KISS/YAGNI). The
-  trusted interpreter stays the base for deep recursion until #2 lands; the M-210 differential must
-  still hold (NFR-7). Tracked M-347 (#109, P1) + M-348 (#110). Design-first — no fix lands with the note.
+  detection** — cautious, optional, on top of #2, only if it earns its keep (KC-3/KISS/YAGNI). Plus
+  **§2.4: the limit must be *dynamic*** — detect stack/heap headroom + per-frame cost at runtime and
+  derive the safe depth (the ~14 KB/unfold cost varies by build/platform, so a static constant is the
+  wrong knob), behind a small `DepthBudget` trait with a conservative static fallback, `EXPLAIN`-able
+  basis, and an explicit error (never an abort/hang/black box). The trusted interpreter stays the base
+  for deep recursion until #2 lands; the M-210 differential must still hold (NFR-7). Tracked M-347
+  (#109, P1) + M-348 (#110). Design-first — no fix lands with the note.
 
 ### Added (Phase 4 — M-342: AOT path extended to the data + recursion fragment; RFC-0011 §4.4 Q5 closed)
 - **The AOT `aot::run` env-machine now covers the full v0 calculus (M-342).** `mycelium-core::lower`

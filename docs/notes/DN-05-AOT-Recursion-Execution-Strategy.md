@@ -36,6 +36,12 @@ binary-searching the fuel in subprocesses). Result (2026-06-16, Linux host, main
 | **Interpreter** (`eval_core`, fuel 5 000 000) | graceful `FuelExhausted` (~6 s) | **O(1)** — no crash at 5M |
 | **AOT env-machine** (`run_core_with_fuel`) | graceful to **~593** `Fix`-unfolds; **aborts (stack overflow) by ~601** | O(depth) |
 
+Back-of-envelope from this: ~8 MB / ~600 unfolds ≈ **~14 KB of host stack per unfold** (this debug
+build; the chain is ~4 live frames/unfold). That cost is **build- and platform-dependent** (release
+inlines and shrinks it; thread stacks differ — see the 2 MB row), which is precisely why a *static*
+depth constant is the wrong knob and a **dynamic** budget (§2.4) is the right one: measure the headroom
+and the per-frame cost, derive the safe depth.
+
 The env-machine survives only **~600 unfolds** before a host-stack **abort**, while the interpreter is
 graceful at fuel ≫ 5 000 000. (On the smaller 2 MB test-thread stack the abort is <100 — the threshold
 scales with the host stack, exactly the fragility this note removes.) ~600 is shallow enough that the
@@ -66,6 +72,34 @@ never an abort") will be **re-measured**, not asserted.
    small and auditable (KC-3/KISS) and a measurement shows it matters; otherwise the trampoline alone
    already removes the abort. **Explicitly guard against bloat** (YAGNI): a tail-call analysis that
    complicates the IR or the trusted differential is *not* worth it for a prototype env-machine.
+
+## 2.4 The budget should be **dynamic**, not a magic constant (maintainer, 2026-06-16)
+
+Whatever limit #1/#2 introduce must be **set dynamically** — *detect the safe depth at runtime and
+manage it automatically/cleanly* — not hardcoded. The §1.1 data shows why: the per-unfold host-stack
+cost (~14 KB here, debug) varies with build profile and thread/stack size, so any static constant is
+either too timid (rejecting valid recursion) or too bold (still aborting). The mechanism:
+
+- **Detect headroom + per-frame cost → derive the safe depth.** Query the available stack (e.g.
+  `getrlimit(RLIMIT_STACK)` / `pthread_attr_getstacksize`; or measure the SP against the thread base)
+  and divide by a measured/calibrated per-frame cost, times a conservative **safety margin** (e.g. use
+  ~70–80 %). The probe (`recursion-probe`) already gives the calibration method; the runtime does the
+  same arithmetic.
+- **Where it bites depends on the layer.** *Interim, before #2:* a headroom check at each `Fix` unfold
+  converts the host-stack **abort → an explicit graceful limit** *cheaply, today* (a stop-gap that
+  already discharges the never-silent goal). *With #2 (trampoline):* the control stack is on the
+  **heap**, so the budget becomes a *policy* over **heap/work** (and, optionally, a watermark), set the
+  same dynamic way — neither magic nor fixed.
+- **Clean, not fragile (the explicit caution).** Stack/headroom introspection is **platform-specific
+  and approximate**, and SP-reading needs `unsafe` (ADR-014: permitted-but-warned). So it lands behind
+  a **small trait** (`DepthBudget`/`StackPolicy`) with: a **conservative static fallback** when
+  detection is unavailable/uncertain (never a guess), the chosen budget + its basis **`EXPLAIN`-able**
+  (no black box), and the limit itself an **explicit error** (never an abort *or* a hang). It must stay
+  small enough not to bloat the kernel/trusted base (KC-3) — it is a *runtime policy*, not kernel logic.
+
+Net: **dynamic budget = the policy; the trampoline (#2) = the mechanism; the native managed stack
+(#1) = the same idea designed into native.** The three compose; dynamic detection is how each one
+chooses its limit honestly.
 
 ## 3. Options, against the constraints
 
@@ -104,13 +138,19 @@ This sequencing fixes the *correctness* hazard (the abort) with one contained ch
   (a property on the IR) or in the env-machine loop? Prefer the loop (keeps the IR unbloated).
 - **DN05-Q4 — native limit shape.** What is the native path's explicit deep-recursion error
   (segmented-stack overflow → trap → error), and does it share the env-machine's limit semantics?
+- **DN05-Q5 — dynamic budget mechanism (§2.4).** How is "safe depth" detected *cleanly and
+  cross-platform* (Linux/macOS `getrlimit`/`pthread`; Windows differs) without bloat or fragile
+  `unsafe`? What safety margin, how is the per-frame cost calibrated (compile-time constant vs a tiny
+  runtime probe), and is the budget re-evaluated per call or once per thread? The `DepthBudget` trait +
+  conservative fallback is the shape; the detection backend is the open part.
 
 ## 6. Honest scope (VR-5)
 
-#1 is **not buildable here** (libMLIR-gated) — it lands as a design requirement, honestly deferred.
-#2 is buildable now and is the near-term fix. #3 is optional and measurement-gated. Until #2 lands, the
-**interpreter remains the trusted base** for deep recursion (O(1) stack), and the AOT env-machine is a
-bounded-depth differential path — stated, not hidden.
+Priority **#1** is **not buildable here** (libMLIR-gated) — it lands as a design requirement, honestly
+deferred. Priority **#2** is buildable now and is the near-term fix; **#3** is optional and
+measurement-gated; the **§2.4 dynamic budget** is the policy layer over whichever mechanism is active.
+Until #2 lands, the **interpreter remains the trusted base** for deep recursion (O(1) stack), and the
+AOT env-machine is a bounded-depth differential path — stated, not hidden.
 
 ## Meta — changelog
 
@@ -126,3 +166,11 @@ bounded-depth differential path — stated, not hidden.
   graceful at fuel 5 000 000 in O(1) stack — measured, not presumed. libMLIR provisioning for #1 is
   near-term (desktop/WSL; M-348). No design enactment lands with this note (the experiment harness is
   measurement, not the fix) — present before folding. Append-only.
+- **2026-06-16 — Draft amended.** Added §2.4: the depth/work limit must be **dynamic** (maintainer) —
+  detect headroom + per-frame cost at runtime and derive the safe depth, not a magic constant
+  (grounded by §1.1's ~14 KB/unfold, which varies by build/platform). Records how it composes (dynamic
+  budget = policy; trampoline #2 = mechanism; native managed stack #1 = same idea in native), its
+  interim use (a host-stack headroom guard converts abort→graceful before #2), and the cleanliness
+  guardrails (a small `DepthBudget` trait, conservative static fallback, `EXPLAIN`-able basis, an
+  explicit error — never an abort/hang/black box; platform-specific `unsafe` kept minimal, ADR-014).
+  Added DN05-Q5. Append-only.
