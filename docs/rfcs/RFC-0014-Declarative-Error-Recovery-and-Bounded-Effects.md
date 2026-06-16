@@ -417,6 +417,12 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
   capabilities), as an alternative or complement to annotations.
 - **Effect/recovery ergonomics** — effect aliases, scoped defaults, and `?`-chaining sugar that reduce
   verbosity *without* hiding an effect or a budget.
+- **Automatic baseline recovery profiles** (DynEL's *automated baseline* intent) — named, **opt-in**,
+  **declared + bounded** recovery profiles (e.g. `resilient`/`strict`) the automation layer applies only
+  when a developer opts in, plus auto-generated handler *skeletons* — for boilerplate QoL without ever an
+  implicit control-flow change (I3/I4/I5 hold; never-silent I1 preserved). Designed in **RFC-0015
+  (Automatic Baseline Diagnostics & Recovery)**, which generates/applies this RFC's policies without
+  weakening its invariants (append-only). Tracked M-362.
 - **Stdlib `result`/`effect` module** (M-346) — the recovery combinators and the standard error/effect kinds
   as a self-contained, dogfoodable core-library citizen.
 - **Self-hosting** — the recovery/effect runtime eventually written in Mycelium-lang, consuming its own

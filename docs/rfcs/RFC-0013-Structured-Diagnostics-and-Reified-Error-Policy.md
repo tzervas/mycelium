@@ -342,6 +342,12 @@ invariants I1–I5 are verified, when the tooling lands, by:
   error (never-silent G2, totality). This is now designed in its **own RFC — RFC-0014 (Declarative Error
   Recovery & Bounded Effects)** — which supersedes this RFC's §4.4 *scope boundary* for the recovery
   concern (append-only) without weakening I1; see §8 DN04-Q1 for the maintainer's recorded constraints.
+- **Automatic baseline diagnostics & logging** (DynEL's *automated baseline* intent): a zero-config
+  baseline diagnostic/logging policy **auto-derived** from the structured mapping (this RFC's registry +
+  routes + RFC-0014's declared effects) and **auto-applied** (wrapping for logging/QoL), with a ladder to
+  light overrides → fully manual. Safe to auto-apply *because* this RFC's presentation is additive and
+  never changes control flow (I1); designed in its own RFC — **RFC-0015 (Automatic Baseline Diagnostics &
+  Recovery)** — which generates/applies this RFC's policies without weakening I1 (append-only). Tracked M-362.
 - **Stdlib graduation** (DN04-Q5 / M-346): a self-contained `diagnostics` core-library module — a clean
   first stdlib citizen and dogfooding target.
 - **Self-hosting** (DN-04 §3): the renderer eventually written in Mycelium-lang, consuming Mycelium's own
