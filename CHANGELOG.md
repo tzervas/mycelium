@@ -18,6 +18,24 @@ corpus, not released software. Versioning will begin when the kernel does.
   M-355/M-356) is the §4.7 revision, presented frozen-spec before folding. The §4.5 runtime vocabulary
   stays **reserved, not active syntax** until the implementation RFCs land.
 
+### Added (RFC-0008 R1 — 2026-06-16: M-357 v0 / deterministic fork/join executor + RT2 differential)
+- **M-357 (v0 slice) — the RT2 deterministic fork/join runtime over the §4.7 primitives.** The
+  maintainer-chosen minimal scope (fork/join + the differential; typed channels deferred to the next
+  slice): `crates/mycelium-mlir/src/runtime.rs` — a structured-concurrency `Scope` (RT7: every child is
+  **joined**, none orphaned) over cooperative `Task`s, each carrying its **own** `Budgets` ledger and the
+  shared `CancelToken` (M-356 C1/C2). Two strategies — `run_sequential` (the reference) and a
+  deterministic `run_interleaved` round-robin — that the RT2 guarantee makes observationally equal over
+  **pure** tasks (RT1). The scheduler lives **outside** the kernel (RT2; the trusted evaluator stays
+  sequential — KC-3).
+- **Verified** (module tests): the **RT2 sequentialization differential** — `run_interleaved` ≡
+  `run_sequential` over a counter corpus (with an interleave trace proving the schedules genuinely
+  differ) **and over the real env-machine** (tasks running `run_core_with_effects` on `bit.not` L0
+  programs; each scheduled outcome equals the standalone `run_core` evaluation — no new meaning,
+  NFR-7/KC-3); **RT7** scope-cancellation (cancelling the scope → every pending child resolves to an
+  explicit additive `Cancelled`, all joined, none leaked); and **C1** per-task budget isolation (one
+  task overrunning its `alloc` budget never exhausts a sibling's). `just check` green. The next R1 slice
+  is typed SPSC **channels** (the Kahn-deterministic communicating half). **M-357 (#122)**.
+
 ### Added (RFC-0008 §4.7 — 2026-06-16: M-356 / concurrency composition primitives, single-task boundary lifted)
 - **M-356 — RFC-0014's single-task boundary lifted onto RFC-0008 (§4.7 added; §8 concurrency deferral
   resolved).** A **frozen-spec** (presented before folding): RFC-0008 **§4.7** specifies four

@@ -28,5 +28,6 @@
   { "name": "priority:P2", "color": "C2E0C6", "description": "Nice-to-have / later" },
   { "name": "status:blocked", "color": "E99695", "description": "Blocked by a dependency" },
   { "name": "status:needs-design", "color": "F9D0C4", "description": "Needs design before implementation" },
+  { "name": "status:done", "color": "0E8A16", "description": "Completed and verified" },
   { "name": "good-first-issue", "color": "7057FF", "description": "Good entry point" }
 ]

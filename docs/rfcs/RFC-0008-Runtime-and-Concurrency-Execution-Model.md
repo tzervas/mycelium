@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0008 |
-| **Status** | **Accepted** (2026-06-16 — maintainer sign-off; the Runtime-tier grounding ADR-012 §7.3 required. RT1–RT7 and the §4 model are now **normative**. Enactment is staged: the budget-unification slice (RFC-0014 §4.8) landed as **M-353**; the route → observability-sink binding (RFC-0013 §8) as **M-354**; the §4.7 **concurrency-composition** primitives — per-task budgets, cancellation, cross-task propagation, `reclaim` bounded-cascade supervision — as **M-356**. The task **scheduler/executor + the RT2 sequentialization differential** are the R1 runtime, **M-357** (next).) |
+| **Status** | **Accepted** (2026-06-16 — maintainer sign-off; the Runtime-tier grounding ADR-012 §7.3 required. RT1–RT7 and the §4 model are now **normative**. Enactment is staged: the budget-unification slice (RFC-0014 §4.8) landed as **M-353**; the route → observability-sink binding (RFC-0013 §8) as **M-354**; the §4.7 **concurrency-composition** primitives — per-task budgets, cancellation, cross-task propagation, `reclaim` bounded-cascade supervision — as **M-356**. The R1 runtime's **v0 slice** — a deterministic fork/join executor + the RT2 sequentialization differential — landed as **M-357** (`mycelium-mlir::runtime`); typed channels + the full scheduler are the next R1 slice.) |
 | **Type** | Foundational / normative (once Accepted) |
 | **Date** | June 10, 2026 |
 | **Depends on** | RFC-0004 (single-node execution model — **extended, not changed**); RFC-0001 (Value/`Meta`/guarantee lattice, WF1–WF5); RFC-0005 (the one selection mechanism + EXPLAIN); RFC-0006 (S1–S6, LR-4/LR-8/LR-9); RFC-0007 (totality / `matured`); RFC-0002 (`ProbabilityBound`, ADR-010 δ-kernel); ADR-012 §7.3 (the gap this fills); DN-02 (naming law); research **T4.1–T4.6** (`research/04-runtime-concurrency-RECORD.md`) |
@@ -236,7 +236,10 @@ Examples using them remain illustrations of intent (ADR-012 §7.3's marking stan
 
 - **R0 (this RFC):** the model and invariants. No syntax, no implementation obligation.
 - **R1 (single node):** structured concurrency + deterministic channels in the runtime, behind
-  the RT2 reference-sequentialization differential. The natural successor to the L1 track.
+  the RT2 reference-sequentialization differential. The natural successor to the L1 track. *(v0 slice
+  landed, M-357: a deterministic fork/join executor over pure tasks — `Scope`/`Task`, RT7 join, per-task
+  budgets + cooperative cancellation — with the RT2 sequentialization differential green over both a toy
+  corpus and the real env-machine; typed SPSC channels are the next slice.)*
 - **R2 (distribution):** `xloc`, `mesh`, `cyst`s — each construct landing with its
   honest bounds (RT5) and its differential/TV obligations.
 
@@ -366,6 +369,19 @@ substrate (the RFC-0004 backend story, distributed).
 
 ## Meta — changelog
 
+- **2026-06-16 — R1 v0 slice landed: deterministic fork/join executor + RT2 differential (M-357).** The
+  first runtime slice over the §4.7 primitives — the maintainer-chosen minimal scope (fork/join + the
+  differential; typed channels deferred). `mycelium-mlir::runtime` (the scheduler lives **outside** the
+  kernel — RT2; KC-3): a structured-concurrency `Scope` (RT7 — every child joined, no orphan) over
+  cooperative `Task`s, each carrying its own `Budgets` ledger + the shared `CancelToken` (M-356 C1/C2),
+  with a `run_sequential` reference and a deterministic `run_interleaved` round-robin. Verified by the
+  **RT2 sequentialization differential**: interleaved ≡ sequential over a toy corpus (an interleave
+  trace proves non-triviality) **and over the real env-machine** (tasks running `run_core_with_effects`
+  on `bit.not` L0 programs; each scheduled outcome equals the standalone evaluation — no new meaning,
+  NFR-7/KC-3), plus RT7 scope-cancellation (every pending child → explicit additive `Cancelled`, all
+  joined) and C1 per-task budget isolation (one task's overrun never exhausts a sibling). The next R1
+  slice is typed single-producer/single-consumer **channels** (the Kahn-deterministic communicating
+  half, §4.3) then §4.5 vocabulary activation. `just check` green. Append-only.
 - **2026-06-16 — §4.7 concurrency composition added + composition primitives enacted (M-356).** Lifts
   RFC-0014's single-task v0 boundary (§8) onto RT1–RT7 as a **frozen composition contract** (presented
   before folding, per design-first): **(C1)** per-task budgets — each task instances its own M-353
