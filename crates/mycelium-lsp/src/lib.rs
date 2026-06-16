@@ -12,6 +12,7 @@ pub mod expand;
 pub mod feedback;
 pub mod fmt;
 pub mod lint;
+pub mod recover;
 pub mod sync;
 pub mod wire;
 
@@ -25,6 +26,10 @@ pub use feedback::{
 };
 pub use fmt::format;
 pub use lint::{has_errors, lint, Diagnostic, Severity};
+pub use recover::{
+    check_effects, handle, EffectBudget, EffectBudgetExhausted, EffectKind, Outcome,
+    RecoveryPolicy, Resolution, StructuredError, UndeclaredEffect as RecoverUndeclaredEffect,
+};
 pub use sync::{publish_for_source, source_diagnostics, DocumentStore};
 pub use wire::{
     publish_diagnostics_notification, read_message, serve, to_lsp_diagnostic, write_message,

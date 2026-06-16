@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0014 |
-| **Status** | **Draft (Proposed)** (drafted 2026-06-16; the isolated recovery subsystem RFC-0013 §8/§9 deferred. **2026-06-16 — three §8 design questions resolved** by the maintainer: effect mechanism = *declared annotations, coarse set*; *no* kernel-visible hook (runtime/checker only, KC-3); *separate named budgets, one enforcement mechanism* (composed alongside fuel/depth in the DN-05 plumbing). **2026-06-16 — the remaining §8 questions now carry concrete *proposed v0 dispositions*** (recovery-action set closed; manual-declare + compositional-check for effects; single-task v0 boundary with concurrency deferred to RFC-0008; lexical/bounded handler composition) — **maintainer sign-off pending** — and the §7 prior-art tracing is **DONE** (Research Record 05). RFC-0014 is therefore **ready for a Draft→Accepted decision**. **No code until Accepted.**) |
+| **Status** | **Accepted — Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design and all §8 dispositions are normative. **Enacted 2026-06-16 — M-352** (#116): the reified recovery subsystem — the result-sum error value, the closed recovery-action set, the registry-shared `on <ErrorClass> => <action>` recovery policy, declared + budgeted effects with a graceful `EffectBudgetExhausted`, the no-undeclared-effect check, and the never-silent `handle` (every error recovered or re-propagated, never dropped) — is code in `crates/mycelium-lsp/src/recover`; the L0-`Match`-over-error-sums lowering target is differentially verified in `mycelium-l1` (no new kernel node, KC-3). Wiring effect-budget enforcement into the AOT env-machine is the RFC-0008 integration (tracked, not v0).) |
 | **Type** | Foundational / normative (once Accepted) — a **separable** surface + runtime subsystem; minimal/no kernel change (KC-3) |
 | **Date** | 2026-06-16 |
 | **Feeds** | RFC-0006 (the optional recovery/effect surface); RFC-0008 (runtime — where effect budgets are enforced, alongside fuel/depth); RFC-0013 (the diagnostic *presentation* of an error this RFC *acts on*); the stdlib (a `result`/`effect` module candidate, M-346) |
@@ -349,7 +349,7 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
   ceiling and resolves DN-05 dynamic budgets. So effect budgets *compose alongside* fuel + depth in the same
   runtime/DN-05 plumbing (shared mechanism), rather than coupling those established clocks into one shared
   budget abstraction. Each overrun is its own explicit, graceful `EffectBudgetExhausted` (§4.5 I4).
-- **Effect inference vs. manual declaration — PROPOSED v0 (2026-06-16; maintainer sign-off pending).**
+- **Effect inference vs. manual declaration — RESOLVED v0 (maintainer, 2026-06-16).**
   v0 is **manual declaration only** — explicit is honest, no inference (an effect set is *written* on
   the signature). To keep that from being a correctness hole rather than just verbose, the checker
   **composes declared effects as a *check*, not an inference**: a definition calling an effectful
@@ -358,7 +358,7 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
   it never *infers* (synthesises) an undeclared effect, so an effect can still never become implicit.
   Computing a minimal effect set (true inference) is deferred to §9; the v0 line is **manual-declare +
   compositional-check**.
-- **Recovery-action set — PROPOSED v0 (2026-06-16; maintainer sign-off pending).** The v0 set is
+- **Recovery-action set — RESOLVED v0 (maintainer, 2026-06-16).** The v0 set is
   **closed and complete for v0**: `fallback(value)` (recover — explicit, honestly-tagged value, I2),
   `retry(<=N)` (re-attempt — bounded, I4), `escalate(class')` (transform + re-propagate), and
   `cleanup_then_propagate(effect)` (act, then let the error continue — additive). These cover the four
@@ -368,15 +368,15 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
   §9 future. When added, a user action is a function `Err(ε) -> Result<τ>` that **must** be total over
   the error's cases (I1) and **declare + bound** any effect it performs (I3/I4) — i.e. it inherits the
   same obligations as the built-in set; it is never a privileged escape hatch.
-- **Concurrency interaction (RFC-0008) — DEFERRED with a v0 boundary fixed (2026-06-16; sign-off
-  pending).** v0 recovery/effects are **single-task / synchronous**: budgets are per-evaluation (the
+- **Concurrency interaction (RFC-0008) — DEFERRED with a v0 boundary fixed (maintainer, 2026-06-16).**
+  v0 recovery/effects are **single-task / synchronous**: budgets are per-evaluation (the
   same scope the `Fix` fuel clock already uses), and there is **no cross-task effect or cascade** in v0
   (no spooky action across tasks — there are no tasks yet). The genuinely-open composition (per-task
   budgets, cancellation, cross-task failure propagation) is **RFC-0008's** design, and it must compose
   **additively**: a task failure is an explicit error subject to I1, a per-task budget overrun is an
   in-that-task `EffectBudgetExhausted`. Fixing the v0 boundary now makes the deferral *safe* (v0 cannot
   accidentally admit an unbounded cross-task cascade) rather than merely postponed.
-- **Handler composition & re-entrancy — PROPOSED v0 (2026-06-16; maintainer sign-off pending).**
+- **Handler composition & re-entrancy — RESOLVED v0 (maintainer, 2026-06-16).**
   - **Nesting is lexical and deterministic.** Handlers nest like `Match`: the **innermost** handling
     site whose pattern matches an error handles it; an unmatched case **re-propagates** to the next
     enclosing site (never dropped — I1). No ambiguity, no ordering surprises.
@@ -409,6 +409,28 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
 
 ## Meta — changelog
 
+- **2026-06-16 — Accepted + Enacted (M-352).** Maintainer ratified `Draft → Accepted` (approving the
+  draft and all §8 dispositions — the four proposed v0 dispositions below move from *sign-off pending* to
+  normative) and approved proceeding. The §4 design is enacted as a **separable, tooling-layer** subsystem
+  in `crates/mycelium-lsp/src/recover` (no kernel change — KC-3, zero new L0 nodes; no Python — ADR-007):
+  `error` (the result-sum `Outcome` over a structured error reusing RFC-0013's shared `ClassRegistry` —
+  X1, no `eval`); `effect` (the closed `EffectKind` set + per-kind named `EffectBudget`, the `Budgets`
+  ledger whose overrun is an explicit, graceful `EffectBudgetExhausted` — I4, and the compositional
+  `check_effects` no-undeclared-effect check — I3); `policy` (the reified `on <ErrorClass> => <action>`
+  recovery policy, closed action set `fallback`/`retry`/`escalate`/`cleanup_then_propagate`,
+  content-addressed `PolicyRef`); and `handle` (the never-silent driver — every error is **recovered**
+  with an honestly-tagged value or **re-propagated**, never dropped — I1; a fallback carries an honest,
+  downgrade-only guarantee — I2/VR-5). Verified by `crates/mycelium-lsp/tests/recover.rs` (RFC-0014 §5):
+  the central **never-silent recovery invariant** (a corpus of errors × every action yields Recovered or
+  Propagated, never a drop — I1), the **bounded-overrun-is-explicit** test (a budgeted effect overrun is
+  `EffectBudgetExhausted`, never a hang/OOM — I4), the **no-undeclared-effect** test (I3), the
+  **honest-guarantee** test (I2/VR-5), and the **opt-in default scope** test (I5). The
+  **L0-`Match`-over-error-sums** lowering target — "recovery introduces no new kernel node" — is
+  differentially verified in `mycelium-l1` (`recovery_match_over_a_result_sum_agrees_three_ways`):
+  a `Result = Ok | Err` match runs identically on L1-eval ≡ elaborate→L0-interp ≡ AOT (NFR-7).
+  **Out of v0 scope (honest boundary):** wiring the `Budgets` ledger into the AOT env-machine's runtime
+  budget resolver is the RFC-0008 integration (the §4.8 boundary), tracked separately; v0 delivers the
+  reified mechanism + semantics + invariants. `just check` green. Append-only.
 - **2026-06-16 — Remaining §8 questions given proposed v0 dispositions (sign-off pending; still
   Draft).** At the maintainer's direction (draft the remaining answers before any code), the four §8
   questions left after the three gating decisions now carry concrete **proposed v0 dispositions**,

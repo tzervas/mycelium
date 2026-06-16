@@ -8,6 +8,29 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (Phase 4 — 2026-06-16: M-352 / RFC-0014 declarative recovery & bounded effects, accepted + enacted)
+- **RFC-0014 ratified `Draft → Accepted`** (maintainer; all §8 dispositions normative) and **M-352
+  enacted** as a **separable, tooling-layer** subsystem in `crates/mycelium-lsp/src/recover` (**no kernel
+  change** — KC-3, zero new L0 nodes; no Python, ADR-007). Three pillars: **errors-as-propagating-values**
+  (`Outcome` over a `StructuredError` whose class is registry-resolved — shares RFC-0013's registry, X1);
+  **explicit declarative recovery** — the never-silent `handle` applies a reified
+  `on <ErrorClass> => <action>` policy (RFC-0005 pattern; content-addressed `PolicyRef`; closed action set
+  `fallback`/`retry`/`escalate`/`cleanup_then_propagate`) and yields a `Resolution` that is **always**
+  *recovered* or *re-propagated* — there is no "dropped" variant (I1 enforced by the type); and
+  **declared, bounded effects** (`EffectKind` set, per-kind `EffectBudget`, the `Budgets` ledger whose
+  overrun is a graceful `EffectBudgetExhausted` — I4, and a compositional `check_effects` no-undeclared
+  -effect check — I3). A substituted fallback is honestly `Declared`, never upgraded (I2/VR-5).
+- **Verified** by `crates/mycelium-lsp/tests/recover.rs` (RFC-0014 §5): the central **never-silent
+  recovery invariant** (every action leaves the error recovered or propagated, never dropped — I1), the
+  **bounded-overrun-is-explicit** test (`EffectBudgetExhausted`, never a hang/OOM — I4), the **opt-in
+  default-scope** test (an undeclared effect can't run — I5), the **no-undeclared-effect** test (I3), the
+  **honest-guarantee** test (I2/VR-5), and the shared-registry / no-`eval` discipline (X1). The
+  **L0-`Match`-over-error-sums lowering target** — "recovery adds no new kernel node" — is differentially
+  verified in `mycelium-l1` (`recovery_match_over_a_result_sum_agrees_three_ways`: L1-eval ≡ L0-interp ≡
+  AOT; NFR-7). **Out of v0 scope (honest boundary):** wiring the `Budgets` ledger into the AOT
+  env-machine's runtime budget resolver is the RFC-0008 integration (§4.8). `just check` green. Advances
+  SC-3, G2, VR-5, NFR-2/SC-5b. RFC-0014 status → **Accepted — Enacted**; **M-352 (#116)** closed.
+
 ### Added (Phase 4 — 2026-06-16: M-345 / RFC-0013 structured diagnostics, enacted)
 - **M-345 — RFC-0013 structured diagnostics & reified error policy: enacted** in
   `crates/mycelium-lsp/src/diagnostics` (tooling layer; **no kernel change**, KC-3; no Python, ADR-007).

@@ -387,6 +387,53 @@ fn mutual_recursion_elaborates_and_all_three_paths_agree() {
     );
 }
 
+/// **M-352 (RFC-0014):** an explicit recovery handling site elaborates to an L0 `Match` over a
+/// **result sum** — recovery introduces **no new kernel node** (KC-3). `handle e { Ok(v) => v,
+/// Err(_) => fallback }` *is* a `Match` on `Result = Ok | Err`, the data+match fragment the three-way
+/// differential already covers; this pins the named recovery case: L1-eval ≡ elaborate→L0-interp ≡
+/// AOT. (The concrete `handle` spelling is KC-2-gated, RFC-0006; the semantics is this match.)
+#[test]
+fn recovery_match_over_a_result_sum_agrees_three_ways() {
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
+    // Written in the existing data+match surface (no new syntax) — the lowering target of a recovery
+    // handling site: match the result sum, recover the `Err` case with an explicit fallback.
+    let src = "colony d\n\
+               type Result = Ok(Binary{8}) | Err(Binary{8})\n\
+               fn recover(r: Result) -> Binary{8} = match r { Ok(v) => v, Err(e) => 0b0000_0000 }\n\
+               fn main() -> Binary{8} = recover(Err(0b1111_1111))";
+    let env = check_colony(&parse(src).unwrap()).unwrap();
+    let registry = build_registry(&env).unwrap();
+    let node = elaborate(&env, "main").expect("a recovery match elaborates (no new kernel node)");
+
+    let l1 = Evaluator::new(&env)
+        .call("main", vec![])
+        .unwrap()
+        .to_core(&env, &registry)
+        .unwrap();
+    let l0 = Interpreter::default()
+        .eval_core(&node)
+        .expect("L0-interp runs the recovery match");
+    let aot = mycelium_mlir::run_core(&node, &prims, &engine).expect("AOT runs the recovery match");
+
+    assert_eq!(
+        l1, l0,
+        "L1-eval vs elaborate→L0-interp diverged on the recovery match"
+    );
+    assert_eq!(
+        l0, aot,
+        "L0-interp vs AOT env-machine diverged on the recovery match"
+    );
+    // The `Err(_)` arm recovers to the explicit fallback `0b0000_0000`.
+    let recovered = l0.as_repr().expect("a Binary result value");
+    assert_eq!(recovered.repr(), &Repr::Binary { width: 8 });
+    assert_eq!(
+        recovered.payload(),
+        &Payload::Bits(vec![false; 8]),
+        "the recovery fallback must be the zero byte"
+    );
+}
+
 /// A `Partial`-classified unproductive recursion: still runnable, but the clock is the guard —
 /// an explicit `FuelExhausted`, never a hang (§4.5).
 #[test]
