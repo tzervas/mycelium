@@ -99,18 +99,23 @@ cargo build -p mycelium-check --bin myc-check     # → target/debug/myc-check
 > **build script fails at link** (`linking with cc failed`, for every crate). Read the
 > `note:` line — the cause is one of:
 >
-> - **`cc` is not the C compiler** (note: `Unknown command '…/symbols.o'. Try: cc help`).
->   Something other than clang is shadowing `cc` on PATH, and rustc links via `cc`. Point
->   Rust + the cc-crate at clang directly:
+> - **`cc` (and maybe `clang`) is not the C compiler** (note: `Unknown command
+>   '…/symbols.o'. Try: cc help`). A personal script named `cc`/`clang`/`gcc` in
+>   `$PREFIX/bin` shadows the real compiler, and rustc links via `cc` — so every build
+>   script fails. Identify it, then either point Rust at the **versioned** clang or
+>   un-shadow it:
 >   ```sh
->   command -v cc; file "$(command -v cc)"        # identify the impostor
->   export CC="$PREFIX/bin/clang" CXX="$PREFIX/bin/clang++"
->   export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$PREFIX/bin/clang"
->   cargo build -p mycelium-check --bin myc-check
+>   file "$(command -v cc)" "$(command -v clang)"     # what are they really?
+>   ls "$PREFIX"/bin/clang-*                           # the real compiler is versioned
+>   # quick unblock (substitute the version, e.g. clang-19):
+>   export CC="$PREFIX/bin/clang-NN" CXX="$PREFIX/bin/clang++-NN"
+>   export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$PREFIX/bin/clang-NN"
+>   # permanent fix: rename the impostor + restore the package symlinks
+>   mv "$PREFIX/bin/cc" "$PREFIX/bin/ccode"; pkg install --reinstall clang
 >   ```
->   Persist it in `~/.cargo/config.toml`:
->   `[target.aarch64-linux-android]` / `linker = "clang"`. (`pkg install clang` provides
->   the real `cc`→clang, but only wins if it's earlier on PATH than the impostor.)
+>   Never name a personal wrapper `cc`/`clang`/`gcc` — those are the compiler. Persisting
+>   the env route: `~/.cargo/config.toml` → `[target.aarch64-linux-android]` /
+>   `linker = "clang-NN"`.
 > - **A missing library** (note: `unable to find library -landroid-spawn` or `-lXXX`).
 >   `pkg install libandroid-spawn binutils` (Termux's libc lacks `posix_spawn`; the
 >   patched rust links `-landroid-spawn`), or `pkg install` the package matching `-lXXX`.

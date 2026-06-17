@@ -11,11 +11,13 @@ corpus, not released software. Versioning will begin when the kernel does.
 ### Added (2026-06-17: Termux/ARM64 myc-check build prerequisites documented)
 - **`experiments/README.md` documents the Termux (Android/ARM64) Rust build failure modes** for
   `myc-check`, found by an on-device build and the never-silent cargo-error surfacing. The actual
-  blocker on the test device was **`cc` not being the C compiler** (a non-clang `cc` shadowing it on
-  PATH — `note: Unknown command '…/symbols.o'. Try: cc help`); rustc links every build script via
-  `cc`, so all of them failed. Fix: point Rust + the cc-crate at clang
-  (`CC=$PREFIX/bin/clang`, `CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=clang`, or `~/.cargo/config.toml`
-  `linker = "clang"`). The note also keeps the missing-library case (`libandroid-spawn`/`-lXXX`).
+  blocker on the test device was a **personal `cc`/`clang` wrapper shadowing the compiler** in
+  `$PREFIX/bin` (`note: Unknown command '…/symbols.o'. Try: cc help`); rustc links every build script
+  via `cc`, so all failed — and `$PREFIX/bin/clang` was the wrapper too, so pointing at it didn't
+  help. Fix: use the **versioned** clang (`CC=$PREFIX/bin/clang-NN`, the matching
+  `CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER`, or `~/.cargo/config.toml` `linker = "clang-NN"`), or
+  un-shadow it (rename the wrapper, `pkg install --reinstall clang`); never name a personal script
+  `cc`/`clang`/`gcc`. The note also keeps the missing-library case (`libandroid-spawn`/`-lXXX`).
   Use the Termux-packaged rust, not rustup. No code change.
 
 ### Fixed (2026-06-17: KC-2 Mycelium arm — wrong cargo package + swallowed build error)
