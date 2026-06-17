@@ -8,6 +8,22 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: capture the Termux/Android Claude Code bootstrap in-repo)
+- **`tools/termux/cc-termux-bootstrap.sh` + `tools/termux/README.md`** — the proot-Ubuntu
+  Claude Code setup used to develop Mycelium on a phone, version-controlled so it survives a
+  toolchain reinstall (an ad-hoc copy was lost to `pkg install --reinstall clang`). It provisions a
+  glibc Ubuntu via `proot-distro` (the official `claude` binary won't run native on Termux),
+  installs Claude Code inside it, and installs a thin Termux launcher (`claude`/`work`/`sd`/`update`/
+  `doctor`/`shell`).
+- **Footgun fixed (root cause of the earlier build saga):** the launcher defaulted to `cc`, which
+  overwrote `$PREFIX/bin/cc → clang` and broke every native build. It now defaults to **`claude`**
+  and **refuses** compiler/toolchain names (`cc`/`clang`/`gcc`/…); use a shell alias for muscle memory.
+- **Idempotent + secret-safe:** safe to re-run (reuse container, guard user creation, install Claude
+  only if missing). No secrets in the script/repo — Claude auth stays interactive in `~/.claude`
+  inside the container. Sudo is passwordless **by design**: the phone is unrooted (no Termux-side
+  root, never used) and proot root is *emulated*, so a sudo password would guard nothing (anyone
+  with Termux access can read the rootfs directly) — documented as the honest choice, not a gap.
+
 ### Fixed (2026-06-17: real-mode hang — force one-shot llama-cli, configurable timeout)
 - **Real-mode runs hung until they timed out** because recent `llama-cli`, given `--prompt`, enters
   its **interactive conversation REPL**: it generated a correct answer, then waited at a `>` prompt
