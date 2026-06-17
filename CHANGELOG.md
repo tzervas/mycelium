@@ -8,6 +8,27 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (2026-06-17: LLM-harness — package/release installs, not Python packages)
+- **Bootstrap now installs runtime tools from the OS package manager / official releases instead of
+  fragile language-package builds.** The Termux failure that kept recurring was `--doctor` trying to
+  `uv tool install huggingface_hub[cli]`, which builds the native **`hf-xet`** dependency from source
+  (no aarch64 wheel) and fails. Fixes:
+  - **llama.cpp** is now installed from the **system package manager** — Termux `pkg install llama-cpp`
+    (repo-signed, prebuilt; binaries land on `$PREFIX/bin`), `brew install llama.cpp` — with a
+    detector for `pkg`/`apt-get`/`dnf`/`pacman`/`zypper`/`brew`. Where no package exists, the harness
+    prints the vetted from-source / pinned-release steps and SKIPs honestly rather than guessing.
+    `--doctor` runs this (with consent) when `llama-cli` is missing.
+  - **The hf CLI is now OPTIONAL and never auto-installed.** The built-in **stdlib downloader** is the
+    default model-fetch path and now sends `Authorization: Bearer $HF_TOKEN` to `huggingface.co`, so
+    **gated repos work without the CLI**. `--install-hf-cli`/`--setup-hf` remain as explicit opt-ins
+    (with a warning that the `hf-xet` build may fail on aarch64).
+  - **Checksum gate added:** `--model-sha256 HEX` (or a pinned registry value) is **verified** before a
+    download is promoted; a mismatch is a loud failure (the `*.part` is kept). No fabricated checksums
+    are stored (honesty rule); absent a pinned value, integrity still rests on the GGUF magic + complete
+    transfer. New supply-chain helpers: `_detect_system_pkg`, `install_system_package`, `sha256_file`,
+    `verify_sha256`, `install_llama_cpp`. README updated (Termux Step 1/2, download section, `--doctor`).
+  - Grounding: CONTRIBUTING.md supply-chain rule (no `curl|bash`, no unpinned fetch), G2 never-silent.
+
 ### Changed (2026-06-17: LLM-harness — `--doctor` is now self-healing)
 - **`--doctor` diagnoses *and* heals by default** instead of only reporting fixes. When a required
   package is missing it now installs it — the **hf CLI** via `uv`/`pipx`/`pip` and the **Claude Code
