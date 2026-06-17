@@ -49,7 +49,7 @@ labels-then-milestones-then-issues superset.)
 | 4 | Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion | active (cut 2026-06-16) | The interp↔compiled ABI (ADR-016) + hot-inject/recompile (ADR-017); AOT env-machine completion over the full v0 calculus + stack-robustness/dynamic budgets (M-342/347/349, DN-05); mutual recursion (M-343, RFC-0001 r5); ambient (M-344, RFC-0012); diagnostics + recovery (M-345, RFC-0013/0014); stdlib roadmap (M-346). Gate: NFR-7 three-way differential across the calculus; budgets explicit/never-silent (G2); kernel small (KC-3). |
 | 5 | Self-Hosting & Core Library | **anticipated** (not yet ratified) | Write the stdlib + diagnostics/recovery runtime in Mycelium-lang itself (dogfooding; "free of other languages"): decompose the M-346 stdlib epic; self-host RFC-0013/0014. Gate: a stdlib module self-hosts with the guarantee/EXPLAIN contract every op must meet (G2, VR-5, KC-3, ADR-003). |
 | 6 | Native Acceleration & Deployment | **anticipated** (not yet ratified) | Native MLIR→LLVM codegen for the full calculus incl. data/closure (M-348, RFC-0004 §2, ADR-009); BitNet / native-ternary acceleration; deployable Spore units (ADR-013); production hardening. Gate: native NFR-7 differential + speedup; deployable Spore (VR-4 no-opaque-lowering). |
-| 7 | Runtime & Concurrency Execution Model (RFC-0008) | **active** (RFC-0008 **Accepted** 2026-06-16) | RFC-0008 ratified RT1–RT7 (M-355 ✓); RFC-0014's single-task boundary lifted to per-task budgets, cancellation, and `reclaim` bounded-cascade supervision (M-356 ✓, RFC-0008 §4.7 / Erlang-OTP grounding, Research Record 05); the RT2 deterministic fork/join runtime + sequentialization differential v0 (M-357 ✓; typed channels = next slice); and the **DN-06 lexicon migration** — static keyword `colony` → `nodule`, introduce `phylum`, free `colony` for the dynamic grouping (M-358, staged). The §4.5 vocabulary (hypha/fuse/xloc/cyst/graft/forage/backbone/mesh/tier/reclaim) decomposes at the Phase-7 gate. Gate: RFC-0008 Accepted ✓; RT2 differential holds (NFR-7-equiv) ✓; guarantees tagged honestly (RT5/VR-5); kernel small (KC-3). |
+| 7 | Runtime & Concurrency Execution Model (RFC-0008) | **active** (RFC-0008 **Accepted** 2026-06-16) | RFC-0008 ratified RT1–RT7 (M-355 ✓); RFC-0014's single-task boundary lifted to per-task budgets, cancellation, and `reclaim` bounded-cascade supervision (M-356 ✓, RFC-0008 §4.7 / Erlang-OTP grounding, Research Record 05); the RT2 deterministic fork/join runtime + sequentialization differential v0 (M-357 ✓; typed channels = next slice); and the **DN-06 lexicon migration** — static keyword `colony` → `nodule`, introduce `phylum`, free `colony` for the dynamic grouping (M-358 ✓; the structured header/manifest M-359 ✓ and RFC-0015 auto-baseline M-362 ✓ also folded). The §4.5 vocabulary (hypha/fuse/xloc/cyst/graft/forage/backbone/mesh/tier/reclaim) decomposes at the Phase-7 gate. Gate: RFC-0008 Accepted ✓; RT2 differential holds (NFR-7-equiv) ✓; guarantees tagged honestly (RT5/VR-5); kernel small (KC-3). |
 
 Phases 0–4 are in `milestones.json` as active milestones. Phases 5–7 are **forward roadmap anchors**:
 they are also created (as empty milestones) so future issues have a home, but their scope is **not yet
@@ -72,8 +72,8 @@ the summary (counts as of 2026-06-16):
 | 4 | ABI/hot-inject/AOT-completion — M-341/342/343/344/345/346/347/348/349 + M-352; RFC-0008 integration M-353/354 | 12 |
 | 5 | (anticipated) self-hosting + stdlib — decomposed from M-346 at the Phase-4 gate | — |
 | 6 | (anticipated) native acceleration + deployment — M-348 native path, Spore | — |
-| 7 | runtime & concurrency (RFC-0008, **Accepted**) — M-355 ratify ✓, M-356 concurrency/supervision ✓, M-357 RT2 differential ✓; M-358 lexicon migration + M-359 structured nodule header/manifest staged; §4.5 vocabulary decomposes at the gate | 5 |
-| 8 | (anticipated) toolchain & release engineering — the full-fat suite (format/correctness/lint+fix/security) + packaging; M-361 epic anchor, M-359 metadata substrate | 1 |
+| 7 | runtime & concurrency (RFC-0008, **Accepted**) — M-355 ratify ✓, M-356 concurrency/supervision ✓, M-357 RT2 differential ✓, M-358 lexicon migration ✓, M-359 structured nodule header/manifest ✓, M-362 RFC-0015 auto-baseline ✓; §4.5 vocabulary decomposes at the gate | 6 |
+| 8 | (anticipated) toolchain & release engineering — the full-fat suite folded as five above-the-kernel crates: M-364 `mycfmt` ✓, M-365 `myc-check` ✓, M-366 `myc-lint` ✓, M-367 `myc-sec` ✓, M-368 `spore` ✓; M-361 epic (CI-parity gate wiring pending) + M-363 authoring pipeline (design Accepted, build unscheduled) | 7 |
 
 A task moves phases by editing its `milestone:` + `phase:N` label in `issues.yaml` (then re-running the
 bootstrap, which is idempotent). Keep the `milestone:` string byte-identical to the `milestones.json`
@@ -92,6 +92,16 @@ title or the script will create a duplicate.
 
 ## Meta — changelog
 
+- **2026-06-17 — Issue-state reconciliation: M-358/359/362 + M-364–368 → `status:done`.** Eight tasks
+  folded across the Phase-7/8 waves but left labelled `status:needs-design` are flipped to **`status:done`**
+  (keeping `type:design` — the M-344/345/352/355 precedent) in `issues.yaml` and on GitHub
+  (#130/#131/#133 + #136–#140). **Issues left OPEN** (maintainer's call): the M-361 epic (#132) stays open
+  until its CI-parity gate is wired (the next wave), and the five children close with it. `type`/milestone/
+  open-state otherwise untouched; since `gh-issues-sync.py` is create-absent-only, the live flip is a direct
+  `issue_write`, not a bootstrap run. Ladder + summary corrected (Phase 7 = 6 tasks, all ✓; Phase 8 = 7 — the
+  five tool children ✓, M-361 gate + M-363 build pending), resolving the prior contradiction (changelog said
+  "enacted"; the ladder still said "staged"). `idmap.tsv` carries no status column, so it gains only a dated
+  note. Append-only.
 - **2026-06-16 — M-361 decomposed into per-tool children (staged).** The Phase-8 toolchain epic **M-361**
   is decomposed into the five per-tool tasks its body names — **M-364** (`mycfmt` formatter), **M-365**
   (correctness/type-check driver), **M-366** (lint + auto-fix, incl. the RFC-0015 baseline lint + the
