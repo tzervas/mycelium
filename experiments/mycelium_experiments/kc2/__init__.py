@@ -48,7 +48,13 @@ from mycelium_experiments.kc2.llm import (
     server_backend,
 )
 from mycelium_experiments.kc2.runner import RunConfig, run_one, run_suite
-from mycelium_experiments.kc2.server import ensure_server, server_healthy, stop_server
+from mycelium_experiments.kc2.server import (
+    ensure_server,
+    find_server_pids,
+    server_healthy,
+    stop_external_servers,
+    stop_server,
+)
 from mycelium_experiments.kc2.summary import assess, render_summary
 from mycelium_experiments.kc2.tasks import TASKS, Task
 
@@ -76,6 +82,7 @@ __all__ = [
     "detect_gpu",
     "detect_memory",
     "extract_source",
+    "find_server_pids",
     "primer_for",
     "render_summary",
     "run_arm",
@@ -84,6 +91,7 @@ __all__ = [
     "run_suite",
     "server_backend",
     "server_healthy",
+    "stop_external_servers",
     "stop_server",
     "swap",
     "tadd",

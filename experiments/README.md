@@ -102,6 +102,16 @@ report to a fixed path.
 > manual `llama-server … &` route fights port collisions ("couldn't bind … port 8080"
 > when an old server lingers); `--serve` reuses a healthy server or picks a free port.
 
+**Server teardown.** `--serve` **auto-tears-down** the server it launched once all reports
+and logs are written. To keep it up for a follow-up run, add `--keep-server` (its URL is
+logged; reuse with `--server URL`). To reap an **orphan** (e.g. from a manual launch that
+lost the port race), either:
+
+```sh
+python -m mycelium_experiments.kc2 --stop-server          # all; or --port 8080 for one
+../tools/llm-harness/llama-server-stop.sh                  # standalone, no Python needed
+```
+
 **The Mycelium arm needs `myc-check`** (parse + typecheck + signature). The checker
 builds it on first use via cargo; on a phone that's heavy but works, or build it once:
 

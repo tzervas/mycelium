@@ -8,6 +8,16 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: KC-2 server teardown — auto, opt-out, and a standalone reaper)
+- **Auto-teardown**: `--serve` already stops the server it launched after all reports/logs are
+  written (the `try/finally`); **`--keep-server`** opts out (leave it up for a follow-up `--server`).
+- **Orphan reaper**: `--stop-server` (optionally `--port N`) reaps running `llama-server` processes —
+  for the orphan a manual `llama-server … &` leaves when it loses the port race — and exits.
+  Standalone `tools/llm-harness/llama-server-stop.sh` does the same with no Python.
+- Matching is by **executable name** (`argv[0]` basename `== llama-server`), excluding self — an
+  early version used a cmdline substring (`pgrep -f llama-server`) that matched the teardown
+  script's own path and killed the shell. New `find_server_pids` / `stop_external_servers`.
+
 ### Added (2026-06-17: KC-2 unattended pipeline — managed server, metrics/logs, suite runner)
 - **Auto-managed llama.cpp server** (`mycelium_experiments/kc2/server.py`, `--serve`): loads the
   model ONCE, drives `/completion` (clean one-shot — no interactive REPL), **reuses a healthy server

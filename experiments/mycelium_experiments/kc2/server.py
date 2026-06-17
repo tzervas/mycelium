@@ -18,7 +18,9 @@ never becomes ready is an explicit error — never a silent fallback.
 from __future__ import annotations
 
 import logging
+import os
 import shutil
+import signal
 import socket
 import subprocess
 import time
@@ -135,3 +137,66 @@ def stop_server(proc: subprocess.Popen[bytes] | None, log: logging.Logger) -> No
             proc.kill()
         except OSError:
             pass
+
+
+def find_server_pids(name_match: str = "llama-server", port: int | None = None) -> list[int]:
+    """PIDs of running llama-server processes (scan /proc). Empty if none/unsupported.
+
+    Matches the **executable name** (basename of argv[0]) exactly — NOT any substring of
+    the cmdline — so it never targets an unrelated process (e.g. the teardown script,
+    whose path contains "llama-server"). Excludes this process. With ``port`` set, only
+    servers naming that ``--port`` are returned.
+    """
+    pids: list[int] = []
+    proc_dir = Path("/proc")
+    if not proc_dir.is_dir():
+        return pids
+    me = os.getpid()
+    for entry in proc_dir.iterdir():
+        if not entry.name.isdigit() or int(entry.name) == me:
+            continue
+        try:
+            raw = (entry / "cmdline").read_bytes()
+        except OSError:
+            continue
+        parts = raw.split(b"\x00")
+        argv0 = parts[0].decode("utf-8", "replace") if parts and parts[0] else ""
+        if os.path.basename(argv0) != name_match:
+            continue
+        if port is not None:
+            cmd = raw.replace(b"\x00", b" ").decode("utf-8", "replace")
+            if f"--port {port}" not in cmd and f"--port={port}" not in cmd:
+                continue
+        pids.append(int(entry.name))
+    return pids
+
+
+def stop_external_servers(
+    log: logging.Logger, *, name_match: str = "llama-server", port: int | None = None
+) -> list[int]:
+    """Reap llama-server processes (e.g. orphans from a manual `llama-server … &`).
+
+    SIGTERM, brief wait, then SIGKILL survivors. Returns the PIDs signalled. Never-silent:
+    logs each action and reports when nothing was found. Best-effort; never raises.
+    """
+    pids = find_server_pids(name_match, port)
+    if not pids:
+        log.info("No llama-server processes found%s.", f" on port {port}" if port else "")
+        return []
+    signalled: list[int] = []
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+            signalled.append(pid)
+            log.info("SIGTERM → llama-server pid %d", pid)
+        except OSError as exc:
+            log.warning("could not signal pid %d: %s", pid, exc)
+    time.sleep(2.0)
+    for pid in signalled:
+        try:
+            os.kill(pid, 0)  # raises if gone
+            os.kill(pid, signal.SIGKILL)
+            log.info("SIGKILL → pid %d (did not exit on SIGTERM)", pid)
+        except OSError:
+            pass  # already exited
+    return signalled

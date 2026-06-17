@@ -119,6 +119,17 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--host", default="127.0.0.1", help="Host for --serve (default 127.0.0.1).")
     p.add_argument("--port", type=int, default=None, help="Port for --serve (default: a free one).")
     p.add_argument(
+        "--keep-server",
+        action="store_true",
+        help="With --serve, leave the managed server running afterwards (default: tear it down).",
+    )
+    p.add_argument(
+        "--stop-server",
+        action="store_true",
+        help="Reap running llama-server processes (orphans from a manual launch) and exit. "
+        "Use --port N to target one.",
+    )
+    p.add_argument(
         "--arms", default="mycelium", help="Comma-separated: mycelium,baseline (default mycelium)."
     )
     p.add_argument(
@@ -169,6 +180,16 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = _build_parser().parse_args()
+
+    # Standalone teardown: reap llama-server processes (e.g. an orphan from a manual
+    # `llama-server … &`) and exit. No run, no model needed.
+    if args.stop_server:
+        rdir = Path(args.results_dir or "results").expanduser()
+        rdir.mkdir(parents=True, exist_ok=True)
+        log = make_logger(rdir / f"{now_utc()}-stop.log")
+        killed = server.stop_external_servers(log, port=args.port)
+        print(f"Stopped {len(killed)} llama-server process(es): {killed}", file=sys.stderr)
+        return 0
 
     arms = tuple(a.strip() for a in args.arms.split(",") if a.strip())
     if unknown := [a for a in arms if a not in ("mycelium", "baseline")]:
@@ -259,7 +280,13 @@ def main() -> int:
             log=log,
         )
     finally:
-        server.stop_server(proc, log)
+        # Auto-teardown after all reports + logs are written. --keep-server leaves the
+        # managed server up (its URL is logged) so a follow-up run can reuse it.
+        if proc is not None and args.keep_server:
+            log.info("--keep-server: leaving managed llama-server running at %s", model_label)
+            log.info("Stop it later: python -m mycelium_experiments.kc2 --stop-server")
+        else:
+            server.stop_server(proc, log)
 
     # Back-compat: copy the single run's JSON to --out when one seed was requested.
     if args.out and len(seeds) == 1 and index["runs"]:
