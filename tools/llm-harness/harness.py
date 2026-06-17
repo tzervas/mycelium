@@ -166,6 +166,14 @@ def _call_llama_cli(
         "--log-disable",  # suppress llama.cpp's internal log spam to stderr
         "-e",  # escape newlines in prompt
     ]
+    # KNOWN FOLLOW-UP (verify on-device before enabling): recent llama.cpp builds
+    # default `llama`/`llama-cli` to interactive *conversation* mode for instruct
+    # models and may echo the prompt back into stdout. Both would distort the
+    # one-shot completions V-01/V-02 parse (prompt-echo can fail JSON parsing).
+    # The fixes are `-no-cnv` (disable the chat loop) and `--no-display-prompt`
+    # (don't echo the prompt) — but flag names/availability vary across builds,
+    # so they are NOT added blindly here. Add them once validated against the
+    # target binary, or prefer --server mode (its /completion output is clean).
     if extra_args:
         cmd.extend(extra_args)
 
@@ -1019,11 +1027,17 @@ def _resolve_llama_cli(
     # Off PATH: search common build/install dirs, then shallow globs.
     hit = _search_dirs_for(_LLAMA_BIN_NAMES, _llama_search_dirs())
     if hit is None:
+        # Both the modern (`llama-cli`) and the packaged/renamed (`llama`) names:
+        # the Termux `llama-cpp` package installs the CLI as plain `llama`, so a
+        # glob that only matched `llama-cli` would miss a hand-built `llama` too.
         for root in (Path.home(), Path.cwd()):
             for pat in (
                 "*/build/bin/llama-cli",
+                "*/build/bin/llama",
                 "llama*/build/bin/llama-cli",
+                "llama*/build/bin/llama",
                 "*/llama-cli",
+                "*/llama",
             ):
                 for cand in sorted(root.glob(pat)):
                     if cand.is_file() and os.access(cand, os.X_OK):
@@ -1493,8 +1507,8 @@ def install_llama_cpp(
             log.info("llama.cpp installed: %s", found)
             return found
         log.warning(
-            "Package installed but llama-cli was not found on PATH — open a new "
-            "shell and re-run, or pass --llama-cli PATH."
+            "Package installed but no llama.cpp CLI (llama-cli / llama) was found "
+            "on PATH — open a new shell and re-run, or pass --llama-cli PATH."
         )
         return None
     log.warning(
@@ -2351,13 +2365,17 @@ def run_harness(args: argparse.Namespace) -> int:
             llama_cli_arg, log, fix_path=fix_path, assume_yes=assume_yes
         )
         if llama_cli:
-            log.info("Mode: REAL (llama-cli) — binary: %s", llama_cli)
+            log.info(
+                "Mode: REAL (llama.cpp CLI) — binary: %s (alias: %s)",
+                llama_cli,
+                os.path.basename(llama_cli),
+            )
         else:
             log.warning(
-                "llama-cli binary not found%s (searched PATH, ~/llama.cpp/build/bin, "
-                "$PREFIX/bin, $MYCELIUM_LLAMA_DIR, and shallow globs). "
-                "SKIPPING all model-dependent validations (skip-gracefully, G2). "
-                "To run real mode: provide --llama-cli PATH or build llama.cpp. "
+                "llama.cpp CLI (llama-cli / llama) not found%s (searched PATH, "
+                "~/llama.cpp/build/bin, $PREFIX/bin, $MYCELIUM_LLAMA_DIR, and shallow "
+                "globs). SKIPPING all model-dependent validations (skip-gracefully, "
+                "G2). To run real mode: provide --llama-cli PATH or build llama.cpp. "
                 "To suppress this and run CI-safe: use --mock. Run --doctor to diagnose.",
                 f" (looked for: {llama_cli_arg})" if llama_cli_arg else "",
             )
@@ -2854,7 +2872,10 @@ def run_doctor(args: argparse.Namespace) -> int:
     out("")
 
     out("-" * 72)
-    out("  llama.cpp (llama-cli)")
+    # The CLI ships under more than one name: the modern build calls it
+    # `llama-cli`, while the Termux `llama-cpp` package installs it as plain
+    # `llama`. We accept either (see _LLAMA_BIN_NAMES), so name both here.
+    out("  llama.cpp (llama-cli / llama)")
     out("-" * 72)
     llama = _resolve_llama_cli(
         getattr(args, "llama_cli", None), log, fix_path=fix_path, assume_yes=assume_yes
@@ -2866,13 +2887,19 @@ def run_doctor(args: argparse.Namespace) -> int:
             llama = installed
             actions.append("Installed llama.cpp from the system package manager.")
     if llama:
-        out(f"      FOUND: {llama}")
+        out(f"      FOUND: {llama}  (alias: {os.path.basename(llama)})")
         try:
             v = subprocess.run(
                 [llama, "--version"], capture_output=True, text=True, timeout=20
             )
             blob = (v.stderr or v.stdout).strip()
-            out(f"      version: {blob.splitlines()[0] if blob else '(no output)'}")
+            # Package builds often omit git metadata, so the binary self-reports
+            # `version: 0 (unknown)`. Strip a leading `version:` it already
+            # printed so we don't render a confusing `version: version: …`.
+            line = blob.splitlines()[0].strip() if blob else "(no output)"
+            if line.lower().startswith("version:"):
+                line = line.split(":", 1)[1].strip()
+            out(f"      version: {line}")
         except Exception as exc:  # noqa: BLE001
             out(f"      version: (could not run --version: {exc})")
     else:

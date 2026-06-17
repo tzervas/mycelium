@@ -8,6 +8,25 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (2026-06-17: LLM-harness — first-class `llama` alias + clearer doctor)
+- **The harness now treats `llama` as a first-class CLI alias, not just `llama-cli`.** The Termux
+  `llama-cpp` package installs the CLI as plain **`llama`** (confirmed on-device: `which llama-cli`
+  is empty, `which llama` resolves to `$PREFIX/bin/llama`). Discovery already matched `llama` via
+  `_LLAMA_BIN_NAMES` since the off-PATH work; this pass makes the rest of the surface honest:
+  - `--doctor`'s section header is now **`llama.cpp (llama-cli / llama)`** and prints the resolved
+    **alias** alongside the path, so it's clear *which* name was found.
+  - The off-PATH **glob fallback** in `_resolve_llama_cli` now also matches `llama` (not only
+    `llama-cli`), so a hand-built `llama` is found too.
+  - Real-mode/install warnings now say **"llama.cpp CLI (llama-cli / llama)"** instead of bare
+    `llama-cli`, removing the impression the harness only wants `llama-cli`.
+  - Package builds self-report `version: 0 (unknown)` (no embedded git metadata); the doctor now
+    de-duplicates a leading `version:` so it no longer renders `version: version: …`.
+  - A **KNOWN FOLLOW-UP** is documented in `_call_llama_cli`: recent builds default to interactive
+    *conversation* mode and may echo the prompt, which would distort the one-shot completions V-01/V-02
+    parse. The `-no-cnv` / `--no-display-prompt` fixes are noted but **not** added blindly (flag
+    availability varies by build); to be validated against the target binary, or use `--server` mode.
+  - Grounding: G2 never-silent (a missing CLI still SKIPs honestly). README Termux step clarified.
+
 ### Changed (2026-06-17: LLM-harness — package/release installs, not Python packages)
 - **Bootstrap now installs runtime tools from the OS package manager / official releases instead of
   fragile language-package builds.** The Termux failure that kept recurring was `--doctor` trying to

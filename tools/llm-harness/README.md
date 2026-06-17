@@ -193,7 +193,8 @@ you can always supply a self-verified file via `--model` or a vetted `--model-sh
 ```sh
 pkg update && pkg upgrade
 pkg install python git              # Python drives the harness; git to clone
-pkg install llama-cpp               # provides llama-cli/llama-server in $PREFIX/bin (on PATH)
+pkg install llama-cpp               # CLI lands in $PREFIX/bin (on PATH) — note: Termux
+                                    # names it `llama` (not `llama-cli`); the harness accepts either
 ```
 
 `pkg install llama-cpp` is the **easy path** on Termux — a repo-signed, prebuilt
