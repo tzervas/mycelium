@@ -15,9 +15,10 @@
 //! **suggest** or **scaffold**, and `--fix` applies **nothing** (header canonicalization is delegated to
 //! `mycfmt`, M-364). This keeps the never-silent guarantee absolute: `myc-lint` v0 cannot rewrite your code.
 //!
-//! The §4.1 documentation quality-bar lint (M-363 §6, 8 checks) is **dormant-but-defined** here: its check
-//! set is named ([`DOC_QUALITY_CHECKS`]) but it activates only with the M-363 doc-IR generator, and it does
-//! **not** block the M-366 gate. KC-3: above the kernel; no new dependency.
+//! The §4.1 documentation quality-bar lint (M-363 §6, 8 checks) is now **ACTIVE** (Phase 9 Wave B): the
+//! check-name set ([`DOC_QUALITY_CHECKS`]) is the single source of truth in `mycelium-doc`, where the
+//! checks run over the M-363 doc-IR (see `mycelium_doc::doc_lint`). It has its own gate (`myc-doc`) and
+//! still does **not** block the M-366 lint gate. KC-3: above the kernel.
 
 use mycelium_l1::{check_and_resolve, elaborate, parse};
 use mycelium_lsp::baseline::RecoveryProfile;
@@ -178,24 +179,17 @@ pub fn recovery_scaffold(class: &str, profile: RecoveryProfile) -> String {
     )
 }
 
-/// The §4.1 documentation quality-bar lint check set (M-363 §6) — **dormant-but-defined** (the eight
-/// checks are named; the lint activates with the M-363 doc-IR generator and does not block this gate).
-pub const DOC_QUALITY_CHECKS: &[&str] = &[
-    "single-template-conformance",
-    "navigability",
-    "progressive-disclosure",
-    "checked-examples",
-    "no-dead-xref",
-    "dual-projection-parity",
-    "no-hallucinated-prose",
-    "legibility-accessibility",
-];
+/// The §4.1 documentation quality-bar lint check set (M-363 §6) — now **active** (Phase 9 Wave B). The
+/// canonical names live in `mycelium-doc` (the crate that runs the checks over the doc-IR); re-exported
+/// here under the historical name so existing callers keep working (DRY — one source of truth).
+pub use mycelium_doc::CHECK_NAMES as DOC_QUALITY_CHECKS;
 
-/// The status line for the dormant §4.1 doc lint — named honestly, never pretended-active.
+/// The status line for the §4.1 doc lint — now **active** (it runs over the M-363 doc-IR via `myc-doc`,
+/// `mycelium_doc::doc_lint`). Has its own gate; does not block the M-366 lint gate.
 #[must_use]
 pub fn doc_lint_status() -> String {
     format!(
-        "doc quality-bar lint (§4.1): dormant-but-defined — {} checks await the M-363 doc-IR generator; \
+        "doc quality-bar lint (§4.1): active — {} checks run over the M-363 doc-IR (myc-doc gate); \
          does not block the M-366 gate",
         DOC_QUALITY_CHECKS.len()
     )
@@ -322,8 +316,11 @@ mod tests {
     }
 
     #[test]
-    fn the_doc_lint_is_dormant_but_defined() {
+    fn the_doc_lint_is_now_active() {
+        // Wave B: the §4.1 lint is no longer dormant — it runs over the M-363 doc-IR (myc-doc).
         assert_eq!(DOC_QUALITY_CHECKS.len(), 8);
-        assert!(doc_lint_status().contains("dormant"));
+        assert!(doc_lint_status().contains("active"));
+        // The check-name set is the single source of truth re-exported from mycelium-doc.
+        assert_eq!(DOC_QUALITY_CHECKS, mycelium_doc::CHECK_NAMES);
     }
 }

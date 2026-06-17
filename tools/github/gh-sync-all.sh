@@ -29,17 +29,20 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # This wrapper ALWAYS runs the full suite (--all), so it forwards only the modifier flags. A single
 # level (--labels/--milestones/--issues/--prs/--project/--validate) is NOT a wrapper mode — it would
 # be a redundant no-op under --all — so we reject it and point at the engine instead of pretending.
+# --all routes through the engine's preflight, which is where the SHARED least-privilege auth
+# automation lives (DRY/KC-3 — implemented once in the engine; both wrappers trigger it via --all).
+# --no-auth-fix is the CI escape hatch (never prompt to change scopes).
 ENGINE_ARGS=(--all --repo "$REPO")
 for arg in "$@"; do
   case "$arg" in
-    --dry-run|--update-bodies|--no-preflight) ENGINE_ARGS+=("$arg") ;;
+    --dry-run|--update-bodies|--no-preflight|--no-auth-fix) ENGINE_ARGS+=("$arg") ;;
     --all) : ;;  # already implied
     --labels|--milestones|--issues|--prs|--project|--validate)
       echo "gh-sync-all always runs the FULL suite (--all); '$arg' would be a redundant no-op." >&2
       echo "for a single level, call the engine directly, e.g.:" >&2
       echo "  python tools/github/gh-issues-sync.py $arg --dry-run" >&2
       exit 2 ;;
-    *) echo "unknown argument: $arg (accepted: --dry-run --update-bodies --no-preflight)" >&2
+    *) echo "unknown argument: $arg (accepted: --dry-run --update-bodies --no-preflight --no-auth-fix)" >&2
        exit 2 ;;
   esac
 done

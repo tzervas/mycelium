@@ -15,6 +15,9 @@ workspace = true
 # The M-141 lints + M-362 baseline (mycelium-lsp) and the parse/check/elaborate pipeline (mycelium-l1).
 mycelium-l1 = { path = "../mycelium-l1" }
 mycelium-lsp = { path = "../mycelium-lsp" }
+# The M-363 doc-IR + the §4.1 doc quality-bar lint, now ACTIVE (Wave B): the check-name set lives there
+# as the single source of truth, re-exported here as `DOC_QUALITY_CHECKS`. KC-3 — both above the kernel.
+mycelium-doc = { path = "../mycelium-doc" }
 
 [[bin]]
 name = "myc-lint"

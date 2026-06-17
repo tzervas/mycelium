@@ -130,6 +130,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-doc"
+version = "0.0.0"
+dependencies = [
+ "blake3",
+ "mycelium-core",
+ "mycelium-l1",
+ "mycelium-proj",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "mycelium-fmt"
 version = "0.0.0"
 dependencies = [
@@ -160,6 +172,7 @@ dependencies = [
 name = "mycelium-lint"
 version = "0.0.0"
 dependencies = [
+ "mycelium-doc",
  "mycelium-l1",
  "mycelium-lsp",
 ]

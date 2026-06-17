@@ -78,14 +78,12 @@ HERE = Path(__file__).resolve().parent
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # gh plumbing (cross-platform: subprocess with a list argv, never shell=True)
 # ─────────────────────────────────────────────────────────────────────────────────────────────
-def gh(args, *, input_text=None, check=True):
-    """Run a `gh` subcommand and return its stdout. Raises on non-zero exit when ``check``."""
+def _run_gh(args, *, input_text=None):
+    """Low-level: run `gh` and return ``(returncode, stdout, stderr)``. Never raises a traceback —
+    a missing `gh` binary is an explicit, classified ``sys.exit`` (G2)."""
     try:
         proc = subprocess.run(
             ["gh", *args],
-            # check=False: we surface stderr ourselves below, then raise — so a failure is
-            # never silent (G2). Passing check=check here would raise inside subprocess.run
-            # before that block could print stderr.
             check=False,
             text=True,
             input=input_text,
@@ -96,10 +94,59 @@ def gh(args, *, input_text=None, check=True):
             "ERROR: `gh` (GitHub CLI) not found on PATH. Install it and run `gh auth login` "
             "(Windows: `winget install GitHub.cli`)."
         )
-    if check and proc.returncode != 0:
-        sys.stderr.write(proc.stderr)
-        proc.check_returncode()
-    return proc.stdout
+    return proc.returncode, proc.stdout, proc.stderr
+
+
+def _gh_fail(args, rc, stderr):
+    """Turn a `gh` failure into an EXPLICIT, classified, remediation-bearing exit — never a raw
+    traceback (G2). This is the fix for the unguarded ``proc.check_returncode()`` crash that surfaced
+    as a ``CalledProcessError`` on a `gh api` 401 inside reconcile_prs/reconcile_project."""
+    blob = (stderr or "").strip()
+    low = blob.lower()
+    cmd = "gh " + " ".join(args)
+    if "401" in blob or "bad credentials" in low or "requires authentication" in low:
+        hint = (
+            "re-authenticate — your token is missing/expired/invalid. Run `gh auth login` "
+            "(or `gh auth refresh`), then re-run."
+        )
+    elif "rate limit" in low:
+        hint = (
+            "GitHub API rate limit hit — wait for the reset shown by `gh api -i rate_limit`, "
+            "or authenticate with a token that has a higher limit."
+        )
+    elif "403" in blob and (
+        "scope" in low or "saml" in low or "sso" in low or "forbidden" in low
+    ):
+        hint = (
+            "the token lacks a required scope or SSO authorization — see the preflight EXPLAIN, "
+            "or grant it with `gh auth refresh -s <scope>`."
+        )
+    elif (
+        "could not resolve host" in low
+        or "dial tcp" in low
+        or "timeout" in low
+        or "timed out" in low
+        or "network is unreachable" in low
+        or "connection refused" in low
+    ):
+        hint = "network error reaching GitHub — check connectivity/proxy and retry."
+    else:
+        hint = "see the gh stderr above; fix the cause and re-run (`gh auth status` to check auth)."
+    sys.exit(
+        f"ERROR: `{cmd}` failed (exit {rc}).\n"
+        f"  gh: {blob or '(no stderr)'}\n"
+        f"  remediation: {hint}\n"
+        f"  (never-silent, G2 — an explicit error, not a Python traceback.)"
+    )
+
+
+def gh(args, *, input_text=None, check=True):
+    """Run a `gh` subcommand and return its stdout. On a non-zero exit (when ``check``), fail with an
+    explicit, classified remediation — NEVER a raw traceback (G2)."""
+    rc, out, err = _run_gh(args, input_text=input_text)
+    if check and rc != 0:
+        _gh_fail(args, rc, err)
+    return out
 
 
 def gh_graphql(query):
@@ -131,14 +178,9 @@ def get_gh_scopes():
     no scope line is present (e.g. a fine-grained PAT) — in which case we must NOT claim a scope
     is missing (the operation itself will surface any real permission error, never-silently).
     """
-    try:
-        proc = subprocess.run(
-            ["gh", "auth", "status"], check=False, text=True, capture_output=True
-        )
-    except FileNotFoundError:
-        return False, None
-    blob = (proc.stdout or "") + (proc.stderr or "")
-    authed = proc.returncode == 0 or "Logged in to" in blob
+    rc, out, err = _run_gh(["auth", "status"])
+    blob = (out or "") + (err or "")
+    authed = rc == 0 or "Logged in to" in blob
     scopes = None
     for line in blob.splitlines():
         if "Token scopes:" in line:
@@ -148,41 +190,253 @@ def get_gh_scopes():
     return authed, scopes
 
 
-def preflight_gh(*, need_project):
-    """Sanity-check `gh` before a live reconcile. Returns ``project_ok`` (may we touch the board?).
+def repo_is_public(repo):
+    """Best-effort: True/False/None(unknown) for ``repo`` visibility. Never raises (own gh handling).
 
-    Honest by construction: if auth is good and the needed scope is present we proceed silently;
-    we only emit the ``gh auth refresh`` remediation when a scope the operation NEEDS is provably
-    absent (so a good token is never asked to refresh — and a fine-grained token, whose scopes we
-    cannot read, is trusted to fail loudly at the call site instead).
+    Drives least-privilege: a *public* target lets the write ops use the tighter ``public_repo``
+    instead of the broad ``repo``. Unknown (offline / unauth / older gh) is treated conservatively
+    as not-public (so we ask for ``repo`` — correctness over tightness, stated honestly).
     """
-    authed, scopes = get_gh_scopes()
-    if not authed:
-        scope_hint = "repo, project" if need_project else "repo"
-        sys.exit(
-            f"ERROR: gh is not authenticated. Run `gh auth login` (scopes: {scope_hint})."
-        )
-    print("   = gh: authenticated")
-    if not need_project:
-        return False
-    if scopes is None:
-        # Unknown scope set (fine-grained token): trust it; the board call fails loudly if not.
-        print(
-            "   ~ gh token scopes not enumerable (fine-grained?) — proceeding; "
-            "the board API will surface any permission gap explicitly."
-        )
-        return True
-    if "project" in scopes:
-        print("   = gh: 'project' scope present")
-        return True
-    # The ONLY case that needs a refresh: the scope is genuinely missing.
-    print(
-        "   ! Projects v2 needs the 'project' scope, which this token lacks.\n"
-        "     Remediation (one-time, per machine):  gh auth refresh -s project\n"
-        "     (verify with: gh auth status). Skipping --project this run (never silent, G2).",
-        file=sys.stderr,
+    rc, out, _ = _run_gh(
+        ["repo", "view", repo, "--json", "visibility", "-q", ".visibility"]
     )
+    if rc != 0:
+        return None
+    v = (out or "").strip().lower()
+    if v == "public":
+        return True
+    if v in ("private", "internal"):
+        return False
+    return None
+
+
+# ── least-privilege scope computation (PURE — no I/O; exercised offline by --self-test) ──────────
+# The classic-OAuth granularity FLOOR (honest): `repo` is coarse — it spans issues/PRs/labels/
+# milestones and CANNOT be narrowed further by a classic scope. A fine-grained PAT is the path to
+# tighter per-resource permissions; its scopes are not enumerable here, so it is trusted to fail
+# loudly at the call site (`gh()` classifies the error).
+WRITE_OPS = frozenset({"labels", "milestones", "issues", "prs"})
+
+
+def required_scopes(ops, *, repo_public, read_only):
+    """The MINIMAL classic-OAuth scope set for the arg'd operation set ``ops``.
+
+    - offline-only (``self-test`` / ``validate``)  -> no scope;
+    - any repo write (labels/milestones/issues/prs) -> ``public_repo`` if the repo is public, else
+      the broader ``repo`` (least-privilege prefers the tighter one);
+    - ``project`` (board) -> ``read:project`` for a read-only/dry-run run, else ``project``.
+    """
+    ops = set(ops)
+    scopes = set()
+    if ops & WRITE_OPS:
+        scopes.add("public_repo" if repo_public else "repo")
+    if "project" in ops:
+        scopes.add("read:project" if read_only else "project")
+    return scopes
+
+
+def _covers(have_scope, need_scope):
+    """Whether a held scope satisfies a needed one (`repo` ⊇ `public_repo`; `project` ⊇ `read:project`)."""
+    if have_scope == need_scope:
+        return True
+    if need_scope == "public_repo" and have_scope == "repo":
+        return True
+    if need_scope == "read:project" and have_scope == "project":
+        return True
     return False
+
+
+def missing_scopes(required, have):
+    """The required scopes NOT covered by ``have`` (empty for a fine-grained token, ``have is None``)."""
+    if have is None:
+        return set()
+    return {s for s in required if not any(_covers(h, s) for h in have)}
+
+
+def over_grants(required, have):
+    """Advisory notes when the token carries MORE than the computed minimum (never blocking)."""
+    if have is None:
+        return []
+    notes = []
+    if "public_repo" in required and "repo" in have:
+        notes.append(
+            "`repo` is broader than the `public_repo` these ops need (public target)"
+        )
+    if "read:project" in required and "project" in have:
+        notes.append(
+            "`project` is broader than the read-only `read:project` this run needs"
+        )
+    family = {"repo", "public_repo", "project", "read:project"}
+    extras = sorted(s for s in have if s not in family and s not in required)
+    for e in extras:
+        notes.append(f"`{e}` is not used by this run")
+    return notes
+
+
+# ── auth automation (state mutation → opt-in, EXPLAIN-ed, never silent — G2) ─────────────────────
+def _auth_command(required, *, authed):
+    verb = "refresh" if authed else "login"
+    scope_args = " ".join(f"-s {s}" for s in sorted(required))
+    return f"gh auth {verb} {scope_args}".strip()
+
+
+def _print_explain(ops, required, repo, *, read_only):
+    print(
+        "   ! least-privilege auth EXPLAIN — changing a token's scopes is a state mutation, so it is "
+        "opt-in and never silent (G2):"
+    )
+    print(
+        f"       these ops  : {sorted(ops)}{' (read-only/dry-run)' if read_only else ''}"
+    )
+    print(
+        f"       → scopes   : {sorted(required) or ['(none)']}  "
+        f"(the MINIMAL classic set for these ops on {repo})"
+    )
+    print("       → command  : " + _auth_command(required, authed=True))
+    print(
+        "       floor      : classic OAuth scopes are coarse — `repo` spans issues/PRs/labels/\n"
+        "                    milestones and can't be narrowed further; a fine-grained PAT is the path\n"
+        "                    to tighter per-resource perms (trusted to fail loudly at the call site)."
+    )
+
+
+def _consent(cmd):
+    """Ask the user to authorize the scope change. EOF/non-interactive → declined (never assumed)."""
+    print(f"   → proposed (one-time, per machine): {cmd}")
+    try:
+        ans = (
+            input("   Run this now to grant the minimal scopes? [y/N] ").strip().lower()
+        )
+    except EOFError:
+        return False
+    return ans in ("y", "yes")
+
+
+def _run_auth(required, *, authed):
+    """Run `gh auth refresh/login -s <minimal-set>` interactively (inherits stdio). Explicit on fail."""
+    base = ["gh", "auth", "refresh" if authed else "login"]
+    for s in sorted(required):
+        base += ["-s", s]
+    print(f"   → running: {' '.join(base)}")
+    rc = subprocess.run(base, check=False).returncode
+    if rc != 0:
+        sys.exit(
+            f"ERROR: `{' '.join(base)}` failed (exit {rc}). Run it manually to grant the scopes "
+            "(never-silent, G2)."
+        )
+
+
+def preflight_gh(*, ops, repo, read_only, no_auth_fix):
+    """Sanity-check `gh` and enforce LEAST-PRIVILEGE before a live reconcile. Returns ``project_ok``.
+
+    Computes the minimal scope set for the arg'd ``ops``, compares it to the active token, and — only
+    when a needed scope is provably absent — EXPLAINs and (with consent, unless ``no_auth_fix``)
+    automates the exact-minimal `gh auth refresh`. An over-granted token gets a non-blocking advisory.
+    A fine-grained token (scopes unreadable) is trusted to fail loudly at the call site.
+    """
+    want_project = "project" in ops
+    authed, scopes = get_gh_scopes()
+    repo_public = repo_is_public(repo) if (ops & WRITE_OPS) else None
+    required = required_scopes(
+        ops, repo_public=(repo_public is True), read_only=read_only
+    )
+
+    if not authed:
+        if not required:
+            print(
+                "   = gh: not authenticated, but the arg'd ops need no scope — proceeding offline"
+            )
+            return False
+        return _remediate(
+            required,
+            ops,
+            repo,
+            read_only,
+            no_auth_fix,
+            authed=False,
+            have=None,
+            want_project=want_project,
+        )
+
+    print("   = gh: authenticated")
+    if not required:
+        print("   = gh: arg'd ops are offline/read-only — no scope required")
+        return want_project
+    if scopes is None:
+        print(
+            "   ~ gh token scopes not enumerable (fine-grained PAT?) — trusting; a missing permission "
+            "fails loudly at the call site. (fine-grained PATs give tighter per-resource perms.)"
+        )
+        return want_project
+
+    for note in over_grants(required, scopes):
+        print(f"   ~ least-privilege advisory: {note}")
+
+    miss = missing_scopes(required, scopes)
+    if not miss:
+        print(f"   = gh: token scopes satisfy the computed minimum {sorted(required)}")
+        return want_project
+    return _remediate(
+        required,
+        ops,
+        repo,
+        read_only,
+        no_auth_fix,
+        authed=True,
+        have=scopes,
+        want_project=want_project,
+    )
+
+
+def _remediate(
+    required, ops, repo, read_only, no_auth_fix, *, authed, have, want_project
+):
+    """Handle a missing-scope situation: EXPLAIN, then automate (with consent) or exit/degrade.
+
+    Missing a *repo* scope blocks the selected write ops (hard exit). Missing only *project* degrades
+    gracefully (skip the board) — preserving the original never-silent behaviour.
+    """
+    miss = missing_scopes(required, have) if authed else set(required)
+    repo_blocked = bool({"repo", "public_repo"} & miss) or (
+        not authed and bool(set(ops) & WRITE_OPS)
+    )
+    cmd = _auth_command(required, authed=authed)
+    _print_explain(ops, required, repo, read_only=read_only)
+
+    if no_auth_fix:
+        head = f"   ! missing gh scope(s) {sorted(miss)} and --no-auth-fix is set — not prompting."
+        if repo_blocked or not authed:
+            sys.exit(
+                f"{head}\n     remediation: {cmd}\n  (cannot proceed; never-silent, G2.)"
+            )
+        print(
+            f"{head}\n     remediation: {cmd}\n     proceeding without --project (board skipped); "
+            "never silent.",
+            file=sys.stderr,
+        )
+        return False
+
+    if not _consent(cmd):
+        if repo_blocked or not authed:
+            sys.exit(
+                f"   ! consent declined — cannot proceed without {sorted(miss)}. "
+                f"Run manually: {cmd}  (never-silent, G2.)"
+            )
+        print(
+            "   ! consent declined — proceeding without --project (board skipped); never silent.",
+            file=sys.stderr,
+        )
+        return False
+
+    _run_auth(required, authed=authed)
+    authed2, scopes2 = get_gh_scopes()
+    if not authed2 or missing_scopes(required, scopes2):
+        sys.exit(
+            f"   ! auth did not grant the required scopes {sorted(required)}. Run manually: {cmd} "
+            "(never-silent, G2)."
+        )
+    print(f"   = gh: scopes now satisfy the computed minimum {sorted(required)}")
+    return want_project
 
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -1225,9 +1479,54 @@ def self_test():
     }
     assert plan_field_reconcile(desired_fields, synced_fields) == ([], {})
 
+    # ── least-privilege scope computation (pure, offline) ───────────────────────────────────────
+    # offline-only ops need nothing.
+    assert required_scopes(set(), repo_public=True, read_only=False) == set()
+    assert required_scopes({"validate"}, repo_public=False, read_only=False) == set()
+    # a public-repo write prefers the tighter `public_repo`; a private one needs broad `repo`.
+    assert required_scopes({"issues"}, repo_public=True, read_only=False) == {
+        "public_repo"
+    }
+    assert required_scopes({"labels", "prs"}, repo_public=False, read_only=False) == {
+        "repo"
+    }
+    # the board needs `read:project` when read-only, `project` when it will write.
+    assert required_scopes({"project"}, repo_public=True, read_only=True) == {
+        "read:project"
+    }
+    assert required_scopes(
+        {"issues", "project"}, repo_public=True, read_only=False
+    ) == {
+        "public_repo",
+        "project",
+    }
+    # coverage: `repo` ⊇ `public_repo`; `project` ⊇ `read:project`.
+    assert missing_scopes({"public_repo"}, {"repo"}) == set()
+    assert missing_scopes({"read:project"}, {"project"}) == set()
+    assert missing_scopes({"public_repo", "project"}, {"repo"}) == {"project"}
+    assert missing_scopes({"repo"}, {"public_repo"}) == {
+        "repo"
+    }  # public_repo does NOT cover repo
+    # a fine-grained token (None) is trusted: nothing reported missing.
+    assert missing_scopes({"repo", "project"}, None) == set()
+    # over-grant advisories: broader-than-needed + entirely-unused scopes; none when exact.
+    assert over_grants({"public_repo"}, {"repo"})  # repo broader than public_repo
+    assert any("read-only" in n for n in over_grants({"read:project"}, {"project"}))
+    assert any(
+        "gist" in n for n in over_grants({"public_repo"}, {"public_repo", "gist"})
+    )
+    assert over_grants({"public_repo", "project"}, {"public_repo", "project"}) == []
+    assert over_grants({"repo"}, None) == []
+    # the auth command is the exact-minimal set, refresh vs login by auth state.
+    assert _auth_command({"public_repo", "project"}, authed=True) == (
+        "gh auth refresh -s project -s public_repo"
+    )
+    assert _auth_command({"repo"}, authed=False) == "gh auth login -s repo"
+
     print(
         "self-test OK: label_delta, normalize_body, plan_issue_update, parse_conventional, "
-        "derive_pr_labels, infer_milestone, label_to_field_values, plan_field_reconcile"
+        "derive_pr_labels, infer_milestone, label_to_field_values, plan_field_reconcile, "
+        "required_scopes, missing_scopes, over_grants, _auth_command"
     )
 
 
@@ -1331,6 +1630,12 @@ def main():
         help="skip the gh auth/scope sanity check (the API call still fails loudly if lacking)",
     )
     parser.add_argument(
+        "--no-auth-fix",
+        action="store_true",
+        help="never prompt to change gh scopes (CI/non-interactive); a missing scope is an explicit "
+        "error or a flagged board-skip, never an interactive prompt",
+    )
+    parser.add_argument(
         "--self-test",
         action="store_true",
         help="run the offline pure-logic check and exit",
@@ -1372,15 +1677,34 @@ def main():
             )
         print()
 
-    # Auto sanity-check: proceed when auth/scopes are good; only flag what is genuinely missing.
+    # The arg'd operation set drives the least-privilege scope computation in preflight.
+    ops = set()
+    if do_labels:
+        ops.add("labels")
+    if do_milestones:
+        ops.add("milestones")
+    if do_issues:
+        ops.add("issues")
+    if do_prs:
+        ops.add("prs")
+    if want_project:
+        ops.add("project")
+
+    # Auto sanity-check + least-privilege enforcement: proceed when scopes match the computed
+    # minimum; EXPLAIN + (consented) automate a refresh only for a genuinely-absent needed scope.
     project_ok = False
     if args.no_preflight:
         project_ok = (
             want_project  # caller vouches; the API call fails loudly if it cannot
         )
     else:
-        print(">> preflight: gh auth / scope sanity check")
-        project_ok = preflight_gh(need_project=want_project)
+        print(">> preflight: gh auth + least-privilege scope check")
+        project_ok = preflight_gh(
+            ops=ops,
+            repo=args.repo,
+            read_only=args.dry_run,
+            no_auth_fix=args.no_auth_fix,
+        )
         print()
     do_project = want_project and project_ok
 
@@ -1429,4 +1753,16 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Top-level guard: a `gh` failure already exits explicitly via _gh_fail; this catches anything
+    # else so the user never sees a raw Python traceback (G2 — every failure is an explicit message).
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit("\nERROR: interrupted by user.")
+    except SystemExit:
+        raise
+    except Exception as exc:  # pragma: no cover - last-resort guard, never a traceback
+        sys.exit(
+            f"ERROR: unexpected failure: {type(exc).__name__}: {exc}\n"
+            "  (this should have been an explicit, classified error — please report it.)"
+        )
