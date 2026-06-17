@@ -120,26 +120,39 @@ added to `PATH`; or a hand-built `llama.cpp` under `~/llama.cpp/build/bin`). The
 this without you editing dotfiles:
 
 ```sh
-python3 tools/llm-harness/harness.py --doctor            # report what's found, where it looked, the fix
-python3 tools/llm-harness/harness.py --doctor --fix-path # also persist any off-PATH fix to your shell rc
+python3 tools/llm-harness/harness.py --doctor             # diagnose AND heal: auto-install + fix PATH
+python3 tools/llm-harness/harness.py --doctor --yes        # same, non-interactive (skip the prompts)
+python3 tools/llm-harness/harness.py --doctor --check-only # read-only report (no installs, no PATH writes)
 ```
 
-- **`--doctor`** prints platform/PATH, installers, and the resolved state of **llama.cpp**, the
-  **hf CLI** (+ auth), the **Claude Code CLI**, and the model cache — with the exact fix for each
-  miss. Run it on the phone and paste the output back to troubleshoot.
+- **`--doctor` is self-healing.** It prints platform/PATH, installers, and the resolved state of
+  **llama.cpp**, the **hf CLI** (+ auth), the **Claude Code CLI**, and the model cache — and then
+  *fixes what it can*:
+  - missing **hf CLI** → installs `huggingface_hub[cli]` (uv → pipx → pip, **never** curl|bash);
+  - **Claude Code CLI** installed-but-unlinked → links it onto PATH; missing entirely → `npm install -g
+    @anthropic-ai/claude-code` (on Termux it points npm's prefix at `$PREFIX` first so the link lands on PATH);
+  - off-PATH binary → PATH healed in-process **and** persisted to your shell rc (healing implies `--fix-path`);
+  - absent default model → offers to download it.
+
+  Every mutation **prompts for consent unless `--yes`**; a non-interactive run without `--yes` declines
+  safely (never-silent, G2). Use **`--check-only`** for the classic read-only report — diagnose and print
+  the fix for each miss, but install nothing and touch no files. Wrong-arch/corrupt binaries (an
+  `Exec format error`) are reported with the reinstall command rather than auto-"fixed" (arch can't be patched).
 - **Discovery** for every binary searches `PATH` first, then the dirs installers/builds actually
   use: hf → scripts dir, `~/.local/bin`, pipx/uv venvs, `$PREFIX/bin`; llama.cpp →
   `~/llama.cpp/build/bin`, `$PREFIX/bin`, `$MYCELIUM_LLAMA_DIR`, shallow globs; claude → npm global
   bin (`npm config get prefix`), nvm/bun/volta/pnpm dirs, `$PREFIX/bin`. If `hf` has no console
   script anywhere but `huggingface_hub` is importable, it falls back to `python -m huggingface_hub…`.
-- **Self-healing:** a binary found off-`PATH` is used anyway (its dir is prepended to *this run's*
-  `PATH` so child processes see it), with the exact `export PATH=…` printed. `--fix-path` appends
-  that line to your shell rc (idempotent; prompts unless `--yes`) so it sticks.
+- **Self-healing PATH:** a binary found off-`PATH` is used anyway (its dir is prepended to *this run's*
+  `PATH` so child processes see it), with the exact `export PATH=…` printed. `--fix-path` (implied by
+  `--doctor` unless `--check-only`) appends that line to your shell rc (idempotent; prompts unless
+  `--yes`) so it sticks.
 - **Cached model is reused automatically:** once a model is in the cache, real mode uses it with no
   `--ensure-model` and no hf round-trip — so after the model is downloaded you only need
   `llama.cpp`. If a model is already present, `--ensure-model` won't even set up the hf CLI.
 - **Unlinked Claude Code CLI:** if the npm package is installed but `claude` isn't on `PATH`,
-  `--doctor` reports it as *installed but not linked* and prints the exact `ln -s …`/relink fix.
+  `--doctor` reports it as *installed but not linked* and (in heal mode) links `cli.js` into a PATH
+  bin dir for you (`--check-only` just prints the exact `ln -s …`/relink fix instead).
 
 **Honesty (G2/VR-5).** Registry URLs/filenames are **best-effort** and may change upstream.
 A download is verified by the **GGUF magic header** (`GGUF`) + a clean, complete transfer
