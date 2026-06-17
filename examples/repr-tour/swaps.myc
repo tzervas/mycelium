@@ -1,0 +1,17 @@
+// nodule: tour.swaps
+// @version: 0.1.0
+// @license: Apache-2.0
+// @authors: Tyler Zervas
+// @since: 2026-06-17
+// @updated: 2026-06-17
+// @summary: Guarantee-annotated swaps — the LR-6 honesty index across the lattice (Exact ⊐ Proven ⊐ Empirical ⊐ Declared). Every swap is explicit and never-silent (G2); L1 v0 carries the index, the cert layer discharges it (VR-5).
+nodule tour.swaps
+
+fn widen(x: Binary{8}) -> Ternary{6} @ Declared =
+  swap(x, to: Ternary{6}, policy: roundtrip)
+
+fn narrow(x: Dense{768, F32}) -> Dense{768, BF16} @ Empirical =
+  swap(x, to: Dense{768, BF16}, policy: bf16_round)
+
+fn certified(x: Dense{768, F32}) -> Dense{768, BF16} @ Proven =
+  swap(x, to: Dense{768, BF16}, policy: bf16_round)

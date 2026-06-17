@@ -1,0 +1,13 @@
+// nodule: tour.iter
+// @version: 0.1.0
+// @license: Apache-2.0
+// @authors: Tyler Zervas
+// @since: 2026-06-17
+// @updated: 2026-06-17
+// @summary: Bounded iteration — a `for` fold over a linearly recursive value (RFC-0007 §4.8). `for` is the only iteration form and is total by construction (structural recursion); here it xor-reduces a byte string into an 8-bit checksum.
+nodule tour.iter
+
+type Bytes = End | More(Binary{8}, Bytes)
+
+fn checksum(bs: Bytes) -> Binary{8} =
+  for b in bs, acc = 0b0000_0000 => xor(acc, b)

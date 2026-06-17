@@ -1,0 +1,22 @@
+# mycelium-proj.toml — a richer canonical phylum that tours more of the L1 surface.
+# Like hello-phylum it is authored to PASS all four toolchain gates (mycfmt --check,
+# myc-check, myc-sec, myc-lint) so `just check` exercises the M-361 tools over
+# representative programs — a guarantee-annotated swap (the LR-6 honesty index), a
+# trait, a matured fn, ambient representation, and a `for` fold — not just a toy.
+[project]
+name        = "tour"
+kind        = "phylum"
+version     = "0.1.0"
+license     = "Apache-2.0"
+authors     = ["Tyler Zervas"]
+since       = "2026-06-17"
+summary     = "Representation-surface tour: the toolchain gate's richer dogfood fixture."
+keywords    = ["example", "toolchain", "conformance"]
+lang        = "mycelium-0"
+
+[surface]
+exports     = ["tour.swaps", "tour.traits", "tour.iter", "tour.ambient"]
+
+[toolchain]
+format      = "mycfmt-0"
+lints       = "strict"
