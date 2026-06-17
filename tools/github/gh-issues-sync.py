@@ -265,13 +265,14 @@ def parse_conventional(title):
     }
 
 
-def derive_pr_labels(parsed, type_map, area_set):
+def derive_pr_labels(parsed, type_map, area_set, scope_aliases=None):
     """Map a parsed title to (labels:set, flags:list) using conventions.json + the area:* set.
 
-    Pure + honest: an unknown type or a scope that is not an area:* label produces a FLAG, never
-    an invented label (G2). The type label is required; area labels are best-effort on exact
-    scope match.
+    Pure + honest: an unknown type, or a scope that is neither an area:* label nor a declared
+    ``scope_to_area`` alias, produces a FLAG, never an invented label (G2). The type label is
+    required; area labels are best-effort on an exact scope match or a ratified alias.
     """
+    scope_aliases = scope_aliases or {}
     labels, flags = set(), []
     if parsed is None:
         return labels, ["title not Conventional-Commit form; type unresolved"]
@@ -281,9 +282,16 @@ def derive_pr_labels(parsed, type_map, area_set):
     else:
         flags.append(f"unknown commit type '{parsed['type']}' (no type:* mapping)")
     for scope in parsed["scopes"]:
-        area = f"area:{scope}"
-        if area in area_set:
-            labels.add(area)
+        if f"area:{scope}" in area_set:
+            labels.add(f"area:{scope}")
+        elif scope in scope_aliases:  # a declared alias turns a FLAG into a mapping
+            aliased = f"area:{scope_aliases[scope]}"
+            if aliased in area_set:
+                labels.add(aliased)
+            else:
+                flags.append(
+                    f"scope alias '{scope}' -> '{scope_aliases[scope]}' is not an area:* label"
+                )
         else:
             flags.append(f"scope '{scope}' is not an area:* label (no area inferred)")
     if parsed["breaking"]:
@@ -666,6 +674,7 @@ def reconcile_prs(repo, conventions, area_set, task_to_ms, *, dry_run):
         },
     }
     patterns = conventions["milestone_inference"]["task_id_patterns"]
+    scope_aliases = conventions.get("scope_to_area", {}).get("aliases", {})
     prs = snapshot_prs(repo)
     print(f">> PRs: {len(prs)} on {repo} — add-only label/milestone backfill")
 
@@ -682,7 +691,7 @@ def reconcile_prs(repo, conventions, area_set, task_to_ms, *, dry_run):
                     parsed, source, text = cand, "commit", text + "\n" + subject
                     break
 
-        desired, flags = derive_pr_labels(parsed, type_map, area_set)
+        desired, flags = derive_pr_labels(parsed, type_map, area_set, scope_aliases)
         ms, ms_flag = infer_milestone(extract_task_ids(text, patterns), task_to_ms)
         if ms_flag:
             flags.append(ms_flag)
@@ -870,8 +879,9 @@ def reconcile_project(repo, manifest, contents, *, dry_run):
         print(f"   = exists: project #{found['number']}")
     pid = found["id"]
 
-    # 1) Fields + options.
-    actual = fetch_project_fields(pid) if not dry_run else {}
+    # 1) Fields + options. Reads are always live (even under --dry-run) so the preview is
+    # accurate — only the mutations below are suppressed.
+    actual = fetch_project_fields(pid)
     actual_by_name = {n: {"options": list(f["options"])} for n, f in actual.items()}
     create, add_options = plan_field_reconcile(manifest["fields"], actual_by_name)
     for name in create:
@@ -904,9 +914,10 @@ def reconcile_project(repo, manifest, contents, *, dry_run):
         if not auto.get("api_writable", False):
             print(f"   ! manual workflow: {auto['id']} — {auto.get('intent', '')}")
 
-    # 3) Items + field values.
+    # 3) Items + field values. Items are read live even under --dry-run so the preview reports
+    # real adds AND real field-value drift on items that already exist.
     field_label_map = manifest["field_label_map"]
-    existing = {} if dry_run else project_items(pid)
+    existing = project_items(pid)
     added = set_count = synced = 0
     for rec in contents:
         number, node_id, labels = rec["number"], rec.get("node_id"), rec["labels"]
@@ -918,22 +929,22 @@ def reconcile_project(repo, manifest, contents, *, dry_run):
             if dry_run:
                 fv = ", ".join(f"{k}={v}" for k, v in values.items())
                 print(f"   + would add item #{number}" + (f" [{fv}]" if fv else ""))
-                continue
+                added += 1
+                continue  # the item/option ids do not exist yet — nothing more to preview
             if not node_id:
                 print(
                     f"   ! #{number}: no node_id — cannot add to board", file=sys.stderr
                 )
                 continue
-            item_id = add_project_item(pid, node_id)
-            existing[number] = {"item_id": item_id, "fields": {}}
+            existing[number] = {"item_id": add_project_item(pid, node_id), "fields": {}}
             added += 1
 
-        if dry_run:
-            continue
         item = existing[number]
         for field_name, option_name in values.items():
             field = actual.get(field_name)
-            if not field:
+            if (
+                not field
+            ):  # field not created yet (a would-create field in a --dry-run preview)
                 continue
             option_id = field["options"].get(option_name)
             if not option_id:
@@ -945,15 +956,19 @@ def reconcile_project(repo, manifest, contents, *, dry_run):
             if item["fields"].get(field_name) == option_name:
                 synced += 1
                 continue
+            if dry_run:
+                print(f"   ~ would set #{number}: {field_name} = {option_name}")
+                set_count += 1
+                continue
             set_item_field(pid, item["item_id"], field["id"], option_id)
             print(f"   ~ #{number}: {field_name} = {option_name}")
             set_count += 1
 
-    if not dry_run:
-        print(
-            f">> project done — {added} item(s) added, {set_count} field value(s) set, "
-            f"{synced} already in sync"
-        )
+    verb = "would change" if dry_run else "done"
+    print(
+        f">> project {verb} — {added} item(s) {'to add' if dry_run else 'added'}, "
+        f"{set_count} field value(s) {'to set' if dry_run else 'set'}, {synced} already in sync"
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -1129,6 +1144,24 @@ def self_test():
     assert labels == set() and any("unknown commit type" in f for f in flags)
     labels, flags = derive_pr_labels(None, type_map, areas)
     assert labels == set() and flags  # unparsed title is flagged, not invented
+    # a declared scope alias turns a FLAG into a mapping; an alias to a non-area still FLAGs.
+    labels, flags = derive_pr_labels(
+        parse_conventional("feat(mlir): x"),
+        type_map,
+        {"area:execution"},
+        {"mlir": "execution"},
+    )
+    assert labels == {"type:feature", "area:execution"} and flags == [], (labels, flags)
+    labels, flags = derive_pr_labels(
+        parse_conventional("feat(zzz): x"),
+        type_map,
+        {"area:execution"},
+        {"zzz": "nope"},
+    )
+    assert labels == {"type:feature"} and any("alias" in f for f in flags), (
+        labels,
+        flags,
+    )
 
     # milestone inference: unambiguous → set; conflicting → flag; none → silent.
     t2m = {"M-150": "Phase 1", "M-151": "Phase 1", "M-201": "Phase 2"}

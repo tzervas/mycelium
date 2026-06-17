@@ -110,13 +110,19 @@ else
   pm_install git gh gnupg jq python openssh   # package-manager installs are themselves idempotent
   ok "packages installed"
 fi
+# Resolve a python interpreter UP FRONT (python3 preferred; Termux often has bare `python`) so a
+# missing one is an explicit prerequisite error here — not a confusing late failure inside the
+# delegated python tools (git-signing-sync.py / gh-issues-sync.py), even under --skip-install.
+PY=""
+for cand in python3 python; do have "$cand" && { PY="$cand"; break; }; done
 # pyyaml only when not already importable (pip is a no-op when satisfied).
-if have python; then
-  if python -c "import yaml" >/dev/null 2>&1; then ok "pyyaml ready"
-  elif python -m pip install --quiet --upgrade pip pyyaml 2>/dev/null; then ok "pyyaml installed"
+if [[ -n "$PY" ]]; then
+  if "$PY" -c "import yaml" >/dev/null 2>&1; then ok "pyyaml ready"
+  elif "$PY" -m pip install --quiet --upgrade pip pyyaml 2>/dev/null; then ok "pyyaml installed"
   else warn "pyyaml install failed — issue sync may skip (install: pip install pyyaml)"; fi
 fi
 for tool in git gh gpg jq; do have "$tool" || die "$tool missing — drop --skip-install or install it"; done
+[[ -n "$PY" ]] || die "python3/python missing — install it (or drop --skip-install)"
 
 # ---- 2. git identity -------------------------------------------------------------------
 step "2. git identity"
@@ -140,7 +146,7 @@ if [[ $DO_GPG -eq 1 ]]; then
   setup_args=(--setup --name "$GIT_USER_NAME" --email "$GIT_USER_EMAIL")
   [[ $GPG_PASSPHRASE -eq 0 ]] && setup_args+=(--no-passphrase)
   [[ -t 0 ]] || setup_args+=(--no-prompt)   # non-interactive: use the provided name/email, no prompts
-  if python "$HERE/git-signing-sync.py" "${setup_args[@]}"; then
+  if "$PY" "$HERE/git-signing-sync.py" "${setup_args[@]}"; then
     ok "commit signing configured (idempotent; existing key reused)"
   else
     die "signing setup failed (run: python $HERE/git-signing-sync.py to diagnose)"
@@ -199,7 +205,7 @@ if [[ $DO_ISSUES -eq 1 ]]; then
   step "8. issues + milestone assignment (gh-issues-sync.py)"
   sync_args=(--repo "$REPO")
   [[ $DRY_ISSUES -eq 1 ]] && sync_args+=(--dry-run)
-  if python "$HERE/gh-issues-sync.py" "${sync_args[@]}"; then ok "issues synced"
+  if "$PY" "$HERE/gh-issues-sync.py" "${sync_args[@]}"; then ok "issues synced"
   else warn "issue sync failed (check pyyaml + gh auth); labels/milestones are still done"; fi
 else
   warn "issue sync skipped (per --skip-issues)"
