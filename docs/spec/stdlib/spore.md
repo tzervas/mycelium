@@ -67,7 +67,7 @@ artifact. It is Ring 1 / Tier A, and it adds **no trusted code** (KC-3): it cons
   `build_spore`/`explain` entry points and the `reconstruction-manifest` authoring/validation in an
   ergonomic, value-semantic surface; it **consumes** `std.content`'s hash and (for the regrowth path)
   `std.vsa`'s decode. No new trusted code, no new hash, no `wild`/FFI (KC-3). *Ring placement is FLAGGED §7 Q1:
-  RFC-0016 §4.2 currently lists `spore` under Ring 2 while §4.3/the stdlib index file it under Tier A;
+  RFC-0016 §4.2 currently lists `spore` under Ring 2 while §4.3/the stdlib index files it under Tier A;
   this spec follows the Tier-A placement and surfaces the discrepancy rather than silently choosing.*
 
 ## 3. Exported-op surface (design sketch)
