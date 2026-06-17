@@ -8,6 +8,18 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: standard-library per-module spec scaffold — Phase-5 design wave orchestration)
+- **`docs/spec/stdlib/` — the per-module standard-library spec directory** (Living index + uniform
+  `_TEMPLATE.md`), decomposing **RFC-0016 (Draft)** into one design spec per module. The index restates the
+  load-bearing **§4.1 per-op contract** (C1–C6) and the **guarantee-matrix** obligation (RFC-0016 §4.5 —
+  ops × {tag · fallibility · declared effects · EXPLAIN-able}) as the shared spine every module spec traces
+  to, and keys each spec to its Phase-5 task (M-510…M-534). The template enforces **single-template
+  conformance** (the §4.1 doc quality-bar lint) so the specs stay uniform + reviewable. First wave marked
+  `design landing`: Tier-A differentiators `core`/`swap`/`ternary`/`dense`/`select`/`content` + Tier-B pure
+  commons `iter`/`math`/`error`/`cmp`/`fmt`; the remainder `anticipated` for later waves. Design-first — no
+  code, no kernel change (KC-3); ratification per module is the maintainer's append-only decision.
+- **`docs/Doc-Index.md`** — indexes the new `docs/spec/stdlib/` directory.
+
 ### Added (2026-06-17: M-363 documentation BUILD pipeline + the §4.1 doc quality-bar lint — Phase 9 Wave B)
 - **`crates/mycelium-doc/` — the M-363 doc BUILD pipeline** (≈3.5k LoC, tested), enacting the ratified
   `docs/spec/Narrative-Authoring-Pipeline.md`. A **content-addressed doc-IR** (`ir.rs`, reusing the
