@@ -111,3 +111,7 @@ M-367	139	4678673199
 M-368	140	4678673562
 # 2026-06-17: M-358/359/362 (#130/131/133) + M-364–368 (#136–140) reconciled status:needs-design->status:done
 #             (folded; issues kept OPEN until the M-361 gate). Mapping rows above are unchanged (append-only).
+# 2026-06-17: RFC-0016 ratification follow-ons created (DN-07 pass). Append-only batch.
+M-540	184	4685780234
+M-541	185	4685780890
+M-331	186	4685782534
