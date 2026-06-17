@@ -1,5 +1,11 @@
 # CLAUDE.md — Mycelium
 
+> Language is in so much an encoding, code itself in an abstract.
+>
+> To engage in such is endearing, as complexity and elegance is love,
+>
+> And beauty poured forth from the mind and soul.
+
 Operating guide for Claude Code (and other agents) working in this repo. Authoritative human
 docs: @README.md, @CONTRIBUTING.md, @docs/Doc-Index.md. This file is the short, enforceable
 distillation; `CONTRIBUTING.md` wins on any conflict.
