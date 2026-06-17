@@ -13,11 +13,20 @@ machine-consumed sources are alongside it.
   `phase:N` label; this is the **per-issue assignment** source of truth.
 - **`gh-bootstrap-local.sh`** — run **locally with `gh`**, it creates any missing milestone/label.
   Idempotent (label = create-or-update; milestone = create-if-absent).
-- **`gh-issues-sync.py`** — creates any **absent issue** (with its labels), assigns each milestone by
-  title, and **appends** new rows to `idmap.tsv`. Idempotent (create-absent-by-title).
-- **`gh-sync-all.sh`** — the **single command** that runs the whole reconciliation: a manifest
-  preflight, then `gh-bootstrap-local.sh` (labels + milestones), then `gh-issues-sync.py` (issues +
-  assignment + idmap). Use this to close gaps after editing any manifest.
+- **`gh-issues-sync.py`** — the **cross-platform reconcile engine** (pure Python + `gh`, no bash/jq,
+  so it runs the same in **PowerShell**). Creates any **absent issue** (matched by `idmap` number,
+  then title — so a renamed title updates instead of duplicating) **and intelligently updates** an
+  existing one to match `issues.yaml`: labels, milestone, title (and body only with `--update-bodies`).
+  Bodies are off by default (GitHub bodies accrue enactment notes) and OPEN/CLOSED state is **never
+  inferred** from a `status:*` label (only an explicit `state:` field moves it). Appends new rows to
+  `idmap.tsv` (append-only). Idempotent + never-silent; `--dry-run` previews; `--all` also does
+  labels + milestones; `--self-test` checks the diff logic offline. *(`gh-bootstrap-local.sh` remains
+  the bash-native labels/milestones path; the Python engine is its cross-platform superset.)*
+- **`gh-sync-all.sh`** / **`gh-sync-all.ps1`** — the **single command** that runs the whole
+  reconciliation. The `.sh` (Linux/macOS): manifest preflight → `gh-bootstrap-local.sh`
+  (labels + milestones) → `gh-issues-sync.py` (issues create + reconcile + idmap). The `.ps1`
+  (Windows/PowerShell): manifest preflight → `gh-issues-sync.py --all` (labels + milestones + issues),
+  needing no bash/jq. Use either to close gaps after editing any manifest.
 - **`manifest-check.py`** — the preflight: every label/milestone `issues.yaml` references must be
   defined in `labels.json`/`milestones.json`, else an explicit error (a missing label would otherwise
   make `gh issue create --label …` fail mid-run — never-silent, G2).
@@ -31,12 +40,20 @@ To reconcile the repo with every manifest (milestones + labels + issues + assign
 idempotent pass** — safe to rerun any time a manifest gains entries:
 
 ```sh
+# Linux/macOS (bash + gh + jq):
 bash tools/github/gh-sync-all.sh                 # needs `gh` authenticated to tzervas/mycelium
-bash tools/github/gh-sync-all.sh --dry-run       # preview issue creation, no repo writes
+bash tools/github/gh-sync-all.sh --dry-run       # preview the reconcile, no repo writes
+
+# Windows (PowerShell + python + gh; no bash/jq needed):
+pwsh tools/github/gh-sync-all.ps1                # full reconcile (labels + milestones + issues)
+pwsh tools/github/gh-sync-all.ps1 -DryRun        # preview, no repo writes
+
+# Any OS, directly (the engine itself):
+python tools/github/gh-issues-sync.py --all --dry-run
 ```
 
 (`gh-bootstrap-local.sh` on its own still creates only labels + milestones — `gh-sync-all.sh` is the
-labels-then-milestones-then-issues superset.)
+labels-then-milestones-then-issues superset; the Python engine's `--all` is its cross-platform twin.)
 
 ## The milestone ladder
 
@@ -92,6 +109,18 @@ title or the script will create a duplicate.
 
 ## Meta — changelog
 
+- **2026-06-17 — `gh-issues-sync.py` grows up: idempotent reconcile + cross-platform (PowerShell).**
+  The sync engine no longer just *creates* absent issues — it now **intelligently updates** existing
+  ones to match `issues.yaml` (labels, milestone, title; bodies only with `--update-bodies`), which is
+  exactly the gap that let the M-358…368 labels drift (the reconciliation below had to be done by hand).
+  Matching is `idmap`-number-first then title (a renamed title updates instead of duplicating).
+  Honest by construction: never-silent (every change printed; `--dry-run` previews), never-destructive by
+  default (bodies opt-in; OPEN/CLOSED **never** inferred from a `status:*` label — only an explicit
+  `state:` field moves it), idempotent (in-sync issues untouched). The engine is now **pure Python + `gh`
+  (no bash/jq)**, so it runs identically in **PowerShell**; `--all` folds in labels + milestones so a
+  Windows user needs no bash. Added **`gh-sync-all.ps1`** (the `.sh` orchestrator's twin) and an offline
+  **`--self-test`** for the diff logic. `gh-sync-all.sh` updated to match (honest comments +
+  `--update-bodies` passthrough). Tooling only (KC-3); no new dependency (PyYAML already required).
 - **2026-06-17 — Issue-state reconciliation: M-358/359/362 + M-364–368 → `status:done`.** Eight tasks
   folded across the Phase-7/8 waves but left labelled `status:needs-design` are flipped to **`status:done`**
   (keeping `type:design` — the M-344/345/352/355 precedent) in `issues.yaml` and on GitHub

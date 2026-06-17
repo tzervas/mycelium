@@ -15,10 +15,16 @@
 #                            defined in the manifests (a missing label would otherwise make
 #                            `gh issue create --label …` fail mid-run — explicit, not silent).
 #   1. gh-bootstrap-local.sh — labels + milestones (so the labels the issues need exist first).
-#   2. gh-issues-sync.py     — create absent issues (with labels), assign milestones, append idmap.
+#   2. gh-issues-sync.py     — create absent issues (with labels) AND reconcile existing ones to
+#                            issues.yaml (labels/milestone/title); assign milestones; append idmap.
 #
-# Idempotent: rerun any time. Labels are create-or-updated; milestones and issues are created
-# only when absent; idmap.tsv is append-only. Nothing is duplicated or rewritten.
+# Idempotent: rerun any time. Labels are create-or-updated; milestones are created when absent;
+# issues are created when absent and otherwise updated to match issues.yaml (bodies only with
+# --update-bodies; OPEN/CLOSED state is never inferred); idmap.tsv is append-only. An in-sync
+# issue is left untouched; nothing is duplicated.
+#
+# Windows/PowerShell users: run gh-sync-all.ps1 instead — it drives the same Python engine with
+# --all (labels + milestones + issues), needing no bash/jq.
 #
 # Requires: gh (authenticated to the repo owner), jq, python3 (+ PyYAML).
 #
@@ -33,10 +39,12 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export REPO
 
 DRY_RUN=0
+UPDATE_BODIES=0
 for arg in "$@"; do
   case "$arg" in
     --dry-run) DRY_RUN=1 ;;
-    *) echo "unknown argument: $arg (only --dry-run is accepted)" >&2; exit 2 ;;
+    --update-bodies) UPDATE_BODIES=1 ;;
+    *) echo "unknown argument: $arg (accepted: --dry-run, --update-bodies)" >&2; exit 2 ;;
   esac
 done
 
@@ -64,9 +72,10 @@ else
 fi
 
 echo
-echo ">> [2/2] issues + milestone assignment + idmap (gh-issues-sync.py)"
+echo ">> [2/2] issues: create absent + reconcile existing + idmap (gh-issues-sync.py)"
 sync_args=(--repo "$REPO")
 [[ "$DRY_RUN" -eq 1 ]] && sync_args+=(--dry-run)
+[[ "$UPDATE_BODIES" -eq 1 ]] && sync_args+=(--update-bodies)
 "$PY" "$HERE/gh-issues-sync.py" "${sync_args[@]}"
 
 echo
