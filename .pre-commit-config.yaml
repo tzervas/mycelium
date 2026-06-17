@@ -63,3 +63,28 @@ repos:
         language: script
         pass_filenames: false
         always_run: true
+      # Mycelium toolchain gates (M-361) — delegate to the same scripts `just check`/CI run.
+      - id: myc-fmt
+        name: mycfmt --check (canonical .myc formatting)
+        entry: scripts/checks/myc-fmt.sh
+        language: script
+        pass_filenames: false
+        files: \.myc$|mycelium-proj\.toml$
+      - id: myc-check
+        name: myc-check (parse + L1 type-check)
+        entry: scripts/checks/myc-check.sh
+        language: script
+        pass_filenames: false
+        files: \.myc$|mycelium-proj\.toml$
+      - id: myc-sec
+        name: myc-sec (wild-block audit)
+        entry: scripts/checks/myc-sec.sh
+        language: script
+        pass_filenames: false
+        files: \.myc$|mycelium-proj\.toml$
+      - id: myc-lint
+        name: myc-lint (invariant + header lints)
+        entry: scripts/checks/myc-lint.sh
+        language: script
+        pass_filenames: false
+        files: \.myc$|mycelium-proj\.toml$

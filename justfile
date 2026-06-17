@@ -45,6 +45,16 @@ secrets:
     @bash scripts/checks/secrets.sh
 test:
     @bash scripts/checks/test.sh
+# Mycelium toolchain gates (M-361): canonical format, type-check, security audit, lint over
+# the real project roots (mycelium-proj.toml dirs, excluding tests/fixtures/). Skip if cargo absent.
+myc-fmt:
+    @bash scripts/checks/myc-fmt.sh
+myc-check:
+    @bash scripts/checks/myc-check.sh
+myc-sec:
+    @bash scripts/checks/myc-sec.sh
+myc-lint:
+    @bash scripts/checks/myc-lint.sh
 proofs:
     @bash scripts/checks/proofs.sh
 api:

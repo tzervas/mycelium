@@ -651,7 +651,7 @@ issues:
   - id: M-361
     title: "M-361 — Full Mycelium toolchain epic (format / correctness / lint+fix / security) — full-fat suite"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:design, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:8, type:design, area:toolchain, priority:P3, status:done]
     depends_on: [M-346, M-359]
     body: |
       Roadmap anchor for the FULL Mycelium toolchain — the "full-fat suite" the maintainer names as a prod-release requirement (2026-06-16), beyond today's LSP + interpreter + AOT compiler: a formatter (mycfmt — M-142 grows up), correctness/type checking, error/issue checking AND auto-fixing (the RFC-0013 diagnostics + RFC-0014 recovery surfaced as actionable fixes), security checks (secrets/supply-chain/`wild`-block audit — the /security-review posture as tooling), and the packaging/metadata layer (the M-359 header/manifest + spore publishing). Principles inherited and non-negotiable: never-silent (G2), honest per-op guarantee tags, no black boxes / EXPLAIN, small auditable kernel (the toolchain lives ABOVE it — KC-3), content-addressed (ADR-003); Rust-first now (ADR-007), Mycelium-lang eventually (dogfooding). Full-fat = a release gate, not a v0 deliverable. Decomposes into per-tool tasks at its gate. Anticipated forward anchor (not yet ratified roadmap); marked so. Run gh-bootstrap-local.sh to create the Phase 8 milestone + phase:8 label and assign.
