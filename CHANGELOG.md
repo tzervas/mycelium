@@ -8,6 +8,19 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (2026-06-17: LLM-harness — `--doctor` is now self-healing)
+- **`--doctor` diagnoses *and* heals by default** instead of only reporting fixes. When a required
+  package is missing it now installs it — the **hf CLI** via `uv`/`pipx`/`pip` and the **Claude Code
+  CLI** via `npm install -g @anthropic-ai/claude-code` (never `curl|bash`, per the CONTRIBUTING
+  supply-chain rule) — **links** an installed-but-unlinked `claude` (`cli.js`) onto `PATH`, **fixes
+  `PATH`** (healing implies `--fix-path`, persisting to the shell rc), and offers to **download the
+  default model** if absent. Every mutation **prompts for consent unless `--yes`**; a non-interactive
+  run without `--yes` declines safely (never-silent, G2). A wrong-arch/corrupt `claude` (an
+  `Exec format error`) is reported with the reinstall command rather than auto-"fixed" (arch can't be
+  patched). New **`--check-only`** flag restores the prior read-only report (no installs, no `PATH`
+  writes). On Termux, the npm install first points npm's global prefix at `$PREFIX` so the `claude`
+  link lands on the existing `PATH`. README Troubleshooting section updated.
+
 ### Added (2026-06-17: LLM-harness — robust binary discovery, PATH self-healing, `--doctor`)
 - **`tools/llm-harness/harness.py` now resolves tools that are installed but off-`PATH`** — the
   real-world Termux failure (`pip --user` → `~/.local/bin`, hand-built `llama.cpp` →

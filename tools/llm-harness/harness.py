@@ -1152,6 +1152,151 @@ def _resolve_claude_cli(
     return None
 
 
+def _writable_path_bin_dir(
+    log: logging.Logger, *, assume_yes: bool = False, fix_path: bool = False
+) -> Path | None:
+    """A bin dir we can symlink into that is (or will be made) on PATH.
+
+    Prefers a dir already on PATH and writable (on Termux that's `$PREFIX/bin`),
+    so a new link is immediately usable. Otherwise falls back to `~/.local/bin`,
+    creating it and healing PATH (in-process now; persisted with --fix-path).
+    """
+    candidates: list[Path] = []
+    prefix = os.environ.get("PREFIX")
+    if prefix:
+        candidates.append(Path(prefix) / "bin")  # Termux: already on PATH
+    candidates.append(Path.home() / ".local" / "bin")
+    for d in candidates:
+        if d.is_dir() and _on_path(d) and os.access(d, os.W_OK):
+            return d
+    fallback = Path.home() / ".local" / "bin"
+    try:
+        fallback.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        log.error("Could not create %s for a launcher: %s", fallback, exc)
+        return None
+    if not _on_path(fallback):
+        _prepend_process_path(fallback, log)
+        if fix_path:
+            persist_path_fix(fallback, log, assume_yes=assume_yes)
+    return fallback
+
+
+def link_claude_cli(
+    pkg: Path, log: logging.Logger, *, assume_yes: bool = False, fix_path: bool = False
+) -> str | None:
+    """Link `claude` → the installed npm package's cli.js into a PATH bin dir.
+
+    The Termux trap: the package unpacked but the `claude` bin symlink never
+    landed on PATH. cli.js carries a `#!/usr/bin/env node` shebang, so a symlink
+    to it is directly runnable. No curl|bash, no global npm mutation. Prompts
+    unless --yes. Returns the new launcher path or None.
+    """
+    if not shutil.which("node"):
+        log.warning(
+            "Claude Code package is at %s but `node` is not on PATH — install "
+            "Node first (Termux: pkg install nodejs), then re-run --doctor.",
+            pkg,
+        )
+        return None
+    bin_dir = _writable_path_bin_dir(log, assume_yes=assume_yes, fix_path=fix_path)
+    if bin_dir is None:
+        return None
+    target = bin_dir / "claude"
+    if not _confirm(
+        f"Link `claude` → {pkg} in {bin_dir}?", assume_yes=assume_yes, log=log
+    ):
+        log.warning('Not linking. Do it yourself:\n    ln -s "%s" "%s"', pkg, target)
+        return None
+    try:
+        # cli.js must be executable for the shebang launcher to work.
+        mode = pkg.stat().st_mode
+        pkg.chmod(mode | 0o111)
+        if target.exists() or target.is_symlink():
+            target.unlink()
+        target.symlink_to(pkg)
+    except OSError as exc:
+        log.error(
+            'Could not link claude: %s. Do it yourself:\n    ln -s "%s" "%s"',
+            exc,
+            pkg,
+            target,
+        )
+        return None
+    log.info("Linked claude: %s → %s", target, pkg)
+    return str(target)
+
+
+CLAUDE_NPM_PACKAGE = "@anthropic-ai/claude-code"
+
+
+def install_claude_cli(
+    log: logging.Logger, *, assume_yes: bool = False, fix_path: bool = False
+) -> str | None:
+    """Best-effort `npm install -g @anthropic-ai/claude-code`, then resolve/link.
+
+    Honesty / supply-chain (CONTRIBUTING.md): installs the published npm package
+    — never curl|bash. On Termux we first point npm's global prefix at `$PREFIX`
+    so the `claude` link lands on the existing PATH. Prompts unless --yes.
+    """
+    npm = shutil.which("npm")
+    if not npm:
+        log.warning(
+            "Cannot auto-install the Claude Code CLI: `npm` not found. Install "
+            "Node/npm first (Termux: pkg install nodejs), then re-run --doctor."
+        )
+        return None
+    if not _confirm(
+        f"Claude Code CLI not found. Install '{CLAUDE_NPM_PACKAGE}' globally via npm now?",
+        assume_yes=assume_yes,
+        log=log,
+    ):
+        log.warning(
+            "Skipping Claude Code install. Do it yourself:\n    npm install -g %s",
+            CLAUDE_NPM_PACKAGE,
+        )
+        return None
+    prefix = os.environ.get("PREFIX")
+    if _is_termux() and prefix:
+        # Make global bin links land on the existing PATH ($PREFIX/bin).
+        try:
+            subprocess.run(
+                [npm, "config", "set", "prefix", prefix],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+        except Exception as exc:  # noqa: BLE001 — best-effort, surfaced below
+            log.warning("Could not set npm prefix to $PREFIX: %s", exc)
+    cmd = [npm, "install", "-g", CLAUDE_NPM_PACKAGE]
+    log.info("Installing Claude Code CLI: %s", " ".join(cmd))
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+    except Exception as exc:  # noqa: BLE001 — never-silent
+        log.error("npm failed to start: %s", exc)
+        return None
+    if res.returncode != 0:
+        log.error(
+            "npm install exited %d: %s",
+            res.returncode,
+            (res.stderr or res.stdout or "").strip()[:400],
+        )
+        return None
+    found = _resolve_claude_cli(None, log, fix_path=fix_path, assume_yes=assume_yes)
+    if found:
+        log.info("Claude Code CLI installed: %s", found)
+        return found
+    # Installed but the bin link missed PATH again — link it ourselves.
+    pkg = _claude_package_cli()
+    if pkg:
+        return link_claude_cli(pkg, log, assume_yes=assume_yes, fix_path=fix_path)
+    log.warning(
+        "npm reported success but `claude` was not found on PATH or in the usual "
+        "dirs. Restart your shell, or add npm's global bin to PATH, then re-run."
+    )
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Hugging Face CLI: detect → (opt-in) install → auth check/prompt
 # ---------------------------------------------------------------------------
@@ -2362,9 +2507,20 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         dest="doctor",
         help=(
-            "Diagnose tools/PATH/auth (llama.cpp, hf CLI, Claude Code CLI, model "
-            "cache), print where it looked + the fix, then exit. Run this on a "
-            "phone and paste the output back to troubleshoot."
+            "Diagnose AND heal the environment (llama.cpp, hf CLI, Claude Code "
+            "CLI, model cache): auto-install missing packages (uv/pipx/pip, npm — "
+            "never curl|bash), link an unlinked CLI, and fix PATH, then exit. "
+            "Mutations prompt unless --yes. Add --check-only for a read-only report."
+        ),
+    )
+    p.add_argument(
+        "--check-only",
+        action="store_true",
+        dest="check_only",
+        help=(
+            "With --doctor: read-only report — diagnose and print the fix for each "
+            "miss, but install nothing and write no PATH changes. Safe to run on a "
+            "phone and paste back."
         ),
     )
     p.add_argument(
@@ -2374,7 +2530,8 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "When a binary is found off-PATH, append an `export PATH=…` line to "
             "your shell rc (idempotent; prompts unless --yes). PATH is always "
-            "healed in-process for the current run regardless of this flag."
+            "healed in-process for the current run regardless of this flag. "
+            "(--doctor implies this unless --check-only.)"
         ),
     )
     p.add_argument(
@@ -2403,15 +2560,24 @@ def _console_logger(name: str = "mycelium.llm-harness.setup") -> logging.Logger:
 
 
 def run_doctor(args: argparse.Namespace) -> int:
-    """Diagnose tool/PATH/auth state and print actionable fixes. Always exits 0.
+    """Diagnose AND heal tool/PATH/auth state. Always exits 0.
 
-    This is the thing to run on a phone and paste back: it reports exactly what
-    was found, where it looked, and the precise fix — and (with --fix-path) heals
-    PATH for you.
+    By default doctor is self-healing: if a required package is missing it
+    installs it (hf CLI via uv/pipx/pip; Claude Code via npm — never curl|bash),
+    links an installed-but-unlinked CLI, and fixes PATH (in-process now, and —
+    since healing implies --fix-path — persisted to your shell rc). Every
+    mutation prompts for consent unless --yes; non-interactive runs without --yes
+    decline safely (never-silent, G2). Pass --check-only for a pure, read-only
+    report (the classic "run it on a phone and paste it back" mode).
     """
     log = _console_logger()
-    fix_path = bool(getattr(args, "fix_path", False))
+    check_only = bool(getattr(args, "check_only", False))
+    heal = not check_only
+    # Healing implies persisting PATH fixes too ("fix the paths automatically").
+    fix_path = heal or bool(getattr(args, "fix_path", False))
     assume_yes = bool(getattr(args, "assume_yes", False))
+    no_hf = bool(getattr(args, "no_hf_cli", False))
+    actions: list[str] = []  # what healing actually did, summarised at the end
     lines: list[str] = []
 
     def out(s: str = "") -> None:
@@ -2420,6 +2586,14 @@ def run_doctor(args: argparse.Namespace) -> int:
     out("=" * 72)
     out("  Mycelium LLM-harness — environment doctor")
     out("=" * 72)
+    out(
+        "  Mode     : "
+        + (
+            "CHECK-ONLY (read-only report; no installs, no PATH writes)"
+            if check_only
+            else "HEAL (auto-install missing packages + fix PATH; --yes to skip prompts)"
+        )
+    )
     out(f"  Platform : {sys.platform}{'  (Termux/Android)' if _is_termux() else ''}")
     out(f"  Python   : {sys.version.split()[0]}  ({sys.executable})")
     out(f"  PREFIX   : {os.environ.get('PREFIX', '(unset)')}")
@@ -2468,6 +2642,11 @@ def run_doctor(args: argparse.Namespace) -> int:
     cmd, style = _resolve_hf_cli(
         getattr(args, "hf_cli", None), log, fix_path=fix_path, assume_yes=assume_yes
     )
+    if not cmd and heal and not no_hf:
+        out("      NOT FOUND — auto-installing '%s'…" % HF_PIP_PACKAGE)
+        cmd, style = install_hf_cli(log, assume_yes=assume_yes, fix_path=fix_path)
+        if cmd:
+            actions.append(f"Installed Hugging Face CLI ('{HF_PIP_PACKAGE}').")
     if cmd:
         out(f"      FOUND: {' '.join(cmd)}  (style: {style})")
         authed, who = hf_auth_status(cmd, style, log)
@@ -2478,7 +2657,17 @@ def run_doctor(args: argparse.Namespace) -> int:
         out("      NOT FOUND. Searched PATH + these bin dirs:")
         for d in _candidate_bin_dirs():
             out(f"          {d}")
-        out(f"      Fix: --setup-hf  (installs '{HF_PIP_PACKAGE}' via uv/pipx/pip).")
+        if no_hf:
+            out("      (--no-hf-cli set: skipping install; stdlib downloader is used.)")
+        elif check_only:
+            out(
+                f"      Fix: --setup-hf  (installs '{HF_PIP_PACKAGE}' via uv/pipx/pip)."
+            )
+        else:
+            out(
+                f"      Could not auto-install '{HF_PIP_PACKAGE}' (declined or no installer)."
+            )
+            out("      Install an installer first (uv/pipx/pip), then re-run --doctor.")
     out("")
 
     out("-" * 72)
@@ -2490,6 +2679,22 @@ def run_doctor(args: argparse.Namespace) -> int:
         fix_path=fix_path,
         assume_yes=assume_yes,
     )
+    if not claude and heal:
+        pkg = _claude_package_cli()
+        if pkg:
+            out(f"      INSTALLED BUT NOT LINKED ({pkg}) — auto-linking…")
+            linked = link_claude_cli(pkg, log, assume_yes=assume_yes, fix_path=fix_path)
+            if linked:
+                claude = linked
+                actions.append("Linked the installed Claude Code CLI onto PATH.")
+        else:
+            out("      NOT FOUND — auto-installing via npm…")
+            installed = install_claude_cli(
+                log, assume_yes=assume_yes, fix_path=fix_path
+            )
+            if installed:
+                claude = installed
+                actions.append("Installed the Claude Code CLI via npm.")
     if claude:
         out(f"      FOUND: {claude}")
         try:
@@ -2498,7 +2703,21 @@ def run_doctor(args: argparse.Namespace) -> int:
             )
             blob = (v.stdout or v.stderr).strip()
             out(f"      version: {blob.splitlines()[0] if blob else '(no output)'}")
-        except Exception as exc:  # noqa: BLE001
+        except OSError as exc:
+            # e.g. "Exec format error" — a wrong-arch/corrupt binary, NOT a PATH
+            # miss. Auto-install can't fix arch; surface the precise reinstall.
+            out(f"      version: (could not run --version: {exc})")
+            out(
+                "      This looks like a wrong-arch or corrupt binary, not a PATH issue."
+            )
+            out("      Fix: reinstall for this CPU —")
+            out(
+                f"          npm uninstall -g {CLAUDE_NPM_PACKAGE}; npm install -g {CLAUDE_NPM_PACKAGE}"
+            )
+            out(
+                "          (On Termux: pkg reinstall nodejs first if node itself errors.)"
+            )
+        except Exception as exc:  # noqa: BLE001 — never-silent
             out(f"      version: (could not run --version: {exc})")
     else:
         pkg = _claude_package_cli()
@@ -2539,10 +2758,47 @@ def run_doctor(args: argparse.Namespace) -> int:
         out(
             f"      default model present: {dest.name} ({_human_bytes(dest.stat().st_size)})"
         )
+    elif heal and _confirm(
+        f"Default model absent. Download {dest.name} (~GB) now?",
+        assume_yes=assume_yes,
+        log=log,
+    ):
+        got = ensure_model(
+            DEFAULT_MODEL_ID,
+            md,
+            log,
+            allow_download=True,
+            hf_cmd=(cmd if not no_hf else None),
+            prefer_hf=not no_hf,
+        )
+        if got and is_valid_gguf(got):
+            out(
+                f"      default model fetched: {got.name} ({_human_bytes(got.stat().st_size)})"
+            )
+            actions.append(f"Downloaded the default model ({got.name}).")
+        else:
+            out(
+                f"      default model still absent: {dest.name}  (download failed — see log)"
+            )
     else:
         out(f"      default model absent : {dest.name}  (fetch with --ensure-model)")
     out("")
-    out("  Tip: re-run with --fix-path to persist any off-PATH fix to your shell rc.")
+
+    out("-" * 72)
+    if check_only:
+        out("  Result: check-only — no changes made.")
+        out(
+            "  Re-run without --check-only to auto-install missing packages + fix PATH,"
+        )
+        out("  or with --fix-path to only persist an off-PATH binary to your shell rc.")
+    elif actions:
+        out("  Healed:")
+        for a in actions:
+            out(f"      ✓ {a}")
+        out("  Open a new shell (or `source` your rc) so persisted PATH fixes apply.")
+    else:
+        out("  Nothing to heal — everything required was already present, or fixes")
+        out("  were declined/unavailable (see the per-tool notes above).")
     out("=" * 72)
     print("\n".join(lines))
     return 0
