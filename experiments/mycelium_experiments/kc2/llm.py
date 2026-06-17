@@ -385,24 +385,49 @@ def server_backend(
     base_url: str,
     *,
     seed: int = 42,
-    n_predict: int = 256,
-    timeout: int = 180,
+    n_predict: int = 192,
+    timeout: int = 600,
+    stop: Sequence[str] | None = ("\nTASK:",),
 ) -> Backend:
-    """A backend that POSTs to a llama.cpp HTTP server's /completion endpoint."""
+    """A backend that POSTs to a llama.cpp HTTP server's /completion endpoint.
+
+    ``timeout`` is the client read budget for ONE generation. A phone CPU decodes a 1.5B
+    model at ~0.3–0.7 tok/s, so ``n_predict`` tokens can take minutes — keep the timeout
+    generous (default 600 s) or generations die mid-stream and abort the run. ``stop``
+    halts the model early on an obvious boundary (a fabricated next ``TASK:``), and
+    ``cache_prompt`` reuses the shared-primer KV across calls (the big common prefix).
+    """
+    import urllib.error
     import urllib.request
 
     url = base_url.rstrip("/") + "/completion"
 
     def complete(prompt: str) -> str:
-        payload = json.dumps(
-            {"prompt": prompt, "seed": seed, "n_predict": n_predict, "stream": False}
-        ).encode()
+        body = {
+            "prompt": prompt,
+            "seed": seed,
+            "n_predict": n_predict,
+            "stream": False,
+            "cache_prompt": True,
+        }
+        if stop:
+            body["stop"] = list(stop)
+        payload = json.dumps(body).encode()
         req = urllib.request.Request(
             url, data=payload, headers={"Content-Type": "application/json"}, method="POST"
         )
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 — local server
-            body = resp.read().decode()
-        return str(json.loads(body).get("content", ""))
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 — local
+                raw = resp.read().decode()
+        except (TimeoutError, urllib.error.URLError, OSError) as exc:
+            # Abort loudly (G2): never a silent empty generation. The runner checkpoints
+            # the attempts collected so far before this propagates, so no data is lost.
+            msg = (
+                f"server /completion failed after {timeout}s ({type(exc).__name__}: {exc}). "
+                f"On a slow phone raise --timeout or lower --n-predict (now {n_predict})."
+            )
+            raise RuntimeError(msg) from exc
+        return str(json.loads(raw).get("content", ""))
 
     return complete
 

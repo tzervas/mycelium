@@ -79,8 +79,12 @@ pass rate (the SC-5b number), and edit-to-fix iterations.
 cd experiments
 
 # RECOMMENDED: auto-manage a llama-server (model loads ONCE, no interactive REPL,
-# picks a free port, tears the server down after). Mycelium arm only by default:
-PYTHONPATH=. python3 -m mycelium_experiments.kc2 --serve --max-iters 1
+# picks a free port, tears the server down after). Mycelium arm only by default.
+# Defaults are tuned light: 2 attempts/task (first + one edit-to-fix), n_predict 128:
+PYTHONPATH=. python3 -m mycelium_experiments.kc2 --serve
+
+# Lighter still for a first pass on a slow phone — just the first 4 tasks:
+PYTHONPATH=. python3 -m mycelium_experiments.kc2 --serve --limit 4
 
 # A SEQUENCE of seeds, unattended — one report each + an index.json:
 PYTHONPATH=. python3 -m mycelium_experiments.kc2 --serve --seeds 42,123,7
@@ -92,9 +96,20 @@ PYTHONPATH=. python3 -m mycelium_experiments.kc2 --model PATH.gguf
 
 Reports land under `--results-dir` (default `experiments/results/`): per run a
 `<utc>-<name>.json` + `.summary.txt`, plus a combined `index.json` and a suite `.log`.
-Each report now also carries **per-attempt records** (generated source, checker verdict,
-generation wall-time) and a `timing` block. `--out PATH` additionally copies a single-seed
-report to a fixed path.
+Each report carries **per-attempt records** (generated source, checker verdict,
+generation wall-time) and a `timing` block, and every attempt is also streamed to
+`<run>.attempts.jsonl` — so an OOM-kill or outer timeout **loses nothing** and a backend
+error mid-run still writes a `partial` report. `--out PATH` copies a single-seed report
+to a fixed path.
+
+> **Tuning for a glacial phone.** A 1.5B model decodes at ~0.3–0.7 tok/s on a phone CPU,
+> so generation time dominates. The timeout is **per generation** and **refreshes every
+> attempt** — there is no cumulative suite timeout — so a long suite completes as long as
+> each *single* generation fits its budget. Levers: `--n-predict` (fewer tokens = faster;
+> the task solutions are short, default 128), `--timeout` (raise it rather than let a slow
+> but valid generation get cut off, default 600 s), `--max-iters` (attempts/task, default
+> 2), `--limit N` (fewer tasks). For a real speedup, point `--model` at a lighter model —
+> e.g. `qwen2.5-coder-0.5b-instruct-q4_k_m.gguf` decodes roughly 2–3× faster than the 1.5B.
 
 > **Why `--serve` beats the bare CLI.** The CLI reloads the model for *every* generation
 > (~1.4 tok/s on a phone) and some builds ignore `-no-cnv` and drop into an interactive

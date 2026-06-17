@@ -29,6 +29,7 @@ from pathlib import Path
 
 from mycelium_experiments.kc2 import llm, server
 from mycelium_experiments.kc2.runner import RunConfig, make_logger, now_utc, run_suite
+from mycelium_experiments.kc2.tasks import TASKS
 
 # Mirror tools/llm-harness's cache layout so a model fetched there is reused here.
 _DEFAULT_MODEL_FILENAME = "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf"
@@ -137,15 +138,31 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run the baseline arm, which EXECUTES generated Python in-process. Sandbox only.",
     )
-    p.add_argument("--max-iters", type=int, default=3, help="Edit-to-fix budget (default 3).")
+    p.add_argument(
+        "--max-iters",
+        type=int,
+        default=2,
+        help="Attempts per task before moving on (default 2: first try + one edit-to-fix).",
+    )
+    p.add_argument(
+        "--limit", type=int, default=None, metavar="N", help="Run only the first N tasks (lighter)."
+    )
     p.add_argument("--seed", type=int, default=42, help="Generation seed (default 42).")
     p.add_argument("--seeds", metavar="A,B,C", help="Run a SEQUENCE of seeds, one report each.")
-    p.add_argument("--n-predict", type=int, default=256, help="Max new tokens (default 256).")
+    p.add_argument(
+        "--n-predict",
+        type=int,
+        default=128,
+        help="Max new tokens per generation (default 128). The task solutions are short; "
+        "lower = faster on a slow CPU, but too low truncates a valid program.",
+    )
     p.add_argument(
         "--timeout",
         type=int,
-        default=300,
-        help="Per-generation timeout s (CLI backend; default 300).",
+        default=600,
+        help="PER-GENERATION timeout in seconds (default 600). It refreshes every attempt — "
+        "there is no cumulative suite timeout — so raise it on a glacial phone (~0.5 tok/s) "
+        "rather than letting a slow but valid generation get cut off.",
     )
     p.add_argument(
         "--ctx-size",
@@ -227,7 +244,9 @@ def main() -> int:
             model_label, backend_label = args.server, "server"
 
             def make_backend(seed: int) -> llm.Backend:
-                return llm.server_backend(args.server, seed=seed, n_predict=n_predict)
+                return llm.server_backend(
+                    args.server, seed=seed, n_predict=n_predict, timeout=args.timeout
+                )
         elif args.llama_cli is not None or (not args.serve):
             # CLI backend (explicit --llama-cli, or the default when neither --serve/--server)
             cli = llm.resolve_llama_cli(args.llama_cli)
@@ -267,9 +286,14 @@ def main() -> int:
             model_label, backend_label = model, "server(managed)"
 
             def make_backend(seed: int) -> llm.Backend:
-                return llm.server_backend(base_url, seed=seed, n_predict=n_predict)
+                return llm.server_backend(
+                    base_url, seed=seed, n_predict=n_predict, timeout=args.timeout
+                )
 
         # --- run the sequence ---
+        tasks = TASKS[: args.limit] if args.limit else TASKS
+        if args.limit:
+            log.info("--limit %d: running %d of %d tasks", args.limit, len(tasks), len(TASKS))
         configs = [
             RunConfig(
                 name=f"seed{seed}",
@@ -287,6 +311,7 @@ def main() -> int:
             model_label=model_label,
             backend_label=backend_label,
             results_dir=results_dir,
+            tasks=tasks,
             log=log,
         )
     finally:

@@ -110,40 +110,98 @@ def _checker_for(arm: str, cfg: RunConfig, log: logging.Logger) -> object | str:
     return BaselineChecker(allow_untrusted=True)
 
 
+def _partial_arm_metrics(
+    arm: str, attempts: list[dict[str, object]], max_iters: int
+) -> dict[str, object]:
+    """Reconstruct an arm's metrics from the attempts captured before an interruption.
+
+    Same shape as ``_arm_metrics`` (so ``assess`` reads it) but flagged ``partial`` and
+    scoped to the tasks actually attempted — honest rates over a subset, never faked over
+    the full suite.
+    """
+    by_task: dict[str, list[dict[str, object]]] = {}
+    for a in attempts:
+        if a["arm"] == arm:
+            by_task.setdefault(str(a["task"]), []).append(a)
+    n = len(by_task)
+    outcomes: list[dict[str, object]] = []
+    fv = fp = ev = 0
+    iters_to_pass: list[int] = []
+    for task, ts in by_task.items():
+        ts.sort(key=lambda x: int(x["attempt"]))  # type: ignore[arg-type]
+        first = ts[0]
+        won = next((x for x in ts if x["passed"]), None)
+        fv += bool(first["syntactically_valid"])
+        fp += bool(first["passed"])
+        if won is not None:
+            ev += 1
+            iters_to_pass.append(int(won["attempt"]))
+        outcomes.append(
+            {
+                "task": task,
+                "first_attempt_valid": first["syntactically_valid"],
+                "first_attempt_passed": first["passed"],
+                "passed": won is not None,
+                "iterations": int(won["attempt"]) if won else len(ts),
+            }
+        )
+    return {
+        "ran": True,
+        "partial": True,
+        "tasks_attempted": n,
+        "syntactic_validity_rate": round(fv / n, 3) if n else None,
+        "first_attempt_pass_rate": round(fp / n, 3) if n else None,
+        "eventual_pass_rate": round(ev / n, 3) if n else None,
+        "mean_iterations_to_pass": (
+            round(sum(iters_to_pass) / len(iters_to_pass), 3) if iters_to_pass else None
+        ),
+        "outcomes": outcomes,
+    }
+
+
 def run_one(
     cfg: RunConfig,
     generator: llm.LlamaGenerator,
     *,
     model_label: str,
     backend_label: str,
+    results_dir: Path,
+    tasks: Sequence[object] = TASKS,
     log: logging.Logger,
 ) -> dict[str, object]:
-    """Execute one run config; return the report document (assessment included)."""
+    """Execute one run config; return the report document (assessment included).
+
+    Durable: every attempt is appended to ``<stem>.attempts.jsonl`` as it happens, so an
+    OOM-kill or outer timeout loses nothing. A backend error mid-arm (e.g. a generation
+    that outran the per-attempt ``--timeout``) is caught, the arm is recorded as PARTIAL
+    from the attempts so far, and the run is flagged ``interrupted`` — never a lost report.
+    """
+    run_utc = now_utc()
+    stem = f"{run_utc}-{cfg.name}"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    jsonl = results_dir / f"{stem}.attempts.jsonl"
     arms_report: dict[str, object] = {}
     attempts: list[dict[str, object]] = []
+    interrupted: str | None = None
 
-    for arm in cfg.arms:
-        checker = _checker_for(arm, cfg, log)
-        if isinstance(checker, str):  # SKIP reason
-            arms_report[arm] = {"ran": False, "skipped": checker}
-            log.warning("SKIP %s arm: %s", arm, checker.splitlines()[0])
-            continue
+    with jsonl.open("w", encoding="utf-8") as ckpt:
 
         def record(
             task_id: str, a: str, attempt: int, source: str, result: CheckResult, wall: float
         ) -> None:
-            attempts.append(
-                {
-                    "task": task_id,
-                    "arm": a,
-                    "attempt": attempt,
-                    "syntactically_valid": result.syntactically_valid,
-                    "passed": result.passes,
-                    "wall_seconds": wall,
-                    "diagnostic": result.diagnostic,
-                    "source": source,
-                }
-            )
+            rec = {
+                "task": task_id,
+                "arm": a,
+                "attempt": attempt,
+                "syntactically_valid": result.syntactically_valid,
+                "passed": result.passes,
+                "wall_seconds": wall,
+                "diagnostic": result.diagnostic,
+                "source": source,
+            }
+            attempts.append(rec)
+            ckpt.write(json.dumps(rec) + "\n")
+            ckpt.flush()  # durable per attempt — survive an OOM-kill mid-run
             log.info(
                 "[%s] %-22s attempt %d: valid=%s passed=%s  %.1fs",
                 a,
@@ -154,8 +212,20 @@ def run_one(
                 wall,
             )
 
-        report = run_arm(generator, checker, arm, TASKS, cfg.max_iters, on_attempt=record)
-        arms_report[arm] = _arm_metrics(report)
+        for arm in cfg.arms:
+            checker = _checker_for(arm, cfg, log)
+            if isinstance(checker, str):  # SKIP reason
+                arms_report[arm] = {"ran": False, "skipped": checker}
+                log.warning("SKIP %s arm: %s", arm, checker.splitlines()[0])
+                continue
+            try:
+                report = run_arm(generator, checker, arm, tasks, cfg.max_iters, on_attempt=record)
+                arms_report[arm] = _arm_metrics(report)
+            except RuntimeError as exc:  # backend/server error (e.g. per-attempt timeout)
+                interrupted = f"{type(exc).__name__}: {exc}"
+                log.error("arm '%s' interrupted — %s", arm, interrupted)
+                arms_report[arm] = _partial_arm_metrics(arm, attempts, cfg.max_iters)
+                break  # the backend is likely down; stop this run (data is checkpointed)
 
     myc = arms_report.get("mycelium", {})
     sc5b = myc.get("first_attempt_pass_rate") if isinstance(myc, dict) else None
@@ -163,10 +233,10 @@ def run_one(
     doc: dict[str, object] = {
         "experiment": "KC-2 LLM-leverage (M-002; Foundation §6 P0.2)",
         "run": cfg.name,
-        "run_utc": now_utc(),
+        "run_utc": run_utc,
         "backend": backend_label,
         "model": model_label,
-        "task_count": len(TASKS),
+        "task_count": len(tasks),
         "edit_to_fix_budget": cfg.max_iters,
         "seed": cfg.seed,
         "arms": arms_report,
@@ -179,6 +249,8 @@ def run_one(
         "sc5b": sc5b,
         "verdict": VERDICT,
     }
+    if interrupted:
+        doc["interrupted"] = interrupted
     doc["assessment"] = assess(doc)
     return doc
 
@@ -205,25 +277,47 @@ def run_suite(
     backend_label: str,
     results_dir: Path,
     log: logging.Logger,
+    tasks: Sequence[object] = TASKS,
 ) -> dict[str, object]:
-    """Run each config back-to-back, write per-run files + an index.json. Returns the index."""
+    """Run each config back-to-back, write per-run files + an index.json. Returns the index.
+
+    Writes the index after EVERY run (not just at the end), so an interruption still leaves
+    a coherent index of what completed. Stops the sequence if a run is interrupted — a dead
+    backend won't recover for the next seed.
+    """
     index: dict[str, object] = {
         "suite_utc": now_utc(),
         "model": model_label,
         "backend": backend_label,
+        "task_count": len(tasks),
         "runs": [],
     }
     runs_list: list[dict[str, object]] = index["runs"]  # type: ignore[assignment]
+
+    def flush_index() -> None:
+        (results_dir / "index.json").write_text(
+            json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+
     for cfg in configs:
         log.info(
-            "=== run '%s' (seed=%d, arms=%s, max_iters=%d) ===",
+            "=== run '%s' (seed=%d, arms=%s, max_iters=%d, tasks=%d) ===",
             cfg.name,
             cfg.seed,
             ",".join(cfg.arms),
             cfg.max_iters,
+            len(tasks),
         )
         generator = llm.LlamaGenerator(backend=backend_factory(cfg.seed), primers=primers)
-        doc = run_one(cfg, generator, model_label=model_label, backend_label=backend_label, log=log)
+        doc = run_one(
+            cfg,
+            generator,
+            model_label=model_label,
+            backend_label=backend_label,
+            results_dir=results_dir,
+            tasks=tasks,
+            log=log,
+        )
         path = write_run(doc, results_dir, log)
         myc = doc["arms"].get("mycelium", {}) if isinstance(doc["arms"], dict) else {}
         runs_list.append(
@@ -233,11 +327,13 @@ def run_suite(
                 "report": path.name,
                 "sc5b": doc["sc5b"],
                 "mycelium_ran": bool(isinstance(myc, dict) and myc.get("ran")),
+                "interrupted": doc.get("interrupted"),
             }
         )
+        flush_index()
+        if doc.get("interrupted"):
+            log.error("stopping the suite — run '%s' was interrupted (see report).", cfg.name)
+            break
 
-    (results_dir / "index.json").write_text(
-        json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
     log.info("suite complete — index: %s", results_dir / "index.json")
     return index

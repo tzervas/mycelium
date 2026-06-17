@@ -8,6 +8,24 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (2026-06-17: KC-2 on-device timeout — durable runs + lighter, refreshing budget)
+- **Root cause** of the on-device crash: the server backend used a fixed **180 s** read timeout
+  (`__main__` never forwarded `--timeout` to it) while the phone decodes at ~0.3–0.7 tok/s, so a
+  256-token generation always outran it and the whole suite aborted with **no report written**
+  (14 min of work lost; the server log showed a healthy server still generating when the client
+  gave up).
+- **Durability**: every attempt now streams to `<run>.attempts.jsonl` (flushed per line) and the
+  `index.json` is rewritten after every run — an OOM-kill or outer timeout loses nothing. A backend
+  error mid-arm is **caught**, the arm is recorded as `partial` (honest rates over the tasks actually
+  attempted), the run is flagged `interrupted`, and the sequence stops cleanly — never a lost report.
+- **Timeout is per-generation and refreshes every attempt** (no cumulative suite timeout): `--timeout`
+  is now forwarded to the server backend and defaults to **600 s**; the backend raises a clear,
+  actionable error on a read timeout instead of an opaque `[Errno 110]`.
+- **Lighter defaults / faster decode**: `--max-iters` default **3 → 2** (first try + one edit-to-fix),
+  `--n-predict` default **256 → 128** (the task solutions are short), plus a `stop` sequence and
+  `cache_prompt` on the server request. New `--limit N` runs only the first N tasks. README documents
+  pointing `--model` at a lighter model (e.g. qwen2.5-coder-0.5b) for a real speedup.
+
 ### Added (2026-06-17: KC-2 gentle pre-run RAM reclaim)
 - **`reclaim_memory()`** runs before context sizing on every run (opt out with `--no-reclaim`), so
   freed RAM is available to the model + KV cache (and reflected in `auto_ctx_size`). Non-destructive
