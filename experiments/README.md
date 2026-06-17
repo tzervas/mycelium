@@ -78,12 +78,29 @@ pass rate (the SC-5b number), and edit-to-fix iterations.
 ```sh
 cd experiments
 
-# Mycelium arm only (default). Needs the myc-check binary (see below):
-PYTHONPATH=. python3 -m mycelium_experiments.kc2 --out kc2-report.json
+# RECOMMENDED: auto-manage a llama-server (model loads ONCE, no interactive REPL,
+# picks a free port, tears the server down after). Mycelium arm only by default:
+PYTHONPATH=. python3 -m mycelium_experiments.kc2 --serve --max-iters 1
 
-# Or against a llama.cpp server (cleaner generation output than the CLI):
-PYTHONPATH=. python3 -m mycelium_experiments.kc2 --server http://localhost:8080 --out kc2-report.json
+# A SEQUENCE of seeds, unattended — one report each + an index.json:
+PYTHONPATH=. python3 -m mycelium_experiments.kc2 --serve --seeds 42,123,7
+
+# Or an already-running server, or the CLI backend (EOF-guarded against the REPL):
+PYTHONPATH=. python3 -m mycelium_experiments.kc2 --server http://localhost:8080
+PYTHONPATH=. python3 -m mycelium_experiments.kc2 --model PATH.gguf
 ```
+
+Reports land under `--results-dir` (default `experiments/results/`): per run a
+`<utc>-<name>.json` + `.summary.txt`, plus a combined `index.json` and a suite `.log`.
+Each report now also carries **per-attempt records** (generated source, checker verdict,
+generation wall-time) and a `timing` block. `--out PATH` additionally copies a single-seed
+report to a fixed path.
+
+> **Why `--serve` beats the bare CLI.** The CLI reloads the model for *every* generation
+> (~1.4 tok/s on a phone) and some builds ignore `-no-cnv` and drop into an interactive
+> REPL. `--serve` loads the model once and uses `/completion` (clean, one-shot). The
+> manual `llama-server … &` route fights port collisions ("couldn't bind … port 8080"
+> when an old server lingers); `--serve` reuses a healthy server or picks a free port.
 
 **The Mycelium arm needs `myc-check`** (parse + typecheck + signature). The checker
 builds it on first use via cargo; on a phone that's heavy but works, or build it once:

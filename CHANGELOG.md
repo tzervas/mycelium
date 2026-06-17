@@ -8,6 +8,23 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: KC-2 unattended pipeline — managed server, metrics/logs, suite runner)
+- **Auto-managed llama.cpp server** (`mycelium_experiments/kc2/server.py`, `--serve`): loads the
+  model ONCE, drives `/completion` (clean one-shot — no interactive REPL), **reuses a healthy server
+  or picks a free port** (the manual `llama-server … &` hits "couldn't bind … port 8080" when an old
+  server lingers), waits for `/health`, and tears down only what it launched. Never-silent on missing
+  binary / early exit / not-ready.
+- **Sequential, instrumented runner** (`mycelium_experiments/kc2/runner.py`): runs a *suite* of
+  configs (e.g. `--seeds 42,123,7`) back-to-back, unattended, writing per run a `<utc>-<name>.json`
+  + `.summary.txt` under `--results-dir` (default `experiments/results/`), plus a combined
+  `index.json` and a suite `.log`.
+- **Richer metrics**: `run_arm` gained an optional `on_attempt` observer; reports now carry
+  **per-attempt records** (generated source, checker verdict, generation wall-time) and a `timing`
+  block — well beyond the bare outcome rates.
+- Decisions for this increment: *richer in-fragment tasks* (deferred) and *prove the pipeline first*
+  (this) — the surface fragment can't express http-client/parser, so "realistic" stays in-fragment.
+  Honesty unchanged (G2 SKIP-with-reason; VR-5 measured rates only, verdict maintainer-written).
+
 ### Fixed (2026-06-17: build-agnostic one-shot — EOF stdin + echoed-prompt strip)
 - On-device the `b0-unknown` Termux `llama-cli` **ignored `-no-cnv`/`--no-display-prompt`** and still
   entered its interactive REPL (slash-command prompt), so a real run hung until Ctrl+C and echoed the

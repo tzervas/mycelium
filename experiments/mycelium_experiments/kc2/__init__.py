@@ -47,6 +47,8 @@ from mycelium_experiments.kc2.llm import (
     primer_for,
     server_backend,
 )
+from mycelium_experiments.kc2.runner import RunConfig, run_one, run_suite
+from mycelium_experiments.kc2.server import ensure_server, server_healthy, stop_server
 from mycelium_experiments.kc2.summary import assess, render_summary
 from mycelium_experiments.kc2.tasks import TASKS, Task
 
@@ -58,12 +60,14 @@ __all__ = [
     "CheckResult",
     "LlamaGenerator",
     "MyceliumChecker",
+    "RunConfig",
     "StaticGenerator",
     "Task",
     "TaskOutcome",
     "Tern",
     "ToolUnavailable",
     "assess",
+    "ensure_server",
     "auto_ctx_size",
     "auto_gpu_layers",
     "bnot",
@@ -76,7 +80,11 @@ __all__ = [
     "render_summary",
     "run_arm",
     "run_experiment",
+    "run_one",
+    "run_suite",
     "server_backend",
+    "server_healthy",
+    "stop_server",
     "swap",
     "tadd",
     "xor",
