@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
 import json
 import logging
 import os
@@ -1335,6 +1336,179 @@ def _confirm(prompt: str, *, assume_yes: bool, log: logging.Logger) -> bool:
     return ans in ("y", "yes")
 
 
+# ---------------------------------------------------------------------------
+# System package managers + vetted release downloads + checksum verification
+# ---------------------------------------------------------------------------
+#
+# Supply-chain posture (CONTRIBUTING.md): we install runtime tools from the OS
+# package manager (Termux `pkg` ≡ apt; Debian/Ubuntu `apt-get`; Fedora `dnf`;
+# Arch `pacman`; openSUSE `zypper`; macOS `brew`) or from an official release
+# artifact whose URL is pinned and whose SHA-256 we VERIFY before use — NEVER by
+# building a fragile language-package from source (the hf-xet/Rust build that
+# fails on Termux/aarch64) and NEVER by piping a remote script into a shell
+# (`curl … | bash`). The OS package manager verifies its own repo signatures;
+# for a direct release download we add an explicit checksum gate. Every step is
+# logged (G2 never-silent); a failure is surfaced, never silently accepted.
+
+
+def _detect_system_pkg() -> tuple[str, list[str]] | None:
+    """Detect a system package manager. Returns (label, install_argv_prefix) or None.
+
+    install_argv_prefix is the command up to (but excluding) the package name(s),
+    already carrying a non-interactive 'assume yes'. Termux's `pkg` is a thin apt
+    wrapper, so installs land in `$PREFIX/bin` (already on PATH). Off Termux we
+    prepend `sudo` for managers that need root (apt/dnf/pacman/zypper) only when
+    we are not already root and sudo exists; `brew` is never run under sudo.
+    """
+    if _is_termux() and shutil.which("pkg"):
+        return ("pkg", ["pkg", "install", "-y"])
+    is_root = getattr(os, "geteuid", lambda: 1)() == 0
+    sudo = [] if is_root else (["sudo"] if shutil.which("sudo") else [])
+    for mgr, args in (
+        ("apt-get", ["apt-get", "install", "-y"]),
+        ("dnf", ["dnf", "install", "-y"]),
+        ("pacman", ["pacman", "-S", "--noconfirm"]),
+        ("zypper", ["zypper", "install", "-y"]),
+    ):
+        if shutil.which(mgr):
+            return (mgr, sudo + args)
+    if shutil.which("brew"):  # macOS/Linuxbrew — never under sudo
+        return ("brew", ["brew", "install"])
+    return None
+
+
+def install_system_package(
+    name_by_mgr: dict[str, str],
+    log: logging.Logger,
+    *,
+    assume_yes: bool = False,
+    purpose: str = "",
+) -> bool:
+    """Install a package via the detected system manager. Returns True on success.
+
+    name_by_mgr maps a manager label ('pkg', 'apt-get', 'dnf', 'pacman',
+    'zypper', 'brew') to the package name there. A manager with no entry ⇒ we have
+    no vetted package name for it and decline rather than guess. The OS package
+    manager verifies its own signatures/checksums (no curl|bash, no unpinned fetch
+    from us). Prompts unless --yes; never-silent on failure.
+    """
+    detected = _detect_system_pkg()
+    if detected is None:
+        log.warning(
+            "No system package manager found (looked for pkg/apt-get/dnf/pacman/"
+            "zypper/brew)%s.",
+            f" — needed for {purpose}" if purpose else "",
+        )
+        return False
+    label, prefix = detected
+    pkg = name_by_mgr.get(label)
+    if not pkg:
+        log.warning(
+            "No known %s package%s — install it another way (see the notes above).",
+            label,
+            f" for {purpose}" if purpose else "",
+        )
+        return False
+    cmd = [*prefix, pkg]
+    if not _confirm(
+        f"Install '{pkg}' via {label}?" + (f"  ({purpose})" if purpose else ""),
+        assume_yes=assume_yes,
+        log=log,
+    ):
+        log.warning("Skipping %s install. Do it yourself:\n    %s", pkg, " ".join(cmd))
+        return False
+    log.info("Installing via %s: %s", label, " ".join(cmd))
+    try:
+        res = subprocess.run(cmd, text=True, timeout=1800)  # inherit stdio: progress
+    except Exception as exc:  # noqa: BLE001 — never-silent
+        log.error("%s failed to start: %s", label, exc)
+        return False
+    if res.returncode != 0:
+        log.error("%s exited %d (see output above).", label, res.returncode)
+        return False
+    log.info("Installed '%s' via %s.", pkg, label)
+    return True
+
+
+def sha256_file(path: Path) -> str:
+    """Streaming SHA-256 of a file (constant memory; large GGUF-safe)."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def verify_sha256(path: Path, expected: str, log: logging.Logger) -> bool:
+    """True iff path's SHA-256 matches `expected`. Logs the outcome (never silent).
+
+    A pinned checksum is the supply-chain gate for a direct release/model
+    download (CONTRIBUTING.md): a mismatch is a loud, explicit failure — never a
+    silent accept. Accepts a bare hex digest or a `sha256:<hex>` form.
+    """
+    want = expected.strip().lower()
+    if want.startswith("sha256:"):
+        want = want.split(":", 1)[1]
+    actual = sha256_file(path)
+    if actual == want:
+        log.info("SHA-256 verified: %s", path.name)
+        return True
+    log.error(
+        "SHA-256 MISMATCH for %s\n    expected: %s\n    actual:   %s",
+        path,
+        want,
+        actual,
+    )
+    return False
+
+
+# ---------------------------------------------------------------------------
+# llama.cpp install (OS package manager → vetted from-source fallback)
+# ---------------------------------------------------------------------------
+
+
+def install_llama_cpp(
+    log: logging.Logger, *, assume_yes: bool = False, fix_path: bool = False
+) -> str | None:
+    """Install llama.cpp from the OS package manager, then resolve `llama-cli`.
+
+    Supply-chain (CONTRIBUTING.md): we install the OS-packaged, repo-signed build
+    (Termux `pkg install llama-cpp`; some distros ship `llama.cpp`) rather than
+    building a fragile source tree blind or piping a script. Where no package
+    exists (most non-Termux aarch64), we DON'T guess — we print the vetted
+    from-source / pinned-release steps and return None, so the run SKIPs honestly
+    instead of faking an install (G2 never-silent).
+    """
+    ok = install_system_package(
+        # Termux: `llama-cpp` (binaries → $PREFIX/bin, on PATH). A few distros
+        # package it too; omit a manager here rather than guess a wrong name.
+        {"pkg": "llama-cpp", "brew": "llama.cpp"},
+        log,
+        assume_yes=assume_yes,
+        purpose="llama.cpp (llama-cli / llama-server)",
+    )
+    if ok:
+        found = _resolve_llama_cli(None, log, fix_path=fix_path, assume_yes=assume_yes)
+        if found:
+            log.info("llama.cpp installed: %s", found)
+            return found
+        log.warning(
+            "Package installed but llama-cli was not found on PATH — open a new "
+            "shell and re-run, or pass --llama-cli PATH."
+        )
+        return None
+    log.warning(
+        "Could not install llama.cpp from a package manager. Build it from the "
+        "official source (vet the repo, pin a tag), then re-run with --llama-cli:\n"
+        "    git clone https://github.com/ggml-org/llama.cpp\n"
+        "    cd llama.cpp && cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF\n"
+        "    cmake --build build -j --target llama-cli\n"
+        "  Or use a checksummed prebuilt release artifact (x86-64 / macOS / Windows):\n"
+        "    https://github.com/ggml-org/llama.cpp/releases"
+    )
+    return None
+
+
 def _candidate_bin_dirs() -> list[Path]:
     """Bin dirs where a pip/uv/pipx-installed `hf` lands but may NOT be on PATH.
 
@@ -1461,10 +1635,21 @@ def install_hf_cli(
 ) -> tuple[list[str] | None, str | None]:
     """Best-effort install of the hf CLI. Returns (cmd, style) or (None, None).
 
-    Honesty / supply-chain (CONTRIBUTING.md): we do NOT `curl … | bash`. We
-    install the published `huggingface_hub[cli]` package — pinnable, auditable,
-    and the source of the `hf` command — via uv / pipx / pip, in that order.
+    OPT-IN ONLY (--install-hf-cli / --setup-hf) — never run by --doctor. The hf
+    CLI is a Python package whose recent versions pull the native `hf-xet` build,
+    which has no aarch64 wheel and FAILS to compile under Termux. The harness does
+    not need it: the stdlib downloader fetches the public registry, and a gated
+    repo works via `$HF_TOKEN`. We keep this path for users who explicitly want
+    the CLI, but we warn first. Honesty / supply-chain (CONTRIBUTING.md): we do
+    NOT `curl … | bash`; we install the published `huggingface_hub[cli]` package
+    via uv / pipx / pip, in that order.
     """
+    log.warning(
+        "Installing the hf CLI builds the native `hf-xet` dependency, which often "
+        "FAILS on Termux/aarch64 (no prebuilt wheel). If it does, that's fine — "
+        "the built-in stdlib downloader still fetches models, and `$HF_TOKEN` "
+        "unlocks gated repos without this CLI."
+    )
     methods: list[tuple[list[str], str]] = []
     if shutil.which("uv"):
         methods.append((["uv", "tool", "install", HF_PIP_PACKAGE], "uv tool"))
@@ -1915,6 +2100,13 @@ def _download_with_resume(
     import urllib.request
 
     headers = {"User-Agent": "mycelium-llm-harness/0 (+python-stdlib-urllib)"}
+    # Gated Hugging Face repos: send a bearer token when one is configured, so the
+    # stdlib downloader can reach gated models WITHOUT the hf CLI (the whole point
+    # of dropping the fragile Python-package install). Scoped to HF hosts only so
+    # the token never leaks to a --model-url pointing elsewhere.
+    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    if token and "huggingface.co" in url:
+        headers["Authorization"] = f"Bearer {token}"
     existing = dest_part.stat().st_size if dest_part.exists() else 0
     if existing:
         headers["Range"] = f"bytes={existing}-"
@@ -1980,11 +2172,17 @@ def ensure_model(
     url_override: str | None = None,
     hf_cmd: list[str] | None = None,
     prefer_hf: bool = True,
+    sha256: str | None = None,
 ) -> Path | None:
     """Idempotent: return a local GGUF path, downloading ONLY if absent/invalid.
 
     Returns the Path on success, or None on failure (explicit + logged — never a
     false path). Re-running is a cheap presence check (the walk-away property).
+
+    Integrity: when a SHA-256 is known (the `sha256` arg or a pinned `spec`
+    value), a freshly-downloaded file MUST match it before promotion — a mismatch
+    is rejected loudly (supply-chain gate, CONTRIBUTING.md). With no pinned
+    checksum we fall back to the GGUF magic + complete-transfer check and say so.
     """
     spec = MODELS.get(model_id)
     if spec is None and url_override is None:
@@ -1996,6 +2194,8 @@ def ensure_model(
         return None
     if spec is None:
         spec = {"filename": f"{model_id}.gguf", "url": url_override}
+
+    expected_sha = sha256 or spec.get("sha256")
 
     model_dir.mkdir(parents=True, exist_ok=True)
     dest = model_dir / spec["filename"]
@@ -2028,6 +2228,13 @@ def ensure_model(
             hf_cmd, str(spec["repo"]), str(spec["filename"]), model_dir, log
         )
         if ensured:
+            if expected_sha and not verify_sha256(ensured, expected_sha, log):
+                log.error(
+                    "Pinned SHA-256 did not match the hf-CLI download — not "
+                    "promoting %s. (Check --model-sha256 / the pinned value.)",
+                    ensured,
+                )
+                return None
             return ensured
         log.warning(
             "hf CLI download did not succeed — falling back to the built-in "
@@ -2071,6 +2278,22 @@ def ensure_model(
         except OSError:
             pass
         return None
+
+    # Supply-chain gate: a pinned checksum must match before promotion. A
+    # mismatch keeps the .part for inspection rather than promoting bad bytes.
+    if expected_sha:
+        if not verify_sha256(dest_part, expected_sha, log):
+            log.error(
+                "Pinned SHA-256 did not match — NOT promoting %s. "
+                "The .part is kept for inspection; verify the URL/checksum.",
+                dest_part,
+            )
+            return None
+    else:
+        log.info(
+            "No pinned SHA-256 for this model — integrity rests on the GGUF magic "
+            "+ complete transfer. Pass --model-sha256 to enforce one."
+        )
 
     os.replace(dest_part, dest)
     log.info("Model ready: %s (%s)", dest, _human_bytes(dest.stat().st_size))
@@ -2191,6 +2414,7 @@ def run_harness(args: argparse.Namespace) -> int:
                 url_override=url_override,
                 hf_cmd=hf_cmd,
                 prefer_hf=prefer_hf,
+                sha256=getattr(args, "model_sha256", None),
             )
             if ensured:
                 model_path = str(ensured)
@@ -2440,6 +2664,16 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Override the download URL for --model-id (fetch an arbitrary GGUF).",
     )
     p.add_argument(
+        "--model-sha256",
+        metavar="HEX",
+        dest="model_sha256",
+        help=(
+            "Expected SHA-256 of the downloaded model. When set (or pinned in the "
+            "registry), the download must match it before being accepted — a "
+            "mismatch is rejected (supply-chain integrity gate)."
+        ),
+    )
+    p.add_argument(
         "--no-download",
         action="store_true",
         dest="no_download",
@@ -2460,8 +2694,10 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         dest="install_hf_cli",
         help=(
-            "If the hf CLI is missing, install 'huggingface_hub[cli]' (via "
-            "uv/pipx/pip — never curl|bash). Prompts unless --yes."
+            "OPTIONAL: install 'huggingface_hub[cli]' (uv/pipx/pip — never "
+            "curl|bash) if the hf CLI is missing. Not needed for downloads (the "
+            "stdlib path + $HF_TOKEN cover them) and may fail to build hf-xet on "
+            "aarch64/Termux. Prompts unless --yes."
         ),
     )
     p.add_argument(
@@ -2508,9 +2744,11 @@ def _build_parser() -> argparse.ArgumentParser:
         dest="doctor",
         help=(
             "Diagnose AND heal the environment (llama.cpp, hf CLI, Claude Code "
-            "CLI, model cache): auto-install missing packages (uv/pipx/pip, npm — "
-            "never curl|bash), link an unlinked CLI, and fix PATH, then exit. "
-            "Mutations prompt unless --yes. Add --check-only for a read-only report."
+            "CLI, model cache): install missing tools from the OS package manager "
+            "/ npm (pkg/apt/brew, npm — never curl|bash), link an unlinked CLI, and "
+            "fix PATH, then exit. The hf CLI is optional (stdlib downloader + "
+            "$HF_TOKEN cover downloads) and is not auto-installed. Mutations prompt "
+            "unless --yes. Add --check-only for a read-only report."
         ),
     )
     p.add_argument(
@@ -2562,13 +2800,16 @@ def _console_logger(name: str = "mycelium.llm-harness.setup") -> logging.Logger:
 def run_doctor(args: argparse.Namespace) -> int:
     """Diagnose AND heal tool/PATH/auth state. Always exits 0.
 
-    By default doctor is self-healing: if a required package is missing it
-    installs it (hf CLI via uv/pipx/pip; Claude Code via npm — never curl|bash),
-    links an installed-but-unlinked CLI, and fixes PATH (in-process now, and —
-    since healing implies --fix-path — persisted to your shell rc). Every
-    mutation prompts for consent unless --yes; non-interactive runs without --yes
-    decline safely (never-silent, G2). Pass --check-only for a pure, read-only
-    report (the classic "run it on a phone and paste it back" mode).
+    By default doctor is self-healing: if a required tool is missing it installs
+    it from the OS package manager / official release — llama.cpp via
+    `pkg`/`apt`/`brew` (repo-signed, no source build), Claude Code via npm — never
+    `curl|bash` and never a fragile language-package build. It links an
+    installed-but-unlinked CLI and fixes PATH (in-process now, and — since healing
+    implies --fix-path — persisted to your shell rc). The hf CLI is treated as
+    OPTIONAL and is NOT auto-installed (the stdlib downloader + $HF_TOKEN cover
+    the model fetch). Every mutation prompts for consent unless --yes;
+    non-interactive runs without --yes decline safely (never-silent, G2). Pass
+    --check-only for a pure, read-only report ("run it on a phone, paste it back").
     """
     log = _console_logger()
     check_only = bool(getattr(args, "check_only", False))
@@ -2618,6 +2859,12 @@ def run_doctor(args: argparse.Namespace) -> int:
     llama = _resolve_llama_cli(
         getattr(args, "llama_cli", None), log, fix_path=fix_path, assume_yes=assume_yes
     )
+    if not llama and heal:
+        out("      NOT FOUND — installing from the system package manager…")
+        installed = install_llama_cpp(log, assume_yes=assume_yes, fix_path=fix_path)
+        if installed:
+            llama = installed
+            actions.append("Installed llama.cpp from the system package manager.")
     if llama:
         out(f"      FOUND: {llama}")
         try:
@@ -2632,7 +2879,10 @@ def run_doctor(args: argparse.Namespace) -> int:
         out("      NOT FOUND. Searched PATH +:")
         for d in _llama_search_dirs():
             out(f"          {d}")
-        out("      Fix: build llama.cpp (README Termux steps), pass --llama-cli PATH,")
+        out("      Fix: install the OS package (Termux: pkg install llama-cpp), or")
+        out(
+            "           build from source (README Termux steps) + pass --llama-cli PATH,"
+        )
         out("           or set $MYCELIUM_LLAMA_DIR to its directory.")
     out("")
 
@@ -2642,11 +2892,6 @@ def run_doctor(args: argparse.Namespace) -> int:
     cmd, style = _resolve_hf_cli(
         getattr(args, "hf_cli", None), log, fix_path=fix_path, assume_yes=assume_yes
     )
-    if not cmd and heal and not no_hf:
-        out("      NOT FOUND — auto-installing '%s'…" % HF_PIP_PACKAGE)
-        cmd, style = install_hf_cli(log, assume_yes=assume_yes, fix_path=fix_path)
-        if cmd:
-            actions.append(f"Installed Hugging Face CLI ('{HF_PIP_PACKAGE}').")
     if cmd:
         out(f"      FOUND: {' '.join(cmd)}  (style: {style})")
         authed, who = hf_auth_status(cmd, style, log)
@@ -2654,20 +2899,18 @@ def run_doctor(args: argparse.Namespace) -> int:
             f"      auth : {'authenticated as ' + str(who) if authed else 'NOT authenticated (fine for public models)'}"
         )
     else:
-        out("      NOT FOUND. Searched PATH + these bin dirs:")
-        for d in _candidate_bin_dirs():
-            out(f"          {d}")
-        if no_hf:
-            out("      (--no-hf-cli set: skipping install; stdlib downloader is used.)")
-        elif check_only:
-            out(
-                f"      Fix: --setup-hf  (installs '{HF_PIP_PACKAGE}' via uv/pipx/pip)."
-            )
-        else:
-            out(
-                f"      Could not auto-install '{HF_PIP_PACKAGE}' (declined or no installer)."
-            )
-            out("      Install an installer first (uv/pipx/pip), then re-run --doctor.")
+        # OPTIONAL by design. The hf CLI is a Python package that drags in the
+        # native `hf-xet` build, which fails on Termux/aarch64 — so doctor does
+        # NOT auto-install it. The built-in stdlib downloader handles the public
+        # registry, and a gated repo works by exporting $HF_TOKEN (sent as a
+        # bearer header by the downloader). Install the CLI yourself only if you
+        # specifically want it.
+        out("      NOT FOUND — this is OPTIONAL, not a failure.")
+        out("      The built-in stdlib downloader fetches the public registry; for")
+        out("      a GATED repo, `export HF_TOKEN=hf_…` and the downloader uses it.")
+        if not no_hf:
+            out("      To install the CLI anyway (may need a native hf-xet build on")
+            out(f"      aarch64): --install-hf-cli  (installs '{HF_PIP_PACKAGE}').")
     out("")
 
     out("-" * 72)

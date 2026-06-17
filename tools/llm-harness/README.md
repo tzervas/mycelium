@@ -85,32 +85,39 @@ python3 tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-coder-3b
   (fetch an arbitrary GGUF under any `--model-id` name); `--model PATH` (bypass the registry
   entirely with a local file you trust).
 
-### Hugging Face CLI (preferred download path + auth)
+### Downloading models: stdlib downloader (default) + `$HF_TOKEN`; hf CLI is optional
 
-When the **`hf` CLI** is available, `--ensure-model` uses it to fetch the GGUF (robust,
-resumable, auth-aware — and the only way to reach **gated** repos). If it isn't, the harness
-falls back to its built-in stdlib downloader, so nothing breaks. The CLI is detected, set up,
-and auth-checked explicitly (G2 never-silent):
+The default download path is the **built-in stdlib downloader** (pure `urllib`, resumable via HTTP
+Range). It needs no extra packages, so it just works on a fresh phone. For a **gated** repo, export a
+token and the downloader sends it as a bearer header — no CLI required:
 
 ```sh
-python3 tools/llm-harness/harness.py --setup-hf            # detect → install → check/prompt auth, then exit
-python3 tools/llm-harness/harness.py --ensure-model        # uses hf CLI if present; falls back otherwise
-python3 tools/llm-harness/harness.py --ensure-model --install-hf-cli   # install it first if missing
+export HF_TOKEN=hf_xxxxxxxx        # only needed for gated repos; public registry needs nothing
+python3 tools/llm-harness/harness.py --ensure-model
+```
+
+The **`hf` CLI is optional.** It is *not* auto-installed (by `--doctor` or otherwise) because it is a
+Python package whose recent versions pull the native **`hf-xet`** dependency, which has no aarch64 wheel
+and **fails to build under Termux** — the exact breakage that motivated moving off the Python-package
+install path. If an `hf`/`huggingface-cli` is already on your `PATH`, `--ensure-model` will use it
+(robust, resumable, auth-aware); otherwise the stdlib path is used and nothing breaks.
+
+```sh
+python3 tools/llm-harness/harness.py --ensure-model                    # stdlib path (or hf CLI if present)
+python3 tools/llm-harness/harness.py --ensure-model --install-hf-cli   # OPT-IN install of the CLI (may fail to build hf-xet on aarch64)
 ```
 
 - **Detection** searches `PATH`, then the dirs installers actually use — `~/.local/bin`,
   `$PREFIX/bin` (Termux). An installed-but-unlinked `hf` (see the Termux note below) is found
   and used, with a warning telling you the exact `export PATH=…` to add for your shell.
-- **Install** (`--install-hf-cli`, implied by `--setup-hf`) installs the published
-  `huggingface_hub[cli]` package via **`uv` / `pipx` / `pip --user`** — **never** `curl … | bash`
-  (CONTRIBUTING.md supply-chain rule). The upstream one-liner is printed as a reviewed manual
-  fallback only. Prompts for consent unless `--yes`.
-- **Auth** runs `hf auth whoami`; if unauthenticated it prompts you to `hf auth login`
-  (interactive), or use `--hf-token TOKEN` / `$HF_TOKEN` for a non-interactive login. This is
-  **non-fatal** — the default registry is public, so a token-less run still downloads; auth only
-  matters for gated repos.
+- **Install** is **opt-in only** (`--install-hf-cli` / `--setup-hf`): it installs the published
+  `huggingface_hub[cli]` package via **`uv` / `pipx` / `pip`** — **never** `curl … | bash`
+  (CONTRIBUTING.md supply-chain rule) — and warns first that the `hf-xet` build may fail on aarch64.
+  You don't need it; prefer `$HF_TOKEN` + the stdlib downloader.
+- **Auth** (when a CLI is present) runs `hf auth whoami`; if unauthenticated it prompts to log in, or
+  use `--hf-token TOKEN` / `$HF_TOKEN`. Non-fatal — the default registry is public.
 - **Flags:** `--hf-cli PATH` (explicit binary), `--no-hf-cli` (force the stdlib downloader),
-  `--install-hf-cli`, `--hf-token TOKEN`, `--setup-hf`, `-y`/`--yes`.
+  `--install-hf-cli`, `--hf-token TOKEN`, `--setup-hf`, `--model-sha256 HEX`, `-y`/`--yes`.
 
 ### Troubleshooting: `--doctor` and PATH self-healing
 
@@ -128,7 +135,12 @@ python3 tools/llm-harness/harness.py --doctor --check-only # read-only report (n
 - **`--doctor` is self-healing.** It prints platform/PATH, installers, and the resolved state of
   **llama.cpp**, the **hf CLI** (+ auth), the **Claude Code CLI**, and the model cache — and then
   *fixes what it can*:
-  - missing **hf CLI** → installs `huggingface_hub[cli]` (uv → pipx → pip, **never** curl|bash);
+  - missing **llama.cpp** → installs it from the **OS package manager** (Termux `pkg install llama-cpp`;
+    `brew install llama.cpp`) — repo-signed, no fragile source build, **never** curl|bash. Where no package
+    exists it prints the vetted from-source / pinned-release steps instead of guessing;
+  - missing **hf CLI** → **left alone (it is optional)**. The hf CLI is a Python package that drags in the
+    native `hf-xet` build (no aarch64 wheel — it fails on Termux), so the doctor does **not** install it. The
+    built-in stdlib downloader fetches the public registry, and `$HF_TOKEN` unlocks gated repos without it;
   - **Claude Code CLI** installed-but-unlinked → links it onto PATH; missing entirely → `npm install -g
     @anthropic-ai/claude-code` (on Termux it points npm's prefix at `$PREFIX` first so the link lands on PATH);
   - off-PATH binary → PATH healed in-process **and** persisted to your shell rc (healing implies `--fix-path`);
@@ -159,9 +171,14 @@ A download is verified by the **GGUF magic header** (`GGUF`) + a clean, complete
 before it is promoted from `*.part` to the final name — a 404/gated **HTML page can never
 masquerade as a model**. A failed/partial fetch is an explicit, logged error and the run
 **SKIPs** the model-dependent validations (never a false PASS). Re-running resumes the
-partial download. The registry stores **no fabricated checksums** (it has none to verify
-against); integrity rests on the GGUF magic + complete transfer, and you can always supply
-a self-verified file via `--model`.
+partial download.
+
+**Checksum gate.** When a **SHA-256** is known — pass `--model-sha256 HEX`, or pin one in the
+registry entry — the freshly-downloaded file **must** match it before promotion; a mismatch is a
+loud, explicit failure and the `*.part` is kept for inspection (supply-chain integrity, CONTRIBUTING.md).
+The registry stores **no fabricated checksums** (the honesty rule forbids asserting a value we
+haven't vetted); where none is pinned, integrity rests on the GGUF magic + complete transfer, and
+you can always supply a self-verified file via `--model` or a vetted `--model-sha256`.
 
 > **Note on gated models (Llama-3.2, Gemma, …).** These require a Hugging Face token and
 > are deliberately **not** in the default registry (a token-less `urlopen` would get an
@@ -175,7 +192,17 @@ a self-verified file via `--model`.
 
 ```sh
 pkg update && pkg upgrade
-pkg install python git cmake clang ninja wget
+pkg install python git              # Python drives the harness; git to clone
+pkg install llama-cpp               # provides llama-cli/llama-server in $PREFIX/bin (on PATH)
+```
+
+`pkg install llama-cpp` is the **easy path** on Termux — a repo-signed, prebuilt
+binary, no source build. `--doctor` will run it for you (with consent). Only fall
+back to a source build (Step 2) if the package is unavailable for your device, in
+which case also install the toolchain:
+
+```sh
+pkg install cmake clang ninja wget
 ```
 
 **FLAG:** `clang` in Termux pulls in its bundled libstdc++. If cmake cannot find
@@ -202,10 +229,12 @@ so links land on Termux's existing `PATH`).
 there: `pkg install python` provides `pip`; `pkg install pipx` (or `pkg install uv`) gives the
 isolated installers. Once one is present, `--setup-hf` / `--install-hf-cli` can take over.
 
-### Step 2 — Clone and build llama.cpp
+### Step 2 — (only if `pkg install llama-cpp` is unavailable) build from source
+
+Prefer the package in Step 1. Build from the official source only as a fallback:
 
 ```sh
-git clone https://github.com/ggerganov/llama.cpp
+git clone https://github.com/ggml-org/llama.cpp
 cd llama.cpp
 cmake -B build \
   -DCMAKE_BUILD_TYPE=Release \
