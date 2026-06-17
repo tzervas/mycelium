@@ -10,7 +10,7 @@
 | Field | Value |
 |---|---|
 | **Status** | **Draft (needs-design)** (`<YYYY-MM-DD>` — fill with the authoring date) — design-first; no code lands until RFC-0016 is Accepted and this spec is ratified (the maintainer's append-only decision). |
-| **Module / Ring** | `std.<module>` · Ring `<0 | 1 | 2>` (RFC-0016 §4.2) · Tier `<A | B>` |
+| **Module / Ring** | `std.<module>` · Ring `<0 \| 1 \| 2>` (RFC-0016 §4.2) · Tier `<A \| B>` |
 | **Tracks** | `<M-5xx>` (#`<issue>`) — the Phase-5 task this spec delivers |
 | **Scope** | `<what this module is, in one or two sentences — the exported surface it owns>` |
 | **Boundary** | `<what is explicitly OUT of scope, and which adjacent module owns it — e.g. "a representation change is std.swap (M-516), not a std.cmp convert">` |

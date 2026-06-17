@@ -283,7 +283,7 @@ artifact exists (the identity receipt / the manifest record / the refusal diagno
 
 - **2026-06-17 — Draft (needs-design).** Stands up `std.spore` (M-522, #163) — the **content-addressed
   deployable unit + reconstruction-manifest library** under RFC-0016 (Draft): Ring 1 / Tier A. Fixes the scope
-  + boundary (consumes `std.content`'s hash (M-523) and `std.vsa`'s decode (M-513); is the library face of the
+  and boundary (consumes `std.content`'s hash (M-523) and `std.vsa`'s decode (M-513); is the library face of the
   Accepted/enacted M-368 packaging contract; defers the full native deploy to the Phase-6 native path M-620;
   representation change is `swap`), the exported-op surface sketch (`build`/`build_value`/`identity`/`explain`;
   manifest `manifest_of`/`validate`/`manifest_hash`/`mode`/`declared_strength`; the deploy seam), and — the

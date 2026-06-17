@@ -287,6 +287,6 @@ precision). The **`wild`?** column marks which ops bottom out in the audited `wi
   RFC-0016 §4.1/§4.4/§4.5/§8-Q6, ADR-014, RFC-0006 LR-8/LR-9, RFC-0013/0014, M-514, RFC-0001, G2/VR-5/
   KC-3. Five questions FLAGGED (the `wild`/FFI floor + `std-sys` phylum split per §8-Q6; the exact io
   surface owned by M-514; the path model + non-UTF-8 portability; atomicity/symlinks/recursive-walk budget
-  + TOCTOU; capability-scoped filesystem effect) — the io surface and the `std`-vs-`std-sys` placement are
+  and TOCTOU; capability-scoped filesystem effect) — the io surface and the `std`-vs-`std-sys` placement are
   *not* invented here. No code; no kernel change beyond the FLAGGED, inventoried `wild` floor (KC-3,
   narrowed). Append-only.
