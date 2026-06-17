@@ -67,7 +67,10 @@ def gh(args, *, input_text=None, check=True):
     try:
         proc = subprocess.run(
             ["gh", *args],
-            check=check,
+            # check=False: we surface stderr ourselves below, then raise — so a failure is
+            # never silent (G2). Passing check=check here would raise inside subprocess.run
+            # before that block could print stderr.
+            check=False,
             text=True,
             input=input_text,
             capture_output=True,

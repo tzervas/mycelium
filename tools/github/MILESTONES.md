@@ -126,8 +126,9 @@ title or the script will create a duplicate.
   (keeping `type:design` — the M-344/345/352/355 precedent) in `issues.yaml` and on GitHub
   (#130/#131/#133 + #136–#140). **Issues left OPEN** (maintainer's call): the M-361 epic (#132) stays open
   until its CI-parity gate is wired (the next wave), and the five children close with it. `type`/milestone/
-  open-state otherwise untouched; since `gh-issues-sync.py` is create-absent-only, the live flip is a direct
-  `issue_write`, not a bootstrap run. Ladder + summary corrected (Phase 7 = 6 tasks, all ✓; Phase 8 = 7 — the
+  open-state otherwise untouched; since the then-current `gh-issues-sync.py` was create-absent-only, the live
+  flip was a direct `issue_write`, not a bootstrap run (the entry above then upgraded the engine to reconcile
+  existing issues, closing that gap). Ladder + summary corrected (Phase 7 = 6 tasks, all ✓; Phase 8 = 7 — the
   five tool children ✓, M-361 gate + M-363 build pending), resolving the prior contradiction (changelog said
   "enacted"; the ladder still said "staged"). `idmap.tsv` carries no status column, so it gains only a dated
   note. Append-only.
