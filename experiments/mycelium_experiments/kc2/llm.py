@@ -30,11 +30,72 @@ import shutil
 import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from mycelium_experiments.kc2.tasks import Task
 
 # A backend is anything that turns a full prompt string into the model's raw text.
 Backend = Callable[[str], str]
+
+# Conservative upper bound on KV bytes/token for a phone-class q4 model (≈32 KB);
+# over-estimating makes the auto-sizer under-allocate context, which is the safe error.
+_KV_MB_PER_TOKEN = 0.032
+
+
+def detect_memory() -> dict[str, int | None]:
+    """Available/total/swap RAM in MB from /proc/meminfo (stdlib; None if unknown)."""
+    out: dict[str, int | None] = {
+        "mem_total_mb": None,
+        "mem_available_mb": None,
+        "swap_free_mb": None,
+    }
+    try:
+        text = Path("/proc/meminfo").read_text(encoding="utf-8")
+    except OSError:
+        return out
+    kv: dict[str, int] = {}
+    for line in text.splitlines():
+        name, _, rest = line.partition(":")
+        fields = rest.strip().split()
+        if fields and fields[0].isdigit():
+            kv[name.strip()] = int(fields[0])  # kB
+    if "MemTotal" in kv:
+        out["mem_total_mb"] = kv["MemTotal"] // 1024
+    avail = kv.get("MemAvailable")
+    if avail is None and "MemFree" in kv:
+        avail = kv.get("MemFree", 0) + kv.get("Buffers", 0) + kv.get("Cached", 0)
+    out["mem_available_mb"] = (avail // 1024) if avail is not None else None
+    if "SwapFree" in kv:
+        out["swap_free_mb"] = kv["SwapFree"] // 1024
+    return out
+
+
+def auto_ctx_size(want: int, model: str | None, mem: dict[str, int | None]) -> tuple[int, str]:
+    """Pick ctx = min(workload need, what available RAM safely holds). Returns (ctx, reason).
+
+    Swap is not counted (KV/compute thrash and still trip the OOM killer if paged).
+    Conservative when memory is unknown. Always overridable with --ctx-size.
+    """
+    avail = mem.get("mem_available_mb")
+    model_mb = 0
+    try:
+        if model and Path(model).is_file():
+            model_mb = Path(model).stat().st_size // (1024 * 1024)
+    except OSError:
+        pass
+    if not isinstance(avail, int) or avail <= 0:
+        chosen = min(want, 1024)
+        return chosen, f"available RAM unknown — conservative ctx={chosen}"
+    reserve = max(768, model_mb)  # OS + worst-case resident weights
+    usable = avail - reserve
+    cap = int((usable * 0.40) / _KV_MB_PER_TOKEN) if usable > 0 else 256
+    cap = max(256, (cap // 256) * 256)
+    chosen = max(256, min(want, cap))
+    reason = (
+        f"avail={avail}MB model={model_mb}MB reserve={reserve}MB usable={max(0, usable)}MB "
+        f"→ memory allows ~{cap}, want {want} ⇒ ctx={chosen}"
+    )
+    return chosen, reason
 
 
 # ---------------------------------------------------------------------------

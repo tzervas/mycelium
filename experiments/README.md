@@ -39,12 +39,13 @@ Reports land in `tools/llm-harness/reports/<run-id>-report.{json,txt}` + `<run-i
 
 > **If the process dies with `[Process completed (signal 9)]`** that's the Android
 > low-memory killer (SIGKILL) — almost always the **KV cache**: llama.cpp otherwise
-> allocates context for the model's full trained window (Qwen2.5 = 32k). The harness
-> now caps it at `--ctx-size 2048` by default; lower it further if a phone still OOMs:
+> allocates context for the model's full trained window (Qwen2.5 = 32k). Both tools
+> now **auto-size the context from available RAM** (`/proc/meminfo`) by default and log
+> the choice; `--doctor` shows the detected RAM/swap + the context it would pick. If a
+> phone still OOMs, force it smaller or drop to the smallest model tier:
 >
 > ```sh
-> python tools/llm-harness/harness.py --ctx-size 1024
-> # or use the smallest model tier:
+> python tools/llm-harness/harness.py --ctx-size 512
 > python tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-0.5b-instruct
 > ```
 >

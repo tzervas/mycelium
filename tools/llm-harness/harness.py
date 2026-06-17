@@ -143,6 +143,138 @@ class RunContext:
 
 
 # ---------------------------------------------------------------------------
+# Memory enumeration + auto context sizing (the OOM governor, self-tuning)
+# ---------------------------------------------------------------------------
+#
+# The real-mode SIGKILL on a phone is a KV-cache blowout: with no `-c`, llama.cpp
+# sizes the KV cache for the model's *full trained window* (Qwen2.5 = 32k). We pick
+# a context that (a) is as large as the workload actually needs and (b) fits the
+# device's *available* RAM with headroom — never silently, always logged (EXPLAIN).
+# Swap is detected and reported but NOT counted toward the budget: KV/compute are
+# active allocations that thrash (and still trip the low-memory killer) if paged.
+
+# The harness's prompts are tiny (tens of tokens, n_predict ≤ 128), so it never needs
+# a large window — auto-sizing mostly clamps DOWNWARD on small devices.
+_HARNESS_DESIRED_CTX = 1024
+# Conservative upper bound on KV bytes/token for a phone-class q4 model with GQA
+# (≈ 2·layers·kv_dim·2B). Over-estimating here makes us under-allocate context — safe.
+_KV_MB_PER_TOKEN = 0.032
+
+
+def detect_memory() -> dict[str, Any]:
+    """Best-effort RAM/swap enumeration in MB. Pure stdlib; never raises.
+
+    Reads /proc/meminfo (Linux/Termux/Android) and falls back to POSIX sysconf.
+    Any field we cannot determine is left None (never guessed) — honest input to the
+    auto-sizer, which degrades to a conservative default when memory is unknown.
+    """
+    info: dict[str, Any] = {
+        "mem_total_mb": None,
+        "mem_available_mb": None,
+        "swap_total_mb": None,
+        "swap_free_mb": None,
+        "source": "unknown",
+    }
+    try:
+        meminfo = Path("/proc/meminfo")
+        if meminfo.is_file():
+            kv: dict[str, int] = {}
+            for line in meminfo.read_text(encoding="utf-8").splitlines():
+                name, _, rest = line.partition(":")
+                fields = rest.strip().split()
+                if fields and fields[0].isdigit():
+                    kv[name.strip()] = int(fields[0])  # kB
+            mb = lambda k: (kv[k] // 1024) if k in kv else None  # noqa: E731
+            info["mem_total_mb"] = mb("MemTotal")
+            avail = mb("MemAvailable")
+            if avail is None and "MemFree" in kv:
+                avail = (
+                    kv.get("MemFree", 0) + kv.get("Buffers", 0) + kv.get("Cached", 0)
+                ) // 1024
+            info["mem_available_mb"] = avail
+            info["swap_total_mb"] = mb("SwapTotal")
+            info["swap_free_mb"] = mb("SwapFree")
+            info["source"] = "/proc/meminfo"
+            return info
+    except OSError:
+        pass
+    try:
+        page = os.sysconf("SC_PAGE_SIZE")
+        names = getattr(os, "sysconf_names", {})
+        if "SC_PHYS_PAGES" in names:
+            info["mem_total_mb"] = os.sysconf("SC_PHYS_PAGES") * page // (1024 * 1024)
+        if "SC_AVPHYS_PAGES" in names:
+            info["mem_available_mb"] = (
+                os.sysconf("SC_AVPHYS_PAGES") * page // (1024 * 1024)
+            )
+        if info["mem_total_mb"] is not None:
+            info["source"] = "sysconf"
+    except (OSError, ValueError):
+        pass
+    return info
+
+
+def auto_ctx_size(
+    want: int,
+    model_path: str | None,
+    mem: dict[str, Any],
+    log: logging.Logger,
+) -> int:
+    """Choose a context size = min(workload need, what available RAM safely holds).
+
+    Logged in full (EXPLAIN, never silent). Returns `want` when memory is ample, a
+    smaller fitting value when it is tight, and a conservative floor when memory is
+    unknown. Always overridable with --ctx-size.
+    """
+    avail = mem.get("mem_available_mb")
+    model_mb = 0
+    try:
+        if model_path and os.path.isfile(model_path):
+            model_mb = os.path.getsize(model_path) // (1024 * 1024)
+    except OSError:
+        pass
+
+    if not isinstance(avail, int) or avail <= 0:
+        chosen = min(want, 1024)
+        log.warning(
+            "Auto-ctx: available memory unknown (source=%s) — using a conservative "
+            "ctx-size=%d. Override with --ctx-size.",
+            mem.get("source"),
+            chosen,
+        )
+        return chosen
+
+    # Reserve headroom for the OS + the model's working set. With mmap the weights are
+    # page-cache backed (reclaimable), but reserve their size anyway as a worst case.
+    reserve = max(768, model_mb)
+    usable = avail - reserve
+    cap = int((usable * 0.40) / _KV_MB_PER_TOKEN) if usable > 0 else 256
+    cap = max(256, (cap // 256) * 256)  # floor + round to a 256 multiple
+    chosen = max(256, min(want, cap))
+    log.info(
+        "Auto-ctx: avail=%dMB swap_free=%sMB model=%dMB → reserve=%dMB usable=%dMB; "
+        "memory allows ~%d, workload wants %d ⇒ ctx-size=%d (override with --ctx-size).",
+        avail,
+        mem.get("swap_free_mb"),
+        model_mb,
+        reserve,
+        max(0, usable),
+        cap,
+        want,
+        chosen,
+    )
+    if usable <= 0:
+        log.warning(
+            "Auto-ctx: low memory headroom — the model (%dMB) is large vs available "
+            "RAM (%dMB). If it still OOMs, use a smaller tier: "
+            "--ensure-model --model-id qwen2.5-0.5b-instruct.",
+            model_mb,
+            avail,
+        )
+    return chosen
+
+
+# ---------------------------------------------------------------------------
 # llama.cpp invocation helpers
 # ---------------------------------------------------------------------------
 
@@ -2489,6 +2621,16 @@ def run_harness(args: argparse.Namespace) -> int:
             "(no model/binary available — use --mock for fixture mode)."
         )
 
+    # Context size: explicit --ctx-size wins; otherwise auto-size from available RAM
+    # (only meaningful for the llama-cli path — server/mock don't use it).
+    ctx_size_arg = getattr(args, "ctx_size", None)
+    if ctx_size_arg is not None:
+        ctx_size = int(ctx_size_arg)
+    elif llama_cli and not server_url:
+        ctx_size = auto_ctx_size(_HARNESS_DESIRED_CTX, model_path, detect_memory(), log)
+    else:
+        ctx_size = _HARNESS_DESIRED_CTX
+
     ctx = RunContext(
         mock=mock_mode,
         llama_cli=llama_cli,
@@ -2497,7 +2639,7 @@ def run_harness(args: argparse.Namespace) -> int:
         reports_dir=reports_dir,
         run_id=run_id,
         log=log,
-        ctx_size=int(getattr(args, "ctx_size", 2048) or 2048),
+        ctx_size=ctx_size,
         extra_llama_args=list(getattr(args, "llama_arg", None) or []),
     )
 
@@ -2659,14 +2801,15 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--ctx-size",
         type=int,
-        default=2048,
+        default=None,
         dest="ctx_size",
         metavar="N",
         help=(
-            "llama.cpp context window (-c). Default 2048 — small on purpose: the prompts "
-            "are tiny, and capping this stops llama.cpp allocating a KV cache for the "
-            "model's full trained window (Qwen2.5 = 32k), which OOM-kills the process "
-            "(SIGKILL/9) on a phone. Raise only if a validation needs more context."
+            "llama.cpp context window (-c). DEFAULT: auto — the harness enumerates "
+            "available RAM (/proc/meminfo) and picks a context that fits with headroom, "
+            "capped by what the tiny prompts need. This stops llama.cpp sizing the KV "
+            "cache for the model's full 32k window, which OOM-kills (SIGKILL/9) a phone. "
+            "Pass an explicit N to override the auto value."
         ),
     )
     p.add_argument(
@@ -3091,6 +3234,31 @@ def run_doctor(args: argparse.Namespace) -> int:
         out(f"      default model absent : {dest.name}  (fetch with --ensure-model)")
     out("")
 
+    out("-" * 72)
+    out("  Memory + auto context size")
+    out("-" * 72)
+    mem = detect_memory()
+    out(f"      source   : {mem.get('source')}")
+
+    def _mb(v: Any) -> str:
+        return f"{v} MB" if isinstance(v, int) else "(unknown)"
+
+    out(
+        f"      RAM      : {_mb(mem.get('mem_available_mb'))} available "
+        f"of {_mb(mem.get('mem_total_mb'))} total"
+    )
+    out(
+        f"      swap     : {_mb(mem.get('swap_free_mb'))} free "
+        f"of {_mb(mem.get('swap_total_mb'))} (detected, NOT counted toward the budget)"
+    )
+    # Show the context a real run WOULD auto-pick for the default model (the auto-sizer
+    # logs its own reasoning; here we just surface the number alongside the inputs).
+    chosen = auto_ctx_size(
+        _HARNESS_DESIRED_CTX, str(dest) if model_ready else None, mem, log
+    )
+    out(f"      auto ctx : {chosen}  (override with --ctx-size N)")
+    out("")
+
     # Bottom-line readiness verdict — the one thing to read in this dense report.
     # Real-mode validations need BOTH a llama.cpp CLI and a local model; the cached
     # model is reused with no flags (the walk-away property). A SKIP is never a PASS,
@@ -3105,7 +3273,9 @@ def run_doctor(args: argparse.Namespace) -> int:
     else:
         out("      ✗ NOT READY — real-mode validations would SKIP (not fail), because:")
         if not llama:
-            out("          · no llama.cpp CLI (llama-cli / llama) — see the section above")
+            out(
+                "          · no llama.cpp CLI (llama-cli / llama) — see the section above"
+            )
         if not model_ready:
             out("          · no local model — fetch it with:")
             out("                python tools/llm-harness/harness.py --ensure-model")

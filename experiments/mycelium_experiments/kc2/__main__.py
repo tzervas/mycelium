@@ -41,6 +41,10 @@ from mycelium_experiments.kc2.tasks import TASKS
 # Mirror tools/llm-harness's cache layout so a model fetched there is reused here.
 _DEFAULT_MODEL_FILENAME = "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf"
 
+# KC-2 prompts (primer + task + feedback + generation) are larger than the harness's,
+# so the workload wants more context — still capped to fit available RAM (auto).
+_KC2_DESIRED_CTX = 2048
+
 _VERDICT = (
     "not established — the KC-2 verdict (proceed / reweight-to-human / "
     "fall-back-to-embedded-DSL) requires a maintainer-written analysis of this run; "
@@ -116,12 +120,17 @@ def _build_backend(args: argparse.Namespace) -> llm.Backend:
             "`python tools/llm-harness/harness.py --ensure-model` (it caches into "
             f"{_default_model_dir()})."
         )
+    if args.ctx_size is not None:
+        ctx_size = args.ctx_size
+    else:
+        ctx_size, reason = llm.auto_ctx_size(_KC2_DESIRED_CTX, model, llm.detect_memory())
+        print(f"Auto-ctx: {reason} (override with --ctx-size)", file=sys.stderr)
     return llm.cli_backend(
         cli,
         model,
         seed=args.seed,
         n_predict=args.n_predict,
-        ctx_size=args.ctx_size,
+        ctx_size=ctx_size,
         extra_args=args.llama_extra_arg,
     )
 
@@ -152,9 +161,10 @@ def main() -> int:
     p.add_argument(
         "--ctx-size",
         type=int,
-        default=2048,
-        help="llama.cpp context window -c (default 2048). Small on purpose: caps the KV "
-        "cache so a phone doesn't OOM-kill (SIGKILL/9) on the model's full 32k window.",
+        default=None,
+        help="llama.cpp context window -c. DEFAULT: auto — sized from available RAM "
+        "(/proc/meminfo) so a phone doesn't OOM-kill (SIGKILL/9) on the model's full 32k "
+        "window. Pass an explicit N to override.",
     )
     p.add_argument("--primer-mycelium", metavar="FILE", help="Override the Mycelium-arm primer.")
     p.add_argument("--primer-baseline", metavar="FILE", help="Override the baseline-arm primer.")

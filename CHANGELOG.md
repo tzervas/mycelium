@@ -8,6 +8,20 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: auto memory enumeration + auto context sizing)
+- **The context size is now auto-tuned from the device's available memory** instead of a fixed
+  default — the harness and the KC-2 backend enumerate RAM/swap (`/proc/meminfo`, with a POSIX
+  `sysconf` fallback) and pick `min(workload need, what available RAM safely holds with headroom)`.
+  New `detect_memory()` + `auto_ctx_size()` in both `tools/llm-harness/harness.py` and
+  `experiments/.../kc2/llm.py`; `--ctx-size` now defaults to **auto** (pass an explicit `N` to
+  override). Swap is detected and reported but **not** counted toward the budget (KV/compute thrash
+  and still trip the OOM killer if paged) — an honest, conservative input.
+- **No black box (EXPLAIN/G2):** the chosen context is logged with every input (available RAM,
+  model size, reserve, the per-token KV assumption, the workload need). `--doctor` gains a
+  **"Memory + auto context size"** section showing detected RAM/swap and the context a run would
+  pick, and recommends the `qwen2.5-0.5b-instruct` tier when headroom is thin. Memory unknown ⇒ a
+  conservative default, never a guess.
+
 ### Fixed (2026-06-17: real-mode OOM — cap the llama.cpp context / KV cache)
 - **On-device real-mode runs were SIGKILLed (`[Process completed (signal 9)]`) at model load.**
   Cause: with no `-c`, llama.cpp allocates a KV cache for the model's *full trained context*

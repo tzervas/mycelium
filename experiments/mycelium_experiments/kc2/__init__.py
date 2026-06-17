@@ -37,8 +37,10 @@ from mycelium_experiments.kc2.harness import (
 )
 from mycelium_experiments.kc2.llm import (
     LlamaGenerator,
+    auto_ctx_size,
     build_prompt,
     cli_backend,
+    detect_memory,
     extract_source,
     primer_for,
     server_backend,
@@ -60,9 +62,11 @@ __all__ = [
     "Tern",
     "ToolUnavailable",
     "assess",
+    "auto_ctx_size",
     "bnot",
     "build_prompt",
     "cli_backend",
+    "detect_memory",
     "extract_source",
     "primer_for",
     "render_summary",
