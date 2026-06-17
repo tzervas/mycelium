@@ -1,0 +1,41 @@
+{
+  "_about": "Conventional-Commits grammar manifest for Mycelium. The single declarative source for mapping a commit/PR-title `type(scope): subject` to the repo's type:* / area:* labels (and for inferring a milestone). Consumed by gh-issues-sync.py --prs. House rule: never invent (G2) — an unmapped type or a scope that is not an area label is FLAGGED, never guessed. The area:* set itself lives in labels.json (DRY); this file only adds the optional, declared scope aliases.",
+
+  "title_grammar": "type(scope)!: subject  — Conventional Commits 1.0.0. scope is optional; a trailing ! on the type (or a `BREAKING CHANGE:` footer) marks a breaking change. The PR-title path falls back to the PR's commit messages when the title itself does not parse.",
+
+  "type_to_label": {
+    "feat": "type:feature",
+    "fix": "type:bug",
+    "docs": "type:docs",
+    "refactor": "type:chore",
+    "perf": "type:chore",
+    "style": "type:chore",
+    "test": "type:verification",
+    "build": "type:infra",
+    "ci": "type:infra",
+    "chore": "type:chore",
+    "revert": "type:chore"
+  },
+
+  "type_to_label_repo_ext": {
+    "_about": "Repo-specific 'friends' of Conventional Commits the maintainer already uses in titles (e.g. `spec(adr-011): ...`). Append-only, ratified extensions — merged over type_to_label by the engine. Add a type here (a decision) instead of letting it FLAG.",
+    "spec": "type:spec",
+    "research": "type:research",
+    "design": "type:design"
+  },
+
+  "scope_to_area": {
+    "_policy": "A scope maps to area:<scope> ONLY when <scope> is exactly an area:* label in labels.json; otherwise it is FLAGGED, never invented (G2). To turn a recurring FLAG into a mapping, add a declared alias below — each alias is a ratified decision, not a guess.",
+    "aliases": {}
+  },
+
+  "milestone_inference": {
+    "_policy": "For a PR, scan the title + body + commit messages for task-ids; resolve each via issues.yaml to its milestone. Set the milestone ONLY when every resolved id agrees on a single milestone (unambiguous); otherwise FLAG and set nothing (never invent a milestone).",
+    "task_id_patterns": ["M-[0-9]+", "E[0-9]+-[0-9]+"]
+  },
+
+  "breaking_change": {
+    "_policy": "A breaking marker (type! or a `BREAKING CHANGE:` footer) is reported in the never-silent output. There is no breaking:* label in labels.json today, so it is FLAGGED for the maintainer rather than mapped to an invented label.",
+    "label": null
+  }
+}

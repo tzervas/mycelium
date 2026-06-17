@@ -2,7 +2,7 @@
 name: Bug report (Design / RFC)
 about: Report an inconsistency, error, or flaw in an existing RFC, ADR, or design decision.
 title: '[BUG] '
-labels: ['bug', 'design']
+labels: ['type:bug', 'type:design']
 ---
 
 **Describe the bug**

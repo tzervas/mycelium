@@ -2,7 +2,7 @@
 name: Research Finding / New Source
 about: Share a new paper, result, or insight relevant to Mycelium.
 title: '[RESEARCH] '
-labels: ['research']
+labels: ['type:research']
 ---
 
 **Source / Paper**

@@ -2,7 +2,7 @@
 name: ADR Proposal
 about: Propose a new Architectural Decision Record.
 title: '[ADR] '
-labels: ['adr', 'decision']
+labels: ['type:design']
 ---
 
 **Context**

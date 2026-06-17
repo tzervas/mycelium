@@ -8,6 +8,38 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: one idempotent, manifest-driven reconciler for the ENTIRE GitHub project state)
+- **`tools/github/gh-issues-sync.py` is now the single cross-platform engine** for the whole project
+  state — labels + milestones + issues **+ PRs + the Project v2 board** — pure Python + `gh` (no new
+  dependency, KC-3; no bash, no jq). `--all` is the **full maintenance suite**: preflight → validate →
+  labels → milestones → issues → PRs → project. Every level is **create-if-absent + update-to-match +
+  `--dry-run` + never-silent (G2) + offline `--self-test`**; in-sync ⇒ zero writes, nothing duplicated.
+- **`--prs` (new):** backfills **every** PR (`state=all`) — derives `type:*` (and `area:*` only on an
+  exact scope match, else **FLAG**, never invented) from the **Conventional-Commit title** (fallback: the
+  PR's commit messages), infers a milestone from referenced task-ids (unambiguous-only, else FLAG), and
+  reconciles **add-only** (a human's labels are never stripped). New manifest **`conventions.json`** holds
+  the `type(scope)` → label / milestone grammar (the maintainer's stated CC mapping + repo `spec/research/
+  design` friends + an empty, declared scope→area alias table).
+- **`--project` (new):** reconciles the **Mycelium** Project v2 board via `gh api graphql` —
+  find-or-create, custom fields + single-select options, items added, and **Status/Phase/Area/Priority set
+  from each item's labels** (idempotent). Views + built-in workflows are settings-only → **recorded in the
+  new machine manifest `project.json` and FLAGGED as manual steps** (never silently skipped). The stale
+  `project-v2-spec.md` is refreshed to phases 0–8 + the live `area:*` set and now points at `project.json`.
+  This **replaces the manual "hand to Grok" step.** (Live GraphQL path is `--dry-run`/`--self-test`-checked;
+  **Declared**, not yet Proven, until run on a `project`-scoped machine.)
+- **Auto preflight + `--validate` (new):** a sanity check proceeds when `gh` auth/scopes are good and only
+  prints the `gh auth refresh -s project` remediation when the **`project`** scope is **genuinely missing**
+  (a good token is never asked to refresh; the board is skipped, never the whole run). `--validate` checks
+  the manifests are **accurate to the codebase** (conventions/project/labels parity, idmap↔issues, changelog
+  hygiene) and gates `--all`.
+- **`tools/github/git-signing-sync.py` (new):** a portable (Linux + Windows), pure-Python **commit-signing**
+  reconciler. **Default = read-only sanity check**; **`--setup`/`--init`** prompts for **name/email/comment**,
+  **reuses** an existing key and **generates only when absent or when `--new-key` forces a rotation** — an
+  existing key is **never replaced without `--new-key`**, git config is set on-drift, an existing SSH-signing
+  setup is left untouched. `termux-setup.sh` now delegates its GPG + package steps to it (idempotent install;
+  gated generation). New thin wrappers `git-signing-setup.{sh,ps1}`; `gh-sync-all.{sh,ps1}` route through the
+  unified engine. `.github/ISSUE_TEMPLATE` labels + `PULL_REQUEST_TEMPLATE` aligned to the CC grammar.
+
 ### Added (2026-06-17: `myc-lint` — lint + auto-fix, folded — M-366; the M-361 suite is complete)
 - **`crates/mycelium-lint`** — the `myc-lint` lint+fix tool (lib + CLI), enacting the M-366 contract
   (Accepted → enacted). Surfaces the M-141 invariant lints + the header lints as **actionable, reified,

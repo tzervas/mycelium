@@ -2,7 +2,7 @@
 name: Documentation improvement
 about: Suggest improvements to README, RFCs, Foundation, or other docs.
 title: '[DOCS] '
-labels: ['documentation']
+labels: ['type:docs']
 ---
 
 **Which document needs improvement?**
