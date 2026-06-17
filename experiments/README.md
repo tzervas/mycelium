@@ -99,22 +99,22 @@ cargo build -p mycelium-check --bin myc-check     # → target/debug/myc-check
 > **build script fails at link** (`linking with cc failed`, for every crate). Read the
 > `note:` line — the cause is one of:
 >
-> - **`cc` (and maybe `clang`) is not the C compiler** (note: `Unknown command
->   '…/symbols.o'. Try: cc help`). A personal script named `cc`/`clang`/`gcc` in
->   `$PREFIX/bin` shadows the real compiler, and rustc links via `cc` — so every build
->   script fails. Identify it, then either point Rust at the **versioned** clang or
->   un-shadow it:
+> - **The C compiler is not actually clang** (note: `Unknown command '…/symbols.o'.
+>   Try: cc help`). A personal script has taken a compiler name — `cc`/`clang`/`gcc`, or
+>   even the **versioned `clang-NN`** itself (the symlink target). rustc links via `cc`,
+>   so every build script fails. Tell the impostor from the real thing by **size/type**:
+>   the real `clang-NN` is a multi-MB ELF; a 1–3 KB script is the impostor.
 >   ```sh
->   file "$(command -v cc)" "$(command -v clang)"     # what are they really?
->   ls "$PREFIX"/bin/clang-*                           # the real compiler is versioned
->   # quick unblock (substitute the version, e.g. clang-19):
+>   file "$(command -v cc)"; ls -la "$PREFIX"/bin/clang-*   # tiny script == impostor
+>   # if clang-NN is the real binary, just point Rust at it:
 >   export CC="$PREFIX/bin/clang-NN" CXX="$PREFIX/bin/clang++-NN"
 >   export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$PREFIX/bin/clang-NN"
->   # permanent fix: rename the impostor + restore the package symlinks
->   mv "$PREFIX/bin/cc" "$PREFIX/bin/ccode"; pkg install --reinstall clang
+>   # if clang-NN ITSELF is the impostor: save it, then restore the real compiler:
+>   cp "$PREFIX/bin/clang-NN" "$PREFIX/bin/ccode"; pkg install --reinstall clang
 >   ```
->   Never name a personal wrapper `cc`/`clang`/`gcc` — those are the compiler. Persisting
->   the env route: `~/.cargo/config.toml` → `[target.aarch64-linux-android]` /
+>   Never name a personal wrapper `cc`/`clang`/`gcc`/`clang-NN` — those are the compiler;
+>   use a shell `alias` instead (aliases don't affect what `cargo` execs). Persisting the
+>   env route: `~/.cargo/config.toml` → `[target.aarch64-linux-android]` /
 >   `linker = "clang-NN"`.
 > - **A missing library** (note: `unable to find library -landroid-spawn` or `-lXXX`).
 >   `pkg install libandroid-spawn binutils` (Termux's libc lacks `posix_spawn`; the
