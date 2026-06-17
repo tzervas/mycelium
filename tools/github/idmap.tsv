@@ -101,7 +101,9 @@ M-359	131	4677946202
 M-361	132	4677946623
 M-362	133	4677946993
 M-363	134	4677947454
-# M-361 decomposition (M-364..M-368) — created 2026-06-16 via gh-sync-all.sh; wired as sub-issues of M-361 (#132).
+# M-361 decomposition (M-364..M-368) staged in issues.yaml 2026-06-16; numbers assigned on the next
+# gh-sync-all.sh run at the Phase-8 gate (sub-issues of M-361 #132).
+# Resolved 2026-06-16: created via gh-sync-all.sh and wired as sub-issues of M-361 (#132); numbers below.
 M-364	136	4678672509
 M-365	137	4678672723
 M-366	138	4678672967
