@@ -8,6 +8,42 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (2026-06-16: M-363 §8 build stack ratified — pipeline design Accepted)
+- **`docs/spec/Narrative-Authoring-Pipeline.md` moves Proposed → Accepted** (append-only): the maintainer
+  **ratified the §8 build stack** — a custom in-repo **doc-IR generator + Typst** (PDF/EPUB) + a static HTML
+  renderer (§8.1a); **Typst** PDF engine (§8.2); **v0 single-version** (§8.3). §8.4 stands at recommendation
+  (rustdoc JSON adapter); §8.5 (hosting) deferred. The §8 gate is lifted; the §8 options are retained
+  verbatim for the record. This **unblocks M-366's §4.1 doc quality-bar lint** (now specifiable against the
+  stack). **Building M-363 remains a separate, not-yet-scheduled task** — ratifying the design is not
+  scheduling the build.
+
+### Added (2026-06-16: M-361 child contracts — design, M-365/M-366/M-367/M-368)
+- **Four design-first contracts for the remaining M-361 children** (each **Proposed**; present before
+  folding; **no code, no new dependency**, all above the kernel — KC-3):
+  - **`docs/spec/Myc-Check-Driver-Contract.md`** (M-365) — the project-aware correctness driver: deterministic
+    project resolution (manifest `[surface]` + `[dependencies]` + M-359 header inheritance), whole-`phylum`
+    **diagnostic aggregation** routed via the **M-362 auto-baseline** (additive-only A1, EXPLAIN-able),
+    **honest per-op tags preserved** (VR-5 — never upgraded), CI exit semantics (non-zero on any error;
+    opt-in `--deny-warnings`); the trusted M-210 checker unchanged.
+  - **`docs/spec/Lint-and-Autofix-Contract.md`** (M-366) — lint+fix under one rule (**no silent rewrite**,
+    G2): the M-141 lints + RFC-0013 diagnostics + the RFC-0015 §9 "only logged — add a handler?" advisory as
+    **actionable, reified, opt-in** fixes with a bright **suggest / apply / scaffold** boundary (a
+    control-flow change — an explicit `swap`, an RFC-0014 recovery handler — is a **scaffold**, never
+    auto-applied; A2/I1/I5). Hosts the M-363 **§4.1 doc quality-bar lint** (8 checks), now unblocked by the
+    §8 ratification (dormant-but-defined until the doc-IR generator lands).
+  - **`docs/spec/Security-Checks-Contract.md`** (M-367) — security as tooling over `scripts/checks/{secrets,
+    deny}.sh` (gitleaks · cargo-deny/audit) plus a new in-repo **`wild`-block audit** (LR-9/S6/DN-02 §5 —
+    inventory every denied-by-default unsafe block + require an ADR-014 `// SAFETY:` justification). Honesty
+    crux: every finding **cites why**, a fixed declared severity map, and a missing scanner is **reduced
+    coverage, never a silent pass** (an OK with `REDUCED` coverage is not a clean bill — G2/VR-5).
+  - **`docs/spec/Spore-Build-and-Publish-Contract.md`** (M-368) — `mycelium-proj.toml` → `spore` (ADR-013):
+    the build pipeline, the **identity-vs-metadata** split (ADR-003 — same code+deps ⇒ same spore hash
+    regardless of version/authors), **hash-authoritative dependency resolution** (a hashless/disagreeing dep
+    is an explicit error), never-silent publish inputs (**no partial artifact**, G2), an `EXPLAIN` identity
+    receipt; honest v0 scope (single-project, hash-pinned — the wire-schema/signing/germination contract
+    deferred to RFC-0008 R2 per ADR-013 §4). First consumer of the M-359 `[surface]`/`[dependencies]`/
+    `[spore]` tables.
+
 ### Added (2026-06-16: `mycfmt` formatter contract — design, M-364)
 - **`docs/spec/Mycfmt-Formatter-Contract.md`** (**Proposed**) — the M-364 formatter contract, design-first
   (present before folding). Pins `mycfmt` (the standalone canonical formatter — M-142 grows up) as an

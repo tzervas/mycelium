@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Proposed** (2026-06-16 — the M-363 pipeline design; **ratify before building** — the build stack (§8) is the maintainer's gate) |
+| **Status** | **Accepted** (2026-06-16 — design ratified; **§8 build stack ratified** 2026-06-16: custom doc-IR + Typst + static HTML · Typst PDF · v0 single-version. The pipeline *design* is now ratified; **building M-363 remains a separate, not-yet-scheduled task** — this unblocks M-366's §4.1 doc quality-bar lint, which can be specified against the chosen stack.) |
 | **Scope** | The generators, templates, HTML/PDF/EPUB build, and the **§4.1 quality-bar lint** that turn the cited corpus into the four authoring outputs (blog · book · manual · API reference) |
 | **Depends on** | The *Narrative Capture & Automated Authoring* note (intent, data model, §4.1 quality bar, honesty constraints); RFC-0013 (the `minimal/medium/detailed` levels reused for docs; "a file is a projection of the canonical declaration"); M-359 (the nodule header / manifest metadata output (d) projects); ADR-003 (content-addressing → stable links, no drift); G2/G11/VR-5; KC-3 (tooling layer) |
 | **Feeds** | M-361 (the full-fat toolchain — this is one of its tools); M-346 (stdlib docs); M-363 (this, enacted after ratification) |
@@ -109,6 +109,16 @@ crates); Mycelium-lang self-hosted doc-comments later.
 Recommendations marked; **no code lands until the maintainer ratifies §8** (the design-first gate — like
 RFC-0015 was Draft before M-362).
 
+> **Ratified (2026-06-16).** The maintainer ratified the recommended stack: **§8.1(a)** a small custom
+> in-repo **doc-IR generator** (Rust, no heavy dep) + **Typst** for the PDF/EPUB fan-out + a static HTML
+> renderer; **§8.2** **Typst** as the PDF engine; **§8.3** **v0 single-version** ("current" only;
+> multi-version deferred). §8.4 stands at its recommendation (rustdoc **JSON** behind a thin adapter so the
+> Mycelium-lang doc-comment source can replace it later); §8.5 stays deferred (a static in-repo/CI artifact
+> plus the LSP-hover sidecar JSON for v0; a hosted site is later). The options below are retained verbatim for
+> the record (append-only). This ratification lifts the §8 gate: the *pipeline design* is now Accepted, and
+> **M-366's §4.1 doc quality-bar lint may now be specified** against this stack. **Building the pipeline
+> (M-363) is still a separate, not-yet-scheduled task** — ratifying the design is not scheduling the build.
+
 1. **Build stack (the consequential one).** (a) *Recommended:* a small **custom doc-IR generator** (Rust,
    in-repo, no heavy dep) + **Pandoc/Typst** for PDF/EPUB fan-out + a static HTML renderer — maximal
    control, fits the content-addressed-IR design, dependency-light (T7.6). (b) **mdBook-class** HTML +
@@ -140,3 +150,9 @@ append-only provenance (every artifact records what it was generated *from* — 
   (T7.1–T7.7). The **build stack (§8) and the other format/versioning choices are flagged for
   ratification — no code lands until they are ratified** (design-first). No kernel change (KC-3).
   Append-only.
+- **2026-06-16 — Accepted (§8 ratified).** The maintainer ratified the recommended build stack: custom
+  in-repo **doc-IR generator + Typst** (PDF/EPUB) + static HTML (§8.1a); **Typst** PDF engine (§8.2);
+  **v0 single-version** (§8.3). §8.4 (rustdoc JSON adapter) stands at recommendation; §8.5 (hosting)
+  deferred. The §8 gate is lifted and the pipeline *design* moves **Proposed → Accepted**; this unblocks
+  **M-366's §4.1 doc quality-bar lint** (now specifiable against the chosen stack). **Building M-363
+  remains a separate, not-yet-scheduled task** (don't start unless asked). Append-only.
