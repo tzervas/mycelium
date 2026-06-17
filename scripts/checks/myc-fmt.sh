@@ -26,7 +26,7 @@ for root in "${MYC_ROOTS[@]}"; do
   if cargo run -q -p mycelium-fmt --bin mycfmt -- --check --config "$root/mycelium-proj.toml" "${files[@]}"; then
     ok "$root: ${#files[@]} nodule(s) canonically formatted"
   else
-    fail "$root: nodule(s) not canonical (run \`cargo run -p mycelium-fmt --bin mycfmt -- --write <file>\`)"
+    fail "$root: nodule(s) not canonical (run \`cargo run -p mycelium-fmt --bin mycfmt -- --write --config $root/mycelium-proj.toml <file>\`)"
     rc=1
   fi
 done
