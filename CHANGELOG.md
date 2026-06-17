@@ -26,9 +26,10 @@ corpus, not released software. Versioning will begin when the kernel does.
   (structure checked; colour-contrast/typography need a rendering engine). `mycelium_lint::doc_lint_status()`
   flips **dormant → active**, sourcing the canonical check-name set from `mycelium-doc` (DRY).
 - **`scripts/checks/myc-doc.sh` (+ wired into `scripts/checks/all.sh`)** — a gated step that fails on any
-  error-severity §4.1 finding. Green-and-real over the live corpus: 97 documents / 2614 content-addressed
-  nodes, 6 examples type-checking, 18 internal xrefs resolving, HTML/JSON parity across all nodes. Skips
-  gracefully when `cargo` is absent. KC-3: above the kernel; **no kernel change; no new workspace dependency**.
+  error-severity §4.1 finding. Green-and-real over the live corpus: 98 documents / 2632 content-addressed
+  nodes, 6 examples type-checking, internal xrefs resolving, HTML/JSON parity across all nodes. Skips
+  gracefully when `cargo` is absent. KC-3: above the kernel; **no kernel change; no new third-party
+  dependency** (this adds the in-repo `mycelium-doc` crate; blake3/serde/serde_json were already vetted).
 
 ### Changed (2026-06-17: harden the GitHub PM sync engine — graceful gh failures + least-privilege auth automation)
 - **`tools/github/gh-issues-sync.py` — no raw tracebacks (G2).** Every `gh` failure now exits with an

@@ -325,8 +325,10 @@ pub struct DocModel {
 }
 
 impl DocModel {
-    /// Assemble a model from projected documents, building the anchor index. Anchor collisions are an
-    /// internal bug (the builders disambiguate) — surfaced loudly rather than silently overwritten.
+    /// Assemble a model from projected documents, building the anchor index. The builders allocate
+    /// globally-unique anchors, so a collision would be an internal bug; if one ever slips through,
+    /// the duplicate key collapses here and the **navigability lint catches it** (it errors when the
+    /// anchor count is below the node count — §4.1 #2). The detection is at lint time, not here.
     #[must_use]
     pub fn new(documents: Vec<Node>) -> DocModel {
         let mut anchors = BTreeMap::new();

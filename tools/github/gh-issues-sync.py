@@ -280,7 +280,7 @@ def _auth_command(required, *, authed):
     return f"gh auth {verb} {scope_args}".strip()
 
 
-def _print_explain(ops, required, repo, *, read_only):
+def _print_explain(ops, required, repo, *, read_only, authed):
     print(
         "   ! least-privilege auth EXPLAIN — changing a token's scopes is a state mutation, so it is "
         "opt-in and never silent (G2):"
@@ -292,7 +292,8 @@ def _print_explain(ops, required, repo, *, read_only):
         f"       → scopes   : {sorted(required) or ['(none)']}  "
         f"(the MINIMAL classic set for these ops on {repo})"
     )
-    print("       → command  : " + _auth_command(required, authed=True))
+    # `login` when not authenticated (the common failure mode), `refresh` to add scopes to a token.
+    print("       → command  : " + _auth_command(required, authed=authed))
     print(
         "       floor      : classic OAuth scopes are coarse — `repo` spans issues/PRs/labels/\n"
         "                    milestones and can't be narrowed further; a fine-grained PAT is the path\n"
@@ -401,7 +402,7 @@ def _remediate(
         not authed and bool(set(ops) & WRITE_OPS)
     )
     cmd = _auth_command(required, authed=authed)
-    _print_explain(ops, required, repo, read_only=read_only)
+    _print_explain(ops, required, repo, read_only=read_only, authed=authed)
 
     if no_auth_fix:
         head = f"   ! missing gh scope(s) {sorted(miss)} and --no-auth-fix is set — not prompting."

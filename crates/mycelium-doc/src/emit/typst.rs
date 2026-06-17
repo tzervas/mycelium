@@ -57,8 +57,11 @@ fn render_node(node: &Node, depth: usize, out: &mut String) {
             out.push_str("\n\n");
         }
         Payload::Example { lang, source, .. } => {
-            // Typst raw block; fence with backticks and the language tag.
-            out.push_str(&format!("```{lang}\n{source}```\n\n"));
+            // Typst raw block; fence with backticks and the language tag. The closing fence must
+            // start on its own line, so normalize to exactly one trailing newline in the body
+            // (a source without a trailing newline would otherwise produce an invalid `…code````).
+            let body = source.strip_suffix('\n').unwrap_or(source);
+            out.push_str(&format!("```{lang}\n{body}\n```\n\n"));
         }
         Payload::ApiItem { signature, summary } => {
             let eq = "=".repeat(depth.clamp(2, 6));

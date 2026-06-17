@@ -203,8 +203,10 @@ pub fn extract_links(text: &str) -> Vec<String> {
     out
 }
 
-/// Whether a fenced example is held to the type-check bar (§4.1 #4). A `myc-checked` info string
-/// (or `myc` for a self-contained nodule) opts in; everything else is honestly *illustrative*.
+/// Whether a fenced example is held to the type-check bar (§4.1 #4). Only a `myc-checked` info
+/// string opts in — a plain ```myc fence stays *illustrative* (most prose snippets are partial, not
+/// complete nodule programs; tagging every one would falsely redden the gate). Complete `.myc`
+/// programs in the `examples/` corpus are the checked source the apiref generator captures.
 fn is_checked_lang(lang: &str) -> bool {
     let l = lang.split_whitespace().next().unwrap_or("");
     matches!(l, "myc-checked")
