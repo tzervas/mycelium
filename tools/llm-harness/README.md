@@ -54,6 +54,51 @@ Each result has `id`, `status`, `guarantee_tag`, `message`, `detail`.
 
 Exit code: `0` if no `FAIL` (PASS/SKIP/mock-PASS only); `1` if any `FAIL`.
 
+## Model acquisition (idempotent — fetch only if missing)
+
+The harness can fetch the model for you, so a phone can start it and walk away. It
+is **idempotent**: a model already on disk is reused (a cheap presence check); only an
+absent/invalid one is downloaded. Downloads are **resumable** (HTTP Range), so a
+slow/interrupted phone transfer continues where it left off on the next run.
+
+```sh
+python3 tools/llm-harness/harness.py --list-models          # see the registry + cache dir
+python3 tools/llm-harness/harness.py --ensure-model         # fetch the default, then run
+python3 tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-coder-3b
+```
+
+- **Default model:** `qwen2.5-coder-1.5b` (Qwen2.5-Coder-1.5B-Instruct, Q4_K_M, ~1 GB,
+  Apache-2.0). Chosen for *this* harness's use case — code + **structured/JSON output** +
+  instruction-following, which is exactly what V-02 (JSON projection) and V-03 (tag
+  honesty) exercise, and the closest fit to Mycelium-surface generation.
+- **Mobile tier** (phone/Termux/CPU; ungated, no auth needed): `qwen2.5-0.5b-instruct`
+  (smoke), `qwen2.5-1.5b-instruct`, **`qwen2.5-coder-1.5b`** (default), `qwen2.5-3b-instruct`,
+  `qwen2.5-coder-3b`. The 3B Qwen2.5 weights are Qwen-Research (non-commercial) — flagged
+  in `--list-models`.
+- **Desktop tier** (for your RTX 5080 / 3090Ti tonight): `qwen2.5-coder-7b` (~4.7 GB),
+  `qwen2.5-coder-14b` (~9 GB; fits 16 GB / 24 GB), `qwen2.5-coder-32b` (~20 GB; 24 GB tight
+  or offload). Same command, just `--model-id qwen2.5-coder-14b`.
+- **Cache dir:** `$MYCELIUM_LLM_MODEL_DIR`, else `$XDG_CACHE_HOME/mycelium-llm-harness/models`,
+  else `~/.cache/mycelium-llm-harness/models` — **outside the repo**, so models are never
+  committed. Override with `--model-dir DIR`.
+- **Other flags:** `--no-download` (presence-check only, never fetch); `--model-url URL`
+  (fetch an arbitrary GGUF under any `--model-id` name); `--model PATH` (bypass the registry
+  entirely with a local file you trust).
+
+**Honesty (G2/VR-5).** Registry URLs/filenames are **best-effort** and may change upstream.
+A download is verified by the **GGUF magic header** (`GGUF`) + a clean, complete transfer
+before it is promoted from `*.part` to the final name — a 404/gated **HTML page can never
+masquerade as a model**. A failed/partial fetch is an explicit, logged error and the run
+**SKIPs** the model-dependent validations (never a false PASS). Re-running resumes the
+partial download. The registry stores **no fabricated checksums** (it has none to verify
+against); integrity rests on the GGUF magic + complete transfer, and you can always supply
+a self-verified file via `--model`.
+
+> **Note on gated models (Llama-3.2, Gemma, …).** These require a Hugging Face token and
+> are deliberately **not** in the default registry (a token-less `urlopen` would get an
+> HTML login page, which the GGUF guard rejects). Download them yourself with
+> `huggingface-cli` and pass `--model PATH`, or add an entry with `--model-url`.
+
 ## How to run on Termux (Android, ARM/aarch64)
 
 ### Step 1 — Install base packages
@@ -97,31 +142,37 @@ The built binary will be at:
 ./build/bin/llama-cli
 ```
 
-### Step 3 — Download a small GGUF model
+### Step 3 — Let the harness fetch the model (idempotent)
 
-Use a small quantised model for initial testing (≤4 GB, Q4_K_M or smaller).
-Example using `wget` (replace URL with a model you have rights to use):
+No manual download needed — the harness fetches a small, ungated GGUF on first run and
+reuses it thereafter. Start it in the background and check back later:
 
 ```sh
-# Example: TinyLlama-1.1B-Chat Q4_K_M (~660 MB)
-# Find current URLs at https://huggingface.co — search "gguf tinyllama q4_k_m"
-wget -O tinyllama.gguf "https://huggingface.co/<org>/<repo>/resolve/main/<filename>.gguf"
+# Default mobile model (Qwen2.5-Coder-1.5B, ~1 GB). Resumable; safe to re-run.
+python3 $HOME/mycelium/tools/llm-harness/harness.py \
+  --ensure-model \
+  --llama-cli $HOME/llama.cpp/build/bin/llama-cli
+
+# Background it on the phone (slow is fine), then read the report when you're home:
+nohup python3 $HOME/mycelium/tools/llm-harness/harness.py --ensure-model \
+  --llama-cli $HOME/llama.cpp/build/bin/llama-cli > $HOME/harness.out 2>&1 &
 ```
 
-**FLAG:** Hugging Face direct download URLs require authentication for some models.
-Use `huggingface-cli download` (pip) or the HF web UI to get a direct link, or use
-a model explicitly published for anonymous download.
+Pick a different size with `--model-id` (see `--list-models`). To pre-fetch the model
+*before* llama.cpp finishes building, run `--ensure-model` on its own — it caches the
+model and the validations simply `SKIP` until `llama-cli` exists.
 
-**FLAG on storage:** GGUF files are large. Ensure you have enough space:
-`df -h $HOME` before downloading.
+**FLAG on storage:** GGUF files are large. Check space first: `df -h $HOME`. The cache
+dir is `~/.cache/mycelium-llm-harness/models` unless you set `--model-dir`/`$MYCELIUM_LLM_MODEL_DIR`.
 
-### Step 4 — Run the harness (real mode)
+### Step 4 — (optional) point at an existing model or a server
+
+If you already have a GGUF, skip the registry:
 
 ```sh
-cd $HOME/llama.cpp
 python3 $HOME/mycelium/tools/llm-harness/harness.py \
-  --llama-cli ./build/bin/llama-cli \
-  --model /path/to/tinyllama.gguf
+  --llama-cli $HOME/llama.cpp/build/bin/llama-cli \
+  --model /path/to/your-model.gguf
 ```
 
 Or against a running llama.cpp server:

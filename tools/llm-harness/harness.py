@@ -13,7 +13,10 @@ Design posture (non-negotiable house rules):
 
 Usage:
     python3 harness.py --mock              # dry-run: no model needed (CI/cloud)
-    python3 harness.py --model PATH.gguf   # real mode via llama-cli
+    python3 harness.py --list-models       # show the model registry + cache dir
+    python3 harness.py --ensure-model      # fetch the default model if absent, then run
+    python3 harness.py --ensure-model --model-id qwen2.5-coder-14b   # desktop tier
+    python3 harness.py --model PATH.gguf   # real mode via a local model file
     python3 harness.py --llama-cli PATH --model PATH.gguf
     python3 harness.py --server URL        # real mode via llama.cpp HTTP server
 
@@ -841,6 +844,315 @@ def _resolve_llama_cli(explicit: str | None) -> str | None:
     return None
 
 
+# ---------------------------------------------------------------------------
+# Model acquisition (idempotent, stdlib-only, Termux-friendly)
+# ---------------------------------------------------------------------------
+#
+# A small registry of GGUF models sized for THIS harness's use case — seeded
+# generation, structured/JSON output (G11), and instruction-following for the
+# guarantee-tag honesty gate. The defaults are mobile-sized and UNGATED
+# (Apache-2.0 Qwen2.5 family), so a phone can `--ensure-model` and walk away;
+# bigger desktop tiers are registered for later runs on a real GPU.
+#
+# Honesty (G2/VR-5): the URLs/filenames below are BEST-EFFORT and may change
+# upstream — a download is verified by the GGUF magic header + a clean,
+# complete transfer, never assumed. A failed/partial/HTML-error fetch is an
+# explicit error (the .part file is kept for resume), never a false "present".
+# Override any entry with --model-url, or bypass the registry with --model PATH.
+
+HF_RESOLVE = "https://huggingface.co/{repo}/resolve/main/{filename}"
+
+# Each entry: repo + filename (→ HF resolve URL), tier, rough size, license,
+# and the use-case note that justifies it for this harness.
+# tier: "mobile" (phone / Termux / CPU) | "desktop" (discrete GPU)
+MODELS: dict[str, dict[str, Any]] = {
+    "qwen2.5-0.5b-instruct": {
+        "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+        "filename": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+        "tier": "mobile",
+        "approx_gb": 0.4,
+        "license": "Apache-2.0",
+        "use_case": "smallest/fastest smoke-test tier; weakest reasoning",
+    },
+    "qwen2.5-1.5b-instruct": {
+        "repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+        "filename": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+        "tier": "mobile",
+        "approx_gb": 1.0,
+        "license": "Apache-2.0",
+        "use_case": "general instruct + JSON/structured output on a phone",
+    },
+    "qwen2.5-coder-1.5b": {
+        "repo": "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF",
+        "filename": "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf",
+        "tier": "mobile",
+        "approx_gb": 1.0,
+        "license": "Apache-2.0",
+        "use_case": (
+            "DEFAULT — code + structured output; best fit for this app "
+            "(Mycelium surface generation + JSON projection conformance)"
+        ),
+    },
+    "qwen2.5-3b-instruct": {
+        "repo": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+        "filename": "qwen2.5-3b-instruct-q4_k_m.gguf",
+        "tier": "mobile",
+        "approx_gb": 2.0,
+        "license": "Qwen-Research (non-commercial — check before use)",
+        "use_case": "stronger reasoning, still phone-feasible (slow)",
+    },
+    "qwen2.5-coder-3b": {
+        "repo": "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF",
+        "filename": "qwen2.5-coder-3b-instruct-q4_k_m.gguf",
+        "tier": "mobile",
+        "approx_gb": 2.0,
+        "license": "Qwen-Research (non-commercial — check before use)",
+        "use_case": "stronger code/structured output; phone-feasible (slow)",
+    },
+    "qwen2.5-coder-7b": {
+        "repo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+        "filename": "qwen2.5-coder-7b-instruct-q4_k_m.gguf",
+        "tier": "desktop",
+        "approx_gb": 4.7,
+        "license": "Apache-2.0",
+        "use_case": "strong code model; fits 8GB+ VRAM (RTX 3090Ti / 5080)",
+    },
+    "qwen2.5-coder-14b": {
+        "repo": "Qwen/Qwen2.5-Coder-14B-Instruct-GGUF",
+        "filename": "qwen2.5-coder-14b-instruct-q4_k_m.gguf",
+        "tier": "desktop",
+        "approx_gb": 9.0,
+        "license": "Apache-2.0",
+        "use_case": "high-quality code/structured; fits 16GB (5080) / 24GB (3090Ti)",
+    },
+    "qwen2.5-coder-32b": {
+        "repo": "Qwen/Qwen2.5-Coder-32B-Instruct-GGUF",
+        "filename": "qwen2.5-coder-32b-instruct-q4_k_m.gguf",
+        "tier": "desktop",
+        "approx_gb": 19.8,
+        "license": "Apache-2.0",
+        "use_case": (
+            "best open code model; ~24GB at q4_k_m (3090Ti tight / 5080 needs "
+            "offload). FLAG: some repos split this into parts — verify on HF or "
+            "fetch with huggingface-cli, then pass --model PATH."
+        ),
+    },
+}
+
+DEFAULT_MODEL_ID = "qwen2.5-coder-1.5b"
+
+GGUF_MAGIC = b"GGUF"
+# A real q4_k_m model is hundreds of MB; this floor catches an HTML 404/gated
+# page saved under a .gguf name (never let that masquerade as a model).
+_MIN_GGUF_BYTES = 1_000_000
+
+
+def _human_bytes(n: int | None) -> str:
+    if n is None:
+        return "?"
+    f = float(n)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if f < 1024 or unit == "TB":
+            return f"{f:.1f}{unit}" if unit != "B" else f"{int(f)}B"
+        f /= 1024
+    return f"{f:.1f}TB"
+
+
+def _model_url(spec: dict[str, Any]) -> str:
+    if spec.get("url"):
+        return str(spec["url"])
+    return HF_RESOLVE.format(repo=spec["repo"], filename=spec["filename"])
+
+
+def default_model_dir() -> Path:
+    """Resolve the model cache dir (outside the repo, so models are never committed)."""
+    env = os.environ.get("MYCELIUM_LLM_MODEL_DIR")
+    if env:
+        return Path(env).expanduser()
+    xdg = os.environ.get("XDG_CACHE_HOME")
+    base = Path(xdg).expanduser() if xdg else Path.home() / ".cache"
+    return base / "mycelium-llm-harness" / "models"
+
+
+def is_valid_gguf(path: Path) -> bool:
+    """True iff path looks like a real, complete-enough GGUF (magic + size floor)."""
+    try:
+        if not path.is_file() or path.stat().st_size < _MIN_GGUF_BYTES:
+            return False
+        with open(path, "rb") as f:
+            return f.read(4) == GGUF_MAGIC
+    except OSError:
+        return False
+
+
+def list_models_text() -> str:
+    lines = [
+        "Registered GGUF models (--model-id ID). Default: " + DEFAULT_MODEL_ID,
+        "Cache dir: "
+        + str(default_model_dir())
+        + "  (override: --model-dir / $MYCELIUM_LLM_MODEL_DIR)",
+        "",
+    ]
+    for tier in ("mobile", "desktop"):
+        lines.append(f"  [{tier}]")
+        for mid, spec in MODELS.items():
+            if spec["tier"] != tier:
+                continue
+            star = " *" if mid == DEFAULT_MODEL_ID else "  "
+            lines.append(f"  {star}{mid:<24} ~{spec['approx_gb']}GB  {spec['license']}")
+            lines.append(f"        {spec['use_case']}")
+        lines.append("")
+    lines.append(
+        "Honesty: URLs are best-effort; a download is verified by the GGUF magic "
+        "header. Override with --model-url, or use a self-verified file via --model PATH."
+    )
+    return "\n".join(lines)
+
+
+def _download_with_resume(url: str, dest_part: Path, log: logging.Logger) -> int:
+    """Stream url → dest_part with HTTP Range resume. Returns total bytes on disk.
+
+    Raises on a hard transfer failure (the .part file is left in place to resume).
+    """
+    import urllib.error
+    import urllib.request
+
+    headers = {"User-Agent": "mycelium-llm-harness/0 (+python-stdlib-urllib)"}
+    existing = dest_part.stat().st_size if dest_part.exists() else 0
+    if existing:
+        headers["Range"] = f"bytes={existing}-"
+        log.info("Resuming at %s", _human_bytes(existing))
+
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        resp = urllib.request.urlopen(req, timeout=60)  # follows redirects (HF CDN)
+    except urllib.error.HTTPError as exc:
+        if exc.code == 416 and existing:
+            # Range not satisfiable ⇒ the .part is already the full file.
+            return existing
+        raise
+
+    status = getattr(resp, "status", resp.getcode())
+    # Determine total expected size for progress (best-effort).
+    total: int | None = None
+    crange = resp.headers.get("Content-Range")
+    clen = resp.headers.get("Content-Length")
+    if crange and "/" in crange:
+        try:
+            total = int(crange.rsplit("/", 1)[1])
+        except ValueError:
+            total = None
+    elif clen is not None:
+        try:
+            total = (existing + int(clen)) if status == 206 else int(clen)
+        except ValueError:
+            total = None
+
+    # If the server ignored our Range (status 200), restart from scratch.
+    append = existing > 0 and status == 206
+    mode = "ab" if append else "wb"
+    downloaded = existing if append else 0
+
+    last_log = time.monotonic()
+    with resp, open(dest_part, mode) as f:
+        while True:
+            chunk = resp.read(256 * 1024)
+            if not chunk:
+                break
+            f.write(chunk)
+            downloaded += len(chunk)
+            now = time.monotonic()
+            if now - last_log >= 5.0:
+                pct = f" ({downloaded * 100 // total}%)" if total else ""
+                log.info(
+                    "  …%s%s%s",
+                    _human_bytes(downloaded),
+                    pct,
+                    f" of {_human_bytes(total)}" if total else "",
+                )
+                last_log = now
+    return downloaded
+
+
+def ensure_model(
+    model_id: str,
+    model_dir: Path,
+    log: logging.Logger,
+    *,
+    allow_download: bool = True,
+    url_override: str | None = None,
+) -> Path | None:
+    """Idempotent: return a local GGUF path, downloading ONLY if absent/invalid.
+
+    Returns the Path on success, or None on failure (explicit + logged — never a
+    false path). Re-running is a cheap presence check (the walk-away property).
+    """
+    spec = MODELS.get(model_id)
+    if spec is None and url_override is None:
+        log.error(
+            "Unknown model id '%s'. Run --list-models, or pass --model-url "
+            "with any --model-id name to fetch an arbitrary GGUF.",
+            model_id,
+        )
+        return None
+    if spec is None:
+        spec = {"filename": f"{model_id}.gguf", "url": url_override}
+
+    model_dir.mkdir(parents=True, exist_ok=True)
+    dest = model_dir / spec["filename"]
+
+    if is_valid_gguf(dest):
+        log.info(
+            "Model already present (idempotent skip): %s (%s)",
+            dest,
+            _human_bytes(dest.stat().st_size),
+        )
+        return dest
+    if dest.exists():
+        log.warning("Existing file failed GGUF validation; will re-fetch: %s", dest)
+    if not allow_download:
+        log.warning("Model absent and --no-download set: %s. SKIP.", dest)
+        return None
+
+    url = url_override or _model_url(spec)
+    log.info(
+        "Fetching model '%s' (~%sGB, %s)",
+        model_id,
+        spec.get("approx_gb", "?"),
+        spec.get("license", "?"),
+    )
+    log.info("  from %s", url)
+    log.info("  into %s", dest)
+
+    dest_part = dest.with_suffix(dest.suffix + ".part")
+    try:
+        _download_with_resume(url, dest_part, log)
+    except Exception as exc:  # noqa: BLE001 — never-silent: surface + keep .part
+        log.error(
+            "Download failed: %s. Re-run to resume (any partial bytes are kept at %s).",
+            exc,
+            dest_part,
+        )
+        return None
+
+    if not is_valid_gguf(dest_part):
+        log.error(
+            "Downloaded file failed GGUF validation — not a GGUF (truncated, or an "
+            "HTML 404/gated page): %s. NOT promoting; removing it. Check the "
+            "URL/filename or pass --model-url.",
+            dest_part,
+        )
+        try:
+            dest_part.unlink()
+        except OSError:
+            pass
+        return None
+
+    os.replace(dest_part, dest)
+    log.info("Model ready: %s (%s)", dest, _human_bytes(dest.stat().st_size))
+    return dest
+
+
 def run_harness(args: argparse.Namespace) -> int:
     """Execute all validations. Returns exit code (0 = no FAIL)."""
     run_id = _now_iso()
@@ -897,6 +1209,33 @@ def run_harness(args: argparse.Namespace) -> int:
                 "To suppress this and run CI-safe: use --mock.",
                 f" (looked for: {llama_cli_arg})" if llama_cli_arg else "",
             )
+
+        # Idempotent model acquisition. Triggered by --ensure-model or by
+        # naming a --model-id; downloads ONLY if absent/invalid. Runs even when
+        # llama-cli is missing, so a phone can prefetch the model first and
+        # build llama.cpp later (the cached model is reused — walk-away property).
+        want_ensure = bool(getattr(args, "ensure_model", False)) or bool(
+            getattr(args, "model_id", None)
+        )
+        if model_path is None and want_ensure:
+            model_id = getattr(args, "model_id", None) or DEFAULT_MODEL_ID
+            md_arg = getattr(args, "model_dir", None)
+            model_dir = Path(md_arg).expanduser() if md_arg else default_model_dir()
+            log.info("Ensuring model '%s' in %s (idempotent)…", model_id, model_dir)
+            ensured = ensure_model(
+                model_id,
+                model_dir,
+                log,
+                allow_download=not bool(getattr(args, "no_download", False)),
+                url_override=getattr(args, "model_url", None),
+            )
+            if ensured:
+                model_path = str(ensured)
+            else:
+                log.warning(
+                    "Model could not be ensured — model-dependent validations "
+                    "will SKIP (skip-gracefully, never a false pass)."
+                )
 
         if not llama_cli and model_path and not server_url:
             log.warning(
@@ -1013,6 +1352,7 @@ def run_harness(args: argparse.Namespace) -> int:
         "mode": "mock"
         if mock_mode
         else ("server" if server_url else ("real" if llama_cli else "skip")),
+        "model": model_path or server_url or None,
     }
 
     mode_label = summary["mode"]
@@ -1075,7 +1415,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--model",
         metavar="PATH",
-        help="Path to a .gguf model file (used with llama-cli, not server mode).",
+        help="Path to a local .gguf model file (bypasses the model registry).",
     )
     p.add_argument(
         "--llama-cli",
@@ -1086,12 +1426,62 @@ def _build_parser() -> argparse.ArgumentParser:
             "If omitted, searches PATH for 'llama-cli', 'llama.cpp', 'main'."
         ),
     )
+    # --- idempotent model acquisition ---
+    p.add_argument(
+        "--ensure-model",
+        action="store_true",
+        dest="ensure_model",
+        help=(
+            "Check for the selected --model-id and download it ONLY if absent "
+            "(idempotent; resumable). Safe to re-run; great for a phone to "
+            "prefetch in the background."
+        ),
+    )
+    p.add_argument(
+        "--model-id",
+        metavar="ID",
+        dest="model_id",
+        help=(
+            f"Registered model to use/fetch (default: {DEFAULT_MODEL_ID}). "
+            "Naming one implies --ensure-model. See --list-models."
+        ),
+    )
+    p.add_argument(
+        "--model-dir",
+        metavar="DIR",
+        dest="model_dir",
+        help=(
+            "Where to cache models (default: $MYCELIUM_LLM_MODEL_DIR or "
+            "~/.cache/mycelium-llm-harness/models — outside the repo)."
+        ),
+    )
+    p.add_argument(
+        "--model-url",
+        metavar="URL",
+        dest="model_url",
+        help="Override the download URL for --model-id (fetch an arbitrary GGUF).",
+    )
+    p.add_argument(
+        "--no-download",
+        action="store_true",
+        dest="no_download",
+        help="With --ensure-model: only check presence; never download.",
+    )
+    p.add_argument(
+        "--list-models",
+        action="store_true",
+        dest="list_models",
+        help="Print the registered models and the cache dir, then exit.",
+    )
     return p
 
 
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
+    if getattr(args, "list_models", False):
+        print(list_models_text())
+        sys.exit(0)
     sys.exit(run_harness(args))
 
 
