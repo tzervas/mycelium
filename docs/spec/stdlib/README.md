@@ -66,9 +66,12 @@ matrix is how C1/C2/C3/C6 are *verified* rather than claimed.
 | [`../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md`](../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md) | M-501 | the contract + taxonomy keystone (every spec traces to its §4.1) | **Draft** — ratification is the maintainer's decision |
 | [`self-hosting-readiness.md`](./self-hosting-readiness.md) | M-502 | the *checkable* self-hosting verdict — gates the Mycelium-lang migration half (RFC-0016 §4.6), not the Rust-first specs/impls | **Draft (needs-design)** — verdict: *not yet established* |
 
-**Wave status:** `Draft — landed` = the spec is authored + integrated in the first orchestration wave (and
-awaits maintainer ratification with RFC-0016); `anticipated` = in the RFC-0016 taxonomy, scheduled for a
-later wave. Cross-module FLAGs reconciled in §5.
+**Wave status:** `Draft — landed` = the spec is authored + integrated (and awaits maintainer ratification
+with RFC-0016). The **first wave** landed the Tier-A differentiators `core`/`swap`/`ternary`/`dense`/
+`select`/`content` + the Tier-B commons `iter`/`math`/`error`/`cmp`/`fmt`; the **second wave** landed the
+remainder (`numerics`/`vsa`/`diag`/`recover`/`runtime`/`spore` + `collections`/`text`/`io`/`fs`/`time`/
+`rand`/`testing`) — **every module in the RFC-0016 taxonomy now has a `Draft` spec.** Cross-module FLAGs
+reconciled in §5.
 
 ### Tier A — differentiator modules (RFC-0016 §4.3)
 
@@ -80,12 +83,12 @@ later wave. Cross-module FLAGs reconciled in §5.
 | `dense` | [`dense.md`](./dense.md) | M-518 (#160) | RFC-0001 §4.1; M-230 | **Draft — landed** |
 | `select` / `explain` | [`select.md`](./select.md) | M-519 (#161) | RFC-0005/ADR-006; M-220/221/222 | **Draft — landed** |
 | `content` / `hash` | [`content.md`](./content.md) | M-523 (#164) | ADR-003; RFC-0001 §4.6 | **Draft — landed** |
-| `numerics` | — | M-512 | ADR-010; M-201/202/203 | anticipated |
-| `vsa` / `hdc` | — | M-513 | RFC-0003/0009 | anticipated |
-| `diag` | — | M-510 | RFC-0013; M-345 | anticipated |
-| `recover` | — | M-520 | RFC-0014; M-352 | anticipated |
-| `runtime` / `colony` | — | M-521 | RFC-0008 | anticipated — Phase-7-gated (§8-Q4) |
-| `spore` | — | M-522 | ADR-013; M-368 | anticipated |
+| `numerics` | [`numerics.md`](./numerics.md) | M-512 (#153) | ADR-010; ADR-011; M-201/202/203 | **Draft — landed** |
+| `vsa` / `hdc` | [`vsa.md`](./vsa.md) | M-513 (#154) | RFC-0003/0009; M-130/240–242/260 | **Draft — landed** |
+| `diag` | [`diag.md`](./diag.md) | M-510 (#151) | RFC-0013; M-345 | **Draft — landed** |
+| `recover` | [`recover.md`](./recover.md) | M-520 (#156) | RFC-0014; M-352/353 | **Draft — landed** |
+| `runtime` / `colony` | [`runtime.md`](./runtime.md) | M-521 (#162) | RFC-0008; M-355–357 | **Draft — landed** (reserved-vocabulary; Phase-7-gated, §8-Q4) |
+| `spore` | [`spore.md`](./spore.md) | M-522 (#163) | ADR-013; RFC-0003 §6; M-368 | **Draft — landed** |
 
 ### Tier B — common / expected modules (RFC-0016 §4.4)
 
@@ -96,13 +99,13 @@ later wave. Cross-module FLAGs reconciled in §5.
 | `error` / `option` / `result` | [`error.md`](./error.md) | M-527 (#168) | propagation is the floor (I1) | **Draft — landed** |
 | `cmp` / `convert` | [`cmp.md`](./cmp.md) | M-532 (#172) | lossy convert is explicit + fallible | **Draft — landed** |
 | `fmt` | [`fmt.md`](./fmt.md) | M-533 (#173) | dual human/machine projection (G11) | **Draft — landed** |
-| `collections` | — | M-511 | value-semantic; no silent reorder | anticipated |
-| `text` / `string` | — | M-524 | `parse` → `Result`, lossy encoding explicit | anticipated |
-| `io` + `serialize` | — | M-514 | substrate single-consumption (LR-8) | anticipated |
-| `fs` | — | M-528 | every path/permission failure explicit; `wild` floor (§8-Q6) | anticipated |
-| `time` | — | M-529 | monotonic vs wall a typed distinction | anticipated |
-| `rand` | — | M-531 | nondeterminism reified/named (RT3) | anticipated |
-| `testing` | — | M-534 | a skipped check is reported, never a silent pass | anticipated |
+| `collections` | [`collections.md`](./collections.md) | M-511 (#152) | value-semantic; no silent reorder | **Draft — landed** |
+| `text` / `string` | [`text.md`](./text.md) | M-524 (#165) | `parse` → `Result`, lossy encoding explicit | **Draft — landed** |
+| `io` + `serialize` | [`io.md`](./io.md) | M-514 (#155) | substrate single-consumption (LR-8); one canonical JSON | **Draft — landed** |
+| `fs` | [`fs.md`](./fs.md) | M-528 (#169) | every path/permission failure explicit; `wild` floor (§8-Q6) | **Draft — landed** |
+| `time` | [`time.md`](./time.md) | M-529 (#170) | monotonic vs wall a typed distinction | **Draft — landed** |
+| `rand` | [`rand.md`](./rand.md) | M-531 (#171) | nondeterminism reified/named (RT3) | **Draft — landed** |
+| `testing` | [`testing.md`](./testing.md) | M-534 (#174) | a skipped check is reported, never a silent pass | **Draft — landed** |
 
 ## 5. Cross-module reconciliation (first design wave)
 
@@ -123,11 +126,25 @@ to resolve at ratification, **not** silently decided here (the planning analogue
 | **Ergonomics vs the contract** (always-explicit EXPLAIN/certificate/tag/identity-ref at the call site vs implicit-but-inspectable) | `swap`, `select`, `content`, `math`, `error`, `iter`, `fmt` | The single most recurrent tension (tension A). Every affected spec FLAGs it rather than choosing; needs one per-ring design pass, not seven per-module answers. | **§8-Q3** |
 | **The migration differential's bar** | `swap`, `self-hosting-readiness` (M-502) | What a self-hosted module must match (observable results vs tags+EXPLAIN bit-for-bit) before its verdict flips. | **§8-Q5** |
 | **`wild`/FFI for transcendentals** | `math` (M-525) | Whether `math`'s transcendental floor is a pure trusted routine or libm via `wild` (which would narrow its C5 "no `wild`" claim). | **§8-Q6** |
+| **The numerics carrier (`Approx<T>`) + the ε numbers** | `numerics` (M-512), `math` (M-525), `dense` (M-518) | **Resolved on the `numerics` side.** `numerics` homes the carrier `math`/`dense` deferred: `Approx<T>` is a *thin view* — a plain value with its `Meta`-attached `{Bound, strength}` (RFC-0001 §4.3), **not** a new numeric type and **not** a kernel change — closing `math` §7-Q1 and `dense` §7-Q5. The concrete ε magnitudes and *which* transcendentals reach `Proven` stay ADR-010/the kernels' to supply; `numerics` fixes the never-upgrade discipline, meet-composition, and the refuse-without-a-rule (M-204) posture, not the numbers. | §8-Q1 (supersedes the "Numeric ε bounds ownership" FLAG) |
+| **The recovery bridge (now owned)** | `recover` (M-520), `error` (M-527), `diag` (M-510) | **Owner landed.** `recover` defines the concrete `Outcome`/`RecoverOutcome`/`PolicyRef` surface `error` described abstractly (consistent with `error`'s bridge); `diag` owns the structured record/trace a recovered-or-re-propagated error carries (presentation never gates propagation, I1); `recover` decides policy, `diag` records. Recovery elaborates to L0 `Match` — no new kernel node (KC-3/NFR-7). | resolves the prior "recovery bridge" FLAG |
+| **The failure-legibility substrate** | `diag` (M-510), `recover` (M-520), `testing` (M-534), every fallible module | **One substrate, consistently consumed.** The maintainer's failure-semantics rule — a program *may* fail, but every failure is a structured RFC-0013 record with a trace + debug info, recovered or re-propagated, **never silently swallowed** (I1) — is discharged once in `diag` and consumed by `recover` (policy), `testing` (a `Fail` is a `diag` record), and every module's `Err` rows. No module re-invents the record. | — |
+| **One canonical JSON projection** | `io`/`serialize` (M-514), `fmt` (M-533) | **Converged from both sides.** `io`/`serialize` owns the single canonical JSON projection; `fmt.to_json` delegates to it (one JSON, two entry points; round-trip established once). Both specs independently proposed the same delegation — supersedes the prior "JSON projection overlap" deferral, pending maintainer sign-off. | §8-Q1/§8-Q3 |
+| **The `wild`/FFI floor (consolidated)** | `fs` (M-528), `rand` (M-531), `math` (M-525) | **One `std-sys` question, three call sites.** OS/platform facilities — `fs` syscalls, `rand`'s platform entropy, `math`'s transcendental libm floor — each bottom out in an audited `wild` block (ADR-014) and may live in a separate `std-sys` phylum so pure `std` stays leak-free (LR-9). The same §8-Q6 decision, now corroborated from three modules. | **§8-Q6** |
+| **Declared nondeterminism (RT3)** | `time` (M-529), `rand` (M-531) | **One rule, two sources.** A wall-clock read and an entropy draw are both nondeterminism under RT3 and both carry a declared effect; a deterministic fragment can do neither silently. Named once, shared — `time` owns clock reads, `rand` owns generators; the seeded/logical (pure) surfaces stay reproducible. | — |
+| **The `runtime` phylum + Phase-7 gate** | `runtime` (M-521) | **Reserved, not active.** The RFC-0008 concurrency lexicon (hypha/colony/reclaim/…) is mostly reserved vocabulary (Glossary ⟂); the spec presents the binding set + the std-vs-separate-`runtime`-phylum decision as a FLAG and activates construct-by-construct as Phase-7 lands — no premature surface (VR-5). | **§8-Q4** |
+| **The deployable spore** | `spore` (M-522), `vsa` (M-513), `content` (M-523), native path (M-620) | **Boundary stated.** `spore` packages a content-addressed deployable + reconstruction manifest; `content` owns the canonical hash identity; `vsa` performs the probabilistic regrowth (held at the FR-C2 `Empirical` ceiling); the full *native* deploy is Phase-6-gated on M-620. | §8-Q1 |
+| **The differential / oracle bar** | `testing` (M-534), `swap` (M-516), `self-hosting-readiness` (M-502) | **Same bar, reused.** `testing`'s `differential` harness adopts whatever interp↔AOT/native agreement bar (observable results vs results+tags+EXPLAIN) the migration differential ratifies — the same §8-Q5 question, not a new one. | **§8-Q5** |
 
-**Net:** no two specs conflict on an *owned* surface; the only unsettled ownership is the lossless
-`BF16→F32` placement (swap §7-Q3 / cmp §7-Q2), FLAGGED above rather than silently assigned. The recurring
-items are the *known* RFC-0016 §8 questions (naming §8-Q2, ergonomics §8-Q3), now corroborated from eleven
-independent angles — useful signal for the maintainer's ratification pass.
+**Net (after the second wave):** with all 23 module specs drafted, **no two specs conflict on an *owned*
+surface.** The first wave's unsettled `BF16→F32` placement (swap §7-Q3 / cmp §7-Q2) is unchanged and still
+FLAGGED. The second wave *resolved* two prior deferrals — the numerics carrier (`Approx<T>` = a `Meta`-attached
+bound, closing `math`/`dense`) and the recovery bridge (`recover` now owns the concrete `Outcome`/`PolicyRef`)
+— and *converged* the JSON projection (`fmt` delegates to `serialize`) from both sides. The remaining recurring
+items are the *known* RFC-0016 §8 questions — naming §8-Q2, ergonomics-vs-contract §8-Q3 (tension A),
+the `wild`/`std-sys` floor §8-Q6 (now corroborated by `fs`/`rand`/`math`), the `runtime` Phase-7 phylum §8-Q4,
+and the differential bar §8-Q5 — each now corroborated from many independent angles. That convergence is the
+useful signal for the maintainer's ratification pass; nothing here silently decides a §8 question.
 
 ## 6. How this index stays honest
 
@@ -140,6 +157,20 @@ independent angles — useful signal for the maintainer's ratification pass.
 
 ## Meta — changelog
 
+- **2026-06-17 — Second design wave integrated.** Lands the remaining 13 module specs, completing the
+  RFC-0016 taxonomy as `Draft`: Tier-A `numerics` (M-512, #153), `vsa` (M-513, #154), `diag` (M-510, #151),
+  `recover` (M-520, #156), `runtime` (M-521, #162), `spore` (M-522, #163); Tier-B `collections` (M-511, #152),
+  `text` (M-524, #165), `io`/`serialize` (M-514, #155), `fs` (M-528, #169), `time` (M-529, #170),
+  `rand` (M-531, #171), `testing` (M-534, #174). Flips their index rows `anticipated → Draft — landed`, and
+  extends §5 with the second-wave seams — the numerics carrier (`Approx<T>` resolved on the `numerics` side,
+  closing `math`/`dense`), the recovery bridge (now owned by `recover`), the one-canonical-JSON convergence
+  (`fmt` delegates to `serialize`), the consolidated `wild`/`std-sys` floor (`fs`/`rand`/`math`, §8-Q6), the
+  shared RT3 declared-nondeterminism rule (`time`/`rand`), the reserved `runtime` Phase-7 phylum (§8-Q4), the
+  deployable-spore boundary (`spore`/`vsa`/`content`/M-620), and the reused differential bar (§8-Q5). A common
+  failure-legibility rule is recorded: a program *may* fail, but every failure is a structured RFC-0013 record
+  with a trace + debug info, recovered or re-propagated, never silently swallowed (I1) — discharged in `diag`,
+  consumed everywhere. No two specs conflict on an owned surface; the open items are the known §8 questions,
+  not silent decisions. No code; no kernel change (KC-3). Append-only.
 - **2026-06-17 — Created (Living index).** Stands up the per-module standard-library spec directory under
   **RFC-0016 (Draft)**: the §4.1 contract reference (C1–C6), the guarantee-matrix obligation (§4.5), the
   ring layering (§4.2), the single-template conformance rule, and the module index keyed to the Phase-5
