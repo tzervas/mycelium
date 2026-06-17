@@ -1,0 +1,20 @@
+# mycelium-proj.toml — the canonical example phylum that dogfoods the toolchain gate.
+# It is authored to PASS all four gates (mycfmt --check, myc-check, myc-sec, myc-lint),
+# so `just check` exercises the M-361 tools green-and-real rather than as all-skips.
+[project]
+name        = "hello"
+kind        = "phylum"
+version     = "0.1.0"
+license     = "Apache-2.0"
+authors     = ["Tyler Zervas"]
+since       = "2026-06-17"
+summary     = "Minimal canonical phylum: the toolchain gate's dogfood fixture."
+keywords    = ["example", "toolchain"]
+lang        = "mycelium-0"
+
+[surface]
+exports     = ["hello"]
+
+[toolchain]
+format      = "mycfmt-0"
+lints       = "strict"

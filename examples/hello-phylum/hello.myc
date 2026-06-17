@@ -1,0 +1,14 @@
+// nodule: hello
+// @version: 0.1.0
+// @license: Apache-2.0
+// @authors: Tyler Zervas
+// @since: 2026-06-17
+// @updated: 2026-06-17
+// @summary: Minimal canonical nodule exercising binary literals and a let-binding.
+nodule hello
+
+fn one() -> Binary{8} =
+  0b0000_0001
+
+fn two() -> Binary{8} =
+  let x = 0b0000_0001 in x

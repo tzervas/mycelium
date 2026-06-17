@@ -8,6 +8,28 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: the M-361 toolchain is wired into the CI-parity gate — Phase 9 Wave A; epic #132 done)
+- **`examples/hello-phylum/`** — a minimal canonical phylum (one `mycelium-proj.toml` + two `.myc`
+  nodules) authored to **pass all four M-361 gates**, so the suite runs **green-and-real**, not all-skips.
+  Wave D later expands this into the full end-to-end conformance fixture.
+- **Four new check scripts** — `scripts/checks/{myc-fmt,myc-check,myc-sec,myc-lint}.sh` — run the folded
+  tools over the real project roots (dirs with a `mycelium-proj.toml`, discovered via the new
+  `myc_roots` helper in `scripts/lib.sh`). They **exclude any `tests/fixtures/` path** (the
+  intentionally-bad must-fail corpus incl. `bad-header.myc` / the `reject/` programs — running the tools
+  there would erroneously turn the gate red; locked decision #3), `have cargo`-skip gracefully, and map a
+  real finding to a **suite failure** (like `lint`/`test`).
+- **Wired into the one source of truth:** the four are appended to `scripts/checks/all.sh` (after `test`),
+  given `just` recipes (`myc-fmt`/`myc-check`/`myc-sec`/`myc-lint`), and added as `.pre-commit-config.yaml`
+  local hooks (`files: \.myc$|mycelium-proj\.toml$`, `pass_filenames: false`) — so local == pre-commit == CI.
+  `just check` now exercises `mycfmt --check`, `myc-check --project`, `myc-sec` (wild-audit), and
+  `myc-lint --project`.
+- **Honest scope per gate:** `myc-sec` runs the **wild-block audit** with `--no-secrets --no-supply-chain`
+  (secrets + supply-chain keep their own dedicated `secrets`/`deny` gates; coverage is preserved at the
+  suite level, FULL for the family myc-sec owns — skip ≠ pass, G2/VR-5); `myc-lint --fix` applies nothing
+  in v0; `myc-check` stops at name-visibility (M-365 cross-phylum depth deferred); the §4.1 doc-quality
+  lint stays dormant until the M-363 doc build (Wave B). **No kernel change, no new dependency** (KC-3).
+- **M-361 (#132) closed `status:done`** in `tools/github/issues.yaml` — the epic's gate has landed.
+
 ### Added (2026-06-17: one idempotent, manifest-driven reconciler for the ENTIRE GitHub project state)
 - **`tools/github/gh-issues-sync.py` is now the single cross-platform engine** for the whole project
   state — labels + milestones + issues **+ PRs + the Project v2 board** — pure Python + `gh` (no new
