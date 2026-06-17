@@ -8,6 +8,30 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: KC-2 experiment runnable against a local llama.cpp model)
+- **The KC-2 LLM-leverage experiment (M-002) can now be *run*, not just structured.** The only
+  documented blocker was "needs LLM API access"; local llama.cpp removes it. New pieces, all pure
+  stdlib, all never-silent (G2) and verdict-free (VR-5):
+  - `experiments/mycelium_experiments/kc2/llm.py` — a `LlamaGenerator` (implements the harness
+    `Generator` protocol) over a `llama`/`llama-cli` subprocess **or** a llama.cpp HTTP server, with
+    per-arm **primers** (generator configuration — generic syntax cheatsheets, no task answers),
+    prompt assembly with edit-to-fix feedback, and best-effort source extraction (fences/prose).
+  - `experiments/mycelium_experiments/kc2/__main__.py` — `python -m mycelium_experiments.kc2`:
+    runs the requested arms, writes a JSON report. An unavailable `myc-check` **SKIPs** the Mycelium
+    arm with an explicit reason (never a fake 0%); the baseline arm **executes generated Python** so
+    it is **off by default** (opt in with `--allow-untrusted-baseline`, inside a sandbox). A missing
+    binary/model aborts with an actionable message, never a silent empty generation.
+  - The KC-2 **verdict is still maintainer-written** — these scripts emit measured rates only (VR-5).
+  - `experiments/README.md` — the end-to-end run order (doctor → validations → unit tests → the
+    real KC-2 run), with the `myc-check` build, the baseline-sandbox caveat, and the primer note.
+  - Grounding: M-002 (#3), SC-5b, G10; the existing KC-2 harness/checkers/tasks unchanged.
+
+### Changed (2026-06-17: LLM-harness — readiness verdict in `--doctor`)
+- **`--doctor` now ends with a bottom-line READY / NOT READY verdict** for real-mode validations
+  (it needs both a llama.cpp CLI and a local model), naming the exact next command or the one fix
+  per miss — so the dense report has a single line to read. A NOT-READY state is honest that
+  real-mode would **SKIP**, not fail (G2).
+
 ### Changed (2026-06-17: LLM-harness — first-class `llama` alias + clearer doctor)
 - **The harness now treats `llama` as a first-class CLI alias, not just `llama-cli`.** The Termux
   `llama-cpp` package installs the CLI as plain **`llama`** (confirmed on-device: `which llama-cli`

@@ -3024,7 +3024,8 @@ def run_doctor(args: argparse.Namespace) -> int:
     spec = MODELS[DEFAULT_MODEL_ID]
     dest = md / str(spec["filename"])
     out(f"      dir: {md}")
-    if is_valid_gguf(dest):
+    model_ready = is_valid_gguf(dest)
+    if model_ready:
         out(
             f"      default model present: {dest.name} ({_human_bytes(dest.stat().st_size)})"
         )
@@ -3045,6 +3046,7 @@ def run_doctor(args: argparse.Namespace) -> int:
             out(
                 f"      default model fetched: {got.name} ({_human_bytes(got.stat().st_size)})"
             )
+            model_ready = True
             actions.append(f"Downloaded the default model ({got.name}).")
         else:
             out(
@@ -3052,6 +3054,27 @@ def run_doctor(args: argparse.Namespace) -> int:
             )
     else:
         out(f"      default model absent : {dest.name}  (fetch with --ensure-model)")
+    out("")
+
+    # Bottom-line readiness verdict — the one thing to read in this dense report.
+    # Real-mode validations need BOTH a llama.cpp CLI and a local model; the cached
+    # model is reused with no flags (the walk-away property). A SKIP is never a PASS,
+    # so we say plainly whether the next command will actually run or skip (G2).
+    out("-" * 72)
+    out("  Readiness (real-mode validations)")
+    out("-" * 72)
+    if llama and model_ready:
+        out("      ✓ READY — llama.cpp CLI + a local model are both present.")
+        out("      Next: run the validations (auto-finds the CLI + cached model):")
+        out("          python tools/llm-harness/harness.py")
+    else:
+        out("      ✗ NOT READY — real-mode validations would SKIP (not fail), because:")
+        if not llama:
+            out("          · no llama.cpp CLI (llama-cli / llama) — see the section above")
+        if not model_ready:
+            out("          · no local model — fetch it with:")
+            out("                python tools/llm-harness/harness.py --ensure-model")
+        out("      (Use --mock for a CI-safe fixture run that needs neither.)")
     out("")
 
     out("-" * 72)
