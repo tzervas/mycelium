@@ -1,0 +1,134 @@
+{
+  "_about": "Machine manifest for the Mycelium GitHub Project (v2) board. The declarative source consumed by gh-issues-sync.py --project (via `gh api graphql`). Companion human doc: project-v2-spec.md. House rules: create-if-absent + update-to-match + never-silent (G2). Custom fields + single-select options + items/field-values are reconciled over the API; views + built-in workflows are settings-only (not API-writable) — their intent is recorded here and the run FLAGS them as manual steps, never silently skipped.",
+
+  "project": {
+    "title": "Mycelium",
+    "owner": "tzervas",
+    "owner_type": "user",
+    "description": "Design → build tracking for the Mycelium language.",
+    "link_repo": "tzervas/mycelium"
+  },
+
+  "fields": [
+    {
+      "name": "Status",
+      "type": "single_select",
+      "builtin": true,
+      "_note": "GitHub seeds a built-in Status on new projects (Todo/In Progress/Done). Reuse it by name; reconcile adds the missing In Review / Blocked options.",
+      "options": [
+        { "name": "Todo", "color": "GRAY", "description": "Not started" },
+        { "name": "In Progress", "color": "BLUE", "description": "Being worked" },
+        { "name": "In Review", "color": "YELLOW", "description": "In review / PR open" },
+        { "name": "Blocked", "color": "RED", "description": "Blocked by a dependency" },
+        { "name": "Done", "color": "GREEN", "description": "Completed / merged / closed" }
+      ]
+    },
+    {
+      "name": "Phase",
+      "type": "single_select",
+      "options": [
+        { "name": "Phase 0", "color": "GREEN",  "description": "Confirm & Specify" },
+        { "name": "Phase 1", "color": "BLUE",   "description": "Minimal Viable Core" },
+        { "name": "Phase 2", "color": "PURPLE", "description": "Full Unification & Verified Swaps" },
+        { "name": "Phase 3", "color": "RED",    "description": "Tooling, Projections & Acceleration" },
+        { "name": "Phase 4", "color": "ORANGE", "description": "Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment" },
+        { "name": "Phase 5", "color": "GREEN",  "description": "Self-Hosting & Core Library (anticipated)" },
+        { "name": "Phase 6", "color": "GRAY",   "description": "Native Acceleration & Deployment (anticipated)" },
+        { "name": "Phase 7", "color": "YELLOW", "description": "Runtime & Concurrency / RFC-0008 (anticipated)" },
+        { "name": "Phase 8", "color": "PURPLE", "description": "Toolchain & Release Engineering (anticipated)" }
+      ]
+    },
+    {
+      "name": "Area",
+      "type": "single_select",
+      "_note": "Mirrors the area:* labels in labels.json (option name = label minus the 'area:' prefix).",
+      "options": [
+        { "name": "core-ir",   "color": "BLUE",   "description": "WS-B Core IR & reference interpreter" },
+        { "name": "swap",      "color": "GREEN",  "description": "WS-C Swaps & certificates" },
+        { "name": "vsa",       "color": "PURPLE", "description": "WS-D VSA submodule" },
+        { "name": "execution", "color": "ORANGE", "description": "WS-E Execution & backends" },
+        { "name": "numerics",  "color": "RED",    "description": "WS-F Verified numerics & checker" },
+        { "name": "selection", "color": "YELLOW", "description": "WS-G Selection & EXPLAIN" },
+        { "name": "toolchain", "color": "PINK",   "description": "WS-H Toolchain (LSP/linter/formatter/build)" },
+        { "name": "project",   "color": "GRAY",   "description": "WS-I Project infrastructure" },
+        { "name": "language",  "color": "BLUE",   "description": "Surface language (L1)" }
+      ]
+    },
+    {
+      "name": "Priority",
+      "type": "single_select",
+      "options": [
+        { "name": "P0", "color": "RED",    "description": "Critical-path / existential" },
+        { "name": "P1", "color": "YELLOW", "description": "Important" },
+        { "name": "P2", "color": "GREEN",  "description": "Nice-to-have / later" },
+        { "name": "P3", "color": "GRAY",   "description": "Low priority / anticipated / out-of-gate" }
+      ]
+    },
+    {
+      "name": "Estimate",
+      "type": "single_select",
+      "optional": true,
+      "_note": "Optional sizing; set from the planning docs when a size is given, else left blank (never invented).",
+      "options": [
+        { "name": "S", "color": "GREEN",  "description": "Small" },
+        { "name": "M", "color": "YELLOW", "description": "Medium" },
+        { "name": "L", "color": "ORANGE", "description": "Large" }
+      ]
+    }
+  ],
+
+  "field_label_map": {
+    "_about": "How an item's labels set its single-select field values. The engine resolves each rule to an option id and writes it only when it differs from the item's current value (idempotent). An unmapped label is reported, never invented (G2).",
+    "Phase":    { "from": "label_prefix", "prefix": "phase:",    "template": "Phase {value}" },
+    "Area":     { "from": "label_prefix", "prefix": "area:",     "template": "{value}" },
+    "Priority": { "from": "label_prefix", "prefix": "priority:", "template": "{value}" },
+    "Status":   { "from": "label_exact",  "map": { "status:blocked": "Blocked", "status:done": "Done" },
+                  "_note": "Only these explicit status labels override Status. status:needs-design has no Status option (the workflow's item-added→Todo default stands); it is reported as unmapped, never guessed." }
+  },
+
+  "views": [
+    {
+      "name": "Board",
+      "api_writable": false,
+      "intent": { "layout": "BOARD", "group_by": "Status" },
+      "_note": "Day-to-day Kanban. View layout/grouping is settings-only — create + configure in the project UI."
+    },
+    {
+      "name": "By Phase",
+      "api_writable": false,
+      "intent": { "layout": "TABLE", "group_by": "Phase", "sort_by": ["Priority", "Estimate"] }
+    },
+    {
+      "name": "Roadmap",
+      "api_writable": false,
+      "intent": { "layout": "ROADMAP", "group_by": "Iteration (or Phase until iterations start)" }
+    }
+  ],
+
+  "automation": [
+    {
+      "id": "auto-add",
+      "api_writable": false,
+      "intent": "Auto-add items from tzervas/mycelium that carry any phase:* label.",
+      "where": "Project → Settings → Workflows → Auto-add to project (filter: repo:tzervas/mycelium label:phase:*)"
+    },
+    {
+      "id": "item-added-todo",
+      "api_writable": false,
+      "intent": "When an item is added → set Status = Todo.",
+      "where": "Project → Settings → Workflows → Item added to project"
+    },
+    {
+      "id": "closed-merged-done",
+      "api_writable": false,
+      "intent": "When an issue is closed / a PR is merged → set Status = Done.",
+      "where": "Project → Settings → Workflows → Item closed (and Pull request merged)"
+    },
+    {
+      "id": "blocked",
+      "api_writable": false,
+      "intent": "When the status:blocked label is added → set Status = Blocked.",
+      "where": "Project → Settings → Workflows (a label-triggered workflow; configure in the UI)"
+    }
+  ]
+}

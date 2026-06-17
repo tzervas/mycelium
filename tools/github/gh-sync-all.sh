@@ -1,50 +1,42 @@
 #!/usr/bin/env bash
-# Mycelium GitHub PM sync — ONE idempotent command to close every gap.
+# Mycelium GitHub PM sync — ONE idempotent command for the ENTIRE project state.
 #
 # WHY THIS EXISTS
 # ---------------
-# The PM bootstrap is split across two idempotent tools (each safe to rerun):
-#   * gh-bootstrap-local.sh  — labels (create-or-update) + milestones (create-absent)
-#   * gh-issues-sync.py      — issues (create-absent-by-title) + milestone assignment + idmap
-# Only termux-setup.sh chained them, and only as part of a full device provision. When
-# issues.yaml / labels.json / milestones.json gain new entries between runs, you want to
-# reconcile the repo with a SINGLE command — without re-provisioning anything. That is this.
+# The whole reconcile now lives in ONE cross-platform engine, gh-issues-sync.py (pure Python +
+# gh — no bash, no jq). This wrapper is the Linux/macOS entry point; gh-sync-all.ps1 is the
+# Windows twin. Both drive the same engine with `--all`, the FULL maintenance suite:
 #
-# It runs, in order:
-#   0. manifest-check.py   — preflight: every label/milestone issues.yaml references must be
-#                            defined in the manifests (a missing label would otherwise make
-#                            `gh issue create --label …` fail mid-run — explicit, not silent).
-#   1. gh-bootstrap-local.sh — labels + milestones (so the labels the issues need exist first).
-#   2. gh-issues-sync.py     — create absent issues (with labels) AND reconcile existing ones to
-#                            issues.yaml (labels/milestone/title); assign milestones; append idmap.
+#   preflight (auth/scope sanity) -> validate (manifests vs codebase) -> labels -> milestones
+#   -> issues -> PRs -> project (Project v2 board, when the `project` scope is present).
 #
-# Idempotent: rerun any time. Labels are create-or-updated; milestones are created when absent;
-# issues are created when absent and otherwise updated to match issues.yaml (bodies only with
-# --update-bodies; OPEN/CLOSED state is never inferred); idmap.tsv is append-only. An in-sync
-# issue is left untouched; nothing is duplicated.
+# Every level is create-if-absent + update-to-match + --dry-run + never-silent + idempotent.
+# See RECONCILE.md for the full contract. (gh-bootstrap-local.sh remains a standalone bash
+# labels+milestones tool, but the engine --all now supersedes it cross-platform.)
 #
-# Windows/PowerShell users: run gh-sync-all.ps1 instead — it drives the same Python engine with
-# --all (labels + milestones + issues), needing no bash/jq.
-#
-# Requires: gh (authenticated to the repo owner), jq, python3 (+ PyYAML).
+# Requires: gh (authenticated to the repo owner), python3 (+ PyYAML).
 #
 # Usage:
-#   bash tools/github/gh-sync-all.sh
-#   REPO=tzervas/mycelium bash tools/github/gh-sync-all.sh
-#   bash tools/github/gh-sync-all.sh --dry-run    # preview issue creation (no repo writes)
+#   bash tools/github/gh-sync-all.sh                  # full suite (live)
+#   bash tools/github/gh-sync-all.sh --dry-run        # preview the whole reconcile (no writes)
+#   bash tools/github/gh-sync-all.sh --update-bodies  # also push issues.yaml bodies
+#   REPO=owner/name bash tools/github/gh-sync-all.sh  # override the repo
 set -euo pipefail
 
 REPO="${REPO:-tzervas/mycelium}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export REPO
 
-DRY_RUN=0
-UPDATE_BODIES=0
+# Forward only the recognised modifier flags to the engine (which runs --all). An explicit single
+# level (--labels/--issues/--prs/--project/--validate) is available by calling the engine directly.
+ENGINE_ARGS=(--all --repo "$REPO")
 for arg in "$@"; do
   case "$arg" in
-    --dry-run) DRY_RUN=1 ;;
-    --update-bodies) UPDATE_BODIES=1 ;;
-    *) echo "unknown argument: $arg (accepted: --dry-run, --update-bodies)" >&2; exit 2 ;;
+    --dry-run|--update-bodies|--prs|--project|--validate|--no-preflight)
+      ENGINE_ARGS+=("$arg") ;;
+    --all) : ;;  # already implied
+    *) echo "unknown argument: $arg" >&2
+       echo "accepted: --dry-run --update-bodies --prs --project --validate --no-preflight" >&2
+       exit 2 ;;
   esac
 done
 
@@ -55,28 +47,4 @@ for cand in python3 python; do
 done
 [[ -n "$PY" ]] || { echo "ERROR: no python3/python on PATH" >&2; exit 1; }
 
-echo "============================================================"
-echo ">> Mycelium PM sync — repo: $REPO  (dry-run: $DRY_RUN)"
-echo "============================================================"
-
-echo
-echo ">> [0/2] preflight: manifest consistency"
-"$PY" "$HERE/manifest-check.py"
-
-echo
-echo ">> [1/2] labels + milestones (gh-bootstrap-local.sh)"
-if [[ "$DRY_RUN" -eq 1 ]]; then
-  echo "   (dry-run: skipping label/milestone writes)"
-else
-  bash "$HERE/gh-bootstrap-local.sh"
-fi
-
-echo
-echo ">> [2/2] issues: create absent + reconcile existing + idmap (gh-issues-sync.py)"
-sync_args=(--repo "$REPO")
-[[ "$DRY_RUN" -eq 1 ]] && sync_args+=(--dry-run)
-[[ "$UPDATE_BODIES" -eq 1 ]] && sync_args+=(--update-bodies)
-"$PY" "$HERE/gh-issues-sync.py" "${sync_args[@]}"
-
-echo
-echo ">> sync complete — repo reconciled with issues.yaml / labels.json / milestones.json."
+exec "$PY" "$HERE/gh-issues-sync.py" "${ENGINE_ARGS[@]}"

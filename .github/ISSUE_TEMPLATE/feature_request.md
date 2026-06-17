@@ -2,7 +2,7 @@
 name: Feature / Enhancement request
 about: Suggest a new feature, capability, or improvement to the language design.
 title: '[FEAT] '
-labels: ['enhancement']
+labels: ['type:feature']
 ---
 
 **Is your feature request related to a problem?**

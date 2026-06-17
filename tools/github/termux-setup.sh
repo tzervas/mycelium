@@ -97,14 +97,24 @@ else warn "not Termux — continuing (pkg/apt path still applies)"; fi
 
 # ---- 1. packages -----------------------------------------------------------------------
 step "1. packages"
-if [[ $DO_INSTALL -eq 1 ]]; then
-  if have pkg; then pkg update -y || warn "pkg update had warnings"; fi
-  pm_install git gh gnupg jq python openssh
-  ok "git gh gnupg jq python installed"
-  if python -m pip install --quiet --upgrade pip pyyaml 2>/dev/null; then ok "pyyaml ready"
-  else warn "pyyaml install failed — issue sync may skip (install: pip install pyyaml)"; fi
-else
+# Idempotent: only install when something is actually missing (re-running is a clean no-op).
+missing=()
+for tool in git gh gpg jq python; do have "$tool" || missing+=("$tool"); done
+if [[ $DO_INSTALL -eq 0 ]]; then
   warn "skipped (per --skip-install)"
+elif [[ ${#missing[@]} -eq 0 ]]; then
+  ok "git gh gpg jq python already installed — nothing to do (idempotent)"
+else
+  warn "installing missing: ${missing[*]}"
+  if have pkg; then pkg update -y || warn "pkg update had warnings"; fi
+  pm_install git gh gnupg jq python openssh   # package-manager installs are themselves idempotent
+  ok "packages installed"
+fi
+# pyyaml only when not already importable (pip is a no-op when satisfied).
+if have python; then
+  if python -c "import yaml" >/dev/null 2>&1; then ok "pyyaml ready"
+  elif python -m pip install --quiet --upgrade pip pyyaml 2>/dev/null; then ok "pyyaml installed"
+  else warn "pyyaml install failed — issue sync may skip (install: pip install pyyaml)"; fi
 fi
 for tool in git gh gpg jq; do have "$tool" || die "$tool missing — drop --skip-install or install it"; done
 
@@ -122,31 +132,19 @@ ok "identity: $GIT_USER_NAME <$GIT_USER_EMAIL>"
 
 # ---- 3. GPG signing key ----------------------------------------------------------------
 step "3. GPG signing key"
+# Delegated to the portable, idempotent reconciler (git-signing-sync.py) — identical logic on
+# Linux + Windows. It REUSES an existing key and generates one only when absent (this --setup is
+# the explicit trigger; pass --new-key to rotate). Git config is set create-if-absent / on-drift.
 if [[ $DO_GPG -eq 1 ]]; then
   GPG_TTY="$(tty || true)"; export GPG_TTY
-  keyid="$(gpg --list-secret-keys --keyid-format=long --with-colons "$GIT_USER_EMAIL" 2>/dev/null \
-            | awk -F: '/^sec:/ {print $5; exit}')"
-  if [[ -n "$keyid" ]]; then
-    ok "reusing existing key $keyid for $GIT_USER_EMAIL"
+  setup_args=(--setup --name "$GIT_USER_NAME" --email "$GIT_USER_EMAIL")
+  [[ $GPG_PASSPHRASE -eq 0 ]] && setup_args+=(--no-passphrase)
+  [[ -t 0 ]] || setup_args+=(--no-prompt)   # non-interactive: use the provided name/email, no prompts
+  if python "$HERE/git-signing-sync.py" "${setup_args[@]}"; then
+    ok "commit signing configured (idempotent; existing key reused)"
   else
-    if [[ $GPG_PASSPHRASE -eq 1 ]]; then
-      printf '  you will be prompted for a passphrase to protect the key.\n'
-      gpg --quick-generate-key "$GIT_USER_NAME <$GIT_USER_EMAIL>" ed25519 sign 2y
-    else
-      warn "generating an UNPROTECTED key (--no-gpg-passphrase)"
-      gpg --batch --pinentry-mode loopback --passphrase '' \
-        --quick-generate-key "$GIT_USER_NAME <$GIT_USER_EMAIL>" ed25519 sign 2y
-    fi
-    keyid="$(gpg --list-secret-keys --keyid-format=long --with-colons "$GIT_USER_EMAIL" \
-              | awk -F: '/^sec:/ {print $5; exit}')"
-    [[ -n "$keyid" ]] || die "GPG key generation failed"
-    ok "generated key $keyid"
+    die "signing setup failed (run: python $HERE/git-signing-sync.py to diagnose)"
   fi
-  git config --global user.signingkey "$keyid"
-  git config --global commit.gpgsign true
-  git config --global tag.gpgsign true
-  git config --global gpg.program "$(command -v gpg)"
-  ok "commit signing enabled with $keyid"
 else
   warn "skipped (per --skip-gpg)"
 fi
@@ -167,7 +165,10 @@ gh auth setup-git
 ok "git credential helper wired to gh"
 
 # ---- 5. upload the PUBLIC GPG key ------------------------------------------------------
-if [[ $DO_GPG -eq 1 && -n "${keyid:-}" ]]; then
+# Step 3 wired user.signingkey; publish its PUBLIC half now that gh is authed (skip for SSH signing).
+keyid="$(git config --global user.signingkey 2>/dev/null || true)"
+gpgfmt="$(git config --global gpg.format 2>/dev/null || echo openpgp)"
+if [[ $DO_GPG -eq 1 && -n "$keyid" && "$gpgfmt" != "ssh" ]]; then
   step "5. publish the public GPG key"
   if gpg --armor --export "$keyid" | gh gpg-key add - 2>/dev/null; then ok "public key uploaded to GitHub"
   else warn "gpg key not uploaded (already present, or scope admin:gpg_key not granted)"; fi
