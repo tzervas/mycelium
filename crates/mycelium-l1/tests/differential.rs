@@ -147,6 +147,12 @@ fn data_corpus() -> Vec<&'static str> {
          fn main() -> Binary{8} = pick(True)",
         // a constructed result carrying a computed repr field
         "nodule d\ntype Box = Mk(Binary{8})\nfn main() -> Box = Mk(not(0b0000_1111))",
+        // a multi-field constructor matched with a NESTED wildcard at a non-root occurrence
+        // (M-320 Maranget: column ordering over two fields + a `_` at occurrence [1]) — the kind of
+        // decision tree the flat Nat cases don't stress; all three paths must still agree
+        "nodule d\ntype Pair = Mk(Bool, Bool)\n\
+         fn both(p: Pair) -> Bool = match p { Mk(True, b) => b, Mk(False, _) => False }\n\
+         fn main() -> Bool = both(Mk(True, False))",
         // --- r4: functions + recursion (Lam/App/Fix), now in the fragment ---
         // self-recursion returning a datum (Fix + App + Match)
         "nodule d\ntype Nat = Z | S(Nat)\n\
