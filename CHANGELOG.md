@@ -20,9 +20,9 @@ corpus, not released software. Versioning will begin when the kernel does.
   and **refuses** compiler/toolchain names (`cc`/`clang`/`gcc`/…); use a shell alias for muscle memory.
 - **Idempotent + secret-safe:** safe to re-run (reuse container, guard user creation, install Claude
   only if missing). No secrets in the script/repo — Claude auth stays interactive in `~/.claude`
-  inside the container. Optional `CC_SUDO_MODE=password` **prompts** (no echo, confirmed) and pipes
-  the password to the container over stdin — never argv/env/disk/repo (default stays passwordless
-  sudo, since it's a single-user proot sandbox).
+  inside the container. Sudo is passwordless **by design**: the phone is unrooted (no Termux-side
+  root, never used) and proot root is *emulated*, so a sudo password would guard nothing (anyone
+  with Termux access can read the rootfs directly) — documented as the honest choice, not a gap.
 
 ### Fixed (2026-06-17: real-mode hang — force one-shot llama-cli, configurable timeout)
 - **Real-mode runs hung until they timed out** because recent `llama-cli`, given `--prompt`, enters

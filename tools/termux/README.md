@@ -34,7 +34,7 @@ Want the old `cc` muscle memory? Use a **shell alias**, never a file:
 ### Tunables (export before running)
 
 `CC_DISTRO` (default `ubuntu`), `CC_DEV_USER` (`dev`), `CC_LAUNCHER` (`claude`),
-`CC_SD_SRC`, `CC_SD_GUEST`, `CC_WORK_GUEST`, `CC_SUDO_MODE` (`nopasswd` | `password`).
+`CC_SD_SRC`, `CC_SD_GUEST`, `CC_WORK_GUEST`.
 
 ### Idempotency
 
@@ -47,10 +47,11 @@ missing. Re-running repairs drift; it never duplicates.
 - **Nothing sensitive is stored** in the script or this repo. Claude auth is interactive
   at first run (browser OAuth or an API key you paste) and lives in `~/.claude` inside the
   container.
-- The dev user defaults to **passwordless sudo** — it's a single-user proot sandbox, not a
-  privilege boundary. For a password instead, run with `CC_SUDO_MODE=password`: you're
-  **prompted** (no echo, with confirmation), and the secret is piped to the container over
-  stdin — never in argv, the environment, on disk, or committed.
+- **No sudo password, by design.** The phone is unrooted, so there is no Termux-side root
+  (and the script never uses it). Inside the proot, root is *emulated* — a sudo password
+  there guards nothing (anyone who can open Termux can read the rootfs and `~/.claude`
+  directly), so it would be theater. The dev user gets passwordless sudo in the sandbox;
+  that's the honest choice, not a gap.
 
 ### ⚠️ Never name the launcher after a compiler
 

@@ -27,10 +27,12 @@
 #   * NO secrets are stored in this script or the repo. Claude auth is interactive
 #     at first run (browser OAuth or an API key you paste), kept in ~/.claude
 #     inside the container. Nothing is committed.
-#   * Optional dev-user password: default is passwordless sudo (it's a single-user
-#     proot sandbox, not a privilege boundary). Set CC_SUDO_MODE=password to be
-#     PROMPTED (no echo) for a password — it is piped over stdin into the
-#     container, never placed in argv/env/disk/the repo.
+#   * No sudo password, by design. The phone is NOT rooted, so there is no
+#     Termux-side root (and this script never uses it). Inside the proot container
+#     root is EMULATED — a sudo password there guards nothing (anyone who can open
+#     Termux can read the rootfs and ~/.claude directly), so it would be security
+#     theater. The dev user gets passwordless sudo inside the sandbox; that is the
+#     honest choice, not a gap.
 #
 # v2 fixes (vs v1):
 #   * proot-distro v5 rewrite uses OCI images and MOVED the rootfs path
@@ -60,7 +62,6 @@ WORK_GUEST="${CC_WORK_GUEST:-/home/$DEV_USER/work}"
 TMP_GUEST="${CC_TMP_GUEST:-/home/$DEV_USER/.cache/cc-tmp}"
 CC_PREFIX_GUEST="/opt/cc"
 CC_SD_SRC="${CC_SD_SRC:-}"
-CC_SUDO_MODE="${CC_SUDO_MODE:-nopasswd}"  # nopasswd (sandbox default) | password (prompts, never hardcoded)
 
 PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
 STAGING="$HOME/.cc-staging"          # Termux-side staging dir (bind-mounted into container)
@@ -71,18 +72,6 @@ log()  { printf '%s[*]%s %s\n' "$c_b" "$c_0" "$*"; }
 ok()   { printf '%s[+]%s %s\n' "$c_g" "$c_0" "$*"; }
 warn() { printf '%s[!]%s %s\n' "$c_y" "$c_0" "$*"; }
 die()  { printf '%s[x]%s %s\n' "$c_r" "$c_0" "$*" >&2; exit 1; }
-
-# Read a secret WITHOUT echo and WITHOUT it ever landing in argv/env/history.
-# Usage: prompt_secret VAR "Prompt: "   (value is stored in $VAR)
-prompt_secret() {
-  local __var="$1" __prompt="$2" __val __confirm
-  [ -t 0 ] || die "$__prompt needs an interactive terminal (no TTY); aborting rather than using a blank/hardcoded secret."
-  printf '%s' "$__prompt" >&2; IFS= read -rs __val; printf '\n' >&2
-  printf 'Confirm: ' >&2;       IFS= read -rs __confirm; printf '\n' >&2
-  [ "$__val" = "$__confirm" ] || die "Entries did not match."
-  [ -n "$__val" ] || die "Empty secret; aborting."
-  printf -v "$__var" '%s' "$__val"
-}
 
 # Guard against being sourced (so a die() can't kill the user's shell).
 if (return 0 2>/dev/null); then
@@ -101,17 +90,7 @@ case "$LAUNCHER" in
     die "CC_LAUNCHER='$LAUNCHER' would shadow a compiler/toolchain command on PATH and break native builds. Choose another (e.g. 'claude' or 'ccode'); use a shell alias for muscle memory." ;;
 esac
 log "Termux prefix: $PREFIX"
-log "Target distro: $DISTRO   user: $DEV_USER   launcher: $LAUNCHER   sudo: $CC_SUDO_MODE"
-
-# Optional: prompt for the dev-user password up-front (so a long provision doesn't
-# block on input later). Held only in this process's memory; piped to the container
-# over stdin after provisioning — never argv/env/disk/repo.
-DEV_PW=""
-case "$CC_SUDO_MODE" in
-  nopasswd) ;;
-  password) prompt_secret DEV_PW "Set a password for '$DEV_USER' (sudo will require it): " ;;
-  *) die "CC_SUDO_MODE must be 'nopasswd' or 'password' (got '$CC_SUDO_MODE')." ;;
-esac
+log "Target distro: $DISTRO   user: $DEV_USER   launcher: $LAUNCHER"
 
 # ---- 1. Termux packages ----------------------------------------------------
 log "Updating Termux and installing base packages..."
@@ -171,7 +150,6 @@ CC_SD_GUEST="$SD_GUEST"
 CC_WORK_GUEST="$WORK_GUEST"
 CC_TMP_GUEST="$TMP_GUEST"
 CC_PREFIX="$CC_PREFIX_GUEST"
-CC_SUDO_MODE="$CC_SUDO_MODE"
 EOF_CONF
 
 cat > "$STAGING/cc-env.sh" <<'EOF_ENV'
@@ -315,13 +293,10 @@ if ! id -u "$CC_DEV_USER" >/dev/null 2>&1; then
   echo "[provision] creating user '$CC_DEV_USER'..."
   useradd -m -s /bin/bash "$CC_DEV_USER"
 fi
-# Idempotent: a single overwrite. NOPASSWD by default (proot sandbox); password
-# mode requires the password we set post-provision (never written here).
-if [ "${CC_SUDO_MODE:-nopasswd}" = "password" ]; then
-  echo "$CC_DEV_USER ALL=(ALL) ALL"          > /etc/sudoers.d/cc-$CC_DEV_USER 2>/dev/null || true
-else
-  echo "$CC_DEV_USER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/cc-$CC_DEV_USER 2>/dev/null || true
-fi
+# Passwordless sudo, idempotent (single overwrite). The phone is unrooted and proot
+# root is emulated — there is no privilege boundary here, so a sudo password would be
+# theater (see the header note). This is the honest default, not a gap.
+echo "$CC_DEV_USER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/cc-$CC_DEV_USER 2>/dev/null || true
 chmod 0440 /etc/sudoers.d/cc-$CC_DEV_USER 2>/dev/null || true
 
 mkdir -p "$CC_SD_GUEST" "$CC_WORK_GUEST" "$CC_TMP_GUEST"
@@ -342,17 +317,6 @@ BINDS=(--bind "$STAGING:/opt/cc-staging")
 proot-distro login "$DISTRO" "${BINDS[@]}" -- bash /opt/cc-staging/provision.sh \
   || die "Provisioning failed (network? re-run, or check Termux network settings)."
 ok "Provisioning complete."
-
-# Set the dev-user password (password mode only). The secret is piped over STDIN
-# into the container and consumed by chpasswd — it never appears in argv, the
-# environment, on disk, or in the repo. Idempotent: re-running just re-sets it.
-if [ "$CC_SUDO_MODE" = "password" ] && [ -n "$DEV_PW" ]; then
-  log "Setting password for '$DEV_USER' (over stdin; not logged)..."
-  printf '%s\n' "$DEV_PW" | proot-distro login "$DISTRO" -- \
-      env TARGET_USER="$DEV_USER" bash -c 'IFS= read -r pw; printf "%s:%s\n" "$TARGET_USER" "$pw" | chpasswd' \
-    && ok "Password set for '$DEV_USER'." || warn "Could not set password — sudo will still prompt; set it later with: passwd $DEV_USER"
-  unset DEV_PW
-fi
 
 # ---- 7. Install the Termux-side launcher ----------------------------------
 log "Installing the '$LAUNCHER' launcher..."
