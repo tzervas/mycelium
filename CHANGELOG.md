@@ -8,6 +8,49 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: standard-library first design wave — 11 module specs + the M-502 gate, integrated)
+- **Eleven per-module standard-library design specs** under `docs/spec/stdlib/`, each authored to the
+  uniform template and the RFC-0016 §4.1 contract, each shipping its load-bearing **guarantee matrix**
+  (ops × {tag · fallibility · declared effects · EXPLAIN-able}) and explicit **C1–C6 conformance**:
+  Tier-A differentiators **`core`** (M-515 — Ring-0 honest value model, re-export-only), **`swap`** (M-516
+  — certificate-carrying representation change over the one M-210 checker), **`ternary`** (M-517 —
+  balanced-ternary algebra Exact + inspectable I2_S/TL1/TL2 packing), **`dense`** (M-518 — typed
+  `Dense{dim,dtype}`, ε via ADR-010, Proven only where checked else downgraded), **`select`** (M-519 — the
+  total non-learned policy + mandatory EXPLAIN), **`content`** (M-523 — content-addressing identity, ADR-003);
+  Tier-B commons **`iter`** (M-526 — totality-preserving folds, the one lazy combinator named, not silent),
+  **`math`** (M-525 — domain errors explicit, transcendentals carry their ε tag), **`error`** (M-527 —
+  errors-as-values with the structural I1 never-silent floor), **`cmp`** (M-532 — the convert-vs-swap
+  boundary; lossy narrowing explicit), **`fmt`** (M-533 — dual human/machine projection, display ≠ identity).
+  Honest throughout (VR-5): no `Proven` tag without a checked basis, no fabricated crate API / bound /
+  schema — genuine unknowns are FLAGGED, not invented.
+- **Cross-module reconciliation (stdlib README §5).** The independently-authored specs are deconflicted: the
+  **swap ↔ convert** boundary and the **numerics-ε ownership** (dense/math → M-512) are *consistent* and
+  resolved in-wave; the recurring **naming** (§8-Q2) and **ergonomics-vs-contract** (§8-Q3) items are
+  corroborated from eleven angles as signal for RFC-0016's ratification pass; `fmt↔serialize`, the
+  `error↔recover` bridge, and `iter`'s early-termination question are FLAGGED to their owning tasks. No two
+  specs conflict on an owned surface. Design-first; no code; no kernel change (KC-3).
+
+### Added (2026-06-17: standard-library per-module spec scaffold — Phase-5 design wave orchestration)
+- **`docs/spec/stdlib/` — the per-module standard-library spec directory** (Living index + uniform
+  `_TEMPLATE.md`), decomposing **RFC-0016 (Draft)** into one design spec per module. The index restates the
+  load-bearing **§4.1 per-op contract** (C1–C6) and the **guarantee-matrix** obligation (RFC-0016 §4.5 —
+  ops × {tag · fallibility · declared effects · EXPLAIN-able}) as the shared spine every module spec traces
+  to, and keys each spec to its Phase-5 task (M-510…M-534). The template enforces **single-template
+  conformance** (the §4.1 doc quality-bar lint) so the specs stay uniform + reviewable. First wave marked
+  `design landing`: Tier-A differentiators `core`/`swap`/`ternary`/`dense`/`select`/`content` + Tier-B pure
+  commons `iter`/`math`/`error`/`cmp`/`fmt`; the remainder `anticipated` for later waves. Design-first — no
+  code, no kernel change (KC-3); ratification per module is the maintainer's append-only decision.
+- **`docs/spec/stdlib/self-hosting-readiness.md` (M-502, #150)** — the **self-hosting readiness gate** as a
+  *checkable verdict*: an eight-row capability checklist (data+matching · functions/closures/recursion ·
+  concrete L3 surface · a running term-language prototype · surface guarantee tags · surface effects ·
+  ambient repr · organization/packaging) assessed against the landed corpus, composed into an honest
+  **not-yet-established** verdict — the *substrate* is ready (RFC-0011/RFC-0001 r4 data/recursion/closures,
+  the lattice + effect model, DN-06 packaging), the *surface* to author + run a module is not (concrete L3
+  syntax KC-2-gated; M-320 #92 open). Records what the gate blocks (the Mycelium-lang migration half of
+  M-510…M-520) vs what proceeds regardless (RFC-0016 ratification, the per-module specs, the Rust-first
+  implementations). Never pre-declared (VR-5).
+- **`docs/Doc-Index.md`** — indexes the new `docs/spec/stdlib/` directory.
+
 ### Added (2026-06-17: M-363 documentation BUILD pipeline + the §4.1 doc quality-bar lint — Phase 9 Wave B)
 - **`crates/mycelium-doc/` — the M-363 doc BUILD pipeline** (≈3.5k LoC, tested), enacting the ratified
   `docs/spec/Narrative-Authoring-Pipeline.md`. A **content-addressed doc-IR** (`ir.rs`, reusing the
