@@ -160,3 +160,13 @@ RFC without waiting on self-hosting readiness.
   RFC-0016 §4.1 per-op contract. Records the batch/sequencing plan (§3) and carries the six RFC-0016 §8
   open questions as FLAGs (§4). Anticipated, not ratified; all tasks `status:needs-design`/`P3`. Numbers
   minted at the Phase-5 gate. Append-only.
+- **2026-06-17 — First design wave landed (specs, not ratification).** The per-module **design specs** now
+  exist under `docs/spec/stdlib/` for the first wave — Tier-A `core` (M-515) / `swap` (M-516) / `ternary`
+  (M-517) / `dense` (M-518) / `select` (M-519) / `content` (M-523) and Tier-B `iter` (M-526) / `math`
+  (M-525) / `error` (M-527) / `cmp` (M-532) / `fmt` (M-533) — plus the **M-502 self-hosting-readiness gate**
+  (honest verdict: *not yet established*). Each ships its load-bearing guarantee matrix (RFC-0016 §4.5) and
+  C1–C6 conformance; cross-module seams are reconciled in the stdlib index §5 (the swap↔convert boundary and
+  the numerics-ε ownership are *consistent*; the recurring naming/ergonomics items are corroborated RFC-0016
+  §8-Q2/Q3 signal for the maintainer). These are **Drafts (needs-design)**, not ratification — RFC-0016
+  (M-501) acceptance + the §8/§7 obligations remain the gate. The Rust-first implementations and the
+  Mycelium-lang migration half are still downstream (the latter gated by M-502). Append-only.

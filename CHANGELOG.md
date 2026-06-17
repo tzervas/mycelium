@@ -8,6 +8,28 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: standard-library first design wave — 11 module specs + the M-502 gate, integrated)
+- **Eleven per-module standard-library design specs** under `docs/spec/stdlib/`, each authored to the
+  uniform template and the RFC-0016 §4.1 contract, each shipping its load-bearing **guarantee matrix**
+  (ops × {tag · fallibility · declared effects · EXPLAIN-able}) and explicit **C1–C6 conformance**:
+  Tier-A differentiators **`core`** (M-515 — Ring-0 honest value model, re-export-only), **`swap`** (M-516
+  — certificate-carrying representation change over the one M-210 checker), **`ternary`** (M-517 —
+  balanced-ternary algebra Exact + inspectable I2_S/TL1/TL2 packing), **`dense`** (M-518 — typed
+  `Dense{dim,dtype}`, ε via ADR-010, Proven only where checked else downgraded), **`select`** (M-519 — the
+  total non-learned policy + mandatory EXPLAIN), **`content`** (M-523 — content-addressing identity, ADR-003);
+  Tier-B commons **`iter`** (M-526 — totality-preserving folds, the one lazy combinator named, not silent),
+  **`math`** (M-525 — domain errors explicit, transcendentals carry their ε tag), **`error`** (M-527 —
+  errors-as-values with the structural I1 never-silent floor), **`cmp`** (M-532 — the convert-vs-swap
+  boundary; lossy narrowing explicit), **`fmt`** (M-533 — dual human/machine projection, display ≠ identity).
+  Honest throughout (VR-5): no `Proven` tag without a checked basis, no fabricated crate API / bound /
+  schema — genuine unknowns are FLAGGED, not invented.
+- **Cross-module reconciliation (stdlib README §5).** The independently-authored specs are deconflicted: the
+  **swap ↔ convert** boundary and the **numerics-ε ownership** (dense/math → M-512) are *consistent* and
+  resolved in-wave; the recurring **naming** (§8-Q2) and **ergonomics-vs-contract** (§8-Q3) items are
+  corroborated from eleven angles as signal for RFC-0016's ratification pass; `fmt↔serialize`, the
+  `error↔recover` bridge, and `iter`'s early-termination question are FLAGGED to their owning tasks. No two
+  specs conflict on an owned surface. Design-first; no code; no kernel change (KC-3).
+
 ### Added (2026-06-17: standard-library per-module spec scaffold — Phase-5 design wave orchestration)
 - **`docs/spec/stdlib/` — the per-module standard-library spec directory** (Living index + uniform
   `_TEMPLATE.md`), decomposing **RFC-0016 (Draft)** into one design spec per module. The index restates the

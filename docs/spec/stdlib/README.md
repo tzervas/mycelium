@@ -66,19 +66,20 @@ matrix is how C1/C2/C3/C6 are *verified* rather than claimed.
 | [`../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md`](../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md) | M-501 | the contract + taxonomy keystone (every spec traces to its §4.1) | **Draft** — ratification is the maintainer's decision |
 | [`self-hosting-readiness.md`](./self-hosting-readiness.md) | M-502 | the *checkable* self-hosting verdict — gates the Mycelium-lang migration half (RFC-0016 §4.6), not the Rust-first specs/impls | **Draft (needs-design)** — verdict: *not yet established* |
 
-**Wave status:** `design landing` = a spec is being authored in this orchestration wave; `anticipated` =
-in the RFC-0016 taxonomy, scheduled for a later wave; FLAGs carried from RFC-0016 §8.
+**Wave status:** `Draft — landed` = the spec is authored + integrated in the first orchestration wave (and
+awaits maintainer ratification with RFC-0016); `anticipated` = in the RFC-0016 taxonomy, scheduled for a
+later wave. Cross-module FLAGs reconciled in §5.
 
 ### Tier A — differentiator modules (RFC-0016 §4.3)
 
 | Module | Spec | Task | Grounding | Wave status |
 |---|---|---|---|---|
-| `core` / prelude | [`core.md`](./core.md) | M-515 (#157) | RFC-0001 | **design landing** |
-| `swap` | [`swap.md`](./swap.md) | M-516 (#158) | RFC-0002; M-120/210/211/231 | **design landing** |
-| `ternary` | [`ternary.md`](./ternary.md) | M-517 (#159) | FR-M2; M-111; RFC-0004 §5 | **design landing** |
-| `dense` | [`dense.md`](./dense.md) | M-518 (#160) | RFC-0001 §4.1; M-230 | **design landing** |
-| `select` / `explain` | [`select.md`](./select.md) | M-519 (#161) | RFC-0005/ADR-006; M-220/221/222 | **design landing** |
-| `content` / `hash` | [`content.md`](./content.md) | M-523 (#164) | ADR-003; RFC-0001 §4.6 | **design landing** |
+| `core` / prelude | [`core.md`](./core.md) | M-515 (#157) | RFC-0001 | **Draft — landed** |
+| `swap` | [`swap.md`](./swap.md) | M-516 (#158) | RFC-0002; M-120/210/211/231 | **Draft — landed** |
+| `ternary` | [`ternary.md`](./ternary.md) | M-517 (#159) | FR-M2; M-111; RFC-0004 §5 | **Draft — landed** |
+| `dense` | [`dense.md`](./dense.md) | M-518 (#160) | RFC-0001 §4.1; M-230 | **Draft — landed** |
+| `select` / `explain` | [`select.md`](./select.md) | M-519 (#161) | RFC-0005/ADR-006; M-220/221/222 | **Draft — landed** |
+| `content` / `hash` | [`content.md`](./content.md) | M-523 (#164) | ADR-003; RFC-0001 §4.6 | **Draft — landed** |
 | `numerics` | — | M-512 | ADR-010; M-201/202/203 | anticipated |
 | `vsa` / `hdc` | — | M-513 | RFC-0003/0009 | anticipated |
 | `diag` | — | M-510 | RFC-0013; M-345 | anticipated |
@@ -90,11 +91,11 @@ in the RFC-0016 taxonomy, scheduled for a later wave; FLAGs carried from RFC-001
 
 | Module | Spec | Task | Honesty crux | Wave status |
 |---|---|---|---|---|
-| `iter` | [`iter.md`](./iter.md) | M-526 (#167) | total/terminating where the kernel guarantees it | **design landing** |
-| `math` | [`math.md`](./math.md) | M-525 (#166) | rounding/approx ops carry their tag | **design landing** |
-| `error` / `option` / `result` | [`error.md`](./error.md) | M-527 (#168) | propagation is the floor (I1) | **design landing** |
-| `cmp` / `convert` | [`cmp.md`](./cmp.md) | M-532 (#172) | lossy convert is explicit + fallible | **design landing** |
-| `fmt` | [`fmt.md`](./fmt.md) | M-533 (#173) | dual human/machine projection (G11) | **design landing** |
+| `iter` | [`iter.md`](./iter.md) | M-526 (#167) | total/terminating where the kernel guarantees it | **Draft — landed** |
+| `math` | [`math.md`](./math.md) | M-525 (#166) | rounding/approx ops carry their tag | **Draft — landed** |
+| `error` / `option` / `result` | [`error.md`](./error.md) | M-527 (#168) | propagation is the floor (I1) | **Draft — landed** |
+| `cmp` / `convert` | [`cmp.md`](./cmp.md) | M-532 (#172) | lossy convert is explicit + fallible | **Draft — landed** |
+| `fmt` | [`fmt.md`](./fmt.md) | M-533 (#173) | dual human/machine projection (G11) | **Draft — landed** |
 | `collections` | — | M-511 | value-semantic; no silent reorder | anticipated |
 | `text` / `string` | — | M-524 | `parse` → `Result`, lossy encoding explicit | anticipated |
 | `io` + `serialize` | — | M-514 | substrate single-consumption (LR-8) | anticipated |
@@ -103,7 +104,31 @@ in the RFC-0016 taxonomy, scheduled for a later wave; FLAGs carried from RFC-001
 | `rand` | — | M-531 | nondeterminism reified/named (RT3) | anticipated |
 | `testing` | — | M-534 | a skipped check is reported, never a silent pass | anticipated |
 
-## 5. How this index stays honest
+## 5. Cross-module reconciliation (first design wave)
+
+The wave authored each spec independently, so the seams **between** modules are reconciled here (the
+orchestrator's deconfliction job). Each spec FLAGs its own open questions in its §7; below are only the
+points that span modules. Most map onto an existing **RFC-0016 §8** question — recorded for the maintainer
+to resolve at ratification, **not** silently decided here (the planning analogue of G2).
+
+| Seam | Modules | Reconciliation | Maps to |
+|---|---|---|---|
+| **The swap ↔ convert boundary** | `swap` (M-516), `cmp`/`convert` (M-532) | **Consistent.** Both place a *representation* change (cross-`Repr`/paradigm, certificate-carrying — e.g. `BF16→F32` widening across the float/repr seam) in **`swap`**, and ordinary same-paradigm widening/narrowing (e.g. `i8→i32`, fallible `i32→i8`) in **`cmp`/`convert`**. No op is double-owned; neither smuggles a certificate-free representation change. | — (resolved within the wave) |
+| **Numeric ε bounds ownership** | `dense` (M-518), `math` (M-525) | **Consistent deferral.** Both route float-op ε through the verified numerics (`std.numerics`, M-512 / ADR-010) and **cite, never restate** the bound; both tag `Proven` *only* where Higham's side-conditions are checked, else honestly downgrade. The concrete ε constants are M-512's to fill — neither spec fabricated them. | §8-Q1 (module set) |
+| **JSON projection overlap** | `fmt` (M-533), `serialize` (M-514, *anticipated*) | **Deferred to when `serialize` lands.** `fmt.to_json` and `serialize`'s JSON both claim "dual human/machine projection". Proposed: one canonical JSON projection that `fmt` delegates to; reconcile when M-514 is authored. | §8-Q1/§8-Q3 |
+| **The recovery bridge** | `error` (M-527), `recover` (M-520, *anticipated*) | **Co-design flag.** `error`'s `recover`-bridge signature (`RecoverOutcome`/`PolicyRef`) is owned by `std.recover` (RFC-0014); `error` described it abstractly without fabricating it. Reconcile the exact signature when M-520 lands. | §8-Q1 |
+| **content-hash vs hash-for-maps** | `content` (M-523), `collections` (M-511, *anticipated*) | **Boundary stated.** `content` owns *identity* hashing (canonical content-addressing, ADR-003); `collections` owns *non-identity* hashing-for-maps. Kept distinct. | — |
+| **Early-termination over a total `for` fold** | `iter` (M-526) → RFC-0007 §4.8 | **Question back to the kernel.** Short-circuit combinators (`any`/`all`/`find`) over the no-`break` total fold either use a done-flag fold (total, walks the full spine) or motivate an early-termination kernel primitive. FLAGGED to RFC-0007, not decided here. | RFC-0007 §4.8 |
+| **Naming** (`Bit`/`Trit`, the `std` phylum, re-export names, the canonical error-value identifier) | `core`, `ternary`, `swap`, `content` | All defer to the DN-02/06 lexicon decision; `core` and `error` must agree the **one** error-value name; no spec committed a name the corpus hasn't ratified. | **§8-Q2** |
+| **Ergonomics vs the contract** (always-explicit EXPLAIN/certificate/tag/identity-ref at the call site vs implicit-but-inspectable) | `swap`, `select`, `content`, `math`, `error`, `iter`, `fmt` | The single most recurrent tension (tension A). Every affected spec FLAGs it rather than choosing; needs one per-ring design pass, not seven per-module answers. | **§8-Q3** |
+| **The migration differential's bar** | `swap`, `self-hosting-readiness` (M-502) | What a self-hosted module must match (observable results vs tags+EXPLAIN bit-for-bit) before its verdict flips. | **§8-Q5** |
+| **`wild`/FFI for transcendentals** | `math` (M-525) | Whether `math`'s transcendental floor is a pure trusted routine or libm via `wild` (which would narrow its C5 "no `wild`" claim). | **§8-Q6** |
+
+**Net:** no two specs conflict on an owned surface; the recurring items are the *known* RFC-0016 §8
+questions (naming §8-Q2, ergonomics §8-Q3), now corroborated from eleven independent angles — useful signal
+for the maintainer's ratification pass.
+
+## 6. How this index stays honest
 
 - **Append-only with status transitions**, mirroring the ADR/RFC discipline: a module row moves
   `design landing → Draft (needs-design) → Accepted` only as the spec actually lands and is ratified;
