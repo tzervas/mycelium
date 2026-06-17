@@ -94,6 +94,17 @@ reference (RFC-0016 §4.6 Phase 5b) — the same M-210 checker the kernel fragme
 
 ## Meta — changelog
 
+- **2026-06-17 — RFC-0016 ratified; the §8-Q5 differential bar fixed; verdict held at *not yet* (A2 ruling).**
+  With RFC-0016 now **Accepted** (DN-07), the gate's two carried FLAGs are partly discharged: **Q-a / §8-Q5
+  (the migration differential's bar) is RESOLVED** to a **two-level bar** — M-210 observable-result
+  equivalence as the universal floor + per-module tag/EXPLAIN equivalence for honesty-load-bearing modules
+  (the §5 re-check trigger now reads against this ratified bar). The maintainer also ruled (**A2**) that the
+  **concrete L3 authoring surface (capability #3) stays KC-2-gated** (RFC-0006 §10) — the deciding experiment
+  M-002 (#3) is unrun (needs LLM API; de-risked by the new `tools/llm-harness/` validation harness). So the
+  **overall verdict stays NOT YET established**: #4 (term prototype) landed, #3 (the in-language source
+  surface) remains the single open gate, and no module is truthfully "self-hosted." Q-c (§8-Q3 surface
+  coverage) folds into the now-scheduled per-ring ergonomics pass (M-540). The verdict is **not flipped** (a
+  flip awaits #3 + a passing migration differential). Append-only.
 - **2026-06-17 — Capability #4 landed; verdict held at *not yet* (honest, VR-5).** Refines capability #4
   (leaf emission / term-language prototype) `not yet → landed (prototype/IR)`: M-320's codegen half is
   complete — the elaborator compiles nested `match` to flat L0 `Match`, the L1 prototype runs the

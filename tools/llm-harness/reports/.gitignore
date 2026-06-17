@@ -1,0 +1,9 @@
+# Generated run artifacts are NOT committed — each harness run writes a new
+# timestamped report/log here. One example set (the 20260617T182214Z-* trio,
+# the --mock format reference) is tracked deliberately; everything else is
+# ignored so real runs never clutter the tree.
+*
+!.gitignore
+!20260617T182214Z-report.json
+!20260617T182214Z-report.txt
+!20260617T182214Z.log

@@ -63,7 +63,7 @@ matrix is how C1/C2/C3/C6 are *verified* rather than claimed.
 
 | Doc | Task | Role | Status |
 |---|---|---|---|
-| [`../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md`](../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md) | M-501 | the contract + taxonomy keystone (every spec traces to its §4.1) | **Draft** — ratification is the maintainer's decision |
+| [`../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md`](../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md) | M-501 | the contract + taxonomy keystone (every spec traces to its §4.1) | **Accepted** (2026-06-17, maintainer; DN-07) — phylum `std`; full 23-module v0 taxonomy; §8 resolved/deferred (see §5 Net) |
 | [`self-hosting-readiness.md`](./self-hosting-readiness.md) | M-502 | the *checkable* self-hosting verdict — gates the Mycelium-lang migration half (RFC-0016 §4.6), not the Rust-first specs/impls | **Draft (needs-design)** — verdict: *not yet established* |
 
 **Wave status:** `Draft — landed` = the spec is authored + integrated (and awaits maintainer ratification
@@ -146,6 +146,31 @@ the `wild`/`std-sys` floor §8-Q6 (now corroborated by `fs`/`rand`/`math`), the 
 and the differential bar §8-Q5 — each now corroborated from many independent angles. That convergence is the
 useful signal for the maintainer's ratification pass; nothing here silently decides a §8 question.
 
+**Ratification dispositions (2026-06-17, maintainer; RFC-0016 now Accepted; DN-07).** The §8 questions and
+the residual FLAG above are now ruled on (recorded append-only in RFC-0016 §8 + its changelog). The table
+rows above are kept verbatim as the design-wave history; the rulings supersede their "FLAGGED" state:
+
+- **`BF16→F32` placement → RESOLVED:** the lossless reverse widening lifts to **`cmp`/`convert`** (no
+  certificate); `swap` keeps only the certified/lossy direction. The last open *owned-surface* seam is closed.
+- **§8-Q2 naming → RESOLVED:** phylum **`std`**; module names **mirror the capability-crate names**; themed
+  names only where the corpus already has one (`spore`, `runtime`); `core`/`error` share the **one**
+  error-value identifier (DN-03).
+- **§8-Q5 differential bar → RESOLVED:** a **two-level bar** — M-210 observable-result equivalence (floor) +
+  per-module tag/EXPLAIN equivalence (honesty-load-bearing modules).
+- **§8-Q6 `wild`/`std-sys` floor → RESOLVED:** the audited `wild` floor (`fs`/`rand`/`math`) splits into a
+  separate **`std-sys` phylum** (LR-9 leak-free `std`); the minimal audited FFI inventory is a follow-on
+  (**M-541**).
+- **§8-Q3 ergonomics-vs-contract → DEFERRED-WITH-DIRECTION:** adopt the **RFC-0012 ambient direction**
+  library-wide (implicit-but-inspectable, EXPLAIN-able); discharge via one **per-ring design pass** (**M-540**).
+- **§8-Q4 `runtime` phylum → DEFERRED (Phase-7):** a separate `runtime` phylum, activated construct-by-construct
+  at the Phase-7 gate.
+- **RFC-0016 §7 grounding → DISCHARGED:** `research/08-honest-stdlib-prior-art-RECORD.md` (T8.1–T8.7) traces
+  the cross-language module-set comparison + the "honest stdlib" prior art.
+
+The Mycelium-lang *migration half* of M-510…M-520 still waits on the concrete L3 authoring surface
+(KC-2-gated; RFC-0006 §10; self-hosting capability #3 — `self-hosting-readiness.md`); the Rust-first specs +
+implementations proceed against RFC-0016 now.
+
 ## 6. How this index stays honest
 
 - **Append-only with status transitions**, mirroring the ADR/RFC discipline: a module row moves
@@ -157,6 +182,16 @@ useful signal for the maintainer's ratification pass; nothing here silently deci
 
 ## Meta — changelog
 
+- **2026-06-17 — RFC-0016 ratified (keystone → Accepted); §8 dispositions recorded.** The maintainer ran the
+  DN-07 ratification pass: the keystone row moves **Draft → Accepted** (phylum `std`; full 23-module v0
+  taxonomy). §5 gains a **Ratification dispositions** block: `BF16→F32` → `cmp`/`convert` (RESOLVED, last
+  owned-surface seam closed), Q2 naming (`std` + crate-mirrored + one error-value name, RESOLVED), Q5
+  two-level differential bar (RESOLVED), Q6 `std-sys` split (RESOLVED; FFI inventory → M-541), Q3
+  ergonomics-vs-contract (DEFERRED-WITH-DIRECTION — RFC-0012 ambient; per-ring pass → M-540), Q4 `runtime`
+  (DEFERRED to Phase-7); the §7 grounding obligation DISCHARGED (`research/08-honest-stdlib-prior-art-RECORD.md`).
+  The §5 history rows are kept verbatim (append-only); the rulings supersede their FLAGGED state. The
+  per-module specs stay `Draft` (only the keystone is ratified); the Mycelium-lang migration half still waits
+  on the KC-2-gated concrete L3 surface (M-502). Append-only.
 - **2026-06-17 — Second design wave integrated.** Lands the remaining 13 module specs, completing the
   RFC-0016 taxonomy as `Draft`: Tier-A `numerics` (M-512, #153), `vsa` (M-513, #154), `diag` (M-510, #151),
   `recover` (M-520, #156), `runtime` (M-521, #162), `spore` (M-522, #163); Tier-B `collections` (M-511, #152),

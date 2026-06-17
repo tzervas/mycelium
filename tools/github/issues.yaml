@@ -471,6 +471,15 @@ issues:
       A generate -> semantic-feedback -> self-correct loop over the LSP surface, operationalizing SC-5b (NFR-2; Area 6; E3-2). The harness is local; the RUN needs LLM API access (KC-2-adjacent).
       Acceptance: the loop runs against the LSP feedback channel; the live LLM run is gated on API access (honest "not established" until then).
 
+  - id: M-331
+    title: "M-331 — Portable LLM-validation harness (llama.cpp / Termux) de-risking M-330/M-002"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P2]
+    depends_on: [M-330]
+    body: |
+      A small, portable validation harness (tools/llm-harness/) that de-risks the backlogged LLM work (M-330 #97/#127, M-002 #3 — all "needs LLM API") without doing the integration. Targets llama.cpp (GGUF) and runs under Termux on Android (no x86 assumptions). Two modes: a --mock dry-run (no model; skips gracefully in CI/cloud, exercises the plumbing) and a real mode (shells to a local llama-cli/server; a missing binary/model is an explicit SKIP, never a false pass — the `just check` idiom). Validations (the smallest set that unblocks the LLM work): model-load + deterministic-seed round-trip; structured-output/JSON-projection conformance (G11); the guarantee-tag honesty gate (model-derived claims must be Empirical/Declared, NEVER Proven — VR-5); a latency/token report. Each run emits a dual JSON + human report and a timestamped log (G11), every check PASS/SKIP/FAIL explicit and tagged (RFC-0013 I1). Above the kernel (KC-3). The scaffold + a --mock run landed 2026-06-17; the real run is the maintainer's to execute on-device and feed back.
+      Acceptance: the --mock mode runs green here (report + log captured as the format example); a documented Termux build/run path for the real mode; honest skip-not-false-pass behavior; the M-002 KC-2 experiment becomes runnable once a model is wired.
+
 # Phase 4 (M-34x) — the interpreted<->compiled ABI + hot-inject + AOT-fragment completion. Created
 # 2026-06-16; gated on ADR-016/017 (Accepted 2026-06-16). The Phase-4 milestone + phase:4 label are now
 # cut (milestones.json / labels.json, 2026-06-16); these tasks are tagged phase:4 / "Phase 4 — …".
@@ -1184,6 +1193,25 @@ issues:
     body: |
       RFC-0016 §4.4 — the repo's own verification discipline as a library: property tests (a bound for every guarantee), golden/snapshot tests, and the differential harness (the M-151/M-210 interp↔AOT pattern). Honesty crux: a skipped or undetermined check is REPORTED, never a silent pass (the `just check` ethos — skips are explicit and explained, G2/VR-5). Dogfoods the language's own honesty rule.
       Acceptance (needs-design): property/golden/differential harnesses; explicit skip reporting (never a silent green); meets the M-501 contract.
+
+  # ---- RFC-0016 ratification follow-ons (opened 2026-06-17 at the DN-07 ratification pass) ----
+  - id: M-540
+    title: "M-540 — stdlib ergonomics-vs-contract: one per-ring design pass (RFC-0016 §8-Q3, tension A)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501]
+    body: |
+      RFC-0016 §8-Q3 (tension A) was ratified DEFERRED-WITH-DIRECTION (DN-07; 2026-06-17): the maintainer accepted the RFC-0012 ambient-representation DIRECTION library-wide — the tag/EXPLAIN/certificate/effect machinery is implicit at the call site but always reified, queryable, and EXPLAIN-able (never a black box, C3) — to be discharged as ONE per-ring design pass, not seven per-module answers. ~10 specs FLAG this (core/cmp/error/fmt/iter/math/recover/select/testing/text; stdlib README §5). This is the chief genuine open stdlib design question.
+      Acceptance (design-first): a per-ring (Ring 0/1/2) ergonomics design pass that fixes, per ring, where the honesty machinery is ambient-but-inspectable vs always-explicit, consistent with RFC-0012's I1/I2 invariants and the §4.1 contract; resolves the §5 tension-A FLAGs without weakening C1–C6 (VR-5); no kernel change (KC-3).
+
+  - id: M-541
+    title: "M-541 — std-sys: the minimal audited wild/FFI floor inventory (RFC-0016 §8-Q6, LR-9)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501]
+    body: |
+      RFC-0016 §8-Q6 was ratified RESOLVED (DN-07; 2026-06-17): the audited `wild` floor splits into a separate `std-sys` phylum so pure `std` stays leak-free by construction (LR-9) and can publish a `wild`-free certification badge (RFC-0016 §9). The three call sites are fs syscalls (M-528), rand platform entropy (M-531), and math libm transcendentals (M-525) — stdlib README §5 "one std-sys question, three call sites"; the Rust core/std isolation precedent (research/08 T8.1).
+      Acceptance (design-first): the minimal audited FFI inventory for std-sys (the exact set of `wild` blocks per ADR-014, each with its audit story); the std/std-sys boundary so no pure-std op transitively reaches `wild`; the leak-free certification badge criterion (§9). No kernel change (KC-3).
 
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 # Phase 6 — Native Acceleration & Deployment (ANTICIPATED — not yet ratified; scope firms at the prior

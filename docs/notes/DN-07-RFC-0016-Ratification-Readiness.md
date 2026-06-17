@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-07 |
-| **Status** | **Draft** (2026-06-17) — a ratification-*readiness* assessment, presented for the maintainer's append-only call. It **does not** flip RFC-0016 `Draft → Accepted` (that is the maintainer's decision per RFC-0016 §8 and the append-only rule); it frames *what remains to decide* so the pass is fast and honest. |
+| **Status** | **Resolved** (2026-06-17) — the maintainer ran the ratification pass this note framed: **RFC-0016 is now Accepted**. Its §3 recommendations were ruled on (Q1/Q2/Q5/Q6 + the `BF16→F32` FLAG **accepted as recommended**; Q3 **accepted as a direction** with a scheduled per-ring pass → M-540; Q4 **deferred** to the Phase-7 `runtime`-phylum gate; the §4 §7 grounding obligation **discharged** via `research/08-honest-stdlib-prior-art-RECORD.md`). The dispositions are recorded append-only in RFC-0016 §8 + its changelog. Was **Draft** (a ratification-*readiness* assessment, presented for the maintainer's append-only call; it did not itself flip RFC-0016's status). |
 | **Feeds** | **RFC-0016** (Core Library & Standard Library — the contract + taxonomy keystone, `Draft`); `docs/spec/stdlib/` (the 23 module specs + their cross-module reconciliation §5); `docs/spec/stdlib/self-hosting-readiness.md` (M-502, the migration gate); `docs/planning/phase-5.md` (the M-510…M-534 decomposition) |
 | **Date** | June 17, 2026 |
 | **Decides** | *Nothing normatively* — it **recommends** a disposition for each RFC-0016 §8 open question (resolve-with-a-recommendation vs formally-defer), states which items genuinely need maintainer ratification, and records the one residual cross-module FLAG + the standing pre-ratification grounding obligation (§7). Grounded throughout; never invents a resolution where the corpus has none (the planning analogue of G2). |
@@ -198,6 +198,17 @@ append-only rule); it is the maintainer's call.
 
 ## Meta — changelog
 
+- **2026-06-17 — Draft → Resolved (the ratification pass ran).** The maintainer ruled on every §3
+  recommendation and **RFC-0016 moved Draft → Accepted**: Q1 (full 23-module taxonomy; five-candidate floor
+  first; `diag`/`recover` lead migration), Q2 (phylum `std`; crate-mirrored names; one `core`↔`error`
+  error-value name), Q5 (two-level differential bar), Q6 (`std-sys` split) and the `BF16→F32` placement
+  (→ `cmp`/`convert`) **accepted as recommended**; Q3 (ergonomics-vs-contract) **accepted as a direction**
+  (RFC-0012 ambient) with a scheduled per-ring design pass (**M-540**); Q4 (`runtime` placement) **deferred**
+  to the Phase-7 gate (separate `runtime` phylum). The §7 grounding obligation (§4) is **discharged** —
+  `research/08-honest-stdlib-prior-art-RECORD.md` (T8.1–T8.7). The `std-sys` FFI inventory is a follow-on
+  (**M-541**). The concrete L3 *authoring* surface stays KC-2-gated (A2 ruling; RFC-0006 §10), so the M-502
+  self-hosting verdict honestly stays **not-yet**. All dispositions recorded append-only in RFC-0016 §8 + its
+  changelog; this note's job (frame the pass) is complete. Append-only status transition.
 - **2026-06-17 — Draft (created).** Ratification-readiness assessment for RFC-0016 (M-501, #149): the
   23 module specs summarized by Ring/Tier (Ring 0 `core`; Ring 1 the nine Tier-A capability surfaces;
   Ring 2 the Tier-B commons + reserved `runtime`), a recommended disposition for each §8 open question

@@ -58,6 +58,7 @@
       "xtask": "toolchain",
       "tooling": "toolchain",
       "diagnostics": "toolchain",
+      "harness": "toolchain",
       "examples": "toolchain",
       "stdlib": "toolchain",
       "doc": "toolchain",
