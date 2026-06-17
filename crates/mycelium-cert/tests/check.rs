@@ -4,12 +4,12 @@
 //! failure mode is an explicit `NotValidated{reason, fallback}` — never a silent pass.
 
 use mycelium_cert::{
-    binary_to_ternary, check, roundtrip_lemma_ref, ternary_to_binary, BinTernParams, CheckVerdict,
-    Evidence, Fallback, NotValidatedReason, RefinementRelation, SwapCertificate,
+    binary_to_ternary, check, check_core, roundtrip_lemma_ref, ternary_to_binary, BinTernParams,
+    CheckVerdict, Evidence, Fallback, NotValidatedReason, RefinementRelation, SwapCertificate,
 };
 use mycelium_core::{
-    binary, operation_hash, ternary, Bound, BoundBasis, BoundKind, ContentHash, GuaranteeStrength,
-    Meta, NormKind, Payload, Provenance, Repr, ScalarKind, Value,
+    binary, operation_hash, ternary, Bound, BoundBasis, BoundKind, ContentHash, CoreValue, CtorRef,
+    Datum, GuaranteeStrength, Meta, NormKind, Payload, Provenance, Repr, ScalarKind, Value,
 };
 use mycelium_numerics::Certificate;
 
@@ -461,4 +461,82 @@ fn relative_deviation_from_zero_reference_diverges() {
         &Evidence::Swap(&cert),
     ));
     assert!(matches!(reason, NotValidatedReason::Diverged { .. }));
+}
+
+// ---------- check_core: ObservationalEquiv over the data + recursion fragment (M-302) ----------
+
+/// A shared `Nat`-like declaration hash; constructor 0 = `Z`, constructor 1 = `S(Nat)`.
+fn nat_decl() -> ContentHash {
+    ContentHash::parse("blake3:natdecl").unwrap()
+}
+fn z() -> CoreValue {
+    CoreValue::Data(Datum::new(CtorRef::new(nat_decl(), 0), vec![]))
+}
+fn s(inner: CoreValue) -> CoreValue {
+    CoreValue::Data(Datum::new(CtorRef::new(nat_decl(), 1), vec![inner]))
+}
+
+#[test]
+fn check_core_validates_structurally_equal_datums() {
+    // S(S(Z)) ≡ S(S(Z)) — same constructors, same fields, all-Exact summary ⇒ Validated{Exact}.
+    assert_eq!(check_core(&s(s(z())), &s(s(z()))), validated_exact());
+}
+
+#[test]
+fn check_core_on_a_repr_leaf_agrees_with_check_observational() {
+    // A representation CoreValue routes to the existing observable — same verdict as `check`.
+    let a = CoreValue::Repr(byte_of(99));
+    let b = CoreValue::Repr(byte_of(99));
+    assert_eq!(check_core(&a, &b), validated_exact());
+    let c = CoreValue::Repr(byte_of(98));
+    assert!(matches!(
+        reason_of(check_core(&a, &c)),
+        NotValidatedReason::Diverged { .. }
+    ));
+}
+
+#[test]
+fn check_core_catches_a_wrong_constructor() {
+    // Mutant-witness: a lowering that built `Z` where the reference built `S(Z)` (wrong arm) is an
+    // explicit divergence, never a silent pass (NFR-7/VR-4).
+    assert!(matches!(
+        reason_of(check_core(&s(z()), &z())),
+        NotValidatedReason::Diverged { .. }
+    ));
+}
+
+#[test]
+fn check_core_catches_a_divergent_field_deep_in_the_tree() {
+    // Mutant-witness at depth: S(S(Z)) vs S(Z) — the constructors agree at the root and the first S,
+    // but the inner field diverges (S(Z) vs Z). The recursion must surface it.
+    assert!(matches!(
+        reason_of(check_core(&s(s(z())), &s(z()))),
+        NotValidatedReason::Diverged { .. }
+    ));
+}
+
+#[test]
+fn check_core_catches_a_repr_field_divergence() {
+    // A datum carrying a representation field (the `Mk(Binary{8})` shape): a wrong field byte is
+    // caught at the representation leaf through the existing exact observable.
+    let mk = |b: Value| CoreValue::Data(Datum::new(CtorRef::new(nat_decl(), 1), vec![b.into()]));
+    assert_eq!(
+        check_core(&mk(byte_of(10)), &mk(byte_of(10))),
+        validated_exact()
+    );
+    assert!(matches!(
+        reason_of(check_core(&mk(byte_of(10)), &mk(byte_of(11)))),
+        NotValidatedReason::Diverged { .. }
+    ));
+}
+
+#[test]
+fn check_core_catches_a_category_mismatch() {
+    // A representation value vs a datum are different observable categories — an explicit divergence,
+    // not a coincidental pass.
+    let repr = CoreValue::Repr(byte_of(0));
+    assert!(matches!(
+        reason_of(check_core(&repr, &z())),
+        NotValidatedReason::Diverged { .. }
+    ));
 }

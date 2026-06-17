@@ -27,7 +27,9 @@
 //! carrying its [`NotValidatedReason`] *and* the explicit [`Fallback`] path (RFC-0002 §2): keep the
 //! reference artifact `A` (refuse the swap; run the trusted interpreter, ADR-007).
 
-use mycelium_core::{BoundKind, ContentHash, GuaranteeStrength, NormKind, Payload, Repr, Value};
+use mycelium_core::{
+    BoundKind, ContentHash, CoreValue, Datum, GuaranteeStrength, NormKind, Payload, Repr, Value,
+};
 use mycelium_numerics::{
     basis_strength, check_error_claim, check_union_claim, Certificate, CheckOutcome, ErrorBound,
     ErrorOp, ProbBound,
@@ -270,6 +272,72 @@ fn check_observational(
             b.meta().guarantee()
         ));
     }
+    CheckVerdict::Validated {
+        strength: GuaranteeStrength::Exact,
+    }
+}
+
+/// Observational equivalence over a whole [`CoreValue`] (RFC-0011 §4.6; NFR-7) — the M-151/M-210
+/// observable **generalized from a representation [`Value`] to the data + recursion fragment**
+/// (M-342). It is the *same* relation, one category up: a representation leaf is the existing
+/// `(repr, payload, guarantee)` observable ([`check_observational`], so path-dependent provenance is
+/// excluded exactly as before); a [`Datum`] is its **constructor identity** + **meet-summary
+/// guarantee** + **field-wise** observational equivalence (recursing into each field). Two values of
+/// different category (a repr vs a datum) are an explicit divergence.
+///
+/// This lets the interp↔AOT/native differential validate **datum** results through the single shared
+/// checker — closing M-302's "through the M-210 `ObservationalEquiv` checker" obligation for the
+/// whole kernel corpus, not just representation results — and a mislabeled lowering (wrong
+/// constructor, wrong field, weakened guarantee) is caught here, never a silent pass (NFR-7/VR-4).
+#[must_use]
+pub fn check_core(a: &CoreValue, b: &CoreValue) -> CheckVerdict {
+    match (a, b) {
+        (CoreValue::Repr(x), CoreValue::Repr(y)) => check(
+            x,
+            y,
+            RefinementRelation::ObservationalEquiv,
+            Certificate::exact(),
+            &Evidence::Observational,
+        ),
+        (CoreValue::Data(x), CoreValue::Data(y)) => check_data(x, y),
+        (CoreValue::Repr(_), CoreValue::Data(_)) | (CoreValue::Data(_), CoreValue::Repr(_)) => {
+            diverged("observable categories differ: a representation value vs a datum")
+        }
+    }
+}
+
+/// The datum instance of [`check_core`]: constructor identity, then the meet-summary guarantee, then
+/// field-wise observational equivalence. The constructor + guarantee checks make a mislabeled or
+/// guarantee-weakened lowering an explicit divergence; the field recursion bottoms out at the
+/// representation leaves' exact observable.
+fn check_data(a: &Datum, b: &Datum) -> CheckVerdict {
+    if a.ctor() != b.ctor() {
+        return diverged(format!(
+            "constructors differ: {:?} vs {:?}",
+            a.ctor(),
+            b.ctor()
+        ));
+    }
+    // A constructor match fixes the arity (WF6 saturation), but check defensively rather than index.
+    if a.fields().len() != b.fields().len() {
+        return diverged("datum arities differ for the same constructor (malformed datum)");
+    }
+    if a.guarantee() != b.guarantee() {
+        return diverged(format!(
+            "datum guarantee summaries differ: {:?} vs {:?}",
+            a.guarantee(),
+            b.guarantee()
+        ));
+    }
+    // Field-wise: the first divergence propagates (with its reason), never a silent skip.
+    for (x, y) in a.fields().iter().zip(b.fields()) {
+        let verdict = check_core(x, y);
+        if !matches!(verdict, CheckVerdict::Validated { .. }) {
+            return verdict;
+        }
+    }
+    // Structurally identical (same ctor, same guarantee, observationally-equal fields) ⇒ the
+    // equivalence holds exactly, consistent with the representation-leaf verdict.
     CheckVerdict::Validated {
         strength: GuaranteeStrength::Exact,
     }

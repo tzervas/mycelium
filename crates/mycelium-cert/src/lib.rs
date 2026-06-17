@@ -28,7 +28,9 @@ use mycelium_core::{
 };
 use mycelium_interp::{EvalError, SwapEngine};
 
-pub use check::{check, CheckVerdict, Evidence, Fallback, NotValidatedReason, RefinementRelation};
+pub use check::{
+    check, check_core, CheckVerdict, Evidence, Fallback, NotValidatedReason, RefinementRelation,
+};
 pub use dense::{dense_f32_to_bf16, BF16_MIN_NORMAL, BF16_REL_EPS};
 pub use dense_vsa::{dense_to_vsa, vsa_to_dense, DENSE_VSA_EMP_DELTA, DENSE_VSA_MODEL};
 
