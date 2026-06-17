@@ -93,21 +93,27 @@ cargo build -p mycelium-check --bin myc-check     # → target/debug/myc-check
 # or point at an existing binary:  export MYC_CHECK=/path/to/myc-check
 ```
 
-> **Termux / Android (ARM64) build prerequisites.** Use the **Termux-packaged** Rust
+> **Termux / Android (ARM64) build notes.** Use the **Termux-packaged** Rust
 > (`pkg install rust` → `cargo`/`rustc` under `$PREFIX/bin`), not a rustup toolchain
-> (rustup's binaries aren't built for Termux). If `cargo` compiles for a while and then
-> a **build script fails at link** — e.g. `linking with cc failed` while building
-> `serde_core`/`proc-macro2` — install the spawn shim Termux's libc needs and rebuild:
+> (rustup's binaries aren't built for Termux). `cargo` compiles for a while and then a
+> **build script fails at link** (`linking with cc failed`, for every crate). Read the
+> `note:` line — the cause is one of:
 >
-> ```sh
-> pkg install libandroid-spawn binutils
-> cargo build -p mycelium-check --bin myc-check
-> ```
->
-> (Termux's libc lacks `posix_spawn`; the patched rust links `-landroid-spawn`, so the
-> link fails until `libandroid-spawn` is present.) If the linker instead reports a
-> *different* missing library (`note: ... unable to find library -lXXX`), paste that
-> line — the fix is usually `pkg install` of the matching package.
+> - **`cc` is not the C compiler** (note: `Unknown command '…/symbols.o'. Try: cc help`).
+>   Something other than clang is shadowing `cc` on PATH, and rustc links via `cc`. Point
+>   Rust + the cc-crate at clang directly:
+>   ```sh
+>   command -v cc; file "$(command -v cc)"        # identify the impostor
+>   export CC="$PREFIX/bin/clang" CXX="$PREFIX/bin/clang++"
+>   export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$PREFIX/bin/clang"
+>   cargo build -p mycelium-check --bin myc-check
+>   ```
+>   Persist it in `~/.cargo/config.toml`:
+>   `[target.aarch64-linux-android]` / `linker = "clang"`. (`pkg install clang` provides
+>   the real `cc`→clang, but only wins if it's earlier on PATH than the impostor.)
+> - **A missing library** (note: `unable to find library -landroid-spawn` or `-lXXX`).
+>   `pkg install libandroid-spawn binutils` (Termux's libc lacks `posix_spawn`; the
+>   patched rust links `-landroid-spawn`), or `pkg install` the package matching `-lXXX`.
 
 If `myc-check` can't be built, the Mycelium arm **SKIPs with an explicit reason** (the
 report records it) — it never reports a fake 0%.

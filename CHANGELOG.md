@@ -9,12 +9,14 @@ corpus, not released software. Versioning will begin when the kernel does.
 ## [Unreleased]
 
 ### Added (2026-06-17: Termux/ARM64 myc-check build prerequisites documented)
-- **`experiments/README.md` now documents the Termux (Android/ARM64) Rust build prerequisites**
-  for `myc-check`, found by an on-device build: use the Termux-packaged Rust (not rustup), and when
-  a build script fails at link (`linking with cc failed` building `serde_core`/`proc-macro2`),
-  `pkg install libandroid-spawn binutils` and rebuild (Termux's libc lacks `posix_spawn`; the
-  patched rust links `-landroid-spawn`). This was surfaced cleanly thanks to the never-silent build
-  error added in the previous entry. No code change.
+- **`experiments/README.md` documents the Termux (Android/ARM64) Rust build failure modes** for
+  `myc-check`, found by an on-device build and the never-silent cargo-error surfacing. The actual
+  blocker on the test device was **`cc` not being the C compiler** (a non-clang `cc` shadowing it on
+  PATH — `note: Unknown command '…/symbols.o'. Try: cc help`); rustc links every build script via
+  `cc`, so all of them failed. Fix: point Rust + the cc-crate at clang
+  (`CC=$PREFIX/bin/clang`, `CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=clang`, or `~/.cargo/config.toml`
+  `linker = "clang"`). The note also keeps the missing-library case (`libandroid-spawn`/`-lXXX`).
+  Use the Termux-packaged rust, not rustup. No code change.
 
 ### Fixed (2026-06-17: KC-2 Mycelium arm — wrong cargo package + swallowed build error)
 - **The KC-2 Mycelium arm always SKIPped because the checker built the wrong crate.**
