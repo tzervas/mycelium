@@ -18,6 +18,15 @@ corpus, not released software. Versioning will begin when the kernel does.
   `design landing`: Tier-A differentiators `core`/`swap`/`ternary`/`dense`/`select`/`content` + Tier-B pure
   commons `iter`/`math`/`error`/`cmp`/`fmt`; the remainder `anticipated` for later waves. Design-first — no
   code, no kernel change (KC-3); ratification per module is the maintainer's append-only decision.
+- **`docs/spec/stdlib/self-hosting-readiness.md` (M-502, #150)** — the **self-hosting readiness gate** as a
+  *checkable verdict*: an eight-row capability checklist (data+matching · functions/closures/recursion ·
+  concrete L3 surface · a running term-language prototype · surface guarantee tags · surface effects ·
+  ambient repr · organization/packaging) assessed against the landed corpus, composed into an honest
+  **not-yet-established** verdict — the *substrate* is ready (RFC-0011/RFC-0001 r4 data/recursion/closures,
+  the lattice + effect model, DN-06 packaging), the *surface* to author + run a module is not (concrete L3
+  syntax KC-2-gated; M-320 #92 open). Records what the gate blocks (the Mycelium-lang migration half of
+  M-510…M-520) vs what proceeds regardless (RFC-0016 ratification, the per-module specs, the Rust-first
+  implementations). Never pre-declared (VR-5).
 - **`docs/Doc-Index.md`** — indexes the new `docs/spec/stdlib/` directory.
 
 ### Added (2026-06-17: M-363 documentation BUILD pipeline + the §4.1 doc quality-bar lint — Phase 9 Wave B)

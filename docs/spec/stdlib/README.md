@@ -59,6 +59,13 @@ matrix is how C1/C2/C3/C6 are *verified* rather than claimed.
 
 ## 4. Module spec index
 
+### Keystone & gate
+
+| Doc | Task | Role | Status |
+|---|---|---|---|
+| [`../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md`](../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md) | M-501 | the contract + taxonomy keystone (every spec traces to its §4.1) | **Draft** — ratification is the maintainer's decision |
+| [`self-hosting-readiness.md`](./self-hosting-readiness.md) | M-502 | the *checkable* self-hosting verdict — gates the Mycelium-lang migration half (RFC-0016 §4.6), not the Rust-first specs/impls | **Draft (needs-design)** — verdict: *not yet established* |
+
 **Wave status:** `design landing` = a spec is being authored in this orchestration wave; `anticipated` =
 in the RFC-0016 taxonomy, scheduled for a later wave; FLAGs carried from RFC-0016 §8.
 
