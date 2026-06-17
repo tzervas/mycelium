@@ -113,7 +113,7 @@ to resolve at ratification, **not** silently decided here (the planning analogue
 
 | Seam | Modules | Reconciliation | Maps to |
 |---|---|---|---|
-| **The swap ↔ convert boundary** | `swap` (M-516), `cmp`/`convert` (M-532) | **Consistent.** Both place a *representation* change (cross-`Repr`/paradigm, certificate-carrying — e.g. `BF16→F32` widening across the float/repr seam) in **`swap`**, and ordinary same-paradigm widening/narrowing (e.g. `i8→i32`, fallible `i32→i8`) in **`cmp`/`convert`**. No op is double-owned; neither smuggles a certificate-free representation change. | — (resolved within the wave) |
+| **The swap ↔ convert boundary** | `swap` (M-516), `cmp`/`convert` (M-532) | **Mostly consistent — one residual placement FLAGGED.** The clear cases agree: a certified *representation* change (binary↔ternary, M-120; the lossy `F32→BF16`, M-211; `Dense↔VSA`, M-231) lives in **`swap`** (certificate-carrying), and ordinary same-paradigm widening/narrowing (`i8→i32`; fallible `i32→i8`) lives in **`cmp`/`convert`**. The **one open sub-seam** is the *lossless reverse* `BF16→F32` widening: `swap.md` §7 FLAGs its placement and proposes it lift to `cmp`/`convert` (lossless float widening, no certificate needed) rather than `swap` — not yet ratified. No op is double-owned today; the `BF16→F32` owner is the FLAG to close. | **FLAGGED** (swap §7-Q3 / cmp §7-Q2) |
 | **Numeric ε bounds ownership** | `dense` (M-518), `math` (M-525) | **Consistent deferral.** Both route float-op ε through the verified numerics (`std.numerics`, M-512 / ADR-010) and **cite, never restate** the bound; both tag `Proven` *only* where Higham's side-conditions are checked, else honestly downgrade. The concrete ε constants are M-512's to fill — neither spec fabricated them. | §8-Q1 (module set) |
 | **JSON projection overlap** | `fmt` (M-533), `serialize` (M-514, *anticipated*) | **Deferred to when `serialize` lands.** `fmt.to_json` and `serialize`'s JSON both claim "dual human/machine projection". Proposed: one canonical JSON projection that `fmt` delegates to; reconcile when M-514 is authored. | §8-Q1/§8-Q3 |
 | **The recovery bridge** | `error` (M-527), `recover` (M-520, *anticipated*) | **Co-design flag.** `error`'s `recover`-bridge signature (`RecoverOutcome`/`PolicyRef`) is owned by `std.recover` (RFC-0014); `error` described it abstractly without fabricating it. Reconcile the exact signature when M-520 lands. | §8-Q1 |
@@ -124,9 +124,10 @@ to resolve at ratification, **not** silently decided here (the planning analogue
 | **The migration differential's bar** | `swap`, `self-hosting-readiness` (M-502) | What a self-hosted module must match (observable results vs tags+EXPLAIN bit-for-bit) before its verdict flips. | **§8-Q5** |
 | **`wild`/FFI for transcendentals** | `math` (M-525) | Whether `math`'s transcendental floor is a pure trusted routine or libm via `wild` (which would narrow its C5 "no `wild`" claim). | **§8-Q6** |
 
-**Net:** no two specs conflict on an owned surface; the recurring items are the *known* RFC-0016 §8
-questions (naming §8-Q2, ergonomics §8-Q3), now corroborated from eleven independent angles — useful signal
-for the maintainer's ratification pass.
+**Net:** no two specs conflict on an *owned* surface; the only unsettled ownership is the lossless
+`BF16→F32` placement (swap §7-Q3 / cmp §7-Q2), FLAGGED above rather than silently assigned. The recurring
+items are the *known* RFC-0016 §8 questions (naming §8-Q2, ergonomics §8-Q3), now corroborated from eleven
+independent angles — useful signal for the maintainer's ratification pass.
 
 ## 6. How this index stays honest
 
