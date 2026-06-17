@@ -49,11 +49,11 @@ Reports land in `tools/llm-harness/reports/<run-id>-report.{json,txt}` + `<run-i
 > python tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-0.5b-instruct
 > ```
 >
-> **If a real run looks wrong** (the JSON check fails with the prompt echoed back, or a
-> run hangs): recent llama.cpp defaults to interactive *conversation* mode and may echo
-> the prompt. Confirm `llama --help`, then pass the flags through:
-> `--llama-arg=-no-cnv --llama-arg=--no-display-prompt` — or run a llama.cpp **server**
-> and use `--server http://localhost:8080` (clean output).
+> **One-shot generation is enforced by default** (`-no-cnv --no-display-prompt`): without
+> them recent llama-cli enters its interactive chat REPL — it generates, then waits at a
+> `>` prompt until the subprocess **times out**, and echoes the prompt into stdout. If a
+> *particular* build rejects those flags, drop them with `--llama-arg=` / use `--server`.
+> CPU phones run ~1–2 tok/s, so if a generation times out, raise `--timeout SEC`.
 
 ---
 

@@ -85,9 +85,7 @@ class MyceliumChecker:
             # Never-silent: surface cargo's actual diagnostic, not just the exit code,
             # so a real compile failure is actionable instead of a bare "exit 101".
             detail = (proc.stderr or proc.stdout or "").strip()
-            msg = (
-                f"`{' '.join(cmd)}` failed (exit {proc.returncode}):\n{detail[-1500:]}"
-            )
+            msg = f"`{' '.join(cmd)}` failed (exit {proc.returncode}):\n{detail[-1500:]}"
             raise ToolUnavailable(msg)
         if not built.is_file():
             msg = f"cargo reported success but {built} does not exist"

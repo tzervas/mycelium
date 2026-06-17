@@ -144,6 +144,7 @@ def _build_backend(args: argparse.Namespace) -> llm.Backend:
         n_predict=args.n_predict,
         ctx_size=ctx_size,
         n_gpu_layers=n_gpu_layers,
+        timeout=args.timeout,
         extra_args=args.llama_extra_arg,
     )
 
@@ -171,6 +172,13 @@ def main() -> int:
     p.add_argument("--max-iters", type=int, default=3, help="Edit-to-fix budget (default 3).")
     p.add_argument("--seed", type=int, default=42, help="Generation seed (default 42).")
     p.add_argument("--n-predict", type=int, default=256, help="Max new tokens (default 256).")
+    p.add_argument(
+        "--timeout",
+        type=int,
+        default=300,
+        help="Per-generation llama-cli timeout in seconds (default 300). Raise on a slow "
+        "CPU phone (~1-2 tok/s) if generation times out.",
+    )
     p.add_argument(
         "--ctx-size",
         type=int,

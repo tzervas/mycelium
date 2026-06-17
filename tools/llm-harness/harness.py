@@ -143,6 +143,9 @@ class RunContext:
     # only (the default on a phone, where no GPU is detected). On desktop the auto-sizer
     # sets this from detected VRAM unless --cpu-only / --n-gpu-layers says otherwise.
     n_gpu_layers: int = 0
+    # Per-generation subprocess timeout (s). CPU phones run ~1-2 tok/s, so the 120s
+    # default is too tight once a real prompt + completion is involved; tunable.
+    llama_timeout: int = 300
     extra_llama_args: list[str] = field(default_factory=list)
 
 
@@ -476,16 +479,17 @@ def _call_llama_cli(
         str(ctx.ctx_size),  # cap the KV cache — see RunContext.ctx_size (OOM governor)
         "--log-disable",  # suppress llama.cpp's internal log spam to stderr
         "-e",  # escape newlines in prompt
+        # One-shot completion, verified on-device (Termux b-unknown): without these,
+        # recent llama-cli enters its interactive *conversation* REPL — it generates,
+        # then waits at a `>` prompt forever (the subprocess times out), and echoes the
+        # prompt into stdout (polluting the V-01/V-02 parse). `-no-cnv` disables the chat
+        # loop (generate, then exit at EOS); `--no-display-prompt` keeps stdout to just
+        # the completion. Remove via --llama-arg only if a build rejects them.
+        "-no-cnv",
+        "--no-display-prompt",
     ]
     if ctx.n_gpu_layers > 0:  # offload to GPU only when one was detected/requested
         cmd += ["--n-gpu-layers", str(ctx.n_gpu_layers)]
-    # KNOWN FOLLOW-UP (verify on-device before enabling): recent llama.cpp builds
-    # default `llama`/`llama-cli` to interactive *conversation* mode for instruct
-    # models and may echo the prompt back into stdout. Both would distort the
-    # one-shot completions V-01/V-02 parse (prompt-echo can fail JSON parsing).
-    # The fixes are `-no-cnv` (disable the chat loop) and `--no-display-prompt`
-    # (don't echo the prompt) — pass them via --llama-arg once validated against
-    # the target binary, or prefer --server mode (its /completion output is clean).
     cmd.extend(ctx.extra_llama_args)
     if extra_args:
         cmd.extend(extra_args)
@@ -496,7 +500,7 @@ def _call_llama_cli(
         cmd,
         capture_output=True,
         text=True,
-        timeout=120,
+        timeout=ctx.llama_timeout,
     )
     wall = time.monotonic() - t0
 
@@ -2833,6 +2837,7 @@ def run_harness(args: argparse.Namespace) -> int:
         log=log,
         ctx_size=ctx_size,
         n_gpu_layers=n_gpu_layers,
+        llama_timeout=int(getattr(args, "timeout", 300) or 300),
         extra_llama_args=list(getattr(args, "llama_arg", None) or []),
     )
 
@@ -3020,6 +3025,17 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         dest="cpu_only",
         help="Force CPU only — never offload to a GPU even if one is detected.",
+    )
+    p.add_argument(
+        "--timeout",
+        type=int,
+        default=300,
+        dest="timeout",
+        metavar="SEC",
+        help=(
+            "Per-generation llama-cli timeout in seconds (default 300). Raise it on a "
+            "slow CPU phone (~1-2 tok/s) if a validation times out."
+        ),
     )
     p.add_argument(
         "--n-gpu-layers",

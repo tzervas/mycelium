@@ -285,7 +285,7 @@ def cli_backend(
     ctx_size: int = 2048,
     n_gpu_layers: int = 0,
     extra_args: Sequence[str] | None = None,
-    timeout: int = 180,
+    timeout: int = 300,
 ) -> Backend:
     """A backend that shells out to `llama` / `llama-cli`.
 
@@ -293,12 +293,11 @@ def cli_backend(
     allocate a KV cache for the model's full trained window (Qwen2.5 = 32k), which
     OOM-kills the process (SIGKILL/9) on a phone.
 
-    NOTE (verify on the target build): recent llama.cpp defaults to interactive
-    *conversation* mode and may echo the prompt back, both of which corrupt one-shot
-    code generation. If you see the prompt echoed into the source, pass the build's
-    flags via ``extra_args`` (commonly ``-no-cnv`` and/or ``--no-display-prompt``)
-    after confirming them in ``llama --help`` — or prefer ``server_backend`` (clean
-    /completion output). We do not hard-code those flags (availability varies).
+    One-shot generation is enforced with ``-no-cnv`` + ``--no-display-prompt`` (verified
+    on-device): without them recent llama-cli enters its interactive conversation REPL —
+    it generates, then waits at a `>` prompt until the subprocess TIMES OUT, and echoes
+    the prompt into stdout. Remove via ``extra_args`` only if a build rejects them, or
+    use ``server_backend`` (clean /completion output).
     """
 
     def complete(prompt: str) -> str:
@@ -316,6 +315,8 @@ def cli_backend(
             str(ctx_size),
             "--log-disable",
             "-e",
+            "-no-cnv",  # one-shot: don't enter the interactive chat REPL (it never exits)
+            "--no-display-prompt",  # stdout = completion only, not the echoed prompt
             *(["--n-gpu-layers", str(n_gpu_layers)] if n_gpu_layers > 0 else []),
             *(extra_args or []),
         ]

@@ -8,6 +8,18 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (2026-06-17: real-mode hang — force one-shot llama-cli, configurable timeout)
+- **Real-mode runs hung until they timed out** because recent `llama-cli`, given `--prompt`, enters
+  its **interactive conversation REPL**: it generated a correct answer, then waited at a `>` prompt
+  forever (subprocess `TimeoutExpired`), and echoed the whole prompt into stdout. Confirmed on-device
+  once `myc-check` built. Fix: both the harness `_call_llama_cli` and the KC-2 `cli_backend` now pass
+  **`-no-cnv`** (generate once, exit at EOS) **+ `--no-display-prompt`** (stdout = completion only).
+  Removable via `--llama-arg` / `--llama-extra-arg` if a build rejects them; `--server` mode was
+  always clean.
+- **Per-generation timeout is now configurable and more generous** (`--timeout`, default 300s, up
+  from a hard-coded 120s) — CPU phones run ~1–2 tok/s, so the old default was too tight. README
+  updated.
+
 ### Added (2026-06-17: Termux/ARM64 myc-check build prerequisites documented)
 - **`experiments/README.md` documents the Termux (Android/ARM64) Rust build failure modes** for
   `myc-check`, found by an on-device build and the never-silent cargo-error surfacing. The actual
