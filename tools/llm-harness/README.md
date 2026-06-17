@@ -85,6 +85,33 @@ python3 tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-coder-3b
   (fetch an arbitrary GGUF under any `--model-id` name); `--model PATH` (bypass the registry
   entirely with a local file you trust).
 
+### Hugging Face CLI (preferred download path + auth)
+
+When the **`hf` CLI** is available, `--ensure-model` uses it to fetch the GGUF (robust,
+resumable, auth-aware — and the only way to reach **gated** repos). If it isn't, the harness
+falls back to its built-in stdlib downloader, so nothing breaks. The CLI is detected, set up,
+and auth-checked explicitly (G2 never-silent):
+
+```sh
+python3 tools/llm-harness/harness.py --setup-hf            # detect → install → check/prompt auth, then exit
+python3 tools/llm-harness/harness.py --ensure-model        # uses hf CLI if present; falls back otherwise
+python3 tools/llm-harness/harness.py --ensure-model --install-hf-cli   # install it first if missing
+```
+
+- **Detection** searches `PATH`, then the dirs installers actually use — `~/.local/bin`,
+  `$PREFIX/bin` (Termux). An installed-but-unlinked `hf` (see the Termux note below) is found
+  and used, with a warning telling you the exact `export PATH=…` to add for your shell.
+- **Install** (`--install-hf-cli`, implied by `--setup-hf`) installs the published
+  `huggingface_hub[cli]` package via **`uv` / `pipx` / `pip --user`** — **never** `curl … | bash`
+  (CONTRIBUTING.md supply-chain rule). The upstream one-liner is printed as a reviewed manual
+  fallback only. Prompts for consent unless `--yes`.
+- **Auth** runs `hf auth whoami`; if unauthenticated it prompts you to `hf auth login`
+  (interactive), or use `--hf-token TOKEN` / `$HF_TOKEN` for a non-interactive login. This is
+  **non-fatal** — the default registry is public, so a token-less run still downloads; auth only
+  matters for gated repos.
+- **Flags:** `--hf-cli PATH` (explicit binary), `--no-hf-cli` (force the stdlib downloader),
+  `--install-hf-cli`, `--hf-token TOKEN`, `--setup-hf`, `-y`/`--yes`.
+
 **Honesty (G2/VR-5).** Registry URLs/filenames are **best-effort** and may change upstream.
 A download is verified by the **GGUF magic header** (`GGUF`) + a clean, complete transfer
 before it is promoted from `*.part` to the final name — a 404/gated **HTML page can never
@@ -96,8 +123,9 @@ a self-verified file via `--model`.
 
 > **Note on gated models (Llama-3.2, Gemma, …).** These require a Hugging Face token and
 > are deliberately **not** in the default registry (a token-less `urlopen` would get an
-> HTML login page, which the GGUF guard rejects). Download them yourself with
-> `huggingface-cli` and pass `--model PATH`, or add an entry with `--model-url`.
+> HTML login page, which the GGUF guard rejects). Authenticate with `--setup-hf` (or
+> `--hf-token`/`$HF_TOKEN`), then either add an entry with `--model-url`, or download with
+> `hf download … --local-dir DIR` yourself and pass `--model PATH`.
 
 ## How to run on Termux (Android, ARM/aarch64)
 
@@ -110,6 +138,27 @@ pkg install python git cmake clang ninja wget
 
 **FLAG:** `clang` in Termux pulls in its bundled libstdc++. If cmake cannot find
 it during the llama.cpp build, try also installing `binutils` and `libandroid-spawn`.
+
+**FLAG on Termux PATH (`hf`/`claude` "command not found").** `pip install --user` (and some
+npm/pipx installs) drop their console scripts in `~/.local/bin` (or `$PREFIX/bin`) **without
+adding that dir to `PATH`** — so `which hf` finds nothing even though the package installed,
+and Termux's helper just suggests unrelated `pkg`s. Fix it once:
+
+```sh
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
+which hf            # should now resolve
+```
+
+The harness works around this for `hf` specifically — it searches `~/.local/bin` and
+`$PREFIX/bin` even when they're off `PATH`, and prints the exact `export` line to run. For
+the Claude Code CLI (npm), the same fix applies to npm's global bin dir: check
+`npm config get prefix` and add its `bin` to `PATH` (or `npm config set prefix "$PREFIX"`
+so links land on Termux's existing `PATH`).
+
+**Note: `pkg` ≡ `apt` on Termux.** `pkg` is Termux's thin wrapper over `apt` — both work
+(`pkg install …` ≈ `apt install …`). The installers the harness uses for the hf CLI come from
+there: `pkg install python` provides `pip`; `pkg install pipx` (or `pkg install uv`) gives the
+isolated installers. Once one is present, `--setup-hf` / `--install-hf-cli` can take over.
 
 ### Step 2 — Clone and build llama.cpp
 
