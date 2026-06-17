@@ -131,8 +131,9 @@ title or the script will create a duplicate.
   §2/§6 and CHANGELOG/RFC-0012 — reconstructed, never invented; all `status:done`), and **Phases 5 & 6
   decomposed** into grounded design-first task sets (M-501…M-520 from the M-346 stdlib epic +
   `milestones.json` Phase-5 charter; M-601…M-630 from the Phase-6 charter + RFC-0004 §2/ADR-009/ADR-013/
-  M-348). Summary counts above corrected (Phase 2 = 25, Phase 4 = 13, Phase 5 = 8, Phase 6 = 5).
-  `--validate` (111 issues) + `--self-test` + `scripts/checks/all.sh` all green; only the reserved
+  M-348). Summary counts as of this entry (Phase 2 = 25, Phase 4 = 13, Phase 5 = 8, Phase 6 = 5; Phase 5
+  was subsequently expanded to 26 by the stdlib-decomposition entry above).
+  `--validate` (111 issues at this point; 129 after the stdlib decomposition above) + `--self-test` + `scripts/checks/all.sh` all green; only the reserved
   `good-first-issue`/`type:bug`/`type:chore` label notes remain (intentionally unused — an honest residual,
   no issue fabricated to clear them). **FLAG:** the PM brief called M-351 a "Phase-3 toolchain task"; the
   corpus + `idmap` place it in **Phase 4** — filed where grounded, discrepancy noted in `issues.yaml`.

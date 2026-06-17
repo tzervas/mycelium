@@ -63,7 +63,7 @@ corpus, not released software. Versioning will begin when the kernel does.
   the cross-backend VR-4 gate) traces to the Phase-6 charter + RFC-0004 §2 / ADR-009 / ADR-013 / M-348.
   Numbers are **minted on the next `gh-sync-all.sh` run** at each gate (the established M-364…M-368
   staging precedent; the MCP cannot create milestones/colored labels) — none fabricated here.
-- **Verification.** `gh-issues-sync.py --validate` (111 issues; phase 5/6 + idmap-drift notes **resolved**;
+- **Verification.** `gh-issues-sync.py --validate` (111 issues at this point — 129 after the stdlib decomposition recorded in the entry above; phase 5/6 + idmap-drift notes **resolved**;
   only the reserved-and-intentionally-unused `good-first-issue`/`type:bug`/`type:chore` label notes remain,
   an honest residual) and `--self-test` both pass; `bash scripts/checks/all.sh` prints **ALL CHECKS
   PASSED**. **Manifests-only** change — no crate, no kernel, no `gh-issues-sync.py` engine touched (KC-3).
