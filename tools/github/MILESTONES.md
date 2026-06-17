@@ -13,11 +13,20 @@ machine-consumed sources are alongside it.
   `phase:N` label; this is the **per-issue assignment** source of truth.
 - **`gh-bootstrap-local.sh`** — run **locally with `gh`**, it creates any missing milestone/label.
   Idempotent (label = create-or-update; milestone = create-if-absent).
-- **`gh-issues-sync.py`** — creates any **absent issue** (with its labels), assigns each milestone by
-  title, and **appends** new rows to `idmap.tsv`. Idempotent (create-absent-by-title).
-- **`gh-sync-all.sh`** — the **single command** that runs the whole reconciliation: a manifest
-  preflight, then `gh-bootstrap-local.sh` (labels + milestones), then `gh-issues-sync.py` (issues +
-  assignment + idmap). Use this to close gaps after editing any manifest.
+- **`gh-issues-sync.py`** — the **cross-platform reconcile engine** (pure Python + `gh`, no bash/jq,
+  so it runs the same in **PowerShell**). Creates any **absent issue** (matched by `idmap` number,
+  then title — so a renamed title updates instead of duplicating) **and intelligently updates** an
+  existing one to match `issues.yaml`: labels, milestone, title (and body only with `--update-bodies`).
+  Bodies are off by default (GitHub bodies accrue enactment notes) and OPEN/CLOSED state is **never
+  inferred** from a `status:*` label (only an explicit `state:` field moves it). Appends new rows to
+  `idmap.tsv` (append-only). Idempotent + never-silent; `--dry-run` previews; `--all` also does
+  labels + milestones; `--self-test` checks the diff logic offline. *(`gh-bootstrap-local.sh` remains
+  the bash-native labels/milestones path; the Python engine is its cross-platform superset.)*
+- **`gh-sync-all.sh`** / **`gh-sync-all.ps1`** — the **single command** that runs the whole
+  reconciliation. The `.sh` (Linux/macOS): manifest preflight → `gh-bootstrap-local.sh`
+  (labels + milestones) → `gh-issues-sync.py` (issues create + reconcile + idmap). The `.ps1`
+  (Windows/PowerShell): manifest preflight → `gh-issues-sync.py --all` (labels + milestones + issues),
+  needing no bash/jq. Use either to close gaps after editing any manifest.
 - **`manifest-check.py`** — the preflight: every label/milestone `issues.yaml` references must be
   defined in `labels.json`/`milestones.json`, else an explicit error (a missing label would otherwise
   make `gh issue create --label …` fail mid-run — never-silent, G2).
@@ -31,12 +40,20 @@ To reconcile the repo with every manifest (milestones + labels + issues + assign
 idempotent pass** — safe to rerun any time a manifest gains entries:
 
 ```sh
+# Linux/macOS (bash + gh + jq):
 bash tools/github/gh-sync-all.sh                 # needs `gh` authenticated to tzervas/mycelium
-bash tools/github/gh-sync-all.sh --dry-run       # preview issue creation, no repo writes
+bash tools/github/gh-sync-all.sh --dry-run       # preview the reconcile, no repo writes
+
+# Windows (PowerShell + python + gh; no bash/jq needed):
+pwsh tools/github/gh-sync-all.ps1                # full reconcile (labels + milestones + issues)
+pwsh tools/github/gh-sync-all.ps1 -DryRun        # preview, no repo writes
+
+# Any OS, directly (the engine itself):
+python tools/github/gh-issues-sync.py --all --dry-run
 ```
 
 (`gh-bootstrap-local.sh` on its own still creates only labels + milestones — `gh-sync-all.sh` is the
-labels-then-milestones-then-issues superset.)
+labels-then-milestones-then-issues superset; the Python engine's `--all` is its cross-platform twin.)
 
 ## The milestone ladder
 
@@ -49,7 +66,7 @@ labels-then-milestones-then-issues superset.)
 | 4 | Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion | active (cut 2026-06-16) | The interp↔compiled ABI (ADR-016) + hot-inject/recompile (ADR-017); AOT env-machine completion over the full v0 calculus + stack-robustness/dynamic budgets (M-342/347/349, DN-05); mutual recursion (M-343, RFC-0001 r5); ambient (M-344, RFC-0012); diagnostics + recovery (M-345, RFC-0013/0014); stdlib roadmap (M-346). Gate: NFR-7 three-way differential across the calculus; budgets explicit/never-silent (G2); kernel small (KC-3). |
 | 5 | Self-Hosting & Core Library | **anticipated** (not yet ratified) | Write the stdlib + diagnostics/recovery runtime in Mycelium-lang itself (dogfooding; "free of other languages"): decompose the M-346 stdlib epic; self-host RFC-0013/0014. Gate: a stdlib module self-hosts with the guarantee/EXPLAIN contract every op must meet (G2, VR-5, KC-3, ADR-003). |
 | 6 | Native Acceleration & Deployment | **anticipated** (not yet ratified) | Native MLIR→LLVM codegen for the full calculus incl. data/closure (M-348, RFC-0004 §2, ADR-009); BitNet / native-ternary acceleration; deployable Spore units (ADR-013); production hardening. Gate: native NFR-7 differential + speedup; deployable Spore (VR-4 no-opaque-lowering). |
-| 7 | Runtime & Concurrency Execution Model (RFC-0008) | **active** (RFC-0008 **Accepted** 2026-06-16) | RFC-0008 ratified RT1–RT7 (M-355 ✓); RFC-0014's single-task boundary lifted to per-task budgets, cancellation, and `reclaim` bounded-cascade supervision (M-356 ✓, RFC-0008 §4.7 / Erlang-OTP grounding, Research Record 05); the RT2 deterministic fork/join runtime + sequentialization differential v0 (M-357 ✓; typed channels = next slice); and the **DN-06 lexicon migration** — static keyword `colony` → `nodule`, introduce `phylum`, free `colony` for the dynamic grouping (M-358, staged). The §4.5 vocabulary (hypha/fuse/xloc/cyst/graft/forage/backbone/mesh/tier/reclaim) decomposes at the Phase-7 gate. Gate: RFC-0008 Accepted ✓; RT2 differential holds (NFR-7-equiv) ✓; guarantees tagged honestly (RT5/VR-5); kernel small (KC-3). |
+| 7 | Runtime & Concurrency Execution Model (RFC-0008) | **active** (RFC-0008 **Accepted** 2026-06-16) | RFC-0008 ratified RT1–RT7 (M-355 ✓); RFC-0014's single-task boundary lifted to per-task budgets, cancellation, and `reclaim` bounded-cascade supervision (M-356 ✓, RFC-0008 §4.7 / Erlang-OTP grounding, Research Record 05); the RT2 deterministic fork/join runtime + sequentialization differential v0 (M-357 ✓; typed channels = next slice); and the **DN-06 lexicon migration** — static keyword `colony` → `nodule`, introduce `phylum`, free `colony` for the dynamic grouping (M-358 ✓; the structured header/manifest M-359 ✓ and RFC-0015 auto-baseline M-362 ✓ also folded). The §4.5 vocabulary (hypha/fuse/xloc/cyst/graft/forage/backbone/mesh/tier/reclaim) decomposes at the Phase-7 gate. Gate: RFC-0008 Accepted ✓; RT2 differential holds (NFR-7-equiv) ✓; guarantees tagged honestly (RT5/VR-5); kernel small (KC-3). |
 
 Phases 0–4 are in `milestones.json` as active milestones. Phases 5–7 are **forward roadmap anchors**:
 they are also created (as empty milestones) so future issues have a home, but their scope is **not yet
@@ -72,8 +89,8 @@ the summary (counts as of 2026-06-16):
 | 4 | ABI/hot-inject/AOT-completion — M-341/342/343/344/345/346/347/348/349 + M-352; RFC-0008 integration M-353/354 | 12 |
 | 5 | (anticipated) self-hosting + stdlib — decomposed from M-346 at the Phase-4 gate | — |
 | 6 | (anticipated) native acceleration + deployment — M-348 native path, Spore | — |
-| 7 | runtime & concurrency (RFC-0008, **Accepted**) — M-355 ratify ✓, M-356 concurrency/supervision ✓, M-357 RT2 differential ✓; M-358 lexicon migration + M-359 structured nodule header/manifest staged; §4.5 vocabulary decomposes at the gate | 5 |
-| 8 | (anticipated) toolchain & release engineering — the full-fat suite (format/correctness/lint+fix/security) + packaging; M-361 epic anchor, M-359 metadata substrate | 1 |
+| 7 | runtime & concurrency (RFC-0008, **Accepted**) — M-355 ratify ✓, M-356 concurrency/supervision ✓, M-357 RT2 differential ✓, M-358 lexicon migration ✓, M-359 structured nodule header/manifest ✓, M-362 RFC-0015 auto-baseline ✓; §4.5 vocabulary decomposes at the gate | 6 |
+| 8 | (anticipated) toolchain & release engineering — the full-fat suite folded as five above-the-kernel crates: M-364 `mycfmt` ✓, M-365 `myc-check` ✓, M-366 `myc-lint` ✓, M-367 `myc-sec` ✓, M-368 `spore` ✓; M-361 epic (CI-parity gate wiring pending) + M-363 authoring pipeline (design Accepted, build unscheduled) | 7 |
 
 A task moves phases by editing its `milestone:` + `phase:N` label in `issues.yaml` (then re-running the
 bootstrap, which is idempotent). Keep the `milestone:` string byte-identical to the `milestones.json`
@@ -92,6 +109,29 @@ title or the script will create a duplicate.
 
 ## Meta — changelog
 
+- **2026-06-17 — `gh-issues-sync.py` grows up: idempotent reconcile + cross-platform (PowerShell).**
+  The sync engine no longer just *creates* absent issues — it now **intelligently updates** existing
+  ones to match `issues.yaml` (labels, milestone, title; bodies only with `--update-bodies`), which is
+  exactly the gap that let the M-358…368 labels drift (the reconciliation below had to be done by hand).
+  Matching is `idmap`-number-first then title (a renamed title updates instead of duplicating).
+  Honest by construction: never-silent (every change printed; `--dry-run` previews), never-destructive by
+  default (bodies opt-in; OPEN/CLOSED **never** inferred from a `status:*` label — only an explicit
+  `state:` field moves it), idempotent (in-sync issues untouched). The engine is now **pure Python + `gh`
+  (no bash/jq)**, so it runs identically in **PowerShell**; `--all` folds in labels + milestones so a
+  Windows user needs no bash. Added **`gh-sync-all.ps1`** (the `.sh` orchestrator's twin) and an offline
+  **`--self-test`** for the diff logic. `gh-sync-all.sh` updated to match (honest comments +
+  `--update-bodies` passthrough). Tooling only (KC-3); no new dependency (PyYAML already required).
+- **2026-06-17 — Issue-state reconciliation: M-358/359/362 + M-364–368 → `status:done`.** Eight tasks
+  folded across the Phase-7/8 waves but left labelled `status:needs-design` are flipped to **`status:done`**
+  (keeping `type:design` — the M-344/345/352/355 precedent) in `issues.yaml` and on GitHub
+  (#130/#131/#133 + #136–#140). **Issues left OPEN** (maintainer's call): the M-361 epic (#132) stays open
+  until its CI-parity gate is wired (the next wave), and the five children close with it. `type`/milestone/
+  open-state otherwise untouched; since the then-current `gh-issues-sync.py` was create-absent-only, the live
+  flip was a direct `issue_write`, not a bootstrap run (the entry above then upgraded the engine to reconcile
+  existing issues, closing that gap). Ladder + summary corrected (Phase 7 = 6 tasks, all ✓; Phase 8 = 7 — the
+  five tool children ✓, M-361 gate + M-363 build pending), resolving the prior contradiction (changelog said
+  "enacted"; the ladder still said "staged"). `idmap.tsv` carries no status column, so it gains only a dated
+  note. Append-only.
 - **2026-06-16 — M-361 decomposed into per-tool children (staged).** The Phase-8 toolchain epic **M-361**
   is decomposed into the five per-tool tasks its body names — **M-364** (`mycfmt` formatter), **M-365**
   (correctness/type-check driver), **M-366** (lint + auto-fix, incl. the RFC-0015 baseline lint + the

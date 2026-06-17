@@ -629,7 +629,7 @@ issues:
   - id: M-358
     title: "M-358 — DN-06 lexicon migration: static keyword `colony` → `nodule`; introduce `phylum`"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:design, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:7, type:design, area:toolchain, priority:P3, status:done]
     depends_on: []
     body: |
       DN-06 (Resolved 2026-06-16) ratifies the static-organization / dynamic-grouping lexicon — `phylum` (library-scale), `nodule` (the basic unit, replacing the generic "module"), and `colony` reassigned from its DN-02 static meaning to the RFC-0008 §4.7 DYNAMIC runtime grouping of `hypha`. This task is the mechanical surface migration the reassignment requires (the DECISION is already ratified; this executes it): rename the L1 surface keyword `colony` → `nodule` across the lexer/token/parser/AST/checker/elaborator (~226 refs in crates/mycelium-l1), the grammar EBNF + LR(1) oracle + the 23-file accept/reject conformance corpus (docs/spec/grammar/), and the prototype binaries/tests; reserve `phylum` (the library grouping above nodules — reserved-not-active until its construct lands) and `colony` (dynamic; realized by mycelium-mlir::runtime's Colony). Keep it ONE auditable change (it alters the grammar contract): the reserved-word set + M-141 linter, the conformance fixtures, and the M-142 formatter spelling move together. No kernel change (KC-3); no semantic change — pure renaming + two reserved additions. Document singular/plural (phylum/phyla, nodule/nodules, colony/colonies, hypha/hyphae). Also wire the DN-06 §6 nodule HEADER-COMMENT convention into the linter/formatter: a file declares nodule status via `// nodule: <dotted.name>` (or bare `// nodule`) on the first non-blank line — NOT in the filename/path (paths stay conventional); the M-141 linter recognises it; content-addressed identity (ADR-003) stays canonical. Acceptance (design-first): present the rename map + grammar diff before folding; verify the full conformance corpus + just check green; the content-addressed identities are unchanged (a rename is not a semantic edit). Until executed, `colony` is the deprecated spelling of `nodule` (DN-06 §2).
@@ -639,7 +639,7 @@ issues:
   - id: M-359
     title: "M-359 — Structured nodule header + project manifest (mycelium-proj.toml) + top-down inheritance"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:design, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:7, type:design, area:toolchain, priority:P3, status:done]
     depends_on: [M-358]
     body: |
       The maintainer prefers a STRUCTURED nodule header over DN-06's minimal `// nodule:` marker: license, authors, first publication, last update, version — on a nodule/phylum ROOT, with subnodules INHERITING most fields top-down; plus a config form like Python UV's pyproject.toml but scoped for Mycelium. Designed in docs/spec/Nodule-Header-and-Project-Manifest.md (Proposed 2026-06-16): a closed-key in-file header (`// @key: value` — version/license/authors/since/updated/summary), a `mycelium-proj.toml` manifest (the pyproject/Cargo analogue), and explicit, EXPLAIN-able top-down inheritance (in-file > nodule-root > mycelium-proj.toml). Honesty-aligned: no ambient metadata (unknown keys/conflicts are explicit errors — G2), metadata is NOT identity (the content hash stays canonical — ADR-003), declared-only license/version (VR-5), tooling-layer (KC-3). Acceptance (design-first / maintainer-gated): ratify the §7 format choices (manifest filename `mycelium-proj.toml`; header sigil `// @key:`; the closed v0 key set; `@updated` discipline) BEFORE folding. Then enact: the header parser + manifest loader + inheritance resolver + an `EXPLAIN` of the resolved header, with a JSON schema under docs/spec/schemas/ and conformance fixtures; the M-141 linter recognises + checks the header (unknown key / bad SPDX / non-ISO date = explicit error). just check green. No kernel change.
@@ -661,7 +661,7 @@ issues:
   - id: M-362
     title: "M-362 — RFC-0015: automatic baseline diagnostics & recovery (DynEL auto-wrapping + logging)"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:design, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:7, type:design, area:toolchain, priority:P3, status:done]
     depends_on: [M-345, M-352]
     body: |
       RFC-0015 (Draft 2026-06-16): the DynEL "automated baseline" intent — easily automated, dynamically-applied baseline error handling + logging — as an AUTOMATION LAYER over RFC-0013 (presentation) + RFC-0014 (recovery). Auto-derive a zero-config BASELINE diagnostic/logging policy from the language's structured mapping (the error-class registry + each class's level/route + a definition's declared effects) and auto-apply it (wrapping for logging/QoL), with a ladder: auto (floor) -> light overrides -> fully manual (manual always wins). The load-bearing HONESTY BOUNDARY (fixed in RFC-0015 §4.1): automatic = ADDITIVE presentation/logging ONLY by default (safe to auto-apply because RFC-0013 never changes control flow — I1); automatic RECOVERY is OPT-IN, declared, bounded (RFC-0014 I3/I4/I5 — no implicit control-flow change, only scaffolding + named opt-in profiles); the auto-baseline is a reified, content-addressed, EXPLAIN-able RFC-0005 policy (no black box — SC-3); the derivation is a TOTAL, inspectable function of the mapping, never learned (VR-5/RFC-0005). Feeds the toolchain epic (M-361) and the M-359 project manifest (project-level baseline profiles). Acceptance (design-first): trace prior art (DynEL/tracing/OTP) into research/, resolve §8 (the derivation function, the opt-in recovery-profile set, auto-wrap scope, default-on presentation vs default-off recovery), then ratify Draft->Accepted before any code. No kernel change (KC-3). Lineage: DN-04 -> RFC-0013 + RFC-0014 -> RFC-0015.
@@ -687,35 +687,35 @@ issues:
   - id: M-364
     title: "M-364 — `mycfmt`: the standalone canonical formatter (M-142 grows up)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:design, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:8, type:design, area:toolchain, priority:P3, status:done]
     depends_on: [M-142, M-358, M-361]
     body: |
       Sub-issue of M-361. Grow the M-142 canonical formatter (today: the Core-IR α-normalizing dump + the surface `expand_to_source` printer in mycelium-lsp/mycelium-l1) into a standalone `mycfmt` CLI over `.myc` sources: idempotent canonical formatting that PRESERVES the DN-06 `// nodule:` header marker + the M-359 structured `// @key:` header (M-358/M-359), never changes content-addressed identity (ADR-003 — formatting is a projection, RFC-0001 §4.8), and is EXPLAIN-able about any normalization it applies (no black box). Reads the `[toolchain].format` pin from `mycelium-proj.toml` (M-359). Honesty: a file it cannot parse is an explicit error, never a partial/garbled rewrite (G2). No kernel change (KC-3). Acceptance (design-first): the formatter contract + idempotence/identity-preservation tests before folding.
   - id: M-365
     title: "M-365 — toolchain correctness / type-check driver (`myc-check` grows up)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:design, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:8, type:design, area:toolchain, priority:P3, status:done]
     depends_on: [M-361]
     body: |
       Sub-issue of M-361. The toolchain-grade correctness/type-checking entry point: grow the `myc-check` prototype (mycelium-l1) + the M-210 shared TV checker into a project-aware driver that checks a whole `phylum`/program (resolving the `mycelium-proj.toml` surface + dependencies, M-359), reports every refusal as an RFC-0013 structured diagnostic (routed via the M-362 baseline), and exits non-zero on any error (CI-usable). Honest per-op guarantees preserved (VR-5); a `NotValidated`/`TypeMismatch`/`UnresolvedName` is explicit, never silent (G2). Lives above the kernel (KC-3). Acceptance (design-first): the driver's project-resolution + diagnostic-aggregation contract before folding.
   - id: M-366
     title: "M-366 — lint + auto-fix (RFC-0013/0014/0015 diagnostics surfaced as actionable fixes) + the §4.1 doc quality-bar lint"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:design, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:8, type:design, area:toolchain, priority:P3, status:done]
     depends_on: [M-345, M-352, M-362, M-363, M-361]
     body: |
       Sub-issue of M-361. The error/issue checking AND auto-fixing tool: surface the M-141 invariant lints + the RFC-0013 diagnostics + the RFC-0015 auto-baseline "this class is only logged — add a handler?" lint (RFC-0015 §9) as ACTIONABLE fixes, and offer RFC-0014 recovery scaffolds (an explicit handler skeleton — never an implicit control-flow change; A2/I5). Also hosts the M-363 §4.1 documentation quality-bar lint (the 8 checks over the doc IR — checked examples, undocumented-is-flagged, dual-projection parity, …). Every fix is a reified, inspectable, opt-in edit (no silent rewrite; G2). No kernel change (KC-3). Acceptance (design-first): the fix model (suggest vs apply; the opt-in boundary) before folding.
   - id: M-367
     title: "M-367 — security checks as tooling (secrets / supply-chain / `wild`-audit)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:design, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:8, type:design, area:toolchain, priority:P3, status:done]
     depends_on: [M-361]
     body: |
       Sub-issue of M-361. The /security-review posture as a tool: secret scanning, supply-chain checks (pinned deps, lockfile integrity, no `curl|bash`), and a `wild`-block audit (LR-9/S6 — every denied-by-default unsafe region is inventoried + justified). Reuses the existing scripts/checks/{secrets,deny}.sh discipline, lifted into the full-fat suite with honest, EXPLAIN-able findings (a flagged item cites why; G2). Adding any new external dependency stays a decision (ADR), not a build detail. No kernel change (KC-3). Acceptance (design-first): the check set + severity/honesty contract before folding.
   - id: M-368
     title: "M-368 — packaging & publishing: `mycelium-proj.toml` → spore (ADR-013)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:design, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:8, type:design, area:toolchain, priority:P3, status:done]
     depends_on: [M-359, M-361]
     body: |
       Sub-issue of M-361. The packaging/metadata + publishing layer: consume the M-359 `mycelium-proj.toml` manifest (the `[spore]`/`[surface]`/`[dependencies]` tables M-359 accepts-but-does-not-yet-interpret) to build a `spore` — the content-addressed, deployable artifact of a `phylum`/program (ADR-013; the germinates-into-a-colony unit, DN-06/Glossary). Content-addressed identity is canonical (ADR-003); metadata is not identity. Honest: a missing/ambiguous publish input is an explicit error, never a guessed default (G2). No kernel change (KC-3). Acceptance (design-first): the spore build + dependency-resolution contract before folding.

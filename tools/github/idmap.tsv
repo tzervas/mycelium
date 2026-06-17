@@ -109,3 +109,5 @@ M-365	137	4678672723
 M-366	138	4678672967
 M-367	139	4678673199
 M-368	140	4678673562
+# 2026-06-17: M-358/359/362 (#130/131/133) + M-364–368 (#136–140) reconciled status:needs-design->status:done
+#             (folded; issues kept OPEN until the M-361 gate). Mapping rows above are unchanged (append-only).
