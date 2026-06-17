@@ -154,10 +154,15 @@ def cli_backend(
     *,
     seed: int = 42,
     n_predict: int = 256,
+    ctx_size: int = 2048,
     extra_args: Sequence[str] | None = None,
     timeout: int = 180,
 ) -> Backend:
     """A backend that shells out to `llama` / `llama-cli`.
+
+    ``ctx_size`` caps the context window (``-c``): keep it small so llama.cpp does not
+    allocate a KV cache for the model's full trained window (Qwen2.5 = 32k), which
+    OOM-kills the process (SIGKILL/9) on a phone.
 
     NOTE (verify on the target build): recent llama.cpp defaults to interactive
     *conversation* mode and may echo the prompt back, both of which corrupt one-shot
@@ -178,6 +183,8 @@ def cli_backend(
             str(seed),
             "--n-predict",
             str(n_predict),
+            "--ctx-size",
+            str(ctx_size),
             "--log-disable",
             "-e",
             *(extra_args or []),

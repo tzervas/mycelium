@@ -37,11 +37,22 @@ python tools/llm-harness/harness.py --mock      # fixture mode — needs no mode
 
 Reports land in `tools/llm-harness/reports/<run-id>-report.{json,txt}` + `<run-id>.log`.
 
-> **If a real run looks wrong** (e.g. the JSON check fails with the prompt echoed back,
-> or a run hangs): recent llama.cpp defaults to interactive *conversation* mode and may
-> echo the prompt. Confirm `llama --help`, then pass the build's flags — or run a
-> llama.cpp **server** and use `--server http://localhost:8080` (clean output). See the
-> note at `_call_llama_cli` in `tools/llm-harness/harness.py`.
+> **If the process dies with `[Process completed (signal 9)]`** that's the Android
+> low-memory killer (SIGKILL) — almost always the **KV cache**: llama.cpp otherwise
+> allocates context for the model's full trained window (Qwen2.5 = 32k). The harness
+> now caps it at `--ctx-size 2048` by default; lower it further if a phone still OOMs:
+>
+> ```sh
+> python tools/llm-harness/harness.py --ctx-size 1024
+> # or use the smallest model tier:
+> python tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-0.5b-instruct
+> ```
+>
+> **If a real run looks wrong** (the JSON check fails with the prompt echoed back, or a
+> run hangs): recent llama.cpp defaults to interactive *conversation* mode and may echo
+> the prompt. Confirm `llama --help`, then pass the flags through:
+> `--llama-arg=-no-cnv --llama-arg=--no-display-prompt` — or run a llama.cpp **server**
+> and use `--server http://localhost:8080` (clean output).
 
 ---
 

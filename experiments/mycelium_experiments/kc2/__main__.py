@@ -121,6 +121,7 @@ def _build_backend(args: argparse.Namespace) -> llm.Backend:
         model,
         seed=args.seed,
         n_predict=args.n_predict,
+        ctx_size=args.ctx_size,
         extra_args=args.llama_extra_arg,
     )
 
@@ -148,6 +149,13 @@ def main() -> int:
     p.add_argument("--max-iters", type=int, default=3, help="Edit-to-fix budget (default 3).")
     p.add_argument("--seed", type=int, default=42, help="Generation seed (default 42).")
     p.add_argument("--n-predict", type=int, default=256, help="Max new tokens (default 256).")
+    p.add_argument(
+        "--ctx-size",
+        type=int,
+        default=2048,
+        help="llama.cpp context window -c (default 2048). Small on purpose: caps the KV "
+        "cache so a phone doesn't OOM-kill (SIGKILL/9) on the model's full 32k window.",
+    )
     p.add_argument("--primer-mycelium", metavar="FILE", help="Override the Mycelium-arm primer.")
     p.add_argument("--primer-baseline", metavar="FILE", help="Override the baseline-arm primer.")
     p.add_argument(

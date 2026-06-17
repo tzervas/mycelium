@@ -134,6 +134,12 @@ class RunContext:
     reports_dir: Path
     run_id: str  # ISO timestamp
     log: logging.Logger
+    # Memory governor: cap the llama.cpp context so it does not allocate a KV cache
+    # for the model's full trained window (Qwen2.5 ⇒ 32k) on a phone — that blows
+    # past the Android low-memory killer (SIGKILL/9) during load. Our prompts are
+    # tiny, so a small context is correct, not just safe. Tunable via --ctx-size.
+    ctx_size: int = 2048
+    extra_llama_args: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -163,6 +169,8 @@ def _call_llama_cli(
         str(seed),
         "--n-predict",
         str(n_predict),
+        "--ctx-size",
+        str(ctx.ctx_size),  # cap the KV cache — see RunContext.ctx_size (OOM governor)
         "--log-disable",  # suppress llama.cpp's internal log spam to stderr
         "-e",  # escape newlines in prompt
     ]
@@ -171,9 +179,9 @@ def _call_llama_cli(
     # models and may echo the prompt back into stdout. Both would distort the
     # one-shot completions V-01/V-02 parse (prompt-echo can fail JSON parsing).
     # The fixes are `-no-cnv` (disable the chat loop) and `--no-display-prompt`
-    # (don't echo the prompt) — but flag names/availability vary across builds,
-    # so they are NOT added blindly here. Add them once validated against the
-    # target binary, or prefer --server mode (its /completion output is clean).
+    # (don't echo the prompt) — pass them via --llama-arg once validated against
+    # the target binary, or prefer --server mode (its /completion output is clean).
+    cmd.extend(ctx.extra_llama_args)
     if extra_args:
         cmd.extend(extra_args)
 
@@ -2489,6 +2497,8 @@ def run_harness(args: argparse.Namespace) -> int:
         reports_dir=reports_dir,
         run_id=run_id,
         log=log,
+        ctx_size=int(getattr(args, "ctx_size", 2048) or 2048),
+        extra_llama_args=list(getattr(args, "llama_arg", None) or []),
     )
 
     results: list[ValidationResult] = []
@@ -2644,6 +2654,31 @@ def _build_parser() -> argparse.ArgumentParser:
             "Path to the llama-cli binary. If omitted, searches PATH, then common "
             "build/install dirs (~/llama.cpp/build/bin, $PREFIX/bin, $MYCELIUM_LLAMA_DIR) "
             "and shallow globs."
+        ),
+    )
+    p.add_argument(
+        "--ctx-size",
+        type=int,
+        default=2048,
+        dest="ctx_size",
+        metavar="N",
+        help=(
+            "llama.cpp context window (-c). Default 2048 — small on purpose: the prompts "
+            "are tiny, and capping this stops llama.cpp allocating a KV cache for the "
+            "model's full trained window (Qwen2.5 = 32k), which OOM-kills the process "
+            "(SIGKILL/9) on a phone. Raise only if a validation needs more context."
+        ),
+    )
+    p.add_argument(
+        "--llama-arg",
+        action="append",
+        default=[],
+        dest="llama_arg",
+        metavar="ARG",
+        help=(
+            "Extra arg passed through to llama-cli (repeatable), e.g. "
+            "--llama-arg=-no-cnv --llama-arg=--no-display-prompt if a real run shows "
+            "conversation-mode chatter or the prompt echoed into the output."
         ),
     )
     # --- idempotent model acquisition ---

@@ -8,6 +8,19 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (2026-06-17: real-mode OOM — cap the llama.cpp context / KV cache)
+- **On-device real-mode runs were SIGKILLed (`[Process completed (signal 9)]`) at model load.**
+  Cause: with no `-c`, llama.cpp allocates a KV cache for the model's *full trained context*
+  (Qwen2.5 = 32k), which — on top of the weights — trips the Android low-memory killer on a phone.
+  The harness's prompts are tiny, so that window was never needed.
+- Fix: both the validation harness (`tools/llm-harness/harness.py`) and the KC-2 backend
+  (`experiments/.../kc2/llm.py`) now pass `--ctx-size`/`-c` with a small default (**2048**),
+  tunable via `--ctx-size`. Added a `--llama-arg` / `--llama-extra-arg` passthrough so
+  conversation-mode/prompt-echo flags (`-no-cnv`, `--no-display-prompt`) can be supplied per build
+  without editing code. `experiments/README.md` gains a signal-9 troubleshooting note (lower
+  `--ctx-size`, or use the `qwen2.5-0.5b-instruct` tier). Because SIGKILL can't be caught, this is
+  prevention: keeping the run alive is what lets it reach the report-writing step.
+
 ### Added (2026-06-17: KC-2 run — executive-summary assessment of the results)
 - **A KC-2 run now emits a descriptive executive summary alongside the raw rates** — new
   `experiments/mycelium_experiments/kc2/summary.py` (`assess` + `render_summary`). Per arm it
