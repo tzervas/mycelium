@@ -1,0 +1,41 @@
+========================================================================
+  Mycelium LLM-validation harness  — human-readable projection (G11)
+========================================================================
+  Run ID  : 20260617T174336Z
+  Mode    : mock
+  Posture : NEVER-SILENT (G2) · VR-5 honesty · DUAL PROJECTION (G11)
+
+  Honesty posture:
+    · A missing tool/model ⇒ SKIP, never a false PASS
+    · Model-derived claims: Empirical or Declared — NEVER Proven/Exact
+    · mock-PASS = fixture run, not a real model quality signal
+
+------------------------------------------------------------------------
+  Validation results
+------------------------------------------------------------------------
+  [mock-PASS ] [Declared]  V-01-determinism
+             [MOCK] Determinism check simulated with fixture — not a real model run. Fixture outputs matched: True
+
+  [mock-PASS ] [Declared]  V-02-json-projection
+             [MOCK] JSON-projection check against fixture — not a real model run. Fixture parsed and validated OK
+
+  [PASS      ]  V-03-tag-honesty
+             Tag-honesty gate PASSED. Correctly rejected 2 forbidden tag(s), correctly allowed 2 compliant tag(s). 
+
+  [mock-PASS ] [Declared]  V-04-latency-tokens
+             [MOCK] Latency/token report — synthetic numbers. wall_seconds=0.0 is a sentinel meaning 'not measured (mock mode)'. Prompt tokens and generated tokens are fixture values.
+
+------------------------------------------------------------------------
+  Summary
+------------------------------------------------------------------------
+  overall             : PASS
+  total               : 4
+  pass                : 1
+  mock_pass           : 3
+  skip                : 0
+  fail                : 0
+  exit_code           : 0
+  mode                : mock
+
+  NOTE: This is the human-readable projection. See companion .json for the machine projection.
+========================================================================

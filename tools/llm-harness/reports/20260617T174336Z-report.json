@@ -1,0 +1,127 @@
+{
+  "harness": "mycelium-llm-validation",
+  "version": "0.1.0",
+  "run_id": "20260617T174336Z",
+  "mode": "mock",
+  "timestamp_utc": "20260617T174336Z",
+  "honesty_posture": {
+    "never_silent": true,
+    "guarantee_lattice": [
+      "Exact",
+      "Proven",
+      "Empirical",
+      "Declared"
+    ],
+    "model_allowed_tags": [
+      "Declared",
+      "Empirical"
+    ],
+    "vr5_rule": "Model-derived claims are Empirical or Declared — NEVER Proven or Exact. A SKIP is never a PASS. mock-PASS is explicitly labelled and never treated as evidence of real model quality."
+  },
+  "summary": {
+    "overall": "PASS",
+    "total": 4,
+    "pass": 1,
+    "mock_pass": 3,
+    "skip": 0,
+    "fail": 0,
+    "exit_code": 0,
+    "mode": "mock"
+  },
+  "results": [
+    {
+      "id": "V-01-determinism",
+      "status": "mock-PASS",
+      "guarantee_tag": "Declared",
+      "message": "[MOCK] Determinism check simulated with fixture — not a real model run. Fixture outputs matched: True",
+      "detail": {
+        "mode": "mock",
+        "fixture": "8, 13, 21",
+        "run_a": "8, 13, 21",
+        "run_b": "8, 13, 21",
+        "matched": true,
+        "guarantee_note": "Declared — synthetic fixture, not model-derived. Real runs would be tagged Empirical."
+      }
+    },
+    {
+      "id": "V-02-json-projection",
+      "status": "mock-PASS",
+      "guarantee_tag": "Declared",
+      "message": "[MOCK] JSON-projection check against fixture — not a real model run. Fixture parsed and validated OK",
+      "detail": {
+        "mode": "mock",
+        "fixture_input": "{\"value\": 42, \"label\": \"fixture\", \"confidence\": 0.95}",
+        "parse_ok": true,
+        "parse_error": null,
+        "parsed": {
+          "value": 42,
+          "label": "fixture",
+          "confidence": 0.95
+        },
+        "expected_keys": [
+          "confidence",
+          "label",
+          "value"
+        ],
+        "guarantee_note": "Declared — fixture response, not model-derived. Real runs would be tagged Empirical."
+      }
+    },
+    {
+      "id": "V-03-tag-honesty",
+      "status": "PASS",
+      "guarantee_tag": null,
+      "message": "Tag-honesty gate PASSED. Correctly rejected 2 forbidden tag(s), correctly allowed 2 compliant tag(s). ",
+      "detail": {
+        "mode": "mock",
+        "note": "This validation runs identically in mock and real mode — it is pure logic (no model involved).",
+        "fixtures_tested": 4,
+        "correctly_rejected": [
+          {
+            "claim_id": "test-claim-proven-FORBIDDEN",
+            "tag": "Proven",
+            "violation_message": "[VR-5 VIOLATION] Claim 'test-claim-proven-FORBIDDEN' carries tag 'Proven', which is FORBIDDEN for model-derived claims. Allowed: ['Declared', 'Empirical']. A model output may never be Proven or Exact without a checked basis.",
+            "outcome": "correctly-rejected"
+          },
+          {
+            "claim_id": "test-claim-exact-FORBIDDEN",
+            "tag": "Exact",
+            "violation_message": "[VR-5 VIOLATION] Claim 'test-claim-exact-FORBIDDEN' carries tag 'Exact', which is FORBIDDEN for model-derived claims. Allowed: ['Declared', 'Empirical']. A model output may never be Proven or Exact without a checked basis.",
+            "outcome": "correctly-rejected"
+          }
+        ],
+        "correctly_allowed": [
+          {
+            "claim_id": "test-claim-empirical",
+            "tag": "Empirical",
+            "outcome": "correctly-allowed"
+          },
+          {
+            "claim_id": "test-claim-declared",
+            "tag": "Declared",
+            "outcome": "correctly-allowed"
+          }
+        ],
+        "missed_violations": [],
+        "unexpected_rejections": [],
+        "vr5_rule": "Model-derived claims may only carry tags in {Empirical, Declared}. Proven or Exact requires a checked theorem — a model output can never be Proven or Exact by definition."
+      }
+    },
+    {
+      "id": "V-04-latency-tokens",
+      "status": "mock-PASS",
+      "guarantee_tag": "Declared",
+      "message": "[MOCK] Latency/token report — synthetic numbers. wall_seconds=0.0 is a sentinel meaning 'not measured (mock mode)'. Prompt tokens and generated tokens are fixture values.",
+      "detail": {
+        "mode": "mock",
+        "wall_seconds": 0.0,
+        "token_counts": {
+          "prompt": 12,
+          "generated": 3,
+          "note": "Declared — synthetic fixture values, not measured"
+        },
+        "output": "4",
+        "guarantee_note": "Declared — all numbers are synthetic fixtures. Real runs would be tagged Empirical."
+      }
+    }
+  ]
+}
