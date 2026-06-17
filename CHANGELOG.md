@@ -8,6 +8,25 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: LLM-harness — robust binary discovery, PATH self-healing, `--doctor`)
+- **`tools/llm-harness/harness.py` now resolves tools that are installed but off-`PATH`** — the
+  real-world Termux failure (`pip --user` → `~/.local/bin`, hand-built `llama.cpp` →
+  `~/llama.cpp/build/bin`, npm CLIs unlinked). Discovery searches `PATH` first, then the dirs
+  installers/builds actually use, for **llama.cpp** (`~/llama.cpp/build/bin`, `$PREFIX/bin`,
+  `$MYCELIUM_LLAMA_DIR`, shallow globs), the **hf CLI** (interpreter scripts dir, `~/.local/bin`,
+  pipx/uv venvs, `$PREFIX/bin`; plus a `python -m huggingface_hub…` fallback when the package is
+  importable but no console script is linked), and the **Claude Code CLI** (npm global bin via
+  `npm config get prefix`, nvm/bun/volta/pnpm dirs, `$PREFIX/bin`). A found-off-`PATH` binary is
+  **self-healed** into the current run's `PATH` (so child processes see it) with the exact
+  `export PATH=…` surfaced; **`--fix-path`** persists that line to the shell rc (idempotent;
+  prompts unless `--yes`).
+- **New `--doctor`** subcommand: prints platform/PATH, installers, and the resolved state of
+  llama.cpp, the hf CLI (+ auth), the Claude Code CLI, and the model cache — with where it looked
+  and the precise fix for each miss. The thing to run on a phone and paste back. New flags:
+  `--doctor`, `--fix-path`, `--claude-cli PATH`. hf-CLI handling refactored to an argv *prefix*
+  (supports the `-m` fallback) and the Termux `pip` install no longer forces `--user` (which is
+  the off-`PATH` trap there). README: new Troubleshooting section.
+
 ### Added (2026-06-17: LLM-validation harness — Hugging Face CLI integration)
 - **`tools/llm-harness/harness.py` gains Hugging Face CLI support** for model acquisition. On
   `--ensure-model` it now **detects** the `hf` CLI (or legacy `huggingface-cli`), uses it as the
