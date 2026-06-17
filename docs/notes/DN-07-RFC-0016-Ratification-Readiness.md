@@ -36,8 +36,8 @@ standing §7 research-tracing obligation. The intent is that the maintainer's ra
 
 The authoritative roster is the spec index (`docs/spec/stdlib/README.md` §4); reproduced here grouped
 by **ring** (RFC-0016 §4.2 — the KC-3-preserving layering) and **tier** (§4.3/§4.4 — *intent*:
-A = Mycelium-shaped differentiator, B = table-stakes common). Every row is `Draft — landed` (authored
-+ integrated, awaiting maintainer ratification with RFC-0016). Every spec meets the same §4.1 contract;
+A = Mycelium-shaped differentiator, B = table-stakes common). Every row is `Draft — landed` (authored and
+integrated, awaiting maintainer ratification with RFC-0016). Every spec meets the same §4.1 contract;
 the tier split is roadmap legibility, not a quality split.
 
 **Ring 0 — kernel-adjacent re-exports** (no new trusted code; KC-3):
@@ -132,7 +132,7 @@ constructs activating (Phase 7); spec index §5 records this as a FLAGGED cross-
 **Recommendation:** home the runtime surface in a **separate `runtime` phylum** (or a gated sub-phylum)
 so pure `std` carries no inactive surface, and activate it construct-by-construct at the Phase-7 gate.
 **This does not block RFC-0016 ratification** — the contract + taxonomy stand without it; only
-`runtime`'s *placement* is deferred. *Defer (Phase-7).* 
+`runtime`'s *placement* is deferred. *Defer (Phase-7).*
 
 ### Q5 — the migration differential's bar → **RESOLVE (recommendation), ratify with M-502**
 Grounding: 14 specs reference a self-hosting differential; `swap`/`testing`/`self-hosting-readiness`
