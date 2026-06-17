@@ -731,3 +731,512 @@ issues:
     depends_on: [M-361, M-364, M-365, M-366, M-367, M-368]
     body: |
       Sub-issue of M-361 (Phase 9 Wave D). Grow examples/ from the Wave-A minimal `hello-phylum` into a richer end-to-end fixture that exercises MORE of the L1 surface through ALL FOUR gates (mycfmt --check, myc-check --project, myc-sec wild-audit, myc-lint), so the gate proves the tools on representative programs rather than a toy. Lands `examples/repr-tour/` — a multi-nodule phylum touring a guarantee-annotated swap (the LR-6 honesty index across the Exact ⊐ Proven ⊐ Empirical ⊐ Declared lattice), a trait, a matured fn (matured ⟹ total), ambient representation (RFC-0012 default paradigm / `{N}` / `with paradigm`), and a `for` fold (RFC-0007 §4.8) — every nodule canonicalized with `mycfmt --write` and PASSING all four gates. Adds a NON-GATING `myc-spore` packaging smoke (`spore build`, M-368) that always exits 0 — it dogfoods the 5th tool without gating, since packaging is a build artifact not a correctness property. Honest findings, deliberately kept OUT of the gated examples (each an open deferral, not a forced-green gate; G2/VR-5): the L1 `spore(…)` expression is deferred in the type-checker (E2-5/M-260), and mycfmt v0 refuses interior comments (the §10.2 comment-preserving deferral). New fixtures live under examples/ (real project roots) and MUST stay green — they are NOT must-fail inputs (locked decision #3: tests/fixtures/ + reject/ stay ungated). No kernel change (KC-3), no new dependency. Acceptance: `bash scripts/checks/all.sh` prints ALL CHECKS PASSED with both phyla green across the four gates.
+
+  # ════════════════════════════════════════════════════════════════════════════════════════════════
+  # BACK-FILL (2026-06-17, PM reconcile) — the Phase-2 M-2xx epic decomposition + M-351, recovered into
+  # the manifest. These task-ids were CREATED on GitHub (idmap.tsv #48–#65, #114) from docs/planning/
+  # phase-2.md when Phase 2 was worked, but the entries were never written back into issues.yaml — so the
+  # manifest was the incomplete side (gh-issues-sync.py --validate flagged "idmap.tsv: 19 task(s) not in
+  # issues.yaml"). Recovered here APPEND-ONLY (existing entries untouched; ordering preserved) and grounded
+  # ENTIRELY in the cited corpus (phase-2.md §2/§6 for the M-2xx set; CHANGELOG + RFC-0012 §8/§9 for M-351)
+  # — reconstructed, never invented (the planning analogue of never-silent, G2). All are DONE at the task
+  # level (phase-2.md §8 exit-gate met 2026-06-12; M-351 #114 decided 2026-06-16); status:done is a label,
+  # not a state change — the reconciler never infers OPEN/CLOSED from it.
+  # ── Phase 2 — E2-4 (verified-numerics) decomposition: M-201…M-204 ──────────────────────────────────
+  - id: M-201
+    title: "M-201 — ErrorBound (ε) affine-arithmetic kernel"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:numerics, priority:P0, status:done]
+    depends_on: [M-101]
+    body: |
+      E2-4 (#31) decomposition (ADR-010 §1 / RFC-0001 §4.7). Affine-form ε composition (add/sub/mul/neg/scale) with a radius→eps projection; Soundness/Monotonicity/Determinism each property-tested. The kernel only ever degrades strength (composition is monotone-downward); a norm mismatch is an explicit None, never a coercion (G2).
+      DONE (2026-06-09): mycelium-numerics::error — AffineForm (shared noise symbols cancel — the correlation advantage over interval arithmetic) with exact linear ops + a sound mul (second-order remainder); the scalar ErrorBound{eps,norm} projection; 20k-trial property tests per law. (phase-2.md §6.1.)
+
+  - id: M-202
+    title: "M-202 — ProbBound (δ) union-bound kernel"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:numerics, priority:P0, status:done]
+    depends_on: [M-101]
+    body: |
+      E2-4 (#31) decomposition (ADR-010 §2 / RFC-0001 §4.7). union(δ₁..δₙ)=min(1,Σδ); apRHL [SEQ] ⟨ε,δ⟩; Soundness/Monotonicity/Determinism tested; a DIFFERENT monoid from ε by construction (T0.1c) — does NOT supply VSA crosstalk content (ADR-010 §5; that stays on RFC-0003's cited-theorem path).
+      DONE (2026-06-09): mycelium-numerics::prob — ProbBound{delta} with saturating union/or + ApRhlJudgment{eps,delta} with seq; union over-estimates the empirical "any fails" rate over 200k Monte-Carlo trials. (phase-2.md §6.2.)
+
+  - id: M-203
+    title: "M-203 — Shared {ε,δ,strength} certificate + tier-i checker"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:verification, area:numerics, priority:P0, status:done]
+    depends_on: [M-201, M-202]
+    body: |
+      E2-4 (#31) decomposition (ADR-010 §3/§4 + the trusted base). Certificate{eps,delta,strength} (strength by meet, serializable); a tier-i Rust checker that REJECTS a too-tight certificate; accuracy_to_probability the single legal cross-kernel rule. Incompleteness is an explicit Rejected/Malformed, never a silent pass (RFC-0002 §2); strength never upgraded without a checked basis (VR-5).
+      DONE (2026-06-09): mycelium-numerics::cert — Certificate + recompute_error; check_error_claim/check_union_claim → Valid/Rejected{recomputed,claimed}/Malformed (tighter-than-rederivation rejected, looser is sound); compose_error_bound (the M-204 entry, basis by meet). (phase-2.md §6.3.)
+
+  - id: M-204
+    title: "M-204 — Interpreter honest approximate composition"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:core-ir, priority:P0, status:done]
+    depends_on: [M-201, M-202, M-203]
+    body: |
+      E2-4 (#31) decomposition (RFC-0001 §4.7). Retire EvalError::ApproxCompositionUnsupported for composable approximate inputs: an exact-over-exact op stays Exact/bound=None (M-I1); an op over approximate inputs carries the kernel-composed Bound + meet-strength; a golden test checks the propagated {bound,guarantee} against the kernel's direct composition; M-I1…M-I4 stay enforced.
+      DONE (2026-06-09): mycelium-interp::prims — exact_result generalized to compose_result with a per-prim ApproxRule (core.id Passthrough; trit add/sub/neg sound 1-Lipschitz ε; bit.* and trit.mul still Refuse — explicit, never silent). Closes the documented Phase-1 honesty gap. (phase-2.md §6.4.)
+
+  # ── Phase 2 — E2-3 (full swap + shared certificate checker) decomposition: M-210…M-212 ─────────────
+  - id: M-210
+    title: "M-210 — Shared translation-validation certificate checker"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:verification, area:swap, priority:P0, status:done]
+    depends_on: [E2-4, M-120, M-151]
+    body: |
+      E2-3 (#30) decomposition (RFC-0002 §2 / RFC-0004 §3). ONE check(A,B,R,claimed-bound,certificate) with a RefinementRelation (bijection | bounded-similarity | observational-equiv); Exact instances discharge by equality, bounded instances consume the E2-4 certificate; TV incompleteness is an explicit fallback, never a silent pass; the M-120 swap cert and the M-151 interp↔AOT differential both validate through the one checker.
+      DONE (2026-06-10): mycelium-cert::check — CheckVerdict::Validated{strength}/NotValidated{reason,fallback}; bijection by structural re-derivation equality (re-checks the round-trip lemma + legal_pair side-condition), BoundedSimilarity twice-validated through the tier-i kernel (a claim never outruns its checked evidence, VR-5), ObservationalEquiv folding the M-151 differential. This is the M-302 native differential's checker. (phase-2.md §6.5.)
+
+  - id: M-211
+    title: "M-211 — Bounded/lossy swap (Dense F32→BF16)"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:swap, priority:P1, status:done]
+    depends_on: [E2-4, M-210, M-230]
+    body: |
+      E2-3 (#30) decomposition (RFC-0002 §5 / ADR-010 §1) — the first Bounded swap. dense_f32_to_bf16 emits the converted value + a Bounded cert with a basis-derived ε bound; validates through M-210; NaN/Inf handling explicit. Subnormal/approximate sources are REFUSED, not tagged with a bound the theorem doesn't cover (VR-5; RFC-0002 §5 "type error, not a Declared gamble").
+      DONE (2026-06-10): mycelium-cert::dense — round-to-nearest-even with the proven per-element {eps:2^−8, norm:Rel} bound, ProvenThm basis (Higham 2002 Thm 2.2 at β=2,p=8) checked PER ELEMENT; 20k-sweep soundness + idempotence. Scope note: needed only the Phase-1 Dense{dim,dtype} repr (M-101/M-103); M-230's Dense ops stayed independent. (phase-2.md §6.6.)
+
+  - id: M-212
+    title: "M-212 — KC-4 cert-overhead measurement + SC-3 global exit"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:verification, area:swap, priority:P1, status:done]
+    depends_on: [M-210, M-211]
+    body: |
+      E2-3 (#30) decomposition (KC-4 / SC-3). A bench harness reporting cert-check cost per swap kind with an HONEST measured verdict vs the KC-4 budget (no pre-written "within budget", VR-5); a test asserting every swap in the legal-pair table emits and validates a certificate, and every unimplemented/rejected row fails EXPLICITLY (SC-3 global, never silent anywhere).
+      DONE (2026-06-10): cargo xtask kc4 (refuses to measure a debug build) — measured per-swap cert checking costs the SAME ORDER as the swap itself (bijective ≈1.3×, bounded ≈0.13×), so the KC-4 downgrade path is NOT triggered on this evidence; a numeric budget ratification stays a pending maintainer decision. tests/sc3.rs pins SC-3 global. (phase-2.md §6.7.)
+
+  # ── Phase 2 — E2-6 (selection policy + EXPLAIN) decomposition: M-220…M-222 ─────────────────────────
+  - id: M-220
+    title: "M-220 — Decision-table SelectionPolicy + cost function"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:selection, priority:P0, status:done]
+    depends_on: [M-101, M-102, M-103]
+    body: |
+      E2-6 (#33) decomposition (RFC-0005 §2/§3). Ordered (predicate over queryable Meta) → candidate rules + explicit cost; TOTAL (default arm) and terminating by construction; deterministic; content-addressed; first-class override; fixed declared precedence. The "statistics" are the kernel's exact metadata — the cardinality-estimation opacity trap does not arise (RFC-0005 §2.5).
+      DONE (2026-06-10): new crate mycelium-select (KC-3 §5 decision — selection stays out of the trusted kernel) — SelectionPolicy with a validating constructor, a small closed non-Turing-complete Predicate language, a CostModel in real storage BITS (not "arbitrary internal units"), policy_ref() content-addressing the canonical serialization. (phase-2.md §6.8.)
+
+  - id: M-221
+    title: "M-221 — Mandatory EXPLAIN trace + LSP surfacing"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:selection, priority:P0, status:done]
+    depends_on: [M-220, M-140]
+    body: |
+      E2-6 (#33) decomposition (RFC-0005 §2.2/§4 / SC-5). A serializable Explanation populated on EVERY selection (candidates + per-candidate cost + chosen + override state); explain(policy, meta) total and deterministic; the LSP facade exposes EXPLAIN as a surfaced artifact kind; a ranking test. Mandatory EXPLAIN is the operational form of "no black boxes" (G2/ADR-006).
+      DONE (2026-06-10): Explanation emitted by select on every call (no selection without an EXPLAIN); mycelium-lsp::analyze_with adds the FIFTH artifact kind to the M-140 facade + a policy-divergence warning that keeps even overridden selections inspectable. (phase-2.md §6.9.)
+
+  - id: M-222
+    title: "M-222 — Wire selection into swap-target (and packing) sites"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:selection, priority:P1, status:done]
+    depends_on: [M-220, M-221]
+    body: |
+      E2-6 (#33) decomposition (RFC-0005 §4) — one mechanism, two sites. The swap path records Meta.policy_used = PolicyRef + EXPLAIN on auto-selection; a single select(policy, candidates, meta) → (choice, explanation) serves both sites; override forces the alternate target deterministically; a wrong-kind candidate is an explicit WrongSiteKind refusal, never a coercion.
+      DONE (2026-06-10): select_swap_target / select_packing thin adapters over the single select; the wiring test asserts "which policy chose this?" is answerable from the value alone. The packing-site CONSUMPTION is honestly deferred to E2-7/M-250 exactly as the issue scopes it. (phase-2.md §6.10.)
+
+  # ── Phase 2 — E2-1 (Dense) decomposition: M-230…M-231 ──────────────────────────────────────────────
+  - id: M-230
+    title: "M-230 — Typed dim-tracked Dense{dim,dtype} ops"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:swap, priority:P1, status:done]
+    depends_on: [M-101]
+    body: |
+      E2-1 (#28) decomposition (RFC-0001 §4.1 / RFC-0002 §5). Dense construction over ScalarKind (F32/BF16) with dim IN the type; elementwise + similarity ops with Exact/Bounded tags per op; dim mismatch a typed error; property tests; float-op ε via E2-4. An off-grid payload contradicts its Repr — refused, never re-rounded.
+      DONE (2026-06-11): new crate mycelium-dense (KC-3, like numerics/selection) — add/sub/scale Proven per-element Rel ε (Higham Thm 2.2 checked per element), neg Exact; dot/similarity f64 helpers; a 20k-pair sweep per dtype (SC-2). F16/F64 explicitly unsupported; approximate-source composition refused (ApproximateSource), the open magnitude-aware rule recorded. (phase-2.md §6.11.)
+
+  - id: M-231
+    title: "M-231 — Dense↔VSA swaps with ε/δ bounds"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:swap, priority:P1, status:done]
+    depends_on: [E2-4, M-210, M-230, M-130]
+    body: |
+      E2-1 (#28) decomposition (RFC-0002 §5 / RFC-0003). dense_to_vsa / vsa_to_dense emit Bounded certs with ε and/or δ, basis DERIVED (ProvenThm where a cited capacity theorem's side-conditions check, else EmpiricalFit); certs validate through M-210; SC-2 for the new swaps.
+      DONE (2026-06-11): mycelium-cert::dense_vsa — bipolar Dense encoded as a MAP-I superposition over a deterministic versioned codebook (so the T0.2 capacity theorem applies), provenance-gated decode; δ basis = ProvenThm iff vsa_dim ≥ requiredDim(n,δ) (reusing the M-131 checked instantiation) else EmpiricalFit else explicit InsufficientCapacity. The M-210 checker's δ-side lands here (the Incomplete placeholder retired). General-real components refused (NotBipolar). (phase-2.md §6.15.)
+
+  # ── Phase 2 — E2-2 (remaining VSA models) decomposition: M-240…M-242 ───────────────────────────────
+  - id: M-240
+    title: "M-240 — VSA models MAP-B + BSC"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:vsa, priority:P1, status:done]
+    depends_on: [M-130]
+    body: |
+      E2-2 (#29) decomposition (RFC-0003 §4). MapB/Bsc implement the VsaModel trait; bind/unbind/permute Exact (property-tested round-trips); bundle carries the HONEST capacity tag per the §4 matrix. A Proven value tag without a corpus formula would violate M-I2/VR-5 — so Value-level bundles carry a trial-backed Empirical δ instead, with an explicit refusal outside the validated profile (OutsideEmpiricalProfile).
+      DONE (2026-06-11): mycelium-vsa::{mapb,bsc} — MAP-B (bipolar, sign-rounded bundle) + BSC (XOR bind, majority bundle, centered Hamming similarity); intrinsic bundle tag Proven per the matrix but Value-level Empirical from declared EmpiricalProfile constants exercised with exactly the declared 10⁴ trials (M-I3). RR-13 NestedBundleUnsupported refusal landed here. (phase-2.md §6.12.)
+
+  - id: M-241
+    title: "M-241 — VSA models HRR + FHRR (Empirical unbind)"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:vsa, priority:P1, status:done]
+    depends_on: [M-130, M-132, E2-4]
+    body: |
+      E2-2 (#29) decomposition (RFC-0003 §4 / T1.2). Hrr/Fhrr implement the trait; bind algebraic; unbind tagged Empirical with a trial-validated EmpiricalFit bound, routed through cleanup; bind→unbind→cleanup recovery trials within the stated δ. The matrix is normative, never upgraded (FHRR stays Empirical even where pure-pair recovery is near-exact).
+      DONE (2026-06-11): mycelium-vsa::{hrr,fhrr} — HRR (naive-O(d²) circular convolution reference; correlation unbind) + FHRR (phase-angle, explicit DegenerateBundleComponent refusal); unbind is the residual Empirical weak link, Value-level unbind_values trial-validated and provenance-gated to the validated single-factor regime (T1.2). Multi-factor recovery left to the Phase-3 resonator, not silently approximated. (phase-2.md §6.13.)
+
+  - id: M-242
+    title: "M-242 — Sparse/SBC + the §4 matrix + RR-13"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:vsa, priority:P1, status:done]
+    depends_on: [M-240, M-241]
+    body: |
+      E2-2 (#29) decomposition (RFC-0003 §4 / RR-13). A sparse model with declared sparsity as a static refinement + observed sparsity as runtime metadata (T1.3, both halves); the §4 matrix as a SINGLE source-of-truth table asserted in tests; MAP-B deep nesting an explicit flagged condition.
+      DONE (2026-06-11): mycelium-vsa::sbc (sparse block codes; exact algebraic unbind; counting-Bloom bundle) carrying declared Sparse{max_active} in the Repr + observed SparsityObs in Meta; mycelium-vsa::matrix encodes RFC0003_MATRIX (6 models × 4 ops) with tests/matrix.rs asserting every implemented tag equals the table; RR-13 NestedBundleUnsupported enforced. A Value-level SBC bundle bound is recorded future work (no corpus Bloom formula), not approximated. (phase-2.md §6.14.)
+
+  # ── Phase 2 — E2-7 (packing selector) decomposition: M-250…M-251 ───────────────────────────────────
+  - id: M-250
+    title: "M-250 — Schedule-staged packing selector (I2_S/TL1/TL2)"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:execution, priority:P1, status:done]
+    depends_on: [M-222, M-112]
+    body: |
+      E2-7 (#34) decomposition (RFC-0004 §5 / DN-01). A packing candidate set + cost function; EXHAUSTIVE selection over the fixed bitnet.cpp set (I2_S/TL1/TL2) through the M-222 select API, emitting an EXPLAIN trace; the chosen layout recorded in meta.physical (lossless, M-I5); determinism + override tested; an E1 perf-harness stub recorded. Packing is a SCHEDULE concern, not a type distinction (DN-01 §2/§6) — never in the type or content hash.
+      DONE (2026-06-12): mycelium-select::{bitnet_packing_policy, select_layout, record_packing_layout} — the one E2-6 mechanism (no parallel selector), bits/element cost (TL2 the deterministic cheapest), the lossless Meta::with_physical (M-I5), cargo xtask e1 stub with an explicit "not established" verdict (VR-5). The packing-codec bytes live in mycelium-mlir, NOT the trusted kernel (KC-3). (phase-2.md §6.17.)
+
+  - id: M-251
+    title: "M-251 — E3 wrong-layout soundness differential"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:verification, area:execution, priority:P1, status:done]
+    depends_on: [M-250, M-151]
+    body: |
+      E2-7 (#34) decomposition (RFC-0004 §8 / NFR-7). Extend the M-151 interp↔AOT differential so a deliberately MISLABELED meta.physical layout FAILS observational equivalence through the M-210 checker, and a correct one passes — proving the layout record is sound-by-checking (the Mycelium analogue of the MLIR-transpose / Rust-packed "wrong layout misreads memory" bug DN-01 §4 cites).
+      DONE (2026-06-12): mycelium-mlir::pack (bijective trit↔byte codec, the three schemes mutually distinct; total decode — a misread, never a panic) + aot::run_with_layout; tests/wrong_layout.rs flips the M-210 verdict SOLELY on the layout tag (correct ⇒ Validated, mislabeled ⇒ NotValidated{Diverged} ⇒ fall back to the reference). Real native pack/unpack kernels + the calibrated E1 answer deferred to the native backend (ADR-009). (phase-2.md §6.18.)
+
+  # ── Phase 2 — E2-5 (reconstruction manifest) decomposition: M-260 ──────────────────────────────────
+  - id: M-260
+    title: "M-260 — Reconstruction manifest (ReconInfo)"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:feature, area:vsa, priority:P1, status:done]
+    depends_on: [M-130, E2-4]
+    body: |
+      E2-5 (#32) decomposition (RFC-0003 §6). A ReconInfo serializing to reconstruction-manifest.schema.json (the ratified name — the issue's recon-info.schema.json reconciled, §7 naming OQ resolved) distinguishing indexed retrieval from compositional reconstruction; content-addressed codebooks; attached bound; the compositional path recovers a NOVEL combination; round-trip + reconstruction tests. Resonator factorization stays Phase-3 with the probabilistic-only ceiling enforced IN THE TYPE (a ProvenThm basis is refused — FR-C2).
+      DONE (2026-06-11): mycelium-core::recon (kernel carries the metadata field per RFC-0003 §2) + Meta.reconstruction; mycelium-vsa::recon::reconstruct_role executes the manifest. Acceptance: bundle(color⊗red, shape⊗cube) with both pairs absent from every codebook recovered role-by-role (the §6 exit criterion). This is the M-350 resonator's gated dependency. (phase-2.md §6.16.)
+
+  # ── Phase 4 — M-351 (RFC-0012 ambient deferred extensions) ─────────────────────────────────────────
+  # NB: idmap.tsv files M-351 (#114) under "Phase 4 (RFC-0012 ambient deferred extensions)"; the task is
+  # the M-344 ambient follow-up that resolves RFC-0012 §8 R12-Q1/Q2. (The PM-task prompt's "Phase-3
+  # toolchain task" label does not match the corpus — grounded here in Phase 4 where the corpus places it;
+  # the milestone/phase is recorded as found, not as described, per "ground every task / never invent".)
+  - id: M-351
+    title: "M-351 — RFC-0012 R12-Q1 & R12-Q2 resolution (ambient deferred extensions)"
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:design, area:toolchain, priority:P3, status:done]
+    depends_on: [M-344]
+    body: |
+      The two RFC-0012 §8 open questions the M-344 ambient enactment deferred. R12-Q1 (per-use size) → NO new sugar: a paradigm-less ascription `e : {N}` already states an explicit size at the use site (paradigm from the central default), elaborating identically to longhand (I2); sizes stay explicit (no ambient default width) and a u8/f64 literal suffix was REJECTED (imports signed/dtype affordances the kernel does not provide — a false-affordance footgun; v0 Binary is unsigned). R12-Q2 (paradigm-boundary swaps) → crossings stay at swap sites: no default swap policy; `with paradigm` stays pure tag-scoping (SoC); the boundary-AUDIT value is routed to observability tooling (M-345 → DN-04 / RFC-0013 §4.6, the representation-crossing audit view) where lossy conversions are enumerated with their honesty bound (never upgraded, VR-5).
+      DECIDED — DONE (2026-06-16): M-351 (#114) closes with NO new ambient surface; R12-Q1/Q2 both resolve to the M-344 baseline. The enforced block-edge boundary is recorded as an optional future discipline (RFC-0012 §9, not adopted). (CHANGELOG "Decided (Phase 4 — M-351 …)"; RFC-0012 §8/§9.)
+
+# ════════════════════════════════════════════════════════════════════════════════════════════════
+# Phase 5 — Self-Hosting & Core Library (ANTICIPATED — not yet ratified; scope firms at the Phase-4 gate).
+# Created 2026-06-17 (PM phase-allocation reconcile) so the defined-but-unused phase:5 label + the
+# "Phase 5 — Self-Hosting & Core Library" milestone are no longer empty (gh-issues-sync.py --validate
+# flagged both). DECOMPOSES the M-346 stdlib epic (which already NAMES its candidate modules + acceptance:
+# "draft a Core Library RFC … and decompose into per-module tasks") and the milestones.json Phase-5 charter
+# (self-host the RFC-0013/0014 diagnostics + recovery in Mycelium-lang). Grounded ENTIRELY in M-346 +
+# milestones.json + RFC-0013/0014; scoped to what the roadmap implies, NOT over-invented. All design-first
+# (status:needs-design) and out-of-gate (P3); M-501 is the keystone gate the rest depend on. Like the
+# M-364…M-368 staging precedent: GitHub issue numbers are minted on the next gh-sync-all.sh run at the
+# Phase-5 gate (the MCP cannot create milestones/colored labels); idmap records them then. Sequencing vs
+# Phases 6-7 is a maintainer gate decision (MILESTONES.md). FLAGGED open question: whether self-hosting
+# precedes or follows the Phase-7 runtime track is unresolved in the corpus — recorded, not decided here.
+  - id: M-501
+    title: "M-501 — Core Library RFC (scope, module boundaries, the per-op guarantee/EXPLAIN contract, Rust→Mycelium migration)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-346]
+    body: |
+      The design-first keystone M-346's acceptance NAMES: "when self-hosting is close, draft a Core Library RFC (scope, module boundaries, the guarantee/EXPLAIN contract every stdlib op must meet, Rust→Mycelium migration) and decompose into per-module tasks. Present before folding." This is that RFC — the gate the rest of Phase 5 depends on. The contract every stdlib op must meet is the language's own house rules lifted to library scope: never-silent (G2), honest per-op guarantee tags (VR-5), no black boxes / EXPLAIN, content-addressed (ADR-003), small auditable kernel — the stdlib lives ABOVE it (KC-3). Rust-first now (ADR-007), Mycelium-lang eventually (dogfooding).
+      Acceptance (design-first): the Core Library RFC presented + ratified (Draft→Accepted, maintainer) before any stdlib code; it fixes the module set, the per-op guarantee/EXPLAIN contract, and the Rust→Mycelium migration order. FLAG any module whose intent is not yet grounded rather than inventing scope.
+
+  - id: M-502
+    title: "M-502 — Self-hosting readiness gate (surface language sufficient to author stdlib modules in Mycelium)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P3, status:needs-design]
+    depends_on: [M-346, M-320]
+    body: |
+      M-346 conditions the whole stdlib decomposition on a precondition: it is "decomposed once the surface language is self-hosting enough to write stdlib modules in Mycelium itself (dogfooding; free of other languages)". This task makes that precondition CHECKABLE: enumerate the surface-language capabilities a stdlib module needs (the RFC-0007 term language M-320 extends; data + recursion; the RFC-0012 ambient surface; nodules/phyla per DN-06; the M-359 manifest) and produce an honest readiness verdict — self-hosting is "close" / "not yet" (never pre-declared, VR-5).
+      Acceptance (design-first): a readiness assessment against M-501's contract; a "not established" verdict stays honest until the surface actually supports it. Gates M-510…M-520.
+
+  - id: M-510
+    title: "M-510 — stdlib: diagnostics module (self-hosted)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      The first M-346 candidate module ("diagnostics (DN-04/M-345)") — self-host the RFC-0013 structured-diagnostics layer (today crates/mycelium-lsp/src/diagnostics, Rust) in Mycelium-lang per its stated self-hosting trajectory ("Rust-first … eventually self-hosted in Mycelium-lang"). Must preserve the central never-silent invariant I1 (presentation never gates propagation) and honest sink guarantees on the lattice (RT5/VR-5).
+      Acceptance (needs-design): meets the M-501 per-op guarantee/EXPLAIN contract; the I1 never-silent test holds in the self-hosted form; differential against the Rust implementation where they coexist (NFR-7-style). The early candidate-module anchor M-345 names.
+
+  - id: M-511
+    title: "M-511 — stdlib: collections module"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      The M-346 candidate module "collections". A core-library collections module authored in Mycelium-lang, every operation carrying its honest guarantee tag + EXPLAIN per the M-501 contract; bounds/refusals explicit (G2). Scope (which collections, which operations) is fixed by the M-501 RFC, not pre-committed here.
+      Acceptance (needs-design): module scope ratified in M-501; ops meet the guarantee/EXPLAIN contract; content-addressed (ADR-003); lives above the kernel (KC-3).
+
+  - id: M-512
+    title: "M-512 — stdlib: numerics helpers (ADR-010)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      The M-346 candidate module "numerics helpers (ADR-010)". Stdlib helpers over the ε/δ bound kernels (the M-201/M-202 monoids + the M-203 shared certificate), authored in Mycelium-lang, each tagged at the strength its basis supports and never upgraded (VR-5). The trusted ADR-010 kernels stay the small trusted base; these are certificate CONSUMERS above it (KC-3).
+      Acceptance (needs-design): scope ratified in M-501; honest per-op tags; the tier-i checker still re-validates; no guarantee upgraded without a checked basis.
+
+  - id: M-513
+    title: "M-513 — stdlib: VSA / encoding utilities (RFC-0003)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:vsa, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      The M-346 candidate module "VSA/encoding utils (RFC-0003)". Stdlib encoding/utility helpers over the VSA models (M-130/M-240…M-242) and the reconstruction manifest (M-260), authored in Mycelium-lang. Honest tags per the RFC-0003 §4 matrix (the normative source-of-truth table M-242 encodes); approximate paths stay Empirical/refused, never silently upgraded.
+      Acceptance (needs-design): scope ratified in M-501; tags match the §4 matrix; reconstruction stays the probabilistic-only ceiling (FR-C2); above the kernel (KC-3).
+
+  - id: M-514
+    title: "M-514 — stdlib: I/O + serialization (RFC-0001 §4.8)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      The M-346 candidate module "I/O + serialization (RFC-0001 §4.8)". Stdlib serialization/IO authored in Mycelium-lang over the content-addressed value model (RFC-0001 §4.8; the (de)serialization M-104 established in Rust). Round-trip is a checked property; a malformed input is an explicit error, never a silent partial read (G2); serialization is a projection, not identity (ADR-003 — the content hash stays canonical).
+      Acceptance (needs-design): scope ratified in M-501; round-trip property holds; meets the guarantee/EXPLAIN contract; above the kernel (KC-3).
+
+  - id: M-520
+    title: "M-520 — Self-host the RFC-0013/0014 diagnostics + recovery runtime in Mycelium-lang"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-345, M-352]
+    body: |
+      The milestones.json Phase-5 charter names this directly: "self-host the RFC-0013/0014 diagnostics + recovery (per their self-hosting trajectory)". Port the reified recovery subsystem (RFC-0014, today crates/mycelium-lsp/src/recover, Rust) into Mycelium-lang — the result-sum Outcome, the closed recovery-action set, the registry-shared on-ErrorClass policy, declared+budgeted effects with graceful EffectBudgetExhausted, and the never-silent handle (every error recovered or re-propagated, never dropped — I1). Builds on the self-hosted diagnostics (M-510). Recovery elaborates to L0 Match — no new kernel node (KC-3, NFR-7).
+      Acceptance (needs-design): meets the M-501 contract; the central never-silent invariant I1 + the effect-budget invariants (I3/I4/I5) hold in the self-hosted form; differential against the Rust implementation (NFR-7). FLAG: depends on the surface supporting error-sum Match + the effect-budget surface (M-353) being expressible in Mycelium-lang.
+
+  # ── Phase 5 — the full stdlib module taxonomy (RFC-0016 §4.3/§4.4) ─────────────────────────────────
+  # Created 2026-06-17 alongside RFC-0016 (Draft) + docs/planning/phase-5.md, decomposing the M-346 stdlib
+  # epic into per-module tasks per the user's request to capture the FULL standard library on the roadmap:
+  # the Tier-A DIFFERENTIATOR modules (the library form of an Accepted RFC/ADR — unique to Mycelium) and
+  # the Tier-B COMMON modules (table-stakes, held to the same RFC-0016 §4.1 per-op contract). M-510/511/512/
+  # 513/514/520 above are the M-346 "early candidates" subset; the rest are added here. Every module ships a
+  # checked guarantee matrix (RFC-0016 §4.5). All grounded in the cited corpus (a module whose intent isn't
+  # grounded is FLAGGED in RFC-0016 §8, never invented — G2). status:needs-design / P3; numbers minted at
+  # the Phase-5 gate (the M-364…368 staging precedent).
+  # ·· Tier A — differentiator modules ··
+  - id: M-515
+    title: "M-515 — stdlib: `core` / prelude (the honest value model)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:core-ir, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-101]
+    body: |
+      RFC-0016 §4.3 Ring-0. The thin prelude: Value/Repr/Meta, Option/Result + error values, and the guarantee-lattice tags (Exact ⊐ Proven ⊐ Empirical ⊐ Declared), mostly re-exporting mycelium-core (RFC-0001; M-101) — NO new trusted code (KC-3). The foundation every other module builds on.
+      Acceptance (needs-design): meets the M-501 §4.1 contract; adds no kernel surface (Ring-0 re-export only); the lattice tags + never-silent error values are the documented floor.
+
+  - id: M-516
+    title: "M-516 — stdlib: `swap` (the certified representation-change library)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:swap, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-210]
+    body: |
+      RFC-0016 §4.3 — the library form of Mycelium's signature operation (RFC-0002). An ergonomic surface over the landed certified swaps (M-120 binary↔ternary, M-211 F32→BF16, M-231 Dense↔VSA) + certificate build/check through the one M-210 checker; a swap is lexically visible, certificate-carrying, never silent (out-of-range = explicit refusal). Certificate consumer (KC-3); honest per-op tags (VR-5).
+      Acceptance (needs-design): every exported swap emits + validates a certificate; the guarantee matrix records each swap's tag + legal-pair side-conditions; unsupported pairs are explicit errors.
+
+  - id: M-517
+    title: "M-517 — stdlib: `ternary` (balanced ternary + bit/trit + packed)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:core-ir, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-111]
+    body: |
+      RFC-0016 §4.3 — the ternary-native differentiator. Balanced-ternary arithmetic, first-class Bit and Trit{-1,0,+1} with identities (FR-M2; M-111), and packed-ternary helpers (the I2_S/TL1/TL2 codecs, RFC-0004 §5 / DN-01) exposed as inspectable meta.physical, never hidden lowering. Exact where the algebra is exact (VR-5).
+      Acceptance (needs-design): arithmetic ops tagged per the matrix (Exact for the balanced-ternary algebra); packing exposed inspectably (NFR-1/NFR-4); rounding/out-of-range explicit (G2).
+
+  - id: M-518
+    title: "M-518 — stdlib: `dense` (typed dim-tracked tensors / embeddings)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-230]
+    body: |
+      RFC-0016 §4.3 — typed Dense{dim,dtype} with dim in the type, elementwise + similarity ops with per-op Exact/Bounded tags (M-230; RFC-0001 §4.1 / RFC-0002 §5). Float-op ε routed through the verified numerics (ADR-010); a dim/dtype mismatch or off-grid payload is a typed error, never re-rounded.
+      Acceptance (needs-design): per-op guarantee matrix (Proven where Higham's bound's side-conditions check, else honest downgrade); mismatches explicit; above the kernel (KC-3).
+
+  - id: M-519
+    title: "M-519 — stdlib: `select` / `explain` (selection DSL + mandatory EXPLAIN)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:selection, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-220]
+    body: |
+      RFC-0016 §4.3 — reified decisions as a library (RFC-0005/ADR-006; M-220/221/222). The total, non-learned, content-addressed decision-table policy surface + the mandatory EXPLAIN record (one mechanism, many sites); the operational form of "no black boxes" (SC-3/G2). Cost in real declared units, never "arbitrary internal units".
+      Acceptance (needs-design): every selection emits a valid EXPLAIN record; the policy is content-addressed + inspectable; determinism + override tested.
+
+  - id: M-521
+    title: "M-521 — stdlib: `runtime` / `colony` (the fungal concurrency surface)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:execution, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-355]
+    body: |
+      RFC-0016 §4.3 — the library bindings for the RFC-0008 runtime lexicon: hypha/fuse/colony/cyst/graft/forage/backbone/mesh/tier/reclaim, structured concurrency (Scope), and reclaim bounded-cascade supervision (M-355–357). Mostly RESERVED-not-active vocabulary (Glossary ⟂) until the RFC-0008 constructs land. FLAGGED cross-phase dependency (RFC-0016 §8-Q4): this module is sequenced against the Phase-7 runtime track and may live in a separate `runtime` phylum rather than `std`.
+      Acceptance (design-first): the binding set + the std-vs-separate-phylum decision presented; activates construct-by-construct as RFC-0008 vocabulary lands (no premature surface — VR-5).
+
+  - id: M-522
+    title: "M-522 — stdlib: `spore` (deployable / reconstruction-manifest library)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-368]
+    body: |
+      RFC-0016 §4.3 — the content-addressed deployable unit + the reconstruction-manifest (regrow-a-value-from-its-recipe) library (ADR-013; RFC-0003 §6; the M-368 packaging contract). Content-addressed identity is canonical (ADR-003); metadata is not identity; a missing/ambiguous publish input is an explicit error (G2). The full native deploy lands with the Phase-6 native path (M-620).
+      Acceptance (needs-design): a spore builds with a deterministic content hash; the reconstruction-manifest single-value case round-trips; honest publish-input errors.
+
+  - id: M-523
+    title: "M-523 — stdlib: `content` / `hash` (content-addressing primitives)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:core-ir, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-103]
+    body: |
+      RFC-0016 §4.3 — the identity model as a first-class library (ADR-003; RFC-0001 §4.6; the M-103 content-addressing): hash-of-AST identity, content hashes for cert/policy refs, and the blake3 digest surface — kept DISTINCT from hashing-for-hash-maps (that lives with collections). Identical defs collide; trivial renames don't change identity.
+      Acceptance (needs-design): content-addressing primitives with the canonical-hash guarantee (ADR-003); the identity-vs-metadata split documented; above the kernel (KC-3).
+
+  # ·· Tier B — common / expected modules ··
+  - id: M-524
+    title: "M-524 — stdlib: `text` / `string` (UTF-8, format, parse)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      RFC-0016 §4.4 — UTF-8 strings, slicing, formatting, parsing. Honesty crux: `parse` returns a Result, NEVER a sentinel (C1); a lossy encoding/transcoding is an explicit error, never a silent replacement-char substitution unless explicitly requested. Value-semantic; immutable by default.
+      Acceptance (needs-design): every fallible op explicit (G2); the guarantee matrix records parse/format fallibility; meets the M-501 contract.
+
+  - id: M-525
+    title: "M-525 — stdlib: `math` (numeric functions over honest numerics)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-512]
+    body: |
+      RFC-0016 §4.4 — numeric functions; where precision/approximation matters they route through the verified numerics (M-512/ADR-010) and carry their tag (C2). A function with a domain restriction (sqrt of negative, log of zero) is an explicit error, never NaN-by-silence. Transcendental/approximate results are tagged at their established strength (VR-5), never pre-claimed.
+      Acceptance (needs-design): per-op guarantee matrix (Exact / Bounded with ε / Empirical as the basis supports); domain errors explicit.
+
+  - id: M-526
+    title: "M-526 — stdlib: `iter` (iterator / fold combinators)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-320]
+    body: |
+      RFC-0016 §4.4 — iterator / fold / transducer combinators over the RFC-0007 §4.8 `for` fold (the kernel's linear-recursion primitive; M-320). Total + terminating where the kernel guarantees it (a matured/total fold stays total); laziness, if offered, is explicit, not a silent thunk. Value-semantic.
+      Acceptance (needs-design): combinators preserve the kernel's totality guarantees; the guarantee matrix records which are total; meets the M-501 contract.
+
+  - id: M-527
+    title: "M-527 — stdlib: `error` / `option` / `result` (errors-as-values ergonomics)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-352]
+    body: |
+      RFC-0016 §4.4 — the errors-as-values ergonomics layer: Option/Result combinators, `?`-style propagation, and the bridge to the RFC-0014 reified recovery (M-352). The never-silent floor (I1) is structural — propagation is the default and suppression is impossible; an error is recovered or re-propagated, never dropped.
+      Acceptance (needs-design): the propagation/combinator surface with I1 held (no silent drop); recovery stays additive + opt-in (I5); meets the M-501 contract.
+
+  - id: M-528
+    title: "M-528 — stdlib: `fs` (filesystem over substrates)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-514]
+    body: |
+      RFC-0016 §4.4 — filesystem access over affine `substrate` handles (LR-8 — a handle is consumed exactly once), building on the M-514 IO surface. Every path/permission/IO failure is an explicit error (G2); no silent create-on-write, no silent truncation. OS facilities are confined to an audited `wild` block (ADR-014); the `wild`/FFI floor is RFC-0016 §8-Q6 (FLAGGED — may live in a separate std-sys phylum so pure `std` stays leak-free, LR-9).
+      Acceptance (needs-design): every fs op explicit + fallible; substrate single-consumption enforced; the `wild` surface inventoried + justified.
+
+  - id: M-529
+    title: "M-529 — stdlib: `time` (clocks, durations, instants)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      RFC-0016 §4.4 — clocks, durations, instants. Honesty crux: MONOTONIC vs WALL-CLOCK time is a typed distinction, never a silent swap (a deterministic-fragment program cannot read wall-clock entropy silently — RT2/RT3); the RFC-0008 logical clock (the M-356 reclaim windowing basis) is the in-runtime time source. Reads are declared effects (C6).
+      Acceptance (needs-design): the monotonic/wall/logical clock distinction typed + explicit; time reads declared as effects; meets the M-501 contract.
+
+  - id: M-531
+    title: "M-531 — stdlib: `rand` (random number generation)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      RFC-0016 §4.4 — RNG. Honesty crux: nondeterminism is REIFIED and NAMED (RT3) — entropy is a declared effect (C6), so a deterministic-fragment program cannot pull randomness silently; a seeded/deterministic generator is a distinct, reproducible construct. Distribution guarantees are tagged honestly (Declared/Empirical), never claimed Proven without a checked basis (VR-5).
+      Acceptance (needs-design): entropy as a declared effect; seeded vs entropy generators distinct; honest distribution tags.
+
+  - id: M-532
+    title: "M-532 — stdlib: `cmp` / `convert` (ordering, equality, non-representation conversions)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      RFC-0016 §4.4 — ordering/equality traits + value conversions that are NOT representation changes (a representation change is a `swap`, M-516 — visible + certified; this is the ordinary widening/conversion surface). Honesty crux: a LOSSY convert is an explicit fallible op, never a silent narrowing/truncation (C1); equality respects content-addressed identity where it applies (ADR-003).
+      Acceptance (needs-design): lossy conversions explicit + fallible; the cmp/convert boundary vs `swap` documented; meets the M-501 contract.
+
+  - id: M-533
+    title: "M-533 — stdlib: `fmt` (formatting / display)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      RFC-0016 §4.4 — formatting / display with the dual HUMAN + MACHINE (JSON) projection (G11; the RFC-0013 diagnostics precedent) over one canonical form. A value's display is a projection, not its identity (ADR-003 — the content hash stays canonical). Honest: a truncated/elided display says so, never silently drops data.
+      Acceptance (needs-design): dual human/machine projection round-trips (G11); display is a projection (identity unchanged); meets the M-501 contract.
+
+  - id: M-534
+    title: "M-534 — stdlib: `testing` (property / golden / differential harness)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      RFC-0016 §4.4 — the repo's own verification discipline as a library: property tests (a bound for every guarantee), golden/snapshot tests, and the differential harness (the M-151/M-210 interp↔AOT pattern). Honesty crux: a skipped or undetermined check is REPORTED, never a silent pass (the `just check` ethos — skips are explicit and explained, G2/VR-5). Dogfoods the language's own honesty rule.
+      Acceptance (needs-design): property/golden/differential harnesses; explicit skip reporting (never a silent green); meets the M-501 contract.
+
+# ════════════════════════════════════════════════════════════════════════════════════════════════
+# Phase 6 — Native Acceleration & Deployment (ANTICIPATED — not yet ratified; scope firms at the prior
+# gate). Created 2026-06-17 (PM phase-allocation reconcile) so the defined-but-unused phase:6 label + the
+# "Phase 6 — Native Acceleration & Deployment" milestone are no longer empty. Grounded ENTIRELY in
+# milestones.json (the Phase-6 charter) + the cited corpus: the native MLIR→LLVM path (M-348 libMLIR
+# provisioning, blocked; RFC-0004 §2; ADR-009; the native codegen M-342 left as UnsupportedNode; DN-05 #1
+# native stack-robustness), the Phase-3 acceleration carried forward (M-360/M-370), deployable Spore units
+# (ADR-013; the germinates-into-a-colony unit, DN-06/Glossary; the M-368 packaging→spore manifest), and
+# production hardening (VR-4 no-opaque-lowering across all backends). Scoped to what the roadmap implies,
+# NOT over-invented; all design-first (status:needs-design) + out-of-gate (P3); M-601 is hard-gated on the
+# libMLIR provisioning (M-348). Numbers minted on the next gh-sync-all.sh run at the gate (the M-364…368
+# staging precedent). FLAGGED open: the native MLIR path is libMLIR-blocked (M-348) — every native verdict
+# stays honestly "not established" (VR-5) until the toolchain is present.
+  - id: M-601
+    title: "M-601 — Native MLIR→LLVM codegen for the full v0 calculus (incl. data + closure)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P3, status:needs-design]
+    depends_on: [M-348, M-342]
+    body: |
+      The milestones.json Phase-6 charter's first item: "Native MLIR→LLVM codegen for the full calculus incl. data/closure (M-348, RFC-0004 §2, ADR-009)". Complete the native lowering M-342 left as explicit UnsupportedNode (native LLVM stayed bit/trit only; the data/closure/recursion fragment runs on the AOT env-machine, not native), and design DN-05 #1 — stack-robust recursion — INTO the native path (RFC-0004 §2 banked it there; reuse the DN-05 budget trait, DN05-Q4). Each lowering stage stays dumpable (no opaque pass — VR-4). HARD-GATED on libMLIR provisioning (M-348, currently blocked); until present, the native verdict stays honestly "not established" (VR-5), never pre-written.
+      Acceptance (design-first; libMLIR-gated): a native MLIR→LLVM increment lowers the data + closure fragment with explicit refusal where a node is still unsupported (never silent); no code until the toolchain is present (M-348).
+
+  - id: M-602
+    title: "M-602 — Native-path NFR-7 three-way differential + E1 speedup verdict"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:verification, area:execution, priority:P3, status:needs-design]
+    depends_on: [M-601, M-302, M-303]
+    body: |
+      The Phase-6 gate's verification half: "native path holds the NFR-7 differential + a speedup". Extend the M-302 interp↔native differential (and the M-210 shared checker) so the full-calculus corpus runs under the interpreter AND the real native MLIR→LLVM artifact with observable equivalence (a divergent lowering caught — NFR-7/RR-12), and replace the M-303 E1 stub's "not established" with a MEASURED native-vs-interpreter speedup on the full calculus (honest caption, refuses a debug build, no pre-written target — VR-5).
+      Acceptance (design-first; gated on M-601): the three-way differential holds across the calculus on the native path; a recorded native/interp ratio with caveats; the E1 verdict moves "not established" → "measured".
+
+  - id: M-610
+    title: "M-610 — BitNet / native-ternary acceleration on the native backend"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P3, status:needs-design]
+    depends_on: [M-601, M-360, M-370]
+    body: |
+      The Phase-6 charter's "BitNet / native-ternary acceleration (Foundation §6 Phase-3 acceleration carried forward)". Carry the M-360 production packed-ternary kernels (real pack/unpack/compute for I2_S/TL1/TL2, packing as inspectable meta.physical — NFR-1/NFR-4, not hidden lowering) and the M-370 native-ternary forward-compat mapping (R7) onto the real native backend M-601 unblocks. The M-251 E3 wrong-layout differential guards soundness (a mislabeled layout is caught). Packing stays a schedule concern recorded on meta.physical, never in the type/hash (DN-01).
+      Acceptance (design-first; gated on M-601): a packed-ternary kernel runs on the native backend with the layout recorded + inspectable; within the E2-7 exit criterion (~0.01 PPL / 0.1% of full precision); the E3 differential still catches a mislabeled layout (NFR-7).
+
+  - id: M-620
+    title: "M-620 — Deployable Spore units on the native path (ADR-013)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P3, status:needs-design]
+    depends_on: [M-601, M-368]
+    body: |
+      The Phase-6 charter's "deployable Spore units (ADR-013)". Produce a deployable Spore — the content-addressed deployable artifact of a phylum/program (ADR-013; the germinates-into-a-colony unit, DN-06/Glossary) — from the native-compiled backend, consuming the M-368 packaging layer (mycelium-proj.toml → spore). Content-addressed identity is canonical (ADR-003); metadata is not identity. A missing/ambiguous deploy input is an explicit error, never a guessed default (G2).
+      Acceptance (design-first; gated on M-601): a Spore built from the native backend deploys + runs; the content hash is canonical; the no-opaque-lowering guarantee (VR-4) holds end-to-end into the deployed unit.
+
+  - id: M-630
+    title: "M-630 — Production hardening + the VR-4 no-opaque-lowering cross-backend gate"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:verification, area:execution, priority:P3, status:needs-design]
+    depends_on: [M-601, M-620]
+    body: |
+      The Phase-6 charter's "production hardening" + its gate condition "a deployable Spore (VR-4 no-opaque-lowering across ALL backends)". Establish the cross-backend VR-4 obligation: every lowering stage on every backend (interpreter, AOT env-machine, native MLIR→LLVM, JIT) stays dumpable/inspectable — no opaque pass anywhere — and a deployed Spore carries that guarantee. Production hardening = the honest soak/robustness work a release needs, with every verdict tagged at its established strength (VR-5).
+      Acceptance (design-first; gated on M-601/M-620): VR-4 demonstrated across all backends (a dumpable stage at every lowering step); the production-hardening checklist met with honest per-item verdicts; this is the Phase-6 exit gate.
