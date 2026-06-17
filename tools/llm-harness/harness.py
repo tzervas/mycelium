@@ -97,14 +97,23 @@ class ValidationResult:
 
 ValidationFn = Any  # Callable[[RunContext], ValidationResult]
 
-_REGISTRY: list[tuple[str, str, ValidationFn]] = []  # (id, description, fn)
+_REGISTRY: list[
+    tuple[str, str, bool, ValidationFn]
+] = []  # (id, desc, requires_model, fn)
 
 
-def validation(vid: str, description: str):
-    """Decorator: register a validation function."""
+def validation(vid: str, description: str, *, requires_model: bool = True):
+    """Decorator: register a validation function.
+
+    requires_model=True (default) means the check needs a real model/server; with
+    none available it becomes an explicit SKIP (never a false PASS). Set False for
+    pure-logic checks (e.g. the VR-5 tag gate) that run in every mode. Carrying this
+    as metadata — instead of matching on a specific id — keeps NEVER-SILENT correct
+    as validations are added.
+    """
 
     def decorator(fn: ValidationFn) -> ValidationFn:
-        _REGISTRY.append((vid, description, fn))
+        _REGISTRY.append((vid, description, requires_model, fn))
         return fn
 
     return decorator
@@ -543,6 +552,7 @@ _TAG_FIXTURES = [
 @validation(
     "V-03-tag-honesty",
     "Guarantee-tag honesty gate (VR-5): model-derived claims must be Empirical or Declared",
+    requires_model=False,  # pure logic — runs in every mode, never SKIPs
 )
 def v03_tag_honesty(ctx: RunContext) -> ValidationResult:
     vid = "V-03-tag-honesty"
@@ -1009,10 +1019,16 @@ def list_models_text() -> str:
     return "\n".join(lines)
 
 
-def _download_with_resume(url: str, dest_part: Path, log: logging.Logger) -> int:
-    """Stream url → dest_part with HTTP Range resume. Returns total bytes on disk.
+def _download_with_resume(
+    url: str, dest_part: Path, log: logging.Logger
+) -> tuple[int, int | None]:
+    """Stream url → dest_part with HTTP Range resume.
 
-    Raises on a hard transfer failure (the .part file is left in place to resume).
+    Returns (bytes_on_disk, expected_total). expected_total is the full file size
+    when the server advertises it (Content-Length / Content-Range), else None.
+    The caller verifies bytes_on_disk == expected_total before accepting the file,
+    so a silently-truncated transfer is never promoted. Raises on a hard transfer
+    failure (the .part file is left in place to resume).
     """
     import urllib.error
     import urllib.request
@@ -1029,7 +1045,7 @@ def _download_with_resume(url: str, dest_part: Path, log: logging.Logger) -> int
     except urllib.error.HTTPError as exc:
         if exc.code == 416 and existing:
             # Range not satisfiable ⇒ the .part is already the full file.
-            return existing
+            return existing, existing
         raise
 
     status = getattr(resp, "status", resp.getcode())
@@ -1071,7 +1087,7 @@ def _download_with_resume(url: str, dest_part: Path, log: logging.Logger) -> int
                     f" of {_human_bytes(total)}" if total else "",
                 )
                 last_log = now
-    return downloaded
+    return downloaded, total
 
 
 def ensure_model(
@@ -1126,11 +1142,22 @@ def ensure_model(
 
     dest_part = dest.with_suffix(dest.suffix + ".part")
     try:
-        _download_with_resume(url, dest_part, log)
+        downloaded, total = _download_with_resume(url, dest_part, log)
     except Exception as exc:  # noqa: BLE001 — never-silent: surface + keep .part
         log.error(
             "Download failed: %s. Re-run to resume (any partial bytes are kept at %s).",
             exc,
+            dest_part,
+        )
+        return None
+
+    # Completeness: if the server advertised a size, the transfer must match it.
+    # A truncated body that still starts with the GGUF magic must NOT be promoted.
+    if total is not None and downloaded != total:
+        log.error(
+            "Incomplete download: got %s of %s. Not promoting (re-run to resume): %s",
+            _human_bytes(downloaded),
+            _human_bytes(total),
             dest_part,
         )
         return None
@@ -1280,18 +1307,13 @@ def run_harness(args: argparse.Namespace) -> int:
     results: list[ValidationResult] = []
 
     # Run all registered validations
-    for vid, description, fn in _REGISTRY:
+    for vid, description, requires_model, fn in _REGISTRY:
         log.info("--- Running %s: %s ---", vid, description)
         try:
             # If we have no model and are not in explicit mock mode,
-            # model-dependent validations (V-01, V-02, V-04) become SKIPs.
-            # V-03 always runs (pure logic).
-            if (
-                not mock_mode
-                and not server_url
-                and not llama_cli
-                and vid != "V-03-tag-honesty"
-            ):
+            # model-dependent validations become SKIPs. Pure-logic checks
+            # (requires_model=False, e.g. V-03) always run.
+            if not mock_mode and not server_url and not llama_cli and requires_model:
                 result = ValidationResult(
                     id=vid,
                     status=STATUS_SKIP,
@@ -1339,7 +1361,17 @@ def run_harness(args: argparse.Namespace) -> int:
 
     any_fail = counts[STATUS_FAIL] > 0
     exit_code = 1 if any_fail else 0
-    overall = "FAIL" if any_fail else "PASS"
+    # Honest overall (SKIP/mock is never a real PASS). Exit code stays 0 unless a
+    # real FAIL: MOCK and INCONCLUSIVE are "no failures, but nothing was actually
+    # validated against a real model" — not a green light, not an error.
+    if any_fail:
+        overall = "FAIL"
+    elif mock_mode:
+        overall = "MOCK"  # fixtures only — never conflated with real PASS
+    elif counts[STATUS_SKIP] > 0 or counts[STATUS_PASS] == 0:
+        overall = "INCONCLUSIVE"  # something skipped, or nothing passed
+    else:
+        overall = "PASS"
 
     summary = {
         "overall": overall,

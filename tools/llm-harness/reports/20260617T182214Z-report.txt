@@ -1,7 +1,7 @@
 ========================================================================
   Mycelium LLM-validation harness  — human-readable projection (G11)
 ========================================================================
-  Run ID  : 20260617T174336Z
+  Run ID  : 20260617T182214Z
   Mode    : mock
   Posture : NEVER-SILENT (G2) · VR-5 honesty · DUAL PROJECTION (G11)
 
@@ -28,7 +28,7 @@
 ------------------------------------------------------------------------
   Summary
 ------------------------------------------------------------------------
-  overall             : PASS
+  overall             : MOCK
   total               : 4
   pass                : 1
   mock_pass           : 3
@@ -36,6 +36,7 @@
   fail                : 0
   exit_code           : 0
   mode                : mock
+  model               : None
 
   NOTE: This is the human-readable projection. See companion .json for the machine projection.
 ========================================================================

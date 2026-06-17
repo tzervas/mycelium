@@ -1,0 +1,19 @@
+2026-06-17T18:22:14Z  INFO      === Mycelium LLM-validation harness ===
+2026-06-17T18:22:14Z  INFO      Run ID: 20260617T182214Z
+2026-06-17T18:22:14Z  INFO      Mode: MOCK (dry-run) — no model, fixture responses, CI-safe
+2026-06-17T18:22:14Z  INFO      --- Running V-01-determinism: Fixed-seed round-trip: same prompt ⇒ same output across two runs ---
+2026-06-17T18:22:14Z  INFO      [mock-PASS] V-01-determinism — [MOCK] Determinism check simulated with fixture — not a real model run. Fixture outputs matched: True
+2026-06-17T18:22:14Z  INFO      --- Running V-02-json-projection: Structured-output / JSON-projection conformance (G11) ---
+2026-06-17T18:22:14Z  INFO      [mock-PASS] V-02-json-projection — [MOCK] JSON-projection check against fixture — not a real model run. Fixture parsed and validated OK
+2026-06-17T18:22:14Z  INFO      --- Running V-03-tag-honesty: Guarantee-tag honesty gate (VR-5): model-derived claims must be Empirical or Declared ---
+2026-06-17T18:22:14Z  INFO      [V-03] Correctly allowed tag 'Empirical' on claim 'test-claim-empirical'
+2026-06-17T18:22:14Z  INFO      [V-03] Correctly allowed tag 'Declared' on claim 'test-claim-declared'
+2026-06-17T18:22:14Z  INFO      [V-03] Correctly rejected forbidden tag 'Proven' on claim 'test-claim-proven-FORBIDDEN'
+2026-06-17T18:22:14Z  INFO      [V-03] Correctly rejected forbidden tag 'Exact' on claim 'test-claim-exact-FORBIDDEN'
+2026-06-17T18:22:14Z  INFO      [PASS] V-03-tag-honesty — Tag-honesty gate PASSED. Correctly rejected 2 forbidden tag(s), correctly allowed 2 compliant tag(s). 
+2026-06-17T18:22:14Z  INFO      --- Running V-04-latency-tokens: Latency and token-count report per generation ---
+2026-06-17T18:22:14Z  INFO      [mock-PASS] V-04-latency-tokens — [MOCK] Latency/token report — synthetic numbers. wall_seconds=0.0 is a sentinel meaning 'not measured (mock mode)'. Prom...
+2026-06-17T18:22:14Z  INFO      === DONE: overall=MOCK | pass=1 mock-pass=3 skip=0 fail=0 ===
+2026-06-17T18:22:14Z  INFO      JSON report  : /home/user/mycelium/tools/llm-harness/reports/20260617T182214Z-report.json
+2026-06-17T18:22:14Z  INFO      Text report  : /home/user/mycelium/tools/llm-harness/reports/20260617T182214Z-report.txt
+2026-06-17T18:22:14Z  INFO      Run log      : /home/user/mycelium/tools/llm-harness/reports/20260617T182214Z.log

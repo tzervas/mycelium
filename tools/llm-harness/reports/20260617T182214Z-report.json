@@ -1,9 +1,9 @@
 {
   "harness": "mycelium-llm-validation",
   "version": "0.1.0",
-  "run_id": "20260617T174336Z",
+  "run_id": "20260617T182214Z",
   "mode": "mock",
-  "timestamp_utc": "20260617T174336Z",
+  "timestamp_utc": "20260617T182214Z",
   "honesty_posture": {
     "never_silent": true,
     "guarantee_lattice": [
@@ -19,14 +19,15 @@
     "vr5_rule": "Model-derived claims are Empirical or Declared — NEVER Proven or Exact. A SKIP is never a PASS. mock-PASS is explicitly labelled and never treated as evidence of real model quality."
   },
   "summary": {
-    "overall": "PASS",
+    "overall": "MOCK",
     "total": 4,
     "pass": 1,
     "mock_pass": 3,
     "skip": 0,
     "fail": 0,
     "exit_code": 0,
-    "mode": "mock"
+    "mode": "mock",
+    "model": null
   },
   "results": [
     {
