@@ -24,7 +24,8 @@ param(
     [string]$Repo = $(if ($env:REPO) { $env:REPO } else { "tzervas/mycelium" }),
     [switch]$DryRun,
     [switch]$UpdateBodies,
-    [switch]$NoPreflight
+    [switch]$NoPreflight,
+    [switch]$NoAuthFix
 )
 
 $ErrorActionPreference = "Stop"
@@ -46,10 +47,14 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
     Die "gh (GitHub CLI) not found — install with: winget install GitHub.cli ; then gh auth login"
 }
 
+# --all routes through the engine's preflight, where the SHARED least-privilege auth automation lives
+# (DRY/KC-3 — one implementation in the engine; both wrappers trigger it via --all). -NoAuthFix is the
+# CI escape hatch (never prompt to change scopes).
 $syncArgs = @((Join-Path $here "gh-issues-sync.py"), "--all", "--repo", $Repo)
 if ($DryRun) { $syncArgs += "--dry-run" }
 if ($UpdateBodies) { $syncArgs += "--update-bodies" }
 if ($NoPreflight) { $syncArgs += "--no-preflight" }
+if ($NoAuthFix) { $syncArgs += "--no-auth-fix" }
 
 & $py @syncArgs
 if ($LASTEXITCODE -ne 0) { Die "gh-issues-sync failed" $LASTEXITCODE }

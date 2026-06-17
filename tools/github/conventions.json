@@ -58,6 +58,7 @@
       "xtask": "toolchain",
       "tooling": "toolchain",
       "diagnostics": "toolchain",
+      "examples": "toolchain",
       "github": "project",
       "planning": "project",
       "tracker": "project",

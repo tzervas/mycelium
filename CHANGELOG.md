@@ -8,6 +8,47 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: M-363 documentation BUILD pipeline + the §4.1 doc quality-bar lint — Phase 9 Wave B)
+- **`crates/mycelium-doc/` — the M-363 doc BUILD pipeline** (≈3.5k LoC, tested), enacting the ratified
+  `docs/spec/Narrative-Authoring-Pipeline.md`. A **content-addressed doc-IR** (`ir.rs`, reusing the
+  kernel's BLAKE3 `ContentHash` shape — ADR-003) into which the corpus (RFCs/ADRs/notes/specs, via a
+  dependency-free CommonMark-subset parser, `corpus.rs`), the JSON schemas, and the **M-359 nodule-
+  header metadata** (`apiref.rs`) are **projected, never authored** — an item that cannot be grounded
+  is an explicit `undocumented` node, **never invented** (the prose analogue of G2). Many renderers
+  (`emit/`): a semantic-HTML site, a **Typst** projection (→ PDF; compile skips gracefully when
+  `typst` is absent — never a half-build), and a machine **JSON/JSONL** view — all *views of one IR*
+  (G11/ADR-003). **EPUB is an honest deferral** (spec §8.5), recorded, not half-built.
+- **The §4.1 doc quality-bar lint is now ACTIVE** (`mycelium_doc::doc_lint`): the eight checks
+  (single-template-conformance · navigability · progressive-disclosure · **checked-examples** ·
+  no-dead-xref · **dual-projection-parity** · no-hallucinated-prose · legibility-accessibility) run over
+  the doc-IR. Checked inline examples **actually type-check** via the trusted L1 checker (the same
+  `parse → check_nodule` pipeline `myc-check` uses); legibility is honestly **partially-dormant**
+  (structure checked; colour-contrast/typography need a rendering engine). `mycelium_lint::doc_lint_status()`
+  flips **dormant → active**, sourcing the canonical check-name set from `mycelium-doc` (DRY).
+- **`scripts/checks/myc-doc.sh` (+ wired into `scripts/checks/all.sh`)** — a gated step that fails on any
+  error-severity §4.1 finding. Green-and-real over the live corpus: 98 documents / 2632 content-addressed
+  nodes, 6 examples type-checking, internal xrefs resolving, HTML/JSON parity across all nodes. Skips
+  gracefully when `cargo` is absent. KC-3: above the kernel; **no kernel change; no new third-party
+  dependency** (this adds the in-repo `mycelium-doc` crate; blake3/serde/serde_json were already vetted).
+
+### Changed (2026-06-17: harden the GitHub PM sync engine — graceful gh failures + least-privilege auth automation)
+- **`tools/github/gh-issues-sync.py` — no raw tracebacks (G2).** Every `gh` failure now exits with an
+  **explicit, classified remediation** (re-auth / missing-scope / rate-limit / network), replacing the
+  unguarded `proc.check_returncode()` that surfaced a `CalledProcessError` traceback on a `gh api` 401
+  inside `reconcile_prs`/`reconcile_project`; a top-level guard in `__main__` catches anything else.
+  Both the direct run and the `--all` wrapper path now fail gracefully.
+- **Least-privilege gh-auth automation (new).** Preflight computes the **minimal** classic-OAuth scope
+  set from the *arg'd* operation set (offline ops → none; repo writes → `public_repo` when the target
+  is public, else `repo`; `--project` → `read:project` when read-only/dry-run, else `project`),
+  compares it to the active token, and — only for a genuinely-absent needed scope — prints an **EXPLAIN**
+  (ops → scopes → command) and, **with explicit consent**, runs `gh auth refresh/login -s <exact set>`
+  (changing scopes is a state mutation: opt-in, never silent — G2). An **over-granted** token gets a
+  non-blocking advisory; the classic-scope **granularity floor** is documented (a fine-grained PAT is
+  the path to tighter per-resource perms, trusted to fail loudly). Implemented **once** in the engine;
+  both wrappers (`gh-sync-all.sh`/`.ps1`) route through it via `--all` and forward a **`--no-auth-fix`**
+  CI escape hatch. Pure scope logic is `--self-test`-covered.
+- **`tools/github/conventions.json`** — added the ratified `examples → toolchain` scope alias (clears
+  PR #145's flagged `examples` scope; verified via `derive_pr_labels` + `--self-test`/`--validate`).
 ### Added (2026-06-17: the full standard-library roadmap — RFC-0016 (Draft) + Phase-5 decomposition)
 - **`docs/rfcs/RFC-0016-Core-Library-and-Standard-Library.md` (Draft)** — the **Core Library RFC** the
   M-346 stdlib epic anchors and M-501 names. It fixes (1) the **per-op contract** every stdlib operation
