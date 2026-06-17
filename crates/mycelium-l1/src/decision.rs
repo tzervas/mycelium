@@ -9,10 +9,16 @@
 //! away by the elaborator": the surface keeps nested patterns; the tree is flat tests.
 //!
 //! **Scope / honesty (VR-5).** This builds and *verifies* the decision tree (the tests evaluate it
-//! against the reference matcher), but it does **not** yet emit it as L0 Core IR — L0 has no `Match`
-//! node, and adding one is the planned RFC-0001 revision (RFC-0007 §4.6). So the tree is an internal
-//! analysis/IR artifact for now: the compilation algorithm is real and checked; wiring its leaves to
-//! emitted kernel nodes lands with full L1-in-Core-IR. No guarantee is touched.
+//! against the reference matcher), and — since RFC-0011 r3 enacted the flat L0 `Match` node
+//! (RFC-0001 r3) — the elaborator **emits** it: [`crate::elab`]'s `lower_tree` walks each `Switch`
+//! into a nested L0 `Match` and each `Leaf` into the surface arm body, the wiring this module's
+//! `Tree` was designed for (RFC-0007 §4.6 / RFC-0011 §4.4). The tree stays the *untrusted,
+//! inspectable* compilation artifact **above** the kernel: the trusted node is the flat `Match`, and
+//! the three-way differential (`tests/differential.rs`) checks the emitted lowering — L1-eval ≡
+//! L0-interp ≡ AOT — so a wrong column choice or specialization is caught, never rubber-stamped. The
+//! tree's own [`eval_tree`] remains a *test-only* reference (it verifies the compiler; it does not
+//! run programs). No accuracy guarantee is touched by the compilation — it is a meaning-preserving
+//! rewrite, witnessed by the differential.
 //!
 //! The compiler operates on the same normalized [`Pat`] matrix usefulness uses; a *value* is just a
 //! [`Pat`] with no [`Pat::Wild`] (a fully concrete constructor/literal tree), which is what the
@@ -315,8 +321,9 @@ fn project<'a>(value: &'a Pat, occurrence: &[usize]) -> &'a Pat {
 
 /// Evaluate a decision tree against a concrete value (a `Pat` with no `Wild`), returning the arm to
 /// run — the executable semantics that lets a test check the tree against the reference matcher.
-/// Test-only for now: the tree is not yet executed in production (it is not emitted to L0 — see the
-/// module note), so its runtime interpreter exists to *verify* the compiler, not to run programs.
+/// **Test-only by design:** production does not execute the `Tree` directly — the elaborator emits
+/// it as nested L0 `Match` nodes (see the module note) which the L0 interpreter/AOT run. This
+/// interpreter exists only to *verify* the compiler against the reference matcher, not to run programs.
 #[cfg(test)]
 pub(crate) fn eval_tree(tree: &Tree, value: &Pat) -> Option<usize> {
     match tree {

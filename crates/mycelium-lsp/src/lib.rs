@@ -37,7 +37,11 @@ pub use recover::{
     check_effects, handle, EffectBudget, EffectBudgetExhausted, EffectKind, Outcome,
     RecoveryPolicy, Resolution, StructuredError, UndeclaredEffect as RecoverUndeclaredEffect,
 };
-pub use sync::{publish_for_source, source_diagnostics, DocumentStore};
+pub use sync::{
+    publish_for_source, resilient_publish_for_source, resilient_source_diagnostics,
+    source_diagnostics, DocumentStore,
+};
 pub use wire::{
-    publish_diagnostics_notification, read_message, serve, to_lsp_diagnostic, write_message,
+    publish_diagnostics_notification, read_message, serve, serve_stdio, to_lsp_diagnostic,
+    write_message,
 };

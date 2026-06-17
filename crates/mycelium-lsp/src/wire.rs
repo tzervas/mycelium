@@ -6,7 +6,9 @@
 //! `Content-Length` header framing every LSP transport uses), the
 //! [`Diagnostic`](crate::lint::Diagnostic) → LSP-`Diagnostic` mapping with the proper
 //! `DiagnosticSeverity` codes, the `textDocument/publishDiagnostics` notification builder, and a
-//! minimal [`serve`] lifecycle loop (`initialize` → capabilities, `shutdown`/`exit`).
+//! minimal [`serve`] lifecycle loop (`initialize` → capabilities, `shutdown`/`exit`). [`serve_stdio`]
+//! runs that loop over the process's real stdin/stdout — the executable an editor launches (the
+//! `mycelium-lsp` binary).
 //!
 //! Since M-310's document-sync step (RFC-0011 r3 / RFC-0001 r4 gave the surface a text → `Node`
 //! path), [`serve`] is a **document-syncing server**: it advertises `TextDocumentSyncKind.Full`,
@@ -160,8 +162,12 @@ fn error_response(id: Value, code: i64, message: &str) -> Value {
 ///
 /// On `textDocument/didOpen` and `didChange` (full sync) it stores the document's text and **pushes
 /// a `textDocument/publishDiagnostics`** computed through the text → `Node` pipeline
-/// ([`crate::sync::source_diagnostics`]: parse → check); `didClose` drops the document and clears its
-/// diagnostics. Returns when the stream ends or `exit` is received.
+/// ([`crate::sync::resilient_publish_for_source`]: parse → check, with an analysis panic isolated as
+/// an `internal` diagnostic per RFC-0013 I1 — a pathological document never kills the session);
+/// `didClose` drops the document and clears its diagnostics. Returns when the stream ends or `exit`
+/// is received. A *malformed transport frame* is a different matter — it is an explicit
+/// [`read_message`] `io::Error` (the byte stream is unrecoverable), surfaced to the caller, never a
+/// silent drop.
 pub fn serve<R: BufRead, W: Write>(reader: &mut R, writer: &mut W) -> io::Result<()> {
     let mut store = crate::sync::DocumentStore::new();
     while let Some(msg) = read_message(reader)? {
@@ -179,13 +185,19 @@ pub fn serve<R: BufRead, W: Write>(reader: &mut R, writer: &mut W) -> io::Result
             ("textDocument/didOpen", _) => {
                 if let Some((uri, text)) = did_open_params(&msg) {
                     store.set(uri.clone(), text.clone());
-                    write_message(writer, &crate::sync::publish_for_source(&uri, &text))?;
+                    write_message(
+                        writer,
+                        &crate::sync::resilient_publish_for_source(&uri, &text),
+                    )?;
                 }
             }
             ("textDocument/didChange", _) => {
                 if let Some((uri, text)) = did_change_params(&msg) {
                     store.set(uri.clone(), text.clone());
-                    write_message(writer, &crate::sync::publish_for_source(&uri, &text))?;
+                    write_message(
+                        writer,
+                        &crate::sync::resilient_publish_for_source(&uri, &text),
+                    )?;
                 }
             }
             ("textDocument/didClose", _) => {
@@ -213,6 +225,19 @@ pub fn serve<R: BufRead, W: Write>(reader: &mut R, writer: &mut W) -> io::Result
         }
     }
     Ok(())
+}
+
+/// Run [`serve`] over the process's **real stdio** — the entry point an editor launches
+/// (`mycelium-lsp` over stdin/stdout, the transport every LSP client speaks). Locks stdin/stdout
+/// once for the session and drives the loop to a clean `exit` (or stream end). A transport-level
+/// `io::Error` (a malformed frame, a broken pipe) propagates to the caller — the binary reports it
+/// on stderr and exits non-zero rather than dropping it silently.
+pub fn serve_stdio() -> io::Result<()> {
+    let stdin = io::stdin();
+    let stdout = io::stdout();
+    let mut reader = stdin.lock();
+    let mut writer = stdout.lock();
+    serve(&mut reader, &mut writer)
 }
 
 /// `params.textDocument.uri` of a document notification.

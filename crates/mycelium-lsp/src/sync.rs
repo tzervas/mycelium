@@ -88,6 +88,72 @@ pub fn publish_for_source(uri: &str, text: &str) -> Value {
     })
 }
 
+/// Like [`source_diagnostics`], but **isolating an internal analysis panic** as a structured
+/// diagnostic instead of letting it unwind through the server loop and kill the session.
+///
+/// The parse → check pipeline returns explicit `Result`s for *expected* failures (syntax / type
+/// errors), and those flow through [`source_diagnostics`] untouched. This wrapper guards only the
+/// *unexpected* case: a bug in the checker/elaborator that fires one of its internal invariant
+/// `expect`s. Per **RFC-0013 I1** (a diagnostic is *additive*, never *substitutive*, and a refusal
+/// is **never swallowed and never silent**), such a panic must be **surfaced** — turned into a
+/// visible `internal`-coded diagnostic — not dropped (`logger.catch`-style swallowing, RFC-0013
+/// §4.5 X3) and not allowed to crash every open document. The server stays alive on the next edit.
+#[must_use]
+pub fn resilient_source_diagnostics(text: &str) -> Vec<Value> {
+    catching(move || source_diagnostics(text))
+}
+
+/// The resilient counterpart of [`publish_for_source`]: the server-boundary builder that the
+/// JSON-RPC loop ([`crate::wire::serve`]) uses, so a single pathological document yields an
+/// `internal` diagnostic rather than taking down the session (RFC-0013 I1).
+#[must_use]
+pub fn resilient_publish_for_source(uri: &str, text: &str) -> Value {
+    json!({
+        "jsonrpc": "2.0",
+        "method": "textDocument/publishDiagnostics",
+        "params": { "uri": uri, "diagnostics": resilient_source_diagnostics(text) },
+    })
+}
+
+/// Run `f`, converting a panic into a single surfaced `internal` diagnostic (RFC-0013 I1). Factored
+/// out so the isolation itself is unit-testable with a deliberately panicking closure (the
+/// mutant-witness: a server that let the panic propagate would crash here instead of reporting).
+fn catching<F>(f: F) -> Vec<Value>
+where
+    F: FnOnce() -> Vec<Value> + std::panic::UnwindSafe,
+{
+    match std::panic::catch_unwind(f) {
+        Ok(diags) => diags,
+        Err(payload) => vec![internal_error_diagnostic(&panic_message(payload.as_ref()))],
+    }
+}
+
+/// Extract a human string from a caught panic payload (`&str` / `String`, else an opaque marker).
+fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
+    if let Some(s) = payload.downcast_ref::<&str>() {
+        (*s).to_owned()
+    } else if let Some(s) = payload.downcast_ref::<String>() {
+        s.clone()
+    } else {
+        "non-string panic payload".to_owned()
+    }
+}
+
+/// A zero-located `internal`-coded diagnostic carrying a caught analysis panic. The range is the
+/// honest zero placeholder (an internal failure has no source span to point at — never a fabricated
+/// location); the message is explicit that the failure was **surfaced, not swallowed** (RFC-0013 I1).
+fn internal_error_diagnostic(detail: &str) -> Value {
+    json!({
+        "range": point_range(0, 0, 1),
+        "severity": 1, // Error
+        "code": "internal",
+        "source": SERVER_NAME,
+        "message": format!(
+            "internal analysis error (surfaced, not swallowed — RFC-0013 I1): {detail}"
+        ),
+    })
+}
+
 /// A zero-based, one-character LSP range at a 1-based lexer [`Pos`].
 fn point_range(line0: u32, col0: u32, width: u32) -> Value {
     json!({
@@ -186,6 +252,47 @@ mod tests {
         assert_eq!(store.text("mem://a"), Some("nodule d2"));
         store.remove("mem://a");
         assert!(store.is_empty());
+    }
+
+    #[test]
+    fn a_caught_analysis_panic_becomes_a_surfaced_internal_diagnostic_not_a_crash() {
+        // Mutant-witness for RFC-0013 I1: a panic inside analysis must be *surfaced* as a visible
+        // diagnostic, never let propagate (which would crash the server) and never swallowed. We
+        // drive `catching` directly with a deliberately panicking closure — a real checker bug that
+        // tripped one of its internal `expect`s would land here identically. (We do *not* touch the
+        // global panic hook to suppress the expected backtrace: tests run in parallel and mutating
+        // the process-wide hook would race other tests' panic reporting — one stderr line is the
+        // honest cost.)
+        let diags = catching(|| panic!("boom in the elaborator"));
+
+        assert_eq!(
+            diags.len(),
+            1,
+            "the panic is surfaced as exactly one diagnostic"
+        );
+        assert_eq!(diags[0]["code"], "internal");
+        assert_eq!(diags[0]["severity"], 1);
+        let msg = diags[0]["message"].as_str().unwrap();
+        assert!(
+            msg.contains("not swallowed"),
+            "the message is explicit it was not swallowed (I1)"
+        );
+        assert!(
+            msg.contains("boom in the elaborator"),
+            "the panic detail is carried, not hidden"
+        );
+    }
+
+    #[test]
+    fn resilient_analysis_is_transparent_when_nothing_panics() {
+        // The guard changes nothing on the normal paths: a clean nodule still yields no diagnostics,
+        // and a type error still yields the same `check` diagnostic as the unguarded analysis.
+        assert!(resilient_source_diagnostics(
+            "nodule d\nfn main() -> Binary{8} = not(0b1011_0010)"
+        )
+        .is_empty());
+        let bad = "nodule d\nfn bad() -> Binary{8} = add(0b0000_0001, 0b0000_0010)";
+        assert_eq!(resilient_source_diagnostics(bad), source_diagnostics(bad));
     }
 
     #[test]

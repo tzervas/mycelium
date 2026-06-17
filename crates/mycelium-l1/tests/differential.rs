@@ -14,8 +14,10 @@
 //! program — and a `Partial`-classified unproductive recursion ends in an explicit
 //! `FuelExhausted`, never a hang (§4.5).
 
-use mycelium_cert::{check, BinaryTernarySwapEngine, CheckVerdict, Evidence, RefinementRelation};
-use mycelium_core::{CoreValue, GuaranteeStrength, Payload, Repr, Value};
+use mycelium_cert::{
+    check, check_core, BinaryTernarySwapEngine, CheckVerdict, Evidence, RefinementRelation,
+};
+use mycelium_core::{GuaranteeStrength, Payload, Repr, Value};
 use mycelium_interp::{Interpreter, PrimRegistry};
 use mycelium_l1::elab::build_registry;
 use mycelium_l1::{check_nodule, elaborate, parse, Evaluator, L1Error};
@@ -147,6 +149,12 @@ fn data_corpus() -> Vec<&'static str> {
          fn main() -> Binary{8} = pick(True)",
         // a constructed result carrying a computed repr field
         "nodule d\ntype Box = Mk(Binary{8})\nfn main() -> Box = Mk(not(0b0000_1111))",
+        // a multi-field constructor matched with a NESTED wildcard at a non-root occurrence
+        // (M-320 Maranget: column ordering over two fields + a `_` at occurrence [1]) — the kind of
+        // decision tree the flat Nat cases don't stress; all three paths must still agree
+        "nodule d\ntype Pair = Mk(Bool, Bool)\n\
+         fn both(p: Pair) -> Bool = match p { Mk(True, b) => b, Mk(False, _) => False }\n\
+         fn main() -> Bool = both(Mk(True, False))",
         // --- r4: functions + recursion (Lam/App/Fix), now in the fragment ---
         // self-recursion returning a datum (Fix + App + Match)
         "nodule d\ntype Nat = Z | S(Nat)\n\
@@ -238,26 +246,22 @@ fn l1_eval_l0_interp_and_aot_agree_on_the_data_and_recursion_fragment() {
             "program #{i}: guarantee summaries disagree (L1 vs AOT)"
         );
 
-        // Where the result is a representation value, the shared M-210 TV checker validates each pair
-        // too (the same checker the repr fragment uses) — defense in depth, never a bespoke compare.
-        if let (CoreValue::Repr(a), CoreValue::Repr(b), CoreValue::Repr(c)) =
-            (&l1_core, &l0_core, &aot_core)
-        {
-            for (x, y, pair) in [(a, b, "L1↔interp"), (b, c, "interp↔AOT")] {
-                assert_eq!(
-                    check(
-                        x,
-                        y,
-                        RefinementRelation::ObservationalEquiv,
-                        Certificate::exact(),
-                        &Evidence::Observational,
-                    ),
-                    CheckVerdict::Validated {
-                        strength: GuaranteeStrength::Exact
-                    },
-                    "program #{i}: the shared checker must validate the {pair} repr-result pair"
-                );
-            }
+        // The single shared M-210 checker validates each pair through `check_core` — now over the
+        // **whole** `CoreValue` (datum *or* repr), so the data + recursion fragment's *datum* results
+        // validate through the same checker the repr fragment uses, closing M-302's "through the
+        // M-210 ObservationalEquiv checker" obligation for the full kernel corpus (never a bespoke
+        // structural compare; a mislabeled lowering is an explicit `NotValidated`, not a silent pass).
+        for (x, y, pair) in [
+            (&l1_core, &l0_core, "L1↔interp"),
+            (&l0_core, &aot_core, "interp↔AOT"),
+        ] {
+            assert_eq!(
+                check_core(x, y),
+                CheckVerdict::Validated {
+                    strength: GuaranteeStrength::Exact
+                },
+                "program #{i}: the shared checker must validate the {pair} result pair"
+            );
         }
     }
 }
@@ -283,6 +287,12 @@ fn the_data_differential_distinguishes_divergent_elaborations() {
         .to_core(&e2, &reg(&e2))
         .unwrap();
     assert_ne!(a, b, "S(Z) and S(S(Z)) must be distinct L0 data values");
+    // And the shared M-210 checker must *report* the divergence on the datum pair — a mislabeled
+    // lowering is an explicit `NotValidated`, not merely unequal (M-302; NFR-7/VR-4).
+    assert!(
+        matches!(check_core(&a, &b), CheckVerdict::NotValidated { .. }),
+        "the shared checker must reject the divergent datum pair, not silently pass"
+    );
 }
 
 /// Sanity: the harness discriminates — the shared checker explicitly rejects a genuinely
