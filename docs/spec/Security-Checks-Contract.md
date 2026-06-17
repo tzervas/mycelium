@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Proposed** (2026-06-16 — the M-367 security-checks contract; design-first, present before folding) |
+| **Status** | **Accepted** (2026-06-16 — design; **enacted 2026-06-17** by `crates/mycelium-sec` — the `myc-sec` lib + CLI; §8.1 `// SAFETY:` convention ratified). The contract is now code; the `wild`-audit and the skip≠pass coverage honesty are tested. |
 | **Scope** | The contract for lifting the `/security-review` posture into a full-fat-suite tool: the three check families (secrets · supply-chain · `wild`-block audit), the severity/honesty contract (every finding cites *why*; a reduced-coverage skip is named, never a silent pass), `EXPLAIN`, and the "a new scanner is an ADR" rule |
 | **Depends on** | The existing check scripts `scripts/checks/{secrets,deny}.sh` (gitleaks + fallback; cargo-deny + cargo-audit); `deny.toml` + `.gitleaks.toml` (present); ADR-014 (the `unsafe`-code policy — permitted-but-warned, `// SAFETY:` mandatory); LR-9 / S6 / DN-02 §5 (the **`wild`** block — the denied-by-default unsafe escape hatch, lexically marked); the grammar (`docs/spec/grammar/mycelium.ebnf` — `wild`); G2 (a flagged item cites why; never-silent); KC-3 (above the kernel) |
 | **Feeds** | M-361 (the full-fat toolchain — the security gate); CI (`scripts/checks/`); the `/security-review` skill (shared posture) |
@@ -135,3 +135,15 @@ we report the claim, we don't fabricate a verdict).
 - **2026-06-17 — Open question §8.1 ratified.** A `wild` block is justified by the **ADR-014 `// SAFETY:`
   comment convention** for v0 (no new structured attribute). §8.2 (`--strict` in CI) and §8.3 (new
   scanners — each an ADR) remain deferred to the first implementation pass. Append-only.
+- **2026-06-17 — Accepted (enacted by `crates/mycelium-sec`, M-367).** The contract is now code: the
+  `wild`-audit lib (`audit_wild`/`explain_wild` — a lexical recogniser over `.myc`, like the M-141 header
+  lints) + the `myc-sec` CLI — **no new dependency** (the lib is std-only; the bin orchestrates the
+  existing `scripts/checks/{secrets,deny}.sh` via `std::process`; KC-3). The **`wild`-audit** inventories
+  every `wild` block (LR-9/S6) and flags any without an adjacent **ADR-014 `// SAFETY:`** justification
+  (`wild-unjustified`, **medium** — fails only under `--strict`; tested: justified passes, prose/identifier
+  is no false positive, a blank line breaks the justification block). The **skip ≠ pass** crux is enacted:
+  secrets/supply-chain are classified **ok / REDUCED / FAIL** (a `skip`/absent scanner is *reduced
+  coverage*, and the run prints a coverage receipt — `FULL`/`REDUCED` — so an OK with reduced coverage is
+  not a clean bill; G2/VR-5). Severity is a **fixed declared map** (`Ord`), not heuristic. v0 scope: the
+  `wild`-audit surfaces the author's `// SAFETY:` claim, it does not adjudicate soundness (VR-5); a new
+  scanner stays an ADR (§8.3). Append-only.

@@ -8,6 +8,20 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: `myc-sec` — security checks as tooling, folded — M-367)
+- **`crates/mycelium-sec`** — the `myc-sec` security tool (lib + CLI), enacting the M-367 contract
+  (Accepted → enacted). v0's library core is the Mycelium-specific **`wild`-block audit** (`audit_wild` —
+  a lexical recogniser over `.myc`, like the M-141 header lints): it inventories every `wild` block
+  (LR-9/S6 — the denied-by-default unsafe escape hatch) and flags any without an adjacent **ADR-014
+  `// SAFETY:`** justification (`wild-unjustified`, **medium** — fails only under `--strict`). Tested:
+  justified passes, a `wild` in prose/an identifier is no false positive, a blank line breaks the
+  justification block. The **skip ≠ pass** crux is enacted: the CLI orchestrates the existing
+  `scripts/checks/{secrets,deny}.sh` gates and classifies each **ok / REDUCED / FAIL** (an absent scanner
+  or a `skip` is *reduced coverage*, printed in a `FULL`/`REDUCED` coverage receipt — an OK with reduced
+  coverage is **not** a clean bill; G2/VR-5). Every finding cites *why*; severity is a fixed declared map.
+  **No new dependency** (std-only lib; the bin shells via `std::process`; KC-3). CLI: `myc-sec [--project
+  <dir>] [--strict] [--explain] [--no-secrets] [--no-supply-chain]`.
+
 ### Added (2026-06-17: `myc-check` — the correctness driver, folded — M-365)
 - **`crates/mycelium-check`** — the project-aware correctness/type-check driver (lib + `myc-check` CLI),
   enacting the M-365 contract (Accepted → enacted). The prototype **grew up in place**: the single-file
