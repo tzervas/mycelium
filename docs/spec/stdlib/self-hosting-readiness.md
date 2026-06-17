@@ -34,7 +34,7 @@ status (read off the Doc-Index, not asserted). "Status" is honest and may be `no
 | 1 | **Data declarations + matching** (algebraic data, a registry `Σ`, flat `Match`) | every module defines + destructures values (`Option`/`Result`, collections, records) | RFC-0011 (L0 `Match`, `Construct`, content-addressed registry; WF6/WF7/WF8) | **landed (kernel/IR)** — RFC-0001 **r3 ENACTED**; M-210 differential covers the data fragment |
 | 2 | **Functions + closures + recursion** (`Lam`/`App`/`Fix`; the `for` fold) | combinators, folds, the recursion every non-trivial module uses | RFC-0001 **r4** (`Lam`/`App`/`Fix`, closed-closure value model); RFC-0007 §4.8 (`for` fold) | **landed (kernel/IR)** — RFC-0001 r4 Accepted; the v0 calculus is ratified |
 | 3 | **A concrete surface syntax** to *write* a module in (L3) — declarations, signatures, guarantee annotations | a human/agent authors `.myc` source; without it there is no Mycelium-lang to author *in* | RFC-0006 (L0–L3 layering; concrete L3 syntax) | **not yet** — RFC-0006 ratifies the *layering*; **concrete L3 syntax is KC-2-gated / deferred** (§10) |
-| 4 | **Leaf emission / a working term-language prototype** (the interpreter executes authored terms) | a self-hosted module must *run* + be differential-tested against its Rust reference | M-320 (L1 term-language extension, interpreter/prototype) | **not yet** — **M-320 is open** (#92); leaf emission unblocked by RFC-0011 but the surface extension is in flight |
+| 4 | **Leaf emission / a working term-language prototype** (the interpreter executes authored terms) | a self-hosted module must *run* + be differential-tested against its Rust reference | M-320 (L1 term-language extension, interpreter/prototype) | **landed (prototype/IR)** — M-320's **codegen half is complete**: the elaborator compiles nested `match` (Maranget) to flat L0 `Match`, and the L1 prototype parses→checks→elaborates→runs the data+recursion fragment, **differential-tested L1-eval ≡ L0-interp ≡ AOT through the shared M-210 checker** (M-302: datum results now validate through `check_core`, not a bespoke compare). The remaining authoring blocker is #3, not #4. |
 | 5 | **Honest guarantee tags expressible in the surface** (the `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` lattice on a signature) | the §4.1 contract (C2) requires every op carry its tag; a self-hosted module must *say* its tags in-language | RFC-0001 (the lattice in `Meta`); RFC-0006 (guarantee annotations in the grammar) | **partial** — the lattice + `Meta` exist; the *surface annotation* rides on capability #3 |
 | 6 | **Declared/bounded effects in the surface** (C6 — IO/time/rand/budget on a signature) | Tier-B modules (`io`/`fs`/`time`/`rand`) declare effects; the surface must express them | RFC-0014 (declared + bounded effects); RFC-0006 (effect surface) | **partial** — the effect *model* is Accepted/enacted (Rust); the *surface* form rides on #3 |
 | 7 | **Ambient representation / scoped overrides** (to keep honesty's verbosity tolerable in-language) | offsets tension A so an authored module is not drowned in explicit reprs | RFC-0012 (ambient representation; I1/I2) | **Accepted, enactment-gated** — design normative; enactment is M-344 |
@@ -50,12 +50,16 @@ surface.**
   surface (#8) — is **landed** in the kernel/IR and the Accepted corpus. The thing a module *means* is
   expressible.
 - **What is not ready (the surface):** the *concrete syntax* to **author** a module in Mycelium-lang (#3)
-  and a **running term-language prototype** to execute + differential-test it (#4) are **not yet landed** —
-  the concrete L3 syntax is KC-2-gated (RFC-0006 §10) and **M-320 (#92) is open**. Capabilities #5/#6 (the
-  surface forms of tags + effects) and #7 (ambient, enactment-gated M-344) ride on those.
+  is **not yet landed** — the concrete L3 syntax is **KC-2-gated** (RFC-0006 §10, a maintainer append-only
+  call). The **running term-language prototype** to execute + differential-test a term (#4) has since
+  **landed** (M-320's codegen half; the data+recursion fragment runs and is validated three ways through
+  the shared M-210 checker) — but it executes the *elaborated kernel form*, not human-authored `.myc`
+  *source*, because that source surface is exactly #3. Capabilities #5/#6 (the surface forms of tags +
+  effects) and #7 (ambient, enactment-gated M-344) ride on #3.
 
-Because authoring requires #3 and #4, the honest verdict is **not-yet**: no module can be *truthfully*
-called "self-hosted" today, and claiming so would itself violate the honesty rule.
+Because authoring a *module* still requires #3 — a concrete surface to write `.myc` source in — the honest
+verdict is **not-yet**: no module can be *truthfully* called "self-hosted" today (the substrate runs, but
+there is no in-language surface to author it in), and claiming so would itself violate the honesty rule.
 
 ## 4. What this gate does and does not block
 
@@ -70,13 +74,14 @@ does not wait on it.
 
 ## 5. How the verdict gets upgraded (the re-check trigger)
 
-The verdict is **append-only with a status transition**, mirroring the ADR/RFC discipline. It flips
-`not-yet → ready` only when the checklist actually clears — concretely when **M-320 (#92)** lands a running
-term-language prototype and the **concrete L3 surface (RFC-0006 §10)** is no longer gated, such that a
-*real* stdlib module (the smallest honest candidate — `core`/prelude or `diag`) can be authored in
-Mycelium-lang **and** pass its NFR-7-style migration differential against the Rust reference (RFC-0016 §4.6
-Phase 5b). The first module to clear it is the *evidence* that upgrades this verdict — never a forward
-declaration. (The exact differential bar is RFC-0016 §8-Q5.)
+The verdict is **append-only with a status transition**, mirroring the ADR/RFC discipline. With M-320's
+term-language prototype now landed (#4), the *single remaining* gate is the **concrete L3 surface
+(RFC-0006 §10, KC-2-gated)** (#3): the verdict flips `not-yet → ready` only when that surface is no longer
+gated, such that a *real* stdlib module (the smallest honest candidate — `core`/prelude or `diag`) can be
+**authored in Mycelium-lang source** **and** pass its NFR-7-style migration differential against the Rust
+reference (RFC-0016 §4.6 Phase 5b) — the same M-210 checker the kernel fragment already validates through
+(now extended to datums, M-302). The first module to clear it is the *evidence* that upgrades this verdict
+— never a forward declaration. (The exact differential bar is RFC-0016 §8-Q5.)
 
 ## 6. Open questions (FLAGGED — carried from RFC-0016 §8)
 
@@ -89,6 +94,16 @@ declaration. (The exact differential bar is RFC-0016 §8-Q5.)
 
 ## Meta — changelog
 
+- **2026-06-17 — Capability #4 landed; verdict held at *not yet* (honest, VR-5).** Refines capability #4
+  (leaf emission / term-language prototype) `not yet → landed (prototype/IR)`: M-320's codegen half is
+  complete — the elaborator compiles nested `match` to flat L0 `Match`, the L1 prototype runs the
+  data+recursion fragment, and that fragment is differential-tested L1-eval ≡ L0-interp ≡ AOT through the
+  shared **M-210 checker**, now over *datum* results too (M-302's `check_core`). The **overall verdict
+  stays NOT YET established**: the *single* remaining gate is the **concrete L3 authoring surface** (#3,
+  RFC-0006 §10, KC-2-gated) — the substrate runs, but there is no in-language source surface to author a
+  module in, so no module is truthfully "self-hosted." Updates §3 (separates the still-gated #3 from the
+  now-landed #4) and the §5 re-check trigger (keyed on #3 alone). Append-only status transition; the
+  verdict is not flipped (a flip awaits #3 + a passing migration differential).
 - **2026-06-17 — Draft (needs-design).** Stands up the M-502 self-hosting readiness gate as a **checkable
   verdict**: an eight-row capability checklist (data+matching · functions/closures/recursion · concrete L3
   surface · a running term-language prototype · surface guarantee tags · surface effects · ambient repr ·
