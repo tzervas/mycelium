@@ -93,6 +93,22 @@ cargo build -p mycelium-check --bin myc-check     # → target/debug/myc-check
 # or point at an existing binary:  export MYC_CHECK=/path/to/myc-check
 ```
 
+> **Termux / Android (ARM64) build prerequisites.** Use the **Termux-packaged** Rust
+> (`pkg install rust` → `cargo`/`rustc` under `$PREFIX/bin`), not a rustup toolchain
+> (rustup's binaries aren't built for Termux). If `cargo` compiles for a while and then
+> a **build script fails at link** — e.g. `linking with cc failed` while building
+> `serde_core`/`proc-macro2` — install the spawn shim Termux's libc needs and rebuild:
+>
+> ```sh
+> pkg install libandroid-spawn binutils
+> cargo build -p mycelium-check --bin myc-check
+> ```
+>
+> (Termux's libc lacks `posix_spawn`; the patched rust links `-landroid-spawn`, so the
+> link fails until `libandroid-spawn` is present.) If the linker instead reports a
+> *different* missing library (`note: ... unable to find library -lXXX`), paste that
+> line — the fix is usually `pkg install` of the matching package.
+
 If `myc-check` can't be built, the Mycelium arm **SKIPs with an explicit reason** (the
 report records it) — it never reports a fake 0%.
 

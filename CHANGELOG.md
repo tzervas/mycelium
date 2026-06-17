@@ -8,6 +8,14 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: Termux/ARM64 myc-check build prerequisites documented)
+- **`experiments/README.md` now documents the Termux (Android/ARM64) Rust build prerequisites**
+  for `myc-check`, found by an on-device build: use the Termux-packaged Rust (not rustup), and when
+  a build script fails at link (`linking with cc failed` building `serde_core`/`proc-macro2`),
+  `pkg install libandroid-spawn binutils` and rebuild (Termux's libc lacks `posix_spawn`; the
+  patched rust links `-landroid-spawn`). This was surfaced cleanly thanks to the never-silent build
+  error added in the previous entry. No code change.
+
 ### Fixed (2026-06-17: KC-2 Mycelium arm — wrong cargo package + swallowed build error)
 - **The KC-2 Mycelium arm always SKIPped because the checker built the wrong crate.**
   `MyceliumChecker._discover` ran `cargo build -p mycelium-l1 --bin myc-check`, but the `myc-check`
