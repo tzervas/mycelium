@@ -49,6 +49,67 @@ corpus, not released software. Versioning will begin when the kernel does.
   CI escape hatch. Pure scope logic is `--self-test`-covered.
 - **`tools/github/conventions.json`** — added the ratified `examples → toolchain` scope alias (clears
   PR #145's flagged `examples` scope; verified via `derive_pr_labels` + `--self-test`/`--validate`).
+### Added (2026-06-17: the full standard-library roadmap — RFC-0016 (Draft) + Phase-5 decomposition)
+- **`docs/rfcs/RFC-0016-Core-Library-and-Standard-Library.md` (Draft)** — the **Core Library RFC** the
+  M-346 stdlib epic anchors and M-501 names. It fixes (1) the **per-op contract** every stdlib operation
+  must meet — **C1** never-silent (G2), **C2** honest per-op guarantee tag on the `Exact ⊐ Proven ⊐
+  Empirical ⊐ Declared` lattice (VR-5), **C3** no black boxes / EXPLAIN (SC-3/G11), **C4** content-addressed
+  value-semantics (ADR-003), **C5** above the small kernel (KC-3), **C6** declared/bounded effects
+  (RFC-0014) — verified per module by a **checked guarantee matrix** (the RFC-0003 §4 template), not prose;
+  (2) the **module taxonomy** split into **Tier-A differentiator** modules (each the library form of an
+  Accepted RFC/ADR — `swap`/`numerics`/`vsa`/`ternary`/`dense`/`select`/`diag`/`recover`/`runtime`/`spore`/
+  `content`) and **Tier-B common** modules (`collections`/`text`/`math`/`iter`/`error`/`io`/`fs`/`serialize`/
+  `time`/`rand`/`cmp`+`convert`/`fmt`/`testing` — table-stakes, held to the *same* contract); (3) the
+  **ring layering** (Ring 0 kernel-adjacent re-exports · Ring 1 capability surfaces · Ring 2 general
+  library) that keeps KC-3 honest; and (4) the **Rust-first → Mycelium-lang migration** (dogfooding; gated
+  by the M-502 readiness verdict, `diag`+`recover` the first targets per the charter). **Six §8 questions
+  FLAGGED** (v0 module set/priority, naming, ergonomics-vs-contract tension A, `runtime` Phase-7 sequencing,
+  the migration differential bar, the `wild`/FFI floor) and a §7 `research/` prior-art obligation recorded —
+  both clear before ratification (G2: an ungrounded module is FLAGGED, never invented). No code; ratification
+  is the maintainer's append-only decision (M-501). No kernel change (KC-3).
+- **`docs/planning/phase-5.md`** — the Phase-5 working plan (mirroring `phase-2.md`/`phase-3.md`): the
+  keystone + gate (M-501/M-502), the Tier-A/Tier-B task tables, the batch/sequencing plan (Ring 0/1 →
+  Ring 2 commons → self-hosting; `runtime` Phase-7-gated), and the six carried §8 FLAGs. Anticipated, not
+  ratified.
+- **`tools/github/issues.yaml`** — **18 new stdlib module tasks** (`M-515…M-534`, append-only) decomposing
+  RFC-0016's taxonomy, on top of the 8 keystone/seed Phase-5 tasks (Phase-5 count 8 → **26**). Each grounded
+  in its corpus RFC/ADR, `status:needs-design`/`P3`; numbers minted at the Phase-5 gate (the M-364…368
+  staging precedent). `--validate` (129 issues) + `--self-test` + `scripts/checks/all.sh` green. RFC index
+  (`docs/rfcs/README.md`) + `docs/Doc-Index.md` updated (RFC-0015 backfilled, RFC-0016 added);
+  `tools/github/MILESTONES.md` summary + Meta changelog updated. Docs + manifests only — no crate/kernel
+  change (KC-3).
+
+### Added (2026-06-17: PM phase-allocation reconcile — Phase-2 M-2xx back-fill + M-351; Phase 5 & 6 task sets)
+- **`tools/github/issues.yaml` — the 19 absent task-ids recovered (append-only).** `gh-issues-sync.py
+  --validate` flagged that **19 task-ids in `idmap.tsv` had no entry in `issues.yaml`** (the manifest was
+  the incomplete side): the **18 Phase-2 `M-2xx`** epic decompositions (`M-201…M-260`, #48–#65) and
+  **`M-351`** (#114). All are now written back into the manifest — **grounded entirely in the cited
+  corpus** (`docs/planning/phase-2.md` §2/§6 for every M-2xx title/priority/dependency/delivery detail;
+  `CHANGELOG` "Decided (Phase 4 — M-351 …)" + RFC-0012 §8/§9 for M-351), reconstructed and never invented
+  (the planning analogue of never-silent, **G2**). All carry `status:done` (Phase-2 exit gate met
+  2026-06-12; M-351 decided 2026-06-16) — a label, **not** a state change (the reconciler never infers
+  OPEN/CLOSED from a `status:*` label). **Honesty FLAG:** the PM-task brief called M-351 a "Phase-3
+  toolchain task", but the corpus + `idmap` place it in **Phase 4** (the M-344 ambient follow-up,
+  RFC-0012 R12-Q1/Q2); it is filed where the corpus grounds it, with the discrepancy recorded in a
+  section comment rather than silently followed.
+- **Phases 5 & 6 are no longer empty.** `--validate` also flagged the `phase:5`/`phase:6` labels **and**
+  the "Phase 5 — Self-Hosting & Core Library" / "Phase 6 — Native Acceleration & Deployment" milestones as
+  *defined but unused*. Both phases are now decomposed into **grounded, design-first** task sets (all
+  `status:needs-design`, `priority:P3`, scoped to what the roadmap implies — not over-invented):
+  **Phase 5** (`M-501` Core Library RFC keystone, `M-502` self-hosting readiness gate, the five M-346
+  candidate stdlib modules `M-510…M-514`, and `M-520` self-host the RFC-0013/0014 diagnostics+recovery)
+  decomposes the **M-346** stdlib epic + the `milestones.json` Phase-5 charter; **Phase 6** (`M-601`
+  native MLIR→LLVM full-calculus codegen, `M-602` native NFR-7 differential + E1 speedup, `M-610`
+  BitNet/native-ternary acceleration, `M-620` deployable Spore units, `M-630` production hardening +
+  the cross-backend VR-4 gate) traces to the Phase-6 charter + RFC-0004 §2 / ADR-009 / ADR-013 / M-348.
+  Numbers are **minted on the next `gh-sync-all.sh` run** at each gate (the established M-364…M-368
+  staging precedent; the MCP cannot create milestones/colored labels) — none fabricated here.
+- **Verification.** `gh-issues-sync.py --validate` (111 issues at this point — 129 after the stdlib decomposition recorded in the entry above; phase 5/6 + idmap-drift notes **resolved**;
+  only the reserved-and-intentionally-unused `good-first-issue`/`type:bug`/`type:chore` label notes remain,
+  an honest residual) and `--self-test` both pass; `bash scripts/checks/all.sh` prints **ALL CHECKS
+  PASSED**. **Manifests-only** change — no crate, no kernel, no `gh-issues-sync.py` engine touched (KC-3).
+  The GitHub board reconcile (creating the Phase-5/6 issues + appending their `idmap.tsv` rows) is the
+  maintainer's follow-up `gh`-capable step (unavailable in-session).
 
 ### Changed (2026-06-17: ratified `scope → area:*` aliases for the board reconciler — clears recurring PR FLAGs)
 - **`tools/github/conventions.json` — `scope_to_area.aliases`** populated (was `{}`). The reconciler's
