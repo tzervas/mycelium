@@ -16,6 +16,11 @@ members = [
     "crates/mycelium-lsp",
     "crates/mycelium-build",
     "crates/mycelium-proj",
+    "crates/mycelium-fmt",
+    "crates/mycelium-spore",
+    "crates/mycelium-check",
+    "crates/mycelium-sec",
+    "crates/mycelium-lint",
     "xtask",
 ]
 

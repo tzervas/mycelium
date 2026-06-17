@@ -8,6 +8,160 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: `myc-lint` — lint + auto-fix, folded — M-366; the M-361 suite is complete)
+- **`crates/mycelium-lint`** — the `myc-lint` lint+fix tool (lib + CLI), enacting the M-366 contract
+  (Accepted → enacted). Surfaces the M-141 invariant lints + the header lints as **actionable, reified,
+  opt-in** fixes with a **suggest / apply / scaffold** boundary. A control-flow change (`implicit-swap` →
+  an explicit `swap`; the RFC-0015 §9 advisory → an RFC-0014 recovery handler via `recovery_scaffold`,
+  bounded `retry(<=3)`) is a **scaffold**, never auto-applied (A2/I1/I5; tested). **First-impl confirmation
+  (§8.1):** no lint has a behaviour-preserving auto-fix that isn't already `mycfmt`'s header
+  canonicalization, so **`--fix` applies nothing** in v0 and says so — no silent rewrite (G2). The **§4.1
+  doc quality-bar lint is dormant-but-defined** (`DOC_QUALITY_CHECKS` names the 8 checks; awaits the M-363
+  doc IR; does not block the gate). Honest deferrals: the §9 lint needs L1 effect declarations (v0 ships
+  the scaffold generator, not the triggering lint); Core-IR lints run over the elaborable fragment (a
+  non-elaborable definition is skipped, not silently passed). **No new dependency** (KC-3). CLI: `myc-lint
+  [--project <dir>] [--fix] [--explain] [<file|->...]`.
+- **The M-361 "full-fat toolchain" suite is now code:** all five children folded — **M-364** `mycfmt`,
+  **M-368** `spore`, **M-365** `myc-check`, **M-367** `myc-sec`, **M-366** `myc-lint` — each above the
+  kernel (KC-3), no new dependency, every contract Accepted/enacted.
+
+### Added (2026-06-17: `myc-sec` — security checks as tooling, folded — M-367)
+- **`crates/mycelium-sec`** — the `myc-sec` security tool (lib + CLI), enacting the M-367 contract
+  (Accepted → enacted). v0's library core is the Mycelium-specific **`wild`-block audit** (`audit_wild` —
+  a lexical recogniser over `.myc`, like the M-141 header lints): it inventories every `wild` block
+  (LR-9/S6 — the denied-by-default unsafe escape hatch) and flags any without an adjacent **ADR-014
+  `// SAFETY:`** justification (`wild-unjustified`, **medium** — fails only under `--strict`). Tested:
+  justified passes, a `wild` in prose/an identifier is no false positive, a blank line breaks the
+  justification block. The **skip ≠ pass** crux is enacted: the CLI orchestrates the existing
+  `scripts/checks/{secrets,deny}.sh` gates and classifies each **ok / REDUCED / FAIL** (an absent scanner
+  or a `skip` is *reduced coverage*, printed in a `FULL`/`REDUCED` coverage receipt — an OK with reduced
+  coverage is **not** a clean bill; G2/VR-5). Every finding cites *why*; severity is a fixed declared map.
+  **No new dependency** (std-only lib; the bin shells via `std::process`; KC-3). CLI: `myc-sec [--project
+  <dir>] [--strict] [--explain] [--no-secrets] [--no-supply-chain]`.
+
+### Added (2026-06-17: `myc-check` — the correctness driver, folded — M-365)
+- **`crates/mycelium-check`** — the project-aware correctness/type-check driver (lib + `myc-check` CLI),
+  enacting the M-365 contract (Accepted → enacted). The prototype **grew up in place**: the single-file
+  **oracle** mode (the M-002/KC-2 harness contract — exit 2/3, `--expect-main`, `ok`/`parse-error:`/
+  `check-error:`) is preserved verbatim, and a **`--project`/`--config` mode** added that walks the whole
+  project, **aggregates** every refusal deterministically (all files), routes **check** refusals through
+  the **M-362 baseline** at the umbrella `NotValidated` class (`Medium`/`stream`; additive-only — never
+  suppressed, A1), and exits **2 parse / 3 check / 5 resolution / 0 clean** (CI-usable). Honest: the flat
+  `CheckError` is **not** split into a finer class it cannot structurally distinguish (VR-5); a project
+  with no `.myc` sources is an explicit exit-5 error, never a silent empty pass (G2). The trusted M-210
+  checker (`check_nodule`) is unchanged — this is the driver above it (KC-3); **no new dependency**.
+- The prototype `crates/mycelium-l1/src/bin/myc-check.rs` is **removed** (superseded; its oracle behavior
+  ported into the driver — nothing references the old bin but a prose doc-comment).
+
+### Added (2026-06-17: `spore` — packaging & publishing, folded — M-368)
+- **`crates/mycelium-spore`** — the `spore` packager (lib + CLI), enacting the M-368 contract (Accepted →
+  enacted; ADR-013). Builds a **content-addressed spore** from a `mycelium-proj.toml`: **identity is the
+  DAG** (project kind + germination surface + source files by raw-byte BLAKE3 + dependency hash edges) and
+  **metadata is excluded** (ADR-003) — a `version`/`authors` change leaves the spore id unchanged, a code
+  or dep-hash change moves it (both tested). Never-silent publish inputs (G2): a phylum with no surface, no
+  `.myc` sources, a **hashless dependency**, or an `[spore].include` naming a non-export is an explicit
+  error (exit 3) — **no partial artifact**. `EXPLAIN`/`spore explain` prints the identity receipt + the
+  not-identity metadata. CLI: `spore build` (`-o <out>`) / `spore explain` / `--config`. **No new
+  dependency** (workspace-pinned `blake3` + `mycelium-core::ContentHash`; KC-3). v0: single project,
+  hash-pinned deps, named-provisional descriptor encoding (R2 wire-schema/signing/germination deferred).
+- **`crates/mycelium-proj`** — the manifest reader now **interprets `[surface]`/`[dependencies]`/`[spore]`**
+  (typed, closed key sets; a non-inline-table dependency or unknown key is an explicit error — G2). `spore`
+  is the first consumer of these accepted-but-uninterpreted M-359 tables. `Surface`/`Dependency`/
+  `SporeConfig` exported.
+
+### Added (2026-06-17: `mycfmt` — the canonical formatter, folded — M-364)
+- **`crates/mycelium-fmt`** — the `mycfmt` formatter (lib + CLI), enacting the M-364 contract; the
+  `Mycfmt-Formatter-Contract` moves **Accepted → enacted**. Formatting is an **identity-preserving
+  projection** (RFC-0001 §4.6/§4.8; ADR-003): the body is re-printed from the **raw parse** (so
+  `default paradigm`/`with paradigm` are preserved, not expanded — formatting ≠ expand-ambient), the
+  DN-06 marker + M-359 `// @key:` header are re-emitted canonically, and a **runtime C1 guard**
+  re-parses the output and refuses (never emits) anything that would change the surface AST or header.
+  **C2 idempotence** + the corpus identity property are tested over `docs/spec/grammar/conformance/`
+  (the whole `accept/` set formats in-scope; every `reject/` is refused). Never-silent (G2): parse
+  (exit 2) / header (exit 3) / out-of-scope (exit 4 — incl. interior comments and the **hard-pin**
+  `[toolchain].format` mismatch) refusals leave the file untouched; `--write` is atomic. CLI:
+  stdout (default) · `--check` · `--write` · `--explain` (prints the identity receipt) · `--config`.
+- **`crates/mycelium-proj`** — the manifest reader now **interprets `[toolchain]`** (`format`/`lints`;
+  closed key set, unknown key = explicit error) — `mycfmt` is the first consumer of the
+  accepted-but-uninterpreted M-359 table. `Toolchain` exported. No new dependency (KC-3).
+
+### Changed (2026-06-17: M-364/365/366/367/368 open questions ratified — append-only)
+- The maintainer ratified one open question per child contract (folded in append-only; all five stay
+  **Proposed**, ready to fold):
+  - **M-364** — `[toolchain].format` is a **hard pin** (refuse on version mismatch, exit 4; never format
+    with rules the project didn't ask for — G2).
+  - **M-365** — warnings **print but do not fail** the build by default; `--deny-warnings` is the opt-in
+    CI gate.
+  - **M-366** — `safe`-edit set is **conservative** (expressions/control flow → scaffold only; header
+    canonicalization is the primary safe-edit); the §4.1 doc lint ships **dormant-but-defined** and does
+    **not** block the gate. Held at Proposed a little longer — the safe-edit boundary + doc-lint dormancy
+    get final confirmation at the first implementation pass.
+  - **M-367** — a `wild` block is justified by the **ADR-014 `// SAFETY:` comment convention** for v0
+    (no new structured attribute).
+  - **M-368** — v0 may ship a **named-provisional on-disk encoding** (superseded append-only when the
+    RFC-0008 R2 wire-schema lands).
+  All other open questions across the five contracts remain deferred to the next wave / first
+  implementation pass.
+
+### Changed (2026-06-16: M-363 §8 build stack ratified — pipeline design Accepted)
+- **`docs/spec/Narrative-Authoring-Pipeline.md` moves Proposed → Accepted** (append-only): the maintainer
+  **ratified the §8 build stack** — a custom in-repo **doc-IR generator + Typst** (PDF/EPUB) + a static HTML
+  renderer (§8.1a); **Typst** PDF engine (§8.2); **v0 single-version** (§8.3). §8.4 stands at recommendation
+  (rustdoc JSON adapter); §8.5 (hosting) deferred. The §8 gate is lifted; the §8 options are retained
+  verbatim for the record. This **unblocks M-366's §4.1 doc quality-bar lint** (now specifiable against the
+  stack). **Building M-363 remains a separate, not-yet-scheduled task** — ratifying the design is not
+  scheduling the build.
+
+### Added (2026-06-16: M-361 child contracts — design, M-365/M-366/M-367/M-368)
+- **Four design-first contracts for the remaining M-361 children** (each **Proposed**; present before
+  folding; **no code, no new dependency**, all above the kernel — KC-3):
+  - **`docs/spec/Myc-Check-Driver-Contract.md`** (M-365) — the project-aware correctness driver: deterministic
+    project resolution (manifest `[surface]` + `[dependencies]` + M-359 header inheritance), whole-`phylum`
+    **diagnostic aggregation** routed via the **M-362 auto-baseline** (additive-only A1, EXPLAIN-able),
+    **honest per-op tags preserved** (VR-5 — never upgraded), CI exit semantics (non-zero on any error;
+    opt-in `--deny-warnings`); the trusted M-210 checker unchanged.
+  - **`docs/spec/Lint-and-Autofix-Contract.md`** (M-366) — lint+fix under one rule (**no silent rewrite**,
+    G2): the M-141 lints + RFC-0013 diagnostics + the RFC-0015 §9 "only logged — add a handler?" advisory as
+    **actionable, reified, opt-in** fixes with a bright **suggest / apply / scaffold** boundary (a
+    control-flow change — an explicit `swap`, an RFC-0014 recovery handler — is a **scaffold**, never
+    auto-applied; A2/I1/I5). Hosts the M-363 **§4.1 doc quality-bar lint** (8 checks), now unblocked by the
+    §8 ratification (dormant-but-defined until the doc-IR generator lands).
+  - **`docs/spec/Security-Checks-Contract.md`** (M-367) — security as tooling over `scripts/checks/{secrets,
+    deny}.sh` (gitleaks · cargo-deny/audit) plus a new in-repo **`wild`-block audit** (LR-9/S6/DN-02 §5 —
+    inventory every denied-by-default unsafe block + require an ADR-014 `// SAFETY:` justification). Honesty
+    crux: every finding **cites why**, a fixed declared severity map, and a missing scanner is **reduced
+    coverage, never a silent pass** (an OK with `REDUCED` coverage is not a clean bill — G2/VR-5).
+  - **`docs/spec/Spore-Build-and-Publish-Contract.md`** (M-368) — `mycelium-proj.toml` → `spore` (ADR-013):
+    the build pipeline, the **identity-vs-metadata** split (ADR-003 — same code+deps ⇒ same spore hash
+    regardless of version/authors), **hash-authoritative dependency resolution** (a hashless/disagreeing dep
+    is an explicit error), never-silent publish inputs (**no partial artifact**, G2), an `EXPLAIN` identity
+    receipt; honest v0 scope (single-project, hash-pinned — the wire-schema/signing/germination contract
+    deferred to RFC-0008 R2 per ADR-013 §4). First consumer of the M-359 `[surface]`/`[dependencies]`/
+    `[spore]` tables.
+
+### Added (2026-06-16: `mycfmt` formatter contract — design, M-364)
+- **`docs/spec/Mycfmt-Formatter-Contract.md`** (**Proposed**) — the M-364 formatter contract, design-first
+  (present before folding). Pins `mycfmt` (the standalone canonical formatter — M-142 grows up) as an
+  **identity-preserving projection** (RFC-0001 §4.6/§4.8; ADR-003 — formatting never changes a definition's
+  content-addressed identity) with three **checked** invariants: **C1** identity-preservation (the
+  load-bearing one — an `EXPLAIN` *identity receipt* shows the content hash unchanged, and a run that
+  cannot is a refusal, not a write), **C2** idempotence (byte-for-byte fixed point), **C3**
+  header-preservation (the DN-06 `// nodule:` marker + the M-359 `// @key:` structured header, re-emitted
+  canonically; a malformed header is an explicit error, never a silent drop — G2/VR-5). Defines the
+  never-silent error model (parse/header/out-of-scope exits; **no partial or garbled rewrite**, G2), the
+  hand-rolled CLI + exit codes (**no new dependency**), `[toolchain].format` reading (the M-359 table's
+  first consumer), and the honest v0 **round-trip-safe scope boundary** — `mycfmt` formats only the fragment
+  where `parse ∘ print ∘ parse` is the identity (checked on `grammar/conformance/accept/`) and **refuses**
+  the rest (exit 4) rather than risk identity. Architecture: a new above-the-kernel `mycelium-fmt` crate
+  over already-landed M-142/M-358/M-359 primitives (KC-3). No `mycfmt` code lands until the contract is
+  acknowledged.
+
+### Changed (2026-06-16: M-361 children created + wired — PM)
+- **M-364…M-368 created on GitHub and wired as sub-issues of M-361 (#132)** via the staged
+  `tools/github/issues.yaml` (gated `gh-sync-all.sh` run): **M-364** #136, **M-365** #137, **M-366** #138,
+  **M-367** #139, **M-368** #140. `tools/github/idmap.tsv` appended (task → number → REST db-id). The
+  Phase-8 milestone + `phase:8` label are assigned. No code (bookkeeping).
+
 ### Changed (2026-06-16: M-361 Phase-8 toolchain epic decomposed — staged, PM)
 - **M-361 decomposed into five per-tool children** (the epic body's named tools), staged in
   `tools/github/issues.yaml` as sub-issues of M-361: **M-364** (`mycfmt` formatter — M-142 grows up),

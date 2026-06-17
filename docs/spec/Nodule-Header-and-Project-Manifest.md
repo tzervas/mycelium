@@ -58,9 +58,9 @@ exports     = ["geometry.shapes", "geometry.transform"]
 [dependencies]                     # other phyla — content-addressed (ADR-003): by hash AND a version req
 numerics    = { phylum = "numerics", version = "^2", hash = "blake3:…" }
 
-[toolchain]                        # optional pins the toolchain (M-361) reads (advisory in design phase)
-format      = "mycfmt-0"           # formatter spelling/version
-lints       = "strict"             # lint profile
+[toolchain]                        # optional pins the toolchain (M-361) reads
+format      = "mycfmt-0"           # formatter spelling/version — a HARD PIN: mycfmt refuses a mismatch (M-364 §10.3, ratified 2026-06-17)
+lints       = "strict"             # lint profile (advisory in the design phase)
 
 [spore]                            # optional: how a phylum/program publishes as a deployable (ADR-013)
 include     = ["surface"]          # what germinates; defaults to the public surface
@@ -206,3 +206,9 @@ are chosen above; please confirm or redirect (append-only either way):
   canonical — ADR-003), declared-only license/version (VR-5), tooling-layer (KC-3). Records the
   long-term full-fat toolchain as M-361 and this schema's enactment as M-359. Format choices (§7) are
   flagged for maintainer sign-off; **no code lands** until ratified. Append-only.
+- **2026-06-17 — `[toolchain].format` posture clarified (M-364).** The §2 example previously labelled the
+  whole `[toolchain]` table "advisory in design phase". `mycfmt` (M-364, enacted) is the first consumer and
+  reads `format` as a **hard pin** (a version mismatch is an explicit refusal — M-364 §10.3, ratified
+  2026-06-17); `lints` stays advisory in the design phase. The example comment is reconciled accordingly so
+  the suite's config semantics are consistent across specs. Metadata is still not identity (ADR-003).
+  Append-only.

@@ -105,6 +105,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-check"
+version = "0.0.0"
+dependencies = [
+ "mycelium-l1",
+ "mycelium-lsp",
+ "mycelium-proj",
+]
+
+[[package]]
 name = "mycelium-core"
 version = "0.0.0"
 dependencies = [
@@ -118,6 +127,14 @@ name = "mycelium-dense"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
+]
+
+[[package]]
+name = "mycelium-fmt"
+version = "0.0.0"
+dependencies = [
+ "mycelium-l1",
+ "mycelium-proj",
 ]
 
 [[package]]
@@ -137,6 +154,14 @@ dependencies = [
  "mycelium-interp",
  "mycelium-mlir",
  "mycelium-numerics",
+]
+
+[[package]]
+name = "mycelium-lint"
+version = "0.0.0"
+dependencies = [
+ "mycelium-l1",
+ "mycelium-lsp",
 ]
 
 [[package]]
@@ -182,6 +207,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-sec"
+version = "0.0.0"
+
+[[package]]
 name = "mycelium-select"
 version = "0.0.0"
 dependencies = [
@@ -190,6 +219,15 @@ dependencies = [
  "mycelium-interp",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "mycelium-spore"
+version = "0.0.0"
+dependencies = [
+ "blake3",
+ "mycelium-core",
+ "mycelium-proj",
 ]
 
 [[package]]
