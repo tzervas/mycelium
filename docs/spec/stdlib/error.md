@@ -202,7 +202,7 @@ states each op's explicit outcome set; none of them is "silently returns success
 
 - **2026-06-17 — Draft (needs-design).** Stands up the `std.error` / `option` / `result` ergonomics module
   (M-527, #168; Ring 2, Tier B) under RFC-0016 (Draft). Fixes the **scope + boundary** (the pure combinator
-  + propagation surface, bounded against `core`'s error *representation*, `recover`'s reified *policies*, and
+  and propagation surface, bounded against `core`'s error *representation*, `recover`'s reified *policies*, and
   `diag`'s *presentation*); the **exported-op surface** sketch (`map`/`map_err`/`and_then`/`or_else`/
   `filter`/`ok_or`/`unwrap_or*`/`?`-propagate/`unwrap`-family/`recover`-bridge); and — the load-bearing
   deliverable — the **guarantee matrix** (11 rows; mostly `Exact` pure combinators, `Declared` for

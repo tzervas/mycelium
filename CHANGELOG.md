@@ -8,6 +8,40 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: standard-library second design wave — the remaining 13 module specs, integrated)
+- **Thirteen per-module standard-library design specs** under `docs/spec/stdlib/`, completing the RFC-0016
+  taxonomy (all 23 modules now `Draft`). Each is authored to the uniform template and the §4.1 contract,
+  shipping its load-bearing **guarantee matrix** (ops × {tag · fallibility · declared effects · EXPLAIN-able})
+  and explicit **C1–C6 conformance**: Tier-A **`numerics`** (M-512, #153 — certificate consumer above the
+  ADR-010 kernels; tags never upgraded past basis; homes the `Approx<T>` carrier `math`/`dense` deferred),
+  **`vsa`** (M-513, #154 — per-`(model,op)` tags read from the RFC-0003 §4 matrix; reconstruction held at the
+  FR-C2 probabilistic-only ceiling), **`diag`** (M-510, #151 — the self-hosted structured-diagnostics record;
+  presentation never gates propagation, I1), **`recover`** (M-520, #156 — the reified `Outcome`/recovery-policy
+  subsystem; every error recovered or re-propagated, never dropped; elaborates to L0 `Match`, no new kernel
+  node), **`runtime`** (M-521, #162 — the RFC-0008 concurrency lexicon as reserved vocabulary, Phase-7-gated,
+  no premature surface), **`spore`** (M-522, #163 — content-addressed deployable + reconstruction manifest;
+  deterministic hash; full native deploy Phase-6-gated on M-620); Tier-B **`collections`** (M-511, #152 —
+  value-semantic, no silent reorder), **`text`** (M-524, #165 — `parse → Result`, lossy encoding explicit),
+  **`io`/`serialize`** (M-514, #155 — checked round-trip, serialization-is-projection, one canonical JSON),
+  **`fs`** (M-528, #169 — every path/permission failure explicit; audited `wild` floor), **`time`** (M-529,
+  #170 — monotonic/wall/logical a typed distinction; reads are declared effects), **`rand`** (M-531, #171 —
+  entropy a declared effect, seeded vs entropy generators distinct), **`testing`** (M-534, #174 — property/
+  golden/differential harness; a skipped check is reported, never a silent pass). Honest throughout (VR-5):
+  no `Proven` without a checked basis, no fabricated crate API / bound / schema — genuine unknowns FLAGGED.
+- **A common failure-legibility rule, recorded once and consumed everywhere.** A Mycelium program *may*
+  legitimately fail/refuse for a specific error case, but every failure is a structured **RFC-0013** record
+  with a clear trace + actionable debug info, and is recovered or re-propagated — **never silently swallowed**
+  (I1). Discharged in `diag`, consumed by `recover` (policy), `testing` (a `Fail` is a `diag` record), and
+  every module's `Err` rows.
+- **Cross-module reconciliation extended (stdlib README §5).** The second wave *resolved* two prior deferrals
+  — the numerics carrier (`Approx<T>` = a `Meta`-attached bound, closing `math`/`dense`) and the recovery
+  bridge (`recover` now owns the concrete `Outcome`/`PolicyRef`) — and *converged* the JSON projection (`fmt`
+  delegates to `serialize`) from both sides. New seams recorded for the consolidated `wild`/`std-sys` floor
+  (`fs`/`rand`/`math`, §8-Q6), the shared RT3 declared-nondeterminism rule (`time`/`rand`), the reserved
+  `runtime` Phase-7 phylum (§8-Q4), the deployable-spore boundary, and the reused differential bar (§8-Q5).
+  No two specs conflict on an owned surface; open items are the known §8 questions, not silent decisions.
+  Design-first; no code; no kernel change (KC-3).
+
 ### Added (2026-06-17: standard-library first design wave — 11 module specs + the M-502 gate, integrated)
 - **Eleven per-module standard-library design specs** under `docs/spec/stdlib/`, each authored to the
   uniform template and the RFC-0016 §4.1 contract, each shipping its load-bearing **guarantee matrix**
