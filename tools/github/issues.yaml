@@ -1010,6 +1010,179 @@ issues:
       The milestones.json Phase-5 charter names this directly: "self-host the RFC-0013/0014 diagnostics + recovery (per their self-hosting trajectory)". Port the reified recovery subsystem (RFC-0014, today crates/mycelium-lsp/src/recover, Rust) into Mycelium-lang — the result-sum Outcome, the closed recovery-action set, the registry-shared on-ErrorClass policy, declared+budgeted effects with graceful EffectBudgetExhausted, and the never-silent handle (every error recovered or re-propagated, never dropped — I1). Builds on the self-hosted diagnostics (M-510). Recovery elaborates to L0 Match — no new kernel node (KC-3, NFR-7).
       Acceptance (needs-design): meets the M-501 contract; the central never-silent invariant I1 + the effect-budget invariants (I3/I4/I5) hold in the self-hosted form; differential against the Rust implementation (NFR-7). FLAG: depends on the surface supporting error-sum Match + the effect-budget surface (M-353) being expressible in Mycelium-lang.
 
+  # ── Phase 5 — the full stdlib module taxonomy (RFC-0016 §4.3/§4.4) ─────────────────────────────────
+  # Created 2026-06-17 alongside RFC-0016 (Draft) + docs/planning/phase-5.md, decomposing the M-346 stdlib
+  # epic into per-module tasks per the user's request to capture the FULL standard library on the roadmap:
+  # the Tier-A DIFFERENTIATOR modules (the library form of an Accepted RFC/ADR — unique to Mycelium) and
+  # the Tier-B COMMON modules (table-stakes, held to the same RFC-0016 §4.1 per-op contract). M-510/511/512/
+  # 513/514/520 above are the M-346 "early candidates" subset; the rest are added here. Every module ships a
+  # checked guarantee matrix (RFC-0016 §4.5). All grounded in the cited corpus (a module whose intent isn't
+  # grounded is FLAGGED in RFC-0016 §8, never invented — G2). status:needs-design / P3; numbers minted at
+  # the Phase-5 gate (the M-364…368 staging precedent).
+  # ·· Tier A — differentiator modules ··
+  - id: M-515
+    title: "M-515 — stdlib: `core` / prelude (the honest value model)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:core-ir, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-101]
+    body: |
+      RFC-0016 §4.3 Ring-0. The thin prelude: Value/Repr/Meta, Option/Result + error values, and the guarantee-lattice tags (Exact ⊐ Proven ⊐ Empirical ⊐ Declared), mostly re-exporting mycelium-core (RFC-0001; M-101) — NO new trusted code (KC-3). The foundation every other module builds on.
+      Acceptance (needs-design): meets the M-501 §4.1 contract; adds no kernel surface (Ring-0 re-export only); the lattice tags + never-silent error values are the documented floor.
+
+  - id: M-516
+    title: "M-516 — stdlib: `swap` (the certified representation-change library)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:swap, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-210]
+    body: |
+      RFC-0016 §4.3 — the library form of Mycelium's signature operation (RFC-0002). An ergonomic surface over the landed certified swaps (M-120 binary↔ternary, M-211 F32→BF16, M-231 Dense↔VSA) + certificate build/check through the one M-210 checker; a swap is lexically visible, certificate-carrying, never silent (out-of-range = explicit refusal). Certificate consumer (KC-3); honest per-op tags (VR-5).
+      Acceptance (needs-design): every exported swap emits + validates a certificate; the guarantee matrix records each swap's tag + legal-pair side-conditions; unsupported pairs are explicit errors.
+
+  - id: M-517
+    title: "M-517 — stdlib: `ternary` (balanced ternary + bit/trit + packed)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:core-ir, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-111]
+    body: |
+      RFC-0016 §4.3 — the ternary-native differentiator. Balanced-ternary arithmetic, first-class Bit and Trit{-1,0,+1} with identities (FR-M2; M-111), and packed-ternary helpers (the I2_S/TL1/TL2 codecs, RFC-0004 §5 / DN-01) exposed as inspectable meta.physical, never hidden lowering. Exact where the algebra is exact (VR-5).
+      Acceptance (needs-design): arithmetic ops tagged per the matrix (Exact for the balanced-ternary algebra); packing exposed inspectably (NFR-1/NFR-4); rounding/out-of-range explicit (G2).
+
+  - id: M-518
+    title: "M-518 — stdlib: `dense` (typed dim-tracked tensors / embeddings)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-230]
+    body: |
+      RFC-0016 §4.3 — typed Dense{dim,dtype} with dim in the type, elementwise + similarity ops with per-op Exact/Bounded tags (M-230; RFC-0001 §4.1 / RFC-0002 §5). Float-op ε routed through the verified numerics (ADR-010); a dim/dtype mismatch or off-grid payload is a typed error, never re-rounded.
+      Acceptance (needs-design): per-op guarantee matrix (Proven where Higham's bound's side-conditions check, else honest downgrade); mismatches explicit; above the kernel (KC-3).
+
+  - id: M-519
+    title: "M-519 — stdlib: `select` / `explain` (selection DSL + mandatory EXPLAIN)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:selection, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-220]
+    body: |
+      RFC-0016 §4.3 — reified decisions as a library (RFC-0005/ADR-006; M-220/221/222). The total, non-learned, content-addressed decision-table policy surface + the mandatory EXPLAIN record (one mechanism, many sites); the operational form of "no black boxes" (SC-3/G2). Cost in real declared units, never "arbitrary internal units".
+      Acceptance (needs-design): every selection emits a valid EXPLAIN record; the policy is content-addressed + inspectable; determinism + override tested.
+
+  - id: M-521
+    title: "M-521 — stdlib: `runtime` / `colony` (the fungal concurrency surface)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:execution, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-355]
+    body: |
+      RFC-0016 §4.3 — the library bindings for the RFC-0008 runtime lexicon: hypha/fuse/colony/cyst/graft/forage/backbone/mesh/tier/reclaim, structured concurrency (Scope), and reclaim bounded-cascade supervision (M-355–357). Mostly RESERVED-not-active vocabulary (Glossary ⟂) until the RFC-0008 constructs land. FLAGGED cross-phase dependency (RFC-0016 §8-Q4): this module is sequenced against the Phase-7 runtime track and may live in a separate `runtime` phylum rather than `std`.
+      Acceptance (design-first): the binding set + the std-vs-separate-phylum decision presented; activates construct-by-construct as RFC-0008 vocabulary lands (no premature surface — VR-5).
+
+  - id: M-522
+    title: "M-522 — stdlib: `spore` (deployable / reconstruction-manifest library)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-368]
+    body: |
+      RFC-0016 §4.3 — the content-addressed deployable unit + the reconstruction-manifest (regrow-a-value-from-its-recipe) library (ADR-013; RFC-0003 §6; the M-368 packaging contract). Content-addressed identity is canonical (ADR-003); metadata is not identity; a missing/ambiguous publish input is an explicit error (G2). The full native deploy lands with the Phase-6 native path (M-620).
+      Acceptance (needs-design): a spore builds with a deterministic content hash; the reconstruction-manifest single-value case round-trips; honest publish-input errors.
+
+  - id: M-523
+    title: "M-523 — stdlib: `content` / `hash` (content-addressing primitives)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:core-ir, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-103]
+    body: |
+      RFC-0016 §4.3 — the identity model as a first-class library (ADR-003; RFC-0001 §4.6; the M-103 content-addressing): hash-of-AST identity, content hashes for cert/policy refs, and the blake3 digest surface — kept DISTINCT from hashing-for-hash-maps (that lives with collections). Identical defs collide; trivial renames don't change identity.
+      Acceptance (needs-design): content-addressing primitives with the canonical-hash guarantee (ADR-003); the identity-vs-metadata split documented; above the kernel (KC-3).
+
+  # ·· Tier B — common / expected modules ··
+  - id: M-524
+    title: "M-524 — stdlib: `text` / `string` (UTF-8, format, parse)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      RFC-0016 §4.4 — UTF-8 strings, slicing, formatting, parsing. Honesty crux: `parse` returns a Result, NEVER a sentinel (C1); a lossy encoding/transcoding is an explicit error, never a silent replacement-char substitution unless explicitly requested. Value-semantic; immutable by default.
+      Acceptance (needs-design): every fallible op explicit (G2); the guarantee matrix records parse/format fallibility; meets the M-501 contract.
+
+  - id: M-525
+    title: "M-525 — stdlib: `math` (numeric functions over honest numerics)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-512]
+    body: |
+      RFC-0016 §4.4 — numeric functions; where precision/approximation matters they route through the verified numerics (M-512/ADR-010) and carry their tag (C2). A function with a domain restriction (sqrt of negative, log of zero) is an explicit error, never NaN-by-silence. Transcendental/approximate results are tagged at their established strength (VR-5), never pre-claimed.
+      Acceptance (needs-design): per-op guarantee matrix (Exact / Bounded with ε / Empirical as the basis supports); domain errors explicit.
+
+  - id: M-526
+    title: "M-526 — stdlib: `iter` (iterator / fold combinators)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-320]
+    body: |
+      RFC-0016 §4.4 — iterator / fold / transducer combinators over the RFC-0007 §4.8 `for` fold (the kernel's linear-recursion primitive; M-320). Total + terminating where the kernel guarantees it (a matured/total fold stays total); laziness, if offered, is explicit, not a silent thunk. Value-semantic.
+      Acceptance (needs-design): combinators preserve the kernel's totality guarantees; the guarantee matrix records which are total; meets the M-501 contract.
+
+  - id: M-527
+    title: "M-527 — stdlib: `error` / `option` / `result` (errors-as-values ergonomics)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-352]
+    body: |
+      RFC-0016 §4.4 — the errors-as-values ergonomics layer: Option/Result combinators, `?`-style propagation, and the bridge to the RFC-0014 reified recovery (M-352). The never-silent floor (I1) is structural — propagation is the default and suppression is impossible; an error is recovered or re-propagated, never dropped.
+      Acceptance (needs-design): the propagation/combinator surface with I1 held (no silent drop); recovery stays additive + opt-in (I5); meets the M-501 contract.
+
+  - id: M-528
+    title: "M-528 — stdlib: `fs` (filesystem over substrates)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502, M-514]
+    body: |
+      RFC-0016 §4.4 — filesystem access over affine `substrate` handles (LR-8 — a handle is consumed exactly once), building on the M-514 IO surface. Every path/permission/IO failure is an explicit error (G2); no silent create-on-write, no silent truncation. OS facilities are confined to an audited `wild` block (ADR-014); the `wild`/FFI floor is RFC-0016 §8-Q6 (FLAGGED — may live in a separate std-sys phylum so pure `std` stays leak-free, LR-9).
+      Acceptance (needs-design): every fs op explicit + fallible; substrate single-consumption enforced; the `wild` surface inventoried + justified.
+
+  - id: M-529
+    title: "M-529 — stdlib: `time` (clocks, durations, instants)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      RFC-0016 §4.4 — clocks, durations, instants. Honesty crux: MONOTONIC vs WALL-CLOCK time is a typed distinction, never a silent swap (a deterministic-fragment program cannot read wall-clock entropy silently — RT2/RT3); the RFC-0008 logical clock (the M-356 reclaim windowing basis) is the in-runtime time source. Reads are declared effects (C6).
+      Acceptance (needs-design): the monotonic/wall/logical clock distinction typed + explicit; time reads declared as effects; meets the M-501 contract.
+
+  - id: M-531
+    title: "M-531 — stdlib: `rand` (random number generation)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      RFC-0016 §4.4 — RNG. Honesty crux: nondeterminism is REIFIED and NAMED (RT3) — entropy is a declared effect (C6), so a deterministic-fragment program cannot pull randomness silently; a seeded/deterministic generator is a distinct, reproducible construct. Distribution guarantees are tagged honestly (Declared/Empirical), never claimed Proven without a checked basis (VR-5).
+      Acceptance (needs-design): entropy as a declared effect; seeded vs entropy generators distinct; honest distribution tags.
+
+  - id: M-532
+    title: "M-532 — stdlib: `cmp` / `convert` (ordering, equality, non-representation conversions)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      RFC-0016 §4.4 — ordering/equality traits + value conversions that are NOT representation changes (a representation change is a `swap`, M-516 — visible + certified; this is the ordinary widening/conversion surface). Honesty crux: a LOSSY convert is an explicit fallible op, never a silent narrowing/truncation (C1); equality respects content-addressed identity where it applies (ADR-003).
+      Acceptance (needs-design): lossy conversions explicit + fallible; the cmp/convert boundary vs `swap` documented; meets the M-501 contract.
+
+  - id: M-533
+    title: "M-533 — stdlib: `fmt` (formatting / display)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      RFC-0016 §4.4 — formatting / display with the dual HUMAN + MACHINE (JSON) projection (G11; the RFC-0013 diagnostics precedent) over one canonical form. A value's display is a projection, not its identity (ADR-003 — the content hash stays canonical). Honest: a truncated/elided display says so, never silently drops data.
+      Acceptance (needs-design): dual human/machine projection round-trips (G11); display is a projection (identity unchanged); meets the M-501 contract.
+
+  - id: M-534
+    title: "M-534 — stdlib: `testing` (property / golden / differential harness)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-501, M-502]
+    body: |
+      RFC-0016 §4.4 — the repo's own verification discipline as a library: property tests (a bound for every guarantee), golden/snapshot tests, and the differential harness (the M-151/M-210 interp↔AOT pattern). Honesty crux: a skipped or undetermined check is REPORTED, never a silent pass (the `just check` ethos — skips are explicit and explained, G2/VR-5). Dogfoods the language's own honesty rule.
+      Acceptance (needs-design): property/golden/differential harnesses; explicit skip reporting (never a silent green); meets the M-501 contract.
+
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 # Phase 6 — Native Acceleration & Deployment (ANTICIPATED — not yet ratified; scope firms at the prior
 # gate). Created 2026-06-17 (PM phase-allocation reconcile) so the defined-but-unused phase:6 label + the

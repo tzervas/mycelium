@@ -8,6 +8,36 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: the full standard-library roadmap — RFC-0016 (Draft) + Phase-5 decomposition)
+- **`docs/rfcs/RFC-0016-Core-Library-and-Standard-Library.md` (Draft)** — the **Core Library RFC** the
+  M-346 stdlib epic anchors and M-501 names. It fixes (1) the **per-op contract** every stdlib operation
+  must meet — **C1** never-silent (G2), **C2** honest per-op guarantee tag on the `Exact ⊐ Proven ⊐
+  Empirical ⊐ Declared` lattice (VR-5), **C3** no black boxes / EXPLAIN (SC-3/G11), **C4** content-addressed
+  value-semantics (ADR-003), **C5** above the small kernel (KC-3), **C6** declared/bounded effects
+  (RFC-0014) — verified per module by a **checked guarantee matrix** (the RFC-0003 §4 template), not prose;
+  (2) the **module taxonomy** split into **Tier-A differentiator** modules (each the library form of an
+  Accepted RFC/ADR — `swap`/`numerics`/`vsa`/`ternary`/`dense`/`select`/`diag`/`recover`/`runtime`/`spore`/
+  `content`) and **Tier-B common** modules (`collections`/`text`/`math`/`iter`/`error`/`io`/`fs`/`serialize`/
+  `time`/`rand`/`cmp`+`convert`/`fmt`/`testing` — table-stakes, held to the *same* contract); (3) the
+  **ring layering** (Ring 0 kernel-adjacent re-exports · Ring 1 capability surfaces · Ring 2 general
+  library) that keeps KC-3 honest; and (4) the **Rust-first → Mycelium-lang migration** (dogfooding; gated
+  by the M-502 readiness verdict, `diag`+`recover` the first targets per the charter). **Six §8 questions
+  FLAGGED** (v0 module set/priority, naming, ergonomics-vs-contract tension A, `runtime` Phase-7 sequencing,
+  the migration differential bar, the `wild`/FFI floor) and a §7 `research/` prior-art obligation recorded —
+  both clear before ratification (G2: an ungrounded module is FLAGGED, never invented). No code; ratification
+  is the maintainer's append-only decision (M-501). No kernel change (KC-3).
+- **`docs/planning/phase-5.md`** — the Phase-5 working plan (mirroring `phase-2.md`/`phase-3.md`): the
+  keystone + gate (M-501/M-502), the Tier-A/Tier-B task tables, the batch/sequencing plan (Ring 0/1 →
+  Ring 2 commons → self-hosting; `runtime` Phase-7-gated), and the six carried §8 FLAGs. Anticipated, not
+  ratified.
+- **`tools/github/issues.yaml`** — **18 new stdlib module tasks** (`M-515…M-534`, append-only) decomposing
+  RFC-0016's taxonomy, on top of the 8 keystone/seed Phase-5 tasks (Phase-5 count 8 → **26**). Each grounded
+  in its corpus RFC/ADR, `status:needs-design`/`P3`; numbers minted at the Phase-5 gate (the M-364…368
+  staging precedent). `--validate` (129 issues) + `--self-test` + `scripts/checks/all.sh` green. RFC index
+  (`docs/rfcs/README.md`) + `docs/Doc-Index.md` updated (RFC-0015 backfilled, RFC-0016 added);
+  `tools/github/MILESTONES.md` summary + Meta changelog updated. Docs + manifests only — no crate/kernel
+  change (KC-3).
+
 ### Added (2026-06-17: PM phase-allocation reconcile — Phase-2 M-2xx back-fill + M-351; Phase 5 & 6 task sets)
 - **`tools/github/issues.yaml` — the 19 absent task-ids recovered (append-only).** `gh-issues-sync.py
   --validate` flagged that **19 task-ids in `idmap.tsv` had no entry in `issues.yaml`** (the manifest was
