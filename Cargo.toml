@@ -17,6 +17,7 @@ members = [
     "crates/mycelium-build",
     "crates/mycelium-proj",
     "crates/mycelium-fmt",
+    "crates/mycelium-spore",
     "xtask",
 ]
 

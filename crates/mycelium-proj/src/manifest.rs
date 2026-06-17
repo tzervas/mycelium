@@ -65,13 +65,51 @@ pub struct Toolchain {
     pub lints: Option<String>,
 }
 
-/// A parsed `mycelium-proj.toml` (v0: the typed `[project]` table + the optional `[toolchain]` pins).
+/// The typed `[surface]` table (M-368): a phylum's **public exports** — the germination boundary. v0
+/// closed key set: `exports` (a list of dotted nodule names). Metadata layer (ADR-003).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Surface {
+    /// `exports` — the public nodule names a phylum germinates from.
+    pub exports: Vec<String>,
+}
+
+/// One `[dependencies]` entry (M-368): another phylum, **content-addressed** (ADR-003) — pinned by
+/// `hash` (authoritative) with a human `version` requirement. A `hash`-less dep is an explicit error at
+/// publish (the spore build refuses an unpinned, non-reproducible input; G2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Dependency {
+    /// The dependency's local name (the `[dependencies]` key).
+    pub name: String,
+    /// `phylum` — the depended-on phylum's name.
+    pub phylum: String,
+    /// `version` — a human version requirement (e.g. `"^2"`), checked against the pinned hash's version.
+    pub version: Option<String>,
+    /// `hash` — the content-addressed pin (`blake3:…`); authoritative (ADR-003).
+    pub hash: Option<String>,
+}
+
+/// The typed `[spore]` table (M-368): how the project publishes as a deployable (ADR-013). v0 closed key
+/// set: `include` (what germinates; defaults to the public `[surface]`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SporeConfig {
+    /// `include` — what germinates (e.g. `["surface"]`, or explicit nodule names).
+    pub include: Vec<String>,
+}
+
+/// A parsed `mycelium-proj.toml` (v0: the typed `[project]` table + the optional `[toolchain]`,
+/// `[surface]`, `[dependencies]`, and `[spore]` tables).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Manifest {
     /// The required `[project]` table.
     pub project: Project,
     /// The optional `[toolchain]` pins (M-364; M-361). `None` when the table is absent.
     pub toolchain: Option<Toolchain>,
+    /// The optional `[surface]` exports (M-368). `None` when the table is absent.
+    pub surface: Option<Surface>,
+    /// The `[dependencies]` (M-368); empty when the table is absent.
+    pub dependencies: Vec<Dependency>,
+    /// The optional `[spore]` packaging config (M-368). `None` when the table is absent.
+    pub spore: Option<SporeConfig>,
 }
 
 /// An explicit manifest error (G2): a syntax error, an out-of-subset construct, or a bad value.
@@ -125,7 +163,10 @@ pub fn parse_manifest(src: &str) -> Result<Manifest, ManifestError> {
     // except `[toolchain]` — its first consumer is M-364 (`mycfmt` reads `[toolchain].format`).
     let mut project_kv: Vec<(String, Val, u32)> = Vec::new();
     let mut toolchain_kv: Vec<(String, Val, u32)> = Vec::new();
-    let mut saw_toolchain = false;
+    let mut surface_kv: Vec<(String, Val, u32)> = Vec::new();
+    let mut deps_kv: Vec<(String, Val, u32)> = Vec::new();
+    let mut spore_kv: Vec<(String, Val, u32)> = Vec::new();
+    let (mut saw_toolchain, mut saw_surface, mut saw_spore) = (false, false, false);
 
     for (idx, raw) in src.lines().enumerate() {
         let line_no = (idx + 1) as u32;
@@ -135,8 +176,11 @@ pub fn parse_manifest(src: &str) -> Result<Manifest, ManifestError> {
         }
         if let Some(table) = line.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
             current = Some(table.trim().to_owned());
-            if current.as_deref() == Some("toolchain") {
-                saw_toolchain = true;
+            match current.as_deref() {
+                Some("toolchain") => saw_toolchain = true,
+                Some("surface") => saw_surface = true,
+                Some("spore") => saw_spore = true,
+                _ => {}
             }
             continue;
         }
@@ -149,18 +193,28 @@ pub fn parse_manifest(src: &str) -> Result<Manifest, ManifestError> {
         match current.as_deref() {
             Some("project") => project_kv.push((key, val, line_no)),
             Some("toolchain") => toolchain_kv.push((key, val, line_no)),
-            // Other tables: accepted, not interpreted in v0 (their consumers are M-361).
+            Some("surface") => surface_kv.push((key, val, line_no)),
+            Some("dependencies") => deps_kv.push((key, val, line_no)),
+            Some("spore") => spore_kv.push((key, val, line_no)),
+            // Other tables: accepted, not interpreted in v0.
             _ => {}
         }
     }
 
     let project = build_project(project_kv)?;
-    let toolchain = if saw_toolchain {
-        Some(build_toolchain(toolchain_kv)?)
-    } else {
-        None
-    };
-    Ok(Manifest { project, toolchain })
+    let toolchain = saw_toolchain
+        .then(|| build_toolchain(toolchain_kv))
+        .transpose()?;
+    let surface = saw_surface.then(|| build_surface(surface_kv)).transpose()?;
+    let spore = saw_spore.then(|| build_spore(spore_kv)).transpose()?;
+    let dependencies = build_dependencies(deps_kv)?;
+    Ok(Manifest {
+        project,
+        toolchain,
+        surface,
+        dependencies,
+        spore,
+    })
 }
 
 /// Strip a trailing `#` comment that is **outside** a quoted string (single-line values only).
@@ -198,6 +252,89 @@ fn build_toolchain(kv: Vec<(String, Val, u32)>) -> Result<Toolchain, ManifestErr
         }
     }
     Ok(tc)
+}
+
+fn build_surface(kv: Vec<(String, Val, u32)>) -> Result<Surface, ManifestError> {
+    let mut exports = None;
+    for (key, val, line) in kv {
+        match key.as_str() {
+            "exports" => exports = Some(as_str_list(&val, "exports", line)?),
+            other => {
+                return Err(ManifestError {
+                    line,
+                    message: format!(
+                        "unknown `[surface]` key `{other}` — the v0 set is closed: exports (G2)"
+                    ),
+                })
+            }
+        }
+    }
+    Ok(Surface {
+        exports: exports.unwrap_or_default(),
+    })
+}
+
+fn build_spore(kv: Vec<(String, Val, u32)>) -> Result<SporeConfig, ManifestError> {
+    let mut include = None;
+    for (key, val, line) in kv {
+        match key.as_str() {
+            "include" => include = Some(as_str_list(&val, "include", line)?),
+            other => {
+                return Err(ManifestError {
+                    line,
+                    message: format!(
+                        "unknown `[spore]` key `{other}` — the v0 set is closed: include (G2)"
+                    ),
+                })
+            }
+        }
+    }
+    Ok(SporeConfig {
+        include: include.unwrap_or_default(),
+    })
+}
+
+/// The closed v0 `[dependencies]` inline-table key set.
+const DEP_KEYS: &[&str] = &["phylum", "version", "hash"];
+
+fn build_dependencies(kv: Vec<(String, Val, u32)>) -> Result<Vec<Dependency>, ManifestError> {
+    let mut deps = Vec::with_capacity(kv.len());
+    for (name, val, line) in kv {
+        let Val::Table(pairs) = val else {
+            return Err(ManifestError {
+                line,
+                message: format!(
+                    "dependency `{name}` must be an inline table \
+                     `{{ phylum = \"…\", version = \"…\", hash = \"blake3:…\" }}` (G2)"
+                ),
+            });
+        };
+        let (mut phylum, mut version, mut hash) = (None, None, None);
+        for (k, v) in &pairs {
+            if !DEP_KEYS.contains(&k.as_str()) {
+                return Err(ManifestError {
+                    line,
+                    message: format!(
+                        "unknown dependency key `{k}` in `{name}` — the v0 set is closed: {} (G2)",
+                        DEP_KEYS.join(", ")
+                    ),
+                });
+            }
+            match k.as_str() {
+                "phylum" => phylum = Some(as_str(v, "phylum", line)?),
+                "version" => version = Some(as_str(v, "version", line)?),
+                "hash" => hash = Some(as_str(v, "hash", line)?),
+                _ => unreachable!("key membership checked above"),
+            }
+        }
+        deps.push(Dependency {
+            phylum: phylum.unwrap_or_else(|| name.clone()),
+            name,
+            version,
+            hash,
+        });
+    }
+    Ok(deps)
 }
 
 fn build_project(kv: Vec<(String, Val, u32)>) -> Result<Project, ManifestError> {
@@ -592,6 +729,48 @@ numerics    = { phylum = "numerics", version = "^2", hash = "blake3:abc" }
         let tc = m.toolchain.unwrap();
         assert_eq!(tc.format.as_deref(), Some("mycfmt-0"));
         assert_eq!(tc.lints.as_deref(), Some("strict"));
+    }
+
+    #[test]
+    fn the_surface_dependencies_and_spore_tables_are_interpreted() {
+        // M-368: the packaging tables are now typed (first consumer).
+        let m = parse_manifest(SAMPLE).unwrap();
+        assert_eq!(
+            m.surface.as_ref().unwrap().exports,
+            vec!["geometry.shapes".to_owned()]
+        );
+        assert_eq!(m.dependencies.len(), 1);
+        let d = &m.dependencies[0];
+        assert_eq!(d.name, "numerics");
+        assert_eq!(d.phylum, "numerics");
+        assert_eq!(d.hash.as_deref(), Some("blake3:abc"));
+        assert_eq!(d.version.as_deref(), Some("^2"));
+
+        let m = parse_manifest(
+            "[project]\nname=\"x\"\nkind=\"phylum\"\n[spore]\ninclude=[\"surface\"]\n",
+        )
+        .unwrap();
+        assert_eq!(m.spore.unwrap().include, vec!["surface".to_owned()]);
+    }
+
+    #[test]
+    fn a_malformed_dependency_or_unknown_key_is_explicit() {
+        // A non-inline-table dependency is an error.
+        assert!(parse_manifest(
+            "[project]\nname=\"x\"\nkind=\"phylum\"\n[dependencies]\nfoo=\"bar\"\n"
+        )
+        .is_err());
+        // An unknown dependency key is an error (closed set).
+        let e = parse_manifest(
+            "[project]\nname=\"x\"\nkind=\"phylum\"\n[dependencies]\nfoo={ phylum=\"f\", oops=\"x\" }\n",
+        )
+        .unwrap_err();
+        assert!(e.message.contains("unknown dependency key"), "{e}");
+        // An unknown [surface] key is an error.
+        assert!(parse_manifest(
+            "[project]\nname=\"x\"\nkind=\"phylum\"\n[surface]\nexprts=[\"a\"]\n"
+        )
+        .is_err());
     }
 
     #[test]

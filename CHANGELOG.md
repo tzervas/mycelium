@@ -8,6 +8,22 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: `spore` — packaging & publishing, folded — M-368)
+- **`crates/mycelium-spore`** — the `spore` packager (lib + CLI), enacting the M-368 contract (Accepted →
+  enacted; ADR-013). Builds a **content-addressed spore** from a `mycelium-proj.toml`: **identity is the
+  DAG** (project kind + germination surface + source files by raw-byte BLAKE3 + dependency hash edges) and
+  **metadata is excluded** (ADR-003) — a `version`/`authors` change leaves the spore id unchanged, a code
+  or dep-hash change moves it (both tested). Never-silent publish inputs (G2): a phylum with no surface, no
+  `.myc` sources, a **hashless dependency**, or an `[spore].include` naming a non-export is an explicit
+  error (exit 3) — **no partial artifact**. `EXPLAIN`/`spore explain` prints the identity receipt + the
+  not-identity metadata. CLI: `spore build` (`-o <out>`) / `spore explain` / `--config`. **No new
+  dependency** (workspace-pinned `blake3` + `mycelium-core::ContentHash`; KC-3). v0: single project,
+  hash-pinned deps, named-provisional descriptor encoding (R2 wire-schema/signing/germination deferred).
+- **`crates/mycelium-proj`** — the manifest reader now **interprets `[surface]`/`[dependencies]`/`[spore]`**
+  (typed, closed key sets; a non-inline-table dependency or unknown key is an explicit error — G2). `spore`
+  is the first consumer of these accepted-but-uninterpreted M-359 tables. `Surface`/`Dependency`/
+  `SporeConfig` exported.
+
 ### Added (2026-06-17: `mycfmt` — the canonical formatter, folded — M-364)
 - **`crates/mycelium-fmt`** — the `mycfmt` formatter (lib + CLI), enacting the M-364 contract; the
   `Mycfmt-Formatter-Contract` moves **Accepted → enacted**. Formatting is an **identity-preserving

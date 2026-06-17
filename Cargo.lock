@@ -201,6 +201,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-spore"
+version = "0.0.0"
+dependencies = [
+ "blake3",
+ "mycelium-core",
+ "mycelium-proj",
+]
+
+[[package]]
 name = "mycelium-vsa"
 version = "0.0.0"
 dependencies = [

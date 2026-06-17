@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Proposed** (2026-06-16 — the M-368 packaging/publishing contract; design-first, present before folding) |
+| **Status** | **Accepted** (2026-06-16 — design; **enacted 2026-06-17** by `crates/mycelium-spore` — the `spore` lib + CLI; §9.1 named-provisional encoding ratified). The contract is now code; identity-vs-metadata (ADR-003) and the never-silent publish inputs (G2) are tested. |
 | **Scope** | The contract for building a **`spore`** (the content-addressed deployable unit) from a `mycelium-proj.toml` project: which manifest tables are consumed, what is identity vs metadata, the dependency-resolution rule, the never-silent publish-input checks, the `EXPLAIN`, and the test plan |
 | **Depends on** | ADR-013 (**`spore` is the content-addressed deployable unit** — a hash-identified DAG of code + values + reconstruction manifest + artifact metadata); ADR-003 (content-addressed identity is canonical; metadata ≠ identity); M-359 (`mycelium-proj.toml` + the accepted-but-uninterpreted `[surface]`/`[dependencies]`/`[spore]` tables, `mycelium_proj::{parse_manifest, Manifest}`); RFC-0003 §6 (the reconstruction manifest — one component, unchanged); DN-06 / Glossary (a spore *germinates into a colony*); G2 (never-silent); KC-3 (tooling above the kernel) |
 | **Feeds** | M-361 (the full-fat toolchain — `spore` is its packager); the RFC-0008 R2 runtime (the deployable artifact's germination contract — **deferred** there, ADR-013 §4) |
@@ -148,4 +148,16 @@ for the R2 schema/signing/germination obligations).
 - **2026-06-17 — Open question §9.1 ratified.** v0 may ship a **named-provisional on-disk encoding** (the
   minimal reproducible serialization), superseded append-only when the RFC-0008 R2 wire-schema lands.
   §9.2 (`[spore].include` vocabulary) and §9.3 (signing) remain deferred to the first implementation pass.
+  Append-only.
+- **2026-06-17 — Accepted (enacted by `crates/mycelium-spore`, M-368).** The contract is now code: the
+  `spore` lib (`build_spore`/`explain`) + CLI (`spore build`/`explain`) over the M-359 manifest (extended
+  to interpret `[surface]`/`[dependencies]`/`[spore]`) — **no new dependency** (the workspace-pinned
+  `blake3` + `mycelium-core::ContentHash`; KC-3). **Identity = the content-addressed DAG** (project kind +
+  germination surface + source files by raw-byte BLAKE3 + dependency hash edges); **metadata excluded** —
+  a `version`/`authors` change leaves the spore id unchanged (tested), a code or dep-hash change moves it
+  (tested). Never-silent (G2, tested): a phylum with no surface, a project with no `.myc` sources, a
+  hashless dependency, or an `[spore].include` naming a non-export is an explicit publish error (exit 3) —
+  **no partial artifact**. `EXPLAIN` prints the identity receipt + the not-identity metadata. v0 scope:
+  single project, hash-pinned deps, **raw-byte** source hashing, named-provisional descriptor encoding;
+  the R2 wire-schema/signing/germination + canonicalized (mycfmt) hashing are deferred (ADR-013 §4).
   Append-only.
