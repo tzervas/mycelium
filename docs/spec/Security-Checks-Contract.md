@@ -114,8 +114,9 @@ we report the claim, we don't fabricate a verdict).
 
 ## 8. Open questions (flagged, not decided)
 
-1. **`wild` justification syntax** — reuse ADR-014's `// SAFETY:` comment convention at the surface, or a
-   structured `wild` attribute? v0 assumes the comment convention (lowest friction); confirm.
+1. **`wild` justification syntax** — **Ratified (2026-06-17): the ADR-014 `// SAFETY:` comment convention**
+   for v0 (no new structured attribute). A `wild` block is justified by an adjacent `// SAFETY:` comment;
+   a structured `wild` attribute is a possible later refinement, not v0.
 2. **`--strict` in CI** — should the suite's release gate run `--strict` (medium fails)? Defaults to
    advisory medium; confirm the release posture.
 3. **New scanners** — any addition (SAST, dependency-confusion checks) is an ADR; none proposed in v0.
@@ -131,3 +132,6 @@ we report the claim, we don't fabricate a verdict).
   clean bill — G2/VR-5). `EXPLAIN` prints the coverage receipt + the unsafe-surface inventory. **No new
   dependency** in v0 (a new scanner is an ADR); above the kernel (KC-3). No code lands until acknowledged.
   Append-only.
+- **2026-06-17 — Open question §8.1 ratified.** A `wild` block is justified by the **ADR-014 `// SAFETY:`
+  comment convention** for v0 (no new structured attribute). §8.2 (`--strict` in CI) and §8.3 (new
+  scanners — each an ADR) remain deferred to the first implementation pass. Append-only.

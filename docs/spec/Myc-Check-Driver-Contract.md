@@ -108,8 +108,10 @@ names; deep cross-phylum type-checking is named as a follow-on). The driver live
 
 ## 8. Open questions (flagged, not decided)
 
-1. **Warning policy default** — warnings print but don't fail (above). Confirm vs failing on warnings by
-   default for a release gate.
+1. **Warning policy default** — **Ratified (2026-06-17): warnings print but do not fail by default;
+   `--deny-warnings` is the opt-in CI gate.** A release gate that wants warnings to fail opts in explicitly;
+   the default never silently passes (warnings are always printed) and never silently fails (the gate is
+   opt-in, not ambient).
 2. **Cross-phylum depth** — v0 resolves dep *names*; deep cross-phylum type-checking is deferred to a
    follow-on once M-368's resolver lands. Confirm v0 may stop at name visibility.
 3. **JSON schema** — reuse the RFC-0013 diagnostic JSON shape; confirm no new schema is needed here.
@@ -124,3 +126,6 @@ names; deep cross-phylum type-checking is named as a follow-on). The driver live
   **honest per-op tags preserved** (VR-5 — never upgraded), and **CI exit semantics** (non-zero on any
   error; opt-in `--deny-warnings`). The trusted M-210 checker is unchanged — this is the driver above it
   (KC-3); **no new dependency**. No code lands until acknowledged. Append-only.
+- **2026-06-17 — Open question §8.1 ratified.** Warnings **print but do not fail** the build by default;
+  `--deny-warnings` remains the opt-in CI gate. §8.2 (cross-phylum depth) and §8.3 (JSON schema reuse)
+  remain deferred to the first implementation pass. Append-only.

@@ -8,6 +8,24 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (2026-06-17: M-364/365/366/367/368 open questions ratified — append-only)
+- The maintainer ratified one open question per child contract (folded in append-only; all five stay
+  **Proposed**, ready to fold):
+  - **M-364** — `[toolchain].format` is a **hard pin** (refuse on version mismatch, exit 4; never format
+    with rules the project didn't ask for — G2).
+  - **M-365** — warnings **print but do not fail** the build by default; `--deny-warnings` is the opt-in
+    CI gate.
+  - **M-366** — `safe`-edit set is **conservative** (expressions/control flow → scaffold only; header
+    canonicalization is the primary safe-edit); the §4.1 doc lint ships **dormant-but-defined** and does
+    **not** block the gate. Held at Proposed a little longer — the safe-edit boundary + doc-lint dormancy
+    get final confirmation at the first implementation pass.
+  - **M-367** — a `wild` block is justified by the **ADR-014 `// SAFETY:` comment convention** for v0
+    (no new structured attribute).
+  - **M-368** — v0 may ship a **named-provisional on-disk encoding** (superseded append-only when the
+    RFC-0008 R2 wire-schema lands).
+  All other open questions across the five contracts remain deferred to the next wave / first
+  implementation pass.
+
 ### Changed (2026-06-16: M-363 §8 build stack ratified — pipeline design Accepted)
 - **`docs/spec/Narrative-Authoring-Pipeline.md` moves Proposed → Accepted** (append-only): the maintainer
   **ratified the §8 build stack** — a custom in-repo **doc-IR generator + Typst** (PDF/EPUB) + a static HTML

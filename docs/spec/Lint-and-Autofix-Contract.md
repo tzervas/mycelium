@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Proposed** (2026-06-16 — the M-366 lint+auto-fix contract; design-first, present before folding) |
+| **Status** | **Proposed** (2026-06-16 — the M-366 lint+auto-fix contract; design-first, present before folding). §8.1 (safe-edit set) + §8.3 (doc-lint dormancy) **ratified 2026-06-17**; held at Proposed a little longer — the safe-edit boundary and doc-lint dormancy get **final confirmation at the first implementation pass** (then → Accepted). |
 | **Scope** | The contract for the suite's lint+fix tool: surfacing the M-141 invariant lints + RFC-0013 diagnostics + the RFC-0015 §9 "class is only logged — add a handler?" lint as **actionable, opt-in, reified** fixes; offering RFC-0014 **recovery scaffolds** (explicit handler skeletons, never an implicit control-flow change); and hosting the M-363 **§4.1 doc quality-bar lint** (the 8 checks over the doc IR — now unblocked by the §8 ratification) |
 | **Depends on** | M-141 (`mycelium_lsp::lint` — `implicit-swap`/`unverified-bound`/`placeholder-policy`/`free-variable`/`nodule-header`); RFC-0013 (structured diagnostics); RFC-0015 §9 (the "only logged; add a handler?" lint — direction set, Q4) + M-362 (`mycelium_lsp::baseline`); RFC-0014 I1–I5 (declarative recovery — a handler is explicit, bounded, opt-in; never makes an error vanish); the M-363 §4.1 quality bar + §8-ratified build stack (custom doc-IR + Typst); G2 (no silent rewrite); KC-3 (above the kernel) |
 | **Feeds** | M-361 (the full-fat toolchain — the lint+fix tool); the editor/LSP (M-140); the M-363 pipeline (the §4.1 lint gates generated docs) |
@@ -121,12 +121,14 @@ change (KC-3).
 
 ## 8. Open questions (flagged, not decided)
 
-1. **`safe`-edit set** — exactly which fixes are behaviour-preserving enough for `--fix` (header
-   canonicalization yes; anything touching expressions → scaffold). Confirm the conservative default.
+1. **`safe`-edit set** — **Ratified (2026-06-17): conservative.** Anything touching **expressions or
+   control flow → scaffold only**; **header canonicalization is the primary `safe`-edit** (`--fix`'s
+   bread and butter). The exact safe-edit list is finalized at the first implementation pass (status note).
 2. **§9 scope** — the "only logged" lint needs a definition's declared effect classes (RFC-0014 I3). v0
    uses the explicitly-declared set; whole-program effect inference is deferred.
-3. **(B) activation** — the doc lint is specified now, dormant until M-363's IR generator exists. Confirm
-   it may ship dormant-but-defined rather than block on the pipeline build.
+3. **(B) activation** — **Ratified (2026-06-17): ships dormant-but-defined.** The §4.1 doc lint is
+   specified now and **does not block the M-366 gate**; it activates once M-363's doc-IR generator exists
+   (it is named honestly as dormant, never pretended-present).
 
 ## Meta — changelog
 
@@ -140,3 +142,9 @@ change (KC-3).
   (custom doc-IR + Typst) — built when the M-363 IR generator lands, dormant-but-defined until then.
   `--fix` applies only `safe` behaviour-preserving edits; `EXPLAIN` names every fix's tier. **No new
   dependency**; above the kernel (KC-3). No code lands until acknowledged. Append-only.
+- **2026-06-17 — Open questions §8.1 + §8.3 ratified.** `safe`-edit set is **conservative** — expressions/
+  control flow → scaffold only; **header canonicalization is the primary safe-edit**. The §4.1 doc lint
+  ships **dormant-but-defined** and **does not block the M-366 gate** (activates with the M-363 doc IR).
+  Held at **Proposed** a little longer — the safe-edit boundary + doc-lint dormancy get final confirmation
+  at the first implementation pass, then → Accepted. §8.2 (effect-class scope) remains deferred.
+  Append-only.

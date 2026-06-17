@@ -127,8 +127,9 @@ for the R2 schema/signing/germination obligations).
 
 ## 9. Open questions (flagged, not decided)
 
-1. **v0 on-disk encoding** — the minimal reproducible serialization until the R2 wire-schema lands. Confirm
-   v0 may ship a named-provisional encoding rather than block on the full ADR-013/RFC-0008 schema.
+1. **v0 on-disk encoding** — **Ratified (2026-06-17): a named-provisional encoding is acceptable** for v0
+   (the minimal reproducible serialization), explicitly marked as provisional and **superseded** when the
+   RFC-0008 R2 wire-schema lands (append-only; not silently re-defined).
 2. **`[spore].include` vocabulary** — v0 supports `["surface"]` (the public surface) and explicit nodule
    lists; richer selectors (globs, exclusions) are deferred.
 3. **Signing** — out of v0 (an artifact-metadata component (4) obligation, deferred with the R2 schema).
@@ -144,3 +145,7 @@ for the R2 schema/signing/germination obligations).
   identity receipt, and an honest **v0 scope** (single-project, hash-pinned; the wire-schema/signing/
   germination contract deferred to RFC-0008 R2 per ADR-013 §4). **No new dependency**; above the kernel
   (KC-3). No code lands until acknowledged. Append-only.
+- **2026-06-17 — Open question §9.1 ratified.** v0 may ship a **named-provisional on-disk encoding** (the
+  minimal reproducible serialization), superseded append-only when the RFC-0008 R2 wire-schema lands.
+  §9.2 (`[spore].include` vocabulary) and §9.3 (signing) remain deferred to the first implementation pass.
+  Append-only.

@@ -99,7 +99,7 @@ mycfmt [--check | --write] [--explain] [--config <mycelium-proj.toml>] <file.myc
 | `--check` | format in memory, compare to input; **report** which files would change, **write nothing**, exit non-zero if any differ (CI gate) |
 | `--write` | format and rewrite the file **in place** — only after a successful, identity-preserving format (never a partial write; §6) |
 | `--explain` | also print the `EXPLAIN` of normalizations applied (§6) |
-| `--config <path>` | use this manifest's `[toolchain].format` pin; default discovers `mycelium-proj.toml` upward from each file |
+| `--config <path>` | use this manifest's `[toolchain].format` pin (a **hard pin** — §10.3: a version mismatch refuses with exit 4); default discovers `mycelium-proj.toml` upward from each file |
 | `-` | read stdin, write stdout |
 
 | Exit code | Meaning |
@@ -195,9 +195,10 @@ scope for the refused remainder).
    lean: add minimal identity-preserving parens where unambiguous; refuse otherwise.
 2. **Body-comment preservation** (§7.2) — v0 refuses; full trivia-preserving formatting is a later task
    (it needs the parser to attach trivia). Confirm v0 may refuse rather than block on it.
-3. **`[toolchain].format` semantics** — is `"mycfmt-0"` a *hard pin* (refuse on mismatch) or *advisory*
-   (warn)? This contract assumes **hard pin** (never format with rules the project didn't ask for);
-   confirm.
+3. **`[toolchain].format` semantics** — **Ratified (2026-06-17): hard pin.** `[toolchain].format =
+   "mycfmt-0"` is a hard pin: a pin naming a *different* formatter version is an **explicit refusal**
+   (exit 4), never a silent format with rules the project did not ask for (G2). `mycfmt` formats only when
+   the pin matches its own version (or no pin is present, when the built-in `mycfmt-0` default applies).
 4. **Multi-file / project mode** — v0 formats the files named on the CLI; a `mycfmt` over a whole
    `phylum`/surface (manifest-driven discovery) can layer on M-368's resolution. Deferred.
 
@@ -212,3 +213,7 @@ scope for the refused remainder).
   never lossily reformat). Architecture: a new above-the-kernel `mycelium-fmt` crate over already-landed
   M-142/M-358/M-359 primitives, **no new dependency** (KC-3). No code lands until this contract is
   acknowledged. Append-only.
+- **2026-06-17 — Open question §10.3 ratified.** `[toolchain].format` is a **hard pin** (refuse on
+  version mismatch, exit 4 — never format with rules the project didn't ask for; G2). §10.1 (parens vs
+  refusal), §10.2 (body comments — v0 refuses), §10.4 (project mode) remain deferred to the first
+  implementation pass. Append-only.
