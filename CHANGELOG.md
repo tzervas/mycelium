@@ -8,6 +8,15 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (2026-06-17: KC-2 skip-reason rendering — line-aligned + concise summary)
+- A skipped-arm reason that embedded a multi-line cargo error rendered badly: the checker's
+  byte-tail (`detail[-1500:]`) cut **mid-line** (garbage like `y: cc help`), and the executive
+  summary dumped the whole linker block into a one-screen overview. Fixes: `MyceliumChecker` now
+  keeps the last **whole lines** (≤25, with a truncation marker) so the first line stays a concise
+  reason; `render_summary` shows only that first line and points to the JSON `skipped` field for the
+  full detail. Surfaced by the first real on-device KC-2 artifact (the run still SKIPped — the
+  toolchain wasn't fixed in that shell — so it carried no model data, but the honesty chain behaved).
+
 ### Added (2026-06-17: capture the Termux/Android Claude Code bootstrap in-repo)
 - **`tools/termux/cc-termux-bootstrap.sh` + `tools/termux/README.md`** — the proot-Ubuntu
   Claude Code setup used to develop Mycelium on a phone, version-controlled so it survives a

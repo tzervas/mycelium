@@ -84,8 +84,14 @@ class MyceliumChecker:
         if proc.returncode != 0:
             # Never-silent: surface cargo's actual diagnostic, not just the exit code,
             # so a real compile failure is actionable instead of a bare "exit 101".
-            detail = (proc.stderr or proc.stdout or "").strip()
-            msg = f"`{' '.join(cmd)}` failed (exit {proc.returncode}):\n{detail[-1500:]}"
+            # Keep WHOLE trailing lines (the last N) — a raw byte-tail cut mid-line and
+            # rendered as garbage like "y: cc help". The first line stays the concise
+            # reason a summary can show; the rest is the actionable detail.
+            raw_lines = (proc.stderr or proc.stdout or "").strip().splitlines()
+            tail = raw_lines[-25:]
+            prefix = "…(truncated; full output in the cargo log)\n" if len(raw_lines) > 25 else ""
+            detail = prefix + "\n".join(tail)
+            msg = f"`{' '.join(cmd)}` failed (exit {proc.returncode}). {detail}"
             raise ToolUnavailable(msg)
         if not built.is_file():
             msg = f"cargo reported success but {built} does not exist"

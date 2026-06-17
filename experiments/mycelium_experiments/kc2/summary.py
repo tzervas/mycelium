@@ -124,7 +124,13 @@ def render_summary(document: Mapping[str, Any], assessment: Mapping[str, Any]) -
     for name, a in assessment.get("arms", {}).items():
         lines.append(f"  [{name}]")
         if not a.get("ran"):
-            lines.append(f"      SKIPPED — {a.get('skipped')}")
+            # Show only the first line of the (possibly multi-line) skip reason here;
+            # the full detail lives in the JSON report's `skipped` field.
+            reason = str(a.get("skipped") or "skipped")
+            rlines = reason.splitlines() or ["skipped"]
+            lines.append(f"      SKIPPED — {rlines[0]}")
+            if len(rlines) > 1:
+                lines.append("               (full detail in the JSON report's `skipped` field)")
             lines.append("")
             continue
         lines.append(
