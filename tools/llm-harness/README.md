@@ -112,6 +112,30 @@ python3 tools/llm-harness/harness.py --ensure-model --install-hf-cli   # install
 - **Flags:** `--hf-cli PATH` (explicit binary), `--no-hf-cli` (force the stdlib downloader),
   `--install-hf-cli`, `--hf-token TOKEN`, `--setup-hf`, `-y`/`--yes`.
 
+### Troubleshooting: `--doctor` and PATH self-healing
+
+If `--ensure-model` / real mode can't find a tool that you *know* is installed, it's almost
+always the **off-PATH trap** (a `pip --user`/`pipx`/`uv`/npm install whose bin dir was never
+added to `PATH`; or a hand-built `llama.cpp` under `~/llama.cpp/build/bin`). The harness handles
+this without you editing dotfiles:
+
+```sh
+python3 tools/llm-harness/harness.py --doctor            # report what's found, where it looked, the fix
+python3 tools/llm-harness/harness.py --doctor --fix-path # also persist any off-PATH fix to your shell rc
+```
+
+- **`--doctor`** prints platform/PATH, installers, and the resolved state of **llama.cpp**, the
+  **hf CLI** (+ auth), the **Claude Code CLI**, and the model cache — with the exact fix for each
+  miss. Run it on the phone and paste the output back to troubleshoot.
+- **Discovery** for every binary searches `PATH` first, then the dirs installers/builds actually
+  use: hf → scripts dir, `~/.local/bin`, pipx/uv venvs, `$PREFIX/bin`; llama.cpp →
+  `~/llama.cpp/build/bin`, `$PREFIX/bin`, `$MYCELIUM_LLAMA_DIR`, shallow globs; claude → npm global
+  bin (`npm config get prefix`), nvm/bun/volta/pnpm dirs, `$PREFIX/bin`. If `hf` has no console
+  script anywhere but `huggingface_hub` is importable, it falls back to `python -m huggingface_hub…`.
+- **Self-healing:** a binary found off-`PATH` is used anyway (its dir is prepended to *this run's*
+  `PATH` so child processes see it), with the exact `export PATH=…` printed. `--fix-path` appends
+  that line to your shell rc (idempotent; prompts unless `--yes`) so it sticks.
+
 **Honesty (G2/VR-5).** Registry URLs/filenames are **best-effort** and may change upstream.
 A download is verified by the **GGUF magic header** (`GGUF`) + a clean, complete transfer
 before it is promoted from `*.part` to the final name — a 404/gated **HTML page can never

@@ -840,17 +840,290 @@ def _write_text_report(
 # ---------------------------------------------------------------------------
 
 
-def _resolve_llama_cli(explicit: str | None) -> str | None:
-    """Return path to llama-cli if resolvable, else None."""
+# ---------------------------------------------------------------------------
+# Binary discovery + PATH self-healing (shared by llama.cpp and the hf CLI)
+# ---------------------------------------------------------------------------
+#
+# The #1 real-world failure on a phone (Termux) is NOT "tool missing" but
+# "tool installed in a dir that isn't on PATH" — `pip --user` → ~/.local/bin,
+# a hand-built llama.cpp → ~/llama.cpp/build/bin. `shutil.which` only sees
+# PATH, so it reports a false "missing". We therefore (a) search the dirs
+# installers/builds actually use, (b) auto-prepend a found dir to THIS
+# process's PATH so the rest of the run works, and (c) optionally persist the
+# fix to the user's shell rc (--fix-path). Every step is logged (G2).
+
+
+def _is_termux() -> bool:
+    """True on Termux/Android, where $PREFIX points into com.termux."""
+    return "com.termux" in (os.environ.get("PREFIX", "") or "")
+
+
+def _path_entries() -> list[str]:
+    return [p for p in os.environ.get("PATH", "").split(os.pathsep) if p]
+
+
+def _on_path(directory: Path) -> bool:
+    rd = os.path.realpath(str(directory))
+    return any(os.path.realpath(p) == rd for p in _path_entries())
+
+
+def _prepend_process_path(directory: Path, log: logging.Logger | None = None) -> None:
+    """Add `directory` to THIS process's PATH (in-memory) so child processes see it."""
+    if not _on_path(directory):
+        os.environ["PATH"] = str(directory) + os.pathsep + os.environ.get("PATH", "")
+        if log is not None:
+            log.debug("Prepended %s to PATH for this run.", directory)
+
+
+def _shell_rc_files() -> list[Path]:
+    """Likely shell rc files to persist a PATH fix into (shell-implied + common)."""
+    home = Path.home()
+    out: list[Path] = []
+    if os.environ.get("SHELL", "").endswith("zsh"):
+        out.append(home / ".zshrc")
+    out.append(home / ".bashrc")  # Termux's default login shell
+    out.append(home / ".profile")
+    seen: set[str] = set()
+    uniq: list[Path] = []
+    for p in out:
+        if str(p) not in seen:
+            seen.add(str(p))
+            uniq.append(p)
+    return uniq
+
+
+def persist_path_fix(directory: Path, log: logging.Logger, *, assume_yes: bool) -> bool:
+    """Append `export PATH="dir:$PATH"` to a shell rc, idempotently. Returns True if applied.
+
+    Opt-in (caller gates on --fix-path) + consent unless --yes. We only APPEND a
+    clearly-marked line and skip if the dir is already referenced — never rewrite
+    an existing rc.
+    """
+    line = f'export PATH="{directory}:$PATH"'
+    marker = "# added by mycelium-llm-harness (--fix-path)"
+    for rc in _shell_rc_files():
+        try:
+            if rc.is_file() and str(directory) in rc.read_text(encoding="utf-8"):
+                log.info("PATH fix already present in %s — nothing to do.", rc)
+                return True
+        except OSError:
+            pass
+    target = _shell_rc_files()[0]
+    if not _confirm(
+        f"Persist PATH fix for {directory} by appending to {target}?",
+        assume_yes=assume_yes,
+        log=log,
+    ):
+        log.warning("Not persisting PATH. Add it yourself:\n    %s", line)
+        return False
+    try:
+        with open(target, "a", encoding="utf-8") as f:
+            f.write(f"\n{marker}\n{line}\n")
+    except OSError as exc:
+        log.error("Could not write %s: %s. Add it yourself:\n    %s", target, exc, line)
+        return False
+    log.info(
+        "Wrote PATH fix to %s. Run `source %s` or restart your shell to pick it up.",
+        target,
+        target,
+    )
+    return True
+
+
+def _note_off_path(
+    found: Path,
+    log: logging.Logger | None,
+    *,
+    fix_path: bool = False,
+    assume_yes: bool = False,
+) -> None:
+    """A binary was found off-PATH: heal this run, advise, optionally persist."""
+    d = found.parent
+    if _on_path(d):
+        return
+    _prepend_process_path(d, log)
+    if log is not None:
+        log.warning(
+            "%s is not on PATH. Using it for this run (PATH healed in-process). "
+            'Make it permanent:\n    export PATH="%s:$PATH"   '
+            "(or re-run with --fix-path to append it to your shell rc).",
+            found,
+            d,
+        )
+    if fix_path and log is not None:
+        persist_path_fix(d, log, assume_yes=assume_yes)
+
+
+def _search_dirs_for(names: tuple[str, ...], dirs: list[Path]) -> Path | None:
+    for d in dirs:
+        for name in names:
+            cand = d / name
+            if cand.is_file() and os.access(cand, os.X_OK):
+                return cand
+    return None
+
+
+def _dedup_existing(dirs: list[Path]) -> list[Path]:
+    seen: set[str] = set()
+    out: list[Path] = []
+    for d in dirs:
+        k = str(d)
+        if k not in seen:
+            seen.add(k)
+            out.append(d)
+    return out
+
+
+def _llama_search_dirs() -> list[Path]:
+    """Dirs a hand-built or packaged llama.cpp commonly lands in (besides PATH)."""
+    home = Path.home()
+    dirs: list[Path] = []
+    roots = [home, Path.cwd()]
+    prefix = os.environ.get("PREFIX")
+    if prefix:
+        roots.append(Path(prefix))
+        dirs.append(Path(prefix) / "bin")  # Termux `pkg install` target
+    opt = os.environ.get("MYCELIUM_LLAMA_DIR")
+    if opt:
+        p = Path(opt).expanduser()
+        dirs += [p, p / "bin", p / "build" / "bin"]
+    for root in roots:
+        for sub in ("llama.cpp", "llama-cpp", "llamacpp", "llama"):
+            base = root / sub
+            dirs += [base / "build" / "bin", base / "build", base / "bin", base]
+    return _dedup_existing(dirs)
+
+
+_LLAMA_BIN_NAMES = ("llama-cli", "llama", "main", "llama.cpp")
+
+
+def _resolve_llama_cli(
+    explicit: str | None,
+    log: logging.Logger | None = None,
+    *,
+    fix_path: bool = False,
+    assume_yes: bool = False,
+) -> str | None:
+    """Resolve llama-cli: explicit → PATH → known build/install dirs → shallow globs."""
     if explicit:
         if os.path.isfile(explicit) and os.access(explicit, os.X_OK):
             return explicit
+        if log is not None:
+            log.warning("--llama-cli is not an executable file: %s", explicit)
         return None
-    # Try common names on PATH
-    for name in ("llama-cli", "llama.cpp", "main"):
+    for name in _LLAMA_BIN_NAMES:
         found = shutil.which(name)
         if found:
             return found
+    # Off PATH: search common build/install dirs, then shallow globs.
+    hit = _search_dirs_for(_LLAMA_BIN_NAMES, _llama_search_dirs())
+    if hit is None:
+        for root in (Path.home(), Path.cwd()):
+            for pat in (
+                "*/build/bin/llama-cli",
+                "llama*/build/bin/llama-cli",
+                "*/llama-cli",
+            ):
+                for cand in sorted(root.glob(pat)):
+                    if cand.is_file() and os.access(cand, os.X_OK):
+                        hit = cand
+                        break
+                if hit:
+                    break
+            if hit:
+                break
+    if hit is not None:
+        _note_off_path(hit, log, fix_path=fix_path, assume_yes=assume_yes)
+        return str(hit)
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Claude Code CLI discovery (same off-PATH problem: npm global bin / nvm)
+# ---------------------------------------------------------------------------
+#
+# Not used by the validations — but the user hit the identical Termux trap
+# (installed, not linked onto PATH), so --doctor / --fix-path cover it too.
+
+_CLAUDE_BIN_NAMES = ("claude",)
+
+
+def _npm_global_bin() -> Path | None:
+    """Best-effort npm global bin dir via `npm config get prefix`."""
+    npm = shutil.which("npm")
+    if not npm:
+        return None
+    try:
+        res = subprocess.run(
+            [npm, "config", "get", "prefix"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+    except Exception:  # noqa: BLE001 — best-effort
+        return None
+    prefix = res.stdout.strip()
+    if res.returncode != 0 or not prefix:
+        return None
+    cand = Path(prefix) / "bin"  # unix layout; Termux $PREFIX/bin (on PATH)
+    return cand if cand.is_dir() else Path(prefix)
+
+
+def _claude_search_dirs() -> list[Path]:
+    """Dirs the Claude Code CLI (npm/bun/pnpm/volta/nvm) commonly lands in."""
+    home = Path.home()
+    dirs: list[Path] = []
+    g = _npm_global_bin()
+    if g:
+        dirs.append(g)
+    dirs += [
+        home / ".local" / "bin",
+        home / ".npm-global" / "bin",
+        home / ".bun" / "bin",
+        home / ".volta" / "bin",
+        home / ".claude" / "local",  # native/local installer
+    ]
+    pnpm = os.environ.get("PNPM_HOME")
+    if pnpm:
+        dirs.append(Path(pnpm))
+    prefix = os.environ.get("PREFIX")
+    if prefix:
+        dirs.append(Path(prefix) / "bin")
+    nvm = home / ".nvm" / "versions" / "node"
+    if nvm.is_dir():
+        dirs += sorted(nvm.glob("*/bin"))
+    return _dedup_existing(dirs)
+
+
+def _resolve_claude_cli(
+    explicit: str | None = None,
+    log: logging.Logger | None = None,
+    *,
+    fix_path: bool = False,
+    assume_yes: bool = False,
+) -> str | None:
+    """Resolve the `claude` binary: explicit → PATH → npm/nvm/Termux dirs → globs."""
+    if explicit:
+        if os.path.isfile(explicit) and os.access(explicit, os.X_OK):
+            return explicit
+        if log is not None:
+            log.warning("--claude-cli is not an executable file: %s", explicit)
+        return None
+    found = shutil.which("claude")
+    if found:
+        return found
+    hit = _search_dirs_for(_CLAUDE_BIN_NAMES, _claude_search_dirs())
+    if hit is None:
+        for pat in (".nvm/versions/node/*/bin/claude", ".npm-global/bin/claude"):
+            for cand in sorted(Path.home().glob(pat)):
+                if cand.is_file() and os.access(cand, os.X_OK):
+                    hit = cand
+                    break
+            if hit:
+                break
+    if hit is not None:
+        _note_off_path(hit, log, fix_path=fix_path, assume_yes=assume_yes)
+        return str(hit)
     return None
 
 
@@ -875,11 +1148,6 @@ HF_INSTALL_SCRIPT_URL = "https://hf.co/cli/install.sh"
 HF_PIP_PACKAGE = "huggingface_hub[cli]"
 
 
-def _is_termux() -> bool:
-    """True on Termux/Android, where $PREFIX points into com.termux."""
-    return "com.termux" in (os.environ.get("PREFIX", "") or "")
-
-
 def _confirm(prompt: str, *, assume_yes: bool, log: logging.Logger) -> bool:
     """Yes/no gate. --yes auto-confirms; a non-TTY without --yes declines (safe default)."""
     if assume_yes:
@@ -900,90 +1168,128 @@ def _confirm(prompt: str, *, assume_yes: bool, log: logging.Logger) -> bool:
 def _candidate_bin_dirs() -> list[Path]:
     """Bin dirs where a pip/uv/pipx-installed `hf` lands but may NOT be on PATH.
 
-    Termux (and `pip install --user` generally) drops console scripts in
-    ~/.local/bin / $PREFIX/bin without adding them to PATH, so `which hf`
-    misses a perfectly-installed CLI. We search these explicitly.
+    Termux (and `pip install --user` generally) drop console scripts in
+    ~/.local/bin / $PREFIX/bin / pipx-and-uv venvs without adding them to PATH,
+    so `which hf` misses a perfectly-installed CLI. We search them explicitly.
     """
     dirs: list[Path] = []
     try:
         import site
         import sysconfig
 
-        dirs.append(Path(site.getuserbase()) / "bin")  # pip --user → ~/.local/bin
         scripts = sysconfig.get_path("scripts")
         if scripts:
-            dirs.append(Path(scripts))
+            dirs.append(Path(scripts))  # this interpreter's scripts dir
+        try:
+            dirs.append(Path(sysconfig.get_path("scripts", scheme="posix_user")))
+        except Exception:  # noqa: BLE001 — scheme may not exist
+            pass
+        dirs.append(Path(site.getuserbase()) / "bin")  # pip --user → ~/.local/bin
     except Exception:  # noqa: BLE001 — best-effort discovery
         pass
     home = Path.home()
-    dirs.append(home / ".local" / "bin")  # pipx / uv tool default
+    dirs.append(home / ".local" / "bin")  # pipx / uv tool symlinks
+    xdg = Path(os.environ.get("XDG_DATA_HOME") or (home / ".local" / "share"))
+    dirs.append(xdg / "pipx" / "venvs" / "huggingface_hub" / "bin")
+    for tool in ("huggingface-hub", "huggingface_hub"):
+        dirs.append(xdg / "uv" / "tools" / tool / "bin")
+    pipx_home = os.environ.get("PIPX_HOME")
+    if pipx_home:
+        dirs.append(Path(pipx_home) / "venvs" / "huggingface_hub" / "bin")
     prefix = os.environ.get("PREFIX")  # Termux: /data/data/com.termux/files/usr
     if prefix:
         dirs.append(Path(prefix) / "bin")
-    # De-dup, preserve order.
-    seen: set[str] = set()
-    out: list[Path] = []
-    for d in dirs:
-        key = str(d)
-        if key not in seen:
-            seen.add(key)
-            out.append(d)
-    return out
+    return _dedup_existing(dirs)
+
+
+def _hf_module_cmd(log: logging.Logger | None = None) -> list[str] | None:
+    """If huggingface_hub's CLI is importable by some Python, return a `-m` invocation.
+
+    Last-resort fallback when no console script exists/links anywhere: the
+    package itself still drives downloads via the legacy CLI module.
+    """
+    module = "huggingface_hub.commands.huggingface_cli"
+    pythons = [sys.executable]
+    for name in ("python3", "python"):
+        w = shutil.which(name)
+        if w and w not in pythons:
+            pythons.append(w)
+    for py in pythons:
+        try:
+            res = subprocess.run(
+                [py, "-c", f"import {module}"], capture_output=True, timeout=20
+            )
+        except Exception:  # noqa: BLE001 — try the next interpreter
+            continue
+        if res.returncode == 0:
+            return [py, "-m", module]
+    return None
 
 
 def _find_hf_off_path(
     log: logging.Logger | None = None,
-) -> tuple[str | None, str | None]:
+    *,
+    fix_path: bool = False,
+    assume_yes: bool = False,
+) -> tuple[list[str] | None, str | None]:
     """Search known install bin dirs for an `hf`/`huggingface-cli` not on PATH."""
     for d in _candidate_bin_dirs():
         for name, style in (("hf", "hf"), ("huggingface-cli", "legacy")):
             cand = d / name
             if cand.is_file() and os.access(cand, os.X_OK):
-                if log is not None:
-                    log.warning(
-                        "Found %s at %s but its dir is not on PATH. "
-                        "Using it for this run; add it to PATH so your shell sees it too:\n"
-                        '    export PATH="%s:$PATH"   '
-                        "(append to ~/.bashrc / Termux ~/.bashrc)",
-                        name,
-                        cand,
-                        d,
-                    )
-                return str(cand), style
+                _note_off_path(cand, log, fix_path=fix_path, assume_yes=assume_yes)
+                return [str(cand)], style
     return None, None
 
 
 def _resolve_hf_cli(
-    explicit: str | None = None, log: logging.Logger | None = None
-) -> tuple[str | None, str | None]:
-    """Return (path, style) for the Hugging Face CLI, or (None, None).
+    explicit: str | None = None,
+    log: logging.Logger | None = None,
+    *,
+    fix_path: bool = False,
+    assume_yes: bool = False,
+) -> tuple[list[str] | None, str | None]:
+    """Return (cmd, style) for the Hugging Face CLI, or (None, None).
 
-    style is "hf" for the new unified CLI, "legacy" for `huggingface-cli`
-    (its subcommands differ: `hf auth whoami` vs `huggingface-cli whoami`).
-    Searches PATH first, then known install bin dirs (Termux/`--user` often
-    install the script without putting its dir on PATH).
+    cmd is an argv PREFIX — usually [path], or [python, -m, module] for the
+    importable-package fallback. style is "hf" (new `hf auth …`) or "legacy"
+    (`huggingface-cli …`). Searches PATH → known install dirs → `-m` fallback.
     """
     if explicit:
         if os.path.isfile(explicit) and os.access(explicit, os.X_OK):
             style = (
                 "legacy" if "huggingface-cli" in os.path.basename(explicit) else "hf"
             )
-            return explicit, style
+            return [explicit], style
+        if log is not None:
+            log.warning("--hf-cli is not an executable file: %s", explicit)
         return None, None
     found = shutil.which("hf")
     if found:
-        return found, "hf"
+        return [found], "hf"
     found = shutil.which("huggingface-cli")
     if found:
-        return found, "legacy"
-    # Not on PATH — look in the dirs installers actually use (Termux/--user).
-    return _find_hf_off_path(log)
+        return [found], "legacy"
+    cmd, style = _find_hf_off_path(log, fix_path=fix_path, assume_yes=assume_yes)
+    if cmd:
+        return cmd, style
+    mod = _hf_module_cmd(log)
+    if mod:
+        if log is not None:
+            log.warning(
+                "No `hf`/`huggingface-cli` executable found, but huggingface_hub is "
+                "importable — driving it via `%s -m huggingface_hub…`. Install the "
+                "[cli] extra (or fix PATH) to get the real `hf` command.",
+                Path(mod[0]).name,
+            )
+        return mod, "legacy"
+    return None, None
 
 
 def install_hf_cli(
-    log: logging.Logger, *, assume_yes: bool = False
-) -> tuple[str | None, str | None]:
-    """Best-effort install of the hf CLI. Returns (path, style) or (None, None).
+    log: logging.Logger, *, assume_yes: bool = False, fix_path: bool = False
+) -> tuple[list[str] | None, str | None]:
+    """Best-effort install of the hf CLI. Returns (cmd, style) or (None, None).
 
     Honesty / supply-chain (CONTRIBUTING.md): we do NOT `curl … | bash`. We
     install the published `huggingface_hub[cli]` package — pinnable, auditable,
@@ -994,12 +1300,13 @@ def install_hf_cli(
         methods.append((["uv", "tool", "install", HF_PIP_PACKAGE], "uv tool"))
     if shutil.which("pipx"):
         methods.append((["pipx", "install", HF_PIP_PACKAGE], "pipx"))
-    methods.append(
-        (
-            [sys.executable, "-m", "pip", "install", "--user", HF_PIP_PACKAGE],
-            "pip --user",
-        )
-    )
+    # On Termux, plain `pip install` lands in $PREFIX/bin (already on PATH);
+    # `--user` (~/.local/bin) is the off-PATH trap. Off-Termux, prefer --user.
+    pip_cmd = [sys.executable, "-m", "pip", "install"]
+    if not _is_termux():
+        pip_cmd.append("--user")
+    pip_cmd.append(HF_PIP_PACKAGE)
+    methods.append((pip_cmd, "pip" if _is_termux() else "pip --user"))
 
     # On Termux, pip/pipx/uv come from `pkg` (≡ `apt`); surface that so a phone
     # with no installer yet has a clear first step.
@@ -1042,9 +1349,9 @@ def install_hf_cli(
                 (res.stderr or res.stdout or "").strip()[:400],
             )
             continue
-        cli, style = _resolve_hf_cli(log=log)
+        cli, style = _resolve_hf_cli(log=log, fix_path=fix_path, assume_yes=assume_yes)
         if cli:
-            log.info("hf CLI installed via %s: %s", label, cli)
+            log.info("hf CLI installed via %s: %s", label, " ".join(cli))
             return cli, style
         log.warning(
             "  %s reported success but 'hf'/'huggingface-cli' was not found, even in "
@@ -1058,12 +1365,12 @@ def install_hf_cli(
 
 
 def hf_auth_status(
-    cli: str, style: str, log: logging.Logger
+    cmd: list[str], style: str, log: logging.Logger
 ) -> tuple[bool, str | None]:
     """Return (authenticated, who). Best-effort; a query failure ⇒ (False, None)."""
     sub = ["auth", "whoami"] if style == "hf" else ["whoami"]
     try:
-        res = subprocess.run([cli, *sub], capture_output=True, text=True, timeout=30)
+        res = subprocess.run([*cmd, *sub], capture_output=True, text=True, timeout=30)
     except Exception as exc:  # noqa: BLE001 — never-silent
         log.warning("Could not query Hugging Face auth status: %s", exc)
         return False, None
@@ -1074,7 +1381,7 @@ def hf_auth_status(
 
 
 def hf_login(
-    cli: str,
+    cmd: list[str],
     style: str,
     log: logging.Logger,
     *,
@@ -1089,7 +1396,7 @@ def hf_login(
     token = (
         token or os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
     )
-    base = [cli, "auth", "login"] if style == "hf" else [cli, "login"]
+    base = [*cmd, "auth", "login"] if style == "hf" else [*cmd, "login"]
 
     if token:
         log.info("Logging in to Hugging Face with a token from --hf-token/$HF_TOKEN…")
@@ -1143,26 +1450,29 @@ def ensure_hf_ready(
     assume_yes: bool = False,
     want_auth: bool = True,
     token: str | None = None,
-) -> tuple[str | None, str | None]:
-    """Detect → (opt-in) install → auth-check the hf CLI. Returns (path, style).
+    fix_path: bool = False,
+) -> tuple[list[str] | None, str | None]:
+    """Detect → (opt-in) install → auth-check the hf CLI. Returns (cmd, style).
 
     (None, None) means no usable CLI — the caller falls back to the stdlib
     downloader. Auth is checked/prompted but never fatal (public registry).
     """
-    cli, style = _resolve_hf_cli(explicit_cli, log)
+    cli, style = _resolve_hf_cli(
+        explicit_cli, log, fix_path=fix_path, assume_yes=assume_yes
+    )
     if not cli:
         log.info(
             "Hugging Face CLI not found%s.",
             f" (looked for: {explicit_cli})"
             if explicit_cli
-            else " on PATH or known install dirs",
+            else " on PATH, known install dirs, or as an importable module",
         )
         if allow_install:
-            cli, style = install_hf_cli(log, assume_yes=assume_yes)
+            cli, style = install_hf_cli(log, assume_yes=assume_yes, fix_path=fix_path)
         else:
             log.info(
                 "Pass --install-hf-cli to install '%s' automatically, or install it "
-                "yourself (uv tool / pipx / pip --user). Falling back to the built-in "
+                "yourself (uv tool / pipx / pip). Falling back to the built-in "
                 "stdlib downloader for now.",
                 HF_PIP_PACKAGE,
             )
@@ -1171,7 +1481,7 @@ def ensure_hf_ready(
     else:
         log.info(
             "Hugging Face CLI: %s (%s)",
-            cli,
+            " ".join(cli),
             "hf" if style == "hf" else "legacy huggingface-cli",
         )
 
@@ -1187,7 +1497,7 @@ def ensure_hf_ready(
 
 
 def _download_via_hf_cli(
-    cli: str,
+    cli: list[str],
     repo: str,
     filename: str,
     model_dir: Path,
@@ -1201,7 +1511,7 @@ def _download_via_hf_cli(
     a false "present".
     """
     dest = model_dir / filename
-    cmd = [cli, "download", repo, filename, "--local-dir", str(model_dir)]
+    cmd = [*cli, "download", repo, filename, "--local-dir", str(model_dir)]
     log.info("Downloading via hf CLI: %s", " ".join(cmd))
     try:
         res = subprocess.run(
@@ -1473,7 +1783,7 @@ def ensure_model(
     *,
     allow_download: bool = True,
     url_override: str | None = None,
-    hf_cli: str | None = None,
+    hf_cmd: list[str] | None = None,
     prefer_hf: bool = True,
 ) -> Path | None:
     """Idempotent: return a local GGUF path, downloading ONLY if absent/invalid.
@@ -1518,9 +1828,9 @@ def ensure_model(
 
     # Preferred path: the hf CLI (robust, resumable, auth-aware). Only when we
     # have a registry repo and no explicit URL override (the CLI is repo-based).
-    if prefer_hf and hf_cli and spec.get("repo") and url_override is None:
+    if prefer_hf and hf_cmd and spec.get("repo") and url_override is None:
         ensured = _download_via_hf_cli(
-            hf_cli, str(spec["repo"]), str(spec["filename"]), model_dir, log
+            hf_cmd, str(spec["repo"]), str(spec["filename"]), model_dir, log
         )
         if ensured:
             return ensured
@@ -1617,15 +1927,20 @@ def run_harness(args: argparse.Namespace) -> int:
                 "--model is ignored in server mode (model is loaded server-side)"
             )
     else:
-        llama_cli = _resolve_llama_cli(llama_cli_arg)
+        fix_path = bool(getattr(args, "fix_path", False))
+        assume_yes = bool(getattr(args, "assume_yes", False))
+        llama_cli = _resolve_llama_cli(
+            llama_cli_arg, log, fix_path=fix_path, assume_yes=assume_yes
+        )
         if llama_cli:
             log.info("Mode: REAL (llama-cli) — binary: %s", llama_cli)
         else:
             log.warning(
-                "llama-cli binary not found%s. "
+                "llama-cli binary not found%s (searched PATH, ~/llama.cpp/build/bin, "
+                "$PREFIX/bin, $MYCELIUM_LLAMA_DIR, and shallow globs). "
                 "SKIPPING all model-dependent validations (skip-gracefully, G2). "
-                "To run real mode: provide --llama-cli PATH or ensure llama-cli is on PATH. "
-                "To suppress this and run CI-safe: use --mock.",
+                "To run real mode: provide --llama-cli PATH or build llama.cpp. "
+                "To suppress this and run CI-safe: use --mock. Run --doctor to diagnose.",
                 f" (looked for: {llama_cli_arg})" if llama_cli_arg else "",
             )
 
@@ -1644,15 +1959,16 @@ def run_harness(args: argparse.Namespace) -> int:
             # Hugging Face CLI: detect → (opt-in) install → auth check/prompt.
             # Falls back to the built-in stdlib downloader when unavailable.
             prefer_hf = not bool(getattr(args, "no_hf_cli", False))
-            hf_cli = None
+            hf_cmd = None
             if prefer_hf and not bool(getattr(args, "no_download", False)):
-                hf_cli, _ = ensure_hf_ready(
+                hf_cmd, _ = ensure_hf_ready(
                     getattr(args, "hf_cli", None),
                     log,
                     allow_install=bool(getattr(args, "install_hf_cli", False)),
-                    assume_yes=bool(getattr(args, "assume_yes", False)),
+                    assume_yes=assume_yes,
                     want_auth=True,
                     token=getattr(args, "hf_token", None),
+                    fix_path=fix_path,
                 )
 
             log.info("Ensuring model '%s' in %s (idempotent)…", model_id, model_dir)
@@ -1662,7 +1978,7 @@ def run_harness(args: argparse.Namespace) -> int:
                 log,
                 allow_download=not bool(getattr(args, "no_download", False)),
                 url_override=getattr(args, "model_url", None),
-                hf_cli=hf_cli,
+                hf_cmd=hf_cmd,
                 prefer_hf=prefer_hf,
             )
             if ensured:
@@ -1863,8 +2179,9 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         dest="llama_cli",
         help=(
-            "Path to the llama-cli binary. "
-            "If omitted, searches PATH for 'llama-cli', 'llama.cpp', 'main'."
+            "Path to the llama-cli binary. If omitted, searches PATH, then common "
+            "build/install dirs (~/llama.cpp/build/bin, $PREFIX/bin, $MYCELIUM_LLAMA_DIR) "
+            "and shallow globs."
         ),
     )
     # --- idempotent model acquisition ---
@@ -1964,6 +2281,33 @@ def _build_parser() -> argparse.ArgumentParser:
         dest="list_models",
         help="Print the registered models and the cache dir, then exit.",
     )
+    # --- diagnostics + PATH self-healing ---
+    p.add_argument(
+        "--doctor",
+        action="store_true",
+        dest="doctor",
+        help=(
+            "Diagnose tools/PATH/auth (llama.cpp, hf CLI, Claude Code CLI, model "
+            "cache), print where it looked + the fix, then exit. Run this on a "
+            "phone and paste the output back to troubleshoot."
+        ),
+    )
+    p.add_argument(
+        "--fix-path",
+        action="store_true",
+        dest="fix_path",
+        help=(
+            "When a binary is found off-PATH, append an `export PATH=…` line to "
+            "your shell rc (idempotent; prompts unless --yes). PATH is always "
+            "healed in-process for the current run regardless of this flag."
+        ),
+    )
+    p.add_argument(
+        "--claude-cli",
+        metavar="PATH",
+        dest="claude_cli",
+        help="Explicit path to the `claude` binary (for --doctor/--fix-path).",
+    )
     return p
 
 
@@ -1983,12 +2327,142 @@ def _console_logger(name: str = "mycelium.llm-harness.setup") -> logging.Logger:
     return log
 
 
+def run_doctor(args: argparse.Namespace) -> int:
+    """Diagnose tool/PATH/auth state and print actionable fixes. Always exits 0.
+
+    This is the thing to run on a phone and paste back: it reports exactly what
+    was found, where it looked, and the precise fix — and (with --fix-path) heals
+    PATH for you.
+    """
+    log = _console_logger()
+    fix_path = bool(getattr(args, "fix_path", False))
+    assume_yes = bool(getattr(args, "assume_yes", False))
+    lines: list[str] = []
+
+    def out(s: str = "") -> None:
+        lines.append(s)
+
+    out("=" * 72)
+    out("  Mycelium LLM-harness — environment doctor")
+    out("=" * 72)
+    out(f"  Platform : {sys.platform}{'  (Termux/Android)' if _is_termux() else ''}")
+    out(f"  Python   : {sys.version.split()[0]}  ({sys.executable})")
+    out(f"  PREFIX   : {os.environ.get('PREFIX', '(unset)')}")
+    out(f"  HOME     : {Path.home()}")
+    out("  PATH     :")
+    for p in _path_entries():
+        out(f"      {p}")
+    out("")
+
+    out("-" * 72)
+    out("  Installers / build tools")
+    out("-" * 72)
+    for tool in ("uv", "pipx", "npm", "node", "git", "cmake", "make", "clang"):
+        w = shutil.which(tool)
+        out(f"      {tool:8s}: {'OK  ' + w if w else '–   (not found)'}")
+    out(f"      {'pip':8s}: OK  {sys.executable} -m pip")
+    out("")
+
+    out("-" * 72)
+    out("  llama.cpp (llama-cli)")
+    out("-" * 72)
+    llama = _resolve_llama_cli(
+        getattr(args, "llama_cli", None), log, fix_path=fix_path, assume_yes=assume_yes
+    )
+    if llama:
+        out(f"      FOUND: {llama}")
+        try:
+            v = subprocess.run(
+                [llama, "--version"], capture_output=True, text=True, timeout=20
+            )
+            blob = (v.stderr or v.stdout).strip()
+            out(f"      version: {blob.splitlines()[0] if blob else '(no output)'}")
+        except Exception as exc:  # noqa: BLE001
+            out(f"      version: (could not run --version: {exc})")
+    else:
+        out("      NOT FOUND. Searched PATH +:")
+        for d in _llama_search_dirs():
+            out(f"          {d}")
+        out("      Fix: build llama.cpp (README Termux steps), pass --llama-cli PATH,")
+        out("           or set $MYCELIUM_LLAMA_DIR to its directory.")
+    out("")
+
+    out("-" * 72)
+    out("  Hugging Face CLI")
+    out("-" * 72)
+    cmd, style = _resolve_hf_cli(
+        getattr(args, "hf_cli", None), log, fix_path=fix_path, assume_yes=assume_yes
+    )
+    if cmd:
+        out(f"      FOUND: {' '.join(cmd)}  (style: {style})")
+        authed, who = hf_auth_status(cmd, style, log)
+        out(
+            f"      auth : {'authenticated as ' + str(who) if authed else 'NOT authenticated (fine for public models)'}"
+        )
+    else:
+        out("      NOT FOUND. Searched PATH + these bin dirs:")
+        for d in _candidate_bin_dirs():
+            out(f"          {d}")
+        out(f"      Fix: --setup-hf  (installs '{HF_PIP_PACKAGE}' via uv/pipx/pip).")
+    out("")
+
+    out("-" * 72)
+    out("  Claude Code CLI (claude)")
+    out("-" * 72)
+    claude = _resolve_claude_cli(
+        getattr(args, "claude_cli", None),
+        log,
+        fix_path=fix_path,
+        assume_yes=assume_yes,
+    )
+    if claude:
+        out(f"      FOUND: {claude}")
+        try:
+            v = subprocess.run(
+                [claude, "--version"], capture_output=True, text=True, timeout=20
+            )
+            blob = (v.stdout or v.stderr).strip()
+            out(f"      version: {blob.splitlines()[0] if blob else '(no output)'}")
+        except Exception as exc:  # noqa: BLE001
+            out(f"      version: (could not run --version: {exc})")
+    else:
+        out("      NOT FOUND. Searched PATH +:")
+        for d in _claude_search_dirs():
+            out(f"          {d}")
+        out("      Fix: npm install -g @anthropic-ai/claude-code, and put npm's global")
+        out('           bin on PATH. On Termux: npm config set prefix "$PREFIX" (then')
+        out("           reinstall) so links land on the existing PATH.")
+    out("")
+
+    out("-" * 72)
+    out("  Model cache")
+    out("-" * 72)
+    md_arg = getattr(args, "model_dir", None)
+    md = Path(md_arg).expanduser() if md_arg else default_model_dir()
+    spec = MODELS[DEFAULT_MODEL_ID]
+    dest = md / str(spec["filename"])
+    out(f"      dir: {md}")
+    if is_valid_gguf(dest):
+        out(
+            f"      default model present: {dest.name} ({_human_bytes(dest.stat().st_size)})"
+        )
+    else:
+        out(f"      default model absent : {dest.name}  (fetch with --ensure-model)")
+    out("")
+    out("  Tip: re-run with --fix-path to persist any off-PATH fix to your shell rc.")
+    out("=" * 72)
+    print("\n".join(lines))
+    return 0
+
+
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
     if getattr(args, "list_models", False):
         print(list_models_text())
         sys.exit(0)
+    if getattr(args, "doctor", False):
+        sys.exit(run_doctor(args))
     if getattr(args, "setup_hf", False):
         # Standalone: detect → install (opt-in implied) → auth check/prompt, then exit.
         log = _console_logger()
@@ -1999,6 +2473,7 @@ def main() -> None:
             assume_yes=bool(getattr(args, "assume_yes", False)),
             want_auth=True,
             token=getattr(args, "hf_token", None),
+            fix_path=bool(getattr(args, "fix_path", False)),
         )
         sys.exit(0 if cli else 1)
     sys.exit(run_harness(args))
