@@ -8,6 +8,22 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: LLM-validation harness — Hugging Face CLI integration)
+- **`tools/llm-harness/harness.py` gains Hugging Face CLI support** for model acquisition. On
+  `--ensure-model` it now **detects** the `hf` CLI (or legacy `huggingface-cli`), uses it as the
+  **preferred** download path (resumable, auth-aware, gated-repo-capable), and **falls back** to the
+  built-in stdlib downloader when it's absent — nothing breaks either way. New flags: `--setup-hf`
+  (detect → install → check/prompt auth, then exit), `--install-hf-cli`, `--no-hf-cli`, `--hf-cli PATH`,
+  `--hf-token TOKEN`, `-y`/`--yes`. **Auth** is checked (`hf auth whoami`) and, if missing, prompts an
+  interactive `hf auth login` (or accepts `--hf-token`/`$HF_TOKEN`) — **non-fatal**, since the default
+  registry is public. Honesty/supply-chain (CONTRIBUTING.md): install uses the published
+  `huggingface_hub[cli]` package via **uv/pipx/pip — never `curl … | bash`** (the upstream one-liner is
+  printed as a reviewed manual fallback only); an hf-CLI download is held to the **same GGUF-magic
+  verification** as the stdlib path (G2 never-silent). Detection also searches `~/.local/bin` and
+  `$PREFIX/bin` so a **Termux / `pip --user`-installed-but-unlinked** `hf` is still found and used,
+  with the exact `export PATH=…` fix surfaced. README updated (hf-CLI section + a Termux-PATH FLAG for
+  `hf`/`claude` "command not found").
+
 ### Changed (2026-06-17: RFC-0016 ratified — Draft → Accepted, the standard-library keystone)
 - **RFC-0016 (Core Library & Standard Library) moves `Draft → Accepted`** by maintainer ratification
   (DN-07 ratification pass; M-501, #149). The §4.1 per-op contract (C1–C6), the §4.2 ring layering, the

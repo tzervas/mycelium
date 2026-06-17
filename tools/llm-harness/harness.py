@@ -855,6 +855,368 @@ def _resolve_llama_cli(explicit: str | None) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Hugging Face CLI: detect → (opt-in) install → auth check/prompt
+# ---------------------------------------------------------------------------
+#
+# The hf CLI gives a robust, resumable, auth-aware download path (gated repos,
+# CDN retries) that the stdlib urllib fallback can't match. The harness:
+#   1. detects `hf` (new) or `huggingface-cli` (legacy) on PATH;
+#   2. on --install-hf-cli, installs the published `huggingface_hub[cli]`
+#      package — NOT via `curl … | bash` (CONTRIBUTING.md supply-chain rule:
+#      no piping a remote script into a shell). The upstream one-liner is
+#      printed as a reviewed manual fallback only;
+#   3. checks auth (`hf auth whoami`) and, if unauthenticated, prompts to log
+#      in. This is NON-FATAL: the default registry is public/ungated, so a
+#      token-less run still downloads. Auth only matters for gated repos.
+# Every step is explicit and logged (G2 never-silent); a missing/declined CLI
+# simply falls back to the built-in stdlib downloader.
+
+HF_INSTALL_SCRIPT_URL = "https://hf.co/cli/install.sh"
+HF_PIP_PACKAGE = "huggingface_hub[cli]"
+
+
+def _confirm(prompt: str, *, assume_yes: bool, log: logging.Logger) -> bool:
+    """Yes/no gate. --yes auto-confirms; a non-TTY without --yes declines (safe default)."""
+    if assume_yes:
+        log.info("%s  [--yes: auto-confirmed]", prompt)
+        return True
+    if not sys.stdin.isatty():
+        log.warning(
+            "%s  — no TTY and --yes not set; declining (non-interactive).", prompt
+        )
+        return False
+    try:
+        ans = input(f"{prompt} [y/N] ").strip().lower()
+    except EOFError:
+        return False
+    return ans in ("y", "yes")
+
+
+def _candidate_bin_dirs() -> list[Path]:
+    """Bin dirs where a pip/uv/pipx-installed `hf` lands but may NOT be on PATH.
+
+    Termux (and `pip install --user` generally) drops console scripts in
+    ~/.local/bin / $PREFIX/bin without adding them to PATH, so `which hf`
+    misses a perfectly-installed CLI. We search these explicitly.
+    """
+    dirs: list[Path] = []
+    try:
+        import site
+        import sysconfig
+
+        dirs.append(Path(site.getuserbase()) / "bin")  # pip --user → ~/.local/bin
+        scripts = sysconfig.get_path("scripts")
+        if scripts:
+            dirs.append(Path(scripts))
+    except Exception:  # noqa: BLE001 — best-effort discovery
+        pass
+    home = Path.home()
+    dirs.append(home / ".local" / "bin")  # pipx / uv tool default
+    prefix = os.environ.get("PREFIX")  # Termux: /data/data/com.termux/files/usr
+    if prefix:
+        dirs.append(Path(prefix) / "bin")
+    # De-dup, preserve order.
+    seen: set[str] = set()
+    out: list[Path] = []
+    for d in dirs:
+        key = str(d)
+        if key not in seen:
+            seen.add(key)
+            out.append(d)
+    return out
+
+
+def _find_hf_off_path(
+    log: logging.Logger | None = None,
+) -> tuple[str | None, str | None]:
+    """Search known install bin dirs for an `hf`/`huggingface-cli` not on PATH."""
+    for d in _candidate_bin_dirs():
+        for name, style in (("hf", "hf"), ("huggingface-cli", "legacy")):
+            cand = d / name
+            if cand.is_file() and os.access(cand, os.X_OK):
+                if log is not None:
+                    log.warning(
+                        "Found %s at %s but its dir is not on PATH. "
+                        "Using it for this run; add it to PATH so your shell sees it too:\n"
+                        '    export PATH="%s:$PATH"   '
+                        "(append to ~/.bashrc / Termux ~/.bashrc)",
+                        name,
+                        cand,
+                        d,
+                    )
+                return str(cand), style
+    return None, None
+
+
+def _resolve_hf_cli(
+    explicit: str | None = None, log: logging.Logger | None = None
+) -> tuple[str | None, str | None]:
+    """Return (path, style) for the Hugging Face CLI, or (None, None).
+
+    style is "hf" for the new unified CLI, "legacy" for `huggingface-cli`
+    (its subcommands differ: `hf auth whoami` vs `huggingface-cli whoami`).
+    Searches PATH first, then known install bin dirs (Termux/`--user` often
+    install the script without putting its dir on PATH).
+    """
+    if explicit:
+        if os.path.isfile(explicit) and os.access(explicit, os.X_OK):
+            style = (
+                "legacy" if "huggingface-cli" in os.path.basename(explicit) else "hf"
+            )
+            return explicit, style
+        return None, None
+    found = shutil.which("hf")
+    if found:
+        return found, "hf"
+    found = shutil.which("huggingface-cli")
+    if found:
+        return found, "legacy"
+    # Not on PATH — look in the dirs installers actually use (Termux/--user).
+    return _find_hf_off_path(log)
+
+
+def install_hf_cli(
+    log: logging.Logger, *, assume_yes: bool = False
+) -> tuple[str | None, str | None]:
+    """Best-effort install of the hf CLI. Returns (path, style) or (None, None).
+
+    Honesty / supply-chain (CONTRIBUTING.md): we do NOT `curl … | bash`. We
+    install the published `huggingface_hub[cli]` package — pinnable, auditable,
+    and the source of the `hf` command — via uv / pipx / pip, in that order.
+    """
+    methods: list[tuple[list[str], str]] = []
+    if shutil.which("uv"):
+        methods.append((["uv", "tool", "install", HF_PIP_PACKAGE], "uv tool"))
+    if shutil.which("pipx"):
+        methods.append((["pipx", "install", HF_PIP_PACKAGE], "pipx"))
+    methods.append(
+        (
+            [sys.executable, "-m", "pip", "install", "--user", HF_PIP_PACKAGE],
+            "pip --user",
+        )
+    )
+
+    manual = (
+        "Install it yourself, then re-run:\n"
+        f"    uv tool install '{HF_PIP_PACKAGE}'\n"
+        f"    pipx install '{HF_PIP_PACKAGE}'\n"
+        f"    pip install --user '{HF_PIP_PACKAGE}'\n"
+        f"  (or the upstream script, after reviewing it: "
+        f"curl -LsSf {HF_INSTALL_SCRIPT_URL} | bash)"
+    )
+
+    if not _confirm(
+        f"Hugging Face CLI not found. Install '{HF_PIP_PACKAGE}' now?",
+        assume_yes=assume_yes,
+        log=log,
+    ):
+        log.warning("Skipping hf-CLI install. %s", manual)
+        return None, None
+
+    for cmd, label in methods:
+        log.info("Installing hf CLI via %s: %s", label, " ".join(cmd))
+        try:
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        except Exception as exc:  # noqa: BLE001 — never-silent: surface + try next
+            log.warning("  %s failed to start: %s", label, exc)
+            continue
+        if res.returncode != 0:
+            log.warning(
+                "  %s exited %d: %s",
+                label,
+                res.returncode,
+                (res.stderr or res.stdout or "").strip()[:400],
+            )
+            continue
+        cli, style = _resolve_hf_cli(log=log)
+        if cli:
+            log.info("hf CLI installed via %s: %s", label, cli)
+            return cli, style
+        log.warning(
+            "  %s reported success but 'hf'/'huggingface-cli' was not found, even in "
+            "the usual install dirs (%s). Restart your shell, or add the install bin "
+            "dir to PATH, then re-run.",
+            label,
+            ", ".join(str(d) for d in _candidate_bin_dirs()),
+        )
+    log.error("Could not install the hf CLI automatically. %s", manual)
+    return None, None
+
+
+def hf_auth_status(
+    cli: str, style: str, log: logging.Logger
+) -> tuple[bool, str | None]:
+    """Return (authenticated, who). Best-effort; a query failure ⇒ (False, None)."""
+    sub = ["auth", "whoami"] if style == "hf" else ["whoami"]
+    try:
+        res = subprocess.run([cli, *sub], capture_output=True, text=True, timeout=30)
+    except Exception as exc:  # noqa: BLE001 — never-silent
+        log.warning("Could not query Hugging Face auth status: %s", exc)
+        return False, None
+    out = (res.stdout + "\n" + res.stderr).strip()
+    if res.returncode == 0 and out and "not logged in" not in out.lower():
+        return True, out.splitlines()[0].strip()
+    return False, None
+
+
+def hf_login(
+    cli: str,
+    style: str,
+    log: logging.Logger,
+    *,
+    assume_yes: bool = False,
+    token: str | None = None,
+) -> bool:
+    """Authenticate to Hugging Face. Token (flag/env) is non-interactive; else prompt.
+
+    Returns True on a successful login. NON-FATAL on failure/decline — public
+    models still download; only gated repos need auth.
+    """
+    token = (
+        token or os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    )
+    base = [cli, "auth", "login"] if style == "hf" else [cli, "login"]
+
+    if token:
+        log.info("Logging in to Hugging Face with a token from --hf-token/$HF_TOKEN…")
+        try:
+            res = subprocess.run(
+                [*base, "--token", token], capture_output=True, text=True, timeout=60
+            )
+        except Exception as exc:  # noqa: BLE001 — never-silent
+            log.error("Hugging Face login failed to run: %s", exc)
+            return False
+        if res.returncode == 0:
+            log.info("Hugging Face login OK (token).")
+            return True
+        log.error(
+            "Hugging Face login failed: %s",
+            (res.stderr or res.stdout or "").strip()[:400],
+        )
+        return False
+
+    instructions = (
+        "Not logged in to Hugging Face. Public models (the default registry) "
+        "still download without auth — this only blocks GATED repos. To "
+        "authenticate:\n"
+        f"    {' '.join(base)}            # interactive\n"
+        "    export HF_TOKEN=hf_xxxxxxxx        # or set a token, then re-run "
+        "(or pass --hf-token)"
+    )
+
+    if sys.stdin.isatty() and _confirm(
+        "Log in to Hugging Face now (interactive prompt)?",
+        assume_yes=assume_yes,
+        log=log,
+    ):
+        log.info("Launching `%s` (interactive)…", " ".join(base))
+        try:
+            res = subprocess.run(base)  # inherit stdio so the prompt works
+        except Exception as exc:  # noqa: BLE001 — never-silent
+            log.error("Hugging Face login failed: %s", exc)
+            return False
+        return res.returncode == 0
+
+    log.warning(instructions)
+    return False
+
+
+def ensure_hf_ready(
+    explicit_cli: str | None,
+    log: logging.Logger,
+    *,
+    allow_install: bool = False,
+    assume_yes: bool = False,
+    want_auth: bool = True,
+    token: str | None = None,
+) -> tuple[str | None, str | None]:
+    """Detect → (opt-in) install → auth-check the hf CLI. Returns (path, style).
+
+    (None, None) means no usable CLI — the caller falls back to the stdlib
+    downloader. Auth is checked/prompted but never fatal (public registry).
+    """
+    cli, style = _resolve_hf_cli(explicit_cli, log)
+    if not cli:
+        log.info(
+            "Hugging Face CLI not found%s.",
+            f" (looked for: {explicit_cli})"
+            if explicit_cli
+            else " on PATH or known install dirs",
+        )
+        if allow_install:
+            cli, style = install_hf_cli(log, assume_yes=assume_yes)
+        else:
+            log.info(
+                "Pass --install-hf-cli to install '%s' automatically, or install it "
+                "yourself (uv tool / pipx / pip --user). Falling back to the built-in "
+                "stdlib downloader for now.",
+                HF_PIP_PACKAGE,
+            )
+        if not cli:
+            return None, None
+    else:
+        log.info(
+            "Hugging Face CLI: %s (%s)",
+            cli,
+            "hf" if style == "hf" else "legacy huggingface-cli",
+        )
+
+    if want_auth and style is not None:
+        authed, who = hf_auth_status(cli, style, log)
+        if authed:
+            log.info("Hugging Face: authenticated as %s.", who)
+        else:
+            log.info("Hugging Face: not authenticated.")
+            hf_login(cli, style, log, assume_yes=assume_yes, token=token)
+
+    return cli, style
+
+
+def _download_via_hf_cli(
+    cli: str,
+    repo: str,
+    filename: str,
+    model_dir: Path,
+    log: logging.Logger,
+) -> Path | None:
+    """Fetch a single GGUF file via `hf download`. Returns the verified path or None.
+
+    Downloads only the named file (not the whole repo), into model_dir/filename,
+    then verifies the GGUF magic before promoting — same honesty bar as the
+    stdlib path: a missing/truncated/non-GGUF result is an explicit error, never
+    a false "present".
+    """
+    dest = model_dir / filename
+    cmd = [cli, "download", repo, filename, "--local-dir", str(model_dir)]
+    log.info("Downloading via hf CLI: %s", " ".join(cmd))
+    try:
+        res = subprocess.run(
+            cmd, text=True, timeout=3600
+        )  # inherit stdio: live progress
+    except Exception as exc:  # noqa: BLE001 — never-silent
+        log.error("hf download failed to run: %s", exc)
+        return None
+    if res.returncode != 0:
+        log.error(
+            "hf download exited %d (auth/network/repo error). "
+            "Falling back to the built-in downloader.",
+            res.returncode,
+        )
+        return None
+    if is_valid_gguf(dest):
+        log.info(
+            "Model ready (hf CLI): %s (%s)", dest, _human_bytes(dest.stat().st_size)
+        )
+        return dest
+    log.error(
+        "hf download completed but %s failed GGUF validation "
+        "(missing/truncated/not a GGUF). Not promoting.",
+        dest,
+    )
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Model acquisition (idempotent, stdlib-only, Termux-friendly)
 # ---------------------------------------------------------------------------
 #
@@ -1097,6 +1459,8 @@ def ensure_model(
     *,
     allow_download: bool = True,
     url_override: str | None = None,
+    hf_cli: str | None = None,
+    prefer_hf: bool = True,
 ) -> Path | None:
     """Idempotent: return a local GGUF path, downloading ONLY if absent/invalid.
 
@@ -1130,15 +1494,29 @@ def ensure_model(
         log.warning("Model absent and --no-download set: %s. SKIP.", dest)
         return None
 
-    url = url_override or _model_url(spec)
     log.info(
         "Fetching model '%s' (~%sGB, %s)",
         model_id,
         spec.get("approx_gb", "?"),
         spec.get("license", "?"),
     )
-    log.info("  from %s", url)
     log.info("  into %s", dest)
+
+    # Preferred path: the hf CLI (robust, resumable, auth-aware). Only when we
+    # have a registry repo and no explicit URL override (the CLI is repo-based).
+    if prefer_hf and hf_cli and spec.get("repo") and url_override is None:
+        ensured = _download_via_hf_cli(
+            hf_cli, str(spec["repo"]), str(spec["filename"]), model_dir, log
+        )
+        if ensured:
+            return ensured
+        log.warning(
+            "hf CLI download did not succeed — falling back to the built-in "
+            "stdlib downloader."
+        )
+
+    url = url_override or _model_url(spec)
+    log.info("  from %s", url)
 
     dest_part = dest.with_suffix(dest.suffix + ".part")
     try:
@@ -1248,6 +1626,21 @@ def run_harness(args: argparse.Namespace) -> int:
             model_id = getattr(args, "model_id", None) or DEFAULT_MODEL_ID
             md_arg = getattr(args, "model_dir", None)
             model_dir = Path(md_arg).expanduser() if md_arg else default_model_dir()
+
+            # Hugging Face CLI: detect → (opt-in) install → auth check/prompt.
+            # Falls back to the built-in stdlib downloader when unavailable.
+            prefer_hf = not bool(getattr(args, "no_hf_cli", False))
+            hf_cli = None
+            if prefer_hf and not bool(getattr(args, "no_download", False)):
+                hf_cli, _ = ensure_hf_ready(
+                    getattr(args, "hf_cli", None),
+                    log,
+                    allow_install=bool(getattr(args, "install_hf_cli", False)),
+                    assume_yes=bool(getattr(args, "assume_yes", False)),
+                    want_auth=True,
+                    token=getattr(args, "hf_token", None),
+                )
+
             log.info("Ensuring model '%s' in %s (idempotent)…", model_id, model_dir)
             ensured = ensure_model(
                 model_id,
@@ -1255,6 +1648,8 @@ def run_harness(args: argparse.Namespace) -> int:
                 log,
                 allow_download=not bool(getattr(args, "no_download", False)),
                 url_override=getattr(args, "model_url", None),
+                hf_cli=hf_cli,
+                prefer_hf=prefer_hf,
             )
             if ensured:
                 model_path = str(ensured)
@@ -1499,6 +1894,56 @@ def _build_parser() -> argparse.ArgumentParser:
         dest="no_download",
         help="With --ensure-model: only check presence; never download.",
     )
+    # --- Hugging Face CLI integration ---
+    p.add_argument(
+        "--hf-cli",
+        metavar="PATH",
+        dest="hf_cli",
+        help=(
+            "Path to the `hf` (or legacy `huggingface-cli`) binary. If omitted, "
+            "searches PATH then known install dirs (~/.local/bin, $PREFIX/bin)."
+        ),
+    )
+    p.add_argument(
+        "--install-hf-cli",
+        action="store_true",
+        dest="install_hf_cli",
+        help=(
+            "If the hf CLI is missing, install 'huggingface_hub[cli]' (via "
+            "uv/pipx/pip — never curl|bash). Prompts unless --yes."
+        ),
+    )
+    p.add_argument(
+        "--no-hf-cli",
+        action="store_true",
+        dest="no_hf_cli",
+        help="Disable the hf-CLI path; use the built-in stdlib downloader only.",
+    )
+    p.add_argument(
+        "--hf-token",
+        metavar="TOKEN",
+        dest="hf_token",
+        help=(
+            "Hugging Face token for non-interactive login (or set $HF_TOKEN). "
+            "Only needed for gated repos; the default registry is public."
+        ),
+    )
+    p.add_argument(
+        "--setup-hf",
+        action="store_true",
+        dest="setup_hf",
+        help=(
+            "Set up the hf CLI (detect → install if missing → check/prompt auth), "
+            "then exit. Implies --install-hf-cli."
+        ),
+    )
+    p.add_argument(
+        "-y",
+        "--yes",
+        action="store_true",
+        dest="assume_yes",
+        help="Assume yes to prompts (install/login) — for non-interactive runs.",
+    )
     p.add_argument(
         "--list-models",
         action="store_true",
@@ -1508,12 +1953,40 @@ def _build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def _console_logger(name: str = "mycelium.llm-harness.setup") -> logging.Logger:
+    """A minimal stderr logger for commands that run before run_harness()."""
+    log = logging.getLogger(name)
+    if not log.handlers:
+        log.setLevel(logging.DEBUG)
+        sh = logging.StreamHandler(sys.stderr)
+        sh.setLevel(logging.INFO)
+        sh.setFormatter(
+            logging.Formatter(
+                "%(asctime)s  %(levelname)-8s  %(message)s", "%Y-%m-%dT%H:%M:%SZ"
+            )
+        )
+        log.addHandler(sh)
+    return log
+
+
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
     if getattr(args, "list_models", False):
         print(list_models_text())
         sys.exit(0)
+    if getattr(args, "setup_hf", False):
+        # Standalone: detect → install (opt-in implied) → auth check/prompt, then exit.
+        log = _console_logger()
+        cli, _ = ensure_hf_ready(
+            getattr(args, "hf_cli", None),
+            log,
+            allow_install=True,  # --setup-hf is an explicit request to install
+            assume_yes=bool(getattr(args, "assume_yes", False)),
+            want_auth=True,
+            token=getattr(args, "hf_token", None),
+        )
+        sys.exit(0 if cli else 1)
     sys.exit(run_harness(args))
 
 
