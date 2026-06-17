@@ -875,6 +875,11 @@ HF_INSTALL_SCRIPT_URL = "https://hf.co/cli/install.sh"
 HF_PIP_PACKAGE = "huggingface_hub[cli]"
 
 
+def _is_termux() -> bool:
+    """True on Termux/Android, where $PREFIX points into com.termux."""
+    return "com.termux" in (os.environ.get("PREFIX", "") or "")
+
+
 def _confirm(prompt: str, *, assume_yes: bool, log: logging.Logger) -> bool:
     """Yes/no gate. --yes auto-confirms; a non-TTY without --yes declines (safe default)."""
     if assume_yes:
@@ -996,11 +1001,20 @@ def install_hf_cli(
         )
     )
 
+    # On Termux, pip/pipx/uv come from `pkg` (≡ `apt`); surface that so a phone
+    # with no installer yet has a clear first step.
+    termux_hint = (
+        "\n  On Termux (pkg ≡ apt): pkg install python  # provides pip\n"
+        "    pkg install pipx   # or:  pkg install uv   (then the lines above)"
+        if _is_termux()
+        else ""
+    )
     manual = (
         "Install it yourself, then re-run:\n"
         f"    uv tool install '{HF_PIP_PACKAGE}'\n"
         f"    pipx install '{HF_PIP_PACKAGE}'\n"
-        f"    pip install --user '{HF_PIP_PACKAGE}'\n"
+        f"    pip install --user '{HF_PIP_PACKAGE}'"
+        f"{termux_hint}\n"
         f"  (or the upstream script, after reviewing it: "
         f"curl -LsSf {HF_INSTALL_SCRIPT_URL} | bash)"
     )

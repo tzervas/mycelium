@@ -21,8 +21,9 @@ corpus, not released software. Versioning will begin when the kernel does.
   printed as a reviewed manual fallback only); an hf-CLI download is held to the **same GGUF-magic
   verification** as the stdlib path (G2 never-silent). Detection also searches `~/.local/bin` and
   `$PREFIX/bin` so a **Termux / `pip --user`-installed-but-unlinked** `hf` is still found and used,
-  with the exact `export PATH=…` fix surfaced. README updated (hf-CLI section + a Termux-PATH FLAG for
-  `hf`/`claude` "command not found").
+  with the exact `export PATH=…` fix surfaced. On **Termux** the install-guidance is tailored
+  (`pkg` ≡ `apt`: `pkg install python`/`pipx`/`uv` to get an installer first). README updated
+  (hf-CLI section + a Termux-PATH/`pkg`≡`apt` FLAG for `hf`/`claude` "command not found").
 
 ### Changed (2026-06-17: RFC-0016 ratified — Draft → Accepted, the standard-library keystone)
 - **RFC-0016 (Core Library & Standard Library) moves `Draft → Accepted`** by maintainer ratification

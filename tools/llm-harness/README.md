@@ -155,6 +155,11 @@ the Claude Code CLI (npm), the same fix applies to npm's global bin dir: check
 `npm config get prefix` and add its `bin` to `PATH` (or `npm config set prefix "$PREFIX"`
 so links land on Termux's existing `PATH`).
 
+**Note: `pkg` ≡ `apt` on Termux.** `pkg` is Termux's thin wrapper over `apt` — both work
+(`pkg install …` ≈ `apt install …`). The installers the harness uses for the hf CLI come from
+there: `pkg install python` provides `pip`; `pkg install pipx` (or `pkg install uv`) gives the
+isolated installers. Once one is present, `--setup-hf` / `--install-hf-cli` can take over.
+
 ### Step 2 — Clone and build llama.cpp
 
 ```sh
