@@ -84,11 +84,11 @@ the summary (counts as of 2026-06-16):
 |---|---|---|
 | 0 | foundational specs + probes — M-001/002, M-010/011/012, M-020, … | 9 |
 | 1 | minimal viable core — kernel, interpreter, binary/ternary, first swap, LSP | 17 |
-| 2 | full unification + verified swaps — Dense/VSA, numerics checker, selection/packing | 7 |
+| 2 | full unification + verified swaps — 7 epics (E2-1…E2-7) **+ the 18 `M-2xx` decompositions** (numerics M-201…204, full-swap/checker M-210…212, selection M-220…222, Dense M-230/231, VSA M-240…242, packing M-250/251, recon M-260) | 25 |
 | 3 | tooling/projections/acceleration — M-1xx/M-2xx/M-3xx build tasks, M-350 | 20 |
-| 4 | ABI/hot-inject/AOT-completion — M-341/342/343/344/345/346/347/348/349 + M-352; RFC-0008 integration M-353/354 | 12 |
-| 5 | (anticipated) self-hosting + stdlib — decomposed from M-346 at the Phase-4 gate | — |
-| 6 | (anticipated) native acceleration + deployment — M-348 native path, Spore | — |
+| 4 | ABI/hot-inject/AOT-completion — M-341/342/343/344/345/346/347/348/349 + **M-351** (RFC-0012 R12-Q1/Q2) + M-352; RFC-0008 integration M-353/354 | 13 |
+| 5 | (anticipated) self-hosting + stdlib — **decomposed 2026-06-17** from M-346: M-501 Core Library RFC (keystone), M-502 readiness gate, M-510…514 stdlib modules, M-520 self-host RFC-0013/0014 | 8 |
+| 6 | (anticipated) native acceleration + deployment — **decomposed 2026-06-17**: M-601 native codegen, M-602 native differential+E1, M-610 BitNet/native-ternary, M-620 deployable Spore, M-630 hardening+VR-4 gate | 5 |
 | 7 | runtime & concurrency (RFC-0008, **Accepted**) — M-355 ratify ✓, M-356 concurrency/supervision ✓, M-357 RT2 differential ✓, M-358 lexicon migration ✓, M-359 structured nodule header/manifest ✓, M-362 RFC-0015 auto-baseline ✓; §4.5 vocabulary decomposes at the gate | 6 |
 | 8 | (anticipated) toolchain & release engineering — the full-fat suite folded as five above-the-kernel crates: M-364 `mycfmt` ✓, M-365 `myc-check` ✓, M-366 `myc-lint` ✓, M-367 `myc-sec` ✓, M-368 `spore` ✓; M-361 epic (CI-parity gate wiring pending) + M-363 authoring pipeline (design Accepted, build unscheduled) | 7 |
 
@@ -109,6 +109,22 @@ title or the script will create a duplicate.
 
 ## Meta — changelog
 
+- **2026-06-17 — PM phase-allocation reconcile: M-2xx + M-351 back-fill; Phases 5 & 6 populated.**
+  `gh-issues-sync.py --validate` flagged three drifts: **19 `idmap.tsv` task-ids absent from
+  `issues.yaml`** (the 18 Phase-2 `M-2xx` decompositions #48–#65 + `M-351` #114), and the
+  `phase:5`/`phase:6` labels + the Phase-5/6 milestones **defined but unused**. All resolved
+  **append-only** in `issues.yaml`: the M-2xx set + M-351 recovered (grounded in `docs/planning/phase-2.md`
+  §2/§6 and CHANGELOG/RFC-0012 — reconstructed, never invented; all `status:done`), and **Phases 5 & 6
+  decomposed** into grounded design-first task sets (M-501…M-520 from the M-346 stdlib epic +
+  `milestones.json` Phase-5 charter; M-601…M-630 from the Phase-6 charter + RFC-0004 §2/ADR-009/ADR-013/
+  M-348). Summary counts above corrected (Phase 2 = 25, Phase 4 = 13, Phase 5 = 8, Phase 6 = 5).
+  `--validate` (111 issues) + `--self-test` + `scripts/checks/all.sh` all green; only the reserved
+  `good-first-issue`/`type:bug`/`type:chore` label notes remain (intentionally unused — an honest residual,
+  no issue fabricated to clear them). **FLAG:** the PM brief called M-351 a "Phase-3 toolchain task"; the
+  corpus + `idmap` place it in **Phase 4** — filed where grounded, discrepancy noted in `issues.yaml`.
+  Phase-5/6 GitHub issue numbers + `idmap.tsv` rows are minted on the next `gh-sync-all.sh` run at each
+  gate (the M-364…368 staging precedent; MCP cannot create milestones/colored labels). Manifests-only
+  (KC-3); no crate/kernel/engine change. Append-only.
 - **2026-06-17 — `gh-issues-sync.py` grows up: idempotent reconcile + cross-platform (PowerShell).**
   The sync engine no longer just *creates* absent issues — it now **intelligently updates** existing
   ones to match `issues.yaml` (labels, milestone, title; bodies only with `--update-bodies`), which is
