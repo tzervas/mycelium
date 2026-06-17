@@ -1,0 +1,19 @@
+// nodule: tour.ambient
+// @version: 0.1.0
+// @license: Apache-2.0
+// @authors: Tyler Zervas
+// @since: 2026-06-17
+// @updated: 2026-06-17
+// @summary: Ambient representation (RFC-0012; M-344) — a nodule-scope `default paradigm`, a paradigm-less repr `{N}` in signatures, a bare decimal that adopts the ambient, and a `with paradigm` override block whose inner swap is still explicit and never-silent (G2).
+nodule tour.ambient
+
+default paradigm Binary
+
+fn mask(x: {8}, m: {8}) -> {8} =
+  xor(x, m)
+
+fn ones() -> {8} =
+  255
+
+fn widen(x: {8}) -> Ternary{6} =
+  with paradigm Ternary { swap(x, to: {6}, policy: roundtrip) }

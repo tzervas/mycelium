@@ -55,6 +55,9 @@ myc-sec:
     @bash scripts/checks/myc-sec.sh
 myc-lint:
     @bash scripts/checks/myc-lint.sh
+# Non-gating packaging smoke (M-368): `spore build` over each root; always exits 0.
+myc-spore:
+    @bash scripts/checks/myc-spore.sh
 proofs:
     @bash scripts/checks/proofs.sh
 api:

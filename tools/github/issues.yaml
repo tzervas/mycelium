@@ -719,3 +719,15 @@ issues:
     depends_on: [M-359, M-361]
     body: |
       Sub-issue of M-361. The packaging/metadata + publishing layer: consume the M-359 `mycelium-proj.toml` manifest (the `[spore]`/`[surface]`/`[dependencies]` tables M-359 accepts-but-does-not-yet-interpret) to build a `spore` — the content-addressed, deployable artifact of a `phylum`/program (ADR-013; the germinates-into-a-colony unit, DN-06/Glossary). Content-addressed identity is canonical (ADR-003); metadata is not identity. Honest: a missing/ambiguous publish input is an explicit error, never a guessed default (G2). No kernel change (KC-3). Acceptance (design-first): the spore build + dependency-resolution contract before folding.
+
+  # Phase 9 (M-369) — the toolchain gate's end-to-end conformance fixture (Wave D). Folds under the
+  # M-361 gate: grow examples/ from the minimal hello-phylum into a richer, still-green-and-real
+  # corpus that dogfoods all four gates over representative L1 programs. Landed this session; no
+  # GitHub issue number minted yet (resolved at the next gh-sync-all.sh board reconcile).
+  - id: M-369
+    title: "M-369 — examples/ end-to-end conformance fixture (Phase 9 Wave D): richer toolchain dogfood"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:design, area:toolchain, priority:P3, status:done]
+    depends_on: [M-361, M-364, M-365, M-366, M-367, M-368]
+    body: |
+      Sub-issue of M-361 (Phase 9 Wave D). Grow examples/ from the Wave-A minimal `hello-phylum` into a richer end-to-end fixture that exercises MORE of the L1 surface through ALL FOUR gates (mycfmt --check, myc-check --project, myc-sec wild-audit, myc-lint), so the gate proves the tools on representative programs rather than a toy. Lands `examples/repr-tour/` — a multi-nodule phylum touring a guarantee-annotated swap (the LR-6 honesty index across the Exact ⊐ Proven ⊐ Empirical ⊐ Declared lattice), a trait, a matured fn (matured ⟹ total), ambient representation (RFC-0012 default paradigm / `{N}` / `with paradigm`), and a `for` fold (RFC-0007 §4.8) — every nodule canonicalized with `mycfmt --write` and PASSING all four gates. Adds a NON-GATING `myc-spore` packaging smoke (`spore build`, M-368) that always exits 0 — it dogfoods the 5th tool without gating, since packaging is a build artifact not a correctness property. Honest findings, deliberately kept OUT of the gated examples (each an open deferral, not a forced-green gate; G2/VR-5): the L1 `spore(…)` expression is deferred in the type-checker (E2-5/M-260), and mycfmt v0 refuses interior comments (the §10.2 comment-preserving deferral). New fixtures live under examples/ (real project roots) and MUST stay green — they are NOT must-fail inputs (locked decision #3: tests/fixtures/ + reject/ stay ungated). No kernel change (KC-3), no new dependency. Acceptance: `bash scripts/checks/all.sh` prints ALL CHECKS PASSED with both phyla green across the four gates.
