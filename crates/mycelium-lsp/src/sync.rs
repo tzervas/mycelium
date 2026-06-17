@@ -259,11 +259,11 @@ mod tests {
         // Mutant-witness for RFC-0013 I1: a panic inside analysis must be *surfaced* as a visible
         // diagnostic, never let propagate (which would crash the server) and never swallowed. We
         // drive `catching` directly with a deliberately panicking closure — a real checker bug that
-        // tripped one of its internal `expect`s would land here identically.
-        let prior = std::panic::take_hook();
-        std::panic::set_hook(Box::new(|_| {})); // keep the test's stderr clean for the expected panic
+        // tripped one of its internal `expect`s would land here identically. (We do *not* touch the
+        // global panic hook to suppress the expected backtrace: tests run in parallel and mutating
+        // the process-wide hook would race other tests' panic reporting — one stderr line is the
+        // honest cost.)
         let diags = catching(|| panic!("boom in the elaborator"));
-        std::panic::set_hook(prior);
 
         assert_eq!(
             diags.len(),

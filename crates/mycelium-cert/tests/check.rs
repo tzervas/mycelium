@@ -517,7 +517,8 @@ fn check_core_catches_a_divergent_field_deep_in_the_tree() {
 
 #[test]
 fn check_core_catches_a_repr_field_divergence() {
-    // A datum carrying a representation field (the `Mk(Binary{8})` shape): a wrong field byte is
+    // A datum carrying a *representation* field — here the unary constructor (index 1 of the shared
+    // decl) wrapping a `Binary{8}` value, the `Box = Mk(Binary{8})` shape: a wrong field byte is
     // caught at the representation leaf through the existing exact observable.
     let mk = |b: Value| CoreValue::Data(Datum::new(CtorRef::new(nat_decl(), 1), vec![b.into()]));
     assert_eq!(
