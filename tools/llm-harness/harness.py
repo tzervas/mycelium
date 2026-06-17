@@ -1048,25 +1048,50 @@ def _resolve_llama_cli(
 _CLAUDE_BIN_NAMES = ("claude",)
 
 
-def _npm_global_bin() -> Path | None:
-    """Best-effort npm global bin dir via `npm config get prefix`."""
+def _npm_query(arg: str) -> str | None:
+    """Best-effort `npm <arg>` one-liner (e.g. `config get prefix`, `root -g`)."""
     npm = shutil.which("npm")
     if not npm:
         return None
     try:
         res = subprocess.run(
-            [npm, "config", "get", "prefix"],
-            capture_output=True,
-            text=True,
-            timeout=20,
+            [npm, *arg.split()], capture_output=True, text=True, timeout=20
         )
     except Exception:  # noqa: BLE001 — best-effort
         return None
-    prefix = res.stdout.strip()
-    if res.returncode != 0 or not prefix:
+    val = res.stdout.strip()
+    return val if (res.returncode == 0 and val) else None
+
+
+def _npm_global_bin() -> Path | None:
+    """Best-effort npm global bin dir via `npm config get prefix`."""
+    prefix = _npm_query("config get prefix")
+    if not prefix:
         return None
     cand = Path(prefix) / "bin"  # unix layout; Termux $PREFIX/bin (on PATH)
     return cand if cand.is_dir() else Path(prefix)
+
+
+def _claude_package_cli() -> Path | None:
+    """The Claude Code package entry (cli.js) if installed but possibly UNLINKED.
+
+    The exact Termux failure: `npm i -g @anthropic-ai/claude-code` unpacks into
+    <root>/@anthropic-ai/claude-code but the `claude` bin symlink never lands on
+    PATH. We locate cli.js so --doctor can say "installed, not linked" + the fix.
+    """
+    roots: list[Path] = []
+    r = _npm_query("root -g")
+    if r:
+        roots.append(Path(r))
+    prefix = os.environ.get("PREFIX")
+    if prefix:
+        roots.append(Path(prefix) / "lib" / "node_modules")
+    roots.append(Path.home() / ".npm-global" / "lib" / "node_modules")
+    for root in _dedup_existing(roots):
+        cli = root / "@anthropic-ai" / "claude-code" / "cli.js"
+        if cli.is_file():
+            return cli
+    return None
 
 
 def _claude_search_dirs() -> list[Path]:
@@ -1681,6 +1706,31 @@ def is_valid_gguf(path: Path) -> bool:
         return False
 
 
+def expected_model_path(model_id: str, model_dir: Path) -> Path:
+    """Where a given model id would live on disk (registry filename, else <id>.gguf)."""
+    spec = MODELS.get(model_id)
+    filename = str(spec["filename"]) if spec else f"{model_id}.gguf"
+    return model_dir / filename
+
+
+def find_cached_model(model_dir: Path) -> str | None:
+    """Return a valid GGUF already in model_dir — the default first, else any.
+
+    Lets real mode reuse an already-downloaded model with no --ensure-model and
+    no hf round-trip (the walk-away property, post-download).
+    """
+    default = expected_model_path(DEFAULT_MODEL_ID, model_dir)
+    if is_valid_gguf(default):
+        return str(default)
+    try:
+        for p in sorted(model_dir.glob("*.gguf")):
+            if is_valid_gguf(p):
+                return str(p)
+    except OSError:
+        pass
+    return None
+
+
 def list_models_text() -> str:
     lines = [
         "Registered GGUF models (--model-id ID). Default: " + DEFAULT_MODEL_ID,
@@ -1955,12 +2005,24 @@ def run_harness(args: argparse.Namespace) -> int:
             model_id = getattr(args, "model_id", None) or DEFAULT_MODEL_ID
             md_arg = getattr(args, "model_dir", None)
             model_dir = Path(md_arg).expanduser() if md_arg else default_model_dir()
+            url_override = getattr(args, "model_url", None)
 
-            # Hugging Face CLI: detect → (opt-in) install → auth check/prompt.
-            # Falls back to the built-in stdlib downloader when unavailable.
+            # If the model is already on disk, there is nothing to download — so
+            # do NOT spin up / install the hf CLI just to no-op. (The user's phone
+            # has the model already; this avoids nagging for a tool it won't use.)
+            already_present = url_override is None and is_valid_gguf(
+                expected_model_path(model_id, model_dir)
+            )
+
             prefer_hf = not bool(getattr(args, "no_hf_cli", False))
             hf_cmd = None
-            if prefer_hf and not bool(getattr(args, "no_download", False)):
+            if (
+                prefer_hf
+                and not bool(getattr(args, "no_download", False))
+                and not already_present
+            ):
+                # Hugging Face CLI: detect → (opt-in) install → auth check/prompt.
+                # Falls back to the built-in stdlib downloader when unavailable.
                 hf_cmd, _ = ensure_hf_ready(
                     getattr(args, "hf_cli", None),
                     log,
@@ -1970,6 +2032,10 @@ def run_harness(args: argparse.Namespace) -> int:
                     token=getattr(args, "hf_token", None),
                     fix_path=fix_path,
                 )
+            elif already_present:
+                log.info(
+                    "Model already present — skipping hf-CLI setup (no download needed)."
+                )
 
             log.info("Ensuring model '%s' in %s (idempotent)…", model_id, model_dir)
             ensured = ensure_model(
@@ -1977,7 +2043,7 @@ def run_harness(args: argparse.Namespace) -> int:
                 model_dir,
                 log,
                 allow_download=not bool(getattr(args, "no_download", False)),
-                url_override=getattr(args, "model_url", None),
+                url_override=url_override,
                 hf_cmd=hf_cmd,
                 prefer_hf=prefer_hf,
             )
@@ -1988,6 +2054,15 @@ def run_harness(args: argparse.Namespace) -> int:
                     "Model could not be ensured — model-dependent validations "
                     "will SKIP (skip-gracefully, never a false pass)."
                 )
+        elif model_path is None and not want_ensure:
+            # No --model / --ensure-model, but a model may already be cached from a
+            # previous run — reuse it so real mode "just works" once llama.cpp exists.
+            md_arg = getattr(args, "model_dir", None)
+            model_dir = Path(md_arg).expanduser() if md_arg else default_model_dir()
+            cached = find_cached_model(model_dir)
+            if cached:
+                model_path = cached
+                log.info("Using cached model (no --ensure-model needed): %s", cached)
 
         if not llama_cli and model_path and not server_url:
             log.warning(
@@ -2426,12 +2501,30 @@ def run_doctor(args: argparse.Namespace) -> int:
         except Exception as exc:  # noqa: BLE001
             out(f"      version: (could not run --version: {exc})")
     else:
-        out("      NOT FOUND. Searched PATH +:")
-        for d in _claude_search_dirs():
-            out(f"          {d}")
-        out("      Fix: npm install -g @anthropic-ai/claude-code, and put npm's global")
-        out('           bin on PATH. On Termux: npm config set prefix "$PREFIX" (then')
-        out("           reinstall) so links land on the existing PATH.")
+        pkg = _claude_package_cli()
+        if pkg:
+            node = shutil.which("node") or "node"
+            out(f"      INSTALLED BUT NOT LINKED: package at {pkg}")
+            out(
+                "      The npm package is there; the `claude` symlink never landed on PATH."
+            )
+            out("      Fix (one of):")
+            out(f'          ln -s "{pkg}" "$PREFIX/bin/claude" && chmod +x "{pkg}"')
+            out(
+                '          npm config set prefix "$PREFIX" && npm install -g @anthropic-ai/claude-code'
+            )
+            out(f"          # or just run it directly:  {node} {pkg}")
+        else:
+            out("      NOT FOUND. Searched PATH +:")
+            for d in _claude_search_dirs():
+                out(f"          {d}")
+            out(
+                "      Fix: npm install -g @anthropic-ai/claude-code, and put npm's global"
+            )
+            out(
+                '           bin on PATH. On Termux: npm config set prefix "$PREFIX" first,'
+            )
+            out("           so links land on the existing PATH.")
     out("")
 
     out("-" * 72)
@@ -2455,14 +2548,12 @@ def run_doctor(args: argparse.Namespace) -> int:
     return 0
 
 
-def main() -> None:
-    parser = _build_parser()
-    args = parser.parse_args()
+def _dispatch(args: argparse.Namespace) -> int:
     if getattr(args, "list_models", False):
         print(list_models_text())
-        sys.exit(0)
+        return 0
     if getattr(args, "doctor", False):
-        sys.exit(run_doctor(args))
+        return run_doctor(args)
     if getattr(args, "setup_hf", False):
         # Standalone: detect → install (opt-in implied) → auth check/prompt, then exit.
         log = _console_logger()
@@ -2475,8 +2566,24 @@ def main() -> None:
             token=getattr(args, "hf_token", None),
             fix_path=bool(getattr(args, "fix_path", False)),
         )
-        sys.exit(0 if cli else 1)
-    sys.exit(run_harness(args))
+        return 0 if cli else 1
+    return run_harness(args)
+
+
+def main() -> None:
+    args = _build_parser().parse_args()
+    try:
+        code = _dispatch(args)
+    except BrokenPipeError:
+        code = 0  # downstream pager/pipe closed — not our error
+    # Flush explicitly: on some platforms (e.g. Termux/Android) an unflushed
+    # buffer at interpreter teardown can surface as a spurious "Aborted".
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.flush()
+        except (BrokenPipeError, ValueError, OSError):
+            pass
+    sys.exit(code)
 
 
 if __name__ == "__main__":

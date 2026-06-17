@@ -26,6 +26,12 @@ corpus, not released software. Versioning will begin when the kernel does.
   `--doctor`, `--fix-path`, `--claude-cli PATH`. hf-CLI handling refactored to an argv *prefix*
   (supports the `-m` fallback) and the Termux `pip` install no longer forces `--user` (which is
   the off-`PATH` trap there). README: new Troubleshooting section.
+- **Cached-model reuse + present-model fast path.** Real mode now reuses a model already in the
+  cache **without** `--ensure-model` (the post-download walk-away property), and `--ensure-model`
+  **skips hf-CLI setup entirely when the model is already present** (no nagging for a tool it
+  won't use). `--doctor` reports an **installed-but-unlinked** Claude Code CLI (npm package found
+  but no `claude` on `PATH`) with the exact symlink/relink fix. Exit is now deterministic with an
+  explicit stdout/stderr flush (guards against a spurious "Aborted" at Termux interpreter teardown).
 
 ### Added (2026-06-17: LLM-validation harness — Hugging Face CLI integration)
 - **`tools/llm-harness/harness.py` gains Hugging Face CLI support** for model acquisition. On

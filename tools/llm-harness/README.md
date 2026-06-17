@@ -135,6 +135,11 @@ python3 tools/llm-harness/harness.py --doctor --fix-path # also persist any off-
 - **Self-healing:** a binary found off-`PATH` is used anyway (its dir is prepended to *this run's*
   `PATH` so child processes see it), with the exact `export PATH=…` printed. `--fix-path` appends
   that line to your shell rc (idempotent; prompts unless `--yes`) so it sticks.
+- **Cached model is reused automatically:** once a model is in the cache, real mode uses it with no
+  `--ensure-model` and no hf round-trip — so after the model is downloaded you only need
+  `llama.cpp`. If a model is already present, `--ensure-model` won't even set up the hf CLI.
+- **Unlinked Claude Code CLI:** if the npm package is installed but `claude` isn't on `PATH`,
+  `--doctor` reports it as *installed but not linked* and prints the exact `ln -s …`/relink fix.
 
 **Honesty (G2/VR-5).** Registry URLs/filenames are **best-effort** and may change upstream.
 A download is verified by the **GGUF magic header** (`GGUF`) + a clean, complete transfer
