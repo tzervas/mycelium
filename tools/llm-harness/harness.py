@@ -139,6 +139,10 @@ class RunContext:
     # past the Android low-memory killer (SIGKILL/9) during load. Our prompts are
     # tiny, so a small context is correct, not just safe. Tunable via --ctx-size.
     ctx_size: int = 2048
+    # GPU offload: number of model layers to push to the GPU (llama.cpp -ngl). 0 = CPU
+    # only (the default on a phone, where no GPU is detected). On desktop the auto-sizer
+    # sets this from detected VRAM unless --cpu-only / --n-gpu-layers says otherwise.
+    n_gpu_layers: int = 0
     extra_llama_args: list[str] = field(default_factory=list)
 
 
@@ -219,14 +223,19 @@ def auto_ctx_size(
     model_path: str | None,
     mem: dict[str, Any],
     log: logging.Logger,
+    *,
+    swap_fraction: float = 0.0,
 ) -> int:
-    """Choose a context size = min(workload need, what available RAM safely holds).
+    """Choose a context size = min(workload need, what available memory safely holds).
 
-    Logged in full (EXPLAIN, never silent). Returns `want` when memory is ample, a
-    smaller fitting value when it is tight, and a conservative floor when memory is
-    unknown. Always overridable with --ctx-size.
+    By default only physical RAM is budgeted. With ``swap_fraction > 0`` (the --use-swap
+    flag), that fraction of free swap is added to the budget — letting the context grow
+    when RAM is tight, at the cost of speed (KV in swap thrashes per token) and some OOM
+    risk (the killer still targets RSS). Logged in full (EXPLAIN, never silent);
+    conservative when memory is unknown; always overridable with --ctx-size.
     """
     avail = mem.get("mem_available_mb")
+    swap_free = mem.get("swap_free_mb")
     model_mb = 0
     try:
         if model_path and os.path.isfile(model_path):
@@ -247,15 +256,20 @@ def auto_ctx_size(
     # Reserve headroom for the OS + the model's working set. With mmap the weights are
     # page-cache backed (reclaimable), but reserve their size anyway as a worst case.
     reserve = max(768, model_mb)
-    usable = avail - reserve
+    swap_budget = (
+        int(swap_free * swap_fraction)
+        if (swap_fraction > 0 and isinstance(swap_free, int) and swap_free > 0)
+        else 0
+    )
+    usable = (avail - reserve) + swap_budget
     cap = int((usable * 0.40) / _KV_MB_PER_TOKEN) if usable > 0 else 256
     cap = max(256, (cap // 256) * 256)  # floor + round to a 256 multiple
     chosen = max(256, min(want, cap))
     log.info(
-        "Auto-ctx: avail=%dMB swap_free=%sMB model=%dMB → reserve=%dMB usable=%dMB; "
+        "Auto-ctx: avail=%dMB%s model=%dMB → reserve=%dMB usable=%dMB; "
         "memory allows ~%d, workload wants %d ⇒ ctx-size=%d (override with --ctx-size).",
         avail,
-        mem.get("swap_free_mb"),
+        f" +{swap_budget}MB swap (of {swap_free} free)" if swap_budget else "",
         model_mb,
         reserve,
         max(0, usable),
@@ -263,15 +277,172 @@ def auto_ctx_size(
         want,
         chosen,
     )
+    if swap_budget:
+        log.info(
+            "Auto-ctx: counting %dMB of swap toward the budget (--use-swap) — expect "
+            "slower generation if the KV cache pages out.",
+            swap_budget,
+        )
     if usable <= 0:
         log.warning(
             "Auto-ctx: low memory headroom — the model (%dMB) is large vs available "
-            "RAM (%dMB). If it still OOMs, use a smaller tier: "
-            "--ensure-model --model-id qwen2.5-0.5b-instruct.",
+            "RAM (%dMB). Try --use-swap, a smaller tier "
+            "(--ensure-model --model-id qwen2.5-0.5b-instruct), or move the model to a "
+            "roomier volume with --model-dir.",
             model_mb,
             avail,
         )
     return chosen
+
+
+# ---------------------------------------------------------------------------
+# GPU + external-storage enumeration (desktop GPU offload; SD-card overflow)
+# ---------------------------------------------------------------------------
+
+
+def detect_gpu() -> list[dict[str, Any]]:
+    """Best-effort GPU enumeration. Returns [{name, backend, vram_total_mb, vram_free_mb}].
+
+    Empty on a machine with no discrete-GPU tooling (e.g. a phone) — never raises. Covers
+    NVIDIA (nvidia-smi), AMD (rocm-smi, presence only), and Apple Metal (macOS).
+    """
+    gpus: list[dict[str, Any]] = []
+    smi = shutil.which("nvidia-smi")
+    if smi:
+        try:
+            res = subprocess.run(
+                [
+                    smi,
+                    "--query-gpu=name,memory.total,memory.free",
+                    "--format=csv,noheader,nounits",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if res.returncode == 0:
+                for line in res.stdout.strip().splitlines():
+                    parts = [p.strip() for p in line.split(",")]
+                    if len(parts) >= 3 and parts[1].isdigit():
+                        gpus.append(
+                            {
+                                "name": parts[0],
+                                "backend": "cuda",
+                                "vram_total_mb": int(parts[1]),
+                                "vram_free_mb": int(parts[2])
+                                if parts[2].isdigit()
+                                else None,
+                            }
+                        )
+        except (OSError, subprocess.SubprocessError):
+            pass
+    if not gpus and shutil.which("rocm-smi"):
+        try:
+            res = subprocess.run(
+                ["rocm-smi", "--showproductname"],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                gpus.append(
+                    {
+                        "name": "AMD ROCm GPU",
+                        "backend": "rocm",
+                        "vram_total_mb": None,
+                        "vram_free_mb": None,
+                    }
+                )
+        except (OSError, subprocess.SubprocessError):
+            pass
+    if not gpus and sys.platform == "darwin":
+        gpus.append(
+            {
+                "name": "Apple GPU (Metal)",
+                "backend": "metal",
+                "vram_total_mb": None,
+                "vram_free_mb": None,
+            }
+        )
+    return gpus
+
+
+def auto_gpu_layers(
+    gpus: list[dict[str, Any]], model_path: str | None, log: logging.Logger
+) -> int:
+    """Choose -ngl (layers to offload). Full offload when VRAM holds the model; else 0
+    (CPU) with a note. Metal/ROCm with unknown VRAM ⇒ full offload (the runtime manages).
+
+    A phone build (no GPU tooling) ⇒ no GPUs ⇒ 0, so this is a no-op there.
+    """
+    if not gpus:
+        return 0
+    g = gpus[0]
+    model_mb = 0
+    try:
+        if model_path and os.path.isfile(model_path):
+            model_mb = os.path.getsize(model_path) // (1024 * 1024)
+    except OSError:
+        pass
+    free = g.get("vram_free_mb") or g.get("vram_total_mb")
+    # Offload all when VRAM is unknown, the model size is unknown, or it comfortably
+    # fits; only refuse when we KNOW the VRAM and KNOW the model won't fit.
+    if not isinstance(free, int) or model_mb == 0 or free >= int(model_mb * 1.15):
+        log.info(
+            "Auto-GPU: %s (%s) — offloading all layers (-ngl 999). "
+            "Use --cpu-only to disable, or --n-gpu-layers N to set it.",
+            g["name"],
+            g["backend"],
+        )
+        return 999
+    log.warning(
+        "Auto-GPU: %s — %dMB free VRAM < model %dMB (+headroom); staying on CPU "
+        "(-ngl 0). Set --n-gpu-layers N for partial offload.",
+        g["name"],
+        free,
+        model_mb,
+    )
+    return 0
+
+
+def detect_external_storage() -> list[dict[str, Any]]:
+    """Best-effort large external/SD volumes with free space (MB). Never raises.
+
+    Termux exposes shared/SD storage under ~/storage and /storage/<UUID>; we report
+    free space so a roomy SD card can host the model cache (--model-dir) or a swapfile
+    (root). Informational — we never auto-mount or auto-swapon.
+    """
+    home = Path.home()
+    paths = [
+        Path("/storage/emulated/0"),
+        home / "storage" / "external-1",
+        home / "storage" / "shared",
+    ]
+    try:
+        paths.extend(p for p in Path("/storage").glob("*-*"))
+    except OSError:
+        pass
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+    for p in paths:
+        try:
+            if not p.exists():
+                continue
+            rp = os.path.realpath(p)
+            if rp in seen:
+                continue
+            seen.add(rp)
+            du = shutil.disk_usage(str(p))
+            out.append(
+                {
+                    "path": str(p),
+                    "free_mb": du.free // (1024 * 1024),
+                    "total_mb": du.total // (1024 * 1024),
+                }
+            )
+        except (OSError, ValueError):
+            continue
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -306,6 +477,8 @@ def _call_llama_cli(
         "--log-disable",  # suppress llama.cpp's internal log spam to stderr
         "-e",  # escape newlines in prompt
     ]
+    if ctx.n_gpu_layers > 0:  # offload to GPU only when one was detected/requested
+        cmd += ["--n-gpu-layers", str(ctx.n_gpu_layers)]
     # KNOWN FOLLOW-UP (verify on-device before enabling): recent llama.cpp builds
     # default `llama`/`llama-cli` to interactive *conversation* mode for instruct
     # models and may echo the prompt back into stdout. Both would distort the
@@ -2621,15 +2794,34 @@ def run_harness(args: argparse.Namespace) -> int:
             "(no model/binary available — use --mock for fixture mode)."
         )
 
-    # Context size: explicit --ctx-size wins; otherwise auto-size from available RAM
-    # (only meaningful for the llama-cli path — server/mock don't use it).
+    # Resource sizing (only meaningful for the llama-cli path — server/mock skip it).
+    # Context: explicit --ctx-size wins; else auto-size from RAM (+ optional swap).
+    # GPU: --cpu-only forces 0; else explicit --n-gpu-layers wins; else auto from VRAM.
+    cli_path = bool(llama_cli) and not server_url
     ctx_size_arg = getattr(args, "ctx_size", None)
+    use_swap = bool(getattr(args, "use_swap", False))
     if ctx_size_arg is not None:
         ctx_size = int(ctx_size_arg)
-    elif llama_cli and not server_url:
-        ctx_size = auto_ctx_size(_HARNESS_DESIRED_CTX, model_path, detect_memory(), log)
+    elif cli_path:
+        ctx_size = auto_ctx_size(
+            _HARNESS_DESIRED_CTX,
+            model_path,
+            detect_memory(),
+            log,
+            swap_fraction=0.5 if use_swap else 0.0,
+        )
     else:
         ctx_size = _HARNESS_DESIRED_CTX
+
+    ngl_arg = getattr(args, "n_gpu_layers", None)
+    if bool(getattr(args, "cpu_only", False)):
+        n_gpu_layers = 0
+    elif ngl_arg is not None:
+        n_gpu_layers = int(ngl_arg)
+    elif cli_path:
+        n_gpu_layers = auto_gpu_layers(detect_gpu(), model_path, log)
+    else:
+        n_gpu_layers = 0
 
     ctx = RunContext(
         mock=mock_mode,
@@ -2640,6 +2832,7 @@ def run_harness(args: argparse.Namespace) -> int:
         run_id=run_id,
         log=log,
         ctx_size=ctx_size,
+        n_gpu_layers=n_gpu_layers,
         extra_llama_args=list(getattr(args, "llama_arg", None) or []),
     )
 
@@ -2810,6 +3003,34 @@ def _build_parser() -> argparse.ArgumentParser:
             "capped by what the tiny prompts need. This stops llama.cpp sizing the KV "
             "cache for the model's full 32k window, which OOM-kills (SIGKILL/9) a phone. "
             "Pass an explicit N to override the auto value."
+        ),
+    )
+    p.add_argument(
+        "--use-swap",
+        action="store_true",
+        dest="use_swap",
+        help=(
+            "Let auto context sizing count ~half of free swap toward the memory budget "
+            "(bigger context when RAM is tight). Trades speed for capacity — the KV "
+            "cache thrashes if it pages out. Off by default."
+        ),
+    )
+    p.add_argument(
+        "--cpu-only",
+        action="store_true",
+        dest="cpu_only",
+        help="Force CPU only — never offload to a GPU even if one is detected.",
+    )
+    p.add_argument(
+        "--n-gpu-layers",
+        type=int,
+        default=None,
+        dest="n_gpu_layers",
+        metavar="N",
+        help=(
+            "Model layers to offload to the GPU (llama.cpp -ngl). DEFAULT: auto — full "
+            "offload when detected VRAM holds the model, else CPU. 0 = CPU; 999 = all. "
+            "Ignored on a CPU-only llama.cpp build (e.g. a phone)."
         ),
     )
     p.add_argument(
@@ -3247,16 +3468,73 @@ def run_doctor(args: argparse.Namespace) -> int:
         f"      RAM      : {_mb(mem.get('mem_available_mb'))} available "
         f"of {_mb(mem.get('mem_total_mb'))} total"
     )
+    swap_free = mem.get("swap_free_mb")
     out(
-        f"      swap     : {_mb(mem.get('swap_free_mb'))} free "
-        f"of {_mb(mem.get('swap_total_mb'))} (detected, NOT counted toward the budget)"
+        f"      swap     : {_mb(swap_free)} free of {_mb(mem.get('swap_total_mb'))} "
+        "(off by default; add --use-swap to count ~half toward the budget)"
     )
     # Show the context a real run WOULD auto-pick for the default model (the auto-sizer
     # logs its own reasoning; here we just surface the number alongside the inputs).
-    chosen = auto_ctx_size(
-        _HARNESS_DESIRED_CTX, str(dest) if model_ready else None, mem, log
-    )
+    model_for_size = str(dest) if model_ready else None
+    chosen = auto_ctx_size(_HARNESS_DESIRED_CTX, model_for_size, mem, log)
     out(f"      auto ctx : {chosen}  (override with --ctx-size N)")
+    if isinstance(swap_free, int) and swap_free > 0:
+        with_swap = auto_ctx_size(
+            _HARNESS_DESIRED_CTX, model_for_size, mem, log, swap_fraction=0.5
+        )
+        if with_swap != chosen:
+            out(
+                f"      with --use-swap : {with_swap}  (slower if the KV cache pages out)"
+            )
+    out("")
+
+    out("-" * 72)
+    out("  GPU (desktop offload)")
+    out("-" * 72)
+    gpus = detect_gpu()
+    if gpus:
+        for g in gpus:
+            vram = (
+                f"{g['vram_free_mb']} MB free of {g['vram_total_mb']} MB"
+                if isinstance(g.get("vram_total_mb"), int)
+                else "VRAM unknown"
+            )
+            out(f"      {g['backend']:5s}: {g['name']}  ({vram})")
+        ngl = auto_gpu_layers(gpus, model_for_size, log)
+        out(
+            f"      auto -ngl: {ngl}  "
+            + (
+                "(full offload)"
+                if ngl >= 999
+                else "(CPU — VRAM too small)"
+                if ngl == 0
+                else ""
+            )
+        )
+        out("      Override: --n-gpu-layers N, or force CPU with --cpu-only.")
+    else:
+        out("      none detected (CPU only). On a phone this is expected; on desktop,")
+        out(
+            "      install a CUDA/ROCm/Metal llama.cpp build + driver tooling (nvidia-smi)."
+        )
+    out("")
+
+    out("-" * 72)
+    out("  External storage (overflow)")
+    out("-" * 72)
+    vols = detect_external_storage()
+    if vols:
+        for v in vols:
+            out(f"      {v['path']}: {v['free_mb']} MB free of {v['total_mb']} MB")
+        out("      A roomy volume can host the model cache (--model-dir DIR) to keep")
+        out(
+            "      internal storage free, or back a swapfile for --use-swap (needs root:"
+        )
+        out("      mkswap + swapon on a file there).")
+    else:
+        out(
+            "      none detected (run `termux-setup-storage` to expose shared/SD storage)."
+        )
     out("")
 
     # Bottom-line readiness verdict — the one thing to read in this dense report.

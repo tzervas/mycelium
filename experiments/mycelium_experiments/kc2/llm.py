@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -70,13 +71,21 @@ def detect_memory() -> dict[str, int | None]:
     return out
 
 
-def auto_ctx_size(want: int, model: str | None, mem: dict[str, int | None]) -> tuple[int, str]:
-    """Pick ctx = min(workload need, what available RAM safely holds). Returns (ctx, reason).
+def auto_ctx_size(
+    want: int,
+    model: str | None,
+    mem: dict[str, int | None],
+    *,
+    swap_fraction: float = 0.0,
+) -> tuple[int, str]:
+    """Pick ctx = min(workload need, what available memory safely holds). Returns (ctx, reason).
 
-    Swap is not counted (KV/compute thrash and still trip the OOM killer if paged).
-    Conservative when memory is unknown. Always overridable with --ctx-size.
+    By default only RAM is budgeted; ``swap_fraction > 0`` (the --use-swap flag) adds that
+    fraction of free swap (slower — KV thrashes if it pages out). Conservative when memory
+    is unknown. Always overridable with --ctx-size.
     """
     avail = mem.get("mem_available_mb")
+    swap_free = mem.get("swap_free_mb")
     model_mb = 0
     try:
         if model and Path(model).is_file():
@@ -87,15 +96,73 @@ def auto_ctx_size(want: int, model: str | None, mem: dict[str, int | None]) -> t
         chosen = min(want, 1024)
         return chosen, f"available RAM unknown — conservative ctx={chosen}"
     reserve = max(768, model_mb)  # OS + worst-case resident weights
-    usable = avail - reserve
+    swap_budget = (
+        int(swap_free * swap_fraction)
+        if (swap_fraction > 0 and isinstance(swap_free, int) and swap_free > 0)
+        else 0
+    )
+    usable = (avail - reserve) + swap_budget
     cap = int((usable * 0.40) / _KV_MB_PER_TOKEN) if usable > 0 else 256
     cap = max(256, (cap // 256) * 256)
     chosen = max(256, min(want, cap))
+    swap_note = f" +{swap_budget}MB swap" if swap_budget else ""
     reason = (
-        f"avail={avail}MB model={model_mb}MB reserve={reserve}MB usable={max(0, usable)}MB "
-        f"→ memory allows ~{cap}, want {want} ⇒ ctx={chosen}"
+        f"avail={avail}MB{swap_note} model={model_mb}MB reserve={reserve}MB "
+        f"usable={max(0, usable)}MB → memory allows ~{cap}, want {want} ⇒ ctx={chosen}"
     )
     return chosen, reason
+
+
+def detect_gpu() -> list[dict[str, object]]:
+    """Best-effort GPU enumeration (NVIDIA/ROCm/Metal). Empty on a phone; never raises."""
+    gpus: list[dict[str, object]] = []
+    smi = shutil.which("nvidia-smi")
+    if smi:
+        try:
+            res = subprocess.run(
+                [smi, "--query-gpu=name,memory.free", "--format=csv,noheader,nounits"],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if res.returncode == 0:
+                for line in res.stdout.strip().splitlines():
+                    parts = [p.strip() for p in line.split(",")]
+                    if len(parts) >= 2:
+                        gpus.append(
+                            {
+                                "name": parts[0],
+                                "backend": "cuda",
+                                "vram_free_mb": int(parts[1]) if parts[1].isdigit() else None,
+                            }
+                        )
+        except (OSError, subprocess.SubprocessError):
+            pass
+    if not gpus and shutil.which("rocm-smi"):
+        gpus.append({"name": "AMD ROCm GPU", "backend": "rocm", "vram_free_mb": None})
+    if not gpus and sys.platform == "darwin":
+        gpus.append({"name": "Apple GPU (Metal)", "backend": "metal", "vram_free_mb": None})
+    return gpus
+
+
+def auto_gpu_layers(gpus: list[dict[str, object]], model: str | None) -> tuple[int, str]:
+    """Choose -ngl: full offload when VRAM holds the model (or is unknown), else CPU.
+
+    Returns (ngl, reason). A phone build has no GPUs ⇒ (0, ...), a no-op there.
+    """
+    if not gpus:
+        return 0, "no GPU detected — CPU only"
+    g = gpus[0]
+    model_mb = 0
+    try:
+        if model and Path(model).is_file():
+            model_mb = Path(model).stat().st_size // (1024 * 1024)
+    except OSError:
+        pass
+    free = g.get("vram_free_mb")
+    if not isinstance(free, int) or model_mb == 0 or free >= int(model_mb * 1.15):
+        return 999, f"{g['name']} ({g['backend']}) — offloading all layers (-ngl 999)"
+    return 0, f"{g['name']} — {free}MB free < model {model_mb}MB; CPU (set --n-gpu-layers N)"
 
 
 # ---------------------------------------------------------------------------
@@ -216,6 +283,7 @@ def cli_backend(
     seed: int = 42,
     n_predict: int = 256,
     ctx_size: int = 2048,
+    n_gpu_layers: int = 0,
     extra_args: Sequence[str] | None = None,
     timeout: int = 180,
 ) -> Backend:
@@ -248,6 +316,7 @@ def cli_backend(
             str(ctx_size),
             "--log-disable",
             "-e",
+            *(["--n-gpu-layers", str(n_gpu_layers)] if n_gpu_layers > 0 else []),
             *(extra_args or []),
         ]
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)

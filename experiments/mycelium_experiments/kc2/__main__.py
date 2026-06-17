@@ -123,14 +123,27 @@ def _build_backend(args: argparse.Namespace) -> llm.Backend:
     if args.ctx_size is not None:
         ctx_size = args.ctx_size
     else:
-        ctx_size, reason = llm.auto_ctx_size(_KC2_DESIRED_CTX, model, llm.detect_memory())
+        mem = llm.detect_memory()
+        ctx_size, reason = llm.auto_ctx_size(
+            _KC2_DESIRED_CTX, model, mem, swap_fraction=0.5 if args.use_swap else 0.0
+        )
         print(f"Auto-ctx: {reason} (override with --ctx-size)", file=sys.stderr)
+
+    if args.cpu_only:
+        n_gpu_layers = 0
+    elif args.n_gpu_layers is not None:
+        n_gpu_layers = args.n_gpu_layers
+    else:
+        n_gpu_layers, gpu_reason = llm.auto_gpu_layers(llm.detect_gpu(), model)
+        print(f"Auto-GPU: {gpu_reason}", file=sys.stderr)
+
     return llm.cli_backend(
         cli,
         model,
         seed=args.seed,
         n_predict=args.n_predict,
         ctx_size=ctx_size,
+        n_gpu_layers=n_gpu_layers,
         extra_args=args.llama_extra_arg,
     )
 
@@ -165,6 +178,24 @@ def main() -> int:
         help="llama.cpp context window -c. DEFAULT: auto — sized from available RAM "
         "(/proc/meminfo) so a phone doesn't OOM-kill (SIGKILL/9) on the model's full 32k "
         "window. Pass an explicit N to override.",
+    )
+    p.add_argument(
+        "--use-swap",
+        action="store_true",
+        help="Count ~half of free swap toward the auto context budget (slower if the KV "
+        "cache pages out). Off by default.",
+    )
+    p.add_argument(
+        "--cpu-only",
+        action="store_true",
+        help="Force CPU only — never offload to a GPU even if one is detected.",
+    )
+    p.add_argument(
+        "--n-gpu-layers",
+        type=int,
+        default=None,
+        help="GPU layers to offload (llama.cpp -ngl). DEFAULT: auto from detected VRAM "
+        "(0 on a phone). 0 = CPU, 999 = all.",
     )
     p.add_argument("--primer-mycelium", metavar="FILE", help="Override the Mycelium-arm primer.")
     p.add_argument("--primer-baseline", metavar="FILE", help="Override the baseline-arm primer.")

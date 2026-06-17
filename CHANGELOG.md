@@ -8,6 +8,22 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: swap budget, SD-card overflow, desktop GPU auto-offload)
+- **Optional swap budget (`--use-swap`):** auto context sizing can count ~half of free swap toward
+  the memory budget, letting the context grow when RAM is tight — with an explicit speed/thrash
+  caveat (swap is still *off by default*; the OOM killer targets RSS).
+- **GPU enumeration + auto-offload:** `detect_gpu()` (NVIDIA via `nvidia-smi`, AMD `rocm-smi`,
+  Apple Metal) + `auto_gpu_layers()` pick `-ngl` automatically on a desktop with a GPU build —
+  full offload when detected VRAM holds the model, else CPU. `--cpu-only` forces CPU; `--n-gpu-layers`
+  sets it explicitly. A phone's CPU-only `llama.cpp` reports no GPU, so it's a no-op there.
+- **External-storage (SD) reporting:** `detect_external_storage()` surfaces roomy shared/SD volumes
+  so they can host the model cache (`--model-dir`) or back a swapfile (root) — informational; never
+  auto-mounted/auto-swapon'd.
+- **`--doctor`** gains **GPU** and **External storage** sections, shows the context a run would pick
+  *with* `--use-swap`, and the same flags (`--use-swap`/`--cpu-only`/`--n-gpu-layers`) exist on the
+  KC-2 entry point. All choices are logged with their inputs (EXPLAIN/G2); honest fallbacks when a
+  resource is unknown.
+
 ### Added (2026-06-17: auto memory enumeration + auto context sizing)
 - **The context size is now auto-tuned from the device's available memory** instead of a fixed
   default — the harness and the KC-2 backend enumerate RAM/swap (`/proc/meminfo`, with a POSIX

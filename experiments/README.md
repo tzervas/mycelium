@@ -111,6 +111,12 @@ PYTHONPATH=. python3 -m mycelium_experiments.kc2 \
 
 - `--model PATH.gguf` — pick a specific model (else the default cache is auto-found).
 - `--max-iters N` — edit-to-fix budget (default 3).
+- `--ctx-size N` — override the auto context size (auto = sized from free RAM).
+- `--use-swap` — count ~half of free swap toward the context budget (slower if the KV
+  cache pages out; lets the context grow on a RAM-tight phone with swap enabled).
+- `--cpu-only` / `--n-gpu-layers N` — on a desktop with a CUDA/ROCm/Metal build, the
+  context auto-offloads to a detected GPU; force CPU or set the layer count explicitly.
+  (No effect on a phone's CPU-only `llama.cpp`.)
 - `--primer-mycelium FILE` / `--primer-baseline FILE` — override the per-arm **primer**.
   The primer is *generator configuration* (a generic syntax cheatsheet, no task answers);
   it's the chief tuning knob and it affects the numbers — **record which primer a run
