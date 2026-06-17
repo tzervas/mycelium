@@ -8,6 +8,39 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (2026-06-17: RFC-0016 ratified — Draft → Accepted, the standard-library keystone)
+- **RFC-0016 (Core Library & Standard Library) moves `Draft → Accepted`** by maintainer ratification
+  (DN-07 ratification pass; M-501, #149). The §4.1 per-op contract (C1–C6), the §4.2 ring layering, the
+  §4.3/§4.4 Tier-A/Tier-B taxonomy (**full 23-module v0 scope**), the §4.5 guarantee-matrix obligation, and the
+  §4.6 Rust-first → Mycelium-lang migration order are ratified. **§8 dispositions** (recorded append-only in
+  RFC-0016 §8 + changelog): **Q1** full taxonomy / five-candidate floor first / `diag`·`recover` lead, **Q2**
+  phylum `std` + crate-mirrored names + one `core`↔`error` error-value name, **Q5** two-level differential
+  bar, **Q6** `std-sys` phylum split, and the `BF16→F32` placement (→ `cmp`/`convert`) are **resolved**;
+  **Q3** ergonomics-vs-contract accepts the RFC-0012 ambient *direction* with a scheduled per-ring pass
+  (**M-540**) and **Q4** `runtime` placement defers to the Phase-7 gate — both deferred-with-direction.
+- **DN-07 moves `Draft → Resolved`** (its job — framing the ratification pass — is complete).
+- **The concrete L3 *authoring* surface stays KC-2-gated** (A2 ruling; RFC-0006 §10) — the deciding
+  experiment M-002 (#3) is unrun (needs LLM API). So the M-502 self-hosting verdict honestly stays
+  *not-yet*, the Mycelium-lang migration half of M-510…M-520 waits, and the Rust-first specs/impls proceed.
+- Status synced across `docs/Doc-Index.md`, the stdlib spec index (`docs/spec/stdlib/README.md` §4/§5),
+  and `self-hosting-readiness.md`.
+
+### Added (2026-06-17: RFC-0016 §7 grounding discharged + the LLM-validation harness scaffold)
+- **Research Record 08** (`research/08-honest-stdlib-prior-art-RECORD.md`) — discharges the RFC-0016 §7
+  pre-ratification grounding obligation: the cross-language stdlib module-set comparison (Rust/Python/Go/
+  OCaml–Haskell → T8.1–T8.4) and the "honest stdlib" prior art (refinement-typed/verified/effect-tracked
+  standard libraries → T8.5–T8.7), grounding the Tier-B taxonomy, the ring layering + `std-sys` split, and
+  the §4.1 honesty contract; flags the 4-point honest-degradation lattice as Mycelium's novel,
+  precedent-free contribution. Tagged Empirical/Declared, never Proven (VR-5).
+- **A portable LLM-validation harness** under `tools/llm-harness/` (Workstream B; de-risks the backlogged
+  M-330 #97/#127 + M-002 #3) — targets llama.cpp (GGUF) and runs under Termux on Android, with a `--mock`
+  dry-run mode (no model; skips gracefully, exercises the plumbing) and a real mode (shells to a local
+  `llama-cli`/server). Emits a structured JSON + human report and a timestamped log per run (dual projection
+  G11), every validation PASS/SKIP/FAIL explicit and tagged (RFC-0013 I1); a model-absent tool is an
+  explicit SKIP, never a false pass. Validations: deterministic-seed round-trip, JSON-projection
+  conformance, the guarantee-tag honesty gate (model-derived ⇒ Empirical/Declared, never Proven), and a
+  latency/token report. Lives above the kernel (KC-3).
+
 ### Added (2026-06-17: standard-library second design wave — the remaining 13 module specs, integrated)
 - **Thirteen per-module standard-library design specs** under `docs/spec/stdlib/`, completing the RFC-0016
   taxonomy (all 23 modules now `Draft`). Each is authored to the uniform template and the §4.1 contract,
