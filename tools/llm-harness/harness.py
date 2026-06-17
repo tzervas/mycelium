@@ -111,6 +111,7 @@ def validation(vid: str, description: str):
 # Run context — carries all resolved config for the run
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class RunContext:
     mock: bool
@@ -126,6 +127,7 @@ class RunContext:
 # llama.cpp invocation helpers
 # ---------------------------------------------------------------------------
 
+
 def _call_llama_cli(
     ctx: RunContext,
     prompt: str,
@@ -140,10 +142,14 @@ def _call_llama_cli(
     """
     cmd = [
         ctx.llama_cli,
-        "--model", ctx.model_path,
-        "--prompt", prompt,
-        "--seed", str(seed),
-        "--n-predict", str(n_predict),
+        "--model",
+        ctx.model_path,
+        "--prompt",
+        prompt,
+        "--seed",
+        str(seed),
+        "--n-predict",
+        str(n_predict),
         "--log-disable",  # suppress llama.cpp's internal log spam to stderr
         "-e",  # escape newlines in prompt
     ]
@@ -183,8 +189,7 @@ def _call_llama_cli(
 
     if result.returncode != 0:
         raise RuntimeError(
-            f"llama-cli exited {result.returncode}.\n"
-            f"stderr: {result.stderr[:2000]}"
+            f"llama-cli exited {result.returncode}.\nstderr: {result.stderr[:2000]}"
         )
 
     return {
@@ -212,12 +217,14 @@ def _call_server(
     """
     import urllib.request
 
-    payload = json.dumps({
-        "prompt": prompt,
-        "seed": seed,
-        "n_predict": n_predict,
-        "stream": False,
-    }).encode()
+    payload = json.dumps(
+        {
+            "prompt": prompt,
+            "seed": seed,
+            "n_predict": n_predict,
+            "stream": False,
+        }
+    ).encode()
 
     url = ctx.server_url.rstrip("/") + "/completion"
     req = urllib.request.Request(
@@ -261,16 +268,16 @@ def _generate(
     """Dispatch to the right backend (llama-cli or server)."""
     if ctx.server_url:
         return _call_server(ctx, prompt, seed=seed, n_predict=n_predict)
-    return _call_llama_cli(ctx, prompt, seed=seed, n_predict=n_predict, extra_args=extra_args)
+    return _call_llama_cli(
+        ctx, prompt, seed=seed, n_predict=n_predict, extra_args=extra_args
+    )
 
 
 # ---------------------------------------------------------------------------
 # Validation 1: model-load + deterministic-seed round-trip
 # ---------------------------------------------------------------------------
 
-_DETERMINISM_PROMPT = (
-    "Complete this sequence with exactly the next three integers and nothing else: 1, 1, 2, 3, 5,"
-)
+_DETERMINISM_PROMPT = "Complete this sequence with exactly the next three integers and nothing else: 1, 1, 2, 3, 5,"
 _DETERMINISM_FIXTURE = "8, 13, 21"
 
 
@@ -359,8 +366,8 @@ def v01_determinism(ctx: RunContext) -> ValidationResult:
 # ---------------------------------------------------------------------------
 
 _JSON_SCHEMA_PROMPT = (
-    'Respond with ONLY a JSON object, no other text. '
-    'The object must have exactly these keys: '
+    "Respond with ONLY a JSON object, no other text. "
+    "The object must have exactly these keys: "
     '"value" (an integer), "label" (a short string), "confidence" (a float between 0 and 1). '
     'Example: {"value": 42, "label": "example", "confidence": 0.95}'
 )
@@ -548,56 +555,70 @@ def v03_tag_honesty(ctx: RunContext) -> ValidationResult:
         try:
             assert_model_tag(tag, claim_id)
             # No exception ⇒ tag is allowed
-            result = "ok"
         except ValueError as exc:
-            result = "FAIL"
             if expected == "FAIL":
                 # This is the correct outcome — we detected the violation
-                detected_violations.append({
-                    "claim_id": claim_id,
-                    "tag": tag,
-                    "violation_message": str(exc),
-                    "outcome": "correctly-rejected",
-                })
+                detected_violations.append(
+                    {
+                        "claim_id": claim_id,
+                        "tag": tag,
+                        "violation_message": str(exc),
+                        "outcome": "correctly-rejected",
+                    }
+                )
                 ctx.log.info(
                     "[V-03] Correctly rejected forbidden tag '%s' on claim '%s'",
-                    tag, claim_id,
+                    tag,
+                    claim_id,
                 )
             else:
                 # Unexpected — the check is broken
-                detected_violations.append({
-                    "claim_id": claim_id,
-                    "tag": tag,
-                    "violation_message": str(exc),
-                    "outcome": "unexpected-rejection",
-                })
+                detected_violations.append(
+                    {
+                        "claim_id": claim_id,
+                        "tag": tag,
+                        "violation_message": str(exc),
+                        "outcome": "unexpected-rejection",
+                    }
+                )
             continue
 
         if expected == "ok":
-            detected_compliant.append({
-                "claim_id": claim_id,
-                "tag": tag,
-                "outcome": "correctly-allowed",
-            })
-            ctx.log.info("[V-03] Correctly allowed tag '%s' on claim '%s'", tag, claim_id)
+            detected_compliant.append(
+                {
+                    "claim_id": claim_id,
+                    "tag": tag,
+                    "outcome": "correctly-allowed",
+                }
+            )
+            ctx.log.info(
+                "[V-03] Correctly allowed tag '%s' on claim '%s'", tag, claim_id
+            )
         else:
             # We expected a violation but didn't get one — honesty gate failed
-            detected_violations.append({
-                "claim_id": claim_id,
-                "tag": tag,
-                "violation_message": f"Tag '{tag}' should have been rejected but was allowed",
-                "outcome": "missed-violation",
-            })
+            detected_violations.append(
+                {
+                    "claim_id": claim_id,
+                    "tag": tag,
+                    "violation_message": f"Tag '{tag}' should have been rejected but was allowed",
+                    "outcome": "missed-violation",
+                }
+            )
             ctx.log.error(
                 "[V-03] MISSED VIOLATION: tag '%s' on claim '%s' should have been rejected",
-                tag, claim_id,
+                tag,
+                claim_id,
             )
 
     # The gate passes only if all expected violations were correctly rejected
     # and all compliant claims were correctly allowed.
     missed = [v for v in detected_violations if v["outcome"] == "missed-violation"]
-    unexpected_rejections = [v for v in detected_violations if v["outcome"] == "unexpected-rejection"]
-    correctly_rejected = [v for v in detected_violations if v["outcome"] == "correctly-rejected"]
+    unexpected_rejections = [
+        v for v in detected_violations if v["outcome"] == "unexpected-rejection"
+    ]
+    correctly_rejected = [
+        v for v in detected_violations if v["outcome"] == "correctly-rejected"
+    ]
 
     all_ok = len(missed) == 0 and len(unexpected_rejections) == 0
 
@@ -610,7 +631,11 @@ def v03_tag_honesty(ctx: RunContext) -> ValidationResult:
             f"Correctly rejected {len(correctly_rejected)} forbidden tag(s), "
             f"correctly allowed {len(detected_compliant)} compliant tag(s). "
             + (f"MISSED {len(missed)} violation(s)! " if missed else "")
-            + (f"UNEXPECTED rejections: {len(unexpected_rejections)}. " if unexpected_rejections else "")
+            + (
+                f"UNEXPECTED rejections: {len(unexpected_rejections)}. "
+                if unexpected_rejections
+                else ""
+            )
         ),
         detail={
             "mode": "mock" if ctx.mock else "real",
@@ -714,6 +739,7 @@ def v04_latency_tokens(ctx: RunContext) -> ValidationResult:
 # Report writing
 # ---------------------------------------------------------------------------
 
+
 def _now_iso() -> str:
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
@@ -744,7 +770,9 @@ def _write_json_report(
         "summary": summary,
         "results": [r.to_dict() for r in results],
     }
-    path.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
 
 
 def _write_text_report(
@@ -760,11 +788,13 @@ def _write_text_report(
     lines.append("=" * 72)
     lines.append(f"  Run ID  : {run_id}")
     lines.append(f"  Mode    : {mode}")
-    lines.append(f"  Posture : NEVER-SILENT (G2) · VR-5 honesty · DUAL PROJECTION (G11)")
+    lines.append("  Posture : NEVER-SILENT (G2) · VR-5 honesty · DUAL PROJECTION (G11)")
     lines.append("")
     lines.append("  Honesty posture:")
     lines.append("    · A missing tool/model ⇒ SKIP, never a false PASS")
-    lines.append("    · Model-derived claims: Empirical or Declared — NEVER Proven/Exact")
+    lines.append(
+        "    · Model-derived claims: Empirical or Declared — NEVER Proven/Exact"
+    )
     lines.append("    · mock-PASS = fixture run, not a real model quality signal")
     lines.append("")
     lines.append("-" * 72)
@@ -795,6 +825,7 @@ def _write_text_report(
 # ---------------------------------------------------------------------------
 # Main run loop
 # ---------------------------------------------------------------------------
+
 
 def _resolve_llama_cli(explicit: str | None) -> str | None:
     """Return path to llama-cli if resolvable, else None."""
@@ -851,7 +882,9 @@ def run_harness(args: argparse.Namespace) -> int:
         log.info("Mode: REAL (server) — %s", server_url)
         llama_cli = None
         if model_path:
-            log.warning("--model is ignored in server mode (model is loaded server-side)")
+            log.warning(
+                "--model is ignored in server mode (model is loaded server-side)"
+            )
     else:
         llama_cli = _resolve_llama_cli(llama_cli_arg)
         if llama_cli:
@@ -882,8 +915,7 @@ def run_harness(args: argparse.Namespace) -> int:
             llama_cli = None  # treat as unavailable
         elif not os.path.isfile(model_path):
             log.warning(
-                "Model file not found: %s. "
-                "Model-dependent validations will SKIP.",
+                "Model file not found: %s. Model-dependent validations will SKIP.",
                 model_path,
             )
             llama_cli = None
@@ -915,7 +947,12 @@ def run_harness(args: argparse.Namespace) -> int:
             # If we have no model and are not in explicit mock mode,
             # model-dependent validations (V-01, V-02, V-04) become SKIPs.
             # V-03 always runs (pure logic).
-            if not mock_mode and not server_url and not llama_cli and vid != "V-03-tag-honesty":
+            if (
+                not mock_mode
+                and not server_url
+                and not llama_cli
+                and vid != "V-03-tag-honesty"
+            ):
                 result = ValidationResult(
                     id=vid,
                     status=STATUS_SKIP,
@@ -931,7 +968,9 @@ def run_harness(args: argparse.Namespace) -> int:
             else:
                 result = fn(ctx)
         except Exception as exc:
-            log.exception("Unhandled exception in %s — converting to FAIL (RFC-0013 I1)", vid)
+            log.exception(
+                "Unhandled exception in %s — converting to FAIL (RFC-0013 I1)", vid
+            )
             result = ValidationResult(
                 id=vid,
                 status=STATUS_FAIL,
@@ -971,7 +1010,9 @@ def run_harness(args: argparse.Namespace) -> int:
         "skip": counts[STATUS_SKIP],
         "fail": counts[STATUS_FAIL],
         "exit_code": exit_code,
-        "mode": "mock" if mock_mode else ("server" if server_url else ("real" if llama_cli else "skip")),
+        "mode": "mock"
+        if mock_mode
+        else ("server" if server_url else ("real" if llama_cli else "skip")),
     }
 
     mode_label = summary["mode"]
@@ -1004,6 +1045,7 @@ def run_harness(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
