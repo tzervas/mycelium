@@ -20,6 +20,7 @@ members = [
     "crates/mycelium-spore",
     "crates/mycelium-check",
     "crates/mycelium-sec",
+    "crates/mycelium-lint",
     "xtask",
 ]
 

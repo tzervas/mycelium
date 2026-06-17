@@ -8,6 +8,23 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: `myc-lint` — lint + auto-fix, folded — M-366; the M-361 suite is complete)
+- **`crates/mycelium-lint`** — the `myc-lint` lint+fix tool (lib + CLI), enacting the M-366 contract
+  (Accepted → enacted). Surfaces the M-141 invariant lints + the header lints as **actionable, reified,
+  opt-in** fixes with a **suggest / apply / scaffold** boundary. A control-flow change (`implicit-swap` →
+  an explicit `swap`; the RFC-0015 §9 advisory → an RFC-0014 recovery handler via `recovery_scaffold`,
+  bounded `retry(<=3)`) is a **scaffold**, never auto-applied (A2/I1/I5; tested). **First-impl confirmation
+  (§8.1):** no lint has a behaviour-preserving auto-fix that isn't already `mycfmt`'s header
+  canonicalization, so **`--fix` applies nothing** in v0 and says so — no silent rewrite (G2). The **§4.1
+  doc quality-bar lint is dormant-but-defined** (`DOC_QUALITY_CHECKS` names the 8 checks; awaits the M-363
+  doc IR; does not block the gate). Honest deferrals: the §9 lint needs L1 effect declarations (v0 ships
+  the scaffold generator, not the triggering lint); Core-IR lints run over the elaborable fragment (a
+  non-elaborable definition is skipped, not silently passed). **No new dependency** (KC-3). CLI: `myc-lint
+  [--project <dir>] [--fix] [--explain] [<file|->...]`.
+- **The M-361 "full-fat toolchain" suite is now code:** all five children folded — **M-364** `mycfmt`,
+  **M-368** `spore`, **M-365** `myc-check`, **M-367** `myc-sec`, **M-366** `myc-lint` — each above the
+  kernel (KC-3), no new dependency, every contract Accepted/enacted.
+
 ### Added (2026-06-17: `myc-sec` — security checks as tooling, folded — M-367)
 - **`crates/mycelium-sec`** — the `myc-sec` security tool (lib + CLI), enacting the M-367 contract
   (Accepted → enacted). v0's library core is the Mycelium-specific **`wild`-block audit** (`audit_wild` —

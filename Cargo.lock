@@ -157,6 +157,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-lint"
+version = "0.0.0"
+dependencies = [
+ "mycelium-l1",
+ "mycelium-lsp",
+]
+
+[[package]]
 name = "mycelium-lsp"
 version = "0.0.0"
 dependencies = [

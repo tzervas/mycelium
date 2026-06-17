@@ -1,0 +1,21 @@
+[package]
+name = "mycelium-lint"
+version = "0.0.0"
+description = "myc-lint — lint + auto-fix (M-366): surfaces the M-141 invariant lints + the header lints as ACTIONABLE, reified, opt-in fixes with a suggest/apply/scaffold boundary (a control-flow change is a scaffold, never auto-applied — RFC-0014 I1/I5). Hosts the M-363 §4.1 doc quality-bar lint (dormant-but-defined until the doc IR lands). No silent rewrite (G2). KC-3 — above the kernel; no new dependency."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+# The M-141 lints + M-362 baseline (mycelium-lsp) and the parse/check/elaborate pipeline (mycelium-l1).
+mycelium-l1 = { path = "../mycelium-l1" }
+mycelium-lsp = { path = "../mycelium-lsp" }
+
+[[bin]]
+name = "myc-lint"
+path = "src/bin/myc-lint.rs"

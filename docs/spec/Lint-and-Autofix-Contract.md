@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Proposed** (2026-06-16 — the M-366 lint+auto-fix contract; design-first, present before folding). §8.1 (safe-edit set) + §8.3 (doc-lint dormancy) **ratified 2026-06-17**; held at Proposed a little longer — the safe-edit boundary and doc-lint dormancy get **final confirmation at the first implementation pass** (then → Accepted). |
+| **Status** | **Accepted** (2026-06-16 — design; §8.1/§8.3 ratified 2026-06-17; **enacted 2026-06-17** by `crates/mycelium-lint` — the `myc-lint` lib + CLI). First-impl confirmation: **no lint has a safe auto-fix** (all suggest/scaffold; `--fix` rewrites nothing — header canonicalization is `mycfmt`'s), and the **§4.1 doc lint ships dormant-but-defined**. The fix model + scaffold boundary are tested. |
 | **Scope** | The contract for the suite's lint+fix tool: surfacing the M-141 invariant lints + RFC-0013 diagnostics + the RFC-0015 §9 "class is only logged — add a handler?" lint as **actionable, opt-in, reified** fixes; offering RFC-0014 **recovery scaffolds** (explicit handler skeletons, never an implicit control-flow change); and hosting the M-363 **§4.1 doc quality-bar lint** (the 8 checks over the doc IR — now unblocked by the §8 ratification) |
 | **Depends on** | M-141 (`mycelium_lsp::lint` — `implicit-swap`/`unverified-bound`/`placeholder-policy`/`free-variable`/`nodule-header`); RFC-0013 (structured diagnostics); RFC-0015 §9 (the "only logged; add a handler?" lint — direction set, Q4) + M-362 (`mycelium_lsp::baseline`); RFC-0014 I1–I5 (declarative recovery — a handler is explicit, bounded, opt-in; never makes an error vanish); the M-363 §4.1 quality bar + §8-ratified build stack (custom doc-IR + Typst); G2 (no silent rewrite); KC-3 (above the kernel) |
 | **Feeds** | M-361 (the full-fat toolchain — the lint+fix tool); the editor/LSP (M-140); the M-363 pipeline (the §4.1 lint gates generated docs) |
@@ -148,3 +148,16 @@ change (KC-3).
   Held at **Proposed** a little longer — the safe-edit boundary + doc-lint dormancy get final confirmation
   at the first implementation pass, then → Accepted. §8.2 (effect-class scope) remains deferred.
   Append-only.
+- **2026-06-17 — Accepted (enacted by `crates/mycelium-lint`, M-366).** The contract is now code: the
+  `myc-lint` lib (`lint_sources`/`lint_source`/`fix_for`/`recovery_scaffold`) + CLI over the M-141 lints
+  (`mycelium_lsp::lint` + the header lints) and the M-362 baseline — **no new dependency** (KC-3). The
+  **fix model is enacted**: every finding carries a `Fix` with a **suggest / apply / scaffold** tier; a
+  control-flow change (`implicit-swap` → explicit `swap`; the RFC-0015 §9 advisory → an RFC-0014 recovery
+  handler via `recovery_scaffold`) is a **scaffold**, never auto-applied (A2/I1/I5; tested). **First-impl
+  confirmation of §8.1:** no lint has a behaviour-preserving auto-fix that isn't already `mycfmt`'s header
+  canonicalization, so **`--fix` applies nothing** in v0 — and says so (no silent rewrite; G2). The **§4.1
+  doc lint is dormant-but-defined** (`DOC_QUALITY_CHECKS` names the 8 checks; `doc_lint_status` reports it
+  awaits the M-363 doc IR; it does **not** block the gate). Honest deferrals: the §9 "only logged" lint
+  needs L1 effect declarations (not yet a surface) so v0 ships the **scaffold generator** but not the
+  triggering lint; the Core-IR lints run over the **elaborable** fragment (a non-elaborable definition is
+  skipped, not silently passed). Append-only.
