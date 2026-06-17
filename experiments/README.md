@@ -89,7 +89,7 @@ PYTHONPATH=. python3 -m mycelium_experiments.kc2 --server http://localhost:8080 
 builds it on first use via cargo; on a phone that's heavy but works, or build it once:
 
 ```sh
-cargo build -p mycelium-l1 --bin myc-check        # → target/debug/myc-check
+cargo build -p mycelium-check --bin myc-check     # → target/debug/myc-check
 # or point at an existing binary:  export MYC_CHECK=/path/to/myc-check
 ```
 

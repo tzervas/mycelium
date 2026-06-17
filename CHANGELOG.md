@@ -8,6 +8,18 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (2026-06-17: KC-2 Mycelium arm — wrong cargo package + swallowed build error)
+- **The KC-2 Mycelium arm always SKIPped because the checker built the wrong crate.**
+  `MyceliumChecker._discover` ran `cargo build -p mycelium-l1 --bin myc-check`, but the `myc-check`
+  binary lives in the **`mycelium-check`** crate — cargo exited 101 ("no bin target named
+  myc-check in mycelium-l1"), which the harness honestly reported as a SKIP (never a false pass).
+  Fixed the package name; the arm now builds + runs (the full experiment test suite goes from
+  partially-skipped to all-pass).
+- **Never-silent gap closed:** a failed `cargo build` now surfaces cargo's actual stderr in the
+  SKIP reason (tail, truncated) instead of a bare `exit status 101`, so a *real* compile failure on
+  a new platform (e.g. aarch64/Termux) is actionable. `experiments/README.md` build command fixed
+  to `-p mycelium-check`.
+
 ### Added (2026-06-17: swap budget, SD-card overflow, desktop GPU auto-offload)
 - **Optional swap budget (`--use-swap`):** auto context sizing can count ~half of free swap toward
   the memory budget, letting the context grow when RAM is tight — with an explicit speed/thrash

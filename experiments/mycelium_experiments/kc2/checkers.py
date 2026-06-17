@@ -68,17 +68,27 @@ class MyceliumChecker:
         built = root / "target" / "debug" / "myc-check"
         if built.is_file():
             return built
+        # The `myc-check` binary lives in the `mycelium-check` crate (NOT mycelium-l1).
+        cmd = ["cargo", "build", "-p", "mycelium-check", "--bin", "myc-check"]
         try:
-            subprocess.run(
-                ["cargo", "build", "-q", "-p", "mycelium-l1", "--bin", "myc-check"],
+            proc = subprocess.run(
+                cmd,
                 cwd=root,
-                check=True,
                 capture_output=True,
-                timeout=600,
+                text=True,
+                timeout=900,
             )
-        except (OSError, subprocess.SubprocessError) as e:
-            msg = f"myc-check is not built and cargo could not build it: {e}"
+        except OSError as e:
+            msg = f"could not run cargo ({' '.join(cmd)}): {e}"
             raise ToolUnavailable(msg) from e
+        if proc.returncode != 0:
+            # Never-silent: surface cargo's actual diagnostic, not just the exit code,
+            # so a real compile failure is actionable instead of a bare "exit 101".
+            detail = (proc.stderr or proc.stdout or "").strip()
+            msg = (
+                f"`{' '.join(cmd)}` failed (exit {proc.returncode}):\n{detail[-1500:]}"
+            )
+            raise ToolUnavailable(msg)
         if not built.is_file():
             msg = f"cargo reported success but {built} does not exist"
             raise ToolUnavailable(msg)
