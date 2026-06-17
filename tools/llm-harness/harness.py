@@ -501,6 +501,9 @@ def _call_llama_cli(
         capture_output=True,
         text=True,
         timeout=ctx.llama_timeout,
+        # EOF on stdin: if a build ignores -no-cnv and enters the interactive REPL, it
+        # exits after the first response instead of hanging on the terminal.
+        stdin=subprocess.DEVNULL,
     )
     wall = time.monotonic() - t0
 

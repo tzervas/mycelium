@@ -8,6 +8,18 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (2026-06-17: build-agnostic one-shot — EOF stdin + echoed-prompt strip)
+- On-device the `b0-unknown` Termux `llama-cli` **ignored `-no-cnv`/`--no-display-prompt`** and still
+  entered its interactive REPL (slash-command prompt), so a real run hung until Ctrl+C and echoed the
+  prompt into stdout. Build-agnostic hardening (it can't depend on flag support):
+  - **`stdin=subprocess.DEVNULL`** for the llama-cli subprocess in both `_call_llama_cli` (harness)
+    and `cli_backend` (KC-2): a REPL that ignores the flags now hits EOF and **exits after the first
+    response** instead of waiting on the terminal — no hang, no Ctrl+C.
+  - **Echoed-prompt strip** in `LlamaGenerator`: if the verbatim prompt appears in stdout (a build
+    that ignored `--no-display-prompt`), keep only what follows it before parsing.
+  - For a guaranteed-clean path, prefer the **server backend** (`--server URL`, `/completion`) — no
+    REPL, no conversation mode — documented as the recommended on-device route.
+
 ### Fixed (2026-06-17: KC-2 skip-reason rendering — line-aligned + concise summary)
 - A skipped-arm reason that embedded a multi-line cargo error rendered badly: the checker's
   byte-tail (`detail[-1500:]`) cut **mid-line** (garbage like `y: cc help`), and the executive

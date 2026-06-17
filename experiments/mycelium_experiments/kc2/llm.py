@@ -320,7 +320,12 @@ def cli_backend(
             *(["--n-gpu-layers", str(n_gpu_layers)] if n_gpu_layers > 0 else []),
             *(extra_args or []),
         ]
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        # stdin=DEVNULL is the build-agnostic safety net: some llama-cli builds ignore
+        # -no-cnv and still enter the interactive REPL. Feeding EOF makes that REPL exit
+        # after the first response instead of hanging on the terminal (no Ctrl+C needed).
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL
+        )
         if proc.returncode != 0:
             msg = f"llama exited {proc.returncode}: {proc.stderr.strip()[:800]}"
             raise RuntimeError(msg)
@@ -376,7 +381,12 @@ class LlamaGenerator:
         primer = self.primers.get(arm) or primer_for(arm)
         prompt = build_prompt(task, arm, feedback, primer)
         self.calls.append((task.id, arm, len(feedback)))
-        return extract_source(self.backend(prompt), arm)
+        raw = self.backend(prompt)
+        # Some builds ignore --no-display-prompt and echo the prompt back into stdout;
+        # if the verbatim prompt is present, keep only what follows it (the completion).
+        if prompt and prompt in raw:
+            raw = raw.split(prompt, 1)[1]
+        return extract_source(raw, arm)
 
 
 def resolve_llama_cli(explicit: str | None = None) -> str | None:
