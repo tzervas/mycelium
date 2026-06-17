@@ -8,6 +8,25 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (2026-06-17: ratified `scope → area:*` aliases for the board reconciler — clears recurring PR FLAGs)
+- **`tools/github/conventions.json` — `scope_to_area.aliases`** populated (was `{}`). The reconciler's
+  `--prs` path maps a Conventional-Commit `type(scope): subject` title's `scope` to an `area:*` label
+  only on an **exact** area match, else it FLAGs (G2 — never invents). Recurring repo scopes were
+  surveyed from `origin/main` history and mapped to the canonical **WS-\*** areas: subsystem/crate
+  scopes (`l1/grammar/surface → language`; `core/interp → core-ir` per WS-B "Core IR & reference
+  interpreter"; `mlir/jit/runtime → execution`; `numerics/dense/bitnet/simd → numerics`;
+  `select → selection`; `swap(s) → swap`; `vsa → vsa`; `lsp/fmt/lint/check/sec/spore/pack/build/xtask/
+  tooling/diagnostics → toolchain` per WS-H which lists LSP), the **verified-numerics** family
+  (`verification/cert/proofs → numerics` per WS-F "Verified numerics & checker"), and project
+  infrastructure (`github/planning/tracker/skills/ci/changelog/workspace/proj/spec/review/kc2/phase-2/
+  phase-3/notes/devlog/glossary/schemas/research/experiments/claude → project`).
+- **Alias values are the BARE area name** (the engine prepends `area:` in `derive_pr_labels`), now noted
+  in the file's `_policy`; the bare form is verified through the real engine function (`--self-test` +
+  `--validate` both pass; the mapping was exercised directly, not just schema-checked).
+- **Deliberately left UNMAPPED → still FLAGGED** (a decision, not a guess; deferred to a later pass):
+  doc-reference scopes (`rfc-*/adr-*/dn-*`, `e1`, `l0`) and task-id scopes (`m-*`). Multi-scope comma
+  titles map each recognized part. No new label, no taxonomy change — `area:*` set is unchanged (DRY).
+
 ### Added (2026-06-17: the toolchain gate's richer end-to-end conformance fixture — Phase 9 Wave D; M-369)
 - **`examples/repr-tour/`** — a richer, multi-nodule canonical phylum (`mycelium-proj.toml` + four
   `.myc` nodules) authored to **pass all four M-361 gates**, so `just check` now proves the tools on
