@@ -8,6 +8,20 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: `myc-check` — the correctness driver, folded — M-365)
+- **`crates/mycelium-check`** — the project-aware correctness/type-check driver (lib + `myc-check` CLI),
+  enacting the M-365 contract (Accepted → enacted). The prototype **grew up in place**: the single-file
+  **oracle** mode (the M-002/KC-2 harness contract — exit 2/3, `--expect-main`, `ok`/`parse-error:`/
+  `check-error:`) is preserved verbatim, and a **`--project`/`--config` mode** added that walks the whole
+  project, **aggregates** every refusal deterministically (all files), routes **check** refusals through
+  the **M-362 baseline** at the umbrella `NotValidated` class (`Medium`/`stream`; additive-only — never
+  suppressed, A1), and exits **2 parse / 3 check / 5 resolution / 0 clean** (CI-usable). Honest: the flat
+  `CheckError` is **not** split into a finer class it cannot structurally distinguish (VR-5); a project
+  with no `.myc` sources is an explicit exit-5 error, never a silent empty pass (G2). The trusted M-210
+  checker (`check_nodule`) is unchanged — this is the driver above it (KC-3); **no new dependency**.
+- The prototype `crates/mycelium-l1/src/bin/myc-check.rs` is **removed** (superseded; its oracle behavior
+  ported into the driver — nothing references the old bin but a prose doc-comment).
+
 ### Added (2026-06-17: `spore` — packaging & publishing, folded — M-368)
 - **`crates/mycelium-spore`** — the `spore` packager (lib + CLI), enacting the M-368 contract (Accepted →
   enacted; ADR-013). Builds a **content-addressed spore** from a `mycelium-proj.toml`: **identity is the

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Proposed** (2026-06-16 — the M-365 correctness/type-check driver contract; design-first, present before folding) |
+| **Status** | **Accepted** (2026-06-16 — design; **enacted 2026-06-17** by `crates/mycelium-check` — the `myc-check` lib + CLI; §8.1 warning policy ratified). The contract is now code; project resolution, baseline-routed aggregation, and CI exit codes are tested. |
 | **Scope** | The contract for growing the `myc-check` prototype into a **project-aware** correctness driver: project resolution (the `mycelium-proj.toml` surface + dependencies), whole-`phylum`/program checking, diagnostic aggregation routed via the M-362 baseline, honest per-op guarantee tags, and CI-usable exit semantics |
 | **Depends on** | The `myc-check` prototype (`crates/mycelium-l1/src/bin/myc-check.rs` — `parse`/`check_nodule`, exit codes); the M-210 shared TV checker (`mycelium_l1::{check_nodule, check_and_resolve, CheckError}`); M-359 (`mycelium_proj::{parse_manifest, parse_header, resolve}` — the surface + inheritance); RFC-0013 (structured diagnostics, levels); M-362 / RFC-0015 (`mycelium_lsp::baseline` — the auto-derived `DiagnosticPolicy`, `present`, the class registry); VR-5 (honest tags, never upgraded); G2 (every refusal explicit); KC-3 (above the kernel) |
 | **Feeds** | M-361 (the full-fat toolchain — the correctness gate); CI (`scripts/checks/`); M-366 (shares the diagnostic surface) |
@@ -129,3 +129,17 @@ names; deep cross-phylum type-checking is named as a follow-on). The driver live
 - **2026-06-17 — Open question §8.1 ratified.** Warnings **print but do not fail** the build by default;
   `--deny-warnings` remains the opt-in CI gate. §8.2 (cross-phylum depth) and §8.3 (JSON schema reuse)
   remain deferred to the first implementation pass. Append-only.
+- **2026-06-17 — Accepted (enacted by `crates/mycelium-check`, M-365).** The contract is now code: the
+  driver lib (`check_project`/`check_sources`/`check_source`/`Report`) + the `myc-check` CLI — **no new
+  dependency** (reuses `mycelium-l1` + the `mycelium-lsp` M-362 baseline + `mycelium-proj`; KC-3). The
+  prototype **grew up in place**: the single-file **oracle** mode (the M-002/KC-2 harness contract — exit
+  2/3, `--expect-main`, `ok`/`parse-error:`/`check-error:`) is preserved verbatim (the old
+  `mycelium-l1` bin is removed; its behavior ported), and a **`--project`/`--config` mode** added that
+  walks the whole project, **aggregates** every refusal deterministically (all files, not first-error),
+  routes **check** refusals through the **M-362 baseline** at the umbrella `NotValidated` class
+  (`Medium`/`stream`; additive-only — never suppressed, A1), and exits **2 parse / 3 check / 5
+  resolution / 0 clean** (CI-usable). Honest: the flat `CheckError` is **not** split into a finer class it
+  cannot structurally distinguish (VR-5); a project with no `.myc` sources is an explicit exit-5
+  resolution error, never a silent empty pass (G2). v0 scope: name-visibility dependency resolution and
+  the warning default (§8.1) as ratified; deep cross-phylum checking + JSON output deferred (§8.2/§8.3).
+  Append-only.
