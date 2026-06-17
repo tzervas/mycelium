@@ -1,0 +1,22 @@
+[package]
+name = "mycelium-fmt"
+version = "0.0.0"
+description = "mycfmt — the canonical formatter (M-364; M-142 grows up): an identity-preserving projection over .myc sources (RFC-0001 §4.6/§4.8; ADR-003 — formatting never changes content-addressed identity). Three checked invariants (identity-preservation · idempotence · header-preservation); never-silent refusals (no partial rewrite, G2); reads the [toolchain].format hard pin (M-359). KC-3 — above the kernel; no new dependency."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+# Reuses the L1 parser + canonical surface printer (M-142) and the M-358/M-359 header layer.
+# No new external dependency (the workspace keeps its deps few/vetted; a new one is an ADR).
+mycelium-l1 = { path = "../mycelium-l1" }
+mycelium-proj = { path = "../mycelium-proj" }
+
+[[bin]]
+name = "mycfmt"
+path = "src/bin/mycfmt.rs"

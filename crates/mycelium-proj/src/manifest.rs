@@ -53,11 +53,25 @@ pub struct Project {
     pub lang: Option<String>,
 }
 
-/// A parsed `mycelium-proj.toml` (v0: the typed `[project]` table).
+/// The typed `[toolchain]` table (M-364): the optional pins the toolchain reads. v0 closed key set:
+/// `format` (the formatter spelling/version — a **hard pin**, M-364 §10.3) and `lints` (the lint
+/// profile). Unknown keys are explicit errors (G2). Metadata, not identity (ADR-003).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Toolchain {
+    /// `format` — the formatter spelling/version pin (e.g. `"mycfmt-0"`). A hard pin: `mycfmt` refuses a
+    /// mismatch rather than format with rules the project did not ask for (M-364 §10.3 / G2).
+    pub format: Option<String>,
+    /// `lints` — the lint profile (e.g. `"strict"`).
+    pub lints: Option<String>,
+}
+
+/// A parsed `mycelium-proj.toml` (v0: the typed `[project]` table + the optional `[toolchain]` pins).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Manifest {
     /// The required `[project]` table.
     pub project: Project,
+    /// The optional `[toolchain]` pins (M-364; M-361). `None` when the table is absent.
+    pub toolchain: Option<Toolchain>,
 }
 
 /// An explicit manifest error (G2): a syntax error, an out-of-subset construct, or a bad value.
@@ -107,8 +121,11 @@ enum Val {
 /// `[project]` key, or a malformed value.
 pub fn parse_manifest(src: &str) -> Result<Manifest, ManifestError> {
     let mut current: Option<String> = None;
-    // Collected `[project]` key→(value, line). Other tables are accepted but not interpreted (v0).
+    // Collected `[project]` key→(value, line). Other tables stay accepted-but-uninterpreted (v0),
+    // except `[toolchain]` — its first consumer is M-364 (`mycfmt` reads `[toolchain].format`).
     let mut project_kv: Vec<(String, Val, u32)> = Vec::new();
+    let mut toolchain_kv: Vec<(String, Val, u32)> = Vec::new();
+    let mut saw_toolchain = false;
 
     for (idx, raw) in src.lines().enumerate() {
         let line_no = (idx + 1) as u32;
@@ -118,6 +135,9 @@ pub fn parse_manifest(src: &str) -> Result<Manifest, ManifestError> {
         }
         if let Some(table) = line.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
             current = Some(table.trim().to_owned());
+            if current.as_deref() == Some("toolchain") {
+                saw_toolchain = true;
+            }
             continue;
         }
         let (key, rhs) = line.split_once('=').ok_or_else(|| ManifestError {
@@ -126,13 +146,21 @@ pub fn parse_manifest(src: &str) -> Result<Manifest, ManifestError> {
         })?;
         let key = key.trim().to_owned();
         let val = parse_value(rhs.trim(), line_no)?;
-        if current.as_deref() == Some("project") {
-            project_kv.push((key, val, line_no));
+        match current.as_deref() {
+            Some("project") => project_kv.push((key, val, line_no)),
+            Some("toolchain") => toolchain_kv.push((key, val, line_no)),
+            // Other tables: accepted, not interpreted in v0 (their consumers are M-361).
+            _ => {}
         }
-        // Other tables: accepted, not interpreted in v0 (their consumers are M-361).
     }
 
-    build_project(project_kv)
+    let project = build_project(project_kv)?;
+    let toolchain = if saw_toolchain {
+        Some(build_toolchain(toolchain_kv)?)
+    } else {
+        None
+    };
+    Ok(Manifest { project, toolchain })
 }
 
 /// Strip a trailing `#` comment that is **outside** a quoted string (single-line values only).
@@ -148,7 +176,31 @@ fn strip_comment(line: &str) -> &str {
     line
 }
 
-fn build_project(kv: Vec<(String, Val, u32)>) -> Result<Manifest, ManifestError> {
+/// The closed v0 `[toolchain]` key set.
+const TOOLCHAIN_KEYS: &[&str] = &["format", "lints"];
+
+fn build_toolchain(kv: Vec<(String, Val, u32)>) -> Result<Toolchain, ManifestError> {
+    let mut tc = Toolchain::default();
+    for (key, val, line) in kv {
+        if !TOOLCHAIN_KEYS.contains(&key.as_str()) {
+            return Err(ManifestError {
+                line,
+                message: format!(
+                    "unknown `[toolchain]` key `{key}` — the v0 set is closed: {} (G2)",
+                    TOOLCHAIN_KEYS.join(", ")
+                ),
+            });
+        }
+        match key.as_str() {
+            "format" => tc.format = Some(as_str(&val, "format", line)?),
+            "lints" => tc.lints = Some(as_str(&val, "lints", line)?),
+            _ => unreachable!("key membership checked above"),
+        }
+    }
+    Ok(tc)
+}
+
+fn build_project(kv: Vec<(String, Val, u32)>) -> Result<Project, ManifestError> {
     if kv.is_empty() {
         return Err(ManifestError {
             line: 1,
@@ -228,7 +280,7 @@ fn build_project(kv: Vec<(String, Val, u32)>) -> Result<Manifest, ManifestError>
         keywords,
         lang,
     };
-    Ok(Manifest { project })
+    Ok(project)
 }
 
 fn as_kind(s: &str, line: u32) -> Result<ProjectKind, ManifestError> {
@@ -526,6 +578,29 @@ numerics    = { phylum = "numerics", version = "^2", hash = "blake3:abc" }
             parse_manifest("[project]\nname=\"x\"\nkind=\"phylum\"\nsince=\"2026/01/10\"\n")
                 .is_err()
         );
+    }
+
+    #[test]
+    fn the_toolchain_table_is_interpreted() {
+        // M-364: `[toolchain].format` is now read (the manifest's first toolchain consumer).
+        let m = parse_manifest(SAMPLE).unwrap();
+        assert!(m.toolchain.is_none(), "SAMPLE declares no [toolchain]");
+        let m = parse_manifest(
+            "[project]\nname=\"x\"\nkind=\"phylum\"\n[toolchain]\nformat=\"mycfmt-0\"\nlints=\"strict\"\n",
+        )
+        .unwrap();
+        let tc = m.toolchain.unwrap();
+        assert_eq!(tc.format.as_deref(), Some("mycfmt-0"));
+        assert_eq!(tc.lints.as_deref(), Some("strict"));
+    }
+
+    #[test]
+    fn an_unknown_toolchain_key_is_an_explicit_error() {
+        let e = parse_manifest(
+            "[project]\nname=\"x\"\nkind=\"phylum\"\n[toolchain]\nformatt=\"mycfmt-0\"\n",
+        )
+        .unwrap_err();
+        assert!(e.message.contains("unknown `[toolchain]` key"), "{e}");
     }
 
     #[test]

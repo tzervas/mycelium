@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Proposed** (2026-06-16 — the M-364 formatter contract; design-first, **present before folding**) |
+| **Status** | **Accepted** (2026-06-16 — design; **enacted 2026-06-17** by `crates/mycelium-fmt` — the `mycfmt` lib + CLI; §10.3 hard pin ratified). The contract is now code; the C1 identity guard and C2/C3 invariants are tested over `grammar/conformance/`. |
 | **Scope** | The contract `mycfmt` (the standalone canonical formatter — M-142 grows up) must meet: the formatting projection, its three load-bearing invariants (identity-preservation · idempotence · header-preservation), the never-silent error model, the CLI surface, config reading, `EXPLAIN`, and the conformance test plan |
 | **Depends on** | M-142 (the Core-IR α-normalizing dump `mycelium_core::lower::format` + the surface printer `mycelium_l1::expand_to_source`); M-358 (DN-06 `// nodule:` marker, `mycelium_l1::parse_nodule_header`); M-359 (`// @key:` structured header + `mycelium-proj.toml`, `mycelium_proj::{parse_header, parse_manifest}`); RFC-0001 §4.6/§4.8 (canonical form; formatting is a projection); ADR-003 (content-addressed identity; metadata ≠ identity); RFC-0006 (the L1 surface); KC-3 (tooling lives **above** the kernel); G2 (never-silent); VR-5 (checked, never fabricated) |
 | **Feeds** | M-361 (the full-fat toolchain — `mycfmt` is its formatter); M-366 (lint+fix shares the parse/print path); the M-363 pipeline (formatted sources are the projection input) |
@@ -217,3 +217,14 @@ scope for the refused remainder).
   version mismatch, exit 4 — never format with rules the project didn't ask for; G2). §10.1 (parens vs
   refusal), §10.2 (body comments — v0 refuses), §10.4 (project mode) remain deferred to the first
   implementation pass. Append-only.
+- **2026-06-17 — Accepted (enacted by `crates/mycelium-fmt`, M-364).** The contract is now code: the
+  `mycfmt` lib (`format_source`) + CLI (stdout/`--check`/`--write`/`--explain`/`--config`; exit codes
+  per §5) over the landed M-142/M-358/M-359 primitives — **no new dependency** (KC-3). **C1
+  identity-preservation is a runtime guard** (the body is re-parsed and compared AST-equal, the header
+  re-parsed equal; an identity-changing format is **structurally never emitted** — it refuses, exit 4),
+  realizing §3's "equivalently, `parse(s')` is AST-equal to `parse(s)`" formulation; the `EXPLAIN` receipt
+  reports this surface round-trip verification. **C2 idempotence** + **C3 header-preservation** are tested
+  over `grammar/conformance/{accept,reject}/` and the M-358/M-359 header fixtures (Empirical on the corpus;
+  C1/C3 additionally enforced by construction at runtime). Comments: the **leading comment block is
+  preserved**, **interior comments are refused** (exit 4) rather than dropped (§7.2 / G2). The full
+  `accept/` corpus formats in-scope (none refused). Append-only.

@@ -8,6 +8,22 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: `mycfmt` — the canonical formatter, folded — M-364)
+- **`crates/mycelium-fmt`** — the `mycfmt` formatter (lib + CLI), enacting the M-364 contract; the
+  `Mycfmt-Formatter-Contract` moves **Accepted → enacted**. Formatting is an **identity-preserving
+  projection** (RFC-0001 §4.6/§4.8; ADR-003): the body is re-printed from the **raw parse** (so
+  `default paradigm`/`with paradigm` are preserved, not expanded — formatting ≠ expand-ambient), the
+  DN-06 marker + M-359 `// @key:` header are re-emitted canonically, and a **runtime C1 guard**
+  re-parses the output and refuses (never emits) anything that would change the surface AST or header.
+  **C2 idempotence** + the corpus identity property are tested over `docs/spec/grammar/conformance/`
+  (the whole `accept/` set formats in-scope; every `reject/` is refused). Never-silent (G2): parse
+  (exit 2) / header (exit 3) / out-of-scope (exit 4 — incl. interior comments and the **hard-pin**
+  `[toolchain].format` mismatch) refusals leave the file untouched; `--write` is atomic. CLI:
+  stdout (default) · `--check` · `--write` · `--explain` (prints the identity receipt) · `--config`.
+- **`crates/mycelium-proj`** — the manifest reader now **interprets `[toolchain]`** (`format`/`lints`;
+  closed key set, unknown key = explicit error) — `mycfmt` is the first consumer of the
+  accepted-but-uninterpreted M-359 table. `Toolchain` exported. No new dependency (KC-3).
+
 ### Changed (2026-06-17: M-364/365/366/367/368 open questions ratified — append-only)
 - The maintainer ratified one open question per child contract (folded in append-only; all five stay
   **Proposed**, ready to fold):

@@ -121,6 +121,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-fmt"
+version = "0.0.0"
+dependencies = [
+ "mycelium-l1",
+ "mycelium-proj",
+]
+
+[[package]]
 name = "mycelium-interp"
 version = "0.0.0"
 dependencies = [

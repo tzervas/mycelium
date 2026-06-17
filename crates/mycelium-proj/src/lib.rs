@@ -22,5 +22,5 @@ pub mod resolve;
 pub use header::{
     parse_header, Deprecated, HeaderError, HeaderFields, StructuredHeader, HEADER_KEYS,
 };
-pub use manifest::{parse_manifest, Manifest, ManifestError, Project, ProjectKind};
+pub use manifest::{parse_manifest, Manifest, ManifestError, Project, ProjectKind, Toolchain};
 pub use resolve::{explain, resolve, Origin, Resolved, ResolvedHeader};
