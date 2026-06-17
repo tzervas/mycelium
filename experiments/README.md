@@ -107,13 +107,18 @@ PYTHONPATH=. python3 -m mycelium_experiments.kc2 \
 
 ---
 
+Every run prints (and, with `--out`, writes a companion `*.summary.txt`) an **executive
+summary**: per-arm ratings, first-attempt vs eventual pass, the edit-to-fix (G10) gain,
+which tasks struggled, and — when both arms ran — the comparison gap. It is *descriptive
+analysis with cues, not conclusions*; the decision is explicitly left to you (VR-5).
+
 ## 4. Capture results
 
-The report is JSON (`--out`), plus the `tools/llm-harness/reports/` artifacts from step 1.
-Commit them to this branch so they can be evaluated:
+The report is JSON (`--out`) + its `*.summary.txt`, plus the `tools/llm-harness/reports/`
+artifacts from step 1. Commit them to this branch so they can be evaluated:
 
 ```sh
-git add kc2-report.json tools/llm-harness/reports/
+git add kc2-report.json kc2-report.json.summary.txt tools/llm-harness/reports/
 git commit -m "experiment(kc2): capture local-llama run results (M-002)"
 git push
 ```

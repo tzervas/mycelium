@@ -35,6 +35,7 @@ from mycelium_experiments.kc2.checkers import (
     ToolUnavailable,
 )
 from mycelium_experiments.kc2.harness import ArmReport, run_arm
+from mycelium_experiments.kc2.summary import assess, render_summary
 from mycelium_experiments.kc2.tasks import TASKS
 
 # Mirror tools/llm-harness's cache layout so a model fetched there is reused here.
@@ -203,7 +204,7 @@ def main() -> int:
 
     mycelium = arms_report.get("mycelium", {})
     sc5b = mycelium.get("first_attempt_pass_rate") if isinstance(mycelium, dict) else None
-    document = {
+    document: dict[str, object] = {
         "experiment": "KC-2 LLM-leverage (M-002; Foundation §6 P0.2)",
         "run_utc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
         "backend": "server" if args.server else "llama-cli",
@@ -215,12 +216,22 @@ def main() -> int:
         "sc5b": sc5b,
         "verdict": _VERDICT,
     }
+    # Descriptive assessment of the run (analysis, not a verdict — VR-5). One object,
+    # two projections (G11): structured in the JSON, human-readable to the console.
+    assessment = assess(document)
+    document["assessment"] = assessment
+    summary_text = render_summary(document, assessment)
 
     blob = json.dumps(document, indent=2, sort_keys=True)
     if args.out:
-        Path(args.out).expanduser().write_text(blob + "\n", encoding="utf-8")
-        print(f"Wrote report: {args.out}", file=sys.stderr)
+        out_path = Path(args.out).expanduser()
+        out_path.write_text(blob + "\n", encoding="utf-8")
+        out_path.with_suffix(out_path.suffix + ".summary.txt").write_text(
+            summary_text, encoding="utf-8"
+        )
+        print(f"Wrote report: {out_path}  (+ {out_path.name}.summary.txt)", file=sys.stderr)
     print(blob)
+    print(summary_text, file=sys.stderr)
     return 0
 
 

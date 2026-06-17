@@ -8,6 +8,17 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: KC-2 run — executive-summary assessment of the results)
+- **A KC-2 run now emits a descriptive executive summary alongside the raw rates** — new
+  `experiments/mycelium_experiments/kc2/summary.py` (`assess` + `render_summary`). Per arm it
+  reports first-attempt vs eventual pass, a coarse rating (strong/moderate/weak), the edit-to-fix
+  (G10) leverage gain, and which tasks never passed / parsed-but-failed-first; with both arms it
+  reports the comparison gap. One assessment, two projections (G11): a structured `assessment`
+  block in the JSON + a human `*.summary.txt` companion (and printed to the console).
+- **Honesty:** the summary *characterises*, it does not decide. The `decision` field and the
+  rendered footer state the KC-2 verdict stays maintainer-written (VR-5); caveats flag the coarse
+  small-n signal and the primer/model/seed dependence so the reader doesn't over-read.
+
 ### Added (2026-06-17: KC-2 experiment runnable against a local llama.cpp model)
 - **The KC-2 LLM-leverage experiment (M-002) can now be *run*, not just structured.** The only
   documented blocker was "needs LLM API access"; local llama.cpp removes it. New pieces, all pure

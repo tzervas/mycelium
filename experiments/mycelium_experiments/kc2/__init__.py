@@ -43,6 +43,7 @@ from mycelium_experiments.kc2.llm import (
     primer_for,
     server_backend,
 )
+from mycelium_experiments.kc2.summary import assess, render_summary
 from mycelium_experiments.kc2.tasks import TASKS, Task
 
 __all__ = [
@@ -58,11 +59,13 @@ __all__ = [
     "TaskOutcome",
     "Tern",
     "ToolUnavailable",
+    "assess",
     "bnot",
     "build_prompt",
     "cli_backend",
     "extract_source",
     "primer_for",
+    "render_summary",
     "run_arm",
     "run_experiment",
     "server_backend",
