@@ -8,6 +8,14 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-17: KC-2 gentle pre-run RAM reclaim)
+- **`reclaim_memory()`** runs before context sizing on every run (opt out with `--no-reclaim`), so
+  freed RAM is available to the model + KV cache (and reflected in `auto_ctx_size`). Non-destructive
+  — `gc.collect()` + `malloc_trim(0)` (return freed heap to the OS) + `sync`, plus `drop_caches`
+  **only if root** (skipped, never-silent, on an unrooted phone). It **never kills processes**;
+  reaping orphan servers (the bigger lever) stays the explicit `--stop-server`. Logs a before→after
+  delta; honest that the unrooted gain is modest (the kernel already counts reclaimable cache).
+
 ### Added (2026-06-17: KC-2 server teardown — auto, opt-out, and a standalone reaper)
 - **Auto-teardown**: `--serve` already stops the server it launched after all reports/logs are
   written (the `try/finally`); **`--keep-server`** opts out (leave it up for a follow-up `--server`).

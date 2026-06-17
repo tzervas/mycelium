@@ -112,6 +112,18 @@ python -m mycelium_experiments.kc2 --stop-server          # all; or --port 8080 
 ../tools/llm-harness/llama-server-stop.sh                  # standalone, no Python needed
 ```
 
+**Gentle RAM reclaim.** Before sizing the context, every run does a *non-destructive*
+reclaim (`gc` + `malloc_trim` + `sync`, plus `drop_caches` **only if root**) so the freed
+memory is available to the model + KV cache — logged with a before→after delta. It never
+kills processes; on an unrooted phone the gain is modest (the kernel already counts
+reclaimable cache), so the real lever is reaping orphan servers first (`--stop-server`).
+Disable with `--no-reclaim`. Max free RAM for a heavy run:
+
+```sh
+python -m mycelium_experiments.kc2 --stop-server      # free an orphan's ~1GB first
+python -m mycelium_experiments.kc2 --serve --seeds 42,123,7   # reclaim runs automatically
+```
+
 **The Mycelium arm needs `myc-check`** (parse + typecheck + signature). The checker
 builds it on first use via cargo; on a phone that's heavy but works, or build it once:
 

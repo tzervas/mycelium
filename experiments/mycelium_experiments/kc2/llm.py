@@ -25,7 +25,10 @@ Pure stdlib (the experiments project has no runtime dependencies).
 
 from __future__ import annotations
 
+import ctypes
+import gc
 import json
+import logging
 import shutil
 import subprocess
 import sys
@@ -69,6 +72,50 @@ def detect_memory() -> dict[str, int | None]:
     if "SwapFree" in kv:
         out["swap_free_mb"] = kv["SwapFree"] // 1024
     return out
+
+
+def reclaim_memory(log: logging.Logger) -> dict[str, int | None]:
+    """Gently free RAM before a run so more is available for the model + KV cache.
+
+    Non-destructive only — it never kills processes (reaping orphan llama-servers, the
+    bigger lever on a phone, stays the explicit `--stop-server`):
+      - ``gc.collect()`` — release this process's own garbage;
+      - ``malloc_trim(0)`` — return free()'d heap to the OS (glibc; bionic may lack it);
+      - ``sync`` — flush dirty pages so the kernel can reclaim them;
+      - drop reclaimable page cache — **root only**; on an unrooted phone this is not
+        permitted and is skipped (logged, never-silent). The kernel already counts
+        reclaimable cache in MemAvailable, so the unrooted gain here is modest.
+
+    Returns {before_mb, after_mb, freed_mb}. Run before context sizing so the freed
+    memory is reflected in `auto_ctx_size`.
+    """
+    before = detect_memory().get("mem_available_mb")
+    gc.collect()
+    try:
+        libc = ctypes.CDLL(None)
+        if hasattr(libc, "malloc_trim"):
+            libc.malloc_trim(0)
+    except (OSError, AttributeError, ValueError):
+        pass
+    try:
+        subprocess.run(["sync"], timeout=30, check=False)  # noqa: S603,S607 — flush dirty pages
+    except (OSError, subprocess.SubprocessError):
+        pass
+    try:
+        with open("/proc/sys/vm/drop_caches", "w", encoding="ascii") as f:
+            f.write("1\n")
+        log.info("reclaim: dropped reclaimable page cache")
+    except OSError:
+        log.debug("reclaim: drop_caches not permitted (unrooted) — skipped")
+    after = detect_memory().get("mem_available_mb")
+    freed = (after - before) if isinstance(before, int) and isinstance(after, int) else None
+    log.info(
+        "reclaim: available RAM %s → %s MB%s",
+        before,
+        after,
+        f"  (+{freed} MB)" if isinstance(freed, int) and freed > 0 else "",
+    )
+    return {"before_mb": before, "after_mb": after, "freed_mb": freed}
 
 
 def auto_ctx_size(

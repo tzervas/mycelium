@@ -172,6 +172,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Extra arg for the llama CLI (repeatable).",
     )
     p.add_argument(
+        "--no-reclaim",
+        action="store_true",
+        help="Skip the gentle pre-run RAM reclaim (gc/malloc_trim/sync, + drop_caches if root).",
+    )
+    p.add_argument(
         "--results-dir", metavar="DIR", help="Where reports land (default experiments/results/)."
     )
     p.add_argument("--out", metavar="PATH", help="Also copy the (single-seed) JSON report here.")
@@ -206,6 +211,11 @@ def main() -> int:
     results_dir.mkdir(parents=True, exist_ok=True)
     suite_id = now_utc()
     log = make_logger(results_dir / f"{suite_id}-suite.log")
+
+    # Gently free RAM BEFORE sizing the context, so the freed memory is available to the
+    # model + KV cache (auto_ctx_size reads memory fresh just below). Non-destructive.
+    if not args.no_reclaim:
+        llm.reclaim_memory(log)
 
     proc = None
     n_predict = args.n_predict

@@ -45,6 +45,7 @@ from mycelium_experiments.kc2.llm import (
     detect_memory,
     extract_source,
     primer_for,
+    reclaim_memory,
     server_backend,
 )
 from mycelium_experiments.kc2.runner import RunConfig, run_one, run_suite
@@ -84,6 +85,7 @@ __all__ = [
     "extract_source",
     "find_server_pids",
     "primer_for",
+    "reclaim_memory",
     "render_summary",
     "run_arm",
     "run_experiment",
