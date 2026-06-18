@@ -8,6 +8,16 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: faster 0.5B coder model for KC-2 sweeps)
+- Registered **`qwen2.5-coder-0.5b`** (Qwen2.5-Coder-0.5B-Instruct-GGUF, Apache-2.0) in the
+  llm-harness model registry — ~2–3× quicker decode than the 1.5B on a phone CPU, where generation
+  time dominates an unattended sweep. Fetch with
+  `python tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-coder-0.5b`.
+- The KC-2 experiment now resolves a model by preference (`--model` → cached 0.5B coder → cached 1.5B
+  coder → any `.gguf`), so fetching the 0.5B makes it the default automatically without breaking an
+  existing 1.5B setup. The validation harness's own `DEFAULT_MODEL_ID` (1.5B) is unchanged — its
+  structured-output gate wants the stronger model.
+
 ### Fixed (2026-06-17: KC-2 on-device timeout — durable runs + lighter, refreshing budget)
 - **Root cause** of the on-device crash: the server backend used a fixed **180 s** read timeout
   (`__main__` never forwarded `--timeout` to it) while the phone decodes at ~0.3–0.7 tok/s, so a

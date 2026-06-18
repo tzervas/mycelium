@@ -108,8 +108,14 @@ to a fixed path.
 > each *single* generation fits its budget. Levers: `--n-predict` (fewer tokens = faster;
 > the task solutions are short, default 128), `--timeout` (raise it rather than let a slow
 > but valid generation get cut off, default 600 s), `--max-iters` (attempts/task, default
-> 2), `--limit N` (fewer tasks). For a real speedup, point `--model` at a lighter model —
-> e.g. `qwen2.5-coder-0.5b-instruct-q4_k_m.gguf` decodes roughly 2–3× faster than the 1.5B.
+> 2), `--limit N` (fewer tasks). For a real speedup, use the **0.5B coder** — it decodes
+> ~2–3× faster than the 1.5B. Fetch it once, then it's picked up automatically (the
+> experiment prefers the 0.5B when cached, else the 1.5B, else any `.gguf`):
+>
+> ```sh
+> python ../tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-coder-0.5b
+> PYTHONPATH=. python3 -m mycelium_experiments.kc2 --serve     # now runs on the 0.5B
+> ```
 
 > **Why `--serve` beats the bare CLI.** The CLI reloads the model for *every* generation
 > (~1.4 tok/s on a phone) and some builds ignore `-no-cnv` and drop into an interactive

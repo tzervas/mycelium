@@ -32,7 +32,14 @@ from mycelium_experiments.kc2.runner import RunConfig, make_logger, now_utc, run
 from mycelium_experiments.kc2.tasks import TASKS
 
 # Mirror tools/llm-harness's cache layout so a model fetched there is reused here.
-_DEFAULT_MODEL_FILENAME = "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf"
+# Preference order when --model is not given: fastest cached coder model first. The
+# 0.5B decodes ~2-3x quicker than the 1.5B on a phone CPU (generation time dominates a
+# sweep); the 1.5B is the stronger fallback. Fetch either via the llm-harness, e.g.
+#   python tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-coder-0.5b
+_PREFERRED_MODELS = (
+    "qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
+    "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf",
+)
 # KC-2 prompts (primer + task + feedback + generation) want more context than the
 # validation harness — still capped to fit available RAM (auto).
 _KC2_DESIRED_CTX = 2048
@@ -51,9 +58,10 @@ def _find_model(explicit: str | None) -> str | None:
     if explicit:
         return explicit if Path(explicit).is_file() else None
     md = _default_model_dir()
-    default = md / _DEFAULT_MODEL_FILENAME
-    if default.is_file():
-        return str(default)
+    for name in _PREFERRED_MODELS:  # fastest cached coder model first
+        cand = md / name
+        if cand.is_file():
+            return str(cand)
     try:
         for p in sorted(md.glob("*.gguf")):
             if p.is_file():
@@ -71,9 +79,9 @@ def _require_model(explicit: str | None) -> str:
     model = _find_model(explicit)
     if not model:
         sys.exit(
-            "ERROR: no model. Pass --model PATH.gguf, or fetch the default with "
-            "`python tools/llm-harness/harness.py --ensure-model` (caches into "
-            f"{_default_model_dir()})."
+            "ERROR: no model. Pass --model PATH.gguf, or fetch the fast 0.5B coder with "
+            "`python tools/llm-harness/harness.py --ensure-model --model-id "
+            f"qwen2.5-coder-0.5b` (caches into {_default_model_dir()})."
         )
     return model
 

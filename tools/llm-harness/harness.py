@@ -2267,6 +2267,17 @@ MODELS: dict[str, dict[str, Any]] = {
         "license": "Apache-2.0",
         "use_case": "general instruct + JSON/structured output on a phone",
     },
+    "qwen2.5-coder-0.5b": {
+        "repo": "Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF",
+        "filename": "qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
+        "tier": "mobile",
+        "approx_gb": 0.4,
+        "license": "Apache-2.0",
+        "use_case": (
+            "fastest code tier — ~2-3x quicker decode than the 1.5B on a phone CPU; "
+            "preferred for unattended KC-2 sweeps where generation time dominates"
+        ),
+    },
     "qwen2.5-coder-1.5b": {
         "repo": "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF",
         "filename": "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf",
@@ -2274,7 +2285,7 @@ MODELS: dict[str, dict[str, Any]] = {
         "approx_gb": 1.0,
         "license": "Apache-2.0",
         "use_case": (
-            "DEFAULT — code + structured output; best fit for this app "
+            "code + structured output; stronger reasoning than the 0.5B but slower "
             "(Mycelium surface generation + JSON projection conformance)"
         ),
     },
