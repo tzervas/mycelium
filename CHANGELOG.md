@@ -8,6 +8,21 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: LlmCanonical projection prototype — RFC-0021 ergonomics gate demonstrated, M-380)
+- **`crates/mycelium-lsp/src/project.rs`** — a v0 `LlmCanonical` projection (RFC-0021 §4.6; FR-S5): an
+  s-expression renderer over the Core IR, **total over all 11 L1 node kinds** (compiler-enforced
+  exhaustive `match`) and **deterministic**, living above the kernel (KC-3) in the dual-intelligibility
+  surface crate. It **preserves the honesty overlay by construction** — **P3** (`Swap` rendered
+  explicitly, never elided) and **P2** (every `Const`'s guarantee tag rendered; bound presence
+  surfaced) — each checked by a unit test (4 tests, all green).
+- This **demonstrates** RFC-0021's §9 ergonomics/feasibility gate (RP-4 sub-q 1) in code, upgrading
+  `research/11` T11.4 from a grounded assessment to demonstrated evidence for L1. RFC-0021 §9
+  addendum + `research/11` changelog appended.
+- *Honest scope (VR-5):* the rules are Rust source, not the declared-rule-table form (RFC-0021 §4.2);
+  the projection is read-only (no `RoundTrip` parse-back); the *measured authoring cost as L2 grows*,
+  the *human-usability* study, and — wholly untouched — the **LLM-leverage** gate remain open. **No
+  leverage result is asserted.** RFC-0021 stays Draft.
+
 ### Decided (2026-06-18: RFC-0018 / RFC-0019 / RFC-0020 ratified — Track B RFCs → Accepted)
 With the gating research discharged (RP-2/RP-3) and readiness assessed (DN-12), the maintainer ratified
 the three non-empirical Track-B RFCs append-only. (RFC-0021 stays Draft — its empirical leverage gate

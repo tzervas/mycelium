@@ -628,3 +628,11 @@ falsification comparison.
   **Status stays Draft:** the framework/design is ratification-ready (carve-out pattern); the empirical
   gate is the one part of this four-RFC wave that analysis alone cannot close. No normative rule
   changed. Append-only.
+- **2026-06-18 — ergonomics-gate feasibility DEMONSTRATED in code (M-380 prototype).** The §9
+  ergonomics prompt's *feasibility* question is now demonstrated, not merely assessed:
+  `crates/mycelium-lsp/src/project.rs` is a tested `LlmCanonical` s-expression renderer total over all
+  11 L1 node kinds, preserving the honesty overlay by construction (P3 `Swap`-never-elided + P2
+  guarantee-tags-survive, each unit-tested; `research/11` T11.4 update). **Status stays Draft:** the
+  *measured authoring cost as L2 grows*, the *human-usability* study, the declared-rule-table form
+  (§4.2), `RoundTrip` parse-back, and — wholly untouched — the **LLM-leverage** gate (§9 second prompt)
+  all remain open. No leverage asserted (VR-5). Append-only.

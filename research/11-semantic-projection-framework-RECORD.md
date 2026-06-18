@@ -89,6 +89,19 @@ modules — remains **open** (a prototyping follow-up, ideally a real `LlmCanoni
 `mycelium-core`). So the ergonomics gate is **partially** addressed: feasibility = grounded *yes*;
 measured cost = open. Grounding: `mycelium-lsp::feedback`, `mycelium-core::lower`; RFC-0021 §4.2/§9.
 
+**Update (2026-06-18) — feasibility now DEMONSTRATED, not just assessed.** The prototyping follow-up
+named above is built: **`crates/mycelium-lsp/src/project.rs`** is a working, tested `LlmCanonical`
+s-expression renderer over the full v0 L1 grammar. It is **one total `match` over all 11 node kinds**
+(the compiler enforces totality), it **preserves the honesty overlay by construction** — P3 (`Swap`
+rendered explicitly, never elided) and P2 (every `Const`'s guarantee tag rendered, bound presence
+surfaced) are each checked by a unit test — and it is deterministic. This converts T11.4 from a
+*grounded assessment* to *demonstrated evidence* for L1: a total, dumpable-as-source, honesty-
+preserving projection is authorable at single-engineer scale (≈11 node-kind rules + a few value/alt
+helpers). **Still open (unchanged):** the *declared-rule-table* form (RFC-0021 §4.2 — the prototype's
+rules are Rust source, not data); `RoundTrip` parse-back (this is read-only); the *measured authoring
+cost as L2 grows*; the *human-usability* field study (RP-4 sub-q 1); and — wholly untouched — the
+**LLM-leverage** gate (T11.6). The prototype asserts **no** leverage result.
+
 ### T11.5 — RP-4 sub-question 1 (human usability): adopt the Unison posture (edit-in-text, project read-mostly)
 
 *Question:* does editing a *projected view* feel faithful, or does the projection↔IR mismatch create
@@ -205,3 +218,8 @@ integration (arm 3) and the `LlmCanonical` projection renderer (arm 4) — both 
   empirical and is NOT discharged** (T11.6), and supplies a turnkey five-arm protocol over the existing
   `experiments/` harness (T11.7). Recommends the maintainer may ratify the *framework* with the
   LLM-leverage claim carved out as empirically open. No leverage result asserted (VR-5). Append-only.
+- **2026-06-18 — T11.4 feasibility DEMONSTRATED in code.** Built `crates/mycelium-lsp/src/project.rs`,
+  a tested `LlmCanonical` s-expression renderer total over all 11 L1 node kinds, preserving the
+  honesty overlay by construction (P3 Swap-never-elided + P2 guarantee-tags-survive each unit-tested).
+  Upgrades T11.4 from grounded assessment to demonstrated evidence for L1. The LLM-leverage gate
+  (T11.6) and the measured-cost/human-usability studies remain open; no leverage asserted. Append-only.
