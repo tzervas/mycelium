@@ -510,6 +510,20 @@ not an extra burden — it is the invariant the corpus has applied consistently 
 
 ## 9. Research prompts (must run before Draft → Accepted)
 
+**Status: PARTIALLY ADVANCED — `research/11-semantic-projection-framework-RECORD.md` (2026-06-18).**
+The *design-decidable* parts are grounded; the *empirical* gate is honestly **not** discharged. The
+record grounds the projection model + P1–P6 as established prior art (Unison/MPS) with a
+locally-checkable honesty overlay, answers the dual-rendering question (RP-4 sub-q 3 — one architecture
+suffices), assesses authoring as **feasible** at single-engineer scale (grounded in the existing
+`mycelium-lsp::feedback` node-walk; a *measured* cost study stays open), and recommends the Unison
+posture for human usability (edit-in-text; projections read-mostly + opt-in round-trip — RP-4 sub-q 1).
+**The LLM-leverage gate (the T3.6 retention-ratio ablation; the "canonical projection raises leverage"
+claim) is irreducibly empirical and remains OPEN** — `research/11` supplies a turnkey five-arm protocol
+over the existing `experiments/` harness, **not** a result; per VR-5 no leverage may be asserted without
+the run. A maintainer **could ratify the framework/design** (the RFC-0006 r5 carve-out pattern) **with
+the LLM-leverage claim explicitly carved out as empirically open**; full ratification still requires the
+run. The original prompts are retained below verbatim (append-only).
+
 These two prompts are the gate on ratification: the G11 ergonomics question and the LLM-facing
 projection leverage question are both **open** (Declared, not Empirical). Moving to Accepted
 without running them would upgrade the guarantee without a checked basis (the honesty rule,
@@ -605,3 +619,12 @@ falsification comparison.
   LLM-facing canonical projection (FR-S5, §3.4/§4.6), the T3.6 ablation trigger (§4.7), and two
   research prompts (§9) gating ratification. Status stays **Draft** pending RP-1 (G11 ergonomics)
   and RP-2 (LLM-facing leverage measurement). Ratification is a maintainer decision, append-only.
+- **2026-06-18 — §9 PARTIALLY ADVANCED (design grounded; empirical gate open) — `research/11`.** The
+  design-decidable parts are grounded (the projection model + P1–P6 as Unison/MPS prior art with a
+  locally-checkable honesty overlay; one dual-rendering architecture, RP-4 sub-q 3; authoring
+  feasibility grounded in the existing node-walk; the Unison human-usability posture, RP-4 sub-q 1).
+  The **LLM-leverage gate (the T3.6 ablation / RP-1) remains OPEN** — `research/11` gives a turnkey
+  protocol over the `experiments/` harness, not a result (VR-5; no leverage asserted without the run).
+  **Status stays Draft:** the framework/design is ratification-ready (carve-out pattern); the empirical
+  gate is the one part of this four-RFC wave that analysis alone cannot close. No normative rule
+  changed. Append-only.

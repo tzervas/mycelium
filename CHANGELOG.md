@@ -8,6 +8,28 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: RFC-0020 readiness + RFC-0021 design grounding — Track B completes its analyzable scope)
+Finishes the next wave's Track B for the two remaining RFCs, honestly bounded by what analysis can settle.
+- **`docs/notes/DN-12-RFC-0020-Ratification-Readiness.md`** — RFC-0020 (L2 surface) carries **no
+  research gate**; its deferred items depend on sibling RFCs, two of which had their research gates
+  discharged this pass (R20-Q1 → RFC-0019/RP-3; R20-Q2 → RFC-0018/RP-2) and one on the enacted
+  RFC-0001 r5 `FixGroup` (R20-Q4). Recommends a **scoped** ratification (the §4.1/§4.3/§4.4/§4.6/§4.7/
+  §4.8/§4.9 core) with a carve-out — the RFC-0006 r5 precedent. RFC-0020 Meta-changelog appended.
+- **`research/11-semantic-projection-framework-RECORD.md`** — grounds RFC-0021's *non-empirical*
+  design (T11.1–T11.5): the projection model + P1–P6 as established Unison/MPS prior art with a
+  locally-checkable honesty overlay; **one** dual-rendering architecture (RP-4 sub-q 3 answered);
+  authoring assessed **feasible** at single-engineer scale (grounded in the existing
+  `mycelium-lsp::feedback` node-walk); the Unison human-usability posture (RP-4 sub-q 1). **States
+  plainly that the LLM-leverage gate (the T3.6 retention-ratio ablation, RP-1; RP-4 sub-q 2) is
+  irreducibly empirical and is NOT discharged** (T11.6) — supplies a turnkey five-arm protocol over the
+  existing `experiments/` harness (T11.7), **a protocol, not a result**. Per VR-5 / DN-09 §4 no leverage
+  is asserted. RFC-0021 §9 marked **partially advanced**; Meta-changelog appended.
+- **RP-1 → Open (irreducibly empirical; protocol ready)** and **RP-4 → partially addressed** in
+  `research-prompts.md`; Doc-Index gains DN-12 and updates the RFC-0020/0021 rows. RFC-0020 and
+  RFC-0021 both **stay Draft**: RFC-0020 awaits the maintainer's scoped-ratification decision (no
+  research needed); RFC-0021's framework is ratification-ready (carve-out) but full ratification still
+  needs the empirical run.
+
 ### Added (2026-06-18: RP-3 discharged — traits coherence + Repr-polymorphism soundness, RFC-0019)
 Continues Track B with the trait layer's two flagged-novel research prompts.
 - **`research/10-traits-coherence-repr-polymorphism-RECORD.md`** — discharges RP-3 / RFC-0019 §9

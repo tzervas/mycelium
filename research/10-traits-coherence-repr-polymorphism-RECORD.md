@@ -62,9 +62,10 @@ overlap-rejection is consistent with content-addressing.** Reasoning:
   adding an unrelated dependency** (orphan instances are rejected at check time). This is the
   mechanism that gives stable, definition-site-determined resolution under separate compilation.
 
-*Position.* Adopt the orphan rule (RFC-0019 §4.5) + global uniqueness (≤1 instance per `(Trait, τ)`)
-+ **reject overlapping instances** (Haskell-98 / Rust coherence, *not* GHC `OverlappingInstances`).
-Grounding: Wadler & Blott (POPL 1989, typeclasses); Rust RFC 1023 (coherence/orphan); RFC-0019 §4.5.
+*Position.* Adopt three rules together: the orphan rule (RFC-0019 §4.5), global uniqueness (≤1
+instance per `(Trait, τ)`), and **rejection of overlapping instances** (Haskell-98 / Rust coherence,
+*not* GHC `OverlappingInstances`). Grounding: Wadler & Blott (POPL 1989, typeclasses); Rust RFC 1023
+(coherence/orphan); RFC-0019 §4.5.
 
 ### T10.3 — R1: coherence soundness — the resolution invariant, stated and argued
 

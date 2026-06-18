@@ -605,3 +605,9 @@ elaboration are explicitly deferred.*
   extending RFC-0006 §4.3). Sibling relationships recorded: RFC-0018 (guarantee grading, R20-Q2),
   RFC-0019 (traits, R20-Q1), RFC-0021 (L3 projections). Ratification is a maintainer decision;
   status is Draft, not Accepted.
+- **2026-06-18 — Ratification-readiness assessed (DN-12).** `docs/notes/DN-12-RFC-0020-Ratification-Readiness.md`
+  records that RFC-0020 carries **no research gate** (unlike RFC-0018/0019): its deferred items depend
+  on sibling RFCs, two of which had their research gates discharged this pass (R20-Q1 → RFC-0019/RP-3,
+  R20-Q2 → RFC-0018/RP-2) and one on the enacted RFC-0001 r5 `FixGroup` (R20-Q4). DN-12 recommends a
+  **scoped** ratification (the §4.1/§4.3/§4.4/§4.6/§4.7/§4.8/§4.9 core) with a carve-out for the
+  deferred sections — the RFC-0006 r5 precedent. Advisory; status unchanged (Draft). Append-only.

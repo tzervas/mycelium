@@ -15,7 +15,12 @@
 
 ## RP-1 — KC-2 Retention-Ratio Ablation (T3.6)
 
-**Status:** Open (the M-002 run cleared the KC-2 kill criterion but did not run this ablation).
+**Status:** **Open — irreducibly empirical (protocol ready).** `research/11-semantic-projection-framework-RECORD.md`
+(T11.6–T11.7) confirms this ablation cannot be discharged by analysis — it needs LLM runs (≥5 arms,
+≥3 seeds, ≥1 frontier model, a grammar-constrained decoder) — and supplies a **turnkey five-arm
+protocol** over the existing `experiments/` harness so the run is mechanical when compute is available.
+Per VR-5 / DN-09 §4 no retention-ratio result may be asserted without the run; this stays **Open**.
+(The M-002 run cleared the KC-2 kill criterion but did not run this ablation.)
 
 **Question.** Does Mycelium's novel-but-regular text syntax retain most LLM leverage relative to a
 familiar-skinned same-AST control, at the rigor T3.6 was designed for? Specifically: what is the
@@ -155,8 +160,13 @@ is both sound (S1-preserving) and complete enough to write useful generic librar
 
 ## RP-4 — Semantic-Projection Ergonomics (G11 / FR-C1)
 
-**Status:** Open (M-380 is design-active since DN-09; the ergonomics question is the design
-constraint for the projection RFC).
+**Status:** **Partially addressed (2026-06-18) — `research/11-semantic-projection-framework-RECORD.md`.**
+Sub-question 3 (dual rendering) is **answered** — one architecture suffices (Unison/MPS precedent);
+sub-question 1 (human usability) is addressed as a **design recommendation** (the Unison posture:
+edit-in-text, projections read-mostly + opt-in round-trip), with authoring assessed **feasible** at
+single-engineer scale (grounded in the existing node-walk; a *measured* cost study stays open).
+**Sub-question 2 (does a canonical projection raise LLM leverage?) is irreducibly empirical and stays
+OPEN** (see RP-1's protocol). No leverage asserted (VR-5). (M-380 is design-active since DN-09.)
 
 **Question.** Is **semantic projection** (not merely notational projection) usable and desirable
 for human authors, and does an **LLM-facing canonical projection** raise leverage above the bare
