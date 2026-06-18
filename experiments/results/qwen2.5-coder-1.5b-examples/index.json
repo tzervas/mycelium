@@ -1,0 +1,16 @@
+{
+  "backend": "server(managed)",
+  "model": "/models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf",
+  "runs": [
+    {
+      "interrupted": null,
+      "mycelium_ran": true,
+      "report": "20260618T041513Z-seed42.json",
+      "run": "seed42",
+      "sc5b": 0.2,
+      "seed": 42
+    }
+  ],
+  "suite_utc": "20260618T041513Z",
+  "task_count": 10
+}

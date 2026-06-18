@@ -1,0 +1,19 @@
+========================================================================
+  KC-2 LLM-leverage — executive summary (analysis, NOT a verdict)
+========================================================================
+  Model   : /models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf
+  Backend : server(managed)   Seed: 42
+  Tasks   : 10   Edit-to-fix budget: 3
+
+  [mycelium]
+      first-attempt pass : 20% (weak)   syntactic valid: 20%
+      eventual pass      : 30%   edit-to-fix gain: +10.0pp   mean iters: 1.6666666666666667
+      never passed       : kc2-01-literal, kc2-02-complement, kc2-04-ternary-add, kc2-05-swap, kc2-07-data-match, kc2-09-iterate-for, kc2-10-iterate-recursion
+
+  Read-this-way (cues, not conclusions):
+      · coarse signal: 10 tasks — each task is ~10.0pp; do not over-read small gaps
+      · first-attempt pass rate is the SC-5b number; eventual-minus-first is the edit-to-fix (G10) leverage signal
+      · rates depend on the primer (generator configuration) and the model/seed — record them with the verdict
+
+  Decision: deferred to the maintainer (VR-5) — this is descriptive analysis of the measured rates, NOT the KC-2 verdict
+========================================================================

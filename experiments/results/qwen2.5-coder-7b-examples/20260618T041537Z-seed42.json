@@ -1,0 +1,328 @@
+{
+  "arms": {
+    "mycelium": {
+      "eventual_pass_rate": 0.7,
+      "first_attempt_pass_rate": 0.4,
+      "mean_iterations_to_pass": 1.5714285714285714,
+      "outcomes": [
+        {
+          "first_attempt_passed": true,
+          "first_attempt_valid": true,
+          "iterations": 1,
+          "passed": true,
+          "task": "kc2-01-literal"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 2,
+          "passed": true,
+          "task": "kc2-02-complement"
+        },
+        {
+          "first_attempt_passed": true,
+          "first_attempt_valid": true,
+          "iterations": 1,
+          "passed": true,
+          "task": "kc2-03-xor"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 3,
+          "passed": false,
+          "task": "kc2-04-ternary-add"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 3,
+          "passed": false,
+          "task": "kc2-05-swap"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 2,
+          "passed": true,
+          "task": "kc2-06-helper"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": true,
+          "iterations": 3,
+          "passed": false,
+          "task": "kc2-07-data-match"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 3,
+          "passed": true,
+          "task": "kc2-08-matured"
+        },
+        {
+          "first_attempt_passed": true,
+          "first_attempt_valid": true,
+          "iterations": 1,
+          "passed": true,
+          "task": "kc2-09-iterate-for"
+        },
+        {
+          "first_attempt_passed": true,
+          "first_attempt_valid": true,
+          "iterations": 1,
+          "passed": true,
+          "task": "kc2-10-iterate-recursion"
+        }
+      ],
+      "ran": true,
+      "syntactic_validity_rate": 0.5
+    }
+  },
+  "assessment": {
+    "arms": {
+      "mycelium": {
+        "edit_to_fix_leverage": 0.3,
+        "eventual_pass_rate": 0.7,
+        "first_attempt_pass_rate": 0.4,
+        "first_attempt_rating": "weak",
+        "mean_iterations_to_pass": 1.5714285714285714,
+        "never_passed_tasks": [
+          "kc2-04-ternary-add",
+          "kc2-05-swap",
+          "kc2-07-data-match"
+        ],
+        "parsed_but_failed_first": [
+          "kc2-07-data-match"
+        ],
+        "ran": true,
+        "syntactic_validity_rate": 0.5
+      }
+    },
+    "caveats": [
+      "coarse signal: 10 tasks \u2014 each task is ~10.0pp; do not over-read small gaps",
+      "first-attempt pass rate is the SC-5b number; eventual-minus-first is the edit-to-fix (G10) leverage signal",
+      "rates depend on the primer (generator configuration) and the model/seed \u2014 record them with the verdict"
+    ],
+    "comparison": null,
+    "decision": "deferred to the maintainer (VR-5) \u2014 this is descriptive analysis of the measured rates, NOT the KC-2 verdict"
+  },
+  "attempts": [
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "",
+      "passed": true,
+      "source": "nodule bench\nfn main() -> Binary{8} = 0b1011_0010\n",
+      "syntactically_valid": true,
+      "task": "kc2-01-literal",
+      "wall_seconds": 0.412
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Ident(\"s\")",
+      "passed": false,
+      "source": "s\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\n",
+      "syntactically_valid": false,
+      "task": "kc2-02-complement",
+      "wall_seconds": 0.622
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "",
+      "passed": true,
+      "source": "nodule bench\nfn main() -> Binary{8} = not(0b1011_0010)\n",
+      "syntactically_valid": true,
+      "task": "kc2-02-complement",
+      "wall_seconds": 0.236
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "",
+      "passed": true,
+      "source": "nodule main\nfn main() -> Binary{8} = xor(0b1011_0010, 0b1111_1111)\n",
+      "syntactically_valid": true,
+      "task": "kc2-03-xor",
+      "wall_seconds": 0.473
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Ident(\"s\")",
+      "passed": false,
+      "source": "s\n",
+      "syntactically_valid": false,
+      "task": "kc2-04-ternary-add",
+      "wall_seconds": 0.208
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Ident(\"s\")",
+      "passed": false,
+      "source": "s\n",
+      "syntactically_valid": false,
+      "task": "kc2-04-ternary-add",
+      "wall_seconds": 0.172
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 3,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Colon",
+      "passed": false,
+      "source": ":nodule bench\nfn main() -> Ternary{4} = add(<00+->, <0+0->)\n",
+      "syntactically_valid": false,
+      "task": "kc2-04-ternary-add",
+      "wall_seconds": 0.194
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Ident(\"s\")",
+      "passed": false,
+      "source": "s\n\n\ns\n",
+      "syntactically_valid": false,
+      "task": "kc2-05-swap",
+      "wall_seconds": 0.273
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Ident(\"s\")",
+      "passed": false,
+      "source": "s\n\n\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\ns\n",
+      "syntactically_valid": false,
+      "task": "kc2-05-swap",
+      "wall_seconds": 0.656
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 3,
+      "diagnostic": "parse-error: parse error at 1:1: unexpected character '/'",
+      "passed": false,
+      "source": "/module\nfn main() -> Ternary{6} = swap(0b1011_0010, to: Ternary{6}, policy: rt)\n",
+      "syntactically_valid": false,
+      "task": "kc2-05-swap",
+      "wall_seconds": 0.285
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Ident(\"s\")",
+      "passed": false,
+      "source": "s\n\n\ns\nn\n",
+      "syntactically_valid": false,
+      "task": "kc2-06-helper",
+      "wall_seconds": 0.271
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "",
+      "passed": true,
+      "source": "nodule bench\nfn flip(x: Binary{8}) -> Binary{8} = not(x)\nfn main() -> Binary{8} = flip(flip(0b1010_1010))\n",
+      "syntactically_valid": true,
+      "task": "kc2-06-helper",
+      "wall_seconds": 0.362
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "check-error: check error in `label`: match arms disagree: arm has type Ternary{1}, expected Ternary{2}",
+      "passed": false,
+      "source": "nodule task\ntype Sign = Neg | Zero | Pos\nfn label(s: Sign) -> Ternary{1} = match s { Neg => <-->, Zero => <0>, Pos => <++> }\nfn main() -> Ternary{1} = label(Zero)\n",
+      "syntactically_valid": true,
+      "task": "kc2-07-data-match",
+      "wall_seconds": 0.598
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Ident(\"s\")",
+      "passed": false,
+      "source": "s\n",
+      "syntactically_valid": false,
+      "task": "kc2-07-data-match",
+      "wall_seconds": 0.287
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 3,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Ident(\"s\")",
+      "passed": false,
+      "source": "s\n",
+      "syntactically_valid": false,
+      "task": "kc2-07-data-match",
+      "wall_seconds": 0.208
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Ident(\"s\")",
+      "passed": false,
+      "source": "s\n",
+      "syntactically_valid": false,
+      "task": "kc2-08-matured",
+      "wall_seconds": 0.214
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Colon",
+      "passed": false,
+      "source": ":1:1\nnodule bench\nmatured fn main() -> Binary{8} = 0b0000_1111\n",
+      "syntactically_valid": false,
+      "task": "kc2-08-matured",
+      "wall_seconds": 0.259
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 3,
+      "diagnostic": "",
+      "passed": true,
+      "source": "nodule bench\nmatured fn main() -> Binary{8} = 0b0000_1111\n",
+      "syntactically_valid": true,
+      "task": "kc2-08-matured",
+      "wall_seconds": 0.285
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "",
+      "passed": true,
+      "source": "nodule main\ntype Bytes = End | More(Binary{8}, Bytes)\nfn main() -> Binary{8} = for b in More(0b1111_0000, More(0b0000_1111, End)), acc = 0b0000_0000 => xor(acc, b)\n",
+      "syntactically_valid": true,
+      "task": "kc2-09-iterate-for",
+      "wall_seconds": 0.539
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "",
+      "passed": true,
+      "source": "nodule bench\ntype Bytes = End | More(Binary{8}, Bytes)\nfn checksum(bs: Bytes) -> Binary{8} = match bs { End => 0b0000_0000, More(b, rest) => xor(b, checksum(rest)) }\nfn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))\n",
+      "syntactically_valid": true,
+      "task": "kc2-10-iterate-recursion",
+      "wall_seconds": 0.781
+    }
+  ],
+  "backend": "server(managed)",
+  "edit_to_fix_budget": 3,
+  "experiment": "KC-2 LLM-leverage (M-002; Foundation \u00a76 P0.2)",
+  "model": "/models/qwen2.5-coder-7b-instruct-q4_k_m.gguf",
+  "run": "seed42",
+  "run_utc": "20260618T041537Z",
+  "sc5b": 0.4,
+  "seed": 42,
+  "task_count": 10,
+  "timing": {
+    "attempts": 20,
+    "mean_attempt_seconds": 0.37,
+    "total_generation_seconds": 7.33
+  },
+  "verdict": "not established \u2014 the KC-2 verdict (proceed / reweight-to-human / fall-back-to-embedded-DSL) requires a maintainer-written analysis of this run; this harness never pre-writes it (VR-5)"
+}
