@@ -367,7 +367,7 @@ def main() -> int:
         # Auto-teardown after all reports + logs are written. --keep-server leaves the
         # managed server up (its URL is logged) so a follow-up run can reuse it.
         if proc is not None and args.keep_server:
-            log.info("--keep-server: leaving managed llama-server running at %s", model_label)
+            log.info("--keep-server: leaving managed llama-server running at %s", base_url)
             log.info("Stop it later: python -m mycelium_experiments.kc2 --stop-server")
         else:
             server.stop_server(proc, log)

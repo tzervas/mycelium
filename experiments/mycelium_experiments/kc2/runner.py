@@ -15,6 +15,7 @@ import datetime
 import json
 import logging
 import sys
+import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -52,9 +53,9 @@ def make_logger(log_path: Path) -> logging.Logger:
     log.handlers.clear()
     fh = logging.FileHandler(log_path, encoding="utf-8")
     fh.setLevel(logging.DEBUG)
-    fh.setFormatter(
-        logging.Formatter("%(asctime)s  %(levelname)-7s  %(message)s", "%Y-%m-%dT%H:%M:%SZ")
-    )
+    fh_fmt = logging.Formatter("%(asctime)s  %(levelname)-7s  %(message)s", "%Y-%m-%dT%H:%M:%SZ")
+    fh_fmt.converter = time.gmtime  # the `Z` claims UTC — make asctime actually UTC, not local
+    fh.setFormatter(fh_fmt)
     sh = logging.StreamHandler(sys.stderr)
     sh.setLevel(logging.INFO)
     sh.setFormatter(logging.Formatter("%(message)s"))

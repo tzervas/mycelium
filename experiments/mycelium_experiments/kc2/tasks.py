@@ -50,12 +50,14 @@ class Task:
         """Per-task generation cap (tokens), sized to the task's own complexity.
 
         A weak model on a novel language tends to ramble; a tight cap keeps each generation
-        fast on a phone CPU without truncating a correct program. Sized from the known-good
-        solution's *length* only (a scalar budget, never its content — the model never sees
-        it): ≈ chars/3 tokens + headroom for the `nodule` header, a code fence, and minor
-        verbosity, rounded to 16 and clamped to a sane band. Override globally with
-        --n-predict."""
-        est = len(self.reference_mycelium) // 3 + 48
+        fast on a phone CPU without truncating a correct program. Sized from the *length* only
+        of the known-good solutions (a scalar budget, never their content — the model never
+        sees it), taking the LONGER of the two arms' references so the baseline arm is not
+        systematically under-budgeted: ≈ chars/3 tokens + headroom for the `nodule` header, a
+        code fence, and minor verbosity, rounded to 16 and clamped to a sane band. Override
+        globally with --n-predict."""
+        longest = max(len(self.reference_mycelium), len(self.reference_baseline))
+        est = longest // 3 + 48
         return max(96, min(256, (est // 16 + 1) * 16))
 
 

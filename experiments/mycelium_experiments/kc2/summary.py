@@ -138,9 +138,10 @@ def render_summary(document: Mapping[str, Any], assessment: Mapping[str, Any]) -
             f"({a['first_attempt_rating']})   "
             f"syntactic valid: {_fmt_rate(a['syntactic_validity_rate'])}"
         )
+        lev = a["edit_to_fix_leverage"]
         lines.append(
             f"      eventual pass      : {_fmt_rate(a['eventual_pass_rate'])}   "
-            f"edit-to-fix gain: {_fmt_pp((a['edit_to_fix_leverage'] or 0) * 100)}   "
+            f"edit-to-fix gain: {_fmt_pp(lev * 100 if lev is not None else None)}   "
             f"mean iters: {a['mean_iterations_to_pass']}"
         )
         if a["never_passed_tasks"]:
