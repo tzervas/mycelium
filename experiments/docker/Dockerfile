@@ -11,7 +11,8 @@
 
 # syntax=docker/dockerfile:1
 # CUDA 12.8+ is required for Blackwell (RTX 5080 = sm_120).
-ARG CUDA_IMAGE=nvidia/cuda:12.8.1-devel-ubuntu24.04
+# Fully-qualified registry: Podman refuses unqualified short-names (Docker auto-prepends docker.io/).
+ARG CUDA_IMAGE=docker.io/nvidia/cuda:12.8.1-devel-ubuntu24.04
 FROM ${CUDA_IMAGE}
 
 ARG LLAMA_CUDA=ON

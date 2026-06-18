@@ -8,6 +8,14 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (2026-06-18: Podman container build on WSL2)
+- `experiments/docker/Dockerfile` now uses the **fully-qualified** base image
+  `docker.io/nvidia/cuda:12.8.1-devel-ubuntu24.04`. Podman refuses unqualified short-names (Docker
+  auto-prepends `docker.io/`), which broke `run.sh` at `FROM` on an RTX 5080 WSL2 box; one line
+  unblocks both engines. Live-validated on that box: `gpu-setup.sh` (toolkit + CDI WSL auto-detect +
+  in-container `nvidia-smi`) succeeds. Added an **Ubuntu WSL quickstart** to `docker/README.md` (and
+  a note that the WSL `libnvidia-sandboxutils.so.1` warning is benign).
+
 ### Added (2026-06-18: Podman/WSL2 GPU path + 1.5B mobile cap)
 - `experiments/docker/run.sh` is now **engine-agnostic and compose-free** — prefers **Podman**
   (rootless; outputs land owned by the user), falls back to Docker, with the correct per-engine GPU

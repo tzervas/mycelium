@@ -1,5 +1,27 @@
 # KC-2 in a container (desktop GPU — Podman or Docker, from WSL2 or native Linux)
 
+## Ubuntu WSL — quickstart
+```sh
+# 0) Windows (once): install the NVIDIA *Windows* driver (R495+). Do NOT install a driver inside WSL.
+# 1) Ubuntu WSL — engine + repo (Podman = rootless, no daemon; preferred in WSL):
+sudo apt update && sudo apt install -y podman git
+git clone https://github.com/tzervas/mycelium && cd mycelium
+# 2) One-time GPU wiring (installs the toolkit, generates the Podman CDI spec, verifies):
+INSTALL=1 bash experiments/docker/gpu-setup.sh
+# 3) Build image (first run only) + run the matrix on the GPU; outputs → experiments/results/:
+bash experiments/docker/run.sh
+```
+- **Docker instead:** `CONTAINER_ENGINE=docker bash experiments/docker/{gpu-setup,run}.sh` (start the
+  daemon first: `sudo service docker start`).
+- The `libnvidia-sandboxutils.so.1 not found` warning during step 2 is **expected on WSL and
+  harmless** — the CDI spec still generates and the GPU check passes.
+- Desktop auto-runs `{0.5B, 1.5B, 7B}` (the 1.5B mobile cap is lifted here). Tune with
+  `MODELS="…" SEEDS=42,123 MAXITERS=4 bash experiments/docker/run.sh`.
+- Re-run `gpu-setup.sh` after a GPU driver update (regenerates the Podman CDI spec). Commit results
+  from the host. Details below.
+
+---
+
 Run the KC-2 experiment on a desktop GPU **without touching the host toolchain** — Python, Rust
 (`myc-check`), and a CUDA `llama-server` all live inside the image. The repo is bind-mounted, so
 **every report/log/JSONL lands on the host** under `experiments/results/<model>-<primer>/`; do all
