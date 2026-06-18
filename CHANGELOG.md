@@ -8,6 +8,22 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: containerised desktop-GPU runner + cross-platform fixes)
+- **`experiments/docker/`** — a CUDA image (Dockerfile + docker-compose) that runs the whole KC-2
+  pipeline on a desktop GPU (e.g. RTX 5080 / Blackwell `sm_120`) without touching the host
+  toolchain: Python+uv, Rust (`myc-check`), and a CUDA-built `llama-server` in one image. The repo
+  is bind-mounted so **all reports/logs/JSONL land on the host** for git; a named volume persists the
+  model cache. Same `--serve` command; GPU auto-detected/offloaded. CPU fallback via
+  `--build-arg LLAMA_CUDA=OFF`. Best-effort/untested in the GPU-less design sandbox (compose config
+  validated; verify on host with `nvidia-smi`).
+- **Model download auto-resumes** within one `--ensure-model` invocation (up to 6 retries, backoff,
+  HTTP Range) — a flaky phone link no longer needs manual re-runs.
+- **Windows correctness**: the Mycelium checker finds `myc-check.exe` on Windows (was POSIX-only, so
+  the arm silently skipped); `reclaim_memory` guards the glibc `ctypes.CDLL(None)`/`malloc_trim`
+  behind `os.name == "posix"` (it raises on Windows). RAM/ctx auto-sizing already degrade gracefully
+  without `/proc`. The pipeline itself is stdlib + pathlib, so it runs on Windows (PowerShell:
+  `$env:PYTHONPATH="."; python -m …`) and natively in WSL2.
+
 ### Added (2026-06-18: KC-2 `--model-id` shortcut)
 - `--model-id ID` selects a cached registry model by name (e.g. `--model-id qwen2.5-coder-0.5b`)
   instead of typing a `.gguf` path. Registry-agnostic — resolves the id as a filename prefix in the

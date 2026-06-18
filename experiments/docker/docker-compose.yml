@@ -1,0 +1,35 @@
+# KC-2 on a CUDA desktop (e.g. RTX 5080), containerised so it does not touch the host
+# toolchain. The repo is bind-mounted, so every report/log/JSONL lands on the HOST under
+# experiments/results/ — handle all git from Windows.
+#
+#   docker compose -f experiments/docker/docker-compose.yml build
+#   docker compose -f experiments/docker/docker-compose.yml run --rm kc2 nvidia-smi   # verify GPU
+#   docker compose -f experiments/docker/docker-compose.yml run --rm kc2 \
+#       uv run python ../tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-coder-7b
+#   docker compose -f experiments/docker/docker-compose.yml run --rm kc2 \
+#       uv run python -m mycelium_experiments.kc2 --serve --model-id qwen2.5-coder-7b --seeds 42,123,7
+
+services:
+  kc2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # CPU-only fallback: add `args: {LLAMA_CUDA: "OFF"}` here and drop `gpus` below.
+    image: mycelium-kc2-cuda
+    gpus: all                       # needs NVIDIA Container Toolkit (Docker Desktop + WSL2 driver)
+    # Older Compose without `gpus:` — use instead:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices: [{driver: nvidia, count: all, capabilities: [gpu]}]
+    volumes:
+      - ../../:/workspace           # the REPO → results/logs are written back to the host
+      - kc2-models:/models          # persistent model cache (survives container removal)
+    working_dir: /workspace/experiments
+    environment:
+      MYCELIUM_LLM_MODEL_DIR: /models
+    # Drop into a shell by default; pass a command to `docker compose run kc2 <cmd>`.
+    command: ["bash"]
+
+volumes:
+  kc2-models:

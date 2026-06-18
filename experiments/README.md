@@ -119,6 +119,12 @@ to a fixed path.
 > PYTHONPATH=. python3 -m mycelium_experiments.kc2 --serve --model-id qwen2.5-coder-0.5b
 > ```
 
+**Desktop GPU (containerised).** To run on a CUDA desktop (e.g. an RTX 5080) without touching
+the host toolchain — Python, Rust, and a CUDA `llama-server` all inside the image, with reports
+written back to the host for git — see [`docker/README.md`](docker/README.md). Same `--serve`
+command; GPU is auto-detected and offloaded, and you can use a much stronger model (`--model-id
+qwen2.5-coder-7b`).
+
 > **Why `--serve` beats the bare CLI.** The CLI reloads the model for *every* generation
 > (~1.4 tok/s on a phone) and some builds ignore `-no-cnv` and drop into an interactive
 > REPL. `--serve` loads the model once and uses `/completion` (clean, one-shot). The
