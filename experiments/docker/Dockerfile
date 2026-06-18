@@ -72,4 +72,7 @@ RUN --mount=type=cache,target=/ccache,sharing=locked \
 # Model cache lives on a named volume (see compose) so a fetched .gguf persists.
 ENV MYCELIUM_LLM_MODEL_DIR=/models
 WORKDIR /workspace/experiments
-ENTRYPOINT ["bash"]
+# CMD (not ENTRYPOINT): a bare `run IMAGE` drops to a shell, but `run IMAGE <cmd>` execs <cmd>
+# directly. ENTRYPOINT ["bash"] would turn `run IMAGE nvidia-smi` into `bash nvidia-smi`, which
+# tries to interpret the binary as a script ("cannot execute binary file").
+CMD ["bash"]

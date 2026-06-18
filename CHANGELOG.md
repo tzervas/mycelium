@@ -8,6 +8,15 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (2026-06-18: container ran `bash <binary>` instead of the command)
+- `experiments/docker/Dockerfile` uses `CMD ["bash"]` instead of `ENTRYPOINT ["bash"]`. The image
+  built fine, but `ENTRYPOINT ["bash"]` made `podman run IMAGE nvidia-smi` → `bash nvidia-smi` (and
+  `… bash run-kc2-matrix.sh` → `bash bash …`), i.e. bash interpreting a binary as a script →
+  "cannot execute binary file". The GPU "not visible" warning was a false alarm and the matrix never
+  ran. `CMD` keeps the bare-`run` shell default while `run IMAGE <cmd>` now execs `<cmd>` directly
+  (also unbreaks the README's `compose run kc2 uv run …` examples). Last-instruction change → rebuild
+  reuses the CUDA compile layer (no recompile).
+
 ### Added (2026-06-18: build checkpointing — fast link preflight + ccache)
 - `experiments/docker/Dockerfile` now **verifies the executable↔shared-lib link in seconds** (its own
   cached layer) *before* the ~10-min CUDA compile: a tiny exe links against a `.so` with undefined
