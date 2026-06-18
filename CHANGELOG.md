@@ -8,6 +8,31 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: KC-2-unblocked surface/type-system designs — Wave 2 of the maturation pass)
+With the KC-2 gate cleared (DN-09), the deferred L-layer designs are drafted in dependency order.
+The deep-novel ones land as **Draft** with a pre-ratification **research prompt** (VR-5 — only the
+KC-2 verdict, RFC-0017, and the L3 commit are ratified this pass; these are grounded direction):
+- **RFC-0018 — Stage-1 Static Guarantee Grading (Draft).** The graded judgment RFC-0006 Q3 /
+  RFC-0007 §4.3 deferred: the guarantee lattice as a graded coeffect modality, `Swap`+certificate the
+  sole endorsement point. Surfaces the **implicit-flows decision** (R18-Q1) as a required maintainer
+  choice + a noninterference proof obligation (research prompt RP-2). Flagged-novel.
+- **RFC-0019 — Traits & Parametric Polymorphism / LR-2 (Draft).** Dictionary-passing elaboration to
+  existing L1 nodes (kernel budget unchanged), coherence under content-addressed identity;
+  Repr-polymorphism (LR-5) + guarantee-indexed methods (LR-6) flagged-novel (RP-3).
+- **RFC-0020 — The L2 Surface Term Language (Draft).** The programmer-facing surface as
+  elaboration-defined (no independent semantics): inference, content-addressed modules, pattern sugar
+  → Maranget-flat L1 `Match`, derived forms; usability-first (DN-09 §3.2).
+- **RFC-0021 — Semantic-Level Projection Framework (Draft).** M-380/FR-C1/G11: projections as
+  inspectable views over content-addressed defs; the LLM-facing canonical projection (FR-S5) as the
+  lever to lift surface leverage. Gated on the G11-ergonomics + T3.6 prompts (RP-1, RP-4).
+- **DN-10 — Remaining L1 Gaps.** Planning capture of R7-Q3 (mutual-recursion surface elaboration) and
+  R7-Q4 (prim table → content-addressed declarations), each purely additive, with spike prompts.
+- **research-prompts.md — Standing Research Prompts.** Consolidated index RP-1…RP-7 for variant passes.
+- **Ripple (corpus consistency):** the KC-2 status flips (phase-3 §5 verdict row, M-002 → done,
+  E3-1/M-380 → design-active; Foundation §6 P0.2; SPECIFICATION §10.2; self-hosting-readiness
+  capability #3 → ready) and the maturation cross-ref notes (RFC-0004 §4, RFC-0008, RFC-0014 §4.7).
+- **Indices:** Doc-Index + RFCs README updated for RFC-0017…0021, DN-10, research-prompts.
+
 ### Decided (2026-06-18: KC-2 verdict + maturation-scope ratification — language-maturation pass)
 - **DN-09 — the KC-2 verdict = proceed.** The maintainer recorded a verdict on the M-002 LLM-leverage
   run (local Qwen2.5-Coder, 10-task gold set, seed 42): measured leverage is *weak-but-recoverable*

@@ -32,6 +32,17 @@ One refinement/equivalence-certificate checker `(A, B, R, bound, certificate)` s
 ## 4. "Stable component" gate — normative
 A definition is a *stable component*, and thus **AOT-eligible**, iff: (1) content-addressed and hash-frozen (Unison identity, ADR-003); (2) its spec is ratified; (3) its verification obligations (swap certificates, bound checks, reference equivalence) are discharged. **Promotion is an explicit act gated on automatic checks** (CI step): the checks must pass, but marking-stable is deliberate. Everything else runs interpreted/JIT.
 
+> **Note (2026-06-18 — append-only; RFC-0017 Accepted):** Maturation is now declared at **scope**
+> granularity (nodule/phylum header `// @matured: true`; program/package via `mycelium-proj.toml`
+> manifest), not per-definition — **RFC-0017** supersedes RFC-0007 §4.5's *granularity* (the
+> per-`matured fn` framing). The **stable-component eligibility checks in §4 above are unchanged**
+> — they are applied per reachable definition in a matured scope. A scope is well-formed for
+> maturation iff every reachable non-`thaw` definition satisfies both the `total` gate (RFC-0007
+> §4.5) and the §4 AOT-eligibility checks (content-addressed + hash-frozen, spec-ratified,
+> verification discharged). `thaw fn f` exempts one definition from the matured set; the remaining
+> definitions' obligations are unaffected. The §4 gate is the *per-definition* obligation; RFC-0017
+> §4.2 is the *scope-level* conjunction of those same obligations. No AOT guarantee is changed.
+
 ## 5. Schedule-staged packing (DN-01 + T1.4) — normative
 The *type* stays packing-agnostic (RFC-0001 §4.1). Packing is chosen **here, at a lowering stage** ("schedule"), recorded as inspectable `Meta.physical` on the lowered artifact, and validated against the reference semantics (no silent layout; E3 soundness check).
 - **Selector:** a **cost-model + exhaustive-over-the-fixed-set benchmark** — **NOT** a Halide-class autoscheduler. T1.4 confirms the small, enumerable layout set (≈5 schemes) is *materially easier* than Halide's exponential schedule search; the "modularize scheduling without losing performance" open problem does not bite at this scale. Selection may be policy-driven via the **RFC-0005** mechanism (one mechanism, two sites).
@@ -85,6 +96,12 @@ A build's **target set** is an explicit, flexible choice — opt-in to breadth, 
 - **OQ-4 — target-set selection as policy.** Whether `--target`/`--fat` selection should be expressible through the RFC-0005 selection-policy mechanism (one mechanism, now three sites) or stay a build-flag. Lean: build-flag first, policy later if it earns it.
 
 ## Meta — changelog
+- **2026-06-18 (append-only note after §4 — RFC-0017 Accepted):** Added an inline note recording
+  that **RFC-0017** lifts maturation granularity from per-definition to **scope** (nodule/phylum
+  header; program manifest); the §4 stable-component eligibility checks are **unchanged**, applied
+  per reachable definition in a matured scope. `thaw fn f` exempts one definition from the matured
+  set. No AOT guarantee altered; §4 is the per-definition obligation, RFC-0017 §4.2 is its
+  scope-level conjunction. Append-only; no r1/r2 decision changed.
 - **2026-06-16 (additive — §2):** Banked a **normative stack-robustness requirement** on the native AOT path (DN-05 #1): object recursion must use a managed/heap call stack with an explicit depth/budget limit — a graceful error, never an abort (G2). Designed in alongside the trampolined AOT env-machine (DN-05 #2, enacted M-347) and the O(1)-stack interpreter; libMLIR provisioning to build it is M-348. Changes no prior decision. Append-only.
 - **r1 (initial):** **Accepted.** §2 backend (MLIR→LLVM), §3 single shared checker, §4 stable-component gate, §5 schedule-staged packing, §6 inspectability, §7 interfaces, §8 residual experiments.
 - **r2 (2026-06-15):** **Accepted (additive — changes no r1 decision).** Adds **§9** (the interpreted↔compiled continuum made explicit + the **build-target profiles** `interpret`/`--slim`/`--target`/`--fat`, with fat multi-target as a first-class-but-optional path and never-silent runtime variant dispatch) and **§10** open questions (the interpreted↔compiled ABI, hot-inject of recompiled definitions, the fat-artifact packaging format, target-set-as-policy). Records the maintainer's interpret-for-dev / compile-when-ready / flexible-multi-target direction (2026-06-15) on the existing §2/§4 + ADR-003/ADR-009 foundation; the cross-target capability remains gated on the deferred MLIR→LLVM backend (§2). Append-only; maintain status transitions as the ADR/RFC discipline (Draft → Accepted → Superseded).

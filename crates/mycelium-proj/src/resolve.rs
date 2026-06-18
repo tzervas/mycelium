@@ -67,6 +67,8 @@ pub struct ResolvedHeader {
     pub summary: Option<String>,
     /// `deprecated` — per-file.
     pub deprecated: Option<Deprecated>,
+    /// `matured` — the nodule/phylum is a matured (AOT) scope; RFC-0017; inherited top-down.
+    pub matured: Option<Resolved<bool>>,
 }
 
 /// Resolve a parsed header against an optional project manifest.
@@ -102,6 +104,19 @@ pub fn resolve(header: &StructuredHeader, manifest: Option<&Manifest>) -> Resolv
             })
         }
     };
+    let inherit_bool = |local: &Option<bool>, from_manifest: Option<bool>| {
+        if let Some(v) = local {
+            Some(Resolved {
+                value: *v,
+                origin: Origin::Local,
+            })
+        } else {
+            from_manifest.map(|v| Resolved {
+                value: v,
+                origin: Origin::ProjectManifest,
+            })
+        }
+    };
 
     ResolvedHeader {
         name: header.marker.name.clone(),
@@ -111,6 +126,10 @@ pub fn resolve(header: &StructuredHeader, manifest: Option<&Manifest>) -> Resolv
         since: inherit_str(&f.since, p.and_then(|p| p.since.as_ref())),
         repository: inherit_str(&f.repository, p.and_then(|p| p.repository.as_ref())),
         keywords: inherit_list(&f.keywords, p.and_then(|p| p.keywords.as_ref())),
+        // `matured` (RFC-0017) inherits top-down. Manifest-level `[project].matured` is a deferred
+        // enactment (R17-Q1; the example uses the header key), so the manifest source is `None` for
+        // now — header inheritance from a parent nodule-root is the active path.
+        matured: inherit_bool(&f.matured, None),
         // Per-file: never inherited.
         updated: f.updated.clone(),
         summary: f.summary.clone(),

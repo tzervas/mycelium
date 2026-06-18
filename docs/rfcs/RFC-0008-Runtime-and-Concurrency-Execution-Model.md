@@ -374,6 +374,19 @@ substrate (the RFC-0004 backend story, distributed).
 
 ## Meta — changelog
 
+- **2026-06-18 — Append-only note: `matured` is now a *scope* attribute (RFC-0017 Accepted).**
+  **RFC-0017** lifts `matured` from per-definition to **scope** granularity (nodule/phylum header
+  `// @matured: true`; program/package via manifest); **`matured fn` is retired** (no longer
+  expressible). The references in this RFC to "matured definitions" (§4.2 lines "MLIR→LLVM AOT for
+  `matured` definitions" and "`matured` and totality … gain runtime significance") remain **correct
+  in substance** — they should be read as **"definitions in a matured scope"**. The runtime
+  semantics described in §4.2 (checkpointability, dormability presupposing replayable determinism)
+  apply at the same scope granularity: the whole matured scope is the unit. The `matured ⟹ total`
+  gate (RFC-0007 §4.5) is unchanged; RFC-0017 §4.2 re-quantifies it over the scope — the same
+  per-definition obligation, universally quantified. De-maturation (`thaw fn f`) is the rare
+  in-source escape hatch for one definition inside an otherwise-matured scope; it does not change
+  the runtime significance of the remaining matured definitions. No normative content of this RFC is
+  altered. Append-only.
 - **2026-06-16 — R1 v0 slice extended: typed SPSC channels + the Kahn-determinism differential
   (M-357 follow-on).** The *communicating* half of the RT2 fragment (§4.3) lands as
   `mycelium-mlir::channel` (outside the kernel; KC-3): typed single-producer/single-consumer channels

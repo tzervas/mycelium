@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | **Exit-gate MET** (re-asserted 2026-06-15 — the §6 gate's three conditions are satisfied and the two prior residuals **R1 + R2 are closed**, §6.1: native execution path met+measured; matured toolchain met (text→`Node`→L0 pipeline exists — the `didOpen`/`didChange` wiring is an ordinary M-310 build task, no longer gate-blocking); L1 surface met (RFC-0011 r3 enacted, RFC-0001 → r3, RFC-0006/0007 Accepted r4). Claimed at the strength the checked runs establish (VR-5): 497 workspace tests + the M-210 data-fragment differential. Phase 3's named build tasks continue, but the **exit gate is closed**. Supersedes the prior "Living draft / no exit gate claimed" line — append-only.) |
 | **Owns** | the concrete, issue-coupled decomposition of the Phase-3 epics (#35–#41 / `E3-1…E3-7`) into `M-3xx` build tasks |
-| **Source of truth above this doc** | `docs/Mycelium_Project_Foundation.md` §6 (roadmap, Phase 3), `docs/spec/SPECIFICATION.md` §10 (open build items), `tools/github/issues.yaml` + `idmap.tsv` (task/epic ids), RFC-0004 §2 (backend decision) / RFC-0006 + RFC-0007 (surface/L1, **Draft**) / ADR-007/009 (hybrid execution), DN-01 (schedule-staged packing) |
+| **Source of truth above this doc** | `docs/Mycelium_Project_Foundation.md` §6 (roadmap, Phase 3), `docs/spec/SPECIFICATION.md` §10 (open build items), `tools/github/issues.yaml` + `idmap.tsv` (task/epic ids), RFC-0004 §2 (backend decision) / RFC-0006 + RFC-0007 (surface/L1, **Accepted r5/r4**; concrete L3 syntax committed, DN-09) / ADR-007/009 (hybrid execution), DN-01 (schedule-staged packing) |
 | **Mirrors** | the GitHub board: every task row carries (or will carry) its issue number from `tools/github/idmap.tsv`; the epics E3-1…E3-7 are #35–#41 |
 | **Companion docs** | `phase-2.md` (predecessor, **exit-gate met** 2026-06-12); `phase-1.md`; `phase-0.md` |
 
@@ -35,7 +35,8 @@ things were deliberately **left as skeletons or stubs**, by design, and recorded
 3. **The surface language above the Core IR is unratified.** RFC-0006 (surface/term-layering) and
    RFC-0007 (L1 kernel calculus) are **Draft**; concrete syntax is explicitly **KC-2-gated**
    (RFC-0006 status line). The KC-2 verdict itself is open — blocked on LLM API access (phase-2.md
-   §5; M-002 / #3).
+   §5; M-002 / #3). *(This was the entering state; **since closed**: RFC-0006/0007 are Accepted
+   r5/r4, KC-2 verdict = proceed (DN-09, 2026-06-18) — see §5/§2/§7 for the current status.)*
 
 Phase 3 (Foundation §6 Phase-3) is **"dual-intelligibility tooling + performance paths."** Its
 deliverables: semantic-level **projections** (G11/FR-C1), **AI co-authoring** with semantic-feedback
@@ -48,7 +49,7 @@ These map to the epics #35–#41:
 
 | Epic | Title | Foundation basis | Depends on (epic) | Disposition entering Phase 3 |
 |---|---|---|---|---|
-| **E3-1** (#35) | Semantic-level projections | FR-C1 / G11 (exploratory) | E3-3 | **needs-design**; *contingent on projection ergonomics + KC-2* |
+| **E3-1** (#35) | Semantic-level projections | FR-C1 / G11 (exploratory) | E3-3 | **design-active** — KC-2 cleared (DN-09, 2026-06-18); M-380 opened co-equally as the projection layer (FR-S5 dual rendering) |
 | **E3-2** (#36) | AI co-authoring loop | NFR-2 / Area 6 / SC-5b | M-140, E2-6 | ready-to-design; *operational arm needs LLM API (KC-2-adjacent)* |
 | **E3-3** (#37) | Matured toolchain | §5.6–5.8 / FR-S5 | M-140/141/142 | ready (local) |
 | **E3-4** (#38) | JIT optimization | ADR-009 / RR-12 | E2-3 | ready-after native path (shares lowering) |
@@ -101,8 +102,8 @@ completed. Readiness is relative to the corpus + landed Phase-1/2 deps.
 | **M-350** Resonator-network factorization (opt-in, probabilistic) | E3-5 | P2 | E2-4, M-260 | FR-C2 / G4 / RFC-0003 §6 | **Design drafted (2026-06-15)** — RFC-0009 (convergence regime, `Empirical`-ceiling honesty, never-silent verdicts); prototype gated on ratification |
 | **M-360** Production packed-ternary acceleration | E3-6 | P2 | E2-7, M-301 | FR-C3 / G3 | **In progress (2026-06-15)** — runtime-data dot kernels for **all three** bitnet packings (I2_S/TL1/TL2; in-process JIT, inspectable per-scheme unpack IR), each oracle-checked; E1 §3 measured. **+ hand-vectorized SIMD** (`mycelium-mlir::simd`, 8-wide I2_S, vector-IR unpack) differential-checked against the scalar oracle through the shared M-210 checker, E1 §5 measured. **+ true 1.67-b/w TL2** (`pack`: 3 trits → 5-bit LUT-index bitstream; the dot kernel decodes it with a bounds-clamped 2-byte window) — **closes A5-08** (codec now matches the selector cost model). Remaining: TL1/TL2 vectorized SIMD unpacks |
 | **M-370** Native-ternary forward-compat mapping (+ stub target) | E3-7 | P2 | M-150, M-301 | R7 | **Done (2026-06-15)** — `docs/notes/Native-Ternary-Forward-Compat.md`; dialect = stub target |
-| **M-380** Semantic-level projection framework | E3-1 | P2 | E3-3 | FR-C1 / G11 | **needs-design**; *KC-2-contingent* |
-| **M-002** KC-2 LLM-leverage run (carried; gates E3-1 + concrete syntax) | E4 | P0 | M-020 (harness landed) | SC-5b / G10 / KC-2 | **Blocked (external)** — needs LLM API |
+| **M-380** Semantic-level projection framework | E3-1 | P2 | E3-3 | FR-C1 / G11 | **design-active** — KC-2 cleared (DN-09); the projection layer is now a **co-equal deliverable** (FR-S5 dual rendering; DN-09 §3.1 / M-380 opened co-equally) |
+| **M-002** KC-2 LLM-leverage run (carried; gates E3-1 + concrete syntax) | E4 | P0 | M-020 (harness landed) | SC-5b / G10 / KC-2 | **Done — verdict recorded (DN-09) = proceed** (weak-but-recoverable; 7B+examples 70% eventual, +30pp edit-to-fix; kill criterion not triggered; T3.6 ablation still open — DN-09 §4) |
 
 Legend — **Ready (local)**: can start now from the corpus + landed deps in this environment.
 **Blocked (external)**: a hard dependency outside the repo (LLM API, libMLIR). **needs-design**: an
@@ -123,11 +124,11 @@ parallelize, while batches serialize on real dependencies.
   rides alongside but is a **maintainer decision** (and concrete syntax is KC-2-gated).
 - **Batch L — acceleration & execution breadth** (depends on J): **M-340** (JIT), **M-360**
   (BitNet acceleration), **M-370** (native-ternary forward-compat doc + stub).
-- **Batch M — exploratory** (depends on numerics/recon, and KC-2): **M-350** (resonator
-  factorization, needs-design), **M-380** (projections, KC-2-contingent), **M-330** (AI co-authoring,
-  run needs API).
-- **External probe — KC-2** (M-002): the harness is landed (phase-2.md §5); the **run** is blocked on
-  LLM API access and stays out of every batch's gate until that exists.
+- **Batch M — exploratory** (depends on numerics/recon): **M-350** (resonator
+  factorization, needs-design), **M-380** (projections — **KC-2 cleared; now design-active, DN-09**),
+  **M-330** (AI co-authoring, run needs API).
+- **External probe — KC-2** (M-002): **CLOSED — verdict recorded (DN-09, 2026-06-18) = proceed.**
+  The run completed (local Qwen2.5-Coder, seed 42); see §5 KC-2 row and §2 M-002 row.
 
 ---
 
@@ -145,13 +146,13 @@ parallelize, while batches serialize on real dependencies.
  Batch K — toolchain & surface (PARALLEL to J, local):
    M-310 full-LSP ──┐
    M-311 build-system ─► M-312 content-addressed cache
-   M-320 L1 term-language extension  (RFC-0006/0007 ratification = maintainer; concrete syntax KC-2-gated)
+   M-320 L1 term-language extension  (RFC-0006/0007 ratification = maintainer; concrete syntax now committed — DN-09)
 
  Batch L (depends J):  M-340 JIT ── M-360 BitNet accel ── M-370 native-ternary forward-compat doc
 
- Batch M (exploratory): M-350 resonator (needs-design) · M-380 projections (KC-2-contingent) · M-330 AI co-authoring (run needs API)
+ Batch M (exploratory): M-350 resonator (needs-design) · M-380 projections (design-active; KC-2 cleared DN-09) · M-330 AI co-authoring (run needs API)
 
- External probe: KC-2 (M-002) — blocked on LLM API; gates E3-1 + concrete-syntax ratification
+ KC-2 (M-002): CLOSED — verdict recorded (DN-09) = proceed; unblocked E3-1 + concrete-syntax ratification
 ```
 
 **Why the native path is the keystone.** The E1 perf verdict, the JIT path (E3-4 reuses the same
@@ -160,12 +161,11 @@ target to accelerate), and the native-ternary forward-compat mapping (E3-7) all 
 actually compiles and runs. So Batch J is built first; the toolchain/surface work (Batch K) is
 genuinely independent and runs in parallel.
 
-**Honest blockers on the critical path.** Two Phase-3 deliverables cannot be *completed* in this
-environment and are sequenced as out-of-gate external probes, never pre-resolved:
+**Honest blockers on the critical path.** One original external blocker remains; the other is closed:
 
-- **KC-2 (M-002)** needs LLM API access. It gates **E3-1 projections** (Foundation: "contingent on
-  projection ergonomics + KC-2") and **concrete-syntax ratification** (RFC-0006 status). The harness
-  is ready; the verdict stays "not established" until a generator runs (VR-5).
+- **KC-2 (M-002) — CLOSED (2026-06-18).** Verdict = proceed (DN-09); the run completed
+  (local Qwen2.5-Coder). **E3-1/M-380 is now design-active**; **concrete L3 syntax is committed**
+  (RFC-0006 r5). The T3.6 rigorous ablation remains an honest open follow-up (DN-09 §4); see §5.
 - **The MLIR dialect lowering** needs libMLIR. Deferred per the §1 scope decision; the direct-LLVM
   backend (M-301) discharges the runnable-native obligation in the meantime.
 
@@ -180,7 +180,7 @@ the phase; the gate is defined in §6 and verdicts are filled as tasks land.
 | Gate | Question | Phase-2→3 verdict (2026-06-15) | What moves it in Phase 3 |
 |---|---|---|---|
 | **KC-1** | Honest, usefully-tight bound for a core VSA op? | ✅ **confirmed (build)** — carried; no regression. M-131 `Proven` capacity bound; the §4-matrix tags hold. | Resonator factorization (M-350) adds a **probabilistic-only** bound (FR-C2/G4) — tagged at the strength its convergence analysis supports, never upgraded. |
-| **KC-2** | LLM code-gen/reasoning survives the Mycelium surface? | **open — blocked (external)** — unchanged from phase-2.md §5. The M-002 harness is landed; *running* it needs LLM API access; the report hard-codes "not established." | Plug an LLM generator into the harness `Generator` protocol when API access exists; then it gates E3-1 + concrete-syntax ratification. |
+| **KC-2** | LLM code-gen/reasoning survives the Mycelium surface? | **verdict recorded (DN-09) = proceed** — the M-002 run (local Qwen2.5-Coder, 10-task gold set, seed 42) shows *weak-but-recoverable* leverage (best arm 7B+examples: 40% first-attempt → 70% eventual, +30pp edit-to-fix); the "irrecoverable collapse even with feedback" kill criterion (**not triggered**). Selects L3 strategy = **committed text syntax + co-equal projection layer (M-380)**; retains embedded-DSL fallback (RR-3) unspent. The T3.6 retention-ratio ablation (the rigorous falsification run) was **not run** — this remains an honest open follow-up (DN-09 §4); VR-5 — weak-but-recoverable is the established strength, not the strong Q1 hypothesis. | E3-1 (M-380) moves to design-active; concrete-syntax ratification unblocked (RFC-0006 r5). T3.6 ablation tracked for a future variant pass (DN-09 §4 / research-prompts.md). |
 | **KC-3** | Kernel stays single-expert auditable? | **holding** — `mycelium-core` stayed small through Phase 2 (numerics/select/mlir all *outside* it). | Phase 3 adds the most surface yet (native backend, JIT, toolchain). **Decision:** the native backend lives in `mycelium-mlir` (already outside core); the build-system + JIT land as their own crates; core gains nothing executable. Re-assess at the Phase-3 gate. |
 | **KC-4** | Per-swap certificate-check overhead within budget? | **measured (M-212), unchanged** — same order as the swap; downgrade path not triggered. Numeric budget still unratified (maintainer). | The native path lets KC-4 be **re-measured on a compiled artifact** (M-303) rather than the interpreter — a more representative number for the eventual budget ratification. |
 
@@ -189,9 +189,9 @@ the phase; the gate is defined in §6 and verdicts are filled as tasks land.
 ## 6. Phase-3 exit gate (proposed — **met; both residuals closed 2026-06-15**, §6.1)
 
 Phase 3 is large and partly exploratory/external-blocked, so the gate is scoped to the **buildable,
-local** deliverables; the exploratory/KC-2-gated epics (E3-1 projections, the E3-2 operational arm,
-E3-5 resonator) are tracked as **stretch** items whose verdicts stay honest (VR-5) and do **not**
-hold the gate. Proposed: Phase 3 closes when **all** of —
+local** deliverables; the exploratory epics (E3-1 projections — **KC-2 now cleared, design-active
+(DN-09)**; the E3-2 operational arm; E3-5 resonator) are tracked as **stretch** items whose verdicts
+stay honest (VR-5) and do **not** hold the gate. Proposed: Phase 3 closes when **all** of —
 
 - **Native execution path** — the direct-LLVM-IR backend (M-301) compiles and runs the kernel subset
   to a native artifact; the interp↔native differential (M-302) passes on the kernel corpus and
@@ -208,8 +208,9 @@ hold the gate. Proposed: Phase 3 closes when **all** of —
 **Stretch (honest, out-of-gate):** JIT (M-340 — **delivered**: in-process JIT + runtime
 specialization with a measured ≈10.7× E1 §4 speedup, no pre-written target), BitNet acceleration
 (M-360 — in progress; SIMD + true-TL2 next), native-ternary forward-compat doc (M-370 — **done**),
-resonator factorization (M-350 — design-drafted, RFC-0009/0010 ratified), projections (M-380,
-KC-2-contingent), AI co-authoring run (M-330, needs API), and the KC-2 verdict (M-002, needs API).
+resonator factorization (M-350 — design-drafted, RFC-0009/0010 ratified), projections (M-380 —
+**design-active, KC-2 cleared DN-09**), AI co-authoring run (M-330, needs API), and the KC-2 verdict
+(M-002 — **CLOSED, verdict = proceed, DN-09 2026-06-18**).
 Each is delivered as far as the environment allows and its verdict pinned at the established strength.
 
 ### 6.1 Verdict fill (2026-06-15, VR-5 — at the strength actually established)
@@ -255,9 +256,9 @@ items) continue *past* the gate; they no longer block it. The standing core-lang
 | **RR-11** | Toolchain + multi-backend scope balloons. | Phase-3 mitigation: reuse LLVM (M-301 emits textual IR, no hand-rolled codegen); the native backend stays in `mycelium-mlir`; build-system/JIT are separate crates (KC-3). Batches serialize on real deps so scope stays auditable. |
 | **RR-12** | Interpreter↔AOT/JIT semantic divergence. | The M-151/M-251 differential already folds into the M-210 checker. M-302 extends it to the **real compiled artifact** (not just the env-machine), and M-340 (JIT) validates through the same machinery (NFR-7). |
 | **RR-N1** *(new)* | The **direct-LLVM AOT** path diverges from the ratified **MLIR→LLVM** decision (RFC-0004 §2). | **Sequencing decision (§1):** direct-LLVM first (libMLIR absent), MLIR deferred; the textual `ternary`-dialect emitter is retained as the MLIR skeleton. If direct-LLVM becomes load-bearing rather than a stopgap, ratify an RFC-0004 erratum / short ADR (maintainer). Flagged, not silently adopted. |
-| **KC-2 / RR-3** | LLM leverage on the Mycelium surface unverified. | **Blocked (external):** harness landed, run needs LLM API. Gates E3-1 + concrete-syntax ratification. Verdict stays "not established" (VR-5); the embedded-DSL fallback (Foundation KC-2) is the documented contingency. |
+| **KC-2 / RR-3** | LLM leverage on the Mycelium surface. | **Verdict recorded (DN-09) = proceed** (2026-06-18). Kill criterion not triggered — feedback recovers leverage; the surface is machine-authorable at this maturity. E3-1/M-380 moves to design-active; concrete L3 text syntax committed (RFC-0006 r5). The embedded-DSL fallback (RR-3) is retained **unspent** as the documented contingency. The T3.6 rigorous ablation (retention ratio vs familiar-skin baseline) was **not run** — honest open follow-up (DN-09 §4); "weak-but-recoverable" is the established strength (VR-5). |
 | **G4 / RR-5** | Resonator factorization may not converge. | M-350 stays **opt-in, probabilistic-only, never in core** (FR-C2; the M-260 manifest already enforces the `Resonator` probabilistic-only ceiling in the type). needs-design: document the convergence regime + bounds before building. |
-| **G11** | Semantic-level (not notational) projections may not be ergonomically viable. | E3-1/M-380 is **exploratory + KC-2-contingent**; deferred to Batch M. The content-addressed IR + EXPLAIN dumps already give a projection substrate (Stage-D roadmap §"Mycelium-lang forward"). |
+| **G11** | Semantic-level (not notational) projections may not be ergonomically viable. | E3-1/M-380 is **exploratory** — **KC-2 cleared (DN-09)**; now **design-active** in Batch M. The content-addressed IR + EXPLAIN dumps already give a projection substrate (Stage-D roadmap §"Mycelium-lang forward"). The ergonomic-viability question remains open, addressed through the M-380 design. |
 
 ---
 
@@ -270,8 +271,9 @@ items) continue *past* the gate; they no longer block it. The standing core-lang
   linked under the E3-1…E3-7 epics, with `idmap.tsv` carrying the join (M-301→#86 … M-380→#98); shipped
   tasks are closed as completed. The Phase-2 epics/tasks (#28–34, #58–65) are closed as completed at the
   same sync.
-- **The two external blockers are named, not hidden** (KC-2 needs an LLM API; the MLIR path needs
-  libMLIR) — each is sequenced as an out-of-gate probe with an honest "not established" verdict.
+- **External blockers are named, not hidden** — KC-2 has its verdict (M-002 closed, DN-09 = proceed,
+  2026-06-18); the remaining external blocker is the MLIR path (needs libMLIR, §1). KC-2's T3.6
+  ablation remains an honest open follow-up (DN-09 §4), tracked separately.
 
 ---
 
@@ -618,6 +620,17 @@ items) continue *past* the gate; they no longer block it. The standing core-lang
 
 ## Meta — changelog & maintenance
 
+- **2026-06-18 (KC-2 verdict received — DN-09; M-002 closed; E3-1/M-380 design-active):** The
+  M-002 run (local Qwen2.5-Coder, 10-task gold set, seed 42, edit-to-fix budget 3) delivered the
+  **KC-2 verdict = proceed** (weak-but-recoverable leverage; best arm 7B+examples 40%→70% eventual,
+  +30pp edit-to-fix; kill criterion not triggered — DN-09 §3). §2 M-002 row flipped to **Done —
+  verdict recorded (DN-09)**. §2 M-380 row flipped from *KC-2-contingent / needs-design* to
+  **design-active** (the projection layer is now a co-equal deliverable, FR-S5 / DN-09 §3.1).
+  §5 KC-2 gate updated from *open — blocked (external)* to **verdict recorded (DN-09) = proceed**
+  (at the established strength — the T3.6 retention-ratio ablation was **not run**; "proceed" does
+  not claim the strong Q1 hypothesis, only non-collapse + recoverability — DN-09 §4). §7 KC-2/RR-3
+  row updated accordingly. Embedded-DSL fallback (RR-3) retained unspent. Concrete L3 text syntax
+  committed (RFC-0006 r5; DN-09 §3.1). Append-only; no gate verdict upgraded beyond the checked run.
 - **2026-06-15 (M-360 true 1.67-b/w TL2 layout — closes A5-08):** `mycelium-mlir::pack` now realizes
   `TL2` as the **true bitnet.cpp layout** — 3 trits → a 5-bit LUT-index (`c = d₀+3d₁+9d₂ ∈ [0,27)`),
   bit-packed as a contiguous 5-bit-field stream ⇒ **1.67 b/w** (`5/3`), distinct from the

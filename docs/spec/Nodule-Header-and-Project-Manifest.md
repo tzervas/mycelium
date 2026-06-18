@@ -190,7 +190,7 @@ are chosen above; please confirm or redirect (append-only either way):
   decision" the §7-#3 closed-key-set rule requires for any addition (the v0 set is now 10 keys: the
   prior 9 + `@matured`). `@matured` is *associated* metadata — it does **not** perturb a definition's
   content hash (ADR-003; same code compiled or interpreted is the same definition); its effective value
-  + provenance is `EXPLAIN`-able like every other resolved field (§4). The retired per-`fn` `matured`
+  and provenance are `EXPLAIN`-able like every other resolved field (§4). The retired per-`fn` `matured`
   modifier is replaced by this scope key + the in-source `thaw` de-maturation marker (RFC-0017 §4.3).
 - **2026-06-16 — Accepted; §7 choices ratified; enacted (M-359).** The maintainer ratified the three open
   §7 choices: **(2) header sigil `// @key: value`**; **(3) the v0 key set extended** with `repository`,

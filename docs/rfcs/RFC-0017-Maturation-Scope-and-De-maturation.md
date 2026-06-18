@@ -22,7 +22,7 @@ It makes three changes and **nothing else**:
 
 1. **Maturation is declared at scope, in metadata, not per-definition in the term grammar.** A
    `nodule` or `phylum` is matured through its **header** (`// @matured: true`); a program/package
-   through its **manifest** (`[project].matured` / a build target). 
+   through its **manifest** (`[project].matured` / a build target).
 2. **`matured fn` is retired.** Per-definition maturation is no longer expressible (superseded, not
    kept as sugar — maintainer decision). The matured *unit* is always a scope.
 3. **De-maturation gets a name and a meaning.** `thaw` (Surface; `germinate` is taken by spore-germination, ADR-013) marks the rare inverse

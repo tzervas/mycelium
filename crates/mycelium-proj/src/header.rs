@@ -1,8 +1,9 @@
 //! The **structured nodule header** (M-359; spec §3) — the `// @key: value` metadata lines that may
 //! follow the required `// nodule:` marker (DN-06 §6, recognised by [`mycelium_l1::parse_nodule_header`]).
 //!
-//! The v0 key set is **closed** (spec §7.3, ratified 2026-06-16): `version`, `license`, `authors`,
-//! `since`, `updated`, `summary`, `repository`, `keywords`, `deprecated`. An **unknown** `@key`, a
+//! The v0 key set is **closed** (spec §7.3, ratified 2026-06-16, extended 2026-06-18 by RFC-0017):
+//! `version`, `license`, `authors`, `since`, `updated`, `summary`, `repository`, `keywords`,
+//! `deprecated`, `matured`. An **unknown** `@key`, a
 //! **duplicate** key, a **malformed** value (non-SPDX `@license`, non-ISO `@since`/`@updated`,
 //! ill-formed `@version`) — each is an **explicit** error, never silently ignored or guessed
 //! (G2 / VR-5). Metadata is **not** identity (ADR-003): nothing here perturbs a definition's content
@@ -22,6 +23,7 @@ pub const HEADER_KEYS: &[&str] = &[
     "repository",
     "keywords",
     "deprecated",
+    "matured",
 ];
 
 /// A `@deprecated` value: a bare flag or a reason string (spec §3).
@@ -54,6 +56,8 @@ pub struct HeaderFields {
     pub keywords: Option<Vec<String>>,
     /// `@deprecated` — flags this nodule superseded (per-file; never inherited).
     pub deprecated: Option<Deprecated>,
+    /// `@matured` — the nodule/phylum is a matured (AOT) scope; RFC-0017; inherited top-down.
+    pub matured: Option<bool>,
 }
 
 /// A parsed structured header: the `// nodule:` marker plus its `@key` metadata.
@@ -218,6 +222,15 @@ fn set_field(
         "authors" => fields.authors = Some(parse_list(val, "authors", line)?),
         "keywords" => fields.keywords = Some(parse_list(val, "keywords", line)?),
         "deprecated" => fields.deprecated = Some(parse_deprecated(val, line)?),
+        "matured" => {
+            fields.matured = Some(match val {
+                "true" => true,
+                "false" => false,
+                _ => {
+                    return Err(bad(line, "matured", val, "a boolean `true` or `false`"));
+                }
+            });
+        }
         _ => unreachable!("key membership checked by caller"),
     }
     Ok(())
@@ -426,6 +439,36 @@ mod tests {
             h.fields.deprecated,
             Some(Deprecated::Reason("use geometry.v2 instead".to_owned()))
         );
+    }
+
+    // RFC-0017: @matured is a boolean key inherited top-down.
+    #[test]
+    fn matured_true_parses() {
+        // Mutant-witness: removing the `"matured"` arm in set_field would make this panic.
+        let h = parse_header("// nodule: g\n// @matured: true\n")
+            .unwrap()
+            .unwrap();
+        assert_eq!(h.fields.matured, Some(true));
+    }
+
+    #[test]
+    fn matured_false_parses() {
+        // Mutant-witness: swapping true/false arms would make this fail.
+        let h = parse_header("// nodule: g\n// @matured: false\n")
+            .unwrap()
+            .unwrap();
+        assert_eq!(h.fields.matured, Some(false));
+    }
+
+    #[test]
+    fn matured_bad_value_is_explicit_error() {
+        // Mutant-witness: removing the bad() call for unknown values would make this succeed.
+        let e = parse_header("// nodule: g\n// @matured: yes\n").unwrap_err();
+        assert!(
+            e.message.contains("a boolean `true` or `false`"),
+            "expected boolean error, got: {e}"
+        );
+        assert_eq!(e.line, 2);
     }
 
     #[test]

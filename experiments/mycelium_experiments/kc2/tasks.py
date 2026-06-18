@@ -176,13 +176,14 @@ TASKS: tuple[Task, ...] = (
     Task(
         id="kc2-08-matured",
         prompt=(
-            "Define a nullary function `main`, marked as a promoted stable component "
-            "(`matured` in Mycelium; in the baseline DSL there is no equivalent marker — just "
-            "define `main`), returning the 8-bit binary constant 0000_1111."
+            "Define a nullary function `main` returning the 8-bit binary constant 0000_1111, "
+            "inside a *matured* (promoted stable component) nodule — mark the whole nodule matured "
+            "with a `// @matured: true` header line (RFC-0017; maturation is a scope attribute, not "
+            "a `fn` modifier). In the baseline DSL there is no equivalent marker — just define `main`."
         ),
         expect_main="Binary{8}",
         expect_baseline=("bin", 8),
-        reference_mycelium="nodule bench\nmatured fn main() -> Binary{8} = 0b0000_1111\n",
+        reference_mycelium="// @matured: true\nnodule bench\nfn main() -> Binary{8} = 0b0000_1111\n",
         reference_baseline="def main():\n    return Bin('0000_1111')\n",
     ),
     Task(
