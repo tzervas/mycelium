@@ -11,10 +11,16 @@
 
 > **Posture (honesty rule / VR-5).** Advisory **planning capture** — the same role DN-08 played
 > for maturation and DN-10 plays for the L1 gaps. This note reopens no ratified decision and grades
-> nothing `Proven`; it groups, orders, and cross-links work the corpus already records. The four
-> Draft RFCs in Track B stay Draft: **none is moved toward Accepted here** — each needs its research
-> prompt run first (no Draft→Accepted without a checked basis, VR-5). Append-only: supersede, do not
-> rewrite.
+> nothing `Proven`; it groups, orders, and cross-links work the corpus already records. **This note
+> itself moves no RFC toward Accepted** — each Track-B RFC needs its research prompt run first (no
+> Draft→Accepted without a checked basis, VR-5). Append-only: supersede, do not rewrite.
+>
+> **Update (2026-06-18, same wave — forward pointer, append-only).** The Track-B research was
+> subsequently discharged (RP-2/RP-3 → `research/09`–`10`; RP-4 design grounded → `research/11`) and
+> the maintainer ratified: **RFC-0018/0019/0020 → Accepted**, **RFC-0021 → Accepted (framework)** with
+> the empirical leverage run split into the non-blocking **M-381**. The "Draft" framing below is this
+> note's *as-written* planning capture (retained verbatim); the current statuses are the RFC headers +
+> the CHANGELOG Decided entries.
 
 ---
 
@@ -53,9 +59,13 @@ directly from RFC-0001 r3 (`Σ`) — the registry pattern it mirrors already exi
 
 ### Track B — Wave-2 RFC ratification (KC-2-unblocked) — *gated on spikes*
 
-Four Draft RFCs, each held Draft until its research prompt produces a checked basis (VR-5):
+Four RFCs that were **Draft when this note was written**, each held Draft until its research prompt
+produces a checked basis (VR-5). *(Same-wave outcome, per the posture update above: all four were
+subsequently ratified — RFC-0018/0019/0020 Accepted, RFC-0021 Accepted (framework) — with the
+empirical leverage run isolated as non-blocking M-381. The table below is the as-written gating
+capture.)*
 
-| RFC (Draft) | What | Gating prompt(s) |
+| RFC (Draft as-written) | What | Gating prompt(s) |
 |---|---|---|
 | **RFC-0018** | Stage-1 static guarantee grading | **RP-2** — implicit-flows decision + a noninterference proof over the 4-point integrity lattice (flagged novel — the soundness argument must be *constructed*, not cited). |
 | **RFC-0019** | Traits & Repr-polymorphism | **RP-3** — coherence mechanism + the S1-preserving restriction set (no instantiation silently inserts a `Swap`). |

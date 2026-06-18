@@ -135,22 +135,36 @@ fn guar_str(g: GuaranteeStrength) -> &'static str {
     }
 }
 
+/// Above this width, a literal payload is summarized by its length rather than inlined element-wise.
+/// `Binary{width}`/`Ternary{trits}` are only constrained `> 0` (`mycelium-core::repr`), so a `Const`
+/// can carry an arbitrarily large payload; rendering every element would be O(width). The summary is
+/// honest (the value is never dropped — it states its shape), mirroring the VSA-hypervector case.
+const INLINE_MAX: usize = 64;
+
 fn render_payload(repr: &Repr, payload: &Payload) -> String {
     match (repr, payload) {
         (Repr::Binary { .. }, Payload::Bits(bits)) => {
-            let s: String = bits.iter().map(|&b| if b { '1' } else { '0' }).collect();
-            format!("0b{s}")
+            if bits.len() > INLINE_MAX {
+                format!("0b<{} bits>", bits.len())
+            } else {
+                let s: String = bits.iter().map(|&b| if b { '1' } else { '0' }).collect();
+                format!("0b{s}")
+            }
         }
         (Repr::Ternary { .. }, Payload::Trits(trits)) => {
-            let s: String = trits
-                .iter()
-                .map(|t| match t {
-                    Trit::Neg => '-',
-                    Trit::Zero => '0',
-                    Trit::Pos => '+',
-                })
-                .collect();
-            format!("<{s}>")
+            if trits.len() > INLINE_MAX {
+                format!("<{} trits>", trits.len())
+            } else {
+                let s: String = trits
+                    .iter()
+                    .map(|t| match t {
+                        Trit::Neg => '-',
+                        Trit::Zero => '0',
+                        Trit::Pos => '+',
+                    })
+                    .collect();
+                format!("<{s}>")
+            }
         }
         (Repr::Dense { dtype, .. }, Payload::Scalars(xs)) => {
             let s: String = xs
@@ -371,5 +385,21 @@ mod tests {
             args: vec![Node::Const(trits()), Node::Const(trits())],
         };
         assert_eq!(llm_canonical(&prog), llm_canonical(&prog));
+    }
+
+    /// A large `Const` payload is summarized by length, not inlined element-wise — bounded output on
+    /// arbitrarily wide values, and never silently dropped (it states its shape).
+    #[test]
+    fn large_payloads_are_summarized() {
+        let wide = Value::new(
+            Repr::Binary { width: 256 },
+            Payload::Bits(vec![false; 256]),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap();
+        let s = llm_canonical(&Node::Const(wide));
+        assert!(s.contains("0b<256 bits>"), "wide binary is summarized: {s}");
+        // A small value is still inlined verbatim (the byte fixture is 8 bits).
+        assert!(llm_canonical(&Node::Const(byte())).contains("0b10110010"));
     }
 }

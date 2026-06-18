@@ -39,12 +39,15 @@ The fourth Track-B RFC is ratified at framework scope, with the empirical levera
 - *Honest scope (VR-5):* the rules are Rust source, not the declared-rule-table form (RFC-0021 §4.2);
   the projection is read-only (no `RoundTrip` parse-back); the *measured authoring cost as L2 grows*,
   the *human-usability* study, and — wholly untouched — the **LLM-leverage** gate remain open. **No
-  leverage result is asserted.** RFC-0021 stays Draft.
+  leverage result is asserted.** (At this step RFC-0021 was still Draft; its framework was ratified
+  later in this same wave — see the Decided entry above — and only the non-blocking leverage run,
+  M-381, stays open.)
 
 ### Decided (2026-06-18: RFC-0018 / RFC-0019 / RFC-0020 ratified — Track B RFCs → Accepted)
 With the gating research discharged (RP-2/RP-3) and readiness assessed (DN-12), the maintainer ratified
-the three non-empirical Track-B RFCs append-only. (RFC-0021 stays Draft — its empirical leverage gate
-is open.)
+the three non-empirical Track-B RFCs append-only. (RFC-0021 was ratified separately, later in this same
+wave, at framework scope — see the Decided entry above; only its empirical leverage gate — non-blocking
+M-381 — stays open.)
 - **RFC-0018 → Accepted.** R18-Q1 = **Design A** (data-lineage / data-provenance integrity; `G-Match/A`
   normative — the guarantee system tracks data provenance, not control-flow secrecy); R18-Q4 =
   certificate reference at the type level, validity at elaboration/runtime (KC-3). R18-Q2/R7-Q2 closed.
@@ -79,10 +82,11 @@ Finishes the next wave's Track B for the two remaining RFCs, honestly bounded by
   existing `experiments/` harness (T11.7), **a protocol, not a result**. Per VR-5 / DN-09 §4 no leverage
   is asserted. RFC-0021 §9 marked **partially advanced**; Meta-changelog appended.
 - **RP-1 → Open (irreducibly empirical; protocol ready)** and **RP-4 → partially addressed** in
-  `research-prompts.md`; Doc-Index gains DN-12 and updates the RFC-0020/0021 rows. RFC-0020 and
-  RFC-0021 both **stay Draft**: RFC-0020 awaits the maintainer's scoped-ratification decision (no
-  research needed); RFC-0021's framework is ratification-ready (carve-out) but full ratification still
-  needs the empirical run.
+  `research-prompts.md`; Doc-Index gains DN-12 and updates the RFC-0020/0021 rows. At this step RFC-0020
+  and RFC-0021 were **both Draft** (RFC-0020 awaiting the maintainer's scoped-ratification decision;
+  RFC-0021's framework ratification-ready behind the carve-out); **both were ratified later in this same
+  wave** — RFC-0020 → Accepted (scoped), RFC-0021 → Accepted (framework); see the Decided entries above.
+  Only the non-blocking empirical run (M-381) remains.
 
 ### Added (2026-06-18: RP-3 discharged — traits coherence + Repr-polymorphism soundness, RFC-0019)
 Continues Track B with the trait layer's two flagged-novel research prompts.
@@ -101,8 +105,9 @@ Continues Track B with the trait layer's two flagged-novel research prompts.
   sketches), **not** `Proven` — mechanization is the future `Proven` basis. The design decisions are
   recommended, not ratified.
 - **RFC-0019 §9 R1/R2 marked DISCHARGED**, Meta-changelog appended; **RP-3 → research-discharged** in
-  `research-prompts.md`; Doc-Index updated. **RFC-0019 stays Draft** — its research gate is closed;
-  ratification awaits the maintainer's append-only design decisions. No normative rule changed.
+  `research-prompts.md`; Doc-Index updated. **RFC-0019 was Draft at this step** — the research gate
+  closed here; ratification followed later in this same wave (RFC-0019 → Accepted; see the Decided
+  entry above). No normative rule changed.
 
 ### Added (2026-06-18: RP-2 discharged — stage-1 grading noninterference, RFC-0018)
 Begins the next wave's Track B (RFC ratification research) with the flagged-novel grading RFC.
@@ -119,9 +124,10 @@ Begins the next wave's Track B (RFC ratification research) with the flagged-nove
   future `Proven` upgrade, named not claimed. The empirical/decision items it cannot settle (the
   R18-Q1 maintainer choice) are recommended (Design A), not ratified.
 - **RFC-0018 §11 marked DISCHARGED**, Meta-changelog appended; **RP-2 status → research-discharged**
-  in `research-prompts.md`; Doc-Index RFC-0018 row updated. **RFC-0018 stays Draft** — of its three
-  §10 ratification gates, the research gate (2) is now closed; gates 1 (R18-Q1) and 3 (R18-Q4) await
-  the maintainer's append-only decision (both recommended in `research/09`). No normative rule changed.
+  in `research-prompts.md`; Doc-Index RFC-0018 row updated. **RFC-0018 was Draft at this step** — of
+  its three §10 ratification gates, the research gate (2) closed here; gates 1 (R18-Q1) and 3 (R18-Q4)
+  were decided later in this same wave (RFC-0018 → Accepted; see the Decided entry above). No normative
+  rule changed.
 
 ### Added (2026-06-18: next-wave plan + R7-Q4 enactment — content-addressed prim table)
 The post-#194 wave is sorted into a plan, and its leading item is begun.

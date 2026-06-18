@@ -613,11 +613,12 @@ issues:
   - id: M-390
     title: "M-390 — R7-Q4: migrate the prim table Π to content-addressed declarations"
     milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
-    labels: [phase:4, type:feature, area:core-ir, priority:P2, status:needs-design]
+    labels: [phase:4, type:feature, area:core-ir, priority:P2, status:done]
     depends_on: [M-101, M-343]
     body: |
       RFC-0007 §8 R7-Q4 / DN-10 §3: the prim signature table Π (RFC-0007 §4.4: Π(p) = (τ₁…τₙ)→τ) is a fixed builtin table hard-coded in the elaborator/typechecker (crates/mycelium-l1/src/checkty.rs prim_sig/prim_family/prim_kernel_name) and the interpreter's intrinsic guarantee (crates/mycelium-interp/src/prims.rs, hard-coded Exact). It SHOULD become content-addressed declarations (ADR-003) living in the registry beside data declarations Σ (RFC-0001 §4.3 r3, crates/mycelium-core::data::DataRegistry) — so each prim is an inspectable, EXPLAIN-able registry entry (G2/SC-3), not a black box. Purely additive (DN-10 §4): preserves Π-lookup semantics exactly — Π_new(hash(p)) = Π_old(name(p)) — so the existing M-210 differential plus a per-prim equivalence test is the regression check (no new theorem). The intrinsic-guarantee-with-citation sub-question is RP-7 (a spike): all v0 prims are Exact, so it does not block the migration.
       Acceptance (needs-design): a content-addressed prim table in mycelium-core (mirroring DataRegistry) populated from the fixed v0 set, each carrying its signature + intrinsic guarantee; the elaborator/typechecker validate prims against it; the LSP surfaces prim declarations as inspectable entries (the EXPLAIN-over-prims gain); Π_new == Π_old equivalence tested; M-210 differential stays green; KC-3 (no L0 node-grammar change). Deferred (own follow-ups, not this task): Node::Op carrying a PrimRef content hash in the term; RP-7's BoundBasis-with-citation schema for non-Exact prims.
+      DONE (2026-06-18): crates/mycelium-core/src/prim.rs — PrimTable/PrimDecl/PrimSig/PrimRef content-addressed via Canon (new PRIM_DECL tags in content.rs), populated with the v0 kernel set, each Exact. The LSP feedback facade surfaces a prim declaration at every Op site (crates/mycelium-lsp/src/feedback.rs, the EXPLAIN-over-prims gain; unknown prims surfaced, never silent). Π_new == Π_old drift-guards pin the surface table (mycelium-l1) and the interpreter intrinsic (mycelium-interp) to PrimTable. M-210 three-way differential stays green; cargo test --workspace + clippy -D warnings clean (KC-3 — no L0 node-grammar change). The two deferred follow-ups above remain unscheduled (their own future tasks).
 
   - id: M-391
     title: "M-391 — R7-Q3: surface elaboration for mutually-recursive function groups"

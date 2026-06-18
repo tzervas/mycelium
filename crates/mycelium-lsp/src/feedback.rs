@@ -22,11 +22,20 @@
 //! document sync, which needs a text → `Node` path (the L1 surface, M-320).
 
 use mycelium_cert::{binary_to_ternary, ternary_to_binary, SwapCertificate};
+use std::sync::OnceLock;
+
 use mycelium_core::lower::{self, Stage};
 use mycelium_core::{Bound, GuaranteeStrength, Node, PrimRef, PrimTable, Repr};
 use mycelium_select::{explain, Candidate, Explanation, PolicyRegistry, SelectionInputs};
 
 use crate::lint::{self, Diagnostic, Severity};
+
+/// The closed v0 kernel-prim table (R7-Q4), built once and shared. It is immutable, so re-hashing it
+/// on every [`analyze_with`] call is avoidable overhead; cache the shared instance.
+fn builtin_prim_table() -> &'static PrimTable {
+    static TABLE: OnceLock<PrimTable> = OnceLock::new();
+    TABLE.get_or_init(PrimTable::builtins)
+}
 
 /// A per-value honesty annotation: where it is, its guarantee tag, and its bound (if approximate).
 #[derive(Debug, Clone, PartialEq)]
@@ -188,10 +197,11 @@ pub fn analyze_with(node: &Node, policies: &PolicyRegistry) -> Feedback {
     let mut prims = Vec::new();
     // The closed v0 kernel-prim table is the source of truth for prim identity + intrinsic guarantee
     // (R7-Q4); every `Op` site resolves against it (an unrecognized prim is surfaced, never silent).
-    let prim_table = PrimTable::builtins();
+    // It is immutable, so build it once and share it across calls (avoids re-hashing on every analyze).
+    let prim_table = builtin_prim_table();
     let mut cx = Collect {
         policies,
-        prim_table: &prim_table,
+        prim_table,
         g: &mut guarantees,
         sw: &mut swaps,
         ex: &mut explanations,
