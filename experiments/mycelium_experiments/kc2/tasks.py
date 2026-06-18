@@ -45,6 +45,19 @@ class Task:
     value-wrong reference solution — or a baseline↔kernel convention drift like A6-01 — is caught,
     not just the result *shape* (A6-04)."""
 
+    @property
+    def max_new_tokens(self) -> int:
+        """Per-task generation cap (tokens), sized to the task's own complexity.
+
+        A weak model on a novel language tends to ramble; a tight cap keeps each generation
+        fast on a phone CPU without truncating a correct program. Sized from the known-good
+        solution's *length* only (a scalar budget, never its content — the model never sees
+        it): ≈ chars/3 tokens + headroom for the `nodule` header, a code fence, and minor
+        verbosity, rounded to 16 and clamped to a sane band. Override globally with
+        --n-predict."""
+        est = len(self.reference_mycelium) // 3 + 48
+        return max(96, min(256, (est // 16 + 1) * 16))
+
 
 TASKS: tuple[Task, ...] = (
     Task(

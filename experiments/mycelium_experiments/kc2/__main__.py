@@ -183,9 +183,9 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--n-predict",
         type=int,
-        default=128,
-        help="Max new tokens per generation (default 128). The task solutions are short; "
-        "lower = faster on a slow CPU, but too low truncates a valid program.",
+        default=None,
+        help="HARD cap on new tokens per generation. DEFAULT: auto — each task uses a budget "
+        "sized to its own complexity (short tasks finish faster). Pass N to force a fixed cap.",
     )
     p.add_argument(
         "--timeout",

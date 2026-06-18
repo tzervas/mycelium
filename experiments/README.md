@@ -94,6 +94,18 @@ PYTHONPATH=. python3 -m mycelium_experiments.kc2 --server http://localhost:8080
 PYTHONPATH=. python3 -m mycelium_experiments.kc2 --model PATH.gguf
 ```
 
+**Primer A/B + model matrix.** The Mycelium *primer* (a grounded, leak-free syntax reference —
+it contains **no** task answer) is the chief generator knob. Two variants live in `primers/`:
+`mycelium-minimal.txt` (syntax only) and `mycelium-examples.txt` (+ two complete, valid,
+*non-answer* worked programs to anchor a weak model). Run the full
+{0.5B, 1.5B} × {minimal, examples} matrix unattended with:
+
+```sh
+./run-kc2-matrix.sh                 # writes results/<model>-<primer>/ for each combo
+MAXITERS=3 SEEDS=42,123 ./run-kc2-matrix.sh
+```
+Override one run's primer directly with `--primer-mycelium primers/mycelium-examples.txt`.
+
 Reports land under `--results-dir` (default `experiments/results/`): per run a
 `<utc>-<name>.json` + `.summary.txt`, plus a combined `index.json` and a suite `.log`.
 Each report carries **per-attempt records** (generated source, checker verdict,
@@ -105,8 +117,9 @@ to a fixed path.
 > **Tuning for a glacial phone.** A 1.5B model decodes at ~0.3–0.7 tok/s on a phone CPU,
 > so generation time dominates. The timeout is **per generation** and **refreshes every
 > attempt** — there is no cumulative suite timeout — so a long suite completes as long as
-> each *single* generation fits its budget. Levers: `--n-predict` (fewer tokens = faster;
-> the task solutions are short, default 128), `--timeout` (raise it rather than let a slow
+> each *single* generation fits its budget. Levers: `--n-predict` (DEFAULT auto — each task
+> uses a token budget sized to its own complexity; pass N to force a fixed cap), `--timeout`
+> (raise it rather than let a slow
 > but valid generation get cut off, default 600 s), `--max-iters` (attempts/task, default
 > 2), `--limit N` (fewer tasks). For a real speedup, use the **0.5B coder** — it decodes
 > ~2–3× faster than the 1.5B. Fetch it once, then it's picked up automatically (the

@@ -40,8 +40,9 @@ from pathlib import Path
 
 from mycelium_experiments.kc2.tasks import Task
 
-# A backend is anything that turns a full prompt string into the model's raw text.
-Backend = Callable[[str], str]
+# A backend turns a full prompt into the model's raw text. The optional second arg is a
+# per-call token budget (the per-task cap); a backend may clamp or ignore it.
+Backend = Callable[..., str]
 
 # Conservative upper bound on KV bytes/token for a phone-class q4 model (≈32 KB);
 # over-estimating makes the auto-sizer under-allocate context, which is the safe error.
@@ -224,28 +225,36 @@ def auto_gpu_layers(gpus: list[dict[str, object]], model: str | None) -> tuple[i
 # the measurement). Keep the two arms comparably generous.
 
 PRIMER_MYCELIUM = """\
-You write programs in the Mycelium surface fragment. Reply with ONLY the program
-source — no prose, no markdown fences, no explanation.
+You write programs in the Mycelium surface fragment — a small typed functional language
+over binary and balanced-ternary words. Reply with ONLY the program source: no prose, no
+markdown fences, no comments (Mycelium has NO comment syntax; every line is code).
 
-Mycelium has NO comments — every line must be code. Do not write `#`, `//`, or `--`.
-
-Syntax (generic examples, NOT answers):
+Structure — a program is a `nodule <name>` header, then one or more declarations:
   nodule bench
-  fn name(x: Binary{8}) -> Binary{8} = not(x)
-  fn main() -> Ternary{4} = add(<00+->, <0+0->)
-- Every program MUST begin with a `nodule <name>` line (e.g. `nodule bench`), then fns.
-- Types: Binary{N} (N bits), Ternary{N} (N balanced trits).
-- Binary literal: 0b1010_1010 (underscores allowed). Ternary literal: <+0-> (MSB first).
-- Built-in ops: not(x), xor(a, b), add(a, b), swap(x, to: Ternary{6}, policy: name).
-- swap ALWAYS needs a `to:` type and a `policy:` name; there is no implicit conversion.
-- Sum types + match:
-    type Sign = Neg | Zero | Pos
-    fn label(s: Sign) -> Ternary{1} = match s { Neg => <->, Zero => <0>, _ => <+> }
-- Recursive list type + recursion:
-    type Bytes = End | More(Binary{8}, Bytes)
-- Bounded iteration (fold):  for b in bs, acc = 0b0000_0000 => xor(acc, b)
-- let-binding:  let bs = More(0b1111_0000, End) in for b in bs, acc = ... => ...
-- `matured fn main() -> ...` marks a promoted stable component.
+  fn main() -> Binary{8} = not(0b0110_1001)
+Functions: fn name(p: Type, ...) -> RetType = <expr>   (the body is ONE expression after `=`).
+`matured fn ... = ...` marks a promoted, total component, e.g. matured fn unit() -> Ternary{1} = <0>
+
+Types and literals (most-significant digit first):
+- Binary{N}  — N-bit word.   Literal: 0b0110_1001  (the `0b` prefix is REQUIRED; `_` optional)
+- Ternary{N} — N-trit word.  Literal: <+-0>        (trit glyphs + 0 - inside angle brackets)
+
+Operators (use these EXACT forms):
+- not(x)                               complement of one Binary (same width)
+- xor(a, b)                            xor of two equal-width Binary
+- add(a, b)                            balanced-ternary add of two equal-width Ternary
+- swap(x, to: Ternary{4}, policy: rt)  change representation — ALWAYS needs BOTH a `to:`
+                                       target type AND a `policy:` name (there is no implicit cast)
+
+Sum types + match (match MUST be exhaustive — one arm per constructor, or a final `_`):
+  type Bit = Off | On
+  fn pick(x: Bit) -> Binary{8} = match x { Off => 0b0000_0000, On => 0b1111_1111 }
+
+Recursive data, recursion, bounded fold, and let:
+  type Bytes = End | More(Binary{8}, Bytes)
+  fn head(bs: Bytes) -> Binary{8} = match bs { End => 0b0000_0000, More(b, rest) => b }
+  fn fold(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b1111_1111 => xor(acc, b)
+  fn run() -> Binary{8} = let bs = More(0b0110_1001, End) in fold(bs)
 """
 
 PRIMER_BASELINE = """\
@@ -335,13 +344,16 @@ def cli_backend(
     model: str,
     *,
     seed: int = 42,
-    n_predict: int = 256,
+    n_predict: int | None = None,
     ctx_size: int = 2048,
     n_gpu_layers: int = 0,
     extra_args: Sequence[str] | None = None,
     timeout: int = 300,
 ) -> Backend:
     """A backend that shells out to `llama` / `llama-cli`.
+
+    ``n_predict``: a HARD token-budget override; ``None`` uses the per-call/per-task budget
+    (or 192). See ``server_backend``.
 
     ``ctx_size`` caps the context window (``-c``): keep it small so llama.cpp does not
     allocate a KV cache for the model's full trained window (Qwen2.5 = 32k), which
@@ -354,7 +366,8 @@ def cli_backend(
     use ``server_backend`` (clean /completion output).
     """
 
-    def complete(prompt: str) -> str:
+    def complete(prompt: str, per_call: int | None = None) -> str:
+        n = n_predict if n_predict is not None else (per_call if per_call is not None else 192)
         cmd = [
             llama_cli,
             "--model",
@@ -364,7 +377,7 @@ def cli_backend(
             "--seed",
             str(seed),
             "--n-predict",
-            str(n_predict),
+            str(n),
             "--ctx-size",
             str(ctx_size),
             "--log-disable",
@@ -392,28 +405,31 @@ def server_backend(
     base_url: str,
     *,
     seed: int = 42,
-    n_predict: int = 192,
+    n_predict: int | None = None,
     timeout: int = 600,
     stop: Sequence[str] | None = ("\nTASK:",),
 ) -> Backend:
     """A backend that POSTs to a llama.cpp HTTP server's /completion endpoint.
 
-    ``timeout`` is the client read budget for ONE generation. A phone CPU decodes a 1.5B
-    model at ~0.3–0.7 tok/s, so ``n_predict`` tokens can take minutes — keep the timeout
-    generous (default 600 s) or generations die mid-stream and abort the run. ``stop``
-    halts the model early on an obvious boundary (a fabricated next ``TASK:``), and
-    ``cache_prompt`` reuses the shared-primer KV across calls (the big common prefix).
+    ``n_predict``: a HARD override of the token budget; ``None`` (default) means use the
+    per-call/per-task budget the generator passes (or 192 if none). ``timeout`` is the
+    client read budget for ONE generation. A phone CPU decodes a 1.5B model at ~0.3–0.7
+    tok/s, so the budget in tokens can take minutes — keep the timeout generous (default
+    600 s) or generations die mid-stream and abort the run. ``stop`` halts the model early
+    on an obvious boundary (a fabricated next ``TASK:``), and ``cache_prompt`` reuses the
+    shared-primer KV across calls (the big common prefix).
     """
     import urllib.error
     import urllib.request
 
     url = base_url.rstrip("/") + "/completion"
 
-    def complete(prompt: str) -> str:
+    def complete(prompt: str, per_call: int | None = None) -> str:
+        n = n_predict if n_predict is not None else (per_call if per_call is not None else 192)
         body = {
             "prompt": prompt,
             "seed": seed,
-            "n_predict": n_predict,
+            "n_predict": n,
             "stream": False,
             "cache_prompt": True,
         }
@@ -434,8 +450,8 @@ def server_backend(
             timed_out = isinstance(exc, TimeoutError) or isinstance(reason, TimeoutError)
             if timed_out:
                 msg = (
-                    f"server /completion timed out after {timeout}s. On a slow phone raise "
-                    f"--timeout or lower --n-predict (now {n_predict})."
+                    f"server /completion timed out after {timeout}s generating up to {n} "
+                    f"tokens. On a slow phone raise --timeout or lower --n-predict."
                 )
             else:
                 msg = (
@@ -470,7 +486,7 @@ class LlamaGenerator:
         primer = self.primers.get(arm) or primer_for(arm)
         prompt = build_prompt(task, arm, feedback, primer)
         self.calls.append((task.id, arm, len(feedback)))
-        raw = self.backend(prompt)
+        raw = self.backend(prompt, task.max_new_tokens)
         # Some builds ignore --no-display-prompt and echo the prompt back into stdout;
         # if the verbatim prompt is present, keep only what follows it (the completion).
         if prompt and prompt in raw:

@@ -8,6 +8,22 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: KC-2 grounded primer, A/B variants, per-task token budgets, run matrix)
+- **Grounded, leak-free Mycelium primer.** Rewrote `PRIMER_MYCELIUM` from the actual L1 grammar
+  (lexer keywords, literal forms, exhaustive `match`, `for`-folds over recursive types, `let`,
+  `swap`'s mandatory `to:`/`policy:`). Every embedded example is validated against `myc-check`.
+  **Fixed an answer leak**: the old primer contained kc2-04's body (`add(<00+->, <0+0->)`) and
+  kc2-07's `Sign`/`match` verbatim — it now uses only non-answer values, verified by a leak check.
+- **Primer A/B variants** in `experiments/primers/`: `mycelium-minimal.txt` (syntax only) and
+  `mycelium-examples.txt` (+ two complete, valid, *non-answer* worked programs to anchor a weak
+  model on a language it was never trained on). Select with `--primer-mycelium FILE`.
+- **Per-task token budgets**: `Task.max_new_tokens` sizes each generation to the task's complexity
+  (96–144 tokens here) instead of a flat cap — faster on a phone CPU without truncating. `--n-predict`
+  now defaults to *auto* (per-task) and, when given, is a hard override. Backends take an optional
+  per-call budget (no effect on the tested `StaticGenerator` path).
+- **`run-kc2-matrix.sh`**: runs {0.5B, 1.5B} × {minimal, examples} in sequence, unattended, robustly
+  prefetching each model and writing `results/<model>-<primer>/` per combo.
+
 ### Fixed (2026-06-18: KC-2 extraction + primer defects surfaced by the first 0.5B run)
 - **`extract_source` leaked the fence info string.** A model that fenced its code as ` ```source `
   left the literal word `source` as line 1, breaking *every* parse at 1:1 ("found Ident(\"source\")").
