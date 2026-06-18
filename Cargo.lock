@@ -295,6 +295,8 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
