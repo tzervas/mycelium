@@ -392,7 +392,7 @@ mod tests {
     /// Wire round-trip for a dense value.
     #[test]
     fn round_trip_wire_dense() {
-        let v = dense_value(&[0.5, -1.0, 2.718]);
+        let v = dense_value(&[0.5, -1.0, 2.75]);
         let bytes = serialize(&v, Format::Wire);
         let recovered = deserialize(&bytes, Format::Wire).expect("dense round-trip");
         assert_eq!(v, recovered);
@@ -546,7 +546,7 @@ mod tests {
             (1u32..=max_dim).prop_flat_map(|d| {
                 prop::collection::vec(
                     // Integer-valued doubles in [-1024, 1024]: exact in JSON.
-                    (-1024_i32..=1024_i32).prop_map(|i| f64::from(i)),
+                    (-1024_i32..=1024_i32).prop_map(f64::from),
                     d as usize,
                 )
             })

@@ -804,8 +804,8 @@ mod tests {
     /// `parse_bool` parses "true" and "false" exactly.
     #[test]
     fn parse_bool_valid() {
-        assert_eq!(parse_bool(&Text::new("true")).expect("valid"), true);
-        assert_eq!(parse_bool(&Text::new("false")).expect("valid"), false);
+        assert!(parse_bool(&Text::new("true")).expect("valid"));
+        assert!(!parse_bool(&Text::new("false")).expect("valid"));
     }
 
     /// `parse_bool` rejects empty input with Err(Empty) — never a sentinel false (C1).

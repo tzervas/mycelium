@@ -1097,8 +1097,7 @@ mod tests {
         for a in -10i32..=10 {
             for b in -10i32..=10 {
                 let m = myc_min(a, b);
-                assert!(m <= a.min(b) + 0 && m >= a.min(b) - 0, "min({a},{b}) = {m}");
-                assert_eq!(m, a.min(b));
+                assert_eq!(m, a.min(b), "min({a},{b}) = {m}");
             }
         }
     }

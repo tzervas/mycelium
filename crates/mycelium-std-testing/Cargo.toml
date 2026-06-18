@@ -1,7 +1,7 @@
 [package]
 name = "mycelium-std-testing"
 version = "0.0.0"
-description = "std.testing — property / golden / differential harness."
+description = "std.testing — property / golden / differential test harness; a skipped check is reported, never a silent pass (M-534)."
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true

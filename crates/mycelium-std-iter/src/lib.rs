@@ -977,7 +977,7 @@ mod tests {
 
     #[test]
     fn transduce_filter_only() {
-        let xf = Transducer::filter(|x: &u32| *x % 2 == 0);
+        let xf = Transducer::filter(|x: &u32| (*x).is_multiple_of(2));
         let result = transduce(fvec(&[1u32, 2, 3, 4]), &xf, vec![], |mut acc, e| {
             acc.push(e);
             acc
