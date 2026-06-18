@@ -8,6 +8,12 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: KC-2 `--model-id` shortcut)
+- `--model-id ID` selects a cached registry model by name (e.g. `--model-id qwen2.5-coder-0.5b`)
+  instead of typing a `.gguf` path. Registry-agnostic — resolves the id as a filename prefix in the
+  cache dir; if it isn't fetched yet, errors with the exact `--ensure-model` command (never-silent).
+  Mutually exclusive with `--model`.
+
 ### Added (2026-06-18: faster 0.5B coder model for KC-2 sweeps)
 - Registered **`qwen2.5-coder-0.5b`** (Qwen2.5-Coder-0.5B-Instruct-GGUF, Apache-2.0) in the
   llm-harness model registry — ~2–3× quicker decode than the 1.5B on a phone CPU, where generation

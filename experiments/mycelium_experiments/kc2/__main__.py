@@ -71,6 +71,23 @@ def _find_model(explicit: str | None) -> str | None:
     return None
 
 
+def _resolve_model_id(model_id: str) -> str | None:
+    """Resolve a registry id (e.g. ``qwen2.5-coder-0.5b``) to its cached .gguf path.
+
+    Registry-agnostic: the harness saves each model as ``<id>...q4_k_m.gguf``, so the id is
+    just a filename prefix in the cache dir. Returns None if it isn't fetched yet (the
+    caller turns that into a never-silent "fetch it with --ensure-model" error).
+    """
+    md = _default_model_dir()
+    try:
+        for p in sorted(md.glob(f"{model_id}*.gguf")):
+            if p.is_file():
+                return str(p)
+    except OSError:
+        pass
+    return None
+
+
 def _read_primer(path: str | None) -> str | None:
     return Path(path).expanduser().read_text(encoding="utf-8") if path else None
 
@@ -124,6 +141,12 @@ def _build_parser() -> argparse.ArgumentParser:
     src.add_argument("--server", metavar="URL", help="Use an already-running llama.cpp server.")
     src.add_argument("--llama-cli", metavar="PATH", help="Use the `llama`/`llama-cli` backend.")
     p.add_argument("--model", metavar="PATH", help="Path to a .gguf model (server/cli backends).")
+    p.add_argument(
+        "--model-id",
+        metavar="ID",
+        help="Pick a cached registry model by id (e.g. qwen2.5-coder-0.5b) instead of a path. "
+        "Fetch one first with `harness.py --ensure-model --model-id ID`.",
+    )
     p.add_argument("--server-binary", metavar="PATH", help="Path to `llama-server` (for --serve).")
     p.add_argument("--host", default="127.0.0.1", help="Host for --serve (default 127.0.0.1).")
     p.add_argument("--port", type=int, default=None, help="Port for --serve (default: a free one).")
@@ -220,6 +243,20 @@ def main() -> int:
         killed = server.stop_external_servers(log, port=args.port)
         print(f"Stopped {len(killed)} llama-server process(es): {killed}", file=sys.stderr)
         return 0
+
+    # Resolve --model-id (registry name) to a cached path, feeding the normal --model path.
+    if args.model_id:
+        if args.model:
+            sys.exit("ERROR: pass either --model PATH or --model-id ID, not both.")
+        resolved = _resolve_model_id(args.model_id)
+        if not resolved:
+            sys.exit(
+                f"ERROR: model-id '{args.model_id}' is not cached in {_default_model_dir()}. "
+                f"Fetch it: python tools/llm-harness/harness.py --ensure-model "
+                f"--model-id {args.model_id}"
+            )
+        args.model = resolved
+        print(f"Using --model-id {args.model_id} → {resolved}", file=sys.stderr)
 
     arms = tuple(a.strip() for a in args.arms.split(",") if a.strip())
     if unknown := [a for a in arms if a not in ("mycelium", "baseline")]:

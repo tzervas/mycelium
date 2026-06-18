@@ -115,6 +115,8 @@ to a fixed path.
 > ```sh
 > python ../tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-coder-0.5b
 > PYTHONPATH=. python3 -m mycelium_experiments.kc2 --serve     # now runs on the 0.5B
+> # or pin it explicitly by id (no long path):
+> PYTHONPATH=. python3 -m mycelium_experiments.kc2 --serve --model-id qwen2.5-coder-0.5b
 > ```
 
 > **Why `--serve` beats the bare CLI.** The CLI reloads the model for *every* generation
