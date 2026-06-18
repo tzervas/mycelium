@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft (needs-design)** (2026-06-17) — design-first; no code lands until RFC-0016 is Accepted and this spec is ratified (the maintainer's append-only decision). |
+| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-math` (M-525, #166, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
 | **Module / Ring** | `std.math` · Ring 2 (RFC-0016 §4.2) · Tier B (RFC-0016 §4.4) |
 | **Tracks** | `M-525` (#166) — the Phase-5 task this spec delivers |
 | **Scope** | Numeric functions over Mycelium's value model: exact integer/rational ops, comparison/aggregation, and the transcendental/approximate family (`sqrt`/`exp`/`log`/`pow`/`sin`/…). Where precision matters, results route through the verified numerics (`mycelium-numerics`, ADR-010) and **carry that crate's bound + tag**. |

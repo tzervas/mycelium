@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft (needs-design)** (2026-06-17) — design-first; no code lands until RFC-0016 is Accepted and this spec is ratified (the maintainer's append-only decision). |
+| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-time` (M-529, #170, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
 | **Module / Ring** | `std.time` · Ring 2 (RFC-0016 §4.2) · Tier B (RFC-0016 §4.4) |
 | **Tracks** | `M-529` (#170) — the Phase-5 task this spec delivers |
 | **Scope** | Value-semantic **durations** and **instants**, and the **typed reading surface** for three clock sources: **MONOTONIC** (elapsed-time, never-backward), **WALL-CLOCK** (civil/UTC time, an entropy source), and the RFC-0008 **in-runtime LOGICAL clock** (a deterministic monotonic tick the runtime advances — the M-356 reclaim-windowing basis). Every clock *read* is a **declared effect** (C6). |

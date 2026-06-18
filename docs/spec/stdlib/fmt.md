@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft (needs-design)** (2026-06-17) — design-first; no code lands until RFC-0016 is Accepted and this spec is ratified (the maintainer's append-only decision). |
+| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-fmt` (M-533, #173, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
 | **Module / Ring** | `std.fmt` · Ring `2` (RFC-0016 §4.2) · Tier `B` |
 | **Tracks** | `M-533` (#173) — the Phase-5 task this spec delivers |
 | **Scope** | Formatting and display: rendering a `Value` into a **human** view and a **machine** (JSON) view over one canonical form. Owns the display/debug/`to-json`/`from-json` surface and the marked-truncation discipline. |
