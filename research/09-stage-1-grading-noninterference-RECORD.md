@@ -137,7 +137,7 @@ Standard **type preservation + substitution** for a graded judgment, with the gr
   demanded at `g₁` preserves grades by `meet`) gives the result. `G-App`'s `g₁' ⊒ g₁` premise (the
   LR-6 demand check) is the side-condition the lemma needs. ✓
 - **`G-Match/A` (the load-bearing case).** The result *is* one of the branch bodies `eᵢ`; its
-  content-provenance is `P(eᵢ) ⊒ gᵢ ⊒ meet over branches = ` result grade. The scrutinee's
+  content-provenance is `P(eᵢ) ⊒ gᵢ ⊒ (meet over branches)` = the result grade. The scrutinee's
   provenance is **not** part of the result's content (selection ≠ data flow), mirroring the static
   rule's omission of `g_s`. The static rule and the content-provenance semantics agree **by
   construction**. ✓ (This is also where the honest *gap* lives — see T9.6.)

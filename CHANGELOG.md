@@ -8,6 +8,26 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: RP-3 discharged — traits coherence + Repr-polymorphism soundness, RFC-0019)
+Continues Track B with the trait layer's two flagged-novel research prompts.
+- **`research/10-traits-coherence-repr-polymorphism-RECORD.md`** — discharges RP-3 / RFC-0019 §9
+  R1+R2. Findings T10.1–T10.9: why content-addressing makes coherence a *correctness* property
+  (T10.1); the coherence mechanism — Rust-style orphan rule + global uniqueness + reject-overlap, the
+  only one consistent with ADR-003 (T10.2) — with a **total/deterministic/hash-stable resolution
+  theorem + sketch** (T10.3); the Q-coherence verdict — reject newtype waivers in v1 (safe admission
+  needs a *roles* mechanism, Weirich et al.) (T10.4); the **Repr-polymorphism restriction set** ("no
+  paradigm-specific `Op` on a Repr-abstract argument; passthrough / trait-interface / lexical-`Swap`
+  only"), shown **locally checkable** (T10.5) and **S1-preserving** with a theorem + sketch (T10.6),
+  grounded as the dual of GHC levity polymorphism (T10.7); recommend-defer for multi-param/associated
+  types (T10.8); and confirmation that dictionary-passing keeps the kernel node budget unchanged
+  (T10.9).
+- *Honest scope (VR-5):* both soundness results are tagged **Declared-with-argument** (theorems with
+  sketches), **not** `Proven` — mechanization is the future `Proven` basis. The design decisions are
+  recommended, not ratified.
+- **RFC-0019 §9 R1/R2 marked DISCHARGED**, Meta-changelog appended; **RP-3 → research-discharged** in
+  `research-prompts.md`; Doc-Index updated. **RFC-0019 stays Draft** — its research gate is closed;
+  ratification awaits the maintainer's append-only design decisions. No normative rule changed.
+
 ### Added (2026-06-18: RP-2 discharged — stage-1 grading noninterference, RFC-0018)
 Begins the next wave's Track B (RFC ratification research) with the flagged-novel grading RFC.
 - **`research/09-stage-1-grading-noninterference-RECORD.md`** — discharges RP-2 / RFC-0018 §11 (the

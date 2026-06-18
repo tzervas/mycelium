@@ -113,8 +113,15 @@ question — does a `default` arm's body meet-degrade differently from named alt
 
 ## RP-3 — Traits Coherence and Repr-Polymorphism Soundness (LR-5 / T3.3)
 
-**Status:** Open (RFC-0006 §4.2 LR-5 is a committed direction; the coherence mechanism and
-restriction set are not yet decided).
+**Status:** **Research discharged (2026-06-18)** — `research/10-traits-coherence-repr-polymorphism-RECORD.md`
+answers all three sub-questions: the coherence *mechanism* (Rust-style orphan rule + global
+uniqueness + reject-overlap, with a hash-stable-resolution theorem), the *restriction set* ("no
+paradigm-specific `Op` on a Repr-abstract argument" — locally checkable), and the *S1-preservation
+soundness statement* (theorem + sketch, the dual of GHC levity polymorphism). Newtype waivers
+recommended rejected in v1 (need roles); multi-param/associated types recommended deferred to v2.
+Soundness tagged **Declared-with-argument** (not machine-checked). RFC-0019 §9 R1/R2 marked
+discharged; ratification now awaits the maintainer's append-only design decisions. (Original prompt
+retained below.)
 
 **Question.** What coherence mechanism and restriction set make **Repr-polymorphism** (LR-5:
 abstracting over the paradigm `∀r: Repr`) sound while keeping `Swap` explicit (S1)?
