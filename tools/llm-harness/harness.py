@@ -2817,6 +2817,16 @@ def run_harness(args: argparse.Namespace) -> int:
                     "Model could not be ensured — model-dependent validations "
                     "will SKIP (skip-gracefully, never a false pass)."
                 )
+            # Prefetch mode: fetch the model and STOP — do not run the validation suite.
+            if bool(getattr(args, "ensure_only", False)):
+                if model_path:
+                    log.info(
+                        "--ensure-only: model ready (%s) — exiting 0 before the validation suite.",
+                        model_path,
+                    )
+                    return 0
+                log.error("--ensure-only: model could not be fetched; nothing to do.")
+                return 1
         elif model_path is None and not want_ensure:
             # No --model / --ensure-model, but a model may already be cached from a
             # previous run — reuse it so real mode "just works" once llama.cpp exists.
@@ -3130,6 +3140,15 @@ def _build_parser() -> argparse.ArgumentParser:
             "(idempotent; resumable, auto-retrying). Safe to re-run; great for a phone or "
             "desktop to PREFETCH a model ahead of time. Tune persistence with "
             "--download-retries (0 = keep going until complete)."
+        ),
+    )
+    p.add_argument(
+        "--ensure-only",
+        action="store_true",
+        dest="ensure_only",
+        help=(
+            "With --ensure-model/--model-id: fetch the model and EXIT 0 — do NOT run the "
+            "validation suite. For prefetching a model in a script (e.g. the KC-2 matrix)."
         ),
     )
     p.add_argument(
