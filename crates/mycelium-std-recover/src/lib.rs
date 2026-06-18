@@ -3,63 +3,75 @@
 //! # Scope (honesty)
 //!
 //! This crate is the **Rust-first library surface** of `std.recover`. The **self-hosting migration**
-//! half of M-520 (diag + recover authored in Mycelium-lang) is **Batch P5-C, M-502-gated** and is
+//! half of M-520 (recover authored in Mycelium-lang) is **Batch P5-C, M-502-gated** and is
 //! *not* in this wave (`docs/spec/stdlib/recover.md` §Status).
 //!
-//! Recovery must be **additive / opt-in (I5)**, **never fabricate or upgrade a guarantee (I2)**,
-//! **bounded (I3/I4)**, and **never a silent drop (I1)** — and it elaborates to an L0 `Match` with
-//! **no new kernel node** (KC-3 / NFR-7). The recovered tag is **inherited from the policy, never
-//! laundered upward**.
+//! # Architecture (KC-3 / NFR-7)
 //!
-//! Design spec: `docs/spec/stdlib/recover.md`; RFC-0014; task M-520, issue #156.
+//! Recovery elaborates to an L0 `Match` over the error sum — **no new kernel node** (RFC-0014
+//! §4.3 / KC-3).  The driver and the policy are ordinary functions/values; budget enforcement
+//! lives in `mycelium-interp` (M-353), not in the kernel calculus.  The self-hosted form will be
+//! held against this Rust origin by a differential (NFR-7) in Batch P5-C.
 //!
-//! ## Scaffold status (SCAFFOLD — M-520 leaf to complete)
+//! # Invariants (RFC-0014 §4.2/§4.5; RFC-0016 C1–C6)
 //!
-//! Stub surface only: the [`Outcome`] sum (no `Dropped` variant — I1) and the [`recover`] entry
-//! point so the workspace builds. The M-520 leaf agent fills in: reified policy execution
-//! (`run_policy`) with declared + bounded effects (`EffectBudgetExhausted` on overrun — I3/I4),
-//! the recovered-tag ≤ policy-tag meet (I2 / VR-5 — fixes the P5-B exact-tag bug), the
-//! [`mycelium_diag::Diag`] a recovered/re-propagated error carries (FR-R5), the §4.5 matrix, and the
-//! never-drops / tag-never-upgraded / budget-bounded property tests. It branches from the
-//! [`mycelium_diag`] scaffold contract — any change it needs to those record types is FLAGged to the
-//! orchestrator, not edited here.
+//! - **(I1) Never-silent.** [`handle_classified`] always yields [`Resolution::Recovered`] or
+//!   [`Resolution::Propagated`] — there is no `Dropped` variant.  Every error is either
+//!   explicitly recovered or explicitly re-propagated.
+//! - **(I2) Honest tags.** The recovered tag is **at most `Declared`** for a `Fallback`;
+//!   **inherited** for a `Retry` success; **`Exact`** for a clean `Ok` pass-through.  Recovery
+//!   never launders a tag upward (VR-5).  This fixes the P5-B exact-tag bug (FR-R3).
+//! - **(I3) Effects are declared.** [`effect::check_effects`] catches any performed-but-undeclared
+//!   effect as an explicit [`effect::UndeclaredEffect`] (no unknown side effects).
+//! - **(I4) Budgets overrun gracefully.** [`effect::Budgets::consume`] returns an explicit
+//!   [`effect::EffectBudgetExhausted`] on overrun — never a hang, OOM, or panic.
+//! - **(I5) Tightly scoped by default.** An effect with no declared budget cannot run.
+//!
+//! # Module layout
+//!
+//! - [`action`] — the closed v0 recovery-action set (`Fallback` / `Retry` / `Escalate` /
+//!   `CleanupThenPropagate`; RFC-0014 §4.4/§8).
+//! - [`registry`] — a minimal error-class registry (`ClassRegistry`, `ClassName`, `UnknownClass`);
+//!   the Rust-first stand-in for `std.diag`'s shared registry (M-510).
+//! - [`policy`] — the reified, content-addressed `RecoveryPolicy<T>` (RFC-0005 pattern; ADR-006)
+//!   and `PolicyRef = ContentHash` (RFC-0001 §4.6).
+//! - [`outcome`] — the `Outcome<T,E>` input sum and the `Resolution<T,E>` output sum (no
+//!   `Dropped` variant — I1).
+//! - [`effect`] — re-exports from `mycelium_interp::budget` + `check_effects`/`UndeclaredEffect`.
+//! - [`handle`] — the never-silent driver: `handle_classified`, `recover_classified`.
+//! - [`guarantee_matrix`] — the §4.5 matrix as checked data (RFC-0016 §4.5).
+//!
+//! # Design spec
+//!
+//! `docs/spec/stdlib/recover.md`; RFC-0014; task M-520, issue #156.
 #![forbid(unsafe_code)]
 
-use mycelium_core::{GuaranteeStrength, PolicyRef};
+pub mod action;
+pub mod effect;
+pub mod guarantee_matrix;
+pub mod handle;
+pub mod outcome;
+pub mod policy;
+pub mod registry;
 
-/// The result of a recovery attempt (FR-R1). There is **no `Dropped` variant** (I1): every error is
-/// either recovered (with an honest, policy-inherited tag) or re-propagated.
-#[derive(Debug, Clone, PartialEq)]
-pub enum Outcome<T, E> {
-    /// The error was recovered. `tag` is **≤ the policy's declared tag** (meet; never `Exact`
-    /// unless the policy proves it — I2/VR-5). `policy` is the reified, EXPLAIN-able artifact.
-    Recovered {
-        /// The recovered value.
-        value: T,
-        /// The honest, policy-inherited guarantee tag.
-        tag: GuaranteeStrength,
-        /// The content-addressed policy that recovered this value.
-        policy: PolicyRef,
-    },
-    /// The error was re-propagated (possibly transformed) — never silently dropped.
-    Propagated(E),
-}
+#[cfg(test)]
+mod tests;
 
-/// Bridge a `Result` into an [`Outcome`] under a reified recovery `policy`.
+// ---- top-level re-exports (the primary public surface) ----------------------
+
+pub use action::RecoveryAction;
+pub use effect::{
+    check_effects, Budgets, EffectBudget, EffectBudgetExhausted, EffectKind, EffectSet,
+    UndeclaredEffect,
+};
+pub use handle::{handle_classified, recover_classified};
+pub use outcome::{DiagError, Outcome, Resolution};
+pub use policy::{policy_effects, PolicyRef, RecoveryPolicy};
+pub use registry::{ClassName, ClassRegistry, UnknownClass};
+
+/// `RecoverOutcome<T, E>` is `Resolution<T, E>` — the concrete shape that resolves
+/// `error.md` §7-Q1 (the `std.error` bridge signature owned here).
 ///
-/// SCAFFOLD: the `Ok` path stamps the honest **`Declared` floor** (never `Exact` — I2), and the
-/// `Err` path re-propagates (the safe never-drop default). The M-520 leaf agent replaces the `Err`
-/// arm with `run_policy` (declared + bounded effects, the closed action set), the recovered tag
-/// being `action_tag.meet(policy_tag)`.
-#[must_use]
-pub fn recover<T, E>(r: Result<T, E>, policy: PolicyRef) -> Outcome<T, E> {
-    match r {
-        Ok(value) => Outcome::Recovered {
-            value,
-            tag: GuaranteeStrength::Declared,
-            policy,
-        },
-        // Never a drop (I1): until a policy action is run, the honest behaviour is re-propagation.
-        Err(e) => Outcome::Propagated(e),
-    }
-}
+/// The bridge is [`handle_classified`] itself; `RecoverOutcome = Recovered | Propagated`, no
+/// drop variant (I1), honest inherited tag (I2).  `error`'s contract holds verbatim.
+pub type RecoverOutcome<T, E> = Resolution<T, E>;
