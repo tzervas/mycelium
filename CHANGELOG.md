@@ -8,6 +8,13 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (2026-06-18: CUDA executable link in the container build)
+- `experiments/docker/Dockerfile` passes `-DCMAKE_EXE_LINKER_FLAGS=-Wl,--allow-shlib-undefined` to the
+  llama.cpp CUDA build. `libcuda.so.1` (the CUDA *driver*) is absent at build time and host-injected at
+  runtime (CDI), so the `llama-cli`/`llama-server` link failed on undefined `cu*` driver symbols
+  (`cuMemCreate`, …) after all 437 objects compiled. This matches upstream llama.cpp's own
+  `.devops/cuda.Dockerfile`. Live-found on an RTX 5080 WSL2 box.
+
 ### Fixed (2026-06-18: Podman container build on WSL2)
 - `experiments/docker/Dockerfile` now uses the **fully-qualified** base image
   `docker.io/nvidia/cuda:12.8.1-devel-ubuntu24.04`. Podman refuses unqualified short-names (Docker

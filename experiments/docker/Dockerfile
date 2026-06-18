@@ -34,12 +34,16 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.cargo/bin:/root/.local/bin:${PATH}"
 
 # Build llama.cpp's server + cli with CUDA, put them on PATH so `--serve` finds them.
+# --allow-shlib-undefined: libcuda.so.1 (the CUDA *driver*) is absent at build time and injected by
+# the host at runtime (CDI). The exe link must tolerate those shlib-provided cu* symbols — this is
+# exactly what upstream llama.cpp's .devops/cuda.Dockerfile does.
 RUN git clone --depth 1 --branch "${LLAMA_CPP_REF}" https://github.com/ggml-org/llama.cpp /opt/llama.cpp \
     && cmake -S /opt/llama.cpp -B /opt/llama.cpp/build -G Ninja \
          -DCMAKE_BUILD_TYPE=Release \
          -DGGML_CUDA="${LLAMA_CUDA}" \
          -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCHS}" \
          -DLLAMA_CURL=OFF \
+         -DCMAKE_EXE_LINKER_FLAGS=-Wl,--allow-shlib-undefined \
     && cmake --build /opt/llama.cpp/build --target llama-server llama-cli -j \
     && ln -s /opt/llama.cpp/build/bin/llama-server /usr/local/bin/llama-server \
     && ln -s /opt/llama.cpp/build/bin/llama-cli   /usr/local/bin/llama-cli \
