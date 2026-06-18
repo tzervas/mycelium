@@ -50,8 +50,12 @@ fi
 # --- build (one-time-ish; CUDA llama.cpp build is the slow part, then cached) ------------
 # The Dockerfile COPYs nothing (repo is bind-mounted at runtime), so the build context is just
 # this dir → a fast upload. Podman reads the same Dockerfile as Docker.
+# `--layers` (Podman): explicitly cache intermediate layers — combined with the Dockerfile's ccache
+# mount, a rebuild reuses the compile and only re-links. Docker caches layers by default.
+BUILD_ARGS=()
+[[ "$ENGINE" == podman ]] && BUILD_ARGS+=(--layers)
 echo "== [1/3] build image '$IMAGE' (cached after the first CUDA build) =="
-if ! "$ENGINE" build -t "$IMAGE" -f "$SCRIPT_DIR/Dockerfile" "$SCRIPT_DIR"; then
+if ! "$ENGINE" build "${BUILD_ARGS[@]}" -t "$IMAGE" -f "$SCRIPT_DIR/Dockerfile" "$SCRIPT_DIR"; then
   echo "ERROR: image build failed." >&2; exit 1
 fi
 

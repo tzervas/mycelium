@@ -23,7 +23,7 @@ ARG LLAMA_CPP_REF=master
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git curl ca-certificates build-essential cmake ninja-build \
+        git curl ca-certificates build-essential cmake ninja-build ccache \
         python3 python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
@@ -33,18 +33,38 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --pr
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.cargo/bin:/root/.local/bin:${PATH}"
 
+# PREFLIGHT (seconds, before the ~10-min CUDA compile): prove this toolchain links an executable
+# against a shared library that has UNDEFINED symbols — the exact shape of the llama.cpp link
+# (llama-cli vs libggml-cuda.so's runtime-injected cu* symbols). If --allow-shlib-undefined is not
+# honored this FAILS FAST here instead of after the whole compile. Its own cached layer.
+RUN set -eux; cd /tmp; \
+    printf 'int undefined_runtime_symbol(void);\nint lib_fn(void){return undefined_runtime_symbol();}\n' > pf_lib.c; \
+    printf 'int lib_fn(void);\nint main(void){return lib_fn();}\n' > pf_main.c; \
+    gcc -shared -fPIC pf_lib.c -o libpfprobe.so; \
+    gcc pf_main.c -o pf_probe -L/tmp -lpfprobe -Wl,--allow-shlib-undefined; \
+    echo "PREFLIGHT OK: exe links against a .so with undefined symbols (CUDA driver-link mechanism)"; \
+    rm -f pf_lib.c pf_main.c libpfprobe.so pf_probe
+
 # Build llama.cpp's server + cli with CUDA, put them on PATH so `--serve` finds them.
 # --allow-shlib-undefined: libcuda.so.1 (the CUDA *driver*) is absent at build time and injected by
 # the host at runtime (CDI). The exe link must tolerate those shlib-provided cu* symbols — this is
 # exactly what upstream llama.cpp's .devops/cuda.Dockerfile does.
-RUN git clone --depth 1 --branch "${LLAMA_CPP_REF}" https://github.com/ggml-org/llama.cpp /opt/llama.cpp \
-    && cmake -S /opt/llama.cpp -B /opt/llama.cpp/build -G Ninja \
+# ccache (cache mount): persists compiled objects across builds — re-runs (even after editing this
+# recipe, which invalidates the layer) reuse the CUDA compile and only re-link, instead of a full
+# ~10-min recompile. The cache survives a failed RUN, so a link error never costs the compile again.
+RUN --mount=type=cache,target=/ccache,sharing=locked \
+    git clone --depth 1 --branch "${LLAMA_CPP_REF}" https://github.com/ggml-org/llama.cpp /opt/llama.cpp \
+    && CCACHE_DIR=/ccache CCACHE_MAXSIZE=8G cmake -S /opt/llama.cpp -B /opt/llama.cpp/build -G Ninja \
          -DCMAKE_BUILD_TYPE=Release \
          -DGGML_CUDA="${LLAMA_CUDA}" \
          -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCHS}" \
          -DLLAMA_CURL=OFF \
          -DCMAKE_EXE_LINKER_FLAGS=-Wl,--allow-shlib-undefined \
-    && cmake --build /opt/llama.cpp/build --target llama-server llama-cli -j \
+         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
+    && CCACHE_DIR=/ccache cmake --build /opt/llama.cpp/build --target llama-server llama-cli -j \
+    && CCACHE_DIR=/ccache ccache --show-stats \
     && ln -s /opt/llama.cpp/build/bin/llama-server /usr/local/bin/llama-server \
     && ln -s /opt/llama.cpp/build/bin/llama-cli   /usr/local/bin/llama-cli \
     && rm -rf /opt/llama.cpp/.git

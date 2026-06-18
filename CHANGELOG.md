@@ -8,6 +8,18 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: build checkpointing — fast link preflight + ccache)
+- `experiments/docker/Dockerfile` now **verifies the executable↔shared-lib link in seconds** (its own
+  cached layer) *before* the ~10-min CUDA compile: a tiny exe links against a `.so` with undefined
+  symbols (the exact shape of the llama.cpp link), so a broken `--allow-shlib-undefined` fails fast
+  instead of after the whole build. (Mechanism validated locally: fails without the flag, passes with.)
+- **ccache cache mount** (`RUN --mount=type=cache,target=/ccache`) + compiler launchers persist
+  compiled objects across builds — a rebuild (even after editing the build recipe, which invalidates
+  the layer) reuses the CUDA compile and only re-links, instead of recompiling from scratch. The cache
+  survives a failed `RUN`, so a link error never costs the compile twice.
+- `experiments/docker/run.sh` passes `--layers` to `podman build` (explicit intermediate-layer
+  caching; Docker caches by default), since Podman was observed not reusing the cache.
+
 ### Fixed (2026-06-18: CUDA executable link in the container build)
 - `experiments/docker/Dockerfile` passes `-DCMAKE_EXE_LINKER_FLAGS=-Wl,--allow-shlib-undefined` to the
   llama.cpp CUDA build. `libcuda.so.1` (the CUDA *driver*) is absent at build time and host-injected at
