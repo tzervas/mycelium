@@ -29,6 +29,18 @@ members = [
     "crates/mycelium-std-select",
     "crates/mycelium-std-vsa",
     "crates/mycelium-std-swap",
+    "crates/mycelium-std-collections",
+    "crates/mycelium-std-error",
+    "crates/mycelium-std-cmp",
+    "crates/mycelium-std-iter",
+    "crates/mycelium-std-math",
+    "crates/mycelium-std-text",
+    "crates/mycelium-std-fmt",
+    "crates/mycelium-std-testing",
+    "crates/mycelium-std-io",
+    "crates/mycelium-std-fs",
+    "crates/mycelium-std-time",
+    "crates/mycelium-std-rand",
     "xtask",
 ]
 
