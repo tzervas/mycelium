@@ -8,6 +8,29 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: next-wave plan + R7-Q4 enactment — content-addressed prim table)
+The post-#194 wave is sorted into a plan, and its leading item is begun.
+- **DN-11 — Next-Wave Plan (Draft / Resolved-as-capture).** Indexes the KC-2-unblocked work into
+  three dependency-ordered tracks with gates — A: DN-10 L1 completion; B: RFC-0018…0021 ratification
+  (each held Draft until its RP-1…RP-4 spike); C: Phase-5 stdlib (gated on M-501/M-502) — names the
+  leading item (Track A → R7-Q4), and records the stdlib spec-vs-code status nuance honestly.
+- **`tools/github/issues.yaml`:** mints **M-390** (R7-Q4 prim declarations) and **M-391** (R7-Q3
+  surface mutual recursion) under Phase 4, with `depends_on` per DN-10 §2.5/§3.5.
+- **M-390 (R7-Q4) — prim table `Π` as content-addressed declarations.** New
+  `mycelium-core::prim` (`PrimTable`/`PrimDecl`/`PrimSig`/`PrimRef`) mirroring the data registry `Σ`
+  (RFC-0001 §4.3 r3; ADR-003): each kernel prim is keyed by the content hash of its *signature +
+  intrinsic guarantee* (`g_f`, RFC-0001 §4.7), name kept as metadata. The LSP feedback facade gains a
+  sixth artifact kind — a **prim declaration surfaced at every `Op` site** (EXPLAIN over prims, DN-10
+  §3.2 step 4; an unrecognized prim is surfaced, never silent). Drift-guards pin `Π_new == Π_old`
+  (DN-10 §3.4) against the L1 surface table and the interpreter's intrinsic.
+  - *Honest scope (VR-5):* every v0 prim is `intrinsic = Exact` (stored as data). Deferred, flagged:
+    `Node::Op` carrying a `PrimRef` content hash in the term, and the **RP-7** BoundBasis-with-citation
+    schema for non-`Exact` prims — neither is faked here.
+  - *Verified:* `cargo test --workspace` + `clippy -D warnings` green; the **M-210** three-way
+    differential (L1-eval ≡ elaborate→L0-interp ≡ AOT) preserved; new unit/equivalence tests in
+    `mycelium-core`, `mycelium-l1`, `mycelium-interp`, `mycelium-lsp`. Advances no `FR/NFR/VR/SC`
+    upgrade — a uniformity/inspectability gain (G2/SC-3), KC-3 (no L0 node-grammar change).
+
 ### Added (2026-06-18: KC-2-unblocked surface/type-system designs — Wave 2 of the maturation pass)
 With the KC-2 gate cleared (DN-09), the deferred L-layer designs are drafted in dependency order.
 The deep-novel ones land as **Draft** with a pre-ratification **research prompt** (VR-5 — only the

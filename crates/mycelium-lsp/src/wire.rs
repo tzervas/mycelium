@@ -325,6 +325,7 @@ mod tests {
             swaps: Vec::new(),
             stages: Vec::new(),
             explanations: Vec::new(),
+            prims: Vec::new(),
         };
         let note = publish_diagnostics_notification("mem://demo", &feedback);
         assert_eq!(note["method"], "textDocument/publishDiagnostics");

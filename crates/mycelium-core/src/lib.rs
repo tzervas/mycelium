@@ -17,6 +17,7 @@ pub mod id;
 pub mod lower;
 pub mod meta;
 pub mod node;
+pub mod prim;
 pub mod recon;
 pub mod repr;
 pub mod ternary;
@@ -33,6 +34,7 @@ pub use guarantee::GuaranteeStrength;
 pub use id::ContentHash;
 pub use meta::{Meta, PackScheme, PhysicalLayout, Provenance, SparsityObs};
 pub use node::{Alt, Node, PolicyRef, Prim, VarId};
+pub use prim::{PrimDecl, PrimParadigm, PrimRef, PrimSig, PrimTable, WidthRel};
 pub use recon::{
     CleanupShape, DecodeProcedure, DecodeSpec, InitStrategy, Recipe, ReconInfo, ReconMode,
 };
