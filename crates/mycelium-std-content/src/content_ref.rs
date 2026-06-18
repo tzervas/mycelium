@@ -16,6 +16,7 @@
 //! `ContentRef` is `Clone` + `PartialEq` + `Eq`. Identical `(kind, hash)` pairs are identical
 //! refs; the struct carries no identity-independent metadata.
 
+use crate::error::MalformedDigest;
 use mycelium_core::ContentHash;
 
 /// The role a [`ContentRef`] points to (the explicit kind tag).
@@ -34,7 +35,7 @@ pub enum RefKind {
     Policy,
     /// A `spore` deployable (ADR-013).
     Spore,
-    /// Any other role not covered by the variants above; the string describes the role.
+    /// Any other role not covered by the variants above.
     Other,
 }
 
@@ -78,9 +79,12 @@ impl ContentRef {
 
     /// The canonical string form of this reference: `<kind-prefix>+<algo>:<digest>`.
     ///
-    /// Round-trips through [`ContentRef::from_str`] (see below). This is the "machine" side of the
-    /// G11 dual projection; the human side is [`kind`](Self::kind) + a name lookup via
+    /// Round-trips through the [`FromStr`] impl (`s.parse::<ContentRef>()`): for any `r`,
+    /// `r.as_str_repr().parse::<ContentRef>() == Ok(r)`. This is the "machine" side of the G11
+    /// dual projection; the human side is [`kind`](Self::kind) + a name lookup via
     /// [`crate::names_of`].
+    ///
+    /// [`FromStr`]: std::str::FromStr
     #[must_use]
     pub fn as_str_repr(&self) -> String {
         format!("{}+{}", self.kind_prefix(), self.hash.as_str())
@@ -98,6 +102,44 @@ impl ContentRef {
     }
 }
 
+impl RefKind {
+    /// The inverse of the kind-prefix used in [`ContentRef::as_str_repr`]; `None` for an
+    /// unrecognised prefix (kept in lock-step with `ContentRef::kind_prefix`).
+    fn from_prefix(prefix: &str) -> Option<RefKind> {
+        Some(match prefix {
+            "value" => RefKind::Value,
+            "def" => RefKind::Def,
+            "op" => RefKind::Operation,
+            "policy" => RefKind::Policy,
+            "spore" => RefKind::Spore,
+            "other" => RefKind::Other,
+            _ => return None,
+        })
+    }
+}
+
+impl std::str::FromStr for ContentRef {
+    type Err = MalformedDigest;
+
+    /// Parse the canonical `<kind-prefix>+<algo>:<digest>` form produced by
+    /// [`ContentRef::as_str_repr`] — the exact inverse of that projection.
+    ///
+    /// # Errors
+    /// Returns [`MalformedDigest`] (never a coerced value — C1/G2) when the string lacks the `+`
+    /// separator, carries an unknown kind prefix, or its `<algo>:<digest>` tail is malformed.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (prefix, rest) = s.split_once('+').ok_or_else(|| {
+            MalformedDigest::new(s, "expected `<kind-prefix>+<algo>:<digest>` (missing `+`)")
+        })?;
+        let kind = RefKind::from_prefix(prefix)
+            .ok_or_else(|| MalformedDigest::new(s, "unknown content-ref kind prefix"))?;
+        let hash = ContentHash::parse(rest).ok_or_else(|| {
+            MalformedDigest::new(s, "malformed `<algo>:<digest>` content address")
+        })?;
+        Ok(ContentRef { kind, hash })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{ContentRef, RefKind};
@@ -105,6 +147,40 @@ mod tests {
 
     fn example_hash() -> ContentHash {
         ContentHash::parse("blake3:abc123").expect("well-formed")
+    }
+
+    #[test]
+    fn str_repr_round_trips_through_from_str() {
+        // The doc on `as_str_repr` promises r.as_str_repr().parse() == Ok(r) for every kind.
+        for kind in [
+            RefKind::Value,
+            RefKind::Def,
+            RefKind::Operation,
+            RefKind::Policy,
+            RefKind::Spore,
+            RefKind::Other,
+        ] {
+            let r = ContentRef::new(kind, example_hash());
+            let parsed = r.as_str_repr().parse::<ContentRef>();
+            assert_eq!(parsed, Ok(r), "round-trip must hold for {kind:?}");
+        }
+    }
+
+    #[test]
+    fn from_str_rejects_malformed_with_explicit_error() {
+        // C1: each malformed shape is an explicit MalformedDigest, never a coerced value.
+        assert!(
+            "nokind".parse::<ContentRef>().is_err(),
+            "missing '+' separator"
+        );
+        assert!(
+            "bogus+blake3:abc123".parse::<ContentRef>().is_err(),
+            "unknown kind prefix"
+        );
+        assert!(
+            "value+nocolon".parse::<ContentRef>().is_err(),
+            "malformed <algo>:<digest> tail"
+        );
     }
 
     #[test]

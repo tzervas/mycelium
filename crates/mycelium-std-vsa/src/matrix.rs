@@ -8,9 +8,10 @@
 //! ## Why a separate table here?
 //!
 //! `mycelium-vsa::RFC0003_MATRIX` encodes the *operation-level* literature tags (the model × op
-//! × strength triple) and is the authoritative source.  This table adds the **fallibility** and
-//! **EXPLAIN-able?** columns from `vsa.md §4` — the complete per-op contract row as the spec
-//! requires for the guarantee-matrix deliverable (RFC-0016 §4.5).
+//! × strength triple) and is the authoritative source.  This table pairs each `(model, op)` tag
+//! with the **EXPLAIN-able?** column from `vsa.md §4`.  Fallibility/effects are **not** encoded
+//! here — each op documents its explicit error set on its `ops.rs` signature; the [`OpGuarantee`]
+//! data model below carries `tag` + `explain_able` only, and the tests assert exactly that.
 
 use mycelium_core::GuaranteeStrength;
 use mycelium_vsa::VsaOp;

@@ -126,7 +126,11 @@ pub fn bind_role<M: VsaModel>(
 ///
 /// Explicit refusals (C1 / G2):
 /// - `Err(BelowCleanupThreshold)` when `confidence < min_confidence` (the caller-supplied floor).
-/// - `Err(Ambiguous)` when `margin < min_margin` (near-tied slots; the caller-supplied floor).
+/// - `Err(BelowCleanupThreshold)` when `margin < min_margin` (near-tied slots). See the FLAG in
+///   the body: `mycelium-vsa::VsaError` has **no** distinct `Ambiguous` variant, so the
+///   margin-shortfall case is surfaced through `BelowCleanupThreshold` (with `confidence` carrying
+///   the margin and `threshold` carrying `min_margin`) — never a silent guess. A dedicated variant
+///   is a kernel change (FLAG).
 /// - `Err(EmptyCodebook)` when the memory is empty or the query has the wrong length.
 ///
 /// Setting `min_confidence = 0.0` and `min_margin = 0.0` disables the threshold gates,
@@ -135,8 +139,9 @@ pub fn bind_role<M: VsaModel>(
 ///
 /// # Errors
 /// - [`VsaError::EmptyCodebook`] — the memory is empty or query length disagrees with `dim`.
-/// - [`VsaError::BelowCleanupThreshold`] — confidence < `min_confidence`.
-/// - [`VsaError::Ambiguous`] — margin < `min_margin`.
+/// - [`VsaError::BelowCleanupThreshold`] — `confidence < min_confidence`, **or** the
+///   margin-shortfall case `margin < min_margin` (see the body FLAG: `VsaError` has no
+///   `Ambiguous` variant, so both refusals share this variant).
 pub fn cleanup<M: VsaModel>(
     codebook: &CleanupMemory,
     query: &[f64],

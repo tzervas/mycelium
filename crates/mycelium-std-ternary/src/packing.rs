@@ -162,7 +162,11 @@ impl core::fmt::Display for ExplainRecord {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Packed {
     /// The packed bytes (lossless re-encoding of the trits; RFC-0004 §5).
-    pub bytes: Vec<u8>,
+    ///
+    /// Private by design: a `Packed` can therefore only originate from [`pack`], which keeps the
+    /// [`unpack`] invariant airtight — no external mutation can corrupt the buffer and trip the
+    /// total-function `expect` (C1/G2). Read-only access is via [`Packed::bytes`].
+    bytes: Vec<u8>,
     /// The scheme used — the inspectable `Meta.physical` record (RFC-0001 §4.3).
     scheme: Scheme,
     /// The number of trits originally packed (needed for `unpack` to know the last group size).
@@ -183,6 +187,15 @@ impl Packed {
     #[must_use]
     pub fn trit_count(&self) -> usize {
         self.trit_count
+    }
+
+    /// The packed bytes, read-only (lossless re-encoding of the trits; RFC-0004 §5).
+    ///
+    /// **Guarantee: `Exact`.** Total. Read-only by design — a `Packed` is immutable and can only
+    /// be produced by [`pack`], so [`unpack`] is total on it (C1/C4).
+    #[must_use]
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
     }
 
     /// The full EXPLAIN record for this packed value (C3/G11/NFR-1/SC-3).
@@ -418,14 +431,14 @@ pub fn pack(ts: &[Trit], scheme: Scheme) -> Result<Packed, PackError> {
 /// (RFC-0004 §5; DN-01 §2 "lossless physical layout"). The scheme is the one recorded in `p`
 /// (inspectable via [`scheme_of`] / `p.scheme()`).
 ///
-/// Note: a [`Packed`] can only be constructed by [`pack`], which validates the input; so
-/// well-formedness is guaranteed by construction. An `OffGrid` byte in the packed buffer is
-/// theoretically possible if a `Packed` were constructed by other means (it cannot be with the
-/// current type), and would propagate as a `Result`. For the type-safe API, `unpack` is total.
+/// Note: a [`Packed`] can only be constructed by [`pack`], which validates the input, and its
+/// `bytes` field is private — so well-formedness is guaranteed by construction and cannot be
+/// broken by a caller. For the type-safe API, `unpack` is total.
 ///
-/// For simplicity and honest total-function semantics, `unpack` panics on an `OffGrid` from the
-/// codec (which is unreachable via the public `pack` API): the `Packed` invariant is that the
-/// bytes were produced by `pack`, which already validated. This is documented explicitly (C3).
+/// For honest total-function semantics, `unpack` panics on an `OffGrid` from the codec — a state
+/// that is **unreachable**: the only way to obtain a `Packed` is via [`pack`] (the `bytes` field
+/// is private), which already validated the input, so the invariant cannot be broken externally
+/// (C1/G2 — no externally-reachable panic). This is documented explicitly (C3).
 #[must_use]
 pub fn unpack(p: &Packed) -> Vec<Trit> {
     let result = match p.scheme {
