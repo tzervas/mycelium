@@ -454,10 +454,8 @@ dependencies = [
 name = "mycelium-std-recover"
 version = "0.0.0"
 dependencies = [
- "blake3",
  "mycelium-core",
  "mycelium-diag",
- "mycelium-interp",
  "mycelium-std-core",
 ]
 
@@ -473,11 +471,15 @@ dependencies = [
 name = "mycelium-std-spore"
 version = "0.0.0"
 dependencies = [
+ "blake3",
  "mycelium-core",
+ "mycelium-proj",
  "mycelium-spore",
  "mycelium-std-content",
  "mycelium-std-core",
  "mycelium-std-vsa",
+ "mycelium-vsa",
+ "serde_json",
 ]
 
 [[package]]
