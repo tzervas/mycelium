@@ -2518,6 +2518,7 @@ def ensure_model(
     hf_cmd: list[str] | None = None,
     prefer_hf: bool = True,
     sha256: str | None = None,
+    download_retries: int = 8,
 ) -> Path | None:
     """Idempotent: return a local GGUF path, downloading ONLY if absent/invalid.
 
@@ -2590,44 +2591,58 @@ def ensure_model(
     log.info("  from %s", url)
 
     dest_part = dest.with_suffix(dest.suffix + ".part")
-    # Auto-resume across transient failures: a flaky/slow link (a phone on cellular, or a
-    # 468MB model over a stalling connection) drops mid-stream, but _download_with_resume
-    # appends to the .part and re-requests with HTTP Range, so each retry picks up where the
-    # last left off. One invocation now survives several drops instead of needing a manual
-    # re-run each time (the .part is still kept if we ultimately give up).
-    max_attempts = 6
-    downloaded, total = 0, None
-    for attempt in range(1, max_attempts + 1):
+    # Robust pre-download: resume across transient drops. _download_with_resume appends to
+    # the .part and re-requests with HTTP Range, so each retry continues where the last left
+    # off. We keep retrying with capped backoff as long as bytes keep ARRIVING, and give up
+    # only when there's no forward progress for several consecutive attempts (a dead
+    # URL/connection) or the retry budget is spent — the .part is always kept to resume.
+    # download_retries <= 0 means "keep going until complete or stalled".
+    unlimited = download_retries <= 0
+    budget = 100_000 if unlimited else download_retries
+    stall_limit = 5
+    stalls = 0
+    last_size = dest_part.stat().st_size if dest_part.exists() else 0
+    downloaded, total = last_size, None
+    attempt = 0
+    while attempt < budget:
+        attempt += 1
+        failed = False
         try:
             downloaded, total = _download_with_resume(url, dest_part, log)
         except Exception as exc:  # noqa: BLE001 — never-silent: surface, keep .part, retry
-            if attempt >= max_attempts:
-                log.error(
-                    "Download failed after %d attempts: %s. Re-run to resume (kept %s).",
-                    max_attempts, exc, dest_part,
-                )
-                return None
-            wait = min(30, 2**attempt)
+            failed = True
             log.warning(
-                "Download error (attempt %d/%d): %s — retrying in %ds (resumes from %s).",
-                attempt, max_attempts, exc, wait, dest_part,
+                "Download error (attempt %d%s): %s",
+                attempt, "" if unlimited else f"/{budget}", exc,
             )
-            time.sleep(wait)
-            continue
-        if total is None or downloaded == total:
-            break  # complete (or size unknown — the GGUF/size checks below decide)
-        if attempt >= max_attempts:
+        cur = dest_part.stat().st_size if dest_part.exists() else downloaded
+        if cur > last_size:
+            stalls, last_size = 0, cur  # progress — reset the stall counter
+        else:
+            stalls += 1
+        if not failed and (total is None or downloaded >= total):
+            break  # complete (size unknown ⇒ the GGUF/size checks below decide)
+        if stalls >= stall_limit:
             log.error(
-                "Incomplete after %d attempts: got %s of %s. Re-run to resume: %s",
-                max_attempts, _human_bytes(downloaded), _human_bytes(total), dest_part,
+                "No download progress in %d attempts (have %s%s) — giving up; the .part is "
+                "kept, re-run to resume: %s",
+                stall_limit, _human_bytes(cur),
+                f" of {_human_bytes(total)}" if total else "", dest_part,
             )
             return None
-        wait = min(30, 2**attempt)
-        log.warning(
-            "Incomplete (%s of %s) — resuming (attempt %d/%d) in %ds.",
-            _human_bytes(downloaded), _human_bytes(total), attempt, max_attempts, wait,
+        wait = min(30, 2 ** min(attempt, 5))
+        log.info(
+            "Resuming in %ds (have %s%s)…",
+            wait, _human_bytes(cur), f" of {_human_bytes(total)}" if total else "",
         )
         time.sleep(wait)
+    else:
+        log.error(
+            "Incomplete after %d attempts: have %s%s. Re-run to resume: %s",
+            budget, _human_bytes(last_size),
+            f" of {_human_bytes(total)}" if total else "", dest_part,
+        )
+        return None
 
     # Completeness: if the server advertised a size, the transfer must match it.
     # A truncated body that still starts with the GGUF magic must NOT be promoted.
@@ -2793,6 +2808,7 @@ def run_harness(args: argparse.Namespace) -> int:
                 hf_cmd=hf_cmd,
                 prefer_hf=prefer_hf,
                 sha256=getattr(args, "model_sha256", None),
+                download_retries=getattr(args, "download_retries", 8),
             )
             if ensured:
                 model_path = str(ensured)
@@ -3111,8 +3127,9 @@ def _build_parser() -> argparse.ArgumentParser:
         dest="ensure_model",
         help=(
             "Check for the selected --model-id and download it ONLY if absent "
-            "(idempotent; resumable). Safe to re-run; great for a phone to "
-            "prefetch in the background."
+            "(idempotent; resumable, auto-retrying). Safe to re-run; great for a phone or "
+            "desktop to PREFETCH a model ahead of time. Tune persistence with "
+            "--download-retries (0 = keep going until complete)."
         ),
     )
     p.add_argument(
@@ -3154,6 +3171,18 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         dest="no_download",
         help="With --ensure-model: only check presence; never download.",
+    )
+    p.add_argument(
+        "--download-retries",
+        type=int,
+        default=8,
+        dest="download_retries",
+        metavar="N",
+        help=(
+            "How many times to resume a dropped download before giving up (default 8). "
+            "0 = keep retrying until complete or no bytes arrive for several tries (a dead "
+            "link). Each retry resumes from the .part via HTTP Range — robust on a flaky link."
+        ),
     )
     # --- Hugging Face CLI integration ---
     p.add_argument(

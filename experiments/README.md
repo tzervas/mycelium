@@ -113,7 +113,9 @@ to a fixed path.
 > experiment prefers the 0.5B when cached, else the 1.5B, else any `.gguf`):
 >
 > ```sh
-> python ../tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-coder-0.5b
+# Prefetch ahead of time, robustly (auto-resumes a dropped/slow download; 0 = keep
+># retrying until complete — ideal for a flaky phone link):
+> python ../tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-coder-0.5b --download-retries 0
 > PYTHONPATH=. python3 -m mycelium_experiments.kc2 --serve     # now runs on the 0.5B
 > # or pin it explicitly by id (no long path):
 > PYTHONPATH=. python3 -m mycelium_experiments.kc2 --serve --model-id qwen2.5-coder-0.5b

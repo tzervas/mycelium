@@ -16,8 +16,12 @@ corpus, not released software. Versioning will begin when the kernel does.
   model cache. Same `--serve` command; GPU auto-detected/offloaded. CPU fallback via
   `--build-arg LLAMA_CUDA=OFF`. Best-effort/untested in the GPU-less design sandbox (compose config
   validated; verify on host with `nvidia-smi`).
-- **Model download auto-resumes** within one `--ensure-model` invocation (up to 6 retries, backoff,
-  HTTP Range) — a flaky phone link no longer needs manual re-runs.
+- **Model prefetch is now robust** — one `--ensure-model` invocation auto-resumes a dropped/slow
+  download with capped backoff and **stall detection** (keeps resuming via HTTP Range as long as
+  bytes arrive; gives up only after several no-progress attempts, always keeping the `.part`). New
+  `--download-retries N` (default 8; **`0` = keep retrying until complete**) — ideal to prefetch a
+  model ahead of time on a flaky phone link. Verified end-to-end against a local HTTP server (fresh,
+  resume, and unlimited modes).
 - **Windows correctness**: the Mycelium checker finds `myc-check.exe` on Windows (was POSIX-only, so
   the arm silently skipped); `reclaim_memory` guards the glibc `ctypes.CDLL(None)`/`malloc_trim`
   behind `os.name == "posix"` (it raises on Windows). RAM/ctx auto-sizing already degrade gracefully
