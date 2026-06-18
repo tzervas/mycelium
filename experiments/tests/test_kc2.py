@@ -228,3 +228,17 @@ def test_no_primer_leaks_a_task_answer() -> None:
             ):
                 continue
             assert line not in blob, f"{task.id} answer line leaked into a primer: {line!r}"
+
+
+def test_auto_ctx_size_budgets_from_vram_when_gpu_present() -> None:
+    """GPU sizing: KV cache is in VRAM, so a desktop targets a far larger window than RAM-only.
+    Without a GPU the window stays small; a GPU with ample VRAM reaches the desired want."""
+    from mycelium_experiments.kc2 import llm
+
+    mem = {"mem_available_mb": 22000, "swap_free_mb": 0}
+    cpu_ctx, _ = llm.auto_ctx_size(8192, None, mem)  # RAM path: capped by want logic / RAM
+    gpu_ctx, reason = llm.auto_ctx_size(8192, None, mem, gpu_vram_free_mb=16000)
+    assert gpu_ctx == 8192 and "VRAM" in reason  # ample VRAM → reaches the desktop want
+    assert gpu_ctx >= cpu_ctx  # GPU never gives a smaller window than the RAM path
+    # never below the floor even when VRAM is scarce
+    assert llm.auto_ctx_size(8192, None, mem, gpu_vram_free_mb=200)[0] >= 256

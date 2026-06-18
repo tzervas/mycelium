@@ -41,8 +41,25 @@ _PREFERRED_MODELS = (
     "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf",
 )
 # KC-2 prompts (primer + task + feedback + generation) want more context than the
-# validation harness — still capped to fit available RAM (auto).
+# validation harness — still capped to fit available memory (auto). On a GPU the KV cache
+# lives in VRAM (plentiful), so a desktop targets a much larger window than a phone.
 _KC2_DESIRED_CTX = 2048
+_KC2_DESIRED_CTX_GPU = 8192
+
+
+def _gpu_vram_free_mb() -> int | None:
+    """Free VRAM (MB) of the first CUDA GPU that reports it, else None (phone/CPU)."""
+    for g in llm.detect_gpu():
+        v = g.get("vram_free_mb")
+        if isinstance(v, int) and v > 0:
+            return v
+    return None
+
+
+def _gpu_budget_scale() -> float:
+    """Scale the per-task n_predict budget up when a GPU is present (generation is ~free there,
+    so give a correct-but-verbose program headroom). 1.0 on a phone/CPU."""
+    return 2.0 if _gpu_vram_free_mb() is not None else 1.0
 
 
 def _default_model_dir() -> Path:
@@ -106,8 +123,14 @@ def _require_model(explicit: str | None) -> str:
 def _resolve_ctx(args: argparse.Namespace, model: str) -> int:
     if args.ctx_size is not None:
         return int(args.ctx_size)
+    vram = _gpu_vram_free_mb()
+    want = _KC2_DESIRED_CTX_GPU if vram is not None else _KC2_DESIRED_CTX
     ctx, reason = llm.auto_ctx_size(
-        _KC2_DESIRED_CTX, model, llm.detect_memory(), swap_fraction=0.5 if args.use_swap else 0.0
+        want,
+        model,
+        llm.detect_memory(),
+        swap_fraction=0.5 if args.use_swap else 0.0,
+        gpu_vram_free_mb=vram,
     )
     print(f"Auto-ctx: {reason} (override with --ctx-size)", file=sys.stderr)
     return ctx
@@ -308,6 +331,8 @@ def main() -> int:
             ctx_size, ngl = _resolve_ctx(args, model), _resolve_ngl(args, model)
             model_label, backend_label = model, "llama-cli"
 
+            budget_scale = _gpu_budget_scale()
+
             def make_backend(seed: int) -> llm.Backend:
                 return llm.cli_backend(
                     cli,
@@ -318,6 +343,7 @@ def main() -> int:
                     n_gpu_layers=ngl,
                     timeout=args.timeout,
                     extra_args=args.llama_extra_arg,
+                    budget_scale=budget_scale,
                 )
         else:  # --serve : auto-manage a server
             model = _require_model(args.model)
@@ -334,9 +360,15 @@ def main() -> int:
             )
             model_label, backend_label = model, "server(managed)"
 
+            budget_scale = _gpu_budget_scale()
+
             def make_backend(seed: int) -> llm.Backend:
                 return llm.server_backend(
-                    base_url, seed=seed, n_predict=n_predict, timeout=args.timeout
+                    base_url,
+                    seed=seed,
+                    n_predict=n_predict,
+                    timeout=args.timeout,
+                    budget_scale=budget_scale,
                 )
 
         # --- run the sequence ---

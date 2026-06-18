@@ -130,12 +130,16 @@ def auto_ctx_size(
     mem: dict[str, int | None],
     *,
     swap_fraction: float = 0.0,
+    gpu_vram_free_mb: int | None = None,
 ) -> tuple[int, str]:
     """Pick ctx = min(workload need, what available memory safely holds). Returns (ctx, reason).
 
-    By default only RAM is budgeted; ``swap_fraction > 0`` (the --use-swap flag) adds that
-    fraction of free swap (slower — KV thrashes if it pages out). Conservative when memory
-    is unknown. Always overridable with --ctx-size.
+    When the model is offloaded to a GPU (``gpu_vram_free_mb`` given), the KV cache lives in
+    **VRAM**, not host RAM — so the budget comes from free VRAM (minus the resident weights and
+    a compute-buffer reserve), letting a desktop pick a far larger context than a phone. Without
+    a GPU, only RAM is budgeted; ``swap_fraction > 0`` (the --use-swap flag) adds that fraction
+    of free swap (slower — KV thrashes if it pages out). Conservative when memory is unknown.
+    Always overridable with --ctx-size.
     """
     avail = mem.get("mem_available_mb")
     swap_free = mem.get("swap_free_mb")
@@ -145,6 +149,17 @@ def auto_ctx_size(
             model_mb = Path(model).stat().st_size // (1024 * 1024)
     except OSError:
         pass
+    # GPU path: KV cache is in VRAM with the (offloaded) weights — budget from VRAM.
+    if isinstance(gpu_vram_free_mb, int) and gpu_vram_free_mb > 0:
+        usable = gpu_vram_free_mb - model_mb - 1024  # reserve ~1GB for CUDA compute buffers
+        cap = int((usable * 0.7) / _KV_MB_PER_TOKEN) if usable > 0 else 256
+        cap = max(256, (cap // 256) * 256)
+        chosen = max(256, min(want, cap))
+        reason = (
+            f"GPU VRAM free={gpu_vram_free_mb}MB model={model_mb}MB reserve~1024MB → "
+            f"VRAM allows ~{cap}, want {want} ⇒ ctx={chosen}"
+        )
+        return chosen, reason
     if not isinstance(avail, int) or avail <= 0:
         chosen = min(want, 1024)
         return chosen, f"available RAM unknown — conservative ctx={chosen}"
@@ -349,11 +364,12 @@ def cli_backend(
     n_gpu_layers: int = 0,
     extra_args: Sequence[str] | None = None,
     timeout: int = 300,
+    budget_scale: float = 1.0,
 ) -> Backend:
     """A backend that shells out to `llama` / `llama-cli`.
 
     ``n_predict``: a HARD token-budget override; ``None`` uses the per-call/per-task budget
-    (or 192). See ``server_backend``.
+    (or 192) times ``budget_scale`` (>1.0 on a GPU). See ``server_backend``.
 
     ``ctx_size`` caps the context window (``-c``): keep it small so llama.cpp does not
     allocate a KV cache for the model's full trained window (Qwen2.5 = 32k), which
@@ -367,7 +383,10 @@ def cli_backend(
     """
 
     def complete(prompt: str, per_call: int | None = None) -> str:
-        n = n_predict if n_predict is not None else (per_call if per_call is not None else 192)
+        if n_predict is not None:
+            n = n_predict
+        else:
+            n = int((per_call if per_call is not None else 192) * budget_scale)
         cmd = [
             llama_cli,
             "--model",
@@ -408,16 +427,18 @@ def server_backend(
     n_predict: int | None = None,
     timeout: int = 600,
     stop: Sequence[str] | None = ("\nTASK:",),
+    budget_scale: float = 1.0,
 ) -> Backend:
     """A backend that POSTs to a llama.cpp HTTP server's /completion endpoint.
 
     ``n_predict``: a HARD override of the token budget; ``None`` (default) means use the
-    per-call/per-task budget the generator passes (or 192 if none). ``timeout`` is the
-    client read budget for ONE generation. A phone CPU decodes a 1.5B model at ~0.3–0.7
-    tok/s, so the budget in tokens can take minutes — keep the timeout generous (default
-    600 s) or generations die mid-stream and abort the run. ``stop`` halts the model early
-    on an obvious boundary (a fabricated next ``TASK:``), and ``cache_prompt`` reuses the
-    shared-primer KV across calls (the big common prefix).
+    per-call/per-task budget the generator passes (or 192 if none), multiplied by
+    ``budget_scale`` (>1.0 on a GPU, where generation is ~free, gives a correct-but-verbose
+    program headroom). ``timeout`` is the client read budget for ONE generation. A phone CPU
+    decodes a 1.5B model at ~0.3–0.7 tok/s, so the budget in tokens can take minutes — keep the
+    timeout generous (default 600 s) or generations die mid-stream and abort the run. ``stop``
+    halts the model early on an obvious boundary (a fabricated next ``TASK:``), and
+    ``cache_prompt`` reuses the shared-primer KV across calls (the big common prefix).
     """
     import urllib.error
     import urllib.request
@@ -425,7 +446,10 @@ def server_backend(
     url = base_url.rstrip("/") + "/completion"
 
     def complete(prompt: str, per_call: int | None = None) -> str:
-        n = n_predict if n_predict is not None else (per_call if per_call is not None else 192)
+        if n_predict is not None:
+            n = n_predict  # hard override wins
+        else:
+            n = int((per_call if per_call is not None else 192) * budget_scale)
         body = {
             "prompt": prompt,
             "seed": seed,
