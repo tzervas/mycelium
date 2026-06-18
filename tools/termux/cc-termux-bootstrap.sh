@@ -187,7 +187,16 @@ set -uo pipefail
 mkdir -p "$TMPDIR" "$CC_WORK_GUEST" "$HOME/.local/bin"
 if ! command -v claude >/dev/null 2>&1; then
   echo "[post-install] installing Claude Code via official installer..."
-  curl -fsSL https://claude.ai/install.sh | bash
+  # Download THEN run (not a blind curl|bash pipe) so the installer lands on disk and is
+  # inspectable/loggable. The upstream installer is a moving target with no published checksum
+  # to pin against, so this is the best available hardening short of vendoring a pinned release.
+  _cc_inst="${TMPDIR:-/tmp}/claude-install.sh"
+  if curl -fsSL --proto '=https' --tlsv1.2 https://claude.ai/install.sh -o "$_cc_inst"; then
+    bash "$_cc_inst"
+    rm -f "$_cc_inst"
+  else
+    echo "[post-install] WARN: could not download the Claude Code installer" >&2
+  fi
 fi
 hash -r 2>/dev/null || true
 v="$(command -v claude >/dev/null 2>&1 && claude --version 2>/dev/null | head -n1 || echo none)"

@@ -77,6 +77,10 @@ On the **host**: `experiments/results/<model>-<primer>/<utc>-seed<N>.json` + `.s
 per-run `.attempts.jsonl` checkpoint, `index.json`, and the suite/server `.log`s. Review and commit
 them from the host. The first run also builds `myc-check` into the host `target/debug/` (gitignored).
 
+**Reproducibility:** the image pins the Rust toolchain + uv version and records the exact llama.cpp
+commit it built — `<engine> run --rm mycelium-kc2-cuda cat /opt/llama-cpp.commit` — so a result set
+traces to the precise code that produced it.
+
 ## CPU-only box
 Build without CUDA — `LLAMA_CUDA=OFF` (Dockerfile build arg) — and run only the small `MODELS`
 (`qwen2.5-coder-0.5b qwen2.5-coder-1.5b`). The 7B on CPU is impractical.

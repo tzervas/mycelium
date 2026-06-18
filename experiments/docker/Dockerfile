@@ -21,16 +21,22 @@ ARG LLAMA_CUDA=ON
 ARG CUDA_ARCHS="75;80;86;89;90;120"
 ARG LLAMA_CPP_REF=master
 
+# Pin tool versions for reproducibility (override at build time with --build-arg).
+ARG RUST_TOOLCHAIN=1.92.0
+ARG UV_VERSION=0.11.21
+
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git curl ca-certificates build-essential cmake ninja-build ccache \
-        python3 python3-venv \
+        python3 python3-venv python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Rust (for `myc-check`) — rustup stable is ≥ MSRV 1.92.
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
-# uv — the project's Python runner.
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# Rust (for `myc-check`) — pin the toolchain to the repo MSRV. rustup itself verifies the
+# SHA-256 of every component it downloads, so a pinned toolchain is integrity-checked.
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+      | sh -s -- -y --profile minimal --default-toolchain "${RUST_TOOLCHAIN}"
+# uv — install a PINNED version from PyPI (TLS-verified) instead of curl|sh of a moving installer.
+RUN python3 -m pip install --break-system-packages --no-cache-dir "uv==${UV_VERSION}"
 ENV PATH="/root/.cargo/bin:/root/.local/bin:${PATH}"
 
 # PREFLIGHT (seconds, before the ~10-min CUDA compile): prove this toolchain links an executable
@@ -67,7 +73,11 @@ RUN --mount=type=cache,target=/ccache,sharing=locked \
     && CCACHE_DIR=/ccache ccache --show-stats \
     && ln -s /opt/llama.cpp/build/bin/llama-server /usr/local/bin/llama-server \
     && ln -s /opt/llama.cpp/build/bin/llama-cli   /usr/local/bin/llama-cli \
+    && git -C /opt/llama.cpp rev-parse HEAD | tee /opt/llama-cpp.commit \
     && rm -rf /opt/llama.cpp/.git
+# Record exactly which llama.cpp commit produced these binaries (master moves) so any results
+# are traceable; surfaced as an image label too. Read it: `… run --rm IMAGE cat /opt/llama-cpp.commit`.
+LABEL org.mycelium.llama-cpp-ref="${LLAMA_CPP_REF}"
 
 # Model cache lives on a named volume (see compose) so a fetched .gguf persists.
 ENV MYCELIUM_LLM_MODEL_DIR=/models

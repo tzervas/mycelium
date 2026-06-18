@@ -8,6 +8,19 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (2026-06-18: PR #193 reproducibility + supply-chain hardening)
+- **llama.cpp traceability:** the container build records the exact llama.cpp commit that produced
+  the binaries to `/opt/llama-cpp.commit` (and an image `LABEL`), so results trace to precise code
+  even though `LLAMA_CPP_REF` stays `master` (overridable). Addresses the "moving ref" review note
+  without risking the working Blackwell build.
+- **Pinned, integrity-checked tooling:** the image pins the Rust toolchain (`RUST_TOOLCHAIN=1.92.0`,
+  the MSRV — rustup verifies each component's SHA-256) and installs **uv** at a pinned version from
+  **PyPI/TLS** (`UV_VERSION=0.11.21`) via pip instead of `curl|sh` of a moving installer. Both are
+  `--build-arg`-overridable.
+- **Termux bootstrap:** the Claude Code install now downloads the installer to a file and runs it
+  (inspectable/loggable) rather than a blind `curl … | bash`; the upstream installer is a moving
+  target with no published checksum to pin, so this is the best available hardening.
+
 ### Fixed (2026-06-18: matrix prefetch ran the whole harness suite, OOM-skipped models)
 - The KC-2 matrix prefetched models with `harness.py --ensure-model`, which fetches **then runs the
   full LLM-validation suite** (V-01…). On the desktop that suite got OOM-`Killed`, so the prefetch
