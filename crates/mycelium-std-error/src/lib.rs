@@ -160,7 +160,13 @@ mod tests {
         for row in MATRIX {
             if row.guarantee == "Declared" {
                 assert!(
-                    row.op == "unwrap_or" || row.op == "unwrap_or_else",
+                    matches!(
+                        row.op,
+                        "unwrap_or"
+                            | "unwrap_or_else"
+                            | "unwrap_or_option"
+                            | "unwrap_or_else_option"
+                    ),
                     "only unwrap_or* should be Declared; found {:?}",
                     row.op
                 );

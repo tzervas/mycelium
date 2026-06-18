@@ -47,11 +47,14 @@
 //!
 //! The spec (§7-Q1) and `README.md §5` record that `fmt.to_json` **should delegate** to the
 //! canonical JSON projection owned by `io`/`serialize` (M-514) — one canonical JSON, two entry
-//! points. `mycelium-std-io` is an unimplemented stub this wave, so this crate implements its
-//! own display-JSON over `serde_json::Value` and marks the delegation seam. **When M-514 lands,
-//! the `to_json`/`from_json` bodies must be replaced with a delegation call.** The round-trip
-//! invariant (`from_json(to_json(v)).content_hash() == v.content_hash()`) is already checked
-//! here and will remain the check once delegation is wired.
+//! points. `mycelium-std-io` **has since landed** (same wave); this crate still implements its
+//! own display-JSON over `serde_json::Value` and marks the delegation seam, because wiring the
+//! delegation is a maintainer-deferred decision (spec §7-Q1 — pending sign-off). The two share the
+//! **same non-finite refusal policy** (a `NaN`/`±∞` `f64` is refused, never a silent `null`), so
+//! the seam is consistent. **When the delegation is ratified, the `to_json`/`from_json` bodies
+//! should call `mycelium-std-io`.** The round-trip invariant
+//! (`from_json(to_json(v)).content_hash() == v.content_hash()`) is already checked here and
+//! remains the check once delegation is wired.
 //!
 //! Design spec: `docs/spec/stdlib/fmt.md`; contract: RFC-0016 §4.1 (C1–C6);
 //! guarantee matrix: spec §4.
@@ -184,6 +187,45 @@ impl core::fmt::Display for FromJsonError {
 
 impl std::error::Error for FromJsonError {}
 
+/// Error the `to_json` machine projection can raise.
+///
+/// Never-silent (C1): a `Value` that has no faithful JSON form is an explicit `Err`, never a
+/// lossy coercion.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ToJsonError {
+    /// A non-finite `f64` (`NaN`/`±∞`) in a `Dense`/`Vsa` payload has no JSON representation.
+    ///
+    /// `serde_json` would silently emit `null` (collapsing `NaN`/`±∞` together and breaking the
+    /// round-trip), so it is refused (C1/G2). Carries the payload index of the first offender.
+    NonFinite {
+        /// Index of the first non-finite scalar in the payload.
+        index: usize,
+    },
+}
+
+impl core::fmt::Display for ToJsonError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            ToJsonError::NonFinite { index } => write!(
+                f,
+                "non-finite f64 at payload index {index} has no JSON form \
+                 (refused — never a silent null)"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ToJsonError {}
+
+/// The payload index of the first non-finite `f64`, if any (`Dense`/`Vsa` payloads only).
+fn first_non_finite(v: &Value) -> Option<usize> {
+    let scalars: &[f64] = match v.payload() {
+        Payload::Scalars(s) | Payload::Hypervector(s) => s,
+        Payload::Bits(_) | Payload::Trits(_) => return None,
+    };
+    scalars.iter().position(|x| !x.is_finite())
+}
+
 // ── §4. Human projection operations ───────────────────────────────────────
 
 /// Render `v` as a human-readable string.
@@ -234,9 +276,10 @@ pub fn display_bounded(v: &Value, limit: Budget) -> Rendering {
 
 /// Project `v` to a machine-faithful JSON view (the `to_json` half of the dual projection, G11).
 ///
-/// **Guarantee tag: `Exact`** — the machine view is a total, deterministic function of the
-/// value's canonical form; every `Value` has a JSON view.
-/// **Fallibility: total**.
+/// **Guarantee tag: `Exact`** (when `Ok`) — the machine view is a deterministic function of the
+/// value's canonical form.
+/// **Fallibility: `Err(ToJsonError::NonFinite)`** — a non-finite `f64` has no JSON form and is
+/// refused rather than silently coerced to `null` (C1/G2). Every finite `Value` has a JSON view.
 /// **Effects: none**.
 /// **EXPLAIN: n/a** — no selection or approximation.
 ///
@@ -245,11 +288,12 @@ pub fn display_bounded(v: &Value, limit: Budget) -> Rendering {
 /// round-trip invariant (spec §4; RFC-0016 §4.5).
 ///
 /// # FLAG — M-514 delegation seam
-/// This op currently implements its own JSON projection. When `mycelium-std-io` lands, this
-/// must delegate to the one canonical JSON projection (spec §7-Q1; README §5 reconciliation).
-#[must_use]
-pub fn to_json(v: &Value) -> Json {
-    Json(value_to_json(v))
+/// This op implements its own JSON projection. `mycelium-std-io` has since landed the **one
+/// canonical JSON projection** (which refuses non-finite identically); wiring this op to delegate
+/// to it is a maintainer-deferred decision (spec §7-Q1; README §5 reconciliation — pending
+/// sign-off). The non-finite refusal policy here matches `std.io`'s so the seam is consistent.
+pub fn to_json(v: &Value) -> Result<Json, ToJsonError> {
+    Ok(Json(value_to_json(v)?))
 }
 
 /// Reconstruct a [`Value`] from its machine JSON view (the `from_json` half).
@@ -317,9 +361,10 @@ pub const GUARANTEE_MATRIX: &[MatrixRow] = &[
     },
     MatrixRow {
         op: "to_json",
-        // Exact: the machine view of one canonical form; total and deterministic.
+        // Exact when Ok: the machine view of one canonical form, deterministic. Fallible: a
+        // non-finite f64 has no JSON form and is refused (never a silent null) — C1/G2.
         tag: GuaranteeStrength::Exact,
-        fallible: false,
+        fallible: true,
         explainable: false,
         effects: "none",
     },
@@ -382,7 +427,8 @@ pub fn assert_matrix_invariants() {
             );
         }
     }
-    // Exactly one fallible op: from_json.
+    // The fallible ops are the two JSON ops: to_json (refuses non-finite f64 — never a silent
+    // null) and from_json (explicit decode errors). The human projections are total.
     let fallible_ops: Vec<&str> = GUARANTEE_MATRIX
         .iter()
         .filter(|r| r.fallible)
@@ -390,8 +436,8 @@ pub fn assert_matrix_invariants() {
         .collect();
     assert_eq!(
         fallible_ops,
-        ["from_json"],
-        "exactly one op (from_json) must be fallible (spec §3)"
+        ["to_json", "from_json"],
+        "the JSON ops (to_json, from_json) must be the fallible ones (spec §3 / C1)"
     );
 }
 
@@ -605,15 +651,16 @@ fn display_bounded_impl(v: &Value, limit: Budget) -> Rendering {
 /// This is a local implementation pending M-514 delegation (see module-level FLAG).
 /// The wire form follows `value.schema.json` via the `Serialize` impl on `mycelium_core::Value`.
 ///
-/// # FLAG — M-514 delegation seam
-/// Replace this with a call to the `mycelium-std-io` canonical JSON projection when that crate
-/// lands. The round-trip invariant (`content_hash` is preserved) must remain the test check.
-fn value_to_json(v: &Value) -> serde_json::Value {
-    // mycelium-core's Value derives Serialize targeting value.schema.json (M-104).
-    // The serialize impl is infallible for well-formed values (only finite f64, valid shapes).
-    serde_json::to_value(v).expect(
-        "Value::serialize is infallible for well-formed values (invariant enforced by Value::new)",
-    )
+/// Refuses a non-finite `f64` (`Err(ToJsonError::NonFinite)`): `Value::new` does **not** enforce
+/// finiteness, and `serde_json::to_value` would silently map `NaN`/`±∞` to `null` — a lossy,
+/// identity-colliding encoding. Refusing keeps the projection never-silent (C1/G2).
+fn value_to_json(v: &Value) -> Result<serde_json::Value, ToJsonError> {
+    if let Some(index) = first_non_finite(v) {
+        return Err(ToJsonError::NonFinite { index });
+    }
+    // After the finiteness check, `Value`'s serde impl is total (M-104; valid shapes by Value::new).
+    Ok(serde_json::to_value(v)
+        .expect("Value serialization is total over finite, well-formed values (M-104)"))
 }
 
 /// Deserialize a [`Value`] from its JSON wire form.
@@ -857,10 +904,28 @@ mod tests {
     /// that the JSON view is a faithful machine projection of the value's identity.
     ///
     /// Mutation witness: truncate the payload in `to_json` -> hash diverges.
+    /// `to_json` refuses a non-finite `f64`, never silently coercing it to JSON `null`.
+    ///
+    /// `serde_json` maps `NaN`/`±∞` to `null` (a lossy, identity-colliding encoding); the machine
+    /// projection must reject it explicitly (C1/G2). Regression guard for that silent-loss path.
+    #[test]
+    fn to_json_refuses_non_finite_f64_never_silent_null() {
+        for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            let v = dense_value(&[1.0, bad, 2.0]);
+            assert_eq!(
+                to_json(&v),
+                Err(ToJsonError::NonFinite { index: 1 }),
+                "to_json must refuse non-finite {bad:?}, not emit a silent null"
+            );
+        }
+        // A wholly-finite dense value still projects fine.
+        assert!(to_json(&dense_value(&[0.5, -1.0, 2.0])).is_ok());
+    }
+
     #[test]
     fn machine_projection_round_trip_preserves_content_hash_binary() {
         let v = binary_value(&[true, false, true, false, true, true, false, false]);
-        let j = to_json(&v);
+        let j = to_json(&v).expect("to_json: finite test value");
         let recovered = from_json(&j).expect("round-trip must succeed on well-formed value");
         assert_eq!(
             v.content_hash(),
@@ -881,7 +946,7 @@ mod tests {
             Trit::Neg,
             Trit::Zero,
         ]);
-        let j = to_json(&v);
+        let j = to_json(&v).expect("to_json: finite test value");
         let recovered = from_json(&j).expect("round-trip must succeed");
         assert_eq!(v.content_hash(), recovered.content_hash());
     }
@@ -891,7 +956,7 @@ mod tests {
     #[test]
     fn machine_projection_round_trip_preserves_content_hash_dense() {
         let v = dense_value(&[1.0, -1.0, 0.5, -0.5]);
-        let j = to_json(&v);
+        let j = to_json(&v).expect("to_json: finite test value");
         let recovered = from_json(&j).expect("round-trip must succeed");
         assert_eq!(v.content_hash(), recovered.content_hash());
     }
@@ -900,7 +965,7 @@ mod tests {
     #[test]
     fn machine_projection_round_trip_preserves_content_hash_vsa() {
         let v = vsa_value(&[0.25, -0.25, 0.75]);
-        let j = to_json(&v);
+        let j = to_json(&v).expect("to_json: finite test value");
         let recovered = from_json(&j).expect("round-trip must succeed");
         assert_eq!(v.content_hash(), recovered.content_hash());
     }
@@ -914,7 +979,7 @@ mod tests {
         for byte_val in 0u16..=255 {
             let bits: Vec<bool> = (0..8).rev().map(|i| (byte_val >> i) & 1 == 1).collect();
             let v = binary_value(&bits);
-            let j = to_json(&v);
+            let j = to_json(&v).expect("to_json: finite test value");
             let recovered = from_json(&j).expect("round-trip must succeed for all byte values");
             assert_eq!(
                 v.content_hash(),
@@ -1112,7 +1177,7 @@ mod tests {
     fn to_json_does_not_change_content_hash() {
         let v = ternary_value(&[Trit::Pos, Trit::Zero]);
         let h_before = v.content_hash();
-        let _j = to_json(&v);
+        let _j = to_json(&v).expect("to_json: finite test value");
         let h_after = v.content_hash();
         assert_eq!(h_before, h_after, "to_json must not change content hash");
     }
@@ -1125,7 +1190,8 @@ mod tests {
         for mask in 0u8..8 {
             let bits: Vec<bool> = (0..3).rev().map(|i| (mask >> i) & 1 == 1).collect();
             let v = binary_value(&bits);
-            let recovered = from_json(&to_json(&v)).expect("round-trip");
+            let recovered =
+                from_json(&to_json(&v).expect("to_json: finite test value")).expect("round-trip");
             assert_eq!(
                 v.content_hash(),
                 recovered.content_hash(),
@@ -1141,7 +1207,8 @@ mod tests {
         for t1 in all_trits {
             for t2 in all_trits {
                 let v = ternary_value(&[t1, t2]);
-                let recovered = from_json(&to_json(&v)).expect("round-trip");
+                let recovered = from_json(&to_json(&v).expect("to_json: finite test value"))
+                    .expect("round-trip");
                 assert_eq!(
                     v.content_hash(),
                     recovered.content_hash(),

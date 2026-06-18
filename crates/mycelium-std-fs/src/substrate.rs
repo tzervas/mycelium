@@ -184,7 +184,9 @@ impl InMemoryFs {
 
     pub(crate) fn open(&mut self, path: &str, opts: &OpenOptions) -> Result<InMemHandle, FsErr> {
         if let Err(e) = opts.validate() {
-            return Err(FsErr::NotFound {
+            // A bad option combination is a request error, not a missing path (C3): the path may
+            // well exist. Surface it as InvalidOptions so callers are not misled by NotFound.
+            return Err(FsErr::InvalidOptions {
                 path: path.to_owned(),
                 why: e,
             });
@@ -338,14 +340,6 @@ impl InMemoryFs {
                 why: "handle was not opened for writing",
             });
         }
-        if let Some(limit) = self.disk_limit {
-            if self.used_bytes + buf.len() as u64 > limit {
-                return Err(FsErr::DiskFull {
-                    path: handle.path.clone(),
-                    why: "disk limit exceeded",
-                });
-            }
-        }
         match self.nodes.get_mut(&handle.path) {
             None => Err(FsErr::NotFound {
                 path: handle.path.clone(),
@@ -354,18 +348,32 @@ impl InMemoryFs {
             Some(FsNode::File {
                 contents, mtime, ..
             }) => {
+                let original_len = contents.len();
                 let pos = if handle.append {
-                    contents.len()
+                    original_len
                 } else {
                     handle.position
                 };
-                // Extend the file if writing past the end.
+                let n = buf.len();
+                let end = pos + n;
+                // Net disk growth: an in-place overwrite (`end <= original_len`) consumes no
+                // additional bytes; a write past the end (incl. a sparse seek) grows the file by
+                // `end - original_len`. Charging the full `n` on every write would spuriously trip
+                // the disk limit on overwrites and over-count `used_bytes`.
+                let net_growth = end.saturating_sub(original_len) as u64;
+                if let Some(limit) = self.disk_limit {
+                    if self.used_bytes + net_growth > limit {
+                        return Err(FsErr::DiskFull {
+                            path: handle.path.clone(),
+                            why: "disk limit exceeded",
+                        });
+                    }
+                }
+                // Extend the file if writing past the end (sparse zero-fill).
                 if pos > contents.len() {
                     contents.resize(pos, 0);
                 }
                 // Insert / overwrite bytes at pos.
-                let n = buf.len();
-                let end = pos + n;
                 if end <= contents.len() {
                     contents[pos..end].copy_from_slice(buf);
                 } else {
@@ -373,7 +381,7 @@ impl InMemoryFs {
                     contents.extend_from_slice(buf);
                 }
                 handle.position = end;
-                self.used_bytes += n as u64;
+                self.used_bytes += net_growth;
                 *mtime += 1;
                 Ok(n)
             }
@@ -688,6 +696,25 @@ mod tests {
         assert!(
             matches!(err, FsErr::NotFound { .. }),
             "expected NotFound; got {err:?}"
+        );
+    }
+
+    /// An invalid option combination (`truncate` without write/append) returns `InvalidOptions`,
+    /// not `NotFound` — a request error caught above the floor, with the right class (C3).
+    #[test]
+    fn open_invalid_options_is_invalid_options_not_not_found() {
+        let mut fs = make_fs();
+        // Pre-create the file so the path exists — proving the error is about the options, not
+        // a missing path.
+        let opts_w = OpenOptions::new().with_write(true).with_create(true);
+        let _ = fs.open("/file.txt", &opts_w).expect("create");
+        let bad = OpenOptions::new().with_truncate(true); // truncate without write/append
+        let err = fs
+            .open("/file.txt", &bad)
+            .expect_err("invalid options must fail");
+        assert!(
+            matches!(err, FsErr::InvalidOptions { .. }),
+            "expected InvalidOptions; got {err:?}"
         );
     }
 

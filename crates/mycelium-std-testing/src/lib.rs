@@ -110,12 +110,16 @@ impl Rng {
     /// Uses rejection sampling to avoid modulo bias (Exact, no approximation).
     pub fn next_usize_below(&mut self, n: usize) -> usize {
         assert!(n > 0, "n must be positive");
-        // Rejection-sampling: discard values that would introduce modulo bias.
-        let threshold = (u64::MAX - (u64::MAX % n as u64)) as usize;
+        let n = n as u64;
+        // Rejection-sampling, done entirely in u64. Computing the threshold (or the draw) as
+        // `usize` would truncate on 32-bit targets — collapsing the threshold near u64::MAX to a
+        // small value and reintroducing severe modulo bias. `v % n < n <= usize::MAX`, so the
+        // final cast is lossless.
+        let threshold = u64::MAX - (u64::MAX % n);
         loop {
-            let v = (self.next_u64() as usize) & (usize::MAX);
+            let v = self.next_u64();
             if v < threshold {
-                return v % n;
+                return (v % n) as usize;
             }
         }
     }

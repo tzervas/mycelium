@@ -241,9 +241,18 @@ impl Duration {
     }
 
     /// Truncating whole-second count (rounds toward zero).
-    #[must_use]
-    pub const fn as_secs_trunc(self) -> i64 {
-        (self.nanos / 1_000_000_000) as i64
+    ///
+    /// # Errors
+    ///
+    /// - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The
+    ///   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed
+    ///   `i64`; it is refused rather than silently truncated (C1/G2).
+    pub const fn as_secs_trunc(self) -> Result<i64, TimeErr> {
+        let secs = self.nanos / 1_000_000_000;
+        if secs < i64::MIN as i128 || secs > i64::MAX as i128 {
+            return Err(TimeErr::Overflow);
+        }
+        Ok(secs as i64)
     }
 
     /// Whether this span is negative.
@@ -587,12 +596,17 @@ impl ClockSource for SystemClock {
         use std::time::{SystemTime, UNIX_EPOCH};
         let result = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map(|d| {
-                // d.as_nanos() is u128; fits in i128 for any time before year ~2262.
-                WallInstant::from_nanos_since_epoch(d.as_nanos() as i128)
-            })
             .map_err(|_| TimeErr::ClockUnavailable {
                 reason: "SystemTime before UNIX_EPOCH (platform clock error)",
+            })
+            .and_then(|d| {
+                // d.as_nanos() is u128; convert with try_from rather than a bare `as` cast so a
+                // post-i128 timestamp (year ~5138+) is refused, never silently wrapped (C1/G2).
+                let nanos =
+                    i128::try_from(d.as_nanos()).map_err(|_| TimeErr::ClockUnavailable {
+                        reason: "wall-clock nanoseconds since epoch exceed i128",
+                    })?;
+                Ok(WallInstant::from_nanos_since_epoch(nanos))
             });
         DeclaredTimeEntropy::new(result)
     }
@@ -1015,6 +1029,26 @@ mod tests {
     ///
     /// Mutation witness: change `duration_add(a, b)` to `duration_add(b, Duration::ZERO)` →
     /// assertion fires for non-zero `b`.
+    #[test]
+    fn as_secs_trunc_is_exact_in_range_and_refuses_overflow() {
+        // In-range: truncates toward zero, exact.
+        assert_eq!(
+            Duration::from_nanos(2_500_000_000).as_secs_trunc().unwrap(),
+            2
+        );
+        assert_eq!(
+            Duration::from_nanos(-2_500_000_000)
+                .as_secs_trunc()
+                .unwrap(),
+            -2
+        );
+        assert_eq!(Duration::ZERO.as_secs_trunc().unwrap(), 0);
+        // Out of i64-seconds range (Duration::MAX nanos ≈ 1.7e38 → ~1.7e29 s ≫ i64::MAX):
+        // must be Err(Overflow), never a silent truncation (C1/G2).
+        assert_eq!(Duration::MAX.as_secs_trunc(), Err(TimeErr::Overflow));
+        assert_eq!(Duration::MIN.as_secs_trunc(), Err(TimeErr::Overflow));
+    }
+
     #[test]
     fn duration_add_is_commutative() {
         let cases: &[(i128, i128)] = &[

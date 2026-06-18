@@ -16,9 +16,13 @@
 //! theorem has been checked for this implementation (VR-5 / spec §4.2 Q2).
 //!
 //! # Honesty stance
-//! - `serialize`/`to_json` are **total**: every `Value` has a projection (RFC-0001
-//!   §4.8).  They borrow a `&Value` and never mutate or re-key it (C4 — projection,
-//!   not identity; ADR-003).
+//! - `serialize`/`to_json` are **fallible**: they project every `Value` whose payload is
+//!   JSON-representable (RFC-0001 §4.8) and **refuse** a `Value` carrying a non-finite `f64`
+//!   (`NaN`/`±∞`) with `Err(SerError::OutOfDomain)`. JSON has no non-finite literal, and
+//!   `serde_json` would silently emit `null` — a lossy, ambiguous encoding (`NaN` and `±∞` both
+//!   collapse to `null`, breaking the round-trip and colliding identity). Refusing is never-silent
+//!   (C1/G2). They borrow a `&Value` and never mutate or re-key it (C4 — projection, not identity;
+//!   ADR-003).
 //! - `deserialize`/`from_json` return `Err(SerError)` with a **locus** on any decode
 //!   failure — never a partially-filled `Value` or a zeroed sentinel (C1/G2).
 //!
@@ -31,6 +35,7 @@
 //! The serialize half is purely in-memory (`Vec<u8>` / `String`); it uses no OS
 //! facilities.  The io half (see `io.rs`) defers its OS floor to `std-sys` (M-541).
 
+use mycelium_core::value::Payload;
 use mycelium_core::Value;
 
 use crate::error::{ByteOffset, FieldPath, SerError};
@@ -69,39 +74,59 @@ pub enum Format {
 
 // ── serialize / deserialize (Wire and Json) ──────────────────────────────────
 
+/// A `Value` carrying a non-finite `f64` (`NaN`/`±∞`) in a `Dense`/`Vsa` payload has no faithful
+/// JSON representation (`serde_json` would silently emit `null`), so it is refused here.
+///
+/// Returns `Err(SerError::OutOfDomain)` naming the payload index of the first non-finite scalar;
+/// `Ok(())` when every scalar is finite (or the payload has no `f64`).
+fn check_json_representable(v: &Value) -> Result<(), SerError> {
+    let scalars: &[f64] = match v.payload() {
+        Payload::Scalars(s) | Payload::Hypervector(s) => s,
+        Payload::Bits(_) | Payload::Trits(_) => return Ok(()),
+    };
+    if let Some(pos) = scalars.iter().position(|x| !x.is_finite()) {
+        return Err(SerError::OutOfDomain {
+            path: FieldPath::from_static("payload"),
+            why: format!(
+                "non-finite f64 at payload index {pos} has no JSON representation \
+                 (serde_json would silently emit null, losing NaN/±∞ and colliding identity); \
+                 refused — never-silent (C1/G2)"
+            ),
+        });
+    }
+    Ok(())
+}
+
 /// Project `v` to the wire/JSON byte form for the given `format`.
 ///
-/// # Guarantee tag: `Exact`
-/// A total, faithful projection: every `Value` has a wire/JSON form (RFC-0001
-/// §4.8).  `serialize` borrows `v` immutably; it never mutates or re-keys the
-/// value, so the content hash is unchanged (C4/ADR-003).
+/// # Guarantee tag: `Exact` (when `Ok`)
+/// A faithful projection: every JSON-representable `Value` has a wire/JSON form (RFC-0001 §4.8).
+/// `serialize` borrows `v` immutably; it never mutates or re-keys the value, so the content hash
+/// is unchanged (C4/ADR-003).
 ///
-/// # Fallibility: total
-/// `serialize` cannot fail for a well-formed `Value` (M-104's `serde`
-/// implementation is total over `Value`).  The function signature reflects this.
+/// # Fallibility: `Err(SerError::OutOfDomain)`
+/// A `Value` carrying a non-finite `f64` (`NaN`/`±∞`) is refused — JSON cannot represent it and
+/// `serde_json` would silently emit `null` (a lossy, identity-colliding encoding). Never-silent
+/// (C1/G2). Every other well-formed `Value` serializes (M-104's `serde` impl is total over the
+/// finite domain).
 ///
 /// # Effects: none
 /// Pure computation over the in-memory value; no IO.
 ///
 /// # EXPLAIN-able: n/a
 /// A faithful projection has no hidden selection or approximation (spec §4/C3).
-#[must_use]
-pub fn serialize(v: &Value, format: Format) -> Vec<u8> {
-    match format {
-        Format::Wire => {
-            // Wire: JSON bytes (compact, RFC-0001 §4.8).
-            // `unwrap` is safe here: `Value`'s `serde::Serialize` impl is total
-            // over every well-formed `Value` (M-104; the only panic would be
-            // an I/O error on the in-memory writer, which cannot happen).
-            serde_json::to_vec(v).expect("Value::serialize must be total (M-104)")
+pub fn serialize(v: &Value, format: Format) -> Result<Vec<u8>, SerError> {
+    check_json_representable(v)?;
+    // After the finiteness check, `Value`'s serde impl is total — the only way `to_vec` could
+    // error is a non-finite float (excluded) or an I/O error on the in-memory writer (impossible).
+    let bytes = match format {
+        // Wire and Json share the same grammar; the `Format` tag is preserved at the call site
+        // (C3 — reified selection), so the two arms intentionally produce identical bytes.
+        Format::Wire | Format::Json => {
+            serde_json::to_vec(v).expect("Value serialization is total over finite Values (M-104)")
         }
-        Format::Json => {
-            // Json: same grammar, same bytes — the canonical JSON is identical
-            // to the wire form for this implementation.  The `Format` tag is
-            // preserved at the call site (C3 — reified selection).
-            serde_json::to_vec(v).expect("Value::serialize must be total (M-104)")
-        }
-    }
+    };
+    Ok(bytes)
 }
 
 /// Recover a `Value` from `bytes` serialized in the given `format`.
@@ -143,18 +168,18 @@ pub fn deserialize(bytes: &[u8], _format: Format) -> Result<Value, SerError> {
 /// §7-Q1 FLAGGED pending maintainer sign-off).  The round-trip property
 /// `from_json(to_json(v)) ≡ v` is established here once and not duplicated.
 ///
-/// # Guarantee tag: `Exact`
-/// Total, faithful projection (identical to `serialize(v, Format::Json)` as
-/// `String`).
+/// # Guarantee tag: `Exact` (when `Ok`)
+/// Faithful projection (identical to `serialize(v, Format::Json)` as `String`).
 ///
-/// # Fallibility: total
-/// Cannot fail for a well-formed `Value`.
+/// # Fallibility: `Err(SerError::OutOfDomain)`
+/// Refuses a `Value` carrying a non-finite `f64` (same domain as [`serialize`]) — JSON cannot
+/// represent it and `serde_json` would silently emit `null` (C1/G2). Total over the finite domain.
 ///
 /// # Effects: none
-#[must_use]
-pub fn to_json(v: &Value) -> String {
-    // Safety: `serde_json::to_string` is total for `Value` (M-104).
-    serde_json::to_string(v).expect("to_json must be total for a well-formed Value (M-104)")
+pub fn to_json(v: &Value) -> Result<String, SerError> {
+    check_json_representable(v)?;
+    Ok(serde_json::to_string(v)
+        .expect("to_json is total over finite Values (M-104; non-finite excluded above)"))
 }
 
 /// Recover a `Value` from canonical JSON text.
@@ -193,15 +218,18 @@ fn map_serde_error(e: serde_json::Error, input: &[u8]) -> SerError {
 
     if is_truncated_error_msg(&msg, input) {
         SerError::Truncated { at: byte_offset }
+    } else if is_unknown_tag_error(&msg) {
+        // Check unknown-tag BEFORE the domain heuristic: serde's "unknown variant `x`, expected
+        // one of [`repr`, …]" message contains the literal "repr", which the substring-based
+        // `is_domain_error` would otherwise misclassify as OutOfDomain (wrong variant — C1/C3).
+        SerError::UnknownTag {
+            path: FieldPath::from_static("repr"),
+            tag: extract_unknown_tag(&msg),
+        }
     } else if is_domain_error(&msg) {
         SerError::OutOfDomain {
             path: classify_path_from_message(&msg),
             why: msg,
-        }
-    } else if is_unknown_tag_error(&msg) {
-        SerError::UnknownTag {
-            path: FieldPath::from_static("repr"),
-            tag: extract_unknown_tag(&msg),
         }
     } else {
         SerError::Malformed {
@@ -339,6 +367,36 @@ mod tests {
         .expect("well-formed dense value")
     }
 
+    /// A non-finite `f64` (`NaN`/`±∞`) in a dense payload is REFUSED, never silently serialized to
+    /// JSON `null`. serde_json maps `NaN`/`±∞` to `null` (a lossy, identity-colliding encoding) —
+    /// we must reject it explicitly (C1/G2). This is the regression guard for that silent-loss path.
+    #[test]
+    fn serialize_refuses_non_finite_f64_never_silent_null() {
+        for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            let v = dense_value(&[1.0, bad, 2.0]);
+            assert!(
+                matches!(
+                    serialize(&v, Format::Wire),
+                    Err(SerError::OutOfDomain { .. })
+                ),
+                "serialize(Wire) must refuse non-finite {bad:?}, not emit silent null"
+            );
+            assert!(
+                matches!(
+                    serialize(&v, Format::Json),
+                    Err(SerError::OutOfDomain { .. })
+                ),
+                "serialize(Json) must refuse non-finite {bad:?}"
+            );
+            assert!(
+                matches!(to_json(&v), Err(SerError::OutOfDomain { .. })),
+                "to_json must refuse non-finite {bad:?}"
+            );
+        }
+        // A wholly-finite dense value still serializes fine.
+        assert!(serialize(&dense_value(&[1.0, -2.0, 3.5]), Format::Wire).is_ok());
+    }
+
     // ── serialize is total ──────────────────────────────────────────────────────
 
     /// `serialize` is total for every Value — it cannot fail.
@@ -346,20 +404,20 @@ mod tests {
     #[test]
     fn serialize_is_total_for_binary() {
         let v = binary_value(&[true, false, true]);
-        let _ = serialize(&v, Format::Wire);
-        let _ = serialize(&v, Format::Json);
+        let _ = serialize(&v, Format::Wire).expect("serialize: finite test value");
+        let _ = serialize(&v, Format::Json).expect("serialize: finite test value");
     }
 
     #[test]
     fn serialize_is_total_for_ternary() {
         let v = ternary_value(&[Trit::Pos, Trit::Zero, Trit::Neg]);
-        let _ = serialize(&v, Format::Wire);
+        let _ = serialize(&v, Format::Wire).expect("serialize: finite test value");
     }
 
     #[test]
     fn serialize_is_total_for_dense() {
         let v = dense_value(&[1.0, 2.0, 3.0]);
-        let _ = serialize(&v, Format::Wire);
+        let _ = serialize(&v, Format::Wire).expect("serialize: finite test value");
     }
 
     // ── Wire round-trip (the checked property; tagged Empirical / VR-5) ─────────
@@ -375,7 +433,7 @@ mod tests {
     #[test]
     fn round_trip_wire_binary() {
         let v = binary_value(&[true, false, true, false, true, true, false, true]);
-        let bytes = serialize(&v, Format::Wire);
+        let bytes = serialize(&v, Format::Wire).expect("serialize: finite test value");
         let recovered = deserialize(&bytes, Format::Wire).expect("round-trip must succeed");
         assert_eq!(v, recovered, "wire round-trip must be identity");
     }
@@ -384,7 +442,7 @@ mod tests {
     #[test]
     fn round_trip_wire_ternary() {
         let v = ternary_value(&[Trit::Pos, Trit::Zero, Trit::Neg, Trit::Pos]);
-        let bytes = serialize(&v, Format::Wire);
+        let bytes = serialize(&v, Format::Wire).expect("serialize: finite test value");
         let recovered = deserialize(&bytes, Format::Wire).expect("ternary round-trip");
         assert_eq!(v, recovered);
     }
@@ -393,7 +451,7 @@ mod tests {
     #[test]
     fn round_trip_wire_dense() {
         let v = dense_value(&[0.5, -1.0, 2.75]);
-        let bytes = serialize(&v, Format::Wire);
+        let bytes = serialize(&v, Format::Wire).expect("serialize: finite test value");
         let recovered = deserialize(&bytes, Format::Wire).expect("dense round-trip");
         assert_eq!(v, recovered);
     }
@@ -405,7 +463,7 @@ mod tests {
     #[test]
     fn round_trip_json_binary() {
         let v = binary_value(&[true, false, true]);
-        let text = to_json(&v);
+        let text = to_json(&v).expect("to_json: finite test value");
         let recovered = from_json(&text).expect("JSON round-trip must succeed");
         assert_eq!(v, recovered, "JSON round-trip must be identity");
     }
@@ -415,9 +473,10 @@ mod tests {
     #[test]
     fn to_json_matches_serialize_json() {
         let v = binary_value(&[true, false]);
-        let via_to_json = to_json(&v);
-        let via_serialize = String::from_utf8(serialize(&v, Format::Json))
-            .expect("serialize(Json) must be valid UTF-8");
+        let via_to_json = to_json(&v).expect("to_json: finite test value");
+        let via_serialize =
+            String::from_utf8(serialize(&v, Format::Json).expect("serialize: finite test value"))
+                .expect("serialize(Json) must be valid UTF-8");
         assert_eq!(
             via_to_json, via_serialize,
             "to_json must equal serialize(v, Json) as text"
@@ -434,7 +493,7 @@ mod tests {
         use mycelium_std_core::ContentHash;
         let v = binary_value(&[true, false, true]);
         let h_before: ContentHash = v.content_hash();
-        let _bytes = serialize(&v, Format::Wire);
+        let _bytes = serialize(&v, Format::Wire).expect("serialize: finite test value");
         let h_after: ContentHash = v.content_hash();
         assert_eq!(
             h_before, h_after,
@@ -580,7 +639,7 @@ mod tests {
             /// this fail.
             #[test]
             fn prop_wire_round_trip_binary(v in arb_binary_value()) {
-                let bytes = serialize(&v, Format::Wire);
+                let bytes = serialize(&v, Format::Wire).expect("serialize: finite test value");
                 let recovered = deserialize(&bytes, Format::Wire)
                     .expect("round-trip must succeed for well-formed binary value");
                 prop_assert_eq!(v, recovered,
@@ -590,7 +649,7 @@ mod tests {
             /// Wire round-trip for ternary values (Empirical).
             #[test]
             fn prop_wire_round_trip_ternary(v in arb_ternary_value()) {
-                let bytes = serialize(&v, Format::Wire);
+                let bytes = serialize(&v, Format::Wire).expect("serialize: finite test value");
                 let recovered = deserialize(&bytes, Format::Wire)
                     .expect("round-trip must succeed for well-formed ternary value");
                 prop_assert_eq!(v, recovered,
@@ -600,7 +659,7 @@ mod tests {
             /// Wire round-trip for dense values (Empirical).
             #[test]
             fn prop_wire_round_trip_dense(v in arb_dense_value()) {
-                let bytes = serialize(&v, Format::Wire);
+                let bytes = serialize(&v, Format::Wire).expect("serialize: finite test value");
                 let recovered = deserialize(&bytes, Format::Wire)
                     .expect("round-trip must succeed for well-formed dense value");
                 prop_assert_eq!(v, recovered,
@@ -611,7 +670,7 @@ mod tests {
             /// Guard: any asymmetry in to_json/from_json makes this fail.
             #[test]
             fn prop_json_round_trip(v in arb_value()) {
-                let text = to_json(&v);
+                let text = to_json(&v).expect("to_json: finite test value");
                 let recovered = from_json(&text)
                     .expect("JSON round-trip must succeed for well-formed values");
                 prop_assert_eq!(v, recovered,
@@ -622,8 +681,8 @@ mod tests {
             /// the canonical JSON is the same regardless of entry point).
             #[test]
             fn prop_json_entry_points_are_consistent(v in arb_value()) {
-                let via_to_json = to_json(&v);
-                let via_serialize = String::from_utf8(serialize(&v, Format::Json))
+                let via_to_json = to_json(&v).expect("to_json: finite test value");
+                let via_serialize = String::from_utf8(serialize(&v, Format::Json).expect("serialize: finite test value"))
                     .expect("serialize(Json) must produce valid UTF-8");
                 prop_assert_eq!(via_to_json, via_serialize,
                     "to_json and serialize(Json) must produce identical output");
@@ -634,7 +693,7 @@ mod tests {
             fn prop_serialize_preserves_content_hash(v in arb_value()) {
                 use mycelium_std_core::ContentHash;
                 let h_before: ContentHash = v.content_hash();
-                let _bytes = serialize(&v, Format::Wire);
+                let _bytes = serialize(&v, Format::Wire).expect("serialize: finite test value");
                 let h_after: ContentHash = v.content_hash();
                 prop_assert_eq!(h_before, h_after,
                     "serialize must not change the content hash (ADR-003)");

@@ -11,8 +11,9 @@
 //!
 //! # Row count note
 //! The spec §4 table has 18 rows, treating `any`/`all` as one row and `find`/`position` as one
-//! row. This implementation splits them into separate rows for finer test granularity (22 rows
-//! total). All split rows carry identical guarantee tags; the test asserts the exact count.
+//! row. This implementation splits each into separate rows for finer test granularity (+2) and
+//! adds a row for `zip_exact` (the fallible companion to `zip`), for **21 rows total**. All split
+//! rows carry identical guarantee tags; the test asserts the exact count.
 //!
 //! # Tag justification (VR-5 — downgrade rather than overclaim)
 //! - Every eager combinator is `Exact`/total: it inherits the kernel fold's `Total`
@@ -157,6 +158,15 @@ pub const MATRIX: &[GuaranteeRow] = &[
         explainable: true, // ZipOutcome carries the truncation point (Q1)
     },
     GuaranteeRow {
+        op: "zip_exact",
+        tag: GuaranteeStrength::Exact,
+        totality_preserving: true,
+        fallibility:
+            "Err(ZipLengthMismatch { left, right }) on unequal lengths — never a silent truncation",
+        effects: "none",
+        explainable: true, // the ZipLengthMismatch is the reified refusal (C3)
+    },
+    GuaranteeRow {
         op: "chain",
         tag: GuaranteeStrength::Exact,
         totality_preserving: true,
@@ -223,14 +233,14 @@ pub const MATRIX: &[GuaranteeRow] = &[
 mod tests {
     use super::*;
 
-    /// The matrix must have exactly 20 rows: 18 spec rows + 2 extra (any, all, find, position
-    /// split: spec has 2 combined rows, we have 4 = +2).
+    /// The matrix must have exactly 21 rows: 18 spec rows + 2 for splitting any/all and
+    /// find/position into separate rows, + 1 for `zip_exact` (the fallible companion to `zip`).
     #[test]
     fn matrix_has_expected_row_count() {
         assert_eq!(
             MATRIX.len(),
-            20,
-            "matrix must have 20 rows (18 spec rows + 2 for splitting any/all and find/position)"
+            21,
+            "matrix must have 21 rows (18 spec rows + 2 split rows + zip_exact)"
         );
     }
 

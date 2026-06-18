@@ -140,7 +140,7 @@ pub const MATRIX: &[MatrixRow] = &[
     MatrixRow {
         op: "slice",
         guarantee: "Exact",
-        fallibility: "Err(BoundaryError::{ OutOfRange | NotCharBoundary | NotGraphemeBoundary }) — never a silent snap",
+        fallibility: "Err(BoundaryError::{ OutOfRange | InvalidRange | NotCharBoundary | NotGraphemeBoundary }) — never a silent snap or panic",
         effects: "none",
         explainable: "yes",
     },

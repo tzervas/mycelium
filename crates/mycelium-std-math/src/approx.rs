@@ -114,7 +114,11 @@ impl Approx<f64> {
     pub fn explain(&self) -> ApproxExplain {
         let (eps, norm) = match self.bound.kind {
             BoundKind::Error { eps, norm } => (eps, norm),
-            _ => (f64::NAN, NormKind::Linf),
+            // A non-`Error` bound states no ε. Report it as `+∞` (an unstated error is, honestly,
+            // unbounded) — never `NaN`, which would silently break any `eps < tol` comparison a
+            // consumer makes (C1). Every `Approx` this crate builds carries an `Error` bound, so
+            // this arm is defensive rather than expected.
+            _ => (f64::INFINITY, NormKind::Linf),
         };
         let basis_desc = match &self.bound.basis {
             Basis::ProvenThm { citation } => format!("ProvenThm: {citation}"),
@@ -165,16 +169,17 @@ pub fn sqrt(x: f64) -> Result<Approx<f64>, MathErr> {
 /// `cbrt(x)` — approximate cube root.
 ///
 /// **Guarantee:** `Declared` (ε = 2·f64::EPSILON, Linf; `UserDeclared` basis — libm floor, M-541).
-/// **Domain:** total on all finite and infinite `f64` (cbrt is odd; no pole).
+/// **Domain:** finite `f64` (cbrt is odd; no pole).
 ///
-/// Note: `cbrt(NaN) = NaN` in IEEE 754; to stay never-silent this function returns
-/// `Err(OutOfDomain)` for NaN input rather than propagating NaN silently.
+/// Note: `cbrt(NaN) = NaN` and `cbrt(±∞) = ±∞` in IEEE 754; to stay never-silent — and because an
+/// ε bound is meaningless over a non-finite result — this function returns `Err(OutOfDomain)` for
+/// any non-finite input rather than wrapping `NaN`/`±∞` in an `Ok(Approx { .. })` (C1/G2).
 ///
 /// # Errors
 ///
-/// - [`MathErr::OutOfDomain`] when `x` is NaN.
+/// - [`MathErr::OutOfDomain`] when `x` is NaN or infinite.
 pub fn cbrt(x: f64) -> Result<Approx<f64>, MathErr> {
-    if x.is_nan() {
+    if !x.is_finite() {
         return Err(MathErr::OutOfDomain);
     }
     Ok(Approx::new(x.cbrt(), declared_error_bound()))

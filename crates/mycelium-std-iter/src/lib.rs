@@ -297,10 +297,12 @@ pub fn find<E: Clone>(source: Foldable<E>, pred: impl Fn(&E) -> bool) -> Option<
 #[must_use]
 pub fn position<E>(source: Foldable<E>, pred: impl Fn(&E) -> bool) -> Option<usize> {
     fold(source, (None::<usize>, 0usize), |(found, idx), e| {
+        // `saturating_add` matches the `any_with_witness`/`all_with_witness` counters: a
+        // `usize::MAX`-length spine must not panic on overflow (release has overflow-checks=true).
         if found.is_none() && pred(&e) {
-            (Some(idx), idx + 1)
+            (Some(idx), idx.saturating_add(1))
         } else {
-            (found, idx + 1)
+            (found, idx.saturating_add(1))
         }
     })
     .0
@@ -480,8 +482,8 @@ mod tests {
     fn matrix_row_count_matches_expected() {
         assert_eq!(
             guarantee_matrix::MATRIX.len(),
-            20,
-            "matrix must have 20 rows (18 spec rows + 2 from splitting any/all + find/position)"
+            21,
+            "matrix must have 21 rows (18 spec rows + 2 split rows + zip_exact)"
         );
     }
 

@@ -482,7 +482,7 @@ mod tests {
         )
         .expect("well-formed value");
 
-        let bytes = serialize(&v, Format::Wire);
+        let bytes = serialize(&v, Format::Wire).expect("serialize: finite test value");
         let src = Source::from_bytes(bytes);
         let recovered = read_value(src, Format::Wire).expect("read_value round-trip");
         assert_eq!(v, recovered, "read_value must recover the original value");

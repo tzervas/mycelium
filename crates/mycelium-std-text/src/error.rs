@@ -103,6 +103,17 @@ pub enum BoundaryError {
         /// The offending byte index.
         byte: usize,
     },
+    /// The requested range is inverted (`start > end`).
+    ///
+    /// Both endpoints can individually be in range yet describe an empty/negative span; reported
+    /// explicitly rather than panicking on the slice index (C1 / G2 — never a runtime panic where
+    /// the signature promises `Result`).
+    InvalidRange {
+        /// The requested start byte index.
+        start: usize,
+        /// The requested end byte index (`< start`).
+        end: usize,
+    },
 }
 
 impl fmt::Display for BoundaryError {
@@ -116,6 +127,9 @@ impl fmt::Display for BoundaryError {
             }
             BoundaryError::NotGraphemeBoundary { byte } => {
                 write!(f, "byte index {byte} is not on a grapheme-cluster boundary")
+            }
+            BoundaryError::InvalidRange { start, end } => {
+                write!(f, "inverted range: start {start} is greater than end {end}")
             }
         }
     }

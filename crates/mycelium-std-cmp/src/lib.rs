@@ -725,8 +725,15 @@ macro_rules! impl_narrow_f64_to_int {
                             ),
                         });
                     }
-                    // Range check against the target type's bounds.
-                    if self < (<$To>::MIN as f64) || self > (<$To>::MAX as f64) {
+                    // Range check via i128. The naive `self > (<$To>::MAX as f64)` test is WRONG
+                    // for i64/u64: `i64::MAX as f64` rounds UP to 2^63, so `2^63` (one past
+                    // i64::MAX) is not `>` it and would slip through to the saturating `as` cast,
+                    // silently yielding `Ok(i64::MAX)` for an unrepresentable input (C1 violation).
+                    // `self` is finite + integral here, so `self as i128` is its exact value
+                    // (saturating only far beyond any 64-bit target, which still gives the correct
+                    // out-of-range verdict). All target bounds are exact in i128.
+                    let as_int = self as i128;
+                    if as_int < (<$To>::MIN as i128) || as_int > (<$To>::MAX as i128) {
                         return Err(NarrowError::OutOfRange {
                             value: self.to_string(),
                             target_min: <$To>::MIN.to_string(),
@@ -767,7 +774,11 @@ macro_rules! impl_narrow_f32_to_int {
                             ),
                         });
                     }
-                    if (self as f64) < (<$To>::MIN as f64) || (self as f64) > (<$To>::MAX as f64) {
+                    // Exact range check via i128 — see the f64 impl: comparing against
+                    // `<$To>::MAX as f64` rounds up at i64/u64 and lets one-past-max slip through
+                    // to a silent saturating cast (C1 violation). `self` is finite + integral.
+                    let as_int = self as i128;
+                    if as_int < (<$To>::MIN as i128) || as_int > (<$To>::MAX as i128) {
                         return Err(NarrowError::OutOfRange {
                             value: self.to_string(),
                             target_min: <$To>::MIN.to_string(),
@@ -1491,6 +1502,40 @@ mod tests {
         // i32 → i8: boundary values must succeed.
         assert!(<i32 as Narrow<i8>>::narrow(127).is_ok());
         assert!(<i32 as Narrow<i8>>::narrow(-128).is_ok());
+    }
+
+    /// Float→integer narrowing at the i64/u64 boundary must NOT silently saturate.
+    ///
+    /// `i64::MAX as f64` rounds up to 2^63, so the value 2^63 is one past `i64::MAX`; a naive
+    /// `value > (i64::MAX as f64)` range check would pass it and the saturating `as` cast would
+    /// return `Ok(i64::MAX)` — a silent wrong value (C1). These probe that exact boundary.
+    #[test]
+    fn narrow_float_to_int_boundary_is_never_silent() {
+        let two_pow_63: f64 = 9_223_372_036_854_775_808.0; // 2^63 == (i64::MAX as f64)
+        let two_pow_64: f64 = 18_446_744_073_709_551_616.0; // 2^64 == (u64::MAX as f64)
+
+        // 2^63 is one past i64::MAX → must be Err, not Ok(i64::MAX).
+        assert!(matches!(
+            <f64 as Narrow<i64>>::narrow(two_pow_63),
+            Err(NarrowError::OutOfRange { .. })
+        ));
+        assert!(matches!(
+            <f32 as Narrow<i64>>::narrow(two_pow_63 as f32),
+            Err(NarrowError::OutOfRange { .. })
+        ));
+        // 2^64 is one past u64::MAX → must be Err, not Ok(u64::MAX).
+        assert!(matches!(
+            <f64 as Narrow<u64>>::narrow(two_pow_64),
+            Err(NarrowError::OutOfRange { .. })
+        ));
+        // i64::MIN (-2^63) IS exactly representable → must succeed.
+        assert_eq!(<f64 as Narrow<i64>>::narrow(-two_pow_63).unwrap(), i64::MIN);
+        // The largest exactly-representable f64 below 2^63 round-trips.
+        let max_repr = 9_223_372_036_854_774_784.0_f64; // 2^63 - 1024
+        assert_eq!(
+            <f64 as Narrow<i64>>::narrow(max_repr).unwrap(),
+            9_223_372_036_854_774_784_i64
+        );
     }
 
     /// No float-to-int narrowing silently produces a wrong integer.

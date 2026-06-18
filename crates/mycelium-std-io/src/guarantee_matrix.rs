@@ -8,7 +8,7 @@
 //!
 //! | Tag | Rows | Reason |
 //! |---|---|---|
-//! | `Exact` | `serialize`, `to_json`, `read_all`, `read`, `write` | No accuracy/precision/probability semantics (RFC-0016 C2 "no accuracy semantics → Exact") |
+//! | `Exact` | `serialize`, `to_json`, `read_all`, `read`, `write` | No accuracy/precision/probability semantics (RFC-0016 C2 "no accuracy semantics → Exact"). `serialize`/`to_json` are `Exact` *when `Ok`* but **fallible**: a non-finite `f64` has no JSON form and is refused (never a silent `null`). |
 //! | `Empirical` | `deserialize`, `from_json`, `read_value` | Round-trip property established by proptest corpus; no checked theorem → `Empirical`, not `Proven` (VR-5 / spec §7-Q2) |
 //!
 //! # Effect column (C6)
@@ -107,8 +107,8 @@ pub const MATRIX: &[MatrixRow] = &[
     MatrixRow {
         op: "serialize",
         guarantee: GuaranteeTag::Exact,
-        fallibility: Fallibility::Total,
-        error_set: "",
+        fallibility: Fallibility::Fallible,
+        error_set: "Err(OutOfDomain) — non-finite f64 has no JSON form (never silent null)",
         effects: "none",
         explainable: Explainable::NotApplicable,
     },
@@ -125,8 +125,8 @@ pub const MATRIX: &[MatrixRow] = &[
     MatrixRow {
         op: "to_json",
         guarantee: GuaranteeTag::Exact,
-        fallibility: Fallibility::Total,
-        error_set: "",
+        fallibility: Fallibility::Fallible,
+        error_set: "Err(OutOfDomain) — non-finite f64 has no JSON form (never silent null)",
         effects: "none",
         explainable: Explainable::NotApplicable,
     },
@@ -299,11 +299,12 @@ mod tests {
         }
     }
 
-    /// The `serialize` and `to_json` ops are total (they cannot fail for any
-    /// well-formed `Value`).
-    /// Guard: flipping either to `Fallible` makes this fail.
+    /// The `serialize` and `to_json` ops are fallible: they refuse a `Value` carrying a non-finite
+    /// `f64` (JSON has no such literal; `serde_json` would silently emit `null` — a lossy,
+    /// identity-colliding encoding). Refusing is never-silent (C1/G2).
+    /// Guard: flipping either back to `Total` (re-introducing the silent-null path) makes this fail.
     #[test]
-    fn serialize_and_to_json_are_total() {
+    fn serialize_and_to_json_refuse_non_finite_fallibly() {
         for op in &["serialize", "to_json"] {
             let row = MATRIX
                 .iter()
@@ -311,8 +312,8 @@ mod tests {
                 .unwrap_or_else(|| panic!("op {:?} missing", op));
             assert_eq!(
                 row.fallibility,
-                Fallibility::Total,
-                "op {:?} must be total (spec §4)",
+                Fallibility::Fallible,
+                "op {:?} must be fallible — non-finite f64 has no faithful JSON form (C1/G2)",
                 op
             );
         }

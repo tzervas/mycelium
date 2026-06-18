@@ -113,6 +113,12 @@ pub enum FsErr {
     ///
     /// This is caught *above* the OS floor — no syscall ran.
     UseAfterConsume { path: String, why: &'static str },
+    /// The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).
+    ///
+    /// A caller error in the *request*, not a property of the path — caught *above* the OS floor
+    /// (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the
+    /// variant is not misled (C3).
+    InvalidOptions { path: String, why: &'static str },
     /// A lower-level IO failure (threaded, not swallowed — I1).
     ///
     /// This wraps a failure that came from the byte-transfer layer. The
@@ -146,6 +152,7 @@ impl FsErr {
             | Self::Interrupted { path, .. }
             | Self::Loop { path, .. }
             | Self::UseAfterConsume { path, .. }
+            | Self::InvalidOptions { path, .. }
             | Self::Os { path, .. } => path,
             Self::CrossDevice { from, .. } => from,
         }
@@ -167,6 +174,7 @@ impl FsErr {
             | Self::Interrupted { why, .. }
             | Self::Loop { why, .. }
             | Self::UseAfterConsume { why, .. }
+            | Self::InvalidOptions { why, .. }
             | Self::Os { why, .. } => why,
         }
     }
@@ -187,6 +195,7 @@ impl FsErr {
             Self::Interrupted { .. } => Some(ErrnoClass::Interrupted),
             Self::Loop { .. } => Some(ErrnoClass::Loop),
             Self::UseAfterConsume { .. } => None, // caught above the floor; no errno
+            Self::InvalidOptions { .. } => None,  // caught above the floor; a request error
             Self::Os { errno_class, .. } => Some(errno_class.clone()),
         }
     }
@@ -200,6 +209,9 @@ impl fmt::Display for FsErr {
             }
             Self::UseAfterConsume { path, why } => {
                 write!(f, "UseAfterConsume(path={path:?}): {why}")
+            }
+            Self::InvalidOptions { path, why } => {
+                write!(f, "InvalidOptions(path={path:?}): {why}")
             }
             Self::Os {
                 path,
@@ -280,6 +292,10 @@ mod tests {
                 why: "test",
             },
             FsErr::UseAfterConsume {
+                path: "/a".into(),
+                why: "test",
+            },
+            FsErr::InvalidOptions {
                 path: "/a".into(),
                 why: "test",
             },

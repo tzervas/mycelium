@@ -272,6 +272,71 @@ pub const MATRIX: &[MatrixRow] = &[
         effects: "none",
         explainable: Explainable::NotApplicable,
     },
+    // ---- constructors & size observers (pure, total, Exact) --------------------
+    MatrixRow {
+        op: "Seq::empty",
+        guarantee: "Exact",
+        fallibility: Fallibility::Total,
+        error_set: "",
+        effects: "none",
+        explainable: Explainable::NotApplicable,
+    },
+    MatrixRow {
+        op: "Seq::from_slice",
+        guarantee: "Exact",
+        fallibility: Fallibility::Total,
+        error_set: "",
+        effects: "none",
+        explainable: Explainable::NotApplicable,
+    },
+    MatrixRow {
+        op: "Map::empty",
+        guarantee: "Exact",
+        fallibility: Fallibility::Total,
+        error_set: "",
+        effects: "none",
+        explainable: Explainable::NotApplicable,
+    },
+    MatrixRow {
+        op: "Map::len",
+        guarantee: "Exact",
+        fallibility: Fallibility::Total,
+        error_set: "",
+        effects: "none",
+        explainable: Explainable::NotApplicable,
+    },
+    MatrixRow {
+        op: "Map::is_empty",
+        guarantee: "Exact",
+        fallibility: Fallibility::Total,
+        error_set: "",
+        effects: "none",
+        explainable: Explainable::NotApplicable,
+    },
+    MatrixRow {
+        op: "Set::empty",
+        guarantee: "Exact",
+        fallibility: Fallibility::Total,
+        error_set: "",
+        effects: "none",
+        explainable: Explainable::NotApplicable,
+    },
+    MatrixRow {
+        op: "Set::len",
+        guarantee: "Exact",
+        fallibility: Fallibility::Total,
+        error_set: "",
+        effects: "none",
+        explainable: Explainable::NotApplicable,
+    },
+    MatrixRow {
+        op: "Set::is_empty",
+        guarantee: "Exact",
+        fallibility: Fallibility::Total,
+        error_set: "",
+        effects: "none",
+        explainable: Explainable::NotApplicable,
+    },
 ];
 
 #[cfg(test)]
@@ -308,6 +373,14 @@ mod tests {
             "Set::intersection",
             "Set::difference",
             "Set::foldable",
+            "Seq::empty",
+            "Seq::from_slice",
+            "Map::empty",
+            "Map::len",
+            "Map::is_empty",
+            "Set::empty",
+            "Set::len",
+            "Set::is_empty",
         ];
         for name in &expected {
             assert!(

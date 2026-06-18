@@ -292,7 +292,7 @@ where
 /// # Effects: none
 pub fn unwrap_or_option<T>(opt: Option<T>, default: T) -> (T, SubstitutionRecord) {
     let record = SubstitutionRecord {
-        op: "unwrap_or",
+        op: "unwrap_or_option",
         guarantee_tag: "Declared",
     };
     (opt.unwrap_or(default), record)
@@ -309,7 +309,7 @@ where
     F: FnOnce() -> T,
 {
     let record = SubstitutionRecord {
-        op: "unwrap_or_else",
+        op: "unwrap_or_else_option",
         guarantee_tag: "Declared",
     };
     (opt.unwrap_or_else(f), record)
@@ -455,7 +455,11 @@ pub fn recover<T, E>(r: Result<T, E>, _policy: PolicyRef) -> RecoverOutcome<T, E
     // run the policy's declared recovery action, and return Recovered(t, tag) or
     // Propagated(e') with the policy's honest tag. It will never return a drop.
     match r {
-        Ok(t) => RecoverOutcome::Recovered(t, "Exact"),
+        // I2/VR-5: the bridge must never *upgrade* a tag. An `Ok(t)` carries its own guarantee,
+        // which this stub cannot inspect — so it stamps the honest **`Declared` floor**, never
+        // `Exact` (which would assert a strength the bridge has not established). The real M-520
+        // policy supplies the inherited tag; until then the floor is the only honest claim.
+        Ok(t) => RecoverOutcome::Recovered(t, "Declared"),
         Err(e) => RecoverOutcome::Propagated(e),
     }
 }

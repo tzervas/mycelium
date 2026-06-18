@@ -232,6 +232,26 @@ pub const MATRIX: &[MatrixRow] = &[
         never_silent_property:
             "recovers with computed default (Declared tag per I2/VR-5); honest tag from closure",
     },
+    MatrixRow {
+        op: "unwrap_or_option",
+        guarantee: "Declared",
+        fallibility: Fallibility::Total,
+        error_set: "",
+        effects: "none",
+        explainable: Explainable::SubstitutedDefault,
+        never_silent_property:
+            "Option variant: recovers None with explicitly-supplied default (Declared per I2/VR-5)",
+    },
+    MatrixRow {
+        op: "unwrap_or_else_option",
+        guarantee: "Declared",
+        fallibility: Fallibility::Total,
+        error_set: "",
+        effects: "none (closure may declare its own)",
+        explainable: Explainable::SubstitutedDefault,
+        never_silent_property:
+            "Option variant: recovers None with computed default (Declared per I2/VR-5)",
+    },
     // ---- explicit propagation --------------------------------------------------
     MatrixRow {
         op: "propagate (?-style)",
@@ -315,6 +335,8 @@ mod tests {
             "zip",
             "unwrap_or",
             "unwrap_or_else",
+            "unwrap_or_option",
+            "unwrap_or_else_option",
             "propagate (?-style)",
             "unwrap",
             "expect",
@@ -335,8 +357,8 @@ mod tests {
         );
         assert_eq!(
             MATRIX.len(),
-            20,
-            "expected 20 rows (19 core + 1 recover bridge)"
+            22,
+            "expected 22 rows (21 core incl. the two Option unwrap_or variants + 1 recover bridge)"
         );
     }
 
@@ -347,7 +369,7 @@ mod tests {
     fn tags_match_spec_lattice() {
         for row in MATRIX {
             match row.op {
-                "unwrap_or" | "unwrap_or_else" => {
+                "unwrap_or" | "unwrap_or_else" | "unwrap_or_option" | "unwrap_or_else_option" => {
                     assert_eq!(
                         row.guarantee, "Declared",
                         "{} must be Declared (I2/VR-5 — fallback substitution)",
@@ -399,8 +421,13 @@ mod tests {
             .collect();
         assert_eq!(
             declared_ops,
-            ["unwrap_or", "unwrap_or_else"],
-            "only the unwrap_or family should be Declared (I2/VR-5)"
+            [
+                "unwrap_or",
+                "unwrap_or_else",
+                "unwrap_or_option",
+                "unwrap_or_else_option"
+            ],
+            "only the unwrap_or family (incl. Option variants) should be Declared (I2/VR-5)"
         );
     }
 

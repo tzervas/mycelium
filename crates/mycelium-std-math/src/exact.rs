@@ -40,21 +40,35 @@ pub enum RoundMode {
     HalfToEven,
 }
 
+/// Convert an integral-valued finite `f64` to `i64`, refusing values outside the
+/// exactly-representable `i64` range (C1 — never a silent saturation/truncation).
+///
+/// Rust's `f64 as i64` *saturates* (since 1.45): `1e20_f64 as i64 == i64::MAX`. A finite
+/// `f64` therefore passes `is_finite()` yet maps to a wrong, silent value. We reject it.
+/// `i64::MIN` is exactly representable as `f64` (`-2^63`); `i64::MAX` is **not** (it rounds
+/// to `2^63`), so the honest upper bound is "strictly below `2^63`".
+fn checked_round_to_i64(r: f64) -> Result<i64, MathErr> {
+    const I64_MIN_F64: f64 = -9_223_372_036_854_775_808.0; // -2^63, exact
+    const TWO_POW_63: f64 = 9_223_372_036_854_775_808.0; // 2^63 == (i64::MAX as f64)
+    if !(I64_MIN_F64..TWO_POW_63).contains(&r) {
+        return Err(MathErr::Overflow);
+    }
+    Ok(r as i64)
+}
+
 /// `floor(x)` — round toward negative infinity (exact under the `Floor` mode).
 ///
-/// **Guarantee: `Exact`** — the floor of a finite `f64` is always representable and exact.
-/// NaN input returns `Err(OutOfDomain)`. Infinite input returns `Err(OutOfDomain)`.
+/// **Guarantee: `Exact`** — the floor of an in-range finite `f64` is representable and exact.
 ///
 /// # Errors
 ///
 /// - [`MathErr::OutOfDomain`] when `x` is NaN or infinite.
+/// - [`MathErr::Overflow`] when `floor(x)` lies outside the `i64` range (never a silent clamp).
 pub fn floor(x: f64) -> Result<i64, MathErr> {
     if !x.is_finite() {
         return Err(MathErr::OutOfDomain);
     }
-    // Safety: x is finite, so floor(x) ∈ [-2^63, 2^63-1] for the f64 range that fits i64.
-    // f64 max-safe integer ≈ 2^53 << 2^63, so this cast is always safe for representable f64.
-    Ok(x.floor() as i64)
+    checked_round_to_i64(x.floor())
 }
 
 /// `ceil(x)` — round toward positive infinity (exact under the `Ceil` mode).
@@ -64,11 +78,12 @@ pub fn floor(x: f64) -> Result<i64, MathErr> {
 /// # Errors
 ///
 /// - [`MathErr::OutOfDomain`] when `x` is NaN or infinite.
+/// - [`MathErr::Overflow`] when `ceil(x)` lies outside the `i64` range (never a silent clamp).
 pub fn ceil(x: f64) -> Result<i64, MathErr> {
     if !x.is_finite() {
         return Err(MathErr::OutOfDomain);
     }
-    Ok(x.ceil() as i64)
+    checked_round_to_i64(x.ceil())
 }
 
 /// `trunc(x)` — round toward zero (exact under the `TruncTowardZero` mode).
@@ -78,11 +93,12 @@ pub fn ceil(x: f64) -> Result<i64, MathErr> {
 /// # Errors
 ///
 /// - [`MathErr::OutOfDomain`] when `x` is NaN or infinite.
+/// - [`MathErr::Overflow`] when `trunc(x)` lies outside the `i64` range (never a silent clamp).
 pub fn trunc(x: f64) -> Result<i64, MathErr> {
     if !x.is_finite() {
         return Err(MathErr::OutOfDomain);
     }
-    Ok(x.trunc() as i64)
+    checked_round_to_i64(x.trunc())
 }
 
 /// `round(x, mode)` — round `x` to the nearest integer under the named, reified [`RoundMode`].
@@ -96,6 +112,7 @@ pub fn trunc(x: f64) -> Result<i64, MathErr> {
 /// # Errors
 ///
 /// - [`MathErr::OutOfDomain`] when `x` is NaN or infinite.
+/// - [`MathErr::Overflow`] when the rounded value lies outside the `i64` range (never a clamp).
 pub fn round(x: f64, mode: RoundMode) -> Result<(i64, RoundMode), MathErr> {
     if !x.is_finite() {
         return Err(MathErr::OutOfDomain);
@@ -110,8 +127,10 @@ pub fn round(x: f64, mode: RoundMode) -> Result<(i64, RoundMode), MathErr> {
         }
         RoundMode::HalfToEven => {
             // Banker's rounding: if the fractional part is exactly 0.5, round to the nearest even.
+            // `frac` and `0.5` are both exact in `f64`, so the half test is exact equality — an
+            // epsilon tolerance would misclassify values adjacent to 0.5 (VR-5 honesty).
             let frac = x - x.trunc();
-            let is_half = (frac.abs() - 0.5).abs() < f64::EPSILON;
+            let is_half = frac.abs() == 0.5;
             if is_half {
                 // Round to even: check if the truncated integer is odd.
                 let t = x.trunc() as i64;
@@ -127,7 +146,7 @@ pub fn round(x: f64, mode: RoundMode) -> Result<(i64, RoundMode), MathErr> {
             }
         }
     };
-    Ok((rounded as i64, mode))
+    Ok((checked_round_to_i64(rounded)?, mode))
 }
 
 // ---- Exact integer operations -----------------------------------------------
@@ -197,33 +216,40 @@ pub fn max(a: i64, b: i64) -> i64 {
 
 /// `gcd(a, b)` — greatest common divisor (always non-negative).
 ///
-/// **Guarantee: `Exact`, total.** Uses the binary GCD (Stein's algorithm) on the absolute values.
-/// `gcd(0, 0) = 0` (conventional).
-#[must_use]
-pub fn gcd(a: i64, b: i64) -> i64 {
-    // Work on absolute values — overflow-safe because i64::MIN.unsigned_abs() fits u64.
+/// **Guarantee: `Exact`; fallible on overflow.** Uses the binary GCD (Stein's algorithm) on the
+/// absolute values. `gcd(0, 0) = 0` (conventional).
+///
+/// # Errors
+///
+/// - [`MathErr::Overflow`] when the true gcd is `2^63` — i.e. when both inputs are drawn from
+///   `{0, i64::MIN}` with at least one `i64::MIN` (e.g. `gcd(0, i64::MIN)`). `|i64::MIN| = 2^63`
+///   is not representable in `i64`, so it is refused rather than wrapped to a negative value (C1).
+pub fn gcd(a: i64, b: i64) -> Result<i64, MathErr> {
+    // Work on absolute values in u64 — `i64::MIN.unsigned_abs() == 2^63` fits u64.
     let mut a = a.unsigned_abs();
     let mut b = b.unsigned_abs();
-    if a == 0 {
-        return b as i64;
-    }
-    if b == 0 {
-        return a as i64;
-    }
-    // Stein's binary GCD.
-    let shift = (a | b).trailing_zeros();
-    a >>= a.trailing_zeros();
-    loop {
-        b >>= b.trailing_zeros();
-        if a > b {
-            core::mem::swap(&mut a, &mut b);
+    let result: u64 = if a == 0 {
+        b
+    } else if b == 0 {
+        a
+    } else {
+        // Stein's binary GCD.
+        let shift = (a | b).trailing_zeros();
+        a >>= a.trailing_zeros();
+        loop {
+            b >>= b.trailing_zeros();
+            if a > b {
+                core::mem::swap(&mut a, &mut b);
+            }
+            b -= a;
+            if b == 0 {
+                break;
+            }
         }
-        b -= a;
-        if b == 0 {
-            break;
-        }
-    }
-    (a << shift) as i64
+        a << shift
+    };
+    // The result is non-negative; refuse the lone `2^63` case rather than wrap (C1/VR-5).
+    i64::try_from(result).map_err(|_| MathErr::Overflow)
 }
 
 /// `lcm(a, b)` — least common multiple (always non-negative).
@@ -237,7 +263,7 @@ pub fn lcm(a: i64, b: i64) -> Result<i64, MathErr> {
     if a == 0 || b == 0 {
         return Ok(0);
     }
-    let g = gcd(a, b);
+    let g = gcd(a, b)?;
     // Compute |a| / gcd first to minimize overflow risk, then multiply |b|.
     let a_abs = a.unsigned_abs();
     let b_abs = b.unsigned_abs();
@@ -293,15 +319,22 @@ pub fn checked_rem(a: i64, b: i64) -> Result<i64, MathErr> {
 /// # Errors
 ///
 /// - [`MathErr::DivByZero`] when `b == 0`.
+/// - [`MathErr::Overflow`] when reducing/canonicalizing would leave a non-representable value
+///   (e.g. `ratio(i64::MIN, -1) = 2^63`); refused rather than wrapped (C1).
 pub fn ratio(a: i64, b: i64) -> Result<(i64, i64), MathErr> {
     if b == 0 {
         return Err(MathErr::DivByZero);
     }
-    let g = gcd(a.unsigned_abs() as i64, b.unsigned_abs() as i64);
+    // `gcd` takes the absolute values of its arguments, so pass `a`/`b` directly — this also
+    // avoids an `unsigned_abs() as i64` overflow at `i64::MIN`.
+    let g = gcd(a, b)?;
     let (num, den) = if g == 0 { (a, b) } else { (a / g, b / g) };
-    // Ensure denominator is always positive (canonical form).
+    // Ensure denominator is always positive (canonical form); negation can overflow at i64::MIN.
     if den < 0 {
-        Ok((-num, -den))
+        Ok((
+            num.checked_neg().ok_or(MathErr::Overflow)?,
+            den.checked_neg().ok_or(MathErr::Overflow)?,
+        ))
     } else {
         Ok((num, den))
     }
@@ -380,7 +413,7 @@ mod tests {
         // Property: gcd(a, b) divides both a and b.
         let cases = [(12i64, 8i64), (35, 14), (100, 75), (17, 13), (0, 5), (5, 0)];
         for (a, b) in cases {
-            let g = gcd(a, b);
+            let g = gcd(a, b).expect("in-range gcd");
             if a != 0 {
                 assert_eq!(a % g, 0, "gcd({a},{b})={g} must divide {a}");
             }
@@ -392,16 +425,27 @@ mod tests {
 
     #[test]
     fn gcd_zero_zero_is_zero() {
-        assert_eq!(gcd(0, 0), 0);
+        assert_eq!(gcd(0, 0).unwrap(), 0);
     }
 
     #[test]
     fn gcd_known_values() {
-        assert_eq!(gcd(12, 8), 4);
-        assert_eq!(gcd(35, 14), 7);
-        assert_eq!(gcd(17, 13), 1); // coprime
-        assert_eq!(gcd(0, 5), 5);
-        assert_eq!(gcd(5, 0), 5);
+        assert_eq!(gcd(12, 8).unwrap(), 4);
+        assert_eq!(gcd(35, 14).unwrap(), 7);
+        assert_eq!(gcd(17, 13).unwrap(), 1); // coprime
+        assert_eq!(gcd(0, 5).unwrap(), 5);
+        assert_eq!(gcd(5, 0).unwrap(), 5);
+    }
+
+    #[test]
+    fn gcd_i64_min_overflow_is_explicit_error() {
+        // |i64::MIN| = 2^63 is not representable in i64 — refused, never wrapped to a negative
+        // (C1/VR-5). The only inputs whose true gcd is 2^63 are drawn from {0, i64::MIN}.
+        assert_eq!(gcd(0, i64::MIN), Err(MathErr::Overflow));
+        assert_eq!(gcd(i64::MIN, 0), Err(MathErr::Overflow));
+        assert_eq!(gcd(i64::MIN, i64::MIN), Err(MathErr::Overflow));
+        // A mixed case whose gcd fits is still fine: gcd(i64::MIN, 6) = 2.
+        assert_eq!(gcd(i64::MIN, 6).unwrap(), 2);
     }
 
     // ---- property: lcm(a,b) = |a*b| / gcd(a,b) ----
@@ -498,6 +542,33 @@ mod tests {
     #[test]
     fn floor_inf_is_explicit_error() {
         assert_eq!(floor(f64::INFINITY), Err(MathErr::OutOfDomain));
+    }
+
+    #[test]
+    fn rounding_out_of_i64_range_is_explicit_overflow_never_silent() {
+        // A finite f64 far beyond i64 range must NOT silently saturate to i64::MAX (C1/G2):
+        // `1e20_f64 as i64` is `i64::MAX` in Rust, so a naive cast would return a wrong value.
+        let big = 1e20_f64;
+        assert_eq!(floor(big), Err(MathErr::Overflow));
+        assert_eq!(ceil(big), Err(MathErr::Overflow));
+        assert_eq!(trunc(big), Err(MathErr::Overflow));
+        assert_eq!(round(big, RoundMode::HalfToEven), Err(MathErr::Overflow));
+        assert_eq!(floor(-1e20_f64), Err(MathErr::Overflow));
+        // The exact boundary: 2^63 is one past i64::MAX and must be refused...
+        assert_eq!(trunc(9_223_372_036_854_775_808.0), Err(MathErr::Overflow));
+        // ...while the largest representable f64 below 2^63 is accepted exactly.
+        assert_eq!(
+            trunc(9_223_372_036_854_774_784.0).unwrap(),
+            9_223_372_036_854_774_784
+        );
+        // i64::MIN (-2^63) is exactly representable and in range.
+        assert_eq!(trunc(-9_223_372_036_854_775_808.0).unwrap(), i64::MIN);
+    }
+
+    #[test]
+    fn ratio_i64_min_canonicalization_overflow_is_explicit() {
+        // ratio(i64::MIN, -1) = 2^63 is not representable — refused, never wrapped (C1).
+        assert_eq!(ratio(i64::MIN, -1), Err(MathErr::Overflow));
     }
 
     // ---- property: round mode is always returned as the EXPLAIN artifact ----

@@ -232,9 +232,11 @@ pub fn chars(s: &Text) -> Vec<char> {
 ///
 /// # Fallibility
 /// - `Err(BoundaryError::OutOfRange { len, asked })` — range end or start is past the end.
+/// - `Err(BoundaryError::InvalidRange { start, end })` — `start > end` (inverted range).
 /// - `Err(BoundaryError::NotCharBoundary { byte })` — `start` or `end` is inside a codepoint.
 ///
-/// **Never a silent truncation to the nearest boundary** (C1 / G2).
+/// **Never a silent truncation to the nearest boundary** (C1 / G2), and **never a runtime
+/// slice-index panic** on an inverted range.
 ///
 /// # Effects: none
 pub fn slice(s: &Text, start: usize, end: usize) -> Result<Text, BoundaryError> {
@@ -244,6 +246,11 @@ pub fn slice(s: &Text, start: usize, end: usize) -> Result<Text, BoundaryError> 
     }
     if end > len {
         return Err(BoundaryError::OutOfRange { len, asked: end });
+    }
+    // Both endpoints are in range, but `&raw[start..end]` panics if `start > end` — refuse it
+    // explicitly (the boundary checks above do not cover an inverted range).
+    if start > end {
+        return Err(BoundaryError::InvalidRange { start, end });
     }
     // Both indices are in-range; check char boundaries.
     let raw = s.as_str();
@@ -658,15 +665,16 @@ mod tests {
         assert_eq!(s.as_str(), "aababc", "original must be unchanged (C4)");
     }
 
-    /// `replace` with empty `from` returns the original unchanged.
+    /// `replace` with empty `from` matches Rust's `str::replace` semantics exactly.
     #[test]
-    fn replace_empty_from_is_noop() {
+    fn replace_empty_from_inserts_between_chars() {
         let s = Text::new("hello");
         let empty = Text::new("");
         let r = replace(&s, &empty, &Text::new("X"));
-        // Rust's `str::replace("", "X")` inserts X between every char; that's the spec behaviour.
-        // We just verify it doesn't panic and returns a Text.
-        let _ = r;
+        // Rust's `str::replace("", "X")` inserts X around every char; assert the exact result so a
+        // regression in `replace` (or a switch to a different empty-pattern policy) is caught.
+        assert_eq!(r.as_str(), "XhXeXlXlXoX");
+        assert_eq!(s.as_str(), "hello", "original must be unchanged (C4)");
     }
 
     // ─── Length tests ──────────────────────────────────────────────────────────
@@ -733,6 +741,19 @@ mod tests {
         assert!(
             matches!(err, BoundaryError::OutOfRange { .. }),
             "out-of-range must be Err(OutOfRange), not silent truncation (C1)"
+        );
+    }
+
+    /// `slice` with an inverted range (`start > end`) returns Err(InvalidRange) — never a panic.
+    #[test]
+    fn slice_inverted_range_is_err_never_panic() {
+        let s = Text::new("hello world");
+        // Both 5 and 3 are individually in range, but 5 > 3 would panic `&raw[5..3]`.
+        let err = slice(&s, 5, 3).expect_err("inverted range must be Err");
+        assert_eq!(
+            err,
+            BoundaryError::InvalidRange { start: 5, end: 3 },
+            "inverted range must be Err(InvalidRange), never a slice-index panic (C1)"
         );
     }
 

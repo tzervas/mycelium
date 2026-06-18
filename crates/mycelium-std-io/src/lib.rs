@@ -131,11 +131,11 @@ mod tests {
     fn flat_re_exports_work() {
         let v = binary_value();
         // serialize
-        let bytes = serialize(&v, Format::Wire);
+        let bytes = serialize(&v, Format::Wire).expect("serialize: finite test value");
         let recovered = deserialize(&bytes, Format::Wire).expect("wire round-trip");
         assert_eq!(v, recovered);
         // json
-        let text = to_json(&v);
+        let text = to_json(&v).expect("to_json: finite test value");
         let recovered = from_json(&text).expect("JSON round-trip");
         assert_eq!(v, recovered);
     }
@@ -144,7 +144,7 @@ mod tests {
     #[test]
     fn io_and_serialize_end_to_end() {
         let v = binary_value();
-        let bytes = serialize(&v, Format::Wire);
+        let bytes = serialize(&v, Format::Wire).expect("serialize: finite test value");
         let src = Source::from_bytes(bytes);
         let raw = read_all(src).expect("read_all");
         let recovered = deserialize(&raw, Format::Wire).expect("deserialize after read_all");
@@ -155,7 +155,7 @@ mod tests {
     #[test]
     fn read_value_end_to_end() {
         let v = binary_value();
-        let bytes = serialize(&v, Format::Wire);
+        let bytes = serialize(&v, Format::Wire).expect("serialize: finite test value");
         let src = Source::from_bytes(bytes);
         let recovered = read_value(src, Format::Wire).expect("read_value");
         assert_eq!(v, recovered);
@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn write_and_serialize_end_to_end() {
         let v = binary_value();
-        let bytes = serialize(&v, Format::Wire);
+        let bytes = serialize(&v, Format::Wire).expect("serialize: finite test value");
         let snk = Sink::new();
         let snk = write(snk, &bytes).expect("write");
         let result = snk.into_bytes();
@@ -210,7 +210,7 @@ mod tests {
     fn serialize_is_a_projection_not_identity() {
         let v = binary_value();
         let h_before = v.content_hash();
-        let _bytes = serialize(&v, Format::Wire);
+        let _bytes = serialize(&v, Format::Wire).expect("serialize: finite test value");
         assert_eq!(
             v.content_hash(),
             h_before,

@@ -362,9 +362,13 @@ pub fn uniform_int(g: Rng, lo: i64, hi: i64) -> Result<(i64, Rng), RandErr> {
     if hi <= lo {
         return Err(RandErr::EmptyRange);
     }
-    let range = (hi - lo) as u64; // safe: hi > lo, both i64, range fits in u64
+    // Compute the span and re-base in i128: `hi - lo` overflows i64 for sign-spanning ranges
+    // (e.g. lo=i64::MIN, hi=0), and `lo + (v as i64)` wraps when v ≥ 2^63. i128 is exact for both
+    // (the result is in [lo, hi) ⊂ i64 by construction), so the final cast never truncates.
+    let range = (i128::from(hi) - i128::from(lo)) as u64;
     let (v, g2) = rejection_sample_u64(g, range);
-    Ok((lo + v as i64, g2))
+    let value = (i128::from(lo) + i128::from(v)) as i64;
+    Ok((value, g2))
 }
 
 /// Draw a uniformly-distributed `u64` in the half-open range `[lo, hi)`.
@@ -426,9 +430,12 @@ pub fn bernoulli(g: Rng, p: f64) -> Result<(bool, Rng), RandErr> {
     // Map a raw u64 to [0, 1) by dividing by 2^64 (multiply by 2^-64).
     // This is the standard f64-threshold method; bias is sub-ULP — `Declared`.
     let (raw, g2) = next_u64(g);
-    // ldexp(raw as f64, -64) = raw / 2^64  ∈ [0, 1)
+    // ldexp(raw as f64, -64) = raw / 2^64. `u64::MAX as f64` rounds up to 2^64, and `raw as f64`
+    // can also round to 2^64 for raw near u64::MAX, so `u` can reach exactly 1.0 — meaning a naive
+    // `u < p` would return `false` even at p == 1.0. Guard the endpoint so p == 1.0 is always true
+    // and p == 0.0 is always false (the stated bounds; C1/VR-5).
     let u = (raw as f64) * (1.0_f64 / u64::MAX as f64); // ∈ [0, 1]
-    Ok((u < p, g2))
+    Ok((p >= 1.0 || u < p, g2))
 }
 
 /// Choose one element uniformly at random from a non-empty slice.
@@ -515,15 +522,18 @@ pub fn exponential(g: Rng, lambda: f64) -> Result<(f64, Rng), RandErr> {
     Ok((-u.ln() / lambda, g2))
 }
 
-/// Draw a `f64` uniformly in `(0, 1)` — strictly open (avoids `ln(0)` in samplers).
+/// Draw a `f64` strictly in the open interval `(0, 1)` (avoids `ln(0)`/`ln(1)=0` in samplers).
 ///
-/// This is an internal helper for samplers that need a strictly-positive uniform draw.
-/// The output is in `(0, 1)` by clamping any raw 0 to `f64::MIN_POSITIVE` — a negligible
-/// distortion (the probability of drawing 0 from a 64-bit uniform is 2^-64).
+/// This is an internal helper for samplers that need a strictly-interior uniform draw.
+/// `raw | 1` excludes the low endpoint 0. The high endpoint needs care too: `u64::MAX as f64`
+/// rounds up to 2^64 and `raw as f64` can round to 2^64 for `raw` near `u64::MAX`, so the naive
+/// product can reach exactly `1.0`. We clamp to the largest f64 strictly below 1 so the result is
+/// genuinely in `(0, 1)` — otherwise `exponential` could emit `-ln(1)/λ = 0` and the stated
+/// interval would be false (the distortion is sub-ULP and confined to ~2^-53 of draws).
 fn next_uniform_open(g: Rng) -> (f64, Rng) {
     let (raw, g2) = next_u64(g);
-    // Map to (0, 1): use (raw | 1) to avoid 0, divide by 2^64.
     let v = ((raw | 1) as f64) * (1.0_f64 / u64::MAX as f64);
+    let v = v.min(1.0 - f64::EPSILON / 2.0); // < 1, exactly representable
     (v, g2)
 }
 
@@ -1100,6 +1110,28 @@ mod tests {
             assert_eq!(v, 42, "singleton range must always produce lo");
             g = ng;
         }
+    }
+
+    /// A sign-spanning, near-full-i64 range must not overflow/panic and stays in `[lo, hi)`.
+    ///
+    /// `hi - lo` and `lo + v` both overflow i64 here — the i128 re-basing must keep them sound
+    /// (regression for the two `uniform_int` overflow bugs). The workspace builds with
+    /// `overflow-checks = true`, so an overflow would panic, not wrap.
+    #[test]
+    fn uniform_int_full_signed_range_never_overflows() {
+        let mut g = seed(7);
+        // [i64::MIN, i64::MAX): span = 2^64 - 1, which overflows i64 if computed in i64.
+        for _ in 0..10_000 {
+            let (v, ng) = uniform_int(g, i64::MIN, i64::MAX).expect("valid wide range");
+            assert!(
+                (i64::MIN..i64::MAX).contains(&v),
+                "draw {v} out of [MIN, MAX)"
+            );
+            g = ng;
+        }
+        // A range straddling zero up to the boundary: lo=i64::MIN, hi=0.
+        let (w, _) = uniform_int(seed(11), i64::MIN, 0).expect("valid range");
+        assert!((i64::MIN..0).contains(&w), "draw {w} out of [MIN, 0)");
     }
 
     // ── `uniform_u64` ─────────────────────────────────────────────────────────
