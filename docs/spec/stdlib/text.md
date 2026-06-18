@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft (needs-design)** (2026-06-17) — design-first; no code lands until RFC-0016 is Accepted and this spec is ratified (the maintainer's append-only decision). |
+| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-text` (M-524, #165, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
 | **Module / Ring** | `std.text` / `string` · Ring `2` (RFC-0016 §4.2) · Tier `B` (RFC-0016 §4.4) |
 | **Tracks** | `M-524` (#165) — the Phase-5 task this spec delivers (RFC-0016 §4.4 `text`/`string` row) |
 | **Scope** | The UTF-8 string **type** and its operations: construction, slicing/indexing on validated char/grapheme boundaries, the parse surface (`str → T` as `Result`), and encoding/transcoding (UTF-8 ⇄ UTF-16/Latin-1/bytes). Value-semantic, immutable by default. |

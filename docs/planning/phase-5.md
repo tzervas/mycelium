@@ -182,3 +182,20 @@ RFC without waiting on self-hosting readiness.
   specs move to **"implemented (Rust-first), pending ratification"**, *not* `Accepted`; ratification
   and the Mycelium-lang migration half (M-502-gated) remain. This advances Batch P5-A (Ring 0/1);
   Batch P5-B (Ring-2 commons) and P5-C (self-hosting) are still downstream. Append-only.
+- **2026-06-18 — Batch P5-B Rust-first enactment landed (code, not ratification).** The Ring-2 commons
+  half lands: the twelve Tier-B crates `mycelium-std-{collections,error,cmp,iter,math,text,fmt,testing,
+  io,fs,time,rand}` (M-511/527/532/526/525/524/533/534/514/528/529/531), built as a **swarm of twelve
+  sonnet agents fanned in by a single octopus merge** (the orchestrator owns every shared file). Each is
+  a KC-3 consumer written **to the §4.1 contract over Ring 0/1** and **encodes its RFC-0016 §4.5 guarantee
+  matrix as checked data asserted in tests** (722 tests; workspace fmt/clippy/test green). Tags are at the
+  honestly-supportable strength (VR-5) — `std.math` transcendentals **downgraded to `Declared`** (unaudited
+  libm floor), `std.rand` samplers `Declared`/`Empirical` and **never `Proven`**, `std.io` `deserialize`
+  `Empirical` (proptest round-trip, no theorem). The effectful modules (`io`/`fs`/`time`/`rand`, and
+  `math`'s transcendentals) ship a **fully-testable surface over an injectable substrate/source** and
+  **FLAG the audited `wild`/FFI floor to the `std-sys` phylum (§8-Q6 / M-541)** rather than inventing it —
+  pure `std` stays leak-free (LR-9). Further cross-module FLAGs recorded for the maintainer (not silently
+  decided): the `recover` bridge (M-520; `error`/`testing`), the `std.diag` record substrate (M-510;
+  `testing`), the `fmt`→`io` canonical-JSON delegation, and the early-termination fold primitive
+  (RFC-0007 §4.8; `iter`). The twelve per-module specs move to **"implemented (Rust-first), pending
+  ratification"**, *not* `Accepted`. This completes the **Rust-first** half of Batches P5-A+P5-B; the
+  Mycelium-lang migration (M-502-gated) and Batch P5-C (self-hosting) remain downstream. Append-only.

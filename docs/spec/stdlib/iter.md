@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft (needs-design)** (2026-06-17) — design-first; no code lands until RFC-0016 is Accepted and this spec is ratified (the maintainer's append-only decision). |
+| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-iter` (M-526, #167, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
 | **Module / Ring** | `std.iter` · Ring 2 (RFC-0016 §4.2) · Tier B (RFC-0016 §4.4) |
 | **Tracks** | M-526 (#167) — the Phase-5 task this spec delivers |
 | **Scope** | Iterator / fold / transducer combinators (`map`, `filter`, `fold`, `scan`, `zip`, `take`, …) expressed over the RFC-0007 §4.8 `for` fold — the kernel's bounded linear-recursion primitive. The module owns the *combinator surface*; it does not own a new control form. |

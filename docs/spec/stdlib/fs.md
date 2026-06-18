@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft (needs-design)** (2026-06-17) — design-first; no code lands until RFC-0016 is Accepted and this spec is ratified (the maintainer's append-only decision). |
+| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-fs` (M-528, #169, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
 | **Module / Ring** | `std.fs` · Ring 2 (RFC-0016 §4.2) · Tier B (RFC-0016 §4.4) |
 | **Tracks** | `M-528` (#169) — the Phase-5 task this spec delivers |
 | **Scope** | Filesystem access — path resolution, open/read/write/append, `stat`/metadata, directory `list`, `create`/`remove`/`rename` — over **affine `substrate` handles** (a handle is consumed exactly once, LR-8), layered on the `io` byte source/sink surface (M-514). Every path/permission/IO failure is an explicit, traceable error (G2); there is **no silent create-on-write and no silent truncation**. |

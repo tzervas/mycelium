@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft (needs-design)** (2026-06-17) — design-first; no code lands until RFC-0016 is Accepted and this spec is ratified (the maintainer's append-only decision, M-501). |
+| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-error` (M-527, #168, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
 | **Module / Ring** | `std.error` / `std.option` / `std.result` · Ring `2` ([RFC-0016 §4.2](../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md)) · Tier `B` ([RFC-0016 §4.4](../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md)) |
 | **Tracks** | `M-527` (#168) — the Phase-5 task this spec delivers: the errors-as-values ergonomics layer (combinators + `?`-style propagation) held to the never-silent floor (I1). |
 | **Scope** | The ergonomic combinator surface over the value model's `Option`/`Result`/error sums: the total, pure combinators (`map`/`map_err`/`and_then`/`or_else`/`unwrap_or`/`ok_or`/…), the explicit propagation form (`?`-style), the explicit named partial accessors (`expect`/`unwrap`), and the **bridge** from an error value into RFC-0014 reified recovery. It owns *ergonomics*, not error representation. |

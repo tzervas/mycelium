@@ -8,6 +8,60 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: Phase-5 Batch P5-B — Rust-first Ring-2 stdlib commons, M-511/514/524/525/526/527/528/529/531/532/533/534)
+The second Phase-5 standard-library wave lands: twelve **Ring-2 / Tier-B** `std` crates — the general
+library written **to the RFC-0016 §4.1 contract over Ring 0/1** — built as a **swarm of twelve sonnet
+agents** fanned in with a single **octopus merge** (the orchestrator owns every shared file; the pattern
+is recorded in `CLAUDE.md`). Each crate lives **above the kernel** (KC-3) and ships its **RFC-0016 §4.5
+guarantee matrix encoded as checked data** (asserted in tests, never prose-only). Tags sit at the
+**honestly-supportable strength (VR-5)** — downgraded, never upgraded without a checked basis.
+- **`mycelium-std-error`** (M-527, #168) — `Option`/`Result`/error combinators; pure combinators `Exact`,
+  the `unwrap_or` family `Declared` (the substituted default is asserted, not proven), the `recover`
+  bridge inherits its policy's tag and never launders upward. The concrete `recover` surface is **owned by
+  `std.recover` (M-520)** and stubbed abstractly here (I1 propagation floor).
+- **`mycelium-std-cmp`** (M-532, #172) — ordering/equality + **non-representation** conversion; lossless
+  widening (incl. the ratified `BF16→F32`) total/`Exact`, lossy narrowing **fallible** (`Result`, never a
+  silent truncation/wrap). A *representation* change stays `std.swap`'s (no op double-owned).
+- **`mycelium-std-iter`** (M-526, #167) — fold/iterator combinators; totality **inherited** from the
+  kernel's RFC-0007 §4.8 total fold (KC-3, not re-proved); short-circuit ops are done-flag folds; the
+  transducer fusion law is an `Empirical` property test, never `Proven`.
+- **`mycelium-std-collections`** (M-511, #152) — value-semantic `Seq`/`Map`/`Set` with property-checked
+  insertion-order invariants (**no silent reorder**); non-identity map hashing kept distinct from
+  `std.content`'s canonical identity (ADR-003).
+- **`mycelium-std-math`** (M-525, #166) — exact integer/rational/rounding ops `Exact`; **all 14
+  transcendentals downgraded to `Declared`** (the libm compute floor is unaudited `wild`/FFI — VR-5); the
+  ε magnitudes + upgrade path are owned by `std.numerics` (M-512) / the `std-sys` audit (M-541).
+- **`mycelium-std-text`** (M-524, #165) — UTF-8 string ops; `parse`/`from_utf8` return `Result` (never a
+  sentinel or silent U+FFFD), lossy transcodes are an explicit `Lossy<T>` value. All `Exact`; the honesty
+  load is the fallibility column.
+- **`mycelium-std-fmt`** (M-533, #173) — dual human/machine projection (G11); deterministic `Exact`
+  projections + an `Exact`-fallible `from_json` with a checked round-trip. The canonical JSON is **owned by
+  `std.io`/serialize (M-514)**; `fmt.to_json` delegation is FLAGGED for wiring (no duplicate JSON created).
+- **`mycelium-std-testing`** (M-534, #174) — property/golden/differential harness; a `Skipped`/
+  `Undetermined` verdict is **reported, never a silent pass**, a `Fail` is a structured record (the
+  `std.diag`/M-510 substrate, stubbed structurally), and the mechanism never inflates a subject's tag.
+- **`mycelium-std-io`** (M-514, #155) — IO + serialization; affine `Source`/`Sink` enforce
+  single-consumption (LR-8); `serialize`/`to_json` `Exact`, `deserialize`/`from_json` `Empirical`
+  (proptest round-trip, no theorem). Owns the canonical JSON; the OS-I/O floor is deferred to `std-sys`
+  (M-541), so the surface ships over a fully-testable in-memory substrate.
+- **`mycelium-std-fs`** (M-528, #169) — filesystem over a substrate; every path/permission failure is an
+  explicit `Result` (I1), effects declared (C6), all `Exact`. The real syscall floor is deferred to
+  `std-sys` (M-541); ships over a testable `InMemoryFs`.
+- **`mycelium-std-time`** (M-529, #170) — monotonic vs wall a **typed** distinction; pure duration
+  arithmetic `Exact` with overflow→`Err` (never wrap); clock reads carry a **declared** effect (RT3) at
+  the type level. The OS clock floor is deferred to `std-sys` (M-541).
+- **`mycelium-std-rand`** (M-531, #171) — seeded PRNG (xoshiro256++) reproducible + `Exact`; samplers
+  `Declared`/`Empirical`, **never `Proven`**; platform entropy is a **declared** effect (RT3) over an
+  injectable source, the OS entropy floor deferred to `std-sys` (M-541).
+
+The 12 per-module specs under `docs/spec/stdlib/` move **Draft → "implemented (Rust-first), pending
+ratification"** (*not* `Accepted`). Cross-module FLAGs raised by the swarm — the `std-sys` `wild`/FFI floor
+(M-541; `math`/`io`/`fs`/`time`/`rand`), the `recover` bridge (M-520; `error`/`testing`), the `std.diag`
+record substrate (M-510; `testing`), the `fmt`→`io` canonical-JSON delegation, and the early-termination
+fold primitive (RFC-0007 §4.8; `iter`) — are recorded for the maintainer's ratification pass, not silently
+decided. 722 tests across the 12 crates; workspace `fmt`/`clippy -D warnings`/`test` green. Ratification
+and the M-502-gated Mycelium-lang migration half remain downstream.
+
 ### Added (2026-06-18: Phase-5 Batch P5-A — Rust-first stdlib enactment, M-513/515/516/517/518/519/523)
 The first Phase-5 standard-library code lands: seven `std` capability crates, built as a
 **swarm of six sonnet agents** fanned in with a single **octopus merge** (the development pattern is
