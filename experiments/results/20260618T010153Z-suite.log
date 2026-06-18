@@ -1,0 +1,9 @@
+2026-06-17T21:01:54Z  DEBUG    reclaim: drop_caches not permitted (unrooted) — skipped
+2026-06-17T21:01:54Z  INFO     reclaim: available RAM 3710 → 3707 MB
+2026-06-17T21:01:54Z  WARNING  No healthy server at http://localhost:8080 (/health). Trying anyway.
+2026-06-17T21:01:54Z  INFO     === run 'seed42' (seed=42, arms=mycelium, max_iters=1, tasks=10) ===
+2026-06-17T21:01:54Z  ERROR    arm 'mycelium' interrupted — RuntimeError: server /completion failed after 600s (URLError: <urlopen error [Errno 111] Connection refused>). On a slow phone raise --timeout or lower --n-predict (now 128).
+2026-06-17T21:01:54Z  INFO     wrote 20260618T010154Z-seed42.json (+ .summary.txt)
+2026-06-17T21:01:54Z  ERROR    stopping the suite — run 'seed42' was interrupted (see report).
+2026-06-17T21:01:54Z  INFO     suite complete — index: results/index.json
+2026-06-17T21:01:54Z  INFO     copied 20260618T010154Z-seed42.json -> kc2-report.json

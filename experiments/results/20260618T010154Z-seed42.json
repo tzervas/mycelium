@@ -1,0 +1,53 @@
+{
+  "arms": {
+    "mycelium": {
+      "eventual_pass_rate": null,
+      "first_attempt_pass_rate": null,
+      "mean_iterations_to_pass": null,
+      "outcomes": [],
+      "partial": true,
+      "ran": true,
+      "syntactic_validity_rate": null,
+      "tasks_attempted": 0
+    }
+  },
+  "assessment": {
+    "arms": {
+      "mycelium": {
+        "edit_to_fix_leverage": null,
+        "eventual_pass_rate": null,
+        "first_attempt_pass_rate": null,
+        "first_attempt_rating": "n/a",
+        "mean_iterations_to_pass": null,
+        "never_passed_tasks": [],
+        "parsed_but_failed_first": [],
+        "ran": true,
+        "syntactic_validity_rate": null
+      }
+    },
+    "caveats": [
+      "coarse signal: 10 tasks \u2014 each task is ~10.0pp; do not over-read small gaps",
+      "first-attempt pass rate is the SC-5b number; eventual-minus-first is the edit-to-fix (G10) leverage signal",
+      "rates depend on the primer (generator configuration) and the model/seed \u2014 record them with the verdict"
+    ],
+    "comparison": null,
+    "decision": "deferred to the maintainer (VR-5) \u2014 this is descriptive analysis of the measured rates, NOT the KC-2 verdict"
+  },
+  "attempts": [],
+  "backend": "server",
+  "edit_to_fix_budget": 1,
+  "experiment": "KC-2 LLM-leverage (M-002; Foundation \u00a76 P0.2)",
+  "interrupted": "RuntimeError: server /completion failed after 600s (URLError: <urlopen error [Errno 111] Connection refused>). On a slow phone raise --timeout or lower --n-predict (now 128).",
+  "model": "http://localhost:8080",
+  "run": "seed42",
+  "run_utc": "20260618T010154Z",
+  "sc5b": null,
+  "seed": 42,
+  "task_count": 10,
+  "timing": {
+    "attempts": 0,
+    "mean_attempt_seconds": null,
+    "total_generation_seconds": 0
+  },
+  "verdict": "not established \u2014 the KC-2 verdict (proceed / reweight-to-human / fall-back-to-embedded-DSL) requires a maintainer-written analysis of this run; this harness never pre-writes it (VR-5)"
+}

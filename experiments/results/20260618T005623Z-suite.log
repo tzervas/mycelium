@@ -1,0 +1,17 @@
+2026-06-17T20:56:23Z  DEBUG    reclaim: drop_caches not permitted (unrooted) — skipped
+2026-06-17T20:56:23Z  INFO     reclaim: available RAM 3691 → 3689 MB
+2026-06-17T20:56:23Z  INFO     Launching llama-server: /data/data/com.termux/files/usr/bin/llama-server -m /data/data/com.termux/files/home/.cache/mycelium-llm-harness/models/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf -c 2048 --host 127.0.0.1 --port 59671
+2026-06-17T20:56:25Z  INFO     llama-server ready at http://127.0.0.1:59671 (2.0s)
+2026-06-17T20:56:25Z  INFO     --limit 4: running 4 of 10 tasks
+2026-06-17T20:56:25Z  INFO     === run 'seed42' (seed=42, arms=mycelium, max_iters=2, tasks=4) ===
+2026-06-17T20:56:41Z  INFO     [mycelium] kc2-01-literal         attempt 1: valid=False passed=False  16.3s
+2026-06-17T20:56:54Z  INFO     [mycelium] kc2-01-literal         attempt 2: valid=False passed=False  13.0s
+2026-06-17T20:57:05Z  INFO     [mycelium] kc2-02-complement      attempt 1: valid=False passed=False  10.5s
+2026-06-17T20:57:28Z  INFO     [mycelium] kc2-02-complement      attempt 2: valid=False passed=False  23.2s
+2026-06-17T20:57:39Z  INFO     [mycelium] kc2-03-xor             attempt 1: valid=False passed=False  11.3s
+2026-06-17T20:58:07Z  INFO     [mycelium] kc2-03-xor             attempt 2: valid=False passed=False  27.3s
+2026-06-17T20:58:24Z  INFO     [mycelium] kc2-04-ternary-add     attempt 1: valid=False passed=False  17.4s
+2026-06-17T20:58:55Z  INFO     [mycelium] kc2-04-ternary-add     attempt 2: valid=False passed=False  30.7s
+2026-06-17T20:58:55Z  INFO     wrote 20260618T005625Z-seed42.json (+ .summary.txt)
+2026-06-17T20:58:55Z  INFO     suite complete — index: results/index.json
+2026-06-17T20:58:55Z  INFO     Stopping llama-server (pid 21209)

@@ -1,0 +1,18 @@
+========================================================================
+  KC-2 LLM-leverage — executive summary (analysis, NOT a verdict)
+========================================================================
+  Model   : http://localhost:8080
+  Backend : server   Seed: 42
+  Tasks   : 10   Edit-to-fix budget: 1
+
+  [mycelium]
+      first-attempt pass : n/a (n/a)   syntactic valid: n/a
+      eventual pass      : n/a   edit-to-fix gain: +0.0pp   mean iters: None
+
+  Read-this-way (cues, not conclusions):
+      · coarse signal: 10 tasks — each task is ~10.0pp; do not over-read small gaps
+      · first-attempt pass rate is the SC-5b number; eventual-minus-first is the edit-to-fix (G10) leverage signal
+      · rates depend on the primer (generator configuration) and the model/seed — record them with the verdict
+
+  Decision: deferred to the maintainer (VR-5) — this is descriptive analysis of the measured rates, NOT the KC-2 verdict
+========================================================================

@@ -1,0 +1,7 @@
+2026-06-17T20:17:40Z  DEBUG    reclaim: drop_caches not permitted (unrooted) — skipped
+2026-06-17T20:17:40Z  INFO     reclaim: available RAM 3470 → 3470 MB
+2026-06-17T20:17:40Z  INFO     Launching llama-server: /data/data/com.termux/files/usr/bin/llama-server -m /data/data/com.termux/files/home/.cache/mycelium-llm-harness/models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf -c 2048 --host 127.0.0.1 --port 53733
+2026-06-17T20:17:47Z  INFO     llama-server ready at http://127.0.0.1:53733 (7.1s)
+2026-06-17T20:17:47Z  INFO     === run 'seed42' (seed=42, arms=mycelium, max_iters=3) ===
+2026-06-17T20:18:38Z  INFO     [mycelium] kc2-01-literal         attempt 1: valid=True passed=False  50.6s
+2026-06-17T20:18:54Z  INFO     Stopping llama-server (pid 17956)
