@@ -65,7 +65,8 @@ class MyceliumChecker:
             msg = f"MYC_CHECK points at a non-existent file: {env}"
             raise ToolUnavailable(msg)
         root = _repo_root()
-        built = root / "target" / "debug" / "myc-check"
+        exe = "myc-check.exe" if os.name == "nt" else "myc-check"
+        built = root / "target" / "debug" / exe
         if built.is_file():
             return built
         # The `myc-check` binary lives in the `mycelium-check` crate (NOT mycelium-l1).

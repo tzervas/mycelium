@@ -2590,15 +2590,44 @@ def ensure_model(
     log.info("  from %s", url)
 
     dest_part = dest.with_suffix(dest.suffix + ".part")
-    try:
-        downloaded, total = _download_with_resume(url, dest_part, log)
-    except Exception as exc:  # noqa: BLE001 — never-silent: surface + keep .part
-        log.error(
-            "Download failed: %s. Re-run to resume (any partial bytes are kept at %s).",
-            exc,
-            dest_part,
+    # Auto-resume across transient failures: a flaky/slow link (a phone on cellular, or a
+    # 468MB model over a stalling connection) drops mid-stream, but _download_with_resume
+    # appends to the .part and re-requests with HTTP Range, so each retry picks up where the
+    # last left off. One invocation now survives several drops instead of needing a manual
+    # re-run each time (the .part is still kept if we ultimately give up).
+    max_attempts = 6
+    downloaded, total = 0, None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            downloaded, total = _download_with_resume(url, dest_part, log)
+        except Exception as exc:  # noqa: BLE001 — never-silent: surface, keep .part, retry
+            if attempt >= max_attempts:
+                log.error(
+                    "Download failed after %d attempts: %s. Re-run to resume (kept %s).",
+                    max_attempts, exc, dest_part,
+                )
+                return None
+            wait = min(30, 2**attempt)
+            log.warning(
+                "Download error (attempt %d/%d): %s — retrying in %ds (resumes from %s).",
+                attempt, max_attempts, exc, wait, dest_part,
+            )
+            time.sleep(wait)
+            continue
+        if total is None or downloaded == total:
+            break  # complete (or size unknown — the GGUF/size checks below decide)
+        if attempt >= max_attempts:
+            log.error(
+                "Incomplete after %d attempts: got %s of %s. Re-run to resume: %s",
+                max_attempts, _human_bytes(downloaded), _human_bytes(total), dest_part,
+            )
+            return None
+        wait = min(30, 2**attempt)
+        log.warning(
+            "Incomplete (%s of %s) — resuming (attempt %d/%d) in %ds.",
+            _human_bytes(downloaded), _human_bytes(total), attempt, max_attempts, wait,
         )
-        return None
+        time.sleep(wait)
 
     # Completeness: if the server advertised a size, the transfer must match it.
     # A truncated body that still starts with the GGUF magic must NOT be promoted.

@@ -29,6 +29,7 @@ import ctypes
 import gc
 import json
 import logging
+import os
 import shutil
 import subprocess
 import sys
@@ -91,12 +92,15 @@ def reclaim_memory(log: logging.Logger) -> dict[str, int | None]:
     """
     before = detect_memory().get("mem_available_mb")
     gc.collect()
-    try:
-        libc = ctypes.CDLL(None)
-        if hasattr(libc, "malloc_trim"):
-            libc.malloc_trim(0)
-    except (OSError, AttributeError, ValueError):
-        pass
+    # malloc_trim is glibc-only; CDLL(None) means "the main program" on POSIX but raises
+    # on Windows. Skip it off POSIX rather than rely on catching a platform-specific error.
+    if os.name == "posix":
+        try:
+            libc = ctypes.CDLL(None)
+            if hasattr(libc, "malloc_trim"):
+                libc.malloc_trim(0)
+        except (OSError, AttributeError, ValueError):
+            pass
     try:
         subprocess.run(["sync"], timeout=30, check=False)  # noqa: S603,S607 — flush dirty pages
     except (OSError, subprocess.SubprocessError):
