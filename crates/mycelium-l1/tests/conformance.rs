@@ -73,6 +73,7 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "10-reserved-not-active.myc",
         "expected a `nodule` header to open the program",
     ),
+    ("11-matured-fn-retired.myc", "maturation is declared per"),
 ];
 
 #[test]

@@ -89,12 +89,20 @@ myco(with: ComputeInfrastructure) {
 }
 ```
 
-### 8. Using `grow` and `matured` for Stable Components
+### 8. Scope-level maturation + `grow`; `thaw` for the rare interpreted exception
+
+Maturation is declared per **scope** (`nodule`/`phylum` header, or program manifest) — not per `fn`
+(RFC-0017, 2026-06-18; `matured fn` is retired). `thaw` keeps one definition interpreted inside
+an otherwise-matured scope (`germinate` is the spore-activation term, ADR-013).
 
 ```mycelium
-matured fn inference_pipeline(input: Value<Dense<...>>) -> Value<Dense<...>> {
-    // heavily optimized path
-}
+// nodule: ml.inference
+// @matured: true            ← the whole nodule takes the AOT path (RFC-0004 §4; RFC-0017 §4.1)
+nodule ml.inference
+
+fn inference_pipeline(input: Dense{1024, F32}) -> Dense{1024, F32} = input   // matured (AOT)
+
+thaw fn experimental_kernel(input: Dense{1024, F32}) -> Dense{1024, F32} = input  // stays interpreted while iterating
 
 grow Serialize for inference_pipeline;
 ```
@@ -280,8 +288,9 @@ reconciliation with the ratified semantics. Cross-references: ADR-012 §7.
   `rhizomorph`), **`tier`** (was `dimorph`), `reclaim`. The Runtime examples remain *intent*
   pending RFC-0008 activation; read them with the ratified names (DN-03 §4 is the source of truth).
 - **Consistent with the corpus:** the `swap`/`policy`/`Meta`/`guarantee`/`bound`/`policy_used`
-  shape (Examples #2, #11, #18) matches RFC-0001 §4.3 and RFC-0002; `matured` (Examples #8, #18)
-  matches the stable-component gate (RFC-0004 §4); content-addressed `spore` matches RFC-0003 §6
+  shape (Examples #2, #11, #18) matches RFC-0001 §4.3 and RFC-0002; `matured` (Example #8) is now a
+  **scope** attribute (RFC-0017: header/manifest, not a `fn` modifier) over the stable-component gate
+  (RFC-0004 §4), with `thaw` the de-maturation exception; content-addressed `spore` matches RFC-0003 §6
   modulo the scope generalization (§7.4).
 
 ---

@@ -131,9 +131,16 @@ impl Parser {
             }
             Tok::Type => self.parse_type_decl().map(Item::Type),
             Tok::Trait => self.parse_trait_decl().map(Item::Trait),
-            Tok::Matured | Tok::Fn => self.parse_fn_decl().map(Item::Fn),
+            Tok::Fn | Tok::Thaw => self.parse_fn_decl().map(Item::Fn),
+            Tok::Matured => Err(ParseError::new(
+                self.pos(),
+                "maturation is declared per `nodule`/`phylum` in the header \
+                     (`// @matured: true`) or per program in the manifest — RFC-0017 §4.1; \
+                     to keep one definition interpreted inside a matured scope use `thaw fn`"
+                    .to_owned(),
+            )),
             _ => self.err(
-                "a top-level item (`use`, `default paradigm`, `type`, `trait`, `fn`, or `matured fn`)",
+                "a top-level item (`use`, `default paradigm`, `type`, `trait`, `fn`, or `thaw fn`)",
             ),
         }
     }
@@ -199,12 +206,12 @@ impl Parser {
     }
 
     fn parse_fn_decl(&mut self) -> Result<FnDecl, ParseError> {
-        let matured = self.eat(&Tok::Matured);
+        let thaw = self.eat(&Tok::Thaw);
         self.expect(&Tok::Fn, "`fn`")?;
         let sig = self.parse_sig_tail()?;
         self.expect(&Tok::Eq, "`=` before the function body")?;
         let body = self.parse_expr()?;
-        Ok(FnDecl { matured, sig, body })
+        Ok(FnDecl { thaw, sig, body })
     }
 
     /// The shared `name <params>? ( value_params? ) -> ret` tail of a signature.

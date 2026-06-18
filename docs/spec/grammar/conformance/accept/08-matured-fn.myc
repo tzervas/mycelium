@@ -1,4 +1,0 @@
-// exercises: a matured fn (promoted stable component, RFC-0004 §4)
-nodule kernel
-
-matured fn identity(x: Binary{8}) -> Binary{8} = x

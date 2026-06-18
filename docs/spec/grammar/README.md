@@ -25,7 +25,8 @@ parser implementation is checked against. The corpus, not any single parser, is 
 | Data type (sum) | `type` | conventional |
 | Trait / typeclass | `trait` | conventional |
 | Function | `fn` | conventional |
-| Promoted stable component | `matured` | themed (grown to a hardened stage) |
+| Promoted stable component (scope-level) | `matured` | themed (grown to a hardened stage); RFC-0017: a **header/manifest key** on a `nodule`/`phylum`/program, **not** a fn modifier |
+| De-maturation (keep one def interpreted in a matured scope) | `thaw` | conventional-clearest — inverts `matured` = "compiled-and-**frozen**"; `germinate` is taken by spore-germination (ADR-013), RFC-0017 §4.3/§5 |
 | Local binding | `let` … `in` | conventional |
 | Conditional | `if`/`then`/`else` | conventional |
 | Pattern match | `match` | conventional |

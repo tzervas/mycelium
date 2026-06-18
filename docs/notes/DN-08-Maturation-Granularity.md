@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-08 |
-| **Status** | **Draft** (2026-06-18; captured maintainer intent, direction open) — advisory. It does **not** alter RFC-0007's Accepted per-definition `matured` gate; a future RFC-0007 amendment (or successor) would ratify any change. |
+| **Status** | **Resolved** (2026-06-18 — ratified by **RFC-0017** (Accepted), the successor this note anticipated). RFC-0017 lifts `matured` to `nodule`/`phylum`/program scope (header + manifest), **retires `matured fn`**, and reserves **`thaw`** for de-maturation — closing all five §3 open questions. This note recorded the intent; RFC-0017 is the normative decision. Append-only: the original Draft capture below is retained verbatim. |
 | **Feeds** | RFC-0007 §4.5 (the `matured ⟹ total` gate — currently **per-definition**); Glossary §2.10 (`matured` = "promoted, stable, compiled-and-frozen"; "takes the AOT path"); DN-06 (the static-organization lexicon: `phylum` = library-scale, `nodule` = basic unit/module; `colony` = *dynamic* runtime grouping); DN-02/DN-03 (reserved words — `matured`); `docs/spec/grammar/` |
 | **Date** | June 18, 2026 |
 | **Decides** | *Nothing normatively.* Records the intended **scope** at which `matured` is expressed and normally applied, the developer-workflow rationale, and the open questions a future ratification must close. |
@@ -73,6 +73,15 @@ argument. It records the intended granularity + the questions a ratification mus
 
 ## Changelog
 
+- **2026-06-18 — Resolved (ratified by RFC-0017).** The successor RFC-0017 (Maturation Scope &
+  De-maturation, Accepted) ratifies this note's direction and closes its five §3 open questions:
+  **(1) surface forms** — `nodule`/`phylum` header `// @matured: …` + program/package manifest
+  (RFC-0017 §4.1); **(2) totality quantification** — confirmed "matured scope ⟹ every reachable def
+  `total`", the same gate quantified over the scope (§4.2, soundness unchanged); **(3) de-maturation**
+  — `thaw fn …`, never-silent/EXPLAIN, weakens no advertised tag (§4.3); **(4) migration** —
+  `matured fn` is **retired/superseded** (not kept as sugar — maintainer decision); **(5) registry/
+  EXPLAIN** — a per-scope content-addressed maturation record, the M-311 certificate's roll-up (§4.4).
+  Status moves `Draft → Resolved`; the capture below is unchanged (append-only).
 - **2026-06-18** — Initial capture (Draft). Records the maintainer intent that `matured` apply at
   `nodule`/`phylum`/program scope (coarse-grained), with per-`fn` maturation atypical and selective
   *de*-maturation the rare fine-grained operation. Grounded in RFC-0007 §4.5, Glossary §2.10, DN-06.

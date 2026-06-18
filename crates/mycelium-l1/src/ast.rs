@@ -119,11 +119,12 @@ pub struct FnSig {
     pub ret: TypeRef,
 }
 
-/// A function definition. `matured` marks a promoted stable component (RFC-0004 §4; DN-02).
+/// A function definition. `thaw` de-matures this def — keeps it interpreted inside a matured
+/// scope; RFC-0017 §4.3. Maturation itself is a scope/header attribute, not a per-fn modifier.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnDecl {
-    /// Whether the definition is `matured` (AOT-promoted).
-    pub matured: bool,
+    /// `thaw` de-matures this def — keeps it interpreted inside a matured scope; RFC-0017 §4.3.
+    pub thaw: bool,
     /// Its signature.
     pub sig: FnSig,
     /// Its body expression.
