@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft (needs-design)** (2026-06-17) — design-first; no code lands until RFC-0016 is Accepted and this spec is ratified (the maintainer's append-only decision). |
+| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-content` (M-523, Batch P5-A; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
 | **Module / Ring** | `std.content` (alias surface `hash`) · Ring 1 (RFC-0016 §4.2) · Tier A |
 | **Tracks** | `M-523` (#164) — the Phase-5 task this spec delivers |
 | **Scope** | The library form of Mycelium's **identity model**: read-only access to a value/definition's content-addressed identity (`hash-of-value`, `hash-of-AST`), digest equality, and the typed content-hash refs that cert/policy/provenance/`spore` artifacts already use. It re-exports and wraps the kernel's content-hash surface (RFC-0001 §4.6); it does not define a new hash. |

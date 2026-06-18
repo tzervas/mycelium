@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft (needs-design)** (2026-06-17) — design-first; no code lands until RFC-0016 is Accepted and this spec is ratified (the maintainer's append-only decision). |
+| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-ternary` (M-517, Batch P5-A; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
 | **Module / Ring** | `std.ternary` · Ring 1 (RFC-0016 §4.2) · Tier A |
 | **Tracks** | M-517 (#159) — the Phase-5 task this spec delivers (RFC-0016 §4.3, the `ternary` row). |
 | **Scope** | The ternary-native differentiator surface: exact balanced-ternary integer arithmetic (`add`/`neg`/`mul` and the `int ↔ trits` codec), first-class `Bit` and `Trit{−1,0,+1}` with their identities (FR-M2; M-111), and the packed-ternary helpers — the I2_S/TL1/TL2 codecs (RFC-0004 §5 / DN-01) — exposed as **inspectable** representation choices, never a hidden lowering. |

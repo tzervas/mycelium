@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft (needs-design)** (2026-06-17) — design-first; no code lands until RFC-0016 is Accepted and this spec is ratified (the maintainer's append-only decision). |
+| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-dense` (M-518, Batch P5-A; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
 | **Module / Ring** | `std.dense` · Ring `1` (RFC-0016 §4.2) · Tier `A` |
 | **Tracks** | `M-518` (#160) — the Phase-5 task this spec delivers |
 | **Scope** | The ergonomic surface over typed, dimension-tracked dense values: `Dense{dim, dtype}` tensors / embeddings, their constructors, elementwise arithmetic, reductions (norms), and similarity ops (dot / cosine). The exported promise is that **`dim` and `dtype` live in the type**, so a shape or precision mismatch is caught at the boundary as a typed error, and every float op carries its ε-tag honestly. |
