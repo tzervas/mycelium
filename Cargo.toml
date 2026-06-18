@@ -13,6 +13,7 @@ members = [
     "crates/mycelium-vsa",
     "crates/mycelium-mlir",
     "crates/mycelium-cert",
+    "crates/mycelium-std-swap",
     "crates/mycelium-lsp",
     "crates/mycelium-build",
     "crates/mycelium-proj",
