@@ -22,6 +22,13 @@ members = [
     "crates/mycelium-sec",
     "crates/mycelium-lint",
     "crates/mycelium-doc",
+    "crates/mycelium-std-core",
+    "crates/mycelium-std-ternary",
+    "crates/mycelium-std-content",
+    "crates/mycelium-std-dense",
+    "crates/mycelium-std-select",
+    "crates/mycelium-std-vsa",
+    "crates/mycelium-std-swap",
     "xtask",
 ]
 

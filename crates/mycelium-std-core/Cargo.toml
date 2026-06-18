@@ -1,0 +1,15 @@
+[package]
+name = "mycelium-std-core"
+version = "0.0.0"
+description = "std.core — Ring-0 prelude: the honest value model re-exported (M-515)."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+mycelium-core = { path = "../mycelium-core" }
