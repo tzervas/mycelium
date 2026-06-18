@@ -231,6 +231,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-std-vsa"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-vsa",
+]
+
+[[package]]
 name = "mycelium-vsa"
 version = "0.0.0"
 dependencies = [
