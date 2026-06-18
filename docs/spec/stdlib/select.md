@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft (needs-design)** (2026-06-17) — design-first; no code lands until RFC-0016 is Accepted and this spec is ratified (the maintainer's append-only decision). |
+| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-select` (M-519, Batch P5-A; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
 | **Module / Ring** | `std.select` (with `explain`) · Ring `1` (RFC-0016 §4.2 — capability surface) · Tier `A` |
 | **Tracks** | `M-519` (#161) — the Phase-5 task this spec delivers (`select` / `explain`: selection DSL + mandatory EXPLAIN). |
 | **Scope** | The ergonomic library home of the **total, non-learned, content-addressed** selection policy and the **mandatory EXPLAIN record**: build/inspect a `SelectionPolicy`, run a selection over a finite candidate set against queryable `Meta`, and obtain the reified `Explanation` for *every* selection — the one mechanism many sites (swap-target, packing-schedule) share. |

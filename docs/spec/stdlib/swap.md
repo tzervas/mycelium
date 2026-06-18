@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft (needs-design)** (2026-06-17) — design-first; no code lands until RFC-0016 is Accepted and this spec is ratified (the maintainer's append-only decision). |
+| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-swap` (M-516, Batch P5-A; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
 | **Module / Ring** | `std.swap` · Ring 1 (RFC-0016 §4.2) · Tier A |
 | **Tracks** | `M-516` (#158) — the Phase-5 task this spec delivers |
 | **Scope** | The ergonomic, certificate-carrying surface over Mycelium's **landed** certified representation swaps (binary↔ternary, `F32`→`BF16`, Dense↔VSA) and the build/check of the RFC-0002 `SwapCertificate` through the **one** M-210 shared checker. A swap is lexically visible, certificate-emitting, and **never silent**. |

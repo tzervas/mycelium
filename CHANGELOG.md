@@ -8,6 +8,40 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: Phase-5 Batch P5-A — Rust-first stdlib enactment, M-513/515/516/517/518/519/523)
+The first Phase-5 standard-library code lands: seven `std` capability crates, built as a
+**swarm of six sonnet agents** fanned in with a single **octopus merge** (the development pattern is
+now recorded in `CLAUDE.md`). Each crate lives **above the kernel** (KC-3) as a consumer of one
+landed capability crate, and each ships its **RFC-0016 §4.5 guarantee matrix encoded as checked
+data** (asserted in tests, never prose-only).
+- **`mycelium-std-core`** (M-515, Ring 0) — the prelude: re-exports the `mycelium-core` value model
+  (`Value`/`Repr`/`Meta`, `CoreValue`/`Datum`, the `GuaranteeStrength` lattice, `Bound`/`BoundBasis`,
+  `ContentHash`) + a thin §4.8 query surface (`repr_of`/`meta_of`/`guarantee_of`/`bound_of`/
+  `provenance_of`) that reports absence with `Option`, never silently. All 9 matrix rows `Exact`/total.
+- **`mycelium-std-ternary`** (M-517, Ring 1) — exact balanced-ternary arithmetic + `Bit`/`Trit` +
+  the inspectable I2_S/TL1/TL2 packing codecs; 18 ops `Exact`, range/overflow is fallibility not a
+  weakened tag.
+- **`mycelium-std-swap`** (M-516, Ring 1) — certified representation change over `mycelium-cert`; a
+  swap is never silent and returns its certificate; bin↔tern `Exact`-within-range, dense↔vsa
+  `Empirical` (δ), `f32→bf16` `Proven` (inherited `ProvenThm`).
+- **`mycelium-std-dense`** (M-518, Ring 1) — typed dim-tracked tensors over `mycelium-dense`;
+  elementwise `Proven` tags **inherited** from the kernel's checked Higham basis, accumulation ops
+  conservatively **downgraded to `Empirical`** pending M-512 (VR-5).
+- **`mycelium-std-select`** (M-519, Ring 1) — selection DSL where **every selection emits a valid,
+  inspectable EXPLAIN record** (one mechanism; SC-3/G2); deterministic, overrides tested.
+- **`mycelium-std-vsa`** (M-513, Ring 1) — hypervector surface over `mycelium-vsa` with **per-model
+  honest tags** (MAP-I bind/unbind `Exact`; HRR/FHRR unbind/bundle `Empirical`; resonator
+  `reconstruct_factors` never `Proven`); approximate unbind returns `(item, confidence)` via cleanup.
+- **`mycelium-std-content`** (M-523, Ring 1) — content-addressing / hash primitives over
+  `mycelium-core`; identical content collides, metadata is not identity, malformed refs are explicit
+  errors.
+- *Verification:* workspace `cargo fmt`/`clippy -D warnings -A unsafe_code` (the CI gate's exemption)/
+  `test` all green — 230 stdlib tests added. *Honest scope (VR-5):* these are the **Rust-first**
+  implementations (RFC-0016 §4.6); the per-module specs move to **"implemented (Rust-first), pending
+  ratification"** — not `Accepted`. The Mycelium-lang migration half (gated on M-502) and the
+  per-module FLAGs each crate carries (lexicon/DN-02·06, error-variant gaps, M-512/M-540 follow-ons)
+  stay open. Advances **FR/NFR** via RFC-0016's contract; **G2/VR-5/SC-3/KC-3** are enforced per op.
+
 ### Decided (2026-06-18: RFC-0021 framework ratified; LLM validation split into an isolated non-blocking track)
 The fourth Track-B RFC is ratified at framework scope, with the empirical leverage gate isolated.
 - **RFC-0021 → Accepted (framework).** Normative: the projection model (§3), invariants **P1–P6**

@@ -170,3 +170,15 @@ RFC without waiting on self-hosting readiness.
   §8-Q2/Q3 signal for the maintainer). These are **Drafts (needs-design)**, not ratification — RFC-0016
   (M-501) acceptance + the §8/§7 obligations remain the gate. The Rust-first implementations and the
   Mycelium-lang migration half are still downstream (the latter gated by M-502). Append-only.
+- **2026-06-18 — Batch P5-A Rust-first enactment landed (code, not ratification).** With RFC-0016
+  **Accepted** (M-501) and the readiness gate assessed (M-502), the first **Rust-first** stdlib code
+  landed: the seven Ring-0/Tier-A crates `mycelium-std-{core,ternary,swap,dense,select,vsa,content}`
+  (M-515/517/516/518/519/513/523), built as a **swarm of six sonnet agents fanned in by a single
+  octopus merge** (the orchestrator owns every shared file; the pattern is recorded in `CLAUDE.md`).
+  Each crate is a KC-3 consumer of one landed capability crate and **encodes its RFC-0016 §4.5
+  guarantee matrix as checked data asserted in tests** (230 tests; workspace fmt/clippy/test green).
+  Tags are at the honestly-supportable strength (VR-5) — e.g. `std.dense` accumulation ops are
+  **downgraded to `Empirical`** pending M-512, `std.vsa` resonator is never `Proven`. The per-module
+  specs move to **"implemented (Rust-first), pending ratification"**, *not* `Accepted`; ratification
+  and the Mycelium-lang migration half (M-502-gated) remain. This advances Batch P5-A (Ring 0/1);
+  Batch P5-B (Ring-2 commons) and P5-C (self-hosting) are still downstream. Append-only.

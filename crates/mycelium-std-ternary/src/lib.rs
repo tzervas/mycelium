@@ -1,0 +1,46 @@
+//! `std.ternary` — Ring-1 / Tier-A capability surface (M-517; RFC-0016 §4.2/§4.3).
+//!
+//! The ergonomic, documented home for Mycelium's ternary differentiator (FR-M2; M-111):
+//! - **First-class `Trit`/`Bit` primitives** with their identities (FR-M2).
+//! - **Exact balanced-ternary integer arithmetic** — `add`, `neg`, `mul`, and the `int ↔ trits`
+//!   codec — fixed-width with explicit out-of-range (M-111; `docs/spec/swaps/binary-ternary.md` §1).
+//! - **Packed-ternary helpers** — I2S/TL1/TL2 codecs (RFC-0004 §5) with inspectable
+//!   `Meta.physical` records, never a hidden lowering pass (C3/NFR-1/DN-01).
+//! - **Guarantee matrix** — the load-bearing deliverable: every exported op's tag/fallibility/
+//!   effects/explainability encoded as data and asserted in tests (RFC-0016 §4.5).
+//!
+//! ## Contract (C1–C6 from RFC-0016 §4.1)
+//!
+//! - **C1 (never-silent):** every fallible op returns `Option`/`Result`; off-range/off-domain is
+//!   an explicit error — never a sentinel, silent clamp, or re-round.
+//! - **C2 (honest per-op tag):** all ops tag `Exact` — the balanced-ternary algebra and the
+//!   I2S/TL1/TL2 codecs are exact (VR-5). The range boundary is fallibility, not a weakened tag.
+//! - **C3 (no black boxes / EXPLAIN):** pack/unpack expose the scheme via [`packing::scheme_of`]
+//!   and [`packing::explain`]; packing is never a hidden lowering pass (RFC-0004 §5; DN-01).
+//! - **C4 (content-addressed, value-semantic):** `Trit`/`Bit`/`Trits`/`Packed` are immutable;
+//!   ops are pure functions of their inputs (no effects). Packing is not identity (DN-01; ADR-003).
+//! - **C5 (above the kernel):** this crate wraps [`mycelium_core::ternary`] and adds no new
+//!   trusted code (KC-3). `#![forbid(unsafe_code)]` is enforced.
+//! - **C6 (declared, bounded effects):** every op is pure (effects = `none`; RFC-0014).
+//!
+//! ## Open questions (FLAGs — do not silently resolve)
+//!
+//! - **Q1:** `Bit`/`Trit` spelling pending the DN-02/06 lexicon decision (ternary.md §7-Q1).
+//! - **Q2:** A future lossy packing scheme is out of scope; it would require a tag below `Exact`
+//!   and cannot be silently folded in (ternary.md §7-Q2).
+//! - **Q3:** The split between "caller names scheme" (v0) and "RFC-0005 selector chooses + emits
+//!   EXPLAIN" (M-519) needs a cross-module design pass (ternary.md §7-Q3).
+//! - **Q4:** Width ceiling mirrors the M-111 `i64` ceiling (`m ≤ 40`); bignum is out of scope
+//!   for v0 (ternary.md §7-Q4). Out-of-range is explicit `None` (C1).
+
+#![forbid(unsafe_code)]
+
+pub mod arithmetic;
+pub mod guarantee_matrix;
+pub mod packing;
+pub mod primitives;
+
+// Re-export the primary surface so callers can use `mycelium_std_ternary::Trit` etc.
+pub use arithmetic::{add, int_to_trits, max_magnitude, mul, neg, sub, trits_to_int};
+pub use packing::{explain, pack, scheme_of, unpack, ExplainRecord, PackError, Packed, Scheme};
+pub use primitives::{Bit, Trit};

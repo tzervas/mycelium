@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft (needs-design)** (2026-06-17) — design-first; no code lands until RFC-0016 is Accepted and this spec is ratified (the maintainer's append-only decision). |
+| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-vsa` (M-513, Batch P5-A; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
 | **Module / Ring** | `std.vsa` (alias surface `hdc`) · Ring 1 (RFC-0016 §4.2) · Tier A |
 | **Tracks** | `M-513` (#154) — the Phase-5 task this spec delivers |
 | **Scope** | The ergonomic surface over the landed VSA/HDC models: the per-model operation vocabulary (`bind`/`unbind`, `bundle`/`superpose`, `permute`, `similarity`, `cleanup`), the encoding utilities built on it, and the reconstruction-manifest surface (indexed retrieval vs compositional reconstruction; resonator decode). Every op carries the guarantee tag the **RFC-0003 §4 matrix** (as corrected by the r3 §4.1 erratum) assigns it, per model — never a fabricated or upgraded tag. |

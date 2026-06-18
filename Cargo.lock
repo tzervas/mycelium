@@ -244,6 +244,60 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-std-content"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+]
+
+[[package]]
+name = "mycelium-std-core"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+]
+
+[[package]]
+name = "mycelium-std-dense"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-dense",
+]
+
+[[package]]
+name = "mycelium-std-select"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-select",
+]
+
+[[package]]
+name = "mycelium-std-swap"
+version = "0.0.0"
+dependencies = [
+ "mycelium-cert",
+ "mycelium-core",
+ "mycelium-numerics",
+]
+
+[[package]]
+name = "mycelium-std-ternary"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+]
+
+[[package]]
+name = "mycelium-std-vsa"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-vsa",
+]
+
+[[package]]
 name = "mycelium-vsa"
 version = "0.0.0"
 dependencies = [
