@@ -8,6 +8,20 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: Podman/WSL2 GPU path + 1.5B mobile cap)
+- `experiments/docker/run.sh` is now **engine-agnostic and compose-free** — prefers **Podman**
+  (rootless; outputs land owned by the user), falls back to Docker, with the correct per-engine GPU
+  wiring (Podman CDI `--device nvidia.com/gpu=all --security-opt=label=disable`; Docker `--gpus all`).
+- `experiments/docker/gpu-setup.sh` — one-time WSL2/Linux GPU preflight: verifies the host GPU,
+  ensures the NVIDIA Container Toolkit, configures access (CDI generate for Podman / runtime configure
+  for Docker), and verifies a container can see the GPU. Commands **vetted against NVIDIA's
+  container-toolkit + CUDA-on-WSL docs** (cited in `docker/README.md` *Sources*).
+- **1.5B mobile cap**: `run-kc2-matrix.sh` skips models larger than 1.5B unless `KC2_ALLOW_LARGE=1`
+  (the desktop `run.sh` sets it). Phones stay at 0.5B/1.5B; desktop adds 7B+.
+- `docker/README.md` rewritten for the Podman-first / WSL2 reality; the Docker Compose file is kept
+  as a Docker-only convenience (its `gpus:` key is Docker-specific). Still best-effort/unverified on
+  GPU here (no GPU/engine in the sandbox); scripts syntax-checked, cap logic unit-tested.
+
 ### Added (2026-06-18: one-command containerized GPU run)
 - `experiments/docker/run.sh` — single fire-and-forget command (run from the repo root) that builds
   the CUDA image, verifies GPU visibility, and runs the full model × primer matrix ({0.5B, 1.5B, 7B}

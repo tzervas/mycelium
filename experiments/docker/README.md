@@ -1,70 +1,75 @@
-# KC-2 in a container (desktop GPU, e.g. RTX 5080)
+# KC-2 in a container (desktop GPU — Podman or Docker, from WSL2 or native Linux)
 
-Run the KC-2 experiment on your desktop **without touching the Windows toolchain** — Python,
-Rust (`myc-check`), and a CUDA `llama-server` all live inside the image. The repo is
-bind-mounted, so **every report/log/JSONL lands on the host** under `experiments/results/`;
-do all your git from Windows as usual.
+Run the KC-2 experiment on a desktop GPU **without touching the host toolchain** — Python, Rust
+(`myc-check`), and a CUDA `llama-server` all live inside the image. The repo is bind-mounted, so
+**every report/log/JSONL lands on the host** under `experiments/results/<model>-<primer>/`; do all
+your git from the host.
 
-> **Honesty note.** The CUDA image is provided best-effort and is **not** validated in the
-> project's design-phase sandbox (no GPU there). The Python pipeline, the CPU path, and the
-> resilience/teardown logic are tested; the GPU build is verified by *you* with `nvidia-smi`
-> below before a long run.
+**Podman is preferred** (rootless-friendly — bind-mounted outputs land owned by *you*, not root);
+Docker works too. The runner auto-detects the engine. Mobile caps at the 1.5B model; the desktop
+path here lifts that and adds the **7B** (and you can go bigger — `14b`/`32b`).
 
-## Single command (fire-and-forget)
-From the **repo root**, one command builds the image, verifies the GPU, and runs the full
-**model × primer matrix** ({0.5B, 1.5B, 7B} × {minimal, examples}) with the GPU offloaded:
+> **Honesty note.** The CUDA/GPU/Podman/Docker path is **not** exercised in the project's
+> design-phase sandbox (no GPU/engine there). The Python pipeline, the CPU path, and the
+> resilience/teardown logic are tested. The container scripts are **syntax-checked and their GPU
+> commands are vetted against NVIDIA's official docs** (see *Sources*), but the GPU build + offload
+> are verified by *you* via the `nvidia-smi` steps below before a long run.
+
+## TL;DR — two commands from the repo root
 ```sh
-bash experiments/docker/run.sh
-# overrides:
-MODELS="qwen2.5-coder-7b qwen2.5-coder-14b" SEEDS=42,123,7 MAXITERS=4 bash experiments/docker/run.sh
+bash experiments/docker/gpu-setup.sh   # ONCE: verify + configure GPU access (uses sudo where needed)
+bash experiments/docker/run.sh         # build image + run {0.5B,1.5B,7B} × {minimal,examples} on the GPU
 ```
-It needs no interaction once started (background it with `nohup … &`, tmux, or screen for a
-truly hands-off run). Every report lands on the host under `experiments/results/<model>-<primer>/`,
-ready to review and `git add`. If the GPU isn't visible it warns and falls back to CPU (slow — the
-7B becomes impractical; drop to the small `MODELS` for a CPU box). The steps below are the same
-thing done manually, for when you want a single model or to debug the image.
+Overrides: `MODELS="qwen2.5-coder-7b qwen2.5-coder-14b" SEEDS=42,123,7 MAXITERS=4 bash experiments/docker/run.sh`,
+or `CONTAINER_ENGINE=docker …` to force the engine. `run.sh` needs no interaction once started —
+background it with `nohup … &`, tmux, or screen for a hands-off run.
 
-## Prerequisites (Windows host)
-1. **NVIDIA driver** for the 5080 (Game-Ready/Studio — includes the WSL2 CUDA driver).
-2. **Docker Desktop** with the **WSL2 backend** (Settings → General → *Use the WSL 2 based
-   engine*). Docker Desktop bundles GPU support; no separate Container Toolkit install needed.
-3. Confirm GPU passthrough: `docker run --rm --gpus all nvidia/cuda:12.8.1-base-ubuntu24.04 nvidia-smi`
-   should list the 5080. If it doesn't, fix this before anything else.
+## Prerequisites (WSL2 host)
+1. **NVIDIA *Windows* driver** (R495+) from nvidia.com. On WSL2 this is the **only** driver you
+   need — **do not install any Linux display driver inside WSL** (it stubs `libcuda.so` and puts
+   `nvidia-smi` under `/usr/lib/wsl/lib`).
+2. **Podman** (`sudo apt install podman`) *or* **Docker** in the WSL distro.
+3. **NVIDIA Container Toolkit** in the WSL distro — `gpu-setup.sh` checks for it and prints the
+   exact apt commands (run that script with `INSTALL=1` to install it for you).
+4. Clone the repo **inside WSL2** (e.g. `~/dev/mycelium`), not under `C:\…` — a Windows-path bind
+   mount is much slower for the Rust/llama.cpp build.
 
-> **Tip:** clone the repo **inside WSL2** (e.g. `~/dev/mycelium`) rather than under `C:\…`.
-> Bind-mounting a Windows path into Linux works but is much slower for the Rust build. Either
-> way the outputs land in the repo dir and you git from there.
+## What `gpu-setup.sh` does (vetted vs NVIDIA docs)
+- Confirms `nvidia-smi` sees the GPU on the host (or `/usr/lib/wsl/lib/nvidia-smi`).
+- Ensures the NVIDIA Container Toolkit is installed (prints the apt block; installs it with `INSTALL=1`).
+- **Podman:** generates the **CDI** spec — `sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml`
+  — which podman consumes via `--device nvidia.com/gpu=all --security-opt=label=disable`.
+  *Re-run after any GPU driver update* (WSL usually lacks the systemd auto-refresh).
+- **Docker:** `sudo nvidia-ctk runtime configure --runtime=docker` + restart, enabling `--gpus all`.
+- Verifies a throwaway CUDA container can run `nvidia-smi -L`.
 
-## Build (one-time; the CUDA `llama.cpp` build takes a while)
+## What `run.sh` does
+Detects the engine, builds the image (the CUDA `llama.cpp` build is the slow one-time step, then
+cached), re-checks GPU visibility, and runs the matrix. `--serve` launches the CUDA `llama-server`
+inside the container and `detect_gpu` (via `nvidia-smi`) sets `--n-gpu-layers` automatically, so no
+GPU flag is needed in the run command itself. Reports land on the host; the server is torn down at
+the end of each combo.
+
+## Where the outputs are
+On the **host**: `experiments/results/<model>-<primer>/<utc>-seed<N>.json` + `.summary.txt`, the
+per-run `.attempts.jsonl` checkpoint, `index.json`, and the suite/server `.log`s. Review and commit
+them from the host. The first run also builds `myc-check` into the host `target/debug/` (gitignored).
+
+## CPU-only box
+Build without CUDA — `LLAMA_CUDA=OFF` (Dockerfile build arg) — and run only the small `MODELS`
+(`qwen2.5-coder-0.5b qwen2.5-coder-1.5b`). The 7B on CPU is impractical.
+
+## Docker Compose (Docker only — optional)
+`docker-compose.yml` is a Docker convenience (its `gpus: all` key is **Docker-specific**; Podman
+does **not** use it — use `run.sh`, which wires CDI). Manual single-model run:
 ```sh
 docker compose -f experiments/docker/docker-compose.yml build
-```
-CPU-only box? Build without CUDA: in `docker-compose.yml` set `build.args: {LLAMA_CUDA: "OFF"}`
-and remove the `gpus: all` line.
-
-## Verify the GPU is visible in the container
-```sh
-docker compose -f experiments/docker/docker-compose.yml run --rm kc2 nvidia-smi
-```
-
-## Fetch a model (persists in the `kc2-models` volume)
-The 5080 (16 GB) comfortably runs the **7B coder** — far stronger than the phone's 0.5/1.5B:
-```sh
-docker compose -f experiments/docker/docker-compose.yml run --rm kc2 \
-  uv run python ../tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-coder-7b
-```
-
-## Run the sweep (GPU auto-detected → offloaded; same `--serve` command)
-```sh
+docker compose -f experiments/docker/docker-compose.yml run --rm kc2 nvidia-smi          # verify GPU
 docker compose -f experiments/docker/docker-compose.yml run --rm kc2 \
   uv run python -m mycelium_experiments.kc2 --serve --model-id qwen2.5-coder-7b --seeds 42,123,7
 ```
-`--serve` launches the CUDA `llama-server` inside the container, `detect_gpu` (via `nvidia-smi`)
-sets `--n-gpu-layers` automatically, the suite runs, and the server is torn down at the end.
-On a 5080 you can raise the budget — e.g. add `--n-predict 256` (the GPU is fast) — and drop the
-phone-oriented `--limit`.
 
-## Where the outputs are
-On the **host**: `experiments/results/<utc>-seed<N>.json` + `.summary.txt`, the per-run
-`.attempts.jsonl` checkpoint, `index.json`, and the suite/server `.log`s. Review and commit them
-from Windows. The first run also builds `myc-check` into the host `target/debug/` (gitignored).
+## Sources (vetted)
+- NVIDIA Container Toolkit — Installation: <https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html>
+- NVIDIA Container Toolkit — CDI support (podman `--device nvidia.com/gpu=all`, `--security-opt=label=disable`, `nvidia-ctk cdi generate/list`): <https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/cdi-support.html>
+- CUDA on WSL User Guide (Windows-driver-only, `/usr/lib/wsl/lib`, container requirements): <https://docs.nvidia.com/cuda/wsl-user-guide/index.html>

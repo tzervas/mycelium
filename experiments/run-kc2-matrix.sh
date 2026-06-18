@@ -7,6 +7,9 @@
 #   MAXITERS=3 SEEDS=42,123 ./run-kc2-matrix.sh        # override budget / seeds
 #   MODELS="qwen2.5-coder-0.5b" ./run-kc2-matrix.sh    # a single model
 #
+# Mobile cap: models larger than 1.5B are skipped unless KC2_ALLOW_LARGE=1 (the desktop
+# container path experiments/docker/run.sh sets it). Phones stay at 0.5B/1.5B.
+#
 # Per-generation timeout refreshes every attempt; per-task n_predict is auto-sized. A run
 # that is interrupted still writes a partial report, and the matrix continues to the next.
 set -uo pipefail
@@ -18,6 +21,24 @@ read -r -a MODELS <<< "${MODELS:-qwen2.5-coder-0.5b qwen2.5-coder-1.5b}"
 PRIMERS=(minimal examples)
 MAXITERS="${MAXITERS:-3}"
 SEEDS="${SEEDS:-42}"
+
+# Mobile caps at 1.5B; anything larger is desktop-only. The desktop container path
+# (experiments/docker/run.sh) opts in with KC2_ALLOW_LARGE=1; on a phone the cap holds.
+ALLOW_LARGE="${KC2_ALLOW_LARGE:-0}"
+KEPT=()
+for m in "${MODELS[@]}"; do
+  size="${m##*-}"; size="${size%b}"   # qwen2.5-coder-7b → 7 ; -1.5b → 1.5
+  if [[ "$size" =~ ^[0-9.]+$ ]] && awk "BEGIN{exit !($size > 1.5)}" && [[ "$ALLOW_LARGE" != 1 ]]; then
+    echo "SKIP $m: models larger than 1.5B are desktop-only (set KC2_ALLOW_LARGE=1, or use" >&2
+    echo "         experiments/docker/run.sh on a desktop GPU)." >&2
+    continue
+  fi
+  KEPT+=("$m")
+done
+MODELS=("${KEPT[@]}")
+if [[ ${#MODELS[@]} -eq 0 ]]; then
+  echo "ERROR: no eligible models (all exceeded the 1.5B mobile cap)." >&2; exit 1
+fi
 
 echo "== Prefetch models (robust, auto-resuming) =="
 for m in "${MODELS[@]}"; do

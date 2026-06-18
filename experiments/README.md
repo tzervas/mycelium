@@ -105,6 +105,10 @@ it contains **no** task answer) is the chief generator knob. Two variants live i
 MAXITERS=3 SEEDS=42,123 ./run-kc2-matrix.sh
 ```
 Override one run's primer directly with `--primer-mycelium primers/mycelium-examples.txt`.
+**Mobile caps at the 1.5B model** — the matrix skips anything larger unless `KC2_ALLOW_LARGE=1`.
+On a desktop GPU run the containerized path, which lifts the cap (adds 7B+) and handles GPU access
+for **Podman or Docker** under WSL2/Linux: `bash docker/gpu-setup.sh` once, then `bash docker/run.sh`
+(see `docker/README.md`).
 
 Reports land under `--results-dir` (default `experiments/results/`): per run a
 `<utc>-<name>.json` + `.summary.txt`, plus a combined `index.json` and a suite `.log`.
