@@ -65,6 +65,37 @@ auto-triggers without an explicit decision.
   verified**. Editorial-only PRs say so.
 - Branch from `main`, one task per branch.
 
+## Swarm development — octopus-merge pattern (parallel agents, zero collision)
+When a wave decomposes into several **tightly-scoped, independent** tasks (e.g. one stdlib
+module / capability crate per task), run them as a **swarm of agents merged with a single
+octopus merge**, with **one orchestrator owning every shared file**. This keeps parallel work
+collision-free *by construction* rather than by after-the-fact conflict resolution.
+
+The discipline:
+1. **Partition by file ownership, not just by task.** Each agent owns a **disjoint directory**
+   (prefer **one crate per task** — `crates/mycelium-std-<module>` — so the only shared file is
+   the workspace `Cargo.toml`). An agent edits **nothing** outside its directory.
+2. **Orchestrator owns all common/shared files** — the wave's collision surface: workspace
+   `Cargo.toml`, `CHANGELOG.md`, `docs/Doc-Index.md`, `tools/github/issues.yaml` + `idmap.tsv`,
+   `docs/planning/phase-*.md`, shared spec indices, per-doc changelog footers. Agents never touch
+   these; the orchestrator reconciles them once, after merge.
+3. **Scaffold first, then fan out.** The orchestrator creates each task's skeleton (crate
+   manifest with deps pre-filled, stub `lib.rs`), registers it in the workspace, and **commits +
+   pushes the scaffold** so every agent branches from a *buildable* base and never needs to edit
+   shared wiring.
+4. **One agent per task, isolated worktree.** Launch each on its own git worktree branch
+   (`isolation: "worktree"`), in parallel. Each follows `/dev-workflow`, ships its honest
+   guarantee tags + tests, runs `cargo fmt`/`clippy -D warnings`/`test -p <crate>` green, commits
+   to its worktree branch (does **not** push), and reports its branch + SHA + any FLAGs. An agent
+   that hits ambiguity **flags it**, it does not guess (G2/VR-5 apply to agents too).
+5. **Octopus-merge back into the working branch.** `git merge --no-ff <b1> <b2> … <bN>`. Disjoint
+   directories + a pre-finalized workspace manifest ⇒ the N-way merge is conflict-free. The
+   orchestrator then makes the single integrating edits to the shared files (step 2), runs the
+   **full** `just check`, fixes integration, and commits + pushes.
+6. **Honesty survives the swarm.** The orchestrator reviews each merged crate against the house
+   rules before the wave's changelog entry; tags stay at the honestly-supportable strength, and a
+   spec moves to "implemented (Rust-first), pending ratification", never silently to `Accepted`.
+
 ## Skills (`.claude/skills/`)
 Invoke with `/<name>`; they auto-engage when relevant.
 - **`/dev-workflow`** — the implementation discipline above, as a working loop.
