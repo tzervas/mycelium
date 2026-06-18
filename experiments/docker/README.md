@@ -10,6 +10,20 @@ do all your git from Windows as usual.
 > resilience/teardown logic are tested; the GPU build is verified by *you* with `nvidia-smi`
 > below before a long run.
 
+## Single command (fire-and-forget)
+From the **repo root**, one command builds the image, verifies the GPU, and runs the full
+**model × primer matrix** ({0.5B, 1.5B, 7B} × {minimal, examples}) with the GPU offloaded:
+```sh
+bash experiments/docker/run.sh
+# overrides:
+MODELS="qwen2.5-coder-7b qwen2.5-coder-14b" SEEDS=42,123,7 MAXITERS=4 bash experiments/docker/run.sh
+```
+It needs no interaction once started (background it with `nohup … &`, tmux, or screen for a
+truly hands-off run). Every report lands on the host under `experiments/results/<model>-<primer>/`,
+ready to review and `git add`. If the GPU isn't visible it warns and falls back to CPU (slow — the
+7B becomes impractical; drop to the small `MODELS` for a CPU box). The steps below are the same
+thing done manually, for when you want a single model or to debug the image.
+
 ## Prerequisites (Windows host)
 1. **NVIDIA driver** for the 5080 (Game-Ready/Studio — includes the WSL2 CUDA driver).
 2. **Docker Desktop** with the **WSL2 backend** (Settings → General → *Use the WSL 2 based

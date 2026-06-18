@@ -8,6 +8,15 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: one-command containerized GPU run)
+- `experiments/docker/run.sh` — single fire-and-forget command (run from the repo root) that builds
+  the CUDA image, verifies GPU visibility, and runs the full model × primer matrix ({0.5B, 1.5B, 7B}
+  × {minimal, examples}) with `--serve` auto-offloading to the GPU. Outputs land on the host under
+  `experiments/results/<model>-<primer>/`, ready to commit. Models/seeds/budget overridable by env.
+  Warns + falls back to CPU if no GPU is visible. **Best-effort / unverified on GPU** in the
+  design-phase sandbox (no GPU/Docker here) — syntax-checked; the GPU build + offload are verified by
+  the operator via the built-in `nvidia-smi` step. README updated to feature the one-command path.
+
 ### Added (2026-06-18: DN-08 — maturation granularity capture)
 - New design note **DN-08** (`docs/notes/`, Draft) capturing the maintainer intent that `matured`
   apply at module (`nodule`) / library (`phylum`) / program scope — coarse-grained, at a stable point
