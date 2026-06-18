@@ -1,16 +1,16 @@
 [package]
 name = "mycelium-std-math"
-version = "0.0.0"
-description = "std.math — numeric functions over honest numerics."
+version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-publish = false
-
-[lints]
-workspace = true
+description = "std.math — Ring-2 / Tier-B numeric functions over the honest numerics (M-525)"
 
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
 mycelium-std-core = { path = "../mycelium-std-core" }
+mycelium-numerics = { path = "../mycelium-numerics" }
+
+[lints]
+workspace = true
