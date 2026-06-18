@@ -8,6 +8,150 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Decided (2026-06-18: RFC-0021 framework ratified; LLM validation split into an isolated non-blocking track)
+The fourth Track-B RFC is ratified at framework scope, with the empirical leverage gate isolated.
+- **RFC-0021 → Accepted (framework).** Normative: the projection model (§3), invariants **P1–P6**
+  (§4.3), the `Projection` interface + registry (§4.1/§4.4), the dual human/machine architecture, the
+  `LlmCanonical` **design** (§4.6), and the §4.7 **supersession mechanism**. The **G11
+  ergonomics/feasibility** gate is discharged — *demonstrated* in code (`mycelium-lsp::project`).
+- **The LLM-leverage validation is split out** into an isolated, **non-blocking** track — **RP-1 /
+  new task M-381** (the T3.6 five-arm retention-ratio ablation; turnkey protocol in `research/11`
+  T11.7). It **gates nothing**; its only coupling to the accepted framework is a future
+  **supersession** (RFC-0021 §4.7) — if the ablation falsifies (retention < ~70%), a new RFC promotes
+  `LlmCanonical` to primary. *Honesty (VR-5):* the ratification asserts **no** leverage result; the
+  claim stays `Declared`/open until the run. This restructures (supersedes, for prompt 2) the §9
+  "both prompts gate ratification" framing, append-only.
+- **Ripples:** RFC-0021 §9 ratification note + §4.7 track note + Meta-changelog appended; RP-1 →
+  "Open — isolated non-blocking track (M-381)"; `issues.yaml` mints **M-381**; Doc-Index status →
+  Accepted (framework). With this, all four Track-B RFCs (0018/0019/0020/0021) are Accepted at their
+  honestly-supportable scope; the only outstanding wave item is the **non-blocking** M-381 run.
+
+### Added (2026-06-18: LlmCanonical projection prototype — RFC-0021 ergonomics gate demonstrated, M-380)
+- **`crates/mycelium-lsp/src/project.rs`** — a v0 `LlmCanonical` projection (RFC-0021 §4.6; FR-S5): an
+  s-expression renderer over the Core IR, **total over all 11 L1 node kinds** (compiler-enforced
+  exhaustive `match`) and **deterministic**, living above the kernel (KC-3) in the dual-intelligibility
+  surface crate. It **preserves the honesty overlay by construction** — **P3** (`Swap` rendered
+  explicitly, never elided) and **P2** (every `Const`'s guarantee tag rendered; bound presence
+  surfaced) — each checked by a unit test (4 tests, all green).
+- This **demonstrates** RFC-0021's §9 ergonomics/feasibility gate (RP-4 sub-q 1) in code, upgrading
+  `research/11` T11.4 from a grounded assessment to demonstrated evidence for L1. RFC-0021 §9
+  addendum + `research/11` changelog appended.
+- *Honest scope (VR-5):* the rules are Rust source, not the declared-rule-table form (RFC-0021 §4.2);
+  the projection is read-only (no `RoundTrip` parse-back); the *measured authoring cost as L2 grows*,
+  the *human-usability* study, and — wholly untouched — the **LLM-leverage** gate remain open. **No
+  leverage result is asserted.** (At this step RFC-0021 was still Draft; its framework was ratified
+  later in this same wave — see the Decided entry above — and only the non-blocking leverage run,
+  M-381, stays open.)
+
+### Decided (2026-06-18: RFC-0018 / RFC-0019 / RFC-0020 ratified — Track B RFCs → Accepted)
+With the gating research discharged (RP-2/RP-3) and readiness assessed (DN-12), the maintainer ratified
+the three non-empirical Track-B RFCs append-only. (RFC-0021 was ratified separately, later in this same
+wave, at framework scope — see the Decided entry above; only its empirical leverage gate — non-blocking
+M-381 — stays open.)
+- **RFC-0018 → Accepted.** R18-Q1 = **Design A** (data-lineage / data-provenance integrity; `G-Match/A`
+  normative — the guarantee system tracks data provenance, not control-flow secrecy); R18-Q4 =
+  certificate reference at the type level, validity at elaboration/runtime (KC-3). R18-Q2/R7-Q2 closed.
+  **Supersedes RFC-0007 §4.3**'s stage-1 deferral and **discharges RFC-0006 §8 Q3**. *Honesty (VR-5):*
+  the noninterference result stays **Declared-with-argument** (not machine-checked) — acceptance is of
+  the design, and does not upgrade that tag.
+- **RFC-0019 → Accepted.** Coherence = **orphan rule + global uniqueness + reject-overlap** (hash-stable
+  resolution); the **Repr-polymorphism restriction set** (§4.6 — "no paradigm-specific `Op` on a
+  Repr-abstract argument", locally checkable, S1-preserving) is normative; **newtype waivers rejected
+  in v1** (need roles); **multi-param + associated types deferred to v2**; dictionary-passing, kernel
+  budget unchanged (KC-3). Soundness stays **Declared-with-argument**.
+- **RFC-0020 → Accepted (scoped).** The §4.1/§4.3/§4.4/§4.6/§4.7/§4.8/§4.9 core is Accepted (no research
+  gate); §4.2/§4.5/R20-Q1…Q5 carved out as deferred (the RFC-0006 r5 pattern), each unblocking via the
+  now-Accepted RFC-0018/0019 and the enacted RFC-0001 r5 `FixGroup`.
+- **Ripples:** RFC-0006 §8 Q3 discharged; RFC-0007 §4.3 stage-1 deferral superseded + R7-Q2 resolved
+  (append-only changelog notes on both); RP-2 and RP-3 → **Resolved**; Doc-Index statuses → Accepted.
+
+### Added (2026-06-18: RFC-0020 readiness + RFC-0021 design grounding — Track B completes its analyzable scope)
+Finishes the next wave's Track B for the two remaining RFCs, honestly bounded by what analysis can settle.
+- **`docs/notes/DN-12-RFC-0020-Ratification-Readiness.md`** — RFC-0020 (L2 surface) carries **no
+  research gate**; its deferred items depend on sibling RFCs, two of which had their research gates
+  discharged this pass (R20-Q1 → RFC-0019/RP-3; R20-Q2 → RFC-0018/RP-2) and one on the enacted
+  RFC-0001 r5 `FixGroup` (R20-Q4). Recommends a **scoped** ratification (the §4.1/§4.3/§4.4/§4.6/§4.7/
+  §4.8/§4.9 core) with a carve-out — the RFC-0006 r5 precedent. RFC-0020 Meta-changelog appended.
+- **`research/11-semantic-projection-framework-RECORD.md`** — grounds RFC-0021's *non-empirical*
+  design (T11.1–T11.5): the projection model + P1–P6 as established Unison/MPS prior art with a
+  locally-checkable honesty overlay; **one** dual-rendering architecture (RP-4 sub-q 3 answered);
+  authoring assessed **feasible** at single-engineer scale (grounded in the existing
+  `mycelium-lsp::feedback` node-walk); the Unison human-usability posture (RP-4 sub-q 1). **States
+  plainly that the LLM-leverage gate (the T3.6 retention-ratio ablation, RP-1; RP-4 sub-q 2) is
+  irreducibly empirical and is NOT discharged** (T11.6) — supplies a turnkey five-arm protocol over the
+  existing `experiments/` harness (T11.7), **a protocol, not a result**. Per VR-5 / DN-09 §4 no leverage
+  is asserted. RFC-0021 §9 marked **partially advanced**; Meta-changelog appended.
+- **RP-1 → Open (irreducibly empirical; protocol ready)** and **RP-4 → partially addressed** in
+  `research-prompts.md`; Doc-Index gains DN-12 and updates the RFC-0020/0021 rows. At this step RFC-0020
+  and RFC-0021 were **both Draft** (RFC-0020 awaiting the maintainer's scoped-ratification decision;
+  RFC-0021's framework ratification-ready behind the carve-out); **both were ratified later in this same
+  wave** — RFC-0020 → Accepted (scoped), RFC-0021 → Accepted (framework); see the Decided entries above.
+  Only the non-blocking empirical run (M-381) remains.
+
+### Added (2026-06-18: RP-3 discharged — traits coherence + Repr-polymorphism soundness, RFC-0019)
+Continues Track B with the trait layer's two flagged-novel research prompts.
+- **`research/10-traits-coherence-repr-polymorphism-RECORD.md`** — discharges RP-3 / RFC-0019 §9
+  R1+R2. Findings T10.1–T10.9: why content-addressing makes coherence a *correctness* property
+  (T10.1); the coherence mechanism — Rust-style orphan rule + global uniqueness + reject-overlap, the
+  only one consistent with ADR-003 (T10.2) — with a **total/deterministic/hash-stable resolution
+  theorem + sketch** (T10.3); the Q-coherence verdict — reject newtype waivers in v1 (safe admission
+  needs a *roles* mechanism, Weirich et al.) (T10.4); the **Repr-polymorphism restriction set** ("no
+  paradigm-specific `Op` on a Repr-abstract argument; passthrough / trait-interface / lexical-`Swap`
+  only"), shown **locally checkable** (T10.5) and **S1-preserving** with a theorem + sketch (T10.6),
+  grounded as the dual of GHC levity polymorphism (T10.7); recommend-defer for multi-param/associated
+  types (T10.8); and confirmation that dictionary-passing keeps the kernel node budget unchanged
+  (T10.9).
+- *Honest scope (VR-5):* both soundness results are tagged **Declared-with-argument** (theorems with
+  sketches), **not** `Proven` — mechanization is the future `Proven` basis. The design decisions are
+  recommended, not ratified.
+- **RFC-0019 §9 R1/R2 marked DISCHARGED**, Meta-changelog appended; **RP-3 → research-discharged** in
+  `research-prompts.md`; Doc-Index updated. **RFC-0019 was Draft at this step** — the research gate
+  closed here; ratification followed later in this same wave (RFC-0019 → Accepted; see the Decided
+  entry above). No normative rule changed.
+
+### Added (2026-06-18: RP-2 discharged — stage-1 grading noninterference, RFC-0018)
+Begins the next wave's Track B (RFC ratification research) with the flagged-novel grading RFC.
+- **`research/09-stage-1-grading-noninterference-RECORD.md`** — discharges RP-2 / RFC-0018 §11 (the
+  pre-ratification noninterference obligation). Findings T9.1–T9.8: the lattice as a Biba integrity
+  lattice with certified-`Swap` endorsement (T9.1); the two candidate properties and which one VR-5
+  demands — *data-provenance*, not full IFC secrecy (T9.2); the Design-A/B distinguishing
+  counterexample, the `pick` program (T9.3); the **data-provenance noninterference theorem + proof
+  sketch**, reduced to the existing `meet`/`propagate` implementation and the RFC-0002 certificate
+  checker so the novelty is isolated to `G-Swap` (T9.4–T9.5); the purity precondition bounding
+  Design A's sufficiency (T9.6); R7-Q2 closure (T9.7); and the R18-Q4 recommendation (T9.8).
+- *Honest scope (VR-5):* the soundness result is tagged **Declared-with-argument** (a stated theorem
+  with a proof sketch), **not** `Proven` — mechanization (Lean/LiquidHaskell) is the basis for a
+  future `Proven` upgrade, named not claimed. The empirical/decision items it cannot settle (the
+  R18-Q1 maintainer choice) are recommended (Design A), not ratified.
+- **RFC-0018 §11 marked DISCHARGED**, Meta-changelog appended; **RP-2 status → research-discharged**
+  in `research-prompts.md`; Doc-Index RFC-0018 row updated. **RFC-0018 was Draft at this step** — of
+  its three §10 ratification gates, the research gate (2) closed here; gates 1 (R18-Q1) and 3 (R18-Q4)
+  were decided later in this same wave (RFC-0018 → Accepted; see the Decided entry above). No normative
+  rule changed.
+
+### Added (2026-06-18: next-wave plan + R7-Q4 enactment — content-addressed prim table)
+The post-#194 wave is sorted into a plan, and its leading item is begun.
+- **DN-11 — Next-Wave Plan (Draft / Resolved-as-capture).** Indexes the KC-2-unblocked work into
+  three dependency-ordered tracks with gates — A: DN-10 L1 completion; B: RFC-0018…0021 ratification
+  (each held Draft until its RP-1…RP-4 spike); C: Phase-5 stdlib (gated on M-501/M-502) — names the
+  leading item (Track A → R7-Q4), and records the stdlib spec-vs-code status nuance honestly.
+- **`tools/github/issues.yaml`:** mints **M-390** (R7-Q4 prim declarations) and **M-391** (R7-Q3
+  surface mutual recursion) under Phase 4, with `depends_on` per DN-10 §2.5/§3.5.
+- **M-390 (R7-Q4) — prim table `Π` as content-addressed declarations.** New
+  `mycelium-core::prim` (`PrimTable`/`PrimDecl`/`PrimSig`/`PrimRef`) mirroring the data registry `Σ`
+  (RFC-0001 §4.3 r3; ADR-003): each kernel prim is keyed by the content hash of its *signature +
+  intrinsic guarantee* (`g_f`, RFC-0001 §4.7), name kept as metadata. The LSP feedback facade gains a
+  sixth artifact kind — a **prim declaration surfaced at every `Op` site** (EXPLAIN over prims, DN-10
+  §3.2 step 4; an unrecognized prim is surfaced, never silent). Drift-guards pin `Π_new == Π_old`
+  (DN-10 §3.4) against the L1 surface table and the interpreter's intrinsic.
+  - *Honest scope (VR-5):* every v0 prim is `intrinsic = Exact` (stored as data). Deferred, flagged:
+    `Node::Op` carrying a `PrimRef` content hash in the term, and the **RP-7** BoundBasis-with-citation
+    schema for non-`Exact` prims — neither is faked here.
+  - *Verified:* `cargo test --workspace` + `clippy -D warnings` green; the **M-210** three-way
+    differential (L1-eval ≡ elaborate→L0-interp ≡ AOT) preserved; new unit/equivalence tests in
+    `mycelium-core`, `mycelium-l1`, `mycelium-interp`, `mycelium-lsp`. Advances no `FR/NFR/VR/SC`
+    upgrade — a uniformity/inspectability gain (G2/SC-3), KC-3 (no L0 node-grammar change).
+
 ### Added (2026-06-18: KC-2-unblocked surface/type-system designs — Wave 2 of the maturation pass)
 With the KC-2 gate cleared (DN-09), the deferred L-layer designs are drafted in dependency order.
 The deep-novel ones land as **Draft** with a pre-ratification **research prompt** (VR-5 — only the

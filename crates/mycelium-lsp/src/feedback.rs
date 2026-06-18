@@ -22,11 +22,20 @@
 //! document sync, which needs a text → `Node` path (the L1 surface, M-320).
 
 use mycelium_cert::{binary_to_ternary, ternary_to_binary, SwapCertificate};
+use std::sync::OnceLock;
+
 use mycelium_core::lower::{self, Stage};
-use mycelium_core::{Bound, GuaranteeStrength, Node, Repr};
+use mycelium_core::{Bound, GuaranteeStrength, Node, PrimRef, PrimTable, Repr};
 use mycelium_select::{explain, Candidate, Explanation, PolicyRegistry, SelectionInputs};
 
 use crate::lint::{self, Diagnostic, Severity};
+
+/// The closed v0 kernel-prim table (R7-Q4), built once and shared. It is immutable, so re-hashing it
+/// on every [`analyze_with`] call is avoidable overhead; cache the shared instance.
+fn builtin_prim_table() -> &'static PrimTable {
+    static TABLE: OnceLock<PrimTable> = OnceLock::new();
+    TABLE.get_or_init(PrimTable::builtins)
+}
 
 /// A per-value honesty annotation: where it is, its guarantee tag, and its bound (if approximate).
 #[derive(Debug, Clone, PartialEq)]
@@ -53,6 +62,25 @@ pub struct SwapSite {
     pub certificate: Option<SwapCertificate>,
 }
 
+/// A surfaced **prim declaration** at an `Op` site (M-390; R7-Q4; DN-10 §3.2 step 4): the
+/// content-addressed prim the call resolves to, made inspectable so a primitive is no longer a black
+/// box (G2/SC-3). The `reference`/`intrinsic`/`arity` are present when the prim resolves in the
+/// content-addressed prim table `Π`; an unrecognized prim instead raises an `unknown-prim`
+/// diagnostic (never silent), and this site records `reference = None`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PrimSite {
+    /// Breadcrumb to the `Op` node.
+    pub at: String,
+    /// The kernel prim name as written in the node.
+    pub name: String,
+    /// The content-addressed declaration `#p` this prim resolves to (`None` if not in `Π`).
+    pub reference: Option<PrimRef>,
+    /// The prim's intrinsic guarantee `g_f` (RFC-0001 §4.7), when resolved.
+    pub intrinsic: Option<GuaranteeStrength>,
+    /// The prim's declared arity, when resolved.
+    pub arity: Option<usize>,
+}
+
 /// A surfaced selection EXPLAIN (M-221; RFC-0005 §4): the swap site and the re-derived trace.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExplainSite {
@@ -76,6 +104,9 @@ pub struct Feedback {
     /// (5) Selection EXPLAIN traces (M-221) — one per swap site whose `PolicyRef` resolves in the
     /// registry handed to [`analyze_with`]; empty under plain [`analyze`].
     pub explanations: Vec<ExplainSite>,
+    /// (6) Prim declarations surfaced at `Op` sites (M-390; R7-Q4) — one per primitive application,
+    /// each resolving to its content-addressed `Π` declaration (EXPLAIN over prims).
+    pub prims: Vec<PrimSite>,
 }
 
 /// A structured, at-a-glance rollup of a [`Feedback`] (M-310): per-artifact-kind counts and the
@@ -96,6 +127,8 @@ pub struct FeedbackSummary {
     pub stages: usize,
     /// Count of selection EXPLAIN traces (kind 5).
     pub explanations: usize,
+    /// Count of prim declarations surfaced at `Op` sites (kind 6).
+    pub prims: usize,
     /// The worst diagnostic severity present, if any (`Error` outranks `Warning`).
     pub worst: Option<Severity>,
 }
@@ -138,6 +171,7 @@ impl Feedback {
             swaps: self.swaps.len(),
             stages: self.stages.len(),
             explanations: self.explanations.len(),
+            prims: self.prims.len(),
             worst,
         }
     }
@@ -160,11 +194,18 @@ pub fn analyze_with(node: &Node, policies: &PolicyRegistry) -> Feedback {
     let mut guarantees = Vec::new();
     let mut swaps = Vec::new();
     let mut explanations = Vec::new();
+    let mut prims = Vec::new();
+    // The closed v0 kernel-prim table is the source of truth for prim identity + intrinsic guarantee
+    // (R7-Q4); every `Op` site resolves against it (an unrecognized prim is surfaced, never silent).
+    // It is immutable, so build it once and share it across calls (avoids re-hashing on every analyze).
+    let prim_table = builtin_prim_table();
     let mut cx = Collect {
         policies,
+        prim_table,
         g: &mut guarantees,
         sw: &mut swaps,
         ex: &mut explanations,
+        pr: &mut prims,
         diags: &mut diagnostics,
     };
     collect(node, "", &mut cx);
@@ -174,6 +215,7 @@ pub fn analyze_with(node: &Node, policies: &PolicyRegistry) -> Feedback {
         swaps,
         stages: lower::stages(node),
         explanations,
+        prims,
     }
 }
 
@@ -188,9 +230,11 @@ fn here(prefix: &str, step: &str) -> String {
 /// The traversal state — bundled so the walk stays one recursive function.
 struct Collect<'a> {
     policies: &'a PolicyRegistry,
+    prim_table: &'a PrimTable,
     g: &'a mut Vec<GuaranteeAnnotation>,
     sw: &'a mut Vec<SwapSite>,
     ex: &'a mut Vec<ExplainSite>,
+    pr: &'a mut Vec<PrimSite>,
     diags: &'a mut Vec<Diagnostic>,
 }
 
@@ -211,6 +255,37 @@ fn collect(node: &Node, prefix: &str, cx: &mut Collect<'_>) {
         }
         Node::Op { prim, args } => {
             let at = here(prefix, &format!("op {prim}"));
+            // EXPLAIN over prims (M-390; R7-Q4): surface the content-addressed declaration this
+            // primitive resolves to — its `#p` reference, intrinsic guarantee, and arity. An
+            // unrecognized prim is surfaced as a diagnostic (never silent), with `reference = None`.
+            let site = match cx.prim_table.get(prim) {
+                Some(decl) => PrimSite {
+                    at: at.clone(),
+                    name: prim.clone(),
+                    reference: cx.prim_table.prim_ref(prim),
+                    intrinsic: Some(decl.intrinsic),
+                    arity: Some(decl.sig.arity()),
+                },
+                None => {
+                    cx.diags.push(Diagnostic {
+                        code: "unknown-prim",
+                        severity: crate::lint::Severity::Error,
+                        at: at.clone(),
+                        message: format!(
+                            "prim `{prim}` is not a declared kernel prim in Π (the prim table); \
+                             the declaration channel is empty for this site (not silent)"
+                        ),
+                    });
+                    PrimSite {
+                        at: at.clone(),
+                        name: prim.clone(),
+                        reference: None,
+                        intrinsic: None,
+                        arity: None,
+                    }
+                }
+            };
+            cx.pr.push(site);
             for a in args {
                 collect(a, &at, cx);
             }

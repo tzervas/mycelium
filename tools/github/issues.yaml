@@ -459,8 +459,18 @@ issues:
     labels: [phase:3, type:feature, area:toolchain, priority:P2, status:needs-design]
     depends_on: [E3-3]
     body: |
-      Multiple human/machine projections of the same content-addressed artifact, beyond MPS notational projections (FR-C1/G11). EXPLORATORY + KC-2-CONTINGENT; the content-addressed IR + EXPLAIN dumps are the existing projection substrate.
+      Multiple human/machine projections of the same content-addressed artifact, beyond MPS notational projections (FR-C1/G11). EXPLORATORY + KC-2-CONTINGENT; the content-addressed IR + EXPLAIN dumps are the existing projection substrate. RFC-0021 (framework) is Accepted (2026-06-18); the LlmCanonical renderer prototype is enacted in crates/mycelium-lsp/src/project.rs (the §9 ergonomics/feasibility gate, demonstrated for L1).
       Acceptance (needs-design first): a projection ergonomics study; contingent on the KC-2 verdict.
+
+  - id: M-381
+    title: "M-381 — LLM-leverage validation (T3.6 retention-ratio ablation) — isolated, non-blocking"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:research, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-380, M-002]
+    body: |
+      The empirical LLM-leverage gate split out of RFC-0021 (Accepted framework) as its OWN isolated, NON-BLOCKING track (RP-1 / DN-09 §4 / RFC-0006 §8 Q1). It does NOT gate RFC-0021 or RFC-0020; its only coupling is a SUPERSESSION (RFC-0021 §4.7): if the text-grammar arm retains < ~70% of the LlmCanonical familiar-skin arm's pass@1 on composition tasks, a future RFC supersedes the text-primary framing and promotes LlmCanonical to primary. Until it runs, NO leverage result is asserted (VR-5; DN-09 §4 — the working hypothesis stays supported-but-not-confirmed).
+      Turnkey protocol (research/11 T11.7): the five arms (bare novel; +grammar-in-context; +constrained decoding (a new GBNF/Outlines/Guidance dependency); LlmCanonical familiar-skin (the crates/mycelium-lsp/src/project.rs renderer); embedded-DSL RR-3), >=3 seeds, >=1 frontier model, over the experiments/ harness (M-002 substrate). Headline metric: retention ratio vs the familiar-skin arm; falsification threshold < ~70% (RFC-0006 §8 Q1). Report each arm at the strength actually run (Empirical/Declared); never pre-write the verdict (experiments/README.md §3).
+      Acceptance (needs-design first): the run executed per the protocol; the retention ratio + verdict recorded append-only; on falsification, the superseding RFC opened (the §4.7 trigger). Build deps it requires: the grammar-constrained decoder integration (arm 3) and the LlmCanonical renderer (arm 4, done). NON-BLOCKING: nothing in the Accepted framework waits on this.
 
   - id: M-330
     title: "M-330 — AI co-authoring loop (generate -> feedback -> self-correct)"
@@ -598,6 +608,26 @@ issues:
     body: |
       Close RFC-0013 §8's open route-targets question: define the closed v0 set of diagnostic `route` targets (crates/mycelium-lsp/src/diagnostics/record.rs + policy.rs) and bind each to an RFC-0008 runtime/observability sink. Honor I1 (routing NEVER gates propagation — re-run the never-silent invariant test across every route) and RT5 (a sink's delivery guarantee is tagged on the Exact⊐Proven⊐Empirical⊐Declared lattice and never upgraded — VR-5; no unguaranteed "fire and forget" claimed as reliable). The diagnostic stream lives in RFC-0008 (RFC-0013 §4.8 Feeds). Tooling layer only; no kernel logging dependency (KC-3).
       DONE (2026-06-16): closed v0 route vocabulary stream/audit/log/null/mesh (maintainer: 4-set then mesh) in crates/mycelium-lsp/src/diagnostics/sink.rs, each bound to an rfc0008.* sink with an honest Delivery guarantee on the lattice (synchronous/durable/best-effort = Declared; null = honestly NOT delivered; mesh = probabilistic with a declared ProbabilityBound δ, never upgraded without a checked basis — VR-5/T4.2/RT5). Route resolution is checked against the closed set (X1 applied to routes — an out-of-set route is an explicit UnknownRoute, never silent) and lives OUTSIDE present (DiagnosticRecord::sink), so routing/failed-resolution never gates propagation (I1). Verified in tests/diagnostics.rs: never-silent across every closed route, honest sink guarantees (RT5/VR-5), explicit unknown-route. RFC-0013 §8 route-targets RESOLVED; all §8 RFC-0008-tied deferrals discharged. just check green.
+
+  # ---- L1 completion: the two remaining L1 gaps (DN-10; minted by DN-11, 2026-06-18) ----
+  - id: M-390
+    title: "M-390 — R7-Q4: migrate the prim table Π to content-addressed declarations"
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:feature, area:core-ir, priority:P2, status:done]
+    depends_on: [M-101, M-343]
+    body: |
+      RFC-0007 §8 R7-Q4 / DN-10 §3: the prim signature table Π (RFC-0007 §4.4: Π(p) = (τ₁…τₙ)→τ) is a fixed builtin table hard-coded in the elaborator/typechecker (crates/mycelium-l1/src/checkty.rs prim_sig/prim_family/prim_kernel_name) and the interpreter's intrinsic guarantee (crates/mycelium-interp/src/prims.rs, hard-coded Exact). It SHOULD become content-addressed declarations (ADR-003) living in the registry beside data declarations Σ (RFC-0001 §4.3 r3, crates/mycelium-core::data::DataRegistry) — so each prim is an inspectable, EXPLAIN-able registry entry (G2/SC-3), not a black box. Purely additive (DN-10 §4): preserves Π-lookup semantics exactly — Π_new(hash(p)) = Π_old(name(p)) — so the existing M-210 differential plus a per-prim equivalence test is the regression check (no new theorem). The intrinsic-guarantee-with-citation sub-question is RP-7 (a spike): all v0 prims are Exact, so it does not block the migration.
+      Acceptance (needs-design): a content-addressed prim table in mycelium-core (mirroring DataRegistry) populated from the fixed v0 set, each carrying its signature + intrinsic guarantee; the elaborator/typechecker validate prims against it; the LSP surfaces prim declarations as inspectable entries (the EXPLAIN-over-prims gain); Π_new == Π_old equivalence tested; M-210 differential stays green; KC-3 (no L0 node-grammar change). Deferred (own follow-ups, not this task): Node::Op carrying a PrimRef content hash in the term; RP-7's BoundBasis-with-citation schema for non-Exact prims.
+      DONE (2026-06-18): crates/mycelium-core/src/prim.rs — PrimTable/PrimDecl/PrimSig/PrimRef content-addressed via Canon (new PRIM_DECL tags in content.rs), populated with the v0 kernel set, each Exact. The LSP feedback facade surfaces a prim declaration at every Op site (crates/mycelium-lsp/src/feedback.rs, the EXPLAIN-over-prims gain; unknown prims surfaced, never silent). Π_new == Π_old drift-guards pin the surface table (mycelium-l1) and the interpreter intrinsic (mycelium-interp) to PrimTable. M-210 three-way differential stays green; cargo test --workspace + clippy -D warnings clean (KC-3 — no L0 node-grammar change). The two deferred follow-ups above remain unscheduled (their own future tasks).
+
+  - id: M-391
+    title: "M-391 — R7-Q3: surface elaboration for mutually-recursive function groups"
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:feature, area:language, priority:P2, status:needs-design]
+    depends_on: [M-343]
+    body: |
+      RFC-0007 §8 R7-Q3 (surface half) / DN-10 §2: the elaboration MECHANICS for mutual recursion are settled (RFC-0001 r5 FixGroup node + the Tarjan SCC path in crates/mycelium-l1::elab + the §4.5 mutual-structural-descent totality classifier, all enacted via M-343). The residual is the SURFACE GRAMMAR for a mutually-recursive group of ≥2 top-level functions, and the front-end that parses it and feeds the existing Tarjan path. GATED on RP-6 (the grammar choice: explicit `let rec … and …` vs nodule-boundary fixpoint vs explicit `mutually_recursive { … }` block) — the choice affects docs/spec/grammar/mycelium.ebnf and the diagnostic story; it must be decided (append-only DN or RFC-0007 amendment) before the front-end lands.
+      Acceptance (needs-design): RP-6 grammar choice recorded append-only; surface parsing + call-graph construction for top-level mutual-recursion groups in mycelium-l1::elab, feeding the existing Tarjan→FixGroup emission unchanged; ≥2 surface-written mutual-recursion programs added to the M-210 three-way differential (L1-eval ≡ elaborate→L0-interp), each producing the same FixGroup the programmatic path does (identity-first, ADR-003). Scope: the elaboration front-end only — no change to mycelium-core, mycelium-interp, or the totality checker (DN-10 §2.5).
 
 # Phase 7 (M-355..M-357) — Runtime & Concurrency Execution Model (RFC-0008). ANTICIPATED (not yet
 # ratified); created 2026-06-16 as the forward home for the runtime/concurrency track the RFC-0013/0014

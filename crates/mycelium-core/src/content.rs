@@ -74,6 +74,19 @@ pub(crate) mod tag {
     pub const APP: u8 = 0x0b;
     pub const FIX: u8 = 0x0c;
     pub const FIXGROUP: u8 = 0x0d;
+
+    // R7-Q4 (RFC-0007 §4.4/§8; DN-10 §3): content-addressed prim declarations (the Π table). The
+    // prim *operation_hash* PRIM tag (0x07) addresses a prim by name (provenance); these tags
+    // address a prim by its signature + intrinsic guarantee (its declaration identity, ADR-003).
+    pub const PRIM_DECL: u8 = 0x60;
+    pub const PRIM_PARADIGM_ANY: u8 = 0x61;
+    pub const PRIM_PARADIGM_BINARY: u8 = 0x62;
+    pub const PRIM_PARADIGM_TERNARY: u8 = 0x63;
+    pub const PRIM_WIDTH_UNIFORM: u8 = 0x64;
+    pub const PRIM_STRENGTH_EXACT: u8 = 0x65;
+    pub const PRIM_STRENGTH_PROVEN: u8 = 0x66;
+    pub const PRIM_STRENGTH_EMPIRICAL: u8 = 0x67;
+    pub const PRIM_STRENGTH_DECLARED: u8 = 0x68;
 }
 
 /// A canonical, injective, metadata-free byte encoder feeding a [`blake3::Hasher`]. Every write is
@@ -135,6 +148,45 @@ impl Canon {
         self.tag(tag::CTOR_REF);
         self.hash(c.decl());
         self.u32(c.index());
+    }
+
+    /// Absorb a prim declaration's identity-bearing content (R7-Q4; RFC-0007 §4.4): its signature
+    /// `(τ₁…τₙ) → τ` (arity-prefixed operand paradigms, the result paradigm, the width relation) and
+    /// its intrinsic guarantee `g_f` (RFC-0001 §4.7). The prim *name* is excluded (ADR-003), so two
+    /// prims with the same signature and intrinsic collide regardless of name.
+    pub(crate) fn prim_decl(
+        &mut self,
+        sig: &crate::prim::PrimSig,
+        intrinsic: crate::guarantee::GuaranteeStrength,
+    ) {
+        self.tag(tag::PRIM_DECL);
+        self.u64(sig.operands.len() as u64);
+        for &p in &sig.operands {
+            self.prim_paradigm(p);
+        }
+        self.prim_paradigm(sig.result);
+        match sig.width {
+            crate::prim::WidthRel::Uniform => self.tag(tag::PRIM_WIDTH_UNIFORM),
+        }
+        self.strength(intrinsic);
+    }
+
+    fn prim_paradigm(&mut self, p: crate::prim::PrimParadigm) {
+        self.tag(match p {
+            crate::prim::PrimParadigm::Any => tag::PRIM_PARADIGM_ANY,
+            crate::prim::PrimParadigm::Binary => tag::PRIM_PARADIGM_BINARY,
+            crate::prim::PrimParadigm::Ternary => tag::PRIM_PARADIGM_TERNARY,
+        });
+    }
+
+    fn strength(&mut self, s: crate::guarantee::GuaranteeStrength) {
+        use crate::guarantee::GuaranteeStrength::{Declared, Empirical, Exact, Proven};
+        self.tag(match s {
+            Exact => tag::PRIM_STRENGTH_EXACT,
+            Proven => tag::PRIM_STRENGTH_PROVEN,
+            Empirical => tag::PRIM_STRENGTH_EMPIRICAL,
+            Declared => tag::PRIM_STRENGTH_DECLARED,
+        });
     }
 }
 

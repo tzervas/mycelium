@@ -15,7 +15,15 @@
 
 ## RP-1 — KC-2 Retention-Ratio Ablation (T3.6)
 
-**Status:** Open (the M-002 run cleared the KC-2 kill criterion but did not run this ablation).
+**Status:** **Open — isolated, NON-BLOCKING validation track (task M-381).** As of 2026-06-18 this
+ablation is **split out of RFC-0021** (whose framework is now Accepted *without* it) into its own
+non-blocking track: it gates nothing, and its only coupling to the accepted design is a **supersession**
+(RFC-0021 §4.7 — on falsification, retention < ~70%, a future RFC promotes `LlmCanonical` to primary).
+`research/11` (T11.6–T11.7) confirms it cannot be discharged by analysis — it needs LLM runs (≥5 arms,
+≥3 seeds, ≥1 frontier model, a grammar-constrained decoder) — and supplies the **turnkey five-arm
+protocol** over the `experiments/` harness. Per VR-5 / DN-09 §4 no retention-ratio result may be
+asserted without the run; this stays **Open**. (The M-002 run cleared the KC-2 kill criterion but did
+not run this ablation.)
 
 **Question.** Does Mycelium's novel-but-regular text syntax retain most LLM leverage relative to a
 familiar-skinned same-AST control, at the rigor T3.6 was designed for? Specifically: what is the
@@ -60,8 +68,12 @@ decoding conditions showing further lift — consistent with the MTOB and gramma
 
 ## RP-2 — Stage-1 Grading: Implicit-Flows Decision and Noninterference Proof
 
-**Status:** Open (RFC-0007 §4.3 is stage-0 dynamic tags; stage-1 static grading is a named
-revision; the implicit-flows sub-decision is the load-bearing open question).
+**Status:** **RESOLVED (2026-06-18)** — research in `research/09-stage-1-grading-noninterference-RECORD.md`;
+decision recorded in **RFC-0018 (Accepted)**: R18-Q1 = **Design A** (data-provenance integrity),
+R18-Q4 = certificate reference at the type level / validity at elaboration-runtime; R7-Q2 closed.
+RFC-0018 supersedes RFC-0007 §4.3's stage-1 deferral and discharges RFC-0006 §8 Q3. The soundness
+result stays **Declared-with-argument** (not machine-checked — a future `Proven` upgrade needs
+mechanization). (Original prompt retained below.)
 
 **Question.** For the stage-1 static guarantee-grading RFC (a revision of RFC-0007 §4.3 / RFC-0006
 Q3): do *implicit flows* taint guarantee grades, or do guarantee grades track data lineage only?
@@ -109,8 +121,12 @@ question — does a `default` arm's body meet-degrade differently from named alt
 
 ## RP-3 — Traits Coherence and Repr-Polymorphism Soundness (LR-5 / T3.3)
 
-**Status:** Open (RFC-0006 §4.2 LR-5 is a committed direction; the coherence mechanism and
-restriction set are not yet decided).
+**Status:** **RESOLVED (2026-06-18)** — research in `research/10-traits-coherence-repr-polymorphism-RECORD.md`;
+decisions recorded in **RFC-0019 (Accepted)**: coherence = orphan rule + global uniqueness +
+reject-overlap; the Repr-polymorphism restriction set ("no paradigm-specific `Op` on a Repr-abstract
+argument" — locally checkable, S1-preserving) is normative; newtype waivers rejected in v1 (need
+roles); multi-param/associated types deferred to v2. Soundness stays **Declared-with-argument** (not
+machine-checked). (Original prompt retained below.)
 
 **Question.** What coherence mechanism and restriction set make **Repr-polymorphism** (LR-5:
 abstracting over the paradigm `∀r: Repr`) sound while keeping `Swap` explicit (S1)?
@@ -144,8 +160,13 @@ is both sound (S1-preserving) and complete enough to write useful generic librar
 
 ## RP-4 — Semantic-Projection Ergonomics (G11 / FR-C1)
 
-**Status:** Open (M-380 is design-active since DN-09; the ergonomics question is the design
-constraint for the projection RFC).
+**Status:** **Partially addressed (2026-06-18) — `research/11-semantic-projection-framework-RECORD.md`.**
+Sub-question 3 (dual rendering) is **answered** — one architecture suffices (Unison/MPS precedent);
+sub-question 1 (human usability) is addressed as a **design recommendation** (the Unison posture:
+edit-in-text, projections read-mostly + opt-in round-trip), with authoring assessed **feasible** at
+single-engineer scale (grounded in the existing node-walk; a *measured* cost study stays open).
+**Sub-question 2 (does a canonical projection raise LLM leverage?) is irreducibly empirical and stays
+OPEN** (see RP-1's protocol). No leverage asserted (VR-5). (M-380 is design-active since DN-09.)
 
 **Question.** Is **semantic projection** (not merely notational projection) usable and desirable
 for human authors, and does an **LLM-facing canonical projection** raise leverage above the bare

@@ -13,6 +13,7 @@ pub mod expand;
 pub mod feedback;
 pub mod fmt;
 pub mod lint;
+pub mod project;
 pub mod recover;
 pub mod sync;
 pub mod wire;

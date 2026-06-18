@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0019 |
-| **Status** | **Draft** (maintainer ratification required — see §10) |
+| **Status** | **Accepted** (2026-06-18, maintainer ratification) — coherence = **orphan rule + global uniqueness + reject-overlap** (R1, `research/10`); the **Repr-polymorphism restriction set** (§4.6, locally checkable, S1-preserving) is normative (R2); **newtype-derived coherence waivers rejected in v1** (need roles); **multi-parameter traits and associated types deferred to v2**; dictionary-passing elaboration, kernel node budget unchanged (KC-3). *Honesty note (VR-5):* the coherence and S1-preservation results are **Declared-with-argument** (not machine-checked) — acceptance does not upgrade that tag; mechanization is the basis for a future `Proven` upgrade. |
 | **Type** | Foundational / normative (once Accepted) |
 | **Date** | June 18, 2026 |
 | **Depends on** | RFC-0006 (S1–S6, LR-2/LR-5/LR-6; KC-2 verdict DN-09); RFC-0007 §4.1–4.4 (L1 kernel calculus: `Lam/App/Construct/Match/Fix`; declarations-as-registry; v0 monomorphic judgments; §4.4 "polymorphism/traits deliberately out of v0 — its own later RFC"); ADR-003 (Unison-style content-addressed identity); ADR-006 (no black boxes); KC-3 (small auditable kernel); DN-03 (`impl` for inherent methods; `grow` = derive-like); DN-09 §3.2 (usability over theming); the v0 grammar `docs/spec/grammar/mycelium.ebnf` (existing `trait`/`type_params` productions) |
@@ -666,6 +666,22 @@ limitation.
 
 ## 9. Research prompts (open — must be surveyed before ratification)
 
+**Status: DISCHARGED — `research/10-traits-coherence-repr-polymorphism-RECORD.md` (2026-06-18).**
+Both prompts below are executed (RP-3). **R1:** the coherence mechanism is Rust-style orphan rule +
+global uniqueness + reject-overlap (the only mechanism consistent with content-addressed identity),
+with a total/deterministic/hash-stable resolution theorem + sketch (record T10.2–T10.3); Q-coherence
+is resolved **reject newtype waivers in v1** (safe admission needs a *roles* mechanism — Weirich et
+al.; T10.4). **R2:** the Repr-polymorphism restriction set ("no paradigm-specific `Op` on a
+Repr-abstract argument; passthrough / trait-interface / lexical-`Swap` only") is **locally checkable**
+and **S1-preserving**, with a theorem + sketch grounded as the dual of GHC levity polymorphism
+(T10.5–T10.7). Q-multi-param and Q-associated-types are recommended **deferred to v2** (T10.8).
+**Honest scope:** both soundness results are tagged **Declared-with-argument** (not machine-checked —
+VR-5; mechanization is the future `Proven` basis). The maintainer's append-only decisions (adopt the
+mechanism + restriction set; the deferrals) remain the ratification gate; the *research* gating them
+is now closed. The original prompts are retained below verbatim (append-only).
+
+---
+
 These are the two pieces of this RFC that have no mainstream analogue and require original
 soundness arguments. They are marked **[research]** in the normative sections above; a
 ratification vote should be conditioned on their completion.
@@ -732,6 +748,19 @@ lands, Repr-polymorphic terms are rejected with `UnresolvedReprPolymorphism` (§
 
 ## 10. Ratification scope (this Draft — not yet ratified)
 
+> **RATIFIED (2026-06-18, maintainer).** All gates below are discharged. **R1/R2** are executed in
+> `research/10-traits-coherence-repr-polymorphism-RECORD.md`; the maintainer **adopts** the
+> orphan-rule + global-uniqueness + reject-overlap coherence mechanism and the §4.6 Repr-polymorphism
+> restriction set (both now normative), **rejects** newtype-derived coherence waivers in v1
+> (Q-coherence — safe admission needs a roles mechanism, deferred with associated types), and
+> **defers** multi-parameter traits and associated types to v2 (Q-multi-param, Q-associated-types).
+> Q-grading-interact is settled by the now-Accepted RFC-0018. The "explicitly NOT ratified" list
+> below is **superseded** by this ratification for the coherence proof and the Repr-polymorphism
+> restriction set (now adopted as Declared-with-argument designs); multi-param and associated types
+> remain out of scope (deferred to v2), as stated. *Honesty (VR-5):* acceptance is of the **design**;
+> the soundness *claims* stay **Declared-with-argument** (not machine-checked). The original Draft
+> ratification criteria are retained below verbatim (append-only).
+
 This RFC is **Draft**. The maintainer must ratify it (move to Accepted) based on:
 
 1. Completion of research prompts R1 (coherence soundness) and R2 (Repr-polymorphism), which are
@@ -774,3 +803,27 @@ This RFC is **Draft**. The maintainer must ratify it (move to Accepted) based on
   orphan rule grounded in ADR-003, and the two Mycelium-specific novelties (Repr-polymorphism
   LR-5 and guarantee-indexed trait methods LR-6) with their research prompts. Status: **Draft**;
   ratification conditioned on R1/R2 research completion.
+- **2026-06-18 — §9 research prompts R1+R2 DISCHARGED (RP-3).** Executed in
+  `research/10-traits-coherence-repr-polymorphism-RECORD.md`: the coherence mechanism +
+  total/deterministic/hash-stable resolution theorem (T10.2–T10.3), the Q-coherence verdict
+  (reject newtype waivers in v1 — needs roles, T10.4), the Repr-polymorphism restriction set
+  (locally checkable, T10.5) + its S1-preservation theorem + sketch (T10.6) grounded as the dual of
+  GHC levity polymorphism (T10.7), and the recommend-defer verdicts for multi-param/associated types
+  (T10.8). Both soundness results tagged **Declared-with-argument** (not machine-checked — VR-5).
+  **Status stays Draft:** the §10 research gate (R1/R2) is now discharged; the remaining gates are
+  the maintainer's append-only decisions (adopt the recommended mechanism + restriction set; record
+  the deferrals). No normative rule changed — this is the grounding the decision was waiting on.
+  Append-only.
+- **2026-06-18 — ACCEPTED (maintainer ratification).** All §10 gates discharged. The maintainer
+  **adopts** (now normative): the coherence mechanism = orphan rule + global uniqueness +
+  reject-overlap (R1/`research/10` T10.2–T10.3); the §4.6 **Repr-polymorphism restriction set** ("no
+  paradigm-specific `Op` on a Repr-abstract argument; passthrough / trait-interface / lexical-`Swap`
+  only" — locally checkable, S1-preserving, R2/T10.5–T10.6) — so the §4.6 "reject until the research
+  lands" posture is now lifted: code obeying the restriction set is admitted, code violating it gets
+  `UnresolvedReprPolymorphism`. **Rejects** newtype-derived coherence waivers in v1 (Q-coherence —
+  needs a roles mechanism, deferred with associated types). **Defers** multi-parameter traits and
+  associated types to v2 (Q-multi-param/Q-associated-types). Q-grading-interact is settled by the
+  now-Accepted RFC-0018. Dictionary-passing elaboration confirmed; kernel node budget unchanged
+  (KC-3). *Honesty (VR-5):* acceptance is of the **design**; the coherence and S1-preservation
+  *claims* stay **Declared-with-argument** (not machine-checked) — mechanization remains the basis for
+  a future `Proven` upgrade. Append-only.
