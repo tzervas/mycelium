@@ -21,6 +21,7 @@ members = [
     "crates/mycelium-check",
     "crates/mycelium-sec",
     "crates/mycelium-lint",
+    "crates/mycelium-std-content",
     "xtask",
 ]
 
