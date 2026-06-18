@@ -15,3 +15,5 @@ workspace = true
 mycelium-core = { path = "../mycelium-core" }
 mycelium-std-core = { path = "../mycelium-std-core" }
 mycelium-diag = { path = "../mycelium-diag" }
+mycelium-interp = { path = "../mycelium-interp" }
+blake3 = "1"
