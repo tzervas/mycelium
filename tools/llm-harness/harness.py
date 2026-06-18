@@ -134,6 +134,318 @@ class RunContext:
     reports_dir: Path
     run_id: str  # ISO timestamp
     log: logging.Logger
+    # Memory governor: cap the llama.cpp context so it does not allocate a KV cache
+    # for the model's full trained window (Qwen2.5 ⇒ 32k) on a phone — that blows
+    # past the Android low-memory killer (SIGKILL/9) during load. Our prompts are
+    # tiny, so a small context is correct, not just safe. Tunable via --ctx-size.
+    ctx_size: int = 2048
+    # GPU offload: number of model layers to push to the GPU (llama.cpp -ngl). 0 = CPU
+    # only (the default on a phone, where no GPU is detected). On desktop the auto-sizer
+    # sets this from detected VRAM unless --cpu-only / --n-gpu-layers says otherwise.
+    n_gpu_layers: int = 0
+    # Per-generation subprocess timeout (s). CPU phones run ~1-2 tok/s, so the 120s
+    # default is too tight once a real prompt + completion is involved; tunable.
+    llama_timeout: int = 300
+    extra_llama_args: list[str] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Memory enumeration + auto context sizing (the OOM governor, self-tuning)
+# ---------------------------------------------------------------------------
+#
+# The real-mode SIGKILL on a phone is a KV-cache blowout: with no `-c`, llama.cpp
+# sizes the KV cache for the model's *full trained window* (Qwen2.5 = 32k). We pick
+# a context that (a) is as large as the workload actually needs and (b) fits the
+# device's *available* RAM with headroom — never silently, always logged (EXPLAIN).
+# Swap is detected and reported but NOT counted toward the budget: KV/compute are
+# active allocations that thrash (and still trip the low-memory killer) if paged.
+
+# The harness's prompts are tiny (tens of tokens, n_predict ≤ 128), so it never needs
+# a large window — auto-sizing mostly clamps DOWNWARD on small devices.
+_HARNESS_DESIRED_CTX = 1024
+# Conservative upper bound on KV bytes/token for a phone-class q4 model with GQA
+# (≈ 2·layers·kv_dim·2B). Over-estimating here makes us under-allocate context — safe.
+_KV_MB_PER_TOKEN = 0.032
+
+
+def detect_memory() -> dict[str, Any]:
+    """Best-effort RAM/swap enumeration in MB. Pure stdlib; never raises.
+
+    Reads /proc/meminfo (Linux/Termux/Android) and falls back to POSIX sysconf.
+    Any field we cannot determine is left None (never guessed) — honest input to the
+    auto-sizer, which degrades to a conservative default when memory is unknown.
+    """
+    info: dict[str, Any] = {
+        "mem_total_mb": None,
+        "mem_available_mb": None,
+        "swap_total_mb": None,
+        "swap_free_mb": None,
+        "source": "unknown",
+    }
+    try:
+        meminfo = Path("/proc/meminfo")
+        if meminfo.is_file():
+            kv: dict[str, int] = {}
+            for line in meminfo.read_text(encoding="utf-8").splitlines():
+                name, _, rest = line.partition(":")
+                fields = rest.strip().split()
+                if fields and fields[0].isdigit():
+                    kv[name.strip()] = int(fields[0])  # kB
+            mb = lambda k: (kv[k] // 1024) if k in kv else None  # noqa: E731
+            info["mem_total_mb"] = mb("MemTotal")
+            avail = mb("MemAvailable")
+            if avail is None and "MemFree" in kv:
+                avail = (
+                    kv.get("MemFree", 0) + kv.get("Buffers", 0) + kv.get("Cached", 0)
+                ) // 1024
+            info["mem_available_mb"] = avail
+            info["swap_total_mb"] = mb("SwapTotal")
+            info["swap_free_mb"] = mb("SwapFree")
+            info["source"] = "/proc/meminfo"
+            return info
+    except OSError:
+        pass
+    try:
+        page = os.sysconf("SC_PAGE_SIZE")
+        names = getattr(os, "sysconf_names", {})
+        if "SC_PHYS_PAGES" in names:
+            info["mem_total_mb"] = os.sysconf("SC_PHYS_PAGES") * page // (1024 * 1024)
+        if "SC_AVPHYS_PAGES" in names:
+            info["mem_available_mb"] = (
+                os.sysconf("SC_AVPHYS_PAGES") * page // (1024 * 1024)
+            )
+        if info["mem_total_mb"] is not None:
+            info["source"] = "sysconf"
+    except (OSError, ValueError):
+        pass
+    return info
+
+
+def auto_ctx_size(
+    want: int,
+    model_path: str | None,
+    mem: dict[str, Any],
+    log: logging.Logger,
+    *,
+    swap_fraction: float = 0.0,
+) -> int:
+    """Choose a context size = min(workload need, what available memory safely holds).
+
+    By default only physical RAM is budgeted. With ``swap_fraction > 0`` (the --use-swap
+    flag), that fraction of free swap is added to the budget — letting the context grow
+    when RAM is tight, at the cost of speed (KV in swap thrashes per token) and some OOM
+    risk (the killer still targets RSS). Logged in full (EXPLAIN, never silent);
+    conservative when memory is unknown; always overridable with --ctx-size.
+    """
+    avail = mem.get("mem_available_mb")
+    swap_free = mem.get("swap_free_mb")
+    model_mb = 0
+    try:
+        if model_path and os.path.isfile(model_path):
+            model_mb = os.path.getsize(model_path) // (1024 * 1024)
+    except OSError:
+        pass
+
+    if not isinstance(avail, int) or avail <= 0:
+        chosen = min(want, 1024)
+        log.warning(
+            "Auto-ctx: available memory unknown (source=%s) — using a conservative "
+            "ctx-size=%d. Override with --ctx-size.",
+            mem.get("source"),
+            chosen,
+        )
+        return chosen
+
+    # Reserve headroom for the OS + the model's working set. With mmap the weights are
+    # page-cache backed (reclaimable), but reserve their size anyway as a worst case.
+    reserve = max(768, model_mb)
+    swap_budget = (
+        int(swap_free * swap_fraction)
+        if (swap_fraction > 0 and isinstance(swap_free, int) and swap_free > 0)
+        else 0
+    )
+    usable = (avail - reserve) + swap_budget
+    cap = int((usable * 0.40) / _KV_MB_PER_TOKEN) if usable > 0 else 256
+    cap = max(256, (cap // 256) * 256)  # floor + round to a 256 multiple
+    chosen = max(256, min(want, cap))
+    log.info(
+        "Auto-ctx: avail=%dMB%s model=%dMB → reserve=%dMB usable=%dMB; "
+        "memory allows ~%d, workload wants %d ⇒ ctx-size=%d (override with --ctx-size).",
+        avail,
+        f" +{swap_budget}MB swap (of {swap_free} free)" if swap_budget else "",
+        model_mb,
+        reserve,
+        max(0, usable),
+        cap,
+        want,
+        chosen,
+    )
+    if swap_budget:
+        log.info(
+            "Auto-ctx: counting %dMB of swap toward the budget (--use-swap) — expect "
+            "slower generation if the KV cache pages out.",
+            swap_budget,
+        )
+    if usable <= 0:
+        log.warning(
+            "Auto-ctx: low memory headroom — the model (%dMB) is large vs available "
+            "RAM (%dMB). Try --use-swap, a smaller tier "
+            "(--ensure-model --model-id qwen2.5-0.5b-instruct), or move the model to a "
+            "roomier volume with --model-dir.",
+            model_mb,
+            avail,
+        )
+    return chosen
+
+
+# ---------------------------------------------------------------------------
+# GPU + external-storage enumeration (desktop GPU offload; SD-card overflow)
+# ---------------------------------------------------------------------------
+
+
+def detect_gpu() -> list[dict[str, Any]]:
+    """Best-effort GPU enumeration. Returns [{name, backend, vram_total_mb, vram_free_mb}].
+
+    Empty on a machine with no discrete-GPU tooling (e.g. a phone) — never raises. Covers
+    NVIDIA (nvidia-smi), AMD (rocm-smi, presence only), and Apple Metal (macOS).
+    """
+    gpus: list[dict[str, Any]] = []
+    smi = shutil.which("nvidia-smi")
+    if smi:
+        try:
+            res = subprocess.run(
+                [
+                    smi,
+                    "--query-gpu=name,memory.total,memory.free",
+                    "--format=csv,noheader,nounits",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if res.returncode == 0:
+                for line in res.stdout.strip().splitlines():
+                    parts = [p.strip() for p in line.split(",")]
+                    if len(parts) >= 3 and parts[1].isdigit():
+                        gpus.append(
+                            {
+                                "name": parts[0],
+                                "backend": "cuda",
+                                "vram_total_mb": int(parts[1]),
+                                "vram_free_mb": int(parts[2])
+                                if parts[2].isdigit()
+                                else None,
+                            }
+                        )
+        except (OSError, subprocess.SubprocessError):
+            pass
+    if not gpus and shutil.which("rocm-smi"):
+        try:
+            res = subprocess.run(
+                ["rocm-smi", "--showproductname"],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                gpus.append(
+                    {
+                        "name": "AMD ROCm GPU",
+                        "backend": "rocm",
+                        "vram_total_mb": None,
+                        "vram_free_mb": None,
+                    }
+                )
+        except (OSError, subprocess.SubprocessError):
+            pass
+    if not gpus and sys.platform == "darwin":
+        gpus.append(
+            {
+                "name": "Apple GPU (Metal)",
+                "backend": "metal",
+                "vram_total_mb": None,
+                "vram_free_mb": None,
+            }
+        )
+    return gpus
+
+
+def auto_gpu_layers(
+    gpus: list[dict[str, Any]], model_path: str | None, log: logging.Logger
+) -> int:
+    """Choose -ngl (layers to offload). Full offload when VRAM holds the model; else 0
+    (CPU) with a note. Metal/ROCm with unknown VRAM ⇒ full offload (the runtime manages).
+
+    A phone build (no GPU tooling) ⇒ no GPUs ⇒ 0, so this is a no-op there.
+    """
+    if not gpus:
+        return 0
+    g = gpus[0]
+    model_mb = 0
+    try:
+        if model_path and os.path.isfile(model_path):
+            model_mb = os.path.getsize(model_path) // (1024 * 1024)
+    except OSError:
+        pass
+    free = g.get("vram_free_mb") or g.get("vram_total_mb")
+    # Offload all when VRAM is unknown, the model size is unknown, or it comfortably
+    # fits; only refuse when we KNOW the VRAM and KNOW the model won't fit.
+    if not isinstance(free, int) or model_mb == 0 or free >= int(model_mb * 1.15):
+        log.info(
+            "Auto-GPU: %s (%s) — offloading all layers (-ngl 999). "
+            "Use --cpu-only to disable, or --n-gpu-layers N to set it.",
+            g["name"],
+            g["backend"],
+        )
+        return 999
+    log.warning(
+        "Auto-GPU: %s — %dMB free VRAM < model %dMB (+headroom); staying on CPU "
+        "(-ngl 0). Set --n-gpu-layers N for partial offload.",
+        g["name"],
+        free,
+        model_mb,
+    )
+    return 0
+
+
+def detect_external_storage() -> list[dict[str, Any]]:
+    """Best-effort large external/SD volumes with free space (MB). Never raises.
+
+    Termux exposes shared/SD storage under ~/storage and /storage/<UUID>; we report
+    free space so a roomy SD card can host the model cache (--model-dir) or a swapfile
+    (root). Informational — we never auto-mount or auto-swapon.
+    """
+    home = Path.home()
+    paths = [
+        Path("/storage/emulated/0"),
+        home / "storage" / "external-1",
+        home / "storage" / "shared",
+    ]
+    try:
+        paths.extend(p for p in Path("/storage").glob("*-*"))
+    except OSError:
+        pass
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+    for p in paths:
+        try:
+            if not p.exists():
+                continue
+            rp = os.path.realpath(p)
+            if rp in seen:
+                continue
+            seen.add(rp)
+            du = shutil.disk_usage(str(p))
+            out.append(
+                {
+                    "path": str(p),
+                    "free_mb": du.free // (1024 * 1024),
+                    "total_mb": du.total // (1024 * 1024),
+                }
+            )
+        except (OSError, ValueError):
+            continue
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -163,9 +475,22 @@ def _call_llama_cli(
         str(seed),
         "--n-predict",
         str(n_predict),
+        "--ctx-size",
+        str(ctx.ctx_size),  # cap the KV cache — see RunContext.ctx_size (OOM governor)
         "--log-disable",  # suppress llama.cpp's internal log spam to stderr
         "-e",  # escape newlines in prompt
+        # One-shot completion, verified on-device (Termux b-unknown): without these,
+        # recent llama-cli enters its interactive *conversation* REPL — it generates,
+        # then waits at a `>` prompt forever (the subprocess times out), and echoes the
+        # prompt into stdout (polluting the V-01/V-02 parse). `-no-cnv` disables the chat
+        # loop (generate, then exit at EOS); `--no-display-prompt` keeps stdout to just
+        # the completion. Remove via --llama-arg only if a build rejects them.
+        "-no-cnv",
+        "--no-display-prompt",
     ]
+    if ctx.n_gpu_layers > 0:  # offload to GPU only when one was detected/requested
+        cmd += ["--n-gpu-layers", str(ctx.n_gpu_layers)]
+    cmd.extend(ctx.extra_llama_args)
     if extra_args:
         cmd.extend(extra_args)
 
@@ -175,7 +500,10 @@ def _call_llama_cli(
         cmd,
         capture_output=True,
         text=True,
-        timeout=120,
+        timeout=ctx.llama_timeout,
+        # EOF on stdin: if a build ignores -no-cnv and enters the interactive REPL, it
+        # exits after the first response instead of hanging on the terminal.
+        stdin=subprocess.DEVNULL,
     )
     wall = time.monotonic() - t0
 
@@ -1019,11 +1347,17 @@ def _resolve_llama_cli(
     # Off PATH: search common build/install dirs, then shallow globs.
     hit = _search_dirs_for(_LLAMA_BIN_NAMES, _llama_search_dirs())
     if hit is None:
+        # Both the modern (`llama-cli`) and the packaged/renamed (`llama`) names:
+        # the Termux `llama-cpp` package installs the CLI as plain `llama`, so a
+        # glob that only matched `llama-cli` would miss a hand-built `llama` too.
         for root in (Path.home(), Path.cwd()):
             for pat in (
                 "*/build/bin/llama-cli",
+                "*/build/bin/llama",
                 "llama*/build/bin/llama-cli",
+                "llama*/build/bin/llama",
                 "*/llama-cli",
+                "*/llama",
             ):
                 for cand in sorted(root.glob(pat)):
                     if cand.is_file() and os.access(cand, os.X_OK):
@@ -1493,8 +1827,8 @@ def install_llama_cpp(
             log.info("llama.cpp installed: %s", found)
             return found
         log.warning(
-            "Package installed but llama-cli was not found on PATH — open a new "
-            "shell and re-run, or pass --llama-cli PATH."
+            "Package installed but no llama.cpp CLI (llama-cli / llama) was found "
+            "on PATH — open a new shell and re-run, or pass --llama-cli PATH."
         )
         return None
     log.warning(
@@ -1933,6 +2267,17 @@ MODELS: dict[str, dict[str, Any]] = {
         "license": "Apache-2.0",
         "use_case": "general instruct + JSON/structured output on a phone",
     },
+    "qwen2.5-coder-0.5b": {
+        "repo": "Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF",
+        "filename": "qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
+        "tier": "mobile",
+        "approx_gb": 0.4,
+        "license": "Apache-2.0",
+        "use_case": (
+            "fastest code tier — ~2-3x quicker decode than the 1.5B on a phone CPU; "
+            "preferred for unattended KC-2 sweeps where generation time dominates"
+        ),
+    },
     "qwen2.5-coder-1.5b": {
         "repo": "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF",
         "filename": "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf",
@@ -1940,7 +2285,7 @@ MODELS: dict[str, dict[str, Any]] = {
         "approx_gb": 1.0,
         "license": "Apache-2.0",
         "use_case": (
-            "DEFAULT — code + structured output; best fit for this app "
+            "code + structured output; stronger reasoning than the 0.5B but slower "
             "(Mycelium surface generation + JSON projection conformance)"
         ),
     },
@@ -2173,6 +2518,7 @@ def ensure_model(
     hf_cmd: list[str] | None = None,
     prefer_hf: bool = True,
     sha256: str | None = None,
+    download_retries: int = 8,
 ) -> Path | None:
     """Idempotent: return a local GGUF path, downloading ONLY if absent/invalid.
 
@@ -2245,13 +2591,56 @@ def ensure_model(
     log.info("  from %s", url)
 
     dest_part = dest.with_suffix(dest.suffix + ".part")
-    try:
-        downloaded, total = _download_with_resume(url, dest_part, log)
-    except Exception as exc:  # noqa: BLE001 — never-silent: surface + keep .part
+    # Robust pre-download: resume across transient drops. _download_with_resume appends to
+    # the .part and re-requests with HTTP Range, so each retry continues where the last left
+    # off. We keep retrying with capped backoff as long as bytes keep ARRIVING, and give up
+    # only when there's no forward progress for several consecutive attempts (a dead
+    # URL/connection) or the retry budget is spent — the .part is always kept to resume.
+    # download_retries <= 0 means "keep going until complete or stalled".
+    unlimited = download_retries <= 0
+    budget = 100_000 if unlimited else download_retries
+    stall_limit = 5
+    stalls = 0
+    last_size = dest_part.stat().st_size if dest_part.exists() else 0
+    downloaded, total = last_size, None
+    attempt = 0
+    while attempt < budget:
+        attempt += 1
+        failed = False
+        try:
+            downloaded, total = _download_with_resume(url, dest_part, log)
+        except Exception as exc:  # noqa: BLE001 — never-silent: surface, keep .part, retry
+            failed = True
+            log.warning(
+                "Download error (attempt %d%s): %s",
+                attempt, "" if unlimited else f"/{budget}", exc,
+            )
+        cur = dest_part.stat().st_size if dest_part.exists() else downloaded
+        if cur > last_size:
+            stalls, last_size = 0, cur  # progress — reset the stall counter
+        else:
+            stalls += 1
+        if not failed and (total is None or downloaded >= total):
+            break  # complete (size unknown ⇒ the GGUF/size checks below decide)
+        if stalls >= stall_limit:
+            log.error(
+                "No download progress in %d attempts (have %s%s) — giving up; the .part is "
+                "kept, re-run to resume: %s",
+                stall_limit, _human_bytes(cur),
+                f" of {_human_bytes(total)}" if total else "", dest_part,
+            )
+            return None
+        wait = min(30, 2 ** min(attempt, 5))
+        log.info(
+            "Resuming in %ds (have %s%s)…",
+            wait, _human_bytes(cur), f" of {_human_bytes(total)}" if total else "",
+        )
+        time.sleep(wait)
+    else:
         log.error(
-            "Download failed: %s. Re-run to resume (any partial bytes are kept at %s).",
-            exc,
-            dest_part,
+            "Incomplete after %d attempts: have %s%s. Re-run to resume: %s",
+            budget, _human_bytes(last_size),
+            f" of {_human_bytes(total)}" if total else "", dest_part,
         )
         return None
 
@@ -2351,13 +2740,17 @@ def run_harness(args: argparse.Namespace) -> int:
             llama_cli_arg, log, fix_path=fix_path, assume_yes=assume_yes
         )
         if llama_cli:
-            log.info("Mode: REAL (llama-cli) — binary: %s", llama_cli)
+            log.info(
+                "Mode: REAL (llama.cpp CLI) — binary: %s (alias: %s)",
+                llama_cli,
+                os.path.basename(llama_cli),
+            )
         else:
             log.warning(
-                "llama-cli binary not found%s (searched PATH, ~/llama.cpp/build/bin, "
-                "$PREFIX/bin, $MYCELIUM_LLAMA_DIR, and shallow globs). "
-                "SKIPPING all model-dependent validations (skip-gracefully, G2). "
-                "To run real mode: provide --llama-cli PATH or build llama.cpp. "
+                "llama.cpp CLI (llama-cli / llama) not found%s (searched PATH, "
+                "~/llama.cpp/build/bin, $PREFIX/bin, $MYCELIUM_LLAMA_DIR, and shallow "
+                "globs). SKIPPING all model-dependent validations (skip-gracefully, "
+                "G2). To run real mode: provide --llama-cli PATH or build llama.cpp. "
                 "To suppress this and run CI-safe: use --mock. Run --doctor to diagnose.",
                 f" (looked for: {llama_cli_arg})" if llama_cli_arg else "",
             )
@@ -2415,6 +2808,7 @@ def run_harness(args: argparse.Namespace) -> int:
                 hf_cmd=hf_cmd,
                 prefer_hf=prefer_hf,
                 sha256=getattr(args, "model_sha256", None),
+                download_retries=getattr(args, "download_retries", 8),
             )
             if ensured:
                 model_path = str(ensured)
@@ -2423,6 +2817,16 @@ def run_harness(args: argparse.Namespace) -> int:
                     "Model could not be ensured — model-dependent validations "
                     "will SKIP (skip-gracefully, never a false pass)."
                 )
+            # Prefetch mode: fetch the model and STOP — do not run the validation suite.
+            if bool(getattr(args, "ensure_only", False)):
+                if model_path:
+                    log.info(
+                        "--ensure-only: model ready (%s) — exiting 0 before the validation suite.",
+                        model_path,
+                    )
+                    return 0
+                log.error("--ensure-only: model could not be fetched; nothing to do.")
+                return 1
         elif model_path is None and not want_ensure:
             # No --model / --ensure-model, but a model may already be cached from a
             # previous run — reuse it so real mode "just works" once llama.cpp exists.
@@ -2463,6 +2867,35 @@ def run_harness(args: argparse.Namespace) -> int:
             "(no model/binary available — use --mock for fixture mode)."
         )
 
+    # Resource sizing (only meaningful for the llama-cli path — server/mock skip it).
+    # Context: explicit --ctx-size wins; else auto-size from RAM (+ optional swap).
+    # GPU: --cpu-only forces 0; else explicit --n-gpu-layers wins; else auto from VRAM.
+    cli_path = bool(llama_cli) and not server_url
+    ctx_size_arg = getattr(args, "ctx_size", None)
+    use_swap = bool(getattr(args, "use_swap", False))
+    if ctx_size_arg is not None:
+        ctx_size = int(ctx_size_arg)
+    elif cli_path:
+        ctx_size = auto_ctx_size(
+            _HARNESS_DESIRED_CTX,
+            model_path,
+            detect_memory(),
+            log,
+            swap_fraction=0.5 if use_swap else 0.0,
+        )
+    else:
+        ctx_size = _HARNESS_DESIRED_CTX
+
+    ngl_arg = getattr(args, "n_gpu_layers", None)
+    if bool(getattr(args, "cpu_only", False)):
+        n_gpu_layers = 0
+    elif ngl_arg is not None:
+        n_gpu_layers = int(ngl_arg)
+    elif cli_path:
+        n_gpu_layers = auto_gpu_layers(detect_gpu(), model_path, log)
+    else:
+        n_gpu_layers = 0
+
     ctx = RunContext(
         mock=mock_mode,
         llama_cli=llama_cli,
@@ -2471,6 +2904,10 @@ def run_harness(args: argparse.Namespace) -> int:
         reports_dir=reports_dir,
         run_id=run_id,
         log=log,
+        ctx_size=ctx_size,
+        n_gpu_layers=n_gpu_layers,
+        llama_timeout=int(getattr(args, "timeout", 300) or 300),
+        extra_llama_args=list(getattr(args, "llama_arg", None) or []),
     )
 
     results: list[ValidationResult] = []
@@ -2628,6 +3065,71 @@ def _build_parser() -> argparse.ArgumentParser:
             "and shallow globs."
         ),
     )
+    p.add_argument(
+        "--ctx-size",
+        type=int,
+        default=None,
+        dest="ctx_size",
+        metavar="N",
+        help=(
+            "llama.cpp context window (-c). DEFAULT: auto — the harness enumerates "
+            "available RAM (/proc/meminfo) and picks a context that fits with headroom, "
+            "capped by what the tiny prompts need. This stops llama.cpp sizing the KV "
+            "cache for the model's full 32k window, which OOM-kills (SIGKILL/9) a phone. "
+            "Pass an explicit N to override the auto value."
+        ),
+    )
+    p.add_argument(
+        "--use-swap",
+        action="store_true",
+        dest="use_swap",
+        help=(
+            "Let auto context sizing count ~half of free swap toward the memory budget "
+            "(bigger context when RAM is tight). Trades speed for capacity — the KV "
+            "cache thrashes if it pages out. Off by default."
+        ),
+    )
+    p.add_argument(
+        "--cpu-only",
+        action="store_true",
+        dest="cpu_only",
+        help="Force CPU only — never offload to a GPU even if one is detected.",
+    )
+    p.add_argument(
+        "--timeout",
+        type=int,
+        default=300,
+        dest="timeout",
+        metavar="SEC",
+        help=(
+            "Per-generation llama-cli timeout in seconds (default 300). Raise it on a "
+            "slow CPU phone (~1-2 tok/s) if a validation times out."
+        ),
+    )
+    p.add_argument(
+        "--n-gpu-layers",
+        type=int,
+        default=None,
+        dest="n_gpu_layers",
+        metavar="N",
+        help=(
+            "Model layers to offload to the GPU (llama.cpp -ngl). DEFAULT: auto — full "
+            "offload when detected VRAM holds the model, else CPU. 0 = CPU; 999 = all. "
+            "Ignored on a CPU-only llama.cpp build (e.g. a phone)."
+        ),
+    )
+    p.add_argument(
+        "--llama-arg",
+        action="append",
+        default=[],
+        dest="llama_arg",
+        metavar="ARG",
+        help=(
+            "Extra arg passed through to llama-cli (repeatable), e.g. "
+            "--llama-arg=-no-cnv --llama-arg=--no-display-prompt if a real run shows "
+            "conversation-mode chatter or the prompt echoed into the output."
+        ),
+    )
     # --- idempotent model acquisition ---
     p.add_argument(
         "--ensure-model",
@@ -2635,8 +3137,18 @@ def _build_parser() -> argparse.ArgumentParser:
         dest="ensure_model",
         help=(
             "Check for the selected --model-id and download it ONLY if absent "
-            "(idempotent; resumable). Safe to re-run; great for a phone to "
-            "prefetch in the background."
+            "(idempotent; resumable, auto-retrying). Safe to re-run; great for a phone or "
+            "desktop to PREFETCH a model ahead of time. Tune persistence with "
+            "--download-retries (0 = keep going until complete)."
+        ),
+    )
+    p.add_argument(
+        "--ensure-only",
+        action="store_true",
+        dest="ensure_only",
+        help=(
+            "With --ensure-model/--model-id: fetch the model and EXIT 0 — do NOT run the "
+            "validation suite. For prefetching a model in a script (e.g. the KC-2 matrix)."
         ),
     )
     p.add_argument(
@@ -2678,6 +3190,18 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         dest="no_download",
         help="With --ensure-model: only check presence; never download.",
+    )
+    p.add_argument(
+        "--download-retries",
+        type=int,
+        default=8,
+        dest="download_retries",
+        metavar="N",
+        help=(
+            "How many times to resume a dropped download before giving up (default 8). "
+            "0 = keep retrying until complete or no bytes arrive for several tries (a dead "
+            "link). Each retry resumes from the .part via HTTP Range — robust on a flaky link."
+        ),
     )
     # --- Hugging Face CLI integration ---
     p.add_argument(
@@ -2854,7 +3378,10 @@ def run_doctor(args: argparse.Namespace) -> int:
     out("")
 
     out("-" * 72)
-    out("  llama.cpp (llama-cli)")
+    # The CLI ships under more than one name: the modern build calls it
+    # `llama-cli`, while the Termux `llama-cpp` package installs it as plain
+    # `llama`. We accept either (see _LLAMA_BIN_NAMES), so name both here.
+    out("  llama.cpp (llama-cli / llama)")
     out("-" * 72)
     llama = _resolve_llama_cli(
         getattr(args, "llama_cli", None), log, fix_path=fix_path, assume_yes=assume_yes
@@ -2866,13 +3393,19 @@ def run_doctor(args: argparse.Namespace) -> int:
             llama = installed
             actions.append("Installed llama.cpp from the system package manager.")
     if llama:
-        out(f"      FOUND: {llama}")
+        out(f"      FOUND: {llama}  (alias: {os.path.basename(llama)})")
         try:
             v = subprocess.run(
                 [llama, "--version"], capture_output=True, text=True, timeout=20
             )
             blob = (v.stderr or v.stdout).strip()
-            out(f"      version: {blob.splitlines()[0] if blob else '(no output)'}")
+            # Package builds often omit git metadata, so the binary self-reports
+            # `version: 0 (unknown)`. Strip a leading `version:` it already
+            # printed so we don't render a confusing `version: version: …`.
+            line = blob.splitlines()[0].strip() if blob else "(no output)"
+            if line.lower().startswith("version:"):
+                line = line.split(":", 1)[1].strip()
+            out(f"      version: {line}")
         except Exception as exc:  # noqa: BLE001
             out(f"      version: (could not run --version: {exc})")
     else:
@@ -2997,7 +3530,8 @@ def run_doctor(args: argparse.Namespace) -> int:
     spec = MODELS[DEFAULT_MODEL_ID]
     dest = md / str(spec["filename"])
     out(f"      dir: {md}")
-    if is_valid_gguf(dest):
+    model_ready = is_valid_gguf(dest)
+    if model_ready:
         out(
             f"      default model present: {dest.name} ({_human_bytes(dest.stat().st_size)})"
         )
@@ -3018,6 +3552,7 @@ def run_doctor(args: argparse.Namespace) -> int:
             out(
                 f"      default model fetched: {got.name} ({_human_bytes(got.stat().st_size)})"
             )
+            model_ready = True
             actions.append(f"Downloaded the default model ({got.name}).")
         else:
             out(
@@ -3025,6 +3560,111 @@ def run_doctor(args: argparse.Namespace) -> int:
             )
     else:
         out(f"      default model absent : {dest.name}  (fetch with --ensure-model)")
+    out("")
+
+    out("-" * 72)
+    out("  Memory + auto context size")
+    out("-" * 72)
+    mem = detect_memory()
+    out(f"      source   : {mem.get('source')}")
+
+    def _mb(v: Any) -> str:
+        return f"{v} MB" if isinstance(v, int) else "(unknown)"
+
+    out(
+        f"      RAM      : {_mb(mem.get('mem_available_mb'))} available "
+        f"of {_mb(mem.get('mem_total_mb'))} total"
+    )
+    swap_free = mem.get("swap_free_mb")
+    out(
+        f"      swap     : {_mb(swap_free)} free of {_mb(mem.get('swap_total_mb'))} "
+        "(off by default; add --use-swap to count ~half toward the budget)"
+    )
+    # Show the context a real run WOULD auto-pick for the default model (the auto-sizer
+    # logs its own reasoning; here we just surface the number alongside the inputs).
+    model_for_size = str(dest) if model_ready else None
+    chosen = auto_ctx_size(_HARNESS_DESIRED_CTX, model_for_size, mem, log)
+    out(f"      auto ctx : {chosen}  (override with --ctx-size N)")
+    if isinstance(swap_free, int) and swap_free > 0:
+        with_swap = auto_ctx_size(
+            _HARNESS_DESIRED_CTX, model_for_size, mem, log, swap_fraction=0.5
+        )
+        if with_swap != chosen:
+            out(
+                f"      with --use-swap : {with_swap}  (slower if the KV cache pages out)"
+            )
+    out("")
+
+    out("-" * 72)
+    out("  GPU (desktop offload)")
+    out("-" * 72)
+    gpus = detect_gpu()
+    if gpus:
+        for g in gpus:
+            vram = (
+                f"{g['vram_free_mb']} MB free of {g['vram_total_mb']} MB"
+                if isinstance(g.get("vram_total_mb"), int)
+                else "VRAM unknown"
+            )
+            out(f"      {g['backend']:5s}: {g['name']}  ({vram})")
+        ngl = auto_gpu_layers(gpus, model_for_size, log)
+        out(
+            f"      auto -ngl: {ngl}  "
+            + (
+                "(full offload)"
+                if ngl >= 999
+                else "(CPU — VRAM too small)"
+                if ngl == 0
+                else ""
+            )
+        )
+        out("      Override: --n-gpu-layers N, or force CPU with --cpu-only.")
+    else:
+        out("      none detected (CPU only). On a phone this is expected; on desktop,")
+        out(
+            "      install a CUDA/ROCm/Metal llama.cpp build + driver tooling (nvidia-smi)."
+        )
+    out("")
+
+    out("-" * 72)
+    out("  External storage (overflow)")
+    out("-" * 72)
+    vols = detect_external_storage()
+    if vols:
+        for v in vols:
+            out(f"      {v['path']}: {v['free_mb']} MB free of {v['total_mb']} MB")
+        out("      A roomy volume can host the model cache (--model-dir DIR) to keep")
+        out(
+            "      internal storage free, or back a swapfile for --use-swap (needs root:"
+        )
+        out("      mkswap + swapon on a file there).")
+    else:
+        out(
+            "      none detected (run `termux-setup-storage` to expose shared/SD storage)."
+        )
+    out("")
+
+    # Bottom-line readiness verdict — the one thing to read in this dense report.
+    # Real-mode validations need BOTH a llama.cpp CLI and a local model; the cached
+    # model is reused with no flags (the walk-away property). A SKIP is never a PASS,
+    # so we say plainly whether the next command will actually run or skip (G2).
+    out("-" * 72)
+    out("  Readiness (real-mode validations)")
+    out("-" * 72)
+    if llama and model_ready:
+        out("      ✓ READY — llama.cpp CLI + a local model are both present.")
+        out("      Next: run the validations (auto-finds the CLI + cached model):")
+        out("          python tools/llm-harness/harness.py")
+    else:
+        out("      ✗ NOT READY — real-mode validations would SKIP (not fail), because:")
+        if not llama:
+            out(
+                "          · no llama.cpp CLI (llama-cli / llama) — see the section above"
+            )
+        if not model_ready:
+            out("          · no local model — fetch it with:")
+            out("                python tools/llm-harness/harness.py --ensure-model")
+        out("      (Use --mock for a CI-safe fixture run that needs neither.)")
     out("")
 
     out("-" * 72)

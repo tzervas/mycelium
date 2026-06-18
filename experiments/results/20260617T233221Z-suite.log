@@ -1,0 +1,16 @@
+2026-06-17T19:32:21Z  DEBUG    reclaim: drop_caches not permitted (unrooted) — skipped
+2026-06-17T19:32:21Z  INFO     reclaim: available RAM 3750 → 3749 MB
+2026-06-17T19:32:21Z  INFO     Launching llama-server: /data/data/com.termux/files/usr/bin/llama-server -m /data/data/com.termux/files/home/.cache/mycelium-llm-harness/models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf -c 2048 --host 127.0.0.1 --port 52983
+2026-06-17T19:32:27Z  INFO     llama-server ready at http://127.0.0.1:52983 (6.1s)
+2026-06-17T19:32:27Z  INFO     === run 'seed42' (seed=42, arms=mycelium, max_iters=3) ===
+2026-06-17T19:33:15Z  INFO     [mycelium] kc2-01-literal         attempt 1: valid=True passed=False  47.8s
+2026-06-17T19:35:49Z  INFO     [mycelium] kc2-01-literal         attempt 2: valid=False passed=False  154.2s
+2026-06-17T19:36:08Z  INFO     [mycelium] kc2-01-literal         attempt 3: valid=True passed=False  19.5s
+2026-06-17T19:36:28Z  INFO     [mycelium] kc2-02-complement      attempt 1: valid=True passed=False  19.6s
+2026-06-17T19:37:10Z  INFO     [mycelium] kc2-02-complement      attempt 2: valid=False passed=False  41.9s
+2026-06-17T19:37:46Z  INFO     [mycelium] kc2-02-complement      attempt 3: valid=False passed=False  36.1s
+2026-06-17T19:38:13Z  INFO     [mycelium] kc2-03-xor             attempt 1: valid=False passed=False  27.1s
+2026-06-17T19:39:23Z  INFO     [mycelium] kc2-03-xor             attempt 2: valid=False passed=False  70.2s
+2026-06-17T19:41:44Z  INFO     [mycelium] kc2-03-xor             attempt 3: valid=False passed=False  140.3s
+2026-06-17T19:43:17Z  INFO     [mycelium] kc2-04-ternary-add     attempt 1: valid=True passed=True  92.9s
+2026-06-17T19:46:17Z  INFO     Stopping llama-server (pid 2818)

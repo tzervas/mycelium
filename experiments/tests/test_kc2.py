@@ -163,3 +163,82 @@ def test_the_report_never_prewrites_a_verdict(myc_checker: MyceliumChecker) -> N
     report = run_experiment(generator, myc_checker, BaselineChecker(), tasks, 3)
     assert report["sc5b"] == 1.0
     assert "not established" in str(report["verdict"])
+
+
+# --- primer integrity guards (Mycelium-only context; no leaked answers) ---
+
+import pathlib  # noqa: E402
+
+_PRIMER_DIR = pathlib.Path(__file__).resolve().parents[1] / "primers"
+
+
+def _programs_in(text: str) -> list[str]:
+    """Extract left-margin `nodule …` program blocks (runs of non-blank, non-indented lines)."""
+    progs: list[str] = []
+    cur: list[str] = []
+    for line in text.splitlines():
+        if line.startswith("nodule "):
+            if cur:
+                progs.append("\n".join(cur))
+            cur = [line]
+        elif cur and line.strip() and not line.startswith((" ", "\t")):
+            cur.append(line)
+        elif cur:
+            progs.append("\n".join(cur))
+            cur = []
+    if cur:
+        progs.append("\n".join(cur))
+    return progs
+
+
+def _all_primer_texts() -> dict[str, str]:
+    from mycelium_experiments.kc2.llm import PRIMER_MYCELIUM
+
+    texts = {"PRIMER_MYCELIUM": PRIMER_MYCELIUM}
+    for f in sorted(_PRIMER_DIR.glob("mycelium-*.txt")):
+        texts[f.name] = f.read_text(encoding="utf-8")
+    return texts
+
+
+def test_primer_worked_examples_are_valid_mycelium(myc_checker: MyceliumChecker) -> None:
+    """Guard: every complete program in a primer parses as Mycelium — never a Rust crate/module
+    fed by accident (Rust would fail to parse → syntactically_valid False)."""
+    found = 0
+    for name, text in _all_primer_texts().items():
+        for prog in _programs_in(text):
+            found += 1
+            result = myc_checker.check(prog, TASKS[0])  # any task; we only assert it parses
+            assert result.syntactically_valid, (
+                f"{name}: not valid Mycelium?\n{prog}\n{result.diagnostic}"
+            )
+    assert found >= 2, "expected the examples primer's two worked programs"
+
+
+def test_no_primer_leaks_a_task_answer() -> None:
+    """Measurement integrity: no task's answer line appears verbatim in any primer."""
+    blob = "\n".join(_all_primer_texts().values())
+    for task in TASKS:
+        for line in task.reference_mycelium.splitlines():
+            line = line.strip()
+            if (
+                not line
+                or line.startswith(("nodule", "type "))
+                or len(line) < 22
+                or line.endswith("=")
+            ):
+                continue
+            assert line not in blob, f"{task.id} answer line leaked into a primer: {line!r}"
+
+
+def test_auto_ctx_size_budgets_from_vram_when_gpu_present() -> None:
+    """GPU sizing: KV cache is in VRAM, so a desktop targets a far larger window than RAM-only.
+    Without a GPU the window stays small; a GPU with ample VRAM reaches the desired want."""
+    from mycelium_experiments.kc2 import llm
+
+    mem = {"mem_available_mb": 22000, "swap_free_mb": 0}
+    cpu_ctx, _ = llm.auto_ctx_size(8192, None, mem)  # RAM path: capped by want logic / RAM
+    gpu_ctx, reason = llm.auto_ctx_size(8192, None, mem, gpu_vram_free_mb=16000)
+    assert gpu_ctx == 8192 and "VRAM" in reason  # ample VRAM → reaches the desktop want
+    assert gpu_ctx >= cpu_ctx  # GPU never gives a smaller window than the RAM path
+    # never below the floor even when VRAM is scarce
+    assert llm.auto_ctx_size(8192, None, mem, gpu_vram_free_mb=200)[0] >= 256

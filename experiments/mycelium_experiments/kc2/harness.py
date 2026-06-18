@@ -17,12 +17,17 @@ or kill-criterion verdict is never pre-written (VR-5). The report says exactly t
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Protocol
 
 from mycelium_experiments.kc2.checkers import CheckResult
 from mycelium_experiments.kc2.tasks import TASKS, Task
+
+# A per-attempt observer: (task_id, arm, attempt_1based, source, result, gen_wall_seconds).
+# Optional hook so a runner can capture richer metrics/logs without the loop owning them.
+AttemptObserver = Callable[[str, str, int, str, CheckResult, float], None]
 
 
 class Generator(Protocol):
@@ -94,8 +99,14 @@ def run_arm(
     arm: str,
     tasks: Sequence[Task] = TASKS,
     max_iters: int = 3,
+    on_attempt: AttemptObserver | None = None,
 ) -> ArmReport:
-    """Run every task through the generate → check → feedback loop for one arm."""
+    """Run every task through the generate → check → feedback loop for one arm.
+
+    ``on_attempt`` (optional) is called once per attempt with the generated source, the
+    checker's verdict, and the generation wall-time — so a runner can record per-attempt
+    metrics/logs without this loop owning them. It never affects the measured outcome.
+    """
     outcomes: list[TaskOutcome] = []
     for task in tasks:
         feedback: list[str] = []
@@ -104,7 +115,12 @@ def run_arm(
         passed = False
         used = max_iters
         for attempt in range(1, max_iters + 1):
-            result = checker.check(generator(task, arm, tuple(feedback)), task)
+            t0 = time.monotonic()
+            source = generator(task, arm, tuple(feedback))
+            gen_wall = time.monotonic() - t0
+            result = checker.check(source, task)
+            if on_attempt is not None:
+                on_attempt(task.id, arm, attempt, source, result, round(gen_wall, 3))
             if attempt == 1:
                 first_valid = result.syntactically_valid
                 first_passed = result.passes

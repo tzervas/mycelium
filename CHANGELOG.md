@@ -8,6 +8,383 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (2026-06-18: PR #193 reproducibility + supply-chain hardening)
+- **llama.cpp traceability:** the container build records the exact llama.cpp commit that produced
+  the binaries to `/opt/llama-cpp.commit` (and an image `LABEL`), so results trace to precise code
+  even though `LLAMA_CPP_REF` stays `master` (overridable). Addresses the "moving ref" review note
+  without risking the working Blackwell build.
+- **Pinned, integrity-checked tooling:** the image pins the Rust toolchain (`RUST_TOOLCHAIN=1.92.0`,
+  the MSRV — rustup verifies each component's SHA-256) and installs **uv** at a pinned version from
+  **PyPI/TLS** (`UV_VERSION=0.11.21`) via pip instead of `curl|sh` of a moving installer. Both are
+  `--build-arg`-overridable.
+- **Termux bootstrap:** the Claude Code install now downloads the installer to a file and runs it
+  (inspectable/loggable) rather than a blind `curl … | bash`; the upstream installer is a moving
+  target with no published checksum to pin, so this is the best available hardening.
+
+### Fixed (2026-06-18: matrix prefetch ran the whole harness suite, OOM-skipped models)
+- The KC-2 matrix prefetched models with `harness.py --ensure-model`, which fetches **then runs the
+  full LLM-validation suite** (V-01…). On the desktop that suite got OOM-`Killed`, so the prefetch
+  exited non-zero and the matrix wrongly **skipped that model's combos** (even though the `.gguf` had
+  downloaded). Added `harness.py --ensure-only` (fetch the model, exit 0, do NOT run the suite) and
+  switched `run-kc2-matrix.sh` to it. Verified: the new flag short-circuits before the suite.
+
+### Fixed (2026-06-18: container ran `bash <binary>` instead of the command)
+- `experiments/docker/Dockerfile` uses `CMD ["bash"]` instead of `ENTRYPOINT ["bash"]`. The image
+  built fine, but `ENTRYPOINT ["bash"]` made `podman run IMAGE nvidia-smi` → `bash nvidia-smi` (and
+  `… bash run-kc2-matrix.sh` → `bash bash …`), i.e. bash interpreting a binary as a script →
+  "cannot execute binary file". The GPU "not visible" warning was a false alarm and the matrix never
+  ran. `CMD` keeps the bare-`run` shell default while `run IMAGE <cmd>` now execs `<cmd>` directly
+  (also unbreaks the README's `compose run kc2 uv run …` examples). Last-instruction change → rebuild
+  reuses the CUDA compile layer (no recompile).
+
+### Added (2026-06-18: build checkpointing — fast link preflight + ccache)
+- `experiments/docker/Dockerfile` now **verifies the executable↔shared-lib link in seconds** (its own
+  cached layer) *before* the ~10-min CUDA compile: a tiny exe links against a `.so` with undefined
+  symbols (the exact shape of the llama.cpp link), so a broken `--allow-shlib-undefined` fails fast
+  instead of after the whole build. (Mechanism validated locally: fails without the flag, passes with.)
+- **ccache cache mount** (`RUN --mount=type=cache,target=/ccache`) + compiler launchers persist
+  compiled objects across builds — a rebuild (even after editing the build recipe, which invalidates
+  the layer) reuses the CUDA compile and only re-links, instead of recompiling from scratch. The cache
+  survives a failed `RUN`, so a link error never costs the compile twice.
+- `experiments/docker/run.sh` passes `--layers` to `podman build` (explicit intermediate-layer
+  caching; Docker caches by default), since Podman was observed not reusing the cache.
+
+### Fixed (2026-06-18: CUDA executable link in the container build)
+- `experiments/docker/Dockerfile` passes `-DCMAKE_EXE_LINKER_FLAGS=-Wl,--allow-shlib-undefined` to the
+  llama.cpp CUDA build. `libcuda.so.1` (the CUDA *driver*) is absent at build time and host-injected at
+  runtime (CDI), so the `llama-cli`/`llama-server` link failed on undefined `cu*` driver symbols
+  (`cuMemCreate`, …) after all 437 objects compiled. This matches upstream llama.cpp's own
+  `.devops/cuda.Dockerfile`. Live-found on an RTX 5080 WSL2 box.
+
+### Fixed (2026-06-18: Podman container build on WSL2)
+- `experiments/docker/Dockerfile` now uses the **fully-qualified** base image
+  `docker.io/nvidia/cuda:12.8.1-devel-ubuntu24.04`. Podman refuses unqualified short-names (Docker
+  auto-prepends `docker.io/`), which broke `run.sh` at `FROM` on an RTX 5080 WSL2 box; one line
+  unblocks both engines. Live-validated on that box: `gpu-setup.sh` (toolkit + CDI WSL auto-detect +
+  in-container `nvidia-smi`) succeeds. Added an **Ubuntu WSL quickstart** to `docker/README.md` (and
+  a note that the WSL `libnvidia-sandboxutils.so.1` warning is benign).
+
+### Added (2026-06-18: Podman/WSL2 GPU path + 1.5B mobile cap)
+- `experiments/docker/run.sh` is now **engine-agnostic and compose-free** — prefers **Podman**
+  (rootless; outputs land owned by the user), falls back to Docker, with the correct per-engine GPU
+  wiring (Podman CDI `--device nvidia.com/gpu=all --security-opt=label=disable`; Docker `--gpus all`).
+- `experiments/docker/gpu-setup.sh` — one-time WSL2/Linux GPU preflight: verifies the host GPU,
+  ensures the NVIDIA Container Toolkit, configures access (CDI generate for Podman / runtime configure
+  for Docker), and verifies a container can see the GPU. Commands **vetted against NVIDIA's
+  container-toolkit + CUDA-on-WSL docs** (cited in `docker/README.md` *Sources*).
+- **1.5B mobile cap**: `run-kc2-matrix.sh` skips models larger than 1.5B unless `KC2_ALLOW_LARGE=1`
+  (the desktop `run.sh` sets it). Phones stay at 0.5B/1.5B; desktop adds 7B+.
+- `docker/README.md` rewritten for the Podman-first / WSL2 reality; the Docker Compose file is kept
+  as a Docker-only convenience (its `gpus:` key is Docker-specific). Still best-effort/unverified on
+  GPU here (no GPU/engine in the sandbox); scripts syntax-checked, cap logic unit-tested.
+
+### Added (2026-06-18: one-command containerized GPU run)
+- `experiments/docker/run.sh` — single fire-and-forget command (run from the repo root) that builds
+  the CUDA image, verifies GPU visibility, and runs the full model × primer matrix ({0.5B, 1.5B, 7B}
+  × {minimal, examples}) with `--serve` auto-offloading to the GPU. Outputs land on the host under
+  `experiments/results/<model>-<primer>/`, ready to commit. Models/seeds/budget overridable by env.
+  Warns + falls back to CPU if no GPU is visible. **Best-effort / unverified on GPU** in the
+  design-phase sandbox (no GPU/Docker here) — syntax-checked; the GPU build + offload are verified by
+  the operator via the built-in `nvidia-smi` step. README updated to feature the one-command path.
+
+### Added (2026-06-18: DN-08 — maturation granularity capture)
+- New design note **DN-08** (`docs/notes/`, Draft) capturing the maintainer intent that `matured`
+  apply at module (`nodule`) / library (`phylum`) / program scope — coarse-grained, at a stable point
+  — with per-`fn` maturation *atypical*, and selective *de*-maturation (shifting one subcomponent back
+  to interpreted) the rare fine-grained operation. Advisory; RFC-0007's Accepted per-definition gate
+  is untouched (append-only). Registered in `Doc-Index.md`; grounded in RFC-0007 §4.5, Glossary §2.10,
+  DN-06. Also notes the harness safety property that only myc-check-validated Mycelium (never Rust, the
+  implementation language) is ever fed to the model or to `myc-check`.
+
+### Added (2026-06-18: KC-2 grounded primer, A/B variants, per-task token budgets, run matrix)
+- **Grounded, leak-free Mycelium primer.** Rewrote `PRIMER_MYCELIUM` from the actual L1 grammar
+  (lexer keywords, literal forms, exhaustive `match`, `for`-folds over recursive types, `let`,
+  `swap`'s mandatory `to:`/`policy:`). Every embedded example is validated against `myc-check`.
+  **Fixed an answer leak**: the old primer contained kc2-04's body (`add(<00+->, <0+0->)`) and
+  kc2-07's `Sign`/`match` verbatim — it now uses only non-answer values, verified by a leak check.
+- **Primer A/B variants** in `experiments/primers/`: `mycelium-minimal.txt` (syntax only) and
+  `mycelium-examples.txt` (+ two complete, valid, *non-answer* worked programs to anchor a weak
+  model on a language it was never trained on). Select with `--primer-mycelium FILE`.
+- **Per-task token budgets**: `Task.max_new_tokens` sizes each generation to the task's complexity
+  (96–144 tokens here) instead of a flat cap — faster on a phone CPU without truncating. `--n-predict`
+  now defaults to *auto* (per-task) and, when given, is a hard override. Backends take an optional
+  per-call budget (no effect on the tested `StaticGenerator` path).
+- **`run-kc2-matrix.sh`**: runs {0.5B, 1.5B} × {minimal, examples} in sequence, unattended, robustly
+  prefetching each model and writing `results/<model>-<primer>/` per combo.
+
+### Fixed (2026-06-18: KC-2 extraction + primer defects surfaced by the first 0.5B run)
+- **`extract_source` leaked the fence info string.** A model that fenced its code as ` ```source `
+  left the literal word `source` as line 1, breaking *every* parse at 1:1 ("found Ident(\"source\")").
+  Now the fence info string (any lone single-word tag, or a bare fence) is always dropped — a real
+  program's first line is multi-token (`nodule <name>`, `fn …`). Verified against the on-device output.
+- **The Mycelium primer showed `#` comments** — which Mycelium does not have (`unexpected character
+  '#'`) — so a weak model parroted them into invalid programs. Also a *fairness* bug: `#` is valid in
+  the Python baseline arm, so it penalised only the Mycelium arm. The primer now states there are no
+  comments and emphasises the required `nodule <name>` header as prose, not an inline `#` annotation.
+- Context: in the first complete 0.5B run (10/10 first-attempt invalid, sc5b=0.0) the failures were
+  largely mechanical — e.g. kc2-04's model body was byte-identical to the reference and passes once
+  the dropped `nodule bench` header is restored. These two fixes + edit-to-fix iterations (max-iters
+  ≥ 2) should recover much of that; honest measurement still pending a re-run.
+
+### Added (2026-06-18: containerised desktop-GPU runner + cross-platform fixes)
+- **`experiments/docker/`** — a CUDA image (Dockerfile + docker-compose) that runs the whole KC-2
+  pipeline on a desktop GPU (e.g. RTX 5080 / Blackwell `sm_120`) without touching the host
+  toolchain: Python+uv, Rust (`myc-check`), and a CUDA-built `llama-server` in one image. The repo
+  is bind-mounted so **all reports/logs/JSONL land on the host** for git; a named volume persists the
+  model cache. Same `--serve` command; GPU auto-detected/offloaded. CPU fallback via
+  `--build-arg LLAMA_CUDA=OFF`. Best-effort/untested in the GPU-less design sandbox (compose config
+  validated; verify on host with `nvidia-smi`).
+- **Model prefetch is now robust** — one `--ensure-model` invocation auto-resumes a dropped/slow
+  download with capped backoff and **stall detection** (keeps resuming via HTTP Range as long as
+  bytes arrive; gives up only after several no-progress attempts, always keeping the `.part`). New
+  `--download-retries N` (default 8; **`0` = keep retrying until complete**) — ideal to prefetch a
+  model ahead of time on a flaky phone link. Verified end-to-end against a local HTTP server (fresh,
+  resume, and unlimited modes).
+- **Windows correctness**: the Mycelium checker finds `myc-check.exe` on Windows (was POSIX-only, so
+  the arm silently skipped); `reclaim_memory` guards the glibc `ctypes.CDLL(None)`/`malloc_trim`
+  behind `os.name == "posix"` (it raises on Windows). RAM/ctx auto-sizing already degrade gracefully
+  without `/proc`. The pipeline itself is stdlib + pathlib, so it runs on Windows (PowerShell:
+  `$env:PYTHONPATH="."; python -m …`) and natively in WSL2.
+
+### Added (2026-06-18: KC-2 `--model-id` shortcut)
+- `--model-id ID` selects a cached registry model by name (e.g. `--model-id qwen2.5-coder-0.5b`)
+  instead of typing a `.gguf` path. Registry-agnostic — resolves the id as a filename prefix in the
+  cache dir; if it isn't fetched yet, errors with the exact `--ensure-model` command (never-silent).
+  Mutually exclusive with `--model`.
+
+### Added (2026-06-18: faster 0.5B coder model for KC-2 sweeps)
+- Registered **`qwen2.5-coder-0.5b`** (Qwen2.5-Coder-0.5B-Instruct-GGUF, Apache-2.0) in the
+  llm-harness model registry — ~2–3× quicker decode than the 1.5B on a phone CPU, where generation
+  time dominates an unattended sweep. Fetch with
+  `python tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-coder-0.5b`.
+- The KC-2 experiment now resolves a model by preference (`--model` → cached 0.5B coder → cached 1.5B
+  coder → any `.gguf`), so fetching the 0.5B makes it the default automatically without breaking an
+  existing 1.5B setup. The validation harness's own `DEFAULT_MODEL_ID` (1.5B) is unchanged — its
+  structured-output gate wants the stronger model.
+
+### Fixed (2026-06-17: KC-2 on-device timeout — durable runs + lighter, refreshing budget)
+- **Root cause** of the on-device crash: the server backend used a fixed **180 s** read timeout
+  (`__main__` never forwarded `--timeout` to it) while the phone decodes at ~0.3–0.7 tok/s, so a
+  256-token generation always outran it and the whole suite aborted with **no report written**
+  (14 min of work lost; the server log showed a healthy server still generating when the client
+  gave up).
+- **Durability**: every attempt now streams to `<run>.attempts.jsonl` (flushed per line) and the
+  `index.json` is rewritten after every run — an OOM-kill or outer timeout loses nothing. A backend
+  error mid-arm is **caught**, the arm is recorded as `partial` (honest rates over the tasks actually
+  attempted), the run is flagged `interrupted`, and the sequence stops cleanly — never a lost report.
+- **Timeout is per-generation and refreshes every attempt** (no cumulative suite timeout): `--timeout`
+  is now forwarded to the server backend and defaults to **600 s**; the backend raises a clear,
+  actionable error on a read timeout instead of an opaque `[Errno 110]`.
+- **Lighter defaults / faster decode**: `--max-iters` default **3 → 2** (first try + one edit-to-fix),
+  `--n-predict` default **256 → 128** (the task solutions are short), plus a `stop` sequence and
+  `cache_prompt` on the server request. New `--limit N` runs only the first N tasks. README documents
+  pointing `--model` at a lighter model (e.g. qwen2.5-coder-0.5b) for a real speedup.
+
+### Added (2026-06-17: KC-2 gentle pre-run RAM reclaim)
+- **`reclaim_memory()`** runs before context sizing on every run (opt out with `--no-reclaim`), so
+  freed RAM is available to the model + KV cache (and reflected in `auto_ctx_size`). Non-destructive
+  — `gc.collect()` + `malloc_trim(0)` (return freed heap to the OS) + `sync`, plus `drop_caches`
+  **only if root** (skipped, never-silent, on an unrooted phone). It **never kills processes**;
+  reaping orphan servers (the bigger lever) stays the explicit `--stop-server`. Logs a before→after
+  delta; honest that the unrooted gain is modest (the kernel already counts reclaimable cache).
+
+### Added (2026-06-17: KC-2 server teardown — auto, opt-out, and a standalone reaper)
+- **Auto-teardown**: `--serve` already stops the server it launched after all reports/logs are
+  written (the `try/finally`); **`--keep-server`** opts out (leave it up for a follow-up `--server`).
+- **Orphan reaper**: `--stop-server` (optionally `--port N`) reaps running `llama-server` processes —
+  for the orphan a manual `llama-server … &` leaves when it loses the port race — and exits.
+  Standalone `tools/llm-harness/llama-server-stop.sh` does the same with no Python.
+- Matching is by **executable name** (`argv[0]` basename `== llama-server`), excluding self — an
+  early version used a cmdline substring (`pgrep -f llama-server`) that matched the teardown
+  script's own path and killed the shell. New `find_server_pids` / `stop_external_servers`.
+
+### Added (2026-06-17: KC-2 unattended pipeline — managed server, metrics/logs, suite runner)
+- **Auto-managed llama.cpp server** (`mycelium_experiments/kc2/server.py`, `--serve`): loads the
+  model ONCE, drives `/completion` (clean one-shot — no interactive REPL), **reuses a healthy server
+  or picks a free port** (the manual `llama-server … &` hits "couldn't bind … port 8080" when an old
+  server lingers), waits for `/health`, and tears down only what it launched. Never-silent on missing
+  binary / early exit / not-ready.
+- **Sequential, instrumented runner** (`mycelium_experiments/kc2/runner.py`): runs a *suite* of
+  configs (e.g. `--seeds 42,123,7`) back-to-back, unattended, writing per run a `<utc>-<name>.json`
+  + `.summary.txt` under `--results-dir` (default `experiments/results/`), plus a combined
+  `index.json` and a suite `.log`.
+- **Richer metrics**: `run_arm` gained an optional `on_attempt` observer; reports now carry
+  **per-attempt records** (generated source, checker verdict, generation wall-time) and a `timing`
+  block — well beyond the bare outcome rates.
+- Decisions for this increment: *richer in-fragment tasks* (deferred) and *prove the pipeline first*
+  (this) — the surface fragment can't express http-client/parser, so "realistic" stays in-fragment.
+  Honesty unchanged (G2 SKIP-with-reason; VR-5 measured rates only, verdict maintainer-written).
+
+### Fixed (2026-06-17: build-agnostic one-shot — EOF stdin + echoed-prompt strip)
+- On-device the `b0-unknown` Termux `llama-cli` **ignored `-no-cnv`/`--no-display-prompt`** and still
+  entered its interactive REPL (slash-command prompt), so a real run hung until Ctrl+C and echoed the
+  prompt into stdout. Build-agnostic hardening (it can't depend on flag support):
+  - **`stdin=subprocess.DEVNULL`** for the llama-cli subprocess in both `_call_llama_cli` (harness)
+    and `cli_backend` (KC-2): a REPL that ignores the flags now hits EOF and **exits after the first
+    response** instead of waiting on the terminal — no hang, no Ctrl+C.
+  - **Echoed-prompt strip** in `LlamaGenerator`: if the verbatim prompt appears in stdout (a build
+    that ignored `--no-display-prompt`), keep only what follows it before parsing.
+  - For a guaranteed-clean path, prefer the **server backend** (`--server URL`, `/completion`) — no
+    REPL, no conversation mode — documented as the recommended on-device route.
+
+### Fixed (2026-06-17: KC-2 skip-reason rendering — line-aligned + concise summary)
+- A skipped-arm reason that embedded a multi-line cargo error rendered badly: the checker's
+  byte-tail (`detail[-1500:]`) cut **mid-line** (garbage like `y: cc help`), and the executive
+  summary dumped the whole linker block into a one-screen overview. Fixes: `MyceliumChecker` now
+  keeps the last **whole lines** (≤25, with a truncation marker) so the first line stays a concise
+  reason; `render_summary` shows only that first line and points to the JSON `skipped` field for the
+  full detail. Surfaced by the first real on-device KC-2 artifact (the run still SKIPped — the
+  toolchain wasn't fixed in that shell — so it carried no model data, but the honesty chain behaved).
+
+### Added (2026-06-17: capture the Termux/Android Claude Code bootstrap in-repo)
+- **`tools/termux/cc-termux-bootstrap.sh` + `tools/termux/README.md`** — the proot-Ubuntu
+  Claude Code setup used to develop Mycelium on a phone, version-controlled so it survives a
+  toolchain reinstall (an ad-hoc copy was lost to `pkg install --reinstall clang`). It provisions a
+  glibc Ubuntu via `proot-distro` (the official `claude` binary won't run native on Termux),
+  installs Claude Code inside it, and installs a thin Termux launcher (`claude`/`work`/`sd`/`update`/
+  `doctor`/`shell`).
+- **Footgun fixed (root cause of the earlier build saga):** the launcher defaulted to `cc`, which
+  overwrote `$PREFIX/bin/cc → clang` and broke every native build. It now defaults to **`claude`**
+  and **refuses** compiler/toolchain names (`cc`/`clang`/`gcc`/…); use a shell alias for muscle memory.
+- **Idempotent + secret-safe:** safe to re-run (reuse container, guard user creation, install Claude
+  only if missing). No secrets in the script/repo — Claude auth stays interactive in `~/.claude`
+  inside the container. Sudo is passwordless **by design**: the phone is unrooted (no Termux-side
+  root, never used) and proot root is *emulated*, so a sudo password would guard nothing (anyone
+  with Termux access can read the rootfs directly) — documented as the honest choice, not a gap.
+
+### Fixed (2026-06-17: real-mode hang — force one-shot llama-cli, configurable timeout)
+- **Real-mode runs hung until they timed out** because recent `llama-cli`, given `--prompt`, enters
+  its **interactive conversation REPL**: it generated a correct answer, then waited at a `>` prompt
+  forever (subprocess `TimeoutExpired`), and echoed the whole prompt into stdout. Confirmed on-device
+  once `myc-check` built. Fix: both the harness `_call_llama_cli` and the KC-2 `cli_backend` now pass
+  **`-no-cnv`** (generate once, exit at EOS) **+ `--no-display-prompt`** (stdout = completion only).
+  Removable via `--llama-arg` / `--llama-extra-arg` if a build rejects them; `--server` mode was
+  always clean.
+- **Per-generation timeout is now configurable and more generous** (`--timeout`, default 300s, up
+  from a hard-coded 120s) — CPU phones run ~1–2 tok/s, so the old default was too tight. README
+  updated.
+
+### Added (2026-06-17: Termux/ARM64 myc-check build prerequisites documented)
+- **`experiments/README.md` documents the Termux (Android/ARM64) Rust build failure modes** for
+  `myc-check`, found by an on-device build and the never-silent cargo-error surfacing. The actual
+  blocker on the test device was a **personal `cc`/`clang` wrapper shadowing the compiler** in
+  `$PREFIX/bin` (`note: Unknown command '…/symbols.o'. Try: cc help`); rustc links every build script
+  via `cc`, so all failed — and `$PREFIX/bin/clang` was the wrapper too, so pointing at it didn't
+  help. Fix: use the **versioned** clang (`CC=$PREFIX/bin/clang-NN`, the matching
+  `CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER`, or `~/.cargo/config.toml` `linker = "clang-NN"`), or
+  un-shadow it (rename the wrapper, `pkg install --reinstall clang`); never name a personal script
+  `cc`/`clang`/`gcc`. The note also keeps the missing-library case (`libandroid-spawn`/`-lXXX`).
+  Use the Termux-packaged rust, not rustup. No code change.
+
+### Fixed (2026-06-17: KC-2 Mycelium arm — wrong cargo package + swallowed build error)
+- **The KC-2 Mycelium arm always SKIPped because the checker built the wrong crate.**
+  `MyceliumChecker._discover` ran `cargo build -p mycelium-l1 --bin myc-check`, but the `myc-check`
+  binary lives in the **`mycelium-check`** crate — cargo exited 101 ("no bin target named
+  myc-check in mycelium-l1"), which the harness honestly reported as a SKIP (never a false pass).
+  Fixed the package name; the arm now builds + runs (the full experiment test suite goes from
+  partially-skipped to all-pass).
+- **Never-silent gap closed:** a failed `cargo build` now surfaces cargo's actual stderr in the
+  SKIP reason (tail, truncated) instead of a bare `exit status 101`, so a *real* compile failure on
+  a new platform (e.g. aarch64/Termux) is actionable. `experiments/README.md` build command fixed
+  to `-p mycelium-check`.
+
+### Added (2026-06-17: swap budget, SD-card overflow, desktop GPU auto-offload)
+- **Optional swap budget (`--use-swap`):** auto context sizing can count ~half of free swap toward
+  the memory budget, letting the context grow when RAM is tight — with an explicit speed/thrash
+  caveat (swap is still *off by default*; the OOM killer targets RSS).
+- **GPU enumeration + auto-offload:** `detect_gpu()` (NVIDIA via `nvidia-smi`, AMD `rocm-smi`,
+  Apple Metal) + `auto_gpu_layers()` pick `-ngl` automatically on a desktop with a GPU build —
+  full offload when detected VRAM holds the model, else CPU. `--cpu-only` forces CPU; `--n-gpu-layers`
+  sets it explicitly. A phone's CPU-only `llama.cpp` reports no GPU, so it's a no-op there.
+- **External-storage (SD) reporting:** `detect_external_storage()` surfaces roomy shared/SD volumes
+  so they can host the model cache (`--model-dir`) or back a swapfile (root) — informational; never
+  auto-mounted/auto-swapon'd.
+- **`--doctor`** gains **GPU** and **External storage** sections, shows the context a run would pick
+  *with* `--use-swap`, and the same flags (`--use-swap`/`--cpu-only`/`--n-gpu-layers`) exist on the
+  KC-2 entry point. All choices are logged with their inputs (EXPLAIN/G2); honest fallbacks when a
+  resource is unknown.
+
+### Added (2026-06-17: auto memory enumeration + auto context sizing)
+- **The context size is now auto-tuned from the device's available memory** instead of a fixed
+  default — the harness and the KC-2 backend enumerate RAM/swap (`/proc/meminfo`, with a POSIX
+  `sysconf` fallback) and pick `min(workload need, what available RAM safely holds with headroom)`.
+  New `detect_memory()` + `auto_ctx_size()` in both `tools/llm-harness/harness.py` and
+  `experiments/.../kc2/llm.py`; `--ctx-size` now defaults to **auto** (pass an explicit `N` to
+  override). Swap is detected and reported but **not** counted toward the budget (KV/compute thrash
+  and still trip the OOM killer if paged) — an honest, conservative input.
+- **No black box (EXPLAIN/G2):** the chosen context is logged with every input (available RAM,
+  model size, reserve, the per-token KV assumption, the workload need). `--doctor` gains a
+  **"Memory + auto context size"** section showing detected RAM/swap and the context a run would
+  pick, and recommends the `qwen2.5-0.5b-instruct` tier when headroom is thin. Memory unknown ⇒ a
+  conservative default, never a guess.
+
+### Fixed (2026-06-17: real-mode OOM — cap the llama.cpp context / KV cache)
+- **On-device real-mode runs were SIGKILLed (`[Process completed (signal 9)]`) at model load.**
+  Cause: with no `-c`, llama.cpp allocates a KV cache for the model's *full trained context*
+  (Qwen2.5 = 32k), which — on top of the weights — trips the Android low-memory killer on a phone.
+  The harness's prompts are tiny, so that window was never needed.
+- Fix: both the validation harness (`tools/llm-harness/harness.py`) and the KC-2 backend
+  (`experiments/.../kc2/llm.py`) now pass `--ctx-size`/`-c` with a small default (**2048**),
+  tunable via `--ctx-size`. Added a `--llama-arg` / `--llama-extra-arg` passthrough so
+  conversation-mode/prompt-echo flags (`-no-cnv`, `--no-display-prompt`) can be supplied per build
+  without editing code. `experiments/README.md` gains a signal-9 troubleshooting note (lower
+  `--ctx-size`, or use the `qwen2.5-0.5b-instruct` tier). Because SIGKILL can't be caught, this is
+  prevention: keeping the run alive is what lets it reach the report-writing step.
+
+### Added (2026-06-17: KC-2 run — executive-summary assessment of the results)
+- **A KC-2 run now emits a descriptive executive summary alongside the raw rates** — new
+  `experiments/mycelium_experiments/kc2/summary.py` (`assess` + `render_summary`). Per arm it
+  reports first-attempt vs eventual pass, a coarse rating (strong/moderate/weak), the edit-to-fix
+  (G10) leverage gain, and which tasks never passed / parsed-but-failed-first; with both arms it
+  reports the comparison gap. One assessment, two projections (G11): a structured `assessment`
+  block in the JSON + a human `*.summary.txt` companion (and printed to the console).
+- **Honesty:** the summary *characterises*, it does not decide. The `decision` field and the
+  rendered footer state the KC-2 verdict stays maintainer-written (VR-5); caveats flag the coarse
+  small-n signal and the primer/model/seed dependence so the reader doesn't over-read.
+
+### Added (2026-06-17: KC-2 experiment runnable against a local llama.cpp model)
+- **The KC-2 LLM-leverage experiment (M-002) can now be *run*, not just structured.** The only
+  documented blocker was "needs LLM API access"; local llama.cpp removes it. New pieces, all pure
+  stdlib, all never-silent (G2) and verdict-free (VR-5):
+  - `experiments/mycelium_experiments/kc2/llm.py` — a `LlamaGenerator` (implements the harness
+    `Generator` protocol) over a `llama`/`llama-cli` subprocess **or** a llama.cpp HTTP server, with
+    per-arm **primers** (generator configuration — generic syntax cheatsheets, no task answers),
+    prompt assembly with edit-to-fix feedback, and best-effort source extraction (fences/prose).
+  - `experiments/mycelium_experiments/kc2/__main__.py` — `python -m mycelium_experiments.kc2`:
+    runs the requested arms, writes a JSON report. An unavailable `myc-check` **SKIPs** the Mycelium
+    arm with an explicit reason (never a fake 0%); the baseline arm **executes generated Python** so
+    it is **off by default** (opt in with `--allow-untrusted-baseline`, inside a sandbox). A missing
+    binary/model aborts with an actionable message, never a silent empty generation.
+  - The KC-2 **verdict is still maintainer-written** — these scripts emit measured rates only (VR-5).
+  - `experiments/README.md` — the end-to-end run order (doctor → validations → unit tests → the
+    real KC-2 run), with the `myc-check` build, the baseline-sandbox caveat, and the primer note.
+  - Grounding: M-002 (#3), SC-5b, G10; the existing KC-2 harness/checkers/tasks unchanged.
+
+### Changed (2026-06-17: LLM-harness — readiness verdict in `--doctor`)
+- **`--doctor` now ends with a bottom-line READY / NOT READY verdict** for real-mode validations
+  (it needs both a llama.cpp CLI and a local model), naming the exact next command or the one fix
+  per miss — so the dense report has a single line to read. A NOT-READY state is honest that
+  real-mode would **SKIP**, not fail (G2).
+
+### Changed (2026-06-17: LLM-harness — first-class `llama` alias + clearer doctor)
+- **The harness now treats `llama` as a first-class CLI alias, not just `llama-cli`.** The Termux
+  `llama-cpp` package installs the CLI as plain **`llama`** (confirmed on-device: `which llama-cli`
+  is empty, `which llama` resolves to `$PREFIX/bin/llama`). Discovery already matched `llama` via
+  `_LLAMA_BIN_NAMES` since the off-PATH work; this pass makes the rest of the surface honest:
+  - `--doctor`'s section header is now **`llama.cpp (llama-cli / llama)`** and prints the resolved
+    **alias** alongside the path, so it's clear *which* name was found.
+  - The off-PATH **glob fallback** in `_resolve_llama_cli` now also matches `llama` (not only
+    `llama-cli`), so a hand-built `llama` is found too.
+  - Real-mode/install warnings now say **"llama.cpp CLI (llama-cli / llama)"** instead of bare
+    `llama-cli`, removing the impression the harness only wants `llama-cli`.
+  - Package builds self-report `version: 0 (unknown)` (no embedded git metadata); the doctor now
+    de-duplicates a leading `version:` so it no longer renders `version: version: …`.
+  - A **KNOWN FOLLOW-UP** is documented in `_call_llama_cli`: recent builds default to interactive
+    *conversation* mode and may echo the prompt, which would distort the one-shot completions V-01/V-02
+    parse. The `-no-cnv` / `--no-display-prompt` fixes are noted but **not** added blindly (flag
+    availability varies by build); to be validated against the target binary, or use `--server` mode.
+  - Grounding: G2 never-silent (a missing CLI still SKIPs honestly). README Termux step clarified.
+
 ### Changed (2026-06-17: LLM-harness — package/release installs, not Python packages)
 - **Bootstrap now installs runtime tools from the OS package manager / official releases instead of
   fragile language-package builds.** The Termux failure that kept recurring was `--doctor` trying to

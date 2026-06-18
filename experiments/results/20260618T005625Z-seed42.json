@@ -1,0 +1,165 @@
+{
+  "arms": {
+    "mycelium": {
+      "eventual_pass_rate": 0.0,
+      "first_attempt_pass_rate": 0.0,
+      "mean_iterations_to_pass": null,
+      "outcomes": [
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 2,
+          "passed": false,
+          "task": "kc2-01-literal"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 2,
+          "passed": false,
+          "task": "kc2-02-complement"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 2,
+          "passed": false,
+          "task": "kc2-03-xor"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 2,
+          "passed": false,
+          "task": "kc2-04-ternary-add"
+        }
+      ],
+      "ran": true,
+      "syntactic_validity_rate": 0.0
+    }
+  },
+  "assessment": {
+    "arms": {
+      "mycelium": {
+        "edit_to_fix_leverage": 0.0,
+        "eventual_pass_rate": 0.0,
+        "first_attempt_pass_rate": 0.0,
+        "first_attempt_rating": "weak",
+        "mean_iterations_to_pass": null,
+        "never_passed_tasks": [
+          "kc2-01-literal",
+          "kc2-02-complement",
+          "kc2-03-xor",
+          "kc2-04-ternary-add"
+        ],
+        "parsed_but_failed_first": [],
+        "ran": true,
+        "syntactic_validity_rate": 0.0
+      }
+    },
+    "caveats": [
+      "coarse signal: 4 tasks \u2014 each task is ~25.0pp; do not over-read small gaps",
+      "first-attempt pass rate is the SC-5b number; eventual-minus-first is the edit-to-fix (G10) leverage signal",
+      "rates depend on the primer (generator configuration) and the model/seed \u2014 record them with the verdict"
+    ],
+    "comparison": null,
+    "decision": "deferred to the maintainer (VR-5) \u2014 this is descriptive analysis of the measured rates, NOT the KC-2 verdict"
+  },
+  "attempts": [
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Ident(\"source\")",
+      "passed": false,
+      "source": "source\nfn main() -> Binary{8} = 1011_0010\n",
+      "syntactically_valid": false,
+      "task": "kc2-01-literal",
+      "wall_seconds": 16.294
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 2:38: unexpected character '#'",
+      "passed": false,
+      "source": "source\nnodule bench                         # every program starts with a nodule line\nfn main() -> Ternary{8} = 1011_0010\n",
+      "syntactically_valid": false,
+      "task": "kc2-01-literal",
+      "wall_seconds": 12.989
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Ident(\"source\")",
+      "passed": false,
+      "source": "source\nfn main() -> Ternary{8} = not(1011_0010)\n",
+      "syntactically_valid": false,
+      "task": "kc2-02-complement",
+      "wall_seconds": 10.456
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 2:38: unexpected character '#'",
+      "passed": false,
+      "source": "source\nnodule bench                         # every program starts with a nodule line\nfn name(x: Binary{8}) -> Binary{8} = not(x)\nfn main() -> Ternary{4} = add(<00+->, <0+0->)\n",
+      "syntactically_valid": false,
+      "task": "kc2-02-complement",
+      "wall_seconds": 23.233
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Ident(\"source\")",
+      "passed": false,
+      "source": "source\nfn main() -> Ternary{8} = xor(<00+->, <0+0->)\n",
+      "syntactically_valid": false,
+      "task": "kc2-03-xor",
+      "wall_seconds": 11.336
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 2:38: unexpected character '#'",
+      "passed": false,
+      "source": "source\nnodule bench                         # every program starts with a nodule line\nfn name(x: Binary{8}) -> Binary{8} = not(x)\nfn main() -> Ternary{4} = add(<00+->, <0+0->)\n",
+      "syntactically_valid": false,
+      "task": "kc2-03-xor",
+      "wall_seconds": 27.257
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Ident(\"source\")",
+      "passed": false,
+      "source": "source\nfn main() -> Ternary{4} = add(<00+->, <0+0->)\n",
+      "syntactically_valid": false,
+      "task": "kc2-04-ternary-add",
+      "wall_seconds": 17.4
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 2:38: unexpected character '#'",
+      "passed": false,
+      "source": "source\nnodule bench                         # every program starts with a nodule line\nfn name(x: Binary{8}) -> Binary{8} = not(x)\nfn main() -> Ternary{4} = add(<00+->, <0+0->)\n",
+      "syntactically_valid": false,
+      "task": "kc2-04-ternary-add",
+      "wall_seconds": 30.67
+    }
+  ],
+  "backend": "server(managed)",
+  "edit_to_fix_budget": 2,
+  "experiment": "KC-2 LLM-leverage (M-002; Foundation \u00a76 P0.2)",
+  "model": "/data/data/com.termux/files/home/.cache/mycelium-llm-harness/models/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
+  "run": "seed42",
+  "run_utc": "20260618T005625Z",
+  "sc5b": 0.0,
+  "seed": 42,
+  "task_count": 4,
+  "timing": {
+    "attempts": 8,
+    "mean_attempt_seconds": 18.7,
+    "total_generation_seconds": 149.63
+  },
+  "verdict": "not established \u2014 the KC-2 verdict (proceed / reweight-to-human / fall-back-to-embedded-DSL) requires a maintainer-written analysis of this run; this harness never pre-writes it (VR-5)"
+}

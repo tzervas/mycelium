@@ -1,0 +1,33 @@
+2026-06-18T04:15:21Z  DEBUG    reclaim: drop_caches not permitted (unrooted) — skipped
+2026-06-18T04:15:21Z  INFO     reclaim: available RAM 22770 → 22770 MB
+2026-06-18T04:15:21Z  INFO     Launching llama-server: /usr/local/bin/llama-server -m /models/qwen2.5-coder-7b-instruct-q4_k_m.gguf -c 2048 --host 127.0.0.1 --port 33951 --n-gpu-layers 999
+2026-06-18T04:15:24Z  INFO     llama-server ready at http://127.0.0.1:33951 (3.0s)
+2026-06-18T04:15:24Z  INFO     === run 'seed42' (seed=42, arms=mycelium, max_iters=3, tasks=10) ===
+2026-06-18T04:15:24Z  INFO     [mycelium] kc2-01-literal         attempt 1: valid=False passed=False  0.7s
+2026-06-18T04:15:25Z  INFO     [mycelium] kc2-01-literal         attempt 2: valid=False passed=False  0.2s
+2026-06-18T04:15:25Z  INFO     [mycelium] kc2-01-literal         attempt 3: valid=False passed=False  0.2s
+2026-06-18T04:15:25Z  INFO     [mycelium] kc2-02-complement      attempt 1: valid=False passed=False  0.1s
+2026-06-18T04:15:25Z  INFO     [mycelium] kc2-02-complement      attempt 2: valid=False passed=False  0.2s
+2026-06-18T04:15:26Z  INFO     [mycelium] kc2-02-complement      attempt 3: valid=False passed=False  0.7s
+2026-06-18T04:15:26Z  INFO     [mycelium] kc2-03-xor             attempt 1: valid=True passed=True  0.5s
+2026-06-18T04:15:27Z  INFO     [mycelium] kc2-04-ternary-add     attempt 1: valid=False passed=False  0.6s
+2026-06-18T04:15:27Z  INFO     [mycelium] kc2-04-ternary-add     attempt 2: valid=False passed=False  0.6s
+2026-06-18T04:15:28Z  INFO     [mycelium] kc2-04-ternary-add     attempt 3: valid=False passed=False  0.6s
+2026-06-18T04:15:29Z  INFO     [mycelium] kc2-05-swap            attempt 1: valid=False passed=False  0.5s
+2026-06-18T04:15:29Z  INFO     [mycelium] kc2-05-swap            attempt 2: valid=True passed=True  0.4s
+2026-06-18T04:15:30Z  INFO     [mycelium] kc2-06-helper          attempt 1: valid=False passed=False  0.6s
+2026-06-18T04:15:30Z  INFO     [mycelium] kc2-06-helper          attempt 2: valid=False passed=False  0.2s
+2026-06-18T04:15:30Z  INFO     [mycelium] kc2-06-helper          attempt 3: valid=False passed=False  0.2s
+2026-06-18T04:15:31Z  INFO     [mycelium] kc2-07-data-match      attempt 1: valid=False passed=False  0.6s
+2026-06-18T04:15:31Z  INFO     [mycelium] kc2-07-data-match      attempt 2: valid=False passed=False  0.8s
+2026-06-18T04:15:32Z  INFO     [mycelium] kc2-07-data-match      attempt 3: valid=False passed=False  0.3s
+2026-06-18T04:15:32Z  INFO     [mycelium] kc2-08-matured         attempt 1: valid=True passed=True  0.5s
+2026-06-18T04:15:33Z  INFO     [mycelium] kc2-09-iterate-for     attempt 1: valid=True passed=False  0.4s
+2026-06-18T04:15:33Z  INFO     [mycelium] kc2-09-iterate-for     attempt 2: valid=False passed=False  0.5s
+2026-06-18T04:15:34Z  INFO     [mycelium] kc2-09-iterate-for     attempt 3: valid=False passed=False  0.6s
+2026-06-18T04:15:34Z  INFO     [mycelium] kc2-10-iterate-recursion attempt 1: valid=False passed=False  0.7s
+2026-06-18T04:15:35Z  INFO     [mycelium] kc2-10-iterate-recursion attempt 2: valid=False passed=False  0.2s
+2026-06-18T04:15:35Z  INFO     [mycelium] kc2-10-iterate-recursion attempt 3: valid=False passed=False  0.7s
+2026-06-18T04:15:35Z  INFO     wrote 20260618T041524Z-seed42.json (+ .summary.txt)
+2026-06-18T04:15:35Z  INFO     suite complete — index: results/qwen2.5-coder-7b-minimal/index.json
+2026-06-18T04:15:35Z  INFO     Stopping llama-server (pid 1893)

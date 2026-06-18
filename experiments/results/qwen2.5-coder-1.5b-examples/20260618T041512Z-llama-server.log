@@ -1,0 +1,411 @@
+0.00.043.981 I log_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.043.997 I device_info:
+0.00.107.983 I   - CUDA0   : NVIDIA GeForce RTX 5080 (16302 MiB, 14953 MiB free)
+0.00.108.007 I   - CPU     : Intel(R) Core(TM) i7-14700K (23650 MiB, 23650 MiB free)
+0.00.108.096 I system_info: n_threads = 14 (n_threads_batch = 14) / 28 | CUDA : ARCHS = 750,800,860,890,900,1200 | USE_GRAPHS = 1 | PEER_MAX_BATCH_SIZE = 128 | BLACKWELL_NATIVE_FP4 = 1 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX_VNNI = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 | 
+0.00.108.111 I srv  llama_server: n_parallel is set to auto, using n_parallel = 4 and kv_unified = true
+0.00.108.185 I srv          init: using 27 threads for HTTP server
+0.00.108.418 I srv         start: binding port with default address family
+0.00.110.121 I srv  llama_server: loading model
+0.00.110.136 I srv    load_model: loading model '/models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf'
+0.00.110.183 I common_init_result: fitting params to device memory ...
+0.00.110.190 I common_init_result: (for bugs during this step try to reproduce them with -fit off, or provide --verbose logs if the bug only occurs with -fit on)
+0.00.354.794 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.00.481.189 W llama_context: n_ctx_seq (2048) < n_ctx_train (32768) -- the full capacity of the model will not be utilized
+0.00.487.689 I common_init_from_params: warming up the model with an empty run - please wait ... (--no-warmup to disable)
+0.00.515.301 I srv    load_model: initializing slots, n_slots = 4
+0.00.521.580 W common_speculative_init: no implementations specified for speculative decoding
+0.00.521.595 I slot   load_model: id  0 | task -1 | new slot, n_ctx = 2048
+0.00.521.599 I slot   load_model: id  1 | task -1 | new slot, n_ctx = 2048
+0.00.521.599 I slot   load_model: id  2 | task -1 | new slot, n_ctx = 2048
+0.00.521.599 I slot   load_model: id  3 | task -1 | new slot, n_ctx = 2048
+0.00.521.647 I srv    load_model: prompt cache is enabled, size limit: 8192 MiB
+0.00.521.656 I srv    load_model: use `--cache-ram 0` to disable the prompt cache
+0.00.521.656 I srv    load_model: for more info see https://github.com/ggml-org/llama.cpp/pull/16391
+0.00.521.656 I srv    load_model: context checkpoints enabled, max = 32, min spacing = 256
+0.00.521.680 I srv          init: idle slots will be saved to prompt cache and cleared upon starting a new task
+0.00.524.521 I init: chat template, example_format: '<|im_start|>system
+You are a helpful assistant<|im_end|>
+<|im_start|>user
+Hello<|im_end|>
+<|im_start|>assistant
+Hi there<|im_end|>
+<|im_start|>user
+How are you?<|im_end|>
+<|im_start|>assistant
+'
+0.00.526.255 I srv          init: init: chat template, thinking = 0
+0.00.526.297 I srv  llama_server: model loaded
+0.00.526.308 I srv  llama_server: server is listening on http://127.0.0.1:40173
+0.00.526.313 I srv  update_slots: all slots are idle
+0.00.981.222 I slot get_availabl: id  3 | task -1 | selected slot by LRU, t_last = -1
+0.00.981.238 I srv  get_availabl: updating prompt cache
+0.00.981.242 I srv          load:  - looking for better prompt, base f_keep = -1.000, sim = 0.000
+0.00.981.245 I srv        update:  - cache state: 0 prompts, 0.000 MiB (limits: 8192.000 MiB, 2048 tokens, 8589934592 est)
+0.00.981.245 I srv  get_availabl: prompt cache update took 0.01 ms
+0.00.981.267 I slot launch_slot_: id  3 | task 0 | processing task, is_child = 0
+0.00.981.276 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.00.981.277 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.00.981.280 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.00.981.281 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.00.981.281 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.00.981.281 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.01.323.253 I slot print_timing: id  3 | task 0 | prompt eval time =      48.29 ms /   761 tokens (    0.06 ms per token, 15757.98 tokens per second)
+0.01.323.272 I slot print_timing: id  3 | task 0 |        eval time =     293.66 ms /    96 tokens (    3.06 ms per token,   326.91 tokens per second)
+0.01.323.272 I slot print_timing: id  3 | task 0 |       total time =     341.95 ms /   857 tokens
+0.01.323.277 I slot print_timing: id  3 | task 0 |    graphs reused =         94
+0.01.323.342 I slot      release: id  3 | task 0 | stop processing: n_tokens = 856, truncated = 0
+0.01.323.356 I srv  update_slots: all slots are idle
+0.01.326.722 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.952 (> 0.100 thold), f_keep = 0.881
+0.01.326.752 I slot launch_slot_: id  3 | task 97 | processing task, is_child = 0
+0.01.326.760 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.01.326.760 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.01.326.764 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.01.326.764 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.01.326.765 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.01.326.766 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.01.629.337 I slot print_timing: id  3 | task 97 | prompt eval time =       9.23 ms /    38 tokens (    0.24 ms per token,  4117.90 tokens per second)
+0.01.629.361 I slot print_timing: id  3 | task 97 |        eval time =     293.33 ms /    96 tokens (    3.06 ms per token,   327.28 tokens per second)
+0.01.629.361 I slot print_timing: id  3 | task 97 |       total time =     302.56 ms /   134 tokens
+0.01.629.361 I slot print_timing: id  3 | task 97 |    graphs reused =        188
+0.01.629.409 I slot      release: id  3 | task 97 | stop processing: n_tokens = 887, truncated = 0
+0.01.629.422 I srv  update_slots: all slots are idle
+0.01.632.309 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.951 (> 0.100 thold), f_keep = 0.880
+0.01.632.339 I slot launch_slot_: id  3 | task 194 | processing task, is_child = 0
+0.01.632.348 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.01.632.349 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.01.632.353 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.01.632.353 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.01.632.354 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.01.632.355 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.01.933.272 I slot print_timing: id  3 | task 194 | prompt eval time =       9.39 ms /    40 tokens (    0.23 ms per token,  4260.76 tokens per second)
+0.01.933.299 I slot print_timing: id  3 | task 194 |        eval time =     291.51 ms /    96 tokens (    3.04 ms per token,   329.31 tokens per second)
+0.01.933.299 I slot print_timing: id  3 | task 194 |       total time =     300.90 ms /   136 tokens
+0.01.933.300 I slot print_timing: id  3 | task 194 |    graphs reused =        282
+0.01.933.358 I slot      release: id  3 | task 194 | stop processing: n_tokens = 916, truncated = 0
+0.01.933.373 I srv  update_slots: all slots are idle
+0.01.936.282 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.965 (> 0.100 thold), f_keep = 0.806
+0.01.936.317 I slot launch_slot_: id  3 | task 291 | processing task, is_child = 0
+0.01.936.325 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.01.936.326 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.01.936.356 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.01.936.363 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.01.936.365 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.01.936.365 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.02.238.855 I slot print_timing: id  3 | task 291 | prompt eval time =      10.05 ms /    27 tokens (    0.37 ms per token,  2686.83 tokens per second)
+0.02.238.877 I slot print_timing: id  3 | task 291 |        eval time =     292.43 ms /    96 tokens (    3.05 ms per token,   328.29 tokens per second)
+0.02.238.877 I slot print_timing: id  3 | task 291 |       total time =     302.48 ms /   123 tokens
+0.02.238.878 I slot print_timing: id  3 | task 291 |    graphs reused =        375
+0.02.238.924 I slot      release: id  3 | task 291 | stop processing: n_tokens = 860, truncated = 0
+0.02.238.930 I srv  update_slots: all slots are idle
+0.02.241.796 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.939 (> 0.100 thold), f_keep = 0.881
+0.02.241.825 I slot launch_slot_: id  3 | task 388 | processing task, is_child = 0
+0.02.241.825 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.02.241.827 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.02.241.830 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.02.241.839 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.02.241.841 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.02.241.841 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.02.515.707 I slot print_timing: id  3 | task 388 | prompt eval time =       9.26 ms /    49 tokens (    0.19 ms per token,  5290.43 tokens per second)
+0.02.515.729 I slot print_timing: id  3 | task 388 |        eval time =     264.59 ms /    96 tokens (    2.76 ms per token,   362.83 tokens per second)
+0.02.515.729 I slot print_timing: id  3 | task 388 |       total time =     273.85 ms /   145 tokens
+0.02.515.730 I slot print_timing: id  3 | task 388 |    graphs reused =        469
+0.02.515.781 I slot      release: id  3 | task 388 | stop processing: n_tokens = 902, truncated = 0
+0.02.515.794 I srv  update_slots: all slots are idle
+0.02.518.560 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.966 (> 0.100 thold), f_keep = 0.882
+0.02.518.586 I slot launch_slot_: id  3 | task 485 | processing task, is_child = 0
+0.02.518.586 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.02.518.587 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.02.518.590 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.02.518.590 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.02.518.591 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.02.518.592 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.02.801.498 I slot print_timing: id  3 | task 485 | prompt eval time =       9.66 ms /    28 tokens (    0.34 ms per token,  2899.15 tokens per second)
+0.02.801.519 I slot print_timing: id  3 | task 485 |        eval time =     273.24 ms /    96 tokens (    2.85 ms per token,   351.34 tokens per second)
+0.02.801.519 I slot print_timing: id  3 | task 485 |       total time =     282.89 ms /   124 tokens
+0.02.801.520 I slot print_timing: id  3 | task 485 |    graphs reused =        563
+0.02.801.566 I slot      release: id  3 | task 485 | stop processing: n_tokens = 919, truncated = 0
+0.02.801.580 I srv  update_slots: all slots are idle
+0.02.804.355 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.952 (> 0.100 thold), f_keep = 0.804
+0.02.804.381 I slot launch_slot_: id  3 | task 582 | processing task, is_child = 0
+0.02.804.390 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.02.804.391 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.02.804.394 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.02.804.394 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.02.804.395 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.02.804.395 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.02.941.062 I slot print_timing: id  3 | task 582 | prompt eval time =       8.18 ms /    37 tokens (    0.22 ms per token,  4524.33 tokens per second)
+0.02.941.080 I slot print_timing: id  3 | task 582 |        eval time =     128.48 ms /    47 tokens (    2.73 ms per token,   365.82 tokens per second)
+0.02.941.080 I slot print_timing: id  3 | task 582 |       total time =     136.66 ms /    84 tokens
+0.02.941.081 I slot print_timing: id  3 | task 582 |    graphs reused =        608
+0.02.941.126 I slot      release: id  3 | task 582 | stop processing: n_tokens = 822, truncated = 0
+0.02.941.133 I srv  update_slots: all slots are idle
+0.02.944.131 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.952 (> 0.100 thold), f_keep = 0.898
+0.02.944.158 I slot launch_slot_: id  3 | task 630 | processing task, is_child = 0
+0.02.944.158 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.02.944.159 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.02.944.162 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.02.944.162 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.02.944.164 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.02.944.164 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.03.029.671 I slot print_timing: id  3 | task 630 | prompt eval time =       7.90 ms /    37 tokens (    0.21 ms per token,  4681.17 tokens per second)
+0.03.029.688 I slot print_timing: id  3 | task 630 |        eval time =      77.59 ms /    28 tokens (    2.77 ms per token,   360.86 tokens per second)
+0.03.029.688 I slot print_timing: id  3 | task 630 |       total time =      85.50 ms /    65 tokens
+0.03.029.689 I slot print_timing: id  3 | task 630 |    graphs reused =        634
+0.03.029.734 I slot      release: id  3 | task 630 | stop processing: n_tokens = 802, truncated = 0
+0.03.029.747 I srv  update_slots: all slots are idle
+0.03.032.481 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.940 (> 0.100 thold), f_keep = 0.958
+0.03.032.503 I slot launch_slot_: id  3 | task 659 | processing task, is_child = 0
+0.03.032.511 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.03.032.511 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.03.032.515 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.03.032.515 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.03.032.516 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.03.032.516 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.03.324.459 I slot print_timing: id  3 | task 659 | prompt eval time =       9.30 ms /    49 tokens (    0.19 ms per token,  5271.08 tokens per second)
+0.03.324.482 I slot print_timing: id  3 | task 659 |        eval time =     282.63 ms /    96 tokens (    2.94 ms per token,   339.66 tokens per second)
+0.03.324.482 I slot print_timing: id  3 | task 659 |       total time =     291.93 ms /   145 tokens
+0.03.324.483 I slot print_timing: id  3 | task 659 |    graphs reused =        728
+0.03.324.537 I slot      release: id  3 | task 659 | stop processing: n_tokens = 912, truncated = 0
+0.03.324.551 I srv  update_slots: all slots are idle
+0.03.327.770 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.966 (> 0.100 thold), f_keep = 0.884
+0.03.327.795 I slot launch_slot_: id  3 | task 756 | processing task, is_child = 0
+0.03.327.810 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.03.327.818 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.03.327.822 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.03.327.822 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.03.327.823 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.03.327.823 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.03.616.250 I slot print_timing: id  3 | task 756 | prompt eval time =       9.22 ms /    28 tokens (    0.33 ms per token,  3035.89 tokens per second)
+0.03.616.273 I slot print_timing: id  3 | task 756 |        eval time =     279.19 ms /    96 tokens (    2.91 ms per token,   343.85 tokens per second)
+0.03.616.273 I slot print_timing: id  3 | task 756 |       total time =     288.41 ms /   124 tokens
+0.03.616.274 I slot print_timing: id  3 | task 756 |    graphs reused =        822
+0.03.616.325 I slot      release: id  3 | task 756 | stop processing: n_tokens = 929, truncated = 0
+0.03.616.341 I srv  update_slots: all slots are idle
+0.03.619.239 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.938 (> 0.100 thold), f_keep = 0.792
+0.03.619.268 I slot launch_slot_: id  3 | task 853 | processing task, is_child = 0
+0.03.619.270 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.03.619.271 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.03.619.275 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.03.619.275 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.03.619.276 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.03.619.277 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.03.914.063 I slot print_timing: id  3 | task 853 | prompt eval time =       9.24 ms /    49 tokens (    0.19 ms per token,  5305.33 tokens per second)
+0.03.914.083 I slot print_timing: id  3 | task 853 |        eval time =     285.54 ms /    96 tokens (    2.97 ms per token,   336.21 tokens per second)
+0.03.914.083 I slot print_timing: id  3 | task 853 |       total time =     294.77 ms /   145 tokens
+0.03.914.084 I slot print_timing: id  3 | task 853 |    graphs reused =        916
+0.03.914.131 I slot      release: id  3 | task 853 | stop processing: n_tokens = 880, truncated = 0
+0.03.914.144 I srv  update_slots: all slots are idle
+0.03.916.967 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.950 (> 0.100 thold), f_keep = 0.884
+0.03.916.996 I slot launch_slot_: id  3 | task 950 | processing task, is_child = 0
+0.03.917.004 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.03.917.005 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.03.917.008 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.03.917.008 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.03.917.010 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.03.917.010 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.04.079.567 I slot print_timing: id  3 | task 950 | prompt eval time =       9.97 ms /    41 tokens (    0.24 ms per token,  4112.75 tokens per second)
+0.04.079.585 I slot print_timing: id  3 | task 950 |        eval time =     152.58 ms /    53 tokens (    2.88 ms per token,   347.37 tokens per second)
+0.04.079.585 I slot print_timing: id  3 | task 950 |       total time =     162.55 ms /    94 tokens
+0.04.079.586 I slot print_timing: id  3 | task 950 |    graphs reused =        967
+0.04.079.635 I slot      release: id  3 | task 950 | stop processing: n_tokens = 871, truncated = 0
+0.04.079.647 I srv  update_slots: all slots are idle
+0.04.082.524 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.957 (> 0.100 thold), f_keep = 0.928
+0.04.082.548 I slot launch_slot_: id  3 | task 1004 | processing task, is_child = 0
+0.04.082.549 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.04.082.549 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.04.082.552 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.04.082.552 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.04.082.554 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.04.082.554 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.04.364.779 I slot print_timing: id  3 | task 1004 | prompt eval time =       8.04 ms /    36 tokens (    0.22 ms per token,  4476.50 tokens per second)
+0.04.364.797 I slot print_timing: id  3 | task 1004 |        eval time =     274.17 ms /    96 tokens (    2.86 ms per token,   350.15 tokens per second)
+0.04.364.797 I slot print_timing: id  3 | task 1004 |       total time =     282.21 ms /   132 tokens
+0.04.364.798 I slot print_timing: id  3 | task 1004 |    graphs reused =       1061
+0.04.364.847 I slot      release: id  3 | task 1004 | stop processing: n_tokens = 939, truncated = 0
+0.04.364.859 I srv  update_slots: all slots are idle
+0.04.367.728 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.934 (> 0.100 thold), f_keep = 0.777
+0.04.367.755 I slot launch_slot_: id  3 | task 1101 | processing task, is_child = 0
+0.04.367.764 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.04.367.765 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.04.367.768 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.04.367.768 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.04.367.769 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.04.367.770 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.04.651.731 I slot print_timing: id  3 | task 1101 | prompt eval time =      10.03 ms /    52 tokens (    0.19 ms per token,  5185.48 tokens per second)
+0.04.651.748 I slot print_timing: id  3 | task 1101 |        eval time =     273.92 ms /    96 tokens (    2.85 ms per token,   350.46 tokens per second)
+0.04.651.749 I slot print_timing: id  3 | task 1101 |       total time =     283.95 ms /   148 tokens
+0.04.651.749 I slot print_timing: id  3 | task 1101 |    graphs reused =       1155
+0.04.651.795 I slot      release: id  3 | task 1101 | stop processing: n_tokens = 877, truncated = 0
+0.04.651.808 I srv  update_slots: all slots are idle
+0.04.654.739 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.908 (> 0.100 thold), f_keep = 0.830
+0.04.654.764 I slot launch_slot_: id  3 | task 1198 | processing task, is_child = 0
+0.04.654.764 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.04.654.765 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.04.654.768 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.04.654.768 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.04.654.770 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.04.654.770 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.04.870.053 I slot print_timing: id  3 | task 1198 | prompt eval time =       9.60 ms /    74 tokens (    0.13 ms per token,  7708.33 tokens per second)
+0.04.870.069 I slot print_timing: id  3 | task 1198 |        eval time =     205.67 ms /    74 tokens (    2.78 ms per token,   359.79 tokens per second)
+0.04.870.069 I slot print_timing: id  3 | task 1198 |       total time =     215.27 ms /   148 tokens
+0.04.870.070 I slot print_timing: id  3 | task 1198 |    graphs reused =       1227
+0.04.870.112 I slot      release: id  3 | task 1198 | stop processing: n_tokens = 875, truncated = 0
+0.04.870.124 I srv  update_slots: all slots are idle
+0.04.872.893 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.954 (> 0.100 thold), f_keep = 0.909
+0.04.872.913 I slot launch_slot_: id  3 | task 1273 | processing task, is_child = 0
+0.04.872.914 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.04.872.914 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.04.872.917 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.04.872.917 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.04.872.918 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.04.872.918 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.05.173.041 I slot print_timing: id  3 | task 1273 | n_decoded =    100, tg = 343.33 t/s
+0.05.205.866 I slot print_timing: id  3 | task 1273 | prompt eval time =       8.85 ms /    38 tokens (    0.23 ms per token,  4295.24 tokens per second)
+0.05.205.881 I slot print_timing: id  3 | task 1273 |        eval time =     324.09 ms /   112 tokens (    2.89 ms per token,   345.58 tokens per second)
+0.05.205.881 I slot print_timing: id  3 | task 1273 |       total time =     332.94 ms /   150 tokens
+0.05.205.882 I slot print_timing: id  3 | task 1273 |    graphs reused =       1337
+0.05.205.929 I slot      release: id  3 | task 1273 | stop processing: n_tokens = 944, truncated = 0
+0.05.205.941 I srv  update_slots: all slots are idle
+0.05.208.793 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.967 (> 0.100 thold), f_keep = 0.871
+0.05.208.818 I slot launch_slot_: id  3 | task 1386 | processing task, is_child = 0
+0.05.208.826 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.05.208.827 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.05.208.830 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.05.208.830 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.05.208.831 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.05.208.831 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.05.525.457 I slot print_timing: id  3 | task 1386 | prompt eval time =       8.31 ms /    28 tokens (    0.30 ms per token,  3370.25 tokens per second)
+0.05.525.474 I slot print_timing: id  3 | task 1386 |        eval time =     308.31 ms /   112 tokens (    2.75 ms per token,   363.27 tokens per second)
+0.05.525.474 I slot print_timing: id  3 | task 1386 |       total time =     316.62 ms /   140 tokens
+0.05.525.475 I slot print_timing: id  3 | task 1386 |    graphs reused =       1447
+0.05.525.520 I slot      release: id  3 | task 1386 | stop processing: n_tokens = 961, truncated = 0
+0.05.525.533 I srv  update_slots: all slots are idle
+0.05.528.346 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.918 (> 0.100 thold), f_keep = 0.758
+0.05.528.368 I slot launch_slot_: id  3 | task 1499 | processing task, is_child = 0
+0.05.528.377 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.05.528.378 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.05.528.381 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.05.528.381 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.05.528.382 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.05.528.382 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.05.803.616 I slot print_timing: id  3 | task 1499 | prompt eval time =       9.34 ms /    65 tokens (    0.14 ms per token,  6961.55 tokens per second)
+0.05.803.633 I slot print_timing: id  3 | task 1499 |        eval time =     265.89 ms /    96 tokens (    2.77 ms per token,   361.06 tokens per second)
+0.05.803.634 I slot print_timing: id  3 | task 1499 |       total time =     275.22 ms /   161 tokens
+0.05.803.634 I slot print_timing: id  3 | task 1499 |    graphs reused =       1541
+0.05.803.669 I slot      release: id  3 | task 1499 | stop processing: n_tokens = 888, truncated = 0
+0.05.803.684 I srv  update_slots: all slots are idle
+0.05.806.623 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.955 (> 0.100 thold), f_keep = 0.885
+0.05.806.647 I slot launch_slot_: id  3 | task 1596 | processing task, is_child = 0
+0.05.806.647 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.05.806.648 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.05.806.651 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.05.806.651 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.05.806.652 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.05.806.652 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.06.083.323 I slot print_timing: id  3 | task 1596 | prompt eval time =       8.26 ms /    37 tokens (    0.22 ms per token,  4479.96 tokens per second)
+0.06.083.343 I slot print_timing: id  3 | task 1596 |        eval time =     268.40 ms /    96 tokens (    2.80 ms per token,   357.67 tokens per second)
+0.06.083.344 I slot print_timing: id  3 | task 1596 |       total time =     276.66 ms /   133 tokens
+0.06.083.344 I slot print_timing: id  3 | task 1596 |    graphs reused =       1635
+0.06.083.398 I slot      release: id  3 | task 1596 | stop processing: n_tokens = 918, truncated = 0
+0.06.083.412 I srv  update_slots: all slots are idle
+0.06.086.266 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.967 (> 0.100 thold), f_keep = 0.885
+0.06.086.291 I slot launch_slot_: id  3 | task 1693 | processing task, is_child = 0
+0.06.086.292 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.06.086.301 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.06.086.305 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.06.086.306 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.06.086.308 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.06.086.308 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.06.359.682 I slot print_timing: id  3 | task 1693 | prompt eval time =       8.17 ms /    28 tokens (    0.29 ms per token,  3425.50 tokens per second)
+0.06.359.703 I slot print_timing: id  3 | task 1693 |        eval time =     265.19 ms /    96 tokens (    2.76 ms per token,   362.01 tokens per second)
+0.06.359.703 I slot print_timing: id  3 | task 1693 |       total time =     273.36 ms /   124 tokens
+0.06.359.704 I slot print_timing: id  3 | task 1693 |    graphs reused =       1729
+0.06.359.753 I slot      release: id  3 | task 1693 | stop processing: n_tokens = 935, truncated = 0
+0.06.359.767 I srv  update_slots: all slots are idle
+0.06.362.968 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.880 (> 0.100 thold), f_keep = 0.779
+0.06.363.001 I slot launch_slot_: id  3 | task 1790 | processing task, is_child = 0
+0.06.363.009 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.06.363.010 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.06.363.015 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.06.363.015 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.06.363.016 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.06.363.016 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.06.723.216 I slot print_timing: id  3 | task 1790 | prompt eval time =      12.85 ms /    99 tokens (    0.13 ms per token,  7704.88 tokens per second)
+0.06.723.234 I slot print_timing: id  3 | task 1790 |        eval time =     347.34 ms /   112 tokens (    3.10 ms per token,   322.45 tokens per second)
+0.06.723.235 I slot print_timing: id  3 | task 1790 |       total time =     360.19 ms /   211 tokens
+0.06.723.235 I slot print_timing: id  3 | task 1790 |    graphs reused =       1839
+0.06.723.289 I slot      release: id  3 | task 1790 | stop processing: n_tokens = 938, truncated = 0
+0.06.723.304 I srv  update_slots: all slots are idle
+0.06.726.631 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.926 (> 0.100 thold), f_keep = 0.874
+0.06.726.668 I slot launch_slot_: id  3 | task 1903 | processing task, is_child = 0
+0.06.726.676 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.06.726.677 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.06.726.682 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.06.726.682 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.06.726.683 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.06.726.684 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.07.073.557 I slot print_timing: id  3 | task 1903 | prompt eval time =      10.93 ms /    66 tokens (    0.17 ms per token,  6040.64 tokens per second)
+0.07.073.582 I slot print_timing: id  3 | task 1903 |        eval time =     335.93 ms /   112 tokens (    3.00 ms per token,   333.40 tokens per second)
+0.07.073.582 I slot print_timing: id  3 | task 1903 |       total time =     346.86 ms /   178 tokens
+0.07.073.583 I slot print_timing: id  3 | task 1903 |    graphs reused =       1949
+0.07.073.639 I slot      release: id  3 | task 1903 | stop processing: n_tokens = 997, truncated = 0
+0.07.073.653 I srv  update_slots: all slots are idle
+0.07.076.742 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.962 (> 0.100 thold), f_keep = 0.878
+0.07.076.770 I slot launch_slot_: id  3 | task 2016 | processing task, is_child = 0
+0.07.076.778 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.07.076.779 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.07.076.782 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.07.076.782 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.07.076.784 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.07.076.784 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.07.419.118 I slot print_timing: id  3 | task 2016 | prompt eval time =       9.74 ms /    35 tokens (    0.28 ms per token,  3591.59 tokens per second)
+0.07.419.138 I slot print_timing: id  3 | task 2016 |        eval time =     332.58 ms /   112 tokens (    2.97 ms per token,   336.76 tokens per second)
+0.07.419.138 I slot print_timing: id  3 | task 2016 |       total time =     342.32 ms /   147 tokens
+0.07.419.139 I slot print_timing: id  3 | task 2016 |    graphs reused =       2059
+0.07.419.191 I slot      release: id  3 | task 2016 | stop processing: n_tokens = 1021, truncated = 0
+0.07.419.205 I srv  update_slots: all slots are idle
+0.07.422.397 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.909 (> 0.100 thold), f_keep = 0.747
+0.07.422.428 I slot launch_slot_: id  3 | task 2129 | processing task, is_child = 0
+0.07.422.428 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.07.422.429 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.07.422.433 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.07.422.433 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.07.422.434 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.07.422.434 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.07.872.385 I slot print_timing: id  3 | task 2129 | prompt eval time =      12.93 ms /    76 tokens (    0.17 ms per token,  5875.99 tokens per second)
+0.07.872.407 I slot print_timing: id  3 | task 2129 |        eval time =     437.00 ms /   144 tokens (    3.03 ms per token,   329.52 tokens per second)
+0.07.872.407 I slot print_timing: id  3 | task 2129 |       total time =     449.94 ms /   220 tokens
+0.07.872.408 I slot print_timing: id  3 | task 2129 |    graphs reused =       2201
+0.07.872.460 I slot      release: id  3 | task 2129 | stop processing: n_tokens = 982, truncated = 0
+0.07.872.474 I srv  update_slots: all slots are idle
+0.07.875.729 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.952 (> 0.100 thold), f_keep = 0.847
+0.07.875.757 I slot launch_slot_: id  3 | task 2274 | processing task, is_child = 0
+0.07.875.757 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.07.875.758 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.07.875.762 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.07.875.762 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.07.875.763 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.07.875.763 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.08.191.078 I slot print_timing: id  3 | task 2274 | n_decoded =    100, tg = 326.94 t/s
+0.08.326.981 I slot print_timing: id  3 | task 2274 | prompt eval time =       9.44 ms /    42 tokens (    0.22 ms per token,  4449.62 tokens per second)
+0.08.326.999 I slot print_timing: id  3 | task 2274 |        eval time =     441.77 ms /   144 tokens (    3.07 ms per token,   325.96 tokens per second)
+0.08.326.999 I slot print_timing: id  3 | task 2274 |       total time =     451.21 ms /   186 tokens
+0.08.327.000 I slot print_timing: id  3 | task 2274 |    graphs reused =       2343
+0.08.327.051 I slot      release: id  3 | task 2274 | stop processing: n_tokens = 1017, truncated = 0
+0.08.327.064 I srv  update_slots: all slots are idle
+0.08.329.944 I slot get_availabl: id  3 | task -1 | selected slot by LCP similarity, sim_best = 0.967 (> 0.100 thold), f_keep = 0.849
+0.08.329.969 I slot launch_slot_: id  3 | task 2419 | processing task, is_child = 0
+0.08.329.977 I slot process_sing: id  0 | task -1 | saving idle slot to prompt cache
+0.08.329.978 I slot prompt_clear: id  0 | task -1 | clearing prompt with 0 tokens
+0.08.329.981 I slot process_sing: id  1 | task -1 | saving idle slot to prompt cache
+0.08.329.981 I slot prompt_clear: id  1 | task -1 | clearing prompt with 0 tokens
+0.08.329.983 I slot process_sing: id  2 | task -1 | saving idle slot to prompt cache
+0.08.329.983 I slot prompt_clear: id  2 | task -1 | clearing prompt with 0 tokens
+0.08.793.211 I slot print_timing: id  3 | task 2419 | prompt eval time =       9.20 ms /    29 tokens (    0.32 ms per token,  3151.15 tokens per second)
+0.08.793.232 I slot print_timing: id  3 | task 2419 |        eval time =     454.01 ms /   144 tokens (    3.15 ms per token,   317.17 tokens per second)
+0.08.793.232 I slot print_timing: id  3 | task 2419 |       total time =     463.21 ms /   173 tokens
+0.08.793.233 I slot print_timing: id  3 | task 2419 |    graphs reused =       2484
+0.08.793.289 I slot      release: id  3 | task 2419 | stop processing: n_tokens = 1035, truncated = 0
+0.08.793.296 I srv  update_slots: all slots are idle
+0.08.795.323 I srv    operator(): operator(): cleaning up before exit...

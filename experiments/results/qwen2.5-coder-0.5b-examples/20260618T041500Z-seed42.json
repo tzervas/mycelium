@@ -1,0 +1,433 @@
+{
+  "arms": {
+    "mycelium": {
+      "eventual_pass_rate": 0.0,
+      "first_attempt_pass_rate": 0.0,
+      "mean_iterations_to_pass": null,
+      "outcomes": [
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 3,
+          "passed": false,
+          "task": "kc2-01-literal"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 3,
+          "passed": false,
+          "task": "kc2-02-complement"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 3,
+          "passed": false,
+          "task": "kc2-03-xor"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 3,
+          "passed": false,
+          "task": "kc2-04-ternary-add"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 3,
+          "passed": false,
+          "task": "kc2-05-swap"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 3,
+          "passed": false,
+          "task": "kc2-06-helper"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 3,
+          "passed": false,
+          "task": "kc2-07-data-match"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 3,
+          "passed": false,
+          "task": "kc2-08-matured"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 3,
+          "passed": false,
+          "task": "kc2-09-iterate-for"
+        },
+        {
+          "first_attempt_passed": false,
+          "first_attempt_valid": false,
+          "iterations": 3,
+          "passed": false,
+          "task": "kc2-10-iterate-recursion"
+        }
+      ],
+      "ran": true,
+      "syntactic_validity_rate": 0.0
+    }
+  },
+  "assessment": {
+    "arms": {
+      "mycelium": {
+        "edit_to_fix_leverage": 0.0,
+        "eventual_pass_rate": 0.0,
+        "first_attempt_pass_rate": 0.0,
+        "first_attempt_rating": "weak",
+        "mean_iterations_to_pass": null,
+        "never_passed_tasks": [
+          "kc2-01-literal",
+          "kc2-02-complement",
+          "kc2-03-xor",
+          "kc2-04-ternary-add",
+          "kc2-05-swap",
+          "kc2-06-helper",
+          "kc2-07-data-match",
+          "kc2-08-matured",
+          "kc2-09-iterate-for",
+          "kc2-10-iterate-recursion"
+        ],
+        "parsed_but_failed_first": [],
+        "ran": true,
+        "syntactic_validity_rate": 0.0
+      }
+    },
+    "caveats": [
+      "coarse signal: 10 tasks \u2014 each task is ~10.0pp; do not over-read small gaps",
+      "first-attempt pass rate is the SC-5b number; eventual-minus-first is the edit-to-fix (G10) leverage signal",
+      "rates depend on the primer (generator configuration) and the model/seed \u2014 record them with the verdict"
+    ],
+    "comparison": null,
+    "decision": "deferred to the maintainer (VR-5) \u2014 this is descriptive analysis of the measured rates, NOT the KC-2 verdict"
+  },
+  "attempts": [
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-01-literal",
+      "wall_seconds": 0.092
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code). Structure \u2014 a program is a `nodule <name>` header, then one or more declarations:\n  nodule bench\n  fn main() -> Binary{8} = not(0b0110_1001)\nFunctions: fn name(p: Type, ...) -> RetType = <expr>   (the body is ONE expression\n",
+      "syntactically_valid": false,
+      "task": "kc2-01-literal",
+      "wall_seconds": 0.167
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 3,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-01-literal",
+      "wall_seconds": 0.052
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-02-complement",
+      "wall_seconds": 0.055
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-02-complement",
+      "wall_seconds": 0.051
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 3,
+      "diagnostic": "parse-error: parse error at 3:1: expected `(` to open the parameter list, found Eof",
+      "passed": false,
+      "source": "nodule demo\nfn twice\n",
+      "syntactically_valid": false,
+      "task": "kc2-02-complement",
+      "wall_seconds": 0.165
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-03-xor",
+      "wall_seconds": 0.051
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-03-xor",
+      "wall_seconds": 0.05
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 3,
+      "diagnostic": "parse-error: parse error at 1:1: unexpected character '`'",
+      "passed": false,
+      "source": "```\n",
+      "syntactically_valid": false,
+      "task": "kc2-03-xor",
+      "wall_seconds": 0.013
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code). Structure \u2014 a program is a `nodule <name>` header, then one or more declarations:\n  nodule bench\n  fn main() -> Binary{8} = not(0b0110_1001)\nFunctions: fn name(p: Type, ...) -> RetType = <expr>   (the body is ONE expression\n",
+      "syntactically_valid": false,
+      "task": "kc2-04-ternary-add",
+      "wall_seconds": 0.163
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-04-ternary-add",
+      "wall_seconds": 0.05
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 3,
+      "diagnostic": "parse-error: parse error at 1:53: unexpected character '`'",
+      "passed": false,
+      "source": "To solve the problem of defining a nullary function `main` that returns the balanced-ternary sum of the 4-trit words 00+- and 0+0-, we need to correctly define the expression for the balanced-ternary sum of two equal-width trit words. The balanced-ternary sum of two trit words is calculated by XORing the trit glyphs of the two words.\n\nHere's the corrected program source:\n\n```mymel\n",
+      "syntactically_valid": false,
+      "task": "kc2-04-ternary-add",
+      "wall_seconds": 0.163
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code). Structure \u2014 a program is a `nodule <name>` header, then one or more declarations:\n  nodule bench\n  fn main() -> Binary{8} = not(0b0110_1001)\nFunctions: fn name(p: Type, ...) -> RetType = <expr>   (the body is ONE expression\n",
+      "syntactically_valid": false,
+      "task": "kc2-05-swap",
+      "wall_seconds": 0.17
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-05-swap",
+      "wall_seconds": 0.053
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 3,
+      "diagnostic": "parse-error: parse error at 3:1: expected a non-negative integer, found Eof",
+      "passed": false,
+      "source": "nodule demo\nfn twice_xor(x: Binary{8}) -> Binary{\n",
+      "syntactically_valid": false,
+      "task": "kc2-05-swap",
+      "wall_seconds": 0.172
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code). Structure \u2014 a program is a `nodule <name>` header, then one or more declarations:\n  nodule bench\n  fn main() -> Binary{8} = not(0b0110_1001)\nFunctions: fn name(p: Type, ...) -> RetType = <expr>   (the body is ONE expression\n",
+      "syntactically_valid": false,
+      "task": "kc2-06-helper",
+      "wall_seconds": 0.168
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-06-helper",
+      "wall_seconds": 0.05
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 3,
+      "diagnostic": "parse-error: parse error at 4:1: expected an expression, found Eof",
+      "passed": false,
+      "source": "nodule demo\ntype Nat = Z | S(Nat)\nfn weigh(n: Nat) -> Ternary{4} =\n",
+      "syntactically_valid": false,
+      "task": "kc2-06-helper",
+      "wall_seconds": 0.165
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-07-data-match",
+      "wall_seconds": 0.059
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-07-data-match",
+      "wall_seconds": 0.053
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 3,
+      "diagnostic": "parse-error: parse error at 1:1: unexpected character '`'",
+      "passed": false,
+      "source": "```\n",
+      "syntactically_valid": false,
+      "task": "kc2-07-data-match",
+      "wall_seconds": 0.014
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-08-matured",
+      "wall_seconds": 0.051
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-08-matured",
+      "wall_seconds": 0.051
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 3,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-08-matured",
+      "wall_seconds": 0.051
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code). Structure \u2014 a program is a `nodule <name>` header, then one or more declarations:\n  nodule bench\n  fn main() -> Bytes{8} = fold([1111_0000, 0000_1111])\n\nFunctions: fn name(p: Type, ...) -> RetType = <expr>   (the body is ONE expression after `=`).\n\n`mature\n",
+      "syntactically_valid": false,
+      "task": "kc2-09-iterate-for",
+      "wall_seconds": 0.2
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-09-iterate-for",
+      "wall_seconds": 0.053
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 3,
+      "diagnostic": "parse-error: parse error at 1:18: unexpected '-' (expected '->')",
+      "passed": false,
+      "source": "To declare a list-shaped type `Bytes` (constructors: `End`, and `More` carrying one 8-bit binary word and the rest of the list), define a nullary function `main` that folds xor over the two-element list [1111_0000, 0000_1111] starting from 0000_0000, using the language's bounded iteration form.\n\nYour previous attempt failed its checker with this diagnostic:\n  parse-error: parse error at 1\n",
+      "syntactically_valid": false,
+      "task": "kc2-09-iterate-for",
+      "wall_seconds": 0.19
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 1,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code).\n",
+      "syntactically_valid": false,
+      "task": "kc2-10-iterate-recursion",
+      "wall_seconds": 0.051
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 2,
+      "diagnostic": "parse-error: parse error at 1:74: unexpected character ';'",
+      "passed": false,
+      "source": "no prose, no markdown fences, no comments (Mycelium has NO comment syntax; every line is code). Structure \u2014 a program is a `nodule <name>` header, then one or more declarations:\n  nodule bench\n  fn main() -> Binary{8} = not(0b0110_1001)\nFunctions: fn name(p: Type, ...) -> RetType = <expr>   (the body is ONE expression after `=`).\n`matured fn ... = ...` marks a promoted, total component, e.g. matured fn unit() -> Ternary{1} = <0>\n\nTypes and literals (most-significant digit first\n",
+      "syntactically_valid": false,
+      "task": "kc2-10-iterate-recursion",
+      "wall_seconds": 0.247
+    },
+    {
+      "arm": "mycelium",
+      "attempt": 3,
+      "diagnostic": "parse-error: parse error at 1:1: expected a `nodule` header to open the program, found Type",
+      "passed": false,
+      "source": "type Bytes = End | More(Binary{8}, Bytes)\n",
+      "syntactically_valid": false,
+      "task": "kc2-10-iterate-recursion",
+      "wall_seconds": 0.247
+    }
+  ],
+  "backend": "server(managed)",
+  "edit_to_fix_budget": 3,
+  "experiment": "KC-2 LLM-leverage (M-002; Foundation \u00a76 P0.2)",
+  "model": "/models/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf",
+  "run": "seed42",
+  "run_utc": "20260618T041500Z",
+  "sc5b": 0.0,
+  "seed": 42,
+  "task_count": 10,
+  "timing": {
+    "attempts": 30,
+    "mean_attempt_seconds": 0.1,
+    "total_generation_seconds": 3.12
+  },
+  "verdict": "not established \u2014 the KC-2 verdict (proceed / reweight-to-human / fall-back-to-embedded-DSL) requires a maintainer-written analysis of this run; this harness never pre-writes it (VR-5)"
+}

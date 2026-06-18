@@ -65,20 +65,35 @@ class MyceliumChecker:
             msg = f"MYC_CHECK points at a non-existent file: {env}"
             raise ToolUnavailable(msg)
         root = _repo_root()
-        built = root / "target" / "debug" / "myc-check"
+        exe = "myc-check.exe" if os.name == "nt" else "myc-check"
+        built = root / "target" / "debug" / exe
         if built.is_file():
             return built
+        # The `myc-check` binary lives in the `mycelium-check` crate (NOT mycelium-l1).
+        cmd = ["cargo", "build", "-p", "mycelium-check", "--bin", "myc-check"]
         try:
-            subprocess.run(
-                ["cargo", "build", "-q", "-p", "mycelium-l1", "--bin", "myc-check"],
+            proc = subprocess.run(
+                cmd,
                 cwd=root,
-                check=True,
                 capture_output=True,
-                timeout=600,
+                text=True,
+                timeout=900,
             )
-        except (OSError, subprocess.SubprocessError) as e:
-            msg = f"myc-check is not built and cargo could not build it: {e}"
+        except OSError as e:
+            msg = f"could not run cargo ({' '.join(cmd)}): {e}"
             raise ToolUnavailable(msg) from e
+        if proc.returncode != 0:
+            # Never-silent: surface cargo's actual diagnostic, not just the exit code,
+            # so a real compile failure is actionable instead of a bare "exit 101".
+            # Keep WHOLE trailing lines (the last N) — a raw byte-tail cut mid-line and
+            # rendered as garbage like "y: cc help". The first line stays the concise
+            # reason a summary can show; the rest is the actionable detail.
+            raw_lines = (proc.stderr or proc.stdout or "").strip().splitlines()
+            tail = raw_lines[-25:]
+            prefix = "…(truncated; full output in the cargo log)\n" if len(raw_lines) > 25 else ""
+            detail = prefix + "\n".join(tail)
+            msg = f"`{' '.join(cmd)}` failed (exit {proc.returncode}). {detail}"
+            raise ToolUnavailable(msg)
         if not built.is_file():
             msg = f"cargo reported success but {built} does not exist"
             raise ToolUnavailable(msg)

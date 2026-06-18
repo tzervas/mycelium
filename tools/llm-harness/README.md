@@ -4,6 +4,11 @@ A small, portable Python harness for validating llama.cpp (GGUF) model behaviour
 against Mycelium's honesty and correctness properties. Designed to run under
 Termux on Android (ARM/aarch64) with zero external Python dependencies.
 
+> **Running the full test/experiment sequence?** This harness is **step 1** (validate
+> the model + honesty gates). The end-to-end run order — doctor → these validations →
+> the KC-2 LLM-leverage experiment (M-002) against the same local model — lives in
+> [`experiments/README.md`](../../experiments/README.md).
+
 ## Honesty posture (non-negotiable)
 
 These rules are enforced by the harness, not just documented:
@@ -193,7 +198,8 @@ you can always supply a self-verified file via `--model` or a vetted `--model-sh
 ```sh
 pkg update && pkg upgrade
 pkg install python git              # Python drives the harness; git to clone
-pkg install llama-cpp               # provides llama-cli/llama-server in $PREFIX/bin (on PATH)
+pkg install llama-cpp               # CLI lands in $PREFIX/bin (on PATH) — note: Termux
+                                    # names it `llama` (not `llama-cli`); the harness accepts either
 ```
 
 `pkg install llama-cpp` is the **easy path** on Termux — a repo-signed, prebuilt
