@@ -244,6 +244,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-std-cmp"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-std-core",
+]
+
+[[package]]
+name = "mycelium-std-collections"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-std-core",
+]
+
+[[package]]
 name = "mycelium-std-content"
 version = "0.0.0"
 dependencies = [
@@ -263,6 +279,62 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-dense",
+]
+
+[[package]]
+name = "mycelium-std-error"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-std-core",
+]
+
+[[package]]
+name = "mycelium-std-fmt"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-std-core",
+]
+
+[[package]]
+name = "mycelium-std-fs"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-std-core",
+]
+
+[[package]]
+name = "mycelium-std-io"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-std-core",
+]
+
+[[package]]
+name = "mycelium-std-iter"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-std-core",
+]
+
+[[package]]
+name = "mycelium-std-math"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-std-core",
+]
+
+[[package]]
+name = "mycelium-std-rand"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-std-core",
 ]
 
 [[package]]
@@ -287,6 +359,30 @@ name = "mycelium-std-ternary"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
+]
+
+[[package]]
+name = "mycelium-std-testing"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-std-core",
+]
+
+[[package]]
+name = "mycelium-std-text"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-std-core",
+]
+
+[[package]]
+name = "mycelium-std-time"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-std-core",
 ]
 
 [[package]]
