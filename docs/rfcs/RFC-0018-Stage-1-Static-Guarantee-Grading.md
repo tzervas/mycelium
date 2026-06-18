@@ -584,6 +584,17 @@ be discharged before ratification.*
 
 ## 11. Research prompt (pre-ratification variant pass)
 
+**Status: DISCHARGED — `research/09-stage-1-grading-noninterference-RECORD.md` (2026-06-18).**
+The variant pass below has been executed (RP-2). The record delivers all three items: the
+Design-A/B distinguishing counterexample (the `pick` program), the data-provenance noninterference
+theorem with a proof sketch reduced to the existing `meet`/`propagate` implementation and the
+RFC-0002 certificate checker, R7-Q2 closure, and recommendations for R18-Q1 (Design A) and R18-Q4
+(certificate reference at the type level; validity at elaboration/runtime). **Honest scope:** the
+result is tagged **Declared-with-argument** (a stated theorem with a proof sketch), *not* `Proven` —
+mechanization is the basis for a future `Proven` upgrade. The maintainer's R18-Q1/R18-Q4 decisions
+remain the gate; the *research* gating them is now closed. The original prompt is retained below
+verbatim (append-only).
+
 > **This block is a required pre-ratification deliverable, not a normative part of this RFC.**
 > It must be executed as a separate research pass before the maintainer ratifies this RFC. The
 > findings feed back into §4.5 (the Design A/B choice), §8 (resolving or narrowing R18-Q1 through
@@ -658,3 +669,15 @@ machine-checked, so it can be tracked as a proof obligation.
   (stage-0 dynamic check remains in force; this draft supersedes only if Accepted). Flagged novel
   per T3.2; ratification gated on the maintainer's Design A/B decision (R18-Q1), the §11 variant
   pass, and R18-Q4. RFC-0006 Q3 / RFC-0007 §8 R7-Q2 are discharged contingently on R18-Q1.
+- **2026-06-18 — §11 research prompt DISCHARGED (RP-2).** The pre-ratification variant pass is
+  executed in `research/09-stage-1-grading-noninterference-RECORD.md`: the Design-A/B distinguishing
+  counterexample (T9.3), the data-provenance noninterference theorem + proof sketch reduced to the
+  existing `meet`/`propagate` implementation and the RFC-0002 certificate checker (T9.4–T9.5), the
+  purity precondition that bounds Design A's sufficiency (T9.6), R7-Q2 closure (T9.7), and the R18-Q4
+  recommendation (T9.8). The record **recommends Design A** (R18-Q1) and **"certificate reference at
+  the type level, validity at elaboration/runtime"** (R18-Q4), and tags the soundness result
+  **Declared-with-argument** (not machine-checked — VR-5; mechanization is the future `Proven`
+  basis). **Status stays Draft:** of the three §10 ratification gates, gate 2 (the §11 research
+  prompt) is now discharged; gates 1 (R18-Q1) and 3 (R18-Q4) await the maintainer's append-only
+  decision (both recommended above). No normative rule changed — this is the grounding the decision
+  was waiting on. Append-only.

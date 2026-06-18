@@ -8,6 +8,25 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: RP-2 discharged — stage-1 grading noninterference, RFC-0018)
+Begins the next wave's Track B (RFC ratification research) with the flagged-novel grading RFC.
+- **`research/09-stage-1-grading-noninterference-RECORD.md`** — discharges RP-2 / RFC-0018 §11 (the
+  pre-ratification noninterference obligation). Findings T9.1–T9.8: the lattice as a Biba integrity
+  lattice with certified-`Swap` endorsement (T9.1); the two candidate properties and which one VR-5
+  demands — *data-provenance*, not full IFC secrecy (T9.2); the Design-A/B distinguishing
+  counterexample, the `pick` program (T9.3); the **data-provenance noninterference theorem + proof
+  sketch**, reduced to the existing `meet`/`propagate` implementation and the RFC-0002 certificate
+  checker so the novelty is isolated to `G-Swap` (T9.4–T9.5); the purity precondition bounding
+  Design A's sufficiency (T9.6); R7-Q2 closure (T9.7); and the R18-Q4 recommendation (T9.8).
+- *Honest scope (VR-5):* the soundness result is tagged **Declared-with-argument** (a stated theorem
+  with a proof sketch), **not** `Proven` — mechanization (Lean/LiquidHaskell) is the basis for a
+  future `Proven` upgrade, named not claimed. The empirical/decision items it cannot settle (the
+  R18-Q1 maintainer choice) are recommended (Design A), not ratified.
+- **RFC-0018 §11 marked DISCHARGED**, Meta-changelog appended; **RP-2 status → research-discharged**
+  in `research-prompts.md`; Doc-Index RFC-0018 row updated. **RFC-0018 stays Draft** — of its three
+  §10 ratification gates, the research gate (2) is now closed; gates 1 (R18-Q1) and 3 (R18-Q4) await
+  the maintainer's append-only decision (both recommended in `research/09`). No normative rule changed.
+
 ### Added (2026-06-18: next-wave plan + R7-Q4 enactment — content-addressed prim table)
 The post-#194 wave is sorted into a plan, and its leading item is begun.
 - **DN-11 — Next-Wave Plan (Draft / Resolved-as-capture).** Indexes the KC-2-unblocked work into

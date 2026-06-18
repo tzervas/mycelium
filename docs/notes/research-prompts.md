@@ -60,8 +60,12 @@ decoding conditions showing further lift — consistent with the MTOB and gramma
 
 ## RP-2 — Stage-1 Grading: Implicit-Flows Decision and Noninterference Proof
 
-**Status:** Open (RFC-0007 §4.3 is stage-0 dynamic tags; stage-1 static grading is a named
-revision; the implicit-flows sub-decision is the load-bearing open question).
+**Status:** **Research discharged (2026-06-18)** — `research/09-stage-1-grading-noninterference-RECORD.md`
+delivers the counterexample, the data-provenance noninterference theorem + proof sketch, R7-Q2
+closure, and the Design-A / R18-Q4 recommendations (RFC-0018 §11 marked discharged). The soundness
+result is tagged **Declared-with-argument** (not machine-checked — a future `Proven` upgrade needs
+mechanization). The *research* gate is closed; RFC-0018 ratification now awaits only the maintainer's
+append-only R18-Q1 (Design A vs B) and R18-Q4 decisions. (Original prompt retained below.)
 
 **Question.** For the stage-1 static guarantee-grading RFC (a revision of RFC-0007 §4.3 / RFC-0006
 Q3): do *implicit flows* taint guarantee grades, or do guarantee grades track data lineage only?
