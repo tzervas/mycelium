@@ -40,8 +40,14 @@ pub enum Tok {
     Trait,
     /// `fn` — function.
     Fn,
-    /// `matured` — promoted stable component (themed).
+    /// `matured` — **reserved keyword** (RFC-0017): maturation is now a scope/header attribute
+    /// (`// @matured: true`), not a function modifier. Using it at item position is a parse error
+    /// with a teaching diagnostic. Kept as a reserved keyword so it can never silently become an
+    /// identifier (G2).
     Matured,
+    /// `thaw` — de-maturation marker (RFC-0017 §4.3): `thaw fn f(…) -> T = …` keeps one
+    /// definition interpreted inside an otherwise-matured scope.
+    Thaw,
     /// `let`.
     Let,
     /// `in`.
@@ -187,6 +193,7 @@ pub fn keyword(word: &str) -> Option<Tok> {
         "trait" => Tok::Trait,
         "fn" => Tok::Fn,
         "matured" => Tok::Matured,
+        "thaw" => Tok::Thaw,
         "let" => Tok::Let,
         "in" => Tok::In,
         "if" => Tok::If,

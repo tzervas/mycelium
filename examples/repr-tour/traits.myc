@@ -3,15 +3,15 @@
 // @license: Apache-2.0
 // @authors: Tyler Zervas
 // @since: 2026-06-17
-// @updated: 2026-06-17
-// @summary: A trait (a set of fn signatures over a type parameter; RFC-0004) and a matured fn (a promoted stable component subject to the matured ⟹ total gate, RFC-0007 §4.5), plus one total ternary witness via the `neg` prim.
+// @updated: 2026-06-18
+// @summary: A trait (a set of fn signatures over a type parameter; RFC-0004) and two total functions over different reprs, with one total ternary witness via the `neg` prim. (Maturation is now a scope attribute declared in the header/manifest — RFC-0017; `matured fn` is retired. The `// @matured: true` header key + the `thaw fn` de-maturation form are exercised in the grammar conformance corpus, `docs/spec/grammar/conformance/`, pending full mycfmt round-trip support.)
 nodule tour.traits
 
 trait Negate<T> {
   fn negate(x: T) -> T
 }
 
-matured fn identity(x: Binary{8}) -> Binary{8} =
+fn identity(x: Binary{8}) -> Binary{8} =
   x
 
 fn flip(x: Ternary{6}) -> Ternary{6} =

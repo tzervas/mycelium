@@ -187,8 +187,8 @@ pub(crate) fn resolve_ty(
 }
 
 /// Check a whole nodule: build the registry (prelude + declarations), then type every function
-/// body against its signature, classify totality, and enforce the `matured ⟹ total` gate
-/// (RFC-0007 §4.5). Returns the checked [`Env`].
+/// body against its signature, classify totality. No maturation gate is applied (the scope is
+/// treated as non-matured). Returns the checked [`Env`].
 ///
 /// As of M-344 (RFC-0012) the input is first run through the **ambient resolution pass**
 /// ([`crate::ambient::resolve`]) — paradigm-less reprs are filled, `with paradigm` blocks stripped,
@@ -198,14 +198,21 @@ pub fn check_nodule(nodule: &Nodule) -> Result<Env, CheckError> {
     check_and_resolve(nodule).map(|(env, _)| env)
 }
 
-/// Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program
-/// (paradigm tags filled *and* bare-decimal widths resolved from context) — the source the M-142/LSP
-/// "expand ambient" projection renders (RFC-0012 §5). The returned [`Nodule`] elaborates to the
-/// identical L0 (and content hash) as the original (I2; RFC-0012 §4.3).
-pub fn check_and_resolve(nodule: &Nodule) -> Result<(Env, Nodule), CheckError> {
+/// Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`,
+/// every reachable definition whose `thaw == false` must be `Total` (the existing totality
+/// classifier, unchanged) — a non-total non-thaw definition is an explicit `CheckError`. Definitions
+/// marked `thaw` are exempt from the gate (RFC-0017 §4.3). When `matured_scope` is `false` this
+/// is identical to [`check_nodule`].
+pub fn check_nodule_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, CheckError> {
+    check_and_resolve_matured(nodule, matured_scope).map(|(env, _)| env)
+}
+
+fn check_and_resolve_matured(
+    nodule: &Nodule,
+    matured_scope: bool,
+) -> Result<(Env, Nodule), CheckError> {
     let resolved = crate::ambient::resolve(nodule)?;
-    let env = check_resolved(&resolved)?;
-    // Rebuild the twin with the checker-resolved fn bodies (bare-decimal widths now concrete).
+    let env = check_resolved_matured(&resolved, matured_scope)?;
     let mut items = Vec::with_capacity(resolved.items.len());
     for item in &resolved.items {
         match item {
@@ -227,8 +234,17 @@ pub fn check_and_resolve(nodule: &Nodule) -> Result<(Env, Nodule), CheckError> {
     Ok((env, twin))
 }
 
-/// The core checker, run on an already ambient-resolved nodule.
-fn check_resolved(nodule: &Nodule) -> Result<Env, CheckError> {
+/// Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program
+/// (paradigm tags filled *and* bare-decimal widths resolved from context) — the source the M-142/LSP
+/// "expand ambient" projection renders (RFC-0012 §5). The returned [`Nodule`] elaborates to the
+/// identical L0 (and content hash) as the original (I2; RFC-0012 §4.3).
+pub fn check_and_resolve(nodule: &Nodule) -> Result<(Env, Nodule), CheckError> {
+    check_and_resolve_matured(nodule, false)
+}
+
+/// The core checker, run on an already ambient-resolved nodule, with an explicit maturation flag.
+/// When `matured_scope` is true, every fn with `thaw == false` must be `Total` (RFC-0017 §4.2).
+fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, CheckError> {
     let mut types = BTreeMap::new();
     let p = prelude();
     types.insert(p.name.clone(), p);
@@ -306,7 +322,7 @@ fn check_resolved(nodule: &Nodule) -> Result<Env, CheckError> {
         resolved_fns.insert(
             fd.sig.name.clone(),
             FnDecl {
-                matured: fd.matured,
+                thaw: fd.thaw,
                 sig: fd.sig.clone(),
                 body,
             },
@@ -314,14 +330,22 @@ fn check_resolved(nodule: &Nodule) -> Result<Env, CheckError> {
     }
     let fns = resolved_fns;
 
-    // Pass 4: totality classification + the matured gate (RFC-0007 §4.5).
+    // Pass 4: totality classification + the scope-quantified matured gate (RFC-0017 §4.2).
+    // When `matured_scope` is true, every fn with `thaw == false` must be `Total`; a non-total
+    // non-thaw fn is an explicit error (RFC-0007 §4.5 / RFC-0017 §4.2). A `thaw` fn is exempt.
     let totality = crate::totality::classify_all(&fns);
-    for fd in fns.values() {
-        if fd.matured && totality[&fd.sig.name] != crate::totality::Totality::Total {
-            return Err(CheckError::new(
-                &fd.sig.name,
-                "`matured` requires a checked-total definition (RFC-0007 §4.5) — this one is partial",
-            ));
+    if matured_scope {
+        for fd in fns.values() {
+            if !fd.thaw && totality[&fd.sig.name] != crate::totality::Totality::Total {
+                return Err(CheckError::new(
+                    &fd.sig.name,
+                    format!(
+                        "`{}` is in a matured scope and must be total (RFC-0007 §4.5 / \
+                         RFC-0017 §4.2) — mark it `thaw fn` to exempt it, or make it total",
+                        fd.sig.name
+                    ),
+                ));
+            }
         }
     }
 

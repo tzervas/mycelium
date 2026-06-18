@@ -90,6 +90,7 @@ metadata lines follow. Compact, greppable, one closed key set shared with the ma
 | `@repository` | source URL | from `project.repository` |
 | `@keywords` | comma-separated discovery tags | from `project.keywords` |
 | `@deprecated` | `true`/`false` or a reason string — flags the nodule superseded | **per-file** (not inherited — a nodule flags *itself*) |
+| `@matured` | `true`/`false` (default `false`) — the nodule/phylum is a **matured** (compiled-and-frozen, AOT) scope (RFC-0017) | **inherited** (a matured phylum/nodule-root matures its subnodules; a subnodule may set `false` to stay interpreted) |
 
 A **phylum/nodule root** carries the fuller header; a **subnodule** typically carries only the marker:
 
@@ -181,6 +182,16 @@ are chosen above; please confirm or redirect (append-only either way):
 
 ## Meta — changelog
 
+- **2026-06-18 — `@matured` key added (RFC-0017); append-only.** RFC-0017 (Maturation Scope &
+  De-maturation, Accepted) extends the closed v0 key set with **`@matured`** (`true`/`false`, default
+  `false`) — the **inherited** header key declaring a `nodule`/`phylum` a matured (compiled-and-frozen,
+  AOT) scope — and adds the program/package manifest forms **`[project].matured = true`** /
+  **`[build].matured = ["<scope>", …]`** (a build target set, RFC-0004 §4). This is the "explicit
+  decision" the §7-#3 closed-key-set rule requires for any addition (the v0 set is now 10 keys: the
+  prior 9 + `@matured`). `@matured` is *associated* metadata — it does **not** perturb a definition's
+  content hash (ADR-003; same code compiled or interpreted is the same definition); its effective value
+  and provenance are `EXPLAIN`-able like every other resolved field (§4). The retired per-`fn` `matured`
+  modifier is replaced by this scope key + the in-source `thaw` de-maturation marker (RFC-0017 §4.3).
 - **2026-06-16 — Accepted; §7 choices ratified; enacted (M-359).** The maintainer ratified the three open
   §7 choices: **(2) header sigil `// @key: value`**; **(3) the v0 key set extended** with `repository`,
   `keywords`, and `deprecated` (9 keys over the `nodule:` marker, closed); **(4) `@updated`

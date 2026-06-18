@@ -8,6 +8,67 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: KC-2-unblocked surface/type-system designs — Wave 2 of the maturation pass)
+With the KC-2 gate cleared (DN-09), the deferred L-layer designs are drafted in dependency order.
+The deep-novel ones land as **Draft** with a pre-ratification **research prompt** (VR-5 — only the
+KC-2 verdict, RFC-0017, and the L3 commit are ratified this pass; these are grounded direction):
+- **RFC-0018 — Stage-1 Static Guarantee Grading (Draft).** The graded judgment RFC-0006 Q3 /
+  RFC-0007 §4.3 deferred: the guarantee lattice as a graded coeffect modality, `Swap`+certificate the
+  sole endorsement point. Surfaces the **implicit-flows decision** (R18-Q1) as a required maintainer
+  choice + a noninterference proof obligation (research prompt RP-2). Flagged-novel.
+- **RFC-0019 — Traits & Parametric Polymorphism / LR-2 (Draft).** Dictionary-passing elaboration to
+  existing L1 nodes (kernel budget unchanged), coherence under content-addressed identity;
+  Repr-polymorphism (LR-5) + guarantee-indexed methods (LR-6) flagged-novel (RP-3).
+- **RFC-0020 — The L2 Surface Term Language (Draft).** The programmer-facing surface as
+  elaboration-defined (no independent semantics): inference, content-addressed modules, pattern sugar
+  → Maranget-flat L1 `Match`, derived forms; usability-first (DN-09 §3.2).
+- **RFC-0021 — Semantic-Level Projection Framework (Draft).** M-380/FR-C1/G11: projections as
+  inspectable views over content-addressed defs; the LLM-facing canonical projection (FR-S5) as the
+  lever to lift surface leverage. Gated on the G11-ergonomics + T3.6 prompts (RP-1, RP-4).
+- **DN-10 — Remaining L1 Gaps.** Planning capture of R7-Q3 (mutual-recursion surface elaboration) and
+  R7-Q4 (prim table → content-addressed declarations), each purely additive, with spike prompts.
+- **research-prompts.md — Standing Research Prompts.** Consolidated index RP-1…RP-7 for variant passes.
+- **Ripple (corpus consistency):** the KC-2 status flips (phase-3 §5 verdict row, M-002 → done,
+  E3-1/M-380 → design-active; Foundation §6 P0.2; SPECIFICATION §10.2; self-hosting-readiness
+  capability #3 → ready) and the maturation cross-ref notes (RFC-0004 §4, RFC-0008, RFC-0014 §4.7).
+- **Indices:** Doc-Index + RFCs README updated for RFC-0017…0021, DN-10, research-prompts.
+
+### Decided (2026-06-18: KC-2 verdict + maturation-scope ratification — language-maturation pass)
+- **DN-09 — the KC-2 verdict = proceed.** The maintainer recorded a verdict on the M-002 LLM-leverage
+  run (local Qwen2.5-Coder, 10-task gold set, seed 42): measured leverage is *weak-but-recoverable*
+  (best arm 7B+examples: 40% first-attempt → **70% eventual**, **+30pp edit-to-fix** via the G10
+  semantic-feedback loop), so KC-2's "irrecoverable collapse even with feedback" kill criterion
+  (Foundation §2.4) is **not triggered**. This **closes the standing KC-2 gate** the corpus parked on.
+  Honest scope (VR-5): single seed / 10 tasks / local ≤7B; the rigorous T3.6 retention-ratio ablation
+  was **not** run and stays a tracked research follow-up.
+- **RFC-0006 → r5: concrete L3 surface committed.** The verdict discharges §8 Q1 (the one deliberate
+  deferral): the L3 strategy is **committed text syntax** (the v0 grammar `docs/spec/grammar/mycelium.ebnf`
+  becomes the real surface, refined append-only) **+ a co-equal structured-projection layer** (M-380,
+  FR-S5). Q6 literal spelling is now committable. Q3 (stage-1 grading) and the Q8 `unsafe` *spelling*
+  stay open on their own merits (never KC-2-gated). The embedded-DSL fallback (RR-3) is retained unspent.
+- **RFC-0017 (new, Accepted) — Maturation Scope & De-maturation; ratifies DN-08 (→ Resolved).** Lifts
+  `matured` from **per-definition** to **scope** granularity: a `nodule`/`phylum` is matured via its
+  **header** (`// @matured: true`), a program/package via its **`mycelium-proj.toml` manifest**;
+  **`matured fn` is retired** (per-definition maturation no longer expressible — maintainer decision).
+  Reserves **`thaw`** (Surface, conventional-clearest — `germinate` taken by ADR-013; DN-02 three-test gate in §5) as the in-source
+  **de-maturation** marker (`thaw fn …` keeps one definition interpreted inside a matured scope —
+  never-silent, `EXPLAIN`-able, weakens no advertised honesty tag). **Supersedes RFC-0007 §4.5
+  *granularity*** append-only — the `matured ⟹ total` gate + totality classifier are **unchanged**,
+  §4.2 merely quantifies them over the matured scope. Reifies a per-scope maturation record (the M-311
+  certificate's roll-up, §4.4).
+
+### Changed (2026-06-18: corpus ripple for the KC-2 verdict + RFC-0017)
+- **Grammar (`mycelium.ebnf`):** `fn_item` drops the `matured?` prefix and gains an optional
+  `thaw` prefix; `matured` is reframed as a header/manifest key (reserved word, no term
+  production); the surface is marked the **committed L3 text surface** (DN-09). **Conformance corpus:**
+  `accept/08-matured-fn.myc` → `accept/08-maturation-and-thaw.myc` (header maturation + a
+  `thaw fn`); new `reject/11-matured-fn-retired.myc` (the old `matured fn` form now rejects).
+- **RFC-0007 §4.5 + changelog**, **Glossary §2.10 + new §2.10.1 `thaw`**, **grammar README**,
+  **DN-03 changelog** (`thaw` reservation pointer), **Example-Programs-Reference #8**, and
+  **Doc-Index** updated for the scope-level maturation + the new docs. (RFC-0004/0008/0014 cross-refs,
+  the Nodule-Header `@matured` key, and the planning/Foundation/SPEC/self-hosting KC-2-status flips
+  land alongside.)
+
 ### Changed (2026-06-18: PR #193 reproducibility + supply-chain hardening)
 - **llama.cpp traceability:** the container build records the exact llama.cpp commit that produced
   the binaries to `/opt/llama-cpp.commit` (and an image `LABEL`), so results trace to precise code

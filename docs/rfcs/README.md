@@ -4,7 +4,7 @@ An RFC is a detailed, normative design of a subsystem that multiple decisions pl
 
 ## Status set
 
-`Draft → Accepted → Superseded`. RFC-0001…0005 are **Accepted** (solidified from the two research passes); **RFC-0006 and RFC-0007 are now Accepted (r4, 2026-06-15)** with a scoped carve-out — the layering / L1 v0 calculus are ratified, while concrete L3 surface syntax stays **KC-2-gated** and stage-1 grading is deferred (each RFC's §10). RFC-0008 (runtime model) and RFC-0010 are **Drafts**.
+`Draft → Accepted → Superseded`. RFC-0001…0005 are **Accepted** (solidified from the two research passes); **RFC-0006 is Accepted (r5, 2026-06-18)** and **RFC-0007 Accepted (r4)** — the layering / L1 v0 calculus are ratified, and the **KC-2 verdict (DN-09, 2026-06-18) = proceed** has now **committed the concrete L3 text surface** (+ a co-equal projection layer), discharging the prior KC-2 gate (RFC-0006 §10 Q1). **RFC-0017** (maturation scope & de-maturation) is **Accepted**. The follow-on surface/type-system designs are new **Drafts**: **RFC-0018** (stage-1 grading), **RFC-0019** (traits/LR-2), **RFC-0020** (L2 surface), **RFC-0021** (projections) — each carrying a pre-ratification research prompt (VR-5). RFC-0008/0010 are **Drafts**.
 
 ## Index
 
@@ -15,8 +15,8 @@ An RFC is a detailed, normative design of a subsystem that multiple decisions pl
 | 0003 | VSA Submodule Boundary | Accepted (r2) | RFC-0001; ADR-008; ADR-010; ADR-013 (r2 `spore` scope note) |
 | 0004 | Execution Model & "Stable Component" | Accepted | RFC-0001; ADR-007; ADR-009; DN-01; shares the checker with RFC-0002 |
 | 0005 | Selection-Policy Language | Accepted | RFC-0001; ADR-006; same mechanism used by RFC-0002 & RFC-0004 |
-| 0006 | Surface Language, Grammar & Term-Language Layering | **Accepted** (r4; concrete L3 syntax KC-2-gated, stage-1 grading deferred — §10) | RFC-0001 §4.5; ADR-003/006/007; KC-2/KC-3; RR-3; SPEC §10.1/§10.2 |
-| 0007 | The L1 Kernel Calculus | **Accepted** (r4; v0 calculus — stage-1 grading / R7-Q1…Q4 / surface syntax deferred — §10) | RFC-0006; RFC-0001 §4.5/§4.6; RFC-0004 §4; ADR-003; T3.1/T3.4 |
+| 0006 | Surface Language, Grammar & Term-Language Layering | **Accepted** (r5; **concrete L3 text surface committed** — DN-09 KC-2 verdict, Q1 discharged; stage-1 grading → RFC-0018) | RFC-0001 §4.5; ADR-003/006/007; KC-2/KC-3; RR-3; DN-09; SPEC §10.1/§10.2 |
+| 0007 | The L1 Kernel Calculus | **Accepted** (r4; v0 calculus; surface now committed via DN-09; `matured` granularity → RFC-0017; R7-Q1…Q4 deferred — §10) | RFC-0006; RFC-0001 §4.5/§4.6; RFC-0004 §4; ADR-003; T3.1/T3.4 |
 | 0008 | Runtime & Concurrency Execution Model | **Draft** | RFC-0004 (extends, per-node model unchanged); RFC-0001/0002/0005/0006/0007; ADR-012 §7.3; T4.1–T4.6 |
 | 0009 | Resonator-Network Factorization | Accepted | RFC-0003 §6; RFC-0001; FR-C2/G2/G4; RR-5/VR-5 (M-350) |
 | 0010 | Decode-Methodology Selection | **Draft** | RFC-0005 (same selection mechanism, third site); RFC-0009 (§10.3 matrix + regime gate); RFC-0003; G2/G4/VR-5 |
@@ -26,6 +26,11 @@ An RFC is a detailed, normative design of a subsystem that multiple decisions pl
 | 0014 | Declarative Error Recovery & Bounded Effects | **Draft** (the isolated recovery subsystem RFC-0013 deferred; design open) | RFC-0001 (error values); RFC-0013 (sibling — shared registry/pattern, presentation vs. recovery); RFC-0005/ADR-006 (reified policy); RFC-0006 (surface); RFC-0004 §4 / RFC-0007 §4.5 / M-347 / DN-05 (the budget discipline bounded effects generalise); G2/VR-5/KC-3/SC-3 |
 | 0015 | Automatic Baseline Diagnostics & Recovery | **Accepted — Enacted** (2026-06-16, M-362) | RFC-0013 (additive presentation it auto-applies) + RFC-0014 (opt-in declared recovery); RFC-0005/ADR-006 (reified EXPLAIN-able policy); RFC-0008 §4.8/RFC-0013 §8 (sinks); G2/VR-5/KC-3/NFR-2 |
 | 0016 | Core Library & Standard Library | **Draft** (scope + per-op contract + module taxonomy; ratification = M-501) | M-346 (the stdlib epic it is the "Core Library RFC" for); RFC-0001 (value model); RFC-0002/0003/0005/0008/0013/0014 (the differentiator modules' designs); ADR-003/007/010/013/014; G2/G11/VR-5/KC-2/KC-3 |
+| 0017 | Maturation Scope & De-maturation | **Accepted** (2026-06-18; `matured` → nodule/phylum/program scope, `matured fn` retired, `thaw` de-maturation; supersedes RFC-0007 §4.5 *granularity*, gate soundness unchanged) | RFC-0007 §4.5; RFC-0004 §4; DN-06/DN-08; Nodule-Header spec; DN-02/DN-03; ADR-003; KC-3/G2/VR-5 |
+| 0018 | Stage-1 Static Guarantee Grading | **Draft** (graded coeffect over the guarantee semilattice; the implicit-flows decision R18-Q1 + research prompt gate ratification) | RFC-0007 §4.3/§4.4 (revision); RFC-0006 §8 Q3; RFC-0002 (Swap certificate = endorsement); LR-6; VR-5; T3.2 |
+| 0019 | Traits & Parametric Polymorphism (LR-2) | **Draft** (dictionary-passing to L1, coherence; Repr-poly LR-5 + guarantee-indexed methods flagged-novel + research prompts) | RFC-0007 §4.4 (the deferral); RFC-0006 LR-2/LR-5/LR-6; ADR-003; DN-03; KC-3; T3.3 |
+| 0020 | The L2 Surface Term Language | **Draft** (elaboration-defined surface: inference, modules, pattern sugar, derived forms; usability-first) | RFC-0006 §3 (L2); RFC-0007 (L1 target); RFC-0011/0012; DN-09 §3.2; LR-1/LR-3; ADR-003/006; KC-3 |
+| 0021 | Semantic-Level Projection Framework | **Draft** (M-380/FR-C1/G11; views over content-addressed defs; LLM-facing canonical projection — gated on the G11/T3.6 research prompts) | RFC-0006 §3/§9 (L3, FR-S5); DN-09 §3.1; RFC-0001 §4.6/ADR-003; ADR-006; FR-C1/G11; RR-3 |
 
 Cross-cutting machinery (decided across RFCs): **one** certificate checker (RFC-0002 ⇄ RFC-0004), **one** selection mechanism (RFC-0002 ⇄ RFC-0004), and **two** bound kernels meeting at one shared certificate (ADR-010 → RFC-0001/0002/0003). See `../Doc-Index.md` for the dependency DAG.
 

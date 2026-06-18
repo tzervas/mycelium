@@ -42,7 +42,7 @@ pub(crate) mod usefulness;
 
 pub use ambient::{expand_to_source, resolve, resolve_report, AmbientError, Resolved};
 pub use ast::Nodule;
-pub use checkty::{check_and_resolve, check_nodule, CheckError, Env, Ty};
+pub use checkty::{check_and_resolve, check_nodule, check_nodule_matured, CheckError, Env, Ty};
 pub use elab::{elaborate, ElabError};
 pub use error::ParseError;
 pub use eval::{Evaluator, L1Error, L1Value};
@@ -64,7 +64,7 @@ mod tests {
         let Item::Fn(f) = &nodule.items[0] else {
             panic!("expected a fn item");
         };
-        assert!(!f.matured);
+        assert!(!f.thaw);
         assert!(matches!(f.body, Expr::Swap { .. }));
         assert_eq!(f.sig.ret.base, BaseType::Ternary(6));
     }
@@ -102,13 +102,33 @@ mod tests {
     }
 
     #[test]
-    fn matured_and_literals_parse() {
-        let src = "nodule demo\nmatured fn k() -> Binary{8} = 0b1011_0010";
+    fn thaw_fn_parses_and_sets_thaw_true() {
+        // RFC-0017 §4.3: `thaw fn` is the de-maturation marker; the field must be `true`.
+        let src = "nodule demo\nthaw fn k() -> Binary{8} = 0b1011_0010";
         let nodule = parse(src).unwrap();
         let Item::Fn(f) = &nodule.items[0] else {
             panic!("fn");
         };
-        assert!(f.matured);
+        assert!(f.thaw);
         assert!(matches!(&f.body, Expr::Lit(Literal::Bin(s)) if s == "1011_0010"));
+    }
+
+    #[test]
+    fn matured_fn_at_item_position_is_a_parse_error_with_teaching_diagnostic() {
+        // RFC-0017 §4.1: `matured fn` at item position is retired — the parser must return an
+        // explicit error whose message teaches the scope form (`// @matured: true` header /
+        // `thaw fn`). `matured` stays a reserved keyword token, so this is never a silent accept.
+        let src = "nodule demo\nmatured fn k() -> Binary{8} = 0b00000000";
+        let err = parse(src).unwrap_err();
+        assert!(
+            err.message.contains("maturation"),
+            "teaching diagnostic must mention maturation, got: {}",
+            err.message
+        );
+        assert!(
+            err.message.contains("thaw"),
+            "teaching diagnostic must mention `thaw`, got: {}",
+            err.message
+        );
     }
 }

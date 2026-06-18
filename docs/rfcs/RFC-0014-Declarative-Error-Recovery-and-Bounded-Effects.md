@@ -234,6 +234,16 @@ never opaque or ambient; it is a declaration you can read, diff, and trace.
   effects and their budgets when classifying `total`/`partial`; only `total` definitions may be `matured`
   (promoted stable). A mis-classification gates packaging, **never meaning** — the runtime clocks effects
   exactly as it clocks `Fix` (the same gate-not-meaning discipline).
+
+  > **Note (2026-06-18 — append-only; RFC-0017 Accepted):** "only `total` definitions may be `matured`"
+  > now reads **over the matured scope** (RFC-0017 §4.2): maturation is declared at nodule/phylum/program
+  > scope, so the obligation becomes — every reachable non-`thaw` definition in a matured scope must be
+  > `total` *and* pass the RFC-0004 §4 stable-component checks. This is the **same obligation, universally
+  > quantified** over the scope — not a new or weaker one. The budget/effect interaction and the
+  > `EffectBudgetExhausted` semantics described here are **unchanged**; the totality checker still
+  > classifies per-definition, and a `thaw` definition is excluded from the matured set (it carries no
+  > totality obligation from maturation, and runs on the fuel-guarded interpreter as usual). The "gates
+  > packaging, never meaning" discipline applies at scope granularity exactly as it did per-definition.
 - **Honesty (VR-5).** Per I2, recovery never fabricates or upgrades a guarantee; a fallback is honestly
   tagged. The effect/recovery subsystem *reports* bounds and outcomes; it never launders a weaker guarantee
   into a stronger one.
@@ -430,6 +440,14 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
 
 ## Meta — changelog
 
+- **2026-06-18 — Append-only note to §4.7 (RFC-0017 Accepted): maturation is now a scope attribute.**
+  Added an inline note to §4.7 recording that "only `total` definitions may be `matured`" now reads
+  **over the matured scope** (RFC-0017 §4.2): every reachable non-`thaw` definition in a matured
+  nodule/phylum/program must be `total` and pass RFC-0004 §4 stable-component checks. The obligation
+  is the **same, universally quantified** — the budget/effect interaction (I4), `EffectBudgetExhausted`
+  semantics, and "gates packaging, never meaning" discipline are **unchanged**. `thaw` definitions are
+  excluded from the matured set and carry no totality obligation from maturation. No normative content
+  altered. Append-only.
 - **2026-06-16 — §8 concurrency deferral RESOLVED; single-task boundary lifted (M-356; RFC-0008 §4.7).**
   The §8 concurrency interaction — the last RFC-0008-tied deferral — is resolved in **RFC-0008 §4.7**:
   per-task budgets (each task instances its own M-353 ledger; an overrun is an *in-that-task*

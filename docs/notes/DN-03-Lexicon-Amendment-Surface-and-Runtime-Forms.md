@@ -108,6 +108,17 @@ the *right* names.
 
 ## Meta — changelog
 
+- **2026-06-18 — `thaw` reserved (Surface, conventional-clearest) via RFC-0017 §5; append-only.**
+  RFC-0017 (Maturation Scope & De-maturation) adds **`thaw`** to the active Surface reserved set — the
+  in-source de-maturation marker (`thaw fn …` keeps one definition interpreted inside a `matured`
+  scope). The DN-02 §1 three-test gate is applied **in RFC-0017 §5** (the ratifying doc), exactly as
+  this note deferred `for`'s reservation to RFC-0007 §4.8 (§2): **T-map** strong — it directly inverts
+  the ratified `matured` = "compiled-and-**frozen**" metaphor (Glossary §2.10); **T-illuminate** good;
+  **T-learn** high. It is **conventional-clearest, not themed** — the intuitive themed inverse
+  *`germinate`* is **unavailable**, already the spore-activation/deployment term (ADR-013;
+  `crates/mycelium-spore`), so reusing it would violate §3's one-name-per-term rule. Same precedent that
+  kept `mesh`/`reclaim`/`tier`/`for` conventional. The decision lives in RFC-0017; recorded here so the
+  reserved-word set stays the single source of truth. Append-only.
 - **2026-06-10 — Resolved.** Amends DN-02 (append-only): adopt `consume`/`grow`; decline
   `embody` (keep `impl`); reserve `for` (RFC-0007 §4.8); adopt **one name per term** (flat —
   ADR-012 §7.6's canonical+alias scheme is rejected as needless surface area, §3) and the single

@@ -265,7 +265,7 @@ impl Resolver {
         // blocks nest *inside* it. Signatures (above) never see a block-scope override.
         let body = self.expr(amb, &fd.sig.name, &fd.body)?;
         Ok(FnDecl {
-            matured: fd.matured,
+            thaw: fd.thaw,
             sig,
             body,
         })
@@ -536,7 +536,7 @@ fn print_trait_decl(td: &TraitDecl) -> String {
 fn print_fn_decl(fd: &FnDecl) -> String {
     format!(
         "{}fn {} =\n  {}\n",
-        if fd.matured { "matured " } else { "" },
+        if fd.thaw { "thaw " } else { "" },
         print_sig_tail(&fd.sig),
         print_expr(&fd.body)
     )

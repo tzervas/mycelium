@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0006 |
-| **Status** | **Accepted** (r4 — ratified 2026-06-15 per §10: layering §3, invariants S1–S6, capability targets LR-1…LR-9, grammar discipline §4.3, and §8 positions Q2/Q4/Q5/Q7. **Concrete L3 syntax stays KC-2-gated** (Q1/Q6); stage-1 static grading (Q3 incl. implicit-flows) stays open for the grading RFC; the `unsafe`-class L3 spelling (Q8) is DN/KC-2-gated. Supersedes the r3 Draft.) |
+| **Status** | **Accepted** (r5 — 2026-06-18: the **KC-2 verdict = proceed** (DN-09) **discharges Q1** — the committed L3 surface is **text syntax** (the v0 grammar, refined append-only) **+ a co-equal structured-projection layer** (M-380, FR-S5); **Q6** concrete literal spelling is now committable. Stage-1 static grading (**Q3**, incl. the implicit-flows decision) and the **Q8** `unsafe`-class *spelling* stay open on their own merits — they were never KC-2-gated. Supersedes the r4 "concrete L3 syntax stays KC-2-gated" line append-only. r4 — ratified 2026-06-15 per §10: layering §3, invariants S1–S6, capability targets LR-1…LR-9, grammar discipline §4.3, and §8 positions Q2/Q4/Q5/Q7. Supersedes the r3 Draft.) |
 | **Type** | Foundational / normative (once Accepted) |
 | **Date** | June 10, 2026 |
 | **Depends on** | RFC-0001 (Core IR §4.5, WF1–WF5, content-addressing §4.6); RFC-0002 (never-silent swaps); RFC-0005 (reified selection); ADR-003 (Unison-style identity); ADR-006 (no black boxes); ADR-007 (interpreter = trusted base); KC-2/KC-3; RR-3; SPEC §10.1/§10.2 |
@@ -297,6 +297,19 @@ KC-2-gated and stage-1 grading (Q3) stays open for the grading RFC.*
 
 ## Meta — changelog
 
+- **2026-06-18 (r5) — KC-2 verdict received (DN-09); Q1 discharged, L3 surface committed.** The
+  maintainer's **KC-2 verdict = proceed** (DN-09, off the measured M-002 run: weak-but-recoverable
+  leverage, no irrecoverable collapse) closes the **one deliberate deferral** this RFC carried (§8 Q1 /
+  §10). The selected L3 strategy is **text syntax + projections, co-equally**: the v0 grammar
+  (`docs/spec/grammar/mycelium.ebnf`) becomes the **committed L3 surface** (refined append-only, not
+  drift), and the structured-projection layer (M-380, FR-S5 dual human/LLM rendering of the same
+  content-addressed defs) is opened as a co-equal deliverable. **Q6** (literal suffix/annotation
+  spelling) is now committable. **Still open, but never KC-2-gated:** **Q3** stage-1 static guarantee
+  grading (its implicit-flows sub-decision → the grading RFC) and the **Q8** `unsafe`-class L3
+  *spelling* (the `wild` mechanism is committed; only theming detail remains). The embedded-DSL fallback
+  (RR-3) is retained unspent. §10's "Concrete L3 surface syntax — KC-2-gated" item is superseded by this
+  entry (append-only); the rigorous T3.6 retention-ratio ablation remains a tracked research follow-up
+  (DN-09 §4).
 - **2026-06-16 — static-organization lexicon revised (DN-06).** The basic static unit (DN-02's
   `colony`, "module / namespace of definitions") is renamed **`nodule`**, with **`phylum`** added as
   the content-addressed **library-scale** level above it; the term `colony` is reassigned to the

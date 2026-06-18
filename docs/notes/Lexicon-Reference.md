@@ -62,7 +62,8 @@ This document is the single source of truth for terminology in the Mycelium prog
 | `consume`  | Consume     | Acquire and take exclusive ownership of a linear/affine resource. | A fungus consumes substrate exactly once to grow. | Enforces single-use semantics via the type system. | `let res = consume(substrate);` |
 | `grow`     | Grow        | Automatically generate or extend behavior on a type. | The system *grows* new capabilities, like fungal extension. | Used for derive-like and generative features. | `grow Debug for Point;` |
 | `wild`     | Wild        | Lexically marked, denied-by-default region for unsafe/raw operations. | Growth that has left the safe, cultivated colony. | Only place raw FFI or manual memory is allowed. | `wild { foreign_call(...) }` |
-| `matured`  | Matured     | Marks a definition as stable, verified, and eligible for AOT compilation. | The component has grown into a hardened, persistent form. | Used for promotion to stable components. | `matured fn critical_path(...)` |
+| `matured`  | Matured     | Marks a **scope** (`nodule`/`phylum`/program) stable, verified, and AOT-compiled. **Header/manifest key, not a `fn` modifier** (RFC-0017). | The scope has grown into a hardened, persistent (compiled-and-frozen) form. | Promotion to stable components, declared per scope. | `// @matured: true` (in the nodule header) |
+| `thaw`     | Thaw        | De-maturation: keeps **one** definition interpreted inside an otherwise-`matured` scope (RFC-0017 §4.3). | Inverts `matured` = "frozen" — thaws one def back to the live, interpreted state. (`germinate` is taken by spore-activation, ADR-013.) | The rare iterate/debug escape hatch in a matured scope. | `thaw fn experimental(...)` |
 
 > **`spore` scope — resolved (ADR-013 + RFC-0003 r2, 2026-06-10):** `spore` is the
 > **content-addressed deployable unit** (code + values + metadata); the RFC-0003 §6

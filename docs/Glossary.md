@@ -39,7 +39,7 @@ Alphabetical; the **Detail** column names each term's §2 subsection. *(L)* = pa
 | `graft` ⟂ *(L)* | a capability contract with external infrastructure | Runtime | §2.8 |
 | guarantee lattice *(H)* | `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` | Formal | §2.4 |
 | `hypha` ⟂ *(L)* | a single structurally-scoped concurrent execution unit | Runtime | §2.9 |
-| `matured` *(L)* | a promoted, stable, compiled-and-frozen definition | Surface | §2.10 |
+| `matured` *(L)* | a compiled-and-frozen **scope** (nodule/phylum/program; header/manifest, not a fn modifier) | Surface | §2.10 |
 | `mesh` ⟂ *(L)* | gossip/pub-sub overlay with honest probabilistic guarantees | Runtime | §2.11 |
 | `Meta` *(H)* | the metadata a `Value` carries (guarantee, provenance, …) | Formal | §2.12 |
 | never-silent (G2) *(H)* | no silent failure/swap; refusal is always explicit | Formal | §2.13 |
@@ -51,6 +51,7 @@ Alphabetical; the **Detail** column names each term's §2 subsection. *(L)* = pa
 | `spore` *(L)* | a content-addressed deployable / reconstruction manifest | Deploy | §2.17 |
 | `substrate` *(L)* | an affine external resource (consumed exactly once) | Surface | §2.18 |
 | `swap` *(L/H)* | a certified, never-silent representation change | Formal | §2.19 |
+| `thaw` *(L)* | de-maturation: keep one def interpreted inside a `matured` scope | Surface | §2.10.1 |
 | `tier` ⟂ *(L)* | an execution-mode switch (interpreted ↔ native) | Runtime | §2.20 |
 | `Value` *(H)* | an immutable `(Repr, Payload, Meta)` — the only thing that moves | Formal | §2.12 |
 | `wild` *(L)* | the denied-by-default unsafe block (FFI / raw memory) | Surface | §2.21 |
@@ -123,10 +124,25 @@ Runtime tier. **Defining doc:** RFC-0008 §4.5 (T4.1; invariants RT1/RT2/RT7); D
 Reserved.
 
 ### 2.10 `matured`
-A definition **promoted from interpreted to compiled-and-frozen** (stable, persistent, verified) — it
-has "grown to a hardened, persistent stage." Only `total` definitions may be `matured`. Surface tier.
-**Defining doc:** RFC-0004 §4 / RFC-0007 §4.5 (the gate); DN-02 §7 (the name, over `hardened`/
-`sclerotium`). *Usage:* "a `matured` definition takes the AOT path."
+A **scope** (`nodule`/`phylum`/program) **promoted from interpreted to compiled-and-frozen** (stable,
+persistent, verified) — it has "grown to a hardened, persistent stage." Every definition reachable in a
+matured scope must be `total` (RFC-0007 §4.5, quantified over the scope) and AOT-eligible (RFC-0004 §4),
+except those marked `thaw`. **Declared at scope, not per definition (RFC-0017, 2026-06-18):** a
+`nodule`/`phylum` via its header (`// @matured: true`), a program/package via its manifest — `matured`
+is a header/manifest key and a reserved word, **not** a `fn` modifier (`matured fn …` is retired). Surface tier.
+**Defining doc:** RFC-0017 (scope + the surface forms); RFC-0004 §4 / RFC-0007 §4.5 (the gate, unchanged);
+DN-02 §7 (the name, over `hardened`/`sclerotium`). *Usage:* "a `matured` nodule takes the AOT path."
+
+### 2.10.1 `thaw`
+The **inverse of maturation**: a `thaw fn f` keeps **one** definition **interpreted** inside an
+otherwise-`matured` scope (the rare iterate/debug escape hatch — RFC-0017 §4.3). `matured` is
+"compiled-and-**frozen**" (§2.10); `thaw` returns *one* definition from frozen to the live, interpreted
+state. It only ever de-matures (a no-op flagged by lint in an unmatured scope), weakens **no** advertised
+honesty tag (only the execution path/performance changes — the guarantee lattice is path-independent,
+NFR-7), and is never-silent + `EXPLAIN`-able. Conventional-clearest (the themed *germinate* is taken by
+spore-germination, ADR-013). Active Surface tier. **Defining doc:** RFC-0017 §4.3/§5 (the name, DN-02
+three-test gate); DN-03 (changelog pointer). *Usage:* "`thaw fn experimental_shear(…)` — stays
+interpreted while the nodule around it is matured."
 
 ### 2.11 `mesh` ⟂
 The **common mycorrhizal network**: gossip/pub-sub overlay coordination whose delivery/convergence

@@ -1,11 +1,17 @@
 //! L1 static checking (RFC-0007 §4.4/§4.5): the monomorphic typechecker, the structural totality
-//! checker, and the `matured ⟹ total` gate. Every refusal is an explicit `CheckError`.
+//! checker, and the scope-quantified `matured ⟹ total` gate (RFC-0017 §4.2). Every refusal is
+//! an explicit `CheckError`.
 
-use mycelium_l1::{check_nodule, parse, Totality};
+use mycelium_l1::{check_nodule, check_nodule_matured, parse, Totality};
 
 fn check(src: &str) -> Result<mycelium_l1::Env, mycelium_l1::CheckError> {
     let nodule = parse(src).expect("parses");
     check_nodule(&nodule)
+}
+
+fn check_matured(src: &str) -> Result<mycelium_l1::Env, mycelium_l1::CheckError> {
+    let nodule = parse(src).expect("parses");
+    check_nodule_matured(&nodule, true)
 }
 
 #[test]
@@ -96,35 +102,54 @@ fn nested_redundant_arm_is_unreachable() {
 
 #[test]
 fn nested_binder_drives_structural_descent_for_matured() {
-    // A recursion descending through a *nested* pattern binder (S(S(m)) → m) is structurally smaller,
-    // so the totality checker must classify it Total and admit `matured` (the depth-2 descent the
-    // extended smallness tracking now recognizes).
+    // RFC-0017 §4.2: scope-quantified gate. A recursion descending through a *nested* pattern
+    // binder (S(S(m)) → m) is structurally smaller, so the totality checker must classify it Total
+    // and the matured scope must admit it (the depth-2 descent the extended smallness tracking
+    // now recognizes).
     let ok = format!(
-        "{NAT}matured fn half(n: Nat) -> Nat = \
+        "{NAT}fn half(n: Nat) -> Nat = \
          match n {{ Z => Z, S(Z) => Z, S(S(m)) => S(half(m)) }}"
     );
-    assert!(check(&ok).is_ok(), "{:?}", check(&ok));
+    assert!(check_matured(&ok).is_ok(), "{:?}", check_matured(&ok));
 }
 
 #[test]
 fn structural_recursion_is_total_and_gates_matured() {
-    // A structurally-decreasing self-recursion over a Peano-like type is classified Total.
+    // RFC-0017 §4.2: a structurally-decreasing self-recursion over a Peano-like type is classified
+    // Total and admitted by a matured scope.
     let src = "nodule d\n\
                type Nat = Z | S(Nat)\n\
-               matured fn count(n: Nat) -> Nat = match n { Z => n, S(m) => count(m) }";
-    let env = check(src).expect("checks");
+               fn count(n: Nat) -> Nat = match n { Z => n, S(m) => count(m) }";
+    let env = check_matured(src).expect("checks");
     assert_eq!(env.totality["count"], Totality::Total);
 }
 
 #[test]
 fn non_decreasing_recursion_cannot_be_matured() {
-    // The recursive call passes the parameter unchanged → not structurally smaller → Partial,
-    // so `matured` is refused (RFC-0007 §4.5).
+    // Mutant-witness for RFC-0017 §4.2 / RFC-0007 §4.5: the recursive call passes the parameter
+    // unchanged → not structurally smaller → Partial. In a matured scope, a non-total non-thaw fn
+    // must be refused.
     let src = "nodule d\n\
                type Nat = Z | S(Nat)\n\
-               matured fn spin(n: Nat) -> Nat = match n { Z => n, S(m) => spin(n) }";
-    let err = check(src).unwrap_err();
-    assert!(err.message.contains("matured"), "got: {}", err.message);
+               fn spin(n: Nat) -> Nat = match n { Z => n, S(m) => spin(n) }";
+    let err = check_matured(src).unwrap_err();
+    assert!(
+        err.message.contains("matured") || err.message.contains("total"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn thaw_fn_is_exempt_from_matured_scope_gate() {
+    // Mutant-witness for RFC-0017 §4.3: a partial fn marked `thaw` is exempt from the matured
+    // scope totality gate. Without the `thaw` exemption, this would be refused.
+    let src = "nodule d\n\
+               type Nat = Z | S(Nat)\n\
+               thaw fn spin(n: Nat) -> Nat = match n { Z => n, S(m) => spin(n) }";
+    let env = check_matured(src)
+        .expect("thaw fn must be accepted even in a matured scope (RFC-0017 §4.3)");
+    assert_eq!(env.totality["spin"], Totality::Partial);
 }
 
 #[test]
@@ -150,10 +175,15 @@ fn shadowing_rebind_does_not_leak_smallness() {
     let env = check(&src).expect("checks");
     assert_eq!(env.totality["f"], Totality::Partial);
 
-    let matured =
-        format!("nodule d\ntype Nat = Z | S(Nat)\nmatured fn f(n: Nat, p: Nat) -> Nat = {body}");
-    let err = check(&matured).unwrap_err();
-    assert!(err.message.contains("matured"), "got: {}", err.message);
+    // In a matured scope the same partial fn must be refused (RFC-0017 §4.2).
+    let matured_src =
+        format!("nodule d\ntype Nat = Z | S(Nat)\nfn f(n: Nat, p: Nat) -> Nat = {body}");
+    let err = check_matured(&matured_src).unwrap_err();
+    assert!(
+        err.message.contains("matured") || err.message.contains("total"),
+        "got: {}",
+        err.message
+    );
 }
 
 // --- mutual-descent classification (RFC-0007 §4.5; M-343 / R7-Q3 loose end) ---
@@ -169,11 +199,11 @@ fn mutual_recursion_with_structural_descent_is_total() {
     assert_eq!(env.totality["ping"], Totality::Total);
     assert_eq!(env.totality["pong"], Totality::Total);
 
-    // The whole group may therefore be `matured`.
+    // The whole group may therefore be admitted by a matured scope (RFC-0017 §4.2).
     let matured = "nodule d\ntype Nat = Z | S(Nat)\n\
-                   matured fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
-                   matured fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }";
-    check(matured).expect("a totally-descending mutual group admits `matured`");
+                   fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
+                   fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }";
+    check_matured(matured).expect("a totally-descending mutual group admits a matured scope");
 }
 
 #[test]
@@ -188,11 +218,16 @@ fn non_productive_mutual_cycle_is_partial() {
     assert_eq!(env.totality["a"], Totality::Partial);
     assert_eq!(env.totality["b"], Totality::Partial);
 
+    // Mutant-witness for RFC-0017 §4.2: a matured scope must refuse partial fns.
     let matured = "nodule d\ntype Nat = Z | S(Nat)\n\
-                   matured fn a(n: Nat) -> Nat = b(n)\n\
+                   fn a(n: Nat) -> Nat = b(n)\n\
                    fn b(n: Nat) -> Nat = a(n)";
-    let err = check(matured).unwrap_err();
-    assert!(err.message.contains("matured"), "got: {}", err.message);
+    let err = check_matured(matured).unwrap_err();
+    assert!(
+        err.message.contains("matured") || err.message.contains("total"),
+        "got: {}",
+        err.message
+    );
 }
 
 #[test]
@@ -277,11 +312,18 @@ const BYTES: &str = "nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n";
 #[test]
 fn a_for_fold_typechecks_and_is_total() {
     let env = check(&format!(
-        "{BYTES}matured fn checksum(bs: Bytes) -> Binary{{8}} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)"
+        "{BYTES}fn checksum(bs: Bytes) -> Binary{{8}} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)"
     ))
     .expect("checks");
-    // Bounded by construction: the fn is non-recursive, so `matured` is admissible.
+    // Bounded by construction: the fn is non-recursive, so it is Total and admissible in a
+    // matured scope (RFC-0017 §4.2).
     assert_eq!(env.totality["checksum"], Totality::Total);
+    // Confirm admission in a matured scope.
+    let env2 = check_matured(&format!(
+        "{BYTES}fn checksum(bs: Bytes) -> Binary{{8}} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)"
+    ))
+    .expect("a total for-fold is admitted by a matured scope");
+    assert_eq!(env2.totality["checksum"], Totality::Total);
 }
 
 #[test]

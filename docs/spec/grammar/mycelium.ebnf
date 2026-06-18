@@ -9,7 +9,18 @@
  * Vocabulary is the ratified DN-02 set (Resolved 2026-06-10) plus `for` (RFC-0007 §4.8 r2;
  * recorded in DN-03) and the DN-06 static-organization lexicon (Resolved 2026-06-16): `nodule`
  * replaces the former static keyword `colony`. Themed keywords: nodule, substrate, spore, matured,
- * wild. Conventional: use, type, trait, fn, let, in, if, then, else, match, for, swap.
+ * wild. Conventional: use, type, trait, fn, let, in, if, then, else, match, for, swap, thaw
+ * (de-maturation; inverts `matured` = "frozen"; `germinate` is taken by spore-germination, ADR-013).
+ *
+ * `matured` is no longer a fn/definition modifier (RFC-0017, 2026-06-18): maturation is declared at
+ * SCOPE — a `nodule`/`phylum` via its header (`// @matured: true`; Nodule-Header spec §3) or a
+ * program/package via its manifest. `matured` stays a reserved word (the header key; never a silent
+ * identifier) but opens no term production. `thaw` is the in-source DE-maturation marker: it
+ * keeps one definition interpreted inside an otherwise-matured scope (RFC-0017 §4.3).
+ *
+ * SURFACE STATUS (2026-06-18): this grammar is the COMMITTED L3 text surface (DN-09 KC-2 verdict =
+ * proceed; RFC-0006 §10 Q1 resolved). Refinements are append-only recorded decisions, not drift; a
+ * co-equal structured-projection layer (M-380) renders the same content-addressed defs (FR-S5).
  *
  * RESERVED, NOT YET ACTIVE (DN-06): `phylum` (the library-scale grouping above nodules) and
  * `colony` (the dynamic runtime grouping of `hypha`, RFC-0008 §4.7) are reserved words — they lex
@@ -48,8 +59,11 @@ constructor    ::= Ident ('(' type_ref (',' type_ref)* ')')?
 trait_item     ::= 'trait' Ident type_params? '{' fn_sig* '}'
 fn_sig         ::= 'fn' Ident '(' params? ')' '->' type_ref
 
-/* Function. 'matured' marks a promoted stable component (RFC-0004 §4; DN-02 themed term). */
-fn_item        ::= 'matured'? 'fn' Ident type_params? '(' params? ')' '->' type_ref '=' expr
+/* Function. Optional 'thaw' DE-matures one definition — keeps it interpreted inside an
+ * otherwise-matured scope (RFC-0017 §4.3; the rare iterate/debug escape hatch). Maturation itself is
+ * NOT a fn modifier — it is declared per `nodule`/`phylum`/program in the header/manifest (RFC-0017
+ * §4.1). A bare `matured fn …` is a parse error with a teaching diagnostic. */
+fn_item        ::= 'thaw'? 'fn' Ident type_params? '(' params? ')' '->' type_ref '=' expr
 params         ::= param (',' param)*
 param          ::= Ident ':' type_ref
 

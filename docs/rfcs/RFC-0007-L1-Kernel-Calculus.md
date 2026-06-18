@@ -136,6 +136,16 @@ generic is an explicit "deferred" error, never a guess. The trait system is its 
 
 ### 4.5 The divergence bit & the `matured` gate (Q4/Q7; T3.4)
 
+> **Granularity superseded by RFC-0017 (2026-06-18; append-only — soundness unchanged).** This
+> section's gate (`matured ⟹ total`) and totality classifier are **retained verbatim**; what RFC-0017
+> changes is the **scope `matured` attaches to**. Maturation is no longer per-definition (`matured fn`
+> is **retired**): it is declared at `nodule`/`phylum` scope (header) or program/package scope
+> (manifest), and the gate is **quantified over that scope** — *every definition reachable in a matured
+> scope must be `total`* (and AOT-eligible, RFC-0004 §4), **except** definitions marked `thaw`
+> (kept interpreted; RFC-0017 §4.3). The conjunction is sound directly from the per-definition gate
+> below, so nothing in the soundness argument moves. Read this section as the per-*definition*
+> obligation that RFC-0017 §4.2 universally quantifies.
+
 Every definition is classified **`total`** or **`partial`** by the totality checker:
 
 - a definition with no (direct or mutual) recursion is `total`;
@@ -335,6 +345,16 @@ revisions / KC-2-gated.*
 
 ## Meta — changelog
 
+- **2026-06-18 — §4.5 `matured` *granularity* superseded by RFC-0017; concrete-surface-syntax
+  carve-out discharged (KC-2 verdict DN-09); append-only, soundness unchanged.** Two consequences of
+  maintainer decisions recorded today, neither altering the calculus: **(1)** RFC-0017 (Accepted) lifts
+  `matured` from per-definition to `nodule`/`phylum`/program **scope** (header + manifest), **retires
+  `matured fn`**, and reserves **`thaw`** for de-maturation — §4.5 gains a note; the
+  `matured ⟹ total` gate + the totality classifier are **retained verbatim**, RFC-0017 §4.2 merely
+  *quantifies* them over the matured scope. **(2)** DN-09 records the **KC-2 verdict = proceed**, which
+  discharges §10's "concrete surface syntax (KC-2)" deferral: the v0 grammar is now the **committed L3
+  text surface** (RFC-0006 §10 Q1 resolved) — ratifying RFC-0007 still ratifies the *calculus*, and the
+  surface is now committed by DN-09/RFC-0006 r5 rather than gated. No calculus content changed.
 - **2026-06-16 — §4.5 mutual-descent classification (M-343 loose end; R7-Q3 fully resolved;
   append-only, completeness-only).** Extends the totality checker's §4.5 classification from
   self-descent only to **mutual structural descent** over a `FixGroup` (RFC-0001 r5): a

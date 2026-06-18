@@ -169,7 +169,7 @@ cardinality-estimation opacity because its statistics are *exact metadata*, not 
 | § | Open item | Issue(s) | Phase |
 |---|---|---|---|
 | 10.1 | Minimal surface-syntax fragment — ✅ [`experiments/surface-fragment/`](../../experiments/surface-fragment/README.md) (M-020, throwaway/experiment-only) | M-020 ([#4](https://github.com/tzervas/mycelium/issues/4)) | 0 |
-| 10.2 | Core IR node grammar — ✅ committed (EBNF in `mycelium-core::node`, RFC-0001 §4.5; M-101); full term language (abstraction/recursion/modules) now under deliberation → [RFC-0006](../rfcs/RFC-0006-Surface-Language-and-Term-Layering.md) (Draft; concrete syntax KC-2-gated) | M-101 ([#11](https://github.com/tzervas/mycelium/issues/11)) | 1 |
+| 10.2 | Core IR node grammar — ✅ committed (EBNF in `mycelium-core::node`, RFC-0001 §4.5; M-101); full term language (abstraction/recursion/modules) → [RFC-0006](../rfcs/RFC-0006-Surface-Language-and-Term-Layering.md) (**Accepted (r5)**; **concrete L3 text syntax now committed** — the v0 grammar is the ratified L3 surface, refined append-only; DN-09 KC-2 verdict = proceed; Q1 discharged); co-equal **projection layer** (M-380, FR-S5) opened as design-active | M-101 ([#11](https://github.com/tzervas/mycelium/issues/11)) | 1 |
 | 10.3 | Reference-interpreter small-step operational semantics — ✅ committed (the `e ⟶ e'` rules E-Let-Bind/Step, E-Op-Arg/Apply, E-Swap-Arg/Apply documented in `mycelium-interp` crate docs; call-by-value substitution semantics + honest metadata threading; golden corpus, M-110). Arithmetic `δ` is M-111; certified swap `σ` is M-120 | M-110 ([#15](https://github.com/tzervas/mycelium/issues/15)) | 1 |
 | 10.4 | Binary↔ternary swap impl + machine-checked round-trip — ✅ committed: `enc`/`dec` + `Bijective` certificate in `mycelium-cert` (M-120; exhaustive `dec(enc x)` over all bytes), and the Z3-discharged injectivity proof in [`proofs/binary-ternary-roundtrip/`](../../proofs/binary-ternary-roundtrip/README.md) (M-121). Encoding spec ✅ [`swaps/binary-ternary.md`](swaps/binary-ternary.md) (M-012) | M-120 ([#18](https://github.com/tzervas/mycelium/issues/18)), M-121 ([#19](https://github.com/tzervas/mycelium/issues/19)) | 1 |
 | 10.5 | Inspectable lowering — ✅ ≥2 dumpable/diffable stages (`mycelium-core::lower`: `core` → A-normal-form `substrate` with scheduled `PhysicalLayout`; SC-4/WF5, M-112); ✅ textual ternary-dialect emitter + runnable AOT artifact over the lowered IR (`mycelium-mlir`, M-150; native libMLIR/LLVM codegen deferred); ✅ interp↔AOT differential on the kernel corpus (NFR-7, M-151) | M-112 ([#17](https://github.com/tzervas/mycelium/issues/17)), M-150 ([#26](https://github.com/tzervas/mycelium/issues/26)), M-151 ([#27](https://github.com/tzervas/mycelium/issues/27)) | 1 |
@@ -202,5 +202,13 @@ the ratified file is [`reconstruction-manifest.schema.json`](schemas/reconstruct
   `Bijective`/`LosslessWithinRange` certificate (`mycelium-cert`, exhaustive round-trip), and its
   Z3-discharged injectivity proof (`proofs/binary-ternary-roundtrip/`, `unsat`). §10.4 flipped to ✅.
   Balanced-ternary arithmetic (`mycelium-core::ternary`, oracle-tested) landed alongside (M-111).
+- **2026-06-18 (§10.2 — KC-2 verdict received; concrete L3 surface committed):** DN-09 records
+  the **KC-2 verdict = proceed** (M-002 run; weak-but-recoverable leverage; kill criterion not
+  triggered). RFC-0006 advances to **Accepted (r5)**; **concrete L3 text syntax is now committed**
+  — the v0 grammar is the ratified surface, refined append-only. The **co-equal projection layer
+  (M-380, FR-S5)** is opened as design-active. §10.2 updated accordingly: RFC-0006 no longer
+  "Draft; concrete syntax KC-2-gated." The T3.6 rigorous ablation remains an honest open follow-up
+  (DN-09 §4; VR-5 — the established strength is non-collapse + recoverability, not the strong Q1
+  retention-ratio confirmation). Append-only.
 - Maintain append-only with status transitions, mirroring the RFC/ADR discipline. The RFCs stay
   normative; this index is folded forward, never used to override them.
