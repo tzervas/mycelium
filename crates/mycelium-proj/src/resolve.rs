@@ -126,9 +126,11 @@ pub fn resolve(header: &StructuredHeader, manifest: Option<&Manifest>) -> Resolv
         since: inherit_str(&f.since, p.and_then(|p| p.since.as_ref())),
         repository: inherit_str(&f.repository, p.and_then(|p| p.repository.as_ref())),
         keywords: inherit_list(&f.keywords, p.and_then(|p| p.keywords.as_ref())),
-        // `matured` (RFC-0017) inherits top-down. Manifest-level `[project].matured` is a deferred
-        // enactment (R17-Q1; the example uses the header key), so the manifest source is `None` for
-        // now — header inheritance from a parent nodule-root is the active path.
+        // `matured` (RFC-0017) is *specified* to inherit top-down, but in this single-file resolver
+        // both inheritance tiers are deferred: manifest-level `[project].matured` is not yet enacted
+        // (R17-Q1) and multi-file ancestor-nodule resolution is out of scope here (see the module
+        // header, §"deferred"). So `@matured` resolves **local-only** for now — the manifest source is
+        // `None` and there is no ancestor tier; the inherited tiers land with those enactments.
         matured: inherit_bool(&f.matured, None),
         // Per-file: never inherited.
         updated: f.updated.clone(),
