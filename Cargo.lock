@@ -208,6 +208,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-diag"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "mycelium-doc"
 version = "0.0.0"
 dependencies = [
@@ -360,6 +369,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-std-diag"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-diag",
+ "mycelium-std-core",
+ "serde_json",
+]
+
+[[package]]
 name = "mycelium-std-error"
 version = "0.0.0"
 dependencies = [
@@ -414,10 +433,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-std-numerics"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-numerics",
+ "mycelium-std-core",
+ "serde_json",
+]
+
+[[package]]
 name = "mycelium-std-rand"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
+ "mycelium-std-core",
+]
+
+[[package]]
+name = "mycelium-std-recover"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-diag",
  "mycelium-std-core",
 ]
 
@@ -427,6 +465,21 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-select",
+]
+
+[[package]]
+name = "mycelium-std-spore"
+version = "0.0.0"
+dependencies = [
+ "blake3",
+ "mycelium-core",
+ "mycelium-proj",
+ "mycelium-spore",
+ "mycelium-std-content",
+ "mycelium-std-core",
+ "mycelium-std-vsa",
+ "mycelium-vsa",
+ "serde_json",
 ]
 
 [[package]]
