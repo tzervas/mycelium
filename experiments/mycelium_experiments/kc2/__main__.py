@@ -285,7 +285,11 @@ def main() -> int:
         # --- choose / build the backend factory (seed -> Backend) ---
         if args.server:
             if not server.server_healthy(args.server):
-                log.warning("No healthy server at %s (/health). Trying anyway.", args.server)
+                log.warning(
+                    "No llama.cpp server is answering /health at %s. If none is running, "
+                    "use --serve (auto-launches + manages one) instead of --server. Trying anyway.",
+                    args.server,
+                )
             model_label, backend_label = args.server, "server"
 
             def make_backend(seed: int) -> llm.Backend:

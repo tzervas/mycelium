@@ -426,10 +426,20 @@ def server_backend(
         except (TimeoutError, urllib.error.URLError, OSError) as exc:
             # Abort loudly (G2): never a silent empty generation. The runner checkpoints
             # the attempts collected so far before this propagates, so no data is lost.
-            msg = (
-                f"server /completion failed after {timeout}s ({type(exc).__name__}: {exc}). "
-                f"On a slow phone raise --timeout or lower --n-predict (now {n_predict})."
-            )
+            # Distinguish "can't connect" (no server) from "connected but too slow".
+            reason = getattr(exc, "reason", exc)
+            timed_out = isinstance(exc, TimeoutError) or isinstance(reason, TimeoutError)
+            if timed_out:
+                msg = (
+                    f"server /completion timed out after {timeout}s. On a slow phone raise "
+                    f"--timeout or lower --n-predict (now {n_predict})."
+                )
+            else:
+                msg = (
+                    f"could not reach a llama.cpp server at {base_url} ({type(exc).__name__}: "
+                    f"{reason}). Is one running there? Easiest fix: use --serve (auto-launches + "
+                    f"manages one on a free port), or start `llama-server -m MODEL --port …` first."
+                )
             raise RuntimeError(msg) from exc
         return str(json.loads(raw).get("content", ""))
 
