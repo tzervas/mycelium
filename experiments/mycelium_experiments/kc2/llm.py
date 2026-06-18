@@ -30,6 +30,7 @@ import gc
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -226,10 +227,13 @@ PRIMER_MYCELIUM = """\
 You write programs in the Mycelium surface fragment. Reply with ONLY the program
 source — no prose, no markdown fences, no explanation.
 
+Mycelium has NO comments — every line must be code. Do not write `#`, `//`, or `--`.
+
 Syntax (generic examples, NOT answers):
-  nodule bench                         # every program starts with a nodule line
+  nodule bench
   fn name(x: Binary{8}) -> Binary{8} = not(x)
   fn main() -> Ternary{4} = add(<00+->, <0+0->)
+- Every program MUST begin with a `nodule <name>` line (e.g. `nodule bench`), then fns.
 - Types: Binary{N} (N bits), Ternary{N} (N balanced trits).
 - Binary literal: 0b1010_1010 (underscores allowed). Ternary literal: <+0-> (MSB first).
 - Built-in ops: not(x), xor(a, b), add(a, b), swap(x, to: Ternary{6}, policy: name).
@@ -305,17 +309,16 @@ def extract_source(raw: str, arm: str) -> str:
     if "```" in text:
         segments = text.split("```")
         if len(segments) >= 2:
-            block = segments[1]
-            block_lines = block.splitlines()
-            # Drop a leading language tag line (```mycelium / ```python / ```).
-            if block_lines and block_lines[0].strip().lower() in {
-                "mycelium",
-                "myc",
-                "python",
-                "py",
-                "",
-            }:
-                block_lines = block_lines[1:]
+            block_lines = segments[1].splitlines()
+            # Drop the fence info string (```mycelium / ```source / ```py / bare ```): it
+            # is never code. Generalised past a fixed list — a real program's first line is
+            # `nodule <name>` (or fn/type/let…), always multi-token, so a lone single word
+            # on the fence line is the language tag (the 0.5B fenced as ```source, which
+            # leaked "source" in as line 1 and broke every parse at 1:1).
+            if block_lines:
+                first = block_lines[0].strip()
+                if first == "" or re.fullmatch(r"[A-Za-z0-9_.+\-]+", first):
+                    block_lines = block_lines[1:]
             extracted = "\n".join(block_lines).strip()
             if extracted:
                 return extracted + "\n"

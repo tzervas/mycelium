@@ -8,6 +8,20 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (2026-06-18: KC-2 extraction + primer defects surfaced by the first 0.5B run)
+- **`extract_source` leaked the fence info string.** A model that fenced its code as ` ```source `
+  left the literal word `source` as line 1, breaking *every* parse at 1:1 ("found Ident(\"source\")").
+  Now the fence info string (any lone single-word tag, or a bare fence) is always dropped — a real
+  program's first line is multi-token (`nodule <name>`, `fn …`). Verified against the on-device output.
+- **The Mycelium primer showed `#` comments** — which Mycelium does not have (`unexpected character
+  '#'`) — so a weak model parroted them into invalid programs. Also a *fairness* bug: `#` is valid in
+  the Python baseline arm, so it penalised only the Mycelium arm. The primer now states there are no
+  comments and emphasises the required `nodule <name>` header as prose, not an inline `#` annotation.
+- Context: in the first complete 0.5B run (10/10 first-attempt invalid, sc5b=0.0) the failures were
+  largely mechanical — e.g. kc2-04's model body was byte-identical to the reference and passes once
+  the dropped `nodule bench` header is restored. These two fixes + edit-to-fix iterations (max-iters
+  ≥ 2) should recover much of that; honest measurement still pending a re-run.
+
 ### Added (2026-06-18: containerised desktop-GPU runner + cross-platform fixes)
 - **`experiments/docker/`** — a CUDA image (Dockerfile + docker-compose) that runs the whole KC-2
   pipeline on a desktop GPU (e.g. RTX 5080 / Blackwell `sm_120`) without touching the host
