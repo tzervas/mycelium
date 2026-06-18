@@ -8,6 +8,27 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Decided (2026-06-18: RFC-0018 / RFC-0019 / RFC-0020 ratified — Track B RFCs → Accepted)
+With the gating research discharged (RP-2/RP-3) and readiness assessed (DN-12), the maintainer ratified
+the three non-empirical Track-B RFCs append-only. (RFC-0021 stays Draft — its empirical leverage gate
+is open.)
+- **RFC-0018 → Accepted.** R18-Q1 = **Design A** (data-lineage / data-provenance integrity; `G-Match/A`
+  normative — the guarantee system tracks data provenance, not control-flow secrecy); R18-Q4 =
+  certificate reference at the type level, validity at elaboration/runtime (KC-3). R18-Q2/R7-Q2 closed.
+  **Supersedes RFC-0007 §4.3**'s stage-1 deferral and **discharges RFC-0006 §8 Q3**. *Honesty (VR-5):*
+  the noninterference result stays **Declared-with-argument** (not machine-checked) — acceptance is of
+  the design, and does not upgrade that tag.
+- **RFC-0019 → Accepted.** Coherence = **orphan rule + global uniqueness + reject-overlap** (hash-stable
+  resolution); the **Repr-polymorphism restriction set** (§4.6 — "no paradigm-specific `Op` on a
+  Repr-abstract argument", locally checkable, S1-preserving) is normative; **newtype waivers rejected
+  in v1** (need roles); **multi-param + associated types deferred to v2**; dictionary-passing, kernel
+  budget unchanged (KC-3). Soundness stays **Declared-with-argument**.
+- **RFC-0020 → Accepted (scoped).** The §4.1/§4.3/§4.4/§4.6/§4.7/§4.8/§4.9 core is Accepted (no research
+  gate); §4.2/§4.5/R20-Q1…Q5 carved out as deferred (the RFC-0006 r5 pattern), each unblocking via the
+  now-Accepted RFC-0018/0019 and the enacted RFC-0001 r5 `FixGroup`.
+- **Ripples:** RFC-0006 §8 Q3 discharged; RFC-0007 §4.3 stage-1 deferral superseded + R7-Q2 resolved
+  (append-only changelog notes on both); RP-2 and RP-3 → **Resolved**; Doc-Index statuses → Accepted.
+
 ### Added (2026-06-18: RFC-0020 readiness + RFC-0021 design grounding — Track B completes its analyzable scope)
 Finishes the next wave's Track B for the two remaining RFCs, honestly bounded by what analysis can settle.
 - **`docs/notes/DN-12-RFC-0020-Ratification-Readiness.md`** — RFC-0020 (L2 surface) carries **no

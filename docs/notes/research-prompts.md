@@ -65,12 +65,12 @@ decoding conditions showing further lift — consistent with the MTOB and gramma
 
 ## RP-2 — Stage-1 Grading: Implicit-Flows Decision and Noninterference Proof
 
-**Status:** **Research discharged (2026-06-18)** — `research/09-stage-1-grading-noninterference-RECORD.md`
-delivers the counterexample, the data-provenance noninterference theorem + proof sketch, R7-Q2
-closure, and the Design-A / R18-Q4 recommendations (RFC-0018 §11 marked discharged). The soundness
-result is tagged **Declared-with-argument** (not machine-checked — a future `Proven` upgrade needs
-mechanization). The *research* gate is closed; RFC-0018 ratification now awaits only the maintainer's
-append-only R18-Q1 (Design A vs B) and R18-Q4 decisions. (Original prompt retained below.)
+**Status:** **RESOLVED (2026-06-18)** — research in `research/09-stage-1-grading-noninterference-RECORD.md`;
+decision recorded in **RFC-0018 (Accepted)**: R18-Q1 = **Design A** (data-provenance integrity),
+R18-Q4 = certificate reference at the type level / validity at elaboration-runtime; R7-Q2 closed.
+RFC-0018 supersedes RFC-0007 §4.3's stage-1 deferral and discharges RFC-0006 §8 Q3. The soundness
+result stays **Declared-with-argument** (not machine-checked — a future `Proven` upgrade needs
+mechanization). (Original prompt retained below.)
 
 **Question.** For the stage-1 static guarantee-grading RFC (a revision of RFC-0007 §4.3 / RFC-0006
 Q3): do *implicit flows* taint guarantee grades, or do guarantee grades track data lineage only?
@@ -118,15 +118,12 @@ question — does a `default` arm's body meet-degrade differently from named alt
 
 ## RP-3 — Traits Coherence and Repr-Polymorphism Soundness (LR-5 / T3.3)
 
-**Status:** **Research discharged (2026-06-18)** — `research/10-traits-coherence-repr-polymorphism-RECORD.md`
-answers all three sub-questions: the coherence *mechanism* (Rust-style orphan rule + global
-uniqueness + reject-overlap, with a hash-stable-resolution theorem), the *restriction set* ("no
-paradigm-specific `Op` on a Repr-abstract argument" — locally checkable), and the *S1-preservation
-soundness statement* (theorem + sketch, the dual of GHC levity polymorphism). Newtype waivers
-recommended rejected in v1 (need roles); multi-param/associated types recommended deferred to v2.
-Soundness tagged **Declared-with-argument** (not machine-checked). RFC-0019 §9 R1/R2 marked
-discharged; ratification now awaits the maintainer's append-only design decisions. (Original prompt
-retained below.)
+**Status:** **RESOLVED (2026-06-18)** — research in `research/10-traits-coherence-repr-polymorphism-RECORD.md`;
+decisions recorded in **RFC-0019 (Accepted)**: coherence = orphan rule + global uniqueness +
+reject-overlap; the Repr-polymorphism restriction set ("no paradigm-specific `Op` on a Repr-abstract
+argument" — locally checkable, S1-preserving) is normative; newtype waivers rejected in v1 (need
+roles); multi-param/associated types deferred to v2. Soundness stays **Declared-with-argument** (not
+machine-checked). (Original prompt retained below.)
 
 **Question.** What coherence mechanism and restriction set make **Repr-polymorphism** (LR-5:
 abstracting over the paradigm `∀r: Repr`) sound while keeping `Swap` explicit (S1)?

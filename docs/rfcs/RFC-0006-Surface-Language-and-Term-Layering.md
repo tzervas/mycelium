@@ -297,6 +297,12 @@ KC-2-gated and stage-1 grading (Q3) stays open for the grading RFC.*
 
 ## Meta — changelog
 
+- **2026-06-18 — §8 Q3 discharged (RFC-0018 Accepted; ripple, append-only).** The stage-1 guarantee-
+  grading mechanism Q3 left open ("a graded coeffect modality … whether implicit flows taint, recorded
+  as a decision") is now **discharged by RFC-0018 (Accepted)**: the mechanism is the graded coeffect
+  judgment, and the implicit-flows decision is **Design A** (data-lineage / data-provenance integrity,
+  R18-Q1). The §10 status note "stage-1 grading (Q3) stays open for the grading RFC" is thereby
+  closed. No normative change to this RFC; editorial cross-ref update.
 - **2026-06-18 (r5) — KC-2 verdict received (DN-09); Q1 discharged, L3 surface committed.** The
   maintainer's **KC-2 verdict = proceed** (DN-09, off the measured M-002 run: weak-but-recoverable
   leverage, no irrecoverable collapse) closes the **one deliberate deferral** this RFC carried (§8 Q1 /

@@ -345,6 +345,14 @@ revisions / KC-2-gated.*
 
 ## Meta — changelog
 
+- **2026-06-18 — §4.3 stage-1 deferral superseded + §8 R7-Q2 resolved (RFC-0018 Accepted; ripple,
+  append-only).** §4.3 deferred the static graded judgment ("stage 1, a revision of this RFC"); that
+  stage-1 grading is now specified and **Accepted in RFC-0018**, which **supersedes §4.3's deferral**
+  (the stage-0 dynamic check specified here remains the runtime semantics). **R7-Q2** (does a `Match`
+  default arm meet-degrade differently from named alternatives once grading lands?) is **resolved**:
+  under RFC-0018's adopted Design A (`G-Match/A`), the default arm is meet-folded identically to named
+  alternatives — no special degradation. No normative change to this RFC's v0 rules; editorial
+  cross-ref update.
 - **2026-06-18 — §4.5 `matured` *granularity* superseded by RFC-0017; concrete-surface-syntax
   carve-out discharged (KC-2 verdict DN-09); append-only, soundness unchanged.** Two consequences of
   maintainer decisions recorded today, neither altering the calculus: **(1)** RFC-0017 (Accepted) lifts

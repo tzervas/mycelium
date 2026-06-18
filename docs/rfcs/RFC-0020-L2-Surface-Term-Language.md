@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0020 |
-| **Status** | **Draft** (maintainer ratification pending — do not read as Accepted) |
+| **Status** | **Accepted (scoped)** (2026-06-18, maintainer ratification; DN-12) — the §4.1/§4.3/§4.4/§4.6/§4.7/§4.8/§4.9 core is Accepted (no research gate). **Carved out (deferred, not objections):** §4.2 polymorphic instantiation + grade-inference integration, §4.5 `grow`-derived traits, and R20-Q1…Q5 — each unblocking via the now-Accepted RFC-0018/RFC-0019 and the enacted RFC-0001 r5 `FixGroup`. The RFC-0006 r5 carve-out precedent. |
 | **Type** | Foundational / normative (once Accepted) — L2 surface layer; no L1 or L0 change |
 | **Date** | 2026-06-18 |
 | **Depends on** | RFC-0006 §3/§4.1 (layering L0–L3, invariants S1–S6); RFC-0007 §4.1–4.8 (L1 kernel: ten nodes, registry, typing, elaboration); RFC-0012 §4 (ambient paradigm — the enacted model example of L2 elaboration-only sugar); RFC-0011 (flat `Match` and Maranget compilation into L0); DN-09 §3.2 (usability-first design bias, committed text surface); DN-03 (lexicon — reserved forms); LR-1/LR-3; KC-3; ADR-003; ADR-006 |
@@ -557,6 +557,15 @@ this section records the extension obligation so M-142's design accommodates it.
 
 ## 10. Ratification scope
 
+> **RATIFIED (scoped) (2026-06-18, maintainer; DN-12).** The "Ready" core below
+> (§4.1/§4.3/§4.4/§4.6/§4.7/§4.8/§4.9) is **Accepted** — RFC-0020 carries no research gate. The
+> "Deferred" items below are **carved out** (deferred, not objections), exactly the RFC-0006 r5
+> pattern; each unblocks via the now-Accepted **RFC-0018** (R20-Q2 grade inference), the now-Accepted
+> **RFC-0019** (R20-Q1 polymorphic inference, §4.5 `grow`), and the enacted **RFC-0001 r5 `FixGroup`**
+> (R20-Q4 mutual recursion; surface front-end is M-391). The §4.9 conformance corpus is a *testing*
+> deliverable that follows ratification, not a gate. The original split is retained below verbatim
+> (append-only).
+
 This is a **Draft**. Ratification is a maintainer decision, append-only. The split of what is
 ready for ratification vs. what is explicitly deferred:
 
@@ -611,3 +620,8 @@ elaboration are explicitly deferred.*
   R20-Q2 → RFC-0018/RP-2) and one on the enacted RFC-0001 r5 `FixGroup` (R20-Q4). DN-12 recommends a
   **scoped** ratification (the §4.1/§4.3/§4.4/§4.6/§4.7/§4.8/§4.9 core) with a carve-out for the
   deferred sections — the RFC-0006 r5 precedent. Advisory; status unchanged (Draft). Append-only.
+- **2026-06-18 — ACCEPTED (scoped) (maintainer ratification; DN-12).** The §4.1/§4.3/§4.4/§4.6/§4.7/
+  §4.8/§4.9 core is Accepted (no research gate). The deferred sections (§4.2 polymorphic + grade
+  inference, §4.5 `grow`, R20-Q1…Q5) are carved out — each now unblocking via the same-day-Accepted
+  RFC-0018/RFC-0019 and the enacted RFC-0001 r5 `FixGroup`. The §4.9 conformance corpus follows
+  ratification (a testing deliverable, not a gate). Append-only.

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0018 |
-| **Status** | **Draft** (revision of RFC-0007 §4.3; flagged novel — graded modality + runtime certificates has no found precedent; maintainer ratification required; do NOT read as Accepted) |
+| **Status** | **Accepted** (2026-06-18, maintainer ratification) — **R18-Q1 = Design A** (data-lineage / data-provenance integrity); **R18-Q4 = certificate reference at the type level, validity at elaboration/runtime**; the §11/RP-2 soundness obligation discharged (`research/09`); R18-Q2/R7-Q2 closed. **Supersedes RFC-0007 §4.3**'s deferral of stage-1 grading. *Honesty note (VR-5):* the noninterference result remains **Declared-with-argument** (not machine-checked) — RFC acceptance does not upgrade that tag; mechanization is the basis for a future `Proven` upgrade. |
 | **Type** | Foundational / normative (language type system) |
 | **Date** | June 18, 2026 |
 | **Depends on** | RFC-0006 §4.1 S2, §4.2 LR-6, §8 Q3, §10; RFC-0007 §4.3/§4.4 (guarantee index `τ @ g`, stage-0 dynamic check); research/03-language-layer-RECORD.md T3.2; VR-5; KC-3 |
@@ -366,6 +366,16 @@ normative decision about the semantics of the guarantee system. It must be recor
 maintainer decision (append-only; RFC-0006 Q3) before this RFC can be ratified. The §11 research
 prompt includes a required worked-example pass that tests both designs on representative programs.
 
+> **RATIFIED (2026-06-18): Design A is normative.** The maintainer recorded R18-Q1 = **Design A**
+> (data-lineage only; the `G-Match/A` rule). The guarantee system tracks **data provenance**, not
+> control-flow secrecy: an `Exact`-typed output certifies that its *content* derives only from
+> `Exact` data, modulo a certified `Swap` (the data-provenance noninterference theorem,
+> `research/09` T9.4). Design B (the `pc`-indexed `G-Match/B` rule) is retained above as the
+> documented, *not-adopted* alternative — the full-IFC property is a strictly stronger but
+> different guarantee than VR-5 asserts. Recorded precondition (`research/09` T9.6): Design A's
+> sufficiency rests on the calculus being pure; when observable effects land, they must become
+> graded outputs (RFC-0014, route i) or carry a local `pc` (route ii).
+
 ### 4.6 Interaction with LR-6 guarantee-indexed types and the prim signature table
 
 **LR-6 (RFC-0006 §4.2):** "a function demanding `Exact` input is a type error to call with
@@ -504,6 +514,8 @@ self-defeating for this use case.
    (data lineage only, no `pc`) or Design B (`pc`-indexed, full implicit-flow taint). This RFC
    recommends Design A (§4.5); the choice is the maintainer's and must be recorded as an explicit
    append-only decision before ratification. Neither design is implicit; silence is not an answer.
+   **— RESOLVED (2026-06-18): Design A** (data-lineage / data-provenance integrity; §4.5 ratified
+   note; `research/09`).
 
 2. **R18-Q2 (R7-Q2 discharged contingently).** R7-Q2 asks whether the `Match` default arm
    degrades differently from named alternatives. §4.5 answers it for both designs: under both,
@@ -524,6 +536,10 @@ self-defeating for this use case.
    *reference* is sufficient at the type level with validation deferred to elaboration/runtime
    (weaker, but separates concerns and keeps the type checker decidable without the proof
    checker). This is a trusted-kernel scope question (KC-3).
+   **— RESOLVED (2026-06-18): certificate reference at the type level; `cert.valid` discharged by the
+   existing RFC-0002 checker at elaboration/runtime** (keeps the trusted type checker free of the
+   proof checker — KC-3; matches the `research/09` T9.8 proof structure where endorsement soundness
+   is delegated, not inlined).
 
 5. **R18-Q5 (grade inference scope for stage 1a).** Stage 1a is monomorphic (§4.7); grade
    inference is therefore only local (within a single expression). The question is whether even
@@ -577,10 +593,14 @@ Items not required for ratification: the prim table grading upgrade (§4.6 — t
 G-Op default is sound), stage 1b polymorphism (§4.7 — stage 1a is the deliverable), and stage 2
 refinement premises (§4.7 — a future RFC).
 
-**Status line (in force):** *Draft — graded typing judgment (§4.3), staging path (§4.7), and
-prior art (§7) are complete; the implicit-flows maintainer decision (R18-Q1), the soundness
-argument (§11 research prompt), and the certificate-validity scope (R18-Q4) remain open and must
-be discharged before ratification.*
+**Status line (in force):** *Accepted (2026-06-18, maintainer ratification). All three §10 gates are
+discharged: R18-Q1 = Design A (data-lineage / data-provenance integrity); the §11/RP-2 soundness
+argument (`research/09`, stated as a theorem with a sketch — Declared-with-argument, not yet
+machine-checked); R18-Q4 = certificate reference at the type level, validity at elaboration/runtime.
+R18-Q2/R7-Q2 closed. Supersedes RFC-0007 §4.3's stage-1 deferral. Not gating ratification and left as
+recorded implementation positions: R18-Q3 (prim-table grading is a separate tracked deliverable — the
+conservative G-Op default is sound meanwhile) and R18-Q5 (stage-1a local grade inference over the
+4-chain — desirable and trivial; the checker's call).*
 
 ## 11. Research prompt (pre-ratification variant pass)
 
@@ -681,3 +701,15 @@ machine-checked, so it can be tracked as a proof obligation.
   prompt) is now discharged; gates 1 (R18-Q1) and 3 (R18-Q4) await the maintainer's append-only
   decision (both recommended above). No normative rule changed — this is the grounding the decision
   was waiting on. Append-only.
+- **2026-06-18 — ACCEPTED (maintainer ratification).** All three §10 gates discharged. The maintainer
+  recorded **R18-Q1 = Design A** (data-lineage only; `G-Match/A` normative — the guarantee system
+  tracks data provenance, not control secrecy; §4.5 ratified note) and **R18-Q4 = certificate
+  reference at the type level, validity discharged by the RFC-0002 checker at elaboration/runtime**
+  (KC-3). The §11/RP-2 soundness argument is discharged by `research/09`. **R18-Q2/R7-Q2 closed**
+  (default arm symmetric under `G-Match/A`). This RFC now **supersedes RFC-0007 §4.3**'s deferral of
+  stage-1 grading (the stage-0 dynamic check it specified remains the runtime semantics; stage-1 is
+  the static judgment of §4.3 here) and **discharges RFC-0006 §8 Q3** (the grading mechanism).
+  *Honesty (VR-5):* acceptance is of the **design**; the soundness *claim* stays
+  **Declared-with-argument** (not machine-checked) — mechanization remains the basis for a `Proven`
+  upgrade, named as future work, not claimed. R18-Q3/R18-Q5 left as recorded implementation positions
+  (not gating). Append-only.
