@@ -15,12 +15,15 @@
 
 ## RP-1 — KC-2 Retention-Ratio Ablation (T3.6)
 
-**Status:** **Open — irreducibly empirical (protocol ready).** `research/11-semantic-projection-framework-RECORD.md`
-(T11.6–T11.7) confirms this ablation cannot be discharged by analysis — it needs LLM runs (≥5 arms,
-≥3 seeds, ≥1 frontier model, a grammar-constrained decoder) — and supplies a **turnkey five-arm
-protocol** over the existing `experiments/` harness so the run is mechanical when compute is available.
-Per VR-5 / DN-09 §4 no retention-ratio result may be asserted without the run; this stays **Open**.
-(The M-002 run cleared the KC-2 kill criterion but did not run this ablation.)
+**Status:** **Open — isolated, NON-BLOCKING validation track (task M-381).** As of 2026-06-18 this
+ablation is **split out of RFC-0021** (whose framework is now Accepted *without* it) into its own
+non-blocking track: it gates nothing, and its only coupling to the accepted design is a **supersession**
+(RFC-0021 §4.7 — on falsification, retention < ~70%, a future RFC promotes `LlmCanonical` to primary).
+`research/11` (T11.6–T11.7) confirms it cannot be discharged by analysis — it needs LLM runs (≥5 arms,
+≥3 seeds, ≥1 frontier model, a grammar-constrained decoder) — and supplies the **turnkey five-arm
+protocol** over the `experiments/` harness. Per VR-5 / DN-09 §4 no retention-ratio result may be
+asserted without the run; this stays **Open**. (The M-002 run cleared the KC-2 kill criterion but did
+not run this ablation.)
 
 **Question.** Does Mycelium's novel-but-regular text syntax retain most LLM leverage relative to a
 familiar-skinned same-AST control, at the rigor T3.6 was designed for? Specifically: what is the

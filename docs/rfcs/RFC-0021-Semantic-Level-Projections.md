@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0021 |
-| **Status** | **Draft** (G11 is flagged exploratory — "may not be ergonomically viable"; ratification is a maintainer decision, append-only) |
+| **Status** | **Accepted (framework)** (2026-06-18, maintainer ratification) — the projection **framework** is normative: the model (§3), invariants **P1–P6** (§4.3), the `Projection` interface + registry (§4.1/§4.4), the dual human/machine architecture, the `LlmCanonical` **design** (§4.6), and the §4.7 **supersession mechanism**. The **G11 ergonomics/feasibility** gate is discharged (demonstrated in code — `crates/mycelium-lsp/src/project.rs`). **Carved out (not asserted):** the **LLM-leverage claim** (that `LlmCanonical` lifts pass@1) stays `Declared`/empirically open — it is **split into an isolated, non-blocking validation track (RP-1 / M-381)** whose outcome arrives by **supersession** (§4.7), not by gating this RFC. *Honesty (VR-5):* acceptance asserts **no** leverage result. |
 | **Type** | Foundational / normative (once Accepted) |
 | **Date** | June 18, 2026 |
 | **Depends on** | RFC-0001 §4.6/ADR-003 (content-addressed identity — the primary grounding for all projection semantics); RFC-0006 §3 (L3 projection layer), §4.1 S2/S4/S6 (honest-tags surface, inspectable elaboration, AI-independence); RFC-0007 §4.1 (L1 node budget); ADR-006 (no black boxes); FR-C1 (the exploratory projections requirement); FR-S5 (dual-intelligibility toolchain surface); G11 (semantic-level, not notational, projections — exploratory, ergonomics unverified); G10 (semantic-feedback loop / edit-to-fix recovery) |
@@ -387,6 +387,11 @@ arm's pass@1 on composition tasks, open an RFC that supersedes RFC-0020's "text-
 and promotes `LlmCanonical` to the primary L3 surface. That RFC is a maintainer decision
 (append-only); this RFC does not pre-write it.
 
+> **The ablation is an isolated, non-blocking track (2026-06-18): RP-1 / task M-381.** This RFC's
+> framework is **Accepted without** running it (§9 ratification note). The ablation's *only* coupling
+> to the accepted framework is the **supersession** above — it cannot block, only (on falsification)
+> supersede the text-primary framing. Until it runs, no leverage claim is asserted (VR-5).
+
 ---
 
 ## 5. Drawbacks
@@ -509,6 +514,22 @@ not an extra burden — it is the invariant the corpus has applied consistently 
 ---
 
 ## 9. Research prompts (must run before Draft → Accepted)
+
+> **RATIFIED (framework) (2026-06-18, maintainer) — the two prompts are RESTRUCTURED, not both
+> gating.** The maintainer ratifies the projection **framework** (the model, P1–P6, the interface +
+> registry, the dual-rendering architecture, the `LlmCanonical` design, and the §4.7 supersession
+> mechanism). **Prompt 1 (G11 ergonomics/feasibility)** is **discharged** for L1: feasibility is
+> *demonstrated* in code (`crates/mycelium-lsp/src/project.rs` — a total, honesty-preserving
+> `LlmCanonical` renderer over all 11 nodes; `research/11` T11.4 update), and the residual
+> measured-cost-as-L2-grows / human-usability questions are not leverage claims and do not gate the
+> framework. **Prompt 2 (LLM-facing leverage)** is **split out into an isolated, non-blocking
+> validation track — RP-1 / task M-381** (the T3.6 five-arm ablation, turnkey protocol in `research/11`
+> T11.7). It is **decoupled from this ratification**: the framework is Accepted *without* it, and its
+> only coupling is a future **supersession** (§4.7) — if the ablation falsifies (retention < ~70%), a
+> new RFC supersedes the text-primary framing and promotes `LlmCanonical` to primary. *Honesty (VR-5):*
+> this ratification asserts **no** leverage result; the leverage claim stays `Declared`/open until the
+> run. The original "both prompts gate" framing below is **superseded** by this restructuring for
+> prompt 2 (retained verbatim, append-only).
 
 **Status: PARTIALLY ADVANCED — `research/11-semantic-projection-framework-RECORD.md` (2026-06-18).**
 The *design-decidable* parts are grounded; the *empirical* gate is honestly **not** discharged. The
@@ -636,3 +657,13 @@ falsification comparison.
   *measured authoring cost as L2 grows*, the *human-usability* study, the declared-rule-table form
   (§4.2), `RoundTrip` parse-back, and — wholly untouched — the **LLM-leverage** gate (§9 second prompt)
   all remain open. No leverage asserted (VR-5). Append-only.
+- **2026-06-18 — ACCEPTED (framework); LLM validation split into an isolated non-blocking track
+  (maintainer ratification).** The projection **framework** is Accepted (model §3, P1–P6 §4.3,
+  interface + registry §4.1/§4.4, dual-rendering architecture, the `LlmCanonical` design §4.6, and the
+  §4.7 supersession mechanism). **Prompt 1 (G11 ergonomics/feasibility)** is discharged — demonstrated
+  in code (`crates/mycelium-lsp/src/project.rs`). **Prompt 2 (LLM-leverage)** is **split out** into an
+  isolated, non-blocking validation track (**RP-1 / M-381**): decoupled from this ratification, its
+  only coupling is a future **supersession** (§4.7) if the T3.6 ablation falsifies (retention < ~70%).
+  *Honesty (VR-5):* acceptance asserts **no** leverage result; the leverage claim stays `Declared`/open
+  until the run. This restructures (supersedes, for prompt 2) the §9 "both prompts gate ratification"
+  framing — append-only; the original text is retained. Append-only.

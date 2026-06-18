@@ -8,6 +8,24 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Decided (2026-06-18: RFC-0021 framework ratified; LLM validation split into an isolated non-blocking track)
+The fourth Track-B RFC is ratified at framework scope, with the empirical leverage gate isolated.
+- **RFC-0021 → Accepted (framework).** Normative: the projection model (§3), invariants **P1–P6**
+  (§4.3), the `Projection` interface + registry (§4.1/§4.4), the dual human/machine architecture, the
+  `LlmCanonical` **design** (§4.6), and the §4.7 **supersession mechanism**. The **G11
+  ergonomics/feasibility** gate is discharged — *demonstrated* in code (`mycelium-lsp::project`).
+- **The LLM-leverage validation is split out** into an isolated, **non-blocking** track — **RP-1 /
+  new task M-381** (the T3.6 five-arm retention-ratio ablation; turnkey protocol in `research/11`
+  T11.7). It **gates nothing**; its only coupling to the accepted framework is a future
+  **supersession** (RFC-0021 §4.7) — if the ablation falsifies (retention < ~70%), a new RFC promotes
+  `LlmCanonical` to primary. *Honesty (VR-5):* the ratification asserts **no** leverage result; the
+  claim stays `Declared`/open until the run. This restructures (supersedes, for prompt 2) the §9
+  "both prompts gate ratification" framing, append-only.
+- **Ripples:** RFC-0021 §9 ratification note + §4.7 track note + Meta-changelog appended; RP-1 →
+  "Open — isolated non-blocking track (M-381)"; `issues.yaml` mints **M-381**; Doc-Index status →
+  Accepted (framework). With this, all four Track-B RFCs (0018/0019/0020/0021) are Accepted at their
+  honestly-supportable scope; the only outstanding wave item is the **non-blocking** M-381 run.
+
 ### Added (2026-06-18: LlmCanonical projection prototype — RFC-0021 ergonomics gate demonstrated, M-380)
 - **`crates/mycelium-lsp/src/project.rs`** — a v0 `LlmCanonical` projection (RFC-0021 §4.6; FR-S5): an
   s-expression renderer over the Core IR, **total over all 11 L1 node kinds** (compiler-enforced

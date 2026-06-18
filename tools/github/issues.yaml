@@ -459,8 +459,18 @@ issues:
     labels: [phase:3, type:feature, area:toolchain, priority:P2, status:needs-design]
     depends_on: [E3-3]
     body: |
-      Multiple human/machine projections of the same content-addressed artifact, beyond MPS notational projections (FR-C1/G11). EXPLORATORY + KC-2-CONTINGENT; the content-addressed IR + EXPLAIN dumps are the existing projection substrate.
+      Multiple human/machine projections of the same content-addressed artifact, beyond MPS notational projections (FR-C1/G11). EXPLORATORY + KC-2-CONTINGENT; the content-addressed IR + EXPLAIN dumps are the existing projection substrate. RFC-0021 (framework) is Accepted (2026-06-18); the LlmCanonical renderer prototype is enacted in crates/mycelium-lsp/src/project.rs (the §9 ergonomics/feasibility gate, demonstrated for L1).
       Acceptance (needs-design first): a projection ergonomics study; contingent on the KC-2 verdict.
+
+  - id: M-381
+    title: "M-381 — LLM-leverage validation (T3.6 retention-ratio ablation) — isolated, non-blocking"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:research, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-380, M-002]
+    body: |
+      The empirical LLM-leverage gate split out of RFC-0021 (Accepted framework) as its OWN isolated, NON-BLOCKING track (RP-1 / DN-09 §4 / RFC-0006 §8 Q1). It does NOT gate RFC-0021 or RFC-0020; its only coupling is a SUPERSESSION (RFC-0021 §4.7): if the text-grammar arm retains < ~70% of the LlmCanonical familiar-skin arm's pass@1 on composition tasks, a future RFC supersedes the text-primary framing and promotes LlmCanonical to primary. Until it runs, NO leverage result is asserted (VR-5; DN-09 §4 — the working hypothesis stays supported-but-not-confirmed).
+      Turnkey protocol (research/11 T11.7): the five arms (bare novel; +grammar-in-context; +constrained decoding (a new GBNF/Outlines/Guidance dependency); LlmCanonical familiar-skin (the crates/mycelium-lsp/src/project.rs renderer); embedded-DSL RR-3), >=3 seeds, >=1 frontier model, over the experiments/ harness (M-002 substrate). Headline metric: retention ratio vs the familiar-skin arm; falsification threshold < ~70% (RFC-0006 §8 Q1). Report each arm at the strength actually run (Empirical/Declared); never pre-write the verdict (experiments/README.md §3).
+      Acceptance (needs-design first): the run executed per the protocol; the retention ratio + verdict recorded append-only; on falsification, the superseding RFC opened (the §4.7 trigger). Build deps it requires: the grammar-constrained decoder integration (arm 3) and the LlmCanonical renderer (arm 4, done). NON-BLOCKING: nothing in the Accepted framework waits on this.
 
   - id: M-330
     title: "M-330 — AI co-authoring loop (generate -> feedback -> self-correct)"
