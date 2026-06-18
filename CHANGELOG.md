@@ -8,6 +8,13 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Fixed (2026-06-18: matrix prefetch ran the whole harness suite, OOM-skipped models)
+- The KC-2 matrix prefetched models with `harness.py --ensure-model`, which fetches **then runs the
+  full LLM-validation suite** (V-01…). On the desktop that suite got OOM-`Killed`, so the prefetch
+  exited non-zero and the matrix wrongly **skipped that model's combos** (even though the `.gguf` had
+  downloaded). Added `harness.py --ensure-only` (fetch the model, exit 0, do NOT run the suite) and
+  switched `run-kc2-matrix.sh` to it. Verified: the new flag short-circuits before the suite.
+
 ### Fixed (2026-06-18: container ran `bash <binary>` instead of the command)
 - `experiments/docker/Dockerfile` uses `CMD ["bash"]` instead of `ENTRYPOINT ["bash"]`. The image
   built fine, but `ENTRYPOINT ["bash"]` made `podman run IMAGE nvidia-smi` → `bash nvidia-smi` (and

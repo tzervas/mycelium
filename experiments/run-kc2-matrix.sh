@@ -40,10 +40,10 @@ if [[ ${#MODELS[@]} -eq 0 ]]; then
   echo "ERROR: no eligible models (all exceeded the 1.5B mobile cap)." >&2; exit 1
 fi
 
-echo "== Prefetch models (robust, auto-resuming) =="
+echo "== Prefetch models (download only — NOT the harness validation suite) =="
 for m in "${MODELS[@]}"; do
   echo "--- ensure $m ---"
-  python3 "$HARNESS" --ensure-model --model-id "$m" --download-retries 0 \
+  python3 "$HARNESS" --ensure-model --ensure-only --model-id "$m" --download-retries 0 \
     || echo "WARN: could not fetch $m; its combos will be skipped."
 done
 
