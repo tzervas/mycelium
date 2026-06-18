@@ -8,6 +8,15 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: DN-08 — maturation granularity capture)
+- New design note **DN-08** (`docs/notes/`, Draft) capturing the maintainer intent that `matured`
+  apply at module (`nodule`) / library (`phylum`) / program scope — coarse-grained, at a stable point
+  — with per-`fn` maturation *atypical*, and selective *de*-maturation (shifting one subcomponent back
+  to interpreted) the rare fine-grained operation. Advisory; RFC-0007's Accepted per-definition gate
+  is untouched (append-only). Registered in `Doc-Index.md`; grounded in RFC-0007 §4.5, Glossary §2.10,
+  DN-06. Also notes the harness safety property that only myc-check-validated Mycelium (never Rust, the
+  implementation language) is ever fed to the model or to `myc-check`.
+
 ### Added (2026-06-18: KC-2 grounded primer, A/B variants, per-task token budgets, run matrix)
 - **Grounded, leak-free Mycelium primer.** Rewrote `PRIMER_MYCELIUM` from the actual L1 grammar
   (lexer keywords, literal forms, exhaustive `match`, `for`-folds over recursive types, `let`,
