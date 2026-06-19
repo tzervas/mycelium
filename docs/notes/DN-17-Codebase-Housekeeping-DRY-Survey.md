@@ -102,8 +102,8 @@ YAGNI line.
 
 The error-*type* unification (the biggest LOC line) is deliberately deferred: during the design phase
 the std specs are still pending ratification (DN-16) and error shapes change per issue. Extracting
-them now would trade visible duplication for invisible coupling — the worse failure under house rule
-#5. The footprint win that is **safe today** is the manifest dedup (P1) and the test-helper
+them now would trade visible duplication for invisible coupling — the worse failure under the
+house DRY/KISS/YAGNI rule. The footprint win that is **safe today** is the manifest dedup (P1) and the test-helper
 consolidation (P2); the rest waits for the specs to stabilise. No item here is a blocker; this is
 maintenance, scheduled at a stable point (DN-08 coarse-granularity posture).
 
