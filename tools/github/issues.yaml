@@ -1300,3 +1300,23 @@ issues:
     body: |
       The Phase-6 charter's "production hardening" + its gate condition "a deployable Spore (VR-4 no-opaque-lowering across ALL backends)". Establish the cross-backend VR-4 obligation: every lowering stage on every backend (interpreter, AOT env-machine, native MLIR→LLVM, JIT) stays dumpable/inspectable — no opaque pass anywhere — and a deployed Spore carries that guarantee. Production hardening = the honest soak/robustness work a release needs, with every verdict tagged at its established strength (VR-5).
       Acceptance (design-first; gated on M-601/M-620): VR-4 demonstrated across all backends (a dumpable stage at every lowering step); the production-hardening checklist met with honest per-item verdicts; this is the Phase-6 exit gate.
+
+  # 2026-06-19: docs-currency wave (M-371) + fmt->io JSON delegation (M-372). Created via the
+  # GitHub MCP server (#202/#203); append-only. Landed as a Sonnet swarm on the wave branch.
+  - id: M-371
+    title: "M-371 — Documentation currency pass + doc-currency check (navigational docs <-> implemented state)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:docs, area:project, priority:P2, status:done]
+    depends_on: []
+    body: |
+      Bring the navigational/overview docs (README, docs/Doc-Index.md, docs/Mycelium_Project_Foundation.md) current with the implemented state (42 crates + xtask; reference interpreter + certified swaps + 23-crate Rust-first stdlib; Phases 0-3/5/7 complete, 4/6/8 in progress) and add a programmatic guard so they cannot silently drift. Scope = the navigational corpus + a skip-graceful `just check` doc-currency gate (scripts/doc_currency.py + scripts/checks/doc-currency.sh): structure-tree <-> filesystem, Doc-Index <-> docs/ coverage, cited crate-count currency; does NOT duplicate the existing links/myc-doc checks. Append-only RFC/ADR/DN/spec bodies untouched; no spec promoted to Accepted.
+      DONE (2026-06-19): landed as a Sonnet swarm wave; doc-currency gate green; README/Doc-Index/Foundation refreshed honestly (KC-1 SAFE, KC-2 proceed per DN-09, self-hosting M-502 not established). Advances NFR-2 (dual-intelligibility / honest self-description).
+
+  - id: M-372
+    title: "M-372 — fmt->io canonical-JSON delegation (resolve fmt 7-Q1 / RFC-0016 8-Q1)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:done]
+    depends_on: [M-533, M-514]
+    body: |
+      Maintainer-ratified (2026-06-19) the converged "one canonical JSON projection" seam: io/serialize (M-514) owns the single canonical JSON; std.fmt's to_json/from_json (M-533) delegate to it (one JSON, two entry points; round-trip established once). Both fmt.md 7-Q1 and io.md independently proposed it (docs/spec/stdlib/README.md 5); it was the last item pending maintainer sign-off. Replaces fmt's duplicated serde_json codec + classification with delegation; preserves the content-hash round-trip, the non-finite-f64 refusal, the public API, and the honest tags (the fmt-Exact vs io-Empirical from_json tag-framing is FLAGGED as a residual, not silently changed; VR-5).
+      DONE (2026-06-19): landed on the wave branch; verification (build/test/clippy) + the append-only spec resolution (fmt.md/io.md/stdlib README 5) run in the Sonnet review pass. Resolves fmt.md 7-Q1 + RFC-0016 8-Q1. Advances RFC-0016 4.1 C5.

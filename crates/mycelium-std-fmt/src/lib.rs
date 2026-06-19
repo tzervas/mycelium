@@ -43,18 +43,24 @@
 //! - **C6 declared bounded effects (RFC-0014):** pure ops declare `none`; `display_bounded`
 //!   declares `alloc(budget)` — the bound is on the signature.
 //!
-//! # FLAG — JSON-delegation seam (pending `mycelium-std-io`)
+//! # JSON delegation to `mycelium-std-io` (M-514) — wired (ratified 2026-06-19)
 //!
-//! The spec (§7-Q1) and `README.md §5` record that `fmt.to_json` **should delegate** to the
-//! canonical JSON projection owned by `io`/`serialize` (M-514) — one canonical JSON, two entry
-//! points. `mycelium-std-io` **has since landed** (same wave); this crate still implements its
-//! own display-JSON over `serde_json::Value` and marks the delegation seam, because wiring the
-//! delegation is a maintainer-deferred decision (spec §7-Q1 — pending sign-off). The two share the
-//! **same non-finite refusal policy** (a `NaN`/`±∞` `f64` is refused, never a silent `null`), so
-//! the seam is consistent. **When the delegation is ratified, the `to_json`/`from_json` bodies
-//! should call `mycelium-std-io`.** The round-trip invariant
-//! (`from_json(to_json(v)).content_hash() == v.content_hash()`) is already checked here and
-//! remains the check once delegation is wired.
+//! `fmt.to_json`/`from_json` **delegate** to the **one canonical JSON projection** owned by
+//! `io`/`serialize` (M-514) — one canonical JSON, two entry points (spec §7-Q1; `README.md §5`).
+//! The maintainer ratified the converged delegation (2026-06-19), so the codec, the non-finite
+//! refusal (`NaN`/`±∞` refused, never a silent `null`), and the never-silent decode-error
+//! classification all live **once**, in `std.io`; this crate keeps only its thin display facade
+//! (`Json`/`ToJsonError`/`FromJsonError`) over them. The round-trip invariant
+//! (`from_json(to_json(v)).content_hash() == v.content_hash()`) is established once in `std.io`
+//! and re-checked here.
+//!
+//! **Tag-framing note (honesty, VR-5 — residual for the maintainer).** `std.io` tags the JSON
+//! round-trip `from_json` **`Empirical`** (proptest corpus, no theorem); `std.fmt` tags its
+//! `from_json` **`Exact`** (a deterministic decode with no accuracy semantics — the round-trip is
+//! a separately-checked property, not a numeric claim). Both are honest descriptions of the same
+//! operation from different angles, and neither over-claims (`Proven`). Unifying the two crates'
+//! tag *framing* for the shared op is a finer reconciliation left to the maintainer; this
+//! delegation does **not** silently change either tag.
 //!
 //! Design spec: `docs/spec/stdlib/fmt.md`; contract: RFC-0016 §4.1 (C1–C6);
 //! guarantee matrix: spec §4.
@@ -143,12 +149,11 @@ pub struct Rendering {
 /// Produced by [`to_json`]; round-trips via [`from_json`]. This is **not** the canonical
 /// transport codec (that is `io`/`serialize`, M-514) — it is the *display* machine projection.
 ///
-/// # FLAG — M-514 delegation seam
-/// When `mycelium-std-io` lands (M-514), the inner representation of this type and the bodies
-/// of `to_json`/`from_json` must be replaced with a delegation call so there is **one canonical
-/// JSON projection, two entry points** (spec §7-Q1; README §5 reconciliation). The round-trip
-/// guarantee (`from_json(to_json(v)).content_hash() == v.content_hash()`) continues to hold
-/// through the delegation.
+/// # Delegation (M-514) — wired
+/// `to_json`/`from_json` delegate the canonical projection to `mycelium-std-io` (the ratified
+/// fmt→io seam; spec §7-Q1, README §5 — "one canonical JSON, two entry points"). This `Json` is
+/// the thin display wrapper over that one canonical JSON; the round-trip guarantee
+/// (`from_json(to_json(v)).content_hash() == v.content_hash()`) holds through the delegation.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Json(pub serde_json::Value);
 
@@ -287,11 +292,10 @@ pub fn display_bounded(v: &Value, limit: Budget) -> Rendering {
 /// `Value` with the **same content hash** as `v` (ADR-003; RFC-0001 §4.6). This is the checked
 /// round-trip invariant (spec §4; RFC-0016 §4.5).
 ///
-/// # FLAG — M-514 delegation seam
-/// This op implements its own JSON projection. `mycelium-std-io` has since landed the **one
-/// canonical JSON projection** (which refuses non-finite identically); wiring this op to delegate
-/// to it is a maintainer-deferred decision (spec §7-Q1; README §5 reconciliation — pending
-/// sign-off). The non-finite refusal policy here matches `std.io`'s so the seam is consistent.
+/// # Delegation (M-514) — wired
+/// This op delegates the canonical Value→JSON projection (and the non-finite refusal) to
+/// `mycelium-std-io::to_json` — the ratified fmt→io seam (spec §7-Q1; README §5). `fmt` reports
+/// the first offending payload index as its typed `ToJsonError::NonFinite`.
 pub fn to_json(v: &Value) -> Result<Json, ToJsonError> {
     Ok(Json(value_to_json(v)?))
 }
@@ -312,8 +316,9 @@ pub fn to_json(v: &Value) -> Result<Json, ToJsonError> {
 /// - [`FromJsonError::UnknownTag`] — the `repr.kind` field is not `Binary|Ternary|Dense|VSA`.
 /// - [`FromJsonError::OutOfDomain`] — a field value is out of its domain (e.g. `width: 0`).
 ///
-/// # FLAG — M-514 delegation seam
-/// Same as `to_json`: must delegate to `mycelium-std-io` once it lands.
+/// # Delegation (M-514) — wired
+/// Delegates the canonical decode (and its located, classified errors) to
+/// `mycelium-std-io::from_json` — the ratified fmt→io seam (spec §7-Q1; README §5).
 pub fn from_json(j: &Json) -> Result<Value, FromJsonError> {
     json_to_value(j.inner())
 }
@@ -644,76 +649,92 @@ fn display_bounded_impl(v: &Value, limit: Budget) -> Rendering {
     }
 }
 
-// ── §9. JSON serialization helpers (M-514-pending own implementation) ──────
+// ── §9. JSON serialization helpers — delegated to `mycelium-std-io` (M-514) ──
+//
+// The canonical Value↔JSON projection, its non-finite refusal, and the never-silent, located
+// decode-error classification all live ONCE in `mycelium-std-io` (M-514; `to_json`/`from_json`).
+// Per the maintainer-ratified delegation (2026-06-19; spec §7-Q1, README §5 — "one canonical
+// JSON, two entry points"), `std.fmt` no longer carries its own codec: it calls `std.io` and
+// adapts the result to its thin, display-facing facade. The round-trip property
+// (`from_json(to_json(v)).content_hash() == v.content_hash()`) is therefore established once, in
+// `std.io` (where it is honestly tagged `Empirical`), and merely re-checked here.
 
-/// Serialize a [`Value`] to its JSON wire form.
+/// Project a [`Value`] to a `serde_json::Value` for `fmt`'s display wrapper, delegating the
+/// canonical projection to [`mycelium_std_io::to_json`].
 ///
-/// This is a local implementation pending M-514 delegation (see module-level FLAG).
-/// The wire form follows `value.schema.json` via the `Serialize` impl on `mycelium_core::Value`.
-///
-/// Refuses a non-finite `f64` (`Err(ToJsonError::NonFinite)`): `Value::new` does **not** enforce
-/// finiteness, and `serde_json::to_value` would silently map `NaN`/`±∞` to `null` — a lossy,
-/// identity-colliding encoding. Refusing keeps the projection never-silent (C1/G2).
+/// Refuses a non-finite `f64` with `Err(ToJsonError::NonFinite { index })` — `fmt` reports the
+/// first offending payload index for an ergonomic typed error; `std.io` independently refuses the
+/// same domain (never a silent `null`), so the seam is consistent (C1/G2).
 fn value_to_json(v: &Value) -> Result<serde_json::Value, ToJsonError> {
     if let Some(index) = first_non_finite(v) {
         return Err(ToJsonError::NonFinite { index });
     }
-    // After the finiteness check, `Value`'s serde impl is total (M-104; valid shapes by Value::new).
-    Ok(serde_json::to_value(v)
-        .expect("Value serialization is total over finite, well-formed values (M-104)"))
+    // Delegate the canonical Value→JSON-text projection to std.io (M-104 grammar, owned by M-514).
+    // The text is valid JSON, so re-parsing it into a serde_json::Value for the display wrapper is
+    // total.
+    let text = mycelium_std_io::to_json(v)
+        .expect("io::to_json is total over finite Values (non-finite excluded above)");
+    Ok(
+        serde_json::from_str(&text)
+            .expect("io::to_json emits valid JSON, so the re-parse is total"),
+    )
 }
 
-/// Deserialize a [`Value`] from its JSON wire form.
+/// Reconstruct a [`Value`] from `fmt`'s display JSON wrapper, delegating the canonical decode
+/// (and its located, classified errors) to [`mycelium_std_io::from_json`].
 ///
-/// Never-silent (C1): every malformed input path returns an explicit `Err(FromJsonError::*)`.
-///
-/// # FLAG — M-514 delegation seam
-/// Same as `value_to_json`: replace with `mycelium-std-io` delegation when M-514 lands.
+/// Never-silent (C1): every failure is an explicit [`FromJsonError`] mapped from `std.io`'s
+/// located [`mycelium_std_io::SerError`]; no partially-filled `Value` is ever returned.
 fn json_to_value(j: &serde_json::Value) -> Result<Value, FromJsonError> {
-    // The schema requires an object with "repr", "meta", and "payload".
-    let obj = j
-        .as_object()
-        .ok_or_else(|| FromJsonError::Malformed("expected a JSON object for a Value".to_owned()))?;
-
-    // Validate that the required fields are present before attempting full deserialization.
-    for field in &["repr", "meta", "payload"] {
-        if !obj.contains_key(*field) {
-            return Err(FromJsonError::Malformed(format!(
-                "missing required field {field:?}"
-            )));
-        }
-    }
-
-    // Check for unknown repr.kind tag before full deserialization for a better error (C1).
-    let repr_obj = obj["repr"].as_object().ok_or_else(|| {
-        FromJsonError::Malformed("\"repr\" field must be a JSON object".to_owned())
-    })?;
-    let kind = repr_obj
-        .get("kind")
+    // Pre-check `repr.kind` before the full delegation. A `serde_json::Map` serialises its keys in
+    // sorted order when the `preserve_order` feature is off (the default), so when this wrapper is
+    // rendered via `serde_json::to_string(j)` below, `meta` precedes `repr` — and a missing-field
+    // error in `meta` would surface in `std.io` before serde ever reaches `repr.kind`. Checking the
+    // tag eagerly here preserves the pre-delegation error priority: unknown `repr.kind` →
+    // `UnknownTag`, regardless of field order in the serialised text (C1 — never-silent, classified
+    // error set, spec §3).
+    if let Some(kind) = j
+        .get("repr")
+        .and_then(|r| r.get("kind"))
         .and_then(|k| k.as_str())
-        .ok_or_else(|| {
-            FromJsonError::Malformed("\"repr.kind\" field must be a string".to_owned())
-        })?;
-    match kind {
-        "Binary" | "Ternary" | "Dense" | "VSA" => {}
-        other => return Err(FromJsonError::UnknownTag(other.to_owned())),
-    }
-
-    // Perform full deserialization (re-runs well-formedness via Value::new, C1).
-    serde_json::from_value::<Value>(j.clone()).map_err(|e| {
-        // Classify the serde error by inspecting the message string.
-        let msg = e.to_string();
-        // Width/dim = 0 and similar violations surface through Value::new -> WfError.
-        if msg.contains("MalformedRepr")
-            || msg.contains("out of range")
-            || msg.contains("non-positive")
-            || msg.contains("minimum")
-        {
-            FromJsonError::OutOfDomain(msg)
-        } else {
-            FromJsonError::Malformed(msg)
+    {
+        match kind {
+            "Binary" | "Ternary" | "Dense" | "VSA" => {}
+            other => return Err(FromJsonError::UnknownTag(other.to_owned())),
         }
-    })
+    }
+    // Render the display wrapper to canonical text, then delegate the decode to std.io.
+    let text = serde_json::to_string(j).expect("a serde_json::Value always re-serializes to text");
+    mycelium_std_io::from_json(&text).map_err(from_ser_error)
+}
+
+/// Map `std.io`'s located [`mycelium_std_io::SerError`] onto `fmt`'s display [`FromJsonError`],
+/// preserving the never-silent error class (C1). The structured locus (byte offset / field path)
+/// is folded into the human-readable description `fmt` carries.
+///
+/// Classification note: `std.io`'s `is_domain_error` heuristic catches `"missing field payload"`
+/// as `OutOfDomain` (because "payload" is in its domain-keyword list). For `fmt`, a missing
+/// required field is a structural/grammar failure (`Malformed`), not a value-model invariant
+/// violation (`OutOfDomain`). We reclassify accordingly.
+fn from_ser_error(e: mycelium_std_io::SerError) -> FromJsonError {
+    use mycelium_std_io::SerError;
+    match &e {
+        SerError::UnknownTag { tag, .. } => FromJsonError::UnknownTag(tag.clone()),
+        SerError::OutOfDomain { why, .. } => {
+            // Reclassify "missing field" as Malformed: missing a required JSON field is a
+            // structural grammar failure (C1 — wrong shape), not a domain invariant violation.
+            // std.io's domain-keyword heuristic over-classifies these (e.g. "missing field
+            // `payload`" → OutOfDomain) because "payload" is in its domain word list.
+            if why.contains("missing field") {
+                FromJsonError::Malformed(e.to_string())
+            } else {
+                FromJsonError::OutOfDomain(why.clone())
+            }
+        }
+        SerError::Truncated { .. }
+        | SerError::Malformed { .. }
+        | SerError::BudgetExceeded { .. } => FromJsonError::Malformed(e.to_string()),
+    }
 }
 
 // ── §10. Tests ─────────────────────────────────────────────────────────────

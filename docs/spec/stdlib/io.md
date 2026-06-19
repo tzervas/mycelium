@@ -217,13 +217,15 @@ below).
 
 ## 7. Open questions (FLAGGED — resolve before ratification)
 
-- **(Q1) The one canonical JSON — `fmt.to_json` delegation.** RFC-0016 §4.4 lists "the dual human/machine
-  projection" against **both** `fmt` (M-533) and `serialize` (this module); the README §5 seam records the
-  overlap. **Proposed:** `serialize` owns *the one canonical JSON projection*, and `fmt.to_json` **delegates**
-  to it (one canonical JSON, two entry points), so the round-trip property is established once and not
-  duplicated. `fmt.md` §7-Q1 proposes the same delegation from its side. — *Disposition: FLAGGED; proposed
-  default is delegation-to-`serialize`. Needs maintainer sign-off; ties to RFC-0016 §8-Q1 (the v0 module set /
-  overlap) and §8-Q3 (ergonomics vs the contract).*
+- **(Q1) — RESOLVED (2026-06-19, wired).** The one canonical JSON — `fmt.to_json` delegation. **Resolution:**
+  `std.io` owns the one canonical JSON projection, and `fmt.to_json`/`from_json` **delegate** to
+  `mycelium_std_io::{to_json, from_json}` (M-372; ratified 2026-06-19). One canonical JSON, two entry points;
+  the round-trip property (`from_json(to_json(v)) ≡ v`) is established once, here, tagged `Empirical`
+  (proptest corpus; no checked theorem), and re-checked in `fmt`. `std.fmt` keeps its thin display facade
+  (`Json`/`ToJsonError`/`FromJsonError`); the codec lives here. **Tag-framing residual (honesty, VR-5):**
+  `std.io` tags this `from_json` `Empirical`; `std.fmt` tags its `from_json` `Exact` (deterministic decode,
+  no accuracy semantics) — both honest from their angle; framing reconciliation is left to the maintainer.
+  Ties to RFC-0016 §8-Q1/§8-Q3 (both resolved per README §5 dispositions).
 - **(Q2) Which round-trip reaches `Proven`, and over which grammar.** The matrix tags `deserialize`/`from_json`
   at the round-trip property's *established* strength — **`Proven` only** with a checked-side-condition theorem
   (e.g. an injectivity/totality argument over the *closed* `Repr`/`Meta`/ctor grammar), else honestly
@@ -250,6 +252,7 @@ below).
 
 ## Meta — changelog
 
+- **2026-06-19 — Q1 resolved/wired (M-372, delegation ratified).** The §7-Q1 open question ("does `fmt.to_json` delegate to `serialize`'s canonical JSON?") is **resolved — delegation wired**: `fmt.to_json`/`from_json` now delegate to `mycelium_std_io::{to_json, from_json}` (M-372). `std.io` owns the one canonical JSON projection; the round-trip property (`from_json(to_json(v)) ≡ v`) is established here (tagged `Empirical`; proptest corpus) and re-checked in `fmt`. **Tag-framing residual** noted: `std.io` tags `from_json` `Empirical`; `std.fmt` tags it `Exact` (deterministic decode, no accuracy claim) — both honest, framing reconciliation deferred to the maintainer (VR-5). No spec status change; no public API change. Append-only.
 - **2026-06-17 — Draft (needs-design).** Stands up `std.io` + the `serialize` half (Ring 2, Tier B; M-514,
   #155) as **two coupled surfaces over the content-addressed value model**: (serialize) the RFC-0001 §4.8
   self-describing wire form + the one canonical JSON projection `fmt` delegates to, and (io) byte movement over

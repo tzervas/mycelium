@@ -1,7 +1,7 @@
 # Mycelium — Document Index & Status
 
-**Date:** June 08, 2026
-**Purpose:** map of the solidified document corpus. The two research passes are complete; the design corpus below is finalized (Accepted/Resolved) and ready for detailed design + hard planning.
+**Date:** June 08, 2026 *(table living — last refreshed 2026-06-19)*
+**Purpose:** the authoritative map of the document corpus — every RFC/ADR/DN with its status and the dependency DAG. The design corpus is Accepted/Resolved and **Rust-first implementation is underway** (Phases 0–3, 5, 7 complete; 4, 6, 8 in progress — see `docs/planning/phase-*.md`). Per the honesty rule the per-module stdlib specs read *"implemented (Rust-first), pending ratification,"* not silently `Accepted`. This index is append-only (§6).
 
 ---
 
@@ -11,7 +11,7 @@
 |---|---|---|
 | **Prior-Art Survey & Synthesis** | evidence base (pass 1) | Recorded → `research/01-prior-art-survey-RECORD.md` (full narrative is a conversation artifact) |
 | **Research Findings (T0/T1/T2)** | evidence base (pass 2) | Recorded → `research/02-research-findings-RECORD.md` (full narrative is a conversation artifact) |
-| **Project Foundation (r3)** | charter, scope, requirements, ADR-001…010, roadmap, risks | **Living — updated** |
+| **Project Foundation (r4)** | charter, scope, requirements, ADR-001…009, roadmap, risks; **r4** records Rust-first implementation status (Phases 0–3/5/7 complete, 4/6/8 in progress), extends §6 roadmap with Phases 4–8, refreshes §10 | **Living — updated** |
 | **RFC-0001 — Core IR & Metadata Schema** | value model, `Repr`, `Meta`, guarantee lattice, content-addressing; **r3** adds data (registry Σ, `Datum`/`CoreValue`, `Construct`/flat `Match`, WF6/WF7/WF8); **r4** adds `Lam`/`App`/`Fix` (full L1-in-Core-IR; closed-closure value model; R7-Q1/Q3) | **Accepted (r4)** |
 | **DN-01 — Packing Placement** | tradeoff study → schedule-staged decision | **Resolved → folded into RFC-0001 §4.1 + RFC-0004 §5** |
 | **DN-02 — Fungal Lexicon & Reserved Words** | the naming law + ratified surface vocabulary (themed vs conventional) feeding RFC-0006's grammar | **Resolved** (ratified 2026-06-10) |
@@ -48,7 +48,7 @@
 | **ADR-011 — BoundBasis is universal** | `basis` is a companion of every `Bound` (supersedes RFC-0001 r1 §4.3) | **Accepted** |
 | **ADR-012 — Layered Lexicon & Fungal Runtime Model** | three-tier lexicon + an (aspirational) distributed fungal runtime vocabulary | **Proposed** (architect review notes appended §7; the runtime model is now drafted as RFC-0008, grounded by research Pass 4) |
 | **Research Record 04 (T4.1–T4.6)** | evidence base (pass 4): concurrency, merge/mesh, mobility/placement, durability, failure, mode switching | Recorded → `research/04-runtime-concurrency-RECORD.md` |
-| **RFC-0008 — Runtime & Concurrency Execution Model** | RT1–RT7 runtime invariants; deterministic-fragment-first; placement as the third policy site; lawful fusion; honest probabilistic guarantees; Runtime vocabulary grounded but reserved | **Draft** |
+| **RFC-0008 — Runtime & Concurrency Execution Model** | RT1–RT7 runtime invariants; deterministic-fragment-first; placement as the third policy site; lawful fusion; honest probabilistic guarantees; Runtime vocabulary grounded but reserved | **Accepted** (2026-06-16 — maintainer sign-off; RT1–RT7 and §4 model normative; enactment staged: M-353/M-354/M-356 budget/observability/concurrency slices; M-357 `mycelium-mlir::runtime` v0 fork/join; Phase 7 complete) |
 | **RFC-0009 — Resonator-Network Factorization** | opt-in VSA factorization of bind products into unknown codebook factors; iterative resonator loop; probabilistic-only (`Empirical` ceiling, never `Proven`); never-silent termination verdicts; reuses `VsaModel`/cleanup/`EmpiricalProfile` (M-350) | **Accepted** (ratified 2026-06-15; prototype building) |
 | **RFC-0010 — Decode-Methodology Selection** | choose the decode methodology (brute-force `Exact` vs resonator `Empirical` vs refuse) as a third site of the one RFC-0005 selection mechanism; reified, `EXPLAIN`-mandatory decision table over exact metadata; guarantee tag read off the chosen arm; cleanup-variant selection deferred (Hebbian dominates) (M-350) | **Accepted** (ratified 2026-06-15; prototype building) |
 | **RFC-0011 — L0 `Match` & the L1-in-Core-IR Revision** | the named RFC-0001 revision (RFC-0006 §4.4 step 2): fold the L1 data-and-matching core (`Construct` + flat `Match` + content-addressed registry; WF6/WF7/WF8) into frozen L0 as **r3**, staged ahead of an r4 (`Lam/App/Fix`); flat `Match` is the kernel node (Maranget tree stays untrusted); unblocks M-320 leaf-emission + M-310 sync (M-320) | **Accepted — r3 ENACTED** (2026-06-15; RFC-0001 → r3, code in `mycelium-core`/`-interp`/`-l1`, M-210 differential covers the data fragment; `Lam/App/Fix` → r4) |
@@ -64,6 +64,7 @@
 | **RFC-0021 — Semantic-Level Projection Framework** | drafts M-380/FR-C1/G11: projections as total, inspectable **views** over content-addressed defs (RFC-0001 §4.6/ADR-003) — the same definitions render for human and **LLM-facing canonical** surfaces (FR-S5), the lever to lift the real-but-modest text-surface leverage (DN-09). Invariants P1–P6 (meaning/tags/identity preserved, S2/S6); gated on the G11-ergonomics + T3.6 research prompts | **Accepted (framework)** (2026-06-18; the framework + P1–P6 + `LlmCanonical` design + §4.7 supersession mechanism Accepted; ergonomics/feasibility **demonstrated** in code (`crates/mycelium-lsp/src/project.rs`); the **LLM-leverage claim is carved out** — split into an isolated, non-blocking validation track (RP-1 / **M-381**), outcome by supersession, no result asserted) |
 | **Standard-Library module specs** (`docs/spec/stdlib/`) | the per-module design specs decomposing RFC-0016: each fixes a module's scope + boundary + exported-op surface and ships the load-bearing **guarantee matrix** (RFC-0016 §4.5 — ops × {tag · fallibility · effects · EXPLAIN}) proving the §4.1 contract per op; a uniform `_TEMPLATE.md` enforces single-template conformance; cross-module seams reconciled in the index §5; lives above the kernel (KC-3) (M-510…M-534) | **Living index** (2026-06-17; first wave **landed** — Drafts `core`/`swap`/`ternary`/`dense`/`select`/`content` + `iter`/`math`/`error`/`cmp`/`fmt`, plus the M-502 self-hosting-readiness gate; remainder anticipated). **2026-06-18 — Batch P5-A Rust-first enactment:** the seven Tier-A/Ring-0 crates `mycelium-std-{core,ternary,swap,dense,select,vsa,content}` (M-515/517/516/518/519/513/523) now exist as code (guarantee matrix asserted in tests; 230 tests; fmt/clippy/test green), so those specs read **implemented (Rust-first), pending ratification** — *not* `Accepted`; the Mycelium-lang migration half (M-502-gated) stays open. **2026-06-18 — Batch P5-B Rust-first enactment:** the twelve Tier-B/Ring-2 commons crates `mycelium-std-{collections,error,cmp,iter,math,text,fmt,testing,io,fs,time,rand}` (M-511/527/532/526/525/524/533/534/514/528/529/531) likewise land as code (matrices asserted; 722 tests; fmt/clippy/test green) and read **implemented (Rust-first), pending ratification**; the effectful modules FLAG the audited `wild`/FFI floor to the `std-sys` phylum (M-541) and pure `std` stays leak-free (LR-9). **2026-06-18 — Tier-A completion Rust-first enactment:** the four remaining Tier-A/Ring-1 crates `mycelium-std-{numerics,diag,recover,spore}` (M-512/510/520/522, #153/151/156/163) land as code (matrices asserted; full `clippy --all-targets`/`test --workspace` green, 1883 tests), reading **implemented (Rust-first), pending ratification** — `recover` is the Rust-first half (self-hosting stays P5-C/M-502), `spore` the library/manifest half (native deploy stays M-620). A maintainer-resolved FLAG extracts the canonical RFC-0013 record into a new **`mycelium-diag` kernel crate** (small, deliberate trusted-base growth; the std crate re-exports it, KC-3). This completes the Tier-A differentiator surface (only Phase-7-gated `runtime` M-521 remains) |
 | **ADR-013 — `spore` Is the Deployable Unit** | spore = content-addressed code+values+metadata; the RFC-0003 manifest is one component; `spore(v)` is the degenerate case | **Accepted** |
+| **ADR-014 — `unsafe` Rust policy** | relax the workspace `unsafe_code` lint from `forbid` to permitted-but-warned (explicit + justified + `// SAFETY:` annotation); never-silent (G2); a new scanner / new `unsafe` site is itself an ADR (KC-3) | **Accepted** (2026-06-15) |
 | **ADR-015 — Decode `DEFAULT_ENUM_BUDGET` = 4096** | fixes the RFC-0010 decode-selector default at the *guarantee-maximal* enumeration budget (4096 = `MAPI_RESONATOR_PROFILE.max_capacity`) — every in-regime request is also enumerable, so the brute-force `Exact` arm dominates the whole validated envelope — over the cost-optimal ≈128; resolves RFC-0010 §8 | **Accepted** |
 | **ADR-016 — Interpreted↔compiled ABI** | dispatch a compiled stable component by its content hash; cross `CoreValue`s in the RFC-0001 §4.8 self-describing wire form (canonical), zero-copy fast-path later; resolves RFC-0004 §10 OQ-1 | **Accepted** (ratified 2026-06-16) |
 | **ADR-017 — Hot-inject recompiled definitions** | hash-keyed dispatch + content-addressed dynamic linking; immutable-by-construction (a change is a new hash under a new entry) dissolves the atomicity hazard; recompile = the changed dependency-closure by hash reachability; resolves RFC-0004 §10 OQ-2; in-process prototype in `mycelium-mlir::inject` (M-341) | **Accepted** (ratified 2026-06-16; prototype building) |
@@ -71,11 +72,21 @@
 ## 2. Dependency DAG
 
 ```
-Survey ─► Foundation(r3) ─► RFC-0001 (r4) ─► { RFC-0002, RFC-0003, RFC-0004 (r2), RFC-0005, RFC-0006 (Accepted r4) ─► RFC-0007 (Accepted r4) ─► RFC-0011 (Accepted; r3 ENACTED → r4 in RFC-0001) }
+Survey ─► Foundation ─► RFC-0001 (r5) ─► { RFC-0002, RFC-0003, RFC-0004 (r2), RFC-0005 }
                                │
-                               └─► DN-01 (Resolved) ─► RFC-0001 §4.1, RFC-0004 §5
+                               ├─► DN-01 (Resolved) ─► RFC-0001 §4.1, RFC-0004 §5
+                               │
+  Surface/term track:          └─► RFC-0006 (r4) ─► RFC-0007 (r4) ─► RFC-0011 (r3 ENACTED → r4 in RFC-0001)
+                                        └─► RFC-0018 (stage-1 grading) · RFC-0019 (traits) · RFC-0020 (L2 surface) · RFC-0021 (projections, M-380)
 
-ADR-010 ─► RFC-0001 §4.7,  RFC-0002 (swap bounds),  RFC-0003 (VSA bounds)
+VSA decode track:      RFC-0003 ─► RFC-0009 (resonator factorization) ─► RFC-0010 (decode-method selection; reuses the ONE selection mechanism)
+Diagnostics/recovery:  RFC-0013 (diagnostics) ─► RFC-0014 (recovery + bounded effects) ─► RFC-0015 (automatic baseline)
+Ambient & ABI:         RFC-0012 (ambient) · ADR-016 (interp↔compiled ABI) ─► ADR-017 (hot-inject)
+Runtime:               RFC-0008 (RT1–RT7 runtime & concurrency)
+Standard library:      RFC-0016 (scope + per-op contract) ─► stdlib module specs (docs/spec/stdlib/) ─► Phase-5 `std-*` crates
+Maturation:            RFC-0007 §4.5 ─► RFC-0017 (maturation scope & de-maturation; supersedes the granularity)
+
+ADR-010 ─► RFC-0001 §4.7,  RFC-0002 (swap bounds),  RFC-0003 (VSA bounds);   ADR-011 (BoundBasis is universal)
 
 Shared machinery (decided):
   • ONE certificate checker   ⇄  RFC-0002 (swaps) & RFC-0004 (interp-vs-compiled)
@@ -96,10 +107,16 @@ Shared machinery (decided):
 
 ## 4. Remaining experiments (small; for the build phase, not blockers to design)
 - ~~**LH bundling-bound instantiation**~~ — **DONE (2026-06-09).** MAP-I `bundle` capacity refinement encoded in Liquid Haskell (`proofs/lh-bundle/`, M-001); LH reports **SAFE**, Z3 discharged all constraints — ratifies the cited-theorem + checked-instantiation strategy (ADR-010 / KC-1). *(RFC-0003 §5)*
-- **E1** staged-packing perf over the 5 schemes *(RFC-0004 §8)* · **E3** wrong-layout-tag soundness vs NFR-7 *(RFC-0004 §8)* · **E4** LLM surface comparison, "packing in type" vs absent *(G10)*.
+- **E1** staged-packing perf over the 5 schemes — **measured in Phase 3 (M-303).** · **E3** wrong-layout-tag soundness vs NFR-7 *(RFC-0004 §8)* — open. · **E4** LLM surface comparison ("packing in type" vs absent) — **subsumed by KC-2 / M-002; verdict proceed (DN-09).**
 
-## 5. Next phase — detailed design & hard planning
-With the corpus Accepted, the work shifts to: (a) the confirming LH probe; (b) the Core IR concrete grammar + the Rust interpreter (reference semantics) + the kernel data structures; (c) the `ternary` MLIR dialect and the certificate checker; (d) the VSA submodule (per the §4-matrix tags), reusing `balanced-ternary`. Track as dependency-ordered, priority-tagged tasks; this index remains the map the board points back to.
+## 5. Build status — the live phase ladder
+The corpus is Accepted and the build is underway; the dependency-ordered, priority-tagged tasks live in `tools/github/issues.yaml` (+ `idmap.tsv`) and the phase plans in `docs/planning/phase-*.md`. Current state:
+- **Phases 0–3 (done):** the confirming LH probe; the Core IR + Rust reference interpreter + kernel data structures; the certified binary↔ternary swap + the single certificate checker; the `ternary` MLIR dialect + native LLVM/JIT; the VSA submodule (per the §4-matrix tags); the L1 calculus, projections, and acceleration.
+- **Phase 5 (Rust-first done; self-hosting open):** the standard library — 23 `std-*` crates implementing RFC-0016 (guarantee matrices asserted in tests); the specs read *"implemented (Rust-first), pending ratification."* Self-hosting (M-502) is **not yet established**.
+- **Phase 7 (done):** the RFC-0008 runtime/concurrency model (RT1–RT7).
+- **Phases 4, 6, 8 (in progress):** the interpreted↔compiled ABI + AOT env-machine completion; native MLIR→LLVM codegen + deployable spores; the toolchain & release-engineering gates.
+
+This index remains the map the board points back to.
 
 ## 6. Maintenance
 Append-only with status transitions (Draft/Proposed/Preliminary → Accepted → Superseded), mirroring the ADR discipline. Keep `Proven | Empirical | Declared` tags honest per VR-5 — per model/op, never in aggregate. New non-asymptotic results may *upgrade* a tag; absence keeps it `Empirical`.

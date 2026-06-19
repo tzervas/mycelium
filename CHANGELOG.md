@@ -3,10 +3,53 @@
 All notable changes to this project are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dates are ISO-8601.
 
-This project is in the **design phase**; "changes" here are to the documentation
-corpus, not released software. Versioning will begin when the kernel does.
+This project is in **design + Rust-first implementation**; entries cover both the documentation
+corpus and the landing kernel/stdlib code. Semantic versioning will begin when the kernel stabilizes.
 
 ## [Unreleased]
+
+### Changed (2026-06-19: documentation currency + `fmt`→`io` JSON delegation — Sonnet swarm wave)
+The navigational/overview docs are brought current with the implemented state and guarded by a new
+programmatic check, and the converged `fmt`→`io` canonical-JSON seam is wired. Landed as a **Sonnet
+review/polish swarm** — two leaves in isolated worktrees, integrated by the orchestrator (who owns the
+shared files). The swarm earned its keep: the review leaf caught two real delegation bugs the
+first-pass code missed.
+
+- **Docs currency (M-371, #202).** `README.md`, `docs/Doc-Index.md`, and
+  `docs/Mycelium_Project_Foundation.md` move off the pre-code *"design phase"* framing to the honest
+  current state — **42 crates** (+ `xtask`), the reference interpreter + certified swaps + the 23-crate
+  Rust-first stdlib; Phases **0–3, 5, 7 complete**, **4, 6, 8 in progress**. README gains an accurate
+  repository-structure tree (`crates`/`tools`/`experiments`/`proofs`/`scripts`/`examples`/`justfile`/…),
+  a *"The Rust workspace"* + *"Build & checks"* section, decisions/reading-order through
+  RFC-0021/ADR-017/DN-12, and honest *Status & open items* (KC-1 **SAFE**; KC-2 **proceed** per DN-09;
+  self-hosting **M-502 not established**; specs *"implemented (Rust-first), pending ratification"* — not
+  silently `Accepted`). Doc-Index: header/framing refreshed, the §2 DAG extended through RFC-0021, the
+  §5 "next steps" replaced by the live phase ladder, and three stale rows corrected by the review leaf
+  (**RFC-0008 Draft→Accepted**, Foundation **r3→r4**, an **ADR-014** row). Foundation: an append-only
+  **r4** revision note + **Phases 4–8** added to the §6 roadmap + §10 refreshed. The stray empty tracked
+  file `oom` is removed.
+- **`doc-currency` gate (M-371).** A new skip-graceful `just check` check
+  (`scripts/doc_currency.py` + `scripts/checks/doc-currency.sh`, wired into `scripts/checks/all.sh` +
+  the `justfile`): asserts the README structure-tree ↔ filesystem, the Doc-Index ↔ `docs/` RFC/ADR/DN
+  coverage, and cited crate-count currency (opt-in `<!-- doc-currency:crate-count -->` marker).
+  Complements — does **not** duplicate — the existing `links` and `myc-doc` checks, so the navigational
+  docs cannot silently drift again.
+- **`fmt`→`io` canonical-JSON delegation (M-372, #203).** The converged *"one canonical JSON
+  projection"* seam (fmt.md §7-Q1 / io.md §7-Q1 / `docs/spec/stdlib/README.md §5` / RFC-0016 §8-Q1) is
+  **ratified and wired**: `std.fmt`'s `to_json`/`from_json` now **delegate** to
+  `mycelium_std_io::{to_json, from_json}` instead of a duplicated `serde_json` codec + error
+  classification — one JSON, two entry points, the round-trip established **once**, in `std.io`. The
+  review leaf caught two real delegation bugs (the alphabetical-map-key error priority for an unknown
+  `repr.kind`; `std.io`'s domain-heuristic vs `fmt`'s grammar classification for a missing field) —
+  both fixed, with `fmt`'s public API and guarantee tags **unchanged** (`ToJsonError::NonFinite{index}`
+  is still the typed non-finite refusal). The honest **tag-framing residual** — `std.io` tags
+  `from_json` `Empirical` (proptest corpus), `std.fmt` tags it `Exact` (deterministic decode, no
+  accuracy semantics) — is **FLAGGED for the maintainer, not silently changed** (VR-5). The specs read
+  *"implemented (Rust-first), pending ratification."*
+
+Verified: `mycelium-std-fmt` **32/32** + `mycelium-std-io` **70/70**; `clippy --all-targets` clean;
+`doc-currency` / `links` / `markdown` green. Append-only; issue mapping recorded in
+`tools/github/idmap.tsv` (#202/#203, real db-ids).
 
 ### Changed (2026-06-19: Tier-A completion fast-follows — cross-crate seam reconciliations)
 The cross-module FLAGs the Tier-A wave left for the maintainer are discharged (each a real change —
