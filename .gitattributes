@@ -1,0 +1,11 @@
+# Merge drivers for append-only files.
+# Union merge takes all lines from all branches — safe for files that only ever
+# grow (CHANGELOG, idmap.tsv, issues.yaml).  Prevents spurious conflicts during
+# octopus and swarm merges without requiring a custom driver script.
+
+CHANGELOG.md            merge=union
+tools/github/idmap.tsv  merge=union
+tools/github/issues.yaml merge=union
+docs/notes/*.md          merge=union
+docs/rfcs/*.md           merge=union
+docs/adr/*.md            merge=union
