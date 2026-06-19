@@ -38,9 +38,9 @@ impl std::fmt::Display for UndeclaredEffect {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "undeclared effect {:?}: a definition may not perform an effect absent from its \
+            "undeclared effect {}: a definition may not perform an effect absent from its \
              declared signature set (RFC-0014 §4.5 I3 — no unknown side effects); declare it",
-            self.effect.to_string()
+            self.effect
         )
     }
 }

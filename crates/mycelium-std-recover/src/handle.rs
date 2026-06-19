@@ -141,14 +141,10 @@ where
             }
         }
         RecoveryAction::Escalate { to_class } => {
-            // Transform the error class — still explicit; re-propagates (I1).
-            // The escalated class name is validated at policy-build time (via `on()` / registry).
-            // The generic driver cannot re-tag an opaque `E` with the class name; it records the
-            // escalation in the PolicyRef (the full rule map is in the content hash — C3).
-            //
-            // FLAG: in `std.diag`-integrated form the error would be re-typed as
-            // `DiagError<E>` with class `to_class`.  For the Rust-first generic driver the
-            // escalation is recorded in the PolicyRef; the orchestrator notes the seam.
+            // Re-propagates explicitly (I1). `to_class` is recorded in the PolicyRef hash (C3)
+            // but the generic driver cannot physically re-type the opaque `E` with the escalated
+            // class. See `RecoveryAction::Escalate` for the full limitation note — this is the
+            // Rust-first seam: honest and EXPLAIN-able, pending std.diag integration (M-510/M-520).
             let _ = to_class;
             Resolution::Propagated {
                 error,

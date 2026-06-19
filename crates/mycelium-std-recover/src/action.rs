@@ -65,15 +65,26 @@ pub enum RecoveryAction<T> {
     },
     /// Transform and re-propagate as a different error class — still explicit.
     ///
-    /// The error is re-tagged with `to_class` (a string naming a registry-resolved class —
-    /// X1: the class is a name, never an evaluated string). It always re-propagates; there is no
-    /// recovered value.
+    /// The escalation intent is captured in `to_class` and recorded in the acting [`crate::policy::PolicyRef`]
+    /// (the content hash over all rules — C3 / EXPLAIN-able). It always re-propagates; there is
+    /// no recovered value.
+    ///
+    /// # Limitation (Rust-first seam — honest, not hidden)
+    ///
+    /// The **generic driver** (`handle_classified`) operates on an opaque `E` and **cannot
+    /// physically re-type it** with the escalated class name.  The `to_class` is registered and
+    /// hashed into the `PolicyRef`, but the propagated `error: E` value itself is unchanged at the
+    /// type level.  In the `std.diag`-integrated form (once the M-510 / M-520 integration seam is
+    /// reconciled) the driver would receive a `DiagError<E>` whose `Diag` record carries the
+    /// escalated class — but that path requires the shared `ClassRegistry` from `mycelium-std-diag`
+    /// (see `registry.rs`).  For now: the escalation is explicit and EXPLAIN-able via the
+    /// `PolicyRef`, but the `E` payload is not re-typed.
     ///
     /// # Never-silent (I1)
-    /// Always `Propagated(transformed_error)` — the error's existence is never hidden.
+    /// Always `Propagated(error)` — the error's existence is never hidden.
     ///
     /// # Effects
-    /// None (a pure structural transform — the class label changes, the error continues).
+    /// None (a pure structural transform — the class intent is in the PolicyRef; the error continues).
     Escalate {
         /// The class to escalate into (registry-resolved name; X1).
         to_class: String,

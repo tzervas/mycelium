@@ -573,6 +573,39 @@ fn undeclared_effect_is_explicit_error() {
     );
 }
 
+/// Property: `UndeclaredEffect::Display` names the effect without extra debug-quoting.
+/// Mutant witness: using `{:?}` on `to_string()` would produce `"io"` (with quotes) instead of
+/// `io` — a display bug that buries the effect name in debug-string quotes.
+#[test]
+fn undeclared_effect_display_names_effect_without_extra_quotes() {
+    use crate::effect::UndeclaredEffect;
+    let e = UndeclaredEffect {
+        effect: EffectKind::Io,
+    };
+    let msg = e.to_string();
+    assert!(
+        msg.contains("io"),
+        "UndeclaredEffect display must contain the effect name (I3)"
+    );
+    assert!(
+        !msg.contains("\"io\""),
+        "UndeclaredEffect display must NOT wrap the effect name in debug quotes: {msg:?}"
+    );
+    // Named effects: the name appears bare, not double-quoted.
+    let named = UndeclaredEffect {
+        effect: EffectKind::Named("flush".to_owned()),
+    };
+    let named_msg = named.to_string();
+    assert!(
+        named_msg.contains("flush"),
+        "UndeclaredEffect display must contain the named effect (I3): {named_msg:?}"
+    );
+    assert!(
+        !named_msg.contains("\"flush\""),
+        "UndeclaredEffect display must NOT wrap named effect in debug quotes: {named_msg:?}"
+    );
+}
+
 #[test]
 fn declared_effects_pass_check() {
     let declared: EffectSet = [EffectKind::Alloc, EffectKind::Io].into_iter().collect();
