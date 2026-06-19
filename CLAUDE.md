@@ -252,6 +252,38 @@ large files. Use `TaskOutput(block=false)` for progress polls (don't block). Sum
 phase explicitly (in-context) before starting the next. The orchestrator's context budget is the
 scarcest resource in a multi-wave swarm — protect it.
 
+## Autonomous PR workflow — review-before-merge, no human gate
+
+The merge gate is the agent's, not a human's. A parent (orchestrator/epic) **merges its children
+up the tree itself** once the work is clean — but only after the discipline below. This makes the
+swarm self-driving while keeping honesty and history intact. (A maintainer may still override; if
+asked to wait, wait.)
+
+1. **Self-review before every merge.** Before merging anything (leaf→epic, epic→orch, orch→`main`,
+   or a PR→`main`), run the `/pr-review` lens on the diff yourself: the honesty rule (per-op tags
+   never upgraded without a checked basis), append-only decisions, grounding, never-silent G2, and
+   a hallucination/consistency pass. Fix what you find or stop and flag it — never merge past a
+   Critical/High you can't resolve.
+2. **Handle every CI / bot review comment first.** For each review comment (Copilot, CI failure,
+   a human note): investigate, then **fix if you're confident and it's small**, **defer honestly**
+   if the fix would be fragile or large (keep an explicit refusal + a clear message + a spec-§ note,
+   never ship fragile/incorrect output to satisfy a comment — G2/VR-5), or **ask** (`AskUserQuestion`)
+   if it's ambiguous or architecturally significant. Reply once, frugally; the diff is the record.
+3. **Green, then merge.** The full `just check` (local↔CI parity) must be green — fix integration,
+   regenerate orchestrator-owned artifacts (`docs/api-index/`, api baselines, `CHANGELOG`,
+   `issues.yaml` status), then merge (squash to `main`, matching repo convention).
+4. **Pull-down before merge-up — keep tips current, never integrate across divergent history.**
+   Before merging a child into its parent, **pull the parent down into the child first** (or branch
+   the child from the parent's *latest pushed tip*), so the child already contains the parent's
+   history and the merge-up is a clean fast-forward / conflict-free. Repeat at **every** level going
+   up. If a leaf was spawned from a stale base, the leaf (which owns its code's context) pulls the
+   parent down and resolves *there*, then reports back — the orchestrator never resolves a large
+   merge blind.
+5. **Branch children from a *pushed* tip, not the upstream.** Push the parent branch **before**
+   spawning worktree children — an `isolation:"worktree"` leaf branches from the branch's *upstream*
+   (`origin/...`), so an un-pushed parent tip leaves the leaf on a stale base and forces an
+   after-the-fact deconfliction (lesson: M-379 Stage-2). Push first; deconflict never.
+
 ## Skills (`.claude/skills/`)
 Invoke with `/<name>`; they auto-engage when relevant.
 - **`/dev-workflow`** — the implementation discipline above, as a working loop.
