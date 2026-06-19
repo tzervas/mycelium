@@ -674,7 +674,10 @@ fn value_to_json(v: &Value) -> Result<serde_json::Value, ToJsonError> {
     // total.
     let text = mycelium_std_io::to_json(v)
         .expect("io::to_json is total over finite Values (non-finite excluded above)");
-    Ok(serde_json::from_str(&text).expect("io::to_json emits valid JSON, so the re-parse is total"))
+    Ok(
+        serde_json::from_str(&text)
+            .expect("io::to_json emits valid JSON, so the re-parse is total"),
+    )
 }
 
 /// Reconstruct a [`Value`] from `fmt`'s display JSON wrapper, delegating the canonical decode
@@ -683,6 +686,21 @@ fn value_to_json(v: &Value) -> Result<serde_json::Value, ToJsonError> {
 /// Never-silent (C1): every failure is an explicit [`FromJsonError`] mapped from `std.io`'s
 /// located [`mycelium_std_io::SerError`]; no partially-filled `Value` is ever returned.
 fn json_to_value(j: &serde_json::Value) -> Result<Value, FromJsonError> {
+    // Pre-check `repr.kind` before the full delegation. `serde_json::json!` serialises map keys
+    // in alphabetical order (`meta` before `repr`), so a missing-field error in `meta` would
+    // surface before serde ever reaches `repr.kind`. Checking the tag eagerly here preserves the
+    // pre-delegation error priority: unknown `repr.kind` → `UnknownTag`, regardless of field order
+    // in the serialised text (C1 — never-silent, classified error set, spec §3).
+    if let Some(kind) = j
+        .get("repr")
+        .and_then(|r| r.get("kind"))
+        .and_then(|k| k.as_str())
+    {
+        match kind {
+            "Binary" | "Ternary" | "Dense" | "VSA" => {}
+            other => return Err(FromJsonError::UnknownTag(other.to_owned())),
+        }
+    }
     // Render the display wrapper to canonical text, then delegate the decode to std.io.
     let text = serde_json::to_string(j).expect("a serde_json::Value always re-serializes to text");
     mycelium_std_io::from_json(&text).map_err(from_ser_error)
@@ -691,14 +709,29 @@ fn json_to_value(j: &serde_json::Value) -> Result<Value, FromJsonError> {
 /// Map `std.io`'s located [`mycelium_std_io::SerError`] onto `fmt`'s display [`FromJsonError`],
 /// preserving the never-silent error class (C1). The structured locus (byte offset / field path)
 /// is folded into the human-readable description `fmt` carries.
+///
+/// Classification note: `std.io`'s `is_domain_error` heuristic catches `"missing field payload"`
+/// as `OutOfDomain` (because "payload" is in its domain-keyword list). For `fmt`, a missing
+/// required field is a structural/grammar failure (`Malformed`), not a value-model invariant
+/// violation (`OutOfDomain`). We reclassify accordingly.
 fn from_ser_error(e: mycelium_std_io::SerError) -> FromJsonError {
     use mycelium_std_io::SerError;
-    match e {
-        SerError::UnknownTag { tag, .. } => FromJsonError::UnknownTag(tag),
-        SerError::OutOfDomain { why, .. } => FromJsonError::OutOfDomain(why),
-        SerError::Truncated { .. } | SerError::Malformed { .. } | SerError::BudgetExceeded { .. } => {
-            FromJsonError::Malformed(e.to_string())
+    match &e {
+        SerError::UnknownTag { tag, .. } => FromJsonError::UnknownTag(tag.clone()),
+        SerError::OutOfDomain { why, .. } => {
+            // Reclassify "missing field" as Malformed: missing a required JSON field is a
+            // structural grammar failure (C1 — wrong shape), not a domain invariant violation.
+            // std.io's domain-keyword heuristic over-classifies these (e.g. "missing field
+            // `payload`" → OutOfDomain) because "payload" is in its domain word list.
+            if why.contains("missing field") {
+                FromJsonError::Malformed(e.to_string())
+            } else {
+                FromJsonError::OutOfDomain(why.clone())
+            }
         }
+        SerError::Truncated { .. }
+        | SerError::Malformed { .. }
+        | SerError::BudgetExceeded { .. } => FromJsonError::Malformed(e.to_string()),
     }
 }
 
