@@ -13,25 +13,15 @@
 //! `Certificate::exact()`), plus a discrimination test so a green pass is not vacuous (guard 7).
 //! Skips when `clang` is absent.
 
+mod common;
+use common::i64_value;
+
 use mycelium_cert::{check, CheckVerdict, Evidence, RefinementRelation};
-use mycelium_core::{GuaranteeStrength, Meta, PackScheme, Payload, Provenance, Repr, Trit, Value};
+use mycelium_core::{GuaranteeStrength, PackScheme, Trit};
 use mycelium_mlir::{
     compile_bitnet_dot_for, compile_bitnet_dot_simd, compile_bitnet_dot_simd_tl1,
     compile_bitnet_dot_simd_tl2, pack_trits, ternary_dot_ref, AotError,
 };
-
-/// Encode an `i64` dot result as an exact 64-bit `Binary` `Value`, so the scalar observable routes
-/// through the M-210 checker (which compares `Value`s). Bit order is irrelevant — both sides encode
-/// identically, so the checker tests exact equality of the sum.
-fn i64_value(x: i64) -> Value {
-    let bits: Vec<bool> = (0..64).map(|b| (x >> b) & 1 == 1).collect();
-    Value::new(
-        Repr::Binary { width: 64 },
-        Payload::Bits(bits),
-        Meta::exact(Provenance::Root),
-    )
-    .expect("64-bit value")
-}
 
 fn weights(n: usize) -> Vec<Trit> {
     let mut s = 0x5151_2727_u64;
