@@ -12,9 +12,6 @@ publish = false
 workspace = true
 
 [dependencies]
-mycelium-core = { path = "../mycelium-core" }
-mycelium-std-core = { path = "../mycelium-std-core" }
 mycelium-diag = { path = "../mycelium-diag" }
 
 [dev-dependencies]
-serde_json = "1"
