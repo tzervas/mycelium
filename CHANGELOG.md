@@ -8,28 +8,27 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
-### In-progress (2026-06-19: Wave-3 launch — issues reconciliation + M-360 TL1/TL2 SIMD + M-330 AI co-authoring harness)
-**Issues reconciliation:** `tools/github/issues.yaml` brought current with the implemented state — 43
-Phase-3–5 tasks updated to `status:done` (confirmed against crate presence), M-360 and M-330 set
-`status:in-progress`. No creative state invented; every change backed by the codebase (VR-5, G2).
+### Changed (2026-06-19: issues reconciliation + wave-3 swarm launch record)
+**Issues reconciliation.** `tools/github/issues.yaml` brought current with the implemented state —
+43 Phase-3–5 tasks updated to `status:done` (confirmed against crate presence in the workspace),
+M-360 and M-330 set `status:in-progress` (work in-flight on epic branches), M-380 body
+disambiguated (KC-2 gate met; RFC-0021 Accepted; LlmCanonical prototype enacted). No creative
+state invented; every status backed by a crate or ratified decision (VR-5, G2).
 
-Wave-3 is a **Sonnet Swarm** (all agents on claude-sonnet-4-6) with two independent epics running in
-parallel on disjoint directory surfaces:
+**Wave-3 launch (planning record — code lands via octopus-merge after epics report).**
+A **Sonnet Swarm** (all agents on claude-sonnet-4-6) with two independent epics on disjoint
+directory surfaces; neither has been merged here yet:
 
-- **Epic E360 (M-360 — TL1/TL2 SIMD vectorized kernels).** Extends
-  `crates/mycelium-mlir/src/simd.rs` with TL1 and TL2 LLVM-IR vector decode kernels, adds a scalar
-  oracle differential in `simd_differential.rs`, and extends E1-harness section 5 for TL1/TL2
-  throughput measurement. The I2_S kernel (already landed) is the template; TL1 decode uses
-  `select(code == 2, −1, code)` (SIMD-efficient, no modulo); TL2 decode unpacks the 3-trit→5-bit LUT
-  bitstream using a fixed-offset period-8 schedule. Guarantee: speedup is `Empirical` (as measured by
-  E1), never `Declared`.
-- **Epic E330 (M-330 — AI co-authoring loop harness).** Creates
-  `tools/llm-harness/coauthor.py` — a pure-stdlib Python harness implementing the generate→LSP-feedback
-  → self-correct loop (mock mode for CI, real mode via `mycelium_lsp::sync::resilient_publish_for_source`),
-  and `crates/mycelium-lsp/examples/check.rs` — the Rust LSP-check entry-point. Never-silent (G2),
-  dual JSON+human report (G11), guarantee-lattice compliant (VR-5).
+- **Epic E360 (M-360 — TL1/TL2 SIMD vectorized kernels, branch
+  `claude/epic/E360-m360-tl1-tl2-simd`).** Extends `crates/mycelium-mlir/src/simd.rs` with TL1
+  and TL2 LLVM-IR vector decode kernels; scalar oracle differential and E1-harness section-5
+  extension. Guarantee: speedup `Empirical` (as measured by E1).
+- **Epic E330 (M-330 — AI co-authoring loop harness, branch `claude/epic/E330-m330-coauthor-loop`,
+  commit `caaeed3`).** Completed. Delivers `tools/llm-harness/coauthor.py` and
+  `crates/mycelium-lsp/examples/check.rs`; pending octopus-merge into this branch.
 
-Both epics report branch+SHA and any FLAGs to the orchestrator for octopus-merge. Append-only.
+The landed code and full details will appear in the CHANGELOG entry added at octopus-merge.
+Append-only.
 
 ### Added (2026-06-19: M-391 — surface mutual-recursion elaboration confirmed; RP-6 resolved)
 The R7-Q3 *surface* half — how a group of ≥2 mutually-recursive top-level functions is written — is

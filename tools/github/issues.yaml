@@ -460,7 +460,8 @@ issues:
     depends_on: [E3-3]
     body: |
       Multiple human/machine projections of the same content-addressed artifact, beyond MPS notational projections (FR-C1/G11). EXPLORATORY + KC-2-CONTINGENT; the content-addressed IR + EXPLAIN dumps are the existing projection substrate. RFC-0021 (framework) is Accepted (2026-06-18); the LlmCanonical renderer prototype is enacted in crates/mycelium-lsp/src/project.rs (the §9 ergonomics/feasibility gate, demonstrated for L1).
-      Acceptance (needs-design first): a projection ergonomics study; contingent on the KC-2 verdict.
+      Original acceptance criterion (KC-2-gated): projection ergonomics study contingent on the KC-2 verdict.
+      STATUS (2026-06-19, done): KC-2 verdict = proceed (DN-09); RFC-0021 Accepted; LlmCanonical prototype enacted. Original gating condition met; M-380 complete.
 
   - id: M-381
     title: "M-381 — LLM-leverage validation (T3.6 retention-ratio ablation) — isolated, non-blocking"
