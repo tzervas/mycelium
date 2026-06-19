@@ -1,20 +1,36 @@
-//! \[Declared\] Platform entropy floor. v0 fills a buffer with `DefaultHasher`+`SystemTime` bytes.
+//! \[Declared\] Platform entropy floor. Reads from `/dev/urandom` via `std::fs`.
 //!
-//! **Not OS entropy.** See the implementation note below — the v0 stand-in is a hash of the
-//! current system time, not a call to `getrandom` or `/dev/urandom`.
-//! Declared — no audit of RNG quality; wiring from `std-rand` deferred to a future wave.
+//! # Implementation
 //!
-//! # Note on implementation
+//! This module provides OS entropy by opening `/dev/urandom` and using `read_exact` to fill
+//! the caller's buffer. Rationale for this approach over alternatives:
 //!
-//! v0 uses `std::collections::hash_map::DefaultHasher` seeded from `SystemTime` as a best-effort
-//! stand-in for a real OS entropy source. A production implementation would use `getrandom` or
-//! `/dev/urandom` directly (requiring a dependency or an `unsafe` FFI block). This establishes
-//! the interface; the real entropy plumbing is the next wave's work.
+//! - **Pure `std::fs` / no new dependency**: the `getrandom` crate provides a cross-platform
+//!   OS-entropy abstraction, but adding it would require editing the workspace `Cargo.toml`
+//!   (orchestrator-owned). `/dev/urandom` is directly available via `std::fs::File` at zero
+//!   additional cost, so it is strongly preferred here.
+//! - **`#![forbid(unsafe_code)]` preserved**: `/dev/urandom` via `std::fs` needs no `unsafe`
+//!   blocks or FFI contact. The `getrandom` path (C FFI or platform `syscall`) would require
+//!   lifting that attribute — avoided.
 //!
-//! `Declared`: this is NOT a cryptographically vetted entropy source. Do not use for
-//! security-sensitive purposes until the implementation is upgraded and retagged.
+//! # Platform caveat
+//!
+//! `/dev/urandom` is a Unix/Linux/macOS concept. On platforms that do not expose it (Windows,
+//! WASI, bare-metal `no_std` targets), `fill_bytes` returns
+//! `Err(EntropyError::Unavailable(...))` **explicitly** — it never panics, never zero-fills
+//! silently (G2 / never-silent fallibility). Cross-platform OS entropy (via `getrandom`) is
+//! the correct long-term solution; see FLAG-GETRANDOM in the report.
+//!
+//! # Guarantee tag
+//!
+//! `[Declared]` — `/dev/urandom` is a real OS entropy source backed by the kernel CSPRNG, but
+//! no statistical audit or coverage measurement has been run against this implementation.
+//! Promotion to `Empirical` requires documented trials with measured statistical quality
+//! (e.g. Diehard/TestU01 run + recorded pass/fail table). Do not use for security-sensitive
+//! purposes without that audit (VR-5).
 
 use std::fmt;
+use std::io::Read as _;
 
 /// Errors from platform entropy operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -33,30 +49,37 @@ impl fmt::Display for EntropyError {
 
 impl std::error::Error for EntropyError {}
 
-/// \[Declared\] Fill `buf` with bytes from the platform entropy source.
+/// \[Declared\] Fill `buf` with bytes from the OS entropy source (`/dev/urandom`).
 ///
-/// Never-silent: returns `Err(EntropyError::Unavailable(...))` on any failure; never panics.
+/// Never-silent: returns `Err(EntropyError::Unavailable(...))` on any failure (open error,
+/// short read, EOF, or platform without `/dev/urandom`). Never panics. Never zero-fills
+/// silently (G2).
 ///
 /// # Guarantee
 ///
-/// `Declared` — v0 uses a `DefaultHasher`+`SystemTime` stand-in. No cryptographic audit.
-/// A real OS entropy source (`getrandom` / `/dev/urandom`) is the next-wave upgrade target.
+/// `Declared` — source is the kernel CSPRNG via `/dev/urandom`, a genuine OS entropy source,
+/// but no statistical quality audit has been conducted. Promotion to `Empirical` requires
+/// documented trials with measured statistical quality (VR-5). Do not use for
+/// security-sensitive purposes until retagged.
+///
+/// # Platform
+///
+/// Unix/Linux/macOS only. Returns `Err(EntropyError::Unavailable(...))` on platforms that
+/// do not expose `/dev/urandom`. Use the `getrandom` crate (FLAG-GETRANDOM) for
+/// cross-platform OS entropy.
 pub fn fill_bytes(buf: &mut [u8]) -> Result<(), EntropyError> {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-    use std::time::SystemTime;
-
-    let seed = SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_err(|e| EntropyError::Unavailable(e.to_string()))?
-        .as_nanos();
-
-    let mut h = DefaultHasher::new();
-    for (i, byte) in buf.iter_mut().enumerate() {
-        (seed ^ (i as u128)).hash(&mut h);
-        *byte = (h.finish() & 0xFF) as u8;
+    // Empty buffer: trivially satisfied — no read needed.
+    if buf.is_empty() {
+        return Ok(());
     }
-    Ok(())
+
+    let mut f = std::fs::File::open("/dev/urandom")
+        .map_err(|e| EntropyError::Unavailable(format!("open /dev/urandom: {e}")))?;
+
+    // `read_exact` fills the entire buffer or returns an error (including UnexpectedEof),
+    // which means we never silently return a partially-filled buffer (G2).
+    f.read_exact(buf)
+        .map_err(|e| EntropyError::Unavailable(format!("read /dev/urandom: {e}")))
 }
 
 #[cfg(test)]
@@ -64,25 +87,63 @@ mod tests {
     use super::*;
 
     #[test]
-    fn fill_bytes_32_succeeds() {
+    fn fill_bytes_32_succeeds_and_fills() {
         let mut buf = [0u8; 32];
         let result = fill_bytes(&mut buf);
         assert!(result.is_ok(), "fill_bytes returned Err: {result:?}");
-        // We can't assert randomness, but a Declared best-effort implementation
-        // should produce at least *some* non-zero bytes for a 32-byte buffer.
-        // (This is a basic smoke test, not a statistical test.)
+        // The buffer should not be all-zero. While /dev/urandom could theoretically
+        // return all-zero bytes, the probability for 32 bytes is ~2^-256 — treated as
+        // impossible in practice. This is a basic connectivity check, not a quality proof.
+        assert_ne!(
+            buf, [0u8; 32],
+            "fill_bytes returned all-zero bytes (smoke check)"
+        );
     }
 
     #[test]
     fn fill_bytes_empty_ok() {
-        let mut buf = [];
+        let mut buf: [u8; 0] = [];
         let result = fill_bytes(&mut buf);
         assert!(result.is_ok(), "fill_bytes([]) returned Err: {result:?}");
+    }
+
+    #[test]
+    fn fill_bytes_large_succeeds() {
+        // Exercises read_exact across a larger buffer (4096 bytes) to ensure no short-read
+        // issue. /dev/urandom never EOF so this must succeed.
+        let mut buf = vec![0u8; 4096];
+        let result = fill_bytes(&mut buf);
+        assert!(result.is_ok(), "fill_bytes(4096) returned Err: {result:?}");
+    }
+
+    /// Smoke test: two successive fills of a 32-byte buffer should differ.
+    ///
+    /// This is a smoke test (connectivity + basic non-determinism), NOT a statistical
+    /// randomness proof. An adversarial CSPRNG could pass this trivially. Honest label:
+    /// `Declared` quality, not `Empirical`.
+    #[test]
+    fn fill_bytes_successive_differ() {
+        let mut buf1 = [0u8; 32];
+        let mut buf2 = [0u8; 32];
+        fill_bytes(&mut buf1).expect("first fill_bytes failed");
+        fill_bytes(&mut buf2).expect("second fill_bytes failed");
+        // Probability of collision from /dev/urandom is ~2^-256; treat as impossible.
+        assert_ne!(
+            buf1, buf2,
+            "two successive fill_bytes returned identical 32-byte buffers (smoke check)"
+        );
     }
 
     #[test]
     fn entropy_error_display() {
         let e = EntropyError::Unavailable("test reason".to_string());
         assert_eq!(e.to_string(), "entropy unavailable: test reason");
+    }
+
+    /// Verify the EntropyError type implements std::error::Error (required by public API).
+    #[test]
+    fn entropy_error_is_std_error() {
+        let e: Box<dyn std::error::Error> = Box::new(EntropyError::Unavailable("x".to_string()));
+        assert!(e.to_string().contains("entropy unavailable"));
     }
 }
