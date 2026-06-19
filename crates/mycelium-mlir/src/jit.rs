@@ -46,6 +46,16 @@ const RTLD_NOW: c_int = 2;
 /// the AOT sentinel line and the interpreter's `EvalError::Overflow`. Deterministic.
 fn emit_kernel_fn(node: &Node) -> Result<(String, LaneKind, usize), AotError> {
     let lowered = lower_program(node)?;
+    if !lowered.funcs.is_empty() {
+        // Closures (Increment-2) emit top-level functions + a bump arena that this single-kernel JIT
+        // emitter does not assemble — refuse explicitly rather than emit a kernel that calls
+        // undefined symbols (G2). The AOT `compile_and_run` path supports closures.
+        return Err(AotError::UnsupportedNode(
+            "closures (Increment-2) are not supported on the JIT path; use the AOT \
+             compile_and_run path"
+                .to_owned(),
+        ));
+    }
     let kind = lowered.result.kind;
     let width = lowered.result.vals.len();
     let vals = lowered.result.vals;

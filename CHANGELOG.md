@@ -8,6 +8,34 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-19: M-378 — direct-LLVM native closures (App/Lam) + heap, Increment-2 of M-373)
+Wave-1 native continuation. The direct-LLVM backend (`crates/mycelium-mlir/src/llvm.rs`) now compiles
+`App`/`Lam` to **native closures** via closure-conversion, extending Increment-1's non-recursive
+`Construct`/`Match`. `Fix`/`FixGroup` stay explicit `UnsupportedNode` (Increment-3, separate session).
+Guarantee tag stays **`Declared`** (hand-written IR + the empirical M-302 differential, not Proven —
+VR-5); every refusal is explicit (G2) and every IR stage dumpable (no opaque pass — RFC-0004 §6/VR-4).
+- **Design-first (append-only).** **RFC-0004 §11.5 (r4)** scopes the Increment-2 sanction under the
+  §2 revisit clause; **DN-15 §7** records the realized design (ABI, no-GC strategy, free-var analysis);
+  the §5 increment table marks row 2 landed. No Accepted text rewritten (house rule #3).
+- **Closure conversion.** A lexical free-variable analysis over the public ANF (`closure_free_vars`;
+  no `mycelium-core` change) computes each `Lam`'s captured set → a heap closure record
+  `[fn_ptr | capture_0 … capture_k]`; `App` loads `fn_ptr` from slot 0 and emits the indirect
+  `call i64 %fp(i8* %env, i64 %arg)`.
+- **Narrow value ABI (DN-15 §7.1).** Closures carry/return `Binary{8}` values packed as one `i64`.
+  Other widths, `Ternary`, datums across the boundary, currying (closure-as-argument/result), a
+  non-closure `App` head, and a closure-valued program result are all explicit `UnsupportedNode`.
+- **No-GC strategy: bump arena (DN-15 §7.2).** One `@malloc`d block, records bump-allocated through a
+  single `@myc_arena_alloc` seam (never-silent over-capacity `@abort`), `@free`d before normal
+  completion. Heap is required (closures escape their creating frame); allocation is statically
+  bounded (no recursion). The seam is where **Increment-3** attaches a `DepthBudget`-resolved ceiling
+  (DN-05 #1; `budget.rs`, M-349) — designed in, not retrofitted. Closure-free programs emit
+  byte-for-byte the same module as before (no arena, no extra declares).
+- **Differential (the gate, NFR-7).** Extended the M-302/M-210 three-way differential with a
+  7-program `closure_corpus` (identity, single/two captures, body-local const, result-feeds-an-op, a
+  nested capturing lambda) + a body-discriminating mutant-witness + an updated refusal-parity test
+  (`Fix`/currying/bare-`Lam` still refused). The JIT path refuses closures explicitly (AOT-only).
+  11 `mycelium-mlir` differential tests green; `docs/api-index/` regenerated.
+
 ### Changed (2026-06-19: M-377 — DN-16 stdlib honesty cleanups, grounded + maintainer-ratified)
 Acted on DN-16's actionable cross-cutting divergences (DN-16 → **Resolved**), each grounded in code
 first (VR-5). No spec moved to Accepted — per-spec ratification stays the maintainer's call.
