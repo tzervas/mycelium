@@ -844,7 +844,7 @@
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
       "line": 357,
-      "summary": "A [`SwapEngine`](mycelium_interp::SwapEngine) for the reference interpreter that performs the",
+      "summary": "A SwapEngine for the reference interpreter that performs the",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -1746,7 +1746,7 @@
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/prim.rs",
       "line": 103,
-      "summary": "A prim reference `#p` (the prim analogue of [`CtorRef`](crate::CtorRef) `#T#i`): the content hash",
+      "summary": "A prim reference `#p` (the prim analogue of CtorRef `#T#i`): the content hash",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -2835,7 +2835,7 @@
       "module": "mycelium_core::guarantee::GuaranteeStrength",
       "file": "crates/mycelium-core/src/guarantee.rs",
       "line": 30,
-      "summary": "The strongest strength — the identity of [`meet`](Self::meet) and the unit of",
+      "summary": "The strongest strength — the identity of meet and the unit of",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -2846,7 +2846,7 @@
       "module": "mycelium_core::guarantee::GuaranteeStrength",
       "file": "crates/mycelium-core/src/guarantee.rs",
       "line": 30,
-      "summary": "The strongest strength — the identity of [`meet`](Self::meet) and the unit of",
+      "summary": "The strongest strength — the identity of meet and the unit of",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -2879,7 +2879,7 @@
       "module": "mycelium_core::guarantee::GuaranteeStrength",
       "file": "crates/mycelium-core/src/guarantee.rs",
       "line": 88,
-      "summary": "The meet of a sequence of strengths, weakest-wins, starting from [`TOP`](Self::TOP)",
+      "summary": "The meet of a sequence of strengths, weakest-wins, starting from TOP",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -2890,7 +2890,7 @@
       "module": "mycelium_core::guarantee::GuaranteeStrength",
       "file": "crates/mycelium-core/src/guarantee.rs",
       "line": 88,
-      "summary": "The meet of a sequence of strengths, weakest-wins, starting from [`TOP`](Self::TOP)",
+      "summary": "The meet of a sequence of strengths, weakest-wins, starting from TOP",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -3781,7 +3781,7 @@
       "module": "mycelium_core::prim",
       "file": "crates/mycelium-core/src/prim.rs",
       "line": 103,
-      "summary": "A prim reference `#p` (the prim analogue of [`CtorRef`](crate::CtorRef) `#T#i`): the content hash",
+      "summary": "A prim reference `#p` (the prim analogue of CtorRef `#T#i`): the content hash",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -5519,7 +5519,7 @@
       "module": "mycelium_doc::corpus",
       "file": "crates/mycelium-doc/src/corpus.rs",
       "line": 170,
-      "summary": "Extract inline `[text](target)` link targets from a paragraph (the cross-reference seed).",
+      "summary": "Extract inline `text` link targets from a paragraph (the cross-reference seed).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -6443,7 +6443,7 @@
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
       "line": 505,
-      "summary": "Evaluate `node` to a **representation** value by iterating [`step`](Self::step) to a normal",
+      "summary": "Evaluate `node` to a **representation** value by iterating step to a normal",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -9798,7 +9798,7 @@
       "module": "mycelium_lsp::diagnostics::policy::Rule",
       "file": "crates/mycelium-lsp/src/diagnostics/policy.rs",
       "line": 78,
-      "summary": "Set the route from the **closed v0** [`Route`](super::sink::Route) vocabulary (the checked path).",
+      "summary": "Set the route from the **closed v0** Route vocabulary (the checked path).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -9809,7 +9809,7 @@
       "module": "mycelium_lsp::diagnostics::policy::Rule",
       "file": "crates/mycelium-lsp/src/diagnostics/policy.rs",
       "line": 78,
-      "summary": "Set the route from the **closed v0** [`Route`](super::sink::Route) vocabulary (the checked path).",
+      "summary": "Set the route from the **closed v0** Route vocabulary (the checked path).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -9820,7 +9820,7 @@
       "module": "mycelium_lsp::diagnostics::policy::Rule",
       "file": "crates/mycelium-lsp/src/diagnostics/policy.rs",
       "line": 78,
-      "summary": "Set the route from the **closed v0** [`Route`](super::sink::Route) vocabulary (the checked path).",
+      "summary": "Set the route from the **closed v0** Route vocabulary (the checked path).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -12361,7 +12361,7 @@
       "module": "mycelium_mlir::bitnet::BitnetDotKernel",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
       "line": 231,
-      "summary": "Run the kernel over `packed_weights` (packed under [`scheme`](Self::scheme)) and",
+      "summary": "Run the kernel over `packed_weights` (packed under scheme) and",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -12372,7 +12372,7 @@
       "module": "mycelium_mlir::bitnet::BitnetDotKernel",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
       "line": 231,
-      "summary": "Run the kernel over `packed_weights` (packed under [`scheme`](Self::scheme)) and",
+      "summary": "Run the kernel over `packed_weights` (packed under scheme) and",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -13032,7 +13032,7 @@
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
       "line": 231,
-      "summary": "Run the kernel over `packed_weights` (packed under [`scheme`](Self::scheme)) and",
+      "summary": "Run the kernel over `packed_weights` (packed under scheme) and",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -13043,7 +13043,7 @@
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
       "line": 231,
-      "summary": "Run the kernel over `packed_weights` (packed under [`scheme`](Self::scheme)) and",
+      "summary": "Run the kernel over `packed_weights` (packed under scheme) and",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -13285,7 +13285,7 @@
       "module": "mycelium_mlir::jit::JitArtifact",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
       "line": 231,
-      "summary": "Run the kernel over `packed_weights` (packed under [`scheme`](Self::scheme)) and",
+      "summary": "Run the kernel over `packed_weights` (packed under scheme) and",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -13296,7 +13296,7 @@
       "module": "mycelium_mlir::jit::JitArtifact",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
       "line": 231,
-      "summary": "Run the kernel over `packed_weights` (packed under [`scheme`](Self::scheme)) and",
+      "summary": "Run the kernel over `packed_weights` (packed under scheme) and",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -13758,7 +13758,7 @@
       "module": "mycelium_mlir::specialize::SpecializedDotKernel",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
       "line": 231,
-      "summary": "Run the kernel over `packed_weights` (packed under [`scheme`](Self::scheme)) and",
+      "summary": "Run the kernel over `packed_weights` (packed under scheme) and",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -13769,7 +13769,7 @@
       "module": "mycelium_mlir::specialize::SpecializedDotKernel",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
       "line": 231,
-      "summary": "Run the kernel over `packed_weights` (packed under [`scheme`](Self::scheme)) and",
+      "summary": "Run the kernel over `packed_weights` (packed under scheme) and",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -14924,7 +14924,7 @@
       "module": "mycelium_numerics::prob::ProbBound",
       "file": "crates/mycelium-numerics/src/prob.rs",
       "line": 60,
-      "summary": "Combine with another failure mode by the union bound — the binary form of [`union`](Self::union).",
+      "summary": "Combine with another failure mode by the union bound — the binary form of union.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -14935,7 +14935,7 @@
       "module": "mycelium_numerics::prob::ProbBound",
       "file": "crates/mycelium-numerics/src/prob.rs",
       "line": 60,
-      "summary": "Combine with another failure mode by the union bound — the binary form of [`union`](Self::union).",
+      "summary": "Combine with another failure mode by the union bound — the binary form of union.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -17553,7 +17553,7 @@
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
       "line": 582,
-      "summary": "Elementwise `a − b` — same contract as [`add`](Self::add).",
+      "summary": "Elementwise `a − b` — same contract as add.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -20413,7 +20413,7 @@
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/error.rs",
       "line": 12,
-      "summary": "Error returned by [`step_by`](crate::step_by) when `k = 0`.",
+      "summary": "Error returned by step_by when `k = 0`.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -20424,7 +20424,7 @@
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/zip_outcome.rs",
       "line": 17,
-      "summary": "Records the outcome of a [`zip`](crate::zip) call — specifically, which side (if any) was",
+      "summary": "Records the outcome of a zip call — specifically, which side (if any) was",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -20501,7 +20501,7 @@
       "module": "mycelium_std_iter::error",
       "file": "crates/mycelium-std-iter/src/error.rs",
       "line": 12,
-      "summary": "Error returned by [`step_by`](crate::step_by) when `k = 0`.",
+      "summary": "Error returned by step_by when `k = 0`.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -20512,7 +20512,7 @@
       "module": "mycelium_std_iter::error",
       "file": "crates/mycelium-std-iter/src/error.rs",
       "line": 29,
-      "summary": "Error returned by [`zip_exact`](crate::zip_exact) when the left and right `Foldable`s have",
+      "summary": "Error returned by zip_exact when the left and right `Foldable`s have",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -20798,7 +20798,7 @@
       "module": "mycelium_std_iter::zip_outcome",
       "file": "crates/mycelium-std-iter/src/zip_outcome.rs",
       "line": 17,
-      "summary": "Records the outcome of a [`zip`](crate::zip) call — specifically, which side (if any) was",
+      "summary": "Records the outcome of a zip call — specifically, which side (if any) was",
       "guarantee_tag": null,
       "corpus_refs": []
     },

@@ -23,6 +23,7 @@ Usage:
 
 Exit: 0 = all refs resolve; 1 = any dangling ref (all reported before exit).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -34,9 +35,7 @@ from pathlib import Path
 try:
     import yaml  # type: ignore[import-untyped]
 except ImportError:  # pragma: no cover
-    sys.exit(
-        "PyYAML is required: `pip install pyyaml` or `uv tool install pyyaml`"
-    )
+    sys.exit("PyYAML is required: `pip install pyyaml` or `uv tool install pyyaml`")
 
 HERE = Path(__file__).resolve().parent
 
@@ -126,9 +125,7 @@ def _check_corpus_ref(
         # Also try exact stem match
         doc_files += list(corpus_root.rglob("*.md"))
         doc_files = [
-            f
-            for f in doc_files
-            if doc_id.lower() in f.stem.lower() or doc_id in f.name
+            f for f in doc_files if doc_id.lower() in f.stem.lower() or doc_id in f.name
         ]
 
         if not doc_files:
@@ -249,9 +246,7 @@ def validate(
         doc_refs = issue.get("doc_refs") or []
         for ref in doc_refs:
             if not isinstance(ref, str):
-                errors.append(
-                    f"{issue_id}: doc_refs entry is not a string: {ref!r}"
-                )
+                errors.append(f"{issue_id}: doc_refs entry is not a string: {ref!r}")
                 continue
             if ref.startswith("api:"):
                 _check_api_ref(ref, issue_id, api_symbols, errors)
@@ -329,13 +324,15 @@ issues:
         failures.append("bad-ref-detection")
 
     if not good_errs:
-        print(f"  PASS  good refs accepted")
+        print("  PASS  good refs accepted")
     else:
         print(f"  FAIL  good refs rejected: {good_errs}")
         failures.append("good-ref-rejection")
 
     if failures:
-        print(f"FAIL — {len(failures)} self-test check(s) failed: {', '.join(failures)}")
+        print(
+            f"FAIL — {len(failures)} self-test check(s) failed: {', '.join(failures)}"
+        )
         return 1
     print("PASS — all self-test checks passed")
     return 0
@@ -384,7 +381,9 @@ def main() -> int:
     repo_root = repo_root.resolve()
 
     index_json = (
-        args.index_json if args.index_json else repo_root / "docs" / "api-index" / "index.json"
+        args.index_json
+        if args.index_json
+        else repo_root / "docs" / "api-index" / "index.json"
     )
     doc_index = (
         args.doc_index if args.doc_index else repo_root / "docs" / "Doc-Index.md"
@@ -404,7 +403,7 @@ def main() -> int:
         )
         return 1
 
-    print(f">> doc_refs check OK: all doc_refs entries resolve.")
+    print(">> doc_refs check OK: all doc_refs entries resolve.")
     return 0
 
 

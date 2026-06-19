@@ -40,6 +40,7 @@ In `tools/github/issues.yaml`, a `doc_refs:` list entry may be:
   line must exist in the file
 
 Validate all refs:
+
 ```bash
 python3 tools/github/doc_refs_check.py --issues-yaml tools/github/issues.yaml
 ```

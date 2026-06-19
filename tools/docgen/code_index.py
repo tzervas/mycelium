@@ -13,12 +13,11 @@ Usage:
     --output-dir  Directory for index.json and INDEX.md (default: docs/api-index)
     --self-test   Determinism + completeness check; exits 0 on PASS, 1 on FAIL
 """
+
 from __future__ import annotations
 
 import argparse
-import glob
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -54,7 +53,7 @@ def _def_re(kind: str, name: str) -> re.Pattern:
             pat = rf"^\s*pub\s+(?:async\s+)?{re.escape(kind)}\s+{escaped}\s*[<({{;:,\s]"
         else:
             # use / re-export — handled via flagged path, but add a fallback
-            pat = rf"^\s*pub\s+use\b"
+            pat = r"^\s*pub\s+use\b"
         _DEF_RE_CACHE[key] = re.compile(pat, re.MULTILINE)
     return _DEF_RE_CACHE[key]
 
@@ -207,6 +206,12 @@ def _extract_summary(lines: list[str], def_line_idx: int) -> Optional[str]:
 
     # First sentence = up to the first `.` followed by space or end of string
     first_line = doc_lines[0]
+
+    # Strip Rust inline doc links: [`foo`](Target) or [foo](Target) → foo
+    # These are valid Rust doc syntax but break the markdown link checker when
+    # written verbatim into INDEX.md tables (checker sees them as relative links).
+    first_line = re.sub(r"\[`?([^`\]]+)`?\]\([^)]+\)", r"\1", first_line)
+
     m = re.match(r"^(.*?\.)\s", first_line)
     if m:
         return m.group(1).strip()
@@ -320,7 +325,9 @@ def emit_json(items: list[dict], flagged: list[dict], output_dir: Path) -> None:
         "flagged": flagged,
     }
     out = output_dir / "index.json"
-    out.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    out.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
 
 
 def emit_markdown(items: list[dict], flagged: list[dict], output_dir: Path) -> None:
@@ -330,9 +337,7 @@ def emit_markdown(items: list[dict], flagged: list[dict], output_dir: Path) -> N
     lines: list[str] = []
     lines.append("# Mycelium Agent Code Index")
     lines.append("")
-    lines.append(
-        f"> **Honesty:** `{HONESTY_TAG}`"
-    )
+    lines.append(f"> **Honesty:** `{HONESTY_TAG}`")
     lines.append(
         "> Use the index to find where to `Read`, not as an authoritative reference."
     )
@@ -367,9 +372,7 @@ def emit_markdown(items: list[dict], flagged: list[dict], output_dir: Path) -> N
     # Flagged section
     lines.append("## Flagged items")
     lines.append("")
-    lines.append(
-        "Items the heuristic could not locate (G2: never silently dropped):"
-    )
+    lines.append("Items the heuristic could not locate (G2: never silently dropped):")
     lines.append("")
     if flagged:
         lines.append("| Symbol | Reason |")
@@ -392,7 +395,6 @@ def emit_markdown(items: list[dict], flagged: list[dict], output_dir: Path) -> N
 def self_test(repo_root: Path, output_dir: Path) -> int:
     """Run determinism + completeness checks. Returns 0 on PASS, 1 on FAIL."""
     import tempfile
-    import filecmp
 
     print("Running self-test…")
     failures: list[str] = []
@@ -408,7 +410,9 @@ def self_test(repo_root: Path, output_dir: Path) -> int:
         if (p1 / "index.json").read_bytes() == (p2 / "index.json").read_bytes():
             print("  PASS  determinism: two runs produce identical JSON")
         else:
-            print("  FAIL  determinism: two runs differ — generator is non-deterministic")
+            print(
+                "  FAIL  determinism: two runs differ — generator is non-deterministic"
+            )
             failures.append("determinism")
 
     # --- Completeness: every `pub` line from spec/api/*.txt in items or flagged ---
@@ -433,7 +437,7 @@ def self_test(repo_root: Path, output_dir: Path) -> int:
                 missing.append(f"{crate_name}: {sym}")
 
     if not missing:
-        print(f"  PASS  completeness: all public items in items or flagged")
+        print("  PASS  completeness: all public items in items or flagged")
     else:
         print(f"  FAIL  completeness: {len(missing)} item(s) not in items or flagged:")
         for m in missing[:20]:
@@ -472,7 +476,9 @@ def main() -> int:
     # Repo root = two levels up from this script (tools/docgen/ -> tools/ -> repo root)
     repo_root = Path(__file__).resolve().parent.parent.parent
 
-    output_dir = args.output_dir if args.output_dir else repo_root / "docs" / "api-index"
+    output_dir = (
+        args.output_dir if args.output_dir else repo_root / "docs" / "api-index"
+    )
     output_dir = output_dir.resolve()
 
     if args.self_test:

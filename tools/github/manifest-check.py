@@ -37,9 +37,8 @@ HERE = Path(__file__).resolve().parent
 # manifest-check can still run without the doc-index infrastructure.
 try:
     import importlib.util as _ilu
-    _spec = _ilu.spec_from_file_location(
-        "doc_refs_check", HERE / "doc_refs_check.py"
-    )
+
+    _spec = _ilu.spec_from_file_location("doc_refs_check", HERE / "doc_refs_check.py")
     _mod = _ilu.module_from_spec(_spec)  # type: ignore[arg-type]
     _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
     _doc_refs_validate = _mod.validate  # type: ignore[attr-defined]
@@ -124,9 +123,7 @@ def main() -> int:
             return 1
         if doc_ref_errors == []:
             # Only print OK if there were any doc_refs to check
-            has_any = any(
-                (issue.get("doc_refs") or []) for issue in issues
-            )
+            has_any = any((issue.get("doc_refs") or []) for issue in issues)
             if has_any:
                 print(">> doc_refs check OK: all doc_refs entries resolve.")
     else:
