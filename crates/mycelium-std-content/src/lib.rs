@@ -58,6 +58,19 @@
 //! - **(Q4)** How implicit `ContentHash` derivation may be at the call site is an open ergonomics
 //!   question (spec §7-Q4 / RFC-0016 §8-Q3 — tension A). This crate is always-explicit;
 //!   the per-ring ergonomics pass (M-540) may introduce implicit derivation later.
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 1, Tier A):** Content-addressed operations are representation-agnostic
+//! at the content level — the canonical hash of a value includes its `Repr` field as part of the
+//! normalized structure (RFC-0001 §4.6), so representation is carried in the identity itself,
+//! not implicit. The certificate of identity is always inspectable; metadata (including `Repr`) is
+//! never stripped from the hash input (ADR-003).
 
 #![forbid(unsafe_code)]
 

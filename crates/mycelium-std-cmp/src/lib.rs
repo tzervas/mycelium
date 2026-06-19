@@ -41,6 +41,19 @@
 //! - **C6 declared, bounded effects:** every op is effect-free (`none`).
 //!
 //! Design spec: `docs/spec/stdlib/cmp.md`.
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 2, Tier B):** Comparison ops are representation-aware where applicable:
+//! a cross-representation comparison (`Binary` vs `Ternary` value) requires an explicit swap
+//! (via `std.swap`) before comparison — this module does not cross `Repr` paradigms. The lossless
+//! `BF16 → F32` widening here emits no certificate because it is not a paradigm crossing; all
+//! other narrowing conversions are explicit fallible ops.
 #![forbid(unsafe_code)]
 
 use mycelium_core::GuaranteeStrength;

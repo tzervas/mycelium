@@ -64,6 +64,18 @@
 //!
 //! Design spec: `docs/spec/stdlib/fmt.md`; contract: RFC-0016 §4.1 (C1–C6);
 //! guarantee matrix: spec §4.
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 2, Tier B):** Format ops render to text; the source representation
+//! is always named in the format receipt — `to_json` serializes the `Repr` tag as part of the
+//! canonical JSON form (the `Value`'s `Repr` is an observable field, never omitted). A rendered
+//! `Value` includes its `Repr`; an `EXPLAIN`-able format rendering is a first-class goal (G11).
 #![forbid(unsafe_code)]
 
 use mycelium_core::{GuaranteeStrength, Repr, Value};

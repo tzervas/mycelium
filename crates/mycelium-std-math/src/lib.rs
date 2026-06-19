@@ -58,6 +58,20 @@
 //!   ambient rounding mode, no global state.
 //!
 //! Design spec: `docs/spec/stdlib/math.md`; task M-525, issue #166.
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 2, Tier B):** Math ops tag approximate results `Declared` — not
+//! `Proven` — because the transcendental compute floor (libm / `wild` FFI, M-541) is not yet
+//! audited. Every approximate result carries an explicit `Bound` (inspectable via
+//! [`Approx::explain`]); the precision bound is an explicit declaration, not an implicit
+//! guarantee. See §FLAG for the M-541 disposition. [§FLAG: transcendental compute floor pending
+//! M-541 `std-sys` audit; strength is `Declared` until the audited theorem is delivered.]
 #![forbid(unsafe_code)]
 
 pub mod approx;

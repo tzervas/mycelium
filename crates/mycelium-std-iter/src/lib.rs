@@ -68,6 +68,19 @@
 //! - **(Q3)** Short-circuit under a `Total` fold — done-flag fold; FLAG to RFC-0007 §4.8.
 //! - **(Q4)** `Lazy` surface in `iter` vs own module — kept here, type-segregated.
 //! - **(Q5)** Transducer fusion law — `Empirical` property test; NOT `Proven` (VR-5).
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 2, Tier B):** Iterators are representation-neutral combinators —
+//! element representation passes through unchanged. A `map` over a `Seq` of `Binary{32}` values
+//! produces `Binary{32}` values (or whatever the mapping function returns); no representation
+//! is coerced by the combinator itself. Cross-representation element transformation requires an
+//! explicit swap in the mapping function.
 #![forbid(unsafe_code)]
 
 pub mod error;
