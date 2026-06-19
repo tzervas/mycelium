@@ -28,10 +28,12 @@
 //!    the optimiser drops the unpack and elides the zero lanes, timed against the generic §3 kernel
 //!    over the *same* runtime activation buffer. Both still take runtime activation pointers (no
 //!    constant folding), so the ratio is honest compute-vs-compute; reported as-measured (VR-5).
-//! 5. **Hand-vectorized (SIMD) kernel** (M-360) — the 8-wide I2_S dot kernel
-//!    (`mycelium_mlir::compile_bitnet_dot_simd`) vs the scalar JIT kernel over the same runtime
-//!    buffer; the SIMD unpack is differential-checked against the scalar oracle. Ratio as-measured
-//!    (VR-5); I2_S only this increment.
+//! 5. **Hand-vectorized (SIMD) kernels** (M-360) — three kernels:
+//!    - I2_S: 8-wide vector body (`compile_bitnet_dot_simd`) — broadcast+shift+sub decode.
+//!    - TL1: 8-wide vector body (`compile_bitnet_dot_simd_tl1`) — broadcast+shift+select decode.
+//!    - TL2: 4-group = 12-trit body (`compile_bitnet_dot_simd_tl2`) — 5-bit bitstream decode.
+//!
+//!    Each is differential-checked against the scalar oracle before timing. Ratio as-measured (VR-5).
 //!
 //! No benchmarking dependency (house style): a warmup pass, then the minimum mean over several
 //! batches. Run with `--release` (`cargo run --release -p xtask -- e1`); a debug build is refused.
@@ -43,8 +45,8 @@ use mycelium_core::{Meta, Node, PackScheme, Payload, Provenance, Repr, Trit, Val
 use mycelium_interp::{IdentitySwapEngine, Interpreter, PrimRegistry};
 use mycelium_mlir::pack::{pack_trits, unpack_trits};
 use mycelium_mlir::{
-    compile, compile_bitnet_dot_for, compile_bitnet_dot_simd, compile_specialized_dot,
-    ternary_dot_ref, AotError,
+    compile, compile_bitnet_dot_for, compile_bitnet_dot_simd, compile_bitnet_dot_simd_tl1,
+    compile_bitnet_dot_simd_tl2, compile_specialized_dot, ternary_dot_ref, AotError,
 };
 
 const BATCHES: usize = 5;
@@ -136,14 +138,13 @@ pub fn run() {
              call overhead. Reported against hand-written Rust scalar baselines doing the identical \
              per-scheme unpack-compute. §4 adds the M-340 JIT runtime-specialization layer: baking the \
              runtime-known weights in (zero lanes elided, unpack dropped) measured a further speedup \
-             over the generic kernel on the same runtime activations. §5 adds a **hand-vectorized \
-             (SIMD) I2_S kernel** (8 trits/iteration via vector IR), differential-checked against the \
-             scalar oracle and measured against it. **TL2** now decodes the **true bitnet.cpp 1.67-b/w \
-             layout** (3 trits → a 5-bit LUT-index bitstream; A5-08 resolved — the codec matches the \
-             selector cost model, the 1.6-b/w placeholder is retired). Still open (honest, VR-5/G3): \
-             the SIMD path is **I2_S only** (TL1/TL2 vectorized unpacks next) and is not claimed at \
-             parity with bitnet.cpp's AVX2/AVX512 LUT kernels. No perf claim is pre-written; the \
-             numbers above are whatever was measured."
+             over the generic kernel on the same runtime activations. §5 adds **hand-vectorized (SIMD) \
+             kernels for all three packings**: I2_S (8-wide, shuffle+shift decode), TL1 (8-wide, \
+             select decode — avoids urem), and TL2 (4-group = 12-trit body, 5-bit bitstream decode); \
+             all differential-checked against the scalar oracle. **TL2** decodes the **true \
+             bitnet.cpp 1.67-b/w layout** (3 trits → a 5-bit LUT-index bitstream; A5-08 resolved). \
+             Still open (honest, VR-5/G3): no parity claim with bitnet.cpp's AVX2/AVX512 LUT kernels. \
+             No perf claim is pre-written; the numbers above are whatever was measured."
         );
     } else {
         println!(
@@ -325,81 +326,202 @@ fn specialize_section(weights: &[Trit], dim: usize) {
     );
 }
 
-/// E1 §5 (M-360): time the **hand-vectorized (SIMD)** I2_S dot kernel against the scalar JIT kernel
-/// over the *same* runtime buffers. Both take runtime pointers (no constant folding), so the ratio is
-/// honest compiled-vector vs compiled-scalar on identical work; reported as-measured (no pre-written
-/// target, VR-5). Skips gracefully when `clang` is absent.
+/// E1 §5 (M-360): time the **hand-vectorized (SIMD)** dot kernels (I2_S, TL1, TL2) against the
+/// scalar JIT kernels over the same runtime buffers. Both take runtime pointers (no constant
+/// folding), so the ratio is honest compiled-vector vs compiled-scalar on identical work; reported
+/// as-measured (no pre-written target, VR-5). Skips gracefully when `clang` is absent.
 fn simd_section(weights: &[Trit], dim: usize) {
     println!(
-        "\n== E1 §5: hand-vectorized (SIMD) vs scalar I2_S dot kernel over runtime data (M-360) =="
+        "\n== E1 §5: hand-vectorized (SIMD) vs scalar dot kernels over runtime data (M-360) =="
+    );
+    println!(
+        "  I2_S: 8-wide vector body; TL1: 8-wide with select decode; TL2: 4-group (12-trit) body"
     );
 
     let acts = activations(dim);
     let oracle_sum = ternary_dot_ref(weights, &acts);
-    let packed = pack_trits(weights, PackScheme::I2S);
 
-    let scalar = match compile_bitnet_dot_for(PackScheme::I2S) {
+    // ── I2_S ──────────────────────────────────────────────────────────────────────────────────
+    let packed_i2s = pack_trits(weights, PackScheme::I2S);
+    let scalar_i2s = match compile_bitnet_dot_for(PackScheme::I2S) {
         Ok(k) => k,
         Err(AotError::ToolchainMissing(tool)) => {
             println!("  skip: native toolchain absent ({tool}) — install clang to measure.");
             return;
         }
         Err(e) => {
-            eprintln!("  scalar kernel compile failed: {e}");
+            eprintln!("  I2_S scalar kernel compile failed: {e}");
             return;
         }
     };
-    let simd = match compile_bitnet_dot_simd() {
+    let simd_i2s = match compile_bitnet_dot_simd() {
         Ok(k) => k,
         Err(AotError::ToolchainMissing(_)) => return,
         Err(e) => {
-            eprintln!("  SIMD kernel compile failed: {e}");
+            eprintln!("  I2_S SIMD kernel compile failed: {e}");
             return;
         }
     };
-
-    // Correctness gate before timing: both compiled paths must agree with the oracle.
-    let scalar_sum = scalar.call(&packed, &acts, dim).expect("scalar runs");
-    let simd_sum = simd.call(&packed, &acts, dim).expect("SIMD runs");
+    let scalar_i2s_sum = scalar_i2s
+        .call(&packed_i2s, &acts, dim)
+        .expect("I2_S scalar runs");
+    let simd_i2s_sum = simd_i2s
+        .call(&packed_i2s, &acts, dim)
+        .expect("I2_S SIMD runs");
     assert_eq!(
-        scalar_sum, oracle_sum,
-        "E1 §5: scalar kernel disagrees with the oracle — refusing to time a wrong kernel"
+        scalar_i2s_sum, oracle_sum,
+        "E1 §5 I2_S: scalar diverges from oracle — refusing to time a wrong kernel"
     );
     assert_eq!(
-        simd_sum, oracle_sum,
-        "E1 §5: SIMD kernel disagrees with the oracle — refusing to time a wrong kernel"
+        simd_i2s_sum, oracle_sum,
+        "E1 §5 I2_S: SIMD diverges from oracle — refusing to time a wrong kernel"
     );
-
     let iters = 5_000u32;
-    let scalar_ns = bench(iters, || {
+    let scalar_i2s_ns = bench(iters, || {
         black_box(
-            scalar
-                .call(black_box(&packed), black_box(&acts), dim)
-                .expect("scalar"),
+            scalar_i2s
+                .call(black_box(&packed_i2s), black_box(&acts), dim)
+                .expect("I2_S scalar"),
         );
     });
-    let simd_ns = bench(iters, || {
+    let simd_i2s_ns = bench(iters, || {
         black_box(
-            simd.call(black_box(&packed), black_box(&acts), dim)
-                .expect("simd"),
+            simd_i2s
+                .call(black_box(&packed_i2s), black_box(&acts), dim)
+                .expect("I2_S SIMD"),
         );
     });
-
     #[allow(clippy::cast_precision_loss)]
-    let (scalar_per, simd_per) = (scalar_ns / dim as f64, simd_ns / dim as f64);
-    let ratio = if simd_ns > 0.0 {
-        scalar_ns / simd_ns
+    let (si2s_sper, si2s_vper) = (scalar_i2s_ns / dim as f64, simd_i2s_ns / dim as f64);
+    let i2s_ratio = if simd_i2s_ns > 0.0 {
+        scalar_i2s_ns / simd_i2s_ns
     } else {
         0.0
     };
     println!(
-        "  scalar {scalar_ns:>10.0} ns ({scalar_per:>5.3} ns/elem)   SIMD (8-wide) {simd_ns:>10.0} ns \
-         ({simd_per:>5.3} ns/elem)   speedup {ratio:>5.2}x"
+        "  I2_S  scalar {scalar_i2s_ns:>10.0} ns ({si2s_sper:>5.3} ns/elem)   \
+         SIMD {simd_i2s_ns:>10.0} ns ({si2s_vper:>5.3} ns/elem)   speedup {i2s_ratio:>5.2}x"
     );
+
+    // ── TL1 ──────────────────────────────────────────────────────────────────────────────────
+    let packed_tl1 = pack_trits(weights, PackScheme::Tl1);
+    let scalar_tl1 = match compile_bitnet_dot_for(PackScheme::Tl1) {
+        Ok(k) => k,
+        Err(AotError::ToolchainMissing(_)) => return,
+        Err(e) => {
+            eprintln!("  TL1 scalar kernel compile failed: {e}");
+            return;
+        }
+    };
+    let simd_tl1 = match compile_bitnet_dot_simd_tl1() {
+        Ok(k) => k,
+        Err(AotError::ToolchainMissing(_)) => return,
+        Err(e) => {
+            eprintln!("  TL1 SIMD kernel compile failed: {e}");
+            return;
+        }
+    };
+    let scalar_tl1_sum = scalar_tl1
+        .call(&packed_tl1, &acts, dim)
+        .expect("TL1 scalar runs");
+    let simd_tl1_sum = simd_tl1
+        .call(&packed_tl1, &acts, dim)
+        .expect("TL1 SIMD runs");
+    assert_eq!(
+        scalar_tl1_sum, oracle_sum,
+        "E1 §5 TL1: scalar diverges from oracle — refusing to time a wrong kernel"
+    );
+    assert_eq!(
+        simd_tl1_sum, oracle_sum,
+        "E1 §5 TL1: SIMD diverges from oracle — refusing to time a wrong kernel"
+    );
+    let scalar_tl1_ns = bench(iters, || {
+        black_box(
+            scalar_tl1
+                .call(black_box(&packed_tl1), black_box(&acts), dim)
+                .expect("TL1 scalar"),
+        );
+    });
+    let simd_tl1_ns = bench(iters, || {
+        black_box(
+            simd_tl1
+                .call(black_box(&packed_tl1), black_box(&acts), dim)
+                .expect("TL1 SIMD"),
+        );
+    });
+    #[allow(clippy::cast_precision_loss)]
+    let (stl1_sper, stl1_vper) = (scalar_tl1_ns / dim as f64, simd_tl1_ns / dim as f64);
+    let tl1_ratio = if simd_tl1_ns > 0.0 {
+        scalar_tl1_ns / simd_tl1_ns
+    } else {
+        0.0
+    };
     println!(
-        "  note: both decode the same I2_S runtime buffer; the SIMD kernel unpacks 8 trits/iteration \
-         via vector IR (shuffle + per-lane shift), scalar one. Speedup as-measured (VR-5); I2_S only \
-         this increment (TL1/TL2 SIMD + true-TL2 layout next)."
+        "  TL1   scalar {scalar_tl1_ns:>10.0} ns ({stl1_sper:>5.3} ns/elem)   \
+         SIMD {simd_tl1_ns:>10.0} ns ({stl1_vper:>5.3} ns/elem)   speedup {tl1_ratio:>5.2}x"
+    );
+
+    // ── TL2 ──────────────────────────────────────────────────────────────────────────────────
+    let packed_tl2 = pack_trits(weights, PackScheme::Tl2);
+    let scalar_tl2 = match compile_bitnet_dot_for(PackScheme::Tl2) {
+        Ok(k) => k,
+        Err(AotError::ToolchainMissing(_)) => return,
+        Err(e) => {
+            eprintln!("  TL2 scalar kernel compile failed: {e}");
+            return;
+        }
+    };
+    let simd_tl2 = match compile_bitnet_dot_simd_tl2() {
+        Ok(k) => k,
+        Err(AotError::ToolchainMissing(_)) => return,
+        Err(e) => {
+            eprintln!("  TL2 SIMD kernel compile failed: {e}");
+            return;
+        }
+    };
+    let scalar_tl2_sum = scalar_tl2
+        .call(&packed_tl2, &acts, dim)
+        .expect("TL2 scalar runs");
+    let simd_tl2_sum = simd_tl2
+        .call(&packed_tl2, &acts, dim)
+        .expect("TL2 SIMD runs");
+    assert_eq!(
+        scalar_tl2_sum, oracle_sum,
+        "E1 §5 TL2: scalar diverges from oracle — refusing to time a wrong kernel"
+    );
+    assert_eq!(
+        simd_tl2_sum, oracle_sum,
+        "E1 §5 TL2: SIMD diverges from oracle — refusing to time a wrong kernel"
+    );
+    let scalar_tl2_ns = bench(iters, || {
+        black_box(
+            scalar_tl2
+                .call(black_box(&packed_tl2), black_box(&acts), dim)
+                .expect("TL2 scalar"),
+        );
+    });
+    let simd_tl2_ns = bench(iters, || {
+        black_box(
+            simd_tl2
+                .call(black_box(&packed_tl2), black_box(&acts), dim)
+                .expect("TL2 SIMD"),
+        );
+    });
+    #[allow(clippy::cast_precision_loss)]
+    let (stl2_sper, stl2_vper) = (scalar_tl2_ns / dim as f64, simd_tl2_ns / dim as f64);
+    let tl2_ratio = if simd_tl2_ns > 0.0 {
+        scalar_tl2_ns / simd_tl2_ns
+    } else {
+        0.0
+    };
+    println!(
+        "  TL2   scalar {scalar_tl2_ns:>10.0} ns ({stl2_sper:>5.3} ns/elem)   \
+         SIMD {simd_tl2_ns:>10.0} ns ({stl2_vper:>5.3} ns/elem)   speedup {tl2_ratio:>5.2}x"
+    );
+
+    println!(
+        "  note: all SIMD kernels decode the runtime buffer for their scheme; the oracle is the \
+         packing-independent ternary_dot_ref. Speedups reported as-measured (VR-5)."
     );
 }
 
