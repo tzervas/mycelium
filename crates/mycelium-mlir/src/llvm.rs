@@ -90,8 +90,8 @@ pub enum AotError {
     /// bitnet packings I2_S/TL1/TL2 have one). An explicit refusal — never a silent misdecode.
     UnsupportedScheme(String),
     /// A tail-recursive `Fix` loop hit the [`AutoDepthBudget`] ceiling — a graceful explicit refusal
-    /// (DN-05 #1: never SIGSEGV; never a silent hang). Matches the interpreter's
-    /// `EvalError::DepthLimit` — both refuse, neither is silent (G2/SC-3).
+    /// (matches `EvalError::DepthLimit` in the interpreter, so the native and interpreter paths both
+    /// refuse; neither is silent (G2/SC-3)).
     ///
     /// [`AutoDepthBudget`]: crate::budget::AutoDepthBudget
     DepthLimit(String),
@@ -102,9 +102,9 @@ pub enum AotError {
 /// bits, `'-'`/`'0'`/`'+'` for trits), so it can never be confused with a result line.
 pub(crate) const OVERFLOW_SENTINEL: u8 = b'!';
 
-/// The single byte the native artifact prints when a tail-recursive `Fix` loop hits the
+/// The single byte the native artifact prints (AOT) when a tail-recursive Fix loop hits the
 /// `AutoDepthBudget` ceiling (Increment-3 / DN-05 #1). Distinct from `OVERFLOW_SENTINEL` and all
-/// valid result chars (`'0'`/`'1'`/`'-'`/`'+'`) — never ambiguous with a normal result line (G2).
+/// valid element chars — a defined-sentinel, never a silent hang or SIGSEGV (G2/SC-3).
 pub(crate) const DEPTHLIMIT_SENTINEL: u8 = b'#';
 
 impl fmt::Display for AotError {
@@ -210,41 +210,39 @@ pub(crate) struct ClosureVal {
     pub(crate) base: String,
 }
 
-/// A **tail-recursive fixpoint** value (Increment-3): carries the self-reference `name` and the
-/// nested ANF body of the `Rhs::Fix` binding so that a downstream `App(fix, arg)` can lower the
-/// whole thing as an iterative LLVM loop rather than a recursive call (DN-05 #1; RFC-0004 §11.6;
-/// DN-15 §8). The body ANF is cloned once at Fix-binding time and consumed at App-lowering time.
-/// A `Fix` value is never a printable result, never a closure-callable, never a datum (G2).
+/// A suspended `Fix` value (Increment-3 / RFC-0004 §11.6): the Fix body (a `λparam. Match ...`)
+/// stored without emitting IR. Consumed by a downstream `App` that triggers `lower_tail_fix`,
+/// which rewrites the Fix+App into an iterative LLVM loop. A bare Fix that is never `App`-applied
+/// is an explicit `UnsupportedNode` (G2 — it would leave the result on a non-printable value).
 #[derive(Debug, Clone)]
 pub(crate) struct FixVal {
-    /// The self-reference name bound inside the Fix body.
+    /// The self-reference name (the bound variable in `Fix name body`).
     pub(crate) name: String,
-    /// The Fix body (a nested ANF whose outer form is `Rhs::Lam{param, lam_body}` where
-    /// `lam_body` is a `Rhs::Match` — the canonical tail-Fix shape; RFC-0004 §11.6).
+    /// The Fix body — a `λparam. Match param { arms }` ANF node (not yet lowered).
     pub(crate) body: mycelium_core::lower::Anf,
 }
 
 /// An environment value — a repr-lane (bit/trit), a constructed data value (tagged struct), a
-/// native closure (Increment-2), or a tail-recursive fixpoint (Increment-3).
+/// native closure (Increment-2), or a suspended Fix value (Increment-3).
 ///
 /// The `lower_program` env maps [`Atom`] → `EnvValue`. Repr-lane values flow into `emit_op`; datum
 /// values are produced by `Construct` and consumed by `Match` arm bodies; closure values are
-/// produced by `Lam` and consumed by `App`; fix values are produced by `Rhs::Fix` and consumed by
-/// `App` as an iterative loop (Increment-3). Neither a datum, closure, nor fix is ever a final
-/// result (the output protocol prints bits/trits; a program that leaves any of these on the result
-/// atom is refused with an explicit [`AotError::UnsupportedNode`]).
+/// produced by `Lam` and consumed by `App`; Fix values are suspended by `Fix` and consumed by the
+/// special `App(Fix, init)` dispatch in `lower_app`. Neither a datum, closure, nor Fix is ever a
+/// final result (the output protocol prints bits/trits; leaving one on the result atom is refused
+/// with an explicit [`AotError::UnsupportedNode`]).
 #[derive(Debug, Clone)]
 pub(crate) enum EnvValue {
     Repr(Lane),
     Datum(Datum),
     Closure(ClosureVal),
-    /// A tail-recursive fixpoint suspended for Increment-3 iterative loop emission. Not callable as
-    /// a closure, not a printable repr, not a datum — always consumed by an `App` immediately.
+    /// A suspended `Fix` — produced by `Rhs::Fix`, consumed by the special `App(Fix, init)`
+    /// dispatch. Never a printable result value (G2).
     Fix(FixVal),
 }
 
 impl EnvValue {
-    /// Extract the repr lane, or return an explicit error if it is a datum/closure/fix.
+    /// Extract the repr lane, or return an explicit error if it is a datum/closure.
     fn into_lane(self, ctx: &str) -> Result<Lane, AotError> {
         match self {
             EnvValue::Repr(l) => Ok(l),
@@ -274,20 +272,6 @@ impl EnvValue {
             EnvValue::Fix(_) => Err(AotError::UnsupportedNode(format!(
                 "{ctx}: expected a repr lane but found a Fix value — only usable as an App func \
                  (Increment-3; G2)"
-            ))),
-        }
-    }
-    fn as_datum(&self, ctx: &str) -> Result<&Datum, AotError> {
-        match self {
-            EnvValue::Datum(d) => Ok(d),
-            EnvValue::Repr(_) => Err(AotError::UnsupportedNode(format!(
-                "{ctx}: expected a data value (Datum) but found a repr lane"
-            ))),
-            EnvValue::Closure(_) => Err(AotError::UnsupportedNode(format!(
-                "{ctx}: expected a data value (Datum) but found a closure value"
-            ))),
-            EnvValue::Fix(_) => Err(AotError::UnsupportedNode(format!(
-                "{ctx}: expected a data value (Datum) but found a Fix value"
             ))),
         }
     }
@@ -563,166 +547,11 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
             Rhs::Match {
                 scrutinee,
                 alts,
-                default: default_arm,
-                // The ANF `default` arm (if `Some`) is lowered into the switch's default block so
-                // that the native path returns the same value as the interpreter when no explicit
-                // arm matches. If `None`, the default emits abort() — a defined-trap for the
-                // provably-unreachable no-match case (WF7 checker proves coverage; G2: never UB).
-            } => {
-                // Load the tag from the scrutinee datum, then switch on it. Each arm loads its
-                // binder fields from the struct and inlines the arm's ANF body (recursively).
-                // The match must terminate at a repr Lane value (not a Datum) — the final result
-                // must be printable by the read-back protocol. The switch has an explicit defined
-                // default — either the lowered ANF default block (if `Some`) or a call to abort()
-                // (if `None`) — never raw `unreachable` UB (G2).
-                let datum = lookup_ev(&env, scrutinee)?
-                    .as_datum("Match scrutinee")
-                    .cloned()?;
-
-                // Load the tag.
-                let tag_gep = ssa.fresh();
-                let slots = datum.slots;
-                let ptr = &datum.ptr.clone();
-                let _ = writeln!(
-                    body,
-                    "  {tag_gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 0"
-                );
-                let tag_reg = ssa.fresh();
-                let _ = writeln!(body, "  {tag_reg} = load i64, i64* {tag_gep}");
-
-                // Generate unique labels for each arm and the merge block.
-                let arm_labels: Vec<String> = (0..alts.len()).map(|_| bbc.fresh()).collect();
-                let default_label = bbc.fresh();
-                let merge_label = bbc.fresh();
-
-                // Emit the switch instruction.
-                let _ = write!(body, "  switch i64 {tag_reg}, label %{default_label} [");
-                for (alt, label) in alts.iter().zip(&arm_labels) {
-                    use mycelium_core::lower::AnfAlt;
-                    let arm_tag = match alt {
-                        AnfAlt::Ctor { ctor, .. } => ctor.index() as u64,
-                        AnfAlt::Lit { .. } => {
-                            return Err(AotError::UnsupportedNode(
-                                "literal Match arms are not supported in the native LLVM data \
-                                 fragment (Increment-1); use constructor arms only"
-                                    .to_owned(),
-                            ));
-                        }
-                    };
-                    let _ = write!(body, " i64 {arm_tag}, label %{label}");
-                }
-                let _ = writeln!(body, " ]");
-
-                // Collect (arm_label, result_lane) pairs for the phi at the merge.
-                let mut phi_entries: Vec<(String, Lane)> = Vec::with_capacity(alts.len());
-
-                for (alt, label) in alts.iter().zip(&arm_labels) {
-                    use mycelium_core::lower::AnfAlt;
-                    let _ = writeln!(body, "{label}:");
-                    let AnfAlt::Ctor {
-                        binders,
-                        body: arm_body,
-                        ..
-                    } = alt
-                    else {
-                        unreachable!("literal arms filtered above")
-                    };
-                    // Issue 2 (never-silent / G2): check binder/field arity before zipping.
-                    // The interpreter rejects arity mismatches with DataMalformed; we must too.
-                    if binders.len() != datum.fields.len() {
-                        return Err(AotError::UnsupportedNode(format!(
-                            "Match arm binder arity ({}) != constructor field count ({}) \
-                             — malformed Match (interpreter rejects with DataMalformed; G2/WF7)",
-                            binders.len(),
-                            datum.fields.len()
-                        )));
-                    }
-                    // Bind field lanes into a child env extended from the current one.
-                    let mut arm_env = env.clone();
-                    for (binder, field_layout) in binders.iter().zip(&datum.fields) {
-                        let field_lane =
-                            emit_load_field(field_layout, ptr, slots, &mut ssa, &mut body);
-                        arm_env.insert(
-                            mycelium_core::lower::Atom::Named(binder.clone()),
-                            EnvValue::Repr(field_lane),
-                        );
-                    }
-                    // Lower the arm body (a nested ANF block) recursively into the current IR body.
-                    let arm_result = lower_anf_block(
-                        arm_body,
-                        &mut arm_env,
-                        &mut ssa,
-                        &mut bbc,
-                        &mut body,
-                        &mut funcs,
-                        &mut flags,
-                    )?;
-                    phi_entries.push((label.clone(), arm_result));
-                    let _ = writeln!(body, "  br label %{merge_label}");
-                }
-
-                // Default block: if the ANF `default` arm is `Some`, lower it and merge its
-                // result via the phi (matching the interpreter: the default body's value is
-                // returned when no explicit arm matches). If `None`, emit abort() — a
-                // defined-trap (WF7 proves exhaustive coverage; abort is the honest never-silent
-                // trap; G2: never raw unreachable UB).
-                let _ = writeln!(body, "{default_label}:");
-                if let Some(default_block) = default_arm {
-                    // The default arm has no binders; use the current env directly.
-                    let default_result = lower_anf_block(
-                        default_block,
-                        &mut env.clone(),
-                        &mut ssa,
-                        &mut bbc,
-                        &mut body,
-                        &mut funcs,
-                        &mut flags,
-                    )?;
-                    phi_entries.push((default_label.clone(), default_result));
-                    let _ = writeln!(body, "  br label %{merge_label}");
-                } else {
-                    // No ANF default: WF7 guarantees the switch is exhaustive; abort() is the
-                    // honest defined-trap (never raw `unreachable` UB — G2).
-                    let _ = writeln!(body, "  call void @abort()");
-                    let _ = writeln!(body, "  ret i32 0");
-                }
-
-                // Merge block: collect results from arms via phi.
-                let _ = writeln!(body, "{merge_label}:");
-                if phi_entries.is_empty() {
-                    return Err(AotError::UnsupportedNode(
-                        "Match with zero arms (exhaustive coverage requires at least one arm)"
-                            .to_owned(),
-                    ));
-                }
-                // All arms must yield the same kind/width Lane — check and emit phi per element.
-                let first = &phi_entries[0].1;
-                let kind = first.kind;
-                let width = first.vals.len();
-                for (_, lane) in &phi_entries[1..] {
-                    if lane.kind != kind || lane.vals.len() != width {
-                        return Err(AotError::UnsupportedNode(
-                            "Match arms produce lanes of different kind or width — the native \
-                             data fragment requires all arms to return the same repr shape"
-                                .to_owned(),
-                        ));
-                    }
-                }
-                let mut result_vals: Vec<Operand> = Vec::with_capacity(width);
-                for elem_idx in 0..width {
-                    let phi_reg = ssa.fresh();
-                    let phi_operands: Vec<String> = phi_entries
-                        .iter()
-                        .map(|(lbl, lane)| format!("[ {}, %{lbl} ]", lane.vals[elem_idx]))
-                        .collect();
-                    let _ = writeln!(body, "  {phi_reg} = phi i32 {}", phi_operands.join(", "));
-                    result_vals.push(phi_reg);
-                }
-                EnvValue::Repr(Lane {
-                    kind,
-                    vals: result_vals,
-                })
-            }
+                default,
+            } => lower_match(
+                scrutinee, alts, default, &env, &mut ssa, &mut bbc, &mut body, &mut funcs,
+                &mut flags,
+            )?,
             // Increment-2 (M-378; DN-15 §7; RFC-0004 §11.5): App/Lam are now natively lowered via
             // closure-conversion (free-var analysis → heap closure record → indirect call), over the
             // narrow `Binary{8}`-packed-`i64` ABI and the bump arena. Fix/FixGroup stay explicit
@@ -733,11 +562,6 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
             } => lower_lam(
                 param, lam_body, &env, &mut ssa, &mut bbc, &mut body, &mut funcs,
             )?,
-            // Increment-3 (M-379; RFC-0004 §11.6; DN-15 §8): a `Fix` binding stores a suspended
-            // `EnvValue::Fix(FixVal)` — no IR emitted yet. The IR is emitted lazily when the Fix
-            // is applied (`Rhs::App{func: fix_atom, arg}` → `lower_tail_fix`). A Fix that is the
-            // program result (not applied to any argument) reaches `into_lane` and is refused with
-            // an explicit UnsupportedNode (a bare Fix is not a printable value; G2).
             Rhs::App { func, arg } => lower_app(
                 func, arg, &env, &mut ssa, &mut bbc, &mut body, &mut funcs, &mut flags,
             )?,
@@ -745,8 +569,7 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                 name,
                 body: fix_body,
             } => {
-                // Store the Fix as a suspended value (no IR emitted). A downstream App(fix, arg)
-                // calls lower_tail_fix which emits the iterative loop (Increment-3; DN-05 #1).
+                // Suspend the Fix as a value (no IR yet). Consumed by a downstream App.
                 EnvValue::Fix(FixVal {
                     name: name.clone(),
                     body: fix_body.clone(),
@@ -754,8 +577,8 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
             }
             Rhs::FixGroup { .. } => {
                 return Err(AotError::UnsupportedNode(
-                    "FixGroup: mutual recursion is outside the tail-Fix subset (Increment-3 supports \
-                     only single-self-recursive Fix; FixGroup deferred — G2/VR-5)"
+                    "FixGroup: mutual recursion is not supported in Increment-3 (only single Fix \
+                     with a λparam.Match body is supported; RFC-0004 §11.6; G2)"
                         .to_owned(),
                 ));
             }
@@ -837,125 +660,10 @@ fn lower_anf_block(
             Rhs::Match {
                 scrutinee,
                 alts,
-                default: default_arm,
-                // Nested match — identical semantics to the top-level Match. The ANF `default`
-                // arm (if `Some`) is lowered and merged via phi; if `None`, abort() is the
-                // defined-trap (G2: never raw unreachable UB; WF7 proves exhaustive coverage).
-            } => {
-                // Nested match inside an arm body — identical logic to the top-level match.
-                let datum = lookup_ev(env, scrutinee)?
-                    .as_datum("Match scrutinee")
-                    .cloned()?;
-                let slots = datum.slots;
-                let ptr = datum.ptr.clone();
-                let tag_gep = ssa.fresh();
-                let _ = writeln!(
-                    body,
-                    "  {tag_gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 0"
-                );
-                let tag_reg = ssa.fresh();
-                let _ = writeln!(body, "  {tag_reg} = load i64, i64* {tag_gep}");
-                let arm_labels: Vec<String> = (0..alts.len()).map(|_| bbc.fresh()).collect();
-                let default_label = bbc.fresh();
-                let merge_label = bbc.fresh();
-                let _ = write!(body, "  switch i64 {tag_reg}, label %{default_label} [");
-                for (alt, label) in alts.iter().zip(&arm_labels) {
-                    use mycelium_core::lower::AnfAlt;
-                    let arm_tag = match alt {
-                        AnfAlt::Ctor { ctor, .. } => ctor.index() as u64,
-                        AnfAlt::Lit { .. } => {
-                            return Err(AotError::UnsupportedNode(
-                                "literal Match arms are not supported in the native LLVM data fragment"
-                                    .to_owned(),
-                            ));
-                        }
-                    };
-                    let _ = write!(body, " i64 {arm_tag}, label %{label}");
-                }
-                let _ = writeln!(body, " ]");
-                let mut phi_entries: Vec<(String, Lane)> = Vec::with_capacity(alts.len());
-                for (alt, label) in alts.iter().zip(&arm_labels) {
-                    use mycelium_core::lower::AnfAlt;
-                    let _ = writeln!(body, "{label}:");
-                    let AnfAlt::Ctor {
-                        binders,
-                        body: arm_body,
-                        ..
-                    } = alt
-                    else {
-                        unreachable!()
-                    };
-                    // Issue 2 (never-silent / G2): check binder/field arity before zipping.
-                    if binders.len() != datum.fields.len() {
-                        return Err(AotError::UnsupportedNode(format!(
-                            "Match arm binder arity ({}) != constructor field count ({}) \
-                             — malformed Match (interpreter rejects with DataMalformed; G2/WF7)",
-                            binders.len(),
-                            datum.fields.len()
-                        )));
-                    }
-                    let mut arm_env = env.clone();
-                    for (binder, field_layout) in binders.iter().zip(&datum.fields) {
-                        let field_lane = emit_load_field(field_layout, &ptr, slots, ssa, body);
-                        arm_env.insert(
-                            mycelium_core::lower::Atom::Named(binder.clone()),
-                            EnvValue::Repr(field_lane),
-                        );
-                    }
-                    let arm_result =
-                        lower_anf_block(arm_body, &mut arm_env, ssa, bbc, body, funcs, flags)?;
-                    phi_entries.push((label.clone(), arm_result));
-                    let _ = writeln!(body, "  br label %{merge_label}");
-                }
-                // Default block: lower ANF default if `Some`; abort() if `None` (G2/WF7).
-                let _ = writeln!(body, "{default_label}:");
-                if let Some(default_block) = default_arm {
-                    let default_result = lower_anf_block(
-                        default_block,
-                        &mut env.clone(),
-                        ssa,
-                        bbc,
-                        body,
-                        funcs,
-                        flags,
-                    )?;
-                    phi_entries.push((default_label.clone(), default_result));
-                    let _ = writeln!(body, "  br label %{merge_label}");
-                } else {
-                    let _ = writeln!(body, "  call void @abort()");
-                    let _ = writeln!(body, "  ret i32 0");
-                }
-                let _ = writeln!(body, "{merge_label}:");
-                if phi_entries.is_empty() {
-                    return Err(AotError::UnsupportedNode("Match with zero arms".to_owned()));
-                }
-                let first = &phi_entries[0].1;
-                let kind = first.kind;
-                let width = first.vals.len();
-                for (_, lane) in &phi_entries[1..] {
-                    if lane.kind != kind || lane.vals.len() != width {
-                        return Err(AotError::UnsupportedNode(
-                            "Match arms produce lanes of different kind or width".to_owned(),
-                        ));
-                    }
-                }
-                let mut result_vals: Vec<Operand> = Vec::with_capacity(width);
-                for elem_idx in 0..width {
-                    let phi_reg = ssa.fresh();
-                    let phi_operands: Vec<String> = phi_entries
-                        .iter()
-                        .map(|(lbl, lane)| format!("[ {}, %{lbl} ]", lane.vals[elem_idx]))
-                        .collect();
-                    let _ = writeln!(body, "  {phi_reg} = phi i32 {}", phi_operands.join(", "));
-                    result_vals.push(phi_reg);
-                }
-                EnvValue::Repr(Lane {
-                    kind,
-                    vals: result_vals,
-                })
-            }
-            // Increment-2/3: closures + Fix are lowered inside nested blocks too.
-            // FixGroup stays explicit UnsupportedNode (Increment-3 supports only single Fix; G2).
+                default,
+            } => lower_match(scrutinee, alts, default, env, ssa, bbc, body, funcs, flags)?,
+            // Increment-2: closures are lowered inside match arms too (a `Lam`/`App` may appear in an
+            // arm body). Fix/FixGroup stay explicit UnsupportedNode (Increment-3; G2/VR-5).
             Rhs::Lam {
                 param,
                 body: lam_body,
@@ -966,6 +674,7 @@ fn lower_anf_block(
                 body: fix_body,
             } => {
                 // Suspend the Fix as a value (no IR yet). Consumed by a downstream App.
+                // (Increment-2/3: closures + Fix are lowered inside nested blocks too.)
                 EnvValue::Fix(FixVal {
                     name: name.clone(),
                     body: fix_body.clone(),
@@ -973,8 +682,8 @@ fn lower_anf_block(
             }
             Rhs::FixGroup { .. } => {
                 return Err(AotError::UnsupportedNode(
-                    "FixGroup in a nested block: mutual recursion is outside the tail-Fix subset \
-                     (Increment-3 deferred; G2/VR-5)"
+                    "FixGroup in a nested block: mutual recursion is not supported in Increment-3 \
+                     (only single Fix with λparam.Match body; RFC-0004 §11.6; G2)"
                         .to_owned(),
                 ));
             }
@@ -1127,30 +836,6 @@ fn as_binary8<'a>(ev: &'a EnvValue, ctx: &str) -> Result<&'a Lane, AotError> {
     Ok(lane)
 }
 
-/// Pack a **compile-time** `Binary{8}` [`Value`] literal into the `u64` switch discriminant used
-/// by the tail-Fix loop's `switch i64` dispatch (Increment-3 / DN-15 §8). Mirrors the runtime
-/// [`pack_binary8`] but operates on a `Value` directly (element `i` → bit `i`, LSB-first). An
-/// explicit `UnsupportedNode` if `value` is not a `Binary{8}` literal — never a silent misdecode
-/// (G2). Used only for Lit arms in the canonical tail-Fix Match (RFC-0004 §11.6).
-fn lit_binary8_packed(value: &Value) -> Result<u64, AotError> {
-    match (value.repr(), value.payload()) {
-        (Repr::Binary { width: 8 }, Payload::Bits(bits)) if bits.len() == 8 => {
-            let mut acc = 0u64;
-            for (i, &b) in bits.iter().enumerate() {
-                if b {
-                    acc |= 1u64 << i;
-                }
-            }
-            Ok(acc)
-        }
-        _ => Err(AotError::UnsupportedNode(format!(
-            "tail-Fix Lit arm: expected a Binary{{8}} literal pattern, got repr={:?} (only \
-             Binary{{8}} is supported in the narrow tail-Fix ABI — Increment-3; G2)",
-            value.repr()
-        ))),
-    }
-}
-
 /// Pack a `Binary{8}` lane (8 `i32` elements in `{0,1}`) into a single `i64` (element `i` → bit `i`).
 /// The inverse of [`unpack_binary8`]; the two define the narrow closure-ABI encoding (DN-15 §7.1).
 fn pack_binary8(lane: &Lane, ssa: &mut Ssa, body: &mut String) -> String {
@@ -1292,10 +977,12 @@ fn lower_lam(
     Ok(EnvValue::Closure(ClosureVal { base }))
 }
 
-/// Lower `Rhs::App` (Increment-2/3; DN-15 §7.3/§8): if `func` resolves to a `Fix` value, emit the
-/// iterative tail-recursion loop via [`lower_tail_fix`] (Increment-3); otherwise emit an indirect
-/// closure call as before (Increment-2). An `App` whose head is neither a closure nor a Fix is an
-/// explicit refusal (G2).
+/// Lower `Rhs::App` (Increment-2/3; DN-15 §7.3/§8): two paths dispatched on `func`'s `EnvValue`:
+/// - **`EnvValue::Fix`** (Increment-3): `App(Fix{…}, init)` — tail-recursive loop; delegates to
+///   [`lower_tail_fix`] which emits the iterative LLVM loop (RFC-0004 §11.6; DN-05 #1).
+/// - **`EnvValue::Closure`** (Increment-2): indirect call through the closure record (DN-15 §7.3).
+///
+/// Anything else is an explicit refusal (G2 — never silent).
 #[allow(clippy::too_many_arguments)]
 fn lower_app(
     func: &Atom,
@@ -1308,12 +995,10 @@ fn lower_app(
     flags: &mut Vec<String>,
 ) -> Result<EnvValue, AotError> {
     let func_ev = lookup_ev(env, func)?;
-    // Increment-3 dispatch: if the func is a Fix, lower it as an iterative loop.
+    // Increment-3: App(Fix, init) → iterative tail-recursion loop (never stack recursion; DN-05 #1).
     if let EnvValue::Fix(fixval) = func_ev {
-        let fixval = fixval.clone();
-        return lower_tail_fix(&fixval, arg, env, ssa, bbc, body, funcs, flags);
+        return lower_tail_fix(fixval, arg, env, ssa, bbc, body, funcs, flags);
     }
-    // Increment-2: closure indirect call path.
     let base = func_ev.as_closure("App function")?.base.clone();
     // fn_ptr ← record slot 0.
     let fpint = ssa.fresh();
@@ -1334,6 +1019,223 @@ fn lower_app(
         "  {res} = call i64 {fp}(i8* {eptr}, i64 {packed_arg})"
     );
     Ok(EnvValue::Repr(unpack_binary8(&res, ssa, body)))
+}
+
+/// Pack a `Binary{8}` literal `Value` (a Match `Lit`-arm pattern) into the `u64` the native branch
+/// switch compares against the packed scrutinee (DN-15 §8.3). Bit `i` → position `i`, identical to
+/// [`pack_binary8`], so the comparison is exact. Other reprs/widths are an explicit refusal (G2).
+fn lit_binary8_packed(value: &Value) -> Result<u64, AotError> {
+    match (value.repr(), value.payload()) {
+        (Repr::Binary { width }, Payload::Bits(bits))
+            if *width as usize == CLOSURE_ABI_WIDTH && bits.len() == CLOSURE_ABI_WIDTH =>
+        {
+            let mut acc = 0u64;
+            for (i, &b) in bits.iter().enumerate() {
+                if b {
+                    acc |= 1u64 << i;
+                }
+            }
+            Ok(acc)
+        }
+        (repr, _) => Err(AotError::UnsupportedNode(format!(
+            "Match Lit-arm pattern must be a Binary{{{CLOSURE_ABI_WIDTH}}} value in the native branch \
+             primitive (Increment-3); got {repr:?}"
+        ))),
+    }
+}
+
+/// Lower `Rhs::Match` — shared by [`lower_program`] and nested arm/closure bodies (so the two paths
+/// never drift). Two forms, dispatched on the scrutinee's [`EnvValue`]:
+/// - **`Datum` scrutinee + `Ctor` arms** (Increment-1): load the tag from slot 0, `switch i64` on the
+///   constructor index, bind each arm's fields, phi-merge.
+/// - **`Binary{8}` lane scrutinee + `Lit` arms** (Increment-3 — the native **branch primitive**;
+///   DN-15 §8.3): pack the lane to `i64`, `switch i64` on the packed literal patterns (`Lit` arms bind
+///   nothing), phi-merge. This is the base-case conditional a terminating recursion needs.
+///
+/// A no-match with no ANF `default` traps with `@abort` (a defined trap, never raw `unreachable`; G2).
+/// Mixing forms (a `Lit` arm on a datum, or a `Ctor` arm on a lane) is an explicit refusal.
+#[allow(clippy::too_many_arguments)]
+fn lower_match(
+    scrutinee: &Atom,
+    alts: &[lower::AnfAlt],
+    default_arm: &Option<lower::Anf>,
+    env: &HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    bbc: &mut Bbc,
+    body: &mut String,
+    funcs: &mut Vec<String>,
+    flags: &mut Vec<String>,
+) -> Result<EnvValue, AotError> {
+    use mycelium_core::lower::AnfAlt;
+    let scrut = lookup_ev(env, scrutinee)?.clone();
+
+    // The discriminant `i64` the switch compares, plus (for a datum) the datum layout for field
+    // binding. A Binary lane is the branch-primitive scrutinee; only `Datum`/`Binary` are valid.
+    let datum_opt: Option<Datum> = match &scrut {
+        EnvValue::Datum(d) => Some(d.clone()),
+        EnvValue::Repr(lane) if lane.kind == LaneKind::Binary => None,
+        EnvValue::Repr(_) => {
+            return Err(AotError::UnsupportedNode(
+                "Match on a non-Binary repr lane (the native branch primitive compares Binary{8} \
+                 values; Ternary scrutinees are out of scope — G2)"
+                    .to_owned(),
+            ));
+        }
+        EnvValue::Closure(_) => {
+            return Err(AotError::UnsupportedNode(
+                "Match on a closure value is not supported (G2)".to_owned(),
+            ));
+        }
+        EnvValue::Fix(_) => {
+            return Err(AotError::UnsupportedNode(
+                "Match on a Fix value is not supported — a Fix must be applied (App) before it \
+                 can be matched (Increment-3; G2)"
+                    .to_owned(),
+            ));
+        }
+    };
+
+    let disc_reg = match &datum_opt {
+        Some(datum) => {
+            let slots = datum.slots;
+            let ptr = &datum.ptr;
+            let tag_gep = ssa.fresh();
+            let _ = writeln!(
+                body,
+                "  {tag_gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 0"
+            );
+            let tag_reg = ssa.fresh();
+            let _ = writeln!(body, "  {tag_reg} = load i64, i64* {tag_gep}");
+            tag_reg
+        }
+        None => {
+            // Binary-lane scrutinee: the packed lane is the discriminant the switch compares.
+            let lane = as_binary8(&scrut, "Match scrutinee")?;
+            pack_binary8(lane, ssa, body)
+        }
+    };
+
+    let arm_labels: Vec<String> = (0..alts.len()).map(|_| bbc.fresh()).collect();
+    let default_label = bbc.fresh();
+    let merge_label = bbc.fresh();
+
+    // The switch: per-arm value is the ctor index (datum form) or the packed `Lit` (Binary form).
+    let _ = write!(body, "  switch i64 {disc_reg}, label %{default_label} [");
+    for (alt, label) in alts.iter().zip(&arm_labels) {
+        let sw_val: u64 = match (&datum_opt, alt) {
+            (Some(_), AnfAlt::Ctor { ctor, .. }) => u64::from(ctor.index()),
+            (None, AnfAlt::Lit { value, .. }) => lit_binary8_packed(value)?,
+            (Some(_), AnfAlt::Lit { .. }) => {
+                return Err(AotError::UnsupportedNode(
+                    "literal arm on a constructed-data Match scrutinee — constructor arms only for \
+                     data values (G2)"
+                        .to_owned(),
+                ));
+            }
+            (None, AnfAlt::Ctor { .. }) => {
+                return Err(AotError::UnsupportedNode(
+                    "constructor arm on a Binary Match scrutinee — literal arms only for repr \
+                     values (G2)"
+                        .to_owned(),
+                ));
+            }
+        };
+        let _ = write!(body, " i64 {sw_val}, label %{label}");
+    }
+    let _ = writeln!(body, " ]");
+
+    // Each arm: bind fields (Ctor) or nothing (Lit), lower the body, collect for the phi.
+    let mut phi_entries: Vec<(String, Lane)> = Vec::with_capacity(alts.len());
+    for (alt, label) in alts.iter().zip(&arm_labels) {
+        let _ = writeln!(body, "{label}:");
+        let mut arm_env = env.clone();
+        let arm_body = match alt {
+            AnfAlt::Ctor {
+                binders,
+                body: arm_body,
+                ..
+            } => {
+                let datum = datum_opt
+                    .as_ref()
+                    .expect("a Ctor arm implies a Datum scrutinee (checked in the switch above)");
+                // Never-silent (G2): the interpreter rejects arity mismatch with DataMalformed.
+                if binders.len() != datum.fields.len() {
+                    return Err(AotError::UnsupportedNode(format!(
+                        "Match arm binder arity ({}) != constructor field count ({}) — malformed \
+                         Match (interpreter rejects with DataMalformed; G2/WF7)",
+                        binders.len(),
+                        datum.fields.len()
+                    )));
+                }
+                let slots = datum.slots;
+                let ptr = &datum.ptr;
+                for (binder, field_layout) in binders.iter().zip(&datum.fields) {
+                    let field_lane = emit_load_field(field_layout, ptr, slots, ssa, body);
+                    arm_env.insert(Atom::Named(binder.clone()), EnvValue::Repr(field_lane));
+                }
+                arm_body
+            }
+            // A `Lit` arm binds nothing — the literal is matched by the switch value.
+            AnfAlt::Lit { body: arm_body, .. } => arm_body,
+        };
+        let arm_result = lower_anf_block(arm_body, &mut arm_env, ssa, bbc, body, funcs, flags)?;
+        phi_entries.push((label.clone(), arm_result));
+        let _ = writeln!(body, "  br label %{merge_label}");
+    }
+
+    // Default block: lower the ANF default (Some) or trap with abort() (None) — never raw UB (G2).
+    let _ = writeln!(body, "{default_label}:");
+    if let Some(default_block) = default_arm {
+        let default_result = lower_anf_block(
+            default_block,
+            &mut env.clone(),
+            ssa,
+            bbc,
+            body,
+            funcs,
+            flags,
+        )?;
+        phi_entries.push((default_label.clone(), default_result));
+        let _ = writeln!(body, "  br label %{merge_label}");
+    } else {
+        let _ = writeln!(body, "  call void @abort()");
+        let _ = writeln!(body, "  ret i32 0");
+    }
+
+    // Merge block: all arms must yield the same lane kind/width; phi per element.
+    let _ = writeln!(body, "{merge_label}:");
+    if phi_entries.is_empty() {
+        return Err(AotError::UnsupportedNode(
+            "Match with zero arms (exhaustive coverage requires at least one arm or a default)"
+                .to_owned(),
+        ));
+    }
+    let first = &phi_entries[0].1;
+    let kind = first.kind;
+    let width = first.vals.len();
+    for (_, lane) in &phi_entries[1..] {
+        if lane.kind != kind || lane.vals.len() != width {
+            return Err(AotError::UnsupportedNode(
+                "Match arms produce lanes of different kind or width — all arms must return the same \
+                 repr shape"
+                    .to_owned(),
+            ));
+        }
+    }
+    let mut result_vals: Vec<Operand> = Vec::with_capacity(width);
+    for elem_idx in 0..width {
+        let phi_reg = ssa.fresh();
+        let phi_operands: Vec<String> = phi_entries
+            .iter()
+            .map(|(lbl, lane)| format!("[ {}, %{lbl} ]", lane.vals[elem_idx]))
+            .collect();
+        let _ = writeln!(body, "  {phi_reg} = phi i32 {}", phi_operands.join(", "));
+        result_vals.push(phi_reg);
+    }
+    Ok(EnvValue::Repr(Lane {
+        kind,
+        vals: result_vals,
+    }))
 }
 
 /// Tail-recursion classification of a Fix-Match arm body (Increment-3; RFC-0004 §11.6).
@@ -1513,67 +1415,52 @@ fn lower_arm_bindings_before_tail(
                     "swap to {target:?} in a tail-Fix arm body (M-301)"
                 )));
             }
-            Rhs::Construct { .. }
-            | Rhs::Match { .. }
-            | Rhs::Lam { .. }
-            | Rhs::App { .. }
-            | Rhs::Fix { .. }
-            | Rhs::FixGroup { .. } => {
-                // Delegate to lower_anf_block for non-trivial sub-expressions by creating a
-                // single-binding sub-anf. But actually we handle them recursively since they may
-                // appear legitimately in step computation. Use lower_app for App, lower_lam etc.
-                // For simplicity, delegate to the full per-binding dispatch inline:
-                match &b.rhs {
-                    Rhs::Construct { ctor, args } => {
-                        let field_lanes: Vec<Lane> = args
-                            .iter()
-                            .map(|a| lookup_ev(env, a)?.as_lane("Construct field").cloned())
-                            .collect::<Result<_, _>>()?;
-                        let total_elem: usize = field_lanes.iter().map(|l| l.vals.len()).sum();
-                        let slots = 1 + total_elem;
-                        let ptr = ssa.fresh();
-                        let _ = writeln!(body, "  {ptr} = alloca [{slots} x i64], align 8");
-                        let tag_gep = ssa.fresh();
-                        let tag_val = ctor.index() as u64;
-                        let _ = writeln!(
-                            body,
-                            "  {tag_gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 0"
-                        );
-                        let _ = writeln!(body, "  store i64 {tag_val}, i64* {tag_gep}");
-                        let mut slot_start = 1usize;
-                        let mut field_layouts = Vec::with_capacity(field_lanes.len());
-                        for lane in &field_lanes {
-                            let layout = emit_store_field(lane, &ptr, slots, slot_start, ssa, body);
-                            slot_start += lane.vals.len();
-                            field_layouts.push(layout);
-                        }
-                        EnvValue::Datum(Datum {
-                            ptr,
-                            _tag: tag_val,
-                            fields: field_layouts,
-                            slots,
-                        })
-                    }
-                    Rhs::Lam {
-                        param,
-                        body: lam_body,
-                    } => lower_lam(param, lam_body, env, ssa, bbc, body, funcs)?,
-                    Rhs::App { func, arg } => {
-                        lower_app(func, arg, env, ssa, bbc, body, funcs, flags)?
-                    }
-                    Rhs::Fix {
-                        name,
-                        body: fix_body,
-                    } => EnvValue::Fix(FixVal {
-                        name: name.clone(),
-                        body: fix_body.clone(),
-                    }),
-                    _ => {
-                        return Err(AotError::UnsupportedNode(
-                            "unexpected node in tail-Fix arm binding sequence".to_owned(),
-                        ))
-                    }
+            Rhs::Construct { ctor, args } => {
+                let field_lanes: Vec<Lane> = args
+                    .iter()
+                    .map(|a| lookup_ev(env, a)?.as_lane("Construct field").cloned())
+                    .collect::<Result<_, _>>()?;
+                let total_elem: usize = field_lanes.iter().map(|l| l.vals.len()).sum();
+                let slots = 1 + total_elem;
+                let ptr = ssa.fresh();
+                let _ = writeln!(body, "  {ptr} = alloca [{slots} x i64], align 8");
+                let tag_gep = ssa.fresh();
+                let tag_val = ctor.index() as u64;
+                let _ = writeln!(
+                    body,
+                    "  {tag_gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 0"
+                );
+                let _ = writeln!(body, "  store i64 {tag_val}, i64* {tag_gep}");
+                let mut slot_start = 1usize;
+                let mut field_layouts = Vec::with_capacity(field_lanes.len());
+                for lane in &field_lanes {
+                    let layout = emit_store_field(lane, &ptr, slots, slot_start, ssa, body);
+                    slot_start += lane.vals.len();
+                    field_layouts.push(layout);
                 }
+                EnvValue::Datum(Datum {
+                    ptr,
+                    _tag: tag_val,
+                    fields: field_layouts,
+                    slots,
+                })
+            }
+            Rhs::Lam {
+                param,
+                body: lam_body,
+            } => lower_lam(param, lam_body, env, ssa, bbc, body, funcs)?,
+            Rhs::App { func, arg } => lower_app(func, arg, env, ssa, bbc, body, funcs, flags)?,
+            Rhs::Fix {
+                name,
+                body: fix_body,
+            } => EnvValue::Fix(FixVal {
+                name: name.clone(),
+                body: fix_body.clone(),
+            }),
+            Rhs::Match { .. } | Rhs::FixGroup { .. } => {
+                return Err(AotError::UnsupportedNode(
+                    "unexpected node in tail-Fix arm binding sequence".to_owned(),
+                ))
             }
         };
         env.insert(b.name.clone(), ev);
@@ -1954,10 +1841,11 @@ fn lower_tail_fix(
     if exit_phi_entries.is_empty() {
         // All arms are tail calls — no base case. The loop is diverging; it will always hit the
         // depth-limit ceiling (emitted above in the header) before the exit block is reached.
-        // Emit `unreachable` as the honest dead-block terminator (never raw `unreachable` as a
-        // soundness trick; here the block is provably dead because the depthlimit path exits
-        // before any base-case branch could reach this label — G2/DN-05 #1/SC-3).
-        let _ = writeln!(body, "  unreachable");
+        // Emit `call void @abort()` + `ret i32 0` as the defined-trap dead-block terminator —
+        // never raw `unreachable` UB (G2/DN-05 #1/SC-3). The block is provably dead because the
+        // depthlimit path exits before any base-case branch could reach this label.
+        let _ = writeln!(body, "  call void @abort()");
+        let _ = writeln!(body, "  ret i32 0");
         // Return a dummy zero-width binary lane; the output section downstream is also dead
         // (execution exits via depthlimit first). The dummy lane propagates cleanly through
         // `result_shape` → `CompiledArtifact::run` → sentinel check (returns `DepthLimit`
