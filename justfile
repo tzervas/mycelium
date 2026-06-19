@@ -64,6 +64,9 @@ proofs:
     @bash scripts/checks/proofs.sh
 api:
     @bash scripts/checks/api.sh
+# Drift gate: committed docs/api-index/ must match a fresh regeneration. Skip if python3 absent.
+doc-index:
+    @bash scripts/checks/doc-index.sh
 # Supply-chain gate: cargo-deny (deny.toml) + cargo-audit. Skips if the tools are absent.
 deny:
     @bash scripts/checks/deny.sh
@@ -75,6 +78,12 @@ map:
 # (Re)generate the committed public-API snapshots under docs/spec/api/ after an intended change.
 api-baseline:
     @bash scripts/api-baseline.sh
+# Build rustdoc HTML locally (NOT committed — output in target/doc/).
+docs:
+    cargo doc --workspace --no-deps
+# Regenerate committed agent index (docs/api-index/); commit the result after any public-API change.
+docs-index:
+    python3 tools/docgen/code_index.py
 
 # --- pre-commit (optional, easy DX) ---
 # Install the git hooks so `just check`-equivalent runs on every commit.
