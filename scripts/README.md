@@ -21,6 +21,32 @@ just <name>    # run one check: md, links, schema, spell, shell, structured, sec
 
 No `just`? The scripts are plain bash: `bash scripts/checks/all.sh`.
 
+## Cloud sessions (Claude Code on the web)
+
+`scripts/install-tools.sh` is also the canonical toolchain installer for cloud sessions. Wire it as
+the environment **Setup script** (Cloud environment settings → *Setup script* field):
+
+```sh
+bash scripts/install-tools.sh
+```
+
+The setup script runs the **first** time a session starts in an environment; Anthropic then
+**snapshots the filesystem** and reuses that snapshot for later sessions — the compiled tools
+(`cargo` binaries in `~/.cargo/bin`, `uv` tools in `~/.local/bin`) persist, and the setup step is
+**skipped** on subsequent sessions. The toolchain is compiled **once**, not per session. The
+snapshot rebuilds only when the setup script or network allowlist changes, or after ~7 days.
+
+- **Don't** put this in a `SessionStart` hook — those run on every session and are **not** cached,
+  so they would recompile the toolchain each time.
+- Setup scripts have a **~5-minute** cache-build budget. The `cargo` introspection tools for
+  `just map` / `just api` (cargo-modules/depgraph/public-api) are the slow tail and are **not** part
+  of `just check`; export `MYCELIUM_SKIP_OPTIONAL_CARGO=1` to skip them and stay under budget. The
+  security gates (cargo-deny/cargo-audit) and the rest still install.
+- Cloud network access must allow crates.io / PyPI / npm (the default **Trusted** policy does).
+
+Docs: [code.claude.com/docs/en/claude-code-on-the-web](https://code.claude.com/docs/en/claude-code-on-the-web)
+§ *Setup scripts* / *Environment caching*.
+
 ## What runs
 | Check | Tool | Notes |
 |---|---|---|

@@ -8,6 +8,73 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Fixed (2026-06-19: Wave-5 — PR #213 review fixes, all honesty/never-silent)
+Addressing the Copilot review on PR #213 (8 comments, 4 issues — all legitimate):
+- **`crates/mycelium-mlir/src/llvm.rs`** — `Rhs::Match` now **lowers the `default` arm** when present
+  (it was silently routed to `abort()` — a real interp↔native divergence whenever the default is taken;
+  NFR-7/G2). `abort()` is kept only when `default` is `None` (WF7 checker-proven coverage). Fixed at both
+  the top-level and nested (`lower_anf_block`) Match sites. Added an explicit **binder/field arity check**
+  at both sites (mirrors the interpreter's `DataMalformed`; never a silent truncation).
+- **`crates/mycelium-mlir/tests/native_differential.rs`** — new regression test
+  `match_default_arm_is_taken_and_observationally_equivalent` (scrutinee tag misses the explicit arms ⇒
+  default taken ⇒ interp value vs native; would have caught the bug). Closes the exhaustive-corpus gap.
+- **`crates/mycelium-std-sys/src/rand.rs`** — rand tests now **skip gracefully** on
+  `EntropyError::Unavailable` (repo idiom); dropped the probabilistic successive-differ content assertion
+  (a quality check belongs in a statistical audit, not a unit test; VR-5).
+- **RFC-0004 §11.2 (r3) + DN-15 §4.1** — corrected to the **landed stack-`alloca`** representation
+  (the increment uses `alloca [N+1 x i64]`, not heap `@malloc`/OOM); non-recursive/bounded ⇒ static
+  allocation depth ⇒ no OOM path. Grounding consistency (house rule #4); r1/r2/§1–§10 untouched.
+
+### Added (2026-06-19: Wave-5 landed — M-373 native direct-LLVM increment, M-374 DN-16 survey, M-375 rand real entropy)
+**Wave-5 octopus-merged (2026-06-19)** into `claude/orch-wave5-mlir-unblock-s0li6o`. Three streams,
+disjoint directories ⇒ conflict-free; 6 files, 1661 insertions; full workspace tests green; no new
+public API surface (api-index unchanged); `issues.yaml` validated, no duplicate ids.
+
+- **M-373 — direct-LLVM native data-fragment increment** (the unblocked half of the decomposed M-348).
+  - **DN-15** (new, Draft) — honest split of M-348 into the **libMLIR-gated** dialect lowering
+    (`dialect.rs` skeleton; stays **blocked**, VR-5) vs the **direct-LLVM-advanceable** `llvm.rs`
+    extension (RFC-0004 §2 revisit clause); a per-increment table grading each "needs libMLIR? /
+    tractable now? / risk".
+  - **RFC-0004 r3** (append-only) — new **§11** scopes the direct-LLVM data-fragment increment under
+    the §2 revisit clause; **no r1/r2 Accepted text rewritten** (house rule #3).
+  - **`crates/mycelium-mlir/src/llvm.rs`** — natively compiles non-recursive `Construct` (stack
+    `alloca [N+1 x i64]`, tag at slot 0) + `Match` (`switch i64` with an explicit `@abort()` default —
+    never silent UB, G2; `phi i32` merge). `App`/`Lam`/`Fix`/`FixGroup` split into separate explicit
+    `UnsupportedNode` refusals — recursion/closures stay honestly deferred (VR-5). Guarantee `Declared`.
+  - **M-302 differential** extended: a 5-program `data_corpus` (interp↔native observational equivalence
+    via the shared M-210 checker) + a test asserting the closure/recursion refusal still holds. 104 tests pass.
+- **M-374 — `docs/notes/DN-16`** (new, Draft). Per-spec stdlib ratification-readiness survey (all 25
+  specs vs their crates): 1 ready, 17 ready-with-flags, 2 ready-scoped, 3 divergent, 2 not-implemented.
+  Advisory (DN-07 posture) — **no spec moved to Accepted**; divergences flagged for the maintainer.
+- **M-375 — `crates/mycelium-std-sys/src/rand.rs`**. `fill_bytes` now reads real OS entropy from
+  `/dev/urandom` (pure-std `std::fs` + `read_exact`; **no new dep**, `#![forbid(unsafe_code)]` preserved);
+  all failure paths are explicit `EntropyError` (never panic/zero-fill, G2). Tag stays **`Declared`**
+  (real kernel CSPRNG, but no documented quality trials — VR-5). 18 std-sys tests green. Resolves FLAG-RAND-IMPL.
+
+**Orchestrator integrating edits:**
+- `tools/github/issues.yaml` — M-373/M-374/M-375 → `status:done` (honest DONE notes); M-348 decomposition
+  recorded, its libMLIR-gated half **unchanged (`status:blocked`)**.
+- `docs/Doc-Index.md` — registered DN-15 + DN-16 in §1.
+- `CHANGELOG.md` — this entry.
+- `scripts/install-tools.sh` + `scripts/README.md` — snapshot-cached cloud Setup-script toolchain provisioning.
+
+### Launched (2026-06-19: Wave-5 — decompose the M-348 libMLIR wall; land a real native increment with zero libMLIR)
+**Wave-5 launched** on `claude/orch-wave5-mlir-unblock-s0li6o` (Opus orchestrator / Sonnet swarm below).
+The wave's thesis: M-348 ("provision libMLIR to unblock the native MLIR→LLVM path", status:blocked) was
+treated as a single external wall but is actually TWO parts — (a) genuinely libMLIR-gated (the real
+`ternary`→arith/vector→LLVM dialect lowering; `dialect.rs` is a textual skeleton) which STAYS blocked
+honestly (VR-5), and (b) advanceable NOW with zero libMLIR (the direct-LLVM-IR backend `llvm.rs`, sanctioned
+by the RFC-0004 §2 "lighter direct-LLVM backend" revisit clause). Step 0 decomposed M-348, minting:
+- **M-373** (in-progress) — direct-LLVM native data-fragment increment (the unblocked half of M-348);
+  Epic 1 spine: Leaf 1A (DN-15 decomposition design + append-only RFC-0004 revision), Leaf 1B (extend
+  `llvm.rs` to natively compile a non-recursive Construct/Match sub-fragment; App/Lam/Fix/FixGroup stay
+  honest `UnsupportedNode`; extend the M-302 differential).
+- **M-374** (in-progress) — stdlib spec ratification-readiness survey (DN-16, docs-only; surfaces
+  recommendations, ratifies nothing).
+- **M-375** (in-progress) — std-sys rand real OS entropy (resolve FLAG-RAND-IMPL; tag stays honest).
+
+M-348's body records the decomposition; its blocked half (the libMLIR dialect layer) is unchanged.
+
 ### Added (2026-06-19: Wave-4B landed — M-541 std-sys FFI floor, M-502 DN-14 self-hosting gate, M-540 RFC-0012 ergonomics annotations)
 **Wave-4B octopus-merged (2026-06-19).** Two parallel epics (M541A + M502A) conflict-free merged into
 `claude/orch-wave4-docs-sys-4ifdo4`; 30 files, 989 insertions; all tests green (15 new std-sys tests);

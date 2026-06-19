@@ -110,7 +110,9 @@ def _check_corpus_ref(
 
     # Check DOC appears in Doc-Index.md as a token (not merely as a substring of another id).
     # Use non-alnum/hyphen boundaries to avoid "RFC-001" matching inside "RFC-0012".
-    if not re.search(r"(?<![A-Za-z0-9-])" + re.escape(doc_id) + r"(?![A-Za-z0-9-])", doc_index_text):
+    if not re.search(
+        r"(?<![A-Za-z0-9-])" + re.escape(doc_id) + r"(?![A-Za-z0-9-])", doc_index_text
+    ):
         errors.append(
             f"{issue_id}: dangling corpus: ref {ref_value!r} — "
             f"{doc_id!r} not found in docs/Doc-Index.md"

@@ -1,11 +1,13 @@
-//! Direct-LLVM-IR AOT backend for the kernel **bit/trit subset** (M-301; RFC-0004 §2 *direct-LLVM
-//! fallback*; ADR-007/009; phase-3.md §1/§9.1).
+//! Direct-LLVM-IR AOT backend for the kernel **bit/trit subset + non-recursive data fragment**
+//! (M-301; M-373; RFC-0004 §2 *direct-LLVM fallback* / §11.2 *Increment-1 sanction*;
+//! ADR-007/009; DN-15 §4.1; phase-3.md §1/§9.1).
 //!
 //! **Scope / honesty.** The ratified AOT path is `MLIR → LLVM` (RFC-0004 §2), but libMLIR is absent
 //! in this environment while LLVM 18 tooling (`llc`, `clang`) is present. RFC-0004 §2 explicitly
 //! anticipates *"a lighter direct-LLVM backend"* as the revisit; this module is that backend, scoped
-//! to a **bit/trit subset**: `core.id`, `bit.not/and/or/xor` over `Binary{w}`, and `trit.neg` over
-//! `Ternary{m}`. It is a *genuinely compiled native artifact* — not the textual `dialect::emit`
+//! to a **bit/trit + non-recursive data sub-fragment**: `core.id`, `bit.not/and/or/xor` over
+//! `Binary{w}`, `trit.neg/add/sub/mul` over `Ternary{m}`, and (Increment-1) `Construct`/`Match` over
+//! tagged stack structs. It is a *genuinely compiled native artifact* — not the textual `dialect::emit`
 //! skeleton, and not the `aot::run` env-machine: [`emit_llvm_ir`] renders textual LLVM IR (one op
 //! per output element, so nothing is opaque — RFC-0004 §6), and [`compile_and_run`] drives `llc` +
 //! `clang` to a native executable, runs it, and reads the result back. This is the third,
@@ -21,9 +23,23 @@
 //! (JIT) and surfaces as an explicit [`AotError::Overflow`] — never a silent wrap (SC-3; G2). This
 //! matches the interpreter's `EvalError::Overflow` so the M-302 differential stays honest.
 //!
-//! **Deliberately out of subset (explicit refusals, never silent — G2):** swaps and Dense/VSA
-//! representations. Each is an explicit [`AotError`]. The MLIR dialect path stays the eventual home
-//! (`dialect::emit` is its dumpable skeleton), deferred until libMLIR exists.
+//! **Non-recursive data sub-fragment (Increment-1 — M-373; DN-15 §4.1; RFC-0004 §11.2).**
+//! `Construct` and `Match` are now natively compiled for the **non-recursive, bounded** case (no
+//! `Fix`/`FixGroup` in scope, so all allocations are statically bounded at codegen time). The
+//! representation uses **stack `alloca`** (not `@malloc`) — a deliberate choice grounded in the
+//! non-recursive/bounded restriction: because no heap recursion can produce unbounded allocation
+//! depth, the alloca frame size is fixed at compile time, and an explicit OOM failure path is
+//! unnecessary. Each constructed value is an `[N+1 x i64]` alloca (slot 0 = tag i64; slots 1..N =
+//! field elements, one i64 per element laid out consecutively across all fields). `Match` emits an
+//! LLVM `switch i64` on the tag with an explicit defined-trap default (never raw `unreachable` UB;
+//! G2). Guarantee tag: **Declared** (hand-written textual-IR lowering; the differential against the
+//! interpreter is empirical evidence, not a proof — VR-5).
+//!
+//! **Deliberately out of subset (explicit refusals, never silent — G2):** `App`, `Lam`, `Fix`,
+//! `FixGroup` (closures + recursion need closure-conversion + heap, deferred to Increment-2/3),
+//! `Swap` (swap to non-binary/ternary repr), Dense/VSA representations. Each is an explicit
+//! [`AotError`]. The MLIR dialect path stays the eventual home (`dialect::emit` is its dumpable
+//! skeleton), deferred until libMLIR exists.
 
 use std::collections::HashMap;
 use std::fmt;
@@ -123,6 +139,81 @@ pub(crate) struct Lane {
     pub(crate) vals: Vec<Operand>,
 }
 
+/// The layout of one field inside a [`Datum`] struct: kind + number of elements. Elements are stored
+/// consecutively in the struct's i64 slots starting at `slot_start` (each element occupies one i64).
+#[derive(Debug, Clone)]
+pub(crate) struct FieldLayout {
+    /// Binary or Ternary — determines how elements are interpreted.
+    pub(crate) kind: LaneKind,
+    /// Number of elements (the `w` of `Binary{w}` or the `m` of `Ternary{m}`).
+    pub(crate) elems: usize,
+    /// The i64 slot index (1-based; slot 0 is always the tag) of the first element of this field.
+    pub(crate) slot_start: usize,
+}
+
+/// A constructed data value in the lowered env: a pointer to a stack-`alloca`'d struct (the tag in
+/// slot 0, field elements in consecutive i64 slots after it) plus the field layout so that a
+/// downstream `Match` can extract the fields without knowing the field types again.
+///
+/// Representation choice (DN-15 §4.1 / RFC-0004 §11.2): **stack `alloca`** is used instead of
+/// `@malloc` because the non-recursive/bounded restriction (no `Fix`/`FixGroup`) means all
+/// allocation depth is fixed at codegen time — there is no need for heap allocation or an explicit
+/// OOM failure path. `alloca` is simpler, inspectable, and directly auditable in the emitted IR.
+#[derive(Debug, Clone)]
+pub(crate) struct Datum {
+    /// The SSA register holding the `[N+1 x i64]*` alloca pointer.
+    pub(crate) ptr: String,
+    /// The constructor tag (an i64 discriminant, equal to the `CtorRef::index()`).
+    /// Retained for auditability / future diagnostics; not read back during Match lowering because
+    /// the tag is re-loaded from the alloca at runtime.
+    pub(crate) _tag: u64,
+    /// Layout of each field, in declaration order.
+    pub(crate) fields: Vec<FieldLayout>,
+    /// Total number of i64 slots (1 tag + sum of all field elem counts).
+    pub(crate) slots: usize,
+}
+
+/// An environment value — either a repr-lane (bit/trit) or a constructed data value (tagged struct).
+///
+/// The `lower_program` env maps [`Atom`] → `EnvValue`. Repr-lane values flow into `emit_op`; datum
+/// values are produced by `Construct` and consumed by `Match` arm bodies. A datum is never a final
+/// result (the output protocol prints bits/trits; a program that leaves a datum on the result atom
+/// is refused with an explicit [`AotError::UnsupportedNode`]).
+#[derive(Debug, Clone)]
+pub(crate) enum EnvValue {
+    Repr(Lane),
+    Datum(Datum),
+}
+
+impl EnvValue {
+    /// Extract the repr lane, or return an explicit error if it is a datum.
+    fn into_lane(self, ctx: &str) -> Result<Lane, AotError> {
+        match self {
+            EnvValue::Repr(l) => Ok(l),
+            EnvValue::Datum(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a repr lane but found a data value (only repr \
+                 values are valid here)"
+            ))),
+        }
+    }
+    fn as_lane(&self, ctx: &str) -> Result<&Lane, AotError> {
+        match self {
+            EnvValue::Repr(l) => Ok(l),
+            EnvValue::Datum(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a repr lane but found a data value"
+            ))),
+        }
+    }
+    fn as_datum(&self, ctx: &str) -> Result<&Datum, AotError> {
+        match self {
+            EnvValue::Datum(d) => Ok(d),
+            EnvValue::Repr(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a data value (Datum) but found a repr lane"
+            ))),
+        }
+    }
+}
+
 /// SSA-name generator for the emitted IR (monotone counter → deterministic names).
 pub(crate) struct Ssa(pub(crate) usize);
 impl Ssa {
@@ -130,6 +221,17 @@ impl Ssa {
         let n = self.0;
         self.0 += 1;
         format!("%r{n}")
+    }
+}
+
+/// Basic-block label counter — gives every emitted control-flow label a unique name (monotone,
+/// deterministic). Separate from the SSA counter so block names and register names never collide.
+pub(crate) struct Bbc(pub(crate) usize);
+impl Bbc {
+    pub(crate) fn fresh(&mut self) -> String {
+        let n = self.0;
+        self.0 += 1;
+        format!("bb{n}")
     }
 }
 
@@ -144,6 +246,65 @@ pub(crate) struct Lowered {
     /// trit-arithmetic op's overflow condition, or `None` for a program that cannot overflow (no
     /// `trit.add/sub/mul`). The AOT/JIT emitters branch on it to drive the read-back protocol.
     pub(crate) overflow: Option<String>,
+}
+
+/// Lower a single field `Lane` into the struct at `ptr`, writing elements starting at `slot_start`
+/// (each element occupies one i64 slot). Returns the `FieldLayout` for this field.
+fn emit_store_field(
+    lane: &Lane,
+    ptr: &str,
+    slots: usize,
+    slot_start: usize,
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> FieldLayout {
+    for (i, v) in lane.vals.iter().enumerate() {
+        // Sign-extend / zero-extend the i32 element to i64 before storing.
+        let ext = ssa.fresh();
+        let _ = writeln!(body, "  {ext} = sext i32 {v} to i64");
+        let gep = ssa.fresh();
+        let slot = slot_start + i;
+        let _ = writeln!(
+            body,
+            "  {gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 {slot}"
+        );
+        let _ = writeln!(body, "  store i64 {ext}, i64* {gep}");
+    }
+    FieldLayout {
+        kind: lane.kind,
+        elems: lane.vals.len(),
+        slot_start,
+    }
+}
+
+/// Load one field from a struct at `ptr` given its `FieldLayout`, returning a `Lane` of i32
+/// register operands (each element truncated from i64). The struct has `slots` total i64 slots.
+fn emit_load_field(
+    layout: &FieldLayout,
+    ptr: &str,
+    slots: usize,
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> Lane {
+    let vals: Vec<Operand> = (0..layout.elems)
+        .map(|i| {
+            let slot = layout.slot_start + i;
+            let gep = ssa.fresh();
+            let _ = writeln!(
+                body,
+                "  {gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 {slot}"
+            );
+            let loaded = ssa.fresh();
+            let _ = writeln!(body, "  {loaded} = load i64, i64* {gep}");
+            let trunc = ssa.fresh();
+            let _ = writeln!(body, "  {trunc} = trunc i64 {loaded} to i32");
+            trunc
+        })
+        .collect();
+    Lane {
+        kind: layout.kind,
+        vals,
+    }
 }
 
 /// Emit the `i32` ASCII char code for one result element of `kind` (operand `v`), returning the SSA
@@ -227,11 +388,13 @@ pub(crate) fn decode_result(
 }
 
 /// Walk the lowered ANF, emitting one op per binding, and return the result lane. Returns an
-/// explicit [`AotError`] for anything outside the bit/trit subset.
+/// explicit [`AotError`] for anything outside the bit/trit + non-recursive-data subset (M-301;
+/// M-373). The env maps each bound atom to an [`EnvValue`] (either a repr lane or a datum struct).
 pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
     let anf = lower::lower_to_anf(node);
-    let mut env: HashMap<Atom, Lane> = HashMap::new();
+    let mut env: HashMap<Atom, EnvValue> = HashMap::new();
     let mut ssa = Ssa(0);
+    let mut bbc = Bbc(0);
     let mut body = String::new();
     // The per-op overflow `i1` registers, accumulated across the program. Any trit-arithmetic op
     // pushes its overflow condition here; the interpreter errors on the *first* overflow, so the
@@ -240,44 +403,261 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
     let mut flags: Vec<String> = Vec::new();
 
     for b in anf.bindings() {
-        let lane = match &b.rhs {
-            Rhs::Const(v) => const_lane(v)?,
-            Rhs::Alias(a) => lookup(&env, a)?.clone(),
+        let ev = match &b.rhs {
+            Rhs::Const(v) => EnvValue::Repr(const_lane(v)?),
+            Rhs::Alias(a) => lookup_ev(&env, a)?.clone(),
             Rhs::Op { prim, args } => {
                 let operands: Vec<&Lane> = args
                     .iter()
-                    .map(|a| lookup(&env, a))
+                    .map(|a| lookup_ev(&env, a)?.as_lane("op operand"))
                     .collect::<Result<_, _>>()?;
-                emit_op(prim, &operands, &mut ssa, &mut body, &mut flags)?
+                EnvValue::Repr(emit_op(prim, &operands, &mut ssa, &mut body, &mut flags)?)
             }
             Rhs::Swap { target, .. } => {
                 return Err(AotError::UnsupportedNode(format!(
                     "swap to {target:?} (the subset is straight-line bit/trit ops; M-301)"
                 )));
             }
-            // The native LLVM backend stays the **bit/trit subset** (VR-5): the data + recursion
-            // fragment (Construct/App/Lam/Fix/FixGroup/Match) needs heap/closure codegen, deferred to
-            // the MLIR→LLVM backend (RFC-0004 §2). It runs on the `aot::run` env-machine instead — the
-            // path the three-way differential exercises for these nodes. Explicit refusal, never a
-            // silent mis-lowering (G2).
-            Rhs::Construct { .. }
-            | Rhs::App { .. }
-            | Rhs::Lam { .. }
-            | Rhs::Fix { .. }
-            | Rhs::FixGroup { .. }
-            | Rhs::Match { .. } => {
+            // Increment-1 (M-373; DN-15 §4.1; RFC-0004 §11.2): Construct and Match are lowered for
+            // the NON-RECURSIVE, BOUNDED case. Stack alloca is used (not malloc) because the
+            // non-recursive/bounded restriction (no Fix/FixGroup in scope) makes all allocation depth
+            // statically known at codegen time — no OOM path needed (G2 is satisfied by the explicit
+            // UnsupportedNode refusal for Fix/FixGroup below). Guarantee: Declared (VR-5).
+            Rhs::Construct { ctor, args } => {
+                // Each field is a Lane; we store each element as one i64 slot after the tag.
+                // Layout: [tag(i64), field_0_elem_0(i64), ..., field_0_elem_w-1, field_1_elem_0, ...]
+                let field_lanes: Vec<Lane> = args
+                    .iter()
+                    .map(|a| lookup_ev(&env, a)?.as_lane("Construct field").cloned())
+                    .collect::<Result<_, _>>()?;
+                let total_elem: usize = field_lanes.iter().map(|l| l.vals.len()).sum();
+                let slots = 1 + total_elem; // tag slot + one slot per element across all fields
+                                            // Allocate the struct on the stack.
+                let ptr = ssa.fresh();
+                let _ = writeln!(body, "  {ptr} = alloca [{slots} x i64], align 8");
+                // Store the tag (ctor.index() as i64) in slot 0.
+                let tag_gep = ssa.fresh();
+                let tag_val = ctor.index() as u64;
+                let _ = writeln!(
+                    body,
+                    "  {tag_gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 0"
+                );
+                let _ = writeln!(body, "  store i64 {tag_val}, i64* {tag_gep}");
+                // Store each field's elements consecutively after the tag.
+                let mut slot_start = 1usize;
+                let mut field_layouts: Vec<FieldLayout> = Vec::with_capacity(field_lanes.len());
+                for lane in &field_lanes {
+                    let layout =
+                        emit_store_field(lane, &ptr, slots, slot_start, &mut ssa, &mut body);
+                    slot_start += lane.vals.len();
+                    field_layouts.push(layout);
+                }
+                EnvValue::Datum(Datum {
+                    ptr,
+                    _tag: tag_val,
+                    fields: field_layouts,
+                    slots,
+                })
+            }
+            Rhs::Match {
+                scrutinee,
+                alts,
+                default: default_arm,
+                // The ANF `default` arm (if `Some`) is lowered into the switch's default block so
+                // that the native path returns the same value as the interpreter when no explicit
+                // arm matches. If `None`, the default emits abort() — a defined-trap for the
+                // provably-unreachable no-match case (WF7 checker proves coverage; G2: never UB).
+            } => {
+                // Load the tag from the scrutinee datum, then switch on it. Each arm loads its
+                // binder fields from the struct and inlines the arm's ANF body (recursively).
+                // The match must terminate at a repr Lane value (not a Datum) — the final result
+                // must be printable by the read-back protocol. The switch has an explicit defined
+                // default — either the lowered ANF default block (if `Some`) or a call to abort()
+                // (if `None`) — never raw `unreachable` UB (G2).
+                let datum = lookup_ev(&env, scrutinee)?
+                    .as_datum("Match scrutinee")
+                    .cloned()?;
+
+                // Load the tag.
+                let tag_gep = ssa.fresh();
+                let slots = datum.slots;
+                let ptr = &datum.ptr.clone();
+                let _ = writeln!(
+                    body,
+                    "  {tag_gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 0"
+                );
+                let tag_reg = ssa.fresh();
+                let _ = writeln!(body, "  {tag_reg} = load i64, i64* {tag_gep}");
+
+                // Generate unique labels for each arm and the merge block.
+                let arm_labels: Vec<String> = (0..alts.len()).map(|_| bbc.fresh()).collect();
+                let default_label = bbc.fresh();
+                let merge_label = bbc.fresh();
+
+                // Emit the switch instruction.
+                let _ = write!(body, "  switch i64 {tag_reg}, label %{default_label} [");
+                for (alt, label) in alts.iter().zip(&arm_labels) {
+                    use mycelium_core::lower::AnfAlt;
+                    let arm_tag = match alt {
+                        AnfAlt::Ctor { ctor, .. } => ctor.index() as u64,
+                        AnfAlt::Lit { .. } => {
+                            return Err(AotError::UnsupportedNode(
+                                "literal Match arms are not supported in the native LLVM data \
+                                 fragment (Increment-1); use constructor arms only"
+                                    .to_owned(),
+                            ));
+                        }
+                    };
+                    let _ = write!(body, " i64 {arm_tag}, label %{label}");
+                }
+                let _ = writeln!(body, " ]");
+
+                // Collect (arm_label, result_lane) pairs for the phi at the merge.
+                let mut phi_entries: Vec<(String, Lane)> = Vec::with_capacity(alts.len());
+
+                for (alt, label) in alts.iter().zip(&arm_labels) {
+                    use mycelium_core::lower::AnfAlt;
+                    let _ = writeln!(body, "{label}:");
+                    let AnfAlt::Ctor {
+                        binders,
+                        body: arm_body,
+                        ..
+                    } = alt
+                    else {
+                        unreachable!("literal arms filtered above")
+                    };
+                    // Issue 2 (never-silent / G2): check binder/field arity before zipping.
+                    // The interpreter rejects arity mismatches with DataMalformed; we must too.
+                    if binders.len() != datum.fields.len() {
+                        return Err(AotError::UnsupportedNode(format!(
+                            "Match arm binder arity ({}) != constructor field count ({}) \
+                             — malformed Match (interpreter rejects with DataMalformed; G2/WF7)",
+                            binders.len(),
+                            datum.fields.len()
+                        )));
+                    }
+                    // Bind field lanes into a child env extended from the current one.
+                    let mut arm_env = env.clone();
+                    for (binder, field_layout) in binders.iter().zip(&datum.fields) {
+                        let field_lane =
+                            emit_load_field(field_layout, ptr, slots, &mut ssa, &mut body);
+                        arm_env.insert(
+                            mycelium_core::lower::Atom::Named(binder.clone()),
+                            EnvValue::Repr(field_lane),
+                        );
+                    }
+                    // Lower the arm body (a nested ANF block) recursively into the current IR body.
+                    let arm_result = lower_anf_block(
+                        arm_body,
+                        &mut arm_env,
+                        &mut ssa,
+                        &mut bbc,
+                        &mut body,
+                        &mut flags,
+                    )?;
+                    phi_entries.push((label.clone(), arm_result));
+                    let _ = writeln!(body, "  br label %{merge_label}");
+                }
+
+                // Default block: if the ANF `default` arm is `Some`, lower it and merge its
+                // result via the phi (matching the interpreter: the default body's value is
+                // returned when no explicit arm matches). If `None`, emit abort() — a
+                // defined-trap (WF7 proves exhaustive coverage; abort is the honest never-silent
+                // trap; G2: never raw unreachable UB).
+                let _ = writeln!(body, "{default_label}:");
+                if let Some(default_block) = default_arm {
+                    // The default arm has no binders; use the current env directly.
+                    let default_result = lower_anf_block(
+                        default_block,
+                        &mut env.clone(),
+                        &mut ssa,
+                        &mut bbc,
+                        &mut body,
+                        &mut flags,
+                    )?;
+                    phi_entries.push((default_label.clone(), default_result));
+                    let _ = writeln!(body, "  br label %{merge_label}");
+                } else {
+                    // No ANF default: WF7 guarantees the switch is exhaustive; abort() is the
+                    // honest defined-trap (never raw `unreachable` UB — G2).
+                    let _ = writeln!(body, "  call void @abort()");
+                    let _ = writeln!(body, "  ret i32 0");
+                }
+
+                // Merge block: collect results from arms via phi.
+                let _ = writeln!(body, "{merge_label}:");
+                if phi_entries.is_empty() {
+                    return Err(AotError::UnsupportedNode(
+                        "Match with zero arms (exhaustive coverage requires at least one arm)"
+                            .to_owned(),
+                    ));
+                }
+                // All arms must yield the same kind/width Lane — check and emit phi per element.
+                let first = &phi_entries[0].1;
+                let kind = first.kind;
+                let width = first.vals.len();
+                for (_, lane) in &phi_entries[1..] {
+                    if lane.kind != kind || lane.vals.len() != width {
+                        return Err(AotError::UnsupportedNode(
+                            "Match arms produce lanes of different kind or width — the native \
+                             data fragment requires all arms to return the same repr shape"
+                                .to_owned(),
+                        ));
+                    }
+                }
+                let mut result_vals: Vec<Operand> = Vec::with_capacity(width);
+                for elem_idx in 0..width {
+                    let phi_reg = ssa.fresh();
+                    let phi_operands: Vec<String> = phi_entries
+                        .iter()
+                        .map(|(lbl, lane)| format!("[ {}, %{lbl} ]", lane.vals[elem_idx]))
+                        .collect();
+                    let _ = writeln!(body, "  {phi_reg} = phi i32 {}", phi_operands.join(", "));
+                    result_vals.push(phi_reg);
+                }
+                EnvValue::Repr(Lane {
+                    kind,
+                    vals: result_vals,
+                })
+            }
+            // App, Lam, Fix, FixGroup: closures + recursion — deferred to Increment-2/3. These run
+            // on the AOT env-machine (M-342); the native LLVM path refuses them explicitly (VR-5; G2).
+            // The refusal message is updated to no longer mention Construct/Match (which are now
+            // supported for the non-recursive bounded case).
+            Rhs::App { .. } => {
                 return Err(AotError::UnsupportedNode(
-                    "data/recursion node (Construct/App/Lam/Fix/FixGroup/Match): the native LLVM \
-                     subset is bit/trit only; these run on the AOT env-machine (M-342), native \
-                     codegen deferred to the MLIR→LLVM backend"
+                    "App: function application needs closure codegen (Increment-2, deferred). \
+                     Runs on the AOT env-machine (M-342)"
+                        .to_owned(),
+                ));
+            }
+            Rhs::Lam { .. } => {
+                return Err(AotError::UnsupportedNode(
+                    "Lam: lambda abstraction needs closure-conversion (Increment-2, deferred). \
+                     Runs on the AOT env-machine (M-342)"
+                        .to_owned(),
+                ));
+            }
+            Rhs::Fix { .. } => {
+                return Err(AotError::UnsupportedNode(
+                    "Fix: general recursion needs a heap trampoline (Increment-3 / DN-05 #1, \
+                     deferred). Runs on the AOT env-machine (M-342)"
+                        .to_owned(),
+                ));
+            }
+            Rhs::FixGroup { .. } => {
+                return Err(AotError::UnsupportedNode(
+                    "FixGroup: mutual recursion needs a heap trampoline (Increment-3 / DN-05 #1, \
+                     deferred). Runs on the AOT env-machine (M-342)"
                         .to_owned(),
                 ));
             }
         };
-        env.insert(b.name.clone(), lane);
+        env.insert(b.name.clone(), ev);
     }
 
-    let result = lookup(&env, anf.result())?.clone();
+    let result_ev = lookup_ev(&env, anf.result())?.clone();
+    let result = result_ev.into_lane("final program result")?;
     // Fold the per-op overflow flags into one `i1` (left-associative `or` chain), or `None`.
     let overflow = fold_or(&flags, &mut ssa, &mut body);
     Ok(Lowered {
@@ -288,10 +668,194 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
     })
 }
 
-/// Emit textual LLVM IR for the bit/trit-subset program `node` — a `main` that computes the result
-/// elements and writes them as a line to stdout (Binary: `'0'`/`'1'`; Ternary: `'-'`/`'0'`/`'+'`).
-/// Deterministic. One op per output element (no opaque pass — RFC-0004 §6). Returns an explicit
-/// [`AotError`] for anything outside the subset.
+/// Lower a nested ANF block (a `Match` arm or similar nested scope) into the ongoing IR stream,
+/// extending `env` with any new bindings. Returns the result `Lane` of the nested block.
+/// This is the recursive workhorse for `Rhs::Match` arm bodies in [`lower_program`].
+fn lower_anf_block(
+    anf: &lower::Anf,
+    env: &mut HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    bbc: &mut Bbc,
+    body: &mut String,
+    flags: &mut Vec<String>,
+) -> Result<Lane, AotError> {
+    for b in anf.bindings() {
+        let ev = match &b.rhs {
+            Rhs::Const(v) => EnvValue::Repr(const_lane(v)?),
+            Rhs::Alias(a) => lookup_ev(env, a)?.clone(),
+            Rhs::Op { prim, args } => {
+                let operands: Vec<&Lane> = args
+                    .iter()
+                    .map(|a| lookup_ev(env, a)?.as_lane("op operand"))
+                    .collect::<Result<_, _>>()?;
+                EnvValue::Repr(emit_op(prim, &operands, ssa, body, flags)?)
+            }
+            Rhs::Swap { target, .. } => {
+                return Err(AotError::UnsupportedNode(format!(
+                    "swap to {target:?} in a match arm (M-301)"
+                )));
+            }
+            Rhs::Construct { ctor, args } => {
+                let field_lanes: Vec<Lane> = args
+                    .iter()
+                    .map(|a| lookup_ev(env, a)?.as_lane("Construct field").cloned())
+                    .collect::<Result<_, _>>()?;
+                let total_elem: usize = field_lanes.iter().map(|l| l.vals.len()).sum();
+                let slots = 1 + total_elem;
+                let ptr = ssa.fresh();
+                let _ = writeln!(body, "  {ptr} = alloca [{slots} x i64], align 8");
+                let tag_gep = ssa.fresh();
+                let tag_val = ctor.index() as u64;
+                let _ = writeln!(
+                    body,
+                    "  {tag_gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 0"
+                );
+                let _ = writeln!(body, "  store i64 {tag_val}, i64* {tag_gep}");
+                let mut slot_start = 1usize;
+                let mut field_layouts: Vec<FieldLayout> = Vec::with_capacity(field_lanes.len());
+                for lane in &field_lanes {
+                    let layout = emit_store_field(lane, &ptr, slots, slot_start, ssa, body);
+                    slot_start += lane.vals.len();
+                    field_layouts.push(layout);
+                }
+                EnvValue::Datum(Datum {
+                    ptr,
+                    _tag: tag_val,
+                    fields: field_layouts,
+                    slots,
+                })
+            }
+            Rhs::Match {
+                scrutinee,
+                alts,
+                default: default_arm,
+                // Nested match — identical semantics to the top-level Match. The ANF `default`
+                // arm (if `Some`) is lowered and merged via phi; if `None`, abort() is the
+                // defined-trap (G2: never raw unreachable UB; WF7 proves exhaustive coverage).
+            } => {
+                // Nested match inside an arm body — identical logic to the top-level match.
+                let datum = lookup_ev(env, scrutinee)?
+                    .as_datum("Match scrutinee")
+                    .cloned()?;
+                let slots = datum.slots;
+                let ptr = datum.ptr.clone();
+                let tag_gep = ssa.fresh();
+                let _ = writeln!(
+                    body,
+                    "  {tag_gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 0"
+                );
+                let tag_reg = ssa.fresh();
+                let _ = writeln!(body, "  {tag_reg} = load i64, i64* {tag_gep}");
+                let arm_labels: Vec<String> = (0..alts.len()).map(|_| bbc.fresh()).collect();
+                let default_label = bbc.fresh();
+                let merge_label = bbc.fresh();
+                let _ = write!(body, "  switch i64 {tag_reg}, label %{default_label} [");
+                for (alt, label) in alts.iter().zip(&arm_labels) {
+                    use mycelium_core::lower::AnfAlt;
+                    let arm_tag = match alt {
+                        AnfAlt::Ctor { ctor, .. } => ctor.index() as u64,
+                        AnfAlt::Lit { .. } => {
+                            return Err(AotError::UnsupportedNode(
+                                "literal Match arms are not supported in the native LLVM data fragment"
+                                    .to_owned(),
+                            ));
+                        }
+                    };
+                    let _ = write!(body, " i64 {arm_tag}, label %{label}");
+                }
+                let _ = writeln!(body, " ]");
+                let mut phi_entries: Vec<(String, Lane)> = Vec::with_capacity(alts.len());
+                for (alt, label) in alts.iter().zip(&arm_labels) {
+                    use mycelium_core::lower::AnfAlt;
+                    let _ = writeln!(body, "{label}:");
+                    let AnfAlt::Ctor {
+                        binders,
+                        body: arm_body,
+                        ..
+                    } = alt
+                    else {
+                        unreachable!()
+                    };
+                    // Issue 2 (never-silent / G2): check binder/field arity before zipping.
+                    if binders.len() != datum.fields.len() {
+                        return Err(AotError::UnsupportedNode(format!(
+                            "Match arm binder arity ({}) != constructor field count ({}) \
+                             — malformed Match (interpreter rejects with DataMalformed; G2/WF7)",
+                            binders.len(),
+                            datum.fields.len()
+                        )));
+                    }
+                    let mut arm_env = env.clone();
+                    for (binder, field_layout) in binders.iter().zip(&datum.fields) {
+                        let field_lane = emit_load_field(field_layout, &ptr, slots, ssa, body);
+                        arm_env.insert(
+                            mycelium_core::lower::Atom::Named(binder.clone()),
+                            EnvValue::Repr(field_lane),
+                        );
+                    }
+                    let arm_result =
+                        lower_anf_block(arm_body, &mut arm_env, ssa, bbc, body, flags)?;
+                    phi_entries.push((label.clone(), arm_result));
+                    let _ = writeln!(body, "  br label %{merge_label}");
+                }
+                // Default block: lower ANF default if `Some`; abort() if `None` (G2/WF7).
+                let _ = writeln!(body, "{default_label}:");
+                if let Some(default_block) = default_arm {
+                    let default_result =
+                        lower_anf_block(default_block, &mut env.clone(), ssa, bbc, body, flags)?;
+                    phi_entries.push((default_label.clone(), default_result));
+                    let _ = writeln!(body, "  br label %{merge_label}");
+                } else {
+                    let _ = writeln!(body, "  call void @abort()");
+                    let _ = writeln!(body, "  ret i32 0");
+                }
+                let _ = writeln!(body, "{merge_label}:");
+                if phi_entries.is_empty() {
+                    return Err(AotError::UnsupportedNode("Match with zero arms".to_owned()));
+                }
+                let first = &phi_entries[0].1;
+                let kind = first.kind;
+                let width = first.vals.len();
+                for (_, lane) in &phi_entries[1..] {
+                    if lane.kind != kind || lane.vals.len() != width {
+                        return Err(AotError::UnsupportedNode(
+                            "Match arms produce lanes of different kind or width".to_owned(),
+                        ));
+                    }
+                }
+                let mut result_vals: Vec<Operand> = Vec::with_capacity(width);
+                for elem_idx in 0..width {
+                    let phi_reg = ssa.fresh();
+                    let phi_operands: Vec<String> = phi_entries
+                        .iter()
+                        .map(|(lbl, lane)| format!("[ {}, %{lbl} ]", lane.vals[elem_idx]))
+                        .collect();
+                    let _ = writeln!(body, "  {phi_reg} = phi i32 {}", phi_operands.join(", "));
+                    result_vals.push(phi_reg);
+                }
+                EnvValue::Repr(Lane {
+                    kind,
+                    vals: result_vals,
+                })
+            }
+            Rhs::App { .. } | Rhs::Lam { .. } | Rhs::Fix { .. } | Rhs::FixGroup { .. } => {
+                return Err(AotError::UnsupportedNode(
+                    "closure/recursion node in a match arm (App/Lam/Fix/FixGroup): deferred to \
+                     Increment-2/3"
+                        .to_owned(),
+                ));
+            }
+        };
+        env.insert(b.name.clone(), ev);
+    }
+    let result_ev = lookup_ev(env, anf.result())?.clone();
+    result_ev.into_lane("match arm result")
+}
+
+/// Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that
+/// computes the result elements and writes them as a line to stdout (Binary: `'0'`/`'1'`;
+/// Ternary: `'-'`/`'0'`/`'+'`). Deterministic. One op per output element (no opaque pass —
+/// RFC-0004 §6). Returns an explicit [`AotError`] for anything outside the subset.
 pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
     let Lowered {
         body,
@@ -299,8 +863,11 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
         mut ssa,
         overflow,
     } = lower_program(node)?;
-    let mut out = String::from("; mycelium direct-LLVM AOT (bit/trit subset; M-301)\n");
-    out.push_str("declare i32 @putchar(i32)\n\n");
+    let mut out =
+        String::from("; mycelium direct-LLVM AOT (bit/trit + non-recursive data; M-301; M-373)\n");
+    // `@putchar` for the read-back protocol; `@abort` for the match no-default trap (G2).
+    out.push_str("declare i32 @putchar(i32)\n");
+    out.push_str("declare void @abort()\n\n");
     out.push_str("define i32 @main() {\nentry:\n");
     out.push_str(&body);
     match overflow {
@@ -348,7 +915,7 @@ fn result_shape(node: &Node) -> Result<(LaneKind, usize), AotError> {
     Ok((l.result.kind, l.result.vals.len()))
 }
 
-fn lookup<'a, T>(env: &'a HashMap<Atom, T>, a: &Atom) -> Result<&'a T, AotError> {
+fn lookup_ev<'a>(env: &'a HashMap<Atom, EnvValue>, a: &Atom) -> Result<&'a EnvValue, AotError> {
     env.get(a).ok_or_else(|| AotError::FreeVariable(a.render()))
 }
 

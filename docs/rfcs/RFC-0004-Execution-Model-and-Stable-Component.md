@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0004 |
-| **Status** | **Accepted** (r2 — adds **§9** the *interpreted↔compiled continuum* + **build-target profiles** (`interpret` / `build --slim` / `build --target …` / `build --fat`) and **§10** open questions; **additive**, changes no r1 decision — append-only) |
+| **Status** | **Accepted** (r2 — adds **§9** the *interpreted↔compiled continuum* + **build-target profiles** (`interpret` / `build --slim` / `build --target …` / `build --fat`) and **§10** open questions; **additive**, changes no r1 decision — append-only) (r3 — adds **§11** scoping the direct-LLVM backend's data-fragment extension as a sanctioned increment of the §2 revisit clause; **additive**, changes no prior decision — append-only) |
 | **Type** | Foundational / normative |
 | **Date** | June 08, 2026 |
 | **Depends on** | RFC-0001 (WF5 metadata-preservation, `ExecutionMode`, `Meta.physical`); ADR-009 (hybrid execution, interpreter-as-reference); DN-01 (schedule-staged packing, Resolved); Research Findings **T1.1**, **T1.4**, **T1.5** |
@@ -95,7 +95,67 @@ A build's **target set** is an explicit, flexible choice — opt-in to breadth, 
 - **OQ-3 — fat-artifact packaging format.** The content-addressed multi-target variant store (§9.3) is a concrete format that needs specifying (manifest, dedup of shared variants, signing/cert linkage to the §4 `BuildCertificate`).
 - **OQ-4 — target-set selection as policy.** Whether `--target`/`--fat` selection should be expressible through the RFC-0005 selection-policy mechanism (one mechanism, now three sites) or stay a build-flag. Lean: build-flag first, policy later if it earns it.
 
+## 11. Direct-LLVM backend: data-fragment increment (r3; M-373)
+
+This section is **additive** (r3). It changes no prior decision — it records the sanctioned scope
+for extending the direct-LLVM backend (`crates/mycelium-mlir/src/llvm.rs`) to cover
+`Construct`/`Match` nodes, grounding that extension in the §2 revisit clause.
+
+### 11.1 Sanction: the §2 revisit clause
+
+§2 contains the explicit revisit clause: *"Revisit if: a tiny stable substrate set + modest perf
+needs would favor a lighter direct-LLVM backend."* The current situation fits: `llvm.rs` is
+already a live, compiled, differentially tested direct-LLVM backend for the bit/trit subset
+(M-301); LLVM 18 tooling (`llc`/`clang`) is present; libMLIR is absent. Extending `llvm.rs` to
+lower `Construct`/`Match` in textual LLVM IR is a sanctioned increment of this clause. It does
+not supersede the MLIR→LLVM commitment — it advances the unblocked half while the libMLIR-gated
+half remains deferred.
+
+### 11.2 Scope of the sanctioned increment
+
+**Increment 1 (this wave; M-373 scope):** non-recursive `Construct`/`Match` codegen in textual
+LLVM IR. Zero libMLIR required. Specifics:
+
+- `Rhs::Construct`: emit a tagged **stack `alloca [N+1 x i64]`** struct (tag word in slot 0;
+  field elements in consecutive i64 slots 1..N). **Not `@malloc`**: the non-recursive/bounded
+  restriction (no `Fix`/`FixGroup` in scope) means all allocation depth is statically known at
+  codegen time, so a heap allocation and an explicit OOM failure path are unnecessary. `alloca`
+  is simpler, directly auditable in the emitted IR, and has no OOM path (DN-15 §4.1).
+- `Rhs::Match`: emit a `switch i64` on the tag word; load field elements from the alloca struct
+  and bind them in each arm; merge arm results via phi.
+- Straight-line arms only — no closures, no heap recursion, no `App`/`Lam`/`Fix`/`FixGroup`.
+- No-match where no explicit arm covers the discriminant and no ANF default is present →
+  explicit `abort()` trap (never raw `unreachable` UB; G2). When an ANF default arm *is*
+  present, it is lowered into the switch's default block and its result merged via phi —
+  matching the reference interpreter's semantics exactly (no silent divergence; G2).
+- Guarantee tag on returned values: `Declared` (the tag-dispatch convention is declared, not
+  formally verified — VR-5).
+
+### 11.3 What remains deferred (VR-5)
+
+The following fragments remain deferred / explicitly unadvanced by this increment:
+
+- **Closures (App/Lam) + heap** — require closure-conversion (free-variable analysis, closure
+  struct packing, indirect call through function pointer). A separate later increment.
+- **Recursion (Fix/FixGroup) + stack-robustness** — require an explicit heap control stack (a
+  trampoline) in the emitted LLVM IR. Must satisfy DN-05 #1 (no unbounded C stack; graceful
+  explicit limit; G2) — that requirement applies to the native path and is designed in, not
+  retrofitted. The `DepthBudget` trait (DN05-Q4/Q5; enacted M-349; `crates/mycelium-mlir::budget`)
+  is reused as the policy interface. A separate later increment.
+- **Real `ternary` MLIR dialect lowering** — `crates/mycelium-mlir/src/dialect.rs` is a textual
+  skeleton only; real lowering requires libMLIR (M-348, blocked). Every verdict on this path
+  stays "not established" (VR-5) until the toolchain is present.
+
+### 11.4 Inspectability (§6 preserved)
+
+Every stage of the Increment-1 extension must remain dumpable/diffable (SC-4; RFC-0004 §6);
+each pass preserves `Meta` (WF5); no-opaque-lowering applies (ADR-009). The textual LLVM IR
+emitter already satisfies this for the bit/trit subset — the extension must hold the same
+standard: every `switch` arm, field-load, and struct-alloc is explicit IR, and the full module
+is human-readable and dumpable. No opaque pass is introduced.
+
 ## Meta — changelog
+- **2026-06-19 (additive — §11; r3; M-373):** Added **§11** recording the sanctioned scope for extending the direct-LLVM backend (`llvm.rs`) to the data-fragment (non-recursive `Construct`/`Match`) as an increment of the §2 revisit clause. Closures (`App`/`Lam`), recursion (`Fix`/`FixGroup`), and the real ternary MLIR dialect lowering remain deferred (VR-5); recursion is bound by DN-05 #1 (no unbounded C stack; `DepthBudget` trait reuse) when it lands. §6 no-opaque-lowering preserved: every IR stage stays dumpable. Changes no prior decision. Append-only.
 - **2026-06-18 (append-only note after §4 — RFC-0017 Accepted):** Added an inline note recording
   that **RFC-0017** lifts maturation granularity from per-definition to **scope** (nodule/phylum
   header; program manifest); the §4 stable-component eligibility checks are **unchanged**, applied

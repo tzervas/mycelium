@@ -251,7 +251,7 @@ def build_index(repo_root: Path) -> tuple[list[dict], list[dict]]:
         for raw_line in lines:
             parsed = _parse_line(raw_line, crate_name)
             if parsed is None:
-                continue  # comment, blank, skip line, or unparseable kind
+                continue  # comment, blank, skip line, or unparsable kind
 
             kind = parsed["kind"]
             short_name = parsed["short_name"]
