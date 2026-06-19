@@ -8,6 +8,37 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (2026-06-19: Tier-A completion fast-follows — cross-crate seam reconciliations)
+The cross-module FLAGs the Tier-A wave left for the maintainer are discharged (each a real change —
+code + tests + guarantee-matrix/baseline kept green):
+- **A1 — `std.testing` `FailRecord` → `Diag` (testing↔diag seam, spec §7-Q2).** `FailRecord` now
+  **delegates** to the canonical record via `FailRecord::to_diag()` → `mycelium_diag::Diag` (the
+  description becomes the message; the op context + reproducing seed + trial ride along as EXPLAIN
+  notes, G11). It keeps the testing-specific seed/trial reproduction metadata a generic `Diag` does
+  not model.
+- **A2 — `std.error` recover stub → real `Outcome` (error.md §7-Q1).** `std.error` drops its abstract
+  stub `RecoverOutcome` enum + `recover` fn and **re-exports** the concrete
+  `mycelium_std_recover::{Outcome, Resolution, RecoverOutcome, handle_classified}` — it is the bridge
+  *target*, not the home of the recovery algebra (KC-3). Contract holds verbatim: `Recovered |
+  Propagated`, no drop (I1), tag inherited from the policy (I2/VR-5).
+- **A3 — `DECLARED_FLOAT_EPS` → `std.numerics` (math ε-ownership, NFR-N2 / math.md §7-Q2).** The
+  `Declared` libm-floor ε is now homed in `std.numerics` (the ε-carrier module) and **re-exported**
+  by `std.math` — stated in exactly one place. Its honest `Proven` upgrade stays the kernel's /
+  M-541's to supply (VR-5).
+- **A4 — `std.spore` `regrow` → `Approx` (spore.md §7-Q4).** `RegrowthResult` now carries the
+  manifest's full certificate `Bound` and projects to `std.numerics::Approx<Factorization>` via
+  `as_approx()` — strength **derived** from the bound's basis (`Approx::attach`, never upgraded —
+  VR-5), held at the `Empirical` ceiling (FR-C2). Carries `Factorization` (the VSA decode result),
+  not `Value` (that mapping is `std.vsa`'s).
+
+**Decision — B2 (kernel f64 finiteness):** keep the **status quo** — `Value::new` stays permissive and
+each projection/op refuses a non-finite `f64` explicitly (never-silent at the point of use), rather
+than rejecting at construction. Revisit alongside a future binary codec. (A formal ADR can ratify
+this; recorded here as the maintainer's decision.) **B1 (`EffectBudget::Io`/`Named`)** remains an open,
+documented kernel FLAG (not enacted this round).
+
+Public-API baselines refreshed for the five touched crates; full `just check` green.
+
 ### Added (2026-06-18: Phase-5 Tier-A completion — Rust-first numerics/diag/recover/spore, M-510/512/520/522)
 The Tier-A differentiator surface is completed: the four remaining spec'd-but-uncoded Tier-A Ring-1 `std`
 modules land as Rust-first crates, built as a **swarm of four sonnet agents** fanned in with an **octopus

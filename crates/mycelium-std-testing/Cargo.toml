@@ -14,3 +14,4 @@ workspace = true
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
 mycelium-std-core = { path = "../mycelium-std-core" }
+mycelium-diag = { path = "../mycelium-diag" }

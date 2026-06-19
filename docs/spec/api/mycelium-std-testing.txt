@@ -94,6 +94,8 @@ pub mycelium_std_testing::verdict::FailRecord::context: alloc::string::String
 pub mycelium_std_testing::verdict::FailRecord::description: alloc::string::String
 pub mycelium_std_testing::verdict::FailRecord::seed: u64
 pub mycelium_std_testing::verdict::FailRecord::trial: u32
+impl mycelium_std_testing::verdict::FailRecord
+pub fn mycelium_std_testing::verdict::FailRecord::to_diag(&self) -> mycelium_diag::Diag
 impl core::clone::Clone for mycelium_std_testing::verdict::FailRecord
 pub fn mycelium_std_testing::verdict::FailRecord::clone(&self) -> mycelium_std_testing::verdict::FailRecord
 impl core::cmp::Eq for mycelium_std_testing::verdict::FailRecord
@@ -230,6 +232,8 @@ pub mycelium_std_testing::FailRecord::context: alloc::string::String
 pub mycelium_std_testing::FailRecord::description: alloc::string::String
 pub mycelium_std_testing::FailRecord::seed: u64
 pub mycelium_std_testing::FailRecord::trial: u32
+impl mycelium_std_testing::verdict::FailRecord
+pub fn mycelium_std_testing::verdict::FailRecord::to_diag(&self) -> mycelium_diag::Diag
 impl core::clone::Clone for mycelium_std_testing::verdict::FailRecord
 pub fn mycelium_std_testing::verdict::FailRecord::clone(&self) -> mycelium_std_testing::verdict::FailRecord
 impl core::cmp::Eq for mycelium_std_testing::verdict::FailRecord

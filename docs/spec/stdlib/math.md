@@ -220,3 +220,7 @@ per build, never pre-claimed**, see below).
   which transcendentals reach `Proven` + the exact ε numbers, the `wild`/FFI compute floor, an iterative-refinement
   budget, the tie/round-mode policy surface) — the numbers and `Proven` reachability are M-512's to fill, never
   invented here. No code; no kernel change (KC-3). Append-only.
+- **2026-06-19 — §7-Q2 (ε-ownership) RESOLVED.** The `Declared` libm-floor ε (`DECLARED_FLOAT_EPS`)
+  is homed in `std.numerics` (the ε-carrier module, M-512) and re-exported by `std.math` — stated in
+  exactly one place (NFR-N2). The honest `Proven` magnitude stays the kernel's (ADR-010) / M-541's to
+  supply (VR-5). Append-only.

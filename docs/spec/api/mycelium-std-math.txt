@@ -1,5 +1,6 @@
 pub mod mycelium_std_math
 pub mod mycelium_std_math::approx
+pub use mycelium_std_math::approx::DECLARED_FLOAT_EPS
 pub struct mycelium_std_math::approx::Approx<T>
 pub mycelium_std_math::approx::Approx::bound: mycelium_core::bound::Bound
 pub mycelium_std_math::approx::Approx::strength: mycelium_core::guarantee::GuaranteeStrength
@@ -43,7 +44,6 @@ impl core::marker::Unpin for mycelium_std_math::approx::ApproxExplain
 impl core::marker::UnsafeUnpin for mycelium_std_math::approx::ApproxExplain
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_math::approx::ApproxExplain
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_math::approx::ApproxExplain
-pub const mycelium_std_math::approx::DECLARED_FLOAT_EPS: f64
 pub fn mycelium_std_math::approx::acos(f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
 pub fn mycelium_std_math::approx::asin(f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
 pub fn mycelium_std_math::approx::atan(f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>

@@ -25,13 +25,12 @@
 //!
 //! - **Native deploy / germination** (FLAG Q2) — Phase-6-gated (M-620); the `deploy` seam
 //!   exists in the spec but is not implemented here — FLAGGED §7 Q2.
-//! - **Approx<Value> coupling** (FLAG Q4) — `regrow` returns the raw `Factorization` from
-//!   `std.vsa` rather than wrapping it in `std.numerics::Approx<Value>`. Coupling that type
-//!   would add a workspace dependency on `mycelium-std-numerics` (a parallel-leaf crate).
-//!   The orchestrator should wire the `Approx<Value>` wrapper after the wave merges. Until
-//!   then [`RegrowthResult`] carries `(Factorization, GuaranteeStrength)` — inspectable and
-//!   honest, never stronger than `Empirical`, but not yet the `Approx<Value>` envelope —
-//!   FLAGGED §7 Q4.
+//! - **Approx coupling** (FLAG Q4 — RESOLVED) — [`RegrowthResult`] carries the manifest's full
+//!   certificate `Bound` and projects to `std.numerics::Approx<Factorization>` via
+//!   [`recon_manifest::RegrowthResult::as_approx`] (strength derived from the bound's basis, never
+//!   upgraded — VR-5; held at the `Empirical` ceiling, FR-C2). It carries `Factorization` rather
+//!   than `Value` because the resonator decode yields VSA factor atoms, not a reconstructed
+//!   `Value` (that mapping is `std.vsa`'s). `std.spore` now depends on `mycelium-std-numerics`.
 //! - **Ring placement discrepancy** (FLAG Q1) — RFC-0016 §4.2 lists `spore` under Ring 2 while
 //!   §4.3 / the stdlib index files it under Tier A. This spec follows Tier-A / Ring-1 —
 //!   FLAGGED §7 Q1.

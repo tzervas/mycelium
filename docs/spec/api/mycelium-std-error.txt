@@ -1,26 +1,11 @@
 pub mod mycelium_std_error
 pub use mycelium_std_error::GuaranteeStrength
+pub use mycelium_std_error::Outcome
 pub use mycelium_std_error::PolicyRef
+pub use mycelium_std_error::RecoverOutcome
+pub use mycelium_std_error::Resolution
+pub use mycelium_std_error::handle_classified
 pub mod mycelium_std_error::combinators
-pub use mycelium_std_error::combinators::PolicyRef
-pub enum mycelium_std_error::combinators::RecoverOutcome<T, E>
-pub mycelium_std_error::combinators::RecoverOutcome::Propagated(E)
-pub mycelium_std_error::combinators::RecoverOutcome::Recovered(T, &'static str)
-impl<T: core::clone::Clone, E: core::clone::Clone> core::clone::Clone for mycelium_std_error::combinators::RecoverOutcome<T, E>
-pub fn mycelium_std_error::combinators::RecoverOutcome<T, E>::clone(&self) -> mycelium_std_error::combinators::RecoverOutcome<T, E>
-impl<T: core::cmp::Eq, E: core::cmp::Eq> core::cmp::Eq for mycelium_std_error::combinators::RecoverOutcome<T, E>
-impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_error::combinators::RecoverOutcome<T, E>
-pub fn mycelium_std_error::combinators::RecoverOutcome<T, E>::eq(&self, &mycelium_std_error::combinators::RecoverOutcome<T, E>) -> bool
-impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_error::combinators::RecoverOutcome<T, E>
-impl<T: core::fmt::Debug, E: core::fmt::Debug> core::fmt::Debug for mycelium_std_error::combinators::RecoverOutcome<T, E>
-pub fn mycelium_std_error::combinators::RecoverOutcome<T, E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl<T, E> core::marker::Freeze for mycelium_std_error::combinators::RecoverOutcome<T, E> where T: core::marker::Freeze, E: core::marker::Freeze
-impl<T, E> core::marker::Send for mycelium_std_error::combinators::RecoverOutcome<T, E> where T: core::marker::Send, E: core::marker::Send
-impl<T, E> core::marker::Sync for mycelium_std_error::combinators::RecoverOutcome<T, E> where T: core::marker::Sync, E: core::marker::Sync
-impl<T, E> core::marker::Unpin for mycelium_std_error::combinators::RecoverOutcome<T, E> where T: core::marker::Unpin, E: core::marker::Unpin
-impl<T, E> core::marker::UnsafeUnpin for mycelium_std_error::combinators::RecoverOutcome<T, E> where T: core::marker::UnsafeUnpin, E: core::marker::UnsafeUnpin
-impl<T, E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_error::combinators::RecoverOutcome<T, E> where T: core::panic::unwind_safe::RefUnwindSafe, E: core::panic::unwind_safe::RefUnwindSafe
-impl<T, E> core::panic::unwind_safe::UnwindSafe for mycelium_std_error::combinators::RecoverOutcome<T, E> where T: core::panic::unwind_safe::UnwindSafe, E: core::panic::unwind_safe::UnwindSafe
 pub struct mycelium_std_error::combinators::RefusalRecord
 pub mycelium_std_error::combinators::RefusalRecord::actual_variant: &'static str
 pub mycelium_std_error::combinators::RefusalRecord::op: &'static str
@@ -72,7 +57,6 @@ pub fn mycelium_std_error::combinators::ok<T, E>(core::result::Result<T, E>) -> 
 pub fn mycelium_std_error::combinators::ok_or<T, E>(core::option::Option<T>, E) -> core::result::Result<T, E>
 pub fn mycelium_std_error::combinators::ok_or_else<T, E, F>(core::option::Option<T>, F) -> core::result::Result<T, E> where F: core::ops::function::FnOnce() -> E
 pub fn mycelium_std_error::combinators::or_else<T, E, F, G>(core::result::Result<T, E>, G) -> core::result::Result<T, F> where G: core::ops::function::FnOnce(E) -> core::result::Result<T, F>
-pub fn mycelium_std_error::combinators::recover<T, E>(core::result::Result<T, E>, mycelium_core::node::PolicyRef) -> mycelium_std_error::combinators::RecoverOutcome<T, E>
 pub fn mycelium_std_error::combinators::transpose<T, E>(core::option::Option<core::result::Result<T, E>>) -> core::result::Result<core::option::Option<T>, E>
 pub fn mycelium_std_error::combinators::unwrap<T, E: core::fmt::Debug>(core::result::Result<T, E>) -> T
 pub fn mycelium_std_error::combinators::unwrap_err<T: core::fmt::Debug, E>(core::result::Result<T, E>) -> E
@@ -149,24 +133,6 @@ impl core::marker::UnsafeUnpin for mycelium_std_error::guarantee_matrix::MatrixR
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_error::guarantee_matrix::MatrixRow
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_error::guarantee_matrix::MatrixRow
 pub const mycelium_std_error::guarantee_matrix::MATRIX: &[mycelium_std_error::guarantee_matrix::MatrixRow]
-pub enum mycelium_std_error::RecoverOutcome<T, E>
-pub mycelium_std_error::RecoverOutcome::Propagated(E)
-pub mycelium_std_error::RecoverOutcome::Recovered(T, &'static str)
-impl<T: core::clone::Clone, E: core::clone::Clone> core::clone::Clone for mycelium_std_error::combinators::RecoverOutcome<T, E>
-pub fn mycelium_std_error::combinators::RecoverOutcome<T, E>::clone(&self) -> mycelium_std_error::combinators::RecoverOutcome<T, E>
-impl<T: core::cmp::Eq, E: core::cmp::Eq> core::cmp::Eq for mycelium_std_error::combinators::RecoverOutcome<T, E>
-impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_error::combinators::RecoverOutcome<T, E>
-pub fn mycelium_std_error::combinators::RecoverOutcome<T, E>::eq(&self, &mycelium_std_error::combinators::RecoverOutcome<T, E>) -> bool
-impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_error::combinators::RecoverOutcome<T, E>
-impl<T: core::fmt::Debug, E: core::fmt::Debug> core::fmt::Debug for mycelium_std_error::combinators::RecoverOutcome<T, E>
-pub fn mycelium_std_error::combinators::RecoverOutcome<T, E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl<T, E> core::marker::Freeze for mycelium_std_error::combinators::RecoverOutcome<T, E> where T: core::marker::Freeze, E: core::marker::Freeze
-impl<T, E> core::marker::Send for mycelium_std_error::combinators::RecoverOutcome<T, E> where T: core::marker::Send, E: core::marker::Send
-impl<T, E> core::marker::Sync for mycelium_std_error::combinators::RecoverOutcome<T, E> where T: core::marker::Sync, E: core::marker::Sync
-impl<T, E> core::marker::Unpin for mycelium_std_error::combinators::RecoverOutcome<T, E> where T: core::marker::Unpin, E: core::marker::Unpin
-impl<T, E> core::marker::UnsafeUnpin for mycelium_std_error::combinators::RecoverOutcome<T, E> where T: core::marker::UnsafeUnpin, E: core::marker::UnsafeUnpin
-impl<T, E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_error::combinators::RecoverOutcome<T, E> where T: core::panic::unwind_safe::RefUnwindSafe, E: core::panic::unwind_safe::RefUnwindSafe
-impl<T, E> core::panic::unwind_safe::UnwindSafe for mycelium_std_error::combinators::RecoverOutcome<T, E> where T: core::panic::unwind_safe::UnwindSafe, E: core::panic::unwind_safe::UnwindSafe
 pub struct mycelium_std_error::RefusalRecord
 pub mycelium_std_error::RefusalRecord::actual_variant: &'static str
 pub mycelium_std_error::RefusalRecord::op: &'static str
@@ -218,7 +184,6 @@ pub fn mycelium_std_error::ok<T, E>(core::result::Result<T, E>) -> core::option:
 pub fn mycelium_std_error::ok_or<T, E>(core::option::Option<T>, E) -> core::result::Result<T, E>
 pub fn mycelium_std_error::ok_or_else<T, E, F>(core::option::Option<T>, F) -> core::result::Result<T, E> where F: core::ops::function::FnOnce() -> E
 pub fn mycelium_std_error::or_else<T, E, F, G>(core::result::Result<T, E>, G) -> core::result::Result<T, F> where G: core::ops::function::FnOnce(E) -> core::result::Result<T, F>
-pub fn mycelium_std_error::recover<T, E>(core::result::Result<T, E>, mycelium_core::node::PolicyRef) -> mycelium_std_error::combinators::RecoverOutcome<T, E>
 pub fn mycelium_std_error::transpose<T, E>(core::option::Option<core::result::Result<T, E>>) -> core::result::Result<core::option::Option<T>, E>
 pub fn mycelium_std_error::unwrap<T, E: core::fmt::Debug>(core::result::Result<T, E>) -> T
 pub fn mycelium_std_error::unwrap_err<T: core::fmt::Debug, E>(core::result::Result<T, E>) -> E

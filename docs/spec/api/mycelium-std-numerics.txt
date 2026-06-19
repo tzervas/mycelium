@@ -141,6 +141,7 @@ impl core::marker::Unpin for mycelium_std_numerics::ProvenThm
 impl core::marker::UnsafeUnpin for mycelium_std_numerics::ProvenThm
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_numerics::ProvenThm
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_numerics::ProvenThm
+pub const mycelium_std_numerics::DECLARED_FLOAT_EPS: f64
 pub fn mycelium_std_numerics::accuracy_to_probability(&mycelium_core::bound::Bound, f64, f64) -> core::result::Result<mycelium_core::bound::Bound, mycelium_std_numerics::NumErr>
 pub fn mycelium_std_numerics::check_error(&[mycelium_numerics::error::ErrorBound], mycelium_numerics::cert::ErrorOp, mycelium_numerics::error::ErrorBound) -> core::result::Result<(), mycelium_std_numerics::CheckErr>
 pub fn mycelium_std_numerics::check_union(&[mycelium_numerics::prob::ProbBound], mycelium_numerics::prob::ProbBound) -> core::result::Result<(), mycelium_std_numerics::CheckErr>

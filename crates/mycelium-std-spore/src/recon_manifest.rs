@@ -13,14 +13,17 @@
 //! it does not set or upgrade it (VR-5). The ceiling is checked at the `ReconInfo` layer in the
 //! kernel (`mycelium-core::recon`) and re-surfaced here for the ergonomic stdlib API.
 //!
-//! # Regrowth result (FLAG Q4)
+//! # Regrowth result (FLAG Q4 — RESOLVED)
 //!
-//! [`RegrowthResult`] wraps the `Factorization` from `std.vsa` and the `GuaranteeStrength` tag
-//! carried from the manifest's bound. This is the stand-in for `std.numerics::Approx<Value>`
-//! until that coupling is wired post-merge. See crate-level FLAG Q4.
+//! [`RegrowthResult`] carries the `Factorization` from `std.vsa` together with the manifest's full
+//! certificate `Bound`, and projects to the stdlib's honest carrier via
+//! [`RegrowthResult::as_approx`] → `std.numerics::Approx<Factorization>` (strength derived from the
+//! bound's basis, never upgraded — VR-5).
 
+use mycelium_core::bound::Bound;
 use mycelium_core::{GuaranteeStrength, ReconInfo};
 pub use mycelium_core::{ReconMode, WfError};
+use mycelium_std_numerics::Approx;
 use mycelium_vsa::Factorization;
 
 /// A validated reconstruction manifest — the RFC-0003 §6 record: mode, model, dim, codebooks,
@@ -224,45 +227,63 @@ impl std::error::Error for MalformedManifest {}
 /// `GuaranteeStrength` tag from the manifest's bound certificate — always ≤ `Empirical`
 /// for the resonator path (FR-C2 enforced at manifest construction time).
 ///
-/// # FLAG Q4 (Approx<Value> coupling)
+/// # Approx<T> coupling (FLAG Q4 — RESOLVED)
 ///
-/// This is the stand-in for `std.numerics::Approx<Value>`. Once `mycelium-std-numerics` is
-/// merged into the workspace, the orchestrator should replace this with an `Approx<Value>`
-/// wrapper that carries the bound inline. Until then this struct carries the information
-/// faithfully. See crate-level FLAG Q4.
+/// `RegrowthResult` carries the manifest's **full `{ε,δ,strength}` certificate bound** (with its
+/// `BoundBasis`), so it projects losslessly to the stdlib's honest carrier via
+/// [`RegrowthResult::as_approx`] — `std.numerics::Approx<Factorization>` — with **no fabricated
+/// basis**: the strength is *derived* from the bound's basis ([`Approx::attach`], VR-5 — never
+/// upgraded). It carries `Factorization` rather than a `core::Value` because the resonator decode
+/// yields VSA factor atoms, not a reconstructed `Value` (that mapping is `std.vsa`'s, not spore's).
 #[derive(Debug)]
 pub struct RegrowthResult {
     /// The recovered factor atoms from the resonator (or cleanup) decode.
     pub factorization: Factorization,
-    /// The guarantee strength from the manifest's bound — always ≤ `Empirical` for the
-    /// resonator path (FR-C2 / VR-5).
-    pub strength: GuaranteeStrength,
-    /// The failure-probability δ from the manifest's bound certificate, when present.
-    pub delta: Option<f64>,
+    /// The manifest's `{ε,δ,strength}` certificate bound — its basis determines the honest
+    /// strength (always ≤ `Empirical` for the resonator path; FR-C2 / VR-5, enforced at manifest
+    /// validation time).
+    pub bound: Bound,
 }
 
 impl RegrowthResult {
-    /// The guarantee strength is never above `Empirical` for a resonator decode.
-    ///
-    /// This is the compile-time-enforced property: `strength().rank() >= Empirical.rank()`.
+    /// The honest guarantee strength — **derived** from the bound's basis (never fabricated,
+    /// never upgraded; VR-5). Always ≤ `Empirical` for a resonator decode (FR-C2).
     ///
     /// # Guarantee tag: `Exact` (this is a pure predicate)
     /// # Fallibility: total
     #[must_use]
     pub fn strength(&self) -> GuaranteeStrength {
-        self.strength
+        self.bound.basis.strength()
+    }
+
+    /// The failure-probability δ from the certificate, when the bound is a `ProbabilityBound`
+    /// (the common case for the resonator path); `None` for other bound kinds.
+    #[must_use]
+    pub fn delta(&self) -> Option<f64> {
+        match &self.bound.kind {
+            mycelium_core::bound::BoundKind::Probability { delta } => Some(*delta),
+            _ => None,
+        }
+    }
+
+    /// Project to the stdlib's honest carrier `std.numerics::Approx<Factorization>` (FLAG Q4).
+    /// The strength is derived from the bound's basis via [`Approx::attach`] — never upgraded
+    /// (VR-5); the δ rides along inside the carried `bound`.
+    #[must_use]
+    pub fn as_approx(&self) -> Approx<Factorization> {
+        Approx::attach(self.factorization.clone(), self.bound.clone())
     }
 
     /// True iff the strength is exactly `Empirical` (the expected case for the resonator path).
     #[must_use]
     pub fn is_empirical(&self) -> bool {
-        self.strength == GuaranteeStrength::Empirical
+        self.strength() == GuaranteeStrength::Empirical
     }
 
     /// True iff the strength is `Declared` (the weakest; user-asserted only).
     #[must_use]
     pub fn is_declared(&self) -> bool {
-        self.strength == GuaranteeStrength::Declared
+        self.strength() == GuaranteeStrength::Declared
     }
 }
 
@@ -562,16 +583,28 @@ mod tests {
             trajectory: vec![],
             final_decode: vec![],
         };
+        let bound = Bound {
+            kind: BoundKind::Probability { delta: 0.05 },
+            basis: BoundBasis::EmpiricalFit {
+                trials: 1000,
+                method: "resonator decode".into(),
+            },
+        };
         let r = RegrowthResult {
             factorization: Factorization {
                 factors: vec![],
                 trace,
             },
-            strength: GuaranteeStrength::Empirical,
-            delta: Some(0.05),
+            bound,
         };
         assert!(r.is_empirical());
         assert!(!r.is_declared());
         assert_eq!(r.strength(), GuaranteeStrength::Empirical);
+        assert_eq!(r.delta(), Some(0.05));
+        // Projects losslessly to the honest carrier; strength is derived from the bound basis,
+        // never upgraded (VR-5) — and stays at the Empirical ceiling (FR-C2).
+        let approx = r.as_approx();
+        assert_eq!(approx.strength, GuaranteeStrength::Empirical);
+        assert_eq!(approx.bound, r.bound);
     }
 }

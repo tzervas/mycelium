@@ -36,11 +36,11 @@ use crate::MathErr;
 
 /// The ε upper bound used for `Declared`-strength float operations (see module honesty note).
 ///
-/// Conservative: 2 * f64::EPSILON ≈ 4.44e-16 (Linf norm). This is a `UserDeclared` assertion
-/// until M-541 / M-512 provide an audited `ProvenThm` basis.
-///
-/// FLAG (ε-ownership): owned by ADR-010 / M-512; this value is a placeholder.
-pub const DECLARED_FLOAT_EPS: f64 = 2.0 * f64::EPSILON;
+/// ε-ownership (math.md §7-Q2 — RESOLVED): the constant is **homed in `std.numerics`** (the
+/// ε-carrier module, M-512) and re-exported here, so the value is stated in exactly one place
+/// (NFR-N2). It is a `UserDeclared` assertion (`2 · f64::EPSILON ≈ 4.44e-16`, Linf) until M-541's
+/// audited libm floor provides a checked `ProvenThm` basis.
+pub use mycelium_std_numerics::DECLARED_FLOAT_EPS;
 
 /// The `Declared` ε bound attached to all approximate ops in this implementation.
 ///

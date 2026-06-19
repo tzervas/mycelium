@@ -16,6 +16,7 @@ mycelium-core = { path = "../mycelium-core" }
 mycelium-std-core = { path = "../mycelium-std-core" }
 mycelium-std-content = { path = "../mycelium-std-content" }
 mycelium-std-vsa = { path = "../mycelium-std-vsa" }
+mycelium-std-numerics = { path = "../mycelium-std-numerics" }
 mycelium-spore = { path = "../mycelium-spore" }
 mycelium-proj = { path = "../mycelium-proj" }
 mycelium-vsa = { path = "../mycelium-vsa" }

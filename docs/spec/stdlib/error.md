@@ -214,3 +214,8 @@ states each op's explicit outcome set; none of them is "silently returns success
   (the abstract `recover`-bridge signature owned by M-520; whether lossy `ok` needs an unmistakable name; the
   `unwrap` refusal mechanism; `?`-unification) — each tied to RFC-0016 §8 where it crosses modules. No code;
   no kernel change (KC-3 — the `?` form elaborates to an existing `Match`, no new L0 node). Append-only.
+- **2026-06-19 — §7-Q1 (recover bridge) RESOLVED.** `std.error` drops its abstract stub
+  `RecoverOutcome` enum + `recover` fn and re-exports the concrete
+  `mycelium_std_recover::{Outcome, Resolution, RecoverOutcome, handle_classified}` (M-520). `std.error`
+  is the bridge *target*, not the home of the recovery algebra (KC-3); the I1 (no drop) / I2 (tag
+  inherited, never laundered) contract holds verbatim in the landed types. Append-only.

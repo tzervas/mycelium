@@ -385,6 +385,7 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
+ "mycelium-std-recover",
 ]
 
 [[package]]
@@ -431,6 +432,7 @@ dependencies = [
  "mycelium-core",
  "mycelium-numerics",
  "mycelium-std-core",
+ "mycelium-std-numerics",
 ]
 
 [[package]]
@@ -480,6 +482,7 @@ dependencies = [
  "mycelium-spore",
  "mycelium-std-content",
  "mycelium-std-core",
+ "mycelium-std-numerics",
  "mycelium-std-vsa",
  "mycelium-vsa",
  "serde_json",
@@ -506,6 +509,7 @@ name = "mycelium-std-testing"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
+ "mycelium-diag",
  "mycelium-std-core",
 ]
 

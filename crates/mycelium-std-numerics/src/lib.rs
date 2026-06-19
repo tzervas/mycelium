@@ -23,13 +23,15 @@
 //! - RFC-0001 §4.3/§4.7 (`Meta`, guarantee lattice, M-I1–M-I4)
 //! - Task M-512, issue #153
 //!
-//! # FLAG — ε-ownership (NFR-N2)
+//! # ε-ownership (NFR-N2 — RESOLVED)
 //!
-//! The `DECLARED_FLOAT_EPS` constant in `mycelium-std-math::approx` is a placeholder for values
-//! that are properly owned by `mycelium-numerics` (ADR-010 / M-512, spec §7-Q2 / README §5). It
-//! should move here once the canonical ε magnitudes + `NormKind` per op are finalised. This module
-//! does **not** re-state or copy that constant; consumers that need a concrete `Declared` ε should
-//! use `mycelium-numerics` kernel symbols directly.
+//! This module is the ε-carrier home, so it now **owns** the `Declared`-strength float ε that
+//! `std.math` previously held locally: [`DECLARED_FLOAT_EPS`]. `std.math` re-exports it from here
+//! rather than restating it (the math.md §7-Q2 / README §5 ε-ownership FLAG). The value is a
+//! **`Declared`** placeholder (`UserDeclared` basis) for the unaudited libm transcendental floor;
+//! its honest upgrade to a `Proven` magnitude is owned by the kernel (ADR-010 / `mycelium-numerics`)
+//! and the audited `wild`/FFI floor (M-541), reachable only via a checked basis (VR-5) — never by
+//! restating a tighter number here.
 #![forbid(unsafe_code)]
 
 pub mod matrix;
@@ -44,6 +46,18 @@ use mycelium_numerics::{
 // `ErrorBound` and `ErrorOp` and `ProbBound` are the kernel types this module surfaces (NFR-N2:
 // cite ε constants from `mycelium-numerics`; restate none).
 pub use mycelium_numerics::{ErrorBound, ErrorOp, ProbBound as KernelProbBound};
+
+/// The `Declared`-strength ε upper bound for `f64` operations whose compute floor is the
+/// platform libm (an unaudited `wild`/FFI floor — ADR-014; M-541).
+///
+/// Conservative: `2 · f64::EPSILON ≈ 4.44e-16` (Linf norm). Its basis is **`UserDeclared`** — there
+/// is no checked-side-condition theorem backing the libm call yet — so any value carrying it tags at
+/// most `Declared` (VR-5: downgrade to stay honest, never upgrade without a checked basis). The
+/// honest *Proven* magnitude is the kernel's (ADR-010 / `mycelium-numerics`) and the audited floor's
+/// (M-541) to supply; do not restate a tighter number here.
+///
+/// This is the single home for the constant (NFR-N2): `std.math` re-exports it from here.
+pub const DECLARED_FLOAT_EPS: f64 = 2.0 * f64::EPSILON;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Sealed witness token for `Proven` construction (FR-N3)

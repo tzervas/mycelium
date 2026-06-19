@@ -79,10 +79,11 @@ impl core::marker::UnsafeUnpin for mycelium_std_spore::recon_manifest::ReconMani
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::recon_manifest::ReconManifest
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::recon_manifest::ReconManifest
 pub struct mycelium_std_spore::recon_manifest::RegrowthResult
-pub mycelium_std_spore::recon_manifest::RegrowthResult::delta: core::option::Option<f64>
+pub mycelium_std_spore::recon_manifest::RegrowthResult::bound: mycelium_core::bound::Bound
 pub mycelium_std_spore::recon_manifest::RegrowthResult::factorization: mycelium_vsa::resonator::Factorization
-pub mycelium_std_spore::recon_manifest::RegrowthResult::strength: mycelium_core::guarantee::GuaranteeStrength
 impl mycelium_std_spore::recon_manifest::RegrowthResult
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::as_approx(&self) -> mycelium_std_numerics::Approx<mycelium_vsa::resonator::Factorization>
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::delta(&self) -> core::option::Option<f64>
 pub fn mycelium_std_spore::recon_manifest::RegrowthResult::is_declared(&self) -> bool
 pub fn mycelium_std_spore::recon_manifest::RegrowthResult::is_empirical(&self) -> bool
 pub fn mycelium_std_spore::recon_manifest::RegrowthResult::strength(&self) -> mycelium_core::guarantee::GuaranteeStrength
@@ -221,10 +222,11 @@ impl core::marker::UnsafeUnpin for mycelium_std_spore::recon_manifest::ReconMani
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::recon_manifest::ReconManifest
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::recon_manifest::ReconManifest
 pub struct mycelium_std_spore::RegrowthResult
-pub mycelium_std_spore::RegrowthResult::delta: core::option::Option<f64>
+pub mycelium_std_spore::RegrowthResult::bound: mycelium_core::bound::Bound
 pub mycelium_std_spore::RegrowthResult::factorization: mycelium_vsa::resonator::Factorization
-pub mycelium_std_spore::RegrowthResult::strength: mycelium_core::guarantee::GuaranteeStrength
 impl mycelium_std_spore::recon_manifest::RegrowthResult
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::as_approx(&self) -> mycelium_std_numerics::Approx<mycelium_vsa::resonator::Factorization>
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::delta(&self) -> core::option::Option<f64>
 pub fn mycelium_std_spore::recon_manifest::RegrowthResult::is_declared(&self) -> bool
 pub fn mycelium_std_spore::recon_manifest::RegrowthResult::is_empirical(&self) -> bool
 pub fn mycelium_std_spore::recon_manifest::RegrowthResult::strength(&self) -> mycelium_core::guarantee::GuaranteeStrength

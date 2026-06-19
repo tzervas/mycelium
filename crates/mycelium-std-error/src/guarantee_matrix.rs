@@ -293,14 +293,14 @@ pub const MATRIX: &[MatrixRow] = &[
         never_silent_property:
             "symmetric partial: EXPLICIT named partial; refuses loudly on Ok variant",
     },
-    // ---- RFC-0014 bridge (deferred — M-520) ------------------------------------
+    // ---- RFC-0014 bridge (re-exported from std.recover — M-520) ----------------
     //
-    // FLAG: The exact `RecoverOutcome` shape and full `PolicyRef` API are owned by
-    // `std.recover` (M-520, RFC-0014). This row describes the bridge contract *abstractly*
-    // per spec §7-Q1. Tag is "Inherited-from-policy" — this module never launders the
-    // policy's tag (VR-5 / I2).
+    // The concrete `Outcome`/`RecoverOutcome` and the recovery driver are owned by
+    // `std.recover` (M-520, RFC-0014), now landed and re-exported at this crate's root. This
+    // row records the bridge `std.error` surfaces. Tag is "Inherited-from-policy" — this module
+    // never launders the policy's tag (VR-5 / I2).
     MatrixRow {
-        op: "recover (RFC-0014 bridge — FLAG Q1: deferred to M-520)",
+        op: "recover (RFC-0014 bridge — re-exported from std.recover, M-520)",
         guarantee: "Inherited-from-policy (Declared floor per I2/VR-5; see spec §7-Q1)",
         fallibility: Fallibility::Combinatorial,
         error_set: "Recovered(t,tag) | Propagated(e') — never a drop (I1); EffectBudgetExhausted on overrun (I4)",
