@@ -34,8 +34,14 @@ code + tests + guarantee-matrix/baseline kept green):
 **Decision — B2 (kernel f64 finiteness):** keep the **status quo** — `Value::new` stays permissive and
 each projection/op refuses a non-finite `f64` explicitly (never-silent at the point of use), rather
 than rejecting at construction. Revisit alongside a future binary codec. (A formal ADR can ratify
-this; recorded here as the maintainer's decision.) **B1 (`EffectBudget::Io`/`Named`)** remains an open,
-documented kernel FLAG (not enacted this round).
+this; recorded here as the maintainer's decision.)
+
+**B1 (`EffectBudget::Io`/`Named`) — enacted.** `mycelium-interp::budget::EffectBudget` gains
+`Ops(u64)` (→ `EffectKind::Io`) and `Named(String, u64)` (→ `EffectKind::Named`) — one budget variant
+per effect kind — so `std.recover`'s `cleanup_then_propagate` budgets an `Io`/`Named` cleanup effect
+**directly**, removing the leaf's Retry/Attempts proxy. Additive kernel change (no new L0 node, KC-3);
+`EffectBudget` is no longer `Copy` (the `Named` variant carries its name); property-tested both sides;
+`mycelium-interp` API baseline refreshed.
 
 Public-API baselines refreshed for the five touched crates; full `just check` green.
 

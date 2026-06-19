@@ -53,17 +53,26 @@ impl fmt::Display for EffectKind {
 }
 
 /// A per-kind **budget** (RFC-0014 §4.5 I4) — distinct vocabulary (`max_attempts` / `max_depth` / a
-/// memory ceiling / a fuel clock), all enforced by the one [`Budgets`] mechanism.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// memory ceiling / a fuel clock / an I/O-op ceiling / a named ceiling), all enforced by the one
+/// [`Budgets`] mechanism. There is **one budget variant per** [`EffectKind`], so any declared effect
+/// kind — including [`EffectKind::Io`] and a user [`EffectKind::Named`] — can be primed (the gap
+/// RFC-0014 §4.5 left for `Io`/`Named` is closed).
+///
+/// Not `Copy`: [`EffectBudget::Named`] carries its effect name.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EffectBudget {
-    /// Bound on retry attempts.
+    /// Bound on retry attempts ([`EffectKind::Retry`]).
     Attempts(u64),
-    /// Bound on cascade depth.
+    /// Bound on cascade depth ([`EffectKind::Cascade`]).
     Depth(u64),
-    /// Bound on bytes allocated.
+    /// Bound on bytes allocated ([`EffectKind::Alloc`]).
     Bytes(u64),
-    /// Bound on a time/fuel clock.
+    /// Bound on a time/fuel clock ([`EffectKind::Time`]).
     Fuel(u64),
+    /// Bound on the number of I/O operations ([`EffectKind::Io`]).
+    Ops(u64),
+    /// Bound on a user-declared named effect ([`EffectKind::Named`]) — the name plus its ceiling.
+    Named(String, u64),
 }
 
 impl EffectBudget {
@@ -75,6 +84,8 @@ impl EffectBudget {
             EffectBudget::Depth(_) => EffectKind::Cascade,
             EffectBudget::Bytes(_) => EffectKind::Alloc,
             EffectBudget::Fuel(_) => EffectKind::Time,
+            EffectBudget::Ops(_) => EffectKind::Io,
+            EffectBudget::Named(name, _) => EffectKind::Named(name.clone()),
         }
     }
     /// The budget's scalar amount.
@@ -84,7 +95,9 @@ impl EffectBudget {
             EffectBudget::Attempts(n)
             | EffectBudget::Depth(n)
             | EffectBudget::Bytes(n)
-            | EffectBudget::Fuel(n) => *n,
+            | EffectBudget::Fuel(n)
+            | EffectBudget::Ops(n)
+            | EffectBudget::Named(_, n) => *n,
         }
     }
 }
@@ -205,6 +218,33 @@ mod tests {
         let err = b.consume(EffectKind::Retry, 1).unwrap_err();
         assert_eq!(err.requested, 1);
         assert_eq!(err.remaining, 0);
+    }
+
+    #[test]
+    fn an_io_budget_can_be_primed_drained_and_overruns_explicitly() {
+        // Closes the RFC-0014 §4.5 gap: `EffectKind::Io` is now primeable via `EffectBudget::Ops`.
+        let mut b = Budgets::new().with(EffectBudget::Ops(1));
+        assert_eq!(b.remaining(&EffectKind::Io), Some(1));
+        assert!(b.consume(EffectKind::Io, 1).is_ok());
+        let err = b.consume(EffectKind::Io, 1).unwrap_err();
+        assert_eq!(err.kind, EffectKind::Io);
+        assert_eq!(err.remaining, 0);
+    }
+
+    #[test]
+    fn named_budgets_are_keyed_by_name_and_independent() {
+        // A user-declared named effect is primeable via `EffectBudget::Named`, keyed by its name —
+        // two distinct names are independent ledgers (never collapsed).
+        let net = EffectKind::Named("net".to_owned());
+        let disk = EffectKind::Named("disk".to_owned());
+        let mut b = Budgets::new()
+            .with(EffectBudget::Named("net".to_owned(), 2))
+            .with(EffectBudget::Named("disk".to_owned(), 0));
+        assert_eq!(b.remaining(&net), Some(2));
+        assert!(b.consume(net.clone(), 2).is_ok());
+        // `net` is now drained; `disk` was never funded → both overrun explicitly, independently.
+        assert!(b.consume(net, 1).is_err());
+        assert!(b.consume(disk, 1).is_err());
     }
 
     #[test]

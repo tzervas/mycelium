@@ -5,6 +5,8 @@ pub mycelium_interp::budget::EffectBudget::Attempts(u64)
 pub mycelium_interp::budget::EffectBudget::Bytes(u64)
 pub mycelium_interp::budget::EffectBudget::Depth(u64)
 pub mycelium_interp::budget::EffectBudget::Fuel(u64)
+pub mycelium_interp::budget::EffectBudget::Named(alloc::string::String, u64)
+pub mycelium_interp::budget::EffectBudget::Ops(u64)
 impl mycelium_interp::budget::EffectBudget
 pub fn mycelium_interp::budget::EffectBudget::amount(&self) -> u64
 pub fn mycelium_interp::budget::EffectBudget::kind(&self) -> mycelium_interp::budget::EffectKind
@@ -15,7 +17,6 @@ impl core::cmp::PartialEq for mycelium_interp::budget::EffectBudget
 pub fn mycelium_interp::budget::EffectBudget::eq(&self, &mycelium_interp::budget::EffectBudget) -> bool
 impl core::fmt::Debug for mycelium_interp::budget::EffectBudget
 pub fn mycelium_interp::budget::EffectBudget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::Copy for mycelium_interp::budget::EffectBudget
 impl core::marker::StructuralPartialEq for mycelium_interp::budget::EffectBudget
 impl core::marker::Freeze for mycelium_interp::budget::EffectBudget
 impl core::marker::Send for mycelium_interp::budget::EffectBudget
@@ -272,6 +273,8 @@ pub mycelium_interp::EffectBudget::Attempts(u64)
 pub mycelium_interp::EffectBudget::Bytes(u64)
 pub mycelium_interp::EffectBudget::Depth(u64)
 pub mycelium_interp::EffectBudget::Fuel(u64)
+pub mycelium_interp::EffectBudget::Named(alloc::string::String, u64)
+pub mycelium_interp::EffectBudget::Ops(u64)
 impl mycelium_interp::budget::EffectBudget
 pub fn mycelium_interp::budget::EffectBudget::amount(&self) -> u64
 pub fn mycelium_interp::budget::EffectBudget::kind(&self) -> mycelium_interp::budget::EffectKind
@@ -282,7 +285,6 @@ impl core::cmp::PartialEq for mycelium_interp::budget::EffectBudget
 pub fn mycelium_interp::budget::EffectBudget::eq(&self, &mycelium_interp::budget::EffectBudget) -> bool
 impl core::fmt::Debug for mycelium_interp::budget::EffectBudget
 pub fn mycelium_interp::budget::EffectBudget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::Copy for mycelium_interp::budget::EffectBudget
 impl core::marker::StructuralPartialEq for mycelium_interp::budget::EffectBudget
 impl core::marker::Freeze for mycelium_interp::budget::EffectBudget
 impl core::marker::Send for mycelium_interp::budget::EffectBudget

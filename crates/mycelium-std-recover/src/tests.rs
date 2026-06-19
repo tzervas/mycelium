@@ -471,6 +471,10 @@ fn cleanup_overrun_is_recorded_not_swallowed() {
 
 /// Property: cleanup succeeds within budget → cleanup_overrun = false.
 /// Mutant witness: setting cleanup_overrun = true unconditionally would make this fail.
+///
+/// B1 (RESOLVED): `EffectKind::Io` is now primeable via `EffectBudget::Ops`, so the cleanup budget
+/// for an Io effect is declared **directly** — no Retry/Attempts proxy (the budget-API gap the
+/// M-520 leaf flagged is closed in `mycelium-interp`).
 #[test]
 fn cleanup_within_budget_sets_overrun_false() {
     let (reg, class) = simple_registry();
@@ -484,64 +488,13 @@ fn cleanup_within_budget_sets_overrun_false() {
             },
         )
         .unwrap();
-    // Io budget = 1 → cleanup can run once.
-    let mut budgets = Budgets::new().with(EffectBudget::Fuel(1)); // Fuel maps to Time, not Io.
-                                                                  // We need an Io budget. Use a manual set.
-    budgets.set(EffectBudget::Fuel(0)); // clear Time.
-                                        // Set Io via consume-compatible type: Named is the generic path.
-                                        // Actually EffectBudget does not have an Io variant — Io is a kind, not a budget kind.
-                                        // The ledger's `consume` for Io checks the BTreeMap which stores by EffectKind.
-                                        // We can't set an Io budget via EffectBudget (no Io variant).
-                                        // FLAG: EffectBudget covers Attempts/Depth/Bytes/Fuel — not a direct Io ceiling.
-                                        // The Named kind maps to Named(String) — no Io budget exists in the current API.
-                                        // This reflects a real gap in mycelium_interp::budget: `EffectKind::Io` is declared but
-                                        // there is no `EffectBudget::Io` variant. Budget consumption for Io requires a Named budget
-                                        // or a future extension. For now, use a Named budget to simulate an Io budget.
-                                        //
-                                        // For this test we verify that when consume(Io, 1) SUCCEEDS (which it cannot with the
-                                        // current API lacking an Io budget variant), cleanup_overrun is false.
-                                        // Since we cannot set a raw `EffectKind::Io` budget through `EffectBudget`, we test the
-                                        // `Named` path as a proxy (the same code path executes for any EffectKind).
-                                        //
-                                        // We test the Named path directly: register a Named budget of 1.
-    let named = EffectKind::Named("cleanup-test".to_string());
-    let mut policy2 = RecoveryPolicy::<u32>::new();
-    policy2
-        .on(
-            &reg,
-            "io-error",
-            RecoveryAction::CleanupThenPropagate {
-                effect: named.clone(),
-            },
-        )
-        .unwrap();
-    // Set a Named budget by consuming through remaining(0) → set via the BTreeMap.
-    // The only way to set a Named budget is to use budgets.set(EffectBudget::Fuel(1)) which maps
-    // to Time — wrong kind. There is no EffectBudget::Named variant in mycelium-interp.
-    //
-    // FLAG (budget-API gap): `mycelium_interp::budget::EffectBudget` has no variant for
-    // `EffectKind::Io` or `EffectKind::Named(_)` — budgets for these kinds cannot be declared
-    // through the current API.  This is a real seam: the ledger can *check* any EffectKind but
-    // can only be *primed* with Attempts/Depth/Bytes/Fuel.  For `std.recover` to fully support
-    // CleanupThenPropagate with Io/Named effects, the orchestrator must add
-    // `EffectBudget::Io(u64)` and/or `EffectBudget::Named(String, u64)`.  Flagging to
-    // orchestrator; the test below uses the Retry kind (which *does* have Attempts) as a proxy
-    // to verify the cleanup_overrun = false path.
-    let retry_kind = EffectKind::Retry;
-    let mut policy3 = RecoveryPolicy::<u32>::new();
-    policy3
-        .on(
-            &reg,
-            "io-error",
-            RecoveryAction::CleanupThenPropagate { effect: retry_kind },
-        )
-        .unwrap();
-    let mut budgets3 = Budgets::new().with(EffectBudget::Attempts(1));
+    // Io budget = 1 → the single cleanup op runs within budget (the real Io path, not a proxy).
+    let mut budgets = Budgets::new().with(EffectBudget::Ops(1));
 
     let r = handle_classified(
         Outcome::Err("err".to_string()),
-        &policy3,
-        &mut budgets3,
+        &policy,
+        &mut budgets,
         |_| class.clone(),
         || unreachable!(),
     );
@@ -555,6 +508,47 @@ fn cleanup_within_budget_sets_overrun_false() {
         assert!(
             !cleanup_overrun,
             "cleanup within budget must set cleanup_overrun = false (spec §7-Q4)"
+        );
+    } else {
+        panic!("cleanup_then_propagate must yield Propagated: {r:?}");
+    }
+}
+
+/// A user-declared **named** cleanup effect is budgeted directly via `EffectBudget::Named`
+/// (B1 — RESOLVED). Within budget the cleanup runs (`cleanup_overrun = false`); the original error
+/// still propagates (I1).
+#[test]
+fn cleanup_with_named_effect_budget_runs_within_budget() {
+    let (reg, class) = simple_registry();
+    let mut policy = RecoveryPolicy::<u32>::new();
+    policy
+        .on(
+            &reg,
+            "io-error",
+            RecoveryAction::CleanupThenPropagate {
+                effect: EffectKind::Named("flush".to_owned()),
+            },
+        )
+        .unwrap();
+    let mut budgets = Budgets::new().with(EffectBudget::Named("flush".to_owned(), 1));
+
+    let r = handle_classified(
+        Outcome::Err("err".to_string()),
+        &policy,
+        &mut budgets,
+        |_| class.clone(),
+        || unreachable!(),
+    );
+    if let Resolution::Propagated {
+        cleanup_overrun,
+        error,
+        ..
+    } = r
+    {
+        assert_eq!(error, "err", "original error propagates (I1)");
+        assert!(
+            !cleanup_overrun,
+            "named cleanup within budget must set cleanup_overrun = false"
         );
     } else {
         panic!("cleanup_then_propagate must yield Propagated: {r:?}");
