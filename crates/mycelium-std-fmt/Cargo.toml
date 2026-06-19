@@ -17,5 +17,5 @@ mycelium-std-core = { path = "../mycelium-std-core" }
 # fmt.to_json/from_json delegate to std.io's one canonical JSON projection (M-514;
 # ratified fmt→io delegation 2026-06-19 — spec §7-Q1 / README §5). KC-3: no new trusted code.
 mycelium-std-io = { path = "../mycelium-std-io" }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde.workspace = true
+serde_json.workspace = true

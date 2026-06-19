@@ -16,38 +16,18 @@
 //! (hand-written IR lowering; the differential is empirical evidence, not a proof — VR-5). The
 //! `App`/`Lam`/`Fix`/`FixGroup` nodes must still return explicit `AotError::UnsupportedNode`.
 
+mod common;
+use common::{byte, observable, tern, A, B, ONES};
+
 use mycelium_cert::{check, CheckVerdict, Evidence, RefinementRelation};
 use mycelium_core::{
-    Alt, CtorSpec, DataRegistry, DeclSpec, FieldSpec, GuaranteeStrength, Meta, Node, Payload,
-    Provenance, Repr, Trit, Value,
+    Alt, CtorSpec, DataRegistry, DeclSpec, FieldSpec, GuaranteeStrength, Node, Payload, Repr, Trit,
+    Value,
 };
 use mycelium_interp::{IdentitySwapEngine, Interpreter, PrimRegistry};
 use mycelium_mlir::AotError;
 use mycelium_numerics::Certificate;
 use std::collections::BTreeMap;
-
-fn byte(bits: [bool; 8]) -> Value {
-    Value::new(
-        Repr::Binary { width: 8 },
-        Payload::Bits(bits.to_vec()),
-        Meta::exact(Provenance::Root),
-    )
-    .unwrap()
-}
-
-fn tern(trits: Vec<Trit>) -> Value {
-    let m = trits.len() as u32;
-    Value::new(
-        Repr::Ternary { trits: m },
-        Payload::Trits(trits),
-        Meta::exact(Provenance::Root),
-    )
-    .unwrap()
-}
-
-const A: [bool; 8] = [true, false, true, true, false, false, true, false];
-const B: [bool; 8] = [false, false, true, false, true, false, true, true];
-const ONES: [bool; 8] = [true; 8];
 
 /// The bit/trit-subset corpus: straight-line bit logic + balanced-ternary `neg` the direct-LLVM
 /// backend lowers (no swaps, no trit *arithmetic* yet — those are out of subset and tested for
@@ -161,12 +141,6 @@ fn bit_corpus() -> Vec<Node> {
             }),
         },
     ]
-}
-
-type Observable<'a> = (&'a Repr, &'a Payload, GuaranteeStrength);
-
-fn observable(v: &Value) -> Observable<'_> {
-    (v.repr(), v.payload(), v.meta().guarantee())
 }
 
 /// Run a program through the interpreter; the bit subset uses no swaps, so an identity swap engine

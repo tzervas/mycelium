@@ -14,8 +14,8 @@ workspace = true
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
 mycelium-std-core = { path = "../mycelium-std-core" }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
 # property tests for the round-trip bound; MSRV 1.92-compatible

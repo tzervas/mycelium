@@ -13,10 +13,10 @@ workspace = true
 
 [dependencies]
 # The KC-4 cert-overhead measurement (M-212) drives the real swap + checker surface.
-mycelium-cert = { path = "../crates/mycelium-cert" }
-mycelium-core = { path = "../crates/mycelium-core" }
-mycelium-numerics = { path = "../crates/mycelium-numerics" }
+mycelium-cert = { path = "../crates/mycelium-cert", version = "0.0.0" }
+mycelium-core = { path = "../crates/mycelium-core", version = "0.0.0" }
+mycelium-numerics = { path = "../crates/mycelium-numerics", version = "0.0.0" }
 # The E1 staged-packing perf stub (M-250) times the substrate packing codec; M-303 adds the native
 # AOT path (compile-once / run-many) vs the reference interpreter.
-mycelium-mlir = { path = "../crates/mycelium-mlir" }
-mycelium-interp = { path = "../crates/mycelium-interp" }
+mycelium-mlir = { path = "../crates/mycelium-mlir", version = "0.0.0" }
+mycelium-interp = { path = "../crates/mycelium-interp", version = "0.0.0" }

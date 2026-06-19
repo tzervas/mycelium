@@ -17,28 +17,21 @@
 //! is caught here**. The true scheme used below is the one the M-250 `bitnet_packing_policy`
 //! actually selects, tying the soundness check to the selector it guards.
 
+mod common;
+use common::{byte, A};
+
 use mycelium_cert::{check, BinaryTernarySwapEngine, CheckVerdict, Evidence, RefinementRelation};
 use mycelium_core::{
-    GuaranteeStrength, Meta, Node, PackScheme, Payload, PhysicalLayout, Provenance, Repr, Value,
+    GuaranteeStrength, Meta, Node, PackScheme, PhysicalLayout, Provenance, Repr, Value,
 };
 use mycelium_interp::{Interpreter, PrimRegistry};
 use mycelium_numerics::Certificate;
 use mycelium_select::{bitnet_packing_policy, layout_of, select_layout, SelectionInputs};
 
-fn byte(bits: [bool; 8]) -> Value {
-    Value::new(
-        Repr::Binary { width: 8 },
-        Payload::Bits(bits.to_vec()),
-        Meta::exact(Provenance::Root),
-    )
-    .unwrap()
-}
-
+// Local: named policy_ref (vs policy() in differential.rs) — kept local to avoid unifying names.
 fn policy_ref() -> mycelium_core::ContentHash {
     mycelium_core::ContentHash::parse("blake3:po1icy_Ref00").unwrap()
 }
-
-const A: [bool; 8] = [true, false, true, true, false, false, true, false];
 
 /// A corpus of ternary-*producing* programs (the ones a packing layout applies to): a bare swap,
 /// a swap fed by an op, and a swap through a let.

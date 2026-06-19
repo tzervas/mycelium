@@ -16,7 +16,7 @@ workspace = true
 # No NEW external dependency: blake3 is already a vetted workspace dependency (mycelium-core, -lsp).
 mycelium-proj = { path = "../mycelium-proj" }
 mycelium-core = { path = "../mycelium-core" }
-blake3 = "1"
+blake3.workspace = true
 
 [[bin]]
 name = "spore"

@@ -13,10 +13,10 @@ workspace = true
 
 [dependencies]
 # Content-addressing (M-103): hash-of-AST identity. BLAKE3 is the fixed kernel hash (id::ContentHash).
-blake3 = "1"
+blake3.workspace = true
 # (De)serialization to/from the ratified JSON data contracts (M-104; RFC-0001 §4.8).
-serde = { version = "1", features = ["derive"] }
+serde.workspace = true
 
 [dev-dependencies]
 # JSON round-trip + schema-shape tests; the on-the-wire form is JSON (M-104).
-serde_json = "1"
+serde_json.workspace = true
