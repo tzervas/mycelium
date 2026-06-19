@@ -8,6 +8,35 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-19: Wave-4A landed — E3-8 agent documentation index, M-392..395)
+**Wave-4A octopus-merged (2026-06-19).** Epic E3-8 "Agent-facing documentation index" merged into
+`claude/orch-wave4-docs-sys-4ifdo4`; 5 commits above base; all Rust tests green; doc-index drift gate ok.
+
+- **M-392 — `tools/docgen/code_index.py`** (pure Python stdlib). JOINs the committed
+  `docs/spec/api/*.txt` public-API snapshots against the source tree to build a navigational index.
+  2561 items located; 3412 items flagged (re-exports, macro-generated, cfg-gated — G2, never silently
+  dropped). `--self-test` verifies determinism + completeness. Honesty tag: `Empirical/Declared`
+  (line/regex heuristic; source is ground truth).
+  - `docs/api-index/index.json` — machine-readable symbol table (symbol, kind, crate, file:line, summary).
+  - `docs/api-index/INDEX.md` — grep-friendly table grouped by crate; human/agent context lookup.
+- **M-393 — `just docs` + `just docs-index`** + `scripts/checks/doc-index.sh` drift gate wired into
+  `scripts/checks/all.sh` and `just check`. Mirrors the `just api` committed-snapshot pattern.
+  `just docs` (rustdoc HTML, target/doc, NOT committed); `just docs-index` (regenerate committed index).
+- **M-394 — `tools/github/doc_refs_check.py`** (pure stdlib). Validates `doc_refs:` list entries in
+  `issues.yaml`: `api:<crate>::<path>` → index.json, `corpus:<DOC>[#<anchor>]` → Doc-Index.md,
+  `src:<path>[:<line>]` → file on disk. Never-silent on dangling refs. Extended `manifest-check.py`.
+  Backfilled `doc_refs:` on all 52 open issues in `issues.yaml` (Wave-4B issues pre-wired).
+- **M-395 — `CLAUDE.md` updated** with "Auto-generated docs & the agent index" section +
+  `docs/api-index/` added to orchestrator-owned collision-surface list. `dev-workflow` skill updated
+  (run `just docs-index` after any public-API change). `changelog` skill updated (index parity note).
+  New `.claude/skills/doc-index/SKILL.md` — `/doc-index` skill for regeneration, query, and doc_refs validation.
+- **`docs/Doc-Index.md` §7** added registering `docs/api-index/`.
+- **`tools/llm-harness/coauthor.py`** ruff format + unused-import fixes (pre-existing FLAG-1 resolved
+  in orchestrator integration pass).
+- **E3-8, M-392..395** → `status:done` in `issues.yaml`.
+
+Append-only.
+
 ### Changed (2026-06-19: wave-4 step-0 reconciliation + wave-4A/4B launch record)
 **Issues reconciliation (step-0).** Three tasks implemented and tested but mislabelled
 `status:needs-design` corrected to `status:done`:

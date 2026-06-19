@@ -45,12 +45,11 @@ import argparse
 import datetime
 import json
 import logging
-import os
 import shutil
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any
 
@@ -79,11 +78,11 @@ def assert_model_tag(tag: str, claim_id: str) -> None:
 # Round status codes (G2 — never-silent; every outcome is explicit)
 # ---------------------------------------------------------------------------
 
-STATUS_PASS = "PASS"             # generated source is clean on first attempt
-STATUS_MOCK_PASS = "mock-PASS"   # clean in mock mode (fixture, not real model)
+STATUS_PASS = "PASS"  # generated source is clean on first attempt
+STATUS_MOCK_PASS = "mock-PASS"  # clean in mock mode (fixture, not real model)
 STATUS_PARTIAL_PASS = "PARTIAL_PASS"  # clean after ≥1 correction round
-STATUS_SKIP = "SKIP"             # generator or checker unavailable
-STATUS_FAIL = "FAIL"             # still not clean after max_rounds
+STATUS_SKIP = "SKIP"  # generator or checker unavailable
+STATUS_FAIL = "FAIL"  # still not clean after max_rounds
 
 # ---------------------------------------------------------------------------
 # Mock programs corpus — canned programs cycles through by MockGenerator
@@ -115,10 +114,7 @@ MOCK_PROGRAMS: list[dict[str, Any]] = [
     },
     {
         "label": "double-add",
-        "source": (
-            "nodule arith\n"
-            "fn double(x: Ternary{6}) -> Ternary{6} = add(x, x)"
-        ),
+        "source": ("nodule arith\nfn double(x: Ternary{6}) -> Ternary{6} = add(x, x)"),
         "expect_clean": True,
         "corrected_source": None,
     },
@@ -166,14 +162,9 @@ MOCK_PROGRAMS: list[dict[str, Any]] = [
     },
     {
         "label": "missing-nodule-header",
-        "source": (
-            "fn orphan(x: Binary{8}) -> Binary{8} = x"
-        ),
+        "source": ("fn orphan(x: Binary{8}) -> Binary{8} = x"),
         "expect_clean": False,
-        "corrected_source": (
-            "nodule demo\n"
-            "fn valid(x: Binary{8}) -> Binary{8} = x"
-        ),
+        "corrected_source": ("nodule demo\nfn valid(x: Binary{8}) -> Binary{8} = x"),
     },
 ]
 
@@ -182,14 +173,15 @@ MOCK_PROGRAMS: list[dict[str, Any]] = [
 # CheckResult — what the Checker returns
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class CheckResult:
     """Outcome of running the LSP checker on one source text."""
 
     is_clean: bool
     diagnostics: list[dict[str, Any]]  # raw LSP diagnostic objects
-    raw_json: dict[str, Any]           # the full publishDiagnostics notification
-    checker_skipped: bool = False      # True when the checker binary is unavailable
+    raw_json: dict[str, Any]  # the full publishDiagnostics notification
+    checker_skipped: bool = False  # True when the checker binary is unavailable
     skip_reason: str = ""
 
 
@@ -197,15 +189,16 @@ class CheckResult:
 # CoauthorRound — one loop iteration record
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class CoauthorRound:
     """One generate→check round in the co-authoring loop."""
 
-    round_number: int          # 1-based
+    round_number: int  # 1-based
     source_text: str
     check_result: CheckResult
-    status: str                # PASS | mock-PASS | PARTIAL_PASS | SKIP | FAIL
-    guarantee_tag: str         # Empirical | Declared (VR-5)
+    status: str  # PASS | mock-PASS | PARTIAL_PASS | SKIP | FAIL
+    guarantee_tag: str  # Empirical | Declared (VR-5)
     message: str
     wall_seconds: float
     is_correction: bool = False  # True for rounds 2..N (correction attempts)
@@ -225,7 +218,7 @@ class CoauthorRound:
 # Checker — shells out to cargo run … --example check (KC-3)
 # ---------------------------------------------------------------------------
 
-_CHECKER_BINARY: str | None = None   # cached path after first build
+_CHECKER_BINARY: str | None = None  # cached path after first build
 
 
 class Checker:
@@ -238,7 +231,7 @@ class Checker:
     def __init__(self, repo_root: Path, log: logging.Logger) -> None:
         self._repo_root = repo_root
         self._log = log
-        self._available: bool | None = None   # None = not yet probed
+        self._available: bool | None = None  # None = not yet probed
         self._binary_path: str | None = None
 
     def _ensure_binary(self) -> bool:
@@ -335,9 +328,7 @@ class Checker:
 
         # Fallback: conventional path
         for profile in ("debug", "release"):
-            candidate = (
-                self._repo_root / "target" / profile / "examples" / "check"
-            )
+            candidate = self._repo_root / "target" / profile / "examples" / "check"
             if candidate.is_file():
                 self._binary_path = str(candidate)
                 return self._binary_path
@@ -423,6 +414,7 @@ class Checker:
 # Generator interface + implementations
 # ---------------------------------------------------------------------------
 
+
 class MockGenerator:
     """Cycles through MOCK_PROGRAMS in order.
 
@@ -463,7 +455,8 @@ class MockGenerator:
             not self._no_fix
             and not prog["expect_clean"]
             and prog.get("corrected_source") is not None
-            and rounds_used >= 1  # first round returns the error; corrections return the fix
+            and rounds_used
+            >= 1  # first round returns the error; corrections return the fix
         ):
             return prog["corrected_source"]
 
@@ -509,9 +502,7 @@ class LlmGenerator:
             return "no --model path given (SKIP — G2)"
         return ""
 
-    def _build_prompt(
-        self, spec: str, feedback_history: list[dict[str, Any]]
-    ) -> str:
+    def _build_prompt(self, spec: str, feedback_history: list[dict[str, Any]]) -> str:
         """Build the generate/correct prompt for the LLM."""
         lines = [
             "You are a Mycelium language assistant. Mycelium is a typed, purely functional",
@@ -553,11 +544,16 @@ class LlmGenerator:
 
         cmd = [
             self._llama_cli,
-            "--model", self._model_path,
-            "--prompt", prompt,
-            "--seed", "42",
-            "--n-predict", str(self._n_predict),
-            "--ctx-size", str(self._ctx_size),
+            "--model",
+            self._model_path,
+            "--prompt",
+            prompt,
+            "--seed",
+            "42",
+            "--n-predict",
+            str(self._n_predict),
+            "--ctx-size",
+            str(self._ctx_size),
             "--log-disable",
             "-e",
             "-no-cnv",
@@ -594,7 +590,12 @@ class LlmGenerator:
         import urllib.request
 
         payload = json.dumps(
-            {"prompt": prompt, "seed": 42, "n_predict": self._n_predict, "stream": False}
+            {
+                "prompt": prompt,
+                "seed": 42,
+                "n_predict": self._n_predict,
+                "stream": False,
+            }
         ).encode()
         url = self._server_url.rstrip("/") + "/completion"
         req = urllib.request.Request(
@@ -655,6 +656,7 @@ def check_guarantee_tags_in_source(
 # ---------------------------------------------------------------------------
 # CoauthorSession — the top-level loop
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SessionConfig:
@@ -813,7 +815,7 @@ def run_one_program(
                 status=STATUS_FAIL,
                 guarantee_tag=guarantee_tag,
                 message=(
-                    f"[VR-5 VIOLATION] forbidden guarantee tag(s) in generated source: "
+                    "[VR-5 VIOLATION] forbidden guarantee tag(s) in generated source: "
                     + "; ".join(tag_violations)
                 ),
                 wall_seconds=time.monotonic() - t_start,
@@ -930,7 +932,10 @@ def run_session(cfg: SessionConfig) -> SessionReport:
 # Dual report emission (G11)
 # ---------------------------------------------------------------------------
 
-def emit_reports(report: SessionReport, reports_dir: Path, run_id: str) -> tuple[Path, Path]:
+
+def emit_reports(
+    report: SessionReport, reports_dir: Path, run_id: str
+) -> tuple[Path, Path]:
     """Write JSON + human-readable reports; return (json_path, txt_path)."""
     reports_dir.mkdir(parents=True, exist_ok=True)
 
@@ -944,7 +949,7 @@ def emit_reports(report: SessionReport, reports_dir: Path, run_id: str) -> tuple
     # Human-readable report
     lines = [
         "=" * 72,
-        f"Mycelium Co-author Report — M-330 (SC-5b; NFR-2)",
+        "Mycelium Co-author Report — M-330 (SC-5b; NFR-2)",
         f"Run ID : {report.run_id}",
         f"Spec   : {report.spec or '(mock — cycling canned programs)'}",
         f"Mode   : {'mock' if report.mock else 'real LLM'}",
@@ -956,10 +961,13 @@ def emit_reports(report: SessionReport, reports_dir: Path, run_id: str) -> tuple
     # One record per program — each round_number is the total attempts used
     for prog_num, rnd in enumerate(report.rounds, start=1):
         attempts_label = (
-            f"{rnd.round_number} attempt(s)" if rnd.round_number > 1
-            else "1 attempt"
+            f"{rnd.round_number} attempt(s)" if rnd.round_number > 1 else "1 attempt"
         )
-        clean_flag = "CLEAN" if rnd.check_result.is_clean else f"{len(rnd.check_result.diagnostics)} error(s)"
+        clean_flag = (
+            "CLEAN"
+            if rnd.check_result.is_clean
+            else f"{len(rnd.check_result.diagnostics)} error(s)"
+        )
         skipped = " [checker-skipped]" if rnd.check_result.checker_skipped else ""
         corr = " [self-corrected]" if rnd.is_correction else ""
         lines.append(
@@ -970,7 +978,9 @@ def emit_reports(report: SessionReport, reports_dir: Path, run_id: str) -> tuple
         lines.append(f"    {rnd.message}")
         if rnd.check_result.diagnostics:
             for diag in rnd.check_result.diagnostics[:3]:
-                lines.append(f"    * [{diag.get('code', '?')}] {diag.get('message', '')[:120]}")
+                lines.append(
+                    f"    * [{diag.get('code', '?')}] {diag.get('message', '')[:120]}"
+                )
             if len(rnd.check_result.diagnostics) > 3:
                 lines.append(f"    … and {len(rnd.check_result.diagnostics) - 3} more")
         lines.append("")
@@ -1000,6 +1010,7 @@ def emit_reports(report: SessionReport, reports_dir: Path, run_id: str) -> tuple
 # ---------------------------------------------------------------------------
 # Check-only mode (--check-only <file>)
 # ---------------------------------------------------------------------------
+
 
 def run_check_only(path: Path, checker: Checker, log: logging.Logger) -> int:
     """Read a .myc file, run the checker, print results, return exit code."""
@@ -1031,12 +1042,15 @@ def run_check_only(path: Path, checker: Checker, log: logging.Logger) -> int:
 # Argument parsing + main
 # ---------------------------------------------------------------------------
 
+
 def _find_repo_root(start: Path) -> Path:
     """Walk up from start until we find a Cargo.toml with `[workspace]`."""
     p = start.resolve()
     for _ in range(20):
         candidate = p / "Cargo.toml"
-        if candidate.is_file() and "[workspace]" in candidate.read_text(encoding="utf-8"):
+        if candidate.is_file() and "[workspace]" in candidate.read_text(
+            encoding="utf-8"
+        ):
             return p
         parent = p.parent
         if parent == p:
