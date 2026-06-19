@@ -678,6 +678,30 @@ fn recursion_and_closure_valued_results_are_still_explicitly_refused() {
     }
 }
 
+/// M-378 narrow-ABI parity: a value crossing the closure boundary that is not `Binary{8}` must be an
+/// explicit `UnsupportedNode` — never a silent mis-encode (G2; DN-15 §7.1). Here the closure is
+/// applied to a `Ternary` argument, which `as_binary8` refuses at the `App` site.
+#[test]
+fn closures_over_non_binary8_values_are_explicitly_refused() {
+    // (λx. x) applied to a balanced-ternary value — outside the Binary{8}-packed-i64 closure ABI.
+    let prog = Node::App {
+        func: Box::new(Node::Lam {
+            param: "x".to_owned(),
+            body: Box::new(Node::Var("x".to_owned())),
+        }),
+        arg: Box::new(Node::Const(tern(vec![Trit::Pos, Trit::Zero, Trit::Neg]))),
+    };
+    match mycelium_mlir::compile_and_run(&prog) {
+        Err(AotError::UnsupportedNode(_)) => { /* expected explicit refusal */ }
+        Err(AotError::ToolchainMissing(_)) => { /* environment skip */ }
+        Ok(v) => panic!(
+            "a ternary-argument closure must be refused; native path returned {:?}",
+            v.payload()
+        ),
+        Err(e) => panic!("ternary-argument closure errored with an unexpected variant: {e}"),
+    }
+}
+
 // ─── Regression: Issue 1 fix — Match default arm taken (PR #213 review) ────────────────────────
 
 /// Build a three-constructor registry: `type Signal = A | B | C`.
