@@ -25,7 +25,7 @@
 //!
 //! - **Native deploy / germination** (FLAG Q2) — Phase-6-gated (M-620); the `deploy` seam
 //!   exists in the spec but is not implemented here — FLAGGED §7 Q2.
-//! - **Approx coupling** (FLAG Q4 — RESOLVED) — [`RegrowthResult`] carries the manifest's full
+//! - **Approx coupling** (FLAG Q4a — RESOLVED) — [`RegrowthResult`] carries the manifest's full
 //!   certificate `Bound` and projects to `std.numerics::Approx<Factorization>` via
 //!   [`recon_manifest::RegrowthResult::as_approx`] (strength derived from the bound's basis, never
 //!   upgraded — VR-5; held at the `Empirical` ceiling, FR-C2). It carries `Factorization` rather
@@ -36,7 +36,7 @@
 //!   FLAGGED §7 Q1.
 //! - **Packaging schema fields** (FLAG Q3) — the `mycelium-proj.toml` field set is
 //!   M-368/M-359's to define; this crate consumes whatever they fix — FLAGGED §7 Q3.
-//! - **Spore ↔ vsa seam** (FLAG Q4) — `std.vsa` owns the regrowth op; `spore` only packages
+//! - **Spore ↔ vsa seam** (FLAG Q4b) — `std.vsa` owns the regrowth op; `spore` only packages
 //!   and validates the manifest — co-design pending — FLAGGED §7 Q4.
 //!
 //! Design spec: `docs/spec/stdlib/spore.md`; ADR-013; RFC-0003 §6; task M-522, issue #163.
