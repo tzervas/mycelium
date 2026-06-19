@@ -8,6 +8,22 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-19: M-376 housekeeping wave — behaviour-preserving DRY/footprint, no-op)
+Executed DN-17 §4 P1+P2 (P3 skipped per YAGNI). Pure refactor — no source logic, no guarantee tags,
+no public API changed; `Cargo.lock` unchanged; `cargo test --workspace` + full `just check` green; net ~−11 LOC.
+- **P1 — workspace dependency dedup.** Added `[workspace.dependencies]` (`serde`/`serde_json`/`blake3`)
+  to the root `Cargo.toml` and converted **15 crate manifests** to `*.workspace = true` (single-point
+  version control; standard Rust convention). Versioned `xtask`'s 5 path-deps (`version = "0.0.0"`),
+  clearing the `cargo deny` `wildcard` advisory.
+- **P2 — MLIR test-helper consolidation.** Factored 7 byte-for-byte-identical differential helpers
+  (`byte`/`tern`/`i64_value`/`observable`/shared consts) into `crates/mycelium-mlir/tests/common/mod.rs`
+  across 6 test files; divergent helpers (different LCG seeds, `int_to_trits` variant) kept local so no
+  test behaviour changes. All 24 `mycelium-mlir` tests green (incl. the M-302 `data_corpus` + the
+  `match_default_arm` regression).
+- **P3 — deferred (YAGNI).** A shared `assert_is_std_error` helper would need a new dev-dep test-util
+  crate to save ~8 trivial one-liners across 3 crates — over-engineering. The error-**type** unification
+  stays deferred to post-stdlib-ratification (DN-17 §4/§5). **M-376 → done.**
+
 ### Added (2026-06-19: DN-17 codebase housekeeping / DRY survey — planning capture, M-376)
 - **`docs/notes/DN-17`** (new, Draft) — a grounded read-only DRY/duplication survey of the ~43-crate
   Rust workspace + a priority-ordered, risk-tagged plan for a future **behaviour-preserving**
