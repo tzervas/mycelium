@@ -8,6 +8,14 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-19: bake the autonomous PR/merge workflow into CLAUDE.md)
+Institutionalized the review-before-merge discipline the native waves (M-378/M-379) converged on, as a
+new **"Autonomous PR workflow"** section in `CLAUDE.md`: the merge gate is the agent's (self-review with
+the `/pr-review` lens → handle every CI/bot review comment, defer honestly rather than ship fragile
+output → full `just check` green → merge up), with **pull-down-before-merge-up** (keep tips current, never
+integrate across divergent history) and **branch children from a *pushed* tip** (avoid the M-379 Stage-2
+worktree-divergence). Process/operating-guide change only — no corpus or code behavior changed.
+
 ### Added (2026-06-19: M-379 — direct-LLVM native tail-recursion (Fix) + Binary branch, Increment-3 of M-373)
 Wave-1 native continuation, built as a **swarm** (orchestrator + a Sonnet leaf in an isolated worktree,
 deconflicted by pulling the parent down). The direct-LLVM backend (`crates/mycelium-mlir/src/llvm.rs`)
