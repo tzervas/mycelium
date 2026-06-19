@@ -34,3 +34,8 @@ serde = { version = "1", features = ["derive"] }
 # Content-addressing the diagnostic record + policy (RFC-0013 §4.3/§4.4; ADR-003) — the same BLAKE3
 # the kernel uses for `ContentHash`, here in the tooling layer (no kernel dependency added; KC-3).
 blake3 = "1"
+
+# M-330 co-authoring loop: the stdin→publishDiagnostics shim used by coauthor.py.
+[[example]]
+name = "check"
+path = "examples/check.rs"
