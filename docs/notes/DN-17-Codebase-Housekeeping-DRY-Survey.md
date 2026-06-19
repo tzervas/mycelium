@@ -57,8 +57,9 @@ Factor them into a shared in-crate test module (`crates/mycelium-mlir/tests/comm
 ~100 LOC saved. (The Wave-5 `data_corpus` additions in `native_differential.rs` join the same pattern.)
 
 ### 2.4 Per-crate error boilerplate — P3 (defer; YAGNI at design phase)
-~8 dedicated `error.rs` files (~1,451 LOC total: `mycelium-std-{text,io,fs,iter,collections,content}`,
-`mycelium-numerics`, `mycelium-l1`), plus error enums inside several `lib.rs` (`mycelium-core`,
+8 dedicated `error.rs` files: the six `mycelium-std-*` (`text`/`io`/`fs`/`iter`/`collections`/`content`)
+sum to **1,451 LOC**, plus `mycelium-numerics` (303) and `mycelium-l1` (30) → **1,784 LOC across all
+eight** (measured `wc -l`, 2026-06-19); plus error enums inside several `lib.rs` (`mycelium-core`,
 `-cert`, `-build`, …). Each hand-rolls `impl Display` + `impl std::error::Error` (+ optional
 `source()` chaining) + a near-identical test suite (`*_is_std_error`, `*_display_includes_*`).
 Roughly ~600 LOC of `Display`/`Error`/test boilerplate is structurally repeated.
