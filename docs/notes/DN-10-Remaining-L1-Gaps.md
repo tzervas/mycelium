@@ -156,6 +156,11 @@ surface-written mutual-recursion programs (a data/matching variant and a pure-fu
 > grammar/diagnostic impact, and record the choice append-only (a new DN or RFC-0007 amendment).
 > Feeds: RFC-0007 §8 R7-Q3 (surface half); `docs/spec/grammar/`; the KC-2 surface commitment
 > (DN-09 §3.1 — append-only refinement, not a reversal).
+>
+> **Resolved (2026-06-19).** RP-6 decided — **candidate 2: nodule-wide mutual visibility, no new
+> syntax** (DN-13). The surface front-end already realizes it (nodule-wide visibility in `checkty`
+> Pass 2/3 + the Tarjan→`FixGroup` path in `mycelium-l1::elab`, from M-343); **M-391** confirms it
+> (M-210 differential + identity + never-silent). Append-only.
 
 ---
 

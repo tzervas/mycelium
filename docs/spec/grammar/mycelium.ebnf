@@ -33,6 +33,15 @@
 
 program        ::= nodule_header item*
 
+/* Top-level scoping (RP-6 / DN-13; append-only surface commitment per DN-09 §3.1): the `item*` under
+ * a `nodule` is unordered for name resolution — every top-level `fn` is mutually visible, so a
+ * function may reference any sibling regardless of declaration order. No mutual-recursion keyword is
+ * introduced (Rust/Unison/ML-module semantics): the elaborator builds the call graph over the nodule
+ * and auto-groups each strongly-connected component of ≥2 functions into a `FixGroup` (a self-looping
+ * singleton → `Fix`; a non-recursive function inlines). The grouping is *inferred*, not written, and
+ * is materialized as a `FixGroup` node in the elaborated term (inspectable; no black box).
+ * RFC-0007 §8 R7-Q3; M-343/M-391. */
+
 nodule_header  ::= 'nodule' path
 
 item           ::= use_item

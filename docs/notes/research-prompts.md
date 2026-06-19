@@ -245,8 +245,9 @@ SC-3) and that the attribution is stable under callee rename (names-as-metadata,
 
 ## RP-6 — R7-Q3 Surface Grammar for Mutual Recursion
 
-**Status:** Open (the elaboration *mechanics* are settled by RFC-0001 r5; the *surface grammar
-question* is the residual — see DN-10 §2.6).
+**Status:** **Resolved** (2026-06-19 — candidate 2: nodule-wide mutual visibility, no new syntax;
+recorded in **DN-13**, confirmed by **M-391**). The elaboration *mechanics* were already settled by
+RFC-0001 r5 / M-343; the *surface grammar* residual is now decided — see DN-13.
 
 **Question.** What is the surface grammar for mutually-recursive function definitions in
 Mycelium's v0 first-order syntax? Three candidate designs:
@@ -298,5 +299,11 @@ schema); ADR-003 (content-addressed identity); KC-3 (small auditable kernel).
 
 ## Resolved Prompts
 
-*(None yet — entries move here when their feeding decision is recorded and the prompt is closed.
-Mark: append the resolution date, verdict, and pointer to the decision doc. Do not delete.)*
+- **RP-6 — R7-Q3 Surface Grammar for Mutual Recursion.** **Resolved 2026-06-19.** Verdict: **candidate
+  2 — nodule-wide mutual visibility, no new syntax** (every top-level `fn` in a `nodule` is mutually
+  visible; the elaborator auto-groups each call-graph SCC of ≥2 into a `FixGroup`). Recorded in
+  **DN-13** (`docs/notes/DN-13-RP-6-Surface-Grammar-Mutual-Recursion.md`); confirmed by **M-391**
+  (M-210 differential + identity + never-silent).
+
+*(Other prompts move here when their feeding decision is recorded and the prompt is closed. Mark:
+append the resolution date, verdict, and pointer to the decision doc. Do not delete.)*
