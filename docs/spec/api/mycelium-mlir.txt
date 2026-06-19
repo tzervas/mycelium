@@ -315,6 +315,7 @@ pub fn mycelium_mlir::jit::jit_run(&mycelium_core::node::Node) -> core::result::
 pub mod mycelium_mlir::llvm
 pub enum mycelium_mlir::llvm::AotError
 pub mycelium_mlir::llvm::AotError::Compile(alloc::string::String)
+pub mycelium_mlir::llvm::AotError::DepthLimit(alloc::string::String)
 pub mycelium_mlir::llvm::AotError::FreeVariable(alloc::string::String)
 pub mycelium_mlir::llvm::AotError::Overflow(alloc::string::String)
 pub mycelium_mlir::llvm::AotError::Parse(alloc::string::String)
@@ -494,6 +495,7 @@ pub fn mycelium_mlir::specialize::emit_specialized_dot_ir(&[mycelium_core::value
 pub fn mycelium_mlir::specialize::jit_specialized_dot(&[mycelium_core::value::Trit], &[i32]) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
 pub enum mycelium_mlir::AotError
 pub mycelium_mlir::AotError::Compile(alloc::string::String)
+pub mycelium_mlir::AotError::DepthLimit(alloc::string::String)
 pub mycelium_mlir::AotError::FreeVariable(alloc::string::String)
 pub mycelium_mlir::AotError::Overflow(alloc::string::String)
 pub mycelium_mlir::AotError::Parse(alloc::string::String)

@@ -219,7 +219,7 @@ a formal argument is constructed. Never pre-written.
 | **0 — bit/trit subset** | `core.id`, `bit.not/and/or/xor`, `trit.neg/add/sub/mul` | No — already shipped (M-301) | Yes — `llvm.rs` is live | Low (done) |
 | **1 — non-recursive Construct/Match** | Tagged stack-`alloca [N+1 x i64]` + switch-on-tag; straight-line arms; no closures, no recursion; no OOM path (non-recursive/bounded ⇒ static alloc depth) | No — textual LLVM IR only | **Yes** (this wave; M-373 landed) | Low: stack alloca is simpler than heap alloc; no GC; the differential against the interpreter is the guard |
 | **2 — closures (App/Lam) + heap** | Closure-conversion + indirect call through heap struct | No — but requires free-var analysis pass | **Yes — landed (M-378; §7)** | Medium: closure conversion is a multi-pass transform; textual-IR indirect calls are brittle to mis-encode |
-| **3 — recursion (Fix/FixGroup) + stack-robustness** | Iterative trampoline in LLVM IR; explicit heap control stack; DepthBudget trait reused | No — but complex IR emission | Tractable in principle, deferred | High: emitting a correct trampoline in textual IR is error-prone; DN-05 #1 requires no unbounded C stack (G2) — must be designed, not retrofitted |
+| **3 — recursion (Fix/FixGroup) + stack-robustness** | **Tail-recursive `Fix` → iterative loop** (host C stack O(1) by construction) + Binary branch primitive + DepthBudget ceiling → graceful `DepthLimit`; **non-tail / `FixGroup` / recursive-data deferred** to the full heap trampoline | No — textual LLVM IR only | **Partial — tail landed (M-379; §8)**; full trampoline deferred | High: emitting a correct trampoline in textual IR is error-prone; DN-05 #1 requires no unbounded C stack (G2) — the tail-loop satisfies it structurally for its fragment, designed in not retrofitted |
 | **4 — real ternary MLIR dialect lowering** | `ternary` → `arith`/`vector` → LLVM via libMLIR | **Yes — libMLIR-gated** | No — `dialect.rs` is a textual skeleton only | Blocked on M-348; every verdict stays `not established` (VR-5) |
 
 **Column definitions:**
@@ -314,7 +314,74 @@ results are all explicit refusals — never a silent mis-lowering, never an upgr
 
 ---
 
+## 8. Increment-3 realized design (M-379 — tail-recursion + Binary branch + stack-robustness)
+
+Increment 3 (§4.3) discharges the **DN-05 #1** stack-robustness requirement for the native path —
+recursion must run *without an unbounded C stack*, with an explicit depth limit, a graceful error,
+never a SIGSEGV. The reference to mirror is the AOT env-machine (`aot.rs`): a heap control stack +
+`DepthBudget`→`DepthLimit`. Two maintainer-resolved forks fix the realized scope; the guarantee tag
+stays **Declared** (hand-written IR + the empirical M-302 differential, not Proven — VR-5).
+Append-only: §4.3 and the §5 table are unchanged in intent; this section records what landed.
+
+### 8.1 Mechanism — tail-recursion as a loop (not yet the full trampoline)
+
+A **tail-position** self-recursive `Fix { name, body }` (every recursive `App` of `name` is the body's
+tail) lowers to an **iterative LLVM loop**: the function parameters become loop variables (`phi`
+nodes at a loop header), a tail self-call becomes a **back-edge** that updates those variables and
+re-enters the header, and a non-recursive (base-case) result is a `ret`. The host **C stack is O(1)
+by construction** — DN-05 #1's "no unbounded C stack" is satisfied *structurally*, not by a calibrated
+guard against the platform stack limit (the weakness of a budget-guarded C-recursion approach, which
+is why it was not chosen). This is the honest first step of DN-15 §4.3: it covers the tail fragment
+fully and compliantly; the **full defunctionalized heap trampoline** (general non-tail recursion,
+mirroring `aot.rs`'s `Frame` stack) is deferred to a later increment.
+
+### 8.2 Depth budget → graceful `DepthLimit`
+
+Loop iterations are bounded by an **`AutoDepthBudget`-resolved** ceiling (`crates/mycelium-mlir::budget`;
+M-349 — the *same* trait the AOT env-machine uses, reused not re-invented). A depth counter is checked
+each iteration; exceeding the ceiling raises a **graceful `DepthLimit`** through the read-back protocol
+(a distinct sentinel, mapped to an explicit `AotError::DepthLimit`), never a SIGSEGV (G2). This is the
+Increment-2 `@myc_arena_alloc` never-silent over-capacity seam (§7.2) generalized from an allocation
+ceiling to a recursion-depth ceiling — the attachment point designed in at Increment 2, now realized.
+
+### 8.3 Binary branch primitive (the base-case conditional)
+
+A terminating recursion needs a base case; the narrow `Binary{8}` ABI had no branch primitive. `Match`
+is extended to a **repr-lane scrutinee with `Lit` arms**: the scrutinee `Binary{8}` lane is compared
+against each literal `Binary` value (an equality test on the packed `i64`) and branched — distinct
+from the Increment-1 `Match` over a `Datum` scrutinee with `Ctor` arms (tag-switch). Both forms remain
+explicit, dumpable IR (no opaque pass).
+
+### 8.4 Differential parity (the error contract)
+
+For a **terminating** tail-recursive `Binary{8}` program the native result is value-checked interp ≡
+AOT ≡ native (M-302/M-210). For a **non-terminating** recursion, the native path must reach a graceful
+`DepthLimit` in **parity** with the interpreter's non-productive refusal — the reference interpreter is
+O(1)-stack and refuses by `FuelExhausted`; both are explicit, never-silent refusals (never an abort),
+which is the equivalence the differential asserts for that class.
+
+### 8.5 What stays refused (G2)
+
+**Non-tail** recursion (a recursive `App` not in tail position), **`FixGroup`** (mutual recursion), and
+**recursive heap data** (self-referential constructors) are all explicit `UnsupportedNode` — never a
+silent mis-lowering, never an upgraded guarantee (VR-5). The real `ternary` MLIR dialect stays
+libMLIR-gated (M-348).
+
+A further codegen-shape limitation (surfaced in the M-379 review): a **`Match` in a tail arm's
+*pre-tail* binding sequence** — e.g. computing the recursion step via a nested `Match`,
+`App(self, Match …)` — is also refused. The tail-loop's back-edge `phi` records the `recur`
+predecessor block before lowering the pre-tail bindings; a `Match` introduces basic blocks, so the
+back-edge would actually branch from the `Match`'s merge block, leaving the `phi` with stale
+predecessors (LLVM "PHI node entries do not match predecessors"). Supporting it requires threading the
+*current* block label through the back-edge; deferred. The program is still semantically valid (the
+reference interpreter evaluates it) — the boundary is an honest native-codegen limitation, surfaced as
+an explicit `UnsupportedNode` (G2), never fragile/incorrect IR.
+
+---
+
 ## Meta — changelog
 
 <!-- changelog: 2026-06-19 Draft created (M-373) — records the libMLIR-gated vs direct-LLVM-advanceable decomposition, the Increment-1 (Construct/Match) design strategy, the DN-05 #1 DepthBudget reuse plan for Increment 3, and the per-increment risk table. Append-only. -->
 <!-- changelog: 2026-06-19 §7 added (M-378) — realized Increment-2 design: narrow packed-i64 closure ABI; bump-arena no-GC strategy with the single alloc seam where Increment-3's DepthBudget ceiling attaches (DN-05 #1); free-variable-analysis closure conversion. §5 table Increment-2 row marked landed. Guarantee stays Declared (VR-5). Append-only. -->
+<!-- changelog: 2026-06-19 §8 added (M-379) — realized Increment-3 design: tail-position Fix → iterative LLVM loop (host C stack O(1) by construction, DN-05 #1 compliant), bounded by an AutoDepthBudget ceiling (M-349) → graceful DepthLimit (the Inc-2 arena seam generalized to a depth counter); a Binary branch primitive (Match repr-lane scrutinee + Lit arms) for the base case. Non-tail recursion, FixGroup, and recursive heap data stay UnsupportedNode (G2). §5 table Increment-3 row marked partially landed (tail only). Guarantee stays Declared (VR-5). Append-only. -->
+<!-- changelog: 2026-06-19 §8.5 refined (M-379; PR #224 review) — recorded a further deferred native-codegen-shape limitation: a Match in a tail arm's pre-tail binding sequence (step computed via Match) would invalidate the loop back-edge phi, so it is an explicit UnsupportedNode (needs current-block tracking through the back-edge; deferred). The program stays semantically valid (interpreter evaluates it); honest boundary, never fragile IR (G2). Append-only. -->
