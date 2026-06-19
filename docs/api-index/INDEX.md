@@ -1238,6 +1238,8 @@
 | `mycelium_mlir::compile_bitnet_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:268` | Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process. |
 | `mycelium_mlir::compile_bitnet_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:275` | Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process. |
 | `mycelium_mlir::compile_bitnet_dot_simd` | fn | `crates/mycelium-mlir/src/simd.rs:127` | Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process, |
+| `mycelium_mlir::compile_bitnet_dot_simd_tl1` | fn | `crates/mycelium-mlir/src/simd.rs:250` | Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process, |
+| `mycelium_mlir::compile_bitnet_dot_simd_tl2` | fn | `crates/mycelium-mlir/src/simd.rs:603` | Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process, |
 | `mycelium_mlir::compile_so` | fn | `crates/mycelium-mlir/src/jit.rs:194` | Compile the bit/trit-subset program to a shared object without calling it. |
 | `mycelium_mlir::compile_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:140` | Compile a kernel **specialized on `weights`** (baked in as constants) to a shared object and load |
 | `mycelium_mlir::default_depth_budget` | fn | `crates/mycelium-mlir/src/aot.rs:60` | The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no |
@@ -1247,6 +1249,8 @@
 | `mycelium_mlir::emit_bitnet_dot_ir` | fn | `crates/mycelium-mlir/src/bitnet.rs:61` | Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme. |
 | `mycelium_mlir::emit_bitnet_dot_ir_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:73` | Emit the textual LLVM IR for the packed-ternary dot kernel |
 | `mycelium_mlir::emit_bitnet_dot_simd_ir` | fn | `crates/mycelium-mlir/src/simd.rs:55` | Emit the textual LLVM IR for the **hand-vectorized I2_S** packed-ternary dot kernel |
+| `mycelium_mlir::emit_bitnet_dot_simd_tl1_ir` | fn | `crates/mycelium-mlir/src/simd.rs:169` | Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel |
+| `mycelium_mlir::emit_bitnet_dot_simd_tl2_ir` | fn | `crates/mycelium-mlir/src/simd.rs:308` | Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel |
 | `mycelium_mlir::emit_llvm_ir` | fn | `crates/mycelium-mlir/src/llvm.rs:1245` | Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that |
 | `mycelium_mlir::emit_specialized_dot_ir` | fn | `crates/mycelium-mlir/src/specialize.rs:53` | Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel |
 | `mycelium_mlir::inject` | mod | `crates/mycelium-mlir/src/lib.rs:40` | — |
@@ -1314,7 +1318,11 @@
 | `mycelium_mlir::runtime::TaskCtx` | struct | `crates/mycelium-mlir/src/runtime.rs:42` | The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token |
 | `mycelium_mlir::simd` | mod | `crates/mycelium-mlir/src/lib.rs:45` | — |
 | `mycelium_mlir::simd::compile_bitnet_dot_simd` | fn | `crates/mycelium-mlir/src/simd.rs:127` | Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process, |
+| `mycelium_mlir::simd::compile_bitnet_dot_simd_tl1` | fn | `crates/mycelium-mlir/src/simd.rs:250` | Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process, |
+| `mycelium_mlir::simd::compile_bitnet_dot_simd_tl2` | fn | `crates/mycelium-mlir/src/simd.rs:603` | Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process, |
 | `mycelium_mlir::simd::emit_bitnet_dot_simd_ir` | fn | `crates/mycelium-mlir/src/simd.rs:55` | Emit the textual LLVM IR for the **hand-vectorized I2_S** packed-ternary dot kernel |
+| `mycelium_mlir::simd::emit_bitnet_dot_simd_tl1_ir` | fn | `crates/mycelium-mlir/src/simd.rs:169` | Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel |
+| `mycelium_mlir::simd::emit_bitnet_dot_simd_tl2_ir` | fn | `crates/mycelium-mlir/src/simd.rs:308` | Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel |
 | `mycelium_mlir::specialize` | mod | `crates/mycelium-mlir/src/lib.rs:46` | — |
 | `mycelium_mlir::specialize::SpecializedDotKernel` | struct | `crates/mycelium-mlir/src/specialize.rs:88` | A compiled, in-process **weight-specialized** dot kernel: the `.so` (in a per-artifact temp dir, |
 | `mycelium_mlir::specialize::SpecializedDotKernel::call` | fn | `crates/mycelium-mlir/src/bitnet.rs:231` | Run the kernel over `packed_weights` (packed under scheme) and |
@@ -2315,6 +2323,39 @@
 | `mycelium_std_swap::f32_to_bf16` | fn | `crates/mycelium-std-swap/src/lib.rs:295` | `f32_to_bf16` — round a `Dense{F32}` value to `Dense{BF16}` under round-to-nearest (M-211). |
 | `mycelium_std_swap::tern_to_bin` | fn | `crates/mycelium-std-swap/src/lib.rs:267` | `tern_to_bin` — decode `m` balanced trits back into an `n`-bit two's-complement [`Value`]. |
 | `mycelium_std_swap::vsa_to_dense` | fn | `crates/mycelium-std-swap/src/lib.rs:348` | `vsa_to_dense` — decode a `swap.dense_vsa.enc.v1` product back to a bipolar `Dense{F32}` value |
+
+## mycelium-std-sys
+
+| Symbol | Kind | File:Line | Summary |
+|---|---|---|---|
+| `mycelium_std_sys::fs` | mod | `crates/mycelium-std-sys/src/lib.rs:42` | — |
+| `mycelium_std_sys::fs::create_dir_all` | fn | `crates/mycelium-std-sys/src/fs.rs:41` | \[Declared\] Create a directory and all its parents. |
+| `mycelium_std_sys::fs::exists` | fn | `crates/mycelium-std-sys/src/fs.rs:34` | \[Declared\] Check whether a path exists on the filesystem. |
+| `mycelium_std_sys::fs::read` | fn | `crates/mycelium-std-sys/src/fs.rs:18` | \[Declared\] Read the entire contents of a file at `path`. |
+| `mycelium_std_sys::fs::remove_file` | fn | `crates/mycelium-std-sys/src/fs.rs:48` | \[Declared\] Remove a file. |
+| `mycelium_std_sys::fs::write` | fn | `crates/mycelium-std-sys/src/fs.rs:25` | \[Declared\] Write `contents` to a file at `path`, creating or truncating it. |
+| `mycelium_std_sys::math` | mod | `crates/mycelium-std-sys/src/lib.rs:43` | — |
+| `mycelium_std_sys::math::acos` | fn | `crates/mycelium-std-sys/src/math.rs:37` | \[Declared\] `acos(x)`. |
+| `mycelium_std_sys::math::asin` | fn | `crates/mycelium-std-sys/src/math.rs:32` | \[Declared\] `asin(x)`. |
+| `mycelium_std_sys::math::atan` | fn | `crates/mycelium-std-sys/src/math.rs:42` | \[Declared\] `atan(x)`. |
+| `mycelium_std_sys::math::atan2` | fn | `crates/mycelium-std-sys/src/math.rs:47` | \[Declared\] `atan2(y, x)`. |
+| `mycelium_std_sys::math::cbrt` | fn | `crates/mycelium-std-sys/src/math.rs:82` | \[Declared\] `cbrt(x)`. |
+| `mycelium_std_sys::math::cos` | fn | `crates/mycelium-std-sys/src/math.rs:22` | \[Declared\] `cos(x)`. |
+| `mycelium_std_sys::math::exp` | fn | `crates/mycelium-std-sys/src/math.rs:52` | \[Declared\] `exp(x)`. |
+| `mycelium_std_sys::math::exp2` | fn | `crates/mycelium-std-sys/src/math.rs:57` | \[Declared\] `exp2(x)`. |
+| `mycelium_std_sys::math::ln` | fn | `crates/mycelium-std-sys/src/math.rs:62` | \[Declared\] `ln(x)`. |
+| `mycelium_std_sys::math::log10` | fn | `crates/mycelium-std-sys/src/math.rs:72` | \[Declared\] `log10(x)`. |
+| `mycelium_std_sys::math::log2` | fn | `crates/mycelium-std-sys/src/math.rs:67` | \[Declared\] `log2(x)`. |
+| `mycelium_std_sys::math::sin` | fn | `crates/mycelium-std-sys/src/math.rs:17` | \[Declared\] `sin(x)`. |
+| `mycelium_std_sys::math::sqrt` | fn | `crates/mycelium-std-sys/src/math.rs:77` | \[Declared\] `sqrt(x)`. |
+| `mycelium_std_sys::math::tan` | fn | `crates/mycelium-std-sys/src/math.rs:27` | \[Declared\] `tan(x)`. |
+| `mycelium_std_sys::rand` | mod | `crates/mycelium-std-sys/src/lib.rs:44` | — |
+| `mycelium_std_sys::rand::EntropyError` | enum | `crates/mycelium-std-sys/src/rand.rs:37` | Errors from platform entropy operations. |
+| `mycelium_std_sys::rand::fill_bytes` | fn | `crates/mycelium-std-sys/src/rand.rs:70` | \[Declared\] Fill `buf` with bytes from the OS entropy source (`/dev/urandom`). |
+| `mycelium_std_sys::time` | mod | `crates/mycelium-std-sys/src/lib.rs:45` | — |
+| `mycelium_std_sys::time::mono_nanos` | fn | `crates/mycelium-std-sys/src/time.rs:41` | \[Declared\] Returns monotonic nanoseconds since an unspecified process-local epoch. |
+| `mycelium_std_sys::time::sleep_nanos` | fn | `crates/mycelium-std-sys/src/time.rs:57` | \[Declared\] Pause the current thread for approximately `nanos` nanoseconds. |
+| `mycelium_std_sys::time::wall_nanos` | fn | `crates/mycelium-std-sys/src/time.rs:26` | \[Declared\] Returns nanoseconds since the Unix epoch from the wall clock. |
 
 ## mycelium-std-ternary
 
@@ -5553,6 +5594,10 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_std_swap::check` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_std_swap::legal_pair` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_std_swap::roundtrip_lemma_ref` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_sys::rand::EntropyError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_std_sys::rand::EntropyError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_std_sys::rand::EntropyError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_sys::rand::EntropyError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_std_ternary::guarantee_matrix::Explainable::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_std_ternary::guarantee_matrix::Explainable::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_std_ternary::guarantee_matrix::Explainable::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
