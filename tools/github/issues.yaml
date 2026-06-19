@@ -437,7 +437,7 @@ issues:
   - id: M-360
     title: "M-360 — Production packed-ternary acceleration"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:execution, priority:P2, status:in-progress]
+    labels: [phase:3, type:feature, area:execution, priority:P2, status:done]
     depends_on: [M-250, M-301]
     body: |
       Production acceleration paths over the Phase-2 packing selector baseline (FR-C3/G3): real pack/unpack/compute kernels for I2_S/TL1/TL2 wired into the native path, packing exposed as inspectable meta.physical (NFR-1/NFR-4), not hidden lowering.
@@ -476,7 +476,7 @@ issues:
   - id: M-330
     title: "M-330 — AI co-authoring loop (generate -> feedback -> self-correct)"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:toolchain, priority:P1, status:in-progress]
+    labels: [phase:3, type:feature, area:toolchain, priority:P1, status:done]
     depends_on: [M-310]
     body: |
       A generate -> semantic-feedback -> self-correct loop over the LSP surface, operationalizing SC-5b (NFR-2; Area 6; E3-2). The harness is local; the RUN needs LLM API access (KC-2-adjacent).
