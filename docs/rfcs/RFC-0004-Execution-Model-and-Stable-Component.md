@@ -179,7 +179,39 @@ M-302 differential, not Proven — VR-5).
 - **Inspectability (§6 preserved):** every closure record write, indirect call, and packed/unpacked
   element is explicit, dumpable textual IR — no opaque pass (ADR-009 / VR-4).
 
+### 11.6 Increment-3 — tail-recursion (Fix) + Binary branch + stack-robustness (additive; r5; M-379)
+
+This subsection is **additive** (r5). It changes no prior decision; it records the sanctioned scope of
+**Increment 3** — native *stack-robust* recursion — under the same §2 revisit clause, and discharges
+the **DN-05 #1** stack-robustness requirement that §11.3 banked for the native path. Design detail
+lives in **DN-15 §8**; the realized guarantee tag stays **`Declared`** (hand-written IR + the M-302
+differential, not Proven — VR-5).
+
+- **Mechanism — tail-recursion as a loop.** A **tail-position** self-recursive `Rhs::Fix` lowers to an
+  **iterative LLVM loop** (the recursive `App` of the self-name becomes a back-edge that updates the
+  loop variables, not a call), so the host **C stack stays O(1) by construction** — DN-05 #1's "no
+  unbounded C stack" is satisfied *structurally*, never relying on a calibrated guard. Loop iteration
+  is bounded by an **`AutoDepthBudget`-resolved ceiling** (`crates/mycelium-mlir::budget`; M-349,
+  reused from the AOT env-machine); exceeding it raises a **graceful `DepthLimit`** via the read-back
+  protocol — never a SIGSEGV (G2). This generalizes the Increment-2 `@myc_arena_alloc` never-silent
+  seam to a recursion-depth counter, exactly as §11.5 anticipated.
+- **Binary branch primitive.** `Rhs::Match` is extended to a **repr-lane scrutinee with `Lit` arms**:
+  the scrutinee `Binary{8}` lane is compared against each literal `Binary` value and branched — the
+  base-case conditional a terminating recursion needs. This extends the Increment-1 `Match` codegen
+  (which handled only a `Datum` scrutinee with `Ctor` arms); both forms stay explicit, dumpable IR.
+- **Still deferred (explicit `UnsupportedNode`, G2):** **non-tail** recursion (needs the full
+  defunctionalized heap trampoline — a later increment), **`FixGroup`** (mutual recursion), and
+  **recursive heap data** (`Nat`/`List`-style self-referential constructors). The narrow `Binary{8}`
+  ABI continues; the real `ternary` MLIR dialect stays libMLIR-gated (M-348).
+- **Differential (NFR-7).** A *terminating* tail-recursive `Binary{8}` program is value-checked
+  interp ≡ AOT ≡ native; a *non-terminating* recursion must reach a graceful `DepthLimit` in parity
+  with the interpreter's non-productive refusal (the reference interpreter is O(1)-stack and refuses
+  by `FuelExhausted`; both are explicit non-silent refusals — never an abort).
+- **Inspectability (§6 preserved):** the loop header/back-edge, the depth-counter check, and the
+  literal-compare branch are all explicit textual IR — no opaque pass (ADR-009 / VR-4).
+
 ## Meta — changelog
+- **2026-06-19 (additive — §11.6; r5; M-379):** Added **§11.6** recording the sanctioned scope for **Increment 3** of the direct-LLVM backend — native *stack-robust* recursion, discharging the DN-05 #1 requirement §11.3 banked. Mechanism: a **tail-position** self-recursive `Fix` lowers to an **iterative LLVM loop** (host C stack O(1) by construction), bounded by an `AutoDepthBudget` ceiling (M-349) that raises a graceful `DepthLimit` (never SIGSEGV; the Increment-2 arena seam generalized to a depth counter). Adds a **Binary branch primitive** (`Match` over a repr-lane scrutinee with `Lit` arms) so terminating recursion is expressible/value-checked. **Non-tail** recursion, **`FixGroup`**, and **recursive heap data** stay explicit `UnsupportedNode` (G2). Guarantee tag stays `Declared` (VR-5); §6 no-opaque-lowering preserved. Design detail in DN-15 §8. Changes no prior decision. Append-only.
 - **2026-06-19 (additive — §11.5; r4; M-378):** Added **§11.5** recording the sanctioned scope for **Increment 2** of the direct-LLVM backend — native closures: `Lam` → heap closure record `[fn_ptr | captures]` + `@closure_N`, `App` → indirect call, free variables captured by a lexical analysis over the ANF body. Narrow value ABI (`Binary{8}` packed as `i64`; everything else explicit `UnsupportedNode`, G2); a **bump-arena** no-GC strategy whose single alloc seam is where Increment-3's `DepthBudget` ceiling attaches (DN-05 #1; M-349). `Fix`/`FixGroup` and the real ternary MLIR dialect stay deferred (§11.3). Guarantee tag stays `Declared` (VR-5); §6 no-opaque-lowering preserved. Design detail in DN-15 §7. Changes no prior decision. Append-only.
 - **2026-06-19 (additive — §11; r3; M-373):** Added **§11** recording the sanctioned scope for extending the direct-LLVM backend (`llvm.rs`) to the data-fragment (non-recursive `Construct`/`Match`) as an increment of the §2 revisit clause. Closures (`App`/`Lam`), recursion (`Fix`/`FixGroup`), and the real ternary MLIR dialect lowering remain deferred (VR-5); recursion is bound by DN-05 #1 (no unbounded C stack; `DepthBudget` trait reuse) when it lands. §6 no-opaque-lowering preserved: every IR stage stays dumpable. Changes no prior decision. Append-only.
 - **2026-06-18 (append-only note after §4 — RFC-0017 Accepted):** Added an inline note recording
