@@ -1155,7 +1155,7 @@
 | `mycelium_mlir::AutoDepthBudget` | struct | `crates/mycelium-mlir/src/budget.rs:164` | The default policy: derive the ceiling from **detected memory headroom**, conservative fallback |
 | `mycelium_mlir::BitnetDotKernel` | struct | `crates/mycelium-mlir/src/bitnet.rs:192` | A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop), |
 | `mycelium_mlir::Colony` | type | `crates/mycelium-mlir/src/runtime.rs:106` | A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of |
-| `mycelium_mlir::CompiledArtifact` | struct | `crates/mycelium-mlir/src/llvm.rs:1220` | A compiled native artifact for a bit/trit-subset program: the executable on disk (in a |
+| `mycelium_mlir::CompiledArtifact` | struct | `crates/mycelium-mlir/src/llvm.rs:1270` | A compiled native artifact for a bit/trit-subset program: the executable on disk (in a |
 | `mycelium_mlir::Deadlock` | struct | `crates/mycelium-mlir/src/runtime.rs:96` | A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a |
 | `mycelium_mlir::DepthBasis` | enum | `crates/mycelium-mlir/src/budget.rs:102` | The inspectable derivation of a [`DepthResolution`] — the no-black-box record (G2). |
 | `mycelium_mlir::DepthBudget` | trait | `crates/mycelium-mlir/src/budget.rs:63` | Resolves a control-stack **depth ceiling** for the AOT env-machine, with an inspectable basis. |
@@ -1233,8 +1233,8 @@
 | `mycelium_mlir::channel::Sender` | struct | `crates/mycelium-mlir/src/channel.rs:112` | The **single producer** end of a channel. |
 | `mycelium_mlir::channel::TryRecv` | enum | `crates/mycelium-mlir/src/channel.rs:134` | Why a [`Receiver::try_recv`] yielded no value. |
 | `mycelium_mlir::channel::TrySend` | enum | `crates/mycelium-mlir/src/channel.rs:124` | Why a [`Sender::try_send`] could not complete *right now*. |
-| `mycelium_mlir::compile` | fn | `crates/mycelium-mlir/src/llvm.rs:1255` | Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`) |
-| `mycelium_mlir::compile_and_run` | fn | `crates/mycelium-mlir/src/llvm.rs:1281` | Compile the bit/trit-subset program to a native executable, run it once, and read the result |
+| `mycelium_mlir::compile` | fn | `crates/mycelium-mlir/src/llvm.rs:1305` | Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`) |
+| `mycelium_mlir::compile_and_run` | fn | `crates/mycelium-mlir/src/llvm.rs:1331` | Compile the bit/trit-subset program to a native executable, run it once, and read the result |
 | `mycelium_mlir::compile_bitnet_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:268` | Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process. |
 | `mycelium_mlir::compile_bitnet_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:275` | Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process. |
 | `mycelium_mlir::compile_bitnet_dot_simd` | fn | `crates/mycelium-mlir/src/simd.rs:127` | Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process, |
@@ -1247,7 +1247,7 @@
 | `mycelium_mlir::emit_bitnet_dot_ir` | fn | `crates/mycelium-mlir/src/bitnet.rs:61` | Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme. |
 | `mycelium_mlir::emit_bitnet_dot_ir_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:73` | Emit the textual LLVM IR for the packed-ternary dot kernel |
 | `mycelium_mlir::emit_bitnet_dot_simd_ir` | fn | `crates/mycelium-mlir/src/simd.rs:55` | Emit the textual LLVM IR for the **hand-vectorized I2_S** packed-ternary dot kernel |
-| `mycelium_mlir::emit_llvm_ir` | fn | `crates/mycelium-mlir/src/llvm.rs:809` | Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that |
+| `mycelium_mlir::emit_llvm_ir` | fn | `crates/mycelium-mlir/src/llvm.rs:859` | Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that |
 | `mycelium_mlir::emit_specialized_dot_ir` | fn | `crates/mycelium-mlir/src/specialize.rs:53` | Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel |
 | `mycelium_mlir::inject` | mod | `crates/mycelium-mlir/src/lib.rs:40` | — |
 | `mycelium_mlir::inject::Image` | struct | `crates/mycelium-mlir/src/inject.rs:99` | The running **image**: a hash-keyed dispatch table over a compiled overlay + an interpretable |
@@ -1284,12 +1284,12 @@
 | `mycelium_mlir::jit_ternary_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:317` | As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs |
 | `mycelium_mlir::llvm` | mod | `crates/mycelium-mlir/src/lib.rs:42` | — |
 | `mycelium_mlir::llvm::AotError` | enum | `crates/mycelium-mlir/src/llvm.rs:56` | An explicit failure of the direct-LLVM AOT path. |
-| `mycelium_mlir::llvm::CompiledArtifact` | struct | `crates/mycelium-mlir/src/llvm.rs:1220` | A compiled native artifact for a bit/trit-subset program: the executable on disk (in a |
+| `mycelium_mlir::llvm::CompiledArtifact` | struct | `crates/mycelium-mlir/src/llvm.rs:1270` | A compiled native artifact for a bit/trit-subset program: the executable on disk (in a |
 | `mycelium_mlir::llvm::CompiledArtifact::run` | fn | `crates/mycelium-mlir/src/aot.rs:209` | Run a Core IR program through the AOT path to a representation [`Value`]. |
 | `mycelium_mlir::llvm::CompiledArtifact::run` | fn | `crates/mycelium-mlir/src/aot.rs:209` | Run a Core IR program through the AOT path to a representation [`Value`]. |
-| `mycelium_mlir::llvm::compile` | fn | `crates/mycelium-mlir/src/llvm.rs:1255` | Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`) |
-| `mycelium_mlir::llvm::compile_and_run` | fn | `crates/mycelium-mlir/src/llvm.rs:1281` | Compile the bit/trit-subset program to a native executable, run it once, and read the result |
-| `mycelium_mlir::llvm::emit_llvm_ir` | fn | `crates/mycelium-mlir/src/llvm.rs:809` | Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that |
+| `mycelium_mlir::llvm::compile` | fn | `crates/mycelium-mlir/src/llvm.rs:1305` | Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`) |
+| `mycelium_mlir::llvm::compile_and_run` | fn | `crates/mycelium-mlir/src/llvm.rs:1331` | Compile the bit/trit-subset program to a native executable, run it once, and read the result |
+| `mycelium_mlir::llvm::emit_llvm_ir` | fn | `crates/mycelium-mlir/src/llvm.rs:859` | Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that |
 | `mycelium_mlir::pack` | mod | `crates/mycelium-mlir/src/lib.rs:43` | — |
 | `mycelium_mlir::pack::PackError` | enum | `crates/mycelium-mlir/src/pack.rs:43` | A packing-codec error. |
 | `mycelium_mlir::pack::needed_bytes` | fn | `crates/mycelium-mlir/src/pack.rs:92` | Bytes required to hold `count` trits under `scheme` — the buffer-bound model. |

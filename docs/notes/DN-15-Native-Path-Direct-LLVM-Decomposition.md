@@ -203,11 +203,11 @@ a formal argument is constructed. Never pre-written.
 
 ### 4.4 What remains libMLIR-gated (permanent block until M-348)
 
-- The real `ternary` → `arith`/`vector` → LLVM dialect pipeline (`dialect.rs` — the textual
++ The real `ternary` → `arith`/`vector` → LLVM dialect pipeline (`dialect.rs` — the textual
   skeleton cannot be compiled without libMLIR).
-- Cross-target codegen for non-host triples (RFC-0004 §9.3: "build is host-target only" until
++ Cross-target codegen for non-host triples (RFC-0004 §9.3: "build is host-target only" until
   the native libMLIR/LLVM backend lands).
-- The ternary-dialect inspectability at the MLIR pass level (currently the textual emitter
++ The ternary-dialect inspectability at the MLIR pass level (currently the textual emitter
   provides the dump, but the actual passes are not present).
 
 ---
@@ -223,30 +223,30 @@ a formal argument is constructed. Never pre-written.
 | **4 — real ternary MLIR dialect lowering** | `ternary` → `arith`/`vector` → LLVM via libMLIR | **Yes — libMLIR-gated** | No — `dialect.rs` is a textual skeleton only | Blocked on M-348; every verdict stays `not established` (VR-5) |
 
 **Column definitions:**
-- *Needs libMLIR?* — whether the increment requires a live libMLIR binding (C++ FFI, not just
++ *Needs libMLIR?* — whether the increment requires a live libMLIR binding (C++ FFI, not just
   LLVM toolchain).
-- *Tractable in textual LLVM IR now?* — whether the LLVM 18 toolchain (`llc`/`clang`) present
++ *Tractable in textual LLVM IR now?* — whether the LLVM 18 toolchain (`llc`/`clang`) present
   in this environment is sufficient, given current `llvm.rs` infrastructure.
-- *Risk* — low = straightforward extension of existing pattern; medium = new infrastructure
++ *Risk* — low = straightforward extension of existing pattern; medium = new infrastructure
   needed; high = correctness is hard to check without formal backing or the approach is novel.
 
 ---
 
 ## 6. What the orchestrator/1B agent needs to know
 
-- **Increment 1 is this wave's scope** — the Construct/Match codegen design and any Rust
++ **Increment 1 is this wave's scope** — the Construct/Match codegen design and any Rust
   implementation land here (or in sibling leaf 1B if the orchestrator assigned implementation
   to that agent).
-- **The `DepthBudget` trait (`crates/mycelium-mlir/src/budget.rs`, M-349) is reusable** for
++ **The `DepthBudget` trait (`crates/mycelium-mlir/src/budget.rs`, M-349) is reusable** for
   Increment 3; the native codegen should share the trait rather than re-invent the abstraction
   (DRY, KC-3).
-- **RFC-0004 §11 (new section, r3) is the append-only record of this sanction** — see
++ **RFC-0004 §11 (new section, r3) is the append-only record of this sanction** — see
   RFC-0004 revision below.
-- **The orchestrator must register DN-15 in `docs/Doc-Index.md`** (orchestrator-owned file; this
++ **The orchestrator must register DN-15 in `docs/Doc-Index.md`** (orchestrator-owned file; this
   leaf agent does not edit it — FLAG).
-- **The orchestrator must add M-373 to `tools/github/issues.yaml`** (orchestrator-owned file;
++ **The orchestrator must add M-373 to `tools/github/issues.yaml`** (orchestrator-owned file;
   FLAG).
-- **No code in this note** — design-first; the implementation (if any) lands in the leaf or the
++ **No code in this note** — design-first; the implementation (if any) lands in the leaf or the
   next wave as a separate task.
 
 ---

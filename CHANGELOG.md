@@ -8,6 +8,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Fixed (2026-06-19: Wave-5 — PR #213 review fixes, all honesty/never-silent)
+Addressing the Copilot review on PR #213 (8 comments, 4 issues — all legitimate):
+- **`crates/mycelium-mlir/src/llvm.rs`** — `Rhs::Match` now **lowers the `default` arm** when present
+  (it was silently routed to `abort()` — a real interp↔native divergence whenever the default is taken;
+  NFR-7/G2). `abort()` is kept only when `default` is `None` (WF7 checker-proven coverage). Fixed at both
+  the top-level and nested (`lower_anf_block`) Match sites. Added an explicit **binder/field arity check**
+  at both sites (mirrors the interpreter's `DataMalformed`; never a silent truncation).
+- **`crates/mycelium-mlir/tests/native_differential.rs`** — new regression test
+  `match_default_arm_is_taken_and_observationally_equivalent` (scrutinee tag misses the explicit arms ⇒
+  default taken ⇒ interp value vs native; would have caught the bug). Closes the exhaustive-corpus gap.
+- **`crates/mycelium-std-sys/src/rand.rs`** — rand tests now **skip gracefully** on
+  `EntropyError::Unavailable` (repo idiom); dropped the probabilistic successive-differ content assertion
+  (a quality check belongs in a statistical audit, not a unit test; VR-5).
+- **RFC-0004 §11.2 (r3) + DN-15 §4.1** — corrected to the **landed stack-`alloca`** representation
+  (the increment uses `alloca [N+1 x i64]`, not heap `@malloc`/OOM); non-recursive/bounded ⇒ static
+  allocation depth ⇒ no OOM path. Grounding consistency (house rule #4); r1/r2/§1–§10 untouched.
+
 ### Added (2026-06-19: Wave-5 landed — M-373 native direct-LLVM increment, M-374 DN-16 survey, M-375 rand real entropy)
 **Wave-5 octopus-merged (2026-06-19)** into `claude/orch-wave5-mlir-unblock-s0li6o`. Three streams,
 disjoint directories ⇒ conflict-free; 6 files, 1661 insertions; full workspace tests green; no new
