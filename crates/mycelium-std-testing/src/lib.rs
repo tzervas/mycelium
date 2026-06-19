@@ -36,15 +36,15 @@
 //!   golden declares baseline IO; seeded generator is pure (RT3).
 //!
 //! # FLAGs (propagate to orchestrator / spec ratification)
-//! - **FLAG-DIAG:** `Fail` carries a structured diagnostic record. `std.diag` (M-510) is not yet
-//!   landed; we represent the failure record structurally as [`FailRecord`] per spec §3, and
-//!   document the seam. When `std.diag` lands, `FailRecord` should be replaced by (or delegate to)
-//!   the `Diag` type from that crate. See [`FailRecord`] doc comment.
+//! - **FLAG-DIAG (RESOLVED):** `Fail` carries a structured diagnostic record. `std.diag` (M-510)
+//!   has landed; [`FailRecord::to_diag`] projects to the canonical [`mycelium_diag::Diag`] record.
+//!   `FailRecord` keeps testing-specific reproduction metadata (seed + trial index) and folds them
+//!   into the `Diag`'s notes — delegating presentation to `std.diag`, not duplicating it (KC-3).
 //! - **FLAG-Q5:** The differential harness adopts the §8-Q5 two-level bar (observable-result
 //!   equivalence floor + per-module tag/EXPLAIN equivalence for honesty-load-bearing modules).
 //!   The exact ratified definition lives in RFC-0016 §8-Q5 (RESOLVED per README §5). This
-//!   implementation provides the observable-equality floor; the tag/EXPLAIN level requires the
-//!   `diag` crate and is deferred pending FLAG-DIAG resolution.
+//!   implementation provides the observable-equality floor; the tag/EXPLAIN level is deferred
+//!   pending fuller `std.diag` integration at the differential test call sites.
 //! - **FLAG-WORKSPACE:** The workspace `Cargo.toml` was updated to add `crates/mycelium-std-testing`
 //!   as a member. This is a parent-owned file; the orchestrator should verify this addition.
 //!
@@ -395,7 +395,7 @@ fn make_diff(expected: &str, actual: &str) -> String {
 ///
 /// This implements the M-151/M-210 interp↔AOT/native oracle pattern (NFR-7). The two-level
 /// agreement bar (§8-Q5 RESOLVED): observable-result equivalence is the floor enforced here;
-/// the tag/EXPLAIN equivalence level requires `std.diag` (FLAG-DIAG) and is deferred.
+/// the tag/EXPLAIN equivalence level requires deeper `std.diag` call-site integration (FLAG-Q5).
 ///
 /// # Guarantee tag: `Exact` (the verdict is an exact function of both outputs)
 ///
@@ -410,7 +410,7 @@ fn make_diff(expected: &str, actual: &str) -> String {
 /// # EXPLAIN
 /// A `Fail` carries both outputs and the input description so the disagreement is inspectable
 /// (C3/G11/SC-3). **FLAG-Q5:** the tag/EXPLAIN level of the §8-Q5 two-level bar awaits
-/// `std.diag` (FLAG-DIAG).
+/// deeper `std.diag` call-site integration.
 pub fn differential<T, O>(
     input_desc: &str,
     lhs_available: bool,

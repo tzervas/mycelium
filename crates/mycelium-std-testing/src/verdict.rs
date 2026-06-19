@@ -123,8 +123,8 @@ pub enum Verdict {
     /// The check ran and at least one assertion failed.
     ///
     /// Carries a [`FailRecord`] with the structured diagnostic: description, reproducing seed,
-    /// trial index, and op context. **FLAG-DIAG:** this will delegate to `std.diag` (M-510) when
-    /// that crate lands.
+    /// trial index, and op context. Use [`FailRecord::to_diag`] to project to the canonical
+    /// [`mycelium_diag::Diag`] record (FLAG-DIAG RESOLVED — `std.diag` has landed, M-510).
     Fail {
         /// The structured failure record (spec §3 `Fail { diagnostic: Diag }`).
         record: FailRecord,
