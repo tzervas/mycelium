@@ -177,7 +177,7 @@ mod tests {
     /// Guard: adding or removing a row without updating this count makes it fail.
     #[test]
     fn matrix_covers_all_spec_ops() {
-        // The spec §4.5 table has 10 normative rows (build, build_value, identity, explain,
+        // The spec §4.5 table has 11 normative rows (build, build_value, identity, explain,
         // manifest_of, validate, manifest_hash, mode, declared_strength, reconstruct, deploy).
         let expected_op_prefixes = [
             "build (project",

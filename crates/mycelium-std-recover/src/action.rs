@@ -60,10 +60,12 @@ pub enum RecoveryAction<T> {
     /// Declares **`EffectKind::Retry`**, budgeted `Attempts(max_attempts)` (I4). A budget
     /// overrun is an explicit [`mycelium_interp::budget::EffectBudgetExhausted`], never a hang.
     Retry {
-        /// The maximum number of re-attempts (the budget ceiling, I4; must be ≥ 1).
+        /// The maximum number of re-attempts (the budget ceiling, I4). `0` is valid and means
+        /// **no retry** — the driver propagates the original error immediately (never a silent
+        /// drop, I1); it is not a fabricated default.
         max_attempts: u64,
     },
-    /// Transform and re-propagate as a different error class — still explicit.
+    /// Re-propagate under a different error-class *intent* — still explicit, never a recovered value.
     ///
     /// The escalation intent is captured in `to_class` and recorded in the acting [`crate::policy::PolicyRef`]
     /// (the content hash over all rules — C3 / EXPLAIN-able). It always re-propagates; there is
