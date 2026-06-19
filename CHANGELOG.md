@@ -8,6 +8,39 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-19: Wave-5 landed — M-373 native direct-LLVM increment, M-374 DN-16 survey, M-375 rand real entropy)
+**Wave-5 octopus-merged (2026-06-19)** into `claude/orch-wave5-mlir-unblock-s0li6o`. Three streams,
+disjoint directories ⇒ conflict-free; 6 files, 1661 insertions; full workspace tests green; no new
+public API surface (api-index unchanged); `issues.yaml` validated, no duplicate ids.
+
+- **M-373 — direct-LLVM native data-fragment increment** (the unblocked half of the decomposed M-348).
+  - **DN-15** (new, Draft) — honest split of M-348 into the **libMLIR-gated** dialect lowering
+    (`dialect.rs` skeleton; stays **blocked**, VR-5) vs the **direct-LLVM-advanceable** `llvm.rs`
+    extension (RFC-0004 §2 revisit clause); a per-increment table grading each "needs libMLIR? /
+    tractable now? / risk".
+  - **RFC-0004 r3** (append-only) — new **§11** scopes the direct-LLVM data-fragment increment under
+    the §2 revisit clause; **no r1/r2 Accepted text rewritten** (house rule #3).
+  - **`crates/mycelium-mlir/src/llvm.rs`** — natively compiles non-recursive `Construct` (stack
+    `alloca [N+1 x i64]`, tag at slot 0) + `Match` (`switch i64` with an explicit `@abort()` default —
+    never silent UB, G2; `phi i32` merge). `App`/`Lam`/`Fix`/`FixGroup` split into separate explicit
+    `UnsupportedNode` refusals — recursion/closures stay honestly deferred (VR-5). Guarantee `Declared`.
+  - **M-302 differential** extended: a 5-program `data_corpus` (interp↔native observational equivalence
+    via the shared M-210 checker) + a test asserting the closure/recursion refusal still holds. 104 tests pass.
+- **M-374 — `docs/notes/DN-16`** (new, Draft). Per-spec stdlib ratification-readiness survey (all 25
+  specs vs their crates): 1 ready, 17 ready-with-flags, 2 ready-scoped, 3 divergent, 2 not-implemented.
+  Advisory (DN-07 posture) — **no spec moved to Accepted**; divergences flagged for the maintainer.
+- **M-375 — `crates/mycelium-std-sys/src/rand.rs`**. `fill_bytes` now reads real OS entropy from
+  `/dev/urandom` (pure-std `std::fs` + `read_exact`; **no new dep**, `#![forbid(unsafe_code)]` preserved);
+  all failure paths are explicit `EntropyError` (never panic/zero-fill, G2). Tag stays **`Declared`**
+  (real kernel CSPRNG, but no documented quality trials — VR-5). 18 std-sys tests green. Resolves FLAG-RAND-IMPL.
+
+**Orchestrator integrating edits:**
+- `tools/github/issues.yaml` — M-373/M-374/M-375 → `status:done` (honest DONE notes); M-348 decomposition
+  recorded, its libMLIR-gated half **unchanged (`status:blocked`)**.
+- `docs/Doc-Index.md` — registered DN-15 + DN-16 in §1.
+- `CHANGELOG.md` — this entry.
+- `scripts/install-tools.sh` + `scripts/README.md` — snapshot-cached cloud Setup-script toolchain provisioning.
+
 ### Launched (2026-06-19: Wave-5 — decompose the M-348 libMLIR wall; land a real native increment with zero libMLIR)
 **Wave-5 launched** on `claude/orch-wave5-mlir-unblock-s0li6o` (Opus orchestrator / Sonnet swarm below).
 The wave's thesis: M-348 ("provision libMLIR to unblock the native MLIR→LLVM path", status:blocked) was

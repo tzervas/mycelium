@@ -1438,31 +1438,34 @@ issues:
   - id: M-373
     title: "M-373 — Direct-LLVM backend: native data-fragment increment (the unblocked half of M-348)"
     milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
-    labels: [phase:4, type:feature, area:execution, priority:P2, status:in-progress]
+    labels: [phase:4, type:feature, area:execution, priority:P2, status:done]
     depends_on: [M-342, M-348]
-    doc_refs: [corpus:RFC-0004, src:crates/mycelium-mlir/src/llvm.rs, src:crates/mycelium-mlir/tests/native_differential.rs]
+    doc_refs: [corpus:RFC-0004, corpus:DN-15, src:crates/mycelium-mlir/src/llvm.rs, src:crates/mycelium-mlir/tests/native_differential.rs]
     body: |
       The direct-LLVM half of M-348, advanceable NOW with zero libMLIR (DN-15). RFC-0004 §2 explicitly sanctions a "lighter direct-LLVM backend" — llvm.rs already compiles the bit/trit subset to native code via llc+clang (passing the M-302 native differential). M-342 left the data/recursion fragment (Construct/App/Lam/Fix/FixGroup/Match) as an explicit UnsupportedNode "deferred to the MLIR->LLVM backend"; DN-15 shows that was a SEQUENCING choice, not an intrinsic libMLIR requirement — heap/closure codegen in textual LLVM IR needs no MLIR.
       Leaf 1A (design): DN-15 honest split (libMLIR-gated vs direct-LLVM-advanceable) + the closure-conversion/heap/DN-05 #1 stack-robustness strategy + a per-increment table; an APPEND-ONLY RFC-0004 revision scoping the direct-LLVM data-fragment extension under the §2 revisit clause (no Accepted text rewritten; house rule #3).
       Leaf 1B (code, gated on 1A scope): extend llvm.rs to natively compile a NON-RECURSIVE data sub-fragment (Construct + Match over bounded, non-recursive data — simple struct/tag codegen in textual LLVM IR, no GC); App/Lam/Fix/FixGroup STAY explicit UnsupportedNode (closure-conversion + heap + stack-robustness is the NEXT increment, deferred). Extend the M-302 differential to the new nodes. Every refusal explicit (G2); no guarantee upgraded without a checked basis (VR-5).
       Acceptance: a non-recursive Construct/Match sub-fragment compiles + runs natively, holds the interp<->native differential; recursion/closures remain honest UnsupportedNode; cargo test -p mycelium-mlir green.
+      DONE (2026-06-19; Wave-5): Leaf 1A landed DN-15 + RFC-0004 r3 (§11, append-only — the §2 revisit clause scoped to the data-fragment increment). Leaf 1B extended llvm.rs to natively compile non-recursive Construct (stack `alloca [N+1 x i64]`, tag at slot 0) + Match (`switch i64` + explicit `@abort()` default — never silent UB, G2; `phi i32` merge); App/Lam/Fix/FixGroup split into separate explicit UnsupportedNode refusals (recursion/closures stay honestly deferred, VR-5). M-302 differential extended with a 5-program data_corpus + a refusal-still-holds test; 104 tests pass. Guarantee `Declared` (hand-written IR + empirical differential, not Proven). FOLLOW-ON (deferred, DN-15 / RFC-0004 §11.3): Increment-2 closures (App/Lam) + heap, Increment-3 recursion (Fix/FixGroup) + DN-05 #1 stack-robustness — minted at the next gate (YAGNI). The libMLIR-gated MLIR dialect half stays M-348 (blocked).
 
   - id: M-374
     title: "M-374 — Stdlib spec ratification-readiness survey (DN-16)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:docs, area:toolchain, priority:P3, status:in-progress]
+    labels: [phase:5, type:docs, area:toolchain, priority:P3, status:done]
     depends_on: [M-501]
-    doc_refs: [corpus:RFC-0016]
+    doc_refs: [corpus:RFC-0016, corpus:DN-16]
     body: |
       DN-16 (Draft): diff each docs/spec/stdlib/*.md against its landed crate; classify each spec ratification-ready (code matches spec) vs divergent (flag the divergence). SURFACE recommendations for maintainer decision — DO NOT move any spec to Accepted in this wave (append-only; ratification is the maintainer's call, DN-07 posture). Docs-only; no code.
       Acceptance: DN-16 presents a per-spec readiness classification grounded in actual crate source; every divergence flagged; no spec flipped to Accepted (VR-5; maintainer decision deferred).
+      DONE (2026-06-19; Wave-5): DN-16 (Draft) surveyed all 25 stdlib specs vs their crates — 1 ratification-ready, 17 ready-with-flags, 2 ready-scoped, 3 divergent (fmt/io from_json tag framing; dense/math/vsa provisional Proven rows unverified per ADR-010; swap §3 surface-reconcile), 2 not-yet-implemented (runtime, self-hosting-readiness). NO spec moved to Accepted (advisory, DN-07 posture; maintainer's call). Divergences flagged for decision.
 
   - id: M-375
     title: "M-375 — std-sys rand: real OS entropy source (resolve FLAG-RAND-IMPL)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:in-progress]
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:done]
     depends_on: [M-541]
     doc_refs: [corpus:RFC-0016, src:crates/mycelium-std-sys/src/rand.rs]
     body: |
       Resolve FLAG-RAND-IMPL (raised by M-541): replace rand::fill_bytes's DefaultHasher+SystemTime stand-in with a real OS entropy source — prefer a pure-std /dev/urandom read to keep #![forbid(unsafe_code)] intact and avoid a new dep (getrandom is the fallback if pure-std cannot satisfy the contract; document the choice). Retag ONLY to the honestly-supportable strength: a real OS source justifies `Empirical` ONLY with documented trials/coverage; otherwise it stays `Declared`. Do not over-claim (VR-5). Any Cargo.toml/Cargo.lock dep change is FLAGGED up to the orchestrator (it owns the lockfile).
       Acceptance: fill_bytes reads real OS entropy with a never-silent error on failure (G2); guarantee tag matches the documented basis (Empirical iff trials documented, else Declared); #![forbid(unsafe_code)] preserved if pure-std; cargo test -p mycelium-std-sys green.
+      DONE (2026-06-19; Wave-5): fill_bytes now opens /dev/urandom via std::fs::File + read_exact (pure-std; NO new dep, #![forbid(unsafe_code)] preserved). All failure paths (open/read error, no /dev/urandom) surface as explicit EntropyError — never panic, never zero-fill (G2). Tag stays `Declared` (real kernel CSPRNG source, but no documented statistical-quality trials — Empirical promotion withheld per VR-5). 6 rand tests (3→6), 18 std-sys tests green. No manifest change. FLAG-GETRANDOM (cross-platform OS entropy via getrandom) noted as a future decision; not needed this wave.

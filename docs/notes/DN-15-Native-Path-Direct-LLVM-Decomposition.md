@@ -80,6 +80,7 @@ clause — it does not supersede the MLIR→LLVM commitment, it fills in the gap
 remains libMLIR-blocked.
 
 **What the refusal site says (source, not paraphrase):** `llvm.rs:258–274`:
+
 ```
 // The native LLVM backend stays the **bit/trit subset** (VR-5): the data + recursion
 // fragment (Construct/App/Lam/Fix/FixGroup/Match) needs heap/closure codegen, deferred to
