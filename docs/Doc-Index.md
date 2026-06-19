@@ -120,7 +120,7 @@ The corpus is Accepted and the build is underway; the dependency-ordered, priori
 
 This index remains the map the board points back to.
 
-## 7. Agent tooling index
+## 6. Agent tooling index
 
 `docs/api-index/` — committed, auto-generated agent-facing code index (Wave-4A, M-392..395; 2026-06-19):
 - `index.json` — machine-readable symbol table (symbol, kind, crate, file:line, summary). `Empirical/Declared` heuristic — source is ground truth; use for navigation only.
@@ -128,5 +128,5 @@ This index remains the map the board points back to.
 
 Regenerate with `just docs-index` (runs `tools/docgen/code_index.py`). The committed index must stay current; `just check` enforces this via a drift gate (`scripts/checks/doc-index.sh`). The orchestrator regenerates and commits the index after every octopus merge that touches a public API. See `CLAUDE.md §Auto-generated docs & the agent index` for the ownership and `doc_refs` grammar.
 
-## 6. Maintenance
+## 7. Maintenance
 Append-only with status transitions (Draft/Proposed/Preliminary → Accepted → Superseded), mirroring the ADR discipline. Keep `Proven | Empirical | Declared` tags honest per VR-5 — per model/op, never in aggregate. New non-asymptotic results may *upgrade* a tag; absence keeps it `Empirical`.

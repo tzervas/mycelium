@@ -54,7 +54,7 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 - **M-393 — `just docs` + `just docs-index`** + `scripts/checks/doc-index.sh` drift gate wired into
   `scripts/checks/all.sh` and `just check`. Mirrors the `just api` committed-snapshot pattern.
   `just docs` (rustdoc HTML, target/doc, NOT committed); `just docs-index` (regenerate committed index).
-- **M-394 — `tools/github/doc_refs_check.py`** (pure stdlib). Validates `doc_refs:` list entries in
+- **M-394 — `tools/github/doc_refs_check.py`** (requires PyYAML). Validates `doc_refs:` list entries in
   `issues.yaml`: `api:<crate>::<path>` → index.json, `corpus:<DOC>[#<anchor>]` → Doc-Index.md,
   `src:<path>[:<line>]` → file on disk. Never-silent on dangling refs. Extended `manifest-check.py`.
   Backfilled `doc_refs:` on all 52 open issues in `issues.yaml` (Wave-4B issues pre-wired).

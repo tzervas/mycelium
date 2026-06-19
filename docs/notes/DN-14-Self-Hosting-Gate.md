@@ -117,7 +117,7 @@ The **blocking gates** for any non-trivial stdlib module authored in Mycelium-la
   RFC-0014 RT3 contract cannot be expressed or checked; `rand`, `time`, `io`, `fs` cannot carry
   the honesty invariant. (Deferred to RFC-0007 stage-1.)
 - **`wild` / FFI surface** — without an auditable `wild` block that the typechecker accepts, no
-  module can bottom out in a syscall; `fs`, `rand`, `io` are inauthrorable. (Denied by design in
+  module can bottom out in a syscall; `fs`, `rand`, `io` cannot be authored in Mycelium v0. (Denied by design in
   v0 per LR-9; the `std-sys` split — RFC-0016 §8-Q6 — is the roadmap path.)
 - **Static guarantee index** — without stage-1 static graded type checking, the guarantee matrix
   (RFC-0016 §4.5) cannot be expressed as checked surface types; guarantee tags remain runtime

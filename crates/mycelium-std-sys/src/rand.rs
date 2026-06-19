@@ -1,6 +1,8 @@
-//! \[Declared\] Platform entropy floor. Fill a buffer with OS-provided random bytes.
+//! \[Declared\] Platform entropy floor. v0 fills a buffer with `DefaultHasher`+`SystemTime` bytes.
 //!
-//! Declared — no audit of the OS RNG quality; wiring from `std-rand` deferred to a future wave.
+//! **Not OS entropy.** See the implementation note below — the v0 stand-in is a hash of the
+//! current system time, not a call to `getrandom` or `/dev/urandom`.
+//! Declared — no audit of RNG quality; wiring from `std-rand` deferred to a future wave.
 //!
 //! # Note on implementation
 //!

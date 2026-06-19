@@ -37,6 +37,8 @@
 //! - [`fs`] — filesystem syscall floor (thin `std::fs` wrappers).
 //! - [`time`] — OS clock floor (wall + monotonic + sleep).
 
+#![forbid(unsafe_code)]
+
 pub mod fs;
 pub mod math;
 pub mod rand;

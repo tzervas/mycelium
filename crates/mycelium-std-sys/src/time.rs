@@ -41,8 +41,8 @@ pub fn wall_nanos() -> Result<u128, String> {
 pub fn mono_nanos() -> u64 {
     static ORIGIN: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
     let origin = ORIGIN.get_or_init(Instant::now);
-    // `as_nanos() as u64` saturates at ~584 years of uptime — acceptable for a process-local clock.
-    origin.elapsed().as_nanos() as u64
+    // Saturate at u64::MAX (~584 years) rather than wrapping; u128→u64 explicit saturating cast.
+    u64::try_from(origin.elapsed().as_nanos()).unwrap_or(u64::MAX)
 }
 
 /// \[Declared\] Pause the current thread for approximately `nanos` nanoseconds.
