@@ -637,6 +637,7 @@ issues:
     body: |
       The MLIR->LLVM native AOT path (RFC-0004 §2, ADR-009) is gated on libMLIR, absent in the current environment. Maintainer intends to provision it near-term (Windows/Claude Code desktop, or via WSL) to unblock native dialect lowering / cross-target codegen, the native data/closure codegen M-342 left as UnsupportedNode, and DN-05 #1 (stack-robust recursion designed into the native path). Verdicts needing it stay honestly "not established" (VR-5) until present.
       Acceptance: libMLIR provisioned + a first native lowering increment runs; no code until the toolchain is present.
+      DECOMPOSED 2026-06-19 (Wave-5; DN-15): M-348 was two parts lumped as one external wall. (a) GENUINELY libMLIR-gated — the real `ternary`→arith/vector→LLVM dialect lowering (dialect.rs is a textual skeleton stand-in) — STAYS status:blocked here, honestly "not established" until the C++ infra is present (VR-5). (b) ADVANCEABLE NOW with zero libMLIR — the direct-LLVM-IR backend (llvm.rs) extension to the data fragment, sanctioned by the RFC-0004 §2 "lighter direct-LLVM backend" revisit clause — split out as M-373 (in-progress). M-342 left the data/recursion nodes as explicit UnsupportedNode by a SEQUENCING choice, not an intrinsic libMLIR requirement (heap/closure codegen in textual LLVM IR needs no MLIR). This entry's blocked half is unchanged; M-373 tracks the unblocked half.
 
   - id: M-343
     title: "M-343 — Mutual recursion: full elaboration (R7-Q3 remaining half)"
@@ -1429,3 +1430,39 @@ issues:
     body: |
       Maintainer-ratified (2026-06-19) the converged "one canonical JSON projection" seam: io/serialize (M-514) owns the single canonical JSON; std.fmt's to_json/from_json (M-533) delegate to it (one JSON, two entry points; round-trip established once). Both fmt.md 7-Q1 and io.md independently proposed it (docs/spec/stdlib/README.md 5); it was the last item pending maintainer sign-off. Replaces fmt's duplicated serde_json codec + classification with delegation; preserves the content-hash round-trip, the non-finite-f64 refusal, the public API, and the honest tags (the fmt-Exact vs io-Empirical from_json tag-framing is FLAGGED as a residual, not silently changed; VR-5).
       DONE (2026-06-19): landed on the wave branch; verification (build/test/clippy) + the append-only spec resolution (fmt.md/io.md/stdlib README 5) run in the Sonnet review pass. Resolves fmt.md 7-Q1 + RFC-0016 8-Q1. Advances RFC-0016 4.1 C5.
+
+  # ════════════════════════════════════════════════════════════════════════════════════════════════
+  # 2026-06-19: Wave-5 — M-348 native-path unblock (decompose the libMLIR wall) + two independent
+  # secondaries. Orchestrated as a swarm on claude/orch-wave5-mlir-unblock-s0li6o. Append-only; the
+  # libMLIR-gated half of M-348 stays blocked (VR-5) — only the direct-LLVM half (M-373) is unblocked.
+  - id: M-373
+    title: "M-373 — Direct-LLVM backend: native data-fragment increment (the unblocked half of M-348)"
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:feature, area:execution, priority:P2, status:in-progress]
+    depends_on: [M-342, M-348]
+    doc_refs: [corpus:RFC-0004, src:crates/mycelium-mlir/src/llvm.rs, src:crates/mycelium-mlir/tests/native_differential.rs]
+    body: |
+      The direct-LLVM half of M-348, advanceable NOW with zero libMLIR (DN-15). RFC-0004 §2 explicitly sanctions a "lighter direct-LLVM backend" — llvm.rs already compiles the bit/trit subset to native code via llc+clang (passing the M-302 native differential). M-342 left the data/recursion fragment (Construct/App/Lam/Fix/FixGroup/Match) as an explicit UnsupportedNode "deferred to the MLIR->LLVM backend"; DN-15 shows that was a SEQUENCING choice, not an intrinsic libMLIR requirement — heap/closure codegen in textual LLVM IR needs no MLIR.
+      Leaf 1A (design): DN-15 honest split (libMLIR-gated vs direct-LLVM-advanceable) + the closure-conversion/heap/DN-05 #1 stack-robustness strategy + a per-increment table; an APPEND-ONLY RFC-0004 revision scoping the direct-LLVM data-fragment extension under the §2 revisit clause (no Accepted text rewritten; house rule #3).
+      Leaf 1B (code, gated on 1A scope): extend llvm.rs to natively compile a NON-RECURSIVE data sub-fragment (Construct + Match over bounded, non-recursive data — simple struct/tag codegen in textual LLVM IR, no GC); App/Lam/Fix/FixGroup STAY explicit UnsupportedNode (closure-conversion + heap + stack-robustness is the NEXT increment, deferred). Extend the M-302 differential to the new nodes. Every refusal explicit (G2); no guarantee upgraded without a checked basis (VR-5).
+      Acceptance: a non-recursive Construct/Match sub-fragment compiles + runs natively, holds the interp<->native differential; recursion/closures remain honest UnsupportedNode; cargo test -p mycelium-mlir green.
+
+  - id: M-374
+    title: "M-374 — Stdlib spec ratification-readiness survey (DN-16)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:docs, area:toolchain, priority:P3, status:in-progress]
+    depends_on: [M-501]
+    doc_refs: [corpus:RFC-0016]
+    body: |
+      DN-16 (Draft): diff each docs/spec/stdlib/*.md against its landed crate; classify each spec ratification-ready (code matches spec) vs divergent (flag the divergence). SURFACE recommendations for maintainer decision — DO NOT move any spec to Accepted in this wave (append-only; ratification is the maintainer's call, DN-07 posture). Docs-only; no code.
+      Acceptance: DN-16 presents a per-spec readiness classification grounded in actual crate source; every divergence flagged; no spec flipped to Accepted (VR-5; maintainer decision deferred).
+
+  - id: M-375
+    title: "M-375 — std-sys rand: real OS entropy source (resolve FLAG-RAND-IMPL)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:in-progress]
+    depends_on: [M-541]
+    doc_refs: [corpus:RFC-0016, src:crates/mycelium-std-sys/src/rand.rs]
+    body: |
+      Resolve FLAG-RAND-IMPL (raised by M-541): replace rand::fill_bytes's DefaultHasher+SystemTime stand-in with a real OS entropy source — prefer a pure-std /dev/urandom read to keep #![forbid(unsafe_code)] intact and avoid a new dep (getrandom is the fallback if pure-std cannot satisfy the contract; document the choice). Retag ONLY to the honestly-supportable strength: a real OS source justifies `Empirical` ONLY with documented trials/coverage; otherwise it stays `Declared`. Do not over-claim (VR-5). Any Cargo.toml/Cargo.lock dep change is FLAGGED up to the orchestrator (it owns the lockfile).
+      Acceptance: fill_bytes reads real OS entropy with a never-silent error on failure (G2); guarantee tag matches the documented basis (Empirical iff trials documented, else Declared); #![forbid(unsafe_code)] preserved if pure-std; cargo test -p mycelium-std-sys green.

@@ -8,6 +8,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Launched (2026-06-19: Wave-5 — decompose the M-348 libMLIR wall; land a real native increment with zero libMLIR)
+**Wave-5 launched** on `claude/orch-wave5-mlir-unblock-s0li6o` (Opus orchestrator / Sonnet swarm below).
+The wave's thesis: M-348 ("provision libMLIR to unblock the native MLIR→LLVM path", status:blocked) was
+treated as a single external wall but is actually TWO parts — (a) genuinely libMLIR-gated (the real
+`ternary`→arith/vector→LLVM dialect lowering; `dialect.rs` is a textual skeleton) which STAYS blocked
+honestly (VR-5), and (b) advanceable NOW with zero libMLIR (the direct-LLVM-IR backend `llvm.rs`, sanctioned
+by the RFC-0004 §2 "lighter direct-LLVM backend" revisit clause). Step 0 decomposed M-348, minting:
+- **M-373** (in-progress) — direct-LLVM native data-fragment increment (the unblocked half of M-348);
+  Epic 1 spine: Leaf 1A (DN-15 decomposition design + append-only RFC-0004 revision), Leaf 1B (extend
+  `llvm.rs` to natively compile a non-recursive Construct/Match sub-fragment; App/Lam/Fix/FixGroup stay
+  honest `UnsupportedNode`; extend the M-302 differential).
+- **M-374** (in-progress) — stdlib spec ratification-readiness survey (DN-16, docs-only; surfaces
+  recommendations, ratifies nothing).
+- **M-375** (in-progress) — std-sys rand real OS entropy (resolve FLAG-RAND-IMPL; tag stays honest).
+
+M-348's body records the decomposition; its blocked half (the libMLIR dialect layer) is unchanged.
+
 ### Added (2026-06-19: Wave-4B landed — M-541 std-sys FFI floor, M-502 DN-14 self-hosting gate, M-540 RFC-0012 ergonomics annotations)
 **Wave-4B octopus-merged (2026-06-19).** Two parallel epics (M541A + M502A) conflict-free merged into
 `claude/orch-wave4-docs-sys-4ifdo4`; 30 files, 989 insertions; all tests green (15 new std-sys tests);
