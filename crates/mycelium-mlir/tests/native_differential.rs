@@ -496,3 +496,109 @@ fn lam_and_fix_are_still_explicitly_refused_by_the_native_path() {
         }
     }
 }
+
+// ─── Regression: Issue 1 fix — Match default arm taken (PR #213 review) ────────────────────────
+
+/// Build a three-constructor registry: `type Signal = A | B | C`.
+/// All three constructors carry no fields — tag alone is the discriminant.
+fn signal_registry() -> DataRegistry {
+    let mut specs = BTreeMap::new();
+    specs.insert(
+        "Signal".to_owned(),
+        DeclSpec {
+            ctors: vec![
+                CtorSpec { fields: vec![] }, // A (tag 0)
+                CtorSpec { fields: vec![] }, // B (tag 1)
+                CtorSpec { fields: vec![] }, // C (tag 2)
+            ],
+        },
+    );
+    DataRegistry::build(&specs).expect("Signal registry must build")
+}
+
+/// Regression test for Issue 1 (PR #213 / Copilot review): the ANF `Match` `default` arm must be
+/// **lowered into the switch's default block**, not silently replaced by `abort()`.
+///
+/// Program structure:
+///   match C {
+///     A → const B-bits        (explicit arm — tag 0, not taken)
+///     | default → const A-bits  (ANF default — taken because scrutinee is C / tag 2)
+///   }
+///
+/// **Before the fix:** the native path would call `abort()` when the `default` arm was taken
+/// (tag 2 hits the switch default ⇒ abort ⇒ `AotError::Run`), while the interpreter returned
+/// the default body's value. That was a **silent semantic divergence**.
+///
+/// **After the fix:** both paths return the default body's value (`A` bits) and the M-210
+/// checker reports `Validated { strength: Exact }`.
+///
+/// Guarantee: `Declared` (same as the rest of the Increment-1 data fragment; VR-5).
+#[test]
+fn match_default_arm_is_taken_and_observationally_equivalent() {
+    let sig = signal_registry();
+    // Construct C (tag 2) — the scrutinee. No explicit arm for tag 2.
+    let construct_c = Node::Construct {
+        ctor: sig.ctor_ref("Signal", 2).unwrap(),
+        args: vec![],
+    };
+    // Match: one explicit arm for A (tag 0) → B-bits; default → A-bits.
+    // The scrutinee is C (tag 2), so the explicit arm is NOT taken and the default IS taken.
+    let program = Node::Match {
+        scrutinee: Box::new(construct_c),
+        alts: vec![Alt::Ctor {
+            ctor: sig.ctor_ref("Signal", 0).unwrap(), // A — not taken
+            binders: vec![],
+            body: Node::Const(byte(B)), // would return B-bits if taken
+        }],
+        default: Some(Box::new(Node::Const(byte(A)))), // taken → returns A-bits
+    };
+
+    // Run through the reference interpreter.
+    let interp_val = Interpreter::new(PrimRegistry::with_builtins(), Box::new(IdentitySwapEngine))
+        .eval(&program)
+        .expect("interpreter must evaluate the default-arm Match to a repr value");
+
+    // Interpreter must return A-bits (the default body), not B-bits.
+    assert_eq!(
+        interp_val.payload(),
+        &Payload::Bits(A.to_vec()),
+        "interpreter must return the default arm's value (A-bits) when scrutinee tag is unmatched"
+    );
+
+    // Run through the native compiled path.
+    let native_val = match mycelium_mlir::compile_and_run(&program) {
+        Ok(v) => v,
+        // Environment skip: no native toolchain → cannot run the compiled path here.
+        Err(AotError::ToolchainMissing(_)) => return,
+        // Before the fix: native would abort() here (AotError::Run). After the fix: it must not.
+        Err(e) => panic!(
+            "native path errored when the Match default arm was taken: {e}\n\
+             (Before the PR-213 fix this would be an AotError::Run from abort(); \
+             after the fix the default block must be lowered correctly.)"
+        ),
+    };
+
+    // Native must return the same A-bits as the interpreter.
+    assert_eq!(
+        observable(&interp_val),
+        observable(&native_val),
+        "interp and native diverged on the default arm: interp {:?} vs native {:?}",
+        interp_val.payload(),
+        native_val.payload()
+    );
+
+    // M-210: the pair validates through the single shared TV checker.
+    assert_eq!(
+        check(
+            &interp_val,
+            &native_val,
+            RefinementRelation::ObservationalEquiv,
+            Certificate::exact(),
+            &Evidence::Observational,
+        ),
+        CheckVerdict::Validated {
+            strength: GuaranteeStrength::Exact
+        },
+        "the shared checker must validate the interp↔native pair when the default arm is taken"
+    );
+}
