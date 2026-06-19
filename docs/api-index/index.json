@@ -17299,7 +17299,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 453,
+      "line": 454,
       "summary": "Empirical basis string for BF16 accumulation ops (FLAG Q1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17310,7 +17310,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 447,
+      "line": 448,
       "summary": "Empirical basis string for accumulation ops (FLAG Q1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17321,7 +17321,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 238,
+      "line": 239,
       "summary": "The guarantee matrix for `std.dense` (RFC-0016 §4.5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17332,7 +17332,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 216,
+      "line": 217,
       "summary": "One row of the guarantee matrix (§4 of `docs/spec/stdlib/dense.md`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17343,7 +17343,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 165,
+      "line": 166,
       "summary": "A reified ε-bound artifact: the inspectable record of a float op's accuracy claim (C3/EXPLAIN;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17354,7 +17354,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::OpBound",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 184,
+      "line": 185,
       "summary": "Convert to a [`Bound`] suitable for attaching to a [`mycelium_core::Meta`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17365,7 +17365,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 458,
+      "line": 459,
       "summary": "Empirical basis string for L2-norm / cosine ops (FLAG Q2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17376,7 +17376,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 491,
+      "line": 492,
       "summary": "The ergonomic Ring-1 capability surface over a typed `Dense{dim, dtype}` space (M-518).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17387,7 +17387,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 588,
+      "line": 589,
       "summary": "Elementwise `a + b` — float DT: `Proven` (FLAG Q1 — uses kernel bound).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17398,7 +17398,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 872,
+      "line": 873,
       "summary": "Cosine similarity — float DT: `Empirical` (FLAG Q2: sqrt + division composition).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17409,7 +17409,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 514,
+      "line": 515,
       "summary": "The dimensionality.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17420,7 +17420,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 844,
+      "line": 845,
       "summary": "Dot product `⟨a, b⟩` — float DT: `Empirical` (FLAG Q1: accumulation bound).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17431,7 +17431,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 520,
+      "line": 521,
       "summary": "The element dtype.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17442,7 +17442,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 559,
+      "line": 560,
       "summary": "Construct a value from a slice, checking length and grid alignment.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17453,7 +17453,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 543,
+      "line": 544,
       "summary": "Construct an **Exact** constant vector with every element equal to `x`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17464,7 +17464,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 629,
+      "line": 630,
       "summary": "Elementwise (Hadamard) product `a ⊙ b` — float DT: `Proven` (FLAG Q1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17475,7 +17475,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 797,
+      "line": 798,
       "summary": "L1 norm (sum of |xᵢ|) — float DT: `Empirical` (same accumulation argument as `sum`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17486,7 +17486,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 817,
+      "line": 818,
       "summary": "L2 (Euclidean) norm — float DT: `Empirical` (FLAG Q2: sqrt composition not fully checked).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17497,7 +17497,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 709,
+      "line": 710,
       "summary": "Map a function `f` over every element (tag = meet of input tag and `f_tag` — VR-5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17508,7 +17508,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 614,
+      "line": 615,
       "summary": "Elementwise negation — **Exact** (the dtype grid is symmetric; no rounding).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17519,7 +17519,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 500,
+      "line": 501,
       "summary": "Construct a `StdDense` surface for a `dim`-dimensional space over `dtype`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17530,7 +17530,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 677,
+      "line": 678,
       "summary": "Scalar multiplication `s · a` — float DT: `Proven` (FLAG Q1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17541,7 +17541,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 508,
+      "line": 509,
       "summary": "The underlying [`DenseSpace`] descriptor.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17552,7 +17552,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 598,
+      "line": 599,
       "summary": "Elementwise `a − b` — same contract as add.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17563,7 +17563,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 776,
+      "line": 777,
       "summary": "Sum all elements — float DT: `Empirical` (FLAG Q1: accumulation bound, conservative",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17574,7 +17574,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 528,
+      "line": 529,
       "summary": "Construct an **Exact** zero vector (guarantee matrix: `zeros` — `Exact`, total).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17585,7 +17585,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 91,
+      "line": 92,
       "summary": "Errors from the `std.dense` capability surface (C1/G2: explicit typed errors, never sentinels).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17596,7 +17596,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 442,
+      "line": 443,
       "summary": "BF16 analogue of [`accumulation_eps_f32`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17607,7 +17607,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 435,
+      "line": 436,
       "summary": "Conservative empirical ε for floating-point accumulation ops (`sum`, `l1_norm`, `dot`).",
       "guarantee_tag": null,
       "corpus_refs": []

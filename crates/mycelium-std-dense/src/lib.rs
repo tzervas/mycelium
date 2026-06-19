@@ -42,7 +42,8 @@
 //! 2026-06-19; maintainer-ratified): they rest on the ADR-010 `ErrorBound` per-element IEEE
 //! backward-error instantiation (`fl(a∘b) = (a∘b)(1+δ)`, `|δ| ≤ u` — Higham 2002, Thm 2.2), whose
 //! single side-condition (operand finiteness / no overflow) is **guarded at runtime** (non-finite
-//! inputs → `DenseError::NonFinite`) and re-validated by the numerics checker (M-512, delivered).
+//! inputs → kernel [`DenseError::NonFinite`], surfaced as [`StdDenseError::Kernel`]) and re-validated
+//! by the numerics checker (M-512, delivered).
 //! The accumulation ops (`sum`, `dot`, `l1_norm`) stay **`Empirical`** conservatively: the `nγ_n`
 //! accumulation bound is a *distinct* theorem not yet discharged by a checked instantiation;
 //! upgrade accumulation to `Proven` only when that checked accumulation theorem is delivered (VR-5).

@@ -48,27 +48,28 @@ bijections.
 ## 3. Exported-op surface (pinned to the landed crate)
 
 **Pinned to the landed `mycelium-std-swap` surface (DN-16, 2026-06-19; §7-Q4 resolved).** Value-semantic,
-immutable-by-default; every fallible op returns `Option`/`Result`. The conversion/check/explain fns are
-defined in `crates/mycelium-std-swap/src/lib.rs`; the certificate types + the M-210 `check` are
-**re-exported from `mycelium_cert`** (not redefined here). Signatures below match the crate.
+immutable-by-default; **every fallible op returns `Result` (no `Option`)**. The conversion/check/explain fns
+are defined in `crates/mycelium-std-swap/src/lib.rs`; the certificate types + the M-210 `check` are
+**re-exported from `mycelium_cert`** (not redefined here). The signatures below are the actual landed surface
+(value-typed: `Value` in, `Swapped` out; the source representation is carried inside the dynamic `Value`).
 
 ```
 // landed surface — crates/mycelium-std-swap/src/lib.rs (cert types re-exported from mycelium_cert)
 
 // A swap result is the target value PLUS its certificate — never the value alone (C1/C3).
-type Swapped<T> = { value: T, cert: SwapCertificate }   // cert re-exported from RFC-0001 / mycelium-core
+pub struct Swapped { value: Value, cert: SwapCertificate }   // non-generic; cert re-exported from mycelium_cert
 
 // --- binary <-> ternary : LosslessWithinRange, Exact-within-range (RFC-0002 §4) ---
-fn bin_to_tern(x: Bin<N>)  -> Result<Swapped<Tern<M>>, SwapError>   // Err(OutOfRange) if x not in image
-fn tern_to_bin(y: Tern<M>) -> Option<Swapped<Bin<N>>>               // None off the image (partial inverse)
+fn bin_to_tern(src: &Value, trits_width:  u32, policy: &PolicyRef) -> Result<Swapped, SwapError>
+fn tern_to_bin(src: &Value, binary_width: u32, policy: &PolicyRef) -> Result<Swapped, SwapError>  // Err off the image
 
 // --- F32 -> BF16 : Bounded (epsilon), one-way (RFC-0002 §5; ADR-010) ---
-fn f32_to_bf16(x: Dense<F32>) -> Result<Swapped<Dense<BF16>>, SwapError>   // carries ErrorBound epsilon
+fn f32_to_bf16(src: &Value, policy: &PolicyRef) -> Result<Swapped, SwapError>   // carries ErrorBound epsilon
 // no exact inverse exported: BF16 -> F32 widening is a `cmp/convert` lift, not a certified swap (boundary)
 
 // --- Dense <-> VSA : Bounded/probabilistic (epsilon, delta) (RFC-0002 §5; RFC-0003/T0.2) ---
-fn dense_to_vsa(x: Dense<F32>, p: PolicyRef) -> Result<Swapped<Vsa>,   SwapError>
-fn vsa_to_dense(h: Vsa,        p: PolicyRef) -> Result<Swapped<Dense<F32>>, SwapError>
+fn dense_to_vsa(src: &Value, vsa_dim:    u32, delta: f64, policy: &PolicyRef) -> Result<Swapped, SwapError>
+fn vsa_to_dense(src: &Value, components: u32, delta: f64, policy: &PolicyRef) -> Result<Swapped, SwapError>
 
 // --- certificate check / explain : the consumer surface over the ONE M-210 checker ---
 // re-exported from mycelium_cert: check, CheckVerdict, Evidence, Fallback, NotValidatedReason,
@@ -193,7 +194,11 @@ Tag justification (VR-5 — downgrade rather than overclaim):
   checker), and `explain`. Corrections vs the old sketch: there is **no `build` fn**; the certificate types
   (`SwapCertificate`/`SwapError`/`CheckVerdict`/`Evidence`/`Fallback`/`NotValidatedReason`/`RefinementRelation`)
   are re-exported from `mycelium_cert`; `CheckError` carries the richer two-arm shape (`Refuted{detail}` /
-  `NotValidated{reason, fallback}`). The M-210 entry point is confirmed (`cert::check`).
+  `NotValidated{reason, fallback}`). The M-210 entry point is confirmed (`cert::check`). The conversion fns
+  are **value-typed**: each takes `&Value` plus its explicit width/`delta` parameter(s) and a `&PolicyRef`, and
+  returns `Result<Swapped, SwapError>` (`Swapped` is **non-generic**: `{ value: Value, cert }`); there are **no
+  `Option` returns** — every fallible op is `Result`. (Earlier §3 drafts showed typed-generic pseudo-signatures
+  `Dense<F32>`/`Vsa`/`Swapped<T>` and an `Option` inverse — those were schematic and are now corrected.)
 - **(Q5) Migration bar for a self-hosted `std.swap`.** When `std.swap` migrates Rust→Mycelium-lang (RFC-0016
   §4.6), must the self-hosted form match the Rust reference on *observable swap results only*, or on the
   *certificate + EXPLAIN bit-for-bit*? Ties to **RFC-0016 §8-Q5 (the migration differential's bar)** /
