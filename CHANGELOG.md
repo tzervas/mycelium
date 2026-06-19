@@ -8,6 +8,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-19: DN-17 codebase housekeeping / DRY survey — planning capture, M-376)
+- **`docs/notes/DN-17`** (new, Draft) — a grounded read-only DRY/duplication survey of the ~43-crate
+  Rust workspace + a priority-ordered, risk-tagged plan for a future **behaviour-preserving**
+  housekeeping wave (**M-376**, `status:needs-design`). P1: hoist repeated external deps
+  (serde/serde_json/blake3) to `[workspace.dependencies]` + version the 5 xtask path-deps (silences
+  the cargo-deny wildcard advisory). P2: consolidate the duplicated MLIR differential test helpers.
+  P3: a shared `assert_is_std_error` test helper — the error-**type** unification is **deferred**
+  (YAGNI; error shapes still evolve per spec). Intentional duplication (M-540 ambient docstrings,
+  per-module guarantee matrices) is explicitly **not** a target. Standard Rust conventions now;
+  Mycelium-native conventions deferred until self-hosting (DN-14). No code changed — survey only.
+
 ### Fixed (2026-06-19: Wave-5 — PR #213 review fixes, all honesty/never-silent)
 Addressing the Copilot review on PR #213 (8 comments, 4 issues — all legitimate):
 - **`crates/mycelium-mlir/src/llvm.rs`** — `Rhs::Match` now **lowers the `default` arm** when present
