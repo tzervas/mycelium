@@ -21,8 +21,8 @@ use common::{byte, observable, tern, A, B, ONES};
 
 use mycelium_cert::{check, CheckVerdict, Evidence, RefinementRelation};
 use mycelium_core::{
-    Alt, CtorSpec, DataRegistry, DeclSpec, FieldSpec, GuaranteeStrength, Node, Payload,
-    Repr, Trit, Value,
+    Alt, CtorSpec, DataRegistry, DeclSpec, FieldSpec, GuaranteeStrength, Node, Payload, Repr, Trit,
+    Value,
 };
 use mycelium_interp::{IdentitySwapEngine, Interpreter, PrimRegistry};
 use mycelium_mlir::AotError;
