@@ -222,10 +222,13 @@ below).
   `mycelium_std_io::{to_json, from_json}` (M-372; ratified 2026-06-19). One canonical JSON, two entry points;
   the round-trip property (`from_json(to_json(v)) ≡ v`) is established once, here, tagged `Empirical`
   (proptest corpus; no checked theorem), and re-checked in `fmt`. `std.fmt` keeps its thin display facade
-  (`Json`/`ToJsonError`/`FromJsonError`); the codec lives here. **Tag-framing residual (honesty, VR-5):**
-  `std.io` tags this `from_json` `Empirical`; `std.fmt` tags its `from_json` `Exact` (deterministic decode,
-  no accuracy semantics) — both honest from their angle; framing reconciliation is left to the maintainer.
-  Ties to RFC-0016 §8-Q1/§8-Q3 (both resolved per README §5 dispositions).
+  (`Json`/`ToJsonError`/`FromJsonError`); the codec lives here. **Tag-framing — RESOLVED (2026-06-19; DN-16,
+  maintainer-ratified): the two tags are deliberately scope-distinct, and both are kept.** `std.io`'s
+  `from_json` `Empirical` claims **round-trip fidelity** (`from_json∘to_json ≡ id`, proptest corpus, no
+  theorem → `Empirical`, VR-5). `std.fmt`'s `from_json` `Exact` claims **decode determinism** (same text →
+  same `Value`, no accuracy semantics → `Exact`, C2) — a *different* property of the same call, not a
+  contradiction; neither over-claims `Proven`. Cross-ref: `crates/mycelium-std-fmt/src/lib.rs` "Tag-framing
+  note" + `crates/mycelium-std-io/src/guarantee_matrix.rs` `from_json` row. Ties to RFC-0016 §8-Q1/§8-Q3.
 - **(Q2) Which round-trip reaches `Proven`, and over which grammar.** The matrix tags `deserialize`/`from_json`
   at the round-trip property's *established* strength — **`Proven` only** with a checked-side-condition theorem
   (e.g. an injectivity/totality argument over the *closed* `Repr`/`Meta`/ctor grammar), else honestly

@@ -131,6 +131,10 @@ pub const MATRIX: &[MatrixRow] = &[
         explainable: Explainable::NotApplicable,
     },
     // ── from_json: canonical JSON → Value (fallible, Empirical) ──────────────
+    // Empirical = round-trip fidelity (from_json∘to_json ≡ id), established by a proptest corpus,
+    // not a theorem (VR-5). NOTE (DN-16, scope-distinct framing): std.fmt tags its delegating
+    // `from_json` `Exact` — a *different* claim (decode determinism, no accuracy semantics), not a
+    // contradiction. See crates/mycelium-std-fmt/src/lib.rs "Tag-framing note". Both retained.
     MatrixRow {
         op: "from_json",
         guarantee: GuaranteeTag::Empirical,

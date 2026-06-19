@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-16 |
-| **Status** | **Draft** (2026-06-19; M-374) |
+| **Status** | **Resolved** (2026-06-19; M-374 survey + M-377 honesty cleanups — the actionable cross-cutting divergences are closed; per-spec *ratification* to Accepted remains the maintainer's append-only call, DN-07) |
 | **Decides** | *Nothing normatively.* Per-spec readiness survey for the maintainer's ratification pass. Specifying "ratification-ready" here means the code matches the spec's stated contract; it does **not** move any spec to Accepted — that is the maintainer's append-only call. (DN-07 posture.) |
 | **Feeds** | RFC-0016 (Core Library RFC — Accepted); each `docs/spec/stdlib/*.md` spec; `crates/mycelium-std-*/`; DN-07 (RFC-0016 ratification note); DN-14 (self-hosting gate). |
 | **Date** | 2026-06-19 |
@@ -480,3 +480,19 @@ not-yet-implemented.
   provisional `Proven` tags in `dense`/`math`/`vsa` pending M-512 ADR-010 checker discharge, `swap`
   spec surface abstract (§7-Q4 gate), and `cmp` `MycEq`/`MycOrd` naming gap. Advisory; no spec
   status changes. Append-only.
+- **2026-06-19 — Resolved (M-377; maintainer-ratified honesty cleanups).** Grounded each cross-cutting
+  divergence in code and closed the actionable ones:
+  - **`dense`/`math`/`vsa` `Proven` rows — verified.** `math` already tags all approx ops `Declared`
+    (no `Proven` claim) — honest, no change. `vsa` `Proven` cells *mirror* the RFC-0003 §4 kernel matrix
+    (cited, not restated; divergence caught in tests) — honest by construction, no change. `dense` (Q1):
+    **finalized** elementwise float `add`/`sub`/`scale`/`hadamard` as `Proven` (the ADR-010 per-element
+    IEEE backward-error bound; finiteness side-condition guarded by `DenseError::NonFinite`; M-512
+    delivered) and **aligned the §4 table's accumulation rows (`sum`/`dot`) down to `Empirical`** to match
+    the landed crate (the `nγ_n` bound is a distinct unchecked theorem — VR-5-safe downgrade).
+  - **`fmt`/`io` `from_json` framing — resolved scope-distinct (both tags kept).** `fmt`-`Exact` = decode
+    determinism; `io`-`Empirical` = round-trip fidelity (proptest, no theorem). Different properties of the
+    same call; neither over-claims. Cross-referenced in both crate guarantee matrices and both specs.
+  - **`swap` §3 — pinned** to the landed `mycelium-std-swap` surface (`check_swap`, the re-exported
+    `mycelium_cert::check` (M-210), no `build`, richer `CheckError`); §7-Q4 gate resolved.
+  - **Remaining (minor, deferred):** the `cmp` `MycEq`/`MycOrd`/`MycPartialOrd` naming-vs-spec doc gap
+    (not an honesty issue); and full per-spec *ratification* to Accepted (the maintainer's call). Append-only.

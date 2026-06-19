@@ -17299,7 +17299,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 450,
+      "line": 453,
       "summary": "Empirical basis string for BF16 accumulation ops (FLAG Q1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17310,7 +17310,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 444,
+      "line": 447,
       "summary": "Empirical basis string for accumulation ops (FLAG Q1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17321,7 +17321,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 235,
+      "line": 238,
       "summary": "The guarantee matrix for `std.dense` (RFC-0016 §4.5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17332,7 +17332,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 213,
+      "line": 216,
       "summary": "One row of the guarantee matrix (§4 of `docs/spec/stdlib/dense.md`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17343,7 +17343,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 162,
+      "line": 165,
       "summary": "A reified ε-bound artifact: the inspectable record of a float op's accuracy claim (C3/EXPLAIN;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17354,7 +17354,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::OpBound",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 181,
+      "line": 184,
       "summary": "Convert to a [`Bound`] suitable for attaching to a [`mycelium_core::Meta`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17365,7 +17365,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 455,
+      "line": 458,
       "summary": "Empirical basis string for L2-norm / cosine ops (FLAG Q2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17376,7 +17376,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 488,
+      "line": 491,
       "summary": "The ergonomic Ring-1 capability surface over a typed `Dense{dim, dtype}` space (M-518).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17387,7 +17387,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 585,
+      "line": 588,
       "summary": "Elementwise `a + b` — float DT: `Proven` (FLAG Q1 — uses kernel bound).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17398,7 +17398,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 869,
+      "line": 872,
       "summary": "Cosine similarity — float DT: `Empirical` (FLAG Q2: sqrt + division composition).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17409,7 +17409,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 511,
+      "line": 514,
       "summary": "The dimensionality.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17420,7 +17420,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 841,
+      "line": 844,
       "summary": "Dot product `⟨a, b⟩` — float DT: `Empirical` (FLAG Q1: accumulation bound).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17431,7 +17431,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 517,
+      "line": 520,
       "summary": "The element dtype.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17442,7 +17442,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 556,
+      "line": 559,
       "summary": "Construct a value from a slice, checking length and grid alignment.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17453,7 +17453,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 540,
+      "line": 543,
       "summary": "Construct an **Exact** constant vector with every element equal to `x`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17464,7 +17464,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 626,
+      "line": 629,
       "summary": "Elementwise (Hadamard) product `a ⊙ b` — float DT: `Proven` (FLAG Q1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17475,7 +17475,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 794,
+      "line": 797,
       "summary": "L1 norm (sum of |xᵢ|) — float DT: `Empirical` (same accumulation argument as `sum`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17486,7 +17486,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 814,
+      "line": 817,
       "summary": "L2 (Euclidean) norm — float DT: `Empirical` (FLAG Q2: sqrt composition not fully checked).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17497,7 +17497,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 706,
+      "line": 709,
       "summary": "Map a function `f` over every element (tag = meet of input tag and `f_tag` — VR-5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17508,7 +17508,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 611,
+      "line": 614,
       "summary": "Elementwise negation — **Exact** (the dtype grid is symmetric; no rounding).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17519,7 +17519,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 497,
+      "line": 500,
       "summary": "Construct a `StdDense` surface for a `dim`-dimensional space over `dtype`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17530,7 +17530,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 674,
+      "line": 677,
       "summary": "Scalar multiplication `s · a` — float DT: `Proven` (FLAG Q1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17541,7 +17541,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 505,
+      "line": 508,
       "summary": "The underlying [`DenseSpace`] descriptor.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17552,7 +17552,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 595,
+      "line": 598,
       "summary": "Elementwise `a − b` — same contract as add.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17563,7 +17563,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 773,
+      "line": 776,
       "summary": "Sum all elements — float DT: `Empirical` (FLAG Q1: accumulation bound, conservative",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17574,7 +17574,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 525,
+      "line": 528,
       "summary": "Construct an **Exact** zero vector (guarantee matrix: `zeros` — `Exact`, total).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17585,7 +17585,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 88,
+      "line": 91,
       "summary": "Errors from the `std.dense` capability surface (C1/G2: explicit typed errors, never sentinels).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17596,7 +17596,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 439,
+      "line": 442,
       "summary": "BF16 analogue of [`accumulation_eps_f32`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17607,7 +17607,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 432,
+      "line": 435,
       "summary": "Conservative empirical ε for floating-point accumulation ops (`sum`, `l1_norm`, `dot`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18223,7 +18223,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 120,
+      "line": 122,
       "summary": "A budget for `display_bounded`: the maximum number of *elements* (bits, trits, scalars,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18234,7 +18234,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 185,
+      "line": 187,
       "summary": "Errors the `from_json` machine projection can raise.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18245,7 +18245,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 362,
+      "line": 364,
       "summary": "The `std.fmt` guarantee matrix (spec §4 / RFC-0016 §4.5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18256,7 +18256,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 170,
+      "line": 172,
       "summary": "The machine-projection JSON view of a [`Value`] (spec §3 / G11).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18267,7 +18267,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt::Json",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 175,
+      "line": 177,
       "summary": "Borrow the inner `serde_json::Value` for inspection.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18278,7 +18278,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 344,
+      "line": 346,
       "summary": "One row of the `std.fmt` guarantee matrix (RFC-0016 §4.5; spec §4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18289,7 +18289,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 150,
+      "line": 152,
       "summary": "The result of `display_bounded`: a rendered text paired with its truncation record.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18300,7 +18300,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 94,
+      "line": 96,
       "summary": "A rendered text string (the output of a human projection).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18311,7 +18311,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt::Text",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 99,
+      "line": 101,
       "summary": "Borrow the inner string.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18322,7 +18322,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 212,
+      "line": 214,
       "summary": "Error the `to_json` machine projection can raise.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18333,7 +18333,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 129,
+      "line": 131,
       "summary": "Whether a [`Rendering`] is complete or whether some content was elided.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18344,7 +18344,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 410,
+      "line": 412,
       "summary": "Assert the structural invariants of the guarantee matrix — called from tests.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18355,7 +18355,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 272,
+      "line": 274,
       "summary": "Render `v` as a structural debug string (more detailed than `display`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18366,7 +18366,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 258,
+      "line": 260,
       "summary": "Render `v` as a human-readable string.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18377,7 +18377,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 288,
+      "line": 290,
       "summary": "Render `v` within `limit` elements, emitting a typed `Truncation` record when content is",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18388,7 +18388,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 334,
+      "line": 336,
       "summary": "Reconstruct a [`Value`] from its machine JSON view (the `from_json` half).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18399,7 +18399,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 311,
+      "line": 313,
       "summary": "Project `v` to a machine-faithful JSON view (the `to_json` half of the dual projection, G11).",
       "guarantee_tag": null,
       "corpus_refs": []

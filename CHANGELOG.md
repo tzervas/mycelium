@@ -8,6 +8,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-19: M-377 — DN-16 stdlib honesty cleanups, grounded + maintainer-ratified)
+Acted on DN-16's actionable cross-cutting divergences (DN-16 → **Resolved**), each grounded in code
+first (VR-5). No spec moved to Accepted — per-spec ratification stays the maintainer's call.
+- **`Proven` rows verified.** `math` already tags all approx ops `Declared` (no `Proven`; no change).
+  `vsa` `Proven` cells *mirror* the RFC-0003 §4 kernel matrix (cited, test-guarded; honest by
+  construction; no change). **`dense` Q1 finalized:** elementwise float `add`/`sub`/`scale`/`hadamard`
+  → `Proven` (ADR-010 per-element IEEE backward-error bound; finiteness side-condition guarded by
+  `DenseError::NonFinite`; M-512 delivered), and the `dense.md` §4 **accumulation rows (`sum`/`dot`)
+  aligned down to `Empirical`** to match the landed crate (`nγ_n` is a distinct unchecked theorem —
+  VR-5-safe downgrade; the spec table had over-claimed).
+- **fmt/io `from_json` framing resolved scope-distinct (both tags kept).** `fmt`-`Exact` = decode
+  determinism; `io`-`Empirical` = round-trip fidelity (proptest, no theorem). Different properties of
+  the same call; neither over-claims. Cross-referenced in both crate guarantee matrices + both specs.
+- **swap §3 pinned** to the landed `mycelium-std-swap` surface (`check_swap` → `Result<GuaranteeStrength,
+  CheckError>`, the re-exported `mycelium_cert::check` (M-210), no `build`, richer `CheckError`); §7-Q4 resolved.
+- Remaining minor (deferred): the `cmp` `MycEq`/`MycOrd` naming-vs-spec doc gap (not honesty-relevant).
+
 ### Changed (2026-06-19: M-376 housekeeping wave — behaviour-preserving DRY/footprint, no-op)
 Executed DN-17 §4 P1+P2 (P3 skipped per YAGNI). Pure refactor — no source logic, no guarantee tags,
 no public API changed; `Cargo.lock` unchanged; `cargo test --workspace` + full `just check` green; net ~−11 LOC.

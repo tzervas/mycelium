@@ -9,8 +9,10 @@
 //!
 //! - **C1 — never-silent:** dim/dtype mismatch → [`StdDenseError`]; zero-norm cosine → explicit
 //!   `Err(ZeroNorm)`; off-grid / wrong-length input → explicit `Err`; no `NaN`/sentinel escapes.
-//! - **C2 — honest per-op tag:** integer ops → `Exact`; float elementwise/`dot`/`sum` → `Proven`
-//!   (FLAG Q1 — provisional on the ADR-010 Higham instantiation); `l2_norm`/`cosine` → `Empirical`
+//! - **C2 — honest per-op tag:** integer ops → `Exact`; float **elementwise** (`add`/`sub`/`scale`/
+//!   `hadamard`) → `Proven` (Q1 — finalized: the ADR-010 per-element IEEE backward-error
+//!   instantiation, M-512 delivered); float **accumulation** (`sum`/`dot`/`l1_norm`) → `Empirical`
+//!   (the `nγ_n` bound is a distinct theorem, not yet checked); `l2_norm`/`cosine` → `Empirical`
 //!   (FLAG Q2 — sqrt/division composition side-conditions not yet fully checked; honest downgrade
 //!   per VR-5). Tags degrade by meet; never upgrade without a checked basis.
 //! - **C3 — EXPLAIN:** every float result carries a reified [`OpBound`] (ε, norm, basis string),
@@ -34,15 +36,16 @@
 //! - Non-representation scalar conversion → **`std.cmp`/`convert`** (M-532).
 //! - VSA hypervector algebra → **`std.vsa`** (M-513).
 //!
-//! ## FLAG Q1 — provisional `Proven` for float elementwise ops; conservative `Empirical` for
-//!    accumulation (sum/dot)
+//! ## Q1 (RESOLVED for elementwise; accumulation stays `Empirical`) — float `Proven` disposition
 //!
-//! The `Proven` tags on `add`/`sub`/`scale`/`hadamard` (float DT) are *provisional*: they rest on
-//! the ADR-010 `ErrorBound` Higham backward-error instantiation and are `Proven` only while that
-//! instantiation's side-conditions are checked by the numerics checker (M-512). The accumulation
-//! ops (`sum`, `dot`, `l1_norm`) are tagged **`Empirical`** conservatively: the `nγ_n` Higham
-//! accumulation bound is not yet checked and discharged by M-512. Disposition: resolve with M-512;
-//! upgrade accumulation to `Proven` only when the checked instantiation is delivered.
+//! The `Proven` tags on `add`/`sub`/`scale`/`hadamard` (float DT) are **finalized** (DN-16,
+//! 2026-06-19; maintainer-ratified): they rest on the ADR-010 `ErrorBound` per-element IEEE
+//! backward-error instantiation (`fl(a∘b) = (a∘b)(1+δ)`, `|δ| ≤ u` — Higham 2002, Thm 2.2), whose
+//! single side-condition (operand finiteness / no overflow) is **guarded at runtime** (non-finite
+//! inputs → `DenseError::NonFinite`) and re-validated by the numerics checker (M-512, delivered).
+//! The accumulation ops (`sum`, `dot`, `l1_norm`) stay **`Empirical`** conservatively: the `nγ_n`
+//! accumulation bound is a *distinct* theorem not yet discharged by a checked instantiation;
+//! upgrade accumulation to `Proven` only when that checked accumulation theorem is delivered (VR-5).
 //!
 //! ## FLAG Q2 — `Empirical` for l2_norm / cosine
 //!
@@ -291,7 +294,7 @@ pub const GUARANTEE_MATRIX: &[GuaranteeRow] = &[
         explainable: false,
         effects: "none",
     },
-    // --- elementwise — float DT (live M-230 v1; Proven provisional, FLAG Q1) ---
+    // --- elementwise — float DT (live M-230 v1; Proven finalized, Q1; M-512-checked) ---
     GuaranteeRow {
         op: "neg_float",
         tag: GuaranteeStrength::Exact,
@@ -443,13 +446,13 @@ pub fn accumulation_eps_bf16(n: usize) -> f64 {
 /// Empirical basis string for accumulation ops (FLAG Q1).
 pub const ACCUMULATION_EMPIRICAL_BASIS: &str =
     "empirical upper bound: 2·n·u (u = IEEE binary32 unit roundoff 2^−24; factor-of-2 slack is \
-     a conservative outward-rounded upper bound pending M-512 Higham-instantiation for Proven \
-     upgrade — FLAG Q1, std.dense §7)";
+     a conservative outward-rounded upper bound pending a checked nγ_n accumulation theorem for a \
+     Proven upgrade — Q1, std.dense §7)";
 
 /// Empirical basis string for BF16 accumulation ops (FLAG Q1).
 pub const ACCUMULATION_BF16_EMPIRICAL_BASIS: &str =
     "empirical upper bound: 2·n·u (u = BF16 two-rounding ε = 2^−8 + 2^−23; conservative \
-     outward-rounded upper bound pending M-512 Higham-instantiation — FLAG Q1, std.dense §7)";
+     outward-rounded upper bound pending a checked nγ_n accumulation theorem — Q1, std.dense §7)";
 
 /// Empirical basis string for L2-norm / cosine ops (FLAG Q2).
 pub const SQRT_COMPOSITION_EMPIRICAL_BASIS: &str =
@@ -986,11 +989,11 @@ fn elementwise_citation(dtype: ScalarKind) -> String {
         ScalarKind::Bf16 => {
             "two-rounding composition (1+δ₁)(1+δ₂)−1 ≤ 2^−8 + 2^−23: native f32 op then \
              bfloat16 round-to-nearest — Higham (2002), Thm 2.2; side-conditions checked per \
-             element (FLAG Q1 provisional)"
+             element (Q1 finalized; M-512-checked)"
                 .to_owned()
         }
         _ => "round-to-nearest relative error ≤ u = 2^−24 for IEEE binary32 — Higham (2002), \
-             Thm 2.2; side-conditions checked per element (FLAG Q1 provisional)"
+             Thm 2.2; side-conditions checked per element (Q1 finalized; M-512-checked)"
             .to_owned(),
     }
 }
@@ -1129,7 +1132,7 @@ mod tests {
             // Mutant-witness: change add_float to Empirical — this test catches it.
             assert_eq!(
                 row.tag, Proven,
-                "float elementwise op '{name}' must be Proven (FLAG Q1 provisional)"
+                "float elementwise op '{name}' must be Proven (Q1 finalized; M-512-checked)"
             );
             assert!(
                 row.explainable,

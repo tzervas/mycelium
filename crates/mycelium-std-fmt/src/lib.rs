@@ -54,13 +54,15 @@
 //! (`from_json(to_json(v)).content_hash() == v.content_hash()`) is established once in `std.io`
 //! and re-checked here.
 //!
-//! **Tag-framing note (honesty, VR-5 — residual for the maintainer).** `std.io` tags the JSON
-//! round-trip `from_json` **`Empirical`** (proptest corpus, no theorem); `std.fmt` tags its
-//! `from_json` **`Exact`** (a deterministic decode with no accuracy semantics — the round-trip is
-//! a separately-checked property, not a numeric claim). Both are honest descriptions of the same
-//! operation from different angles, and neither over-claims (`Proven`). Unifying the two crates'
-//! tag *framing* for the shared op is a finer reconciliation left to the maintainer; this
-//! delegation does **not** silently change either tag.
+//! **Tag-framing note (honesty, VR-5 — RESOLVED 2026-06-19; DN-16, maintainer-ratified).** The two
+//! `from_json` tags are **deliberately scope-distinct**, not a contradiction — each names a different
+//! property of the shared op, and both are kept. `std.fmt` `from_json` = **`Exact`** claims *decode
+//! determinism* (the same JSON text always decodes to the same `Value`, with no accuracy semantics —
+//! an `Exact` structural property of the parse, RFC-0016 C2). `std.io` `from_json` = **`Empirical`**
+//! claims *round-trip fidelity* (`from_json(to_json(v)) ≡ v`), established by a proptest corpus, not a
+//! theorem (VR-5: no checked theorem ⇒ not `Proven`). Neither over-claims (`Proven`); the tags answer
+//! different questions about the same call and are intentionally retained as-is. (Cross-ref: `std.io`
+//! `guarantee_matrix.rs` `from_json` row.)
 //!
 //! Design spec: `docs/spec/stdlib/fmt.md`; contract: RFC-0016 §4.1 (C1–C6);
 //! guarantee matrix: spec §4.
