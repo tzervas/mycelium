@@ -37,7 +37,9 @@ How we build Mycelium. This operationalizes `CONTRIBUTING.md`; follow it while a
 7. **Verify locally, with parity.** Run `just check` (the same suite CI runs) before you commit.
    Fix or explicitly skip; never hand off red. Add a property test for any new bound.
 8. **Record it.** Update the `CHANGELOG.md` and any doc's changelog footer / status (use the
-   `changelog` skill).
+   `changelog` skill). If you changed a public API, run `just api-baseline` (updates
+   `docs/spec/api/`) AND `just docs-index` (updates `docs/api-index/`). Commit both deltas
+   as part of the change.
 9. **Commit & PR.** Conventional, imperative subject referencing the issue
    (`feat(swap): …`, `docs(rfc-0003): …`). The PR says which `FR/NFR/VR/SC` it advances and
    **how it was verified**; editorial-only PRs say so.

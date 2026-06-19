@@ -33,6 +33,18 @@ except ImportError:  # pragma: no cover - environment guard
 
 HERE = Path(__file__).resolve().parent
 
+# Import doc_refs validator (same directory); soft-fail if unavailable so
+# manifest-check can still run without the doc-index infrastructure.
+try:
+    import importlib.util as _ilu
+
+    _spec = _ilu.spec_from_file_location("doc_refs_check", HERE / "doc_refs_check.py")
+    _mod = _ilu.module_from_spec(_spec)  # type: ignore[arg-type]
+    _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+    _doc_refs_validate = _mod.validate  # type: ignore[attr-defined]
+except Exception:  # pragma: no cover
+    _doc_refs_validate = None  # type: ignore[assignment]
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate PM manifest consistency.")
@@ -91,6 +103,32 @@ def main() -> int:
         f">> manifest check OK: {len(issues)} issue(s); "
         f"{len(used_labels)} label(s) + {len(used_ms)} milestone(s) all defined."
     )
+
+    # doc_refs validation (additive — runs after label/milestone checks pass)
+    if _doc_refs_validate is not None:
+        repo_root = HERE.parent.parent
+        index_json = repo_root / "docs" / "api-index" / "index.json"
+        doc_index = repo_root / "docs" / "Doc-Index.md"
+        doc_ref_errors = _doc_refs_validate(
+            args.issues_yaml, index_json, doc_index, repo_root
+        )
+        if doc_ref_errors:
+            for err in doc_ref_errors:
+                print(f"ERROR (doc_refs): {err}", file=sys.stderr)
+            print(
+                f">> doc_refs check FAILED: {len(doc_ref_errors)} dangling "
+                "reference(s) — fix before syncing.",
+                file=sys.stderr,
+            )
+            return 1
+        if doc_ref_errors == []:
+            # Only print OK if there were any doc_refs to check
+            has_any = any((issue.get("doc_refs") or []) for issue in issues)
+            if has_any:
+                print(">> doc_refs check OK: all doc_refs entries resolve.")
+    else:
+        print("  note: doc_refs_check.py not available — doc_refs validation skipped")
+
     return 0
 
 
