@@ -22,6 +22,7 @@
 //! already honest), the meet is either a no-op or a downgrade — never an upgrade (VR-5).
 
 use mycelium_core::GuaranteeStrength;
+use serde::Serialize;
 
 use crate::action::RecoveryAction;
 use crate::effect::Budgets;
@@ -60,6 +61,16 @@ use crate::registry::ClassName;
 ///   `cleanup_overrun: true` in the `Propagated` outcome (spec §7-Q4 disposition: record, not
 ///   swallow).
 /// - `Fallback` and `Escalate` are effect-free.
+///
+/// # Policy identity (banked guard #5)
+///
+/// When a rule matches, the acting [`PolicyRef`](crate::policy::PolicyRef) is computed via
+/// [`RecoveryPolicy::policy_ref`] (a stable serde_json encoding — not `Debug`).  If the fallback
+/// value's `serde::Serialize` impl fails (e.g. a `NaN` float), the function propagates the
+/// original error with `policy: None` — it refuses to apply the action without an established
+/// policy identity (never-silent: the error is never dropped, I1).  This situation is a
+/// configuration error in the caller's `T: Serialize` impl; the explicit `Propagated` makes it
+/// diagnosable.
 #[must_use]
 pub fn handle_classified<T, E>(
     outcome: Outcome<T, E>,
@@ -69,7 +80,7 @@ pub fn handle_classified<T, E>(
     mut attempt: impl FnMut() -> (Outcome<T, E>, GuaranteeStrength),
 ) -> Resolution<T, E>
 where
-    T: std::fmt::Debug + Clone + Send + Sync + 'static,
+    T: Serialize + std::fmt::Debug + Clone + Send + Sync + 'static,
 {
     let error = match outcome {
         Outcome::Ok(value) => {
@@ -96,7 +107,20 @@ where
         };
     };
 
-    let pref = Some(policy.policy_ref());
+    // Compute the content-addressed PolicyRef (banked guard #5 — stable serde_json encoding).
+    // If the fallback value's serialization fails (a configuration error in T's Serialize impl),
+    // propagate the original error with policy: None — never-silent (I1): the error is not
+    // dropped, and the policy ref hash failure is diagnosable from the Propagated outcome.
+    let pref = match policy.policy_ref() {
+        Ok(r) => Some(r),
+        Err(_) => {
+            return Resolution::Propagated {
+                error,
+                policy: None,
+                cleanup_overrun: false,
+            };
+        }
+    };
 
     match action {
         RecoveryAction::Fallback { value } => {
@@ -179,7 +203,7 @@ pub fn recover_classified<T, E>(
     attempt: impl FnMut() -> (Outcome<T, E>, GuaranteeStrength),
 ) -> Resolution<T, E>
 where
-    T: std::fmt::Debug + Clone + Send + Sync + 'static,
+    T: Serialize + std::fmt::Debug + Clone + Send + Sync + 'static,
 {
     handle_classified(
         Outcome::from_result(result),

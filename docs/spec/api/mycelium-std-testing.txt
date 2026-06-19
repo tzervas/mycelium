@@ -314,7 +314,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::verdict::Sum
 pub trait mycelium_std_testing::Gen<T>
 pub fn mycelium_std_testing::Gen::generate(&mut self, &mut mycelium_std_testing::Rng) -> core::option::Option<T>
 pub fn mycelium_std_testing::Gen::shrink(&self, &T) -> alloc::vec::Vec<T>
-pub fn mycelium_std_testing::differential<T, O>(&str, bool, impl core::ops::function::FnOnce() -> O, bool, impl core::ops::function::FnOnce() -> O) -> mycelium_std_testing::verdict::Verdict where T: core::fmt::Debug, O: core::cmp::PartialEq + core::fmt::Debug
+pub fn mycelium_std_testing::differential<O>(&str, bool, impl core::ops::function::FnOnce() -> O, bool, impl core::ops::function::FnOnce() -> O) -> mycelium_std_testing::verdict::Verdict where O: core::cmp::PartialEq + core::fmt::Debug
 pub fn mycelium_std_testing::for_all<T, G>(&mut G, u64, mycelium_std_testing::Budget, impl core::ops::function::Fn(&T) -> bool) -> mycelium_std_testing::verdict::Verdict where G: mycelium_std_testing::Gen<T>, T: core::fmt::Debug
 pub fn mycelium_std_testing::golden(core::option::Option<&mycelium_std_testing::GoldenBaseline>, &str, &str) -> mycelium_std_testing::verdict::Verdict
 pub fn mycelium_std_testing::is_green(&mycelium_std_testing::verdict::Summary) -> bool

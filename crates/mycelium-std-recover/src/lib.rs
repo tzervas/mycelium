@@ -66,7 +66,7 @@ pub use effect::{
 };
 pub use handle::{handle_classified, recover_classified};
 pub use outcome::{DiagError, Outcome, Resolution};
-pub use policy::{policy_effects, PolicyRef, RecoveryPolicy};
+pub use policy::{policy_effects, PolicyHashError, PolicyRef, RecoveryPolicy};
 pub use registry::{ClassName, ClassRegistry, UnknownClass};
 
 /// `RecoverOutcome<T, E>` is `Resolution<T, E>` — the concrete shape that resolves

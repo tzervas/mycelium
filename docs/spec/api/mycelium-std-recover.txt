@@ -120,8 +120,8 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::guarantee
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::guarantee_matrix::MatrixRow
 pub static mycelium_std_recover::guarantee_matrix::MATRIX: &[mycelium_std_recover::guarantee_matrix::MatrixRow]
 pub mod mycelium_std_recover::handle
-pub fn mycelium_std_recover::handle::handle_classified<T, E>(mycelium_std_recover::outcome::Outcome<T, E>, &mycelium_std_recover::policy::RecoveryPolicy<T>, &mut mycelium_interp::budget::Budgets, impl core::ops::function::Fn(&E) -> mycelium_std_recover::registry::ClassName, impl core::ops::function::FnMut() -> (mycelium_std_recover::outcome::Outcome<T, E>, mycelium_core::guarantee::GuaranteeStrength)) -> mycelium_std_recover::outcome::Resolution<T, E> where T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
-pub fn mycelium_std_recover::handle::recover_classified<T, E>(core::result::Result<T, E>, &mycelium_std_recover::policy::RecoveryPolicy<T>, &mut mycelium_interp::budget::Budgets, impl core::ops::function::Fn(&E) -> mycelium_std_recover::registry::ClassName, impl core::ops::function::FnMut() -> (mycelium_std_recover::outcome::Outcome<T, E>, mycelium_core::guarantee::GuaranteeStrength)) -> mycelium_std_recover::outcome::Resolution<T, E> where T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub fn mycelium_std_recover::handle::handle_classified<T, E>(mycelium_std_recover::outcome::Outcome<T, E>, &mycelium_std_recover::policy::RecoveryPolicy<T>, &mut mycelium_interp::budget::Budgets, impl core::ops::function::Fn(&E) -> mycelium_std_recover::registry::ClassName, impl core::ops::function::FnMut() -> (mycelium_std_recover::outcome::Outcome<T, E>, mycelium_core::guarantee::GuaranteeStrength)) -> mycelium_std_recover::outcome::Resolution<T, E> where T: serde_core::ser::Serialize + core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub fn mycelium_std_recover::handle::recover_classified<T, E>(core::result::Result<T, E>, &mycelium_std_recover::policy::RecoveryPolicy<T>, &mut mycelium_interp::budget::Budgets, impl core::ops::function::Fn(&E) -> mycelium_std_recover::registry::ClassName, impl core::ops::function::FnMut() -> (mycelium_std_recover::outcome::Outcome<T, E>, mycelium_core::guarantee::GuaranteeStrength)) -> mycelium_std_recover::outcome::Resolution<T, E> where T: serde_core::ser::Serialize + core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
 pub mod mycelium_std_recover::outcome
 pub enum mycelium_std_recover::outcome::Outcome<T, E>
 pub mycelium_std_recover::outcome::Outcome::Err(E)
@@ -192,13 +192,28 @@ impl<E> core::marker::UnsafeUnpin for mycelium_std_recover::outcome::DiagError<E
 impl<E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::outcome::DiagError<E> where E: core::panic::unwind_safe::RefUnwindSafe
 impl<E> core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::outcome::DiagError<E> where E: core::panic::unwind_safe::UnwindSafe
 pub mod mycelium_std_recover::policy
+pub struct mycelium_std_recover::policy::PolicyHashError
+pub mycelium_std_recover::policy::PolicyHashError::source: serde_json::error::Error
+impl core::error::Error for mycelium_std_recover::policy::PolicyHashError
+pub fn mycelium_std_recover::policy::PolicyHashError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for mycelium_std_recover::policy::PolicyHashError
+pub fn mycelium_std_recover::policy::PolicyHashError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_recover::policy::PolicyHashError
+pub fn mycelium_std_recover::policy::PolicyHashError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_recover::policy::PolicyHashError
+impl core::marker::Send for mycelium_std_recover::policy::PolicyHashError
+impl core::marker::Sync for mycelium_std_recover::policy::PolicyHashError
+impl core::marker::Unpin for mycelium_std_recover::policy::PolicyHashError
+impl core::marker::UnsafeUnpin for mycelium_std_recover::policy::PolicyHashError
+impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::policy::PolicyHashError
+impl !core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::policy::PolicyHashError
 pub struct mycelium_std_recover::policy::RecoveryPolicy<T>
-impl<T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static> mycelium_std_recover::policy::RecoveryPolicy<T>
+impl<T: serde_core::ser::Serialize + core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static> mycelium_std_recover::policy::RecoveryPolicy<T>
 pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::action_for(&self, &mycelium_std_recover::registry::ClassName) -> core::option::Option<&mycelium_std_recover::action::RecoveryAction<T>>
 pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::is_empty(&self) -> bool
 pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::new() -> Self
 pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::on(&mut self, &mycelium_std_recover::registry::ClassRegistry, &str, mycelium_std_recover::action::RecoveryAction<T>) -> core::result::Result<core::option::Option<mycelium_std_recover::action::RecoveryAction<T>>, mycelium_std_recover::registry::UnknownClass>
-pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::policy_ref(&self) -> mycelium_std_recover::policy::PolicyRef
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::policy_ref(&self) -> core::result::Result<mycelium_std_recover::policy::PolicyRef, mycelium_std_recover::policy::PolicyHashError>
 pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::rules(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&mycelium_std_recover::registry::ClassName, &mycelium_std_recover::action::RecoveryAction<T>)>
 impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_recover::policy::RecoveryPolicy<T>
 pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::clone(&self) -> mycelium_std_recover::policy::RecoveryPolicy<T>
@@ -213,7 +228,7 @@ impl<T> core::marker::Unpin for mycelium_std_recover::policy::RecoveryPolicy<T>
 impl<T> core::marker::UnsafeUnpin for mycelium_std_recover::policy::RecoveryPolicy<T>
 impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::policy::RecoveryPolicy<T> where T: core::panic::unwind_safe::RefUnwindSafe
 impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::policy::RecoveryPolicy<T> where T: core::panic::unwind_safe::RefUnwindSafe
-pub fn mycelium_std_recover::policy::policy_effects<T>(&mycelium_std_recover::policy::RecoveryPolicy<T>) -> alloc::collections::btree::set::BTreeSet<mycelium_interp::budget::EffectKind> where T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub fn mycelium_std_recover::policy::policy_effects<T>(&mycelium_std_recover::policy::RecoveryPolicy<T>) -> alloc::collections::btree::set::BTreeSet<mycelium_interp::budget::EffectKind> where T: serde_core::ser::Serialize + core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
 pub type mycelium_std_recover::policy::PolicyRef = mycelium_core::id::ContentHash
 pub mod mycelium_std_recover::registry
 pub struct mycelium_std_recover::registry::ClassName(_)
@@ -419,13 +434,28 @@ impl<E> core::marker::Unpin for mycelium_std_recover::outcome::DiagError<E> wher
 impl<E> core::marker::UnsafeUnpin for mycelium_std_recover::outcome::DiagError<E> where E: core::marker::UnsafeUnpin
 impl<E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::outcome::DiagError<E> where E: core::panic::unwind_safe::RefUnwindSafe
 impl<E> core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::outcome::DiagError<E> where E: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_recover::PolicyHashError
+pub mycelium_std_recover::PolicyHashError::source: serde_json::error::Error
+impl core::error::Error for mycelium_std_recover::policy::PolicyHashError
+pub fn mycelium_std_recover::policy::PolicyHashError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for mycelium_std_recover::policy::PolicyHashError
+pub fn mycelium_std_recover::policy::PolicyHashError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_recover::policy::PolicyHashError
+pub fn mycelium_std_recover::policy::PolicyHashError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_recover::policy::PolicyHashError
+impl core::marker::Send for mycelium_std_recover::policy::PolicyHashError
+impl core::marker::Sync for mycelium_std_recover::policy::PolicyHashError
+impl core::marker::Unpin for mycelium_std_recover::policy::PolicyHashError
+impl core::marker::UnsafeUnpin for mycelium_std_recover::policy::PolicyHashError
+impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::policy::PolicyHashError
+impl !core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::policy::PolicyHashError
 pub struct mycelium_std_recover::RecoveryPolicy<T>
-impl<T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static> mycelium_std_recover::policy::RecoveryPolicy<T>
+impl<T: serde_core::ser::Serialize + core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static> mycelium_std_recover::policy::RecoveryPolicy<T>
 pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::action_for(&self, &mycelium_std_recover::registry::ClassName) -> core::option::Option<&mycelium_std_recover::action::RecoveryAction<T>>
 pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::is_empty(&self) -> bool
 pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::new() -> Self
 pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::on(&mut self, &mycelium_std_recover::registry::ClassRegistry, &str, mycelium_std_recover::action::RecoveryAction<T>) -> core::result::Result<core::option::Option<mycelium_std_recover::action::RecoveryAction<T>>, mycelium_std_recover::registry::UnknownClass>
-pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::policy_ref(&self) -> mycelium_std_recover::policy::PolicyRef
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::policy_ref(&self) -> core::result::Result<mycelium_std_recover::policy::PolicyRef, mycelium_std_recover::policy::PolicyHashError>
 pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::rules(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&mycelium_std_recover::registry::ClassName, &mycelium_std_recover::action::RecoveryAction<T>)>
 impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_recover::policy::RecoveryPolicy<T>
 pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::clone(&self) -> mycelium_std_recover::policy::RecoveryPolicy<T>
@@ -481,9 +511,9 @@ impl core::marker::UnsafeUnpin for mycelium_std_recover::registry::UnknownClass
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::registry::UnknownClass
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::registry::UnknownClass
 pub fn mycelium_std_recover::check_effects(&mycelium_std_recover::effect::EffectSet, &mycelium_std_recover::effect::EffectSet) -> core::result::Result<(), mycelium_std_recover::effect::UndeclaredEffect>
-pub fn mycelium_std_recover::handle_classified<T, E>(mycelium_std_recover::outcome::Outcome<T, E>, &mycelium_std_recover::policy::RecoveryPolicy<T>, &mut mycelium_interp::budget::Budgets, impl core::ops::function::Fn(&E) -> mycelium_std_recover::registry::ClassName, impl core::ops::function::FnMut() -> (mycelium_std_recover::outcome::Outcome<T, E>, mycelium_core::guarantee::GuaranteeStrength)) -> mycelium_std_recover::outcome::Resolution<T, E> where T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
-pub fn mycelium_std_recover::policy_effects<T>(&mycelium_std_recover::policy::RecoveryPolicy<T>) -> alloc::collections::btree::set::BTreeSet<mycelium_interp::budget::EffectKind> where T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
-pub fn mycelium_std_recover::recover_classified<T, E>(core::result::Result<T, E>, &mycelium_std_recover::policy::RecoveryPolicy<T>, &mut mycelium_interp::budget::Budgets, impl core::ops::function::Fn(&E) -> mycelium_std_recover::registry::ClassName, impl core::ops::function::FnMut() -> (mycelium_std_recover::outcome::Outcome<T, E>, mycelium_core::guarantee::GuaranteeStrength)) -> mycelium_std_recover::outcome::Resolution<T, E> where T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub fn mycelium_std_recover::handle_classified<T, E>(mycelium_std_recover::outcome::Outcome<T, E>, &mycelium_std_recover::policy::RecoveryPolicy<T>, &mut mycelium_interp::budget::Budgets, impl core::ops::function::Fn(&E) -> mycelium_std_recover::registry::ClassName, impl core::ops::function::FnMut() -> (mycelium_std_recover::outcome::Outcome<T, E>, mycelium_core::guarantee::GuaranteeStrength)) -> mycelium_std_recover::outcome::Resolution<T, E> where T: serde_core::ser::Serialize + core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub fn mycelium_std_recover::policy_effects<T>(&mycelium_std_recover::policy::RecoveryPolicy<T>) -> alloc::collections::btree::set::BTreeSet<mycelium_interp::budget::EffectKind> where T: serde_core::ser::Serialize + core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub fn mycelium_std_recover::recover_classified<T, E>(core::result::Result<T, E>, &mycelium_std_recover::policy::RecoveryPolicy<T>, &mut mycelium_interp::budget::Budgets, impl core::ops::function::Fn(&E) -> mycelium_std_recover::registry::ClassName, impl core::ops::function::FnMut() -> (mycelium_std_recover::outcome::Outcome<T, E>, mycelium_core::guarantee::GuaranteeStrength)) -> mycelium_std_recover::outcome::Resolution<T, E> where T: serde_core::ser::Serialize + core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
 pub type mycelium_std_recover::EffectSet = alloc::collections::btree::set::BTreeSet<mycelium_interp::budget::EffectKind>
 pub type mycelium_std_recover::PolicyRef = mycelium_core::id::ContentHash
 pub type mycelium_std_recover::RecoverOutcome<T, E> = mycelium_std_recover::outcome::Resolution<T, E>

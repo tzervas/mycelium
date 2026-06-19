@@ -459,6 +459,8 @@ dependencies = [
  "mycelium-diag",
  "mycelium-interp",
  "mycelium-std-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

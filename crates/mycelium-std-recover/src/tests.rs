@@ -188,7 +188,11 @@ fn no_drop_for_err_with_retry_exhausted() {
 fn no_drop_for_err_with_escalate() {
     // Escalate → Propagated — still explicit, never dropped (I1).
     // Mutant witness: returning Recovered for an escalation would violate I1.
-    let (reg, class) = simple_registry();
+    // Fix #3: "fatal" is now registry-validated in `on()`, so we must register it.
+    let mut reg = ClassRegistry::new();
+    reg.register("io-error");
+    reg.register("fatal"); // must be registered — Escalate.to_class is now X1-validated.
+    let class = reg.resolve("io-error").unwrap();
     let mut policy = RecoveryPolicy::<u32>::new();
     policy
         .on(
@@ -648,6 +652,9 @@ fn policy_on_unknown_class_is_explicit_error() {
 
 /// Property: `policy_ref` is deterministic for the same rules (content-addressed — ADR-006/C3).
 /// Mutant witness: non-deterministic hashing would produce different refs for the same policy.
+///
+/// Fix #2: policy_ref() now returns Result; unwrap() is safe because u32: serde::Serialize always
+/// succeeds in serde_json (no non-finite values; integers serialize without error).
 #[test]
 fn policy_ref_is_deterministic() {
     let (reg, _) = simple_registry();
@@ -670,14 +677,16 @@ fn policy_ref_is_deterministic() {
     )
     .unwrap();
     assert_eq!(
-        p1.policy_ref(),
-        p2.policy_ref(),
+        p1.policy_ref().unwrap(),
+        p2.policy_ref().unwrap(),
         "same policy must have same content hash (ADR-006)"
     );
 }
 
 /// Property: different rules produce different `PolicyRef`s (no collision — banked guard #5).
 /// Mutant witness: a hash collision between distinct rules would fail this test.
+///
+/// Fix #2: policy_ref() returns Result; unwrap() is safe for u32 (always serializable in serde_json).
 #[test]
 fn different_policies_have_different_refs() {
     let (reg, _) = simple_registry();
@@ -692,25 +701,28 @@ fn different_policies_have_different_refs() {
     p2.on(&reg, "io-error", RecoveryAction::Retry { max_attempts: 3 })
         .unwrap();
     assert_ne!(
-        p1.policy_ref(),
-        p2.policy_ref(),
+        p1.policy_ref().unwrap(),
+        p2.policy_ref().unwrap(),
         "distinct policies must have distinct content hashes (ADR-006/banked guard #5)"
     );
 }
 
 /// Property: empty policy has a stable content hash (not a fabricated zero — G2).
 /// Mutant witness: returning a null/zero hash for an empty policy would produce collisions.
+///
+/// Fix #2: policy_ref() returns Result; empty policy has no fallback values, so it always
+/// succeeds (no serialization possible to fail).
 #[test]
 fn empty_policy_has_stable_hash() {
     let p1 = RecoveryPolicy::<u32>::new();
     let p2 = RecoveryPolicy::<u32>::new();
     assert_eq!(
-        p1.policy_ref(),
-        p2.policy_ref(),
+        p1.policy_ref().unwrap(),
+        p2.policy_ref().unwrap(),
         "two empty policies must have the same content hash"
     );
     // And it must be a valid ContentHash (not a fabricated value).
-    let r = p1.policy_ref();
+    let r = p1.policy_ref().unwrap();
     assert!(
         r.as_str().starts_with("blake3:"),
         "policy_ref must be a valid blake3 content hash: {:?}",
@@ -722,6 +734,8 @@ fn empty_policy_has_stable_hash() {
 
 /// Property: every Recovered outcome carries a PolicyRef when a rule was applied (C3).
 /// Mutant witness: returning policy: None when a rule acts would lose EXPLAIN-ability.
+///
+/// Fix #2: policy_ref() returns Result; unwrap() is safe for u32.
 #[test]
 fn recovered_outcome_carries_policy_ref_when_rule_applied() {
     let (reg, class) = simple_registry();
@@ -733,7 +747,8 @@ fn recovered_outcome_carries_policy_ref_when_rule_applied() {
             RecoveryAction::Fallback { value: Box::new(0) },
         )
         .unwrap();
-    let expected_ref = policy.policy_ref();
+    // Fix #2: policy_ref() now returns Result — unwrap() is safe (u32: serde::Serialize).
+    let expected_ref = policy.policy_ref().unwrap();
     let mut budgets = Budgets::new();
 
     let r = handle_classified(
@@ -755,7 +770,11 @@ fn recovered_outcome_carries_policy_ref_when_rule_applied() {
 /// Mutant witness: returning policy: None when escalate acts would lose EXPLAIN-ability.
 #[test]
 fn propagated_outcome_carries_policy_ref_when_rule_applied() {
-    let (reg, class) = simple_registry();
+    // Fix #3: "fatal" must be registered — Escalate.to_class is now X1-validated.
+    let mut reg = ClassRegistry::new();
+    reg.register("io-error");
+    reg.register("fatal");
+    let class = reg.resolve("io-error").unwrap();
     let mut policy = RecoveryPolicy::<u32>::new();
     policy
         .on(
@@ -766,7 +785,8 @@ fn propagated_outcome_carries_policy_ref_when_rule_applied() {
             },
         )
         .unwrap();
-    let expected_ref = policy.policy_ref();
+    // Fix #2: policy_ref() now returns Result — unwrap() is safe for well-typed T (u32: Serialize).
+    let expected_ref = policy.policy_ref().unwrap();
     let mut budgets = Budgets::new();
 
     let r = handle_classified(
@@ -878,4 +898,170 @@ fn registered_class_resolves() {
         .resolve("my-class")
         .expect("registered class must resolve");
     assert_eq!(class.as_str(), "my-class");
+}
+
+// ---- 10. Fix #2: stable serde-based PolicyRef encoding (banked guard #5) ------
+
+/// Fix #2 — Property: two structurally-equal policies produce the same `PolicyRef` via
+/// the stable serde_json encoding.
+///
+/// This also implicitly verifies that the hash does NOT depend on `Debug` output (if it did,
+/// a custom `Debug` impl that returns varying text would cause two equal policies to diverge).
+///
+/// Mutant witness: using `format!("{:?}")` instead of `serde_json::to_vec` would make this
+/// test fail for a type whose `Debug` output is non-deterministic or differs from its serde
+/// representation (see `DebugOverrideType` in the next test).
+#[test]
+fn equal_fallback_values_produce_equal_policy_refs() {
+    // Two policies with structurally-equal fallback values must have the same PolicyRef
+    // regardless of how their types format under Debug.
+    let (reg, _) = simple_registry();
+    let mut p1 = RecoveryPolicy::<u32>::new();
+    p1.on(
+        &reg,
+        "io-error",
+        RecoveryAction::Fallback { value: Box::new(7) },
+    )
+    .unwrap();
+    let mut p2 = RecoveryPolicy::<u32>::new();
+    p2.on(
+        &reg,
+        "io-error",
+        RecoveryAction::Fallback { value: Box::new(7) },
+    )
+    .unwrap();
+    assert_eq!(
+        p1.policy_ref().unwrap(),
+        p2.policy_ref().unwrap(),
+        "two policies with equal fallback values must produce equal PolicyRefs (banked guard #5)"
+    );
+}
+
+/// Fix #2 — Property: the PolicyRef hash uses `serde::Serialize`, not `Debug`.
+///
+/// `DebugDiffers` has a `Debug` impl that always returns `"VARIABLE"` regardless of the
+/// inner value, but a `Serialize` impl that uses the actual integer.  Two instances with
+/// different inner values therefore produce identical `Debug` output but different serde
+/// output — and must produce **different** `PolicyRef`s (the hash must use serde, not Debug).
+///
+/// Mutant witness: using `format!("{:?}")` for hashing would make both policies produce the
+/// SAME `PolicyRef` (both serialize as `"VARIABLE"` under Debug), making this test fail.
+#[test]
+fn policy_ref_hashes_by_serialize_not_debug() {
+    use serde::Serialize;
+
+    /// A wrapper type whose `Debug` output is always `"VARIABLE"` regardless of the
+    /// inner value, but whose `Serialize` output reflects the actual inner `u32`.
+    /// This deliberately breaks the Debug↔Serialize consistency to expose which path the
+    /// hash uses.
+    #[derive(Clone, Serialize)]
+    struct DebugDiffers(u32);
+
+    impl std::fmt::Debug for DebugDiffers {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            // Always returns the same string regardless of the inner value.
+            f.write_str("VARIABLE")
+        }
+    }
+
+    let (reg, _) = simple_registry();
+
+    // p1 holds DebugDiffers(1), p2 holds DebugDiffers(2).
+    // Their Debug outputs are identical ("VARIABLE"), but their serde outputs differ.
+    let mut p1 = RecoveryPolicy::<DebugDiffers>::new();
+    p1.on(
+        &reg,
+        "io-error",
+        RecoveryAction::Fallback {
+            value: Box::new(DebugDiffers(1)),
+        },
+    )
+    .unwrap();
+    let mut p2 = RecoveryPolicy::<DebugDiffers>::new();
+    p2.on(
+        &reg,
+        "io-error",
+        RecoveryAction::Fallback {
+            value: Box::new(DebugDiffers(2)),
+        },
+    )
+    .unwrap();
+
+    // Sanity: Debug output is the same for both.
+    assert_eq!(
+        format!("{:?}", DebugDiffers(1)),
+        format!("{:?}", DebugDiffers(2)),
+        "precondition: Debug output must be identical for both values"
+    );
+
+    // The PolicyRef must differ — the hash uses serde output (which differs), not Debug.
+    // Mutant witness: hashing via `format!("{:?}")` would produce equal refs here.
+    assert_ne!(
+        p1.policy_ref().unwrap(),
+        p2.policy_ref().unwrap(),
+        "policies with different fallback values must produce different PolicyRefs even when \
+         their Debug output is identical — serde encoding, not Debug, is used (banked guard #5)"
+    );
+}
+
+// ---- 11. Fix #3: Escalate `to_class` is registry-validated in `on()` (X1) ----
+
+/// Fix #3 — Property: `on(.., Escalate { to_class: "<unregistered>" })` returns `Err(UnknownClass)`.
+///
+/// Prior to this fix, only the LHS `class` was validated; the Escalate `to_class` was an
+/// unvalidated raw string (partial X1 violation).  Now both are registry-checked.
+///
+/// Mutant witness: removing the `to_class` registry check in `on()` would let an unregistered
+/// escalation target slip through, making this test fail (X1 / G2).
+#[test]
+fn on_escalate_with_unregistered_to_class_is_explicit_error() {
+    let mut reg = ClassRegistry::new();
+    reg.register("io-error"); // LHS class is registered.
+                              // "fatal" is NOT registered — escalating to it must be an explicit error.
+    let mut policy = RecoveryPolicy::<u32>::new();
+    let err = policy
+        .on(
+            &reg,
+            "io-error",
+            RecoveryAction::Escalate {
+                to_class: "fatal".to_string(), // not in registry
+            },
+        )
+        .unwrap_err();
+    // The error must name the unknown `to_class`, not the LHS class (X1 — explicit, not silent).
+    // Mutant witness: returning Err for the LHS class name instead of "fatal" loses the
+    // diagnostic (the caller can't tell which class was bad).
+    assert_eq!(
+        err.name, "fatal",
+        "UnknownClass must name the unregistered Escalate to_class (X1 / G2)"
+    );
+}
+
+/// Fix #3 — Property: `on(.., Escalate { to_class: "<registered>" })` succeeds (Ok).
+///
+/// Confirms the registry check does not reject valid, registered escalation targets.
+///
+/// Mutant witness: always returning Err for Escalate `to_class` (over-correction) would make
+/// this test fail and break valid escalation policies.
+#[test]
+fn on_escalate_with_registered_to_class_succeeds() {
+    let mut reg = ClassRegistry::new();
+    reg.register("io-error");
+    reg.register("fatal"); // escalation target is registered — must be accepted.
+    let mut policy = RecoveryPolicy::<u32>::new();
+    policy
+        .on(
+            &reg,
+            "io-error",
+            RecoveryAction::Escalate {
+                to_class: "fatal".to_string(),
+            },
+        )
+        .expect("registered Escalate.to_class must be accepted (X1)");
+    // The rule is now in the policy.
+    let class = reg.resolve("io-error").unwrap();
+    assert!(
+        policy.action_for(&class).is_some(),
+        "escalate rule must be inserted when to_class is registered"
+    );
 }

@@ -410,8 +410,8 @@ fn make_diff(expected: &str, actual: &str) -> String {
 /// # EXPLAIN
 /// A `Fail` carries both outputs and the input description so the disagreement is inspectable
 /// (C3/G11/SC-3). **FLAG-Q5:** the tag/EXPLAIN level of the §8-Q5 two-level bar awaits
-/// deeper `std.diag` call-site integration.
-pub fn differential<T, O>(
+/// `std.diag` (FLAG-DIAG).
+pub fn differential<O>(
     input_desc: &str,
     lhs_available: bool,
     lhs: impl FnOnce() -> O,
@@ -419,7 +419,6 @@ pub fn differential<T, O>(
     rhs: impl FnOnce() -> O,
 ) -> Verdict
 where
-    T: core::fmt::Debug,
     O: PartialEq + core::fmt::Debug,
 {
     if !lhs_available || !rhs_available {
@@ -786,7 +785,7 @@ mod tests {
     /// Both backends agree → Pass.
     #[test]
     fn differential_pass_on_agreement() {
-        let v = differential::<(), _>("input_42", true, || 42u32, true, || 42u32);
+        let v = differential("input_42", true, || 42u32, true, || 42u32);
         assert_eq!(v, Verdict::Pass, "agreeing backends must pass");
     }
 
@@ -794,7 +793,7 @@ mod tests {
     /// Guard: returning Pass for disagreement is the primary differential violation.
     #[test]
     fn differential_fail_on_disagreement() {
-        let v = differential::<(), _>("input_x", true, || 1u32, true, || 2u32);
+        let v = differential("input_x", true, || 1u32, true, || 2u32);
         assert!(
             matches!(v, Verdict::Fail { .. }),
             "disagreeing backends must fail; got {v:?}"
@@ -804,7 +803,7 @@ mod tests {
     /// lhs unavailable → Skipped{BackendUnavailable} (C1/G2).
     #[test]
     fn differential_skipped_on_lhs_unavailable() {
-        let v = differential::<(), _>(
+        let v = differential(
             "x",
             false, // lhs unavailable
             || 0u32,
@@ -825,7 +824,7 @@ mod tests {
     /// rhs unavailable → Skipped{BackendUnavailable} (C1/G2).
     #[test]
     fn differential_skipped_on_rhs_unavailable() {
-        let v = differential::<(), _>(
+        let v = differential(
             "x",
             true,
             || 0u32,
@@ -846,7 +845,7 @@ mod tests {
     /// A Fail carries both outputs (EXPLAIN artifact — C3/G11).
     #[test]
     fn differential_fail_carries_both_outputs() {
-        let v = differential::<(), _>("x", true, || 1u32, true, || 99u32);
+        let v = differential("x", true, || 1u32, true, || 99u32);
         if let Verdict::Fail { record } = v {
             assert!(
                 record.description.contains("lhs=") && record.description.contains("rhs="),

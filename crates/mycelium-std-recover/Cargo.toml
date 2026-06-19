@@ -17,3 +17,7 @@ mycelium-std-core = { path = "../mycelium-std-core" }
 mycelium-diag = { path = "../mycelium-diag" }
 mycelium-interp = { path = "../mycelium-interp" }
 blake3 = "1"
+# serde + serde_json: stable canonical encoding for fallback values in PolicyRef hash (banked guard #5).
+# Both are vetted workspace deps (mycelium-core, mycelium-std-spore, etc. already use them).
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
