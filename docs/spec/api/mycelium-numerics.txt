@@ -1,0 +1,389 @@
+pub mod mycelium_numerics
+pub mod mycelium_numerics::cert
+pub enum mycelium_numerics::cert::CheckOutcome
+pub mycelium_numerics::cert::CheckOutcome::Malformed
+pub mycelium_numerics::cert::CheckOutcome::Rejected
+pub mycelium_numerics::cert::CheckOutcome::Rejected::claimed: f64
+pub mycelium_numerics::cert::CheckOutcome::Rejected::recomputed: f64
+pub mycelium_numerics::cert::CheckOutcome::Valid
+impl core::clone::Clone for mycelium_numerics::cert::CheckOutcome
+pub fn mycelium_numerics::cert::CheckOutcome::clone(&self) -> mycelium_numerics::cert::CheckOutcome
+impl core::cmp::PartialEq for mycelium_numerics::cert::CheckOutcome
+pub fn mycelium_numerics::cert::CheckOutcome::eq(&self, &mycelium_numerics::cert::CheckOutcome) -> bool
+impl core::fmt::Debug for mycelium_numerics::cert::CheckOutcome
+pub fn mycelium_numerics::cert::CheckOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_numerics::cert::CheckOutcome
+impl core::marker::StructuralPartialEq for mycelium_numerics::cert::CheckOutcome
+impl core::marker::Freeze for mycelium_numerics::cert::CheckOutcome
+impl core::marker::Send for mycelium_numerics::cert::CheckOutcome
+impl core::marker::Sync for mycelium_numerics::cert::CheckOutcome
+impl core::marker::Unpin for mycelium_numerics::cert::CheckOutcome
+impl core::marker::UnsafeUnpin for mycelium_numerics::cert::CheckOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::cert::CheckOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::cert::CheckOutcome
+pub enum mycelium_numerics::cert::ErrorOp
+pub mycelium_numerics::cert::ErrorOp::Add
+pub mycelium_numerics::cert::ErrorOp::Mul
+pub mycelium_numerics::cert::ErrorOp::Mul::x0_mag: f64
+pub mycelium_numerics::cert::ErrorOp::Mul::y0_mag: f64
+pub mycelium_numerics::cert::ErrorOp::Neg
+pub mycelium_numerics::cert::ErrorOp::Scale(f64)
+pub mycelium_numerics::cert::ErrorOp::Sub
+impl core::clone::Clone for mycelium_numerics::cert::ErrorOp
+pub fn mycelium_numerics::cert::ErrorOp::clone(&self) -> mycelium_numerics::cert::ErrorOp
+impl core::cmp::PartialEq for mycelium_numerics::cert::ErrorOp
+pub fn mycelium_numerics::cert::ErrorOp::eq(&self, &mycelium_numerics::cert::ErrorOp) -> bool
+impl core::fmt::Debug for mycelium_numerics::cert::ErrorOp
+pub fn mycelium_numerics::cert::ErrorOp::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_numerics::cert::ErrorOp
+impl core::marker::StructuralPartialEq for mycelium_numerics::cert::ErrorOp
+impl core::marker::Freeze for mycelium_numerics::cert::ErrorOp
+impl core::marker::Send for mycelium_numerics::cert::ErrorOp
+impl core::marker::Sync for mycelium_numerics::cert::ErrorOp
+impl core::marker::Unpin for mycelium_numerics::cert::ErrorOp
+impl core::marker::UnsafeUnpin for mycelium_numerics::cert::ErrorOp
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::cert::ErrorOp
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::cert::ErrorOp
+pub struct mycelium_numerics::cert::Certificate
+impl mycelium_numerics::cert::Certificate
+pub fn mycelium_numerics::cert::Certificate::delta(&self) -> f64
+pub fn mycelium_numerics::cert::Certificate::eps(&self) -> f64
+pub const fn mycelium_numerics::cert::Certificate::exact() -> Self
+pub fn mycelium_numerics::cert::Certificate::from_error(mycelium_numerics::error::ErrorBound, mycelium_core::guarantee::GuaranteeStrength) -> Self
+pub fn mycelium_numerics::cert::Certificate::from_prob(mycelium_numerics::prob::ProbBound, mycelium_core::guarantee::GuaranteeStrength) -> Self
+pub fn mycelium_numerics::cert::Certificate::new(f64, f64, mycelium_core::guarantee::GuaranteeStrength) -> core::option::Option<Self>
+pub fn mycelium_numerics::cert::Certificate::strength(&self) -> mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_numerics::cert::Certificate
+pub fn mycelium_numerics::cert::Certificate::clone(&self) -> mycelium_numerics::cert::Certificate
+impl core::cmp::PartialEq for mycelium_numerics::cert::Certificate
+pub fn mycelium_numerics::cert::Certificate::eq(&self, &mycelium_numerics::cert::Certificate) -> bool
+impl core::fmt::Debug for mycelium_numerics::cert::Certificate
+pub fn mycelium_numerics::cert::Certificate::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_numerics::cert::Certificate
+impl core::marker::StructuralPartialEq for mycelium_numerics::cert::Certificate
+impl serde_core::ser::Serialize for mycelium_numerics::cert::Certificate
+pub fn mycelium_numerics::cert::Certificate::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_numerics::cert::Certificate
+pub fn mycelium_numerics::cert::Certificate::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for mycelium_numerics::cert::Certificate
+impl core::marker::Send for mycelium_numerics::cert::Certificate
+impl core::marker::Sync for mycelium_numerics::cert::Certificate
+impl core::marker::Unpin for mycelium_numerics::cert::Certificate
+impl core::marker::UnsafeUnpin for mycelium_numerics::cert::Certificate
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::cert::Certificate
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::cert::Certificate
+pub struct mycelium_numerics::cert::ComposedBound
+pub mycelium_numerics::cert::ComposedBound::bound: mycelium_core::bound::Bound
+pub mycelium_numerics::cert::ComposedBound::strength: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_numerics::cert::ComposedBound
+pub fn mycelium_numerics::cert::ComposedBound::clone(&self) -> mycelium_numerics::cert::ComposedBound
+impl core::cmp::PartialEq for mycelium_numerics::cert::ComposedBound
+pub fn mycelium_numerics::cert::ComposedBound::eq(&self, &mycelium_numerics::cert::ComposedBound) -> bool
+impl core::fmt::Debug for mycelium_numerics::cert::ComposedBound
+pub fn mycelium_numerics::cert::ComposedBound::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_numerics::cert::ComposedBound
+impl core::marker::Freeze for mycelium_numerics::cert::ComposedBound
+impl core::marker::Send for mycelium_numerics::cert::ComposedBound
+impl core::marker::Sync for mycelium_numerics::cert::ComposedBound
+impl core::marker::Unpin for mycelium_numerics::cert::ComposedBound
+impl core::marker::UnsafeUnpin for mycelium_numerics::cert::ComposedBound
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::cert::ComposedBound
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::cert::ComposedBound
+pub fn mycelium_numerics::cert::accuracy_to_probability(mycelium_numerics::error::ErrorBound, f64, f64) -> core::option::Option<mycelium_numerics::prob::ProbBound>
+pub fn mycelium_numerics::cert::basis_strength(&mycelium_core::bound::BoundBasis) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_numerics::cert::check_error_claim(&[mycelium_numerics::error::ErrorBound], mycelium_numerics::cert::ErrorOp, mycelium_numerics::error::ErrorBound) -> mycelium_numerics::cert::CheckOutcome
+pub fn mycelium_numerics::cert::check_union_claim(&[mycelium_numerics::prob::ProbBound], mycelium_numerics::prob::ProbBound) -> mycelium_numerics::cert::CheckOutcome
+pub fn mycelium_numerics::cert::compose_error_bound(&[&mycelium_core::bound::Bound], mycelium_numerics::cert::ErrorOp) -> core::option::Option<mycelium_numerics::cert::ComposedBound>
+pub fn mycelium_numerics::cert::error_norm(&mycelium_core::bound::Bound) -> core::option::Option<mycelium_core::bound::NormKind>
+pub fn mycelium_numerics::cert::recompute_error(&[mycelium_numerics::error::ErrorBound], mycelium_numerics::cert::ErrorOp) -> core::option::Option<mycelium_numerics::error::ErrorBound>
+pub mod mycelium_numerics::error
+pub struct mycelium_numerics::error::AffineForm
+impl mycelium_numerics::error::AffineForm
+pub fn mycelium_numerics::error::AffineForm::add(&self, &mycelium_numerics::error::AffineForm) -> Self
+pub fn mycelium_numerics::error::AffineForm::center(&self) -> f64
+pub fn mycelium_numerics::error::AffineForm::constant(f64) -> Self
+pub fn mycelium_numerics::error::AffineForm::eval(&self, impl core::ops::function::Fn(mycelium_numerics::error::NoiseSym) -> f64) -> f64
+pub fn mycelium_numerics::error::AffineForm::mul(&self, &mycelium_numerics::error::AffineForm, mycelium_numerics::error::NoiseSym) -> Self
+pub fn mycelium_numerics::error::AffineForm::neg(&self) -> Self
+pub fn mycelium_numerics::error::AffineForm::radius(&self) -> f64
+pub fn mycelium_numerics::error::AffineForm::scale(&self, f64) -> Self
+pub fn mycelium_numerics::error::AffineForm::sub(&self, &mycelium_numerics::error::AffineForm) -> Self
+pub fn mycelium_numerics::error::AffineForm::uncertain(f64, mycelium_numerics::error::NoiseSym, f64) -> core::option::Option<Self>
+impl core::clone::Clone for mycelium_numerics::error::AffineForm
+pub fn mycelium_numerics::error::AffineForm::clone(&self) -> mycelium_numerics::error::AffineForm
+impl core::cmp::PartialEq for mycelium_numerics::error::AffineForm
+pub fn mycelium_numerics::error::AffineForm::eq(&self, &mycelium_numerics::error::AffineForm) -> bool
+impl core::fmt::Debug for mycelium_numerics::error::AffineForm
+pub fn mycelium_numerics::error::AffineForm::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_numerics::error::AffineForm
+impl core::marker::Freeze for mycelium_numerics::error::AffineForm
+impl core::marker::Send for mycelium_numerics::error::AffineForm
+impl core::marker::Sync for mycelium_numerics::error::AffineForm
+impl core::marker::Unpin for mycelium_numerics::error::AffineForm
+impl core::marker::UnsafeUnpin for mycelium_numerics::error::AffineForm
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::error::AffineForm
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::error::AffineForm
+pub struct mycelium_numerics::error::ErrorBound
+impl mycelium_numerics::error::ErrorBound
+pub fn mycelium_numerics::error::ErrorBound::add(&self, &mycelium_numerics::error::ErrorBound) -> core::option::Option<Self>
+pub fn mycelium_numerics::error::ErrorBound::eps(&self) -> f64
+pub const fn mycelium_numerics::error::ErrorBound::exact(mycelium_core::bound::NormKind) -> Self
+pub fn mycelium_numerics::error::ErrorBound::mul(&self, &mycelium_numerics::error::ErrorBound, f64, f64) -> core::option::Option<Self>
+pub fn mycelium_numerics::error::ErrorBound::neg(&self) -> Self
+pub fn mycelium_numerics::error::ErrorBound::new(f64, mycelium_core::bound::NormKind) -> core::option::Option<Self>
+pub fn mycelium_numerics::error::ErrorBound::norm(&self) -> mycelium_core::bound::NormKind
+pub fn mycelium_numerics::error::ErrorBound::scale(&self, f64) -> Self
+pub fn mycelium_numerics::error::ErrorBound::sub(&self, &mycelium_numerics::error::ErrorBound) -> core::option::Option<Self>
+impl core::clone::Clone for mycelium_numerics::error::ErrorBound
+pub fn mycelium_numerics::error::ErrorBound::clone(&self) -> mycelium_numerics::error::ErrorBound
+impl core::cmp::PartialEq for mycelium_numerics::error::ErrorBound
+pub fn mycelium_numerics::error::ErrorBound::eq(&self, &mycelium_numerics::error::ErrorBound) -> bool
+impl core::fmt::Debug for mycelium_numerics::error::ErrorBound
+pub fn mycelium_numerics::error::ErrorBound::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_numerics::error::ErrorBound
+impl core::marker::StructuralPartialEq for mycelium_numerics::error::ErrorBound
+impl core::marker::Freeze for mycelium_numerics::error::ErrorBound
+impl core::marker::Send for mycelium_numerics::error::ErrorBound
+impl core::marker::Sync for mycelium_numerics::error::ErrorBound
+impl core::marker::Unpin for mycelium_numerics::error::ErrorBound
+impl core::marker::UnsafeUnpin for mycelium_numerics::error::ErrorBound
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::error::ErrorBound
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::error::ErrorBound
+pub const mycelium_numerics::error::ROUNDOFF_SYM: mycelium_numerics::error::NoiseSym
+pub type mycelium_numerics::error::NoiseSym = u64
+pub mod mycelium_numerics::prob
+pub struct mycelium_numerics::prob::ApRhlJudgment
+impl mycelium_numerics::prob::ApRhlJudgment
+pub fn mycelium_numerics::prob::ApRhlJudgment::delta(&self) -> f64
+pub fn mycelium_numerics::prob::ApRhlJudgment::eps(&self) -> f64
+pub fn mycelium_numerics::prob::ApRhlJudgment::new(f64, f64) -> core::option::Option<Self>
+pub fn mycelium_numerics::prob::ApRhlJudgment::seq(&self, &mycelium_numerics::prob::ApRhlJudgment) -> Self
+impl core::clone::Clone for mycelium_numerics::prob::ApRhlJudgment
+pub fn mycelium_numerics::prob::ApRhlJudgment::clone(&self) -> mycelium_numerics::prob::ApRhlJudgment
+impl core::cmp::PartialEq for mycelium_numerics::prob::ApRhlJudgment
+pub fn mycelium_numerics::prob::ApRhlJudgment::eq(&self, &mycelium_numerics::prob::ApRhlJudgment) -> bool
+impl core::fmt::Debug for mycelium_numerics::prob::ApRhlJudgment
+pub fn mycelium_numerics::prob::ApRhlJudgment::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_numerics::prob::ApRhlJudgment
+impl core::marker::StructuralPartialEq for mycelium_numerics::prob::ApRhlJudgment
+impl core::marker::Freeze for mycelium_numerics::prob::ApRhlJudgment
+impl core::marker::Send for mycelium_numerics::prob::ApRhlJudgment
+impl core::marker::Sync for mycelium_numerics::prob::ApRhlJudgment
+impl core::marker::Unpin for mycelium_numerics::prob::ApRhlJudgment
+impl core::marker::UnsafeUnpin for mycelium_numerics::prob::ApRhlJudgment
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::prob::ApRhlJudgment
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::prob::ApRhlJudgment
+pub struct mycelium_numerics::prob::ProbBound
+impl mycelium_numerics::prob::ProbBound
+pub const fn mycelium_numerics::prob::ProbBound::certain() -> Self
+pub fn mycelium_numerics::prob::ProbBound::delta(&self) -> f64
+pub fn mycelium_numerics::prob::ProbBound::new(f64) -> core::option::Option<Self>
+pub fn mycelium_numerics::prob::ProbBound::or(&self, &mycelium_numerics::prob::ProbBound) -> Self
+pub fn mycelium_numerics::prob::ProbBound::union<'a, I>(I) -> Self where I: core::iter::traits::collect::IntoIterator<Item = &'a mycelium_numerics::prob::ProbBound>
+impl core::clone::Clone for mycelium_numerics::prob::ProbBound
+pub fn mycelium_numerics::prob::ProbBound::clone(&self) -> mycelium_numerics::prob::ProbBound
+impl core::cmp::PartialEq for mycelium_numerics::prob::ProbBound
+pub fn mycelium_numerics::prob::ProbBound::eq(&self, &mycelium_numerics::prob::ProbBound) -> bool
+impl core::fmt::Debug for mycelium_numerics::prob::ProbBound
+pub fn mycelium_numerics::prob::ProbBound::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_numerics::prob::ProbBound
+impl core::marker::StructuralPartialEq for mycelium_numerics::prob::ProbBound
+impl core::marker::Freeze for mycelium_numerics::prob::ProbBound
+impl core::marker::Send for mycelium_numerics::prob::ProbBound
+impl core::marker::Sync for mycelium_numerics::prob::ProbBound
+impl core::marker::Unpin for mycelium_numerics::prob::ProbBound
+impl core::marker::UnsafeUnpin for mycelium_numerics::prob::ProbBound
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::prob::ProbBound
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::prob::ProbBound
+pub enum mycelium_numerics::CheckOutcome
+pub mycelium_numerics::CheckOutcome::Malformed
+pub mycelium_numerics::CheckOutcome::Rejected
+pub mycelium_numerics::CheckOutcome::Rejected::claimed: f64
+pub mycelium_numerics::CheckOutcome::Rejected::recomputed: f64
+pub mycelium_numerics::CheckOutcome::Valid
+impl core::clone::Clone for mycelium_numerics::cert::CheckOutcome
+pub fn mycelium_numerics::cert::CheckOutcome::clone(&self) -> mycelium_numerics::cert::CheckOutcome
+impl core::cmp::PartialEq for mycelium_numerics::cert::CheckOutcome
+pub fn mycelium_numerics::cert::CheckOutcome::eq(&self, &mycelium_numerics::cert::CheckOutcome) -> bool
+impl core::fmt::Debug for mycelium_numerics::cert::CheckOutcome
+pub fn mycelium_numerics::cert::CheckOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_numerics::cert::CheckOutcome
+impl core::marker::StructuralPartialEq for mycelium_numerics::cert::CheckOutcome
+impl core::marker::Freeze for mycelium_numerics::cert::CheckOutcome
+impl core::marker::Send for mycelium_numerics::cert::CheckOutcome
+impl core::marker::Sync for mycelium_numerics::cert::CheckOutcome
+impl core::marker::Unpin for mycelium_numerics::cert::CheckOutcome
+impl core::marker::UnsafeUnpin for mycelium_numerics::cert::CheckOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::cert::CheckOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::cert::CheckOutcome
+pub enum mycelium_numerics::ErrorOp
+pub mycelium_numerics::ErrorOp::Add
+pub mycelium_numerics::ErrorOp::Mul
+pub mycelium_numerics::ErrorOp::Mul::x0_mag: f64
+pub mycelium_numerics::ErrorOp::Mul::y0_mag: f64
+pub mycelium_numerics::ErrorOp::Neg
+pub mycelium_numerics::ErrorOp::Scale(f64)
+pub mycelium_numerics::ErrorOp::Sub
+impl core::clone::Clone for mycelium_numerics::cert::ErrorOp
+pub fn mycelium_numerics::cert::ErrorOp::clone(&self) -> mycelium_numerics::cert::ErrorOp
+impl core::cmp::PartialEq for mycelium_numerics::cert::ErrorOp
+pub fn mycelium_numerics::cert::ErrorOp::eq(&self, &mycelium_numerics::cert::ErrorOp) -> bool
+impl core::fmt::Debug for mycelium_numerics::cert::ErrorOp
+pub fn mycelium_numerics::cert::ErrorOp::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_numerics::cert::ErrorOp
+impl core::marker::StructuralPartialEq for mycelium_numerics::cert::ErrorOp
+impl core::marker::Freeze for mycelium_numerics::cert::ErrorOp
+impl core::marker::Send for mycelium_numerics::cert::ErrorOp
+impl core::marker::Sync for mycelium_numerics::cert::ErrorOp
+impl core::marker::Unpin for mycelium_numerics::cert::ErrorOp
+impl core::marker::UnsafeUnpin for mycelium_numerics::cert::ErrorOp
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::cert::ErrorOp
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::cert::ErrorOp
+pub struct mycelium_numerics::AffineForm
+impl mycelium_numerics::error::AffineForm
+pub fn mycelium_numerics::error::AffineForm::add(&self, &mycelium_numerics::error::AffineForm) -> Self
+pub fn mycelium_numerics::error::AffineForm::center(&self) -> f64
+pub fn mycelium_numerics::error::AffineForm::constant(f64) -> Self
+pub fn mycelium_numerics::error::AffineForm::eval(&self, impl core::ops::function::Fn(mycelium_numerics::error::NoiseSym) -> f64) -> f64
+pub fn mycelium_numerics::error::AffineForm::mul(&self, &mycelium_numerics::error::AffineForm, mycelium_numerics::error::NoiseSym) -> Self
+pub fn mycelium_numerics::error::AffineForm::neg(&self) -> Self
+pub fn mycelium_numerics::error::AffineForm::radius(&self) -> f64
+pub fn mycelium_numerics::error::AffineForm::scale(&self, f64) -> Self
+pub fn mycelium_numerics::error::AffineForm::sub(&self, &mycelium_numerics::error::AffineForm) -> Self
+pub fn mycelium_numerics::error::AffineForm::uncertain(f64, mycelium_numerics::error::NoiseSym, f64) -> core::option::Option<Self>
+impl core::clone::Clone for mycelium_numerics::error::AffineForm
+pub fn mycelium_numerics::error::AffineForm::clone(&self) -> mycelium_numerics::error::AffineForm
+impl core::cmp::PartialEq for mycelium_numerics::error::AffineForm
+pub fn mycelium_numerics::error::AffineForm::eq(&self, &mycelium_numerics::error::AffineForm) -> bool
+impl core::fmt::Debug for mycelium_numerics::error::AffineForm
+pub fn mycelium_numerics::error::AffineForm::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_numerics::error::AffineForm
+impl core::marker::Freeze for mycelium_numerics::error::AffineForm
+impl core::marker::Send for mycelium_numerics::error::AffineForm
+impl core::marker::Sync for mycelium_numerics::error::AffineForm
+impl core::marker::Unpin for mycelium_numerics::error::AffineForm
+impl core::marker::UnsafeUnpin for mycelium_numerics::error::AffineForm
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::error::AffineForm
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::error::AffineForm
+pub struct mycelium_numerics::ApRhlJudgment
+impl mycelium_numerics::prob::ApRhlJudgment
+pub fn mycelium_numerics::prob::ApRhlJudgment::delta(&self) -> f64
+pub fn mycelium_numerics::prob::ApRhlJudgment::eps(&self) -> f64
+pub fn mycelium_numerics::prob::ApRhlJudgment::new(f64, f64) -> core::option::Option<Self>
+pub fn mycelium_numerics::prob::ApRhlJudgment::seq(&self, &mycelium_numerics::prob::ApRhlJudgment) -> Self
+impl core::clone::Clone for mycelium_numerics::prob::ApRhlJudgment
+pub fn mycelium_numerics::prob::ApRhlJudgment::clone(&self) -> mycelium_numerics::prob::ApRhlJudgment
+impl core::cmp::PartialEq for mycelium_numerics::prob::ApRhlJudgment
+pub fn mycelium_numerics::prob::ApRhlJudgment::eq(&self, &mycelium_numerics::prob::ApRhlJudgment) -> bool
+impl core::fmt::Debug for mycelium_numerics::prob::ApRhlJudgment
+pub fn mycelium_numerics::prob::ApRhlJudgment::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_numerics::prob::ApRhlJudgment
+impl core::marker::StructuralPartialEq for mycelium_numerics::prob::ApRhlJudgment
+impl core::marker::Freeze for mycelium_numerics::prob::ApRhlJudgment
+impl core::marker::Send for mycelium_numerics::prob::ApRhlJudgment
+impl core::marker::Sync for mycelium_numerics::prob::ApRhlJudgment
+impl core::marker::Unpin for mycelium_numerics::prob::ApRhlJudgment
+impl core::marker::UnsafeUnpin for mycelium_numerics::prob::ApRhlJudgment
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::prob::ApRhlJudgment
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::prob::ApRhlJudgment
+pub struct mycelium_numerics::Certificate
+impl mycelium_numerics::cert::Certificate
+pub fn mycelium_numerics::cert::Certificate::delta(&self) -> f64
+pub fn mycelium_numerics::cert::Certificate::eps(&self) -> f64
+pub const fn mycelium_numerics::cert::Certificate::exact() -> Self
+pub fn mycelium_numerics::cert::Certificate::from_error(mycelium_numerics::error::ErrorBound, mycelium_core::guarantee::GuaranteeStrength) -> Self
+pub fn mycelium_numerics::cert::Certificate::from_prob(mycelium_numerics::prob::ProbBound, mycelium_core::guarantee::GuaranteeStrength) -> Self
+pub fn mycelium_numerics::cert::Certificate::new(f64, f64, mycelium_core::guarantee::GuaranteeStrength) -> core::option::Option<Self>
+pub fn mycelium_numerics::cert::Certificate::strength(&self) -> mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_numerics::cert::Certificate
+pub fn mycelium_numerics::cert::Certificate::clone(&self) -> mycelium_numerics::cert::Certificate
+impl core::cmp::PartialEq for mycelium_numerics::cert::Certificate
+pub fn mycelium_numerics::cert::Certificate::eq(&self, &mycelium_numerics::cert::Certificate) -> bool
+impl core::fmt::Debug for mycelium_numerics::cert::Certificate
+pub fn mycelium_numerics::cert::Certificate::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_numerics::cert::Certificate
+impl core::marker::StructuralPartialEq for mycelium_numerics::cert::Certificate
+impl serde_core::ser::Serialize for mycelium_numerics::cert::Certificate
+pub fn mycelium_numerics::cert::Certificate::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_numerics::cert::Certificate
+pub fn mycelium_numerics::cert::Certificate::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for mycelium_numerics::cert::Certificate
+impl core::marker::Send for mycelium_numerics::cert::Certificate
+impl core::marker::Sync for mycelium_numerics::cert::Certificate
+impl core::marker::Unpin for mycelium_numerics::cert::Certificate
+impl core::marker::UnsafeUnpin for mycelium_numerics::cert::Certificate
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::cert::Certificate
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::cert::Certificate
+pub struct mycelium_numerics::ComposedBound
+pub mycelium_numerics::ComposedBound::bound: mycelium_core::bound::Bound
+pub mycelium_numerics::ComposedBound::strength: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_numerics::cert::ComposedBound
+pub fn mycelium_numerics::cert::ComposedBound::clone(&self) -> mycelium_numerics::cert::ComposedBound
+impl core::cmp::PartialEq for mycelium_numerics::cert::ComposedBound
+pub fn mycelium_numerics::cert::ComposedBound::eq(&self, &mycelium_numerics::cert::ComposedBound) -> bool
+impl core::fmt::Debug for mycelium_numerics::cert::ComposedBound
+pub fn mycelium_numerics::cert::ComposedBound::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_numerics::cert::ComposedBound
+impl core::marker::Freeze for mycelium_numerics::cert::ComposedBound
+impl core::marker::Send for mycelium_numerics::cert::ComposedBound
+impl core::marker::Sync for mycelium_numerics::cert::ComposedBound
+impl core::marker::Unpin for mycelium_numerics::cert::ComposedBound
+impl core::marker::UnsafeUnpin for mycelium_numerics::cert::ComposedBound
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::cert::ComposedBound
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::cert::ComposedBound
+pub struct mycelium_numerics::ErrorBound
+impl mycelium_numerics::error::ErrorBound
+pub fn mycelium_numerics::error::ErrorBound::add(&self, &mycelium_numerics::error::ErrorBound) -> core::option::Option<Self>
+pub fn mycelium_numerics::error::ErrorBound::eps(&self) -> f64
+pub const fn mycelium_numerics::error::ErrorBound::exact(mycelium_core::bound::NormKind) -> Self
+pub fn mycelium_numerics::error::ErrorBound::mul(&self, &mycelium_numerics::error::ErrorBound, f64, f64) -> core::option::Option<Self>
+pub fn mycelium_numerics::error::ErrorBound::neg(&self) -> Self
+pub fn mycelium_numerics::error::ErrorBound::new(f64, mycelium_core::bound::NormKind) -> core::option::Option<Self>
+pub fn mycelium_numerics::error::ErrorBound::norm(&self) -> mycelium_core::bound::NormKind
+pub fn mycelium_numerics::error::ErrorBound::scale(&self, f64) -> Self
+pub fn mycelium_numerics::error::ErrorBound::sub(&self, &mycelium_numerics::error::ErrorBound) -> core::option::Option<Self>
+impl core::clone::Clone for mycelium_numerics::error::ErrorBound
+pub fn mycelium_numerics::error::ErrorBound::clone(&self) -> mycelium_numerics::error::ErrorBound
+impl core::cmp::PartialEq for mycelium_numerics::error::ErrorBound
+pub fn mycelium_numerics::error::ErrorBound::eq(&self, &mycelium_numerics::error::ErrorBound) -> bool
+impl core::fmt::Debug for mycelium_numerics::error::ErrorBound
+pub fn mycelium_numerics::error::ErrorBound::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_numerics::error::ErrorBound
+impl core::marker::StructuralPartialEq for mycelium_numerics::error::ErrorBound
+impl core::marker::Freeze for mycelium_numerics::error::ErrorBound
+impl core::marker::Send for mycelium_numerics::error::ErrorBound
+impl core::marker::Sync for mycelium_numerics::error::ErrorBound
+impl core::marker::Unpin for mycelium_numerics::error::ErrorBound
+impl core::marker::UnsafeUnpin for mycelium_numerics::error::ErrorBound
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::error::ErrorBound
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::error::ErrorBound
+pub struct mycelium_numerics::ProbBound
+impl mycelium_numerics::prob::ProbBound
+pub const fn mycelium_numerics::prob::ProbBound::certain() -> Self
+pub fn mycelium_numerics::prob::ProbBound::delta(&self) -> f64
+pub fn mycelium_numerics::prob::ProbBound::new(f64) -> core::option::Option<Self>
+pub fn mycelium_numerics::prob::ProbBound::or(&self, &mycelium_numerics::prob::ProbBound) -> Self
+pub fn mycelium_numerics::prob::ProbBound::union<'a, I>(I) -> Self where I: core::iter::traits::collect::IntoIterator<Item = &'a mycelium_numerics::prob::ProbBound>
+impl core::clone::Clone for mycelium_numerics::prob::ProbBound
+pub fn mycelium_numerics::prob::ProbBound::clone(&self) -> mycelium_numerics::prob::ProbBound
+impl core::cmp::PartialEq for mycelium_numerics::prob::ProbBound
+pub fn mycelium_numerics::prob::ProbBound::eq(&self, &mycelium_numerics::prob::ProbBound) -> bool
+impl core::fmt::Debug for mycelium_numerics::prob::ProbBound
+pub fn mycelium_numerics::prob::ProbBound::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_numerics::prob::ProbBound
+impl core::marker::StructuralPartialEq for mycelium_numerics::prob::ProbBound
+impl core::marker::Freeze for mycelium_numerics::prob::ProbBound
+impl core::marker::Send for mycelium_numerics::prob::ProbBound
+impl core::marker::Sync for mycelium_numerics::prob::ProbBound
+impl core::marker::Unpin for mycelium_numerics::prob::ProbBound
+impl core::marker::UnsafeUnpin for mycelium_numerics::prob::ProbBound
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_numerics::prob::ProbBound
+impl core::panic::unwind_safe::UnwindSafe for mycelium_numerics::prob::ProbBound
+pub fn mycelium_numerics::accuracy_to_probability(mycelium_numerics::error::ErrorBound, f64, f64) -> core::option::Option<mycelium_numerics::prob::ProbBound>
+pub fn mycelium_numerics::basis_strength(&mycelium_core::bound::BoundBasis) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_numerics::check_error_claim(&[mycelium_numerics::error::ErrorBound], mycelium_numerics::cert::ErrorOp, mycelium_numerics::error::ErrorBound) -> mycelium_numerics::cert::CheckOutcome
+pub fn mycelium_numerics::check_union_claim(&[mycelium_numerics::prob::ProbBound], mycelium_numerics::prob::ProbBound) -> mycelium_numerics::cert::CheckOutcome
+pub fn mycelium_numerics::compose_error_bound(&[&mycelium_core::bound::Bound], mycelium_numerics::cert::ErrorOp) -> core::option::Option<mycelium_numerics::cert::ComposedBound>
+pub fn mycelium_numerics::error_norm(&mycelium_core::bound::Bound) -> core::option::Option<mycelium_core::bound::NormKind>
+pub fn mycelium_numerics::recompute_error(&[mycelium_numerics::error::ErrorBound], mycelium_numerics::cert::ErrorOp) -> core::option::Option<mycelium_numerics::error::ErrorBound>
+pub type mycelium_numerics::NoiseSym = u64

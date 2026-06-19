@@ -1,0 +1,556 @@
+pub mod mycelium_std_io
+pub mod mycelium_std_io::error
+pub enum mycelium_std_io::error::IoError
+pub mycelium_std_io::error::IoError::EffectBudget
+pub mycelium_std_io::error::IoError::EffectBudget::kind: alloc::string::String
+pub mycelium_std_io::error::IoError::Refused
+pub mycelium_std_io::error::IoError::Refused::why: alloc::string::String
+pub mycelium_std_io::error::IoError::UnexpectedEof
+pub mycelium_std_io::error::IoError::UnexpectedEof::read: mycelium_std_io::error::ByteCount
+impl core::clone::Clone for mycelium_std_io::error::IoError
+pub fn mycelium_std_io::error::IoError::clone(&self) -> mycelium_std_io::error::IoError
+impl core::cmp::Eq for mycelium_std_io::error::IoError
+impl core::cmp::PartialEq for mycelium_std_io::error::IoError
+pub fn mycelium_std_io::error::IoError::eq(&self, &mycelium_std_io::error::IoError) -> bool
+impl core::convert::From<mycelium_std_io::error::IoError> for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::from(mycelium_std_io::error::IoError) -> Self
+impl core::error::Error for mycelium_std_io::error::IoError
+impl core::fmt::Debug for mycelium_std_io::error::IoError
+pub fn mycelium_std_io::error::IoError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_io::error::IoError
+pub fn mycelium_std_io::error::IoError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_io::error::IoError
+impl core::marker::Freeze for mycelium_std_io::error::IoError
+impl core::marker::Send for mycelium_std_io::error::IoError
+impl core::marker::Sync for mycelium_std_io::error::IoError
+impl core::marker::Unpin for mycelium_std_io::error::IoError
+impl core::marker::UnsafeUnpin for mycelium_std_io::error::IoError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::error::IoError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::error::IoError
+pub enum mycelium_std_io::error::ReadValueError
+pub mycelium_std_io::error::ReadValueError::Io(mycelium_std_io::error::IoError)
+pub mycelium_std_io::error::ReadValueError::Ser(mycelium_std_io::error::SerError)
+impl core::clone::Clone for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::clone(&self) -> mycelium_std_io::error::ReadValueError
+impl core::cmp::Eq for mycelium_std_io::error::ReadValueError
+impl core::cmp::PartialEq for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::eq(&self, &mycelium_std_io::error::ReadValueError) -> bool
+impl core::convert::From<mycelium_std_io::error::IoError> for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::from(mycelium_std_io::error::IoError) -> Self
+impl core::convert::From<mycelium_std_io::error::SerError> for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::from(mycelium_std_io::error::SerError) -> Self
+impl core::error::Error for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_io::error::ReadValueError
+impl core::marker::Freeze for mycelium_std_io::error::ReadValueError
+impl core::marker::Send for mycelium_std_io::error::ReadValueError
+impl core::marker::Sync for mycelium_std_io::error::ReadValueError
+impl core::marker::Unpin for mycelium_std_io::error::ReadValueError
+impl core::marker::UnsafeUnpin for mycelium_std_io::error::ReadValueError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::error::ReadValueError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::error::ReadValueError
+pub enum mycelium_std_io::error::SerError
+pub mycelium_std_io::error::SerError::BudgetExceeded
+pub mycelium_std_io::error::SerError::BudgetExceeded::kind: alloc::string::String
+pub mycelium_std_io::error::SerError::Malformed
+pub mycelium_std_io::error::SerError::Malformed::at: mycelium_std_io::error::ByteOffset
+pub mycelium_std_io::error::SerError::Malformed::why: alloc::string::String
+pub mycelium_std_io::error::SerError::OutOfDomain
+pub mycelium_std_io::error::SerError::OutOfDomain::path: mycelium_std_io::error::FieldPath
+pub mycelium_std_io::error::SerError::OutOfDomain::why: alloc::string::String
+pub mycelium_std_io::error::SerError::Truncated
+pub mycelium_std_io::error::SerError::Truncated::at: mycelium_std_io::error::ByteOffset
+pub mycelium_std_io::error::SerError::UnknownTag
+pub mycelium_std_io::error::SerError::UnknownTag::path: mycelium_std_io::error::FieldPath
+pub mycelium_std_io::error::SerError::UnknownTag::tag: alloc::string::String
+impl core::clone::Clone for mycelium_std_io::error::SerError
+pub fn mycelium_std_io::error::SerError::clone(&self) -> mycelium_std_io::error::SerError
+impl core::cmp::Eq for mycelium_std_io::error::SerError
+impl core::cmp::PartialEq for mycelium_std_io::error::SerError
+pub fn mycelium_std_io::error::SerError::eq(&self, &mycelium_std_io::error::SerError) -> bool
+impl core::convert::From<mycelium_std_io::error::SerError> for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::from(mycelium_std_io::error::SerError) -> Self
+impl core::error::Error for mycelium_std_io::error::SerError
+impl core::fmt::Debug for mycelium_std_io::error::SerError
+pub fn mycelium_std_io::error::SerError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_io::error::SerError
+pub fn mycelium_std_io::error::SerError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_io::error::SerError
+impl core::marker::Freeze for mycelium_std_io::error::SerError
+impl core::marker::Send for mycelium_std_io::error::SerError
+impl core::marker::Sync for mycelium_std_io::error::SerError
+impl core::marker::Unpin for mycelium_std_io::error::SerError
+impl core::marker::UnsafeUnpin for mycelium_std_io::error::SerError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::error::SerError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::error::SerError
+pub struct mycelium_std_io::error::ByteCount(pub u64)
+impl core::clone::Clone for mycelium_std_io::error::ByteCount
+pub fn mycelium_std_io::error::ByteCount::clone(&self) -> mycelium_std_io::error::ByteCount
+impl core::cmp::Eq for mycelium_std_io::error::ByteCount
+impl core::cmp::PartialEq for mycelium_std_io::error::ByteCount
+pub fn mycelium_std_io::error::ByteCount::eq(&self, &mycelium_std_io::error::ByteCount) -> bool
+impl core::fmt::Debug for mycelium_std_io::error::ByteCount
+pub fn mycelium_std_io::error::ByteCount::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_io::error::ByteCount
+pub fn mycelium_std_io::error::ByteCount::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_io::error::ByteCount
+impl core::marker::StructuralPartialEq for mycelium_std_io::error::ByteCount
+impl core::marker::Freeze for mycelium_std_io::error::ByteCount
+impl core::marker::Send for mycelium_std_io::error::ByteCount
+impl core::marker::Sync for mycelium_std_io::error::ByteCount
+impl core::marker::Unpin for mycelium_std_io::error::ByteCount
+impl core::marker::UnsafeUnpin for mycelium_std_io::error::ByteCount
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::error::ByteCount
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::error::ByteCount
+pub struct mycelium_std_io::error::ByteOffset(pub u64)
+impl core::clone::Clone for mycelium_std_io::error::ByteOffset
+pub fn mycelium_std_io::error::ByteOffset::clone(&self) -> mycelium_std_io::error::ByteOffset
+impl core::cmp::Eq for mycelium_std_io::error::ByteOffset
+impl core::cmp::PartialEq for mycelium_std_io::error::ByteOffset
+pub fn mycelium_std_io::error::ByteOffset::eq(&self, &mycelium_std_io::error::ByteOffset) -> bool
+impl core::fmt::Debug for mycelium_std_io::error::ByteOffset
+pub fn mycelium_std_io::error::ByteOffset::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_io::error::ByteOffset
+pub fn mycelium_std_io::error::ByteOffset::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_io::error::ByteOffset
+impl core::marker::StructuralPartialEq for mycelium_std_io::error::ByteOffset
+impl core::marker::Freeze for mycelium_std_io::error::ByteOffset
+impl core::marker::Send for mycelium_std_io::error::ByteOffset
+impl core::marker::Sync for mycelium_std_io::error::ByteOffset
+impl core::marker::Unpin for mycelium_std_io::error::ByteOffset
+impl core::marker::UnsafeUnpin for mycelium_std_io::error::ByteOffset
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::error::ByteOffset
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::error::ByteOffset
+pub struct mycelium_std_io::error::FieldPath(pub alloc::string::String)
+impl mycelium_std_io::error::FieldPath
+pub fn mycelium_std_io::error::FieldPath::from_static(&'static str) -> Self
+impl core::clone::Clone for mycelium_std_io::error::FieldPath
+pub fn mycelium_std_io::error::FieldPath::clone(&self) -> mycelium_std_io::error::FieldPath
+impl core::cmp::Eq for mycelium_std_io::error::FieldPath
+impl core::cmp::PartialEq for mycelium_std_io::error::FieldPath
+pub fn mycelium_std_io::error::FieldPath::eq(&self, &mycelium_std_io::error::FieldPath) -> bool
+impl core::fmt::Debug for mycelium_std_io::error::FieldPath
+pub fn mycelium_std_io::error::FieldPath::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_io::error::FieldPath
+pub fn mycelium_std_io::error::FieldPath::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_io::error::FieldPath
+impl core::marker::Freeze for mycelium_std_io::error::FieldPath
+impl core::marker::Send for mycelium_std_io::error::FieldPath
+impl core::marker::Sync for mycelium_std_io::error::FieldPath
+impl core::marker::Unpin for mycelium_std_io::error::FieldPath
+impl core::marker::UnsafeUnpin for mycelium_std_io::error::FieldPath
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::error::FieldPath
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::error::FieldPath
+pub mod mycelium_std_io::guarantee_matrix
+pub enum mycelium_std_io::guarantee_matrix::Explainable
+pub mycelium_std_io::guarantee_matrix::Explainable::NotApplicable
+pub mycelium_std_io::guarantee_matrix::Explainable::Yes
+impl core::clone::Clone for mycelium_std_io::guarantee_matrix::Explainable
+pub fn mycelium_std_io::guarantee_matrix::Explainable::clone(&self) -> mycelium_std_io::guarantee_matrix::Explainable
+impl core::cmp::Eq for mycelium_std_io::guarantee_matrix::Explainable
+impl core::cmp::PartialEq for mycelium_std_io::guarantee_matrix::Explainable
+pub fn mycelium_std_io::guarantee_matrix::Explainable::eq(&self, &mycelium_std_io::guarantee_matrix::Explainable) -> bool
+impl core::fmt::Debug for mycelium_std_io::guarantee_matrix::Explainable
+pub fn mycelium_std_io::guarantee_matrix::Explainable::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_io::guarantee_matrix::Explainable
+impl core::marker::StructuralPartialEq for mycelium_std_io::guarantee_matrix::Explainable
+impl core::marker::Freeze for mycelium_std_io::guarantee_matrix::Explainable
+impl core::marker::Send for mycelium_std_io::guarantee_matrix::Explainable
+impl core::marker::Sync for mycelium_std_io::guarantee_matrix::Explainable
+impl core::marker::Unpin for mycelium_std_io::guarantee_matrix::Explainable
+impl core::marker::UnsafeUnpin for mycelium_std_io::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::guarantee_matrix::Explainable
+pub enum mycelium_std_io::guarantee_matrix::Fallibility
+pub mycelium_std_io::guarantee_matrix::Fallibility::Fallible
+pub mycelium_std_io::guarantee_matrix::Fallibility::Total
+impl core::clone::Clone for mycelium_std_io::guarantee_matrix::Fallibility
+pub fn mycelium_std_io::guarantee_matrix::Fallibility::clone(&self) -> mycelium_std_io::guarantee_matrix::Fallibility
+impl core::cmp::Eq for mycelium_std_io::guarantee_matrix::Fallibility
+impl core::cmp::PartialEq for mycelium_std_io::guarantee_matrix::Fallibility
+pub fn mycelium_std_io::guarantee_matrix::Fallibility::eq(&self, &mycelium_std_io::guarantee_matrix::Fallibility) -> bool
+impl core::fmt::Debug for mycelium_std_io::guarantee_matrix::Fallibility
+pub fn mycelium_std_io::guarantee_matrix::Fallibility::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_io::guarantee_matrix::Fallibility
+impl core::marker::StructuralPartialEq for mycelium_std_io::guarantee_matrix::Fallibility
+impl core::marker::Freeze for mycelium_std_io::guarantee_matrix::Fallibility
+impl core::marker::Send for mycelium_std_io::guarantee_matrix::Fallibility
+impl core::marker::Sync for mycelium_std_io::guarantee_matrix::Fallibility
+impl core::marker::Unpin for mycelium_std_io::guarantee_matrix::Fallibility
+impl core::marker::UnsafeUnpin for mycelium_std_io::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::guarantee_matrix::Fallibility
+pub enum mycelium_std_io::guarantee_matrix::GuaranteeTag
+pub mycelium_std_io::guarantee_matrix::GuaranteeTag::Declared
+pub mycelium_std_io::guarantee_matrix::GuaranteeTag::Empirical
+pub mycelium_std_io::guarantee_matrix::GuaranteeTag::Exact
+pub mycelium_std_io::guarantee_matrix::GuaranteeTag::Proven
+impl mycelium_std_io::guarantee_matrix::GuaranteeTag
+pub fn mycelium_std_io::guarantee_matrix::GuaranteeTag::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_std_io::guarantee_matrix::GuaranteeTag
+pub fn mycelium_std_io::guarantee_matrix::GuaranteeTag::clone(&self) -> mycelium_std_io::guarantee_matrix::GuaranteeTag
+impl core::cmp::Eq for mycelium_std_io::guarantee_matrix::GuaranteeTag
+impl core::cmp::PartialEq for mycelium_std_io::guarantee_matrix::GuaranteeTag
+pub fn mycelium_std_io::guarantee_matrix::GuaranteeTag::eq(&self, &mycelium_std_io::guarantee_matrix::GuaranteeTag) -> bool
+impl core::fmt::Debug for mycelium_std_io::guarantee_matrix::GuaranteeTag
+pub fn mycelium_std_io::guarantee_matrix::GuaranteeTag::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_io::guarantee_matrix::GuaranteeTag
+impl core::marker::StructuralPartialEq for mycelium_std_io::guarantee_matrix::GuaranteeTag
+impl core::marker::Freeze for mycelium_std_io::guarantee_matrix::GuaranteeTag
+impl core::marker::Send for mycelium_std_io::guarantee_matrix::GuaranteeTag
+impl core::marker::Sync for mycelium_std_io::guarantee_matrix::GuaranteeTag
+impl core::marker::Unpin for mycelium_std_io::guarantee_matrix::GuaranteeTag
+impl core::marker::UnsafeUnpin for mycelium_std_io::guarantee_matrix::GuaranteeTag
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::guarantee_matrix::GuaranteeTag
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::guarantee_matrix::GuaranteeTag
+pub struct mycelium_std_io::guarantee_matrix::MatrixRow
+pub mycelium_std_io::guarantee_matrix::MatrixRow::effects: &'static str
+pub mycelium_std_io::guarantee_matrix::MatrixRow::error_set: &'static str
+pub mycelium_std_io::guarantee_matrix::MatrixRow::explainable: mycelium_std_io::guarantee_matrix::Explainable
+pub mycelium_std_io::guarantee_matrix::MatrixRow::fallibility: mycelium_std_io::guarantee_matrix::Fallibility
+pub mycelium_std_io::guarantee_matrix::MatrixRow::guarantee: mycelium_std_io::guarantee_matrix::GuaranteeTag
+pub mycelium_std_io::guarantee_matrix::MatrixRow::op: &'static str
+impl core::clone::Clone for mycelium_std_io::guarantee_matrix::MatrixRow
+pub fn mycelium_std_io::guarantee_matrix::MatrixRow::clone(&self) -> mycelium_std_io::guarantee_matrix::MatrixRow
+impl core::cmp::Eq for mycelium_std_io::guarantee_matrix::MatrixRow
+impl core::cmp::PartialEq for mycelium_std_io::guarantee_matrix::MatrixRow
+pub fn mycelium_std_io::guarantee_matrix::MatrixRow::eq(&self, &mycelium_std_io::guarantee_matrix::MatrixRow) -> bool
+impl core::fmt::Debug for mycelium_std_io::guarantee_matrix::MatrixRow
+pub fn mycelium_std_io::guarantee_matrix::MatrixRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_io::guarantee_matrix::MatrixRow
+impl core::marker::Freeze for mycelium_std_io::guarantee_matrix::MatrixRow
+impl core::marker::Send for mycelium_std_io::guarantee_matrix::MatrixRow
+impl core::marker::Sync for mycelium_std_io::guarantee_matrix::MatrixRow
+impl core::marker::Unpin for mycelium_std_io::guarantee_matrix::MatrixRow
+impl core::marker::UnsafeUnpin for mycelium_std_io::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::guarantee_matrix::MatrixRow
+pub const mycelium_std_io::guarantee_matrix::MATRIX: &[mycelium_std_io::guarantee_matrix::MatrixRow]
+pub mod mycelium_std_io::io
+pub enum mycelium_std_io::io::Budget
+pub mycelium_std_io::io::Budget::Bytes(u64)
+pub mycelium_std_io::io::Budget::Unbounded
+impl core::clone::Clone for mycelium_std_io::io::Budget
+pub fn mycelium_std_io::io::Budget::clone(&self) -> mycelium_std_io::io::Budget
+impl core::cmp::Eq for mycelium_std_io::io::Budget
+impl core::cmp::PartialEq for mycelium_std_io::io::Budget
+pub fn mycelium_std_io::io::Budget::eq(&self, &mycelium_std_io::io::Budget) -> bool
+impl core::fmt::Debug for mycelium_std_io::io::Budget
+pub fn mycelium_std_io::io::Budget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_io::io::Budget
+impl core::marker::StructuralPartialEq for mycelium_std_io::io::Budget
+impl core::marker::Freeze for mycelium_std_io::io::Budget
+impl core::marker::Send for mycelium_std_io::io::Budget
+impl core::marker::Sync for mycelium_std_io::io::Budget
+impl core::marker::Unpin for mycelium_std_io::io::Budget
+impl core::marker::UnsafeUnpin for mycelium_std_io::io::Budget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::io::Budget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::io::Budget
+pub struct mycelium_std_io::io::Sink
+impl mycelium_std_io::io::Sink
+pub fn mycelium_std_io::io::Sink::into_bytes(self) -> alloc::vec::Vec<u8>
+pub fn mycelium_std_io::io::Sink::new() -> Self
+impl core::default::Default for mycelium_std_io::io::Sink
+pub fn mycelium_std_io::io::Sink::default() -> Self
+impl core::fmt::Debug for mycelium_std_io::io::Sink
+pub fn mycelium_std_io::io::Sink::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_io::io::Sink
+impl core::marker::Send for mycelium_std_io::io::Sink
+impl core::marker::Sync for mycelium_std_io::io::Sink
+impl core::marker::Unpin for mycelium_std_io::io::Sink
+impl core::marker::UnsafeUnpin for mycelium_std_io::io::Sink
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::io::Sink
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::io::Sink
+pub struct mycelium_std_io::io::Source
+impl mycelium_std_io::io::Source
+pub fn mycelium_std_io::io::Source::from_bytes(impl core::convert::Into<alloc::vec::Vec<u8>>) -> Self
+pub fn mycelium_std_io::io::Source::new(mycelium_std_io::io::Substrate) -> Self
+pub fn mycelium_std_io::io::Source::remaining(&self) -> usize
+impl core::fmt::Debug for mycelium_std_io::io::Source
+pub fn mycelium_std_io::io::Source::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_io::io::Source
+impl core::marker::Send for mycelium_std_io::io::Source
+impl core::marker::Sync for mycelium_std_io::io::Source
+impl core::marker::Unpin for mycelium_std_io::io::Source
+impl core::marker::UnsafeUnpin for mycelium_std_io::io::Source
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::io::Source
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::io::Source
+pub struct mycelium_std_io::io::Substrate
+impl mycelium_std_io::io::Substrate
+pub fn mycelium_std_io::io::Substrate::from_bytes(impl core::convert::Into<alloc::vec::Vec<u8>>) -> Self
+pub fn mycelium_std_io::io::Substrate::remaining(&self) -> usize
+impl core::fmt::Debug for mycelium_std_io::io::Substrate
+pub fn mycelium_std_io::io::Substrate::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_io::io::Substrate
+impl core::marker::Send for mycelium_std_io::io::Substrate
+impl core::marker::Sync for mycelium_std_io::io::Substrate
+impl core::marker::Unpin for mycelium_std_io::io::Substrate
+impl core::marker::UnsafeUnpin for mycelium_std_io::io::Substrate
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::io::Substrate
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::io::Substrate
+pub fn mycelium_std_io::io::read(mycelium_std_io::io::Source, mycelium_std_io::io::Budget) -> core::result::Result<(alloc::vec::Vec<u8>, mycelium_std_io::io::Source), mycelium_std_io::error::IoError>
+pub fn mycelium_std_io::io::read_all(mycelium_std_io::io::Source) -> core::result::Result<alloc::vec::Vec<u8>, mycelium_std_io::error::IoError>
+pub fn mycelium_std_io::io::read_value(mycelium_std_io::io::Source, mycelium_std_io::serialize::Format) -> core::result::Result<mycelium_core::value::Value, mycelium_std_io::error::ReadValueError>
+pub fn mycelium_std_io::io::write(mycelium_std_io::io::Sink, &[u8]) -> core::result::Result<mycelium_std_io::io::Sink, mycelium_std_io::error::IoError>
+pub mod mycelium_std_io::serialize
+pub enum mycelium_std_io::serialize::Format
+pub mycelium_std_io::serialize::Format::Json
+pub mycelium_std_io::serialize::Format::Wire
+impl core::clone::Clone for mycelium_std_io::serialize::Format
+pub fn mycelium_std_io::serialize::Format::clone(&self) -> mycelium_std_io::serialize::Format
+impl core::cmp::Eq for mycelium_std_io::serialize::Format
+impl core::cmp::PartialEq for mycelium_std_io::serialize::Format
+pub fn mycelium_std_io::serialize::Format::eq(&self, &mycelium_std_io::serialize::Format) -> bool
+impl core::fmt::Debug for mycelium_std_io::serialize::Format
+pub fn mycelium_std_io::serialize::Format::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_io::serialize::Format
+impl core::marker::StructuralPartialEq for mycelium_std_io::serialize::Format
+impl core::marker::Freeze for mycelium_std_io::serialize::Format
+impl core::marker::Send for mycelium_std_io::serialize::Format
+impl core::marker::Sync for mycelium_std_io::serialize::Format
+impl core::marker::Unpin for mycelium_std_io::serialize::Format
+impl core::marker::UnsafeUnpin for mycelium_std_io::serialize::Format
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::serialize::Format
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::serialize::Format
+pub fn mycelium_std_io::serialize::deserialize(&[u8], mycelium_std_io::serialize::Format) -> core::result::Result<mycelium_core::value::Value, mycelium_std_io::error::SerError>
+pub fn mycelium_std_io::serialize::from_json(&str) -> core::result::Result<mycelium_core::value::Value, mycelium_std_io::error::SerError>
+pub fn mycelium_std_io::serialize::serialize(&mycelium_core::value::Value, mycelium_std_io::serialize::Format) -> core::result::Result<alloc::vec::Vec<u8>, mycelium_std_io::error::SerError>
+pub fn mycelium_std_io::serialize::to_json(&mycelium_core::value::Value) -> core::result::Result<alloc::string::String, mycelium_std_io::error::SerError>
+pub enum mycelium_std_io::Budget
+pub mycelium_std_io::Budget::Bytes(u64)
+pub mycelium_std_io::Budget::Unbounded
+impl core::clone::Clone for mycelium_std_io::io::Budget
+pub fn mycelium_std_io::io::Budget::clone(&self) -> mycelium_std_io::io::Budget
+impl core::cmp::Eq for mycelium_std_io::io::Budget
+impl core::cmp::PartialEq for mycelium_std_io::io::Budget
+pub fn mycelium_std_io::io::Budget::eq(&self, &mycelium_std_io::io::Budget) -> bool
+impl core::fmt::Debug for mycelium_std_io::io::Budget
+pub fn mycelium_std_io::io::Budget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_io::io::Budget
+impl core::marker::StructuralPartialEq for mycelium_std_io::io::Budget
+impl core::marker::Freeze for mycelium_std_io::io::Budget
+impl core::marker::Send for mycelium_std_io::io::Budget
+impl core::marker::Sync for mycelium_std_io::io::Budget
+impl core::marker::Unpin for mycelium_std_io::io::Budget
+impl core::marker::UnsafeUnpin for mycelium_std_io::io::Budget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::io::Budget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::io::Budget
+pub enum mycelium_std_io::Format
+pub mycelium_std_io::Format::Json
+pub mycelium_std_io::Format::Wire
+impl core::clone::Clone for mycelium_std_io::serialize::Format
+pub fn mycelium_std_io::serialize::Format::clone(&self) -> mycelium_std_io::serialize::Format
+impl core::cmp::Eq for mycelium_std_io::serialize::Format
+impl core::cmp::PartialEq for mycelium_std_io::serialize::Format
+pub fn mycelium_std_io::serialize::Format::eq(&self, &mycelium_std_io::serialize::Format) -> bool
+impl core::fmt::Debug for mycelium_std_io::serialize::Format
+pub fn mycelium_std_io::serialize::Format::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_io::serialize::Format
+impl core::marker::StructuralPartialEq for mycelium_std_io::serialize::Format
+impl core::marker::Freeze for mycelium_std_io::serialize::Format
+impl core::marker::Send for mycelium_std_io::serialize::Format
+impl core::marker::Sync for mycelium_std_io::serialize::Format
+impl core::marker::Unpin for mycelium_std_io::serialize::Format
+impl core::marker::UnsafeUnpin for mycelium_std_io::serialize::Format
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::serialize::Format
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::serialize::Format
+pub enum mycelium_std_io::IoError
+pub mycelium_std_io::IoError::EffectBudget
+pub mycelium_std_io::IoError::EffectBudget::kind: alloc::string::String
+pub mycelium_std_io::IoError::Refused
+pub mycelium_std_io::IoError::Refused::why: alloc::string::String
+pub mycelium_std_io::IoError::UnexpectedEof
+pub mycelium_std_io::IoError::UnexpectedEof::read: mycelium_std_io::error::ByteCount
+impl core::clone::Clone for mycelium_std_io::error::IoError
+pub fn mycelium_std_io::error::IoError::clone(&self) -> mycelium_std_io::error::IoError
+impl core::cmp::Eq for mycelium_std_io::error::IoError
+impl core::cmp::PartialEq for mycelium_std_io::error::IoError
+pub fn mycelium_std_io::error::IoError::eq(&self, &mycelium_std_io::error::IoError) -> bool
+impl core::convert::From<mycelium_std_io::error::IoError> for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::from(mycelium_std_io::error::IoError) -> Self
+impl core::error::Error for mycelium_std_io::error::IoError
+impl core::fmt::Debug for mycelium_std_io::error::IoError
+pub fn mycelium_std_io::error::IoError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_io::error::IoError
+pub fn mycelium_std_io::error::IoError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_io::error::IoError
+impl core::marker::Freeze for mycelium_std_io::error::IoError
+impl core::marker::Send for mycelium_std_io::error::IoError
+impl core::marker::Sync for mycelium_std_io::error::IoError
+impl core::marker::Unpin for mycelium_std_io::error::IoError
+impl core::marker::UnsafeUnpin for mycelium_std_io::error::IoError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::error::IoError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::error::IoError
+pub enum mycelium_std_io::ReadValueError
+pub mycelium_std_io::ReadValueError::Io(mycelium_std_io::error::IoError)
+pub mycelium_std_io::ReadValueError::Ser(mycelium_std_io::error::SerError)
+impl core::clone::Clone for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::clone(&self) -> mycelium_std_io::error::ReadValueError
+impl core::cmp::Eq for mycelium_std_io::error::ReadValueError
+impl core::cmp::PartialEq for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::eq(&self, &mycelium_std_io::error::ReadValueError) -> bool
+impl core::convert::From<mycelium_std_io::error::IoError> for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::from(mycelium_std_io::error::IoError) -> Self
+impl core::convert::From<mycelium_std_io::error::SerError> for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::from(mycelium_std_io::error::SerError) -> Self
+impl core::error::Error for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_io::error::ReadValueError
+impl core::marker::Freeze for mycelium_std_io::error::ReadValueError
+impl core::marker::Send for mycelium_std_io::error::ReadValueError
+impl core::marker::Sync for mycelium_std_io::error::ReadValueError
+impl core::marker::Unpin for mycelium_std_io::error::ReadValueError
+impl core::marker::UnsafeUnpin for mycelium_std_io::error::ReadValueError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::error::ReadValueError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::error::ReadValueError
+pub enum mycelium_std_io::SerError
+pub mycelium_std_io::SerError::BudgetExceeded
+pub mycelium_std_io::SerError::BudgetExceeded::kind: alloc::string::String
+pub mycelium_std_io::SerError::Malformed
+pub mycelium_std_io::SerError::Malformed::at: mycelium_std_io::error::ByteOffset
+pub mycelium_std_io::SerError::Malformed::why: alloc::string::String
+pub mycelium_std_io::SerError::OutOfDomain
+pub mycelium_std_io::SerError::OutOfDomain::path: mycelium_std_io::error::FieldPath
+pub mycelium_std_io::SerError::OutOfDomain::why: alloc::string::String
+pub mycelium_std_io::SerError::Truncated
+pub mycelium_std_io::SerError::Truncated::at: mycelium_std_io::error::ByteOffset
+pub mycelium_std_io::SerError::UnknownTag
+pub mycelium_std_io::SerError::UnknownTag::path: mycelium_std_io::error::FieldPath
+pub mycelium_std_io::SerError::UnknownTag::tag: alloc::string::String
+impl core::clone::Clone for mycelium_std_io::error::SerError
+pub fn mycelium_std_io::error::SerError::clone(&self) -> mycelium_std_io::error::SerError
+impl core::cmp::Eq for mycelium_std_io::error::SerError
+impl core::cmp::PartialEq for mycelium_std_io::error::SerError
+pub fn mycelium_std_io::error::SerError::eq(&self, &mycelium_std_io::error::SerError) -> bool
+impl core::convert::From<mycelium_std_io::error::SerError> for mycelium_std_io::error::ReadValueError
+pub fn mycelium_std_io::error::ReadValueError::from(mycelium_std_io::error::SerError) -> Self
+impl core::error::Error for mycelium_std_io::error::SerError
+impl core::fmt::Debug for mycelium_std_io::error::SerError
+pub fn mycelium_std_io::error::SerError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_io::error::SerError
+pub fn mycelium_std_io::error::SerError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_io::error::SerError
+impl core::marker::Freeze for mycelium_std_io::error::SerError
+impl core::marker::Send for mycelium_std_io::error::SerError
+impl core::marker::Sync for mycelium_std_io::error::SerError
+impl core::marker::Unpin for mycelium_std_io::error::SerError
+impl core::marker::UnsafeUnpin for mycelium_std_io::error::SerError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::error::SerError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::error::SerError
+pub struct mycelium_std_io::ByteCount(pub u64)
+impl core::clone::Clone for mycelium_std_io::error::ByteCount
+pub fn mycelium_std_io::error::ByteCount::clone(&self) -> mycelium_std_io::error::ByteCount
+impl core::cmp::Eq for mycelium_std_io::error::ByteCount
+impl core::cmp::PartialEq for mycelium_std_io::error::ByteCount
+pub fn mycelium_std_io::error::ByteCount::eq(&self, &mycelium_std_io::error::ByteCount) -> bool
+impl core::fmt::Debug for mycelium_std_io::error::ByteCount
+pub fn mycelium_std_io::error::ByteCount::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_io::error::ByteCount
+pub fn mycelium_std_io::error::ByteCount::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_io::error::ByteCount
+impl core::marker::StructuralPartialEq for mycelium_std_io::error::ByteCount
+impl core::marker::Freeze for mycelium_std_io::error::ByteCount
+impl core::marker::Send for mycelium_std_io::error::ByteCount
+impl core::marker::Sync for mycelium_std_io::error::ByteCount
+impl core::marker::Unpin for mycelium_std_io::error::ByteCount
+impl core::marker::UnsafeUnpin for mycelium_std_io::error::ByteCount
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::error::ByteCount
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::error::ByteCount
+pub struct mycelium_std_io::ByteOffset(pub u64)
+impl core::clone::Clone for mycelium_std_io::error::ByteOffset
+pub fn mycelium_std_io::error::ByteOffset::clone(&self) -> mycelium_std_io::error::ByteOffset
+impl core::cmp::Eq for mycelium_std_io::error::ByteOffset
+impl core::cmp::PartialEq for mycelium_std_io::error::ByteOffset
+pub fn mycelium_std_io::error::ByteOffset::eq(&self, &mycelium_std_io::error::ByteOffset) -> bool
+impl core::fmt::Debug for mycelium_std_io::error::ByteOffset
+pub fn mycelium_std_io::error::ByteOffset::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_io::error::ByteOffset
+pub fn mycelium_std_io::error::ByteOffset::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_io::error::ByteOffset
+impl core::marker::StructuralPartialEq for mycelium_std_io::error::ByteOffset
+impl core::marker::Freeze for mycelium_std_io::error::ByteOffset
+impl core::marker::Send for mycelium_std_io::error::ByteOffset
+impl core::marker::Sync for mycelium_std_io::error::ByteOffset
+impl core::marker::Unpin for mycelium_std_io::error::ByteOffset
+impl core::marker::UnsafeUnpin for mycelium_std_io::error::ByteOffset
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::error::ByteOffset
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::error::ByteOffset
+pub struct mycelium_std_io::FieldPath(pub alloc::string::String)
+impl mycelium_std_io::error::FieldPath
+pub fn mycelium_std_io::error::FieldPath::from_static(&'static str) -> Self
+impl core::clone::Clone for mycelium_std_io::error::FieldPath
+pub fn mycelium_std_io::error::FieldPath::clone(&self) -> mycelium_std_io::error::FieldPath
+impl core::cmp::Eq for mycelium_std_io::error::FieldPath
+impl core::cmp::PartialEq for mycelium_std_io::error::FieldPath
+pub fn mycelium_std_io::error::FieldPath::eq(&self, &mycelium_std_io::error::FieldPath) -> bool
+impl core::fmt::Debug for mycelium_std_io::error::FieldPath
+pub fn mycelium_std_io::error::FieldPath::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_io::error::FieldPath
+pub fn mycelium_std_io::error::FieldPath::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_io::error::FieldPath
+impl core::marker::Freeze for mycelium_std_io::error::FieldPath
+impl core::marker::Send for mycelium_std_io::error::FieldPath
+impl core::marker::Sync for mycelium_std_io::error::FieldPath
+impl core::marker::Unpin for mycelium_std_io::error::FieldPath
+impl core::marker::UnsafeUnpin for mycelium_std_io::error::FieldPath
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::error::FieldPath
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::error::FieldPath
+pub struct mycelium_std_io::Sink
+impl mycelium_std_io::io::Sink
+pub fn mycelium_std_io::io::Sink::into_bytes(self) -> alloc::vec::Vec<u8>
+pub fn mycelium_std_io::io::Sink::new() -> Self
+impl core::default::Default for mycelium_std_io::io::Sink
+pub fn mycelium_std_io::io::Sink::default() -> Self
+impl core::fmt::Debug for mycelium_std_io::io::Sink
+pub fn mycelium_std_io::io::Sink::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_io::io::Sink
+impl core::marker::Send for mycelium_std_io::io::Sink
+impl core::marker::Sync for mycelium_std_io::io::Sink
+impl core::marker::Unpin for mycelium_std_io::io::Sink
+impl core::marker::UnsafeUnpin for mycelium_std_io::io::Sink
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::io::Sink
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::io::Sink
+pub struct mycelium_std_io::Source
+impl mycelium_std_io::io::Source
+pub fn mycelium_std_io::io::Source::from_bytes(impl core::convert::Into<alloc::vec::Vec<u8>>) -> Self
+pub fn mycelium_std_io::io::Source::new(mycelium_std_io::io::Substrate) -> Self
+pub fn mycelium_std_io::io::Source::remaining(&self) -> usize
+impl core::fmt::Debug for mycelium_std_io::io::Source
+pub fn mycelium_std_io::io::Source::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_io::io::Source
+impl core::marker::Send for mycelium_std_io::io::Source
+impl core::marker::Sync for mycelium_std_io::io::Source
+impl core::marker::Unpin for mycelium_std_io::io::Source
+impl core::marker::UnsafeUnpin for mycelium_std_io::io::Source
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::io::Source
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::io::Source
+pub struct mycelium_std_io::Substrate
+impl mycelium_std_io::io::Substrate
+pub fn mycelium_std_io::io::Substrate::from_bytes(impl core::convert::Into<alloc::vec::Vec<u8>>) -> Self
+pub fn mycelium_std_io::io::Substrate::remaining(&self) -> usize
+impl core::fmt::Debug for mycelium_std_io::io::Substrate
+pub fn mycelium_std_io::io::Substrate::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_io::io::Substrate
+impl core::marker::Send for mycelium_std_io::io::Substrate
+impl core::marker::Sync for mycelium_std_io::io::Substrate
+impl core::marker::Unpin for mycelium_std_io::io::Substrate
+impl core::marker::UnsafeUnpin for mycelium_std_io::io::Substrate
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_io::io::Substrate
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_io::io::Substrate
+pub const mycelium_std_io::GUARANTEE_MATRIX: &[mycelium_std_io::guarantee_matrix::MatrixRow]
+pub fn mycelium_std_io::deserialize(&[u8], mycelium_std_io::serialize::Format) -> core::result::Result<mycelium_core::value::Value, mycelium_std_io::error::SerError>
+pub fn mycelium_std_io::from_json(&str) -> core::result::Result<mycelium_core::value::Value, mycelium_std_io::error::SerError>
+pub fn mycelium_std_io::read(mycelium_std_io::io::Source, mycelium_std_io::io::Budget) -> core::result::Result<(alloc::vec::Vec<u8>, mycelium_std_io::io::Source), mycelium_std_io::error::IoError>
+pub fn mycelium_std_io::read_all(mycelium_std_io::io::Source) -> core::result::Result<alloc::vec::Vec<u8>, mycelium_std_io::error::IoError>
+pub fn mycelium_std_io::read_value(mycelium_std_io::io::Source, mycelium_std_io::serialize::Format) -> core::result::Result<mycelium_core::value::Value, mycelium_std_io::error::ReadValueError>
+pub fn mycelium_std_io::serialize(&mycelium_core::value::Value, mycelium_std_io::serialize::Format) -> core::result::Result<alloc::vec::Vec<u8>, mycelium_std_io::error::SerError>
+pub fn mycelium_std_io::to_json(&mycelium_core::value::Value) -> core::result::Result<alloc::string::String, mycelium_std_io::error::SerError>
+pub fn mycelium_std_io::write(mycelium_std_io::io::Sink, &[u8]) -> core::result::Result<mycelium_std_io::io::Sink, mycelium_std_io::error::IoError>

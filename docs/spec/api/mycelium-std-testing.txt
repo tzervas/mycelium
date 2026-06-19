@@ -1,0 +1,321 @@
+pub mod mycelium_std_testing
+pub mod mycelium_std_testing::guarantee_matrix
+pub struct mycelium_std_testing::guarantee_matrix::Row
+pub mycelium_std_testing::guarantee_matrix::Row::effects: &'static str
+pub mycelium_std_testing::guarantee_matrix::Row::explainable: bool
+pub mycelium_std_testing::guarantee_matrix::Row::fallibility: &'static str
+pub mycelium_std_testing::guarantee_matrix::Row::op: &'static str
+pub mycelium_std_testing::guarantee_matrix::Row::tag: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_std_testing::guarantee_matrix::Row
+pub fn mycelium_std_testing::guarantee_matrix::Row::clone(&self) -> mycelium_std_testing::guarantee_matrix::Row
+impl core::cmp::Eq for mycelium_std_testing::guarantee_matrix::Row
+impl core::cmp::PartialEq for mycelium_std_testing::guarantee_matrix::Row
+pub fn mycelium_std_testing::guarantee_matrix::Row::eq(&self, &mycelium_std_testing::guarantee_matrix::Row) -> bool
+impl core::fmt::Debug for mycelium_std_testing::guarantee_matrix::Row
+pub fn mycelium_std_testing::guarantee_matrix::Row::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_testing::guarantee_matrix::Row
+impl core::marker::StructuralPartialEq for mycelium_std_testing::guarantee_matrix::Row
+impl core::marker::Freeze for mycelium_std_testing::guarantee_matrix::Row
+impl core::marker::Send for mycelium_std_testing::guarantee_matrix::Row
+impl core::marker::Sync for mycelium_std_testing::guarantee_matrix::Row
+impl core::marker::Unpin for mycelium_std_testing::guarantee_matrix::Row
+impl core::marker::UnsafeUnpin for mycelium_std_testing::guarantee_matrix::Row
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::guarantee_matrix::Row
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::guarantee_matrix::Row
+pub const mycelium_std_testing::guarantee_matrix::MATRIX: &[mycelium_std_testing::guarantee_matrix::Row]
+pub mod mycelium_std_testing::verdict
+pub enum mycelium_std_testing::verdict::SkipReason
+pub mycelium_std_testing::verdict::SkipReason::BackendUnavailable
+pub mycelium_std_testing::verdict::SkipReason::Ignored
+pub mycelium_std_testing::verdict::SkipReason::NeedsRecord
+pub mycelium_std_testing::verdict::SkipReason::ToolMissing
+pub mycelium_std_testing::verdict::SkipReason::UnmetPrecondition
+impl core::clone::Clone for mycelium_std_testing::verdict::SkipReason
+pub fn mycelium_std_testing::verdict::SkipReason::clone(&self) -> mycelium_std_testing::verdict::SkipReason
+impl core::cmp::Eq for mycelium_std_testing::verdict::SkipReason
+impl core::cmp::PartialEq for mycelium_std_testing::verdict::SkipReason
+pub fn mycelium_std_testing::verdict::SkipReason::eq(&self, &mycelium_std_testing::verdict::SkipReason) -> bool
+impl core::fmt::Debug for mycelium_std_testing::verdict::SkipReason
+pub fn mycelium_std_testing::verdict::SkipReason::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_testing::verdict::SkipReason
+impl core::marker::StructuralPartialEq for mycelium_std_testing::verdict::SkipReason
+impl core::marker::Freeze for mycelium_std_testing::verdict::SkipReason
+impl core::marker::Send for mycelium_std_testing::verdict::SkipReason
+impl core::marker::Sync for mycelium_std_testing::verdict::SkipReason
+impl core::marker::Unpin for mycelium_std_testing::verdict::SkipReason
+impl core::marker::UnsafeUnpin for mycelium_std_testing::verdict::SkipReason
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::verdict::SkipReason
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::verdict::SkipReason
+pub enum mycelium_std_testing::verdict::UndetReason
+pub mycelium_std_testing::verdict::UndetReason::BudgetExhaustedInconclusive
+pub mycelium_std_testing::verdict::UndetReason::NonDeterministicInput
+pub mycelium_std_testing::verdict::UndetReason::OracleUnavailable
+impl core::clone::Clone for mycelium_std_testing::verdict::UndetReason
+pub fn mycelium_std_testing::verdict::UndetReason::clone(&self) -> mycelium_std_testing::verdict::UndetReason
+impl core::cmp::Eq for mycelium_std_testing::verdict::UndetReason
+impl core::cmp::PartialEq for mycelium_std_testing::verdict::UndetReason
+pub fn mycelium_std_testing::verdict::UndetReason::eq(&self, &mycelium_std_testing::verdict::UndetReason) -> bool
+impl core::fmt::Debug for mycelium_std_testing::verdict::UndetReason
+pub fn mycelium_std_testing::verdict::UndetReason::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_testing::verdict::UndetReason
+impl core::marker::StructuralPartialEq for mycelium_std_testing::verdict::UndetReason
+impl core::marker::Freeze for mycelium_std_testing::verdict::UndetReason
+impl core::marker::Send for mycelium_std_testing::verdict::UndetReason
+impl core::marker::Sync for mycelium_std_testing::verdict::UndetReason
+impl core::marker::Unpin for mycelium_std_testing::verdict::UndetReason
+impl core::marker::UnsafeUnpin for mycelium_std_testing::verdict::UndetReason
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::verdict::UndetReason
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::verdict::UndetReason
+pub enum mycelium_std_testing::verdict::Verdict
+pub mycelium_std_testing::verdict::Verdict::Fail
+pub mycelium_std_testing::verdict::Verdict::Fail::record: mycelium_std_testing::verdict::FailRecord
+pub mycelium_std_testing::verdict::Verdict::Pass
+pub mycelium_std_testing::verdict::Verdict::Skipped
+pub mycelium_std_testing::verdict::Verdict::Skipped::reason: mycelium_std_testing::verdict::SkipReason
+pub mycelium_std_testing::verdict::Verdict::Undetermined
+pub mycelium_std_testing::verdict::Verdict::Undetermined::reason: mycelium_std_testing::verdict::UndetReason
+impl core::clone::Clone for mycelium_std_testing::verdict::Verdict
+pub fn mycelium_std_testing::verdict::Verdict::clone(&self) -> mycelium_std_testing::verdict::Verdict
+impl core::cmp::Eq for mycelium_std_testing::verdict::Verdict
+impl core::cmp::PartialEq for mycelium_std_testing::verdict::Verdict
+pub fn mycelium_std_testing::verdict::Verdict::eq(&self, &mycelium_std_testing::verdict::Verdict) -> bool
+impl core::fmt::Debug for mycelium_std_testing::verdict::Verdict
+pub fn mycelium_std_testing::verdict::Verdict::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_testing::verdict::Verdict
+impl core::marker::Freeze for mycelium_std_testing::verdict::Verdict
+impl core::marker::Send for mycelium_std_testing::verdict::Verdict
+impl core::marker::Sync for mycelium_std_testing::verdict::Verdict
+impl core::marker::Unpin for mycelium_std_testing::verdict::Verdict
+impl core::marker::UnsafeUnpin for mycelium_std_testing::verdict::Verdict
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::verdict::Verdict
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::verdict::Verdict
+pub struct mycelium_std_testing::verdict::FailRecord
+pub mycelium_std_testing::verdict::FailRecord::context: alloc::string::String
+pub mycelium_std_testing::verdict::FailRecord::description: alloc::string::String
+pub mycelium_std_testing::verdict::FailRecord::seed: u64
+pub mycelium_std_testing::verdict::FailRecord::trial: u32
+impl mycelium_std_testing::verdict::FailRecord
+pub fn mycelium_std_testing::verdict::FailRecord::to_diag(&self) -> mycelium_diag::Diag
+impl core::clone::Clone for mycelium_std_testing::verdict::FailRecord
+pub fn mycelium_std_testing::verdict::FailRecord::clone(&self) -> mycelium_std_testing::verdict::FailRecord
+impl core::cmp::Eq for mycelium_std_testing::verdict::FailRecord
+impl core::cmp::PartialEq for mycelium_std_testing::verdict::FailRecord
+pub fn mycelium_std_testing::verdict::FailRecord::eq(&self, &mycelium_std_testing::verdict::FailRecord) -> bool
+impl core::fmt::Debug for mycelium_std_testing::verdict::FailRecord
+pub fn mycelium_std_testing::verdict::FailRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_testing::verdict::FailRecord
+impl core::marker::Freeze for mycelium_std_testing::verdict::FailRecord
+impl core::marker::Send for mycelium_std_testing::verdict::FailRecord
+impl core::marker::Sync for mycelium_std_testing::verdict::FailRecord
+impl core::marker::Unpin for mycelium_std_testing::verdict::FailRecord
+impl core::marker::UnsafeUnpin for mycelium_std_testing::verdict::FailRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::verdict::FailRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::verdict::FailRecord
+pub struct mycelium_std_testing::verdict::Summary
+pub mycelium_std_testing::verdict::Summary::failed: u32
+pub mycelium_std_testing::verdict::Summary::passed: u32
+pub mycelium_std_testing::verdict::Summary::skipped: u32
+pub mycelium_std_testing::verdict::Summary::undetermined: u32
+impl mycelium_std_testing::verdict::Summary
+pub fn mycelium_std_testing::verdict::Summary::total(&self) -> u32
+impl core::clone::Clone for mycelium_std_testing::verdict::Summary
+pub fn mycelium_std_testing::verdict::Summary::clone(&self) -> mycelium_std_testing::verdict::Summary
+impl core::cmp::Eq for mycelium_std_testing::verdict::Summary
+impl core::cmp::PartialEq for mycelium_std_testing::verdict::Summary
+pub fn mycelium_std_testing::verdict::Summary::eq(&self, &mycelium_std_testing::verdict::Summary) -> bool
+impl core::default::Default for mycelium_std_testing::verdict::Summary
+pub fn mycelium_std_testing::verdict::Summary::default() -> mycelium_std_testing::verdict::Summary
+impl core::fmt::Debug for mycelium_std_testing::verdict::Summary
+pub fn mycelium_std_testing::verdict::Summary::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_testing::verdict::Summary
+impl core::marker::StructuralPartialEq for mycelium_std_testing::verdict::Summary
+impl core::marker::Freeze for mycelium_std_testing::verdict::Summary
+impl core::marker::Send for mycelium_std_testing::verdict::Summary
+impl core::marker::Sync for mycelium_std_testing::verdict::Summary
+impl core::marker::Unpin for mycelium_std_testing::verdict::Summary
+impl core::marker::UnsafeUnpin for mycelium_std_testing::verdict::Summary
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::verdict::Summary
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::verdict::Summary
+pub enum mycelium_std_testing::SkipReason
+pub mycelium_std_testing::SkipReason::BackendUnavailable
+pub mycelium_std_testing::SkipReason::Ignored
+pub mycelium_std_testing::SkipReason::NeedsRecord
+pub mycelium_std_testing::SkipReason::ToolMissing
+pub mycelium_std_testing::SkipReason::UnmetPrecondition
+impl core::clone::Clone for mycelium_std_testing::verdict::SkipReason
+pub fn mycelium_std_testing::verdict::SkipReason::clone(&self) -> mycelium_std_testing::verdict::SkipReason
+impl core::cmp::Eq for mycelium_std_testing::verdict::SkipReason
+impl core::cmp::PartialEq for mycelium_std_testing::verdict::SkipReason
+pub fn mycelium_std_testing::verdict::SkipReason::eq(&self, &mycelium_std_testing::verdict::SkipReason) -> bool
+impl core::fmt::Debug for mycelium_std_testing::verdict::SkipReason
+pub fn mycelium_std_testing::verdict::SkipReason::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_testing::verdict::SkipReason
+impl core::marker::StructuralPartialEq for mycelium_std_testing::verdict::SkipReason
+impl core::marker::Freeze for mycelium_std_testing::verdict::SkipReason
+impl core::marker::Send for mycelium_std_testing::verdict::SkipReason
+impl core::marker::Sync for mycelium_std_testing::verdict::SkipReason
+impl core::marker::Unpin for mycelium_std_testing::verdict::SkipReason
+impl core::marker::UnsafeUnpin for mycelium_std_testing::verdict::SkipReason
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::verdict::SkipReason
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::verdict::SkipReason
+pub enum mycelium_std_testing::UndetReason
+pub mycelium_std_testing::UndetReason::BudgetExhaustedInconclusive
+pub mycelium_std_testing::UndetReason::NonDeterministicInput
+pub mycelium_std_testing::UndetReason::OracleUnavailable
+impl core::clone::Clone for mycelium_std_testing::verdict::UndetReason
+pub fn mycelium_std_testing::verdict::UndetReason::clone(&self) -> mycelium_std_testing::verdict::UndetReason
+impl core::cmp::Eq for mycelium_std_testing::verdict::UndetReason
+impl core::cmp::PartialEq for mycelium_std_testing::verdict::UndetReason
+pub fn mycelium_std_testing::verdict::UndetReason::eq(&self, &mycelium_std_testing::verdict::UndetReason) -> bool
+impl core::fmt::Debug for mycelium_std_testing::verdict::UndetReason
+pub fn mycelium_std_testing::verdict::UndetReason::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_testing::verdict::UndetReason
+impl core::marker::StructuralPartialEq for mycelium_std_testing::verdict::UndetReason
+impl core::marker::Freeze for mycelium_std_testing::verdict::UndetReason
+impl core::marker::Send for mycelium_std_testing::verdict::UndetReason
+impl core::marker::Sync for mycelium_std_testing::verdict::UndetReason
+impl core::marker::Unpin for mycelium_std_testing::verdict::UndetReason
+impl core::marker::UnsafeUnpin for mycelium_std_testing::verdict::UndetReason
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::verdict::UndetReason
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::verdict::UndetReason
+pub enum mycelium_std_testing::Verdict
+pub mycelium_std_testing::Verdict::Fail
+pub mycelium_std_testing::Verdict::Fail::record: mycelium_std_testing::verdict::FailRecord
+pub mycelium_std_testing::Verdict::Pass
+pub mycelium_std_testing::Verdict::Skipped
+pub mycelium_std_testing::Verdict::Skipped::reason: mycelium_std_testing::verdict::SkipReason
+pub mycelium_std_testing::Verdict::Undetermined
+pub mycelium_std_testing::Verdict::Undetermined::reason: mycelium_std_testing::verdict::UndetReason
+impl core::clone::Clone for mycelium_std_testing::verdict::Verdict
+pub fn mycelium_std_testing::verdict::Verdict::clone(&self) -> mycelium_std_testing::verdict::Verdict
+impl core::cmp::Eq for mycelium_std_testing::verdict::Verdict
+impl core::cmp::PartialEq for mycelium_std_testing::verdict::Verdict
+pub fn mycelium_std_testing::verdict::Verdict::eq(&self, &mycelium_std_testing::verdict::Verdict) -> bool
+impl core::fmt::Debug for mycelium_std_testing::verdict::Verdict
+pub fn mycelium_std_testing::verdict::Verdict::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_testing::verdict::Verdict
+impl core::marker::Freeze for mycelium_std_testing::verdict::Verdict
+impl core::marker::Send for mycelium_std_testing::verdict::Verdict
+impl core::marker::Sync for mycelium_std_testing::verdict::Verdict
+impl core::marker::Unpin for mycelium_std_testing::verdict::Verdict
+impl core::marker::UnsafeUnpin for mycelium_std_testing::verdict::Verdict
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::verdict::Verdict
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::verdict::Verdict
+pub struct mycelium_std_testing::Budget(_)
+impl mycelium_std_testing::Budget
+pub const mycelium_std_testing::Budget::DEFAULT: mycelium_std_testing::Budget
+pub const mycelium_std_testing::Budget::MIN: mycelium_std_testing::Budget
+pub fn mycelium_std_testing::Budget::new(u32) -> core::option::Option<Self>
+pub fn mycelium_std_testing::Budget::trials(self) -> u32
+impl core::clone::Clone for mycelium_std_testing::Budget
+pub fn mycelium_std_testing::Budget::clone(&self) -> mycelium_std_testing::Budget
+impl core::cmp::Eq for mycelium_std_testing::Budget
+impl core::cmp::Ord for mycelium_std_testing::Budget
+pub fn mycelium_std_testing::Budget::cmp(&self, &mycelium_std_testing::Budget) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_std_testing::Budget
+pub fn mycelium_std_testing::Budget::eq(&self, &mycelium_std_testing::Budget) -> bool
+impl core::cmp::PartialOrd for mycelium_std_testing::Budget
+pub fn mycelium_std_testing::Budget::partial_cmp(&self, &mycelium_std_testing::Budget) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_std_testing::Budget
+pub fn mycelium_std_testing::Budget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_testing::Budget
+impl core::marker::StructuralPartialEq for mycelium_std_testing::Budget
+impl core::marker::Freeze for mycelium_std_testing::Budget
+impl core::marker::Send for mycelium_std_testing::Budget
+impl core::marker::Sync for mycelium_std_testing::Budget
+impl core::marker::Unpin for mycelium_std_testing::Budget
+impl core::marker::UnsafeUnpin for mycelium_std_testing::Budget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::Budget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::Budget
+pub struct mycelium_std_testing::FailRecord
+pub mycelium_std_testing::FailRecord::context: alloc::string::String
+pub mycelium_std_testing::FailRecord::description: alloc::string::String
+pub mycelium_std_testing::FailRecord::seed: u64
+pub mycelium_std_testing::FailRecord::trial: u32
+impl mycelium_std_testing::verdict::FailRecord
+pub fn mycelium_std_testing::verdict::FailRecord::to_diag(&self) -> mycelium_diag::Diag
+impl core::clone::Clone for mycelium_std_testing::verdict::FailRecord
+pub fn mycelium_std_testing::verdict::FailRecord::clone(&self) -> mycelium_std_testing::verdict::FailRecord
+impl core::cmp::Eq for mycelium_std_testing::verdict::FailRecord
+impl core::cmp::PartialEq for mycelium_std_testing::verdict::FailRecord
+pub fn mycelium_std_testing::verdict::FailRecord::eq(&self, &mycelium_std_testing::verdict::FailRecord) -> bool
+impl core::fmt::Debug for mycelium_std_testing::verdict::FailRecord
+pub fn mycelium_std_testing::verdict::FailRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_testing::verdict::FailRecord
+impl core::marker::Freeze for mycelium_std_testing::verdict::FailRecord
+impl core::marker::Send for mycelium_std_testing::verdict::FailRecord
+impl core::marker::Sync for mycelium_std_testing::verdict::FailRecord
+impl core::marker::Unpin for mycelium_std_testing::verdict::FailRecord
+impl core::marker::UnsafeUnpin for mycelium_std_testing::verdict::FailRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::verdict::FailRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::verdict::FailRecord
+pub struct mycelium_std_testing::GoldenBaseline
+pub mycelium_std_testing::GoldenBaseline::expected: alloc::string::String
+pub mycelium_std_testing::GoldenBaseline::name: alloc::string::String
+impl mycelium_std_testing::GoldenBaseline
+pub fn mycelium_std_testing::GoldenBaseline::new(impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_std_testing::GoldenBaseline
+pub fn mycelium_std_testing::GoldenBaseline::clone(&self) -> mycelium_std_testing::GoldenBaseline
+impl core::cmp::Eq for mycelium_std_testing::GoldenBaseline
+impl core::cmp::PartialEq for mycelium_std_testing::GoldenBaseline
+pub fn mycelium_std_testing::GoldenBaseline::eq(&self, &mycelium_std_testing::GoldenBaseline) -> bool
+impl core::fmt::Debug for mycelium_std_testing::GoldenBaseline
+pub fn mycelium_std_testing::GoldenBaseline::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_testing::GoldenBaseline
+impl core::marker::Freeze for mycelium_std_testing::GoldenBaseline
+impl core::marker::Send for mycelium_std_testing::GoldenBaseline
+impl core::marker::Sync for mycelium_std_testing::GoldenBaseline
+impl core::marker::Unpin for mycelium_std_testing::GoldenBaseline
+impl core::marker::UnsafeUnpin for mycelium_std_testing::GoldenBaseline
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::GoldenBaseline
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::GoldenBaseline
+pub struct mycelium_std_testing::Rng
+impl mycelium_std_testing::Rng
+pub fn mycelium_std_testing::Rng::new(u64) -> Self
+pub fn mycelium_std_testing::Rng::next_u32(&mut self) -> u32
+pub fn mycelium_std_testing::Rng::next_u64(&mut self) -> u64
+pub fn mycelium_std_testing::Rng::next_usize_below(&mut self, usize) -> usize
+impl core::clone::Clone for mycelium_std_testing::Rng
+pub fn mycelium_std_testing::Rng::clone(&self) -> mycelium_std_testing::Rng
+impl core::fmt::Debug for mycelium_std_testing::Rng
+pub fn mycelium_std_testing::Rng::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_testing::Rng
+impl core::marker::Send for mycelium_std_testing::Rng
+impl core::marker::Sync for mycelium_std_testing::Rng
+impl core::marker::Unpin for mycelium_std_testing::Rng
+impl core::marker::UnsafeUnpin for mycelium_std_testing::Rng
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::Rng
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::Rng
+pub struct mycelium_std_testing::Summary
+pub mycelium_std_testing::Summary::failed: u32
+pub mycelium_std_testing::Summary::passed: u32
+pub mycelium_std_testing::Summary::skipped: u32
+pub mycelium_std_testing::Summary::undetermined: u32
+impl mycelium_std_testing::verdict::Summary
+pub fn mycelium_std_testing::verdict::Summary::total(&self) -> u32
+impl core::clone::Clone for mycelium_std_testing::verdict::Summary
+pub fn mycelium_std_testing::verdict::Summary::clone(&self) -> mycelium_std_testing::verdict::Summary
+impl core::cmp::Eq for mycelium_std_testing::verdict::Summary
+impl core::cmp::PartialEq for mycelium_std_testing::verdict::Summary
+pub fn mycelium_std_testing::verdict::Summary::eq(&self, &mycelium_std_testing::verdict::Summary) -> bool
+impl core::default::Default for mycelium_std_testing::verdict::Summary
+pub fn mycelium_std_testing::verdict::Summary::default() -> mycelium_std_testing::verdict::Summary
+impl core::fmt::Debug for mycelium_std_testing::verdict::Summary
+pub fn mycelium_std_testing::verdict::Summary::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_testing::verdict::Summary
+impl core::marker::StructuralPartialEq for mycelium_std_testing::verdict::Summary
+impl core::marker::Freeze for mycelium_std_testing::verdict::Summary
+impl core::marker::Send for mycelium_std_testing::verdict::Summary
+impl core::marker::Sync for mycelium_std_testing::verdict::Summary
+impl core::marker::Unpin for mycelium_std_testing::verdict::Summary
+impl core::marker::UnsafeUnpin for mycelium_std_testing::verdict::Summary
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::verdict::Summary
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::verdict::Summary
+pub trait mycelium_std_testing::Gen<T>
+pub fn mycelium_std_testing::Gen::generate(&mut self, &mut mycelium_std_testing::Rng) -> core::option::Option<T>
+pub fn mycelium_std_testing::Gen::shrink(&self, &T) -> alloc::vec::Vec<T>
+pub fn mycelium_std_testing::differential<O>(&str, bool, impl core::ops::function::FnOnce() -> O, bool, impl core::ops::function::FnOnce() -> O) -> mycelium_std_testing::verdict::Verdict where O: core::cmp::PartialEq + core::fmt::Debug
+pub fn mycelium_std_testing::for_all<T, G>(&mut G, u64, mycelium_std_testing::Budget, impl core::ops::function::Fn(&T) -> bool) -> mycelium_std_testing::verdict::Verdict where G: mycelium_std_testing::Gen<T>, T: core::fmt::Debug
+pub fn mycelium_std_testing::golden(core::option::Option<&mycelium_std_testing::GoldenBaseline>, &str, &str) -> mycelium_std_testing::verdict::Verdict
+pub fn mycelium_std_testing::is_green(&mycelium_std_testing::verdict::Summary) -> bool
+pub fn mycelium_std_testing::summarize(&[mycelium_std_testing::verdict::Verdict]) -> mycelium_std_testing::verdict::Summary

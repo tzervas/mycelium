@@ -1,0 +1,1894 @@
+pub mod mycelium_lsp
+pub use mycelium_lsp::EffectBudget
+pub use mycelium_lsp::EffectBudgetExhausted
+pub use mycelium_lsp::EffectKind
+pub mod mycelium_lsp::baseline
+pub enum mycelium_lsp::baseline::RecoveryProfile
+pub mycelium_lsp::baseline::RecoveryProfile::Resilient
+pub mycelium_lsp::baseline::RecoveryProfile::Strict
+impl mycelium_lsp::baseline::RecoveryProfile
+pub fn mycelium_lsp::baseline::RecoveryProfile::all() -> [mycelium_lsp::baseline::RecoveryProfile; 2]
+pub fn mycelium_lsp::baseline::RecoveryProfile::as_str(self) -> &'static str
+pub fn mycelium_lsp::baseline::RecoveryProfile::resolve(&str) -> core::option::Option<mycelium_lsp::baseline::RecoveryProfile>
+impl core::clone::Clone for mycelium_lsp::baseline::RecoveryProfile
+pub fn mycelium_lsp::baseline::RecoveryProfile::clone(&self) -> mycelium_lsp::baseline::RecoveryProfile
+impl core::cmp::Eq for mycelium_lsp::baseline::RecoveryProfile
+impl core::cmp::PartialEq for mycelium_lsp::baseline::RecoveryProfile
+pub fn mycelium_lsp::baseline::RecoveryProfile::eq(&self, &mycelium_lsp::baseline::RecoveryProfile) -> bool
+impl core::fmt::Debug for mycelium_lsp::baseline::RecoveryProfile
+pub fn mycelium_lsp::baseline::RecoveryProfile::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_lsp::baseline::RecoveryProfile
+impl core::marker::StructuralPartialEq for mycelium_lsp::baseline::RecoveryProfile
+impl core::marker::Freeze for mycelium_lsp::baseline::RecoveryProfile
+impl core::marker::Send for mycelium_lsp::baseline::RecoveryProfile
+impl core::marker::Sync for mycelium_lsp::baseline::RecoveryProfile
+impl core::marker::Unpin for mycelium_lsp::baseline::RecoveryProfile
+impl core::marker::UnsafeUnpin for mycelium_lsp::baseline::RecoveryProfile
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::baseline::RecoveryProfile
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::baseline::RecoveryProfile
+pub struct mycelium_lsp::baseline::BaselineRule
+pub mycelium_lsp::baseline::BaselineRule::level: mycelium_lsp::diagnostics::record::Level
+pub mycelium_lsp::baseline::BaselineRule::rationale: &'static str
+pub mycelium_lsp::baseline::BaselineRule::route: mycelium_lsp::diagnostics::sink::Route
+impl core::clone::Clone for mycelium_lsp::baseline::BaselineRule
+pub fn mycelium_lsp::baseline::BaselineRule::clone(&self) -> mycelium_lsp::baseline::BaselineRule
+impl core::cmp::Eq for mycelium_lsp::baseline::BaselineRule
+impl core::cmp::PartialEq for mycelium_lsp::baseline::BaselineRule
+pub fn mycelium_lsp::baseline::BaselineRule::eq(&self, &mycelium_lsp::baseline::BaselineRule) -> bool
+impl core::fmt::Debug for mycelium_lsp::baseline::BaselineRule
+pub fn mycelium_lsp::baseline::BaselineRule::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_lsp::baseline::BaselineRule
+impl core::marker::StructuralPartialEq for mycelium_lsp::baseline::BaselineRule
+impl core::marker::Freeze for mycelium_lsp::baseline::BaselineRule
+impl core::marker::Send for mycelium_lsp::baseline::BaselineRule
+impl core::marker::Sync for mycelium_lsp::baseline::BaselineRule
+impl core::marker::Unpin for mycelium_lsp::baseline::BaselineRule
+impl core::marker::UnsafeUnpin for mycelium_lsp::baseline::BaselineRule
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::baseline::BaselineRule
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::baseline::BaselineRule
+pub const mycelium_lsp::baseline::RESILIENT_MAX_ATTEMPTS: u64
+pub fn mycelium_lsp::baseline::baseline_for_class(&str) -> mycelium_lsp::baseline::BaselineRule
+pub fn mycelium_lsp::baseline::derive_baseline(&mycelium_lsp::diagnostics::registry::ClassRegistry) -> mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::baseline::derive_baseline_for(&mycelium_lsp::diagnostics::registry::ClassRegistry, &[&str]) -> core::result::Result<mycelium_lsp::diagnostics::policy::DiagnosticPolicy, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::baseline::explain_baseline(&mycelium_lsp::diagnostics::registry::ClassRegistry) -> alloc::string::String
+pub fn mycelium_lsp::baseline::recovery_profile(mycelium_lsp::baseline::RecoveryProfile, &mycelium_lsp::diagnostics::registry::ClassRegistry, &[&str]) -> core::result::Result<mycelium_lsp::recover::policy::RecoveryPolicy, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub mod mycelium_lsp::diagnostics
+pub mod mycelium_lsp::diagnostics::audit
+pub struct mycelium_lsp::diagnostics::audit::AuditView
+pub mycelium_lsp::diagnostics::audit::AuditView::crossings: alloc::vec::Vec<mycelium_lsp::diagnostics::audit::Crossing>
+impl mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::of(&mycelium_core::node::Node) -> Self
+pub fn mycelium_lsp::diagnostics::audit::AuditView::to_human(&self) -> alloc::string::String
+pub fn mycelium_lsp::diagnostics::audit::AuditView::to_json(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::clone(&self) -> mycelium_lsp::diagnostics::audit::AuditView
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::eq(&self, &mycelium_lsp::diagnostics::audit::AuditView) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::audit::AuditView
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_lsp::diagnostics::audit::AuditView
+impl core::marker::Send for mycelium_lsp::diagnostics::audit::AuditView
+impl core::marker::Sync for mycelium_lsp::diagnostics::audit::AuditView
+impl core::marker::Unpin for mycelium_lsp::diagnostics::audit::AuditView
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::audit::AuditView
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::audit::AuditView
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::audit::AuditView
+pub struct mycelium_lsp::diagnostics::audit::Crossing
+pub mycelium_lsp::diagnostics::audit::Crossing::from: core::option::Option<mycelium_core::repr::Repr>
+pub mycelium_lsp::diagnostics::audit::Crossing::honesty: core::option::Option<mycelium_core::guarantee::GuaranteeStrength>
+pub mycelium_lsp::diagnostics::audit::Crossing::policy: alloc::string::String
+pub mycelium_lsp::diagnostics::audit::Crossing::site: alloc::string::String
+pub mycelium_lsp::diagnostics::audit::Crossing::to: mycelium_core::repr::Repr
+impl core::clone::Clone for mycelium_lsp::diagnostics::audit::Crossing
+pub fn mycelium_lsp::diagnostics::audit::Crossing::clone(&self) -> mycelium_lsp::diagnostics::audit::Crossing
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::audit::Crossing
+pub fn mycelium_lsp::diagnostics::audit::Crossing::eq(&self, &mycelium_lsp::diagnostics::audit::Crossing) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::audit::Crossing
+pub fn mycelium_lsp::diagnostics::audit::Crossing::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::audit::Crossing
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::audit::Crossing
+pub fn mycelium_lsp::diagnostics::audit::Crossing::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_lsp::diagnostics::audit::Crossing
+impl core::marker::Send for mycelium_lsp::diagnostics::audit::Crossing
+impl core::marker::Sync for mycelium_lsp::diagnostics::audit::Crossing
+impl core::marker::Unpin for mycelium_lsp::diagnostics::audit::Crossing
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::audit::Crossing
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::audit::Crossing
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::audit::Crossing
+pub mod mycelium_lsp::diagnostics::policy
+pub struct mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::content_id(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::is_empty(&self) -> bool
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::new() -> Self
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::on(&mut self, &mycelium_lsp::diagnostics::registry::ClassRegistry, &str, mycelium_lsp::diagnostics::policy::Rule) -> core::result::Result<core::option::Option<mycelium_lsp::diagnostics::policy::Rule>, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::rule_for(&self, &mycelium_lsp::diagnostics::registry::ClassName) -> core::option::Option<&mycelium_lsp::diagnostics::policy::Rule>
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::rules(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&mycelium_lsp::diagnostics::registry::ClassName, &mycelium_lsp::diagnostics::policy::Rule)>
+impl mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::from_file(&mycelium_lsp::diagnostics::registry::ClassRegistry, &mycelium_lsp::diagnostics::policy::PolicyFile) -> core::result::Result<Self, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::to_file(&self) -> mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::clone::Clone for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::clone(&self) -> mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::cmp::Eq for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::eq(&self, &mycelium_lsp::diagnostics::policy::DiagnosticPolicy) -> bool
+impl core::default::Default for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::default() -> mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::fmt::Debug for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::Freeze for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::Send for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::Sync for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::Unpin for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub struct mycelium_lsp::diagnostics::policy::PolicyFile
+pub mycelium_lsp::diagnostics::policy::PolicyFile::on: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_lsp::diagnostics::policy::Rule>
+impl core::clone::Clone for mycelium_lsp::diagnostics::policy::PolicyFile
+pub fn mycelium_lsp::diagnostics::policy::PolicyFile::clone(&self) -> mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::cmp::Eq for mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::policy::PolicyFile
+pub fn mycelium_lsp::diagnostics::policy::PolicyFile::eq(&self, &mycelium_lsp::diagnostics::policy::PolicyFile) -> bool
+impl core::default::Default for mycelium_lsp::diagnostics::policy::PolicyFile
+pub fn mycelium_lsp::diagnostics::policy::PolicyFile::default() -> mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::fmt::Debug for mycelium_lsp::diagnostics::policy::PolicyFile
+pub fn mycelium_lsp::diagnostics::policy::PolicyFile::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::policy::PolicyFile
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::policy::PolicyFile
+pub fn mycelium_lsp::diagnostics::policy::PolicyFile::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_lsp::diagnostics::policy::PolicyFile
+pub fn mycelium_lsp::diagnostics::policy::PolicyFile::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::marker::Send for mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::marker::Sync for mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::marker::Unpin for mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::policy::PolicyFile
+pub struct mycelium_lsp::diagnostics::policy::Rule
+pub mycelium_lsp::diagnostics::policy::Rule::level: core::option::Option<mycelium_lsp::diagnostics::record::Level>
+pub mycelium_lsp::diagnostics::policy::Rule::message: core::option::Option<alloc::string::String>
+pub mycelium_lsp::diagnostics::policy::Rule::route: core::option::Option<alloc::string::String>
+pub mycelium_lsp::diagnostics::policy::Rule::tags: alloc::collections::btree::set::BTreeSet<alloc::string::String>
+impl mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::level(self, mycelium_lsp::diagnostics::record::Level) -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::message(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::new() -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::route(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::route_to(self, mycelium_lsp::diagnostics::sink::Route) -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::tag(self, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::clone(&self) -> mycelium_lsp::diagnostics::policy::Rule
+impl core::cmp::Eq for mycelium_lsp::diagnostics::policy::Rule
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::eq(&self, &mycelium_lsp::diagnostics::policy::Rule) -> bool
+impl core::default::Default for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::default() -> mycelium_lsp::diagnostics::policy::Rule
+impl core::fmt::Debug for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::policy::Rule
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_lsp::diagnostics::policy::Rule
+impl core::marker::Send for mycelium_lsp::diagnostics::policy::Rule
+impl core::marker::Sync for mycelium_lsp::diagnostics::policy::Rule
+impl core::marker::Unpin for mycelium_lsp::diagnostics::policy::Rule
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::policy::Rule
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::policy::Rule
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::policy::Rule
+pub mod mycelium_lsp::diagnostics::record
+pub enum mycelium_lsp::diagnostics::record::Level
+pub mycelium_lsp::diagnostics::record::Level::Detailed
+pub mycelium_lsp::diagnostics::record::Level::Medium
+pub mycelium_lsp::diagnostics::record::Level::Minimal
+impl core::clone::Clone for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::clone(&self) -> mycelium_lsp::diagnostics::record::Level
+impl core::cmp::Eq for mycelium_lsp::diagnostics::record::Level
+impl core::cmp::Ord for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::cmp(&self, &mycelium_lsp::diagnostics::record::Level) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::eq(&self, &mycelium_lsp::diagnostics::record::Level) -> bool
+impl core::cmp::PartialOrd for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::partial_cmp(&self, &mycelium_lsp::diagnostics::record::Level) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_lsp::diagnostics::record::Level
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::record::Level
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_lsp::diagnostics::record::Level
+impl core::marker::Send for mycelium_lsp::diagnostics::record::Level
+impl core::marker::Sync for mycelium_lsp::diagnostics::record::Level
+impl core::marker::Unpin for mycelium_lsp::diagnostics::record::Level
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::record::Level
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::record::Level
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::record::Level
+pub struct mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub mycelium_lsp::diagnostics::record::DiagnosticRecord::class: alloc::string::String
+pub mycelium_lsp::diagnostics::record::DiagnosticRecord::context: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub mycelium_lsp::diagnostics::record::DiagnosticRecord::level: mycelium_lsp::diagnostics::record::Level
+pub mycelium_lsp::diagnostics::record::DiagnosticRecord::message: alloc::string::String
+pub mycelium_lsp::diagnostics::record::DiagnosticRecord::policy: core::option::Option<alloc::string::String>
+pub mycelium_lsp::diagnostics::record::DiagnosticRecord::reason: core::option::Option<alloc::string::String>
+pub mycelium_lsp::diagnostics::record::DiagnosticRecord::route: core::option::Option<alloc::string::String>
+pub mycelium_lsp::diagnostics::record::DiagnosticRecord::site: alloc::string::String
+pub mycelium_lsp::diagnostics::record::DiagnosticRecord::tags: alloc::collections::btree::set::BTreeSet<alloc::string::String>
+impl mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::content_id(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::from_json(&str) -> core::result::Result<Self, serde_json::error::Error>
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::sink(&self) -> core::option::Option<core::result::Result<mycelium_lsp::diagnostics::sink::SinkBinding, mycelium_lsp::diagnostics::sink::UnknownRoute>>
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::to_human(&self) -> alloc::string::String
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::to_json(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::clone(&self) -> mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::cmp::Eq for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::eq(&self, &mycelium_lsp::diagnostics::record::DiagnosticRecord) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::marker::Send for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::marker::Sync for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::marker::Unpin for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub struct mycelium_lsp::diagnostics::record::Presentation
+pub mycelium_lsp::diagnostics::record::Presentation::diagnostic: mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub mycelium_lsp::diagnostics::record::Presentation::error: mycelium_lsp::diagnostics::record::ReasonedError
+impl core::clone::Clone for mycelium_lsp::diagnostics::record::Presentation
+pub fn mycelium_lsp::diagnostics::record::Presentation::clone(&self) -> mycelium_lsp::diagnostics::record::Presentation
+impl core::cmp::Eq for mycelium_lsp::diagnostics::record::Presentation
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::record::Presentation
+pub fn mycelium_lsp::diagnostics::record::Presentation::eq(&self, &mycelium_lsp::diagnostics::record::Presentation) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::record::Presentation
+pub fn mycelium_lsp::diagnostics::record::Presentation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::Freeze for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::Send for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::Sync for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::Unpin for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::record::Presentation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::record::Presentation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::record::Presentation
+pub struct mycelium_lsp::diagnostics::record::ReasonedError
+pub mycelium_lsp::diagnostics::record::ReasonedError::class: mycelium_lsp::diagnostics::registry::ClassName
+pub mycelium_lsp::diagnostics::record::ReasonedError::context: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub mycelium_lsp::diagnostics::record::ReasonedError::message: alloc::string::String
+pub mycelium_lsp::diagnostics::record::ReasonedError::reason: core::option::Option<alloc::string::String>
+pub mycelium_lsp::diagnostics::record::ReasonedError::site: alloc::string::String
+impl mycelium_lsp::diagnostics::record::ReasonedError
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::new(mycelium_lsp::diagnostics::registry::ClassName, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::with_context(self, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::with_reason(self, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_lsp::diagnostics::record::ReasonedError
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::clone(&self) -> mycelium_lsp::diagnostics::record::ReasonedError
+impl core::cmp::Eq for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::record::ReasonedError
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::eq(&self, &mycelium_lsp::diagnostics::record::ReasonedError) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::record::ReasonedError
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::Freeze for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::Send for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::Sync for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::Unpin for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::record::ReasonedError
+pub const mycelium_lsp::diagnostics::record::DETAILED_ALLOWLIST: &[&str]
+pub fn mycelium_lsp::diagnostics::record::present(mycelium_lsp::diagnostics::record::ReasonedError, core::option::Option<&mycelium_lsp::diagnostics::policy::DiagnosticPolicy>) -> mycelium_lsp::diagnostics::record::Presentation
+pub mod mycelium_lsp::diagnostics::registry
+pub struct mycelium_lsp::diagnostics::registry::ClassName(_)
+impl mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::as_str(&self) -> &str
+impl core::clone::Clone for mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::clone(&self) -> mycelium_lsp::diagnostics::registry::ClassName
+impl core::cmp::Eq for mycelium_lsp::diagnostics::registry::ClassName
+impl core::cmp::Ord for mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::cmp(&self, &mycelium_lsp::diagnostics::registry::ClassName) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::eq(&self, &mycelium_lsp::diagnostics::registry::ClassName) -> bool
+impl core::cmp::PartialOrd for mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::partial_cmp(&self, &mycelium_lsp::diagnostics::registry::ClassName) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::registry::ClassName
+impl core::marker::Freeze for mycelium_lsp::diagnostics::registry::ClassName
+impl core::marker::Send for mycelium_lsp::diagnostics::registry::ClassName
+impl core::marker::Sync for mycelium_lsp::diagnostics::registry::ClassName
+impl core::marker::Unpin for mycelium_lsp::diagnostics::registry::ClassName
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::registry::ClassName
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::registry::ClassName
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::registry::ClassName
+pub struct mycelium_lsp::diagnostics::registry::ClassRegistry
+impl mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::classes(&self) -> impl core::iter::traits::iterator::Iterator<Item = &str>
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::contains(&self, &str) -> bool
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::new() -> Self
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::register(&mut self, impl core::convert::Into<alloc::string::String>) -> bool
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::resolve(&self, &str) -> core::result::Result<mycelium_lsp::diagnostics::registry::ClassName, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::with_builtins() -> Self
+impl core::clone::Clone for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::clone(&self) -> mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::cmp::Eq for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::eq(&self, &mycelium_lsp::diagnostics::registry::ClassRegistry) -> bool
+impl core::default::Default for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::default() -> Self
+impl core::fmt::Debug for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::Freeze for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::Send for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::Sync for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::Unpin for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub struct mycelium_lsp::diagnostics::registry::UnknownClass
+pub mycelium_lsp::diagnostics::registry::UnknownClass::name: alloc::string::String
+impl core::clone::Clone for mycelium_lsp::diagnostics::registry::UnknownClass
+pub fn mycelium_lsp::diagnostics::registry::UnknownClass::clone(&self) -> mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::cmp::Eq for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::registry::UnknownClass
+pub fn mycelium_lsp::diagnostics::registry::UnknownClass::eq(&self, &mycelium_lsp::diagnostics::registry::UnknownClass) -> bool
+impl core::error::Error for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::fmt::Debug for mycelium_lsp::diagnostics::registry::UnknownClass
+pub fn mycelium_lsp::diagnostics::registry::UnknownClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::diagnostics::registry::UnknownClass
+pub fn mycelium_lsp::diagnostics::registry::UnknownClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::Freeze for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::Send for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::Sync for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::Unpin for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::registry::UnknownClass
+pub mod mycelium_lsp::diagnostics::sink
+pub enum mycelium_lsp::diagnostics::sink::Delivery
+pub mycelium_lsp::diagnostics::sink::Delivery::BestEffort
+pub mycelium_lsp::diagnostics::sink::Delivery::Discarded
+pub mycelium_lsp::diagnostics::sink::Delivery::Durable
+pub mycelium_lsp::diagnostics::sink::Delivery::Probabilistic
+pub mycelium_lsp::diagnostics::sink::Delivery::Probabilistic::bound: mycelium_core::bound::Bound
+pub mycelium_lsp::diagnostics::sink::Delivery::Synchronous
+impl mycelium_lsp::diagnostics::sink::Delivery
+pub fn mycelium_lsp::diagnostics::sink::Delivery::delivers(&self) -> bool
+pub fn mycelium_lsp::diagnostics::sink::Delivery::guarantee(&self) -> core::option::Option<mycelium_core::guarantee::GuaranteeStrength>
+pub fn mycelium_lsp::diagnostics::sink::Delivery::probability_bound(&self) -> core::option::Option<&mycelium_core::bound::Bound>
+impl core::clone::Clone for mycelium_lsp::diagnostics::sink::Delivery
+pub fn mycelium_lsp::diagnostics::sink::Delivery::clone(&self) -> mycelium_lsp::diagnostics::sink::Delivery
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::sink::Delivery
+pub fn mycelium_lsp::diagnostics::sink::Delivery::eq(&self, &mycelium_lsp::diagnostics::sink::Delivery) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::sink::Delivery
+pub fn mycelium_lsp::diagnostics::sink::Delivery::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::sink::Delivery
+impl core::marker::Freeze for mycelium_lsp::diagnostics::sink::Delivery
+impl core::marker::Send for mycelium_lsp::diagnostics::sink::Delivery
+impl core::marker::Sync for mycelium_lsp::diagnostics::sink::Delivery
+impl core::marker::Unpin for mycelium_lsp::diagnostics::sink::Delivery
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::sink::Delivery
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::sink::Delivery
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::sink::Delivery
+pub enum mycelium_lsp::diagnostics::sink::Route
+pub mycelium_lsp::diagnostics::sink::Route::Audit
+pub mycelium_lsp::diagnostics::sink::Route::Log
+pub mycelium_lsp::diagnostics::sink::Route::Mesh
+pub mycelium_lsp::diagnostics::sink::Route::Null
+pub mycelium_lsp::diagnostics::sink::Route::Stream
+impl mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::all() -> [mycelium_lsp::diagnostics::sink::Route; 5]
+pub fn mycelium_lsp::diagnostics::sink::Route::as_str(self) -> &'static str
+pub fn mycelium_lsp::diagnostics::sink::Route::binding(self) -> mycelium_lsp::diagnostics::sink::SinkBinding
+pub fn mycelium_lsp::diagnostics::sink::Route::resolve(&str) -> core::result::Result<mycelium_lsp::diagnostics::sink::Route, mycelium_lsp::diagnostics::sink::UnknownRoute>
+impl core::clone::Clone for mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::clone(&self) -> mycelium_lsp::diagnostics::sink::Route
+impl core::cmp::Eq for mycelium_lsp::diagnostics::sink::Route
+impl core::cmp::Ord for mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::cmp(&self, &mycelium_lsp::diagnostics::sink::Route) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::eq(&self, &mycelium_lsp::diagnostics::sink::Route) -> bool
+impl core::cmp::PartialOrd for mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::partial_cmp(&self, &mycelium_lsp::diagnostics::sink::Route) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_lsp::diagnostics::sink::Route
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::sink::Route
+impl core::marker::Freeze for mycelium_lsp::diagnostics::sink::Route
+impl core::marker::Send for mycelium_lsp::diagnostics::sink::Route
+impl core::marker::Sync for mycelium_lsp::diagnostics::sink::Route
+impl core::marker::Unpin for mycelium_lsp::diagnostics::sink::Route
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::sink::Route
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::sink::Route
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::sink::Route
+pub struct mycelium_lsp::diagnostics::sink::SinkBinding
+pub mycelium_lsp::diagnostics::sink::SinkBinding::delivery: mycelium_lsp::diagnostics::sink::Delivery
+pub mycelium_lsp::diagnostics::sink::SinkBinding::route: mycelium_lsp::diagnostics::sink::Route
+pub mycelium_lsp::diagnostics::sink::SinkBinding::sink: &'static str
+impl core::clone::Clone for mycelium_lsp::diagnostics::sink::SinkBinding
+pub fn mycelium_lsp::diagnostics::sink::SinkBinding::clone(&self) -> mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::sink::SinkBinding
+pub fn mycelium_lsp::diagnostics::sink::SinkBinding::eq(&self, &mycelium_lsp::diagnostics::sink::SinkBinding) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::sink::SinkBinding
+pub fn mycelium_lsp::diagnostics::sink::SinkBinding::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::marker::Freeze for mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::marker::Send for mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::marker::Sync for mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::marker::Unpin for mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::sink::SinkBinding
+pub struct mycelium_lsp::diagnostics::sink::UnknownRoute
+pub mycelium_lsp::diagnostics::sink::UnknownRoute::route: alloc::string::String
+impl core::clone::Clone for mycelium_lsp::diagnostics::sink::UnknownRoute
+pub fn mycelium_lsp::diagnostics::sink::UnknownRoute::clone(&self) -> mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::cmp::Eq for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::sink::UnknownRoute
+pub fn mycelium_lsp::diagnostics::sink::UnknownRoute::eq(&self, &mycelium_lsp::diagnostics::sink::UnknownRoute) -> bool
+impl core::error::Error for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::fmt::Debug for mycelium_lsp::diagnostics::sink::UnknownRoute
+pub fn mycelium_lsp::diagnostics::sink::UnknownRoute::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::diagnostics::sink::UnknownRoute
+pub fn mycelium_lsp::diagnostics::sink::UnknownRoute::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::marker::Freeze for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::marker::Send for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::marker::Sync for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::marker::Unpin for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::sink::UnknownRoute
+pub enum mycelium_lsp::diagnostics::Delivery
+pub mycelium_lsp::diagnostics::Delivery::BestEffort
+pub mycelium_lsp::diagnostics::Delivery::Discarded
+pub mycelium_lsp::diagnostics::Delivery::Durable
+pub mycelium_lsp::diagnostics::Delivery::Probabilistic
+pub mycelium_lsp::diagnostics::Delivery::Probabilistic::bound: mycelium_core::bound::Bound
+pub mycelium_lsp::diagnostics::Delivery::Synchronous
+impl mycelium_lsp::diagnostics::sink::Delivery
+pub fn mycelium_lsp::diagnostics::sink::Delivery::delivers(&self) -> bool
+pub fn mycelium_lsp::diagnostics::sink::Delivery::guarantee(&self) -> core::option::Option<mycelium_core::guarantee::GuaranteeStrength>
+pub fn mycelium_lsp::diagnostics::sink::Delivery::probability_bound(&self) -> core::option::Option<&mycelium_core::bound::Bound>
+impl core::clone::Clone for mycelium_lsp::diagnostics::sink::Delivery
+pub fn mycelium_lsp::diagnostics::sink::Delivery::clone(&self) -> mycelium_lsp::diagnostics::sink::Delivery
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::sink::Delivery
+pub fn mycelium_lsp::diagnostics::sink::Delivery::eq(&self, &mycelium_lsp::diagnostics::sink::Delivery) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::sink::Delivery
+pub fn mycelium_lsp::diagnostics::sink::Delivery::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::sink::Delivery
+impl core::marker::Freeze for mycelium_lsp::diagnostics::sink::Delivery
+impl core::marker::Send for mycelium_lsp::diagnostics::sink::Delivery
+impl core::marker::Sync for mycelium_lsp::diagnostics::sink::Delivery
+impl core::marker::Unpin for mycelium_lsp::diagnostics::sink::Delivery
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::sink::Delivery
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::sink::Delivery
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::sink::Delivery
+pub enum mycelium_lsp::diagnostics::Level
+pub mycelium_lsp::diagnostics::Level::Detailed
+pub mycelium_lsp::diagnostics::Level::Medium
+pub mycelium_lsp::diagnostics::Level::Minimal
+impl core::clone::Clone for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::clone(&self) -> mycelium_lsp::diagnostics::record::Level
+impl core::cmp::Eq for mycelium_lsp::diagnostics::record::Level
+impl core::cmp::Ord for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::cmp(&self, &mycelium_lsp::diagnostics::record::Level) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::eq(&self, &mycelium_lsp::diagnostics::record::Level) -> bool
+impl core::cmp::PartialOrd for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::partial_cmp(&self, &mycelium_lsp::diagnostics::record::Level) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_lsp::diagnostics::record::Level
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::record::Level
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_lsp::diagnostics::record::Level
+impl core::marker::Send for mycelium_lsp::diagnostics::record::Level
+impl core::marker::Sync for mycelium_lsp::diagnostics::record::Level
+impl core::marker::Unpin for mycelium_lsp::diagnostics::record::Level
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::record::Level
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::record::Level
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::record::Level
+pub enum mycelium_lsp::diagnostics::Route
+pub mycelium_lsp::diagnostics::Route::Audit
+pub mycelium_lsp::diagnostics::Route::Log
+pub mycelium_lsp::diagnostics::Route::Mesh
+pub mycelium_lsp::diagnostics::Route::Null
+pub mycelium_lsp::diagnostics::Route::Stream
+impl mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::all() -> [mycelium_lsp::diagnostics::sink::Route; 5]
+pub fn mycelium_lsp::diagnostics::sink::Route::as_str(self) -> &'static str
+pub fn mycelium_lsp::diagnostics::sink::Route::binding(self) -> mycelium_lsp::diagnostics::sink::SinkBinding
+pub fn mycelium_lsp::diagnostics::sink::Route::resolve(&str) -> core::result::Result<mycelium_lsp::diagnostics::sink::Route, mycelium_lsp::diagnostics::sink::UnknownRoute>
+impl core::clone::Clone for mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::clone(&self) -> mycelium_lsp::diagnostics::sink::Route
+impl core::cmp::Eq for mycelium_lsp::diagnostics::sink::Route
+impl core::cmp::Ord for mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::cmp(&self, &mycelium_lsp::diagnostics::sink::Route) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::eq(&self, &mycelium_lsp::diagnostics::sink::Route) -> bool
+impl core::cmp::PartialOrd for mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::partial_cmp(&self, &mycelium_lsp::diagnostics::sink::Route) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_lsp::diagnostics::sink::Route
+pub fn mycelium_lsp::diagnostics::sink::Route::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_lsp::diagnostics::sink::Route
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::sink::Route
+impl core::marker::Freeze for mycelium_lsp::diagnostics::sink::Route
+impl core::marker::Send for mycelium_lsp::diagnostics::sink::Route
+impl core::marker::Sync for mycelium_lsp::diagnostics::sink::Route
+impl core::marker::Unpin for mycelium_lsp::diagnostics::sink::Route
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::sink::Route
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::sink::Route
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::sink::Route
+pub struct mycelium_lsp::diagnostics::AuditView
+pub mycelium_lsp::diagnostics::AuditView::crossings: alloc::vec::Vec<mycelium_lsp::diagnostics::audit::Crossing>
+impl mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::of(&mycelium_core::node::Node) -> Self
+pub fn mycelium_lsp::diagnostics::audit::AuditView::to_human(&self) -> alloc::string::String
+pub fn mycelium_lsp::diagnostics::audit::AuditView::to_json(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::clone(&self) -> mycelium_lsp::diagnostics::audit::AuditView
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::eq(&self, &mycelium_lsp::diagnostics::audit::AuditView) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::audit::AuditView
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_lsp::diagnostics::audit::AuditView
+impl core::marker::Send for mycelium_lsp::diagnostics::audit::AuditView
+impl core::marker::Sync for mycelium_lsp::diagnostics::audit::AuditView
+impl core::marker::Unpin for mycelium_lsp::diagnostics::audit::AuditView
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::audit::AuditView
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::audit::AuditView
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::audit::AuditView
+pub struct mycelium_lsp::diagnostics::ClassName(_)
+impl mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::as_str(&self) -> &str
+impl core::clone::Clone for mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::clone(&self) -> mycelium_lsp::diagnostics::registry::ClassName
+impl core::cmp::Eq for mycelium_lsp::diagnostics::registry::ClassName
+impl core::cmp::Ord for mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::cmp(&self, &mycelium_lsp::diagnostics::registry::ClassName) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::eq(&self, &mycelium_lsp::diagnostics::registry::ClassName) -> bool
+impl core::cmp::PartialOrd for mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::partial_cmp(&self, &mycelium_lsp::diagnostics::registry::ClassName) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_lsp::diagnostics::registry::ClassName
+pub fn mycelium_lsp::diagnostics::registry::ClassName::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::registry::ClassName
+impl core::marker::Freeze for mycelium_lsp::diagnostics::registry::ClassName
+impl core::marker::Send for mycelium_lsp::diagnostics::registry::ClassName
+impl core::marker::Sync for mycelium_lsp::diagnostics::registry::ClassName
+impl core::marker::Unpin for mycelium_lsp::diagnostics::registry::ClassName
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::registry::ClassName
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::registry::ClassName
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::registry::ClassName
+pub struct mycelium_lsp::diagnostics::ClassRegistry
+impl mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::classes(&self) -> impl core::iter::traits::iterator::Iterator<Item = &str>
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::contains(&self, &str) -> bool
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::new() -> Self
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::register(&mut self, impl core::convert::Into<alloc::string::String>) -> bool
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::resolve(&self, &str) -> core::result::Result<mycelium_lsp::diagnostics::registry::ClassName, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::with_builtins() -> Self
+impl core::clone::Clone for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::clone(&self) -> mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::cmp::Eq for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::eq(&self, &mycelium_lsp::diagnostics::registry::ClassRegistry) -> bool
+impl core::default::Default for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::default() -> Self
+impl core::fmt::Debug for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::Freeze for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::Send for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::Sync for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::Unpin for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub struct mycelium_lsp::diagnostics::Crossing
+pub mycelium_lsp::diagnostics::Crossing::from: core::option::Option<mycelium_core::repr::Repr>
+pub mycelium_lsp::diagnostics::Crossing::honesty: core::option::Option<mycelium_core::guarantee::GuaranteeStrength>
+pub mycelium_lsp::diagnostics::Crossing::policy: alloc::string::String
+pub mycelium_lsp::diagnostics::Crossing::site: alloc::string::String
+pub mycelium_lsp::diagnostics::Crossing::to: mycelium_core::repr::Repr
+impl core::clone::Clone for mycelium_lsp::diagnostics::audit::Crossing
+pub fn mycelium_lsp::diagnostics::audit::Crossing::clone(&self) -> mycelium_lsp::diagnostics::audit::Crossing
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::audit::Crossing
+pub fn mycelium_lsp::diagnostics::audit::Crossing::eq(&self, &mycelium_lsp::diagnostics::audit::Crossing) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::audit::Crossing
+pub fn mycelium_lsp::diagnostics::audit::Crossing::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::audit::Crossing
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::audit::Crossing
+pub fn mycelium_lsp::diagnostics::audit::Crossing::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_lsp::diagnostics::audit::Crossing
+impl core::marker::Send for mycelium_lsp::diagnostics::audit::Crossing
+impl core::marker::Sync for mycelium_lsp::diagnostics::audit::Crossing
+impl core::marker::Unpin for mycelium_lsp::diagnostics::audit::Crossing
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::audit::Crossing
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::audit::Crossing
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::audit::Crossing
+pub struct mycelium_lsp::diagnostics::DiagnosticPolicy
+impl mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::content_id(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::is_empty(&self) -> bool
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::new() -> Self
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::on(&mut self, &mycelium_lsp::diagnostics::registry::ClassRegistry, &str, mycelium_lsp::diagnostics::policy::Rule) -> core::result::Result<core::option::Option<mycelium_lsp::diagnostics::policy::Rule>, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::rule_for(&self, &mycelium_lsp::diagnostics::registry::ClassName) -> core::option::Option<&mycelium_lsp::diagnostics::policy::Rule>
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::rules(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&mycelium_lsp::diagnostics::registry::ClassName, &mycelium_lsp::diagnostics::policy::Rule)>
+impl mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::from_file(&mycelium_lsp::diagnostics::registry::ClassRegistry, &mycelium_lsp::diagnostics::policy::PolicyFile) -> core::result::Result<Self, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::to_file(&self) -> mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::clone::Clone for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::clone(&self) -> mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::cmp::Eq for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::eq(&self, &mycelium_lsp::diagnostics::policy::DiagnosticPolicy) -> bool
+impl core::default::Default for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::default() -> mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::fmt::Debug for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::Freeze for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::Send for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::Sync for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::Unpin for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub struct mycelium_lsp::diagnostics::DiagnosticRecord
+pub mycelium_lsp::diagnostics::DiagnosticRecord::class: alloc::string::String
+pub mycelium_lsp::diagnostics::DiagnosticRecord::context: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub mycelium_lsp::diagnostics::DiagnosticRecord::level: mycelium_lsp::diagnostics::record::Level
+pub mycelium_lsp::diagnostics::DiagnosticRecord::message: alloc::string::String
+pub mycelium_lsp::diagnostics::DiagnosticRecord::policy: core::option::Option<alloc::string::String>
+pub mycelium_lsp::diagnostics::DiagnosticRecord::reason: core::option::Option<alloc::string::String>
+pub mycelium_lsp::diagnostics::DiagnosticRecord::route: core::option::Option<alloc::string::String>
+pub mycelium_lsp::diagnostics::DiagnosticRecord::site: alloc::string::String
+pub mycelium_lsp::diagnostics::DiagnosticRecord::tags: alloc::collections::btree::set::BTreeSet<alloc::string::String>
+impl mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::content_id(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::from_json(&str) -> core::result::Result<Self, serde_json::error::Error>
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::sink(&self) -> core::option::Option<core::result::Result<mycelium_lsp::diagnostics::sink::SinkBinding, mycelium_lsp::diagnostics::sink::UnknownRoute>>
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::to_human(&self) -> alloc::string::String
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::to_json(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::clone(&self) -> mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::cmp::Eq for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::eq(&self, &mycelium_lsp::diagnostics::record::DiagnosticRecord) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::marker::Send for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::marker::Sync for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::marker::Unpin for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub struct mycelium_lsp::diagnostics::PolicyFile
+pub mycelium_lsp::diagnostics::PolicyFile::on: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_lsp::diagnostics::policy::Rule>
+impl core::clone::Clone for mycelium_lsp::diagnostics::policy::PolicyFile
+pub fn mycelium_lsp::diagnostics::policy::PolicyFile::clone(&self) -> mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::cmp::Eq for mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::policy::PolicyFile
+pub fn mycelium_lsp::diagnostics::policy::PolicyFile::eq(&self, &mycelium_lsp::diagnostics::policy::PolicyFile) -> bool
+impl core::default::Default for mycelium_lsp::diagnostics::policy::PolicyFile
+pub fn mycelium_lsp::diagnostics::policy::PolicyFile::default() -> mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::fmt::Debug for mycelium_lsp::diagnostics::policy::PolicyFile
+pub fn mycelium_lsp::diagnostics::policy::PolicyFile::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::policy::PolicyFile
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::policy::PolicyFile
+pub fn mycelium_lsp::diagnostics::policy::PolicyFile::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_lsp::diagnostics::policy::PolicyFile
+pub fn mycelium_lsp::diagnostics::policy::PolicyFile::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::marker::Send for mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::marker::Sync for mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::marker::Unpin for mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::policy::PolicyFile
+pub struct mycelium_lsp::diagnostics::Presentation
+pub mycelium_lsp::diagnostics::Presentation::diagnostic: mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub mycelium_lsp::diagnostics::Presentation::error: mycelium_lsp::diagnostics::record::ReasonedError
+impl core::clone::Clone for mycelium_lsp::diagnostics::record::Presentation
+pub fn mycelium_lsp::diagnostics::record::Presentation::clone(&self) -> mycelium_lsp::diagnostics::record::Presentation
+impl core::cmp::Eq for mycelium_lsp::diagnostics::record::Presentation
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::record::Presentation
+pub fn mycelium_lsp::diagnostics::record::Presentation::eq(&self, &mycelium_lsp::diagnostics::record::Presentation) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::record::Presentation
+pub fn mycelium_lsp::diagnostics::record::Presentation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::Freeze for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::Send for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::Sync for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::Unpin for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::record::Presentation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::record::Presentation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::record::Presentation
+pub struct mycelium_lsp::diagnostics::ReasonedError
+pub mycelium_lsp::diagnostics::ReasonedError::class: mycelium_lsp::diagnostics::registry::ClassName
+pub mycelium_lsp::diagnostics::ReasonedError::context: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub mycelium_lsp::diagnostics::ReasonedError::message: alloc::string::String
+pub mycelium_lsp::diagnostics::ReasonedError::reason: core::option::Option<alloc::string::String>
+pub mycelium_lsp::diagnostics::ReasonedError::site: alloc::string::String
+impl mycelium_lsp::diagnostics::record::ReasonedError
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::new(mycelium_lsp::diagnostics::registry::ClassName, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::with_context(self, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::with_reason(self, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_lsp::diagnostics::record::ReasonedError
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::clone(&self) -> mycelium_lsp::diagnostics::record::ReasonedError
+impl core::cmp::Eq for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::record::ReasonedError
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::eq(&self, &mycelium_lsp::diagnostics::record::ReasonedError) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::record::ReasonedError
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::Freeze for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::Send for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::Sync for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::Unpin for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::record::ReasonedError
+pub struct mycelium_lsp::diagnostics::Rule
+pub mycelium_lsp::diagnostics::Rule::level: core::option::Option<mycelium_lsp::diagnostics::record::Level>
+pub mycelium_lsp::diagnostics::Rule::message: core::option::Option<alloc::string::String>
+pub mycelium_lsp::diagnostics::Rule::route: core::option::Option<alloc::string::String>
+pub mycelium_lsp::diagnostics::Rule::tags: alloc::collections::btree::set::BTreeSet<alloc::string::String>
+impl mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::level(self, mycelium_lsp::diagnostics::record::Level) -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::message(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::new() -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::route(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::route_to(self, mycelium_lsp::diagnostics::sink::Route) -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::tag(self, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::clone(&self) -> mycelium_lsp::diagnostics::policy::Rule
+impl core::cmp::Eq for mycelium_lsp::diagnostics::policy::Rule
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::eq(&self, &mycelium_lsp::diagnostics::policy::Rule) -> bool
+impl core::default::Default for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::default() -> mycelium_lsp::diagnostics::policy::Rule
+impl core::fmt::Debug for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::policy::Rule
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_lsp::diagnostics::policy::Rule
+impl core::marker::Send for mycelium_lsp::diagnostics::policy::Rule
+impl core::marker::Sync for mycelium_lsp::diagnostics::policy::Rule
+impl core::marker::Unpin for mycelium_lsp::diagnostics::policy::Rule
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::policy::Rule
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::policy::Rule
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::policy::Rule
+pub struct mycelium_lsp::diagnostics::SinkBinding
+pub mycelium_lsp::diagnostics::SinkBinding::delivery: mycelium_lsp::diagnostics::sink::Delivery
+pub mycelium_lsp::diagnostics::SinkBinding::route: mycelium_lsp::diagnostics::sink::Route
+pub mycelium_lsp::diagnostics::SinkBinding::sink: &'static str
+impl core::clone::Clone for mycelium_lsp::diagnostics::sink::SinkBinding
+pub fn mycelium_lsp::diagnostics::sink::SinkBinding::clone(&self) -> mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::sink::SinkBinding
+pub fn mycelium_lsp::diagnostics::sink::SinkBinding::eq(&self, &mycelium_lsp::diagnostics::sink::SinkBinding) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::sink::SinkBinding
+pub fn mycelium_lsp::diagnostics::sink::SinkBinding::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::marker::Freeze for mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::marker::Send for mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::marker::Sync for mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::marker::Unpin for mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::sink::SinkBinding
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::sink::SinkBinding
+pub struct mycelium_lsp::diagnostics::UnknownClass
+pub mycelium_lsp::diagnostics::UnknownClass::name: alloc::string::String
+impl core::clone::Clone for mycelium_lsp::diagnostics::registry::UnknownClass
+pub fn mycelium_lsp::diagnostics::registry::UnknownClass::clone(&self) -> mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::cmp::Eq for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::registry::UnknownClass
+pub fn mycelium_lsp::diagnostics::registry::UnknownClass::eq(&self, &mycelium_lsp::diagnostics::registry::UnknownClass) -> bool
+impl core::error::Error for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::fmt::Debug for mycelium_lsp::diagnostics::registry::UnknownClass
+pub fn mycelium_lsp::diagnostics::registry::UnknownClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::diagnostics::registry::UnknownClass
+pub fn mycelium_lsp::diagnostics::registry::UnknownClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::Freeze for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::Send for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::Sync for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::Unpin for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::registry::UnknownClass
+pub struct mycelium_lsp::diagnostics::UnknownRoute
+pub mycelium_lsp::diagnostics::UnknownRoute::route: alloc::string::String
+impl core::clone::Clone for mycelium_lsp::diagnostics::sink::UnknownRoute
+pub fn mycelium_lsp::diagnostics::sink::UnknownRoute::clone(&self) -> mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::cmp::Eq for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::sink::UnknownRoute
+pub fn mycelium_lsp::diagnostics::sink::UnknownRoute::eq(&self, &mycelium_lsp::diagnostics::sink::UnknownRoute) -> bool
+impl core::error::Error for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::fmt::Debug for mycelium_lsp::diagnostics::sink::UnknownRoute
+pub fn mycelium_lsp::diagnostics::sink::UnknownRoute::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::diagnostics::sink::UnknownRoute
+pub fn mycelium_lsp::diagnostics::sink::UnknownRoute::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::marker::Freeze for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::marker::Send for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::marker::Sync for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::marker::Unpin for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::sink::UnknownRoute
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::sink::UnknownRoute
+pub const mycelium_lsp::diagnostics::DETAILED_ALLOWLIST: &[&str]
+pub fn mycelium_lsp::diagnostics::present(mycelium_lsp::diagnostics::record::ReasonedError, core::option::Option<&mycelium_lsp::diagnostics::policy::DiagnosticPolicy>) -> mycelium_lsp::diagnostics::record::Presentation
+pub mod mycelium_lsp::expand
+pub fn mycelium_lsp::expand::expand_ambient(&str) -> core::result::Result<alloc::string::String, alloc::string::String>
+pub mod mycelium_lsp::feedback
+pub struct mycelium_lsp::feedback::ExplainSite
+pub mycelium_lsp::feedback::ExplainSite::at: alloc::string::String
+pub mycelium_lsp::feedback::ExplainSite::explanation: mycelium_select::Explanation
+impl core::clone::Clone for mycelium_lsp::feedback::ExplainSite
+pub fn mycelium_lsp::feedback::ExplainSite::clone(&self) -> mycelium_lsp::feedback::ExplainSite
+impl core::cmp::PartialEq for mycelium_lsp::feedback::ExplainSite
+pub fn mycelium_lsp::feedback::ExplainSite::eq(&self, &mycelium_lsp::feedback::ExplainSite) -> bool
+impl core::fmt::Debug for mycelium_lsp::feedback::ExplainSite
+pub fn mycelium_lsp::feedback::ExplainSite::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::feedback::ExplainSite
+impl core::marker::Freeze for mycelium_lsp::feedback::ExplainSite
+impl core::marker::Send for mycelium_lsp::feedback::ExplainSite
+impl core::marker::Sync for mycelium_lsp::feedback::ExplainSite
+impl core::marker::Unpin for mycelium_lsp::feedback::ExplainSite
+impl core::marker::UnsafeUnpin for mycelium_lsp::feedback::ExplainSite
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::feedback::ExplainSite
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::feedback::ExplainSite
+pub struct mycelium_lsp::feedback::Feedback
+pub mycelium_lsp::feedback::Feedback::diagnostics: alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
+pub mycelium_lsp::feedback::Feedback::explanations: alloc::vec::Vec<mycelium_lsp::feedback::ExplainSite>
+pub mycelium_lsp::feedback::Feedback::guarantees: alloc::vec::Vec<mycelium_lsp::feedback::GuaranteeAnnotation>
+pub mycelium_lsp::feedback::Feedback::prims: alloc::vec::Vec<mycelium_lsp::feedback::PrimSite>
+pub mycelium_lsp::feedback::Feedback::stages: alloc::vec::Vec<mycelium_core::lower::Stage>
+pub mycelium_lsp::feedback::Feedback::swaps: alloc::vec::Vec<mycelium_lsp::feedback::SwapSite>
+impl mycelium_lsp::feedback::Feedback
+pub fn mycelium_lsp::feedback::Feedback::summary(&self) -> mycelium_lsp::feedback::FeedbackSummary
+impl core::clone::Clone for mycelium_lsp::feedback::Feedback
+pub fn mycelium_lsp::feedback::Feedback::clone(&self) -> mycelium_lsp::feedback::Feedback
+impl core::cmp::PartialEq for mycelium_lsp::feedback::Feedback
+pub fn mycelium_lsp::feedback::Feedback::eq(&self, &mycelium_lsp::feedback::Feedback) -> bool
+impl core::fmt::Debug for mycelium_lsp::feedback::Feedback
+pub fn mycelium_lsp::feedback::Feedback::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::feedback::Feedback
+impl core::marker::Freeze for mycelium_lsp::feedback::Feedback
+impl core::marker::Send for mycelium_lsp::feedback::Feedback
+impl core::marker::Sync for mycelium_lsp::feedback::Feedback
+impl core::marker::Unpin for mycelium_lsp::feedback::Feedback
+impl core::marker::UnsafeUnpin for mycelium_lsp::feedback::Feedback
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::feedback::Feedback
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::feedback::Feedback
+pub struct mycelium_lsp::feedback::FeedbackSummary
+pub mycelium_lsp::feedback::FeedbackSummary::errors: usize
+pub mycelium_lsp::feedback::FeedbackSummary::explanations: usize
+pub mycelium_lsp::feedback::FeedbackSummary::guarantees: usize
+pub mycelium_lsp::feedback::FeedbackSummary::prims: usize
+pub mycelium_lsp::feedback::FeedbackSummary::stages: usize
+pub mycelium_lsp::feedback::FeedbackSummary::swaps: usize
+pub mycelium_lsp::feedback::FeedbackSummary::warnings: usize
+pub mycelium_lsp::feedback::FeedbackSummary::worst: core::option::Option<mycelium_lsp::lint::Severity>
+impl mycelium_lsp::feedback::FeedbackSummary
+pub fn mycelium_lsp::feedback::FeedbackSummary::is_clean(&self) -> bool
+impl core::clone::Clone for mycelium_lsp::feedback::FeedbackSummary
+pub fn mycelium_lsp::feedback::FeedbackSummary::clone(&self) -> mycelium_lsp::feedback::FeedbackSummary
+impl core::cmp::Eq for mycelium_lsp::feedback::FeedbackSummary
+impl core::cmp::PartialEq for mycelium_lsp::feedback::FeedbackSummary
+pub fn mycelium_lsp::feedback::FeedbackSummary::eq(&self, &mycelium_lsp::feedback::FeedbackSummary) -> bool
+impl core::fmt::Debug for mycelium_lsp::feedback::FeedbackSummary
+pub fn mycelium_lsp::feedback::FeedbackSummary::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::feedback::FeedbackSummary
+impl core::marker::Freeze for mycelium_lsp::feedback::FeedbackSummary
+impl core::marker::Send for mycelium_lsp::feedback::FeedbackSummary
+impl core::marker::Sync for mycelium_lsp::feedback::FeedbackSummary
+impl core::marker::Unpin for mycelium_lsp::feedback::FeedbackSummary
+impl core::marker::UnsafeUnpin for mycelium_lsp::feedback::FeedbackSummary
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::feedback::FeedbackSummary
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::feedback::FeedbackSummary
+pub struct mycelium_lsp::feedback::GuaranteeAnnotation
+pub mycelium_lsp::feedback::GuaranteeAnnotation::at: alloc::string::String
+pub mycelium_lsp::feedback::GuaranteeAnnotation::bound: core::option::Option<mycelium_core::bound::Bound>
+pub mycelium_lsp::feedback::GuaranteeAnnotation::guarantee: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_lsp::feedback::GuaranteeAnnotation
+pub fn mycelium_lsp::feedback::GuaranteeAnnotation::clone(&self) -> mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::cmp::PartialEq for mycelium_lsp::feedback::GuaranteeAnnotation
+pub fn mycelium_lsp::feedback::GuaranteeAnnotation::eq(&self, &mycelium_lsp::feedback::GuaranteeAnnotation) -> bool
+impl core::fmt::Debug for mycelium_lsp::feedback::GuaranteeAnnotation
+pub fn mycelium_lsp::feedback::GuaranteeAnnotation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::marker::Freeze for mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::marker::Send for mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::marker::Sync for mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::marker::Unpin for mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::marker::UnsafeUnpin for mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::feedback::GuaranteeAnnotation
+pub struct mycelium_lsp::feedback::PrimSite
+pub mycelium_lsp::feedback::PrimSite::arity: core::option::Option<usize>
+pub mycelium_lsp::feedback::PrimSite::at: alloc::string::String
+pub mycelium_lsp::feedback::PrimSite::intrinsic: core::option::Option<mycelium_core::guarantee::GuaranteeStrength>
+pub mycelium_lsp::feedback::PrimSite::name: alloc::string::String
+pub mycelium_lsp::feedback::PrimSite::reference: core::option::Option<mycelium_core::prim::PrimRef>
+impl core::clone::Clone for mycelium_lsp::feedback::PrimSite
+pub fn mycelium_lsp::feedback::PrimSite::clone(&self) -> mycelium_lsp::feedback::PrimSite
+impl core::cmp::PartialEq for mycelium_lsp::feedback::PrimSite
+pub fn mycelium_lsp::feedback::PrimSite::eq(&self, &mycelium_lsp::feedback::PrimSite) -> bool
+impl core::fmt::Debug for mycelium_lsp::feedback::PrimSite
+pub fn mycelium_lsp::feedback::PrimSite::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::feedback::PrimSite
+impl core::marker::Freeze for mycelium_lsp::feedback::PrimSite
+impl core::marker::Send for mycelium_lsp::feedback::PrimSite
+impl core::marker::Sync for mycelium_lsp::feedback::PrimSite
+impl core::marker::Unpin for mycelium_lsp::feedback::PrimSite
+impl core::marker::UnsafeUnpin for mycelium_lsp::feedback::PrimSite
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::feedback::PrimSite
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::feedback::PrimSite
+pub struct mycelium_lsp::feedback::SwapSite
+pub mycelium_lsp::feedback::SwapSite::at: alloc::string::String
+pub mycelium_lsp::feedback::SwapSite::certificate: core::option::Option<mycelium_cert::SwapCertificate>
+pub mycelium_lsp::feedback::SwapSite::target: mycelium_core::repr::Repr
+impl core::clone::Clone for mycelium_lsp::feedback::SwapSite
+pub fn mycelium_lsp::feedback::SwapSite::clone(&self) -> mycelium_lsp::feedback::SwapSite
+impl core::cmp::PartialEq for mycelium_lsp::feedback::SwapSite
+pub fn mycelium_lsp::feedback::SwapSite::eq(&self, &mycelium_lsp::feedback::SwapSite) -> bool
+impl core::fmt::Debug for mycelium_lsp::feedback::SwapSite
+pub fn mycelium_lsp::feedback::SwapSite::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::feedback::SwapSite
+impl core::marker::Freeze for mycelium_lsp::feedback::SwapSite
+impl core::marker::Send for mycelium_lsp::feedback::SwapSite
+impl core::marker::Sync for mycelium_lsp::feedback::SwapSite
+impl core::marker::Unpin for mycelium_lsp::feedback::SwapSite
+impl core::marker::UnsafeUnpin for mycelium_lsp::feedback::SwapSite
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::feedback::SwapSite
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::feedback::SwapSite
+pub fn mycelium_lsp::feedback::analyze(&mycelium_core::node::Node) -> mycelium_lsp::feedback::Feedback
+pub fn mycelium_lsp::feedback::analyze_with(&mycelium_core::node::Node, &mycelium_select::PolicyRegistry) -> mycelium_lsp::feedback::Feedback
+pub mod mycelium_lsp::fmt
+pub fn mycelium_lsp::fmt::format(&mycelium_core::node::Node) -> alloc::string::String
+pub mod mycelium_lsp::lint
+pub enum mycelium_lsp::lint::Severity
+pub mycelium_lsp::lint::Severity::Error
+pub mycelium_lsp::lint::Severity::Warning
+impl core::clone::Clone for mycelium_lsp::lint::Severity
+pub fn mycelium_lsp::lint::Severity::clone(&self) -> mycelium_lsp::lint::Severity
+impl core::cmp::Eq for mycelium_lsp::lint::Severity
+impl core::cmp::PartialEq for mycelium_lsp::lint::Severity
+pub fn mycelium_lsp::lint::Severity::eq(&self, &mycelium_lsp::lint::Severity) -> bool
+impl core::fmt::Debug for mycelium_lsp::lint::Severity
+pub fn mycelium_lsp::lint::Severity::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_lsp::lint::Severity
+impl core::marker::StructuralPartialEq for mycelium_lsp::lint::Severity
+impl core::marker::Freeze for mycelium_lsp::lint::Severity
+impl core::marker::Send for mycelium_lsp::lint::Severity
+impl core::marker::Sync for mycelium_lsp::lint::Severity
+impl core::marker::Unpin for mycelium_lsp::lint::Severity
+impl core::marker::UnsafeUnpin for mycelium_lsp::lint::Severity
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::lint::Severity
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::lint::Severity
+pub struct mycelium_lsp::lint::Diagnostic
+pub mycelium_lsp::lint::Diagnostic::at: alloc::string::String
+pub mycelium_lsp::lint::Diagnostic::code: &'static str
+pub mycelium_lsp::lint::Diagnostic::message: alloc::string::String
+pub mycelium_lsp::lint::Diagnostic::severity: mycelium_lsp::lint::Severity
+impl mycelium_lsp::lint::Diagnostic
+pub fn mycelium_lsp::lint::Diagnostic::path(&self) -> alloc::vec::Vec<&str>
+impl core::clone::Clone for mycelium_lsp::lint::Diagnostic
+pub fn mycelium_lsp::lint::Diagnostic::clone(&self) -> mycelium_lsp::lint::Diagnostic
+impl core::cmp::Eq for mycelium_lsp::lint::Diagnostic
+impl core::cmp::PartialEq for mycelium_lsp::lint::Diagnostic
+pub fn mycelium_lsp::lint::Diagnostic::eq(&self, &mycelium_lsp::lint::Diagnostic) -> bool
+impl core::fmt::Debug for mycelium_lsp::lint::Diagnostic
+pub fn mycelium_lsp::lint::Diagnostic::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::lint::Diagnostic
+impl core::marker::Freeze for mycelium_lsp::lint::Diagnostic
+impl core::marker::Send for mycelium_lsp::lint::Diagnostic
+impl core::marker::Sync for mycelium_lsp::lint::Diagnostic
+impl core::marker::Unpin for mycelium_lsp::lint::Diagnostic
+impl core::marker::UnsafeUnpin for mycelium_lsp::lint::Diagnostic
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::lint::Diagnostic
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::lint::Diagnostic
+pub fn mycelium_lsp::lint::has_errors(&[mycelium_lsp::lint::Diagnostic]) -> bool
+pub fn mycelium_lsp::lint::lint(&mycelium_core::node::Node) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
+pub fn mycelium_lsp::lint::lint_nodule_header(&str) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
+pub fn mycelium_lsp::lint::lint_structured_header(&str) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
+pub mod mycelium_lsp::project
+pub fn mycelium_lsp::project::llm_canonical(&mycelium_core::node::Node) -> alloc::string::String
+pub mod mycelium_lsp::recover
+pub use mycelium_lsp::recover::EffectBudget
+pub use mycelium_lsp::recover::EffectBudgetExhausted
+pub use mycelium_lsp::recover::EffectBudgets
+pub use mycelium_lsp::recover::EffectKind
+pub mod mycelium_lsp::recover::effect
+pub use mycelium_lsp::recover::effect::Budgets
+pub use mycelium_lsp::recover::effect::EffectBudget
+pub use mycelium_lsp::recover::effect::EffectBudgetExhausted
+pub use mycelium_lsp::recover::effect::EffectKind
+pub struct mycelium_lsp::recover::effect::UndeclaredEffect
+pub mycelium_lsp::recover::effect::UndeclaredEffect::effect: mycelium_interp::budget::EffectKind
+impl core::clone::Clone for mycelium_lsp::recover::effect::UndeclaredEffect
+pub fn mycelium_lsp::recover::effect::UndeclaredEffect::clone(&self) -> mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::cmp::Eq for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::cmp::PartialEq for mycelium_lsp::recover::effect::UndeclaredEffect
+pub fn mycelium_lsp::recover::effect::UndeclaredEffect::eq(&self, &mycelium_lsp::recover::effect::UndeclaredEffect) -> bool
+impl core::error::Error for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::fmt::Debug for mycelium_lsp::recover::effect::UndeclaredEffect
+pub fn mycelium_lsp::recover::effect::UndeclaredEffect::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::recover::effect::UndeclaredEffect
+pub fn mycelium_lsp::recover::effect::UndeclaredEffect::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::Freeze for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::Send for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::Sync for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::Unpin for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::UnsafeUnpin for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::effect::UndeclaredEffect
+pub fn mycelium_lsp::recover::effect::check_effects(&mycelium_lsp::recover::effect::EffectSet, &mycelium_lsp::recover::effect::EffectSet) -> core::result::Result<(), mycelium_lsp::recover::effect::UndeclaredEffect>
+pub type mycelium_lsp::recover::effect::EffectSet = alloc::collections::btree::set::BTreeSet<mycelium_interp::budget::EffectKind>
+pub mod mycelium_lsp::recover::policy
+pub enum mycelium_lsp::recover::policy::RecoveryAction
+pub mycelium_lsp::recover::policy::RecoveryAction::CleanupThenPropagate
+pub mycelium_lsp::recover::policy::RecoveryAction::CleanupThenPropagate::effect: mycelium_interp::budget::EffectKind
+pub mycelium_lsp::recover::policy::RecoveryAction::Escalate
+pub mycelium_lsp::recover::policy::RecoveryAction::Escalate::to: mycelium_lsp::diagnostics::registry::ClassName
+pub mycelium_lsp::recover::policy::RecoveryAction::Fallback
+pub mycelium_lsp::recover::policy::RecoveryAction::Fallback::value: alloc::boxed::Box<mycelium_core::value::Value>
+pub mycelium_lsp::recover::policy::RecoveryAction::Retry
+pub mycelium_lsp::recover::policy::RecoveryAction::Retry::max_attempts: u64
+impl core::clone::Clone for mycelium_lsp::recover::policy::RecoveryAction
+pub fn mycelium_lsp::recover::policy::RecoveryAction::clone(&self) -> mycelium_lsp::recover::policy::RecoveryAction
+impl core::cmp::PartialEq for mycelium_lsp::recover::policy::RecoveryAction
+pub fn mycelium_lsp::recover::policy::RecoveryAction::eq(&self, &mycelium_lsp::recover::policy::RecoveryAction) -> bool
+impl core::fmt::Debug for mycelium_lsp::recover::policy::RecoveryAction
+pub fn mycelium_lsp::recover::policy::RecoveryAction::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::recover::policy::RecoveryAction
+impl core::marker::Freeze for mycelium_lsp::recover::policy::RecoveryAction
+impl core::marker::Send for mycelium_lsp::recover::policy::RecoveryAction
+impl core::marker::Sync for mycelium_lsp::recover::policy::RecoveryAction
+impl core::marker::Unpin for mycelium_lsp::recover::policy::RecoveryAction
+impl core::marker::UnsafeUnpin for mycelium_lsp::recover::policy::RecoveryAction
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::policy::RecoveryAction
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::policy::RecoveryAction
+pub struct mycelium_lsp::recover::policy::RecoveryPolicy
+impl mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::action_for(&self, &mycelium_lsp::diagnostics::registry::ClassName) -> core::option::Option<&mycelium_lsp::recover::policy::RecoveryAction>
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::content_id(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::is_empty(&self) -> bool
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::new() -> Self
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::on(&mut self, &mycelium_lsp::diagnostics::registry::ClassRegistry, &str, mycelium_lsp::recover::policy::RecoveryAction) -> core::result::Result<core::option::Option<mycelium_lsp::recover::policy::RecoveryAction>, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::rules(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&mycelium_lsp::diagnostics::registry::ClassName, &mycelium_lsp::recover::policy::RecoveryAction)>
+impl core::clone::Clone for mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::clone(&self) -> mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::cmp::PartialEq for mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::eq(&self, &mycelium_lsp::recover::policy::RecoveryPolicy) -> bool
+impl core::default::Default for mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::default() -> mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::fmt::Debug for mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::Freeze for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::Send for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::Sync for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::Unpin for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::UnsafeUnpin for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::policy::RecoveryPolicy
+pub enum mycelium_lsp::recover::Action
+pub mycelium_lsp::recover::Action::CleanupThenPropagate
+pub mycelium_lsp::recover::Action::CleanupThenPropagate::effect: mycelium_interp::budget::EffectKind
+pub mycelium_lsp::recover::Action::Escalate
+pub mycelium_lsp::recover::Action::Escalate::to: mycelium_lsp::diagnostics::registry::ClassName
+pub mycelium_lsp::recover::Action::Fallback
+pub mycelium_lsp::recover::Action::Fallback::value: alloc::boxed::Box<mycelium_core::value::Value>
+pub mycelium_lsp::recover::Action::Retry
+pub mycelium_lsp::recover::Action::Retry::max_attempts: u64
+impl core::clone::Clone for mycelium_lsp::recover::policy::RecoveryAction
+pub fn mycelium_lsp::recover::policy::RecoveryAction::clone(&self) -> mycelium_lsp::recover::policy::RecoveryAction
+impl core::cmp::PartialEq for mycelium_lsp::recover::policy::RecoveryAction
+pub fn mycelium_lsp::recover::policy::RecoveryAction::eq(&self, &mycelium_lsp::recover::policy::RecoveryAction) -> bool
+impl core::fmt::Debug for mycelium_lsp::recover::policy::RecoveryAction
+pub fn mycelium_lsp::recover::policy::RecoveryAction::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::recover::policy::RecoveryAction
+impl core::marker::Freeze for mycelium_lsp::recover::policy::RecoveryAction
+impl core::marker::Send for mycelium_lsp::recover::policy::RecoveryAction
+impl core::marker::Sync for mycelium_lsp::recover::policy::RecoveryAction
+impl core::marker::Unpin for mycelium_lsp::recover::policy::RecoveryAction
+impl core::marker::UnsafeUnpin for mycelium_lsp::recover::policy::RecoveryAction
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::policy::RecoveryAction
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::policy::RecoveryAction
+pub enum mycelium_lsp::recover::Outcome
+pub mycelium_lsp::recover::Outcome::Err(mycelium_lsp::recover::StructuredError)
+pub mycelium_lsp::recover::Outcome::Ok(mycelium_core::value::Value)
+impl core::clone::Clone for mycelium_lsp::recover::Outcome
+pub fn mycelium_lsp::recover::Outcome::clone(&self) -> mycelium_lsp::recover::Outcome
+impl core::cmp::PartialEq for mycelium_lsp::recover::Outcome
+pub fn mycelium_lsp::recover::Outcome::eq(&self, &mycelium_lsp::recover::Outcome) -> bool
+impl core::fmt::Debug for mycelium_lsp::recover::Outcome
+pub fn mycelium_lsp::recover::Outcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::recover::Outcome
+impl core::marker::Freeze for mycelium_lsp::recover::Outcome
+impl core::marker::Send for mycelium_lsp::recover::Outcome
+impl core::marker::Sync for mycelium_lsp::recover::Outcome
+impl core::marker::Unpin for mycelium_lsp::recover::Outcome
+impl core::marker::UnsafeUnpin for mycelium_lsp::recover::Outcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::Outcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::Outcome
+pub enum mycelium_lsp::recover::Resolution
+pub mycelium_lsp::recover::Resolution::Propagated
+pub mycelium_lsp::recover::Resolution::Propagated::error: mycelium_lsp::recover::StructuredError
+pub mycelium_lsp::recover::Resolution::Propagated::policy: core::option::Option<mycelium_core::id::ContentHash>
+pub mycelium_lsp::recover::Resolution::Recovered
+pub mycelium_lsp::recover::Resolution::Recovered::guarantee: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_lsp::recover::Resolution::Recovered::policy: core::option::Option<mycelium_core::id::ContentHash>
+pub mycelium_lsp::recover::Resolution::Recovered::value: mycelium_core::value::Value
+impl core::clone::Clone for mycelium_lsp::recover::Resolution
+pub fn mycelium_lsp::recover::Resolution::clone(&self) -> mycelium_lsp::recover::Resolution
+impl core::cmp::PartialEq for mycelium_lsp::recover::Resolution
+pub fn mycelium_lsp::recover::Resolution::eq(&self, &mycelium_lsp::recover::Resolution) -> bool
+impl core::fmt::Debug for mycelium_lsp::recover::Resolution
+pub fn mycelium_lsp::recover::Resolution::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::recover::Resolution
+impl core::marker::Freeze for mycelium_lsp::recover::Resolution
+impl core::marker::Send for mycelium_lsp::recover::Resolution
+impl core::marker::Sync for mycelium_lsp::recover::Resolution
+impl core::marker::Unpin for mycelium_lsp::recover::Resolution
+impl core::marker::UnsafeUnpin for mycelium_lsp::recover::Resolution
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::Resolution
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::Resolution
+pub struct mycelium_lsp::recover::RecoveryPolicy
+impl mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::action_for(&self, &mycelium_lsp::diagnostics::registry::ClassName) -> core::option::Option<&mycelium_lsp::recover::policy::RecoveryAction>
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::content_id(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::is_empty(&self) -> bool
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::new() -> Self
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::on(&mut self, &mycelium_lsp::diagnostics::registry::ClassRegistry, &str, mycelium_lsp::recover::policy::RecoveryAction) -> core::result::Result<core::option::Option<mycelium_lsp::recover::policy::RecoveryAction>, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::rules(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&mycelium_lsp::diagnostics::registry::ClassName, &mycelium_lsp::recover::policy::RecoveryAction)>
+impl core::clone::Clone for mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::clone(&self) -> mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::cmp::PartialEq for mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::eq(&self, &mycelium_lsp::recover::policy::RecoveryPolicy) -> bool
+impl core::default::Default for mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::default() -> mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::fmt::Debug for mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::Freeze for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::Send for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::Sync for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::Unpin for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::UnsafeUnpin for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::policy::RecoveryPolicy
+pub struct mycelium_lsp::recover::StructuredError
+pub mycelium_lsp::recover::StructuredError::class: mycelium_lsp::diagnostics::registry::ClassName
+pub mycelium_lsp::recover::StructuredError::message: alloc::string::String
+pub mycelium_lsp::recover::StructuredError::site: alloc::string::String
+impl mycelium_lsp::recover::StructuredError
+pub fn mycelium_lsp::recover::StructuredError::new(mycelium_lsp::diagnostics::registry::ClassName, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_lsp::recover::StructuredError
+pub fn mycelium_lsp::recover::StructuredError::clone(&self) -> mycelium_lsp::recover::StructuredError
+impl core::cmp::Eq for mycelium_lsp::recover::StructuredError
+impl core::cmp::PartialEq for mycelium_lsp::recover::StructuredError
+pub fn mycelium_lsp::recover::StructuredError::eq(&self, &mycelium_lsp::recover::StructuredError) -> bool
+impl core::fmt::Debug for mycelium_lsp::recover::StructuredError
+pub fn mycelium_lsp::recover::StructuredError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::recover::StructuredError
+impl core::marker::Freeze for mycelium_lsp::recover::StructuredError
+impl core::marker::Send for mycelium_lsp::recover::StructuredError
+impl core::marker::Sync for mycelium_lsp::recover::StructuredError
+impl core::marker::Unpin for mycelium_lsp::recover::StructuredError
+impl core::marker::UnsafeUnpin for mycelium_lsp::recover::StructuredError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::StructuredError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::StructuredError
+pub struct mycelium_lsp::recover::UndeclaredEffect
+pub mycelium_lsp::recover::UndeclaredEffect::effect: mycelium_interp::budget::EffectKind
+impl core::clone::Clone for mycelium_lsp::recover::effect::UndeclaredEffect
+pub fn mycelium_lsp::recover::effect::UndeclaredEffect::clone(&self) -> mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::cmp::Eq for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::cmp::PartialEq for mycelium_lsp::recover::effect::UndeclaredEffect
+pub fn mycelium_lsp::recover::effect::UndeclaredEffect::eq(&self, &mycelium_lsp::recover::effect::UndeclaredEffect) -> bool
+impl core::error::Error for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::fmt::Debug for mycelium_lsp::recover::effect::UndeclaredEffect
+pub fn mycelium_lsp::recover::effect::UndeclaredEffect::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::recover::effect::UndeclaredEffect
+pub fn mycelium_lsp::recover::effect::UndeclaredEffect::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::Freeze for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::Send for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::Sync for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::Unpin for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::UnsafeUnpin for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::effect::UndeclaredEffect
+pub fn mycelium_lsp::recover::check_effects(&mycelium_lsp::recover::effect::EffectSet, &mycelium_lsp::recover::effect::EffectSet) -> core::result::Result<(), mycelium_lsp::recover::effect::UndeclaredEffect>
+pub fn mycelium_lsp::recover::handle(mycelium_lsp::recover::Outcome, &mycelium_lsp::recover::policy::RecoveryPolicy, &mut mycelium_interp::budget::Budgets, impl core::ops::function::FnMut() -> mycelium_lsp::recover::Outcome) -> mycelium_lsp::recover::Resolution
+pub type mycelium_lsp::recover::EffectSet = alloc::collections::btree::set::BTreeSet<mycelium_interp::budget::EffectKind>
+pub mod mycelium_lsp::sync
+pub struct mycelium_lsp::sync::DocumentStore
+impl mycelium_lsp::sync::DocumentStore
+pub fn mycelium_lsp::sync::DocumentStore::is_empty(&self) -> bool
+pub fn mycelium_lsp::sync::DocumentStore::len(&self) -> usize
+pub fn mycelium_lsp::sync::DocumentStore::new() -> Self
+pub fn mycelium_lsp::sync::DocumentStore::remove(&mut self, &str)
+pub fn mycelium_lsp::sync::DocumentStore::set(&mut self, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>)
+pub fn mycelium_lsp::sync::DocumentStore::text(&self, &str) -> core::option::Option<&str>
+impl core::clone::Clone for mycelium_lsp::sync::DocumentStore
+pub fn mycelium_lsp::sync::DocumentStore::clone(&self) -> mycelium_lsp::sync::DocumentStore
+impl core::default::Default for mycelium_lsp::sync::DocumentStore
+pub fn mycelium_lsp::sync::DocumentStore::default() -> mycelium_lsp::sync::DocumentStore
+impl core::fmt::Debug for mycelium_lsp::sync::DocumentStore
+pub fn mycelium_lsp::sync::DocumentStore::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_lsp::sync::DocumentStore
+impl core::marker::Send for mycelium_lsp::sync::DocumentStore
+impl core::marker::Sync for mycelium_lsp::sync::DocumentStore
+impl core::marker::Unpin for mycelium_lsp::sync::DocumentStore
+impl core::marker::UnsafeUnpin for mycelium_lsp::sync::DocumentStore
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::sync::DocumentStore
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::sync::DocumentStore
+pub fn mycelium_lsp::sync::publish_for_source(&str, &str) -> serde_json::value::Value
+pub fn mycelium_lsp::sync::resilient_publish_for_source(&str, &str) -> serde_json::value::Value
+pub fn mycelium_lsp::sync::resilient_source_diagnostics(&str) -> alloc::vec::Vec<serde_json::value::Value>
+pub fn mycelium_lsp::sync::source_diagnostics(&str) -> alloc::vec::Vec<serde_json::value::Value>
+pub mod mycelium_lsp::wire
+pub const mycelium_lsp::wire::SERVER_NAME: &str
+pub fn mycelium_lsp::wire::initialize_result() -> serde_json::value::Value
+pub fn mycelium_lsp::wire::lsp_severity(mycelium_lsp::lint::Severity) -> u8
+pub fn mycelium_lsp::wire::publish_diagnostics_notification(&str, &mycelium_lsp::feedback::Feedback) -> serde_json::value::Value
+pub fn mycelium_lsp::wire::publish_diagnostics_params(&str, &mycelium_lsp::feedback::Feedback) -> serde_json::value::Value
+pub fn mycelium_lsp::wire::read_message<R: std::io::BufRead>(&mut R) -> std::io::error::Result<core::option::Option<serde_json::value::Value>>
+pub fn mycelium_lsp::wire::serve<R: std::io::BufRead, W: std::io::Write>(&mut R, &mut W) -> std::io::error::Result<()>
+pub fn mycelium_lsp::wire::serve_stdio() -> std::io::error::Result<()>
+pub fn mycelium_lsp::wire::to_lsp_diagnostic(&mycelium_lsp::lint::Diagnostic) -> serde_json::value::Value
+pub fn mycelium_lsp::wire::write_message<W: std::io::Write>(&mut W, &serde_json::value::Value) -> std::io::error::Result<()>
+pub enum mycelium_lsp::Level
+pub mycelium_lsp::Level::Detailed
+pub mycelium_lsp::Level::Medium
+pub mycelium_lsp::Level::Minimal
+impl core::clone::Clone for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::clone(&self) -> mycelium_lsp::diagnostics::record::Level
+impl core::cmp::Eq for mycelium_lsp::diagnostics::record::Level
+impl core::cmp::Ord for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::cmp(&self, &mycelium_lsp::diagnostics::record::Level) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::eq(&self, &mycelium_lsp::diagnostics::record::Level) -> bool
+impl core::cmp::PartialOrd for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::partial_cmp(&self, &mycelium_lsp::diagnostics::record::Level) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_lsp::diagnostics::record::Level
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::record::Level
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_lsp::diagnostics::record::Level
+pub fn mycelium_lsp::diagnostics::record::Level::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_lsp::diagnostics::record::Level
+impl core::marker::Send for mycelium_lsp::diagnostics::record::Level
+impl core::marker::Sync for mycelium_lsp::diagnostics::record::Level
+impl core::marker::Unpin for mycelium_lsp::diagnostics::record::Level
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::record::Level
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::record::Level
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::record::Level
+pub enum mycelium_lsp::Outcome
+pub mycelium_lsp::Outcome::Err(mycelium_lsp::recover::StructuredError)
+pub mycelium_lsp::Outcome::Ok(mycelium_core::value::Value)
+impl core::clone::Clone for mycelium_lsp::recover::Outcome
+pub fn mycelium_lsp::recover::Outcome::clone(&self) -> mycelium_lsp::recover::Outcome
+impl core::cmp::PartialEq for mycelium_lsp::recover::Outcome
+pub fn mycelium_lsp::recover::Outcome::eq(&self, &mycelium_lsp::recover::Outcome) -> bool
+impl core::fmt::Debug for mycelium_lsp::recover::Outcome
+pub fn mycelium_lsp::recover::Outcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::recover::Outcome
+impl core::marker::Freeze for mycelium_lsp::recover::Outcome
+impl core::marker::Send for mycelium_lsp::recover::Outcome
+impl core::marker::Sync for mycelium_lsp::recover::Outcome
+impl core::marker::Unpin for mycelium_lsp::recover::Outcome
+impl core::marker::UnsafeUnpin for mycelium_lsp::recover::Outcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::Outcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::Outcome
+pub enum mycelium_lsp::RecoveryProfile
+pub mycelium_lsp::RecoveryProfile::Resilient
+pub mycelium_lsp::RecoveryProfile::Strict
+impl mycelium_lsp::baseline::RecoveryProfile
+pub fn mycelium_lsp::baseline::RecoveryProfile::all() -> [mycelium_lsp::baseline::RecoveryProfile; 2]
+pub fn mycelium_lsp::baseline::RecoveryProfile::as_str(self) -> &'static str
+pub fn mycelium_lsp::baseline::RecoveryProfile::resolve(&str) -> core::option::Option<mycelium_lsp::baseline::RecoveryProfile>
+impl core::clone::Clone for mycelium_lsp::baseline::RecoveryProfile
+pub fn mycelium_lsp::baseline::RecoveryProfile::clone(&self) -> mycelium_lsp::baseline::RecoveryProfile
+impl core::cmp::Eq for mycelium_lsp::baseline::RecoveryProfile
+impl core::cmp::PartialEq for mycelium_lsp::baseline::RecoveryProfile
+pub fn mycelium_lsp::baseline::RecoveryProfile::eq(&self, &mycelium_lsp::baseline::RecoveryProfile) -> bool
+impl core::fmt::Debug for mycelium_lsp::baseline::RecoveryProfile
+pub fn mycelium_lsp::baseline::RecoveryProfile::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_lsp::baseline::RecoveryProfile
+impl core::marker::StructuralPartialEq for mycelium_lsp::baseline::RecoveryProfile
+impl core::marker::Freeze for mycelium_lsp::baseline::RecoveryProfile
+impl core::marker::Send for mycelium_lsp::baseline::RecoveryProfile
+impl core::marker::Sync for mycelium_lsp::baseline::RecoveryProfile
+impl core::marker::Unpin for mycelium_lsp::baseline::RecoveryProfile
+impl core::marker::UnsafeUnpin for mycelium_lsp::baseline::RecoveryProfile
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::baseline::RecoveryProfile
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::baseline::RecoveryProfile
+pub enum mycelium_lsp::Resolution
+pub mycelium_lsp::Resolution::Propagated
+pub mycelium_lsp::Resolution::Propagated::error: mycelium_lsp::recover::StructuredError
+pub mycelium_lsp::Resolution::Propagated::policy: core::option::Option<mycelium_core::id::ContentHash>
+pub mycelium_lsp::Resolution::Recovered
+pub mycelium_lsp::Resolution::Recovered::guarantee: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_lsp::Resolution::Recovered::policy: core::option::Option<mycelium_core::id::ContentHash>
+pub mycelium_lsp::Resolution::Recovered::value: mycelium_core::value::Value
+impl core::clone::Clone for mycelium_lsp::recover::Resolution
+pub fn mycelium_lsp::recover::Resolution::clone(&self) -> mycelium_lsp::recover::Resolution
+impl core::cmp::PartialEq for mycelium_lsp::recover::Resolution
+pub fn mycelium_lsp::recover::Resolution::eq(&self, &mycelium_lsp::recover::Resolution) -> bool
+impl core::fmt::Debug for mycelium_lsp::recover::Resolution
+pub fn mycelium_lsp::recover::Resolution::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::recover::Resolution
+impl core::marker::Freeze for mycelium_lsp::recover::Resolution
+impl core::marker::Send for mycelium_lsp::recover::Resolution
+impl core::marker::Sync for mycelium_lsp::recover::Resolution
+impl core::marker::Unpin for mycelium_lsp::recover::Resolution
+impl core::marker::UnsafeUnpin for mycelium_lsp::recover::Resolution
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::Resolution
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::Resolution
+pub enum mycelium_lsp::Severity
+pub mycelium_lsp::Severity::Error
+pub mycelium_lsp::Severity::Warning
+impl core::clone::Clone for mycelium_lsp::lint::Severity
+pub fn mycelium_lsp::lint::Severity::clone(&self) -> mycelium_lsp::lint::Severity
+impl core::cmp::Eq for mycelium_lsp::lint::Severity
+impl core::cmp::PartialEq for mycelium_lsp::lint::Severity
+pub fn mycelium_lsp::lint::Severity::eq(&self, &mycelium_lsp::lint::Severity) -> bool
+impl core::fmt::Debug for mycelium_lsp::lint::Severity
+pub fn mycelium_lsp::lint::Severity::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_lsp::lint::Severity
+impl core::marker::StructuralPartialEq for mycelium_lsp::lint::Severity
+impl core::marker::Freeze for mycelium_lsp::lint::Severity
+impl core::marker::Send for mycelium_lsp::lint::Severity
+impl core::marker::Sync for mycelium_lsp::lint::Severity
+impl core::marker::Unpin for mycelium_lsp::lint::Severity
+impl core::marker::UnsafeUnpin for mycelium_lsp::lint::Severity
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::lint::Severity
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::lint::Severity
+pub struct mycelium_lsp::AuditView
+pub mycelium_lsp::AuditView::crossings: alloc::vec::Vec<mycelium_lsp::diagnostics::audit::Crossing>
+impl mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::of(&mycelium_core::node::Node) -> Self
+pub fn mycelium_lsp::diagnostics::audit::AuditView::to_human(&self) -> alloc::string::String
+pub fn mycelium_lsp::diagnostics::audit::AuditView::to_json(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::clone(&self) -> mycelium_lsp::diagnostics::audit::AuditView
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::eq(&self, &mycelium_lsp::diagnostics::audit::AuditView) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::audit::AuditView
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::audit::AuditView
+pub fn mycelium_lsp::diagnostics::audit::AuditView::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_lsp::diagnostics::audit::AuditView
+impl core::marker::Send for mycelium_lsp::diagnostics::audit::AuditView
+impl core::marker::Sync for mycelium_lsp::diagnostics::audit::AuditView
+impl core::marker::Unpin for mycelium_lsp::diagnostics::audit::AuditView
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::audit::AuditView
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::audit::AuditView
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::audit::AuditView
+pub struct mycelium_lsp::BaselineRule
+pub mycelium_lsp::BaselineRule::level: mycelium_lsp::diagnostics::record::Level
+pub mycelium_lsp::BaselineRule::rationale: &'static str
+pub mycelium_lsp::BaselineRule::route: mycelium_lsp::diagnostics::sink::Route
+impl core::clone::Clone for mycelium_lsp::baseline::BaselineRule
+pub fn mycelium_lsp::baseline::BaselineRule::clone(&self) -> mycelium_lsp::baseline::BaselineRule
+impl core::cmp::Eq for mycelium_lsp::baseline::BaselineRule
+impl core::cmp::PartialEq for mycelium_lsp::baseline::BaselineRule
+pub fn mycelium_lsp::baseline::BaselineRule::eq(&self, &mycelium_lsp::baseline::BaselineRule) -> bool
+impl core::fmt::Debug for mycelium_lsp::baseline::BaselineRule
+pub fn mycelium_lsp::baseline::BaselineRule::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_lsp::baseline::BaselineRule
+impl core::marker::StructuralPartialEq for mycelium_lsp::baseline::BaselineRule
+impl core::marker::Freeze for mycelium_lsp::baseline::BaselineRule
+impl core::marker::Send for mycelium_lsp::baseline::BaselineRule
+impl core::marker::Sync for mycelium_lsp::baseline::BaselineRule
+impl core::marker::Unpin for mycelium_lsp::baseline::BaselineRule
+impl core::marker::UnsafeUnpin for mycelium_lsp::baseline::BaselineRule
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::baseline::BaselineRule
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::baseline::BaselineRule
+pub struct mycelium_lsp::ClassRegistry
+impl mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::classes(&self) -> impl core::iter::traits::iterator::Iterator<Item = &str>
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::contains(&self, &str) -> bool
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::new() -> Self
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::register(&mut self, impl core::convert::Into<alloc::string::String>) -> bool
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::resolve(&self, &str) -> core::result::Result<mycelium_lsp::diagnostics::registry::ClassName, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::with_builtins() -> Self
+impl core::clone::Clone for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::clone(&self) -> mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::cmp::Eq for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::eq(&self, &mycelium_lsp::diagnostics::registry::ClassRegistry) -> bool
+impl core::default::Default for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::default() -> Self
+impl core::fmt::Debug for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub fn mycelium_lsp::diagnostics::registry::ClassRegistry::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::Freeze for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::Send for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::Sync for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::Unpin for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::registry::ClassRegistry
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub struct mycelium_lsp::Crossing
+pub mycelium_lsp::Crossing::from: core::option::Option<mycelium_core::repr::Repr>
+pub mycelium_lsp::Crossing::honesty: core::option::Option<mycelium_core::guarantee::GuaranteeStrength>
+pub mycelium_lsp::Crossing::policy: alloc::string::String
+pub mycelium_lsp::Crossing::site: alloc::string::String
+pub mycelium_lsp::Crossing::to: mycelium_core::repr::Repr
+impl core::clone::Clone for mycelium_lsp::diagnostics::audit::Crossing
+pub fn mycelium_lsp::diagnostics::audit::Crossing::clone(&self) -> mycelium_lsp::diagnostics::audit::Crossing
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::audit::Crossing
+pub fn mycelium_lsp::diagnostics::audit::Crossing::eq(&self, &mycelium_lsp::diagnostics::audit::Crossing) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::audit::Crossing
+pub fn mycelium_lsp::diagnostics::audit::Crossing::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::audit::Crossing
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::audit::Crossing
+pub fn mycelium_lsp::diagnostics::audit::Crossing::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_lsp::diagnostics::audit::Crossing
+impl core::marker::Send for mycelium_lsp::diagnostics::audit::Crossing
+impl core::marker::Sync for mycelium_lsp::diagnostics::audit::Crossing
+impl core::marker::Unpin for mycelium_lsp::diagnostics::audit::Crossing
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::audit::Crossing
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::audit::Crossing
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::audit::Crossing
+pub struct mycelium_lsp::Diagnostic
+pub mycelium_lsp::Diagnostic::at: alloc::string::String
+pub mycelium_lsp::Diagnostic::code: &'static str
+pub mycelium_lsp::Diagnostic::message: alloc::string::String
+pub mycelium_lsp::Diagnostic::severity: mycelium_lsp::lint::Severity
+impl mycelium_lsp::lint::Diagnostic
+pub fn mycelium_lsp::lint::Diagnostic::path(&self) -> alloc::vec::Vec<&str>
+impl core::clone::Clone for mycelium_lsp::lint::Diagnostic
+pub fn mycelium_lsp::lint::Diagnostic::clone(&self) -> mycelium_lsp::lint::Diagnostic
+impl core::cmp::Eq for mycelium_lsp::lint::Diagnostic
+impl core::cmp::PartialEq for mycelium_lsp::lint::Diagnostic
+pub fn mycelium_lsp::lint::Diagnostic::eq(&self, &mycelium_lsp::lint::Diagnostic) -> bool
+impl core::fmt::Debug for mycelium_lsp::lint::Diagnostic
+pub fn mycelium_lsp::lint::Diagnostic::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::lint::Diagnostic
+impl core::marker::Freeze for mycelium_lsp::lint::Diagnostic
+impl core::marker::Send for mycelium_lsp::lint::Diagnostic
+impl core::marker::Sync for mycelium_lsp::lint::Diagnostic
+impl core::marker::Unpin for mycelium_lsp::lint::Diagnostic
+impl core::marker::UnsafeUnpin for mycelium_lsp::lint::Diagnostic
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::lint::Diagnostic
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::lint::Diagnostic
+pub struct mycelium_lsp::DiagnosticPolicy
+impl mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::content_id(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::is_empty(&self) -> bool
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::new() -> Self
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::on(&mut self, &mycelium_lsp::diagnostics::registry::ClassRegistry, &str, mycelium_lsp::diagnostics::policy::Rule) -> core::result::Result<core::option::Option<mycelium_lsp::diagnostics::policy::Rule>, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::rule_for(&self, &mycelium_lsp::diagnostics::registry::ClassName) -> core::option::Option<&mycelium_lsp::diagnostics::policy::Rule>
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::rules(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&mycelium_lsp::diagnostics::registry::ClassName, &mycelium_lsp::diagnostics::policy::Rule)>
+impl mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::from_file(&mycelium_lsp::diagnostics::registry::ClassRegistry, &mycelium_lsp::diagnostics::policy::PolicyFile) -> core::result::Result<Self, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::to_file(&self) -> mycelium_lsp::diagnostics::policy::PolicyFile
+impl core::clone::Clone for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::clone(&self) -> mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::cmp::Eq for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::eq(&self, &mycelium_lsp::diagnostics::policy::DiagnosticPolicy) -> bool
+impl core::default::Default for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::default() -> mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::fmt::Debug for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::diagnostics::policy::DiagnosticPolicy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::Freeze for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::Send for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::Sync for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::Unpin for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub struct mycelium_lsp::DiagnosticRecord
+pub mycelium_lsp::DiagnosticRecord::class: alloc::string::String
+pub mycelium_lsp::DiagnosticRecord::context: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub mycelium_lsp::DiagnosticRecord::level: mycelium_lsp::diagnostics::record::Level
+pub mycelium_lsp::DiagnosticRecord::message: alloc::string::String
+pub mycelium_lsp::DiagnosticRecord::policy: core::option::Option<alloc::string::String>
+pub mycelium_lsp::DiagnosticRecord::reason: core::option::Option<alloc::string::String>
+pub mycelium_lsp::DiagnosticRecord::route: core::option::Option<alloc::string::String>
+pub mycelium_lsp::DiagnosticRecord::site: alloc::string::String
+pub mycelium_lsp::DiagnosticRecord::tags: alloc::collections::btree::set::BTreeSet<alloc::string::String>
+impl mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::content_id(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::from_json(&str) -> core::result::Result<Self, serde_json::error::Error>
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::sink(&self) -> core::option::Option<core::result::Result<mycelium_lsp::diagnostics::sink::SinkBinding, mycelium_lsp::diagnostics::sink::UnknownRoute>>
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::to_human(&self) -> alloc::string::String
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::to_json(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::clone(&self) -> mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::cmp::Eq for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::eq(&self, &mycelium_lsp::diagnostics::record::DiagnosticRecord) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub fn mycelium_lsp::diagnostics::record::DiagnosticRecord::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::marker::Send for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::marker::Sync for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::marker::Unpin for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::record::DiagnosticRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub struct mycelium_lsp::DocumentStore
+impl mycelium_lsp::sync::DocumentStore
+pub fn mycelium_lsp::sync::DocumentStore::is_empty(&self) -> bool
+pub fn mycelium_lsp::sync::DocumentStore::len(&self) -> usize
+pub fn mycelium_lsp::sync::DocumentStore::new() -> Self
+pub fn mycelium_lsp::sync::DocumentStore::remove(&mut self, &str)
+pub fn mycelium_lsp::sync::DocumentStore::set(&mut self, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>)
+pub fn mycelium_lsp::sync::DocumentStore::text(&self, &str) -> core::option::Option<&str>
+impl core::clone::Clone for mycelium_lsp::sync::DocumentStore
+pub fn mycelium_lsp::sync::DocumentStore::clone(&self) -> mycelium_lsp::sync::DocumentStore
+impl core::default::Default for mycelium_lsp::sync::DocumentStore
+pub fn mycelium_lsp::sync::DocumentStore::default() -> mycelium_lsp::sync::DocumentStore
+impl core::fmt::Debug for mycelium_lsp::sync::DocumentStore
+pub fn mycelium_lsp::sync::DocumentStore::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_lsp::sync::DocumentStore
+impl core::marker::Send for mycelium_lsp::sync::DocumentStore
+impl core::marker::Sync for mycelium_lsp::sync::DocumentStore
+impl core::marker::Unpin for mycelium_lsp::sync::DocumentStore
+impl core::marker::UnsafeUnpin for mycelium_lsp::sync::DocumentStore
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::sync::DocumentStore
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::sync::DocumentStore
+pub struct mycelium_lsp::ExplainSite
+pub mycelium_lsp::ExplainSite::at: alloc::string::String
+pub mycelium_lsp::ExplainSite::explanation: mycelium_select::Explanation
+impl core::clone::Clone for mycelium_lsp::feedback::ExplainSite
+pub fn mycelium_lsp::feedback::ExplainSite::clone(&self) -> mycelium_lsp::feedback::ExplainSite
+impl core::cmp::PartialEq for mycelium_lsp::feedback::ExplainSite
+pub fn mycelium_lsp::feedback::ExplainSite::eq(&self, &mycelium_lsp::feedback::ExplainSite) -> bool
+impl core::fmt::Debug for mycelium_lsp::feedback::ExplainSite
+pub fn mycelium_lsp::feedback::ExplainSite::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::feedback::ExplainSite
+impl core::marker::Freeze for mycelium_lsp::feedback::ExplainSite
+impl core::marker::Send for mycelium_lsp::feedback::ExplainSite
+impl core::marker::Sync for mycelium_lsp::feedback::ExplainSite
+impl core::marker::Unpin for mycelium_lsp::feedback::ExplainSite
+impl core::marker::UnsafeUnpin for mycelium_lsp::feedback::ExplainSite
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::feedback::ExplainSite
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::feedback::ExplainSite
+pub struct mycelium_lsp::Feedback
+pub mycelium_lsp::Feedback::diagnostics: alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
+pub mycelium_lsp::Feedback::explanations: alloc::vec::Vec<mycelium_lsp::feedback::ExplainSite>
+pub mycelium_lsp::Feedback::guarantees: alloc::vec::Vec<mycelium_lsp::feedback::GuaranteeAnnotation>
+pub mycelium_lsp::Feedback::prims: alloc::vec::Vec<mycelium_lsp::feedback::PrimSite>
+pub mycelium_lsp::Feedback::stages: alloc::vec::Vec<mycelium_core::lower::Stage>
+pub mycelium_lsp::Feedback::swaps: alloc::vec::Vec<mycelium_lsp::feedback::SwapSite>
+impl mycelium_lsp::feedback::Feedback
+pub fn mycelium_lsp::feedback::Feedback::summary(&self) -> mycelium_lsp::feedback::FeedbackSummary
+impl core::clone::Clone for mycelium_lsp::feedback::Feedback
+pub fn mycelium_lsp::feedback::Feedback::clone(&self) -> mycelium_lsp::feedback::Feedback
+impl core::cmp::PartialEq for mycelium_lsp::feedback::Feedback
+pub fn mycelium_lsp::feedback::Feedback::eq(&self, &mycelium_lsp::feedback::Feedback) -> bool
+impl core::fmt::Debug for mycelium_lsp::feedback::Feedback
+pub fn mycelium_lsp::feedback::Feedback::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::feedback::Feedback
+impl core::marker::Freeze for mycelium_lsp::feedback::Feedback
+impl core::marker::Send for mycelium_lsp::feedback::Feedback
+impl core::marker::Sync for mycelium_lsp::feedback::Feedback
+impl core::marker::Unpin for mycelium_lsp::feedback::Feedback
+impl core::marker::UnsafeUnpin for mycelium_lsp::feedback::Feedback
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::feedback::Feedback
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::feedback::Feedback
+pub struct mycelium_lsp::FeedbackSummary
+pub mycelium_lsp::FeedbackSummary::errors: usize
+pub mycelium_lsp::FeedbackSummary::explanations: usize
+pub mycelium_lsp::FeedbackSummary::guarantees: usize
+pub mycelium_lsp::FeedbackSummary::prims: usize
+pub mycelium_lsp::FeedbackSummary::stages: usize
+pub mycelium_lsp::FeedbackSummary::swaps: usize
+pub mycelium_lsp::FeedbackSummary::warnings: usize
+pub mycelium_lsp::FeedbackSummary::worst: core::option::Option<mycelium_lsp::lint::Severity>
+impl mycelium_lsp::feedback::FeedbackSummary
+pub fn mycelium_lsp::feedback::FeedbackSummary::is_clean(&self) -> bool
+impl core::clone::Clone for mycelium_lsp::feedback::FeedbackSummary
+pub fn mycelium_lsp::feedback::FeedbackSummary::clone(&self) -> mycelium_lsp::feedback::FeedbackSummary
+impl core::cmp::Eq for mycelium_lsp::feedback::FeedbackSummary
+impl core::cmp::PartialEq for mycelium_lsp::feedback::FeedbackSummary
+pub fn mycelium_lsp::feedback::FeedbackSummary::eq(&self, &mycelium_lsp::feedback::FeedbackSummary) -> bool
+impl core::fmt::Debug for mycelium_lsp::feedback::FeedbackSummary
+pub fn mycelium_lsp::feedback::FeedbackSummary::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::feedback::FeedbackSummary
+impl core::marker::Freeze for mycelium_lsp::feedback::FeedbackSummary
+impl core::marker::Send for mycelium_lsp::feedback::FeedbackSummary
+impl core::marker::Sync for mycelium_lsp::feedback::FeedbackSummary
+impl core::marker::Unpin for mycelium_lsp::feedback::FeedbackSummary
+impl core::marker::UnsafeUnpin for mycelium_lsp::feedback::FeedbackSummary
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::feedback::FeedbackSummary
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::feedback::FeedbackSummary
+pub struct mycelium_lsp::GuaranteeAnnotation
+pub mycelium_lsp::GuaranteeAnnotation::at: alloc::string::String
+pub mycelium_lsp::GuaranteeAnnotation::bound: core::option::Option<mycelium_core::bound::Bound>
+pub mycelium_lsp::GuaranteeAnnotation::guarantee: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_lsp::feedback::GuaranteeAnnotation
+pub fn mycelium_lsp::feedback::GuaranteeAnnotation::clone(&self) -> mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::cmp::PartialEq for mycelium_lsp::feedback::GuaranteeAnnotation
+pub fn mycelium_lsp::feedback::GuaranteeAnnotation::eq(&self, &mycelium_lsp::feedback::GuaranteeAnnotation) -> bool
+impl core::fmt::Debug for mycelium_lsp::feedback::GuaranteeAnnotation
+pub fn mycelium_lsp::feedback::GuaranteeAnnotation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::marker::Freeze for mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::marker::Send for mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::marker::Sync for mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::marker::Unpin for mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::marker::UnsafeUnpin for mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::feedback::GuaranteeAnnotation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::feedback::GuaranteeAnnotation
+pub struct mycelium_lsp::Presentation
+pub mycelium_lsp::Presentation::diagnostic: mycelium_lsp::diagnostics::record::DiagnosticRecord
+pub mycelium_lsp::Presentation::error: mycelium_lsp::diagnostics::record::ReasonedError
+impl core::clone::Clone for mycelium_lsp::diagnostics::record::Presentation
+pub fn mycelium_lsp::diagnostics::record::Presentation::clone(&self) -> mycelium_lsp::diagnostics::record::Presentation
+impl core::cmp::Eq for mycelium_lsp::diagnostics::record::Presentation
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::record::Presentation
+pub fn mycelium_lsp::diagnostics::record::Presentation::eq(&self, &mycelium_lsp::diagnostics::record::Presentation) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::record::Presentation
+pub fn mycelium_lsp::diagnostics::record::Presentation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::Freeze for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::Send for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::Sync for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::Unpin for mycelium_lsp::diagnostics::record::Presentation
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::record::Presentation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::record::Presentation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::record::Presentation
+pub struct mycelium_lsp::ReasonedError
+pub mycelium_lsp::ReasonedError::class: mycelium_lsp::diagnostics::registry::ClassName
+pub mycelium_lsp::ReasonedError::context: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub mycelium_lsp::ReasonedError::message: alloc::string::String
+pub mycelium_lsp::ReasonedError::reason: core::option::Option<alloc::string::String>
+pub mycelium_lsp::ReasonedError::site: alloc::string::String
+impl mycelium_lsp::diagnostics::record::ReasonedError
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::new(mycelium_lsp::diagnostics::registry::ClassName, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::with_context(self, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::with_reason(self, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_lsp::diagnostics::record::ReasonedError
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::clone(&self) -> mycelium_lsp::diagnostics::record::ReasonedError
+impl core::cmp::Eq for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::record::ReasonedError
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::eq(&self, &mycelium_lsp::diagnostics::record::ReasonedError) -> bool
+impl core::fmt::Debug for mycelium_lsp::diagnostics::record::ReasonedError
+pub fn mycelium_lsp::diagnostics::record::ReasonedError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::Freeze for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::Send for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::Sync for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::Unpin for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::record::ReasonedError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::record::ReasonedError
+pub struct mycelium_lsp::RecoverUndeclaredEffect
+pub mycelium_lsp::RecoverUndeclaredEffect::effect: mycelium_interp::budget::EffectKind
+impl core::clone::Clone for mycelium_lsp::recover::effect::UndeclaredEffect
+pub fn mycelium_lsp::recover::effect::UndeclaredEffect::clone(&self) -> mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::cmp::Eq for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::cmp::PartialEq for mycelium_lsp::recover::effect::UndeclaredEffect
+pub fn mycelium_lsp::recover::effect::UndeclaredEffect::eq(&self, &mycelium_lsp::recover::effect::UndeclaredEffect) -> bool
+impl core::error::Error for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::fmt::Debug for mycelium_lsp::recover::effect::UndeclaredEffect
+pub fn mycelium_lsp::recover::effect::UndeclaredEffect::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::recover::effect::UndeclaredEffect
+pub fn mycelium_lsp::recover::effect::UndeclaredEffect::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::Freeze for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::Send for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::Sync for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::Unpin for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::marker::UnsafeUnpin for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::effect::UndeclaredEffect
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::effect::UndeclaredEffect
+pub struct mycelium_lsp::RecoveryPolicy
+impl mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::action_for(&self, &mycelium_lsp::diagnostics::registry::ClassName) -> core::option::Option<&mycelium_lsp::recover::policy::RecoveryAction>
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::content_id(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::is_empty(&self) -> bool
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::new() -> Self
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::on(&mut self, &mycelium_lsp::diagnostics::registry::ClassRegistry, &str, mycelium_lsp::recover::policy::RecoveryAction) -> core::result::Result<core::option::Option<mycelium_lsp::recover::policy::RecoveryAction>, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::rules(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&mycelium_lsp::diagnostics::registry::ClassName, &mycelium_lsp::recover::policy::RecoveryAction)>
+impl core::clone::Clone for mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::clone(&self) -> mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::cmp::PartialEq for mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::eq(&self, &mycelium_lsp::recover::policy::RecoveryPolicy) -> bool
+impl core::default::Default for mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::default() -> mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::fmt::Debug for mycelium_lsp::recover::policy::RecoveryPolicy
+pub fn mycelium_lsp::recover::policy::RecoveryPolicy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::Freeze for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::Send for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::Sync for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::Unpin for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::marker::UnsafeUnpin for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::policy::RecoveryPolicy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::policy::RecoveryPolicy
+pub struct mycelium_lsp::Rule
+pub mycelium_lsp::Rule::level: core::option::Option<mycelium_lsp::diagnostics::record::Level>
+pub mycelium_lsp::Rule::message: core::option::Option<alloc::string::String>
+pub mycelium_lsp::Rule::route: core::option::Option<alloc::string::String>
+pub mycelium_lsp::Rule::tags: alloc::collections::btree::set::BTreeSet<alloc::string::String>
+impl mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::level(self, mycelium_lsp::diagnostics::record::Level) -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::message(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::new() -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::route(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::route_to(self, mycelium_lsp::diagnostics::sink::Route) -> Self
+pub fn mycelium_lsp::diagnostics::policy::Rule::tag(self, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::clone(&self) -> mycelium_lsp::diagnostics::policy::Rule
+impl core::cmp::Eq for mycelium_lsp::diagnostics::policy::Rule
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::eq(&self, &mycelium_lsp::diagnostics::policy::Rule) -> bool
+impl core::default::Default for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::default() -> mycelium_lsp::diagnostics::policy::Rule
+impl core::fmt::Debug for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::policy::Rule
+impl serde_core::ser::Serialize for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_lsp::diagnostics::policy::Rule
+pub fn mycelium_lsp::diagnostics::policy::Rule::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_lsp::diagnostics::policy::Rule
+impl core::marker::Send for mycelium_lsp::diagnostics::policy::Rule
+impl core::marker::Sync for mycelium_lsp::diagnostics::policy::Rule
+impl core::marker::Unpin for mycelium_lsp::diagnostics::policy::Rule
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::policy::Rule
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::policy::Rule
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::policy::Rule
+pub struct mycelium_lsp::StructuredError
+pub mycelium_lsp::StructuredError::class: mycelium_lsp::diagnostics::registry::ClassName
+pub mycelium_lsp::StructuredError::message: alloc::string::String
+pub mycelium_lsp::StructuredError::site: alloc::string::String
+impl mycelium_lsp::recover::StructuredError
+pub fn mycelium_lsp::recover::StructuredError::new(mycelium_lsp::diagnostics::registry::ClassName, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_lsp::recover::StructuredError
+pub fn mycelium_lsp::recover::StructuredError::clone(&self) -> mycelium_lsp::recover::StructuredError
+impl core::cmp::Eq for mycelium_lsp::recover::StructuredError
+impl core::cmp::PartialEq for mycelium_lsp::recover::StructuredError
+pub fn mycelium_lsp::recover::StructuredError::eq(&self, &mycelium_lsp::recover::StructuredError) -> bool
+impl core::fmt::Debug for mycelium_lsp::recover::StructuredError
+pub fn mycelium_lsp::recover::StructuredError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::recover::StructuredError
+impl core::marker::Freeze for mycelium_lsp::recover::StructuredError
+impl core::marker::Send for mycelium_lsp::recover::StructuredError
+impl core::marker::Sync for mycelium_lsp::recover::StructuredError
+impl core::marker::Unpin for mycelium_lsp::recover::StructuredError
+impl core::marker::UnsafeUnpin for mycelium_lsp::recover::StructuredError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::StructuredError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::StructuredError
+pub struct mycelium_lsp::SwapSite
+pub mycelium_lsp::SwapSite::at: alloc::string::String
+pub mycelium_lsp::SwapSite::certificate: core::option::Option<mycelium_cert::SwapCertificate>
+pub mycelium_lsp::SwapSite::target: mycelium_core::repr::Repr
+impl core::clone::Clone for mycelium_lsp::feedback::SwapSite
+pub fn mycelium_lsp::feedback::SwapSite::clone(&self) -> mycelium_lsp::feedback::SwapSite
+impl core::cmp::PartialEq for mycelium_lsp::feedback::SwapSite
+pub fn mycelium_lsp::feedback::SwapSite::eq(&self, &mycelium_lsp::feedback::SwapSite) -> bool
+impl core::fmt::Debug for mycelium_lsp::feedback::SwapSite
+pub fn mycelium_lsp::feedback::SwapSite::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::feedback::SwapSite
+impl core::marker::Freeze for mycelium_lsp::feedback::SwapSite
+impl core::marker::Send for mycelium_lsp::feedback::SwapSite
+impl core::marker::Sync for mycelium_lsp::feedback::SwapSite
+impl core::marker::Unpin for mycelium_lsp::feedback::SwapSite
+impl core::marker::UnsafeUnpin for mycelium_lsp::feedback::SwapSite
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::feedback::SwapSite
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::feedback::SwapSite
+pub struct mycelium_lsp::UnknownClass
+pub mycelium_lsp::UnknownClass::name: alloc::string::String
+impl core::clone::Clone for mycelium_lsp::diagnostics::registry::UnknownClass
+pub fn mycelium_lsp::diagnostics::registry::UnknownClass::clone(&self) -> mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::cmp::Eq for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::cmp::PartialEq for mycelium_lsp::diagnostics::registry::UnknownClass
+pub fn mycelium_lsp::diagnostics::registry::UnknownClass::eq(&self, &mycelium_lsp::diagnostics::registry::UnknownClass) -> bool
+impl core::error::Error for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::fmt::Debug for mycelium_lsp::diagnostics::registry::UnknownClass
+pub fn mycelium_lsp::diagnostics::registry::UnknownClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::diagnostics::registry::UnknownClass
+pub fn mycelium_lsp::diagnostics::registry::UnknownClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::Freeze for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::Send for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::Sync for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::Unpin for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::registry::UnknownClass
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::registry::UnknownClass
+pub const mycelium_lsp::RESILIENT_MAX_ATTEMPTS: u64
+pub fn mycelium_lsp::analyze(&mycelium_core::node::Node) -> mycelium_lsp::feedback::Feedback
+pub fn mycelium_lsp::analyze_with(&mycelium_core::node::Node, &mycelium_select::PolicyRegistry) -> mycelium_lsp::feedback::Feedback
+pub fn mycelium_lsp::baseline_for_class(&str) -> mycelium_lsp::baseline::BaselineRule
+pub fn mycelium_lsp::check_effects(&mycelium_lsp::recover::effect::EffectSet, &mycelium_lsp::recover::effect::EffectSet) -> core::result::Result<(), mycelium_lsp::recover::effect::UndeclaredEffect>
+pub fn mycelium_lsp::derive_baseline(&mycelium_lsp::diagnostics::registry::ClassRegistry) -> mycelium_lsp::diagnostics::policy::DiagnosticPolicy
+pub fn mycelium_lsp::derive_baseline_for(&mycelium_lsp::diagnostics::registry::ClassRegistry, &[&str]) -> core::result::Result<mycelium_lsp::diagnostics::policy::DiagnosticPolicy, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::expand_ambient(&str) -> core::result::Result<alloc::string::String, alloc::string::String>
+pub fn mycelium_lsp::explain_baseline(&mycelium_lsp::diagnostics::registry::ClassRegistry) -> alloc::string::String
+pub fn mycelium_lsp::format(&mycelium_core::node::Node) -> alloc::string::String
+pub fn mycelium_lsp::handle(mycelium_lsp::recover::Outcome, &mycelium_lsp::recover::policy::RecoveryPolicy, &mut mycelium_interp::budget::Budgets, impl core::ops::function::FnMut() -> mycelium_lsp::recover::Outcome) -> mycelium_lsp::recover::Resolution
+pub fn mycelium_lsp::has_errors(&[mycelium_lsp::lint::Diagnostic]) -> bool
+pub fn mycelium_lsp::lint(&mycelium_core::node::Node) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
+pub fn mycelium_lsp::lint_nodule_header(&str) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
+pub fn mycelium_lsp::lint_structured_header(&str) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
+pub fn mycelium_lsp::present(mycelium_lsp::diagnostics::record::ReasonedError, core::option::Option<&mycelium_lsp::diagnostics::policy::DiagnosticPolicy>) -> mycelium_lsp::diagnostics::record::Presentation
+pub fn mycelium_lsp::publish_diagnostics_notification(&str, &mycelium_lsp::feedback::Feedback) -> serde_json::value::Value
+pub fn mycelium_lsp::publish_for_source(&str, &str) -> serde_json::value::Value
+pub fn mycelium_lsp::read_message<R: std::io::BufRead>(&mut R) -> std::io::error::Result<core::option::Option<serde_json::value::Value>>
+pub fn mycelium_lsp::recovery_profile(mycelium_lsp::baseline::RecoveryProfile, &mycelium_lsp::diagnostics::registry::ClassRegistry, &[&str]) -> core::result::Result<mycelium_lsp::recover::policy::RecoveryPolicy, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub fn mycelium_lsp::resilient_publish_for_source(&str, &str) -> serde_json::value::Value
+pub fn mycelium_lsp::resilient_source_diagnostics(&str) -> alloc::vec::Vec<serde_json::value::Value>
+pub fn mycelium_lsp::serve<R: std::io::BufRead, W: std::io::Write>(&mut R, &mut W) -> std::io::error::Result<()>
+pub fn mycelium_lsp::serve_stdio() -> std::io::error::Result<()>
+pub fn mycelium_lsp::source_diagnostics(&str) -> alloc::vec::Vec<serde_json::value::Value>
+pub fn mycelium_lsp::to_lsp_diagnostic(&mycelium_lsp::lint::Diagnostic) -> serde_json::value::Value
+pub fn mycelium_lsp::write_message<W: std::io::Write>(&mut W, &serde_json::value::Value) -> std::io::error::Result<()>

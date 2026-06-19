@@ -9,10 +9,15 @@
 /// A structured failure record carried by [`Verdict::Fail`].
 ///
 /// This is the `std.testing` representation of a diagnostic record (spec §3:
-/// `Fail { diagnostic: Diag }`). It is intentionally structural rather than delegating to an
-/// external `Diag` type — **FLAG-DIAG**: `std.diag` (M-510) is not yet landed. When it lands,
-/// this record should be replaced by (or delegate to) the `Diag` type it provides (per the
-/// `testing`/`diag` seam, spec §7-Q2 and README §5 "failure-legibility substrate").
+/// `Fail { diagnostic: Diag }`).
+///
+/// # FLAG-DIAG (RESOLVED, testing↔diag seam — spec §7-Q2)
+/// `std.diag` (M-510) has landed, so `FailRecord` now **delegates** to its canonical record:
+/// [`FailRecord::to_diag`] projects to a [`mycelium_diag::Diag`] — the structured diagnostic the
+/// rest of the failure-legibility substrate speaks (README §5). `FailRecord` keeps the
+/// **testing-specific reproduction metadata** (the seed + trial index) that a generic `Diag` does
+/// not model, and folds them — with the description and op context — into the `Diag`'s message and
+/// notes. The `Diag` is the legibility artifact; this record is its seed-reproducible test wrapper.
 ///
 /// # C1 — never-silent
 /// Every failure is a structured record with a description + reproducing seed — never an opaque
@@ -32,6 +37,23 @@ pub struct FailRecord {
     pub trial: u32,
     /// The op context that produced this failure (e.g. `"for_all"`, `"golden(name)"`).
     pub context: String,
+}
+
+impl FailRecord {
+    /// Project this failure to the canonical [`mycelium_diag::Diag`] record (the testing↔diag
+    /// seam — spec §7-Q2). The `description` becomes the diagnostic message; the op `context`, the
+    /// reproducing `seed`, and the `trial` index ride along as EXPLAIN notes (G11). Severity is
+    /// `Error` and the code is the test-failure class — never an opaque red/green bit (C1/C3).
+    ///
+    /// # Guarantee tag: `Exact` (a pure, total projection)
+    #[must_use]
+    pub fn to_diag(&self) -> mycelium_diag::Diag {
+        mycelium_diag::Diag::error(mycelium_diag::Code::Other("test.fail".to_owned()))
+            .message(self.description.clone())
+            .note(format!("context={}", self.context))
+            .note(format!("seed={}", self.seed))
+            .note(format!("trial={}", self.trial))
+    }
 }
 
 // ─── SkipReason ───────────────────────────────────────────────────────────────
@@ -101,8 +123,8 @@ pub enum Verdict {
     /// The check ran and at least one assertion failed.
     ///
     /// Carries a [`FailRecord`] with the structured diagnostic: description, reproducing seed,
-    /// trial index, and op context. **FLAG-DIAG:** this will delegate to `std.diag` (M-510) when
-    /// that crate lands.
+    /// trial index, and op context. Use [`FailRecord::to_diag`] to project to the canonical
+    /// [`mycelium_diag::Diag`] record (FLAG-DIAG RESOLVED — `std.diag` has landed, M-510).
     Fail {
         /// The structured failure record (spec §3 `Fail { diagnostic: Diag }`).
         record: FailRecord,
@@ -275,5 +297,25 @@ mod tests {
         } else {
             panic!("expected Fail");
         }
+    }
+
+    /// `FailRecord::to_diag` delegates to the canonical `mycelium_diag::Diag` (testing↔diag seam,
+    /// spec §7-Q2): the description is the message; context/seed/trial ride along as notes; the
+    /// severity is `Error` — never an opaque red/green bit (C1/C3).
+    #[test]
+    fn fail_record_projects_to_diag() {
+        let record = FailRecord {
+            description: "shrunk counterexample: n=7".to_owned(),
+            seed: 42,
+            trial: 3,
+            context: "for_all".to_owned(),
+        };
+        let d = record.to_diag();
+        assert_eq!(d.severity(), mycelium_diag::Severity::Error);
+        assert_eq!(d.message, "shrunk counterexample: n=7");
+        // The reproduction metadata survives in the diagnostic's EXPLAIN notes.
+        assert!(d.notes.iter().any(|n| n == "seed=42"));
+        assert!(d.notes.iter().any(|n| n == "trial=3"));
+        assert!(d.notes.iter().any(|n| n == "context=for_all"));
     }
 }

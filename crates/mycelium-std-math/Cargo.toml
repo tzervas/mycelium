@@ -11,6 +11,7 @@ description = "std.math — Ring-2 / Tier-B numeric functions over the honest nu
 mycelium-core = { path = "../mycelium-core" }
 mycelium-std-core = { path = "../mycelium-std-core" }
 mycelium-numerics = { path = "../mycelium-numerics" }
+mycelium-std-numerics = { path = "../mycelium-std-numerics" }
 
 [lints]
 workspace = true

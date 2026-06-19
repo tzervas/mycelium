@@ -104,6 +104,7 @@ it contains **no** task answer) is the chief generator knob. Two variants live i
 ./run-kc2-matrix.sh                 # writes results/<model>-<primer>/ for each combo
 MAXITERS=3 SEEDS=42,123 ./run-kc2-matrix.sh
 ```
+
 Override one run's primer directly with `--primer-mycelium primers/mycelium-examples.txt`.
 **Mobile caps at the 1.5B model** — the matrix skips anything larger unless `KC2_ALLOW_LARGE=1`.
 On a desktop GPU run the containerized path, which lifts the cap (adds 7B+) and handles GPU access
@@ -130,8 +131,8 @@ to a fixed path.
 > experiment prefers the 0.5B when cached, else the 1.5B, else any `.gguf`):
 >
 > ```sh
-# Prefetch ahead of time, robustly (auto-resumes a dropped/slow download; 0 = keep
-># retrying until complete — ideal for a flaky phone link):
+> # Prefetch ahead of time, robustly (auto-resumes a dropped/slow download; 0 = keep
+> # retrying until complete — ideal for a flaky phone link):
 > python ../tools/llm-harness/harness.py --ensure-model --model-id qwen2.5-coder-0.5b --download-retries 0
 > PYTHONPATH=. python3 -m mycelium_experiments.kc2 --serve     # now runs on the 0.5B
 > # or pin it explicitly by id (no long path):
@@ -191,6 +192,7 @@ cargo build -p mycelium-check --bin myc-check     # → target/debug/myc-check
 >   even the **versioned `clang-NN`** itself (the symlink target). rustc links via `cc`,
 >   so every build script fails. Tell the impostor from the real thing by **size/type**:
 >   the real `clang-NN` is a multi-MB ELF; a 1–3 KB script is the impostor.
+>
 >   ```sh
 >   file "$(command -v cc)"; ls -la "$PREFIX"/bin/clang-*   # tiny script == impostor
 >   # if clang-NN is the real binary, just point Rust at it:
@@ -199,6 +201,7 @@ cargo build -p mycelium-check --bin myc-check     # → target/debug/myc-check
 >   # if clang-NN ITSELF is the impostor: save it, then restore the real compiler:
 >   cp "$PREFIX/bin/clang-NN" "$PREFIX/bin/ccode"; pkg install --reinstall clang
 >   ```
+>
 >   Never name a personal wrapper `cc`/`clang`/`gcc`/`clang-NN` — those are the compiler;
 >   use a shell `alias` instead (aliases don't affect what `cargo` execs). Persisting the
 >   env route: `~/.cargo/config.toml` → `[target.aarch64-linux-android]` /

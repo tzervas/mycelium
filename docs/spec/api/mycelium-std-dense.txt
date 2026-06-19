@@ -1,0 +1,119 @@
+pub mod mycelium_std_dense
+pub use mycelium_std_dense::BF16_OP_REL_EPS
+pub use mycelium_std_dense::Bound
+pub use mycelium_std_dense::BoundBasis
+pub use mycelium_std_dense::BoundKind
+pub use mycelium_std_dense::DENSE_MIN_NORMAL
+pub use mycelium_std_dense::DenseError
+pub use mycelium_std_dense::DenseOp
+pub use mycelium_std_dense::DenseSpace
+pub use mycelium_std_dense::F32_OP_REL_EPS
+pub use mycelium_std_dense::GuaranteeStrength
+pub use mycelium_std_dense::NormKind
+pub use mycelium_std_dense::ScalarKind
+pub enum mycelium_std_dense::StdDenseError
+pub mycelium_std_dense::StdDenseError::Kernel(mycelium_dense::DenseError)
+pub mycelium_std_dense::StdDenseError::LenMismatch
+pub mycelium_std_dense::StdDenseError::LenMismatch::expected: usize
+pub mycelium_std_dense::StdDenseError::LenMismatch::got: usize
+pub mycelium_std_dense::StdDenseError::OffGrid
+pub mycelium_std_dense::StdDenseError::OffGrid::dtype: mycelium_core::repr::ScalarKind
+pub mycelium_std_dense::StdDenseError::OffGrid::index: usize
+pub mycelium_std_dense::StdDenseError::ZeroNorm
+impl core::clone::Clone for mycelium_std_dense::StdDenseError
+pub fn mycelium_std_dense::StdDenseError::clone(&self) -> mycelium_std_dense::StdDenseError
+impl core::cmp::PartialEq for mycelium_std_dense::StdDenseError
+pub fn mycelium_std_dense::StdDenseError::eq(&self, &mycelium_std_dense::StdDenseError) -> bool
+impl core::convert::From<mycelium_dense::DenseError> for mycelium_std_dense::StdDenseError
+pub fn mycelium_std_dense::StdDenseError::from(mycelium_dense::DenseError) -> Self
+impl core::error::Error for mycelium_std_dense::StdDenseError
+impl core::fmt::Debug for mycelium_std_dense::StdDenseError
+pub fn mycelium_std_dense::StdDenseError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_dense::StdDenseError
+pub fn mycelium_std_dense::StdDenseError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_dense::StdDenseError
+impl core::marker::Freeze for mycelium_std_dense::StdDenseError
+impl core::marker::Send for mycelium_std_dense::StdDenseError
+impl core::marker::Sync for mycelium_std_dense::StdDenseError
+impl core::marker::Unpin for mycelium_std_dense::StdDenseError
+impl core::marker::UnsafeUnpin for mycelium_std_dense::StdDenseError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_dense::StdDenseError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_dense::StdDenseError
+pub struct mycelium_std_dense::GuaranteeRow
+pub mycelium_std_dense::GuaranteeRow::effects: &'static str
+pub mycelium_std_dense::GuaranteeRow::error_variants: &'static [&'static str]
+pub mycelium_std_dense::GuaranteeRow::explainable: bool
+pub mycelium_std_dense::GuaranteeRow::fallible: bool
+pub mycelium_std_dense::GuaranteeRow::op: &'static str
+pub mycelium_std_dense::GuaranteeRow::tag: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_std_dense::GuaranteeRow
+pub fn mycelium_std_dense::GuaranteeRow::clone(&self) -> mycelium_std_dense::GuaranteeRow
+impl core::cmp::Eq for mycelium_std_dense::GuaranteeRow
+impl core::cmp::PartialEq for mycelium_std_dense::GuaranteeRow
+pub fn mycelium_std_dense::GuaranteeRow::eq(&self, &mycelium_std_dense::GuaranteeRow) -> bool
+impl core::fmt::Debug for mycelium_std_dense::GuaranteeRow
+pub fn mycelium_std_dense::GuaranteeRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_dense::GuaranteeRow
+impl core::marker::Freeze for mycelium_std_dense::GuaranteeRow
+impl core::marker::Send for mycelium_std_dense::GuaranteeRow
+impl core::marker::Sync for mycelium_std_dense::GuaranteeRow
+impl core::marker::Unpin for mycelium_std_dense::GuaranteeRow
+impl core::marker::UnsafeUnpin for mycelium_std_dense::GuaranteeRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_dense::GuaranteeRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_dense::GuaranteeRow
+pub struct mycelium_std_dense::OpBound
+pub mycelium_std_dense::OpBound::basis: alloc::string::String
+pub mycelium_std_dense::OpBound::eps: f64
+pub mycelium_std_dense::OpBound::norm: mycelium_core::bound::NormKind
+pub mycelium_std_dense::OpBound::strength: mycelium_core::guarantee::GuaranteeStrength
+impl mycelium_std_dense::OpBound
+pub fn mycelium_std_dense::OpBound::to_core_bound(&self) -> mycelium_core::bound::Bound
+impl core::clone::Clone for mycelium_std_dense::OpBound
+pub fn mycelium_std_dense::OpBound::clone(&self) -> mycelium_std_dense::OpBound
+impl core::cmp::PartialEq for mycelium_std_dense::OpBound
+pub fn mycelium_std_dense::OpBound::eq(&self, &mycelium_std_dense::OpBound) -> bool
+impl core::fmt::Debug for mycelium_std_dense::OpBound
+pub fn mycelium_std_dense::OpBound::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_dense::OpBound
+impl core::marker::Freeze for mycelium_std_dense::OpBound
+impl core::marker::Send for mycelium_std_dense::OpBound
+impl core::marker::Sync for mycelium_std_dense::OpBound
+impl core::marker::Unpin for mycelium_std_dense::OpBound
+impl core::marker::UnsafeUnpin for mycelium_std_dense::OpBound
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_dense::OpBound
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_dense::OpBound
+pub struct mycelium_std_dense::StdDense
+impl mycelium_std_dense::StdDense
+pub fn mycelium_std_dense::StdDense::add(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<(mycelium_core::value::Value, mycelium_std_dense::OpBound), mycelium_std_dense::StdDenseError>
+pub fn mycelium_std_dense::StdDense::cosine(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<(f64, mycelium_std_dense::OpBound), mycelium_std_dense::StdDenseError>
+pub fn mycelium_std_dense::StdDense::dim(&self) -> u32
+pub fn mycelium_std_dense::StdDense::dot(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<(f64, mycelium_std_dense::OpBound), mycelium_std_dense::StdDenseError>
+pub fn mycelium_std_dense::StdDense::dtype(&self) -> mycelium_core::repr::ScalarKind
+pub fn mycelium_std_dense::StdDense::from_slice(&self, &[f64]) -> core::result::Result<mycelium_core::value::Value, mycelium_std_dense::StdDenseError>
+pub fn mycelium_std_dense::StdDense::full(&self, f64) -> core::result::Result<mycelium_core::value::Value, mycelium_std_dense::StdDenseError>
+pub fn mycelium_std_dense::StdDense::hadamard(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<(mycelium_core::value::Value, mycelium_std_dense::OpBound), mycelium_std_dense::StdDenseError>
+pub fn mycelium_std_dense::StdDense::l1_norm(&self, &mycelium_core::value::Value) -> core::result::Result<(f64, mycelium_std_dense::OpBound), mycelium_std_dense::StdDenseError>
+pub fn mycelium_std_dense::StdDense::l2_norm(&self, &mycelium_core::value::Value) -> core::result::Result<(f64, mycelium_std_dense::OpBound), mycelium_std_dense::StdDenseError>
+pub fn mycelium_std_dense::StdDense::map<E>(&self, &mycelium_core::value::Value, mycelium_core::guarantee::GuaranteeStrength, impl core::ops::function::Fn(f64) -> core::result::Result<f64, E>) -> core::result::Result<(mycelium_core::value::Value, mycelium_core::guarantee::GuaranteeStrength), mycelium_std_dense::StdDenseError> where E: core::convert::Into<mycelium_std_dense::StdDenseError>
+pub fn mycelium_std_dense::StdDense::neg(&self, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_std_dense::StdDenseError>
+pub fn mycelium_std_dense::StdDense::new(u32, mycelium_core::repr::ScalarKind) -> core::result::Result<Self, mycelium_std_dense::StdDenseError>
+pub fn mycelium_std_dense::StdDense::scale(&self, &mycelium_core::value::Value, f64) -> core::result::Result<(mycelium_core::value::Value, mycelium_std_dense::OpBound), mycelium_std_dense::StdDenseError>
+pub fn mycelium_std_dense::StdDense::space(&self) -> &mycelium_dense::DenseSpace
+pub fn mycelium_std_dense::StdDense::sub(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<(mycelium_core::value::Value, mycelium_std_dense::OpBound), mycelium_std_dense::StdDenseError>
+pub fn mycelium_std_dense::StdDense::sum(&self, &mycelium_core::value::Value) -> core::result::Result<(f64, mycelium_std_dense::OpBound), mycelium_std_dense::StdDenseError>
+pub fn mycelium_std_dense::StdDense::zeros(&self) -> mycelium_core::value::Value
+impl core::fmt::Debug for mycelium_std_dense::StdDense
+pub fn mycelium_std_dense::StdDense::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_dense::StdDense
+impl core::marker::Send for mycelium_std_dense::StdDense
+impl core::marker::Sync for mycelium_std_dense::StdDense
+impl core::marker::Unpin for mycelium_std_dense::StdDense
+impl core::marker::UnsafeUnpin for mycelium_std_dense::StdDense
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_dense::StdDense
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_dense::StdDense
+pub const mycelium_std_dense::ACCUMULATION_BF16_EMPIRICAL_BASIS: &str
+pub const mycelium_std_dense::ACCUMULATION_EMPIRICAL_BASIS: &str
+pub const mycelium_std_dense::GUARANTEE_MATRIX: &[mycelium_std_dense::GuaranteeRow]
+pub const mycelium_std_dense::SQRT_COMPOSITION_EMPIRICAL_BASIS: &str
+pub fn mycelium_std_dense::accumulation_eps_bf16(usize) -> f64
+pub fn mycelium_std_dense::accumulation_eps_f32(usize) -> f64

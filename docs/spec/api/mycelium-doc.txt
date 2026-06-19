@@ -1,0 +1,682 @@
+pub mod mycelium_doc
+pub mod mycelium_doc::apiref
+pub fn mycelium_doc::apiref::project_nodule(&str, &str, &mut mycelium_doc::corpus::AnchorAlloc) -> mycelium_doc::ir::Node
+pub fn mycelium_doc::apiref::project_schema(&str, &str, &mut mycelium_doc::corpus::AnchorAlloc) -> core::option::Option<mycelium_doc::ir::Node>
+pub mod mycelium_doc::build
+pub struct mycelium_doc::build::BuildInput
+pub mycelium_doc::build::BuildInput::corpus_root: core::option::Option<std::path::PathBuf>
+pub mycelium_doc::build::BuildInput::example_roots: alloc::vec::Vec<std::path::PathBuf>
+pub mycelium_doc::build::BuildInput::repo_root: std::path::PathBuf
+pub mycelium_doc::build::BuildInput::schemas_root: core::option::Option<std::path::PathBuf>
+impl mycelium_doc::build::BuildInput
+pub fn mycelium_doc::build::BuildInput::conventional(impl core::convert::Into<std::path::PathBuf>) -> Self
+impl core::clone::Clone for mycelium_doc::build::BuildInput
+pub fn mycelium_doc::build::BuildInput::clone(&self) -> mycelium_doc::build::BuildInput
+impl core::fmt::Debug for mycelium_doc::build::BuildInput
+pub fn mycelium_doc::build::BuildInput::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_doc::build::BuildInput
+impl core::marker::Send for mycelium_doc::build::BuildInput
+impl core::marker::Sync for mycelium_doc::build::BuildInput
+impl core::marker::Unpin for mycelium_doc::build::BuildInput
+impl core::marker::UnsafeUnpin for mycelium_doc::build::BuildInput
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::build::BuildInput
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::build::BuildInput
+pub const mycelium_doc::build::EPUB_DEFERRAL: &str
+pub fn mycelium_doc::build::build(&mycelium_doc::build::BuildInput) -> std::io::error::Result<mycelium_doc::ir::DocModel>
+pub fn mycelium_doc::build::emit_all(&mycelium_doc::ir::DocModel) -> mycelium_doc::emit::Artifacts
+pub mod mycelium_doc::corpus
+pub struct mycelium_doc::corpus::AnchorAlloc
+impl mycelium_doc::corpus::AnchorAlloc
+pub fn mycelium_doc::corpus::AnchorAlloc::alloc(&mut self, core::option::Option<&str>, &str) -> alloc::string::String
+pub fn mycelium_doc::corpus::AnchorAlloc::new() -> Self
+impl core::default::Default for mycelium_doc::corpus::AnchorAlloc
+pub fn mycelium_doc::corpus::AnchorAlloc::default() -> mycelium_doc::corpus::AnchorAlloc
+impl core::fmt::Debug for mycelium_doc::corpus::AnchorAlloc
+pub fn mycelium_doc::corpus::AnchorAlloc::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_doc::corpus::AnchorAlloc
+impl core::marker::Send for mycelium_doc::corpus::AnchorAlloc
+impl core::marker::Sync for mycelium_doc::corpus::AnchorAlloc
+impl core::marker::Unpin for mycelium_doc::corpus::AnchorAlloc
+impl core::marker::UnsafeUnpin for mycelium_doc::corpus::AnchorAlloc
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::corpus::AnchorAlloc
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::corpus::AnchorAlloc
+pub fn mycelium_doc::corpus::extract_links(&str) -> alloc::vec::Vec<alloc::string::String>
+pub fn mycelium_doc::corpus::ingest(&str, &str, mycelium_doc::ir::SourceKind, &mut mycelium_doc::corpus::AnchorAlloc) -> mycelium_doc::ir::Node
+pub fn mycelium_doc::corpus::slugify(&str) -> alloc::string::String
+pub mod mycelium_doc::doc_lint
+pub enum mycelium_doc::doc_lint::CheckStatus
+pub mycelium_doc::doc_lint::CheckStatus::Active
+pub mycelium_doc::doc_lint::CheckStatus::Dormant(alloc::string::String)
+pub mycelium_doc::doc_lint::CheckStatus::PartiallyDormant(alloc::string::String)
+impl core::clone::Clone for mycelium_doc::doc_lint::CheckStatus
+pub fn mycelium_doc::doc_lint::CheckStatus::clone(&self) -> mycelium_doc::doc_lint::CheckStatus
+impl core::cmp::Eq for mycelium_doc::doc_lint::CheckStatus
+impl core::cmp::PartialEq for mycelium_doc::doc_lint::CheckStatus
+pub fn mycelium_doc::doc_lint::CheckStatus::eq(&self, &mycelium_doc::doc_lint::CheckStatus) -> bool
+impl core::fmt::Debug for mycelium_doc::doc_lint::CheckStatus
+pub fn mycelium_doc::doc_lint::CheckStatus::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::doc_lint::CheckStatus
+impl core::marker::Freeze for mycelium_doc::doc_lint::CheckStatus
+impl core::marker::Send for mycelium_doc::doc_lint::CheckStatus
+impl core::marker::Sync for mycelium_doc::doc_lint::CheckStatus
+impl core::marker::Unpin for mycelium_doc::doc_lint::CheckStatus
+impl core::marker::UnsafeUnpin for mycelium_doc::doc_lint::CheckStatus
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::doc_lint::CheckStatus
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::doc_lint::CheckStatus
+pub enum mycelium_doc::doc_lint::Severity
+pub mycelium_doc::doc_lint::Severity::Error
+pub mycelium_doc::doc_lint::Severity::Info
+pub mycelium_doc::doc_lint::Severity::Warning
+impl mycelium_doc::doc_lint::Severity
+pub fn mycelium_doc::doc_lint::Severity::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_doc::doc_lint::Severity
+pub fn mycelium_doc::doc_lint::Severity::clone(&self) -> mycelium_doc::doc_lint::Severity
+impl core::cmp::Eq for mycelium_doc::doc_lint::Severity
+impl core::cmp::PartialEq for mycelium_doc::doc_lint::Severity
+pub fn mycelium_doc::doc_lint::Severity::eq(&self, &mycelium_doc::doc_lint::Severity) -> bool
+impl core::fmt::Debug for mycelium_doc::doc_lint::Severity
+pub fn mycelium_doc::doc_lint::Severity::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_doc::doc_lint::Severity
+impl core::marker::StructuralPartialEq for mycelium_doc::doc_lint::Severity
+impl core::marker::Freeze for mycelium_doc::doc_lint::Severity
+impl core::marker::Send for mycelium_doc::doc_lint::Severity
+impl core::marker::Sync for mycelium_doc::doc_lint::Severity
+impl core::marker::Unpin for mycelium_doc::doc_lint::Severity
+impl core::marker::UnsafeUnpin for mycelium_doc::doc_lint::Severity
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::doc_lint::Severity
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::doc_lint::Severity
+pub struct mycelium_doc::doc_lint::CheckOutcome
+pub mycelium_doc::doc_lint::CheckOutcome::findings: alloc::vec::Vec<mycelium_doc::doc_lint::Finding>
+pub mycelium_doc::doc_lint::CheckOutcome::name: alloc::string::String
+pub mycelium_doc::doc_lint::CheckOutcome::status: mycelium_doc::doc_lint::CheckStatus
+pub mycelium_doc::doc_lint::CheckOutcome::summary: alloc::string::String
+impl core::clone::Clone for mycelium_doc::doc_lint::CheckOutcome
+pub fn mycelium_doc::doc_lint::CheckOutcome::clone(&self) -> mycelium_doc::doc_lint::CheckOutcome
+impl core::cmp::Eq for mycelium_doc::doc_lint::CheckOutcome
+impl core::cmp::PartialEq for mycelium_doc::doc_lint::CheckOutcome
+pub fn mycelium_doc::doc_lint::CheckOutcome::eq(&self, &mycelium_doc::doc_lint::CheckOutcome) -> bool
+impl core::fmt::Debug for mycelium_doc::doc_lint::CheckOutcome
+pub fn mycelium_doc::doc_lint::CheckOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::doc_lint::CheckOutcome
+impl core::marker::Freeze for mycelium_doc::doc_lint::CheckOutcome
+impl core::marker::Send for mycelium_doc::doc_lint::CheckOutcome
+impl core::marker::Sync for mycelium_doc::doc_lint::CheckOutcome
+impl core::marker::Unpin for mycelium_doc::doc_lint::CheckOutcome
+impl core::marker::UnsafeUnpin for mycelium_doc::doc_lint::CheckOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::doc_lint::CheckOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::doc_lint::CheckOutcome
+pub struct mycelium_doc::doc_lint::DocLintReport
+pub mycelium_doc::doc_lint::DocLintReport::outcomes: alloc::vec::Vec<mycelium_doc::doc_lint::CheckOutcome>
+impl mycelium_doc::doc_lint::DocLintReport
+pub fn mycelium_doc::doc_lint::DocLintReport::errors(&self) -> alloc::vec::Vec<&mycelium_doc::doc_lint::Finding>
+pub fn mycelium_doc::doc_lint::DocLintReport::has_errors(&self) -> bool
+impl core::clone::Clone for mycelium_doc::doc_lint::DocLintReport
+pub fn mycelium_doc::doc_lint::DocLintReport::clone(&self) -> mycelium_doc::doc_lint::DocLintReport
+impl core::cmp::Eq for mycelium_doc::doc_lint::DocLintReport
+impl core::cmp::PartialEq for mycelium_doc::doc_lint::DocLintReport
+pub fn mycelium_doc::doc_lint::DocLintReport::eq(&self, &mycelium_doc::doc_lint::DocLintReport) -> bool
+impl core::fmt::Debug for mycelium_doc::doc_lint::DocLintReport
+pub fn mycelium_doc::doc_lint::DocLintReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::doc_lint::DocLintReport
+impl core::marker::Freeze for mycelium_doc::doc_lint::DocLintReport
+impl core::marker::Send for mycelium_doc::doc_lint::DocLintReport
+impl core::marker::Sync for mycelium_doc::doc_lint::DocLintReport
+impl core::marker::Unpin for mycelium_doc::doc_lint::DocLintReport
+impl core::marker::UnsafeUnpin for mycelium_doc::doc_lint::DocLintReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::doc_lint::DocLintReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::doc_lint::DocLintReport
+pub struct mycelium_doc::doc_lint::Finding
+pub mycelium_doc::doc_lint::Finding::anchor: alloc::string::String
+pub mycelium_doc::doc_lint::Finding::check: alloc::string::String
+pub mycelium_doc::doc_lint::Finding::message: alloc::string::String
+pub mycelium_doc::doc_lint::Finding::severity: mycelium_doc::doc_lint::Severity
+impl core::clone::Clone for mycelium_doc::doc_lint::Finding
+pub fn mycelium_doc::doc_lint::Finding::clone(&self) -> mycelium_doc::doc_lint::Finding
+impl core::cmp::Eq for mycelium_doc::doc_lint::Finding
+impl core::cmp::PartialEq for mycelium_doc::doc_lint::Finding
+pub fn mycelium_doc::doc_lint::Finding::eq(&self, &mycelium_doc::doc_lint::Finding) -> bool
+impl core::fmt::Debug for mycelium_doc::doc_lint::Finding
+pub fn mycelium_doc::doc_lint::Finding::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::doc_lint::Finding
+impl core::marker::Freeze for mycelium_doc::doc_lint::Finding
+impl core::marker::Send for mycelium_doc::doc_lint::Finding
+impl core::marker::Sync for mycelium_doc::doc_lint::Finding
+impl core::marker::Unpin for mycelium_doc::doc_lint::Finding
+impl core::marker::UnsafeUnpin for mycelium_doc::doc_lint::Finding
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::doc_lint::Finding
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::doc_lint::Finding
+pub const mycelium_doc::doc_lint::CHECK_NAMES: &[&str]
+pub fn mycelium_doc::doc_lint::lint(&mycelium_doc::ir::DocModel) -> mycelium_doc::doc_lint::DocLintReport
+pub mod mycelium_doc::emit
+pub mod mycelium_doc::emit::html
+pub fn mycelium_doc::emit::html::render(&mycelium_doc::ir::DocModel) -> mycelium_doc::emit::Artifacts
+pub fn mycelium_doc::emit::html::render_concat(&mycelium_doc::ir::DocModel) -> alloc::string::String
+pub fn mycelium_doc::emit::html::template_hash() -> alloc::string::String
+pub mod mycelium_doc::emit::json
+pub fn mycelium_doc::emit::json::render(&mycelium_doc::ir::DocModel) -> mycelium_doc::emit::Artifacts
+pub fn mycelium_doc::emit::json::render_model_json(&mycelium_doc::ir::DocModel) -> alloc::string::String
+pub fn mycelium_doc::emit::json::render_search_index(&mycelium_doc::ir::DocModel) -> alloc::string::String
+pub mod mycelium_doc::emit::typst
+pub fn mycelium_doc::emit::typst::render(&mycelium_doc::ir::DocModel) -> alloc::string::String
+pub struct mycelium_doc::emit::Artifacts
+pub mycelium_doc::emit::Artifacts::files: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+impl mycelium_doc::emit::Artifacts
+pub fn mycelium_doc::emit::Artifacts::new() -> Self
+pub fn mycelium_doc::emit::Artifacts::put(&mut self, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>)
+pub fn mycelium_doc::emit::Artifacts::write_to(&self, &std::path::Path) -> std::io::error::Result<usize>
+impl core::clone::Clone for mycelium_doc::emit::Artifacts
+pub fn mycelium_doc::emit::Artifacts::clone(&self) -> mycelium_doc::emit::Artifacts
+impl core::default::Default for mycelium_doc::emit::Artifacts
+pub fn mycelium_doc::emit::Artifacts::default() -> mycelium_doc::emit::Artifacts
+impl core::fmt::Debug for mycelium_doc::emit::Artifacts
+pub fn mycelium_doc::emit::Artifacts::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_doc::emit::Artifacts
+impl core::marker::Send for mycelium_doc::emit::Artifacts
+impl core::marker::Sync for mycelium_doc::emit::Artifacts
+impl core::marker::Unpin for mycelium_doc::emit::Artifacts
+impl core::marker::UnsafeUnpin for mycelium_doc::emit::Artifacts
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::emit::Artifacts
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::emit::Artifacts
+pub fn mycelium_doc::emit::html_escape(&str) -> alloc::string::String
+pub mod mycelium_doc::hash
+pub struct mycelium_doc::hash::DocHasher
+impl mycelium_doc::hash::DocHasher
+pub fn mycelium_doc::hash::DocHasher::child(&mut self, &mycelium_core::id::ContentHash) -> &mut Self
+pub fn mycelium_doc::hash::DocHasher::finish(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_doc::hash::DocHasher::new() -> Self
+pub fn mycelium_doc::hash::DocHasher::opt_str(&mut self, core::option::Option<&str>) -> &mut Self
+pub fn mycelium_doc::hash::DocHasher::str(&mut self, &str) -> &mut Self
+pub fn mycelium_doc::hash::DocHasher::tag(&mut self, u8) -> &mut Self
+pub fn mycelium_doc::hash::DocHasher::u64(&mut self, u64) -> &mut Self
+impl core::default::Default for mycelium_doc::hash::DocHasher
+pub fn mycelium_doc::hash::DocHasher::default() -> Self
+impl core::marker::Freeze for mycelium_doc::hash::DocHasher
+impl core::marker::Send for mycelium_doc::hash::DocHasher
+impl core::marker::Sync for mycelium_doc::hash::DocHasher
+impl core::marker::Unpin for mycelium_doc::hash::DocHasher
+impl core::marker::UnsafeUnpin for mycelium_doc::hash::DocHasher
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::hash::DocHasher
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::hash::DocHasher
+pub mod mycelium_doc::ir
+pub enum mycelium_doc::ir::Level
+pub mycelium_doc::ir::Level::Detailed
+pub mycelium_doc::ir::Level::Medium
+pub mycelium_doc::ir::Level::Minimal
+impl mycelium_doc::ir::Level
+pub fn mycelium_doc::ir::Level::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_doc::ir::Level
+pub fn mycelium_doc::ir::Level::clone(&self) -> mycelium_doc::ir::Level
+impl core::cmp::Eq for mycelium_doc::ir::Level
+impl core::cmp::PartialEq for mycelium_doc::ir::Level
+pub fn mycelium_doc::ir::Level::eq(&self, &mycelium_doc::ir::Level) -> bool
+impl core::fmt::Debug for mycelium_doc::ir::Level
+pub fn mycelium_doc::ir::Level::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_doc::ir::Level
+impl core::marker::StructuralPartialEq for mycelium_doc::ir::Level
+impl serde_core::ser::Serialize for mycelium_doc::ir::Level
+pub fn mycelium_doc::ir::Level::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::ir::Level
+impl core::marker::Send for mycelium_doc::ir::Level
+impl core::marker::Sync for mycelium_doc::ir::Level
+impl core::marker::Unpin for mycelium_doc::ir::Level
+impl core::marker::UnsafeUnpin for mycelium_doc::ir::Level
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::Level
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::Level
+pub enum mycelium_doc::ir::Payload
+pub mycelium_doc::ir::Payload::ApiItem
+pub mycelium_doc::ir::Payload::ApiItem::signature: core::option::Option<alloc::string::String>
+pub mycelium_doc::ir::Payload::ApiItem::summary: core::option::Option<alloc::string::String>
+pub mycelium_doc::ir::Payload::Document
+pub mycelium_doc::ir::Payload::Document::source_kind: mycelium_doc::ir::SourceKind
+pub mycelium_doc::ir::Payload::Example
+pub mycelium_doc::ir::Payload::Example::checked: bool
+pub mycelium_doc::ir::Payload::Example::lang: alloc::string::String
+pub mycelium_doc::ir::Payload::Example::source: alloc::string::String
+pub mycelium_doc::ir::Payload::Index
+pub mycelium_doc::ir::Payload::Prose
+pub mycelium_doc::ir::Payload::Prose::text: alloc::string::String
+pub mycelium_doc::ir::Payload::Section
+pub mycelium_doc::ir::Payload::Undocumented
+pub mycelium_doc::ir::Payload::Undocumented::what: alloc::string::String
+pub mycelium_doc::ir::Payload::Xref
+pub mycelium_doc::ir::Payload::Xref::target: mycelium_doc::ir::XrefTarget
+impl mycelium_doc::ir::Payload
+pub fn mycelium_doc::ir::Payload::kind_str(&self) -> &'static str
+impl core::clone::Clone for mycelium_doc::ir::Payload
+pub fn mycelium_doc::ir::Payload::clone(&self) -> mycelium_doc::ir::Payload
+impl core::cmp::Eq for mycelium_doc::ir::Payload
+impl core::cmp::PartialEq for mycelium_doc::ir::Payload
+pub fn mycelium_doc::ir::Payload::eq(&self, &mycelium_doc::ir::Payload) -> bool
+impl core::fmt::Debug for mycelium_doc::ir::Payload
+pub fn mycelium_doc::ir::Payload::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::ir::Payload
+impl serde_core::ser::Serialize for mycelium_doc::ir::Payload
+pub fn mycelium_doc::ir::Payload::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::ir::Payload
+impl core::marker::Send for mycelium_doc::ir::Payload
+impl core::marker::Sync for mycelium_doc::ir::Payload
+impl core::marker::Unpin for mycelium_doc::ir::Payload
+impl core::marker::UnsafeUnpin for mycelium_doc::ir::Payload
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::Payload
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::Payload
+pub enum mycelium_doc::ir::SourceKind
+pub mycelium_doc::ir::SourceKind::Adr
+pub mycelium_doc::ir::SourceKind::Api
+pub mycelium_doc::ir::SourceKind::Devlog
+pub mycelium_doc::ir::SourceKind::Note
+pub mycelium_doc::ir::SourceKind::Other
+pub mycelium_doc::ir::SourceKind::Rfc
+pub mycelium_doc::ir::SourceKind::Spec
+impl mycelium_doc::ir::SourceKind
+pub fn mycelium_doc::ir::SourceKind::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_doc::ir::SourceKind
+pub fn mycelium_doc::ir::SourceKind::clone(&self) -> mycelium_doc::ir::SourceKind
+impl core::cmp::Eq for mycelium_doc::ir::SourceKind
+impl core::cmp::PartialEq for mycelium_doc::ir::SourceKind
+pub fn mycelium_doc::ir::SourceKind::eq(&self, &mycelium_doc::ir::SourceKind) -> bool
+impl core::fmt::Debug for mycelium_doc::ir::SourceKind
+pub fn mycelium_doc::ir::SourceKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_doc::ir::SourceKind
+impl core::marker::StructuralPartialEq for mycelium_doc::ir::SourceKind
+impl serde_core::ser::Serialize for mycelium_doc::ir::SourceKind
+pub fn mycelium_doc::ir::SourceKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::ir::SourceKind
+impl core::marker::Send for mycelium_doc::ir::SourceKind
+impl core::marker::Sync for mycelium_doc::ir::SourceKind
+impl core::marker::Unpin for mycelium_doc::ir::SourceKind
+impl core::marker::UnsafeUnpin for mycelium_doc::ir::SourceKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::SourceKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::SourceKind
+pub enum mycelium_doc::ir::XrefResolution
+pub mycelium_doc::ir::XrefResolution::Dead
+pub mycelium_doc::ir::XrefResolution::Dead::reason: alloc::string::String
+pub mycelium_doc::ir::XrefResolution::ExternalUrl
+pub mycelium_doc::ir::XrefResolution::Internal
+pub mycelium_doc::ir::XrefResolution::Internal::anchor: alloc::string::String
+pub mycelium_doc::ir::XrefResolution::OutOfScope
+pub mycelium_doc::ir::XrefResolution::Unresolved
+impl core::clone::Clone for mycelium_doc::ir::XrefResolution
+pub fn mycelium_doc::ir::XrefResolution::clone(&self) -> mycelium_doc::ir::XrefResolution
+impl core::cmp::Eq for mycelium_doc::ir::XrefResolution
+impl core::cmp::PartialEq for mycelium_doc::ir::XrefResolution
+pub fn mycelium_doc::ir::XrefResolution::eq(&self, &mycelium_doc::ir::XrefResolution) -> bool
+impl core::fmt::Debug for mycelium_doc::ir::XrefResolution
+pub fn mycelium_doc::ir::XrefResolution::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::ir::XrefResolution
+impl serde_core::ser::Serialize for mycelium_doc::ir::XrefResolution
+pub fn mycelium_doc::ir::XrefResolution::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::ir::XrefResolution
+impl core::marker::Send for mycelium_doc::ir::XrefResolution
+impl core::marker::Sync for mycelium_doc::ir::XrefResolution
+impl core::marker::Unpin for mycelium_doc::ir::XrefResolution
+impl core::marker::UnsafeUnpin for mycelium_doc::ir::XrefResolution
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::XrefResolution
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::XrefResolution
+pub struct mycelium_doc::ir::DocModel
+pub mycelium_doc::ir::DocModel::anchors: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_core::id::ContentHash>
+pub mycelium_doc::ir::DocModel::documents: alloc::vec::Vec<mycelium_doc::ir::Node>
+impl mycelium_doc::ir::DocModel
+pub fn mycelium_doc::ir::DocModel::all_nodes(&self) -> alloc::vec::Vec<&mycelium_doc::ir::Node>
+pub fn mycelium_doc::ir::DocModel::id_set(&self) -> alloc::collections::btree::set::BTreeSet<alloc::string::String>
+pub fn mycelium_doc::ir::DocModel::new(alloc::vec::Vec<mycelium_doc::ir::Node>) -> mycelium_doc::ir::DocModel
+impl core::clone::Clone for mycelium_doc::ir::DocModel
+pub fn mycelium_doc::ir::DocModel::clone(&self) -> mycelium_doc::ir::DocModel
+impl core::fmt::Debug for mycelium_doc::ir::DocModel
+pub fn mycelium_doc::ir::DocModel::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_doc::ir::DocModel
+pub fn mycelium_doc::ir::DocModel::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::ir::DocModel
+impl core::marker::Send for mycelium_doc::ir::DocModel
+impl core::marker::Sync for mycelium_doc::ir::DocModel
+impl core::marker::Unpin for mycelium_doc::ir::DocModel
+impl core::marker::UnsafeUnpin for mycelium_doc::ir::DocModel
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::DocModel
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::DocModel
+pub struct mycelium_doc::ir::Node
+pub mycelium_doc::ir::Node::anchor: alloc::string::String
+pub mycelium_doc::ir::Node::children: alloc::vec::Vec<mycelium_doc::ir::Node>
+pub mycelium_doc::ir::Node::id: mycelium_core::id::ContentHash
+pub mycelium_doc::ir::Node::level: core::option::Option<mycelium_doc::ir::Level>
+pub mycelium_doc::ir::Node::payload: mycelium_doc::ir::Payload
+pub mycelium_doc::ir::Node::provenance: mycelium_doc::ir::Provenance
+pub mycelium_doc::ir::Node::title: core::option::Option<alloc::string::String>
+impl mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::new(impl core::convert::Into<alloc::string::String>, core::option::Option<alloc::string::String>, core::option::Option<mycelium_doc::ir::Level>, mycelium_doc::ir::Provenance, mycelium_doc::ir::Payload, alloc::vec::Vec<mycelium_doc::ir::Node>) -> mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::walk<'a>(&'a self, &mut dyn core::ops::function::FnMut(&'a mycelium_doc::ir::Node))
+impl core::clone::Clone for mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::clone(&self) -> mycelium_doc::ir::Node
+impl core::cmp::Eq for mycelium_doc::ir::Node
+impl core::cmp::PartialEq for mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::eq(&self, &mycelium_doc::ir::Node) -> bool
+impl core::fmt::Debug for mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::ir::Node
+impl serde_core::ser::Serialize for mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::ir::Node
+impl core::marker::Send for mycelium_doc::ir::Node
+impl core::marker::Sync for mycelium_doc::ir::Node
+impl core::marker::Unpin for mycelium_doc::ir::Node
+impl core::marker::UnsafeUnpin for mycelium_doc::ir::Node
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::Node
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::Node
+pub struct mycelium_doc::ir::Provenance
+pub mycelium_doc::ir::Provenance::line: u32
+pub mycelium_doc::ir::Provenance::source: alloc::string::String
+impl core::clone::Clone for mycelium_doc::ir::Provenance
+pub fn mycelium_doc::ir::Provenance::clone(&self) -> mycelium_doc::ir::Provenance
+impl core::cmp::Eq for mycelium_doc::ir::Provenance
+impl core::cmp::PartialEq for mycelium_doc::ir::Provenance
+pub fn mycelium_doc::ir::Provenance::eq(&self, &mycelium_doc::ir::Provenance) -> bool
+impl core::fmt::Debug for mycelium_doc::ir::Provenance
+pub fn mycelium_doc::ir::Provenance::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::ir::Provenance
+impl serde_core::ser::Serialize for mycelium_doc::ir::Provenance
+pub fn mycelium_doc::ir::Provenance::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::ir::Provenance
+impl core::marker::Send for mycelium_doc::ir::Provenance
+impl core::marker::Sync for mycelium_doc::ir::Provenance
+impl core::marker::Unpin for mycelium_doc::ir::Provenance
+impl core::marker::UnsafeUnpin for mycelium_doc::ir::Provenance
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::Provenance
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::Provenance
+pub struct mycelium_doc::ir::XrefTarget
+pub mycelium_doc::ir::XrefTarget::raw: alloc::string::String
+pub mycelium_doc::ir::XrefTarget::resolution: mycelium_doc::ir::XrefResolution
+impl core::clone::Clone for mycelium_doc::ir::XrefTarget
+pub fn mycelium_doc::ir::XrefTarget::clone(&self) -> mycelium_doc::ir::XrefTarget
+impl core::cmp::Eq for mycelium_doc::ir::XrefTarget
+impl core::cmp::PartialEq for mycelium_doc::ir::XrefTarget
+pub fn mycelium_doc::ir::XrefTarget::eq(&self, &mycelium_doc::ir::XrefTarget) -> bool
+impl core::fmt::Debug for mycelium_doc::ir::XrefTarget
+pub fn mycelium_doc::ir::XrefTarget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::ir::XrefTarget
+impl serde_core::ser::Serialize for mycelium_doc::ir::XrefTarget
+pub fn mycelium_doc::ir::XrefTarget::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::ir::XrefTarget
+impl core::marker::Send for mycelium_doc::ir::XrefTarget
+impl core::marker::Sync for mycelium_doc::ir::XrefTarget
+impl core::marker::Unpin for mycelium_doc::ir::XrefTarget
+impl core::marker::UnsafeUnpin for mycelium_doc::ir::XrefTarget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::XrefTarget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::XrefTarget
+pub enum mycelium_doc::CheckStatus
+pub mycelium_doc::CheckStatus::Active
+pub mycelium_doc::CheckStatus::Dormant(alloc::string::String)
+pub mycelium_doc::CheckStatus::PartiallyDormant(alloc::string::String)
+impl core::clone::Clone for mycelium_doc::doc_lint::CheckStatus
+pub fn mycelium_doc::doc_lint::CheckStatus::clone(&self) -> mycelium_doc::doc_lint::CheckStatus
+impl core::cmp::Eq for mycelium_doc::doc_lint::CheckStatus
+impl core::cmp::PartialEq for mycelium_doc::doc_lint::CheckStatus
+pub fn mycelium_doc::doc_lint::CheckStatus::eq(&self, &mycelium_doc::doc_lint::CheckStatus) -> bool
+impl core::fmt::Debug for mycelium_doc::doc_lint::CheckStatus
+pub fn mycelium_doc::doc_lint::CheckStatus::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::doc_lint::CheckStatus
+impl core::marker::Freeze for mycelium_doc::doc_lint::CheckStatus
+impl core::marker::Send for mycelium_doc::doc_lint::CheckStatus
+impl core::marker::Sync for mycelium_doc::doc_lint::CheckStatus
+impl core::marker::Unpin for mycelium_doc::doc_lint::CheckStatus
+impl core::marker::UnsafeUnpin for mycelium_doc::doc_lint::CheckStatus
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::doc_lint::CheckStatus
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::doc_lint::CheckStatus
+pub enum mycelium_doc::Level
+pub mycelium_doc::Level::Detailed
+pub mycelium_doc::Level::Medium
+pub mycelium_doc::Level::Minimal
+impl mycelium_doc::ir::Level
+pub fn mycelium_doc::ir::Level::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_doc::ir::Level
+pub fn mycelium_doc::ir::Level::clone(&self) -> mycelium_doc::ir::Level
+impl core::cmp::Eq for mycelium_doc::ir::Level
+impl core::cmp::PartialEq for mycelium_doc::ir::Level
+pub fn mycelium_doc::ir::Level::eq(&self, &mycelium_doc::ir::Level) -> bool
+impl core::fmt::Debug for mycelium_doc::ir::Level
+pub fn mycelium_doc::ir::Level::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_doc::ir::Level
+impl core::marker::StructuralPartialEq for mycelium_doc::ir::Level
+impl serde_core::ser::Serialize for mycelium_doc::ir::Level
+pub fn mycelium_doc::ir::Level::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::ir::Level
+impl core::marker::Send for mycelium_doc::ir::Level
+impl core::marker::Sync for mycelium_doc::ir::Level
+impl core::marker::Unpin for mycelium_doc::ir::Level
+impl core::marker::UnsafeUnpin for mycelium_doc::ir::Level
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::Level
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::Level
+pub enum mycelium_doc::Payload
+pub mycelium_doc::Payload::ApiItem
+pub mycelium_doc::Payload::ApiItem::signature: core::option::Option<alloc::string::String>
+pub mycelium_doc::Payload::ApiItem::summary: core::option::Option<alloc::string::String>
+pub mycelium_doc::Payload::Document
+pub mycelium_doc::Payload::Document::source_kind: mycelium_doc::ir::SourceKind
+pub mycelium_doc::Payload::Example
+pub mycelium_doc::Payload::Example::checked: bool
+pub mycelium_doc::Payload::Example::lang: alloc::string::String
+pub mycelium_doc::Payload::Example::source: alloc::string::String
+pub mycelium_doc::Payload::Index
+pub mycelium_doc::Payload::Prose
+pub mycelium_doc::Payload::Prose::text: alloc::string::String
+pub mycelium_doc::Payload::Section
+pub mycelium_doc::Payload::Undocumented
+pub mycelium_doc::Payload::Undocumented::what: alloc::string::String
+pub mycelium_doc::Payload::Xref
+pub mycelium_doc::Payload::Xref::target: mycelium_doc::ir::XrefTarget
+impl mycelium_doc::ir::Payload
+pub fn mycelium_doc::ir::Payload::kind_str(&self) -> &'static str
+impl core::clone::Clone for mycelium_doc::ir::Payload
+pub fn mycelium_doc::ir::Payload::clone(&self) -> mycelium_doc::ir::Payload
+impl core::cmp::Eq for mycelium_doc::ir::Payload
+impl core::cmp::PartialEq for mycelium_doc::ir::Payload
+pub fn mycelium_doc::ir::Payload::eq(&self, &mycelium_doc::ir::Payload) -> bool
+impl core::fmt::Debug for mycelium_doc::ir::Payload
+pub fn mycelium_doc::ir::Payload::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::ir::Payload
+impl serde_core::ser::Serialize for mycelium_doc::ir::Payload
+pub fn mycelium_doc::ir::Payload::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::ir::Payload
+impl core::marker::Send for mycelium_doc::ir::Payload
+impl core::marker::Sync for mycelium_doc::ir::Payload
+impl core::marker::Unpin for mycelium_doc::ir::Payload
+impl core::marker::UnsafeUnpin for mycelium_doc::ir::Payload
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::Payload
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::Payload
+pub enum mycelium_doc::Severity
+pub mycelium_doc::Severity::Error
+pub mycelium_doc::Severity::Info
+pub mycelium_doc::Severity::Warning
+impl mycelium_doc::doc_lint::Severity
+pub fn mycelium_doc::doc_lint::Severity::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_doc::doc_lint::Severity
+pub fn mycelium_doc::doc_lint::Severity::clone(&self) -> mycelium_doc::doc_lint::Severity
+impl core::cmp::Eq for mycelium_doc::doc_lint::Severity
+impl core::cmp::PartialEq for mycelium_doc::doc_lint::Severity
+pub fn mycelium_doc::doc_lint::Severity::eq(&self, &mycelium_doc::doc_lint::Severity) -> bool
+impl core::fmt::Debug for mycelium_doc::doc_lint::Severity
+pub fn mycelium_doc::doc_lint::Severity::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_doc::doc_lint::Severity
+impl core::marker::StructuralPartialEq for mycelium_doc::doc_lint::Severity
+impl core::marker::Freeze for mycelium_doc::doc_lint::Severity
+impl core::marker::Send for mycelium_doc::doc_lint::Severity
+impl core::marker::Sync for mycelium_doc::doc_lint::Severity
+impl core::marker::Unpin for mycelium_doc::doc_lint::Severity
+impl core::marker::UnsafeUnpin for mycelium_doc::doc_lint::Severity
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::doc_lint::Severity
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::doc_lint::Severity
+pub enum mycelium_doc::SourceKind
+pub mycelium_doc::SourceKind::Adr
+pub mycelium_doc::SourceKind::Api
+pub mycelium_doc::SourceKind::Devlog
+pub mycelium_doc::SourceKind::Note
+pub mycelium_doc::SourceKind::Other
+pub mycelium_doc::SourceKind::Rfc
+pub mycelium_doc::SourceKind::Spec
+impl mycelium_doc::ir::SourceKind
+pub fn mycelium_doc::ir::SourceKind::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_doc::ir::SourceKind
+pub fn mycelium_doc::ir::SourceKind::clone(&self) -> mycelium_doc::ir::SourceKind
+impl core::cmp::Eq for mycelium_doc::ir::SourceKind
+impl core::cmp::PartialEq for mycelium_doc::ir::SourceKind
+pub fn mycelium_doc::ir::SourceKind::eq(&self, &mycelium_doc::ir::SourceKind) -> bool
+impl core::fmt::Debug for mycelium_doc::ir::SourceKind
+pub fn mycelium_doc::ir::SourceKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_doc::ir::SourceKind
+impl core::marker::StructuralPartialEq for mycelium_doc::ir::SourceKind
+impl serde_core::ser::Serialize for mycelium_doc::ir::SourceKind
+pub fn mycelium_doc::ir::SourceKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::ir::SourceKind
+impl core::marker::Send for mycelium_doc::ir::SourceKind
+impl core::marker::Sync for mycelium_doc::ir::SourceKind
+impl core::marker::Unpin for mycelium_doc::ir::SourceKind
+impl core::marker::UnsafeUnpin for mycelium_doc::ir::SourceKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::SourceKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::SourceKind
+pub struct mycelium_doc::BuildInput
+pub mycelium_doc::BuildInput::corpus_root: core::option::Option<std::path::PathBuf>
+pub mycelium_doc::BuildInput::example_roots: alloc::vec::Vec<std::path::PathBuf>
+pub mycelium_doc::BuildInput::repo_root: std::path::PathBuf
+pub mycelium_doc::BuildInput::schemas_root: core::option::Option<std::path::PathBuf>
+impl mycelium_doc::build::BuildInput
+pub fn mycelium_doc::build::BuildInput::conventional(impl core::convert::Into<std::path::PathBuf>) -> Self
+impl core::clone::Clone for mycelium_doc::build::BuildInput
+pub fn mycelium_doc::build::BuildInput::clone(&self) -> mycelium_doc::build::BuildInput
+impl core::fmt::Debug for mycelium_doc::build::BuildInput
+pub fn mycelium_doc::build::BuildInput::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_doc::build::BuildInput
+impl core::marker::Send for mycelium_doc::build::BuildInput
+impl core::marker::Sync for mycelium_doc::build::BuildInput
+impl core::marker::Unpin for mycelium_doc::build::BuildInput
+impl core::marker::UnsafeUnpin for mycelium_doc::build::BuildInput
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::build::BuildInput
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::build::BuildInput
+pub struct mycelium_doc::CheckOutcome
+pub mycelium_doc::CheckOutcome::findings: alloc::vec::Vec<mycelium_doc::doc_lint::Finding>
+pub mycelium_doc::CheckOutcome::name: alloc::string::String
+pub mycelium_doc::CheckOutcome::status: mycelium_doc::doc_lint::CheckStatus
+pub mycelium_doc::CheckOutcome::summary: alloc::string::String
+impl core::clone::Clone for mycelium_doc::doc_lint::CheckOutcome
+pub fn mycelium_doc::doc_lint::CheckOutcome::clone(&self) -> mycelium_doc::doc_lint::CheckOutcome
+impl core::cmp::Eq for mycelium_doc::doc_lint::CheckOutcome
+impl core::cmp::PartialEq for mycelium_doc::doc_lint::CheckOutcome
+pub fn mycelium_doc::doc_lint::CheckOutcome::eq(&self, &mycelium_doc::doc_lint::CheckOutcome) -> bool
+impl core::fmt::Debug for mycelium_doc::doc_lint::CheckOutcome
+pub fn mycelium_doc::doc_lint::CheckOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::doc_lint::CheckOutcome
+impl core::marker::Freeze for mycelium_doc::doc_lint::CheckOutcome
+impl core::marker::Send for mycelium_doc::doc_lint::CheckOutcome
+impl core::marker::Sync for mycelium_doc::doc_lint::CheckOutcome
+impl core::marker::Unpin for mycelium_doc::doc_lint::CheckOutcome
+impl core::marker::UnsafeUnpin for mycelium_doc::doc_lint::CheckOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::doc_lint::CheckOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::doc_lint::CheckOutcome
+pub struct mycelium_doc::DocLintReport
+pub mycelium_doc::DocLintReport::outcomes: alloc::vec::Vec<mycelium_doc::doc_lint::CheckOutcome>
+impl mycelium_doc::doc_lint::DocLintReport
+pub fn mycelium_doc::doc_lint::DocLintReport::errors(&self) -> alloc::vec::Vec<&mycelium_doc::doc_lint::Finding>
+pub fn mycelium_doc::doc_lint::DocLintReport::has_errors(&self) -> bool
+impl core::clone::Clone for mycelium_doc::doc_lint::DocLintReport
+pub fn mycelium_doc::doc_lint::DocLintReport::clone(&self) -> mycelium_doc::doc_lint::DocLintReport
+impl core::cmp::Eq for mycelium_doc::doc_lint::DocLintReport
+impl core::cmp::PartialEq for mycelium_doc::doc_lint::DocLintReport
+pub fn mycelium_doc::doc_lint::DocLintReport::eq(&self, &mycelium_doc::doc_lint::DocLintReport) -> bool
+impl core::fmt::Debug for mycelium_doc::doc_lint::DocLintReport
+pub fn mycelium_doc::doc_lint::DocLintReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::doc_lint::DocLintReport
+impl core::marker::Freeze for mycelium_doc::doc_lint::DocLintReport
+impl core::marker::Send for mycelium_doc::doc_lint::DocLintReport
+impl core::marker::Sync for mycelium_doc::doc_lint::DocLintReport
+impl core::marker::Unpin for mycelium_doc::doc_lint::DocLintReport
+impl core::marker::UnsafeUnpin for mycelium_doc::doc_lint::DocLintReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::doc_lint::DocLintReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::doc_lint::DocLintReport
+pub struct mycelium_doc::DocModel
+pub mycelium_doc::DocModel::anchors: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_core::id::ContentHash>
+pub mycelium_doc::DocModel::documents: alloc::vec::Vec<mycelium_doc::ir::Node>
+impl mycelium_doc::ir::DocModel
+pub fn mycelium_doc::ir::DocModel::all_nodes(&self) -> alloc::vec::Vec<&mycelium_doc::ir::Node>
+pub fn mycelium_doc::ir::DocModel::id_set(&self) -> alloc::collections::btree::set::BTreeSet<alloc::string::String>
+pub fn mycelium_doc::ir::DocModel::new(alloc::vec::Vec<mycelium_doc::ir::Node>) -> mycelium_doc::ir::DocModel
+impl core::clone::Clone for mycelium_doc::ir::DocModel
+pub fn mycelium_doc::ir::DocModel::clone(&self) -> mycelium_doc::ir::DocModel
+impl core::fmt::Debug for mycelium_doc::ir::DocModel
+pub fn mycelium_doc::ir::DocModel::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_doc::ir::DocModel
+pub fn mycelium_doc::ir::DocModel::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::ir::DocModel
+impl core::marker::Send for mycelium_doc::ir::DocModel
+impl core::marker::Sync for mycelium_doc::ir::DocModel
+impl core::marker::Unpin for mycelium_doc::ir::DocModel
+impl core::marker::UnsafeUnpin for mycelium_doc::ir::DocModel
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::DocModel
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::DocModel
+pub struct mycelium_doc::Finding
+pub mycelium_doc::Finding::anchor: alloc::string::String
+pub mycelium_doc::Finding::check: alloc::string::String
+pub mycelium_doc::Finding::message: alloc::string::String
+pub mycelium_doc::Finding::severity: mycelium_doc::doc_lint::Severity
+impl core::clone::Clone for mycelium_doc::doc_lint::Finding
+pub fn mycelium_doc::doc_lint::Finding::clone(&self) -> mycelium_doc::doc_lint::Finding
+impl core::cmp::Eq for mycelium_doc::doc_lint::Finding
+impl core::cmp::PartialEq for mycelium_doc::doc_lint::Finding
+pub fn mycelium_doc::doc_lint::Finding::eq(&self, &mycelium_doc::doc_lint::Finding) -> bool
+impl core::fmt::Debug for mycelium_doc::doc_lint::Finding
+pub fn mycelium_doc::doc_lint::Finding::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::doc_lint::Finding
+impl core::marker::Freeze for mycelium_doc::doc_lint::Finding
+impl core::marker::Send for mycelium_doc::doc_lint::Finding
+impl core::marker::Sync for mycelium_doc::doc_lint::Finding
+impl core::marker::Unpin for mycelium_doc::doc_lint::Finding
+impl core::marker::UnsafeUnpin for mycelium_doc::doc_lint::Finding
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::doc_lint::Finding
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::doc_lint::Finding
+pub struct mycelium_doc::Node
+pub mycelium_doc::Node::anchor: alloc::string::String
+pub mycelium_doc::Node::children: alloc::vec::Vec<mycelium_doc::ir::Node>
+pub mycelium_doc::Node::id: mycelium_core::id::ContentHash
+pub mycelium_doc::Node::level: core::option::Option<mycelium_doc::ir::Level>
+pub mycelium_doc::Node::payload: mycelium_doc::ir::Payload
+pub mycelium_doc::Node::provenance: mycelium_doc::ir::Provenance
+pub mycelium_doc::Node::title: core::option::Option<alloc::string::String>
+impl mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::new(impl core::convert::Into<alloc::string::String>, core::option::Option<alloc::string::String>, core::option::Option<mycelium_doc::ir::Level>, mycelium_doc::ir::Provenance, mycelium_doc::ir::Payload, alloc::vec::Vec<mycelium_doc::ir::Node>) -> mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::walk<'a>(&'a self, &mut dyn core::ops::function::FnMut(&'a mycelium_doc::ir::Node))
+impl core::clone::Clone for mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::clone(&self) -> mycelium_doc::ir::Node
+impl core::cmp::Eq for mycelium_doc::ir::Node
+impl core::cmp::PartialEq for mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::eq(&self, &mycelium_doc::ir::Node) -> bool
+impl core::fmt::Debug for mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::ir::Node
+impl serde_core::ser::Serialize for mycelium_doc::ir::Node
+pub fn mycelium_doc::ir::Node::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::ir::Node
+impl core::marker::Send for mycelium_doc::ir::Node
+impl core::marker::Sync for mycelium_doc::ir::Node
+impl core::marker::Unpin for mycelium_doc::ir::Node
+impl core::marker::UnsafeUnpin for mycelium_doc::ir::Node
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::Node
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::Node
+pub struct mycelium_doc::Provenance
+pub mycelium_doc::Provenance::line: u32
+pub mycelium_doc::Provenance::source: alloc::string::String
+impl core::clone::Clone for mycelium_doc::ir::Provenance
+pub fn mycelium_doc::ir::Provenance::clone(&self) -> mycelium_doc::ir::Provenance
+impl core::cmp::Eq for mycelium_doc::ir::Provenance
+impl core::cmp::PartialEq for mycelium_doc::ir::Provenance
+pub fn mycelium_doc::ir::Provenance::eq(&self, &mycelium_doc::ir::Provenance) -> bool
+impl core::fmt::Debug for mycelium_doc::ir::Provenance
+pub fn mycelium_doc::ir::Provenance::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_doc::ir::Provenance
+impl serde_core::ser::Serialize for mycelium_doc::ir::Provenance
+pub fn mycelium_doc::ir::Provenance::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_doc::ir::Provenance
+impl core::marker::Send for mycelium_doc::ir::Provenance
+impl core::marker::Sync for mycelium_doc::ir::Provenance
+impl core::marker::Unpin for mycelium_doc::ir::Provenance
+impl core::marker::UnsafeUnpin for mycelium_doc::ir::Provenance
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_doc::ir::Provenance
+impl core::panic::unwind_safe::UnwindSafe for mycelium_doc::ir::Provenance
+pub const mycelium_doc::CHECK_NAMES: &[&str]
+pub fn mycelium_doc::build(&mycelium_doc::build::BuildInput) -> std::io::error::Result<mycelium_doc::ir::DocModel>
+pub fn mycelium_doc::emit_all(&mycelium_doc::ir::DocModel) -> mycelium_doc::emit::Artifacts
+pub fn mycelium_doc::lint(&mycelium_doc::ir::DocModel) -> mycelium_doc::doc_lint::DocLintReport

@@ -378,8 +378,8 @@ future L2 elaboration rules and syntax additions:
    teaching advantage is clear, pick the conventional word (append-only — a later revision may
    revisit if evidence accumulates, but the default is familiar).
 
-4. **Novel type-system features are where Mycelium is novel** (RFC-0006 §4.2: "beyond Rust" = LR-5
-   + LR-6, not exotic syntax). The surface should be boring *because* the type system is
+4. **Novel type-system features are where Mycelium is novel** (RFC-0006 §4.2: "beyond Rust" = LR-5 +
+   LR-6, not exotic syntax). The surface should be boring *because* the type system is
    interesting — theming the surface on top of a novel type system compounds novelty rather than
    controlling it.
 

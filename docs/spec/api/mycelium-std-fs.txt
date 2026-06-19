@@ -1,0 +1,739 @@
+pub mod mycelium_std_fs
+pub mod mycelium_std_fs::error
+pub enum mycelium_std_fs::error::ErrnoClass
+pub mycelium_std_fs::error::ErrnoClass::AlreadyExists
+pub mycelium_std_fs::error::ErrnoClass::CrossDevice
+pub mycelium_std_fs::error::ErrnoClass::DiskFull
+pub mycelium_std_fs::error::ErrnoClass::Interrupted
+pub mycelium_std_fs::error::ErrnoClass::IsADirectory
+pub mycelium_std_fs::error::ErrnoClass::Loop
+pub mycelium_std_fs::error::ErrnoClass::NotADirectory
+pub mycelium_std_fs::error::ErrnoClass::NotEmpty
+pub mycelium_std_fs::error::ErrnoClass::NotFound
+pub mycelium_std_fs::error::ErrnoClass::Other
+pub mycelium_std_fs::error::ErrnoClass::PermDenied
+pub mycelium_std_fs::error::ErrnoClass::WouldBlock
+impl core::clone::Clone for mycelium_std_fs::error::ErrnoClass
+pub fn mycelium_std_fs::error::ErrnoClass::clone(&self) -> mycelium_std_fs::error::ErrnoClass
+impl core::cmp::Eq for mycelium_std_fs::error::ErrnoClass
+impl core::cmp::PartialEq for mycelium_std_fs::error::ErrnoClass
+pub fn mycelium_std_fs::error::ErrnoClass::eq(&self, &mycelium_std_fs::error::ErrnoClass) -> bool
+impl core::fmt::Debug for mycelium_std_fs::error::ErrnoClass
+pub fn mycelium_std_fs::error::ErrnoClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_fs::error::ErrnoClass
+pub fn mycelium_std_fs::error::ErrnoClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fs::error::ErrnoClass
+impl core::marker::Freeze for mycelium_std_fs::error::ErrnoClass
+impl core::marker::Send for mycelium_std_fs::error::ErrnoClass
+impl core::marker::Sync for mycelium_std_fs::error::ErrnoClass
+impl core::marker::Unpin for mycelium_std_fs::error::ErrnoClass
+impl core::marker::UnsafeUnpin for mycelium_std_fs::error::ErrnoClass
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::error::ErrnoClass
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::error::ErrnoClass
+pub enum mycelium_std_fs::error::FsErr
+pub mycelium_std_fs::error::FsErr::AlreadyExists
+pub mycelium_std_fs::error::FsErr::AlreadyExists::path: alloc::string::String
+pub mycelium_std_fs::error::FsErr::AlreadyExists::why: &'static str
+pub mycelium_std_fs::error::FsErr::CrossDevice
+pub mycelium_std_fs::error::FsErr::CrossDevice::from: alloc::string::String
+pub mycelium_std_fs::error::FsErr::CrossDevice::to: alloc::string::String
+pub mycelium_std_fs::error::FsErr::CrossDevice::why: &'static str
+pub mycelium_std_fs::error::FsErr::DiskFull
+pub mycelium_std_fs::error::FsErr::DiskFull::path: alloc::string::String
+pub mycelium_std_fs::error::FsErr::DiskFull::why: &'static str
+pub mycelium_std_fs::error::FsErr::Interrupted
+pub mycelium_std_fs::error::FsErr::Interrupted::path: alloc::string::String
+pub mycelium_std_fs::error::FsErr::Interrupted::why: &'static str
+pub mycelium_std_fs::error::FsErr::InvalidOptions
+pub mycelium_std_fs::error::FsErr::InvalidOptions::path: alloc::string::String
+pub mycelium_std_fs::error::FsErr::InvalidOptions::why: &'static str
+pub mycelium_std_fs::error::FsErr::IsADirectory
+pub mycelium_std_fs::error::FsErr::IsADirectory::path: alloc::string::String
+pub mycelium_std_fs::error::FsErr::IsADirectory::why: &'static str
+pub mycelium_std_fs::error::FsErr::Loop
+pub mycelium_std_fs::error::FsErr::Loop::path: alloc::string::String
+pub mycelium_std_fs::error::FsErr::Loop::why: &'static str
+pub mycelium_std_fs::error::FsErr::NotADirectory
+pub mycelium_std_fs::error::FsErr::NotADirectory::path: alloc::string::String
+pub mycelium_std_fs::error::FsErr::NotADirectory::why: &'static str
+pub mycelium_std_fs::error::FsErr::NotEmpty
+pub mycelium_std_fs::error::FsErr::NotEmpty::path: alloc::string::String
+pub mycelium_std_fs::error::FsErr::NotEmpty::why: &'static str
+pub mycelium_std_fs::error::FsErr::NotFound
+pub mycelium_std_fs::error::FsErr::NotFound::path: alloc::string::String
+pub mycelium_std_fs::error::FsErr::NotFound::why: &'static str
+pub mycelium_std_fs::error::FsErr::Os
+pub mycelium_std_fs::error::FsErr::Os::errno_class: mycelium_std_fs::error::ErrnoClass
+pub mycelium_std_fs::error::FsErr::Os::path: alloc::string::String
+pub mycelium_std_fs::error::FsErr::Os::raw: i32
+pub mycelium_std_fs::error::FsErr::Os::why: &'static str
+pub mycelium_std_fs::error::FsErr::PermDenied
+pub mycelium_std_fs::error::FsErr::PermDenied::path: alloc::string::String
+pub mycelium_std_fs::error::FsErr::PermDenied::why: &'static str
+pub mycelium_std_fs::error::FsErr::UseAfterConsume
+pub mycelium_std_fs::error::FsErr::UseAfterConsume::path: alloc::string::String
+pub mycelium_std_fs::error::FsErr::UseAfterConsume::why: &'static str
+pub mycelium_std_fs::error::FsErr::WouldBlock
+pub mycelium_std_fs::error::FsErr::WouldBlock::path: alloc::string::String
+pub mycelium_std_fs::error::FsErr::WouldBlock::why: &'static str
+impl mycelium_std_fs::error::FsErr
+pub fn mycelium_std_fs::error::FsErr::errno_class(&self) -> core::option::Option<mycelium_std_fs::error::ErrnoClass>
+pub fn mycelium_std_fs::error::FsErr::path(&self) -> &str
+pub fn mycelium_std_fs::error::FsErr::why(&self) -> &str
+impl core::clone::Clone for mycelium_std_fs::error::FsErr
+pub fn mycelium_std_fs::error::FsErr::clone(&self) -> mycelium_std_fs::error::FsErr
+impl core::cmp::Eq for mycelium_std_fs::error::FsErr
+impl core::cmp::PartialEq for mycelium_std_fs::error::FsErr
+pub fn mycelium_std_fs::error::FsErr::eq(&self, &mycelium_std_fs::error::FsErr) -> bool
+impl core::error::Error for mycelium_std_fs::error::FsErr
+impl core::fmt::Debug for mycelium_std_fs::error::FsErr
+pub fn mycelium_std_fs::error::FsErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_fs::error::FsErr
+pub fn mycelium_std_fs::error::FsErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fs::error::FsErr
+impl core::marker::Freeze for mycelium_std_fs::error::FsErr
+impl core::marker::Send for mycelium_std_fs::error::FsErr
+impl core::marker::Sync for mycelium_std_fs::error::FsErr
+impl core::marker::Unpin for mycelium_std_fs::error::FsErr
+impl core::marker::UnsafeUnpin for mycelium_std_fs::error::FsErr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::error::FsErr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::error::FsErr
+pub mod mycelium_std_fs::guarantee_matrix
+pub enum mycelium_std_fs::guarantee_matrix::Effects
+pub mycelium_std_fs::guarantee_matrix::Effects::Io
+pub mycelium_std_fs::guarantee_matrix::Effects::None
+impl core::clone::Clone for mycelium_std_fs::guarantee_matrix::Effects
+pub fn mycelium_std_fs::guarantee_matrix::Effects::clone(&self) -> mycelium_std_fs::guarantee_matrix::Effects
+impl core::cmp::Eq for mycelium_std_fs::guarantee_matrix::Effects
+impl core::cmp::PartialEq for mycelium_std_fs::guarantee_matrix::Effects
+pub fn mycelium_std_fs::guarantee_matrix::Effects::eq(&self, &mycelium_std_fs::guarantee_matrix::Effects) -> bool
+impl core::fmt::Debug for mycelium_std_fs::guarantee_matrix::Effects
+pub fn mycelium_std_fs::guarantee_matrix::Effects::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_fs::guarantee_matrix::Effects
+impl core::marker::StructuralPartialEq for mycelium_std_fs::guarantee_matrix::Effects
+impl core::marker::Freeze for mycelium_std_fs::guarantee_matrix::Effects
+impl core::marker::Send for mycelium_std_fs::guarantee_matrix::Effects
+impl core::marker::Sync for mycelium_std_fs::guarantee_matrix::Effects
+impl core::marker::Unpin for mycelium_std_fs::guarantee_matrix::Effects
+impl core::marker::UnsafeUnpin for mycelium_std_fs::guarantee_matrix::Effects
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::guarantee_matrix::Effects
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::guarantee_matrix::Effects
+pub enum mycelium_std_fs::guarantee_matrix::Explainable
+pub mycelium_std_fs::guarantee_matrix::Explainable::NotApplicable
+pub mycelium_std_fs::guarantee_matrix::Explainable::Yes
+impl core::clone::Clone for mycelium_std_fs::guarantee_matrix::Explainable
+pub fn mycelium_std_fs::guarantee_matrix::Explainable::clone(&self) -> mycelium_std_fs::guarantee_matrix::Explainable
+impl core::cmp::Eq for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::cmp::PartialEq for mycelium_std_fs::guarantee_matrix::Explainable
+pub fn mycelium_std_fs::guarantee_matrix::Explainable::eq(&self, &mycelium_std_fs::guarantee_matrix::Explainable) -> bool
+impl core::fmt::Debug for mycelium_std_fs::guarantee_matrix::Explainable
+pub fn mycelium_std_fs::guarantee_matrix::Explainable::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::marker::StructuralPartialEq for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::marker::Freeze for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::marker::Send for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::marker::Sync for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::marker::Unpin for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::marker::UnsafeUnpin for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::guarantee_matrix::Explainable
+pub enum mycelium_std_fs::guarantee_matrix::Fallibility
+pub mycelium_std_fs::guarantee_matrix::Fallibility::OptionFallible
+pub mycelium_std_fs::guarantee_matrix::Fallibility::ResultFallible
+pub mycelium_std_fs::guarantee_matrix::Fallibility::Total
+impl core::clone::Clone for mycelium_std_fs::guarantee_matrix::Fallibility
+pub fn mycelium_std_fs::guarantee_matrix::Fallibility::clone(&self) -> mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::cmp::Eq for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::cmp::PartialEq for mycelium_std_fs::guarantee_matrix::Fallibility
+pub fn mycelium_std_fs::guarantee_matrix::Fallibility::eq(&self, &mycelium_std_fs::guarantee_matrix::Fallibility) -> bool
+impl core::fmt::Debug for mycelium_std_fs::guarantee_matrix::Fallibility
+pub fn mycelium_std_fs::guarantee_matrix::Fallibility::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::marker::StructuralPartialEq for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::marker::Freeze for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::marker::Send for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::marker::Sync for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::marker::Unpin for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::marker::UnsafeUnpin for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::guarantee_matrix::Fallibility
+pub enum mycelium_std_fs::guarantee_matrix::Wild
+pub mycelium_std_fs::guarantee_matrix::Wild::No
+pub mycelium_std_fs::guarantee_matrix::Wild::Yes
+impl core::clone::Clone for mycelium_std_fs::guarantee_matrix::Wild
+pub fn mycelium_std_fs::guarantee_matrix::Wild::clone(&self) -> mycelium_std_fs::guarantee_matrix::Wild
+impl core::cmp::Eq for mycelium_std_fs::guarantee_matrix::Wild
+impl core::cmp::PartialEq for mycelium_std_fs::guarantee_matrix::Wild
+pub fn mycelium_std_fs::guarantee_matrix::Wild::eq(&self, &mycelium_std_fs::guarantee_matrix::Wild) -> bool
+impl core::fmt::Debug for mycelium_std_fs::guarantee_matrix::Wild
+pub fn mycelium_std_fs::guarantee_matrix::Wild::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_fs::guarantee_matrix::Wild
+impl core::marker::StructuralPartialEq for mycelium_std_fs::guarantee_matrix::Wild
+impl core::marker::Freeze for mycelium_std_fs::guarantee_matrix::Wild
+impl core::marker::Send for mycelium_std_fs::guarantee_matrix::Wild
+impl core::marker::Sync for mycelium_std_fs::guarantee_matrix::Wild
+impl core::marker::Unpin for mycelium_std_fs::guarantee_matrix::Wild
+impl core::marker::UnsafeUnpin for mycelium_std_fs::guarantee_matrix::Wild
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::guarantee_matrix::Wild
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::guarantee_matrix::Wild
+pub struct mycelium_std_fs::guarantee_matrix::MatrixRow
+pub mycelium_std_fs::guarantee_matrix::MatrixRow::effects: mycelium_std_fs::guarantee_matrix::Effects
+pub mycelium_std_fs::guarantee_matrix::MatrixRow::error_set: &'static str
+pub mycelium_std_fs::guarantee_matrix::MatrixRow::explainable: mycelium_std_fs::guarantee_matrix::Explainable
+pub mycelium_std_fs::guarantee_matrix::MatrixRow::fallibility: mycelium_std_fs::guarantee_matrix::Fallibility
+pub mycelium_std_fs::guarantee_matrix::MatrixRow::guarantee: &'static str
+pub mycelium_std_fs::guarantee_matrix::MatrixRow::op: &'static str
+pub mycelium_std_fs::guarantee_matrix::MatrixRow::wild: mycelium_std_fs::guarantee_matrix::Wild
+impl core::clone::Clone for mycelium_std_fs::guarantee_matrix::MatrixRow
+pub fn mycelium_std_fs::guarantee_matrix::MatrixRow::clone(&self) -> mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::cmp::Eq for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::cmp::PartialEq for mycelium_std_fs::guarantee_matrix::MatrixRow
+pub fn mycelium_std_fs::guarantee_matrix::MatrixRow::eq(&self, &mycelium_std_fs::guarantee_matrix::MatrixRow) -> bool
+impl core::fmt::Debug for mycelium_std_fs::guarantee_matrix::MatrixRow
+pub fn mycelium_std_fs::guarantee_matrix::MatrixRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::marker::Freeze for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::marker::Send for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::marker::Sync for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::marker::Unpin for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::marker::UnsafeUnpin for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::guarantee_matrix::MatrixRow
+pub const mycelium_std_fs::guarantee_matrix::MATRIX: &[mycelium_std_fs::guarantee_matrix::MatrixRow]
+pub mod mycelium_std_fs::metadata
+pub enum mycelium_std_fs::metadata::FileKind
+pub mycelium_std_fs::metadata::FileKind::Directory
+pub mycelium_std_fs::metadata::FileKind::File
+pub mycelium_std_fs::metadata::FileKind::Other
+pub mycelium_std_fs::metadata::FileKind::Symlink
+impl core::clone::Clone for mycelium_std_fs::metadata::FileKind
+pub fn mycelium_std_fs::metadata::FileKind::clone(&self) -> mycelium_std_fs::metadata::FileKind
+impl core::cmp::Eq for mycelium_std_fs::metadata::FileKind
+impl core::cmp::PartialEq for mycelium_std_fs::metadata::FileKind
+pub fn mycelium_std_fs::metadata::FileKind::eq(&self, &mycelium_std_fs::metadata::FileKind) -> bool
+impl core::fmt::Debug for mycelium_std_fs::metadata::FileKind
+pub fn mycelium_std_fs::metadata::FileKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_fs::metadata::FileKind
+pub fn mycelium_std_fs::metadata::FileKind::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_fs::metadata::FileKind
+impl core::marker::StructuralPartialEq for mycelium_std_fs::metadata::FileKind
+impl core::marker::Freeze for mycelium_std_fs::metadata::FileKind
+impl core::marker::Send for mycelium_std_fs::metadata::FileKind
+impl core::marker::Sync for mycelium_std_fs::metadata::FileKind
+impl core::marker::Unpin for mycelium_std_fs::metadata::FileKind
+impl core::marker::UnsafeUnpin for mycelium_std_fs::metadata::FileKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::metadata::FileKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::metadata::FileKind
+pub struct mycelium_std_fs::metadata::Metadata
+pub mycelium_std_fs::metadata::Metadata::kind: mycelium_std_fs::metadata::FileKind
+pub mycelium_std_fs::metadata::Metadata::mtime_secs: u64
+pub mycelium_std_fs::metadata::Metadata::permissions: mycelium_std_fs::metadata::Permissions
+pub mycelium_std_fs::metadata::Metadata::size: u64
+impl mycelium_std_fs::metadata::Metadata
+pub fn mycelium_std_fs::metadata::Metadata::is_dir(&self) -> bool
+pub fn mycelium_std_fs::metadata::Metadata::is_file(&self) -> bool
+pub fn mycelium_std_fs::metadata::Metadata::is_symlink(&self) -> bool
+pub fn mycelium_std_fs::metadata::Metadata::new(mycelium_std_fs::metadata::FileKind, u64, mycelium_std_fs::metadata::Permissions, u64) -> Self
+impl core::clone::Clone for mycelium_std_fs::metadata::Metadata
+pub fn mycelium_std_fs::metadata::Metadata::clone(&self) -> mycelium_std_fs::metadata::Metadata
+impl core::cmp::Eq for mycelium_std_fs::metadata::Metadata
+impl core::cmp::PartialEq for mycelium_std_fs::metadata::Metadata
+pub fn mycelium_std_fs::metadata::Metadata::eq(&self, &mycelium_std_fs::metadata::Metadata) -> bool
+impl core::fmt::Debug for mycelium_std_fs::metadata::Metadata
+pub fn mycelium_std_fs::metadata::Metadata::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fs::metadata::Metadata
+impl core::marker::Freeze for mycelium_std_fs::metadata::Metadata
+impl core::marker::Send for mycelium_std_fs::metadata::Metadata
+impl core::marker::Sync for mycelium_std_fs::metadata::Metadata
+impl core::marker::Unpin for mycelium_std_fs::metadata::Metadata
+impl core::marker::UnsafeUnpin for mycelium_std_fs::metadata::Metadata
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::metadata::Metadata
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::metadata::Metadata
+pub struct mycelium_std_fs::metadata::Permissions
+impl mycelium_std_fs::metadata::Permissions
+pub fn mycelium_std_fs::metadata::Permissions::from_mode(u32) -> Self
+pub fn mycelium_std_fs::metadata::Permissions::group_read(self) -> bool
+pub fn mycelium_std_fs::metadata::Permissions::is_readonly(self) -> bool
+pub fn mycelium_std_fs::metadata::Permissions::others_read(self) -> bool
+pub fn mycelium_std_fs::metadata::Permissions::owner_execute(self) -> bool
+pub fn mycelium_std_fs::metadata::Permissions::owner_read(self) -> bool
+pub fn mycelium_std_fs::metadata::Permissions::owner_write(self) -> bool
+pub fn mycelium_std_fs::metadata::Permissions::raw_mode(self) -> u32
+impl core::clone::Clone for mycelium_std_fs::metadata::Permissions
+pub fn mycelium_std_fs::metadata::Permissions::clone(&self) -> mycelium_std_fs::metadata::Permissions
+impl core::cmp::Eq for mycelium_std_fs::metadata::Permissions
+impl core::cmp::PartialEq for mycelium_std_fs::metadata::Permissions
+pub fn mycelium_std_fs::metadata::Permissions::eq(&self, &mycelium_std_fs::metadata::Permissions) -> bool
+impl core::fmt::Debug for mycelium_std_fs::metadata::Permissions
+pub fn mycelium_std_fs::metadata::Permissions::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_fs::metadata::Permissions
+pub fn mycelium_std_fs::metadata::Permissions::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_fs::metadata::Permissions
+impl core::marker::StructuralPartialEq for mycelium_std_fs::metadata::Permissions
+impl core::marker::Freeze for mycelium_std_fs::metadata::Permissions
+impl core::marker::Send for mycelium_std_fs::metadata::Permissions
+impl core::marker::Sync for mycelium_std_fs::metadata::Permissions
+impl core::marker::Unpin for mycelium_std_fs::metadata::Permissions
+impl core::marker::UnsafeUnpin for mycelium_std_fs::metadata::Permissions
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::metadata::Permissions
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::metadata::Permissions
+pub mod mycelium_std_fs::options
+pub struct mycelium_std_fs::options::OpenOptions
+pub mycelium_std_fs::options::OpenOptions::append: bool
+pub mycelium_std_fs::options::OpenOptions::create: bool
+pub mycelium_std_fs::options::OpenOptions::create_new: bool
+pub mycelium_std_fs::options::OpenOptions::read: bool
+pub mycelium_std_fs::options::OpenOptions::truncate: bool
+pub mycelium_std_fs::options::OpenOptions::write: bool
+impl mycelium_std_fs::options::OpenOptions
+pub fn mycelium_std_fs::options::OpenOptions::new() -> Self
+pub fn mycelium_std_fs::options::OpenOptions::read_only() -> Self
+pub fn mycelium_std_fs::options::OpenOptions::validate(&self) -> core::result::Result<(), &'static str>
+pub fn mycelium_std_fs::options::OpenOptions::wants_write(&self) -> bool
+pub fn mycelium_std_fs::options::OpenOptions::with_append(self, bool) -> Self
+pub fn mycelium_std_fs::options::OpenOptions::with_create(self, bool) -> Self
+pub fn mycelium_std_fs::options::OpenOptions::with_create_new(self, bool) -> Self
+pub fn mycelium_std_fs::options::OpenOptions::with_read(self, bool) -> Self
+pub fn mycelium_std_fs::options::OpenOptions::with_truncate(self, bool) -> Self
+pub fn mycelium_std_fs::options::OpenOptions::with_write(self, bool) -> Self
+impl core::clone::Clone for mycelium_std_fs::options::OpenOptions
+pub fn mycelium_std_fs::options::OpenOptions::clone(&self) -> mycelium_std_fs::options::OpenOptions
+impl core::cmp::Eq for mycelium_std_fs::options::OpenOptions
+impl core::cmp::PartialEq for mycelium_std_fs::options::OpenOptions
+pub fn mycelium_std_fs::options::OpenOptions::eq(&self, &mycelium_std_fs::options::OpenOptions) -> bool
+impl core::default::Default for mycelium_std_fs::options::OpenOptions
+pub fn mycelium_std_fs::options::OpenOptions::default() -> Self
+impl core::fmt::Debug for mycelium_std_fs::options::OpenOptions
+pub fn mycelium_std_fs::options::OpenOptions::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fs::options::OpenOptions
+impl core::marker::Freeze for mycelium_std_fs::options::OpenOptions
+impl core::marker::Send for mycelium_std_fs::options::OpenOptions
+impl core::marker::Sync for mycelium_std_fs::options::OpenOptions
+impl core::marker::Unpin for mycelium_std_fs::options::OpenOptions
+impl core::marker::UnsafeUnpin for mycelium_std_fs::options::OpenOptions
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::options::OpenOptions
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::options::OpenOptions
+pub mod mycelium_std_fs::path
+pub struct mycelium_std_fs::path::Path
+impl mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::as_str(&self) -> &str
+pub fn mycelium_std_fs::path::Path::file_name(&self) -> core::option::Option<&str>
+pub fn mycelium_std_fs::path::Path::is_absolute(&self) -> bool
+pub fn mycelium_std_fs::path::Path::join(&self, &str) -> Self
+pub fn mycelium_std_fs::path::Path::new(impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_std_fs::path::Path::parent(&self) -> core::option::Option<Self>
+impl core::clone::Clone for mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::clone(&self) -> mycelium_std_fs::path::Path
+impl core::cmp::Eq for mycelium_std_fs::path::Path
+impl core::cmp::PartialEq for mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::eq(&self, &mycelium_std_fs::path::Path) -> bool
+impl core::convert::From<&str> for mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::from(&str) -> Self
+impl core::convert::From<alloc::string::String> for mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::from(alloc::string::String) -> Self
+impl core::fmt::Debug for mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_std_fs::path::Path
+impl core::marker::Freeze for mycelium_std_fs::path::Path
+impl core::marker::Send for mycelium_std_fs::path::Path
+impl core::marker::Sync for mycelium_std_fs::path::Path
+impl core::marker::Unpin for mycelium_std_fs::path::Path
+impl core::marker::UnsafeUnpin for mycelium_std_fs::path::Path
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::path::Path
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::path::Path
+pub enum mycelium_std_fs::Effects
+pub mycelium_std_fs::Effects::Io
+pub mycelium_std_fs::Effects::None
+impl core::clone::Clone for mycelium_std_fs::guarantee_matrix::Effects
+pub fn mycelium_std_fs::guarantee_matrix::Effects::clone(&self) -> mycelium_std_fs::guarantee_matrix::Effects
+impl core::cmp::Eq for mycelium_std_fs::guarantee_matrix::Effects
+impl core::cmp::PartialEq for mycelium_std_fs::guarantee_matrix::Effects
+pub fn mycelium_std_fs::guarantee_matrix::Effects::eq(&self, &mycelium_std_fs::guarantee_matrix::Effects) -> bool
+impl core::fmt::Debug for mycelium_std_fs::guarantee_matrix::Effects
+pub fn mycelium_std_fs::guarantee_matrix::Effects::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_fs::guarantee_matrix::Effects
+impl core::marker::StructuralPartialEq for mycelium_std_fs::guarantee_matrix::Effects
+impl core::marker::Freeze for mycelium_std_fs::guarantee_matrix::Effects
+impl core::marker::Send for mycelium_std_fs::guarantee_matrix::Effects
+impl core::marker::Sync for mycelium_std_fs::guarantee_matrix::Effects
+impl core::marker::Unpin for mycelium_std_fs::guarantee_matrix::Effects
+impl core::marker::UnsafeUnpin for mycelium_std_fs::guarantee_matrix::Effects
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::guarantee_matrix::Effects
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::guarantee_matrix::Effects
+pub enum mycelium_std_fs::ErrnoClass
+pub mycelium_std_fs::ErrnoClass::AlreadyExists
+pub mycelium_std_fs::ErrnoClass::CrossDevice
+pub mycelium_std_fs::ErrnoClass::DiskFull
+pub mycelium_std_fs::ErrnoClass::Interrupted
+pub mycelium_std_fs::ErrnoClass::IsADirectory
+pub mycelium_std_fs::ErrnoClass::Loop
+pub mycelium_std_fs::ErrnoClass::NotADirectory
+pub mycelium_std_fs::ErrnoClass::NotEmpty
+pub mycelium_std_fs::ErrnoClass::NotFound
+pub mycelium_std_fs::ErrnoClass::Other
+pub mycelium_std_fs::ErrnoClass::PermDenied
+pub mycelium_std_fs::ErrnoClass::WouldBlock
+impl core::clone::Clone for mycelium_std_fs::error::ErrnoClass
+pub fn mycelium_std_fs::error::ErrnoClass::clone(&self) -> mycelium_std_fs::error::ErrnoClass
+impl core::cmp::Eq for mycelium_std_fs::error::ErrnoClass
+impl core::cmp::PartialEq for mycelium_std_fs::error::ErrnoClass
+pub fn mycelium_std_fs::error::ErrnoClass::eq(&self, &mycelium_std_fs::error::ErrnoClass) -> bool
+impl core::fmt::Debug for mycelium_std_fs::error::ErrnoClass
+pub fn mycelium_std_fs::error::ErrnoClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_fs::error::ErrnoClass
+pub fn mycelium_std_fs::error::ErrnoClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fs::error::ErrnoClass
+impl core::marker::Freeze for mycelium_std_fs::error::ErrnoClass
+impl core::marker::Send for mycelium_std_fs::error::ErrnoClass
+impl core::marker::Sync for mycelium_std_fs::error::ErrnoClass
+impl core::marker::Unpin for mycelium_std_fs::error::ErrnoClass
+impl core::marker::UnsafeUnpin for mycelium_std_fs::error::ErrnoClass
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::error::ErrnoClass
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::error::ErrnoClass
+pub enum mycelium_std_fs::Explainable
+pub mycelium_std_fs::Explainable::NotApplicable
+pub mycelium_std_fs::Explainable::Yes
+impl core::clone::Clone for mycelium_std_fs::guarantee_matrix::Explainable
+pub fn mycelium_std_fs::guarantee_matrix::Explainable::clone(&self) -> mycelium_std_fs::guarantee_matrix::Explainable
+impl core::cmp::Eq for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::cmp::PartialEq for mycelium_std_fs::guarantee_matrix::Explainable
+pub fn mycelium_std_fs::guarantee_matrix::Explainable::eq(&self, &mycelium_std_fs::guarantee_matrix::Explainable) -> bool
+impl core::fmt::Debug for mycelium_std_fs::guarantee_matrix::Explainable
+pub fn mycelium_std_fs::guarantee_matrix::Explainable::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::marker::StructuralPartialEq for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::marker::Freeze for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::marker::Send for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::marker::Sync for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::marker::Unpin for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::marker::UnsafeUnpin for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::guarantee_matrix::Explainable
+pub enum mycelium_std_fs::Fallibility
+pub mycelium_std_fs::Fallibility::OptionFallible
+pub mycelium_std_fs::Fallibility::ResultFallible
+pub mycelium_std_fs::Fallibility::Total
+impl core::clone::Clone for mycelium_std_fs::guarantee_matrix::Fallibility
+pub fn mycelium_std_fs::guarantee_matrix::Fallibility::clone(&self) -> mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::cmp::Eq for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::cmp::PartialEq for mycelium_std_fs::guarantee_matrix::Fallibility
+pub fn mycelium_std_fs::guarantee_matrix::Fallibility::eq(&self, &mycelium_std_fs::guarantee_matrix::Fallibility) -> bool
+impl core::fmt::Debug for mycelium_std_fs::guarantee_matrix::Fallibility
+pub fn mycelium_std_fs::guarantee_matrix::Fallibility::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::marker::StructuralPartialEq for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::marker::Freeze for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::marker::Send for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::marker::Sync for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::marker::Unpin for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::marker::UnsafeUnpin for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::guarantee_matrix::Fallibility
+pub enum mycelium_std_fs::FileKind
+pub mycelium_std_fs::FileKind::Directory
+pub mycelium_std_fs::FileKind::File
+pub mycelium_std_fs::FileKind::Other
+pub mycelium_std_fs::FileKind::Symlink
+impl core::clone::Clone for mycelium_std_fs::metadata::FileKind
+pub fn mycelium_std_fs::metadata::FileKind::clone(&self) -> mycelium_std_fs::metadata::FileKind
+impl core::cmp::Eq for mycelium_std_fs::metadata::FileKind
+impl core::cmp::PartialEq for mycelium_std_fs::metadata::FileKind
+pub fn mycelium_std_fs::metadata::FileKind::eq(&self, &mycelium_std_fs::metadata::FileKind) -> bool
+impl core::fmt::Debug for mycelium_std_fs::metadata::FileKind
+pub fn mycelium_std_fs::metadata::FileKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_fs::metadata::FileKind
+pub fn mycelium_std_fs::metadata::FileKind::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_fs::metadata::FileKind
+impl core::marker::StructuralPartialEq for mycelium_std_fs::metadata::FileKind
+impl core::marker::Freeze for mycelium_std_fs::metadata::FileKind
+impl core::marker::Send for mycelium_std_fs::metadata::FileKind
+impl core::marker::Sync for mycelium_std_fs::metadata::FileKind
+impl core::marker::Unpin for mycelium_std_fs::metadata::FileKind
+impl core::marker::UnsafeUnpin for mycelium_std_fs::metadata::FileKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::metadata::FileKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::metadata::FileKind
+pub enum mycelium_std_fs::FsErr
+pub mycelium_std_fs::FsErr::AlreadyExists
+pub mycelium_std_fs::FsErr::AlreadyExists::path: alloc::string::String
+pub mycelium_std_fs::FsErr::AlreadyExists::why: &'static str
+pub mycelium_std_fs::FsErr::CrossDevice
+pub mycelium_std_fs::FsErr::CrossDevice::from: alloc::string::String
+pub mycelium_std_fs::FsErr::CrossDevice::to: alloc::string::String
+pub mycelium_std_fs::FsErr::CrossDevice::why: &'static str
+pub mycelium_std_fs::FsErr::DiskFull
+pub mycelium_std_fs::FsErr::DiskFull::path: alloc::string::String
+pub mycelium_std_fs::FsErr::DiskFull::why: &'static str
+pub mycelium_std_fs::FsErr::Interrupted
+pub mycelium_std_fs::FsErr::Interrupted::path: alloc::string::String
+pub mycelium_std_fs::FsErr::Interrupted::why: &'static str
+pub mycelium_std_fs::FsErr::InvalidOptions
+pub mycelium_std_fs::FsErr::InvalidOptions::path: alloc::string::String
+pub mycelium_std_fs::FsErr::InvalidOptions::why: &'static str
+pub mycelium_std_fs::FsErr::IsADirectory
+pub mycelium_std_fs::FsErr::IsADirectory::path: alloc::string::String
+pub mycelium_std_fs::FsErr::IsADirectory::why: &'static str
+pub mycelium_std_fs::FsErr::Loop
+pub mycelium_std_fs::FsErr::Loop::path: alloc::string::String
+pub mycelium_std_fs::FsErr::Loop::why: &'static str
+pub mycelium_std_fs::FsErr::NotADirectory
+pub mycelium_std_fs::FsErr::NotADirectory::path: alloc::string::String
+pub mycelium_std_fs::FsErr::NotADirectory::why: &'static str
+pub mycelium_std_fs::FsErr::NotEmpty
+pub mycelium_std_fs::FsErr::NotEmpty::path: alloc::string::String
+pub mycelium_std_fs::FsErr::NotEmpty::why: &'static str
+pub mycelium_std_fs::FsErr::NotFound
+pub mycelium_std_fs::FsErr::NotFound::path: alloc::string::String
+pub mycelium_std_fs::FsErr::NotFound::why: &'static str
+pub mycelium_std_fs::FsErr::Os
+pub mycelium_std_fs::FsErr::Os::errno_class: mycelium_std_fs::error::ErrnoClass
+pub mycelium_std_fs::FsErr::Os::path: alloc::string::String
+pub mycelium_std_fs::FsErr::Os::raw: i32
+pub mycelium_std_fs::FsErr::Os::why: &'static str
+pub mycelium_std_fs::FsErr::PermDenied
+pub mycelium_std_fs::FsErr::PermDenied::path: alloc::string::String
+pub mycelium_std_fs::FsErr::PermDenied::why: &'static str
+pub mycelium_std_fs::FsErr::UseAfterConsume
+pub mycelium_std_fs::FsErr::UseAfterConsume::path: alloc::string::String
+pub mycelium_std_fs::FsErr::UseAfterConsume::why: &'static str
+pub mycelium_std_fs::FsErr::WouldBlock
+pub mycelium_std_fs::FsErr::WouldBlock::path: alloc::string::String
+pub mycelium_std_fs::FsErr::WouldBlock::why: &'static str
+impl mycelium_std_fs::error::FsErr
+pub fn mycelium_std_fs::error::FsErr::errno_class(&self) -> core::option::Option<mycelium_std_fs::error::ErrnoClass>
+pub fn mycelium_std_fs::error::FsErr::path(&self) -> &str
+pub fn mycelium_std_fs::error::FsErr::why(&self) -> &str
+impl core::clone::Clone for mycelium_std_fs::error::FsErr
+pub fn mycelium_std_fs::error::FsErr::clone(&self) -> mycelium_std_fs::error::FsErr
+impl core::cmp::Eq for mycelium_std_fs::error::FsErr
+impl core::cmp::PartialEq for mycelium_std_fs::error::FsErr
+pub fn mycelium_std_fs::error::FsErr::eq(&self, &mycelium_std_fs::error::FsErr) -> bool
+impl core::error::Error for mycelium_std_fs::error::FsErr
+impl core::fmt::Debug for mycelium_std_fs::error::FsErr
+pub fn mycelium_std_fs::error::FsErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_fs::error::FsErr
+pub fn mycelium_std_fs::error::FsErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fs::error::FsErr
+impl core::marker::Freeze for mycelium_std_fs::error::FsErr
+impl core::marker::Send for mycelium_std_fs::error::FsErr
+impl core::marker::Sync for mycelium_std_fs::error::FsErr
+impl core::marker::Unpin for mycelium_std_fs::error::FsErr
+impl core::marker::UnsafeUnpin for mycelium_std_fs::error::FsErr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::error::FsErr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::error::FsErr
+pub enum mycelium_std_fs::Wild
+pub mycelium_std_fs::Wild::No
+pub mycelium_std_fs::Wild::Yes
+impl core::clone::Clone for mycelium_std_fs::guarantee_matrix::Wild
+pub fn mycelium_std_fs::guarantee_matrix::Wild::clone(&self) -> mycelium_std_fs::guarantee_matrix::Wild
+impl core::cmp::Eq for mycelium_std_fs::guarantee_matrix::Wild
+impl core::cmp::PartialEq for mycelium_std_fs::guarantee_matrix::Wild
+pub fn mycelium_std_fs::guarantee_matrix::Wild::eq(&self, &mycelium_std_fs::guarantee_matrix::Wild) -> bool
+impl core::fmt::Debug for mycelium_std_fs::guarantee_matrix::Wild
+pub fn mycelium_std_fs::guarantee_matrix::Wild::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_fs::guarantee_matrix::Wild
+impl core::marker::StructuralPartialEq for mycelium_std_fs::guarantee_matrix::Wild
+impl core::marker::Freeze for mycelium_std_fs::guarantee_matrix::Wild
+impl core::marker::Send for mycelium_std_fs::guarantee_matrix::Wild
+impl core::marker::Sync for mycelium_std_fs::guarantee_matrix::Wild
+impl core::marker::Unpin for mycelium_std_fs::guarantee_matrix::Wild
+impl core::marker::UnsafeUnpin for mycelium_std_fs::guarantee_matrix::Wild
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::guarantee_matrix::Wild
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::guarantee_matrix::Wild
+pub struct mycelium_std_fs::DirIter
+impl core::fmt::Debug for mycelium_std_fs::DirIter
+pub fn mycelium_std_fs::DirIter::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::iter::traits::iterator::Iterator for mycelium_std_fs::DirIter
+pub type mycelium_std_fs::DirIter::Item = alloc::string::String
+pub fn mycelium_std_fs::DirIter::next(&mut self) -> core::option::Option<Self::Item>
+impl core::marker::Freeze for mycelium_std_fs::DirIter
+impl core::marker::Send for mycelium_std_fs::DirIter
+impl core::marker::Sync for mycelium_std_fs::DirIter
+impl core::marker::Unpin for mycelium_std_fs::DirIter
+impl core::marker::UnsafeUnpin for mycelium_std_fs::DirIter
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::DirIter
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::DirIter
+pub struct mycelium_std_fs::File
+impl mycelium_std_fs::File
+pub fn mycelium_std_fs::File::is_consumed(&self) -> bool
+pub fn mycelium_std_fs::File::path(&self) -> &str
+impl core::fmt::Debug for mycelium_std_fs::File
+pub fn mycelium_std_fs::File::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_fs::File
+impl core::marker::Send for mycelium_std_fs::File
+impl core::marker::Sync for mycelium_std_fs::File
+impl core::marker::Unpin for mycelium_std_fs::File
+impl core::marker::UnsafeUnpin for mycelium_std_fs::File
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::File
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::File
+pub struct mycelium_std_fs::Fs
+impl mycelium_std_fs::Fs
+pub fn mycelium_std_fs::Fs::close(&self, &mut mycelium_std_fs::File) -> core::result::Result<(), mycelium_std_fs::error::FsErr>
+pub fn mycelium_std_fs::Fs::copy(&mut self, &mycelium_std_fs::path::Path, &mycelium_std_fs::path::Path) -> core::result::Result<u64, mycelium_std_fs::error::FsErr>
+pub fn mycelium_std_fs::Fs::create_dir(&mut self, &mycelium_std_fs::path::Path) -> core::result::Result<(), mycelium_std_fs::error::FsErr>
+pub fn mycelium_std_fs::Fs::exists(&self, &mycelium_std_fs::path::Path) -> core::result::Result<bool, mycelium_std_fs::error::FsErr>
+pub fn mycelium_std_fs::Fs::flush(&self, &mycelium_std_fs::File) -> core::result::Result<(), mycelium_std_fs::error::FsErr>
+pub fn mycelium_std_fs::Fs::in_memory() -> Self
+pub fn mycelium_std_fs::Fs::in_memory_with_limit(u64) -> Self
+pub fn mycelium_std_fs::Fs::open(&mut self, &mycelium_std_fs::path::Path, &mycelium_std_fs::options::OpenOptions) -> core::result::Result<mycelium_std_fs::File, mycelium_std_fs::error::FsErr>
+pub fn mycelium_std_fs::Fs::path(&self, impl core::convert::Into<alloc::string::String>) -> mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::Fs::read(&self, &mut mycelium_std_fs::File, &mut [u8]) -> core::result::Result<usize, mycelium_std_fs::error::FsErr>
+pub fn mycelium_std_fs::Fs::read_dir(&self, &mycelium_std_fs::path::Path) -> core::result::Result<mycelium_std_fs::DirIter, mycelium_std_fs::error::FsErr>
+pub fn mycelium_std_fs::Fs::remove_dir(&mut self, &mycelium_std_fs::path::Path) -> core::result::Result<(), mycelium_std_fs::error::FsErr>
+pub fn mycelium_std_fs::Fs::remove_file(&mut self, &mycelium_std_fs::path::Path) -> core::result::Result<(), mycelium_std_fs::error::FsErr>
+pub fn mycelium_std_fs::Fs::rename(&mut self, &mycelium_std_fs::path::Path, &mycelium_std_fs::path::Path) -> core::result::Result<(), mycelium_std_fs::error::FsErr>
+pub fn mycelium_std_fs::Fs::stat(&self, &mycelium_std_fs::path::Path) -> core::result::Result<mycelium_std_fs::metadata::Metadata, mycelium_std_fs::error::FsErr>
+pub fn mycelium_std_fs::Fs::write(&mut self, &mut mycelium_std_fs::File, &[u8]) -> core::result::Result<usize, mycelium_std_fs::error::FsErr>
+impl core::marker::Freeze for mycelium_std_fs::Fs
+impl core::marker::Send for mycelium_std_fs::Fs
+impl core::marker::Sync for mycelium_std_fs::Fs
+impl core::marker::Unpin for mycelium_std_fs::Fs
+impl core::marker::UnsafeUnpin for mycelium_std_fs::Fs
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::Fs
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::Fs
+pub struct mycelium_std_fs::MatrixRow
+pub mycelium_std_fs::MatrixRow::effects: mycelium_std_fs::guarantee_matrix::Effects
+pub mycelium_std_fs::MatrixRow::error_set: &'static str
+pub mycelium_std_fs::MatrixRow::explainable: mycelium_std_fs::guarantee_matrix::Explainable
+pub mycelium_std_fs::MatrixRow::fallibility: mycelium_std_fs::guarantee_matrix::Fallibility
+pub mycelium_std_fs::MatrixRow::guarantee: &'static str
+pub mycelium_std_fs::MatrixRow::op: &'static str
+pub mycelium_std_fs::MatrixRow::wild: mycelium_std_fs::guarantee_matrix::Wild
+impl core::clone::Clone for mycelium_std_fs::guarantee_matrix::MatrixRow
+pub fn mycelium_std_fs::guarantee_matrix::MatrixRow::clone(&self) -> mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::cmp::Eq for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::cmp::PartialEq for mycelium_std_fs::guarantee_matrix::MatrixRow
+pub fn mycelium_std_fs::guarantee_matrix::MatrixRow::eq(&self, &mycelium_std_fs::guarantee_matrix::MatrixRow) -> bool
+impl core::fmt::Debug for mycelium_std_fs::guarantee_matrix::MatrixRow
+pub fn mycelium_std_fs::guarantee_matrix::MatrixRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::marker::Freeze for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::marker::Send for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::marker::Sync for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::marker::Unpin for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::marker::UnsafeUnpin for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::guarantee_matrix::MatrixRow
+pub struct mycelium_std_fs::Metadata
+pub mycelium_std_fs::Metadata::kind: mycelium_std_fs::metadata::FileKind
+pub mycelium_std_fs::Metadata::mtime_secs: u64
+pub mycelium_std_fs::Metadata::permissions: mycelium_std_fs::metadata::Permissions
+pub mycelium_std_fs::Metadata::size: u64
+impl mycelium_std_fs::metadata::Metadata
+pub fn mycelium_std_fs::metadata::Metadata::is_dir(&self) -> bool
+pub fn mycelium_std_fs::metadata::Metadata::is_file(&self) -> bool
+pub fn mycelium_std_fs::metadata::Metadata::is_symlink(&self) -> bool
+pub fn mycelium_std_fs::metadata::Metadata::new(mycelium_std_fs::metadata::FileKind, u64, mycelium_std_fs::metadata::Permissions, u64) -> Self
+impl core::clone::Clone for mycelium_std_fs::metadata::Metadata
+pub fn mycelium_std_fs::metadata::Metadata::clone(&self) -> mycelium_std_fs::metadata::Metadata
+impl core::cmp::Eq for mycelium_std_fs::metadata::Metadata
+impl core::cmp::PartialEq for mycelium_std_fs::metadata::Metadata
+pub fn mycelium_std_fs::metadata::Metadata::eq(&self, &mycelium_std_fs::metadata::Metadata) -> bool
+impl core::fmt::Debug for mycelium_std_fs::metadata::Metadata
+pub fn mycelium_std_fs::metadata::Metadata::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fs::metadata::Metadata
+impl core::marker::Freeze for mycelium_std_fs::metadata::Metadata
+impl core::marker::Send for mycelium_std_fs::metadata::Metadata
+impl core::marker::Sync for mycelium_std_fs::metadata::Metadata
+impl core::marker::Unpin for mycelium_std_fs::metadata::Metadata
+impl core::marker::UnsafeUnpin for mycelium_std_fs::metadata::Metadata
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::metadata::Metadata
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::metadata::Metadata
+pub struct mycelium_std_fs::OpenOptions
+pub mycelium_std_fs::OpenOptions::append: bool
+pub mycelium_std_fs::OpenOptions::create: bool
+pub mycelium_std_fs::OpenOptions::create_new: bool
+pub mycelium_std_fs::OpenOptions::read: bool
+pub mycelium_std_fs::OpenOptions::truncate: bool
+pub mycelium_std_fs::OpenOptions::write: bool
+impl mycelium_std_fs::options::OpenOptions
+pub fn mycelium_std_fs::options::OpenOptions::new() -> Self
+pub fn mycelium_std_fs::options::OpenOptions::read_only() -> Self
+pub fn mycelium_std_fs::options::OpenOptions::validate(&self) -> core::result::Result<(), &'static str>
+pub fn mycelium_std_fs::options::OpenOptions::wants_write(&self) -> bool
+pub fn mycelium_std_fs::options::OpenOptions::with_append(self, bool) -> Self
+pub fn mycelium_std_fs::options::OpenOptions::with_create(self, bool) -> Self
+pub fn mycelium_std_fs::options::OpenOptions::with_create_new(self, bool) -> Self
+pub fn mycelium_std_fs::options::OpenOptions::with_read(self, bool) -> Self
+pub fn mycelium_std_fs::options::OpenOptions::with_truncate(self, bool) -> Self
+pub fn mycelium_std_fs::options::OpenOptions::with_write(self, bool) -> Self
+impl core::clone::Clone for mycelium_std_fs::options::OpenOptions
+pub fn mycelium_std_fs::options::OpenOptions::clone(&self) -> mycelium_std_fs::options::OpenOptions
+impl core::cmp::Eq for mycelium_std_fs::options::OpenOptions
+impl core::cmp::PartialEq for mycelium_std_fs::options::OpenOptions
+pub fn mycelium_std_fs::options::OpenOptions::eq(&self, &mycelium_std_fs::options::OpenOptions) -> bool
+impl core::default::Default for mycelium_std_fs::options::OpenOptions
+pub fn mycelium_std_fs::options::OpenOptions::default() -> Self
+impl core::fmt::Debug for mycelium_std_fs::options::OpenOptions
+pub fn mycelium_std_fs::options::OpenOptions::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fs::options::OpenOptions
+impl core::marker::Freeze for mycelium_std_fs::options::OpenOptions
+impl core::marker::Send for mycelium_std_fs::options::OpenOptions
+impl core::marker::Sync for mycelium_std_fs::options::OpenOptions
+impl core::marker::Unpin for mycelium_std_fs::options::OpenOptions
+impl core::marker::UnsafeUnpin for mycelium_std_fs::options::OpenOptions
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::options::OpenOptions
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::options::OpenOptions
+pub struct mycelium_std_fs::Path
+impl mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::as_str(&self) -> &str
+pub fn mycelium_std_fs::path::Path::file_name(&self) -> core::option::Option<&str>
+pub fn mycelium_std_fs::path::Path::is_absolute(&self) -> bool
+pub fn mycelium_std_fs::path::Path::join(&self, &str) -> Self
+pub fn mycelium_std_fs::path::Path::new(impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_std_fs::path::Path::parent(&self) -> core::option::Option<Self>
+impl core::clone::Clone for mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::clone(&self) -> mycelium_std_fs::path::Path
+impl core::cmp::Eq for mycelium_std_fs::path::Path
+impl core::cmp::PartialEq for mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::eq(&self, &mycelium_std_fs::path::Path) -> bool
+impl core::convert::From<&str> for mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::from(&str) -> Self
+impl core::convert::From<alloc::string::String> for mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::from(alloc::string::String) -> Self
+impl core::fmt::Debug for mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_fs::path::Path
+pub fn mycelium_std_fs::path::Path::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_std_fs::path::Path
+impl core::marker::Freeze for mycelium_std_fs::path::Path
+impl core::marker::Send for mycelium_std_fs::path::Path
+impl core::marker::Sync for mycelium_std_fs::path::Path
+impl core::marker::Unpin for mycelium_std_fs::path::Path
+impl core::marker::UnsafeUnpin for mycelium_std_fs::path::Path
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::path::Path
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::path::Path
+pub struct mycelium_std_fs::Permissions
+impl mycelium_std_fs::metadata::Permissions
+pub fn mycelium_std_fs::metadata::Permissions::from_mode(u32) -> Self
+pub fn mycelium_std_fs::metadata::Permissions::group_read(self) -> bool
+pub fn mycelium_std_fs::metadata::Permissions::is_readonly(self) -> bool
+pub fn mycelium_std_fs::metadata::Permissions::others_read(self) -> bool
+pub fn mycelium_std_fs::metadata::Permissions::owner_execute(self) -> bool
+pub fn mycelium_std_fs::metadata::Permissions::owner_read(self) -> bool
+pub fn mycelium_std_fs::metadata::Permissions::owner_write(self) -> bool
+pub fn mycelium_std_fs::metadata::Permissions::raw_mode(self) -> u32
+impl core::clone::Clone for mycelium_std_fs::metadata::Permissions
+pub fn mycelium_std_fs::metadata::Permissions::clone(&self) -> mycelium_std_fs::metadata::Permissions
+impl core::cmp::Eq for mycelium_std_fs::metadata::Permissions
+impl core::cmp::PartialEq for mycelium_std_fs::metadata::Permissions
+pub fn mycelium_std_fs::metadata::Permissions::eq(&self, &mycelium_std_fs::metadata::Permissions) -> bool
+impl core::fmt::Debug for mycelium_std_fs::metadata::Permissions
+pub fn mycelium_std_fs::metadata::Permissions::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_fs::metadata::Permissions
+pub fn mycelium_std_fs::metadata::Permissions::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_fs::metadata::Permissions
+impl core::marker::StructuralPartialEq for mycelium_std_fs::metadata::Permissions
+impl core::marker::Freeze for mycelium_std_fs::metadata::Permissions
+impl core::marker::Send for mycelium_std_fs::metadata::Permissions
+impl core::marker::Sync for mycelium_std_fs::metadata::Permissions
+impl core::marker::Unpin for mycelium_std_fs::metadata::Permissions
+impl core::marker::UnsafeUnpin for mycelium_std_fs::metadata::Permissions
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fs::metadata::Permissions
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fs::metadata::Permissions
+pub const mycelium_std_fs::MATRIX: &[mycelium_std_fs::guarantee_matrix::MatrixRow]

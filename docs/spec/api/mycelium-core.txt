@@ -1,0 +1,2388 @@
+pub mod mycelium_core
+pub mod mycelium_core::binary
+pub fn mycelium_core::binary::bits_to_int(&[bool]) -> i64
+pub fn mycelium_core::binary::int_to_bits(i64, u32) -> core::option::Option<alloc::vec::Vec<bool>>
+pub mod mycelium_core::bound
+pub enum mycelium_core::bound::BoundBasis
+pub mycelium_core::bound::BoundBasis::EmpiricalFit
+pub mycelium_core::bound::BoundBasis::EmpiricalFit::method: alloc::string::String
+pub mycelium_core::bound::BoundBasis::EmpiricalFit::trials: u64
+pub mycelium_core::bound::BoundBasis::ProvenThm
+pub mycelium_core::bound::BoundBasis::ProvenThm::citation: alloc::string::String
+pub mycelium_core::bound::BoundBasis::UserDeclared
+impl mycelium_core::bound::BoundBasis
+pub fn mycelium_core::bound::BoundBasis::strength(&self) -> mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_core::bound::BoundBasis
+pub fn mycelium_core::bound::BoundBasis::clone(&self) -> mycelium_core::bound::BoundBasis
+impl core::cmp::PartialEq for mycelium_core::bound::BoundBasis
+pub fn mycelium_core::bound::BoundBasis::eq(&self, &mycelium_core::bound::BoundBasis) -> bool
+impl core::fmt::Debug for mycelium_core::bound::BoundBasis
+pub fn mycelium_core::bound::BoundBasis::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::bound::BoundBasis
+impl serde_core::ser::Serialize for mycelium_core::bound::BoundBasis
+pub fn mycelium_core::bound::BoundBasis::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::bound::BoundBasis
+pub fn mycelium_core::bound::BoundBasis::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::bound::BoundBasis
+impl core::marker::Send for mycelium_core::bound::BoundBasis
+impl core::marker::Sync for mycelium_core::bound::BoundBasis
+impl core::marker::Unpin for mycelium_core::bound::BoundBasis
+impl core::marker::UnsafeUnpin for mycelium_core::bound::BoundBasis
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::bound::BoundBasis
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::bound::BoundBasis
+pub enum mycelium_core::bound::BoundKind
+pub mycelium_core::bound::BoundKind::Capacity
+pub mycelium_core::bound::BoundKind::Capacity::dim: u64
+pub mycelium_core::bound::BoundKind::Capacity::items: u64
+pub mycelium_core::bound::BoundKind::Crosstalk
+pub mycelium_core::bound::BoundKind::Crosstalk::expected: f64
+pub mycelium_core::bound::BoundKind::Crosstalk::tail: core::option::Option<f64>
+pub mycelium_core::bound::BoundKind::Error
+pub mycelium_core::bound::BoundKind::Error::eps: f64
+pub mycelium_core::bound::BoundKind::Error::norm: mycelium_core::bound::NormKind
+pub mycelium_core::bound::BoundKind::Probability
+pub mycelium_core::bound::BoundKind::Probability::delta: f64
+impl core::clone::Clone for mycelium_core::bound::BoundKind
+pub fn mycelium_core::bound::BoundKind::clone(&self) -> mycelium_core::bound::BoundKind
+impl core::cmp::PartialEq for mycelium_core::bound::BoundKind
+pub fn mycelium_core::bound::BoundKind::eq(&self, &mycelium_core::bound::BoundKind) -> bool
+impl core::fmt::Debug for mycelium_core::bound::BoundKind
+pub fn mycelium_core::bound::BoundKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::bound::BoundKind
+impl serde_core::ser::Serialize for mycelium_core::bound::BoundKind
+pub fn mycelium_core::bound::BoundKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::bound::BoundKind
+pub fn mycelium_core::bound::BoundKind::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::bound::BoundKind
+impl core::marker::Send for mycelium_core::bound::BoundKind
+impl core::marker::Sync for mycelium_core::bound::BoundKind
+impl core::marker::Unpin for mycelium_core::bound::BoundKind
+impl core::marker::UnsafeUnpin for mycelium_core::bound::BoundKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::bound::BoundKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::bound::BoundKind
+pub enum mycelium_core::bound::NormKind
+pub mycelium_core::bound::NormKind::L1
+pub mycelium_core::bound::NormKind::L2
+pub mycelium_core::bound::NormKind::Linf
+pub mycelium_core::bound::NormKind::Rel
+impl core::clone::Clone for mycelium_core::bound::NormKind
+pub fn mycelium_core::bound::NormKind::clone(&self) -> mycelium_core::bound::NormKind
+impl core::cmp::Eq for mycelium_core::bound::NormKind
+impl core::cmp::PartialEq for mycelium_core::bound::NormKind
+pub fn mycelium_core::bound::NormKind::eq(&self, &mycelium_core::bound::NormKind) -> bool
+impl core::fmt::Debug for mycelium_core::bound::NormKind
+pub fn mycelium_core::bound::NormKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::bound::NormKind
+impl core::marker::StructuralPartialEq for mycelium_core::bound::NormKind
+impl serde_core::ser::Serialize for mycelium_core::bound::NormKind
+pub fn mycelium_core::bound::NormKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::bound::NormKind
+pub fn mycelium_core::bound::NormKind::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::bound::NormKind
+impl core::marker::Send for mycelium_core::bound::NormKind
+impl core::marker::Sync for mycelium_core::bound::NormKind
+impl core::marker::Unpin for mycelium_core::bound::NormKind
+impl core::marker::UnsafeUnpin for mycelium_core::bound::NormKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::bound::NormKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::bound::NormKind
+pub struct mycelium_core::bound::Bound
+pub mycelium_core::bound::Bound::basis: mycelium_core::bound::BoundBasis
+pub mycelium_core::bound::Bound::kind: mycelium_core::bound::BoundKind
+impl mycelium_core::bound::Bound
+pub fn mycelium_core::bound::Bound::well_formed(&self) -> bool
+impl core::clone::Clone for mycelium_core::bound::Bound
+pub fn mycelium_core::bound::Bound::clone(&self) -> mycelium_core::bound::Bound
+impl core::cmp::PartialEq for mycelium_core::bound::Bound
+pub fn mycelium_core::bound::Bound::eq(&self, &mycelium_core::bound::Bound) -> bool
+impl core::fmt::Debug for mycelium_core::bound::Bound
+pub fn mycelium_core::bound::Bound::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::bound::Bound
+impl serde_core::ser::Serialize for mycelium_core::bound::Bound
+pub fn mycelium_core::bound::Bound::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::bound::Bound
+pub fn mycelium_core::bound::Bound::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::bound::Bound
+impl core::marker::Send for mycelium_core::bound::Bound
+impl core::marker::Sync for mycelium_core::bound::Bound
+impl core::marker::Unpin for mycelium_core::bound::Bound
+impl core::marker::UnsafeUnpin for mycelium_core::bound::Bound
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::bound::Bound
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::bound::Bound
+pub mod mycelium_core::content
+pub struct mycelium_core::content::Names
+impl mycelium_core::content::Names
+pub fn mycelium_core::content::Names::bind(&mut self, mycelium_core::id::ContentHash, impl core::convert::Into<alloc::string::String>) -> core::option::Option<alloc::string::String>
+pub fn mycelium_core::content::Names::is_empty(&self) -> bool
+pub fn mycelium_core::content::Names::len(&self) -> usize
+pub fn mycelium_core::content::Names::name_of(&self, &mycelium_core::id::ContentHash) -> core::option::Option<&str>
+pub fn mycelium_core::content::Names::new() -> Self
+impl core::clone::Clone for mycelium_core::content::Names
+pub fn mycelium_core::content::Names::clone(&self) -> mycelium_core::content::Names
+impl core::cmp::Eq for mycelium_core::content::Names
+impl core::cmp::PartialEq for mycelium_core::content::Names
+pub fn mycelium_core::content::Names::eq(&self, &mycelium_core::content::Names) -> bool
+impl core::default::Default for mycelium_core::content::Names
+pub fn mycelium_core::content::Names::default() -> mycelium_core::content::Names
+impl core::fmt::Debug for mycelium_core::content::Names
+pub fn mycelium_core::content::Names::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::content::Names
+impl core::marker::Freeze for mycelium_core::content::Names
+impl core::marker::Send for mycelium_core::content::Names
+impl core::marker::Sync for mycelium_core::content::Names
+impl core::marker::Unpin for mycelium_core::content::Names
+impl core::marker::UnsafeUnpin for mycelium_core::content::Names
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::content::Names
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::content::Names
+pub fn mycelium_core::content::operation_hash(&str) -> mycelium_core::id::ContentHash
+pub mod mycelium_core::data
+pub enum mycelium_core::data::FieldSpec
+pub mycelium_core::data::FieldSpec::Data(alloc::string::String)
+pub mycelium_core::data::FieldSpec::Repr(mycelium_core::repr::Repr)
+impl core::clone::Clone for mycelium_core::data::FieldSpec
+pub fn mycelium_core::data::FieldSpec::clone(&self) -> mycelium_core::data::FieldSpec
+impl core::cmp::Eq for mycelium_core::data::FieldSpec
+impl core::cmp::PartialEq for mycelium_core::data::FieldSpec
+pub fn mycelium_core::data::FieldSpec::eq(&self, &mycelium_core::data::FieldSpec) -> bool
+impl core::fmt::Debug for mycelium_core::data::FieldSpec
+pub fn mycelium_core::data::FieldSpec::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::FieldSpec
+impl core::marker::Freeze for mycelium_core::data::FieldSpec
+impl core::marker::Send for mycelium_core::data::FieldSpec
+impl core::marker::Sync for mycelium_core::data::FieldSpec
+impl core::marker::Unpin for mycelium_core::data::FieldSpec
+impl core::marker::UnsafeUnpin for mycelium_core::data::FieldSpec
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::FieldSpec
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::FieldSpec
+pub enum mycelium_core::data::FieldTy
+pub mycelium_core::data::FieldTy::Data(mycelium_core::id::ContentHash)
+pub mycelium_core::data::FieldTy::Repr(mycelium_core::repr::Repr)
+impl core::clone::Clone for mycelium_core::data::FieldTy
+pub fn mycelium_core::data::FieldTy::clone(&self) -> mycelium_core::data::FieldTy
+impl core::cmp::Eq for mycelium_core::data::FieldTy
+impl core::cmp::PartialEq for mycelium_core::data::FieldTy
+pub fn mycelium_core::data::FieldTy::eq(&self, &mycelium_core::data::FieldTy) -> bool
+impl core::fmt::Debug for mycelium_core::data::FieldTy
+pub fn mycelium_core::data::FieldTy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::FieldTy
+impl core::marker::Freeze for mycelium_core::data::FieldTy
+impl core::marker::Send for mycelium_core::data::FieldTy
+impl core::marker::Sync for mycelium_core::data::FieldTy
+impl core::marker::Unpin for mycelium_core::data::FieldTy
+impl core::marker::UnsafeUnpin for mycelium_core::data::FieldTy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::FieldTy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::FieldTy
+pub enum mycelium_core::data::RegistryError
+pub mycelium_core::data::RegistryError::UnknownTypeRef
+pub mycelium_core::data::RegistryError::UnknownTypeRef::in_decl: alloc::string::String
+pub mycelium_core::data::RegistryError::UnknownTypeRef::missing: alloc::string::String
+impl core::clone::Clone for mycelium_core::data::RegistryError
+pub fn mycelium_core::data::RegistryError::clone(&self) -> mycelium_core::data::RegistryError
+impl core::cmp::Eq for mycelium_core::data::RegistryError
+impl core::cmp::PartialEq for mycelium_core::data::RegistryError
+pub fn mycelium_core::data::RegistryError::eq(&self, &mycelium_core::data::RegistryError) -> bool
+impl core::error::Error for mycelium_core::data::RegistryError
+impl core::fmt::Debug for mycelium_core::data::RegistryError
+pub fn mycelium_core::data::RegistryError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_core::data::RegistryError
+pub fn mycelium_core::data::RegistryError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::RegistryError
+impl core::marker::Freeze for mycelium_core::data::RegistryError
+impl core::marker::Send for mycelium_core::data::RegistryError
+impl core::marker::Sync for mycelium_core::data::RegistryError
+impl core::marker::Unpin for mycelium_core::data::RegistryError
+impl core::marker::UnsafeUnpin for mycelium_core::data::RegistryError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::RegistryError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::RegistryError
+pub struct mycelium_core::data::CtorDecl
+pub mycelium_core::data::CtorDecl::fields: alloc::vec::Vec<mycelium_core::data::FieldTy>
+impl core::clone::Clone for mycelium_core::data::CtorDecl
+pub fn mycelium_core::data::CtorDecl::clone(&self) -> mycelium_core::data::CtorDecl
+impl core::cmp::Eq for mycelium_core::data::CtorDecl
+impl core::cmp::PartialEq for mycelium_core::data::CtorDecl
+pub fn mycelium_core::data::CtorDecl::eq(&self, &mycelium_core::data::CtorDecl) -> bool
+impl core::fmt::Debug for mycelium_core::data::CtorDecl
+pub fn mycelium_core::data::CtorDecl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::CtorDecl
+impl core::marker::Freeze for mycelium_core::data::CtorDecl
+impl core::marker::Send for mycelium_core::data::CtorDecl
+impl core::marker::Sync for mycelium_core::data::CtorDecl
+impl core::marker::Unpin for mycelium_core::data::CtorDecl
+impl core::marker::UnsafeUnpin for mycelium_core::data::CtorDecl
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::CtorDecl
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::CtorDecl
+pub struct mycelium_core::data::CtorRef
+impl mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::decl(&self) -> &mycelium_core::id::ContentHash
+pub fn mycelium_core::data::CtorRef::index(&self) -> u32
+pub fn mycelium_core::data::CtorRef::new(mycelium_core::id::ContentHash, u32) -> Self
+impl core::clone::Clone for mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::clone(&self) -> mycelium_core::data::CtorRef
+impl core::cmp::Eq for mycelium_core::data::CtorRef
+impl core::cmp::Ord for mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::cmp(&self, &mycelium_core::data::CtorRef) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::eq(&self, &mycelium_core::data::CtorRef) -> bool
+impl core::cmp::PartialOrd for mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::partial_cmp(&self, &mycelium_core::data::CtorRef) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_core::data::CtorRef
+impl core::marker::Freeze for mycelium_core::data::CtorRef
+impl core::marker::Send for mycelium_core::data::CtorRef
+impl core::marker::Sync for mycelium_core::data::CtorRef
+impl core::marker::Unpin for mycelium_core::data::CtorRef
+impl core::marker::UnsafeUnpin for mycelium_core::data::CtorRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::CtorRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::CtorRef
+pub struct mycelium_core::data::CtorSpec
+pub mycelium_core::data::CtorSpec::fields: alloc::vec::Vec<mycelium_core::data::FieldSpec>
+impl core::clone::Clone for mycelium_core::data::CtorSpec
+pub fn mycelium_core::data::CtorSpec::clone(&self) -> mycelium_core::data::CtorSpec
+impl core::cmp::Eq for mycelium_core::data::CtorSpec
+impl core::cmp::PartialEq for mycelium_core::data::CtorSpec
+pub fn mycelium_core::data::CtorSpec::eq(&self, &mycelium_core::data::CtorSpec) -> bool
+impl core::fmt::Debug for mycelium_core::data::CtorSpec
+pub fn mycelium_core::data::CtorSpec::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::CtorSpec
+impl core::marker::Freeze for mycelium_core::data::CtorSpec
+impl core::marker::Send for mycelium_core::data::CtorSpec
+impl core::marker::Sync for mycelium_core::data::CtorSpec
+impl core::marker::Unpin for mycelium_core::data::CtorSpec
+impl core::marker::UnsafeUnpin for mycelium_core::data::CtorSpec
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::CtorSpec
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::CtorSpec
+pub struct mycelium_core::data::DataDecl
+pub mycelium_core::data::DataDecl::ctors: alloc::vec::Vec<mycelium_core::data::CtorDecl>
+impl core::clone::Clone for mycelium_core::data::DataDecl
+pub fn mycelium_core::data::DataDecl::clone(&self) -> mycelium_core::data::DataDecl
+impl core::cmp::Eq for mycelium_core::data::DataDecl
+impl core::cmp::PartialEq for mycelium_core::data::DataDecl
+pub fn mycelium_core::data::DataDecl::eq(&self, &mycelium_core::data::DataDecl) -> bool
+impl core::fmt::Debug for mycelium_core::data::DataDecl
+pub fn mycelium_core::data::DataDecl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::DataDecl
+impl core::marker::Freeze for mycelium_core::data::DataDecl
+impl core::marker::Send for mycelium_core::data::DataDecl
+impl core::marker::Sync for mycelium_core::data::DataDecl
+impl core::marker::Unpin for mycelium_core::data::DataDecl
+impl core::marker::UnsafeUnpin for mycelium_core::data::DataDecl
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::DataDecl
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::DataDecl
+pub struct mycelium_core::data::DataRegistry
+impl mycelium_core::data::DataRegistry
+pub fn mycelium_core::data::DataRegistry::build(&alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_core::data::DeclSpec>) -> core::result::Result<Self, mycelium_core::data::RegistryError>
+pub fn mycelium_core::data::DataRegistry::ctor(&self, &mycelium_core::data::CtorRef) -> core::option::Option<&mycelium_core::data::CtorDecl>
+pub fn mycelium_core::data::DataRegistry::ctor_count(&self, &mycelium_core::data::CtorRef) -> core::option::Option<usize>
+pub fn mycelium_core::data::DataRegistry::ctor_ref(&self, &str, u32) -> core::option::Option<mycelium_core::data::CtorRef>
+pub fn mycelium_core::data::DataRegistry::decl(&self, &mycelium_core::id::ContentHash) -> core::option::Option<&mycelium_core::data::DataDecl>
+pub fn mycelium_core::data::DataRegistry::decl_hash(&self, &str) -> core::option::Option<&mycelium_core::id::ContentHash>
+pub fn mycelium_core::data::DataRegistry::field_count(&self, &mycelium_core::data::CtorRef) -> core::option::Option<usize>
+impl core::clone::Clone for mycelium_core::data::DataRegistry
+pub fn mycelium_core::data::DataRegistry::clone(&self) -> mycelium_core::data::DataRegistry
+impl core::cmp::Eq for mycelium_core::data::DataRegistry
+impl core::cmp::PartialEq for mycelium_core::data::DataRegistry
+pub fn mycelium_core::data::DataRegistry::eq(&self, &mycelium_core::data::DataRegistry) -> bool
+impl core::default::Default for mycelium_core::data::DataRegistry
+pub fn mycelium_core::data::DataRegistry::default() -> mycelium_core::data::DataRegistry
+impl core::fmt::Debug for mycelium_core::data::DataRegistry
+pub fn mycelium_core::data::DataRegistry::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::DataRegistry
+impl core::marker::Freeze for mycelium_core::data::DataRegistry
+impl core::marker::Send for mycelium_core::data::DataRegistry
+impl core::marker::Sync for mycelium_core::data::DataRegistry
+impl core::marker::Unpin for mycelium_core::data::DataRegistry
+impl core::marker::UnsafeUnpin for mycelium_core::data::DataRegistry
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::DataRegistry
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::DataRegistry
+pub struct mycelium_core::data::DeclSpec
+pub mycelium_core::data::DeclSpec::ctors: alloc::vec::Vec<mycelium_core::data::CtorSpec>
+impl core::clone::Clone for mycelium_core::data::DeclSpec
+pub fn mycelium_core::data::DeclSpec::clone(&self) -> mycelium_core::data::DeclSpec
+impl core::cmp::Eq for mycelium_core::data::DeclSpec
+impl core::cmp::PartialEq for mycelium_core::data::DeclSpec
+pub fn mycelium_core::data::DeclSpec::eq(&self, &mycelium_core::data::DeclSpec) -> bool
+impl core::fmt::Debug for mycelium_core::data::DeclSpec
+pub fn mycelium_core::data::DeclSpec::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::DeclSpec
+impl core::marker::Freeze for mycelium_core::data::DeclSpec
+impl core::marker::Send for mycelium_core::data::DeclSpec
+impl core::marker::Sync for mycelium_core::data::DeclSpec
+impl core::marker::Unpin for mycelium_core::data::DeclSpec
+impl core::marker::UnsafeUnpin for mycelium_core::data::DeclSpec
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::DeclSpec
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::DeclSpec
+pub mod mycelium_core::datum
+pub enum mycelium_core::datum::CoreValue
+pub mycelium_core::datum::CoreValue::Data(mycelium_core::datum::Datum)
+pub mycelium_core::datum::CoreValue::Repr(mycelium_core::value::Value)
+impl mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::as_data(&self) -> core::option::Option<&mycelium_core::datum::Datum>
+pub fn mycelium_core::datum::CoreValue::as_repr(&self) -> core::option::Option<&mycelium_core::value::Value>
+pub fn mycelium_core::datum::CoreValue::content_hash(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_core::datum::CoreValue::guarantee(&self) -> mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::clone(&self) -> mycelium_core::datum::CoreValue
+impl core::cmp::PartialEq for mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::eq(&self, &mycelium_core::datum::CoreValue) -> bool
+impl core::convert::From<mycelium_core::datum::Datum> for mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::from(mycelium_core::datum::Datum) -> Self
+impl core::convert::From<mycelium_core::value::Value> for mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::from(mycelium_core::value::Value) -> Self
+impl core::fmt::Debug for mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::datum::CoreValue
+impl core::marker::Freeze for mycelium_core::datum::CoreValue
+impl core::marker::Send for mycelium_core::datum::CoreValue
+impl core::marker::Sync for mycelium_core::datum::CoreValue
+impl core::marker::Unpin for mycelium_core::datum::CoreValue
+impl core::marker::UnsafeUnpin for mycelium_core::datum::CoreValue
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::datum::CoreValue
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::datum::CoreValue
+pub struct mycelium_core::datum::Datum
+impl mycelium_core::datum::Datum
+pub fn mycelium_core::datum::Datum::content_hash(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_core::datum::Datum::ctor(&self) -> &mycelium_core::data::CtorRef
+pub fn mycelium_core::datum::Datum::fields(&self) -> &[mycelium_core::datum::CoreValue]
+pub fn mycelium_core::datum::Datum::guarantee(&self) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::datum::Datum::meet_guarantee(self, mycelium_core::guarantee::GuaranteeStrength) -> Self
+pub fn mycelium_core::datum::Datum::new(mycelium_core::data::CtorRef, alloc::vec::Vec<mycelium_core::datum::CoreValue>) -> Self
+impl core::clone::Clone for mycelium_core::datum::Datum
+pub fn mycelium_core::datum::Datum::clone(&self) -> mycelium_core::datum::Datum
+impl core::cmp::PartialEq for mycelium_core::datum::Datum
+pub fn mycelium_core::datum::Datum::eq(&self, &mycelium_core::datum::Datum) -> bool
+impl core::convert::From<mycelium_core::datum::Datum> for mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::from(mycelium_core::datum::Datum) -> Self
+impl core::fmt::Debug for mycelium_core::datum::Datum
+pub fn mycelium_core::datum::Datum::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::datum::Datum
+impl core::marker::Freeze for mycelium_core::datum::Datum
+impl core::marker::Send for mycelium_core::datum::Datum
+impl core::marker::Sync for mycelium_core::datum::Datum
+impl core::marker::Unpin for mycelium_core::datum::Datum
+impl core::marker::UnsafeUnpin for mycelium_core::datum::Datum
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::datum::Datum
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::datum::Datum
+pub mod mycelium_core::guarantee
+pub enum mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_core::guarantee::GuaranteeStrength::Declared
+pub mycelium_core::guarantee::GuaranteeStrength::Empirical
+pub mycelium_core::guarantee::GuaranteeStrength::Exact
+pub mycelium_core::guarantee::GuaranteeStrength::Proven
+impl mycelium_core::guarantee::GuaranteeStrength
+pub const mycelium_core::guarantee::GuaranteeStrength::ALL: [mycelium_core::guarantee::GuaranteeStrength; 4]
+pub const mycelium_core::guarantee::GuaranteeStrength::TOP: mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::meet(self, mycelium_core::guarantee::GuaranteeStrength) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::meet_all(impl core::iter::traits::collect::IntoIterator<Item = mycelium_core::guarantee::GuaranteeStrength>) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::propagate(mycelium_core::guarantee::GuaranteeStrength, impl core::iter::traits::collect::IntoIterator<Item = mycelium_core::guarantee::GuaranteeStrength>) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::rank(self) -> u8
+impl core::clone::Clone for mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::clone(&self) -> mycelium_core::guarantee::GuaranteeStrength
+impl core::cmp::Eq for mycelium_core::guarantee::GuaranteeStrength
+impl core::cmp::PartialEq for mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::eq(&self, &mycelium_core::guarantee::GuaranteeStrength) -> bool
+impl core::fmt::Debug for mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::guarantee::GuaranteeStrength
+impl core::marker::StructuralPartialEq for mycelium_core::guarantee::GuaranteeStrength
+impl serde_core::ser::Serialize for mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::guarantee::GuaranteeStrength
+impl core::marker::Send for mycelium_core::guarantee::GuaranteeStrength
+impl core::marker::Sync for mycelium_core::guarantee::GuaranteeStrength
+impl core::marker::Unpin for mycelium_core::guarantee::GuaranteeStrength
+impl core::marker::UnsafeUnpin for mycelium_core::guarantee::GuaranteeStrength
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::guarantee::GuaranteeStrength
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::guarantee::GuaranteeStrength
+pub mod mycelium_core::id
+pub struct mycelium_core::id::ContentHash(_)
+impl mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::algo(&self) -> &str
+pub fn mycelium_core::id::ContentHash::as_str(&self) -> &str
+pub fn mycelium_core::id::ContentHash::digest(&self) -> &str
+pub fn mycelium_core::id::ContentHash::from_parts(&str, &str) -> core::option::Option<Self>
+pub fn mycelium_core::id::ContentHash::parse(&str) -> core::option::Option<Self>
+impl core::clone::Clone for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::clone(&self) -> mycelium_core::id::ContentHash
+impl core::cmp::Eq for mycelium_core::id::ContentHash
+impl core::cmp::Ord for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::cmp(&self, &mycelium_core::id::ContentHash) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::eq(&self, &mycelium_core::id::ContentHash) -> bool
+impl core::cmp::PartialOrd for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::partial_cmp(&self, &mycelium_core::id::ContentHash) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_core::id::ContentHash
+impl serde_core::ser::Serialize for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for mycelium_core::id::ContentHash
+impl core::marker::Send for mycelium_core::id::ContentHash
+impl core::marker::Sync for mycelium_core::id::ContentHash
+impl core::marker::Unpin for mycelium_core::id::ContentHash
+impl core::marker::UnsafeUnpin for mycelium_core::id::ContentHash
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::id::ContentHash
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::id::ContentHash
+pub mod mycelium_core::lower
+pub enum mycelium_core::lower::AnfAlt
+pub mycelium_core::lower::AnfAlt::Ctor
+pub mycelium_core::lower::AnfAlt::Ctor::binders: alloc::vec::Vec<mycelium_core::node::VarId>
+pub mycelium_core::lower::AnfAlt::Ctor::body: mycelium_core::lower::Anf
+pub mycelium_core::lower::AnfAlt::Ctor::ctor: mycelium_core::data::CtorRef
+pub mycelium_core::lower::AnfAlt::Lit
+pub mycelium_core::lower::AnfAlt::Lit::body: mycelium_core::lower::Anf
+pub mycelium_core::lower::AnfAlt::Lit::value: mycelium_core::value::Value
+impl core::clone::Clone for mycelium_core::lower::AnfAlt
+pub fn mycelium_core::lower::AnfAlt::clone(&self) -> mycelium_core::lower::AnfAlt
+impl core::cmp::PartialEq for mycelium_core::lower::AnfAlt
+pub fn mycelium_core::lower::AnfAlt::eq(&self, &mycelium_core::lower::AnfAlt) -> bool
+impl core::fmt::Debug for mycelium_core::lower::AnfAlt
+pub fn mycelium_core::lower::AnfAlt::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::lower::AnfAlt
+impl core::marker::Freeze for mycelium_core::lower::AnfAlt
+impl core::marker::Send for mycelium_core::lower::AnfAlt
+impl core::marker::Sync for mycelium_core::lower::AnfAlt
+impl core::marker::Unpin for mycelium_core::lower::AnfAlt
+impl core::marker::UnsafeUnpin for mycelium_core::lower::AnfAlt
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::lower::AnfAlt
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::lower::AnfAlt
+pub enum mycelium_core::lower::Atom
+pub mycelium_core::lower::Atom::Named(alloc::string::String)
+pub mycelium_core::lower::Atom::Temp(usize)
+impl mycelium_core::lower::Atom
+pub fn mycelium_core::lower::Atom::render(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_core::lower::Atom
+pub fn mycelium_core::lower::Atom::clone(&self) -> mycelium_core::lower::Atom
+impl core::cmp::Eq for mycelium_core::lower::Atom
+impl core::cmp::PartialEq for mycelium_core::lower::Atom
+pub fn mycelium_core::lower::Atom::eq(&self, &mycelium_core::lower::Atom) -> bool
+impl core::fmt::Debug for mycelium_core::lower::Atom
+pub fn mycelium_core::lower::Atom::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_core::lower::Atom
+pub fn mycelium_core::lower::Atom::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_core::lower::Atom
+impl core::marker::Freeze for mycelium_core::lower::Atom
+impl core::marker::Send for mycelium_core::lower::Atom
+impl core::marker::Sync for mycelium_core::lower::Atom
+impl core::marker::Unpin for mycelium_core::lower::Atom
+impl core::marker::UnsafeUnpin for mycelium_core::lower::Atom
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::lower::Atom
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::lower::Atom
+pub enum mycelium_core::lower::Rhs
+pub mycelium_core::lower::Rhs::Alias(mycelium_core::lower::Atom)
+pub mycelium_core::lower::Rhs::App
+pub mycelium_core::lower::Rhs::App::arg: mycelium_core::lower::Atom
+pub mycelium_core::lower::Rhs::App::func: mycelium_core::lower::Atom
+pub mycelium_core::lower::Rhs::Const(mycelium_core::value::Value)
+pub mycelium_core::lower::Rhs::Construct
+pub mycelium_core::lower::Rhs::Construct::args: alloc::vec::Vec<mycelium_core::lower::Atom>
+pub mycelium_core::lower::Rhs::Construct::ctor: mycelium_core::data::CtorRef
+pub mycelium_core::lower::Rhs::Fix
+pub mycelium_core::lower::Rhs::Fix::body: mycelium_core::lower::Anf
+pub mycelium_core::lower::Rhs::Fix::name: mycelium_core::node::VarId
+pub mycelium_core::lower::Rhs::FixGroup
+pub mycelium_core::lower::Rhs::FixGroup::defs: alloc::vec::Vec<(mycelium_core::node::VarId, mycelium_core::lower::Anf)>
+pub mycelium_core::lower::Rhs::FixGroup::which: mycelium_core::node::VarId
+pub mycelium_core::lower::Rhs::Lam
+pub mycelium_core::lower::Rhs::Lam::body: mycelium_core::lower::Anf
+pub mycelium_core::lower::Rhs::Lam::param: mycelium_core::node::VarId
+pub mycelium_core::lower::Rhs::Match
+pub mycelium_core::lower::Rhs::Match::alts: alloc::vec::Vec<mycelium_core::lower::AnfAlt>
+pub mycelium_core::lower::Rhs::Match::default: core::option::Option<mycelium_core::lower::Anf>
+pub mycelium_core::lower::Rhs::Match::scrutinee: mycelium_core::lower::Atom
+pub mycelium_core::lower::Rhs::Op
+pub mycelium_core::lower::Rhs::Op::args: alloc::vec::Vec<mycelium_core::lower::Atom>
+pub mycelium_core::lower::Rhs::Op::prim: alloc::string::String
+pub mycelium_core::lower::Rhs::Swap
+pub mycelium_core::lower::Rhs::Swap::policy: mycelium_core::id::ContentHash
+pub mycelium_core::lower::Rhs::Swap::src: mycelium_core::lower::Atom
+pub mycelium_core::lower::Rhs::Swap::target: mycelium_core::repr::Repr
+impl core::clone::Clone for mycelium_core::lower::Rhs
+pub fn mycelium_core::lower::Rhs::clone(&self) -> mycelium_core::lower::Rhs
+impl core::cmp::PartialEq for mycelium_core::lower::Rhs
+pub fn mycelium_core::lower::Rhs::eq(&self, &mycelium_core::lower::Rhs) -> bool
+impl core::fmt::Debug for mycelium_core::lower::Rhs
+pub fn mycelium_core::lower::Rhs::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::lower::Rhs
+impl core::marker::Freeze for mycelium_core::lower::Rhs
+impl core::marker::Send for mycelium_core::lower::Rhs
+impl core::marker::Sync for mycelium_core::lower::Rhs
+impl core::marker::Unpin for mycelium_core::lower::Rhs
+impl core::marker::UnsafeUnpin for mycelium_core::lower::Rhs
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::lower::Rhs
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::lower::Rhs
+pub struct mycelium_core::lower::Anf
+impl mycelium_core::lower::Anf
+pub fn mycelium_core::lower::Anf::bindings(&self) -> &[mycelium_core::lower::Binding]
+pub fn mycelium_core::lower::Anf::dump(&self) -> alloc::string::String
+pub fn mycelium_core::lower::Anf::is_empty(&self) -> bool
+pub fn mycelium_core::lower::Anf::len(&self) -> usize
+pub fn mycelium_core::lower::Anf::result(&self) -> &mycelium_core::lower::Atom
+impl core::clone::Clone for mycelium_core::lower::Anf
+pub fn mycelium_core::lower::Anf::clone(&self) -> mycelium_core::lower::Anf
+impl core::cmp::PartialEq for mycelium_core::lower::Anf
+pub fn mycelium_core::lower::Anf::eq(&self, &mycelium_core::lower::Anf) -> bool
+impl core::fmt::Debug for mycelium_core::lower::Anf
+pub fn mycelium_core::lower::Anf::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::lower::Anf
+impl core::marker::Freeze for mycelium_core::lower::Anf
+impl core::marker::Send for mycelium_core::lower::Anf
+impl core::marker::Sync for mycelium_core::lower::Anf
+impl core::marker::Unpin for mycelium_core::lower::Anf
+impl core::marker::UnsafeUnpin for mycelium_core::lower::Anf
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::lower::Anf
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::lower::Anf
+pub struct mycelium_core::lower::Binding
+pub mycelium_core::lower::Binding::layout: core::option::Option<mycelium_core::meta::PhysicalLayout>
+pub mycelium_core::lower::Binding::name: mycelium_core::lower::Atom
+pub mycelium_core::lower::Binding::rhs: mycelium_core::lower::Rhs
+impl core::clone::Clone for mycelium_core::lower::Binding
+pub fn mycelium_core::lower::Binding::clone(&self) -> mycelium_core::lower::Binding
+impl core::cmp::PartialEq for mycelium_core::lower::Binding
+pub fn mycelium_core::lower::Binding::eq(&self, &mycelium_core::lower::Binding) -> bool
+impl core::fmt::Debug for mycelium_core::lower::Binding
+pub fn mycelium_core::lower::Binding::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::lower::Binding
+impl core::marker::Freeze for mycelium_core::lower::Binding
+impl core::marker::Send for mycelium_core::lower::Binding
+impl core::marker::Sync for mycelium_core::lower::Binding
+impl core::marker::Unpin for mycelium_core::lower::Binding
+impl core::marker::UnsafeUnpin for mycelium_core::lower::Binding
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::lower::Binding
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::lower::Binding
+pub struct mycelium_core::lower::Stage
+pub mycelium_core::lower::Stage::name: &'static str
+pub mycelium_core::lower::Stage::text: alloc::string::String
+impl core::clone::Clone for mycelium_core::lower::Stage
+pub fn mycelium_core::lower::Stage::clone(&self) -> mycelium_core::lower::Stage
+impl core::cmp::Eq for mycelium_core::lower::Stage
+impl core::cmp::PartialEq for mycelium_core::lower::Stage
+pub fn mycelium_core::lower::Stage::eq(&self, &mycelium_core::lower::Stage) -> bool
+impl core::fmt::Debug for mycelium_core::lower::Stage
+pub fn mycelium_core::lower::Stage::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::lower::Stage
+impl core::marker::Freeze for mycelium_core::lower::Stage
+impl core::marker::Send for mycelium_core::lower::Stage
+impl core::marker::Sync for mycelium_core::lower::Stage
+impl core::marker::Unpin for mycelium_core::lower::Stage
+impl core::marker::UnsafeUnpin for mycelium_core::lower::Stage
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::lower::Stage
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::lower::Stage
+pub fn mycelium_core::lower::dump_node(&mycelium_core::node::Node) -> alloc::string::String
+pub fn mycelium_core::lower::format(&mycelium_core::node::Node) -> alloc::string::String
+pub fn mycelium_core::lower::lower_to_anf(&mycelium_core::node::Node) -> mycelium_core::lower::Anf
+pub fn mycelium_core::lower::schedule(&mycelium_core::repr::Repr) -> mycelium_core::meta::PhysicalLayout
+pub fn mycelium_core::lower::stages(&mycelium_core::node::Node) -> alloc::vec::Vec<mycelium_core::lower::Stage>
+pub mod mycelium_core::meta
+pub enum mycelium_core::meta::PackScheme
+pub mycelium_core::meta::PackScheme::FiveTritPerByte
+pub mycelium_core::meta::PackScheme::I2S
+pub mycelium_core::meta::PackScheme::Tl1
+pub mycelium_core::meta::PackScheme::Tl2
+pub mycelium_core::meta::PackScheme::TwoBitPerTrit
+pub mycelium_core::meta::PackScheme::Unpacked
+impl core::clone::Clone for mycelium_core::meta::PackScheme
+pub fn mycelium_core::meta::PackScheme::clone(&self) -> mycelium_core::meta::PackScheme
+impl core::cmp::Eq for mycelium_core::meta::PackScheme
+impl core::cmp::PartialEq for mycelium_core::meta::PackScheme
+pub fn mycelium_core::meta::PackScheme::eq(&self, &mycelium_core::meta::PackScheme) -> bool
+impl core::fmt::Debug for mycelium_core::meta::PackScheme
+pub fn mycelium_core::meta::PackScheme::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::meta::PackScheme
+impl core::marker::StructuralPartialEq for mycelium_core::meta::PackScheme
+impl serde_core::ser::Serialize for mycelium_core::meta::PackScheme
+pub fn mycelium_core::meta::PackScheme::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::meta::PackScheme
+pub fn mycelium_core::meta::PackScheme::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::meta::PackScheme
+impl core::marker::Send for mycelium_core::meta::PackScheme
+impl core::marker::Sync for mycelium_core::meta::PackScheme
+impl core::marker::Unpin for mycelium_core::meta::PackScheme
+impl core::marker::UnsafeUnpin for mycelium_core::meta::PackScheme
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::meta::PackScheme
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::meta::PackScheme
+pub enum mycelium_core::meta::PhysicalLayout
+pub mycelium_core::meta::PhysicalLayout::BinaryWords
+pub mycelium_core::meta::PhysicalLayout::DenseArray
+pub mycelium_core::meta::PhysicalLayout::TritPacked
+pub mycelium_core::meta::PhysicalLayout::TritPacked::scheme: mycelium_core::meta::PackScheme
+pub mycelium_core::meta::PhysicalLayout::VsaStore
+pub mycelium_core::meta::PhysicalLayout::VsaStore::sparse: bool
+impl core::clone::Clone for mycelium_core::meta::PhysicalLayout
+pub fn mycelium_core::meta::PhysicalLayout::clone(&self) -> mycelium_core::meta::PhysicalLayout
+impl core::cmp::Eq for mycelium_core::meta::PhysicalLayout
+impl core::cmp::PartialEq for mycelium_core::meta::PhysicalLayout
+pub fn mycelium_core::meta::PhysicalLayout::eq(&self, &mycelium_core::meta::PhysicalLayout) -> bool
+impl core::fmt::Debug for mycelium_core::meta::PhysicalLayout
+pub fn mycelium_core::meta::PhysicalLayout::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::meta::PhysicalLayout
+impl core::marker::StructuralPartialEq for mycelium_core::meta::PhysicalLayout
+impl serde_core::ser::Serialize for mycelium_core::meta::PhysicalLayout
+pub fn mycelium_core::meta::PhysicalLayout::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::meta::PhysicalLayout
+pub fn mycelium_core::meta::PhysicalLayout::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::meta::PhysicalLayout
+impl core::marker::Send for mycelium_core::meta::PhysicalLayout
+impl core::marker::Sync for mycelium_core::meta::PhysicalLayout
+impl core::marker::Unpin for mycelium_core::meta::PhysicalLayout
+impl core::marker::UnsafeUnpin for mycelium_core::meta::PhysicalLayout
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::meta::PhysicalLayout
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::meta::PhysicalLayout
+pub enum mycelium_core::meta::Provenance
+pub mycelium_core::meta::Provenance::Derived
+pub mycelium_core::meta::Provenance::Derived::inputs: alloc::vec::Vec<mycelium_core::id::ContentHash>
+pub mycelium_core::meta::Provenance::Derived::op: mycelium_core::id::ContentHash
+pub mycelium_core::meta::Provenance::Root
+impl core::clone::Clone for mycelium_core::meta::Provenance
+pub fn mycelium_core::meta::Provenance::clone(&self) -> mycelium_core::meta::Provenance
+impl core::cmp::Eq for mycelium_core::meta::Provenance
+impl core::cmp::PartialEq for mycelium_core::meta::Provenance
+pub fn mycelium_core::meta::Provenance::eq(&self, &mycelium_core::meta::Provenance) -> bool
+impl core::fmt::Debug for mycelium_core::meta::Provenance
+pub fn mycelium_core::meta::Provenance::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::meta::Provenance
+impl serde_core::ser::Serialize for mycelium_core::meta::Provenance
+pub fn mycelium_core::meta::Provenance::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::meta::Provenance
+pub fn mycelium_core::meta::Provenance::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::meta::Provenance
+impl core::marker::Send for mycelium_core::meta::Provenance
+impl core::marker::Sync for mycelium_core::meta::Provenance
+impl core::marker::Unpin for mycelium_core::meta::Provenance
+impl core::marker::UnsafeUnpin for mycelium_core::meta::Provenance
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::meta::Provenance
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::meta::Provenance
+pub struct mycelium_core::meta::Meta
+impl mycelium_core::meta::Meta
+pub fn mycelium_core::meta::Meta::bound(&self) -> core::option::Option<&mycelium_core::bound::Bound>
+pub fn mycelium_core::meta::Meta::exact(mycelium_core::meta::Provenance) -> Self
+pub fn mycelium_core::meta::Meta::guarantee(&self) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::meta::Meta::new(mycelium_core::meta::Provenance, mycelium_core::guarantee::GuaranteeStrength, core::option::Option<mycelium_core::bound::Bound>, core::option::Option<mycelium_core::meta::SparsityObs>, core::option::Option<mycelium_core::meta::PhysicalLayout>, core::option::Option<mycelium_core::id::ContentHash>) -> core::result::Result<Self, mycelium_core::WfError>
+pub fn mycelium_core::meta::Meta::physical(&self) -> core::option::Option<mycelium_core::meta::PhysicalLayout>
+pub fn mycelium_core::meta::Meta::policy_used(&self) -> core::option::Option<&mycelium_core::id::ContentHash>
+pub fn mycelium_core::meta::Meta::provenance(&self) -> &mycelium_core::meta::Provenance
+pub fn mycelium_core::meta::Meta::reconstruction(&self) -> core::option::Option<&mycelium_core::recon::ReconInfo>
+pub fn mycelium_core::meta::Meta::sparsity(&self) -> core::option::Option<mycelium_core::meta::SparsityObs>
+pub fn mycelium_core::meta::Meta::with_physical(self, mycelium_core::meta::PhysicalLayout) -> Self
+pub fn mycelium_core::meta::Meta::with_reconstruction(self, mycelium_core::recon::ReconInfo) -> Self
+impl core::clone::Clone for mycelium_core::meta::Meta
+pub fn mycelium_core::meta::Meta::clone(&self) -> mycelium_core::meta::Meta
+impl core::cmp::PartialEq for mycelium_core::meta::Meta
+pub fn mycelium_core::meta::Meta::eq(&self, &mycelium_core::meta::Meta) -> bool
+impl core::fmt::Debug for mycelium_core::meta::Meta
+pub fn mycelium_core::meta::Meta::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::meta::Meta
+impl serde_core::ser::Serialize for mycelium_core::meta::Meta
+pub fn mycelium_core::meta::Meta::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::meta::Meta
+pub fn mycelium_core::meta::Meta::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for mycelium_core::meta::Meta
+impl core::marker::Send for mycelium_core::meta::Meta
+impl core::marker::Sync for mycelium_core::meta::Meta
+impl core::marker::Unpin for mycelium_core::meta::Meta
+impl core::marker::UnsafeUnpin for mycelium_core::meta::Meta
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::meta::Meta
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::meta::Meta
+pub struct mycelium_core::meta::SparsityObs
+pub mycelium_core::meta::SparsityObs::active: u64
+pub mycelium_core::meta::SparsityObs::density: f64
+impl core::clone::Clone for mycelium_core::meta::SparsityObs
+pub fn mycelium_core::meta::SparsityObs::clone(&self) -> mycelium_core::meta::SparsityObs
+impl core::cmp::PartialEq for mycelium_core::meta::SparsityObs
+pub fn mycelium_core::meta::SparsityObs::eq(&self, &mycelium_core::meta::SparsityObs) -> bool
+impl core::fmt::Debug for mycelium_core::meta::SparsityObs
+pub fn mycelium_core::meta::SparsityObs::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::meta::SparsityObs
+impl core::marker::StructuralPartialEq for mycelium_core::meta::SparsityObs
+impl serde_core::ser::Serialize for mycelium_core::meta::SparsityObs
+pub fn mycelium_core::meta::SparsityObs::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::meta::SparsityObs
+pub fn mycelium_core::meta::SparsityObs::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::meta::SparsityObs
+impl core::marker::Send for mycelium_core::meta::SparsityObs
+impl core::marker::Sync for mycelium_core::meta::SparsityObs
+impl core::marker::Unpin for mycelium_core::meta::SparsityObs
+impl core::marker::UnsafeUnpin for mycelium_core::meta::SparsityObs
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::meta::SparsityObs
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::meta::SparsityObs
+pub mod mycelium_core::node
+pub enum mycelium_core::node::Alt
+pub mycelium_core::node::Alt::Ctor
+pub mycelium_core::node::Alt::Ctor::binders: alloc::vec::Vec<mycelium_core::node::VarId>
+pub mycelium_core::node::Alt::Ctor::body: mycelium_core::node::Node
+pub mycelium_core::node::Alt::Ctor::ctor: mycelium_core::data::CtorRef
+pub mycelium_core::node::Alt::Lit
+pub mycelium_core::node::Alt::Lit::body: mycelium_core::node::Node
+pub mycelium_core::node::Alt::Lit::value: mycelium_core::value::Value
+impl core::clone::Clone for mycelium_core::node::Alt
+pub fn mycelium_core::node::Alt::clone(&self) -> mycelium_core::node::Alt
+impl core::cmp::PartialEq for mycelium_core::node::Alt
+pub fn mycelium_core::node::Alt::eq(&self, &mycelium_core::node::Alt) -> bool
+impl core::fmt::Debug for mycelium_core::node::Alt
+pub fn mycelium_core::node::Alt::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::node::Alt
+impl core::marker::Freeze for mycelium_core::node::Alt
+impl core::marker::Send for mycelium_core::node::Alt
+impl core::marker::Sync for mycelium_core::node::Alt
+impl core::marker::Unpin for mycelium_core::node::Alt
+impl core::marker::UnsafeUnpin for mycelium_core::node::Alt
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::node::Alt
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::node::Alt
+pub enum mycelium_core::node::Node
+pub mycelium_core::node::Node::App
+pub mycelium_core::node::Node::App::arg: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::node::Node::App::func: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::node::Node::Const(mycelium_core::value::Value)
+pub mycelium_core::node::Node::Construct
+pub mycelium_core::node::Node::Construct::args: alloc::vec::Vec<mycelium_core::node::Node>
+pub mycelium_core::node::Node::Construct::ctor: mycelium_core::data::CtorRef
+pub mycelium_core::node::Node::Fix
+pub mycelium_core::node::Node::Fix::body: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::node::Node::Fix::name: mycelium_core::node::VarId
+pub mycelium_core::node::Node::FixGroup
+pub mycelium_core::node::Node::FixGroup::body: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::node::Node::FixGroup::defs: alloc::vec::Vec<(mycelium_core::node::VarId, alloc::boxed::Box<mycelium_core::node::Node>)>
+pub mycelium_core::node::Node::Lam
+pub mycelium_core::node::Node::Lam::body: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::node::Node::Lam::param: mycelium_core::node::VarId
+pub mycelium_core::node::Node::Let
+pub mycelium_core::node::Node::Let::body: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::node::Node::Let::bound: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::node::Node::Let::id: mycelium_core::node::VarId
+pub mycelium_core::node::Node::Match
+pub mycelium_core::node::Node::Match::alts: alloc::vec::Vec<mycelium_core::node::Alt>
+pub mycelium_core::node::Node::Match::default: core::option::Option<alloc::boxed::Box<mycelium_core::node::Node>>
+pub mycelium_core::node::Node::Match::scrutinee: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::node::Node::Op
+pub mycelium_core::node::Node::Op::args: alloc::vec::Vec<mycelium_core::node::Node>
+pub mycelium_core::node::Node::Op::prim: mycelium_core::node::Prim
+pub mycelium_core::node::Node::Swap
+pub mycelium_core::node::Node::Swap::policy: mycelium_core::node::PolicyRef
+pub mycelium_core::node::Node::Swap::src: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::node::Node::Swap::target: mycelium_core::repr::Repr
+pub mycelium_core::node::Node::Var(mycelium_core::node::VarId)
+impl mycelium_core::node::Node
+pub fn mycelium_core::node::Node::content_hash(&self) -> mycelium_core::id::ContentHash
+impl mycelium_core::node::Node
+pub fn mycelium_core::node::Node::is_aot_lowerable(&self) -> bool
+pub fn mycelium_core::node::Node::is_repr_changing(&self) -> bool
+impl core::clone::Clone for mycelium_core::node::Node
+pub fn mycelium_core::node::Node::clone(&self) -> mycelium_core::node::Node
+impl core::cmp::PartialEq for mycelium_core::node::Node
+pub fn mycelium_core::node::Node::eq(&self, &mycelium_core::node::Node) -> bool
+impl core::fmt::Debug for mycelium_core::node::Node
+pub fn mycelium_core::node::Node::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::node::Node
+impl core::marker::Freeze for mycelium_core::node::Node
+impl core::marker::Send for mycelium_core::node::Node
+impl core::marker::Sync for mycelium_core::node::Node
+impl core::marker::Unpin for mycelium_core::node::Node
+impl core::marker::UnsafeUnpin for mycelium_core::node::Node
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::node::Node
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::node::Node
+pub type mycelium_core::node::PolicyRef = mycelium_core::id::ContentHash
+pub type mycelium_core::node::Prim = alloc::string::String
+pub type mycelium_core::node::VarId = alloc::string::String
+pub mod mycelium_core::prim
+pub enum mycelium_core::prim::PrimParadigm
+pub mycelium_core::prim::PrimParadigm::Any
+pub mycelium_core::prim::PrimParadigm::Binary
+pub mycelium_core::prim::PrimParadigm::Ternary
+impl core::clone::Clone for mycelium_core::prim::PrimParadigm
+pub fn mycelium_core::prim::PrimParadigm::clone(&self) -> mycelium_core::prim::PrimParadigm
+impl core::cmp::Eq for mycelium_core::prim::PrimParadigm
+impl core::cmp::PartialEq for mycelium_core::prim::PrimParadigm
+pub fn mycelium_core::prim::PrimParadigm::eq(&self, &mycelium_core::prim::PrimParadigm) -> bool
+impl core::fmt::Debug for mycelium_core::prim::PrimParadigm
+pub fn mycelium_core::prim::PrimParadigm::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::prim::PrimParadigm
+impl core::marker::StructuralPartialEq for mycelium_core::prim::PrimParadigm
+impl core::marker::Freeze for mycelium_core::prim::PrimParadigm
+impl core::marker::Send for mycelium_core::prim::PrimParadigm
+impl core::marker::Sync for mycelium_core::prim::PrimParadigm
+impl core::marker::Unpin for mycelium_core::prim::PrimParadigm
+impl core::marker::UnsafeUnpin for mycelium_core::prim::PrimParadigm
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::prim::PrimParadigm
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::prim::PrimParadigm
+pub enum mycelium_core::prim::WidthRel
+pub mycelium_core::prim::WidthRel::Uniform
+impl core::clone::Clone for mycelium_core::prim::WidthRel
+pub fn mycelium_core::prim::WidthRel::clone(&self) -> mycelium_core::prim::WidthRel
+impl core::cmp::Eq for mycelium_core::prim::WidthRel
+impl core::cmp::PartialEq for mycelium_core::prim::WidthRel
+pub fn mycelium_core::prim::WidthRel::eq(&self, &mycelium_core::prim::WidthRel) -> bool
+impl core::fmt::Debug for mycelium_core::prim::WidthRel
+pub fn mycelium_core::prim::WidthRel::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::prim::WidthRel
+impl core::marker::StructuralPartialEq for mycelium_core::prim::WidthRel
+impl core::marker::Freeze for mycelium_core::prim::WidthRel
+impl core::marker::Send for mycelium_core::prim::WidthRel
+impl core::marker::Sync for mycelium_core::prim::WidthRel
+impl core::marker::Unpin for mycelium_core::prim::WidthRel
+impl core::marker::UnsafeUnpin for mycelium_core::prim::WidthRel
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::prim::WidthRel
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::prim::WidthRel
+pub struct mycelium_core::prim::PrimDecl
+pub mycelium_core::prim::PrimDecl::intrinsic: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_core::prim::PrimDecl::sig: mycelium_core::prim::PrimSig
+impl mycelium_core::prim::PrimDecl
+pub fn mycelium_core::prim::PrimDecl::content_hash(&self) -> mycelium_core::id::ContentHash
+impl core::clone::Clone for mycelium_core::prim::PrimDecl
+pub fn mycelium_core::prim::PrimDecl::clone(&self) -> mycelium_core::prim::PrimDecl
+impl core::cmp::Eq for mycelium_core::prim::PrimDecl
+impl core::cmp::PartialEq for mycelium_core::prim::PrimDecl
+pub fn mycelium_core::prim::PrimDecl::eq(&self, &mycelium_core::prim::PrimDecl) -> bool
+impl core::fmt::Debug for mycelium_core::prim::PrimDecl
+pub fn mycelium_core::prim::PrimDecl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::prim::PrimDecl
+impl core::marker::Freeze for mycelium_core::prim::PrimDecl
+impl core::marker::Send for mycelium_core::prim::PrimDecl
+impl core::marker::Sync for mycelium_core::prim::PrimDecl
+impl core::marker::Unpin for mycelium_core::prim::PrimDecl
+impl core::marker::UnsafeUnpin for mycelium_core::prim::PrimDecl
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::prim::PrimDecl
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::prim::PrimDecl
+pub struct mycelium_core::prim::PrimRef(_)
+impl mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::decl(&self) -> &mycelium_core::id::ContentHash
+pub fn mycelium_core::prim::PrimRef::new(mycelium_core::id::ContentHash) -> Self
+impl core::clone::Clone for mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::clone(&self) -> mycelium_core::prim::PrimRef
+impl core::cmp::Eq for mycelium_core::prim::PrimRef
+impl core::cmp::Ord for mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::cmp(&self, &mycelium_core::prim::PrimRef) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::eq(&self, &mycelium_core::prim::PrimRef) -> bool
+impl core::cmp::PartialOrd for mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::partial_cmp(&self, &mycelium_core::prim::PrimRef) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_core::prim::PrimRef
+impl core::marker::Freeze for mycelium_core::prim::PrimRef
+impl core::marker::Send for mycelium_core::prim::PrimRef
+impl core::marker::Sync for mycelium_core::prim::PrimRef
+impl core::marker::Unpin for mycelium_core::prim::PrimRef
+impl core::marker::UnsafeUnpin for mycelium_core::prim::PrimRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::prim::PrimRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::prim::PrimRef
+pub struct mycelium_core::prim::PrimSig
+pub mycelium_core::prim::PrimSig::operands: alloc::vec::Vec<mycelium_core::prim::PrimParadigm>
+pub mycelium_core::prim::PrimSig::result: mycelium_core::prim::PrimParadigm
+pub mycelium_core::prim::PrimSig::width: mycelium_core::prim::WidthRel
+impl mycelium_core::prim::PrimSig
+pub fn mycelium_core::prim::PrimSig::arity(&self) -> usize
+impl core::clone::Clone for mycelium_core::prim::PrimSig
+pub fn mycelium_core::prim::PrimSig::clone(&self) -> mycelium_core::prim::PrimSig
+impl core::cmp::Eq for mycelium_core::prim::PrimSig
+impl core::cmp::PartialEq for mycelium_core::prim::PrimSig
+pub fn mycelium_core::prim::PrimSig::eq(&self, &mycelium_core::prim::PrimSig) -> bool
+impl core::fmt::Debug for mycelium_core::prim::PrimSig
+pub fn mycelium_core::prim::PrimSig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::prim::PrimSig
+impl core::marker::Freeze for mycelium_core::prim::PrimSig
+impl core::marker::Send for mycelium_core::prim::PrimSig
+impl core::marker::Sync for mycelium_core::prim::PrimSig
+impl core::marker::Unpin for mycelium_core::prim::PrimSig
+impl core::marker::UnsafeUnpin for mycelium_core::prim::PrimSig
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::prim::PrimSig
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::prim::PrimSig
+pub struct mycelium_core::prim::PrimTable
+impl mycelium_core::prim::PrimTable
+pub fn mycelium_core::prim::PrimTable::builtins() -> Self
+pub fn mycelium_core::prim::PrimTable::contains(&self, &str) -> bool
+pub fn mycelium_core::prim::PrimTable::decl(&self, &mycelium_core::id::ContentHash) -> core::option::Option<&mycelium_core::prim::PrimDecl>
+pub fn mycelium_core::prim::PrimTable::decl_hash(&self, &str) -> core::option::Option<&mycelium_core::id::ContentHash>
+pub fn mycelium_core::prim::PrimTable::entries(&self) -> alloc::vec::Vec<(&str, mycelium_core::prim::PrimRef, &mycelium_core::prim::PrimDecl)>
+pub fn mycelium_core::prim::PrimTable::get(&self, &str) -> core::option::Option<&mycelium_core::prim::PrimDecl>
+pub fn mycelium_core::prim::PrimTable::insert(&mut self, impl core::convert::Into<alloc::string::String>, mycelium_core::prim::PrimDecl) -> mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimTable::intrinsic(&self, &str) -> core::option::Option<mycelium_core::guarantee::GuaranteeStrength>
+pub fn mycelium_core::prim::PrimTable::names(&self) -> alloc::vec::Vec<&str>
+pub fn mycelium_core::prim::PrimTable::new() -> Self
+pub fn mycelium_core::prim::PrimTable::prim_ref(&self, &str) -> core::option::Option<mycelium_core::prim::PrimRef>
+pub fn mycelium_core::prim::PrimTable::resolve(&self, &mycelium_core::prim::PrimRef) -> core::option::Option<&mycelium_core::prim::PrimDecl>
+impl core::clone::Clone for mycelium_core::prim::PrimTable
+pub fn mycelium_core::prim::PrimTable::clone(&self) -> mycelium_core::prim::PrimTable
+impl core::cmp::Eq for mycelium_core::prim::PrimTable
+impl core::cmp::PartialEq for mycelium_core::prim::PrimTable
+pub fn mycelium_core::prim::PrimTable::eq(&self, &mycelium_core::prim::PrimTable) -> bool
+impl core::default::Default for mycelium_core::prim::PrimTable
+pub fn mycelium_core::prim::PrimTable::default() -> mycelium_core::prim::PrimTable
+impl core::fmt::Debug for mycelium_core::prim::PrimTable
+pub fn mycelium_core::prim::PrimTable::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::prim::PrimTable
+impl core::marker::Freeze for mycelium_core::prim::PrimTable
+impl core::marker::Send for mycelium_core::prim::PrimTable
+impl core::marker::Sync for mycelium_core::prim::PrimTable
+impl core::marker::Unpin for mycelium_core::prim::PrimTable
+impl core::marker::UnsafeUnpin for mycelium_core::prim::PrimTable
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::prim::PrimTable
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::prim::PrimTable
+pub mod mycelium_core::recon
+pub enum mycelium_core::recon::CleanupShape
+pub mycelium_core::recon::CleanupShape::ArgMax
+pub mycelium_core::recon::CleanupShape::Softmax
+impl core::clone::Clone for mycelium_core::recon::CleanupShape
+pub fn mycelium_core::recon::CleanupShape::clone(&self) -> mycelium_core::recon::CleanupShape
+impl core::cmp::Eq for mycelium_core::recon::CleanupShape
+impl core::cmp::PartialEq for mycelium_core::recon::CleanupShape
+pub fn mycelium_core::recon::CleanupShape::eq(&self, &mycelium_core::recon::CleanupShape) -> bool
+impl core::fmt::Debug for mycelium_core::recon::CleanupShape
+pub fn mycelium_core::recon::CleanupShape::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::recon::CleanupShape
+impl core::marker::StructuralPartialEq for mycelium_core::recon::CleanupShape
+impl serde_core::ser::Serialize for mycelium_core::recon::CleanupShape
+pub fn mycelium_core::recon::CleanupShape::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::recon::CleanupShape
+pub fn mycelium_core::recon::CleanupShape::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::recon::CleanupShape
+impl core::marker::Send for mycelium_core::recon::CleanupShape
+impl core::marker::Sync for mycelium_core::recon::CleanupShape
+impl core::marker::Unpin for mycelium_core::recon::CleanupShape
+impl core::marker::UnsafeUnpin for mycelium_core::recon::CleanupShape
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::CleanupShape
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::CleanupShape
+pub enum mycelium_core::recon::DecodeProcedure
+pub mycelium_core::recon::DecodeProcedure::Cleanup
+pub mycelium_core::recon::DecodeProcedure::Resonator
+impl core::clone::Clone for mycelium_core::recon::DecodeProcedure
+pub fn mycelium_core::recon::DecodeProcedure::clone(&self) -> mycelium_core::recon::DecodeProcedure
+impl core::cmp::Eq for mycelium_core::recon::DecodeProcedure
+impl core::cmp::PartialEq for mycelium_core::recon::DecodeProcedure
+pub fn mycelium_core::recon::DecodeProcedure::eq(&self, &mycelium_core::recon::DecodeProcedure) -> bool
+impl core::fmt::Debug for mycelium_core::recon::DecodeProcedure
+pub fn mycelium_core::recon::DecodeProcedure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::recon::DecodeProcedure
+impl core::marker::StructuralPartialEq for mycelium_core::recon::DecodeProcedure
+impl serde_core::ser::Serialize for mycelium_core::recon::DecodeProcedure
+pub fn mycelium_core::recon::DecodeProcedure::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::recon::DecodeProcedure
+pub fn mycelium_core::recon::DecodeProcedure::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::recon::DecodeProcedure
+impl core::marker::Send for mycelium_core::recon::DecodeProcedure
+impl core::marker::Sync for mycelium_core::recon::DecodeProcedure
+impl core::marker::Unpin for mycelium_core::recon::DecodeProcedure
+impl core::marker::UnsafeUnpin for mycelium_core::recon::DecodeProcedure
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::DecodeProcedure
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::DecodeProcedure
+pub enum mycelium_core::recon::InitStrategy
+pub mycelium_core::recon::InitStrategy::SeededGuess
+pub mycelium_core::recon::InitStrategy::UniformSuperposition
+impl core::clone::Clone for mycelium_core::recon::InitStrategy
+pub fn mycelium_core::recon::InitStrategy::clone(&self) -> mycelium_core::recon::InitStrategy
+impl core::cmp::Eq for mycelium_core::recon::InitStrategy
+impl core::cmp::PartialEq for mycelium_core::recon::InitStrategy
+pub fn mycelium_core::recon::InitStrategy::eq(&self, &mycelium_core::recon::InitStrategy) -> bool
+impl core::fmt::Debug for mycelium_core::recon::InitStrategy
+pub fn mycelium_core::recon::InitStrategy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::recon::InitStrategy
+impl core::marker::StructuralPartialEq for mycelium_core::recon::InitStrategy
+impl serde_core::ser::Serialize for mycelium_core::recon::InitStrategy
+pub fn mycelium_core::recon::InitStrategy::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::recon::InitStrategy
+pub fn mycelium_core::recon::InitStrategy::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::recon::InitStrategy
+impl core::marker::Send for mycelium_core::recon::InitStrategy
+impl core::marker::Sync for mycelium_core::recon::InitStrategy
+impl core::marker::Unpin for mycelium_core::recon::InitStrategy
+impl core::marker::UnsafeUnpin for mycelium_core::recon::InitStrategy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::InitStrategy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::InitStrategy
+pub enum mycelium_core::recon::ReconMode
+pub mycelium_core::recon::ReconMode::CompositionalReconstruction
+pub mycelium_core::recon::ReconMode::IndexedRetrieval
+impl core::clone::Clone for mycelium_core::recon::ReconMode
+pub fn mycelium_core::recon::ReconMode::clone(&self) -> mycelium_core::recon::ReconMode
+impl core::cmp::Eq for mycelium_core::recon::ReconMode
+impl core::cmp::PartialEq for mycelium_core::recon::ReconMode
+pub fn mycelium_core::recon::ReconMode::eq(&self, &mycelium_core::recon::ReconMode) -> bool
+impl core::fmt::Debug for mycelium_core::recon::ReconMode
+pub fn mycelium_core::recon::ReconMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::recon::ReconMode
+impl core::marker::StructuralPartialEq for mycelium_core::recon::ReconMode
+impl serde_core::ser::Serialize for mycelium_core::recon::ReconMode
+pub fn mycelium_core::recon::ReconMode::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::recon::ReconMode
+pub fn mycelium_core::recon::ReconMode::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::recon::ReconMode
+impl core::marker::Send for mycelium_core::recon::ReconMode
+impl core::marker::Sync for mycelium_core::recon::ReconMode
+impl core::marker::Unpin for mycelium_core::recon::ReconMode
+impl core::marker::UnsafeUnpin for mycelium_core::recon::ReconMode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::ReconMode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::ReconMode
+pub struct mycelium_core::recon::DecodeSpec
+pub mycelium_core::recon::DecodeSpec::beta: core::option::Option<f64>
+pub mycelium_core::recon::DecodeSpec::cleanup: core::option::Option<mycelium_core::recon::CleanupShape>
+pub mycelium_core::recon::DecodeSpec::cleanup_threshold: core::option::Option<f64>
+pub mycelium_core::recon::DecodeSpec::factors: core::option::Option<alloc::vec::Vec<mycelium_core::id::ContentHash>>
+pub mycelium_core::recon::DecodeSpec::init: core::option::Option<mycelium_core::recon::InitStrategy>
+pub mycelium_core::recon::DecodeSpec::iteration_budget: core::option::Option<u64>
+pub mycelium_core::recon::DecodeSpec::procedure: mycelium_core::recon::DecodeProcedure
+pub mycelium_core::recon::DecodeSpec::seed: core::option::Option<u64>
+pub mycelium_core::recon::DecodeSpec::tau_lock: core::option::Option<f64>
+impl core::clone::Clone for mycelium_core::recon::DecodeSpec
+pub fn mycelium_core::recon::DecodeSpec::clone(&self) -> mycelium_core::recon::DecodeSpec
+impl core::cmp::PartialEq for mycelium_core::recon::DecodeSpec
+pub fn mycelium_core::recon::DecodeSpec::eq(&self, &mycelium_core::recon::DecodeSpec) -> bool
+impl core::fmt::Debug for mycelium_core::recon::DecodeSpec
+pub fn mycelium_core::recon::DecodeSpec::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::recon::DecodeSpec
+impl serde_core::ser::Serialize for mycelium_core::recon::DecodeSpec
+pub fn mycelium_core::recon::DecodeSpec::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::recon::DecodeSpec
+pub fn mycelium_core::recon::DecodeSpec::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::recon::DecodeSpec
+impl core::marker::Send for mycelium_core::recon::DecodeSpec
+impl core::marker::Sync for mycelium_core::recon::DecodeSpec
+impl core::marker::Unpin for mycelium_core::recon::DecodeSpec
+impl core::marker::UnsafeUnpin for mycelium_core::recon::DecodeSpec
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::DecodeSpec
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::DecodeSpec
+pub struct mycelium_core::recon::Recipe
+pub mycelium_core::recon::Recipe::roles: alloc::vec::Vec<alloc::string::String>
+pub mycelium_core::recon::Recipe::structure: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_core::id::ContentHash>
+impl core::clone::Clone for mycelium_core::recon::Recipe
+pub fn mycelium_core::recon::Recipe::clone(&self) -> mycelium_core::recon::Recipe
+impl core::cmp::Eq for mycelium_core::recon::Recipe
+impl core::cmp::PartialEq for mycelium_core::recon::Recipe
+pub fn mycelium_core::recon::Recipe::eq(&self, &mycelium_core::recon::Recipe) -> bool
+impl core::fmt::Debug for mycelium_core::recon::Recipe
+pub fn mycelium_core::recon::Recipe::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::recon::Recipe
+impl serde_core::ser::Serialize for mycelium_core::recon::Recipe
+pub fn mycelium_core::recon::Recipe::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::recon::Recipe
+pub fn mycelium_core::recon::Recipe::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::recon::Recipe
+impl core::marker::Send for mycelium_core::recon::Recipe
+impl core::marker::Sync for mycelium_core::recon::Recipe
+impl core::marker::Unpin for mycelium_core::recon::Recipe
+impl core::marker::UnsafeUnpin for mycelium_core::recon::Recipe
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::Recipe
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::Recipe
+pub struct mycelium_core::recon::ReconInfo
+impl mycelium_core::recon::ReconInfo
+pub fn mycelium_core::recon::ReconInfo::bound(&self) -> &mycelium_core::bound::Bound
+pub fn mycelium_core::recon::ReconInfo::codebooks(&self) -> &[mycelium_core::id::ContentHash]
+pub fn mycelium_core::recon::ReconInfo::decode(&self) -> &mycelium_core::recon::DecodeSpec
+pub fn mycelium_core::recon::ReconInfo::dim(&self) -> u32
+pub fn mycelium_core::recon::ReconInfo::mode(&self) -> mycelium_core::recon::ReconMode
+pub fn mycelium_core::recon::ReconInfo::model(&self) -> &str
+pub fn mycelium_core::recon::ReconInfo::new(mycelium_core::recon::ReconMode, impl core::convert::Into<alloc::string::String>, u32, alloc::vec::Vec<mycelium_core::id::ContentHash>, core::option::Option<mycelium_core::recon::Recipe>, mycelium_core::recon::DecodeSpec, mycelium_core::bound::Bound) -> core::result::Result<Self, mycelium_core::WfError>
+pub fn mycelium_core::recon::ReconInfo::recipe(&self) -> core::option::Option<&mycelium_core::recon::Recipe>
+impl core::clone::Clone for mycelium_core::recon::ReconInfo
+pub fn mycelium_core::recon::ReconInfo::clone(&self) -> mycelium_core::recon::ReconInfo
+impl core::cmp::PartialEq for mycelium_core::recon::ReconInfo
+pub fn mycelium_core::recon::ReconInfo::eq(&self, &mycelium_core::recon::ReconInfo) -> bool
+impl core::fmt::Debug for mycelium_core::recon::ReconInfo
+pub fn mycelium_core::recon::ReconInfo::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::recon::ReconInfo
+impl serde_core::ser::Serialize for mycelium_core::recon::ReconInfo
+pub fn mycelium_core::recon::ReconInfo::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::recon::ReconInfo
+pub fn mycelium_core::recon::ReconInfo::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for mycelium_core::recon::ReconInfo
+impl core::marker::Send for mycelium_core::recon::ReconInfo
+impl core::marker::Sync for mycelium_core::recon::ReconInfo
+impl core::marker::Unpin for mycelium_core::recon::ReconInfo
+impl core::marker::UnsafeUnpin for mycelium_core::recon::ReconInfo
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::ReconInfo
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::ReconInfo
+pub mod mycelium_core::repr
+pub enum mycelium_core::repr::Repr
+pub mycelium_core::repr::Repr::Binary
+pub mycelium_core::repr::Repr::Binary::width: u32
+pub mycelium_core::repr::Repr::Dense
+pub mycelium_core::repr::Repr::Dense::dim: u32
+pub mycelium_core::repr::Repr::Dense::dtype: mycelium_core::repr::ScalarKind
+pub mycelium_core::repr::Repr::Ternary
+pub mycelium_core::repr::Repr::Ternary::trits: u32
+pub mycelium_core::repr::Repr::Vsa
+pub mycelium_core::repr::Repr::Vsa::dim: u32
+pub mycelium_core::repr::Repr::Vsa::model: alloc::string::String
+pub mycelium_core::repr::Repr::Vsa::sparsity: mycelium_core::repr::SparsityClass
+impl mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::well_formed(&self) -> bool
+impl core::clone::Clone for mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::clone(&self) -> mycelium_core::repr::Repr
+impl core::cmp::Eq for mycelium_core::repr::Repr
+impl core::cmp::PartialEq for mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::eq(&self, &mycelium_core::repr::Repr) -> bool
+impl core::fmt::Debug for mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::repr::Repr
+impl serde_core::ser::Serialize for mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::repr::Repr
+impl core::marker::Send for mycelium_core::repr::Repr
+impl core::marker::Sync for mycelium_core::repr::Repr
+impl core::marker::Unpin for mycelium_core::repr::Repr
+impl core::marker::UnsafeUnpin for mycelium_core::repr::Repr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::repr::Repr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::repr::Repr
+pub enum mycelium_core::repr::ScalarKind
+pub mycelium_core::repr::ScalarKind::Bf16
+pub mycelium_core::repr::ScalarKind::F16
+pub mycelium_core::repr::ScalarKind::F32
+pub mycelium_core::repr::ScalarKind::F64
+impl mycelium_core::repr::ScalarKind
+pub fn mycelium_core::repr::ScalarKind::tag(self) -> u8
+impl core::clone::Clone for mycelium_core::repr::ScalarKind
+pub fn mycelium_core::repr::ScalarKind::clone(&self) -> mycelium_core::repr::ScalarKind
+impl core::cmp::Eq for mycelium_core::repr::ScalarKind
+impl core::cmp::PartialEq for mycelium_core::repr::ScalarKind
+pub fn mycelium_core::repr::ScalarKind::eq(&self, &mycelium_core::repr::ScalarKind) -> bool
+impl core::fmt::Debug for mycelium_core::repr::ScalarKind
+pub fn mycelium_core::repr::ScalarKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::repr::ScalarKind
+impl core::marker::StructuralPartialEq for mycelium_core::repr::ScalarKind
+impl serde_core::ser::Serialize for mycelium_core::repr::ScalarKind
+pub fn mycelium_core::repr::ScalarKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::repr::ScalarKind
+pub fn mycelium_core::repr::ScalarKind::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::repr::ScalarKind
+impl core::marker::Send for mycelium_core::repr::ScalarKind
+impl core::marker::Sync for mycelium_core::repr::ScalarKind
+impl core::marker::Unpin for mycelium_core::repr::ScalarKind
+impl core::marker::UnsafeUnpin for mycelium_core::repr::ScalarKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::repr::ScalarKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::repr::ScalarKind
+pub enum mycelium_core::repr::SparsityClass
+pub mycelium_core::repr::SparsityClass::Dense
+pub mycelium_core::repr::SparsityClass::Sparse
+pub mycelium_core::repr::SparsityClass::Sparse::max_active: u32
+impl core::clone::Clone for mycelium_core::repr::SparsityClass
+pub fn mycelium_core::repr::SparsityClass::clone(&self) -> mycelium_core::repr::SparsityClass
+impl core::cmp::Eq for mycelium_core::repr::SparsityClass
+impl core::cmp::PartialEq for mycelium_core::repr::SparsityClass
+pub fn mycelium_core::repr::SparsityClass::eq(&self, &mycelium_core::repr::SparsityClass) -> bool
+impl core::fmt::Debug for mycelium_core::repr::SparsityClass
+pub fn mycelium_core::repr::SparsityClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::repr::SparsityClass
+impl core::marker::StructuralPartialEq for mycelium_core::repr::SparsityClass
+impl serde_core::ser::Serialize for mycelium_core::repr::SparsityClass
+pub fn mycelium_core::repr::SparsityClass::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::repr::SparsityClass
+pub fn mycelium_core::repr::SparsityClass::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::repr::SparsityClass
+impl core::marker::Send for mycelium_core::repr::SparsityClass
+impl core::marker::Sync for mycelium_core::repr::SparsityClass
+impl core::marker::Unpin for mycelium_core::repr::SparsityClass
+impl core::marker::UnsafeUnpin for mycelium_core::repr::SparsityClass
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::repr::SparsityClass
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::repr::SparsityClass
+pub mod mycelium_core::ternary
+pub fn mycelium_core::ternary::add(&[mycelium_core::value::Trit], &[mycelium_core::value::Trit]) -> core::option::Option<alloc::vec::Vec<mycelium_core::value::Trit>>
+pub fn mycelium_core::ternary::digit(mycelium_core::value::Trit) -> i64
+pub fn mycelium_core::ternary::int_to_trits(i64, u32) -> core::option::Option<alloc::vec::Vec<mycelium_core::value::Trit>>
+pub fn mycelium_core::ternary::max_magnitude(u32) -> core::option::Option<i64>
+pub fn mycelium_core::ternary::mul(&[mycelium_core::value::Trit], &[mycelium_core::value::Trit]) -> core::option::Option<alloc::vec::Vec<mycelium_core::value::Trit>>
+pub fn mycelium_core::ternary::neg(&[mycelium_core::value::Trit]) -> alloc::vec::Vec<mycelium_core::value::Trit>
+pub fn mycelium_core::ternary::sub(&[mycelium_core::value::Trit], &[mycelium_core::value::Trit]) -> core::option::Option<alloc::vec::Vec<mycelium_core::value::Trit>>
+pub fn mycelium_core::ternary::trits_to_int(&[mycelium_core::value::Trit]) -> i64
+pub mod mycelium_core::value
+pub enum mycelium_core::value::Payload
+pub mycelium_core::value::Payload::Bits(alloc::vec::Vec<bool>)
+pub mycelium_core::value::Payload::Hypervector(alloc::vec::Vec<f64>)
+pub mycelium_core::value::Payload::Scalars(alloc::vec::Vec<f64>)
+pub mycelium_core::value::Payload::Trits(alloc::vec::Vec<mycelium_core::value::Trit>)
+impl core::clone::Clone for mycelium_core::value::Payload
+pub fn mycelium_core::value::Payload::clone(&self) -> mycelium_core::value::Payload
+impl core::cmp::PartialEq for mycelium_core::value::Payload
+pub fn mycelium_core::value::Payload::eq(&self, &mycelium_core::value::Payload) -> bool
+impl core::fmt::Debug for mycelium_core::value::Payload
+pub fn mycelium_core::value::Payload::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::value::Payload
+impl serde_core::ser::Serialize for mycelium_core::value::Payload
+pub fn mycelium_core::value::Payload::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::value::Payload
+pub fn mycelium_core::value::Payload::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for mycelium_core::value::Payload
+impl core::marker::Send for mycelium_core::value::Payload
+impl core::marker::Sync for mycelium_core::value::Payload
+impl core::marker::Unpin for mycelium_core::value::Payload
+impl core::marker::UnsafeUnpin for mycelium_core::value::Payload
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::value::Payload
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::value::Payload
+pub enum mycelium_core::value::Trit
+pub mycelium_core::value::Trit::Neg
+pub mycelium_core::value::Trit::Pos
+pub mycelium_core::value::Trit::Zero
+impl core::clone::Clone for mycelium_core::value::Trit
+pub fn mycelium_core::value::Trit::clone(&self) -> mycelium_core::value::Trit
+impl core::cmp::Eq for mycelium_core::value::Trit
+impl core::cmp::PartialEq for mycelium_core::value::Trit
+pub fn mycelium_core::value::Trit::eq(&self, &mycelium_core::value::Trit) -> bool
+impl core::fmt::Debug for mycelium_core::value::Trit
+pub fn mycelium_core::value::Trit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::value::Trit
+impl core::marker::StructuralPartialEq for mycelium_core::value::Trit
+impl core::marker::Freeze for mycelium_core::value::Trit
+impl core::marker::Send for mycelium_core::value::Trit
+impl core::marker::Sync for mycelium_core::value::Trit
+impl core::marker::Unpin for mycelium_core::value::Trit
+impl core::marker::UnsafeUnpin for mycelium_core::value::Trit
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::value::Trit
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::value::Trit
+pub struct mycelium_core::value::Value
+impl mycelium_core::value::Value
+pub fn mycelium_core::value::Value::content_hash(&self) -> mycelium_core::id::ContentHash
+impl mycelium_core::value::Value
+pub fn mycelium_core::value::Value::meta(&self) -> &mycelium_core::meta::Meta
+pub fn mycelium_core::value::Value::new(mycelium_core::repr::Repr, mycelium_core::value::Payload, mycelium_core::meta::Meta) -> core::result::Result<Self, mycelium_core::WfError>
+pub fn mycelium_core::value::Value::payload(&self) -> &mycelium_core::value::Payload
+pub fn mycelium_core::value::Value::repr(&self) -> &mycelium_core::repr::Repr
+impl core::clone::Clone for mycelium_core::value::Value
+pub fn mycelium_core::value::Value::clone(&self) -> mycelium_core::value::Value
+impl core::cmp::PartialEq for mycelium_core::value::Value
+pub fn mycelium_core::value::Value::eq(&self, &mycelium_core::value::Value) -> bool
+impl core::convert::From<mycelium_core::value::Value> for mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::from(mycelium_core::value::Value) -> Self
+impl core::fmt::Debug for mycelium_core::value::Value
+pub fn mycelium_core::value::Value::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::value::Value
+impl serde_core::ser::Serialize for mycelium_core::value::Value
+pub fn mycelium_core::value::Value::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::value::Value
+pub fn mycelium_core::value::Value::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for mycelium_core::value::Value
+impl core::marker::Send for mycelium_core::value::Value
+impl core::marker::Sync for mycelium_core::value::Value
+impl core::marker::Unpin for mycelium_core::value::Value
+impl core::marker::UnsafeUnpin for mycelium_core::value::Value
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::value::Value
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::value::Value
+pub enum mycelium_core::Alt
+pub mycelium_core::Alt::Ctor
+pub mycelium_core::Alt::Ctor::binders: alloc::vec::Vec<mycelium_core::node::VarId>
+pub mycelium_core::Alt::Ctor::body: mycelium_core::node::Node
+pub mycelium_core::Alt::Ctor::ctor: mycelium_core::data::CtorRef
+pub mycelium_core::Alt::Lit
+pub mycelium_core::Alt::Lit::body: mycelium_core::node::Node
+pub mycelium_core::Alt::Lit::value: mycelium_core::value::Value
+impl core::clone::Clone for mycelium_core::node::Alt
+pub fn mycelium_core::node::Alt::clone(&self) -> mycelium_core::node::Alt
+impl core::cmp::PartialEq for mycelium_core::node::Alt
+pub fn mycelium_core::node::Alt::eq(&self, &mycelium_core::node::Alt) -> bool
+impl core::fmt::Debug for mycelium_core::node::Alt
+pub fn mycelium_core::node::Alt::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::node::Alt
+impl core::marker::Freeze for mycelium_core::node::Alt
+impl core::marker::Send for mycelium_core::node::Alt
+impl core::marker::Sync for mycelium_core::node::Alt
+impl core::marker::Unpin for mycelium_core::node::Alt
+impl core::marker::UnsafeUnpin for mycelium_core::node::Alt
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::node::Alt
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::node::Alt
+pub enum mycelium_core::BoundBasis
+pub mycelium_core::BoundBasis::EmpiricalFit
+pub mycelium_core::BoundBasis::EmpiricalFit::method: alloc::string::String
+pub mycelium_core::BoundBasis::EmpiricalFit::trials: u64
+pub mycelium_core::BoundBasis::ProvenThm
+pub mycelium_core::BoundBasis::ProvenThm::citation: alloc::string::String
+pub mycelium_core::BoundBasis::UserDeclared
+impl mycelium_core::bound::BoundBasis
+pub fn mycelium_core::bound::BoundBasis::strength(&self) -> mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_core::bound::BoundBasis
+pub fn mycelium_core::bound::BoundBasis::clone(&self) -> mycelium_core::bound::BoundBasis
+impl core::cmp::PartialEq for mycelium_core::bound::BoundBasis
+pub fn mycelium_core::bound::BoundBasis::eq(&self, &mycelium_core::bound::BoundBasis) -> bool
+impl core::fmt::Debug for mycelium_core::bound::BoundBasis
+pub fn mycelium_core::bound::BoundBasis::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::bound::BoundBasis
+impl serde_core::ser::Serialize for mycelium_core::bound::BoundBasis
+pub fn mycelium_core::bound::BoundBasis::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::bound::BoundBasis
+pub fn mycelium_core::bound::BoundBasis::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::bound::BoundBasis
+impl core::marker::Send for mycelium_core::bound::BoundBasis
+impl core::marker::Sync for mycelium_core::bound::BoundBasis
+impl core::marker::Unpin for mycelium_core::bound::BoundBasis
+impl core::marker::UnsafeUnpin for mycelium_core::bound::BoundBasis
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::bound::BoundBasis
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::bound::BoundBasis
+pub enum mycelium_core::BoundKind
+pub mycelium_core::BoundKind::Capacity
+pub mycelium_core::BoundKind::Capacity::dim: u64
+pub mycelium_core::BoundKind::Capacity::items: u64
+pub mycelium_core::BoundKind::Crosstalk
+pub mycelium_core::BoundKind::Crosstalk::expected: f64
+pub mycelium_core::BoundKind::Crosstalk::tail: core::option::Option<f64>
+pub mycelium_core::BoundKind::Error
+pub mycelium_core::BoundKind::Error::eps: f64
+pub mycelium_core::BoundKind::Error::norm: mycelium_core::bound::NormKind
+pub mycelium_core::BoundKind::Probability
+pub mycelium_core::BoundKind::Probability::delta: f64
+impl core::clone::Clone for mycelium_core::bound::BoundKind
+pub fn mycelium_core::bound::BoundKind::clone(&self) -> mycelium_core::bound::BoundKind
+impl core::cmp::PartialEq for mycelium_core::bound::BoundKind
+pub fn mycelium_core::bound::BoundKind::eq(&self, &mycelium_core::bound::BoundKind) -> bool
+impl core::fmt::Debug for mycelium_core::bound::BoundKind
+pub fn mycelium_core::bound::BoundKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::bound::BoundKind
+impl serde_core::ser::Serialize for mycelium_core::bound::BoundKind
+pub fn mycelium_core::bound::BoundKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::bound::BoundKind
+pub fn mycelium_core::bound::BoundKind::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::bound::BoundKind
+impl core::marker::Send for mycelium_core::bound::BoundKind
+impl core::marker::Sync for mycelium_core::bound::BoundKind
+impl core::marker::Unpin for mycelium_core::bound::BoundKind
+impl core::marker::UnsafeUnpin for mycelium_core::bound::BoundKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::bound::BoundKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::bound::BoundKind
+pub enum mycelium_core::CleanupShape
+pub mycelium_core::CleanupShape::ArgMax
+pub mycelium_core::CleanupShape::Softmax
+impl core::clone::Clone for mycelium_core::recon::CleanupShape
+pub fn mycelium_core::recon::CleanupShape::clone(&self) -> mycelium_core::recon::CleanupShape
+impl core::cmp::Eq for mycelium_core::recon::CleanupShape
+impl core::cmp::PartialEq for mycelium_core::recon::CleanupShape
+pub fn mycelium_core::recon::CleanupShape::eq(&self, &mycelium_core::recon::CleanupShape) -> bool
+impl core::fmt::Debug for mycelium_core::recon::CleanupShape
+pub fn mycelium_core::recon::CleanupShape::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::recon::CleanupShape
+impl core::marker::StructuralPartialEq for mycelium_core::recon::CleanupShape
+impl serde_core::ser::Serialize for mycelium_core::recon::CleanupShape
+pub fn mycelium_core::recon::CleanupShape::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::recon::CleanupShape
+pub fn mycelium_core::recon::CleanupShape::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::recon::CleanupShape
+impl core::marker::Send for mycelium_core::recon::CleanupShape
+impl core::marker::Sync for mycelium_core::recon::CleanupShape
+impl core::marker::Unpin for mycelium_core::recon::CleanupShape
+impl core::marker::UnsafeUnpin for mycelium_core::recon::CleanupShape
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::CleanupShape
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::CleanupShape
+pub enum mycelium_core::CoreValue
+pub mycelium_core::CoreValue::Data(mycelium_core::datum::Datum)
+pub mycelium_core::CoreValue::Repr(mycelium_core::value::Value)
+impl mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::as_data(&self) -> core::option::Option<&mycelium_core::datum::Datum>
+pub fn mycelium_core::datum::CoreValue::as_repr(&self) -> core::option::Option<&mycelium_core::value::Value>
+pub fn mycelium_core::datum::CoreValue::content_hash(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_core::datum::CoreValue::guarantee(&self) -> mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::clone(&self) -> mycelium_core::datum::CoreValue
+impl core::cmp::PartialEq for mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::eq(&self, &mycelium_core::datum::CoreValue) -> bool
+impl core::convert::From<mycelium_core::datum::Datum> for mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::from(mycelium_core::datum::Datum) -> Self
+impl core::convert::From<mycelium_core::value::Value> for mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::from(mycelium_core::value::Value) -> Self
+impl core::fmt::Debug for mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::datum::CoreValue
+impl core::marker::Freeze for mycelium_core::datum::CoreValue
+impl core::marker::Send for mycelium_core::datum::CoreValue
+impl core::marker::Sync for mycelium_core::datum::CoreValue
+impl core::marker::Unpin for mycelium_core::datum::CoreValue
+impl core::marker::UnsafeUnpin for mycelium_core::datum::CoreValue
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::datum::CoreValue
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::datum::CoreValue
+pub enum mycelium_core::DecodeProcedure
+pub mycelium_core::DecodeProcedure::Cleanup
+pub mycelium_core::DecodeProcedure::Resonator
+impl core::clone::Clone for mycelium_core::recon::DecodeProcedure
+pub fn mycelium_core::recon::DecodeProcedure::clone(&self) -> mycelium_core::recon::DecodeProcedure
+impl core::cmp::Eq for mycelium_core::recon::DecodeProcedure
+impl core::cmp::PartialEq for mycelium_core::recon::DecodeProcedure
+pub fn mycelium_core::recon::DecodeProcedure::eq(&self, &mycelium_core::recon::DecodeProcedure) -> bool
+impl core::fmt::Debug for mycelium_core::recon::DecodeProcedure
+pub fn mycelium_core::recon::DecodeProcedure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::recon::DecodeProcedure
+impl core::marker::StructuralPartialEq for mycelium_core::recon::DecodeProcedure
+impl serde_core::ser::Serialize for mycelium_core::recon::DecodeProcedure
+pub fn mycelium_core::recon::DecodeProcedure::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::recon::DecodeProcedure
+pub fn mycelium_core::recon::DecodeProcedure::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::recon::DecodeProcedure
+impl core::marker::Send for mycelium_core::recon::DecodeProcedure
+impl core::marker::Sync for mycelium_core::recon::DecodeProcedure
+impl core::marker::Unpin for mycelium_core::recon::DecodeProcedure
+impl core::marker::UnsafeUnpin for mycelium_core::recon::DecodeProcedure
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::DecodeProcedure
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::DecodeProcedure
+pub enum mycelium_core::FieldSpec
+pub mycelium_core::FieldSpec::Data(alloc::string::String)
+pub mycelium_core::FieldSpec::Repr(mycelium_core::repr::Repr)
+impl core::clone::Clone for mycelium_core::data::FieldSpec
+pub fn mycelium_core::data::FieldSpec::clone(&self) -> mycelium_core::data::FieldSpec
+impl core::cmp::Eq for mycelium_core::data::FieldSpec
+impl core::cmp::PartialEq for mycelium_core::data::FieldSpec
+pub fn mycelium_core::data::FieldSpec::eq(&self, &mycelium_core::data::FieldSpec) -> bool
+impl core::fmt::Debug for mycelium_core::data::FieldSpec
+pub fn mycelium_core::data::FieldSpec::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::FieldSpec
+impl core::marker::Freeze for mycelium_core::data::FieldSpec
+impl core::marker::Send for mycelium_core::data::FieldSpec
+impl core::marker::Sync for mycelium_core::data::FieldSpec
+impl core::marker::Unpin for mycelium_core::data::FieldSpec
+impl core::marker::UnsafeUnpin for mycelium_core::data::FieldSpec
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::FieldSpec
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::FieldSpec
+pub enum mycelium_core::FieldTy
+pub mycelium_core::FieldTy::Data(mycelium_core::id::ContentHash)
+pub mycelium_core::FieldTy::Repr(mycelium_core::repr::Repr)
+impl core::clone::Clone for mycelium_core::data::FieldTy
+pub fn mycelium_core::data::FieldTy::clone(&self) -> mycelium_core::data::FieldTy
+impl core::cmp::Eq for mycelium_core::data::FieldTy
+impl core::cmp::PartialEq for mycelium_core::data::FieldTy
+pub fn mycelium_core::data::FieldTy::eq(&self, &mycelium_core::data::FieldTy) -> bool
+impl core::fmt::Debug for mycelium_core::data::FieldTy
+pub fn mycelium_core::data::FieldTy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::FieldTy
+impl core::marker::Freeze for mycelium_core::data::FieldTy
+impl core::marker::Send for mycelium_core::data::FieldTy
+impl core::marker::Sync for mycelium_core::data::FieldTy
+impl core::marker::Unpin for mycelium_core::data::FieldTy
+impl core::marker::UnsafeUnpin for mycelium_core::data::FieldTy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::FieldTy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::FieldTy
+pub enum mycelium_core::GuaranteeStrength
+pub mycelium_core::GuaranteeStrength::Declared
+pub mycelium_core::GuaranteeStrength::Empirical
+pub mycelium_core::GuaranteeStrength::Exact
+pub mycelium_core::GuaranteeStrength::Proven
+impl mycelium_core::guarantee::GuaranteeStrength
+pub const mycelium_core::guarantee::GuaranteeStrength::ALL: [mycelium_core::guarantee::GuaranteeStrength; 4]
+pub const mycelium_core::guarantee::GuaranteeStrength::TOP: mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::meet(self, mycelium_core::guarantee::GuaranteeStrength) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::meet_all(impl core::iter::traits::collect::IntoIterator<Item = mycelium_core::guarantee::GuaranteeStrength>) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::propagate(mycelium_core::guarantee::GuaranteeStrength, impl core::iter::traits::collect::IntoIterator<Item = mycelium_core::guarantee::GuaranteeStrength>) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::rank(self) -> u8
+impl core::clone::Clone for mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::clone(&self) -> mycelium_core::guarantee::GuaranteeStrength
+impl core::cmp::Eq for mycelium_core::guarantee::GuaranteeStrength
+impl core::cmp::PartialEq for mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::eq(&self, &mycelium_core::guarantee::GuaranteeStrength) -> bool
+impl core::fmt::Debug for mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::guarantee::GuaranteeStrength
+impl core::marker::StructuralPartialEq for mycelium_core::guarantee::GuaranteeStrength
+impl serde_core::ser::Serialize for mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::guarantee::GuaranteeStrength::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::guarantee::GuaranteeStrength
+impl core::marker::Send for mycelium_core::guarantee::GuaranteeStrength
+impl core::marker::Sync for mycelium_core::guarantee::GuaranteeStrength
+impl core::marker::Unpin for mycelium_core::guarantee::GuaranteeStrength
+impl core::marker::UnsafeUnpin for mycelium_core::guarantee::GuaranteeStrength
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::guarantee::GuaranteeStrength
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::guarantee::GuaranteeStrength
+pub enum mycelium_core::InitStrategy
+pub mycelium_core::InitStrategy::SeededGuess
+pub mycelium_core::InitStrategy::UniformSuperposition
+impl core::clone::Clone for mycelium_core::recon::InitStrategy
+pub fn mycelium_core::recon::InitStrategy::clone(&self) -> mycelium_core::recon::InitStrategy
+impl core::cmp::Eq for mycelium_core::recon::InitStrategy
+impl core::cmp::PartialEq for mycelium_core::recon::InitStrategy
+pub fn mycelium_core::recon::InitStrategy::eq(&self, &mycelium_core::recon::InitStrategy) -> bool
+impl core::fmt::Debug for mycelium_core::recon::InitStrategy
+pub fn mycelium_core::recon::InitStrategy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::recon::InitStrategy
+impl core::marker::StructuralPartialEq for mycelium_core::recon::InitStrategy
+impl serde_core::ser::Serialize for mycelium_core::recon::InitStrategy
+pub fn mycelium_core::recon::InitStrategy::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::recon::InitStrategy
+pub fn mycelium_core::recon::InitStrategy::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::recon::InitStrategy
+impl core::marker::Send for mycelium_core::recon::InitStrategy
+impl core::marker::Sync for mycelium_core::recon::InitStrategy
+impl core::marker::Unpin for mycelium_core::recon::InitStrategy
+impl core::marker::UnsafeUnpin for mycelium_core::recon::InitStrategy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::InitStrategy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::InitStrategy
+pub enum mycelium_core::Node
+pub mycelium_core::Node::App
+pub mycelium_core::Node::App::arg: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::Node::App::func: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::Node::Const(mycelium_core::value::Value)
+pub mycelium_core::Node::Construct
+pub mycelium_core::Node::Construct::args: alloc::vec::Vec<mycelium_core::node::Node>
+pub mycelium_core::Node::Construct::ctor: mycelium_core::data::CtorRef
+pub mycelium_core::Node::Fix
+pub mycelium_core::Node::Fix::body: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::Node::Fix::name: mycelium_core::node::VarId
+pub mycelium_core::Node::FixGroup
+pub mycelium_core::Node::FixGroup::body: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::Node::FixGroup::defs: alloc::vec::Vec<(mycelium_core::node::VarId, alloc::boxed::Box<mycelium_core::node::Node>)>
+pub mycelium_core::Node::Lam
+pub mycelium_core::Node::Lam::body: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::Node::Lam::param: mycelium_core::node::VarId
+pub mycelium_core::Node::Let
+pub mycelium_core::Node::Let::body: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::Node::Let::bound: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::Node::Let::id: mycelium_core::node::VarId
+pub mycelium_core::Node::Match
+pub mycelium_core::Node::Match::alts: alloc::vec::Vec<mycelium_core::node::Alt>
+pub mycelium_core::Node::Match::default: core::option::Option<alloc::boxed::Box<mycelium_core::node::Node>>
+pub mycelium_core::Node::Match::scrutinee: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::Node::Op
+pub mycelium_core::Node::Op::args: alloc::vec::Vec<mycelium_core::node::Node>
+pub mycelium_core::Node::Op::prim: mycelium_core::node::Prim
+pub mycelium_core::Node::Swap
+pub mycelium_core::Node::Swap::policy: mycelium_core::node::PolicyRef
+pub mycelium_core::Node::Swap::src: alloc::boxed::Box<mycelium_core::node::Node>
+pub mycelium_core::Node::Swap::target: mycelium_core::repr::Repr
+pub mycelium_core::Node::Var(mycelium_core::node::VarId)
+impl mycelium_core::node::Node
+pub fn mycelium_core::node::Node::content_hash(&self) -> mycelium_core::id::ContentHash
+impl mycelium_core::node::Node
+pub fn mycelium_core::node::Node::is_aot_lowerable(&self) -> bool
+pub fn mycelium_core::node::Node::is_repr_changing(&self) -> bool
+impl core::clone::Clone for mycelium_core::node::Node
+pub fn mycelium_core::node::Node::clone(&self) -> mycelium_core::node::Node
+impl core::cmp::PartialEq for mycelium_core::node::Node
+pub fn mycelium_core::node::Node::eq(&self, &mycelium_core::node::Node) -> bool
+impl core::fmt::Debug for mycelium_core::node::Node
+pub fn mycelium_core::node::Node::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::node::Node
+impl core::marker::Freeze for mycelium_core::node::Node
+impl core::marker::Send for mycelium_core::node::Node
+impl core::marker::Sync for mycelium_core::node::Node
+impl core::marker::Unpin for mycelium_core::node::Node
+impl core::marker::UnsafeUnpin for mycelium_core::node::Node
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::node::Node
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::node::Node
+pub enum mycelium_core::NormKind
+pub mycelium_core::NormKind::L1
+pub mycelium_core::NormKind::L2
+pub mycelium_core::NormKind::Linf
+pub mycelium_core::NormKind::Rel
+impl core::clone::Clone for mycelium_core::bound::NormKind
+pub fn mycelium_core::bound::NormKind::clone(&self) -> mycelium_core::bound::NormKind
+impl core::cmp::Eq for mycelium_core::bound::NormKind
+impl core::cmp::PartialEq for mycelium_core::bound::NormKind
+pub fn mycelium_core::bound::NormKind::eq(&self, &mycelium_core::bound::NormKind) -> bool
+impl core::fmt::Debug for mycelium_core::bound::NormKind
+pub fn mycelium_core::bound::NormKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::bound::NormKind
+impl core::marker::StructuralPartialEq for mycelium_core::bound::NormKind
+impl serde_core::ser::Serialize for mycelium_core::bound::NormKind
+pub fn mycelium_core::bound::NormKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::bound::NormKind
+pub fn mycelium_core::bound::NormKind::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::bound::NormKind
+impl core::marker::Send for mycelium_core::bound::NormKind
+impl core::marker::Sync for mycelium_core::bound::NormKind
+impl core::marker::Unpin for mycelium_core::bound::NormKind
+impl core::marker::UnsafeUnpin for mycelium_core::bound::NormKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::bound::NormKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::bound::NormKind
+pub enum mycelium_core::PackScheme
+pub mycelium_core::PackScheme::FiveTritPerByte
+pub mycelium_core::PackScheme::I2S
+pub mycelium_core::PackScheme::Tl1
+pub mycelium_core::PackScheme::Tl2
+pub mycelium_core::PackScheme::TwoBitPerTrit
+pub mycelium_core::PackScheme::Unpacked
+impl core::clone::Clone for mycelium_core::meta::PackScheme
+pub fn mycelium_core::meta::PackScheme::clone(&self) -> mycelium_core::meta::PackScheme
+impl core::cmp::Eq for mycelium_core::meta::PackScheme
+impl core::cmp::PartialEq for mycelium_core::meta::PackScheme
+pub fn mycelium_core::meta::PackScheme::eq(&self, &mycelium_core::meta::PackScheme) -> bool
+impl core::fmt::Debug for mycelium_core::meta::PackScheme
+pub fn mycelium_core::meta::PackScheme::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::meta::PackScheme
+impl core::marker::StructuralPartialEq for mycelium_core::meta::PackScheme
+impl serde_core::ser::Serialize for mycelium_core::meta::PackScheme
+pub fn mycelium_core::meta::PackScheme::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::meta::PackScheme
+pub fn mycelium_core::meta::PackScheme::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::meta::PackScheme
+impl core::marker::Send for mycelium_core::meta::PackScheme
+impl core::marker::Sync for mycelium_core::meta::PackScheme
+impl core::marker::Unpin for mycelium_core::meta::PackScheme
+impl core::marker::UnsafeUnpin for mycelium_core::meta::PackScheme
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::meta::PackScheme
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::meta::PackScheme
+pub enum mycelium_core::Payload
+pub mycelium_core::Payload::Bits(alloc::vec::Vec<bool>)
+pub mycelium_core::Payload::Hypervector(alloc::vec::Vec<f64>)
+pub mycelium_core::Payload::Scalars(alloc::vec::Vec<f64>)
+pub mycelium_core::Payload::Trits(alloc::vec::Vec<mycelium_core::value::Trit>)
+impl core::clone::Clone for mycelium_core::value::Payload
+pub fn mycelium_core::value::Payload::clone(&self) -> mycelium_core::value::Payload
+impl core::cmp::PartialEq for mycelium_core::value::Payload
+pub fn mycelium_core::value::Payload::eq(&self, &mycelium_core::value::Payload) -> bool
+impl core::fmt::Debug for mycelium_core::value::Payload
+pub fn mycelium_core::value::Payload::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::value::Payload
+impl serde_core::ser::Serialize for mycelium_core::value::Payload
+pub fn mycelium_core::value::Payload::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::value::Payload
+pub fn mycelium_core::value::Payload::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for mycelium_core::value::Payload
+impl core::marker::Send for mycelium_core::value::Payload
+impl core::marker::Sync for mycelium_core::value::Payload
+impl core::marker::Unpin for mycelium_core::value::Payload
+impl core::marker::UnsafeUnpin for mycelium_core::value::Payload
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::value::Payload
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::value::Payload
+pub enum mycelium_core::PhysicalLayout
+pub mycelium_core::PhysicalLayout::BinaryWords
+pub mycelium_core::PhysicalLayout::DenseArray
+pub mycelium_core::PhysicalLayout::TritPacked
+pub mycelium_core::PhysicalLayout::TritPacked::scheme: mycelium_core::meta::PackScheme
+pub mycelium_core::PhysicalLayout::VsaStore
+pub mycelium_core::PhysicalLayout::VsaStore::sparse: bool
+impl core::clone::Clone for mycelium_core::meta::PhysicalLayout
+pub fn mycelium_core::meta::PhysicalLayout::clone(&self) -> mycelium_core::meta::PhysicalLayout
+impl core::cmp::Eq for mycelium_core::meta::PhysicalLayout
+impl core::cmp::PartialEq for mycelium_core::meta::PhysicalLayout
+pub fn mycelium_core::meta::PhysicalLayout::eq(&self, &mycelium_core::meta::PhysicalLayout) -> bool
+impl core::fmt::Debug for mycelium_core::meta::PhysicalLayout
+pub fn mycelium_core::meta::PhysicalLayout::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::meta::PhysicalLayout
+impl core::marker::StructuralPartialEq for mycelium_core::meta::PhysicalLayout
+impl serde_core::ser::Serialize for mycelium_core::meta::PhysicalLayout
+pub fn mycelium_core::meta::PhysicalLayout::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::meta::PhysicalLayout
+pub fn mycelium_core::meta::PhysicalLayout::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::meta::PhysicalLayout
+impl core::marker::Send for mycelium_core::meta::PhysicalLayout
+impl core::marker::Sync for mycelium_core::meta::PhysicalLayout
+impl core::marker::Unpin for mycelium_core::meta::PhysicalLayout
+impl core::marker::UnsafeUnpin for mycelium_core::meta::PhysicalLayout
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::meta::PhysicalLayout
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::meta::PhysicalLayout
+pub enum mycelium_core::PrimParadigm
+pub mycelium_core::PrimParadigm::Any
+pub mycelium_core::PrimParadigm::Binary
+pub mycelium_core::PrimParadigm::Ternary
+impl core::clone::Clone for mycelium_core::prim::PrimParadigm
+pub fn mycelium_core::prim::PrimParadigm::clone(&self) -> mycelium_core::prim::PrimParadigm
+impl core::cmp::Eq for mycelium_core::prim::PrimParadigm
+impl core::cmp::PartialEq for mycelium_core::prim::PrimParadigm
+pub fn mycelium_core::prim::PrimParadigm::eq(&self, &mycelium_core::prim::PrimParadigm) -> bool
+impl core::fmt::Debug for mycelium_core::prim::PrimParadigm
+pub fn mycelium_core::prim::PrimParadigm::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::prim::PrimParadigm
+impl core::marker::StructuralPartialEq for mycelium_core::prim::PrimParadigm
+impl core::marker::Freeze for mycelium_core::prim::PrimParadigm
+impl core::marker::Send for mycelium_core::prim::PrimParadigm
+impl core::marker::Sync for mycelium_core::prim::PrimParadigm
+impl core::marker::Unpin for mycelium_core::prim::PrimParadigm
+impl core::marker::UnsafeUnpin for mycelium_core::prim::PrimParadigm
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::prim::PrimParadigm
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::prim::PrimParadigm
+pub enum mycelium_core::Provenance
+pub mycelium_core::Provenance::Derived
+pub mycelium_core::Provenance::Derived::inputs: alloc::vec::Vec<mycelium_core::id::ContentHash>
+pub mycelium_core::Provenance::Derived::op: mycelium_core::id::ContentHash
+pub mycelium_core::Provenance::Root
+impl core::clone::Clone for mycelium_core::meta::Provenance
+pub fn mycelium_core::meta::Provenance::clone(&self) -> mycelium_core::meta::Provenance
+impl core::cmp::Eq for mycelium_core::meta::Provenance
+impl core::cmp::PartialEq for mycelium_core::meta::Provenance
+pub fn mycelium_core::meta::Provenance::eq(&self, &mycelium_core::meta::Provenance) -> bool
+impl core::fmt::Debug for mycelium_core::meta::Provenance
+pub fn mycelium_core::meta::Provenance::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::meta::Provenance
+impl serde_core::ser::Serialize for mycelium_core::meta::Provenance
+pub fn mycelium_core::meta::Provenance::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::meta::Provenance
+pub fn mycelium_core::meta::Provenance::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::meta::Provenance
+impl core::marker::Send for mycelium_core::meta::Provenance
+impl core::marker::Sync for mycelium_core::meta::Provenance
+impl core::marker::Unpin for mycelium_core::meta::Provenance
+impl core::marker::UnsafeUnpin for mycelium_core::meta::Provenance
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::meta::Provenance
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::meta::Provenance
+pub enum mycelium_core::ReconMode
+pub mycelium_core::ReconMode::CompositionalReconstruction
+pub mycelium_core::ReconMode::IndexedRetrieval
+impl core::clone::Clone for mycelium_core::recon::ReconMode
+pub fn mycelium_core::recon::ReconMode::clone(&self) -> mycelium_core::recon::ReconMode
+impl core::cmp::Eq for mycelium_core::recon::ReconMode
+impl core::cmp::PartialEq for mycelium_core::recon::ReconMode
+pub fn mycelium_core::recon::ReconMode::eq(&self, &mycelium_core::recon::ReconMode) -> bool
+impl core::fmt::Debug for mycelium_core::recon::ReconMode
+pub fn mycelium_core::recon::ReconMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::recon::ReconMode
+impl core::marker::StructuralPartialEq for mycelium_core::recon::ReconMode
+impl serde_core::ser::Serialize for mycelium_core::recon::ReconMode
+pub fn mycelium_core::recon::ReconMode::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::recon::ReconMode
+pub fn mycelium_core::recon::ReconMode::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::recon::ReconMode
+impl core::marker::Send for mycelium_core::recon::ReconMode
+impl core::marker::Sync for mycelium_core::recon::ReconMode
+impl core::marker::Unpin for mycelium_core::recon::ReconMode
+impl core::marker::UnsafeUnpin for mycelium_core::recon::ReconMode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::ReconMode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::ReconMode
+pub enum mycelium_core::RegistryError
+pub mycelium_core::RegistryError::UnknownTypeRef
+pub mycelium_core::RegistryError::UnknownTypeRef::in_decl: alloc::string::String
+pub mycelium_core::RegistryError::UnknownTypeRef::missing: alloc::string::String
+impl core::clone::Clone for mycelium_core::data::RegistryError
+pub fn mycelium_core::data::RegistryError::clone(&self) -> mycelium_core::data::RegistryError
+impl core::cmp::Eq for mycelium_core::data::RegistryError
+impl core::cmp::PartialEq for mycelium_core::data::RegistryError
+pub fn mycelium_core::data::RegistryError::eq(&self, &mycelium_core::data::RegistryError) -> bool
+impl core::error::Error for mycelium_core::data::RegistryError
+impl core::fmt::Debug for mycelium_core::data::RegistryError
+pub fn mycelium_core::data::RegistryError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_core::data::RegistryError
+pub fn mycelium_core::data::RegistryError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::RegistryError
+impl core::marker::Freeze for mycelium_core::data::RegistryError
+impl core::marker::Send for mycelium_core::data::RegistryError
+impl core::marker::Sync for mycelium_core::data::RegistryError
+impl core::marker::Unpin for mycelium_core::data::RegistryError
+impl core::marker::UnsafeUnpin for mycelium_core::data::RegistryError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::RegistryError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::RegistryError
+pub enum mycelium_core::Repr
+pub mycelium_core::Repr::Binary
+pub mycelium_core::Repr::Binary::width: u32
+pub mycelium_core::Repr::Dense
+pub mycelium_core::Repr::Dense::dim: u32
+pub mycelium_core::Repr::Dense::dtype: mycelium_core::repr::ScalarKind
+pub mycelium_core::Repr::Ternary
+pub mycelium_core::Repr::Ternary::trits: u32
+pub mycelium_core::Repr::Vsa
+pub mycelium_core::Repr::Vsa::dim: u32
+pub mycelium_core::Repr::Vsa::model: alloc::string::String
+pub mycelium_core::Repr::Vsa::sparsity: mycelium_core::repr::SparsityClass
+impl mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::well_formed(&self) -> bool
+impl core::clone::Clone for mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::clone(&self) -> mycelium_core::repr::Repr
+impl core::cmp::Eq for mycelium_core::repr::Repr
+impl core::cmp::PartialEq for mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::eq(&self, &mycelium_core::repr::Repr) -> bool
+impl core::fmt::Debug for mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::repr::Repr
+impl serde_core::ser::Serialize for mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::repr::Repr
+impl core::marker::Send for mycelium_core::repr::Repr
+impl core::marker::Sync for mycelium_core::repr::Repr
+impl core::marker::Unpin for mycelium_core::repr::Repr
+impl core::marker::UnsafeUnpin for mycelium_core::repr::Repr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::repr::Repr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::repr::Repr
+pub enum mycelium_core::ScalarKind
+pub mycelium_core::ScalarKind::Bf16
+pub mycelium_core::ScalarKind::F16
+pub mycelium_core::ScalarKind::F32
+pub mycelium_core::ScalarKind::F64
+impl mycelium_core::repr::ScalarKind
+pub fn mycelium_core::repr::ScalarKind::tag(self) -> u8
+impl core::clone::Clone for mycelium_core::repr::ScalarKind
+pub fn mycelium_core::repr::ScalarKind::clone(&self) -> mycelium_core::repr::ScalarKind
+impl core::cmp::Eq for mycelium_core::repr::ScalarKind
+impl core::cmp::PartialEq for mycelium_core::repr::ScalarKind
+pub fn mycelium_core::repr::ScalarKind::eq(&self, &mycelium_core::repr::ScalarKind) -> bool
+impl core::fmt::Debug for mycelium_core::repr::ScalarKind
+pub fn mycelium_core::repr::ScalarKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::repr::ScalarKind
+impl core::marker::StructuralPartialEq for mycelium_core::repr::ScalarKind
+impl serde_core::ser::Serialize for mycelium_core::repr::ScalarKind
+pub fn mycelium_core::repr::ScalarKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::repr::ScalarKind
+pub fn mycelium_core::repr::ScalarKind::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::repr::ScalarKind
+impl core::marker::Send for mycelium_core::repr::ScalarKind
+impl core::marker::Sync for mycelium_core::repr::ScalarKind
+impl core::marker::Unpin for mycelium_core::repr::ScalarKind
+impl core::marker::UnsafeUnpin for mycelium_core::repr::ScalarKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::repr::ScalarKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::repr::ScalarKind
+pub enum mycelium_core::SparsityClass
+pub mycelium_core::SparsityClass::Dense
+pub mycelium_core::SparsityClass::Sparse
+pub mycelium_core::SparsityClass::Sparse::max_active: u32
+impl core::clone::Clone for mycelium_core::repr::SparsityClass
+pub fn mycelium_core::repr::SparsityClass::clone(&self) -> mycelium_core::repr::SparsityClass
+impl core::cmp::Eq for mycelium_core::repr::SparsityClass
+impl core::cmp::PartialEq for mycelium_core::repr::SparsityClass
+pub fn mycelium_core::repr::SparsityClass::eq(&self, &mycelium_core::repr::SparsityClass) -> bool
+impl core::fmt::Debug for mycelium_core::repr::SparsityClass
+pub fn mycelium_core::repr::SparsityClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::repr::SparsityClass
+impl core::marker::StructuralPartialEq for mycelium_core::repr::SparsityClass
+impl serde_core::ser::Serialize for mycelium_core::repr::SparsityClass
+pub fn mycelium_core::repr::SparsityClass::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::repr::SparsityClass
+pub fn mycelium_core::repr::SparsityClass::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::repr::SparsityClass
+impl core::marker::Send for mycelium_core::repr::SparsityClass
+impl core::marker::Sync for mycelium_core::repr::SparsityClass
+impl core::marker::Unpin for mycelium_core::repr::SparsityClass
+impl core::marker::UnsafeUnpin for mycelium_core::repr::SparsityClass
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::repr::SparsityClass
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::repr::SparsityClass
+pub enum mycelium_core::Trit
+pub mycelium_core::Trit::Neg
+pub mycelium_core::Trit::Pos
+pub mycelium_core::Trit::Zero
+impl core::clone::Clone for mycelium_core::value::Trit
+pub fn mycelium_core::value::Trit::clone(&self) -> mycelium_core::value::Trit
+impl core::cmp::Eq for mycelium_core::value::Trit
+impl core::cmp::PartialEq for mycelium_core::value::Trit
+pub fn mycelium_core::value::Trit::eq(&self, &mycelium_core::value::Trit) -> bool
+impl core::fmt::Debug for mycelium_core::value::Trit
+pub fn mycelium_core::value::Trit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::value::Trit
+impl core::marker::StructuralPartialEq for mycelium_core::value::Trit
+impl core::marker::Freeze for mycelium_core::value::Trit
+impl core::marker::Send for mycelium_core::value::Trit
+impl core::marker::Sync for mycelium_core::value::Trit
+impl core::marker::Unpin for mycelium_core::value::Trit
+impl core::marker::UnsafeUnpin for mycelium_core::value::Trit
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::value::Trit
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::value::Trit
+pub enum mycelium_core::WfError
+pub mycelium_core::WfError::GuaranteeBoundMismatch
+pub mycelium_core::WfError::MalformedBound
+pub mycelium_core::WfError::MalformedReconstruction
+pub mycelium_core::WfError::MalformedRepr
+pub mycelium_core::WfError::MalformedSparsity
+pub mycelium_core::WfError::PayloadReprMismatch
+impl core::clone::Clone for mycelium_core::WfError
+pub fn mycelium_core::WfError::clone(&self) -> mycelium_core::WfError
+impl core::cmp::Eq for mycelium_core::WfError
+impl core::cmp::PartialEq for mycelium_core::WfError
+pub fn mycelium_core::WfError::eq(&self, &mycelium_core::WfError) -> bool
+impl core::error::Error for mycelium_core::WfError
+impl core::fmt::Debug for mycelium_core::WfError
+pub fn mycelium_core::WfError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_core::WfError
+pub fn mycelium_core::WfError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::WfError
+impl core::marker::Freeze for mycelium_core::WfError
+impl core::marker::Send for mycelium_core::WfError
+impl core::marker::Sync for mycelium_core::WfError
+impl core::marker::Unpin for mycelium_core::WfError
+impl core::marker::UnsafeUnpin for mycelium_core::WfError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::WfError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::WfError
+pub enum mycelium_core::WidthRel
+pub mycelium_core::WidthRel::Uniform
+impl core::clone::Clone for mycelium_core::prim::WidthRel
+pub fn mycelium_core::prim::WidthRel::clone(&self) -> mycelium_core::prim::WidthRel
+impl core::cmp::Eq for mycelium_core::prim::WidthRel
+impl core::cmp::PartialEq for mycelium_core::prim::WidthRel
+pub fn mycelium_core::prim::WidthRel::eq(&self, &mycelium_core::prim::WidthRel) -> bool
+impl core::fmt::Debug for mycelium_core::prim::WidthRel
+pub fn mycelium_core::prim::WidthRel::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::prim::WidthRel
+impl core::marker::StructuralPartialEq for mycelium_core::prim::WidthRel
+impl core::marker::Freeze for mycelium_core::prim::WidthRel
+impl core::marker::Send for mycelium_core::prim::WidthRel
+impl core::marker::Sync for mycelium_core::prim::WidthRel
+impl core::marker::Unpin for mycelium_core::prim::WidthRel
+impl core::marker::UnsafeUnpin for mycelium_core::prim::WidthRel
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::prim::WidthRel
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::prim::WidthRel
+pub struct mycelium_core::Bound
+pub mycelium_core::Bound::basis: mycelium_core::bound::BoundBasis
+pub mycelium_core::Bound::kind: mycelium_core::bound::BoundKind
+impl mycelium_core::bound::Bound
+pub fn mycelium_core::bound::Bound::well_formed(&self) -> bool
+impl core::clone::Clone for mycelium_core::bound::Bound
+pub fn mycelium_core::bound::Bound::clone(&self) -> mycelium_core::bound::Bound
+impl core::cmp::PartialEq for mycelium_core::bound::Bound
+pub fn mycelium_core::bound::Bound::eq(&self, &mycelium_core::bound::Bound) -> bool
+impl core::fmt::Debug for mycelium_core::bound::Bound
+pub fn mycelium_core::bound::Bound::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::bound::Bound
+impl serde_core::ser::Serialize for mycelium_core::bound::Bound
+pub fn mycelium_core::bound::Bound::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::bound::Bound
+pub fn mycelium_core::bound::Bound::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::bound::Bound
+impl core::marker::Send for mycelium_core::bound::Bound
+impl core::marker::Sync for mycelium_core::bound::Bound
+impl core::marker::Unpin for mycelium_core::bound::Bound
+impl core::marker::UnsafeUnpin for mycelium_core::bound::Bound
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::bound::Bound
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::bound::Bound
+pub struct mycelium_core::ContentHash(_)
+impl mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::algo(&self) -> &str
+pub fn mycelium_core::id::ContentHash::as_str(&self) -> &str
+pub fn mycelium_core::id::ContentHash::digest(&self) -> &str
+pub fn mycelium_core::id::ContentHash::from_parts(&str, &str) -> core::option::Option<Self>
+pub fn mycelium_core::id::ContentHash::parse(&str) -> core::option::Option<Self>
+impl core::clone::Clone for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::clone(&self) -> mycelium_core::id::ContentHash
+impl core::cmp::Eq for mycelium_core::id::ContentHash
+impl core::cmp::Ord for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::cmp(&self, &mycelium_core::id::ContentHash) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::eq(&self, &mycelium_core::id::ContentHash) -> bool
+impl core::cmp::PartialOrd for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::partial_cmp(&self, &mycelium_core::id::ContentHash) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_core::id::ContentHash
+impl serde_core::ser::Serialize for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::id::ContentHash
+pub fn mycelium_core::id::ContentHash::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for mycelium_core::id::ContentHash
+impl core::marker::Send for mycelium_core::id::ContentHash
+impl core::marker::Sync for mycelium_core::id::ContentHash
+impl core::marker::Unpin for mycelium_core::id::ContentHash
+impl core::marker::UnsafeUnpin for mycelium_core::id::ContentHash
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::id::ContentHash
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::id::ContentHash
+pub struct mycelium_core::CtorDecl
+pub mycelium_core::CtorDecl::fields: alloc::vec::Vec<mycelium_core::data::FieldTy>
+impl core::clone::Clone for mycelium_core::data::CtorDecl
+pub fn mycelium_core::data::CtorDecl::clone(&self) -> mycelium_core::data::CtorDecl
+impl core::cmp::Eq for mycelium_core::data::CtorDecl
+impl core::cmp::PartialEq for mycelium_core::data::CtorDecl
+pub fn mycelium_core::data::CtorDecl::eq(&self, &mycelium_core::data::CtorDecl) -> bool
+impl core::fmt::Debug for mycelium_core::data::CtorDecl
+pub fn mycelium_core::data::CtorDecl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::CtorDecl
+impl core::marker::Freeze for mycelium_core::data::CtorDecl
+impl core::marker::Send for mycelium_core::data::CtorDecl
+impl core::marker::Sync for mycelium_core::data::CtorDecl
+impl core::marker::Unpin for mycelium_core::data::CtorDecl
+impl core::marker::UnsafeUnpin for mycelium_core::data::CtorDecl
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::CtorDecl
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::CtorDecl
+pub struct mycelium_core::CtorRef
+impl mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::decl(&self) -> &mycelium_core::id::ContentHash
+pub fn mycelium_core::data::CtorRef::index(&self) -> u32
+pub fn mycelium_core::data::CtorRef::new(mycelium_core::id::ContentHash, u32) -> Self
+impl core::clone::Clone for mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::clone(&self) -> mycelium_core::data::CtorRef
+impl core::cmp::Eq for mycelium_core::data::CtorRef
+impl core::cmp::Ord for mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::cmp(&self, &mycelium_core::data::CtorRef) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::eq(&self, &mycelium_core::data::CtorRef) -> bool
+impl core::cmp::PartialOrd for mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::partial_cmp(&self, &mycelium_core::data::CtorRef) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_core::data::CtorRef
+pub fn mycelium_core::data::CtorRef::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_core::data::CtorRef
+impl core::marker::Freeze for mycelium_core::data::CtorRef
+impl core::marker::Send for mycelium_core::data::CtorRef
+impl core::marker::Sync for mycelium_core::data::CtorRef
+impl core::marker::Unpin for mycelium_core::data::CtorRef
+impl core::marker::UnsafeUnpin for mycelium_core::data::CtorRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::CtorRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::CtorRef
+pub struct mycelium_core::CtorSpec
+pub mycelium_core::CtorSpec::fields: alloc::vec::Vec<mycelium_core::data::FieldSpec>
+impl core::clone::Clone for mycelium_core::data::CtorSpec
+pub fn mycelium_core::data::CtorSpec::clone(&self) -> mycelium_core::data::CtorSpec
+impl core::cmp::Eq for mycelium_core::data::CtorSpec
+impl core::cmp::PartialEq for mycelium_core::data::CtorSpec
+pub fn mycelium_core::data::CtorSpec::eq(&self, &mycelium_core::data::CtorSpec) -> bool
+impl core::fmt::Debug for mycelium_core::data::CtorSpec
+pub fn mycelium_core::data::CtorSpec::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::CtorSpec
+impl core::marker::Freeze for mycelium_core::data::CtorSpec
+impl core::marker::Send for mycelium_core::data::CtorSpec
+impl core::marker::Sync for mycelium_core::data::CtorSpec
+impl core::marker::Unpin for mycelium_core::data::CtorSpec
+impl core::marker::UnsafeUnpin for mycelium_core::data::CtorSpec
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::CtorSpec
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::CtorSpec
+pub struct mycelium_core::DataDecl
+pub mycelium_core::DataDecl::ctors: alloc::vec::Vec<mycelium_core::data::CtorDecl>
+impl core::clone::Clone for mycelium_core::data::DataDecl
+pub fn mycelium_core::data::DataDecl::clone(&self) -> mycelium_core::data::DataDecl
+impl core::cmp::Eq for mycelium_core::data::DataDecl
+impl core::cmp::PartialEq for mycelium_core::data::DataDecl
+pub fn mycelium_core::data::DataDecl::eq(&self, &mycelium_core::data::DataDecl) -> bool
+impl core::fmt::Debug for mycelium_core::data::DataDecl
+pub fn mycelium_core::data::DataDecl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::DataDecl
+impl core::marker::Freeze for mycelium_core::data::DataDecl
+impl core::marker::Send for mycelium_core::data::DataDecl
+impl core::marker::Sync for mycelium_core::data::DataDecl
+impl core::marker::Unpin for mycelium_core::data::DataDecl
+impl core::marker::UnsafeUnpin for mycelium_core::data::DataDecl
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::DataDecl
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::DataDecl
+pub struct mycelium_core::DataRegistry
+impl mycelium_core::data::DataRegistry
+pub fn mycelium_core::data::DataRegistry::build(&alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_core::data::DeclSpec>) -> core::result::Result<Self, mycelium_core::data::RegistryError>
+pub fn mycelium_core::data::DataRegistry::ctor(&self, &mycelium_core::data::CtorRef) -> core::option::Option<&mycelium_core::data::CtorDecl>
+pub fn mycelium_core::data::DataRegistry::ctor_count(&self, &mycelium_core::data::CtorRef) -> core::option::Option<usize>
+pub fn mycelium_core::data::DataRegistry::ctor_ref(&self, &str, u32) -> core::option::Option<mycelium_core::data::CtorRef>
+pub fn mycelium_core::data::DataRegistry::decl(&self, &mycelium_core::id::ContentHash) -> core::option::Option<&mycelium_core::data::DataDecl>
+pub fn mycelium_core::data::DataRegistry::decl_hash(&self, &str) -> core::option::Option<&mycelium_core::id::ContentHash>
+pub fn mycelium_core::data::DataRegistry::field_count(&self, &mycelium_core::data::CtorRef) -> core::option::Option<usize>
+impl core::clone::Clone for mycelium_core::data::DataRegistry
+pub fn mycelium_core::data::DataRegistry::clone(&self) -> mycelium_core::data::DataRegistry
+impl core::cmp::Eq for mycelium_core::data::DataRegistry
+impl core::cmp::PartialEq for mycelium_core::data::DataRegistry
+pub fn mycelium_core::data::DataRegistry::eq(&self, &mycelium_core::data::DataRegistry) -> bool
+impl core::default::Default for mycelium_core::data::DataRegistry
+pub fn mycelium_core::data::DataRegistry::default() -> mycelium_core::data::DataRegistry
+impl core::fmt::Debug for mycelium_core::data::DataRegistry
+pub fn mycelium_core::data::DataRegistry::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::DataRegistry
+impl core::marker::Freeze for mycelium_core::data::DataRegistry
+impl core::marker::Send for mycelium_core::data::DataRegistry
+impl core::marker::Sync for mycelium_core::data::DataRegistry
+impl core::marker::Unpin for mycelium_core::data::DataRegistry
+impl core::marker::UnsafeUnpin for mycelium_core::data::DataRegistry
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::DataRegistry
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::DataRegistry
+pub struct mycelium_core::Datum
+impl mycelium_core::datum::Datum
+pub fn mycelium_core::datum::Datum::content_hash(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_core::datum::Datum::ctor(&self) -> &mycelium_core::data::CtorRef
+pub fn mycelium_core::datum::Datum::fields(&self) -> &[mycelium_core::datum::CoreValue]
+pub fn mycelium_core::datum::Datum::guarantee(&self) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::datum::Datum::meet_guarantee(self, mycelium_core::guarantee::GuaranteeStrength) -> Self
+pub fn mycelium_core::datum::Datum::new(mycelium_core::data::CtorRef, alloc::vec::Vec<mycelium_core::datum::CoreValue>) -> Self
+impl core::clone::Clone for mycelium_core::datum::Datum
+pub fn mycelium_core::datum::Datum::clone(&self) -> mycelium_core::datum::Datum
+impl core::cmp::PartialEq for mycelium_core::datum::Datum
+pub fn mycelium_core::datum::Datum::eq(&self, &mycelium_core::datum::Datum) -> bool
+impl core::convert::From<mycelium_core::datum::Datum> for mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::from(mycelium_core::datum::Datum) -> Self
+impl core::fmt::Debug for mycelium_core::datum::Datum
+pub fn mycelium_core::datum::Datum::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::datum::Datum
+impl core::marker::Freeze for mycelium_core::datum::Datum
+impl core::marker::Send for mycelium_core::datum::Datum
+impl core::marker::Sync for mycelium_core::datum::Datum
+impl core::marker::Unpin for mycelium_core::datum::Datum
+impl core::marker::UnsafeUnpin for mycelium_core::datum::Datum
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::datum::Datum
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::datum::Datum
+pub struct mycelium_core::DeclSpec
+pub mycelium_core::DeclSpec::ctors: alloc::vec::Vec<mycelium_core::data::CtorSpec>
+impl core::clone::Clone for mycelium_core::data::DeclSpec
+pub fn mycelium_core::data::DeclSpec::clone(&self) -> mycelium_core::data::DeclSpec
+impl core::cmp::Eq for mycelium_core::data::DeclSpec
+impl core::cmp::PartialEq for mycelium_core::data::DeclSpec
+pub fn mycelium_core::data::DeclSpec::eq(&self, &mycelium_core::data::DeclSpec) -> bool
+impl core::fmt::Debug for mycelium_core::data::DeclSpec
+pub fn mycelium_core::data::DeclSpec::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::DeclSpec
+impl core::marker::Freeze for mycelium_core::data::DeclSpec
+impl core::marker::Send for mycelium_core::data::DeclSpec
+impl core::marker::Sync for mycelium_core::data::DeclSpec
+impl core::marker::Unpin for mycelium_core::data::DeclSpec
+impl core::marker::UnsafeUnpin for mycelium_core::data::DeclSpec
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::DeclSpec
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::DeclSpec
+pub struct mycelium_core::DecodeSpec
+pub mycelium_core::DecodeSpec::beta: core::option::Option<f64>
+pub mycelium_core::DecodeSpec::cleanup: core::option::Option<mycelium_core::recon::CleanupShape>
+pub mycelium_core::DecodeSpec::cleanup_threshold: core::option::Option<f64>
+pub mycelium_core::DecodeSpec::factors: core::option::Option<alloc::vec::Vec<mycelium_core::id::ContentHash>>
+pub mycelium_core::DecodeSpec::init: core::option::Option<mycelium_core::recon::InitStrategy>
+pub mycelium_core::DecodeSpec::iteration_budget: core::option::Option<u64>
+pub mycelium_core::DecodeSpec::procedure: mycelium_core::recon::DecodeProcedure
+pub mycelium_core::DecodeSpec::seed: core::option::Option<u64>
+pub mycelium_core::DecodeSpec::tau_lock: core::option::Option<f64>
+impl core::clone::Clone for mycelium_core::recon::DecodeSpec
+pub fn mycelium_core::recon::DecodeSpec::clone(&self) -> mycelium_core::recon::DecodeSpec
+impl core::cmp::PartialEq for mycelium_core::recon::DecodeSpec
+pub fn mycelium_core::recon::DecodeSpec::eq(&self, &mycelium_core::recon::DecodeSpec) -> bool
+impl core::fmt::Debug for mycelium_core::recon::DecodeSpec
+pub fn mycelium_core::recon::DecodeSpec::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::recon::DecodeSpec
+impl serde_core::ser::Serialize for mycelium_core::recon::DecodeSpec
+pub fn mycelium_core::recon::DecodeSpec::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::recon::DecodeSpec
+pub fn mycelium_core::recon::DecodeSpec::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::recon::DecodeSpec
+impl core::marker::Send for mycelium_core::recon::DecodeSpec
+impl core::marker::Sync for mycelium_core::recon::DecodeSpec
+impl core::marker::Unpin for mycelium_core::recon::DecodeSpec
+impl core::marker::UnsafeUnpin for mycelium_core::recon::DecodeSpec
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::DecodeSpec
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::DecodeSpec
+pub struct mycelium_core::Meta
+impl mycelium_core::meta::Meta
+pub fn mycelium_core::meta::Meta::bound(&self) -> core::option::Option<&mycelium_core::bound::Bound>
+pub fn mycelium_core::meta::Meta::exact(mycelium_core::meta::Provenance) -> Self
+pub fn mycelium_core::meta::Meta::guarantee(&self) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::meta::Meta::new(mycelium_core::meta::Provenance, mycelium_core::guarantee::GuaranteeStrength, core::option::Option<mycelium_core::bound::Bound>, core::option::Option<mycelium_core::meta::SparsityObs>, core::option::Option<mycelium_core::meta::PhysicalLayout>, core::option::Option<mycelium_core::id::ContentHash>) -> core::result::Result<Self, mycelium_core::WfError>
+pub fn mycelium_core::meta::Meta::physical(&self) -> core::option::Option<mycelium_core::meta::PhysicalLayout>
+pub fn mycelium_core::meta::Meta::policy_used(&self) -> core::option::Option<&mycelium_core::id::ContentHash>
+pub fn mycelium_core::meta::Meta::provenance(&self) -> &mycelium_core::meta::Provenance
+pub fn mycelium_core::meta::Meta::reconstruction(&self) -> core::option::Option<&mycelium_core::recon::ReconInfo>
+pub fn mycelium_core::meta::Meta::sparsity(&self) -> core::option::Option<mycelium_core::meta::SparsityObs>
+pub fn mycelium_core::meta::Meta::with_physical(self, mycelium_core::meta::PhysicalLayout) -> Self
+pub fn mycelium_core::meta::Meta::with_reconstruction(self, mycelium_core::recon::ReconInfo) -> Self
+impl core::clone::Clone for mycelium_core::meta::Meta
+pub fn mycelium_core::meta::Meta::clone(&self) -> mycelium_core::meta::Meta
+impl core::cmp::PartialEq for mycelium_core::meta::Meta
+pub fn mycelium_core::meta::Meta::eq(&self, &mycelium_core::meta::Meta) -> bool
+impl core::fmt::Debug for mycelium_core::meta::Meta
+pub fn mycelium_core::meta::Meta::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::meta::Meta
+impl serde_core::ser::Serialize for mycelium_core::meta::Meta
+pub fn mycelium_core::meta::Meta::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::meta::Meta
+pub fn mycelium_core::meta::Meta::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for mycelium_core::meta::Meta
+impl core::marker::Send for mycelium_core::meta::Meta
+impl core::marker::Sync for mycelium_core::meta::Meta
+impl core::marker::Unpin for mycelium_core::meta::Meta
+impl core::marker::UnsafeUnpin for mycelium_core::meta::Meta
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::meta::Meta
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::meta::Meta
+pub struct mycelium_core::Names
+impl mycelium_core::content::Names
+pub fn mycelium_core::content::Names::bind(&mut self, mycelium_core::id::ContentHash, impl core::convert::Into<alloc::string::String>) -> core::option::Option<alloc::string::String>
+pub fn mycelium_core::content::Names::is_empty(&self) -> bool
+pub fn mycelium_core::content::Names::len(&self) -> usize
+pub fn mycelium_core::content::Names::name_of(&self, &mycelium_core::id::ContentHash) -> core::option::Option<&str>
+pub fn mycelium_core::content::Names::new() -> Self
+impl core::clone::Clone for mycelium_core::content::Names
+pub fn mycelium_core::content::Names::clone(&self) -> mycelium_core::content::Names
+impl core::cmp::Eq for mycelium_core::content::Names
+impl core::cmp::PartialEq for mycelium_core::content::Names
+pub fn mycelium_core::content::Names::eq(&self, &mycelium_core::content::Names) -> bool
+impl core::default::Default for mycelium_core::content::Names
+pub fn mycelium_core::content::Names::default() -> mycelium_core::content::Names
+impl core::fmt::Debug for mycelium_core::content::Names
+pub fn mycelium_core::content::Names::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::content::Names
+impl core::marker::Freeze for mycelium_core::content::Names
+impl core::marker::Send for mycelium_core::content::Names
+impl core::marker::Sync for mycelium_core::content::Names
+impl core::marker::Unpin for mycelium_core::content::Names
+impl core::marker::UnsafeUnpin for mycelium_core::content::Names
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::content::Names
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::content::Names
+pub struct mycelium_core::PrimDecl
+pub mycelium_core::PrimDecl::intrinsic: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_core::PrimDecl::sig: mycelium_core::prim::PrimSig
+impl mycelium_core::prim::PrimDecl
+pub fn mycelium_core::prim::PrimDecl::content_hash(&self) -> mycelium_core::id::ContentHash
+impl core::clone::Clone for mycelium_core::prim::PrimDecl
+pub fn mycelium_core::prim::PrimDecl::clone(&self) -> mycelium_core::prim::PrimDecl
+impl core::cmp::Eq for mycelium_core::prim::PrimDecl
+impl core::cmp::PartialEq for mycelium_core::prim::PrimDecl
+pub fn mycelium_core::prim::PrimDecl::eq(&self, &mycelium_core::prim::PrimDecl) -> bool
+impl core::fmt::Debug for mycelium_core::prim::PrimDecl
+pub fn mycelium_core::prim::PrimDecl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::prim::PrimDecl
+impl core::marker::Freeze for mycelium_core::prim::PrimDecl
+impl core::marker::Send for mycelium_core::prim::PrimDecl
+impl core::marker::Sync for mycelium_core::prim::PrimDecl
+impl core::marker::Unpin for mycelium_core::prim::PrimDecl
+impl core::marker::UnsafeUnpin for mycelium_core::prim::PrimDecl
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::prim::PrimDecl
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::prim::PrimDecl
+pub struct mycelium_core::PrimRef(_)
+impl mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::decl(&self) -> &mycelium_core::id::ContentHash
+pub fn mycelium_core::prim::PrimRef::new(mycelium_core::id::ContentHash) -> Self
+impl core::clone::Clone for mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::clone(&self) -> mycelium_core::prim::PrimRef
+impl core::cmp::Eq for mycelium_core::prim::PrimRef
+impl core::cmp::Ord for mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::cmp(&self, &mycelium_core::prim::PrimRef) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::eq(&self, &mycelium_core::prim::PrimRef) -> bool
+impl core::cmp::PartialOrd for mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::partial_cmp(&self, &mycelium_core::prim::PrimRef) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimRef::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_core::prim::PrimRef
+impl core::marker::Freeze for mycelium_core::prim::PrimRef
+impl core::marker::Send for mycelium_core::prim::PrimRef
+impl core::marker::Sync for mycelium_core::prim::PrimRef
+impl core::marker::Unpin for mycelium_core::prim::PrimRef
+impl core::marker::UnsafeUnpin for mycelium_core::prim::PrimRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::prim::PrimRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::prim::PrimRef
+pub struct mycelium_core::PrimSig
+pub mycelium_core::PrimSig::operands: alloc::vec::Vec<mycelium_core::prim::PrimParadigm>
+pub mycelium_core::PrimSig::result: mycelium_core::prim::PrimParadigm
+pub mycelium_core::PrimSig::width: mycelium_core::prim::WidthRel
+impl mycelium_core::prim::PrimSig
+pub fn mycelium_core::prim::PrimSig::arity(&self) -> usize
+impl core::clone::Clone for mycelium_core::prim::PrimSig
+pub fn mycelium_core::prim::PrimSig::clone(&self) -> mycelium_core::prim::PrimSig
+impl core::cmp::Eq for mycelium_core::prim::PrimSig
+impl core::cmp::PartialEq for mycelium_core::prim::PrimSig
+pub fn mycelium_core::prim::PrimSig::eq(&self, &mycelium_core::prim::PrimSig) -> bool
+impl core::fmt::Debug for mycelium_core::prim::PrimSig
+pub fn mycelium_core::prim::PrimSig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::prim::PrimSig
+impl core::marker::Freeze for mycelium_core::prim::PrimSig
+impl core::marker::Send for mycelium_core::prim::PrimSig
+impl core::marker::Sync for mycelium_core::prim::PrimSig
+impl core::marker::Unpin for mycelium_core::prim::PrimSig
+impl core::marker::UnsafeUnpin for mycelium_core::prim::PrimSig
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::prim::PrimSig
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::prim::PrimSig
+pub struct mycelium_core::PrimTable
+impl mycelium_core::prim::PrimTable
+pub fn mycelium_core::prim::PrimTable::builtins() -> Self
+pub fn mycelium_core::prim::PrimTable::contains(&self, &str) -> bool
+pub fn mycelium_core::prim::PrimTable::decl(&self, &mycelium_core::id::ContentHash) -> core::option::Option<&mycelium_core::prim::PrimDecl>
+pub fn mycelium_core::prim::PrimTable::decl_hash(&self, &str) -> core::option::Option<&mycelium_core::id::ContentHash>
+pub fn mycelium_core::prim::PrimTable::entries(&self) -> alloc::vec::Vec<(&str, mycelium_core::prim::PrimRef, &mycelium_core::prim::PrimDecl)>
+pub fn mycelium_core::prim::PrimTable::get(&self, &str) -> core::option::Option<&mycelium_core::prim::PrimDecl>
+pub fn mycelium_core::prim::PrimTable::insert(&mut self, impl core::convert::Into<alloc::string::String>, mycelium_core::prim::PrimDecl) -> mycelium_core::prim::PrimRef
+pub fn mycelium_core::prim::PrimTable::intrinsic(&self, &str) -> core::option::Option<mycelium_core::guarantee::GuaranteeStrength>
+pub fn mycelium_core::prim::PrimTable::names(&self) -> alloc::vec::Vec<&str>
+pub fn mycelium_core::prim::PrimTable::new() -> Self
+pub fn mycelium_core::prim::PrimTable::prim_ref(&self, &str) -> core::option::Option<mycelium_core::prim::PrimRef>
+pub fn mycelium_core::prim::PrimTable::resolve(&self, &mycelium_core::prim::PrimRef) -> core::option::Option<&mycelium_core::prim::PrimDecl>
+impl core::clone::Clone for mycelium_core::prim::PrimTable
+pub fn mycelium_core::prim::PrimTable::clone(&self) -> mycelium_core::prim::PrimTable
+impl core::cmp::Eq for mycelium_core::prim::PrimTable
+impl core::cmp::PartialEq for mycelium_core::prim::PrimTable
+pub fn mycelium_core::prim::PrimTable::eq(&self, &mycelium_core::prim::PrimTable) -> bool
+impl core::default::Default for mycelium_core::prim::PrimTable
+pub fn mycelium_core::prim::PrimTable::default() -> mycelium_core::prim::PrimTable
+impl core::fmt::Debug for mycelium_core::prim::PrimTable
+pub fn mycelium_core::prim::PrimTable::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::prim::PrimTable
+impl core::marker::Freeze for mycelium_core::prim::PrimTable
+impl core::marker::Send for mycelium_core::prim::PrimTable
+impl core::marker::Sync for mycelium_core::prim::PrimTable
+impl core::marker::Unpin for mycelium_core::prim::PrimTable
+impl core::marker::UnsafeUnpin for mycelium_core::prim::PrimTable
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::prim::PrimTable
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::prim::PrimTable
+pub struct mycelium_core::Recipe
+pub mycelium_core::Recipe::roles: alloc::vec::Vec<alloc::string::String>
+pub mycelium_core::Recipe::structure: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_core::id::ContentHash>
+impl core::clone::Clone for mycelium_core::recon::Recipe
+pub fn mycelium_core::recon::Recipe::clone(&self) -> mycelium_core::recon::Recipe
+impl core::cmp::Eq for mycelium_core::recon::Recipe
+impl core::cmp::PartialEq for mycelium_core::recon::Recipe
+pub fn mycelium_core::recon::Recipe::eq(&self, &mycelium_core::recon::Recipe) -> bool
+impl core::fmt::Debug for mycelium_core::recon::Recipe
+pub fn mycelium_core::recon::Recipe::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::recon::Recipe
+impl serde_core::ser::Serialize for mycelium_core::recon::Recipe
+pub fn mycelium_core::recon::Recipe::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::recon::Recipe
+pub fn mycelium_core::recon::Recipe::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::recon::Recipe
+impl core::marker::Send for mycelium_core::recon::Recipe
+impl core::marker::Sync for mycelium_core::recon::Recipe
+impl core::marker::Unpin for mycelium_core::recon::Recipe
+impl core::marker::UnsafeUnpin for mycelium_core::recon::Recipe
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::Recipe
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::Recipe
+pub struct mycelium_core::ReconInfo
+impl mycelium_core::recon::ReconInfo
+pub fn mycelium_core::recon::ReconInfo::bound(&self) -> &mycelium_core::bound::Bound
+pub fn mycelium_core::recon::ReconInfo::codebooks(&self) -> &[mycelium_core::id::ContentHash]
+pub fn mycelium_core::recon::ReconInfo::decode(&self) -> &mycelium_core::recon::DecodeSpec
+pub fn mycelium_core::recon::ReconInfo::dim(&self) -> u32
+pub fn mycelium_core::recon::ReconInfo::mode(&self) -> mycelium_core::recon::ReconMode
+pub fn mycelium_core::recon::ReconInfo::model(&self) -> &str
+pub fn mycelium_core::recon::ReconInfo::new(mycelium_core::recon::ReconMode, impl core::convert::Into<alloc::string::String>, u32, alloc::vec::Vec<mycelium_core::id::ContentHash>, core::option::Option<mycelium_core::recon::Recipe>, mycelium_core::recon::DecodeSpec, mycelium_core::bound::Bound) -> core::result::Result<Self, mycelium_core::WfError>
+pub fn mycelium_core::recon::ReconInfo::recipe(&self) -> core::option::Option<&mycelium_core::recon::Recipe>
+impl core::clone::Clone for mycelium_core::recon::ReconInfo
+pub fn mycelium_core::recon::ReconInfo::clone(&self) -> mycelium_core::recon::ReconInfo
+impl core::cmp::PartialEq for mycelium_core::recon::ReconInfo
+pub fn mycelium_core::recon::ReconInfo::eq(&self, &mycelium_core::recon::ReconInfo) -> bool
+impl core::fmt::Debug for mycelium_core::recon::ReconInfo
+pub fn mycelium_core::recon::ReconInfo::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::recon::ReconInfo
+impl serde_core::ser::Serialize for mycelium_core::recon::ReconInfo
+pub fn mycelium_core::recon::ReconInfo::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::recon::ReconInfo
+pub fn mycelium_core::recon::ReconInfo::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for mycelium_core::recon::ReconInfo
+impl core::marker::Send for mycelium_core::recon::ReconInfo
+impl core::marker::Sync for mycelium_core::recon::ReconInfo
+impl core::marker::Unpin for mycelium_core::recon::ReconInfo
+impl core::marker::UnsafeUnpin for mycelium_core::recon::ReconInfo
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::ReconInfo
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::ReconInfo
+pub struct mycelium_core::SparsityObs
+pub mycelium_core::SparsityObs::active: u64
+pub mycelium_core::SparsityObs::density: f64
+impl core::clone::Clone for mycelium_core::meta::SparsityObs
+pub fn mycelium_core::meta::SparsityObs::clone(&self) -> mycelium_core::meta::SparsityObs
+impl core::cmp::PartialEq for mycelium_core::meta::SparsityObs
+pub fn mycelium_core::meta::SparsityObs::eq(&self, &mycelium_core::meta::SparsityObs) -> bool
+impl core::fmt::Debug for mycelium_core::meta::SparsityObs
+pub fn mycelium_core::meta::SparsityObs::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::meta::SparsityObs
+impl core::marker::StructuralPartialEq for mycelium_core::meta::SparsityObs
+impl serde_core::ser::Serialize for mycelium_core::meta::SparsityObs
+pub fn mycelium_core::meta::SparsityObs::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::meta::SparsityObs
+pub fn mycelium_core::meta::SparsityObs::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::meta::SparsityObs
+impl core::marker::Send for mycelium_core::meta::SparsityObs
+impl core::marker::Sync for mycelium_core::meta::SparsityObs
+impl core::marker::Unpin for mycelium_core::meta::SparsityObs
+impl core::marker::UnsafeUnpin for mycelium_core::meta::SparsityObs
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::meta::SparsityObs
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::meta::SparsityObs
+pub struct mycelium_core::Value
+impl mycelium_core::value::Value
+pub fn mycelium_core::value::Value::content_hash(&self) -> mycelium_core::id::ContentHash
+impl mycelium_core::value::Value
+pub fn mycelium_core::value::Value::meta(&self) -> &mycelium_core::meta::Meta
+pub fn mycelium_core::value::Value::new(mycelium_core::repr::Repr, mycelium_core::value::Payload, mycelium_core::meta::Meta) -> core::result::Result<Self, mycelium_core::WfError>
+pub fn mycelium_core::value::Value::payload(&self) -> &mycelium_core::value::Payload
+pub fn mycelium_core::value::Value::repr(&self) -> &mycelium_core::repr::Repr
+impl core::clone::Clone for mycelium_core::value::Value
+pub fn mycelium_core::value::Value::clone(&self) -> mycelium_core::value::Value
+impl core::cmp::PartialEq for mycelium_core::value::Value
+pub fn mycelium_core::value::Value::eq(&self, &mycelium_core::value::Value) -> bool
+impl core::convert::From<mycelium_core::value::Value> for mycelium_core::datum::CoreValue
+pub fn mycelium_core::datum::CoreValue::from(mycelium_core::value::Value) -> Self
+impl core::fmt::Debug for mycelium_core::value::Value
+pub fn mycelium_core::value::Value::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::value::Value
+impl serde_core::ser::Serialize for mycelium_core::value::Value
+pub fn mycelium_core::value::Value::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::value::Value
+pub fn mycelium_core::value::Value::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for mycelium_core::value::Value
+impl core::marker::Send for mycelium_core::value::Value
+impl core::marker::Sync for mycelium_core::value::Value
+impl core::marker::Unpin for mycelium_core::value::Value
+impl core::marker::UnsafeUnpin for mycelium_core::value::Value
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::value::Value
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::value::Value
+pub fn mycelium_core::operation_hash(&str) -> mycelium_core::id::ContentHash
+pub type mycelium_core::PolicyRef = mycelium_core::id::ContentHash
+pub type mycelium_core::Prim = alloc::string::String
+pub type mycelium_core::VarId = alloc::string::String

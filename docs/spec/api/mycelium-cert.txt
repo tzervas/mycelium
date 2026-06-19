@@ -1,0 +1,364 @@
+pub mod mycelium_cert
+pub mod mycelium_cert::check
+pub enum mycelium_cert::check::CheckVerdict
+pub mycelium_cert::check::CheckVerdict::NotValidated
+pub mycelium_cert::check::CheckVerdict::NotValidated::fallback: mycelium_cert::check::Fallback
+pub mycelium_cert::check::CheckVerdict::NotValidated::reason: mycelium_cert::check::NotValidatedReason
+pub mycelium_cert::check::CheckVerdict::Validated
+pub mycelium_cert::check::CheckVerdict::Validated::strength: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_cert::check::CheckVerdict
+pub fn mycelium_cert::check::CheckVerdict::clone(&self) -> mycelium_cert::check::CheckVerdict
+impl core::cmp::PartialEq for mycelium_cert::check::CheckVerdict
+pub fn mycelium_cert::check::CheckVerdict::eq(&self, &mycelium_cert::check::CheckVerdict) -> bool
+impl core::fmt::Debug for mycelium_cert::check::CheckVerdict
+pub fn mycelium_cert::check::CheckVerdict::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_cert::check::CheckVerdict
+impl core::marker::Freeze for mycelium_cert::check::CheckVerdict
+impl core::marker::Send for mycelium_cert::check::CheckVerdict
+impl core::marker::Sync for mycelium_cert::check::CheckVerdict
+impl core::marker::Unpin for mycelium_cert::check::CheckVerdict
+impl core::marker::UnsafeUnpin for mycelium_cert::check::CheckVerdict
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::check::CheckVerdict
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::check::CheckVerdict
+pub enum mycelium_cert::check::Evidence<'a>
+pub mycelium_cert::check::Evidence::Observational
+pub mycelium_cert::check::Evidence::Swap(&'a mycelium_cert::SwapCertificate)
+impl<'a> core::clone::Clone for mycelium_cert::check::Evidence<'a>
+pub fn mycelium_cert::check::Evidence<'a>::clone(&self) -> mycelium_cert::check::Evidence<'a>
+impl<'a> core::cmp::PartialEq for mycelium_cert::check::Evidence<'a>
+pub fn mycelium_cert::check::Evidence<'a>::eq(&self, &mycelium_cert::check::Evidence<'a>) -> bool
+impl<'a> core::fmt::Debug for mycelium_cert::check::Evidence<'a>
+pub fn mycelium_cert::check::Evidence<'a>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'a> core::marker::Copy for mycelium_cert::check::Evidence<'a>
+impl<'a> core::marker::StructuralPartialEq for mycelium_cert::check::Evidence<'a>
+impl<'a> core::marker::Freeze for mycelium_cert::check::Evidence<'a>
+impl<'a> core::marker::Send for mycelium_cert::check::Evidence<'a>
+impl<'a> core::marker::Sync for mycelium_cert::check::Evidence<'a>
+impl<'a> core::marker::Unpin for mycelium_cert::check::Evidence<'a>
+impl<'a> core::marker::UnsafeUnpin for mycelium_cert::check::Evidence<'a>
+impl<'a> core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::check::Evidence<'a>
+impl<'a> core::panic::unwind_safe::UnwindSafe for mycelium_cert::check::Evidence<'a>
+pub enum mycelium_cert::check::Fallback
+pub mycelium_cert::check::Fallback::UseReference
+impl core::clone::Clone for mycelium_cert::check::Fallback
+pub fn mycelium_cert::check::Fallback::clone(&self) -> mycelium_cert::check::Fallback
+impl core::cmp::Eq for mycelium_cert::check::Fallback
+impl core::cmp::PartialEq for mycelium_cert::check::Fallback
+pub fn mycelium_cert::check::Fallback::eq(&self, &mycelium_cert::check::Fallback) -> bool
+impl core::fmt::Debug for mycelium_cert::check::Fallback
+pub fn mycelium_cert::check::Fallback::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_cert::check::Fallback
+impl core::marker::StructuralPartialEq for mycelium_cert::check::Fallback
+impl core::marker::Freeze for mycelium_cert::check::Fallback
+impl core::marker::Send for mycelium_cert::check::Fallback
+impl core::marker::Sync for mycelium_cert::check::Fallback
+impl core::marker::Unpin for mycelium_cert::check::Fallback
+impl core::marker::UnsafeUnpin for mycelium_cert::check::Fallback
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::check::Fallback
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::check::Fallback
+pub enum mycelium_cert::check::NotValidatedReason
+pub mycelium_cert::check::NotValidatedReason::CertificateMismatch
+pub mycelium_cert::check::NotValidatedReason::CertificateMismatch::detail: alloc::string::String
+pub mycelium_cert::check::NotValidatedReason::ClaimTooTight
+pub mycelium_cert::check::NotValidatedReason::ClaimTooTight::claimed: f64
+pub mycelium_cert::check::NotValidatedReason::ClaimTooTight::recomputed: f64
+pub mycelium_cert::check::NotValidatedReason::Diverged
+pub mycelium_cert::check::NotValidatedReason::Diverged::detail: alloc::string::String
+pub mycelium_cert::check::NotValidatedReason::Incomplete
+pub mycelium_cert::check::NotValidatedReason::Incomplete::detail: alloc::string::String
+impl core::clone::Clone for mycelium_cert::check::NotValidatedReason
+pub fn mycelium_cert::check::NotValidatedReason::clone(&self) -> mycelium_cert::check::NotValidatedReason
+impl core::cmp::PartialEq for mycelium_cert::check::NotValidatedReason
+pub fn mycelium_cert::check::NotValidatedReason::eq(&self, &mycelium_cert::check::NotValidatedReason) -> bool
+impl core::fmt::Debug for mycelium_cert::check::NotValidatedReason
+pub fn mycelium_cert::check::NotValidatedReason::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_cert::check::NotValidatedReason
+impl core::marker::Freeze for mycelium_cert::check::NotValidatedReason
+impl core::marker::Send for mycelium_cert::check::NotValidatedReason
+impl core::marker::Sync for mycelium_cert::check::NotValidatedReason
+impl core::marker::Unpin for mycelium_cert::check::NotValidatedReason
+impl core::marker::UnsafeUnpin for mycelium_cert::check::NotValidatedReason
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::check::NotValidatedReason
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::check::NotValidatedReason
+pub enum mycelium_cert::check::RefinementRelation
+pub mycelium_cert::check::RefinementRelation::Bijection
+pub mycelium_cert::check::RefinementRelation::BoundedSimilarity
+pub mycelium_cert::check::RefinementRelation::ObservationalEquiv
+impl core::clone::Clone for mycelium_cert::check::RefinementRelation
+pub fn mycelium_cert::check::RefinementRelation::clone(&self) -> mycelium_cert::check::RefinementRelation
+impl core::cmp::Eq for mycelium_cert::check::RefinementRelation
+impl core::cmp::PartialEq for mycelium_cert::check::RefinementRelation
+pub fn mycelium_cert::check::RefinementRelation::eq(&self, &mycelium_cert::check::RefinementRelation) -> bool
+impl core::fmt::Debug for mycelium_cert::check::RefinementRelation
+pub fn mycelium_cert::check::RefinementRelation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_cert::check::RefinementRelation
+impl core::marker::StructuralPartialEq for mycelium_cert::check::RefinementRelation
+impl core::marker::Freeze for mycelium_cert::check::RefinementRelation
+impl core::marker::Send for mycelium_cert::check::RefinementRelation
+impl core::marker::Sync for mycelium_cert::check::RefinementRelation
+impl core::marker::Unpin for mycelium_cert::check::RefinementRelation
+impl core::marker::UnsafeUnpin for mycelium_cert::check::RefinementRelation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::check::RefinementRelation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::check::RefinementRelation
+pub fn mycelium_cert::check::check(&mycelium_core::value::Value, &mycelium_core::value::Value, mycelium_cert::check::RefinementRelation, mycelium_numerics::cert::Certificate, &mycelium_cert::check::Evidence<'_>) -> mycelium_cert::check::CheckVerdict
+pub fn mycelium_cert::check::check_core(&mycelium_core::datum::CoreValue, &mycelium_core::datum::CoreValue) -> mycelium_cert::check::CheckVerdict
+pub mod mycelium_cert::dense
+pub const mycelium_cert::dense::BF16_MIN_NORMAL: f64
+pub const mycelium_cert::dense::BF16_REL_EPS: f64
+pub fn mycelium_cert::dense::dense_f32_to_bf16(&mycelium_core::value::Value, &mycelium_core::id::ContentHash) -> core::result::Result<(mycelium_core::value::Value, mycelium_cert::SwapCertificate), mycelium_cert::SwapError>
+pub mod mycelium_cert::dense_vsa
+pub const mycelium_cert::dense_vsa::DENSE_VSA_EMP_DELTA: f64
+pub const mycelium_cert::dense_vsa::DENSE_VSA_EMP_DIM_FACTOR: u32
+pub const mycelium_cert::dense_vsa::DENSE_VSA_EMP_MAX_COMPONENTS: u32
+pub const mycelium_cert::dense_vsa::DENSE_VSA_EMP_METHOD: &str
+pub const mycelium_cert::dense_vsa::DENSE_VSA_EMP_TRIALS: u64
+pub const mycelium_cert::dense_vsa::DENSE_VSA_MODEL: &str
+pub fn mycelium_cert::dense_vsa::dense_to_vsa(&mycelium_core::value::Value, u32, f64, &mycelium_core::id::ContentHash) -> core::result::Result<(mycelium_core::value::Value, mycelium_cert::SwapCertificate), mycelium_cert::SwapError>
+pub fn mycelium_cert::dense_vsa::vsa_to_dense(&mycelium_core::value::Value, u32, f64, &mycelium_core::id::ContentHash) -> core::result::Result<(mycelium_core::value::Value, mycelium_cert::SwapCertificate), mycelium_cert::SwapError>
+pub enum mycelium_cert::CheckVerdict
+pub mycelium_cert::CheckVerdict::NotValidated
+pub mycelium_cert::CheckVerdict::NotValidated::fallback: mycelium_cert::check::Fallback
+pub mycelium_cert::CheckVerdict::NotValidated::reason: mycelium_cert::check::NotValidatedReason
+pub mycelium_cert::CheckVerdict::Validated
+pub mycelium_cert::CheckVerdict::Validated::strength: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_cert::check::CheckVerdict
+pub fn mycelium_cert::check::CheckVerdict::clone(&self) -> mycelium_cert::check::CheckVerdict
+impl core::cmp::PartialEq for mycelium_cert::check::CheckVerdict
+pub fn mycelium_cert::check::CheckVerdict::eq(&self, &mycelium_cert::check::CheckVerdict) -> bool
+impl core::fmt::Debug for mycelium_cert::check::CheckVerdict
+pub fn mycelium_cert::check::CheckVerdict::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_cert::check::CheckVerdict
+impl core::marker::Freeze for mycelium_cert::check::CheckVerdict
+impl core::marker::Send for mycelium_cert::check::CheckVerdict
+impl core::marker::Sync for mycelium_cert::check::CheckVerdict
+impl core::marker::Unpin for mycelium_cert::check::CheckVerdict
+impl core::marker::UnsafeUnpin for mycelium_cert::check::CheckVerdict
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::check::CheckVerdict
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::check::CheckVerdict
+pub enum mycelium_cert::Evidence<'a>
+pub mycelium_cert::Evidence::Observational
+pub mycelium_cert::Evidence::Swap(&'a mycelium_cert::SwapCertificate)
+impl<'a> core::clone::Clone for mycelium_cert::check::Evidence<'a>
+pub fn mycelium_cert::check::Evidence<'a>::clone(&self) -> mycelium_cert::check::Evidence<'a>
+impl<'a> core::cmp::PartialEq for mycelium_cert::check::Evidence<'a>
+pub fn mycelium_cert::check::Evidence<'a>::eq(&self, &mycelium_cert::check::Evidence<'a>) -> bool
+impl<'a> core::fmt::Debug for mycelium_cert::check::Evidence<'a>
+pub fn mycelium_cert::check::Evidence<'a>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'a> core::marker::Copy for mycelium_cert::check::Evidence<'a>
+impl<'a> core::marker::StructuralPartialEq for mycelium_cert::check::Evidence<'a>
+impl<'a> core::marker::Freeze for mycelium_cert::check::Evidence<'a>
+impl<'a> core::marker::Send for mycelium_cert::check::Evidence<'a>
+impl<'a> core::marker::Sync for mycelium_cert::check::Evidence<'a>
+impl<'a> core::marker::Unpin for mycelium_cert::check::Evidence<'a>
+impl<'a> core::marker::UnsafeUnpin for mycelium_cert::check::Evidence<'a>
+impl<'a> core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::check::Evidence<'a>
+impl<'a> core::panic::unwind_safe::UnwindSafe for mycelium_cert::check::Evidence<'a>
+pub enum mycelium_cert::Fallback
+pub mycelium_cert::Fallback::UseReference
+impl core::clone::Clone for mycelium_cert::check::Fallback
+pub fn mycelium_cert::check::Fallback::clone(&self) -> mycelium_cert::check::Fallback
+impl core::cmp::Eq for mycelium_cert::check::Fallback
+impl core::cmp::PartialEq for mycelium_cert::check::Fallback
+pub fn mycelium_cert::check::Fallback::eq(&self, &mycelium_cert::check::Fallback) -> bool
+impl core::fmt::Debug for mycelium_cert::check::Fallback
+pub fn mycelium_cert::check::Fallback::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_cert::check::Fallback
+impl core::marker::StructuralPartialEq for mycelium_cert::check::Fallback
+impl core::marker::Freeze for mycelium_cert::check::Fallback
+impl core::marker::Send for mycelium_cert::check::Fallback
+impl core::marker::Sync for mycelium_cert::check::Fallback
+impl core::marker::Unpin for mycelium_cert::check::Fallback
+impl core::marker::UnsafeUnpin for mycelium_cert::check::Fallback
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::check::Fallback
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::check::Fallback
+pub enum mycelium_cert::NotValidatedReason
+pub mycelium_cert::NotValidatedReason::CertificateMismatch
+pub mycelium_cert::NotValidatedReason::CertificateMismatch::detail: alloc::string::String
+pub mycelium_cert::NotValidatedReason::ClaimTooTight
+pub mycelium_cert::NotValidatedReason::ClaimTooTight::claimed: f64
+pub mycelium_cert::NotValidatedReason::ClaimTooTight::recomputed: f64
+pub mycelium_cert::NotValidatedReason::Diverged
+pub mycelium_cert::NotValidatedReason::Diverged::detail: alloc::string::String
+pub mycelium_cert::NotValidatedReason::Incomplete
+pub mycelium_cert::NotValidatedReason::Incomplete::detail: alloc::string::String
+impl core::clone::Clone for mycelium_cert::check::NotValidatedReason
+pub fn mycelium_cert::check::NotValidatedReason::clone(&self) -> mycelium_cert::check::NotValidatedReason
+impl core::cmp::PartialEq for mycelium_cert::check::NotValidatedReason
+pub fn mycelium_cert::check::NotValidatedReason::eq(&self, &mycelium_cert::check::NotValidatedReason) -> bool
+impl core::fmt::Debug for mycelium_cert::check::NotValidatedReason
+pub fn mycelium_cert::check::NotValidatedReason::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_cert::check::NotValidatedReason
+impl core::marker::Freeze for mycelium_cert::check::NotValidatedReason
+impl core::marker::Send for mycelium_cert::check::NotValidatedReason
+impl core::marker::Sync for mycelium_cert::check::NotValidatedReason
+impl core::marker::Unpin for mycelium_cert::check::NotValidatedReason
+impl core::marker::UnsafeUnpin for mycelium_cert::check::NotValidatedReason
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::check::NotValidatedReason
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::check::NotValidatedReason
+pub enum mycelium_cert::RefinementRelation
+pub mycelium_cert::RefinementRelation::Bijection
+pub mycelium_cert::RefinementRelation::BoundedSimilarity
+pub mycelium_cert::RefinementRelation::ObservationalEquiv
+impl core::clone::Clone for mycelium_cert::check::RefinementRelation
+pub fn mycelium_cert::check::RefinementRelation::clone(&self) -> mycelium_cert::check::RefinementRelation
+impl core::cmp::Eq for mycelium_cert::check::RefinementRelation
+impl core::cmp::PartialEq for mycelium_cert::check::RefinementRelation
+pub fn mycelium_cert::check::RefinementRelation::eq(&self, &mycelium_cert::check::RefinementRelation) -> bool
+impl core::fmt::Debug for mycelium_cert::check::RefinementRelation
+pub fn mycelium_cert::check::RefinementRelation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_cert::check::RefinementRelation
+impl core::marker::StructuralPartialEq for mycelium_cert::check::RefinementRelation
+impl core::marker::Freeze for mycelium_cert::check::RefinementRelation
+impl core::marker::Send for mycelium_cert::check::RefinementRelation
+impl core::marker::Sync for mycelium_cert::check::RefinementRelation
+impl core::marker::Unpin for mycelium_cert::check::RefinementRelation
+impl core::marker::UnsafeUnpin for mycelium_cert::check::RefinementRelation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::check::RefinementRelation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::check::RefinementRelation
+pub enum mycelium_cert::SwapCertificate
+pub mycelium_cert::SwapCertificate::Bijective
+pub mycelium_cert::SwapCertificate::Bijective::lemma_ref: mycelium_core::id::ContentHash
+pub mycelium_cert::SwapCertificate::Bijective::params: mycelium_cert::BinTernParams
+pub mycelium_cert::SwapCertificate::Bijective::policy_used: mycelium_core::id::ContentHash
+pub mycelium_cert::SwapCertificate::Bijective::src: mycelium_core::repr::Repr
+pub mycelium_cert::SwapCertificate::Bijective::target: mycelium_core::repr::Repr
+pub mycelium_cert::SwapCertificate::Bounded
+pub mycelium_cert::SwapCertificate::Bounded::bound: mycelium_core::bound::Bound
+pub mycelium_cert::SwapCertificate::Bounded::policy_used: mycelium_core::id::ContentHash
+pub mycelium_cert::SwapCertificate::Bounded::src: mycelium_core::repr::Repr
+pub mycelium_cert::SwapCertificate::Bounded::target: mycelium_core::repr::Repr
+impl core::clone::Clone for mycelium_cert::SwapCertificate
+pub fn mycelium_cert::SwapCertificate::clone(&self) -> mycelium_cert::SwapCertificate
+impl core::cmp::PartialEq for mycelium_cert::SwapCertificate
+pub fn mycelium_cert::SwapCertificate::eq(&self, &mycelium_cert::SwapCertificate) -> bool
+impl core::fmt::Debug for mycelium_cert::SwapCertificate
+pub fn mycelium_cert::SwapCertificate::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_cert::SwapCertificate
+impl serde_core::ser::Serialize for mycelium_cert::SwapCertificate
+pub fn mycelium_cert::SwapCertificate::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_cert::SwapCertificate
+pub fn mycelium_cert::SwapCertificate::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_cert::SwapCertificate
+impl core::marker::Send for mycelium_cert::SwapCertificate
+impl core::marker::Sync for mycelium_cert::SwapCertificate
+impl core::marker::Unpin for mycelium_cert::SwapCertificate
+impl core::marker::UnsafeUnpin for mycelium_cert::SwapCertificate
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::SwapCertificate
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::SwapCertificate
+pub enum mycelium_cert::SwapError
+pub mycelium_cert::SwapError::AmbiguousDecode
+pub mycelium_cert::SwapError::AmbiguousDecode::index: usize
+pub mycelium_cert::SwapError::ApproximateSource
+pub mycelium_cert::SwapError::IllegalPair
+pub mycelium_cert::SwapError::IllegalPair::trits: u32
+pub mycelium_cert::SwapError::IllegalPair::width: u32
+pub mycelium_cert::SwapError::InsufficientCapacity
+pub mycelium_cert::SwapError::InsufficientCapacity::components: u32
+pub mycelium_cert::SwapError::InsufficientCapacity::dim: u32
+pub mycelium_cert::SwapError::InsufficientCapacity::required: u64
+pub mycelium_cert::SwapError::NonFinite
+pub mycelium_cert::SwapError::NonFinite::index: usize
+pub mycelium_cert::SwapError::NotAnF32
+pub mycelium_cert::SwapError::NotAnF32::index: usize
+pub mycelium_cert::SwapError::NotBipolar
+pub mycelium_cert::SwapError::NotBipolar::index: usize
+pub mycelium_cert::SwapError::NotDenseVsaEncoding
+pub mycelium_cert::SwapError::OutOfRange
+pub mycelium_cert::SwapError::RoundOverflow
+pub mycelium_cert::SwapError::RoundOverflow::index: usize
+pub mycelium_cert::SwapError::SubnormalUnsupported
+pub mycelium_cert::SwapError::SubnormalUnsupported::index: usize
+pub mycelium_cert::SwapError::Wf(mycelium_core::WfError)
+pub mycelium_cert::SwapError::WrongSource
+pub mycelium_cert::SwapError::WrongSource::expected: &'static str
+impl core::clone::Clone for mycelium_cert::SwapError
+pub fn mycelium_cert::SwapError::clone(&self) -> mycelium_cert::SwapError
+impl core::cmp::Eq for mycelium_cert::SwapError
+impl core::cmp::PartialEq for mycelium_cert::SwapError
+pub fn mycelium_cert::SwapError::eq(&self, &mycelium_cert::SwapError) -> bool
+impl core::convert::From<mycelium_cert::SwapError> for mycelium_interp::EvalError
+pub fn mycelium_interp::EvalError::from(mycelium_cert::SwapError) -> Self
+impl core::error::Error for mycelium_cert::SwapError
+impl core::fmt::Debug for mycelium_cert::SwapError
+pub fn mycelium_cert::SwapError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_cert::SwapError
+pub fn mycelium_cert::SwapError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_cert::SwapError
+impl core::marker::Freeze for mycelium_cert::SwapError
+impl core::marker::Send for mycelium_cert::SwapError
+impl core::marker::Sync for mycelium_cert::SwapError
+impl core::marker::Unpin for mycelium_cert::SwapError
+impl core::marker::UnsafeUnpin for mycelium_cert::SwapError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::SwapError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::SwapError
+pub struct mycelium_cert::BinTernParams
+pub mycelium_cert::BinTernParams::trits: u32
+pub mycelium_cert::BinTernParams::width: u32
+impl core::clone::Clone for mycelium_cert::BinTernParams
+pub fn mycelium_cert::BinTernParams::clone(&self) -> mycelium_cert::BinTernParams
+impl core::cmp::Eq for mycelium_cert::BinTernParams
+impl core::cmp::PartialEq for mycelium_cert::BinTernParams
+pub fn mycelium_cert::BinTernParams::eq(&self, &mycelium_cert::BinTernParams) -> bool
+impl core::fmt::Debug for mycelium_cert::BinTernParams
+pub fn mycelium_cert::BinTernParams::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_cert::BinTernParams
+impl core::marker::StructuralPartialEq for mycelium_cert::BinTernParams
+impl serde_core::ser::Serialize for mycelium_cert::BinTernParams
+pub fn mycelium_cert::BinTernParams::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_cert::BinTernParams
+pub fn mycelium_cert::BinTernParams::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_cert::BinTernParams
+impl core::marker::Send for mycelium_cert::BinTernParams
+impl core::marker::Sync for mycelium_cert::BinTernParams
+impl core::marker::Unpin for mycelium_cert::BinTernParams
+impl core::marker::UnsafeUnpin for mycelium_cert::BinTernParams
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::BinTernParams
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::BinTernParams
+pub struct mycelium_cert::BinaryTernarySwapEngine
+impl core::clone::Clone for mycelium_cert::BinaryTernarySwapEngine
+pub fn mycelium_cert::BinaryTernarySwapEngine::clone(&self) -> mycelium_cert::BinaryTernarySwapEngine
+impl core::default::Default for mycelium_cert::BinaryTernarySwapEngine
+pub fn mycelium_cert::BinaryTernarySwapEngine::default() -> mycelium_cert::BinaryTernarySwapEngine
+impl core::fmt::Debug for mycelium_cert::BinaryTernarySwapEngine
+pub fn mycelium_cert::BinaryTernarySwapEngine::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_cert::BinaryTernarySwapEngine
+impl mycelium_interp::swap::SwapEngine for mycelium_cert::BinaryTernarySwapEngine
+pub fn mycelium_cert::BinaryTernarySwapEngine::swap(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+impl core::marker::Freeze for mycelium_cert::BinaryTernarySwapEngine
+impl core::marker::Send for mycelium_cert::BinaryTernarySwapEngine
+impl core::marker::Sync for mycelium_cert::BinaryTernarySwapEngine
+impl core::marker::Unpin for mycelium_cert::BinaryTernarySwapEngine
+impl core::marker::UnsafeUnpin for mycelium_cert::BinaryTernarySwapEngine
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::BinaryTernarySwapEngine
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::BinaryTernarySwapEngine
+pub struct mycelium_cert::CertifiedSwapEngine
+impl core::clone::Clone for mycelium_cert::CertifiedSwapEngine
+pub fn mycelium_cert::CertifiedSwapEngine::clone(&self) -> mycelium_cert::CertifiedSwapEngine
+impl core::default::Default for mycelium_cert::CertifiedSwapEngine
+pub fn mycelium_cert::CertifiedSwapEngine::default() -> mycelium_cert::CertifiedSwapEngine
+impl core::fmt::Debug for mycelium_cert::CertifiedSwapEngine
+pub fn mycelium_cert::CertifiedSwapEngine::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_cert::CertifiedSwapEngine
+impl mycelium_interp::swap::SwapEngine for mycelium_cert::CertifiedSwapEngine
+pub fn mycelium_cert::CertifiedSwapEngine::swap(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+impl core::marker::Freeze for mycelium_cert::CertifiedSwapEngine
+impl core::marker::Send for mycelium_cert::CertifiedSwapEngine
+impl core::marker::Sync for mycelium_cert::CertifiedSwapEngine
+impl core::marker::Unpin for mycelium_cert::CertifiedSwapEngine
+impl core::marker::UnsafeUnpin for mycelium_cert::CertifiedSwapEngine
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::CertifiedSwapEngine
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::CertifiedSwapEngine
+pub const mycelium_cert::BF16_MIN_NORMAL: f64
+pub const mycelium_cert::BF16_REL_EPS: f64
+pub const mycelium_cert::DENSE_VSA_DEFAULT_DELTA: f64
+pub const mycelium_cert::DENSE_VSA_EMP_DELTA: f64
+pub const mycelium_cert::DENSE_VSA_MODEL: &str
+pub fn mycelium_cert::binary_to_ternary(&mycelium_core::value::Value, u32, &mycelium_core::id::ContentHash) -> core::result::Result<(mycelium_core::value::Value, mycelium_cert::SwapCertificate), mycelium_cert::SwapError>
+pub fn mycelium_cert::check(&mycelium_core::value::Value, &mycelium_core::value::Value, mycelium_cert::check::RefinementRelation, mycelium_numerics::cert::Certificate, &mycelium_cert::check::Evidence<'_>) -> mycelium_cert::check::CheckVerdict
+pub fn mycelium_cert::check_core(&mycelium_core::datum::CoreValue, &mycelium_core::datum::CoreValue) -> mycelium_cert::check::CheckVerdict
+pub fn mycelium_cert::dense_f32_to_bf16(&mycelium_core::value::Value, &mycelium_core::id::ContentHash) -> core::result::Result<(mycelium_core::value::Value, mycelium_cert::SwapCertificate), mycelium_cert::SwapError>
+pub fn mycelium_cert::dense_to_vsa(&mycelium_core::value::Value, u32, f64, &mycelium_core::id::ContentHash) -> core::result::Result<(mycelium_core::value::Value, mycelium_cert::SwapCertificate), mycelium_cert::SwapError>
+pub fn mycelium_cert::legal_pair(u32, u32) -> bool
+pub fn mycelium_cert::roundtrip_lemma_ref() -> mycelium_core::id::ContentHash
+pub fn mycelium_cert::ternary_to_binary(&mycelium_core::value::Value, u32, &mycelium_core::id::ContentHash) -> core::result::Result<(mycelium_core::value::Value, mycelium_cert::SwapCertificate), mycelium_cert::SwapError>
+pub fn mycelium_cert::vsa_to_dense(&mycelium_core::value::Value, u32, f64, &mycelium_core::id::ContentHash) -> core::result::Result<(mycelium_core::value::Value, mycelium_cert::SwapCertificate), mycelium_cert::SwapError>

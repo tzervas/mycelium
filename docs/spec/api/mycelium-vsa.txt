@@ -1,0 +1,1089 @@
+pub mod mycelium_vsa
+pub use mycelium_vsa::DecodeMethod
+pub use mycelium_vsa::Explanation
+pub mod mycelium_vsa::bsc
+pub struct mycelium_vsa::bsc::Bsc
+pub mycelium_vsa::bsc::Bsc::dim: u32
+impl mycelium_vsa::bsc::Bsc
+pub fn mycelium_vsa::bsc::Bsc::bind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::bundle_values_empirical(&self, &[&mycelium_core::value::Value]) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::new(u32) -> Self
+pub fn mycelium_vsa::bsc::Bsc::permute_value(&self, &mycelium_core::value::Value, i64) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::unbind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::bsc::Bsc
+pub fn mycelium_vsa::bsc::Bsc::clone(&self) -> mycelium_vsa::bsc::Bsc
+impl core::cmp::Eq for mycelium_vsa::bsc::Bsc
+impl core::cmp::PartialEq for mycelium_vsa::bsc::Bsc
+pub fn mycelium_vsa::bsc::Bsc::eq(&self, &mycelium_vsa::bsc::Bsc) -> bool
+impl core::fmt::Debug for mycelium_vsa::bsc::Bsc
+pub fn mycelium_vsa::bsc::Bsc::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::bsc::Bsc
+impl core::marker::StructuralPartialEq for mycelium_vsa::bsc::Bsc
+impl mycelium_vsa::VsaModel for mycelium_vsa::bsc::Bsc
+pub fn mycelium_vsa::bsc::Bsc::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::bsc::Bsc::model_id(&self) -> &'static str
+pub fn mycelium_vsa::bsc::Bsc::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::self_inverse(&self) -> bool
+pub fn mycelium_vsa::bsc::Bsc::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::bsc::Bsc::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl core::marker::Freeze for mycelium_vsa::bsc::Bsc
+impl core::marker::Send for mycelium_vsa::bsc::Bsc
+impl core::marker::Sync for mycelium_vsa::bsc::Bsc
+impl core::marker::Unpin for mycelium_vsa::bsc::Bsc
+impl core::marker::UnsafeUnpin for mycelium_vsa::bsc::Bsc
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::bsc::Bsc
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::bsc::Bsc
+pub const mycelium_vsa::bsc::BSC_BUNDLE_PROFILE: mycelium_vsa::EmpiricalProfile
+pub mod mycelium_vsa::capacity
+pub const mycelium_vsa::capacity::CAPACITY_CITATION: &str
+pub const mycelium_vsa::capacity::MARGIN_MU: f64
+pub fn mycelium_vsa::capacity::proven_capacity_bound(u64, u64, f64) -> core::option::Option<mycelium_core::bound::Bound>
+pub fn mycelium_vsa::capacity::required_dim(u64, f64, f64) -> u64
+pub mod mycelium_vsa::cleanup
+pub struct mycelium_vsa::cleanup::CleanupMemory
+impl mycelium_vsa::cleanup::CleanupMemory
+pub fn mycelium_vsa::cleanup::CleanupMemory::atoms(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&str, &[f64])>
+pub fn mycelium_vsa::cleanup::CleanupMemory::cleanup<M: mycelium_vsa::VsaModel>(&self, &[f64], &M) -> core::option::Option<mycelium_vsa::cleanup::Match>
+pub fn mycelium_vsa::cleanup::CleanupMemory::dim(&self) -> u32
+pub fn mycelium_vsa::cleanup::CleanupMemory::insert(&mut self, impl core::convert::Into<alloc::string::String>, alloc::vec::Vec<f64>) -> core::result::Result<(), mycelium_vsa::VsaError>
+pub fn mycelium_vsa::cleanup::CleanupMemory::is_empty(&self) -> bool
+pub fn mycelium_vsa::cleanup::CleanupMemory::len(&self) -> usize
+pub fn mycelium_vsa::cleanup::CleanupMemory::new(u32) -> Self
+impl core::clone::Clone for mycelium_vsa::cleanup::CleanupMemory
+pub fn mycelium_vsa::cleanup::CleanupMemory::clone(&self) -> mycelium_vsa::cleanup::CleanupMemory
+impl core::default::Default for mycelium_vsa::cleanup::CleanupMemory
+pub fn mycelium_vsa::cleanup::CleanupMemory::default() -> mycelium_vsa::cleanup::CleanupMemory
+impl core::fmt::Debug for mycelium_vsa::cleanup::CleanupMemory
+pub fn mycelium_vsa::cleanup::CleanupMemory::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_vsa::cleanup::CleanupMemory
+impl core::marker::Send for mycelium_vsa::cleanup::CleanupMemory
+impl core::marker::Sync for mycelium_vsa::cleanup::CleanupMemory
+impl core::marker::Unpin for mycelium_vsa::cleanup::CleanupMemory
+impl core::marker::UnsafeUnpin for mycelium_vsa::cleanup::CleanupMemory
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::cleanup::CleanupMemory
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::cleanup::CleanupMemory
+pub struct mycelium_vsa::cleanup::Match
+pub mycelium_vsa::cleanup::Match::confidence: f64
+pub mycelium_vsa::cleanup::Match::index: usize
+pub mycelium_vsa::cleanup::Match::label: alloc::string::String
+pub mycelium_vsa::cleanup::Match::margin: f64
+impl core::clone::Clone for mycelium_vsa::cleanup::Match
+pub fn mycelium_vsa::cleanup::Match::clone(&self) -> mycelium_vsa::cleanup::Match
+impl core::cmp::PartialEq for mycelium_vsa::cleanup::Match
+pub fn mycelium_vsa::cleanup::Match::eq(&self, &mycelium_vsa::cleanup::Match) -> bool
+impl core::fmt::Debug for mycelium_vsa::cleanup::Match
+pub fn mycelium_vsa::cleanup::Match::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::cleanup::Match
+impl core::marker::Freeze for mycelium_vsa::cleanup::Match
+impl core::marker::Send for mycelium_vsa::cleanup::Match
+impl core::marker::Sync for mycelium_vsa::cleanup::Match
+impl core::marker::Unpin for mycelium_vsa::cleanup::Match
+impl core::marker::UnsafeUnpin for mycelium_vsa::cleanup::Match
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::cleanup::Match
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::cleanup::Match
+pub mod mycelium_vsa::decode_select
+pub use mycelium_vsa::decode_select::DecodeMethod
+pub use mycelium_vsa::decode_select::Explanation
+pub struct mycelium_vsa::decode_select::DecodeSelection
+pub mycelium_vsa::decode_select::DecodeSelection::explanation: mycelium_select::Explanation
+pub mycelium_vsa::decode_select::DecodeSelection::factors: alloc::vec::Vec<mycelium_vsa::cleanup::Match>
+pub mycelium_vsa::decode_select::DecodeSelection::guarantee: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_vsa::decode_select::DecodeSelection::method: mycelium_select::DecodeMethod
+pub mycelium_vsa::decode_select::DecodeSelection::resonator_trace: core::option::Option<mycelium_vsa::resonator::ResonatorTrace>
+impl core::clone::Clone for mycelium_vsa::decode_select::DecodeSelection
+pub fn mycelium_vsa::decode_select::DecodeSelection::clone(&self) -> mycelium_vsa::decode_select::DecodeSelection
+impl core::cmp::PartialEq for mycelium_vsa::decode_select::DecodeSelection
+pub fn mycelium_vsa::decode_select::DecodeSelection::eq(&self, &mycelium_vsa::decode_select::DecodeSelection) -> bool
+impl core::fmt::Debug for mycelium_vsa::decode_select::DecodeSelection
+pub fn mycelium_vsa::decode_select::DecodeSelection::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::decode_select::DecodeSelection
+impl core::marker::Freeze for mycelium_vsa::decode_select::DecodeSelection
+impl core::marker::Send for mycelium_vsa::decode_select::DecodeSelection
+impl core::marker::Sync for mycelium_vsa::decode_select::DecodeSelection
+impl core::marker::Unpin for mycelium_vsa::decode_select::DecodeSelection
+impl core::marker::UnsafeUnpin for mycelium_vsa::decode_select::DecodeSelection
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::decode_select::DecodeSelection
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::decode_select::DecodeSelection
+pub const mycelium_vsa::decode_select::DEFAULT_ENUM_BUDGET: u128
+pub fn mycelium_vsa::decode_select::decode_method_policy(u128) -> mycelium_select::SelectionPolicy
+pub fn mycelium_vsa::decode_select::explain_decode_method<M: mycelium_vsa::VsaModel>(&M, &[usize], u32, u128) -> mycelium_select::Explanation
+pub fn mycelium_vsa::decode_select::reconstruct_factors_auto<M: mycelium_vsa::VsaModel>(&M, &[f64], &[mycelium_vsa::cleanup::CleanupMemory], &mycelium_vsa::resonator::ResonatorParams, u128, core::option::Option<mycelium_select::DecodeMethod>) -> core::result::Result<mycelium_vsa::decode_select::DecodeSelection, mycelium_vsa::VsaError>
+pub mod mycelium_vsa::fhrr
+pub struct mycelium_vsa::fhrr::Fhrr
+pub mycelium_vsa::fhrr::Fhrr::dim: u32
+impl mycelium_vsa::fhrr::Fhrr
+pub fn mycelium_vsa::fhrr::Fhrr::bind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::fhrr::Fhrr::new(u32) -> Self
+pub fn mycelium_vsa::fhrr::Fhrr::unbind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::fhrr::Fhrr
+pub fn mycelium_vsa::fhrr::Fhrr::clone(&self) -> mycelium_vsa::fhrr::Fhrr
+impl core::cmp::Eq for mycelium_vsa::fhrr::Fhrr
+impl core::cmp::PartialEq for mycelium_vsa::fhrr::Fhrr
+pub fn mycelium_vsa::fhrr::Fhrr::eq(&self, &mycelium_vsa::fhrr::Fhrr) -> bool
+impl core::fmt::Debug for mycelium_vsa::fhrr::Fhrr
+pub fn mycelium_vsa::fhrr::Fhrr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::fhrr::Fhrr
+impl core::marker::StructuralPartialEq for mycelium_vsa::fhrr::Fhrr
+impl mycelium_vsa::VsaModel for mycelium_vsa::fhrr::Fhrr
+pub fn mycelium_vsa::fhrr::Fhrr::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::fhrr::Fhrr::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::fhrr::Fhrr::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::fhrr::Fhrr::model_id(&self) -> &'static str
+pub fn mycelium_vsa::fhrr::Fhrr::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::fhrr::Fhrr::self_inverse(&self) -> bool
+pub fn mycelium_vsa::fhrr::Fhrr::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::fhrr::Fhrr::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::fhrr::Fhrr::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl core::marker::Freeze for mycelium_vsa::fhrr::Fhrr
+impl core::marker::Send for mycelium_vsa::fhrr::Fhrr
+impl core::marker::Sync for mycelium_vsa::fhrr::Fhrr
+impl core::marker::Unpin for mycelium_vsa::fhrr::Fhrr
+impl core::marker::UnsafeUnpin for mycelium_vsa::fhrr::Fhrr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::fhrr::Fhrr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::fhrr::Fhrr
+pub const mycelium_vsa::fhrr::FHRR_UNBIND_PROFILE: mycelium_vsa::EmpiricalProfile
+pub mod mycelium_vsa::hrr
+pub struct mycelium_vsa::hrr::Hrr
+pub mycelium_vsa::hrr::Hrr::dim: u32
+impl mycelium_vsa::hrr::Hrr
+pub fn mycelium_vsa::hrr::Hrr::bind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::hrr::Hrr::new(u32) -> Self
+pub fn mycelium_vsa::hrr::Hrr::unbind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::hrr::Hrr
+pub fn mycelium_vsa::hrr::Hrr::clone(&self) -> mycelium_vsa::hrr::Hrr
+impl core::cmp::Eq for mycelium_vsa::hrr::Hrr
+impl core::cmp::PartialEq for mycelium_vsa::hrr::Hrr
+pub fn mycelium_vsa::hrr::Hrr::eq(&self, &mycelium_vsa::hrr::Hrr) -> bool
+impl core::fmt::Debug for mycelium_vsa::hrr::Hrr
+pub fn mycelium_vsa::hrr::Hrr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::hrr::Hrr
+impl core::marker::StructuralPartialEq for mycelium_vsa::hrr::Hrr
+impl mycelium_vsa::VsaModel for mycelium_vsa::hrr::Hrr
+pub fn mycelium_vsa::hrr::Hrr::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::hrr::Hrr::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::hrr::Hrr::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::hrr::Hrr::model_id(&self) -> &'static str
+pub fn mycelium_vsa::hrr::Hrr::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::hrr::Hrr::self_inverse(&self) -> bool
+pub fn mycelium_vsa::hrr::Hrr::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::hrr::Hrr::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::hrr::Hrr::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl core::marker::Freeze for mycelium_vsa::hrr::Hrr
+impl core::marker::Send for mycelium_vsa::hrr::Hrr
+impl core::marker::Sync for mycelium_vsa::hrr::Hrr
+impl core::marker::Unpin for mycelium_vsa::hrr::Hrr
+impl core::marker::UnsafeUnpin for mycelium_vsa::hrr::Hrr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::hrr::Hrr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::hrr::Hrr
+pub const mycelium_vsa::hrr::HRR_UNBIND_PROFILE: mycelium_vsa::EmpiricalProfile
+pub mod mycelium_vsa::mapb
+pub struct mycelium_vsa::mapb::MapB
+pub mycelium_vsa::mapb::MapB::dim: u32
+impl mycelium_vsa::mapb::MapB
+pub fn mycelium_vsa::mapb::MapB::bind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::bundle_values_empirical(&self, &[&mycelium_core::value::Value]) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::new(u32) -> Self
+pub fn mycelium_vsa::mapb::MapB::permute_value(&self, &mycelium_core::value::Value, i64) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::unbind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::mapb::MapB
+pub fn mycelium_vsa::mapb::MapB::clone(&self) -> mycelium_vsa::mapb::MapB
+impl core::cmp::Eq for mycelium_vsa::mapb::MapB
+impl core::cmp::PartialEq for mycelium_vsa::mapb::MapB
+pub fn mycelium_vsa::mapb::MapB::eq(&self, &mycelium_vsa::mapb::MapB) -> bool
+impl core::fmt::Debug for mycelium_vsa::mapb::MapB
+pub fn mycelium_vsa::mapb::MapB::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::mapb::MapB
+impl core::marker::StructuralPartialEq for mycelium_vsa::mapb::MapB
+impl mycelium_vsa::VsaModel for mycelium_vsa::mapb::MapB
+pub fn mycelium_vsa::mapb::MapB::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::mapb::MapB::model_id(&self) -> &'static str
+pub fn mycelium_vsa::mapb::MapB::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::self_inverse(&self) -> bool
+pub fn mycelium_vsa::mapb::MapB::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::mapb::MapB::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl core::marker::Freeze for mycelium_vsa::mapb::MapB
+impl core::marker::Send for mycelium_vsa::mapb::MapB
+impl core::marker::Sync for mycelium_vsa::mapb::MapB
+impl core::marker::Unpin for mycelium_vsa::mapb::MapB
+impl core::marker::UnsafeUnpin for mycelium_vsa::mapb::MapB
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::mapb::MapB
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::mapb::MapB
+pub const mycelium_vsa::mapb::MAPB_BUNDLE_PROFILE: mycelium_vsa::EmpiricalProfile
+pub mod mycelium_vsa::mapi
+pub struct mycelium_vsa::mapi::MapI
+pub mycelium_vsa::mapi::MapI::dim: u32
+impl mycelium_vsa::mapi::MapI
+pub fn mycelium_vsa::mapi::MapI::bind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::bundle_values_certified(&self, &[&mycelium_core::value::Value], f64) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::new(u32) -> Self
+pub fn mycelium_vsa::mapi::MapI::permute_value(&self, &mycelium_core::value::Value, i64) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::unbind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::mapi::MapI
+pub fn mycelium_vsa::mapi::MapI::clone(&self) -> mycelium_vsa::mapi::MapI
+impl core::cmp::Eq for mycelium_vsa::mapi::MapI
+impl core::cmp::PartialEq for mycelium_vsa::mapi::MapI
+pub fn mycelium_vsa::mapi::MapI::eq(&self, &mycelium_vsa::mapi::MapI) -> bool
+impl core::fmt::Debug for mycelium_vsa::mapi::MapI
+pub fn mycelium_vsa::mapi::MapI::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::mapi::MapI
+impl core::marker::StructuralPartialEq for mycelium_vsa::mapi::MapI
+impl mycelium_vsa::VsaModel for mycelium_vsa::mapi::MapI
+pub fn mycelium_vsa::mapi::MapI::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::mapi::MapI::model_id(&self) -> &'static str
+pub fn mycelium_vsa::mapi::MapI::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::self_inverse(&self) -> bool
+pub fn mycelium_vsa::mapi::MapI::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::mapi::MapI::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl core::marker::Freeze for mycelium_vsa::mapi::MapI
+impl core::marker::Send for mycelium_vsa::mapi::MapI
+impl core::marker::Sync for mycelium_vsa::mapi::MapI
+impl core::marker::Unpin for mycelium_vsa::mapi::MapI
+impl core::marker::UnsafeUnpin for mycelium_vsa::mapi::MapI
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::mapi::MapI
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::mapi::MapI
+pub mod mycelium_vsa::matrix
+pub const mycelium_vsa::matrix::RFC0003_MATRIX: &[(&str, mycelium_vsa::VsaOp, mycelium_core::guarantee::GuaranteeStrength)]
+pub fn mycelium_vsa::matrix::matrix_tag(&str, mycelium_vsa::VsaOp) -> core::option::Option<mycelium_core::guarantee::GuaranteeStrength>
+pub mod mycelium_vsa::recon
+pub fn mycelium_vsa::recon::reconstruct_factors<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &[mycelium_vsa::cleanup::CleanupMemory]) -> core::result::Result<mycelium_vsa::resonator::Factorization, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::recon::reconstruct_factors_selected<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &[mycelium_vsa::cleanup::CleanupMemory], u128, core::option::Option<mycelium_select::DecodeMethod>) -> core::result::Result<mycelium_vsa::decode_select::DecodeSelection, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::recon::reconstruct_role<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &str, &mycelium_core::value::Value, &mycelium_vsa::cleanup::CleanupMemory) -> core::result::Result<mycelium_vsa::cleanup::Match, mycelium_vsa::VsaError>
+pub mod mycelium_vsa::resonator
+pub enum mycelium_vsa::resonator::Cleanup
+pub mycelium_vsa::resonator::Cleanup::ArgMax
+pub mycelium_vsa::resonator::Cleanup::Hebbian
+pub mycelium_vsa::resonator::Cleanup::Softmax
+pub mycelium_vsa::resonator::Cleanup::Softmax::beta: f64
+pub mycelium_vsa::resonator::Cleanup::SoftmaxSign
+pub mycelium_vsa::resonator::Cleanup::SoftmaxSign::beta: f64
+impl core::clone::Clone for mycelium_vsa::resonator::Cleanup
+pub fn mycelium_vsa::resonator::Cleanup::clone(&self) -> mycelium_vsa::resonator::Cleanup
+impl core::cmp::PartialEq for mycelium_vsa::resonator::Cleanup
+pub fn mycelium_vsa::resonator::Cleanup::eq(&self, &mycelium_vsa::resonator::Cleanup) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::Cleanup
+pub fn mycelium_vsa::resonator::Cleanup::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::resonator::Cleanup
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::Cleanup
+impl core::marker::Freeze for mycelium_vsa::resonator::Cleanup
+impl core::marker::Send for mycelium_vsa::resonator::Cleanup
+impl core::marker::Sync for mycelium_vsa::resonator::Cleanup
+impl core::marker::Unpin for mycelium_vsa::resonator::Cleanup
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::Cleanup
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::Cleanup
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::Cleanup
+pub enum mycelium_vsa::resonator::Init
+pub mycelium_vsa::resonator::Init::SeededGuess
+pub mycelium_vsa::resonator::Init::UniformSuperposition
+impl core::clone::Clone for mycelium_vsa::resonator::Init
+pub fn mycelium_vsa::resonator::Init::clone(&self) -> mycelium_vsa::resonator::Init
+impl core::cmp::PartialEq for mycelium_vsa::resonator::Init
+pub fn mycelium_vsa::resonator::Init::eq(&self, &mycelium_vsa::resonator::Init) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::Init
+pub fn mycelium_vsa::resonator::Init::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::resonator::Init
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::Init
+impl core::marker::Freeze for mycelium_vsa::resonator::Init
+impl core::marker::Send for mycelium_vsa::resonator::Init
+impl core::marker::Sync for mycelium_vsa::resonator::Init
+impl core::marker::Unpin for mycelium_vsa::resonator::Init
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::Init
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::Init
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::Init
+pub enum mycelium_vsa::resonator::StopReason
+pub mycelium_vsa::resonator::StopReason::BudgetExhausted
+pub mycelium_vsa::resonator::StopReason::Converged
+pub mycelium_vsa::resonator::StopReason::Oscillating
+pub mycelium_vsa::resonator::StopReason::Oscillating::period: usize
+pub mycelium_vsa::resonator::StopReason::Stalled
+pub mycelium_vsa::resonator::StopReason::Stalled::sweeps: u64
+impl core::clone::Clone for mycelium_vsa::resonator::StopReason
+pub fn mycelium_vsa::resonator::StopReason::clone(&self) -> mycelium_vsa::resonator::StopReason
+impl core::cmp::PartialEq for mycelium_vsa::resonator::StopReason
+pub fn mycelium_vsa::resonator::StopReason::eq(&self, &mycelium_vsa::resonator::StopReason) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::StopReason
+pub fn mycelium_vsa::resonator::StopReason::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::StopReason
+impl core::marker::Freeze for mycelium_vsa::resonator::StopReason
+impl core::marker::Send for mycelium_vsa::resonator::StopReason
+impl core::marker::Sync for mycelium_vsa::resonator::StopReason
+impl core::marker::Unpin for mycelium_vsa::resonator::StopReason
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::StopReason
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::StopReason
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::StopReason
+pub struct mycelium_vsa::resonator::Factorization
+pub mycelium_vsa::resonator::Factorization::factors: alloc::vec::Vec<mycelium_vsa::cleanup::Match>
+pub mycelium_vsa::resonator::Factorization::trace: mycelium_vsa::resonator::ResonatorTrace
+impl core::clone::Clone for mycelium_vsa::resonator::Factorization
+pub fn mycelium_vsa::resonator::Factorization::clone(&self) -> mycelium_vsa::resonator::Factorization
+impl core::cmp::PartialEq for mycelium_vsa::resonator::Factorization
+pub fn mycelium_vsa::resonator::Factorization::eq(&self, &mycelium_vsa::resonator::Factorization) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::Factorization
+pub fn mycelium_vsa::resonator::Factorization::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::Factorization
+impl core::marker::Freeze for mycelium_vsa::resonator::Factorization
+impl core::marker::Send for mycelium_vsa::resonator::Factorization
+impl core::marker::Sync for mycelium_vsa::resonator::Factorization
+impl core::marker::Unpin for mycelium_vsa::resonator::Factorization
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::Factorization
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::Factorization
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::Factorization
+pub struct mycelium_vsa::resonator::IterationRecord
+pub mycelium_vsa::resonator::IterationRecord::confidences: alloc::vec::Vec<f64>
+pub mycelium_vsa::resonator::IterationRecord::indices: alloc::vec::Vec<usize>
+pub mycelium_vsa::resonator::IterationRecord::iter: u64
+pub mycelium_vsa::resonator::IterationRecord::margins: alloc::vec::Vec<f64>
+impl core::clone::Clone for mycelium_vsa::resonator::IterationRecord
+pub fn mycelium_vsa::resonator::IterationRecord::clone(&self) -> mycelium_vsa::resonator::IterationRecord
+impl core::cmp::PartialEq for mycelium_vsa::resonator::IterationRecord
+pub fn mycelium_vsa::resonator::IterationRecord::eq(&self, &mycelium_vsa::resonator::IterationRecord) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::IterationRecord
+pub fn mycelium_vsa::resonator::IterationRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::IterationRecord
+impl core::marker::Freeze for mycelium_vsa::resonator::IterationRecord
+impl core::marker::Send for mycelium_vsa::resonator::IterationRecord
+impl core::marker::Sync for mycelium_vsa::resonator::IterationRecord
+impl core::marker::Unpin for mycelium_vsa::resonator::IterationRecord
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::IterationRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::IterationRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::IterationRecord
+pub struct mycelium_vsa::resonator::ResonatorParams
+pub mycelium_vsa::resonator::ResonatorParams::cleanup: mycelium_vsa::resonator::Cleanup
+pub mycelium_vsa::resonator::ResonatorParams::confidence_threshold: f64
+pub mycelium_vsa::resonator::ResonatorParams::history_window: usize
+pub mycelium_vsa::resonator::ResonatorParams::init: mycelium_vsa::resonator::Init
+pub mycelium_vsa::resonator::ResonatorParams::iteration_budget: u64
+pub mycelium_vsa::resonator::ResonatorParams::margin_threshold: f64
+pub mycelium_vsa::resonator::ResonatorParams::seed: u64
+pub mycelium_vsa::resonator::ResonatorParams::tau_lock: f64
+impl mycelium_vsa::resonator::ResonatorParams
+pub fn mycelium_vsa::resonator::ResonatorParams::mapi_default(u64, u64) -> Self
+impl core::clone::Clone for mycelium_vsa::resonator::ResonatorParams
+pub fn mycelium_vsa::resonator::ResonatorParams::clone(&self) -> mycelium_vsa::resonator::ResonatorParams
+impl core::cmp::PartialEq for mycelium_vsa::resonator::ResonatorParams
+pub fn mycelium_vsa::resonator::ResonatorParams::eq(&self, &mycelium_vsa::resonator::ResonatorParams) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::ResonatorParams
+pub fn mycelium_vsa::resonator::ResonatorParams::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::resonator::ResonatorParams
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::ResonatorParams
+impl core::marker::Freeze for mycelium_vsa::resonator::ResonatorParams
+impl core::marker::Send for mycelium_vsa::resonator::ResonatorParams
+impl core::marker::Sync for mycelium_vsa::resonator::ResonatorParams
+impl core::marker::Unpin for mycelium_vsa::resonator::ResonatorParams
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::ResonatorParams
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::ResonatorParams
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::ResonatorParams
+pub struct mycelium_vsa::resonator::ResonatorProfile
+pub mycelium_vsa::resonator::ResonatorProfile::delta: f64
+pub mycelium_vsa::resonator::ResonatorProfile::max_capacity: u128
+pub mycelium_vsa::resonator::ResonatorProfile::max_codebook: usize
+pub mycelium_vsa::resonator::ResonatorProfile::max_factors: usize
+pub mycelium_vsa::resonator::ResonatorProfile::method: &'static str
+pub mycelium_vsa::resonator::ResonatorProfile::min_dim: u32
+pub mycelium_vsa::resonator::ResonatorProfile::trials: u64
+impl mycelium_vsa::resonator::ResonatorProfile
+pub fn mycelium_vsa::resonator::ResonatorProfile::bound(&self) -> mycelium_core::bound::Bound
+pub fn mycelium_vsa::resonator::ResonatorProfile::check(&self, usize, &[usize], u32) -> core::result::Result<(), mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::resonator::ResonatorProfile
+pub fn mycelium_vsa::resonator::ResonatorProfile::clone(&self) -> mycelium_vsa::resonator::ResonatorProfile
+impl core::cmp::PartialEq for mycelium_vsa::resonator::ResonatorProfile
+pub fn mycelium_vsa::resonator::ResonatorProfile::eq(&self, &mycelium_vsa::resonator::ResonatorProfile) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::ResonatorProfile
+pub fn mycelium_vsa::resonator::ResonatorProfile::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::ResonatorProfile
+impl core::marker::Freeze for mycelium_vsa::resonator::ResonatorProfile
+impl core::marker::Send for mycelium_vsa::resonator::ResonatorProfile
+impl core::marker::Sync for mycelium_vsa::resonator::ResonatorProfile
+impl core::marker::Unpin for mycelium_vsa::resonator::ResonatorProfile
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::ResonatorProfile
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::ResonatorProfile
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::ResonatorProfile
+pub struct mycelium_vsa::resonator::ResonatorTrace
+pub mycelium_vsa::resonator::ResonatorTrace::final_decode: alloc::vec::Vec<mycelium_vsa::cleanup::Match>
+pub mycelium_vsa::resonator::ResonatorTrace::iterations: u64
+pub mycelium_vsa::resonator::ResonatorTrace::stop: mycelium_vsa::resonator::StopReason
+pub mycelium_vsa::resonator::ResonatorTrace::trajectory: alloc::vec::Vec<mycelium_vsa::resonator::IterationRecord>
+impl core::clone::Clone for mycelium_vsa::resonator::ResonatorTrace
+pub fn mycelium_vsa::resonator::ResonatorTrace::clone(&self) -> mycelium_vsa::resonator::ResonatorTrace
+impl core::cmp::PartialEq for mycelium_vsa::resonator::ResonatorTrace
+pub fn mycelium_vsa::resonator::ResonatorTrace::eq(&self, &mycelium_vsa::resonator::ResonatorTrace) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::ResonatorTrace
+pub fn mycelium_vsa::resonator::ResonatorTrace::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::ResonatorTrace
+impl core::marker::Freeze for mycelium_vsa::resonator::ResonatorTrace
+impl core::marker::Send for mycelium_vsa::resonator::ResonatorTrace
+impl core::marker::Sync for mycelium_vsa::resonator::ResonatorTrace
+impl core::marker::Unpin for mycelium_vsa::resonator::ResonatorTrace
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::ResonatorTrace
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::ResonatorTrace
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::ResonatorTrace
+pub const mycelium_vsa::resonator::MAPI_RESONATOR_PROFILE: mycelium_vsa::resonator::ResonatorProfile
+pub fn mycelium_vsa::resonator::factorize<M: mycelium_vsa::VsaModel>(&M, &[f64], &[mycelium_vsa::cleanup::CleanupMemory], &mycelium_vsa::resonator::ResonatorParams) -> core::result::Result<mycelium_vsa::resonator::Factorization, mycelium_vsa::VsaError>
+pub mod mycelium_vsa::sbc
+pub struct mycelium_vsa::sbc::Sbc
+pub mycelium_vsa::sbc::Sbc::block_len: u32
+pub mycelium_vsa::sbc::Sbc::blocks: u32
+impl mycelium_vsa::sbc::Sbc
+pub fn mycelium_vsa::sbc::Sbc::bind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::dim(&self) -> u32
+pub fn mycelium_vsa::sbc::Sbc::new(u32, u32) -> Self
+pub fn mycelium_vsa::sbc::Sbc::repr(&self) -> mycelium_core::repr::Repr
+pub fn mycelium_vsa::sbc::Sbc::unbind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::value(&self, &[u32]) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::sbc::Sbc
+pub fn mycelium_vsa::sbc::Sbc::clone(&self) -> mycelium_vsa::sbc::Sbc
+impl core::cmp::Eq for mycelium_vsa::sbc::Sbc
+impl core::cmp::PartialEq for mycelium_vsa::sbc::Sbc
+pub fn mycelium_vsa::sbc::Sbc::eq(&self, &mycelium_vsa::sbc::Sbc) -> bool
+impl core::fmt::Debug for mycelium_vsa::sbc::Sbc
+pub fn mycelium_vsa::sbc::Sbc::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::sbc::Sbc
+impl core::marker::StructuralPartialEq for mycelium_vsa::sbc::Sbc
+impl mycelium_vsa::VsaModel for mycelium_vsa::sbc::Sbc
+pub fn mycelium_vsa::sbc::Sbc::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::sbc::Sbc::model_id(&self) -> &'static str
+pub fn mycelium_vsa::sbc::Sbc::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::self_inverse(&self) -> bool
+pub fn mycelium_vsa::sbc::Sbc::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::sbc::Sbc::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl core::marker::Freeze for mycelium_vsa::sbc::Sbc
+impl core::marker::Send for mycelium_vsa::sbc::Sbc
+impl core::marker::Sync for mycelium_vsa::sbc::Sbc
+impl core::marker::Unpin for mycelium_vsa::sbc::Sbc
+impl core::marker::UnsafeUnpin for mycelium_vsa::sbc::Sbc
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::sbc::Sbc
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::sbc::Sbc
+pub enum mycelium_vsa::Cleanup
+pub mycelium_vsa::Cleanup::ArgMax
+pub mycelium_vsa::Cleanup::Hebbian
+pub mycelium_vsa::Cleanup::Softmax
+pub mycelium_vsa::Cleanup::Softmax::beta: f64
+pub mycelium_vsa::Cleanup::SoftmaxSign
+pub mycelium_vsa::Cleanup::SoftmaxSign::beta: f64
+impl core::clone::Clone for mycelium_vsa::resonator::Cleanup
+pub fn mycelium_vsa::resonator::Cleanup::clone(&self) -> mycelium_vsa::resonator::Cleanup
+impl core::cmp::PartialEq for mycelium_vsa::resonator::Cleanup
+pub fn mycelium_vsa::resonator::Cleanup::eq(&self, &mycelium_vsa::resonator::Cleanup) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::Cleanup
+pub fn mycelium_vsa::resonator::Cleanup::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::resonator::Cleanup
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::Cleanup
+impl core::marker::Freeze for mycelium_vsa::resonator::Cleanup
+impl core::marker::Send for mycelium_vsa::resonator::Cleanup
+impl core::marker::Sync for mycelium_vsa::resonator::Cleanup
+impl core::marker::Unpin for mycelium_vsa::resonator::Cleanup
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::Cleanup
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::Cleanup
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::Cleanup
+pub enum mycelium_vsa::Init
+pub mycelium_vsa::Init::SeededGuess
+pub mycelium_vsa::Init::UniformSuperposition
+impl core::clone::Clone for mycelium_vsa::resonator::Init
+pub fn mycelium_vsa::resonator::Init::clone(&self) -> mycelium_vsa::resonator::Init
+impl core::cmp::PartialEq for mycelium_vsa::resonator::Init
+pub fn mycelium_vsa::resonator::Init::eq(&self, &mycelium_vsa::resonator::Init) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::Init
+pub fn mycelium_vsa::resonator::Init::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::resonator::Init
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::Init
+impl core::marker::Freeze for mycelium_vsa::resonator::Init
+impl core::marker::Send for mycelium_vsa::resonator::Init
+impl core::marker::Sync for mycelium_vsa::resonator::Init
+impl core::marker::Unpin for mycelium_vsa::resonator::Init
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::Init
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::Init
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::Init
+pub enum mycelium_vsa::StopReason
+pub mycelium_vsa::StopReason::BudgetExhausted
+pub mycelium_vsa::StopReason::Converged
+pub mycelium_vsa::StopReason::Oscillating
+pub mycelium_vsa::StopReason::Oscillating::period: usize
+pub mycelium_vsa::StopReason::Stalled
+pub mycelium_vsa::StopReason::Stalled::sweeps: u64
+impl core::clone::Clone for mycelium_vsa::resonator::StopReason
+pub fn mycelium_vsa::resonator::StopReason::clone(&self) -> mycelium_vsa::resonator::StopReason
+impl core::cmp::PartialEq for mycelium_vsa::resonator::StopReason
+pub fn mycelium_vsa::resonator::StopReason::eq(&self, &mycelium_vsa::resonator::StopReason) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::StopReason
+pub fn mycelium_vsa::resonator::StopReason::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::StopReason
+impl core::marker::Freeze for mycelium_vsa::resonator::StopReason
+impl core::marker::Send for mycelium_vsa::resonator::StopReason
+impl core::marker::Sync for mycelium_vsa::resonator::StopReason
+impl core::marker::Unpin for mycelium_vsa::resonator::StopReason
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::StopReason
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::StopReason
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::StopReason
+pub enum mycelium_vsa::VsaError
+pub mycelium_vsa::VsaError::BelowCleanupThreshold
+pub mycelium_vsa::VsaError::BelowCleanupThreshold::confidence: f64
+pub mycelium_vsa::VsaError::BelowCleanupThreshold::threshold: f64
+pub mycelium_vsa::VsaError::DecodeRefused
+pub mycelium_vsa::VsaError::DecodeRefused::detail: alloc::string::String
+pub mycelium_vsa::VsaError::DegenerateBundleComponent
+pub mycelium_vsa::VsaError::DegenerateBundleComponent::index: usize
+pub mycelium_vsa::VsaError::DimMismatch
+pub mycelium_vsa::VsaError::DimMismatch::expected: usize
+pub mycelium_vsa::VsaError::DimMismatch::got: usize
+pub mycelium_vsa::VsaError::DuplicateBundleItems
+pub mycelium_vsa::VsaError::DuplicateBundleItems::index: usize
+pub mycelium_vsa::VsaError::EmptyBundle
+pub mycelium_vsa::VsaError::EmptyCodebook
+pub mycelium_vsa::VsaError::InsufficientCapacity
+pub mycelium_vsa::VsaError::InsufficientCapacity::dim: u64
+pub mycelium_vsa::VsaError::InsufficientCapacity::items: u64
+pub mycelium_vsa::VsaError::InsufficientCapacity::required: u64
+pub mycelium_vsa::VsaError::NestedBundleUnsupported
+pub mycelium_vsa::VsaError::NestedBundleUnsupported::model: &'static str
+pub mycelium_vsa::VsaError::NonAlphabetComponent
+pub mycelium_vsa::VsaError::NonAlphabetComponent::index: usize
+pub mycelium_vsa::VsaError::NonIdentifiable
+pub mycelium_vsa::VsaError::NonIdentifiable::runner_up_similarity: f64
+pub mycelium_vsa::VsaError::NotCompositional
+pub mycelium_vsa::VsaError::NotThisModel
+pub mycelium_vsa::VsaError::NotThisModel::expected: &'static str
+pub mycelium_vsa::VsaError::OutsideEmpiricalProfile
+pub mycelium_vsa::VsaError::OutsideEmpiricalProfile::detail: alloc::string::String
+pub mycelium_vsa::VsaError::ResonatorBelowConfidence
+pub mycelium_vsa::VsaError::ResonatorBelowConfidence::confidence: f64
+pub mycelium_vsa::VsaError::ResonatorBelowConfidence::slot: usize
+pub mycelium_vsa::VsaError::ResonatorBelowConfidence::threshold: f64
+pub mycelium_vsa::VsaError::ResonatorBelowConfidence::trace: alloc::boxed::Box<mycelium_vsa::resonator::ResonatorTrace>
+pub mycelium_vsa::VsaError::ResonatorBelowMargin
+pub mycelium_vsa::VsaError::ResonatorBelowMargin::margin: f64
+pub mycelium_vsa::VsaError::ResonatorBelowMargin::slot: usize
+pub mycelium_vsa::VsaError::ResonatorBelowMargin::threshold: f64
+pub mycelium_vsa::VsaError::ResonatorBelowMargin::trace: alloc::boxed::Box<mycelium_vsa::resonator::ResonatorTrace>
+pub mycelium_vsa::VsaError::ResonatorBudgetExhausted
+pub mycelium_vsa::VsaError::ResonatorBudgetExhausted::trace: alloc::boxed::Box<mycelium_vsa::resonator::ResonatorTrace>
+pub mycelium_vsa::VsaError::ResonatorOscillating
+pub mycelium_vsa::VsaError::ResonatorOscillating::trace: alloc::boxed::Box<mycelium_vsa::resonator::ResonatorTrace>
+pub mycelium_vsa::VsaError::ResonatorStalled
+pub mycelium_vsa::VsaError::ResonatorStalled::trace: alloc::boxed::Box<mycelium_vsa::resonator::ResonatorTrace>
+pub mycelium_vsa::VsaError::UnknownRole
+pub mycelium_vsa::VsaError::UnknownRole::role: alloc::string::String
+pub mycelium_vsa::VsaError::Wf(mycelium_core::WfError)
+impl core::clone::Clone for mycelium_vsa::VsaError
+pub fn mycelium_vsa::VsaError::clone(&self) -> mycelium_vsa::VsaError
+impl core::cmp::PartialEq for mycelium_vsa::VsaError
+pub fn mycelium_vsa::VsaError::eq(&self, &mycelium_vsa::VsaError) -> bool
+impl core::error::Error for mycelium_vsa::VsaError
+impl core::fmt::Debug for mycelium_vsa::VsaError
+pub fn mycelium_vsa::VsaError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_vsa::VsaError
+pub fn mycelium_vsa::VsaError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::VsaError
+impl core::marker::Freeze for mycelium_vsa::VsaError
+impl core::marker::Send for mycelium_vsa::VsaError
+impl core::marker::Sync for mycelium_vsa::VsaError
+impl core::marker::Unpin for mycelium_vsa::VsaError
+impl core::marker::UnsafeUnpin for mycelium_vsa::VsaError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::VsaError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::VsaError
+pub enum mycelium_vsa::VsaOp
+pub mycelium_vsa::VsaOp::Bind
+pub mycelium_vsa::VsaOp::Bundle
+pub mycelium_vsa::VsaOp::Permute
+pub mycelium_vsa::VsaOp::Unbind
+impl core::clone::Clone for mycelium_vsa::VsaOp
+pub fn mycelium_vsa::VsaOp::clone(&self) -> mycelium_vsa::VsaOp
+impl core::cmp::Eq for mycelium_vsa::VsaOp
+impl core::cmp::PartialEq for mycelium_vsa::VsaOp
+pub fn mycelium_vsa::VsaOp::eq(&self, &mycelium_vsa::VsaOp) -> bool
+impl core::fmt::Debug for mycelium_vsa::VsaOp
+pub fn mycelium_vsa::VsaOp::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::VsaOp
+impl core::marker::StructuralPartialEq for mycelium_vsa::VsaOp
+impl core::marker::Freeze for mycelium_vsa::VsaOp
+impl core::marker::Send for mycelium_vsa::VsaOp
+impl core::marker::Sync for mycelium_vsa::VsaOp
+impl core::marker::Unpin for mycelium_vsa::VsaOp
+impl core::marker::UnsafeUnpin for mycelium_vsa::VsaOp
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::VsaOp
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::VsaOp
+pub struct mycelium_vsa::Bsc
+pub mycelium_vsa::Bsc::dim: u32
+impl mycelium_vsa::bsc::Bsc
+pub fn mycelium_vsa::bsc::Bsc::bind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::bundle_values_empirical(&self, &[&mycelium_core::value::Value]) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::new(u32) -> Self
+pub fn mycelium_vsa::bsc::Bsc::permute_value(&self, &mycelium_core::value::Value, i64) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::unbind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::bsc::Bsc
+pub fn mycelium_vsa::bsc::Bsc::clone(&self) -> mycelium_vsa::bsc::Bsc
+impl core::cmp::Eq for mycelium_vsa::bsc::Bsc
+impl core::cmp::PartialEq for mycelium_vsa::bsc::Bsc
+pub fn mycelium_vsa::bsc::Bsc::eq(&self, &mycelium_vsa::bsc::Bsc) -> bool
+impl core::fmt::Debug for mycelium_vsa::bsc::Bsc
+pub fn mycelium_vsa::bsc::Bsc::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::bsc::Bsc
+impl core::marker::StructuralPartialEq for mycelium_vsa::bsc::Bsc
+impl mycelium_vsa::VsaModel for mycelium_vsa::bsc::Bsc
+pub fn mycelium_vsa::bsc::Bsc::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::bsc::Bsc::model_id(&self) -> &'static str
+pub fn mycelium_vsa::bsc::Bsc::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::self_inverse(&self) -> bool
+pub fn mycelium_vsa::bsc::Bsc::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::bsc::Bsc::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl core::marker::Freeze for mycelium_vsa::bsc::Bsc
+impl core::marker::Send for mycelium_vsa::bsc::Bsc
+impl core::marker::Sync for mycelium_vsa::bsc::Bsc
+impl core::marker::Unpin for mycelium_vsa::bsc::Bsc
+impl core::marker::UnsafeUnpin for mycelium_vsa::bsc::Bsc
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::bsc::Bsc
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::bsc::Bsc
+pub struct mycelium_vsa::CleanupMemory
+impl mycelium_vsa::cleanup::CleanupMemory
+pub fn mycelium_vsa::cleanup::CleanupMemory::atoms(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&str, &[f64])>
+pub fn mycelium_vsa::cleanup::CleanupMemory::cleanup<M: mycelium_vsa::VsaModel>(&self, &[f64], &M) -> core::option::Option<mycelium_vsa::cleanup::Match>
+pub fn mycelium_vsa::cleanup::CleanupMemory::dim(&self) -> u32
+pub fn mycelium_vsa::cleanup::CleanupMemory::insert(&mut self, impl core::convert::Into<alloc::string::String>, alloc::vec::Vec<f64>) -> core::result::Result<(), mycelium_vsa::VsaError>
+pub fn mycelium_vsa::cleanup::CleanupMemory::is_empty(&self) -> bool
+pub fn mycelium_vsa::cleanup::CleanupMemory::len(&self) -> usize
+pub fn mycelium_vsa::cleanup::CleanupMemory::new(u32) -> Self
+impl core::clone::Clone for mycelium_vsa::cleanup::CleanupMemory
+pub fn mycelium_vsa::cleanup::CleanupMemory::clone(&self) -> mycelium_vsa::cleanup::CleanupMemory
+impl core::default::Default for mycelium_vsa::cleanup::CleanupMemory
+pub fn mycelium_vsa::cleanup::CleanupMemory::default() -> mycelium_vsa::cleanup::CleanupMemory
+impl core::fmt::Debug for mycelium_vsa::cleanup::CleanupMemory
+pub fn mycelium_vsa::cleanup::CleanupMemory::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_vsa::cleanup::CleanupMemory
+impl core::marker::Send for mycelium_vsa::cleanup::CleanupMemory
+impl core::marker::Sync for mycelium_vsa::cleanup::CleanupMemory
+impl core::marker::Unpin for mycelium_vsa::cleanup::CleanupMemory
+impl core::marker::UnsafeUnpin for mycelium_vsa::cleanup::CleanupMemory
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::cleanup::CleanupMemory
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::cleanup::CleanupMemory
+pub struct mycelium_vsa::DecodeSelection
+pub mycelium_vsa::DecodeSelection::explanation: mycelium_select::Explanation
+pub mycelium_vsa::DecodeSelection::factors: alloc::vec::Vec<mycelium_vsa::cleanup::Match>
+pub mycelium_vsa::DecodeSelection::guarantee: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_vsa::DecodeSelection::method: mycelium_select::DecodeMethod
+pub mycelium_vsa::DecodeSelection::resonator_trace: core::option::Option<mycelium_vsa::resonator::ResonatorTrace>
+impl core::clone::Clone for mycelium_vsa::decode_select::DecodeSelection
+pub fn mycelium_vsa::decode_select::DecodeSelection::clone(&self) -> mycelium_vsa::decode_select::DecodeSelection
+impl core::cmp::PartialEq for mycelium_vsa::decode_select::DecodeSelection
+pub fn mycelium_vsa::decode_select::DecodeSelection::eq(&self, &mycelium_vsa::decode_select::DecodeSelection) -> bool
+impl core::fmt::Debug for mycelium_vsa::decode_select::DecodeSelection
+pub fn mycelium_vsa::decode_select::DecodeSelection::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::decode_select::DecodeSelection
+impl core::marker::Freeze for mycelium_vsa::decode_select::DecodeSelection
+impl core::marker::Send for mycelium_vsa::decode_select::DecodeSelection
+impl core::marker::Sync for mycelium_vsa::decode_select::DecodeSelection
+impl core::marker::Unpin for mycelium_vsa::decode_select::DecodeSelection
+impl core::marker::UnsafeUnpin for mycelium_vsa::decode_select::DecodeSelection
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::decode_select::DecodeSelection
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::decode_select::DecodeSelection
+pub struct mycelium_vsa::EmpiricalProfile
+pub mycelium_vsa::EmpiricalProfile::delta: f64
+pub mycelium_vsa::EmpiricalProfile::max_items: usize
+pub mycelium_vsa::EmpiricalProfile::method: &'static str
+pub mycelium_vsa::EmpiricalProfile::min_dim: u32
+pub mycelium_vsa::EmpiricalProfile::odd_items_only: bool
+pub mycelium_vsa::EmpiricalProfile::trials: u64
+impl mycelium_vsa::EmpiricalProfile
+pub fn mycelium_vsa::EmpiricalProfile::bound(&self) -> mycelium_core::bound::Bound
+pub fn mycelium_vsa::EmpiricalProfile::check(&self, usize, u32) -> core::result::Result<(), mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::EmpiricalProfile
+pub fn mycelium_vsa::EmpiricalProfile::clone(&self) -> mycelium_vsa::EmpiricalProfile
+impl core::cmp::PartialEq for mycelium_vsa::EmpiricalProfile
+pub fn mycelium_vsa::EmpiricalProfile::eq(&self, &mycelium_vsa::EmpiricalProfile) -> bool
+impl core::fmt::Debug for mycelium_vsa::EmpiricalProfile
+pub fn mycelium_vsa::EmpiricalProfile::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::EmpiricalProfile
+impl core::marker::StructuralPartialEq for mycelium_vsa::EmpiricalProfile
+impl core::marker::Freeze for mycelium_vsa::EmpiricalProfile
+impl core::marker::Send for mycelium_vsa::EmpiricalProfile
+impl core::marker::Sync for mycelium_vsa::EmpiricalProfile
+impl core::marker::Unpin for mycelium_vsa::EmpiricalProfile
+impl core::marker::UnsafeUnpin for mycelium_vsa::EmpiricalProfile
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::EmpiricalProfile
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::EmpiricalProfile
+pub struct mycelium_vsa::Factorization
+pub mycelium_vsa::Factorization::factors: alloc::vec::Vec<mycelium_vsa::cleanup::Match>
+pub mycelium_vsa::Factorization::trace: mycelium_vsa::resonator::ResonatorTrace
+impl core::clone::Clone for mycelium_vsa::resonator::Factorization
+pub fn mycelium_vsa::resonator::Factorization::clone(&self) -> mycelium_vsa::resonator::Factorization
+impl core::cmp::PartialEq for mycelium_vsa::resonator::Factorization
+pub fn mycelium_vsa::resonator::Factorization::eq(&self, &mycelium_vsa::resonator::Factorization) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::Factorization
+pub fn mycelium_vsa::resonator::Factorization::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::Factorization
+impl core::marker::Freeze for mycelium_vsa::resonator::Factorization
+impl core::marker::Send for mycelium_vsa::resonator::Factorization
+impl core::marker::Sync for mycelium_vsa::resonator::Factorization
+impl core::marker::Unpin for mycelium_vsa::resonator::Factorization
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::Factorization
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::Factorization
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::Factorization
+pub struct mycelium_vsa::Fhrr
+pub mycelium_vsa::Fhrr::dim: u32
+impl mycelium_vsa::fhrr::Fhrr
+pub fn mycelium_vsa::fhrr::Fhrr::bind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::fhrr::Fhrr::new(u32) -> Self
+pub fn mycelium_vsa::fhrr::Fhrr::unbind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::fhrr::Fhrr
+pub fn mycelium_vsa::fhrr::Fhrr::clone(&self) -> mycelium_vsa::fhrr::Fhrr
+impl core::cmp::Eq for mycelium_vsa::fhrr::Fhrr
+impl core::cmp::PartialEq for mycelium_vsa::fhrr::Fhrr
+pub fn mycelium_vsa::fhrr::Fhrr::eq(&self, &mycelium_vsa::fhrr::Fhrr) -> bool
+impl core::fmt::Debug for mycelium_vsa::fhrr::Fhrr
+pub fn mycelium_vsa::fhrr::Fhrr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::fhrr::Fhrr
+impl core::marker::StructuralPartialEq for mycelium_vsa::fhrr::Fhrr
+impl mycelium_vsa::VsaModel for mycelium_vsa::fhrr::Fhrr
+pub fn mycelium_vsa::fhrr::Fhrr::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::fhrr::Fhrr::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::fhrr::Fhrr::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::fhrr::Fhrr::model_id(&self) -> &'static str
+pub fn mycelium_vsa::fhrr::Fhrr::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::fhrr::Fhrr::self_inverse(&self) -> bool
+pub fn mycelium_vsa::fhrr::Fhrr::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::fhrr::Fhrr::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::fhrr::Fhrr::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl core::marker::Freeze for mycelium_vsa::fhrr::Fhrr
+impl core::marker::Send for mycelium_vsa::fhrr::Fhrr
+impl core::marker::Sync for mycelium_vsa::fhrr::Fhrr
+impl core::marker::Unpin for mycelium_vsa::fhrr::Fhrr
+impl core::marker::UnsafeUnpin for mycelium_vsa::fhrr::Fhrr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::fhrr::Fhrr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::fhrr::Fhrr
+pub struct mycelium_vsa::Hrr
+pub mycelium_vsa::Hrr::dim: u32
+impl mycelium_vsa::hrr::Hrr
+pub fn mycelium_vsa::hrr::Hrr::bind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::hrr::Hrr::new(u32) -> Self
+pub fn mycelium_vsa::hrr::Hrr::unbind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::hrr::Hrr
+pub fn mycelium_vsa::hrr::Hrr::clone(&self) -> mycelium_vsa::hrr::Hrr
+impl core::cmp::Eq for mycelium_vsa::hrr::Hrr
+impl core::cmp::PartialEq for mycelium_vsa::hrr::Hrr
+pub fn mycelium_vsa::hrr::Hrr::eq(&self, &mycelium_vsa::hrr::Hrr) -> bool
+impl core::fmt::Debug for mycelium_vsa::hrr::Hrr
+pub fn mycelium_vsa::hrr::Hrr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::hrr::Hrr
+impl core::marker::StructuralPartialEq for mycelium_vsa::hrr::Hrr
+impl mycelium_vsa::VsaModel for mycelium_vsa::hrr::Hrr
+pub fn mycelium_vsa::hrr::Hrr::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::hrr::Hrr::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::hrr::Hrr::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::hrr::Hrr::model_id(&self) -> &'static str
+pub fn mycelium_vsa::hrr::Hrr::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::hrr::Hrr::self_inverse(&self) -> bool
+pub fn mycelium_vsa::hrr::Hrr::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::hrr::Hrr::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::hrr::Hrr::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl core::marker::Freeze for mycelium_vsa::hrr::Hrr
+impl core::marker::Send for mycelium_vsa::hrr::Hrr
+impl core::marker::Sync for mycelium_vsa::hrr::Hrr
+impl core::marker::Unpin for mycelium_vsa::hrr::Hrr
+impl core::marker::UnsafeUnpin for mycelium_vsa::hrr::Hrr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::hrr::Hrr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::hrr::Hrr
+pub struct mycelium_vsa::IterationRecord
+pub mycelium_vsa::IterationRecord::confidences: alloc::vec::Vec<f64>
+pub mycelium_vsa::IterationRecord::indices: alloc::vec::Vec<usize>
+pub mycelium_vsa::IterationRecord::iter: u64
+pub mycelium_vsa::IterationRecord::margins: alloc::vec::Vec<f64>
+impl core::clone::Clone for mycelium_vsa::resonator::IterationRecord
+pub fn mycelium_vsa::resonator::IterationRecord::clone(&self) -> mycelium_vsa::resonator::IterationRecord
+impl core::cmp::PartialEq for mycelium_vsa::resonator::IterationRecord
+pub fn mycelium_vsa::resonator::IterationRecord::eq(&self, &mycelium_vsa::resonator::IterationRecord) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::IterationRecord
+pub fn mycelium_vsa::resonator::IterationRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::IterationRecord
+impl core::marker::Freeze for mycelium_vsa::resonator::IterationRecord
+impl core::marker::Send for mycelium_vsa::resonator::IterationRecord
+impl core::marker::Sync for mycelium_vsa::resonator::IterationRecord
+impl core::marker::Unpin for mycelium_vsa::resonator::IterationRecord
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::IterationRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::IterationRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::IterationRecord
+pub struct mycelium_vsa::MapB
+pub mycelium_vsa::MapB::dim: u32
+impl mycelium_vsa::mapb::MapB
+pub fn mycelium_vsa::mapb::MapB::bind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::bundle_values_empirical(&self, &[&mycelium_core::value::Value]) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::new(u32) -> Self
+pub fn mycelium_vsa::mapb::MapB::permute_value(&self, &mycelium_core::value::Value, i64) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::unbind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::mapb::MapB
+pub fn mycelium_vsa::mapb::MapB::clone(&self) -> mycelium_vsa::mapb::MapB
+impl core::cmp::Eq for mycelium_vsa::mapb::MapB
+impl core::cmp::PartialEq for mycelium_vsa::mapb::MapB
+pub fn mycelium_vsa::mapb::MapB::eq(&self, &mycelium_vsa::mapb::MapB) -> bool
+impl core::fmt::Debug for mycelium_vsa::mapb::MapB
+pub fn mycelium_vsa::mapb::MapB::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::mapb::MapB
+impl core::marker::StructuralPartialEq for mycelium_vsa::mapb::MapB
+impl mycelium_vsa::VsaModel for mycelium_vsa::mapb::MapB
+pub fn mycelium_vsa::mapb::MapB::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::mapb::MapB::model_id(&self) -> &'static str
+pub fn mycelium_vsa::mapb::MapB::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::self_inverse(&self) -> bool
+pub fn mycelium_vsa::mapb::MapB::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::mapb::MapB::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl core::marker::Freeze for mycelium_vsa::mapb::MapB
+impl core::marker::Send for mycelium_vsa::mapb::MapB
+impl core::marker::Sync for mycelium_vsa::mapb::MapB
+impl core::marker::Unpin for mycelium_vsa::mapb::MapB
+impl core::marker::UnsafeUnpin for mycelium_vsa::mapb::MapB
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::mapb::MapB
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::mapb::MapB
+pub struct mycelium_vsa::MapI
+pub mycelium_vsa::MapI::dim: u32
+impl mycelium_vsa::mapi::MapI
+pub fn mycelium_vsa::mapi::MapI::bind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::bundle_values_certified(&self, &[&mycelium_core::value::Value], f64) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::new(u32) -> Self
+pub fn mycelium_vsa::mapi::MapI::permute_value(&self, &mycelium_core::value::Value, i64) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::unbind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::mapi::MapI
+pub fn mycelium_vsa::mapi::MapI::clone(&self) -> mycelium_vsa::mapi::MapI
+impl core::cmp::Eq for mycelium_vsa::mapi::MapI
+impl core::cmp::PartialEq for mycelium_vsa::mapi::MapI
+pub fn mycelium_vsa::mapi::MapI::eq(&self, &mycelium_vsa::mapi::MapI) -> bool
+impl core::fmt::Debug for mycelium_vsa::mapi::MapI
+pub fn mycelium_vsa::mapi::MapI::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::mapi::MapI
+impl core::marker::StructuralPartialEq for mycelium_vsa::mapi::MapI
+impl mycelium_vsa::VsaModel for mycelium_vsa::mapi::MapI
+pub fn mycelium_vsa::mapi::MapI::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::mapi::MapI::model_id(&self) -> &'static str
+pub fn mycelium_vsa::mapi::MapI::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::self_inverse(&self) -> bool
+pub fn mycelium_vsa::mapi::MapI::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::mapi::MapI::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl core::marker::Freeze for mycelium_vsa::mapi::MapI
+impl core::marker::Send for mycelium_vsa::mapi::MapI
+impl core::marker::Sync for mycelium_vsa::mapi::MapI
+impl core::marker::Unpin for mycelium_vsa::mapi::MapI
+impl core::marker::UnsafeUnpin for mycelium_vsa::mapi::MapI
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::mapi::MapI
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::mapi::MapI
+pub struct mycelium_vsa::Match
+pub mycelium_vsa::Match::confidence: f64
+pub mycelium_vsa::Match::index: usize
+pub mycelium_vsa::Match::label: alloc::string::String
+pub mycelium_vsa::Match::margin: f64
+impl core::clone::Clone for mycelium_vsa::cleanup::Match
+pub fn mycelium_vsa::cleanup::Match::clone(&self) -> mycelium_vsa::cleanup::Match
+impl core::cmp::PartialEq for mycelium_vsa::cleanup::Match
+pub fn mycelium_vsa::cleanup::Match::eq(&self, &mycelium_vsa::cleanup::Match) -> bool
+impl core::fmt::Debug for mycelium_vsa::cleanup::Match
+pub fn mycelium_vsa::cleanup::Match::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::cleanup::Match
+impl core::marker::Freeze for mycelium_vsa::cleanup::Match
+impl core::marker::Send for mycelium_vsa::cleanup::Match
+impl core::marker::Sync for mycelium_vsa::cleanup::Match
+impl core::marker::Unpin for mycelium_vsa::cleanup::Match
+impl core::marker::UnsafeUnpin for mycelium_vsa::cleanup::Match
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::cleanup::Match
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::cleanup::Match
+pub struct mycelium_vsa::ResonatorParams
+pub mycelium_vsa::ResonatorParams::cleanup: mycelium_vsa::resonator::Cleanup
+pub mycelium_vsa::ResonatorParams::confidence_threshold: f64
+pub mycelium_vsa::ResonatorParams::history_window: usize
+pub mycelium_vsa::ResonatorParams::init: mycelium_vsa::resonator::Init
+pub mycelium_vsa::ResonatorParams::iteration_budget: u64
+pub mycelium_vsa::ResonatorParams::margin_threshold: f64
+pub mycelium_vsa::ResonatorParams::seed: u64
+pub mycelium_vsa::ResonatorParams::tau_lock: f64
+impl mycelium_vsa::resonator::ResonatorParams
+pub fn mycelium_vsa::resonator::ResonatorParams::mapi_default(u64, u64) -> Self
+impl core::clone::Clone for mycelium_vsa::resonator::ResonatorParams
+pub fn mycelium_vsa::resonator::ResonatorParams::clone(&self) -> mycelium_vsa::resonator::ResonatorParams
+impl core::cmp::PartialEq for mycelium_vsa::resonator::ResonatorParams
+pub fn mycelium_vsa::resonator::ResonatorParams::eq(&self, &mycelium_vsa::resonator::ResonatorParams) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::ResonatorParams
+pub fn mycelium_vsa::resonator::ResonatorParams::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::resonator::ResonatorParams
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::ResonatorParams
+impl core::marker::Freeze for mycelium_vsa::resonator::ResonatorParams
+impl core::marker::Send for mycelium_vsa::resonator::ResonatorParams
+impl core::marker::Sync for mycelium_vsa::resonator::ResonatorParams
+impl core::marker::Unpin for mycelium_vsa::resonator::ResonatorParams
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::ResonatorParams
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::ResonatorParams
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::ResonatorParams
+pub struct mycelium_vsa::ResonatorProfile
+pub mycelium_vsa::ResonatorProfile::delta: f64
+pub mycelium_vsa::ResonatorProfile::max_capacity: u128
+pub mycelium_vsa::ResonatorProfile::max_codebook: usize
+pub mycelium_vsa::ResonatorProfile::max_factors: usize
+pub mycelium_vsa::ResonatorProfile::method: &'static str
+pub mycelium_vsa::ResonatorProfile::min_dim: u32
+pub mycelium_vsa::ResonatorProfile::trials: u64
+impl mycelium_vsa::resonator::ResonatorProfile
+pub fn mycelium_vsa::resonator::ResonatorProfile::bound(&self) -> mycelium_core::bound::Bound
+pub fn mycelium_vsa::resonator::ResonatorProfile::check(&self, usize, &[usize], u32) -> core::result::Result<(), mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::resonator::ResonatorProfile
+pub fn mycelium_vsa::resonator::ResonatorProfile::clone(&self) -> mycelium_vsa::resonator::ResonatorProfile
+impl core::cmp::PartialEq for mycelium_vsa::resonator::ResonatorProfile
+pub fn mycelium_vsa::resonator::ResonatorProfile::eq(&self, &mycelium_vsa::resonator::ResonatorProfile) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::ResonatorProfile
+pub fn mycelium_vsa::resonator::ResonatorProfile::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::ResonatorProfile
+impl core::marker::Freeze for mycelium_vsa::resonator::ResonatorProfile
+impl core::marker::Send for mycelium_vsa::resonator::ResonatorProfile
+impl core::marker::Sync for mycelium_vsa::resonator::ResonatorProfile
+impl core::marker::Unpin for mycelium_vsa::resonator::ResonatorProfile
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::ResonatorProfile
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::ResonatorProfile
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::ResonatorProfile
+pub struct mycelium_vsa::ResonatorTrace
+pub mycelium_vsa::ResonatorTrace::final_decode: alloc::vec::Vec<mycelium_vsa::cleanup::Match>
+pub mycelium_vsa::ResonatorTrace::iterations: u64
+pub mycelium_vsa::ResonatorTrace::stop: mycelium_vsa::resonator::StopReason
+pub mycelium_vsa::ResonatorTrace::trajectory: alloc::vec::Vec<mycelium_vsa::resonator::IterationRecord>
+impl core::clone::Clone for mycelium_vsa::resonator::ResonatorTrace
+pub fn mycelium_vsa::resonator::ResonatorTrace::clone(&self) -> mycelium_vsa::resonator::ResonatorTrace
+impl core::cmp::PartialEq for mycelium_vsa::resonator::ResonatorTrace
+pub fn mycelium_vsa::resonator::ResonatorTrace::eq(&self, &mycelium_vsa::resonator::ResonatorTrace) -> bool
+impl core::fmt::Debug for mycelium_vsa::resonator::ResonatorTrace
+pub fn mycelium_vsa::resonator::ResonatorTrace::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa::resonator::ResonatorTrace
+impl core::marker::Freeze for mycelium_vsa::resonator::ResonatorTrace
+impl core::marker::Send for mycelium_vsa::resonator::ResonatorTrace
+impl core::marker::Sync for mycelium_vsa::resonator::ResonatorTrace
+impl core::marker::Unpin for mycelium_vsa::resonator::ResonatorTrace
+impl core::marker::UnsafeUnpin for mycelium_vsa::resonator::ResonatorTrace
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::resonator::ResonatorTrace
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::resonator::ResonatorTrace
+pub struct mycelium_vsa::Sbc
+pub mycelium_vsa::Sbc::block_len: u32
+pub mycelium_vsa::Sbc::blocks: u32
+impl mycelium_vsa::sbc::Sbc
+pub fn mycelium_vsa::sbc::Sbc::bind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::dim(&self) -> u32
+pub fn mycelium_vsa::sbc::Sbc::new(u32, u32) -> Self
+pub fn mycelium_vsa::sbc::Sbc::repr(&self) -> mycelium_core::repr::Repr
+pub fn mycelium_vsa::sbc::Sbc::unbind_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::value(&self, &[u32]) -> core::result::Result<mycelium_core::value::Value, mycelium_vsa::VsaError>
+impl core::clone::Clone for mycelium_vsa::sbc::Sbc
+pub fn mycelium_vsa::sbc::Sbc::clone(&self) -> mycelium_vsa::sbc::Sbc
+impl core::cmp::Eq for mycelium_vsa::sbc::Sbc
+impl core::cmp::PartialEq for mycelium_vsa::sbc::Sbc
+pub fn mycelium_vsa::sbc::Sbc::eq(&self, &mycelium_vsa::sbc::Sbc) -> bool
+impl core::fmt::Debug for mycelium_vsa::sbc::Sbc
+pub fn mycelium_vsa::sbc::Sbc::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_vsa::sbc::Sbc
+impl core::marker::StructuralPartialEq for mycelium_vsa::sbc::Sbc
+impl mycelium_vsa::VsaModel for mycelium_vsa::sbc::Sbc
+pub fn mycelium_vsa::sbc::Sbc::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::sbc::Sbc::model_id(&self) -> &'static str
+pub fn mycelium_vsa::sbc::Sbc::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::self_inverse(&self) -> bool
+pub fn mycelium_vsa::sbc::Sbc::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::sbc::Sbc::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl core::marker::Freeze for mycelium_vsa::sbc::Sbc
+impl core::marker::Send for mycelium_vsa::sbc::Sbc
+impl core::marker::Sync for mycelium_vsa::sbc::Sbc
+impl core::marker::Unpin for mycelium_vsa::sbc::Sbc
+impl core::marker::UnsafeUnpin for mycelium_vsa::sbc::Sbc
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::sbc::Sbc
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::sbc::Sbc
+pub const mycelium_vsa::DEFAULT_ENUM_BUDGET: u128
+pub const mycelium_vsa::MAPI_RESONATOR_PROFILE: mycelium_vsa::resonator::ResonatorProfile
+pub const mycelium_vsa::RFC0003_MATRIX: &[(&str, mycelium_vsa::VsaOp, mycelium_core::guarantee::GuaranteeStrength)]
+pub trait mycelium_vsa::VsaModel
+pub fn mycelium_vsa::VsaModel::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::VsaModel::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::VsaModel::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::VsaModel::model_id(&self) -> &'static str
+pub fn mycelium_vsa::VsaModel::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::VsaModel::self_inverse(&self) -> bool
+pub fn mycelium_vsa::VsaModel::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::VsaModel::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::VsaModel::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl mycelium_vsa::VsaModel for mycelium_vsa::bsc::Bsc
+pub fn mycelium_vsa::bsc::Bsc::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::bsc::Bsc::model_id(&self) -> &'static str
+pub fn mycelium_vsa::bsc::Bsc::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::self_inverse(&self) -> bool
+pub fn mycelium_vsa::bsc::Bsc::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::bsc::Bsc::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::bsc::Bsc::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl mycelium_vsa::VsaModel for mycelium_vsa::fhrr::Fhrr
+pub fn mycelium_vsa::fhrr::Fhrr::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::fhrr::Fhrr::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::fhrr::Fhrr::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::fhrr::Fhrr::model_id(&self) -> &'static str
+pub fn mycelium_vsa::fhrr::Fhrr::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::fhrr::Fhrr::self_inverse(&self) -> bool
+pub fn mycelium_vsa::fhrr::Fhrr::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::fhrr::Fhrr::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::fhrr::Fhrr::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl mycelium_vsa::VsaModel for mycelium_vsa::hrr::Hrr
+pub fn mycelium_vsa::hrr::Hrr::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::hrr::Hrr::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::hrr::Hrr::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::hrr::Hrr::model_id(&self) -> &'static str
+pub fn mycelium_vsa::hrr::Hrr::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::hrr::Hrr::self_inverse(&self) -> bool
+pub fn mycelium_vsa::hrr::Hrr::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::hrr::Hrr::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::hrr::Hrr::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl mycelium_vsa::VsaModel for mycelium_vsa::mapb::MapB
+pub fn mycelium_vsa::mapb::MapB::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::mapb::MapB::model_id(&self) -> &'static str
+pub fn mycelium_vsa::mapb::MapB::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::self_inverse(&self) -> bool
+pub fn mycelium_vsa::mapb::MapB::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::mapb::MapB::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapb::MapB::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl mycelium_vsa::VsaModel for mycelium_vsa::mapi::MapI
+pub fn mycelium_vsa::mapi::MapI::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::mapi::MapI::model_id(&self) -> &'static str
+pub fn mycelium_vsa::mapi::MapI::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::self_inverse(&self) -> bool
+pub fn mycelium_vsa::mapi::MapI::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::mapi::MapI::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::mapi::MapI::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+impl mycelium_vsa::VsaModel for mycelium_vsa::sbc::Sbc
+pub fn mycelium_vsa::sbc::Sbc::bind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::bundle(&self, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::intrinsic_guarantee(&self, mycelium_vsa::VsaOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_vsa::sbc::Sbc::model_id(&self) -> &'static str
+pub fn mycelium_vsa::sbc::Sbc::permute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::self_inverse(&self) -> bool
+pub fn mycelium_vsa::sbc::Sbc::similarity(&self, &[f64], &[f64]) -> f64
+pub fn mycelium_vsa::sbc::Sbc::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::sbc::Sbc::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::decode_method_policy(u128) -> mycelium_select::SelectionPolicy
+pub fn mycelium_vsa::explain_decode_method<M: mycelium_vsa::VsaModel>(&M, &[usize], u32, u128) -> mycelium_select::Explanation
+pub fn mycelium_vsa::factorize<M: mycelium_vsa::VsaModel>(&M, &[f64], &[mycelium_vsa::cleanup::CleanupMemory], &mycelium_vsa::resonator::ResonatorParams) -> core::result::Result<mycelium_vsa::resonator::Factorization, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::matrix_tag(&str, mycelium_vsa::VsaOp) -> core::option::Option<mycelium_core::guarantee::GuaranteeStrength>
+pub fn mycelium_vsa::reconstruct_factors<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &[mycelium_vsa::cleanup::CleanupMemory]) -> core::result::Result<mycelium_vsa::resonator::Factorization, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::reconstruct_factors_auto<M: mycelium_vsa::VsaModel>(&M, &[f64], &[mycelium_vsa::cleanup::CleanupMemory], &mycelium_vsa::resonator::ResonatorParams, u128, core::option::Option<mycelium_select::DecodeMethod>) -> core::result::Result<mycelium_vsa::decode_select::DecodeSelection, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::reconstruct_factors_selected<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &[mycelium_vsa::cleanup::CleanupMemory], u128, core::option::Option<mycelium_select::DecodeMethod>) -> core::result::Result<mycelium_vsa::decode_select::DecodeSelection, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::reconstruct_role<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &str, &mycelium_core::value::Value, &mycelium_vsa::cleanup::CleanupMemory) -> core::result::Result<mycelium_vsa::cleanup::Match, mycelium_vsa::VsaError>

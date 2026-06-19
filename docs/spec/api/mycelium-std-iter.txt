@@ -1,0 +1,280 @@
+pub mod mycelium_std_iter
+pub use mycelium_std_iter::GuaranteeStrength
+pub mod mycelium_std_iter::error
+pub struct mycelium_std_iter::error::ZeroStep
+impl core::clone::Clone for mycelium_std_iter::error::ZeroStep
+pub fn mycelium_std_iter::error::ZeroStep::clone(&self) -> mycelium_std_iter::error::ZeroStep
+impl core::cmp::Eq for mycelium_std_iter::error::ZeroStep
+impl core::cmp::PartialEq for mycelium_std_iter::error::ZeroStep
+pub fn mycelium_std_iter::error::ZeroStep::eq(&self, &mycelium_std_iter::error::ZeroStep) -> bool
+impl core::error::Error for mycelium_std_iter::error::ZeroStep
+impl core::fmt::Debug for mycelium_std_iter::error::ZeroStep
+pub fn mycelium_std_iter::error::ZeroStep::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_iter::error::ZeroStep
+pub fn mycelium_std_iter::error::ZeroStep::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_iter::error::ZeroStep
+impl core::marker::StructuralPartialEq for mycelium_std_iter::error::ZeroStep
+impl core::marker::Freeze for mycelium_std_iter::error::ZeroStep
+impl core::marker::Send for mycelium_std_iter::error::ZeroStep
+impl core::marker::Sync for mycelium_std_iter::error::ZeroStep
+impl core::marker::Unpin for mycelium_std_iter::error::ZeroStep
+impl core::marker::UnsafeUnpin for mycelium_std_iter::error::ZeroStep
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_iter::error::ZeroStep
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_iter::error::ZeroStep
+pub struct mycelium_std_iter::error::ZipLengthMismatch
+pub mycelium_std_iter::error::ZipLengthMismatch::left_len: usize
+pub mycelium_std_iter::error::ZipLengthMismatch::right_len: usize
+impl core::clone::Clone for mycelium_std_iter::error::ZipLengthMismatch
+pub fn mycelium_std_iter::error::ZipLengthMismatch::clone(&self) -> mycelium_std_iter::error::ZipLengthMismatch
+impl core::cmp::Eq for mycelium_std_iter::error::ZipLengthMismatch
+impl core::cmp::PartialEq for mycelium_std_iter::error::ZipLengthMismatch
+pub fn mycelium_std_iter::error::ZipLengthMismatch::eq(&self, &mycelium_std_iter::error::ZipLengthMismatch) -> bool
+impl core::error::Error for mycelium_std_iter::error::ZipLengthMismatch
+impl core::fmt::Debug for mycelium_std_iter::error::ZipLengthMismatch
+pub fn mycelium_std_iter::error::ZipLengthMismatch::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_iter::error::ZipLengthMismatch
+pub fn mycelium_std_iter::error::ZipLengthMismatch::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_iter::error::ZipLengthMismatch
+impl core::marker::StructuralPartialEq for mycelium_std_iter::error::ZipLengthMismatch
+impl core::marker::Freeze for mycelium_std_iter::error::ZipLengthMismatch
+impl core::marker::Send for mycelium_std_iter::error::ZipLengthMismatch
+impl core::marker::Sync for mycelium_std_iter::error::ZipLengthMismatch
+impl core::marker::Unpin for mycelium_std_iter::error::ZipLengthMismatch
+impl core::marker::UnsafeUnpin for mycelium_std_iter::error::ZipLengthMismatch
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_iter::error::ZipLengthMismatch
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_iter::error::ZipLengthMismatch
+pub mod mycelium_std_iter::foldable
+pub struct mycelium_std_iter::foldable::Foldable<E>
+impl<E> mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::foldable::Foldable<E>::as_slice(&self) -> &[E]
+pub fn mycelium_std_iter::foldable::Foldable<E>::empty() -> Self
+pub fn mycelium_std_iter::foldable::Foldable<E>::from_vec(alloc::vec::Vec<E>) -> Self
+pub fn mycelium_std_iter::foldable::Foldable<E>::into_vec(self) -> alloc::vec::Vec<E>
+pub fn mycelium_std_iter::foldable::Foldable<E>::is_empty(&self) -> bool
+pub fn mycelium_std_iter::foldable::Foldable<E>::len(&self) -> usize
+impl<E: core::clone::Clone> core::clone::Clone for mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::foldable::Foldable<E>::clone(&self) -> mycelium_std_iter::foldable::Foldable<E>
+impl<E: core::cmp::Eq> core::cmp::Eq for mycelium_std_iter::foldable::Foldable<E>
+impl<E: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::foldable::Foldable<E>::eq(&self, &mycelium_std_iter::foldable::Foldable<E>) -> bool
+impl<E: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_iter::foldable::Foldable<E>
+impl<E: core::fmt::Debug> core::fmt::Debug for mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::foldable::Foldable<E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<E> core::marker::Freeze for mycelium_std_iter::foldable::Foldable<E>
+impl<E> core::marker::Send for mycelium_std_iter::foldable::Foldable<E> where E: core::marker::Send
+impl<E> core::marker::Sync for mycelium_std_iter::foldable::Foldable<E> where E: core::marker::Sync
+impl<E> core::marker::Unpin for mycelium_std_iter::foldable::Foldable<E> where E: core::marker::Unpin
+impl<E> core::marker::UnsafeUnpin for mycelium_std_iter::foldable::Foldable<E>
+impl<E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_iter::foldable::Foldable<E> where E: core::panic::unwind_safe::RefUnwindSafe
+impl<E> core::panic::unwind_safe::UnwindSafe for mycelium_std_iter::foldable::Foldable<E> where E: core::panic::unwind_safe::UnwindSafe
+pub mod mycelium_std_iter::guarantee_matrix
+pub struct mycelium_std_iter::guarantee_matrix::GuaranteeRow
+pub mycelium_std_iter::guarantee_matrix::GuaranteeRow::effects: &'static str
+pub mycelium_std_iter::guarantee_matrix::GuaranteeRow::explainable: bool
+pub mycelium_std_iter::guarantee_matrix::GuaranteeRow::fallibility: &'static str
+pub mycelium_std_iter::guarantee_matrix::GuaranteeRow::op: &'static str
+pub mycelium_std_iter::guarantee_matrix::GuaranteeRow::tag: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_std_iter::guarantee_matrix::GuaranteeRow::totality_preserving: bool
+impl core::clone::Clone for mycelium_std_iter::guarantee_matrix::GuaranteeRow
+pub fn mycelium_std_iter::guarantee_matrix::GuaranteeRow::clone(&self) -> mycelium_std_iter::guarantee_matrix::GuaranteeRow
+impl core::cmp::Eq for mycelium_std_iter::guarantee_matrix::GuaranteeRow
+impl core::cmp::PartialEq for mycelium_std_iter::guarantee_matrix::GuaranteeRow
+pub fn mycelium_std_iter::guarantee_matrix::GuaranteeRow::eq(&self, &mycelium_std_iter::guarantee_matrix::GuaranteeRow) -> bool
+impl core::fmt::Debug for mycelium_std_iter::guarantee_matrix::GuaranteeRow
+pub fn mycelium_std_iter::guarantee_matrix::GuaranteeRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_iter::guarantee_matrix::GuaranteeRow
+impl core::marker::StructuralPartialEq for mycelium_std_iter::guarantee_matrix::GuaranteeRow
+impl core::marker::Freeze for mycelium_std_iter::guarantee_matrix::GuaranteeRow
+impl core::marker::Send for mycelium_std_iter::guarantee_matrix::GuaranteeRow
+impl core::marker::Sync for mycelium_std_iter::guarantee_matrix::GuaranteeRow
+impl core::marker::Unpin for mycelium_std_iter::guarantee_matrix::GuaranteeRow
+impl core::marker::UnsafeUnpin for mycelium_std_iter::guarantee_matrix::GuaranteeRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_iter::guarantee_matrix::GuaranteeRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_iter::guarantee_matrix::GuaranteeRow
+pub const mycelium_std_iter::guarantee_matrix::MATRIX: &[mycelium_std_iter::guarantee_matrix::GuaranteeRow]
+pub mod mycelium_std_iter::lazy
+pub struct mycelium_std_iter::lazy::Lazy<E>
+impl<E: 'static> mycelium_std_iter::lazy::Lazy<E>
+pub fn mycelium_std_iter::lazy::Lazy<E>::take(self, usize) -> mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::lazy::Lazy<E>::unfold<S: 'static>(S, impl core::ops::function::FnMut(S) -> core::option::Option<(E, S)> + 'static) -> Self
+impl<E> core::marker::Freeze for mycelium_std_iter::lazy::Lazy<E>
+impl<E> !core::marker::Send for mycelium_std_iter::lazy::Lazy<E>
+impl<E> !core::marker::Sync for mycelium_std_iter::lazy::Lazy<E>
+impl<E> core::marker::Unpin for mycelium_std_iter::lazy::Lazy<E>
+impl<E> core::marker::UnsafeUnpin for mycelium_std_iter::lazy::Lazy<E>
+impl<E> !core::panic::unwind_safe::RefUnwindSafe for mycelium_std_iter::lazy::Lazy<E>
+impl<E> !core::panic::unwind_safe::UnwindSafe for mycelium_std_iter::lazy::Lazy<E>
+pub mod mycelium_std_iter::transducer
+pub struct mycelium_std_iter::transducer::Transducer<E, F>
+impl<E: 'static, F: 'static> mycelium_std_iter::transducer::Transducer<E, F>
+pub fn mycelium_std_iter::transducer::Transducer<E, F>::compose<G: 'static>(self, mycelium_std_iter::transducer::Transducer<F, G>) -> mycelium_std_iter::transducer::Transducer<E, G>
+pub fn mycelium_std_iter::transducer::Transducer<E, F>::describe(&self) -> &str
+pub fn mycelium_std_iter::transducer::Transducer<E, F>::new(impl core::convert::Into<alloc::string::String>, impl core::ops::function::Fn(alloc::vec::Vec<E>) -> alloc::vec::Vec<F> + 'static) -> Self
+impl<E: 'static, F: 'static> mycelium_std_iter::transducer::Transducer<E, F>
+pub fn mycelium_std_iter::transducer::Transducer<E, F>::map(impl core::ops::function::Fn(E) -> F + 'static) -> mycelium_std_iter::transducer::Transducer<E, F>
+impl<E: 'static> mycelium_std_iter::transducer::Transducer<E, E>
+pub fn mycelium_std_iter::transducer::Transducer<E, E>::filter(impl core::ops::function::Fn(&E) -> bool + 'static) -> mycelium_std_iter::transducer::Transducer<E, E>
+impl<E, F> core::marker::Freeze for mycelium_std_iter::transducer::Transducer<E, F>
+impl<E, F> !core::marker::Send for mycelium_std_iter::transducer::Transducer<E, F>
+impl<E, F> !core::marker::Sync for mycelium_std_iter::transducer::Transducer<E, F>
+impl<E, F> core::marker::Unpin for mycelium_std_iter::transducer::Transducer<E, F>
+impl<E, F> core::marker::UnsafeUnpin for mycelium_std_iter::transducer::Transducer<E, F>
+impl<E, F> !core::panic::unwind_safe::RefUnwindSafe for mycelium_std_iter::transducer::Transducer<E, F>
+impl<E, F> !core::panic::unwind_safe::UnwindSafe for mycelium_std_iter::transducer::Transducer<E, F>
+pub mod mycelium_std_iter::zip_outcome
+pub struct mycelium_std_iter::zip_outcome::ZipOutcome
+impl mycelium_std_iter::zip_outcome::ZipOutcome
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::left_excess(&self) -> usize
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::left_len(&self) -> usize
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::result_len(&self) -> usize
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::right_excess(&self) -> usize
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::right_len(&self) -> usize
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::was_truncated(&self) -> bool
+impl core::clone::Clone for mycelium_std_iter::zip_outcome::ZipOutcome
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::clone(&self) -> mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::cmp::Eq for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::cmp::PartialEq for mycelium_std_iter::zip_outcome::ZipOutcome
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::eq(&self, &mycelium_std_iter::zip_outcome::ZipOutcome) -> bool
+impl core::fmt::Debug for mycelium_std_iter::zip_outcome::ZipOutcome
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::marker::StructuralPartialEq for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::marker::Freeze for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::marker::Send for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::marker::Sync for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::marker::Unpin for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::marker::UnsafeUnpin for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_iter::zip_outcome::ZipOutcome
+pub struct mycelium_std_iter::AnyAllWitness
+pub mycelium_std_iter::AnyAllWitness::first_match: core::option::Option<usize>
+impl core::clone::Clone for mycelium_std_iter::AnyAllWitness
+pub fn mycelium_std_iter::AnyAllWitness::clone(&self) -> mycelium_std_iter::AnyAllWitness
+impl core::cmp::Eq for mycelium_std_iter::AnyAllWitness
+impl core::cmp::PartialEq for mycelium_std_iter::AnyAllWitness
+pub fn mycelium_std_iter::AnyAllWitness::eq(&self, &mycelium_std_iter::AnyAllWitness) -> bool
+impl core::fmt::Debug for mycelium_std_iter::AnyAllWitness
+pub fn mycelium_std_iter::AnyAllWitness::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_iter::AnyAllWitness
+impl core::marker::StructuralPartialEq for mycelium_std_iter::AnyAllWitness
+impl core::marker::Freeze for mycelium_std_iter::AnyAllWitness
+impl core::marker::Send for mycelium_std_iter::AnyAllWitness
+impl core::marker::Sync for mycelium_std_iter::AnyAllWitness
+impl core::marker::Unpin for mycelium_std_iter::AnyAllWitness
+impl core::marker::UnsafeUnpin for mycelium_std_iter::AnyAllWitness
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_iter::AnyAllWitness
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_iter::AnyAllWitness
+pub struct mycelium_std_iter::Foldable<E>
+impl<E> mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::foldable::Foldable<E>::as_slice(&self) -> &[E]
+pub fn mycelium_std_iter::foldable::Foldable<E>::empty() -> Self
+pub fn mycelium_std_iter::foldable::Foldable<E>::from_vec(alloc::vec::Vec<E>) -> Self
+pub fn mycelium_std_iter::foldable::Foldable<E>::into_vec(self) -> alloc::vec::Vec<E>
+pub fn mycelium_std_iter::foldable::Foldable<E>::is_empty(&self) -> bool
+pub fn mycelium_std_iter::foldable::Foldable<E>::len(&self) -> usize
+impl<E: core::clone::Clone> core::clone::Clone for mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::foldable::Foldable<E>::clone(&self) -> mycelium_std_iter::foldable::Foldable<E>
+impl<E: core::cmp::Eq> core::cmp::Eq for mycelium_std_iter::foldable::Foldable<E>
+impl<E: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::foldable::Foldable<E>::eq(&self, &mycelium_std_iter::foldable::Foldable<E>) -> bool
+impl<E: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_iter::foldable::Foldable<E>
+impl<E: core::fmt::Debug> core::fmt::Debug for mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::foldable::Foldable<E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<E> core::marker::Freeze for mycelium_std_iter::foldable::Foldable<E>
+impl<E> core::marker::Send for mycelium_std_iter::foldable::Foldable<E> where E: core::marker::Send
+impl<E> core::marker::Sync for mycelium_std_iter::foldable::Foldable<E> where E: core::marker::Sync
+impl<E> core::marker::Unpin for mycelium_std_iter::foldable::Foldable<E> where E: core::marker::Unpin
+impl<E> core::marker::UnsafeUnpin for mycelium_std_iter::foldable::Foldable<E>
+impl<E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_iter::foldable::Foldable<E> where E: core::panic::unwind_safe::RefUnwindSafe
+impl<E> core::panic::unwind_safe::UnwindSafe for mycelium_std_iter::foldable::Foldable<E> where E: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_iter::Lazy<E>
+impl<E: 'static> mycelium_std_iter::lazy::Lazy<E>
+pub fn mycelium_std_iter::lazy::Lazy<E>::take(self, usize) -> mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::lazy::Lazy<E>::unfold<S: 'static>(S, impl core::ops::function::FnMut(S) -> core::option::Option<(E, S)> + 'static) -> Self
+impl<E> core::marker::Freeze for mycelium_std_iter::lazy::Lazy<E>
+impl<E> !core::marker::Send for mycelium_std_iter::lazy::Lazy<E>
+impl<E> !core::marker::Sync for mycelium_std_iter::lazy::Lazy<E>
+impl<E> core::marker::Unpin for mycelium_std_iter::lazy::Lazy<E>
+impl<E> core::marker::UnsafeUnpin for mycelium_std_iter::lazy::Lazy<E>
+impl<E> !core::panic::unwind_safe::RefUnwindSafe for mycelium_std_iter::lazy::Lazy<E>
+impl<E> !core::panic::unwind_safe::UnwindSafe for mycelium_std_iter::lazy::Lazy<E>
+pub struct mycelium_std_iter::Transducer<E, F>
+impl<E: 'static, F: 'static> mycelium_std_iter::transducer::Transducer<E, F>
+pub fn mycelium_std_iter::transducer::Transducer<E, F>::compose<G: 'static>(self, mycelium_std_iter::transducer::Transducer<F, G>) -> mycelium_std_iter::transducer::Transducer<E, G>
+pub fn mycelium_std_iter::transducer::Transducer<E, F>::describe(&self) -> &str
+pub fn mycelium_std_iter::transducer::Transducer<E, F>::new(impl core::convert::Into<alloc::string::String>, impl core::ops::function::Fn(alloc::vec::Vec<E>) -> alloc::vec::Vec<F> + 'static) -> Self
+impl<E: 'static, F: 'static> mycelium_std_iter::transducer::Transducer<E, F>
+pub fn mycelium_std_iter::transducer::Transducer<E, F>::map(impl core::ops::function::Fn(E) -> F + 'static) -> mycelium_std_iter::transducer::Transducer<E, F>
+impl<E: 'static> mycelium_std_iter::transducer::Transducer<E, E>
+pub fn mycelium_std_iter::transducer::Transducer<E, E>::filter(impl core::ops::function::Fn(&E) -> bool + 'static) -> mycelium_std_iter::transducer::Transducer<E, E>
+impl<E, F> core::marker::Freeze for mycelium_std_iter::transducer::Transducer<E, F>
+impl<E, F> !core::marker::Send for mycelium_std_iter::transducer::Transducer<E, F>
+impl<E, F> !core::marker::Sync for mycelium_std_iter::transducer::Transducer<E, F>
+impl<E, F> core::marker::Unpin for mycelium_std_iter::transducer::Transducer<E, F>
+impl<E, F> core::marker::UnsafeUnpin for mycelium_std_iter::transducer::Transducer<E, F>
+impl<E, F> !core::panic::unwind_safe::RefUnwindSafe for mycelium_std_iter::transducer::Transducer<E, F>
+impl<E, F> !core::panic::unwind_safe::UnwindSafe for mycelium_std_iter::transducer::Transducer<E, F>
+pub struct mycelium_std_iter::ZeroStep
+impl core::clone::Clone for mycelium_std_iter::error::ZeroStep
+pub fn mycelium_std_iter::error::ZeroStep::clone(&self) -> mycelium_std_iter::error::ZeroStep
+impl core::cmp::Eq for mycelium_std_iter::error::ZeroStep
+impl core::cmp::PartialEq for mycelium_std_iter::error::ZeroStep
+pub fn mycelium_std_iter::error::ZeroStep::eq(&self, &mycelium_std_iter::error::ZeroStep) -> bool
+impl core::error::Error for mycelium_std_iter::error::ZeroStep
+impl core::fmt::Debug for mycelium_std_iter::error::ZeroStep
+pub fn mycelium_std_iter::error::ZeroStep::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_iter::error::ZeroStep
+pub fn mycelium_std_iter::error::ZeroStep::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_iter::error::ZeroStep
+impl core::marker::StructuralPartialEq for mycelium_std_iter::error::ZeroStep
+impl core::marker::Freeze for mycelium_std_iter::error::ZeroStep
+impl core::marker::Send for mycelium_std_iter::error::ZeroStep
+impl core::marker::Sync for mycelium_std_iter::error::ZeroStep
+impl core::marker::Unpin for mycelium_std_iter::error::ZeroStep
+impl core::marker::UnsafeUnpin for mycelium_std_iter::error::ZeroStep
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_iter::error::ZeroStep
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_iter::error::ZeroStep
+pub struct mycelium_std_iter::ZipOutcome
+impl mycelium_std_iter::zip_outcome::ZipOutcome
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::left_excess(&self) -> usize
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::left_len(&self) -> usize
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::result_len(&self) -> usize
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::right_excess(&self) -> usize
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::right_len(&self) -> usize
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::was_truncated(&self) -> bool
+impl core::clone::Clone for mycelium_std_iter::zip_outcome::ZipOutcome
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::clone(&self) -> mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::cmp::Eq for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::cmp::PartialEq for mycelium_std_iter::zip_outcome::ZipOutcome
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::eq(&self, &mycelium_std_iter::zip_outcome::ZipOutcome) -> bool
+impl core::fmt::Debug for mycelium_std_iter::zip_outcome::ZipOutcome
+pub fn mycelium_std_iter::zip_outcome::ZipOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::marker::StructuralPartialEq for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::marker::Freeze for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::marker::Send for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::marker::Sync for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::marker::Unpin for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::marker::UnsafeUnpin for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_iter::zip_outcome::ZipOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_iter::zip_outcome::ZipOutcome
+pub fn mycelium_std_iter::all_with_witness<E>(mycelium_std_iter::foldable::Foldable<E>, impl core::ops::function::Fn(&E) -> bool) -> (bool, mycelium_std_iter::AnyAllWitness)
+pub fn mycelium_std_iter::any_with_witness<E>(mycelium_std_iter::foldable::Foldable<E>, impl core::ops::function::Fn(&E) -> bool) -> (bool, mycelium_std_iter::AnyAllWitness)
+pub fn mycelium_std_iter::chain<E>(mycelium_std_iter::foldable::Foldable<E>, mycelium_std_iter::foldable::Foldable<E>) -> mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::count<E>(mycelium_std_iter::foldable::Foldable<E>) -> usize
+pub fn mycelium_std_iter::enumerate<E>(mycelium_std_iter::foldable::Foldable<E>) -> mycelium_std_iter::foldable::Foldable<(usize, E)>
+pub fn mycelium_std_iter::filter<E>(mycelium_std_iter::foldable::Foldable<E>, impl core::ops::function::FnMut(&E) -> bool) -> mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::find<E: core::clone::Clone>(mycelium_std_iter::foldable::Foldable<E>, impl core::ops::function::Fn(&E) -> bool) -> core::option::Option<E>
+pub fn mycelium_std_iter::flat_map<E, F>(mycelium_std_iter::foldable::Foldable<E>, impl core::ops::function::FnMut(E) -> mycelium_std_iter::foldable::Foldable<F>) -> mycelium_std_iter::foldable::Foldable<F>
+pub fn mycelium_std_iter::fold<E, A>(mycelium_std_iter::foldable::Foldable<E>, A, impl core::ops::function::FnMut(A, E) -> A) -> A
+pub fn mycelium_std_iter::lazy_take<E: 'static>(mycelium_std_iter::lazy::Lazy<E>, usize) -> mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::map<E, F>(mycelium_std_iter::foldable::Foldable<E>, impl core::ops::function::FnMut(E) -> F) -> mycelium_std_iter::foldable::Foldable<F>
+pub fn mycelium_std_iter::position<E>(mycelium_std_iter::foldable::Foldable<E>, impl core::ops::function::Fn(&E) -> bool) -> core::option::Option<usize>
+pub fn mycelium_std_iter::reduce<E>(mycelium_std_iter::foldable::Foldable<E>, impl core::ops::function::FnMut(E, E) -> E) -> core::option::Option<E>
+pub fn mycelium_std_iter::scan<E: core::clone::Clone, A: core::clone::Clone>(mycelium_std_iter::foldable::Foldable<E>, A, impl core::ops::function::FnMut(A, E) -> A) -> mycelium_std_iter::foldable::Foldable<A>
+pub fn mycelium_std_iter::skip<E>(mycelium_std_iter::foldable::Foldable<E>, usize) -> mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::step_by<E>(mycelium_std_iter::foldable::Foldable<E>, usize) -> core::result::Result<mycelium_std_iter::foldable::Foldable<E>, mycelium_std_iter::error::ZeroStep>
+pub fn mycelium_std_iter::take<E>(mycelium_std_iter::foldable::Foldable<E>, usize) -> mycelium_std_iter::foldable::Foldable<E>
+pub fn mycelium_std_iter::transduce<E: 'static, F: 'static, A>(mycelium_std_iter::foldable::Foldable<E>, &mycelium_std_iter::transducer::Transducer<E, F>, A, impl core::ops::function::FnMut(A, F) -> A) -> A
+pub fn mycelium_std_iter::zip<E, F>(mycelium_std_iter::foldable::Foldable<E>, mycelium_std_iter::foldable::Foldable<F>) -> (mycelium_std_iter::foldable::Foldable<(E, F)>, mycelium_std_iter::zip_outcome::ZipOutcome)
+pub fn mycelium_std_iter::zip_exact<E, F>(mycelium_std_iter::foldable::Foldable<E>, mycelium_std_iter::foldable::Foldable<F>) -> core::result::Result<mycelium_std_iter::foldable::Foldable<(E, F)>, mycelium_std_iter::error::ZipLengthMismatch>

@@ -1,0 +1,433 @@
+pub mod mycelium_std_ternary
+pub mod mycelium_std_ternary::arithmetic
+pub fn mycelium_std_ternary::arithmetic::add(&[mycelium_std_ternary::primitives::Trit], &[mycelium_std_ternary::primitives::Trit]) -> core::option::Option<alloc::vec::Vec<mycelium_std_ternary::primitives::Trit>>
+pub fn mycelium_std_ternary::arithmetic::int_to_trits(i64, u32) -> core::option::Option<alloc::vec::Vec<mycelium_std_ternary::primitives::Trit>>
+pub fn mycelium_std_ternary::arithmetic::max_magnitude(u32) -> core::option::Option<i64>
+pub fn mycelium_std_ternary::arithmetic::mul(&[mycelium_std_ternary::primitives::Trit], &[mycelium_std_ternary::primitives::Trit]) -> core::option::Option<alloc::vec::Vec<mycelium_std_ternary::primitives::Trit>>
+pub fn mycelium_std_ternary::arithmetic::neg(&[mycelium_std_ternary::primitives::Trit]) -> alloc::vec::Vec<mycelium_std_ternary::primitives::Trit>
+pub fn mycelium_std_ternary::arithmetic::sub(&[mycelium_std_ternary::primitives::Trit], &[mycelium_std_ternary::primitives::Trit]) -> core::option::Option<alloc::vec::Vec<mycelium_std_ternary::primitives::Trit>>
+pub fn mycelium_std_ternary::arithmetic::trits_to_int(&[mycelium_std_ternary::primitives::Trit]) -> i64
+pub mod mycelium_std_ternary::guarantee_matrix
+pub enum mycelium_std_ternary::guarantee_matrix::Explainable
+pub mycelium_std_ternary::guarantee_matrix::Explainable::NotApplicable
+pub mycelium_std_ternary::guarantee_matrix::Explainable::Yes
+impl core::clone::Clone for mycelium_std_ternary::guarantee_matrix::Explainable
+pub fn mycelium_std_ternary::guarantee_matrix::Explainable::clone(&self) -> mycelium_std_ternary::guarantee_matrix::Explainable
+impl core::cmp::Eq for mycelium_std_ternary::guarantee_matrix::Explainable
+impl core::cmp::PartialEq for mycelium_std_ternary::guarantee_matrix::Explainable
+pub fn mycelium_std_ternary::guarantee_matrix::Explainable::eq(&self, &mycelium_std_ternary::guarantee_matrix::Explainable) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::guarantee_matrix::Explainable
+pub fn mycelium_std_ternary::guarantee_matrix::Explainable::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_ternary::guarantee_matrix::Explainable
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::guarantee_matrix::Explainable
+impl core::marker::Freeze for mycelium_std_ternary::guarantee_matrix::Explainable
+impl core::marker::Send for mycelium_std_ternary::guarantee_matrix::Explainable
+impl core::marker::Sync for mycelium_std_ternary::guarantee_matrix::Explainable
+impl core::marker::Unpin for mycelium_std_ternary::guarantee_matrix::Explainable
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::guarantee_matrix::Explainable
+pub enum mycelium_std_ternary::guarantee_matrix::Fallibility
+pub mycelium_std_ternary::guarantee_matrix::Fallibility::ErrOn(&'static str)
+pub mycelium_std_ternary::guarantee_matrix::Fallibility::NoneOnOffDomain(&'static str)
+pub mycelium_std_ternary::guarantee_matrix::Fallibility::Total
+impl core::clone::Clone for mycelium_std_ternary::guarantee_matrix::Fallibility
+pub fn mycelium_std_ternary::guarantee_matrix::Fallibility::clone(&self) -> mycelium_std_ternary::guarantee_matrix::Fallibility
+impl core::cmp::Eq for mycelium_std_ternary::guarantee_matrix::Fallibility
+impl core::cmp::PartialEq for mycelium_std_ternary::guarantee_matrix::Fallibility
+pub fn mycelium_std_ternary::guarantee_matrix::Fallibility::eq(&self, &mycelium_std_ternary::guarantee_matrix::Fallibility) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::guarantee_matrix::Fallibility
+pub fn mycelium_std_ternary::guarantee_matrix::Fallibility::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_ternary::guarantee_matrix::Fallibility
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::guarantee_matrix::Fallibility
+impl core::marker::Freeze for mycelium_std_ternary::guarantee_matrix::Fallibility
+impl core::marker::Send for mycelium_std_ternary::guarantee_matrix::Fallibility
+impl core::marker::Sync for mycelium_std_ternary::guarantee_matrix::Fallibility
+impl core::marker::Unpin for mycelium_std_ternary::guarantee_matrix::Fallibility
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::guarantee_matrix::Fallibility
+pub enum mycelium_std_ternary::guarantee_matrix::Tag
+pub mycelium_std_ternary::guarantee_matrix::Tag::Declared
+pub mycelium_std_ternary::guarantee_matrix::Tag::Empirical
+pub mycelium_std_ternary::guarantee_matrix::Tag::Exact
+pub mycelium_std_ternary::guarantee_matrix::Tag::Proven
+impl core::clone::Clone for mycelium_std_ternary::guarantee_matrix::Tag
+pub fn mycelium_std_ternary::guarantee_matrix::Tag::clone(&self) -> mycelium_std_ternary::guarantee_matrix::Tag
+impl core::cmp::Eq for mycelium_std_ternary::guarantee_matrix::Tag
+impl core::cmp::PartialEq for mycelium_std_ternary::guarantee_matrix::Tag
+pub fn mycelium_std_ternary::guarantee_matrix::Tag::eq(&self, &mycelium_std_ternary::guarantee_matrix::Tag) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::guarantee_matrix::Tag
+pub fn mycelium_std_ternary::guarantee_matrix::Tag::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_ternary::guarantee_matrix::Tag
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::guarantee_matrix::Tag
+impl core::marker::Freeze for mycelium_std_ternary::guarantee_matrix::Tag
+impl core::marker::Send for mycelium_std_ternary::guarantee_matrix::Tag
+impl core::marker::Sync for mycelium_std_ternary::guarantee_matrix::Tag
+impl core::marker::Unpin for mycelium_std_ternary::guarantee_matrix::Tag
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::guarantee_matrix::Tag
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::guarantee_matrix::Tag
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::guarantee_matrix::Tag
+pub struct mycelium_std_ternary::guarantee_matrix::OpGuarantee
+pub mycelium_std_ternary::guarantee_matrix::OpGuarantee::effects: &'static str
+pub mycelium_std_ternary::guarantee_matrix::OpGuarantee::explainable: mycelium_std_ternary::guarantee_matrix::Explainable
+pub mycelium_std_ternary::guarantee_matrix::OpGuarantee::fallibility: mycelium_std_ternary::guarantee_matrix::Fallibility
+pub mycelium_std_ternary::guarantee_matrix::OpGuarantee::op: &'static str
+pub mycelium_std_ternary::guarantee_matrix::OpGuarantee::tag: mycelium_std_ternary::guarantee_matrix::Tag
+impl core::clone::Clone for mycelium_std_ternary::guarantee_matrix::OpGuarantee
+pub fn mycelium_std_ternary::guarantee_matrix::OpGuarantee::clone(&self) -> mycelium_std_ternary::guarantee_matrix::OpGuarantee
+impl core::cmp::Eq for mycelium_std_ternary::guarantee_matrix::OpGuarantee
+impl core::cmp::PartialEq for mycelium_std_ternary::guarantee_matrix::OpGuarantee
+pub fn mycelium_std_ternary::guarantee_matrix::OpGuarantee::eq(&self, &mycelium_std_ternary::guarantee_matrix::OpGuarantee) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::guarantee_matrix::OpGuarantee
+pub fn mycelium_std_ternary::guarantee_matrix::OpGuarantee::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::guarantee_matrix::OpGuarantee
+impl core::marker::Freeze for mycelium_std_ternary::guarantee_matrix::OpGuarantee
+impl core::marker::Send for mycelium_std_ternary::guarantee_matrix::OpGuarantee
+impl core::marker::Sync for mycelium_std_ternary::guarantee_matrix::OpGuarantee
+impl core::marker::Unpin for mycelium_std_ternary::guarantee_matrix::OpGuarantee
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::guarantee_matrix::OpGuarantee
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::guarantee_matrix::OpGuarantee
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::guarantee_matrix::OpGuarantee
+pub const mycelium_std_ternary::guarantee_matrix::MATRIX: &[mycelium_std_ternary::guarantee_matrix::OpGuarantee]
+pub fn mycelium_std_ternary::guarantee_matrix::assert_matrix_invariants()
+pub mod mycelium_std_ternary::packing
+pub enum mycelium_std_ternary::packing::PackError
+pub mycelium_std_ternary::packing::PackError::Misaligned
+pub mycelium_std_ternary::packing::PackError::OffGrid
+impl core::clone::Clone for mycelium_std_ternary::packing::PackError
+pub fn mycelium_std_ternary::packing::PackError::clone(&self) -> mycelium_std_ternary::packing::PackError
+impl core::cmp::Eq for mycelium_std_ternary::packing::PackError
+impl core::cmp::PartialEq for mycelium_std_ternary::packing::PackError
+pub fn mycelium_std_ternary::packing::PackError::eq(&self, &mycelium_std_ternary::packing::PackError) -> bool
+impl core::error::Error for mycelium_std_ternary::packing::PackError
+impl core::fmt::Debug for mycelium_std_ternary::packing::PackError
+pub fn mycelium_std_ternary::packing::PackError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_ternary::packing::PackError
+pub fn mycelium_std_ternary::packing::PackError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_ternary::packing::PackError
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::packing::PackError
+impl core::marker::Freeze for mycelium_std_ternary::packing::PackError
+impl core::marker::Send for mycelium_std_ternary::packing::PackError
+impl core::marker::Sync for mycelium_std_ternary::packing::PackError
+impl core::marker::Unpin for mycelium_std_ternary::packing::PackError
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::packing::PackError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::packing::PackError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::packing::PackError
+pub enum mycelium_std_ternary::packing::Scheme
+pub mycelium_std_ternary::packing::Scheme::I2S
+pub mycelium_std_ternary::packing::Scheme::Tl1
+pub mycelium_std_ternary::packing::Scheme::Tl2
+impl mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::Scheme::group_size(self) -> usize
+pub fn mycelium_std_ternary::packing::Scheme::trits_per_byte(self) -> usize
+impl core::clone::Clone for mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::Scheme::clone(&self) -> mycelium_std_ternary::packing::Scheme
+impl core::cmp::Eq for mycelium_std_ternary::packing::Scheme
+impl core::cmp::PartialEq for mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::Scheme::eq(&self, &mycelium_std_ternary::packing::Scheme) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::Scheme::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::Scheme::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::Scheme::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_ternary::packing::Scheme
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::packing::Scheme
+impl core::marker::Freeze for mycelium_std_ternary::packing::Scheme
+impl core::marker::Send for mycelium_std_ternary::packing::Scheme
+impl core::marker::Sync for mycelium_std_ternary::packing::Scheme
+impl core::marker::Unpin for mycelium_std_ternary::packing::Scheme
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::packing::Scheme
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::packing::Scheme
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::packing::Scheme
+pub enum mycelium_std_ternary::packing::SelectionNote
+pub mycelium_std_ternary::packing::SelectionNote::ExplicitCaller
+impl core::clone::Clone for mycelium_std_ternary::packing::SelectionNote
+pub fn mycelium_std_ternary::packing::SelectionNote::clone(&self) -> mycelium_std_ternary::packing::SelectionNote
+impl core::cmp::Eq for mycelium_std_ternary::packing::SelectionNote
+impl core::cmp::PartialEq for mycelium_std_ternary::packing::SelectionNote
+pub fn mycelium_std_ternary::packing::SelectionNote::eq(&self, &mycelium_std_ternary::packing::SelectionNote) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::packing::SelectionNote
+pub fn mycelium_std_ternary::packing::SelectionNote::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::packing::SelectionNote
+impl core::marker::Freeze for mycelium_std_ternary::packing::SelectionNote
+impl core::marker::Send for mycelium_std_ternary::packing::SelectionNote
+impl core::marker::Sync for mycelium_std_ternary::packing::SelectionNote
+impl core::marker::Unpin for mycelium_std_ternary::packing::SelectionNote
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::packing::SelectionNote
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::packing::SelectionNote
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::packing::SelectionNote
+pub struct mycelium_std_ternary::packing::ExplainRecord
+pub mycelium_std_ternary::packing::ExplainRecord::byte_count: usize
+pub mycelium_std_ternary::packing::ExplainRecord::scheme: mycelium_std_ternary::packing::Scheme
+pub mycelium_std_ternary::packing::ExplainRecord::selection: mycelium_std_ternary::packing::SelectionNote
+pub mycelium_std_ternary::packing::ExplainRecord::trit_count: usize
+impl core::clone::Clone for mycelium_std_ternary::packing::ExplainRecord
+pub fn mycelium_std_ternary::packing::ExplainRecord::clone(&self) -> mycelium_std_ternary::packing::ExplainRecord
+impl core::cmp::Eq for mycelium_std_ternary::packing::ExplainRecord
+impl core::cmp::PartialEq for mycelium_std_ternary::packing::ExplainRecord
+pub fn mycelium_std_ternary::packing::ExplainRecord::eq(&self, &mycelium_std_ternary::packing::ExplainRecord) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::packing::ExplainRecord
+pub fn mycelium_std_ternary::packing::ExplainRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_ternary::packing::ExplainRecord
+pub fn mycelium_std_ternary::packing::ExplainRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::packing::ExplainRecord
+impl core::marker::Freeze for mycelium_std_ternary::packing::ExplainRecord
+impl core::marker::Send for mycelium_std_ternary::packing::ExplainRecord
+impl core::marker::Sync for mycelium_std_ternary::packing::ExplainRecord
+impl core::marker::Unpin for mycelium_std_ternary::packing::ExplainRecord
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::packing::ExplainRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::packing::ExplainRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::packing::ExplainRecord
+pub struct mycelium_std_ternary::packing::Packed
+impl mycelium_std_ternary::packing::Packed
+pub fn mycelium_std_ternary::packing::Packed::bytes(&self) -> &[u8]
+pub fn mycelium_std_ternary::packing::Packed::explain(&self) -> mycelium_std_ternary::packing::ExplainRecord
+pub fn mycelium_std_ternary::packing::Packed::scheme(&self) -> mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::Packed::trit_count(&self) -> usize
+impl core::clone::Clone for mycelium_std_ternary::packing::Packed
+pub fn mycelium_std_ternary::packing::Packed::clone(&self) -> mycelium_std_ternary::packing::Packed
+impl core::cmp::Eq for mycelium_std_ternary::packing::Packed
+impl core::cmp::PartialEq for mycelium_std_ternary::packing::Packed
+pub fn mycelium_std_ternary::packing::Packed::eq(&self, &mycelium_std_ternary::packing::Packed) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::packing::Packed
+pub fn mycelium_std_ternary::packing::Packed::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::packing::Packed
+impl core::marker::Freeze for mycelium_std_ternary::packing::Packed
+impl core::marker::Send for mycelium_std_ternary::packing::Packed
+impl core::marker::Sync for mycelium_std_ternary::packing::Packed
+impl core::marker::Unpin for mycelium_std_ternary::packing::Packed
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::packing::Packed
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::packing::Packed
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::packing::Packed
+pub fn mycelium_std_ternary::packing::explain(&mycelium_std_ternary::packing::Packed) -> mycelium_std_ternary::packing::ExplainRecord
+pub fn mycelium_std_ternary::packing::pack(&[mycelium_std_ternary::primitives::Trit], mycelium_std_ternary::packing::Scheme) -> core::result::Result<mycelium_std_ternary::packing::Packed, mycelium_std_ternary::packing::PackError>
+pub fn mycelium_std_ternary::packing::scheme_of(&mycelium_std_ternary::packing::Packed) -> mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::unpack(&mycelium_std_ternary::packing::Packed) -> alloc::vec::Vec<mycelium_std_ternary::primitives::Trit>
+pub mod mycelium_std_ternary::primitives
+pub enum mycelium_std_ternary::primitives::Bit
+pub mycelium_std_ternary::primitives::Bit::One
+pub mycelium_std_ternary::primitives::Bit::Zero
+impl mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::and(self, mycelium_std_ternary::primitives::Bit) -> mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::digit(self) -> i64
+pub fn mycelium_std_ternary::primitives::Bit::new(i64) -> core::option::Option<mycelium_std_ternary::primitives::Bit>
+pub fn mycelium_std_ternary::primitives::Bit::or(self, mycelium_std_ternary::primitives::Bit) -> mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::xor(self, mycelium_std_ternary::primitives::Bit) -> mycelium_std_ternary::primitives::Bit
+impl core::clone::Clone for mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::clone(&self) -> mycelium_std_ternary::primitives::Bit
+impl core::cmp::Eq for mycelium_std_ternary::primitives::Bit
+impl core::cmp::PartialEq for mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::eq(&self, &mycelium_std_ternary::primitives::Bit) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_ternary::primitives::Bit
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::primitives::Bit
+impl core::marker::Freeze for mycelium_std_ternary::primitives::Bit
+impl core::marker::Send for mycelium_std_ternary::primitives::Bit
+impl core::marker::Sync for mycelium_std_ternary::primitives::Bit
+impl core::marker::Unpin for mycelium_std_ternary::primitives::Bit
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::primitives::Bit
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::primitives::Bit
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::primitives::Bit
+pub enum mycelium_std_ternary::primitives::Trit
+pub mycelium_std_ternary::primitives::Trit::Neg
+pub mycelium_std_ternary::primitives::Trit::Pos
+pub mycelium_std_ternary::primitives::Trit::Zero
+impl mycelium_std_ternary::primitives::Trit
+pub fn mycelium_std_ternary::primitives::Trit::digit(self) -> i64
+pub fn mycelium_std_ternary::primitives::Trit::from_wire_char(char) -> core::option::Option<mycelium_std_ternary::primitives::Trit>
+pub fn mycelium_std_ternary::primitives::Trit::new(i64) -> core::option::Option<mycelium_std_ternary::primitives::Trit>
+pub fn mycelium_std_ternary::primitives::Trit::to_wire_char(self) -> char
+impl core::clone::Clone for mycelium_std_ternary::primitives::Trit
+pub fn mycelium_std_ternary::primitives::Trit::clone(&self) -> mycelium_std_ternary::primitives::Trit
+impl core::cmp::Eq for mycelium_std_ternary::primitives::Trit
+impl core::cmp::PartialEq for mycelium_std_ternary::primitives::Trit
+pub fn mycelium_std_ternary::primitives::Trit::eq(&self, &mycelium_std_ternary::primitives::Trit) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::primitives::Trit
+pub fn mycelium_std_ternary::primitives::Trit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_ternary::primitives::Trit
+pub fn mycelium_std_ternary::primitives::Trit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_ternary::primitives::Trit
+pub fn mycelium_std_ternary::primitives::Trit::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_ternary::primitives::Trit
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::primitives::Trit
+impl core::ops::arith::Neg for mycelium_std_ternary::primitives::Trit
+pub type mycelium_std_ternary::primitives::Trit::Output = mycelium_std_ternary::primitives::Trit
+pub fn mycelium_std_ternary::primitives::Trit::neg(self) -> mycelium_std_ternary::primitives::Trit
+impl core::marker::Freeze for mycelium_std_ternary::primitives::Trit
+impl core::marker::Send for mycelium_std_ternary::primitives::Trit
+impl core::marker::Sync for mycelium_std_ternary::primitives::Trit
+impl core::marker::Unpin for mycelium_std_ternary::primitives::Trit
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::primitives::Trit
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::primitives::Trit
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::primitives::Trit
+pub enum mycelium_std_ternary::Bit
+pub mycelium_std_ternary::Bit::One
+pub mycelium_std_ternary::Bit::Zero
+impl mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::and(self, mycelium_std_ternary::primitives::Bit) -> mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::digit(self) -> i64
+pub fn mycelium_std_ternary::primitives::Bit::new(i64) -> core::option::Option<mycelium_std_ternary::primitives::Bit>
+pub fn mycelium_std_ternary::primitives::Bit::or(self, mycelium_std_ternary::primitives::Bit) -> mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::xor(self, mycelium_std_ternary::primitives::Bit) -> mycelium_std_ternary::primitives::Bit
+impl core::clone::Clone for mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::clone(&self) -> mycelium_std_ternary::primitives::Bit
+impl core::cmp::Eq for mycelium_std_ternary::primitives::Bit
+impl core::cmp::PartialEq for mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::eq(&self, &mycelium_std_ternary::primitives::Bit) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_ternary::primitives::Bit
+pub fn mycelium_std_ternary::primitives::Bit::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_ternary::primitives::Bit
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::primitives::Bit
+impl core::marker::Freeze for mycelium_std_ternary::primitives::Bit
+impl core::marker::Send for mycelium_std_ternary::primitives::Bit
+impl core::marker::Sync for mycelium_std_ternary::primitives::Bit
+impl core::marker::Unpin for mycelium_std_ternary::primitives::Bit
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::primitives::Bit
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::primitives::Bit
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::primitives::Bit
+pub enum mycelium_std_ternary::PackError
+pub mycelium_std_ternary::PackError::Misaligned
+pub mycelium_std_ternary::PackError::OffGrid
+impl core::clone::Clone for mycelium_std_ternary::packing::PackError
+pub fn mycelium_std_ternary::packing::PackError::clone(&self) -> mycelium_std_ternary::packing::PackError
+impl core::cmp::Eq for mycelium_std_ternary::packing::PackError
+impl core::cmp::PartialEq for mycelium_std_ternary::packing::PackError
+pub fn mycelium_std_ternary::packing::PackError::eq(&self, &mycelium_std_ternary::packing::PackError) -> bool
+impl core::error::Error for mycelium_std_ternary::packing::PackError
+impl core::fmt::Debug for mycelium_std_ternary::packing::PackError
+pub fn mycelium_std_ternary::packing::PackError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_ternary::packing::PackError
+pub fn mycelium_std_ternary::packing::PackError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_ternary::packing::PackError
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::packing::PackError
+impl core::marker::Freeze for mycelium_std_ternary::packing::PackError
+impl core::marker::Send for mycelium_std_ternary::packing::PackError
+impl core::marker::Sync for mycelium_std_ternary::packing::PackError
+impl core::marker::Unpin for mycelium_std_ternary::packing::PackError
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::packing::PackError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::packing::PackError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::packing::PackError
+pub enum mycelium_std_ternary::Scheme
+pub mycelium_std_ternary::Scheme::I2S
+pub mycelium_std_ternary::Scheme::Tl1
+pub mycelium_std_ternary::Scheme::Tl2
+impl mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::Scheme::group_size(self) -> usize
+pub fn mycelium_std_ternary::packing::Scheme::trits_per_byte(self) -> usize
+impl core::clone::Clone for mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::Scheme::clone(&self) -> mycelium_std_ternary::packing::Scheme
+impl core::cmp::Eq for mycelium_std_ternary::packing::Scheme
+impl core::cmp::PartialEq for mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::Scheme::eq(&self, &mycelium_std_ternary::packing::Scheme) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::Scheme::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::Scheme::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::Scheme::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_ternary::packing::Scheme
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::packing::Scheme
+impl core::marker::Freeze for mycelium_std_ternary::packing::Scheme
+impl core::marker::Send for mycelium_std_ternary::packing::Scheme
+impl core::marker::Sync for mycelium_std_ternary::packing::Scheme
+impl core::marker::Unpin for mycelium_std_ternary::packing::Scheme
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::packing::Scheme
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::packing::Scheme
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::packing::Scheme
+pub enum mycelium_std_ternary::Trit
+pub mycelium_std_ternary::Trit::Neg
+pub mycelium_std_ternary::Trit::Pos
+pub mycelium_std_ternary::Trit::Zero
+impl mycelium_std_ternary::primitives::Trit
+pub fn mycelium_std_ternary::primitives::Trit::digit(self) -> i64
+pub fn mycelium_std_ternary::primitives::Trit::from_wire_char(char) -> core::option::Option<mycelium_std_ternary::primitives::Trit>
+pub fn mycelium_std_ternary::primitives::Trit::new(i64) -> core::option::Option<mycelium_std_ternary::primitives::Trit>
+pub fn mycelium_std_ternary::primitives::Trit::to_wire_char(self) -> char
+impl core::clone::Clone for mycelium_std_ternary::primitives::Trit
+pub fn mycelium_std_ternary::primitives::Trit::clone(&self) -> mycelium_std_ternary::primitives::Trit
+impl core::cmp::Eq for mycelium_std_ternary::primitives::Trit
+impl core::cmp::PartialEq for mycelium_std_ternary::primitives::Trit
+pub fn mycelium_std_ternary::primitives::Trit::eq(&self, &mycelium_std_ternary::primitives::Trit) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::primitives::Trit
+pub fn mycelium_std_ternary::primitives::Trit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_ternary::primitives::Trit
+pub fn mycelium_std_ternary::primitives::Trit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_ternary::primitives::Trit
+pub fn mycelium_std_ternary::primitives::Trit::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_ternary::primitives::Trit
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::primitives::Trit
+impl core::ops::arith::Neg for mycelium_std_ternary::primitives::Trit
+pub type mycelium_std_ternary::primitives::Trit::Output = mycelium_std_ternary::primitives::Trit
+pub fn mycelium_std_ternary::primitives::Trit::neg(self) -> mycelium_std_ternary::primitives::Trit
+impl core::marker::Freeze for mycelium_std_ternary::primitives::Trit
+impl core::marker::Send for mycelium_std_ternary::primitives::Trit
+impl core::marker::Sync for mycelium_std_ternary::primitives::Trit
+impl core::marker::Unpin for mycelium_std_ternary::primitives::Trit
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::primitives::Trit
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::primitives::Trit
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::primitives::Trit
+pub struct mycelium_std_ternary::ExplainRecord
+pub mycelium_std_ternary::ExplainRecord::byte_count: usize
+pub mycelium_std_ternary::ExplainRecord::scheme: mycelium_std_ternary::packing::Scheme
+pub mycelium_std_ternary::ExplainRecord::selection: mycelium_std_ternary::packing::SelectionNote
+pub mycelium_std_ternary::ExplainRecord::trit_count: usize
+impl core::clone::Clone for mycelium_std_ternary::packing::ExplainRecord
+pub fn mycelium_std_ternary::packing::ExplainRecord::clone(&self) -> mycelium_std_ternary::packing::ExplainRecord
+impl core::cmp::Eq for mycelium_std_ternary::packing::ExplainRecord
+impl core::cmp::PartialEq for mycelium_std_ternary::packing::ExplainRecord
+pub fn mycelium_std_ternary::packing::ExplainRecord::eq(&self, &mycelium_std_ternary::packing::ExplainRecord) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::packing::ExplainRecord
+pub fn mycelium_std_ternary::packing::ExplainRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_ternary::packing::ExplainRecord
+pub fn mycelium_std_ternary::packing::ExplainRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::packing::ExplainRecord
+impl core::marker::Freeze for mycelium_std_ternary::packing::ExplainRecord
+impl core::marker::Send for mycelium_std_ternary::packing::ExplainRecord
+impl core::marker::Sync for mycelium_std_ternary::packing::ExplainRecord
+impl core::marker::Unpin for mycelium_std_ternary::packing::ExplainRecord
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::packing::ExplainRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::packing::ExplainRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::packing::ExplainRecord
+pub struct mycelium_std_ternary::Packed
+impl mycelium_std_ternary::packing::Packed
+pub fn mycelium_std_ternary::packing::Packed::bytes(&self) -> &[u8]
+pub fn mycelium_std_ternary::packing::Packed::explain(&self) -> mycelium_std_ternary::packing::ExplainRecord
+pub fn mycelium_std_ternary::packing::Packed::scheme(&self) -> mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::packing::Packed::trit_count(&self) -> usize
+impl core::clone::Clone for mycelium_std_ternary::packing::Packed
+pub fn mycelium_std_ternary::packing::Packed::clone(&self) -> mycelium_std_ternary::packing::Packed
+impl core::cmp::Eq for mycelium_std_ternary::packing::Packed
+impl core::cmp::PartialEq for mycelium_std_ternary::packing::Packed
+pub fn mycelium_std_ternary::packing::Packed::eq(&self, &mycelium_std_ternary::packing::Packed) -> bool
+impl core::fmt::Debug for mycelium_std_ternary::packing::Packed
+pub fn mycelium_std_ternary::packing::Packed::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_ternary::packing::Packed
+impl core::marker::Freeze for mycelium_std_ternary::packing::Packed
+impl core::marker::Send for mycelium_std_ternary::packing::Packed
+impl core::marker::Sync for mycelium_std_ternary::packing::Packed
+impl core::marker::Unpin for mycelium_std_ternary::packing::Packed
+impl core::marker::UnsafeUnpin for mycelium_std_ternary::packing::Packed
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_ternary::packing::Packed
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_ternary::packing::Packed
+pub fn mycelium_std_ternary::add(&[mycelium_std_ternary::primitives::Trit], &[mycelium_std_ternary::primitives::Trit]) -> core::option::Option<alloc::vec::Vec<mycelium_std_ternary::primitives::Trit>>
+pub fn mycelium_std_ternary::explain(&mycelium_std_ternary::packing::Packed) -> mycelium_std_ternary::packing::ExplainRecord
+pub fn mycelium_std_ternary::int_to_trits(i64, u32) -> core::option::Option<alloc::vec::Vec<mycelium_std_ternary::primitives::Trit>>
+pub fn mycelium_std_ternary::max_magnitude(u32) -> core::option::Option<i64>
+pub fn mycelium_std_ternary::mul(&[mycelium_std_ternary::primitives::Trit], &[mycelium_std_ternary::primitives::Trit]) -> core::option::Option<alloc::vec::Vec<mycelium_std_ternary::primitives::Trit>>
+pub fn mycelium_std_ternary::neg(&[mycelium_std_ternary::primitives::Trit]) -> alloc::vec::Vec<mycelium_std_ternary::primitives::Trit>
+pub fn mycelium_std_ternary::pack(&[mycelium_std_ternary::primitives::Trit], mycelium_std_ternary::packing::Scheme) -> core::result::Result<mycelium_std_ternary::packing::Packed, mycelium_std_ternary::packing::PackError>
+pub fn mycelium_std_ternary::scheme_of(&mycelium_std_ternary::packing::Packed) -> mycelium_std_ternary::packing::Scheme
+pub fn mycelium_std_ternary::sub(&[mycelium_std_ternary::primitives::Trit], &[mycelium_std_ternary::primitives::Trit]) -> core::option::Option<alloc::vec::Vec<mycelium_std_ternary::primitives::Trit>>
+pub fn mycelium_std_ternary::trits_to_int(&[mycelium_std_ternary::primitives::Trit]) -> i64
+pub fn mycelium_std_ternary::unpack(&mycelium_std_ternary::packing::Packed) -> alloc::vec::Vec<mycelium_std_ternary::primitives::Trit>

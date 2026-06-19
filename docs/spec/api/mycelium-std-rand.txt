@@ -1,0 +1,141 @@
+pub mod mycelium_std_rand
+pub enum mycelium_std_rand::RandErr
+pub mycelium_std_rand::RandErr::BadParameter
+pub mycelium_std_rand::RandErr::BadProbability
+pub mycelium_std_rand::RandErr::EmptyDomain
+pub mycelium_std_rand::RandErr::EmptyRange
+pub mycelium_std_rand::RandErr::EntropyUnavailable
+impl core::clone::Clone for mycelium_std_rand::RandErr
+pub fn mycelium_std_rand::RandErr::clone(&self) -> mycelium_std_rand::RandErr
+impl core::cmp::Eq for mycelium_std_rand::RandErr
+impl core::cmp::PartialEq for mycelium_std_rand::RandErr
+pub fn mycelium_std_rand::RandErr::eq(&self, &mycelium_std_rand::RandErr) -> bool
+impl core::error::Error for mycelium_std_rand::RandErr
+impl core::fmt::Debug for mycelium_std_rand::RandErr
+pub fn mycelium_std_rand::RandErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_rand::RandErr
+pub fn mycelium_std_rand::RandErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_rand::RandErr
+impl core::marker::Freeze for mycelium_std_rand::RandErr
+impl core::marker::Send for mycelium_std_rand::RandErr
+impl core::marker::Sync for mycelium_std_rand::RandErr
+impl core::marker::Unpin for mycelium_std_rand::RandErr
+impl core::marker::UnsafeUnpin for mycelium_std_rand::RandErr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_rand::RandErr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_rand::RandErr
+pub enum mycelium_std_rand::RngAlgo
+pub mycelium_std_rand::RngAlgo::Xoshiro256PlusPlus
+impl core::clone::Clone for mycelium_std_rand::RngAlgo
+pub fn mycelium_std_rand::RngAlgo::clone(&self) -> mycelium_std_rand::RngAlgo
+impl core::cmp::Eq for mycelium_std_rand::RngAlgo
+impl core::cmp::PartialEq for mycelium_std_rand::RngAlgo
+pub fn mycelium_std_rand::RngAlgo::eq(&self, &mycelium_std_rand::RngAlgo) -> bool
+impl core::fmt::Debug for mycelium_std_rand::RngAlgo
+pub fn mycelium_std_rand::RngAlgo::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_rand::RngAlgo
+impl core::marker::StructuralPartialEq for mycelium_std_rand::RngAlgo
+impl core::marker::Freeze for mycelium_std_rand::RngAlgo
+impl core::marker::Send for mycelium_std_rand::RngAlgo
+impl core::marker::Sync for mycelium_std_rand::RngAlgo
+impl core::marker::Unpin for mycelium_std_rand::RngAlgo
+impl core::marker::UnsafeUnpin for mycelium_std_rand::RngAlgo
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_rand::RngAlgo
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_rand::RngAlgo
+pub struct mycelium_std_rand::EntropyEffect
+impl core::clone::Clone for mycelium_std_rand::EntropyEffect
+pub fn mycelium_std_rand::EntropyEffect::clone(&self) -> mycelium_std_rand::EntropyEffect
+impl core::cmp::Eq for mycelium_std_rand::EntropyEffect
+impl core::cmp::PartialEq for mycelium_std_rand::EntropyEffect
+pub fn mycelium_std_rand::EntropyEffect::eq(&self, &mycelium_std_rand::EntropyEffect) -> bool
+impl core::fmt::Debug for mycelium_std_rand::EntropyEffect
+pub fn mycelium_std_rand::EntropyEffect::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_rand::EntropyEffect
+impl core::marker::StructuralPartialEq for mycelium_std_rand::EntropyEffect
+impl core::marker::Freeze for mycelium_std_rand::EntropyEffect
+impl core::marker::Send for mycelium_std_rand::EntropyEffect
+impl core::marker::Sync for mycelium_std_rand::EntropyEffect
+impl core::marker::Unpin for mycelium_std_rand::EntropyEffect
+impl core::marker::UnsafeUnpin for mycelium_std_rand::EntropyEffect
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_rand::EntropyEffect
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_rand::EntropyEffect
+pub struct mycelium_std_rand::EntropyRng<S: mycelium_std_rand::EntropySource>
+impl<S: mycelium_std_rand::EntropySource> mycelium_std_rand::EntropyRng<S>
+pub fn mycelium_std_rand::EntropyRng<S>::new(S) -> core::result::Result<(mycelium_std_rand::EntropyRng<S>, mycelium_std_rand::EntropyEffect), mycelium_std_rand::RandErr>
+pub fn mycelium_std_rand::EntropyRng<S>::next_entropy(&mut self) -> (u64, mycelium_std_rand::EntropyEffect)
+impl<S> core::marker::Freeze for mycelium_std_rand::EntropyRng<S> where S: core::marker::Freeze
+impl<S> core::marker::Send for mycelium_std_rand::EntropyRng<S> where S: core::marker::Send
+impl<S> core::marker::Sync for mycelium_std_rand::EntropyRng<S> where S: core::marker::Sync
+impl<S> core::marker::Unpin for mycelium_std_rand::EntropyRng<S> where S: core::marker::Unpin
+impl<S> core::marker::UnsafeUnpin for mycelium_std_rand::EntropyRng<S> where S: core::marker::UnsafeUnpin
+impl<S> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_rand::EntropyRng<S> where S: core::panic::unwind_safe::RefUnwindSafe
+impl<S> core::panic::unwind_safe::UnwindSafe for mycelium_std_rand::EntropyRng<S> where S: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_rand::MatrixRow
+pub mycelium_std_rand::MatrixRow::effects: &'static str
+pub mycelium_std_rand::MatrixRow::explainable: bool
+pub mycelium_std_rand::MatrixRow::fallibility: &'static str
+pub mycelium_std_rand::MatrixRow::op: &'static str
+pub mycelium_std_rand::MatrixRow::tag: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_std_rand::MatrixRow
+pub fn mycelium_std_rand::MatrixRow::clone(&self) -> mycelium_std_rand::MatrixRow
+impl core::cmp::Eq for mycelium_std_rand::MatrixRow
+impl core::cmp::PartialEq for mycelium_std_rand::MatrixRow
+pub fn mycelium_std_rand::MatrixRow::eq(&self, &mycelium_std_rand::MatrixRow) -> bool
+impl core::fmt::Debug for mycelium_std_rand::MatrixRow
+pub fn mycelium_std_rand::MatrixRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_rand::MatrixRow
+impl core::marker::Freeze for mycelium_std_rand::MatrixRow
+impl core::marker::Send for mycelium_std_rand::MatrixRow
+impl core::marker::Sync for mycelium_std_rand::MatrixRow
+impl core::marker::Unpin for mycelium_std_rand::MatrixRow
+impl core::marker::UnsafeUnpin for mycelium_std_rand::MatrixRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_rand::MatrixRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_rand::MatrixRow
+pub struct mycelium_std_rand::Rng
+pub mycelium_std_rand::Rng::algo: mycelium_std_rand::RngAlgo
+impl mycelium_std_rand::Rng
+pub fn mycelium_std_rand::Rng::algo(&self) -> mycelium_std_rand::RngAlgo
+pub fn mycelium_std_rand::Rng::state(&self) -> [u64; 4]
+impl core::clone::Clone for mycelium_std_rand::Rng
+pub fn mycelium_std_rand::Rng::clone(&self) -> mycelium_std_rand::Rng
+impl core::cmp::Eq for mycelium_std_rand::Rng
+impl core::cmp::PartialEq for mycelium_std_rand::Rng
+pub fn mycelium_std_rand::Rng::eq(&self, &mycelium_std_rand::Rng) -> bool
+impl core::fmt::Debug for mycelium_std_rand::Rng
+pub fn mycelium_std_rand::Rng::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_rand::Rng
+impl core::marker::Freeze for mycelium_std_rand::Rng
+impl core::marker::Send for mycelium_std_rand::Rng
+impl core::marker::Sync for mycelium_std_rand::Rng
+impl core::marker::Unpin for mycelium_std_rand::Rng
+impl core::marker::UnsafeUnpin for mycelium_std_rand::Rng
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_rand::Rng
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_rand::Rng
+pub struct mycelium_std_rand::StubEntropy
+impl mycelium_std_rand::StubEntropy
+pub fn mycelium_std_rand::StubEntropy::new(u8) -> Self
+impl mycelium_std_rand::EntropySource for mycelium_std_rand::StubEntropy
+pub fn mycelium_std_rand::StubEntropy::fill_bytes(&mut self, &mut [u8]) -> core::result::Result<mycelium_std_rand::EntropyEffect, mycelium_std_rand::RandErr>
+impl core::marker::Freeze for mycelium_std_rand::StubEntropy
+impl core::marker::Send for mycelium_std_rand::StubEntropy
+impl core::marker::Sync for mycelium_std_rand::StubEntropy
+impl core::marker::Unpin for mycelium_std_rand::StubEntropy
+impl core::marker::UnsafeUnpin for mycelium_std_rand::StubEntropy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_rand::StubEntropy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_rand::StubEntropy
+pub const mycelium_std_rand::GUARANTEE_MATRIX: &[mycelium_std_rand::MatrixRow]
+pub trait mycelium_std_rand::EntropySource
+pub fn mycelium_std_rand::EntropySource::fill_bytes(&mut self, &mut [u8]) -> core::result::Result<mycelium_std_rand::EntropyEffect, mycelium_std_rand::RandErr>
+impl mycelium_std_rand::EntropySource for mycelium_std_rand::StubEntropy
+pub fn mycelium_std_rand::StubEntropy::fill_bytes(&mut self, &mut [u8]) -> core::result::Result<mycelium_std_rand::EntropyEffect, mycelium_std_rand::RandErr>
+pub fn mycelium_std_rand::assert_matrix_invariants()
+pub fn mycelium_std_rand::bernoulli(mycelium_std_rand::Rng, f64) -> core::result::Result<(bool, mycelium_std_rand::Rng), mycelium_std_rand::RandErr>
+pub fn mycelium_std_rand::choice<T: core::clone::Clone>(mycelium_std_rand::Rng, &[T]) -> core::result::Result<(T, mycelium_std_rand::Rng), mycelium_std_rand::RandErr>
+pub fn mycelium_std_rand::exponential(mycelium_std_rand::Rng, f64) -> core::result::Result<(f64, mycelium_std_rand::Rng), mycelium_std_rand::RandErr>
+pub fn mycelium_std_rand::next_u64(mycelium_std_rand::Rng) -> (u64, mycelium_std_rand::Rng)
+pub fn mycelium_std_rand::normal(mycelium_std_rand::Rng, f64, f64) -> core::result::Result<(f64, mycelium_std_rand::Rng), mycelium_std_rand::RandErr>
+pub fn mycelium_std_rand::seed(u64) -> mycelium_std_rand::Rng
+pub fn mycelium_std_rand::seed_from_entropy<S: mycelium_std_rand::EntropySource>(S) -> core::result::Result<(mycelium_std_rand::Rng, mycelium_std_rand::EntropyEffect), mycelium_std_rand::RandErr>
+pub fn mycelium_std_rand::shuffle<T: core::clone::Clone>(mycelium_std_rand::Rng, alloc::vec::Vec<T>) -> (alloc::vec::Vec<T>, mycelium_std_rand::Rng)
+pub fn mycelium_std_rand::split(mycelium_std_rand::Rng) -> (mycelium_std_rand::Rng, mycelium_std_rand::Rng)
+pub fn mycelium_std_rand::uniform_int(mycelium_std_rand::Rng, i64, i64) -> core::result::Result<(i64, mycelium_std_rand::Rng), mycelium_std_rand::RandErr>
+pub fn mycelium_std_rand::uniform_u64(mycelium_std_rand::Rng, u64, u64) -> core::result::Result<(u64, mycelium_std_rand::Rng), mycelium_std_rand::RandErr>

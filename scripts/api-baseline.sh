@@ -17,6 +17,12 @@ mkdir -p "$baseline_dir"
 for d in crates/*/ xtask/; do
   [[ -f "${d}Cargo.toml" ]] || continue
   pkg="$(basename "$d")"
+  # Skip bin-only crates (no src/lib.rs): cargo-public-api introspects a library rustdoc and a
+  # binary has no Rust public-API surface to baseline (mirrors the skip in scripts/checks/api.sh).
+  if [[ ! -f "${d}src/lib.rs" ]]; then
+    skip "$pkg: bin-only (no library target) — no public-API baseline"
+    continue
+  fi
   if cargo public-api --package "$pkg" --simplified >"$baseline_dir/$pkg.txt" 2>/dev/null; then
     ok "$pkg → $baseline_dir/$pkg.txt"
   else

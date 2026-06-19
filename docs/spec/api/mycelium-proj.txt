@@ -1,0 +1,657 @@
+pub mod mycelium_proj
+pub mod mycelium_proj::header
+pub enum mycelium_proj::header::Deprecated
+pub mycelium_proj::header::Deprecated::Flag(bool)
+pub mycelium_proj::header::Deprecated::Reason(alloc::string::String)
+impl core::clone::Clone for mycelium_proj::header::Deprecated
+pub fn mycelium_proj::header::Deprecated::clone(&self) -> mycelium_proj::header::Deprecated
+impl core::cmp::Eq for mycelium_proj::header::Deprecated
+impl core::cmp::PartialEq for mycelium_proj::header::Deprecated
+pub fn mycelium_proj::header::Deprecated::eq(&self, &mycelium_proj::header::Deprecated) -> bool
+impl core::fmt::Debug for mycelium_proj::header::Deprecated
+pub fn mycelium_proj::header::Deprecated::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::header::Deprecated
+impl core::marker::Freeze for mycelium_proj::header::Deprecated
+impl core::marker::Send for mycelium_proj::header::Deprecated
+impl core::marker::Sync for mycelium_proj::header::Deprecated
+impl core::marker::Unpin for mycelium_proj::header::Deprecated
+impl core::marker::UnsafeUnpin for mycelium_proj::header::Deprecated
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::header::Deprecated
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::header::Deprecated
+pub struct mycelium_proj::header::HeaderError
+pub mycelium_proj::header::HeaderError::line: u32
+pub mycelium_proj::header::HeaderError::message: alloc::string::String
+impl core::clone::Clone for mycelium_proj::header::HeaderError
+pub fn mycelium_proj::header::HeaderError::clone(&self) -> mycelium_proj::header::HeaderError
+impl core::cmp::Eq for mycelium_proj::header::HeaderError
+impl core::cmp::PartialEq for mycelium_proj::header::HeaderError
+pub fn mycelium_proj::header::HeaderError::eq(&self, &mycelium_proj::header::HeaderError) -> bool
+impl core::convert::From<mycelium_l1::nodule::NoduleHeaderError> for mycelium_proj::header::HeaderError
+pub fn mycelium_proj::header::HeaderError::from(mycelium_l1::nodule::NoduleHeaderError) -> Self
+impl core::error::Error for mycelium_proj::header::HeaderError
+impl core::fmt::Debug for mycelium_proj::header::HeaderError
+pub fn mycelium_proj::header::HeaderError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_proj::header::HeaderError
+pub fn mycelium_proj::header::HeaderError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::header::HeaderError
+impl core::marker::Freeze for mycelium_proj::header::HeaderError
+impl core::marker::Send for mycelium_proj::header::HeaderError
+impl core::marker::Sync for mycelium_proj::header::HeaderError
+impl core::marker::Unpin for mycelium_proj::header::HeaderError
+impl core::marker::UnsafeUnpin for mycelium_proj::header::HeaderError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::header::HeaderError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::header::HeaderError
+pub struct mycelium_proj::header::HeaderFields
+pub mycelium_proj::header::HeaderFields::authors: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub mycelium_proj::header::HeaderFields::deprecated: core::option::Option<mycelium_proj::header::Deprecated>
+pub mycelium_proj::header::HeaderFields::keywords: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub mycelium_proj::header::HeaderFields::license: core::option::Option<alloc::string::String>
+pub mycelium_proj::header::HeaderFields::matured: core::option::Option<bool>
+pub mycelium_proj::header::HeaderFields::repository: core::option::Option<alloc::string::String>
+pub mycelium_proj::header::HeaderFields::since: core::option::Option<alloc::string::String>
+pub mycelium_proj::header::HeaderFields::summary: core::option::Option<alloc::string::String>
+pub mycelium_proj::header::HeaderFields::updated: core::option::Option<alloc::string::String>
+pub mycelium_proj::header::HeaderFields::version: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_proj::header::HeaderFields
+pub fn mycelium_proj::header::HeaderFields::clone(&self) -> mycelium_proj::header::HeaderFields
+impl core::cmp::Eq for mycelium_proj::header::HeaderFields
+impl core::cmp::PartialEq for mycelium_proj::header::HeaderFields
+pub fn mycelium_proj::header::HeaderFields::eq(&self, &mycelium_proj::header::HeaderFields) -> bool
+impl core::default::Default for mycelium_proj::header::HeaderFields
+pub fn mycelium_proj::header::HeaderFields::default() -> mycelium_proj::header::HeaderFields
+impl core::fmt::Debug for mycelium_proj::header::HeaderFields
+pub fn mycelium_proj::header::HeaderFields::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::header::HeaderFields
+impl core::marker::Freeze for mycelium_proj::header::HeaderFields
+impl core::marker::Send for mycelium_proj::header::HeaderFields
+impl core::marker::Sync for mycelium_proj::header::HeaderFields
+impl core::marker::Unpin for mycelium_proj::header::HeaderFields
+impl core::marker::UnsafeUnpin for mycelium_proj::header::HeaderFields
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::header::HeaderFields
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::header::HeaderFields
+pub struct mycelium_proj::header::StructuredHeader
+pub mycelium_proj::header::StructuredHeader::fields: mycelium_proj::header::HeaderFields
+pub mycelium_proj::header::StructuredHeader::marker: mycelium_l1::nodule::NoduleHeader
+impl core::clone::Clone for mycelium_proj::header::StructuredHeader
+pub fn mycelium_proj::header::StructuredHeader::clone(&self) -> mycelium_proj::header::StructuredHeader
+impl core::cmp::Eq for mycelium_proj::header::StructuredHeader
+impl core::cmp::PartialEq for mycelium_proj::header::StructuredHeader
+pub fn mycelium_proj::header::StructuredHeader::eq(&self, &mycelium_proj::header::StructuredHeader) -> bool
+impl core::fmt::Debug for mycelium_proj::header::StructuredHeader
+pub fn mycelium_proj::header::StructuredHeader::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::header::StructuredHeader
+impl core::marker::Freeze for mycelium_proj::header::StructuredHeader
+impl core::marker::Send for mycelium_proj::header::StructuredHeader
+impl core::marker::Sync for mycelium_proj::header::StructuredHeader
+impl core::marker::Unpin for mycelium_proj::header::StructuredHeader
+impl core::marker::UnsafeUnpin for mycelium_proj::header::StructuredHeader
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::header::StructuredHeader
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::header::StructuredHeader
+pub const mycelium_proj::header::HEADER_KEYS: &[&str]
+pub const mycelium_proj::header::KNOWN_SPDX: &[&str]
+pub fn mycelium_proj::header::is_iso_date(&str) -> bool
+pub fn mycelium_proj::header::is_semver(&str) -> bool
+pub fn mycelium_proj::header::is_spdx(&str) -> bool
+pub fn mycelium_proj::header::is_url(&str) -> bool
+pub fn mycelium_proj::header::parse_header(&str) -> core::result::Result<core::option::Option<mycelium_proj::header::StructuredHeader>, mycelium_proj::header::HeaderError>
+pub mod mycelium_proj::manifest
+pub enum mycelium_proj::manifest::ProjectKind
+pub mycelium_proj::manifest::ProjectKind::Phylum
+pub mycelium_proj::manifest::ProjectKind::Program
+pub mycelium_proj::manifest::ProjectKind::Script
+impl core::clone::Clone for mycelium_proj::manifest::ProjectKind
+pub fn mycelium_proj::manifest::ProjectKind::clone(&self) -> mycelium_proj::manifest::ProjectKind
+impl core::cmp::Eq for mycelium_proj::manifest::ProjectKind
+impl core::cmp::PartialEq for mycelium_proj::manifest::ProjectKind
+pub fn mycelium_proj::manifest::ProjectKind::eq(&self, &mycelium_proj::manifest::ProjectKind) -> bool
+impl core::fmt::Debug for mycelium_proj::manifest::ProjectKind
+pub fn mycelium_proj::manifest::ProjectKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::manifest::ProjectKind
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::ProjectKind
+impl core::marker::Freeze for mycelium_proj::manifest::ProjectKind
+impl core::marker::Send for mycelium_proj::manifest::ProjectKind
+impl core::marker::Sync for mycelium_proj::manifest::ProjectKind
+impl core::marker::Unpin for mycelium_proj::manifest::ProjectKind
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::ProjectKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::ProjectKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::ProjectKind
+pub struct mycelium_proj::manifest::Dependency
+pub mycelium_proj::manifest::Dependency::hash: core::option::Option<alloc::string::String>
+pub mycelium_proj::manifest::Dependency::name: alloc::string::String
+pub mycelium_proj::manifest::Dependency::phylum: alloc::string::String
+pub mycelium_proj::manifest::Dependency::version: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_proj::manifest::Dependency
+pub fn mycelium_proj::manifest::Dependency::clone(&self) -> mycelium_proj::manifest::Dependency
+impl core::cmp::Eq for mycelium_proj::manifest::Dependency
+impl core::cmp::PartialEq for mycelium_proj::manifest::Dependency
+pub fn mycelium_proj::manifest::Dependency::eq(&self, &mycelium_proj::manifest::Dependency) -> bool
+impl core::fmt::Debug for mycelium_proj::manifest::Dependency
+pub fn mycelium_proj::manifest::Dependency::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::Dependency
+impl core::marker::Freeze for mycelium_proj::manifest::Dependency
+impl core::marker::Send for mycelium_proj::manifest::Dependency
+impl core::marker::Sync for mycelium_proj::manifest::Dependency
+impl core::marker::Unpin for mycelium_proj::manifest::Dependency
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::Dependency
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::Dependency
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::Dependency
+pub struct mycelium_proj::manifest::Manifest
+pub mycelium_proj::manifest::Manifest::dependencies: alloc::vec::Vec<mycelium_proj::manifest::Dependency>
+pub mycelium_proj::manifest::Manifest::project: mycelium_proj::manifest::Project
+pub mycelium_proj::manifest::Manifest::spore: core::option::Option<mycelium_proj::manifest::SporeConfig>
+pub mycelium_proj::manifest::Manifest::surface: core::option::Option<mycelium_proj::manifest::Surface>
+pub mycelium_proj::manifest::Manifest::toolchain: core::option::Option<mycelium_proj::manifest::Toolchain>
+impl core::clone::Clone for mycelium_proj::manifest::Manifest
+pub fn mycelium_proj::manifest::Manifest::clone(&self) -> mycelium_proj::manifest::Manifest
+impl core::cmp::Eq for mycelium_proj::manifest::Manifest
+impl core::cmp::PartialEq for mycelium_proj::manifest::Manifest
+pub fn mycelium_proj::manifest::Manifest::eq(&self, &mycelium_proj::manifest::Manifest) -> bool
+impl core::fmt::Debug for mycelium_proj::manifest::Manifest
+pub fn mycelium_proj::manifest::Manifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::Manifest
+impl core::marker::Freeze for mycelium_proj::manifest::Manifest
+impl core::marker::Send for mycelium_proj::manifest::Manifest
+impl core::marker::Sync for mycelium_proj::manifest::Manifest
+impl core::marker::Unpin for mycelium_proj::manifest::Manifest
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::Manifest
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::Manifest
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::Manifest
+pub struct mycelium_proj::manifest::ManifestError
+pub mycelium_proj::manifest::ManifestError::line: u32
+pub mycelium_proj::manifest::ManifestError::message: alloc::string::String
+impl core::clone::Clone for mycelium_proj::manifest::ManifestError
+pub fn mycelium_proj::manifest::ManifestError::clone(&self) -> mycelium_proj::manifest::ManifestError
+impl core::cmp::Eq for mycelium_proj::manifest::ManifestError
+impl core::cmp::PartialEq for mycelium_proj::manifest::ManifestError
+pub fn mycelium_proj::manifest::ManifestError::eq(&self, &mycelium_proj::manifest::ManifestError) -> bool
+impl core::error::Error for mycelium_proj::manifest::ManifestError
+impl core::fmt::Debug for mycelium_proj::manifest::ManifestError
+pub fn mycelium_proj::manifest::ManifestError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_proj::manifest::ManifestError
+pub fn mycelium_proj::manifest::ManifestError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::ManifestError
+impl core::marker::Freeze for mycelium_proj::manifest::ManifestError
+impl core::marker::Send for mycelium_proj::manifest::ManifestError
+impl core::marker::Sync for mycelium_proj::manifest::ManifestError
+impl core::marker::Unpin for mycelium_proj::manifest::ManifestError
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::ManifestError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::ManifestError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::ManifestError
+pub struct mycelium_proj::manifest::Project
+pub mycelium_proj::manifest::Project::authors: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub mycelium_proj::manifest::Project::keywords: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub mycelium_proj::manifest::Project::kind: mycelium_proj::manifest::ProjectKind
+pub mycelium_proj::manifest::Project::lang: core::option::Option<alloc::string::String>
+pub mycelium_proj::manifest::Project::license: core::option::Option<alloc::string::String>
+pub mycelium_proj::manifest::Project::name: alloc::string::String
+pub mycelium_proj::manifest::Project::repository: core::option::Option<alloc::string::String>
+pub mycelium_proj::manifest::Project::since: core::option::Option<alloc::string::String>
+pub mycelium_proj::manifest::Project::summary: core::option::Option<alloc::string::String>
+pub mycelium_proj::manifest::Project::version: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_proj::manifest::Project
+pub fn mycelium_proj::manifest::Project::clone(&self) -> mycelium_proj::manifest::Project
+impl core::cmp::Eq for mycelium_proj::manifest::Project
+impl core::cmp::PartialEq for mycelium_proj::manifest::Project
+pub fn mycelium_proj::manifest::Project::eq(&self, &mycelium_proj::manifest::Project) -> bool
+impl core::fmt::Debug for mycelium_proj::manifest::Project
+pub fn mycelium_proj::manifest::Project::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::Project
+impl core::marker::Freeze for mycelium_proj::manifest::Project
+impl core::marker::Send for mycelium_proj::manifest::Project
+impl core::marker::Sync for mycelium_proj::manifest::Project
+impl core::marker::Unpin for mycelium_proj::manifest::Project
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::Project
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::Project
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::Project
+pub struct mycelium_proj::manifest::SporeConfig
+pub mycelium_proj::manifest::SporeConfig::include: alloc::vec::Vec<alloc::string::String>
+impl core::clone::Clone for mycelium_proj::manifest::SporeConfig
+pub fn mycelium_proj::manifest::SporeConfig::clone(&self) -> mycelium_proj::manifest::SporeConfig
+impl core::cmp::Eq for mycelium_proj::manifest::SporeConfig
+impl core::cmp::PartialEq for mycelium_proj::manifest::SporeConfig
+pub fn mycelium_proj::manifest::SporeConfig::eq(&self, &mycelium_proj::manifest::SporeConfig) -> bool
+impl core::default::Default for mycelium_proj::manifest::SporeConfig
+pub fn mycelium_proj::manifest::SporeConfig::default() -> mycelium_proj::manifest::SporeConfig
+impl core::fmt::Debug for mycelium_proj::manifest::SporeConfig
+pub fn mycelium_proj::manifest::SporeConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::SporeConfig
+impl core::marker::Freeze for mycelium_proj::manifest::SporeConfig
+impl core::marker::Send for mycelium_proj::manifest::SporeConfig
+impl core::marker::Sync for mycelium_proj::manifest::SporeConfig
+impl core::marker::Unpin for mycelium_proj::manifest::SporeConfig
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::SporeConfig
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::SporeConfig
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::SporeConfig
+pub struct mycelium_proj::manifest::Surface
+pub mycelium_proj::manifest::Surface::exports: alloc::vec::Vec<alloc::string::String>
+impl core::clone::Clone for mycelium_proj::manifest::Surface
+pub fn mycelium_proj::manifest::Surface::clone(&self) -> mycelium_proj::manifest::Surface
+impl core::cmp::Eq for mycelium_proj::manifest::Surface
+impl core::cmp::PartialEq for mycelium_proj::manifest::Surface
+pub fn mycelium_proj::manifest::Surface::eq(&self, &mycelium_proj::manifest::Surface) -> bool
+impl core::default::Default for mycelium_proj::manifest::Surface
+pub fn mycelium_proj::manifest::Surface::default() -> mycelium_proj::manifest::Surface
+impl core::fmt::Debug for mycelium_proj::manifest::Surface
+pub fn mycelium_proj::manifest::Surface::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::Surface
+impl core::marker::Freeze for mycelium_proj::manifest::Surface
+impl core::marker::Send for mycelium_proj::manifest::Surface
+impl core::marker::Sync for mycelium_proj::manifest::Surface
+impl core::marker::Unpin for mycelium_proj::manifest::Surface
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::Surface
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::Surface
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::Surface
+pub struct mycelium_proj::manifest::Toolchain
+pub mycelium_proj::manifest::Toolchain::format: core::option::Option<alloc::string::String>
+pub mycelium_proj::manifest::Toolchain::lints: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_proj::manifest::Toolchain
+pub fn mycelium_proj::manifest::Toolchain::clone(&self) -> mycelium_proj::manifest::Toolchain
+impl core::cmp::Eq for mycelium_proj::manifest::Toolchain
+impl core::cmp::PartialEq for mycelium_proj::manifest::Toolchain
+pub fn mycelium_proj::manifest::Toolchain::eq(&self, &mycelium_proj::manifest::Toolchain) -> bool
+impl core::default::Default for mycelium_proj::manifest::Toolchain
+pub fn mycelium_proj::manifest::Toolchain::default() -> mycelium_proj::manifest::Toolchain
+impl core::fmt::Debug for mycelium_proj::manifest::Toolchain
+pub fn mycelium_proj::manifest::Toolchain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::Toolchain
+impl core::marker::Freeze for mycelium_proj::manifest::Toolchain
+impl core::marker::Send for mycelium_proj::manifest::Toolchain
+impl core::marker::Sync for mycelium_proj::manifest::Toolchain
+impl core::marker::Unpin for mycelium_proj::manifest::Toolchain
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::Toolchain
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::Toolchain
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::Toolchain
+pub fn mycelium_proj::manifest::parse_manifest(&str) -> core::result::Result<mycelium_proj::manifest::Manifest, mycelium_proj::manifest::ManifestError>
+pub mod mycelium_proj::resolve
+pub enum mycelium_proj::resolve::Origin
+pub mycelium_proj::resolve::Origin::Local
+pub mycelium_proj::resolve::Origin::ProjectManifest
+impl core::clone::Clone for mycelium_proj::resolve::Origin
+pub fn mycelium_proj::resolve::Origin::clone(&self) -> mycelium_proj::resolve::Origin
+impl core::cmp::Eq for mycelium_proj::resolve::Origin
+impl core::cmp::PartialEq for mycelium_proj::resolve::Origin
+pub fn mycelium_proj::resolve::Origin::eq(&self, &mycelium_proj::resolve::Origin) -> bool
+impl core::fmt::Debug for mycelium_proj::resolve::Origin
+pub fn mycelium_proj::resolve::Origin::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::resolve::Origin
+impl core::marker::StructuralPartialEq for mycelium_proj::resolve::Origin
+impl core::marker::Freeze for mycelium_proj::resolve::Origin
+impl core::marker::Send for mycelium_proj::resolve::Origin
+impl core::marker::Sync for mycelium_proj::resolve::Origin
+impl core::marker::Unpin for mycelium_proj::resolve::Origin
+impl core::marker::UnsafeUnpin for mycelium_proj::resolve::Origin
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::resolve::Origin
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::resolve::Origin
+pub struct mycelium_proj::resolve::Resolved<T>
+pub mycelium_proj::resolve::Resolved::origin: mycelium_proj::resolve::Origin
+pub mycelium_proj::resolve::Resolved::value: T
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_proj::resolve::Resolved<T>
+pub fn mycelium_proj::resolve::Resolved<T>::clone(&self) -> mycelium_proj::resolve::Resolved<T>
+impl<T: core::cmp::Eq> core::cmp::Eq for mycelium_proj::resolve::Resolved<T>
+impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_proj::resolve::Resolved<T>
+pub fn mycelium_proj::resolve::Resolved<T>::eq(&self, &mycelium_proj::resolve::Resolved<T>) -> bool
+impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_proj::resolve::Resolved<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_proj::resolve::Resolved<T>
+pub fn mycelium_proj::resolve::Resolved<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::marker::Freeze for mycelium_proj::resolve::Resolved<T> where T: core::marker::Freeze
+impl<T> core::marker::Send for mycelium_proj::resolve::Resolved<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_proj::resolve::Resolved<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_proj::resolve::Resolved<T> where T: core::marker::Unpin
+impl<T> core::marker::UnsafeUnpin for mycelium_proj::resolve::Resolved<T> where T: core::marker::UnsafeUnpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::resolve::Resolved<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_proj::resolve::Resolved<T> where T: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_proj::resolve::ResolvedHeader
+pub mycelium_proj::resolve::ResolvedHeader::authors: core::option::Option<mycelium_proj::resolve::Resolved<alloc::vec::Vec<alloc::string::String>>>
+pub mycelium_proj::resolve::ResolvedHeader::deprecated: core::option::Option<mycelium_proj::header::Deprecated>
+pub mycelium_proj::resolve::ResolvedHeader::keywords: core::option::Option<mycelium_proj::resolve::Resolved<alloc::vec::Vec<alloc::string::String>>>
+pub mycelium_proj::resolve::ResolvedHeader::license: core::option::Option<mycelium_proj::resolve::Resolved<alloc::string::String>>
+pub mycelium_proj::resolve::ResolvedHeader::matured: core::option::Option<mycelium_proj::resolve::Resolved<bool>>
+pub mycelium_proj::resolve::ResolvedHeader::name: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub mycelium_proj::resolve::ResolvedHeader::repository: core::option::Option<mycelium_proj::resolve::Resolved<alloc::string::String>>
+pub mycelium_proj::resolve::ResolvedHeader::since: core::option::Option<mycelium_proj::resolve::Resolved<alloc::string::String>>
+pub mycelium_proj::resolve::ResolvedHeader::summary: core::option::Option<alloc::string::String>
+pub mycelium_proj::resolve::ResolvedHeader::updated: core::option::Option<alloc::string::String>
+pub mycelium_proj::resolve::ResolvedHeader::version: core::option::Option<mycelium_proj::resolve::Resolved<alloc::string::String>>
+impl core::clone::Clone for mycelium_proj::resolve::ResolvedHeader
+pub fn mycelium_proj::resolve::ResolvedHeader::clone(&self) -> mycelium_proj::resolve::ResolvedHeader
+impl core::cmp::Eq for mycelium_proj::resolve::ResolvedHeader
+impl core::cmp::PartialEq for mycelium_proj::resolve::ResolvedHeader
+pub fn mycelium_proj::resolve::ResolvedHeader::eq(&self, &mycelium_proj::resolve::ResolvedHeader) -> bool
+impl core::default::Default for mycelium_proj::resolve::ResolvedHeader
+pub fn mycelium_proj::resolve::ResolvedHeader::default() -> mycelium_proj::resolve::ResolvedHeader
+impl core::fmt::Debug for mycelium_proj::resolve::ResolvedHeader
+pub fn mycelium_proj::resolve::ResolvedHeader::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::resolve::ResolvedHeader
+impl core::marker::Freeze for mycelium_proj::resolve::ResolvedHeader
+impl core::marker::Send for mycelium_proj::resolve::ResolvedHeader
+impl core::marker::Sync for mycelium_proj::resolve::ResolvedHeader
+impl core::marker::Unpin for mycelium_proj::resolve::ResolvedHeader
+impl core::marker::UnsafeUnpin for mycelium_proj::resolve::ResolvedHeader
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::resolve::ResolvedHeader
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::resolve::ResolvedHeader
+pub fn mycelium_proj::resolve::explain(&mycelium_proj::resolve::ResolvedHeader) -> alloc::string::String
+pub fn mycelium_proj::resolve::resolve(&mycelium_proj::header::StructuredHeader, core::option::Option<&mycelium_proj::manifest::Manifest>) -> mycelium_proj::resolve::ResolvedHeader
+pub enum mycelium_proj::Deprecated
+pub mycelium_proj::Deprecated::Flag(bool)
+pub mycelium_proj::Deprecated::Reason(alloc::string::String)
+impl core::clone::Clone for mycelium_proj::header::Deprecated
+pub fn mycelium_proj::header::Deprecated::clone(&self) -> mycelium_proj::header::Deprecated
+impl core::cmp::Eq for mycelium_proj::header::Deprecated
+impl core::cmp::PartialEq for mycelium_proj::header::Deprecated
+pub fn mycelium_proj::header::Deprecated::eq(&self, &mycelium_proj::header::Deprecated) -> bool
+impl core::fmt::Debug for mycelium_proj::header::Deprecated
+pub fn mycelium_proj::header::Deprecated::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::header::Deprecated
+impl core::marker::Freeze for mycelium_proj::header::Deprecated
+impl core::marker::Send for mycelium_proj::header::Deprecated
+impl core::marker::Sync for mycelium_proj::header::Deprecated
+impl core::marker::Unpin for mycelium_proj::header::Deprecated
+impl core::marker::UnsafeUnpin for mycelium_proj::header::Deprecated
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::header::Deprecated
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::header::Deprecated
+pub enum mycelium_proj::Origin
+pub mycelium_proj::Origin::Local
+pub mycelium_proj::Origin::ProjectManifest
+impl core::clone::Clone for mycelium_proj::resolve::Origin
+pub fn mycelium_proj::resolve::Origin::clone(&self) -> mycelium_proj::resolve::Origin
+impl core::cmp::Eq for mycelium_proj::resolve::Origin
+impl core::cmp::PartialEq for mycelium_proj::resolve::Origin
+pub fn mycelium_proj::resolve::Origin::eq(&self, &mycelium_proj::resolve::Origin) -> bool
+impl core::fmt::Debug for mycelium_proj::resolve::Origin
+pub fn mycelium_proj::resolve::Origin::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::resolve::Origin
+impl core::marker::StructuralPartialEq for mycelium_proj::resolve::Origin
+impl core::marker::Freeze for mycelium_proj::resolve::Origin
+impl core::marker::Send for mycelium_proj::resolve::Origin
+impl core::marker::Sync for mycelium_proj::resolve::Origin
+impl core::marker::Unpin for mycelium_proj::resolve::Origin
+impl core::marker::UnsafeUnpin for mycelium_proj::resolve::Origin
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::resolve::Origin
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::resolve::Origin
+pub enum mycelium_proj::ProjectKind
+pub mycelium_proj::ProjectKind::Phylum
+pub mycelium_proj::ProjectKind::Program
+pub mycelium_proj::ProjectKind::Script
+impl core::clone::Clone for mycelium_proj::manifest::ProjectKind
+pub fn mycelium_proj::manifest::ProjectKind::clone(&self) -> mycelium_proj::manifest::ProjectKind
+impl core::cmp::Eq for mycelium_proj::manifest::ProjectKind
+impl core::cmp::PartialEq for mycelium_proj::manifest::ProjectKind
+pub fn mycelium_proj::manifest::ProjectKind::eq(&self, &mycelium_proj::manifest::ProjectKind) -> bool
+impl core::fmt::Debug for mycelium_proj::manifest::ProjectKind
+pub fn mycelium_proj::manifest::ProjectKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::manifest::ProjectKind
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::ProjectKind
+impl core::marker::Freeze for mycelium_proj::manifest::ProjectKind
+impl core::marker::Send for mycelium_proj::manifest::ProjectKind
+impl core::marker::Sync for mycelium_proj::manifest::ProjectKind
+impl core::marker::Unpin for mycelium_proj::manifest::ProjectKind
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::ProjectKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::ProjectKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::ProjectKind
+pub struct mycelium_proj::Dependency
+pub mycelium_proj::Dependency::hash: core::option::Option<alloc::string::String>
+pub mycelium_proj::Dependency::name: alloc::string::String
+pub mycelium_proj::Dependency::phylum: alloc::string::String
+pub mycelium_proj::Dependency::version: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_proj::manifest::Dependency
+pub fn mycelium_proj::manifest::Dependency::clone(&self) -> mycelium_proj::manifest::Dependency
+impl core::cmp::Eq for mycelium_proj::manifest::Dependency
+impl core::cmp::PartialEq for mycelium_proj::manifest::Dependency
+pub fn mycelium_proj::manifest::Dependency::eq(&self, &mycelium_proj::manifest::Dependency) -> bool
+impl core::fmt::Debug for mycelium_proj::manifest::Dependency
+pub fn mycelium_proj::manifest::Dependency::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::Dependency
+impl core::marker::Freeze for mycelium_proj::manifest::Dependency
+impl core::marker::Send for mycelium_proj::manifest::Dependency
+impl core::marker::Sync for mycelium_proj::manifest::Dependency
+impl core::marker::Unpin for mycelium_proj::manifest::Dependency
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::Dependency
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::Dependency
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::Dependency
+pub struct mycelium_proj::HeaderError
+pub mycelium_proj::HeaderError::line: u32
+pub mycelium_proj::HeaderError::message: alloc::string::String
+impl core::clone::Clone for mycelium_proj::header::HeaderError
+pub fn mycelium_proj::header::HeaderError::clone(&self) -> mycelium_proj::header::HeaderError
+impl core::cmp::Eq for mycelium_proj::header::HeaderError
+impl core::cmp::PartialEq for mycelium_proj::header::HeaderError
+pub fn mycelium_proj::header::HeaderError::eq(&self, &mycelium_proj::header::HeaderError) -> bool
+impl core::convert::From<mycelium_l1::nodule::NoduleHeaderError> for mycelium_proj::header::HeaderError
+pub fn mycelium_proj::header::HeaderError::from(mycelium_l1::nodule::NoduleHeaderError) -> Self
+impl core::error::Error for mycelium_proj::header::HeaderError
+impl core::fmt::Debug for mycelium_proj::header::HeaderError
+pub fn mycelium_proj::header::HeaderError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_proj::header::HeaderError
+pub fn mycelium_proj::header::HeaderError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::header::HeaderError
+impl core::marker::Freeze for mycelium_proj::header::HeaderError
+impl core::marker::Send for mycelium_proj::header::HeaderError
+impl core::marker::Sync for mycelium_proj::header::HeaderError
+impl core::marker::Unpin for mycelium_proj::header::HeaderError
+impl core::marker::UnsafeUnpin for mycelium_proj::header::HeaderError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::header::HeaderError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::header::HeaderError
+pub struct mycelium_proj::HeaderFields
+pub mycelium_proj::HeaderFields::authors: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub mycelium_proj::HeaderFields::deprecated: core::option::Option<mycelium_proj::header::Deprecated>
+pub mycelium_proj::HeaderFields::keywords: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub mycelium_proj::HeaderFields::license: core::option::Option<alloc::string::String>
+pub mycelium_proj::HeaderFields::matured: core::option::Option<bool>
+pub mycelium_proj::HeaderFields::repository: core::option::Option<alloc::string::String>
+pub mycelium_proj::HeaderFields::since: core::option::Option<alloc::string::String>
+pub mycelium_proj::HeaderFields::summary: core::option::Option<alloc::string::String>
+pub mycelium_proj::HeaderFields::updated: core::option::Option<alloc::string::String>
+pub mycelium_proj::HeaderFields::version: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_proj::header::HeaderFields
+pub fn mycelium_proj::header::HeaderFields::clone(&self) -> mycelium_proj::header::HeaderFields
+impl core::cmp::Eq for mycelium_proj::header::HeaderFields
+impl core::cmp::PartialEq for mycelium_proj::header::HeaderFields
+pub fn mycelium_proj::header::HeaderFields::eq(&self, &mycelium_proj::header::HeaderFields) -> bool
+impl core::default::Default for mycelium_proj::header::HeaderFields
+pub fn mycelium_proj::header::HeaderFields::default() -> mycelium_proj::header::HeaderFields
+impl core::fmt::Debug for mycelium_proj::header::HeaderFields
+pub fn mycelium_proj::header::HeaderFields::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::header::HeaderFields
+impl core::marker::Freeze for mycelium_proj::header::HeaderFields
+impl core::marker::Send for mycelium_proj::header::HeaderFields
+impl core::marker::Sync for mycelium_proj::header::HeaderFields
+impl core::marker::Unpin for mycelium_proj::header::HeaderFields
+impl core::marker::UnsafeUnpin for mycelium_proj::header::HeaderFields
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::header::HeaderFields
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::header::HeaderFields
+pub struct mycelium_proj::Manifest
+pub mycelium_proj::Manifest::dependencies: alloc::vec::Vec<mycelium_proj::manifest::Dependency>
+pub mycelium_proj::Manifest::project: mycelium_proj::manifest::Project
+pub mycelium_proj::Manifest::spore: core::option::Option<mycelium_proj::manifest::SporeConfig>
+pub mycelium_proj::Manifest::surface: core::option::Option<mycelium_proj::manifest::Surface>
+pub mycelium_proj::Manifest::toolchain: core::option::Option<mycelium_proj::manifest::Toolchain>
+impl core::clone::Clone for mycelium_proj::manifest::Manifest
+pub fn mycelium_proj::manifest::Manifest::clone(&self) -> mycelium_proj::manifest::Manifest
+impl core::cmp::Eq for mycelium_proj::manifest::Manifest
+impl core::cmp::PartialEq for mycelium_proj::manifest::Manifest
+pub fn mycelium_proj::manifest::Manifest::eq(&self, &mycelium_proj::manifest::Manifest) -> bool
+impl core::fmt::Debug for mycelium_proj::manifest::Manifest
+pub fn mycelium_proj::manifest::Manifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::Manifest
+impl core::marker::Freeze for mycelium_proj::manifest::Manifest
+impl core::marker::Send for mycelium_proj::manifest::Manifest
+impl core::marker::Sync for mycelium_proj::manifest::Manifest
+impl core::marker::Unpin for mycelium_proj::manifest::Manifest
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::Manifest
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::Manifest
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::Manifest
+pub struct mycelium_proj::ManifestError
+pub mycelium_proj::ManifestError::line: u32
+pub mycelium_proj::ManifestError::message: alloc::string::String
+impl core::clone::Clone for mycelium_proj::manifest::ManifestError
+pub fn mycelium_proj::manifest::ManifestError::clone(&self) -> mycelium_proj::manifest::ManifestError
+impl core::cmp::Eq for mycelium_proj::manifest::ManifestError
+impl core::cmp::PartialEq for mycelium_proj::manifest::ManifestError
+pub fn mycelium_proj::manifest::ManifestError::eq(&self, &mycelium_proj::manifest::ManifestError) -> bool
+impl core::error::Error for mycelium_proj::manifest::ManifestError
+impl core::fmt::Debug for mycelium_proj::manifest::ManifestError
+pub fn mycelium_proj::manifest::ManifestError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_proj::manifest::ManifestError
+pub fn mycelium_proj::manifest::ManifestError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::ManifestError
+impl core::marker::Freeze for mycelium_proj::manifest::ManifestError
+impl core::marker::Send for mycelium_proj::manifest::ManifestError
+impl core::marker::Sync for mycelium_proj::manifest::ManifestError
+impl core::marker::Unpin for mycelium_proj::manifest::ManifestError
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::ManifestError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::ManifestError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::ManifestError
+pub struct mycelium_proj::Project
+pub mycelium_proj::Project::authors: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub mycelium_proj::Project::keywords: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub mycelium_proj::Project::kind: mycelium_proj::manifest::ProjectKind
+pub mycelium_proj::Project::lang: core::option::Option<alloc::string::String>
+pub mycelium_proj::Project::license: core::option::Option<alloc::string::String>
+pub mycelium_proj::Project::name: alloc::string::String
+pub mycelium_proj::Project::repository: core::option::Option<alloc::string::String>
+pub mycelium_proj::Project::since: core::option::Option<alloc::string::String>
+pub mycelium_proj::Project::summary: core::option::Option<alloc::string::String>
+pub mycelium_proj::Project::version: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_proj::manifest::Project
+pub fn mycelium_proj::manifest::Project::clone(&self) -> mycelium_proj::manifest::Project
+impl core::cmp::Eq for mycelium_proj::manifest::Project
+impl core::cmp::PartialEq for mycelium_proj::manifest::Project
+pub fn mycelium_proj::manifest::Project::eq(&self, &mycelium_proj::manifest::Project) -> bool
+impl core::fmt::Debug for mycelium_proj::manifest::Project
+pub fn mycelium_proj::manifest::Project::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::Project
+impl core::marker::Freeze for mycelium_proj::manifest::Project
+impl core::marker::Send for mycelium_proj::manifest::Project
+impl core::marker::Sync for mycelium_proj::manifest::Project
+impl core::marker::Unpin for mycelium_proj::manifest::Project
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::Project
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::Project
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::Project
+pub struct mycelium_proj::Resolved<T>
+pub mycelium_proj::Resolved::origin: mycelium_proj::resolve::Origin
+pub mycelium_proj::Resolved::value: T
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_proj::resolve::Resolved<T>
+pub fn mycelium_proj::resolve::Resolved<T>::clone(&self) -> mycelium_proj::resolve::Resolved<T>
+impl<T: core::cmp::Eq> core::cmp::Eq for mycelium_proj::resolve::Resolved<T>
+impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_proj::resolve::Resolved<T>
+pub fn mycelium_proj::resolve::Resolved<T>::eq(&self, &mycelium_proj::resolve::Resolved<T>) -> bool
+impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_proj::resolve::Resolved<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_proj::resolve::Resolved<T>
+pub fn mycelium_proj::resolve::Resolved<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::marker::Freeze for mycelium_proj::resolve::Resolved<T> where T: core::marker::Freeze
+impl<T> core::marker::Send for mycelium_proj::resolve::Resolved<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_proj::resolve::Resolved<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_proj::resolve::Resolved<T> where T: core::marker::Unpin
+impl<T> core::marker::UnsafeUnpin for mycelium_proj::resolve::Resolved<T> where T: core::marker::UnsafeUnpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::resolve::Resolved<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_proj::resolve::Resolved<T> where T: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_proj::ResolvedHeader
+pub mycelium_proj::ResolvedHeader::authors: core::option::Option<mycelium_proj::resolve::Resolved<alloc::vec::Vec<alloc::string::String>>>
+pub mycelium_proj::ResolvedHeader::deprecated: core::option::Option<mycelium_proj::header::Deprecated>
+pub mycelium_proj::ResolvedHeader::keywords: core::option::Option<mycelium_proj::resolve::Resolved<alloc::vec::Vec<alloc::string::String>>>
+pub mycelium_proj::ResolvedHeader::license: core::option::Option<mycelium_proj::resolve::Resolved<alloc::string::String>>
+pub mycelium_proj::ResolvedHeader::matured: core::option::Option<mycelium_proj::resolve::Resolved<bool>>
+pub mycelium_proj::ResolvedHeader::name: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub mycelium_proj::ResolvedHeader::repository: core::option::Option<mycelium_proj::resolve::Resolved<alloc::string::String>>
+pub mycelium_proj::ResolvedHeader::since: core::option::Option<mycelium_proj::resolve::Resolved<alloc::string::String>>
+pub mycelium_proj::ResolvedHeader::summary: core::option::Option<alloc::string::String>
+pub mycelium_proj::ResolvedHeader::updated: core::option::Option<alloc::string::String>
+pub mycelium_proj::ResolvedHeader::version: core::option::Option<mycelium_proj::resolve::Resolved<alloc::string::String>>
+impl core::clone::Clone for mycelium_proj::resolve::ResolvedHeader
+pub fn mycelium_proj::resolve::ResolvedHeader::clone(&self) -> mycelium_proj::resolve::ResolvedHeader
+impl core::cmp::Eq for mycelium_proj::resolve::ResolvedHeader
+impl core::cmp::PartialEq for mycelium_proj::resolve::ResolvedHeader
+pub fn mycelium_proj::resolve::ResolvedHeader::eq(&self, &mycelium_proj::resolve::ResolvedHeader) -> bool
+impl core::default::Default for mycelium_proj::resolve::ResolvedHeader
+pub fn mycelium_proj::resolve::ResolvedHeader::default() -> mycelium_proj::resolve::ResolvedHeader
+impl core::fmt::Debug for mycelium_proj::resolve::ResolvedHeader
+pub fn mycelium_proj::resolve::ResolvedHeader::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::resolve::ResolvedHeader
+impl core::marker::Freeze for mycelium_proj::resolve::ResolvedHeader
+impl core::marker::Send for mycelium_proj::resolve::ResolvedHeader
+impl core::marker::Sync for mycelium_proj::resolve::ResolvedHeader
+impl core::marker::Unpin for mycelium_proj::resolve::ResolvedHeader
+impl core::marker::UnsafeUnpin for mycelium_proj::resolve::ResolvedHeader
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::resolve::ResolvedHeader
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::resolve::ResolvedHeader
+pub struct mycelium_proj::SporeConfig
+pub mycelium_proj::SporeConfig::include: alloc::vec::Vec<alloc::string::String>
+impl core::clone::Clone for mycelium_proj::manifest::SporeConfig
+pub fn mycelium_proj::manifest::SporeConfig::clone(&self) -> mycelium_proj::manifest::SporeConfig
+impl core::cmp::Eq for mycelium_proj::manifest::SporeConfig
+impl core::cmp::PartialEq for mycelium_proj::manifest::SporeConfig
+pub fn mycelium_proj::manifest::SporeConfig::eq(&self, &mycelium_proj::manifest::SporeConfig) -> bool
+impl core::default::Default for mycelium_proj::manifest::SporeConfig
+pub fn mycelium_proj::manifest::SporeConfig::default() -> mycelium_proj::manifest::SporeConfig
+impl core::fmt::Debug for mycelium_proj::manifest::SporeConfig
+pub fn mycelium_proj::manifest::SporeConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::SporeConfig
+impl core::marker::Freeze for mycelium_proj::manifest::SporeConfig
+impl core::marker::Send for mycelium_proj::manifest::SporeConfig
+impl core::marker::Sync for mycelium_proj::manifest::SporeConfig
+impl core::marker::Unpin for mycelium_proj::manifest::SporeConfig
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::SporeConfig
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::SporeConfig
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::SporeConfig
+pub struct mycelium_proj::StructuredHeader
+pub mycelium_proj::StructuredHeader::fields: mycelium_proj::header::HeaderFields
+pub mycelium_proj::StructuredHeader::marker: mycelium_l1::nodule::NoduleHeader
+impl core::clone::Clone for mycelium_proj::header::StructuredHeader
+pub fn mycelium_proj::header::StructuredHeader::clone(&self) -> mycelium_proj::header::StructuredHeader
+impl core::cmp::Eq for mycelium_proj::header::StructuredHeader
+impl core::cmp::PartialEq for mycelium_proj::header::StructuredHeader
+pub fn mycelium_proj::header::StructuredHeader::eq(&self, &mycelium_proj::header::StructuredHeader) -> bool
+impl core::fmt::Debug for mycelium_proj::header::StructuredHeader
+pub fn mycelium_proj::header::StructuredHeader::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::header::StructuredHeader
+impl core::marker::Freeze for mycelium_proj::header::StructuredHeader
+impl core::marker::Send for mycelium_proj::header::StructuredHeader
+impl core::marker::Sync for mycelium_proj::header::StructuredHeader
+impl core::marker::Unpin for mycelium_proj::header::StructuredHeader
+impl core::marker::UnsafeUnpin for mycelium_proj::header::StructuredHeader
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::header::StructuredHeader
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::header::StructuredHeader
+pub struct mycelium_proj::Surface
+pub mycelium_proj::Surface::exports: alloc::vec::Vec<alloc::string::String>
+impl core::clone::Clone for mycelium_proj::manifest::Surface
+pub fn mycelium_proj::manifest::Surface::clone(&self) -> mycelium_proj::manifest::Surface
+impl core::cmp::Eq for mycelium_proj::manifest::Surface
+impl core::cmp::PartialEq for mycelium_proj::manifest::Surface
+pub fn mycelium_proj::manifest::Surface::eq(&self, &mycelium_proj::manifest::Surface) -> bool
+impl core::default::Default for mycelium_proj::manifest::Surface
+pub fn mycelium_proj::manifest::Surface::default() -> mycelium_proj::manifest::Surface
+impl core::fmt::Debug for mycelium_proj::manifest::Surface
+pub fn mycelium_proj::manifest::Surface::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::Surface
+impl core::marker::Freeze for mycelium_proj::manifest::Surface
+impl core::marker::Send for mycelium_proj::manifest::Surface
+impl core::marker::Sync for mycelium_proj::manifest::Surface
+impl core::marker::Unpin for mycelium_proj::manifest::Surface
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::Surface
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::Surface
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::Surface
+pub struct mycelium_proj::Toolchain
+pub mycelium_proj::Toolchain::format: core::option::Option<alloc::string::String>
+pub mycelium_proj::Toolchain::lints: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_proj::manifest::Toolchain
+pub fn mycelium_proj::manifest::Toolchain::clone(&self) -> mycelium_proj::manifest::Toolchain
+impl core::cmp::Eq for mycelium_proj::manifest::Toolchain
+impl core::cmp::PartialEq for mycelium_proj::manifest::Toolchain
+pub fn mycelium_proj::manifest::Toolchain::eq(&self, &mycelium_proj::manifest::Toolchain) -> bool
+impl core::default::Default for mycelium_proj::manifest::Toolchain
+pub fn mycelium_proj::manifest::Toolchain::default() -> mycelium_proj::manifest::Toolchain
+impl core::fmt::Debug for mycelium_proj::manifest::Toolchain
+pub fn mycelium_proj::manifest::Toolchain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_proj::manifest::Toolchain
+impl core::marker::Freeze for mycelium_proj::manifest::Toolchain
+impl core::marker::Send for mycelium_proj::manifest::Toolchain
+impl core::marker::Sync for mycelium_proj::manifest::Toolchain
+impl core::marker::Unpin for mycelium_proj::manifest::Toolchain
+impl core::marker::UnsafeUnpin for mycelium_proj::manifest::Toolchain
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::Toolchain
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::Toolchain
+pub const mycelium_proj::HEADER_KEYS: &[&str]
+pub fn mycelium_proj::explain(&mycelium_proj::resolve::ResolvedHeader) -> alloc::string::String
+pub fn mycelium_proj::parse_header(&str) -> core::result::Result<core::option::Option<mycelium_proj::header::StructuredHeader>, mycelium_proj::header::HeaderError>
+pub fn mycelium_proj::parse_manifest(&str) -> core::result::Result<mycelium_proj::manifest::Manifest, mycelium_proj::manifest::ManifestError>
+pub fn mycelium_proj::resolve(&mycelium_proj::header::StructuredHeader, core::option::Option<&mycelium_proj::manifest::Manifest>) -> mycelium_proj::resolve::ResolvedHeader

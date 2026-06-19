@@ -1,0 +1,939 @@
+pub mod mycelium_mlir
+pub mod mycelium_mlir::aot
+pub fn mycelium_mlir::aot::default_depth_budget() -> mycelium_mlir::budget::DepthResolution
+pub fn mycelium_mlir::aot::run(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+pub fn mycelium_mlir::aot::run_core(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
+pub fn mycelium_mlir::aot::run_core_with_budget(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64, usize) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
+pub fn mycelium_mlir::aot::run_core_with_effects(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64, usize, &mut mycelium_interp::budget::Budgets) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
+pub fn mycelium_mlir::aot::run_core_with_fuel(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
+pub fn mycelium_mlir::aot::run_with_layout(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, mycelium_core::meta::PackScheme, mycelium_core::meta::PackScheme) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+pub mod mycelium_mlir::bitnet
+pub struct mycelium_mlir::bitnet::BitnetDotKernel
+impl mycelium_mlir::bitnet::BitnetDotKernel
+pub fn mycelium_mlir::bitnet::BitnetDotKernel::call(&self, &[u8], &[i32], usize) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::bitnet::BitnetDotKernel::scheme(&self) -> mycelium_core::meta::PackScheme
+impl core::marker::Freeze for mycelium_mlir::bitnet::BitnetDotKernel
+impl !core::marker::Send for mycelium_mlir::bitnet::BitnetDotKernel
+impl !core::marker::Sync for mycelium_mlir::bitnet::BitnetDotKernel
+impl core::marker::Unpin for mycelium_mlir::bitnet::BitnetDotKernel
+impl core::marker::UnsafeUnpin for mycelium_mlir::bitnet::BitnetDotKernel
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::bitnet::BitnetDotKernel
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::bitnet::BitnetDotKernel
+pub const mycelium_mlir::bitnet::KERNEL_SCHEME: mycelium_core::meta::PackScheme
+pub fn mycelium_mlir::bitnet::compile_bitnet_dot() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::bitnet::compile_bitnet_dot_for(mycelium_core::meta::PackScheme) -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::bitnet::emit_bitnet_dot_ir() -> alloc::string::String
+pub fn mycelium_mlir::bitnet::emit_bitnet_dot_ir_for(mycelium_core::meta::PackScheme) -> core::result::Result<alloc::string::String, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::bitnet::jit_ternary_dot(&[mycelium_core::value::Trit], &[i32]) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::bitnet::jit_ternary_dot_for(&[mycelium_core::value::Trit], &[i32], mycelium_core::meta::PackScheme) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::bitnet::ternary_dot_ref(&[mycelium_core::value::Trit], &[i32]) -> i64
+pub mod mycelium_mlir::budget
+pub enum mycelium_mlir::budget::DepthBasis
+pub mycelium_mlir::budget::DepthBasis::DetectedMemory
+pub mycelium_mlir::budget::DepthBasis::DetectedMemory::clamped: bool
+pub mycelium_mlir::budget::DepthBasis::DetectedMemory::headroom_bytes: u64
+pub mycelium_mlir::budget::DepthBasis::DetectedMemory::margin_pct: u8
+pub mycelium_mlir::budget::DepthBasis::DetectedMemory::per_frame_bytes: u64
+pub mycelium_mlir::budget::DepthBasis::DetectedMemory::source: mycelium_mlir::budget::MemSource
+pub mycelium_mlir::budget::DepthBasis::Static
+pub mycelium_mlir::budget::DepthBasis::Static::reason: mycelium_mlir::budget::StaticReason
+impl core::clone::Clone for mycelium_mlir::budget::DepthBasis
+pub fn mycelium_mlir::budget::DepthBasis::clone(&self) -> mycelium_mlir::budget::DepthBasis
+impl core::cmp::Eq for mycelium_mlir::budget::DepthBasis
+impl core::cmp::PartialEq for mycelium_mlir::budget::DepthBasis
+pub fn mycelium_mlir::budget::DepthBasis::eq(&self, &mycelium_mlir::budget::DepthBasis) -> bool
+impl core::fmt::Debug for mycelium_mlir::budget::DepthBasis
+pub fn mycelium_mlir::budget::DepthBasis::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::budget::DepthBasis
+impl core::marker::Freeze for mycelium_mlir::budget::DepthBasis
+impl core::marker::Send for mycelium_mlir::budget::DepthBasis
+impl core::marker::Sync for mycelium_mlir::budget::DepthBasis
+impl core::marker::Unpin for mycelium_mlir::budget::DepthBasis
+impl core::marker::UnsafeUnpin for mycelium_mlir::budget::DepthBasis
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::DepthBasis
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::DepthBasis
+pub enum mycelium_mlir::budget::MemSource
+pub mycelium_mlir::budget::MemSource::AddressSpaceRlimit
+pub mycelium_mlir::budget::MemSource::MemAvailable
+impl core::clone::Clone for mycelium_mlir::budget::MemSource
+pub fn mycelium_mlir::budget::MemSource::clone(&self) -> mycelium_mlir::budget::MemSource
+impl core::cmp::Eq for mycelium_mlir::budget::MemSource
+impl core::cmp::PartialEq for mycelium_mlir::budget::MemSource
+pub fn mycelium_mlir::budget::MemSource::eq(&self, &mycelium_mlir::budget::MemSource) -> bool
+impl core::fmt::Debug for mycelium_mlir::budget::MemSource
+pub fn mycelium_mlir::budget::MemSource::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::budget::MemSource
+impl core::marker::StructuralPartialEq for mycelium_mlir::budget::MemSource
+impl core::marker::Freeze for mycelium_mlir::budget::MemSource
+impl core::marker::Send for mycelium_mlir::budget::MemSource
+impl core::marker::Sync for mycelium_mlir::budget::MemSource
+impl core::marker::Unpin for mycelium_mlir::budget::MemSource
+impl core::marker::UnsafeUnpin for mycelium_mlir::budget::MemSource
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::MemSource
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::MemSource
+pub enum mycelium_mlir::budget::StaticReason
+pub mycelium_mlir::budget::StaticReason::DetectionFailed
+pub mycelium_mlir::budget::StaticReason::Explicit
+pub mycelium_mlir::budget::StaticReason::UnsupportedPlatform
+impl core::clone::Clone for mycelium_mlir::budget::StaticReason
+pub fn mycelium_mlir::budget::StaticReason::clone(&self) -> mycelium_mlir::budget::StaticReason
+impl core::cmp::Eq for mycelium_mlir::budget::StaticReason
+impl core::cmp::PartialEq for mycelium_mlir::budget::StaticReason
+pub fn mycelium_mlir::budget::StaticReason::eq(&self, &mycelium_mlir::budget::StaticReason) -> bool
+impl core::fmt::Debug for mycelium_mlir::budget::StaticReason
+pub fn mycelium_mlir::budget::StaticReason::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::budget::StaticReason
+impl core::marker::StructuralPartialEq for mycelium_mlir::budget::StaticReason
+impl core::marker::Freeze for mycelium_mlir::budget::StaticReason
+impl core::marker::Send for mycelium_mlir::budget::StaticReason
+impl core::marker::Sync for mycelium_mlir::budget::StaticReason
+impl core::marker::Unpin for mycelium_mlir::budget::StaticReason
+impl core::marker::UnsafeUnpin for mycelium_mlir::budget::StaticReason
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::StaticReason
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::StaticReason
+pub struct mycelium_mlir::budget::AutoDepthBudget
+pub mycelium_mlir::budget::AutoDepthBudget::ceil: usize
+pub mycelium_mlir::budget::AutoDepthBudget::fallback: usize
+pub mycelium_mlir::budget::AutoDepthBudget::floor: usize
+pub mycelium_mlir::budget::AutoDepthBudget::margin_pct: u8
+pub mycelium_mlir::budget::AutoDepthBudget::per_frame_bytes: u64
+impl core::clone::Clone for mycelium_mlir::budget::AutoDepthBudget
+pub fn mycelium_mlir::budget::AutoDepthBudget::clone(&self) -> mycelium_mlir::budget::AutoDepthBudget
+impl core::default::Default for mycelium_mlir::budget::AutoDepthBudget
+pub fn mycelium_mlir::budget::AutoDepthBudget::default() -> Self
+impl core::fmt::Debug for mycelium_mlir::budget::AutoDepthBudget
+pub fn mycelium_mlir::budget::AutoDepthBudget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::budget::AutoDepthBudget
+impl mycelium_mlir::budget::DepthBudget for mycelium_mlir::budget::AutoDepthBudget
+pub fn mycelium_mlir::budget::AutoDepthBudget::resolve(&self) -> mycelium_mlir::budget::DepthResolution
+impl core::marker::Freeze for mycelium_mlir::budget::AutoDepthBudget
+impl core::marker::Send for mycelium_mlir::budget::AutoDepthBudget
+impl core::marker::Sync for mycelium_mlir::budget::AutoDepthBudget
+impl core::marker::Unpin for mycelium_mlir::budget::AutoDepthBudget
+impl core::marker::UnsafeUnpin for mycelium_mlir::budget::AutoDepthBudget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::AutoDepthBudget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::AutoDepthBudget
+pub struct mycelium_mlir::budget::DepthResolution
+pub mycelium_mlir::budget::DepthResolution::basis: mycelium_mlir::budget::DepthBasis
+pub mycelium_mlir::budget::DepthResolution::max_depth: usize
+impl core::clone::Clone for mycelium_mlir::budget::DepthResolution
+pub fn mycelium_mlir::budget::DepthResolution::clone(&self) -> mycelium_mlir::budget::DepthResolution
+impl core::cmp::Eq for mycelium_mlir::budget::DepthResolution
+impl core::cmp::PartialEq for mycelium_mlir::budget::DepthResolution
+pub fn mycelium_mlir::budget::DepthResolution::eq(&self, &mycelium_mlir::budget::DepthResolution) -> bool
+impl core::fmt::Debug for mycelium_mlir::budget::DepthResolution
+pub fn mycelium_mlir::budget::DepthResolution::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::budget::DepthResolution
+pub fn mycelium_mlir::budget::DepthResolution::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::budget::DepthResolution
+impl core::marker::Freeze for mycelium_mlir::budget::DepthResolution
+impl core::marker::Send for mycelium_mlir::budget::DepthResolution
+impl core::marker::Sync for mycelium_mlir::budget::DepthResolution
+impl core::marker::Unpin for mycelium_mlir::budget::DepthResolution
+impl core::marker::UnsafeUnpin for mycelium_mlir::budget::DepthResolution
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::DepthResolution
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::DepthResolution
+pub struct mycelium_mlir::budget::StaticDepthBudget(pub usize)
+impl core::clone::Clone for mycelium_mlir::budget::StaticDepthBudget
+pub fn mycelium_mlir::budget::StaticDepthBudget::clone(&self) -> mycelium_mlir::budget::StaticDepthBudget
+impl core::fmt::Debug for mycelium_mlir::budget::StaticDepthBudget
+pub fn mycelium_mlir::budget::StaticDepthBudget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::budget::StaticDepthBudget
+impl mycelium_mlir::budget::DepthBudget for mycelium_mlir::budget::StaticDepthBudget
+pub fn mycelium_mlir::budget::StaticDepthBudget::resolve(&self) -> mycelium_mlir::budget::DepthResolution
+impl core::marker::Freeze for mycelium_mlir::budget::StaticDepthBudget
+impl core::marker::Send for mycelium_mlir::budget::StaticDepthBudget
+impl core::marker::Sync for mycelium_mlir::budget::StaticDepthBudget
+impl core::marker::Unpin for mycelium_mlir::budget::StaticDepthBudget
+impl core::marker::UnsafeUnpin for mycelium_mlir::budget::StaticDepthBudget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::StaticDepthBudget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::StaticDepthBudget
+pub const mycelium_mlir::budget::DEFAULT_PER_FRAME_BYTES: u64
+pub const mycelium_mlir::budget::STATIC_FALLBACK_DEPTH: usize
+pub trait mycelium_mlir::budget::DepthBudget
+pub fn mycelium_mlir::budget::DepthBudget::resolve(&self) -> mycelium_mlir::budget::DepthResolution
+impl mycelium_mlir::budget::DepthBudget for mycelium_mlir::budget::AutoDepthBudget
+pub fn mycelium_mlir::budget::AutoDepthBudget::resolve(&self) -> mycelium_mlir::budget::DepthResolution
+impl mycelium_mlir::budget::DepthBudget for mycelium_mlir::budget::StaticDepthBudget
+pub fn mycelium_mlir::budget::StaticDepthBudget::resolve(&self) -> mycelium_mlir::budget::DepthResolution
+pub mod mycelium_mlir::channel
+pub enum mycelium_mlir::channel::TryRecv
+pub mycelium_mlir::channel::TryRecv::Closed
+pub mycelium_mlir::channel::TryRecv::Empty
+impl core::clone::Clone for mycelium_mlir::channel::TryRecv
+pub fn mycelium_mlir::channel::TryRecv::clone(&self) -> mycelium_mlir::channel::TryRecv
+impl core::cmp::Eq for mycelium_mlir::channel::TryRecv
+impl core::cmp::PartialEq for mycelium_mlir::channel::TryRecv
+pub fn mycelium_mlir::channel::TryRecv::eq(&self, &mycelium_mlir::channel::TryRecv) -> bool
+impl core::fmt::Debug for mycelium_mlir::channel::TryRecv
+pub fn mycelium_mlir::channel::TryRecv::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::channel::TryRecv
+impl core::marker::StructuralPartialEq for mycelium_mlir::channel::TryRecv
+impl core::marker::Freeze for mycelium_mlir::channel::TryRecv
+impl core::marker::Send for mycelium_mlir::channel::TryRecv
+impl core::marker::Sync for mycelium_mlir::channel::TryRecv
+impl core::marker::Unpin for mycelium_mlir::channel::TryRecv
+impl core::marker::UnsafeUnpin for mycelium_mlir::channel::TryRecv
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::TryRecv
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::TryRecv
+pub enum mycelium_mlir::channel::TrySend<V>
+pub mycelium_mlir::channel::TrySend::Disconnected(V)
+pub mycelium_mlir::channel::TrySend::Full(V)
+impl<V: core::cmp::Eq> core::cmp::Eq for mycelium_mlir::channel::TrySend<V>
+impl<V: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_mlir::channel::TrySend<V>
+pub fn mycelium_mlir::channel::TrySend<V>::eq(&self, &mycelium_mlir::channel::TrySend<V>) -> bool
+impl<V: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_mlir::channel::TrySend<V>
+impl<V: core::fmt::Debug> core::fmt::Debug for mycelium_mlir::channel::TrySend<V>
+pub fn mycelium_mlir::channel::TrySend<V>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<V> core::marker::Freeze for mycelium_mlir::channel::TrySend<V> where V: core::marker::Freeze
+impl<V> core::marker::Send for mycelium_mlir::channel::TrySend<V> where V: core::marker::Send
+impl<V> core::marker::Sync for mycelium_mlir::channel::TrySend<V> where V: core::marker::Sync
+impl<V> core::marker::Unpin for mycelium_mlir::channel::TrySend<V> where V: core::marker::Unpin
+impl<V> core::marker::UnsafeUnpin for mycelium_mlir::channel::TrySend<V> where V: core::marker::UnsafeUnpin
+impl<V> core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::TrySend<V> where V: core::panic::unwind_safe::RefUnwindSafe
+impl<V> core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::TrySend<V> where V: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_mlir::channel::Network
+impl mycelium_mlir::channel::Network
+pub fn mycelium_mlir::channel::Network::channel<V>(&self, core::num::nonzero::NonZeroUsize) -> (mycelium_mlir::channel::Sender<V>, mycelium_mlir::channel::Receiver<V>)
+pub fn mycelium_mlir::channel::Network::epoch(&self) -> u64
+pub fn mycelium_mlir::channel::Network::new() -> Self
+impl core::clone::Clone for mycelium_mlir::channel::Network
+pub fn mycelium_mlir::channel::Network::clone(&self) -> mycelium_mlir::channel::Network
+impl core::default::Default for mycelium_mlir::channel::Network
+pub fn mycelium_mlir::channel::Network::default() -> mycelium_mlir::channel::Network
+impl core::marker::Freeze for mycelium_mlir::channel::Network
+impl !core::marker::Send for mycelium_mlir::channel::Network
+impl !core::marker::Sync for mycelium_mlir::channel::Network
+impl core::marker::Unpin for mycelium_mlir::channel::Network
+impl core::marker::UnsafeUnpin for mycelium_mlir::channel::Network
+impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::Network
+impl !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::Network
+pub struct mycelium_mlir::channel::Receiver<V>
+impl<V> mycelium_mlir::channel::Receiver<V>
+pub fn mycelium_mlir::channel::Receiver<V>::is_connected(&self) -> bool
+pub fn mycelium_mlir::channel::Receiver<V>::try_recv(&self) -> core::result::Result<V, mycelium_mlir::channel::TryRecv>
+impl<V> core::ops::drop::Drop for mycelium_mlir::channel::Receiver<V>
+pub fn mycelium_mlir::channel::Receiver<V>::drop(&mut self)
+impl<V> core::marker::Freeze for mycelium_mlir::channel::Receiver<V>
+impl<V> !core::marker::Send for mycelium_mlir::channel::Receiver<V>
+impl<V> !core::marker::Sync for mycelium_mlir::channel::Receiver<V>
+impl<V> core::marker::Unpin for mycelium_mlir::channel::Receiver<V>
+impl<V> core::marker::UnsafeUnpin for mycelium_mlir::channel::Receiver<V>
+impl<V> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::Receiver<V>
+impl<V> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::Receiver<V>
+pub struct mycelium_mlir::channel::Sender<V>
+impl<V> mycelium_mlir::channel::Sender<V>
+pub fn mycelium_mlir::channel::Sender<V>::is_connected(&self) -> bool
+pub fn mycelium_mlir::channel::Sender<V>::try_send(&self, V) -> core::result::Result<(), mycelium_mlir::channel::TrySend<V>>
+impl<V> core::ops::drop::Drop for mycelium_mlir::channel::Sender<V>
+pub fn mycelium_mlir::channel::Sender<V>::drop(&mut self)
+impl<V> core::marker::Freeze for mycelium_mlir::channel::Sender<V>
+impl<V> !core::marker::Send for mycelium_mlir::channel::Sender<V>
+impl<V> !core::marker::Sync for mycelium_mlir::channel::Sender<V>
+impl<V> core::marker::Unpin for mycelium_mlir::channel::Sender<V>
+impl<V> core::marker::UnsafeUnpin for mycelium_mlir::channel::Sender<V>
+impl<V> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::Sender<V>
+impl<V> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::Sender<V>
+pub mod mycelium_mlir::dialect
+pub fn mycelium_mlir::dialect::emit(&mycelium_core::node::Node) -> alloc::string::String
+pub mod mycelium_mlir::inject
+pub enum mycelium_mlir::inject::InjectError
+pub mycelium_mlir::inject::InjectError::Compile(mycelium_mlir::llvm::AotError)
+pub mycelium_mlir::inject::InjectError::DispatchMiss(mycelium_core::id::ContentHash)
+pub mycelium_mlir::inject::InjectError::Interp(mycelium_interp::EvalError)
+impl core::clone::Clone for mycelium_mlir::inject::InjectError
+pub fn mycelium_mlir::inject::InjectError::clone(&self) -> mycelium_mlir::inject::InjectError
+impl core::cmp::PartialEq for mycelium_mlir::inject::InjectError
+pub fn mycelium_mlir::inject::InjectError::eq(&self, &mycelium_mlir::inject::InjectError) -> bool
+impl core::error::Error for mycelium_mlir::inject::InjectError
+impl core::fmt::Debug for mycelium_mlir::inject::InjectError
+pub fn mycelium_mlir::inject::InjectError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::inject::InjectError
+pub fn mycelium_mlir::inject::InjectError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject::InjectError
+impl core::marker::Freeze for mycelium_mlir::inject::InjectError
+impl core::marker::Send for mycelium_mlir::inject::InjectError
+impl core::marker::Sync for mycelium_mlir::inject::InjectError
+impl core::marker::Unpin for mycelium_mlir::inject::InjectError
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject::InjectError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject::InjectError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject::InjectError
+pub enum mycelium_mlir::inject::Resolution
+pub mycelium_mlir::inject::Resolution::Compiled
+pub mycelium_mlir::inject::Resolution::Interpreted
+pub mycelium_mlir::inject::Resolution::Miss
+impl core::clone::Clone for mycelium_mlir::inject::Resolution
+pub fn mycelium_mlir::inject::Resolution::clone(&self) -> mycelium_mlir::inject::Resolution
+impl core::cmp::Eq for mycelium_mlir::inject::Resolution
+impl core::cmp::PartialEq for mycelium_mlir::inject::Resolution
+pub fn mycelium_mlir::inject::Resolution::eq(&self, &mycelium_mlir::inject::Resolution) -> bool
+impl core::fmt::Debug for mycelium_mlir::inject::Resolution
+pub fn mycelium_mlir::inject::Resolution::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::inject::Resolution
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject::Resolution
+impl core::marker::Freeze for mycelium_mlir::inject::Resolution
+impl core::marker::Send for mycelium_mlir::inject::Resolution
+impl core::marker::Sync for mycelium_mlir::inject::Resolution
+impl core::marker::Unpin for mycelium_mlir::inject::Resolution
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject::Resolution
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject::Resolution
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject::Resolution
+pub struct mycelium_mlir::inject::Image
+impl mycelium_mlir::inject::Image
+pub fn mycelium_mlir::inject::Image::call(&self, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::inject::InjectError>
+pub fn mycelium_mlir::inject::Image::define(&mut self, mycelium_core::node::Node) -> mycelium_core::id::ContentHash
+pub fn mycelium_mlir::inject::Image::defined_count(&self) -> usize
+pub fn mycelium_mlir::inject::Image::inject(&mut self, &mycelium_core::node::Node) -> core::result::Result<mycelium_core::id::ContentHash, mycelium_mlir::inject::InjectError>
+pub fn mycelium_mlir::inject::Image::injected_count(&self) -> usize
+pub fn mycelium_mlir::inject::Image::is_injected(&self, &mycelium_core::id::ContentHash) -> bool
+pub fn mycelium_mlir::inject::Image::new() -> Self
+pub fn mycelium_mlir::inject::Image::resolve(&self, &mycelium_core::id::ContentHash) -> mycelium_mlir::inject::Resolution
+pub fn mycelium_mlir::inject::Image::with_interpreter(mycelium_interp::Interpreter) -> Self
+impl core::default::Default for mycelium_mlir::inject::Image
+pub fn mycelium_mlir::inject::Image::default() -> mycelium_mlir::inject::Image
+impl core::marker::Freeze for mycelium_mlir::inject::Image
+impl !core::marker::Send for mycelium_mlir::inject::Image
+impl !core::marker::Sync for mycelium_mlir::inject::Image
+impl core::marker::Unpin for mycelium_mlir::inject::Image
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject::Image
+impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject::Image
+impl !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject::Image
+pub fn mycelium_mlir::inject::recompile_closure(&std::collections::hash::map::HashMap<mycelium_core::id::ContentHash, alloc::vec::Vec<mycelium_core::id::ContentHash>>, &[mycelium_core::id::ContentHash]) -> std::collections::hash::set::HashSet<mycelium_core::id::ContentHash>
+pub mod mycelium_mlir::jit
+pub struct mycelium_mlir::jit::JitArtifact
+impl mycelium_mlir::jit::JitArtifact
+pub fn mycelium_mlir::jit::JitArtifact::call(&self) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::llvm::AotError>
+impl core::marker::Freeze for mycelium_mlir::jit::JitArtifact
+impl core::marker::Send for mycelium_mlir::jit::JitArtifact
+impl core::marker::Sync for mycelium_mlir::jit::JitArtifact
+impl core::marker::Unpin for mycelium_mlir::jit::JitArtifact
+impl core::marker::UnsafeUnpin for mycelium_mlir::jit::JitArtifact
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::jit::JitArtifact
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::jit::JitArtifact
+pub fn mycelium_mlir::jit::compile_so(&mycelium_core::node::Node) -> core::result::Result<mycelium_mlir::jit::JitArtifact, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::jit::jit_run(&mycelium_core::node::Node) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::llvm::AotError>
+pub mod mycelium_mlir::llvm
+pub enum mycelium_mlir::llvm::AotError
+pub mycelium_mlir::llvm::AotError::Compile(alloc::string::String)
+pub mycelium_mlir::llvm::AotError::FreeVariable(alloc::string::String)
+pub mycelium_mlir::llvm::AotError::Overflow(alloc::string::String)
+pub mycelium_mlir::llvm::AotError::Parse(alloc::string::String)
+pub mycelium_mlir::llvm::AotError::Run(alloc::string::String)
+pub mycelium_mlir::llvm::AotError::ToolchainMissing(alloc::string::String)
+pub mycelium_mlir::llvm::AotError::UnsupportedNode(alloc::string::String)
+pub mycelium_mlir::llvm::AotError::UnsupportedPrim(alloc::string::String)
+pub mycelium_mlir::llvm::AotError::UnsupportedRepr(alloc::string::String)
+pub mycelium_mlir::llvm::AotError::UnsupportedScheme(alloc::string::String)
+pub mycelium_mlir::llvm::AotError::Wf(alloc::string::String)
+pub mycelium_mlir::llvm::AotError::WidthMismatch
+pub mycelium_mlir::llvm::AotError::WidthMismatch::a: usize
+pub mycelium_mlir::llvm::AotError::WidthMismatch::b: usize
+pub mycelium_mlir::llvm::AotError::WidthMismatch::prim: alloc::string::String
+impl core::clone::Clone for mycelium_mlir::llvm::AotError
+pub fn mycelium_mlir::llvm::AotError::clone(&self) -> mycelium_mlir::llvm::AotError
+impl core::cmp::Eq for mycelium_mlir::llvm::AotError
+impl core::cmp::PartialEq for mycelium_mlir::llvm::AotError
+pub fn mycelium_mlir::llvm::AotError::eq(&self, &mycelium_mlir::llvm::AotError) -> bool
+impl core::error::Error for mycelium_mlir::llvm::AotError
+impl core::fmt::Debug for mycelium_mlir::llvm::AotError
+pub fn mycelium_mlir::llvm::AotError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::llvm::AotError
+pub fn mycelium_mlir::llvm::AotError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::llvm::AotError
+impl core::marker::Freeze for mycelium_mlir::llvm::AotError
+impl core::marker::Send for mycelium_mlir::llvm::AotError
+impl core::marker::Sync for mycelium_mlir::llvm::AotError
+impl core::marker::Unpin for mycelium_mlir::llvm::AotError
+impl core::marker::UnsafeUnpin for mycelium_mlir::llvm::AotError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::llvm::AotError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::llvm::AotError
+pub struct mycelium_mlir::llvm::CompiledArtifact
+impl mycelium_mlir::llvm::CompiledArtifact
+pub fn mycelium_mlir::llvm::CompiledArtifact::run(&self) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::llvm::AotError>
+impl core::marker::Freeze for mycelium_mlir::llvm::CompiledArtifact
+impl core::marker::Send for mycelium_mlir::llvm::CompiledArtifact
+impl core::marker::Sync for mycelium_mlir::llvm::CompiledArtifact
+impl core::marker::Unpin for mycelium_mlir::llvm::CompiledArtifact
+impl core::marker::UnsafeUnpin for mycelium_mlir::llvm::CompiledArtifact
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::llvm::CompiledArtifact
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::llvm::CompiledArtifact
+pub fn mycelium_mlir::llvm::compile(&mycelium_core::node::Node) -> core::result::Result<mycelium_mlir::llvm::CompiledArtifact, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::llvm::compile_and_run(&mycelium_core::node::Node) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::llvm::emit_llvm_ir(&mycelium_core::node::Node) -> core::result::Result<alloc::string::String, mycelium_mlir::llvm::AotError>
+pub mod mycelium_mlir::pack
+pub enum mycelium_mlir::pack::PackError
+pub mycelium_mlir::pack::PackError::BufferTooShort
+pub mycelium_mlir::pack::PackError::BufferTooShort::count: usize
+pub mycelium_mlir::pack::PackError::BufferTooShort::got: usize
+pub mycelium_mlir::pack::PackError::BufferTooShort::needed: usize
+impl core::clone::Clone for mycelium_mlir::pack::PackError
+pub fn mycelium_mlir::pack::PackError::clone(&self) -> mycelium_mlir::pack::PackError
+impl core::cmp::Eq for mycelium_mlir::pack::PackError
+impl core::cmp::PartialEq for mycelium_mlir::pack::PackError
+pub fn mycelium_mlir::pack::PackError::eq(&self, &mycelium_mlir::pack::PackError) -> bool
+impl core::error::Error for mycelium_mlir::pack::PackError
+impl core::fmt::Debug for mycelium_mlir::pack::PackError
+pub fn mycelium_mlir::pack::PackError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::pack::PackError
+pub fn mycelium_mlir::pack::PackError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::pack::PackError
+impl core::marker::StructuralPartialEq for mycelium_mlir::pack::PackError
+impl core::marker::Freeze for mycelium_mlir::pack::PackError
+impl core::marker::Send for mycelium_mlir::pack::PackError
+impl core::marker::Sync for mycelium_mlir::pack::PackError
+impl core::marker::Unpin for mycelium_mlir::pack::PackError
+impl core::marker::UnsafeUnpin for mycelium_mlir::pack::PackError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::pack::PackError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::pack::PackError
+pub fn mycelium_mlir::pack::needed_bytes(mycelium_core::meta::PackScheme, usize) -> usize
+pub fn mycelium_mlir::pack::pack_trits(&[mycelium_core::value::Trit], mycelium_core::meta::PackScheme) -> alloc::vec::Vec<u8>
+pub fn mycelium_mlir::pack::relayout_trits(&[mycelium_core::value::Trit], mycelium_core::meta::PackScheme, mycelium_core::meta::PackScheme) -> alloc::vec::Vec<mycelium_core::value::Trit>
+pub fn mycelium_mlir::pack::unpack_trits(&[u8], mycelium_core::meta::PackScheme, usize) -> core::result::Result<alloc::vec::Vec<mycelium_core::value::Trit>, mycelium_mlir::pack::PackError>
+pub mod mycelium_mlir::runtime
+pub enum mycelium_mlir::runtime::Poll<T, E>
+pub mycelium_mlir::runtime::Poll::Pending
+pub mycelium_mlir::runtime::Poll::Ready(mycelium_interp::supervise::TaskOutcome<T, E>)
+impl<T, E> core::marker::Freeze for mycelium_mlir::runtime::Poll<T, E> where T: core::marker::Freeze, E: core::marker::Freeze
+impl<T, E> core::marker::Send for mycelium_mlir::runtime::Poll<T, E> where T: core::marker::Send, E: core::marker::Send
+impl<T, E> core::marker::Sync for mycelium_mlir::runtime::Poll<T, E> where T: core::marker::Sync, E: core::marker::Sync
+impl<T, E> core::marker::Unpin for mycelium_mlir::runtime::Poll<T, E> where T: core::marker::Unpin, E: core::marker::Unpin
+impl<T, E> core::marker::UnsafeUnpin for mycelium_mlir::runtime::Poll<T, E> where T: core::marker::UnsafeUnpin, E: core::marker::UnsafeUnpin
+impl<T, E> core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Poll<T, E> where T: core::panic::unwind_safe::RefUnwindSafe, E: core::panic::unwind_safe::RefUnwindSafe
+impl<T, E> core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::Poll<T, E> where T: core::panic::unwind_safe::UnwindSafe, E: core::panic::unwind_safe::UnwindSafe
+pub enum mycelium_mlir::runtime::SweepOrder
+pub mycelium_mlir::runtime::SweepOrder::Ascending
+pub mycelium_mlir::runtime::SweepOrder::Descending
+impl core::clone::Clone for mycelium_mlir::runtime::SweepOrder
+pub fn mycelium_mlir::runtime::SweepOrder::clone(&self) -> mycelium_mlir::runtime::SweepOrder
+impl core::cmp::Eq for mycelium_mlir::runtime::SweepOrder
+impl core::cmp::PartialEq for mycelium_mlir::runtime::SweepOrder
+pub fn mycelium_mlir::runtime::SweepOrder::eq(&self, &mycelium_mlir::runtime::SweepOrder) -> bool
+impl core::fmt::Debug for mycelium_mlir::runtime::SweepOrder
+pub fn mycelium_mlir::runtime::SweepOrder::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::runtime::SweepOrder
+impl core::marker::StructuralPartialEq for mycelium_mlir::runtime::SweepOrder
+impl core::marker::Freeze for mycelium_mlir::runtime::SweepOrder
+impl core::marker::Send for mycelium_mlir::runtime::SweepOrder
+impl core::marker::Sync for mycelium_mlir::runtime::SweepOrder
+impl core::marker::Unpin for mycelium_mlir::runtime::SweepOrder
+impl core::marker::UnsafeUnpin for mycelium_mlir::runtime::SweepOrder
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::SweepOrder
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::SweepOrder
+pub struct mycelium_mlir::runtime::Deadlock
+pub mycelium_mlir::runtime::Deadlock::parked: alloc::vec::Vec<usize>
+impl core::clone::Clone for mycelium_mlir::runtime::Deadlock
+pub fn mycelium_mlir::runtime::Deadlock::clone(&self) -> mycelium_mlir::runtime::Deadlock
+impl core::cmp::Eq for mycelium_mlir::runtime::Deadlock
+impl core::cmp::PartialEq for mycelium_mlir::runtime::Deadlock
+pub fn mycelium_mlir::runtime::Deadlock::eq(&self, &mycelium_mlir::runtime::Deadlock) -> bool
+impl core::fmt::Debug for mycelium_mlir::runtime::Deadlock
+pub fn mycelium_mlir::runtime::Deadlock::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::runtime::Deadlock
+impl core::marker::Freeze for mycelium_mlir::runtime::Deadlock
+impl core::marker::Send for mycelium_mlir::runtime::Deadlock
+impl core::marker::Sync for mycelium_mlir::runtime::Deadlock
+impl core::marker::Unpin for mycelium_mlir::runtime::Deadlock
+impl core::marker::UnsafeUnpin for mycelium_mlir::runtime::Deadlock
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Deadlock
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::Deadlock
+pub struct mycelium_mlir::runtime::Scope<T, E>
+impl<T, E> mycelium_mlir::runtime::Scope<T, E>
+pub fn mycelium_mlir::runtime::Scope<T, E>::cancel_token(&self) -> mycelium_interp::supervise::CancelToken
+pub fn mycelium_mlir::runtime::Scope<T, E>::new() -> Self
+pub fn mycelium_mlir::runtime::Scope<T, E>::run_dataflow(self, mycelium_mlir::runtime::SweepOrder, impl core::ops::function::Fn() -> u64) -> core::result::Result<alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>, mycelium_mlir::runtime::Deadlock>
+pub fn mycelium_mlir::runtime::Scope<T, E>::run_interleaved(self, core::option::Option<&mut alloc::vec::Vec<usize>>) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>
+pub fn mycelium_mlir::runtime::Scope<T, E>::run_sequential(self) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>
+pub fn mycelium_mlir::runtime::Scope<T, E>::spawn(&mut self, alloc::boxed::Box<dyn mycelium_mlir::runtime::Task<Output = T, Error = E>>, mycelium_interp::budget::Budgets) -> usize
+impl<T, E> core::default::Default for mycelium_mlir::runtime::Scope<T, E>
+pub fn mycelium_mlir::runtime::Scope<T, E>::default() -> Self
+impl<T, E> core::marker::Freeze for mycelium_mlir::runtime::Scope<T, E>
+impl<T, E> !core::marker::Send for mycelium_mlir::runtime::Scope<T, E>
+impl<T, E> !core::marker::Sync for mycelium_mlir::runtime::Scope<T, E>
+impl<T, E> core::marker::Unpin for mycelium_mlir::runtime::Scope<T, E> where T: core::marker::Unpin, E: core::marker::Unpin
+impl<T, E> core::marker::UnsafeUnpin for mycelium_mlir::runtime::Scope<T, E>
+impl<T, E> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Scope<T, E>
+impl<T, E> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::Scope<T, E>
+pub struct mycelium_mlir::runtime::TaskCtx<'a>
+pub mycelium_mlir::runtime::TaskCtx::budgets: &'a mut mycelium_interp::budget::Budgets
+pub mycelium_mlir::runtime::TaskCtx::cancel: &'a mycelium_interp::supervise::CancelToken
+pub mycelium_mlir::runtime::TaskCtx::tick: u64
+impl<'a> core::marker::Freeze for mycelium_mlir::runtime::TaskCtx<'a>
+impl<'a> core::marker::Send for mycelium_mlir::runtime::TaskCtx<'a>
+impl<'a> core::marker::Sync for mycelium_mlir::runtime::TaskCtx<'a>
+impl<'a> core::marker::Unpin for mycelium_mlir::runtime::TaskCtx<'a>
+impl<'a> core::marker::UnsafeUnpin for mycelium_mlir::runtime::TaskCtx<'a>
+impl<'a> core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::TaskCtx<'a>
+impl<'a> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::TaskCtx<'a>
+pub trait mycelium_mlir::runtime::Task
+pub type mycelium_mlir::runtime::Task::Error
+pub type mycelium_mlir::runtime::Task::Output
+pub fn mycelium_mlir::runtime::Task::poll(&mut self, &mut mycelium_mlir::runtime::TaskCtx<'_>) -> mycelium_mlir::runtime::Poll<Self::Output, Self::Error>
+pub type mycelium_mlir::runtime::Colony<T, E> = mycelium_mlir::runtime::Scope<T, E>
+pub mod mycelium_mlir::simd
+pub fn mycelium_mlir::simd::compile_bitnet_dot_simd() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::simd::emit_bitnet_dot_simd_ir() -> alloc::string::String
+pub mod mycelium_mlir::specialize
+pub struct mycelium_mlir::specialize::SpecializedDotKernel
+impl mycelium_mlir::specialize::SpecializedDotKernel
+pub fn mycelium_mlir::specialize::SpecializedDotKernel::call(&self, &[i32]) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::specialize::SpecializedDotKernel::n(&self) -> usize
+pub fn mycelium_mlir::specialize::SpecializedDotKernel::nonzero(&self) -> usize
+impl core::marker::Freeze for mycelium_mlir::specialize::SpecializedDotKernel
+impl !core::marker::Send for mycelium_mlir::specialize::SpecializedDotKernel
+impl !core::marker::Sync for mycelium_mlir::specialize::SpecializedDotKernel
+impl core::marker::Unpin for mycelium_mlir::specialize::SpecializedDotKernel
+impl core::marker::UnsafeUnpin for mycelium_mlir::specialize::SpecializedDotKernel
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::specialize::SpecializedDotKernel
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::specialize::SpecializedDotKernel
+pub fn mycelium_mlir::specialize::compile_specialized_dot(&[mycelium_core::value::Trit]) -> core::result::Result<mycelium_mlir::specialize::SpecializedDotKernel, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::specialize::emit_specialized_dot_ir(&[mycelium_core::value::Trit]) -> alloc::string::String
+pub fn mycelium_mlir::specialize::jit_specialized_dot(&[mycelium_core::value::Trit], &[i32]) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+pub enum mycelium_mlir::AotError
+pub mycelium_mlir::AotError::Compile(alloc::string::String)
+pub mycelium_mlir::AotError::FreeVariable(alloc::string::String)
+pub mycelium_mlir::AotError::Overflow(alloc::string::String)
+pub mycelium_mlir::AotError::Parse(alloc::string::String)
+pub mycelium_mlir::AotError::Run(alloc::string::String)
+pub mycelium_mlir::AotError::ToolchainMissing(alloc::string::String)
+pub mycelium_mlir::AotError::UnsupportedNode(alloc::string::String)
+pub mycelium_mlir::AotError::UnsupportedPrim(alloc::string::String)
+pub mycelium_mlir::AotError::UnsupportedRepr(alloc::string::String)
+pub mycelium_mlir::AotError::UnsupportedScheme(alloc::string::String)
+pub mycelium_mlir::AotError::Wf(alloc::string::String)
+pub mycelium_mlir::AotError::WidthMismatch
+pub mycelium_mlir::AotError::WidthMismatch::a: usize
+pub mycelium_mlir::AotError::WidthMismatch::b: usize
+pub mycelium_mlir::AotError::WidthMismatch::prim: alloc::string::String
+impl core::clone::Clone for mycelium_mlir::llvm::AotError
+pub fn mycelium_mlir::llvm::AotError::clone(&self) -> mycelium_mlir::llvm::AotError
+impl core::cmp::Eq for mycelium_mlir::llvm::AotError
+impl core::cmp::PartialEq for mycelium_mlir::llvm::AotError
+pub fn mycelium_mlir::llvm::AotError::eq(&self, &mycelium_mlir::llvm::AotError) -> bool
+impl core::error::Error for mycelium_mlir::llvm::AotError
+impl core::fmt::Debug for mycelium_mlir::llvm::AotError
+pub fn mycelium_mlir::llvm::AotError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::llvm::AotError
+pub fn mycelium_mlir::llvm::AotError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::llvm::AotError
+impl core::marker::Freeze for mycelium_mlir::llvm::AotError
+impl core::marker::Send for mycelium_mlir::llvm::AotError
+impl core::marker::Sync for mycelium_mlir::llvm::AotError
+impl core::marker::Unpin for mycelium_mlir::llvm::AotError
+impl core::marker::UnsafeUnpin for mycelium_mlir::llvm::AotError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::llvm::AotError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::llvm::AotError
+pub enum mycelium_mlir::DepthBasis
+pub mycelium_mlir::DepthBasis::DetectedMemory
+pub mycelium_mlir::DepthBasis::DetectedMemory::clamped: bool
+pub mycelium_mlir::DepthBasis::DetectedMemory::headroom_bytes: u64
+pub mycelium_mlir::DepthBasis::DetectedMemory::margin_pct: u8
+pub mycelium_mlir::DepthBasis::DetectedMemory::per_frame_bytes: u64
+pub mycelium_mlir::DepthBasis::DetectedMemory::source: mycelium_mlir::budget::MemSource
+pub mycelium_mlir::DepthBasis::Static
+pub mycelium_mlir::DepthBasis::Static::reason: mycelium_mlir::budget::StaticReason
+impl core::clone::Clone for mycelium_mlir::budget::DepthBasis
+pub fn mycelium_mlir::budget::DepthBasis::clone(&self) -> mycelium_mlir::budget::DepthBasis
+impl core::cmp::Eq for mycelium_mlir::budget::DepthBasis
+impl core::cmp::PartialEq for mycelium_mlir::budget::DepthBasis
+pub fn mycelium_mlir::budget::DepthBasis::eq(&self, &mycelium_mlir::budget::DepthBasis) -> bool
+impl core::fmt::Debug for mycelium_mlir::budget::DepthBasis
+pub fn mycelium_mlir::budget::DepthBasis::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::budget::DepthBasis
+impl core::marker::Freeze for mycelium_mlir::budget::DepthBasis
+impl core::marker::Send for mycelium_mlir::budget::DepthBasis
+impl core::marker::Sync for mycelium_mlir::budget::DepthBasis
+impl core::marker::Unpin for mycelium_mlir::budget::DepthBasis
+impl core::marker::UnsafeUnpin for mycelium_mlir::budget::DepthBasis
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::DepthBasis
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::DepthBasis
+pub enum mycelium_mlir::InjectError
+pub mycelium_mlir::InjectError::Compile(mycelium_mlir::llvm::AotError)
+pub mycelium_mlir::InjectError::DispatchMiss(mycelium_core::id::ContentHash)
+pub mycelium_mlir::InjectError::Interp(mycelium_interp::EvalError)
+impl core::clone::Clone for mycelium_mlir::inject::InjectError
+pub fn mycelium_mlir::inject::InjectError::clone(&self) -> mycelium_mlir::inject::InjectError
+impl core::cmp::PartialEq for mycelium_mlir::inject::InjectError
+pub fn mycelium_mlir::inject::InjectError::eq(&self, &mycelium_mlir::inject::InjectError) -> bool
+impl core::error::Error for mycelium_mlir::inject::InjectError
+impl core::fmt::Debug for mycelium_mlir::inject::InjectError
+pub fn mycelium_mlir::inject::InjectError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::inject::InjectError
+pub fn mycelium_mlir::inject::InjectError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject::InjectError
+impl core::marker::Freeze for mycelium_mlir::inject::InjectError
+impl core::marker::Send for mycelium_mlir::inject::InjectError
+impl core::marker::Sync for mycelium_mlir::inject::InjectError
+impl core::marker::Unpin for mycelium_mlir::inject::InjectError
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject::InjectError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject::InjectError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject::InjectError
+pub enum mycelium_mlir::MemSource
+pub mycelium_mlir::MemSource::AddressSpaceRlimit
+pub mycelium_mlir::MemSource::MemAvailable
+impl core::clone::Clone for mycelium_mlir::budget::MemSource
+pub fn mycelium_mlir::budget::MemSource::clone(&self) -> mycelium_mlir::budget::MemSource
+impl core::cmp::Eq for mycelium_mlir::budget::MemSource
+impl core::cmp::PartialEq for mycelium_mlir::budget::MemSource
+pub fn mycelium_mlir::budget::MemSource::eq(&self, &mycelium_mlir::budget::MemSource) -> bool
+impl core::fmt::Debug for mycelium_mlir::budget::MemSource
+pub fn mycelium_mlir::budget::MemSource::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::budget::MemSource
+impl core::marker::StructuralPartialEq for mycelium_mlir::budget::MemSource
+impl core::marker::Freeze for mycelium_mlir::budget::MemSource
+impl core::marker::Send for mycelium_mlir::budget::MemSource
+impl core::marker::Sync for mycelium_mlir::budget::MemSource
+impl core::marker::Unpin for mycelium_mlir::budget::MemSource
+impl core::marker::UnsafeUnpin for mycelium_mlir::budget::MemSource
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::MemSource
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::MemSource
+pub enum mycelium_mlir::Poll<T, E>
+pub mycelium_mlir::Poll::Pending
+pub mycelium_mlir::Poll::Ready(mycelium_interp::supervise::TaskOutcome<T, E>)
+impl<T, E> core::marker::Freeze for mycelium_mlir::runtime::Poll<T, E> where T: core::marker::Freeze, E: core::marker::Freeze
+impl<T, E> core::marker::Send for mycelium_mlir::runtime::Poll<T, E> where T: core::marker::Send, E: core::marker::Send
+impl<T, E> core::marker::Sync for mycelium_mlir::runtime::Poll<T, E> where T: core::marker::Sync, E: core::marker::Sync
+impl<T, E> core::marker::Unpin for mycelium_mlir::runtime::Poll<T, E> where T: core::marker::Unpin, E: core::marker::Unpin
+impl<T, E> core::marker::UnsafeUnpin for mycelium_mlir::runtime::Poll<T, E> where T: core::marker::UnsafeUnpin, E: core::marker::UnsafeUnpin
+impl<T, E> core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Poll<T, E> where T: core::panic::unwind_safe::RefUnwindSafe, E: core::panic::unwind_safe::RefUnwindSafe
+impl<T, E> core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::Poll<T, E> where T: core::panic::unwind_safe::UnwindSafe, E: core::panic::unwind_safe::UnwindSafe
+pub enum mycelium_mlir::Resolution
+pub mycelium_mlir::Resolution::Compiled
+pub mycelium_mlir::Resolution::Interpreted
+pub mycelium_mlir::Resolution::Miss
+impl core::clone::Clone for mycelium_mlir::inject::Resolution
+pub fn mycelium_mlir::inject::Resolution::clone(&self) -> mycelium_mlir::inject::Resolution
+impl core::cmp::Eq for mycelium_mlir::inject::Resolution
+impl core::cmp::PartialEq for mycelium_mlir::inject::Resolution
+pub fn mycelium_mlir::inject::Resolution::eq(&self, &mycelium_mlir::inject::Resolution) -> bool
+impl core::fmt::Debug for mycelium_mlir::inject::Resolution
+pub fn mycelium_mlir::inject::Resolution::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::inject::Resolution
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject::Resolution
+impl core::marker::Freeze for mycelium_mlir::inject::Resolution
+impl core::marker::Send for mycelium_mlir::inject::Resolution
+impl core::marker::Sync for mycelium_mlir::inject::Resolution
+impl core::marker::Unpin for mycelium_mlir::inject::Resolution
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject::Resolution
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject::Resolution
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject::Resolution
+pub enum mycelium_mlir::StaticReason
+pub mycelium_mlir::StaticReason::DetectionFailed
+pub mycelium_mlir::StaticReason::Explicit
+pub mycelium_mlir::StaticReason::UnsupportedPlatform
+impl core::clone::Clone for mycelium_mlir::budget::StaticReason
+pub fn mycelium_mlir::budget::StaticReason::clone(&self) -> mycelium_mlir::budget::StaticReason
+impl core::cmp::Eq for mycelium_mlir::budget::StaticReason
+impl core::cmp::PartialEq for mycelium_mlir::budget::StaticReason
+pub fn mycelium_mlir::budget::StaticReason::eq(&self, &mycelium_mlir::budget::StaticReason) -> bool
+impl core::fmt::Debug for mycelium_mlir::budget::StaticReason
+pub fn mycelium_mlir::budget::StaticReason::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::budget::StaticReason
+impl core::marker::StructuralPartialEq for mycelium_mlir::budget::StaticReason
+impl core::marker::Freeze for mycelium_mlir::budget::StaticReason
+impl core::marker::Send for mycelium_mlir::budget::StaticReason
+impl core::marker::Sync for mycelium_mlir::budget::StaticReason
+impl core::marker::Unpin for mycelium_mlir::budget::StaticReason
+impl core::marker::UnsafeUnpin for mycelium_mlir::budget::StaticReason
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::StaticReason
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::StaticReason
+pub enum mycelium_mlir::SweepOrder
+pub mycelium_mlir::SweepOrder::Ascending
+pub mycelium_mlir::SweepOrder::Descending
+impl core::clone::Clone for mycelium_mlir::runtime::SweepOrder
+pub fn mycelium_mlir::runtime::SweepOrder::clone(&self) -> mycelium_mlir::runtime::SweepOrder
+impl core::cmp::Eq for mycelium_mlir::runtime::SweepOrder
+impl core::cmp::PartialEq for mycelium_mlir::runtime::SweepOrder
+pub fn mycelium_mlir::runtime::SweepOrder::eq(&self, &mycelium_mlir::runtime::SweepOrder) -> bool
+impl core::fmt::Debug for mycelium_mlir::runtime::SweepOrder
+pub fn mycelium_mlir::runtime::SweepOrder::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::runtime::SweepOrder
+impl core::marker::StructuralPartialEq for mycelium_mlir::runtime::SweepOrder
+impl core::marker::Freeze for mycelium_mlir::runtime::SweepOrder
+impl core::marker::Send for mycelium_mlir::runtime::SweepOrder
+impl core::marker::Sync for mycelium_mlir::runtime::SweepOrder
+impl core::marker::Unpin for mycelium_mlir::runtime::SweepOrder
+impl core::marker::UnsafeUnpin for mycelium_mlir::runtime::SweepOrder
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::SweepOrder
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::SweepOrder
+pub enum mycelium_mlir::TryRecv
+pub mycelium_mlir::TryRecv::Closed
+pub mycelium_mlir::TryRecv::Empty
+impl core::clone::Clone for mycelium_mlir::channel::TryRecv
+pub fn mycelium_mlir::channel::TryRecv::clone(&self) -> mycelium_mlir::channel::TryRecv
+impl core::cmp::Eq for mycelium_mlir::channel::TryRecv
+impl core::cmp::PartialEq for mycelium_mlir::channel::TryRecv
+pub fn mycelium_mlir::channel::TryRecv::eq(&self, &mycelium_mlir::channel::TryRecv) -> bool
+impl core::fmt::Debug for mycelium_mlir::channel::TryRecv
+pub fn mycelium_mlir::channel::TryRecv::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::channel::TryRecv
+impl core::marker::StructuralPartialEq for mycelium_mlir::channel::TryRecv
+impl core::marker::Freeze for mycelium_mlir::channel::TryRecv
+impl core::marker::Send for mycelium_mlir::channel::TryRecv
+impl core::marker::Sync for mycelium_mlir::channel::TryRecv
+impl core::marker::Unpin for mycelium_mlir::channel::TryRecv
+impl core::marker::UnsafeUnpin for mycelium_mlir::channel::TryRecv
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::TryRecv
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::TryRecv
+pub enum mycelium_mlir::TrySend<V>
+pub mycelium_mlir::TrySend::Disconnected(V)
+pub mycelium_mlir::TrySend::Full(V)
+impl<V: core::cmp::Eq> core::cmp::Eq for mycelium_mlir::channel::TrySend<V>
+impl<V: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_mlir::channel::TrySend<V>
+pub fn mycelium_mlir::channel::TrySend<V>::eq(&self, &mycelium_mlir::channel::TrySend<V>) -> bool
+impl<V: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_mlir::channel::TrySend<V>
+impl<V: core::fmt::Debug> core::fmt::Debug for mycelium_mlir::channel::TrySend<V>
+pub fn mycelium_mlir::channel::TrySend<V>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<V> core::marker::Freeze for mycelium_mlir::channel::TrySend<V> where V: core::marker::Freeze
+impl<V> core::marker::Send for mycelium_mlir::channel::TrySend<V> where V: core::marker::Send
+impl<V> core::marker::Sync for mycelium_mlir::channel::TrySend<V> where V: core::marker::Sync
+impl<V> core::marker::Unpin for mycelium_mlir::channel::TrySend<V> where V: core::marker::Unpin
+impl<V> core::marker::UnsafeUnpin for mycelium_mlir::channel::TrySend<V> where V: core::marker::UnsafeUnpin
+impl<V> core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::TrySend<V> where V: core::panic::unwind_safe::RefUnwindSafe
+impl<V> core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::TrySend<V> where V: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_mlir::AutoDepthBudget
+pub mycelium_mlir::AutoDepthBudget::ceil: usize
+pub mycelium_mlir::AutoDepthBudget::fallback: usize
+pub mycelium_mlir::AutoDepthBudget::floor: usize
+pub mycelium_mlir::AutoDepthBudget::margin_pct: u8
+pub mycelium_mlir::AutoDepthBudget::per_frame_bytes: u64
+impl core::clone::Clone for mycelium_mlir::budget::AutoDepthBudget
+pub fn mycelium_mlir::budget::AutoDepthBudget::clone(&self) -> mycelium_mlir::budget::AutoDepthBudget
+impl core::default::Default for mycelium_mlir::budget::AutoDepthBudget
+pub fn mycelium_mlir::budget::AutoDepthBudget::default() -> Self
+impl core::fmt::Debug for mycelium_mlir::budget::AutoDepthBudget
+pub fn mycelium_mlir::budget::AutoDepthBudget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::budget::AutoDepthBudget
+impl mycelium_mlir::budget::DepthBudget for mycelium_mlir::budget::AutoDepthBudget
+pub fn mycelium_mlir::budget::AutoDepthBudget::resolve(&self) -> mycelium_mlir::budget::DepthResolution
+impl core::marker::Freeze for mycelium_mlir::budget::AutoDepthBudget
+impl core::marker::Send for mycelium_mlir::budget::AutoDepthBudget
+impl core::marker::Sync for mycelium_mlir::budget::AutoDepthBudget
+impl core::marker::Unpin for mycelium_mlir::budget::AutoDepthBudget
+impl core::marker::UnsafeUnpin for mycelium_mlir::budget::AutoDepthBudget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::AutoDepthBudget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::AutoDepthBudget
+pub struct mycelium_mlir::BitnetDotKernel
+impl mycelium_mlir::bitnet::BitnetDotKernel
+pub fn mycelium_mlir::bitnet::BitnetDotKernel::call(&self, &[u8], &[i32], usize) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::bitnet::BitnetDotKernel::scheme(&self) -> mycelium_core::meta::PackScheme
+impl core::marker::Freeze for mycelium_mlir::bitnet::BitnetDotKernel
+impl !core::marker::Send for mycelium_mlir::bitnet::BitnetDotKernel
+impl !core::marker::Sync for mycelium_mlir::bitnet::BitnetDotKernel
+impl core::marker::Unpin for mycelium_mlir::bitnet::BitnetDotKernel
+impl core::marker::UnsafeUnpin for mycelium_mlir::bitnet::BitnetDotKernel
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::bitnet::BitnetDotKernel
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::bitnet::BitnetDotKernel
+pub struct mycelium_mlir::CompiledArtifact
+impl mycelium_mlir::llvm::CompiledArtifact
+pub fn mycelium_mlir::llvm::CompiledArtifact::run(&self) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::llvm::AotError>
+impl core::marker::Freeze for mycelium_mlir::llvm::CompiledArtifact
+impl core::marker::Send for mycelium_mlir::llvm::CompiledArtifact
+impl core::marker::Sync for mycelium_mlir::llvm::CompiledArtifact
+impl core::marker::Unpin for mycelium_mlir::llvm::CompiledArtifact
+impl core::marker::UnsafeUnpin for mycelium_mlir::llvm::CompiledArtifact
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::llvm::CompiledArtifact
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::llvm::CompiledArtifact
+pub struct mycelium_mlir::Deadlock
+pub mycelium_mlir::Deadlock::parked: alloc::vec::Vec<usize>
+impl core::clone::Clone for mycelium_mlir::runtime::Deadlock
+pub fn mycelium_mlir::runtime::Deadlock::clone(&self) -> mycelium_mlir::runtime::Deadlock
+impl core::cmp::Eq for mycelium_mlir::runtime::Deadlock
+impl core::cmp::PartialEq for mycelium_mlir::runtime::Deadlock
+pub fn mycelium_mlir::runtime::Deadlock::eq(&self, &mycelium_mlir::runtime::Deadlock) -> bool
+impl core::fmt::Debug for mycelium_mlir::runtime::Deadlock
+pub fn mycelium_mlir::runtime::Deadlock::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::runtime::Deadlock
+impl core::marker::Freeze for mycelium_mlir::runtime::Deadlock
+impl core::marker::Send for mycelium_mlir::runtime::Deadlock
+impl core::marker::Sync for mycelium_mlir::runtime::Deadlock
+impl core::marker::Unpin for mycelium_mlir::runtime::Deadlock
+impl core::marker::UnsafeUnpin for mycelium_mlir::runtime::Deadlock
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Deadlock
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::Deadlock
+pub struct mycelium_mlir::DepthResolution
+pub mycelium_mlir::DepthResolution::basis: mycelium_mlir::budget::DepthBasis
+pub mycelium_mlir::DepthResolution::max_depth: usize
+impl core::clone::Clone for mycelium_mlir::budget::DepthResolution
+pub fn mycelium_mlir::budget::DepthResolution::clone(&self) -> mycelium_mlir::budget::DepthResolution
+impl core::cmp::Eq for mycelium_mlir::budget::DepthResolution
+impl core::cmp::PartialEq for mycelium_mlir::budget::DepthResolution
+pub fn mycelium_mlir::budget::DepthResolution::eq(&self, &mycelium_mlir::budget::DepthResolution) -> bool
+impl core::fmt::Debug for mycelium_mlir::budget::DepthResolution
+pub fn mycelium_mlir::budget::DepthResolution::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::budget::DepthResolution
+pub fn mycelium_mlir::budget::DepthResolution::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::budget::DepthResolution
+impl core::marker::Freeze for mycelium_mlir::budget::DepthResolution
+impl core::marker::Send for mycelium_mlir::budget::DepthResolution
+impl core::marker::Sync for mycelium_mlir::budget::DepthResolution
+impl core::marker::Unpin for mycelium_mlir::budget::DepthResolution
+impl core::marker::UnsafeUnpin for mycelium_mlir::budget::DepthResolution
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::DepthResolution
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::DepthResolution
+pub struct mycelium_mlir::Image
+impl mycelium_mlir::inject::Image
+pub fn mycelium_mlir::inject::Image::call(&self, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::inject::InjectError>
+pub fn mycelium_mlir::inject::Image::define(&mut self, mycelium_core::node::Node) -> mycelium_core::id::ContentHash
+pub fn mycelium_mlir::inject::Image::defined_count(&self) -> usize
+pub fn mycelium_mlir::inject::Image::inject(&mut self, &mycelium_core::node::Node) -> core::result::Result<mycelium_core::id::ContentHash, mycelium_mlir::inject::InjectError>
+pub fn mycelium_mlir::inject::Image::injected_count(&self) -> usize
+pub fn mycelium_mlir::inject::Image::is_injected(&self, &mycelium_core::id::ContentHash) -> bool
+pub fn mycelium_mlir::inject::Image::new() -> Self
+pub fn mycelium_mlir::inject::Image::resolve(&self, &mycelium_core::id::ContentHash) -> mycelium_mlir::inject::Resolution
+pub fn mycelium_mlir::inject::Image::with_interpreter(mycelium_interp::Interpreter) -> Self
+impl core::default::Default for mycelium_mlir::inject::Image
+pub fn mycelium_mlir::inject::Image::default() -> mycelium_mlir::inject::Image
+impl core::marker::Freeze for mycelium_mlir::inject::Image
+impl !core::marker::Send for mycelium_mlir::inject::Image
+impl !core::marker::Sync for mycelium_mlir::inject::Image
+impl core::marker::Unpin for mycelium_mlir::inject::Image
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject::Image
+impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject::Image
+impl !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject::Image
+pub struct mycelium_mlir::JitArtifact
+impl mycelium_mlir::jit::JitArtifact
+pub fn mycelium_mlir::jit::JitArtifact::call(&self) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::llvm::AotError>
+impl core::marker::Freeze for mycelium_mlir::jit::JitArtifact
+impl core::marker::Send for mycelium_mlir::jit::JitArtifact
+impl core::marker::Sync for mycelium_mlir::jit::JitArtifact
+impl core::marker::Unpin for mycelium_mlir::jit::JitArtifact
+impl core::marker::UnsafeUnpin for mycelium_mlir::jit::JitArtifact
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::jit::JitArtifact
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::jit::JitArtifact
+pub struct mycelium_mlir::Network
+impl mycelium_mlir::channel::Network
+pub fn mycelium_mlir::channel::Network::channel<V>(&self, core::num::nonzero::NonZeroUsize) -> (mycelium_mlir::channel::Sender<V>, mycelium_mlir::channel::Receiver<V>)
+pub fn mycelium_mlir::channel::Network::epoch(&self) -> u64
+pub fn mycelium_mlir::channel::Network::new() -> Self
+impl core::clone::Clone for mycelium_mlir::channel::Network
+pub fn mycelium_mlir::channel::Network::clone(&self) -> mycelium_mlir::channel::Network
+impl core::default::Default for mycelium_mlir::channel::Network
+pub fn mycelium_mlir::channel::Network::default() -> mycelium_mlir::channel::Network
+impl core::marker::Freeze for mycelium_mlir::channel::Network
+impl !core::marker::Send for mycelium_mlir::channel::Network
+impl !core::marker::Sync for mycelium_mlir::channel::Network
+impl core::marker::Unpin for mycelium_mlir::channel::Network
+impl core::marker::UnsafeUnpin for mycelium_mlir::channel::Network
+impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::Network
+impl !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::Network
+pub struct mycelium_mlir::Receiver<V>
+impl<V> mycelium_mlir::channel::Receiver<V>
+pub fn mycelium_mlir::channel::Receiver<V>::is_connected(&self) -> bool
+pub fn mycelium_mlir::channel::Receiver<V>::try_recv(&self) -> core::result::Result<V, mycelium_mlir::channel::TryRecv>
+impl<V> core::ops::drop::Drop for mycelium_mlir::channel::Receiver<V>
+pub fn mycelium_mlir::channel::Receiver<V>::drop(&mut self)
+impl<V> core::marker::Freeze for mycelium_mlir::channel::Receiver<V>
+impl<V> !core::marker::Send for mycelium_mlir::channel::Receiver<V>
+impl<V> !core::marker::Sync for mycelium_mlir::channel::Receiver<V>
+impl<V> core::marker::Unpin for mycelium_mlir::channel::Receiver<V>
+impl<V> core::marker::UnsafeUnpin for mycelium_mlir::channel::Receiver<V>
+impl<V> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::Receiver<V>
+impl<V> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::Receiver<V>
+pub struct mycelium_mlir::Scope<T, E>
+impl<T, E> mycelium_mlir::runtime::Scope<T, E>
+pub fn mycelium_mlir::runtime::Scope<T, E>::cancel_token(&self) -> mycelium_interp::supervise::CancelToken
+pub fn mycelium_mlir::runtime::Scope<T, E>::new() -> Self
+pub fn mycelium_mlir::runtime::Scope<T, E>::run_dataflow(self, mycelium_mlir::runtime::SweepOrder, impl core::ops::function::Fn() -> u64) -> core::result::Result<alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>, mycelium_mlir::runtime::Deadlock>
+pub fn mycelium_mlir::runtime::Scope<T, E>::run_interleaved(self, core::option::Option<&mut alloc::vec::Vec<usize>>) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>
+pub fn mycelium_mlir::runtime::Scope<T, E>::run_sequential(self) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>
+pub fn mycelium_mlir::runtime::Scope<T, E>::spawn(&mut self, alloc::boxed::Box<dyn mycelium_mlir::runtime::Task<Output = T, Error = E>>, mycelium_interp::budget::Budgets) -> usize
+impl<T, E> core::default::Default for mycelium_mlir::runtime::Scope<T, E>
+pub fn mycelium_mlir::runtime::Scope<T, E>::default() -> Self
+impl<T, E> core::marker::Freeze for mycelium_mlir::runtime::Scope<T, E>
+impl<T, E> !core::marker::Send for mycelium_mlir::runtime::Scope<T, E>
+impl<T, E> !core::marker::Sync for mycelium_mlir::runtime::Scope<T, E>
+impl<T, E> core::marker::Unpin for mycelium_mlir::runtime::Scope<T, E> where T: core::marker::Unpin, E: core::marker::Unpin
+impl<T, E> core::marker::UnsafeUnpin for mycelium_mlir::runtime::Scope<T, E>
+impl<T, E> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Scope<T, E>
+impl<T, E> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::Scope<T, E>
+pub struct mycelium_mlir::Sender<V>
+impl<V> mycelium_mlir::channel::Sender<V>
+pub fn mycelium_mlir::channel::Sender<V>::is_connected(&self) -> bool
+pub fn mycelium_mlir::channel::Sender<V>::try_send(&self, V) -> core::result::Result<(), mycelium_mlir::channel::TrySend<V>>
+impl<V> core::ops::drop::Drop for mycelium_mlir::channel::Sender<V>
+pub fn mycelium_mlir::channel::Sender<V>::drop(&mut self)
+impl<V> core::marker::Freeze for mycelium_mlir::channel::Sender<V>
+impl<V> !core::marker::Send for mycelium_mlir::channel::Sender<V>
+impl<V> !core::marker::Sync for mycelium_mlir::channel::Sender<V>
+impl<V> core::marker::Unpin for mycelium_mlir::channel::Sender<V>
+impl<V> core::marker::UnsafeUnpin for mycelium_mlir::channel::Sender<V>
+impl<V> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::Sender<V>
+impl<V> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::Sender<V>
+pub struct mycelium_mlir::SpecializedDotKernel
+impl mycelium_mlir::specialize::SpecializedDotKernel
+pub fn mycelium_mlir::specialize::SpecializedDotKernel::call(&self, &[i32]) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::specialize::SpecializedDotKernel::n(&self) -> usize
+pub fn mycelium_mlir::specialize::SpecializedDotKernel::nonzero(&self) -> usize
+impl core::marker::Freeze for mycelium_mlir::specialize::SpecializedDotKernel
+impl !core::marker::Send for mycelium_mlir::specialize::SpecializedDotKernel
+impl !core::marker::Sync for mycelium_mlir::specialize::SpecializedDotKernel
+impl core::marker::Unpin for mycelium_mlir::specialize::SpecializedDotKernel
+impl core::marker::UnsafeUnpin for mycelium_mlir::specialize::SpecializedDotKernel
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::specialize::SpecializedDotKernel
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::specialize::SpecializedDotKernel
+pub struct mycelium_mlir::StaticDepthBudget(pub usize)
+impl core::clone::Clone for mycelium_mlir::budget::StaticDepthBudget
+pub fn mycelium_mlir::budget::StaticDepthBudget::clone(&self) -> mycelium_mlir::budget::StaticDepthBudget
+impl core::fmt::Debug for mycelium_mlir::budget::StaticDepthBudget
+pub fn mycelium_mlir::budget::StaticDepthBudget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::budget::StaticDepthBudget
+impl mycelium_mlir::budget::DepthBudget for mycelium_mlir::budget::StaticDepthBudget
+pub fn mycelium_mlir::budget::StaticDepthBudget::resolve(&self) -> mycelium_mlir::budget::DepthResolution
+impl core::marker::Freeze for mycelium_mlir::budget::StaticDepthBudget
+impl core::marker::Send for mycelium_mlir::budget::StaticDepthBudget
+impl core::marker::Sync for mycelium_mlir::budget::StaticDepthBudget
+impl core::marker::Unpin for mycelium_mlir::budget::StaticDepthBudget
+impl core::marker::UnsafeUnpin for mycelium_mlir::budget::StaticDepthBudget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::StaticDepthBudget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::StaticDepthBudget
+pub struct mycelium_mlir::TaskCtx<'a>
+pub mycelium_mlir::TaskCtx::budgets: &'a mut mycelium_interp::budget::Budgets
+pub mycelium_mlir::TaskCtx::cancel: &'a mycelium_interp::supervise::CancelToken
+pub mycelium_mlir::TaskCtx::tick: u64
+impl<'a> core::marker::Freeze for mycelium_mlir::runtime::TaskCtx<'a>
+impl<'a> core::marker::Send for mycelium_mlir::runtime::TaskCtx<'a>
+impl<'a> core::marker::Sync for mycelium_mlir::runtime::TaskCtx<'a>
+impl<'a> core::marker::Unpin for mycelium_mlir::runtime::TaskCtx<'a>
+impl<'a> core::marker::UnsafeUnpin for mycelium_mlir::runtime::TaskCtx<'a>
+impl<'a> core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::TaskCtx<'a>
+impl<'a> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::TaskCtx<'a>
+pub const mycelium_mlir::STATIC_FALLBACK_DEPTH: usize
+pub trait mycelium_mlir::DepthBudget
+pub fn mycelium_mlir::DepthBudget::resolve(&self) -> mycelium_mlir::budget::DepthResolution
+impl mycelium_mlir::budget::DepthBudget for mycelium_mlir::budget::AutoDepthBudget
+pub fn mycelium_mlir::budget::AutoDepthBudget::resolve(&self) -> mycelium_mlir::budget::DepthResolution
+impl mycelium_mlir::budget::DepthBudget for mycelium_mlir::budget::StaticDepthBudget
+pub fn mycelium_mlir::budget::StaticDepthBudget::resolve(&self) -> mycelium_mlir::budget::DepthResolution
+pub trait mycelium_mlir::Task
+pub type mycelium_mlir::Task::Error
+pub type mycelium_mlir::Task::Output
+pub fn mycelium_mlir::Task::poll(&mut self, &mut mycelium_mlir::runtime::TaskCtx<'_>) -> mycelium_mlir::runtime::Poll<Self::Output, Self::Error>
+pub fn mycelium_mlir::compile(&mycelium_core::node::Node) -> core::result::Result<mycelium_mlir::llvm::CompiledArtifact, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::compile_and_run(&mycelium_core::node::Node) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::compile_bitnet_dot() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::compile_bitnet_dot_for(mycelium_core::meta::PackScheme) -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::compile_bitnet_dot_simd() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::compile_so(&mycelium_core::node::Node) -> core::result::Result<mycelium_mlir::jit::JitArtifact, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::compile_specialized_dot(&[mycelium_core::value::Trit]) -> core::result::Result<mycelium_mlir::specialize::SpecializedDotKernel, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::default_depth_budget() -> mycelium_mlir::budget::DepthResolution
+pub fn mycelium_mlir::emit(&mycelium_core::node::Node) -> alloc::string::String
+pub fn mycelium_mlir::emit_bitnet_dot_ir() -> alloc::string::String
+pub fn mycelium_mlir::emit_bitnet_dot_ir_for(mycelium_core::meta::PackScheme) -> core::result::Result<alloc::string::String, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::emit_bitnet_dot_simd_ir() -> alloc::string::String
+pub fn mycelium_mlir::emit_llvm_ir(&mycelium_core::node::Node) -> core::result::Result<alloc::string::String, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::emit_specialized_dot_ir(&[mycelium_core::value::Trit]) -> alloc::string::String
+pub fn mycelium_mlir::jit_run(&mycelium_core::node::Node) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::jit_specialized_dot(&[mycelium_core::value::Trit], &[i32]) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::jit_ternary_dot(&[mycelium_core::value::Trit], &[i32]) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::jit_ternary_dot_for(&[mycelium_core::value::Trit], &[i32], mycelium_core::meta::PackScheme) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::pack_trits(&[mycelium_core::value::Trit], mycelium_core::meta::PackScheme) -> alloc::vec::Vec<u8>
+pub fn mycelium_mlir::recompile_closure(&std::collections::hash::map::HashMap<mycelium_core::id::ContentHash, alloc::vec::Vec<mycelium_core::id::ContentHash>>, &[mycelium_core::id::ContentHash]) -> std::collections::hash::set::HashSet<mycelium_core::id::ContentHash>
+pub fn mycelium_mlir::relayout_trits(&[mycelium_core::value::Trit], mycelium_core::meta::PackScheme, mycelium_core::meta::PackScheme) -> alloc::vec::Vec<mycelium_core::value::Trit>
+pub fn mycelium_mlir::run(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+pub fn mycelium_mlir::run_core(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
+pub fn mycelium_mlir::run_core_with_effects(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64, usize, &mut mycelium_interp::budget::Budgets) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
+pub fn mycelium_mlir::run_core_with_fuel(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
+pub fn mycelium_mlir::run_with_layout(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, mycelium_core::meta::PackScheme, mycelium_core::meta::PackScheme) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+pub fn mycelium_mlir::ternary_dot_ref(&[mycelium_core::value::Trit], &[i32]) -> i64
+pub fn mycelium_mlir::unpack_trits(&[u8], mycelium_core::meta::PackScheme, usize) -> core::result::Result<alloc::vec::Vec<mycelium_core::value::Trit>, mycelium_mlir::pack::PackError>
+pub type mycelium_mlir::Colony<T, E> = mycelium_mlir::runtime::Scope<T, E>

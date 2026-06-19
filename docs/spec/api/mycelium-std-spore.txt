@@ -1,0 +1,269 @@
+pub mod mycelium_std_spore
+pub use mycelium_std_spore::ContentHash
+pub use mycelium_std_spore::GuaranteeStrength
+pub use mycelium_std_spore::RawSpore
+pub use mycelium_std_spore::ReconMode
+pub use mycelium_std_spore::SporeError
+pub mod mycelium_std_spore::guarantee_matrix
+pub struct mycelium_std_spore::guarantee_matrix::MatrixRow
+pub mycelium_std_spore::guarantee_matrix::MatrixRow::effects: &'static str
+pub mycelium_std_spore::guarantee_matrix::MatrixRow::explain_able: bool
+pub mycelium_std_spore::guarantee_matrix::MatrixRow::fallibility: &'static str
+pub mycelium_std_spore::guarantee_matrix::MatrixRow::guarantee: mycelium_std_spore::guarantee_matrix::GuaranteeTag
+pub mycelium_std_spore::guarantee_matrix::MatrixRow::never_silent_property: &'static str
+pub mycelium_std_spore::guarantee_matrix::MatrixRow::op: &'static str
+impl core::clone::Clone for mycelium_std_spore::guarantee_matrix::MatrixRow
+pub fn mycelium_std_spore::guarantee_matrix::MatrixRow::clone(&self) -> mycelium_std_spore::guarantee_matrix::MatrixRow
+impl core::cmp::Eq for mycelium_std_spore::guarantee_matrix::MatrixRow
+impl core::cmp::PartialEq for mycelium_std_spore::guarantee_matrix::MatrixRow
+pub fn mycelium_std_spore::guarantee_matrix::MatrixRow::eq(&self, &mycelium_std_spore::guarantee_matrix::MatrixRow) -> bool
+impl core::fmt::Debug for mycelium_std_spore::guarantee_matrix::MatrixRow
+pub fn mycelium_std_spore::guarantee_matrix::MatrixRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::guarantee_matrix::MatrixRow
+impl core::marker::Freeze for mycelium_std_spore::guarantee_matrix::MatrixRow
+impl core::marker::Send for mycelium_std_spore::guarantee_matrix::MatrixRow
+impl core::marker::Sync for mycelium_std_spore::guarantee_matrix::MatrixRow
+impl core::marker::Unpin for mycelium_std_spore::guarantee_matrix::MatrixRow
+impl core::marker::UnsafeUnpin for mycelium_std_spore::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::guarantee_matrix::MatrixRow
+pub const mycelium_std_spore::guarantee_matrix::MATRIX: &[mycelium_std_spore::guarantee_matrix::MatrixRow]
+pub type mycelium_std_spore::guarantee_matrix::GuaranteeTag = &'static str
+pub mod mycelium_std_spore::recon_manifest
+pub use mycelium_std_spore::recon_manifest::ReconMode
+pub enum mycelium_std_spore::recon_manifest::MalformedManifest
+pub mycelium_std_spore::recon_manifest::MalformedManifest::KernelWf
+pub mycelium_std_spore::recon_manifest::MalformedManifest::ResonatorOverStrength
+impl core::clone::Clone for mycelium_std_spore::recon_manifest::MalformedManifest
+pub fn mycelium_std_spore::recon_manifest::MalformedManifest::clone(&self) -> mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::cmp::Eq for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::cmp::PartialEq for mycelium_std_spore::recon_manifest::MalformedManifest
+pub fn mycelium_std_spore::recon_manifest::MalformedManifest::eq(&self, &mycelium_std_spore::recon_manifest::MalformedManifest) -> bool
+impl core::error::Error for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::fmt::Debug for mycelium_std_spore::recon_manifest::MalformedManifest
+pub fn mycelium_std_spore::recon_manifest::MalformedManifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_spore::recon_manifest::MalformedManifest
+pub fn mycelium_std_spore::recon_manifest::MalformedManifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::marker::Freeze for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::marker::Send for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::marker::Sync for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::marker::Unpin for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::marker::UnsafeUnpin for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::recon_manifest::MalformedManifest
+pub struct mycelium_std_spore::recon_manifest::ReconManifest
+impl mycelium_std_spore::recon_manifest::ReconManifest
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::declared_strength(&self) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::delta(&self) -> core::option::Option<f64>
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::inner(&self) -> &mycelium_core::recon::ReconInfo
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::manifest_hash(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::mode(&self) -> mycelium_core::recon::ReconMode
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::new(mycelium_core::recon::ReconMode, impl core::convert::Into<alloc::string::String>, u32, alloc::vec::Vec<mycelium_core::id::ContentHash>, core::option::Option<mycelium_core::recon::Recipe>, mycelium_core::recon::DecodeSpec, mycelium_core::bound::Bound) -> core::result::Result<Self, mycelium_std_spore::recon_manifest::MalformedManifest>
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::validate(mycelium_core::recon::ReconInfo) -> core::result::Result<Self, mycelium_std_spore::recon_manifest::MalformedManifest>
+impl core::clone::Clone for mycelium_std_spore::recon_manifest::ReconManifest
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::clone(&self) -> mycelium_std_spore::recon_manifest::ReconManifest
+impl core::cmp::PartialEq for mycelium_std_spore::recon_manifest::ReconManifest
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::eq(&self, &mycelium_std_spore::recon_manifest::ReconManifest) -> bool
+impl core::fmt::Debug for mycelium_std_spore::recon_manifest::ReconManifest
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_spore::recon_manifest::ReconManifest
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::recon_manifest::ReconManifest
+impl core::marker::Freeze for mycelium_std_spore::recon_manifest::ReconManifest
+impl core::marker::Send for mycelium_std_spore::recon_manifest::ReconManifest
+impl core::marker::Sync for mycelium_std_spore::recon_manifest::ReconManifest
+impl core::marker::Unpin for mycelium_std_spore::recon_manifest::ReconManifest
+impl core::marker::UnsafeUnpin for mycelium_std_spore::recon_manifest::ReconManifest
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::recon_manifest::ReconManifest
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::recon_manifest::ReconManifest
+pub struct mycelium_std_spore::recon_manifest::RegrowthResult
+pub mycelium_std_spore::recon_manifest::RegrowthResult::factorization: mycelium_vsa::resonator::Factorization
+impl mycelium_std_spore::recon_manifest::RegrowthResult
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::as_approx(&self) -> mycelium_std_numerics::Approx<mycelium_vsa::resonator::Factorization>
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::bound(&self) -> &mycelium_core::bound::Bound
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::delta(&self) -> core::option::Option<f64>
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::is_declared(&self) -> bool
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::is_empirical(&self) -> bool
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::new(mycelium_vsa::resonator::Factorization, mycelium_core::bound::Bound) -> core::result::Result<Self, mycelium_std_spore::recon_manifest::MalformedManifest>
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::strength(&self) -> mycelium_core::guarantee::GuaranteeStrength
+impl core::fmt::Debug for mycelium_std_spore::recon_manifest::RegrowthResult
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_spore::recon_manifest::RegrowthResult
+impl core::marker::Send for mycelium_std_spore::recon_manifest::RegrowthResult
+impl core::marker::Sync for mycelium_std_spore::recon_manifest::RegrowthResult
+impl core::marker::Unpin for mycelium_std_spore::recon_manifest::RegrowthResult
+impl core::marker::UnsafeUnpin for mycelium_std_spore::recon_manifest::RegrowthResult
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::recon_manifest::RegrowthResult
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::recon_manifest::RegrowthResult
+pub mod mycelium_std_spore::spore_ops
+pub enum mycelium_std_spore::spore_ops::SporeErr
+pub mycelium_std_spore::spore_ops::SporeErr::HashMismatch
+pub mycelium_std_spore::spore_ops::SporeErr::HashMismatch::expected: mycelium_core::id::ContentHash
+pub mycelium_std_spore::spore_ops::SporeErr::HashMismatch::found: mycelium_core::id::ContentHash
+pub mycelium_std_spore::spore_ops::SporeErr::IoErr(alloc::string::String)
+pub mycelium_std_spore::spore_ops::SporeErr::PublishErr(alloc::string::String)
+impl core::clone::Clone for mycelium_std_spore::spore_ops::SporeErr
+pub fn mycelium_std_spore::spore_ops::SporeErr::clone(&self) -> mycelium_std_spore::spore_ops::SporeErr
+impl core::cmp::Eq for mycelium_std_spore::spore_ops::SporeErr
+impl core::cmp::PartialEq for mycelium_std_spore::spore_ops::SporeErr
+pub fn mycelium_std_spore::spore_ops::SporeErr::eq(&self, &mycelium_std_spore::spore_ops::SporeErr) -> bool
+impl core::convert::From<mycelium_spore::SporeError> for mycelium_std_spore::spore_ops::SporeErr
+pub fn mycelium_std_spore::spore_ops::SporeErr::from(mycelium_spore::SporeError) -> Self
+impl core::error::Error for mycelium_std_spore::spore_ops::SporeErr
+impl core::fmt::Debug for mycelium_std_spore::spore_ops::SporeErr
+pub fn mycelium_std_spore::spore_ops::SporeErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_spore::spore_ops::SporeErr
+pub fn mycelium_std_spore::spore_ops::SporeErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::spore_ops::SporeErr
+impl core::marker::Freeze for mycelium_std_spore::spore_ops::SporeErr
+impl core::marker::Send for mycelium_std_spore::spore_ops::SporeErr
+impl core::marker::Sync for mycelium_std_spore::spore_ops::SporeErr
+impl core::marker::Unpin for mycelium_std_spore::spore_ops::SporeErr
+impl core::marker::UnsafeUnpin for mycelium_std_spore::spore_ops::SporeErr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::spore_ops::SporeErr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::spore_ops::SporeErr
+pub struct mycelium_std_spore::spore_ops::SporeUnit
+impl mycelium_std_spore::spore_ops::SporeUnit
+pub fn mycelium_std_spore::spore_ops::SporeUnit::from_manifest(&mycelium_proj::manifest::Manifest, &std::path::Path) -> core::result::Result<Self, mycelium_std_spore::spore_ops::SporeErr>
+pub fn mycelium_std_spore::spore_ops::SporeUnit::from_value(&mycelium_core::value::Value, core::option::Option<mycelium_std_spore::recon_manifest::ReconManifest>) -> core::result::Result<Self, mycelium_std_spore::spore_ops::SporeErr>
+pub fn mycelium_std_spore::spore_ops::SporeUnit::identity(&self) -> &mycelium_core::id::ContentHash
+pub fn mycelium_std_spore::spore_ops::SporeUnit::manifest(&self) -> core::option::Option<&mycelium_std_spore::recon_manifest::ReconManifest>
+pub fn mycelium_std_spore::spore_ops::SporeUnit::raw(&self) -> &mycelium_spore::Spore
+pub fn mycelium_std_spore::spore_ops::SporeUnit::verify(&self) -> core::result::Result<(), mycelium_std_spore::spore_ops::SporeErr>
+impl core::clone::Clone for mycelium_std_spore::spore_ops::SporeUnit
+pub fn mycelium_std_spore::spore_ops::SporeUnit::clone(&self) -> mycelium_std_spore::spore_ops::SporeUnit
+impl core::cmp::PartialEq for mycelium_std_spore::spore_ops::SporeUnit
+pub fn mycelium_std_spore::spore_ops::SporeUnit::eq(&self, &mycelium_std_spore::spore_ops::SporeUnit) -> bool
+impl core::fmt::Debug for mycelium_std_spore::spore_ops::SporeUnit
+pub fn mycelium_std_spore::spore_ops::SporeUnit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::spore_ops::SporeUnit
+impl core::marker::Freeze for mycelium_std_spore::spore_ops::SporeUnit
+impl core::marker::Send for mycelium_std_spore::spore_ops::SporeUnit
+impl core::marker::Sync for mycelium_std_spore::spore_ops::SporeUnit
+impl core::marker::Unpin for mycelium_std_spore::spore_ops::SporeUnit
+impl core::marker::UnsafeUnpin for mycelium_std_spore::spore_ops::SporeUnit
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::spore_ops::SporeUnit
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::spore_ops::SporeUnit
+pub fn mycelium_std_spore::spore_ops::explain_spore(&mycelium_std_spore::spore_ops::SporeUnit) -> alloc::string::String
+pub fn mycelium_std_spore::spore_ops::identity(&mycelium_std_spore::spore_ops::SporeUnit) -> &mycelium_core::id::ContentHash
+pub fn mycelium_std_spore::spore_ops::manifest_of(&mycelium_std_spore::spore_ops::SporeUnit) -> core::option::Option<&mycelium_std_spore::recon_manifest::ReconManifest>
+pub fn mycelium_std_spore::spore_ops::verify(&mycelium_std_spore::spore_ops::SporeUnit) -> core::result::Result<(), mycelium_std_spore::spore_ops::SporeErr>
+pub enum mycelium_std_spore::MalformedManifest
+pub mycelium_std_spore::MalformedManifest::KernelWf
+pub mycelium_std_spore::MalformedManifest::ResonatorOverStrength
+impl core::clone::Clone for mycelium_std_spore::recon_manifest::MalformedManifest
+pub fn mycelium_std_spore::recon_manifest::MalformedManifest::clone(&self) -> mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::cmp::Eq for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::cmp::PartialEq for mycelium_std_spore::recon_manifest::MalformedManifest
+pub fn mycelium_std_spore::recon_manifest::MalformedManifest::eq(&self, &mycelium_std_spore::recon_manifest::MalformedManifest) -> bool
+impl core::error::Error for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::fmt::Debug for mycelium_std_spore::recon_manifest::MalformedManifest
+pub fn mycelium_std_spore::recon_manifest::MalformedManifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_spore::recon_manifest::MalformedManifest
+pub fn mycelium_std_spore::recon_manifest::MalformedManifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::marker::Freeze for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::marker::Send for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::marker::Sync for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::marker::Unpin for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::marker::UnsafeUnpin for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::recon_manifest::MalformedManifest
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::recon_manifest::MalformedManifest
+pub enum mycelium_std_spore::SporeErr
+pub mycelium_std_spore::SporeErr::HashMismatch
+pub mycelium_std_spore::SporeErr::HashMismatch::expected: mycelium_core::id::ContentHash
+pub mycelium_std_spore::SporeErr::HashMismatch::found: mycelium_core::id::ContentHash
+pub mycelium_std_spore::SporeErr::IoErr(alloc::string::String)
+pub mycelium_std_spore::SporeErr::PublishErr(alloc::string::String)
+impl core::clone::Clone for mycelium_std_spore::spore_ops::SporeErr
+pub fn mycelium_std_spore::spore_ops::SporeErr::clone(&self) -> mycelium_std_spore::spore_ops::SporeErr
+impl core::cmp::Eq for mycelium_std_spore::spore_ops::SporeErr
+impl core::cmp::PartialEq for mycelium_std_spore::spore_ops::SporeErr
+pub fn mycelium_std_spore::spore_ops::SporeErr::eq(&self, &mycelium_std_spore::spore_ops::SporeErr) -> bool
+impl core::convert::From<mycelium_spore::SporeError> for mycelium_std_spore::spore_ops::SporeErr
+pub fn mycelium_std_spore::spore_ops::SporeErr::from(mycelium_spore::SporeError) -> Self
+impl core::error::Error for mycelium_std_spore::spore_ops::SporeErr
+impl core::fmt::Debug for mycelium_std_spore::spore_ops::SporeErr
+pub fn mycelium_std_spore::spore_ops::SporeErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_spore::spore_ops::SporeErr
+pub fn mycelium_std_spore::spore_ops::SporeErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::spore_ops::SporeErr
+impl core::marker::Freeze for mycelium_std_spore::spore_ops::SporeErr
+impl core::marker::Send for mycelium_std_spore::spore_ops::SporeErr
+impl core::marker::Sync for mycelium_std_spore::spore_ops::SporeErr
+impl core::marker::Unpin for mycelium_std_spore::spore_ops::SporeErr
+impl core::marker::UnsafeUnpin for mycelium_std_spore::spore_ops::SporeErr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::spore_ops::SporeErr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::spore_ops::SporeErr
+pub struct mycelium_std_spore::ReconManifest
+impl mycelium_std_spore::recon_manifest::ReconManifest
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::declared_strength(&self) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::delta(&self) -> core::option::Option<f64>
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::inner(&self) -> &mycelium_core::recon::ReconInfo
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::manifest_hash(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::mode(&self) -> mycelium_core::recon::ReconMode
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::new(mycelium_core::recon::ReconMode, impl core::convert::Into<alloc::string::String>, u32, alloc::vec::Vec<mycelium_core::id::ContentHash>, core::option::Option<mycelium_core::recon::Recipe>, mycelium_core::recon::DecodeSpec, mycelium_core::bound::Bound) -> core::result::Result<Self, mycelium_std_spore::recon_manifest::MalformedManifest>
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::validate(mycelium_core::recon::ReconInfo) -> core::result::Result<Self, mycelium_std_spore::recon_manifest::MalformedManifest>
+impl core::clone::Clone for mycelium_std_spore::recon_manifest::ReconManifest
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::clone(&self) -> mycelium_std_spore::recon_manifest::ReconManifest
+impl core::cmp::PartialEq for mycelium_std_spore::recon_manifest::ReconManifest
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::eq(&self, &mycelium_std_spore::recon_manifest::ReconManifest) -> bool
+impl core::fmt::Debug for mycelium_std_spore::recon_manifest::ReconManifest
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_spore::recon_manifest::ReconManifest
+pub fn mycelium_std_spore::recon_manifest::ReconManifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::recon_manifest::ReconManifest
+impl core::marker::Freeze for mycelium_std_spore::recon_manifest::ReconManifest
+impl core::marker::Send for mycelium_std_spore::recon_manifest::ReconManifest
+impl core::marker::Sync for mycelium_std_spore::recon_manifest::ReconManifest
+impl core::marker::Unpin for mycelium_std_spore::recon_manifest::ReconManifest
+impl core::marker::UnsafeUnpin for mycelium_std_spore::recon_manifest::ReconManifest
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::recon_manifest::ReconManifest
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::recon_manifest::ReconManifest
+pub struct mycelium_std_spore::RegrowthResult
+pub mycelium_std_spore::RegrowthResult::factorization: mycelium_vsa::resonator::Factorization
+impl mycelium_std_spore::recon_manifest::RegrowthResult
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::as_approx(&self) -> mycelium_std_numerics::Approx<mycelium_vsa::resonator::Factorization>
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::bound(&self) -> &mycelium_core::bound::Bound
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::delta(&self) -> core::option::Option<f64>
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::is_declared(&self) -> bool
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::is_empirical(&self) -> bool
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::new(mycelium_vsa::resonator::Factorization, mycelium_core::bound::Bound) -> core::result::Result<Self, mycelium_std_spore::recon_manifest::MalformedManifest>
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::strength(&self) -> mycelium_core::guarantee::GuaranteeStrength
+impl core::fmt::Debug for mycelium_std_spore::recon_manifest::RegrowthResult
+pub fn mycelium_std_spore::recon_manifest::RegrowthResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_spore::recon_manifest::RegrowthResult
+impl core::marker::Send for mycelium_std_spore::recon_manifest::RegrowthResult
+impl core::marker::Sync for mycelium_std_spore::recon_manifest::RegrowthResult
+impl core::marker::Unpin for mycelium_std_spore::recon_manifest::RegrowthResult
+impl core::marker::UnsafeUnpin for mycelium_std_spore::recon_manifest::RegrowthResult
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::recon_manifest::RegrowthResult
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::recon_manifest::RegrowthResult
+pub struct mycelium_std_spore::SporeUnit
+impl mycelium_std_spore::spore_ops::SporeUnit
+pub fn mycelium_std_spore::spore_ops::SporeUnit::from_manifest(&mycelium_proj::manifest::Manifest, &std::path::Path) -> core::result::Result<Self, mycelium_std_spore::spore_ops::SporeErr>
+pub fn mycelium_std_spore::spore_ops::SporeUnit::from_value(&mycelium_core::value::Value, core::option::Option<mycelium_std_spore::recon_manifest::ReconManifest>) -> core::result::Result<Self, mycelium_std_spore::spore_ops::SporeErr>
+pub fn mycelium_std_spore::spore_ops::SporeUnit::identity(&self) -> &mycelium_core::id::ContentHash
+pub fn mycelium_std_spore::spore_ops::SporeUnit::manifest(&self) -> core::option::Option<&mycelium_std_spore::recon_manifest::ReconManifest>
+pub fn mycelium_std_spore::spore_ops::SporeUnit::raw(&self) -> &mycelium_spore::Spore
+pub fn mycelium_std_spore::spore_ops::SporeUnit::verify(&self) -> core::result::Result<(), mycelium_std_spore::spore_ops::SporeErr>
+impl core::clone::Clone for mycelium_std_spore::spore_ops::SporeUnit
+pub fn mycelium_std_spore::spore_ops::SporeUnit::clone(&self) -> mycelium_std_spore::spore_ops::SporeUnit
+impl core::cmp::PartialEq for mycelium_std_spore::spore_ops::SporeUnit
+pub fn mycelium_std_spore::spore_ops::SporeUnit::eq(&self, &mycelium_std_spore::spore_ops::SporeUnit) -> bool
+impl core::fmt::Debug for mycelium_std_spore::spore_ops::SporeUnit
+pub fn mycelium_std_spore::spore_ops::SporeUnit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::spore_ops::SporeUnit
+impl core::marker::Freeze for mycelium_std_spore::spore_ops::SporeUnit
+impl core::marker::Send for mycelium_std_spore::spore_ops::SporeUnit
+impl core::marker::Sync for mycelium_std_spore::spore_ops::SporeUnit
+impl core::marker::Unpin for mycelium_std_spore::spore_ops::SporeUnit
+impl core::marker::UnsafeUnpin for mycelium_std_spore::spore_ops::SporeUnit
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::spore_ops::SporeUnit
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::spore_ops::SporeUnit
+pub const mycelium_std_spore::MATRIX: &[mycelium_std_spore::guarantee_matrix::MatrixRow]
+pub fn mycelium_std_spore::explain_spore(&mycelium_std_spore::spore_ops::SporeUnit) -> alloc::string::String
+pub fn mycelium_std_spore::identity(&mycelium_std_spore::spore_ops::SporeUnit) -> &mycelium_core::id::ContentHash
+pub fn mycelium_std_spore::manifest_of(&mycelium_std_spore::spore_ops::SporeUnit) -> core::option::Option<&mycelium_std_spore::recon_manifest::ReconManifest>
+pub fn mycelium_std_spore::verify(&mycelium_std_spore::spore_ops::SporeUnit) -> core::result::Result<(), mycelium_std_spore::spore_ops::SporeErr>

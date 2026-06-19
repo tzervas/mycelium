@@ -1,0 +1,46 @@
+pub mod mycelium_fmt
+pub enum mycelium_fmt::FmtError
+pub mycelium_fmt::FmtError::Header(alloc::string::String)
+pub mycelium_fmt::FmtError::OutOfScope(alloc::string::String)
+pub mycelium_fmt::FmtError::Parse(alloc::string::String)
+impl mycelium_fmt::FmtError
+pub fn mycelium_fmt::FmtError::exit_code(&self) -> u8
+impl core::clone::Clone for mycelium_fmt::FmtError
+pub fn mycelium_fmt::FmtError::clone(&self) -> mycelium_fmt::FmtError
+impl core::cmp::Eq for mycelium_fmt::FmtError
+impl core::cmp::PartialEq for mycelium_fmt::FmtError
+pub fn mycelium_fmt::FmtError::eq(&self, &mycelium_fmt::FmtError) -> bool
+impl core::error::Error for mycelium_fmt::FmtError
+impl core::fmt::Debug for mycelium_fmt::FmtError
+pub fn mycelium_fmt::FmtError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_fmt::FmtError
+pub fn mycelium_fmt::FmtError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_fmt::FmtError
+impl core::marker::Freeze for mycelium_fmt::FmtError
+impl core::marker::Send for mycelium_fmt::FmtError
+impl core::marker::Sync for mycelium_fmt::FmtError
+impl core::marker::Unpin for mycelium_fmt::FmtError
+impl core::marker::UnsafeUnpin for mycelium_fmt::FmtError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_fmt::FmtError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_fmt::FmtError
+pub struct mycelium_fmt::Formatted
+pub mycelium_fmt::Formatted::changed: bool
+pub mycelium_fmt::Formatted::notes: alloc::vec::Vec<alloc::string::String>
+pub mycelium_fmt::Formatted::output: alloc::string::String
+impl core::clone::Clone for mycelium_fmt::Formatted
+pub fn mycelium_fmt::Formatted::clone(&self) -> mycelium_fmt::Formatted
+impl core::cmp::Eq for mycelium_fmt::Formatted
+impl core::cmp::PartialEq for mycelium_fmt::Formatted
+pub fn mycelium_fmt::Formatted::eq(&self, &mycelium_fmt::Formatted) -> bool
+impl core::fmt::Debug for mycelium_fmt::Formatted
+pub fn mycelium_fmt::Formatted::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_fmt::Formatted
+impl core::marker::Freeze for mycelium_fmt::Formatted
+impl core::marker::Send for mycelium_fmt::Formatted
+impl core::marker::Sync for mycelium_fmt::Formatted
+impl core::marker::Unpin for mycelium_fmt::Formatted
+impl core::marker::UnsafeUnpin for mycelium_fmt::Formatted
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_fmt::Formatted
+impl core::panic::unwind_safe::UnwindSafe for mycelium_fmt::Formatted
+pub const mycelium_fmt::MYCFMT_VERSION: &str
+pub fn mycelium_fmt::format_source(&str, core::option::Option<&str>) -> core::result::Result<mycelium_fmt::Formatted, mycelium_fmt::FmtError>

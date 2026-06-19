@@ -1,0 +1,160 @@
+pub mod mycelium_diag
+pub use mycelium_diag::ContentHash
+pub enum mycelium_diag::Code
+pub mycelium_diag::Code::Budget
+pub mycelium_diag::Code::HashMismatch
+pub mycelium_diag::Code::Other(alloc::string::String)
+pub mycelium_diag::Code::OutOfRange
+impl mycelium_diag::Code
+pub fn mycelium_diag::Code::as_str(&self) -> &str
+impl core::clone::Clone for mycelium_diag::Code
+pub fn mycelium_diag::Code::clone(&self) -> mycelium_diag::Code
+impl core::cmp::Eq for mycelium_diag::Code
+impl core::cmp::PartialEq for mycelium_diag::Code
+pub fn mycelium_diag::Code::eq(&self, &mycelium_diag::Code) -> bool
+impl core::fmt::Debug for mycelium_diag::Code
+pub fn mycelium_diag::Code::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_diag::Code
+pub fn mycelium_diag::Code::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_diag::Code
+impl serde_core::ser::Serialize for mycelium_diag::Code
+pub fn mycelium_diag::Code::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_diag::Code
+pub fn mycelium_diag::Code::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_diag::Code
+impl core::marker::Send for mycelium_diag::Code
+impl core::marker::Sync for mycelium_diag::Code
+impl core::marker::Unpin for mycelium_diag::Code
+impl core::marker::UnsafeUnpin for mycelium_diag::Code
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_diag::Code
+impl core::panic::unwind_safe::UnwindSafe for mycelium_diag::Code
+pub enum mycelium_diag::Severity
+pub mycelium_diag::Severity::Debug
+pub mycelium_diag::Severity::Error
+pub mycelium_diag::Severity::Info
+pub mycelium_diag::Severity::Warn
+impl mycelium_diag::Severity
+pub const mycelium_diag::Severity::ALL: [mycelium_diag::Severity; 4]
+pub fn mycelium_diag::Severity::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_diag::Severity
+pub fn mycelium_diag::Severity::clone(&self) -> mycelium_diag::Severity
+impl core::cmp::Eq for mycelium_diag::Severity
+impl core::cmp::Ord for mycelium_diag::Severity
+pub fn mycelium_diag::Severity::cmp(&self, &mycelium_diag::Severity) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_diag::Severity
+pub fn mycelium_diag::Severity::eq(&self, &mycelium_diag::Severity) -> bool
+impl core::cmp::PartialOrd for mycelium_diag::Severity
+pub fn mycelium_diag::Severity::partial_cmp(&self, &mycelium_diag::Severity) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_diag::Severity
+pub fn mycelium_diag::Severity::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_diag::Severity
+pub fn mycelium_diag::Severity::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_diag::Severity
+impl core::marker::StructuralPartialEq for mycelium_diag::Severity
+impl serde_core::ser::Serialize for mycelium_diag::Severity
+pub fn mycelium_diag::Severity::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_diag::Severity
+pub fn mycelium_diag::Severity::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_diag::Severity
+impl core::marker::Send for mycelium_diag::Severity
+impl core::marker::Sync for mycelium_diag::Severity
+impl core::marker::Unpin for mycelium_diag::Severity
+impl core::marker::UnsafeUnpin for mycelium_diag::Severity
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_diag::Severity
+impl core::panic::unwind_safe::UnwindSafe for mycelium_diag::Severity
+pub struct mycelium_diag::Diag
+pub mycelium_diag::Diag::code: mycelium_diag::Code
+pub mycelium_diag::Diag::locus: core::option::Option<mycelium_diag::Locus>
+pub mycelium_diag::Diag::message: alloc::string::String
+pub mycelium_diag::Diag::notes: alloc::vec::Vec<alloc::string::String>
+pub mycelium_diag::Diag::severity: mycelium_diag::Severity
+pub mycelium_diag::Diag::trace: mycelium_diag::Trace
+impl mycelium_diag::Diag
+pub fn mycelium_diag::Diag::at(self, mycelium_diag::Locus) -> Self
+pub fn mycelium_diag::Diag::code(&self) -> &mycelium_diag::Code
+pub fn mycelium_diag::Diag::content_hash(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_diag::Diag::error(mycelium_diag::Code) -> Self
+pub fn mycelium_diag::Diag::from_json(&str) -> core::result::Result<Self, serde_json::error::Error>
+pub fn mycelium_diag::Diag::human(&self) -> alloc::string::String
+pub fn mycelium_diag::Diag::info(mycelium_diag::Code) -> Self
+pub fn mycelium_diag::Diag::machine(&self) -> alloc::string::String
+pub fn mycelium_diag::Diag::message(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_diag::Diag::note(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_diag::Diag::severity(&self) -> mycelium_diag::Severity
+pub fn mycelium_diag::Diag::trace(self, mycelium_diag::Trace) -> Self
+pub fn mycelium_diag::Diag::warn(mycelium_diag::Code) -> Self
+pub fn mycelium_diag::Diag::with_severity(mycelium_diag::Severity, mycelium_diag::Code) -> Self
+impl core::clone::Clone for mycelium_diag::Diag
+pub fn mycelium_diag::Diag::clone(&self) -> mycelium_diag::Diag
+impl core::cmp::Eq for mycelium_diag::Diag
+impl core::cmp::PartialEq for mycelium_diag::Diag
+pub fn mycelium_diag::Diag::eq(&self, &mycelium_diag::Diag) -> bool
+impl core::fmt::Debug for mycelium_diag::Diag
+pub fn mycelium_diag::Diag::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_diag::Diag
+impl serde_core::ser::Serialize for mycelium_diag::Diag
+pub fn mycelium_diag::Diag::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_diag::Diag
+pub fn mycelium_diag::Diag::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_diag::Diag
+impl core::marker::Send for mycelium_diag::Diag
+impl core::marker::Sync for mycelium_diag::Diag
+impl core::marker::Unpin for mycelium_diag::Diag
+impl core::marker::UnsafeUnpin for mycelium_diag::Diag
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_diag::Diag
+impl core::panic::unwind_safe::UnwindSafe for mycelium_diag::Diag
+pub struct mycelium_diag::Locus
+pub mycelium_diag::Locus::column: core::option::Option<u32>
+pub mycelium_diag::Locus::line: core::option::Option<u32>
+pub mycelium_diag::Locus::source: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_diag::Locus
+pub fn mycelium_diag::Locus::clone(&self) -> mycelium_diag::Locus
+impl core::cmp::Eq for mycelium_diag::Locus
+impl core::cmp::PartialEq for mycelium_diag::Locus
+pub fn mycelium_diag::Locus::eq(&self, &mycelium_diag::Locus) -> bool
+impl core::default::Default for mycelium_diag::Locus
+pub fn mycelium_diag::Locus::default() -> mycelium_diag::Locus
+impl core::fmt::Debug for mycelium_diag::Locus
+pub fn mycelium_diag::Locus::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_diag::Locus
+pub fn mycelium_diag::Locus::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_diag::Locus
+impl serde_core::ser::Serialize for mycelium_diag::Locus
+pub fn mycelium_diag::Locus::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_diag::Locus
+pub fn mycelium_diag::Locus::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_diag::Locus
+impl core::marker::Send for mycelium_diag::Locus
+impl core::marker::Sync for mycelium_diag::Locus
+impl core::marker::Unpin for mycelium_diag::Locus
+impl core::marker::UnsafeUnpin for mycelium_diag::Locus
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_diag::Locus
+impl core::panic::unwind_safe::UnwindSafe for mycelium_diag::Locus
+pub struct mycelium_diag::Trace
+pub mycelium_diag::Trace::frames: alloc::vec::Vec<alloc::string::String>
+impl mycelium_diag::Trace
+pub fn mycelium_diag::Trace::empty() -> Self
+pub fn mycelium_diag::Trace::with_frame(self, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_diag::Trace
+pub fn mycelium_diag::Trace::clone(&self) -> mycelium_diag::Trace
+impl core::cmp::Eq for mycelium_diag::Trace
+impl core::cmp::PartialEq for mycelium_diag::Trace
+pub fn mycelium_diag::Trace::eq(&self, &mycelium_diag::Trace) -> bool
+impl core::default::Default for mycelium_diag::Trace
+pub fn mycelium_diag::Trace::default() -> mycelium_diag::Trace
+impl core::fmt::Debug for mycelium_diag::Trace
+pub fn mycelium_diag::Trace::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_diag::Trace
+pub fn mycelium_diag::Trace::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_diag::Trace
+impl serde_core::ser::Serialize for mycelium_diag::Trace
+pub fn mycelium_diag::Trace::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_diag::Trace
+pub fn mycelium_diag::Trace::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_diag::Trace
+impl core::marker::Send for mycelium_diag::Trace
+impl core::marker::Sync for mycelium_diag::Trace
+impl core::marker::Unpin for mycelium_diag::Trace
+impl core::marker::UnsafeUnpin for mycelium_diag::Trace
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_diag::Trace
+impl core::panic::unwind_safe::UnwindSafe for mycelium_diag::Trace

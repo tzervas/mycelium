@@ -36,11 +36,11 @@ use crate::MathErr;
 
 /// The ε upper bound used for `Declared`-strength float operations (see module honesty note).
 ///
-/// Conservative: 2 * f64::EPSILON ≈ 4.44e-16 (Linf norm). This is a `UserDeclared` assertion
-/// until M-541 / M-512 provide an audited `ProvenThm` basis.
-///
-/// FLAG (ε-ownership): owned by ADR-010 / M-512; this value is a placeholder.
-pub const DECLARED_FLOAT_EPS: f64 = 2.0 * f64::EPSILON;
+/// ε-ownership (math.md §7-Q2 — RESOLVED): the constant is **homed in `std.numerics`** (the
+/// ε-carrier module, M-512) and re-exported here, so the value is stated in exactly one place
+/// (NFR-N2). It is a `UserDeclared` assertion (`2 · f64::EPSILON ≈ 4.44e-16`, Linf) until M-541's
+/// audited libm floor provides a checked `ProvenThm` basis.
+pub use mycelium_std_numerics::DECLARED_FLOAT_EPS;
 
 /// The `Declared` ε bound attached to all approximate ops in this implementation.
 ///
@@ -72,7 +72,12 @@ pub struct Approx<T> {
     /// The attached error bound — the C2/C3 artifact, never dropped.
     pub bound: Bound,
     /// The honest guarantee strength (derived from `bound.basis`, never asserted; VR-5).
-    pub strength: GuaranteeStrength,
+    ///
+    /// **Private (the VR-5 seal):** a public field would let a caller write
+    /// `Approx { strength: Proven, .. }` and assert a strength the basis doesn't support; keeping
+    /// it private means [`Approx::new`] (basis-deriving) is the only way to set it. Read via
+    /// [`Approx::strength`].
+    strength: GuaranteeStrength,
 }
 
 /// The dual human/machine EXPLAIN record for an [`Approx`] result (G11; C3).
@@ -103,6 +108,12 @@ impl<T: Copy + core::fmt::Debug> Approx<T> {
             bound,
             strength,
         }
+    }
+
+    /// The honest guarantee strength (derived from the bound's basis; VR-5 — never asserted).
+    #[must_use]
+    pub fn strength(&self) -> GuaranteeStrength {
+        self.strength
     }
 }
 
@@ -230,14 +241,23 @@ pub fn log(x: f64) -> Result<Approx<f64>, MathErr> {
 /// - [`MathErr::BadBase`] when `b ≤ 0`, `b == 1`, `b` is NaN, or `b` is infinite.
 /// - [`MathErr::NonPositiveDomain`] when `x ≤ 0` or NaN.
 pub fn logb(b: f64, x: f64) -> Result<Approx<f64>, MathErr> {
-    if b.is_nan() || b.is_infinite() || b <= 0.0 || (b - 1.0).abs() < f64::EPSILON {
+    if b.is_nan() || b.is_infinite() || b <= 0.0 {
         return Err(MathErr::BadBase);
     }
     if x.is_nan() || x <= 0.0 {
         return Err(MathErr::NonPositiveDomain);
     }
+    // Base 1 is the *only* degenerate base: `ln(1) == 0` ⇒ division by zero. Guard the actual
+    // div-by-zero (`ln(b) == 0`), not a fuzzy ε-band around 1 — a base adjacent to 1 (e.g. the
+    // largest f64 below 1) has a tiny-but-nonzero `ln` and is a perfectly valid base, which the
+    // old `(b - 1.0).abs() < EPSILON` test wrongly rejected. (`== 0.0` is clippy-clean: float_cmp
+    // exempts comparison to zero.)
+    let ln_b = b.ln();
+    if ln_b == 0.0 {
+        return Err(MathErr::BadBase);
+    }
     // log_b(x) = ln(x) / ln(b)
-    Ok(Approx::new(x.ln() / b.ln(), declared_error_bound()))
+    Ok(Approx::new(x.ln() / ln_b, declared_error_bound()))
 }
 
 /// `pow(x, y)` — approximate `xʸ`.
@@ -425,7 +445,7 @@ mod tests {
     // Helper: assert an Approx<f64> carries a Declared bound with the expected ε.
     fn assert_declared(a: &Approx<f64>) {
         assert_eq!(
-            a.strength,
+            a.strength(),
             GuaranteeStrength::Declared,
             "approximate ops must carry Declared strength (VR-5: libm floor not audited, FLAG M-541)"
         );
@@ -573,9 +593,25 @@ mod tests {
     fn logb_bad_base_is_explicit_error() {
         assert_eq!(logb(0.0, 1.0), Err(MathErr::BadBase));
         assert_eq!(logb(-1.0, 1.0), Err(MathErr::BadBase));
-        assert_eq!(logb(1.0, 1.0), Err(MathErr::BadBase)); // base == 1 is degenerate
+        assert_eq!(logb(1.0, 1.0), Err(MathErr::BadBase)); // base == 1 is degenerate (ln 1 = 0)
         assert_eq!(logb(f64::NAN, 1.0), Err(MathErr::BadBase));
         assert_eq!(logb(f64::INFINITY, 1.0), Err(MathErr::BadBase));
+    }
+
+    /// Only base **exactly** 1.0 is degenerate; bases adjacent to 1 have a tiny-but-nonzero `ln`
+    /// and are valid. The old fuzzy `(b-1).abs() < EPSILON` guard wrongly rejected these.
+    #[test]
+    fn logb_bases_adjacent_to_one_are_valid() {
+        let below = 1.0_f64.next_down(); // largest f64 < 1
+        let above = 1.0_f64.next_up(); // smallest f64 > 1
+        assert!(
+            logb(below, 8.0).is_ok(),
+            "base just below 1 is a valid base"
+        );
+        assert!(
+            logb(above, 8.0).is_ok(),
+            "base just above 1 is a valid base"
+        );
     }
 
     #[test]

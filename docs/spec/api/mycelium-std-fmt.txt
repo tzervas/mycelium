@@ -1,0 +1,174 @@
+pub mod mycelium_std_fmt
+pub use mycelium_std_fmt::Payload
+pub use mycelium_std_fmt::Trit
+pub enum mycelium_std_fmt::FromJsonError
+pub mycelium_std_fmt::FromJsonError::Malformed(alloc::string::String)
+pub mycelium_std_fmt::FromJsonError::OutOfDomain(alloc::string::String)
+pub mycelium_std_fmt::FromJsonError::UnknownTag(alloc::string::String)
+impl core::clone::Clone for mycelium_std_fmt::FromJsonError
+pub fn mycelium_std_fmt::FromJsonError::clone(&self) -> mycelium_std_fmt::FromJsonError
+impl core::cmp::Eq for mycelium_std_fmt::FromJsonError
+impl core::cmp::PartialEq for mycelium_std_fmt::FromJsonError
+pub fn mycelium_std_fmt::FromJsonError::eq(&self, &mycelium_std_fmt::FromJsonError) -> bool
+impl core::error::Error for mycelium_std_fmt::FromJsonError
+impl core::fmt::Debug for mycelium_std_fmt::FromJsonError
+pub fn mycelium_std_fmt::FromJsonError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_fmt::FromJsonError
+pub fn mycelium_std_fmt::FromJsonError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fmt::FromJsonError
+impl core::marker::Freeze for mycelium_std_fmt::FromJsonError
+impl core::marker::Send for mycelium_std_fmt::FromJsonError
+impl core::marker::Sync for mycelium_std_fmt::FromJsonError
+impl core::marker::Unpin for mycelium_std_fmt::FromJsonError
+impl core::marker::UnsafeUnpin for mycelium_std_fmt::FromJsonError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fmt::FromJsonError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fmt::FromJsonError
+pub enum mycelium_std_fmt::ToJsonError
+pub mycelium_std_fmt::ToJsonError::NonFinite
+pub mycelium_std_fmt::ToJsonError::NonFinite::index: usize
+impl core::clone::Clone for mycelium_std_fmt::ToJsonError
+pub fn mycelium_std_fmt::ToJsonError::clone(&self) -> mycelium_std_fmt::ToJsonError
+impl core::cmp::Eq for mycelium_std_fmt::ToJsonError
+impl core::cmp::PartialEq for mycelium_std_fmt::ToJsonError
+pub fn mycelium_std_fmt::ToJsonError::eq(&self, &mycelium_std_fmt::ToJsonError) -> bool
+impl core::error::Error for mycelium_std_fmt::ToJsonError
+impl core::fmt::Debug for mycelium_std_fmt::ToJsonError
+pub fn mycelium_std_fmt::ToJsonError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_fmt::ToJsonError
+pub fn mycelium_std_fmt::ToJsonError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fmt::ToJsonError
+impl core::marker::Freeze for mycelium_std_fmt::ToJsonError
+impl core::marker::Send for mycelium_std_fmt::ToJsonError
+impl core::marker::Sync for mycelium_std_fmt::ToJsonError
+impl core::marker::Unpin for mycelium_std_fmt::ToJsonError
+impl core::marker::UnsafeUnpin for mycelium_std_fmt::ToJsonError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fmt::ToJsonError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fmt::ToJsonError
+pub enum mycelium_std_fmt::Truncation
+pub mycelium_std_fmt::Truncation::Complete
+pub mycelium_std_fmt::Truncation::Elided
+pub mycelium_std_fmt::Truncation::Elided::marker: alloc::string::String
+pub mycelium_std_fmt::Truncation::Elided::omitted: usize
+impl core::clone::Clone for mycelium_std_fmt::Truncation
+pub fn mycelium_std_fmt::Truncation::clone(&self) -> mycelium_std_fmt::Truncation
+impl core::cmp::Eq for mycelium_std_fmt::Truncation
+impl core::cmp::PartialEq for mycelium_std_fmt::Truncation
+pub fn mycelium_std_fmt::Truncation::eq(&self, &mycelium_std_fmt::Truncation) -> bool
+impl core::fmt::Debug for mycelium_std_fmt::Truncation
+pub fn mycelium_std_fmt::Truncation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fmt::Truncation
+impl core::marker::Freeze for mycelium_std_fmt::Truncation
+impl core::marker::Send for mycelium_std_fmt::Truncation
+impl core::marker::Sync for mycelium_std_fmt::Truncation
+impl core::marker::Unpin for mycelium_std_fmt::Truncation
+impl core::marker::UnsafeUnpin for mycelium_std_fmt::Truncation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fmt::Truncation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fmt::Truncation
+pub struct mycelium_std_fmt::Budget(pub usize)
+impl core::clone::Clone for mycelium_std_fmt::Budget
+pub fn mycelium_std_fmt::Budget::clone(&self) -> mycelium_std_fmt::Budget
+impl core::cmp::Eq for mycelium_std_fmt::Budget
+impl core::cmp::Ord for mycelium_std_fmt::Budget
+pub fn mycelium_std_fmt::Budget::cmp(&self, &mycelium_std_fmt::Budget) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_std_fmt::Budget
+pub fn mycelium_std_fmt::Budget::eq(&self, &mycelium_std_fmt::Budget) -> bool
+impl core::cmp::PartialOrd for mycelium_std_fmt::Budget
+pub fn mycelium_std_fmt::Budget::partial_cmp(&self, &mycelium_std_fmt::Budget) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_std_fmt::Budget
+pub fn mycelium_std_fmt::Budget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_fmt::Budget
+impl core::marker::StructuralPartialEq for mycelium_std_fmt::Budget
+impl core::marker::Freeze for mycelium_std_fmt::Budget
+impl core::marker::Send for mycelium_std_fmt::Budget
+impl core::marker::Sync for mycelium_std_fmt::Budget
+impl core::marker::Unpin for mycelium_std_fmt::Budget
+impl core::marker::UnsafeUnpin for mycelium_std_fmt::Budget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fmt::Budget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fmt::Budget
+pub struct mycelium_std_fmt::Json(pub serde_json::value::Value)
+impl mycelium_std_fmt::Json
+pub fn mycelium_std_fmt::Json::inner(&self) -> &serde_json::value::Value
+impl core::clone::Clone for mycelium_std_fmt::Json
+pub fn mycelium_std_fmt::Json::clone(&self) -> mycelium_std_fmt::Json
+impl core::cmp::PartialEq for mycelium_std_fmt::Json
+pub fn mycelium_std_fmt::Json::eq(&self, &mycelium_std_fmt::Json) -> bool
+impl core::fmt::Debug for mycelium_std_fmt::Json
+pub fn mycelium_std_fmt::Json::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fmt::Json
+impl serde_core::ser::Serialize for mycelium_std_fmt::Json
+pub fn mycelium_std_fmt::Json::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_std_fmt::Json
+pub fn mycelium_std_fmt::Json::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_std_fmt::Json
+impl core::marker::Send for mycelium_std_fmt::Json
+impl core::marker::Sync for mycelium_std_fmt::Json
+impl core::marker::Unpin for mycelium_std_fmt::Json
+impl core::marker::UnsafeUnpin for mycelium_std_fmt::Json
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fmt::Json
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fmt::Json
+pub struct mycelium_std_fmt::MatrixRow
+pub mycelium_std_fmt::MatrixRow::effects: &'static str
+pub mycelium_std_fmt::MatrixRow::explainable: bool
+pub mycelium_std_fmt::MatrixRow::fallible: bool
+pub mycelium_std_fmt::MatrixRow::op: &'static str
+pub mycelium_std_fmt::MatrixRow::tag: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_std_fmt::MatrixRow
+pub fn mycelium_std_fmt::MatrixRow::clone(&self) -> mycelium_std_fmt::MatrixRow
+impl core::cmp::Eq for mycelium_std_fmt::MatrixRow
+impl core::cmp::PartialEq for mycelium_std_fmt::MatrixRow
+pub fn mycelium_std_fmt::MatrixRow::eq(&self, &mycelium_std_fmt::MatrixRow) -> bool
+impl core::fmt::Debug for mycelium_std_fmt::MatrixRow
+pub fn mycelium_std_fmt::MatrixRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fmt::MatrixRow
+impl core::marker::Freeze for mycelium_std_fmt::MatrixRow
+impl core::marker::Send for mycelium_std_fmt::MatrixRow
+impl core::marker::Sync for mycelium_std_fmt::MatrixRow
+impl core::marker::Unpin for mycelium_std_fmt::MatrixRow
+impl core::marker::UnsafeUnpin for mycelium_std_fmt::MatrixRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fmt::MatrixRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fmt::MatrixRow
+pub struct mycelium_std_fmt::Rendering
+pub mycelium_std_fmt::Rendering::text: mycelium_std_fmt::Text
+pub mycelium_std_fmt::Rendering::truncation: mycelium_std_fmt::Truncation
+impl core::clone::Clone for mycelium_std_fmt::Rendering
+pub fn mycelium_std_fmt::Rendering::clone(&self) -> mycelium_std_fmt::Rendering
+impl core::cmp::Eq for mycelium_std_fmt::Rendering
+impl core::cmp::PartialEq for mycelium_std_fmt::Rendering
+pub fn mycelium_std_fmt::Rendering::eq(&self, &mycelium_std_fmt::Rendering) -> bool
+impl core::fmt::Debug for mycelium_std_fmt::Rendering
+pub fn mycelium_std_fmt::Rendering::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fmt::Rendering
+impl core::marker::Freeze for mycelium_std_fmt::Rendering
+impl core::marker::Send for mycelium_std_fmt::Rendering
+impl core::marker::Sync for mycelium_std_fmt::Rendering
+impl core::marker::Unpin for mycelium_std_fmt::Rendering
+impl core::marker::UnsafeUnpin for mycelium_std_fmt::Rendering
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fmt::Rendering
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fmt::Rendering
+pub struct mycelium_std_fmt::Text(pub alloc::string::String)
+impl mycelium_std_fmt::Text
+pub fn mycelium_std_fmt::Text::as_str(&self) -> &str
+impl core::clone::Clone for mycelium_std_fmt::Text
+pub fn mycelium_std_fmt::Text::clone(&self) -> mycelium_std_fmt::Text
+impl core::cmp::Eq for mycelium_std_fmt::Text
+impl core::cmp::PartialEq for mycelium_std_fmt::Text
+pub fn mycelium_std_fmt::Text::eq(&self, &mycelium_std_fmt::Text) -> bool
+impl core::fmt::Debug for mycelium_std_fmt::Text
+pub fn mycelium_std_fmt::Text::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_fmt::Text
+pub fn mycelium_std_fmt::Text::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_fmt::Text
+impl core::marker::Freeze for mycelium_std_fmt::Text
+impl core::marker::Send for mycelium_std_fmt::Text
+impl core::marker::Sync for mycelium_std_fmt::Text
+impl core::marker::Unpin for mycelium_std_fmt::Text
+impl core::marker::UnsafeUnpin for mycelium_std_fmt::Text
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_fmt::Text
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_fmt::Text
+pub const mycelium_std_fmt::GUARANTEE_MATRIX: &[mycelium_std_fmt::MatrixRow]
+pub fn mycelium_std_fmt::assert_matrix_invariants()
+pub fn mycelium_std_fmt::debug(&mycelium_core::value::Value) -> mycelium_std_fmt::Text
+pub fn mycelium_std_fmt::display(&mycelium_core::value::Value) -> mycelium_std_fmt::Text
+pub fn mycelium_std_fmt::display_bounded(&mycelium_core::value::Value, mycelium_std_fmt::Budget) -> mycelium_std_fmt::Rendering
+pub fn mycelium_std_fmt::from_json(&mycelium_std_fmt::Json) -> core::result::Result<mycelium_core::value::Value, mycelium_std_fmt::FromJsonError>
+pub fn mycelium_std_fmt::to_json(&mycelium_core::value::Value) -> core::result::Result<mycelium_std_fmt::Json, mycelium_std_fmt::ToJsonError>

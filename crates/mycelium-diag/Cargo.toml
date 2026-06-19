@@ -1,0 +1,20 @@
+[package]
+name = "mycelium-diag"
+version = "0.0.0"
+description = "Canonical RFC-0013 structured-diagnostic record types — the failure-legibility substrate (Diag/Severity/Locus/Trace/Code); the small audited kernel std.diag/std.recover/std.testing consume (M-510)."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+mycelium-core = { path = "../mycelium-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+blake3 = "1"
+
+[dev-dependencies]

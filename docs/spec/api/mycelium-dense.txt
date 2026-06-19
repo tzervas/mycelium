@@ -1,0 +1,94 @@
+pub mod mycelium_dense
+pub enum mycelium_dense::DenseError
+pub mycelium_dense::DenseError::ApproximateSource
+pub mycelium_dense::DenseError::DimMismatch
+pub mycelium_dense::DenseError::DimMismatch::expected: u32
+pub mycelium_dense::DenseError::DimMismatch::got: u32
+pub mycelium_dense::DenseError::DtypeMismatch
+pub mycelium_dense::DenseError::DtypeMismatch::expected: mycelium_core::repr::ScalarKind
+pub mycelium_dense::DenseError::NonFinite
+pub mycelium_dense::DenseError::NonFinite::index: usize
+pub mycelium_dense::DenseError::NotDense
+pub mycelium_dense::DenseError::NotOnGrid
+pub mycelium_dense::DenseError::NotOnGrid::index: usize
+pub mycelium_dense::DenseError::Overflow
+pub mycelium_dense::DenseError::Overflow::index: usize
+pub mycelium_dense::DenseError::ScalarOffGrid
+pub mycelium_dense::DenseError::SubnormalUnsupported
+pub mycelium_dense::DenseError::SubnormalUnsupported::index: usize
+pub mycelium_dense::DenseError::UnsupportedDtype
+pub mycelium_dense::DenseError::UnsupportedDtype::dtype: mycelium_core::repr::ScalarKind
+pub mycelium_dense::DenseError::Wf(mycelium_core::WfError)
+impl core::clone::Clone for mycelium_dense::DenseError
+pub fn mycelium_dense::DenseError::clone(&self) -> mycelium_dense::DenseError
+impl core::cmp::Eq for mycelium_dense::DenseError
+impl core::cmp::PartialEq for mycelium_dense::DenseError
+pub fn mycelium_dense::DenseError::eq(&self, &mycelium_dense::DenseError) -> bool
+impl core::error::Error for mycelium_dense::DenseError
+impl core::fmt::Debug for mycelium_dense::DenseError
+pub fn mycelium_dense::DenseError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_dense::DenseError
+pub fn mycelium_dense::DenseError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_dense::DenseError
+impl core::marker::Freeze for mycelium_dense::DenseError
+impl core::marker::Send for mycelium_dense::DenseError
+impl core::marker::Sync for mycelium_dense::DenseError
+impl core::marker::Unpin for mycelium_dense::DenseError
+impl core::marker::UnsafeUnpin for mycelium_dense::DenseError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_dense::DenseError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_dense::DenseError
+pub enum mycelium_dense::DenseOp
+pub mycelium_dense::DenseOp::Add
+pub mycelium_dense::DenseOp::Neg
+pub mycelium_dense::DenseOp::Scale
+pub mycelium_dense::DenseOp::Sub
+impl core::clone::Clone for mycelium_dense::DenseOp
+pub fn mycelium_dense::DenseOp::clone(&self) -> mycelium_dense::DenseOp
+impl core::cmp::Eq for mycelium_dense::DenseOp
+impl core::cmp::PartialEq for mycelium_dense::DenseOp
+pub fn mycelium_dense::DenseOp::eq(&self, &mycelium_dense::DenseOp) -> bool
+impl core::fmt::Debug for mycelium_dense::DenseOp
+pub fn mycelium_dense::DenseOp::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_dense::DenseOp
+impl core::marker::StructuralPartialEq for mycelium_dense::DenseOp
+impl core::marker::Freeze for mycelium_dense::DenseOp
+impl core::marker::Send for mycelium_dense::DenseOp
+impl core::marker::Sync for mycelium_dense::DenseOp
+impl core::marker::Unpin for mycelium_dense::DenseOp
+impl core::marker::UnsafeUnpin for mycelium_dense::DenseOp
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_dense::DenseOp
+impl core::panic::unwind_safe::UnwindSafe for mycelium_dense::DenseOp
+pub struct mycelium_dense::DenseSpace
+pub mycelium_dense::DenseSpace::dim: u32
+pub mycelium_dense::DenseSpace::dtype: mycelium_core::repr::ScalarKind
+impl mycelium_dense::DenseSpace
+pub fn mycelium_dense::DenseSpace::add_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_dense::DenseError>
+pub fn mycelium_dense::DenseSpace::dot(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<f64, mycelium_dense::DenseError>
+pub fn mycelium_dense::DenseSpace::neg_value(&self, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_dense::DenseError>
+pub fn mycelium_dense::DenseSpace::new(u32, mycelium_core::repr::ScalarKind) -> core::result::Result<Self, mycelium_dense::DenseError>
+pub fn mycelium_dense::DenseSpace::op_guarantee(mycelium_dense::DenseOp) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_dense::DenseSpace::op_rel_eps(&self) -> f64
+pub fn mycelium_dense::DenseSpace::repr(&self) -> mycelium_core::repr::Repr
+pub fn mycelium_dense::DenseSpace::scale_value(&self, &mycelium_core::value::Value, f64) -> core::result::Result<mycelium_core::value::Value, mycelium_dense::DenseError>
+pub fn mycelium_dense::DenseSpace::similarity(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<f64, mycelium_dense::DenseError>
+pub fn mycelium_dense::DenseSpace::sub_values(&self, &mycelium_core::value::Value, &mycelium_core::value::Value) -> core::result::Result<mycelium_core::value::Value, mycelium_dense::DenseError>
+pub fn mycelium_dense::DenseSpace::value(&self, alloc::vec::Vec<f64>) -> core::result::Result<mycelium_core::value::Value, mycelium_dense::DenseError>
+impl core::clone::Clone for mycelium_dense::DenseSpace
+pub fn mycelium_dense::DenseSpace::clone(&self) -> mycelium_dense::DenseSpace
+impl core::cmp::Eq for mycelium_dense::DenseSpace
+impl core::cmp::PartialEq for mycelium_dense::DenseSpace
+pub fn mycelium_dense::DenseSpace::eq(&self, &mycelium_dense::DenseSpace) -> bool
+impl core::fmt::Debug for mycelium_dense::DenseSpace
+pub fn mycelium_dense::DenseSpace::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_dense::DenseSpace
+impl core::marker::StructuralPartialEq for mycelium_dense::DenseSpace
+impl core::marker::Freeze for mycelium_dense::DenseSpace
+impl core::marker::Send for mycelium_dense::DenseSpace
+impl core::marker::Sync for mycelium_dense::DenseSpace
+impl core::marker::Unpin for mycelium_dense::DenseSpace
+impl core::marker::UnsafeUnpin for mycelium_dense::DenseSpace
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_dense::DenseSpace
+impl core::panic::unwind_safe::UnwindSafe for mycelium_dense::DenseSpace
+pub const mycelium_dense::BF16_OP_REL_EPS: f64
+pub const mycelium_dense::DENSE_MIN_NORMAL: f64
+pub const mycelium_dense::F32_OP_REL_EPS: f64

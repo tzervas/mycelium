@@ -399,70 +399,24 @@ pub fn unwrap_err<T: core::fmt::Debug, E>(r: Result<T, E>) -> E {
     }
 }
 
-// ---- RFC-0014 bridge (deferred — FLAG Q1) ------------------------------------
+// ---- RFC-0014 bridge (FLAG Q1 — RESOLVED) ------------------------------------
 //
-// The exact `RecoverOutcome` shape, the `PolicyRef` resolution surface, and how a
-// policy's declared effects/budgets are reflected are **owned by `std.recover` (M-520,
-// RFC-0014)** — not yet landed. This module types the bridge *abstractly* (per spec §7-Q1)
-// to hold the I1/I2 contract without fabricating the M-520 API.
-//
-// FLAG Q1: co-design the concrete bridge signature with M-520. This module's obligation:
+// The concrete `RecoverOutcome` shape, the `PolicyRef` resolution surface, and the declared/
+// budgeted-effects handling are **owned by `std.recover` (M-520, RFC-0014)**, now landed. This
+// module re-exports that surface at the crate root (`Outcome`/`Resolution`/`RecoverOutcome` =
+// `Recovered | Propagated`, and `handle_classified`) rather than re-typing it — `std.error`
+// adds no recovery algebra of its own (KC-3). The contract `std.error` stated abstractly holds
+// verbatim in the landed types:
 //   - the outcome is `Recovered | Propagated` with no drop variant (I1), and
 //   - the tag is inherited from the policy, never laundered upward (I2/VR-5).
 //
-// The `PolicyRef` type is already in mycelium-core (= `ContentHash`) and is re-exported
-// here. The `RecoverOutcome` type below is an *abstract stub* — replace with the M-520
-// import once that crate lands.
-
-pub use mycelium_core::PolicyRef;
-
-/// An abstract outcome of the RFC-0014 recover bridge (spec §3/§4; FLAG Q1).
-///
-/// This is a **stub type** that fulfils the I1/I2 contract:
-/// - `Recovered(t, tag)` — the error was explicitly recovered with an honest tag
-///   (which is `Declared` floor by I2 for a bare fallback; higher only with a checked basis).
-/// - `Propagated(e)` — the error was not recovered and is re-propagated.
-///
-/// **Never a `Dropped` variant** — I1 forbids silent drops.
-///
-/// The full shape (with effect budgets, `EffectBudgetExhausted`, etc.) is owned by M-520.
-/// FLAG Q1: replace this stub with `mycelium_std_recover::RecoverOutcome` when M-520 lands.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum RecoverOutcome<T, E> {
-    /// The error was explicitly recovered: `t` is the recovered value, `tag` is the
-    /// honest guarantee tag the policy attached to it (never laundered upward — I2/VR-5).
-    Recovered(T, &'static str),
-    /// The error was not recovered and is re-propagated to the caller.
-    Propagated(E),
-}
-
-/// The recover bridge: hand an `Err(e)` to a RFC-0014 reified recovery policy and return
-/// its explicit outcome. `Ok(t)` passes through unrecovered.
-///
-/// # Guarantee: Inherited from the policy (never laundered upward — I2/VR-5)
-/// # Never-silent (I1/C1): yields `Recovered | Propagated`; never a drop.
-/// # Effects: declared by the policy (FLAG Q1 — see type-level doc)
-/// # EXPLAIN (C3): every outcome records the `PolicyRef`.
-///
-/// **FLAG Q1 (spec §7-Q1): this is an abstract stub.** The `_policy` parameter is
-/// accepted but the policy resolution/execution is deferred to M-520. The stub always
-/// propagates (the safe, I1-compliant default) when `_policy` is not yet connected to a
-/// real recovery implementation. Replace the body with the M-520 integration once it
-/// lands.
-pub fn recover<T, E>(r: Result<T, E>, _policy: PolicyRef) -> RecoverOutcome<T, E> {
-    // FLAG Q1: stub implementation — always propagates.
-    // The real implementation will: inspect _policy via the M-520 PolicyRef surface,
-    // run the policy's declared recovery action, and return Recovered(t, tag) or
-    // Propagated(e') with the policy's honest tag. It will never return a drop.
-    match r {
-        // I2/VR-5: the bridge must never *upgrade* a tag. An `Ok(t)` carries its own guarantee,
-        // which this stub cannot inspect — so it stamps the honest **`Declared` floor**, never
-        // `Exact` (which would assert a strength the bridge has not established). The real M-520
-        // policy supplies the inherited tag; until then the floor is the only honest claim.
-        Ok(t) => RecoverOutcome::Recovered(t, "Declared"),
-        Err(e) => RecoverOutcome::Propagated(e),
-    }
-}
+// The concrete recovery surface — `Outcome`/`Resolution`/`RecoverOutcome` and the
+// `handle_classified` driver — lives in `std.recover` (M-520) and is re-exported from this
+// crate's root (see `lib.rs`). `std.error` defines no recovery type or driver of its own (KC-3):
+// it is the *bridge target* that hands an error value to `std.recover`, not the home of the
+// recovery algebra. The contract `std.error` stated abstractly holds verbatim in the landed
+// `std.recover` types — `Recovered | Propagated`, no drop variant (I1), tag inherited from the
+// policy and never laundered upward (I2/VR-5).
 
 #[cfg(test)]
 mod tests {
@@ -724,44 +678,9 @@ mod tests {
         unwrap_err(ok_42());
     }
 
-    // ---- recover bridge stub (FLAG Q1) ----------------------------------------
-
-    /// `recover` on Ok passes through as Recovered with Exact tag (stub).
-    #[test]
-    fn recover_ok_passes_through() {
-        let policy = mycelium_core::ContentHash::parse("blake3:policy1").expect("valid hash");
-        let outcome = recover(ok_42(), policy);
-        assert!(
-            matches!(outcome, RecoverOutcome::Recovered(42, _)),
-            "Ok must pass through as Recovered"
-        );
-    }
-
-    /// `recover` on Err propagates (stub behaviour — no silent drop, I1).
-    #[test]
-    fn recover_err_propagates_never_drops() {
-        let policy = mycelium_core::ContentHash::parse("blake3:policy2").expect("valid hash");
-        let outcome = recover(err_oops(), policy);
-        assert!(
-            matches!(outcome, RecoverOutcome::Propagated("oops")),
-            "Err must propagate (I1 — never dropped)"
-        );
-    }
-
-    /// `RecoverOutcome` has no `Dropped` variant (I1 invariant).
-    /// Guard: adding a Dropped variant and matching it makes this fail.
-    #[test]
-    fn recover_outcome_has_no_drop_variant() {
-        // This test is structurally enforced by the type definition: the only variants are
-        // `Recovered` and `Propagated`. Exhaustive matching below confirms no third variant.
-        let policy = mycelium_core::ContentHash::parse("blake3:policy3").expect("valid hash");
-        let outcome: RecoverOutcome<i32, &str> = recover(ok_42(), policy);
-        let _: () = match outcome {
-            RecoverOutcome::Recovered(_, _) => {}
-            RecoverOutcome::Propagated(_) => {} // No other arm — if a `Dropped` variant were added, this match would become
-                                                // non-exhaustive and the test would fail to compile.
-        };
-    }
+    // The recover bridge's behaviour (Ok→floor, Err→propagate, no drop variant, budgeted
+    // effects) is owned and tested by `std.recover` (M-520); `std.error` only re-exports the
+    // surface, so its tests live there — not duplicated here.
 
     // ---- property tests: lattice + honesty bounds ----------------------------
 
@@ -843,33 +762,9 @@ mod tests {
         }
     }
 
-    /// Property: `recover` never produces a `Dropped` variant — the structural I1 bound.
-    /// Tests a domain of ok/err pairs.
-    #[test]
-    fn property_recover_never_drops() {
-        let policy = mycelium_core::ContentHash::parse("blake3:proptest").expect("valid hash");
-        let cases: Vec<Result<i32, &str>> = vec![
-            Ok(0),
-            Ok(1),
-            Ok(-1),
-            Ok(i32::MAX),
-            Err("a"),
-            Err("b"),
-            Err("long error"),
-        ];
-        for r in cases {
-            let outcome = recover(r, policy.clone());
-            // I1 bound: the outcome is EITHER Recovered OR Propagated — never anything else.
-            let is_valid = matches!(
-                &outcome,
-                RecoverOutcome::Recovered(_, _) | RecoverOutcome::Propagated(_)
-            );
-            assert!(
-                is_valid,
-                "recover must yield Recovered or Propagated — never a drop (I1)"
-            );
-        }
-    }
+    // The `recover`-never-drops property (Outcome is always `Recovered | Propagated`) is owned
+    // and property-tested by `std.recover` (M-520) over its real `Outcome`/`Resolution` types;
+    // `std.error` re-exports that surface and does not re-test it here.
 
     /// Property: `zip` always yields None when either input is None.
     #[test]

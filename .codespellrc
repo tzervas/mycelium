@@ -3,5 +3,7 @@
 # lowercase). Keep this list small and justified.
 skip = .git,*.lock,node_modules,target,dist-newstyle,.venv,.tools-venv,*.svg,idmap.tsv
 # Domain terms / abbreviations codespell otherwise flags:
-ignore-words-list = crate,crates,iff,ist,nin,ba,te,fo,mor,ans,od,implementor,referenced,effekt,inout
+# ser (Serialize abbrev), clen (Content-Length var), publisherr (PublishErr type), raison (raison
+# d'être), copyed/copys (Dockerfile COPY directive), re-used (valid hyphenation).
+ignore-words-list = crate,crates,iff,ist,nin,ba,te,fo,mor,ans,od,implementor,implementors,referenced,effekt,inout,ser,clen,publisherr,raison,copyed,copys,re-use,re-used,re-uses
 quiet-level = 3

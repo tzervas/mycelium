@@ -8,6 +8,83 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Changed (2026-06-19: Tier-A completion fast-follows — cross-crate seam reconciliations)
+The cross-module FLAGs the Tier-A wave left for the maintainer are discharged (each a real change —
+code + tests + guarantee-matrix/baseline kept green):
+- **A1 — `std.testing` `FailRecord` → `Diag` (testing↔diag seam, spec §7-Q2).** `FailRecord` now
+  **delegates** to the canonical record via `FailRecord::to_diag()` → `mycelium_diag::Diag` (the
+  description becomes the message; the op context + reproducing seed + trial ride along as EXPLAIN
+  notes, G11). It keeps the testing-specific seed/trial reproduction metadata a generic `Diag` does
+  not model.
+- **A2 — `std.error` recover stub → real `Outcome` (error.md §7-Q1).** `std.error` drops its abstract
+  stub `RecoverOutcome` enum + `recover` fn and **re-exports** the concrete
+  `mycelium_std_recover::{Outcome, Resolution, RecoverOutcome, handle_classified}` — it is the bridge
+  *target*, not the home of the recovery algebra (KC-3). Contract holds verbatim: `Recovered |
+  Propagated`, no drop (I1), tag inherited from the policy (I2/VR-5).
+- **A3 — `DECLARED_FLOAT_EPS` → `std.numerics` (math ε-ownership, NFR-N2 / math.md §7-Q2).** The
+  `Declared` libm-floor ε is now homed in `std.numerics` (the ε-carrier module) and **re-exported**
+  by `std.math` — stated in exactly one place. Its honest `Proven` upgrade stays the kernel's /
+  M-541's to supply (VR-5).
+- **A4 — `std.spore` `regrow` → `Approx` (spore.md §7-Q4).** `RegrowthResult` now carries the
+  manifest's full certificate `Bound` and projects to `std.numerics::Approx<Factorization>` via
+  `as_approx()` — strength **derived** from the bound's basis (`Approx::attach`, never upgraded —
+  VR-5), held at the `Empirical` ceiling (FR-C2). Carries `Factorization` (the VSA decode result),
+  not `Value` (that mapping is `std.vsa`'s).
+
+**Decision — B2 (kernel f64 finiteness):** keep the **status quo** — `Value::new` stays permissive and
+each projection/op refuses a non-finite `f64` explicitly (never-silent at the point of use), rather
+than rejecting at construction. Revisit alongside a future binary codec. (A formal ADR can ratify
+this; recorded here as the maintainer's decision.)
+
+**B1 (`EffectBudget::Io`/`Named`) — enacted.** `mycelium-interp::budget::EffectBudget` gains
+`Ops(u64)` (→ `EffectKind::Io`) and `Named(String, u64)` (→ `EffectKind::Named`) — one budget variant
+per effect kind — so `std.recover`'s `cleanup_then_propagate` budgets an `Io`/`Named` cleanup effect
+**directly**, removing the leaf's Retry/Attempts proxy. Additive kernel change (no new L0 node, KC-3);
+`EffectBudget` is no longer `Copy` (the `Named` variant carries its name); property-tested both sides;
+`mycelium-interp` API baseline refreshed.
+
+Public-API baselines refreshed for the five touched crates; full `just check` green.
+
+### Added (2026-06-18: Phase-5 Tier-A completion — Rust-first numerics/diag/recover/spore, M-510/512/520/522)
+The Tier-A differentiator surface is completed: the four remaining spec'd-but-uncoded Tier-A Ring-1 `std`
+modules land as Rust-first crates, built as a **swarm of four sonnet agents** fanned in with an **octopus
+merge** (the orchestrator scaffolds first, owns every shared file, and reconciles after merge — the pattern
+in `CLAUDE.md`). Each ships its **RFC-0016 §4.5 guarantee matrix as checked data** (asserted in tests) and
+sits at the **honestly-supportable strength (VR-5)** — downgraded, never upgraded without a checked basis.
+- **`mycelium-diag`** (new kernel crate) + **`mycelium-std-diag`** (M-510, #151) — the structured
+  failure-legibility substrate. A **maintainer-resolved FLAG** (scaffold decision #1): the canonical
+  RFC-0013 record types (`Diag`/`Severity`/`Locus`/`Trace`/`Code`) are **extracted into a small
+  `mycelium-diag` kernel crate** — a deliberate, bounded trusted-base growth so the record has one owner
+  below the std layer — and `mycelium-std-diag` re-exports + wraps it (KC-3). Dual human/JSON projection
+  (G11, round-trip-checked), content-addressed presentation-invariant identity (ADR-003); all matrix rows
+  `Exact`; `present` returns the error **unchanged** — the I1 structural proof (presentation never gates
+  propagation).
+- **`mycelium-std-numerics`** (M-512, #153) — the honest ε/δ carrier. `Approx<T>` is a thin
+  `Meta`-attached `{Bound, strength}` view (no new numeric type, no kernel change, KC-3); `combine`/`map`
+  take the **meet** of input strengths and propagate bounds with **outward (directed) rounding**; `Proven`
+  is reachable **only** via a sealed `ProvenThm` witness (FR-N3, type-level; `compile_fail`-doctested);
+  refuse-without-a-rule (`Err(NoRule)`, never a fabricated bound). ε constants cited from
+  `mycelium-numerics`, restated none (NFR-N2).
+- **`mycelium-std-recover`** (M-520, #156, **Rust-first half**) — the declarative recovery bridge. The
+  `Outcome`/`Resolution` sums have **no `Dropped` variant** (I1); the closed v0 action set, a
+  content-addressed `RecoveryPolicy`/`PolicyRef`, declared + budgeted effects via `mycelium_interp::budget`
+  (graceful `EffectBudgetExhausted`), and the never-silent `handle_classified` driver carry a
+  `mycelium_diag::Diag`. The recovered tag is honest (`Ok`→floor, `fallback`→`Declared`, `retry`→inherited;
+  never laundered up — I2/VR-5), **fixing the P5-B exact-tag bug**. The self-hosting half stays Batch P5-C
+  (M-502-gated).
+- **`mycelium-std-spore`** (M-522, #163, library/manifest half) — the content-addressed deployable +
+  reconstruction-manifest library over the `mycelium-spore` packager + `std.content` + `std.vsa` (KC-3 — no
+  new hash, no new trusted code). Identity is the canonical content hash and metadata-invariant (ADR-003); a
+  hash mismatch is an explicit `Err` (C1/G2); probabilistic regrowth is held structurally at the
+  **`Empirical` ceiling** (FR-C2/VR-5, never `Proven`). Full native deploy is Phase-6-gated (M-620).
+
+The four spec `Status` lines move to **"Implemented (Rust-first), pending ratification"** (append-only;
+never silently `Accepted`). Fast-follow reconciliations are FLAGGED, not silently made: `std.testing`'s
+placeholder `FailRecord` → `mycelium_diag::Diag`; `std.error`'s abstract `recover` stub → the concrete
+`mycelium_std_recover::Outcome`; `EffectBudget::Io`/`Named` variants for `mycelium-interp`; the
+`DECLARED_FLOAT_EPS` migration into `std.numerics`; the `regrow` → `Approx<Value>` wrapper. Full
+`cargo build`/`clippy --all-targets -D warnings`/`test --workspace` green (1883 tests).
+
 ### Added (2026-06-18: Phase-5 Batch P5-B — Rust-first Ring-2 stdlib commons, M-511/514/524/525/526/527/528/529/531/532/533/534)
 The second Phase-5 standard-library wave lands: twelve **Ring-2 / Tier-B** `std` crates — the general
 library written **to the RFC-0016 §4.1 contract over Ring 0/1** — built as a **swarm of twelve sonnet
@@ -498,8 +575,8 @@ KC-2 verdict, RFC-0017, and the L3 commit are ratified this pass; these are grou
   server lingers), waits for `/health`, and tears down only what it launched. Never-silent on missing
   binary / early exit / not-ready.
 - **Sequential, instrumented runner** (`mycelium_experiments/kc2/runner.py`): runs a *suite* of
-  configs (e.g. `--seeds 42,123,7`) back-to-back, unattended, writing per run a `<utc>-<name>.json`
-  + `.summary.txt` under `--results-dir` (default `experiments/results/`), plus a combined
+  configs (e.g. `--seeds 42,123,7`) back-to-back, unattended, writing per run a `<utc>-<name>.json` +
+  `.summary.txt` under `--results-dir` (default `experiments/results/`), plus a combined
   `index.json` and a suite `.log`.
 - **Richer metrics**: `run_arm` gained an optional `on_attempt` observer; reports now carry
   **per-attempt records** (generated source, checker verdict, generation wall-time) and a `timing`

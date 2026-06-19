@@ -36,9 +36,10 @@
 //!   target); error *presentation* (`std.diag`, M-510).
 //!
 //! # Open FLAGs (carried from spec §7)
-//! - **FLAG Q1:** The exact `RecoverOutcome` shape and `PolicyRef` API are owned by
-//!   `std.recover` (M-520, RFC-0014). [`combinators::RecoverOutcome`] is an abstract stub;
-//!   replace with `mycelium_std_recover::RecoverOutcome` when M-520 lands.
+//! - **FLAG Q1 (RESOLVED):** The concrete `RecoverOutcome`/`Outcome` shape and the recovery
+//!   driver are owned by `std.recover` (M-520, RFC-0014), now landed. This crate re-exports
+//!   that surface ([`Outcome`]/[`Resolution`]/[`RecoverOutcome`]/[`handle_classified`]) at its
+//!   root and defines no recovery type of its own (KC-3 — it is the bridge target, not the home).
 //! - **FLAG Q2:** Whether `ok` (`Result→Option`) should be gated behind an unmissable
 //!   name (e.g. `ok_discarding_err`) awaits RFC-0016 §8-Q3 ratification.
 //! - **FLAG Q3:** The `unwrap`/`expect`/`unwrap_err` refusal mechanism (abort vs escalate
@@ -57,6 +58,14 @@ pub mod guarantee_matrix;
 pub use mycelium_core::PolicyRef;
 pub use mycelium_std_core::GuaranteeStrength;
 
+// RFC-0014 recovery bridge (error.md §7-Q1 — RESOLVED). The concrete `Outcome`/`Resolution`
+// landed in `std.recover` (M-520); re-export it here so `std.error` callers reach the recovery
+// surface through the errors module. The bridge keeps `std.error`'s obligation verbatim: the
+// outcome is `Recovered | Propagated` with **no drop variant** (I1), and the recovered tag is
+// inherited from the policy, **never laundered upward** (I2/VR-5). `std.error` adds no recovery
+// algebra of its own — it consumes `std.recover`'s (KC-3).
+pub use mycelium_std_recover::{handle_classified, Outcome, RecoverOutcome, Resolution};
+
 // Combinator functions re-exported at the crate root for ergonomics.
 pub use combinators::{
     // transform
@@ -73,8 +82,6 @@ pub use combinators::{
     ok_or,
     ok_or_else,
     or_else,
-    // recover bridge (FLAG Q1)
-    recover,
     transpose,
     unwrap,
     unwrap_err,
@@ -84,7 +91,6 @@ pub use combinators::{
     unwrap_or_else_option,
     unwrap_or_option,
     zip,
-    RecoverOutcome,
     // EXPLAIN / diagnostic support
     RefusalRecord,
     SubstitutionRecord,
