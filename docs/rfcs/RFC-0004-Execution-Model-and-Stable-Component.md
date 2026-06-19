@@ -116,12 +116,18 @@ half remains deferred.
 **Increment 1 (this wave; M-373 scope):** non-recursive `Construct`/`Match` codegen in textual
 LLVM IR. Zero libMLIR required. Specifics:
 
-- `Rhs::Construct`: emit a tagged heap struct (`@malloc`; tag word + field words as `i64` slots).
-- `Rhs::Match`: emit a `switch i64` on the tag word; bind field words in each arm.
+- `Rhs::Construct`: emit a tagged **stack `alloca [N+1 x i64]`** struct (tag word in slot 0;
+  field elements in consecutive i64 slots 1..N). **Not `@malloc`**: the non-recursive/bounded
+  restriction (no `Fix`/`FixGroup` in scope) means all allocation depth is statically known at
+  codegen time, so a heap allocation and an explicit OOM failure path are unnecessary. `alloca`
+  is simpler, directly auditable in the emitted IR, and has no OOM path (DN-15 §4.1).
+- `Rhs::Match`: emit a `switch i64` on the tag word; load field elements from the alloca struct
+  and bind them in each arm; merge arm results via phi.
 - Straight-line arms only — no closures, no heap recursion, no `App`/`Lam`/`Fix`/`FixGroup`.
-- Out-of-memory → explicit `AotError::Run` (never silent; G2).
-- No-match where patterns do not cover the discriminant → `AotError::UnsupportedNode` (never
-  silent; G2).
+- No-match where no explicit arm covers the discriminant and no ANF default is present →
+  explicit `abort()` trap (never raw `unreachable` UB; G2). When an ANF default arm *is*
+  present, it is lowered into the switch's default block and its result merged via phi —
+  matching the reference interpreter's semantics exactly (no silent divergence; G2).
 - Guarantee tag on returned values: `Declared` (the tag-dispatch convention is declared, not
   formally verified — VR-5).
 

@@ -122,22 +122,28 @@ and dumpable.
 constructor tag + field words) and `Rhs::Match` (branch on the tag; bind fields). No closures,
 no lambdas, no `App`, no heap recursion, no `Fix`/`FixGroup`.
 
-**Why non-recursive first:** Construct/Match over heap structs in textual LLVM IR is
-self-contained and does not require a calling convention for closures or a trampoline for
-recursion. The IR is straight-line within each arm (after the tag-branch), which keeps the
-emitter auditable and the differential straightforward. This is the only increment where the
-risk of textual-IR fragility is manageable without additional infrastructure.
+**Why non-recursive first:** Construct/Match in textual LLVM IR is self-contained and does not
+require a calling convention for closures or a trampoline for recursion. The IR is straight-line
+within each arm (after the tag-branch), which keeps the emitter auditable and the differential
+straightforward. This is the only increment where the risk of textual-IR fragility is manageable
+without additional infrastructure.
 
-**Heap representation (textual LLVM IR):** Tagged structs allocated with `@malloc` (or a
-bump-allocator shim). Each constructor `Ctor { tag: u32, arity: usize }` becomes an `i64*`
-pointer to a heap block: `[i64 tag, i64 field_0, i64 field_1, …]`. Fields are `!myc.value`
-opaque words (i64 slots). No GC for the first increment — the program is straight-line and the
-heap is arena-freed on exit. Out-of-memory is an explicit `AotError::Run` (never silent; G2).
+**Stack representation (textual LLVM IR — as landed):** Tagged structs allocated with **stack
+`alloca [N+1 x i64]`** (not `@malloc`). Each constructor becomes an `[N+1 x i64]*` alloca
+pointer: slot 0 holds the tag `i64`; slots 1..N hold field elements consecutively, one `i64` per
+element. **Rationale for stack vs heap:** the non-recursive/bounded restriction (no
+`Fix`/`FixGroup` in scope) means all allocation depth is statically fixed at codegen time —
+there is no possibility of unbounded stack growth, so a heap allocation and an explicit OOM
+failure path (`AotError::Run`) are unnecessary. `alloca` is simpler, needs no GC, has zero OOM
+path, and the emitted IR is directly auditable without a malloc/free trace.
 
-**Match lowering:** Read the tag word (`load i64`), emit an LLVM `switch i64` over the known
-constructor tags, bind field words from the struct, continue in each arm. No-match (missing
-default when the discriminant is exhausted by patterns) is a compile-time `AotError::UnsupportedNode`
-explaining the gap — never a silent fallthrough.
+**Match lowering:** Read the tag word (`load i64` from slot 0 of the alloca), emit an LLVM
+`switch i64` over the known constructor tags, bind field elements from the alloca (one `load i64`
++ `trunc i64→i32` per element), continue in each arm. When an ANF default arm is present (`Some`),
+it is lowered into the switch's default block and its result merged via phi — matching the
+reference interpreter's semantics exactly (no silent divergence; G2). When no ANF default is
+present (`None`), the switch default emits an explicit `abort()` — a defined-trap, never raw
+`unreachable` UB (G2; WF7 checker proves exhaustive coverage in this case).
 
 **Inspectability:** Every `switch` arm and field-load is explicit IR; the full module is
 dumpable. `Meta` is preserved on the returned `Value` as `Declared` (the tag-dispatch is a
@@ -211,7 +217,7 @@ a formal argument is constructed. Never pre-written.
 | Increment | Description | Needs libMLIR? | Tractable in textual LLVM IR now? | Risk |
 |---|---|---|---|---|
 | **0 — bit/trit subset** | `core.id`, `bit.not/and/or/xor`, `trit.neg/add/sub/mul` | No — already shipped (M-301) | Yes — `llvm.rs` is live | Low (done) |
-| **1 — non-recursive Construct/Match** | Tagged-struct alloc + switch-on-tag; straight-line arms; no closures, no recursion | No — textual LLVM IR only | **Yes** (this wave; M-373 design scope) | Low-medium: heap alloc in textual IR is straightforward; the differential against the env-machine is the guard |
+| **1 — non-recursive Construct/Match** | Tagged stack-`alloca [N+1 x i64]` + switch-on-tag; straight-line arms; no closures, no recursion; no OOM path (non-recursive/bounded ⇒ static alloc depth) | No — textual LLVM IR only | **Yes** (this wave; M-373 landed) | Low: stack alloca is simpler than heap alloc; no GC; the differential against the interpreter is the guard |
 | **2 — closures (App/Lam) + heap** | Closure-conversion + indirect call through heap struct | No — but requires free-var analysis pass | Yes in principle, deferred | Medium: closure conversion is a multi-pass transform; textual-IR indirect calls are brittle to mis-encode |
 | **3 — recursion (Fix/FixGroup) + stack-robustness** | Iterative trampoline in LLVM IR; explicit heap control stack; DepthBudget trait reused | No — but complex IR emission | Tractable in principle, deferred | High: emitting a correct trampoline in textual IR is error-prone; DN-05 #1 requires no unbounded C stack (G2) — must be designed, not retrofitted |
 | **4 — real ternary MLIR dialect lowering** | `ternary` → `arith`/`vector` → LLVM via libMLIR | **Yes — libMLIR-gated** | No — `dialect.rs` is a textual skeleton only | Blocked on M-348; every verdict stays `not established` (VR-5) |

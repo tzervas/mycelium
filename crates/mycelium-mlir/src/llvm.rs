@@ -462,17 +462,18 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
             Rhs::Match {
                 scrutinee,
                 alts,
-                default: _default_arm,
-                // The ANF `default` arm (if present) is the catch-all for exhaustive coverage;
-                // for Increment-1 the LLVM `switch` emits an explicit abort() default block (G2),
-                // so the ANF default arm is intentionally unused here (the abort block plays its
-                // role). We do NOT silently discard it — we just route all unmatched tags to abort.
+                default: default_arm,
+                // The ANF `default` arm (if `Some`) is lowered into the switch's default block so
+                // that the native path returns the same value as the interpreter when no explicit
+                // arm matches. If `None`, the default emits abort() — a defined-trap for the
+                // provably-unreachable no-match case (WF7 checker proves coverage; G2: never UB).
             } => {
                 // Load the tag from the scrutinee datum, then switch on it. Each arm loads its
                 // binder fields from the struct and inlines the arm's ANF body (recursively).
                 // The match must terminate at a repr Lane value (not a Datum) — the final result
                 // must be printable by the read-back protocol. The switch has an explicit defined
-                // default (a call to abort()) — never raw `unreachable` UB (G2).
+                // default — either the lowered ANF default block (if `Some`) or a call to abort()
+                // (if `None`) — never raw `unreachable` UB (G2).
                 let datum = lookup_ev(&env, scrutinee)?
                     .as_datum("Match scrutinee")
                     .cloned()?;
@@ -525,6 +526,16 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                     else {
                         unreachable!("literal arms filtered above")
                     };
+                    // Issue 2 (never-silent / G2): check binder/field arity before zipping.
+                    // The interpreter rejects arity mismatches with DataMalformed; we must too.
+                    if binders.len() != datum.fields.len() {
+                        return Err(AotError::UnsupportedNode(format!(
+                            "Match arm binder arity ({}) != constructor field count ({}) \
+                             — malformed Match (interpreter rejects with DataMalformed; G2/WF7)",
+                            binders.len(),
+                            datum.fields.len()
+                        )));
+                    }
                     // Bind field lanes into a child env extended from the current one.
                     let mut arm_env = env.clone();
                     for (binder, field_layout) in binders.iter().zip(&datum.fields) {
@@ -548,11 +559,30 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                     let _ = writeln!(body, "  br label %{merge_label}");
                 }
 
-                // Default (no-match) block: emit an explicit abort() call, then a dummy `ret i32 0`.
-                // This is a defined-trap, not raw `unreachable` — G2 (never silent UB).
+                // Default block: if the ANF `default` arm is `Some`, lower it and merge its
+                // result via the phi (matching the interpreter: the default body's value is
+                // returned when no explicit arm matches). If `None`, emit abort() — a
+                // defined-trap (WF7 proves exhaustive coverage; abort is the honest never-silent
+                // trap; G2: never raw unreachable UB).
                 let _ = writeln!(body, "{default_label}:");
-                let _ = writeln!(body, "  call void @abort()");
-                let _ = writeln!(body, "  ret i32 0");
+                if let Some(default_block) = default_arm {
+                    // The default arm has no binders; use the current env directly.
+                    let default_result = lower_anf_block(
+                        default_block,
+                        &mut env.clone(),
+                        &mut ssa,
+                        &mut bbc,
+                        &mut body,
+                        &mut flags,
+                    )?;
+                    phi_entries.push((default_label.clone(), default_result));
+                    let _ = writeln!(body, "  br label %{merge_label}");
+                } else {
+                    // No ANF default: WF7 guarantees the switch is exhaustive; abort() is the
+                    // honest defined-trap (never raw `unreachable` UB — G2).
+                    let _ = writeln!(body, "  call void @abort()");
+                    let _ = writeln!(body, "  ret i32 0");
+                }
 
                 // Merge block: collect results from arms via phi.
                 let _ = writeln!(body, "{merge_label}:");
@@ -698,7 +728,10 @@ fn lower_anf_block(
             Rhs::Match {
                 scrutinee,
                 alts,
-                default: _default_arm, // abort block plays the default role (G2: no silent UB)
+                default: default_arm,
+                // Nested match — identical semantics to the top-level Match. The ANF `default`
+                // arm (if `Some`) is lowered and merged via phi; if `None`, abort() is the
+                // defined-trap (G2: never raw unreachable UB; WF7 proves exhaustive coverage).
             } => {
                 // Nested match inside an arm body — identical logic to the top-level match.
                 let datum = lookup_ev(env, scrutinee)?
@@ -743,6 +776,15 @@ fn lower_anf_block(
                     else {
                         unreachable!()
                     };
+                    // Issue 2 (never-silent / G2): check binder/field arity before zipping.
+                    if binders.len() != datum.fields.len() {
+                        return Err(AotError::UnsupportedNode(format!(
+                            "Match arm binder arity ({}) != constructor field count ({}) \
+                             — malformed Match (interpreter rejects with DataMalformed; G2/WF7)",
+                            binders.len(),
+                            datum.fields.len()
+                        )));
+                    }
                     let mut arm_env = env.clone();
                     for (binder, field_layout) in binders.iter().zip(&datum.fields) {
                         let field_lane = emit_load_field(field_layout, &ptr, slots, ssa, body);
@@ -756,9 +798,17 @@ fn lower_anf_block(
                     phi_entries.push((label.clone(), arm_result));
                     let _ = writeln!(body, "  br label %{merge_label}");
                 }
+                // Default block: lower ANF default if `Some`; abort() if `None` (G2/WF7).
                 let _ = writeln!(body, "{default_label}:");
-                let _ = writeln!(body, "  call void @abort()");
-                let _ = writeln!(body, "  ret i32 0");
+                if let Some(default_block) = default_arm {
+                    let default_result =
+                        lower_anf_block(default_block, &mut env.clone(), ssa, bbc, body, flags)?;
+                    phi_entries.push((default_label.clone(), default_result));
+                    let _ = writeln!(body, "  br label %{merge_label}");
+                } else {
+                    let _ = writeln!(body, "  call void @abort()");
+                    let _ = writeln!(body, "  ret i32 0");
+                }
                 let _ = writeln!(body, "{merge_label}:");
                 if phi_entries.is_empty() {
                     return Err(AotError::UnsupportedNode("Match with zero arms".to_owned()));
