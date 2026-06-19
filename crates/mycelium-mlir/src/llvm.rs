@@ -89,12 +89,23 @@ pub enum AotError {
     /// A [`PackScheme`](mycelium_core::PackScheme) with no BitNet compute kernel (only the three
     /// bitnet packings I2_S/TL1/TL2 have one). An explicit refusal — never a silent misdecode.
     UnsupportedScheme(String),
+    /// A tail-recursive `Fix` loop hit the [`AutoDepthBudget`] ceiling — a graceful explicit refusal
+    /// (matches `EvalError::DepthLimit` in the interpreter, so the native and interpreter paths both
+    /// refuse; neither is silent (G2/SC-3)).
+    ///
+    /// [`AutoDepthBudget`]: crate::budget::AutoDepthBudget
+    DepthLimit(String),
 }
 
 /// The single byte the native artifact prints (AOT) when a fixed-width trit-arithmetic result
 /// overflows the `m`-trit range. Chosen because it is **not** a valid element char (`'0'`/`'1'` for
 /// bits, `'-'`/`'0'`/`'+'` for trits), so it can never be confused with a result line.
 pub(crate) const OVERFLOW_SENTINEL: u8 = b'!';
+
+/// The single byte the native artifact prints (AOT) when a tail-recursive Fix loop hits the
+/// `AutoDepthBudget` ceiling (Increment-3 / DN-05 #1). Distinct from `OVERFLOW_SENTINEL` and all
+/// valid element chars — a defined-sentinel, never a silent hang or SIGSEGV (G2/SC-3).
+pub(crate) const DEPTHLIMIT_SENTINEL: u8 = b'#';
 
 impl fmt::Display for AotError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -113,6 +124,7 @@ impl fmt::Display for AotError {
             AotError::Wf(e) => write!(f, "result not well-formed: {e}"),
             AotError::Overflow(e) => write!(f, "balanced-ternary overflow: {e}"),
             AotError::UnsupportedScheme(s) => write!(f, "no BitNet kernel for packing scheme: {s}"),
+            AotError::DepthLimit(e) => write!(f, "tail-recursion depth limit reached: {e}"),
         }
     }
 }
@@ -198,19 +210,35 @@ pub(crate) struct ClosureVal {
     pub(crate) base: String,
 }
 
-/// An environment value — a repr-lane (bit/trit), a constructed data value (tagged struct), or a
-/// native closure (Increment-2).
+/// A suspended `Fix` value (Increment-3 / RFC-0004 §11.6): the Fix body (a `λparam. Match ...`)
+/// stored without emitting IR. Consumed by a downstream `App` that triggers `lower_tail_fix`,
+/// which rewrites the Fix+App into an iterative LLVM loop. A bare Fix that is never `App`-applied
+/// is an explicit `UnsupportedNode` (G2 — it would leave the result on a non-printable value).
+#[derive(Debug, Clone)]
+pub(crate) struct FixVal {
+    /// The self-reference name (the bound variable in `Fix name body`).
+    pub(crate) name: String,
+    /// The Fix body — a `λparam. Match param { arms }` ANF node (not yet lowered).
+    pub(crate) body: mycelium_core::lower::Anf,
+}
+
+/// An environment value — a repr-lane (bit/trit), a constructed data value (tagged struct), a
+/// native closure (Increment-2), or a suspended Fix value (Increment-3).
 ///
 /// The `lower_program` env maps [`Atom`] → `EnvValue`. Repr-lane values flow into `emit_op`; datum
 /// values are produced by `Construct` and consumed by `Match` arm bodies; closure values are
-/// produced by `Lam` and consumed by `App`. Neither a datum nor a closure is ever a final result
-/// (the output protocol prints bits/trits; a program that leaves a datum/closure on the result atom
-/// is refused with an explicit [`AotError::UnsupportedNode`]).
+/// produced by `Lam` and consumed by `App`; Fix values are suspended by `Fix` and consumed by the
+/// special `App(Fix, init)` dispatch in `lower_app`. Neither a datum, closure, nor Fix is ever a
+/// final result (the output protocol prints bits/trits; leaving one on the result atom is refused
+/// with an explicit [`AotError::UnsupportedNode`]).
 #[derive(Debug, Clone)]
 pub(crate) enum EnvValue {
     Repr(Lane),
     Datum(Datum),
     Closure(ClosureVal),
+    /// A suspended `Fix` — produced by `Rhs::Fix`, consumed by the special `App(Fix, init)`
+    /// dispatch. Never a printable result value (G2).
+    Fix(FixVal),
 }
 
 impl EnvValue {
@@ -226,6 +254,10 @@ impl EnvValue {
                 "{ctx}: expected a repr lane but found a closure value — a closure is not a \
                  printable/repr value in the native ABI (Increment-2; DN-15 §7.4)"
             ))),
+            EnvValue::Fix(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a repr lane but found a Fix value — a bare Fix is not a \
+                 printable/repr value; it must be applied to an argument (Increment-3; DN-15 §8; G2)"
+            ))),
         }
     }
     fn as_lane(&self, ctx: &str) -> Result<&Lane, AotError> {
@@ -237,6 +269,10 @@ impl EnvValue {
             EnvValue::Closure(_) => Err(AotError::UnsupportedNode(format!(
                 "{ctx}: expected a repr lane but found a closure value (Increment-2; DN-15 §7.4)"
             ))),
+            EnvValue::Fix(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a repr lane but found a Fix value — only usable as an App func \
+                 (Increment-3; G2)"
+            ))),
         }
     }
     /// Extract the closure, or an explicit refusal if this is not a closure (e.g. `App` applied to a
@@ -244,6 +280,10 @@ impl EnvValue {
     fn as_closure(&self, ctx: &str) -> Result<&ClosureVal, AotError> {
         match self {
             EnvValue::Closure(c) => Ok(c),
+            EnvValue::Fix(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: found a Fix value where a closure was expected — an App on a Fix is handled \
+                 specially by lower_tail_fix, not via as_closure (Increment-3; G2)"
+            ))),
             _ => Err(AotError::UnsupportedNode(format!(
                 "{ctx}: expected a closure value but found a non-function value — only a `Lam` \
                  produces a callable closure (Increment-2; DN-15 §7.1)"
@@ -522,18 +562,23 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
             } => lower_lam(
                 param, lam_body, &env, &mut ssa, &mut bbc, &mut body, &mut funcs,
             )?,
-            Rhs::App { func, arg } => lower_app(func, arg, &env, &mut ssa, &mut body)?,
-            Rhs::Fix { .. } => {
-                return Err(AotError::UnsupportedNode(
-                    "Fix: general recursion needs a heap trampoline (Increment-3 / DN-05 #1, \
-                     deferred). Runs on the AOT env-machine (M-342)"
-                        .to_owned(),
-                ));
+            Rhs::App { func, arg } => lower_app(
+                func, arg, &env, &mut ssa, &mut bbc, &mut body, &mut funcs, &mut flags,
+            )?,
+            Rhs::Fix {
+                name,
+                body: fix_body,
+            } => {
+                // Suspend the Fix as a value (no IR yet). Consumed by a downstream App.
+                EnvValue::Fix(FixVal {
+                    name: name.clone(),
+                    body: fix_body.clone(),
+                })
             }
             Rhs::FixGroup { .. } => {
                 return Err(AotError::UnsupportedNode(
-                    "FixGroup: mutual recursion needs a heap trampoline (Increment-3 / DN-05 #1, \
-                     deferred). Runs on the AOT env-machine (M-342)"
+                    "FixGroup: mutual recursion is not supported in Increment-3 (only single Fix \
+                     with a λparam.Match body is supported; RFC-0004 §11.6; G2)"
                         .to_owned(),
                 ));
             }
@@ -623,11 +668,22 @@ fn lower_anf_block(
                 param,
                 body: lam_body,
             } => lower_lam(param, lam_body, env, ssa, bbc, body, funcs)?,
-            Rhs::App { func, arg } => lower_app(func, arg, env, ssa, body)?,
-            Rhs::Fix { .. } | Rhs::FixGroup { .. } => {
+            Rhs::App { func, arg } => lower_app(func, arg, env, ssa, bbc, body, funcs, flags)?,
+            Rhs::Fix {
+                name,
+                body: fix_body,
+            } => {
+                // Suspend the Fix as a value (no IR yet). Consumed by a downstream App.
+                // (Increment-2/3: closures + Fix are lowered inside nested blocks too.)
+                EnvValue::Fix(FixVal {
+                    name: name.clone(),
+                    body: fix_body.clone(),
+                })
+            }
+            Rhs::FixGroup { .. } => {
                 return Err(AotError::UnsupportedNode(
-                    "recursion node in a match arm (Fix/FixGroup): deferred to Increment-3 \
-                     (heap trampoline + DN-05 #1 stack-robustness; G2/VR-5)"
+                    "FixGroup in a nested block: mutual recursion is not supported in Increment-3 \
+                     (only single Fix with λparam.Match body; RFC-0004 §11.6; G2)"
                         .to_owned(),
                 ));
             }
@@ -921,21 +977,29 @@ fn lower_lam(
     Ok(EnvValue::Closure(ClosureVal { base }))
 }
 
-/// Lower `Rhs::App` (Increment-2; DN-15 §7.3): resolve `func` to a closure, load its `fn_ptr` from
-/// record slot 0, point `%env` at slot 1, pack the `Binary{8}` argument, and emit the indirect call;
-/// unpack the `i64` result back to a lane. An `App` whose head is not a closure is an explicit
-/// refusal (G2).
+/// Lower `Rhs::App` (Increment-2/3; DN-15 §7.3/§8): two paths dispatched on `func`'s `EnvValue`:
+/// - **`EnvValue::Fix`** (Increment-3): `App(Fix{…}, init)` — tail-recursive loop; delegates to
+///   [`lower_tail_fix`] which emits the iterative LLVM loop (RFC-0004 §11.6; DN-05 #1).
+/// - **`EnvValue::Closure`** (Increment-2): indirect call through the closure record (DN-15 §7.3).
+///
+/// Anything else is an explicit refusal (G2 — never silent).
+#[allow(clippy::too_many_arguments)]
 fn lower_app(
     func: &Atom,
     arg: &Atom,
     env: &HashMap<Atom, EnvValue>,
     ssa: &mut Ssa,
+    bbc: &mut Bbc,
     body: &mut String,
+    funcs: &mut Vec<String>,
+    flags: &mut Vec<String>,
 ) -> Result<EnvValue, AotError> {
-    let base = lookup_ev(env, func)?
-        .as_closure("App function")?
-        .base
-        .clone();
+    let func_ev = lookup_ev(env, func)?;
+    // Increment-3: App(Fix, init) → iterative tail-recursion loop (never stack recursion; DN-05 #1).
+    if let EnvValue::Fix(fixval) = func_ev {
+        return lower_tail_fix(fixval, arg, env, ssa, bbc, body, funcs, flags);
+    }
+    let base = func_ev.as_closure("App function")?.base.clone();
     // fn_ptr ← record slot 0.
     let fpint = ssa.fresh();
     let _ = writeln!(body, "  {fpint} = load i64, i64* {base}");
@@ -1020,6 +1084,13 @@ fn lower_match(
         EnvValue::Closure(_) => {
             return Err(AotError::UnsupportedNode(
                 "Match on a closure value is not supported (G2)".to_owned(),
+            ));
+        }
+        EnvValue::Fix(_) => {
+            return Err(AotError::UnsupportedNode(
+                "Match on a Fix value is not supported — a Fix must be applied (App) before it \
+                 can be matched (Increment-3; G2)"
+                    .to_owned(),
             ));
         }
     };
@@ -1155,6 +1226,653 @@ fn lower_match(
     for elem_idx in 0..width {
         let phi_reg = ssa.fresh();
         let phi_operands: Vec<String> = phi_entries
+            .iter()
+            .map(|(lbl, lane)| format!("[ {}, %{lbl} ]", lane.vals[elem_idx]))
+            .collect();
+        let _ = writeln!(body, "  {phi_reg} = phi i32 {}", phi_operands.join(", "));
+        result_vals.push(phi_reg);
+    }
+    Ok(EnvValue::Repr(Lane {
+        kind,
+        vals: result_vals,
+    }))
+}
+
+/// Tail-recursion classification of a Fix-Match arm body (Increment-3; RFC-0004 §11.6).
+/// Each arm's body is inspected (never lowered yet) to determine whether it is:
+/// - **Tail**: the arm body's result atom is bound by `Rhs::App{func: Named(self_name), arg}` and
+///   `self_name` appears nowhere else in the arm body. If so, the step atom is extracted.
+/// - **Base**: `self_name` does not appear anywhere in the arm body (no recursion in arm).
+/// - **NonTail**: `self_name` appears in a non-tail position → `UnsupportedNode` (G2).
+#[derive(Debug)]
+enum ArmKind {
+    /// A tail self-call: `App(self, step)` is the result; carry the `step` atom.
+    Tail(Atom),
+    /// A base case: no reference to the self-name anywhere.
+    Base,
+}
+
+/// Scan every binding and the result atom of `anf` for any reference to `self_name` as a
+/// `Named` atom. Returns `true` if found anywhere.
+fn anf_refs_name(anf: &lower::Anf, self_name: &str) -> bool {
+    use mycelium_core::lower::AnfAlt;
+    let named = |a: &Atom| matches!(a, Atom::Named(n) if n == self_name);
+    for b in anf.bindings() {
+        let found = match &b.rhs {
+            Rhs::Const(_) => false,
+            Rhs::Alias(a) => named(a),
+            Rhs::Op { args, .. } | Rhs::Construct { args, .. } => args.iter().any(named),
+            Rhs::Swap { src, .. } => named(src),
+            Rhs::App { func, arg } => named(func) || named(arg),
+            Rhs::Lam { body: lb, .. } => anf_refs_name(lb, self_name),
+            Rhs::Fix { body: fb, .. } => anf_refs_name(fb, self_name),
+            Rhs::FixGroup { defs, .. } => defs.iter().any(|(_, d)| anf_refs_name(d, self_name)),
+            Rhs::Match {
+                scrutinee,
+                alts,
+                default,
+            } => {
+                named(scrutinee)
+                    || alts.iter().any(|alt| match alt {
+                        AnfAlt::Ctor { body: ab, .. } | AnfAlt::Lit { body: ab, .. } => {
+                            anf_refs_name(ab, self_name)
+                        }
+                    })
+                    || default
+                        .as_ref()
+                        .is_some_and(|d| anf_refs_name(d, self_name))
+            }
+        };
+        if found {
+            return true;
+        }
+    }
+    named(anf.result())
+}
+
+/// Classify the arm body of a Fix-Match arm (Increment-3; RFC-0004 §11.6).
+///
+/// An arm is a **tail call** iff (1) its result atom is bound (in that Anf) by
+/// `Rhs::App{func: Named(self_name), arg: step}` and (2) `self_name` does not appear anywhere
+/// ELSE in the arm body (only in the final App binding). An arm is a **base case** iff
+/// `self_name` does not appear anywhere in the arm body at all. Any other occurrence
+/// (self used as non-call, or nested recursion) returns `UnsupportedNode` (G2).
+fn classify_arm(arm_body: &lower::Anf, self_name: &str) -> Result<ArmKind, AotError> {
+    let result_atom = arm_body.result();
+    // Check if the result atom is bound by App(self_name, step) in this Anf.
+    let tail_step: Option<Atom> = arm_body.bindings().iter().find_map(|b| {
+        if &b.name != result_atom {
+            return None;
+        }
+        if let Rhs::App {
+            func: Atom::Named(fname),
+            arg: step,
+        } = &b.rhs
+        {
+            if fname == self_name {
+                return Some(step.clone());
+            }
+        }
+        None
+    });
+
+    if let Some(step) = tail_step {
+        // It's a tail call. Verify self_name appears ONLY in the final App binding — not elsewhere.
+        // Build a trimmed anf without the final binding to check for stray references.
+        let bindings_without_tail: Vec<_> = arm_body
+            .bindings()
+            .iter()
+            .filter(|b| &b.name != result_atom)
+            .collect();
+        // Check: self_name must not appear in any earlier binding or the step atom itself.
+        let stray_ref = bindings_without_tail.iter().any(|b| {
+            let in_rhs = match &b.rhs {
+                Rhs::Const(_) => false,
+                Rhs::Alias(a) => matches!(a, Atom::Named(n) if n == self_name),
+                Rhs::Op { args, .. } | Rhs::Construct { args, .. } => args
+                    .iter()
+                    .any(|a| matches!(a, Atom::Named(n) if n == self_name)),
+                Rhs::Swap { src, .. } => matches!(src, Atom::Named(n) if n == self_name),
+                Rhs::App { func, arg } => {
+                    matches!(func, Atom::Named(n) if n == self_name)
+                        || matches!(arg, Atom::Named(n) if n == self_name)
+                }
+                Rhs::Lam { body: lb, .. } => anf_refs_name(lb, self_name),
+                Rhs::Fix { body: fb, .. } => anf_refs_name(fb, self_name),
+                Rhs::FixGroup { defs, .. } => defs.iter().any(|(_, d)| anf_refs_name(d, self_name)),
+                Rhs::Match {
+                    scrutinee,
+                    alts,
+                    default,
+                } => {
+                    matches!(scrutinee, Atom::Named(n) if n == self_name)
+                        || alts.iter().any(|alt| {
+                            let ab = match alt {
+                                mycelium_core::lower::AnfAlt::Ctor { body, .. } => body,
+                                mycelium_core::lower::AnfAlt::Lit { body, .. } => body,
+                            };
+                            anf_refs_name(ab, self_name)
+                        })
+                        || default
+                            .as_ref()
+                            .is_some_and(|d| anf_refs_name(d, self_name))
+                }
+            };
+            in_rhs || matches!(&b.name, Atom::Named(n) if n == self_name)
+        });
+        if stray_ref {
+            return Err(AotError::UnsupportedNode(format!(
+                "non-tail self-reference to `{self_name}` in a tail-Fix arm: the self-name \
+                 appears outside the final tail App — only tail self-calls are supported \
+                 (Increment-3; RFC-0004 §11.6; G2)"
+            )));
+        }
+        Ok(ArmKind::Tail(step))
+    } else {
+        // Not a tail call: self_name must not appear anywhere in the arm (base case).
+        if anf_refs_name(arm_body, self_name) {
+            return Err(AotError::UnsupportedNode(format!(
+                "non-tail self-reference to `{self_name}` in a tail-Fix arm: self-name appears \
+                 but the arm result is not a direct tail App(self, step) — non-tail recursion is \
+                 unsupported (Increment-3; RFC-0004 §11.6; G2)"
+            )));
+        }
+        Ok(ArmKind::Base)
+    }
+}
+
+/// Lower bindings of `arm_body` up to (but NOT including) the final binding whose name is
+/// `result_atom` (the tail App binding). Extends `env` with each intermediate binding.
+/// This computes the `step` argument of the tail call without recursing into `lower_app`.
+#[allow(clippy::too_many_arguments)]
+fn lower_arm_bindings_before_tail(
+    arm_body: &lower::Anf,
+    env: &mut HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    bbc: &mut Bbc,
+    body: &mut String,
+    funcs: &mut Vec<String>,
+    flags: &mut Vec<String>,
+) -> Result<(), AotError> {
+    let result_atom = arm_body.result();
+    for b in arm_body.bindings() {
+        if &b.name == result_atom {
+            // The tail App binding — stop here (caller handles it explicitly).
+            break;
+        }
+        let ev = match &b.rhs {
+            Rhs::Const(v) => EnvValue::Repr(const_lane(v)?),
+            Rhs::Alias(a) => lookup_ev(env, a)?.clone(),
+            Rhs::Op { prim, args } => {
+                let operands: Vec<&Lane> = args
+                    .iter()
+                    .map(|a| lookup_ev(env, a)?.as_lane("op operand"))
+                    .collect::<Result<_, _>>()?;
+                EnvValue::Repr(emit_op(prim, &operands, ssa, body, flags)?)
+            }
+            Rhs::Swap { target, .. } => {
+                return Err(AotError::UnsupportedNode(format!(
+                    "swap to {target:?} in a tail-Fix arm body (M-301)"
+                )));
+            }
+            Rhs::Construct { ctor, args } => {
+                let field_lanes: Vec<Lane> = args
+                    .iter()
+                    .map(|a| lookup_ev(env, a)?.as_lane("Construct field").cloned())
+                    .collect::<Result<_, _>>()?;
+                let total_elem: usize = field_lanes.iter().map(|l| l.vals.len()).sum();
+                let slots = 1 + total_elem;
+                let ptr = ssa.fresh();
+                let _ = writeln!(body, "  {ptr} = alloca [{slots} x i64], align 8");
+                let tag_gep = ssa.fresh();
+                let tag_val = ctor.index() as u64;
+                let _ = writeln!(
+                    body,
+                    "  {tag_gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 0"
+                );
+                let _ = writeln!(body, "  store i64 {tag_val}, i64* {tag_gep}");
+                let mut slot_start = 1usize;
+                let mut field_layouts = Vec::with_capacity(field_lanes.len());
+                for lane in &field_lanes {
+                    let layout = emit_store_field(lane, &ptr, slots, slot_start, ssa, body);
+                    slot_start += lane.vals.len();
+                    field_layouts.push(layout);
+                }
+                EnvValue::Datum(Datum {
+                    ptr,
+                    _tag: tag_val,
+                    fields: field_layouts,
+                    slots,
+                })
+            }
+            Rhs::Lam {
+                param,
+                body: lam_body,
+            } => lower_lam(param, lam_body, env, ssa, bbc, body, funcs)?,
+            Rhs::App { func, arg } => lower_app(func, arg, env, ssa, bbc, body, funcs, flags)?,
+            Rhs::Fix {
+                name,
+                body: fix_body,
+            } => EnvValue::Fix(FixVal {
+                name: name.clone(),
+                body: fix_body.clone(),
+            }),
+            Rhs::Match { .. } | Rhs::FixGroup { .. } => {
+                return Err(AotError::UnsupportedNode(
+                    "unexpected node in tail-Fix arm binding sequence".to_owned(),
+                ))
+            }
+        };
+        env.insert(b.name.clone(), ev);
+    }
+    Ok(())
+}
+
+/// Emit the iterative LLVM loop for `App(Fix{name, λparam. Match param { <arms> }}, init)`
+/// (Increment-3; RFC-0004 §11.6; DN-15 §8; DN-05 #1). Only the canonical shape is supported;
+/// out-of-scope cases are refused with explicit `UnsupportedNode` (never silent — G2).
+///
+/// ## Shape invariant (checked here)
+///
+/// The Fix body must be exactly `Rhs::Lam{param, lam_body}` where `lam_body` is exactly
+/// `Rhs::Match{scrutinee=param, alts, default}`. Each alt/default is tail-classified:
+///
+/// - **tail arm**: `App(self, step)` is the result — back-edge with the new accumulator.
+/// - **base arm**: no self-reference — exit the loop with the base result.
+///
+/// Non-tail self-references, `FixGroup`, non-Binary{8} types, Ctor arms all return
+/// `UnsupportedNode` (G2).
+///
+/// ## Loop structure (emitted IR)
+/// ```text
+/// entry:
+///   br %header
+/// header:   ; loop header — phi nodes accumulate the iteration state
+///   %n_packed = phi i64 [%init, %entry], [%next_k, %recur_k]...
+///   %depth   = phi i64 [0, %entry],      [%depth1_k, %recur_k]...
+///   %over = icmp uge i64 %depth, <ceiling>
+///   br i1 %over, label %depthlimit, label %dispatch
+/// depthlimit:
+///   putchar(DEPTHLIMIT_SENTINEL); putchar(10); ret i32 0
+/// dispatch:
+///   %n = unpack(%n_packed)
+///   switch i64 %n_packed, label %def [ i64 <k>, label %arm_k ... ]
+/// arm_k:     ; base: lower arm body; br %exit; or tail: lower step, br %header
+/// exit:
+///   %res = phi i32 [<base results>...]   (per element)
+/// ```
+#[allow(clippy::too_many_arguments)]
+fn lower_tail_fix(
+    fixval: &FixVal,
+    init_atom: &Atom,
+    env: &HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    bbc: &mut Bbc,
+    body: &mut String,
+    funcs: &mut Vec<String>,
+    flags: &mut Vec<String>,
+) -> Result<EnvValue, AotError> {
+    let self_name = &fixval.name;
+    let fix_body = &fixval.body;
+
+    // ── Step (a): extract (param, match_node) from the Fix body ───────────────────────────────
+    // The Fix body is a single-binding Anf: one `Rhs::Lam{param, lam_body}` binding.
+    let (param, lam_body) = {
+        let bindings = fix_body.bindings();
+        if bindings.len() != 1 {
+            return Err(AotError::UnsupportedNode(format!(
+                "tail-Fix: Fix body must be exactly `λparam. Match ...` (a single Lam binding); \
+                 got {} bindings — nested/complex Fix bodies are outside Increment-3 (G2)",
+                bindings.len()
+            )));
+        }
+        match &bindings[0].rhs {
+            Rhs::Lam { param, body: lb } => (param.clone(), lb),
+            other => {
+                return Err(AotError::UnsupportedNode(format!(
+                    "tail-Fix: Fix body must be a Lam, got {other:?} — only `Fix{{λ.Match}}` \
+                     is supported (Increment-3; RFC-0004 §11.6; G2)"
+                )));
+            }
+        }
+    };
+
+    // The Lam body is a single-binding Anf: one `Rhs::Match{scrutinee=param, alts, default}`.
+    let (alts, default_anf) = {
+        let lam_bindings = lam_body.bindings();
+        if lam_bindings.len() != 1 {
+            return Err(AotError::UnsupportedNode(format!(
+                "tail-Fix: Lam body must be exactly `Match param {{ ... }}` (a single Match \
+                 binding); got {} bindings (G2)",
+                lam_bindings.len()
+            )));
+        }
+        match &lam_bindings[0].rhs {
+            Rhs::Match {
+                scrutinee,
+                alts,
+                default,
+            } => {
+                // Scrutinee must be the param atom.
+                if scrutinee != &Atom::Named(param.clone()) {
+                    return Err(AotError::UnsupportedNode(format!(
+                        "tail-Fix: Match scrutinee must be the Lam param `{param}`; got \
+                         {scrutinee:?} (G2)"
+                    )));
+                }
+                (alts.clone(), default.clone())
+            }
+            other => {
+                return Err(AotError::UnsupportedNode(format!(
+                    "tail-Fix: Lam body must be a Match, got {other:?} — only `λ.Match` is \
+                     supported (Increment-3; G2)"
+                )));
+            }
+        }
+    };
+
+    // ── Step (b): tail-classify each arm and the default ──────────────────────────────────────
+    // Lit arms only (Ctor arms on the param → UnsupportedNode).
+    use mycelium_core::lower::AnfAlt;
+    let mut arm_kinds: Vec<(u64, lower::Anf, ArmKind)> = Vec::with_capacity(alts.len());
+    for alt in &alts {
+        match alt {
+            AnfAlt::Lit {
+                value,
+                body: arm_body,
+            } => {
+                let packed_key = lit_binary8_packed(value)?;
+                let kind = classify_arm(arm_body, self_name)?;
+                arm_kinds.push((packed_key, arm_body.clone(), kind));
+            }
+            AnfAlt::Ctor { .. } => {
+                return Err(AotError::UnsupportedNode(
+                    "tail-Fix: Ctor arm on the recursion param is not supported — only Lit arms \
+                     (Binary{8} literal patterns) are allowed in Increment-3 (G2)"
+                        .to_owned(),
+                ));
+            }
+        }
+    }
+    // Classify the default arm (if present).
+    let default_kind: Option<(lower::Anf, ArmKind)> = if let Some(def) = &default_anf {
+        let kind = classify_arm(def, self_name)?;
+        Some((def.clone(), kind))
+    } else {
+        None
+    };
+
+    // ── Step (c): pack `init` to i64 ──────────────────────────────────────────────────────────
+    let init_ev = lookup_ev(env, init_atom)?;
+    let init_lane = as_binary8(init_ev, "tail-Fix init argument")?.clone();
+    let init_packed = pack_binary8(&init_lane, ssa, body);
+
+    // ── Step (d): emit the loop IR ────────────────────────────────────────────────────────────
+    // Resolve the depth ceiling once (via the DepthBudget trait).
+    use crate::budget::DepthBudget as _;
+    let ceiling = crate::budget::AutoDepthBudget::default()
+        .resolve()
+        .max_depth;
+
+    // Label pool — all unique (bbc.fresh() is monotone).
+    let entry_label = bbc.fresh(); // the pre-header block (already "active" — we emit a br)
+    let header_label = bbc.fresh(); // phi / depth-check
+    let depthlimit_label = bbc.fresh(); // graceful depth-limit exit
+    let dispatch_label = bbc.fresh(); // switch dispatch
+    let exit_label = bbc.fresh(); // merge point for base cases
+
+    // Per-arm/default labels.
+    let arm_labels: Vec<String> = (0..arm_kinds.len()).map(|_| bbc.fresh()).collect();
+    let default_label = bbc.fresh(); // the switch default block
+
+    // Emit the br to the entry pre-header (terminates the current "fall-through" block).
+    let _ = writeln!(body, "  br label %{entry_label}");
+    let _ = writeln!(body, "{entry_label}:");
+    let _ = writeln!(body, "  br label %{header_label}");
+
+    // ── Header: phi nodes ─────────────────────────────────────────────────────────────────────
+    // The header phi has one incoming edge from entry + one from each recur (tail-call) arm.
+    // We emit placeholder phi strings now and back-patch after classifying arms; instead, we
+    // structure the emission so that phi operands are collected first, then emitted.
+    //
+    // Collect recur arm labels (for the back-edges on the phi).
+    let recur_arm_labels: Vec<String> = arm_kinds
+        .iter()
+        .zip(&arm_labels)
+        .filter(|((_, _, kind), _)| matches!(kind, ArmKind::Tail(_)))
+        .map(|(_, lbl)| lbl.clone())
+        .collect();
+    let recur_default_label: Option<String> = default_kind
+        .as_ref()
+        .and_then(|(_, kind)| matches!(kind, ArmKind::Tail(_)).then(|| default_label.clone()));
+
+    // The packed-n phi: %n_packed = phi i64 [%init, %entry_label], [%next_k, %recur_k]...
+    // We emit the phi header now with just the entry edge; back-edges are added after loop body.
+    // HOWEVER, LLVM requires complete phi operand lists — so we must use SSA registers that we
+    // declare in the recur arm blocks. We do this by pre-assigning SSA names for the "next"
+    // registers and the "depth1" registers that will be defined in each recur arm block.
+    let n_packed_phi = ssa.fresh();
+    let depth_phi = ssa.fresh();
+
+    // Pre-assign "next" packed values + "depth1" values for each recur arm.
+    // We know which arms are tail calls; for each we reserve two SSA names now.
+    let mut recur_next_regs: Vec<String> = Vec::new();
+    let mut recur_depth1_regs: Vec<String> = Vec::new();
+    let all_recur_count = recur_arm_labels.len() + recur_default_label.as_ref().map_or(0, |_| 1);
+    for _ in 0..all_recur_count {
+        recur_next_regs.push(ssa.fresh());
+        recur_depth1_regs.push(ssa.fresh());
+    }
+
+    let _ = writeln!(body, "{header_label}:");
+    // Build the phi for %n_packed.
+    {
+        let mut phi_args = format!("[ {init_packed}, %{entry_label} ]");
+        let mut ri = 0;
+        for ((_, _, kind), lbl) in arm_kinds.iter().zip(&arm_labels) {
+            if matches!(kind, ArmKind::Tail(_)) {
+                phi_args.push_str(&format!(", [ {}, %{lbl} ]", recur_next_regs[ri]));
+                ri += 1;
+            }
+        }
+        if let Some((_, kind)) = &default_kind {
+            if matches!(kind, ArmKind::Tail(_)) {
+                phi_args.push_str(&format!(", [ {}, %{default_label} ]", recur_next_regs[ri]));
+            }
+        }
+        let _ = writeln!(body, "  {n_packed_phi} = phi i64 {phi_args}");
+    }
+    // Build the phi for %depth.
+    {
+        let mut phi_args = format!("[ 0, %{entry_label} ]");
+        let mut ri = 0;
+        for ((_, _, kind), lbl) in arm_kinds.iter().zip(&arm_labels) {
+            if matches!(kind, ArmKind::Tail(_)) {
+                phi_args.push_str(&format!(", [ {}, %{lbl} ]", recur_depth1_regs[ri]));
+                ri += 1;
+            }
+        }
+        if let Some((_, kind)) = &default_kind {
+            if matches!(kind, ArmKind::Tail(_)) {
+                phi_args.push_str(&format!(
+                    ", [ {}, %{default_label} ]",
+                    recur_depth1_regs[ri]
+                ));
+            }
+        }
+        let _ = writeln!(body, "  {depth_phi} = phi i64 {phi_args}");
+    }
+    // Depth-limit check.
+    let over_reg = ssa.fresh();
+    let _ = writeln!(body, "  {over_reg} = icmp uge i64 {depth_phi}, {ceiling}");
+    let _ = writeln!(
+        body,
+        "  br i1 {over_reg}, label %{depthlimit_label}, label %{dispatch_label}"
+    );
+
+    // ── DepthLimit block ──────────────────────────────────────────────────────────────────────
+    let _ = writeln!(body, "{depthlimit_label}:");
+    let dl1 = ssa.fresh();
+    let _ = writeln!(
+        body,
+        "  {dl1} = call i32 @putchar(i32 {})",
+        DEPTHLIMIT_SENTINEL
+    );
+    let dl2 = ssa.fresh();
+    let _ = writeln!(body, "  {dl2} = call i32 @putchar(i32 10)");
+    let _ = writeln!(body, "  ret i32 0");
+
+    // ── Dispatch block: unpack + switch ───────────────────────────────────────────────────────
+    let _ = writeln!(body, "{dispatch_label}:");
+    let n_lane = unpack_binary8(&n_packed_phi, ssa, body);
+    // Emit switch: default → %default_label; lit_k → %arm_k.
+    let _ = write!(
+        body,
+        "  switch i64 {n_packed_phi}, label %{default_label} ["
+    );
+    for ((key, _, _), lbl) in arm_kinds.iter().zip(&arm_labels) {
+        let _ = write!(body, " i64 {key}, label %{lbl}");
+    }
+    let _ = writeln!(body, " ]");
+
+    // ── Arm blocks ────────────────────────────────────────────────────────────────────────────
+    // Collect (label, lane) pairs for the exit phi (base arms only).
+    let mut exit_phi_entries: Vec<(String, Lane)> = Vec::new();
+    let mut recur_idx = 0usize;
+
+    for ((_, arm_anf, arm_kind), lbl) in arm_kinds.iter().zip(&arm_labels) {
+        let _ = writeln!(body, "{lbl}:");
+        // Bind param → n_lane in a child env (clone).
+        let mut arm_env = env.clone();
+        arm_env.insert(Atom::Named(param.clone()), EnvValue::Repr(n_lane.clone()));
+
+        match arm_kind {
+            ArmKind::Base => {
+                // Lower the full arm body and collect its result for the exit phi.
+                let result_lane =
+                    lower_anf_block(arm_anf, &mut arm_env, ssa, bbc, body, funcs, flags)?;
+                exit_phi_entries.push((lbl.clone(), result_lane));
+                let _ = writeln!(body, "  br label %{exit_label}");
+            }
+            ArmKind::Tail(step_atom) => {
+                // Lower bindings BEFORE the tail App (the step computation).
+                lower_arm_bindings_before_tail(
+                    arm_anf,
+                    &mut arm_env,
+                    ssa,
+                    bbc,
+                    body,
+                    funcs,
+                    flags,
+                )?;
+                // Look up the step atom from the arm env.
+                let step_ev = lookup_ev(&arm_env, step_atom)?;
+                let step_lane = as_binary8(step_ev, "tail-Fix step argument")?.clone();
+                // Emit the "next" packed value and "depth+1" using the pre-reserved SSA regs.
+                let next_packed = pack_binary8(&step_lane, ssa, body);
+                // Copy packed value into the pre-reserved register via an `or i64 <val>, 0`.
+                let _ = writeln!(
+                    body,
+                    "  {} = or i64 {next_packed}, 0",
+                    recur_next_regs[recur_idx]
+                );
+                let depth1_raw = ssa.fresh();
+                let _ = writeln!(body, "  {depth1_raw} = add i64 {depth_phi}, 1");
+                let _ = writeln!(
+                    body,
+                    "  {} = or i64 {depth1_raw}, 0",
+                    recur_depth1_regs[recur_idx]
+                );
+                recur_idx += 1;
+                let _ = writeln!(body, "  br label %{header_label}");
+            }
+        }
+    }
+
+    // ── Default block ─────────────────────────────────────────────────────────────────────────
+    let _ = writeln!(body, "{default_label}:");
+    {
+        let mut def_env = env.clone();
+        def_env.insert(Atom::Named(param.clone()), EnvValue::Repr(n_lane.clone()));
+        match &default_kind {
+            Some((def_anf, ArmKind::Base)) => {
+                let result_lane =
+                    lower_anf_block(def_anf, &mut def_env, ssa, bbc, body, funcs, flags)?;
+                exit_phi_entries.push((default_label.clone(), result_lane));
+                let _ = writeln!(body, "  br label %{exit_label}");
+            }
+            Some((def_anf, ArmKind::Tail(step_atom))) => {
+                lower_arm_bindings_before_tail(
+                    def_anf,
+                    &mut def_env,
+                    ssa,
+                    bbc,
+                    body,
+                    funcs,
+                    flags,
+                )?;
+                let step_ev = lookup_ev(&def_env, step_atom)?;
+                let step_lane = as_binary8(step_ev, "tail-Fix default step argument")?.clone();
+                let next_packed = pack_binary8(&step_lane, ssa, body);
+                let _ = writeln!(
+                    body,
+                    "  {} = or i64 {next_packed}, 0",
+                    recur_next_regs[recur_idx]
+                );
+                let depth1_raw = ssa.fresh();
+                let _ = writeln!(body, "  {depth1_raw} = add i64 {depth_phi}, 1");
+                let _ = writeln!(
+                    body,
+                    "  {} = or i64 {depth1_raw}, 0",
+                    recur_depth1_regs[recur_idx]
+                );
+                let _ = writeln!(body, "  br label %{header_label}");
+            }
+            None => {
+                // No default arm: abort() — defined-trap (never raw unreachable UB; G2/WF7).
+                let _ = writeln!(body, "  call void @abort()");
+                let _ = writeln!(body, "  ret i32 0");
+            }
+        }
+    }
+
+    // ── Exit block: phi over base-case results ────────────────────────────────────────────────
+    let _ = writeln!(body, "{exit_label}:");
+    if exit_phi_entries.is_empty() {
+        // All arms are tail calls — no base case. The loop is diverging; it will always hit the
+        // depth-limit ceiling (emitted above in the header) before the exit block is reached.
+        // Emit `call void @abort()` + `ret i32 0` as the defined-trap dead-block terminator —
+        // never raw `unreachable` UB (G2/DN-05 #1/SC-3). The block is provably dead because the
+        // depthlimit path exits before any base-case branch could reach this label.
+        let _ = writeln!(body, "  call void @abort()");
+        let _ = writeln!(body, "  ret i32 0");
+        // Return a dummy zero-width binary lane; the output section downstream is also dead
+        // (execution exits via depthlimit first). The dummy lane propagates cleanly through
+        // `result_shape` → `CompiledArtifact::run` → sentinel check (returns `DepthLimit`
+        // before `decode_result` is invoked, so `width == 0` is never observed by the decoder).
+        return Ok(EnvValue::Repr(Lane {
+            kind: LaneKind::Binary,
+            vals: vec![],
+        }));
+    }
+    // All base arms must agree on kind/width.
+    let first = &exit_phi_entries[0].1;
+    let kind = first.kind;
+    let width = first.vals.len();
+    for (_, lane) in &exit_phi_entries[1..] {
+        if lane.kind != kind || lane.vals.len() != width {
+            return Err(AotError::UnsupportedNode(
+                "tail-Fix: base-case arms return lanes of different kind or width — all base \
+                 cases must agree on repr shape (G2)"
+                    .to_owned(),
+            ));
+        }
+    }
+    // Emit phi per element.
+    let mut result_vals: Vec<Operand> = Vec::with_capacity(width);
+    for elem_idx in 0..width {
+        let phi_reg = ssa.fresh();
+        let phi_operands: Vec<String> = exit_phi_entries
             .iter()
             .map(|(lbl, lane)| format!("[ {}, %{lbl} ]", lane.vals[elem_idx]))
             .collect();
@@ -1684,6 +2402,13 @@ impl CompiledArtifact {
                 "fixed-width result out of {}-trit range",
                 self.width
             )));
+        }
+        // DepthLimit sentinel: the tail-recursive Fix loop hit the AutoDepthBudget ceiling (DN-05 #1).
+        // Graceful explicit refusal — never SIGSEGV, never hang (matches `EvalError::DepthLimit`).
+        if line.as_bytes() == [DEPTHLIMIT_SENTINEL] {
+            return Err(AotError::DepthLimit(
+                "tail-recursive Fix loop exceeded the AutoDepthBudget ceiling".to_owned(),
+            ));
         }
         decode_result(self.kind, self.width, line.chars())
     }
