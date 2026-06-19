@@ -196,6 +196,18 @@ fn data_corpus() -> Vec<&'static str> {
          fn g3(n: Nat) -> Nat = match n { Z => Z, S(m) => h3(m) }\n\
          fn h3(n: Nat) -> Nat = match n { Z => Z, S(m) => f3(m) }\n\
          fn main() -> Nat = f3(S(S(S(S(Z)))))",
+        // --- M-391 (R7-Q3 surface): two further surface-written mutual-recursion shapes ---
+        // a mutual pair returning a REPR (not a datum): hi(SS Z) ⟶ lo(S Z) ⟶ hi(Z) ⟶ 0b1111_1111
+        "nodule d\ntype Nat = Z | S(Nat)\n\
+         fn hi(n: Nat) -> Binary{8} = match n { Z => 0b1111_1111, S(m) => lo(m) }\n\
+         fn lo(n: Nat) -> Binary{8} = match n { Z => 0b0000_0000, S(m) => hi(m) }\n\
+         fn main() -> Binary{8} = hi(S(S(Z)))",
+        // a mutual pair destructuring a MULTI-FIELD constructor (Maranget over two fields, inside a
+        // FixGroup): shrink(Mk(S Z, S Z)) ⟶ grow(Mk(Z, S Z)) ⟶ shrink(Mk(Z, Z)) ⟶ Z
+        "nodule d\ntype Nat = Z | S(Nat)\ntype Two = Mk(Nat, Nat)\n\
+         fn shrink(t: Two) -> Nat = match t { Mk(Z, b) => b, Mk(S(a), b) => grow(Mk(a, b)) }\n\
+         fn grow(t: Two) -> Nat = match t { Mk(a, Z) => a, Mk(a, S(b)) => shrink(Mk(a, b)) }\n\
+         fn main() -> Nat = shrink(Mk(S(Z), S(Z)))",
     ]
 }
 
@@ -264,6 +276,86 @@ fn l1_eval_l0_interp_and_aot_agree_on_the_data_and_recursion_fragment() {
             );
         }
     }
+}
+
+/// The arity (member count) of the first `FixGroup` in `n`, if any — a tiny structural probe so the
+/// M-391 identity assertion can confirm a surface group lowered to a `FixGroup` of the expected size.
+/// Mirrors the elaborator's own `contains_fixgroup` test walker (one node kind per arm).
+fn fixgroup_arity(n: &mycelium_core::Node) -> Option<usize> {
+    use mycelium_core::{Alt, Node};
+    match n {
+        Node::FixGroup { defs, .. } => Some(defs.len()),
+        Node::Let { bound, body, .. } => fixgroup_arity(bound).or_else(|| fixgroup_arity(body)),
+        Node::Fix { body, .. } | Node::Lam { body, .. } => fixgroup_arity(body),
+        Node::App { func, arg } => fixgroup_arity(func).or_else(|| fixgroup_arity(arg)),
+        Node::Op { args, .. } | Node::Construct { args, .. } => {
+            args.iter().find_map(fixgroup_arity)
+        }
+        Node::Swap { src, .. } => fixgroup_arity(src),
+        Node::Match {
+            scrutinee,
+            alts,
+            default,
+        } => fixgroup_arity(scrutinee)
+            .or_else(|| {
+                alts.iter().find_map(|a| match a {
+                    Alt::Ctor { body, .. } | Alt::Lit { body, .. } => fixgroup_arity(body),
+                })
+            })
+            .or_else(|| default.as_deref().and_then(fixgroup_arity)),
+        Node::Const(_) | Node::Var(_) => None,
+    }
+}
+
+/// M-391 / ADR-003 (identity-first): a mutually-recursive group written in surface syntax lowers to
+/// *the* `FixGroup` the SCC decomposition dictates — deterministically (same source ⟶ byte-equal term,
+/// so the content hash is stable) and materialized as that concrete, content-addressed L0 node (the
+/// grouping is reified, never a black box; walked here). There is a single `FixGroup` emission path
+/// (RP-6 nodule-wide visibility feeds the existing Tarjan→`FixGroup` lowering; DN-13), so
+/// "surface-written ≡ programmatic" is pinned here against that canonical path.
+#[test]
+fn surface_mutual_recursion_lowers_to_the_canonical_fixgroup() {
+    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
+        fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\n\
+        fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }\n\
+        fn main() -> Nat = ping(S(S(Z)))";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+    // Determinism: the lowering (fresh-name numbering, group member order) is reproducible, so the
+    // term — and therefore its content hash — is stable across elaborations of the same source.
+    let a = elaborate(&env, "main").expect("elaborates");
+    let b = elaborate(&env, "main").expect("elaborates");
+    assert_eq!(
+        a, b,
+        "elaboration must be deterministic (stable content identity)"
+    );
+
+    // The surface ping/pong group is materialized as exactly one 2-member `FixGroup` — the concrete,
+    // content-addressed L0 node that reifies the grouping (no black box) — found by walking the term.
+    assert_eq!(
+        fixgroup_arity(&a),
+        Some(2),
+        "the surface ping/pong group must lower to a 2-member FixGroup"
+    );
+}
+
+/// Never-silent (G2): RP-6 makes top-level functions mutually visible, so `ping` may forward-reference
+/// `pong` — but a reference to a function that does **not** exist must stay an explicit checker error,
+/// never silently absorbed into the mutual group as a phantom member. Here `pongg` is a typo for
+/// `pong`; the program must be REJECTED at check time, not elaborated.
+#[test]
+fn an_undefined_reference_is_an_explicit_error_not_a_silent_mutual_group() {
+    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
+        fn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pongg(m) }\n\
+        fn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }\n\
+        fn main() -> Nat = ping(S(Z))";
+    let nodule = parse(src).expect("parses");
+    let err = check_nodule(&nodule).expect_err("an undefined reference must be rejected");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("pongg"),
+        "the error must explicitly name the undefined reference; got: {msg}"
+    );
 }
 
 /// A **mutant-witness** for the elaboration: a deliberately wrong elaboration must be caught by the
