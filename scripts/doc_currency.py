@@ -53,7 +53,7 @@ def fail(msg: str) -> None:
 
 def required_toplevel() -> set[str]:
     """Significant top-level entries the README must document."""
-    required: set[str] = set(KEY_FILES)
+    required: set[str] = {f for f in KEY_FILES if (REPO_ROOT / f).exists()}
     for entry in REPO_ROOT.iterdir():
         if entry.name.startswith(".") or entry.name in IGNORE_TOPLEVEL:
             continue
@@ -106,8 +106,6 @@ def check_structure(errors: list[str]) -> None:
         )
 
     for name in sorted(listed):
-        if name in KEY_FILES:
-            continue
         if not (REPO_ROOT / name).exists():
             errors.append(
                 f"README 'Repository structure' lists {name!r}, which does not "

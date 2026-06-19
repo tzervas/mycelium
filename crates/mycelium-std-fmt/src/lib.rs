@@ -686,11 +686,13 @@ fn value_to_json(v: &Value) -> Result<serde_json::Value, ToJsonError> {
 /// Never-silent (C1): every failure is an explicit [`FromJsonError`] mapped from `std.io`'s
 /// located [`mycelium_std_io::SerError`]; no partially-filled `Value` is ever returned.
 fn json_to_value(j: &serde_json::Value) -> Result<Value, FromJsonError> {
-    // Pre-check `repr.kind` before the full delegation. `serde_json::json!` serialises map keys
-    // in alphabetical order (`meta` before `repr`), so a missing-field error in `meta` would
-    // surface before serde ever reaches `repr.kind`. Checking the tag eagerly here preserves the
-    // pre-delegation error priority: unknown `repr.kind` → `UnknownTag`, regardless of field order
-    // in the serialised text (C1 — never-silent, classified error set, spec §3).
+    // Pre-check `repr.kind` before the full delegation. A `serde_json::Map` serialises its keys in
+    // sorted order when the `preserve_order` feature is off (the default), so when this wrapper is
+    // rendered via `serde_json::to_string(j)` below, `meta` precedes `repr` — and a missing-field
+    // error in `meta` would surface in `std.io` before serde ever reaches `repr.kind`. Checking the
+    // tag eagerly here preserves the pre-delegation error priority: unknown `repr.kind` →
+    // `UnknownTag`, regardless of field order in the serialised text (C1 — never-silent, classified
+    // error set, spec §3).
     if let Some(kind) = j
         .get("repr")
         .and_then(|r| r.get("kind"))
