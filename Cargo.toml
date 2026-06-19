@@ -46,6 +46,7 @@ members = [
     "crates/mycelium-std-fs",
     "crates/mycelium-std-time",
     "crates/mycelium-std-rand",
+    "crates/mycelium-std-sys",
     "xtask",
 ]
 

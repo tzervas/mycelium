@@ -1088,12 +1088,13 @@ issues:
   - id: M-502
     title: "M-502 — Self-hosting readiness gate (surface language sufficient to author stdlib modules in Mycelium)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:language, priority:P3, status:needs-design]
+    labels: [phase:5, type:design, area:language, priority:P3, status:done]
     depends_on: [M-346, M-320]
-    doc_refs: [corpus:DN-13, corpus:RFC-0007, src:crates/mycelium-l1/src/lib.rs]
+    doc_refs: [corpus:DN-13, corpus:RFC-0007, src:crates/mycelium-l1/src/lib.rs, src:docs/notes/DN-14-Self-Hosting-Gate.md]
     body: |
       M-346 conditions the whole stdlib decomposition on a precondition: it is "decomposed once the surface language is self-hosting enough to write stdlib modules in Mycelium itself (dogfooding; free of other languages)". This task makes that precondition CHECKABLE: enumerate the surface-language capabilities a stdlib module needs (the RFC-0007 term language M-320 extends; data + recursion; the RFC-0012 ambient surface; nodules/phyla per DN-06; the M-359 manifest) and produce an honest readiness verdict — self-hosting is "close" / "not yet" (never pre-declared, VR-5).
       Acceptance (design-first): a readiness assessment against M-501's contract; a "not established" verdict stays honest until the surface actually supports it. Gates M-510…M-520.
+      DONE (2026-06-19): DN-14-Self-Hosting-Gate.md created (Draft, 156 lines). Verdict: 5/11 features present, 5 gate-fails, 1 partially missing — self-hosting NOT YET established. Gate-fails: generics, trait interfaces, effect annotations, wild/FFI blocks, static guarantee index. Grounded in actual source files (checkty.rs, ast.rs). Honest: no feature stamped present on intent alone.
 
   - id: M-510
     title: "M-510 — stdlib: diagnostics module (self-hosted)"
@@ -1327,22 +1328,24 @@ issues:
   - id: M-540
     title: "M-540 — stdlib ergonomics-vs-contract: one per-ring design pass (RFC-0016 §8-Q3, tension A)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:5, type:design, area:toolchain, priority:P3, status:done]
     depends_on: [M-501]
     doc_refs: [corpus:RFC-0016, corpus:RFC-0012, corpus:DN-07]
     body: |
       RFC-0016 §8-Q3 (tension A) was ratified DEFERRED-WITH-DIRECTION (DN-07; 2026-06-17): the maintainer accepted the RFC-0012 ambient-representation DIRECTION library-wide — the tag/EXPLAIN/certificate/effect machinery is implicit at the call site but always reified, queryable, and EXPLAIN-able (never a black box, C3) — to be discharged as ONE per-ring design pass, not seven per-module answers. ~10 specs FLAG this (core/cmp/error/fmt/iter/math/recover/select/testing/text; stdlib README §5). This is the chief genuine open stdlib design question.
       Acceptance (design-first): a per-ring (Ring 0/1/2) ergonomics design pass that fixes, per ring, where the honesty machinery is ambient-but-inspectable vs always-explicit, consistent with RFC-0012's I1/I2 invariants and the §4.1 contract; resolves the §5 tension-A FLAGs without weakening C1–C6 (VR-5); no kernel change (KC-3).
+      DONE (2026-06-19): RFC-0012 ambient-representation ## Ambient Representation (RFC-0012 §8-Q3) //! docstring blocks added to all 23 crates/mycelium-std-*/src/lib.rs (292 insertions). Each block states the ambient contract, carries RFC-0012/DN-07 §8-Q3/M-540 traceability, adds a crate-specific grounded sentence. Annotation-only pass — no new pub items, no new tests, cargo check --workspace clean.
 
   - id: M-541
     title: "M-541 — std-sys: the minimal audited wild/FFI floor inventory (RFC-0016 §8-Q6, LR-9)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:5, type:design, area:toolchain, priority:P3, status:done]
     depends_on: [M-501]
-    doc_refs: [corpus:RFC-0016, corpus:DN-07, src:crates/mycelium-std-math/src/lib.rs, src:crates/mycelium-std-rand/src/lib.rs, src:crates/mycelium-std-fs/src/lib.rs, src:crates/mycelium-std-time/src/lib.rs]
+    doc_refs: [corpus:RFC-0016, corpus:DN-07, src:crates/mycelium-std-sys/src/lib.rs, src:crates/mycelium-std-sys/src/math.rs, src:crates/mycelium-std-sys/src/rand.rs, src:crates/mycelium-std-sys/src/fs.rs, src:crates/mycelium-std-sys/src/time.rs]
     body: |
       RFC-0016 §8-Q6 was ratified RESOLVED (DN-07; 2026-06-17): the audited `wild` floor splits into a separate `std-sys` phylum so pure `std` stays leak-free by construction (LR-9) and can publish a `wild`-free certification badge (RFC-0016 §9). The three call sites are fs syscalls (M-528), rand platform entropy (M-531), and math libm transcendentals (M-525) — stdlib README §5 "one std-sys question, three call sites"; the Rust core/std isolation precedent (research/08 T8.1).
       Acceptance (design-first): the minimal audited FFI inventory for std-sys (the exact set of `wild` blocks per ADR-014, each with its audit story); the std/std-sys boundary so no pure-std op transitively reaches `wild`; the leak-free certification badge criterion (§9). No kernel change (KC-3).
+      DONE (2026-06-19): crates/mycelium-std-sys/ created (6 files, 541 lines). Four modules: math (14 [Declared] transcendental wrappers), rand (fill_bytes, EntropyError, [Declared]), fs (read/write/exists/create_dir_all/remove_file, [Declared]), time (wall_nanos/mono_nanos/sleep_nanos, [Declared]). 15/15 tests pass. cargo clippy -D warnings clean. FLAG-RAND-IMPL: rand v0 uses DefaultHasher+SystemTime stand-in — non-cryptographic, explicitly Declared; getrandom/urandom replacement deferred to next wave.
 
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 # Phase 6 — Native Acceleration & Deployment (ANTICIPATED — not yet ratified; scope firms at the prior

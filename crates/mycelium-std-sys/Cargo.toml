@@ -1,20 +1,11 @@
 [package]
 name = "mycelium-std-sys"
 version = "0.1.0"
-edition = "2021"
-rust-version = "1.92"
-license = "MIT"
-repository = "https://github.com/tzervas/mycelium"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 description = "Audited FFI/syscall floor for the Mycelium standard library (RFC-0016 §8-Q6, LR-9)"
-
-# Standalone manifest (not yet in workspace.members — FLAG-WORKSPACE).
-# Once the orchestrator adds this crate to the workspace, remove the `[workspace]` table below
-# and replace the explicit package fields with `edition.workspace`, `rust-version.workspace`,
-# `license.workspace`, `repository.workspace`, and `[lints] workspace = true`.
-
-# Empty [workspace] prevents Cargo from climbing to the root workspace, allowing standalone
-# fmt/clippy/test before the orchestrator wires this into workspace.members.
-[workspace]
 
 [dependencies]
 # No mycelium workspace dependencies — std-sys sits below the std layer.
@@ -23,9 +14,5 @@ description = "Audited FFI/syscall floor for the Mycelium standard library (RFC-
 [dev-dependencies]
 # None required — tests use only std
 
-[lints.rust]
-# Mirror workspace lints (ADR-014): unsafe is permitted-but-warned in dev, not forbidden.
-unsafe_code = "warn"
-
-[lints.clippy]
-all = { level = "warn", priority = -1 }
+[lints]
+workspace = true

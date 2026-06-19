@@ -199,6 +199,59 @@ follows the **branch convention**, and obeys the **file-ownership rule**.
 > green. Commit to your leaf branch (do **not** push); report your **branch + SHA + any FLAGs** to
 > your Epic Agent.
 
+## Swarm failure-mode mitigations (lessons from Wave-4, 2026-06-19)
+
+These are recurring failure patterns observed in multi-agent waves. Treat them as mandatory
+pre-checks and post-checks — not optional hygiene.
+
+### 1. ID namespace collision
+**Pattern:** Orchestrator mints a new `M-xxx` / `Exx` ID from the plan without verifying the slot
+is free in `issues.yaml`. Results in a collision that must be fixed mid-wave.  
+**Mitigation:** Before assigning any new ID, grep `issues.yaml` for the candidate: `grep "id: E3-8"
+tools/github/issues.yaml`. If taken, find the next free slot. Do this before spawning epics.
+
+### 2. Union-merge YAML duplication
+**Pattern:** `.gitattributes` applies `merge=union` to `issues.yaml` so octopus merges
+append both sides of every touched block, creating duplicate YAML keys that are syntactically
+valid but semantically wrong.  
+**Mitigation:** Immediately after every octopus merge, validate + dedup `issues.yaml`:
+`python3 -c "import yaml; yaml.safe_load(open('tools/github/issues.yaml')); print('OK')"`.
+If duplicates are present, consolidate manually into single canonical entries before any further
+commits. Consider whether `issues.yaml` should remain in the union-merge set (it is
+orchestrator-owned and never agent-edited — union merge has no benefit).
+
+### 3. Tool discovery / PATH failures
+**Pattern:** Agent invokes `python3 -m ruff` but `ruff` is installed as a standalone binary at
+`~/.local/bin/ruff` (via `uv tool install`) and that path is not on `$PATH` for subprocess
+invocations.  
+**Mitigation:** Always prefer `just fmt` and `just check` — the justfile resolves tool paths.
+When invoking raw tools, probe first: `command -v ruff || ~/.local/bin/ruff`. The `just setup`
+recipe should verify tool paths and warn if they're not on `$PATH`.
+
+### 4. Interactive git flags in automation
+**Pattern:** `git add -p` / `git add -i` / `git rebase -i` launch interactive pagers that block
+non-interactive agent contexts.  
+**Mitigation:** Never use `-p`, `-i`, or `--interactive` git flags in agent context. Stage with
+explicit file paths: `git add <file1> <file2>`. The CLAUDE.md git section already says no `-i`
+for rebase; the same applies to `add`.
+
+### 5. Agent progress opacity (appears hung)
+**Pattern:** An agent annotating N independent items (e.g. 23 std crates) sequentially emits no
+visible signals — looks identical to a stuck agent from the orchestrator's view.  
+**Mitigation:** Agents processing N ≥ 5 independent, repetitive items MUST commit in batches
+(every 5–7 items) with a `wip(batch M/N): ...` message. Orchestrator can then poll progress
+via `git log worktree-agent-<id> --oneline`. Agents may also emit a brief text status line
+after each batch.
+
+### 6. Orchestrator context exhaustion
+**Pattern:** A single orchestrator session accumulates the full context of Step 0 + Wave-4A
+fan-out + monitoring + integration across many large file reads, exhausting the context window
+before Wave-4B even starts.  
+**Mitigation:** Spawn a read-only `Explore` subagent for any pre-work that requires reading > 3
+large files. Use `TaskOutput(block=false)` for progress polls (don't block). Summarize each
+phase explicitly (in-context) before starting the next. The orchestrator's context budget is the
+scarcest resource in a multi-wave swarm — protect it.
+
 ## Skills (`.claude/skills/`)
 Invoke with `/<name>`; they auto-engage when relevant.
 - **`/dev-workflow`** — the implementation discipline above, as a working loop.

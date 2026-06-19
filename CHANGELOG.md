@@ -8,6 +8,38 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-19: Wave-4B landed — M-541 std-sys FFI floor, M-502 DN-14 self-hosting gate, M-540 RFC-0012 ergonomics annotations)
+**Wave-4B octopus-merged (2026-06-19).** Two parallel epics (M541A + M502A) conflict-free merged into
+`claude/orch-wave4-docs-sys-4ifdo4`; 30 files, 989 insertions; all tests green (15 new std-sys tests);
+`docs/api-index/` regenerated to include new std-sys public surface.
+
+- **M-541 — `crates/mycelium-std-sys/`** (new crate). Minimal audited FFI/syscall floor (RFC-0016
+  §8-Q6 / LR-9): four modules, all `[Declared]` (unaudited libm/syscall floor; honest per VR-5):
+  - `math` — 14 transcendental wrappers (sin/cos/tan/asin/acos/atan/atan2/exp/exp2/ln/log2/log10/sqrt/cbrt)
+  - `rand` — `fill_bytes(buf) → Result<(), EntropyError>`; v0 uses DefaultHasher+SystemTime (non-cryptographic stand-in; explicitly Declared; getrandom replacement deferred — FLAG-RAND-IMPL)
+  - `fs` — `read`/`write`/`exists`/`create_dir_all`/`remove_file` over `std::fs`
+  - `time` — `wall_nanos()`/`mono_nanos()`/`sleep_nanos()` over `std::time`
+  - 15/15 tests pass. `cargo clippy -D warnings` clean. `#![forbid(unsafe_code)]`.
+
+- **M-502 — `docs/notes/DN-14-Self-Hosting-Gate.md`** (new, Draft). Honest self-hosting readiness
+  assessment grounded in actual source (`crates/mycelium-l1/src/checkty.rs`, `ast.rs`).
+  Verdict: **5/11 features present, 5 gate-fails, 1 partially missing** — self-hosting not established.
+  Gate-fails: generics (monomorphic-only), trait interfaces (v0 deferred), effect annotations (no AST
+  syntax), `wild`/FFI blocks (LR-9 denied by default), static guarantee index (stage-0 only).
+  No feature stamped present on intent alone (VR-5).
+
+- **M-540 — RFC-0012 ambient-representation `//!` docstring annotations** across all 23
+  `crates/mycelium-std-*/src/lib.rs` (292 insertions). Each block states the RFC-0012 ambient contract
+  (representation implicit at call site, always reified/queryable/EXPLAIN-able), carries
+  RFC-0012/DN-07/M-540 traceability, and adds a crate-specific grounded sentence.
+  Annotation-only pass — no new `pub` items, no new `#[test]` blocks, `cargo check --workspace` clean.
+
+**Orchestrator integrating edits:**
+- `Cargo.toml` — added `"crates/mycelium-std-sys"` to workspace `members`
+- `docs/Doc-Index.md` — registered DN-14 in §1 corpus table
+- `docs/api-index/` — regenerated (new std-sys public surface; 2561 items located, 3412 flagged)
+- `CLAUDE.md` — added "Swarm failure-mode mitigations" section (lessons from Wave-4)
+
 ### Added (2026-06-19: Wave-4A landed — E3-8 agent documentation index, M-392..395)
 **Wave-4A octopus-merged (2026-06-19).** Epic E3-8 "Agent-facing documentation index" merged into
 `claude/orch-wave4-docs-sys-4ifdo4`; 5 commits above base; all Rust tests green; doc-index drift gate ok.
