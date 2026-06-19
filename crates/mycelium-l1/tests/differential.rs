@@ -278,32 +278,55 @@ fn l1_eval_l0_interp_and_aot_agree_on_the_data_and_recursion_fragment() {
     }
 }
 
-/// The arity (member count) of the first `FixGroup` in `n`, if any — a tiny structural probe so the
-/// M-391 identity assertion can confirm a surface group lowered to a `FixGroup` of the expected size.
-/// Mirrors the elaborator's own `contains_fixgroup` test walker (one node kind per arm).
-fn fixgroup_arity(n: &mycelium_core::Node) -> Option<usize> {
+/// The arities (member counts) of **every** `FixGroup` in `n`, in pre-order — a small structural probe
+/// so the M-391 identity assertion can confirm a surface group lowered to *exactly* the FixGroup(s)
+/// expected (count *and* size, not just the first one). Walks the whole term, including inside each
+/// `FixGroup`'s member lambdas and body, so a nested or spurious group cannot hide.
+fn fixgroup_arities(n: &mycelium_core::Node) -> Vec<usize> {
     use mycelium_core::{Alt, Node};
     match n {
-        Node::FixGroup { defs, .. } => Some(defs.len()),
-        Node::Let { bound, body, .. } => fixgroup_arity(bound).or_else(|| fixgroup_arity(body)),
-        Node::Fix { body, .. } | Node::Lam { body, .. } => fixgroup_arity(body),
-        Node::App { func, arg } => fixgroup_arity(func).or_else(|| fixgroup_arity(arg)),
-        Node::Op { args, .. } | Node::Construct { args, .. } => {
-            args.iter().find_map(fixgroup_arity)
+        Node::FixGroup { defs, body } => {
+            let mut v = vec![defs.len()];
+            for (_, d) in defs {
+                v.extend(fixgroup_arities(d));
+            }
+            v.extend(fixgroup_arities(body));
+            v
         }
-        Node::Swap { src, .. } => fixgroup_arity(src),
+        Node::Let { bound, body, .. } => {
+            let mut v = fixgroup_arities(bound);
+            v.extend(fixgroup_arities(body));
+            v
+        }
+        Node::Fix { body, .. } | Node::Lam { body, .. } => fixgroup_arities(body),
+        Node::App { func, arg } => {
+            let mut v = fixgroup_arities(func);
+            v.extend(fixgroup_arities(arg));
+            v
+        }
+        Node::Op { args, .. } | Node::Construct { args, .. } => {
+            args.iter().flat_map(fixgroup_arities).collect()
+        }
+        Node::Swap { src, .. } => fixgroup_arities(src),
         Node::Match {
             scrutinee,
             alts,
             default,
-        } => fixgroup_arity(scrutinee)
-            .or_else(|| {
-                alts.iter().find_map(|a| match a {
-                    Alt::Ctor { body, .. } | Alt::Lit { body, .. } => fixgroup_arity(body),
-                })
-            })
-            .or_else(|| default.as_deref().and_then(fixgroup_arity)),
-        Node::Const(_) | Node::Var(_) => None,
+        } => {
+            let mut v = fixgroup_arities(scrutinee);
+            for alt in alts {
+                match alt {
+                    Alt::Ctor { body, .. } | Alt::Lit { body, .. } => {
+                        v.extend(fixgroup_arities(body))
+                    }
+                }
+            }
+            if let Some(d) = default {
+                v.extend(fixgroup_arities(d));
+            }
+            v
+        }
+        Node::Const(_) | Node::Var(_) => Vec::new(),
     }
 }
 
@@ -331,11 +354,12 @@ fn surface_mutual_recursion_lowers_to_the_canonical_fixgroup() {
     );
 
     // The surface ping/pong group is materialized as exactly one 2-member `FixGroup` — the concrete,
-    // content-addressed L0 node that reifies the grouping (no black box) — found by walking the term.
+    // content-addressed L0 node that reifies the grouping (no black box). Walking the whole term must
+    // find exactly one `FixGroup`, of arity 2 (uniqueness — not merely "the first one encountered").
     assert_eq!(
-        fixgroup_arity(&a),
-        Some(2),
-        "the surface ping/pong group must lower to a 2-member FixGroup"
+        fixgroup_arities(&a),
+        vec![2],
+        "the surface ping/pong group must lower to exactly one 2-member FixGroup"
     );
 }
 
