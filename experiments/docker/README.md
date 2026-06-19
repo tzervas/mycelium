@@ -1,6 +1,7 @@
 # KC-2 in a container (desktop GPU — Podman or Docker, from WSL2 or native Linux)
 
 ## Ubuntu WSL — quickstart
+
 ```sh
 # 0) Windows (once): install the NVIDIA *Windows* driver (R495+). Do NOT install a driver inside WSL.
 # 1) Ubuntu WSL — engine + repo (Podman = rootless, no daemon; preferred in WSL):
@@ -11,6 +12,7 @@ INSTALL=1 bash experiments/docker/gpu-setup.sh
 # 3) Build image (first run only) + run the matrix on the GPU; outputs → experiments/results/:
 bash experiments/docker/run.sh
 ```
+
 - **Docker instead:** `CONTAINER_ENGINE=docker bash experiments/docker/{gpu-setup,run}.sh` (start the
   daemon first: `sudo service docker start`).
 - The `libnvidia-sandboxutils.so.1 not found` warning during step 2 is **expected on WSL and
@@ -38,10 +40,12 @@ path here lifts that and adds the **7B** (and you can go bigger — `14b`/`32b`)
 > are verified by *you* via the `nvidia-smi` steps below before a long run.
 
 ## TL;DR — two commands from the repo root
+
 ```sh
 bash experiments/docker/gpu-setup.sh   # ONCE: verify + configure GPU access (uses sudo where needed)
 bash experiments/docker/run.sh         # build image + run {0.5B,1.5B,7B} × {minimal,examples} on the GPU
 ```
+
 Overrides: `MODELS="qwen2.5-coder-7b qwen2.5-coder-14b" SEEDS=42,123,7 MAXITERS=4 bash experiments/docker/run.sh`,
 or `CONTAINER_ENGINE=docker …` to force the engine. `run.sh` needs no interaction once started —
 background it with `nohup … &`, tmux, or screen for a hands-off run.
@@ -88,6 +92,7 @@ Build without CUDA — `LLAMA_CUDA=OFF` (Dockerfile build arg) — and run only 
 ## Docker Compose (Docker only — optional)
 `docker-compose.yml` is a Docker convenience (its `gpus: all` key is **Docker-specific**; Podman
 does **not** use it — use `run.sh`, which wires CDI). Manual single-model run:
+
 ```sh
 docker compose -f experiments/docker/docker-compose.yml build
 docker compose -f experiments/docker/docker-compose.yml run --rm kc2 nvidia-smi          # verify GPU

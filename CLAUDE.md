@@ -146,12 +146,14 @@ This is the fractal form of "the orchestrator owns the collision surface": at ea
 owns whatever its children share, so every merge below it is conflict-free *by construction*.
 
 ### Hierarchy & merge flow
+
 ```
 main
  └─ Orchestrator   claude/orch-0000-…        (branches from main)
      └─ Epic       claude/epic/<EPIC>-…      (branches from the Orchestrator branch)
          └─ Leaf   claude/leaf/<EPIC>-<LEAF>-… (branches from its Epic branch)
 ```
+
 Merges are **bottom-up octopus merges**: **Leaf → Epic → Orchestrator → main**. Each parent
 octopus-merges its children's branches, makes the single integrating edit to the files **it** owns,
 runs the level-appropriate checks green (`just check` at the top), reviews each merged subtree

@@ -13,7 +13,7 @@
 # Per-generation timeout refreshes every attempt; per-task n_predict is auto-sized. A run
 # that is interrupted still writes a partial report, and the matrix continues to the next.
 set -uo pipefail
-cd "$(dirname "$0")"                      # → experiments/
+cd "$(dirname "$0")" || exit             # → experiments/
 export PYTHONPATH=.
 
 HARNESS="../tools/llm-harness/harness.py"

@@ -2613,7 +2613,9 @@ def ensure_model(
             failed = True
             log.warning(
                 "Download error (attempt %d%s): %s",
-                attempt, "" if unlimited else f"/{budget}", exc,
+                attempt,
+                "" if unlimited else f"/{budget}",
+                exc,
             )
         cur = dest_part.stat().st_size if dest_part.exists() else downloaded
         if cur > last_size:
@@ -2626,21 +2628,27 @@ def ensure_model(
             log.error(
                 "No download progress in %d attempts (have %s%s) — giving up; the .part is "
                 "kept, re-run to resume: %s",
-                stall_limit, _human_bytes(cur),
-                f" of {_human_bytes(total)}" if total else "", dest_part,
+                stall_limit,
+                _human_bytes(cur),
+                f" of {_human_bytes(total)}" if total else "",
+                dest_part,
             )
             return None
         wait = min(30, 2 ** min(attempt, 5))
         log.info(
             "Resuming in %ds (have %s%s)…",
-            wait, _human_bytes(cur), f" of {_human_bytes(total)}" if total else "",
+            wait,
+            _human_bytes(cur),
+            f" of {_human_bytes(total)}" if total else "",
         )
         time.sleep(wait)
     else:
         log.error(
             "Incomplete after %d attempts: have %s%s. Re-run to resume: %s",
-            budget, _human_bytes(last_size),
-            f" of {_human_bytes(total)}" if total else "", dest_part,
+            budget,
+            _human_bytes(last_size),
+            f" of {_human_bytes(total)}" if total else "",
+            dest_part,
         )
         return None
 

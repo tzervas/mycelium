@@ -538,8 +538,8 @@ KC-2 verdict, RFC-0017, and the L3 commit are ratified this pass; these are grou
   server lingers), waits for `/health`, and tears down only what it launched. Never-silent on missing
   binary / early exit / not-ready.
 - **Sequential, instrumented runner** (`mycelium_experiments/kc2/runner.py`): runs a *suite* of
-  configs (e.g. `--seeds 42,123,7`) back-to-back, unattended, writing per run a `<utc>-<name>.json`
-  + `.summary.txt` under `--results-dir` (default `experiments/results/`), plus a combined
+  configs (e.g. `--seeds 42,123,7`) back-to-back, unattended, writing per run a `<utc>-<name>.json` +
+  `.summary.txt` under `--results-dir` (default `experiments/results/`), plus a combined
   `index.json` and a suite `.log`.
 - **Richer metrics**: `run_arm` gained an optional `on_attempt` observer; reports now carry
   **per-attempt records** (generated source, checker verdict, generation wall-time) and a `timing`

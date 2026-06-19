@@ -107,13 +107,16 @@ if [ ! -d "$HOME/storage/shared" ]; then
   log "Waiting up to 60s for storage permission..."
   for _ in $(seq 1 60); do [ -d "$HOME/storage/shared" ] && break; sleep 1; done
 fi
-[ -d "$HOME/storage/shared" ] && ok "Shared storage available." \
-  || warn "Shared storage not granted — SD offload skipped (re-run later to add it)."
+if [ -d "$HOME/storage/shared" ]; then ok "Shared storage available."
+else warn "Shared storage not granted — SD offload skipped (re-run later to add it)."; fi
 
 # ---- 3. Detect a writable SD source ---------------------------------------
 SD_SRC=""
 if [ -n "$CC_SD_SRC" ]; then SD_SRC="$CC_SD_SRC"
-else SD_SRC="$(ls -d "$HOME"/storage/external-* 2>/dev/null | head -n1 || true)"; fi
+else
+  # shellcheck disable=SC2012  # controlled $HOME path; ls+head picks the first external-* mount.
+  SD_SRC="$(ls -d "$HOME"/storage/external-* 2>/dev/null | head -n1 || true)"
+fi
 if [ -n "$SD_SRC" ] && [ -d "$SD_SRC" ]; then
   mkdir -p "$SD_SRC/cc-data" 2>/dev/null || true
   if ( : > "$SD_SRC/cc-data/.w" ) 2>/dev/null; then
