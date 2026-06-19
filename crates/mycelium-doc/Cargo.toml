@@ -16,9 +16,9 @@ workspace = true
 # identity is the same `blake3:<hex>` form as every other content address. blake3 + serde +
 # serde_json are already vetted workspace deps (mycelium-core/-lsp/...); NO new dependency.
 mycelium-core = { path = "../mycelium-core" }
-blake3 = "1"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+blake3.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 # The M-359 nodule-header metadata the apiref generator projects from (G2: a missing @summary is an
 # explicit "undocumented" node, never invented). Above the kernel (KC-3).
 mycelium-proj = { path = "../mycelium-proj" }

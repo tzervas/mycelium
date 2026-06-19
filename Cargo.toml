@@ -56,6 +56,12 @@ rust-version = "1.92"
 license = "MIT"
 repository = "https://github.com/tzervas/mycelium"
 
+# M-376 P1: hoisted external deps so version bumps are single-point (DN-17 §2.1).
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+blake3 = "1"
+
 [workspace.lints.rust]
 # ADR-014: `unsafe` is permitted-but-warned (not forbidden). Plain `cargo build`/`cargo test`
 # (dev/test) warn at every unsafe site — the caution incentive — and still compile/run; the

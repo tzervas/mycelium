@@ -6,33 +6,14 @@
 //! same checker the AOT/env-machine differentials use. Skips when `clang` is absent (the house
 //! "skip gracefully" idiom).
 
+mod common;
+use common::{byte, tern, A, B};
+
 use mycelium_cert::{check, CheckVerdict, Evidence, RefinementRelation};
-use mycelium_core::{GuaranteeStrength, Meta, Node, Payload, Provenance, Repr, Trit, Value};
+use mycelium_core::{GuaranteeStrength, Node, Trit, Value};
 use mycelium_interp::{IdentitySwapEngine, Interpreter, PrimRegistry};
 use mycelium_mlir::AotError;
 use mycelium_numerics::Certificate;
-
-fn byte(bits: [bool; 8]) -> Value {
-    Value::new(
-        Repr::Binary { width: 8 },
-        Payload::Bits(bits.to_vec()),
-        Meta::exact(Provenance::Root),
-    )
-    .unwrap()
-}
-
-fn tern(trits: Vec<Trit>) -> Value {
-    let m = trits.len() as u32;
-    Value::new(
-        Repr::Ternary { trits: m },
-        Payload::Trits(trits),
-        Meta::exact(Provenance::Root),
-    )
-    .unwrap()
-}
-
-const A: [bool; 8] = [true, false, true, true, false, false, true, false];
-const B: [bool; 8] = [false, false, true, false, true, false, true, true];
 
 /// The bit/trit subset the JIT lowers — the same shape the AOT differential uses.
 fn corpus() -> Vec<Node> {

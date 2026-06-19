@@ -17,4 +17,4 @@ mycelium-std-core = { path = "../mycelium-std-core" }
 mycelium-numerics = { path = "../mycelium-numerics" }
 
 [dev-dependencies]
-serde_json = "1"
+serde_json.workspace = true

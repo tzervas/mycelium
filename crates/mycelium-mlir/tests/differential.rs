@@ -15,20 +15,15 @@
 //! `mycelium_cert::check(interp, aot, ObservationalEquiv, {0,0,Exact}, Observational)` — the
 //! interp↔AOT instance of the one checker that also validates swap certificates.
 
+mod common;
+use common::{byte, observable, A, ONES};
+
 use mycelium_cert::{check, BinaryTernarySwapEngine, CheckVerdict, Evidence, RefinementRelation};
 use mycelium_core::{ternary, GuaranteeStrength, Meta, Node, Payload, Provenance, Repr, Value};
 use mycelium_interp::{Interpreter, PrimRegistry};
 use mycelium_numerics::Certificate;
 
-fn byte(bits: [bool; 8]) -> Value {
-    Value::new(
-        Repr::Binary { width: 8 },
-        Payload::Bits(bits.to_vec()),
-        Meta::exact(Provenance::Root),
-    )
-    .unwrap()
-}
-
+// Local variant: uses `int_to_trits(i64, u32)` — differs from the Vec<Trit> form in common.
 fn tern(value: i64, m: u32) -> Value {
     Value::new(
         Repr::Ternary { trits: m },
@@ -38,12 +33,10 @@ fn tern(value: i64, m: u32) -> Value {
     .unwrap()
 }
 
+// Local: name differs from wrong_layout.rs's policy_ref() (same value, different call sites).
 fn policy() -> mycelium_core::ContentHash {
     mycelium_core::ContentHash::parse("blake3:po1icy_Ref00").unwrap()
 }
-
-const A: [bool; 8] = [true, false, true, true, false, false, true, false];
-const ONES: [bool; 8] = [true; 8];
 
 /// The kernel corpus: closed programs runnable by both paths (const/let/op/swap subset).
 fn corpus() -> Vec<Node> {
@@ -120,12 +113,6 @@ fn corpus() -> Vec<Node> {
             }),
         },
     ]
-}
-
-type Observable<'a> = (&'a Repr, &'a Payload, GuaranteeStrength);
-
-fn observable(v: &Value) -> Observable<'_> {
-    (v.repr(), v.payload(), v.meta().guarantee())
 }
 
 #[test]
