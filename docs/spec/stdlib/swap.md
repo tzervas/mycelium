@@ -45,38 +45,45 @@ bijections.
   rather than redefining them. It is a certificate/EXPLAIN **consumer**; no `wild`/FFI; no new trusted code
   (KC-3, C5).
 
-## 3. Exported-op surface (design sketch)
+## 3. Exported-op surface (pinned to the landed crate)
 
-A design sketch — enough to fix the surface and feed the guarantee matrix, not a committed grammar. The
-named-crate surfaces below are described **abstractly**; the exact landed-crate signatures are not restated
-here (see §7-Q4 FLAG). Value-semantic, immutable-by-default; every fallible op returns `Option`/`Result`.
+**Pinned to the landed `mycelium-std-swap` surface (DN-16, 2026-06-19; §7-Q4 resolved).** Value-semantic,
+immutable-by-default; **every fallible op returns `Result` (no `Option`)**. The conversion/check/explain fns
+are defined in `crates/mycelium-std-swap/src/lib.rs`; the certificate types + the M-210 `check` are
+**re-exported from `mycelium_cert`** (not redefined here). The signatures below are the actual landed surface
+(value-typed: `Value` in, `Swapped` out; the source representation is carried inside the dynamic `Value`).
 
 ```
-// illustrative signatures (NOT a committed surface)
+// landed surface — crates/mycelium-std-swap/src/lib.rs (cert types re-exported from mycelium_cert)
 
 // A swap result is the target value PLUS its certificate — never the value alone (C1/C3).
-type Swapped<T> = { value: T, cert: SwapCertificate }   // cert re-exported from RFC-0001 / mycelium-core
+pub struct Swapped { value: Value, cert: SwapCertificate }   // non-generic; cert re-exported from mycelium_cert
 
 // --- binary <-> ternary : LosslessWithinRange, Exact-within-range (RFC-0002 §4) ---
-fn bin_to_tern(x: Bin<N>)  -> Result<Swapped<Tern<M>>, SwapError>   // Err(OutOfRange) if x not in image
-fn tern_to_bin(y: Tern<M>) -> Option<Swapped<Bin<N>>>               // None off the image (partial inverse)
+fn bin_to_tern(src: &Value, trits_width:  u32, policy: &PolicyRef) -> Result<Swapped, SwapError>
+fn tern_to_bin(src: &Value, binary_width: u32, policy: &PolicyRef) -> Result<Swapped, SwapError>  // Err off the image
 
 // --- F32 -> BF16 : Bounded (epsilon), one-way (RFC-0002 §5; ADR-010) ---
-fn f32_to_bf16(x: Dense<F32>) -> Result<Swapped<Dense<BF16>>, SwapError>   // carries ErrorBound epsilon
+fn f32_to_bf16(src: &Value, policy: &PolicyRef) -> Result<Swapped, SwapError>   // carries ErrorBound epsilon
 // no exact inverse exported: BF16 -> F32 widening is a `cmp/convert` lift, not a certified swap (boundary)
 
 // --- Dense <-> VSA : Bounded/probabilistic (epsilon, delta) (RFC-0002 §5; RFC-0003/T0.2) ---
-fn dense_to_vsa(x: Dense<F32>, p: PolicyRef) -> Result<Swapped<Vsa>,   SwapError>
-fn vsa_to_dense(h: Vsa,        p: PolicyRef) -> Result<Swapped<Dense<F32>>, SwapError>
+fn dense_to_vsa(src: &Value, vsa_dim:    u32, delta: f64, policy: &PolicyRef) -> Result<Swapped, SwapError>
+fn vsa_to_dense(src: &Value, components: u32, delta: f64, policy: &PolicyRef) -> Result<Swapped, SwapError>
 
-// --- certificate build / check : the consumer surface over the ONE M-210 checker ---
-fn build(src: Repr, target: Repr, policy: PolicyRef) -> Result<SwapCertificate, SwapError>  // assemble only
-fn check(a: Value, b: Value, cert: &SwapCertificate) -> Result<(), CheckError>              // calls M-210
-fn explain(cert: &SwapCertificate) -> ExplainRecord                                          // total; EXPLAIN
+// --- certificate check / explain : the consumer surface over the ONE M-210 checker ---
+// re-exported from mycelium_cert: check, CheckVerdict, Evidence, Fallback, NotValidatedReason,
+//                                 RefinementRelation, SwapCertificate, SwapError
+fn check_swap(a: &Value, b: &Value, cert: &SwapCertificate) -> Result<GuaranteeStrength, CheckError>  // delegates to cert::check (M-210); returns the established strength
+fn explain(cert: &SwapCertificate) -> ExplainRecord                                                   // total; EXPLAIN
+// (no `build` fn: a certificate is carried by the conversion fns above / assembled via mycelium_cert)
 
-// Unsupported pair == explicit error, never a fallback:
-enum SwapError  { UnsupportedPair(Repr, Repr), OutOfRange, NoStatableBound, PolicyRejected }
-enum CheckError { Refuted, NotValidated /* TV incompleteness -> explicit fallback, never silent pass */ }
+// Unsupported pair / out-of-range == explicit error, never a fallback. SwapError is re-exported
+// from mycelium_cert (variants owned there). CheckError is defined here (matches the crate):
+enum CheckError {
+    Refuted { detail: String },                                  // concrete counterexample — the swap is wrong
+    NotValidated { reason: NotValidatedReason, fallback: Fallback }, // TV incompleteness -> explicit fallback, never a silent pass
+}
 ```
 
 The `NotValidated` arm is load-bearing: translation validation may *fail to validate a correct* swap
@@ -180,10 +187,18 @@ Tag justification (VR-5 — downgrade rather than overclaim):
   trivially-exact lift, or in `std.cmp`/`convert` (M-532)? Ties to **RFC-0016 §8-Q1 (module set)** and the
   swap/convert boundary; cross-module reconcile with `cmp.md`. Disposition: leave with `cmp`/`convert` unless
   the maintainer rules the boundary the other way.
-- **(Q4) Exact landed-crate surface.** The M-120/211/231 crate signatures are described **abstractly** in §3;
-  the exact exported types/functions are **not** asserted here (no fabricated crate API — the grounding rule).
-  FLAGGED: pin §3 to the real surfaces before this spec is ratified, and confirm the M-210 checker entry
-  point the `check` op delegates to.
+- **(Q4 — RESOLVED 2026-06-19; DN-16) Exact landed-crate surface.** §3 is now **pinned to the landed
+  `mycelium-std-swap` surface** (verified against `crates/mycelium-std-swap/src/lib.rs`): the conversion fns
+  (`bin_to_tern`/`tern_to_bin`/`f32_to_bf16`/`dense_to_vsa`/`vsa_to_dense`), `check_swap(a, b, cert) ->
+  Result<GuaranteeStrength, CheckError>` (delegating to the **re-exported** `mycelium_cert::check`, the M-210
+  checker), and `explain`. Corrections vs the old sketch: there is **no `build` fn**; the certificate types
+  (`SwapCertificate`/`SwapError`/`CheckVerdict`/`Evidence`/`Fallback`/`NotValidatedReason`/`RefinementRelation`)
+  are re-exported from `mycelium_cert`; `CheckError` carries the richer two-arm shape (`Refuted{detail}` /
+  `NotValidated{reason, fallback}`). The M-210 entry point is confirmed (`cert::check`). The conversion fns
+  are **value-typed**: each takes `&Value` plus its explicit width/`delta` parameter(s) and a `&PolicyRef`, and
+  returns `Result<Swapped, SwapError>` (`Swapped` is **non-generic**: `{ value: Value, cert }`); there are **no
+  `Option` returns** — every fallible op is `Result`. (Earlier §3 drafts showed typed-generic pseudo-signatures
+  `Dense<F32>`/`Vsa`/`Swapped<T>` and an `Option` inverse — those were schematic and are now corrected.)
 - **(Q5) Migration bar for a self-hosted `std.swap`.** When `std.swap` migrates Rust→Mycelium-lang (RFC-0016
   §4.6), must the self-hosted form match the Rust reference on *observable swap results only*, or on the
   *certificate + EXPLAIN bit-for-bit*? Ties to **RFC-0016 §8-Q5 (the migration differential's bar)** /
