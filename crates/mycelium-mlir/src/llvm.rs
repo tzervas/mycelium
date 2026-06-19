@@ -89,9 +89,12 @@ pub enum AotError {
     /// A [`PackScheme`](mycelium_core::PackScheme) with no BitNet compute kernel (only the three
     /// bitnet packings I2_S/TL1/TL2 have one). An explicit refusal — never a silent misdecode.
     UnsupportedScheme(String),
-    /// A tail-recursive `Fix` loop hit the [`AutoDepthBudget`] ceiling — a graceful explicit refusal
-    /// (matches `EvalError::DepthLimit` in the interpreter, so the native and interpreter paths both
-    /// refuse; neither is silent (G2/SC-3)).
+    /// A tail-recursive `Fix` loop hit the [`AutoDepthBudget`] ceiling — a graceful explicit refusal.
+    /// This mirrors the **AOT env-machine's** `EvalError::DepthLimit` (the env-machine reuses the same
+    /// budget trait). The reference **interpreter** is O(1)-host-stack and refuses non-termination via
+    /// `EvalError::FuelExhausted` instead — it does **not** raise `DepthLimit`. So the differential
+    /// parity is *"every path refuses a non-productive recursion, none silently"* (G2/SC-3), **not**
+    /// that all paths raise the same error variant.
     ///
     /// [`AutoDepthBudget`]: crate::budget::AutoDepthBudget
     DepthLimit(String),
@@ -1264,9 +1267,21 @@ fn anf_refs_name(anf: &lower::Anf, self_name: &str) -> bool {
             Rhs::Op { args, .. } | Rhs::Construct { args, .. } => args.iter().any(named),
             Rhs::Swap { src, .. } => named(src),
             Rhs::App { func, arg } => named(func) || named(arg),
-            Rhs::Lam { body: lb, .. } => anf_refs_name(lb, self_name),
-            Rhs::Fix { body: fb, .. } => anf_refs_name(fb, self_name),
-            Rhs::FixGroup { defs, .. } => defs.iter().any(|(_, d)| anf_refs_name(d, self_name)),
+            // A nested binder that rebinds `self_name` SHADOWS it — references inside that scope are
+            // not the outer self, so do NOT descend (A4-01: respect shadowing, as `free_vars_into`
+            // does). Core lowering keeps source `Named` binders un-alpha-renamed, so this is reachable.
+            Rhs::Lam { param, body: lb } => {
+                param.as_str() != self_name && anf_refs_name(lb, self_name)
+            }
+            Rhs::Fix { name, body: fb } => {
+                name.as_str() != self_name && anf_refs_name(fb, self_name)
+            }
+            Rhs::FixGroup { defs, .. } => {
+                // Every member name is in scope of every def, so if any member shadows `self_name`
+                // the whole group rebinds it — skip; otherwise descend into each def.
+                !defs.iter().any(|(n, _)| n.as_str() == self_name)
+                    && defs.iter().any(|(_, d)| anf_refs_name(d, self_name))
+            }
             Rhs::Match {
                 scrutinee,
                 alts,
@@ -1457,11 +1472,24 @@ fn lower_arm_bindings_before_tail(
                 name: name.clone(),
                 body: fix_body.clone(),
             }),
-            Rhs::Match { .. } | Rhs::FixGroup { .. } => {
-                return Err(AotError::UnsupportedNode(
-                    "unexpected node in tail-Fix arm binding sequence".to_owned(),
-                ))
-            }
+            // A `Match` in the pre-tail binding sequence (e.g. computing the next step via a Match)
+            // is refused for now. `lower_match` introduces basic blocks, so the loop's back-edge
+            // would branch from the Match's merge block rather than the recorded `recur` label — the
+            // back-edge `phi` then has stale predecessors (LLVM "PHI node entries do not match
+            // predecessors"). Supporting it needs current-block tracking threaded through the
+            // back-edge; deferred (DN-15 §8.5). Explicit refusal, never fragile/incorrect IR (G2/VR-5).
+            Rhs::Match { .. } => return Err(AotError::UnsupportedNode(
+                "a Match in a tail-Fix arm's pre-tail binding sequence (e.g. computing the next \
+                     step via a Match) is not yet supported — it introduces basic blocks that \
+                     invalidate the loop back-edge phi; deferred (DN-15 §8.5)"
+                    .to_owned(),
+            )),
+            // FixGroup (mutual recursion) stays deferred — explicit refusal, never silent (G2).
+            Rhs::FixGroup { .. } => return Err(AotError::UnsupportedNode(
+                "FixGroup in a tail-Fix arm binding sequence (mutual recursion — deferred to a \
+                     later increment)"
+                    .to_owned(),
+            )),
         };
         env.insert(b.name.clone(), ev);
     }
@@ -2404,7 +2432,9 @@ impl CompiledArtifact {
             )));
         }
         // DepthLimit sentinel: the tail-recursive Fix loop hit the AutoDepthBudget ceiling (DN-05 #1).
-        // Graceful explicit refusal — never SIGSEGV, never hang (matches `EvalError::DepthLimit`).
+        // Graceful explicit refusal — never SIGSEGV, never hang. Mirrors the AOT env-machine's
+        // `EvalError::DepthLimit`; the reference interpreter refuses divergence via `FuelExhausted`
+        // (it does not raise DepthLimit). Both refuse non-silently — that is the differential parity.
         if line.as_bytes() == [DEPTHLIMIT_SENTINEL] {
             return Err(AotError::DepthLimit(
                 "tail-recursive Fix loop exceeded the AutoDepthBudget ceiling".to_owned(),

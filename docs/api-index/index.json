@@ -11975,7 +11975,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2378,
+      "line": 2406,
       "summary": "A compiled native artifact for a bit/trit-subset program: the executable on disk (in a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12833,7 +12833,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2420,
+      "line": 2450,
       "summary": "Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`)",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12844,7 +12844,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2446,
+      "line": 2476,
       "summary": "Compile the bit/trit-subset program to a native executable, run it once, and read the result",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13031,7 +13031,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 1892,
+      "line": 1920,
       "summary": "Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13438,7 +13438,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2378,
+      "line": 2406,
       "summary": "A compiled native artifact for a bit/trit-subset program: the executable on disk (in a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13471,7 +13471,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2420,
+      "line": 2450,
       "summary": "Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`)",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13482,7 +13482,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2446,
+      "line": 2476,
       "summary": "Compile the bit/trit-subset program to a native executable, run it once, and read the result",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13493,7 +13493,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 1892,
+      "line": 1920,
       "summary": "Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that",
       "guarantee_tag": null,
       "corpus_refs": []

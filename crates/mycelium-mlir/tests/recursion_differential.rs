@@ -289,6 +289,69 @@ fn countdown_interp_and_native_agree() {
     assert_eq!(native.repr(), &Repr::Binary { width: 8 });
 }
 
+/// Increment-3 review (Copilot #224): a tail-recursive arm whose **next step is computed via a
+/// nested `Match`** — a `Match` in the pre-tail binding sequence. `f = λn. Match n { Lit 0 → B ;
+/// default → App(self, Match n { Lit 2 → 1 ; _ → 0 }) }`, applied to `byte(2)`. The program is valid
+/// (the interpreter evaluates it 2 → 1 → 0 → B), but the **native** path refuses it: a `Match`
+/// introduces basic blocks that would invalidate the loop back-edge phi, so it is an explicit
+/// `UnsupportedNode` (deferred — DN-15 §8.5), never fragile IR (G2).
+fn step_via_match_program() -> Node {
+    // The recursion argument is itself a Match (a pre-tail binding after ANF flattening).
+    let step_match = || Node::Match {
+        scrutinee: Box::new(Node::Var("n".into())),
+        alts: vec![Alt::Lit {
+            value: byte_n(2),
+            body: Node::Const(byte_n(1)),
+        }],
+        default: Some(Box::new(Node::Const(byte_n(0)))),
+    };
+    let fix_body = Node::Lam {
+        param: "n".into(),
+        body: Box::new(Node::Match {
+            scrutinee: Box::new(Node::Var("n".into())),
+            alts: vec![Alt::Lit {
+                value: byte_n(0),
+                body: Node::Const(byte(B)),
+            }],
+            default: Some(Box::new(Node::App {
+                func: Box::new(Node::Var("self".into())),
+                arg: Box::new(step_match()),
+            })),
+        }),
+    };
+    Node::App {
+        func: Box::new(Node::Fix {
+            name: "self".into(),
+            body: Box::new(fix_body),
+        }),
+        arg: Box::new(Node::Const(byte_n(2))),
+    }
+}
+
+#[test]
+fn step_via_match_in_pre_tail_bindings_is_explicitly_refused() {
+    // Computing the next step via a nested `Match` puts a `Match` in the tail arm's pre-tail binding
+    // sequence. That introduces basic blocks which would invalidate the loop back-edge phi, so the
+    // native path REFUSES it explicitly (UnsupportedNode) — never fragile/incorrect IR (G2; DN-15
+    // §8.5 deferred). The interpreter evaluates it fine (it's a valid program); the boundary is a
+    // native-codegen limitation, honestly surfaced, not a semantic restriction.
+    let prog = step_via_match_program();
+    match mycelium_mlir::compile_and_run(&prog) {
+        Err(AotError::UnsupportedNode(_)) => { /* expected explicit refusal */ }
+        Err(AotError::ToolchainMissing(_)) => { /* env skip */ }
+        Ok(v) => panic!(
+            "a Match-in-pre-tail-bindings program must be refused; native returned {:?}",
+            v.payload()
+        ),
+        Err(e) => panic!("step-via-match errored with an unexpected variant: {e}"),
+    }
+    // The interpreter still evaluates it (sanity: the program itself is well-formed).
+    assert!(
+        interp_bounded(&prog, 10_000).is_ok(),
+        "the interpreter should evaluate the (valid) step-via-match program"
+    );
+}
+
 /// One-step: interp and native agree (single default-arm iteration, then base B).
 #[test]
 fn one_step_interp_and_native_agree() {

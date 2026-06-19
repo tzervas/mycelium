@@ -367,6 +367,16 @@ which is the equivalence the differential asserts for that class.
 silent mis-lowering, never an upgraded guarantee (VR-5). The real `ternary` MLIR dialect stays
 libMLIR-gated (M-348).
 
+A further codegen-shape limitation (surfaced in the M-379 review): a **`Match` in a tail arm's
+*pre-tail* binding sequence** — e.g. computing the recursion step via a nested `Match`,
+`App(self, Match …)` — is also refused. The tail-loop's back-edge `phi` records the `recur`
+predecessor block before lowering the pre-tail bindings; a `Match` introduces basic blocks, so the
+back-edge would actually branch from the `Match`'s merge block, leaving the `phi` with stale
+predecessors (LLVM "PHI node entries do not match predecessors"). Supporting it requires threading the
+*current* block label through the back-edge; deferred. The program is still semantically valid (the
+reference interpreter evaluates it) — the boundary is an honest native-codegen limitation, surfaced as
+an explicit `UnsupportedNode` (G2), never fragile/incorrect IR.
+
 ---
 
 ## Meta — changelog
@@ -374,3 +384,4 @@ libMLIR-gated (M-348).
 <!-- changelog: 2026-06-19 Draft created (M-373) — records the libMLIR-gated vs direct-LLVM-advanceable decomposition, the Increment-1 (Construct/Match) design strategy, the DN-05 #1 DepthBudget reuse plan for Increment 3, and the per-increment risk table. Append-only. -->
 <!-- changelog: 2026-06-19 §7 added (M-378) — realized Increment-2 design: narrow packed-i64 closure ABI; bump-arena no-GC strategy with the single alloc seam where Increment-3's DepthBudget ceiling attaches (DN-05 #1); free-variable-analysis closure conversion. §5 table Increment-2 row marked landed. Guarantee stays Declared (VR-5). Append-only. -->
 <!-- changelog: 2026-06-19 §8 added (M-379) — realized Increment-3 design: tail-position Fix → iterative LLVM loop (host C stack O(1) by construction, DN-05 #1 compliant), bounded by an AutoDepthBudget ceiling (M-349) → graceful DepthLimit (the Inc-2 arena seam generalized to a depth counter); a Binary branch primitive (Match repr-lane scrutinee + Lit arms) for the base case. Non-tail recursion, FixGroup, and recursive heap data stay UnsupportedNode (G2). §5 table Increment-3 row marked partially landed (tail only). Guarantee stays Declared (VR-5). Append-only. -->
+<!-- changelog: 2026-06-19 §8.5 refined (M-379; PR #224 review) — recorded a further deferred native-codegen-shape limitation: a Match in a tail arm's pre-tail binding sequence (step computed via Match) would invalidate the loop back-edge phi, so it is an explicit UnsupportedNode (needs current-block tracking through the back-edge; deferred). The program stays semantically valid (interpreter evaluates it); honest boundary, never fragile IR (G2). Append-only. -->
