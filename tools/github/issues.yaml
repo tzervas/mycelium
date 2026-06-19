@@ -14,6 +14,7 @@ issues:
     milestone: "Phase 0 — Confirm & Specify"
     labels: [phase:0, type:verification, area:numerics, priority:P0]
     depends_on: [M-010]
+    doc_refs: [corpus:RFC-0003]
     body: |
       Encode MAP-I `bundle` as a capacity refinement instantiating the cited theorems (RFC-0003 §5; T0.2: Clarkson 2023, Thomas 2021) and confirm Z3 discharges it for >=3 concrete (d,k,s,m,delta) settings.
       Acceptance: LH module type-checks; Z3 discharges; short writeup confirms the axiomatized-theorem + checked-instantiation strategy; KC-1 upgraded "passed (literature)" -> "confirmed (build)".
@@ -23,6 +24,7 @@ issues:
     milestone: "Phase 0 — Confirm & Specify"
     labels: [phase:0, type:research, area:project, priority:P0]
     depends_on: [M-020, M-010]
+    doc_refs: [corpus:RFC-0006]
     body: |
       Fixed benchmark: tasks generated in the minimal Mycelium surface fragment vs a Python-embedded DSL baseline; measure syntactic validity + type-check pass rate + edit-to-fix iterations (Foundation §6 P0.2; SC-5b; G10).
       Acceptance: SC-5b baseline number + a written KC-2 verdict (proceed / reweight-to-human / fall-back-to-embedded-DSL).
@@ -32,6 +34,7 @@ issues:
     milestone: "Phase 0 — Confirm & Specify"
     labels: [phase:0, type:spec, area:core-ir, priority:P0]
     depends_on: []
+    doc_refs: [corpus:RFC-0006]
     body: |
       A tiny throwaway-grade concrete syntax covering declare-value / swap / one VSA op, sufficient to run M-002 (SPEC §10.1). NOT a committed surface (gated on KC-2).
 
@@ -40,6 +43,7 @@ issues:
     milestone: "Phase 0 — Confirm & Specify"
     labels: [phase:0, type:spec, area:project, priority:P0]
     depends_on: []
+    doc_refs: [corpus:RFC-0001]
     body: |
       Review the 10 JSON Schemas (docs/spec/schemas/) against their source RFCs; add >=1 valid + >=1 invalid example per schema; CI runs check-jsonschema/ajv over examples.
       Acceptance: examples validate in CI; schema status draft -> ratified.
@@ -49,6 +53,7 @@ issues:
     milestone: "Phase 0 — Confirm & Specify"
     labels: [phase:0, type:spec, area:project, priority:P1]
     depends_on: [M-010]
+    doc_refs: [corpus:RFC-0001]
     body: |
       Confirm §1–§9 match their RFCs; link every §10 TODO to a live issue id (docs/spec/SPECIFICATION.md).
       Acceptance: status consolidating-draft -> ratified-skeleton.
@@ -58,6 +63,7 @@ issues:
     milestone: "Phase 0 — Confirm & Specify"
     labels: [phase:0, type:spec, area:swap, priority:P1]
     depends_on: []
+    doc_refs: [corpus:RFC-0002]
     body: |
       Precise enc/dec for chosen widths (range, rounding, out-of-range), implementable (M-120) and provable (M-121) (RFC-0002 §4; T2.1 IOTA/Jones).
       Acceptance: spec + one worked end-to-end example.
@@ -67,6 +73,7 @@ issues:
     milestone: "Phase 0 — Confirm & Specify"
     labels: [phase:0, type:infra, area:project, priority:P1]
     depends_on: []
+    doc_refs: [corpus:RFC-0001]
     body: |
       GitHub Actions: markdown-lint + link-check (+ Trunk if configured) over docs/** and schemas; PR template wired.
       Acceptance: green on a no-op PR.
@@ -76,6 +83,7 @@ issues:
     milestone: "Phase 0 — Confirm & Specify"
     labels: [phase:0, type:infra, area:core-ir, priority:P0]
     depends_on: []
+    doc_refs: [corpus:RFC-0001]
     body: |
       Cargo workspace: crates mycelium-core, mycelium-interp, mycelium-vsa, mycelium-mlir (stub), mycelium-cert (stub), xtask; MSRV pinned 1.92 (ADR-007).
       Acceptance: cargo fmt --check, clippy -D warnings, test all green in CI on the empty skeleton.
@@ -85,6 +93,7 @@ issues:
     milestone: "Phase 0 — Confirm & Specify"
     labels: [phase:0, type:infra, area:project, priority:P1]
     depends_on: []
+    doc_refs: [corpus:RFC-0001]
     body: |
       UV-managed experiments/ project; pytest + ruff + black; trivial passing test; codecov upload in CI (ADR-007: Python 3.13/3.14).
 
@@ -94,6 +103,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:feature, area:core-ir, priority:P0]
     depends_on: [M-091, M-010]
+    doc_refs: [corpus:RFC-0001]
     body: |
       Rust types for Value<Repr,Meta>, Repr enum, Meta mirroring the schemas; commit a concrete Core IR node grammar (EBNF; closes SPEC §10.2) (RFC-0001 §4.1–§4.3).
       Acceptance: construction + well-formedness unit tests.
@@ -103,6 +113,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:feature, area:core-ir, priority:P0]
     depends_on: [M-101]
+    doc_refs: [corpus:RFC-0001]
     body: |
       Guarantee lattice with meet (assoc/comm/idempotent, property-tested); ops propagate by meet (RFC-0001 §3.4/§4.7).
       Acceptance: all 4x4 pairs tested.
@@ -112,6 +123,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:feature, area:core-ir, priority:P1]
     depends_on: [M-101]
+    doc_refs: [corpus:RFC-0001]
     body: |
       Hash-of-AST identity + names-as-metadata (RFC-0001 §4.6; ADR-003); cert/policy refs are content hashes.
       Acceptance: identical defs collide; trivial renames don't change identity.
@@ -121,6 +133,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:feature, area:core-ir, priority:P1]
     depends_on: [M-101, M-010]
+    doc_refs: [corpus:RFC-0001]
     body: |
       (De)serialize Core IR to/from the JSON schemas; round-trip property test; output validates against value.schema.json in CI.
 
@@ -129,6 +142,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:feature, area:core-ir, priority:P0]
     depends_on: [M-101]
+    doc_refs: [corpus:RFC-0004, corpus:RFC-0001]
     body: |
       The executable reference semantics for the Core IR; document small-step rules alongside (closes SPEC §10.3) (RFC-0004 §2; ADR-009; NFR-7).
       Acceptance: golden test corpus with expected results.
@@ -138,6 +152,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:feature, area:core-ir, priority:P0]
     depends_on: [M-110]
+    doc_refs: [corpus:RFC-0001]
     body: |
       First-class Bit and Trit{-1,0,+1}; balanced-ternary add/neg/mul with identities (negation=flip; rounding≡truncation) (FR-M2).
       Acceptance: property tests vs an oracle (balanced-ternary crate or hand-derived).
@@ -147,6 +162,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:feature, area:execution, priority:P1]
     depends_on: [M-110]
+    doc_refs: [corpus:RFC-0001]
     body: |
       >=2 dumpable/diffable lowering stages; metadata preserved across stages (WF5; SC-4; closes SPEC §10.5 partial).
       Acceptance: a wrong/missing metadata propagation is caught by test.
@@ -156,6 +172,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:feature, area:swap, priority:P0]
     depends_on: [M-111, M-012]
+    doc_refs: [corpus:RFC-0002]
     body: |
       enc/dec per M-012; dec returns Option; out-of-range = explicit error (never silent); emits a LosslessWithinRange certificate (RFC-0002 §4).
       Acceptance: dec(enc x)=Some x over a large corpus (SC-1, SC-3).
@@ -165,6 +182,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:verification, area:swap, priority:P1]
     depends_on: [M-120]
+    doc_refs: [corpus:RFC-0002]
     body: |
       Machine-checkable round-trip/injectivity proof for fixed widths (SMT or Coq decide), referenced by proof_ref (VR-1; SC-1).
 
@@ -173,6 +191,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:feature, area:vsa, priority:P0]
     depends_on: [M-101]
+    doc_refs: [corpus:RFC-0003]
     body: |
       Composition-style VsaModel trait; MAP-I bind/unbind (self-inverse, Exact), permute (Exact), bundle; dependency-gated submodule (kernel still type-checks hypervector mentions; KC-3) (RFC-0003 §3–§4; T2.6).
 
@@ -181,6 +200,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:verification, area:vsa, priority:P0]
     depends_on: [M-130, M-102]
+    doc_refs: [corpus:RFC-0003]
     body: |
       bundle ships a CapacityBound tagged Proven (citing the M-001 theorem) with side-conditions checked; measured behavior within bound across >=1e4 trials; honest per-op tag (RFC-0003 §4; VR-3/5; SC-2).
 
@@ -189,6 +209,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:feature, area:vsa, priority:P2]
     depends_on: [M-130]
+    doc_refs: [corpus:RFC-0003]
     body: |
       Clean-up memory (nearest-neighbor item memory) returning (item, confidence) to make approximate unbind usable (FR-S4).
 
@@ -197,6 +218,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:feature, area:toolchain, priority:P1]
     depends_on: [M-110, M-112]
+    doc_refs: [corpus:RFC-0001]
     body: |
       LSP exposing the four feedback artifact kinds — typecheck diagnostics, swap certificates, bound/guarantee annotations, lowering-stage dumps — over one surface (FR-S5; §5.8; SC-5 channel).
       Acceptance: verified with a scripted client.
@@ -206,6 +228,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:feature, area:toolchain, priority:P1]
     depends_on: [M-101]
+    doc_refs: [corpus:RFC-0001]
     body: |
       Lints for implicit-swap attempt, untagged bound, swap without PolicyRef (SC-3; G2).
       Acceptance: positive + negative test per lint.
@@ -215,6 +238,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:feature, area:toolchain, priority:P2]
     depends_on: [M-101]
+    doc_refs: [corpus:RFC-0001]
     body: |
       Canonical rendering; reformatting does not change content-addressed identity (ADR-003).
 
@@ -223,6 +247,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:feature, area:execution, priority:P1]
     depends_on: [M-110, M-091]
+    doc_refs: [corpus:RFC-0003]
     body: |
       A ternary MLIR dialect skeleton lowering a kernel subset via arith/vector -> LLVM -> native; each stage dumpable (no opaque pass) (RFC-0004 §2; ADR-007; T1.5).
       Acceptance: runnable artifact for the subset.
@@ -232,6 +257,7 @@ issues:
     milestone: "Phase 1 — Minimal Viable Core"
     labels: [phase:1, type:verification, area:execution, priority:P1]
     depends_on: [M-150, M-110]
+    doc_refs: [corpus:RFC-0004]
     body: |
       Harness runs the kernel corpus under interpreter and AOT artifact; asserts observable equivalence; divergence fails CI (NFR-7; VR-4; RR-12). Cheap baseline preceding per-artifact TV in Phase 2.
 
@@ -241,6 +267,7 @@ issues:
     milestone: "Phase 2 — Full Unification & Verified Swaps"
     labels: [phase:2, type:feature, area:swap, priority:P1]
     depends_on: [M-101, M-120, M-130]
+    doc_refs: [corpus:RFC-0001]
     body: |
       EPIC. Typed dim-tracked Dense{dim,dtype}; Dense<->VSA swaps with epsilon/delta bounds (RFC-0002 §5). Exit: SC-2 for new swaps. Decompose at the Phase-1 gate.
 
@@ -249,6 +276,7 @@ issues:
     milestone: "Phase 2 — Full Unification & Verified Swaps"
     labels: [phase:2, type:feature, area:vsa, priority:P1]
     depends_on: [M-130, M-131]
+    doc_refs: [corpus:RFC-0002]
     body: |
       EPIC. MAP-B, BSC, HRR, FHRR, sparse/SBC with RFC-0003 §4 honest tags; HRR/FHRR unbind Empirical + cleanup; restrict MAP-B deep nesting (RR-13). Decompose at gate.
 
@@ -257,6 +285,7 @@ issues:
     milestone: "Phase 2 — Full Unification & Verified Swaps"
     labels: [phase:2, type:feature, area:swap, priority:P0]
     depends_on: [E2-1, E2-4]
+    doc_refs: [corpus:RFC-0004]
     body: |
       EPIC. Complete swap with split regime; the single translation-validation certificate checker (A,B,R,bound,certificate) shared with interp<->AOT (RFC-0002 §2 / RFC-0004 §3). Exit: SC-3 global; cert overhead within KC-4 budget.
 
@@ -265,6 +294,7 @@ issues:
     milestone: "Phase 2 — Full Unification & Verified Swaps"
     labels: [phase:2, type:verification, area:numerics, priority:P0]
     depends_on: [M-102, M-001]
+    doc_refs: [corpus:RFC-0003]
     body: |
       EPIC. ErrorBound (affine arith) + ProbBound (union-bound; apRHL) kernels meeting at the shared {eps,delta,strength} certificate; certificate-checker-in-Rust (tier-i; tier-ii optional) (ADR-010). Exit: sound/monotone/deterministic composition; tier-i checker validates examples.
 
@@ -273,6 +303,7 @@ issues:
     milestone: "Phase 2 — Full Unification & Verified Swaps"
     labels: [phase:2, type:feature, area:vsa, priority:P1]
     depends_on: [E2-2]
+    doc_refs: [corpus:RFC-0003]
     body: |
       EPIC. Implement ReconInfo (RFC-0003 §6; recon-info.schema.json): indexed retrieval vs compositional reconstruction; content-addressed codebooks; bound attached. Exit: compositional path recovers a novel combination.
 
@@ -281,6 +312,7 @@ issues:
     milestone: "Phase 2 — Full Unification & Verified Swaps"
     labels: [phase:2, type:feature, area:selection, priority:P0]
     depends_on: [E2-3, E2-7]
+    doc_refs: [corpus:RFC-0005]
     body: |
       EPIC. Total non-learned content-addressed decision-table policy (RFC-0005) + mandatory EXPLAIN; one mechanism, two sites. Exit: every selection emits a valid explain-record; determinism + overrides tested.
 
@@ -289,6 +321,7 @@ issues:
     milestone: "Phase 2 — Full Unification & Verified Swaps"
     labels: [phase:2, type:feature, area:execution, priority:P1]
     depends_on: [M-150, E2-6]
+    doc_refs: [corpus:RFC-0003]
     body: |
       EPIC. Cost-model + exhaustive-over-fixed-set selector among bitnet.cpp packings (I2_S/TL1/TL2); records meta.physical; runs E1 (perf) + E3 (wrong-layout soundness vs NFR-7) (RFC-0004 §5). Exit: within ~0.01 PPL / 0.1% of full precision; E3 catches a mislabeled layout.
 
@@ -296,8 +329,9 @@ issues:
   - id: E3-1
     title: "E3-1 (epic) — Semantic-level projections"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:needs-design]
+    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:done]
     depends_on: [E3-3]
+    doc_refs: [corpus:RFC-0021]
     body: |
       EPIC (exploratory, FR-C1/G11). Multiple human/machine views of the same content-addressed artifact. Contingent on projection ergonomics + KC-2.
 
@@ -306,6 +340,7 @@ issues:
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
     labels: [phase:3, type:feature, area:toolchain, priority:P1]
     depends_on: [M-140, E2-6]
+    doc_refs: [corpus:RFC-0021, corpus:RFC-0006]
     body: |
       EPIC. generate -> semantic-feedback -> self-correct loop over the LSP surface; operationalizes SC-5b (NFR-2; Area 6).
 
@@ -314,6 +349,7 @@ issues:
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
     labels: [phase:3, type:feature, area:toolchain, priority:P1]
     depends_on: [M-140, M-141, M-142]
+    doc_refs: [corpus:RFC-0006]
     body: |
       EPIC. Full LSP + rich diagnostics; linter/formatter maturity; build-system stable/experimental management + content-addressed caching + certificate artifacts.
 
@@ -322,14 +358,16 @@ issues:
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
     labels: [phase:3, type:feature, area:execution, priority:P2]
     depends_on: [E2-3]
+    doc_refs: [corpus:RFC-0004]
     body: |
       EPIC (ADR-009). JIT for dynamic/long-running VSA pipelines; same lowering + runtime specialization. Exit: NFR-7 equivalence + speedup target.
 
   - id: E3-5
     title: "E3-5 (epic) — Resonator factorization (opt-in, probabilistic)"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:vsa, priority:P2, status:needs-design]
+    labels: [phase:3, type:feature, area:vsa, priority:P2, status:done]
     depends_on: [E2-4, E2-5]
+    doc_refs: [corpus:RFC-0003]
     body: |
       EPIC (FR-C2/G4). Factorization for unknown-factor products; per-factor codebooks + approximate inverse; probabilistic-only guarantee; never in core. Exit: documented convergence regime + bounds.
 
@@ -338,6 +376,7 @@ issues:
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
     labels: [phase:3, type:feature, area:execution, priority:P2]
     depends_on: [E2-7]
+    doc_refs: [corpus:RFC-0003]
     body: |
       EPIC (FR-C3/G3). Production acceleration paths beyond the Phase-2 selector baseline.
 
@@ -346,8 +385,20 @@ issues:
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
     labels: [phase:3, type:feature, area:execution, priority:P2]
     depends_on: [M-150, E2-7]
+    doc_refs: [corpus:RFC-0004]
     body: |
       EPIC (R7). Documented mapping from the ternary value-semantics contract to a future 3-state hardware backend; stubbed dialect target.
+
+  - id: E3-8
+    title: "E3-8 (epic) — Agent-facing documentation index & auto-doc workflow"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:docs, area:toolchain, priority:P2, status:done]
+    depends_on: []
+    doc_refs: [src:tools/docgen/code_index.py, src:docs/api-index/INDEX.md]
+    body: |
+      EPIC (Wave-4A). A small, committed, navigable, agent-facing index (docs/api-index/) built by aggregating the public-API surface already committed in docs/spec/api/*.txt against the source tree. Delivers: a code-index generator (M-392), `just docs` / `just docs-index` + drift gate (M-393), doc_refs grammar + backfill (M-394), CLAUDE.md + skill updates (M-395). (Note: this wave called it E3-6 in the plan; E3-6 was already taken by BitNet acceleration, so assigned E3-8.)
+      DONE (2026-06-19): all four tasks complete; just check green; docs/api-index committed and current; doc_refs backfilled for 52 open issues; CLAUDE.md + skills updated.
+
 
   # ---------------- Phase 3 (M-3xx build tasks; decomposed 2026-06-15, docs/planning/phase-3.md) ----------------
   # Batch J — native execution path (keystone). Direct-LLVM AOT first; MLIR deferred (libMLIR absent) — RFC-0004 §2 fallback, RR-N1.
@@ -428,8 +479,9 @@ issues:
   - id: M-350
     title: "M-350 — Resonator-network factorization (opt-in, probabilistic)"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:vsa, priority:P2, status:needs-design]
+    labels: [phase:3, type:feature, area:vsa, priority:P2, status:done]
     depends_on: [M-204, M-260]
+    doc_refs: [corpus:RFC-0003]
     body: |
       Resonator factorization for unknown-factor VSA products: per-factor codebooks + approximate inverse + iterative cleanup; PROBABILISTIC-ONLY guarantee; NEVER in core (FR-C2/G4; RFC-0003 §6; the M-260 manifest already enforces the Resonator probabilistic-only ceiling).
       Acceptance (needs-design first): a documented convergence regime + bounds; a NoConverge result is explicit, never a fabricated factorization.
@@ -468,6 +520,7 @@ issues:
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
     labels: [phase:3, type:research, area:toolchain, priority:P3, status:needs-design]
     depends_on: [M-380, M-002]
+    doc_refs: [corpus:RFC-0021, corpus:RFC-0006, src:tools/llm-harness/coauthor.py]
     body: |
       The empirical LLM-leverage gate split out of RFC-0021 (Accepted framework) as its OWN isolated, NON-BLOCKING track (RP-1 / DN-09 §4 / RFC-0006 §8 Q1). It does NOT gate RFC-0021 or RFC-0020; its only coupling is a SUPERSESSION (RFC-0021 §4.7): if the text-grammar arm retains < ~70% of the LlmCanonical familiar-skin arm's pass@1 on composition tasks, a future RFC supersedes the text-primary framing and promotes LlmCanonical to primary. Until it runs, NO leverage result is asserted (VR-5; DN-09 §4 — the working hypothesis stays supported-but-not-confirmed).
       Turnkey protocol (research/11 T11.7): the five arms (bare novel; +grammar-in-context; +constrained decoding (a new GBNF/Outlines/Guidance dependency); LlmCanonical familiar-skin (the crates/mycelium-lsp/src/project.rs renderer); embedded-DSL RR-3), >=3 seeds, >=1 frontier model, over the experiments/ harness (M-002 substrate). Headline metric: retention ratio vs the familiar-skin arm; falsification threshold < ~70% (RFC-0006 §8 Q1). Report each arm at the strength actually run (Empirical/Declared); never pre-write the verdict (experiments/README.md §3).
@@ -490,6 +543,47 @@ issues:
     body: |
       A small, portable validation harness (tools/llm-harness/) that de-risks the backlogged LLM work (M-330 #97/#127, M-002 #3 — all "needs LLM API") without doing the integration. Targets llama.cpp (GGUF) and runs under Termux on Android (no x86 assumptions). Two modes: a --mock dry-run (no model; skips gracefully in CI/cloud, exercises the plumbing) and a real mode (shells to a local llama-cli/server; a missing binary/model is an explicit SKIP, never a false pass — the `just check` idiom). Validations (the smallest set that unblocks the LLM work): model-load + deterministic-seed round-trip; structured-output/JSON-projection conformance (G11); the guarantee-tag honesty gate (model-derived claims must be Empirical/Declared, NEVER Proven — VR-5); a latency/token report. Each run emits a dual JSON + human report and a timestamped log (G11), every check PASS/SKIP/FAIL explicit and tagged (RFC-0013 I1). Above the kernel (KC-3). The scaffold + a --mock run landed 2026-06-17; the real run is the maintainer's to execute on-device and feed back.
       Acceptance: the --mock mode runs green here (report + log captured as the format example); a documented Termux build/run path for the real mode; honest skip-not-false-pass behavior; the M-002 KC-2 experiment becomes runnable once a model is wired.
+
+  # ---- Wave-4A documentation infrastructure (added 2026-06-19; all done 2026-06-19, E3-8) ----
+  - id: M-392
+    title: "M-392 — Agent code-index generator (tools/docgen/code_index.py)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:done]
+    depends_on: []
+    doc_refs: [src:tools/docgen/code_index.py, src:docs/api-index/index.json]
+    body: |
+      LEAF task under E3-8. tools/docgen/code_index.py (pure Python stdlib): JOIN the committed public surface in docs/spec/api/*.txt against the source tree (crates/*/src/**/*.rs) to attach, per public item: crate, module path, file:line, and the leading /// summary. Emits docs/api-index/index.json (machine) and docs/api-index/INDEX.md (human/agent: grep-friendly table, grouped by crate). Empirical/Declared — navigational aid only; source is ground truth. Items the parser can't classify go in `flagged` (G2), never silently dropped.
+      DONE (2026-06-19): 2561 items indexed, 3412 flagged; --self-test passes; doc-index drift gate wired into `just check`.
+
+  - id: M-393
+    title: "M-393 — `just docs` + `just docs-index` + staleness drift gate"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:done]
+    depends_on: [M-392]
+    doc_refs: [src:justfile, src:scripts/checks/doc-index.sh]
+    body: |
+      EPIC-DIRECT task under E3-8. `just docs` (cargo doc --workspace --no-deps -> target/doc, NOT committed). `just docs-index` (runs tools/docgen/code_index.py). scripts/checks/doc-index.sh (skip-graceful drift gate, wired into scripts/checks/all.sh). Mirrors the existing `just api` drift-gate pattern.
+      DONE (2026-06-19): drift gate passes when index is current, fails when stale.
+
+  - id: M-394
+    title: "M-394 — Issue/epic <-> index cross-references (doc_refs: grammar + backfill)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:docs, area:toolchain, priority:P2, status:done]
+    depends_on: [M-392]
+    doc_refs: [src:tools/github/doc_refs_check.py]
+    body: |
+      EPIC-DIRECT task under E3-8. `doc_refs:` grammar: `api:<crate>::<path>`, `corpus:<DOC>[#<anchor>]`, `src:<path>[:<line>]`. Validator tools/github/doc_refs_check.py (pure stdlib) wired into manifest-check.py. Backfilled doc_refs for all 52 open issues.
+      DONE (2026-06-19): doc_refs_check.py validates all refs with never-silent dangling-ref reporting; no dangling refs; validator wired into manifest-check.py.
+
+  - id: M-395
+    title: "M-395 — Workflow integration (CLAUDE.md + .claude/skills/)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:docs, area:toolchain, priority:P2, status:done]
+    depends_on: [M-392, M-393, M-394]
+    doc_refs: [src:CLAUDE.md, src:.claude/skills/dev-workflow/SKILL.md]
+    body: |
+      EPIC-DIRECT task under E3-8. CLAUDE.md "Auto-generated docs & the agent index" section added + docs/api-index/ added to orchestrator-owned list. dev-workflow skill updated (just docs-index in Record step). changelog skill updated (index parity note). /doc-index skill created (.claude/skills/doc-index/SKILL.md).
+      DONE (2026-06-19): all updates complete; /doc-index skill active.
 
 # Phase 4 (M-34x) — the interpreted<->compiled ABI + hot-inject + AOT-fragment completion. Created
 # 2026-06-16; gated on ADR-016/017 (Accepted 2026-06-16). The Phase-4 milestone + phase:4 label are now
@@ -539,6 +633,7 @@ issues:
     milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
     labels: [phase:4, type:design, area:execution, priority:P2, status:blocked]
     depends_on: [M-301]
+    doc_refs: [corpus:RFC-0004]
     body: |
       The MLIR->LLVM native AOT path (RFC-0004 §2, ADR-009) is gated on libMLIR, absent in the current environment. Maintainer intends to provision it near-term (Windows/Claude Code desktop, or via WSL) to unblock native dialect lowering / cross-target codegen, the native data/closure codegen M-342 left as UnsupportedNode, and DN-05 #1 (stack-robust recursion designed into the native path). Verdicts needing it stay honestly "not established" (VR-5) until present.
       Acceptance: libMLIR provisioned + a first native lowering increment runs; no code until the toolchain is present.
@@ -993,11 +1088,13 @@ issues:
   - id: M-502
     title: "M-502 — Self-hosting readiness gate (surface language sufficient to author stdlib modules in Mycelium)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:language, priority:P3, status:needs-design]
+    labels: [phase:5, type:design, area:language, priority:P3, status:done]
     depends_on: [M-346, M-320]
+    doc_refs: [corpus:DN-13, corpus:RFC-0007, src:crates/mycelium-l1/src/lib.rs, src:docs/notes/DN-14-Self-Hosting-Gate.md]
     body: |
       M-346 conditions the whole stdlib decomposition on a precondition: it is "decomposed once the surface language is self-hosting enough to write stdlib modules in Mycelium itself (dogfooding; free of other languages)". This task makes that precondition CHECKABLE: enumerate the surface-language capabilities a stdlib module needs (the RFC-0007 term language M-320 extends; data + recursion; the RFC-0012 ambient surface; nodules/phyla per DN-06; the M-359 manifest) and produce an honest readiness verdict — self-hosting is "close" / "not yet" (never pre-declared, VR-5).
       Acceptance (design-first): a readiness assessment against M-501's contract; a "not established" verdict stays honest until the surface actually supports it. Gates M-510…M-520.
+      DONE (2026-06-19): DN-14-Self-Hosting-Gate.md created (Draft, 156 lines). Verdict: 5/11 features present, 5 gate-fails, 1 partially missing — self-hosting NOT YET established. Gate-fails: generics, trait interfaces, effect annotations, wild/FFI blocks, static guarantee index. Grounded in actual source files (checkty.rs, ast.rs). Honest: no feature stamped present on intent alone.
 
   - id: M-510
     title: "M-510 — stdlib: diagnostics module (self-hosted)"
@@ -1113,6 +1210,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:design, area:execution, priority:P3, status:needs-design]
     depends_on: [M-501, M-502, M-355]
+    doc_refs: [corpus:RFC-0016, corpus:RFC-0007]
     body: |
       RFC-0016 §4.3 — the library bindings for the RFC-0008 runtime lexicon: hypha/fuse/colony/cyst/graft/forage/backbone/mesh/tier/reclaim, structured concurrency (Scope), and reclaim bounded-cascade supervision (M-355–357). Mostly RESERVED-not-active vocabulary (Glossary ⟂) until the RFC-0008 constructs land. FLAGGED cross-phase dependency (RFC-0016 §8-Q4): this module is sequenced against the Phase-7 runtime track and may live in a separate `runtime` phylum rather than `std`.
       Acceptance (design-first): the binding set + the std-vs-separate-phylum decision presented; activates construct-by-construct as RFC-0008 vocabulary lands (no premature surface — VR-5).
@@ -1230,20 +1328,24 @@ issues:
   - id: M-540
     title: "M-540 — stdlib ergonomics-vs-contract: one per-ring design pass (RFC-0016 §8-Q3, tension A)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:5, type:design, area:toolchain, priority:P3, status:done]
     depends_on: [M-501]
+    doc_refs: [corpus:RFC-0016, corpus:RFC-0012, corpus:DN-07]
     body: |
       RFC-0016 §8-Q3 (tension A) was ratified DEFERRED-WITH-DIRECTION (DN-07; 2026-06-17): the maintainer accepted the RFC-0012 ambient-representation DIRECTION library-wide — the tag/EXPLAIN/certificate/effect machinery is implicit at the call site but always reified, queryable, and EXPLAIN-able (never a black box, C3) — to be discharged as ONE per-ring design pass, not seven per-module answers. ~10 specs FLAG this (core/cmp/error/fmt/iter/math/recover/select/testing/text; stdlib README §5). This is the chief genuine open stdlib design question.
       Acceptance (design-first): a per-ring (Ring 0/1/2) ergonomics design pass that fixes, per ring, where the honesty machinery is ambient-but-inspectable vs always-explicit, consistent with RFC-0012's I1/I2 invariants and the §4.1 contract; resolves the §5 tension-A FLAGs without weakening C1–C6 (VR-5); no kernel change (KC-3).
+      DONE (2026-06-19): RFC-0012 ambient-representation ## Ambient Representation (RFC-0012 §8-Q3) //! docstring blocks added to all 23 crates/mycelium-std-*/src/lib.rs (292 insertions). Each block states the ambient contract, carries RFC-0012/DN-07 §8-Q3/M-540 traceability, adds a crate-specific grounded sentence. Annotation-only pass — no new pub items, no new tests, cargo check --workspace clean.
 
   - id: M-541
     title: "M-541 — std-sys: the minimal audited wild/FFI floor inventory (RFC-0016 §8-Q6, LR-9)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:5, type:design, area:toolchain, priority:P3, status:done]
     depends_on: [M-501]
+    doc_refs: [corpus:RFC-0016, corpus:DN-07, src:crates/mycelium-std-sys/src/lib.rs, src:crates/mycelium-std-sys/src/math.rs, src:crates/mycelium-std-sys/src/rand.rs, src:crates/mycelium-std-sys/src/fs.rs, src:crates/mycelium-std-sys/src/time.rs]
     body: |
       RFC-0016 §8-Q6 was ratified RESOLVED (DN-07; 2026-06-17): the audited `wild` floor splits into a separate `std-sys` phylum so pure `std` stays leak-free by construction (LR-9) and can publish a `wild`-free certification badge (RFC-0016 §9). The three call sites are fs syscalls (M-528), rand platform entropy (M-531), and math libm transcendentals (M-525) — stdlib README §5 "one std-sys question, three call sites"; the Rust core/std isolation precedent (research/08 T8.1).
       Acceptance (design-first): the minimal audited FFI inventory for std-sys (the exact set of `wild` blocks per ADR-014, each with its audit story); the std/std-sys boundary so no pure-std op transitively reaches `wild`; the leak-free certification badge criterion (§9). No kernel change (KC-3).
+      DONE (2026-06-19): crates/mycelium-std-sys/ created (6 files, 541 lines). Four modules: math (14 [Declared] transcendental wrappers), rand (fill_bytes, EntropyError, [Declared]), fs (read/write/exists/create_dir_all/remove_file, [Declared]), time (wall_nanos/mono_nanos/sleep_nanos, [Declared]). 15/15 tests pass. cargo clippy -D warnings clean. FLAG-RAND-IMPL: rand v0 uses DefaultHasher+SystemTime stand-in — non-cryptographic, explicitly Declared; getrandom/urandom replacement deferred to next wave.
 
 # ════════════════════════════════════════════════════════════════════════════════════════════════
 # Phase 6 — Native Acceleration & Deployment (ANTICIPATED — not yet ratified; scope firms at the prior
@@ -1263,6 +1365,7 @@ issues:
     milestone: "Phase 6 — Native Acceleration & Deployment"
     labels: [phase:6, type:feature, area:execution, priority:P3, status:needs-design]
     depends_on: [M-348, M-342]
+    doc_refs: [corpus:RFC-0004]
     body: |
       The milestones.json Phase-6 charter's first item: "Native MLIR→LLVM codegen for the full calculus incl. data/closure (M-348, RFC-0004 §2, ADR-009)". Complete the native lowering M-342 left as explicit UnsupportedNode (native LLVM stayed bit/trit only; the data/closure/recursion fragment runs on the AOT env-machine, not native), and design DN-05 #1 — stack-robust recursion — INTO the native path (RFC-0004 §2 banked it there; reuse the DN-05 budget trait, DN05-Q4). Each lowering stage stays dumpable (no opaque pass — VR-4). HARD-GATED on libMLIR provisioning (M-348, currently blocked); until present, the native verdict stays honestly "not established" (VR-5), never pre-written.
       Acceptance (design-first; libMLIR-gated): a native MLIR→LLVM increment lowers the data + closure fragment with explicit refusal where a node is still unsupported (never silent); no code until the toolchain is present (M-348).
@@ -1272,6 +1375,7 @@ issues:
     milestone: "Phase 6 — Native Acceleration & Deployment"
     labels: [phase:6, type:verification, area:execution, priority:P3, status:needs-design]
     depends_on: [M-601, M-302, M-303]
+    doc_refs: [corpus:RFC-0004]
     body: |
       The Phase-6 gate's verification half: "native path holds the NFR-7 differential + a speedup". Extend the M-302 interp↔native differential (and the M-210 shared checker) so the full-calculus corpus runs under the interpreter AND the real native MLIR→LLVM artifact with observable equivalence (a divergent lowering caught — NFR-7/RR-12), and replace the M-303 E1 stub's "not established" with a MEASURED native-vs-interpreter speedup on the full calculus (honest caption, refuses a debug build, no pre-written target — VR-5).
       Acceptance (design-first; gated on M-601): the three-way differential holds across the calculus on the native path; a recorded native/interp ratio with caveats; the E1 verdict moves "not established" → "measured".
@@ -1281,6 +1385,7 @@ issues:
     milestone: "Phase 6 — Native Acceleration & Deployment"
     labels: [phase:6, type:feature, area:execution, priority:P3, status:needs-design]
     depends_on: [M-601, M-360, M-370]
+    doc_refs: [corpus:RFC-0003, corpus:RFC-0004]
     body: |
       The Phase-6 charter's "BitNet / native-ternary acceleration (Foundation §6 Phase-3 acceleration carried forward)". Carry the M-360 production packed-ternary kernels (real pack/unpack/compute for I2_S/TL1/TL2, packing as inspectable meta.physical — NFR-1/NFR-4, not hidden lowering) and the M-370 native-ternary forward-compat mapping (R7) onto the real native backend M-601 unblocks. The M-251 E3 wrong-layout differential guards soundness (a mislabeled layout is caught). Packing stays a schedule concern recorded on meta.physical, never in the type/hash (DN-01).
       Acceptance (design-first; gated on M-601): a packed-ternary kernel runs on the native backend with the layout recorded + inspectable; within the E2-7 exit criterion (~0.01 PPL / 0.1% of full precision); the E3 differential still catches a mislabeled layout (NFR-7).
@@ -1290,6 +1395,7 @@ issues:
     milestone: "Phase 6 — Native Acceleration & Deployment"
     labels: [phase:6, type:feature, area:execution, priority:P3, status:needs-design]
     depends_on: [M-601, M-368]
+    doc_refs: [corpus:RFC-0004]
     body: |
       The Phase-6 charter's "deployable Spore units (ADR-013)". Produce a deployable Spore — the content-addressed deployable artifact of a phylum/program (ADR-013; the germinates-into-a-colony unit, DN-06/Glossary) — from the native-compiled backend, consuming the M-368 packaging layer (mycelium-proj.toml → spore). Content-addressed identity is canonical (ADR-003); metadata is not identity. A missing/ambiguous deploy input is an explicit error, never a guessed default (G2).
       Acceptance (design-first; gated on M-601): a Spore built from the native backend deploys + runs; the content hash is canonical; the no-opaque-lowering guarantee (VR-4) holds end-to-end into the deployed unit.
@@ -1299,6 +1405,7 @@ issues:
     milestone: "Phase 6 — Native Acceleration & Deployment"
     labels: [phase:6, type:verification, area:execution, priority:P3, status:needs-design]
     depends_on: [M-601, M-620]
+    doc_refs: [corpus:RFC-0004]
     body: |
       The Phase-6 charter's "production hardening" + its gate condition "a deployable Spore (VR-4 no-opaque-lowering across ALL backends)". Establish the cross-backend VR-4 obligation: every lowering stage on every backend (interpreter, AOT env-machine, native MLIR→LLVM, JIT) stays dumpable/inspectable — no opaque pass anywhere — and a deployed Spore carries that guarantee. Production hardening = the honest soak/robustness work a release needs, with every verdict tagged at its established strength (VR-5).
       Acceptance (design-first; gated on M-601/M-620): VR-4 demonstrated across all backends (a dumpable stage at every lowering step); the production-hardening checklist met with honest per-item verdicts; this is the Phase-6 exit gate.

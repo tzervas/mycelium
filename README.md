@@ -3,8 +3,8 @@
 > A programming language that treats **traditional binary**, **balanced ternary**, **dense embeddings**, and **Vector Symbolic Architectures (VSA / hyperdimensional computing)** as co-equal, first-class substrates — under semantics that are **transparent** (no hidden behavior), **metadata-native**, and **amenable to formal reasoning**.
 
 **Status:** design + **Rust-first implementation underway.** The design corpus is Accepted/Resolved
-(Foundation, RFC-0001…0021, ADR-001…017, DN-01…12), and the kernel is landing as a
-Rust workspace of **42 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified binary↔ternary
+(Foundation, RFC-0001…0021, ADR-001…017, DN-01…14), and the kernel is landing as a
+Rust workspace of **43 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified binary↔ternary
 swaps, the selection-policy engine, and a Rust-first standard library. Phases **0–3, 5, and 7** are
 complete; Phases **4, 6, and 8** are in progress. Per the honesty rule, the stdlib specs read
 *"implemented (Rust-first), pending ratification"* — **not** silently `Accepted` — and self-hosting
@@ -47,7 +47,7 @@ mycelium/
 ├── CONTRIBUTING.md           ← decision process, honesty rule, dev env, workflow
 ├── CLAUDE.md                 ← operating guide for Claude Code / agents (the house rules)
 ├── CHANGELOG.md              ← Keep-a-Changelog; design baseline + implementation edits
-├── Cargo.toml                ← Rust workspace (42 crates + xtask; MSRV 1.92, ADR-007)
+├── Cargo.toml                ← Rust workspace (43 crates + xtask; MSRV 1.92, ADR-007)
 ├── rust-toolchain.toml       ← pinned MSRV
 ├── justfile                  ← one source of truth for local↔CI checks (`just check`)
 ├── deny.toml                 ← cargo-deny supply-chain policy
@@ -58,7 +58,7 @@ mycelium/
 │   ├── Glossary.md                      ← the fungal lexicon + honesty/architecture terms
 │   ├── rfcs/        ← RFC-0001…0021 (normative designs) + index
 │   ├── adr/         ← ADR-010…017 as files (ADR-001…009 live in the Foundation §8) + index
-│   ├── notes/       ← DN-01…12 design notes + reference material (lexicon, examples, research prompts)
+│   ├── notes/       ← DN-01…14 design notes + reference material (lexicon, examples, research prompts)
 │   ├── spec/        ← per-module + per-tool specs (stdlib/, api/ baselines, swaps/)
 │   ├── planning/    ← phase-by-phase build plans (phase-0 … phase-5)
 │   └── devlog/      ← append-only development log
@@ -77,7 +77,7 @@ mycelium/
 
 ## The Rust workspace
 
-The kernel and its tooling live in `crates/` as **42 crates** (+ `xtask`), MSRV-pinned to Rust 1.92
+The kernel and its tooling live in `crates/` as **43 crates** (+ `xtask`), MSRV-pinned to Rust 1.92
 (ADR-007). The trusted base is small and the public surface is gated by a committed API baseline
 (`docs/spec/api/`, KC-3). Grouped by role:
 
@@ -124,7 +124,7 @@ Checks **skip gracefully** when a tool isn't present. Remote CI (`.github/workfl
 1. **`docs/Doc-Index.md`** — the map: every document, its status, and how they depend on each other.
 2. **`docs/Mycelium_Project_Foundation.md`** — the charter: vision, requirements (FR/NFR/VR), success & kill criteria, ADRs 001–009, roadmap, risks.
 3. **`docs/rfcs/RFC-0001…`** — the Core IR & metadata schema (everything else plugs into this).
-4. **RFC-0002 → RFC-0021**, then the ADRs (010…017) and design notes (DN-01…12) for the deep dives — `Doc-Index.md` orders them.
+4. **RFC-0002 → RFC-0021**, then the ADRs (010…017) and design notes (DN-01…14) for the deep dives — `Doc-Index.md` orders them.
 5. **`crates/mycelium-core` and `crates/mycelium-interp`** — the kernel and reference semantics, if you want to read the design as code.
 6. **`research/`** — the evidence base (records 01…11), if you want the "why" behind a decision.
 

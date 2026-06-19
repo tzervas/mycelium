@@ -82,6 +82,19 @@
 //! - **(Q5) Format / Budget ergonomics at the call site.** Both `Format` and `Budget`
 //!   are required-explicit until the per-ring ergonomics pass (M-540; spec §7-Q5 /
 //!   RFC-0016 §8-Q3 tension A).
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 2, Tier B):** I/O is representation-opaque at the byte level —
+//! `Source`/`Sink` move raw bytes without interpreting `Repr`. Callers own the encoding
+//! choice; the `Format` parameter to serialize ops is always explicit (never inferred from
+//! context). The serialized form carries the `Repr` descriptor as part of its wire schema
+//! (RFC-0001 §4.8 "schema-travels-with-data"), so no silent re-encoding occurs on round-trip.
 
 #![forbid(unsafe_code)]
 

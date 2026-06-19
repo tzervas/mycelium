@@ -90,6 +90,19 @@
 //! - **(FLAG: workspace Cargo.toml)**
 //!   The orchestrator scaffold did not include `mycelium-std-collections` in the workspace
 //!   `Cargo.toml`; this leaf added it. FLAG for the orchestrator to reconcile.
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 2, Tier B):** Collections are representation-agnostic containers —
+//! a `Seq<E>` stores elements of whatever `Repr` the caller provides; no element representation
+//! is coerced by the container. The bucketing hash used by `Map`/`Set` internally is not a
+//! representation operation (ADR-003 — it is not `ContentHash`); no `Repr` is changed or inferred
+//! by collection operations. Representation change of elements requires an explicit `std.swap`.
 
 #![forbid(unsafe_code)]
 

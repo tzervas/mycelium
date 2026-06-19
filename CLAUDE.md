@@ -77,8 +77,8 @@ The discipline:
    the workspace `Cargo.toml`). An agent edits **nothing** outside its directory.
 2. **Orchestrator owns all common/shared files** — the wave's collision surface: workspace
    `Cargo.toml`, `CHANGELOG.md`, `docs/Doc-Index.md`, `tools/github/issues.yaml` + `idmap.tsv`,
-   `docs/planning/phase-*.md`, shared spec indices, per-doc changelog footers. Agents never touch
-   these; the orchestrator reconciles them once, after merge.
+   `docs/planning/phase-*.md`, shared spec indices, per-doc changelog footers, `docs/api-index/`.
+   Agents never touch these; the orchestrator reconciles them once, after merge.
 3. **Scaffold first, then fan out.** The orchestrator creates each task's skeleton (crate
    manifest with deps pre-filled, stub `lib.rs`), registers it in the workspace, and **commits +
    pushes the scaffold** so every agent branches from a *buildable* base and never needs to edit
@@ -199,6 +199,59 @@ follows the **branch convention**, and obeys the **file-ownership rule**.
 > green. Commit to your leaf branch (do **not** push); report your **branch + SHA + any FLAGs** to
 > your Epic Agent.
 
+## Swarm failure-mode mitigations (lessons from Wave-4, 2026-06-19)
+
+These are recurring failure patterns observed in multi-agent waves. Treat them as mandatory
+pre-checks and post-checks — not optional hygiene.
+
+### 1. ID namespace collision
+**Pattern:** Orchestrator mints a new `M-xxx` / `Exx` ID from the plan without verifying the slot
+is free in `issues.yaml`. Results in a collision that must be fixed mid-wave.  
+**Mitigation:** Before assigning any new ID, grep `issues.yaml` for the candidate: `grep "id: E3-8"
+tools/github/issues.yaml`. If taken, find the next free slot. Do this before spawning epics.
+
+### 2. Union-merge YAML duplication
+**Pattern:** `.gitattributes` applies `merge=union` to `issues.yaml` so octopus merges
+append both sides of every touched block, creating duplicate YAML keys that are syntactically
+valid but semantically wrong.  
+**Mitigation:** Immediately after every octopus merge, validate + dedup `issues.yaml`:
+`python3 -c "import yaml; yaml.safe_load(open('tools/github/issues.yaml')); print('OK')"`.
+If duplicates are present, consolidate manually into single canonical entries before any further
+commits. Consider whether `issues.yaml` should remain in the union-merge set (it is
+orchestrator-owned and never agent-edited — union merge has no benefit).
+
+### 3. Tool discovery / PATH failures
+**Pattern:** Agent invokes `python3 -m ruff` but `ruff` is installed as a standalone binary at
+`~/.local/bin/ruff` (via `uv tool install`) and that path is not on `$PATH` for subprocess
+invocations.  
+**Mitigation:** Always prefer `just fmt` and `just check` — the justfile resolves tool paths.
+When invoking raw tools, probe first: `command -v ruff || ~/.local/bin/ruff`. The `just setup`
+recipe should verify tool paths and warn if they're not on `$PATH`.
+
+### 4. Interactive git flags in automation
+**Pattern:** `git add -p` / `git add -i` / `git rebase -i` launch interactive pagers that block
+non-interactive agent contexts.  
+**Mitigation:** Never use `-p`, `-i`, or `--interactive` git flags in agent context. Stage with
+explicit file paths: `git add <file1> <file2>`. The CLAUDE.md git section already says no `-i`
+for rebase; the same applies to `add`.
+
+### 5. Agent progress opacity (appears hung)
+**Pattern:** An agent annotating N independent items (e.g. 23 std crates) sequentially emits no
+visible signals — looks identical to a stuck agent from the orchestrator's view.  
+**Mitigation:** Agents processing N ≥ 5 independent, repetitive items MUST commit in batches
+(every 5–7 items) with a `wip(batch M/N): ...` message. Orchestrator can then poll progress
+via `git log worktree-agent-<id> --oneline`. Agents may also emit a brief text status line
+after each batch.
+
+### 6. Orchestrator context exhaustion
+**Pattern:** A single orchestrator session accumulates the full context of Step 0 + Wave-4A
+fan-out + monitoring + integration across many large file reads, exhausting the context window
+before Wave-4B even starts.  
+**Mitigation:** Spawn a read-only `Explore` subagent for any pre-work that requires reading > 3
+large files. Use `TaskOutput(block=false)` for progress polls (don't block). Summarize each
+phase explicitly (in-context) before starting the next. The orchestrator's context budget is the
+scarcest resource in a multi-wave swarm — protect it.
+
 ## Skills (`.claude/skills/`)
 Invoke with `/<name>`; they auto-engage when relevant.
 - **`/dev-workflow`** — the implementation discipline above, as a working loop.
@@ -207,6 +260,8 @@ Invoke with `/<name>`; they auto-engage when relevant.
 - **`/security-review`** — secrets, supply-chain, shell/CI safety; auto-light on docs-only.
 - **`/docs-review`** — cross-refs, notation, grounding labels, status/changelog discipline.
 - **`/changelog`** — keep `CHANGELOG.md` + per-doc footers in sync, append-only.
+- **`/doc-index`** — regenerate and query the agent code index (`docs/api-index/`), check
+  `doc_refs` grammar validity.
 
 The review skills share one rubric: `.claude/skills/_shared/review-rubric.md` (tiers, severity,
 report format). Posture is **advisory** — they recommend, they don't gate.
@@ -218,3 +273,28 @@ report format). Posture is **advisory** — they recommend, they don't gate.
 - `tools/github/` — issue/label/milestone bootstrap (`mcp-bootstrap.md`, `gh-bootstrap-local.sh`,
   `issues.yaml`, `idmap.tsv`).
 - `justfile`, `.pre-commit-config.yaml`, `scripts/` — the local/CI check tooling.
+
+## Auto-generated docs & the agent index
+
+`docs/api-index/` holds two committed, deterministic artifacts generated by `tools/docgen/code_index.py`:
+- `index.json` — machine-readable symbol table (crate, file:line, summary, guarantee_tag)
+- `INDEX.md` — grep-friendly table for agent context lookups, grouped by crate
+
+**Honesty:** the index is an `Empirical/Declared` line/regex heuristic — source is ground truth.
+Use the index to find where to `Read`, not as an authoritative reference. Re-exports,
+macro-generated items, and cfg-gated items appear in the `flagged` section (G2: never silently dropped).
+
+**How to use:** point an agent at `docs/api-index/INDEX.md#<crate>` via a `doc_refs` entry so it
+loads targeted context instead of re-reading whole files.
+
+**How to regenerate:** `just docs-index` — the owning parent must run this and commit the delta
+after any octopus merge that touched a public API (before pushing).
+
+**Ownership:** `docs/api-index/` is orchestrator-owned (listed above). It is REGENERATED
+by the integrating parent — never hand-merged, never union-merged.
+
+**`doc_refs:` grammar** (in `tools/github/issues.yaml`):
+- `api:<crate>::<path>` — a symbol in `docs/api-index/index.json`
+- `corpus:<DOC>[#<anchor>]` — a doc/section in `docs/Doc-Index.md`
+- `src:<path>[:<line>]` — a source file location (relative to repo root)
+Validate with: `python3 tools/github/doc_refs_check.py`

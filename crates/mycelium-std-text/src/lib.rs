@@ -63,6 +63,18 @@
 //!
 //! # Design spec
 //! `docs/spec/stdlib/text.md` (M-524, #165). Contract: RFC-0016 §4.1 (C1–C6).
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 2, Tier B):** Text ops are representation-opaque at the byte level —
+//! `Text` is a UTF-8 byte sequence; callers are responsible for any encoding decision (e.g.,
+//! which `Repr` their parsed numeric values use). No ambient encoding is inferred; lossy
+//! transcoding is an explicit named op (`to_latin1_lossy`), never a silent substitution.
 #![forbid(unsafe_code)]
 
 pub mod error;

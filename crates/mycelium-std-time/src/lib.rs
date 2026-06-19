@@ -67,6 +67,19 @@
 //!
 //! Design spec: `docs/spec/stdlib/time.md`; contract: RFC-0016 §4.1 (C1–C6);
 //! guarantee matrix: §4.5 (encoded as data, asserted in tests).
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 2, Tier B):** Clock sources are representation-independent —
+//! `Duration` and typed instants (`MonoInstant`, `WallInstant`, `LogicalInstant`) carry no
+//! `Repr`. Cross-source instant arithmetic is a compile-time type error; typed instants prevent
+//! cross-source subtraction structurally. Wall-clock reads are `Declared` + effectful; the
+//! declared effect ([`DeclaredTimeEntropy`]) is the inspectable annotation, never an implicit side effect.
 #![forbid(unsafe_code)]
 
 use mycelium_std_core::GuaranteeStrength;

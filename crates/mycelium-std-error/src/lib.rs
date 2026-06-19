@@ -47,6 +47,18 @@
 //!   never silent) is fixed here.
 //! - **FLAG Q4:** Whether `?`-on-`Option` vs `?`-on-`Result` unification is one
 //!   polymorphic operator or two surface forms is a DN-level decision (RFC-0016 §8-Q3).
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 1, Tier A / Tier B boundary):** Error types carry the representation
+//! context in which they arose — a conversion error (e.g., from `std.swap`) retains the source
+//! and target `Repr` as part of its value. No representation context is stripped on error paths;
+//! an `Err` is as inspectable as an `Ok`.
 #![forbid(unsafe_code)]
 
 pub mod combinators;

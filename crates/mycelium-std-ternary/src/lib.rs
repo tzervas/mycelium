@@ -32,6 +32,19 @@
 //!   EXPLAIN" (M-519) needs a cross-module design pass (ternary.md §7-Q3).
 //! - **Q4:** Width ceiling mirrors the M-111 `i64` ceiling (`m ≤ 40`); bignum is out of scope
 //!   for v0 (ternary.md §7-Q4). Out-of-range is explicit `None` (C1).
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 1, Tier A):** Ternary ops are representation-aware by construction
+//! (RFC-0001 §3.3); no implicit binary fallback exists. A `Trit` value is always in the
+//! `Ternary` paradigm; packing is always named (`scheme_of` / `explain`) and never a hidden
+//! lowering pass — the packed form's `Meta.physical` is an inspectable record, not an opaque
+//! layout (C3/NFR-1/DN-01).
 
 #![forbid(unsafe_code)]
 

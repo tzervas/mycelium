@@ -8,6 +8,102 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-19: Wave-4B landed — M-541 std-sys FFI floor, M-502 DN-14 self-hosting gate, M-540 RFC-0012 ergonomics annotations)
+**Wave-4B octopus-merged (2026-06-19).** Two parallel epics (M541A + M502A) conflict-free merged into
+`claude/orch-wave4-docs-sys-4ifdo4`; 30 files, 989 insertions; all tests green (15 new std-sys tests);
+`docs/api-index/` regenerated to include new std-sys public surface.
+
+- **M-541 — `crates/mycelium-std-sys/`** (new crate). Minimal audited FFI/syscall floor (RFC-0016
+  §8-Q6 / LR-9): four modules, all `[Declared]` (unaudited libm/syscall floor; honest per VR-5):
+  - `math` — 14 transcendental wrappers (sin/cos/tan/asin/acos/atan/atan2/exp/exp2/ln/log2/log10/sqrt/cbrt)
+  - `rand` — `fill_bytes(buf) → Result<(), EntropyError>`; v0 uses DefaultHasher+SystemTime (non-cryptographic stand-in; explicitly Declared; getrandom replacement deferred — FLAG-RAND-IMPL)
+  - `fs` — `read`/`write`/`exists`/`create_dir_all`/`remove_file` over `std::fs`
+  - `time` — `wall_nanos()`/`mono_nanos()`/`sleep_nanos()` over `std::time`
+  - 15/15 tests pass. `cargo clippy -D warnings` clean. `#![forbid(unsafe_code)]`.
+
+- **M-502 — `docs/notes/DN-14-Self-Hosting-Gate.md`** (new, Draft). Honest self-hosting readiness
+  assessment grounded in actual source (`crates/mycelium-l1/src/checkty.rs`, `ast.rs`).
+  Verdict: **5/11 features present, 5 gate-fails, 1 partially missing** — self-hosting not established.
+  Gate-fails: generics (monomorphic-only), trait interfaces (v0 deferred), effect annotations (no AST
+  syntax), `wild`/FFI blocks (LR-9 denied by default), static guarantee index (stage-0 only).
+  No feature stamped present on intent alone (VR-5).
+
+- **M-540 — RFC-0012 ambient-representation `//!` docstring annotations** across all 23
+  `crates/mycelium-std-*/src/lib.rs` (292 insertions). Each block states the RFC-0012 ambient contract
+  (representation implicit at call site, always reified/queryable/EXPLAIN-able), carries
+  RFC-0012/DN-07/M-540 traceability, and adds a crate-specific grounded sentence.
+  Annotation-only pass — no new `pub` items, no new `#[test]` blocks, `cargo check --workspace` clean.
+
+**Orchestrator integrating edits:**
+- `Cargo.toml` — added `"crates/mycelium-std-sys"` to workspace `members`
+- `docs/Doc-Index.md` — registered DN-14 in §1 corpus table
+- `docs/api-index/` — regenerated (new std-sys public surface; 2561 items located, 3412 flagged)
+- `CLAUDE.md` — added "Swarm failure-mode mitigations" section (lessons from Wave-4)
+
+### Added (2026-06-19: Wave-4A landed — E3-8 agent documentation index, M-392..395)
+**Wave-4A octopus-merged (2026-06-19).** Epic E3-8 "Agent-facing documentation index" merged into
+`claude/orch-wave4-docs-sys-4ifdo4`; 5 commits above base; all Rust tests green; doc-index drift gate ok.
+
+- **M-392 — `tools/docgen/code_index.py`** (pure Python stdlib). JOINs the committed
+  `docs/spec/api/*.txt` public-API snapshots against the source tree to build a navigational index.
+  2561 items located; 3412 items flagged (re-exports, macro-generated, cfg-gated — G2, never silently
+  dropped). `--self-test` verifies determinism + completeness. Honesty tag: `Empirical/Declared`
+  (line/regex heuristic; source is ground truth).
+  - `docs/api-index/index.json` — machine-readable symbol table (symbol, kind, crate, file:line, summary).
+  - `docs/api-index/INDEX.md` — grep-friendly table grouped by crate; human/agent context lookup.
+- **M-393 — `just docs` + `just docs-index`** + `scripts/checks/doc-index.sh` drift gate wired into
+  `scripts/checks/all.sh` and `just check`. Mirrors the `just api` committed-snapshot pattern.
+  `just docs` (rustdoc HTML, target/doc, NOT committed); `just docs-index` (regenerate committed index).
+- **M-394 — `tools/github/doc_refs_check.py`** (requires PyYAML). Validates `doc_refs:` list entries in
+  `issues.yaml`: `api:<crate>::<path>` → index.json, `corpus:<DOC>[#<anchor>]` → Doc-Index.md,
+  `src:<path>[:<line>]` → file on disk. Never-silent on dangling refs. Extended `manifest-check.py`.
+  Backfilled `doc_refs:` on all 52 open issues in `issues.yaml` (Wave-4B issues pre-wired).
+- **M-395 — `CLAUDE.md` updated** with "Auto-generated docs & the agent index" section +
+  `docs/api-index/` added to orchestrator-owned collision-surface list. `dev-workflow` skill updated
+  (run `just docs-index` after any public-API change). `changelog` skill updated (index parity note).
+  New `.claude/skills/doc-index/SKILL.md` — `/doc-index` skill for regeneration, query, and doc_refs validation.
+- **`docs/Doc-Index.md` §7** added registering `docs/api-index/`.
+- **`tools/llm-harness/coauthor.py`** ruff format + unused-import fixes (pre-existing FLAG-1 resolved
+  in orchestrator integration pass).
+- **E3-8, M-392..395** → `status:done` in `issues.yaml`.
+
+Append-only.
+
+### Changed (2026-06-19: wave-4 step-0 reconciliation + wave-4A/4B launch record)
+**Issues reconciliation (step-0).** Three tasks implemented and tested but mislabelled
+`status:needs-design` corrected to `status:done`:
+- **M-350** (Resonator-network factorization) — evidence: `crates/mycelium-vsa/src/resonator.rs`
+  (893 lines); `tests/resonator_oracle.rs` + `tests/resonator_profile.rs` pass; convergence regime
+  documented; `StopReason::{BudgetExhausted,Oscillating,Stalled}` explicit; `ResonatorProfile`
+  carries bounds; never silent (G2 / VR-5).
+- **E3-5** (epic: resonator factorization) — M-350 complete.
+- **E3-1** (epic: semantic-level projections) — M-380 LlmCanonical enacted; M-381 is a
+  non-blocking P3 research track, not a gate on the epic.
+
+**Wave-4A tasks added to issues.yaml** — E3-8 (agent-facing documentation index epic) +
+M-392/M-393/M-394/M-395 (toolchain tasks; fill a gap in the M-300–M-400 block):
+- **E3-8** — Agent-facing documentation index & auto-doc workflow (note: the Wave-4A plan called
+  this E3-6; E3-6 was already taken by the BitNet acceleration epic, so assigned E3-8)
+- **M-392** — Agent code-index generator (`tools/docgen/code_index.py`, `docs/api-index/`)
+- **M-393** — `just docs` + `just docs-index` + staleness drift gate
+- **M-394** — Issue/epic ↔ index cross-references (`doc_refs:` grammar + backfill)
+- **M-395** — Workflow integration (CLAUDE.md + `.claude/skills/`)
+
+**Wave-4A swarm launch.** Sonnet Swarm (all agents claude-sonnet-4-6). Orchestrator on
+`claude/orch-wave4-docs-sys-4ifdo4`. Epic E3-8 on branch `claude/epic/E36A0-agent-doc-index`;
+leaf M-392 on `claude/leaf/E36A0-M392A-code-index-gen`. M-393/394/395 are epic-direct (no
+separate leaf). Wave-4A must land before Wave-4B fan-out so Wave-4B agents can read the index
+and their issues carry `doc_refs`.
+
+**Wave-4B swarm launch** (to fan out after Wave-4A merges):
+- **Epic A (M-541 std-sys)** — `claude/epic/M541A-std-sys-ffi-floor`; owns new crate
+  `crates/mycelium-std-sys/` (audited FFI floor per RFC-0016 §8-Q6 + DN-07).
+- **Epic B (M-502 + M-540)** — `claude/epic/M502A-self-host-ergonomics`; owns
+  `docs/notes/DN-14-Self-Hosting-Gate.md` (new, M-502) + `//!` ambient-representation
+  docstring additions across 23 std crates (M-540, annotation-only).
+
+No code merged yet; epics will octopus-merge into this branch after reporting. Append-only.
+
 ### Changed (2026-06-19: issues reconciliation + wave-3 swarm launch record)
 **Issues reconciliation.** `tools/github/issues.yaml` brought current with the implemented state —
 43 Phase-3–5 tasks updated to `status:done` (confirmed against crate presence in the workspace),

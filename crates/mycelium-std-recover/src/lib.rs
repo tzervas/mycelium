@@ -44,6 +44,18 @@
 //! # Design spec
 //!
 //! `docs/spec/stdlib/recover.md`; RFC-0014; task M-520, issue #156.
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 1, Tier A):** Recovery operations are representation-aware: a recover
+//! over a `Dense` value does not silently re-interpret the payload as `Ternary` on fallback.
+//! The recovered value's `Repr` matches the source; a `Fallback` that substitutes a different
+//! representation requires an explicit swap (and yields a `Declared` tag — I2/VR-5).
 #![forbid(unsafe_code)]
 
 pub mod action;

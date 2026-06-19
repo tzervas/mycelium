@@ -20,6 +20,19 @@
 //! data — `guarantee` / `audit_of` surface honest tags without upgrading them (RT5/VR-5).
 //!
 //! Design spec: `docs/spec/stdlib/diag.md`; RFC-0013; task M-510, issue #151.
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 1, Tier A):** Diagnostic emissions include representation context —
+//! a `Diag` record that originates from a representation operation carries the `Repr` of the
+//! input and output as part of its `Locus`; EXPLAIN-over-representation is a first-class
+//! diagnostic kind. `Diag::human` and `Diag::machine` are dual projections (G11); representation
+//! context is present in both projections, never silently omitted.
 #![forbid(unsafe_code)]
 
 // Re-export the kernel record types so consumers only need to depend on this crate.

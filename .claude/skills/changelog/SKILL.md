@@ -43,6 +43,10 @@ Keep the record honest and append-only.
 - When versioning starts: move `[Unreleased]` items into a dated `## [X.Y.Z] - YYYY-MM-DD`
   section, add comparison links, and reset `[Unreleased]`.
 
+## Checklist before staging the changelog entry
+- `docs/api-index/` in step with source: if any public symbol changed, confirm `just docs-index`
+  was run and the updated index is staged before the changelog entry.
+
 ## Output
 Propose the exact diff (which file, which section, which bullets). Confirm cross-references in
 new bullets resolve. Note if a status transition implies a supersede that hasn't been written.
