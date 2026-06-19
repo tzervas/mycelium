@@ -218,7 +218,7 @@ a formal argument is constructed. Never pre-written.
 |---|---|---|---|---|
 | **0 — bit/trit subset** | `core.id`, `bit.not/and/or/xor`, `trit.neg/add/sub/mul` | No — already shipped (M-301) | Yes — `llvm.rs` is live | Low (done) |
 | **1 — non-recursive Construct/Match** | Tagged stack-`alloca [N+1 x i64]` + switch-on-tag; straight-line arms; no closures, no recursion; no OOM path (non-recursive/bounded ⇒ static alloc depth) | No — textual LLVM IR only | **Yes** (this wave; M-373 landed) | Low: stack alloca is simpler than heap alloc; no GC; the differential against the interpreter is the guard |
-| **2 — closures (App/Lam) + heap** | Closure-conversion + indirect call through heap struct | No — but requires free-var analysis pass | Yes in principle, deferred | Medium: closure conversion is a multi-pass transform; textual-IR indirect calls are brittle to mis-encode |
+| **2 — closures (App/Lam) + heap** | Closure-conversion + indirect call through heap struct | No — but requires free-var analysis pass | **Yes — landed (M-378; §7)** | Medium: closure conversion is a multi-pass transform; textual-IR indirect calls are brittle to mis-encode |
 | **3 — recursion (Fix/FixGroup) + stack-robustness** | Iterative trampoline in LLVM IR; explicit heap control stack; DepthBudget trait reused | No — but complex IR emission | Tractable in principle, deferred | High: emitting a correct trampoline in textual IR is error-prone; DN-05 #1 requires no unbounded C stack (G2) — must be designed, not retrofitted |
 | **4 — real ternary MLIR dialect lowering** | `ternary` → `arith`/`vector` → LLVM via libMLIR | **Yes — libMLIR-gated** | No — `dialect.rs` is a textual skeleton only | Blocked on M-348; every verdict stays `not established` (VR-5) |
 
@@ -251,6 +251,70 @@ a formal argument is constructed. Never pre-written.
 
 ---
 
+## 7. Increment-2 realized design (M-378 — closures App/Lam + heap)
+
+Increment 2 (§4.2) is realized in this wave under M-378. The §4.2 sketch named a heap closure record
+`[fn_ptr, env]` + indirect call; this section fixes the concrete ABI, the no-GC strategy, and the
+free-variable analysis the implementation lands — all in textual LLVM IR (no libMLIR; sanctioned by
+§3 / RFC-0004 §2). The guarantee tag stays **Declared** (hand-written IR + the empirical M-302
+differential, not Proven — VR-5). Append-only: §4.2 and the §5 table are unchanged in intent; this
+section records what landed.
+
+### 7.1 Closure value ABI (narrow, packed-`i64`)
+
+To keep the first closure increment small and auditable (KISS/KC-3) and the differential tractable,
+closures cross the call boundary carrying **8-bit binary values packed into a single `i64`**. A
+`Lam` compiles to a top-level function `define i64 @closure_N(i8* %env, i64 %arg)`; its argument and
+result are packed `Binary{8}` lanes. Everything else is an explicit `AotError::UnsupportedNode` (G2):
+other widths, `Ternary`, datums across the boundary, closures-as-argument or closures-as-result
+(currying), an `App` whose function operand does not resolve to a closure, and a top-level program
+result that is itself a closure (not printable by the read-back protocol). The narrow ABI proves the
+closure machinery — free-variable capture, heap record, indirect call — end-to-end without committing
+to a general boxed-value calling convention; widening it (uniform pointer-boxed lanes of any
+repr/width) is a later, separable step.
+
+### 7.2 No-GC heap strategy: bump arena, freed at exit
+
+Closures are **heap**-allocated, not stack-allocated. A closure can outlive the function that built
+it (it is written into a record and applied later), so a stack `alloca` — Increment-1's choice for
+`Construct` (§4.1) — would be a use-after-return for an escaping closure. Increment 2 still excludes
+`Fix`/`FixGroup`, so the **total number of closure allocations is statically bounded by program
+structure** — no loop can allocate unboundedly. The strategy is therefore a **bump arena**: `@main`
+`@malloc`s one block, closure records are bump-allocated from it through a single helper, and the
+block is `@free`d before normal completion. Every allocation routes through **one seam**
+(`@myc_arena_alloc`) that checks the bump cursor against the arena capacity and takes an explicit
+defined-trap (`call @abort`, never raw `unreachable` UB; G2) on over-capacity. The capacity is a
+`Declared` compile-time constant — a safe over-estimate the static bound cannot exceed in Increment 2.
+
+**This seam is exactly where Increment 3 (DN-05 #1) attaches.** When `Fix`/`FixGroup` make allocation
+unbounded, the fixed capacity is replaced by an `AutoDepthBudget`-resolved ceiling
+(`crates/mycelium-mlir::budget`; M-349) and the over-capacity `@abort` becomes a graceful,
+`DepthLimit`-style refusal (matching the env-machine's `EvalError::DepthLimit`). The arena is
+*designed in* as that attachment point now, not retrofitted later — the honest sequencing DN-05 #1
+requires.
+
+### 7.3 Closure conversion (free-variable analysis → record → indirect call)
+
+A `Lam { param, body }` carries no captured environment in the node (the Core IR lambda is closed
+except for `param` and globals); its **free variables** are the body's referenced `Named` atoms that
+are neither `param` nor locally bound. A lexical free-variable analysis — recursing into nested
+lambdas and match arms, removing each scope's binders — computes the capture set deterministically.
+`Lam` lowering then (1) packs each captured `Binary{8}` lane to `i64` and writes the closure record
+`[fn_ptr | capture_0 | … | capture_k]` into the arena, and (2) emits `@closure_N`, whose body unpacks
+`%arg` to the `param` lane and each capture from `%env`, lowers `body`, and packs the result to
+`ret i64`. `App { func, arg }` loads `fn_ptr` from record slot 0, points `%env` at slot 1, packs
+`arg`, emits the indirect `call i64 %fp(i8* %env, i64 %arg)`, and unpacks the result. Every stage is
+explicit, dumpable textual IR — no opaque pass (RFC-0004 §6 / ADR-009 / VR-4).
+
+### 7.4 What stays refused (G2)
+
+`Fix`/`FixGroup` remain explicit `UnsupportedNode` (Increment 3). Closures over non-`Binary{8}`
+values, datums across the boundary, currying, non-closure `App` heads, and closure-valued program
+results are all explicit refusals — never a silent mis-lowering, never an upgraded guarantee (VR-5).
+
+---
+
 ## Meta — changelog
 
 <!-- changelog: 2026-06-19 Draft created (M-373) — records the libMLIR-gated vs direct-LLVM-advanceable decomposition, the Increment-1 (Construct/Match) design strategy, the DN-05 #1 DepthBudget reuse plan for Increment 3, and the per-increment risk table. Append-only. -->
+<!-- changelog: 2026-06-19 §7 added (M-378) — realized Increment-2 design: narrow packed-i64 closure ABI; bump-arena no-GC strategy with the single alloc seam where Increment-3's DepthBudget ceiling attaches (DN-05 #1); free-variable-analysis closure conversion. §5 table Increment-2 row marked landed. Guarantee stays Declared (VR-5). Append-only. -->

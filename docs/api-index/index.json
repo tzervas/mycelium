@@ -11975,7 +11975,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 1270,
+      "line": 1731,
       "summary": "A compiled native artifact for a bit/trit-subset program: the executable on disk (in a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12063,7 +12063,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 87,
+      "line": 97,
       "summary": "A JIT-compiled kernel: the `.so` on disk (in a per-artifact temp dir, cleaned on drop) + the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12833,7 +12833,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 1305,
+      "line": 1766,
       "summary": "Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`)",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12844,7 +12844,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 1331,
+      "line": 1792,
       "summary": "Compile the bit/trit-subset program to a native executable, run it once, and read the result",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12883,12 +12883,34 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mlir::compile_bitnet_dot_simd_tl1",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/simd.rs",
+      "line": 250,
+      "summary": "Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process,",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::compile_bitnet_dot_simd_tl2",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/simd.rs",
+      "line": 603,
+      "summary": "Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process,",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mlir::compile_so",
       "kind": "fn",
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 184,
+      "line": 194,
       "summary": "Compile the bit/trit-subset program to a shared object without calling it.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12982,12 +13004,34 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mlir::emit_bitnet_dot_simd_tl1_ir",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/simd.rs",
+      "line": 169,
+      "summary": "Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::emit_bitnet_dot_simd_tl2_ir",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/simd.rs",
+      "line": 308,
+      "summary": "Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mlir::emit_llvm_ir",
       "kind": "fn",
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 859,
+      "line": 1245,
       "summary": "Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13273,7 +13317,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::jit",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 87,
+      "line": 97,
       "summary": "A JIT-compiled kernel: the `.so` on disk (in a per-artifact temp dir, cleaned on drop) + the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13306,7 +13350,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::jit",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 184,
+      "line": 194,
       "summary": "Compile the bit/trit-subset program to a shared object without calling it.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13317,7 +13361,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::jit",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 208,
+      "line": 218,
       "summary": "Compile the program to a shared object and call it once, in-process.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13328,7 +13372,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 208,
+      "line": 218,
       "summary": "Compile the program to a shared object and call it once, in-process.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13394,7 +13438,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 1270,
+      "line": 1731,
       "summary": "A compiled native artifact for a bit/trit-subset program: the executable on disk (in a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13427,7 +13471,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 1305,
+      "line": 1766,
       "summary": "Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`)",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13438,7 +13482,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 1331,
+      "line": 1792,
       "summary": "Compile the bit/trit-subset program to a native executable, run it once, and read the result",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13449,7 +13493,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 859,
+      "line": 1245,
       "summary": "Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13719,6 +13763,28 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mlir::simd::compile_bitnet_dot_simd_tl1",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::simd",
+      "file": "crates/mycelium-mlir/src/simd.rs",
+      "line": 250,
+      "summary": "Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process,",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::simd::compile_bitnet_dot_simd_tl2",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::simd",
+      "file": "crates/mycelium-mlir/src/simd.rs",
+      "line": 603,
+      "summary": "Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process,",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mlir::simd::emit_bitnet_dot_simd_ir",
       "kind": "fn",
       "crate": "mycelium-mlir",
@@ -13726,6 +13792,28 @@
       "file": "crates/mycelium-mlir/src/simd.rs",
       "line": 55,
       "summary": "Emit the textual LLVM IR for the **hand-vectorized I2_S** packed-ternary dot kernel",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::simd::emit_bitnet_dot_simd_tl1_ir",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::simd",
+      "file": "crates/mycelium-mlir/src/simd.rs",
+      "line": 169,
+      "summary": "Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::simd::emit_bitnet_dot_simd_tl2_ir",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::simd",
+      "file": "crates/mycelium-mlir/src/simd.rs",
+      "line": 308,
+      "summary": "Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -23461,6 +23549,314 @@
       "file": "crates/mycelium-std-swap/src/lib.rs",
       "line": 348,
       "summary": "`vsa_to_dense` — decode a `swap.dense_vsa.enc.v1` product back to a bipolar `Dense{F32}` value",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::fs",
+      "kind": "mod",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys",
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 42,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::fs::create_dir_all",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::fs",
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 41,
+      "summary": "\\[Declared\\] Create a directory and all its parents.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::fs::exists",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::fs",
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 34,
+      "summary": "\\[Declared\\] Check whether a path exists on the filesystem.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::fs::read",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::fs",
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 18,
+      "summary": "\\[Declared\\] Read the entire contents of a file at `path`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::fs::remove_file",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::fs",
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 48,
+      "summary": "\\[Declared\\] Remove a file.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::fs::write",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::fs",
+      "file": "crates/mycelium-std-sys/src/fs.rs",
+      "line": 25,
+      "summary": "\\[Declared\\] Write `contents` to a file at `path`, creating or truncating it.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math",
+      "kind": "mod",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys",
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 43,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math::acos",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::math",
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 37,
+      "summary": "\\[Declared\\] `acos(x)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math::asin",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::math",
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 32,
+      "summary": "\\[Declared\\] `asin(x)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math::atan",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::math",
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 42,
+      "summary": "\\[Declared\\] `atan(x)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math::atan2",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::math",
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 47,
+      "summary": "\\[Declared\\] `atan2(y, x)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math::cbrt",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::math",
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 82,
+      "summary": "\\[Declared\\] `cbrt(x)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math::cos",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::math",
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 22,
+      "summary": "\\[Declared\\] `cos(x)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math::exp",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::math",
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 52,
+      "summary": "\\[Declared\\] `exp(x)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math::exp2",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::math",
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 57,
+      "summary": "\\[Declared\\] `exp2(x)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math::ln",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::math",
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 62,
+      "summary": "\\[Declared\\] `ln(x)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math::log10",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::math",
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 72,
+      "summary": "\\[Declared\\] `log10(x)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math::log2",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::math",
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 67,
+      "summary": "\\[Declared\\] `log2(x)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math::sin",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::math",
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 17,
+      "summary": "\\[Declared\\] `sin(x)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math::sqrt",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::math",
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 77,
+      "summary": "\\[Declared\\] `sqrt(x)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::math::tan",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::math",
+      "file": "crates/mycelium-std-sys/src/math.rs",
+      "line": 27,
+      "summary": "\\[Declared\\] `tan(x)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::rand",
+      "kind": "mod",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys",
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 44,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::rand::EntropyError",
+      "kind": "enum",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::rand",
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 37,
+      "summary": "Errors from platform entropy operations.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::rand::fill_bytes",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::rand",
+      "file": "crates/mycelium-std-sys/src/rand.rs",
+      "line": 70,
+      "summary": "\\[Declared\\] Fill `buf` with bytes from the OS entropy source (`/dev/urandom`).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::time",
+      "kind": "mod",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys",
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 45,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::time::mono_nanos",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::time",
+      "file": "crates/mycelium-std-sys/src/time.rs",
+      "line": 41,
+      "summary": "\\[Declared\\] Returns monotonic nanoseconds since an unspecified process-local epoch.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::time::sleep_nanos",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::time",
+      "file": "crates/mycelium-std-sys/src/time.rs",
+      "line": 57,
+      "summary": "\\[Declared\\] Pause the current thread for approximately `nanos` nanoseconds.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::time::wall_nanos",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::time",
+      "file": "crates/mycelium-std-sys/src/time.rs",
+      "line": 26,
+      "summary": "\\[Declared\\] Returns nanoseconds since the Unix epoch from the wall clock.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -39265,6 +39661,22 @@
     {
       "symbol": "mycelium_std_swap::roundtrip_lemma_ref",
       "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_std_sys::rand::EntropyError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::rand::EntropyError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::rand::EntropyError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::rand::EntropyError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_ternary::guarantee_matrix::Explainable::clone",

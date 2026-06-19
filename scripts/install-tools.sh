@@ -14,8 +14,16 @@
 # tools land in ~/.cargo/bin) persist and the setup step is SKIPPED on subsequent sessions — the
 # toolchain is compiled once, not per session. Snapshot rebuilds only when the setup script or the
 # network allowlist changes, or after ~7 days. (Docs: code.claude.com/docs/en/claude-code-on-the-web
-# § "Setup scripts" / "Environment caching".) Do NOT put this in a SessionStart hook — those run on
-# every session and are not cached, which would recompile the toolchain every time.
+# § "Setup scripts" / "Environment caching".)
+#
+# The Setup script stays the PRIMARY mechanism (it compiles the toolchain once, inside the cached
+# snapshot). This script is **idempotent** — every install probes for the tool first (`have` / `cargo
+# <sub> --version`) and skips it when present, so a re-run only fills gaps and never recompiles an
+# already-installed toolchain. That makes a SessionStart-hook **safety-net** re-run cheap and safe on
+# a normal (snapshotted) session — it just confirms "present" for everything. Caveat: on a *cold*
+# container where the snapshot is unavailable, a SessionStart re-run would compile the missing cargo
+# tools inside the hook (slow, uncached), so prefer the cached Setup script and treat the hook only as
+# a belt-and-suspenders gap-filler.
 #
 # Setup scripts have a ~5-minute budget for the cache to build. The cargo introspection tools
 # (`just map` / `just api`: cargo-modules/depgraph/public-api) are the slow tail and are NOT part
@@ -54,14 +62,22 @@ fi
 section "install check tools"
 
 PY_TOOLS=(check-jsonschema codespell shellcheck-py)
+# The binary each package provides (so a re-run can skip an already-installed tool by presence,
+# only filling gaps — `shellcheck-py` ships `shellcheck`, not `shellcheck-py`).
+declare -A PY_BIN=( [check-jsonschema]=check-jsonschema [codespell]=codespell [shellcheck-py]=shellcheck )
 
 if have uv; then
   for t in "${PY_TOOLS[@]}"; do
-    if uv tool install --quiet "$t" 2>/dev/null; then ok "uv tool: $t"
-    else skip "uv tool: $t (already present or failed)"; fi
+    if have "${PY_BIN[$t]}"; then ok "present: $t (${PY_BIN[$t]})"
+    elif uv tool install --quiet "$t" 2>/dev/null; then ok "uv tool: $t"
+    else skip "uv tool: $t (install failed)"; fi
   done
 elif have python3; then
-  if python3 -m pip install --user --quiet "${PY_TOOLS[@]}"; then ok "pip --user: ${PY_TOOLS[*]}"
+  # Only install the packages whose binary is missing (idempotent gap-fill, not a blanket reinstall).
+  missing=()
+  for t in "${PY_TOOLS[@]}"; do have "${PY_BIN[$t]}" || missing+=("$t"); done
+  if [[ ${#missing[@]} -eq 0 ]]; then ok "present: ${PY_TOOLS[*]}"
+  elif python3 -m pip install --user --quiet "${missing[@]}"; then ok "pip --user: ${missing[*]}"
   else skip "pip install failed"; fi
 else
   skip "no uv/python3 — skipped python tools"
@@ -89,11 +105,14 @@ else
 fi
 
 # cargo-deny / cargo-audit (C1-09): supply-chain gates driven by scripts/checks/deny.sh.
-# Best-effort, skip-if-missing. `deny.sh` skips gracefully when either is absent.
+# Best-effort, skip-if-missing. `deny.sh` skips gracefully when either is absent. Idempotent: the
+# `--version` probe short-circuits when the tool is already installed (a re-run never recompiles),
+# and `--locked` pins the install to each crate's committed Cargo.lock (deterministic, no surprise
+# dep rebuilds across snapshot rebuilds).
 if have cargo; then
   for t in cargo-deny cargo-audit; do
     if cargo "${t#cargo-}" --version >/dev/null 2>&1; then ok "cargo: $t present"
-    elif cargo install --quiet "$t" 2>/dev/null; then ok "cargo install: $t"
+    elif cargo install --locked --quiet "$t" 2>/dev/null; then ok "cargo install: $t"
     else skip "cargo: $t (install failed or offline; \`just deny\` will skip it)"; fi
   done
 fi
@@ -108,9 +127,21 @@ if [[ "${MYCELIUM_SKIP_OPTIONAL_CARGO:-0}" == "1" ]]; then
 elif have cargo; then
   for t in cargo-modules cargo-depgraph cargo-public-api; do
     if cargo "${t#cargo-}" --help >/dev/null 2>&1; then ok "cargo: $t present"
-    elif cargo install --quiet "$t" 2>/dev/null; then ok "cargo install: $t"
+    elif cargo install --locked --quiet "$t" 2>/dev/null; then ok "cargo install: $t"
     else skip "cargo: $t (install failed or offline; \`just map\`/\`just api\` will skip it)"; fi
   done
+  # `cargo public-api` (the `just api` surface gate) builds rustdoc-JSON, which needs a **nightly**
+  # rustdoc. Provision it here (idempotent: `rustup` is a no-op when nightly is already present) so
+  # the gate runs in the snapshot rather than failing at runtime on a missing toolchain. Minimal
+  # profile + the `rustdoc` component is all the surface build needs (not a full nightly std).
+  if have rustup; then
+    if rustup run nightly rustdoc --version >/dev/null 2>&1; then ok "rustup: nightly (rustdoc) present"
+    elif rustup toolchain install nightly --profile minimal --component rustdoc >/dev/null 2>&1; then
+      ok "rustup: nightly installed (rustdoc for \`cargo public-api\`)"
+    else skip "rustup: nightly install failed (\`just api\` will fail to build the surface)"; fi
+  else
+    skip "no rustup — \`cargo public-api\` cannot build rustdoc-JSON (\`just api\` will fail)"
+  fi
 else
   skip "no cargo — skipped code-map tools"
 fi

@@ -442,23 +442,230 @@ fn interp_and_native_are_observably_equivalent_on_the_data_corpus() {
     }
 }
 
-/// M-373 refusal parity: `App`/`Lam`/`Fix`/`FixGroup` nodes must still return an explicit
-/// `AotError::UnsupportedNode` on the native path — never a panic, never silent UB (G2).
-/// Verifies that the refusal split (Construct/Match pulled out of the catch-all) did not
-/// accidentally silence the remaining unsupported nodes.
+// ─── M-378: closure (App/Lam) + heap differential (Increment-2) ───────────────────────────────
+
+/// The closure corpus (M-378 Increment-2; DN-15 §7 / RFC-0004 §11.5): `App`/`Lam` programs over the
+/// **narrow `Binary{8}`-packed-`i64` closure ABI**. Each program applies a closure fully and reduces
+/// to a bit vector, so it is valid under both the interpreter (full v0 calculus) and the LLVM
+/// closure path (`compile_and_run`, free-var analysis → heap closure record → indirect call).
+///
+/// Guarantee: `Declared` — hand-written IR lowering, empirically validated by the differential (VR-5:
+/// never upgraded to `Proven` without a checked proof).
+fn closure_corpus() -> Vec<Node> {
+    // λx. <op over x and named vars>, applied to `arg`.
+    let lam = |param: &str, body: Node| Node::Lam {
+        param: param.to_owned(),
+        body: Box::new(body),
+    };
+    let app = |f: Node, a: Node| Node::App {
+        func: Box::new(f),
+        arg: Box::new(a),
+    };
+    let var = |x: &str| Node::Var(x.to_owned());
+    let op2 = |prim: &str, a: Node, b: Node| Node::Op {
+        prim: prim.into(),
+        args: vec![a, b],
+    };
+    let not = |a: Node| Node::Op {
+        prim: "bit.not".into(),
+        args: vec![a],
+    };
+    let let_ = |id: &str, bound: Node, body: Node| Node::Let {
+        id: id.to_owned(),
+        bound: Box::new(bound),
+        body: Box::new(body),
+    };
+
+    vec![
+        // 1. Identity: (λx. x) A → A. The minimal closure (no captures) + indirect call.
+        app(lam("x", var("x")), Node::Const(byte(A))),
+        // 2. Capture + xor: let y = B in (λx. x ⊕ y) A → A ⊕ B. One captured free var.
+        let_(
+            "y",
+            Node::Const(byte(B)),
+            app(
+                lam("x", op2("bit.xor", var("x"), var("y"))),
+                Node::Const(byte(A)),
+            ),
+        ),
+        // 3. Capture + and: let y = A in (λx. x ∧ y) B → A ∧ B (capture distinct from the argument).
+        let_(
+            "y",
+            Node::Const(byte(A)),
+            app(
+                lam("x", op2("bit.and", var("x"), var("y"))),
+                Node::Const(byte(B)),
+            ),
+        ),
+        // 4. Two captures: let y = A in let z = B in (λx. (x ⊕ y) ∨ z) ONES. Record with k = 2.
+        let_(
+            "y",
+            Node::Const(byte(A)),
+            let_(
+                "z",
+                Node::Const(byte(B)),
+                app(
+                    lam(
+                        "x",
+                        op2("bit.or", op2("bit.xor", var("x"), var("y")), var("z")),
+                    ),
+                    Node::Const(byte(ONES)),
+                ),
+            ),
+        ),
+        // 5. Const inside the body, no capture: (λx. ¬(x ⊕ A)) B → ¬(B ⊕ A). Body-local const stays
+        //    body-local (not a capture) — exercises the empty-capture record with a non-trivial body.
+        app(
+            lam("x", not(op2("bit.xor", var("x"), Node::Const(byte(A))))),
+            Node::Const(byte(B)),
+        ),
+        // 6. Closure result feeds an enclosing op: let y = A in ¬((λx. x ∧ y) B) → ¬(B ∧ A).
+        //    The App result (unpacked lane) flows into a following `bit.not`.
+        let_(
+            "y",
+            Node::Const(byte(A)),
+            not(app(
+                lam("x", op2("bit.and", var("x"), var("y"))),
+                Node::Const(byte(B)),
+            )),
+        ),
+        // 7. Nested capturing lambda, applied inside the body: (λx. (λw. w ⊕ x) x) A → A ⊕ A.
+        //    The inner closure captures the *outer* parameter x (a capture that resolves to another
+        //    closure's argument lane), is allocated + called within the outer body, and returns
+        //    Binary{8}. Exercises recursion of the closure-conversion machinery (free-var analysis
+        //    descending into a nested lambda; a record built inside a closure function).
+        app(
+            lam(
+                "x",
+                app(lam("w", op2("bit.xor", var("w"), var("x"))), var("x")),
+            ),
+            Node::Const(byte(A)),
+        ),
+    ]
+}
+
+/// Evaluate a `closure_corpus` program through the reference interpreter (the oracle). Each program
+/// applies its closures fully, reducing to a repr `Value`, so `eval` suffices.
+fn interp_eval_closure(node: &Node) -> Value {
+    Interpreter::new(PrimRegistry::with_builtins(), Box::new(IdentitySwapEngine))
+        .eval(node)
+        .expect("interpreter must evaluate every closure_corpus program to a repr value")
+}
+
+/// M-378 Increment-2: interp ↔ native are observably equivalent on the `closure_corpus`.
+///
+/// The gate (NFR-7): closures lowered to heap records + indirect calls in textual LLVM IR must agree
+/// with the reference interpreter, element for element, through the single shared M-210 checker.
+/// Guarantee: `Declared` (the differential is empirical evidence — VR-5; DN-15 §7).
 #[test]
-fn lam_and_fix_are_still_explicitly_refused_by_the_native_path() {
-    // A bare Lam — not callable without App, but sufficient to test the refusal path.
-    let lam = Node::Lam {
+fn interp_and_native_are_observably_equivalent_on_the_closure_corpus() {
+    for (i, node) in closure_corpus().iter().enumerate() {
+        let native = match mycelium_mlir::compile_and_run(node) {
+            Ok(v) => v,
+            // Environment skip: no native toolchain → cannot run the compiled path here.
+            Err(AotError::ToolchainMissing(_)) => return,
+            Err(e) => panic!("closure program #{i}: native path errored: {e}"),
+        };
+        let interp = interp_eval_closure(node);
+        // Mutant-witness: if the closure captured the wrong slot, the indirect call passed the env
+        // and arg in the wrong order, or pack/unpack mis-encoded the bits, the payloads would diverge.
+        assert_eq!(
+            observable(&interp),
+            observable(&native),
+            "closure program #{i} diverged: interp {:?} vs native {:?}",
+            interp.payload(),
+            native.payload()
+        );
+        // M-210: the same pair validates through the single shared TV checker.
+        assert_eq!(
+            check(
+                &interp,
+                &native,
+                RefinementRelation::ObservationalEquiv,
+                Certificate::exact(),
+                &Evidence::Observational,
+            ),
+            CheckVerdict::Validated {
+                strength: GuaranteeStrength::Exact
+            },
+            "closure program #{i}: the shared checker must validate the interp↔native pair"
+        );
+    }
+}
+
+/// Sanity: the closure path actually discriminates — two closures with the *same* capture but
+/// different bodies (`x ⊕ y` vs `x ∧ y`) produce different results, and the shared checker reports
+/// the divergence (never a vacuous pass). Guards specifically the closure machinery.
+#[test]
+fn native_closure_differential_distinguishes_different_bodies() {
+    let mk = |prim: &str| Node::Let {
+        id: "y".to_owned(),
+        bound: Box::new(Node::Const(byte(A))),
+        body: Box::new(Node::App {
+            func: Box::new(Node::Lam {
+                param: "x".to_owned(),
+                body: Box::new(Node::Op {
+                    prim: prim.into(),
+                    args: vec![Node::Var("x".to_owned()), Node::Var("y".to_owned())],
+                }),
+            }),
+            arg: Box::new(Node::Const(byte(B))),
+        }),
+    };
+    let (x, y) = match (
+        mycelium_mlir::compile_and_run(&mk("bit.xor")),
+        mycelium_mlir::compile_and_run(&mk("bit.and")),
+    ) {
+        (Ok(x), Ok(y)) => (x, y),
+        (Err(AotError::ToolchainMissing(_)), _) | (_, Err(AotError::ToolchainMissing(_))) => return,
+        (x, y) => panic!("native closure path errored: {x:?} / {y:?}"),
+    };
+    assert_ne!(
+        observable(&x),
+        observable(&y),
+        "A⊕B and A∧B must differ for these A/B"
+    );
+    let verdict = check(
+        &x,
+        &y,
+        RefinementRelation::ObservationalEquiv,
+        Certificate::exact(),
+        &Evidence::Observational,
+    );
+    assert!(
+        matches!(verdict, CheckVerdict::NotValidated { .. }),
+        "the checker must reject the divergent closure pair, got {verdict:?}"
+    );
+}
+
+/// Refusal parity (M-378 updates M-373): with closures now lowered, the native path must still
+/// refuse — explicitly, never silently (G2) — the constructs outside the Increment-2 subset:
+/// `Fix`/`FixGroup` recursion (Increment-3) and a **closure-valued program result** (a bare `Lam`,
+/// or currying — a closure is not a printable value in the narrow ABI; DN-15 §7.4).
+#[test]
+fn recursion_and_closure_valued_results_are_still_explicitly_refused() {
+    // A bare Lam: lowers to a closure value, which cannot be the printable program result.
+    let bare_lam = Node::Lam {
         param: "x".to_owned(),
         body: Box::new(Node::Var("x".to_owned())),
     };
-    // A Fix node (self-referential recursion — not in the bounded non-recursive subset).
+    // Currying — the inner application would need a closure as a value across the ABI: (λx. λy. x) A.
+    let curry = Node::App {
+        func: Box::new(Node::Lam {
+            param: "x".to_owned(),
+            body: Box::new(Node::Lam {
+                param: "y".to_owned(),
+                body: Box::new(Node::Var("x".to_owned())),
+            }),
+        }),
+        arg: Box::new(Node::Const(byte(A))),
+    };
+    // Self-referential recursion — Increment-3, not this subset.
     let fix = Node::Fix {
         name: "f".to_owned(),
         body: Box::new(Node::Var("f".to_owned())),
     };
-    for (label, node) in [("Lam", &lam), ("Fix", &fix)] {
+    for (label, node) in [("bare Lam", &bare_lam), ("curry", &curry), ("Fix", &fix)] {
         match mycelium_mlir::compile_and_run(node) {
             Err(AotError::UnsupportedNode(_)) => { /* expected explicit refusal */ }
             Err(AotError::ToolchainMissing(_)) => { /* environment skip */ }
@@ -468,6 +675,30 @@ fn lam_and_fix_are_still_explicitly_refused_by_the_native_path() {
             ),
             Err(e) => panic!("{label} errored with an unexpected variant: {e}"),
         }
+    }
+}
+
+/// M-378 narrow-ABI parity: a value crossing the closure boundary that is not `Binary{8}` must be an
+/// explicit `UnsupportedNode` — never a silent mis-encode (G2; DN-15 §7.1). Here the closure is
+/// applied to a `Ternary` argument, which `as_binary8` refuses at the `App` site.
+#[test]
+fn closures_over_non_binary8_values_are_explicitly_refused() {
+    // (λx. x) applied to a balanced-ternary value — outside the Binary{8}-packed-i64 closure ABI.
+    let prog = Node::App {
+        func: Box::new(Node::Lam {
+            param: "x".to_owned(),
+            body: Box::new(Node::Var("x".to_owned())),
+        }),
+        arg: Box::new(Node::Const(tern(vec![Trit::Pos, Trit::Zero, Trit::Neg]))),
+    };
+    match mycelium_mlir::compile_and_run(&prog) {
+        Err(AotError::UnsupportedNode(_)) => { /* expected explicit refusal */ }
+        Err(AotError::ToolchainMissing(_)) => { /* environment skip */ }
+        Ok(v) => panic!(
+            "a ternary-argument closure must be refused; native path returned {:?}",
+            v.payload()
+        ),
+        Err(e) => panic!("ternary-argument closure errored with an unexpected variant: {e}"),
     }
 }
 

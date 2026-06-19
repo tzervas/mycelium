@@ -173,26 +173,58 @@ pub(crate) struct Datum {
     pub(crate) slots: usize,
 }
 
-/// An environment value — either a repr-lane (bit/trit) or a constructed data value (tagged struct).
+/// The element width of the **narrow Increment-2 closure ABI**: closures carry/return `Binary{8}`
+/// values packed into a single `i64` (DN-15 §7.1; RFC-0004 §11.5). Anything wider/other-repr is an
+/// explicit `UnsupportedNode` (never a silent mis-encode — G2).
+pub(crate) const CLOSURE_ABI_WIDTH: usize = 8;
+
+/// The arena capacity (bytes) for the bump-allocated closure heap (DN-15 §7.2). A **`Declared`**
+/// compile-time over-estimate. Increment-2 excludes `Fix`/`FixGroup`, so the number of closure
+/// records is statically bounded by program structure (not a runaway) — but that bound is *not
+/// computed here*, so a sufficiently large finite program could still exceed this capacity. If it
+/// does, the over-capacity check in `@myc_arena_alloc` takes an explicit `@abort` (a never-silent
+/// defined-trap — G2), exactly the seam where **Increment-3** substitutes a `DepthBudget`-resolved
+/// ceiling + a graceful limit (DN-05 #1; `budget.rs`, M-349).
+pub(crate) const ARENA_CAPACITY_BYTES: usize = 1 << 20;
+
+/// A native closure value (Increment-2): a pointer to a heap (arena) closure record laid out as
+/// `[ fn_ptr:i64 | capture_0:i64 | … | capture_k:i64 ]` (slot 0 = `@myc_closureN` address as i64,
+/// slots 1.. = captured `Binary{8}` values packed to `i64`). Produced by `Rhs::Lam`, consumed by
+/// `Rhs::App` as an indirect call. A closure is never a printable result and never crosses the
+/// narrow ABI as an argument/result — those are explicit refusals (DN-15 §7.4; G2).
+#[derive(Debug, Clone)]
+pub(crate) struct ClosureVal {
+    /// The SSA register holding the record's `i64*` base pointer.
+    pub(crate) base: String,
+}
+
+/// An environment value — a repr-lane (bit/trit), a constructed data value (tagged struct), or a
+/// native closure (Increment-2).
 ///
 /// The `lower_program` env maps [`Atom`] → `EnvValue`. Repr-lane values flow into `emit_op`; datum
-/// values are produced by `Construct` and consumed by `Match` arm bodies. A datum is never a final
-/// result (the output protocol prints bits/trits; a program that leaves a datum on the result atom
+/// values are produced by `Construct` and consumed by `Match` arm bodies; closure values are
+/// produced by `Lam` and consumed by `App`. Neither a datum nor a closure is ever a final result
+/// (the output protocol prints bits/trits; a program that leaves a datum/closure on the result atom
 /// is refused with an explicit [`AotError::UnsupportedNode`]).
 #[derive(Debug, Clone)]
 pub(crate) enum EnvValue {
     Repr(Lane),
     Datum(Datum),
+    Closure(ClosureVal),
 }
 
 impl EnvValue {
-    /// Extract the repr lane, or return an explicit error if it is a datum.
+    /// Extract the repr lane, or return an explicit error if it is a datum/closure.
     fn into_lane(self, ctx: &str) -> Result<Lane, AotError> {
         match self {
             EnvValue::Repr(l) => Ok(l),
             EnvValue::Datum(_) => Err(AotError::UnsupportedNode(format!(
                 "{ctx}: expected a repr lane but found a data value (only repr \
                  values are valid here)"
+            ))),
+            EnvValue::Closure(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a repr lane but found a closure value — a closure is not a \
+                 printable/repr value in the native ABI (Increment-2; DN-15 §7.4)"
             ))),
         }
     }
@@ -202,6 +234,9 @@ impl EnvValue {
             EnvValue::Datum(_) => Err(AotError::UnsupportedNode(format!(
                 "{ctx}: expected a repr lane but found a data value"
             ))),
+            EnvValue::Closure(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a repr lane but found a closure value (Increment-2; DN-15 §7.4)"
+            ))),
         }
     }
     fn as_datum(&self, ctx: &str) -> Result<&Datum, AotError> {
@@ -209,6 +244,20 @@ impl EnvValue {
             EnvValue::Datum(d) => Ok(d),
             EnvValue::Repr(_) => Err(AotError::UnsupportedNode(format!(
                 "{ctx}: expected a data value (Datum) but found a repr lane"
+            ))),
+            EnvValue::Closure(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a data value (Datum) but found a closure value"
+            ))),
+        }
+    }
+    /// Extract the closure, or an explicit refusal if this is not a closure (e.g. `App` applied to a
+    /// non-function value — never a silent miscall; G2).
+    fn as_closure(&self, ctx: &str) -> Result<&ClosureVal, AotError> {
+        match self {
+            EnvValue::Closure(c) => Ok(c),
+            _ => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a closure value but found a non-function value — only a `Lam` \
+                 produces a callable closure (Increment-2; DN-15 §7.1)"
             ))),
         }
     }
@@ -246,6 +295,10 @@ pub(crate) struct Lowered {
     /// trit-arithmetic op's overflow condition, or `None` for a program that cannot overflow (no
     /// `trit.add/sub/mul`). The AOT/JIT emitters branch on it to drive the read-back protocol.
     pub(crate) overflow: Option<String>,
+    /// The emitted closure functions (`define i64 @myc_closureN(i8* %env, i64 %arg) { … }`), one per
+    /// `Rhs::Lam` lowered (Increment-2). Empty for a closure-free program — in which case
+    /// [`emit_llvm_ir`] emits byte-for-byte the same module as before (no arena, no closures).
+    pub(crate) funcs: Vec<String>,
 }
 
 /// Lower a single field `Lane` into the struct at `ptr`, writing elements starting at `slot_start`
@@ -401,6 +454,9 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
     // native path being conservative (OR of all of them ⇒ one explicit `Overflow`) gives the same
     // verdict — we never read the meaningless result either way.
     let mut flags: Vec<String> = Vec::new();
+    // The emitted closure functions (Increment-2); one per `Rhs::Lam`. Stays empty for closure-free
+    // programs, so their emitted module is unchanged.
+    let mut funcs: Vec<String> = Vec::new();
 
     for b in anf.bindings() {
         let ev = match &b.rhs {
@@ -553,6 +609,7 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                         &mut ssa,
                         &mut bbc,
                         &mut body,
+                        &mut funcs,
                         &mut flags,
                     )?;
                     phi_entries.push((label.clone(), arm_result));
@@ -573,6 +630,7 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                         &mut ssa,
                         &mut bbc,
                         &mut body,
+                        &mut funcs,
                         &mut flags,
                     )?;
                     phi_entries.push((default_label.clone(), default_result));
@@ -620,24 +678,17 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                     vals: result_vals,
                 })
             }
-            // App, Lam, Fix, FixGroup: closures + recursion — deferred to Increment-2/3. These run
-            // on the AOT env-machine (M-342); the native LLVM path refuses them explicitly (VR-5; G2).
-            // The refusal message is updated to no longer mention Construct/Match (which are now
-            // supported for the non-recursive bounded case).
-            Rhs::App { .. } => {
-                return Err(AotError::UnsupportedNode(
-                    "App: function application needs closure codegen (Increment-2, deferred). \
-                     Runs on the AOT env-machine (M-342)"
-                        .to_owned(),
-                ));
-            }
-            Rhs::Lam { .. } => {
-                return Err(AotError::UnsupportedNode(
-                    "Lam: lambda abstraction needs closure-conversion (Increment-2, deferred). \
-                     Runs on the AOT env-machine (M-342)"
-                        .to_owned(),
-                ));
-            }
+            // Increment-2 (M-378; DN-15 §7; RFC-0004 §11.5): App/Lam are now natively lowered via
+            // closure-conversion (free-var analysis → heap closure record → indirect call), over the
+            // narrow `Binary{8}`-packed-`i64` ABI and the bump arena. Fix/FixGroup stay explicit
+            // UnsupportedNode (Increment-3 — heap trampoline + DN-05 #1 stack-robustness; G2/VR-5).
+            Rhs::Lam {
+                param,
+                body: lam_body,
+            } => lower_lam(
+                param, lam_body, &env, &mut ssa, &mut bbc, &mut body, &mut funcs,
+            )?,
+            Rhs::App { func, arg } => lower_app(func, arg, &env, &mut ssa, &mut body)?,
             Rhs::Fix { .. } => {
                 return Err(AotError::UnsupportedNode(
                     "Fix: general recursion needs a heap trampoline (Increment-3 / DN-05 #1, \
@@ -665,6 +716,7 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
         result,
         ssa,
         overflow,
+        funcs,
     })
 }
 
@@ -677,6 +729,7 @@ fn lower_anf_block(
     ssa: &mut Ssa,
     bbc: &mut Bbc,
     body: &mut String,
+    funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
 ) -> Result<Lane, AotError> {
     for b in anf.bindings() {
@@ -794,15 +847,22 @@ fn lower_anf_block(
                         );
                     }
                     let arm_result =
-                        lower_anf_block(arm_body, &mut arm_env, ssa, bbc, body, flags)?;
+                        lower_anf_block(arm_body, &mut arm_env, ssa, bbc, body, funcs, flags)?;
                     phi_entries.push((label.clone(), arm_result));
                     let _ = writeln!(body, "  br label %{merge_label}");
                 }
                 // Default block: lower ANF default if `Some`; abort() if `None` (G2/WF7).
                 let _ = writeln!(body, "{default_label}:");
                 if let Some(default_block) = default_arm {
-                    let default_result =
-                        lower_anf_block(default_block, &mut env.clone(), ssa, bbc, body, flags)?;
+                    let default_result = lower_anf_block(
+                        default_block,
+                        &mut env.clone(),
+                        ssa,
+                        bbc,
+                        body,
+                        funcs,
+                        flags,
+                    )?;
                     phi_entries.push((default_label.clone(), default_result));
                     let _ = writeln!(body, "  br label %{merge_label}");
                 } else {
@@ -838,10 +898,17 @@ fn lower_anf_block(
                     vals: result_vals,
                 })
             }
-            Rhs::App { .. } | Rhs::Lam { .. } | Rhs::Fix { .. } | Rhs::FixGroup { .. } => {
+            // Increment-2: closures are lowered inside match arms too (a `Lam`/`App` may appear in an
+            // arm body). Fix/FixGroup stay explicit UnsupportedNode (Increment-3; G2/VR-5).
+            Rhs::Lam {
+                param,
+                body: lam_body,
+            } => lower_lam(param, lam_body, env, ssa, bbc, body, funcs)?,
+            Rhs::App { func, arg } => lower_app(func, arg, env, ssa, body)?,
+            Rhs::Fix { .. } | Rhs::FixGroup { .. } => {
                 return Err(AotError::UnsupportedNode(
-                    "closure/recursion node in a match arm (App/Lam/Fix/FixGroup): deferred to \
-                     Increment-2/3"
+                    "recursion node in a match arm (Fix/FixGroup): deferred to Increment-3 \
+                     (heap trampoline + DN-05 #1 stack-robustness; G2/VR-5)"
                         .to_owned(),
                 ));
             }
@@ -850,6 +917,325 @@ fn lower_anf_block(
     }
     let result_ev = lookup_ev(env, anf.result())?.clone();
     result_ev.into_lane("match arm result")
+}
+
+/// Compute the **free `Named` variables** of a closure body `body` whose parameter is `param`, in
+/// deterministic first-encounter order — the closure's captured set (Increment-2; DN-15 §7.3). A
+/// name is free iff it is referenced (directly, or inside a nested lambda / match arm) and is neither
+/// `param` nor bound by an enclosing binding / match binder / nested lambda parameter *within*
+/// `body`. Lexical scoping is honoured (each nested scope's binders are removed while inside it).
+/// Only `Named` atoms are captured; `Temp` operands are always block-local in this ANF, so a closure
+/// body never has a free temp — and if one ever did, the closure-body lowering would surface it as an
+/// explicit [`AotError::FreeVariable`] (never a silent miscapture; G2).
+fn closure_free_vars(body: &lower::Anf, param: &str) -> Vec<String> {
+    use std::collections::HashSet;
+    let mut bound: HashSet<String> = HashSet::new();
+    bound.insert(param.to_owned());
+    let mut free: Vec<String> = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+    free_vars_into(body, &mut bound, &mut free, &mut seen);
+    free
+}
+
+/// Record `a` as free if it is a `Named` atom not in `bound` and not already captured (dedup via
+/// `seen`, preserving first-encounter order).
+fn note_free_atom(
+    a: &Atom,
+    bound: &std::collections::HashSet<String>,
+    free: &mut Vec<String>,
+    seen: &mut std::collections::HashSet<String>,
+) {
+    if let Atom::Named(n) = a {
+        if !bound.contains(n) && seen.insert(n.clone()) {
+            free.push(n.clone());
+        }
+    }
+}
+
+/// The lexical free-variable walk backing [`closure_free_vars`]. Adds a scope's binders to `bound`
+/// while descending into it and removes them on the way out, so shadowing is honoured.
+fn free_vars_into(
+    anf: &lower::Anf,
+    bound: &mut std::collections::HashSet<String>,
+    free: &mut Vec<String>,
+    seen: &mut std::collections::HashSet<String>,
+) {
+    use mycelium_core::lower::AnfAlt;
+    for b in anf.bindings() {
+        match &b.rhs {
+            Rhs::Const(_) => {}
+            Rhs::Alias(a) => note_free_atom(a, bound, free, seen),
+            Rhs::Op { args, .. } | Rhs::Construct { args, .. } => {
+                for a in args {
+                    note_free_atom(a, bound, free, seen);
+                }
+            }
+            Rhs::Swap { src, .. } => note_free_atom(src, bound, free, seen),
+            Rhs::App { func, arg } => {
+                note_free_atom(func, bound, free, seen);
+                note_free_atom(arg, bound, free, seen);
+            }
+            Rhs::Lam {
+                param,
+                body: lam_body,
+            } => {
+                let added = bound.insert(param.clone());
+                free_vars_into(lam_body, bound, free, seen);
+                if added {
+                    bound.remove(param);
+                }
+            }
+            Rhs::Fix { name, body: fbody } => {
+                let added = bound.insert(name.clone());
+                free_vars_into(fbody, bound, free, seen);
+                if added {
+                    bound.remove(name);
+                }
+            }
+            Rhs::FixGroup { defs, .. } => {
+                let added: Vec<String> = defs
+                    .iter()
+                    .filter(|(n, _)| bound.insert(n.clone()))
+                    .map(|(n, _)| n.clone())
+                    .collect();
+                for (_, d) in defs {
+                    free_vars_into(d, bound, free, seen);
+                }
+                for n in added {
+                    bound.remove(&n);
+                }
+            }
+            Rhs::Match {
+                scrutinee,
+                alts,
+                default,
+            } => {
+                note_free_atom(scrutinee, bound, free, seen);
+                for alt in alts {
+                    match alt {
+                        AnfAlt::Ctor {
+                            binders,
+                            body: arm_body,
+                            ..
+                        } => {
+                            let added: Vec<String> = binders
+                                .iter()
+                                .filter(|x| bound.insert((*x).clone()))
+                                .cloned()
+                                .collect();
+                            free_vars_into(arm_body, bound, free, seen);
+                            for x in added {
+                                bound.remove(&x);
+                            }
+                        }
+                        AnfAlt::Lit { body: arm_body, .. } => {
+                            free_vars_into(arm_body, bound, free, seen);
+                        }
+                    }
+                }
+                if let Some(d) = default {
+                    free_vars_into(d, bound, free, seen);
+                }
+            }
+        }
+        // The binding's own name becomes bound for subsequent bindings in this block.
+        if let Atom::Named(n) = &b.name {
+            bound.insert(n.clone());
+        }
+    }
+    note_free_atom(anf.result(), bound, free, seen);
+}
+
+/// Require an [`EnvValue`] to be a `Binary{8}` lane — the only value type that crosses a closure
+/// boundary in the narrow Increment-2 ABI (DN-15 §7.1). Explicit refusal otherwise (G2).
+fn as_binary8<'a>(ev: &'a EnvValue, ctx: &str) -> Result<&'a Lane, AotError> {
+    let lane = ev.as_lane(ctx)?;
+    if lane.kind != LaneKind::Binary || lane.vals.len() != CLOSURE_ABI_WIDTH {
+        return Err(AotError::UnsupportedNode(format!(
+            "{ctx}: the native closure ABI (Increment-2) carries only Binary{{{CLOSURE_ABI_WIDTH}}} \
+             values packed as one i64; got {:?} of width {}",
+            lane.kind,
+            lane.vals.len()
+        )));
+    }
+    Ok(lane)
+}
+
+/// Pack a `Binary{8}` lane (8 `i32` elements in `{0,1}`) into a single `i64` (element `i` → bit `i`).
+/// The inverse of [`unpack_binary8`]; the two define the narrow closure-ABI encoding (DN-15 §7.1).
+fn pack_binary8(lane: &Lane, ssa: &mut Ssa, body: &mut String) -> String {
+    let mut acc = "0".to_owned();
+    for (i, v) in lane.vals.iter().enumerate() {
+        let z = ssa.fresh();
+        let _ = writeln!(body, "  {z} = zext i32 {v} to i64");
+        let sh = ssa.fresh();
+        let _ = writeln!(body, "  {sh} = shl i64 {z}, {i}");
+        let next = ssa.fresh();
+        let _ = writeln!(body, "  {next} = or i64 {acc}, {sh}");
+        acc = next;
+    }
+    acc
+}
+
+/// Unpack a single `i64` into a `Binary{8}` lane (bit `i` → element `i`, as an `i32` in `{0,1}`). The
+/// inverse of [`pack_binary8`].
+fn unpack_binary8(src: &str, ssa: &mut Ssa, body: &mut String) -> Lane {
+    let vals = (0..CLOSURE_ABI_WIDTH)
+        .map(|i| {
+            let sh = ssa.fresh();
+            let _ = writeln!(body, "  {sh} = lshr i64 {src}, {i}");
+            let m = ssa.fresh();
+            let _ = writeln!(body, "  {m} = and i64 {sh}, 1");
+            let t = ssa.fresh();
+            let _ = writeln!(body, "  {t} = trunc i64 {m} to i32");
+            t
+        })
+        .collect();
+    Lane {
+        kind: LaneKind::Binary,
+        vals,
+    }
+}
+
+/// The fixed LLVM type of a closure function pointer in the narrow ABI: `i64 (i8*, i64)*`.
+const CLOSURE_FN_TY: &str = "i64 (i8*, i64)*";
+
+/// Lower `Rhs::Lam` (Increment-2 closure-conversion; DN-15 §7.3). Emits — into the *current* function
+/// `out_body` — the arena allocation of a closure record `[fn_ptr | captures]` (capturing each free
+/// var, packed), and registers a top-level `@myc_closureN(i8* %env, i64 %arg)` function whose body is
+/// `body` lowered with `param`←`%arg` and each capture←`%env`. Returns the [`EnvValue::Closure`].
+#[allow(clippy::too_many_arguments)]
+fn lower_lam(
+    param: &str,
+    body: &lower::Anf,
+    env: &HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    bbc: &mut Bbc,
+    out_body: &mut String,
+    funcs: &mut Vec<String>,
+) -> Result<EnvValue, AotError> {
+    let captures = closure_free_vars(body, param);
+
+    // Reserve this closure's function slot/name up-front (deterministic id = structural order). The
+    // placeholder is overwritten once the body — which may itself register nested closures — lowers.
+    let id = funcs.len();
+    funcs.push(String::new());
+    let fname = format!("@myc_closure{id}");
+
+    // Allocate the record on the bump arena: 1 (fn_ptr) + k (captures) i64 slots.
+    let k = captures.len();
+    let nbytes = (1 + k) * 8;
+    let raw = ssa.fresh();
+    let _ = writeln!(
+        out_body,
+        "  {raw} = call i8* @myc_arena_alloc(i64 {nbytes})"
+    );
+    let base = ssa.fresh();
+    let _ = writeln!(out_body, "  {base} = bitcast i8* {raw} to i64*");
+    // Slot 0 ← the closure function pointer, as i64.
+    let fpint = ssa.fresh();
+    let _ = writeln!(
+        out_body,
+        "  {fpint} = ptrtoint {CLOSURE_FN_TY} {fname} to i64"
+    );
+    let _ = writeln!(out_body, "  store i64 {fpint}, i64* {base}");
+    // Slots 1..=k ← each captured Binary{8} value, packed.
+    for (j, capname) in captures.iter().enumerate() {
+        let cev = lookup_ev(env, &Atom::Named(capname.clone()))?;
+        let clane = as_binary8(cev, &format!("closure capture `{capname}`"))?.clone();
+        let packed = pack_binary8(&clane, ssa, out_body);
+        let cgep = ssa.fresh();
+        let _ = writeln!(
+            out_body,
+            "  {cgep} = getelementptr i64, i64* {base}, i64 {}",
+            j + 1
+        );
+        let _ = writeln!(out_body, "  store i64 {packed}, i64* {cgep}");
+    }
+
+    // Emit the closure function body in a *fresh* env (param + captures only — a closure cannot see
+    // the enclosing function's SSA registers; any other reference surfaces as an explicit
+    // FreeVariable error, never invalid IR — G2).
+    let mut cbody = String::new();
+    let mut cenv: HashMap<Atom, EnvValue> = HashMap::new();
+    let arg_lane = unpack_binary8("%arg", ssa, &mut cbody);
+    cenv.insert(Atom::Named(param.to_owned()), EnvValue::Repr(arg_lane));
+    let envp = ssa.fresh();
+    let _ = writeln!(cbody, "  {envp} = bitcast i8* %env to i64*");
+    for (j, capname) in captures.iter().enumerate() {
+        let cgep = ssa.fresh();
+        let _ = writeln!(cbody, "  {cgep} = getelementptr i64, i64* {envp}, i64 {j}");
+        let cval = ssa.fresh();
+        let _ = writeln!(cbody, "  {cval} = load i64, i64* {cgep}");
+        let clane = unpack_binary8(&cval, ssa, &mut cbody);
+        cenv.insert(Atom::Named(capname.clone()), EnvValue::Repr(clane));
+    }
+    // The closure body is a straight-line Binary block; give it its own flag sink and refuse any
+    // trit-arithmetic overflow inside it (the narrow ABI is Binary-only; G2).
+    let mut cflags: Vec<String> = Vec::new();
+    let result_lane = lower_anf_block(body, &mut cenv, ssa, bbc, &mut cbody, funcs, &mut cflags)?;
+    if !cflags.is_empty() {
+        return Err(AotError::UnsupportedNode(
+            "trit arithmetic inside a closure body is not supported in the native closure ABI \
+             (Increment-2; closures carry Binary{8} only — DN-15 §7.1)"
+                .to_owned(),
+        ));
+    }
+    if result_lane.kind != LaneKind::Binary || result_lane.vals.len() != CLOSURE_ABI_WIDTH {
+        return Err(AotError::UnsupportedNode(format!(
+            "closure body result must be a Binary{{{CLOSURE_ABI_WIDTH}}} value in the native \
+             closure ABI (Increment-2); got {:?} width {}",
+            result_lane.kind,
+            result_lane.vals.len()
+        )));
+    }
+    let packed_ret = pack_binary8(&result_lane, ssa, &mut cbody);
+
+    let mut def = String::new();
+    let _ = writeln!(def, "define i64 {fname}(i8* %env, i64 %arg) {{");
+    def.push_str("entry:\n");
+    def.push_str(&cbody);
+    let _ = writeln!(def, "  ret i64 {packed_ret}");
+    def.push_str("}\n");
+    funcs[id] = def;
+
+    Ok(EnvValue::Closure(ClosureVal { base }))
+}
+
+/// Lower `Rhs::App` (Increment-2; DN-15 §7.3): resolve `func` to a closure, load its `fn_ptr` from
+/// record slot 0, point `%env` at slot 1, pack the `Binary{8}` argument, and emit the indirect call;
+/// unpack the `i64` result back to a lane. An `App` whose head is not a closure is an explicit
+/// refusal (G2).
+fn lower_app(
+    func: &Atom,
+    arg: &Atom,
+    env: &HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> Result<EnvValue, AotError> {
+    let base = lookup_ev(env, func)?
+        .as_closure("App function")?
+        .base
+        .clone();
+    // fn_ptr ← record slot 0.
+    let fpint = ssa.fresh();
+    let _ = writeln!(body, "  {fpint} = load i64, i64* {base}");
+    let fp = ssa.fresh();
+    let _ = writeln!(body, "  {fp} = inttoptr i64 {fpint} to {CLOSURE_FN_TY}");
+    // %env ← &record[1] (the captures region), as i8*.
+    let egep = ssa.fresh();
+    let _ = writeln!(body, "  {egep} = getelementptr i64, i64* {base}, i64 1");
+    let eptr = ssa.fresh();
+    let _ = writeln!(body, "  {eptr} = bitcast i64* {egep} to i8*");
+    // arg (must be Binary{8}) → packed i64.
+    let arg_lane = as_binary8(lookup_ev(env, arg)?, "App argument")?.clone();
+    let packed_arg = pack_binary8(&arg_lane, ssa, body);
+    let res = ssa.fresh();
+    let _ = writeln!(
+        body,
+        "  {res} = call i64 {fp}(i8* {eptr}, i64 {packed_arg})"
+    );
+    Ok(EnvValue::Repr(unpack_binary8(&res, ssa, body)))
 }
 
 /// Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that
@@ -862,19 +1248,58 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
         result,
         mut ssa,
         overflow,
+        funcs,
     } = lower_program(node)?;
+    // Closures (Increment-2) bring in the bump arena + `@malloc`/`@free`; a closure-free program
+    // emits byte-for-byte the same module as before (no arena, no extra declares).
+    let uses_closures = !funcs.is_empty();
     let mut out =
         String::from("; mycelium direct-LLVM AOT (bit/trit + non-recursive data; M-301; M-373)\n");
-    // `@putchar` for the read-back protocol; `@abort` for the match no-default trap (G2).
+    if uses_closures {
+        out.push_str("; closures: heap closure records on a bump arena (M-378; DN-15 §7)\n");
+    }
+    // `@putchar` for the read-back protocol; `@abort` for the defined-traps (the match no-default
+    // trap and the bump-arena OOM). `@abort` is declared `noreturn` so LLVM treats every
+    // `call @abort` as non-returning: the dead `ret` that follows each trap is provably never taken
+    // (G2), and no post-trap path — e.g. the OOM block returning a null pointer — is ever reachable.
     out.push_str("declare i32 @putchar(i32)\n");
-    out.push_str("declare void @abort()\n\n");
+    out.push_str("declare void @abort() noreturn\n");
+    if uses_closures {
+        out.push_str("declare i8* @malloc(i64)\n");
+        out.push_str("declare void @free(i8*)\n");
+        out.push_str(&arena_runtime());
+        // The closure functions (one `define` per `Rhs::Lam`), emitted before `@main`.
+        for f in &funcs {
+            out.push('\n');
+            out.push_str(f);
+        }
+    }
+    out.push('\n');
     out.push_str("define i32 @main() {\nentry:\n");
+    if uses_closures {
+        // Bump-arena init: one `@malloc` block + a zeroed cursor (DN-15 §7.2). Freed before the
+        // normal-completion `ret` below.
+        let _ = writeln!(
+            out,
+            "  %arena_raw = call i8* @malloc(i64 {ARENA_CAPACITY_BYTES})"
+        );
+        out.push_str("  store i8* %arena_raw, i8** @myc_arena_base\n");
+        out.push_str("  store i64 0, i64* @myc_arena_off\n");
+    }
     out.push_str(&body);
     match overflow {
         // No trit arithmetic ⇒ no overflow path; emit the result line straight-line (unchanged IR).
-        None => emit_result_line(result.kind, &result.vals, &mut ssa, &mut out),
+        None => {
+            if uses_closures {
+                emit_arena_free(&mut out);
+            }
+            emit_result_line(result.kind, &result.vals, &mut ssa, &mut out);
+        }
         // Overflow possible ⇒ branch on the runtime flag: print the sentinel line on overflow, the
-        // result line otherwise (the read-back protocol — never a silent wrap, G2).
+        // result line otherwise (the read-back protocol — never a silent wrap, G2). A program can
+        // both use closures and contain trit arithmetic in non-closure bindings, so this branch may
+        // co-occur with a live arena: the `@free` stays on the normal `ok` path; the `ovf` early-exit
+        // skips it and lets the OS reclaim the arena at process exit.
         Some(ovf) => {
             let _ = writeln!(&mut out, "  br i1 {ovf}, label %ovf, label %ok");
             out.push_str("ovf:\n");
@@ -887,11 +1312,47 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
             let snl = ssa.fresh();
             let _ = writeln!(&mut out, "  {snl} = call i32 @putchar(i32 10)");
             out.push_str("  ret i32 0\nok:\n");
+            if uses_closures {
+                emit_arena_free(&mut out);
+            }
             emit_result_line(result.kind, &result.vals, &mut ssa, &mut out);
         }
     }
     out.push_str("}\n");
     Ok(out)
+}
+
+/// The bump-arena runtime (DN-15 §7.2): two module globals (base pointer + cursor) and the single
+/// allocation seam `@myc_arena_alloc`. The over-capacity check takes an explicit defined-trap
+/// (`@abort`, never raw `unreachable` UB; G2) — the exact point where **Increment-3** substitutes a
+/// `DepthBudget`-resolved ceiling + a graceful limit (DN-05 #1; `budget.rs`, M-349). All textual,
+/// fully dumpable (no opaque pass — RFC-0004 §6 / VR-4).
+fn arena_runtime() -> String {
+    let mut s = String::new();
+    s.push_str("@myc_arena_base = internal global i8* null\n");
+    s.push_str("@myc_arena_off = internal global i64 0\n\n");
+    s.push_str("define i8* @myc_arena_alloc(i64 %n) {\nentry:\n");
+    s.push_str("  %base = load i8*, i8** @myc_arena_base\n");
+    s.push_str("  %off = load i64, i64* @myc_arena_off\n");
+    s.push_str("  %newoff = add i64 %off, %n\n");
+    let _ = writeln!(s, "  %over = icmp ugt i64 %newoff, {ARENA_CAPACITY_BYTES}");
+    s.push_str("  br i1 %over, label %oom, label %ok\n");
+    // OOM: an explicit defined-trap. `@abort` is declared `noreturn` (see `emit_llvm_ir`), so this
+    // block is non-returning in IR — the trailing `ret i8* null` is a provably-dead terminator
+    // (LLVM never lets the null reach the caller's bitcast/store), kept only so the block has a
+    // valid terminator without a raw `unreachable` (consistent with the match no-default trap; G2).
+    s.push_str("oom:\n  call void @abort()\n  ret i8* null\n");
+    s.push_str("ok:\n");
+    s.push_str("  store i64 %newoff, i64* @myc_arena_off\n");
+    s.push_str("  %p = getelementptr i8, i8* %base, i64 %off\n");
+    s.push_str("  ret i8* %p\n}\n");
+    s
+}
+
+/// Emit the arena teardown — `@free` the single block before normal completion (DN-15 §7.2).
+fn emit_arena_free(out: &mut String) {
+    out.push_str("  %arena_fb = load i8*, i8** @myc_arena_base\n");
+    out.push_str("  call void @free(i8* %arena_fb)\n");
 }
 
 /// Emit each result element as its ASCII char via `@putchar` (one op per element — a transparent

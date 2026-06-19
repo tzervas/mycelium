@@ -154,7 +154,33 @@ emitter already satisfies this for the bit/trit subset — the extension must ho
 standard: every `switch` arm, field-load, and struct-alloc is explicit IR, and the full module
 is human-readable and dumpable. No opaque pass is introduced.
 
+### 11.5 Increment-2 — closures (App/Lam) + heap (additive; r4; M-378)
+
+This subsection is **additive** (r4). It changes no prior decision; it records the sanctioned scope
+of **Increment 2** — native closure codegen — under the same §2 revisit clause as §11.1. Design
+detail lives in **DN-15 §7**; the realized guarantee tag stays **`Declared`** (hand-written IR + the
+M-302 differential, not Proven — VR-5).
+
+- **`Rhs::Lam`** → a **heap closure record** `[fn_ptr | capture_0 … capture_k]` plus a top-level
+  function `define i64 @closure_N(i8* %env, i64 %arg)`; free variables are captured by a lexical
+  free-variable analysis over the ANF body. **`Rhs::App`** → an **indirect call** through the
+  record's `fn_ptr`, passing the captured environment and the argument.
+- **Narrow value ABI:** closures carry/return **`Binary{8}` values packed as one `i64`**. Other
+  widths, `Ternary`, datums across the boundary, currying (closure-as-argument/result), a non-closure
+  `App` head, and a closure-valued program result are all explicit `UnsupportedNode` (G2).
+- **No-GC strategy:** a **bump arena** — one `@malloc` at `@main` entry, records bump-allocated
+  through a single seam (`@myc_arena_alloc`), `@free`d before normal completion. Heap (not stack) is
+  required because closures escape their creating frame; the allocation count is statically bounded
+  (no `Fix`/`FixGroup`). The single seam is the attachment point at which **Increment 3** swaps the
+  fixed arena capacity for a `DepthBudget`-resolved ceiling and the over-capacity `@abort` for a
+  graceful limit (DN-05 #1; `crates/mycelium-mlir::budget`, M-349) — designed in, not retrofitted.
+- **Still deferred:** `Fix`/`FixGroup` recursion + stack-robustness (Increment 3) and the real
+  `ternary` MLIR dialect lowering (M-348, blocked) — per §11.3, unchanged.
+- **Inspectability (§6 preserved):** every closure record write, indirect call, and packed/unpacked
+  element is explicit, dumpable textual IR — no opaque pass (ADR-009 / VR-4).
+
 ## Meta — changelog
+- **2026-06-19 (additive — §11.5; r4; M-378):** Added **§11.5** recording the sanctioned scope for **Increment 2** of the direct-LLVM backend — native closures: `Lam` → heap closure record `[fn_ptr | captures]` + `@closure_N`, `App` → indirect call, free variables captured by a lexical analysis over the ANF body. Narrow value ABI (`Binary{8}` packed as `i64`; everything else explicit `UnsupportedNode`, G2); a **bump-arena** no-GC strategy whose single alloc seam is where Increment-3's `DepthBudget` ceiling attaches (DN-05 #1; M-349). `Fix`/`FixGroup` and the real ternary MLIR dialect stay deferred (§11.3). Guarantee tag stays `Declared` (VR-5); §6 no-opaque-lowering preserved. Design detail in DN-15 §7. Changes no prior decision. Append-only.
 - **2026-06-19 (additive — §11; r3; M-373):** Added **§11** recording the sanctioned scope for extending the direct-LLVM backend (`llvm.rs`) to the data-fragment (non-recursive `Construct`/`Match`) as an increment of the §2 revisit clause. Closures (`App`/`Lam`), recursion (`Fix`/`FixGroup`), and the real ternary MLIR dialect lowering remain deferred (VR-5); recursion is bound by DN-05 #1 (no unbounded C stack; `DepthBudget` trait reuse) when it lands. §6 no-opaque-lowering preserved: every IR stage stays dumpable. Changes no prior decision. Append-only.
 - **2026-06-18 (append-only note after §4 — RFC-0017 Accepted):** Added an inline note recording
   that **RFC-0017** lifts maturation granularity from per-definition to **scope** (nodule/phylum

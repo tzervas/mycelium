@@ -471,7 +471,11 @@ pub fn mycelium_mlir::runtime::Task::poll(&mut self, &mut mycelium_mlir::runtime
 pub type mycelium_mlir::runtime::Colony<T, E> = mycelium_mlir::runtime::Scope<T, E>
 pub mod mycelium_mlir::simd
 pub fn mycelium_mlir::simd::compile_bitnet_dot_simd() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::simd::compile_bitnet_dot_simd_tl1() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::simd::compile_bitnet_dot_simd_tl2() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::simd::emit_bitnet_dot_simd_ir() -> alloc::string::String
+pub fn mycelium_mlir::simd::emit_bitnet_dot_simd_tl1_ir() -> alloc::string::String
+pub fn mycelium_mlir::simd::emit_bitnet_dot_simd_tl2_ir() -> alloc::string::String
 pub mod mycelium_mlir::specialize
 pub struct mycelium_mlir::specialize::SpecializedDotKernel
 impl mycelium_mlir::specialize::SpecializedDotKernel
@@ -913,6 +917,8 @@ pub fn mycelium_mlir::compile_and_run(&mycelium_core::node::Node) -> core::resul
 pub fn mycelium_mlir::compile_bitnet_dot() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::compile_bitnet_dot_for(mycelium_core::meta::PackScheme) -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::compile_bitnet_dot_simd() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::compile_bitnet_dot_simd_tl1() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::compile_bitnet_dot_simd_tl2() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::compile_so(&mycelium_core::node::Node) -> core::result::Result<mycelium_mlir::jit::JitArtifact, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::compile_specialized_dot(&[mycelium_core::value::Trit]) -> core::result::Result<mycelium_mlir::specialize::SpecializedDotKernel, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::default_depth_budget() -> mycelium_mlir::budget::DepthResolution
@@ -920,6 +926,8 @@ pub fn mycelium_mlir::emit(&mycelium_core::node::Node) -> alloc::string::String
 pub fn mycelium_mlir::emit_bitnet_dot_ir() -> alloc::string::String
 pub fn mycelium_mlir::emit_bitnet_dot_ir_for(mycelium_core::meta::PackScheme) -> core::result::Result<alloc::string::String, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::emit_bitnet_dot_simd_ir() -> alloc::string::String
+pub fn mycelium_mlir::emit_bitnet_dot_simd_tl1_ir() -> alloc::string::String
+pub fn mycelium_mlir::emit_bitnet_dot_simd_tl2_ir() -> alloc::string::String
 pub fn mycelium_mlir::emit_llvm_ir(&mycelium_core::node::Node) -> core::result::Result<alloc::string::String, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::emit_specialized_dot_ir(&[mycelium_core::value::Trit]) -> alloc::string::String
 pub fn mycelium_mlir::jit_run(&mycelium_core::node::Node) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::llvm::AotError>
