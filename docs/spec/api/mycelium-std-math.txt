@@ -3,12 +3,12 @@ pub mod mycelium_std_math::approx
 pub use mycelium_std_math::approx::DECLARED_FLOAT_EPS
 pub struct mycelium_std_math::approx::Approx<T>
 pub mycelium_std_math::approx::Approx::bound: mycelium_core::bound::Bound
-pub mycelium_std_math::approx::Approx::strength: mycelium_core::guarantee::GuaranteeStrength
 pub mycelium_std_math::approx::Approx::value: T
 impl mycelium_std_math::approx::Approx<f64>
 pub fn mycelium_std_math::approx::Approx<f64>::explain(&self) -> mycelium_std_math::approx::ApproxExplain
 impl<T: core::marker::Copy + core::fmt::Debug> mycelium_std_math::approx::Approx<T>
 pub fn mycelium_std_math::approx::Approx<T>::new(T, mycelium_core::bound::Bound) -> Self
+pub fn mycelium_std_math::approx::Approx<T>::strength(&self) -> mycelium_core::guarantee::GuaranteeStrength
 impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_math::approx::Approx<T>
 pub fn mycelium_std_math::approx::Approx<T>::clone(&self) -> mycelium_std_math::approx::Approx<T>
 impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_math::approx::Approx<T>
@@ -172,12 +172,12 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_math::exact::Round
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_math::exact::RoundMode
 pub struct mycelium_std_math::Approx<T>
 pub mycelium_std_math::Approx::bound: mycelium_core::bound::Bound
-pub mycelium_std_math::Approx::strength: mycelium_core::guarantee::GuaranteeStrength
 pub mycelium_std_math::Approx::value: T
 impl mycelium_std_math::approx::Approx<f64>
 pub fn mycelium_std_math::approx::Approx<f64>::explain(&self) -> mycelium_std_math::approx::ApproxExplain
 impl<T: core::marker::Copy + core::fmt::Debug> mycelium_std_math::approx::Approx<T>
 pub fn mycelium_std_math::approx::Approx<T>::new(T, mycelium_core::bound::Bound) -> Self
+pub fn mycelium_std_math::approx::Approx<T>::strength(&self) -> mycelium_core::guarantee::GuaranteeStrength
 impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_math::approx::Approx<T>
 pub fn mycelium_std_math::approx::Approx<T>::clone(&self) -> mycelium_std_math::approx::Approx<T>
 impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_math::approx::Approx<T>

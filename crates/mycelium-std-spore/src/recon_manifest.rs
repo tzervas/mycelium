@@ -234,14 +234,42 @@ pub struct RegrowthResult {
     /// The recovered factor atoms from the resonator (or cleanup) decode.
     pub factorization: Factorization,
     /// The manifest's `{ε,δ,strength}` certificate bound — its basis determines the honest
-    /// strength (always ≤ `Empirical` for the resonator path; FR-C2 / VR-5, enforced at manifest
-    /// validation time).
-    pub bound: Bound,
+    /// strength. **Private (the FR-C2 seal):** a public field would let a caller hand-build a
+    /// `RegrowthResult` with a `Proven` basis and project it to a `Proven` `Approx`, exceeding the
+    /// probabilistic-regrowth ceiling. Construction goes through [`RegrowthResult::new`], which
+    /// refuses an over-strength basis; read it via [`RegrowthResult::bound`].
+    bound: Bound,
 }
 
 impl RegrowthResult {
+    /// Construct a regrowth result, **refusing** a bound whose basis is stronger than `Empirical`
+    /// (the FR-C2 / VR-5 probabilistic-regrowth ceiling) with an explicit
+    /// [`MalformedManifest::ResonatorOverStrength`] — never a silent accept. This makes
+    /// [`as_approx`](Self::as_approx) structurally incapable of producing a strength above
+    /// `Empirical`: the ceiling holds by construction, not by comment.
+    ///
+    /// # Errors
+    /// Returns [`MalformedManifest::ResonatorOverStrength`] if `bound`'s basis implies a strength
+    /// stronger than `Empirical` (i.e. `Exact` or `Proven`).
+    pub fn new(factorization: Factorization, bound: Bound) -> Result<Self, MalformedManifest> {
+        if bound.basis.strength().rank() < GuaranteeStrength::Empirical.rank() {
+            return Err(MalformedManifest::ResonatorOverStrength);
+        }
+        Ok(Self {
+            factorization,
+            bound,
+        })
+    }
+
+    /// The certificate bound (read-only — construction enforces the FR-C2 ceiling).
+    #[must_use]
+    pub fn bound(&self) -> &Bound {
+        &self.bound
+    }
+
     /// The honest guarantee strength — **derived** from the bound's basis (never fabricated,
-    /// never upgraded; VR-5). Always ≤ `Empirical` for a resonator decode (FR-C2).
+    /// never upgraded; VR-5). Always ≤ `Empirical` for a resonator decode (FR-C2, enforced by
+    /// [`new`](Self::new)).
     ///
     /// # Guarantee tag: `Exact` (this is a pure predicate)
     /// # Fallibility: total
@@ -594,13 +622,14 @@ mod tests {
                 method: "resonator decode".into(),
             },
         };
-        let r = RegrowthResult {
-            factorization: Factorization {
+        let r = RegrowthResult::new(
+            Factorization {
                 factors: vec![],
                 trace,
             },
             bound,
-        };
+        )
+        .expect("Empirical basis is within the FR-C2 ceiling");
         assert!(r.is_empirical());
         assert!(!r.is_declared());
         assert_eq!(r.strength(), GuaranteeStrength::Empirical);
@@ -608,7 +637,36 @@ mod tests {
         // Projects losslessly to the honest carrier; strength is derived from the bound basis,
         // never upgraded (VR-5) — and stays at the Empirical ceiling (FR-C2).
         let approx = r.as_approx();
-        assert_eq!(approx.strength, GuaranteeStrength::Empirical);
-        assert_eq!(approx.bound, r.bound);
+        assert_eq!(approx.strength(), GuaranteeStrength::Empirical);
+        assert_eq!(&approx.bound, r.bound());
+    }
+
+    /// FR-C2 seal: `RegrowthResult::new` **refuses** a bound whose basis is stronger than
+    /// `Empirical` (a `Proven`/`Exact` regrowth is dishonest for the probabilistic resonator path)
+    /// — an explicit `ResonatorOverStrength`, never a silent accept. This is what makes
+    /// `as_approx()` structurally unable to exceed the ceiling.
+    #[test]
+    fn regrowth_result_refuses_over_strength_basis() {
+        use mycelium_vsa::{Factorization, ResonatorTrace, StopReason};
+        let proven = Bound {
+            kind: BoundKind::Probability { delta: 0.0 },
+            basis: BoundBasis::ProvenThm {
+                citation: "bogus — regrowth is never proven".into(),
+            },
+        };
+        let trace = ResonatorTrace {
+            stop: StopReason::Converged,
+            iterations: 1,
+            trajectory: vec![],
+            final_decode: vec![],
+        };
+        let r = RegrowthResult::new(
+            Factorization {
+                factors: vec![],
+                trace,
+            },
+            proven,
+        );
+        assert_eq!(r.unwrap_err(), MalformedManifest::ResonatorOverStrength);
     }
 }

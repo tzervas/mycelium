@@ -73,7 +73,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_numerics::NumErr
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_numerics::NumErr
 pub struct mycelium_std_numerics::Approx<T>
 pub mycelium_std_numerics::Approx::bound: mycelium_core::bound::Bound
-pub mycelium_std_numerics::Approx::strength: mycelium_core::guarantee::GuaranteeStrength
 pub mycelium_std_numerics::Approx::value: T
 impl<T: core::fmt::Debug> mycelium_std_numerics::Approx<T>
 pub fn mycelium_std_numerics::Approx<T>::explain(&self) -> mycelium_std_numerics::Explanation

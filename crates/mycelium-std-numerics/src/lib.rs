@@ -235,9 +235,14 @@ pub struct Approx<T> {
     pub value: T,
     /// The error/probability bound certifying `value` (carries its `BoundBasis` per ADR-011).
     pub bound: Bound,
-    /// The honest guarantee strength — derived from `bound.basis` by the constructor, **never**
+    /// The honest guarantee strength — derived from `bound.basis` by the constructors, **never**
     /// set independently (VR-5). Invariant: `strength == basis_strength(&bound.basis)`.
-    pub strength: GuaranteeStrength,
+    ///
+    /// **Private (the VR-5 seal):** a public field would let a caller write
+    /// `Approx { strength: Proven, .. }` and bypass the [`ProvenThm`] witness; keeping it private
+    /// means the only way to build an `Approx` is the basis-deriving constructors. Read it via
+    /// [`Approx::strength`].
+    strength: GuaranteeStrength,
 }
 
 impl<T> Approx<T> {
