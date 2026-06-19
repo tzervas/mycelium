@@ -211,6 +211,7 @@ dependencies = [
 name = "mycelium-diag"
 version = "0.0.0"
 dependencies = [
+ "blake3",
  "mycelium-core",
  "serde",
  "serde_json",
@@ -454,8 +455,10 @@ dependencies = [
 name = "mycelium-std-recover"
 version = "0.0.0"
 dependencies = [
+ "blake3",
  "mycelium-core",
  "mycelium-diag",
+ "mycelium-interp",
  "mycelium-std-core",
 ]
 

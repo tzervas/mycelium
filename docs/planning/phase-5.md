@@ -199,3 +199,20 @@ RFC without waiting on self-hosting readiness.
   (RFC-0007 §4.8; `iter`). The twelve per-module specs move to **"implemented (Rust-first), pending
   ratification"**, *not* `Accepted`. This completes the **Rust-first** half of Batches P5-A+P5-B; the
   Mycelium-lang migration (M-502-gated) and Batch P5-C (self-hosting) remain downstream. Append-only.
+- **2026-06-18 — Tier-A completion Rust-first enactment landed (code, not ratification).** The four
+  remaining spec'd-but-uncoded **Tier-A Ring-1** modules land as Rust-first crates (a four-sonnet-agent
+  swarm, scaffold-first then octopus-merged): `mycelium-std-numerics` (M-512, #153), `mycelium-std-diag`
+  (M-510, #151) over a newly-extracted **`mycelium-diag` kernel crate**, `mycelium-std-recover` (M-520,
+  #156 — the Rust-first half only; self-hosting stays Batch P5-C, M-502-gated), and `mycelium-std-spore`
+  (M-522, #163 — the library/manifest half; native deploy stays Phase-6, M-620). This discharges the three
+  P5-B seams (`math`→`numerics` ε carrier; `testing`→`diag` `Fail`-record; `error`→`recover`
+  `Outcome`/`PolicyRef`) and **completes the Tier-A differentiator surface** (only the Phase-7-gated
+  `runtime` M-521 remains). A **maintainer-resolved FLAG** (scaffold decision #1): the canonical RFC-0013
+  record is homed in the extracted `mycelium-diag` kernel crate (a small, deliberate trusted-base growth),
+  not inside the std crate. Each crate encodes its RFC-0016 §4.5 guarantee matrix as checked data and tags
+  at the honestly-supportable strength (VR-5) — notably `recover` **fixes the P5-B exact-tag bug** (Ok→floor,
+  fallback→`Declared`, never laundered up). Cross-module reconciliations are **FLAGGED for fast-follow**, not
+  silently made (`testing` `FailRecord`→`Diag`; `error` stub→real `Outcome`; `mycelium-interp`
+  `EffectBudget::Io`/`Named`; the `DECLARED_FLOAT_EPS` migration; the `regrow`→`Approx<Value>` wrapper). The
+  four per-module specs move to **"Implemented (Rust-first), pending ratification"**, *not* `Accepted`. Full
+  `cargo build`/`clippy --all-targets -D warnings`/`test --workspace` green (1883 tests). Append-only.

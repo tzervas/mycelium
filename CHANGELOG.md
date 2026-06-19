@@ -8,6 +8,46 @@ corpus, not released software. Versioning will begin when the kernel does.
 
 ## [Unreleased]
 
+### Added (2026-06-18: Phase-5 Tier-A completion — Rust-first numerics/diag/recover/spore, M-510/512/520/522)
+The Tier-A differentiator surface is completed: the four remaining spec'd-but-uncoded Tier-A Ring-1 `std`
+modules land as Rust-first crates, built as a **swarm of four sonnet agents** fanned in with an **octopus
+merge** (the orchestrator scaffolds first, owns every shared file, and reconciles after merge — the pattern
+in `CLAUDE.md`). Each ships its **RFC-0016 §4.5 guarantee matrix as checked data** (asserted in tests) and
+sits at the **honestly-supportable strength (VR-5)** — downgraded, never upgraded without a checked basis.
+- **`mycelium-diag`** (new kernel crate) + **`mycelium-std-diag`** (M-510, #151) — the structured
+  failure-legibility substrate. A **maintainer-resolved FLAG** (scaffold decision #1): the canonical
+  RFC-0013 record types (`Diag`/`Severity`/`Locus`/`Trace`/`Code`) are **extracted into a small
+  `mycelium-diag` kernel crate** — a deliberate, bounded trusted-base growth so the record has one owner
+  below the std layer — and `mycelium-std-diag` re-exports + wraps it (KC-3). Dual human/JSON projection
+  (G11, round-trip-checked), content-addressed presentation-invariant identity (ADR-003); all matrix rows
+  `Exact`; `present` returns the error **unchanged** — the I1 structural proof (presentation never gates
+  propagation).
+- **`mycelium-std-numerics`** (M-512, #153) — the honest ε/δ carrier. `Approx<T>` is a thin
+  `Meta`-attached `{Bound, strength}` view (no new numeric type, no kernel change, KC-3); `combine`/`map`
+  take the **meet** of input strengths and propagate bounds with **outward (directed) rounding**; `Proven`
+  is reachable **only** via a sealed `ProvenThm` witness (FR-N3, type-level; `compile_fail`-doctested);
+  refuse-without-a-rule (`Err(NoRule)`, never a fabricated bound). ε constants cited from
+  `mycelium-numerics`, restated none (NFR-N2).
+- **`mycelium-std-recover`** (M-520, #156, **Rust-first half**) — the declarative recovery bridge. The
+  `Outcome`/`Resolution` sums have **no `Dropped` variant** (I1); the closed v0 action set, a
+  content-addressed `RecoveryPolicy`/`PolicyRef`, declared + budgeted effects via `mycelium_interp::budget`
+  (graceful `EffectBudgetExhausted`), and the never-silent `handle_classified` driver carry a
+  `mycelium_diag::Diag`. The recovered tag is honest (`Ok`→floor, `fallback`→`Declared`, `retry`→inherited;
+  never laundered up — I2/VR-5), **fixing the P5-B exact-tag bug**. The self-hosting half stays Batch P5-C
+  (M-502-gated).
+- **`mycelium-std-spore`** (M-522, #163, library/manifest half) — the content-addressed deployable +
+  reconstruction-manifest library over the `mycelium-spore` packager + `std.content` + `std.vsa` (KC-3 — no
+  new hash, no new trusted code). Identity is the canonical content hash and metadata-invariant (ADR-003); a
+  hash mismatch is an explicit `Err` (C1/G2); probabilistic regrowth is held structurally at the
+  **`Empirical` ceiling** (FR-C2/VR-5, never `Proven`). Full native deploy is Phase-6-gated (M-620).
+
+The four spec `Status` lines move to **"Implemented (Rust-first), pending ratification"** (append-only;
+never silently `Accepted`). Fast-follow reconciliations are FLAGGED, not silently made: `std.testing`'s
+placeholder `FailRecord` → `mycelium_diag::Diag`; `std.error`'s abstract `recover` stub → the concrete
+`mycelium_std_recover::Outcome`; `EffectBudget::Io`/`Named` variants for `mycelium-interp`; the
+`DECLARED_FLOAT_EPS` migration into `std.numerics`; the `regrow` → `Approx<Value>` wrapper. Full
+`cargo build`/`clippy --all-targets -D warnings`/`test --workspace` green (1883 tests).
+
 ### Added (2026-06-18: Phase-5 Batch P5-B — Rust-first Ring-2 stdlib commons, M-511/514/524/525/526/527/528/529/531/532/533/534)
 The second Phase-5 standard-library wave lands: twelve **Ring-2 / Tier-B** `std` crates — the general
 library written **to the RFC-0016 §4.1 contract over Ring 0/1** — built as a **swarm of twelve sonnet
