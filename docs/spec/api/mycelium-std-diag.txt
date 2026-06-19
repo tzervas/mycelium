@@ -1,0 +1,72 @@
+pub mod mycelium_std_diag
+pub use mycelium_std_diag::Code
+pub use mycelium_std_diag::ContentHash
+pub use mycelium_std_diag::Diag
+pub use mycelium_std_diag::Locus
+pub use mycelium_std_diag::Severity
+pub use mycelium_std_diag::Trace
+pub mod mycelium_std_diag::guarantee_matrix
+pub enum mycelium_std_diag::guarantee_matrix::Explainable
+pub mycelium_std_diag::guarantee_matrix::Explainable::ClosedVocabulary
+pub mycelium_std_diag::guarantee_matrix::Explainable::ContentAddressedHandle
+pub mycelium_std_diag::guarantee_matrix::Explainable::IsExplainRecord
+pub mycelium_std_diag::guarantee_matrix::Explainable::NotApplicable
+impl core::clone::Clone for mycelium_std_diag::guarantee_matrix::Explainable
+pub fn mycelium_std_diag::guarantee_matrix::Explainable::clone(&self) -> mycelium_std_diag::guarantee_matrix::Explainable
+impl core::cmp::Eq for mycelium_std_diag::guarantee_matrix::Explainable
+impl core::cmp::PartialEq for mycelium_std_diag::guarantee_matrix::Explainable
+pub fn mycelium_std_diag::guarantee_matrix::Explainable::eq(&self, &mycelium_std_diag::guarantee_matrix::Explainable) -> bool
+impl core::fmt::Debug for mycelium_std_diag::guarantee_matrix::Explainable
+pub fn mycelium_std_diag::guarantee_matrix::Explainable::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_diag::guarantee_matrix::Explainable
+impl core::marker::StructuralPartialEq for mycelium_std_diag::guarantee_matrix::Explainable
+impl core::marker::Freeze for mycelium_std_diag::guarantee_matrix::Explainable
+impl core::marker::Send for mycelium_std_diag::guarantee_matrix::Explainable
+impl core::marker::Sync for mycelium_std_diag::guarantee_matrix::Explainable
+impl core::marker::Unpin for mycelium_std_diag::guarantee_matrix::Explainable
+impl core::marker::UnsafeUnpin for mycelium_std_diag::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_diag::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_diag::guarantee_matrix::Explainable
+pub enum mycelium_std_diag::guarantee_matrix::Fallibility
+pub mycelium_std_diag::guarantee_matrix::Fallibility::Explicit
+pub mycelium_std_diag::guarantee_matrix::Fallibility::Total
+impl core::clone::Clone for mycelium_std_diag::guarantee_matrix::Fallibility
+pub fn mycelium_std_diag::guarantee_matrix::Fallibility::clone(&self) -> mycelium_std_diag::guarantee_matrix::Fallibility
+impl core::cmp::Eq for mycelium_std_diag::guarantee_matrix::Fallibility
+impl core::cmp::PartialEq for mycelium_std_diag::guarantee_matrix::Fallibility
+pub fn mycelium_std_diag::guarantee_matrix::Fallibility::eq(&self, &mycelium_std_diag::guarantee_matrix::Fallibility) -> bool
+impl core::fmt::Debug for mycelium_std_diag::guarantee_matrix::Fallibility
+pub fn mycelium_std_diag::guarantee_matrix::Fallibility::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_diag::guarantee_matrix::Fallibility
+impl core::marker::StructuralPartialEq for mycelium_std_diag::guarantee_matrix::Fallibility
+impl core::marker::Freeze for mycelium_std_diag::guarantee_matrix::Fallibility
+impl core::marker::Send for mycelium_std_diag::guarantee_matrix::Fallibility
+impl core::marker::Sync for mycelium_std_diag::guarantee_matrix::Fallibility
+impl core::marker::Unpin for mycelium_std_diag::guarantee_matrix::Fallibility
+impl core::marker::UnsafeUnpin for mycelium_std_diag::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_diag::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_diag::guarantee_matrix::Fallibility
+pub struct mycelium_std_diag::guarantee_matrix::MatrixRow
+pub mycelium_std_diag::guarantee_matrix::MatrixRow::effects: &'static str
+pub mycelium_std_diag::guarantee_matrix::MatrixRow::error_set: &'static str
+pub mycelium_std_diag::guarantee_matrix::MatrixRow::explainable: mycelium_std_diag::guarantee_matrix::Explainable
+pub mycelium_std_diag::guarantee_matrix::MatrixRow::fallibility: mycelium_std_diag::guarantee_matrix::Fallibility
+pub mycelium_std_diag::guarantee_matrix::MatrixRow::guarantee: &'static str
+pub mycelium_std_diag::guarantee_matrix::MatrixRow::never_silent_property: &'static str
+pub mycelium_std_diag::guarantee_matrix::MatrixRow::op: &'static str
+impl core::clone::Clone for mycelium_std_diag::guarantee_matrix::MatrixRow
+pub fn mycelium_std_diag::guarantee_matrix::MatrixRow::clone(&self) -> mycelium_std_diag::guarantee_matrix::MatrixRow
+impl core::cmp::Eq for mycelium_std_diag::guarantee_matrix::MatrixRow
+impl core::cmp::PartialEq for mycelium_std_diag::guarantee_matrix::MatrixRow
+pub fn mycelium_std_diag::guarantee_matrix::MatrixRow::eq(&self, &mycelium_std_diag::guarantee_matrix::MatrixRow) -> bool
+impl core::fmt::Debug for mycelium_std_diag::guarantee_matrix::MatrixRow
+pub fn mycelium_std_diag::guarantee_matrix::MatrixRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_diag::guarantee_matrix::MatrixRow
+impl core::marker::Freeze for mycelium_std_diag::guarantee_matrix::MatrixRow
+impl core::marker::Send for mycelium_std_diag::guarantee_matrix::MatrixRow
+impl core::marker::Sync for mycelium_std_diag::guarantee_matrix::MatrixRow
+impl core::marker::Unpin for mycelium_std_diag::guarantee_matrix::MatrixRow
+impl core::marker::UnsafeUnpin for mycelium_std_diag::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_diag::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_diag::guarantee_matrix::MatrixRow
+pub const mycelium_std_diag::guarantee_matrix::MATRIX: &[mycelium_std_diag::guarantee_matrix::MatrixRow]

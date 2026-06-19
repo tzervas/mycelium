@@ -21,6 +21,12 @@ checked=0
 for d in crates/*/ xtask/; do
   [[ -f "${d}Cargo.toml" ]] || continue
   pkg="$(basename "$d")"
+  # cargo-public-api introspects a *library* rustdoc; a bin-only crate (no src/lib.rs) has no
+  # Rust public-API surface to gate (its surface is its CLI), so skip it — never fail on it.
+  if [[ ! -f "${d}src/lib.rs" ]]; then
+    skip "$pkg: bin-only (no library target) — public-API gate N/A"
+    continue
+  fi
   base="$baseline_dir/$pkg.txt"
   if [[ ! -f "$base" ]]; then
     skip "$pkg: no baseline ($base) — run \`just api-baseline\`"

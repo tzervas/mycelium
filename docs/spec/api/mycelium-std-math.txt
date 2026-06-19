@@ -1,0 +1,239 @@
+pub mod mycelium_std_math
+pub mod mycelium_std_math::approx
+pub struct mycelium_std_math::approx::Approx<T>
+pub mycelium_std_math::approx::Approx::bound: mycelium_core::bound::Bound
+pub mycelium_std_math::approx::Approx::strength: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_std_math::approx::Approx::value: T
+impl mycelium_std_math::approx::Approx<f64>
+pub fn mycelium_std_math::approx::Approx<f64>::explain(&self) -> mycelium_std_math::approx::ApproxExplain
+impl<T: core::marker::Copy + core::fmt::Debug> mycelium_std_math::approx::Approx<T>
+pub fn mycelium_std_math::approx::Approx<T>::new(T, mycelium_core::bound::Bound) -> Self
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_math::approx::Approx<T>
+pub fn mycelium_std_math::approx::Approx<T>::clone(&self) -> mycelium_std_math::approx::Approx<T>
+impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_math::approx::Approx<T>
+pub fn mycelium_std_math::approx::Approx<T>::eq(&self, &mycelium_std_math::approx::Approx<T>) -> bool
+impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_math::approx::Approx<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_std_math::approx::Approx<T>
+pub fn mycelium_std_math::approx::Approx<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::marker::Freeze for mycelium_std_math::approx::Approx<T> where T: core::marker::Freeze
+impl<T> core::marker::Send for mycelium_std_math::approx::Approx<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_std_math::approx::Approx<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_std_math::approx::Approx<T> where T: core::marker::Unpin
+impl<T> core::marker::UnsafeUnpin for mycelium_std_math::approx::Approx<T> where T: core::marker::UnsafeUnpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_math::approx::Approx<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_math::approx::Approx<T> where T: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_math::approx::ApproxExplain
+pub mycelium_std_math::approx::ApproxExplain::basis: mycelium_core::bound::BoundBasis
+pub mycelium_std_math::approx::ApproxExplain::eps: f64
+pub mycelium_std_math::approx::ApproxExplain::norm: mycelium_core::bound::NormKind
+pub mycelium_std_math::approx::ApproxExplain::strength: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_std_math::approx::ApproxExplain::summary: alloc::string::String
+pub mycelium_std_math::approx::ApproxExplain::value: f64
+impl core::clone::Clone for mycelium_std_math::approx::ApproxExplain
+pub fn mycelium_std_math::approx::ApproxExplain::clone(&self) -> mycelium_std_math::approx::ApproxExplain
+impl core::cmp::PartialEq for mycelium_std_math::approx::ApproxExplain
+pub fn mycelium_std_math::approx::ApproxExplain::eq(&self, &mycelium_std_math::approx::ApproxExplain) -> bool
+impl core::fmt::Debug for mycelium_std_math::approx::ApproxExplain
+pub fn mycelium_std_math::approx::ApproxExplain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_math::approx::ApproxExplain
+impl core::marker::Freeze for mycelium_std_math::approx::ApproxExplain
+impl core::marker::Send for mycelium_std_math::approx::ApproxExplain
+impl core::marker::Sync for mycelium_std_math::approx::ApproxExplain
+impl core::marker::Unpin for mycelium_std_math::approx::ApproxExplain
+impl core::marker::UnsafeUnpin for mycelium_std_math::approx::ApproxExplain
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_math::approx::ApproxExplain
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_math::approx::ApproxExplain
+pub const mycelium_std_math::approx::DECLARED_FLOAT_EPS: f64
+pub fn mycelium_std_math::approx::acos(f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::approx::asin(f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::approx::atan(f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::approx::atan2(f64, f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::approx::cbrt(f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::approx::cos(f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::approx::declared_error_bound() -> mycelium_core::bound::Bound
+pub fn mycelium_std_math::approx::exp(f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::approx::hypot(f64, f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::approx::log(f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::approx::logb(f64, f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::approx::pow(f64, f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::approx::sin(f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::approx::sqrt(f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::approx::tan(f64) -> core::result::Result<mycelium_std_math::approx::Approx<f64>, mycelium_std_math::MathErr>
+pub mod mycelium_std_math::exact
+pub enum mycelium_std_math::exact::RoundMode
+pub mycelium_std_math::exact::RoundMode::Ceil
+pub mycelium_std_math::exact::RoundMode::Floor
+pub mycelium_std_math::exact::RoundMode::HalfAwayFromZero
+pub mycelium_std_math::exact::RoundMode::HalfToEven
+pub mycelium_std_math::exact::RoundMode::TruncTowardZero
+impl core::clone::Clone for mycelium_std_math::exact::RoundMode
+pub fn mycelium_std_math::exact::RoundMode::clone(&self) -> mycelium_std_math::exact::RoundMode
+impl core::cmp::Eq for mycelium_std_math::exact::RoundMode
+impl core::cmp::PartialEq for mycelium_std_math::exact::RoundMode
+pub fn mycelium_std_math::exact::RoundMode::eq(&self, &mycelium_std_math::exact::RoundMode) -> bool
+impl core::fmt::Debug for mycelium_std_math::exact::RoundMode
+pub fn mycelium_std_math::exact::RoundMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_math::exact::RoundMode
+impl core::marker::StructuralPartialEq for mycelium_std_math::exact::RoundMode
+impl core::marker::Freeze for mycelium_std_math::exact::RoundMode
+impl core::marker::Send for mycelium_std_math::exact::RoundMode
+impl core::marker::Sync for mycelium_std_math::exact::RoundMode
+impl core::marker::Unpin for mycelium_std_math::exact::RoundMode
+impl core::marker::UnsafeUnpin for mycelium_std_math::exact::RoundMode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_math::exact::RoundMode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_math::exact::RoundMode
+pub fn mycelium_std_math::exact::abs(i64) -> core::result::Result<i64, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::exact::ceil(f64) -> core::result::Result<i64, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::exact::checked_div(i64, i64) -> core::result::Result<i64, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::exact::checked_rem(i64, i64) -> core::result::Result<i64, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::exact::floor(f64) -> core::result::Result<i64, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::exact::gcd(i64, i64) -> core::result::Result<i64, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::exact::lcm(i64, i64) -> core::result::Result<i64, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::exact::max(i64, i64) -> i64
+pub fn mycelium_std_math::exact::min(i64, i64) -> i64
+pub fn mycelium_std_math::exact::neg(i64) -> core::result::Result<i64, mycelium_std_math::MathErr>
+pub fn mycelium_std_math::exact::ratio(i64, i64) -> core::result::Result<(i64, i64), mycelium_std_math::MathErr>
+pub fn mycelium_std_math::exact::round(f64, mycelium_std_math::exact::RoundMode) -> core::result::Result<(i64, mycelium_std_math::exact::RoundMode), mycelium_std_math::MathErr>
+pub fn mycelium_std_math::exact::signum(i64) -> i64
+pub fn mycelium_std_math::exact::trunc(f64) -> core::result::Result<i64, mycelium_std_math::MathErr>
+pub mod mycelium_std_math::matrix
+pub struct mycelium_std_math::matrix::GuaranteeRow
+pub mycelium_std_math::matrix::GuaranteeRow::effects: &'static str
+pub mycelium_std_math::matrix::GuaranteeRow::error_set: &'static str
+pub mycelium_std_math::matrix::GuaranteeRow::explainable: bool
+pub mycelium_std_math::matrix::GuaranteeRow::fallible: bool
+pub mycelium_std_math::matrix::GuaranteeRow::op: &'static str
+pub mycelium_std_math::matrix::GuaranteeRow::tag: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_std_math::matrix::GuaranteeRow
+pub fn mycelium_std_math::matrix::GuaranteeRow::clone(&self) -> mycelium_std_math::matrix::GuaranteeRow
+impl core::cmp::Eq for mycelium_std_math::matrix::GuaranteeRow
+impl core::cmp::PartialEq for mycelium_std_math::matrix::GuaranteeRow
+pub fn mycelium_std_math::matrix::GuaranteeRow::eq(&self, &mycelium_std_math::matrix::GuaranteeRow) -> bool
+impl core::fmt::Debug for mycelium_std_math::matrix::GuaranteeRow
+pub fn mycelium_std_math::matrix::GuaranteeRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_math::matrix::GuaranteeRow
+impl core::marker::Freeze for mycelium_std_math::matrix::GuaranteeRow
+impl core::marker::Send for mycelium_std_math::matrix::GuaranteeRow
+impl core::marker::Sync for mycelium_std_math::matrix::GuaranteeRow
+impl core::marker::Unpin for mycelium_std_math::matrix::GuaranteeRow
+impl core::marker::UnsafeUnpin for mycelium_std_math::matrix::GuaranteeRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_math::matrix::GuaranteeRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_math::matrix::GuaranteeRow
+pub const mycelium_std_math::matrix::GUARANTEE_MATRIX: &[mycelium_std_math::matrix::GuaranteeRow]
+pub fn mycelium_std_math::matrix::assert_matrix_invariants()
+pub enum mycelium_std_math::MathErr
+pub mycelium_std_math::MathErr::BadBase
+pub mycelium_std_math::MathErr::DivByZero
+pub mycelium_std_math::MathErr::NegativeDomain
+pub mycelium_std_math::MathErr::NonPositiveDomain
+pub mycelium_std_math::MathErr::OutOfDomain
+pub mycelium_std_math::MathErr::Overflow
+pub mycelium_std_math::MathErr::PoleDomain
+impl core::clone::Clone for mycelium_std_math::MathErr
+pub fn mycelium_std_math::MathErr::clone(&self) -> mycelium_std_math::MathErr
+impl core::cmp::Eq for mycelium_std_math::MathErr
+impl core::cmp::PartialEq for mycelium_std_math::MathErr
+pub fn mycelium_std_math::MathErr::eq(&self, &mycelium_std_math::MathErr) -> bool
+impl core::error::Error for mycelium_std_math::MathErr
+impl core::fmt::Debug for mycelium_std_math::MathErr
+pub fn mycelium_std_math::MathErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_math::MathErr
+pub fn mycelium_std_math::MathErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_math::MathErr
+impl core::marker::StructuralPartialEq for mycelium_std_math::MathErr
+impl core::marker::Freeze for mycelium_std_math::MathErr
+impl core::marker::Send for mycelium_std_math::MathErr
+impl core::marker::Sync for mycelium_std_math::MathErr
+impl core::marker::Unpin for mycelium_std_math::MathErr
+impl core::marker::UnsafeUnpin for mycelium_std_math::MathErr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_math::MathErr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_math::MathErr
+pub enum mycelium_std_math::RoundMode
+pub mycelium_std_math::RoundMode::Ceil
+pub mycelium_std_math::RoundMode::Floor
+pub mycelium_std_math::RoundMode::HalfAwayFromZero
+pub mycelium_std_math::RoundMode::HalfToEven
+pub mycelium_std_math::RoundMode::TruncTowardZero
+impl core::clone::Clone for mycelium_std_math::exact::RoundMode
+pub fn mycelium_std_math::exact::RoundMode::clone(&self) -> mycelium_std_math::exact::RoundMode
+impl core::cmp::Eq for mycelium_std_math::exact::RoundMode
+impl core::cmp::PartialEq for mycelium_std_math::exact::RoundMode
+pub fn mycelium_std_math::exact::RoundMode::eq(&self, &mycelium_std_math::exact::RoundMode) -> bool
+impl core::fmt::Debug for mycelium_std_math::exact::RoundMode
+pub fn mycelium_std_math::exact::RoundMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_math::exact::RoundMode
+impl core::marker::StructuralPartialEq for mycelium_std_math::exact::RoundMode
+impl core::marker::Freeze for mycelium_std_math::exact::RoundMode
+impl core::marker::Send for mycelium_std_math::exact::RoundMode
+impl core::marker::Sync for mycelium_std_math::exact::RoundMode
+impl core::marker::Unpin for mycelium_std_math::exact::RoundMode
+impl core::marker::UnsafeUnpin for mycelium_std_math::exact::RoundMode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_math::exact::RoundMode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_math::exact::RoundMode
+pub struct mycelium_std_math::Approx<T>
+pub mycelium_std_math::Approx::bound: mycelium_core::bound::Bound
+pub mycelium_std_math::Approx::strength: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_std_math::Approx::value: T
+impl mycelium_std_math::approx::Approx<f64>
+pub fn mycelium_std_math::approx::Approx<f64>::explain(&self) -> mycelium_std_math::approx::ApproxExplain
+impl<T: core::marker::Copy + core::fmt::Debug> mycelium_std_math::approx::Approx<T>
+pub fn mycelium_std_math::approx::Approx<T>::new(T, mycelium_core::bound::Bound) -> Self
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_math::approx::Approx<T>
+pub fn mycelium_std_math::approx::Approx<T>::clone(&self) -> mycelium_std_math::approx::Approx<T>
+impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_math::approx::Approx<T>
+pub fn mycelium_std_math::approx::Approx<T>::eq(&self, &mycelium_std_math::approx::Approx<T>) -> bool
+impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_math::approx::Approx<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_std_math::approx::Approx<T>
+pub fn mycelium_std_math::approx::Approx<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::marker::Freeze for mycelium_std_math::approx::Approx<T> where T: core::marker::Freeze
+impl<T> core::marker::Send for mycelium_std_math::approx::Approx<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_std_math::approx::Approx<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_std_math::approx::Approx<T> where T: core::marker::Unpin
+impl<T> core::marker::UnsafeUnpin for mycelium_std_math::approx::Approx<T> where T: core::marker::UnsafeUnpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_math::approx::Approx<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_math::approx::Approx<T> where T: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_math::ApproxExplain
+pub mycelium_std_math::ApproxExplain::basis: mycelium_core::bound::BoundBasis
+pub mycelium_std_math::ApproxExplain::eps: f64
+pub mycelium_std_math::ApproxExplain::norm: mycelium_core::bound::NormKind
+pub mycelium_std_math::ApproxExplain::strength: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_std_math::ApproxExplain::summary: alloc::string::String
+pub mycelium_std_math::ApproxExplain::value: f64
+impl core::clone::Clone for mycelium_std_math::approx::ApproxExplain
+pub fn mycelium_std_math::approx::ApproxExplain::clone(&self) -> mycelium_std_math::approx::ApproxExplain
+impl core::cmp::PartialEq for mycelium_std_math::approx::ApproxExplain
+pub fn mycelium_std_math::approx::ApproxExplain::eq(&self, &mycelium_std_math::approx::ApproxExplain) -> bool
+impl core::fmt::Debug for mycelium_std_math::approx::ApproxExplain
+pub fn mycelium_std_math::approx::ApproxExplain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_math::approx::ApproxExplain
+impl core::marker::Freeze for mycelium_std_math::approx::ApproxExplain
+impl core::marker::Send for mycelium_std_math::approx::ApproxExplain
+impl core::marker::Sync for mycelium_std_math::approx::ApproxExplain
+impl core::marker::Unpin for mycelium_std_math::approx::ApproxExplain
+impl core::marker::UnsafeUnpin for mycelium_std_math::approx::ApproxExplain
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_math::approx::ApproxExplain
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_math::approx::ApproxExplain
+pub struct mycelium_std_math::GuaranteeRow
+pub mycelium_std_math::GuaranteeRow::effects: &'static str
+pub mycelium_std_math::GuaranteeRow::error_set: &'static str
+pub mycelium_std_math::GuaranteeRow::explainable: bool
+pub mycelium_std_math::GuaranteeRow::fallible: bool
+pub mycelium_std_math::GuaranteeRow::op: &'static str
+pub mycelium_std_math::GuaranteeRow::tag: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_std_math::matrix::GuaranteeRow
+pub fn mycelium_std_math::matrix::GuaranteeRow::clone(&self) -> mycelium_std_math::matrix::GuaranteeRow
+impl core::cmp::Eq for mycelium_std_math::matrix::GuaranteeRow
+impl core::cmp::PartialEq for mycelium_std_math::matrix::GuaranteeRow
+pub fn mycelium_std_math::matrix::GuaranteeRow::eq(&self, &mycelium_std_math::matrix::GuaranteeRow) -> bool
+impl core::fmt::Debug for mycelium_std_math::matrix::GuaranteeRow
+pub fn mycelium_std_math::matrix::GuaranteeRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_math::matrix::GuaranteeRow
+impl core::marker::Freeze for mycelium_std_math::matrix::GuaranteeRow
+impl core::marker::Send for mycelium_std_math::matrix::GuaranteeRow
+impl core::marker::Sync for mycelium_std_math::matrix::GuaranteeRow
+impl core::marker::Unpin for mycelium_std_math::matrix::GuaranteeRow
+impl core::marker::UnsafeUnpin for mycelium_std_math::matrix::GuaranteeRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_math::matrix::GuaranteeRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_math::matrix::GuaranteeRow
+pub const mycelium_std_math::GUARANTEE_MATRIX: &[mycelium_std_math::matrix::GuaranteeRow]
+pub fn mycelium_std_math::assert_matrix_invariants()

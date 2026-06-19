@@ -1,0 +1,279 @@
+pub mod mycelium_std_content
+pub use mycelium_std_content::ContentHash
+pub use mycelium_std_content::Names
+pub mod mycelium_std_content::content_ref
+pub enum mycelium_std_content::content_ref::RefKind
+pub mycelium_std_content::content_ref::RefKind::Def
+pub mycelium_std_content::content_ref::RefKind::Operation
+pub mycelium_std_content::content_ref::RefKind::Other
+pub mycelium_std_content::content_ref::RefKind::Policy
+pub mycelium_std_content::content_ref::RefKind::Spore
+pub mycelium_std_content::content_ref::RefKind::Value
+impl core::clone::Clone for mycelium_std_content::content_ref::RefKind
+pub fn mycelium_std_content::content_ref::RefKind::clone(&self) -> mycelium_std_content::content_ref::RefKind
+impl core::cmp::Eq for mycelium_std_content::content_ref::RefKind
+impl core::cmp::Ord for mycelium_std_content::content_ref::RefKind
+pub fn mycelium_std_content::content_ref::RefKind::cmp(&self, &mycelium_std_content::content_ref::RefKind) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_std_content::content_ref::RefKind
+pub fn mycelium_std_content::content_ref::RefKind::eq(&self, &mycelium_std_content::content_ref::RefKind) -> bool
+impl core::cmp::PartialOrd for mycelium_std_content::content_ref::RefKind
+pub fn mycelium_std_content::content_ref::RefKind::partial_cmp(&self, &mycelium_std_content::content_ref::RefKind) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_std_content::content_ref::RefKind
+pub fn mycelium_std_content::content_ref::RefKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_content::content_ref::RefKind
+pub fn mycelium_std_content::content_ref::RefKind::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_content::content_ref::RefKind
+impl core::marker::StructuralPartialEq for mycelium_std_content::content_ref::RefKind
+impl core::marker::Freeze for mycelium_std_content::content_ref::RefKind
+impl core::marker::Send for mycelium_std_content::content_ref::RefKind
+impl core::marker::Sync for mycelium_std_content::content_ref::RefKind
+impl core::marker::Unpin for mycelium_std_content::content_ref::RefKind
+impl core::marker::UnsafeUnpin for mycelium_std_content::content_ref::RefKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_content::content_ref::RefKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_content::content_ref::RefKind
+pub struct mycelium_std_content::content_ref::ContentRef
+impl mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::content_ref::ContentRef::as_str_repr(&self) -> alloc::string::String
+pub fn mycelium_std_content::content_ref::ContentRef::hash(&self) -> &mycelium_core::id::ContentHash
+pub fn mycelium_std_content::content_ref::ContentRef::into_hash(self) -> mycelium_core::id::ContentHash
+pub fn mycelium_std_content::content_ref::ContentRef::kind(&self) -> mycelium_std_content::content_ref::RefKind
+pub fn mycelium_std_content::content_ref::ContentRef::new(mycelium_std_content::content_ref::RefKind, mycelium_core::id::ContentHash) -> Self
+impl core::clone::Clone for mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::content_ref::ContentRef::clone(&self) -> mycelium_std_content::content_ref::ContentRef
+impl core::cmp::Eq for mycelium_std_content::content_ref::ContentRef
+impl core::cmp::Ord for mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::content_ref::ContentRef::cmp(&self, &mycelium_std_content::content_ref::ContentRef) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::content_ref::ContentRef::eq(&self, &mycelium_std_content::content_ref::ContentRef) -> bool
+impl core::cmp::PartialOrd for mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::content_ref::ContentRef::partial_cmp(&self, &mycelium_std_content::content_ref::ContentRef) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::content_ref::ContentRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::content_ref::ContentRef::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_std_content::content_ref::ContentRef
+impl core::str::traits::FromStr for mycelium_std_content::content_ref::ContentRef
+pub type mycelium_std_content::content_ref::ContentRef::Err = mycelium_std_content::error::MalformedDigest
+pub fn mycelium_std_content::content_ref::ContentRef::from_str(&str) -> core::result::Result<Self, Self::Err>
+impl core::marker::Freeze for mycelium_std_content::content_ref::ContentRef
+impl core::marker::Send for mycelium_std_content::content_ref::ContentRef
+impl core::marker::Sync for mycelium_std_content::content_ref::ContentRef
+impl core::marker::Unpin for mycelium_std_content::content_ref::ContentRef
+impl core::marker::UnsafeUnpin for mycelium_std_content::content_ref::ContentRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_content::content_ref::ContentRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_content::content_ref::ContentRef
+pub mod mycelium_std_content::error
+pub struct mycelium_std_content::error::MalformedDigest
+pub mycelium_std_content::error::MalformedDigest::description: &'static str
+pub mycelium_std_content::error::MalformedDigest::input: alloc::string::String
+impl core::clone::Clone for mycelium_std_content::error::MalformedDigest
+pub fn mycelium_std_content::error::MalformedDigest::clone(&self) -> mycelium_std_content::error::MalformedDigest
+impl core::cmp::Eq for mycelium_std_content::error::MalformedDigest
+impl core::cmp::PartialEq for mycelium_std_content::error::MalformedDigest
+pub fn mycelium_std_content::error::MalformedDigest::eq(&self, &mycelium_std_content::error::MalformedDigest) -> bool
+impl core::error::Error for mycelium_std_content::error::MalformedDigest
+impl core::fmt::Debug for mycelium_std_content::error::MalformedDigest
+pub fn mycelium_std_content::error::MalformedDigest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_content::error::MalformedDigest
+pub fn mycelium_std_content::error::MalformedDigest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_content::error::MalformedDigest
+impl core::marker::Freeze for mycelium_std_content::error::MalformedDigest
+impl core::marker::Send for mycelium_std_content::error::MalformedDigest
+impl core::marker::Sync for mycelium_std_content::error::MalformedDigest
+impl core::marker::Unpin for mycelium_std_content::error::MalformedDigest
+impl core::marker::UnsafeUnpin for mycelium_std_content::error::MalformedDigest
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_content::error::MalformedDigest
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_content::error::MalformedDigest
+pub mod mycelium_std_content::guarantee_matrix
+pub enum mycelium_std_content::guarantee_matrix::Explainable
+pub mycelium_std_content::guarantee_matrix::Explainable::NotApplicable
+pub mycelium_std_content::guarantee_matrix::Explainable::Yes
+impl core::clone::Clone for mycelium_std_content::guarantee_matrix::Explainable
+pub fn mycelium_std_content::guarantee_matrix::Explainable::clone(&self) -> mycelium_std_content::guarantee_matrix::Explainable
+impl core::cmp::Eq for mycelium_std_content::guarantee_matrix::Explainable
+impl core::cmp::PartialEq for mycelium_std_content::guarantee_matrix::Explainable
+pub fn mycelium_std_content::guarantee_matrix::Explainable::eq(&self, &mycelium_std_content::guarantee_matrix::Explainable) -> bool
+impl core::fmt::Debug for mycelium_std_content::guarantee_matrix::Explainable
+pub fn mycelium_std_content::guarantee_matrix::Explainable::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_content::guarantee_matrix::Explainable
+impl core::marker::StructuralPartialEq for mycelium_std_content::guarantee_matrix::Explainable
+impl core::marker::Freeze for mycelium_std_content::guarantee_matrix::Explainable
+impl core::marker::Send for mycelium_std_content::guarantee_matrix::Explainable
+impl core::marker::Sync for mycelium_std_content::guarantee_matrix::Explainable
+impl core::marker::Unpin for mycelium_std_content::guarantee_matrix::Explainable
+impl core::marker::UnsafeUnpin for mycelium_std_content::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_content::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_content::guarantee_matrix::Explainable
+pub enum mycelium_std_content::guarantee_matrix::Fallibility
+pub mycelium_std_content::guarantee_matrix::Fallibility::Fallible
+pub mycelium_std_content::guarantee_matrix::Fallibility::Total
+impl core::clone::Clone for mycelium_std_content::guarantee_matrix::Fallibility
+pub fn mycelium_std_content::guarantee_matrix::Fallibility::clone(&self) -> mycelium_std_content::guarantee_matrix::Fallibility
+impl core::cmp::Eq for mycelium_std_content::guarantee_matrix::Fallibility
+impl core::cmp::PartialEq for mycelium_std_content::guarantee_matrix::Fallibility
+pub fn mycelium_std_content::guarantee_matrix::Fallibility::eq(&self, &mycelium_std_content::guarantee_matrix::Fallibility) -> bool
+impl core::fmt::Debug for mycelium_std_content::guarantee_matrix::Fallibility
+pub fn mycelium_std_content::guarantee_matrix::Fallibility::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_content::guarantee_matrix::Fallibility
+impl core::marker::StructuralPartialEq for mycelium_std_content::guarantee_matrix::Fallibility
+impl core::marker::Freeze for mycelium_std_content::guarantee_matrix::Fallibility
+impl core::marker::Send for mycelium_std_content::guarantee_matrix::Fallibility
+impl core::marker::Sync for mycelium_std_content::guarantee_matrix::Fallibility
+impl core::marker::Unpin for mycelium_std_content::guarantee_matrix::Fallibility
+impl core::marker::UnsafeUnpin for mycelium_std_content::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_content::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_content::guarantee_matrix::Fallibility
+pub struct mycelium_std_content::guarantee_matrix::MatrixRow
+pub mycelium_std_content::guarantee_matrix::MatrixRow::effects: &'static str
+pub mycelium_std_content::guarantee_matrix::MatrixRow::error_set: &'static str
+pub mycelium_std_content::guarantee_matrix::MatrixRow::explainable: mycelium_std_content::guarantee_matrix::Explainable
+pub mycelium_std_content::guarantee_matrix::MatrixRow::fallibility: mycelium_std_content::guarantee_matrix::Fallibility
+pub mycelium_std_content::guarantee_matrix::MatrixRow::guarantee: &'static str
+pub mycelium_std_content::guarantee_matrix::MatrixRow::op: &'static str
+impl core::clone::Clone for mycelium_std_content::guarantee_matrix::MatrixRow
+pub fn mycelium_std_content::guarantee_matrix::MatrixRow::clone(&self) -> mycelium_std_content::guarantee_matrix::MatrixRow
+impl core::cmp::Eq for mycelium_std_content::guarantee_matrix::MatrixRow
+impl core::cmp::PartialEq for mycelium_std_content::guarantee_matrix::MatrixRow
+pub fn mycelium_std_content::guarantee_matrix::MatrixRow::eq(&self, &mycelium_std_content::guarantee_matrix::MatrixRow) -> bool
+impl core::fmt::Debug for mycelium_std_content::guarantee_matrix::MatrixRow
+pub fn mycelium_std_content::guarantee_matrix::MatrixRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_content::guarantee_matrix::MatrixRow
+impl core::marker::Freeze for mycelium_std_content::guarantee_matrix::MatrixRow
+impl core::marker::Send for mycelium_std_content::guarantee_matrix::MatrixRow
+impl core::marker::Sync for mycelium_std_content::guarantee_matrix::MatrixRow
+impl core::marker::Unpin for mycelium_std_content::guarantee_matrix::MatrixRow
+impl core::marker::UnsafeUnpin for mycelium_std_content::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_content::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_content::guarantee_matrix::MatrixRow
+pub const mycelium_std_content::guarantee_matrix::MATRIX: &[mycelium_std_content::guarantee_matrix::MatrixRow]
+pub mod mycelium_std_content::name_registry
+pub struct mycelium_std_content::name_registry::NameRegistry
+impl mycelium_std_content::name_registry::NameRegistry
+pub fn mycelium_std_content::name_registry::NameRegistry::bind(&mut self, mycelium_core::id::ContentHash, impl core::convert::Into<alloc::string::String>) -> core::option::Option<alloc::string::String>
+pub fn mycelium_std_content::name_registry::NameRegistry::is_empty(&self) -> bool
+pub fn mycelium_std_content::name_registry::NameRegistry::len(&self) -> usize
+pub fn mycelium_std_content::name_registry::NameRegistry::names_of(&self, &mycelium_core::id::ContentHash) -> alloc::vec::Vec<alloc::string::String>
+pub fn mycelium_std_content::name_registry::NameRegistry::new() -> Self
+pub fn mycelium_std_content::name_registry::NameRegistry::resolve_name(&self, &mycelium_core::id::ContentHash) -> core::option::Option<&str>
+impl core::clone::Clone for mycelium_std_content::name_registry::NameRegistry
+pub fn mycelium_std_content::name_registry::NameRegistry::clone(&self) -> mycelium_std_content::name_registry::NameRegistry
+impl core::default::Default for mycelium_std_content::name_registry::NameRegistry
+pub fn mycelium_std_content::name_registry::NameRegistry::default() -> mycelium_std_content::name_registry::NameRegistry
+impl core::fmt::Debug for mycelium_std_content::name_registry::NameRegistry
+pub fn mycelium_std_content::name_registry::NameRegistry::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_content::name_registry::NameRegistry
+impl core::marker::Send for mycelium_std_content::name_registry::NameRegistry
+impl core::marker::Sync for mycelium_std_content::name_registry::NameRegistry
+impl core::marker::Unpin for mycelium_std_content::name_registry::NameRegistry
+impl core::marker::UnsafeUnpin for mycelium_std_content::name_registry::NameRegistry
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_content::name_registry::NameRegistry
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_content::name_registry::NameRegistry
+pub enum mycelium_std_content::RefKind
+pub mycelium_std_content::RefKind::Def
+pub mycelium_std_content::RefKind::Operation
+pub mycelium_std_content::RefKind::Other
+pub mycelium_std_content::RefKind::Policy
+pub mycelium_std_content::RefKind::Spore
+pub mycelium_std_content::RefKind::Value
+impl core::clone::Clone for mycelium_std_content::content_ref::RefKind
+pub fn mycelium_std_content::content_ref::RefKind::clone(&self) -> mycelium_std_content::content_ref::RefKind
+impl core::cmp::Eq for mycelium_std_content::content_ref::RefKind
+impl core::cmp::Ord for mycelium_std_content::content_ref::RefKind
+pub fn mycelium_std_content::content_ref::RefKind::cmp(&self, &mycelium_std_content::content_ref::RefKind) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_std_content::content_ref::RefKind
+pub fn mycelium_std_content::content_ref::RefKind::eq(&self, &mycelium_std_content::content_ref::RefKind) -> bool
+impl core::cmp::PartialOrd for mycelium_std_content::content_ref::RefKind
+pub fn mycelium_std_content::content_ref::RefKind::partial_cmp(&self, &mycelium_std_content::content_ref::RefKind) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_std_content::content_ref::RefKind
+pub fn mycelium_std_content::content_ref::RefKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_content::content_ref::RefKind
+pub fn mycelium_std_content::content_ref::RefKind::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_content::content_ref::RefKind
+impl core::marker::StructuralPartialEq for mycelium_std_content::content_ref::RefKind
+impl core::marker::Freeze for mycelium_std_content::content_ref::RefKind
+impl core::marker::Send for mycelium_std_content::content_ref::RefKind
+impl core::marker::Sync for mycelium_std_content::content_ref::RefKind
+impl core::marker::Unpin for mycelium_std_content::content_ref::RefKind
+impl core::marker::UnsafeUnpin for mycelium_std_content::content_ref::RefKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_content::content_ref::RefKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_content::content_ref::RefKind
+pub struct mycelium_std_content::ContentRef
+impl mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::content_ref::ContentRef::as_str_repr(&self) -> alloc::string::String
+pub fn mycelium_std_content::content_ref::ContentRef::hash(&self) -> &mycelium_core::id::ContentHash
+pub fn mycelium_std_content::content_ref::ContentRef::into_hash(self) -> mycelium_core::id::ContentHash
+pub fn mycelium_std_content::content_ref::ContentRef::kind(&self) -> mycelium_std_content::content_ref::RefKind
+pub fn mycelium_std_content::content_ref::ContentRef::new(mycelium_std_content::content_ref::RefKind, mycelium_core::id::ContentHash) -> Self
+impl core::clone::Clone for mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::content_ref::ContentRef::clone(&self) -> mycelium_std_content::content_ref::ContentRef
+impl core::cmp::Eq for mycelium_std_content::content_ref::ContentRef
+impl core::cmp::Ord for mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::content_ref::ContentRef::cmp(&self, &mycelium_std_content::content_ref::ContentRef) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::content_ref::ContentRef::eq(&self, &mycelium_std_content::content_ref::ContentRef) -> bool
+impl core::cmp::PartialOrd for mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::content_ref::ContentRef::partial_cmp(&self, &mycelium_std_content::content_ref::ContentRef) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::content_ref::ContentRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::content_ref::ContentRef::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_std_content::content_ref::ContentRef
+impl core::str::traits::FromStr for mycelium_std_content::content_ref::ContentRef
+pub type mycelium_std_content::content_ref::ContentRef::Err = mycelium_std_content::error::MalformedDigest
+pub fn mycelium_std_content::content_ref::ContentRef::from_str(&str) -> core::result::Result<Self, Self::Err>
+impl core::marker::Freeze for mycelium_std_content::content_ref::ContentRef
+impl core::marker::Send for mycelium_std_content::content_ref::ContentRef
+impl core::marker::Sync for mycelium_std_content::content_ref::ContentRef
+impl core::marker::Unpin for mycelium_std_content::content_ref::ContentRef
+impl core::marker::UnsafeUnpin for mycelium_std_content::content_ref::ContentRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_content::content_ref::ContentRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_content::content_ref::ContentRef
+pub struct mycelium_std_content::MalformedDigest
+pub mycelium_std_content::MalformedDigest::description: &'static str
+pub mycelium_std_content::MalformedDigest::input: alloc::string::String
+impl core::clone::Clone for mycelium_std_content::error::MalformedDigest
+pub fn mycelium_std_content::error::MalformedDigest::clone(&self) -> mycelium_std_content::error::MalformedDigest
+impl core::cmp::Eq for mycelium_std_content::error::MalformedDigest
+impl core::cmp::PartialEq for mycelium_std_content::error::MalformedDigest
+pub fn mycelium_std_content::error::MalformedDigest::eq(&self, &mycelium_std_content::error::MalformedDigest) -> bool
+impl core::error::Error for mycelium_std_content::error::MalformedDigest
+impl core::fmt::Debug for mycelium_std_content::error::MalformedDigest
+pub fn mycelium_std_content::error::MalformedDigest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_content::error::MalformedDigest
+pub fn mycelium_std_content::error::MalformedDigest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_content::error::MalformedDigest
+impl core::marker::Freeze for mycelium_std_content::error::MalformedDigest
+impl core::marker::Send for mycelium_std_content::error::MalformedDigest
+impl core::marker::Sync for mycelium_std_content::error::MalformedDigest
+impl core::marker::Unpin for mycelium_std_content::error::MalformedDigest
+impl core::marker::UnsafeUnpin for mycelium_std_content::error::MalformedDigest
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_content::error::MalformedDigest
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_content::error::MalformedDigest
+pub struct mycelium_std_content::NameRegistry
+impl mycelium_std_content::name_registry::NameRegistry
+pub fn mycelium_std_content::name_registry::NameRegistry::bind(&mut self, mycelium_core::id::ContentHash, impl core::convert::Into<alloc::string::String>) -> core::option::Option<alloc::string::String>
+pub fn mycelium_std_content::name_registry::NameRegistry::is_empty(&self) -> bool
+pub fn mycelium_std_content::name_registry::NameRegistry::len(&self) -> usize
+pub fn mycelium_std_content::name_registry::NameRegistry::names_of(&self, &mycelium_core::id::ContentHash) -> alloc::vec::Vec<alloc::string::String>
+pub fn mycelium_std_content::name_registry::NameRegistry::new() -> Self
+pub fn mycelium_std_content::name_registry::NameRegistry::resolve_name(&self, &mycelium_core::id::ContentHash) -> core::option::Option<&str>
+impl core::clone::Clone for mycelium_std_content::name_registry::NameRegistry
+pub fn mycelium_std_content::name_registry::NameRegistry::clone(&self) -> mycelium_std_content::name_registry::NameRegistry
+impl core::default::Default for mycelium_std_content::name_registry::NameRegistry
+pub fn mycelium_std_content::name_registry::NameRegistry::default() -> mycelium_std_content::name_registry::NameRegistry
+impl core::fmt::Debug for mycelium_std_content::name_registry::NameRegistry
+pub fn mycelium_std_content::name_registry::NameRegistry::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_content::name_registry::NameRegistry
+impl core::marker::Send for mycelium_std_content::name_registry::NameRegistry
+impl core::marker::Sync for mycelium_std_content::name_registry::NameRegistry
+impl core::marker::Unpin for mycelium_std_content::name_registry::NameRegistry
+impl core::marker::UnsafeUnpin for mycelium_std_content::name_registry::NameRegistry
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_content::name_registry::NameRegistry
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_content::name_registry::NameRegistry
+pub fn mycelium_std_content::as_ref(mycelium_core::id::ContentHash, mycelium_std_content::content_ref::RefKind) -> mycelium_std_content::content_ref::ContentRef
+pub fn mycelium_std_content::digest_eq(&mycelium_core::id::ContentHash, &mycelium_core::id::ContentHash) -> bool
+pub fn mycelium_std_content::hash_of_def(&mycelium_core::node::Node) -> mycelium_core::id::ContentHash
+pub fn mycelium_std_content::hash_of_value(&mycelium_core::value::Value) -> mycelium_core::id::ContentHash
+pub fn mycelium_std_content::names_of(&mycelium_std_content::name_registry::NameRegistry, &mycelium_core::id::ContentHash) -> alloc::vec::Vec<alloc::string::String>
+pub fn mycelium_std_content::parse_ref(&str) -> core::result::Result<mycelium_core::id::ContentHash, mycelium_std_content::error::MalformedDigest>
+pub fn mycelium_std_content::resolve_name<'r>(&'r mycelium_std_content::name_registry::NameRegistry, &mycelium_core::id::ContentHash) -> core::option::Option<&'r str>

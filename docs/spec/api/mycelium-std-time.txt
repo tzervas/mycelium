@@ -1,0 +1,270 @@
+pub mod mycelium_std_time
+pub enum mycelium_std_time::TimeErr
+pub mycelium_std_time::TimeErr::ClockUnavailable
+pub mycelium_std_time::TimeErr::ClockUnavailable::reason: &'static str
+pub mycelium_std_time::TimeErr::NonMonotonic
+pub mycelium_std_time::TimeErr::NonMonotonic::earlier_ns: i128
+pub mycelium_std_time::TimeErr::NonMonotonic::later_ns: i128
+pub mycelium_std_time::TimeErr::Overflow
+impl core::clone::Clone for mycelium_std_time::TimeErr
+pub fn mycelium_std_time::TimeErr::clone(&self) -> mycelium_std_time::TimeErr
+impl core::cmp::Eq for mycelium_std_time::TimeErr
+impl core::cmp::PartialEq for mycelium_std_time::TimeErr
+pub fn mycelium_std_time::TimeErr::eq(&self, &mycelium_std_time::TimeErr) -> bool
+impl core::error::Error for mycelium_std_time::TimeErr
+impl core::fmt::Debug for mycelium_std_time::TimeErr
+pub fn mycelium_std_time::TimeErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_time::TimeErr
+pub fn mycelium_std_time::TimeErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_time::TimeErr
+impl core::marker::Freeze for mycelium_std_time::TimeErr
+impl core::marker::Send for mycelium_std_time::TimeErr
+impl core::marker::Sync for mycelium_std_time::TimeErr
+impl core::marker::Unpin for mycelium_std_time::TimeErr
+impl core::marker::UnsafeUnpin for mycelium_std_time::TimeErr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_time::TimeErr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_time::TimeErr
+pub struct mycelium_std_time::DeclaredTime<T>(_)
+impl<T> mycelium_std_time::DeclaredTime<T>
+pub fn mycelium_std_time::DeclaredTime<T>::as_inner(&self) -> &T
+pub fn mycelium_std_time::DeclaredTime<T>::into_inner(self) -> T
+pub fn mycelium_std_time::DeclaredTime<T>::new(T) -> Self
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_time::DeclaredTime<T>
+pub fn mycelium_std_time::DeclaredTime<T>::clone(&self) -> mycelium_std_time::DeclaredTime<T>
+impl<T: core::cmp::Eq> core::cmp::Eq for mycelium_std_time::DeclaredTime<T>
+impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_time::DeclaredTime<T>
+pub fn mycelium_std_time::DeclaredTime<T>::eq(&self, &mycelium_std_time::DeclaredTime<T>) -> bool
+impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_time::DeclaredTime<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_std_time::DeclaredTime<T>
+pub fn mycelium_std_time::DeclaredTime<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::marker::Freeze for mycelium_std_time::DeclaredTime<T> where T: core::marker::Freeze
+impl<T> core::marker::Send for mycelium_std_time::DeclaredTime<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_std_time::DeclaredTime<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_std_time::DeclaredTime<T> where T: core::marker::Unpin
+impl<T> core::marker::UnsafeUnpin for mycelium_std_time::DeclaredTime<T> where T: core::marker::UnsafeUnpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_time::DeclaredTime<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_time::DeclaredTime<T> where T: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_time::DeclaredTimeEntropy<T>(_)
+impl<T> mycelium_std_time::DeclaredTimeEntropy<T>
+pub fn mycelium_std_time::DeclaredTimeEntropy<T>::as_inner(&self) -> &T
+pub fn mycelium_std_time::DeclaredTimeEntropy<T>::into_inner(self) -> T
+pub fn mycelium_std_time::DeclaredTimeEntropy<T>::new(T) -> Self
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_time::DeclaredTimeEntropy<T>
+pub fn mycelium_std_time::DeclaredTimeEntropy<T>::clone(&self) -> mycelium_std_time::DeclaredTimeEntropy<T>
+impl<T: core::cmp::Eq> core::cmp::Eq for mycelium_std_time::DeclaredTimeEntropy<T>
+impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_time::DeclaredTimeEntropy<T>
+pub fn mycelium_std_time::DeclaredTimeEntropy<T>::eq(&self, &mycelium_std_time::DeclaredTimeEntropy<T>) -> bool
+impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_time::DeclaredTimeEntropy<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_std_time::DeclaredTimeEntropy<T>
+pub fn mycelium_std_time::DeclaredTimeEntropy<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::marker::Freeze for mycelium_std_time::DeclaredTimeEntropy<T> where T: core::marker::Freeze
+impl<T> core::marker::Send for mycelium_std_time::DeclaredTimeEntropy<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_std_time::DeclaredTimeEntropy<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_std_time::DeclaredTimeEntropy<T> where T: core::marker::Unpin
+impl<T> core::marker::UnsafeUnpin for mycelium_std_time::DeclaredTimeEntropy<T> where T: core::marker::UnsafeUnpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_time::DeclaredTimeEntropy<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_time::DeclaredTimeEntropy<T> where T: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_time::Duration
+impl mycelium_std_time::Duration
+pub const mycelium_std_time::Duration::MAX: mycelium_std_time::Duration
+pub const mycelium_std_time::Duration::MIN: mycelium_std_time::Duration
+pub const mycelium_std_time::Duration::ZERO: mycelium_std_time::Duration
+pub const fn mycelium_std_time::Duration::as_nanos(self) -> i128
+pub const fn mycelium_std_time::Duration::as_secs_trunc(self) -> core::result::Result<i64, mycelium_std_time::TimeErr>
+pub fn mycelium_std_time::Duration::checked_abs(self) -> core::result::Result<mycelium_std_time::Duration, mycelium_std_time::TimeErr>
+pub fn mycelium_std_time::Duration::checked_neg(self) -> core::result::Result<mycelium_std_time::Duration, mycelium_std_time::TimeErr>
+pub fn mycelium_std_time::Duration::from_micros(i64) -> core::result::Result<Self, mycelium_std_time::TimeErr>
+pub fn mycelium_std_time::Duration::from_millis(i64) -> core::result::Result<Self, mycelium_std_time::TimeErr>
+pub const fn mycelium_std_time::Duration::from_nanos(i128) -> Self
+pub fn mycelium_std_time::Duration::from_secs(i64) -> core::result::Result<Self, mycelium_std_time::TimeErr>
+pub const fn mycelium_std_time::Duration::is_negative(self) -> bool
+pub const fn mycelium_std_time::Duration::is_zero(self) -> bool
+impl core::clone::Clone for mycelium_std_time::Duration
+pub fn mycelium_std_time::Duration::clone(&self) -> mycelium_std_time::Duration
+impl core::cmp::Eq for mycelium_std_time::Duration
+impl core::cmp::Ord for mycelium_std_time::Duration
+pub fn mycelium_std_time::Duration::cmp(&self, &mycelium_std_time::Duration) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_std_time::Duration
+pub fn mycelium_std_time::Duration::eq(&self, &mycelium_std_time::Duration) -> bool
+impl core::cmp::PartialOrd for mycelium_std_time::Duration
+pub fn mycelium_std_time::Duration::partial_cmp(&self, &mycelium_std_time::Duration) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_std_time::Duration
+pub fn mycelium_std_time::Duration::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_time::Duration
+pub fn mycelium_std_time::Duration::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_time::Duration
+impl core::marker::StructuralPartialEq for mycelium_std_time::Duration
+impl core::marker::Freeze for mycelium_std_time::Duration
+impl core::marker::Send for mycelium_std_time::Duration
+impl core::marker::Sync for mycelium_std_time::Duration
+impl core::marker::Unpin for mycelium_std_time::Duration
+impl core::marker::UnsafeUnpin for mycelium_std_time::Duration
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_time::Duration
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_time::Duration
+pub struct mycelium_std_time::GuaranteeRow
+pub mycelium_std_time::GuaranteeRow::effects: &'static str
+pub mycelium_std_time::GuaranteeRow::explainable: bool
+pub mycelium_std_time::GuaranteeRow::fallibility: &'static str
+pub mycelium_std_time::GuaranteeRow::op: &'static str
+pub mycelium_std_time::GuaranteeRow::tag: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_std_time::GuaranteeRow
+pub fn mycelium_std_time::GuaranteeRow::clone(&self) -> mycelium_std_time::GuaranteeRow
+impl core::cmp::Eq for mycelium_std_time::GuaranteeRow
+impl core::cmp::PartialEq for mycelium_std_time::GuaranteeRow
+pub fn mycelium_std_time::GuaranteeRow::eq(&self, &mycelium_std_time::GuaranteeRow) -> bool
+impl core::fmt::Debug for mycelium_std_time::GuaranteeRow
+pub fn mycelium_std_time::GuaranteeRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_time::GuaranteeRow
+impl core::marker::Freeze for mycelium_std_time::GuaranteeRow
+impl core::marker::Send for mycelium_std_time::GuaranteeRow
+impl core::marker::Sync for mycelium_std_time::GuaranteeRow
+impl core::marker::Unpin for mycelium_std_time::GuaranteeRow
+impl core::marker::UnsafeUnpin for mycelium_std_time::GuaranteeRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_time::GuaranteeRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_time::GuaranteeRow
+pub struct mycelium_std_time::LogicalInstant
+impl mycelium_std_time::LogicalInstant
+pub const fn mycelium_std_time::LogicalInstant::as_tick(self) -> u64
+pub const fn mycelium_std_time::LogicalInstant::from_tick(u64) -> Self
+impl core::clone::Clone for mycelium_std_time::LogicalInstant
+pub fn mycelium_std_time::LogicalInstant::clone(&self) -> mycelium_std_time::LogicalInstant
+impl core::cmp::Eq for mycelium_std_time::LogicalInstant
+impl core::cmp::Ord for mycelium_std_time::LogicalInstant
+pub fn mycelium_std_time::LogicalInstant::cmp(&self, &mycelium_std_time::LogicalInstant) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_std_time::LogicalInstant
+pub fn mycelium_std_time::LogicalInstant::eq(&self, &mycelium_std_time::LogicalInstant) -> bool
+impl core::cmp::PartialOrd for mycelium_std_time::LogicalInstant
+pub fn mycelium_std_time::LogicalInstant::partial_cmp(&self, &mycelium_std_time::LogicalInstant) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_std_time::LogicalInstant
+pub fn mycelium_std_time::LogicalInstant::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_time::LogicalInstant
+pub fn mycelium_std_time::LogicalInstant::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_time::LogicalInstant
+impl core::marker::StructuralPartialEq for mycelium_std_time::LogicalInstant
+impl core::marker::Freeze for mycelium_std_time::LogicalInstant
+impl core::marker::Send for mycelium_std_time::LogicalInstant
+impl core::marker::Sync for mycelium_std_time::LogicalInstant
+impl core::marker::Unpin for mycelium_std_time::LogicalInstant
+impl core::marker::UnsafeUnpin for mycelium_std_time::LogicalInstant
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_time::LogicalInstant
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_time::LogicalInstant
+pub struct mycelium_std_time::ManualClock
+impl mycelium_std_time::ManualClock
+pub fn mycelium_std_time::ManualClock::advance_mono(&mut self, u64)
+pub fn mycelium_std_time::ManualClock::set_logical(&mut self, mycelium_std_time::LogicalInstant)
+pub fn mycelium_std_time::ManualClock::set_mono(&mut self, mycelium_std_time::MonoInstant)
+pub fn mycelium_std_time::ManualClock::set_wall(&mut self, mycelium_std_time::WallInstant)
+pub fn mycelium_std_time::ManualClock::step_logical(&mut self)
+impl core::clone::Clone for mycelium_std_time::ManualClock
+pub fn mycelium_std_time::ManualClock::clone(&self) -> mycelium_std_time::ManualClock
+impl core::default::Default for mycelium_std_time::ManualClock
+pub fn mycelium_std_time::ManualClock::default() -> Self
+impl core::fmt::Debug for mycelium_std_time::ManualClock
+pub fn mycelium_std_time::ManualClock::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl mycelium_std_time::ClockSource for mycelium_std_time::ManualClock
+pub fn mycelium_std_time::ManualClock::logical_now(&self) -> mycelium_std_time::DeclaredTime<mycelium_std_time::LogicalInstant>
+pub fn mycelium_std_time::ManualClock::mono_now(&self) -> mycelium_std_time::DeclaredTime<core::result::Result<mycelium_std_time::MonoInstant, mycelium_std_time::TimeErr>>
+pub fn mycelium_std_time::ManualClock::wall_now(&self) -> mycelium_std_time::DeclaredTimeEntropy<core::result::Result<mycelium_std_time::WallInstant, mycelium_std_time::TimeErr>>
+impl core::marker::Freeze for mycelium_std_time::ManualClock
+impl core::marker::Send for mycelium_std_time::ManualClock
+impl core::marker::Sync for mycelium_std_time::ManualClock
+impl core::marker::Unpin for mycelium_std_time::ManualClock
+impl core::marker::UnsafeUnpin for mycelium_std_time::ManualClock
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_time::ManualClock
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_time::ManualClock
+pub struct mycelium_std_time::MonoInstant
+impl mycelium_std_time::MonoInstant
+pub const fn mycelium_std_time::MonoInstant::as_nanos(self) -> u64
+pub const fn mycelium_std_time::MonoInstant::from_nanos(u64) -> Self
+impl core::clone::Clone for mycelium_std_time::MonoInstant
+pub fn mycelium_std_time::MonoInstant::clone(&self) -> mycelium_std_time::MonoInstant
+impl core::cmp::Eq for mycelium_std_time::MonoInstant
+impl core::cmp::Ord for mycelium_std_time::MonoInstant
+pub fn mycelium_std_time::MonoInstant::cmp(&self, &mycelium_std_time::MonoInstant) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_std_time::MonoInstant
+pub fn mycelium_std_time::MonoInstant::eq(&self, &mycelium_std_time::MonoInstant) -> bool
+impl core::cmp::PartialOrd for mycelium_std_time::MonoInstant
+pub fn mycelium_std_time::MonoInstant::partial_cmp(&self, &mycelium_std_time::MonoInstant) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_std_time::MonoInstant
+pub fn mycelium_std_time::MonoInstant::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_time::MonoInstant
+pub fn mycelium_std_time::MonoInstant::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_time::MonoInstant
+impl core::marker::StructuralPartialEq for mycelium_std_time::MonoInstant
+impl core::marker::Freeze for mycelium_std_time::MonoInstant
+impl core::marker::Send for mycelium_std_time::MonoInstant
+impl core::marker::Sync for mycelium_std_time::MonoInstant
+impl core::marker::Unpin for mycelium_std_time::MonoInstant
+impl core::marker::UnsafeUnpin for mycelium_std_time::MonoInstant
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_time::MonoInstant
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_time::MonoInstant
+pub struct mycelium_std_time::SystemClock
+impl core::clone::Clone for mycelium_std_time::SystemClock
+pub fn mycelium_std_time::SystemClock::clone(&self) -> mycelium_std_time::SystemClock
+impl core::default::Default for mycelium_std_time::SystemClock
+pub fn mycelium_std_time::SystemClock::default() -> mycelium_std_time::SystemClock
+impl core::fmt::Debug for mycelium_std_time::SystemClock
+pub fn mycelium_std_time::SystemClock::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_time::SystemClock
+impl mycelium_std_time::ClockSource for mycelium_std_time::SystemClock
+pub fn mycelium_std_time::SystemClock::logical_now(&self) -> mycelium_std_time::DeclaredTime<mycelium_std_time::LogicalInstant>
+pub fn mycelium_std_time::SystemClock::mono_now(&self) -> mycelium_std_time::DeclaredTime<core::result::Result<mycelium_std_time::MonoInstant, mycelium_std_time::TimeErr>>
+pub fn mycelium_std_time::SystemClock::wall_now(&self) -> mycelium_std_time::DeclaredTimeEntropy<core::result::Result<mycelium_std_time::WallInstant, mycelium_std_time::TimeErr>>
+impl core::marker::Freeze for mycelium_std_time::SystemClock
+impl core::marker::Send for mycelium_std_time::SystemClock
+impl core::marker::Sync for mycelium_std_time::SystemClock
+impl core::marker::Unpin for mycelium_std_time::SystemClock
+impl core::marker::UnsafeUnpin for mycelium_std_time::SystemClock
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_time::SystemClock
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_time::SystemClock
+pub struct mycelium_std_time::WallInstant
+impl mycelium_std_time::WallInstant
+pub const fn mycelium_std_time::WallInstant::as_nanos_since_epoch(self) -> i128
+pub const fn mycelium_std_time::WallInstant::from_nanos_since_epoch(i128) -> Self
+impl core::clone::Clone for mycelium_std_time::WallInstant
+pub fn mycelium_std_time::WallInstant::clone(&self) -> mycelium_std_time::WallInstant
+impl core::cmp::Eq for mycelium_std_time::WallInstant
+impl core::cmp::Ord for mycelium_std_time::WallInstant
+pub fn mycelium_std_time::WallInstant::cmp(&self, &mycelium_std_time::WallInstant) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_std_time::WallInstant
+pub fn mycelium_std_time::WallInstant::eq(&self, &mycelium_std_time::WallInstant) -> bool
+impl core::cmp::PartialOrd for mycelium_std_time::WallInstant
+pub fn mycelium_std_time::WallInstant::partial_cmp(&self, &mycelium_std_time::WallInstant) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_std_time::WallInstant
+pub fn mycelium_std_time::WallInstant::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_time::WallInstant
+pub fn mycelium_std_time::WallInstant::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_time::WallInstant
+impl core::marker::StructuralPartialEq for mycelium_std_time::WallInstant
+impl core::marker::Freeze for mycelium_std_time::WallInstant
+impl core::marker::Send for mycelium_std_time::WallInstant
+impl core::marker::Sync for mycelium_std_time::WallInstant
+impl core::marker::Unpin for mycelium_std_time::WallInstant
+impl core::marker::UnsafeUnpin for mycelium_std_time::WallInstant
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_time::WallInstant
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_time::WallInstant
+pub const mycelium_std_time::GUARANTEE_MATRIX: &[mycelium_std_time::GuaranteeRow]
+pub trait mycelium_std_time::ClockSource
+pub fn mycelium_std_time::ClockSource::logical_now(&self) -> mycelium_std_time::DeclaredTime<mycelium_std_time::LogicalInstant>
+pub fn mycelium_std_time::ClockSource::mono_now(&self) -> mycelium_std_time::DeclaredTime<core::result::Result<mycelium_std_time::MonoInstant, mycelium_std_time::TimeErr>>
+pub fn mycelium_std_time::ClockSource::wall_now(&self) -> mycelium_std_time::DeclaredTimeEntropy<core::result::Result<mycelium_std_time::WallInstant, mycelium_std_time::TimeErr>>
+impl mycelium_std_time::ClockSource for mycelium_std_time::ManualClock
+pub fn mycelium_std_time::ManualClock::logical_now(&self) -> mycelium_std_time::DeclaredTime<mycelium_std_time::LogicalInstant>
+pub fn mycelium_std_time::ManualClock::mono_now(&self) -> mycelium_std_time::DeclaredTime<core::result::Result<mycelium_std_time::MonoInstant, mycelium_std_time::TimeErr>>
+pub fn mycelium_std_time::ManualClock::wall_now(&self) -> mycelium_std_time::DeclaredTimeEntropy<core::result::Result<mycelium_std_time::WallInstant, mycelium_std_time::TimeErr>>
+impl mycelium_std_time::ClockSource for mycelium_std_time::SystemClock
+pub fn mycelium_std_time::SystemClock::logical_now(&self) -> mycelium_std_time::DeclaredTime<mycelium_std_time::LogicalInstant>
+pub fn mycelium_std_time::SystemClock::mono_now(&self) -> mycelium_std_time::DeclaredTime<core::result::Result<mycelium_std_time::MonoInstant, mycelium_std_time::TimeErr>>
+pub fn mycelium_std_time::SystemClock::wall_now(&self) -> mycelium_std_time::DeclaredTimeEntropy<core::result::Result<mycelium_std_time::WallInstant, mycelium_std_time::TimeErr>>
+pub fn mycelium_std_time::assert_matrix_invariants()
+pub fn mycelium_std_time::duration_add(mycelium_std_time::Duration, mycelium_std_time::Duration) -> core::result::Result<mycelium_std_time::Duration, mycelium_std_time::TimeErr>
+pub fn mycelium_std_time::duration_as_unit(mycelium_std_time::Duration, i128) -> core::result::Result<mycelium_std_time::Duration, mycelium_std_time::TimeErr>
+pub fn mycelium_std_time::duration_cmp(mycelium_std_time::Duration, mycelium_std_time::Duration) -> core::cmp::Ordering
+pub fn mycelium_std_time::duration_scale(mycelium_std_time::Duration, i64) -> core::result::Result<mycelium_std_time::Duration, mycelium_std_time::TimeErr>
+pub fn mycelium_std_time::duration_sub(mycelium_std_time::Duration, mycelium_std_time::Duration) -> core::result::Result<mycelium_std_time::Duration, mycelium_std_time::TimeErr>
+pub fn mycelium_std_time::logical_diff(mycelium_std_time::LogicalInstant, mycelium_std_time::LogicalInstant) -> mycelium_std_time::Duration
+pub fn mycelium_std_time::logical_now(&dyn mycelium_std_time::ClockSource) -> mycelium_std_time::DeclaredTime<mycelium_std_time::LogicalInstant>
+pub fn mycelium_std_time::mono_diff(mycelium_std_time::MonoInstant, mycelium_std_time::MonoInstant) -> mycelium_std_time::Duration
+pub fn mycelium_std_time::mono_now(&dyn mycelium_std_time::ClockSource) -> mycelium_std_time::DeclaredTime<core::result::Result<mycelium_std_time::MonoInstant, mycelium_std_time::TimeErr>>
+pub fn mycelium_std_time::wall_diff(mycelium_std_time::WallInstant, mycelium_std_time::WallInstant) -> core::result::Result<mycelium_std_time::Duration, mycelium_std_time::TimeErr>
+pub fn mycelium_std_time::wall_now(&dyn mycelium_std_time::ClockSource) -> mycelium_std_time::DeclaredTimeEntropy<core::result::Result<mycelium_std_time::WallInstant, mycelium_std_time::TimeErr>>

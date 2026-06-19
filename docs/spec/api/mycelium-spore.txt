@@ -1,0 +1,88 @@
+pub mod mycelium_spore
+pub enum mycelium_spore::SporeError
+pub mycelium_spore::SporeError::Io(alloc::string::String)
+pub mycelium_spore::SporeError::Publish(alloc::string::String)
+impl mycelium_spore::SporeError
+pub fn mycelium_spore::SporeError::exit_code(&self) -> u8
+impl core::clone::Clone for mycelium_spore::SporeError
+pub fn mycelium_spore::SporeError::clone(&self) -> mycelium_spore::SporeError
+impl core::cmp::Eq for mycelium_spore::SporeError
+impl core::cmp::PartialEq for mycelium_spore::SporeError
+pub fn mycelium_spore::SporeError::eq(&self, &mycelium_spore::SporeError) -> bool
+impl core::error::Error for mycelium_spore::SporeError
+impl core::fmt::Debug for mycelium_spore::SporeError
+pub fn mycelium_spore::SporeError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_spore::SporeError
+pub fn mycelium_spore::SporeError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::SporeError
+impl core::marker::Freeze for mycelium_spore::SporeError
+impl core::marker::Send for mycelium_spore::SporeError
+impl core::marker::Sync for mycelium_spore::SporeError
+impl core::marker::Unpin for mycelium_spore::SporeError
+impl core::marker::UnsafeUnpin for mycelium_spore::SporeError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::SporeError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::SporeError
+pub struct mycelium_spore::ResolvedDep
+pub mycelium_spore::ResolvedDep::hash: alloc::string::String
+pub mycelium_spore::ResolvedDep::name: alloc::string::String
+pub mycelium_spore::ResolvedDep::phylum: alloc::string::String
+pub mycelium_spore::ResolvedDep::version: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_spore::ResolvedDep
+pub fn mycelium_spore::ResolvedDep::clone(&self) -> mycelium_spore::ResolvedDep
+impl core::cmp::Eq for mycelium_spore::ResolvedDep
+impl core::cmp::PartialEq for mycelium_spore::ResolvedDep
+pub fn mycelium_spore::ResolvedDep::eq(&self, &mycelium_spore::ResolvedDep) -> bool
+impl core::fmt::Debug for mycelium_spore::ResolvedDep
+pub fn mycelium_spore::ResolvedDep::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::ResolvedDep
+impl core::marker::Freeze for mycelium_spore::ResolvedDep
+impl core::marker::Send for mycelium_spore::ResolvedDep
+impl core::marker::Sync for mycelium_spore::ResolvedDep
+impl core::marker::Unpin for mycelium_spore::ResolvedDep
+impl core::marker::UnsafeUnpin for mycelium_spore::ResolvedDep
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::ResolvedDep
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::ResolvedDep
+pub struct mycelium_spore::SourceFile
+pub mycelium_spore::SourceFile::hash: mycelium_core::id::ContentHash
+pub mycelium_spore::SourceFile::path: alloc::string::String
+impl core::clone::Clone for mycelium_spore::SourceFile
+pub fn mycelium_spore::SourceFile::clone(&self) -> mycelium_spore::SourceFile
+impl core::cmp::Eq for mycelium_spore::SourceFile
+impl core::cmp::PartialEq for mycelium_spore::SourceFile
+pub fn mycelium_spore::SourceFile::eq(&self, &mycelium_spore::SourceFile) -> bool
+impl core::fmt::Debug for mycelium_spore::SourceFile
+pub fn mycelium_spore::SourceFile::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::SourceFile
+impl core::marker::Freeze for mycelium_spore::SourceFile
+impl core::marker::Send for mycelium_spore::SourceFile
+impl core::marker::Sync for mycelium_spore::SourceFile
+impl core::marker::Unpin for mycelium_spore::SourceFile
+impl core::marker::UnsafeUnpin for mycelium_spore::SourceFile
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::SourceFile
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::SourceFile
+pub struct mycelium_spore::Spore
+pub mycelium_spore::Spore::deps: alloc::vec::Vec<mycelium_spore::ResolvedDep>
+pub mycelium_spore::Spore::id: mycelium_core::id::ContentHash
+pub mycelium_spore::Spore::kind: mycelium_proj::manifest::ProjectKind
+pub mycelium_spore::Spore::name: alloc::string::String
+pub mycelium_spore::Spore::sources: alloc::vec::Vec<mycelium_spore::SourceFile>
+pub mycelium_spore::Spore::surface: alloc::vec::Vec<alloc::string::String>
+pub mycelium_spore::Spore::version: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_spore::Spore
+pub fn mycelium_spore::Spore::clone(&self) -> mycelium_spore::Spore
+impl core::cmp::Eq for mycelium_spore::Spore
+impl core::cmp::PartialEq for mycelium_spore::Spore
+pub fn mycelium_spore::Spore::eq(&self, &mycelium_spore::Spore) -> bool
+impl core::fmt::Debug for mycelium_spore::Spore
+pub fn mycelium_spore::Spore::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::Spore
+impl core::marker::Freeze for mycelium_spore::Spore
+impl core::marker::Send for mycelium_spore::Spore
+impl core::marker::Sync for mycelium_spore::Spore
+impl core::marker::Unpin for mycelium_spore::Spore
+impl core::marker::UnsafeUnpin for mycelium_spore::Spore
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::Spore
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::Spore
+pub fn mycelium_spore::build_spore(&mycelium_proj::manifest::Manifest, &std::path::Path) -> core::result::Result<mycelium_spore::Spore, mycelium_spore::SporeError>
+pub fn mycelium_spore::explain(&mycelium_spore::Spore) -> alloc::string::String
+pub fn mycelium_spore::kind_str(mycelium_proj::manifest::ProjectKind) -> &'static str

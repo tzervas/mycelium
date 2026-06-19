@@ -1,0 +1,67 @@
+pub mod mycelium_std_core
+pub use mycelium_std_core::Bound
+pub use mycelium_std_core::BoundBasis
+pub use mycelium_std_core::BoundKind
+pub use mycelium_std_core::ContentHash
+pub use mycelium_std_core::CoreValue
+pub use mycelium_std_core::Datum
+pub use mycelium_std_core::GuaranteeStrength
+pub use mycelium_std_core::Meta
+pub use mycelium_std_core::NormKind
+pub use mycelium_std_core::PackScheme
+pub use mycelium_std_core::Payload
+pub use mycelium_std_core::PhysicalLayout
+pub use mycelium_std_core::Provenance
+pub use mycelium_std_core::Repr
+pub use mycelium_std_core::ScalarKind
+pub use mycelium_std_core::SparsityClass
+pub use mycelium_std_core::SparsityObs
+pub use mycelium_std_core::Trit
+pub use mycelium_std_core::Value
+pub mod mycelium_std_core::prelude
+pub use mycelium_std_core::prelude::Bound
+pub use mycelium_std_core::prelude::BoundBasis
+pub use mycelium_std_core::prelude::BoundKind
+pub use mycelium_std_core::prelude::CoreValue
+pub use mycelium_std_core::prelude::Datum
+pub use mycelium_std_core::prelude::GuaranteeStrength
+pub use mycelium_std_core::prelude::Meta
+pub use mycelium_std_core::prelude::NormKind
+pub use mycelium_std_core::prelude::Payload
+pub use mycelium_std_core::prelude::Provenance
+pub use mycelium_std_core::prelude::Repr
+pub use mycelium_std_core::prelude::Trit
+pub use mycelium_std_core::prelude::Value
+pub fn mycelium_std_core::prelude::bound_of(&mycelium_core::datum::CoreValue) -> core::option::Option<&mycelium_core::bound::Bound>
+pub fn mycelium_std_core::prelude::guarantee_of(&mycelium_core::datum::CoreValue) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_std_core::prelude::meta_of(&mycelium_core::datum::CoreValue) -> core::option::Option<&mycelium_core::meta::Meta>
+pub fn mycelium_std_core::prelude::provenance_of(&mycelium_core::datum::CoreValue) -> core::option::Option<&mycelium_core::meta::Provenance>
+pub fn mycelium_std_core::prelude::repr_of(&mycelium_core::datum::CoreValue) -> core::option::Option<&mycelium_core::repr::Repr>
+pub struct mycelium_std_core::GuaranteeRow
+pub mycelium_std_core::GuaranteeRow::effects: &'static str
+pub mycelium_std_core::GuaranteeRow::explainable: bool
+pub mycelium_std_core::GuaranteeRow::fallibility: &'static str
+pub mycelium_std_core::GuaranteeRow::op: &'static str
+pub mycelium_std_core::GuaranteeRow::tag: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_std_core::GuaranteeRow
+pub fn mycelium_std_core::GuaranteeRow::clone(&self) -> mycelium_std_core::GuaranteeRow
+impl core::cmp::Eq for mycelium_std_core::GuaranteeRow
+impl core::cmp::PartialEq for mycelium_std_core::GuaranteeRow
+pub fn mycelium_std_core::GuaranteeRow::eq(&self, &mycelium_std_core::GuaranteeRow) -> bool
+impl core::fmt::Debug for mycelium_std_core::GuaranteeRow
+pub fn mycelium_std_core::GuaranteeRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_core::GuaranteeRow
+impl core::marker::StructuralPartialEq for mycelium_std_core::GuaranteeRow
+impl core::marker::Freeze for mycelium_std_core::GuaranteeRow
+impl core::marker::Send for mycelium_std_core::GuaranteeRow
+impl core::marker::Sync for mycelium_std_core::GuaranteeRow
+impl core::marker::Unpin for mycelium_std_core::GuaranteeRow
+impl core::marker::UnsafeUnpin for mycelium_std_core::GuaranteeRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_core::GuaranteeRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_core::GuaranteeRow
+pub const mycelium_std_core::GUARANTEE_MATRIX: &[mycelium_std_core::GuaranteeRow]
+pub fn mycelium_std_core::bound_of(&mycelium_core::datum::CoreValue) -> core::option::Option<&mycelium_core::bound::Bound>
+pub fn mycelium_std_core::guarantee_of(&mycelium_core::datum::CoreValue) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_std_core::meta_of(&mycelium_core::datum::CoreValue) -> core::option::Option<&mycelium_core::meta::Meta>
+pub fn mycelium_std_core::provenance_of(&mycelium_core::datum::CoreValue) -> core::option::Option<&mycelium_core::meta::Provenance>
+pub fn mycelium_std_core::repr_of(&mycelium_core::datum::CoreValue) -> core::option::Option<&mycelium_core::repr::Repr>

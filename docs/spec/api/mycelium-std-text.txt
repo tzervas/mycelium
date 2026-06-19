@@ -1,0 +1,443 @@
+pub mod mycelium_std_text
+pub mod mycelium_std_text::error
+pub enum mycelium_std_text::error::BoundaryError
+pub mycelium_std_text::error::BoundaryError::InvalidRange
+pub mycelium_std_text::error::BoundaryError::InvalidRange::end: usize
+pub mycelium_std_text::error::BoundaryError::InvalidRange::start: usize
+pub mycelium_std_text::error::BoundaryError::NotCharBoundary
+pub mycelium_std_text::error::BoundaryError::NotCharBoundary::byte: usize
+pub mycelium_std_text::error::BoundaryError::NotGraphemeBoundary
+pub mycelium_std_text::error::BoundaryError::NotGraphemeBoundary::byte: usize
+pub mycelium_std_text::error::BoundaryError::OutOfRange
+pub mycelium_std_text::error::BoundaryError::OutOfRange::asked: usize
+pub mycelium_std_text::error::BoundaryError::OutOfRange::len: usize
+impl core::clone::Clone for mycelium_std_text::error::BoundaryError
+pub fn mycelium_std_text::error::BoundaryError::clone(&self) -> mycelium_std_text::error::BoundaryError
+impl core::cmp::Eq for mycelium_std_text::error::BoundaryError
+impl core::cmp::PartialEq for mycelium_std_text::error::BoundaryError
+pub fn mycelium_std_text::error::BoundaryError::eq(&self, &mycelium_std_text::error::BoundaryError) -> bool
+impl core::error::Error for mycelium_std_text::error::BoundaryError
+impl core::fmt::Debug for mycelium_std_text::error::BoundaryError
+pub fn mycelium_std_text::error::BoundaryError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_text::error::BoundaryError
+pub fn mycelium_std_text::error::BoundaryError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_text::error::BoundaryError
+impl core::marker::Freeze for mycelium_std_text::error::BoundaryError
+impl core::marker::Send for mycelium_std_text::error::BoundaryError
+impl core::marker::Sync for mycelium_std_text::error::BoundaryError
+impl core::marker::Unpin for mycelium_std_text::error::BoundaryError
+impl core::marker::UnsafeUnpin for mycelium_std_text::error::BoundaryError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::error::BoundaryError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_text::error::BoundaryError
+pub enum mycelium_std_text::error::EncodeError
+pub mycelium_std_text::error::EncodeError::Unrepresentable
+pub mycelium_std_text::error::EncodeError::Unrepresentable::at: usize
+pub mycelium_std_text::error::EncodeError::Unrepresentable::ch: char
+pub mycelium_std_text::error::EncodeError::Unrepresentable::target_encoding: &'static str
+impl core::clone::Clone for mycelium_std_text::error::EncodeError
+pub fn mycelium_std_text::error::EncodeError::clone(&self) -> mycelium_std_text::error::EncodeError
+impl core::cmp::Eq for mycelium_std_text::error::EncodeError
+impl core::cmp::PartialEq for mycelium_std_text::error::EncodeError
+pub fn mycelium_std_text::error::EncodeError::eq(&self, &mycelium_std_text::error::EncodeError) -> bool
+impl core::error::Error for mycelium_std_text::error::EncodeError
+impl core::fmt::Debug for mycelium_std_text::error::EncodeError
+pub fn mycelium_std_text::error::EncodeError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_text::error::EncodeError
+pub fn mycelium_std_text::error::EncodeError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_text::error::EncodeError
+impl core::marker::Freeze for mycelium_std_text::error::EncodeError
+impl core::marker::Send for mycelium_std_text::error::EncodeError
+impl core::marker::Sync for mycelium_std_text::error::EncodeError
+impl core::marker::Unpin for mycelium_std_text::error::EncodeError
+impl core::marker::UnsafeUnpin for mycelium_std_text::error::EncodeError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::error::EncodeError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_text::error::EncodeError
+pub enum mycelium_std_text::error::ParseErr
+pub mycelium_std_text::error::ParseErr::Empty
+pub mycelium_std_text::error::ParseErr::Invalid
+pub mycelium_std_text::error::ParseErr::Invalid::at: usize
+pub mycelium_std_text::error::ParseErr::Invalid::expected: &'static str
+pub mycelium_std_text::error::ParseErr::Invalid::found: alloc::string::String
+pub mycelium_std_text::error::ParseErr::OutOfRange
+pub mycelium_std_text::error::ParseErr::OutOfRange::at: usize
+pub mycelium_std_text::error::ParseErr::OutOfRange::target: &'static str
+impl core::clone::Clone for mycelium_std_text::error::ParseErr
+pub fn mycelium_std_text::error::ParseErr::clone(&self) -> mycelium_std_text::error::ParseErr
+impl core::cmp::Eq for mycelium_std_text::error::ParseErr
+impl core::cmp::PartialEq for mycelium_std_text::error::ParseErr
+pub fn mycelium_std_text::error::ParseErr::eq(&self, &mycelium_std_text::error::ParseErr) -> bool
+impl core::error::Error for mycelium_std_text::error::ParseErr
+impl core::fmt::Debug for mycelium_std_text::error::ParseErr
+pub fn mycelium_std_text::error::ParseErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_text::error::ParseErr
+pub fn mycelium_std_text::error::ParseErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_text::error::ParseErr
+impl core::marker::Freeze for mycelium_std_text::error::ParseErr
+impl core::marker::Send for mycelium_std_text::error::ParseErr
+impl core::marker::Sync for mycelium_std_text::error::ParseErr
+impl core::marker::Unpin for mycelium_std_text::error::ParseErr
+impl core::marker::UnsafeUnpin for mycelium_std_text::error::ParseErr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::error::ParseErr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_text::error::ParseErr
+pub enum mycelium_std_text::error::TranscodeError
+pub mycelium_std_text::error::TranscodeError::Invalid
+pub mycelium_std_text::error::TranscodeError::Invalid::at: usize
+pub mycelium_std_text::error::TranscodeError::UnpairedSurrogate
+pub mycelium_std_text::error::TranscodeError::UnpairedSurrogate::at: usize
+impl core::clone::Clone for mycelium_std_text::error::TranscodeError
+pub fn mycelium_std_text::error::TranscodeError::clone(&self) -> mycelium_std_text::error::TranscodeError
+impl core::cmp::Eq for mycelium_std_text::error::TranscodeError
+impl core::cmp::PartialEq for mycelium_std_text::error::TranscodeError
+pub fn mycelium_std_text::error::TranscodeError::eq(&self, &mycelium_std_text::error::TranscodeError) -> bool
+impl core::error::Error for mycelium_std_text::error::TranscodeError
+impl core::fmt::Debug for mycelium_std_text::error::TranscodeError
+pub fn mycelium_std_text::error::TranscodeError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_text::error::TranscodeError
+pub fn mycelium_std_text::error::TranscodeError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_text::error::TranscodeError
+impl core::marker::Freeze for mycelium_std_text::error::TranscodeError
+impl core::marker::Send for mycelium_std_text::error::TranscodeError
+impl core::marker::Sync for mycelium_std_text::error::TranscodeError
+impl core::marker::Unpin for mycelium_std_text::error::TranscodeError
+impl core::marker::UnsafeUnpin for mycelium_std_text::error::TranscodeError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::error::TranscodeError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_text::error::TranscodeError
+pub enum mycelium_std_text::error::Utf8Error
+pub mycelium_std_text::error::Utf8Error::Invalid
+pub mycelium_std_text::error::Utf8Error::Invalid::byte: usize
+pub mycelium_std_text::error::Utf8Error::Invalid::reason: &'static str
+impl core::clone::Clone for mycelium_std_text::error::Utf8Error
+pub fn mycelium_std_text::error::Utf8Error::clone(&self) -> mycelium_std_text::error::Utf8Error
+impl core::cmp::Eq for mycelium_std_text::error::Utf8Error
+impl core::cmp::PartialEq for mycelium_std_text::error::Utf8Error
+pub fn mycelium_std_text::error::Utf8Error::eq(&self, &mycelium_std_text::error::Utf8Error) -> bool
+impl core::error::Error for mycelium_std_text::error::Utf8Error
+impl core::fmt::Debug for mycelium_std_text::error::Utf8Error
+pub fn mycelium_std_text::error::Utf8Error::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_text::error::Utf8Error
+pub fn mycelium_std_text::error::Utf8Error::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_text::error::Utf8Error
+impl core::marker::Freeze for mycelium_std_text::error::Utf8Error
+impl core::marker::Send for mycelium_std_text::error::Utf8Error
+impl core::marker::Sync for mycelium_std_text::error::Utf8Error
+impl core::marker::Unpin for mycelium_std_text::error::Utf8Error
+impl core::marker::UnsafeUnpin for mycelium_std_text::error::Utf8Error
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::error::Utf8Error
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_text::error::Utf8Error
+pub mod mycelium_std_text::guarantee_matrix
+pub struct mycelium_std_text::guarantee_matrix::MatrixRow
+pub mycelium_std_text::guarantee_matrix::MatrixRow::effects: &'static str
+pub mycelium_std_text::guarantee_matrix::MatrixRow::explainable: &'static str
+pub mycelium_std_text::guarantee_matrix::MatrixRow::fallibility: &'static str
+pub mycelium_std_text::guarantee_matrix::MatrixRow::guarantee: &'static str
+pub mycelium_std_text::guarantee_matrix::MatrixRow::op: &'static str
+impl core::clone::Clone for mycelium_std_text::guarantee_matrix::MatrixRow
+pub fn mycelium_std_text::guarantee_matrix::MatrixRow::clone(&self) -> mycelium_std_text::guarantee_matrix::MatrixRow
+impl core::cmp::Eq for mycelium_std_text::guarantee_matrix::MatrixRow
+impl core::cmp::PartialEq for mycelium_std_text::guarantee_matrix::MatrixRow
+pub fn mycelium_std_text::guarantee_matrix::MatrixRow::eq(&self, &mycelium_std_text::guarantee_matrix::MatrixRow) -> bool
+impl core::fmt::Debug for mycelium_std_text::guarantee_matrix::MatrixRow
+pub fn mycelium_std_text::guarantee_matrix::MatrixRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_text::guarantee_matrix::MatrixRow
+impl core::marker::Freeze for mycelium_std_text::guarantee_matrix::MatrixRow
+impl core::marker::Send for mycelium_std_text::guarantee_matrix::MatrixRow
+impl core::marker::Sync for mycelium_std_text::guarantee_matrix::MatrixRow
+impl core::marker::Unpin for mycelium_std_text::guarantee_matrix::MatrixRow
+impl core::marker::UnsafeUnpin for mycelium_std_text::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_text::guarantee_matrix::MatrixRow
+pub const mycelium_std_text::guarantee_matrix::MATRIX: &[mycelium_std_text::guarantee_matrix::MatrixRow]
+pub mod mycelium_std_text::ops
+pub fn mycelium_std_text::ops::char_at(&mycelium_std_text::types::Text, usize) -> core::result::Result<char, mycelium_std_text::error::BoundaryError>
+pub fn mycelium_std_text::ops::chars(&mycelium_std_text::types::Text) -> alloc::vec::Vec<char>
+pub fn mycelium_std_text::ops::concat(&mycelium_std_text::types::Text, &mycelium_std_text::types::Text) -> mycelium_std_text::types::Text
+pub fn mycelium_std_text::ops::encode_utf8(&mycelium_std_text::types::Text) -> alloc::vec::Vec<u8>
+pub fn mycelium_std_text::ops::from_chars(&[char]) -> mycelium_std_text::types::Text
+pub fn mycelium_std_text::ops::from_utf16(&[u16]) -> core::result::Result<mycelium_std_text::types::Text, mycelium_std_text::error::TranscodeError>
+pub fn mycelium_std_text::ops::from_utf8(&[u8]) -> core::result::Result<mycelium_std_text::types::Text, mycelium_std_text::error::Utf8Error>
+pub fn mycelium_std_text::ops::join(&[mycelium_std_text::types::Text], &mycelium_std_text::types::Text) -> mycelium_std_text::types::Text
+pub fn mycelium_std_text::ops::len_bytes(&mycelium_std_text::types::Text) -> usize
+pub fn mycelium_std_text::ops::len_chars(&mycelium_std_text::types::Text) -> usize
+pub fn mycelium_std_text::ops::len_graphemes(&mycelium_std_text::types::Text) -> usize
+pub fn mycelium_std_text::ops::parse_bool(&mycelium_std_text::types::Text) -> core::result::Result<bool, mycelium_std_text::error::ParseErr>
+pub fn mycelium_std_text::ops::parse_int(&mycelium_std_text::types::Text) -> core::result::Result<i64, mycelium_std_text::error::ParseErr>
+pub fn mycelium_std_text::ops::replace(&mycelium_std_text::types::Text, &mycelium_std_text::types::Text, &mycelium_std_text::types::Text) -> mycelium_std_text::types::Text
+pub fn mycelium_std_text::ops::slice(&mycelium_std_text::types::Text, usize, usize) -> core::result::Result<mycelium_std_text::types::Text, mycelium_std_text::error::BoundaryError>
+pub fn mycelium_std_text::ops::to_latin1(&mycelium_std_text::types::Text) -> core::result::Result<alloc::vec::Vec<u8>, mycelium_std_text::error::EncodeError>
+pub fn mycelium_std_text::ops::to_latin1_lossy(&mycelium_std_text::types::Text, char) -> mycelium_std_text::types::Lossy<alloc::vec::Vec<u8>>
+pub fn mycelium_std_text::ops::to_lower(&mycelium_std_text::types::Text) -> mycelium_std_text::types::Text
+pub fn mycelium_std_text::ops::to_upper(&mycelium_std_text::types::Text) -> mycelium_std_text::types::Text
+pub fn mycelium_std_text::ops::to_utf16(&mycelium_std_text::types::Text) -> alloc::vec::Vec<u16>
+pub fn mycelium_std_text::ops::trim(&mycelium_std_text::types::Text) -> mycelium_std_text::types::Text
+pub mod mycelium_std_text::types
+pub struct mycelium_std_text::types::Lossy<T>
+pub mycelium_std_text::types::Lossy::marker: char
+pub mycelium_std_text::types::Lossy::substituted: usize
+pub mycelium_std_text::types::Lossy::value: T
+impl<T> mycelium_std_text::types::Lossy<T>
+pub fn mycelium_std_text::types::Lossy<T>::is_lossless(&self) -> bool
+pub fn mycelium_std_text::types::Lossy<T>::new(T, usize, char) -> Self
+pub fn mycelium_std_text::types::Lossy<T>::with_default_marker(T, usize) -> Self
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_text::types::Lossy<T>
+pub fn mycelium_std_text::types::Lossy<T>::clone(&self) -> mycelium_std_text::types::Lossy<T>
+impl<T: core::cmp::Eq> core::cmp::Eq for mycelium_std_text::types::Lossy<T>
+impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_text::types::Lossy<T>
+pub fn mycelium_std_text::types::Lossy<T>::eq(&self, &mycelium_std_text::types::Lossy<T>) -> bool
+impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_text::types::Lossy<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_std_text::types::Lossy<T>
+pub fn mycelium_std_text::types::Lossy<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::marker::Freeze for mycelium_std_text::types::Lossy<T> where T: core::marker::Freeze
+impl<T> core::marker::Send for mycelium_std_text::types::Lossy<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_std_text::types::Lossy<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_std_text::types::Lossy<T> where T: core::marker::Unpin
+impl<T> core::marker::UnsafeUnpin for mycelium_std_text::types::Lossy<T> where T: core::marker::UnsafeUnpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::types::Lossy<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_text::types::Lossy<T> where T: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_text::types::Text
+impl mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::as_bytes(&self) -> &[u8]
+pub fn mycelium_std_text::types::Text::as_str(&self) -> &str
+pub fn mycelium_std_text::types::Text::into_inner(self) -> alloc::string::String
+pub fn mycelium_std_text::types::Text::is_empty(&self) -> bool
+pub fn mycelium_std_text::types::Text::len_bytes(&self) -> usize
+pub fn mycelium_std_text::types::Text::new(&str) -> mycelium_std_text::types::Text
+impl core::clone::Clone for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::clone(&self) -> mycelium_std_text::types::Text
+impl core::cmp::Eq for mycelium_std_text::types::Text
+impl core::cmp::PartialEq for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::eq(&self, &mycelium_std_text::types::Text) -> bool
+impl core::cmp::PartialEq<&str> for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::eq(&self, &&str) -> bool
+impl core::cmp::PartialEq<str> for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::eq(&self, &str) -> bool
+impl core::convert::AsRef<str> for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::as_ref(&self) -> &str
+impl core::convert::From<&str> for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::from(&str) -> Self
+impl core::convert::From<alloc::string::String> for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::from(alloc::string::String) -> Self
+impl core::fmt::Debug for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_std_text::types::Text
+impl core::str::traits::FromStr for mycelium_std_text::types::Text
+pub type mycelium_std_text::types::Text::Err = core::convert::Infallible
+pub fn mycelium_std_text::types::Text::from_str(&str) -> core::result::Result<Self, Self::Err>
+impl core::marker::Freeze for mycelium_std_text::types::Text
+impl core::marker::Send for mycelium_std_text::types::Text
+impl core::marker::Sync for mycelium_std_text::types::Text
+impl core::marker::Unpin for mycelium_std_text::types::Text
+impl core::marker::UnsafeUnpin for mycelium_std_text::types::Text
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::types::Text
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_text::types::Text
+pub enum mycelium_std_text::BoundaryError
+pub mycelium_std_text::BoundaryError::InvalidRange
+pub mycelium_std_text::BoundaryError::InvalidRange::end: usize
+pub mycelium_std_text::BoundaryError::InvalidRange::start: usize
+pub mycelium_std_text::BoundaryError::NotCharBoundary
+pub mycelium_std_text::BoundaryError::NotCharBoundary::byte: usize
+pub mycelium_std_text::BoundaryError::NotGraphemeBoundary
+pub mycelium_std_text::BoundaryError::NotGraphemeBoundary::byte: usize
+pub mycelium_std_text::BoundaryError::OutOfRange
+pub mycelium_std_text::BoundaryError::OutOfRange::asked: usize
+pub mycelium_std_text::BoundaryError::OutOfRange::len: usize
+impl core::clone::Clone for mycelium_std_text::error::BoundaryError
+pub fn mycelium_std_text::error::BoundaryError::clone(&self) -> mycelium_std_text::error::BoundaryError
+impl core::cmp::Eq for mycelium_std_text::error::BoundaryError
+impl core::cmp::PartialEq for mycelium_std_text::error::BoundaryError
+pub fn mycelium_std_text::error::BoundaryError::eq(&self, &mycelium_std_text::error::BoundaryError) -> bool
+impl core::error::Error for mycelium_std_text::error::BoundaryError
+impl core::fmt::Debug for mycelium_std_text::error::BoundaryError
+pub fn mycelium_std_text::error::BoundaryError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_text::error::BoundaryError
+pub fn mycelium_std_text::error::BoundaryError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_text::error::BoundaryError
+impl core::marker::Freeze for mycelium_std_text::error::BoundaryError
+impl core::marker::Send for mycelium_std_text::error::BoundaryError
+impl core::marker::Sync for mycelium_std_text::error::BoundaryError
+impl core::marker::Unpin for mycelium_std_text::error::BoundaryError
+impl core::marker::UnsafeUnpin for mycelium_std_text::error::BoundaryError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::error::BoundaryError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_text::error::BoundaryError
+pub enum mycelium_std_text::EncodeError
+pub mycelium_std_text::EncodeError::Unrepresentable
+pub mycelium_std_text::EncodeError::Unrepresentable::at: usize
+pub mycelium_std_text::EncodeError::Unrepresentable::ch: char
+pub mycelium_std_text::EncodeError::Unrepresentable::target_encoding: &'static str
+impl core::clone::Clone for mycelium_std_text::error::EncodeError
+pub fn mycelium_std_text::error::EncodeError::clone(&self) -> mycelium_std_text::error::EncodeError
+impl core::cmp::Eq for mycelium_std_text::error::EncodeError
+impl core::cmp::PartialEq for mycelium_std_text::error::EncodeError
+pub fn mycelium_std_text::error::EncodeError::eq(&self, &mycelium_std_text::error::EncodeError) -> bool
+impl core::error::Error for mycelium_std_text::error::EncodeError
+impl core::fmt::Debug for mycelium_std_text::error::EncodeError
+pub fn mycelium_std_text::error::EncodeError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_text::error::EncodeError
+pub fn mycelium_std_text::error::EncodeError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_text::error::EncodeError
+impl core::marker::Freeze for mycelium_std_text::error::EncodeError
+impl core::marker::Send for mycelium_std_text::error::EncodeError
+impl core::marker::Sync for mycelium_std_text::error::EncodeError
+impl core::marker::Unpin for mycelium_std_text::error::EncodeError
+impl core::marker::UnsafeUnpin for mycelium_std_text::error::EncodeError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::error::EncodeError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_text::error::EncodeError
+pub enum mycelium_std_text::ParseErr
+pub mycelium_std_text::ParseErr::Empty
+pub mycelium_std_text::ParseErr::Invalid
+pub mycelium_std_text::ParseErr::Invalid::at: usize
+pub mycelium_std_text::ParseErr::Invalid::expected: &'static str
+pub mycelium_std_text::ParseErr::Invalid::found: alloc::string::String
+pub mycelium_std_text::ParseErr::OutOfRange
+pub mycelium_std_text::ParseErr::OutOfRange::at: usize
+pub mycelium_std_text::ParseErr::OutOfRange::target: &'static str
+impl core::clone::Clone for mycelium_std_text::error::ParseErr
+pub fn mycelium_std_text::error::ParseErr::clone(&self) -> mycelium_std_text::error::ParseErr
+impl core::cmp::Eq for mycelium_std_text::error::ParseErr
+impl core::cmp::PartialEq for mycelium_std_text::error::ParseErr
+pub fn mycelium_std_text::error::ParseErr::eq(&self, &mycelium_std_text::error::ParseErr) -> bool
+impl core::error::Error for mycelium_std_text::error::ParseErr
+impl core::fmt::Debug for mycelium_std_text::error::ParseErr
+pub fn mycelium_std_text::error::ParseErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_text::error::ParseErr
+pub fn mycelium_std_text::error::ParseErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_text::error::ParseErr
+impl core::marker::Freeze for mycelium_std_text::error::ParseErr
+impl core::marker::Send for mycelium_std_text::error::ParseErr
+impl core::marker::Sync for mycelium_std_text::error::ParseErr
+impl core::marker::Unpin for mycelium_std_text::error::ParseErr
+impl core::marker::UnsafeUnpin for mycelium_std_text::error::ParseErr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::error::ParseErr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_text::error::ParseErr
+pub enum mycelium_std_text::TranscodeError
+pub mycelium_std_text::TranscodeError::Invalid
+pub mycelium_std_text::TranscodeError::Invalid::at: usize
+pub mycelium_std_text::TranscodeError::UnpairedSurrogate
+pub mycelium_std_text::TranscodeError::UnpairedSurrogate::at: usize
+impl core::clone::Clone for mycelium_std_text::error::TranscodeError
+pub fn mycelium_std_text::error::TranscodeError::clone(&self) -> mycelium_std_text::error::TranscodeError
+impl core::cmp::Eq for mycelium_std_text::error::TranscodeError
+impl core::cmp::PartialEq for mycelium_std_text::error::TranscodeError
+pub fn mycelium_std_text::error::TranscodeError::eq(&self, &mycelium_std_text::error::TranscodeError) -> bool
+impl core::error::Error for mycelium_std_text::error::TranscodeError
+impl core::fmt::Debug for mycelium_std_text::error::TranscodeError
+pub fn mycelium_std_text::error::TranscodeError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_text::error::TranscodeError
+pub fn mycelium_std_text::error::TranscodeError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_text::error::TranscodeError
+impl core::marker::Freeze for mycelium_std_text::error::TranscodeError
+impl core::marker::Send for mycelium_std_text::error::TranscodeError
+impl core::marker::Sync for mycelium_std_text::error::TranscodeError
+impl core::marker::Unpin for mycelium_std_text::error::TranscodeError
+impl core::marker::UnsafeUnpin for mycelium_std_text::error::TranscodeError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::error::TranscodeError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_text::error::TranscodeError
+pub enum mycelium_std_text::Utf8Error
+pub mycelium_std_text::Utf8Error::Invalid
+pub mycelium_std_text::Utf8Error::Invalid::byte: usize
+pub mycelium_std_text::Utf8Error::Invalid::reason: &'static str
+impl core::clone::Clone for mycelium_std_text::error::Utf8Error
+pub fn mycelium_std_text::error::Utf8Error::clone(&self) -> mycelium_std_text::error::Utf8Error
+impl core::cmp::Eq for mycelium_std_text::error::Utf8Error
+impl core::cmp::PartialEq for mycelium_std_text::error::Utf8Error
+pub fn mycelium_std_text::error::Utf8Error::eq(&self, &mycelium_std_text::error::Utf8Error) -> bool
+impl core::error::Error for mycelium_std_text::error::Utf8Error
+impl core::fmt::Debug for mycelium_std_text::error::Utf8Error
+pub fn mycelium_std_text::error::Utf8Error::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_text::error::Utf8Error
+pub fn mycelium_std_text::error::Utf8Error::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_text::error::Utf8Error
+impl core::marker::Freeze for mycelium_std_text::error::Utf8Error
+impl core::marker::Send for mycelium_std_text::error::Utf8Error
+impl core::marker::Sync for mycelium_std_text::error::Utf8Error
+impl core::marker::Unpin for mycelium_std_text::error::Utf8Error
+impl core::marker::UnsafeUnpin for mycelium_std_text::error::Utf8Error
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::error::Utf8Error
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_text::error::Utf8Error
+pub struct mycelium_std_text::Lossy<T>
+pub mycelium_std_text::Lossy::marker: char
+pub mycelium_std_text::Lossy::substituted: usize
+pub mycelium_std_text::Lossy::value: T
+impl<T> mycelium_std_text::types::Lossy<T>
+pub fn mycelium_std_text::types::Lossy<T>::is_lossless(&self) -> bool
+pub fn mycelium_std_text::types::Lossy<T>::new(T, usize, char) -> Self
+pub fn mycelium_std_text::types::Lossy<T>::with_default_marker(T, usize) -> Self
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_text::types::Lossy<T>
+pub fn mycelium_std_text::types::Lossy<T>::clone(&self) -> mycelium_std_text::types::Lossy<T>
+impl<T: core::cmp::Eq> core::cmp::Eq for mycelium_std_text::types::Lossy<T>
+impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_text::types::Lossy<T>
+pub fn mycelium_std_text::types::Lossy<T>::eq(&self, &mycelium_std_text::types::Lossy<T>) -> bool
+impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_text::types::Lossy<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_std_text::types::Lossy<T>
+pub fn mycelium_std_text::types::Lossy<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::marker::Freeze for mycelium_std_text::types::Lossy<T> where T: core::marker::Freeze
+impl<T> core::marker::Send for mycelium_std_text::types::Lossy<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_std_text::types::Lossy<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_std_text::types::Lossy<T> where T: core::marker::Unpin
+impl<T> core::marker::UnsafeUnpin for mycelium_std_text::types::Lossy<T> where T: core::marker::UnsafeUnpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::types::Lossy<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_text::types::Lossy<T> where T: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_text::Text
+impl mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::as_bytes(&self) -> &[u8]
+pub fn mycelium_std_text::types::Text::as_str(&self) -> &str
+pub fn mycelium_std_text::types::Text::into_inner(self) -> alloc::string::String
+pub fn mycelium_std_text::types::Text::is_empty(&self) -> bool
+pub fn mycelium_std_text::types::Text::len_bytes(&self) -> usize
+pub fn mycelium_std_text::types::Text::new(&str) -> mycelium_std_text::types::Text
+impl core::clone::Clone for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::clone(&self) -> mycelium_std_text::types::Text
+impl core::cmp::Eq for mycelium_std_text::types::Text
+impl core::cmp::PartialEq for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::eq(&self, &mycelium_std_text::types::Text) -> bool
+impl core::cmp::PartialEq<&str> for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::eq(&self, &&str) -> bool
+impl core::cmp::PartialEq<str> for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::eq(&self, &str) -> bool
+impl core::convert::AsRef<str> for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::as_ref(&self) -> &str
+impl core::convert::From<&str> for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::from(&str) -> Self
+impl core::convert::From<alloc::string::String> for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::from(alloc::string::String) -> Self
+impl core::fmt::Debug for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_text::types::Text
+pub fn mycelium_std_text::types::Text::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_std_text::types::Text
+impl core::str::traits::FromStr for mycelium_std_text::types::Text
+pub type mycelium_std_text::types::Text::Err = core::convert::Infallible
+pub fn mycelium_std_text::types::Text::from_str(&str) -> core::result::Result<Self, Self::Err>
+impl core::marker::Freeze for mycelium_std_text::types::Text
+impl core::marker::Send for mycelium_std_text::types::Text
+impl core::marker::Sync for mycelium_std_text::types::Text
+impl core::marker::Unpin for mycelium_std_text::types::Text
+impl core::marker::UnsafeUnpin for mycelium_std_text::types::Text
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_text::types::Text
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_text::types::Text
+pub fn mycelium_std_text::char_at(&mycelium_std_text::types::Text, usize) -> core::result::Result<char, mycelium_std_text::error::BoundaryError>
+pub fn mycelium_std_text::chars(&mycelium_std_text::types::Text) -> alloc::vec::Vec<char>
+pub fn mycelium_std_text::concat(&mycelium_std_text::types::Text, &mycelium_std_text::types::Text) -> mycelium_std_text::types::Text
+pub fn mycelium_std_text::encode_utf8(&mycelium_std_text::types::Text) -> alloc::vec::Vec<u8>
+pub fn mycelium_std_text::from_chars(&[char]) -> mycelium_std_text::types::Text
+pub fn mycelium_std_text::from_utf16(&[u16]) -> core::result::Result<mycelium_std_text::types::Text, mycelium_std_text::error::TranscodeError>
+pub fn mycelium_std_text::from_utf8(&[u8]) -> core::result::Result<mycelium_std_text::types::Text, mycelium_std_text::error::Utf8Error>
+pub fn mycelium_std_text::join(&[mycelium_std_text::types::Text], &mycelium_std_text::types::Text) -> mycelium_std_text::types::Text
+pub fn mycelium_std_text::len_bytes(&mycelium_std_text::types::Text) -> usize
+pub fn mycelium_std_text::len_chars(&mycelium_std_text::types::Text) -> usize
+pub fn mycelium_std_text::len_graphemes(&mycelium_std_text::types::Text) -> usize
+pub fn mycelium_std_text::parse_bool(&mycelium_std_text::types::Text) -> core::result::Result<bool, mycelium_std_text::error::ParseErr>
+pub fn mycelium_std_text::parse_int(&mycelium_std_text::types::Text) -> core::result::Result<i64, mycelium_std_text::error::ParseErr>
+pub fn mycelium_std_text::replace(&mycelium_std_text::types::Text, &mycelium_std_text::types::Text, &mycelium_std_text::types::Text) -> mycelium_std_text::types::Text
+pub fn mycelium_std_text::slice(&mycelium_std_text::types::Text, usize, usize) -> core::result::Result<mycelium_std_text::types::Text, mycelium_std_text::error::BoundaryError>
+pub fn mycelium_std_text::to_latin1(&mycelium_std_text::types::Text) -> core::result::Result<alloc::vec::Vec<u8>, mycelium_std_text::error::EncodeError>
+pub fn mycelium_std_text::to_latin1_lossy(&mycelium_std_text::types::Text, char) -> mycelium_std_text::types::Lossy<alloc::vec::Vec<u8>>
+pub fn mycelium_std_text::to_lower(&mycelium_std_text::types::Text) -> mycelium_std_text::types::Text
+pub fn mycelium_std_text::to_upper(&mycelium_std_text::types::Text) -> mycelium_std_text::types::Text
+pub fn mycelium_std_text::to_utf16(&mycelium_std_text::types::Text) -> alloc::vec::Vec<u16>
+pub fn mycelium_std_text::trim(&mycelium_std_text::types::Text) -> mycelium_std_text::types::Text

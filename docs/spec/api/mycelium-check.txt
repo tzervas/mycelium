@@ -1,0 +1,83 @@
+pub mod mycelium_check
+pub enum mycelium_check::FindingKind
+pub mycelium_check::FindingKind::Check
+pub mycelium_check::FindingKind::Parse
+impl core::clone::Clone for mycelium_check::FindingKind
+pub fn mycelium_check::FindingKind::clone(&self) -> mycelium_check::FindingKind
+impl core::cmp::Eq for mycelium_check::FindingKind
+impl core::cmp::PartialEq for mycelium_check::FindingKind
+pub fn mycelium_check::FindingKind::eq(&self, &mycelium_check::FindingKind) -> bool
+impl core::fmt::Debug for mycelium_check::FindingKind
+pub fn mycelium_check::FindingKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_check::FindingKind
+impl core::marker::StructuralPartialEq for mycelium_check::FindingKind
+impl core::marker::Freeze for mycelium_check::FindingKind
+impl core::marker::Send for mycelium_check::FindingKind
+impl core::marker::Sync for mycelium_check::FindingKind
+impl core::marker::Unpin for mycelium_check::FindingKind
+impl core::marker::UnsafeUnpin for mycelium_check::FindingKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::FindingKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_check::FindingKind
+pub struct mycelium_check::Finding
+pub mycelium_check::Finding::file: alloc::string::String
+pub mycelium_check::Finding::kind: mycelium_check::FindingKind
+pub mycelium_check::Finding::level: mycelium_lsp::diagnostics::record::Level
+pub mycelium_check::Finding::message: alloc::string::String
+pub mycelium_check::Finding::route: core::option::Option<alloc::string::String>
+pub mycelium_check::Finding::site: alloc::string::String
+impl core::clone::Clone for mycelium_check::Finding
+pub fn mycelium_check::Finding::clone(&self) -> mycelium_check::Finding
+impl core::cmp::Eq for mycelium_check::Finding
+impl core::cmp::PartialEq for mycelium_check::Finding
+pub fn mycelium_check::Finding::eq(&self, &mycelium_check::Finding) -> bool
+impl core::fmt::Debug for mycelium_check::Finding
+pub fn mycelium_check::Finding::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_check::Finding
+impl core::marker::Freeze for mycelium_check::Finding
+impl core::marker::Send for mycelium_check::Finding
+impl core::marker::Sync for mycelium_check::Finding
+impl core::marker::Unpin for mycelium_check::Finding
+impl core::marker::UnsafeUnpin for mycelium_check::Finding
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::Finding
+impl core::panic::unwind_safe::UnwindSafe for mycelium_check::Finding
+pub struct mycelium_check::Report
+pub mycelium_check::Report::files_checked: usize
+pub mycelium_check::Report::findings: alloc::vec::Vec<mycelium_check::Finding>
+impl mycelium_check::Report
+pub fn mycelium_check::Report::exit_code(&self) -> u8
+pub fn mycelium_check::Report::is_ok(&self) -> bool
+impl core::clone::Clone for mycelium_check::Report
+pub fn mycelium_check::Report::clone(&self) -> mycelium_check::Report
+impl core::default::Default for mycelium_check::Report
+pub fn mycelium_check::Report::default() -> mycelium_check::Report
+impl core::fmt::Debug for mycelium_check::Report
+pub fn mycelium_check::Report::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_check::Report
+impl core::marker::Send for mycelium_check::Report
+impl core::marker::Sync for mycelium_check::Report
+impl core::marker::Unpin for mycelium_check::Report
+impl core::marker::UnsafeUnpin for mycelium_check::Report
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::Report
+impl core::panic::unwind_safe::UnwindSafe for mycelium_check::Report
+pub struct mycelium_check::ResolveError(pub alloc::string::String)
+impl core::clone::Clone for mycelium_check::ResolveError
+pub fn mycelium_check::ResolveError::clone(&self) -> mycelium_check::ResolveError
+impl core::cmp::Eq for mycelium_check::ResolveError
+impl core::cmp::PartialEq for mycelium_check::ResolveError
+pub fn mycelium_check::ResolveError::eq(&self, &mycelium_check::ResolveError) -> bool
+impl core::error::Error for mycelium_check::ResolveError
+impl core::fmt::Debug for mycelium_check::ResolveError
+pub fn mycelium_check::ResolveError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_check::ResolveError
+pub fn mycelium_check::ResolveError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_check::ResolveError
+impl core::marker::Freeze for mycelium_check::ResolveError
+impl core::marker::Send for mycelium_check::ResolveError
+impl core::marker::Sync for mycelium_check::ResolveError
+impl core::marker::Unpin for mycelium_check::ResolveError
+impl core::marker::UnsafeUnpin for mycelium_check::ResolveError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::ResolveError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_check::ResolveError
+pub fn mycelium_check::check_project(&std::path::Path) -> core::result::Result<mycelium_check::Report, mycelium_check::ResolveError>
+pub fn mycelium_check::check_source(&str, &str, &mycelium_lsp::diagnostics::policy::DiagnosticPolicy, &mycelium_lsp::diagnostics::registry::ClassRegistry, &mut alloc::vec::Vec<mycelium_check::Finding>)
+pub fn mycelium_check::check_sources(&[(alloc::string::String, alloc::string::String)]) -> mycelium_check::Report

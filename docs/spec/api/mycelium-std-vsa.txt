@@ -1,0 +1,80 @@
+pub mod mycelium_std_vsa
+pub use mycelium_std_vsa::CleanupMemory
+pub use mycelium_std_vsa::Factorization
+pub use mycelium_std_vsa::GuaranteeStrength
+pub use mycelium_std_vsa::Match
+pub use mycelium_std_vsa::ResonatorTrace
+pub use mycelium_std_vsa::VsaError
+pub use mycelium_std_vsa::VsaModel
+pub use mycelium_std_vsa::VsaOp
+pub mod mycelium_std_vsa::encoding
+pub fn mycelium_std_vsa::encoding::encode_seq<M: mycelium_vsa::VsaModel>(&M, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::encoding::encode_set<M: mycelium_vsa::VsaModel>(&M, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub mod mycelium_std_vsa::matrix
+pub struct mycelium_std_vsa::matrix::OpGuarantee
+pub mycelium_std_vsa::matrix::OpGuarantee::explain_able: bool
+pub mycelium_std_vsa::matrix::OpGuarantee::model_id: &'static str
+pub mycelium_std_vsa::matrix::OpGuarantee::op: mycelium_vsa::VsaOp
+pub mycelium_std_vsa::matrix::OpGuarantee::tag: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_std_vsa::matrix::OpGuarantee
+pub fn mycelium_std_vsa::matrix::OpGuarantee::clone(&self) -> mycelium_std_vsa::matrix::OpGuarantee
+impl core::cmp::PartialEq for mycelium_std_vsa::matrix::OpGuarantee
+pub fn mycelium_std_vsa::matrix::OpGuarantee::eq(&self, &mycelium_std_vsa::matrix::OpGuarantee) -> bool
+impl core::fmt::Debug for mycelium_std_vsa::matrix::OpGuarantee
+pub fn mycelium_std_vsa::matrix::OpGuarantee::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_vsa::matrix::OpGuarantee
+impl core::marker::StructuralPartialEq for mycelium_std_vsa::matrix::OpGuarantee
+impl core::marker::Freeze for mycelium_std_vsa::matrix::OpGuarantee
+impl core::marker::Send for mycelium_std_vsa::matrix::OpGuarantee
+impl core::marker::Sync for mycelium_std_vsa::matrix::OpGuarantee
+impl core::marker::Unpin for mycelium_std_vsa::matrix::OpGuarantee
+impl core::marker::UnsafeUnpin for mycelium_std_vsa::matrix::OpGuarantee
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_vsa::matrix::OpGuarantee
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_vsa::matrix::OpGuarantee
+pub const mycelium_std_vsa::matrix::GUARANTEE_MATRIX: &[mycelium_std_vsa::matrix::OpGuarantee]
+pub fn mycelium_std_vsa::matrix::std_matrix_tag(&str, mycelium_vsa::VsaOp) -> core::option::Option<mycelium_core::guarantee::GuaranteeStrength>
+pub mod mycelium_std_vsa::ops
+pub fn mycelium_std_vsa::ops::bind<M: mycelium_vsa::VsaModel>(&M, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::ops::bind_role<M: mycelium_vsa::VsaModel>(&M, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::ops::bundle<M: mycelium_vsa::VsaModel>(&M, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::ops::cleanup<M: mycelium_vsa::VsaModel>(&mycelium_vsa::cleanup::CleanupMemory, &[f64], &M, f64, f64) -> core::result::Result<mycelium_vsa::cleanup::Match, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::ops::permute<M: mycelium_vsa::VsaModel>(&M, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::ops::similarity<M: mycelium_vsa::VsaModel>(&M, &[f64], &[f64]) -> f64
+pub fn mycelium_std_vsa::ops::unbind<M: mycelium_vsa::VsaModel>(&M, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::ops::unpermute<M: mycelium_vsa::VsaModel>(&M, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub mod mycelium_std_vsa::recon
+pub fn mycelium_std_vsa::recon::reconstruct_factors<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &[mycelium_vsa::cleanup::CleanupMemory]) -> core::result::Result<mycelium_vsa::resonator::Factorization, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::recon::reconstruct_role<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &str, &mycelium_core::value::Value, &mycelium_vsa::cleanup::CleanupMemory) -> core::result::Result<mycelium_vsa::cleanup::Match, mycelium_vsa::VsaError>
+pub struct mycelium_std_vsa::OpGuarantee
+pub mycelium_std_vsa::OpGuarantee::explain_able: bool
+pub mycelium_std_vsa::OpGuarantee::model_id: &'static str
+pub mycelium_std_vsa::OpGuarantee::op: mycelium_vsa::VsaOp
+pub mycelium_std_vsa::OpGuarantee::tag: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_std_vsa::matrix::OpGuarantee
+pub fn mycelium_std_vsa::matrix::OpGuarantee::clone(&self) -> mycelium_std_vsa::matrix::OpGuarantee
+impl core::cmp::PartialEq for mycelium_std_vsa::matrix::OpGuarantee
+pub fn mycelium_std_vsa::matrix::OpGuarantee::eq(&self, &mycelium_std_vsa::matrix::OpGuarantee) -> bool
+impl core::fmt::Debug for mycelium_std_vsa::matrix::OpGuarantee
+pub fn mycelium_std_vsa::matrix::OpGuarantee::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_vsa::matrix::OpGuarantee
+impl core::marker::StructuralPartialEq for mycelium_std_vsa::matrix::OpGuarantee
+impl core::marker::Freeze for mycelium_std_vsa::matrix::OpGuarantee
+impl core::marker::Send for mycelium_std_vsa::matrix::OpGuarantee
+impl core::marker::Sync for mycelium_std_vsa::matrix::OpGuarantee
+impl core::marker::Unpin for mycelium_std_vsa::matrix::OpGuarantee
+impl core::marker::UnsafeUnpin for mycelium_std_vsa::matrix::OpGuarantee
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_vsa::matrix::OpGuarantee
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_vsa::matrix::OpGuarantee
+pub const mycelium_std_vsa::GUARANTEE_MATRIX: &[mycelium_std_vsa::matrix::OpGuarantee]
+pub fn mycelium_std_vsa::bind<M: mycelium_vsa::VsaModel>(&M, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::bind_role<M: mycelium_vsa::VsaModel>(&M, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::bundle<M: mycelium_vsa::VsaModel>(&M, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::cleanup<M: mycelium_vsa::VsaModel>(&mycelium_vsa::cleanup::CleanupMemory, &[f64], &M, f64, f64) -> core::result::Result<mycelium_vsa::cleanup::Match, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::encode_seq<M: mycelium_vsa::VsaModel>(&M, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::encode_set<M: mycelium_vsa::VsaModel>(&M, &[&[f64]]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::permute<M: mycelium_vsa::VsaModel>(&M, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::reconstruct_factors<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &[mycelium_vsa::cleanup::CleanupMemory]) -> core::result::Result<mycelium_vsa::resonator::Factorization, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::reconstruct_role<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &str, &mycelium_core::value::Value, &mycelium_vsa::cleanup::CleanupMemory) -> core::result::Result<mycelium_vsa::cleanup::Match, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::similarity<M: mycelium_vsa::VsaModel>(&M, &[f64], &[f64]) -> f64
+pub fn mycelium_std_vsa::unbind<M: mycelium_vsa::VsaModel>(&M, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
+pub fn mycelium_std_vsa::unpermute<M: mycelium_vsa::VsaModel>(&M, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>

@@ -1,0 +1,584 @@
+pub mod mycelium_build
+pub mod mycelium_build::cache
+pub enum mycelium_build::cache::CacheOutcome
+pub mycelium_build::cache::CacheOutcome::Hit(mycelium_build::BuildCertificate)
+pub mycelium_build::cache::CacheOutcome::Miss(mycelium_build::BuildCertificate)
+impl mycelium_build::cache::CacheOutcome
+pub fn mycelium_build::cache::CacheOutcome::certificate(&self) -> &mycelium_build::BuildCertificate
+pub fn mycelium_build::cache::CacheOutcome::was_hit(&self) -> bool
+impl core::clone::Clone for mycelium_build::cache::CacheOutcome
+pub fn mycelium_build::cache::CacheOutcome::clone(&self) -> mycelium_build::cache::CacheOutcome
+impl core::cmp::Eq for mycelium_build::cache::CacheOutcome
+impl core::cmp::PartialEq for mycelium_build::cache::CacheOutcome
+pub fn mycelium_build::cache::CacheOutcome::eq(&self, &mycelium_build::cache::CacheOutcome) -> bool
+impl core::fmt::Debug for mycelium_build::cache::CacheOutcome
+pub fn mycelium_build::cache::CacheOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_build::cache::CacheOutcome
+impl core::marker::Freeze for mycelium_build::cache::CacheOutcome
+impl core::marker::Send for mycelium_build::cache::CacheOutcome
+impl core::marker::Sync for mycelium_build::cache::CacheOutcome
+impl core::marker::Unpin for mycelium_build::cache::CacheOutcome
+impl core::marker::UnsafeUnpin for mycelium_build::cache::CacheOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::cache::CacheOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::cache::CacheOutcome
+pub struct mycelium_build::cache::BuildCache
+impl mycelium_build::cache::BuildCache
+pub fn mycelium_build::cache::BuildCache::build(&mut self, &mycelium_build::Component, bool) -> mycelium_build::cache::CacheOutcome
+pub fn mycelium_build::cache::BuildCache::is_empty(&self) -> bool
+pub fn mycelium_build::cache::BuildCache::len(&self) -> usize
+pub fn mycelium_build::cache::BuildCache::new() -> Self
+pub fn mycelium_build::cache::BuildCache::request_key(&mycelium_build::Component, bool) -> mycelium_core::id::ContentHash
+impl core::clone::Clone for mycelium_build::cache::BuildCache
+pub fn mycelium_build::cache::BuildCache::clone(&self) -> mycelium_build::cache::BuildCache
+impl core::default::Default for mycelium_build::cache::BuildCache
+pub fn mycelium_build::cache::BuildCache::default() -> mycelium_build::cache::BuildCache
+impl core::fmt::Debug for mycelium_build::cache::BuildCache
+pub fn mycelium_build::cache::BuildCache::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_build::cache::BuildCache
+impl core::marker::Send for mycelium_build::cache::BuildCache
+impl core::marker::Sync for mycelium_build::cache::BuildCache
+impl core::marker::Unpin for mycelium_build::cache::BuildCache
+impl core::marker::UnsafeUnpin for mycelium_build::cache::BuildCache
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::cache::BuildCache
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::cache::BuildCache
+pub mod mycelium_build::target
+pub enum mycelium_build::target::Arch
+pub mycelium_build::target::Arch::Aarch64
+pub mycelium_build::target::Arch::X86_64
+impl core::clone::Clone for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::clone(&self) -> mycelium_build::target::Arch
+impl core::cmp::Eq for mycelium_build::target::Arch
+impl core::cmp::Ord for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::cmp(&self, &mycelium_build::target::Arch) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::eq(&self, &mycelium_build::target::Arch) -> bool
+impl core::cmp::PartialOrd for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::partial_cmp(&self, &mycelium_build::target::Arch) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_build::target::Arch
+impl core::marker::StructuralPartialEq for mycelium_build::target::Arch
+impl serde_core::ser::Serialize for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_build::target::Arch
+impl core::marker::Send for mycelium_build::target::Arch
+impl core::marker::Sync for mycelium_build::target::Arch
+impl core::marker::Unpin for mycelium_build::target::Arch
+impl core::marker::UnsafeUnpin for mycelium_build::target::Arch
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::target::Arch
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::target::Arch
+pub enum mycelium_build::target::BuildError
+pub mycelium_build::target::BuildError::CrossTargetDeferred
+pub mycelium_build::target::BuildError::CrossTargetDeferred::host: mycelium_build::target::Target
+pub mycelium_build::target::BuildError::CrossTargetDeferred::requested: alloc::vec::Vec<mycelium_build::target::Target>
+pub mycelium_build::target::BuildError::UnsupportedHost
+impl core::clone::Clone for mycelium_build::target::BuildError
+pub fn mycelium_build::target::BuildError::clone(&self) -> mycelium_build::target::BuildError
+impl core::cmp::Eq for mycelium_build::target::BuildError
+impl core::cmp::PartialEq for mycelium_build::target::BuildError
+pub fn mycelium_build::target::BuildError::eq(&self, &mycelium_build::target::BuildError) -> bool
+impl core::error::Error for mycelium_build::target::BuildError
+impl core::fmt::Debug for mycelium_build::target::BuildError
+pub fn mycelium_build::target::BuildError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_build::target::BuildError
+pub fn mycelium_build::target::BuildError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_build::target::BuildError
+impl core::marker::Freeze for mycelium_build::target::BuildError
+impl core::marker::Send for mycelium_build::target::BuildError
+impl core::marker::Sync for mycelium_build::target::BuildError
+impl core::marker::Unpin for mycelium_build::target::BuildError
+impl core::marker::UnsafeUnpin for mycelium_build::target::BuildError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::target::BuildError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::target::BuildError
+pub enum mycelium_build::target::BuildProfile
+pub mycelium_build::target::BuildProfile::Fat
+pub mycelium_build::target::BuildProfile::Interpret
+pub mycelium_build::target::BuildProfile::Selective(alloc::collections::btree::set::BTreeSet<mycelium_build::target::Target>)
+pub mycelium_build::target::BuildProfile::Slim(mycelium_build::target::Target)
+impl mycelium_build::target::BuildProfile
+pub fn mycelium_build::target::BuildProfile::is_compiled(&self) -> bool
+pub fn mycelium_build::target::BuildProfile::targets(&self) -> alloc::collections::btree::set::BTreeSet<mycelium_build::target::Target>
+impl core::clone::Clone for mycelium_build::target::BuildProfile
+pub fn mycelium_build::target::BuildProfile::clone(&self) -> mycelium_build::target::BuildProfile
+impl core::cmp::Eq for mycelium_build::target::BuildProfile
+impl core::cmp::PartialEq for mycelium_build::target::BuildProfile
+pub fn mycelium_build::target::BuildProfile::eq(&self, &mycelium_build::target::BuildProfile) -> bool
+impl core::fmt::Debug for mycelium_build::target::BuildProfile
+pub fn mycelium_build::target::BuildProfile::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_build::target::BuildProfile
+impl core::marker::Freeze for mycelium_build::target::BuildProfile
+impl core::marker::Send for mycelium_build::target::BuildProfile
+impl core::marker::Sync for mycelium_build::target::BuildProfile
+impl core::marker::Unpin for mycelium_build::target::BuildProfile
+impl core::marker::UnsafeUnpin for mycelium_build::target::BuildProfile
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::target::BuildProfile
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::target::BuildProfile
+pub enum mycelium_build::target::Os
+pub mycelium_build::target::Os::Linux
+pub mycelium_build::target::Os::MacOs
+pub mycelium_build::target::Os::Windows
+impl core::clone::Clone for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::clone(&self) -> mycelium_build::target::Os
+impl core::cmp::Eq for mycelium_build::target::Os
+impl core::cmp::Ord for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::cmp(&self, &mycelium_build::target::Os) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::eq(&self, &mycelium_build::target::Os) -> bool
+impl core::cmp::PartialOrd for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::partial_cmp(&self, &mycelium_build::target::Os) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_build::target::Os
+impl core::marker::StructuralPartialEq for mycelium_build::target::Os
+impl serde_core::ser::Serialize for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_build::target::Os
+impl core::marker::Send for mycelium_build::target::Os
+impl core::marker::Sync for mycelium_build::target::Os
+impl core::marker::Unpin for mycelium_build::target::Os
+impl core::marker::UnsafeUnpin for mycelium_build::target::Os
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::target::Os
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::target::Os
+pub struct mycelium_build::target::DispatchMiss
+pub mycelium_build::target::DispatchMiss::host: mycelium_build::target::Target
+impl core::clone::Clone for mycelium_build::target::DispatchMiss
+pub fn mycelium_build::target::DispatchMiss::clone(&self) -> mycelium_build::target::DispatchMiss
+impl core::cmp::Eq for mycelium_build::target::DispatchMiss
+impl core::cmp::PartialEq for mycelium_build::target::DispatchMiss
+pub fn mycelium_build::target::DispatchMiss::eq(&self, &mycelium_build::target::DispatchMiss) -> bool
+impl core::error::Error for mycelium_build::target::DispatchMiss
+impl core::fmt::Debug for mycelium_build::target::DispatchMiss
+pub fn mycelium_build::target::DispatchMiss::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_build::target::DispatchMiss
+pub fn mycelium_build::target::DispatchMiss::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_build::target::DispatchMiss
+impl core::marker::Freeze for mycelium_build::target::DispatchMiss
+impl core::marker::Send for mycelium_build::target::DispatchMiss
+impl core::marker::Sync for mycelium_build::target::DispatchMiss
+impl core::marker::Unpin for mycelium_build::target::DispatchMiss
+impl core::marker::UnsafeUnpin for mycelium_build::target::DispatchMiss
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::target::DispatchMiss
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::target::DispatchMiss
+pub struct mycelium_build::target::Target
+pub mycelium_build::target::Target::arch: mycelium_build::target::Arch
+pub mycelium_build::target::Target::os: mycelium_build::target::Os
+impl mycelium_build::target::Target
+pub fn mycelium_build::target::Target::host() -> core::option::Option<mycelium_build::target::Target>
+pub fn mycelium_build::target::Target::new(mycelium_build::target::Os, mycelium_build::target::Arch) -> Self
+impl core::clone::Clone for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::clone(&self) -> mycelium_build::target::Target
+impl core::cmp::Eq for mycelium_build::target::Target
+impl core::cmp::Ord for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::cmp(&self, &mycelium_build::target::Target) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::eq(&self, &mycelium_build::target::Target) -> bool
+impl core::cmp::PartialOrd for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::partial_cmp(&self, &mycelium_build::target::Target) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_build::target::Target
+impl core::marker::StructuralPartialEq for mycelium_build::target::Target
+impl serde_core::ser::Serialize for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_build::target::Target
+impl core::marker::Send for mycelium_build::target::Target
+impl core::marker::Sync for mycelium_build::target::Target
+impl core::marker::Unpin for mycelium_build::target::Target
+impl core::marker::UnsafeUnpin for mycelium_build::target::Target
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::target::Target
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::target::Target
+pub struct mycelium_build::target::VariantTable
+impl mycelium_build::target::VariantTable
+pub fn mycelium_build::target::VariantTable::insert(&mut self, mycelium_build::target::Target, mycelium_core::id::ContentHash)
+pub fn mycelium_build::target::VariantTable::is_empty(&self) -> bool
+pub fn mycelium_build::target::VariantTable::len(&self) -> usize
+pub fn mycelium_build::target::VariantTable::new() -> Self
+pub fn mycelium_build::target::VariantTable::select(&self, mycelium_build::target::Target) -> core::result::Result<&mycelium_core::id::ContentHash, mycelium_build::target::DispatchMiss>
+pub fn mycelium_build::target::VariantTable::targets(&self) -> impl core::iter::traits::iterator::Iterator<Item = &mycelium_build::target::Target>
+impl core::clone::Clone for mycelium_build::target::VariantTable
+pub fn mycelium_build::target::VariantTable::clone(&self) -> mycelium_build::target::VariantTable
+impl core::cmp::Eq for mycelium_build::target::VariantTable
+impl core::cmp::PartialEq for mycelium_build::target::VariantTable
+pub fn mycelium_build::target::VariantTable::eq(&self, &mycelium_build::target::VariantTable) -> bool
+impl core::default::Default for mycelium_build::target::VariantTable
+pub fn mycelium_build::target::VariantTable::default() -> mycelium_build::target::VariantTable
+impl core::fmt::Debug for mycelium_build::target::VariantTable
+pub fn mycelium_build::target::VariantTable::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_build::target::VariantTable
+impl serde_core::ser::Serialize for mycelium_build::target::VariantTable
+pub fn mycelium_build::target::VariantTable::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_build::target::VariantTable
+pub fn mycelium_build::target::VariantTable::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_build::target::VariantTable
+impl core::marker::Send for mycelium_build::target::VariantTable
+impl core::marker::Sync for mycelium_build::target::VariantTable
+impl core::marker::Unpin for mycelium_build::target::VariantTable
+impl core::marker::UnsafeUnpin for mycelium_build::target::VariantTable
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::target::VariantTable
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::target::VariantTable
+pub fn mycelium_build::target::realizable_targets(&mycelium_build::target::BuildProfile, mycelium_build::target::Target) -> core::result::Result<alloc::collections::btree::set::BTreeSet<mycelium_build::target::Target>, mycelium_build::target::BuildError>
+pub fn mycelium_build::target::supported_targets() -> alloc::collections::btree::set::BTreeSet<mycelium_build::target::Target>
+pub enum mycelium_build::Arch
+pub mycelium_build::Arch::Aarch64
+pub mycelium_build::Arch::X86_64
+impl core::clone::Clone for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::clone(&self) -> mycelium_build::target::Arch
+impl core::cmp::Eq for mycelium_build::target::Arch
+impl core::cmp::Ord for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::cmp(&self, &mycelium_build::target::Arch) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::eq(&self, &mycelium_build::target::Arch) -> bool
+impl core::cmp::PartialOrd for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::partial_cmp(&self, &mycelium_build::target::Arch) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_build::target::Arch
+impl core::marker::StructuralPartialEq for mycelium_build::target::Arch
+impl serde_core::ser::Serialize for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_build::target::Arch
+pub fn mycelium_build::target::Arch::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_build::target::Arch
+impl core::marker::Send for mycelium_build::target::Arch
+impl core::marker::Sync for mycelium_build::target::Arch
+impl core::marker::Unpin for mycelium_build::target::Arch
+impl core::marker::UnsafeUnpin for mycelium_build::target::Arch
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::target::Arch
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::target::Arch
+pub enum mycelium_build::BuildError
+pub mycelium_build::BuildError::CrossTargetDeferred
+pub mycelium_build::BuildError::CrossTargetDeferred::host: mycelium_build::target::Target
+pub mycelium_build::BuildError::CrossTargetDeferred::requested: alloc::vec::Vec<mycelium_build::target::Target>
+pub mycelium_build::BuildError::UnsupportedHost
+impl core::clone::Clone for mycelium_build::target::BuildError
+pub fn mycelium_build::target::BuildError::clone(&self) -> mycelium_build::target::BuildError
+impl core::cmp::Eq for mycelium_build::target::BuildError
+impl core::cmp::PartialEq for mycelium_build::target::BuildError
+pub fn mycelium_build::target::BuildError::eq(&self, &mycelium_build::target::BuildError) -> bool
+impl core::error::Error for mycelium_build::target::BuildError
+impl core::fmt::Debug for mycelium_build::target::BuildError
+pub fn mycelium_build::target::BuildError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_build::target::BuildError
+pub fn mycelium_build::target::BuildError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_build::target::BuildError
+impl core::marker::Freeze for mycelium_build::target::BuildError
+impl core::marker::Send for mycelium_build::target::BuildError
+impl core::marker::Sync for mycelium_build::target::BuildError
+impl core::marker::Unpin for mycelium_build::target::BuildError
+impl core::marker::UnsafeUnpin for mycelium_build::target::BuildError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::target::BuildError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::target::BuildError
+pub enum mycelium_build::BuildProfile
+pub mycelium_build::BuildProfile::Fat
+pub mycelium_build::BuildProfile::Interpret
+pub mycelium_build::BuildProfile::Selective(alloc::collections::btree::set::BTreeSet<mycelium_build::target::Target>)
+pub mycelium_build::BuildProfile::Slim(mycelium_build::target::Target)
+impl mycelium_build::target::BuildProfile
+pub fn mycelium_build::target::BuildProfile::is_compiled(&self) -> bool
+pub fn mycelium_build::target::BuildProfile::targets(&self) -> alloc::collections::btree::set::BTreeSet<mycelium_build::target::Target>
+impl core::clone::Clone for mycelium_build::target::BuildProfile
+pub fn mycelium_build::target::BuildProfile::clone(&self) -> mycelium_build::target::BuildProfile
+impl core::cmp::Eq for mycelium_build::target::BuildProfile
+impl core::cmp::PartialEq for mycelium_build::target::BuildProfile
+pub fn mycelium_build::target::BuildProfile::eq(&self, &mycelium_build::target::BuildProfile) -> bool
+impl core::fmt::Debug for mycelium_build::target::BuildProfile
+pub fn mycelium_build::target::BuildProfile::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_build::target::BuildProfile
+impl core::marker::Freeze for mycelium_build::target::BuildProfile
+impl core::marker::Send for mycelium_build::target::BuildProfile
+impl core::marker::Sync for mycelium_build::target::BuildProfile
+impl core::marker::Unpin for mycelium_build::target::BuildProfile
+impl core::marker::UnsafeUnpin for mycelium_build::target::BuildProfile
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::target::BuildProfile
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::target::BuildProfile
+pub enum mycelium_build::CacheOutcome
+pub mycelium_build::CacheOutcome::Hit(mycelium_build::BuildCertificate)
+pub mycelium_build::CacheOutcome::Miss(mycelium_build::BuildCertificate)
+impl mycelium_build::cache::CacheOutcome
+pub fn mycelium_build::cache::CacheOutcome::certificate(&self) -> &mycelium_build::BuildCertificate
+pub fn mycelium_build::cache::CacheOutcome::was_hit(&self) -> bool
+impl core::clone::Clone for mycelium_build::cache::CacheOutcome
+pub fn mycelium_build::cache::CacheOutcome::clone(&self) -> mycelium_build::cache::CacheOutcome
+impl core::cmp::Eq for mycelium_build::cache::CacheOutcome
+impl core::cmp::PartialEq for mycelium_build::cache::CacheOutcome
+pub fn mycelium_build::cache::CacheOutcome::eq(&self, &mycelium_build::cache::CacheOutcome) -> bool
+impl core::fmt::Debug for mycelium_build::cache::CacheOutcome
+pub fn mycelium_build::cache::CacheOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_build::cache::CacheOutcome
+impl core::marker::Freeze for mycelium_build::cache::CacheOutcome
+impl core::marker::Send for mycelium_build::cache::CacheOutcome
+impl core::marker::Sync for mycelium_build::cache::CacheOutcome
+impl core::marker::Unpin for mycelium_build::cache::CacheOutcome
+impl core::marker::UnsafeUnpin for mycelium_build::cache::CacheOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::cache::CacheOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::cache::CacheOutcome
+pub enum mycelium_build::Eligibility
+pub mycelium_build::Eligibility::Blocked(alloc::vec::Vec<&'static str>)
+pub mycelium_build::Eligibility::Eligible
+impl core::clone::Clone for mycelium_build::Eligibility
+pub fn mycelium_build::Eligibility::clone(&self) -> mycelium_build::Eligibility
+impl core::cmp::Eq for mycelium_build::Eligibility
+impl core::cmp::PartialEq for mycelium_build::Eligibility
+pub fn mycelium_build::Eligibility::eq(&self, &mycelium_build::Eligibility) -> bool
+impl core::fmt::Debug for mycelium_build::Eligibility
+pub fn mycelium_build::Eligibility::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_build::Eligibility
+impl core::marker::Freeze for mycelium_build::Eligibility
+impl core::marker::Send for mycelium_build::Eligibility
+impl core::marker::Sync for mycelium_build::Eligibility
+impl core::marker::Unpin for mycelium_build::Eligibility
+impl core::marker::UnsafeUnpin for mycelium_build::Eligibility
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::Eligibility
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::Eligibility
+pub enum mycelium_build::ExecutionRoute
+pub mycelium_build::ExecutionRoute::Aot
+pub mycelium_build::ExecutionRoute::Interpreted
+impl core::clone::Clone for mycelium_build::ExecutionRoute
+pub fn mycelium_build::ExecutionRoute::clone(&self) -> mycelium_build::ExecutionRoute
+impl core::cmp::Eq for mycelium_build::ExecutionRoute
+impl core::cmp::PartialEq for mycelium_build::ExecutionRoute
+pub fn mycelium_build::ExecutionRoute::eq(&self, &mycelium_build::ExecutionRoute) -> bool
+impl core::fmt::Debug for mycelium_build::ExecutionRoute
+pub fn mycelium_build::ExecutionRoute::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_build::ExecutionRoute
+impl core::marker::StructuralPartialEq for mycelium_build::ExecutionRoute
+impl serde_core::ser::Serialize for mycelium_build::ExecutionRoute
+pub fn mycelium_build::ExecutionRoute::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_build::ExecutionRoute
+pub fn mycelium_build::ExecutionRoute::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_build::ExecutionRoute
+impl core::marker::Send for mycelium_build::ExecutionRoute
+impl core::marker::Sync for mycelium_build::ExecutionRoute
+impl core::marker::Unpin for mycelium_build::ExecutionRoute
+impl core::marker::UnsafeUnpin for mycelium_build::ExecutionRoute
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::ExecutionRoute
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::ExecutionRoute
+pub enum mycelium_build::Os
+pub mycelium_build::Os::Linux
+pub mycelium_build::Os::MacOs
+pub mycelium_build::Os::Windows
+impl core::clone::Clone for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::clone(&self) -> mycelium_build::target::Os
+impl core::cmp::Eq for mycelium_build::target::Os
+impl core::cmp::Ord for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::cmp(&self, &mycelium_build::target::Os) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::eq(&self, &mycelium_build::target::Os) -> bool
+impl core::cmp::PartialOrd for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::partial_cmp(&self, &mycelium_build::target::Os) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_build::target::Os
+impl core::marker::StructuralPartialEq for mycelium_build::target::Os
+impl serde_core::ser::Serialize for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_build::target::Os
+pub fn mycelium_build::target::Os::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_build::target::Os
+impl core::marker::Send for mycelium_build::target::Os
+impl core::marker::Sync for mycelium_build::target::Os
+impl core::marker::Unpin for mycelium_build::target::Os
+impl core::marker::UnsafeUnpin for mycelium_build::target::Os
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::target::Os
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::target::Os
+pub struct mycelium_build::BuildCache
+impl mycelium_build::cache::BuildCache
+pub fn mycelium_build::cache::BuildCache::build(&mut self, &mycelium_build::Component, bool) -> mycelium_build::cache::CacheOutcome
+pub fn mycelium_build::cache::BuildCache::is_empty(&self) -> bool
+pub fn mycelium_build::cache::BuildCache::len(&self) -> usize
+pub fn mycelium_build::cache::BuildCache::new() -> Self
+pub fn mycelium_build::cache::BuildCache::request_key(&mycelium_build::Component, bool) -> mycelium_core::id::ContentHash
+impl core::clone::Clone for mycelium_build::cache::BuildCache
+pub fn mycelium_build::cache::BuildCache::clone(&self) -> mycelium_build::cache::BuildCache
+impl core::default::Default for mycelium_build::cache::BuildCache
+pub fn mycelium_build::cache::BuildCache::default() -> mycelium_build::cache::BuildCache
+impl core::fmt::Debug for mycelium_build::cache::BuildCache
+pub fn mycelium_build::cache::BuildCache::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_build::cache::BuildCache
+impl core::marker::Send for mycelium_build::cache::BuildCache
+impl core::marker::Sync for mycelium_build::cache::BuildCache
+impl core::marker::Unpin for mycelium_build::cache::BuildCache
+impl core::marker::UnsafeUnpin for mycelium_build::cache::BuildCache
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::cache::BuildCache
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::cache::BuildCache
+pub struct mycelium_build::BuildCertificate
+impl mycelium_build::BuildCertificate
+pub fn mycelium_build::BuildCertificate::blocked_on(&self) -> &[alloc::string::String]
+pub fn mycelium_build::BuildCertificate::cert_ref(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_build::BuildCertificate::component(&self) -> &mycelium_core::id::ContentHash
+pub fn mycelium_build::BuildCertificate::eligible(&self) -> bool
+pub fn mycelium_build::BuildCertificate::obligations(&self) -> mycelium_build::Obligations
+pub fn mycelium_build::BuildCertificate::promoted(&self) -> bool
+pub fn mycelium_build::BuildCertificate::route(&self) -> mycelium_build::ExecutionRoute
+pub fn mycelium_build::BuildCertificate::spec_ratified(&self) -> bool
+impl core::clone::Clone for mycelium_build::BuildCertificate
+pub fn mycelium_build::BuildCertificate::clone(&self) -> mycelium_build::BuildCertificate
+impl core::cmp::Eq for mycelium_build::BuildCertificate
+impl core::cmp::PartialEq for mycelium_build::BuildCertificate
+pub fn mycelium_build::BuildCertificate::eq(&self, &mycelium_build::BuildCertificate) -> bool
+impl core::fmt::Debug for mycelium_build::BuildCertificate
+pub fn mycelium_build::BuildCertificate::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_build::BuildCertificate
+impl serde_core::ser::Serialize for mycelium_build::BuildCertificate
+pub fn mycelium_build::BuildCertificate::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_build::BuildCertificate
+pub fn mycelium_build::BuildCertificate::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for mycelium_build::BuildCertificate
+impl core::marker::Send for mycelium_build::BuildCertificate
+impl core::marker::Sync for mycelium_build::BuildCertificate
+impl core::marker::Unpin for mycelium_build::BuildCertificate
+impl core::marker::UnsafeUnpin for mycelium_build::BuildCertificate
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::BuildCertificate
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::BuildCertificate
+pub struct mycelium_build::Component
+pub mycelium_build::Component::hash: mycelium_core::id::ContentHash
+pub mycelium_build::Component::obligations: mycelium_build::Obligations
+pub mycelium_build::Component::spec_ratified: bool
+impl core::clone::Clone for mycelium_build::Component
+pub fn mycelium_build::Component::clone(&self) -> mycelium_build::Component
+impl core::cmp::Eq for mycelium_build::Component
+impl core::cmp::PartialEq for mycelium_build::Component
+pub fn mycelium_build::Component::eq(&self, &mycelium_build::Component) -> bool
+impl core::fmt::Debug for mycelium_build::Component
+pub fn mycelium_build::Component::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_build::Component
+impl core::marker::Freeze for mycelium_build::Component
+impl core::marker::Send for mycelium_build::Component
+impl core::marker::Sync for mycelium_build::Component
+impl core::marker::Unpin for mycelium_build::Component
+impl core::marker::UnsafeUnpin for mycelium_build::Component
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::Component
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::Component
+pub struct mycelium_build::DispatchMiss
+pub mycelium_build::DispatchMiss::host: mycelium_build::target::Target
+impl core::clone::Clone for mycelium_build::target::DispatchMiss
+pub fn mycelium_build::target::DispatchMiss::clone(&self) -> mycelium_build::target::DispatchMiss
+impl core::cmp::Eq for mycelium_build::target::DispatchMiss
+impl core::cmp::PartialEq for mycelium_build::target::DispatchMiss
+pub fn mycelium_build::target::DispatchMiss::eq(&self, &mycelium_build::target::DispatchMiss) -> bool
+impl core::error::Error for mycelium_build::target::DispatchMiss
+impl core::fmt::Debug for mycelium_build::target::DispatchMiss
+pub fn mycelium_build::target::DispatchMiss::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_build::target::DispatchMiss
+pub fn mycelium_build::target::DispatchMiss::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_build::target::DispatchMiss
+impl core::marker::Freeze for mycelium_build::target::DispatchMiss
+impl core::marker::Send for mycelium_build::target::DispatchMiss
+impl core::marker::Sync for mycelium_build::target::DispatchMiss
+impl core::marker::Unpin for mycelium_build::target::DispatchMiss
+impl core::marker::UnsafeUnpin for mycelium_build::target::DispatchMiss
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::target::DispatchMiss
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::target::DispatchMiss
+pub struct mycelium_build::Obligations
+pub mycelium_build::Obligations::bound_checks_discharged: bool
+pub mycelium_build::Obligations::reference_equivalence_checked: bool
+pub mycelium_build::Obligations::swap_certificates_valid: bool
+impl mycelium_build::Obligations
+pub const fn mycelium_build::Obligations::all() -> Self
+pub const fn mycelium_build::Obligations::all_discharged(self) -> bool
+pub const fn mycelium_build::Obligations::none() -> Self
+impl core::clone::Clone for mycelium_build::Obligations
+pub fn mycelium_build::Obligations::clone(&self) -> mycelium_build::Obligations
+impl core::cmp::Eq for mycelium_build::Obligations
+impl core::cmp::PartialEq for mycelium_build::Obligations
+pub fn mycelium_build::Obligations::eq(&self, &mycelium_build::Obligations) -> bool
+impl core::fmt::Debug for mycelium_build::Obligations
+pub fn mycelium_build::Obligations::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_build::Obligations
+impl core::marker::StructuralPartialEq for mycelium_build::Obligations
+impl serde_core::ser::Serialize for mycelium_build::Obligations
+pub fn mycelium_build::Obligations::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_build::Obligations
+pub fn mycelium_build::Obligations::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_build::Obligations
+impl core::marker::Send for mycelium_build::Obligations
+impl core::marker::Sync for mycelium_build::Obligations
+impl core::marker::Unpin for mycelium_build::Obligations
+impl core::marker::UnsafeUnpin for mycelium_build::Obligations
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::Obligations
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::Obligations
+pub struct mycelium_build::Target
+pub mycelium_build::Target::arch: mycelium_build::target::Arch
+pub mycelium_build::Target::os: mycelium_build::target::Os
+impl mycelium_build::target::Target
+pub fn mycelium_build::target::Target::host() -> core::option::Option<mycelium_build::target::Target>
+pub fn mycelium_build::target::Target::new(mycelium_build::target::Os, mycelium_build::target::Arch) -> Self
+impl core::clone::Clone for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::clone(&self) -> mycelium_build::target::Target
+impl core::cmp::Eq for mycelium_build::target::Target
+impl core::cmp::Ord for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::cmp(&self, &mycelium_build::target::Target) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::eq(&self, &mycelium_build::target::Target) -> bool
+impl core::cmp::PartialOrd for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::partial_cmp(&self, &mycelium_build::target::Target) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_build::target::Target
+impl core::marker::StructuralPartialEq for mycelium_build::target::Target
+impl serde_core::ser::Serialize for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_build::target::Target
+pub fn mycelium_build::target::Target::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_build::target::Target
+impl core::marker::Send for mycelium_build::target::Target
+impl core::marker::Sync for mycelium_build::target::Target
+impl core::marker::Unpin for mycelium_build::target::Target
+impl core::marker::UnsafeUnpin for mycelium_build::target::Target
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::target::Target
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::target::Target
+pub struct mycelium_build::VariantTable
+impl mycelium_build::target::VariantTable
+pub fn mycelium_build::target::VariantTable::insert(&mut self, mycelium_build::target::Target, mycelium_core::id::ContentHash)
+pub fn mycelium_build::target::VariantTable::is_empty(&self) -> bool
+pub fn mycelium_build::target::VariantTable::len(&self) -> usize
+pub fn mycelium_build::target::VariantTable::new() -> Self
+pub fn mycelium_build::target::VariantTable::select(&self, mycelium_build::target::Target) -> core::result::Result<&mycelium_core::id::ContentHash, mycelium_build::target::DispatchMiss>
+pub fn mycelium_build::target::VariantTable::targets(&self) -> impl core::iter::traits::iterator::Iterator<Item = &mycelium_build::target::Target>
+impl core::clone::Clone for mycelium_build::target::VariantTable
+pub fn mycelium_build::target::VariantTable::clone(&self) -> mycelium_build::target::VariantTable
+impl core::cmp::Eq for mycelium_build::target::VariantTable
+impl core::cmp::PartialEq for mycelium_build::target::VariantTable
+pub fn mycelium_build::target::VariantTable::eq(&self, &mycelium_build::target::VariantTable) -> bool
+impl core::default::Default for mycelium_build::target::VariantTable
+pub fn mycelium_build::target::VariantTable::default() -> mycelium_build::target::VariantTable
+impl core::fmt::Debug for mycelium_build::target::VariantTable
+pub fn mycelium_build::target::VariantTable::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_build::target::VariantTable
+impl serde_core::ser::Serialize for mycelium_build::target::VariantTable
+pub fn mycelium_build::target::VariantTable::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_build::target::VariantTable
+pub fn mycelium_build::target::VariantTable::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_build::target::VariantTable
+impl core::marker::Send for mycelium_build::target::VariantTable
+impl core::marker::Sync for mycelium_build::target::VariantTable
+impl core::marker::Unpin for mycelium_build::target::VariantTable
+impl core::marker::UnsafeUnpin for mycelium_build::target::VariantTable
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_build::target::VariantTable
+impl core::panic::unwind_safe::UnwindSafe for mycelium_build::target::VariantTable
+pub fn mycelium_build::check_eligibility(&mycelium_build::Component) -> mycelium_build::Eligibility
+pub fn mycelium_build::decide(&mycelium_build::Component, bool) -> mycelium_build::BuildCertificate
+pub fn mycelium_build::realizable_targets(&mycelium_build::target::BuildProfile, mycelium_build::target::Target) -> core::result::Result<alloc::collections::btree::set::BTreeSet<mycelium_build::target::Target>, mycelium_build::target::BuildError>
+pub fn mycelium_build::supported_targets() -> alloc::collections::btree::set::BTreeSet<mycelium_build::target::Target>

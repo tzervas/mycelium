@@ -1,0 +1,489 @@
+pub mod mycelium_std_recover
+pub use mycelium_std_recover::Budgets
+pub use mycelium_std_recover::EffectBudget
+pub use mycelium_std_recover::EffectBudgetExhausted
+pub use mycelium_std_recover::EffectKind
+pub mod mycelium_std_recover::action
+pub enum mycelium_std_recover::action::RecoveryAction<T>
+pub mycelium_std_recover::action::RecoveryAction::CleanupThenPropagate
+pub mycelium_std_recover::action::RecoveryAction::CleanupThenPropagate::effect: mycelium_interp::budget::EffectKind
+pub mycelium_std_recover::action::RecoveryAction::Escalate
+pub mycelium_std_recover::action::RecoveryAction::Escalate::to_class: alloc::string::String
+pub mycelium_std_recover::action::RecoveryAction::Fallback
+pub mycelium_std_recover::action::RecoveryAction::Fallback::value: alloc::boxed::Box<T>
+pub mycelium_std_recover::action::RecoveryAction::Retry
+pub mycelium_std_recover::action::RecoveryAction::Retry::max_attempts: u64
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_recover::action::RecoveryAction<T>
+pub fn mycelium_std_recover::action::RecoveryAction<T>::clone(&self) -> mycelium_std_recover::action::RecoveryAction<T>
+impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_recover::action::RecoveryAction<T>
+pub fn mycelium_std_recover::action::RecoveryAction<T>::eq(&self, &mycelium_std_recover::action::RecoveryAction<T>) -> bool
+impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_recover::action::RecoveryAction<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_std_recover::action::RecoveryAction<T>
+pub fn mycelium_std_recover::action::RecoveryAction<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::marker::Freeze for mycelium_std_recover::action::RecoveryAction<T>
+impl<T> core::marker::Send for mycelium_std_recover::action::RecoveryAction<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_std_recover::action::RecoveryAction<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_std_recover::action::RecoveryAction<T>
+impl<T> core::marker::UnsafeUnpin for mycelium_std_recover::action::RecoveryAction<T>
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::action::RecoveryAction<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::action::RecoveryAction<T> where T: core::panic::unwind_safe::UnwindSafe
+pub mod mycelium_std_recover::effect
+pub use mycelium_std_recover::effect::Budgets
+pub use mycelium_std_recover::effect::EffectBudget
+pub use mycelium_std_recover::effect::EffectBudgetExhausted
+pub use mycelium_std_recover::effect::EffectKind
+pub struct mycelium_std_recover::effect::UndeclaredEffect
+pub mycelium_std_recover::effect::UndeclaredEffect::effect: mycelium_interp::budget::EffectKind
+impl core::clone::Clone for mycelium_std_recover::effect::UndeclaredEffect
+pub fn mycelium_std_recover::effect::UndeclaredEffect::clone(&self) -> mycelium_std_recover::effect::UndeclaredEffect
+impl core::cmp::Eq for mycelium_std_recover::effect::UndeclaredEffect
+impl core::cmp::PartialEq for mycelium_std_recover::effect::UndeclaredEffect
+pub fn mycelium_std_recover::effect::UndeclaredEffect::eq(&self, &mycelium_std_recover::effect::UndeclaredEffect) -> bool
+impl core::error::Error for mycelium_std_recover::effect::UndeclaredEffect
+impl core::fmt::Debug for mycelium_std_recover::effect::UndeclaredEffect
+pub fn mycelium_std_recover::effect::UndeclaredEffect::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_recover::effect::UndeclaredEffect
+pub fn mycelium_std_recover::effect::UndeclaredEffect::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_recover::effect::UndeclaredEffect
+impl core::marker::Freeze for mycelium_std_recover::effect::UndeclaredEffect
+impl core::marker::Send for mycelium_std_recover::effect::UndeclaredEffect
+impl core::marker::Sync for mycelium_std_recover::effect::UndeclaredEffect
+impl core::marker::Unpin for mycelium_std_recover::effect::UndeclaredEffect
+impl core::marker::UnsafeUnpin for mycelium_std_recover::effect::UndeclaredEffect
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::effect::UndeclaredEffect
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::effect::UndeclaredEffect
+pub fn mycelium_std_recover::effect::check_effects(&mycelium_std_recover::effect::EffectSet, &mycelium_std_recover::effect::EffectSet) -> core::result::Result<(), mycelium_std_recover::effect::UndeclaredEffect>
+pub type mycelium_std_recover::effect::EffectSet = alloc::collections::btree::set::BTreeSet<mycelium_interp::budget::EffectKind>
+pub mod mycelium_std_recover::guarantee_matrix
+pub enum mycelium_std_recover::guarantee_matrix::Explainable
+pub mycelium_std_recover::guarantee_matrix::Explainable::IsPolicyRef
+pub mycelium_std_recover::guarantee_matrix::Explainable::NotApplicable
+pub mycelium_std_recover::guarantee_matrix::Explainable::PolicyRef
+impl core::clone::Clone for mycelium_std_recover::guarantee_matrix::Explainable
+pub fn mycelium_std_recover::guarantee_matrix::Explainable::clone(&self) -> mycelium_std_recover::guarantee_matrix::Explainable
+impl core::cmp::Eq for mycelium_std_recover::guarantee_matrix::Explainable
+impl core::cmp::PartialEq for mycelium_std_recover::guarantee_matrix::Explainable
+pub fn mycelium_std_recover::guarantee_matrix::Explainable::eq(&self, &mycelium_std_recover::guarantee_matrix::Explainable) -> bool
+impl core::fmt::Debug for mycelium_std_recover::guarantee_matrix::Explainable
+pub fn mycelium_std_recover::guarantee_matrix::Explainable::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_recover::guarantee_matrix::Explainable
+impl core::marker::StructuralPartialEq for mycelium_std_recover::guarantee_matrix::Explainable
+impl core::marker::Freeze for mycelium_std_recover::guarantee_matrix::Explainable
+impl core::marker::Send for mycelium_std_recover::guarantee_matrix::Explainable
+impl core::marker::Sync for mycelium_std_recover::guarantee_matrix::Explainable
+impl core::marker::Unpin for mycelium_std_recover::guarantee_matrix::Explainable
+impl core::marker::UnsafeUnpin for mycelium_std_recover::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::guarantee_matrix::Explainable
+pub enum mycelium_std_recover::guarantee_matrix::Fallibility
+pub mycelium_std_recover::guarantee_matrix::Fallibility::FallibleBudget
+pub mycelium_std_recover::guarantee_matrix::Fallibility::FallibleConfig
+pub mycelium_std_recover::guarantee_matrix::Fallibility::Total
+impl core::clone::Clone for mycelium_std_recover::guarantee_matrix::Fallibility
+pub fn mycelium_std_recover::guarantee_matrix::Fallibility::clone(&self) -> mycelium_std_recover::guarantee_matrix::Fallibility
+impl core::cmp::Eq for mycelium_std_recover::guarantee_matrix::Fallibility
+impl core::cmp::PartialEq for mycelium_std_recover::guarantee_matrix::Fallibility
+pub fn mycelium_std_recover::guarantee_matrix::Fallibility::eq(&self, &mycelium_std_recover::guarantee_matrix::Fallibility) -> bool
+impl core::fmt::Debug for mycelium_std_recover::guarantee_matrix::Fallibility
+pub fn mycelium_std_recover::guarantee_matrix::Fallibility::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_recover::guarantee_matrix::Fallibility
+impl core::marker::StructuralPartialEq for mycelium_std_recover::guarantee_matrix::Fallibility
+impl core::marker::Freeze for mycelium_std_recover::guarantee_matrix::Fallibility
+impl core::marker::Send for mycelium_std_recover::guarantee_matrix::Fallibility
+impl core::marker::Sync for mycelium_std_recover::guarantee_matrix::Fallibility
+impl core::marker::Unpin for mycelium_std_recover::guarantee_matrix::Fallibility
+impl core::marker::UnsafeUnpin for mycelium_std_recover::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::guarantee_matrix::Fallibility
+pub struct mycelium_std_recover::guarantee_matrix::MatrixRow
+pub mycelium_std_recover::guarantee_matrix::MatrixRow::effects: &'static str
+pub mycelium_std_recover::guarantee_matrix::MatrixRow::error_set: &'static str
+pub mycelium_std_recover::guarantee_matrix::MatrixRow::explainable: mycelium_std_recover::guarantee_matrix::Explainable
+pub mycelium_std_recover::guarantee_matrix::MatrixRow::fallibility: mycelium_std_recover::guarantee_matrix::Fallibility
+pub mycelium_std_recover::guarantee_matrix::MatrixRow::guarantee: &'static str
+pub mycelium_std_recover::guarantee_matrix::MatrixRow::never_silent_property: &'static str
+pub mycelium_std_recover::guarantee_matrix::MatrixRow::op: &'static str
+impl core::clone::Clone for mycelium_std_recover::guarantee_matrix::MatrixRow
+pub fn mycelium_std_recover::guarantee_matrix::MatrixRow::clone(&self) -> mycelium_std_recover::guarantee_matrix::MatrixRow
+impl core::cmp::Eq for mycelium_std_recover::guarantee_matrix::MatrixRow
+impl core::cmp::PartialEq for mycelium_std_recover::guarantee_matrix::MatrixRow
+pub fn mycelium_std_recover::guarantee_matrix::MatrixRow::eq(&self, &mycelium_std_recover::guarantee_matrix::MatrixRow) -> bool
+impl core::fmt::Debug for mycelium_std_recover::guarantee_matrix::MatrixRow
+pub fn mycelium_std_recover::guarantee_matrix::MatrixRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_recover::guarantee_matrix::MatrixRow
+impl core::marker::Freeze for mycelium_std_recover::guarantee_matrix::MatrixRow
+impl core::marker::Send for mycelium_std_recover::guarantee_matrix::MatrixRow
+impl core::marker::Sync for mycelium_std_recover::guarantee_matrix::MatrixRow
+impl core::marker::Unpin for mycelium_std_recover::guarantee_matrix::MatrixRow
+impl core::marker::UnsafeUnpin for mycelium_std_recover::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::guarantee_matrix::MatrixRow
+pub static mycelium_std_recover::guarantee_matrix::MATRIX: &[mycelium_std_recover::guarantee_matrix::MatrixRow]
+pub mod mycelium_std_recover::handle
+pub fn mycelium_std_recover::handle::handle_classified<T, E>(mycelium_std_recover::outcome::Outcome<T, E>, &mycelium_std_recover::policy::RecoveryPolicy<T>, &mut mycelium_interp::budget::Budgets, impl core::ops::function::Fn(&E) -> mycelium_std_recover::registry::ClassName, impl core::ops::function::FnMut() -> (mycelium_std_recover::outcome::Outcome<T, E>, mycelium_core::guarantee::GuaranteeStrength)) -> mycelium_std_recover::outcome::Resolution<T, E> where T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub fn mycelium_std_recover::handle::recover_classified<T, E>(core::result::Result<T, E>, &mycelium_std_recover::policy::RecoveryPolicy<T>, &mut mycelium_interp::budget::Budgets, impl core::ops::function::Fn(&E) -> mycelium_std_recover::registry::ClassName, impl core::ops::function::FnMut() -> (mycelium_std_recover::outcome::Outcome<T, E>, mycelium_core::guarantee::GuaranteeStrength)) -> mycelium_std_recover::outcome::Resolution<T, E> where T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub mod mycelium_std_recover::outcome
+pub enum mycelium_std_recover::outcome::Outcome<T, E>
+pub mycelium_std_recover::outcome::Outcome::Err(E)
+pub mycelium_std_recover::outcome::Outcome::Ok(T)
+impl<T, E> mycelium_std_recover::outcome::Outcome<T, E>
+pub fn mycelium_std_recover::outcome::Outcome<T, E>::from_result(core::result::Result<T, E>) -> Self
+pub fn mycelium_std_recover::outcome::Outcome<T, E>::into_result(self) -> core::result::Result<T, E>
+pub fn mycelium_std_recover::outcome::Outcome<T, E>::is_err(&self) -> bool
+pub fn mycelium_std_recover::outcome::Outcome<T, E>::is_ok(&self) -> bool
+impl<T: core::clone::Clone, E: core::clone::Clone> core::clone::Clone for mycelium_std_recover::outcome::Outcome<T, E>
+pub fn mycelium_std_recover::outcome::Outcome<T, E>::clone(&self) -> mycelium_std_recover::outcome::Outcome<T, E>
+impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_recover::outcome::Outcome<T, E>
+pub fn mycelium_std_recover::outcome::Outcome<T, E>::eq(&self, &mycelium_std_recover::outcome::Outcome<T, E>) -> bool
+impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_recover::outcome::Outcome<T, E>
+impl<T: core::fmt::Debug, E: core::fmt::Debug> core::fmt::Debug for mycelium_std_recover::outcome::Outcome<T, E>
+pub fn mycelium_std_recover::outcome::Outcome<T, E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T, E> core::marker::Freeze for mycelium_std_recover::outcome::Outcome<T, E> where T: core::marker::Freeze, E: core::marker::Freeze
+impl<T, E> core::marker::Send for mycelium_std_recover::outcome::Outcome<T, E> where T: core::marker::Send, E: core::marker::Send
+impl<T, E> core::marker::Sync for mycelium_std_recover::outcome::Outcome<T, E> where T: core::marker::Sync, E: core::marker::Sync
+impl<T, E> core::marker::Unpin for mycelium_std_recover::outcome::Outcome<T, E> where T: core::marker::Unpin, E: core::marker::Unpin
+impl<T, E> core::marker::UnsafeUnpin for mycelium_std_recover::outcome::Outcome<T, E> where T: core::marker::UnsafeUnpin, E: core::marker::UnsafeUnpin
+impl<T, E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::outcome::Outcome<T, E> where T: core::panic::unwind_safe::RefUnwindSafe, E: core::panic::unwind_safe::RefUnwindSafe
+impl<T, E> core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::outcome::Outcome<T, E> where T: core::panic::unwind_safe::UnwindSafe, E: core::panic::unwind_safe::UnwindSafe
+pub enum mycelium_std_recover::outcome::Resolution<T, E>
+pub mycelium_std_recover::outcome::Resolution::Propagated
+pub mycelium_std_recover::outcome::Resolution::Propagated::cleanup_overrun: bool
+pub mycelium_std_recover::outcome::Resolution::Propagated::error: E
+pub mycelium_std_recover::outcome::Resolution::Propagated::policy: core::option::Option<mycelium_std_recover::policy::PolicyRef>
+pub mycelium_std_recover::outcome::Resolution::Recovered
+pub mycelium_std_recover::outcome::Resolution::Recovered::policy: core::option::Option<mycelium_std_recover::policy::PolicyRef>
+pub mycelium_std_recover::outcome::Resolution::Recovered::tag: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_std_recover::outcome::Resolution::Recovered::value: T
+impl<T, E> mycelium_std_recover::outcome::Resolution<T, E>
+pub fn mycelium_std_recover::outcome::Resolution<T, E>::is_propagated(&self) -> bool
+pub fn mycelium_std_recover::outcome::Resolution<T, E>::is_recovered(&self) -> bool
+pub fn mycelium_std_recover::outcome::Resolution<T, E>::policy_ref(&self) -> core::option::Option<&mycelium_std_recover::policy::PolicyRef>
+impl<T: core::clone::Clone, E: core::clone::Clone> core::clone::Clone for mycelium_std_recover::outcome::Resolution<T, E>
+pub fn mycelium_std_recover::outcome::Resolution<T, E>::clone(&self) -> mycelium_std_recover::outcome::Resolution<T, E>
+impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_recover::outcome::Resolution<T, E>
+pub fn mycelium_std_recover::outcome::Resolution<T, E>::eq(&self, &mycelium_std_recover::outcome::Resolution<T, E>) -> bool
+impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_recover::outcome::Resolution<T, E>
+impl<T: core::fmt::Debug, E: core::fmt::Debug> core::fmt::Debug for mycelium_std_recover::outcome::Resolution<T, E>
+pub fn mycelium_std_recover::outcome::Resolution<T, E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T, E> core::marker::Freeze for mycelium_std_recover::outcome::Resolution<T, E> where T: core::marker::Freeze, E: core::marker::Freeze
+impl<T, E> core::marker::Send for mycelium_std_recover::outcome::Resolution<T, E> where T: core::marker::Send, E: core::marker::Send
+impl<T, E> core::marker::Sync for mycelium_std_recover::outcome::Resolution<T, E> where T: core::marker::Sync, E: core::marker::Sync
+impl<T, E> core::marker::Unpin for mycelium_std_recover::outcome::Resolution<T, E> where T: core::marker::Unpin, E: core::marker::Unpin
+impl<T, E> core::marker::UnsafeUnpin for mycelium_std_recover::outcome::Resolution<T, E> where T: core::marker::UnsafeUnpin, E: core::marker::UnsafeUnpin
+impl<T, E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::outcome::Resolution<T, E> where T: core::panic::unwind_safe::RefUnwindSafe, E: core::panic::unwind_safe::RefUnwindSafe
+impl<T, E> core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::outcome::Resolution<T, E> where T: core::panic::unwind_safe::UnwindSafe, E: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_recover::outcome::DiagError<E>
+pub mycelium_std_recover::outcome::DiagError::diag: mycelium_diag::Diag
+pub mycelium_std_recover::outcome::DiagError::error: E
+impl<E> mycelium_std_recover::outcome::DiagError<E>
+pub fn mycelium_std_recover::outcome::DiagError<E>::new(E, mycelium_diag::Diag) -> Self
+impl<E: core::clone::Clone> core::clone::Clone for mycelium_std_recover::outcome::DiagError<E>
+pub fn mycelium_std_recover::outcome::DiagError<E>::clone(&self) -> mycelium_std_recover::outcome::DiagError<E>
+impl<E: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_recover::outcome::DiagError<E>
+pub fn mycelium_std_recover::outcome::DiagError<E>::eq(&self, &mycelium_std_recover::outcome::DiagError<E>) -> bool
+impl<E: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_recover::outcome::DiagError<E>
+impl<E: core::fmt::Debug> core::fmt::Debug for mycelium_std_recover::outcome::DiagError<E>
+pub fn mycelium_std_recover::outcome::DiagError<E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<E> core::marker::Freeze for mycelium_std_recover::outcome::DiagError<E> where E: core::marker::Freeze
+impl<E> core::marker::Send for mycelium_std_recover::outcome::DiagError<E> where E: core::marker::Send
+impl<E> core::marker::Sync for mycelium_std_recover::outcome::DiagError<E> where E: core::marker::Sync
+impl<E> core::marker::Unpin for mycelium_std_recover::outcome::DiagError<E> where E: core::marker::Unpin
+impl<E> core::marker::UnsafeUnpin for mycelium_std_recover::outcome::DiagError<E> where E: core::marker::UnsafeUnpin
+impl<E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::outcome::DiagError<E> where E: core::panic::unwind_safe::RefUnwindSafe
+impl<E> core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::outcome::DiagError<E> where E: core::panic::unwind_safe::UnwindSafe
+pub mod mycelium_std_recover::policy
+pub struct mycelium_std_recover::policy::RecoveryPolicy<T>
+impl<T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static> mycelium_std_recover::policy::RecoveryPolicy<T>
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::action_for(&self, &mycelium_std_recover::registry::ClassName) -> core::option::Option<&mycelium_std_recover::action::RecoveryAction<T>>
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::is_empty(&self) -> bool
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::new() -> Self
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::on(&mut self, &mycelium_std_recover::registry::ClassRegistry, &str, mycelium_std_recover::action::RecoveryAction<T>) -> core::result::Result<core::option::Option<mycelium_std_recover::action::RecoveryAction<T>>, mycelium_std_recover::registry::UnknownClass>
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::policy_ref(&self) -> mycelium_std_recover::policy::PolicyRef
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::rules(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&mycelium_std_recover::registry::ClassName, &mycelium_std_recover::action::RecoveryAction<T>)>
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_recover::policy::RecoveryPolicy<T>
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::clone(&self) -> mycelium_std_recover::policy::RecoveryPolicy<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_std_recover::policy::RecoveryPolicy<T>
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::default::Default for mycelium_std_recover::policy::RecoveryPolicy<T>
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::default() -> Self
+impl<T> core::marker::Freeze for mycelium_std_recover::policy::RecoveryPolicy<T>
+impl<T> core::marker::Send for mycelium_std_recover::policy::RecoveryPolicy<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_std_recover::policy::RecoveryPolicy<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_std_recover::policy::RecoveryPolicy<T>
+impl<T> core::marker::UnsafeUnpin for mycelium_std_recover::policy::RecoveryPolicy<T>
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::policy::RecoveryPolicy<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::policy::RecoveryPolicy<T> where T: core::panic::unwind_safe::RefUnwindSafe
+pub fn mycelium_std_recover::policy::policy_effects<T>(&mycelium_std_recover::policy::RecoveryPolicy<T>) -> alloc::collections::btree::set::BTreeSet<mycelium_interp::budget::EffectKind> where T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub type mycelium_std_recover::policy::PolicyRef = mycelium_core::id::ContentHash
+pub mod mycelium_std_recover::registry
+pub struct mycelium_std_recover::registry::ClassName(_)
+impl mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::as_str(&self) -> &str
+impl core::clone::Clone for mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::clone(&self) -> mycelium_std_recover::registry::ClassName
+impl core::cmp::Eq for mycelium_std_recover::registry::ClassName
+impl core::cmp::Ord for mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::cmp(&self, &mycelium_std_recover::registry::ClassName) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::eq(&self, &mycelium_std_recover::registry::ClassName) -> bool
+impl core::cmp::PartialOrd for mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::partial_cmp(&self, &mycelium_std_recover::registry::ClassName) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_std_recover::registry::ClassName
+impl core::marker::Freeze for mycelium_std_recover::registry::ClassName
+impl core::marker::Send for mycelium_std_recover::registry::ClassName
+impl core::marker::Sync for mycelium_std_recover::registry::ClassName
+impl core::marker::Unpin for mycelium_std_recover::registry::ClassName
+impl core::marker::UnsafeUnpin for mycelium_std_recover::registry::ClassName
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::registry::ClassName
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::registry::ClassName
+pub struct mycelium_std_recover::registry::ClassRegistry
+impl mycelium_std_recover::registry::ClassRegistry
+pub fn mycelium_std_recover::registry::ClassRegistry::contains(&self, &str) -> bool
+pub fn mycelium_std_recover::registry::ClassRegistry::new() -> Self
+pub fn mycelium_std_recover::registry::ClassRegistry::register(&mut self, impl core::convert::Into<alloc::string::String>)
+pub fn mycelium_std_recover::registry::ClassRegistry::resolve(&self, &str) -> core::result::Result<mycelium_std_recover::registry::ClassName, mycelium_std_recover::registry::UnknownClass>
+pub fn mycelium_std_recover::registry::ClassRegistry::with(self, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_std_recover::registry::ClassRegistry
+pub fn mycelium_std_recover::registry::ClassRegistry::clone(&self) -> mycelium_std_recover::registry::ClassRegistry
+impl core::default::Default for mycelium_std_recover::registry::ClassRegistry
+pub fn mycelium_std_recover::registry::ClassRegistry::default() -> mycelium_std_recover::registry::ClassRegistry
+impl core::fmt::Debug for mycelium_std_recover::registry::ClassRegistry
+pub fn mycelium_std_recover::registry::ClassRegistry::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_recover::registry::ClassRegistry
+impl core::marker::Send for mycelium_std_recover::registry::ClassRegistry
+impl core::marker::Sync for mycelium_std_recover::registry::ClassRegistry
+impl core::marker::Unpin for mycelium_std_recover::registry::ClassRegistry
+impl core::marker::UnsafeUnpin for mycelium_std_recover::registry::ClassRegistry
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::registry::ClassRegistry
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::registry::ClassRegistry
+pub struct mycelium_std_recover::registry::UnknownClass
+pub mycelium_std_recover::registry::UnknownClass::name: alloc::string::String
+impl core::clone::Clone for mycelium_std_recover::registry::UnknownClass
+pub fn mycelium_std_recover::registry::UnknownClass::clone(&self) -> mycelium_std_recover::registry::UnknownClass
+impl core::cmp::Eq for mycelium_std_recover::registry::UnknownClass
+impl core::cmp::PartialEq for mycelium_std_recover::registry::UnknownClass
+pub fn mycelium_std_recover::registry::UnknownClass::eq(&self, &mycelium_std_recover::registry::UnknownClass) -> bool
+impl core::error::Error for mycelium_std_recover::registry::UnknownClass
+impl core::fmt::Debug for mycelium_std_recover::registry::UnknownClass
+pub fn mycelium_std_recover::registry::UnknownClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_recover::registry::UnknownClass
+pub fn mycelium_std_recover::registry::UnknownClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_recover::registry::UnknownClass
+impl core::marker::Freeze for mycelium_std_recover::registry::UnknownClass
+impl core::marker::Send for mycelium_std_recover::registry::UnknownClass
+impl core::marker::Sync for mycelium_std_recover::registry::UnknownClass
+impl core::marker::Unpin for mycelium_std_recover::registry::UnknownClass
+impl core::marker::UnsafeUnpin for mycelium_std_recover::registry::UnknownClass
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::registry::UnknownClass
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::registry::UnknownClass
+pub enum mycelium_std_recover::Outcome<T, E>
+pub mycelium_std_recover::Outcome::Err(E)
+pub mycelium_std_recover::Outcome::Ok(T)
+impl<T, E> mycelium_std_recover::outcome::Outcome<T, E>
+pub fn mycelium_std_recover::outcome::Outcome<T, E>::from_result(core::result::Result<T, E>) -> Self
+pub fn mycelium_std_recover::outcome::Outcome<T, E>::into_result(self) -> core::result::Result<T, E>
+pub fn mycelium_std_recover::outcome::Outcome<T, E>::is_err(&self) -> bool
+pub fn mycelium_std_recover::outcome::Outcome<T, E>::is_ok(&self) -> bool
+impl<T: core::clone::Clone, E: core::clone::Clone> core::clone::Clone for mycelium_std_recover::outcome::Outcome<T, E>
+pub fn mycelium_std_recover::outcome::Outcome<T, E>::clone(&self) -> mycelium_std_recover::outcome::Outcome<T, E>
+impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_recover::outcome::Outcome<T, E>
+pub fn mycelium_std_recover::outcome::Outcome<T, E>::eq(&self, &mycelium_std_recover::outcome::Outcome<T, E>) -> bool
+impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_recover::outcome::Outcome<T, E>
+impl<T: core::fmt::Debug, E: core::fmt::Debug> core::fmt::Debug for mycelium_std_recover::outcome::Outcome<T, E>
+pub fn mycelium_std_recover::outcome::Outcome<T, E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T, E> core::marker::Freeze for mycelium_std_recover::outcome::Outcome<T, E> where T: core::marker::Freeze, E: core::marker::Freeze
+impl<T, E> core::marker::Send for mycelium_std_recover::outcome::Outcome<T, E> where T: core::marker::Send, E: core::marker::Send
+impl<T, E> core::marker::Sync for mycelium_std_recover::outcome::Outcome<T, E> where T: core::marker::Sync, E: core::marker::Sync
+impl<T, E> core::marker::Unpin for mycelium_std_recover::outcome::Outcome<T, E> where T: core::marker::Unpin, E: core::marker::Unpin
+impl<T, E> core::marker::UnsafeUnpin for mycelium_std_recover::outcome::Outcome<T, E> where T: core::marker::UnsafeUnpin, E: core::marker::UnsafeUnpin
+impl<T, E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::outcome::Outcome<T, E> where T: core::panic::unwind_safe::RefUnwindSafe, E: core::panic::unwind_safe::RefUnwindSafe
+impl<T, E> core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::outcome::Outcome<T, E> where T: core::panic::unwind_safe::UnwindSafe, E: core::panic::unwind_safe::UnwindSafe
+pub enum mycelium_std_recover::RecoveryAction<T>
+pub mycelium_std_recover::RecoveryAction::CleanupThenPropagate
+pub mycelium_std_recover::RecoveryAction::CleanupThenPropagate::effect: mycelium_interp::budget::EffectKind
+pub mycelium_std_recover::RecoveryAction::Escalate
+pub mycelium_std_recover::RecoveryAction::Escalate::to_class: alloc::string::String
+pub mycelium_std_recover::RecoveryAction::Fallback
+pub mycelium_std_recover::RecoveryAction::Fallback::value: alloc::boxed::Box<T>
+pub mycelium_std_recover::RecoveryAction::Retry
+pub mycelium_std_recover::RecoveryAction::Retry::max_attempts: u64
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_recover::action::RecoveryAction<T>
+pub fn mycelium_std_recover::action::RecoveryAction<T>::clone(&self) -> mycelium_std_recover::action::RecoveryAction<T>
+impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_recover::action::RecoveryAction<T>
+pub fn mycelium_std_recover::action::RecoveryAction<T>::eq(&self, &mycelium_std_recover::action::RecoveryAction<T>) -> bool
+impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_recover::action::RecoveryAction<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_std_recover::action::RecoveryAction<T>
+pub fn mycelium_std_recover::action::RecoveryAction<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::marker::Freeze for mycelium_std_recover::action::RecoveryAction<T>
+impl<T> core::marker::Send for mycelium_std_recover::action::RecoveryAction<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_std_recover::action::RecoveryAction<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_std_recover::action::RecoveryAction<T>
+impl<T> core::marker::UnsafeUnpin for mycelium_std_recover::action::RecoveryAction<T>
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::action::RecoveryAction<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::action::RecoveryAction<T> where T: core::panic::unwind_safe::UnwindSafe
+pub enum mycelium_std_recover::Resolution<T, E>
+pub mycelium_std_recover::Resolution::Propagated
+pub mycelium_std_recover::Resolution::Propagated::cleanup_overrun: bool
+pub mycelium_std_recover::Resolution::Propagated::error: E
+pub mycelium_std_recover::Resolution::Propagated::policy: core::option::Option<mycelium_std_recover::policy::PolicyRef>
+pub mycelium_std_recover::Resolution::Recovered
+pub mycelium_std_recover::Resolution::Recovered::policy: core::option::Option<mycelium_std_recover::policy::PolicyRef>
+pub mycelium_std_recover::Resolution::Recovered::tag: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_std_recover::Resolution::Recovered::value: T
+impl<T, E> mycelium_std_recover::outcome::Resolution<T, E>
+pub fn mycelium_std_recover::outcome::Resolution<T, E>::is_propagated(&self) -> bool
+pub fn mycelium_std_recover::outcome::Resolution<T, E>::is_recovered(&self) -> bool
+pub fn mycelium_std_recover::outcome::Resolution<T, E>::policy_ref(&self) -> core::option::Option<&mycelium_std_recover::policy::PolicyRef>
+impl<T: core::clone::Clone, E: core::clone::Clone> core::clone::Clone for mycelium_std_recover::outcome::Resolution<T, E>
+pub fn mycelium_std_recover::outcome::Resolution<T, E>::clone(&self) -> mycelium_std_recover::outcome::Resolution<T, E>
+impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_recover::outcome::Resolution<T, E>
+pub fn mycelium_std_recover::outcome::Resolution<T, E>::eq(&self, &mycelium_std_recover::outcome::Resolution<T, E>) -> bool
+impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_recover::outcome::Resolution<T, E>
+impl<T: core::fmt::Debug, E: core::fmt::Debug> core::fmt::Debug for mycelium_std_recover::outcome::Resolution<T, E>
+pub fn mycelium_std_recover::outcome::Resolution<T, E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T, E> core::marker::Freeze for mycelium_std_recover::outcome::Resolution<T, E> where T: core::marker::Freeze, E: core::marker::Freeze
+impl<T, E> core::marker::Send for mycelium_std_recover::outcome::Resolution<T, E> where T: core::marker::Send, E: core::marker::Send
+impl<T, E> core::marker::Sync for mycelium_std_recover::outcome::Resolution<T, E> where T: core::marker::Sync, E: core::marker::Sync
+impl<T, E> core::marker::Unpin for mycelium_std_recover::outcome::Resolution<T, E> where T: core::marker::Unpin, E: core::marker::Unpin
+impl<T, E> core::marker::UnsafeUnpin for mycelium_std_recover::outcome::Resolution<T, E> where T: core::marker::UnsafeUnpin, E: core::marker::UnsafeUnpin
+impl<T, E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::outcome::Resolution<T, E> where T: core::panic::unwind_safe::RefUnwindSafe, E: core::panic::unwind_safe::RefUnwindSafe
+impl<T, E> core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::outcome::Resolution<T, E> where T: core::panic::unwind_safe::UnwindSafe, E: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_recover::ClassName(_)
+impl mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::as_str(&self) -> &str
+impl core::clone::Clone for mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::clone(&self) -> mycelium_std_recover::registry::ClassName
+impl core::cmp::Eq for mycelium_std_recover::registry::ClassName
+impl core::cmp::Ord for mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::cmp(&self, &mycelium_std_recover::registry::ClassName) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::eq(&self, &mycelium_std_recover::registry::ClassName) -> bool
+impl core::cmp::PartialOrd for mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::partial_cmp(&self, &mycelium_std_recover::registry::ClassName) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_recover::registry::ClassName
+pub fn mycelium_std_recover::registry::ClassName::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_std_recover::registry::ClassName
+impl core::marker::Freeze for mycelium_std_recover::registry::ClassName
+impl core::marker::Send for mycelium_std_recover::registry::ClassName
+impl core::marker::Sync for mycelium_std_recover::registry::ClassName
+impl core::marker::Unpin for mycelium_std_recover::registry::ClassName
+impl core::marker::UnsafeUnpin for mycelium_std_recover::registry::ClassName
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::registry::ClassName
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::registry::ClassName
+pub struct mycelium_std_recover::ClassRegistry
+impl mycelium_std_recover::registry::ClassRegistry
+pub fn mycelium_std_recover::registry::ClassRegistry::contains(&self, &str) -> bool
+pub fn mycelium_std_recover::registry::ClassRegistry::new() -> Self
+pub fn mycelium_std_recover::registry::ClassRegistry::register(&mut self, impl core::convert::Into<alloc::string::String>)
+pub fn mycelium_std_recover::registry::ClassRegistry::resolve(&self, &str) -> core::result::Result<mycelium_std_recover::registry::ClassName, mycelium_std_recover::registry::UnknownClass>
+pub fn mycelium_std_recover::registry::ClassRegistry::with(self, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_std_recover::registry::ClassRegistry
+pub fn mycelium_std_recover::registry::ClassRegistry::clone(&self) -> mycelium_std_recover::registry::ClassRegistry
+impl core::default::Default for mycelium_std_recover::registry::ClassRegistry
+pub fn mycelium_std_recover::registry::ClassRegistry::default() -> mycelium_std_recover::registry::ClassRegistry
+impl core::fmt::Debug for mycelium_std_recover::registry::ClassRegistry
+pub fn mycelium_std_recover::registry::ClassRegistry::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_recover::registry::ClassRegistry
+impl core::marker::Send for mycelium_std_recover::registry::ClassRegistry
+impl core::marker::Sync for mycelium_std_recover::registry::ClassRegistry
+impl core::marker::Unpin for mycelium_std_recover::registry::ClassRegistry
+impl core::marker::UnsafeUnpin for mycelium_std_recover::registry::ClassRegistry
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::registry::ClassRegistry
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::registry::ClassRegistry
+pub struct mycelium_std_recover::DiagError<E>
+pub mycelium_std_recover::DiagError::diag: mycelium_diag::Diag
+pub mycelium_std_recover::DiagError::error: E
+impl<E> mycelium_std_recover::outcome::DiagError<E>
+pub fn mycelium_std_recover::outcome::DiagError<E>::new(E, mycelium_diag::Diag) -> Self
+impl<E: core::clone::Clone> core::clone::Clone for mycelium_std_recover::outcome::DiagError<E>
+pub fn mycelium_std_recover::outcome::DiagError<E>::clone(&self) -> mycelium_std_recover::outcome::DiagError<E>
+impl<E: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_recover::outcome::DiagError<E>
+pub fn mycelium_std_recover::outcome::DiagError<E>::eq(&self, &mycelium_std_recover::outcome::DiagError<E>) -> bool
+impl<E: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_recover::outcome::DiagError<E>
+impl<E: core::fmt::Debug> core::fmt::Debug for mycelium_std_recover::outcome::DiagError<E>
+pub fn mycelium_std_recover::outcome::DiagError<E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<E> core::marker::Freeze for mycelium_std_recover::outcome::DiagError<E> where E: core::marker::Freeze
+impl<E> core::marker::Send for mycelium_std_recover::outcome::DiagError<E> where E: core::marker::Send
+impl<E> core::marker::Sync for mycelium_std_recover::outcome::DiagError<E> where E: core::marker::Sync
+impl<E> core::marker::Unpin for mycelium_std_recover::outcome::DiagError<E> where E: core::marker::Unpin
+impl<E> core::marker::UnsafeUnpin for mycelium_std_recover::outcome::DiagError<E> where E: core::marker::UnsafeUnpin
+impl<E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::outcome::DiagError<E> where E: core::panic::unwind_safe::RefUnwindSafe
+impl<E> core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::outcome::DiagError<E> where E: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_recover::RecoveryPolicy<T>
+impl<T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static> mycelium_std_recover::policy::RecoveryPolicy<T>
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::action_for(&self, &mycelium_std_recover::registry::ClassName) -> core::option::Option<&mycelium_std_recover::action::RecoveryAction<T>>
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::is_empty(&self) -> bool
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::new() -> Self
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::on(&mut self, &mycelium_std_recover::registry::ClassRegistry, &str, mycelium_std_recover::action::RecoveryAction<T>) -> core::result::Result<core::option::Option<mycelium_std_recover::action::RecoveryAction<T>>, mycelium_std_recover::registry::UnknownClass>
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::policy_ref(&self) -> mycelium_std_recover::policy::PolicyRef
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::rules(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&mycelium_std_recover::registry::ClassName, &mycelium_std_recover::action::RecoveryAction<T>)>
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_recover::policy::RecoveryPolicy<T>
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::clone(&self) -> mycelium_std_recover::policy::RecoveryPolicy<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_std_recover::policy::RecoveryPolicy<T>
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::default::Default for mycelium_std_recover::policy::RecoveryPolicy<T>
+pub fn mycelium_std_recover::policy::RecoveryPolicy<T>::default() -> Self
+impl<T> core::marker::Freeze for mycelium_std_recover::policy::RecoveryPolicy<T>
+impl<T> core::marker::Send for mycelium_std_recover::policy::RecoveryPolicy<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_std_recover::policy::RecoveryPolicy<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_std_recover::policy::RecoveryPolicy<T>
+impl<T> core::marker::UnsafeUnpin for mycelium_std_recover::policy::RecoveryPolicy<T>
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::policy::RecoveryPolicy<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::policy::RecoveryPolicy<T> where T: core::panic::unwind_safe::RefUnwindSafe
+pub struct mycelium_std_recover::UndeclaredEffect
+pub mycelium_std_recover::UndeclaredEffect::effect: mycelium_interp::budget::EffectKind
+impl core::clone::Clone for mycelium_std_recover::effect::UndeclaredEffect
+pub fn mycelium_std_recover::effect::UndeclaredEffect::clone(&self) -> mycelium_std_recover::effect::UndeclaredEffect
+impl core::cmp::Eq for mycelium_std_recover::effect::UndeclaredEffect
+impl core::cmp::PartialEq for mycelium_std_recover::effect::UndeclaredEffect
+pub fn mycelium_std_recover::effect::UndeclaredEffect::eq(&self, &mycelium_std_recover::effect::UndeclaredEffect) -> bool
+impl core::error::Error for mycelium_std_recover::effect::UndeclaredEffect
+impl core::fmt::Debug for mycelium_std_recover::effect::UndeclaredEffect
+pub fn mycelium_std_recover::effect::UndeclaredEffect::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_recover::effect::UndeclaredEffect
+pub fn mycelium_std_recover::effect::UndeclaredEffect::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_recover::effect::UndeclaredEffect
+impl core::marker::Freeze for mycelium_std_recover::effect::UndeclaredEffect
+impl core::marker::Send for mycelium_std_recover::effect::UndeclaredEffect
+impl core::marker::Sync for mycelium_std_recover::effect::UndeclaredEffect
+impl core::marker::Unpin for mycelium_std_recover::effect::UndeclaredEffect
+impl core::marker::UnsafeUnpin for mycelium_std_recover::effect::UndeclaredEffect
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::effect::UndeclaredEffect
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::effect::UndeclaredEffect
+pub struct mycelium_std_recover::UnknownClass
+pub mycelium_std_recover::UnknownClass::name: alloc::string::String
+impl core::clone::Clone for mycelium_std_recover::registry::UnknownClass
+pub fn mycelium_std_recover::registry::UnknownClass::clone(&self) -> mycelium_std_recover::registry::UnknownClass
+impl core::cmp::Eq for mycelium_std_recover::registry::UnknownClass
+impl core::cmp::PartialEq for mycelium_std_recover::registry::UnknownClass
+pub fn mycelium_std_recover::registry::UnknownClass::eq(&self, &mycelium_std_recover::registry::UnknownClass) -> bool
+impl core::error::Error for mycelium_std_recover::registry::UnknownClass
+impl core::fmt::Debug for mycelium_std_recover::registry::UnknownClass
+pub fn mycelium_std_recover::registry::UnknownClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_recover::registry::UnknownClass
+pub fn mycelium_std_recover::registry::UnknownClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_recover::registry::UnknownClass
+impl core::marker::Freeze for mycelium_std_recover::registry::UnknownClass
+impl core::marker::Send for mycelium_std_recover::registry::UnknownClass
+impl core::marker::Sync for mycelium_std_recover::registry::UnknownClass
+impl core::marker::Unpin for mycelium_std_recover::registry::UnknownClass
+impl core::marker::UnsafeUnpin for mycelium_std_recover::registry::UnknownClass
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_recover::registry::UnknownClass
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_recover::registry::UnknownClass
+pub fn mycelium_std_recover::check_effects(&mycelium_std_recover::effect::EffectSet, &mycelium_std_recover::effect::EffectSet) -> core::result::Result<(), mycelium_std_recover::effect::UndeclaredEffect>
+pub fn mycelium_std_recover::handle_classified<T, E>(mycelium_std_recover::outcome::Outcome<T, E>, &mycelium_std_recover::policy::RecoveryPolicy<T>, &mut mycelium_interp::budget::Budgets, impl core::ops::function::Fn(&E) -> mycelium_std_recover::registry::ClassName, impl core::ops::function::FnMut() -> (mycelium_std_recover::outcome::Outcome<T, E>, mycelium_core::guarantee::GuaranteeStrength)) -> mycelium_std_recover::outcome::Resolution<T, E> where T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub fn mycelium_std_recover::policy_effects<T>(&mycelium_std_recover::policy::RecoveryPolicy<T>) -> alloc::collections::btree::set::BTreeSet<mycelium_interp::budget::EffectKind> where T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub fn mycelium_std_recover::recover_classified<T, E>(core::result::Result<T, E>, &mycelium_std_recover::policy::RecoveryPolicy<T>, &mut mycelium_interp::budget::Budgets, impl core::ops::function::Fn(&E) -> mycelium_std_recover::registry::ClassName, impl core::ops::function::FnMut() -> (mycelium_std_recover::outcome::Outcome<T, E>, mycelium_core::guarantee::GuaranteeStrength)) -> mycelium_std_recover::outcome::Resolution<T, E> where T: core::fmt::Debug + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub type mycelium_std_recover::EffectSet = alloc::collections::btree::set::BTreeSet<mycelium_interp::budget::EffectKind>
+pub type mycelium_std_recover::PolicyRef = mycelium_core::id::ContentHash
+pub type mycelium_std_recover::RecoverOutcome<T, E> = mycelium_std_recover::outcome::Resolution<T, E>

@@ -1,0 +1,612 @@
+pub mod mycelium_interp
+pub mod mycelium_interp::budget
+pub enum mycelium_interp::budget::EffectBudget
+pub mycelium_interp::budget::EffectBudget::Attempts(u64)
+pub mycelium_interp::budget::EffectBudget::Bytes(u64)
+pub mycelium_interp::budget::EffectBudget::Depth(u64)
+pub mycelium_interp::budget::EffectBudget::Fuel(u64)
+impl mycelium_interp::budget::EffectBudget
+pub fn mycelium_interp::budget::EffectBudget::amount(&self) -> u64
+pub fn mycelium_interp::budget::EffectBudget::kind(&self) -> mycelium_interp::budget::EffectKind
+impl core::clone::Clone for mycelium_interp::budget::EffectBudget
+pub fn mycelium_interp::budget::EffectBudget::clone(&self) -> mycelium_interp::budget::EffectBudget
+impl core::cmp::Eq for mycelium_interp::budget::EffectBudget
+impl core::cmp::PartialEq for mycelium_interp::budget::EffectBudget
+pub fn mycelium_interp::budget::EffectBudget::eq(&self, &mycelium_interp::budget::EffectBudget) -> bool
+impl core::fmt::Debug for mycelium_interp::budget::EffectBudget
+pub fn mycelium_interp::budget::EffectBudget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_interp::budget::EffectBudget
+impl core::marker::StructuralPartialEq for mycelium_interp::budget::EffectBudget
+impl core::marker::Freeze for mycelium_interp::budget::EffectBudget
+impl core::marker::Send for mycelium_interp::budget::EffectBudget
+impl core::marker::Sync for mycelium_interp::budget::EffectBudget
+impl core::marker::Unpin for mycelium_interp::budget::EffectBudget
+impl core::marker::UnsafeUnpin for mycelium_interp::budget::EffectBudget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::budget::EffectBudget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::budget::EffectBudget
+pub enum mycelium_interp::budget::EffectKind
+pub mycelium_interp::budget::EffectKind::Alloc
+pub mycelium_interp::budget::EffectKind::Cascade
+pub mycelium_interp::budget::EffectKind::Io
+pub mycelium_interp::budget::EffectKind::Named(alloc::string::String)
+pub mycelium_interp::budget::EffectKind::Retry
+pub mycelium_interp::budget::EffectKind::Time
+impl core::clone::Clone for mycelium_interp::budget::EffectKind
+pub fn mycelium_interp::budget::EffectKind::clone(&self) -> mycelium_interp::budget::EffectKind
+impl core::cmp::Eq for mycelium_interp::budget::EffectKind
+impl core::cmp::Ord for mycelium_interp::budget::EffectKind
+pub fn mycelium_interp::budget::EffectKind::cmp(&self, &mycelium_interp::budget::EffectKind) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_interp::budget::EffectKind
+pub fn mycelium_interp::budget::EffectKind::eq(&self, &mycelium_interp::budget::EffectKind) -> bool
+impl core::cmp::PartialOrd for mycelium_interp::budget::EffectKind
+pub fn mycelium_interp::budget::EffectKind::partial_cmp(&self, &mycelium_interp::budget::EffectKind) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_interp::budget::EffectKind
+pub fn mycelium_interp::budget::EffectKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_interp::budget::EffectKind
+pub fn mycelium_interp::budget::EffectKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_interp::budget::EffectKind
+pub fn mycelium_interp::budget::EffectKind::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_interp::budget::EffectKind
+impl core::marker::Freeze for mycelium_interp::budget::EffectKind
+impl core::marker::Send for mycelium_interp::budget::EffectKind
+impl core::marker::Sync for mycelium_interp::budget::EffectKind
+impl core::marker::Unpin for mycelium_interp::budget::EffectKind
+impl core::marker::UnsafeUnpin for mycelium_interp::budget::EffectKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::budget::EffectKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::budget::EffectKind
+pub struct mycelium_interp::budget::Budgets
+impl mycelium_interp::budget::Budgets
+pub fn mycelium_interp::budget::Budgets::consume(&mut self, mycelium_interp::budget::EffectKind, u64) -> core::result::Result<(), mycelium_interp::budget::EffectBudgetExhausted>
+pub fn mycelium_interp::budget::Budgets::new() -> Self
+pub fn mycelium_interp::budget::Budgets::remaining(&self, &mycelium_interp::budget::EffectKind) -> core::option::Option<u64>
+pub fn mycelium_interp::budget::Budgets::set(&mut self, mycelium_interp::budget::EffectBudget)
+pub fn mycelium_interp::budget::Budgets::with(self, mycelium_interp::budget::EffectBudget) -> Self
+impl core::clone::Clone for mycelium_interp::budget::Budgets
+pub fn mycelium_interp::budget::Budgets::clone(&self) -> mycelium_interp::budget::Budgets
+impl core::cmp::Eq for mycelium_interp::budget::Budgets
+impl core::cmp::PartialEq for mycelium_interp::budget::Budgets
+pub fn mycelium_interp::budget::Budgets::eq(&self, &mycelium_interp::budget::Budgets) -> bool
+impl core::default::Default for mycelium_interp::budget::Budgets
+pub fn mycelium_interp::budget::Budgets::default() -> mycelium_interp::budget::Budgets
+impl core::fmt::Debug for mycelium_interp::budget::Budgets
+pub fn mycelium_interp::budget::Budgets::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_interp::budget::Budgets
+impl core::marker::Freeze for mycelium_interp::budget::Budgets
+impl core::marker::Send for mycelium_interp::budget::Budgets
+impl core::marker::Sync for mycelium_interp::budget::Budgets
+impl core::marker::Unpin for mycelium_interp::budget::Budgets
+impl core::marker::UnsafeUnpin for mycelium_interp::budget::Budgets
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::budget::Budgets
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::budget::Budgets
+pub struct mycelium_interp::budget::EffectBudgetExhausted
+pub mycelium_interp::budget::EffectBudgetExhausted::kind: mycelium_interp::budget::EffectKind
+pub mycelium_interp::budget::EffectBudgetExhausted::remaining: u64
+pub mycelium_interp::budget::EffectBudgetExhausted::requested: u64
+impl core::clone::Clone for mycelium_interp::budget::EffectBudgetExhausted
+pub fn mycelium_interp::budget::EffectBudgetExhausted::clone(&self) -> mycelium_interp::budget::EffectBudgetExhausted
+impl core::cmp::Eq for mycelium_interp::budget::EffectBudgetExhausted
+impl core::cmp::PartialEq for mycelium_interp::budget::EffectBudgetExhausted
+pub fn mycelium_interp::budget::EffectBudgetExhausted::eq(&self, &mycelium_interp::budget::EffectBudgetExhausted) -> bool
+impl core::convert::From<mycelium_interp::budget::EffectBudgetExhausted> for mycelium_interp::EvalError
+pub fn mycelium_interp::EvalError::from(mycelium_interp::budget::EffectBudgetExhausted) -> Self
+impl core::error::Error for mycelium_interp::budget::EffectBudgetExhausted
+impl core::fmt::Debug for mycelium_interp::budget::EffectBudgetExhausted
+pub fn mycelium_interp::budget::EffectBudgetExhausted::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_interp::budget::EffectBudgetExhausted
+pub fn mycelium_interp::budget::EffectBudgetExhausted::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_interp::budget::EffectBudgetExhausted
+impl core::marker::Freeze for mycelium_interp::budget::EffectBudgetExhausted
+impl core::marker::Send for mycelium_interp::budget::EffectBudgetExhausted
+impl core::marker::Sync for mycelium_interp::budget::EffectBudgetExhausted
+impl core::marker::Unpin for mycelium_interp::budget::EffectBudgetExhausted
+impl core::marker::UnsafeUnpin for mycelium_interp::budget::EffectBudgetExhausted
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::budget::EffectBudgetExhausted
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::budget::EffectBudgetExhausted
+pub mod mycelium_interp::prims
+pub struct mycelium_interp::prims::PrimRegistry
+impl mycelium_interp::prims::PrimRegistry
+pub fn mycelium_interp::prims::PrimRegistry::empty() -> Self
+pub fn mycelium_interp::prims::PrimRegistry::get(&self, &str) -> core::option::Option<mycelium_interp::prims::PrimFn>
+pub fn mycelium_interp::prims::PrimRegistry::names(&self) -> alloc::vec::Vec<&str>
+pub fn mycelium_interp::prims::PrimRegistry::register(&mut self, &str, mycelium_interp::prims::PrimFn)
+pub fn mycelium_interp::prims::PrimRegistry::with_builtins() -> Self
+impl core::clone::Clone for mycelium_interp::prims::PrimRegistry
+pub fn mycelium_interp::prims::PrimRegistry::clone(&self) -> mycelium_interp::prims::PrimRegistry
+impl core::default::Default for mycelium_interp::prims::PrimRegistry
+pub fn mycelium_interp::prims::PrimRegistry::default() -> mycelium_interp::prims::PrimRegistry
+impl core::marker::Freeze for mycelium_interp::prims::PrimRegistry
+impl core::marker::Send for mycelium_interp::prims::PrimRegistry
+impl core::marker::Sync for mycelium_interp::prims::PrimRegistry
+impl core::marker::Unpin for mycelium_interp::prims::PrimRegistry
+impl core::marker::UnsafeUnpin for mycelium_interp::prims::PrimRegistry
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::prims::PrimRegistry
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::prims::PrimRegistry
+pub type mycelium_interp::prims::PrimFn = fn(&str, &[&mycelium_core::value::Value]) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+pub mod mycelium_interp::supervise
+pub enum mycelium_interp::supervise::Escalation
+pub mycelium_interp::supervise::Escalation::CascadeBudgetExhausted(mycelium_interp::budget::EffectBudgetExhausted)
+pub mycelium_interp::supervise::Escalation::IntensityExceeded
+pub mycelium_interp::supervise::Escalation::IntensityExceeded::max_restarts: u32
+pub mycelium_interp::supervise::Escalation::IntensityExceeded::restarts_in_window: u32
+pub mycelium_interp::supervise::Escalation::IntensityExceeded::window_ticks: u64
+impl core::clone::Clone for mycelium_interp::supervise::Escalation
+pub fn mycelium_interp::supervise::Escalation::clone(&self) -> mycelium_interp::supervise::Escalation
+impl core::cmp::Eq for mycelium_interp::supervise::Escalation
+impl core::cmp::PartialEq for mycelium_interp::supervise::Escalation
+pub fn mycelium_interp::supervise::Escalation::eq(&self, &mycelium_interp::supervise::Escalation) -> bool
+impl core::error::Error for mycelium_interp::supervise::Escalation
+impl core::fmt::Debug for mycelium_interp::supervise::Escalation
+pub fn mycelium_interp::supervise::Escalation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_interp::supervise::Escalation
+pub fn mycelium_interp::supervise::Escalation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_interp::supervise::Escalation
+impl core::marker::Freeze for mycelium_interp::supervise::Escalation
+impl core::marker::Send for mycelium_interp::supervise::Escalation
+impl core::marker::Sync for mycelium_interp::supervise::Escalation
+impl core::marker::Unpin for mycelium_interp::supervise::Escalation
+impl core::marker::UnsafeUnpin for mycelium_interp::supervise::Escalation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::supervise::Escalation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::supervise::Escalation
+pub enum mycelium_interp::supervise::TaskOutcome<T, E>
+pub mycelium_interp::supervise::TaskOutcome::BudgetExhausted(mycelium_interp::budget::EffectBudgetExhausted)
+pub mycelium_interp::supervise::TaskOutcome::Cancelled
+pub mycelium_interp::supervise::TaskOutcome::Done(T)
+pub mycelium_interp::supervise::TaskOutcome::Failed(E)
+impl<T, E> mycelium_interp::supervise::TaskOutcome<T, E>
+pub fn mycelium_interp::supervise::TaskOutcome<T, E>::is_failure(&self) -> bool
+impl<T: core::clone::Clone, E: core::clone::Clone> core::clone::Clone for mycelium_interp::supervise::TaskOutcome<T, E>
+pub fn mycelium_interp::supervise::TaskOutcome<T, E>::clone(&self) -> mycelium_interp::supervise::TaskOutcome<T, E>
+impl<T: core::cmp::Eq, E: core::cmp::Eq> core::cmp::Eq for mycelium_interp::supervise::TaskOutcome<T, E>
+impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_interp::supervise::TaskOutcome<T, E>
+pub fn mycelium_interp::supervise::TaskOutcome<T, E>::eq(&self, &mycelium_interp::supervise::TaskOutcome<T, E>) -> bool
+impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_interp::supervise::TaskOutcome<T, E>
+impl<T: core::fmt::Debug, E: core::fmt::Debug> core::fmt::Debug for mycelium_interp::supervise::TaskOutcome<T, E>
+pub fn mycelium_interp::supervise::TaskOutcome<T, E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T, E> core::marker::Freeze for mycelium_interp::supervise::TaskOutcome<T, E> where T: core::marker::Freeze, E: core::marker::Freeze
+impl<T, E> core::marker::Send for mycelium_interp::supervise::TaskOutcome<T, E> where T: core::marker::Send, E: core::marker::Send
+impl<T, E> core::marker::Sync for mycelium_interp::supervise::TaskOutcome<T, E> where T: core::marker::Sync, E: core::marker::Sync
+impl<T, E> core::marker::Unpin for mycelium_interp::supervise::TaskOutcome<T, E> where T: core::marker::Unpin, E: core::marker::Unpin
+impl<T, E> core::marker::UnsafeUnpin for mycelium_interp::supervise::TaskOutcome<T, E> where T: core::marker::UnsafeUnpin, E: core::marker::UnsafeUnpin
+impl<T, E> core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::supervise::TaskOutcome<T, E> where T: core::panic::unwind_safe::RefUnwindSafe, E: core::panic::unwind_safe::RefUnwindSafe
+impl<T, E> core::panic::unwind_safe::UnwindSafe for mycelium_interp::supervise::TaskOutcome<T, E> where T: core::panic::unwind_safe::UnwindSafe, E: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_interp::supervise::CancelToken
+impl mycelium_interp::supervise::CancelToken
+pub fn mycelium_interp::supervise::CancelToken::cancel(&self)
+pub fn mycelium_interp::supervise::CancelToken::check(&self) -> core::result::Result<(), mycelium_interp::supervise::Cancelled>
+pub fn mycelium_interp::supervise::CancelToken::is_cancelled(&self) -> bool
+pub fn mycelium_interp::supervise::CancelToken::new() -> Self
+impl core::clone::Clone for mycelium_interp::supervise::CancelToken
+pub fn mycelium_interp::supervise::CancelToken::clone(&self) -> mycelium_interp::supervise::CancelToken
+impl core::default::Default for mycelium_interp::supervise::CancelToken
+pub fn mycelium_interp::supervise::CancelToken::default() -> mycelium_interp::supervise::CancelToken
+impl core::fmt::Debug for mycelium_interp::supervise::CancelToken
+pub fn mycelium_interp::supervise::CancelToken::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_interp::supervise::CancelToken
+impl core::marker::Send for mycelium_interp::supervise::CancelToken
+impl core::marker::Sync for mycelium_interp::supervise::CancelToken
+impl core::marker::Unpin for mycelium_interp::supervise::CancelToken
+impl core::marker::UnsafeUnpin for mycelium_interp::supervise::CancelToken
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::supervise::CancelToken
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::supervise::CancelToken
+pub struct mycelium_interp::supervise::Cancelled
+impl core::clone::Clone for mycelium_interp::supervise::Cancelled
+pub fn mycelium_interp::supervise::Cancelled::clone(&self) -> mycelium_interp::supervise::Cancelled
+impl core::cmp::Eq for mycelium_interp::supervise::Cancelled
+impl core::cmp::PartialEq for mycelium_interp::supervise::Cancelled
+pub fn mycelium_interp::supervise::Cancelled::eq(&self, &mycelium_interp::supervise::Cancelled) -> bool
+impl core::error::Error for mycelium_interp::supervise::Cancelled
+impl core::fmt::Debug for mycelium_interp::supervise::Cancelled
+pub fn mycelium_interp::supervise::Cancelled::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_interp::supervise::Cancelled
+pub fn mycelium_interp::supervise::Cancelled::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_interp::supervise::Cancelled
+impl core::marker::StructuralPartialEq for mycelium_interp::supervise::Cancelled
+impl core::marker::Freeze for mycelium_interp::supervise::Cancelled
+impl core::marker::Send for mycelium_interp::supervise::Cancelled
+impl core::marker::Sync for mycelium_interp::supervise::Cancelled
+impl core::marker::Unpin for mycelium_interp::supervise::Cancelled
+impl core::marker::UnsafeUnpin for mycelium_interp::supervise::Cancelled
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::supervise::Cancelled
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::supervise::Cancelled
+pub struct mycelium_interp::supervise::RestartIntensity
+pub mycelium_interp::supervise::RestartIntensity::max_restarts: u32
+pub mycelium_interp::supervise::RestartIntensity::window_ticks: u64
+impl core::clone::Clone for mycelium_interp::supervise::RestartIntensity
+pub fn mycelium_interp::supervise::RestartIntensity::clone(&self) -> mycelium_interp::supervise::RestartIntensity
+impl core::cmp::Eq for mycelium_interp::supervise::RestartIntensity
+impl core::cmp::PartialEq for mycelium_interp::supervise::RestartIntensity
+pub fn mycelium_interp::supervise::RestartIntensity::eq(&self, &mycelium_interp::supervise::RestartIntensity) -> bool
+impl core::fmt::Debug for mycelium_interp::supervise::RestartIntensity
+pub fn mycelium_interp::supervise::RestartIntensity::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_interp::supervise::RestartIntensity
+impl core::marker::StructuralPartialEq for mycelium_interp::supervise::RestartIntensity
+impl core::marker::Freeze for mycelium_interp::supervise::RestartIntensity
+impl core::marker::Send for mycelium_interp::supervise::RestartIntensity
+impl core::marker::Sync for mycelium_interp::supervise::RestartIntensity
+impl core::marker::Unpin for mycelium_interp::supervise::RestartIntensity
+impl core::marker::UnsafeUnpin for mycelium_interp::supervise::RestartIntensity
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::supervise::RestartIntensity
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::supervise::RestartIntensity
+pub struct mycelium_interp::supervise::Supervisor
+impl mycelium_interp::supervise::Supervisor
+pub fn mycelium_interp::supervise::Supervisor::new(mycelium_interp::supervise::RestartIntensity, u64) -> Self
+pub fn mycelium_interp::supervise::Supervisor::now(&self) -> u64
+pub fn mycelium_interp::supervise::Supervisor::record_restart(&mut self) -> core::result::Result<(), mycelium_interp::supervise::Escalation>
+pub fn mycelium_interp::supervise::Supervisor::restarts_remaining(&self) -> u64
+pub fn mycelium_interp::supervise::Supervisor::tick(&mut self) -> u64
+impl core::clone::Clone for mycelium_interp::supervise::Supervisor
+pub fn mycelium_interp::supervise::Supervisor::clone(&self) -> mycelium_interp::supervise::Supervisor
+impl core::fmt::Debug for mycelium_interp::supervise::Supervisor
+pub fn mycelium_interp::supervise::Supervisor::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_interp::supervise::Supervisor
+impl core::marker::Send for mycelium_interp::supervise::Supervisor
+impl core::marker::Sync for mycelium_interp::supervise::Supervisor
+impl core::marker::Unpin for mycelium_interp::supervise::Supervisor
+impl core::marker::UnsafeUnpin for mycelium_interp::supervise::Supervisor
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::supervise::Supervisor
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::supervise::Supervisor
+pub mod mycelium_interp::swap
+pub struct mycelium_interp::swap::IdentitySwapEngine
+impl core::clone::Clone for mycelium_interp::swap::IdentitySwapEngine
+pub fn mycelium_interp::swap::IdentitySwapEngine::clone(&self) -> mycelium_interp::swap::IdentitySwapEngine
+impl core::default::Default for mycelium_interp::swap::IdentitySwapEngine
+pub fn mycelium_interp::swap::IdentitySwapEngine::default() -> mycelium_interp::swap::IdentitySwapEngine
+impl core::fmt::Debug for mycelium_interp::swap::IdentitySwapEngine
+pub fn mycelium_interp::swap::IdentitySwapEngine::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_interp::swap::IdentitySwapEngine
+impl mycelium_interp::swap::SwapEngine for mycelium_interp::swap::IdentitySwapEngine
+pub fn mycelium_interp::swap::IdentitySwapEngine::swap(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+impl core::marker::Freeze for mycelium_interp::swap::IdentitySwapEngine
+impl core::marker::Send for mycelium_interp::swap::IdentitySwapEngine
+impl core::marker::Sync for mycelium_interp::swap::IdentitySwapEngine
+impl core::marker::Unpin for mycelium_interp::swap::IdentitySwapEngine
+impl core::marker::UnsafeUnpin for mycelium_interp::swap::IdentitySwapEngine
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::swap::IdentitySwapEngine
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::swap::IdentitySwapEngine
+pub trait mycelium_interp::swap::SwapEngine
+pub fn mycelium_interp::swap::SwapEngine::swap(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+impl mycelium_interp::swap::SwapEngine for mycelium_interp::swap::IdentitySwapEngine
+pub fn mycelium_interp::swap::IdentitySwapEngine::swap(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+pub enum mycelium_interp::EffectBudget
+pub mycelium_interp::EffectBudget::Attempts(u64)
+pub mycelium_interp::EffectBudget::Bytes(u64)
+pub mycelium_interp::EffectBudget::Depth(u64)
+pub mycelium_interp::EffectBudget::Fuel(u64)
+impl mycelium_interp::budget::EffectBudget
+pub fn mycelium_interp::budget::EffectBudget::amount(&self) -> u64
+pub fn mycelium_interp::budget::EffectBudget::kind(&self) -> mycelium_interp::budget::EffectKind
+impl core::clone::Clone for mycelium_interp::budget::EffectBudget
+pub fn mycelium_interp::budget::EffectBudget::clone(&self) -> mycelium_interp::budget::EffectBudget
+impl core::cmp::Eq for mycelium_interp::budget::EffectBudget
+impl core::cmp::PartialEq for mycelium_interp::budget::EffectBudget
+pub fn mycelium_interp::budget::EffectBudget::eq(&self, &mycelium_interp::budget::EffectBudget) -> bool
+impl core::fmt::Debug for mycelium_interp::budget::EffectBudget
+pub fn mycelium_interp::budget::EffectBudget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_interp::budget::EffectBudget
+impl core::marker::StructuralPartialEq for mycelium_interp::budget::EffectBudget
+impl core::marker::Freeze for mycelium_interp::budget::EffectBudget
+impl core::marker::Send for mycelium_interp::budget::EffectBudget
+impl core::marker::Sync for mycelium_interp::budget::EffectBudget
+impl core::marker::Unpin for mycelium_interp::budget::EffectBudget
+impl core::marker::UnsafeUnpin for mycelium_interp::budget::EffectBudget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::budget::EffectBudget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::budget::EffectBudget
+pub enum mycelium_interp::EffectKind
+pub mycelium_interp::EffectKind::Alloc
+pub mycelium_interp::EffectKind::Cascade
+pub mycelium_interp::EffectKind::Io
+pub mycelium_interp::EffectKind::Named(alloc::string::String)
+pub mycelium_interp::EffectKind::Retry
+pub mycelium_interp::EffectKind::Time
+impl core::clone::Clone for mycelium_interp::budget::EffectKind
+pub fn mycelium_interp::budget::EffectKind::clone(&self) -> mycelium_interp::budget::EffectKind
+impl core::cmp::Eq for mycelium_interp::budget::EffectKind
+impl core::cmp::Ord for mycelium_interp::budget::EffectKind
+pub fn mycelium_interp::budget::EffectKind::cmp(&self, &mycelium_interp::budget::EffectKind) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_interp::budget::EffectKind
+pub fn mycelium_interp::budget::EffectKind::eq(&self, &mycelium_interp::budget::EffectKind) -> bool
+impl core::cmp::PartialOrd for mycelium_interp::budget::EffectKind
+pub fn mycelium_interp::budget::EffectKind::partial_cmp(&self, &mycelium_interp::budget::EffectKind) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_interp::budget::EffectKind
+pub fn mycelium_interp::budget::EffectKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_interp::budget::EffectKind
+pub fn mycelium_interp::budget::EffectKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_interp::budget::EffectKind
+pub fn mycelium_interp::budget::EffectKind::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_interp::budget::EffectKind
+impl core::marker::Freeze for mycelium_interp::budget::EffectKind
+impl core::marker::Send for mycelium_interp::budget::EffectKind
+impl core::marker::Sync for mycelium_interp::budget::EffectKind
+impl core::marker::Unpin for mycelium_interp::budget::EffectKind
+impl core::marker::UnsafeUnpin for mycelium_interp::budget::EffectKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::budget::EffectKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::budget::EffectKind
+pub enum mycelium_interp::Escalation
+pub mycelium_interp::Escalation::CascadeBudgetExhausted(mycelium_interp::budget::EffectBudgetExhausted)
+pub mycelium_interp::Escalation::IntensityExceeded
+pub mycelium_interp::Escalation::IntensityExceeded::max_restarts: u32
+pub mycelium_interp::Escalation::IntensityExceeded::restarts_in_window: u32
+pub mycelium_interp::Escalation::IntensityExceeded::window_ticks: u64
+impl core::clone::Clone for mycelium_interp::supervise::Escalation
+pub fn mycelium_interp::supervise::Escalation::clone(&self) -> mycelium_interp::supervise::Escalation
+impl core::cmp::Eq for mycelium_interp::supervise::Escalation
+impl core::cmp::PartialEq for mycelium_interp::supervise::Escalation
+pub fn mycelium_interp::supervise::Escalation::eq(&self, &mycelium_interp::supervise::Escalation) -> bool
+impl core::error::Error for mycelium_interp::supervise::Escalation
+impl core::fmt::Debug for mycelium_interp::supervise::Escalation
+pub fn mycelium_interp::supervise::Escalation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_interp::supervise::Escalation
+pub fn mycelium_interp::supervise::Escalation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_interp::supervise::Escalation
+impl core::marker::Freeze for mycelium_interp::supervise::Escalation
+impl core::marker::Send for mycelium_interp::supervise::Escalation
+impl core::marker::Sync for mycelium_interp::supervise::Escalation
+impl core::marker::Unpin for mycelium_interp::supervise::Escalation
+impl core::marker::UnsafeUnpin for mycelium_interp::supervise::Escalation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::supervise::Escalation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::supervise::Escalation
+pub enum mycelium_interp::EvalError
+pub mycelium_interp::EvalError::ApplyNonFunction
+pub mycelium_interp::EvalError::ApproxCompositionUnsupported
+pub mycelium_interp::EvalError::ApproxCompositionUnsupported::prim: alloc::string::String
+pub mycelium_interp::EvalError::DataMalformed
+pub mycelium_interp::EvalError::DataMalformed::why: alloc::string::String
+pub mycelium_interp::EvalError::DataResult
+pub mycelium_interp::EvalError::DepthLimit
+pub mycelium_interp::EvalError::DepthLimit::limit: usize
+pub mycelium_interp::EvalError::EffectBudget(mycelium_interp::budget::EffectBudgetExhausted)
+pub mycelium_interp::EvalError::FreeVariable(alloc::string::String)
+pub mycelium_interp::EvalError::FuelExhausted
+pub mycelium_interp::EvalError::FunctionResult
+pub mycelium_interp::EvalError::GuaranteeMeetUnsupported
+pub mycelium_interp::EvalError::GuaranteeMeetUnsupported::scrutinee: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_interp::EvalError::NonExhaustiveMatch
+pub mycelium_interp::EvalError::Overflow
+pub mycelium_interp::EvalError::Overflow::prim: alloc::string::String
+pub mycelium_interp::EvalError::PrimType
+pub mycelium_interp::EvalError::PrimType::prim: alloc::string::String
+pub mycelium_interp::EvalError::PrimType::why: alloc::string::String
+pub mycelium_interp::EvalError::Swap(alloc::string::String)
+pub mycelium_interp::EvalError::UnknownPrim(alloc::string::String)
+pub mycelium_interp::EvalError::UnsupportedSwap
+pub mycelium_interp::EvalError::UnsupportedSwap::from: mycelium_core::repr::Repr
+pub mycelium_interp::EvalError::UnsupportedSwap::to: mycelium_core::repr::Repr
+pub mycelium_interp::EvalError::Wf(mycelium_core::WfError)
+impl core::clone::Clone for mycelium_interp::EvalError
+pub fn mycelium_interp::EvalError::clone(&self) -> mycelium_interp::EvalError
+impl core::cmp::PartialEq for mycelium_interp::EvalError
+pub fn mycelium_interp::EvalError::eq(&self, &mycelium_interp::EvalError) -> bool
+impl core::convert::From<mycelium_interp::budget::EffectBudgetExhausted> for mycelium_interp::EvalError
+pub fn mycelium_interp::EvalError::from(mycelium_interp::budget::EffectBudgetExhausted) -> Self
+impl core::error::Error for mycelium_interp::EvalError
+impl core::fmt::Debug for mycelium_interp::EvalError
+pub fn mycelium_interp::EvalError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_interp::EvalError
+pub fn mycelium_interp::EvalError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_interp::EvalError
+impl core::marker::Freeze for mycelium_interp::EvalError
+impl core::marker::Send for mycelium_interp::EvalError
+impl core::marker::Sync for mycelium_interp::EvalError
+impl core::marker::Unpin for mycelium_interp::EvalError
+impl core::marker::UnsafeUnpin for mycelium_interp::EvalError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::EvalError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::EvalError
+pub enum mycelium_interp::Step
+pub mycelium_interp::Step::Next(alloc::boxed::Box<mycelium_core::node::Node>)
+pub mycelium_interp::Step::Value
+impl core::clone::Clone for mycelium_interp::Step
+pub fn mycelium_interp::Step::clone(&self) -> mycelium_interp::Step
+impl core::cmp::PartialEq for mycelium_interp::Step
+pub fn mycelium_interp::Step::eq(&self, &mycelium_interp::Step) -> bool
+impl core::fmt::Debug for mycelium_interp::Step
+pub fn mycelium_interp::Step::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_interp::Step
+impl core::marker::Freeze for mycelium_interp::Step
+impl core::marker::Send for mycelium_interp::Step
+impl core::marker::Sync for mycelium_interp::Step
+impl core::marker::Unpin for mycelium_interp::Step
+impl core::marker::UnsafeUnpin for mycelium_interp::Step
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::Step
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::Step
+pub enum mycelium_interp::TaskOutcome<T, E>
+pub mycelium_interp::TaskOutcome::BudgetExhausted(mycelium_interp::budget::EffectBudgetExhausted)
+pub mycelium_interp::TaskOutcome::Cancelled
+pub mycelium_interp::TaskOutcome::Done(T)
+pub mycelium_interp::TaskOutcome::Failed(E)
+impl<T, E> mycelium_interp::supervise::TaskOutcome<T, E>
+pub fn mycelium_interp::supervise::TaskOutcome<T, E>::is_failure(&self) -> bool
+impl<T: core::clone::Clone, E: core::clone::Clone> core::clone::Clone for mycelium_interp::supervise::TaskOutcome<T, E>
+pub fn mycelium_interp::supervise::TaskOutcome<T, E>::clone(&self) -> mycelium_interp::supervise::TaskOutcome<T, E>
+impl<T: core::cmp::Eq, E: core::cmp::Eq> core::cmp::Eq for mycelium_interp::supervise::TaskOutcome<T, E>
+impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_interp::supervise::TaskOutcome<T, E>
+pub fn mycelium_interp::supervise::TaskOutcome<T, E>::eq(&self, &mycelium_interp::supervise::TaskOutcome<T, E>) -> bool
+impl<T: core::cmp::PartialEq, E: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_interp::supervise::TaskOutcome<T, E>
+impl<T: core::fmt::Debug, E: core::fmt::Debug> core::fmt::Debug for mycelium_interp::supervise::TaskOutcome<T, E>
+pub fn mycelium_interp::supervise::TaskOutcome<T, E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T, E> core::marker::Freeze for mycelium_interp::supervise::TaskOutcome<T, E> where T: core::marker::Freeze, E: core::marker::Freeze
+impl<T, E> core::marker::Send for mycelium_interp::supervise::TaskOutcome<T, E> where T: core::marker::Send, E: core::marker::Send
+impl<T, E> core::marker::Sync for mycelium_interp::supervise::TaskOutcome<T, E> where T: core::marker::Sync, E: core::marker::Sync
+impl<T, E> core::marker::Unpin for mycelium_interp::supervise::TaskOutcome<T, E> where T: core::marker::Unpin, E: core::marker::Unpin
+impl<T, E> core::marker::UnsafeUnpin for mycelium_interp::supervise::TaskOutcome<T, E> where T: core::marker::UnsafeUnpin, E: core::marker::UnsafeUnpin
+impl<T, E> core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::supervise::TaskOutcome<T, E> where T: core::panic::unwind_safe::RefUnwindSafe, E: core::panic::unwind_safe::RefUnwindSafe
+impl<T, E> core::panic::unwind_safe::UnwindSafe for mycelium_interp::supervise::TaskOutcome<T, E> where T: core::panic::unwind_safe::UnwindSafe, E: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_interp::Budgets
+impl mycelium_interp::budget::Budgets
+pub fn mycelium_interp::budget::Budgets::consume(&mut self, mycelium_interp::budget::EffectKind, u64) -> core::result::Result<(), mycelium_interp::budget::EffectBudgetExhausted>
+pub fn mycelium_interp::budget::Budgets::new() -> Self
+pub fn mycelium_interp::budget::Budgets::remaining(&self, &mycelium_interp::budget::EffectKind) -> core::option::Option<u64>
+pub fn mycelium_interp::budget::Budgets::set(&mut self, mycelium_interp::budget::EffectBudget)
+pub fn mycelium_interp::budget::Budgets::with(self, mycelium_interp::budget::EffectBudget) -> Self
+impl core::clone::Clone for mycelium_interp::budget::Budgets
+pub fn mycelium_interp::budget::Budgets::clone(&self) -> mycelium_interp::budget::Budgets
+impl core::cmp::Eq for mycelium_interp::budget::Budgets
+impl core::cmp::PartialEq for mycelium_interp::budget::Budgets
+pub fn mycelium_interp::budget::Budgets::eq(&self, &mycelium_interp::budget::Budgets) -> bool
+impl core::default::Default for mycelium_interp::budget::Budgets
+pub fn mycelium_interp::budget::Budgets::default() -> mycelium_interp::budget::Budgets
+impl core::fmt::Debug for mycelium_interp::budget::Budgets
+pub fn mycelium_interp::budget::Budgets::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_interp::budget::Budgets
+impl core::marker::Freeze for mycelium_interp::budget::Budgets
+impl core::marker::Send for mycelium_interp::budget::Budgets
+impl core::marker::Sync for mycelium_interp::budget::Budgets
+impl core::marker::Unpin for mycelium_interp::budget::Budgets
+impl core::marker::UnsafeUnpin for mycelium_interp::budget::Budgets
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::budget::Budgets
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::budget::Budgets
+pub struct mycelium_interp::CancelToken
+impl mycelium_interp::supervise::CancelToken
+pub fn mycelium_interp::supervise::CancelToken::cancel(&self)
+pub fn mycelium_interp::supervise::CancelToken::check(&self) -> core::result::Result<(), mycelium_interp::supervise::Cancelled>
+pub fn mycelium_interp::supervise::CancelToken::is_cancelled(&self) -> bool
+pub fn mycelium_interp::supervise::CancelToken::new() -> Self
+impl core::clone::Clone for mycelium_interp::supervise::CancelToken
+pub fn mycelium_interp::supervise::CancelToken::clone(&self) -> mycelium_interp::supervise::CancelToken
+impl core::default::Default for mycelium_interp::supervise::CancelToken
+pub fn mycelium_interp::supervise::CancelToken::default() -> mycelium_interp::supervise::CancelToken
+impl core::fmt::Debug for mycelium_interp::supervise::CancelToken
+pub fn mycelium_interp::supervise::CancelToken::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_interp::supervise::CancelToken
+impl core::marker::Send for mycelium_interp::supervise::CancelToken
+impl core::marker::Sync for mycelium_interp::supervise::CancelToken
+impl core::marker::Unpin for mycelium_interp::supervise::CancelToken
+impl core::marker::UnsafeUnpin for mycelium_interp::supervise::CancelToken
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::supervise::CancelToken
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::supervise::CancelToken
+pub struct mycelium_interp::Cancelled
+impl core::clone::Clone for mycelium_interp::supervise::Cancelled
+pub fn mycelium_interp::supervise::Cancelled::clone(&self) -> mycelium_interp::supervise::Cancelled
+impl core::cmp::Eq for mycelium_interp::supervise::Cancelled
+impl core::cmp::PartialEq for mycelium_interp::supervise::Cancelled
+pub fn mycelium_interp::supervise::Cancelled::eq(&self, &mycelium_interp::supervise::Cancelled) -> bool
+impl core::error::Error for mycelium_interp::supervise::Cancelled
+impl core::fmt::Debug for mycelium_interp::supervise::Cancelled
+pub fn mycelium_interp::supervise::Cancelled::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_interp::supervise::Cancelled
+pub fn mycelium_interp::supervise::Cancelled::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_interp::supervise::Cancelled
+impl core::marker::StructuralPartialEq for mycelium_interp::supervise::Cancelled
+impl core::marker::Freeze for mycelium_interp::supervise::Cancelled
+impl core::marker::Send for mycelium_interp::supervise::Cancelled
+impl core::marker::Sync for mycelium_interp::supervise::Cancelled
+impl core::marker::Unpin for mycelium_interp::supervise::Cancelled
+impl core::marker::UnsafeUnpin for mycelium_interp::supervise::Cancelled
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::supervise::Cancelled
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::supervise::Cancelled
+pub struct mycelium_interp::EffectBudgetExhausted
+pub mycelium_interp::EffectBudgetExhausted::kind: mycelium_interp::budget::EffectKind
+pub mycelium_interp::EffectBudgetExhausted::remaining: u64
+pub mycelium_interp::EffectBudgetExhausted::requested: u64
+impl core::clone::Clone for mycelium_interp::budget::EffectBudgetExhausted
+pub fn mycelium_interp::budget::EffectBudgetExhausted::clone(&self) -> mycelium_interp::budget::EffectBudgetExhausted
+impl core::cmp::Eq for mycelium_interp::budget::EffectBudgetExhausted
+impl core::cmp::PartialEq for mycelium_interp::budget::EffectBudgetExhausted
+pub fn mycelium_interp::budget::EffectBudgetExhausted::eq(&self, &mycelium_interp::budget::EffectBudgetExhausted) -> bool
+impl core::convert::From<mycelium_interp::budget::EffectBudgetExhausted> for mycelium_interp::EvalError
+pub fn mycelium_interp::EvalError::from(mycelium_interp::budget::EffectBudgetExhausted) -> Self
+impl core::error::Error for mycelium_interp::budget::EffectBudgetExhausted
+impl core::fmt::Debug for mycelium_interp::budget::EffectBudgetExhausted
+pub fn mycelium_interp::budget::EffectBudgetExhausted::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_interp::budget::EffectBudgetExhausted
+pub fn mycelium_interp::budget::EffectBudgetExhausted::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_interp::budget::EffectBudgetExhausted
+impl core::marker::Freeze for mycelium_interp::budget::EffectBudgetExhausted
+impl core::marker::Send for mycelium_interp::budget::EffectBudgetExhausted
+impl core::marker::Sync for mycelium_interp::budget::EffectBudgetExhausted
+impl core::marker::Unpin for mycelium_interp::budget::EffectBudgetExhausted
+impl core::marker::UnsafeUnpin for mycelium_interp::budget::EffectBudgetExhausted
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::budget::EffectBudgetExhausted
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::budget::EffectBudgetExhausted
+pub struct mycelium_interp::IdentitySwapEngine
+impl core::clone::Clone for mycelium_interp::swap::IdentitySwapEngine
+pub fn mycelium_interp::swap::IdentitySwapEngine::clone(&self) -> mycelium_interp::swap::IdentitySwapEngine
+impl core::default::Default for mycelium_interp::swap::IdentitySwapEngine
+pub fn mycelium_interp::swap::IdentitySwapEngine::default() -> mycelium_interp::swap::IdentitySwapEngine
+impl core::fmt::Debug for mycelium_interp::swap::IdentitySwapEngine
+pub fn mycelium_interp::swap::IdentitySwapEngine::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_interp::swap::IdentitySwapEngine
+impl mycelium_interp::swap::SwapEngine for mycelium_interp::swap::IdentitySwapEngine
+pub fn mycelium_interp::swap::IdentitySwapEngine::swap(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+impl core::marker::Freeze for mycelium_interp::swap::IdentitySwapEngine
+impl core::marker::Send for mycelium_interp::swap::IdentitySwapEngine
+impl core::marker::Sync for mycelium_interp::swap::IdentitySwapEngine
+impl core::marker::Unpin for mycelium_interp::swap::IdentitySwapEngine
+impl core::marker::UnsafeUnpin for mycelium_interp::swap::IdentitySwapEngine
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::swap::IdentitySwapEngine
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::swap::IdentitySwapEngine
+pub struct mycelium_interp::Interpreter
+impl mycelium_interp::Interpreter
+pub fn mycelium_interp::Interpreter::eval(&self, &mycelium_core::node::Node) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+pub fn mycelium_interp::Interpreter::eval_core(&self, &mycelium_core::node::Node) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
+pub fn mycelium_interp::Interpreter::new(mycelium_interp::prims::PrimRegistry, alloc::boxed::Box<dyn mycelium_interp::swap::SwapEngine>) -> Self
+pub fn mycelium_interp::Interpreter::prim_names(&self) -> alloc::vec::Vec<&str>
+pub fn mycelium_interp::Interpreter::step(&self, &mycelium_core::node::Node) -> core::result::Result<mycelium_interp::Step, mycelium_interp::EvalError>
+pub fn mycelium_interp::Interpreter::with_fuel(self, u64) -> Self
+impl core::default::Default for mycelium_interp::Interpreter
+pub fn mycelium_interp::Interpreter::default() -> Self
+impl core::marker::Freeze for mycelium_interp::Interpreter
+impl !core::marker::Send for mycelium_interp::Interpreter
+impl !core::marker::Sync for mycelium_interp::Interpreter
+impl core::marker::Unpin for mycelium_interp::Interpreter
+impl core::marker::UnsafeUnpin for mycelium_interp::Interpreter
+impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::Interpreter
+impl !core::panic::unwind_safe::UnwindSafe for mycelium_interp::Interpreter
+pub struct mycelium_interp::PrimRegistry
+impl mycelium_interp::prims::PrimRegistry
+pub fn mycelium_interp::prims::PrimRegistry::empty() -> Self
+pub fn mycelium_interp::prims::PrimRegistry::get(&self, &str) -> core::option::Option<mycelium_interp::prims::PrimFn>
+pub fn mycelium_interp::prims::PrimRegistry::names(&self) -> alloc::vec::Vec<&str>
+pub fn mycelium_interp::prims::PrimRegistry::register(&mut self, &str, mycelium_interp::prims::PrimFn)
+pub fn mycelium_interp::prims::PrimRegistry::with_builtins() -> Self
+impl core::clone::Clone for mycelium_interp::prims::PrimRegistry
+pub fn mycelium_interp::prims::PrimRegistry::clone(&self) -> mycelium_interp::prims::PrimRegistry
+impl core::default::Default for mycelium_interp::prims::PrimRegistry
+pub fn mycelium_interp::prims::PrimRegistry::default() -> mycelium_interp::prims::PrimRegistry
+impl core::marker::Freeze for mycelium_interp::prims::PrimRegistry
+impl core::marker::Send for mycelium_interp::prims::PrimRegistry
+impl core::marker::Sync for mycelium_interp::prims::PrimRegistry
+impl core::marker::Unpin for mycelium_interp::prims::PrimRegistry
+impl core::marker::UnsafeUnpin for mycelium_interp::prims::PrimRegistry
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::prims::PrimRegistry
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::prims::PrimRegistry
+pub struct mycelium_interp::RestartIntensity
+pub mycelium_interp::RestartIntensity::max_restarts: u32
+pub mycelium_interp::RestartIntensity::window_ticks: u64
+impl core::clone::Clone for mycelium_interp::supervise::RestartIntensity
+pub fn mycelium_interp::supervise::RestartIntensity::clone(&self) -> mycelium_interp::supervise::RestartIntensity
+impl core::cmp::Eq for mycelium_interp::supervise::RestartIntensity
+impl core::cmp::PartialEq for mycelium_interp::supervise::RestartIntensity
+pub fn mycelium_interp::supervise::RestartIntensity::eq(&self, &mycelium_interp::supervise::RestartIntensity) -> bool
+impl core::fmt::Debug for mycelium_interp::supervise::RestartIntensity
+pub fn mycelium_interp::supervise::RestartIntensity::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_interp::supervise::RestartIntensity
+impl core::marker::StructuralPartialEq for mycelium_interp::supervise::RestartIntensity
+impl core::marker::Freeze for mycelium_interp::supervise::RestartIntensity
+impl core::marker::Send for mycelium_interp::supervise::RestartIntensity
+impl core::marker::Sync for mycelium_interp::supervise::RestartIntensity
+impl core::marker::Unpin for mycelium_interp::supervise::RestartIntensity
+impl core::marker::UnsafeUnpin for mycelium_interp::supervise::RestartIntensity
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::supervise::RestartIntensity
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::supervise::RestartIntensity
+pub struct mycelium_interp::Supervisor
+impl mycelium_interp::supervise::Supervisor
+pub fn mycelium_interp::supervise::Supervisor::new(mycelium_interp::supervise::RestartIntensity, u64) -> Self
+pub fn mycelium_interp::supervise::Supervisor::now(&self) -> u64
+pub fn mycelium_interp::supervise::Supervisor::record_restart(&mut self) -> core::result::Result<(), mycelium_interp::supervise::Escalation>
+pub fn mycelium_interp::supervise::Supervisor::restarts_remaining(&self) -> u64
+pub fn mycelium_interp::supervise::Supervisor::tick(&mut self) -> u64
+impl core::clone::Clone for mycelium_interp::supervise::Supervisor
+pub fn mycelium_interp::supervise::Supervisor::clone(&self) -> mycelium_interp::supervise::Supervisor
+impl core::fmt::Debug for mycelium_interp::supervise::Supervisor
+pub fn mycelium_interp::supervise::Supervisor::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_interp::supervise::Supervisor
+impl core::marker::Send for mycelium_interp::supervise::Supervisor
+impl core::marker::Sync for mycelium_interp::supervise::Supervisor
+impl core::marker::Unpin for mycelium_interp::supervise::Supervisor
+impl core::marker::UnsafeUnpin for mycelium_interp::supervise::Supervisor
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_interp::supervise::Supervisor
+impl core::panic::unwind_safe::UnwindSafe for mycelium_interp::supervise::Supervisor
+pub trait mycelium_interp::SwapEngine
+pub fn mycelium_interp::SwapEngine::swap(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+impl mycelium_interp::swap::SwapEngine for mycelium_interp::swap::IdentitySwapEngine
+pub fn mycelium_interp::swap::IdentitySwapEngine::swap(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>

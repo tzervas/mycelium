@@ -1,0 +1,88 @@
+pub mod mycelium_lint
+pub use mycelium_lint::DOC_QUALITY_CHECKS
+pub enum mycelium_lint::FixTier
+pub mycelium_lint::FixTier::Apply
+pub mycelium_lint::FixTier::Scaffold
+pub mycelium_lint::FixTier::Suggest
+impl mycelium_lint::FixTier
+pub fn mycelium_lint::FixTier::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_lint::FixTier
+pub fn mycelium_lint::FixTier::clone(&self) -> mycelium_lint::FixTier
+impl core::cmp::Eq for mycelium_lint::FixTier
+impl core::cmp::PartialEq for mycelium_lint::FixTier
+pub fn mycelium_lint::FixTier::eq(&self, &mycelium_lint::FixTier) -> bool
+impl core::fmt::Debug for mycelium_lint::FixTier
+pub fn mycelium_lint::FixTier::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_lint::FixTier
+impl core::marker::StructuralPartialEq for mycelium_lint::FixTier
+impl core::marker::Freeze for mycelium_lint::FixTier
+impl core::marker::Send for mycelium_lint::FixTier
+impl core::marker::Sync for mycelium_lint::FixTier
+impl core::marker::Unpin for mycelium_lint::FixTier
+impl core::marker::UnsafeUnpin for mycelium_lint::FixTier
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lint::FixTier
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lint::FixTier
+pub struct mycelium_lint::Fix
+pub mycelium_lint::Fix::description: alloc::string::String
+pub mycelium_lint::Fix::scaffold: core::option::Option<alloc::string::String>
+pub mycelium_lint::Fix::tier: mycelium_lint::FixTier
+impl core::clone::Clone for mycelium_lint::Fix
+pub fn mycelium_lint::Fix::clone(&self) -> mycelium_lint::Fix
+impl core::cmp::Eq for mycelium_lint::Fix
+impl core::cmp::PartialEq for mycelium_lint::Fix
+pub fn mycelium_lint::Fix::eq(&self, &mycelium_lint::Fix) -> bool
+impl core::fmt::Debug for mycelium_lint::Fix
+pub fn mycelium_lint::Fix::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lint::Fix
+impl core::marker::Freeze for mycelium_lint::Fix
+impl core::marker::Send for mycelium_lint::Fix
+impl core::marker::Sync for mycelium_lint::Fix
+impl core::marker::Unpin for mycelium_lint::Fix
+impl core::marker::UnsafeUnpin for mycelium_lint::Fix
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lint::Fix
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lint::Fix
+pub struct mycelium_lint::LintFinding
+pub mycelium_lint::LintFinding::at: alloc::string::String
+pub mycelium_lint::LintFinding::code: alloc::string::String
+pub mycelium_lint::LintFinding::file: alloc::string::String
+pub mycelium_lint::LintFinding::fix: core::option::Option<mycelium_lint::Fix>
+pub mycelium_lint::LintFinding::message: alloc::string::String
+pub mycelium_lint::LintFinding::severity: mycelium_lsp::lint::Severity
+impl core::clone::Clone for mycelium_lint::LintFinding
+pub fn mycelium_lint::LintFinding::clone(&self) -> mycelium_lint::LintFinding
+impl core::cmp::Eq for mycelium_lint::LintFinding
+impl core::cmp::PartialEq for mycelium_lint::LintFinding
+pub fn mycelium_lint::LintFinding::eq(&self, &mycelium_lint::LintFinding) -> bool
+impl core::fmt::Debug for mycelium_lint::LintFinding
+pub fn mycelium_lint::LintFinding::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lint::LintFinding
+impl core::marker::Freeze for mycelium_lint::LintFinding
+impl core::marker::Send for mycelium_lint::LintFinding
+impl core::marker::Sync for mycelium_lint::LintFinding
+impl core::marker::Unpin for mycelium_lint::LintFinding
+impl core::marker::UnsafeUnpin for mycelium_lint::LintFinding
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lint::LintFinding
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lint::LintFinding
+pub struct mycelium_lint::LintReport
+pub mycelium_lint::LintReport::files: usize
+pub mycelium_lint::LintReport::findings: alloc::vec::Vec<mycelium_lint::LintFinding>
+impl mycelium_lint::LintReport
+pub fn mycelium_lint::LintReport::has_errors(&self) -> bool
+pub fn mycelium_lint::LintReport::tier_counts(&self) -> (usize, usize, usize)
+impl core::clone::Clone for mycelium_lint::LintReport
+pub fn mycelium_lint::LintReport::clone(&self) -> mycelium_lint::LintReport
+impl core::default::Default for mycelium_lint::LintReport
+pub fn mycelium_lint::LintReport::default() -> mycelium_lint::LintReport
+impl core::fmt::Debug for mycelium_lint::LintReport
+pub fn mycelium_lint::LintReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_lint::LintReport
+impl core::marker::Send for mycelium_lint::LintReport
+impl core::marker::Sync for mycelium_lint::LintReport
+impl core::marker::Unpin for mycelium_lint::LintReport
+impl core::marker::UnsafeUnpin for mycelium_lint::LintReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lint::LintReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lint::LintReport
+pub fn mycelium_lint::doc_lint_status() -> alloc::string::String
+pub fn mycelium_lint::lint_source(&str, &str, &mut alloc::vec::Vec<mycelium_lint::LintFinding>)
+pub fn mycelium_lint::lint_sources(&[(alloc::string::String, alloc::string::String)]) -> mycelium_lint::LintReport
+pub fn mycelium_lint::recovery_scaffold(&str, mycelium_lsp::baseline::RecoveryProfile) -> alloc::string::String

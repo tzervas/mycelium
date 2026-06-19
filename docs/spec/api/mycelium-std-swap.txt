@@ -1,0 +1,119 @@
+pub mod mycelium_std_swap
+pub use mycelium_std_swap::BF16_MIN_NORMAL
+pub use mycelium_std_swap::BF16_REL_EPS
+pub use mycelium_std_swap::Bound
+pub use mycelium_std_swap::BoundBasis
+pub use mycelium_std_swap::BoundKind
+pub use mycelium_std_swap::CheckVerdict
+pub use mycelium_std_swap::ContentHash
+pub use mycelium_std_swap::DENSE_VSA_EMP_DELTA
+pub use mycelium_std_swap::DENSE_VSA_MODEL
+pub use mycelium_std_swap::Evidence
+pub use mycelium_std_swap::Fallback
+pub use mycelium_std_swap::GuaranteeStrength
+pub use mycelium_std_swap::NormKind
+pub use mycelium_std_swap::NotValidatedReason
+pub use mycelium_std_swap::RefinementRelation
+pub use mycelium_std_swap::Repr
+pub use mycelium_std_swap::SwapCertificate
+pub use mycelium_std_swap::SwapError
+pub use mycelium_std_swap::Value
+pub use mycelium_std_swap::check
+pub use mycelium_std_swap::check
+pub use mycelium_std_swap::legal_pair
+pub use mycelium_std_swap::roundtrip_lemma_ref
+pub enum mycelium_std_swap::CheckError
+pub mycelium_std_swap::CheckError::NotValidated
+pub mycelium_std_swap::CheckError::NotValidated::fallback: mycelium_cert::check::Fallback
+pub mycelium_std_swap::CheckError::NotValidated::reason: mycelium_cert::check::NotValidatedReason
+pub mycelium_std_swap::CheckError::Refuted
+pub mycelium_std_swap::CheckError::Refuted::detail: alloc::string::String
+impl core::clone::Clone for mycelium_std_swap::CheckError
+pub fn mycelium_std_swap::CheckError::clone(&self) -> mycelium_std_swap::CheckError
+impl core::cmp::PartialEq for mycelium_std_swap::CheckError
+pub fn mycelium_std_swap::CheckError::eq(&self, &mycelium_std_swap::CheckError) -> bool
+impl core::error::Error for mycelium_std_swap::CheckError
+impl core::fmt::Debug for mycelium_std_swap::CheckError
+pub fn mycelium_std_swap::CheckError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_swap::CheckError
+pub fn mycelium_std_swap::CheckError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_swap::CheckError
+impl core::marker::Freeze for mycelium_std_swap::CheckError
+impl core::marker::Send for mycelium_std_swap::CheckError
+impl core::marker::Sync for mycelium_std_swap::CheckError
+impl core::marker::Unpin for mycelium_std_swap::CheckError
+impl core::marker::UnsafeUnpin for mycelium_std_swap::CheckError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_swap::CheckError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_swap::CheckError
+pub struct mycelium_std_swap::ExplainRecord
+pub mycelium_std_swap::ExplainRecord::bound: core::option::Option<mycelium_core::bound::Bound>
+pub mycelium_std_swap::ExplainRecord::cert_kind: &'static str
+pub mycelium_std_swap::ExplainRecord::lemma_ref: core::option::Option<mycelium_core::id::ContentHash>
+pub mycelium_std_swap::ExplainRecord::policy_used: mycelium_core::id::ContentHash
+pub mycelium_std_swap::ExplainRecord::src: mycelium_core::repr::Repr
+pub mycelium_std_swap::ExplainRecord::strength: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_std_swap::ExplainRecord::summary: alloc::string::String
+pub mycelium_std_swap::ExplainRecord::target: mycelium_core::repr::Repr
+impl core::clone::Clone for mycelium_std_swap::ExplainRecord
+pub fn mycelium_std_swap::ExplainRecord::clone(&self) -> mycelium_std_swap::ExplainRecord
+impl core::cmp::PartialEq for mycelium_std_swap::ExplainRecord
+pub fn mycelium_std_swap::ExplainRecord::eq(&self, &mycelium_std_swap::ExplainRecord) -> bool
+impl core::fmt::Debug for mycelium_std_swap::ExplainRecord
+pub fn mycelium_std_swap::ExplainRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_swap::ExplainRecord
+impl core::marker::Freeze for mycelium_std_swap::ExplainRecord
+impl core::marker::Send for mycelium_std_swap::ExplainRecord
+impl core::marker::Sync for mycelium_std_swap::ExplainRecord
+impl core::marker::Unpin for mycelium_std_swap::ExplainRecord
+impl core::marker::UnsafeUnpin for mycelium_std_swap::ExplainRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_swap::ExplainRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_swap::ExplainRecord
+pub struct mycelium_std_swap::MatrixRow
+pub mycelium_std_swap::MatrixRow::cert_carrying: bool
+pub mycelium_std_swap::MatrixRow::cert_kind: core::option::Option<&'static str>
+pub mycelium_std_swap::MatrixRow::fallible: bool
+pub mycelium_std_swap::MatrixRow::guarantee: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_std_swap::MatrixRow::op: &'static str
+impl core::clone::Clone for mycelium_std_swap::MatrixRow
+pub fn mycelium_std_swap::MatrixRow::clone(&self) -> mycelium_std_swap::MatrixRow
+impl core::cmp::PartialEq for mycelium_std_swap::MatrixRow
+pub fn mycelium_std_swap::MatrixRow::eq(&self, &mycelium_std_swap::MatrixRow) -> bool
+impl core::fmt::Debug for mycelium_std_swap::MatrixRow
+pub fn mycelium_std_swap::MatrixRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_swap::MatrixRow
+impl core::marker::Freeze for mycelium_std_swap::MatrixRow
+impl core::marker::Send for mycelium_std_swap::MatrixRow
+impl core::marker::Sync for mycelium_std_swap::MatrixRow
+impl core::marker::Unpin for mycelium_std_swap::MatrixRow
+impl core::marker::UnsafeUnpin for mycelium_std_swap::MatrixRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_swap::MatrixRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_swap::MatrixRow
+pub struct mycelium_std_swap::Swapped
+pub mycelium_std_swap::Swapped::cert: mycelium_cert::SwapCertificate
+pub mycelium_std_swap::Swapped::value: mycelium_core::value::Value
+impl mycelium_std_swap::Swapped
+pub fn mycelium_std_swap::Swapped::explain(&self) -> mycelium_std_swap::ExplainRecord
+impl core::clone::Clone for mycelium_std_swap::Swapped
+pub fn mycelium_std_swap::Swapped::clone(&self) -> mycelium_std_swap::Swapped
+impl core::cmp::PartialEq for mycelium_std_swap::Swapped
+pub fn mycelium_std_swap::Swapped::eq(&self, &mycelium_std_swap::Swapped) -> bool
+impl core::fmt::Debug for mycelium_std_swap::Swapped
+pub fn mycelium_std_swap::Swapped::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_swap::Swapped
+impl core::marker::Freeze for mycelium_std_swap::Swapped
+impl core::marker::Send for mycelium_std_swap::Swapped
+impl core::marker::Sync for mycelium_std_swap::Swapped
+impl core::marker::Unpin for mycelium_std_swap::Swapped
+impl core::marker::UnsafeUnpin for mycelium_std_swap::Swapped
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_swap::Swapped
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_swap::Swapped
+pub const mycelium_std_swap::GUARANTEE_MATRIX: &[mycelium_std_swap::MatrixRow]
+pub fn mycelium_std_swap::assert_matrix_invariants()
+pub fn mycelium_std_swap::bin_to_tern(&mycelium_core::value::Value, u32, &mycelium_std_swap::PolicyRef) -> core::result::Result<mycelium_std_swap::Swapped, mycelium_cert::SwapError>
+pub fn mycelium_std_swap::check_swap(&mycelium_core::value::Value, &mycelium_core::value::Value, &mycelium_cert::SwapCertificate) -> core::result::Result<mycelium_core::guarantee::GuaranteeStrength, mycelium_std_swap::CheckError>
+pub fn mycelium_std_swap::dense_to_vsa(&mycelium_core::value::Value, u32, f64, &mycelium_std_swap::PolicyRef) -> core::result::Result<mycelium_std_swap::Swapped, mycelium_cert::SwapError>
+pub fn mycelium_std_swap::explain(&mycelium_cert::SwapCertificate) -> mycelium_std_swap::ExplainRecord
+pub fn mycelium_std_swap::f32_to_bf16(&mycelium_core::value::Value, &mycelium_std_swap::PolicyRef) -> core::result::Result<mycelium_std_swap::Swapped, mycelium_cert::SwapError>
+pub fn mycelium_std_swap::tern_to_bin(&mycelium_core::value::Value, u32, &mycelium_std_swap::PolicyRef) -> core::result::Result<mycelium_std_swap::Swapped, mycelium_cert::SwapError>
+pub fn mycelium_std_swap::vsa_to_dense(&mycelium_core::value::Value, u32, f64, &mycelium_std_swap::PolicyRef) -> core::result::Result<mycelium_std_swap::Swapped, mycelium_cert::SwapError>
+pub type mycelium_std_swap::PolicyRef = mycelium_core::id::ContentHash

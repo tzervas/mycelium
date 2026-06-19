@@ -1,0 +1,99 @@
+pub mod mycelium_std_select
+pub use mycelium_std_select::Action
+pub use mycelium_std_select::BITNET_PACKINGS
+pub use mycelium_std_select::Candidate
+pub use mycelium_std_select::CandidateCost
+pub use mycelium_std_select::ContentHash
+pub use mycelium_std_select::CostModel
+pub use mycelium_std_select::DecodeFacts
+pub use mycelium_std_select::DecodeMethod
+pub use mycelium_std_select::Explanation
+pub use mycelium_std_select::Meta
+pub use mycelium_std_select::PackScheme
+pub use mycelium_std_select::ParadigmKind
+pub use mycelium_std_select::PhysicalLayout
+pub use mycelium_std_select::PolicyError
+pub use mycelium_std_select::PolicyRegistry
+pub use mycelium_std_select::Predicate
+pub use mycelium_std_select::Provenance
+pub use mycelium_std_select::Repr
+pub use mycelium_std_select::Rule
+pub use mycelium_std_select::SelectError
+pub use mycelium_std_select::SelectionInputs
+pub use mycelium_std_select::SelectionPolicy
+pub use mycelium_std_select::Value
+pub use mycelium_std_select::bitnet_packing_policy
+pub use mycelium_std_select::layout_of
+pub use mycelium_std_select::record_packing_layout
+pub use mycelium_std_select::select_decode_method
+pub use mycelium_std_select::select_layout
+pub use mycelium_std_select::select_packing
+pub use mycelium_std_select::select_swap_target
+pub enum mycelium_std_select::ExplainAble
+pub mycelium_std_select::ExplainAble::NotApplicable
+pub mycelium_std_select::ExplainAble::Yes
+impl core::clone::Clone for mycelium_std_select::ExplainAble
+pub fn mycelium_std_select::ExplainAble::clone(&self) -> mycelium_std_select::ExplainAble
+impl core::cmp::Eq for mycelium_std_select::ExplainAble
+impl core::cmp::PartialEq for mycelium_std_select::ExplainAble
+pub fn mycelium_std_select::ExplainAble::eq(&self, &mycelium_std_select::ExplainAble) -> bool
+impl core::fmt::Debug for mycelium_std_select::ExplainAble
+pub fn mycelium_std_select::ExplainAble::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_select::ExplainAble
+impl core::marker::StructuralPartialEq for mycelium_std_select::ExplainAble
+impl core::marker::Freeze for mycelium_std_select::ExplainAble
+impl core::marker::Send for mycelium_std_select::ExplainAble
+impl core::marker::Sync for mycelium_std_select::ExplainAble
+impl core::marker::Unpin for mycelium_std_select::ExplainAble
+impl core::marker::UnsafeUnpin for mycelium_std_select::ExplainAble
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_select::ExplainAble
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_select::ExplainAble
+pub enum mycelium_std_select::GuaranteeTag
+pub mycelium_std_select::GuaranteeTag::Declared
+pub mycelium_std_select::GuaranteeTag::Empirical
+pub mycelium_std_select::GuaranteeTag::Exact
+pub mycelium_std_select::GuaranteeTag::Proven
+impl core::clone::Clone for mycelium_std_select::GuaranteeTag
+pub fn mycelium_std_select::GuaranteeTag::clone(&self) -> mycelium_std_select::GuaranteeTag
+impl core::cmp::Eq for mycelium_std_select::GuaranteeTag
+impl core::cmp::PartialEq for mycelium_std_select::GuaranteeTag
+pub fn mycelium_std_select::GuaranteeTag::eq(&self, &mycelium_std_select::GuaranteeTag) -> bool
+impl core::fmt::Debug for mycelium_std_select::GuaranteeTag
+pub fn mycelium_std_select::GuaranteeTag::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_select::GuaranteeTag
+impl core::marker::StructuralPartialEq for mycelium_std_select::GuaranteeTag
+impl core::marker::Freeze for mycelium_std_select::GuaranteeTag
+impl core::marker::Send for mycelium_std_select::GuaranteeTag
+impl core::marker::Sync for mycelium_std_select::GuaranteeTag
+impl core::marker::Unpin for mycelium_std_select::GuaranteeTag
+impl core::marker::UnsafeUnpin for mycelium_std_select::GuaranteeTag
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_select::GuaranteeTag
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_select::GuaranteeTag
+pub struct mycelium_std_select::GuaranteeRow
+pub mycelium_std_select::GuaranteeRow::effects: &'static str
+pub mycelium_std_select::GuaranteeRow::explain_able: mycelium_std_select::ExplainAble
+pub mycelium_std_select::GuaranteeRow::fallible: bool
+pub mycelium_std_select::GuaranteeRow::op: &'static str
+pub mycelium_std_select::GuaranteeRow::tag: mycelium_std_select::GuaranteeTag
+impl core::clone::Clone for mycelium_std_select::GuaranteeRow
+pub fn mycelium_std_select::GuaranteeRow::clone(&self) -> mycelium_std_select::GuaranteeRow
+impl core::cmp::Eq for mycelium_std_select::GuaranteeRow
+impl core::cmp::PartialEq for mycelium_std_select::GuaranteeRow
+pub fn mycelium_std_select::GuaranteeRow::eq(&self, &mycelium_std_select::GuaranteeRow) -> bool
+impl core::fmt::Debug for mycelium_std_select::GuaranteeRow
+pub fn mycelium_std_select::GuaranteeRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_select::GuaranteeRow
+impl core::marker::Freeze for mycelium_std_select::GuaranteeRow
+impl core::marker::Send for mycelium_std_select::GuaranteeRow
+impl core::marker::Sync for mycelium_std_select::GuaranteeRow
+impl core::marker::Unpin for mycelium_std_select::GuaranteeRow
+impl core::marker::UnsafeUnpin for mycelium_std_select::GuaranteeRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_select::GuaranteeRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_select::GuaranteeRow
+pub static mycelium_std_select::GUARANTEE_MATRIX: &[mycelium_std_select::GuaranteeRow]
+pub fn mycelium_std_select::build(impl core::convert::Into<alloc::string::String>, alloc::vec::Vec<mycelium_select::Candidate>, alloc::vec::Vec<mycelium_select::Rule>, usize, mycelium_select::CostModel) -> core::result::Result<mycelium_select::SelectionPolicy, mycelium_select::PolicyError>
+pub fn mycelium_std_select::explain(&mycelium_select::SelectionPolicy, &mycelium_select::SelectionInputs) -> mycelium_select::Explanation
+pub fn mycelium_std_select::policy_ref(&mycelium_select::SelectionPolicy) -> mycelium_std_select::PolicyRef
+pub fn mycelium_std_select::select(&mycelium_select::SelectionPolicy, &mycelium_select::SelectionInputs) -> core::result::Result<(mycelium_select::Candidate, mycelium_select::Explanation), mycelium_select::SelectError>
+pub fn mycelium_std_select::select_with_override(&mycelium_select::SelectionPolicy, &mycelium_select::SelectionInputs, usize) -> core::result::Result<(mycelium_select::Candidate, mycelium_select::Explanation), mycelium_select::SelectError>
+pub type mycelium_std_select::PolicyRef = mycelium_core::id::ContentHash

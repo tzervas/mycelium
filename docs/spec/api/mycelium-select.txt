@@ -1,0 +1,379 @@
+pub mod mycelium_select
+pub enum mycelium_select::Action
+pub mycelium_select::Action::Cheapest
+pub mycelium_select::Action::Choose(usize)
+impl core::clone::Clone for mycelium_select::Action
+pub fn mycelium_select::Action::clone(&self) -> mycelium_select::Action
+impl core::cmp::Eq for mycelium_select::Action
+impl core::cmp::PartialEq for mycelium_select::Action
+pub fn mycelium_select::Action::eq(&self, &mycelium_select::Action) -> bool
+impl core::fmt::Debug for mycelium_select::Action
+pub fn mycelium_select::Action::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_select::Action
+impl core::marker::StructuralPartialEq for mycelium_select::Action
+impl serde_core::ser::Serialize for mycelium_select::Action
+pub fn mycelium_select::Action::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_select::Action
+pub fn mycelium_select::Action::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_select::Action
+impl core::marker::Send for mycelium_select::Action
+impl core::marker::Sync for mycelium_select::Action
+impl core::marker::Unpin for mycelium_select::Action
+impl core::marker::UnsafeUnpin for mycelium_select::Action
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::Action
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::Action
+pub enum mycelium_select::Candidate
+pub mycelium_select::Candidate::Decode(mycelium_select::DecodeMethod)
+pub mycelium_select::Candidate::Packing(mycelium_core::meta::PackScheme)
+pub mycelium_select::Candidate::Repr(mycelium_core::repr::Repr)
+impl core::clone::Clone for mycelium_select::Candidate
+pub fn mycelium_select::Candidate::clone(&self) -> mycelium_select::Candidate
+impl core::cmp::PartialEq for mycelium_select::Candidate
+pub fn mycelium_select::Candidate::eq(&self, &mycelium_select::Candidate) -> bool
+impl core::fmt::Debug for mycelium_select::Candidate
+pub fn mycelium_select::Candidate::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_select::Candidate
+impl serde_core::ser::Serialize for mycelium_select::Candidate
+pub fn mycelium_select::Candidate::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_select::Candidate
+pub fn mycelium_select::Candidate::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_select::Candidate
+impl core::marker::Send for mycelium_select::Candidate
+impl core::marker::Sync for mycelium_select::Candidate
+impl core::marker::Unpin for mycelium_select::Candidate
+impl core::marker::UnsafeUnpin for mycelium_select::Candidate
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::Candidate
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::Candidate
+pub enum mycelium_select::DecodeMethod
+pub mycelium_select::DecodeMethod::BruteForceExact
+pub mycelium_select::DecodeMethod::Refuse
+pub mycelium_select::DecodeMethod::Resonator
+impl core::clone::Clone for mycelium_select::DecodeMethod
+pub fn mycelium_select::DecodeMethod::clone(&self) -> mycelium_select::DecodeMethod
+impl core::cmp::Eq for mycelium_select::DecodeMethod
+impl core::cmp::PartialEq for mycelium_select::DecodeMethod
+pub fn mycelium_select::DecodeMethod::eq(&self, &mycelium_select::DecodeMethod) -> bool
+impl core::fmt::Debug for mycelium_select::DecodeMethod
+pub fn mycelium_select::DecodeMethod::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_select::DecodeMethod
+impl core::marker::StructuralPartialEq for mycelium_select::DecodeMethod
+impl serde_core::ser::Serialize for mycelium_select::DecodeMethod
+pub fn mycelium_select::DecodeMethod::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_select::DecodeMethod
+pub fn mycelium_select::DecodeMethod::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_select::DecodeMethod
+impl core::marker::Send for mycelium_select::DecodeMethod
+impl core::marker::Sync for mycelium_select::DecodeMethod
+impl core::marker::Unpin for mycelium_select::DecodeMethod
+impl core::marker::UnsafeUnpin for mycelium_select::DecodeMethod
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::DecodeMethod
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::DecodeMethod
+pub enum mycelium_select::ParadigmKind
+pub mycelium_select::ParadigmKind::Binary
+pub mycelium_select::ParadigmKind::Dense
+pub mycelium_select::ParadigmKind::Ternary
+pub mycelium_select::ParadigmKind::Vsa
+impl core::clone::Clone for mycelium_select::ParadigmKind
+pub fn mycelium_select::ParadigmKind::clone(&self) -> mycelium_select::ParadigmKind
+impl core::cmp::Eq for mycelium_select::ParadigmKind
+impl core::cmp::PartialEq for mycelium_select::ParadigmKind
+pub fn mycelium_select::ParadigmKind::eq(&self, &mycelium_select::ParadigmKind) -> bool
+impl core::fmt::Debug for mycelium_select::ParadigmKind
+pub fn mycelium_select::ParadigmKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_select::ParadigmKind
+impl core::marker::StructuralPartialEq for mycelium_select::ParadigmKind
+impl serde_core::ser::Serialize for mycelium_select::ParadigmKind
+pub fn mycelium_select::ParadigmKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_select::ParadigmKind
+pub fn mycelium_select::ParadigmKind::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_select::ParadigmKind
+impl core::marker::Send for mycelium_select::ParadigmKind
+impl core::marker::Sync for mycelium_select::ParadigmKind
+impl core::marker::Unpin for mycelium_select::ParadigmKind
+impl core::marker::UnsafeUnpin for mycelium_select::ParadigmKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::ParadigmKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::ParadigmKind
+pub enum mycelium_select::PolicyError
+pub mycelium_select::PolicyError::BadCost
+pub mycelium_select::PolicyError::BadPredicateLiteral
+pub mycelium_select::PolicyError::IndexOutOfRange
+pub mycelium_select::PolicyError::IndexOutOfRange::index: usize
+pub mycelium_select::PolicyError::NoCandidates
+impl core::clone::Clone for mycelium_select::PolicyError
+pub fn mycelium_select::PolicyError::clone(&self) -> mycelium_select::PolicyError
+impl core::cmp::Eq for mycelium_select::PolicyError
+impl core::cmp::PartialEq for mycelium_select::PolicyError
+pub fn mycelium_select::PolicyError::eq(&self, &mycelium_select::PolicyError) -> bool
+impl core::error::Error for mycelium_select::PolicyError
+impl core::fmt::Debug for mycelium_select::PolicyError
+pub fn mycelium_select::PolicyError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_select::PolicyError
+pub fn mycelium_select::PolicyError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_select::PolicyError
+impl core::marker::Freeze for mycelium_select::PolicyError
+impl core::marker::Send for mycelium_select::PolicyError
+impl core::marker::Sync for mycelium_select::PolicyError
+impl core::marker::Unpin for mycelium_select::PolicyError
+impl core::marker::UnsafeUnpin for mycelium_select::PolicyError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::PolicyError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::PolicyError
+pub enum mycelium_select::Predicate
+pub mycelium_select::Predicate::All(alloc::vec::Vec<mycelium_select::Predicate>)
+pub mycelium_select::Predicate::Always
+pub mycelium_select::Predicate::Any(alloc::vec::Vec<mycelium_select::Predicate>)
+pub mycelium_select::Predicate::CapacityAtMost(u128)
+pub mycelium_select::Predicate::DeclaredSparse
+pub mycelium_select::Predicate::DtypeIs(mycelium_core::repr::ScalarKind)
+pub mycelium_select::Predicate::ErrorEpsAtMost(f64)
+pub mycelium_select::Predicate::FactorsAtMost(u32)
+pub mycelium_select::Predicate::GuaranteeAtLeast(mycelium_core::guarantee::GuaranteeStrength)
+pub mycelium_select::Predicate::InResonatorRegime
+pub mycelium_select::Predicate::Not(alloc::boxed::Box<mycelium_select::Predicate>)
+pub mycelium_select::Predicate::SrcKindIs(mycelium_select::ParadigmKind)
+impl mycelium_select::Predicate
+pub fn mycelium_select::Predicate::eval(&self, &mycelium_select::SelectionInputs) -> bool
+pub fn mycelium_select::Predicate::literals_finite(&self) -> bool
+impl core::clone::Clone for mycelium_select::Predicate
+pub fn mycelium_select::Predicate::clone(&self) -> mycelium_select::Predicate
+impl core::cmp::PartialEq for mycelium_select::Predicate
+pub fn mycelium_select::Predicate::eq(&self, &mycelium_select::Predicate) -> bool
+impl core::fmt::Debug for mycelium_select::Predicate
+pub fn mycelium_select::Predicate::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_select::Predicate
+impl serde_core::ser::Serialize for mycelium_select::Predicate
+pub fn mycelium_select::Predicate::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_select::Predicate
+pub fn mycelium_select::Predicate::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_select::Predicate
+impl core::marker::Send for mycelium_select::Predicate
+impl core::marker::Sync for mycelium_select::Predicate
+impl core::marker::Unpin for mycelium_select::Predicate
+impl core::marker::UnsafeUnpin for mycelium_select::Predicate
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::Predicate
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::Predicate
+pub enum mycelium_select::SelectError
+pub mycelium_select::SelectError::NonTernarySource
+pub mycelium_select::SelectError::NonTernarySource::src: mycelium_core::repr::Repr
+pub mycelium_select::SelectError::OverrideOutOfRange
+pub mycelium_select::SelectError::OverrideOutOfRange::candidates: usize
+pub mycelium_select::SelectError::OverrideOutOfRange::index: usize
+pub mycelium_select::SelectError::WrongSiteKind
+pub mycelium_select::SelectError::WrongSiteKind::chosen: mycelium_select::Candidate
+pub mycelium_select::SelectError::WrongSiteKind::site: &'static str
+impl core::clone::Clone for mycelium_select::SelectError
+pub fn mycelium_select::SelectError::clone(&self) -> mycelium_select::SelectError
+impl core::cmp::PartialEq for mycelium_select::SelectError
+pub fn mycelium_select::SelectError::eq(&self, &mycelium_select::SelectError) -> bool
+impl core::error::Error for mycelium_select::SelectError
+impl core::fmt::Debug for mycelium_select::SelectError
+pub fn mycelium_select::SelectError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_select::SelectError
+pub fn mycelium_select::SelectError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_select::SelectError
+impl core::marker::Freeze for mycelium_select::SelectError
+impl core::marker::Send for mycelium_select::SelectError
+impl core::marker::Sync for mycelium_select::SelectError
+impl core::marker::Unpin for mycelium_select::SelectError
+impl core::marker::UnsafeUnpin for mycelium_select::SelectError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::SelectError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::SelectError
+pub struct mycelium_select::CandidateCost
+pub mycelium_select::CandidateCost::candidate: mycelium_select::Candidate
+pub mycelium_select::CandidateCost::cost: f64
+impl core::clone::Clone for mycelium_select::CandidateCost
+pub fn mycelium_select::CandidateCost::clone(&self) -> mycelium_select::CandidateCost
+impl core::cmp::PartialEq for mycelium_select::CandidateCost
+pub fn mycelium_select::CandidateCost::eq(&self, &mycelium_select::CandidateCost) -> bool
+impl core::fmt::Debug for mycelium_select::CandidateCost
+pub fn mycelium_select::CandidateCost::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_select::CandidateCost
+impl serde_core::ser::Serialize for mycelium_select::CandidateCost
+pub fn mycelium_select::CandidateCost::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_select::CandidateCost
+pub fn mycelium_select::CandidateCost::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_select::CandidateCost
+impl core::marker::Send for mycelium_select::CandidateCost
+impl core::marker::Sync for mycelium_select::CandidateCost
+impl core::marker::Unpin for mycelium_select::CandidateCost
+impl core::marker::UnsafeUnpin for mycelium_select::CandidateCost
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::CandidateCost
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::CandidateCost
+pub struct mycelium_select::CostModel
+pub mycelium_select::CostModel::storage_weight: f64
+impl mycelium_select::CostModel
+pub fn mycelium_select::CostModel::cost(&self, &mycelium_select::Candidate, &mycelium_select::SelectionInputs) -> f64
+impl core::clone::Clone for mycelium_select::CostModel
+pub fn mycelium_select::CostModel::clone(&self) -> mycelium_select::CostModel
+impl core::cmp::PartialEq for mycelium_select::CostModel
+pub fn mycelium_select::CostModel::eq(&self, &mycelium_select::CostModel) -> bool
+impl core::fmt::Debug for mycelium_select::CostModel
+pub fn mycelium_select::CostModel::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_select::CostModel
+impl core::marker::StructuralPartialEq for mycelium_select::CostModel
+impl serde_core::ser::Serialize for mycelium_select::CostModel
+pub fn mycelium_select::CostModel::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_select::CostModel
+pub fn mycelium_select::CostModel::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_select::CostModel
+impl core::marker::Send for mycelium_select::CostModel
+impl core::marker::Sync for mycelium_select::CostModel
+impl core::marker::Unpin for mycelium_select::CostModel
+impl core::marker::UnsafeUnpin for mycelium_select::CostModel
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::CostModel
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::CostModel
+pub struct mycelium_select::DecodeFacts
+pub mycelium_select::DecodeFacts::capacity: u128
+pub mycelium_select::DecodeFacts::dim: u32
+pub mycelium_select::DecodeFacts::factors: u32
+pub mycelium_select::DecodeFacts::in_regime: bool
+impl core::clone::Clone for mycelium_select::DecodeFacts
+pub fn mycelium_select::DecodeFacts::clone(&self) -> mycelium_select::DecodeFacts
+impl core::cmp::Eq for mycelium_select::DecodeFacts
+impl core::cmp::PartialEq for mycelium_select::DecodeFacts
+pub fn mycelium_select::DecodeFacts::eq(&self, &mycelium_select::DecodeFacts) -> bool
+impl core::fmt::Debug for mycelium_select::DecodeFacts
+pub fn mycelium_select::DecodeFacts::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_select::DecodeFacts
+impl core::marker::StructuralPartialEq for mycelium_select::DecodeFacts
+impl serde_core::ser::Serialize for mycelium_select::DecodeFacts
+pub fn mycelium_select::DecodeFacts::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_select::DecodeFacts
+pub fn mycelium_select::DecodeFacts::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_select::DecodeFacts
+impl core::marker::Send for mycelium_select::DecodeFacts
+impl core::marker::Sync for mycelium_select::DecodeFacts
+impl core::marker::Unpin for mycelium_select::DecodeFacts
+impl core::marker::UnsafeUnpin for mycelium_select::DecodeFacts
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::DecodeFacts
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::DecodeFacts
+pub struct mycelium_select::Explanation
+pub mycelium_select::Explanation::chosen: mycelium_select::Candidate
+pub mycelium_select::Explanation::chosen_index: usize
+pub mycelium_select::Explanation::costs: alloc::vec::Vec<mycelium_select::CandidateCost>
+pub mycelium_select::Explanation::inputs: mycelium_select::SelectionInputs
+pub mycelium_select::Explanation::matched_rule: core::option::Option<usize>
+pub mycelium_select::Explanation::overridden: bool
+pub mycelium_select::Explanation::policy: mycelium_core::id::ContentHash
+pub mycelium_select::Explanation::policy_name: alloc::string::String
+impl core::clone::Clone for mycelium_select::Explanation
+pub fn mycelium_select::Explanation::clone(&self) -> mycelium_select::Explanation
+impl core::cmp::PartialEq for mycelium_select::Explanation
+pub fn mycelium_select::Explanation::eq(&self, &mycelium_select::Explanation) -> bool
+impl core::fmt::Debug for mycelium_select::Explanation
+pub fn mycelium_select::Explanation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_select::Explanation
+impl serde_core::ser::Serialize for mycelium_select::Explanation
+pub fn mycelium_select::Explanation::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_select::Explanation
+pub fn mycelium_select::Explanation::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_select::Explanation
+impl core::marker::Send for mycelium_select::Explanation
+impl core::marker::Sync for mycelium_select::Explanation
+impl core::marker::Unpin for mycelium_select::Explanation
+impl core::marker::UnsafeUnpin for mycelium_select::Explanation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::Explanation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::Explanation
+pub struct mycelium_select::PolicyRegistry
+impl mycelium_select::PolicyRegistry
+pub fn mycelium_select::PolicyRegistry::get(&self, &mycelium_core::id::ContentHash) -> core::option::Option<&mycelium_select::SelectionPolicy>
+pub fn mycelium_select::PolicyRegistry::is_empty(&self) -> bool
+pub fn mycelium_select::PolicyRegistry::len(&self) -> usize
+pub fn mycelium_select::PolicyRegistry::new() -> Self
+pub fn mycelium_select::PolicyRegistry::register(&mut self, mycelium_select::SelectionPolicy) -> mycelium_core::id::ContentHash
+impl core::default::Default for mycelium_select::PolicyRegistry
+pub fn mycelium_select::PolicyRegistry::default() -> mycelium_select::PolicyRegistry
+impl core::fmt::Debug for mycelium_select::PolicyRegistry
+pub fn mycelium_select::PolicyRegistry::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_select::PolicyRegistry
+impl core::marker::Send for mycelium_select::PolicyRegistry
+impl core::marker::Sync for mycelium_select::PolicyRegistry
+impl core::marker::Unpin for mycelium_select::PolicyRegistry
+impl core::marker::UnsafeUnpin for mycelium_select::PolicyRegistry
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::PolicyRegistry
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::PolicyRegistry
+pub struct mycelium_select::Rule
+pub mycelium_select::Rule::action: mycelium_select::Action
+pub mycelium_select::Rule::when: mycelium_select::Predicate
+impl core::clone::Clone for mycelium_select::Rule
+pub fn mycelium_select::Rule::clone(&self) -> mycelium_select::Rule
+impl core::cmp::PartialEq for mycelium_select::Rule
+pub fn mycelium_select::Rule::eq(&self, &mycelium_select::Rule) -> bool
+impl core::fmt::Debug for mycelium_select::Rule
+pub fn mycelium_select::Rule::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_select::Rule
+impl serde_core::ser::Serialize for mycelium_select::Rule
+pub fn mycelium_select::Rule::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_select::Rule
+pub fn mycelium_select::Rule::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_select::Rule
+impl core::marker::Send for mycelium_select::Rule
+impl core::marker::Sync for mycelium_select::Rule
+impl core::marker::Unpin for mycelium_select::Rule
+impl core::marker::UnsafeUnpin for mycelium_select::Rule
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::Rule
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::Rule
+pub struct mycelium_select::SelectionInputs
+pub mycelium_select::SelectionInputs::bound: core::option::Option<mycelium_core::bound::Bound>
+pub mycelium_select::SelectionInputs::decode: core::option::Option<mycelium_select::DecodeFacts>
+pub mycelium_select::SelectionInputs::guarantee: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_select::SelectionInputs::sparsity: core::option::Option<mycelium_core::meta::SparsityObs>
+pub mycelium_select::SelectionInputs::src: mycelium_core::repr::Repr
+impl mycelium_select::SelectionInputs
+pub fn mycelium_select::SelectionInputs::from_meta(mycelium_core::repr::Repr, &mycelium_core::meta::Meta) -> Self
+pub fn mycelium_select::SelectionInputs::of_value(&mycelium_core::value::Value) -> Self
+pub fn mycelium_select::SelectionInputs::with_decode(self, mycelium_select::DecodeFacts) -> Self
+impl core::clone::Clone for mycelium_select::SelectionInputs
+pub fn mycelium_select::SelectionInputs::clone(&self) -> mycelium_select::SelectionInputs
+impl core::cmp::PartialEq for mycelium_select::SelectionInputs
+pub fn mycelium_select::SelectionInputs::eq(&self, &mycelium_select::SelectionInputs) -> bool
+impl core::fmt::Debug for mycelium_select::SelectionInputs
+pub fn mycelium_select::SelectionInputs::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_select::SelectionInputs
+impl serde_core::ser::Serialize for mycelium_select::SelectionInputs
+pub fn mycelium_select::SelectionInputs::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_select::SelectionInputs
+pub fn mycelium_select::SelectionInputs::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_select::SelectionInputs
+impl core::marker::Send for mycelium_select::SelectionInputs
+impl core::marker::Sync for mycelium_select::SelectionInputs
+impl core::marker::Unpin for mycelium_select::SelectionInputs
+impl core::marker::UnsafeUnpin for mycelium_select::SelectionInputs
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::SelectionInputs
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::SelectionInputs
+pub struct mycelium_select::SelectionPolicy
+impl mycelium_select::SelectionPolicy
+pub fn mycelium_select::SelectionPolicy::candidates(&self) -> &[mycelium_select::Candidate]
+pub fn mycelium_select::SelectionPolicy::cost_model(&self) -> mycelium_select::CostModel
+pub fn mycelium_select::SelectionPolicy::default_choice(&self) -> usize
+pub fn mycelium_select::SelectionPolicy::name(&self) -> &str
+pub fn mycelium_select::SelectionPolicy::new(impl core::convert::Into<alloc::string::String>, alloc::vec::Vec<mycelium_select::Candidate>, alloc::vec::Vec<mycelium_select::Rule>, usize, mycelium_select::CostModel) -> core::result::Result<Self, mycelium_select::PolicyError>
+pub fn mycelium_select::SelectionPolicy::policy_ref(&self) -> mycelium_core::id::ContentHash
+pub fn mycelium_select::SelectionPolicy::rules(&self) -> &[mycelium_select::Rule]
+impl core::clone::Clone for mycelium_select::SelectionPolicy
+pub fn mycelium_select::SelectionPolicy::clone(&self) -> mycelium_select::SelectionPolicy
+impl core::cmp::PartialEq for mycelium_select::SelectionPolicy
+pub fn mycelium_select::SelectionPolicy::eq(&self, &mycelium_select::SelectionPolicy) -> bool
+impl core::fmt::Debug for mycelium_select::SelectionPolicy
+pub fn mycelium_select::SelectionPolicy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_select::SelectionPolicy
+impl serde_core::ser::Serialize for mycelium_select::SelectionPolicy
+pub fn mycelium_select::SelectionPolicy::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_select::SelectionPolicy
+pub fn mycelium_select::SelectionPolicy::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for mycelium_select::SelectionPolicy
+impl core::marker::Send for mycelium_select::SelectionPolicy
+impl core::marker::Sync for mycelium_select::SelectionPolicy
+impl core::marker::Unpin for mycelium_select::SelectionPolicy
+impl core::marker::UnsafeUnpin for mycelium_select::SelectionPolicy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::SelectionPolicy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::SelectionPolicy
+pub const mycelium_select::BITNET_PACKINGS: [mycelium_core::meta::PackScheme; 3]
+pub fn mycelium_select::bitnet_packing_policy() -> mycelium_select::SelectionPolicy
+pub fn mycelium_select::explain(&mycelium_select::SelectionPolicy, &mycelium_select::SelectionInputs) -> mycelium_select::Explanation
+pub fn mycelium_select::layout_of(mycelium_core::meta::PackScheme) -> mycelium_core::meta::PhysicalLayout
+pub fn mycelium_select::record_packing_layout(&mycelium_select::SelectionPolicy, &mycelium_core::repr::Repr, &mycelium_core::meta::Meta, core::option::Option<usize>) -> core::result::Result<(mycelium_core::meta::Meta, mycelium_select::Explanation), mycelium_select::SelectError>
+pub fn mycelium_select::select(&mycelium_select::SelectionPolicy, &mycelium_select::SelectionInputs, core::option::Option<usize>) -> core::result::Result<(mycelium_select::Candidate, mycelium_select::Explanation), mycelium_select::SelectError>
+pub fn mycelium_select::select_decode_method(&mycelium_select::SelectionPolicy, &mycelium_select::SelectionInputs, core::option::Option<usize>) -> core::result::Result<(mycelium_select::DecodeMethod, mycelium_select::Explanation), mycelium_select::SelectError>
+pub fn mycelium_select::select_layout(&mycelium_select::SelectionPolicy, &mycelium_select::SelectionInputs, core::option::Option<usize>) -> core::result::Result<(mycelium_core::meta::PhysicalLayout, mycelium_select::Explanation), mycelium_select::SelectError>
+pub fn mycelium_select::select_packing(&mycelium_select::SelectionPolicy, &mycelium_select::SelectionInputs, core::option::Option<usize>) -> core::result::Result<(mycelium_core::meta::PackScheme, mycelium_select::Explanation), mycelium_select::SelectError>
+pub fn mycelium_select::select_swap_target(&mycelium_select::SelectionPolicy, &mycelium_select::SelectionInputs, core::option::Option<usize>) -> core::result::Result<(mycelium_core::repr::Repr, mycelium_select::Explanation), mycelium_select::SelectError>

@@ -1,0 +1,149 @@
+pub mod mycelium_std_numerics
+pub use mycelium_std_numerics::ErrorBound
+pub use mycelium_std_numerics::ErrorOp
+pub use mycelium_std_numerics::KernelProbBound
+pub mod mycelium_std_numerics::matrix
+pub struct mycelium_std_numerics::matrix::GuaranteeRow
+pub mycelium_std_numerics::matrix::GuaranteeRow::effects: &'static str
+pub mycelium_std_numerics::matrix::GuaranteeRow::error_set: &'static str
+pub mycelium_std_numerics::matrix::GuaranteeRow::explainable: bool
+pub mycelium_std_numerics::matrix::GuaranteeRow::fallible: bool
+pub mycelium_std_numerics::matrix::GuaranteeRow::op: &'static str
+pub mycelium_std_numerics::matrix::GuaranteeRow::tag: mycelium_core::guarantee::GuaranteeStrength
+impl core::clone::Clone for mycelium_std_numerics::matrix::GuaranteeRow
+pub fn mycelium_std_numerics::matrix::GuaranteeRow::clone(&self) -> mycelium_std_numerics::matrix::GuaranteeRow
+impl core::cmp::Eq for mycelium_std_numerics::matrix::GuaranteeRow
+impl core::cmp::PartialEq for mycelium_std_numerics::matrix::GuaranteeRow
+pub fn mycelium_std_numerics::matrix::GuaranteeRow::eq(&self, &mycelium_std_numerics::matrix::GuaranteeRow) -> bool
+impl core::fmt::Debug for mycelium_std_numerics::matrix::GuaranteeRow
+pub fn mycelium_std_numerics::matrix::GuaranteeRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_numerics::matrix::GuaranteeRow
+impl core::marker::Freeze for mycelium_std_numerics::matrix::GuaranteeRow
+impl core::marker::Send for mycelium_std_numerics::matrix::GuaranteeRow
+impl core::marker::Sync for mycelium_std_numerics::matrix::GuaranteeRow
+impl core::marker::Unpin for mycelium_std_numerics::matrix::GuaranteeRow
+impl core::marker::UnsafeUnpin for mycelium_std_numerics::matrix::GuaranteeRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_numerics::matrix::GuaranteeRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_numerics::matrix::GuaranteeRow
+pub const mycelium_std_numerics::matrix::GUARANTEE_MATRIX: &[mycelium_std_numerics::matrix::GuaranteeRow]
+pub fn mycelium_std_numerics::matrix::assert_matrix_invariants()
+pub enum mycelium_std_numerics::CheckErr
+pub mycelium_std_numerics::CheckErr::Malformed
+pub mycelium_std_numerics::CheckErr::Rejected
+pub mycelium_std_numerics::CheckErr::Rejected::claimed: f64
+pub mycelium_std_numerics::CheckErr::Rejected::recomputed: f64
+impl core::clone::Clone for mycelium_std_numerics::CheckErr
+pub fn mycelium_std_numerics::CheckErr::clone(&self) -> mycelium_std_numerics::CheckErr
+impl core::cmp::PartialEq for mycelium_std_numerics::CheckErr
+pub fn mycelium_std_numerics::CheckErr::eq(&self, &mycelium_std_numerics::CheckErr) -> bool
+impl core::fmt::Debug for mycelium_std_numerics::CheckErr
+pub fn mycelium_std_numerics::CheckErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_numerics::CheckErr
+pub fn mycelium_std_numerics::CheckErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_numerics::CheckErr
+impl core::marker::Freeze for mycelium_std_numerics::CheckErr
+impl core::marker::Send for mycelium_std_numerics::CheckErr
+impl core::marker::Sync for mycelium_std_numerics::CheckErr
+impl core::marker::Unpin for mycelium_std_numerics::CheckErr
+impl core::marker::UnsafeUnpin for mycelium_std_numerics::CheckErr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_numerics::CheckErr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_numerics::CheckErr
+pub enum mycelium_std_numerics::NumErr
+pub mycelium_std_numerics::NumErr::BadDelta
+pub mycelium_std_numerics::NumErr::BadEps
+pub mycelium_std_numerics::NumErr::NoRule
+pub mycelium_std_numerics::NumErr::NormMismatch
+pub mycelium_std_numerics::NumErr::Overflow
+impl core::clone::Clone for mycelium_std_numerics::NumErr
+pub fn mycelium_std_numerics::NumErr::clone(&self) -> mycelium_std_numerics::NumErr
+impl core::cmp::Eq for mycelium_std_numerics::NumErr
+impl core::cmp::PartialEq for mycelium_std_numerics::NumErr
+pub fn mycelium_std_numerics::NumErr::eq(&self, &mycelium_std_numerics::NumErr) -> bool
+impl core::fmt::Debug for mycelium_std_numerics::NumErr
+pub fn mycelium_std_numerics::NumErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_numerics::NumErr
+pub fn mycelium_std_numerics::NumErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_numerics::NumErr
+impl core::marker::Freeze for mycelium_std_numerics::NumErr
+impl core::marker::Send for mycelium_std_numerics::NumErr
+impl core::marker::Sync for mycelium_std_numerics::NumErr
+impl core::marker::Unpin for mycelium_std_numerics::NumErr
+impl core::marker::UnsafeUnpin for mycelium_std_numerics::NumErr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_numerics::NumErr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_numerics::NumErr
+pub struct mycelium_std_numerics::Approx<T>
+pub mycelium_std_numerics::Approx::bound: mycelium_core::bound::Bound
+pub mycelium_std_numerics::Approx::strength: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_std_numerics::Approx::value: T
+impl<T: core::fmt::Debug> mycelium_std_numerics::Approx<T>
+pub fn mycelium_std_numerics::Approx<T>::explain(&self) -> mycelium_std_numerics::Explanation
+impl<T> mycelium_std_numerics::Approx<T>
+pub fn mycelium_std_numerics::Approx<T>::attach(T, mycelium_core::bound::Bound) -> Self
+pub fn mycelium_std_numerics::Approx<T>::bound_of(&self) -> &mycelium_core::bound::Bound
+pub fn mycelium_std_numerics::Approx<T>::combine(&self, &mycelium_std_numerics::Approx<T>, T, mycelium_numerics::cert::ErrorOp) -> core::result::Result<mycelium_std_numerics::Approx<T>, mycelium_std_numerics::NumErr>
+pub fn mycelium_std_numerics::Approx<T>::declared(T, mycelium_core::bound::Bound) -> Self
+pub fn mycelium_std_numerics::Approx<T>::empirical(T, mycelium_core::bound::Bound) -> Self
+pub fn mycelium_std_numerics::Approx<T>::map<U>(self, impl core::ops::function::FnOnce(T) -> U) -> mycelium_std_numerics::Approx<U>
+pub fn mycelium_std_numerics::Approx<T>::proven(T, mycelium_core::bound::Bound, mycelium_std_numerics::ProvenThm) -> Self
+pub fn mycelium_std_numerics::Approx<T>::strength(&self) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_std_numerics::Approx<T>::value_of(&self) -> &T
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_numerics::Approx<T>
+pub fn mycelium_std_numerics::Approx<T>::clone(&self) -> mycelium_std_numerics::Approx<T>
+impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_numerics::Approx<T>
+pub fn mycelium_std_numerics::Approx<T>::eq(&self, &mycelium_std_numerics::Approx<T>) -> bool
+impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_numerics::Approx<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_std_numerics::Approx<T>
+pub fn mycelium_std_numerics::Approx<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::marker::Freeze for mycelium_std_numerics::Approx<T> where T: core::marker::Freeze
+impl<T> core::marker::Send for mycelium_std_numerics::Approx<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_std_numerics::Approx<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_std_numerics::Approx<T> where T: core::marker::Unpin
+impl<T> core::marker::UnsafeUnpin for mycelium_std_numerics::Approx<T> where T: core::marker::UnsafeUnpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_numerics::Approx<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_numerics::Approx<T> where T: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_numerics::Explanation
+pub mycelium_std_numerics::Explanation::basis: mycelium_core::bound::BoundBasis
+pub mycelium_std_numerics::Explanation::delta: f64
+pub mycelium_std_numerics::Explanation::eps: f64
+pub mycelium_std_numerics::Explanation::kind: alloc::string::String
+pub mycelium_std_numerics::Explanation::norm: mycelium_core::bound::NormKind
+pub mycelium_std_numerics::Explanation::strength: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_std_numerics::Explanation::summary: alloc::string::String
+impl core::clone::Clone for mycelium_std_numerics::Explanation
+pub fn mycelium_std_numerics::Explanation::clone(&self) -> mycelium_std_numerics::Explanation
+impl core::cmp::PartialEq for mycelium_std_numerics::Explanation
+pub fn mycelium_std_numerics::Explanation::eq(&self, &mycelium_std_numerics::Explanation) -> bool
+impl core::fmt::Debug for mycelium_std_numerics::Explanation
+pub fn mycelium_std_numerics::Explanation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_numerics::Explanation
+impl core::marker::Freeze for mycelium_std_numerics::Explanation
+impl core::marker::Send for mycelium_std_numerics::Explanation
+impl core::marker::Sync for mycelium_std_numerics::Explanation
+impl core::marker::Unpin for mycelium_std_numerics::Explanation
+impl core::marker::UnsafeUnpin for mycelium_std_numerics::Explanation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_numerics::Explanation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_numerics::Explanation
+pub struct mycelium_std_numerics::ProvenThm
+pub mycelium_std_numerics::ProvenThm::citation: alloc::string::String
+impl mycelium_std_numerics::ProvenThm
+pub fn mycelium_std_numerics::ProvenThm::new(impl core::convert::Into<alloc::string::String>) -> core::option::Option<Self>
+impl core::clone::Clone for mycelium_std_numerics::ProvenThm
+pub fn mycelium_std_numerics::ProvenThm::clone(&self) -> mycelium_std_numerics::ProvenThm
+impl core::cmp::PartialEq for mycelium_std_numerics::ProvenThm
+pub fn mycelium_std_numerics::ProvenThm::eq(&self, &mycelium_std_numerics::ProvenThm) -> bool
+impl core::fmt::Debug for mycelium_std_numerics::ProvenThm
+pub fn mycelium_std_numerics::ProvenThm::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_numerics::ProvenThm
+impl core::marker::Freeze for mycelium_std_numerics::ProvenThm
+impl core::marker::Send for mycelium_std_numerics::ProvenThm
+impl core::marker::Sync for mycelium_std_numerics::ProvenThm
+impl core::marker::Unpin for mycelium_std_numerics::ProvenThm
+impl core::marker::UnsafeUnpin for mycelium_std_numerics::ProvenThm
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_numerics::ProvenThm
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_numerics::ProvenThm
+pub fn mycelium_std_numerics::accuracy_to_probability(&mycelium_core::bound::Bound, f64, f64) -> core::result::Result<mycelium_core::bound::Bound, mycelium_std_numerics::NumErr>
+pub fn mycelium_std_numerics::check_error(&[mycelium_numerics::error::ErrorBound], mycelium_numerics::cert::ErrorOp, mycelium_numerics::error::ErrorBound) -> core::result::Result<(), mycelium_std_numerics::CheckErr>
+pub fn mycelium_std_numerics::check_union(&[mycelium_numerics::prob::ProbBound], mycelium_numerics::prob::ProbBound) -> core::result::Result<(), mycelium_std_numerics::CheckErr>
+pub fn mycelium_std_numerics::error_bound(f64, mycelium_core::bound::NormKind, mycelium_core::bound::BoundBasis) -> core::result::Result<mycelium_core::bound::Bound, mycelium_std_numerics::NumErr>
+pub fn mycelium_std_numerics::prob_bound(f64, mycelium_core::bound::BoundBasis) -> core::result::Result<mycelium_core::bound::Bound, mycelium_std_numerics::NumErr>
+pub fn mycelium_std_numerics::union_delta(&[&mycelium_core::bound::Bound]) -> core::result::Result<mycelium_core::bound::Bound, mycelium_std_numerics::NumErr>

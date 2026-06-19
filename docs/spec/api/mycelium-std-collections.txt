@@ -1,0 +1,283 @@
+pub mod mycelium_std_collections
+pub mod mycelium_std_collections::error
+pub enum mycelium_std_collections::error::CollErr
+pub mycelium_std_collections::error::CollErr::IndexOOB
+pub mycelium_std_collections::error::CollErr::IndexOOB::context: &'static str
+pub mycelium_std_collections::error::CollErr::IndexOOB::index: usize
+pub mycelium_std_collections::error::CollErr::IndexOOB::len: usize
+impl core::clone::Clone for mycelium_std_collections::error::CollErr
+pub fn mycelium_std_collections::error::CollErr::clone(&self) -> mycelium_std_collections::error::CollErr
+impl core::cmp::Eq for mycelium_std_collections::error::CollErr
+impl core::cmp::PartialEq for mycelium_std_collections::error::CollErr
+pub fn mycelium_std_collections::error::CollErr::eq(&self, &mycelium_std_collections::error::CollErr) -> bool
+impl core::error::Error for mycelium_std_collections::error::CollErr
+impl core::fmt::Debug for mycelium_std_collections::error::CollErr
+pub fn mycelium_std_collections::error::CollErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_collections::error::CollErr
+pub fn mycelium_std_collections::error::CollErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_collections::error::CollErr
+impl core::marker::Freeze for mycelium_std_collections::error::CollErr
+impl core::marker::Send for mycelium_std_collections::error::CollErr
+impl core::marker::Sync for mycelium_std_collections::error::CollErr
+impl core::marker::Unpin for mycelium_std_collections::error::CollErr
+impl core::marker::UnsafeUnpin for mycelium_std_collections::error::CollErr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_collections::error::CollErr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_collections::error::CollErr
+pub mod mycelium_std_collections::guarantee_matrix
+pub enum mycelium_std_collections::guarantee_matrix::Explainable
+pub mycelium_std_collections::guarantee_matrix::Explainable::NotApplicable
+pub mycelium_std_collections::guarantee_matrix::Explainable::Yes
+impl core::clone::Clone for mycelium_std_collections::guarantee_matrix::Explainable
+pub fn mycelium_std_collections::guarantee_matrix::Explainable::clone(&self) -> mycelium_std_collections::guarantee_matrix::Explainable
+impl core::cmp::Eq for mycelium_std_collections::guarantee_matrix::Explainable
+impl core::cmp::PartialEq for mycelium_std_collections::guarantee_matrix::Explainable
+pub fn mycelium_std_collections::guarantee_matrix::Explainable::eq(&self, &mycelium_std_collections::guarantee_matrix::Explainable) -> bool
+impl core::fmt::Debug for mycelium_std_collections::guarantee_matrix::Explainable
+pub fn mycelium_std_collections::guarantee_matrix::Explainable::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_collections::guarantee_matrix::Explainable
+impl core::marker::StructuralPartialEq for mycelium_std_collections::guarantee_matrix::Explainable
+impl core::marker::Freeze for mycelium_std_collections::guarantee_matrix::Explainable
+impl core::marker::Send for mycelium_std_collections::guarantee_matrix::Explainable
+impl core::marker::Sync for mycelium_std_collections::guarantee_matrix::Explainable
+impl core::marker::Unpin for mycelium_std_collections::guarantee_matrix::Explainable
+impl core::marker::UnsafeUnpin for mycelium_std_collections::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_collections::guarantee_matrix::Explainable
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_collections::guarantee_matrix::Explainable
+pub enum mycelium_std_collections::guarantee_matrix::Fallibility
+pub mycelium_std_collections::guarantee_matrix::Fallibility::Fallible
+pub mycelium_std_collections::guarantee_matrix::Fallibility::Total
+impl core::clone::Clone for mycelium_std_collections::guarantee_matrix::Fallibility
+pub fn mycelium_std_collections::guarantee_matrix::Fallibility::clone(&self) -> mycelium_std_collections::guarantee_matrix::Fallibility
+impl core::cmp::Eq for mycelium_std_collections::guarantee_matrix::Fallibility
+impl core::cmp::PartialEq for mycelium_std_collections::guarantee_matrix::Fallibility
+pub fn mycelium_std_collections::guarantee_matrix::Fallibility::eq(&self, &mycelium_std_collections::guarantee_matrix::Fallibility) -> bool
+impl core::fmt::Debug for mycelium_std_collections::guarantee_matrix::Fallibility
+pub fn mycelium_std_collections::guarantee_matrix::Fallibility::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_collections::guarantee_matrix::Fallibility
+impl core::marker::StructuralPartialEq for mycelium_std_collections::guarantee_matrix::Fallibility
+impl core::marker::Freeze for mycelium_std_collections::guarantee_matrix::Fallibility
+impl core::marker::Send for mycelium_std_collections::guarantee_matrix::Fallibility
+impl core::marker::Sync for mycelium_std_collections::guarantee_matrix::Fallibility
+impl core::marker::Unpin for mycelium_std_collections::guarantee_matrix::Fallibility
+impl core::marker::UnsafeUnpin for mycelium_std_collections::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_collections::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_collections::guarantee_matrix::Fallibility
+pub struct mycelium_std_collections::guarantee_matrix::MatrixRow
+pub mycelium_std_collections::guarantee_matrix::MatrixRow::effects: &'static str
+pub mycelium_std_collections::guarantee_matrix::MatrixRow::error_set: &'static str
+pub mycelium_std_collections::guarantee_matrix::MatrixRow::explainable: mycelium_std_collections::guarantee_matrix::Explainable
+pub mycelium_std_collections::guarantee_matrix::MatrixRow::fallibility: mycelium_std_collections::guarantee_matrix::Fallibility
+pub mycelium_std_collections::guarantee_matrix::MatrixRow::guarantee: &'static str
+pub mycelium_std_collections::guarantee_matrix::MatrixRow::op: &'static str
+impl core::clone::Clone for mycelium_std_collections::guarantee_matrix::MatrixRow
+pub fn mycelium_std_collections::guarantee_matrix::MatrixRow::clone(&self) -> mycelium_std_collections::guarantee_matrix::MatrixRow
+impl core::cmp::Eq for mycelium_std_collections::guarantee_matrix::MatrixRow
+impl core::cmp::PartialEq for mycelium_std_collections::guarantee_matrix::MatrixRow
+pub fn mycelium_std_collections::guarantee_matrix::MatrixRow::eq(&self, &mycelium_std_collections::guarantee_matrix::MatrixRow) -> bool
+impl core::fmt::Debug for mycelium_std_collections::guarantee_matrix::MatrixRow
+pub fn mycelium_std_collections::guarantee_matrix::MatrixRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_collections::guarantee_matrix::MatrixRow
+impl core::marker::Freeze for mycelium_std_collections::guarantee_matrix::MatrixRow
+impl core::marker::Send for mycelium_std_collections::guarantee_matrix::MatrixRow
+impl core::marker::Sync for mycelium_std_collections::guarantee_matrix::MatrixRow
+impl core::marker::Unpin for mycelium_std_collections::guarantee_matrix::MatrixRow
+impl core::marker::UnsafeUnpin for mycelium_std_collections::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_collections::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_collections::guarantee_matrix::MatrixRow
+pub const mycelium_std_collections::guarantee_matrix::MATRIX: &[mycelium_std_collections::guarantee_matrix::MatrixRow]
+pub mod mycelium_std_collections::map
+pub struct mycelium_std_collections::map::Map<K, V>
+impl<K: core::clone::Clone + core::cmp::Eq + core::hash::Hash, V: core::clone::Clone> mycelium_std_collections::map::Map<K, V>
+pub fn mycelium_std_collections::map::Map<K, V>::contains_key(&self, &K) -> bool
+pub fn mycelium_std_collections::map::Map<K, V>::empty() -> Self
+pub fn mycelium_std_collections::map::Map<K, V>::entries(&self) -> alloc::vec::Vec<(&K, &V)>
+pub fn mycelium_std_collections::map::Map<K, V>::get(&self, &K) -> core::option::Option<&V>
+pub fn mycelium_std_collections::map::Map<K, V>::get_or<'a>(&'a self, &K, &'a V) -> &'a V
+pub fn mycelium_std_collections::map::Map<K, V>::insert(&self, K, V) -> Self
+pub fn mycelium_std_collections::map::Map<K, V>::is_empty(&self) -> bool
+pub fn mycelium_std_collections::map::Map<K, V>::keys(&self) -> alloc::vec::Vec<&K>
+pub fn mycelium_std_collections::map::Map<K, V>::len(&self) -> usize
+pub fn mycelium_std_collections::map::Map<K, V>::remove(&self, &K) -> (Self, core::option::Option<V>)
+pub fn mycelium_std_collections::map::Map<K, V>::values(&self) -> alloc::vec::Vec<&V>
+impl<K: core::clone::Clone + core::cmp::Eq + core::hash::Hash, V: core::cmp::Eq + core::clone::Clone> core::cmp::Eq for mycelium_std_collections::map::Map<K, V>
+impl<K: core::clone::Clone + core::cmp::Eq + core::hash::Hash, V: core::cmp::PartialEq + core::clone::Clone> core::cmp::PartialEq for mycelium_std_collections::map::Map<K, V>
+pub fn mycelium_std_collections::map::Map<K, V>::eq(&self, &Self) -> bool
+impl<K: core::clone::Clone, V: core::clone::Clone> core::clone::Clone for mycelium_std_collections::map::Map<K, V>
+pub fn mycelium_std_collections::map::Map<K, V>::clone(&self) -> mycelium_std_collections::map::Map<K, V>
+impl<K: core::fmt::Debug, V: core::fmt::Debug> core::fmt::Debug for mycelium_std_collections::map::Map<K, V>
+pub fn mycelium_std_collections::map::Map<K, V>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<K, V> core::marker::Freeze for mycelium_std_collections::map::Map<K, V>
+impl<K, V> core::marker::Send for mycelium_std_collections::map::Map<K, V> where K: core::marker::Send, V: core::marker::Send
+impl<K, V> core::marker::Sync for mycelium_std_collections::map::Map<K, V> where K: core::marker::Sync, V: core::marker::Sync
+impl<K, V> core::marker::Unpin for mycelium_std_collections::map::Map<K, V> where K: core::marker::Unpin, V: core::marker::Unpin
+impl<K, V> core::marker::UnsafeUnpin for mycelium_std_collections::map::Map<K, V>
+impl<K, V> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_collections::map::Map<K, V> where K: core::panic::unwind_safe::RefUnwindSafe, V: core::panic::unwind_safe::RefUnwindSafe
+impl<K, V> core::panic::unwind_safe::UnwindSafe for mycelium_std_collections::map::Map<K, V> where K: core::panic::unwind_safe::UnwindSafe, V: core::panic::unwind_safe::UnwindSafe
+pub mod mycelium_std_collections::seq
+pub struct mycelium_std_collections::seq::Seq<E>
+impl<E: core::clone::Clone> mycelium_std_collections::seq::Seq<E>
+pub fn mycelium_std_collections::seq::Seq<E>::concat(&self, &Self) -> Self
+pub fn mycelium_std_collections::seq::Seq<E>::empty() -> Self
+pub fn mycelium_std_collections::seq::Seq<E>::first(&self) -> core::option::Option<&E>
+pub fn mycelium_std_collections::seq::Seq<E>::foldable(&self) -> &[E]
+pub fn mycelium_std_collections::seq::Seq<E>::from_slice(&[E]) -> Self
+pub fn mycelium_std_collections::seq::Seq<E>::get(&self, usize) -> core::option::Option<&E>
+pub fn mycelium_std_collections::seq::Seq<E>::is_empty(&self) -> bool
+pub fn mycelium_std_collections::seq::Seq<E>::len(&self) -> usize
+pub fn mycelium_std_collections::seq::Seq<E>::pop(&self) -> core::option::Option<(Self, E)>
+pub fn mycelium_std_collections::seq::Seq<E>::push(&self, E) -> Self
+pub fn mycelium_std_collections::seq::Seq<E>::slice(&self, usize, usize) -> core::result::Result<Self, mycelium_std_collections::error::CollErr>
+pub fn mycelium_std_collections::seq::Seq<E>::update(&self, usize, E) -> core::result::Result<Self, mycelium_std_collections::error::CollErr>
+impl<E: core::clone::Clone> core::clone::Clone for mycelium_std_collections::seq::Seq<E>
+pub fn mycelium_std_collections::seq::Seq<E>::clone(&self) -> mycelium_std_collections::seq::Seq<E>
+impl<E: core::cmp::Eq> core::cmp::Eq for mycelium_std_collections::seq::Seq<E>
+impl<E: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_collections::seq::Seq<E>
+pub fn mycelium_std_collections::seq::Seq<E>::eq(&self, &mycelium_std_collections::seq::Seq<E>) -> bool
+impl<E: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_collections::seq::Seq<E>
+impl<E: core::fmt::Debug> core::fmt::Debug for mycelium_std_collections::seq::Seq<E>
+pub fn mycelium_std_collections::seq::Seq<E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<E: core::hash::Hash> core::hash::Hash for mycelium_std_collections::seq::Seq<E>
+pub fn mycelium_std_collections::seq::Seq<E>::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl<E> core::marker::Freeze for mycelium_std_collections::seq::Seq<E>
+impl<E> core::marker::Send for mycelium_std_collections::seq::Seq<E> where E: core::marker::Send
+impl<E> core::marker::Sync for mycelium_std_collections::seq::Seq<E> where E: core::marker::Sync
+impl<E> core::marker::Unpin for mycelium_std_collections::seq::Seq<E> where E: core::marker::Unpin
+impl<E> core::marker::UnsafeUnpin for mycelium_std_collections::seq::Seq<E>
+impl<E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_collections::seq::Seq<E> where E: core::panic::unwind_safe::RefUnwindSafe
+impl<E> core::panic::unwind_safe::UnwindSafe for mycelium_std_collections::seq::Seq<E> where E: core::panic::unwind_safe::UnwindSafe
+pub mod mycelium_std_collections::set
+pub struct mycelium_std_collections::set::Set<E>
+impl<E: core::clone::Clone + core::cmp::Eq + core::hash::Hash> mycelium_std_collections::set::Set<E>
+pub fn mycelium_std_collections::set::Set<E>::contains(&self, &E) -> bool
+pub fn mycelium_std_collections::set::Set<E>::difference(&self, &Self) -> Self
+pub fn mycelium_std_collections::set::Set<E>::empty() -> Self
+pub fn mycelium_std_collections::set::Set<E>::foldable(&self) -> &[E]
+pub fn mycelium_std_collections::set::Set<E>::from_slice(&[E]) -> Self
+pub fn mycelium_std_collections::set::Set<E>::insert(&self, E) -> Self
+pub fn mycelium_std_collections::set::Set<E>::intersection(&self, &Self) -> Self
+pub fn mycelium_std_collections::set::Set<E>::is_empty(&self) -> bool
+pub fn mycelium_std_collections::set::Set<E>::len(&self) -> usize
+pub fn mycelium_std_collections::set::Set<E>::remove(&self, &E) -> Self
+pub fn mycelium_std_collections::set::Set<E>::union(&self, &Self) -> Self
+impl<E: core::clone::Clone + core::cmp::Eq + core::hash::Hash> core::cmp::Eq for mycelium_std_collections::set::Set<E>
+impl<E: core::clone::Clone + core::cmp::Eq + core::hash::Hash> core::cmp::PartialEq for mycelium_std_collections::set::Set<E>
+pub fn mycelium_std_collections::set::Set<E>::eq(&self, &Self) -> bool
+impl<E: core::clone::Clone> core::clone::Clone for mycelium_std_collections::set::Set<E>
+pub fn mycelium_std_collections::set::Set<E>::clone(&self) -> mycelium_std_collections::set::Set<E>
+impl<E: core::fmt::Debug> core::fmt::Debug for mycelium_std_collections::set::Set<E>
+pub fn mycelium_std_collections::set::Set<E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<E> core::marker::Freeze for mycelium_std_collections::set::Set<E>
+impl<E> core::marker::Send for mycelium_std_collections::set::Set<E> where E: core::marker::Send
+impl<E> core::marker::Sync for mycelium_std_collections::set::Set<E> where E: core::marker::Sync
+impl<E> core::marker::Unpin for mycelium_std_collections::set::Set<E> where E: core::marker::Unpin
+impl<E> core::marker::UnsafeUnpin for mycelium_std_collections::set::Set<E>
+impl<E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_collections::set::Set<E> where E: core::panic::unwind_safe::RefUnwindSafe
+impl<E> core::panic::unwind_safe::UnwindSafe for mycelium_std_collections::set::Set<E> where E: core::panic::unwind_safe::UnwindSafe
+pub enum mycelium_std_collections::CollErr
+pub mycelium_std_collections::CollErr::IndexOOB
+pub mycelium_std_collections::CollErr::IndexOOB::context: &'static str
+pub mycelium_std_collections::CollErr::IndexOOB::index: usize
+pub mycelium_std_collections::CollErr::IndexOOB::len: usize
+impl core::clone::Clone for mycelium_std_collections::error::CollErr
+pub fn mycelium_std_collections::error::CollErr::clone(&self) -> mycelium_std_collections::error::CollErr
+impl core::cmp::Eq for mycelium_std_collections::error::CollErr
+impl core::cmp::PartialEq for mycelium_std_collections::error::CollErr
+pub fn mycelium_std_collections::error::CollErr::eq(&self, &mycelium_std_collections::error::CollErr) -> bool
+impl core::error::Error for mycelium_std_collections::error::CollErr
+impl core::fmt::Debug for mycelium_std_collections::error::CollErr
+pub fn mycelium_std_collections::error::CollErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_collections::error::CollErr
+pub fn mycelium_std_collections::error::CollErr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_collections::error::CollErr
+impl core::marker::Freeze for mycelium_std_collections::error::CollErr
+impl core::marker::Send for mycelium_std_collections::error::CollErr
+impl core::marker::Sync for mycelium_std_collections::error::CollErr
+impl core::marker::Unpin for mycelium_std_collections::error::CollErr
+impl core::marker::UnsafeUnpin for mycelium_std_collections::error::CollErr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_collections::error::CollErr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_collections::error::CollErr
+pub struct mycelium_std_collections::Map<K, V>
+impl<K: core::clone::Clone + core::cmp::Eq + core::hash::Hash, V: core::clone::Clone> mycelium_std_collections::map::Map<K, V>
+pub fn mycelium_std_collections::map::Map<K, V>::contains_key(&self, &K) -> bool
+pub fn mycelium_std_collections::map::Map<K, V>::empty() -> Self
+pub fn mycelium_std_collections::map::Map<K, V>::entries(&self) -> alloc::vec::Vec<(&K, &V)>
+pub fn mycelium_std_collections::map::Map<K, V>::get(&self, &K) -> core::option::Option<&V>
+pub fn mycelium_std_collections::map::Map<K, V>::get_or<'a>(&'a self, &K, &'a V) -> &'a V
+pub fn mycelium_std_collections::map::Map<K, V>::insert(&self, K, V) -> Self
+pub fn mycelium_std_collections::map::Map<K, V>::is_empty(&self) -> bool
+pub fn mycelium_std_collections::map::Map<K, V>::keys(&self) -> alloc::vec::Vec<&K>
+pub fn mycelium_std_collections::map::Map<K, V>::len(&self) -> usize
+pub fn mycelium_std_collections::map::Map<K, V>::remove(&self, &K) -> (Self, core::option::Option<V>)
+pub fn mycelium_std_collections::map::Map<K, V>::values(&self) -> alloc::vec::Vec<&V>
+impl<K: core::clone::Clone + core::cmp::Eq + core::hash::Hash, V: core::cmp::Eq + core::clone::Clone> core::cmp::Eq for mycelium_std_collections::map::Map<K, V>
+impl<K: core::clone::Clone + core::cmp::Eq + core::hash::Hash, V: core::cmp::PartialEq + core::clone::Clone> core::cmp::PartialEq for mycelium_std_collections::map::Map<K, V>
+pub fn mycelium_std_collections::map::Map<K, V>::eq(&self, &Self) -> bool
+impl<K: core::clone::Clone, V: core::clone::Clone> core::clone::Clone for mycelium_std_collections::map::Map<K, V>
+pub fn mycelium_std_collections::map::Map<K, V>::clone(&self) -> mycelium_std_collections::map::Map<K, V>
+impl<K: core::fmt::Debug, V: core::fmt::Debug> core::fmt::Debug for mycelium_std_collections::map::Map<K, V>
+pub fn mycelium_std_collections::map::Map<K, V>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<K, V> core::marker::Freeze for mycelium_std_collections::map::Map<K, V>
+impl<K, V> core::marker::Send for mycelium_std_collections::map::Map<K, V> where K: core::marker::Send, V: core::marker::Send
+impl<K, V> core::marker::Sync for mycelium_std_collections::map::Map<K, V> where K: core::marker::Sync, V: core::marker::Sync
+impl<K, V> core::marker::Unpin for mycelium_std_collections::map::Map<K, V> where K: core::marker::Unpin, V: core::marker::Unpin
+impl<K, V> core::marker::UnsafeUnpin for mycelium_std_collections::map::Map<K, V>
+impl<K, V> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_collections::map::Map<K, V> where K: core::panic::unwind_safe::RefUnwindSafe, V: core::panic::unwind_safe::RefUnwindSafe
+impl<K, V> core::panic::unwind_safe::UnwindSafe for mycelium_std_collections::map::Map<K, V> where K: core::panic::unwind_safe::UnwindSafe, V: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_collections::Seq<E>
+impl<E: core::clone::Clone> mycelium_std_collections::seq::Seq<E>
+pub fn mycelium_std_collections::seq::Seq<E>::concat(&self, &Self) -> Self
+pub fn mycelium_std_collections::seq::Seq<E>::empty() -> Self
+pub fn mycelium_std_collections::seq::Seq<E>::first(&self) -> core::option::Option<&E>
+pub fn mycelium_std_collections::seq::Seq<E>::foldable(&self) -> &[E]
+pub fn mycelium_std_collections::seq::Seq<E>::from_slice(&[E]) -> Self
+pub fn mycelium_std_collections::seq::Seq<E>::get(&self, usize) -> core::option::Option<&E>
+pub fn mycelium_std_collections::seq::Seq<E>::is_empty(&self) -> bool
+pub fn mycelium_std_collections::seq::Seq<E>::len(&self) -> usize
+pub fn mycelium_std_collections::seq::Seq<E>::pop(&self) -> core::option::Option<(Self, E)>
+pub fn mycelium_std_collections::seq::Seq<E>::push(&self, E) -> Self
+pub fn mycelium_std_collections::seq::Seq<E>::slice(&self, usize, usize) -> core::result::Result<Self, mycelium_std_collections::error::CollErr>
+pub fn mycelium_std_collections::seq::Seq<E>::update(&self, usize, E) -> core::result::Result<Self, mycelium_std_collections::error::CollErr>
+impl<E: core::clone::Clone> core::clone::Clone for mycelium_std_collections::seq::Seq<E>
+pub fn mycelium_std_collections::seq::Seq<E>::clone(&self) -> mycelium_std_collections::seq::Seq<E>
+impl<E: core::cmp::Eq> core::cmp::Eq for mycelium_std_collections::seq::Seq<E>
+impl<E: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_collections::seq::Seq<E>
+pub fn mycelium_std_collections::seq::Seq<E>::eq(&self, &mycelium_std_collections::seq::Seq<E>) -> bool
+impl<E: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_collections::seq::Seq<E>
+impl<E: core::fmt::Debug> core::fmt::Debug for mycelium_std_collections::seq::Seq<E>
+pub fn mycelium_std_collections::seq::Seq<E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<E: core::hash::Hash> core::hash::Hash for mycelium_std_collections::seq::Seq<E>
+pub fn mycelium_std_collections::seq::Seq<E>::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl<E> core::marker::Freeze for mycelium_std_collections::seq::Seq<E>
+impl<E> core::marker::Send for mycelium_std_collections::seq::Seq<E> where E: core::marker::Send
+impl<E> core::marker::Sync for mycelium_std_collections::seq::Seq<E> where E: core::marker::Sync
+impl<E> core::marker::Unpin for mycelium_std_collections::seq::Seq<E> where E: core::marker::Unpin
+impl<E> core::marker::UnsafeUnpin for mycelium_std_collections::seq::Seq<E>
+impl<E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_collections::seq::Seq<E> where E: core::panic::unwind_safe::RefUnwindSafe
+impl<E> core::panic::unwind_safe::UnwindSafe for mycelium_std_collections::seq::Seq<E> where E: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_collections::Set<E>
+impl<E: core::clone::Clone + core::cmp::Eq + core::hash::Hash> mycelium_std_collections::set::Set<E>
+pub fn mycelium_std_collections::set::Set<E>::contains(&self, &E) -> bool
+pub fn mycelium_std_collections::set::Set<E>::difference(&self, &Self) -> Self
+pub fn mycelium_std_collections::set::Set<E>::empty() -> Self
+pub fn mycelium_std_collections::set::Set<E>::foldable(&self) -> &[E]
+pub fn mycelium_std_collections::set::Set<E>::from_slice(&[E]) -> Self
+pub fn mycelium_std_collections::set::Set<E>::insert(&self, E) -> Self
+pub fn mycelium_std_collections::set::Set<E>::intersection(&self, &Self) -> Self
+pub fn mycelium_std_collections::set::Set<E>::is_empty(&self) -> bool
+pub fn mycelium_std_collections::set::Set<E>::len(&self) -> usize
+pub fn mycelium_std_collections::set::Set<E>::remove(&self, &E) -> Self
+pub fn mycelium_std_collections::set::Set<E>::union(&self, &Self) -> Self
+impl<E: core::clone::Clone + core::cmp::Eq + core::hash::Hash> core::cmp::Eq for mycelium_std_collections::set::Set<E>
+impl<E: core::clone::Clone + core::cmp::Eq + core::hash::Hash> core::cmp::PartialEq for mycelium_std_collections::set::Set<E>
+pub fn mycelium_std_collections::set::Set<E>::eq(&self, &Self) -> bool
+impl<E: core::clone::Clone> core::clone::Clone for mycelium_std_collections::set::Set<E>
+pub fn mycelium_std_collections::set::Set<E>::clone(&self) -> mycelium_std_collections::set::Set<E>
+impl<E: core::fmt::Debug> core::fmt::Debug for mycelium_std_collections::set::Set<E>
+pub fn mycelium_std_collections::set::Set<E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<E> core::marker::Freeze for mycelium_std_collections::set::Set<E>
+impl<E> core::marker::Send for mycelium_std_collections::set::Set<E> where E: core::marker::Send
+impl<E> core::marker::Sync for mycelium_std_collections::set::Set<E> where E: core::marker::Sync
+impl<E> core::marker::Unpin for mycelium_std_collections::set::Set<E> where E: core::marker::Unpin
+impl<E> core::marker::UnsafeUnpin for mycelium_std_collections::set::Set<E>
+impl<E> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_collections::set::Set<E> where E: core::panic::unwind_safe::RefUnwindSafe
+impl<E> core::panic::unwind_safe::UnwindSafe for mycelium_std_collections::set::Set<E> where E: core::panic::unwind_safe::UnwindSafe

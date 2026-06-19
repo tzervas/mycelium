@@ -1,0 +1,96 @@
+pub mod mycelium_sec
+pub enum mycelium_sec::Severity
+pub mycelium_sec::Severity::Critical
+pub mycelium_sec::Severity::High
+pub mycelium_sec::Severity::Info
+pub mycelium_sec::Severity::Low
+pub mycelium_sec::Severity::Medium
+impl mycelium_sec::Severity
+pub fn mycelium_sec::Severity::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_sec::Severity
+pub fn mycelium_sec::Severity::clone(&self) -> mycelium_sec::Severity
+impl core::cmp::Eq for mycelium_sec::Severity
+impl core::cmp::Ord for mycelium_sec::Severity
+pub fn mycelium_sec::Severity::cmp(&self, &mycelium_sec::Severity) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_sec::Severity
+pub fn mycelium_sec::Severity::eq(&self, &mycelium_sec::Severity) -> bool
+impl core::cmp::PartialOrd for mycelium_sec::Severity
+pub fn mycelium_sec::Severity::partial_cmp(&self, &mycelium_sec::Severity) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_sec::Severity
+pub fn mycelium_sec::Severity::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_sec::Severity
+impl core::marker::StructuralPartialEq for mycelium_sec::Severity
+impl core::marker::Freeze for mycelium_sec::Severity
+impl core::marker::Send for mycelium_sec::Severity
+impl core::marker::Sync for mycelium_sec::Severity
+impl core::marker::Unpin for mycelium_sec::Severity
+impl core::marker::UnsafeUnpin for mycelium_sec::Severity
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_sec::Severity
+impl core::panic::unwind_safe::UnwindSafe for mycelium_sec::Severity
+pub struct mycelium_sec::Finding
+pub mycelium_sec::Finding::at: alloc::string::String
+pub mycelium_sec::Finding::family: &'static str
+pub mycelium_sec::Finding::rule: &'static str
+pub mycelium_sec::Finding::severity: mycelium_sec::Severity
+pub mycelium_sec::Finding::why: alloc::string::String
+impl core::clone::Clone for mycelium_sec::Finding
+pub fn mycelium_sec::Finding::clone(&self) -> mycelium_sec::Finding
+impl core::cmp::Eq for mycelium_sec::Finding
+impl core::cmp::PartialEq for mycelium_sec::Finding
+pub fn mycelium_sec::Finding::eq(&self, &mycelium_sec::Finding) -> bool
+impl core::fmt::Debug for mycelium_sec::Finding
+pub fn mycelium_sec::Finding::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_sec::Finding
+impl core::marker::Freeze for mycelium_sec::Finding
+impl core::marker::Send for mycelium_sec::Finding
+impl core::marker::Sync for mycelium_sec::Finding
+impl core::marker::Unpin for mycelium_sec::Finding
+impl core::marker::UnsafeUnpin for mycelium_sec::Finding
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_sec::Finding
+impl core::panic::unwind_safe::UnwindSafe for mycelium_sec::Finding
+pub struct mycelium_sec::WildAudit
+pub mycelium_sec::WildAudit::findings: alloc::vec::Vec<mycelium_sec::Finding>
+pub mycelium_sec::WildAudit::inventory: alloc::vec::Vec<mycelium_sec::WildBlock>
+impl mycelium_sec::WildAudit
+pub fn mycelium_sec::WildAudit::justified(&self) -> usize
+pub fn mycelium_sec::WildAudit::unjustified(&self) -> usize
+impl core::clone::Clone for mycelium_sec::WildAudit
+pub fn mycelium_sec::WildAudit::clone(&self) -> mycelium_sec::WildAudit
+impl core::cmp::Eq for mycelium_sec::WildAudit
+impl core::cmp::PartialEq for mycelium_sec::WildAudit
+pub fn mycelium_sec::WildAudit::eq(&self, &mycelium_sec::WildAudit) -> bool
+impl core::default::Default for mycelium_sec::WildAudit
+pub fn mycelium_sec::WildAudit::default() -> mycelium_sec::WildAudit
+impl core::fmt::Debug for mycelium_sec::WildAudit
+pub fn mycelium_sec::WildAudit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_sec::WildAudit
+impl core::marker::Freeze for mycelium_sec::WildAudit
+impl core::marker::Send for mycelium_sec::WildAudit
+impl core::marker::Sync for mycelium_sec::WildAudit
+impl core::marker::Unpin for mycelium_sec::WildAudit
+impl core::marker::UnsafeUnpin for mycelium_sec::WildAudit
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_sec::WildAudit
+impl core::panic::unwind_safe::UnwindSafe for mycelium_sec::WildAudit
+pub struct mycelium_sec::WildBlock
+pub mycelium_sec::WildBlock::file: alloc::string::String
+pub mycelium_sec::WildBlock::justified: bool
+pub mycelium_sec::WildBlock::line: u32
+pub mycelium_sec::WildBlock::text: alloc::string::String
+impl core::clone::Clone for mycelium_sec::WildBlock
+pub fn mycelium_sec::WildBlock::clone(&self) -> mycelium_sec::WildBlock
+impl core::cmp::Eq for mycelium_sec::WildBlock
+impl core::cmp::PartialEq for mycelium_sec::WildBlock
+pub fn mycelium_sec::WildBlock::eq(&self, &mycelium_sec::WildBlock) -> bool
+impl core::fmt::Debug for mycelium_sec::WildBlock
+pub fn mycelium_sec::WildBlock::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_sec::WildBlock
+impl core::marker::Freeze for mycelium_sec::WildBlock
+impl core::marker::Send for mycelium_sec::WildBlock
+impl core::marker::Sync for mycelium_sec::WildBlock
+impl core::marker::Unpin for mycelium_sec::WildBlock
+impl core::marker::UnsafeUnpin for mycelium_sec::WildBlock
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_sec::WildBlock
+impl core::panic::unwind_safe::UnwindSafe for mycelium_sec::WildBlock
+pub fn mycelium_sec::audit_wild(&[(alloc::string::String, alloc::string::String)]) -> mycelium_sec::WildAudit
+pub fn mycelium_sec::collect_myc(&std::path::Path) -> core::result::Result<alloc::vec::Vec<std::path::PathBuf>, alloc::string::String>
+pub fn mycelium_sec::explain_wild(&mycelium_sec::WildAudit) -> alloc::string::String

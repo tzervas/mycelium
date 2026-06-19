@@ -1,0 +1,1249 @@
+pub mod mycelium_l1
+pub mod mycelium_l1::ambient
+pub enum mycelium_l1::ambient::AmbientError
+pub mycelium_l1::ambient::AmbientError::BareDecimalNoEncoding
+pub mycelium_l1::ambient::AmbientError::BareDecimalNoEncoding::paradigm: mycelium_l1::ast::Paradigm
+pub mycelium_l1::ambient::AmbientError::BareDecimalNoEncoding::site: alloc::string::String
+pub mycelium_l1::ambient::AmbientError::MultipleDefaults
+pub mycelium_l1::ambient::AmbientError::MultipleDefaults::first: mycelium_l1::ast::Paradigm
+pub mycelium_l1::ambient::AmbientError::MultipleDefaults::second: mycelium_l1::ast::Paradigm
+pub mycelium_l1::ambient::AmbientError::ParadigmShapeMismatch
+pub mycelium_l1::ambient::AmbientError::ParadigmShapeMismatch::detail: alloc::string::String
+pub mycelium_l1::ambient::AmbientError::ParadigmShapeMismatch::paradigm: mycelium_l1::ast::Paradigm
+pub mycelium_l1::ambient::AmbientError::ParadigmShapeMismatch::site: alloc::string::String
+pub mycelium_l1::ambient::AmbientError::UnresolvedAmbient
+pub mycelium_l1::ambient::AmbientError::UnresolvedAmbient::site: alloc::string::String
+impl core::clone::Clone for mycelium_l1::ambient::AmbientError
+pub fn mycelium_l1::ambient::AmbientError::clone(&self) -> mycelium_l1::ambient::AmbientError
+impl core::cmp::Eq for mycelium_l1::ambient::AmbientError
+impl core::cmp::PartialEq for mycelium_l1::ambient::AmbientError
+pub fn mycelium_l1::ambient::AmbientError::eq(&self, &mycelium_l1::ambient::AmbientError) -> bool
+impl core::convert::From<mycelium_l1::ambient::AmbientError> for mycelium_l1::checkty::CheckError
+pub fn mycelium_l1::checkty::CheckError::from(mycelium_l1::ambient::AmbientError) -> Self
+impl core::error::Error for mycelium_l1::ambient::AmbientError
+impl core::fmt::Debug for mycelium_l1::ambient::AmbientError
+pub fn mycelium_l1::ambient::AmbientError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::ambient::AmbientError
+pub fn mycelium_l1::ambient::AmbientError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ambient::AmbientError
+impl core::marker::Freeze for mycelium_l1::ambient::AmbientError
+impl core::marker::Send for mycelium_l1::ambient::AmbientError
+impl core::marker::Sync for mycelium_l1::ambient::AmbientError
+impl core::marker::Unpin for mycelium_l1::ambient::AmbientError
+impl core::marker::UnsafeUnpin for mycelium_l1::ambient::AmbientError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ambient::AmbientError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ambient::AmbientError
+pub struct mycelium_l1::ambient::ResolutionNote
+pub mycelium_l1::ambient::ResolutionNote::detail: alloc::string::String
+pub mycelium_l1::ambient::ResolutionNote::paradigm: mycelium_l1::ast::Paradigm
+pub mycelium_l1::ambient::ResolutionNote::site: alloc::string::String
+impl core::clone::Clone for mycelium_l1::ambient::ResolutionNote
+pub fn mycelium_l1::ambient::ResolutionNote::clone(&self) -> mycelium_l1::ambient::ResolutionNote
+impl core::cmp::Eq for mycelium_l1::ambient::ResolutionNote
+impl core::cmp::PartialEq for mycelium_l1::ambient::ResolutionNote
+pub fn mycelium_l1::ambient::ResolutionNote::eq(&self, &mycelium_l1::ambient::ResolutionNote) -> bool
+impl core::fmt::Debug for mycelium_l1::ambient::ResolutionNote
+pub fn mycelium_l1::ambient::ResolutionNote::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ambient::ResolutionNote
+impl core::marker::Freeze for mycelium_l1::ambient::ResolutionNote
+impl core::marker::Send for mycelium_l1::ambient::ResolutionNote
+impl core::marker::Sync for mycelium_l1::ambient::ResolutionNote
+impl core::marker::Unpin for mycelium_l1::ambient::ResolutionNote
+impl core::marker::UnsafeUnpin for mycelium_l1::ambient::ResolutionNote
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ambient::ResolutionNote
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ambient::ResolutionNote
+pub struct mycelium_l1::ambient::Resolved
+pub mycelium_l1::ambient::Resolved::nodule: mycelium_l1::ast::Nodule
+pub mycelium_l1::ambient::Resolved::notes: alloc::vec::Vec<mycelium_l1::ambient::ResolutionNote>
+impl core::clone::Clone for mycelium_l1::ambient::Resolved
+pub fn mycelium_l1::ambient::Resolved::clone(&self) -> mycelium_l1::ambient::Resolved
+impl core::cmp::PartialEq for mycelium_l1::ambient::Resolved
+pub fn mycelium_l1::ambient::Resolved::eq(&self, &mycelium_l1::ambient::Resolved) -> bool
+impl core::fmt::Debug for mycelium_l1::ambient::Resolved
+pub fn mycelium_l1::ambient::Resolved::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ambient::Resolved
+impl core::marker::Freeze for mycelium_l1::ambient::Resolved
+impl core::marker::Send for mycelium_l1::ambient::Resolved
+impl core::marker::Sync for mycelium_l1::ambient::Resolved
+impl core::marker::Unpin for mycelium_l1::ambient::Resolved
+impl core::marker::UnsafeUnpin for mycelium_l1::ambient::Resolved
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ambient::Resolved
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ambient::Resolved
+pub fn mycelium_l1::ambient::expand_to_source(&mycelium_l1::ast::Nodule) -> alloc::string::String
+pub fn mycelium_l1::ambient::resolve(&mycelium_l1::ast::Nodule) -> core::result::Result<mycelium_l1::ast::Nodule, mycelium_l1::ambient::AmbientError>
+pub fn mycelium_l1::ambient::resolve_report(&mycelium_l1::ast::Nodule) -> core::result::Result<mycelium_l1::ambient::Resolved, mycelium_l1::ambient::AmbientError>
+pub mod mycelium_l1::ast
+pub enum mycelium_l1::ast::AmbientParams
+pub mycelium_l1::ast::AmbientParams::Dense(u32, mycelium_l1::ast::Scalar)
+pub mycelium_l1::ast::AmbientParams::Size(u32)
+pub mycelium_l1::ast::AmbientParams::Vsa
+pub mycelium_l1::ast::AmbientParams::Vsa::dim: u32
+pub mycelium_l1::ast::AmbientParams::Vsa::model: alloc::string::String
+pub mycelium_l1::ast::AmbientParams::Vsa::sparsity: mycelium_l1::ast::Sparsity
+impl core::clone::Clone for mycelium_l1::ast::AmbientParams
+pub fn mycelium_l1::ast::AmbientParams::clone(&self) -> mycelium_l1::ast::AmbientParams
+impl core::cmp::Eq for mycelium_l1::ast::AmbientParams
+impl core::cmp::PartialEq for mycelium_l1::ast::AmbientParams
+pub fn mycelium_l1::ast::AmbientParams::eq(&self, &mycelium_l1::ast::AmbientParams) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::AmbientParams
+pub fn mycelium_l1::ast::AmbientParams::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::AmbientParams
+impl core::marker::Freeze for mycelium_l1::ast::AmbientParams
+impl core::marker::Send for mycelium_l1::ast::AmbientParams
+impl core::marker::Sync for mycelium_l1::ast::AmbientParams
+impl core::marker::Unpin for mycelium_l1::ast::AmbientParams
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::AmbientParams
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::AmbientParams
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::AmbientParams
+pub enum mycelium_l1::ast::BaseType
+pub mycelium_l1::ast::BaseType::Ambient(mycelium_l1::ast::AmbientParams)
+pub mycelium_l1::ast::BaseType::Binary(u32)
+pub mycelium_l1::ast::BaseType::Dense(u32, mycelium_l1::ast::Scalar)
+pub mycelium_l1::ast::BaseType::Named(alloc::string::String, alloc::vec::Vec<mycelium_l1::ast::TypeRef>)
+pub mycelium_l1::ast::BaseType::Substrate(alloc::string::String)
+pub mycelium_l1::ast::BaseType::Ternary(u32)
+pub mycelium_l1::ast::BaseType::Vsa
+pub mycelium_l1::ast::BaseType::Vsa::dim: u32
+pub mycelium_l1::ast::BaseType::Vsa::model: alloc::string::String
+pub mycelium_l1::ast::BaseType::Vsa::sparsity: mycelium_l1::ast::Sparsity
+impl core::clone::Clone for mycelium_l1::ast::BaseType
+pub fn mycelium_l1::ast::BaseType::clone(&self) -> mycelium_l1::ast::BaseType
+impl core::cmp::PartialEq for mycelium_l1::ast::BaseType
+pub fn mycelium_l1::ast::BaseType::eq(&self, &mycelium_l1::ast::BaseType) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::BaseType
+pub fn mycelium_l1::ast::BaseType::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::BaseType
+impl core::marker::Freeze for mycelium_l1::ast::BaseType
+impl core::marker::Send for mycelium_l1::ast::BaseType
+impl core::marker::Sync for mycelium_l1::ast::BaseType
+impl core::marker::Unpin for mycelium_l1::ast::BaseType
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::BaseType
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::BaseType
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::BaseType
+pub enum mycelium_l1::ast::Expr
+pub mycelium_l1::ast::Expr::App
+pub mycelium_l1::ast::Expr::App::args: alloc::vec::Vec<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::App::head: alloc::boxed::Box<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::Ascribe(alloc::boxed::Box<mycelium_l1::ast::Expr>, mycelium_l1::ast::TypeRef)
+pub mycelium_l1::ast::Expr::For
+pub mycelium_l1::ast::Expr::For::acc: alloc::string::String
+pub mycelium_l1::ast::Expr::For::body: alloc::boxed::Box<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::For::init: alloc::boxed::Box<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::For::x: alloc::string::String
+pub mycelium_l1::ast::Expr::For::xs: alloc::boxed::Box<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::If
+pub mycelium_l1::ast::Expr::If::alt: alloc::boxed::Box<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::If::cond: alloc::boxed::Box<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::If::conseq: alloc::boxed::Box<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::Let
+pub mycelium_l1::ast::Expr::Let::body: alloc::boxed::Box<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::Let::bound: alloc::boxed::Box<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::Let::name: alloc::string::String
+pub mycelium_l1::ast::Expr::Let::ty: core::option::Option<mycelium_l1::ast::TypeRef>
+pub mycelium_l1::ast::Expr::Lit(mycelium_l1::ast::Literal)
+pub mycelium_l1::ast::Expr::Match
+pub mycelium_l1::ast::Expr::Match::arms: alloc::vec::Vec<mycelium_l1::ast::Arm>
+pub mycelium_l1::ast::Expr::Match::scrutinee: alloc::boxed::Box<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::Path(mycelium_l1::ast::Path)
+pub mycelium_l1::ast::Expr::Spore(alloc::boxed::Box<mycelium_l1::ast::Expr>)
+pub mycelium_l1::ast::Expr::Swap
+pub mycelium_l1::ast::Expr::Swap::policy: mycelium_l1::ast::Path
+pub mycelium_l1::ast::Expr::Swap::target: mycelium_l1::ast::TypeRef
+pub mycelium_l1::ast::Expr::Swap::value: alloc::boxed::Box<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::Wild(alloc::boxed::Box<mycelium_l1::ast::Expr>)
+pub mycelium_l1::ast::Expr::WithParadigm
+pub mycelium_l1::ast::Expr::WithParadigm::body: alloc::boxed::Box<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::WithParadigm::paradigm: mycelium_l1::ast::Paradigm
+impl core::clone::Clone for mycelium_l1::ast::Expr
+pub fn mycelium_l1::ast::Expr::clone(&self) -> mycelium_l1::ast::Expr
+impl core::cmp::PartialEq for mycelium_l1::ast::Expr
+pub fn mycelium_l1::ast::Expr::eq(&self, &mycelium_l1::ast::Expr) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::Expr
+pub fn mycelium_l1::ast::Expr::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::Expr
+impl core::marker::Freeze for mycelium_l1::ast::Expr
+impl core::marker::Send for mycelium_l1::ast::Expr
+impl core::marker::Sync for mycelium_l1::ast::Expr
+impl core::marker::Unpin for mycelium_l1::ast::Expr
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::Expr
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Expr
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Expr
+pub enum mycelium_l1::ast::Item
+pub mycelium_l1::ast::Item::Default(mycelium_l1::ast::Paradigm)
+pub mycelium_l1::ast::Item::Fn(mycelium_l1::ast::FnDecl)
+pub mycelium_l1::ast::Item::Trait(mycelium_l1::ast::TraitDecl)
+pub mycelium_l1::ast::Item::Type(mycelium_l1::ast::TypeDecl)
+pub mycelium_l1::ast::Item::Use(mycelium_l1::ast::Path)
+impl core::clone::Clone for mycelium_l1::ast::Item
+pub fn mycelium_l1::ast::Item::clone(&self) -> mycelium_l1::ast::Item
+impl core::cmp::PartialEq for mycelium_l1::ast::Item
+pub fn mycelium_l1::ast::Item::eq(&self, &mycelium_l1::ast::Item) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::Item
+pub fn mycelium_l1::ast::Item::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::Item
+impl core::marker::Freeze for mycelium_l1::ast::Item
+impl core::marker::Send for mycelium_l1::ast::Item
+impl core::marker::Sync for mycelium_l1::ast::Item
+impl core::marker::Unpin for mycelium_l1::ast::Item
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::Item
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Item
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Item
+pub enum mycelium_l1::ast::Literal
+pub mycelium_l1::ast::Literal::AmbientInt(mycelium_l1::ast::Paradigm, i64)
+pub mycelium_l1::ast::Literal::Bin(alloc::string::String)
+pub mycelium_l1::ast::Literal::Int(i64)
+pub mycelium_l1::ast::Literal::List(alloc::vec::Vec<mycelium_l1::ast::Expr>)
+pub mycelium_l1::ast::Literal::Trit(alloc::string::String)
+impl core::clone::Clone for mycelium_l1::ast::Literal
+pub fn mycelium_l1::ast::Literal::clone(&self) -> mycelium_l1::ast::Literal
+impl core::cmp::PartialEq for mycelium_l1::ast::Literal
+pub fn mycelium_l1::ast::Literal::eq(&self, &mycelium_l1::ast::Literal) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::Literal
+pub fn mycelium_l1::ast::Literal::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::Literal
+impl core::marker::Freeze for mycelium_l1::ast::Literal
+impl core::marker::Send for mycelium_l1::ast::Literal
+impl core::marker::Sync for mycelium_l1::ast::Literal
+impl core::marker::Unpin for mycelium_l1::ast::Literal
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::Literal
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Literal
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Literal
+pub enum mycelium_l1::ast::Paradigm
+pub mycelium_l1::ast::Paradigm::Binary
+pub mycelium_l1::ast::Paradigm::Dense
+pub mycelium_l1::ast::Paradigm::Ternary
+pub mycelium_l1::ast::Paradigm::Vsa
+impl core::clone::Clone for mycelium_l1::ast::Paradigm
+pub fn mycelium_l1::ast::Paradigm::clone(&self) -> mycelium_l1::ast::Paradigm
+impl core::cmp::Eq for mycelium_l1::ast::Paradigm
+impl core::cmp::PartialEq for mycelium_l1::ast::Paradigm
+pub fn mycelium_l1::ast::Paradigm::eq(&self, &mycelium_l1::ast::Paradigm) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::Paradigm
+pub fn mycelium_l1::ast::Paradigm::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::ast::Paradigm
+pub fn mycelium_l1::ast::Paradigm::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_l1::ast::Paradigm
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::Paradigm
+impl core::marker::Freeze for mycelium_l1::ast::Paradigm
+impl core::marker::Send for mycelium_l1::ast::Paradigm
+impl core::marker::Sync for mycelium_l1::ast::Paradigm
+impl core::marker::Unpin for mycelium_l1::ast::Paradigm
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::Paradigm
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Paradigm
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Paradigm
+pub enum mycelium_l1::ast::Pattern
+pub mycelium_l1::ast::Pattern::Ctor(alloc::string::String, alloc::vec::Vec<mycelium_l1::ast::Pattern>)
+pub mycelium_l1::ast::Pattern::Ident(alloc::string::String)
+pub mycelium_l1::ast::Pattern::Lit(mycelium_l1::ast::Literal)
+pub mycelium_l1::ast::Pattern::Wildcard
+impl core::clone::Clone for mycelium_l1::ast::Pattern
+pub fn mycelium_l1::ast::Pattern::clone(&self) -> mycelium_l1::ast::Pattern
+impl core::cmp::PartialEq for mycelium_l1::ast::Pattern
+pub fn mycelium_l1::ast::Pattern::eq(&self, &mycelium_l1::ast::Pattern) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::Pattern
+pub fn mycelium_l1::ast::Pattern::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::Pattern
+impl core::marker::Freeze for mycelium_l1::ast::Pattern
+impl core::marker::Send for mycelium_l1::ast::Pattern
+impl core::marker::Sync for mycelium_l1::ast::Pattern
+impl core::marker::Unpin for mycelium_l1::ast::Pattern
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::Pattern
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Pattern
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Pattern
+pub enum mycelium_l1::ast::Scalar
+pub mycelium_l1::ast::Scalar::Bf16
+pub mycelium_l1::ast::Scalar::F16
+pub mycelium_l1::ast::Scalar::F32
+pub mycelium_l1::ast::Scalar::F64
+impl core::clone::Clone for mycelium_l1::ast::Scalar
+pub fn mycelium_l1::ast::Scalar::clone(&self) -> mycelium_l1::ast::Scalar
+impl core::cmp::Eq for mycelium_l1::ast::Scalar
+impl core::cmp::PartialEq for mycelium_l1::ast::Scalar
+pub fn mycelium_l1::ast::Scalar::eq(&self, &mycelium_l1::ast::Scalar) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::Scalar
+pub fn mycelium_l1::ast::Scalar::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_l1::ast::Scalar
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::Scalar
+impl core::marker::Freeze for mycelium_l1::ast::Scalar
+impl core::marker::Send for mycelium_l1::ast::Scalar
+impl core::marker::Sync for mycelium_l1::ast::Scalar
+impl core::marker::Unpin for mycelium_l1::ast::Scalar
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::Scalar
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Scalar
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Scalar
+pub enum mycelium_l1::ast::Sparsity
+pub mycelium_l1::ast::Sparsity::Dense
+pub mycelium_l1::ast::Sparsity::Sparse(u32)
+impl core::clone::Clone for mycelium_l1::ast::Sparsity
+pub fn mycelium_l1::ast::Sparsity::clone(&self) -> mycelium_l1::ast::Sparsity
+impl core::cmp::Eq for mycelium_l1::ast::Sparsity
+impl core::cmp::PartialEq for mycelium_l1::ast::Sparsity
+pub fn mycelium_l1::ast::Sparsity::eq(&self, &mycelium_l1::ast::Sparsity) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::Sparsity
+pub fn mycelium_l1::ast::Sparsity::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::Sparsity
+impl core::marker::Freeze for mycelium_l1::ast::Sparsity
+impl core::marker::Send for mycelium_l1::ast::Sparsity
+impl core::marker::Sync for mycelium_l1::ast::Sparsity
+impl core::marker::Unpin for mycelium_l1::ast::Sparsity
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::Sparsity
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Sparsity
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Sparsity
+pub enum mycelium_l1::ast::Strength
+pub mycelium_l1::ast::Strength::Declared
+pub mycelium_l1::ast::Strength::Empirical
+pub mycelium_l1::ast::Strength::Exact
+pub mycelium_l1::ast::Strength::Proven
+impl core::clone::Clone for mycelium_l1::ast::Strength
+pub fn mycelium_l1::ast::Strength::clone(&self) -> mycelium_l1::ast::Strength
+impl core::cmp::Eq for mycelium_l1::ast::Strength
+impl core::cmp::PartialEq for mycelium_l1::ast::Strength
+pub fn mycelium_l1::ast::Strength::eq(&self, &mycelium_l1::ast::Strength) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::Strength
+pub fn mycelium_l1::ast::Strength::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_l1::ast::Strength
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::Strength
+impl core::marker::Freeze for mycelium_l1::ast::Strength
+impl core::marker::Send for mycelium_l1::ast::Strength
+impl core::marker::Sync for mycelium_l1::ast::Strength
+impl core::marker::Unpin for mycelium_l1::ast::Strength
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::Strength
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Strength
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Strength
+pub struct mycelium_l1::ast::Arm
+pub mycelium_l1::ast::Arm::body: mycelium_l1::ast::Expr
+pub mycelium_l1::ast::Arm::pattern: mycelium_l1::ast::Pattern
+impl core::clone::Clone for mycelium_l1::ast::Arm
+pub fn mycelium_l1::ast::Arm::clone(&self) -> mycelium_l1::ast::Arm
+impl core::cmp::PartialEq for mycelium_l1::ast::Arm
+pub fn mycelium_l1::ast::Arm::eq(&self, &mycelium_l1::ast::Arm) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::Arm
+pub fn mycelium_l1::ast::Arm::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::Arm
+impl core::marker::Freeze for mycelium_l1::ast::Arm
+impl core::marker::Send for mycelium_l1::ast::Arm
+impl core::marker::Sync for mycelium_l1::ast::Arm
+impl core::marker::Unpin for mycelium_l1::ast::Arm
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::Arm
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Arm
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Arm
+pub struct mycelium_l1::ast::Ctor
+pub mycelium_l1::ast::Ctor::fields: alloc::vec::Vec<mycelium_l1::ast::TypeRef>
+pub mycelium_l1::ast::Ctor::name: alloc::string::String
+impl core::clone::Clone for mycelium_l1::ast::Ctor
+pub fn mycelium_l1::ast::Ctor::clone(&self) -> mycelium_l1::ast::Ctor
+impl core::cmp::PartialEq for mycelium_l1::ast::Ctor
+pub fn mycelium_l1::ast::Ctor::eq(&self, &mycelium_l1::ast::Ctor) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::Ctor
+pub fn mycelium_l1::ast::Ctor::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::Ctor
+impl core::marker::Freeze for mycelium_l1::ast::Ctor
+impl core::marker::Send for mycelium_l1::ast::Ctor
+impl core::marker::Sync for mycelium_l1::ast::Ctor
+impl core::marker::Unpin for mycelium_l1::ast::Ctor
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::Ctor
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Ctor
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Ctor
+pub struct mycelium_l1::ast::FnDecl
+pub mycelium_l1::ast::FnDecl::body: mycelium_l1::ast::Expr
+pub mycelium_l1::ast::FnDecl::sig: mycelium_l1::ast::FnSig
+pub mycelium_l1::ast::FnDecl::thaw: bool
+impl core::clone::Clone for mycelium_l1::ast::FnDecl
+pub fn mycelium_l1::ast::FnDecl::clone(&self) -> mycelium_l1::ast::FnDecl
+impl core::cmp::PartialEq for mycelium_l1::ast::FnDecl
+pub fn mycelium_l1::ast::FnDecl::eq(&self, &mycelium_l1::ast::FnDecl) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::FnDecl
+pub fn mycelium_l1::ast::FnDecl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::FnDecl
+impl core::marker::Freeze for mycelium_l1::ast::FnDecl
+impl core::marker::Send for mycelium_l1::ast::FnDecl
+impl core::marker::Sync for mycelium_l1::ast::FnDecl
+impl core::marker::Unpin for mycelium_l1::ast::FnDecl
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::FnDecl
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::FnDecl
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::FnDecl
+pub struct mycelium_l1::ast::FnSig
+pub mycelium_l1::ast::FnSig::name: alloc::string::String
+pub mycelium_l1::ast::FnSig::params: alloc::vec::Vec<alloc::string::String>
+pub mycelium_l1::ast::FnSig::ret: mycelium_l1::ast::TypeRef
+pub mycelium_l1::ast::FnSig::value_params: alloc::vec::Vec<mycelium_l1::ast::Param>
+impl core::clone::Clone for mycelium_l1::ast::FnSig
+pub fn mycelium_l1::ast::FnSig::clone(&self) -> mycelium_l1::ast::FnSig
+impl core::cmp::PartialEq for mycelium_l1::ast::FnSig
+pub fn mycelium_l1::ast::FnSig::eq(&self, &mycelium_l1::ast::FnSig) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::FnSig
+pub fn mycelium_l1::ast::FnSig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::FnSig
+impl core::marker::Freeze for mycelium_l1::ast::FnSig
+impl core::marker::Send for mycelium_l1::ast::FnSig
+impl core::marker::Sync for mycelium_l1::ast::FnSig
+impl core::marker::Unpin for mycelium_l1::ast::FnSig
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::FnSig
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::FnSig
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::FnSig
+pub struct mycelium_l1::ast::Nodule
+pub mycelium_l1::ast::Nodule::items: alloc::vec::Vec<mycelium_l1::ast::Item>
+pub mycelium_l1::ast::Nodule::path: mycelium_l1::ast::Path
+impl core::clone::Clone for mycelium_l1::ast::Nodule
+pub fn mycelium_l1::ast::Nodule::clone(&self) -> mycelium_l1::ast::Nodule
+impl core::cmp::PartialEq for mycelium_l1::ast::Nodule
+pub fn mycelium_l1::ast::Nodule::eq(&self, &mycelium_l1::ast::Nodule) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::Nodule
+pub fn mycelium_l1::ast::Nodule::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::Nodule
+impl core::marker::Freeze for mycelium_l1::ast::Nodule
+impl core::marker::Send for mycelium_l1::ast::Nodule
+impl core::marker::Sync for mycelium_l1::ast::Nodule
+impl core::marker::Unpin for mycelium_l1::ast::Nodule
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::Nodule
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Nodule
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Nodule
+pub struct mycelium_l1::ast::Param
+pub mycelium_l1::ast::Param::name: alloc::string::String
+pub mycelium_l1::ast::Param::ty: mycelium_l1::ast::TypeRef
+impl core::clone::Clone for mycelium_l1::ast::Param
+pub fn mycelium_l1::ast::Param::clone(&self) -> mycelium_l1::ast::Param
+impl core::cmp::PartialEq for mycelium_l1::ast::Param
+pub fn mycelium_l1::ast::Param::eq(&self, &mycelium_l1::ast::Param) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::Param
+pub fn mycelium_l1::ast::Param::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::Param
+impl core::marker::Freeze for mycelium_l1::ast::Param
+impl core::marker::Send for mycelium_l1::ast::Param
+impl core::marker::Sync for mycelium_l1::ast::Param
+impl core::marker::Unpin for mycelium_l1::ast::Param
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::Param
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Param
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Param
+pub struct mycelium_l1::ast::Path(pub alloc::vec::Vec<alloc::string::String>)
+impl core::clone::Clone for mycelium_l1::ast::Path
+pub fn mycelium_l1::ast::Path::clone(&self) -> mycelium_l1::ast::Path
+impl core::cmp::Eq for mycelium_l1::ast::Path
+impl core::cmp::PartialEq for mycelium_l1::ast::Path
+pub fn mycelium_l1::ast::Path::eq(&self, &mycelium_l1::ast::Path) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::Path
+pub fn mycelium_l1::ast::Path::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::Path
+impl core::marker::Freeze for mycelium_l1::ast::Path
+impl core::marker::Send for mycelium_l1::ast::Path
+impl core::marker::Sync for mycelium_l1::ast::Path
+impl core::marker::Unpin for mycelium_l1::ast::Path
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::Path
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Path
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Path
+pub struct mycelium_l1::ast::TraitDecl
+pub mycelium_l1::ast::TraitDecl::name: alloc::string::String
+pub mycelium_l1::ast::TraitDecl::params: alloc::vec::Vec<alloc::string::String>
+pub mycelium_l1::ast::TraitDecl::sigs: alloc::vec::Vec<mycelium_l1::ast::FnSig>
+impl core::clone::Clone for mycelium_l1::ast::TraitDecl
+pub fn mycelium_l1::ast::TraitDecl::clone(&self) -> mycelium_l1::ast::TraitDecl
+impl core::cmp::PartialEq for mycelium_l1::ast::TraitDecl
+pub fn mycelium_l1::ast::TraitDecl::eq(&self, &mycelium_l1::ast::TraitDecl) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::TraitDecl
+pub fn mycelium_l1::ast::TraitDecl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::TraitDecl
+impl core::marker::Freeze for mycelium_l1::ast::TraitDecl
+impl core::marker::Send for mycelium_l1::ast::TraitDecl
+impl core::marker::Sync for mycelium_l1::ast::TraitDecl
+impl core::marker::Unpin for mycelium_l1::ast::TraitDecl
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::TraitDecl
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::TraitDecl
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::TraitDecl
+pub struct mycelium_l1::ast::TypeDecl
+pub mycelium_l1::ast::TypeDecl::ctors: alloc::vec::Vec<mycelium_l1::ast::Ctor>
+pub mycelium_l1::ast::TypeDecl::name: alloc::string::String
+pub mycelium_l1::ast::TypeDecl::params: alloc::vec::Vec<alloc::string::String>
+impl core::clone::Clone for mycelium_l1::ast::TypeDecl
+pub fn mycelium_l1::ast::TypeDecl::clone(&self) -> mycelium_l1::ast::TypeDecl
+impl core::cmp::PartialEq for mycelium_l1::ast::TypeDecl
+pub fn mycelium_l1::ast::TypeDecl::eq(&self, &mycelium_l1::ast::TypeDecl) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::TypeDecl
+pub fn mycelium_l1::ast::TypeDecl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::TypeDecl
+impl core::marker::Freeze for mycelium_l1::ast::TypeDecl
+impl core::marker::Send for mycelium_l1::ast::TypeDecl
+impl core::marker::Sync for mycelium_l1::ast::TypeDecl
+impl core::marker::Unpin for mycelium_l1::ast::TypeDecl
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::TypeDecl
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::TypeDecl
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::TypeDecl
+pub struct mycelium_l1::ast::TypeRef
+pub mycelium_l1::ast::TypeRef::base: mycelium_l1::ast::BaseType
+pub mycelium_l1::ast::TypeRef::guarantee: core::option::Option<mycelium_l1::ast::Strength>
+impl core::clone::Clone for mycelium_l1::ast::TypeRef
+pub fn mycelium_l1::ast::TypeRef::clone(&self) -> mycelium_l1::ast::TypeRef
+impl core::cmp::PartialEq for mycelium_l1::ast::TypeRef
+pub fn mycelium_l1::ast::TypeRef::eq(&self, &mycelium_l1::ast::TypeRef) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::TypeRef
+pub fn mycelium_l1::ast::TypeRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::TypeRef
+impl core::marker::Freeze for mycelium_l1::ast::TypeRef
+impl core::marker::Send for mycelium_l1::ast::TypeRef
+impl core::marker::Sync for mycelium_l1::ast::TypeRef
+impl core::marker::Unpin for mycelium_l1::ast::TypeRef
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::TypeRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::TypeRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::TypeRef
+pub mod mycelium_l1::checkty
+pub enum mycelium_l1::checkty::Ty
+pub mycelium_l1::checkty::Ty::Binary(u32)
+pub mycelium_l1::checkty::Ty::Data(alloc::string::String)
+pub mycelium_l1::checkty::Ty::Dense(u32, mycelium_l1::ast::Scalar)
+pub mycelium_l1::checkty::Ty::Substrate(alloc::string::String)
+pub mycelium_l1::checkty::Ty::Ternary(u32)
+impl core::clone::Clone for mycelium_l1::checkty::Ty
+pub fn mycelium_l1::checkty::Ty::clone(&self) -> mycelium_l1::checkty::Ty
+impl core::cmp::Eq for mycelium_l1::checkty::Ty
+impl core::cmp::PartialEq for mycelium_l1::checkty::Ty
+pub fn mycelium_l1::checkty::Ty::eq(&self, &mycelium_l1::checkty::Ty) -> bool
+impl core::fmt::Debug for mycelium_l1::checkty::Ty
+pub fn mycelium_l1::checkty::Ty::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::checkty::Ty
+pub fn mycelium_l1::checkty::Ty::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::checkty::Ty
+impl core::marker::Freeze for mycelium_l1::checkty::Ty
+impl core::marker::Send for mycelium_l1::checkty::Ty
+impl core::marker::Sync for mycelium_l1::checkty::Ty
+impl core::marker::Unpin for mycelium_l1::checkty::Ty
+impl core::marker::UnsafeUnpin for mycelium_l1::checkty::Ty
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::Ty
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::Ty
+pub struct mycelium_l1::checkty::CheckError
+pub mycelium_l1::checkty::CheckError::message: alloc::string::String
+pub mycelium_l1::checkty::CheckError::site: alloc::string::String
+impl core::clone::Clone for mycelium_l1::checkty::CheckError
+pub fn mycelium_l1::checkty::CheckError::clone(&self) -> mycelium_l1::checkty::CheckError
+impl core::cmp::Eq for mycelium_l1::checkty::CheckError
+impl core::cmp::PartialEq for mycelium_l1::checkty::CheckError
+pub fn mycelium_l1::checkty::CheckError::eq(&self, &mycelium_l1::checkty::CheckError) -> bool
+impl core::convert::From<mycelium_l1::ambient::AmbientError> for mycelium_l1::checkty::CheckError
+pub fn mycelium_l1::checkty::CheckError::from(mycelium_l1::ambient::AmbientError) -> Self
+impl core::error::Error for mycelium_l1::checkty::CheckError
+impl core::fmt::Debug for mycelium_l1::checkty::CheckError
+pub fn mycelium_l1::checkty::CheckError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::checkty::CheckError
+pub fn mycelium_l1::checkty::CheckError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::checkty::CheckError
+impl core::marker::Freeze for mycelium_l1::checkty::CheckError
+impl core::marker::Send for mycelium_l1::checkty::CheckError
+impl core::marker::Sync for mycelium_l1::checkty::CheckError
+impl core::marker::Unpin for mycelium_l1::checkty::CheckError
+impl core::marker::UnsafeUnpin for mycelium_l1::checkty::CheckError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::CheckError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::CheckError
+pub struct mycelium_l1::checkty::CtorInfo
+pub mycelium_l1::checkty::CtorInfo::fields: alloc::vec::Vec<mycelium_l1::checkty::Ty>
+pub mycelium_l1::checkty::CtorInfo::name: alloc::string::String
+impl core::clone::Clone for mycelium_l1::checkty::CtorInfo
+pub fn mycelium_l1::checkty::CtorInfo::clone(&self) -> mycelium_l1::checkty::CtorInfo
+impl core::cmp::PartialEq for mycelium_l1::checkty::CtorInfo
+pub fn mycelium_l1::checkty::CtorInfo::eq(&self, &mycelium_l1::checkty::CtorInfo) -> bool
+impl core::fmt::Debug for mycelium_l1::checkty::CtorInfo
+pub fn mycelium_l1::checkty::CtorInfo::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::checkty::CtorInfo
+impl core::marker::Freeze for mycelium_l1::checkty::CtorInfo
+impl core::marker::Send for mycelium_l1::checkty::CtorInfo
+impl core::marker::Sync for mycelium_l1::checkty::CtorInfo
+impl core::marker::Unpin for mycelium_l1::checkty::CtorInfo
+impl core::marker::UnsafeUnpin for mycelium_l1::checkty::CtorInfo
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::CtorInfo
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::CtorInfo
+pub struct mycelium_l1::checkty::DataInfo
+pub mycelium_l1::checkty::DataInfo::ctors: alloc::vec::Vec<mycelium_l1::checkty::CtorInfo>
+pub mycelium_l1::checkty::DataInfo::name: alloc::string::String
+impl core::clone::Clone for mycelium_l1::checkty::DataInfo
+pub fn mycelium_l1::checkty::DataInfo::clone(&self) -> mycelium_l1::checkty::DataInfo
+impl core::cmp::PartialEq for mycelium_l1::checkty::DataInfo
+pub fn mycelium_l1::checkty::DataInfo::eq(&self, &mycelium_l1::checkty::DataInfo) -> bool
+impl core::fmt::Debug for mycelium_l1::checkty::DataInfo
+pub fn mycelium_l1::checkty::DataInfo::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::checkty::DataInfo
+impl core::marker::Freeze for mycelium_l1::checkty::DataInfo
+impl core::marker::Send for mycelium_l1::checkty::DataInfo
+impl core::marker::Sync for mycelium_l1::checkty::DataInfo
+impl core::marker::Unpin for mycelium_l1::checkty::DataInfo
+impl core::marker::UnsafeUnpin for mycelium_l1::checkty::DataInfo
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::DataInfo
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::DataInfo
+pub struct mycelium_l1::checkty::Env
+pub mycelium_l1::checkty::Env::fns: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::ast::FnDecl>
+pub mycelium_l1::checkty::Env::totality: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::totality::Totality>
+pub mycelium_l1::checkty::Env::types: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::checkty::DataInfo>
+impl mycelium_l1::checkty::Env
+pub fn mycelium_l1::checkty::Env::ctor(&self, &str) -> core::option::Option<(&mycelium_l1::checkty::DataInfo, usize)>
+impl core::clone::Clone for mycelium_l1::checkty::Env
+pub fn mycelium_l1::checkty::Env::clone(&self) -> mycelium_l1::checkty::Env
+impl core::fmt::Debug for mycelium_l1::checkty::Env
+pub fn mycelium_l1::checkty::Env::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_l1::checkty::Env
+impl core::marker::Send for mycelium_l1::checkty::Env
+impl core::marker::Sync for mycelium_l1::checkty::Env
+impl core::marker::Unpin for mycelium_l1::checkty::Env
+impl core::marker::UnsafeUnpin for mycelium_l1::checkty::Env
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::Env
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::Env
+pub fn mycelium_l1::checkty::check_and_resolve(&mycelium_l1::ast::Nodule) -> core::result::Result<(mycelium_l1::checkty::Env, mycelium_l1::ast::Nodule), mycelium_l1::checkty::CheckError>
+pub fn mycelium_l1::checkty::check_nodule(&mycelium_l1::ast::Nodule) -> core::result::Result<mycelium_l1::checkty::Env, mycelium_l1::checkty::CheckError>
+pub fn mycelium_l1::checkty::check_nodule_matured(&mycelium_l1::ast::Nodule, bool) -> core::result::Result<mycelium_l1::checkty::Env, mycelium_l1::checkty::CheckError>
+pub fn mycelium_l1::checkty::prim_kernel_name(&str) -> core::option::Option<&'static str>
+pub fn mycelium_l1::checkty::prim_sig(&str, &[mycelium_l1::checkty::Ty]) -> core::option::Option<mycelium_l1::checkty::Ty>
+pub mod mycelium_l1::elab
+pub enum mycelium_l1::elab::ElabError
+pub mycelium_l1::elab::ElabError::Residual
+pub mycelium_l1::elab::ElabError::Residual::site: alloc::string::String
+pub mycelium_l1::elab::ElabError::Residual::what: alloc::string::String
+pub mycelium_l1::elab::ElabError::UnknownFn(alloc::string::String)
+impl core::clone::Clone for mycelium_l1::elab::ElabError
+pub fn mycelium_l1::elab::ElabError::clone(&self) -> mycelium_l1::elab::ElabError
+impl core::cmp::Eq for mycelium_l1::elab::ElabError
+impl core::cmp::PartialEq for mycelium_l1::elab::ElabError
+pub fn mycelium_l1::elab::ElabError::eq(&self, &mycelium_l1::elab::ElabError) -> bool
+impl core::error::Error for mycelium_l1::elab::ElabError
+impl core::fmt::Debug for mycelium_l1::elab::ElabError
+pub fn mycelium_l1::elab::ElabError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::elab::ElabError
+pub fn mycelium_l1::elab::ElabError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::elab::ElabError
+impl core::marker::Freeze for mycelium_l1::elab::ElabError
+impl core::marker::Send for mycelium_l1::elab::ElabError
+impl core::marker::Sync for mycelium_l1::elab::ElabError
+impl core::marker::Unpin for mycelium_l1::elab::ElabError
+impl core::marker::UnsafeUnpin for mycelium_l1::elab::ElabError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::elab::ElabError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::elab::ElabError
+pub fn mycelium_l1::elab::build_registry(&mycelium_l1::checkty::Env) -> core::result::Result<mycelium_core::data::DataRegistry, mycelium_l1::elab::ElabError>
+pub fn mycelium_l1::elab::elaborate(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
+pub fn mycelium_l1::elab::lit_value(&str, &mycelium_l1::ast::Literal) -> core::result::Result<mycelium_core::value::Value, mycelium_l1::elab::ElabError>
+pub fn mycelium_l1::elab::policy_name_ref(&mycelium_l1::ast::Path) -> mycelium_core::node::PolicyRef
+pub fn mycelium_l1::elab::type_repr(&str, &mycelium_l1::ast::TypeRef) -> core::result::Result<mycelium_core::repr::Repr, mycelium_l1::elab::ElabError>
+pub mod mycelium_l1::error
+pub struct mycelium_l1::error::ParseError
+pub mycelium_l1::error::ParseError::message: alloc::string::String
+pub mycelium_l1::error::ParseError::pos: mycelium_l1::token::Pos
+impl mycelium_l1::error::ParseError
+pub fn mycelium_l1::error::ParseError::new(mycelium_l1::token::Pos, alloc::string::String) -> Self
+impl core::clone::Clone for mycelium_l1::error::ParseError
+pub fn mycelium_l1::error::ParseError::clone(&self) -> mycelium_l1::error::ParseError
+impl core::cmp::Eq for mycelium_l1::error::ParseError
+impl core::cmp::PartialEq for mycelium_l1::error::ParseError
+pub fn mycelium_l1::error::ParseError::eq(&self, &mycelium_l1::error::ParseError) -> bool
+impl core::error::Error for mycelium_l1::error::ParseError
+impl core::fmt::Debug for mycelium_l1::error::ParseError
+pub fn mycelium_l1::error::ParseError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::error::ParseError
+pub fn mycelium_l1::error::ParseError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::error::ParseError
+impl core::marker::Freeze for mycelium_l1::error::ParseError
+impl core::marker::Send for mycelium_l1::error::ParseError
+impl core::marker::Sync for mycelium_l1::error::ParseError
+impl core::marker::Unpin for mycelium_l1::error::ParseError
+impl core::marker::UnsafeUnpin for mycelium_l1::error::ParseError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::error::ParseError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::error::ParseError
+pub mod mycelium_l1::eval
+pub enum mycelium_l1::eval::L1Error
+pub mycelium_l1::eval::L1Error::DepthExceeded
+pub mycelium_l1::eval::L1Error::DepthExceeded::limit: u32
+pub mycelium_l1::eval::L1Error::FuelExhausted
+pub mycelium_l1::eval::L1Error::GuaranteeTooWeak
+pub mycelium_l1::eval::L1Error::GuaranteeTooWeak::actual: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_l1::eval::L1Error::GuaranteeTooWeak::asserted: mycelium_l1::ast::Strength
+pub mycelium_l1::eval::L1Error::GuaranteeTooWeak::site: alloc::string::String
+pub mycelium_l1::eval::L1Error::Kernel(mycelium_interp::EvalError)
+pub mycelium_l1::eval::L1Error::Stuck
+pub mycelium_l1::eval::L1Error::Stuck::site: alloc::string::String
+pub mycelium_l1::eval::L1Error::Stuck::why: alloc::string::String
+pub mycelium_l1::eval::L1Error::Unsupported
+pub mycelium_l1::eval::L1Error::Unsupported::site: alloc::string::String
+pub mycelium_l1::eval::L1Error::Unsupported::what: alloc::string::String
+impl core::clone::Clone for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::clone(&self) -> mycelium_l1::eval::L1Error
+impl core::cmp::PartialEq for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::eq(&self, &mycelium_l1::eval::L1Error) -> bool
+impl core::convert::From<mycelium_interp::EvalError> for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::from(mycelium_interp::EvalError) -> Self
+impl core::error::Error for mycelium_l1::eval::L1Error
+impl core::fmt::Debug for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::eval::L1Error
+impl core::marker::Freeze for mycelium_l1::eval::L1Error
+impl core::marker::Send for mycelium_l1::eval::L1Error
+impl core::marker::Sync for mycelium_l1::eval::L1Error
+impl core::marker::Unpin for mycelium_l1::eval::L1Error
+impl core::marker::UnsafeUnpin for mycelium_l1::eval::L1Error
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::L1Error
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::L1Error
+pub enum mycelium_l1::eval::L1Value
+pub mycelium_l1::eval::L1Value::Data
+pub mycelium_l1::eval::L1Value::Data::ctor: alloc::string::String
+pub mycelium_l1::eval::L1Value::Data::fields: alloc::vec::Vec<mycelium_l1::eval::L1Value>
+pub mycelium_l1::eval::L1Value::Data::ty: alloc::string::String
+pub mycelium_l1::eval::L1Value::Repr(mycelium_core::value::Value)
+impl mycelium_l1::eval::L1Value
+pub fn mycelium_l1::eval::L1Value::as_repr(&self) -> core::option::Option<&mycelium_core::value::Value>
+pub fn mycelium_l1::eval::L1Value::to_core(&self, &mycelium_l1::checkty::Env, &mycelium_core::data::DataRegistry) -> core::option::Option<mycelium_core::datum::CoreValue>
+impl core::clone::Clone for mycelium_l1::eval::L1Value
+pub fn mycelium_l1::eval::L1Value::clone(&self) -> mycelium_l1::eval::L1Value
+impl core::cmp::PartialEq for mycelium_l1::eval::L1Value
+pub fn mycelium_l1::eval::L1Value::eq(&self, &mycelium_l1::eval::L1Value) -> bool
+impl core::fmt::Debug for mycelium_l1::eval::L1Value
+pub fn mycelium_l1::eval::L1Value::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::eval::L1Value
+impl core::marker::Freeze for mycelium_l1::eval::L1Value
+impl core::marker::Send for mycelium_l1::eval::L1Value
+impl core::marker::Sync for mycelium_l1::eval::L1Value
+impl core::marker::Unpin for mycelium_l1::eval::L1Value
+impl core::marker::UnsafeUnpin for mycelium_l1::eval::L1Value
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::L1Value
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::L1Value
+pub struct mycelium_l1::eval::Evaluator<'e>
+impl<'e> mycelium_l1::eval::Evaluator<'e>
+pub fn mycelium_l1::eval::Evaluator<'e>::call(&self, &str, alloc::vec::Vec<mycelium_l1::eval::L1Value>) -> core::result::Result<mycelium_l1::eval::L1Value, mycelium_l1::eval::L1Error>
+pub fn mycelium_l1::eval::Evaluator<'e>::new(&'e mycelium_l1::checkty::Env) -> Self
+pub fn mycelium_l1::eval::Evaluator<'e>::with_depth(self, u32) -> Self
+pub fn mycelium_l1::eval::Evaluator<'e>::with_engines(self, mycelium_interp::prims::PrimRegistry, alloc::boxed::Box<dyn mycelium_interp::swap::SwapEngine>) -> Self
+pub fn mycelium_l1::eval::Evaluator<'e>::with_fuel(self, u64) -> Self
+impl<'e> core::marker::Freeze for mycelium_l1::eval::Evaluator<'e>
+impl<'e> !core::marker::Send for mycelium_l1::eval::Evaluator<'e>
+impl<'e> !core::marker::Sync for mycelium_l1::eval::Evaluator<'e>
+impl<'e> core::marker::Unpin for mycelium_l1::eval::Evaluator<'e>
+impl<'e> core::marker::UnsafeUnpin for mycelium_l1::eval::Evaluator<'e>
+impl<'e> !core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::Evaluator<'e>
+impl<'e> !core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::Evaluator<'e>
+pub fn mycelium_l1::eval::strength_of(mycelium_l1::ast::Strength) -> mycelium_core::guarantee::GuaranteeStrength
+pub mod mycelium_l1::lexer
+pub fn mycelium_l1::lexer::lex(&str) -> core::result::Result<alloc::vec::Vec<mycelium_l1::token::Spanned>, mycelium_l1::error::ParseError>
+pub mod mycelium_l1::nodule
+pub struct mycelium_l1::nodule::NoduleHeader
+pub mycelium_l1::nodule::NoduleHeader::name: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+impl mycelium_l1::nodule::NoduleHeader
+pub fn mycelium_l1::nodule::NoduleHeader::canonical(&self) -> alloc::string::String
+pub fn mycelium_l1::nodule::NoduleHeader::dotted(&self) -> core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_l1::nodule::NoduleHeader
+pub fn mycelium_l1::nodule::NoduleHeader::clone(&self) -> mycelium_l1::nodule::NoduleHeader
+impl core::cmp::Eq for mycelium_l1::nodule::NoduleHeader
+impl core::cmp::PartialEq for mycelium_l1::nodule::NoduleHeader
+pub fn mycelium_l1::nodule::NoduleHeader::eq(&self, &mycelium_l1::nodule::NoduleHeader) -> bool
+impl core::fmt::Debug for mycelium_l1::nodule::NoduleHeader
+pub fn mycelium_l1::nodule::NoduleHeader::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::nodule::NoduleHeader
+impl core::marker::Freeze for mycelium_l1::nodule::NoduleHeader
+impl core::marker::Send for mycelium_l1::nodule::NoduleHeader
+impl core::marker::Sync for mycelium_l1::nodule::NoduleHeader
+impl core::marker::Unpin for mycelium_l1::nodule::NoduleHeader
+impl core::marker::UnsafeUnpin for mycelium_l1::nodule::NoduleHeader
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::nodule::NoduleHeader
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::nodule::NoduleHeader
+pub struct mycelium_l1::nodule::NoduleHeaderError
+pub mycelium_l1::nodule::NoduleHeaderError::line: u32
+pub mycelium_l1::nodule::NoduleHeaderError::message: alloc::string::String
+impl core::clone::Clone for mycelium_l1::nodule::NoduleHeaderError
+pub fn mycelium_l1::nodule::NoduleHeaderError::clone(&self) -> mycelium_l1::nodule::NoduleHeaderError
+impl core::cmp::Eq for mycelium_l1::nodule::NoduleHeaderError
+impl core::cmp::PartialEq for mycelium_l1::nodule::NoduleHeaderError
+pub fn mycelium_l1::nodule::NoduleHeaderError::eq(&self, &mycelium_l1::nodule::NoduleHeaderError) -> bool
+impl core::error::Error for mycelium_l1::nodule::NoduleHeaderError
+impl core::fmt::Debug for mycelium_l1::nodule::NoduleHeaderError
+pub fn mycelium_l1::nodule::NoduleHeaderError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::nodule::NoduleHeaderError
+pub fn mycelium_l1::nodule::NoduleHeaderError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::nodule::NoduleHeaderError
+impl core::marker::Freeze for mycelium_l1::nodule::NoduleHeaderError
+impl core::marker::Send for mycelium_l1::nodule::NoduleHeaderError
+impl core::marker::Sync for mycelium_l1::nodule::NoduleHeaderError
+impl core::marker::Unpin for mycelium_l1::nodule::NoduleHeaderError
+impl core::marker::UnsafeUnpin for mycelium_l1::nodule::NoduleHeaderError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::nodule::NoduleHeaderError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::nodule::NoduleHeaderError
+pub fn mycelium_l1::nodule::parse_nodule_header(&str) -> core::result::Result<core::option::Option<mycelium_l1::nodule::NoduleHeader>, mycelium_l1::nodule::NoduleHeaderError>
+pub mod mycelium_l1::parse
+pub fn mycelium_l1::parse::parse(&str) -> core::result::Result<mycelium_l1::ast::Nodule, mycelium_l1::error::ParseError>
+pub mod mycelium_l1::token
+pub enum mycelium_l1::token::ScalarTok
+pub mycelium_l1::token::ScalarTok::Bf16
+pub mycelium_l1::token::ScalarTok::F16
+pub mycelium_l1::token::ScalarTok::F32
+pub mycelium_l1::token::ScalarTok::F64
+impl core::clone::Clone for mycelium_l1::token::ScalarTok
+pub fn mycelium_l1::token::ScalarTok::clone(&self) -> mycelium_l1::token::ScalarTok
+impl core::cmp::Eq for mycelium_l1::token::ScalarTok
+impl core::cmp::PartialEq for mycelium_l1::token::ScalarTok
+pub fn mycelium_l1::token::ScalarTok::eq(&self, &mycelium_l1::token::ScalarTok) -> bool
+impl core::fmt::Debug for mycelium_l1::token::ScalarTok
+pub fn mycelium_l1::token::ScalarTok::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_l1::token::ScalarTok
+impl core::marker::StructuralPartialEq for mycelium_l1::token::ScalarTok
+impl core::marker::Freeze for mycelium_l1::token::ScalarTok
+impl core::marker::Send for mycelium_l1::token::ScalarTok
+impl core::marker::Sync for mycelium_l1::token::ScalarTok
+impl core::marker::Unpin for mycelium_l1::token::ScalarTok
+impl core::marker::UnsafeUnpin for mycelium_l1::token::ScalarTok
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::token::ScalarTok
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::token::ScalarTok
+pub enum mycelium_l1::token::StrengthTok
+pub mycelium_l1::token::StrengthTok::Declared
+pub mycelium_l1::token::StrengthTok::Empirical
+pub mycelium_l1::token::StrengthTok::Exact
+pub mycelium_l1::token::StrengthTok::Proven
+impl core::clone::Clone for mycelium_l1::token::StrengthTok
+pub fn mycelium_l1::token::StrengthTok::clone(&self) -> mycelium_l1::token::StrengthTok
+impl core::cmp::Eq for mycelium_l1::token::StrengthTok
+impl core::cmp::PartialEq for mycelium_l1::token::StrengthTok
+pub fn mycelium_l1::token::StrengthTok::eq(&self, &mycelium_l1::token::StrengthTok) -> bool
+impl core::fmt::Debug for mycelium_l1::token::StrengthTok
+pub fn mycelium_l1::token::StrengthTok::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_l1::token::StrengthTok
+impl core::marker::StructuralPartialEq for mycelium_l1::token::StrengthTok
+impl core::marker::Freeze for mycelium_l1::token::StrengthTok
+impl core::marker::Send for mycelium_l1::token::StrengthTok
+impl core::marker::Sync for mycelium_l1::token::StrengthTok
+impl core::marker::Unpin for mycelium_l1::token::StrengthTok
+impl core::marker::UnsafeUnpin for mycelium_l1::token::StrengthTok
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::token::StrengthTok
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::token::StrengthTok
+pub enum mycelium_l1::token::Tok
+pub mycelium_l1::token::Tok::Arrow
+pub mycelium_l1::token::Tok::At
+pub mycelium_l1::token::Tok::BinLit(alloc::string::String)
+pub mycelium_l1::token::Tok::Binary
+pub mycelium_l1::token::Tok::Colon
+pub mycelium_l1::token::Tok::Colony
+pub mycelium_l1::token::Tok::Comma
+pub mycelium_l1::token::Tok::Default
+pub mycelium_l1::token::Tok::Dense
+pub mycelium_l1::token::Tok::Dot
+pub mycelium_l1::token::Tok::Else
+pub mycelium_l1::token::Tok::Eof
+pub mycelium_l1::token::Tok::Eq
+pub mycelium_l1::token::Tok::FatArrow
+pub mycelium_l1::token::Tok::Fn
+pub mycelium_l1::token::Tok::For
+pub mycelium_l1::token::Tok::Ident(alloc::string::String)
+pub mycelium_l1::token::Tok::If
+pub mycelium_l1::token::Tok::In
+pub mycelium_l1::token::Tok::Int(i64)
+pub mycelium_l1::token::Tok::LAngle
+pub mycelium_l1::token::Tok::LBrace
+pub mycelium_l1::token::Tok::LBracket
+pub mycelium_l1::token::Tok::LParen
+pub mycelium_l1::token::Tok::Let
+pub mycelium_l1::token::Tok::Match
+pub mycelium_l1::token::Tok::Matured
+pub mycelium_l1::token::Tok::Nodule
+pub mycelium_l1::token::Tok::Paradigm
+pub mycelium_l1::token::Tok::Phylum
+pub mycelium_l1::token::Tok::Pipe
+pub mycelium_l1::token::Tok::Policy
+pub mycelium_l1::token::Tok::RAngle
+pub mycelium_l1::token::Tok::RBrace
+pub mycelium_l1::token::Tok::RBracket
+pub mycelium_l1::token::Tok::RParen
+pub mycelium_l1::token::Tok::Scalar(mycelium_l1::token::ScalarTok)
+pub mycelium_l1::token::Tok::Sparse
+pub mycelium_l1::token::Tok::Spore
+pub mycelium_l1::token::Tok::Strength(mycelium_l1::token::StrengthTok)
+pub mycelium_l1::token::Tok::Substrate
+pub mycelium_l1::token::Tok::Swap
+pub mycelium_l1::token::Tok::Ternary
+pub mycelium_l1::token::Tok::Thaw
+pub mycelium_l1::token::Tok::Then
+pub mycelium_l1::token::Tok::To
+pub mycelium_l1::token::Tok::Trait
+pub mycelium_l1::token::Tok::TritLit(alloc::string::String)
+pub mycelium_l1::token::Tok::Type
+pub mycelium_l1::token::Tok::Use
+pub mycelium_l1::token::Tok::Vsa
+pub mycelium_l1::token::Tok::Wild
+pub mycelium_l1::token::Tok::With
+impl core::clone::Clone for mycelium_l1::token::Tok
+pub fn mycelium_l1::token::Tok::clone(&self) -> mycelium_l1::token::Tok
+impl core::cmp::PartialEq for mycelium_l1::token::Tok
+pub fn mycelium_l1::token::Tok::eq(&self, &mycelium_l1::token::Tok) -> bool
+impl core::fmt::Debug for mycelium_l1::token::Tok
+pub fn mycelium_l1::token::Tok::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::token::Tok
+impl core::marker::Freeze for mycelium_l1::token::Tok
+impl core::marker::Send for mycelium_l1::token::Tok
+impl core::marker::Sync for mycelium_l1::token::Tok
+impl core::marker::Unpin for mycelium_l1::token::Tok
+impl core::marker::UnsafeUnpin for mycelium_l1::token::Tok
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::token::Tok
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::token::Tok
+pub struct mycelium_l1::token::Pos
+pub mycelium_l1::token::Pos::col: u32
+pub mycelium_l1::token::Pos::line: u32
+impl core::clone::Clone for mycelium_l1::token::Pos
+pub fn mycelium_l1::token::Pos::clone(&self) -> mycelium_l1::token::Pos
+impl core::cmp::Eq for mycelium_l1::token::Pos
+impl core::cmp::PartialEq for mycelium_l1::token::Pos
+pub fn mycelium_l1::token::Pos::eq(&self, &mycelium_l1::token::Pos) -> bool
+impl core::fmt::Debug for mycelium_l1::token::Pos
+pub fn mycelium_l1::token::Pos::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::token::Pos
+pub fn mycelium_l1::token::Pos::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_l1::token::Pos
+impl core::marker::StructuralPartialEq for mycelium_l1::token::Pos
+impl core::marker::Freeze for mycelium_l1::token::Pos
+impl core::marker::Send for mycelium_l1::token::Pos
+impl core::marker::Sync for mycelium_l1::token::Pos
+impl core::marker::Unpin for mycelium_l1::token::Pos
+impl core::marker::UnsafeUnpin for mycelium_l1::token::Pos
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::token::Pos
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::token::Pos
+pub struct mycelium_l1::token::Spanned
+pub mycelium_l1::token::Spanned::pos: mycelium_l1::token::Pos
+pub mycelium_l1::token::Spanned::tok: mycelium_l1::token::Tok
+impl core::clone::Clone for mycelium_l1::token::Spanned
+pub fn mycelium_l1::token::Spanned::clone(&self) -> mycelium_l1::token::Spanned
+impl core::cmp::PartialEq for mycelium_l1::token::Spanned
+pub fn mycelium_l1::token::Spanned::eq(&self, &mycelium_l1::token::Spanned) -> bool
+impl core::fmt::Debug for mycelium_l1::token::Spanned
+pub fn mycelium_l1::token::Spanned::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::token::Spanned
+impl core::marker::Freeze for mycelium_l1::token::Spanned
+impl core::marker::Send for mycelium_l1::token::Spanned
+impl core::marker::Sync for mycelium_l1::token::Spanned
+impl core::marker::Unpin for mycelium_l1::token::Spanned
+impl core::marker::UnsafeUnpin for mycelium_l1::token::Spanned
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::token::Spanned
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::token::Spanned
+pub fn mycelium_l1::token::keyword(&str) -> core::option::Option<mycelium_l1::token::Tok>
+pub mod mycelium_l1::totality
+pub enum mycelium_l1::totality::Totality
+pub mycelium_l1::totality::Totality::Partial
+pub mycelium_l1::totality::Totality::Total
+impl core::clone::Clone for mycelium_l1::totality::Totality
+pub fn mycelium_l1::totality::Totality::clone(&self) -> mycelium_l1::totality::Totality
+impl core::cmp::Eq for mycelium_l1::totality::Totality
+impl core::cmp::PartialEq for mycelium_l1::totality::Totality
+pub fn mycelium_l1::totality::Totality::eq(&self, &mycelium_l1::totality::Totality) -> bool
+impl core::fmt::Debug for mycelium_l1::totality::Totality
+pub fn mycelium_l1::totality::Totality::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_l1::totality::Totality
+impl core::marker::StructuralPartialEq for mycelium_l1::totality::Totality
+impl core::marker::Freeze for mycelium_l1::totality::Totality
+impl core::marker::Send for mycelium_l1::totality::Totality
+impl core::marker::Sync for mycelium_l1::totality::Totality
+impl core::marker::Unpin for mycelium_l1::totality::Totality
+impl core::marker::UnsafeUnpin for mycelium_l1::totality::Totality
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::totality::Totality
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::totality::Totality
+pub fn mycelium_l1::totality::classify_all(&alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::ast::FnDecl>) -> alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::totality::Totality>
+pub enum mycelium_l1::AmbientError
+pub mycelium_l1::AmbientError::BareDecimalNoEncoding
+pub mycelium_l1::AmbientError::BareDecimalNoEncoding::paradigm: mycelium_l1::ast::Paradigm
+pub mycelium_l1::AmbientError::BareDecimalNoEncoding::site: alloc::string::String
+pub mycelium_l1::AmbientError::MultipleDefaults
+pub mycelium_l1::AmbientError::MultipleDefaults::first: mycelium_l1::ast::Paradigm
+pub mycelium_l1::AmbientError::MultipleDefaults::second: mycelium_l1::ast::Paradigm
+pub mycelium_l1::AmbientError::ParadigmShapeMismatch
+pub mycelium_l1::AmbientError::ParadigmShapeMismatch::detail: alloc::string::String
+pub mycelium_l1::AmbientError::ParadigmShapeMismatch::paradigm: mycelium_l1::ast::Paradigm
+pub mycelium_l1::AmbientError::ParadigmShapeMismatch::site: alloc::string::String
+pub mycelium_l1::AmbientError::UnresolvedAmbient
+pub mycelium_l1::AmbientError::UnresolvedAmbient::site: alloc::string::String
+impl core::clone::Clone for mycelium_l1::ambient::AmbientError
+pub fn mycelium_l1::ambient::AmbientError::clone(&self) -> mycelium_l1::ambient::AmbientError
+impl core::cmp::Eq for mycelium_l1::ambient::AmbientError
+impl core::cmp::PartialEq for mycelium_l1::ambient::AmbientError
+pub fn mycelium_l1::ambient::AmbientError::eq(&self, &mycelium_l1::ambient::AmbientError) -> bool
+impl core::convert::From<mycelium_l1::ambient::AmbientError> for mycelium_l1::checkty::CheckError
+pub fn mycelium_l1::checkty::CheckError::from(mycelium_l1::ambient::AmbientError) -> Self
+impl core::error::Error for mycelium_l1::ambient::AmbientError
+impl core::fmt::Debug for mycelium_l1::ambient::AmbientError
+pub fn mycelium_l1::ambient::AmbientError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::ambient::AmbientError
+pub fn mycelium_l1::ambient::AmbientError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ambient::AmbientError
+impl core::marker::Freeze for mycelium_l1::ambient::AmbientError
+impl core::marker::Send for mycelium_l1::ambient::AmbientError
+impl core::marker::Sync for mycelium_l1::ambient::AmbientError
+impl core::marker::Unpin for mycelium_l1::ambient::AmbientError
+impl core::marker::UnsafeUnpin for mycelium_l1::ambient::AmbientError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ambient::AmbientError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ambient::AmbientError
+pub enum mycelium_l1::ElabError
+pub mycelium_l1::ElabError::Residual
+pub mycelium_l1::ElabError::Residual::site: alloc::string::String
+pub mycelium_l1::ElabError::Residual::what: alloc::string::String
+pub mycelium_l1::ElabError::UnknownFn(alloc::string::String)
+impl core::clone::Clone for mycelium_l1::elab::ElabError
+pub fn mycelium_l1::elab::ElabError::clone(&self) -> mycelium_l1::elab::ElabError
+impl core::cmp::Eq for mycelium_l1::elab::ElabError
+impl core::cmp::PartialEq for mycelium_l1::elab::ElabError
+pub fn mycelium_l1::elab::ElabError::eq(&self, &mycelium_l1::elab::ElabError) -> bool
+impl core::error::Error for mycelium_l1::elab::ElabError
+impl core::fmt::Debug for mycelium_l1::elab::ElabError
+pub fn mycelium_l1::elab::ElabError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::elab::ElabError
+pub fn mycelium_l1::elab::ElabError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::elab::ElabError
+impl core::marker::Freeze for mycelium_l1::elab::ElabError
+impl core::marker::Send for mycelium_l1::elab::ElabError
+impl core::marker::Sync for mycelium_l1::elab::ElabError
+impl core::marker::Unpin for mycelium_l1::elab::ElabError
+impl core::marker::UnsafeUnpin for mycelium_l1::elab::ElabError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::elab::ElabError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::elab::ElabError
+pub enum mycelium_l1::L1Error
+pub mycelium_l1::L1Error::DepthExceeded
+pub mycelium_l1::L1Error::DepthExceeded::limit: u32
+pub mycelium_l1::L1Error::FuelExhausted
+pub mycelium_l1::L1Error::GuaranteeTooWeak
+pub mycelium_l1::L1Error::GuaranteeTooWeak::actual: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_l1::L1Error::GuaranteeTooWeak::asserted: mycelium_l1::ast::Strength
+pub mycelium_l1::L1Error::GuaranteeTooWeak::site: alloc::string::String
+pub mycelium_l1::L1Error::Kernel(mycelium_interp::EvalError)
+pub mycelium_l1::L1Error::Stuck
+pub mycelium_l1::L1Error::Stuck::site: alloc::string::String
+pub mycelium_l1::L1Error::Stuck::why: alloc::string::String
+pub mycelium_l1::L1Error::Unsupported
+pub mycelium_l1::L1Error::Unsupported::site: alloc::string::String
+pub mycelium_l1::L1Error::Unsupported::what: alloc::string::String
+impl core::clone::Clone for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::clone(&self) -> mycelium_l1::eval::L1Error
+impl core::cmp::PartialEq for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::eq(&self, &mycelium_l1::eval::L1Error) -> bool
+impl core::convert::From<mycelium_interp::EvalError> for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::from(mycelium_interp::EvalError) -> Self
+impl core::error::Error for mycelium_l1::eval::L1Error
+impl core::fmt::Debug for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::eval::L1Error
+impl core::marker::Freeze for mycelium_l1::eval::L1Error
+impl core::marker::Send for mycelium_l1::eval::L1Error
+impl core::marker::Sync for mycelium_l1::eval::L1Error
+impl core::marker::Unpin for mycelium_l1::eval::L1Error
+impl core::marker::UnsafeUnpin for mycelium_l1::eval::L1Error
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::L1Error
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::L1Error
+pub enum mycelium_l1::L1Value
+pub mycelium_l1::L1Value::Data
+pub mycelium_l1::L1Value::Data::ctor: alloc::string::String
+pub mycelium_l1::L1Value::Data::fields: alloc::vec::Vec<mycelium_l1::eval::L1Value>
+pub mycelium_l1::L1Value::Data::ty: alloc::string::String
+pub mycelium_l1::L1Value::Repr(mycelium_core::value::Value)
+impl mycelium_l1::eval::L1Value
+pub fn mycelium_l1::eval::L1Value::as_repr(&self) -> core::option::Option<&mycelium_core::value::Value>
+pub fn mycelium_l1::eval::L1Value::to_core(&self, &mycelium_l1::checkty::Env, &mycelium_core::data::DataRegistry) -> core::option::Option<mycelium_core::datum::CoreValue>
+impl core::clone::Clone for mycelium_l1::eval::L1Value
+pub fn mycelium_l1::eval::L1Value::clone(&self) -> mycelium_l1::eval::L1Value
+impl core::cmp::PartialEq for mycelium_l1::eval::L1Value
+pub fn mycelium_l1::eval::L1Value::eq(&self, &mycelium_l1::eval::L1Value) -> bool
+impl core::fmt::Debug for mycelium_l1::eval::L1Value
+pub fn mycelium_l1::eval::L1Value::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::eval::L1Value
+impl core::marker::Freeze for mycelium_l1::eval::L1Value
+impl core::marker::Send for mycelium_l1::eval::L1Value
+impl core::marker::Sync for mycelium_l1::eval::L1Value
+impl core::marker::Unpin for mycelium_l1::eval::L1Value
+impl core::marker::UnsafeUnpin for mycelium_l1::eval::L1Value
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::L1Value
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::L1Value
+pub enum mycelium_l1::Totality
+pub mycelium_l1::Totality::Partial
+pub mycelium_l1::Totality::Total
+impl core::clone::Clone for mycelium_l1::totality::Totality
+pub fn mycelium_l1::totality::Totality::clone(&self) -> mycelium_l1::totality::Totality
+impl core::cmp::Eq for mycelium_l1::totality::Totality
+impl core::cmp::PartialEq for mycelium_l1::totality::Totality
+pub fn mycelium_l1::totality::Totality::eq(&self, &mycelium_l1::totality::Totality) -> bool
+impl core::fmt::Debug for mycelium_l1::totality::Totality
+pub fn mycelium_l1::totality::Totality::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_l1::totality::Totality
+impl core::marker::StructuralPartialEq for mycelium_l1::totality::Totality
+impl core::marker::Freeze for mycelium_l1::totality::Totality
+impl core::marker::Send for mycelium_l1::totality::Totality
+impl core::marker::Sync for mycelium_l1::totality::Totality
+impl core::marker::Unpin for mycelium_l1::totality::Totality
+impl core::marker::UnsafeUnpin for mycelium_l1::totality::Totality
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::totality::Totality
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::totality::Totality
+pub enum mycelium_l1::Ty
+pub mycelium_l1::Ty::Binary(u32)
+pub mycelium_l1::Ty::Data(alloc::string::String)
+pub mycelium_l1::Ty::Dense(u32, mycelium_l1::ast::Scalar)
+pub mycelium_l1::Ty::Substrate(alloc::string::String)
+pub mycelium_l1::Ty::Ternary(u32)
+impl core::clone::Clone for mycelium_l1::checkty::Ty
+pub fn mycelium_l1::checkty::Ty::clone(&self) -> mycelium_l1::checkty::Ty
+impl core::cmp::Eq for mycelium_l1::checkty::Ty
+impl core::cmp::PartialEq for mycelium_l1::checkty::Ty
+pub fn mycelium_l1::checkty::Ty::eq(&self, &mycelium_l1::checkty::Ty) -> bool
+impl core::fmt::Debug for mycelium_l1::checkty::Ty
+pub fn mycelium_l1::checkty::Ty::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::checkty::Ty
+pub fn mycelium_l1::checkty::Ty::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::checkty::Ty
+impl core::marker::Freeze for mycelium_l1::checkty::Ty
+impl core::marker::Send for mycelium_l1::checkty::Ty
+impl core::marker::Sync for mycelium_l1::checkty::Ty
+impl core::marker::Unpin for mycelium_l1::checkty::Ty
+impl core::marker::UnsafeUnpin for mycelium_l1::checkty::Ty
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::Ty
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::Ty
+pub struct mycelium_l1::CheckError
+pub mycelium_l1::CheckError::message: alloc::string::String
+pub mycelium_l1::CheckError::site: alloc::string::String
+impl core::clone::Clone for mycelium_l1::checkty::CheckError
+pub fn mycelium_l1::checkty::CheckError::clone(&self) -> mycelium_l1::checkty::CheckError
+impl core::cmp::Eq for mycelium_l1::checkty::CheckError
+impl core::cmp::PartialEq for mycelium_l1::checkty::CheckError
+pub fn mycelium_l1::checkty::CheckError::eq(&self, &mycelium_l1::checkty::CheckError) -> bool
+impl core::convert::From<mycelium_l1::ambient::AmbientError> for mycelium_l1::checkty::CheckError
+pub fn mycelium_l1::checkty::CheckError::from(mycelium_l1::ambient::AmbientError) -> Self
+impl core::error::Error for mycelium_l1::checkty::CheckError
+impl core::fmt::Debug for mycelium_l1::checkty::CheckError
+pub fn mycelium_l1::checkty::CheckError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::checkty::CheckError
+pub fn mycelium_l1::checkty::CheckError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::checkty::CheckError
+impl core::marker::Freeze for mycelium_l1::checkty::CheckError
+impl core::marker::Send for mycelium_l1::checkty::CheckError
+impl core::marker::Sync for mycelium_l1::checkty::CheckError
+impl core::marker::Unpin for mycelium_l1::checkty::CheckError
+impl core::marker::UnsafeUnpin for mycelium_l1::checkty::CheckError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::CheckError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::CheckError
+pub struct mycelium_l1::Env
+pub mycelium_l1::Env::fns: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::ast::FnDecl>
+pub mycelium_l1::Env::totality: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::totality::Totality>
+pub mycelium_l1::Env::types: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::checkty::DataInfo>
+impl mycelium_l1::checkty::Env
+pub fn mycelium_l1::checkty::Env::ctor(&self, &str) -> core::option::Option<(&mycelium_l1::checkty::DataInfo, usize)>
+impl core::clone::Clone for mycelium_l1::checkty::Env
+pub fn mycelium_l1::checkty::Env::clone(&self) -> mycelium_l1::checkty::Env
+impl core::fmt::Debug for mycelium_l1::checkty::Env
+pub fn mycelium_l1::checkty::Env::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_l1::checkty::Env
+impl core::marker::Send for mycelium_l1::checkty::Env
+impl core::marker::Sync for mycelium_l1::checkty::Env
+impl core::marker::Unpin for mycelium_l1::checkty::Env
+impl core::marker::UnsafeUnpin for mycelium_l1::checkty::Env
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::Env
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::Env
+pub struct mycelium_l1::Evaluator<'e>
+impl<'e> mycelium_l1::eval::Evaluator<'e>
+pub fn mycelium_l1::eval::Evaluator<'e>::call(&self, &str, alloc::vec::Vec<mycelium_l1::eval::L1Value>) -> core::result::Result<mycelium_l1::eval::L1Value, mycelium_l1::eval::L1Error>
+pub fn mycelium_l1::eval::Evaluator<'e>::new(&'e mycelium_l1::checkty::Env) -> Self
+pub fn mycelium_l1::eval::Evaluator<'e>::with_depth(self, u32) -> Self
+pub fn mycelium_l1::eval::Evaluator<'e>::with_engines(self, mycelium_interp::prims::PrimRegistry, alloc::boxed::Box<dyn mycelium_interp::swap::SwapEngine>) -> Self
+pub fn mycelium_l1::eval::Evaluator<'e>::with_fuel(self, u64) -> Self
+impl<'e> core::marker::Freeze for mycelium_l1::eval::Evaluator<'e>
+impl<'e> !core::marker::Send for mycelium_l1::eval::Evaluator<'e>
+impl<'e> !core::marker::Sync for mycelium_l1::eval::Evaluator<'e>
+impl<'e> core::marker::Unpin for mycelium_l1::eval::Evaluator<'e>
+impl<'e> core::marker::UnsafeUnpin for mycelium_l1::eval::Evaluator<'e>
+impl<'e> !core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::Evaluator<'e>
+impl<'e> !core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::Evaluator<'e>
+pub struct mycelium_l1::Nodule
+pub mycelium_l1::Nodule::items: alloc::vec::Vec<mycelium_l1::ast::Item>
+pub mycelium_l1::Nodule::path: mycelium_l1::ast::Path
+impl core::clone::Clone for mycelium_l1::ast::Nodule
+pub fn mycelium_l1::ast::Nodule::clone(&self) -> mycelium_l1::ast::Nodule
+impl core::cmp::PartialEq for mycelium_l1::ast::Nodule
+pub fn mycelium_l1::ast::Nodule::eq(&self, &mycelium_l1::ast::Nodule) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::Nodule
+pub fn mycelium_l1::ast::Nodule::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::Nodule
+impl core::marker::Freeze for mycelium_l1::ast::Nodule
+impl core::marker::Send for mycelium_l1::ast::Nodule
+impl core::marker::Sync for mycelium_l1::ast::Nodule
+impl core::marker::Unpin for mycelium_l1::ast::Nodule
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::Nodule
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Nodule
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Nodule
+pub struct mycelium_l1::NoduleHeader
+pub mycelium_l1::NoduleHeader::name: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+impl mycelium_l1::nodule::NoduleHeader
+pub fn mycelium_l1::nodule::NoduleHeader::canonical(&self) -> alloc::string::String
+pub fn mycelium_l1::nodule::NoduleHeader::dotted(&self) -> core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_l1::nodule::NoduleHeader
+pub fn mycelium_l1::nodule::NoduleHeader::clone(&self) -> mycelium_l1::nodule::NoduleHeader
+impl core::cmp::Eq for mycelium_l1::nodule::NoduleHeader
+impl core::cmp::PartialEq for mycelium_l1::nodule::NoduleHeader
+pub fn mycelium_l1::nodule::NoduleHeader::eq(&self, &mycelium_l1::nodule::NoduleHeader) -> bool
+impl core::fmt::Debug for mycelium_l1::nodule::NoduleHeader
+pub fn mycelium_l1::nodule::NoduleHeader::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::nodule::NoduleHeader
+impl core::marker::Freeze for mycelium_l1::nodule::NoduleHeader
+impl core::marker::Send for mycelium_l1::nodule::NoduleHeader
+impl core::marker::Sync for mycelium_l1::nodule::NoduleHeader
+impl core::marker::Unpin for mycelium_l1::nodule::NoduleHeader
+impl core::marker::UnsafeUnpin for mycelium_l1::nodule::NoduleHeader
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::nodule::NoduleHeader
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::nodule::NoduleHeader
+pub struct mycelium_l1::NoduleHeaderError
+pub mycelium_l1::NoduleHeaderError::line: u32
+pub mycelium_l1::NoduleHeaderError::message: alloc::string::String
+impl core::clone::Clone for mycelium_l1::nodule::NoduleHeaderError
+pub fn mycelium_l1::nodule::NoduleHeaderError::clone(&self) -> mycelium_l1::nodule::NoduleHeaderError
+impl core::cmp::Eq for mycelium_l1::nodule::NoduleHeaderError
+impl core::cmp::PartialEq for mycelium_l1::nodule::NoduleHeaderError
+pub fn mycelium_l1::nodule::NoduleHeaderError::eq(&self, &mycelium_l1::nodule::NoduleHeaderError) -> bool
+impl core::error::Error for mycelium_l1::nodule::NoduleHeaderError
+impl core::fmt::Debug for mycelium_l1::nodule::NoduleHeaderError
+pub fn mycelium_l1::nodule::NoduleHeaderError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::nodule::NoduleHeaderError
+pub fn mycelium_l1::nodule::NoduleHeaderError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::nodule::NoduleHeaderError
+impl core::marker::Freeze for mycelium_l1::nodule::NoduleHeaderError
+impl core::marker::Send for mycelium_l1::nodule::NoduleHeaderError
+impl core::marker::Sync for mycelium_l1::nodule::NoduleHeaderError
+impl core::marker::Unpin for mycelium_l1::nodule::NoduleHeaderError
+impl core::marker::UnsafeUnpin for mycelium_l1::nodule::NoduleHeaderError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::nodule::NoduleHeaderError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::nodule::NoduleHeaderError
+pub struct mycelium_l1::ParseError
+pub mycelium_l1::ParseError::message: alloc::string::String
+pub mycelium_l1::ParseError::pos: mycelium_l1::token::Pos
+impl mycelium_l1::error::ParseError
+pub fn mycelium_l1::error::ParseError::new(mycelium_l1::token::Pos, alloc::string::String) -> Self
+impl core::clone::Clone for mycelium_l1::error::ParseError
+pub fn mycelium_l1::error::ParseError::clone(&self) -> mycelium_l1::error::ParseError
+impl core::cmp::Eq for mycelium_l1::error::ParseError
+impl core::cmp::PartialEq for mycelium_l1::error::ParseError
+pub fn mycelium_l1::error::ParseError::eq(&self, &mycelium_l1::error::ParseError) -> bool
+impl core::error::Error for mycelium_l1::error::ParseError
+impl core::fmt::Debug for mycelium_l1::error::ParseError
+pub fn mycelium_l1::error::ParseError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::error::ParseError
+pub fn mycelium_l1::error::ParseError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::error::ParseError
+impl core::marker::Freeze for mycelium_l1::error::ParseError
+impl core::marker::Send for mycelium_l1::error::ParseError
+impl core::marker::Sync for mycelium_l1::error::ParseError
+impl core::marker::Unpin for mycelium_l1::error::ParseError
+impl core::marker::UnsafeUnpin for mycelium_l1::error::ParseError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::error::ParseError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::error::ParseError
+pub struct mycelium_l1::Resolved
+pub mycelium_l1::Resolved::nodule: mycelium_l1::ast::Nodule
+pub mycelium_l1::Resolved::notes: alloc::vec::Vec<mycelium_l1::ambient::ResolutionNote>
+impl core::clone::Clone for mycelium_l1::ambient::Resolved
+pub fn mycelium_l1::ambient::Resolved::clone(&self) -> mycelium_l1::ambient::Resolved
+impl core::cmp::PartialEq for mycelium_l1::ambient::Resolved
+pub fn mycelium_l1::ambient::Resolved::eq(&self, &mycelium_l1::ambient::Resolved) -> bool
+impl core::fmt::Debug for mycelium_l1::ambient::Resolved
+pub fn mycelium_l1::ambient::Resolved::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ambient::Resolved
+impl core::marker::Freeze for mycelium_l1::ambient::Resolved
+impl core::marker::Send for mycelium_l1::ambient::Resolved
+impl core::marker::Sync for mycelium_l1::ambient::Resolved
+impl core::marker::Unpin for mycelium_l1::ambient::Resolved
+impl core::marker::UnsafeUnpin for mycelium_l1::ambient::Resolved
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ambient::Resolved
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ambient::Resolved
+pub fn mycelium_l1::check_and_resolve(&mycelium_l1::ast::Nodule) -> core::result::Result<(mycelium_l1::checkty::Env, mycelium_l1::ast::Nodule), mycelium_l1::checkty::CheckError>
+pub fn mycelium_l1::check_nodule(&mycelium_l1::ast::Nodule) -> core::result::Result<mycelium_l1::checkty::Env, mycelium_l1::checkty::CheckError>
+pub fn mycelium_l1::check_nodule_matured(&mycelium_l1::ast::Nodule, bool) -> core::result::Result<mycelium_l1::checkty::Env, mycelium_l1::checkty::CheckError>
+pub fn mycelium_l1::elaborate(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
+pub fn mycelium_l1::expand_to_source(&mycelium_l1::ast::Nodule) -> alloc::string::String
+pub fn mycelium_l1::parse(&str) -> core::result::Result<mycelium_l1::ast::Nodule, mycelium_l1::error::ParseError>
+pub fn mycelium_l1::parse_nodule_header(&str) -> core::result::Result<core::option::Option<mycelium_l1::nodule::NoduleHeader>, mycelium_l1::nodule::NoduleHeaderError>
+pub fn mycelium_l1::resolve(&mycelium_l1::ast::Nodule) -> core::result::Result<mycelium_l1::ast::Nodule, mycelium_l1::ambient::AmbientError>
+pub fn mycelium_l1::resolve_report(&mycelium_l1::ast::Nodule) -> core::result::Result<mycelium_l1::ambient::Resolved, mycelium_l1::ambient::AmbientError>
