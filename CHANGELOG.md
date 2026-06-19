@@ -8,6 +8,55 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-19: issues reconciliation + wave-3 swarm launch record)
+**Issues reconciliation.** `tools/github/issues.yaml` brought current with the implemented state —
+43 Phase-3–5 tasks updated to `status:done` (confirmed against crate presence in the workspace),
+M-360 and M-330 set `status:in-progress` (work in-flight on epic branches), M-380 body
+disambiguated (KC-2 gate met; RFC-0021 Accepted; LlmCanonical prototype enacted). No creative
+state invented; every status backed by a crate or ratified decision (VR-5, G2).
+
+**Wave-3 launch (planning record — code lands via octopus-merge after epics report).**
+A **Sonnet Swarm** (all agents on claude-sonnet-4-6) with two independent epics on disjoint
+directory surfaces; neither has been merged here yet:
+
+- **Epic E360 (M-360 — TL1/TL2 SIMD vectorized kernels, branch
+  `claude/epic/E360-m360-tl1-tl2-simd`).** Extends `crates/mycelium-mlir/src/simd.rs` with TL1
+  and TL2 LLVM-IR vector decode kernels; scalar oracle differential and E1-harness section-5
+  extension. Guarantee: speedup `Empirical` (as measured by E1).
+- **Epic E330 (M-330 — AI co-authoring loop harness, branch `claude/epic/E330-m330-coauthor-loop`,
+  commit `caaeed3`).** Completed. Delivers `tools/llm-harness/coauthor.py` and
+  `crates/mycelium-lsp/examples/check.rs`; pending octopus-merge into this branch.
+
+**Octopus-merge landed (2026-06-19).** Both epics merged conflict-free into this branch; 135 test
+suites green (0 failures); `clippy -D warnings` clean. Statuses updated to `status:done`.
+
+- **M-360 (E360) — TL1 + TL2 hand-vectorized SIMD dot kernels (`crates/mycelium-mlir/`, `xtask/`).**
+  - `simd.rs`: `emit_bitnet_dot_simd_tl1_ir()` + `compile_bitnet_dot_simd_tl1()` — TL1 decode uses
+    `select(code == 2, −1, code)` (no modulo, SIMD-efficient); `emit_bitnet_dot_simd_tl2_ir()` +
+    `compile_bitnet_dot_simd_tl2()` — TL2 unpacks the 3-trit→5-bit LUT bitstream at fixed period-8
+    offsets. Four unit tests (IR inspectability + correctness corpus for each packing).
+  - `lib.rs`: all 6 public symbols exported (2 emitters + 2 compilers for TL1/TL2, plus the
+    existing I2_S pair).
+  - `tests/simd_differential.rs`: two new integration tests routing TL1 and TL2 through the shared
+    M-210 checker (`tl1_simd_and_scalar_agree_…`, `tl2_simd_and_scalar_agree_…`).
+  - `xtask/src/e1.rs`: `simd_section()` extended to compile, correctness-gate, and benchmark all
+    three kernels (I2_S, TL1, TL2) against their scalar counterparts. Guarantee: speedup `Empirical`
+    (as-measured by E1 — never `Declared`). No FLAGs.
+- **M-330 (E330) — AI co-authoring loop harness (`tools/llm-harness/`, `crates/mycelium-lsp/`).**
+  - `tools/llm-harness/coauthor.py` (1212 lines, pure stdlib, Termux-portable): MockGenerator
+    cycles 7 canned programs (4 valid, 3 fixable), self-corrects by default; LlmGenerator shells
+    to `llama-cli`/HTTP server (SKIP when absent, G2); Checker shells `cargo run -p mycelium-lsp
+    --example check` (KC-3, no Python kernel deps); VR-5 enforcement scans generated source for
+    forbidden tags (`Proven`/`Exact`); G11 dual projection writes `reports/coauthor-<ts>.json` +
+    `.txt`; statuses `PASS`/`mock-PASS`/`PARTIAL_PASS`/`SKIP`/`FAIL` all explicit (G2).
+  - `crates/mycelium-lsp/examples/check.rs` (26 lines): stdin→publishDiagnostics shim; reads
+    Mycelium source, calls `publish_for_source`, writes JSON-RPC to stdout. Zero new Rust deps.
+  - `crates/mycelium-lsp/Cargo.toml`: `[[example]] name = "check"` entry added.
+  - Verified: `--mock` exit 0; 4 `mock-PASS` + 3 `PARTIAL_PASS` (self-correction demonstrated).
+    Guarantee: `Declared` (design phase; mock mode only; real LLM is API-gated SKIP). No FLAGs.
+
+Append-only.
+
 ### Added (2026-06-19: M-391 — surface mutual-recursion elaboration confirmed; RP-6 resolved)
 The R7-Q3 *surface* half — how a group of ≥2 mutually-recursive top-level functions is written — is
 decided and pinned. **RP-6 verdict (DN-13): nodule-wide mutual visibility, no new syntax** — every
