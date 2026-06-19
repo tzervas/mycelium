@@ -151,3 +151,7 @@ M-602	176	4684127931
 M-610	177	4684128489
 M-620	178	4684129008
 M-630	179	4684129480
+# 2026-06-19: docs-currency wave (M-371 navigational docs + doc-currency gate) + fmt->io canonical-
+#             JSON delegation (M-372). Created via the GitHub MCP server; real db-ids (append-only).
+M-371	202	4697741054
+M-372	203	4697741421
