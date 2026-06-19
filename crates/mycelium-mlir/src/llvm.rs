@@ -179,10 +179,12 @@ pub(crate) struct Datum {
 pub(crate) const CLOSURE_ABI_WIDTH: usize = 8;
 
 /// The arena capacity (bytes) for the bump-allocated closure heap (DN-15 §7.2). A **`Declared`**
-/// compile-time over-estimate: Increment-2 excludes `Fix`/`FixGroup`, so the number of closure
-/// records is statically bounded by program structure and cannot approach this bound. The
-/// over-capacity check in `@myc_arena_alloc` is the never-silent seam (an explicit `@abort`, G2)
-/// where **Increment-3** substitutes a `DepthBudget`-resolved ceiling (DN-05 #1; `budget.rs`, M-349).
+/// compile-time over-estimate. Increment-2 excludes `Fix`/`FixGroup`, so the number of closure
+/// records is statically bounded by program structure (not a runaway) — but that bound is *not
+/// computed here*, so a sufficiently large finite program could still exceed this capacity. If it
+/// does, the over-capacity check in `@myc_arena_alloc` takes an explicit `@abort` (a never-silent
+/// defined-trap — G2), exactly the seam where **Increment-3** substitutes a `DepthBudget`-resolved
+/// ceiling + a graceful limit (DN-05 #1; `budget.rs`, M-349).
 pub(crate) const ARENA_CAPACITY_BYTES: usize = 1 << 20;
 
 /// A native closure value (Increment-2): a pointer to a heap (arena) closure record laid out as
@@ -1256,9 +1258,12 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
     if uses_closures {
         out.push_str("; closures: heap closure records on a bump arena (M-378; DN-15 §7)\n");
     }
-    // `@putchar` for the read-back protocol; `@abort` for the match no-default trap (G2).
+    // `@putchar` for the read-back protocol; `@abort` for the defined-traps (the match no-default
+    // trap and the bump-arena OOM). `@abort` is declared `noreturn` so LLVM treats every
+    // `call @abort` as non-returning: the dead `ret` that follows each trap is provably never taken
+    // (G2), and no post-trap path — e.g. the OOM block returning a null pointer — is ever reachable.
     out.push_str("declare i32 @putchar(i32)\n");
-    out.push_str("declare void @abort()\n");
+    out.push_str("declare void @abort() noreturn\n");
     if uses_closures {
         out.push_str("declare i8* @malloc(i64)\n");
         out.push_str("declare void @free(i8*)\n");
@@ -1291,9 +1296,10 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
             emit_result_line(result.kind, &result.vals, &mut ssa, &mut out);
         }
         // Overflow possible ⇒ branch on the runtime flag: print the sentinel line on overflow, the
-        // result line otherwise (the read-back protocol — never a silent wrap, G2). (Overflow cannot
-        // co-occur with closures — the narrow ABI is Binary-only — but the free stays on the normal
-        // `ok` path for robustness; the `ovf` early-exit lets the OS reclaim the arena.)
+        // result line otherwise (the read-back protocol — never a silent wrap, G2). A program can
+        // both use closures and contain trit arithmetic in non-closure bindings, so this branch may
+        // co-occur with a live arena: the `@free` stays on the normal `ok` path; the `ovf` early-exit
+        // skips it and lets the OS reclaim the arena at process exit.
         Some(ovf) => {
             let _ = writeln!(&mut out, "  br i1 {ovf}, label %ovf, label %ok");
             out.push_str("ovf:\n");
@@ -1331,6 +1337,10 @@ fn arena_runtime() -> String {
     s.push_str("  %newoff = add i64 %off, %n\n");
     let _ = writeln!(s, "  %over = icmp ugt i64 %newoff, {ARENA_CAPACITY_BYTES}");
     s.push_str("  br i1 %over, label %oom, label %ok\n");
+    // OOM: an explicit defined-trap. `@abort` is declared `noreturn` (see `emit_llvm_ir`), so this
+    // block is non-returning in IR — the trailing `ret i8* null` is a provably-dead terminator
+    // (LLVM never lets the null reach the caller's bitcast/store), kept only so the block has a
+    // valid terminator without a raw `unreachable` (consistent with the match no-default trap; G2).
     s.push_str("oom:\n  call void @abort()\n  ret i8* null\n");
     s.push_str("ok:\n");
     s.push_str("  store i64 %newoff, i64* @myc_arena_off\n");
