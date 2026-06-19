@@ -8,6 +8,30 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-19: M-391 — surface mutual-recursion elaboration confirmed; RP-6 resolved)
+The R7-Q3 *surface* half — how a group of ≥2 mutually-recursive top-level functions is written — is
+decided and pinned. **RP-6 verdict (DN-13): nodule-wide mutual visibility, no new syntax** — every
+top-level `fn` in a `nodule` is mutually visible, and the elaborator auto-groups each call-graph SCC of
+≥2 into the RFC-0001 r5 `FixGroup`. The lowering already existed (M-343); the inferred grouping is
+materialized as that concrete, content-addressed L0 node (no black box).
+- **M-391 (#199).** Confirms + pins the surface front-end (already realized by M-343's nodule-wide
+  scoping + Tarjan→`FixGroup` path): the M-210 three-way differential
+  (`crates/mycelium-l1/tests/differential.rs`) gains two further surface-written mutual-recursion
+  shapes — a repr-returning pair and a multi-field-constructor pair — each agreeing across
+  L1-eval ≡ elaborate→L0-interp ≡ AOT through the shared checker; an **identity** assertion pins the
+  deterministic `FixGroup` lowering (ADR-003); a **never-silent** regression pins that a reference to an
+  undefined function stays an explicit checker error, never a silent phantom group member (G2). No
+  change to `mycelium-core` / `mycelium-interp` / the totality checker, and **no public-API/baseline
+  change** (KC-3; DN-10 §2.5).
+- **RP-6 record (DN-13).** New decision note records the verdict + rationale (least append-only surface
+  commitment; KISS; Rust/Unison/ML-module consistency). `docs/spec/grammar/mycelium.ebnf` gains a
+  scoping comment (**no production change**); RFC-0007 §8 R7-Q3 (surface half) resolved (append-only);
+  `docs/notes/research-prompts.md` RP-6 → Resolved; DN-10 §2.6 annotated.
+
+Verified: `cargo test -p mycelium-l1` (all suites green, incl. the new differential / identity /
+never-silent tests); `clippy --all-targets -D warnings -A unsafe_code` clean; `cargo fmt --check` clean.
+Append-only.
+
 ### Changed (2026-06-19: documentation currency + `fmt`→`io` JSON delegation — Sonnet swarm wave)
 The navigational/overview docs are brought current with the implemented state and guarded by a new
 programmatic check, and the converged `fmt`→`io` canonical-JSON seam is wired. Landed as a **Sonnet

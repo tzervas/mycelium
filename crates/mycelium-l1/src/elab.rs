@@ -195,7 +195,10 @@ type Binding = (String, String, Ty);
 /// (r3) and now **functions + recursion** (`Lam`/`App`/`Fix`). Each reachable **self-recursive**
 /// function is bound once as `let f = Fix(f, λparams. body)` (callee-first), and a call to it
 /// elaborates to a curried `App`; every other call still inlines (the non-recursive call graph is
-/// acyclic). **Mutual recursion** lowers to a `FixGroup` (RFC-0001 r5; M-343 — R7-Q3). Still
+/// acyclic). **Mutual recursion** lowers to a `FixGroup` (RFC-0001 r5; M-343 — R7-Q3); top-level
+/// functions in a nodule are mutually visible (RP-6 / DN-13 — no surface marker), so a mutual group is
+/// *inferred* from the call graph and **materialized as a `FixGroup` node** — inspectable in the
+/// elaborated term, never a black box. Still
 /// `Residual`: a dynamic guarantee index `@ g` (RFC-0007 §4.3, stage 0). On success the result is a
 /// closed L0 term whose evaluation must agree with the L1 evaluator (NFR-7; the M-210 differential).
 pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {

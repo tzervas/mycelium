@@ -345,6 +345,16 @@ revisions / KC-2-gated.*
 
 ## Meta — changelog
 
+- **2026-06-19 — §8 R7-Q3 surface grammar decided (RP-6 → DN-13; M-391; append-only, surface
+  commitment).** The remaining R7-Q3 sub-question — the *surface grammar* for a group of ≥2
+  mutually-recursive top-level functions — is resolved: **nodule-wide mutual visibility, no new
+  syntax** (RP-6 candidate 2; DN-13). Every top-level `fn` in a `nodule` is mutually visible; the
+  elaborator auto-groups each call-graph SCC of ≥2 into the `FixGroup` of RFC-0001 r5 (the lowering
+  already enacted by M-343), materializing the inferred grouping as a concrete L0 node (no black box).
+  The grammar spec (`docs/spec/grammar/mycelium.ebnf`) records the scoping rule as a comment — **no
+  production change**. M-391 pins it: two further surface-written mutual-recursion programs in the
+  M-210 three-way differential, an identity assertion, and a never-silent regression. No calculus
+  content changed (KC-3).
 - **2026-06-18 — §4.3 stage-1 deferral superseded + §8 R7-Q2 resolved (RFC-0018 Accepted; ripple,
   append-only).** §4.3 deferred the static graded judgment ("stage 1, a revision of this RFC"); that
   stage-1 grading is now specified and **Accepted in RFC-0018**, which **supersedes §4.3's deferral**
