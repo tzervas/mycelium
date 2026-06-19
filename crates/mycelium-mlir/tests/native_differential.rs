@@ -702,6 +702,82 @@ fn closures_over_non_binary8_values_are_explicitly_refused() {
     }
 }
 
+// ─── M-379: Binary branch primitive (Match Lit-arms on a Binary lane) ─────────────────────────
+
+/// The Binary-branch corpus (M-379 Increment-3; DN-15 §8.3): `Match` over a `Binary{8}` *lane*
+/// scrutinee with `Lit` arms — the native branch primitive (pack the lane, `switch i64` on the packed
+/// literals). Distinct from the Increment-1 `Match` over a `Datum` scrutinee with `Ctor` arms. Each
+/// program reduces to a bit vector and is value-checked interp ≡ native.
+fn binary_branch_corpus() -> Vec<Node> {
+    // Match `scrut` against a single `Lit` pattern → `hit` on match, else `miss` (the default).
+    let lit_match =
+        |scrut: [bool; 8], pat: [bool; 8], hit: [bool; 8], miss: [bool; 8]| Node::Match {
+            scrutinee: Box::new(Node::Const(byte(scrut))),
+            alts: vec![Alt::Lit {
+                value: byte(pat),
+                body: Node::Const(byte(hit)),
+            }],
+            default: Some(Box::new(Node::Const(byte(miss)))),
+        };
+    vec![
+        // 1. scrutinee A == pattern A → take the Lit arm (B).
+        lit_match(A, A, B, ONES),
+        // 2. scrutinee B != pattern A → fall through to the default (ONES). Mutant-witness that the
+        //    branch compares the value, not always-takes the first arm.
+        lit_match(B, A, B, ONES),
+        // 3. Two Lit arms: the scrutinee matches the *second* pattern (dispatch on the right value).
+        Node::Match {
+            scrutinee: Box::new(Node::Const(byte(B))),
+            alts: vec![
+                Alt::Lit {
+                    value: byte(A),
+                    body: Node::Const(byte(ONES)),
+                },
+                Alt::Lit {
+                    value: byte(B),
+                    body: Node::Const(byte(A)),
+                },
+            ],
+            default: Some(Box::new(Node::Const(byte(ONES)))),
+        },
+    ]
+}
+
+/// M-379 Increment-3: interp ↔ native are observably equivalent on the `binary_branch_corpus`.
+/// Guarantee: `Declared` — the differential is empirical evidence (VR-5; DN-15 §8).
+#[test]
+fn interp_and_native_are_observably_equivalent_on_the_binary_branch_corpus() {
+    for (i, node) in binary_branch_corpus().iter().enumerate() {
+        let native = match mycelium_mlir::compile_and_run(node) {
+            Ok(v) => v,
+            Err(AotError::ToolchainMissing(_)) => return,
+            Err(e) => panic!("binary-branch program #{i}: native path errored: {e}"),
+        };
+        let interp = interp_eval_closure(node);
+        // Mutant-witness: a wrong literal compare (or always taking arm 0) would diverge here.
+        assert_eq!(
+            observable(&interp),
+            observable(&native),
+            "binary-branch program #{i} diverged: interp {:?} vs native {:?}",
+            interp.payload(),
+            native.payload()
+        );
+        assert_eq!(
+            check(
+                &interp,
+                &native,
+                RefinementRelation::ObservationalEquiv,
+                Certificate::exact(),
+                &Evidence::Observational,
+            ),
+            CheckVerdict::Validated {
+                strength: GuaranteeStrength::Exact
+            },
+            "binary-branch program #{i}: the shared checker must validate the interp↔native pair"
+        );
+    }
+}
+
 // ─── Regression: Issue 1 fix — Match default arm taken (PR #213 review) ────────────────────────
 
 /// Build a three-constructor registry: `type Signal = A | B | C`.

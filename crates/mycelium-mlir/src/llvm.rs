@@ -239,17 +239,6 @@ impl EnvValue {
             ))),
         }
     }
-    fn as_datum(&self, ctx: &str) -> Result<&Datum, AotError> {
-        match self {
-            EnvValue::Datum(d) => Ok(d),
-            EnvValue::Repr(_) => Err(AotError::UnsupportedNode(format!(
-                "{ctx}: expected a data value (Datum) but found a repr lane"
-            ))),
-            EnvValue::Closure(_) => Err(AotError::UnsupportedNode(format!(
-                "{ctx}: expected a data value (Datum) but found a closure value"
-            ))),
-        }
-    }
     /// Extract the closure, or an explicit refusal if this is not a closure (e.g. `App` applied to a
     /// non-function value — never a silent miscall; G2).
     fn as_closure(&self, ctx: &str) -> Result<&ClosureVal, AotError> {
@@ -518,166 +507,11 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
             Rhs::Match {
                 scrutinee,
                 alts,
-                default: default_arm,
-                // The ANF `default` arm (if `Some`) is lowered into the switch's default block so
-                // that the native path returns the same value as the interpreter when no explicit
-                // arm matches. If `None`, the default emits abort() — a defined-trap for the
-                // provably-unreachable no-match case (WF7 checker proves coverage; G2: never UB).
-            } => {
-                // Load the tag from the scrutinee datum, then switch on it. Each arm loads its
-                // binder fields from the struct and inlines the arm's ANF body (recursively).
-                // The match must terminate at a repr Lane value (not a Datum) — the final result
-                // must be printable by the read-back protocol. The switch has an explicit defined
-                // default — either the lowered ANF default block (if `Some`) or a call to abort()
-                // (if `None`) — never raw `unreachable` UB (G2).
-                let datum = lookup_ev(&env, scrutinee)?
-                    .as_datum("Match scrutinee")
-                    .cloned()?;
-
-                // Load the tag.
-                let tag_gep = ssa.fresh();
-                let slots = datum.slots;
-                let ptr = &datum.ptr.clone();
-                let _ = writeln!(
-                    body,
-                    "  {tag_gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 0"
-                );
-                let tag_reg = ssa.fresh();
-                let _ = writeln!(body, "  {tag_reg} = load i64, i64* {tag_gep}");
-
-                // Generate unique labels for each arm and the merge block.
-                let arm_labels: Vec<String> = (0..alts.len()).map(|_| bbc.fresh()).collect();
-                let default_label = bbc.fresh();
-                let merge_label = bbc.fresh();
-
-                // Emit the switch instruction.
-                let _ = write!(body, "  switch i64 {tag_reg}, label %{default_label} [");
-                for (alt, label) in alts.iter().zip(&arm_labels) {
-                    use mycelium_core::lower::AnfAlt;
-                    let arm_tag = match alt {
-                        AnfAlt::Ctor { ctor, .. } => ctor.index() as u64,
-                        AnfAlt::Lit { .. } => {
-                            return Err(AotError::UnsupportedNode(
-                                "literal Match arms are not supported in the native LLVM data \
-                                 fragment (Increment-1); use constructor arms only"
-                                    .to_owned(),
-                            ));
-                        }
-                    };
-                    let _ = write!(body, " i64 {arm_tag}, label %{label}");
-                }
-                let _ = writeln!(body, " ]");
-
-                // Collect (arm_label, result_lane) pairs for the phi at the merge.
-                let mut phi_entries: Vec<(String, Lane)> = Vec::with_capacity(alts.len());
-
-                for (alt, label) in alts.iter().zip(&arm_labels) {
-                    use mycelium_core::lower::AnfAlt;
-                    let _ = writeln!(body, "{label}:");
-                    let AnfAlt::Ctor {
-                        binders,
-                        body: arm_body,
-                        ..
-                    } = alt
-                    else {
-                        unreachable!("literal arms filtered above")
-                    };
-                    // Issue 2 (never-silent / G2): check binder/field arity before zipping.
-                    // The interpreter rejects arity mismatches with DataMalformed; we must too.
-                    if binders.len() != datum.fields.len() {
-                        return Err(AotError::UnsupportedNode(format!(
-                            "Match arm binder arity ({}) != constructor field count ({}) \
-                             — malformed Match (interpreter rejects with DataMalformed; G2/WF7)",
-                            binders.len(),
-                            datum.fields.len()
-                        )));
-                    }
-                    // Bind field lanes into a child env extended from the current one.
-                    let mut arm_env = env.clone();
-                    for (binder, field_layout) in binders.iter().zip(&datum.fields) {
-                        let field_lane =
-                            emit_load_field(field_layout, ptr, slots, &mut ssa, &mut body);
-                        arm_env.insert(
-                            mycelium_core::lower::Atom::Named(binder.clone()),
-                            EnvValue::Repr(field_lane),
-                        );
-                    }
-                    // Lower the arm body (a nested ANF block) recursively into the current IR body.
-                    let arm_result = lower_anf_block(
-                        arm_body,
-                        &mut arm_env,
-                        &mut ssa,
-                        &mut bbc,
-                        &mut body,
-                        &mut funcs,
-                        &mut flags,
-                    )?;
-                    phi_entries.push((label.clone(), arm_result));
-                    let _ = writeln!(body, "  br label %{merge_label}");
-                }
-
-                // Default block: if the ANF `default` arm is `Some`, lower it and merge its
-                // result via the phi (matching the interpreter: the default body's value is
-                // returned when no explicit arm matches). If `None`, emit abort() — a
-                // defined-trap (WF7 proves exhaustive coverage; abort is the honest never-silent
-                // trap; G2: never raw unreachable UB).
-                let _ = writeln!(body, "{default_label}:");
-                if let Some(default_block) = default_arm {
-                    // The default arm has no binders; use the current env directly.
-                    let default_result = lower_anf_block(
-                        default_block,
-                        &mut env.clone(),
-                        &mut ssa,
-                        &mut bbc,
-                        &mut body,
-                        &mut funcs,
-                        &mut flags,
-                    )?;
-                    phi_entries.push((default_label.clone(), default_result));
-                    let _ = writeln!(body, "  br label %{merge_label}");
-                } else {
-                    // No ANF default: WF7 guarantees the switch is exhaustive; abort() is the
-                    // honest defined-trap (never raw `unreachable` UB — G2).
-                    let _ = writeln!(body, "  call void @abort()");
-                    let _ = writeln!(body, "  ret i32 0");
-                }
-
-                // Merge block: collect results from arms via phi.
-                let _ = writeln!(body, "{merge_label}:");
-                if phi_entries.is_empty() {
-                    return Err(AotError::UnsupportedNode(
-                        "Match with zero arms (exhaustive coverage requires at least one arm)"
-                            .to_owned(),
-                    ));
-                }
-                // All arms must yield the same kind/width Lane — check and emit phi per element.
-                let first = &phi_entries[0].1;
-                let kind = first.kind;
-                let width = first.vals.len();
-                for (_, lane) in &phi_entries[1..] {
-                    if lane.kind != kind || lane.vals.len() != width {
-                        return Err(AotError::UnsupportedNode(
-                            "Match arms produce lanes of different kind or width — the native \
-                             data fragment requires all arms to return the same repr shape"
-                                .to_owned(),
-                        ));
-                    }
-                }
-                let mut result_vals: Vec<Operand> = Vec::with_capacity(width);
-                for elem_idx in 0..width {
-                    let phi_reg = ssa.fresh();
-                    let phi_operands: Vec<String> = phi_entries
-                        .iter()
-                        .map(|(lbl, lane)| format!("[ {}, %{lbl} ]", lane.vals[elem_idx]))
-                        .collect();
-                    let _ = writeln!(body, "  {phi_reg} = phi i32 {}", phi_operands.join(", "));
-                    result_vals.push(phi_reg);
-                }
-                EnvValue::Repr(Lane {
-                    kind,
-                    vals: result_vals,
-                })
-            }
+                default,
+            } => lower_match(
+                scrutinee, alts, default, &env, &mut ssa, &mut bbc, &mut body, &mut funcs,
+                &mut flags,
+            )?,
             // Increment-2 (M-378; DN-15 §7; RFC-0004 §11.5): App/Lam are now natively lowered via
             // closure-conversion (free-var analysis → heap closure record → indirect call), over the
             // narrow `Binary{8}`-packed-`i64` ABI and the bump arena. Fix/FixGroup stay explicit
@@ -781,123 +615,8 @@ fn lower_anf_block(
             Rhs::Match {
                 scrutinee,
                 alts,
-                default: default_arm,
-                // Nested match — identical semantics to the top-level Match. The ANF `default`
-                // arm (if `Some`) is lowered and merged via phi; if `None`, abort() is the
-                // defined-trap (G2: never raw unreachable UB; WF7 proves exhaustive coverage).
-            } => {
-                // Nested match inside an arm body — identical logic to the top-level match.
-                let datum = lookup_ev(env, scrutinee)?
-                    .as_datum("Match scrutinee")
-                    .cloned()?;
-                let slots = datum.slots;
-                let ptr = datum.ptr.clone();
-                let tag_gep = ssa.fresh();
-                let _ = writeln!(
-                    body,
-                    "  {tag_gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 0"
-                );
-                let tag_reg = ssa.fresh();
-                let _ = writeln!(body, "  {tag_reg} = load i64, i64* {tag_gep}");
-                let arm_labels: Vec<String> = (0..alts.len()).map(|_| bbc.fresh()).collect();
-                let default_label = bbc.fresh();
-                let merge_label = bbc.fresh();
-                let _ = write!(body, "  switch i64 {tag_reg}, label %{default_label} [");
-                for (alt, label) in alts.iter().zip(&arm_labels) {
-                    use mycelium_core::lower::AnfAlt;
-                    let arm_tag = match alt {
-                        AnfAlt::Ctor { ctor, .. } => ctor.index() as u64,
-                        AnfAlt::Lit { .. } => {
-                            return Err(AotError::UnsupportedNode(
-                                "literal Match arms are not supported in the native LLVM data fragment"
-                                    .to_owned(),
-                            ));
-                        }
-                    };
-                    let _ = write!(body, " i64 {arm_tag}, label %{label}");
-                }
-                let _ = writeln!(body, " ]");
-                let mut phi_entries: Vec<(String, Lane)> = Vec::with_capacity(alts.len());
-                for (alt, label) in alts.iter().zip(&arm_labels) {
-                    use mycelium_core::lower::AnfAlt;
-                    let _ = writeln!(body, "{label}:");
-                    let AnfAlt::Ctor {
-                        binders,
-                        body: arm_body,
-                        ..
-                    } = alt
-                    else {
-                        unreachable!()
-                    };
-                    // Issue 2 (never-silent / G2): check binder/field arity before zipping.
-                    if binders.len() != datum.fields.len() {
-                        return Err(AotError::UnsupportedNode(format!(
-                            "Match arm binder arity ({}) != constructor field count ({}) \
-                             — malformed Match (interpreter rejects with DataMalformed; G2/WF7)",
-                            binders.len(),
-                            datum.fields.len()
-                        )));
-                    }
-                    let mut arm_env = env.clone();
-                    for (binder, field_layout) in binders.iter().zip(&datum.fields) {
-                        let field_lane = emit_load_field(field_layout, &ptr, slots, ssa, body);
-                        arm_env.insert(
-                            mycelium_core::lower::Atom::Named(binder.clone()),
-                            EnvValue::Repr(field_lane),
-                        );
-                    }
-                    let arm_result =
-                        lower_anf_block(arm_body, &mut arm_env, ssa, bbc, body, funcs, flags)?;
-                    phi_entries.push((label.clone(), arm_result));
-                    let _ = writeln!(body, "  br label %{merge_label}");
-                }
-                // Default block: lower ANF default if `Some`; abort() if `None` (G2/WF7).
-                let _ = writeln!(body, "{default_label}:");
-                if let Some(default_block) = default_arm {
-                    let default_result = lower_anf_block(
-                        default_block,
-                        &mut env.clone(),
-                        ssa,
-                        bbc,
-                        body,
-                        funcs,
-                        flags,
-                    )?;
-                    phi_entries.push((default_label.clone(), default_result));
-                    let _ = writeln!(body, "  br label %{merge_label}");
-                } else {
-                    let _ = writeln!(body, "  call void @abort()");
-                    let _ = writeln!(body, "  ret i32 0");
-                }
-                let _ = writeln!(body, "{merge_label}:");
-                if phi_entries.is_empty() {
-                    return Err(AotError::UnsupportedNode("Match with zero arms".to_owned()));
-                }
-                let first = &phi_entries[0].1;
-                let kind = first.kind;
-                let width = first.vals.len();
-                for (_, lane) in &phi_entries[1..] {
-                    if lane.kind != kind || lane.vals.len() != width {
-                        return Err(AotError::UnsupportedNode(
-                            "Match arms produce lanes of different kind or width".to_owned(),
-                        ));
-                    }
-                }
-                let mut result_vals: Vec<Operand> = Vec::with_capacity(width);
-                for elem_idx in 0..width {
-                    let phi_reg = ssa.fresh();
-                    let phi_operands: Vec<String> = phi_entries
-                        .iter()
-                        .map(|(lbl, lane)| format!("[ {}, %{lbl} ]", lane.vals[elem_idx]))
-                        .collect();
-                    let _ = writeln!(body, "  {phi_reg} = phi i32 {}", phi_operands.join(", "));
-                    result_vals.push(phi_reg);
-                }
-                EnvValue::Repr(Lane {
-                    kind,
-                    vals: result_vals,
-                })
-            }
+                default,
+            } => lower_match(scrutinee, alts, default, env, ssa, bbc, body, funcs, flags)?,
             // Increment-2: closures are lowered inside match arms too (a `Lam`/`App` may appear in an
             // arm body). Fix/FixGroup stay explicit UnsupportedNode (Increment-3; G2/VR-5).
             Rhs::Lam {
@@ -1236,6 +955,216 @@ fn lower_app(
         "  {res} = call i64 {fp}(i8* {eptr}, i64 {packed_arg})"
     );
     Ok(EnvValue::Repr(unpack_binary8(&res, ssa, body)))
+}
+
+/// Pack a `Binary{8}` literal `Value` (a Match `Lit`-arm pattern) into the `u64` the native branch
+/// switch compares against the packed scrutinee (DN-15 §8.3). Bit `i` → position `i`, identical to
+/// [`pack_binary8`], so the comparison is exact. Other reprs/widths are an explicit refusal (G2).
+fn lit_binary8_packed(value: &Value) -> Result<u64, AotError> {
+    match (value.repr(), value.payload()) {
+        (Repr::Binary { width }, Payload::Bits(bits))
+            if *width as usize == CLOSURE_ABI_WIDTH && bits.len() == CLOSURE_ABI_WIDTH =>
+        {
+            let mut acc = 0u64;
+            for (i, &b) in bits.iter().enumerate() {
+                if b {
+                    acc |= 1u64 << i;
+                }
+            }
+            Ok(acc)
+        }
+        (repr, _) => Err(AotError::UnsupportedNode(format!(
+            "Match Lit-arm pattern must be a Binary{{{CLOSURE_ABI_WIDTH}}} value in the native branch \
+             primitive (Increment-3); got {repr:?}"
+        ))),
+    }
+}
+
+/// Lower `Rhs::Match` — shared by [`lower_program`] and nested arm/closure bodies (so the two paths
+/// never drift). Two forms, dispatched on the scrutinee's [`EnvValue`]:
+/// - **`Datum` scrutinee + `Ctor` arms** (Increment-1): load the tag from slot 0, `switch i64` on the
+///   constructor index, bind each arm's fields, phi-merge.
+/// - **`Binary{8}` lane scrutinee + `Lit` arms** (Increment-3 — the native **branch primitive**;
+///   DN-15 §8.3): pack the lane to `i64`, `switch i64` on the packed literal patterns (`Lit` arms bind
+///   nothing), phi-merge. This is the base-case conditional a terminating recursion needs.
+///
+/// A no-match with no ANF `default` traps with `@abort` (a defined trap, never raw `unreachable`; G2).
+/// Mixing forms (a `Lit` arm on a datum, or a `Ctor` arm on a lane) is an explicit refusal.
+#[allow(clippy::too_many_arguments)]
+fn lower_match(
+    scrutinee: &Atom,
+    alts: &[lower::AnfAlt],
+    default_arm: &Option<lower::Anf>,
+    env: &HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    bbc: &mut Bbc,
+    body: &mut String,
+    funcs: &mut Vec<String>,
+    flags: &mut Vec<String>,
+) -> Result<EnvValue, AotError> {
+    use mycelium_core::lower::AnfAlt;
+    let scrut = lookup_ev(env, scrutinee)?.clone();
+
+    // The discriminant `i64` the switch compares, plus (for a datum) the datum layout for field
+    // binding. A Binary lane is the branch-primitive scrutinee; only `Datum`/`Binary` are valid.
+    let datum_opt: Option<Datum> = match &scrut {
+        EnvValue::Datum(d) => Some(d.clone()),
+        EnvValue::Repr(lane) if lane.kind == LaneKind::Binary => None,
+        EnvValue::Repr(_) => {
+            return Err(AotError::UnsupportedNode(
+                "Match on a non-Binary repr lane (the native branch primitive compares Binary{8} \
+                 values; Ternary scrutinees are out of scope — G2)"
+                    .to_owned(),
+            ));
+        }
+        EnvValue::Closure(_) => {
+            return Err(AotError::UnsupportedNode(
+                "Match on a closure value is not supported (G2)".to_owned(),
+            ));
+        }
+    };
+
+    let disc_reg = match &datum_opt {
+        Some(datum) => {
+            let slots = datum.slots;
+            let ptr = &datum.ptr;
+            let tag_gep = ssa.fresh();
+            let _ = writeln!(
+                body,
+                "  {tag_gep} = getelementptr inbounds [{slots} x i64], [{slots} x i64]* {ptr}, i64 0, i64 0"
+            );
+            let tag_reg = ssa.fresh();
+            let _ = writeln!(body, "  {tag_reg} = load i64, i64* {tag_gep}");
+            tag_reg
+        }
+        None => {
+            // Binary-lane scrutinee: the packed lane is the discriminant the switch compares.
+            let lane = as_binary8(&scrut, "Match scrutinee")?;
+            pack_binary8(lane, ssa, body)
+        }
+    };
+
+    let arm_labels: Vec<String> = (0..alts.len()).map(|_| bbc.fresh()).collect();
+    let default_label = bbc.fresh();
+    let merge_label = bbc.fresh();
+
+    // The switch: per-arm value is the ctor index (datum form) or the packed `Lit` (Binary form).
+    let _ = write!(body, "  switch i64 {disc_reg}, label %{default_label} [");
+    for (alt, label) in alts.iter().zip(&arm_labels) {
+        let sw_val: u64 = match (&datum_opt, alt) {
+            (Some(_), AnfAlt::Ctor { ctor, .. }) => u64::from(ctor.index()),
+            (None, AnfAlt::Lit { value, .. }) => lit_binary8_packed(value)?,
+            (Some(_), AnfAlt::Lit { .. }) => {
+                return Err(AotError::UnsupportedNode(
+                    "literal arm on a constructed-data Match scrutinee — constructor arms only for \
+                     data values (G2)"
+                        .to_owned(),
+                ));
+            }
+            (None, AnfAlt::Ctor { .. }) => {
+                return Err(AotError::UnsupportedNode(
+                    "constructor arm on a Binary Match scrutinee — literal arms only for repr \
+                     values (G2)"
+                        .to_owned(),
+                ));
+            }
+        };
+        let _ = write!(body, " i64 {sw_val}, label %{label}");
+    }
+    let _ = writeln!(body, " ]");
+
+    // Each arm: bind fields (Ctor) or nothing (Lit), lower the body, collect for the phi.
+    let mut phi_entries: Vec<(String, Lane)> = Vec::with_capacity(alts.len());
+    for (alt, label) in alts.iter().zip(&arm_labels) {
+        let _ = writeln!(body, "{label}:");
+        let mut arm_env = env.clone();
+        let arm_body = match alt {
+            AnfAlt::Ctor {
+                binders,
+                body: arm_body,
+                ..
+            } => {
+                let datum = datum_opt
+                    .as_ref()
+                    .expect("a Ctor arm implies a Datum scrutinee (checked in the switch above)");
+                // Never-silent (G2): the interpreter rejects arity mismatch with DataMalformed.
+                if binders.len() != datum.fields.len() {
+                    return Err(AotError::UnsupportedNode(format!(
+                        "Match arm binder arity ({}) != constructor field count ({}) — malformed \
+                         Match (interpreter rejects with DataMalformed; G2/WF7)",
+                        binders.len(),
+                        datum.fields.len()
+                    )));
+                }
+                let slots = datum.slots;
+                let ptr = &datum.ptr;
+                for (binder, field_layout) in binders.iter().zip(&datum.fields) {
+                    let field_lane = emit_load_field(field_layout, ptr, slots, ssa, body);
+                    arm_env.insert(Atom::Named(binder.clone()), EnvValue::Repr(field_lane));
+                }
+                arm_body
+            }
+            // A `Lit` arm binds nothing — the literal is matched by the switch value.
+            AnfAlt::Lit { body: arm_body, .. } => arm_body,
+        };
+        let arm_result = lower_anf_block(arm_body, &mut arm_env, ssa, bbc, body, funcs, flags)?;
+        phi_entries.push((label.clone(), arm_result));
+        let _ = writeln!(body, "  br label %{merge_label}");
+    }
+
+    // Default block: lower the ANF default (Some) or trap with abort() (None) — never raw UB (G2).
+    let _ = writeln!(body, "{default_label}:");
+    if let Some(default_block) = default_arm {
+        let default_result = lower_anf_block(
+            default_block,
+            &mut env.clone(),
+            ssa,
+            bbc,
+            body,
+            funcs,
+            flags,
+        )?;
+        phi_entries.push((default_label.clone(), default_result));
+        let _ = writeln!(body, "  br label %{merge_label}");
+    } else {
+        let _ = writeln!(body, "  call void @abort()");
+        let _ = writeln!(body, "  ret i32 0");
+    }
+
+    // Merge block: all arms must yield the same lane kind/width; phi per element.
+    let _ = writeln!(body, "{merge_label}:");
+    if phi_entries.is_empty() {
+        return Err(AotError::UnsupportedNode(
+            "Match with zero arms (exhaustive coverage requires at least one arm or a default)"
+                .to_owned(),
+        ));
+    }
+    let first = &phi_entries[0].1;
+    let kind = first.kind;
+    let width = first.vals.len();
+    for (_, lane) in &phi_entries[1..] {
+        if lane.kind != kind || lane.vals.len() != width {
+            return Err(AotError::UnsupportedNode(
+                "Match arms produce lanes of different kind or width — all arms must return the same \
+                 repr shape"
+                    .to_owned(),
+            ));
+        }
+    }
+    let mut result_vals: Vec<Operand> = Vec::with_capacity(width);
+    for elem_idx in 0..width {
+        let phi_reg = ssa.fresh();
+        let phi_operands: Vec<String> = phi_entries
+            .iter()
+            .map(|(lbl, lane)| format!("[ {}, %{lbl} ]", lane.vals[elem_idx]))
+            .collect();
+        let _ = writeln!(body, "  {phi_reg} = phi i32 {}", phi_operands.join(", "));
+        result_vals.push(phi_reg);
+    }
+    Ok(EnvValue::Repr(Lane {
+        kind,
+        vals: result_vals,
+    }))
 }
 
 /// Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that
