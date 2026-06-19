@@ -8,6 +8,33 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-19: M-379 — direct-LLVM native tail-recursion (Fix) + Binary branch, Increment-3 of M-373)
+Wave-1 native continuation, built as a **swarm** (orchestrator + a Sonnet leaf in an isolated worktree,
+deconflicted by pulling the parent down). The direct-LLVM backend (`crates/mycelium-mlir/src/llvm.rs`)
+now compiles **stack-robust tail-recursion**, discharging the DN-05 #1 requirement for the native path.
+`FixGroup`, non-tail recursion, and recursive heap data stay explicit `UnsupportedNode`. Guarantee tag
+stays **`Declared`** (hand-written IR + the empirical M-302 differential, not Proven — VR-5); every
+out-of-scope case is an explicit refusal (G2); every IR stage dumpable (no opaque pass — RFC-0004 §6/VR-4).
+- **Design-first (append-only).** **RFC-0004 §11.6 (r5)** sanctions Increment-3 and discharges the
+  §11.3-banked DN-05 #1 requirement; **DN-15 §8** records the realized design; the §5 table row 3 →
+  partial (tail landed). No Accepted text rewritten (house rule #3).
+- **Binary branch primitive.** The two duplicated `Match` handlers are factored into one `lower_match`
+  (behaviour-preserving), extended with a `Binary{8}`-lane scrutinee + `Lit` arms (pack the lane,
+  `switch i64` on packed literals) — the base-case conditional terminating recursion needs.
+- **Tail-recursion as a loop (DN-05 #1).** `App(Fix{λn. Match n {…}}, init)` lowers to an **iterative
+  LLVM `phi` loop** — a tail self-call is a back-edge that updates the loop variable, so the host C
+  stack is **O(1) by construction** (no unbounded C stack; never SIGSEGV). A depth counter is checked
+  each iteration against an **`AutoDepthBudget`-resolved ceiling** (`budget.rs`, M-349 — reused from the
+  AOT env-machine); exceeding it raises a **graceful `AotError::DepthLimit`** via a distinct read-back
+  sentinel (`#`). The diverging no-base-case exit traps with `@abort`+`ret` (never raw `unreachable`, G2).
+- **Still refused (`UnsupportedNode`, G2):** non-tail recursion, `FixGroup`, non-`λ.Match` `Fix` bodies,
+  recursion over non-`Binary{8}`, and a bare-`Fix` program result.
+- **Differential (the gate, NFR-7).** New `crates/mycelium-mlir/tests/recursion_differential.rs`: a
+  Lit-match-encoded countdown + a one-step recursion value-checked interp ≡ native, a non-terminating
+  program reaching a graceful `DepthLimit` (parity with the interpreter's `FuelExhausted` — both
+  explicit, non-silent), and three refusal tests. 114 `mycelium-mlir` tests green; clippy `-D warnings`
+  clean; api baseline + agent index updated for the new `AotError::DepthLimit` variant.
+
 ### Added (2026-06-19: M-378 — direct-LLVM native closures (App/Lam) + heap, Increment-2 of M-373)
 Wave-1 native continuation. The direct-LLVM backend (`crates/mycelium-mlir/src/llvm.rs`) now compiles
 `App`/`Lam` to **native closures** via closure-conversion, extending Increment-1's non-recursive
