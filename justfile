@@ -31,6 +31,8 @@ md:
     @bash scripts/checks/markdown.sh
 links:
     @bash scripts/checks/links.sh
+doc-currency:
+    @bash scripts/checks/doc-currency.sh
 schema:
     @bash scripts/checks/schema.sh
 grammar:

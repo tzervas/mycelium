@@ -1,8 +1,8 @@
 # Mycelium — Project Foundation
 
-**Status:** Foundation / design phase (both research passes complete; design corpus Accepted)
-**Revision:** r3 — integrates the follow-up research findings: ratifies ADR-010 (two bound kernels) and ADR-007 (Rust kernel + MLIR); records the **KC-1 pass** (proven VSA bundling bounds exist); marks RFC-0001…0005 Accepted and DN-01 Resolved (packing → schedule-staged); de-risks RR-1 and adds residual risks RR-13/RR-14.
-**Revision history:** r2 — added the execution-model and VSA-packaging decisions (ADR-008, ADR-009) plus a first-class toolchain treatment (§5.8); folded hybrid-compilation and tooling constraints into Requirements (§3) and the Roadmap (§6).
+**Status:** Foundation — design corpus Accepted; **Rust-first implementation underway** (Phases 0–3, 5, 7 complete; 4, 6, 8 in progress). Research: eleven passes recorded (`research/01…11`).
+**Revision:** r4 — records the **Rust-first implementation** status: the kernel + reference interpreter + certified swaps + the 23-crate standard library have landed (Phases 0–3/5/7 complete, 4/6/8 in progress); per the honesty rule the stdlib specs read *"implemented (Rust-first), pending ratification,"* and self-hosting (M-502) is not yet established. Extends the §6 roadmap with Phases 4–8 and refreshes §10. **Design decisions are unchanged (append-only)** — this is a status/roadmap refresh, not a decision change.
+**Revision history:** r3 — integrates the follow-up research findings: ratifies ADR-010 (two bound kernels) and ADR-007 (Rust kernel + MLIR); records the **KC-1 pass** (proven VSA bundling bounds exist); marks RFC-0001…0005 Accepted and DN-01 Resolved (packing → schedule-staged); de-risks RR-1 and adds residual risks RR-13/RR-14. · r2 — added the execution-model and VSA-packaging decisions (ADR-008, ADR-009) plus a first-class toolchain treatment (§5.8); folded hybrid-compilation and tooling constraints into Requirements (§3) and the Roadmap (§6).
 **Date:** June 08, 2026
 **Working name:** Mycelium (formerly *Verid* — provenance note; sole remaining reference)
 **Source of truth for claims:** the prior-art *Survey & Synthesis* and the follow-up *Research Findings* (T0/T1/T2). Inline references use those labels (Areas, **G1–G11**, **A–E**, **R1–R8**, **T0.x/T1.x/T2.x**) so every assertion is traceable. The r2/r3 additions are *engineering decisions* grounded in those findings, not new prior art.
@@ -262,21 +262,44 @@ Designing the LSP protocol surface early is high-leverage: it is the channel thr
 
 ### Phase 1 — Minimal viable core (kernel)
 **Goal:** a small, auditable language kernel.
+**Status (2026-06): complete.** The typed Core IR (`mycelium-core`), the reference interpreter (`mycelium-interp`), the certified binary↔ternary swap (`mycelium-cert`), the first VSA ops (`mycelium-vsa`), and the LSP skeleton landed; interpreter↔AOT equivalence checked (NFR-7).
 - **Deliverables:** typed core IR with `Value<Repr,Meta>`; first-class `Bit`/`Trit`; binary + logical-ternary execution on binary HW (packing as metadata); **interpreter (reference semantics) + an AOT path for the kernel itself**, with the interpreter↔AOT equivalence checked (NFR-7); inspectable lowering (≥2 stages, dumpable/diffable, shared across backends); content-addressed definition identity; **one or two** VSA ops via the optional submodule (ADR-008), with attached, tagged bounds (carrying P0.1 forward); certified binary↔ternary swap; **minimal toolchain surface** — an LSP skeleton exposing diagnostics + stage dumps, a linter enforcing the core invariants (no implicit swap, no untagged bound), and a formatter (FR-S5).
 - **Success metrics:** SC-1, SC-3 (for the in-scope swaps), SC-4; SC-2 for the shipped VSA op(s); interpreter↔AOT observable equivalence on the kernel test corpus (NFR-7); LSP emits the four semantic-feedback artifact kinds (SC-5 channel).
 - **Major risks:** integrative complexity → un-auditable kernel (→ KC-3); real-vs-float/VSA kernel-opacity blocks proofs (**G8**); dual-path semantic divergence (→ RR-12).
 
 ### Phase 2 — Full substrate unification + verified swap infrastructure
 **Goal:** all four substrates co-equal; lossy swaps certified per-swap.
+**Status (2026-06): complete.** Verified numerics (ε/δ, `mycelium-numerics`), the full swap + shared certificate checker, the selection-policy engine + EXPLAIN (`mycelium-select`), Dense/VSA breadth, and the schedule-staged packing selector landed.
 - **Deliverables:** dense embeddings + sparse/dense VSA models (MAP/BSC/HRR/FHRR/SBC); the full `swap` with the split regime; per-swap certificate checker (translation-validation model, **VR-4**, **G9**); clean-up memory; reified policies promoted from prototype to feature.
 - **Success metrics:** SC-2 across all exposed approximate ops; SC-3 globally; certificate-check overhead within an agreed budget (else → KC-4).
 - **Major risks:** translation-validation cost (→ KC-4); VSA bounds insufficiently rigorous to tag `Proven` (**G5**).
 
 ### Phase 3 — Tooling, projections, AI co-authoring, acceleration
 **Goal:** dual-intelligibility tooling + performance paths.
+**Status (2026-06): complete (gate re-asserted 2026-06-15).** The direct-LLVM AOT backend, the native differential + JIT, BitNet-class packed-ternary acceleration, resonator factorization (RFC-0009), and the semantic-projection framework (RFC-0021, M-380) landed.
 - **Deliverables:** semantic-level projections (beyond MPS notational projections, **G11**); AI co-authoring with semantic-feedback loops (Area 6); **matured toolchain** (full LSP, rich diagnostics, linter/formatter, build-system stable/experimental management) and **JIT optimization** for dynamic VSA workloads (ADR-009; §5.6–5.8); opt-in resonator factorization with probabilistic guarantees (**FR-C2**, **G4**, exploratory); BitNet-class packed-ternary acceleration (**FR-C3**, **G3**); a documented forward-compatibility path to native ternary HW (**R7**).
 - **Success metrics:** SC-5a/b at target thresholds; projection-editing ergonomics validated; JIT path meets interpreter equivalence (NFR-7) and an agreed speedup target.
 - **Major risks:** projectional-editor usability friction (Area 6); factorization non-convergence in practice (**G4**).
+
+### Phase 4 — Interpreted↔compiled ABI, hot-inject & AOT-fragment completion
+**Goal:** complete the interpreted↔compiled story so stable components compile and hot-swap by content hash.
+**Status (2026-06): in progress.** ADR-016 (ABI) and ADR-017 (hot-inject) are Accepted; an in-process inject prototype lives in `mycelium-mlir`. Open: the full AOT env-machine over the v0 calculus, RFC-0001 r5 mutual recursion, the RFC-0012 ambient, dynamic budgets, and stack-robustness (M-341…M-354).
+
+### Phase 5 — Self-hosting & core library
+**Goal:** the standard library (RFC-0016) and the Rust-first → Mycelium-lang migration.
+**Status (2026-06): Rust-first complete; self-hosting open.** 23 `std-*` crates implement the RFC-0016 contract with their guarantee matrices asserted in tests; the specs read *"implemented (Rust-first), pending ratification."* Self-hosting readiness (M-502) is **not yet established**.
+
+### Phase 6 — Native acceleration & deployment
+**Goal:** native MLIR→LLVM codegen for the full calculus, native differential, BitNet-class acceleration, deployable spore units, and the VR-4 hardening gate.
+**Status (2026-06): anticipated** (M-601…M-630), gated on the Phase-4 three-way NFR-7 differential.
+
+### Phase 7 — Runtime & concurrency execution model (RFC-0008)
+**Goal:** the RT1–RT7 runtime invariants — deterministic-fragment-first, partial failure explicit, honest probabilistic guarantees.
+**Status (2026-06): complete.** RFC-0008 Accepted; concurrency/supervision, the RT2 fork/join differential, and the structured-nodule manifest landed (M-355…M-362).
+
+### Phase 8 — Toolchain & release engineering
+**Goal:** the matured toolchain (`mycfmt`/`myc-check`/`myc-lint`/`myc-sec`/`myc-doc`/`spore`) and local↔CI check parity.
+**Status (2026-06): largely complete.** The five tool crates are folded and wired into `just check` (local↔CI parity); the narrative-authoring pipeline (M-363) design is Accepted, with the build a separate task.
 
 ---
 
@@ -392,16 +415,16 @@ Designing the LSP protocol surface early is high-leverage: it is the channel thr
 
 ## 10. Recommended Immediate Next Actions
 
-> Post-research. Both survey passes are complete and the design corpus is Accepted; the items below shift from research to confirmation + build. Dependency-ordered, priority-tagged.
+> The original Phase-0 confirm + Phases 1–3 build items (1–7) are **complete**; the live next actions follow. The authoritative task board is `tools/github/issues.yaml` (+ `idmap.tsv`) and `docs/planning/phase-*.md`.
 
-1. **[P0 · confirm · dep: ADR-010] Liquid-Haskell `bundle` capacity-refinement probe** (RFC-0003 §5). Encode MAP-I `bundle` as a capacity refinement instantiating Clarkson/Thomas; confirm Z3 discharges the arithmetic. The one confirming build that ratifies the cited-theorem + checked-instantiation strategy (and finalizes the KC-1 pass). Highest signal.
-2. **[P0 · build] Core IR + reference interpreter** (RFC-0001): concrete node grammar, `Value<Repr,Meta>`, the guarantee-lattice elaborator, content-addressing, and the Rust interpreter as reference semantics (ADR-007, NFR-7).
-3. **[P1 · build · dep: 2] Binary↔ternary `LosslessWithinRange` swap** (RFC-0002 §4): `enc`/`dec` with `Option`, machine-checked round-trip, Exact-within-range tag. Low-risk, satisfies SC-1.
-4. **[P1 · build · dep: 2] The single certificate checker** (RFC-0002 §2 / RFC-0004 §3): `(A,B,R,bound,certificate)` for swaps *and* interpreter-vs-compiled equivalence; certificate-checker-in-Rust per ADR-010.
-5. **[P1 · build · dep: 2] `ternary` MLIR dialect + schedule-staged packing** (RFC-0004): lower to LLVM; cost-model+exhaustive selector over the bitnet.cpp packings; record `Meta.physical`; run E1 (perf) and E3 (soundness).
-6. **[P1 · build · dep: 2] VSA submodule** (RFC-0003): the `VsaModel` trait + MAP/BSC/HRR/FHRR/sparse with the §4-matrix guarantee tags; reuse `balanced-ternary`; port torchhd's op set as reference.
-7. **[P1 · experiment · parallel] LLM-leverage experiment** (E4 / **G10**): Mycelium surface vs Python-embedded DSL, incl. "packing in type" vs absent; sets SC-5b and the **KC-2** verdict — the one existential question the research did *not* fully settle.
-8. **[ongoing] Maintain the ADR log, risk register, and `Proven|Empirical|Declared` tags** per model/op (VR-5).
+**Complete (Phases 0–3, 5, 7):** the LH `bundle` probe (KC-1 confirmed, `proofs/lh-bundle/`); the Core IR + reference interpreter; the binary↔ternary `LosslessWithinRange` swap + the single certificate checker; the `ternary` MLIR dialect + schedule-staged packing (E1 measured); the VSA submodule; the LLM-leverage experiment (KC-2 verdict **proceed**, DN-09); and the Rust-first standard library (23 `std-*` crates).
+
+**Live, dependency-ordered:**
+1. **[P1 · build] Phase-4 ABI/AOT completion** — the full AOT env-machine, RFC-0001 r5 mutual recursion, the RFC-0012 ambient, dynamic budgets, and stack-robustness (M-341…M-354), toward the three-way NFR-7 differential.
+2. **[P1 · gate] Self-hosting readiness (M-502)** — whether the surface can host a stdlib module migrated from Rust-first to Mycelium-lang; unblocks Batch P5-C.
+3. **[P2 · build · dep: 1] Phase-6 native codegen + deployable spores** (M-601…M-630).
+4. **[ongoing] Keep the navigational docs current** (README / Doc-Index / this charter) and the `just check` doc-currency gate green (M-371).
+5. **[ongoing] Maintain the ADR log, risk register, and `Proven|Empirical|Declared` tags** per model/op (VR-5).
 
 ---
 

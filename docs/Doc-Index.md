@@ -1,7 +1,7 @@
 # Mycelium — Document Index & Status
 
-**Date:** June 08, 2026
-**Purpose:** map of the solidified document corpus. The two research passes are complete; the design corpus below is finalized (Accepted/Resolved) and ready for detailed design + hard planning.
+**Date:** June 08, 2026 *(table living — last refreshed 2026-06-19)*
+**Purpose:** the authoritative map of the document corpus — every RFC/ADR/DN with its status and the dependency DAG. The design corpus is Accepted/Resolved and **Rust-first implementation is underway** (Phases 0–3, 5, 7 complete; 4, 6, 8 in progress — see `docs/planning/phase-*.md`). Per the honesty rule the per-module stdlib specs read *"implemented (Rust-first), pending ratification,"* not silently `Accepted`. This index is append-only (§6).
 
 ---
 
@@ -71,11 +71,21 @@
 ## 2. Dependency DAG
 
 ```
-Survey ─► Foundation(r3) ─► RFC-0001 (r4) ─► { RFC-0002, RFC-0003, RFC-0004 (r2), RFC-0005, RFC-0006 (Accepted r4) ─► RFC-0007 (Accepted r4) ─► RFC-0011 (Accepted; r3 ENACTED → r4 in RFC-0001) }
+Survey ─► Foundation ─► RFC-0001 (r5) ─► { RFC-0002, RFC-0003, RFC-0004 (r2), RFC-0005 }
                                │
-                               └─► DN-01 (Resolved) ─► RFC-0001 §4.1, RFC-0004 §5
+                               ├─► DN-01 (Resolved) ─► RFC-0001 §4.1, RFC-0004 §5
+                               │
+  Surface/term track:          └─► RFC-0006 (r4) ─► RFC-0007 (r4) ─► RFC-0011 (r3 ENACTED → r4 in RFC-0001)
+                                        └─► RFC-0018 (stage-1 grading) · RFC-0019 (traits) · RFC-0020 (L2 surface) · RFC-0021 (projections, M-380)
 
-ADR-010 ─► RFC-0001 §4.7,  RFC-0002 (swap bounds),  RFC-0003 (VSA bounds)
+VSA decode track:      RFC-0003 ─► RFC-0009 (resonator factorization) ─► RFC-0010 (decode-method selection; reuses the ONE selection mechanism)
+Diagnostics/recovery:  RFC-0013 (diagnostics) ─► RFC-0014 (recovery + bounded effects) ─► RFC-0015 (automatic baseline)
+Ambient & ABI:         RFC-0012 (ambient) · ADR-016 (interp↔compiled ABI) ─► ADR-017 (hot-inject)
+Runtime:               RFC-0008 (RT1–RT7 runtime & concurrency)
+Standard library:      RFC-0016 (scope + per-op contract) ─► stdlib module specs (docs/spec/stdlib/) ─► Phase-5 `std-*` crates
+Maturation:            RFC-0007 §4.5 ─► RFC-0017 (maturation scope & de-maturation; supersedes the granularity)
+
+ADR-010 ─► RFC-0001 §4.7,  RFC-0002 (swap bounds),  RFC-0003 (VSA bounds);   ADR-011 (BoundBasis is universal)
 
 Shared machinery (decided):
   • ONE certificate checker   ⇄  RFC-0002 (swaps) & RFC-0004 (interp-vs-compiled)
@@ -96,10 +106,16 @@ Shared machinery (decided):
 
 ## 4. Remaining experiments (small; for the build phase, not blockers to design)
 - ~~**LH bundling-bound instantiation**~~ — **DONE (2026-06-09).** MAP-I `bundle` capacity refinement encoded in Liquid Haskell (`proofs/lh-bundle/`, M-001); LH reports **SAFE**, Z3 discharged all constraints — ratifies the cited-theorem + checked-instantiation strategy (ADR-010 / KC-1). *(RFC-0003 §5)*
-- **E1** staged-packing perf over the 5 schemes *(RFC-0004 §8)* · **E3** wrong-layout-tag soundness vs NFR-7 *(RFC-0004 §8)* · **E4** LLM surface comparison, "packing in type" vs absent *(G10)*.
+- **E1** staged-packing perf over the 5 schemes — **measured in Phase 3 (M-303).** · **E3** wrong-layout-tag soundness vs NFR-7 *(RFC-0004 §8)* — open. · **E4** LLM surface comparison ("packing in type" vs absent) — **subsumed by KC-2 / M-002; verdict proceed (DN-09).**
 
-## 5. Next phase — detailed design & hard planning
-With the corpus Accepted, the work shifts to: (a) the confirming LH probe; (b) the Core IR concrete grammar + the Rust interpreter (reference semantics) + the kernel data structures; (c) the `ternary` MLIR dialect and the certificate checker; (d) the VSA submodule (per the §4-matrix tags), reusing `balanced-ternary`. Track as dependency-ordered, priority-tagged tasks; this index remains the map the board points back to.
+## 5. Build status — the live phase ladder
+The corpus is Accepted and the build is underway; the dependency-ordered, priority-tagged tasks live in `tools/github/issues.yaml` (+ `idmap.tsv`) and the phase plans in `docs/planning/phase-*.md`. Current state:
+- **Phases 0–3 (done):** the confirming LH probe; the Core IR + Rust reference interpreter + kernel data structures; the certified binary↔ternary swap + the single certificate checker; the `ternary` MLIR dialect + native LLVM/JIT; the VSA submodule (per the §4-matrix tags); the L1 calculus, projections, and acceleration.
+- **Phase 5 (Rust-first done; self-hosting open):** the standard library — 23 `std-*` crates implementing RFC-0016 (guarantee matrices asserted in tests); the specs read *"implemented (Rust-first), pending ratification."* Self-hosting (M-502) is **not yet established**.
+- **Phase 7 (done):** the RFC-0008 runtime/concurrency model (RT1–RT7).
+- **Phases 4, 6, 8 (in progress):** the interpreted↔compiled ABI + AOT env-machine completion; native MLIR→LLVM codegen + deployable spores; the toolchain & release-engineering gates.
+
+This index remains the map the board points back to.
 
 ## 6. Maintenance
 Append-only with status transitions (Draft/Proposed/Preliminary → Accepted → Superseded), mirroring the ADR discipline. Keep `Proven | Empirical | Declared` tags honest per VR-5 — per model/op, never in aggregate. New non-asymptotic results may *upgrade* a tag; absence keeps it `Empirical`.
