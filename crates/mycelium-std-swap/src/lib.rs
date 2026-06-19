@@ -29,6 +29,19 @@
 //! - **C5 above the kernel:** consumes `mycelium-cert`; no `unsafe`, no FFI, no new trusted code.
 //! - **C6 declared bounded effects:** every op is pure save for bounded `alloc` of the target
 //!   value + certificate.
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 1, Tier A):** Swap operations are the primary site where representation
+//! changes are reified. Every swap returns a [`SwapCertificate`] (the EXPLAIN artifact — ADR-003)
+//! describing the conversion; no swap is ever silent (S1/G2). The representation change is not
+//! just inspectable after the fact — it is structurally impossible to obtain a converted value
+//! without its certificate.
 #![forbid(unsafe_code)]
 
 // Re-export the types consumers need — surfaced from the landed crates, not redefined here (C5).

@@ -40,6 +40,19 @@
 //!   and validates the manifest — co-design pending — FLAGGED §7 Q4.
 //!
 //! Design spec: `docs/spec/stdlib/spore.md`; ADR-013; RFC-0003 §6; task M-522, issue #163.
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 1, Tier A):** Spore deployment records the representation manifest in
+//! the content-addressed certificate: the packed representation of each component is part of the
+//! canonical hash (ADR-003/RFC-0001 §4.6), so a packing change produces a different spore
+//! identity. There is never a silent packing change at deploy time — the identity itself proves
+//! the packing.
 #![forbid(unsafe_code)]
 
 pub mod guarantee_matrix;

@@ -56,6 +56,19 @@
 //! The v1 `mycelium-dense` supports only `F32`/`BF16`; integer dtype ops are specified in the
 //! guarantee matrix as `Exact` design claims but are not implemented in the underlying kernel
 //! (M-230 v1 scope, FLAG Q3). They will be implemented when the kernel adds integer dtype support.
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 1, Tier A):** Dense operations always operate in the `Dense`
+//! representation; no implicit cross-representation conversion occurs. Shape and dtype are carried
+//! in the [`DenseSpace`] descriptor (never inferred), and a shape or dtype mismatch is an explicit
+//! `Err`, never a silent broadcast or re-round (C1). Representation changes (`Dense{F32}→Dense{BF16}`,
+//! `Dense↔VSA`) are explicit swaps in `std.swap` — never automatic.
 #![forbid(unsafe_code)]
 
 pub use mycelium_core::{Bound, BoundBasis, BoundKind, GuaranteeStrength, NormKind, ScalarKind};

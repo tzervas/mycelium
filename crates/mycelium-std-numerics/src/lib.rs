@@ -32,6 +32,19 @@
 //! its honest upgrade to a `Proven` magnitude is owned by the kernel (ADR-010 / `mycelium-numerics`)
 //! and the audited `wild`/FFI floor (M-541), reachable only via a checked basis (VR-5) — never by
 //! restating a tighter number here.
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 2, Tier B):** Numerics ops are representation-agnostic (the bound
+//! algebra operates over floats and fixed-point values regardless of `Repr`); however, every
+//! result always carries an explicit `Bound` with its `BoundBasis` — no precision is implicitly
+//! reduced or silently upgraded. The `Proven` strength is reachable only via a `ProvenThm`
+//! witness token; there is no ambient path to `Proven`.
 #![forbid(unsafe_code)]
 
 pub mod matrix;

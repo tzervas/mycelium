@@ -50,6 +50,18 @@
 //!
 //! # Design spec
 //! `docs/spec/stdlib/testing.md` (M-534, #174).
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 2, Tier B):** Test assertions carry representation context — a
+//! representation mismatch between expected and actual values is a [`Verdict::Fail`], never a
+//! silent coercion. The differential harness (NFR-7) checks observable-result equivalence across
+//! representations; a tag or `Repr` mismatch is a first-class failure, not a silent pass.
 #![forbid(unsafe_code)]
 
 pub mod guarantee_matrix;

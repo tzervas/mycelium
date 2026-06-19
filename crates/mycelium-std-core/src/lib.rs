@@ -23,6 +23,18 @@
 //! (M-516), ε/δ numeric helpers `std.numerics` (M-512), `Option`/`Result`
 //! *combinators* `std.error` (M-527), content-addressing *as a library*
 //! `std.content` (M-523).
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 0):** Ring-0 re-exports make the representation machinery
+//! available to the whole library; no ambient choice is imposed here — callers select
+//! the representation explicitly. `repr_of`, `meta_of`, and `guarantee_of` expose the
+//! reified representation of any value as a pure, total query (never an inferred default).
 #![forbid(unsafe_code)]
 
 // ---- value model re-exports (RFC-0001 §4.1–§4.3) ---------------------------------

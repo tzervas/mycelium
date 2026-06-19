@@ -54,6 +54,18 @@
 //! v0 surface always returns `(choice, explanation)` — the mandatory-EXPLAIN posture (C3). A
 //! future M-540 pass may add an ergonomic `select_choice`-only wrapper, but that cannot suppress
 //! the EXPLAIN record's *existence* — only its return position. Tracked: spec §7-Q3.
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 1, Tier A):** Selection records the chosen packing and representation
+//! in the mandatory [`Explanation`] artifact (the `meta.physical` of the selected candidate,
+//! EXPLAIN-able via `explain`); there is no code path that returns a layout decision without
+//! an accompanying record. The representation choice is never a silent internal layout decision.
 #![forbid(unsafe_code)]
 
 // Re-export the full landed kernel surface so callers need only this crate.

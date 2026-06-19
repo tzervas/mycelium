@@ -40,6 +40,18 @@
 //! # Design spec
 //! `docs/spec/stdlib/fs.md` (M-528, #169). Contract: RFC-0016 §4.1 (C1–C6). Guarantee matrix:
 //! spec §4 / [`guarantee_matrix::MATRIX`].
+//!
+//! ## Ambient Representation (RFC-0012 §8-Q3)
+//!
+//! This crate's public API participates in the RFC-0012 ambient-representation contract:
+//! the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+//! always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+//! [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//!
+//! **For this crate (Ring 2, Tier B):** FS ops are representation-opaque at the byte level —
+//! filesystem handles move raw bytes without interpreting any `Repr`. Encoding is always the
+//! caller's responsibility; no silent re-encoding occurs at the FS layer. The `Path` type is a
+//! UTF-8 newtype (conservative — see FLAG Q3); no non-UTF-8 path is silently coerced (C1).
 #![forbid(unsafe_code)]
 
 pub mod error;
