@@ -59,7 +59,7 @@ pub struct MatrixRow {
 /// is Phase-6-gated (M-620). The row is present to fix the seam and carry the honesty commitment
 /// (hash mismatch = explicit `DeployErr::HashMismatch`, never silent); it is not implemented here.
 ///
-/// # Regrowth row (FLAG Q4)
+/// # Regrowth row (FLAG Q4b)
 ///
 /// The `reconstruct (via std.vsa)` row shows the bound `std.vsa` establishes. `spore` packages the
 /// manifest; `vsa` performs the decode. The `Empirical` ceiling is owned by FR-C2 / M-513.
@@ -147,7 +147,7 @@ pub const MATRIX: &[MatrixRow] = &[
     },
     // ─── Regrowth (the seam — std.vsa performs the decode; spore carries the manifest) ─────────
     MatrixRow {
-        op: "reconstruct (via std.vsa — spec §4.5 seam row; FLAG Q4)",
+        op: "reconstruct (via std.vsa — spec §4.5 seam row; FLAG Q4b)",
         guarantee: "Empirical (probabilistic resonator decode) / Exact (indexed-retrieval exact-hit) \
                     — owned by std.vsa (M-513), bounded by FR-C2; spore carries, never sets the tag",
         fallibility: "Err/refusal on non-convergence (a std.vsa op; spore does not perform it)",

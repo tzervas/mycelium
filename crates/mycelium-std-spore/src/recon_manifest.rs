@@ -13,7 +13,7 @@
 //! it does not set or upgrade it (VR-5). The ceiling is checked at the `ReconInfo` layer in the
 //! kernel (`mycelium-core::recon`) and re-surfaced here for the ergonomic stdlib API.
 //!
-//! # Regrowth result (FLAG Q4 — RESOLVED)
+//! # Regrowth result (FLAG Q4a — RESOLVED)
 //!
 //! [`RegrowthResult`] carries the `Factorization` from `std.vsa` together with the manifest's full
 //! certificate `Bound`, and projects to the stdlib's honest carrier via
@@ -21,8 +21,8 @@
 //! bound's basis, never upgraded — VR-5).
 
 use mycelium_core::bound::Bound;
-use mycelium_core::{GuaranteeStrength, ReconInfo};
-pub use mycelium_core::{ReconMode, WfError};
+pub use mycelium_core::ReconMode;
+use mycelium_core::{GuaranteeStrength, ReconInfo, WfError};
 use mycelium_std_numerics::Approx;
 use mycelium_vsa::Factorization;
 
@@ -46,17 +46,18 @@ impl ReconManifest {
     /// well-formedness), then applies the `std.spore` additional check:
     ///
     /// - **FR-C2 ceiling**: if `decode.procedure == Resonator`, the bound basis must not exceed
-    ///   `Empirical`. `Err(MalformedManifest::ResonatorOverStrength)` is returned for any attempt
-    ///   to produce an over-strength resonator manifest.
+    ///   `Empirical`. The kernel (`ReconInfo::new`) enforces this; a violation is caught as
+    ///   `WfError::MalformedReconstruction` and mapped to `Err(MalformedManifest::KernelWf)`.
     ///
     /// # Guarantee tag: `Exact` (deterministic)
     /// Validation is a pure predicate; the same inputs always produce the same outcome.
     ///
-    /// # Fallibility: `Err(MalformedManifest::*)`
+    /// # Fallibility: `Err(MalformedManifest::KernelWf)`
     ///
-    /// Returns `Err(MalformedManifest::KernelWf)` for kernel-level malformation (bad mode/bound,
-    /// missing recipe/decode param) or `Err(MalformedManifest::ResonatorOverStrength)` when the
-    /// resonator-ceiling rule is violated. The error names the violated invariant (C1/G2).
+    /// All kernel-level well-formedness violations (bad mode/bound, missing recipe/decode param,
+    /// FR-C2 resonator-ceiling exceeded) return `Err(KernelWf)` — the specific kernel rule
+    /// violated is described in the `WfError` message (C1/G2). Use [`ReconManifest::validate`] on
+    /// a deserialized `ReconInfo` to get the `ResonatorOverStrength` variant explicitly.
     ///
     /// # Effects: none
     pub fn new(
@@ -68,18 +69,11 @@ impl ReconManifest {
         decode: mycelium_core::recon::DecodeSpec,
         bound: mycelium_core::bound::Bound,
     ) -> Result<Self, MalformedManifest> {
-        let inner = ReconInfo::new(mode, model, dim, codebooks, recipe, decode, bound).map_err(
-            |e| match e {
-                WfError::MalformedReconstruction => MalformedManifest::KernelWf,
-                WfError::MalformedBound => MalformedManifest::KernelWf,
-                _ => MalformedManifest::KernelWf,
-            },
-        )?;
-        // The kernel already enforces the FR-C2 ceiling (rank check), so a ResonatorOverStrength
-        // from the kernel maps here. We also surface it explicitly for the std.spore API.
-        // Guard: if this check is removed, a Resonator manifest with ProvenThm basis could
-        // be produced (FR-C2 violated). The kernel's ReconInfo::new already rejects this, so the
-        // Err path above catches it; this re-check makes the std.spore layer's intent explicit.
+        // The kernel (`ReconInfo::new`) enforces the FR-C2 ceiling (resonator + ProvenThm basis →
+        // WfError::MalformedReconstruction). All WfError variants map to KernelWf here; the
+        // `validate` path carries the defense-in-depth re-check for deserialized carry-ins.
+        let inner = ReconInfo::new(mode, model, dim, codebooks, recipe, decode, bound)
+            .map_err(|_: WfError| MalformedManifest::KernelWf)?;
         Ok(ReconManifest { inner })
     }
 
@@ -227,7 +221,7 @@ impl std::error::Error for MalformedManifest {}
 /// `GuaranteeStrength` tag from the manifest's bound certificate — always ≤ `Empirical`
 /// for the resonator path (FR-C2 enforced at manifest construction time).
 ///
-/// # Approx<T> coupling (FLAG Q4 — RESOLVED)
+/// # Approx<T> coupling (FLAG Q4a — RESOLVED)
 ///
 /// `RegrowthResult` carries the manifest's **full `{ε,δ,strength}` certificate bound** (with its
 /// `BoundBasis`), so it projects losslessly to the stdlib's honest carrier via
@@ -266,9 +260,9 @@ impl RegrowthResult {
         }
     }
 
-    /// Project to the stdlib's honest carrier `std.numerics::Approx<Factorization>` (FLAG Q4).
-    /// The strength is derived from the bound's basis via [`Approx::attach`] — never upgraded
-    /// (VR-5); the δ rides along inside the carried `bound`.
+    /// Project to the stdlib's honest carrier `std.numerics::Approx<Factorization>` (FLAG Q4a —
+    /// RESOLVED). The strength is derived from the bound's basis via [`Approx::attach`] — never
+    /// upgraded (VR-5); the δ rides along inside the carried `bound`.
     #[must_use]
     pub fn as_approx(&self) -> Approx<Factorization> {
         Approx::attach(self.factorization.clone(), self.bound.clone())
@@ -406,12 +400,16 @@ mod tests {
         );
     }
 
-    /// A Resonator + ProvenThm manifest is REFUSED (FR-C2 ceiling violated).
+    /// A Resonator + ProvenThm manifest via `new()` is REFUSED (FR-C2 ceiling violated).
     ///
-    /// Guard: accepting this would violate the honesty rule — a probabilistic resonator decode
-    /// can never be Proven. This is the primary FR-C2 / VR-5 test for std.spore.
+    /// The kernel (`ReconInfo::new`) catches this as `WfError::MalformedReconstruction`, which
+    /// maps to `MalformedManifest::KernelWf` here. The `ResonatorOverStrength` variant is the
+    /// defense-in-depth path via `validate()` for deserialized carry-ins.
+    ///
+    /// Guard: accepting this (returning Ok) violates FR-C2 — a probabilistic resonator decode
+    /// can never be Proven.
     #[test]
-    fn resonator_proven_basis_is_refused_with_resonator_over_strength() {
+    fn resonator_proven_basis_is_refused_via_new() {
         // Mutant witness: accepting this (returning Ok) violates FR-C2.
         let err = ReconManifest::new(
             ReconMode::IndexedRetrieval,
@@ -423,12 +421,13 @@ mod tests {
             proven_bound(),
         )
         .unwrap_err();
-        // The error must name the FR-C2 violation (not just a generic error).
-        // In practice the kernel's ReconInfo::new catches this and returns KernelWf; the
-        // important property is that it is refused, not what exact variant is returned.
-        // We assert that the refused manifest produces any MalformedManifest error — the kernel
-        // catches it before our validate layer gets to check.
-        let _ = err; // any MalformedManifest variant is acceptable; the key property is refusal.
+        // The kernel catches the FR-C2 violation and maps it to KernelWf (not ResonatorOverStrength).
+        // ResonatorOverStrength is returned only by `validate()` as a defense-in-depth re-check.
+        assert_eq!(
+            err,
+            MalformedManifest::KernelWf,
+            "new() must map the kernel's FR-C2 refusal to KernelWf (not ResonatorOverStrength)"
+        );
     }
 
     /// The `validate` path also refuses a (hypothetically constructed) over-strength manifest.
@@ -452,10 +451,15 @@ mod tests {
         )
         .unwrap();
         let strength = m.declared_strength();
+        // rank() ordering: 0=Exact (strongest) … 3=Declared (weakest).
+        // "strength ≤ Empirical" (in the lattice sense, i.e. at most as strong as Empirical)
+        // means rank() >= Empirical.rank() (2), which excludes Exact (0) and Proven (1).
         assert!(
             strength.rank() >= GuaranteeStrength::Empirical.rank(),
-            "resonator manifest strength must be <= Empirical (larger rank); got {:?}",
-            strength
+            "resonator manifest strength must not exceed Empirical (rank must be ≥ 2); \
+             got {:?} (rank {})",
+            strength,
+            strength.rank()
         );
     }
 

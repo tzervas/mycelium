@@ -560,12 +560,10 @@ mod tests {
     /// Guard: any inconsistency between from_value's identity and recompute_identity makes this fail.
     #[test]
     fn from_value_verify_is_ok_round_trip() {
-        // Mutant witness: using a different domain separator in from_value vs recompute_identity
-        // would produce a mismatch.
-        // Note: from_value uses a custom encoding (domain-separated from project spores);
-        // recompute_identity re-derives the M-368 canonical form. For a value-only spore
-        // the raw.sources contains the value's content hash and raw.id is the domain-separated
-        // hash — these are self-consistent by construction.
+        // Mutant witness: if `from_value` stored a different id than `recompute_identity` would
+        // compute from the same `raw`, verify would fail. They are consistent by construction:
+        // `from_value` calls `recompute_identity` directly to set `raw.id`, so verify (which also
+        // calls `recompute_identity`) always reproduces the same hash.
         let v = byte_value(BITS_A);
         let spore = SporeUnit::from_value(&v, None).unwrap();
         // The self-consistency check: recompute from the stored raw components.
@@ -660,7 +658,7 @@ mod tests {
         // The error must be PublishErr naming the surface issue — not a silent default.
         match &err {
             SporeErr::PublishErr(msg) => assert!(
-                msg.contains("germinate") || msg.contains("surface") || msg.contains("surface"),
+                msg.contains("germinate") || msg.contains("surface"),
                 "error must mention the germination surface issue: {msg}"
             ),
             other => panic!("expected PublishErr, got {other:?}"),
