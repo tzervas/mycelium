@@ -373,10 +373,7 @@ dependencies = [
 name = "mycelium-std-diag"
 version = "0.0.0"
 dependencies = [
- "mycelium-core",
  "mycelium-diag",
- "mycelium-std-core",
- "serde_json",
 ]
 
 [[package]]

@@ -134,7 +134,7 @@ impl Severity {
 
 /// A stable diagnostic code / error class (RFC-0013 §4.2). Closed for the common kernel cases with
 /// an explicit [`Code::Other`] escape hatch — never a stringly-typed free-for-all on the common
-/// path. The M-510 leaf may widen this set (additively) as the spec's registry is populated.
+/// path. The set may be widened additively (via new variants) as the spec's class registry grows.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value")]
 pub enum Code {
@@ -303,8 +303,9 @@ impl Diag {
     // ── Content address (ADR-003 / RFC-0013 I3) ─────────────────────────────────────────────────
 
     /// The **content address** of this diagnostic (RFC-0013 §4.3; ADR-003) — a deterministic BLAKE3
-    /// over the canonical fields, **excluding presentation** (severity, code, message, locus, trace,
-    /// notes). Presentation-invariant: the same `Diag` content always hashes the same, so the human
+    /// over the **canonical fields** (severity, code, message, locus, trace, notes), excluding the
+    /// rendered presentation (the formatted human string and JSON output are not hash inputs).
+    /// Presentation-invariant: the same `Diag` content always hashes the same, so the human
     /// and JSON projections share one identity (I3).
     ///
     /// # Guarantee: `Exact`
@@ -435,9 +436,10 @@ impl Diag {
 
     /// Recover a `Diag` from its machine JSON projection (I3).
     ///
-    /// The embedded `id` field is informational and is stripped by the `#[serde(deny_unknown_fields)]`
-    /// absence: serde ignores extra fields by default, so the `id` round-trips transparently. Identity
-    /// is recomputed from the recovered fields so the round-trip is over semantic content.
+    /// The embedded `id` field is informational: because `Diag` does not carry
+    /// `#[serde(deny_unknown_fields)]`, serde ignores unknown fields (including `id`) by default, so
+    /// the machine projection round-trips transparently. Identity is recomputed from the recovered
+    /// fields, so the round-trip is over semantic content, not the wire string.
     ///
     /// # Errors
     /// Returns a [`serde_json::Error`] if `s` is not a well-formed `Diag` JSON record (C1: explicit
@@ -594,6 +596,36 @@ mod tests {
             without.content_hash(),
             with_locus.content_hash(),
             "locus changes identity (G2 — absence is distinct from presence)"
+        );
+    }
+
+    /// `None` locus and an all-`None`-field `Some(Locus::default())` produce distinct hashes (G2).
+    /// Mutation witness: changing the locus presence tag from 1 to 0 collapses these two cases.
+    #[test]
+    fn locus_none_differs_from_default_locus() {
+        let no_locus = Diag::error(Code::OutOfRange).message("m");
+        let default_locus = Diag::error(Code::OutOfRange)
+            .message("m")
+            .at(Locus::default()); // all-None fields
+        assert_ne!(
+            no_locus.content_hash(),
+            default_locus.content_hash(),
+            "None locus ≠ Some(Locus::default()) — explicit absence (G2)"
+        );
+    }
+
+    /// A `Diag` with a non-empty trace produces a distinct hash from one without (G2).
+    /// Mutation witness: commenting out the trace encoding in `content_hash` collapses these.
+    #[test]
+    fn trace_is_identity_bearing() {
+        let no_trace = Diag::error(Code::OutOfRange).message("m");
+        let with_trace = Diag::error(Code::OutOfRange)
+            .message("m")
+            .trace(Trace::empty().with_frame("outer"));
+        assert_ne!(
+            no_trace.content_hash(),
+            with_trace.content_hash(),
+            "non-empty trace changes identity"
         );
     }
 
