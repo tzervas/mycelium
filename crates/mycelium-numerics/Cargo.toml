@@ -15,7 +15,7 @@ workspace = true
 # The guarantee lattice (meet), the Bound/BoundBasis vocabulary, NormKind — the shared certificate
 # reduces to core's {Bound, GuaranteeStrength} (ADR-010 §3; ADR-011).
 mycelium-core = { path = "../mycelium-core" }
-serde = { version = "1", features = ["derive"] }
+serde.workspace = true
 
 [dev-dependencies]
-serde_json = "1"
+serde_json.workspace = true

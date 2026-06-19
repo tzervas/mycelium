@@ -19,7 +19,7 @@ mycelium-interp = { path = "../mycelium-interp" }
 mycelium-numerics = { path = "../mycelium-numerics" }
 # The M-231 Dense<->VSA swap reuses the M-131 checked capacity instantiation (RFC-0003 §5).
 mycelium-vsa = { path = "../mycelium-vsa" }
-serde = { version = "1", features = ["derive"] }
+serde.workspace = true
 
 [dev-dependencies]
-serde_json = "1"
+serde_json.workspace = true
