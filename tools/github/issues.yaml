@@ -296,7 +296,7 @@ issues:
   - id: E3-1
     title: "E3-1 (epic) — Semantic-level projections"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:needs-design]
+    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:done]
     depends_on: [E3-3]
     body: |
       EPIC (exploratory, FR-C1/G11). Multiple human/machine views of the same content-addressed artifact. Contingent on projection ergonomics + KC-2.
@@ -328,7 +328,7 @@ issues:
   - id: E3-5
     title: "E3-5 (epic) — Resonator factorization (opt-in, probabilistic)"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:vsa, priority:P2, status:needs-design]
+    labels: [phase:3, type:feature, area:vsa, priority:P2, status:done]
     depends_on: [E2-4, E2-5]
     body: |
       EPIC (FR-C2/G4). Factorization for unknown-factor products; per-factor codebooks + approximate inverse; probabilistic-only guarantee; never in core. Exit: documented convergence regime + bounds.
@@ -348,6 +348,15 @@ issues:
     depends_on: [M-150, E2-7]
     body: |
       EPIC (R7). Documented mapping from the ternary value-semantics contract to a future 3-state hardware backend; stubbed dialect target.
+
+  - id: E3-8
+    title: "E3-8 (epic) — Agent-facing documentation index & auto-doc workflow"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:docs, area:toolchain, priority:P2, status:in-progress]
+    depends_on: []
+    body: |
+      EPIC (Wave-4A). A small, committed, navigable, agent-facing index (docs/api-index/) built by aggregating the public-API surface already committed in docs/spec/api/*.txt against the source tree. Delivers: a code-index generator (M-392), `just docs` / `just docs-index` + drift gate (M-393), doc_refs grammar + backfill (M-394), CLAUDE.md + skill updates (M-395). (Note: this wave called it E3-6 in the plan; E3-6 was already taken by BitNet acceleration, so assigned E3-8.)
+      Acceptance: `just check` green including the new doc-index drift gate; docs/api-index/{index.json,INDEX.md} committed and current; doc_refs validated + backfilled; CLAUDE.md + skills updated; docs/api-index registered in docs/Doc-Index.md.
 
   # ---------------- Phase 3 (M-3xx build tasks; decomposed 2026-06-15, docs/planning/phase-3.md) ----------------
   # Batch J — native execution path (keystone). Direct-LLVM AOT first; MLIR deferred (libMLIR absent) — RFC-0004 §2 fallback, RR-N1.
@@ -428,7 +437,7 @@ issues:
   - id: M-350
     title: "M-350 — Resonator-network factorization (opt-in, probabilistic)"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:vsa, priority:P2, status:needs-design]
+    labels: [phase:3, type:feature, area:vsa, priority:P2, status:done]
     depends_on: [M-204, M-260]
     body: |
       Resonator factorization for unknown-factor VSA products: per-factor codebooks + approximate inverse + iterative cleanup; PROBABILISTIC-ONLY guarantee; NEVER in core (FR-C2/G4; RFC-0003 §6; the M-260 manifest already enforces the Resonator probabilistic-only ceiling).
@@ -490,6 +499,44 @@ issues:
     body: |
       A small, portable validation harness (tools/llm-harness/) that de-risks the backlogged LLM work (M-330 #97/#127, M-002 #3 — all "needs LLM API") without doing the integration. Targets llama.cpp (GGUF) and runs under Termux on Android (no x86 assumptions). Two modes: a --mock dry-run (no model; skips gracefully in CI/cloud, exercises the plumbing) and a real mode (shells to a local llama-cli/server; a missing binary/model is an explicit SKIP, never a false pass — the `just check` idiom). Validations (the smallest set that unblocks the LLM work): model-load + deterministic-seed round-trip; structured-output/JSON-projection conformance (G11); the guarantee-tag honesty gate (model-derived claims must be Empirical/Declared, NEVER Proven — VR-5); a latency/token report. Each run emits a dual JSON + human report and a timestamped log (G11), every check PASS/SKIP/FAIL explicit and tagged (RFC-0013 I1). Above the kernel (KC-3). The scaffold + a --mock run landed 2026-06-17; the real run is the maintainer's to execute on-device and feed back.
       Acceptance: the --mock mode runs green here (report + log captured as the format example); a documented Termux build/run path for the real mode; honest skip-not-false-pass behavior; the M-002 KC-2 experiment becomes runnable once a model is wired.
+
+  # ---- Wave-4A documentation infrastructure (added 2026-06-19; decomposed 2026-06-19 docs/planning/wave-4a) ----
+  - id: M-392
+    title: "M-392 — Agent code-index generator (tools/docgen/code_index.py)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:in-progress]
+    depends_on: []
+    body: |
+      LEAF task under E3-8. Deliver tools/docgen/code_index.py (pure Python stdlib, no pip deps): JOIN the committed public surface in docs/spec/api/*.txt against the source tree (crates/*/src/**/*.rs) to attach, per public item: crate, module path, file:line, and the leading /// summary. Emit two deterministic committed artifacts: docs/api-index/index.json (machine: [{symbol, kind, crate, module, file, line, summary, guarantee_tag?, corpus_refs[]}], stable key order) and docs/api-index/INDEX.md (human/agent: grep-friendly table, grouped by crate).
+      Honesty: navigational aid only — source is ground truth; the index says "declared ~here", agents verify by Read. Line/regex heuristic => tag Empirical/Declared, NEVER Exact. Items the parser can't classify (macro-generated, cfg-gated, re-exports) go in an explicit `flagged` section (G2), never silently dropped. No new pip dependency. Self-test mode (--self-test) validates round-trip stability.
+      Acceptance: generator runs; docs/api-index/ artifacts committed and current; --self-test passes; flagged section present even if empty; `just check` green.
+
+  - id: M-393
+    title: "M-393 — `just docs` + `just docs-index` + staleness drift gate"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:in-progress]
+    depends_on: [M-392]
+    body: |
+      EPIC-DIRECT task under E3-8. Add `just docs` (cargo doc --workspace --no-deps -> target/doc, human HTML, NOT committed). Add `just docs-index` (runs tools/docgen/code_index.py). Add scripts/checks/doc-index.sh (skip-graceful, wired into scripts/checks/all.sh + justfile `check`): regenerate into a temp dir and diff vs the committed docs/api-index/ — FAIL on drift (stale index), SKIP if Python absent. Mirrors the existing `just api` drift-gate pattern.
+      Acceptance: `just docs` builds rustdoc; `just docs-index` regenerates the index; `just check` includes the drift gate; gate passes when current, fails when stale.
+
+  - id: M-394
+    title: "M-394 — Issue/epic <-> index cross-references (doc_refs: grammar + backfill)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:docs, area:toolchain, priority:P2, status:in-progress]
+    depends_on: [M-392]
+    body: |
+      EPIC-DIRECT task under E3-8. Add an optional `doc_refs:` list to issues.yaml entries. Ref grammar (validate each resolves; never-silent on dangling ref): `api:<crate>::<path>` (an index symbol), `corpus:<DOC>[#<anchor>]` (a Doc-Index.md doc/section), `src:<path>[:<line>]` (a source location). Add validator tools/github/doc_refs_check.py (pure stdlib; wired into manifest-check.py --validate). BACKFILL doc_refs for every open issue, including Wave-4B issues, so agents read their issue and immediately know which index entries + corpus sections to pull.
+      Acceptance: doc_refs_check.py validates all refs with never-silent dangling-ref reporting; no dangling refs in issues.yaml after backfill; validator wired into manifest-check.py.
+
+  - id: M-395
+    title: "M-395 — Workflow integration (CLAUDE.md + .claude/skills/)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:docs, area:toolchain, priority:P2, status:in-progress]
+    depends_on: [M-392, M-393, M-394]
+    body: |
+      EPIC-DIRECT task under E3-8. CLAUDE.md: add "Auto-generated docs & the agent index" section — where the index lives (docs/api-index/), how to regenerate (`just docs-index`), the rule that it is REGENERATED (not hand-merged) and committed by the OWNING PARENT during every octopus merge, and how agents use `doc_refs` for targeted lookups; add docs/api-index/ to the orchestrator-owned collision-surface list. Update skill .claude/skills/dev-workflow: add `just docs-index` to the "Record" step. Update skill .claude/skills/changelog: add index-parity note. Add skill .claude/skills/doc-index (/doc-index): regenerate + query the index, explain the doc_refs grammar.
+      Acceptance: CLAUDE.md updated with accurate cross-references; dev-workflow + changelog skills updated; /doc-index skill added; docs/api-index/ listed in orchestrator-owned files.
 
 # Phase 4 (M-34x) — the interpreted<->compiled ABI + hot-inject + AOT-fragment completion. Created
 # 2026-06-16; gated on ADR-016/017 (Accepted 2026-06-16). The Phase-4 milestone + phase:4 label are now

@@ -8,6 +8,41 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-19: wave-4 step-0 reconciliation + wave-4A/4B launch record)
+**Issues reconciliation (step-0).** Three tasks implemented and tested but mislabelled
+`status:needs-design` corrected to `status:done`:
+- **M-350** (Resonator-network factorization) — evidence: `crates/mycelium-vsa/src/resonator.rs`
+  (893 lines); `tests/resonator_oracle.rs` + `tests/resonator_profile.rs` pass; convergence regime
+  documented; `StopReason::{BudgetExhausted,Oscillating,Stalled}` explicit; `ResonatorProfile`
+  carries bounds; never silent (G2 / VR-5).
+- **E3-5** (epic: resonator factorization) — M-350 complete.
+- **E3-1** (epic: semantic-level projections) — M-380 LlmCanonical enacted; M-381 is a
+  non-blocking P3 research track, not a gate on the epic.
+
+**Wave-4A tasks added to issues.yaml** — E3-8 (agent-facing documentation index epic) +
+M-392/M-393/M-394/M-395 (toolchain tasks; fill a gap in the M-300–M-400 block):
+- **E3-8** — Agent-facing documentation index & auto-doc workflow (note: the Wave-4A plan called
+  this E3-6; E3-6 was already taken by the BitNet acceleration epic, so assigned E3-8)
+- **M-392** — Agent code-index generator (`tools/docgen/code_index.py`, `docs/api-index/`)
+- **M-393** — `just docs` + `just docs-index` + staleness drift gate
+- **M-394** — Issue/epic ↔ index cross-references (`doc_refs:` grammar + backfill)
+- **M-395** — Workflow integration (CLAUDE.md + `.claude/skills/`)
+
+**Wave-4A swarm launch.** Sonnet Swarm (all agents claude-sonnet-4-6). Orchestrator on
+`claude/orch-wave4-docs-sys-4ifdo4`. Epic E3-8 on branch `claude/epic/E36A0-agent-doc-index`;
+leaf M-392 on `claude/leaf/E36A0-M392A-code-index-gen`. M-393/394/395 are epic-direct (no
+separate leaf). Wave-4A must land before Wave-4B fan-out so Wave-4B agents can read the index
+and their issues carry `doc_refs`.
+
+**Wave-4B swarm launch** (to fan out after Wave-4A merges):
+- **Epic A (M-541 std-sys)** — `claude/epic/M541A-std-sys-ffi-floor`; owns new crate
+  `crates/mycelium-std-sys/` (audited FFI floor per RFC-0016 §8-Q6 + DN-07).
+- **Epic B (M-502 + M-540)** — `claude/epic/M502A-self-host-ergonomics`; owns
+  `docs/notes/DN-14-Self-Hosting-Gate.md` (new, M-502) + `//!` ambient-representation
+  docstring additions across 23 std crates (M-540, annotation-only).
+
+No code merged yet; epics will octopus-merge into this branch after reporting. Append-only.
+
 ### Changed (2026-06-19: issues reconciliation + wave-3 swarm launch record)
 **Issues reconciliation.** `tools/github/issues.yaml` brought current with the implemented state —
 43 Phase-3–5 tasks updated to `status:done` (confirmed against crate presence in the workspace),
