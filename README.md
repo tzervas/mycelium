@@ -6,9 +6,10 @@
 (Foundation, RFC-0001…0021, ADR-001…017, DN-01…14), and the kernel is landing as a
 Rust workspace of **43 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified binary↔ternary
 swaps, the selection-policy engine, and a Rust-first standard library. Phases **0–3, 5, and 7** are
-complete; Phases **4, 6, and 8** are in progress. Per the honesty rule, the stdlib specs read
-*"implemented (Rust-first), pending ratification"* — **not** silently `Accepted` — and self-hosting
-(M-502) is **not yet established**. See [Status & open items](#status--open-items).
+complete; Phases **4, 6, and 8** are in progress. Per the honesty rule, the 23 Rust-first stdlib
+specs were **ratified to `Accepted`** (2026-06-20, DN-07) only on a checked basis (guarantee
+matrices asserted in tests) — `runtime` and `self-hosting-readiness` stay `Draft` (gate-pending),
+and self-hosting (M-502) is **not yet established**. See [Status & open items](#status--open-items).
 
 *(Formerly named **Verid** — retained only as a provenance note.)*
 
@@ -90,8 +91,8 @@ The kernel and its tooling live in `crates/` as **43 crates** (+ `xtask`), MSRV-
 - **Paradigms & selection** — `mycelium-dense`, `mycelium-vsa` (MAP-I algebra), `mycelium-select`
   (the total, EXPLAIN-able selection-policy engine).
 - **Language & execution** — `mycelium-l1` (the L1 calculus + the unified swap/interp differential
-  checker), `mycelium-mlir` (the AOT path: a `ternary` dialect, an env-machine, native LLVM, JIT,
-  hot-inject).
+  checker), `mycelium-mlir` (the AOT path: an env-machine + the direct-LLVM native lowering, JIT,
+  and hot-inject; the real `ternary` MLIR dialect is in progress, M-601).
 - **Toolchain (above the kernel)** — `mycelium-lsp`, `mycelium-fmt` (`mycfmt`), `mycelium-check`
   (`myc-check`), `mycelium-lint` (`myc-lint`), `mycelium-sec` (`myc-sec`), `mycelium-doc`
   (`myc-doc`), `mycelium-spore` (the `spore` packager), `mycelium-build`, `mycelium-proj`.
@@ -164,9 +165,9 @@ The design corpus is Accepted and the kernel is **building**:
 
 - ✅ **KC-1 (the existential risk) passed — and confirmed in a build.** Proven non-asymptotic VSA bundling bounds exist (Clarkson 2023; Thomas 2021), and the Liquid-Haskell `bundle` capacity-refinement probe (`proofs/lh-bundle/`, RFC-0003 §5) reports **SAFE** (Z3 discharged), ratifying the "axiomatized theorem + checked instantiation" strategy. VSA stays in core with honest `Proven` tags.
 - ✅ **KC-2 / LLM leverage — verdict: proceed (DN-09).** The M-002 experiment measured *weak-but-recoverable* leverage (best arm ≈40% first-attempt → ≈70% eventual), below the "irrecoverable collapse" kill threshold. The follow-up is a committed text syntax + a co-equal projection layer (M-380; RFC-0021); the retention-ratio ablation (RP-1) stays an honest, non-blocking open research prompt.
-- 🧱 **Built (Phases 0–3, 5, 7):** the Core IR + Rust reference interpreter, the single certificate checker, the certified binary↔ternary swap (Z3-proved), Dense/VSA breadth, the selection-policy engine + EXPLAIN, the `ternary` MLIR dialect + native LLVM / JIT / hot-inject, the L1 calculus, the runtime/concurrency model (RFC-0008), and the Rust-first standard library (23 `std` crates).
-- 🔜 **In progress (Phases 4, 6, 8):** the full interpreted↔compiled ABI + AOT env-machine (mutual recursion, RFC-0012 ambient), native MLIR→LLVM codegen + deployable spores, and the remaining toolchain/release-engineering gates.
-- ❓ **Not yet established:** **self-hosting (M-502)** — the stdlib is Rust-first; the Mycelium-lang migration half is open. Stdlib specs read *"implemented (Rust-first), pending ratification"*, never silently `Accepted`.
+- 🧱 **Built (Phases 0–3, 5, 7):** the Core IR + Rust reference interpreter, the single certificate checker, the certified binary↔ternary swap (Z3-proved), Dense/VSA breadth, the selection-policy engine + EXPLAIN, the **direct-LLVM native path + JIT + hot-inject** (the data/closure/tail-recursion fragment, M-373/M-378/M-379), the L1 calculus, the runtime/concurrency model (RFC-0008), and the Rust-first standard library — whose 23 specs are now **ratified to `Accepted`** (2026-06-20, DN-07; `runtime` + `self-hosting-readiness` stay `Draft`).
+- 🔜 **In progress (Phases 4, 6, 8):** the full interpreted↔compiled ABI + AOT env-machine (mutual recursion, RFC-0012 ambient); the **real `ternary`→arith/vector→LLVM MLIR-dialect lowering** (M-601, E6-1 — replacing the textual stand-in; **unblocked** now that libMLIR is provisionable on Linux, M-348) + deployable spores; and the remaining toolchain/release-engineering gates.
+- ❓ **Not yet established:** **self-hosting (M-502)** — the stdlib is Rust-first; the Mycelium-lang migration half is open, and `runtime` / `self-hosting-readiness` stay `Draft` (gate-pending). The native MLIR-dialect verdict (M-601/M-602) stays honestly "not established" until the lowering lands and the three-way differential holds (VR-5), never pre-written.
 
 Residual risks tracked in the Foundation risk register, notably **RR-13** (HRR/FHRR are the VSA weak link). See `docs/Mycelium_Project_Foundation.md` §10 for the dependency-ordered action list and `docs/planning/phase-*.md` for the live phase ladder.
 
@@ -175,7 +176,7 @@ Residual risks tracked in the Foundation risk register, notably **RR-13** (HRR/F
 ## Technology stack
 
 - **Kernel + reference interpreter:** Rust (MSRV **1.92**, ADR-007). The interpreter is the trusted base and the reference semantics (`crates/mycelium-interp`).
-- **AOT path:** **MLIR → LLVM** — a `ternary` dialect + env-machine + native lowering, with JIT and hot-inject (`crates/mycelium-mlir`), confined to the performance path; `vsa`/`embedding` dialects deferred.
+- **AOT path:** **MLIR → LLVM** (`crates/mycelium-mlir`), confined to the performance path. Built: the env-machine + the **direct-LLVM** native lowering of the data/closure/tail-recursion fragment, with JIT and hot-inject (M-373/M-378/M-379). In progress: the real `ternary`→arith/vector→LLVM **MLIR-dialect** lowering (M-601, E6-1 — currently a textual stand-in; unblocked by libMLIR provisioning on Linux, M-348). `vsa`/`embedding` dialects deferred.
 - **VSA submodule:** Rust (`crates/mycelium-vsa`) — the MAP-I algebra + the per-model guarantee matrix (RFC-0003).
 - **Verified numerics:** a Flocq/FloVer-style certificate-checker-in-Rust — two assurance tiers, ε (affine arithmetic) and δ (union-bound) sharing one certificate (`crates/mycelium-numerics`, ADR-010).
 - **Toolchain:** Rust crates (`mycfmt` / `myc-check` / `myc-lint` / `myc-sec` / `myc-doc` / `spore`), all routed through `just check`.
@@ -208,6 +209,7 @@ Residual risks tracked in the Foundation risk register, notably **RR-13** (HRR/F
 - **Honesty rule.** Guarantee tags are assigned **per model and per operation**, never in aggregate. A bound may be tagged `Proven` *only* if it cites a theorem whose side-conditions are checked; otherwise it is `Empirical` (validated) or `Declared` (user-asserted, always flagged). New results may *upgrade* a tag; absence keeps it weaker.
 - **No black boxes.** Any feature that introduces opaque behavior (especially "intelligent" automatic selection) must be reified, inspectable, and explainable (`EXPLAIN`).
 - **Engineering principles** (the project's house style): SRP, OCP, LSP, ISP, DIP, DRY, KISS, YAGNI, Law of Demeter, separation of concerns; **composition over inheritance**; PEP 8 / Black for Python.
+- **Squash-only into `main`.** Every PR lands as a single curated squash commit (a clean linear, bisectable history); internal swarm integration merges (leaf→epic→orch) stay octopus/`--no-ff` to preserve lineage. The `/land` skill drives the autonomous self-review → green `just check` → curated squash-merge → cleanup loop.
 - **Kill criteria** (KC-1…KC-4) are re-checked at every phase gate; a gate that doesn't check them is hiding risk.
 
 ---
