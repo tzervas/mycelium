@@ -629,15 +629,16 @@ issues:
       Acceptance: dynamic ceiling derived + EXPLAIN-able + conservative fallback; never-silent error preserved; trusted interpreter + three-way differential unchanged (NFR-7). DONE.
 
   - id: M-348
-    title: "M-348 — Provision libMLIR (desktop/WSL) to unblock the native MLIR->LLVM path"
+    title: "M-348 — Provision libMLIR to unblock the native MLIR->LLVM path"
     milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
-    labels: [phase:4, type:design, area:execution, priority:P2, status:blocked]
+    labels: [phase:4, type:design, area:execution, priority:P1, status:needs-design]
     depends_on: [M-301]
-    doc_refs: [corpus:RFC-0004]
+    doc_refs: [corpus:RFC-0004, corpus:DN-15]
     body: |
       The MLIR->LLVM native AOT path (RFC-0004 §2, ADR-009) is gated on libMLIR, absent in the current environment. Maintainer intends to provision it near-term (Windows/Claude Code desktop, or via WSL) to unblock native dialect lowering / cross-target codegen, the native data/closure codegen M-342 left as UnsupportedNode, and DN-05 #1 (stack-robust recursion designed into the native path). Verdicts needing it stay honestly "not established" (VR-5) until present.
       Acceptance: libMLIR provisioned + a first native lowering increment runs; no code until the toolchain is present.
-      DECOMPOSED 2026-06-19 (Wave-5; DN-15): M-348 was two parts lumped as one external wall. (a) GENUINELY libMLIR-gated — the real `ternary`→arith/vector→LLVM dialect lowering (dialect.rs is a textual skeleton stand-in) — STAYS status:blocked here, honestly "not established" until the C++ infra is present (VR-5). (b) ADVANCEABLE NOW with zero libMLIR — the direct-LLVM-IR backend (llvm.rs) extension to the data fragment, sanctioned by the RFC-0004 §2 "lighter direct-LLVM backend" revisit clause — split out as M-373 (in-progress). M-342 left the data/recursion nodes as explicit UnsupportedNode by a SEQUENCING choice, not an intrinsic libMLIR requirement (heap/closure codegen in textual LLVM IR needs no MLIR). This entry's blocked half is unchanged; M-373 tracks the unblocked half.
+      DECOMPOSED 2026-06-19 (Wave-5; DN-15): M-348 was two parts lumped as one external wall. (a) GENUINELY libMLIR-gated — the real `ternary`→arith/vector→LLVM dialect lowering (dialect.rs is a textual skeleton stand-in) — until the C++ infra is present (VR-5). (b) ADVANCEABLE NOW with zero libMLIR — the direct-LLVM-IR backend (llvm.rs) extension to the data fragment, sanctioned by the RFC-0004 §2 "lighter direct-LLVM backend" revisit clause — split out as M-373 (in-progress). M-342 left the data/recursion nodes as explicit UnsupportedNode by a SEQUENCING choice, not an intrinsic libMLIR requirement.
+      UNBLOCKED 2026-06-20 (VERIFIED on Linux): the "libMLIR absent" premise no longer holds in the Linux CI/dev environment. `apt-get install -y --no-install-recommends libmlir-18-dev mlir-18-tools` (candidate 1:18.1.3-1ubuntu1, matching the installed LLVM 18.1.3) provides `mlir-opt-18`/`mlir-translate-18` (/usr/bin) + `libMLIR.so.18.1` (/usr/lib/llvm-18/lib); the pipeline `mlir-opt-18 --convert-func-to-llvm --convert-arith-to-llvm --reconcile-unrealized-casts | mlir-translate-18 --mlir-to-llvmir` is verified to emit valid LLVM IR. Status moves blocked -> needs-design. Folded into epic E6-1: durable provisioning recipe + ADR-019 (libMLIR toolchain decision) + DN-15 append are M-603; the real ternary-dialect lowering is M-601; the three-way differential is M-602.
 
   - id: M-343
     title: "M-343 — Mutual recursion: full elaboration (R7-Q3 remaining half)"
@@ -1364,7 +1365,7 @@ issues:
   - id: M-601
     title: "M-601 — Native MLIR→LLVM codegen for the full v0 calculus (incl. data + closure)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P3, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:needs-design]
     depends_on: [M-348, M-342]
     doc_refs: [corpus:RFC-0004]
     body: |
@@ -1374,7 +1375,7 @@ issues:
   - id: M-602
     title: "M-602 — Native-path NFR-7 three-way differential + E1 speedup verdict"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:verification, area:execution, priority:P3, status:needs-design]
+    labels: [phase:6, type:verification, area:execution, priority:P1, status:needs-design]
     depends_on: [M-601, M-302, M-303]
     doc_refs: [corpus:RFC-0004]
     body: |
@@ -1533,3 +1534,98 @@ issues:
       Scope: IN = tail-recursive Fix + Binary Lit-arm Match + DepthBudget ceiling/DepthLimit. OUT = non-tail Fix, FixGroup, recursive heap data (all explicit UnsupportedNode, G2), MLIR dialect (M-348 blocked). Narrow Binary{8} ABI continues. KC-3 — touch only crates/mycelium-mlir (+ its tests); mycelium-core/-interp READ-ONLY (FLAG up). Guarantee `Declared` (hand-written IR + empirical differential, not Proven — VR-5). Every lowering stage dumpable (no opaque pass — RFC-0004 §6/VR-4).
       Acceptance: a terminating tail-recursive Binary{8} program (e.g. an iterate/countdown mod 256) compiles + runs natively and holds the M-302/M-210 three-way differential (interp ≡ AOT env-machine ≡ native); a non-terminating recursion hits a graceful DepthLimit (parity with the interpreter's non-productive refusal — never SIGSEGV); non-tail Fix + FixGroup + recursive data stay honest UnsupportedNode; cargo test -p mycelium-mlir + full `just check` green.
       DONE (2026-06-19; Wave-1 Increment-3, swarm-built): STAGE 1 (parent) — factored the two duplicated Match handlers into one shared `lower_match` and added the Binary branch primitive (repr-lane scrutinee + `Lit` arms → pack lane, `switch i64` on packed literals; `lit_binary8_packed`); `binary_branch_corpus` value-checked interp≡native. STAGE 2 (Sonnet leaf, isolated worktree, deconflicted/pulled-down to parent) — `App(Fix{λparam.Match}, init)` lowers to an iterative LLVM phi loop: depth-counter checked each iteration against an `AutoDepthBudget`-resolved ceiling (budget.rs, M-349) → graceful `AotError::DepthLimit` via a distinct read-back sentinel (`#`), never SIGSEGV/hang (host C stack O(1) by construction — DN-05 #1). `EnvValue::Fix(FixVal)` defers lowering to the application site; tail-position classification (`classify_arm`/`anf_refs_name`); the diverging no-base-case exit traps with `@abort`+`ret` (never raw `unreachable`, G2). NON-tail Fix, FixGroup, non-λ.Match Fix bodies, recursion over non-Binary{8}, and a bare-Fix result all stay explicit UnsupportedNode (G2). New tests/recursion_differential.rs: countdown + one-step value-checked interp≡native, a non-terminating program → graceful DepthLimit, + 3 refusal tests. 114 mycelium-mlir tests green; clippy -D warnings clean; guarantee `Declared` (VR-5). FULL trampoline (general non-tail recursion) + FixGroup + recursive heap data remain deferred to a later increment (DN-15 §8.1/§8.5).
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 2026-06-20: Post-ratification waves (stdlib ratified, DN-07). Three INDEPENDENT
+  # epics in disjoint directories ⇒ octopus-merge clean; run as a Fractal Swarm
+  # (CLAUDE.md). Sets up mechanics + unblocks the native path; NOT a release.
+  # ───────────────────────────────────────────────────────────────────────────
+  - id: E5-1
+    title: "E5-1 (epic) — Stdlib error-type unification (DN-17 §5)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:stdlib, priority:P2]
+    depends_on: [M-376, M-501]
+    doc_refs: [corpus:DN-17, corpus:DN-16]
+    body: |
+      The DN-17 §4/§5 deferred half, now UNBLOCKED: the stdlib specs ratified 2026-06-20 (DN-07), so error shapes have settled and the ~600 LOC of Display/Error boilerplate across ~8 `mycelium-std-*/src/error.rs` can be DRY-unified without trading visible duplication for premature coupling. Pure refactor — no error SEMANTICS, guarantee tag, or public surface change (VR-5); tests + `cargo public-api` baselines stay green. Children: M-535 (shared error scaffold, scaffold-first), M-536 (per-crate conversion fan-out). Owns a new shared scaffold + `crates/mycelium-std-*/src/error.rs`.
+      Acceptance: scaffold landed + every consuming std crate converted; cargo test --workspace + full `just check` green; net LOC down; zero public-API/guarantee diff.
+
+  - id: M-535
+    title: "M-535 — Shared stdlib error scaffold (derive/helper for the std error contract)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:needs-design]
+    depends_on: [M-376]
+    doc_refs: [corpus:DN-17, corpus:RFC-0016]
+    body: |
+      Scaffold-first leaf of E5-1: design + land ONE shared error derive/helper (a new leaf crate or a shared module in a low-level std crate) capturing the repeated Display/Error/`is_std_error` boilerplate the RFC-0016 §4.5 per-module error contracts share — WITHOUT coupling the per-module honesty contracts. Register it in the workspace (FLAG the Cargo.toml add up to the parent) and PUSH it so the M-536 fan-out branches from a buildable base.
+      Acceptance: scaffold compiles + is unit-tested; one pilot crate converted to prove the shape; no public-API/guarantee change; clippy -D warnings clean.
+
+  - id: M-536
+    title: "M-536 — Convert each mycelium-std-* error.rs to the shared scaffold (fan-out)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:stdlib, priority:P2, status:needs-design]
+    depends_on: [M-535]
+    doc_refs: [corpus:DN-17]
+    body: |
+      Fan-out leaf of E5-1: one disjoint sub-task per consuming `mycelium-std-*` crate — replace its hand-written error Display/Error boilerplate with the M-535 scaffold. Behaviour-preserving; typed variants, messages, and guarantee tags byte-for-byte unchanged (a refactor never changes a guarantee, VR-5). Commit in `wip(batch M/N)` batches (≥5 crates).
+      Acceptance: every crate's tests + its `cargo public-api` baseline green and UNCHANGED; full `just check` green; net LOC down.
+
+  - id: E8-1
+    title: "E8-1 (epic) — Release machinery & housekeeping (mechanics only, no release)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:epic, area:release, priority:P2]
+    depends_on: [M-361]
+    doc_refs: [corpus:RFC-0017]
+    body: |
+      Stand up the release MECHANICS so a version cut is one button WHEN the project is genuinely MVP/release-capable — this epic does NOT cut a release (still Phase-4-in-progress). Children: M-382 (gh-sync retry bug), M-383 (ADR-018 versioning policy), M-384 (release-plz dry-run), M-385 (GH PM tooling capture — DONE). Owns `docs/adr/ADR-018-*.md`, `release-plz.toml`, `tools/github/`; FLAGs up `.github/workflows/` + workspace-Cargo.toml version.
+      Acceptance: ADR-018 Accepted; release-plz dry-run emits a correct version/changelog preview WITHOUT publishing; gh-sync resilient; no real tag/release.
+
+  - id: M-383
+    title: "M-383 — ADR-018: per-crate 0.x versioning policy (source-only, no crates.io publish)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:design, area:release, priority:P2, status:needs-design]
+    depends_on: []
+    doc_refs: [corpus:RFC-0017]
+    body: |
+      Author ADR-018 fixing the versioning policy: per-crate 0.x SemVer across the workspace, SOURCE-ONLY (no crates.io publish in the design phase), how CHANGELOG `[Unreleased]` maps to a cut, and the MVP/release-capability gate a real release must clear (honest: not now). Relate to ADR-007. Append-only decision doc.
+      Acceptance: ADR-018 Accepted; Doc-Index + CHANGELOG updated; cited by M-384.
+
+  - id: M-384
+    title: "M-384 — Wire release-plz to a dry-run, workflow_dispatch-only release workflow"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:infra, area:release, priority:P2, status:needs-design]
+    depends_on: [M-383]
+    doc_refs: [corpus:RFC-0017]
+    body: |
+      Wire `release-plz` (config + a `.github/workflows/release*.yml`) to a DRY-RUN, manual-dispatch-only, advisory job — matching the repo's "no automatic remote CI" policy (workflow_dispatch only; never on push/PR). It previews the per-crate version bumps + changelog from Conventional Commits; it does NOT tag, publish, or open release PRs automatically. Implements ADR-018.
+      Acceptance: the dry-run runs locally + via manual dispatch and emits a correct version/changelog preview; nothing is published; `just check` parity holds.
+
+  - id: M-385
+    title: "M-385 — GH PM tooling: capture post-ratification waves + multi-milestone & noncompliant-label sync"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:infra, area:project, priority:P2, status:done]
+    depends_on: []
+    doc_refs: [src:tools/github/gh-issues-sync.py, src:tools/github/issues.yaml, src:tools/github/label-aliases.json]
+    body: |
+      Capture the three post-ratification epics (E5-1, E6-1, E8-1) + leaves in issues.yaml with fitting labels (new: type:epic, area:stdlib, area:release); extend gh-issues-sync.py to (a) MIGRATE noncompliant repo labels to the canonical set via a declared label-aliases.json (relabel issues then delete; unmapped ones FLAGGED, never silently deleted — G2), and (b) resolve a multi-milestone PR deterministically to the highest-phase milestone instead of refusing.
+      DONE (2026-06-20): labels.json +3 labels; label-aliases.json added (bug/documentation/enhancement/good-first-issue migrations); plan_label_migrations + milestone_rank + multi-milestone infer_milestone, covered by --self-test (green); issues.yaml captures the waves + unblocks M-348. issues.yaml parses; doc_refs validate.
+
+  - id: E6-1
+    title: "E6-1 (epic) — Native MLIR path: libMLIR unblock -> dialect lowering -> three-way differential"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:epic, area:execution, priority:P1]
+    depends_on: [M-301, M-348]
+    doc_refs: [corpus:RFC-0004, corpus:DN-15, corpus:ADR-009]
+    body: |
+      The MVP-critical native path, now UNBLOCKED (M-348): libMLIR is apt-provisionable on Linux (libmlir-18-dev + mlir-18-tools @ 1:18.1.3-1ubuntu1, matching LLVM 18.1.3; the mlir-opt-18 | mlir-translate-18 lowering pipeline is verified to emit valid LLVM IR). Sequenced children: M-603 (durable provisioning recipe + ADR-019 toolchain decision + DN-15 append), M-601 (real ternary->arith/vector->LLVM dialect lowering, replacing the textual stand-in), M-602 (interp <-> direct-LLVM <-> MLIR three-way NFR-7 differential, VR-4). Honesty floor: the interpreter stays the trusted base, MLIR is the perf-path; differential-test, never trust; any unlowerable op stays on the direct-LLVM/interp path with an EXPLAIN-able note — never ship fragile codegen (G2/VR-5). Owns crates/mycelium-mlir + the native differential harness.
+      Acceptance: provisioning durable + recorded (ADR-019, DN-15); the dialect path lowers the v0 subset; the three-way differential holds (interp ≡ direct-LLVM ≡ MLIR) with honest per-op tags; cargo test -p mycelium-mlir + full `just check` green.
+
+  - id: M-603
+    title: "M-603 — Durable libMLIR provisioning recipe + ADR-019 (toolchain) + DN-15 unblock append"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:infra, area:execution, priority:P1, status:needs-design]
+    depends_on: [M-348]
+    doc_refs: [corpus:DN-15, corpus:RFC-0004]
+    body: |
+      Make the M-348 unblock DURABLE + honest (a toolchain DECISION, not a silent install): a `scripts/setup-mlir.sh` recipe (`apt-get install libmlir-18-dev mlir-18-tools`, version-matched to the installed LLVM) wired into `just setup` (skip-gracefully if absent); ADR-019 recording libMLIR as a build dependency of the MLIR-dialect feature; an append-only DN-15 update recording that the libMLIR-gated half (M-348/M-601) is now provisionable on Linux. FLAG up justfile/CI/Cargo.toml feature changes to the parent.
+      Acceptance: a clean checkout runs `just setup` -> MLIR present -> the dialect feature builds; ADR-019 Accepted; DN-15 updated; no silent toolchain bump.

@@ -449,6 +449,37 @@ def label_delta(desired, actual):
     return sorted(desired - actual), sorted(actual - desired)
 
 
+def plan_label_migrations(repo_label_names, canonical_names, aliases):
+    """Plan noncompliant-label migrations from the repo's live label set.
+
+    Pure (no I/O): returns (migrations, flags) where:
+    - ``migrations`` is a sorted list of (old_name, new_name) for noncompliant labels that have a
+      declared alias;
+    - ``flags`` is a sorted list of noncompliant label names with NO declared alias (they must be
+      handled manually — never silently deleted, G2).
+
+    A label is COMPLIANT when its name appears in ``canonical_names`` (the labels.json set). A
+    noncompliant label is either MIGRATED (has an alias) or FLAGGED (has no alias). An alias that
+    maps to a name not in ``canonical_names`` is itself flagged (the target must be declared).
+    """
+    canonical = set(canonical_names)
+    noncompliant = [n for n in repo_label_names if n not in canonical]
+    migrations, flags = [], []
+    for name in noncompliant:
+        if name in aliases:
+            target = aliases[name]
+            if target in canonical:
+                migrations.append((name, target))
+            else:
+                # alias target is not a canonical label — flag it, never guess (G2)
+                flags.append(
+                    f"{name} (alias -> '{target}' is not in labels.json; add it first)"
+                )
+        else:
+            flags.append(name)
+    return sorted(migrations), sorted(flags)
+
+
 def normalize_body(text):
     """Normalize a body for comparison: LF line endings, no trailing space, no trailing blanks.
 
@@ -565,14 +596,37 @@ def extract_task_ids(text, patterns):
     return found
 
 
+def milestone_rank(title):
+    """Return the phase number (int) from a 'Phase N' prefix, or -1 for unprefixed titles.
+
+    Pure: parses the leading 'Phase N' token only; everything after the first word boundary is
+    ignored. Used to resolve multi-milestone spans deterministically to the highest-phase
+    (most advanced) milestone. Examples: 'Phase 8 — Toolchain' -> 8; 'Backlog' -> -1.
+    """
+    m = re.match(r"Phase\s+(\d+)", title or "", re.IGNORECASE)
+    return int(m.group(1)) if m else -1
+
+
 def infer_milestone(task_ids, task_to_ms):
-    """Infer a single milestone from referenced task-ids, or (None, flag) when not unambiguous."""
+    """Infer a single milestone from referenced task-ids.
+
+    - Exactly one milestone spanned → return (milestone, None).
+    - No milestone found            → return (None, None) — silent, no claim made.
+    - Multiple milestones           → resolve to the HIGHEST-phase milestone (milestone_rank);
+                                      return (chosen, note_string) where the note is
+                                      informational, not a blocking flag — callers that check
+                                      truthiness of the second return value now get a milestone
+                                      AND a note (not a refusal).
+    """
     milestones = {task_to_ms[t] for t in task_ids if t in task_to_ms}
     if len(milestones) == 1:
         return next(iter(milestones)), None
     if not milestones:
         return None, None  # nothing to infer from — silent (no claim made)
-    return None, f"ambiguous milestone across {sorted(task_ids)}: {sorted(milestones)}"
+    # Multi-milestone: resolve deterministically to the highest-phase milestone.
+    chosen = max(milestones, key=milestone_rank)
+    note = f"note: spanned {sorted(milestones)} -> chose highest-phase '{chosen}'"
+    return chosen, note
 
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -721,6 +775,24 @@ def load_idmap(idmap_path):
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Reconcilers (labels / milestones / issues)
 # ─────────────────────────────────────────────────────────────────────────────────────────────
+def _load_label_aliases(here):
+    """Load label-aliases.json from ``here``, returning the aliases dict.
+
+    Tolerates the file being absent — returns an empty dict so all noncompliant labels are
+    flagged (never-silent G2) rather than silently ignored.
+    """
+    aliases_path = here / "label-aliases.json"
+    if not aliases_path.exists():
+        print(
+            "   ~ label-aliases.json not found — all noncompliant labels will be FLAGGED "
+            "(add label-aliases.json to declare migrations)",
+            file=sys.stderr,
+        )
+        return {}
+    data = json.loads(aliases_path.read_text(encoding="utf-8"))
+    return {k: v for k, v in data.get("aliases", {}).items()}
+
+
 def reconcile_labels(repo, labels_json, dry_run):
     labels = json.loads(labels_json.read_text(encoding="utf-8"))
     print(f">> labels: {len(labels)} declared in {labels_json.name}")
@@ -745,6 +817,67 @@ def reconcile_labels(repo, labels_json, dry_run):
             ]
         )
         print(f"   • {name}")
+
+    # ── noncompliant-label reconcile (runs after create-or-update) ───────────────────────────
+    # Snapshot the repo's actual labels and compare against labels.json. Noncompliant labels
+    # with a declared alias are migrated (relabel every open+closed issue/PR, then delete the
+    # stale label). Noncompliant labels without an alias are FLAGGED — never silently deleted (G2).
+    aliases = _load_label_aliases(HERE)
+    canonical_names = {lb["name"] for lb in labels}
+    raw_repo_labels = json.loads(gh(["api", "--paginate", f"repos/{repo}/labels"]))
+    repo_label_names = [lb["name"] for lb in raw_repo_labels]
+    migrations, flags = plan_label_migrations(
+        repo_label_names, canonical_names, aliases
+    )
+
+    if not migrations and not flags:
+        print("   = noncompliant labels: none found (repo labels match labels.json)")
+    else:
+        if migrations:
+            print(f">> noncompliant-label migrations: {len(migrations)} to migrate")
+        for old_name, new_name in migrations:
+            # Find every open + closed issue/PR carrying the stale label.
+            raw_issues = json.loads(
+                gh(
+                    [
+                        "api",
+                        "--paginate",
+                        f"repos/{repo}/issues?state=all&per_page=100&labels={old_name}",
+                    ]
+                )
+            )
+            numbers = [item["number"] for item in raw_issues]
+            if dry_run:
+                print(
+                    f"   ~ would migrate label '{old_name}' -> '{new_name}' "
+                    f"({len(numbers)} issue(s)/PR(s)), then delete '{old_name}'"
+                )
+            else:
+                for number in numbers:
+                    gh(
+                        [
+                            "issue",
+                            "edit",
+                            str(number),
+                            "--repo",
+                            repo,
+                            "--add-label",
+                            new_name,
+                            "--remove-label",
+                            old_name,
+                        ]
+                    )
+                    print(f"   • #{number}: label '{old_name}' -> '{new_name}'")
+                gh(["label", "delete", old_name, "--repo", repo, "--yes"])
+                print(f"   • deleted stale label '{old_name}'")
+
+        for flag in flags:
+            # Never-silent: a noncompliant label with no alias is left untouched and reported (G2).
+            print(
+                f"   ! noncompliant label '{flag}' has no declared alias in label-aliases.json "
+                f"— left untouched; add an alias or delete it manually",
+                file=sys.stderr,
+            )
 
 
 def reconcile_milestones(repo, milestones_json, dry_run):
@@ -1418,13 +1551,63 @@ def self_test():
         flags,
     )
 
-    # milestone inference: unambiguous → set; conflicting → flag; none → silent.
+    # milestone inference: unambiguous → set; multi → highest-phase + note; none → silent.
     t2m = {"M-150": "Phase 1", "M-151": "Phase 1", "M-201": "Phase 2"}
     assert extract_task_ids("does M-150 and M-151", ["M-[0-9]+"]) == ["M-150", "M-151"]
     assert infer_milestone(["M-150", "M-151"], t2m) == ("Phase 1", None)
     assert infer_milestone([], t2m) == (None, None)
-    ms, flag = infer_milestone(["M-150", "M-201"], t2m)
-    assert ms is None and flag and "ambiguous" in flag
+    # Multi-milestone: resolves to highest-phase, returns informational note (not a blocking flag).
+    ms, note = infer_milestone(["M-150", "M-201"], t2m)
+    assert ms == "Phase 2", f"expected 'Phase 2', got {ms!r}"
+    assert note and note.startswith("note:") and "Phase 2" in note, (
+        f"unexpected note: {note!r}"
+    )
+    # milestone_rank: Phase N prefix → N (int); unprefixed → -1.
+    assert milestone_rank("Phase 8 — Toolchain & Release Engineering") == 8
+    assert milestone_rank("Phase 0") == 0
+    assert milestone_rank("Backlog") == -1
+    assert milestone_rank("") == -1
+    assert milestone_rank(None) == -1
+    # Highest-phase wins even when it's not the lexicographically last name.
+    t2m_mixed = {"A": "Phase 10 — Future", "B": "Phase 2 — Now", "C": "Backlog"}
+    ms2, note2 = infer_milestone(["A", "B"], t2m_mixed)
+    assert ms2 == "Phase 10 — Future" and note2 and "Phase 10" in note2, (ms2, note2)
+    # All unprefixed → highest by rank (-1 tie) → max() picks deterministically (first in sort).
+    ms3, note3 = infer_milestone(["B", "C"], t2m_mixed)
+    assert ms3 is not None and note3 and note3.startswith("note:"), (ms3, note3)
+
+    # ── plan_label_migrations (pure, offline) ────────────────────────────────────────────────
+    canonical = {
+        "type:bug",
+        "type:feature",
+        "type:docs",
+        "good-first-issue",
+        "area:swap",
+    }
+    aliases = {
+        "bug": "type:bug",
+        "enhancement": "type:feature",
+        "documentation": "type:docs",
+        "good first issue": "good-first-issue",
+    }
+    # compliant labels → no migrations, no flags.
+    migs, flgs = plan_label_migrations(["type:bug", "area:swap"], canonical, aliases)
+    assert migs == [] and flgs == [], (migs, flgs)
+    # mix: two aliased + one unaliased noncompliant.
+    migs, flgs = plan_label_migrations(
+        ["type:bug", "bug", "enhancement", "orphan-label"], canonical, aliases
+    )
+    assert migs == [("bug", "type:bug"), ("enhancement", "type:feature")], migs
+    assert flgs == ["orphan-label"], flgs
+    # alias pointing to a non-canonical target → appears in flags, not migrations.
+    bad_aliases = {"stale": "nonexistent-canonical"}
+    migs2, flgs2 = plan_label_migrations(["stale"], canonical, bad_aliases)
+    assert migs2 == [], migs2
+    assert any("nonexistent-canonical" in f for f in flgs2), flgs2
+    # empty repo labels → no migrations, no flags (idempotent on an already-clean repo).
+    assert plan_label_migrations([], canonical, aliases) == ([], [])
+    # all canonical → no output.
+    assert plan_label_migrations(list(canonical), canonical, aliases) == ([], [])
 
     # ── Project v2 pure mapping/diff ──────────────────────────────────────────────────────────
     field_map = {
@@ -1526,7 +1709,8 @@ def self_test():
 
     print(
         "self-test OK: label_delta, normalize_body, plan_issue_update, parse_conventional, "
-        "derive_pr_labels, infer_milestone, label_to_field_values, plan_field_reconcile, "
+        "derive_pr_labels, milestone_rank, infer_milestone (multi-milestone), "
+        "plan_label_migrations, label_to_field_values, plan_field_reconcile, "
         "required_scopes, missing_scopes, over_grants, _auth_command"
     )
 
