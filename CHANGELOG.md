@@ -8,6 +8,16 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-20: add `Enacted` as a first-class decision status)
+Extended the append-only status lattice in `CLAUDE.md` (house rule #3) + `CONTRIBUTING.md` from
+`Draft/Proposed → Accepted → Superseded` to **`Draft/Proposed → Accepted → Enacted → Superseded`**
+(notes still `→ Resolved`). **`Enacted`** = an Accepted decision now fully implemented/landed —
+complete and stable, outside ongoing maintenance + future-dev integration — and it **must step
+through `Accepted`** first (no skipping). The canonical spelling is the standalone `Enacted` (earlier
+docs used the compound `Accepted — Enacted`). Normalizing existing statuses to the new spelling, the
+stale `docs/rfcs/README.md` rows, and a `doc-status` currency gate that enforces the lattice +
+nav-doc↔header consistency are a follow-up.
+
 ### Changed (2026-06-20: docs/README refresh — ratification status + native-path honesty)
 Refreshed the prose READMEs to the current, verified state: the top-level `README.md` and
 `docs/spec/stdlib/README.md` now report the **23 Rust-first stdlib specs as `Accepted`** (2026-06-20,

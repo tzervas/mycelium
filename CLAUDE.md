@@ -24,8 +24,11 @@ never-silent** representation swaps and **honest, per-operation guarantees**. It
 2. **No black boxes.** Selections/conversions/approximations are reified, inspectable, and
    `EXPLAIN`-able. A swap is **never silent**; out-of-range is an explicit `Option`/error.
 3. **Append-only decisions.** ADR/RFC/DN status moves forward only
-   (`Draft/Proposed → Accepted → Superseded`; notes `→ Resolved`). To change an Accepted
-   decision, **supersede** it — don't rewrite history.
+   (`Draft/Proposed → Accepted → Enacted → Superseded`; notes `→ Resolved`). **`Enacted`** = an
+   Accepted decision now **fully implemented/landed** — complete and stable, outside ongoing
+   maintenance and future-dev integration; it **must step through `Accepted`** first (never skip
+   straight to Enacted). To change an Accepted/Enacted decision, **supersede** it — don't rewrite
+   history.
 4. **Ground every claim.** Normative statements cite their basis (`G1–G11`, tensions `A–E`,
    `R1–R8`, `T0.x–T2.x`) or are marked open questions. No ungrounded "facts".
 5. **Small, auditable kernel** (KC-3). SOLID · DRY · KISS · YAGNI · Law of Demeter · SoC;
