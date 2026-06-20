@@ -712,8 +712,8 @@
 | `mycelium_l1::AmbientError` | enum | `crates/mycelium-l1/src/ambient.rs:49` | A never-silent refusal from the resolution pass (§4.3/§4.4) — always explicit, never a guess. |
 | `mycelium_l1::CheckError` | struct | `crates/mycelium-l1/src/checkty.rs:45` | An explicit check failure (never a silent pass or a guess — S5/G2). |
 | `mycelium_l1::ElabError` | enum | `crates/mycelium-l1/src/elab.rs:45` | Why a definition could not be elaborated to L0 — always explicit, never a partial artifact |
-| `mycelium_l1::Env` | struct | `crates/mycelium-l1/src/checkty.rs:107` | The checked program environment: registry + function table. |
-| `mycelium_l1::Evaluator` | struct | `crates/mycelium-l1/src/eval.rs:187` | The L1 evaluator over a checked [`Env`]. |
+| `mycelium_l1::Env` | struct | `crates/mycelium-l1/src/checkty.rs:119` | The checked program environment: registry + function table. |
+| `mycelium_l1::Evaluator` | struct | `crates/mycelium-l1/src/eval.rs:230` | The L1 evaluator over a checked [`Env`]. |
 | `mycelium_l1::L1Error` | enum | `crates/mycelium-l1/src/eval.rs:86` | Why L1 evaluation could not produce a value — always explicit (S5/G2). |
 | `mycelium_l1::L1Value` | enum | `crates/mycelium-l1/src/eval.rs:35` | An L1 runtime value: an L0 representation value, or a constructed datum. |
 | `mycelium_l1::Nodule` | struct | `crates/mycelium-l1/src/ast.rs:10` | A whole program: a `nodule` header and its items. |
@@ -732,44 +732,44 @@
 | `mycelium_l1::ambient::resolve_report` | fn | `crates/mycelium-l1/src/ambient.rs:151` | Like [`resolve`], but also returns the provenance trace ([`ResolutionNote`]s) for EXPLAIN (§4.3). |
 | `mycelium_l1::ast` | mod | `crates/mycelium-l1/src/lib.rs:30` | — |
 | `mycelium_l1::ast::AmbientParams` | enum | `crates/mycelium-l1/src/ast.rs:46` | The written params of a **paradigm-less repr** `{ … }` (RFC-0012 §4.2): the size/shape is still |
-| `mycelium_l1::ast::Arm` | struct | `crates/mycelium-l1/src/ast.rs:302` | A `match` arm. |
-| `mycelium_l1::ast::BaseType` | enum | `crates/mycelium-l1/src/ast.rs:154` | A base (un-annotated) type. |
+| `mycelium_l1::ast::Arm` | struct | `crates/mycelium-l1/src/ast.rs:327` | A `match` arm. |
+| `mycelium_l1::ast::BaseType` | enum | `crates/mycelium-l1/src/ast.rs:179` | A base (un-annotated) type. |
 | `mycelium_l1::ast::Ctor` | struct | `crates/mycelium-l1/src/ast.rs:91` | One constructor of a [`TypeDecl`]. |
-| `mycelium_l1::ast::Expr` | enum | `crates/mycelium-l1/src/ast.rs:218` | An expression. |
+| `mycelium_l1::ast::Expr` | enum | `crates/mycelium-l1/src/ast.rs:243` | An expression. |
 | `mycelium_l1::ast::FnDecl` | struct | `crates/mycelium-l1/src/ast.rs:125` | A function definition. |
 | `mycelium_l1::ast::FnSig` | struct | `crates/mycelium-l1/src/ast.rs:111` | A function signature (shared by trait requirements and `fn` definitions). |
 | `mycelium_l1::ast::Item` | enum | `crates/mycelium-l1/src/ast.rs:64` | A top-level item. |
-| `mycelium_l1::ast::Literal` | enum | `crates/mycelium-l1/src/ast.rs:324` | A literal value. |
+| `mycelium_l1::ast::Literal` | enum | `crates/mycelium-l1/src/ast.rs:356` | A literal value. |
 | `mycelium_l1::ast::Nodule` | struct | `crates/mycelium-l1/src/ast.rs:10` | A whole program: a `nodule` header and its items. |
 | `mycelium_l1::ast::Paradigm` | enum | `crates/mycelium-l1/src/ast.rs:20` | A representation **paradigm** tag (RFC-0001 §4.2): the granularity of the RFC-0012 ambient. |
 | `mycelium_l1::ast::Param` | struct | `crates/mycelium-l1/src/ast.rs:136` | A value parameter `name: type`. |
 | `mycelium_l1::ast::Path` | struct | `crates/mycelium-l1/src/ast.rs:6` | A dotted path (`signals.demo`, `core.binary`); also a bare name. |
-| `mycelium_l1::ast::Pattern` | enum | `crates/mycelium-l1/src/ast.rs:311` | A pattern. |
-| `mycelium_l1::ast::Scalar` | enum | `crates/mycelium-l1/src/ast.rs:192` | A scalar element kind. |
-| `mycelium_l1::ast::Sparsity` | enum | `crates/mycelium-l1/src/ast.rs:183` | Declared sparsity of a VSA type. |
-| `mycelium_l1::ast::Strength` | enum | `crates/mycelium-l1/src/ast.rs:205` | A guarantee-lattice strength. |
+| `mycelium_l1::ast::Pattern` | enum | `crates/mycelium-l1/src/ast.rs:336` | A pattern. |
+| `mycelium_l1::ast::Scalar` | enum | `crates/mycelium-l1/src/ast.rs:217` | A scalar element kind. |
+| `mycelium_l1::ast::Sparsity` | enum | `crates/mycelium-l1/src/ast.rs:208` | Declared sparsity of a VSA type. |
+| `mycelium_l1::ast::Strength` | enum | `crates/mycelium-l1/src/ast.rs:230` | A guarantee-lattice strength. |
 | `mycelium_l1::ast::TraitDecl` | struct | `crates/mycelium-l1/src/ast.rs:100` | `trait Name<params> { fn … }` (LR-2; conventional term). |
 | `mycelium_l1::ast::TypeDecl` | struct | `crates/mycelium-l1/src/ast.rs:80` | `type Name<params> = Ctor \| Ctor(field, …) \| …` (LR-1). |
 | `mycelium_l1::ast::TypeRef` | struct | `crates/mycelium-l1/src/ast.rs:145` | A type with an optional guarantee-strength index (`T @ Exact`; LR-6). |
-| `mycelium_l1::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:241` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
-| `mycelium_l1::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:197` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
-| `mycelium_l1::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:206` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
+| `mycelium_l1::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:275` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
+| `mycelium_l1::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:231` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
+| `mycelium_l1::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:240` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
 | `mycelium_l1::checkty` | mod | `crates/mycelium-l1/src/lib.rs:31` | — |
 | `mycelium_l1::checkty::CheckError` | struct | `crates/mycelium-l1/src/checkty.rs:45` | An explicit check failure (never a silent pass or a guess — S5/G2). |
-| `mycelium_l1::checkty::CtorInfo` | struct | `crates/mycelium-l1/src/checkty.rs:88` | One constructor of a registered data type. |
-| `mycelium_l1::checkty::DataInfo` | struct | `crates/mycelium-l1/src/checkty.rs:97` | A registered (monomorphic) data type. |
-| `mycelium_l1::checkty::Env` | struct | `crates/mycelium-l1/src/checkty.rs:107` | The checked program environment: registry + function table. |
-| `mycelium_l1::checkty::Env::ctor` | fn | `crates/mycelium-l1/src/checkty.rs:119` | Find the data type owning constructor `ctor`, with its index — `None` if no type has it. |
-| `mycelium_l1::checkty::Env::ctor` | fn | `crates/mycelium-l1/src/checkty.rs:119` | Find the data type owning constructor `ctor`, with its index — `None` if no type has it. |
+| `mycelium_l1::checkty::CtorInfo` | struct | `crates/mycelium-l1/src/checkty.rs:100` | One constructor of a registered data type. |
+| `mycelium_l1::checkty::DataInfo` | struct | `crates/mycelium-l1/src/checkty.rs:109` | A registered (monomorphic) data type. |
+| `mycelium_l1::checkty::Env` | struct | `crates/mycelium-l1/src/checkty.rs:119` | The checked program environment: registry + function table. |
+| `mycelium_l1::checkty::Env::ctor` | fn | `crates/mycelium-l1/src/checkty.rs:131` | Find the data type owning constructor `ctor`, with its index — `None` if no type has it. |
+| `mycelium_l1::checkty::Env::ctor` | fn | `crates/mycelium-l1/src/checkty.rs:131` | Find the data type owning constructor `ctor`, with its index — `None` if no type has it. |
 | `mycelium_l1::checkty::Ty` | enum | `crates/mycelium-l1/src/checkty.rs:17` | A v0 (monomorphic) type. |
-| `mycelium_l1::checkty::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:241` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
-| `mycelium_l1::checkty::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:197` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
-| `mycelium_l1::checkty::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:206` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
-| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:1375` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
-| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:1361` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
+| `mycelium_l1::checkty::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:275` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
+| `mycelium_l1::checkty::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:231` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
+| `mycelium_l1::checkty::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:240` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
+| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:1409` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
+| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:1395` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
 | `mycelium_l1::elab` | mod | `crates/mycelium-l1/src/lib.rs:33` | — |
 | `mycelium_l1::elab::ElabError` | enum | `crates/mycelium-l1/src/elab.rs:45` | Why a definition could not be elaborated to L0 — always explicit, never a partial artifact |
-| `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:450` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |
+| `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:421` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |
 | `mycelium_l1::elab::elaborate` | fn | `crates/mycelium-l1/src/elab.rs:204` | Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`]. |
 | `mycelium_l1::elab::lit_value` | fn | `crates/mycelium-l1/src/elab.rs:83` | Build the L0 [`Value`] of a representation literal (Q6: a literal *is* its representation — |
 | `mycelium_l1::elab::policy_name_ref` | fn | `crates/mycelium-l1/src/elab.rs:183` | The v0 **policy-name reference**: a deterministic, domain-separated content address derived |
@@ -780,7 +780,7 @@
 | `mycelium_l1::error::ParseError::new` | fn | `crates/mycelium-l1/src/error.rs:19` | Build an error at `pos`. |
 | `mycelium_l1::error::ParseError::new` | fn | `crates/mycelium-l1/src/error.rs:19` | Build an error at `pos`. |
 | `mycelium_l1::eval` | mod | `crates/mycelium-l1/src/lib.rs:35` | — |
-| `mycelium_l1::eval::Evaluator` | struct | `crates/mycelium-l1/src/eval.rs:187` | The L1 evaluator over a checked [`Env`]. |
+| `mycelium_l1::eval::Evaluator` | struct | `crates/mycelium-l1/src/eval.rs:230` | The L1 evaluator over a checked [`Env`]. |
 | `mycelium_l1::eval::L1Error` | enum | `crates/mycelium-l1/src/eval.rs:86` | Why L1 evaluation could not produce a value — always explicit (S5/G2). |
 | `mycelium_l1::eval::L1Value` | enum | `crates/mycelium-l1/src/eval.rs:35` | An L1 runtime value: an L0 representation value, or a constructed datum. |
 | `mycelium_l1::eval::L1Value::as_repr` | fn | `crates/mycelium-l1/src/eval.rs:52` | The underlying L0 value, if this is a representation value. |
@@ -1575,27 +1575,27 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_std_cmp::Bf16Bits` | struct | `crates/mycelium-std-cmp/src/lib.rs:534` | A BF16 value stored as its bit pattern in a `u16`. |
-| `mycelium_std_cmp::Bf16Bits::INFINITY:` | const | `crates/mycelium-std-cmp/src/lib.rs:546` | The BF16 bit-pattern for positive infinity. |
-| `mycelium_std_cmp::Bf16Bits::NAN:` | const | `crates/mycelium-std-cmp/src/lib.rs:544` | The BF16 bit-pattern for NaN (a quiet NaN in f32 bit layout). |
-| `mycelium_std_cmp::Bf16Bits::NEG_INFINITY:` | const | `crates/mycelium-std-cmp/src/lib.rs:548` | The BF16 bit-pattern for negative infinity. |
-| `mycelium_std_cmp::Bf16Bits::NEG_ONE:` | const | `crates/mycelium-std-cmp/src/lib.rs:542` | The BF16 bit-pattern for negative one. |
-| `mycelium_std_cmp::Bf16Bits::ONE:` | const | `crates/mycelium-std-cmp/src/lib.rs:540` | The BF16 bit-pattern for positive one. |
-| `mycelium_std_cmp::Bf16Bits::ZERO:` | const | `crates/mycelium-std-cmp/src/lib.rs:538` | The BF16 bit-pattern for positive zero. |
-| `mycelium_std_cmp::Bf16Bits::to_f32` | fn | `crates/mycelium-std-cmp/src/lib.rs:556` | Widen this BF16 value to an f32 by zero-filling the lower 16 mantissa bits. |
+| `mycelium_std_cmp::Bf16Bits` | struct | `crates/mycelium-std-cmp/src/lib.rs:538` | A BF16 value stored as its bit pattern in a `u16`. |
+| `mycelium_std_cmp::Bf16Bits::INFINITY:` | const | `crates/mycelium-std-cmp/src/lib.rs:550` | The BF16 bit-pattern for positive infinity. |
+| `mycelium_std_cmp::Bf16Bits::NAN:` | const | `crates/mycelium-std-cmp/src/lib.rs:548` | The BF16 bit-pattern for NaN (a quiet NaN in f32 bit layout). |
+| `mycelium_std_cmp::Bf16Bits::NEG_INFINITY:` | const | `crates/mycelium-std-cmp/src/lib.rs:552` | The BF16 bit-pattern for negative infinity. |
+| `mycelium_std_cmp::Bf16Bits::NEG_ONE:` | const | `crates/mycelium-std-cmp/src/lib.rs:546` | The BF16 bit-pattern for negative one. |
+| `mycelium_std_cmp::Bf16Bits::ONE:` | const | `crates/mycelium-std-cmp/src/lib.rs:544` | The BF16 bit-pattern for positive one. |
+| `mycelium_std_cmp::Bf16Bits::ZERO:` | const | `crates/mycelium-std-cmp/src/lib.rs:542` | The BF16 bit-pattern for positive zero. |
+| `mycelium_std_cmp::Bf16Bits::to_f32` | fn | `crates/mycelium-std-cmp/src/lib.rs:560` | Widen this BF16 value to an f32 by zero-filling the lower 16 mantissa bits. |
 | `mycelium_std_cmp::ClampError` | enum | `crates/mycelium-std-cmp/src/lib.rs:251` | The explicit error set for `clamp` (spec §3). |
-| `mycelium_std_cmp::GUARANTEE_MATRIX:` | const | `crates/mycelium-std-cmp/src/lib.rs:841` | The `std.cmp`/`convert` guarantee matrix (spec §4). |
-| `mycelium_std_cmp::MatrixRow` | struct | `crates/mycelium-std-cmp/src/lib.rs:819` | One row of the `std.cmp`/`convert` guarantee matrix (RFC-0016 §4.5; spec §4). |
+| `mycelium_std_cmp::GUARANTEE_MATRIX:` | const | `crates/mycelium-std-cmp/src/lib.rs:845` | The `std.cmp`/`convert` guarantee matrix (spec §4). |
+| `mycelium_std_cmp::MatrixRow` | struct | `crates/mycelium-std-cmp/src/lib.rs:823` | One row of the `std.cmp`/`convert` guarantee matrix (RFC-0016 §4.5; spec §4). |
 | `mycelium_std_cmp::MycEq` | trait | `crates/mycelium-std-cmp/src/lib.rs:119` | Total equality — respects content-addressed identity where it applies (ADR-003). |
 | `mycelium_std_cmp::MycOrd:` | trait | `crates/mycelium-std-cmp/src/lib.rs:133` | Total ordering — for types with a well-defined total order. |
 | `mycelium_std_cmp::MycPartialOrd:` | trait | `crates/mycelium-std-cmp/src/lib.rs:168` | Partial ordering — for types where some pairs may be incomparable (e.g. |
-| `mycelium_std_cmp::Narrow` | trait | `crates/mycelium-std-cmp/src/lib.rs:359` | Explicitly-fallible narrowing conversion — the value may not fit in the target type. |
-| `mycelium_std_cmp::NarrowError` | enum | `crates/mycelium-std-cmp/src/lib.rs:314` | The explicit error set for a narrowing conversion (spec §3 / §4). |
+| `mycelium_std_cmp::Narrow` | trait | `crates/mycelium-std-cmp/src/lib.rs:363` | Explicitly-fallible narrowing conversion — the value may not fit in the target type. |
+| `mycelium_std_cmp::NarrowError` | enum | `crates/mycelium-std-cmp/src/lib.rs:318` | The explicit error set for a narrowing conversion (spec §3 / §4). |
 | `mycelium_std_cmp::Ordering` | enum | `crates/mycelium-std-cmp/src/lib.rs:70` | The result of a comparison — Less, Equal, or Greater. |
 | `mycelium_std_cmp::Ordering::reverse` | fn | `crates/mycelium-std-cmp/src/lib.rs:82` | Reverse the ordering: `Less ↔ Greater`, `Equal ↔ Equal`. |
-| `mycelium_std_cmp::Widen` | trait | `crates/mycelium-std-cmp/src/lib.rs:303` | Lossless widening conversion — the domain is a subset of the codomain by construction. |
-| `mycelium_std_cmp::assert_matrix_invariants` | fn | `crates/mycelium-std-cmp/src/lib.rs:920` | Assert the structural invariants of the guarantee matrix — called from tests. |
-| `mycelium_std_cmp::myc_clamp` | fn | `crates/mycelium-std-cmp/src/lib.rs:281` | Clamp `x` to `[lo, hi]` under total order. |
+| `mycelium_std_cmp::Widen` | trait | `crates/mycelium-std-cmp/src/lib.rs:307` | Lossless widening conversion — the domain is a subset of the codomain by construction. |
+| `mycelium_std_cmp::assert_matrix_invariants` | fn | `crates/mycelium-std-cmp/src/lib.rs:924` | Assert the structural invariants of the guarantee matrix — called from tests. |
+| `mycelium_std_cmp::myc_clamp` | fn | `crates/mycelium-std-cmp/src/lib.rs:285` | Clamp `x` to `[lo, hi]` under total order. |
 | `mycelium_std_cmp::myc_max` | fn | `crates/mycelium-std-cmp/src/lib.rs:238` | Return the maximum of two values under total order. |
 | `mycelium_std_cmp::myc_min` | fn | `crates/mycelium-std-cmp/src/lib.rs:226` | Return the minimum of two values under total order. |
 
@@ -1679,19 +1679,19 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_std_core::GUARANTEE_MATRIX:` | const | `crates/mycelium-std-core/src/lib.rs:130` | The `std.core` guarantee matrix (spec §4). |
-| `mycelium_std_core::GuaranteeRow` | struct | `crates/mycelium-std-core/src/lib.rs:112` | One row of the module guarantee matrix (RFC-0016 §4.5): an exported item, its |
-| `mycelium_std_core::bound_of` | fn | `crates/mycelium-std-core/src/lib.rs:96` | The bound attached to `v`, or `None` when there is no metadata or no bound. |
-| `mycelium_std_core::guarantee_of` | fn | `crates/mycelium-std-core/src/lib.rs:90` | The guarantee tag of `v` (total — every value carries one). |
-| `mycelium_std_core::meta_of` | fn | `crates/mycelium-std-core/src/lib.rs:84` | The metadata of `v`, or `None` if `v` is algebraic data (no `Meta`). |
-| `mycelium_std_core::prelude` | mod | `crates/mycelium-std-core/src/lib.rs:53` | The curated default prelude (spec §3 / FLAG Q1). |
-| `mycelium_std_core::prelude::bound_of` | fn | `crates/mycelium-std-core/src/lib.rs:96` | The bound attached to `v`, or `None` when there is no metadata or no bound. |
-| `mycelium_std_core::prelude::guarantee_of` | fn | `crates/mycelium-std-core/src/lib.rs:90` | The guarantee tag of `v` (total — every value carries one). |
-| `mycelium_std_core::prelude::meta_of` | fn | `crates/mycelium-std-core/src/lib.rs:84` | The metadata of `v`, or `None` if `v` is algebraic data (no `Meta`). |
-| `mycelium_std_core::prelude::provenance_of` | fn | `crates/mycelium-std-core/src/lib.rs:102` | The provenance of `v`, or `None` if `v` is algebraic data (no `Meta`). |
-| `mycelium_std_core::prelude::repr_of` | fn | `crates/mycelium-std-core/src/lib.rs:78` | The representation of `v`, or `None` if `v` is algebraic data (no `Repr`). |
-| `mycelium_std_core::provenance_of` | fn | `crates/mycelium-std-core/src/lib.rs:102` | The provenance of `v`, or `None` if `v` is algebraic data (no `Meta`). |
-| `mycelium_std_core::repr_of` | fn | `crates/mycelium-std-core/src/lib.rs:78` | The representation of `v`, or `None` if `v` is algebraic data (no `Repr`). |
+| `mycelium_std_core::GUARANTEE_MATRIX:` | const | `crates/mycelium-std-core/src/lib.rs:139` | The `std.core` guarantee matrix (spec §4). |
+| `mycelium_std_core::GuaranteeRow` | struct | `crates/mycelium-std-core/src/lib.rs:121` | One row of the module guarantee matrix (RFC-0016 §4.5): an exported item, its |
+| `mycelium_std_core::bound_of` | fn | `crates/mycelium-std-core/src/lib.rs:105` | The bound attached to `v`, or `None` when there is no metadata or no bound. |
+| `mycelium_std_core::guarantee_of` | fn | `crates/mycelium-std-core/src/lib.rs:99` | The guarantee tag of `v` (total — every value carries one). |
+| `mycelium_std_core::meta_of` | fn | `crates/mycelium-std-core/src/lib.rs:93` | The metadata of `v`, or `None` if `v` is algebraic data (no `Meta`). |
+| `mycelium_std_core::prelude` | mod | `crates/mycelium-std-core/src/lib.rs:62` | The curated default prelude (spec §3 / FLAG Q1). |
+| `mycelium_std_core::prelude::bound_of` | fn | `crates/mycelium-std-core/src/lib.rs:105` | The bound attached to `v`, or `None` when there is no metadata or no bound. |
+| `mycelium_std_core::prelude::guarantee_of` | fn | `crates/mycelium-std-core/src/lib.rs:99` | The guarantee tag of `v` (total — every value carries one). |
+| `mycelium_std_core::prelude::meta_of` | fn | `crates/mycelium-std-core/src/lib.rs:93` | The metadata of `v`, or `None` if `v` is algebraic data (no `Meta`). |
+| `mycelium_std_core::prelude::provenance_of` | fn | `crates/mycelium-std-core/src/lib.rs:111` | The provenance of `v`, or `None` if `v` is algebraic data (no `Meta`). |
+| `mycelium_std_core::prelude::repr_of` | fn | `crates/mycelium-std-core/src/lib.rs:87` | The representation of `v`, or `None` if `v` is algebraic data (no `Repr`). |
+| `mycelium_std_core::provenance_of` | fn | `crates/mycelium-std-core/src/lib.rs:111` | The provenance of `v`, or `None` if `v` is algebraic data (no `Meta`). |
+| `mycelium_std_core::repr_of` | fn | `crates/mycelium-std-core/src/lib.rs:87` | The representation of `v`, or `None` if `v` is algebraic data (no `Repr`). |
 
 ## mycelium-std-dense
 
@@ -2173,7 +2173,7 @@
 | `mycelium_std_recover::PolicyRef` | type | `crates/mycelium-std-recover/src/policy.rs:35` | The content address of a `RecoveryPolicy` (RFC-0001 §4.6 / ADR-006 / `PolicyRef`). |
 | `mycelium_std_recover::RecoverOutcome` | type | `crates/mycelium-std-recover/src/lib.rs:89` | `RecoverOutcome<T, E>` is `Resolution<T, E>` — the concrete shape that resolves |
 | `mycelium_std_recover::RecoveryAction` | enum | `crates/mycelium-std-recover/src/action.rs:33` | The **closed** v0 recovery-action set (RFC-0014 §4.4; §8 resolved). |
-| `mycelium_std_recover::RecoveryPolicy` | struct | `crates/mycelium-std-recover/src/policy.rs:90` | A reified, content-addressed recovery policy. |
+| `mycelium_std_recover::RecoveryPolicy` | struct | `crates/mycelium-std-recover/src/policy.rs:86` | A reified, content-addressed recovery policy. |
 | `mycelium_std_recover::Resolution` | enum | `crates/mycelium-std-recover/src/outcome.rs:90` | The **outcome of handling** an [`Outcome`] under a recovery policy (RFC-0014 §4.2). |
 | `mycelium_std_recover::UndeclaredEffect` | struct | `crates/mycelium-std-recover/src/effect.rs:32` | A performed-but-undeclared effect (I3) — an explicit checker error, never silent. |
 | `mycelium_std_recover::UnknownClass` | struct | `crates/mycelium-std-recover/src/registry.rs:39` | The explicit error returned by [`ClassRegistry::resolve`] when a name is not registered (X1). |
@@ -2199,9 +2199,9 @@
 | `mycelium_std_recover::policy` | mod | `crates/mycelium-std-recover/src/lib.rs:66` | — |
 | `mycelium_std_recover::policy::PolicyHashError` | struct | `crates/mycelium-std-recover/src/policy.rs:50` | An error computing the content address of a [`RecoveryPolicy`] (banked guard #5). |
 | `mycelium_std_recover::policy::PolicyRef` | type | `crates/mycelium-std-recover/src/policy.rs:35` | The content address of a `RecoveryPolicy` (RFC-0001 §4.6 / ADR-006 / `PolicyRef`). |
-| `mycelium_std_recover::policy::RecoveryPolicy` | struct | `crates/mycelium-std-recover/src/policy.rs:90` | A reified, content-addressed recovery policy. |
-| `mycelium_std_recover::policy::policy_effects` | fn | `crates/mycelium-std-recover/src/policy.rs:246` | The declared, closed effect set for a policy (I3 / RFC-0014 §4.5). |
-| `mycelium_std_recover::policy_effects` | fn | `crates/mycelium-std-recover/src/policy.rs:246` | The declared, closed effect set for a policy (I3 / RFC-0014 §4.5). |
+| `mycelium_std_recover::policy::RecoveryPolicy` | struct | `crates/mycelium-std-recover/src/policy.rs:86` | A reified, content-addressed recovery policy. |
+| `mycelium_std_recover::policy::policy_effects` | fn | `crates/mycelium-std-recover/src/policy.rs:242` | The declared, closed effect set for a policy (I3 / RFC-0014 §4.5). |
+| `mycelium_std_recover::policy_effects` | fn | `crates/mycelium-std-recover/src/policy.rs:242` | The declared, closed effect set for a policy (I3 / RFC-0014 §4.5). |
 | `mycelium_std_recover::recover_classified` | fn | `crates/mycelium-std-recover/src/handle.rs:198` | Convenience: bridge a `Result<T, E>` into a [`Resolution<T, E>`] under a policy. |
 | `mycelium_std_recover::registry` | mod | `crates/mycelium-std-recover/src/lib.rs:67` | — |
 | `mycelium_std_recover::registry::ClassName` | struct | `crates/mycelium-std-recover/src/registry.rs:19` | A registry-resolved error class name (RFC-0013 §4.5 — X1). |

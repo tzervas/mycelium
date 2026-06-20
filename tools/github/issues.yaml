@@ -1545,7 +1545,7 @@ issues:
   - id: E5-1
     title: "E5-1 (epic) — Stdlib error-type unification (DN-17 §5)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:stdlib, priority:P2]
+    labels: [phase:5, type:epic, area:stdlib, priority:P2, status:done]
     depends_on: [M-376, M-501]
     doc_refs: [corpus:DN-17, corpus:DN-16]
     body: |
@@ -1555,7 +1555,7 @@ issues:
   - id: M-535
     title: "M-535 — Shared stdlib error scaffold (derive/helper for the std error contract)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:needs-design]
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
     depends_on: [M-376]
     doc_refs: [corpus:DN-17, corpus:RFC-0016]
     body: |
@@ -1565,7 +1565,7 @@ issues:
   - id: M-536
     title: "M-536 — Convert each mycelium-std-* error.rs to the shared scaffold (fan-out)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:chore, area:stdlib, priority:P2, status:needs-design]
+    labels: [phase:5, type:chore, area:stdlib, priority:P2, status:done]
     depends_on: [M-535]
     doc_refs: [corpus:DN-17]
     body: |
@@ -1638,7 +1638,7 @@ issues:
   - id: E4-1
     title: "E4-1 (epic) — DRY + backwards-compatible API-ergonomics pass over the L1 lexer/parser + toolchain"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:language, priority:P2, status:needs-design]
+    labels: [phase:5, type:epic, area:language, priority:P2, status:done]
     depends_on: []
     doc_refs: [src:crates/mycelium-l1/src/parse.rs, src:crates/mycelium-l1/src/ast.rs, src:crates/mycelium-fmt/src/lib.rs, src:crates/mycelium-diag/src/lib.rs]
     body: |
@@ -1648,7 +1648,7 @@ issues:
   - id: M-640
     title: "M-640 — L1 parser DRY: extract separated-list + punctuation-expect helpers"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:chore, area:language, priority:P2, status:needs-design]
+    labels: [phase:5, type:chore, area:language, priority:P2, status:done]
     depends_on: []
     doc_refs: [src:crates/mycelium-l1/src/parse.rs, src:crates/mycelium-l1/src/token.rs, src:crates/mycelium-l1/src/lexer.rs]
     body: |
@@ -1658,7 +1658,7 @@ issues:
   - id: M-641
     title: "M-641 — L1 pass DRY: unify Expr walkers + parameterize pattern-matrix specialization"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:chore, area:language, priority:P2, status:needs-design]
+    labels: [phase:5, type:chore, area:language, priority:P2, status:done]
     depends_on: []
     doc_refs: [src:crates/mycelium-l1/src/elab.rs, src:crates/mycelium-l1/src/totality.rs, src:crates/mycelium-l1/src/usefulness.rs, src:crates/mycelium-l1/src/decision.rs]
     body: |
@@ -1668,7 +1668,7 @@ issues:
   - id: M-642
     title: "M-642 — L1 backwards-compatible API ergonomics (Default/From/ctors/non_exhaustive/getters)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P3, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P3, status:done]
     depends_on: []
     doc_refs: [src:crates/mycelium-l1/src/ast.rs, src:crates/mycelium-l1/src/eval.rs, src:crates/mycelium-l1/src/error.rs, src:crates/mycelium-l1/src/checkty.rs]
     body: |

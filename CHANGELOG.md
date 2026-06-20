@@ -8,6 +8,26 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-20: Phase 5 — L1 DRY (E4-1) + stdlib error unification (E5-1))
+Two behaviour-preserving Phase-5 refactors (existing tests stay green; no guarantee/semantic change, VR-5).
+- **E4-1 — L1 front-end DRY + ergonomics (M-640/641/642).** Parser: `comma_separated`/`expect_keyword`
+  fold 8 hand-rolled separated-list loops + 12 keyword-opener diagnostics onto one path each (context-
+  bearing messages left byte-identical). Passes: a shared `pub(crate) walk_expr` pre-order traversal +
+  a `SpecializeRow` trait make the Maranget row-specialization one generic across the bare matrix and
+  the arm-tagged decision rows (`decision.rs` 398→190 code lines). Additive API ergonomics (ctors,
+  `Hash`, `#[non_exhaustive]` on `Literal`, getters) — **`Default for TypeRef` deliberately omitted**
+  (no honest zero value → would mask bugs, G2). All 7 l1 dependents still build + test.
+- **E5-1 — stdlib error unification (M-535/536).** New `mycelium_std_core::error_scaffold`: a `StdError`
+  marker super-trait + blanket impl + an opt-in `impl_std_error!` declarative macro (plain / generic /
+  `source`-delegating) factoring out **only** the mechanical `impl std::error::Error` boilerplate — never
+  a Display message, variant, derive, or guarantee tag (DN-17 §5 non-coupling). **24 error types across
+  12 std crates** converted, behaviour-preserving (zero Display/variant/derive lines removed).
+  **Honest scope:** 5 crates (content, dense, swap, sys, ternary) are **deliberately not** converted —
+  they don't depend on `std.core` and `std-sys` sits *below* the std layer; adding the dep for a 1-line
+  marker would be a layering inversion (G2/VR-5, KC-3) — left hand-rolled. **Honest LOC:** net **+345**
+  (the documented+tested scaffold dominates at this eligible scale; the win accrues as more complex error
+  types adopt it) — the DN-17 "net LOC down" expectation is corrected, not claimed.
+
 ### Added (2026-06-20: Phase 8 — release mechanics + CLI DRY (M-383, M-384, M-643))
 - **ADR-018 (Accepted) — versioning policy.** Per-crate `0.x` SemVer across the workspace,
   **source-only** distribution (no crates.io publish in the design phase), and the `CHANGELOG`
