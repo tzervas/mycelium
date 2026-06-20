@@ -65,6 +65,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from urllib.parse import quote
 
 try:
     import yaml
@@ -90,6 +91,7 @@ VERBOSE = False
 # BEFORE each retry (1s, 2s, 4s, 8s — exponential).
 _GH_RETRY_MAX = 4
 _GH_RETRY_DELAYS = (1, 2, 4, 8)
+_GH_TIMEOUT = 120  # per-call ceiling so a HUNG gh request can never block forever (M-382 follow-up)
 
 
 def _is_transient_network(stderr) -> bool:
@@ -149,13 +151,19 @@ def _run_gh(args, *, input_text=None):
                 text=True,
                 input=input_text,
                 capture_output=True,
+                timeout=_GH_TIMEOUT,
             )
+            rc, out, err = proc.returncode, proc.stdout, proc.stderr
         except FileNotFoundError:  # pragma: no cover - environment guard
             sys.exit(
                 "ERROR: `gh` (GitHub CLI) not found on PATH. Install it and run `gh auth login` "
                 "(Windows: `winget install GitHub.cli`)."
             )
-        rc, out, err = proc.returncode, proc.stdout, proc.stderr
+        except subprocess.TimeoutExpired:
+            # A hung call (e.g. a malformed request that never returns) is turned into a
+            # classified TRANSIENT failure so the retry/backoff handles it — never an infinite
+            # block. ('timed out' is recognized by _is_transient_network.)
+            rc, out, err = 124, "", f"gh call timed out after {_GH_TIMEOUT}s"
         # Success, or a non-transient failure: return immediately (no retry).
         if rc == 0 or not _is_transient_network(err):
             return rc, out, err
@@ -938,13 +946,15 @@ def reconcile_labels(repo, labels_json, dry_run):
         if migrations:
             print(f">> noncompliant-label migrations: {len(migrations)} to migrate")
         for old_name, new_name in migrations:
-            # Find every open + closed issue/PR carrying the stale label.
+            # Find every open + closed issue/PR carrying the stale label. The label name is
+            # URL-encoded (it can contain spaces, e.g. the GitHub default `good first issue`) —
+            # an unencoded space makes a malformed query that HANGS the request (M-382 follow-up).
             raw_issues = json.loads(
                 gh(
                     [
                         "api",
                         "--paginate",
-                        f"repos/{repo}/issues?state=all&per_page=100&labels={old_name}",
+                        f"repos/{repo}/issues?state=all&per_page=100&labels={quote(old_name, safe='')}",
                     ]
                 )
             )
