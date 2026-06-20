@@ -303,6 +303,7 @@ Invoke with `/<name>`; they auto-engage when relevant.
 - **`/changelog`** — keep `CHANGELOG.md` + per-doc footers in sync, append-only.
 - **`/doc-index`** — regenerate and query the agent code index (`docs/api-index/`), check
   `doc_refs` grammar validity.
+- **`/land`** — land a reviewed PR on main: self-review + handle CI/bot comments → green `just check` → curated squash-merge (squash-only) → branch/worktree cleanup.
 
 The review skills share one rubric: `.claude/skills/_shared/review-rubric.md` (tiers, severity,
 report format). Posture is **advisory** — they recommend, they don't gate.
