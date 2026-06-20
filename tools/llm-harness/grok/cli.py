@@ -88,7 +88,9 @@ def _load_prior_outcomes(
     if path.is_dir():
         for m in models:
             safe = m.id.replace("/", "_").replace(" ", "_")
-            candidates = sorted(path.glob(f"*{safe}*.json"), reverse=True)
+            # Narrow to *-<model>-live.json so we don't accidentally pick up SYNTHETIC
+            # self-test samples, batch reports, or other stray JSON files.
+            candidates = sorted(path.glob(f"*-{safe}-live.json"), reverse=True)
             if candidates:
                 paths.append(candidates[0])
             else:
@@ -98,7 +100,7 @@ def _load_prior_outcomes(
     elif path.is_file():
         paths = [path]
     else:
-        log.error("--resume-from: path does not exist: %s", path)
+        log.warning("--resume-from: path does not exist: %s — run proceeds fresh", path)
         return result
 
     for p in paths:

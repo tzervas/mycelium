@@ -72,9 +72,9 @@ class RunConfig:
     # bound (heuristic token estimate; unbounded live completions). Default $10.
     max_usd: float = 10.0
     # Optional: task outcomes from a prior run, keyed by model id.  Tasks whose prior status
-    # is STATUS_PASS are carried forward unchanged; all others are retried.  Metrics in the
-    # new report cover retried tasks only — the report header notes the resume.
-    prior_outcomes: dict[str, list[dict]] = field(default_factory=dict)
+    # is STATUS_PASS are carried forward (marked resumed=True in output); all others are retried.
+    # Outcomes for task ids not in the current task set are silently dropped.
+    prior_outcomes: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
 
 
 def _paced_live_call(
@@ -139,8 +139,16 @@ def run_live_model(
     guarantee_tag = "Empirical"  # live model output (VR-5)
 
     # Resume: carry forward already-PASSed tasks from a prior run; retry the rest.
-    prior = {o["task_id"]: o for o in cfg.prior_outcomes.get(model.id, [])}
-    carried = {tid: o for tid, o in prior.items() if o.get("status") == STATUS_PASS}
+    # .get("task_id") avoids KeyError on malformed entries; None key is discarded.
+    # Filter to the current task set so stale PASS outcomes are never silently carried.
+    prior = {o.get("task_id"): o for o in cfg.prior_outcomes.get(model.id, [])}
+    prior.pop(None, None)
+    current_task_ids = {t.id for t in cfg.tasks}
+    carried = {
+        tid: o
+        for tid, o in prior.items()
+        if o.get("status") == STATUS_PASS and tid in current_task_ids
+    }
     tasks_to_run = [t for t in cfg.tasks if t.id not in carried]
     if carried:
         log.info(
