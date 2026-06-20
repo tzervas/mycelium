@@ -824,11 +824,11 @@ def reconcile_labels(repo, labels_json, dry_run):
     # stale label). Noncompliant labels without an alias are FLAGGED — never silently deleted (G2).
     aliases = _load_label_aliases(HERE)
     canonical_names = {lb["name"] for lb in labels}
-    raw_repo_labels = json.loads(
-        gh(["api", "--paginate", f"repos/{repo}/labels"])
-    )
+    raw_repo_labels = json.loads(gh(["api", "--paginate", f"repos/{repo}/labels"]))
     repo_label_names = [lb["name"] for lb in raw_repo_labels]
-    migrations, flags = plan_label_migrations(repo_label_names, canonical_names, aliases)
+    migrations, flags = plan_label_migrations(
+        repo_label_names, canonical_names, aliases
+    )
 
     if not migrations and not flags:
         print("   = noncompliant labels: none found (repo labels match labels.json)")
@@ -1559,7 +1559,9 @@ def self_test():
     # Multi-milestone: resolves to highest-phase, returns informational note (not a blocking flag).
     ms, note = infer_milestone(["M-150", "M-201"], t2m)
     assert ms == "Phase 2", f"expected 'Phase 2', got {ms!r}"
-    assert note and note.startswith("note:") and "Phase 2" in note, f"unexpected note: {note!r}"
+    assert note and note.startswith("note:") and "Phase 2" in note, (
+        f"unexpected note: {note!r}"
+    )
     # milestone_rank: Phase N prefix → N (int); unprefixed → -1.
     assert milestone_rank("Phase 8 — Toolchain & Release Engineering") == 8
     assert milestone_rank("Phase 0") == 0
@@ -1575,7 +1577,13 @@ def self_test():
     assert ms3 is not None and note3 and note3.startswith("note:"), (ms3, note3)
 
     # ── plan_label_migrations (pure, offline) ────────────────────────────────────────────────
-    canonical = {"type:bug", "type:feature", "type:docs", "good-first-issue", "area:swap"}
+    canonical = {
+        "type:bug",
+        "type:feature",
+        "type:docs",
+        "good-first-issue",
+        "area:swap",
+    }
     aliases = {
         "bug": "type:bug",
         "enhancement": "type:feature",
@@ -1583,9 +1591,7 @@ def self_test():
         "good first issue": "good-first-issue",
     }
     # compliant labels → no migrations, no flags.
-    migs, flgs = plan_label_migrations(
-        ["type:bug", "area:swap"], canonical, aliases
-    )
+    migs, flgs = plan_label_migrations(["type:bug", "area:swap"], canonical, aliases)
     assert migs == [] and flgs == [], (migs, flgs)
     # mix: two aliased + one unaliased noncompliant.
     migs, flgs = plan_label_migrations(
