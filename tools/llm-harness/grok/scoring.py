@@ -193,7 +193,7 @@ class MycCheckScorer:
             )
         runner = self._runner or self._default_runner
         try:
-            code, _out, err = runner(source_text)
+            code, out, err = runner(source_text)
         except BackendScorerError as exc:
             self._available = False
             self._skip_reason = str(exc)
@@ -207,11 +207,16 @@ class MycCheckScorer:
             )
         self._available = True
         result = classify_exit_code(code)
-        # Carry a tail of stderr as a diagnostic hint for the correction loop.
-        if err and result.verdict in (VERDICT_SYNTAX_ERROR, VERDICT_TYPE_ERROR):
-            result.diagnostics = [
-                {"message": line} for line in err.strip().splitlines()
-            ]
+        # Carry diagnostic text back to the correction loop.
+        # myc-check oracle emits the error message on stdout (e.g. "parse-error: …");
+        # the LSP shim path uses stderr.  Prefer stderr when non-empty; fall back to
+        # stdout so parse-error messages are not silently discarded.
+        if result.verdict in (VERDICT_SYNTAX_ERROR, VERDICT_TYPE_ERROR):
+            diag_raw = err.strip() or out.strip()
+            if diag_raw:
+                result.diagnostics = [
+                    {"message": line} for line in diag_raw.splitlines()
+                ]
         return result
 
     @property

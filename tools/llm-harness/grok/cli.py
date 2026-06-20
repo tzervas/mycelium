@@ -69,6 +69,63 @@ def _find_repo_root(start: Path) -> Path | None:
     return None
 
 
+def _load_prior_outcomes(
+    path: Path,
+    models: list,
+    log: logging.Logger,
+) -> dict[str, list[dict]]:
+    """Load per-model task outcomes from a prior run's JSON reports (for --resume-from).
+
+    PATH may be a reports directory (selects the most recent *-<model>-live.json per model)
+    or a single JSON file.  Returns a dict mapping model_id → list[outcome_dict].
+    Missing or unreadable files are warned, not errors (G2 — the run proceeds fresh).
+    """
+    import json
+
+    result: dict[str, list[dict]] = {}
+    paths: list[Path] = []
+
+    if path.is_dir():
+        for m in models:
+            safe = m.id.replace("/", "_").replace(" ", "_")
+            candidates = sorted(path.glob(f"*{safe}*.json"), reverse=True)
+            if candidates:
+                paths.append(candidates[0])
+            else:
+                log.warning(
+                    "resume: no prior report found for model %r in %s", m.id, path
+                )
+    elif path.is_file():
+        paths = [path]
+    else:
+        log.error("--resume-from: path does not exist: %s", path)
+        return result
+
+    for p in paths:
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+            model_id = data.get("metadata", {}).get("model")
+            outcomes = data.get("outcomes", [])
+            if not model_id or not isinstance(outcomes, list):
+                log.warning(
+                    "resume: %s has no usable metadata.model or outcomes", p.name
+                )
+                continue
+            result[model_id] = outcomes
+            n_pass = sum(1 for o in outcomes if o.get("status") == "PASS")
+            log.info(
+                "resume: loaded %s — %d task(s), %d PASS (will be carried forward, %d will retry)",
+                p.name,
+                len(outcomes),
+                n_pass,
+                len(outcomes) - n_pass,
+            )
+        except Exception as exc:
+            log.warning("resume: could not load %s: %s", p, exc)
+
+    return result
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="grok-harness",
@@ -177,6 +234,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="where to write reports (default: tools/llm-harness/reports/).",
     )
     cfg.add_argument(
+        "--resume-from",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help="resume from a prior run: PATH is a reports directory (picks the most recent "
+        "JSON report per model) or a single JSON report file. Tasks that already have "
+        "status PASS are carried forward unchanged; all others are retried. Metrics in "
+        "the new report cover retried tasks only. Useful after fixing scorer diagnostics "
+        "so that the model now receives actionable error messages on re-run.",
+    )
+    cfg.add_argument(
         "-v", "--verbose", action="store_true", help="DEBUG-level logging."
     )
     return p
@@ -252,6 +320,11 @@ def main(argv: list[str] | None = None) -> int:
 
     tasks = task_set(args.task_set)
     seeds = _split_csv(args.seeds)
+
+    prior_outcomes: dict[str, list[dict]] = {}
+    if args.resume_from is not None:
+        prior_outcomes = _load_prior_outcomes(args.resume_from, ordered, log)
+
     cfg = RunConfig(
         mode=args.mode,
         models=ordered,
@@ -266,6 +339,7 @@ def main(argv: list[str] | None = None) -> int:
         repo_root=_find_repo_root(here),
         base_url=args.base_url,
         max_usd=args.max_usd,
+        prior_outcomes=prior_outcomes,
     )
 
     log.info(

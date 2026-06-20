@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -71,6 +71,10 @@ class RunConfig:
     # estimated cost would breach this is refused before it is sent. Best-effort, not a formal
     # bound (heuristic token estimate; unbounded live completions). Default $10.
     max_usd: float = 10.0
+    # Optional: task outcomes from a prior run, keyed by model id.  Tasks whose prior status
+    # is STATUS_PASS are carried forward unchanged; all others are retried.  Metrics in the
+    # new report cover retried tasks only — the report header notes the resume.
+    prior_outcomes: dict[str, list[dict]] = field(default_factory=dict)
 
 
 def _paced_live_call(
@@ -134,7 +138,21 @@ def run_live_model(
     scorer = MycCheckScorer(repo_root=cfg.repo_root, log=log)
     guarantee_tag = "Empirical"  # live model output (VR-5)
 
-    outcomes = []
+    # Resume: carry forward already-PASSed tasks from a prior run; retry the rest.
+    prior = {o["task_id"]: o for o in cfg.prior_outcomes.get(model.id, [])}
+    carried = {tid: o for tid, o in prior.items() if o.get("status") == STATUS_PASS}
+    tasks_to_run = [t for t in cfg.tasks if t.id not in carried]
+    if carried:
+        log.info(
+            "resume: model %s — carrying forward %d PASS(es), retrying %d task(s): %s",
+            model.id,
+            len(carried),
+            len(tasks_to_run),
+            [t.id for t in tasks_to_run],
+        )
+
+    # Seed outcomes with carried-forward PASSes (marked so the report is self-describing).
+    outcomes: list[dict] = [dict(o, resumed=True) for o in carried.values()]
     scores: list[ScoreResult] = []
     edit_to_fix: list[int] = []
     latencies: list[float] = []
@@ -143,7 +161,7 @@ def run_live_model(
     request_count = 0
     est_holder: dict[str, int] = {"est": 256}
 
-    for task in cfg.tasks:
+    for task in tasks_to_run:
         # Budget gate (G2): refuse to START a task whose conservative cost estimate
         # (max_rounds requests at the floored token estimate) would breach the cap.
         if budget is not None:
