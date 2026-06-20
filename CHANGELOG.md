@@ -8,6 +8,22 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: LLM harness — one-command runner + packaging fix)
+- **`tools/llm-harness/run.sh`** — a one-command runner: resolves uv (else system python3),
+  `uv sync` (+`xai_sdk` only for `--batch`), runs the offline self-test and **aborts if it
+  fails** (never spend on a broken harness — G2), lists the cheapest-first models, then does the
+  **capped** live/batch run *only when a key is present* (otherwise it stops gracefully after the
+  free checks and prints how to set the key). Knobs: `--check-only`, `--smoke`, `--max-usd`,
+  `--models`, `--no-ablation`, `--batch`, and `--` passthrough to `grok.cli`. shellcheck-clean.
+- **Packaging fix:** added the missing `[build-system]` to `tools/llm-harness/pyproject.toml`, so
+  `uv sync` builds + installs the project (and the `grok-harness` console script / `--extra batch`)
+  instead of skipping the entry point with a warning. Verified `uv sync` clean and `uv run
+  grok-harness --self-test` → 14/14. The harness stays **lockless by design** (`.venv`/`uv.lock`
+  gitignored; live + self-test are pure stdlib — no third-party runtime deps).
+- Audited the harness for real-run pitfalls: the live client is stdlib `urllib` (no missing deps),
+  all modules import, the no-key path fails gracefully (clear message, not a traceback), the
+  reports dir is created on demand, and live requests carry a 120 s timeout (no infinite hang).
+
 ### Added (2026-06-20: LLM harness — USD spend gate (`--max-usd`, default $10))
 The Grok/xAI harness (`tools/llm-harness/grok/`) now **gates** total xAI spend (the operator's ≤ $10
 requirement), instead of merely *estimating* cost. A new `budget.BudgetGuard` (one instance per run,

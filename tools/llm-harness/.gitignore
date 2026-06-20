@@ -1,0 +1,5 @@
+# Local uv artifacts. The harness resolves dependencies fresh on each `uv sync` — it is
+# lockless by design (the live path + self-test are pure stdlib; xai_sdk is an optional
+# batch-only extra). See pyproject.toml's portability note. Don't commit either of these.
+.venv/
+uv.lock

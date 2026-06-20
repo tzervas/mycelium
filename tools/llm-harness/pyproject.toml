@@ -8,6 +8,14 @@
 # `xai_sdk` never breaks live mode or the self-test (G2: the batch client raises a
 # clear, actionable error only when it is actually invoked).
 
+[build-system]
+# Declared so `uv sync` can build + install this project (and its `grok-harness` console
+# script / extras) instead of skipping the entry point with a warning. setuptools is the
+# backend the existing `[tool.setuptools]` config below already targets; the package is a
+# pure-Python `tools/` harness (no compiled extensions), so the build is trivial + portable.
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "mycelium-llm-harness"
 version = "0.1.0"
