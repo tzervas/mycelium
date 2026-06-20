@@ -29,8 +29,12 @@ guessed. Downgrade to a flag to stay honest; never upgrade to an invented label.
 
 **Non-destructive by default.** Issue *bodies* change only with `--update-bodies`; OPEN/CLOSED is
 never inferred from a label; **PR labels are add-only** (a human's labels are never stripped);
-adding an option to an existing project field is flagged for the UI (its only API path is not
-safely idempotent without live validation). Sensitive/creative state — a **GPG key** — is **never**
+**project-field options are reconciled additively** — a missing option on an existing single-select
+field is *added* via `updateProjectV2Field`, name-matched (existing options keep their id + item
+assignments; new options are appended; **no option is ever deleted**, because the reconcile always
+sends the *union* of the field's live options ∪ the manifest's options). A live option that is not
+in `project.json` is a would-be deletion — it is **kept in place and FLAGGED** (remove it in the UI
+if intended), never silently dropped (G2). Sensitive/creative state — a **GPG key** — is **never**
 generated without an explicit trigger.
 
 ## Manifests (the declarative source of truth)
@@ -55,10 +59,19 @@ generated without an explicit trigger.
   PR's **commit messages**), derive `type:*` (and `area:*` only on an exact scope match, else
   FLAG), infer a milestone from referenced task-ids (`M-####` / `E#-#`, unambiguous-only, else
   FLAG), and reconcile **add-only**. Backfills every merged PR and keeps new ones in sync.
-- **`--project`** — find-or-create the **Mycelium** board; reconcile fields + single-select
-  options; add repo issues/PRs as items; set **Status/Phase/Area/Priority** from each item's
-  labels. **Views + built-in workflows are settings-only** → recorded in `project.json` and
-  **FLAGGED as manual steps**. See [`project-v2-spec.md`](project-v2-spec.md).
+- **`--project`** — find-or-create the **Mycelium** board; create absent fields (with all their
+  options) and **additively add any missing options to existing fields** (`updateProjectV2Field`,
+  name-matched, union-of-live-∪-manifest, never-deleting — see *Non-destructive by default* above),
+  so a maintainer adds a new option (e.g. a new `area:*` value) to `project.json` and it appears on
+  the board on the next reconcile; add repo issues/PRs as items; set **Status/Phase/Area/Priority**
+  from each item's labels. **Views + built-in workflows are settings-only** → recorded in
+  `project.json` and **FLAGGED as manual steps**. See [`project-v2-spec.md`](project-v2-spec.md).
+
+> **Everything is create/add-if-absent from the manifests.** Labels (`labels.json`,
+> create-or-update via `gh label --force`), milestones (`milestones.json`, create-absent by title),
+> project **fields** (`project.json`, create-absent) and their **options** (`project.json`,
+> add-absent additively) all flow from the declarative manifests — edit the manifest, re-run, and
+> the missing thing is created/added (never deleted, never duplicated, in-sync ⇒ zero writes).
 
 `--all` = the **full maintenance suite**, in order:
 **preflight → validate → labels → milestones → issues → PRs → project**.
