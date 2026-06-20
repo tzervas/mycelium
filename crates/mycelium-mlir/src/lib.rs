@@ -45,6 +45,7 @@ pub mod aot;
 pub mod bitnet;
 pub mod budget;
 pub mod channel;
+pub mod deploy;
 pub mod dialect;
 pub mod inject;
 pub mod jit;
@@ -67,6 +68,7 @@ pub use budget::{
     StaticReason, STATIC_FALLBACK_DEPTH,
 };
 pub use channel::{Network, Receiver, Sender, TryRecv, TrySend};
+pub use deploy::{DeployError, NativeArtifact};
 pub use dialect::emit;
 #[cfg(feature = "mlir-dialect")]
 pub use dialect::native::{
