@@ -14,6 +14,9 @@ workspace = true
 [dependencies]
 # v0 is dependency-free at the library level (a text-scan recogniser, like the M-141 header lints).
 # The bin orchestrates the existing scripts/checks/{secrets,deny}.sh via std::process (no new crate).
+# M-643: the shared CLI substrate. The bin reuses it for arg handling; the `.myc` walk stays in this
+# crate's own `collect_myc` (lib-public, untouched). In-workspace path dep, std-only (KC-3).
+mycelium-cli-common = { path = "../mycelium-cli-common" }
 
 [[bin]]
 name = "myc-sec"

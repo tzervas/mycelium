@@ -18,6 +18,9 @@ mycelium-lsp = { path = "../mycelium-lsp" }
 # The M-363 doc-IR + the §4.1 doc quality-bar lint, now ACTIVE (Wave B): the check-name set lives there
 # as the single source of truth, re-exported here as `DOC_QUALITY_CHECKS`. KC-3 — both above the kernel.
 mycelium-doc = { path = "../mycelium-doc" }
+# M-643: the shared CLI substrate (stdin-or-file `read_source`, the `.myc` `walk_myc`). In-workspace
+# path dep, std-only — no new external crate enters the tree (KC-3).
+mycelium-cli-common = { path = "../mycelium-cli-common" }
 
 [[bin]]
 name = "myc-lint"
