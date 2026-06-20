@@ -58,7 +58,7 @@ descriptor of one natively-compiled program that the Spore layer will embed:
 pub struct NativeArtifact { /* identity, lowered_ir, vr4, faithfulness — all private */ }
 
 impl NativeArtifact {
-    pub fn build(node: &Node, identity: ContentHash) -> Result<Self, DeployError>;
+    pub fn build(node: &Node) -> Result<Self, DeployError>; // identity derived from node.content_hash()
     pub fn id(&self) -> &ContentHash;            // ADR-003 identity = the program's content hash
     pub fn lowered_ir(&self) -> &str;            // dumpable LLVM IR — VR-4 evidence (metadata)
     pub fn vr4(&self) -> &CrossBackendGate;      // the M-630 cross-backend no-opaque attestation
@@ -70,20 +70,24 @@ impl NativeArtifact {
 
 Design choices, each grounded:
 
-1. **Identity is the program's `ContentHash` (ADR-003), supplied by the caller — *not* recomputed
-   from the IR text.** Code identity is the hash of the program, not of its lowering; two builds of
-   the same program on different LLVM patch versions are the *same* artifact identity, their carried
-   IR merely differing. `same_identity_as` keys on the identity, blind to metadata — the
-   "metadata is not identity" rule made executable.
+1. **Identity is the program's `ContentHash` (ADR-003), derived *internally* from
+   `node.content_hash()` — never supplied.** Code identity is the hash of the program, not of its
+   lowering, and deriving it at build time makes it *structurally impossible* for an artifact's `id()`
+   to disagree with the program its IR/attestation embody (a forged identity is unrepresentable, not
+   merely rejected). Two builds of the same program on different LLVM patch versions are the *same*
+   artifact identity, their carried IR merely differing. `same_identity_as` keys on the identity, blind
+   to metadata — the "metadata is not identity" rule made executable.
 2. **VR-4 travels with the unit (the M-620↔M-630 seam).** The descriptor embeds *both* the program's
    dumpable lowered IR *and* the [`vr4::cross_backend_gate`] attestation (every backend's lowering is
    dumpable — no opaque pass), so the no-opaque-lowering guarantee (RFC-0004 §6 / VR-4) is inspectable
    *at the deployment site*, not only at build time. This is exactly M-620's "VR-4 holds end-to-end
    into the deployed unit".
-3. **Never-silent (G2), in its strongest form.** The deploy `identity` is a `ContentHash`, a
-   *validated, non-empty* type — a missing/malformed identity is **unrepresentable**, not a runtime
-   branch (CLAUDE.md banked guard 2). The remaining failure is a program the native backend cannot
-   lower soundly: an explicit `DeployError::NotDeployable` carrying the backend's own EXPLAIN reason,
+3. **Never-silent (G2), in its strongest form, and *structured*.** The deploy `identity` is derived,
+   never an input, so a missing/forged identity is **unrepresentable** — not a runtime branch
+   (CLAUDE.md banked guard 2). The two remaining failures both keep a *structured* signal so a caller
+   branches without string-matching: an absent toolchain is `DeployError::ToolchainMissing` (the caller
+   **skips** — the house idiom, mirroring `AotError::ToolchainMissing`); a program the native backend
+   cannot lower soundly is `DeployError::NotDeployable` carrying the backend's own EXPLAIN reason,
    routed to the proven path — fragile codegen is **never** shipped (G2/VR-5). (Verified: a `Swap` to
    a non-bit/ternary repr is refused; trit-carry arithmetic, `Construct`/`Match`, bit ops *are*
    deployable on the direct-LLVM backend — the artifact covers more than the element-wise fragment,

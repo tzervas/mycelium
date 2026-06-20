@@ -11,11 +11,14 @@
 //! carrying the **VR-4 no-opaque-lowering attestation** into the deployed unit.
 //!
 //! **Content-addressed identity (ADR-003).** A [`NativeArtifact`]'s identity **is the content hash of
-//! the program it compiles** — supplied by the caller (the program's `ContentHash`), the same
-//! Unison-style code identity ADR-003 fixes. Everything else the descriptor carries — the dumpable IR
-//! text, the toolchain versions, the `EXPLAIN` — is **metadata, not identity** (two builds of the
-//! *same* program on different LLVM patch versions are the *same* artifact identity; their IR text
-//! may differ). [`NativeArtifact::id`] returns that canonical identity; [`NativeArtifact::same_identity_as`]
+//! the program it compiles**, derived **internally** from [`Node::content_hash`] at build time — never
+//! supplied, and so structurally unable to disagree with the program its `lowered_ir`/`vr4` embody.
+//! This is the same Unison-style code identity ADR-003 fixes, enforced *by construction*: an artifact
+//! whose `id()` names a different program than it compiled is **unrepresentable**, not merely rejected.
+//! Everything else the descriptor carries — the dumpable IR text, the toolchain versions, the
+//! `EXPLAIN` — is **metadata, not identity** (two builds of the *same* program on different LLVM patch
+//! versions share one identity, because `content_hash` is over the program structure, not the lowered
+//! text). [`NativeArtifact::id`] returns that canonical identity; [`NativeArtifact::same_identity_as`]
 //! compares by it, ignoring metadata — exactly ADR-003's "metadata is not identity".
 //!
 //! **VR-4 carried into the deployment (the M-620↔M-630 seam).** The descriptor embeds the
@@ -24,10 +27,13 @@
 //! *with* the deployed unit and is inspectable at the deployment site, not just at build time
 //! (RFC-0004 §6). [`NativeArtifact::explain`] renders the whole attestation.
 //!
-//! **Never-silent (G2).** A missing/ambiguous deploy input is an explicit [`DeployError`], never a
-//! guessed default: a program the native backend cannot lower soundly is refused with the backend's
-//! own `EXPLAIN`-able reason (routed to the proven path), never fragile codegen shipped to fill the
-//! gap (G2/VR-5).
+//! **Never-silent (G2), and *structured*.** A failure is an explicit [`DeployError`], never a guessed
+//! default — and each failure keeps a distinct, *structured* signal so a caller branches on it without
+//! brittle string-matching: an absent native toolchain is [`DeployError::ToolchainMissing`] (the
+//! caller **skips** — the house idiom, mirroring [`AotError::ToolchainMissing`]); a program the native
+//! backend cannot lower soundly is [`DeployError::NotDeployable`] carrying the backend's own
+//! `EXPLAIN`-able reason (routed to the proven path), never fragile codegen shipped to fill the gap
+//! (G2/VR-5).
 //!
 //! **Honesty (VR-5).** The descriptor's guarantee is `Empirical` — the lowered IR is the real
 //! artifact, its faithfulness evidenced by the differentials (M-302/M-602); never `Proven` (no
@@ -38,15 +44,21 @@ use mycelium_core::{ContentHash, GuaranteeStrength, Node};
 use crate::llvm::{emit_llvm_ir, AotError};
 use crate::vr4::{cross_backend_gate, CrossBackendGate};
 
-/// Why producing a deployable native artifact failed — always explicit (G2), never a guessed default.
+/// Why producing a deployable native artifact failed — always explicit (G2), never a guessed default,
+/// and always *structured* so a caller branches on the case without string-matching.
 ///
-/// Note on "missing input" (G2, the stronger form): the deploy **identity** is a [`ContentHash`],
-/// which is a *validated, non-empty* type — an empty/malformed identity is **unrepresentable**, so
-/// there is no runtime "missing identity" branch to take. That is the strongest G2 posture: an
-/// invalid input cannot be constructed, rather than being rejected after the fact (CLAUDE.md banked
-/// guard 2). The remaining never-silent failure is a program the native backend cannot lower soundly.
+/// Note on "missing identity" (G2, the strongest form): the deploy **identity** is **derived
+/// internally** from [`Node::content_hash`] — it is *never an input*, so it can neither be missing nor
+/// disagree with the program. An invalid identity is unrepresentable *by construction*, not rejected
+/// after the fact (CLAUDE.md banked guard 2). The two never-silent failures below are the real ones,
+/// and both keep a structured signal.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DeployError {
+    /// The native toolchain (`llc`/`clang`) is absent — the caller should **skip**, not fail (the
+    /// house "skip gracefully when a tool is absent" idiom). A *dedicated, structured* variant
+    /// mirroring [`AotError::ToolchainMissing`], so the skip case is detectable without brittle
+    /// string-matching of [`DeployError::NotDeployable`]. Carries the missing tool's name.
+    ToolchainMissing(String),
     /// The program is outside the fragment the native backend can lower soundly. Carries the
     /// backend's own `EXPLAIN`-able reason; the program runs on the proven (interpreter / richer)
     /// path — fragile codegen is **never** shipped to fill the gap (G2/VR-5).
@@ -56,6 +68,13 @@ pub enum DeployError {
 impl core::fmt::Display for DeployError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
+            DeployError::ToolchainMissing(t) => {
+                write!(
+                    f,
+                    "native toolchain absent ({t}) — cannot produce a deployable native artifact here \
+                     (skip; the program runs on the proven path)"
+                )
+            }
             DeployError::NotDeployable(m) => {
                 write!(
                     f,
@@ -73,8 +92,10 @@ impl std::error::Error for DeployError {}
 /// dumpable IR + VR-4 attestation are carried metadata (not identity, ADR-003).
 #[derive(Debug, Clone, PartialEq)]
 pub struct NativeArtifact {
-    /// The **canonical identity**: the content hash of the program this artifact compiles (ADR-003
-    /// code identity). Two builds of the same program are the same artifact, whatever the toolchain.
+    /// The **canonical identity**: the content hash of the program this artifact compiles, derived
+    /// internally from [`Node::content_hash`] (ADR-003 code identity) — never an input. Two builds of
+    /// the same program are the same artifact, whatever the toolchain: identity is over the program
+    /// structure, not the lowered IR text.
     identity: ContentHash,
     /// The program's **dumpable lowered LLVM IR** — the no-opaque-lowering evidence carried into the
     /// deployed unit (VR-4; RFC-0004 §6). Metadata, not identity (a different LLVM patch may render
@@ -89,30 +110,31 @@ pub struct NativeArtifact {
 }
 
 impl NativeArtifact {
-    /// Build the native-artifact descriptor for `node` under the content identity `identity`
-    /// (the program's `ContentHash`, ADR-003 — supplied by the caller, *not* recomputed from the IR,
-    /// because identity is the code's hash, not the lowering's text).
+    /// Build the native-artifact descriptor for `node`. The content identity is derived **internally**
+    /// from [`Node::content_hash`] (ADR-003) — never supplied, so an artifact's `id()` can never name a
+    /// different program than its `lowered_ir`/`vr4` embody (that mismatch is unrepresentable, not
+    /// merely rejected — the strongest G2 form).
     ///
-    /// Lowers `node` to dumpable LLVM IR via the direct-LLVM backend and records the VR-4
-    /// cross-backend attestation. A program the backend cannot lower soundly is an explicit
-    /// [`DeployError::NotDeployable`] (the backend's own refusal reason) — never fragile codegen
-    /// (G2/VR-5). The `identity` is a validated, non-empty [`ContentHash`], so a "missing identity"
-    /// is unrepresentable (the strongest G2 form — no defaulting possible). Returns
-    /// [`DeployError::NotDeployable`] wrapping a `ToolchainMissing` when the compiler is absent so a
-    /// caller can skip (the house idiom).
-    pub fn build(node: &Node, identity: ContentHash) -> Result<Self, DeployError> {
+    /// Lowers `node` to dumpable LLVM IR via the direct-LLVM backend and records the VR-4 cross-backend
+    /// attestation. Two never-silent, *structured* refusals (so a caller branches without
+    /// string-matching): an absent toolchain is [`DeployError::ToolchainMissing`] — the caller **skips**
+    /// (the house idiom, mirroring [`AotError::ToolchainMissing`]); a program the backend cannot lower
+    /// soundly is [`DeployError::NotDeployable`] carrying the backend's own `EXPLAIN`-able reason —
+    /// never fragile codegen (G2/VR-5).
+    pub fn build(node: &Node) -> Result<Self, DeployError> {
+        // Identity IS the program's content hash (ADR-003), computed here from the program structure —
+        // not a caller's claim, not the lowered text — so `id()` cannot name a different program than
+        // the IR/attestation below embody.
+        let identity = node.content_hash();
         // The dumpable lowering is the artifact's no-opaque evidence; an out-of-fragment node (or a
-        // missing toolchain) is an explicit refusal routed to the proven path — never fragile output.
+        // missing toolchain) is an explicit, *structured* refusal routed to the proven path — never
+        // fragile output.
         let lowered_ir = match emit_llvm_ir(node) {
             Ok(ir) => ir,
-            Err(AotError::ToolchainMissing(t)) => {
-                return Err(DeployError::NotDeployable(format!(
-                    "native toolchain absent ({t}) — cannot produce a deployable native artifact here"
-                )));
-            }
-            Err(e) => {
-                return Err(DeployError::NotDeployable(e.to_string()));
-            }
+            // The toolchain-absent case keeps its structured signal (mirrors AotError::ToolchainMissing)
+            // so a caller can skip without string-matching — the house "skip gracefully" idiom.
+            Err(AotError::ToolchainMissing(t)) => return Err(DeployError::ToolchainMissing(t)),
+            Err(e) => return Err(DeployError::NotDeployable(e.to_string())),
         };
         let vr4 = cross_backend_gate(node);
         Ok(NativeArtifact {
@@ -191,9 +213,15 @@ mod tests {
         .unwrap()
     }
 
-    fn ident(tag: &str) -> ContentHash {
-        // A well-formed blake3 identity placeholder (the program hash the caller supplies).
-        ContentHash::parse(&format!("blake3:{tag}")).expect("valid id")
+    /// Build, or signal a skip (`None`) when the native toolchain is absent — the honest house idiom
+    /// (the structured [`DeployError::ToolchainMissing`]) so the deploy tests pass on a machine without
+    /// `llc`/`clang` instead of failing. Any *other* error is a real bug and panics.
+    fn build_or_skip(node: &Node) -> Option<NativeArtifact> {
+        match NativeArtifact::build(node) {
+            Ok(a) => Some(a),
+            Err(DeployError::ToolchainMissing(_)) => None,
+            Err(e) => panic!("unexpected deploy error: {e}"),
+        }
     }
 
     fn in_fragment() -> Node {
@@ -213,14 +241,12 @@ mod tests {
     fn builds_a_deployable_artifact_carrying_the_vr4_attestation() {
         // M-620: a native artifact built from the in-fragment program carries its content identity,
         // dumpable IR (VR-4 evidence), and the cross-backend no-opaque attestation.
-        let art = match NativeArtifact::build(&in_fragment(), ident("deadbeef00")) {
-            Ok(a) => a,
-            // The direct-LLVM emitter does not need a toolchain to *emit* IR, so this should succeed;
-            // if a future change made it toolchain-gated, a skip would be the honest outcome.
-            Err(DeployError::NotDeployable(m)) if m.contains("toolchain absent") => return,
-            Err(e) => panic!("unexpected deploy error: {e}"),
+        let prog = in_fragment();
+        let Some(art) = build_or_skip(&prog) else {
+            return; // toolchain absent — honest structured skip
         };
-        assert_eq!(art.id().as_str(), "blake3:deadbeef00");
+        // Identity IS the program's content hash (ADR-003), derived internally — not a supplied input.
+        assert_eq!(art.id(), &prog.content_hash());
         assert!(
             !art.lowered_ir().is_empty(),
             "dumpable IR is carried (VR-4)"
@@ -231,68 +257,80 @@ mod tests {
         assert_eq!(art.faithfulness(), GuaranteeStrength::Empirical);
         // The EXPLAIN names the identity and the VR-4 obligation.
         let ex = art.explain();
-        assert!(ex.contains("blake3:deadbeef00"));
+        assert!(ex.contains(art.id().as_str()));
         assert!(ex.contains("VR-4 no-opaque-lowering"));
     }
 
     #[test]
-    fn identity_is_the_program_hash_and_metadata_is_not_identity() {
-        // ADR-003 — witnessed directly: identity is the supplied content hash, NOT the carried
-        // metadata (the lowered IR + the VR-4 attestation). To prove metadata-blindness we build two
-        // artifacts from DIFFERENT programs (so their lowered IR and VR-4 attestation genuinely
-        // differ) but pass the SAME identity, and confirm `same_identity_as` still holds.
+    fn identity_is_the_program_content_hash_derived_not_supplied() {
+        // ADR-003 (Copilot #264 fix): identity is the program's content hash, derived **internally** —
+        // the caller cannot supply (and so cannot forge) it. We witness the three invariants this buys.
         let prog_a = in_fragment(); // bit.not(bit.xor(a,b))
         let prog_b = Node::Op {
-            // a different program ⇒ different lowered IR + different attestation byte-size
+            // a genuinely different program ⇒ different content hash AND different lowered IR
             prim: "bit.and".into(),
             args: vec![
                 Node::Const(byte([true; 8])),
                 Node::Const(byte([false, true, false, true, false, true, false, true])),
             ],
         };
-        let a = NativeArtifact::build(&prog_a, ident("aaaa0000")).unwrap();
-        let b = NativeArtifact::build(&prog_b, ident("aaaa0000")).unwrap();
-        // The carried metadata genuinely differs between the two...
+        let (Some(a), Some(b)) = (build_or_skip(&prog_a), build_or_skip(&prog_b)) else {
+            return; // toolchain absent — honest structured skip
+        };
+        // (1) Identity IS the program hash — exactly, by construction (not the IR text, not a claim).
+        assert_eq!(a.id(), &prog_a.content_hash());
+        assert_eq!(b.id(), &prog_b.content_hash());
+        // (2) Different programs ⇒ different identity (their lowered IR also differs — real distinctness).
         assert_ne!(
             a.lowered_ir(),
             b.lowered_ir(),
-            "the two programs must have different lowered IR (so this is a real metadata-blindness test)"
+            "the two programs must have different lowered IR (real distinctness)"
         );
-        // ...yet they share identity, because identity is the supplied hash, not the metadata (ADR-003).
         assert!(
-            a.same_identity_as(&b),
-            "same supplied identity ⇒ same artifact identity, even with different IR (metadata is not identity)"
+            !a.same_identity_as(&b),
+            "different programs ⇒ different identity"
         );
-        // Conversely, the SAME program under a DIFFERENT identity is a different artifact.
-        let c = NativeArtifact::build(&prog_a, ident("bbbb1111")).unwrap();
+        // (3) Metadata is not identity: a second independent build of the SAME program yields the SAME
+        // identity. `content_hash` is over the program structure, not the lowered text — so two builds
+        // on different LLVM patch versions (whose IR would differ) would still share this identity.
+        let Some(a2) = build_or_skip(&prog_a) else {
+            return;
+        };
         assert!(
-            !a.same_identity_as(&c),
-            "different supplied identity ⇒ different artifact identity"
+            a.same_identity_as(&a2),
+            "same program ⇒ same identity (metadata is not identity)"
         );
-        assert_eq!(a.id().as_str(), "blake3:aaaa0000");
+        assert_eq!(a.id(), a2.id());
     }
 
     #[test]
-    fn a_missing_identity_is_unrepresentable_and_a_swap_is_an_explicit_refusal() {
-        // G2 (the strongest form): the deploy identity is a validated, non-empty ContentHash, so an
-        // empty/malformed identity cannot even be constructed — `ContentHash::parse` rejects it. We
-        // pin that: an empty digest does not parse, so a "missing identity" is unrepresentable, not a
-        // runtime branch (CLAUDE.md banked guard 2).
-        assert!(
-            ContentHash::parse("blake3:").is_none(),
-            "an empty digest is unrepresentable"
-        );
-        // The remaining never-silent path: a Swap is outside the direct-LLVM bit subset ⇒ explicit
-        // NotDeployable (routed to the proven path), never fragile codegen (G2/VR-5).
+    fn identity_cannot_be_forged_and_a_swap_is_a_structured_refusal() {
+        // G2 (the strongest form): identity is derived from the program (`content_hash`), never an
+        // input — so there is no path by which an artifact's id() disagrees with its program. We pin
+        // it directly: the built artifact's id() equals the program hash, full stop (no forgeable
+        // parameter exists — Copilot #264).
+        let prog = in_fragment();
+        if let Some(art) = build_or_skip(&prog) {
+            assert_eq!(
+                art.id(),
+                &prog.content_hash(),
+                "id() is the program hash, not a forgeable input"
+            );
+        }
+        // The remaining never-silent path: a Swap is outside the direct-LLVM bit subset ⇒ an explicit,
+        // *structured* refusal (routed to the proven path), never fragile codegen (G2/VR-5).
         let swap = Node::Swap {
             src: Box::new(Node::Const(byte([true; 8]))),
             target: Repr::Ternary { trits: 6 },
             policy: ContentHash::parse("blake3:round_trip_safe").unwrap(),
         };
-        match NativeArtifact::build(&swap, ident("cccc2222")) {
+        match NativeArtifact::build(&swap) {
             Err(DeployError::NotDeployable(m)) => {
                 assert!(!m.is_empty(), "the refusal carries an EXPLAIN-able reason");
             }
+            // Honest: if the toolchain is absent the out-of-fragment refusal may surface as the skip
+            // signal instead — still never a fabricated Ok.
+            Err(DeployError::ToolchainMissing(_)) => {}
             Ok(_) => panic!("a Swap must not be natively deployable (out of fragment)"),
         }
     }
@@ -326,8 +364,10 @@ mod tests {
                 ),
             ],
         };
-        let art = NativeArtifact::build(&add, ident("dddd3333")).expect("trit.add is deployable");
-        assert_eq!(art.id().as_str(), "blake3:dddd3333");
+        let Some(art) = build_or_skip(&add) else {
+            return; // toolchain absent — honest structured skip
+        };
+        assert_eq!(art.id(), &add.content_hash());
         assert!(!art.lowered_ir().is_empty(), "carries dumpable IR (VR-4)");
         assert_eq!(art.faithfulness(), GuaranteeStrength::Empirical);
     }
@@ -336,8 +376,10 @@ mod tests {
     fn the_artifact_explain_is_deterministic_for_deployment() {
         // The deployed attestation must be byte-deterministic so its identity is stable across runs /
         // machines (ADR-003 content-addressing).
-        let a = NativeArtifact::build(&in_fragment(), ident("eeee4444")).unwrap();
-        let b = NativeArtifact::build(&in_fragment(), ident("eeee4444")).unwrap();
+        let (Some(a), Some(b)) = (build_or_skip(&in_fragment()), build_or_skip(&in_fragment()))
+        else {
+            return; // toolchain absent — honest structured skip
+        };
         assert_eq!(a.explain(), b.explain());
     }
 }
