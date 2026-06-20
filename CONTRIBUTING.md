@@ -19,11 +19,12 @@ Mycelium is in the **design phase**: the corpus in `docs/` is the product right 
 Decisions are **never silently edited**. Each ADR/RFC carries a status that only moves forward:
 
 ```
-Draft / Proposed / Preliminary  →  Accepted  →  Superseded
+Draft / Proposed / Preliminary  →  Accepted  →  Enacted  →  Superseded
                                        │
                                   (Resolved, for design notes)
 ```
 
+- **`Enacted`** = an Accepted decision that is now **fully implemented/landed** — complete and stable, outside ongoing maintenance and future-development integration. It **must step through `Accepted`** first: a decision can never jump straight to `Enacted`. (Earlier docs used the compound `Accepted — Enacted`; the canonical spelling is the standalone `Enacted`.)
 - To change an accepted decision, **supersede** it: write a new ADR/RFC (or revision) and link the old one forward. Don't rewrite history.
 - Every normative claim **cites its grounding** using the established labels: survey labels (`G1–G11`, tensions `A–E`, recommendations `R1–R8`) and research labels (`T0.x / T1.x / T2.x`). If a claim can't be grounded, mark it as an open question, not a fact.
 - Documents are revised in place only for *editorial* fixes and status transitions; the changelog at the bottom of each doc (and the top-level `CHANGELOG.md`) records what moved.
