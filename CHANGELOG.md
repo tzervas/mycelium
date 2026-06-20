@@ -8,6 +8,18 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: LLM harness — hard USD spend cap (`--max-usd`, default $10))
+The Grok/xAI harness (`tools/llm-harness/grok/`) now enforces a **hard, never-silent ceiling on
+total xAI spend** (the operator's ≤ $10 requirement), instead of merely *estimating* cost. A new
+`budget.BudgetGuard` (one instance per run, shared across all models so the cap is the *total* spend)
+gates each unit of work: a task (live) or batch (batch mode) whose **conservative** cost estimate
+would push cumulative **actual** spend past the cap is **refused before it is sent** (`BudgetExceeded`),
+and the run stops with a partial, honestly-flagged report — it cannot quietly over-spend (G2). The
+estimate never under-counts tokens, so the cap is a true upper bound, not a hope; actual billed cost
+is recorded as the run proceeds (VR-5 — the reported spend is the real one). `--max-usd` (default
+`10.0`) is wired through `RunConfig`; the offline `--self-test` gains a deterministic budget-cap check
+(now **14/14**, no key/network). Documented in the harness README ("Live xAI (Grok) runs").
+
 ### Added (2026-06-20: Phase 8 — toolchain API ergonomics (M-644))
 Purely **additive** ergonomics on the four toolchain library crates (owns only their `src/lib.rs`) —
 every change ADDS a symbol / trait impl / attribute; **no in-workspace caller changes** (verified by a

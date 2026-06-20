@@ -121,6 +121,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="max throttle/backoff retries per request in live mode (default 5).",
     )
     cfg.add_argument(
+        "--max-usd",
+        type=float,
+        default=10.0,
+        help="HARD cap on TOTAL xAI spend across all models (default $10.00). A unit of "
+        "work whose conservative estimate would breach this is refused before it is sent, "
+        "and the run stops with a partial report — never silently over-spend (G2).",
+    )
+    cfg.add_argument(
         "--task-set",
         default=TASK_SET_ID,
         help=f"task set id (default {TASK_SET_ID}).",
@@ -196,6 +204,7 @@ def main(argv: list[str] | None = None) -> int:
         ablation_seeds=[int(s) for s in seeds] if seeds else None,
         repo_root=_find_repo_root(here),
         base_url=args.base_url,
+        max_usd=args.max_usd,
     )
 
     log.info(

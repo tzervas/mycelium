@@ -30,6 +30,11 @@ from .ablation import (
     default_arms,
     run_arm,
 )
+from .budget import (
+    CONSERVATIVE_TOKENS_PER_REQUEST,
+    BudgetExceeded,
+    BudgetGuard,
+)
 from .batch import (
     BatchPollConfig,
     build_generation_requests,
@@ -62,6 +67,9 @@ class RunConfig:
     ablation_seeds: list[int] | None = None
     repo_root: Path | None = None
     base_url: str = "https://api.x.ai/v1"
+    # Hard cap on TOTAL xAI spend across all models (never-silent; G2). A unit of work whose
+    # conservative estimate would breach this is refused before it is sent. Default $10.
+    max_usd: float = 10.0
 
 
 def _paced_live_call(
@@ -104,9 +112,19 @@ def _paced_live_call(
 
 
 def run_live_model(
-    *, model: ModelSpec, cfg: RunConfig, log: logging.Logger
+    *,
+    model: ModelSpec,
+    cfg: RunConfig,
+    log: logging.Logger,
+    budget: BudgetGuard | None = None,
 ) -> report_mod.ModelRunReport:
-    """Run the full gold set (and optional ablation) for one model in live mode."""
+    """Run the full gold set (and optional ablation) for one model in live mode.
+
+    When ``budget`` is given, each task is gated by a conservative cost estimate: a task
+    whose worst-case cost would push cumulative spend past the cap raises
+    :class:`~grok.budget.BudgetExceeded` *before* the task runs (never silently
+    over-spend; G2). Actual per-task cost is recorded into the guard as the run proceeds.
+    """
     client = OpenAICompatClient(base_url=cfg.base_url)
     pacer = RatePacer(rpm=model.rpm, tpm=model.tpm)
     scorer = MycCheckScorer(repo_root=cfg.repo_root, log=log)
@@ -122,6 +140,18 @@ def run_live_model(
     est_holder: dict[str, int] = {"est": 256}
 
     for task in cfg.tasks:
+        # Hard budget gate (G2): refuse to START a task whose conservative worst-case cost
+        # (max_rounds requests at the running token estimate, floored) would breach the cap.
+        if budget is not None:
+            est_tokens = max(est_holder["est"], CONSERVATIVE_TOKENS_PER_REQUEST)
+            est_task_usd = (
+                model.cost_usd(
+                    prompt_tokens=est_tokens, completion_tokens=est_tokens, batch=False
+                )
+                * cfg.max_rounds
+            )
+            budget.check_or_raise(est_task_usd, model_id=model.id, log=log)
+
         # Wrap the loop's client.complete via hooks so each call is paced.
         def before(est: int) -> None:
             est_holder["est"] = est
@@ -158,6 +188,8 @@ def run_live_model(
         total_prompt += outcome.total_prompt_tokens
         total_completion += outcome.total_completion_tokens
         total_cost += outcome.total_cost_usd
+        if budget is not None:
+            budget.record(outcome.total_cost_usd)  # ACTUAL billed cost (VR-5)
         latencies.extend(r.chat.latency_s for r in outcome.rounds)
         request_count += len(outcome.rounds)
 
@@ -262,19 +294,38 @@ def _run_ablation_live(*, model, cfg, client, pacer, scorer, log) -> dict[str, A
 
 
 def run_batch_model(
-    *, model: ModelSpec, cfg: RunConfig, log: logging.Logger
+    *,
+    model: ModelSpec,
+    cfg: RunConfig,
+    log: logging.Logger,
+    budget: BudgetGuard | None = None,
 ) -> report_mod.ModelRunReport:
     """Run the first-pass generations for one model in batch mode (xai_sdk).
 
     LIVE-ONLY (needs xai_sdk + key + network). The iterative correction loop is not
     batchable and is intentionally skipped here (documented); batch mode measures
     first-pass pass@1 quality + batch-priced cost.
+
+    When ``budget`` is given, the whole batch's conservative cost (one request per task at
+    the floored token estimate, **batch-priced**) is gated *before submission*: a batch that
+    would breach the cap raises :class:`~grok.budget.BudgetExceeded` (G2 — never submit work
+    that would over-spend). Actual batch cost is recorded into the guard after collection.
     """
     client = XaiBatchClient()  # raises clear error if xai_sdk missing (G2)
     scorer = MycCheckScorer(repo_root=cfg.repo_root, log=log)
     requests, items = build_generation_requests(
         tasks=cfg.tasks, model=model, seed=cfg.seed
     )
+    # Hard budget gate (G2): a batch is all-or-nothing once submitted, so estimate the whole
+    # batch conservatively (one request/task at the floored token estimate, batch-priced) and
+    # refuse to submit if it would breach the cap.
+    if budget is not None:
+        est_batch_usd = model.cost_usd(
+            prompt_tokens=CONSERVATIVE_TOKENS_PER_REQUEST * len(requests),
+            completion_tokens=CONSERVATIVE_TOKENS_PER_REQUEST * len(requests),
+            batch=True,
+        )
+        budget.check_or_raise(est_batch_usd, model_id=model.id, log=log)
     results = submit_and_collect(
         client=client,
         batch_name=f"mycelium-gold-{model.id}-{cfg.seed}",
@@ -291,6 +342,8 @@ def run_batch_model(
     total_prompt = sum(s.chat.prompt_tokens for s in scored)
     total_completion = sum(s.chat.completion_tokens for s in scored)
     total_cost = sum(s.cost_usd for s in scored)
+    if budget is not None:
+        budget.record(total_cost)  # ACTUAL batch-billed cost (VR-5)
     perf = report_mod.build_performance(
         prompt_tokens=total_prompt,
         completion_tokens=total_completion,
@@ -328,15 +381,38 @@ def run(
     run_id = report_mod.now_iso()
     reports: list[report_mod.ModelRunReport] = []
     json_paths: list[Path] = []
+    # One guard for the whole run: the cap is TOTAL xAI spend, not per-model (G2).
+    budget = BudgetGuard(cap_usd=cfg.max_usd)
+    log.info("hard spend cap: $%.2f (total across all models)", cfg.max_usd)
     for model in cfg.models:
-        log.info("=== model %s (mode=%s) ===", model.id, cfg.mode)
-        if cfg.mode == "batch":
-            mr = run_batch_model(model=model, cfg=cfg, log=log)
-        else:
-            mr = run_live_model(model=model, cfg=cfg, log=log)
+        log.info(
+            "=== model %s (mode=%s) — %s ===", model.id, cfg.mode, budget.summary()
+        )
+        try:
+            if cfg.mode == "batch":
+                mr = run_batch_model(model=model, cfg=cfg, log=log, budget=budget)
+            else:
+                mr = run_live_model(model=model, cfg=cfg, log=log, budget=budget)
+        except BudgetExceeded as exc:
+            # Never-silent: stop the run with whatever completed, honestly flagged. The
+            # remaining (pricier) models are skipped — the cap is a hard ceiling.
+            log.warning(
+                "STOPPING the run at the spend cap before model %s: %s", model.id, exc
+            )
+            break
         reports.append(mr)
         json_paths.append(
             report_mod.write_model_json(mr, reports_dir=cfg.reports_dir, run_id=run_id)
+        )
+    log.info("run complete — %s", budget.summary())
+    if not reports:
+        # The very first unit breached the cap (e.g. an absurdly low --max-usd): emit nothing
+        # rather than a misleading empty comparison, and say so loudly (G2).
+        raise BudgetExceeded(
+            spent_usd=budget.spent_usd,
+            est_usd=0.0,
+            cap_usd=budget.cap_usd,
+            model_id="(none ran)",
         )
     md_path = report_mod.write_comparison_markdown(
         reports,

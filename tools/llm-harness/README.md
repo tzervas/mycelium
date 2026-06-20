@@ -44,6 +44,34 @@ python3 tools/llm-harness/harness.py --mock
 Exits 0. Writes a timestamped JSON + text report under `tools/llm-harness/reports/`.
 All model-dependent results are labelled `mock-PASS`, never `PASS`.
 
+## Live xAI (Grok) runs — with the hard spend cap
+
+The `grok/` sub-package drives real xAI runs (OpenAI-compatible `https://api.x.ai/v1`; key
+from `$XAI_API_KEY` or `$GROK_API_KEY`). Models run **cheapest-first**; `--mode batch` uses
+the xAI batch API (lower price). A **hard, never-silent USD cap** (`--max-usd`, default
+**$10.00**) guards the **total** spend across all models: a unit of work whose conservative
+estimate would breach the cap is **refused before it is sent**, and the run stops with a
+partial, honestly-flagged report — it cannot quietly over-spend (G2).
+
+```sh
+cd tools/llm-harness
+
+# Offline plumbing gate — no key, no network (14/14 checks).
+uv run python -m grok.cli --self-test
+
+# Live, batch-priced, cheapest-first, capped at $10 (the default):
+XAI_API_KEY=…  uv run python -m grok.cli --mode batch --max-usd 10
+# Sequential live mode + the M-381 retention-ratio ablation, capped:
+XAI_API_KEY=…  uv run python -m grok.cli --mode live --ablation --max-usd 10
+# Preview the resolved (cheapest-first) model list without spending:
+uv run python -m grok.cli --list-models
+```
+
+Every measured number is **Empirical** (with its trial count); the model-quality / KC-2
+retention **verdict stays open** until a real run lands (never pre-written — VR-5). The cap
+estimate is deliberately conservative (it never under-counts tokens), so it errs toward
+stopping early, never late.
+
 ## Reports and logs
 
 Each run writes three files under `tools/llm-harness/reports/`:
