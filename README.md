@@ -5,11 +5,11 @@
 **Status:** design + **Rust-first implementation underway.** The design corpus is Accepted/Resolved
 (Foundation, RFC-0001…0021, ADR-001…017, DN-01…14), and the kernel is landing as a
 Rust workspace of **45 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified binary↔ternary
-swaps, the selection-policy engine, and a Rust-first standard library. Phases **0–5 and 7** are
+swaps, the selection-policy engine, and a Rust-first standard library. Phases **0–5, 7, and 8** are
 complete; Phase **6**'s VR-4 no-opaque-lowering exit gate is met (native-codegen/deploy follow-ons
-M-601/M-620 in progress) and Phase **8** is complete bar the deferred **M-644**. The one open
-Phase-0 residual is the **KC-2 LLM-leverage verdict** (M-002/M-381), gated on a live model run — the
-harness is landed. Per the honesty rule, the 23 Rust-first stdlib
+M-601/M-620 in progress). The one open Phase-0 residual is the **KC-2 LLM-leverage verdict**
+(M-002/M-381), gated on a live model run — the harness is landed. Per the honesty rule, the 23
+Rust-first stdlib
 specs were **ratified to `Accepted`** (2026-06-20, DN-07) only on a checked basis (guarantee
 matrices asserted in tests) — `runtime` and `self-hosting-readiness` stay `Draft` (gate-pending),
 and self-hosting (M-502) is **not yet established**. See [Status & open items](#status--open-items).

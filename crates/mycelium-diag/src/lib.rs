@@ -96,8 +96,12 @@ impl Canon {
 ///
 /// Ordered `Debug < Info < Warn < Error` (weakest-to-strongest). The ordering is purely for
 /// comparisons and aggregation; it does **not** gate propagation (I1).
+/// `#[non_exhaustive]`: a future severity grade may be added without a breaking change — an external
+/// exhaustive `match` must carry a `_` arm (M-644; additive — no variant removed; the `Ord` order and
+/// [`Severity::ALL`] are preserved). In-crate matches and `ALL` already name every variant.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum Severity {
     /// A debug-grade diagnostic (lowest severity).
     Debug,

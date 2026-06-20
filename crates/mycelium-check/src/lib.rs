@@ -46,6 +46,15 @@ pub struct Finding {
     pub route: Option<String>,
 }
 
+impl Finding {
+    /// Attach a baseline route, fluently (M-644 ergonomics). Additive builder; sets `route`.
+    #[must_use]
+    pub fn with_route(mut self, route: String) -> Self {
+        self.route = Some(route);
+        self
+    }
+}
+
 /// The aggregated result of checking a set of sources.
 #[derive(Debug, Clone, Default)]
 pub struct Report {
@@ -56,6 +65,21 @@ pub struct Report {
 }
 
 impl Report {
+    /// Push a finding, fluently (M-644 ergonomics). Additive builder; appends to `findings` (does
+    /// **not** touch `files_checked` — set that explicitly with [`Report::with_files_checked`]).
+    #[must_use]
+    pub fn with_finding(mut self, finding: Finding) -> Self {
+        self.findings.push(finding);
+        self
+    }
+
+    /// Set the checked-file count, fluently (M-644 ergonomics). Additive builder.
+    #[must_use]
+    pub fn with_files_checked(mut self, files_checked: usize) -> Self {
+        self.files_checked = files_checked;
+        self
+    }
+
     /// Whether the report is clean (no findings).
     #[must_use]
     pub fn is_ok(&self) -> bool {
@@ -127,6 +151,18 @@ pub fn check_source(
             }
         }
     }
+}
+
+/// Check one source under the **default baseline policy** — the M-644 ergonomic convenience for the
+/// common case where a caller has no custom `policy`/`registry`. Derives the builtin
+/// [`ClassRegistry`] + the [`derive_baseline`] policy (exactly as [`check_sources`] does) and delegates
+/// to the 5-arg [`check_source`]. A *new name* (Rust has no overloading; renaming `check_source` would
+/// be breaking — M-644 is additive-only). For many sources prefer [`check_sources`], which builds the
+/// registry/policy once.
+pub fn check_source_default(file: &str, src: &str, out: &mut Vec<Finding>) {
+    let registry = ClassRegistry::with_builtins();
+    let policy = derive_baseline(&registry);
+    check_source(file, src, &policy, &registry, out);
 }
 
 /// Check an explicit set of `(path, contents)` sources, aggregating findings deterministically.
@@ -262,5 +298,27 @@ mod tests {
         assert_eq!(r.findings[0].file, "a.myc");
         assert_eq!(r.findings[1].file, "b.myc");
         assert_eq!(r.exit_code(), 3);
+    }
+
+    #[test]
+    fn check_source_default_and_builders_are_additive_ergonomics() {
+        // M-644: the default-policy convenience checks one source via the same baseline path as
+        // check_sources (builds the builtin registry + derived policy, delegates to check_source).
+        let mut out = Vec::new();
+        check_source_default(
+            "a.myc",
+            "nodule d\nfn g() -> Binary{8} = also_nope(0b0)\n",
+            &mut out,
+        );
+        assert!(
+            !out.is_empty(),
+            "an unresolved call is a recorded check finding"
+        );
+        // The fluent builders compose a Report additively (no canonical constructor changed).
+        let f = out.remove(0).with_route("escalate".to_owned());
+        assert_eq!(f.route.as_deref(), Some("escalate"));
+        let r = Report::default().with_finding(f).with_files_checked(1);
+        assert_eq!(r.findings.len(), 1);
+        assert_eq!(r.files_checked, 1);
     }
 }

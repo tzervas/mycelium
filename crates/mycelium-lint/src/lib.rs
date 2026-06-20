@@ -25,7 +25,11 @@ use mycelium_lsp::baseline::RecoveryProfile;
 use mycelium_lsp::{lint, lint_structured_header, Severity};
 
 /// How a fix may be applied — the opt-in boundary (the crux).
+///
+/// `#[non_exhaustive]`: a future tier may be added without a breaking change — an external exhaustive
+/// `match` must carry a `_` arm (M-644; additive — no variant removed).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum FixTier {
     /// A reviewable edit; never auto-applied.
     Suggest,
@@ -58,6 +62,18 @@ pub struct Fix {
     pub scaffold: Option<String>,
 }
 
+impl Default for Fix {
+    /// The neutral fix offer (M-644 ergonomics): tier [`FixTier::Suggest`] — the **never-auto-applied**
+    /// tier, so a defaulted `Fix` can never silently rewrite code (G2). Empty description, no scaffold.
+    fn default() -> Self {
+        Self {
+            tier: FixTier::Suggest,
+            description: String::new(),
+            scaffold: None,
+        }
+    }
+}
+
 /// One lint finding with its (optional) reified fix.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LintFinding {
@@ -75,6 +91,15 @@ pub struct LintFinding {
     pub fix: Option<Fix>,
 }
 
+impl LintFinding {
+    /// Attach a reified fix offer, fluently (M-644 ergonomics). Additive builder; sets `fix`.
+    #[must_use]
+    pub fn with_fix(mut self, fix: Fix) -> Self {
+        self.fix = Some(fix);
+        self
+    }
+}
+
 /// The aggregated lint result.
 #[derive(Debug, Clone, Default)]
 pub struct LintReport {
@@ -85,6 +110,21 @@ pub struct LintReport {
 }
 
 impl LintReport {
+    /// Push a finding, fluently (M-644 ergonomics). Additive builder; appends to `findings` (does
+    /// **not** touch `files` — set that explicitly with [`LintReport::with_files`]).
+    #[must_use]
+    pub fn with_finding(mut self, finding: LintFinding) -> Self {
+        self.findings.push(finding);
+        self
+    }
+
+    /// Set the linted-file count, fluently (M-644 ergonomics). Additive builder.
+    #[must_use]
+    pub fn with_files(mut self, files: usize) -> Self {
+        self.files = files;
+        self
+    }
+
     /// Whether any finding is an error-severity house-rule violation.
     #[must_use]
     pub fn has_errors(&self) -> bool {
@@ -322,5 +362,24 @@ mod tests {
         assert!(doc_lint_status().contains("active"));
         // The check-name set is the single source of truth re-exported from mycelium-doc.
         assert_eq!(DOC_QUALITY_CHECKS, mycelium_doc::CHECK_NAMES);
+    }
+
+    #[test]
+    fn fix_default_is_the_never_auto_applied_tier_and_builders_compose() {
+        // M-644: a defaulted Fix is Suggest — never auto-applied (G2); builders compose fluently.
+        assert_eq!(Fix::default().tier, FixTier::Suggest);
+        let finding = LintFinding {
+            file: "a.myc".into(),
+            code: "implicit-swap".into(),
+            severity: Severity::Warning,
+            at: "f".into(),
+            message: "m".into(),
+            fix: None,
+        }
+        .with_fix(Fix::default());
+        assert_eq!(finding.fix.as_ref().map(|x| x.tier), Some(FixTier::Suggest));
+        let report = LintReport::default().with_finding(finding).with_files(1);
+        assert_eq!(report.findings.len(), 1);
+        assert_eq!(report.files, 1);
     }
 }

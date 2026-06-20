@@ -8,6 +8,30 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: Phase 8 — toolchain API ergonomics (M-644))
+Purely **additive** ergonomics on the four toolchain library crates (owns only their `src/lib.rs`) —
+every change ADDS a symbol / trait impl / attribute; **no in-workspace caller changes** (verified by a
+clean `cargo build --workspace`). Completes Phase 8. *Compatibility nuance:* `#[non_exhaustive]` is
+additive to the API surface (a variant is never removed), but for an **external** crate that
+exhaustively `match`es one of these enums it is a source change requiring a `_` arm — not silently
+breaking, and no such matcher exists in-workspace.
+- **`#[non_exhaustive]`** on the growth-prone public enums `FmtError` (fmt), `FixTier` (lint), and
+  `Severity` (diag) — a future variant is no longer a breaking change *for downstream users that
+  already carry a `_` arm*. Verified no in-workspace external exhaustive `match` exists (the cross-crate
+  `Severity` matches are on *other* `Severity` types — lsp's, sec's — not `mycelium_diag::Severity`).
+- **`Default`** for `Formatted` (derived) and `Fix` (tier `Suggest` — the **never-auto-applied** tier,
+  so a defaulted fix can never silently rewrite code, G2); **`From<String> for Formatted`** (a trivial
+  lift; `format_source` remains the path that computes `changed`/`notes`).
+- **Fluent `with_*` builders**: `LintFinding::with_fix`, `LintReport::with_finding/with_files`,
+  `Finding::with_route`, `Report::with_finding/with_files_checked`.
+- **`check_source_default(file, src, out)`** — a new-named convenience (Rust has no overloading;
+  renaming `check_source` would be breaking) that derives the builtin `ClassRegistry` + baseline policy
+  the way `check_sources` does and delegates to the existing 5-arg `check_source`.
+- Honest caveat: the `cargo public-api` baselines (`docs/spec/api/*.txt`) are not regenerated here (the
+  tool is absent; `api.sh` skips gracefully) — the changes are additions-only, refreshed when the tool
+  is available. Verified: `cargo test -p mycelium-fmt -p mycelium-lint -p mycelium-check -p
+  mycelium-diag` green; clippy `-D warnings` (`-A unsafe_code`) + full `just check` green.
+
 ### Changed (2026-06-20: PM-manifest phase-status reconciliation — Phase 0/3/8)
 Reconciled the `tools/github/issues.yaml` board to the verified completion state (the labels had
 lagged reality — `docs/planning/phase-0.md §2` already recorded the work done). Audited each item
