@@ -1220,7 +1220,9 @@ def _relabel_task(repo, number, old_name, new_name):
     return task
 
 
-DEFAULT_LABEL_COLOR = "ededed"  # neutral gray for an auto-created (undefined-in-manifest) label
+DEFAULT_LABEL_COLOR = (
+    "ededed"  # neutral gray for an auto-created (undefined-in-manifest) label
+)
 
 
 def reconcile_labels(repo, labels_json, dry_run, issues_yaml=None):
