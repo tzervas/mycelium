@@ -631,9 +631,9 @@ issues:
   - id: M-348
     title: "M-348 — Provision libMLIR to unblock the native MLIR->LLVM path"
     milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
-    labels: [phase:4, type:design, area:execution, priority:P1, status:needs-design]
+    labels: [phase:4, type:design, area:execution, priority:P1, status:done]
     depends_on: [M-301]
-    doc_refs: [corpus:RFC-0004, corpus:DN-15]
+    doc_refs: [corpus:RFC-0004, corpus:DN-15, corpus:ADR-019, src:scripts/setup-mlir.sh]
     body: |
       The MLIR->LLVM native AOT path (RFC-0004 §2, ADR-009) is gated on libMLIR, absent in the current environment. Maintainer intends to provision it near-term (Windows/Claude Code desktop, or via WSL) to unblock native dialect lowering / cross-target codegen, the native data/closure codegen M-342 left as UnsupportedNode, and DN-05 #1 (stack-robust recursion designed into the native path). Verdicts needing it stay honestly "not established" (VR-5) until present.
       Acceptance: libMLIR provisioned + a first native lowering increment runs; no code until the toolchain is present.
@@ -1365,19 +1365,20 @@ issues:
   - id: M-601
     title: "M-601 — Native MLIR→LLVM codegen for the full v0 calculus (incl. data + closure)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:in-progress]
     depends_on: [M-348, M-342]
-    doc_refs: [corpus:RFC-0004]
+    doc_refs: [corpus:RFC-0004, src:crates/mycelium-mlir/src/dialect/native.rs]
     body: |
       The milestones.json Phase-6 charter's first item: "Native MLIR→LLVM codegen for the full calculus incl. data/closure (M-348, RFC-0004 §2, ADR-009)". Complete the native lowering M-342 left as explicit UnsupportedNode (native LLVM stayed bit/trit only; the data/closure/recursion fragment runs on the AOT env-machine, not native), and design DN-05 #1 — stack-robust recursion — INTO the native path (RFC-0004 §2 banked it there; reuse the DN-05 budget trait, DN05-Q4). Each lowering stage stays dumpable (no opaque pass — VR-4). HARD-GATED on libMLIR provisioning (M-348, currently blocked); until present, the native verdict stays honestly "not established" (VR-5), never pre-written.
       Acceptance (design-first; libMLIR-gated): a native MLIR→LLVM increment lowers the data + closure fragment with explicit refusal where a node is still unsupported (never silent); no code until the toolchain is present (M-348).
+      IMPLEMENTED 2026-06-20 (Wave-1): `mycelium-mlir::dialect::native` lowers the bit/trit ELEMENT-WISE fragment (core.id, bit.{not,and,or,xor}, trit.neg) via `mlir-opt-18 | mlir-translate-18` behind the off-by-default `mlir-dialect` feature; every stage dumpable (VR-4). HONEST SCOPE (G2/VR-5): data/closure/recursion are NOT given a second, divergent MLIR codegen — they stay on the proven direct-LLVM backend (M-373/378/379) + env-machine and are explicitly refused by MLIR (`DialectError::Unsupported`). So the calculus runs end-to-end across direct-LLVM+MLIR+interp, but the full-MLIR data/closure lowering remains an honest open follow-up (not fragile-shipped). Tag: Empirical (real compiled artifact, differential-evidenced).
 
   - id: M-602
     title: "M-602 — Native-path NFR-7 three-way differential + E1 speedup verdict"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:verification, area:execution, priority:P1, status:needs-design]
+    labels: [phase:6, type:verification, area:execution, priority:P1, status:done]
     depends_on: [M-601, M-302, M-303]
-    doc_refs: [corpus:RFC-0004]
+    doc_refs: [corpus:RFC-0004, src:crates/mycelium-mlir/tests/threeway_differential.rs]
     body: |
       The Phase-6 gate's verification half: "native path holds the NFR-7 differential + a speedup". Extend the M-302 interp↔native differential (and the M-210 shared checker) so the full-calculus corpus runs under the interpreter AND the real native MLIR→LLVM artifact with observable equivalence (a divergent lowering caught — NFR-7/RR-12), and replace the M-303 E1 stub's "not established" with a MEASURED native-vs-interpreter speedup on the full calculus (honest caption, refuses a debug build, no pre-written target — VR-5).
       Acceptance (design-first; gated on M-601): the three-way differential holds across the calculus on the native path; a recorded native/interp ratio with caveats; the E1 verdict moves "not established" → "measured".
@@ -1624,9 +1625,9 @@ issues:
   - id: M-603
     title: "M-603 — Durable libMLIR provisioning recipe + ADR-019 (toolchain) + DN-15 unblock append"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:infra, area:execution, priority:P1, status:needs-design]
+    labels: [phase:6, type:infra, area:execution, priority:P1, status:done]
     depends_on: [M-348]
-    doc_refs: [corpus:DN-15, corpus:RFC-0004]
+    doc_refs: [corpus:DN-15, corpus:RFC-0004, corpus:ADR-019, src:scripts/setup-mlir.sh]
     body: |
       Make the M-348 unblock DURABLE + honest (a toolchain DECISION, not a silent install): a `scripts/setup-mlir.sh` recipe (`apt-get install libmlir-18-dev mlir-18-tools`, version-matched to the installed LLVM) wired into `just setup` (skip-gracefully if absent); ADR-019 recording libMLIR as a build dependency of the MLIR-dialect feature; an append-only DN-15 update recording that the libMLIR-gated half (M-348/M-601) is now provisionable on Linux. FLAG up justfile/CI/Cargo.toml feature changes to the parent.
       Acceptance: a clean checkout runs `just setup` -> MLIR present -> the dialect feature builds; ADR-019 Accepted; DN-15 updated; no silent toolchain bump.

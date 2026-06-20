@@ -1,0 +1,14 @@
+[package]
+name = "mycelium-cli-common"
+version = "0.0.0"
+description = "Shared CLI plumbing for the Mycelium toolchain binaries (M-643): input reading, source collection, and common argument handling — DRY across mycfmt / myc-check / myc-lint / myc-sec (KC-3: above the kernel, no new external dependency). Scaffold; populated by the Phase-8 release-mechanics epic."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]

@@ -1,9 +1,35 @@
-//! Textual ternary-dialect emitter (M-150; RFC-0004 §6).
+//! Ternary-dialect lowering (M-150 textual skeleton + M-601 real `arith`/`func`→LLVM path).
 //!
-//! Renders the lowered A-normal form (`mycelium-core::lower`) as an MLIR-*style* module — one
-//! dialect op per binding, all attributes inline so nothing is opaque. This is a **textual**
-//! artifact (no libMLIR binding); it stands in for the real `ternary` → `arith`/`vector` → LLVM
-//! lowering, which is deferred.
+//! Two artifacts share this module:
+//!
+//! - [`emit`] — the **textual** ternary-dialect rendering of the lowered A-normal form
+//!   (`mycelium-core::lower`): one dialect op per binding, all attributes inline so nothing is
+//!   opaque (M-150; RFC-0004 §6). Always available, no toolchain needed — the per-stage-dumpable
+//!   anchor and the *shape* of the eventual MLIR path.
+//!
+//! - [`native`] (feature `mlir-dialect`, OFF by default) — the **real** lowering (M-601; RFC-0004
+//!   §2; ADR-009/ADR-019). For the **bit/trit element-wise straight-line fragment** (`core.id`,
+//!   `bit.not/and/or/xor`, `trit.neg`) it emits a genuine MLIR module in the `arith`/`func`
+//!   dialects, runs it through `mlir-opt-<v> --convert-func-to-llvm --convert-arith-to-llvm
+//!   --reconcile-unrealized-casts | mlir-translate-<v> --mlir-to-llvmir` to **real LLVM IR**, then
+//!   `clang` → native → read-back (the *same* read-back protocol as [`crate::llvm`], so the two
+//!   compiled paths are differential-equivalent by one contract). This is a fourth, genuinely
+//!   MLIR-compiled execution path — not the textual skeleton.
+//!
+//! **Honesty / scope (VR-5; G2).** [`native`] covers only the fragment the **standard** MLIR
+//! dialects carry faithfully (bit/trit element-wise ops — the natural "ternary-first" dialect
+//! increment, RFC-0004 §2). Every other node — trit *carry* arithmetic (`trit.add/sub/mul`), the
+//! data fragment (`Construct`/`Match`), closures (`App`/`Lam`), recursion (`Fix`/`FixGroup`),
+//! `Swap`, Dense/VSA — is an **explicit, never-silent** [`native::DialectError::Unsupported`] with
+//! an `EXPLAIN`-able reason that routes it back to the richer direct-LLVM backend ([`crate::llvm`])
+//! or the interpreter. No fragile codegen is ever shipped to widen coverage (G2/VR-5). The
+//! `mlir-opt`/`mlir-translate` tools are **probed at runtime** and their absence is a graceful
+//! [`native::DialectError::ToolchainMissing`] (skip, never fail) — mirroring the `llc`/`clang`
+//! idiom — so the feature build/test stays green on a box without libMLIR (ADR-019).
+//!
+//! **Guarantee tag:** `Empirical` — a genuinely compiled MLIR→LLVM artifact whose correctness is
+//! evidenced by the three-way differential (interp ≡ direct-LLVM ≡ MLIR-dialect) over the v0
+//! calculus corpus (M-602); never `Proven` without a checked equivalence proof.
 
 use core::fmt::Write as _;
 
@@ -238,3 +264,6 @@ mod tests {
         assert_eq!(emit(&program()), emit(&program()));
     }
 }
+
+#[cfg(feature = "mlir-dialect")]
+pub mod native;
