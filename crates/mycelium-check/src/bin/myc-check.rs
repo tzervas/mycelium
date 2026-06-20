@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use mycelium_check::{check_project, check_sources, FindingKind, Report};
+use mycelium_cli_common::{read_source, Args};
 use mycelium_l1::ast::{Item, TypeRef};
 use mycelium_l1::{check_nodule, parse};
 
@@ -32,18 +33,18 @@ fn main() -> ExitCode {
     let mut explain = false;
     let mut path: Option<String> = None;
 
-    let mut args = std::env::args().skip(1);
+    let mut args = Args::from_env();
     while let Some(a) = args.next() {
         match a.as_str() {
-            "--expect-main" => match args.next() {
+            "--expect-main" => match args.value() {
                 Some(t) => expect_main = Some(t),
                 None => return usage(),
             },
-            "--project" => match args.next() {
+            "--project" => match args.value() {
                 Some(p) => project = Some(p),
                 None => return usage(),
             },
-            "--config" => match args.next() {
+            "--config" => match args.value() {
                 Some(p) => config = Some(p),
                 None => return usage(),
             },
@@ -128,9 +129,11 @@ fn print_report(report: &Report, explain: bool) {
 /// Oracle mode: the prototype's exact behavior (M-002/KC-2 harness contract). A single file (or `-`),
 /// optional `--expect-main`, machine-readable first line, exit 2 (parse) / 3 (check) / 0 (ok).
 fn run_oracle(path: &str, expect_main: Option<&str>) -> ExitCode {
-    let src = match read_input(path) {
+    // `read_source` prints the same `io-error: …` line (no tool-name tag, as the prototype oracle did);
+    // a refusal maps to exit 66 (EX_IOERR) here, preserving the harness contract.
+    let src = match read_source("io-error", path) {
         Ok(s) => s,
-        Err(code) => return code,
+        Err(_) => return ExitCode::from(66),
     };
 
     let nodule = match parse(&src) {
@@ -172,23 +175,6 @@ fn run_oracle(path: &str, expect_main: Option<&str>) -> ExitCode {
     let _ = check_sources(&[(path.to_owned(), src)]);
     println!("ok");
     ExitCode::SUCCESS
-}
-
-fn read_input(path: &str) -> Result<String, ExitCode> {
-    use std::io::Read;
-    if path == "-" {
-        let mut s = String::new();
-        if std::io::stdin().read_to_string(&mut s).is_err() {
-            eprintln!("io-error: could not read stdin");
-            return Err(ExitCode::from(66));
-        }
-        Ok(s)
-    } else {
-        std::fs::read_to_string(path).map_err(|e| {
-            eprintln!("io-error: {path}: {e}");
-            ExitCode::from(66)
-        })
-    }
 }
 
 /// Render a declared return type the way the surface writes it (for `--expect-main`). Ported verbatim

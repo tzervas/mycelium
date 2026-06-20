@@ -13,6 +13,7 @@
 
 use std::process::ExitCode;
 
+use mycelium_cli_common::{read_source, Args};
 use mycelium_fmt::{format_source, Formatted};
 use mycelium_proj::parse_manifest;
 
@@ -39,13 +40,13 @@ fn main() -> ExitCode {
     let mut config: Option<String> = None;
     let mut paths: Vec<String> = Vec::new();
 
-    let mut args = std::env::args().skip(1);
+    let mut args = Args::from_env();
     while let Some(a) = args.next() {
         match a.as_str() {
             "--check" => mode = Mode::Check,
             "--write" => mode = Mode::Write,
             "--explain" => explain = true,
-            "--config" => match args.next() {
+            "--config" => match args.value() {
                 Some(p) => config = Some(p),
                 None => return usage(),
             },
@@ -127,9 +128,11 @@ fn discover_manifest(start: &std::path::Path) -> Option<std::path::PathBuf> {
 
 /// Format one path; return its exit code (contract §5).
 fn run_one(path: &str, mode: Mode, explain: bool, pin: Option<&str>) -> u8 {
-    let src = match read_input(path) {
+    // `read_source` prints the same `mycfmt: io-error: …` line the local copy did; a refusal maps to
+    // the contract's I/O exit code 66 (EX_IOERR) here, where the exit-code newtype lives.
+    let src = match read_source("mycfmt: io-error", path) {
         Ok(s) => s,
-        Err(code) => return code,
+        Err(_) => return 66,
     };
 
     match format_source(&src, pin) {
@@ -138,23 +141,6 @@ fn run_one(path: &str, mode: Mode, explain: bool, pin: Option<&str>) -> u8 {
             eprintln!("mycfmt: {path}: {e}");
             e.exit_code()
         }
-    }
-}
-
-fn read_input(path: &str) -> Result<String, u8> {
-    use std::io::Read;
-    if path == "-" {
-        let mut s = String::new();
-        if std::io::stdin().read_to_string(&mut s).is_err() {
-            eprintln!("mycfmt: io-error: could not read stdin");
-            return Err(66);
-        }
-        Ok(s)
-    } else {
-        std::fs::read_to_string(path).map_err(|e| {
-            eprintln!("mycfmt: io-error: {path}: {e}");
-            66
-        })
     }
 }
 

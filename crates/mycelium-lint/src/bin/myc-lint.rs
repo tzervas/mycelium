@@ -12,9 +12,10 @@
 //!
 //! Exit codes: 0 clean (or warnings only) · 1 an error-severity finding · 64 usage · 66 I/O.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::ExitCode;
 
+use mycelium_cli_common::{read_source, walk_myc, Args};
 use mycelium_lint::{doc_lint_status, lint_sources, LintReport};
 use mycelium_lsp::Severity;
 
@@ -29,10 +30,10 @@ fn main() -> ExitCode {
     let mut explain = false;
     let mut paths: Vec<String> = Vec::new();
 
-    let mut args = std::env::args().skip(1);
+    let mut args = Args::from_env();
     while let Some(a) = args.next() {
         match a.as_str() {
-            "--project" => match args.next() {
+            "--project" => match args.value() {
                 Some(p) => project = Some(p),
                 None => return usage(),
             },
@@ -110,16 +111,16 @@ fn print_report(report: &LintReport, explain: bool, fix: bool) {
 }
 
 /// Resolve the sources: `--project <dir>` walks for `.myc`; explicit paths are read (`-` = stdin);
-/// neither → the current directory.
+/// neither → the current directory. The `.myc` walk is `mycelium_cli_common::walk_myc` (shared with
+/// `myc-sec`); explicit `-`/path reads go through `read_source` (shared with `mycfmt`/`myc-check`).
 fn collect_sources(
     project: Option<&str>,
     paths: &[String],
 ) -> Result<Vec<(String, String)>, ExitCode> {
-    use std::io::Read;
     let mut out = Vec::new();
 
     if let Some(dir) = project {
-        for f in walk(Path::new(dir)).map_err(|e| {
+        for f in walk_myc(Path::new(dir)).map_err(|e| {
             eprintln!("myc-lint: {e}");
             ExitCode::from(66)
         })? {
@@ -138,8 +139,9 @@ fn collect_sources(
     }
 
     if paths.is_empty() {
-        // Default: walk the current directory.
-        for f in walk(Path::new(".")).map_err(|e| {
+        // Default: walk the current directory. A file that cannot be read here is skipped (best-effort
+        // over an ambient tree) — unchanged from the original, distinct from the explicit-path case.
+        for f in walk_myc(Path::new(".")).map_err(|e| {
             eprintln!("myc-lint: {e}");
             ExitCode::from(66)
         })? {
@@ -151,49 +153,16 @@ fn collect_sources(
     }
 
     for p in paths {
-        if p == "-" {
-            let mut s = String::new();
-            if std::io::stdin().read_to_string(&mut s).is_err() {
-                eprintln!("myc-lint: io-error: could not read stdin");
-                return Err(ExitCode::from(66));
-            }
-            out.push(("<stdin>".to_owned(), s));
+        // `read_source` prints the same `myc-lint: io-error: …` line and treats `-` as stdin; a refusal
+        // maps to exit 66 (EX_IOERR) here. Stdin keeps its `<stdin>` display name (read_source does not
+        // name the source — the caller owns the label, as before).
+        let src = read_source("myc-lint: io-error", p).map_err(|_| ExitCode::from(66))?;
+        let name = if p == "-" {
+            "<stdin>".to_owned()
         } else {
-            let src = std::fs::read_to_string(p).map_err(|e| {
-                eprintln!("myc-lint: io-error: {p}: {e}");
-                ExitCode::from(66)
-            })?;
-            out.push((p.clone(), src));
-        }
+            p.clone()
+        };
+        out.push((name, src));
     }
     Ok(out)
-}
-
-/// Collect every `.myc` under `dir` (recursively, sorted); skipping hidden entries and `target/`.
-fn walk(dir: &Path) -> Result<Vec<PathBuf>, String> {
-    let mut out = Vec::new();
-    walk_into(dir, &mut out)?;
-    out.sort();
-    Ok(out)
-}
-
-fn walk_into(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), String> {
-    let entries = std::fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
-    let mut paths: Vec<PathBuf> = entries.filter_map(|e| e.ok().map(|e| e.path())).collect();
-    paths.sort();
-    for path in paths {
-        let name = path
-            .file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or_default();
-        if name.starts_with('.') || name == "target" {
-            continue;
-        }
-        if path.is_dir() {
-            walk_into(&path, out)?;
-        } else if path.extension().is_some_and(|x| x == "myc") {
-            out.push(path);
-        }
-    }
-    Ok(())
 }

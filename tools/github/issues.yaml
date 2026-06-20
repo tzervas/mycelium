@@ -1585,7 +1585,7 @@ issues:
   - id: M-383
     title: "M-383 — ADR-018: per-crate 0.x versioning policy (source-only, no crates.io publish)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:design, area:release, priority:P2, status:needs-design]
+    labels: [phase:8, type:design, area:release, priority:P2, status:done]
     depends_on: []
     doc_refs: [corpus:RFC-0017]
     body: |
@@ -1595,7 +1595,7 @@ issues:
   - id: M-384
     title: "M-384 — Wire release-plz to a dry-run, workflow_dispatch-only release workflow"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:infra, area:release, priority:P2, status:needs-design]
+    labels: [phase:8, type:infra, area:release, priority:P2, status:done]
     depends_on: [M-383]
     doc_refs: [corpus:RFC-0017]
     body: |
@@ -1678,7 +1678,7 @@ issues:
   - id: M-643
     title: "M-643 — Toolchain CLI DRY: shared mycelium-cli-common (read-input/collect-sources/arg-parse)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:chore, area:toolchain, priority:P2, status:needs-design]
+    labels: [phase:8, type:chore, area:toolchain, priority:P2, status:done]
     depends_on: []
     doc_refs: [src:crates/mycelium-fmt/src/bin/mycfmt.rs, src:crates/mycelium-check/src/bin/myc-check.rs, src:crates/mycelium-lint/src/bin/myc-lint.rs, src:crates/mycelium-sec/src/bin/myc-sec.rs]
     body: |
