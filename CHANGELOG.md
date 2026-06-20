@@ -8,6 +8,76 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: Wave 4 — M-381 ablation results recorded)
+- **M-381 ablation run `20260620T195352Z` — results recorded (DN-09 §9):** Three-arm live
+  ablation (grok-build-0.1, seeds [11,23,42], 8 tasks × 3 seeds). Results [Empirical]: arm1
+  (bare) 0/24 = 0%; arm2 (grammar-primer) 24/24 = **100%**; arm4 (LlmCanonical) 0/24 = 0%
+  (scoring artifact — `myc-check` cannot parse S-expressions by design). Retention ratio:
+  **INDETERMINATE** — arm4 denominator = 0 (arm4 pass@1 reflects scorer limitation, not model
+  failure). Gold set: g04-widen-swap PARTIAL_PASS (self-corrected), g05-narrow-swap PASS (first
+  attempt) — 4/8 total PASSes. Total spend $0.0373 this run, ≈$0.072 cumulative. KC-2 verdict
+  unchanged: **proceed** (DN-09 §3). To unlock a determinate retention ratio: add
+  LlmCanonical-native scoring (Python-side parse-only or RFC-0021 §4.1 L1-bridge).
+  Arm3 (grammar-constrained) and arm5 (embedded-DSL) remain blocked (no GBNF, no RR-3).
+  M-381 status: in-progress (non-blocking research track).
+
+### Changed (2026-06-20: Wave 3 — ADR-020 Enacted, M-381 Arm 4 ablation run)
+- **ADR-020 — Enacted** (2026-06-20): `runtime`/`colony` phylum-placement decision is now
+  **Enacted** — the M-521 v0 R1 implementation landed on `main` in Wave 2
+  (`crates/mycelium-std-runtime`; 21 tests, 16-row guarantee matrix, `#![forbid(unsafe_code)]`).
+  Status: Accepted → Enacted. ADR-020 is outside ongoing maintenance; future runtime constructs
+  (Phase-7 gate) will reference it but not modify it. Append-only.
+- **ADR README** updated: status-set now shows `Proposed → Accepted → Enacted → Superseded`;
+  ADR-020 table row and summary text corrected (was stale "Proposed").
+
+### Added (2026-06-20: Wave 2 — M-620 native spore deploy seam, M-521 runtime phylum impl, M-381 Arm 4 unblocked)
+- **M-620 — DONE (native deploy/germination seam, FLAG Q2 resolved):** `crates/mycelium-std-spore/src/deploy.rs`
+  implements `germinate(spore, target) -> Result<DeployResult, DeployError>` — the content-addressed
+  native deploy pipeline. `DeployVerification` carries `content_hash_canonical` (Exact) and
+  `no_opaque_lowering` (Declared, VR-4). All 4 error paths are explicit, never silent (G2);
+  `explain_deploy` is always deterministic (Exact, SC-3). 44 tests pass; guarantee matrix extended
+  from 11 → 15 rows. ADR-013 FLAG Q2 ("Phase-6-gated") retired.
+- **M-521 — runtime phylum implemented (ADR-020 Accepted):** `crates/mycelium-std-runtime` v0 R1
+  surface fully implemented: `Scope<(),E>::join_all` (Empirical, FIFO sweep Exact, panic-caught G2);
+  `Colony<T,E>::scope()` factory; `Task` with `run(self)` (Declared purity); `TaskCtx::cancel`;
+  bounded `Network::channel(capacity)` returning `(Sender<V>, Receiver<V>)` with real
+  `Arc<Mutex<VecDeque>>` backend; `TrySend<V>` / `TryRecv<V>` fail-closed (`ZeroCapacity` on
+  capacity=0 — G2); all reserved vocabulary absent (RFC-0008 §4.5 Glossary ⟂); `#![forbid(unsafe_code)]`.
+  21 tests; 16-row guarantee matrix; clippy -D warnings clean.
+- **M-381 Arm 4 — unblocked (LlmCanonical parser + harness wiring):** `crates/mycelium-lsp/src/llm_canonical_parser.rs`
+  — `parse_llm_canonical(source) -> Result<String, ParseError>`, depth-limited recursive descent
+  (DEPTH_LIMIT=64; banked guard #4), 4 error variants, 14 tests. `tools/llm-harness/grok/llm_canonical_arm4.py`
+  — `arm4_run` with graceful-skip when Rust binary absent (`status: "skip"`, reason reported,
+  never silent). `ablation.py`: Arm 4 flipped to `runnable=True`. Python selftest 16/16 green.
+  Guarantee tag: `Empirical` (heuristic parser — not upgraded without checked basis, VR-5).
+- **ADR-020 — Accepted** (2026-06-20; moved from Proposed): unblocks M-521 implementation.
+
+### Added (2026-06-20: Wave 1 — Phase 5/6 close: M-601 done, ADR-020 Proposed, M-602 verified)
+- **ADR-020 — `runtime`/`colony` Phylum Placement (Proposed, M-521):** resolves RFC-0016
+  §8-Q4 (the deferred phylum-placement question). Decision: **Option C hybrid** — a dedicated
+  `runtime` phylum (`crates/mycelium-std-runtime`) with a thin `std.runtime` re-export facade
+  inside `std`; construct-by-construct activation at the Phase-7 gate. v0 R1 surface:
+  `Colony<T,E>`/`Scope<T,E>`, `Task`, `TaskCtx`, `Poll`, `SweepOrder`, `Deadlock`,
+  `Network`, `Sender<V>`, `Receiver<V>`, `TrySend<V>`, `TryRecv` — with per-op guarantee
+  matrix (`Exact`/`Empirical`/`Declared`; `Empirical` on `Scope`/`Network` grounded in the
+  RT2 sequentialization + Kahn-determinism differentials; `Declared` on the `Task` purity
+  contract). All RFC-0008 §4.5 reserved vocabulary (`hypha`/`fuse`/`xloc`/`cyst`/`graft`/
+  `forage`/`backbone`/`mesh`/`tier`/`reclaim`) stays Glossary ⟂. `runtime` v0 is
+  `wild`-free. Awaiting maintainer ratification (Proposed → Accepted).
+- **M-601 — DONE (honest scope):** native MLIR→LLVM codegen for the bit/trit element-wise
+  fragment (core.id, bit.not/and/or/xor, trit.neg) via `mlir-opt-18 | mlir-translate-18`
+  behind the `mlir-dialect` feature (`crates/mycelium-mlir/src/dialect/native.rs`); every
+  stage dumpable (VR-4); data/closure/recursion explicitly return `DialectError::Unsupported`
+  (never silent, VR-5). The full calculus runs end-to-end across interpreter + direct-LLVM +
+  MLIR; full-MLIR data/closure lowering is an honest open follow-up (not gated on M-601).
+- **M-602 — verified:** three-way interp↔MLIR↔direct-LLVM differential harness in
+  `crates/mycelium-mlir/tests/threeway_differential.rs`; 148 tests pass (graceful skip when
+  `mlir-opt-18` absent); E1 speedup test skeleton in place (pending `scripts/setup-mlir.sh`
+  toolchain installation). MLIR path correctly refuses out-of-fragment nodes while
+  interp↔direct-LLVM equivalence holds across the full calculus corpus.
+- **M-521 — in-progress (design initiated):** ADR-020 Proposed unblocks M-521-impl. Labels
+  updated from `needs-design` → `in-progress`.
+
 ### Added (2026-06-20: KC-2 / M-002 close — Grok/xAI harness verification + honest run record)
 - **DN-09 §7 (append-only):** records the 2026-06-20 Grok/xAI live run attempt. Harness
   self-test **14/14** (Empirical/plumbing — 14 checks: T0–T12 + T2b verified). Live run **blocked** by
