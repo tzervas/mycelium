@@ -82,8 +82,10 @@ The live reconcile issues many small, **independent, idempotent** `gh` mutations
 label, one per drifted issue, …). They are subprocess/IO-bound, so the engine overlaps their latency
 with a **bounded thread pool over the existing synchronous `gh()`** (threads, **not** an asyncio
 rewrite) — `gh()`/`_run_gh` keep their M-382 retry/backoff/120s-timeout verbatim. This maximizes sync
-speed while staying inside GitHub's **secondary** rate limits, and it is never-silent (G2),
-fault-tolerant, and ordered.
+speed while staying inside GitHub's **secondary** rate limits, and it is never-silent (G2) and
+fault-tolerant. The per-batch summary and the collected failure FLAGs are reported in **submission
+order** (deterministic); only the *live* per-item progress lines print in completion order, guarded by
+a process-wide lock so concurrent / `--verbose` output never interleaves.
 
 | Knob | Default | Meaning |
 |---|---|---|

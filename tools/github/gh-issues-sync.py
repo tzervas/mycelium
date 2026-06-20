@@ -65,7 +65,7 @@ import subprocess
 import sys
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import quote
 
@@ -413,8 +413,9 @@ def run_batch(name, tasks, *, concurrency=None, summary=True, return_results=Fal
 
     - ``concurrency=1`` (or the module ``CONCURRENCY`` being 1) ⇒ EXACT sequential behaviour: each
       task runs inline, in submission order, with no executor — the clean debugging fallback.
-    - otherwise a bounded ``ThreadPoolExecutor(max_workers=N)`` runs them, results aggregated via
-      ``as_completed``. One task raising/failing NEVER aborts the batch — its failure is captured.
+    - otherwise a bounded ``ThreadPoolExecutor(max_workers=N)`` runs them concurrently; results are
+      collected in SUBMISSION order (deterministic summary/failures). One task raising/failing NEVER
+      aborts the batch — its failure (incl. a stray ``SystemExit``) is captured.
     - returns ``(ok_count, fail_count, failures)`` (the pure ``aggregate_results`` split), or the
       full ``[(item, ok, err)]`` results list when ``return_results`` is set (the create pass needs
       the ok payloads). When ``summary`` is set, prints a ``>> <name>: N ok, M failed`` line (G2)."""
@@ -429,8 +430,10 @@ def run_batch(name, tasks, *, concurrency=None, summary=True, return_results=Fal
     else:
         with ThreadPoolExecutor(max_workers=n) as pool:
             futures = [pool.submit(_run_one_task, task) for task in tasks]
-            for fut in as_completed(futures):
-                results.append(fut.result())
+            # Collect in SUBMISSION order (not completion order) so the aggregation + failure
+            # report are deterministic. Each .result() blocks until that task is done; all run
+            # concurrently (already submitted). Live per-item progress still prints as tasks finish.
+            results = [fut.result() for fut in futures]
     ok_count, fail_count, failures = aggregate_results(results)
     if summary:
         safe_print(f">> {name}: {ok_count} ok, {fail_count} failed")
@@ -444,10 +447,11 @@ def _run_one_task(task):
     one bad task never aborts the batch (build on the existing migration fault-tolerance)."""
     try:
         return task()
-    except SystemExit:
-        # A task that hit _gh_fail/sys.exit would normally abort the process; inside a batch we
-        # capture it as a failure so the rest of the batch still completes (never-silent below).
-        raise
+    except SystemExit as exc:
+        # A task that hit _gh_fail/sys.exit (its remediation is already printed) would, in a worker
+        # thread, bubble out of fut.result() and abort the batch — so capture it as a failure to
+        # honour 'one failure never aborts a batch' (G2; never-silent in the aggregation below).
+        return (getattr(task, "item", "?"), False, f"task exited: {exc}")
     except (
         Exception
     ) as exc:  # pragma: no cover - defensive: a task should return, not raise

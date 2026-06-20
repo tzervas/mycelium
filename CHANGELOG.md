@@ -31,10 +31,12 @@ fallback. Builds on the existing M-382 per-call retry/backoff/120s-timeout in `_
   optional start-of-run `gh api rate_limit` probe that reduces `N` when the remaining core budget is
   low (`negotiate_concurrency`, never-silent; `--no-rate-probe` opts out). A **primary** rate-limit is
   deliberately NOT absorbed into a short pause (it resets hourly — `_gh_fail` surfaces it honestly).
-- **Never-silent, fault-tolerant, ordered output** — each task returns `(item, ok, err)`; `run_batch`
-  aggregates per batch (`aggregate_results`), prints `>> <batch>: N ok, M failed`, and collects every
-  failure as a re-runnable FLAG — one failure never aborts the batch. **All printing is guarded by a
-  process-wide lock** (`safe_print`/`_safe_stderr`) so concurrent / `--verbose` output never interleaves.
+- **Never-silent, fault-tolerant, non-interleaving output** — each task returns `(item, ok, err)`;
+  `run_batch` collects results in **submission order** (deterministic summary + failure FLAGs),
+  aggregates per batch (`aggregate_results`), prints `>> <batch>: N ok, M failed`, and keeps every
+  failure as a re-runnable FLAG — one failure (incl. a stray `SystemExit`) never aborts the batch.
+  **All printing is guarded by a process-wide lock** (`safe_print`/`_safe_stderr`) so concurrent /
+  `--verbose` output never interleaves.
 - **Pure helpers + `--self-test`** — `should_pause_for_rate_limit`, `parse_rate_remaining`,
   `negotiate_concurrency`, `aggregate_results`, `_issue_update_args`, `partition_issue_work`, and
   `run_batch` (N=1 sequential + concurrent fault-capture) are all covered offline. Verified:
