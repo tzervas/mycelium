@@ -15,11 +15,13 @@
 #   phrase:      the literal stale phrase that must NOT appear (case-insensitive).
 #   in_files:    list of repo-root-relative navigational doc paths to scan.
 #   when:        (optional) a precondition — the rule only fires when it holds.
-#                Supported form: `all_status_at_least` over a glob, with an `except`
-#                list and a `floor` lattice rank. The phrase is then forbidden only
-#                once every non-excepted doc in the glob has reached the floor status.
+#                Supported forms (each over a `glob`, with an optional `except` list and
+#                a `floor` lattice status): `all_status_at_least` fires once EVERY
+#                non-excepted doc in the glob has reached the floor; `any_status_at_least`
+#                fires once AT LEAST ONE has. A malformed when-clause fails the gate
+#                (controlled error, not a traceback).
 #
-# The lattice rank used by `all_status_at_least` (forward order):
+# The lattice rank used by the preconditions (forward order):
 #   Draft=0  Proposed=0  Preliminary=0  Accepted=1  Enacted=2  Superseded=3  Resolved=1
 # (Resolved is the notes-track terminal of Accepted; it ranks with Accepted for "≥".)
 
@@ -63,7 +65,7 @@ rules:
     in_files:
       - docs/adr/README.md
     when:
-      all_status_at_least:
+      any_status_at_least:
         glob: docs/adr/*.md
         floor: Enacted
         except:

@@ -4,7 +4,7 @@ An RFC is a detailed, normative design of a subsystem that multiple decisions pl
 
 ## Status set
 
-`Draft/Proposed → Accepted → Enacted → Superseded` (the ratified lattice, #236; `Enacted` = an Accepted design now fully implemented/landed — it must step through `Accepted` first). RFC-0001…0005 are **Accepted** (solidified from the two research passes); **RFC-0006 is Accepted (r5, 2026-06-18)** and **RFC-0007 Accepted (r4)** — the layering / L1 v0 calculus are ratified, and the **KC-2 verdict (DN-09, 2026-06-18) = proceed** has now **committed the concrete L3 text surface** (+ a co-equal projection layer), discharging the prior KC-2 gate (RFC-0006 §10 Q1). **RFC-0017** (maturation scope & de-maturation) is **Accepted**. The follow-on surface/type-system designs ratified 2026-06-18: **RFC-0018** (stage-1 grading) and **RFC-0019** (traits/LR-2) are **Accepted**, **RFC-0020** (L2 surface) **Accepted (scoped)**, **RFC-0021** (projections) **Accepted (framework)**. RFC-0008/0010 are **Accepted**; the error-handling family **RFC-0011/0012/0013/0014/0015** is **Enacted** (Accepted designs landed in code).
+`Draft/Proposed/Preliminary → Accepted → Enacted → Superseded` (the ratified lattice, #236; `Enacted` = an Accepted design now fully implemented/landed — it must step through `Accepted` first). RFC-0001…0005 are **Accepted** (solidified from the two research passes); **RFC-0006 is Accepted (r5, 2026-06-18)** and **RFC-0007 Accepted (r4)** — the layering / L1 v0 calculus are ratified, and the **KC-2 verdict (DN-09, 2026-06-18) = proceed** has now **committed the concrete L3 text surface** (+ a co-equal projection layer), discharging the prior KC-2 gate (RFC-0006 §10 Q1). **RFC-0017** (maturation scope & de-maturation) is **Accepted**. The follow-on surface/type-system designs ratified 2026-06-18: **RFC-0018** (stage-1 grading) and **RFC-0019** (traits/LR-2) are **Accepted**, **RFC-0020** (L2 surface) **Accepted (scoped)**, **RFC-0021** (projections) **Accepted (framework)**. RFC-0008/0010 are **Accepted**; the error-handling family **RFC-0011/0012/0013/0014/0015** is **Enacted** (Accepted designs landed in code).
 
 ## Index
 
@@ -46,7 +46,7 @@ An **ADR** records *a* decision; an **RFC** designs *a subsystem* and may rest o
 | Field | Value |
 |---|---|
 | **RFC** | NNNN |
-| **Status** | Draft \| Accepted \| Enacted \| Superseded |
+| **Status** | Draft \| Proposed \| Preliminary \| Accepted \| Enacted \| Superseded |
 | **Type** | Foundational / normative \| Informational |
 | **Date** | YYYY-MM-DD |
 | **Depends on** | <RFCs / ADRs / Foundation labels> |

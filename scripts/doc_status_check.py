@@ -7,7 +7,8 @@ authoritative per-doc `Status` headers. Three passes, each cheap, deterministic,
 never-silent (every check AND every failure is printed with the file:line):
 
 1. **Lattice validation** — parse every decision doc's authoritative `Status` header
-   (`docs/rfcs/*.md`, `docs/adr/*.md`, `docs/notes/*.md`, `docs/spec/stdlib/*.md`) and
+   (the numbered decision docs `docs/rfcs/RFC-*.md`, `docs/adr/ADR-*.md`,
+   `docs/notes/DN-*.md`, plus `docs/spec/stdlib/*.md`) and
    FAIL if its leading status token is not in the allowed lattice
    {Draft, Proposed, Preliminary, Accepted, Enacted, Superseded, Resolved}. A bare
    legacy compound `Accepted — Enacted` is FAILed as normalization-needed (the canonical
@@ -299,28 +300,44 @@ def _status_token_for(path: Path) -> str | None:
 
 
 def _precondition_met(when: dict, errors: list[str]) -> tuple[bool, str]:
-    """Evaluate an optional `when:` precondition. Returns (met, human-reason)."""
-    spec = when.get("all_status_at_least")
-    if not spec:
+    """Evaluate an optional `when:` precondition. Returns (met, human-reason).
+
+    Supports `all_status_at_least` (every non-excepted doc in the glob has reached the
+    floor) and `any_status_at_least` (at least one has). A malformed clause fails the
+    gate with a controlled message rather than a `KeyError` traceback.
+    """
+    mode = next(
+        (k for k in ("all_status_at_least", "any_status_at_least") if k in when), None
+    )
+    if mode is None:
         return True, "no precondition"
-    glob = spec["glob"]
-    floor = spec["floor"]
+    spec = when.get(mode) or {}
+    glob, floor = spec.get("glob"), spec.get("floor")
+    if not glob or not floor:
+        errors.append(f"manifest: `{mode}` needs both 'glob' and 'floor'")
+        return False, f"malformed `{mode}` (needs glob + floor)"
     floor_rank = LATTICE_RANK.get(floor)
     if floor_rank is None:
         errors.append(f"manifest: unknown floor status {floor!r} in when-clause")
         return False, f"unknown floor {floor!r}"
     except_rel = set(spec.get("except", []))
-    laggards: list[str] = []
-    for path in sorted(REPO_ROOT.glob(glob)):
-        if rel(path) in except_rel or path.name in NON_DECISION_NAMES:
-            continue
-        token = _status_token_for(path)
-        rank = LATTICE_RANK.get(token or "", -1)
-        if rank < floor_rank:
-            laggards.append(f"{rel(path)} ({token})")
-    if laggards:
-        return False, f"{len(laggards)} doc(s) below {floor}: {', '.join(laggards)}"
-    return True, f"all {glob} (except carve-outs) >= {floor}"
+    ranked = [
+        (rel(p), _status_token_for(p))
+        for p in sorted(REPO_ROOT.glob(glob))
+        if rel(p) not in except_rel and p.name not in NON_DECISION_NAMES
+    ]
+    below = [
+        f"{r} ({t})" for r, t in ranked if LATTICE_RANK.get(t or "", -1) < floor_rank
+    ]
+    at_floor = [r for r, t in ranked if LATTICE_RANK.get(t or "", -1) >= floor_rank]
+    if mode == "all_status_at_least":
+        if below:
+            return False, f"{len(below)} doc(s) below {floor}: {', '.join(below)}"
+        return True, f"all {glob} (except carve-outs) >= {floor}"
+    # any_status_at_least
+    if at_floor:
+        return True, f"{len(at_floor)} doc(s) of {glob} >= {floor}"
+    return False, f"no {glob} doc has reached {floor} yet"
 
 
 def check_invariants(errors: list[str]) -> None:

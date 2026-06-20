@@ -16,7 +16,7 @@ just setup     # install the check tools (uv tool / npx / pip); safe to re-run
 just check     # run the full suite
 just fmt       # auto-format (rust + python)
 just hooks     # install pre-commit so checks run on every commit
-just <name>    # run one check: md, links, doc-currency, doc-status, schema, spell, shell, structured, secrets, lint, fmt-check
+just <name>    # run one check (e.g. md, links, doc-currency, doc-status, schema, spell, lint); `just --list` shows them all
 ```
 
 No `just`? The scripts are plain bash: `bash scripts/checks/all.sh`.
