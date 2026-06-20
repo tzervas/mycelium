@@ -7,7 +7,7 @@ silent or invented discount; batch prices default to sync prices in the seed fil
 until the published batch rates are filled in).
 
 HONESTY: the numbers are ``Declared`` configuration, not measurements. This module
-neither verifies nor upgrades that tag; it only loads, orders and arithmetics.
+neither verifies nor upgrades that tag; it only loads, orders and does arithmetic.
 
 Pure stdlib: ``tomllib`` ships in CPython 3.11+. No third-party TOML dependency.
 """

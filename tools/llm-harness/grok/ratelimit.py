@@ -43,7 +43,7 @@ _RETRY_AFTER_RE = re.compile(r"(\d+)")
 
 
 def parse_retry_after(value: str | int | float | None) -> float | None:
-    """Parse a ``Retry-After`` value into seconds, or ``None`` if unparseable.
+    """Parse a ``Retry-After`` value into seconds, or ``None`` if unparsable.
 
     PURE (offline-testable). Accepts an int/float directly, or a string holding a
     leading integer count of seconds. Negative/zero -> ``None`` (treat as absent).
