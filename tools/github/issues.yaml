@@ -1585,7 +1585,7 @@ issues:
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:design, area:release, priority:P2, status:needs-design]
     depends_on: []
-    doc_refs: [corpus:ADR-007]
+    doc_refs: [corpus:RFC-0017]
     body: |
       Author ADR-018 fixing the versioning policy: per-crate 0.x SemVer across the workspace, SOURCE-ONLY (no crates.io publish in the design phase), how CHANGELOG `[Unreleased]` maps to a cut, and the MVP/release-capability gate a real release must clear (honest: not now). Relate to ADR-007. Append-only decision doc.
       Acceptance: ADR-018 Accepted; Doc-Index + CHANGELOG updated; cited by M-384.
@@ -1595,7 +1595,7 @@ issues:
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:infra, area:release, priority:P2, status:needs-design]
     depends_on: [M-383]
-    doc_refs: [corpus:ADR-007]
+    doc_refs: [corpus:RFC-0017]
     body: |
       Wire `release-plz` (config + a `.github/workflows/release*.yml`) to a DRY-RUN, manual-dispatch-only, advisory job — matching the repo's "no automatic remote CI" policy (workflow_dispatch only; never on push/PR). It previews the per-crate version bumps + changelog from Conventional Commits; it does NOT tag, publish, or open release PRs automatically. Implements ADR-018.
       Acceptance: the dry-run runs locally + via manual dispatch and emits a correct version/changelog preview; nothing is published; `just check` parity holds.
