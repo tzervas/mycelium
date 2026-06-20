@@ -22,6 +22,8 @@ and an injected scorer, exercising exactly the load-bearing math:
   T13 API discovery: from_api_discovery() maps a mock GET /v1/models response to
       ModelSpec objects with correct Declared conservative defaults; bad/missing
       pricing entries are skipped with a warning; all-bad input is a G2 error.
+  T14 Resume logic: --resume-from bookkeeping carries PASS tasks, retries non-PASS,
+      drops stale/unknown task ids, and tolerates malformed entries without crashing.
 
 Each check returns a (name, ok, detail) triple; ``run_self_test`` prints them and
 returns process exit 0 iff all pass. Plumbing verified this way is **Empirical**
@@ -118,6 +120,15 @@ def _fake_scorer(verdict_by_call: list[int]) -> MycCheckScorer:
         code = verdict_by_call[min(i, len(verdict_by_call) - 1)]
         stderr = "" if code == EXIT_CLEAN else f"diagnostic for exit {code}"
         return code, "", stderr
+
+    return MycCheckScorer(runner=runner)
+
+
+def _stdout_scorer(exit_code: int, stdout_msg: str) -> MycCheckScorer:
+    """A scorer whose runner emits its diagnostic on stdout (empty stderr) — like myc-check oracle mode."""
+
+    def runner(_src: str) -> tuple[int, str, str]:
+        return exit_code, stdout_msg, ""
 
     return MycCheckScorer(runner=runner)
 
@@ -273,7 +284,30 @@ def check_scoring_classifier() -> Check:
         return Check("T6 scoring", False, f"aggregate wrong: {agg.to_dict()}")
     if abs((agg.typecheck_pass_rate or 0) - (1 / 3)) > 1e-9:
         return Check("T6 scoring", False, "typecheck rate denominator excludes skips")
-    return Check("T6 scoring", True, "exit-code classify + KC-2 rates (skips excluded)")
+    # M-330 fix: myc-check oracle emits errors on stdout; scorer must capture stdout fallback.
+    # Mutation witness: if scoring.py reverts to `_out` discard, diagnostics would be empty here.
+    stdout_scorer = _stdout_scorer(
+        EXIT_PARSE_ERROR, "parse-error: unexpected token '}'"
+    )
+    r_stdout = stdout_scorer.score("bad{}")
+    if r_stdout.verdict != VERDICT_SYNTAX_ERROR:
+        return Check(
+            "T6 scoring", False, f"stdout-path: wrong verdict {r_stdout.verdict}"
+        )
+    if (
+        not r_stdout.diagnostics
+        or r_stdout.diagnostics[0]["message"] != "parse-error: unexpected token '}'"
+    ):
+        return Check(
+            "T6 scoring",
+            False,
+            f"stdout-path: diagnostics not captured: {r_stdout.diagnostics}",
+        )
+    return Check(
+        "T6 scoring",
+        True,
+        "exit-code classify + KC-2 rates (skips excluded) + stdout fallback",
+    )
 
 
 def _skip_scorer() -> MycCheckScorer:
@@ -742,6 +776,45 @@ def check_api_discovery() -> Check:
     )
 
 
+def check_resume_logic() -> Check:
+    """T14: --resume-from bookkeeping: PASS carried, non-PASS retried, unknown/malformed filtered.
+
+    Tests the pure filtering logic (no live calls).  Mutation witness: if the .get("task_id")
+    fix is reverted the malformed-entry case raises KeyError instead of passing.
+    """
+    from .coauthor_loop import STATUS_PASS as _PASS
+
+    tasks = [Task("t1", "task 1"), Task("t2", "task 2"), Task("t3", "task 3")]
+    prior: list[dict] = [
+        {"task_id": "t1", "status": _PASS},  # → carried (PASS, in task set)
+        {"task_id": "t2", "status": "syntax_error"},  # → retried (non-PASS)
+        {"task_id": "unknown", "status": _PASS},  # → dropped (not in task set)
+        {"status": _PASS},  # → no crash (no task_id key)
+    ]
+
+    raw = {o.get("task_id"): o for o in prior}
+    raw.pop(None, None)
+    current_ids = {t.id for t in tasks}
+    carried = {
+        tid: o
+        for tid, o in raw.items()
+        if o.get("status") == _PASS and tid in current_ids
+    }
+    to_run = [t for t in tasks if t.id not in carried]
+
+    if set(carried) != {"t1"}:
+        return Check("T14 resume", False, f"carried={set(carried)!r}, want {{'t1'}}")
+    if [t.id for t in to_run] != ["t2", "t3"]:
+        return Check(
+            "T14 resume", False, f"to_run={[t.id for t in to_run]!r}, want ['t2','t3']"
+        )
+    return Check(
+        "T14 resume",
+        True,
+        "PASS in task-set carried; non-PASS + unknown + no-task_id handled correctly",
+    )
+
+
 # -- driver ------------------------------------------------------------------
 
 ALL_CHECKS = [
@@ -760,6 +833,7 @@ ALL_CHECKS = [
     check_report_emission,
     check_budget_cap,
     check_api_discovery,
+    check_resume_logic,
 ]
 
 
