@@ -45,6 +45,7 @@ pub mod aot;
 pub mod bitnet;
 pub mod budget;
 pub mod channel;
+pub mod deploy;
 pub mod dialect;
 pub mod inject;
 pub mod jit;
@@ -53,19 +54,21 @@ pub mod pack;
 pub mod runtime;
 pub mod simd;
 pub mod specialize;
+pub mod vr4;
 
 pub use aot::{
     default_depth_budget, run, run_core, run_core_with_effects, run_core_with_fuel, run_with_layout,
 };
 pub use bitnet::{
     compile_bitnet_dot, compile_bitnet_dot_for, emit_bitnet_dot_ir, emit_bitnet_dot_ir_for,
-    jit_ternary_dot, jit_ternary_dot_for, ternary_dot_ref, BitnetDotKernel,
+    jit_ternary_dot, jit_ternary_dot_for, ternary_dot_ref, BitnetDotKernel, KernelLayout,
 };
 pub use budget::{
     AutoDepthBudget, DepthBasis, DepthBudget, DepthResolution, MemSource, StaticDepthBudget,
     StaticReason, STATIC_FALLBACK_DEPTH,
 };
 pub use channel::{Network, Receiver, Sender, TryRecv, TrySend};
+pub use deploy::{DeployError, NativeArtifact};
 pub use dialect::emit;
 #[cfg(feature = "mlir-dialect")]
 pub use dialect::native::{
@@ -75,7 +78,7 @@ pub use dialect::native::{
 pub use inject::{recompile_closure, Image, InjectError, Resolution};
 pub use jit::{compile_so, jit_run, JitArtifact};
 pub use llvm::{compile, compile_and_run, emit_llvm_ir, AotError, CompiledArtifact};
-pub use pack::{pack_trits, relayout_trits, unpack_trits};
+pub use pack::{needed_bytes as needed_bytes_for, pack_trits, relayout_trits, unpack_trits};
 pub use runtime::{Colony, Deadlock, Poll, Scope, SweepOrder, Task, TaskCtx};
 pub use simd::{
     compile_bitnet_dot_simd, compile_bitnet_dot_simd_tl1, compile_bitnet_dot_simd_tl2,
@@ -84,3 +87,4 @@ pub use simd::{
 pub use specialize::{
     compile_specialized_dot, emit_specialized_dot_ir, jit_specialized_dot, SpecializedDotKernel,
 };
+pub use vr4::{cross_backend_gate, Backend, BackendStage, CrossBackendGate, StageStatus};

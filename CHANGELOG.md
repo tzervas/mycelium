@@ -8,6 +8,38 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: Phase 6 — native acceleration + deploy + VR-4 exit gate (M-360, M-610/620/630))
+Completed the Phase-6 native path on the keystone (E6-1) — the **VR-4 no-opaque-lowering cross-backend
+gate is met (the Phase-6 exit)**. All in `crates/mycelium-mlir/` (+ DN-18); interpreter stays the
+trusted base, native is the differential-tested perf-path.
+- **M-360 (Phase 3) — measured BitNet SIMD throughput.** The I2_S/TL1/TL2 SIMD unpack kernels already
+  existed + were differential-tested; added the missing **measurement**: an `#[ignore]`-by-default
+  release harness timing scalar vs SIMD, correctness re-checked vs the oracle. **Empirical, no
+  pre-written target** — illustrative: I2_S ×1.09, TL1 ×1.65, TL2 ×4.72 over scalar.
+- **M-610 — packed-ternary on the native backend.** `bitnet::KernelLayout` reifies the kernel's
+  inspectable `Meta.physical` (scheme + *measured* bits/element — 2.0 for 2-bit, ~1.667 for TL2 — +
+  EXPLAIN, never hidden, DN-01). The M-251 E3 wrong-layout differential is carried onto the **actual
+  compiled kernel** (real `clang`): a mislabeled layout misreads → caught (NFR-7, non-vacuous).
+- **M-620 — deployable native artifact (primitive + design note).** `deploy::NativeArtifact`: a
+  content-addressed deploy descriptor whose **identity *is* the program's `ContentHash`**, derived
+  *internally* from `Node::content_hash()` (ADR-003) — never a supplied input, so `id()` can never name
+  a different program than its IR/attestation embody (a forged identity is *unrepresentable* — G2 in
+  its strongest form). Carries the dumpable IR + the VR-4 attestation into the deployed unit; failures
+  keep a *structured* signal (an absent toolchain → `DeployError::ToolchainMissing` so a caller skips,
+  mirroring `AotError`; an un-lowerable program → `DeployError::NotDeployable`) — never fragile codegen,
+  never brittle string-matching. **Honest scope:** the full Spore wiring (the `spore`←`mlir` dep + the
+  wire-schema `native` component) is **ADR-level and impl-pending**, designed in **DN-18 (Draft)** —
+  `status:in-progress`, not overclaimed.
+- **M-630 (Phase-6 EXIT) — VR-4 cross-backend gate.** `vr4::cross_backend_gate` makes the
+  no-opaque-lowering obligation **mechanical + enumerable** over all **6 backends** (interpreter, AOT
+  env-machine, direct-LLVM, MLIR skeleton, real MLIR `arith`/`func`→LLVM, JIT/SIMD) — each yields an
+  inspectable textual lowering stage tagged at honest strength (Declared for trusted-base/skips,
+  Empirical for differential-validated dumps; **never Proven**); an absent feature/tool is an explicit
+  `Skipped(reason)`, never a fabricated dump. The test drove the real `mlir-opt-18 | mlir-translate-18`
+  pipeline to genuine LLVM IR. **No opaque pass on any backend → Phase-6 exit gate met.**
+- Verified: `cargo test -p mycelium-mlir` 133 (default) / 140 (`mlir-dialect`) green; `mycelium-spore` &
+  `mycelium-proj` 32 green; workspace clippy `-D warnings` + fmt clean; full `just check` green.
+
 ### Added (2026-06-20: Phase 3 — Grok-pluggable LLM co-authoring harness (M-330/331; M-381 wired))
 Extended `tools/llm-harness/` (M-330/331, already `done`) with a pluggable, batchable, cost-aware Grok/xAI
 backend so the language-leverage experiment is runnable from a WSL host (or any box with a key).

@@ -30,11 +30,93 @@ use std::ffi::c_void;
 use std::fmt::Write as _;
 
 use mycelium_core::ternary::digit;
-use mycelium_core::{PackScheme, Trit};
+use mycelium_core::{PackScheme, PhysicalLayout, Trit};
 
 use crate::jit::{dlopen_path, Lib};
 use crate::llvm::{path, run_tool, unique_tmp_dir, AotError, TmpDir};
-use crate::pack::pack_trits;
+use crate::pack::{needed_bytes, pack_trits};
+
+/// The **inspectable physical-layout record** a packed-ternary kernel decodes (M-610; NFR-1/NFR-4;
+/// DN-01; RFC-0004 §5). This is the kernel's reified `Meta.physical` claim: which [`PackScheme`] it
+/// reads, expressed as the [`PhysicalLayout`] record that travels on a result's `Meta`, plus the
+/// *actual* byte/bit density the kernel's loads assume (derived from [`crate::pack::needed_bytes`] —
+/// the single source of truth for the buffer the kernel reads, never a separately-asserted number).
+///
+/// Packing is a **schedule concern recorded on `Meta.physical`, never hidden lowering** (DN-01): the
+/// kernel does not silently "know" a layout — it carries this record, it is queryable, and an
+/// `EXPLAIN` ([`KernelLayout::explain`]) renders it. A *wrong* record fed to the kernel misreads the
+/// buffer; that mislabel is caught by the kernel-level wrong-layout differential (M-251 E3 carried
+/// onto the native kernel; `tests/native_packed_layout.rs`), so the record is trusted **only because
+/// a wrong one is caught** (NFR-7).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct KernelLayout {
+    /// The packing scheme the kernel's unpack body decodes.
+    scheme: PackScheme,
+}
+
+impl KernelLayout {
+    /// The layout for `scheme`. Only the three bitnet packings (I2_S/TL1/TL2) have a native kernel,
+    /// so this is the layout a compiled [`BitnetDotKernel`] reports; constructing it for another
+    /// scheme is still meaningful as a *record* but no kernel decodes it.
+    #[must_use]
+    pub fn new(scheme: PackScheme) -> Self {
+        Self { scheme }
+    }
+
+    /// The packing scheme.
+    #[must_use]
+    pub fn scheme(self) -> PackScheme {
+        self.scheme
+    }
+
+    /// The reified `Meta.physical` record — the [`PhysicalLayout`] that travels on a result's `Meta`
+    /// (`PhysicalLayout::TritPacked { scheme }`). This is the value the E3 wrong-layout differential
+    /// (M-251) compares against the *true* packing; a mismatch is the soundness hazard it catches.
+    #[must_use]
+    pub fn physical(self) -> PhysicalLayout {
+        PhysicalLayout::TritPacked {
+            scheme: self.scheme,
+        }
+    }
+
+    /// The **actual** bits-per-element the kernel's loads assume, measured from the byte buffer the
+    /// kernel reads over a large run ([`crate::pack::needed_bytes`] — the codec the kernel decodes,
+    /// not a cost-model estimate). For the byte-aligned 2-bit schemes this is exactly `2.0`; for the
+    /// TL2 5-bit-field bitstream it converges to `5/3 ≈ 1.667`. Honest/`Empirical`: it is the density
+    /// of the concrete layout this kernel decodes, computed over a 60 000-element reference window.
+    #[must_use]
+    pub fn bits_per_element(self) -> f64 {
+        const N: usize = 60_000;
+        #[allow(clippy::cast_precision_loss)]
+        {
+            (needed_bytes(self.scheme, N) as f64) * 8.0 / (N as f64)
+        }
+    }
+
+    /// A human-readable `EXPLAIN` of the physical layout — what the kernel actually reads, so the
+    /// packing is auditable and never a black box (NFR-1/NFR-4; DN-01). Names the scheme, the
+    /// grouping (trits per byte / per bit-field), and the measured bits-per-element density.
+    #[must_use]
+    pub fn explain(self) -> String {
+        let grouping = match self.scheme {
+            PackScheme::Unpacked => "1 trit/byte".to_owned(),
+            PackScheme::I2S | PackScheme::Tl1 | PackScheme::TwoBitPerTrit => {
+                "4 trits/byte (2-bit code per trit)".to_owned()
+            }
+            PackScheme::FiveTritPerByte => "5 trits/byte (base-3, 1.6 b/w)".to_owned(),
+            PackScheme::Tl2 => {
+                "3 trits -> a 5-bit LUT-index, bit-packed contiguously (1.67 b/w bitstream)"
+                    .to_owned()
+            }
+        };
+        format!(
+            "PhysicalLayout::TritPacked {{ scheme: {:?} }} — {grouping}; \
+             measured {:.3} bits/element (from pack::needed_bytes, the codec the kernel decodes)",
+            self.scheme,
+            self.bits_per_element(),
+        )
+    }
+}
 
 /// The packing this kernel decodes inline by default. **I2_S** is the RFC-0004 §5 default (2-bit,
 /// 4 trits/byte, `rot = 0` so a code `c ∈ {0,1,2}` is the base-3 digit and the signed weight is
@@ -221,6 +303,16 @@ impl BitnetDotKernel {
     #[must_use]
     pub fn scheme(&self) -> PackScheme {
         self.scheme
+    }
+
+    /// The kernel's **inspectable physical-layout record** (M-610): the reified `Meta.physical`
+    /// claim — which [`PhysicalLayout`] it decodes and the measured bits-per-element — `EXPLAIN`-able
+    /// via [`KernelLayout::explain`]. The packing is metadata on the lowered artifact, not hidden
+    /// lowering (NFR-1/NFR-4; DN-01). A wrong record is caught by the kernel-level wrong-layout
+    /// differential (M-251 E3), so the record is trusted only because a mislabel is caught (NFR-7).
+    #[must_use]
+    pub fn layout(&self) -> KernelLayout {
+        KernelLayout::new(self.scheme)
     }
 
     /// Run the kernel over `packed_weights` (packed under [`scheme`](Self::scheme)) and
@@ -492,6 +584,49 @@ mod tests {
             kernel.call(&[0u8, 0u8], &x, n),
             Err(AotError::Run(_))
         ));
+    }
+
+    #[test]
+    fn kernel_layout_records_the_inspectable_physical_layout() {
+        // M-610: the layout record is the reified Meta.physical the kernel decodes — queryable,
+        // EXPLAIN-able, and exactly the PhysicalLayout that travels on a result's Meta (so the E3
+        // wrong-layout differential can compare it to the true packing).
+        for scheme in [PackScheme::I2S, PackScheme::Tl1, PackScheme::Tl2] {
+            let layout = KernelLayout::new(scheme);
+            assert_eq!(layout.scheme(), scheme);
+            assert_eq!(layout.physical(), PhysicalLayout::TritPacked { scheme });
+            // The EXPLAIN names the scheme and the measured density — no black box (NFR-1/NFR-4).
+            let ex = layout.explain();
+            assert!(
+                ex.contains(&format!("{scheme:?}")),
+                "EXPLAIN names scheme: {ex}"
+            );
+            assert!(ex.contains("bits/element"), "EXPLAIN reports density: {ex}");
+        }
+        // The measured bits-per-element matches the codec the kernel actually decodes (pack.rs):
+        // 2-bit schemes are exactly 2.0; TL2 is the true 1.67-b/w bitstream.
+        assert!((KernelLayout::new(PackScheme::I2S).bits_per_element() - 2.0).abs() < 1e-9);
+        assert!((KernelLayout::new(PackScheme::Tl1).bits_per_element() - 2.0).abs() < 1e-9);
+        let tl2 = KernelLayout::new(PackScheme::Tl2).bits_per_element();
+        assert!((1.66..=1.68).contains(&tl2), "TL2 ≈ 1.67 b/w, got {tl2}");
+    }
+
+    #[test]
+    fn compiled_kernel_reports_its_layout() {
+        // The compiled kernel carries the same inspectable record as its scheme — the native
+        // packed-ternary path records meta.physical, it is not hidden lowering (M-610).
+        let kernel = match compile_bitnet_dot_for(PackScheme::Tl2) {
+            Ok(k) => k,
+            Err(AotError::ToolchainMissing(_)) => return,
+            Err(e) => panic!("compile failed: {e}"),
+        };
+        assert_eq!(kernel.layout().scheme(), PackScheme::Tl2);
+        assert_eq!(
+            kernel.layout().physical(),
+            PhysicalLayout::TritPacked {
+                scheme: PackScheme::Tl2
+            }
+        );
     }
 
     #[test]

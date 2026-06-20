@@ -1153,7 +1153,7 @@
 |---|---|---|---|
 | `mycelium_mlir::AotError` | enum | `crates/mycelium-mlir/src/llvm.rs:56` | An explicit failure of the direct-LLVM AOT path. |
 | `mycelium_mlir::AutoDepthBudget` | struct | `crates/mycelium-mlir/src/budget.rs:164` | The default policy: derive the ceiling from **detected memory headroom**, conservative fallback |
-| `mycelium_mlir::BitnetDotKernel` | struct | `crates/mycelium-mlir/src/bitnet.rs:192` | A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop), |
+| `mycelium_mlir::BitnetDotKernel` | struct | `crates/mycelium-mlir/src/bitnet.rs:274` | A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop), |
 | `mycelium_mlir::Colony` | type | `crates/mycelium-mlir/src/runtime.rs:106` | A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of |
 | `mycelium_mlir::CompiledArtifact` | struct | `crates/mycelium-mlir/src/llvm.rs:2406` | A compiled native artifact for a bit/trit-subset program: the executable on disk (in a |
 | `mycelium_mlir::Deadlock` | struct | `crates/mycelium-mlir/src/runtime.rs:96` | A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a |
@@ -1189,19 +1189,19 @@
 | `mycelium_mlir::aot::run_core_with_fuel` | fn | `crates/mycelium-mlir/src/aot.rs:152` | [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling. |
 | `mycelium_mlir::aot::run_with_layout` | fn | `crates/mycelium-mlir/src/aot.rs:543` | Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251; |
 | `mycelium_mlir::bitnet` | mod | `crates/mycelium-mlir/src/lib.rs:45` | — |
-| `mycelium_mlir::bitnet::BitnetDotKernel` | struct | `crates/mycelium-mlir/src/bitnet.rs:192` | A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop), |
-| `mycelium_mlir::bitnet::BitnetDotKernel::call` | fn | `crates/mycelium-mlir/src/bitnet.rs:231` | Run the kernel over `packed_weights` (packed under scheme) and |
-| `mycelium_mlir::bitnet::BitnetDotKernel::call` | fn | `crates/mycelium-mlir/src/bitnet.rs:231` | Run the kernel over `packed_weights` (packed under scheme) and |
-| `mycelium_mlir::bitnet::BitnetDotKernel::scheme` | fn | `crates/mycelium-mlir/src/bitnet.rs:222` | The packing this kernel decodes inline. |
-| `mycelium_mlir::bitnet::BitnetDotKernel::scheme` | fn | `crates/mycelium-mlir/src/bitnet.rs:222` | The packing this kernel decodes inline. |
-| `mycelium_mlir::bitnet::KERNEL_SCHEME:` | const | `crates/mycelium-mlir/src/bitnet.rs:42` | The packing this kernel decodes inline by default. |
-| `mycelium_mlir::bitnet::compile_bitnet_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:268` | Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process. |
-| `mycelium_mlir::bitnet::compile_bitnet_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:275` | Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process. |
-| `mycelium_mlir::bitnet::emit_bitnet_dot_ir` | fn | `crates/mycelium-mlir/src/bitnet.rs:61` | Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme. |
-| `mycelium_mlir::bitnet::emit_bitnet_dot_ir_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:73` | Emit the textual LLVM IR for the packed-ternary dot kernel |
-| `mycelium_mlir::bitnet::jit_ternary_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:311` | Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot |
-| `mycelium_mlir::bitnet::jit_ternary_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:317` | As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs |
-| `mycelium_mlir::bitnet::ternary_dot_ref` | fn | `crates/mycelium-mlir/src/bitnet.rs:49` | The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the |
+| `mycelium_mlir::bitnet::BitnetDotKernel` | struct | `crates/mycelium-mlir/src/bitnet.rs:274` | A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop), |
+| `mycelium_mlir::bitnet::BitnetDotKernel::call` | fn | `crates/mycelium-mlir/src/bitnet.rs:323` | Run the kernel over `packed_weights` (packed under scheme) and |
+| `mycelium_mlir::bitnet::BitnetDotKernel::call` | fn | `crates/mycelium-mlir/src/bitnet.rs:323` | Run the kernel over `packed_weights` (packed under scheme) and |
+| `mycelium_mlir::bitnet::BitnetDotKernel::scheme` | fn | `crates/mycelium-mlir/src/bitnet.rs:68` | The packing scheme. |
+| `mycelium_mlir::bitnet::BitnetDotKernel::scheme` | fn | `crates/mycelium-mlir/src/bitnet.rs:68` | The packing scheme. |
+| `mycelium_mlir::bitnet::KERNEL_SCHEME:` | const | `crates/mycelium-mlir/src/bitnet.rs:124` | The packing this kernel decodes inline by default. |
+| `mycelium_mlir::bitnet::compile_bitnet_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:360` | Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process. |
+| `mycelium_mlir::bitnet::compile_bitnet_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:367` | Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process. |
+| `mycelium_mlir::bitnet::emit_bitnet_dot_ir` | fn | `crates/mycelium-mlir/src/bitnet.rs:143` | Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme. |
+| `mycelium_mlir::bitnet::emit_bitnet_dot_ir_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:155` | Emit the textual LLVM IR for the packed-ternary dot kernel |
+| `mycelium_mlir::bitnet::jit_ternary_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:403` | Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot |
+| `mycelium_mlir::bitnet::jit_ternary_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:409` | As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs |
+| `mycelium_mlir::bitnet::ternary_dot_ref` | fn | `crates/mycelium-mlir/src/bitnet.rs:131` | The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the |
 | `mycelium_mlir::budget` | mod | `crates/mycelium-mlir/src/lib.rs:46` | — |
 | `mycelium_mlir::budget::AutoDepthBudget` | struct | `crates/mycelium-mlir/src/budget.rs:164` | The default policy: derive the ceiling from **detected memory headroom**, conservative fallback |
 | `mycelium_mlir::budget::AutoDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:168` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
@@ -1235,25 +1235,25 @@
 | `mycelium_mlir::channel::TrySend` | enum | `crates/mycelium-mlir/src/channel.rs:124` | Why a [`Sender::try_send`] could not complete *right now*. |
 | `mycelium_mlir::compile` | fn | `crates/mycelium-mlir/src/dialect/native.rs:694` | Compile `node` through the MLIR pipeline to a native executable (MLIR → LLVM IR → `clang`) |
 | `mycelium_mlir::compile_and_run` | fn | `crates/mycelium-mlir/src/dialect/native.rs:724` | Compile + run `node` through the MLIR pipeline and read the result back. |
-| `mycelium_mlir::compile_bitnet_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:268` | Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process. |
-| `mycelium_mlir::compile_bitnet_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:275` | Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process. |
+| `mycelium_mlir::compile_bitnet_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:360` | Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process. |
+| `mycelium_mlir::compile_bitnet_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:367` | Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process. |
 | `mycelium_mlir::compile_bitnet_dot_simd` | fn | `crates/mycelium-mlir/src/simd.rs:127` | Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process, |
 | `mycelium_mlir::compile_bitnet_dot_simd_tl1` | fn | `crates/mycelium-mlir/src/simd.rs:250` | Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process, |
 | `mycelium_mlir::compile_bitnet_dot_simd_tl2` | fn | `crates/mycelium-mlir/src/simd.rs:603` | Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process, |
 | `mycelium_mlir::compile_so` | fn | `crates/mycelium-mlir/src/jit.rs:194` | Compile the bit/trit-subset program to a shared object without calling it. |
 | `mycelium_mlir::compile_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:140` | Compile a kernel **specialized on `weights`** (baked in as constants) to a shared object and load |
 | `mycelium_mlir::default_depth_budget` | fn | `crates/mycelium-mlir/src/aot.rs:60` | The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no |
-| `mycelium_mlir::dialect` | mod | `crates/mycelium-mlir/src/lib.rs:48` | — |
+| `mycelium_mlir::dialect` | mod | `crates/mycelium-mlir/src/lib.rs:49` | — |
 | `mycelium_mlir::dialect::emit` | fn | `crates/mycelium-mlir/src/dialect.rs:71` | Emit the textual `ternary`-dialect module for `node` (one op per lowered binding). |
 | `mycelium_mlir::emit` | fn | `crates/mycelium-mlir/src/dialect.rs:71` | Emit the textual `ternary`-dialect module for `node` (one op per lowered binding). |
-| `mycelium_mlir::emit_bitnet_dot_ir` | fn | `crates/mycelium-mlir/src/bitnet.rs:61` | Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme. |
-| `mycelium_mlir::emit_bitnet_dot_ir_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:73` | Emit the textual LLVM IR for the packed-ternary dot kernel |
+| `mycelium_mlir::emit_bitnet_dot_ir` | fn | `crates/mycelium-mlir/src/bitnet.rs:143` | Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme. |
+| `mycelium_mlir::emit_bitnet_dot_ir_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:155` | Emit the textual LLVM IR for the packed-ternary dot kernel |
 | `mycelium_mlir::emit_bitnet_dot_simd_ir` | fn | `crates/mycelium-mlir/src/simd.rs:55` | Emit the textual LLVM IR for the **hand-vectorized I2_S** packed-ternary dot kernel |
 | `mycelium_mlir::emit_bitnet_dot_simd_tl1_ir` | fn | `crates/mycelium-mlir/src/simd.rs:169` | Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel |
 | `mycelium_mlir::emit_bitnet_dot_simd_tl2_ir` | fn | `crates/mycelium-mlir/src/simd.rs:308` | Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel |
 | `mycelium_mlir::emit_llvm_ir` | fn | `crates/mycelium-mlir/src/llvm.rs:1920` | Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that |
 | `mycelium_mlir::emit_specialized_dot_ir` | fn | `crates/mycelium-mlir/src/specialize.rs:53` | Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel |
-| `mycelium_mlir::inject` | mod | `crates/mycelium-mlir/src/lib.rs:49` | — |
+| `mycelium_mlir::inject` | mod | `crates/mycelium-mlir/src/lib.rs:50` | — |
 | `mycelium_mlir::inject::Image` | struct | `crates/mycelium-mlir/src/inject.rs:99` | The running **image**: a hash-keyed dispatch table over a compiled overlay + an interpretable |
 | `mycelium_mlir::inject::Image::call` | fn | `crates/mycelium-mlir/src/inject.rs:181` | Dispatch a call by content hash (ADR-016's call ABI, nullary-unit restriction). |
 | `mycelium_mlir::inject::Image::call` | fn | `crates/mycelium-mlir/src/inject.rs:181` | Dispatch a call by content hash (ADR-016's call ABI, nullary-unit restriction). |
@@ -1276,7 +1276,7 @@
 | `mycelium_mlir::inject::InjectError` | enum | `crates/mycelium-mlir/src/inject.rs:65` | A failure at the dispatch/injection boundary — every variant is explicit (never a silent pass or |
 | `mycelium_mlir::inject::Resolution` | enum | `crates/mycelium-mlir/src/inject.rs:50` | How a [`ContentHash`] resolves in an [`Image`] — the inspectable/`EXPLAIN`-able dispatch decision |
 | `mycelium_mlir::inject::recompile_closure` | fn | `crates/mycelium-mlir/src/inject.rs:222` | The **recompile set** of a change, by hash reachability (ADR-017 decision 3 — no AST/file diff). |
-| `mycelium_mlir::jit` | mod | `crates/mycelium-mlir/src/lib.rs:50` | — |
+| `mycelium_mlir::jit` | mod | `crates/mycelium-mlir/src/lib.rs:51` | — |
 | `mycelium_mlir::jit::JitArtifact` | struct | `crates/mycelium-mlir/src/jit.rs:97` | A JIT-compiled kernel: the `.so` on disk (in a per-artifact temp dir, cleaned on drop) + the |
 | `mycelium_mlir::jit::JitArtifact::call` | fn | `crates/mycelium-mlir/src/jit.rs:107` | Call the kernel in-process (`dlopen` → `dlsym` → call) and read the result back as an `Exact` |
 | `mycelium_mlir::jit::JitArtifact::call` | fn | `crates/mycelium-mlir/src/jit.rs:107` | Call the kernel in-process (`dlopen` → `dlsym` → call) and read the result back as an `Exact` |
@@ -1284,9 +1284,9 @@
 | `mycelium_mlir::jit::jit_run` | fn | `crates/mycelium-mlir/src/jit.rs:218` | Compile the program to a shared object and call it once, in-process. |
 | `mycelium_mlir::jit_run` | fn | `crates/mycelium-mlir/src/jit.rs:218` | Compile the program to a shared object and call it once, in-process. |
 | `mycelium_mlir::jit_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:177` | Convenience: specialize on `weights`, compile, and run the dot product against `activations` once. |
-| `mycelium_mlir::jit_ternary_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:311` | Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot |
-| `mycelium_mlir::jit_ternary_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:317` | As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs |
-| `mycelium_mlir::llvm` | mod | `crates/mycelium-mlir/src/lib.rs:51` | — |
+| `mycelium_mlir::jit_ternary_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:403` | Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot |
+| `mycelium_mlir::jit_ternary_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:409` | As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs |
+| `mycelium_mlir::llvm` | mod | `crates/mycelium-mlir/src/lib.rs:52` | — |
 | `mycelium_mlir::llvm::AotError` | enum | `crates/mycelium-mlir/src/llvm.rs:56` | An explicit failure of the direct-LLVM AOT path. |
 | `mycelium_mlir::llvm::CompiledArtifact` | struct | `crates/mycelium-mlir/src/llvm.rs:2406` | A compiled native artifact for a bit/trit-subset program: the executable on disk (in a |
 | `mycelium_mlir::llvm::CompiledArtifact::run` | fn | `crates/mycelium-mlir/src/llvm.rs:2416` | Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}` |
@@ -1294,7 +1294,7 @@
 | `mycelium_mlir::llvm::compile` | fn | `crates/mycelium-mlir/src/llvm.rs:2450` | Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`) |
 | `mycelium_mlir::llvm::compile_and_run` | fn | `crates/mycelium-mlir/src/llvm.rs:2476` | Compile the bit/trit-subset program to a native executable, run it once, and read the result |
 | `mycelium_mlir::llvm::emit_llvm_ir` | fn | `crates/mycelium-mlir/src/llvm.rs:1920` | Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that |
-| `mycelium_mlir::pack` | mod | `crates/mycelium-mlir/src/lib.rs:52` | — |
+| `mycelium_mlir::pack` | mod | `crates/mycelium-mlir/src/lib.rs:53` | — |
 | `mycelium_mlir::pack::PackError` | enum | `crates/mycelium-mlir/src/pack.rs:43` | A packing-codec error. |
 | `mycelium_mlir::pack::needed_bytes` | fn | `crates/mycelium-mlir/src/pack.rs:92` | Bytes required to hold `count` trits under `scheme` — the buffer-bound model. |
 | `mycelium_mlir::pack::pack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:197` | Encode `trits` to bytes under `scheme` (bijective; the AOT path's physical buffer). |
@@ -1308,7 +1308,7 @@
 | `mycelium_mlir::run_core_with_effects` | fn | `crates/mycelium-mlir/src/aot.rs:192` | [`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine |
 | `mycelium_mlir::run_core_with_fuel` | fn | `crates/mycelium-mlir/src/aot.rs:152` | [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling. |
 | `mycelium_mlir::run_with_layout` | fn | `crates/mycelium-mlir/src/aot.rs:543` | Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251; |
-| `mycelium_mlir::runtime` | mod | `crates/mycelium-mlir/src/lib.rs:53` | — |
+| `mycelium_mlir::runtime` | mod | `crates/mycelium-mlir/src/lib.rs:54` | — |
 | `mycelium_mlir::runtime::Colony` | type | `crates/mycelium-mlir/src/runtime.rs:106` | A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of |
 | `mycelium_mlir::runtime::Deadlock` | struct | `crates/mycelium-mlir/src/runtime.rs:96` | A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a |
 | `mycelium_mlir::runtime::Poll` | enum | `crates/mycelium-mlir/src/runtime.rs:32` | The result of advancing a task one cooperative step. |
@@ -1316,14 +1316,14 @@
 | `mycelium_mlir::runtime::SweepOrder` | enum | `crates/mycelium-mlir/src/runtime.rs:84` | The order a **dataflow** sweep visits still-pending children. |
 | `mycelium_mlir::runtime::Task` | trait | `crates/mycelium-mlir/src/runtime.rs:55` | A cooperative task: `poll` advances it by one step. |
 | `mycelium_mlir::runtime::TaskCtx` | struct | `crates/mycelium-mlir/src/runtime.rs:42` | The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token |
-| `mycelium_mlir::simd` | mod | `crates/mycelium-mlir/src/lib.rs:54` | — |
+| `mycelium_mlir::simd` | mod | `crates/mycelium-mlir/src/lib.rs:55` | — |
 | `mycelium_mlir::simd::compile_bitnet_dot_simd` | fn | `crates/mycelium-mlir/src/simd.rs:127` | Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process, |
 | `mycelium_mlir::simd::compile_bitnet_dot_simd_tl1` | fn | `crates/mycelium-mlir/src/simd.rs:250` | Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process, |
 | `mycelium_mlir::simd::compile_bitnet_dot_simd_tl2` | fn | `crates/mycelium-mlir/src/simd.rs:603` | Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process, |
 | `mycelium_mlir::simd::emit_bitnet_dot_simd_ir` | fn | `crates/mycelium-mlir/src/simd.rs:55` | Emit the textual LLVM IR for the **hand-vectorized I2_S** packed-ternary dot kernel |
 | `mycelium_mlir::simd::emit_bitnet_dot_simd_tl1_ir` | fn | `crates/mycelium-mlir/src/simd.rs:169` | Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel |
 | `mycelium_mlir::simd::emit_bitnet_dot_simd_tl2_ir` | fn | `crates/mycelium-mlir/src/simd.rs:308` | Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel |
-| `mycelium_mlir::specialize` | mod | `crates/mycelium-mlir/src/lib.rs:55` | — |
+| `mycelium_mlir::specialize` | mod | `crates/mycelium-mlir/src/lib.rs:56` | — |
 | `mycelium_mlir::specialize::SpecializedDotKernel` | struct | `crates/mycelium-mlir/src/specialize.rs:88` | A compiled, in-process **weight-specialized** dot kernel: the `.so` (in a per-artifact temp dir, |
 | `mycelium_mlir::specialize::SpecializedDotKernel::call` | fn | `crates/mycelium-mlir/src/specialize.rs:115` | Run the specialized kernel over `activations`, returning `Σ digit(wᵢ)·activations[i]` for the |
 | `mycelium_mlir::specialize::SpecializedDotKernel::call` | fn | `crates/mycelium-mlir/src/specialize.rs:115` | Run the specialized kernel over `activations`, returning `Σ digit(wᵢ)·activations[i]` for the |
@@ -1334,7 +1334,7 @@
 | `mycelium_mlir::specialize::compile_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:140` | Compile a kernel **specialized on `weights`** (baked in as constants) to a shared object and load |
 | `mycelium_mlir::specialize::emit_specialized_dot_ir` | fn | `crates/mycelium-mlir/src/specialize.rs:53` | Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel |
 | `mycelium_mlir::specialize::jit_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:177` | Convenience: specialize on `weights`, compile, and run the dot product against `activations` once. |
-| `mycelium_mlir::ternary_dot_ref` | fn | `crates/mycelium-mlir/src/bitnet.rs:49` | The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the |
+| `mycelium_mlir::ternary_dot_ref` | fn | `crates/mycelium-mlir/src/bitnet.rs:131` | The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the |
 | `mycelium_mlir::unpack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:239` | Decode `count` trits from `bytes` under `scheme`. |
 
 ## mycelium-numerics
