@@ -41,6 +41,7 @@ members = [
     "crates/mycelium-std-diag",
     "crates/mycelium-std-recover",
     "crates/mycelium-std-spore",
+    "crates/mycelium-std-runtime",
     "crates/mycelium-std-testing",
     "crates/mycelium-std-io",
     "crates/mycelium-std-fs",

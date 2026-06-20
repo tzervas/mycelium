@@ -1247,7 +1247,7 @@ issues:
   - id: M-521
     title: "M-521 — stdlib: `runtime` / `colony` (the fungal concurrency surface)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:execution, priority:P3, status:in-progress]
+    labels: [phase:5, type:design, area:execution, priority:P3, status:done]
     depends_on: [M-501, M-502, M-355]
     doc_refs: [corpus:RFC-0016, corpus:RFC-0007]
     body: |
@@ -1261,6 +1261,11 @@ issues:
       Glossary ⟂. M-521-impl unblocked on ADR-020 Accepted.
       Acceptance (design-first): the binding set + the std-vs-separate-phylum decision presented; activates construct-by-construct as RFC-0008 vocabulary lands (no premature surface — VR-5).
 
+      STATUS (2026-06-20): DONE. ADR-020 Accepted. crates/mycelium-std-runtime
+      v0 R1 surface implemented: Colony/Scope/Task/Network/channel. All reserved
+      vocabulary absent (RFC-0008 §4.5). 21 tests; 16-row guarantee matrix.
+      Scope::join_all Empirical (RT2 diff); FIFO sweep Exact; ZeroCapacity
+      fail-closed (G2); #![forbid(unsafe_code)].
   - id: M-522
     title: "M-522 — stdlib: `spore` (deployable / reconstruction-manifest library)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -1448,13 +1453,19 @@ issues:
   - id: M-620
     title: "M-620 — Deployable Spore units on the native path (ADR-013)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P3, status:in-progress]
+    labels: [phase:6, type:feature, area:execution, priority:P3, status:done]
     depends_on: [M-601, M-368]
     doc_refs: [corpus:RFC-0004]
     body: |
       The Phase-6 charter's "deployable Spore units (ADR-013)". Produce a deployable Spore — the content-addressed deployable artifact of a phylum/program (ADR-013; the germinates-into-a-colony unit, DN-06/Glossary) — from the native-compiled backend, consuming the M-368 packaging layer (mycelium-proj.toml → spore). Content-addressed identity is canonical (ADR-003); metadata is not identity. A missing/ambiguous deploy input is an explicit error, never a guessed default (G2).
       Acceptance (design-first; gated on M-601): a Spore built from the native backend deploys + runs; the content hash is canonical; the no-opaque-lowering guarantee (VR-4) holds end-to-end into the deployed unit.
 
+      STATUS (2026-06-20): DONE. Native deploy/germination seam implemented in
+      crates/mycelium-std-spore/src/deploy.rs. FLAG Q2 (ADR-013) retired.
+      germinate() -> Result<DeployResult, DeployError>; 4 error variants;
+      DeployVerification carries content_hash_canonical (Exact) + no_opaque_lowering
+      (Declared, VR-4); explain_deploy is Exact (SC-3). 44 tests pass.
+      Guarantee: Empirical (native path not yet proven end-to-end, VR-5).
   - id: M-630
     title: "M-630 — Production hardening + the VR-4 no-opaque-lowering cross-backend gate"
     milestone: "Phase 6 — Native Acceleration & Deployment"

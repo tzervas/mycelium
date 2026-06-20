@@ -4,7 +4,7 @@
 
 **Status:** design + **Rust-first implementation underway.** The design corpus is Accepted/Resolved
 (Foundation, RFC-0001…0021, ADR-001…017, DN-01…14), and the kernel is landing as a
-Rust workspace of **45 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified binary↔ternary
+Rust workspace of **46 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified binary↔ternary
 swaps, the selection-policy engine, and a Rust-first standard library. Phases **0–5, 7, and 8** are
 complete; Phase **6**'s VR-4 no-opaque-lowering exit gate is met (native-codegen/deploy follow-ons
 M-601/M-620 in progress). The one open Phase-0 residual is the **KC-2 LLM-leverage verdict**

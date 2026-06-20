@@ -15,8 +15,9 @@ and an injected scorer, exercising exactly the load-bearing math:
       and the aggregate KC-2 rates (skips excluded from denominators).
   T7  M-330 loop: generate->fix reaches PARTIAL_PASS via a self-correcting mock,
       and an empty/failed generation is never a PASS (G2).
-  T8  M-381 ablation: pass@1 per runnable arm; retention ratio is INDETERMINATE
-      while arm 4 is blocked (verdict never pre-written, VR-5).
+  T8  M-381 ablation: pass@1 per runnable arm; arm 4 (LlmCanonical) is now
+      RUNNABLE (M-381 Arm 4 / W2L3); retention ratio is now DETERMINATE when
+      arm 4 runs; leverage claim stays Declared/open (VR-5).
   T9  report emission: per-model JSON + cross-model markdown are written and are
       stamped SYNTHETIC (self-test).
   T13 API discovery: from_api_discovery() maps a mock GET /v1/models response to
@@ -380,7 +381,7 @@ def check_coauthor_loop() -> Check:
 
 
 def check_ablation() -> Check:
-    client = MockClient()  # default echo; arm1/arm2 runnable
+    client = MockClient()  # default echo; arm1/arm2/arm4 runnable
     # Scorer: make every generation clean so pass@1 is well-defined and non-trivial.
     scorer = _fake_scorer([EXIT_CLEAN])
     model = _spec("m", out_price=2.0, in_price=1.0, order=0)
@@ -402,20 +403,44 @@ def check_ablation() -> Check:
     bare = by[ARM_BARE]
     if not (bare.ran and bare.n_samples == 6 and bare.pass_at_1 == 1.0):
         return Check("T8 ablation", False, f"arm1 wrong: {bare.to_dict()}")
+    # Arm 4 (LlmCanonical) is now RUNNABLE (M-381 Arm 4 / W2L3 landed).
+    # With a MockClient (default echo) + fake scorer that always returns EXIT_CLEAN,
+    # arm4 runs and its pass@1 is well-defined (the mock scorer marks everything clean).
     canonical = by[ARM_CANONICAL]
-    if canonical.ran:
-        return Check("T8 ablation", False, "arm4 must be BLOCKED (not fabricated)")
+    if not canonical.ran:
+        return Check(
+            "T8 ablation",
+            False,
+            "arm4 should now be RUNNABLE (M-381 Arm 4 / W2L3 unblocked it)",
+        )
+    if canonical.n_samples != 6:
+        return Check(
+            "T8 ablation",
+            False,
+            f"arm4 should have 6 samples (2 tasks × 3 seeds), got {canonical.n_samples}",
+        )
+    # With arm4 running, the retention verdict is determinable (arm4 is the denominator).
+    # Mock scorer → every arm has pass@1 = 1.0, retention = 1.0 ≥ threshold (not falsified).
     verdict = compute_retention(arm_results)
-    if verdict.determinate or verdict.ratio is not None:
-        return Check("T8 ablation", False, "retention must be INDETERMINATE w/o arm4")
-    if "INDETERMINATE" not in verdict.conclusion:
-        return Check("T8 ablation", False, f"verdict not honest: {verdict.conclusion}")
+    if not verdict.determinate:
+        return Check(
+            "T8 ablation",
+            False,
+            "retention must be DETERMINATE now that arm4 runs",
+        )
+    if verdict.ratio is None:
+        return Check(
+            "T8 ablation", False, "retention ratio must be defined when arm4 ran"
+        )
     if verdict.leverage_claim_tag != "Declared":
-        return Check("T8 ablation", False, "leverage claim must stay Declared/open")
+        return Check(
+            "T8 ablation", False, "leverage claim must stay Declared/open (VR-5)"
+        )
     return Check(
         "T8 ablation",
         True,
-        "arm1/2 pass@1 computed; arm4 blocked; retention INDETERMINATE (verdict open)",
+        f"arm1/2/4 pass@1 computed; arm4 RUNNABLE; retention={verdict.ratio:.2f} "
+        "(Declared/open — single run, not a ratified verdict; VR-5)",
     )
 
 
@@ -935,7 +960,7 @@ def _emit_sample_report(reports_dir: Path, *, verbose: bool) -> None:
         tc += out.total_completion_tokens
         cost += out.total_cost_usd
         lat.extend(r.chat.latency_s for r in out.rounds)
-    # A blocked-arm ablation snapshot (honest: arm4 blocked => indeterminate).
+    # Ablation snapshot: arm4 is now RUNNABLE (M-381 Arm 4 / W2L3) — retention determinable.
     arms = [
         run_arm(
             arm=a,
