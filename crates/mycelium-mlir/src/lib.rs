@@ -53,6 +53,7 @@ pub mod pack;
 pub mod runtime;
 pub mod simd;
 pub mod specialize;
+pub mod vr4;
 
 pub use aot::{
     default_depth_budget, run, run_core, run_core_with_effects, run_core_with_fuel, run_with_layout,
@@ -84,3 +85,4 @@ pub use simd::{
 pub use specialize::{
     compile_specialized_dot, emit_specialized_dot_ir, jit_specialized_dot, SpecializedDotKernel,
 };
+pub use vr4::{cross_backend_gate, Backend, BackendStage, CrossBackendGate, StageStatus};
