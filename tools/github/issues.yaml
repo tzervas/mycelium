@@ -399,6 +399,16 @@ issues:
       EPIC (Wave-4A). A small, committed, navigable, agent-facing index (docs/api-index/) built by aggregating the public-API surface already committed in docs/spec/api/*.txt against the source tree. Delivers: a code-index generator (M-392), `just docs` / `just docs-index` + drift gate (M-393), doc_refs grammar + backfill (M-394), CLAUDE.md + skill updates (M-395). (Note: this wave called it E3-6 in the plan; E3-6 was already taken by BitNet acceleration, so assigned E3-8.)
       DONE (2026-06-19): all four tasks complete; just check green; docs/api-index committed and current; doc_refs backfilled for 52 open issues; CLAUDE.md + skills updated.
 
+  - id: E3-9
+    title: "E3-9 (epic) — Honest benchmarking & evaluation harness (where Mycelium wins/loses)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:done]
+    depends_on: [M-302, M-340, M-360]
+    doc_refs: [src:crates/mycelium-bench/src/lib.rs, src:crates/mycelium-bench/src/verdict.rs]
+    body: |
+      EPIC (E-BENCH). Deep, honest measurement of what this language actually buys us — when, where, how, and why — and crucially where we LOSE capability or performance. Lands `crates/mycelium-bench/` (lib + `bench` bin): times whole v0-calculus programs across every execution backend (interpreter trusted-base, AOT env-machine, JIT, direct-LLVM, MLIR-dialect behind `mlir-dialect`) over a shared corpus, classifies each (backend,case) as speed WIN/LOSS/neutral, correctness LOSS, capability LOSS (with reason), or graceful Skip — vs the interpreter via a provenance-insensitive observable differential (repr+payload+guarantee; RFC-0001 §4.6 / M-210). Ingests the LLM-harness quality/cost/latency report (KC-2/SC-5b; synthetic labeled synthetic). Every number Empirical (trial count + spread); no pre-written performance target (VR-5); a capability/correctness loss is recorded, never hidden (G2). Complements `xtask e1`/`kc4` (which time packing kernels / cert overhead).
+      DONE (2026-06-20): M-645 landed; `cargo test -p mycelium-bench` (29 lib + 4 integration) green; workspace clippy -D warnings + build green; zero new external deps; deterministic md+JSON report with a "where we're losing" section emitted on this host — losses surfaced honestly (incl. the process-spawn-bound direct-LLVM caveat, M-602/E1), not buried.
+
 
   # ---------------- Phase 3 (M-3xx build tasks; decomposed 2026-06-15, docs/planning/phase-3.md) ----------------
   # Batch J — native execution path (keystone). Direct-LLVM AOT first; MLIR deferred (libMLIR absent) — RFC-0004 §2 fallback, RR-N1.
@@ -1716,3 +1726,14 @@ issues:
     body: |
       Speed up the sync (M-382 follow-up) with a `--concurrency N` thread pool (default 6; N=1 = exact sequential fallback) over the existing retry/backoff/120s-timeout-wrapped `gh()`. Batched dispatch (label/milestone/issue-create/issue-update/PR-backfill/migration-relabel) preserves cross-batch dependency order; a pool-wide `RateGate` pauses the whole pool on secondary-rate-limit/abuse/403/429/Retry-After then retries once; an optional `gh api rate_limit` probe dials N down when the budget is low; never-silent fault-tolerant lock-ordered per-batch aggregation (one failure never aborts a batch).
       DONE (2026-06-20, PR #256): --self-test (all new pure helpers) + full `just check` green. HONESTY: the rate-limit tuning (N=6, pause windows, low-water) is **Declared** — GitHub does not publish secondary-limit thresholds and no live gh was run; confirm with a small live run before trusting high `--concurrency`. N=1 reproduces today's exact sequential behaviour (the safe fallback + the baseline-equivalence diff target).
+
+  # 2026-06-20: E-BENCH — honest benchmarking & evaluation harness (E3-9 deliverable).
+  - id: M-645
+    title: "M-645 — mycelium-bench: cross-backend WIN/LOSS harness + LLM-report ingestion (E-BENCH)"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:done]
+    depends_on: [M-302, M-340, M-360, M-330]
+    doc_refs: [src:crates/mycelium-bench/src/lib.rs, src:crates/mycelium-bench/src/backend.rs, src:crates/mycelium-bench/src/verdict.rs, src:crates/mycelium-bench/src/report.rs]
+    body: |
+      The E3-9 deliverable. A standalone crate `crates/mycelium-bench/` (lib + `bench` bin) — chosen over an `xtask bench` subcommand because the WIN/LOSS classifier, report emission, and LLM-report ingestion are real, testable library logic (`cargo test -p mycelium-bench`). Measures all five backends over a 14-program corpus (bit-subset / swap / data / recursion): warm per-run wall time (compile-once/run-many — compile cost reported separately, not charged per call), one-time compile cost, and a differential vs the interpreter classified WIN / LOSS / capability-LOSS / correctness-LOSS / error / skip. The differential compares the OBSERVABLE (repr+payload+guarantee / content-identity, provenance excluded per RFC-0001 §4.6 — matching the M-210 ObservationalEquiv checker; this fix turned 10 false-positive "correctness losses" into honest speed verdicts). Ingests the LLM-harness report (M-330/M-331; KC-2/SC-5b) and labels synthetic as synthetic. Harness plumbing Empirical (test-verified); every measured number Empirical (trial count + spread); capability-loss/skip/error Declared; no verdict Proven/Exact; no pre-written target (VR-5). Zero new external deps (only workspace serde/serde_json + the internal crates it measures, read-only).
+      Acceptance: `cargo test -p mycelium-bench` green (29 lib + 4 integration: WIN/LOSS classification incl. the provenance case, report determinism, LLM-report ingestion); fmt + clippy -D warnings clean; emits deterministic md+JSON with a "where we're losing" section. DONE (2026-06-20).
