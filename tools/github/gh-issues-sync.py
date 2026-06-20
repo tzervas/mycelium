@@ -63,7 +63,9 @@ import json
 import re
 import subprocess
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from urllib.parse import quote
 
@@ -92,6 +94,17 @@ VERBOSE = False
 _GH_RETRY_MAX = 4
 _GH_RETRY_DELAYS = (1, 2, 4, 8)
 _GH_TIMEOUT = 120  # per-call ceiling so a HUNG gh request can never block forever (M-382 follow-up)
+
+# A process-wide lock so concurrent worker prints (and --verbose `gh` echoes) never interleave
+# under the M-397 thread pool. Defined here (before _run_gh) so the VERBOSE echo can use it; the
+# public ``safe_print`` wrapper lives in the concurrency section below.
+_PRINT_LOCK = threading.Lock()
+
+
+def _safe_stderr(msg):
+    """Lock-guarded single-line stderr print (interleave-safe under the M-397 pool)."""
+    with _PRINT_LOCK:
+        print(msg, file=sys.stderr)
 
 
 def _is_transient_network(stderr) -> bool:
@@ -143,7 +156,7 @@ def _run_gh(args, *, input_text=None):
     # attempt 0 = the initial call; attempts 1.._GH_RETRY_MAX = the bounded retries.
     for attempt in range(0, _GH_RETRY_MAX + 1):
         if VERBOSE:
-            print(f"   → gh {' '.join(args)}", file=sys.stderr)
+            _safe_stderr(f"   → gh {' '.join(args)}")
         try:
             proc = subprocess.run(
                 ["gh", *args],
@@ -170,10 +183,9 @@ def _run_gh(args, *, input_text=None):
         # Transient failure with retries remaining: never-silent retry + backoff.
         if attempt < _GH_RETRY_MAX:
             delay = _GH_RETRY_DELAYS[attempt]
-            print(
+            _safe_stderr(
                 f"   ~ transient network error (gh exit {rc}) — "
-                f"retry {attempt + 1}/{_GH_RETRY_MAX} in {delay}s: {_stderr_tail(err)}",
-                file=sys.stderr,
+                f"retry {attempt + 1}/{_GH_RETRY_MAX} in {delay}s: {_stderr_tail(err)}"
             )
             time.sleep(delay)
     # Exhausted: hand back the last classified failure for gh()/_gh_fail to surface.
@@ -226,6 +238,249 @@ def gh(args, *, input_text=None, check=True):
     if check and rc != 0:
         _gh_fail(args, rc, err)
     return out
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Bounded-concurrency, rate-negotiated, batched execution (M-397)
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# The reconcilers issue many small, independent, idempotent `gh` mutations per run (a label per
+# label, a field-update per issue, …). They are subprocess/IO-bound, so a bounded thread pool over
+# the EXISTING synchronous `gh()` (NOT an asyncio rewrite) overlaps the latency without changing a
+# single call's behaviour — `gh()`/`_run_gh` keep their retry/backoff/120s-timeout verbatim.
+#
+# Three layers keep us inside GitHub's limits (never-silent, G2):
+#   1. bounded concurrency — at most ``--concurrency N`` (default 6) calls in flight;
+#   2. a shared PAUSE gate — on a secondary-rate-limit / abuse / 403 / 429 / Retry-After signal we
+#      pause the WHOLE pool for the advised window, then resume (never keep bursting);
+#   3. an optional start-of-run budget probe (``gh api rate_limit``) that reduces N when the
+#      remaining core budget is low — never-silently.
+#
+# N=1 reproduces today's exact sequential behaviour (a clean fallback for --verbose / debugging):
+# ``run_batch`` then runs each task inline, in order, with no executor and no extra threads.
+
+_DEFAULT_CONCURRENCY = 6
+
+
+# A run-scoped pause gate shared by every worker thread. When ``resume`` is set (the steady state)
+# workers proceed; on a secondary-rate-limit signal a worker clears it, sleeps the advised window,
+# and sets it again — pausing the whole pool for the duration. Guarded by a lock so only ONE worker
+# performs the sleep for a given burst (the rest just wait on the Event).
+class RateGate:
+    """Shared, thread-safe pause gate for the worker pool (never-silent on every pause)."""
+
+    def __init__(self):
+        self._resume = threading.Event()
+        self._resume.set()  # steady state: not paused
+        self._lock = threading.Lock()
+
+    def wait(self):
+        """Block while the pool is paused; return immediately in the steady state."""
+        self._resume.wait()
+
+    def pause(self, seconds, *, reason):
+        """Pause the whole pool for ``seconds`` (bounded). Only the first worker into the lock for a
+        given burst actually sleeps; concurrent callers coalesce onto the same window (G2: printed
+        once, under the print lock)."""
+        # Try to become THE pauser for this burst. If another worker already holds the lock we are
+        # mid-pause already — just wait on the event rather than stacking a second sleep.
+        if not self._lock.acquire(blocking=False):
+            self._resume.wait()
+            return
+        try:
+            self._resume.clear()
+            safe_print(
+                f"   ~ rate-limit pause: sleeping {seconds}s before resuming ({reason})",
+                file=sys.stderr,
+            )
+            time.sleep(seconds)
+        finally:
+            self._resume.set()
+            self._lock.release()
+
+
+def safe_print(*args, **kwargs):
+    """``print`` guarded by a global lock so concurrent/`--verbose` output never interleaves (G2)."""
+    with _PRINT_LOCK:
+        print(*args, **kwargs)
+
+
+# secondary-rate-limit / abuse needles + a Retry-After parser — PURE, exercised offline by --self-test.
+_SECONDARY_LIMIT_NEEDLES = (
+    "secondary rate limit",
+    "abuse detection",
+    "abuse",
+    "you have exceeded a secondary rate limit",
+    "have triggered an abuse",
+    "retry your request again later",
+)
+_RETRY_AFTER_RE = re.compile(r"retry[- ]after[:\s]+(\d+)", re.IGNORECASE)
+
+
+def should_pause_for_rate_limit(stderr, *, default_backoff=60, max_backoff=300):
+    """PURE: decide whether a gh failure's ``stderr`` indicates a secondary-rate-limit / abuse stop,
+    and for how long to pause the whole pool (no I/O — exercised offline by --self-test).
+
+    Returns ``(should_pause: bool, seconds: int)``. We treat as a pause-worthy signal: an explicit
+    ``secondary rate limit`` / ``abuse`` message, OR an HTTP ``403``/``429`` (GitHub returns 403 for
+    secondary limits and 429 for some abuse cases). The pause length is the ``Retry-After`` header
+    value when present (clamped to ``max_backoff``), else ``default_backoff``.
+
+    NOTE (honesty): a *primary* rate-limit (``API rate limit exceeded``) is NOT handled here — it
+    resets on a fixed hourly window, not a short pause, and ``_gh_fail`` already surfaces it with the
+    ``gh api -i rate_limit`` remediation. We only negotiate the *secondary*/abuse pause-and-resume.
+    """
+    blob = stderr or ""
+    low = blob.lower()
+    # A primary rate-limit is a different beast — do not absorb it into a short pause (stay honest).
+    if "api rate limit exceeded" in low:
+        return False, 0
+    secondary = any(n in low for n in _SECONDARY_LIMIT_NEEDLES)
+    http_throttle = ("403" in blob) or ("429" in blob)
+    if not (secondary or http_throttle):
+        return False, 0
+    m = _RETRY_AFTER_RE.search(blob)
+    if m:
+        seconds = int(m.group(1))
+    else:
+        seconds = default_backoff
+    seconds = max(1, min(seconds, max_backoff))
+    return True, seconds
+
+
+def parse_rate_remaining(rate_limit_json):
+    """PURE: extract the core ``remaining`` budget from a ``gh api rate_limit`` JSON blob, or None.
+
+    Tolerates the shapes ``{"resources":{"core":{"remaining":N}}}`` and a bare ``{"rate":{...}}``
+    (older API) — returns None when neither is present so the caller degrades never-silently.
+    """
+    if not isinstance(rate_limit_json, dict):
+        return None
+    core = (rate_limit_json.get("resources") or {}).get("core")
+    if isinstance(core, dict) and isinstance(core.get("remaining"), int):
+        return core["remaining"]
+    rate = rate_limit_json.get("rate")
+    if isinstance(rate, dict) and isinstance(rate.get("remaining"), int):
+        return rate["remaining"]
+    return None
+
+
+def negotiate_concurrency(requested, remaining, *, low_water=100):
+    """PURE: reduce the requested worker count when the remaining core budget is low (never-silent
+    decision; the caller prints when it differs). ``remaining is None`` (probe failed/offline) ⇒
+    trust the request unchanged. Below ``low_water`` ⇒ clamp to 1 (serialize, safest). Returns the
+    effective worker count (always ≥ 1)."""
+    n = max(1, int(requested))
+    if remaining is None:
+        return n
+    if remaining < low_water:
+        return 1
+    return n
+
+
+def aggregate_results(results):
+    """PURE: split a list of ``(item, ok, err)`` task results into (ok_count, fail_count, failures),
+    where ``failures`` is the ``[(item, err), …]`` sublist of the non-ok ones (order preserved).
+    The single place batch summaries are computed (exercised offline by --self-test)."""
+    ok_count = sum(1 for _item, ok, _err in results if ok)
+    failures = [(item, err) for item, ok, err in results if not ok]
+    return ok_count, len(failures), failures
+
+
+# The run-scoped rate gate + effective worker count, set once by main() before any batch runs.
+RATE_GATE = RateGate()
+CONCURRENCY = 1
+
+
+def run_gh_task(args, *, input_text=None):
+    """Run one `gh` mutation inside a worker: honour the shared pause gate BEFORE the call, run the
+    existing ``_run_gh`` (retry/backoff/timeout unchanged), and if it fails with a secondary-rate-
+    limit / abuse / 403 / 429 signal, PAUSE THE WHOLE POOL for the advised window (never-silent)
+    then retry ONCE. Returns ``(rc, out, err)`` exactly like ``_run_gh`` so callers are unchanged."""
+    RATE_GATE.wait()
+    rc, out, err = _run_gh(args, input_text=input_text)
+    if rc != 0:
+        pause, seconds = should_pause_for_rate_limit(err)
+        if pause:
+            RATE_GATE.pause(seconds, reason=_stderr_tail(err))
+            # One post-pause retry: the burst that tripped the limit is now spread out.
+            rc, out, err = _run_gh(args, input_text=input_text)
+    return rc, out, err
+
+
+def run_batch(name, tasks, *, concurrency=None, summary=True, return_results=False):
+    """Run a batch of independent ``tasks`` (callables returning ``(item, ok, err)``) with bounded
+    concurrency, never-silently, fault-tolerant + ordered-summary aggregation (M-397).
+
+    - ``concurrency=1`` (or the module ``CONCURRENCY`` being 1) ⇒ EXACT sequential behaviour: each
+      task runs inline, in submission order, with no executor — the clean debugging fallback.
+    - otherwise a bounded ``ThreadPoolExecutor(max_workers=N)`` runs them, results aggregated via
+      ``as_completed``. One task raising/failing NEVER aborts the batch — its failure is captured.
+    - returns ``(ok_count, fail_count, failures)`` (the pure ``aggregate_results`` split), or the
+      full ``[(item, ok, err)]`` results list when ``return_results`` is set (the create pass needs
+      the ok payloads). When ``summary`` is set, prints a ``>> <name>: N ok, M failed`` line (G2)."""
+    n = concurrency if concurrency is not None else CONCURRENCY
+    n = max(1, int(n))
+    tasks = list(tasks)
+    results = []
+    if n == 1 or len(tasks) <= 1:
+        # Sequential fallback — byte-for-byte today's ordering/behaviour.
+        for task in tasks:
+            results.append(_run_one_task(task))
+    else:
+        with ThreadPoolExecutor(max_workers=n) as pool:
+            futures = [pool.submit(_run_one_task, task) for task in tasks]
+            for fut in as_completed(futures):
+                results.append(fut.result())
+    ok_count, fail_count, failures = aggregate_results(results)
+    if summary:
+        safe_print(f">> {name}: {ok_count} ok, {fail_count} failed")
+    if return_results:
+        return results
+    return ok_count, fail_count, failures
+
+
+def _run_one_task(task):
+    """Run a single batch task, turning ANY exception into a captured ``(item, ok, err)`` failure so
+    one bad task never aborts the batch (build on the existing migration fault-tolerance)."""
+    try:
+        return task()
+    except SystemExit:
+        # A task that hit _gh_fail/sys.exit would normally abort the process; inside a batch we
+        # capture it as a failure so the rest of the batch still completes (never-silent below).
+        raise
+    except (
+        Exception
+    ) as exc:  # pragma: no cover - defensive: a task should return, not raise
+        return (getattr(task, "item", "?"), False, f"{type(exc).__name__}: {exc}")
+
+
+def probe_rate_budget(requested):
+    """Optionally read ``gh api rate_limit`` at start and reduce N if the remaining budget is low.
+
+    Never-silent: prints the probed budget and any reduction. A failed/declined probe (offline,
+    unauth, older gh) degrades to the requested N unchanged (``parse_rate_remaining`` ⇒ None)."""
+    rc, out, _err = _run_gh(["api", "rate_limit"])
+    remaining = None
+    if rc == 0:
+        try:
+            remaining = parse_rate_remaining(json.loads(out))
+        except (ValueError, TypeError):
+            remaining = None
+    effective = negotiate_concurrency(requested, remaining)
+    if remaining is None:
+        print(
+            f"   ~ rate budget unknown (probe unavailable) — using --concurrency {effective}"
+        )
+    elif effective != requested:
+        print(
+            f"   ~ rate budget low ({remaining} core remaining) — reducing concurrency "
+            f"{requested} -> {effective} (never-silent)"
+        )
+    else:
+        print(
+            f"   = rate budget OK ({remaining} core remaining) — concurrency {effective}"
+        )
+    return effective
 
 
 def gh_graphql(query):
@@ -903,16 +1158,15 @@ def _load_label_aliases(here):
     return {k: v for k, v in data.get("aliases", {}).items()}
 
 
-def reconcile_labels(repo, labels_json, dry_run):
-    labels = json.loads(labels_json.read_text(encoding="utf-8"))
-    print(f">> labels: {len(labels)} declared in {labels_json.name}")
-    for lb in labels:
-        name, color, desc = lb["name"], lb.get("color", ""), lb.get("description", "")
-        if dry_run:
-            print(f"   ~ would create-or-update: {name}")
-            continue
-        # --force makes `gh label create` create-or-update (color + description) — idempotent.
-        gh(
+def _label_task(repo, lb):
+    """Build a batch task (callable -> (item, ok, err)) that create-or-updates one label.
+
+    Idempotent + disjoint (each label is its own resource), so the create-or-update batch is safe
+    to parallelize. ``--force`` makes `gh label create` create-or-update (color+description)."""
+    name, color, desc = lb["name"], lb.get("color", ""), lb.get("description", "")
+
+    def task():
+        rc, _out, err = run_gh_task(
             [
                 "label",
                 "create",
@@ -926,7 +1180,57 @@ def reconcile_labels(repo, labels_json, dry_run):
                 "--force",
             ]
         )
-        print(f"   • {name}")
+        if rc != 0:
+            return (name, False, _stderr_tail(err))
+        safe_print(f"   • {name}")
+        return (name, True, None)
+
+    task.item = name
+    return task
+
+
+def _relabel_task(repo, number, old_name, new_name):
+    """Build a batch task that relabels one issue/PR ``old_name``->``new_name`` (disjoint, idempotent)."""
+
+    def task():
+        rc, _out, err = run_gh_task(
+            [
+                "issue",
+                "edit",
+                str(number),
+                "--repo",
+                repo,
+                "--add-label",
+                new_name,
+                "--remove-label",
+                old_name,
+            ]
+        )
+        if rc != 0:
+            return (number, False, _stderr_tail(err))
+        safe_print(f"   • #{number}: label '{old_name}' -> '{new_name}'")
+        return (number, True, None)
+
+    task.item = number
+    return task
+
+
+def reconcile_labels(repo, labels_json, dry_run):
+    labels = json.loads(labels_json.read_text(encoding="utf-8"))
+    print(f">> labels: {len(labels)} declared in {labels_json.name}")
+    if dry_run:
+        for lb in labels:
+            print(f"   ~ would create-or-update: {lb['name']}")
+    else:
+        # Batch: create-or-update each label concurrently (idempotent, disjoint resources).
+        _ok, fail, failures = run_batch(
+            "labels", [_label_task(repo, lb) for lb in labels]
+        )
+        for name, err in failures:
+            safe_print(
+                f"   ! could not create-or-update label '{name}' ({err}) — re-run to retry",
+                file=sys.stderr,
+            )
 
     # ── noncompliant-label reconcile (runs after create-or-update) ───────────────────────────
     # Snapshot the repo's actual labels and compare against labels.json. Noncompliant labels
@@ -975,50 +1279,41 @@ def reconcile_labels(repo, labels_json, dry_run):
                 # Fault-tolerant: a per-issue edit that fails is reported and SKIPPED — never an
                 # abort of the whole label (M-382). We track failures so the stale label is only
                 # deleted when EVERY issue was successfully relabeled (G2: never break the
-                # label↔issue link silently).
-                failed = 0
-                for number in ordered_numbers:
-                    rc, _out, err = _run_gh(
-                        [
-                            "issue",
-                            "edit",
-                            str(number),
-                            "--repo",
-                            repo,
-                            "--add-label",
-                            new_name,
-                            "--remove-label",
-                            old_name,
-                        ]
+                # label↔issue link silently). The relabels target DISJOINT issues + are idempotent,
+                # so they run as a bounded-concurrency batch (M-397) — open-before-closed ordering
+                # is preserved at submission; failures are aggregated, never abort the batch.
+                _ok, failed, failures = run_batch(
+                    f"relabel '{old_name}'->'{new_name}'",
+                    [
+                        _relabel_task(repo, number, old_name, new_name)
+                        for number in ordered_numbers
+                    ],
+                )
+                for number, err in failures:
+                    safe_print(
+                        f"   ! could not relabel #{number} '{old_name}'->'{new_name}' "
+                        f"({err}) — left as-is; re-run to retry",
+                        file=sys.stderr,
                     )
-                    if rc != 0:
-                        failed += 1
-                        print(
-                            f"   ! could not relabel #{number} '{old_name}'->'{new_name}' "
-                            f"({_stderr_tail(err)}) — left as-is; re-run to retry",
-                            file=sys.stderr,
-                        )
-                        continue
-                    print(f"   • #{number}: label '{old_name}' -> '{new_name}'")
                 if failed:
                     # Never delete a label still carried by issues — a stale-but-present label is
                     # safer than a silently-broken link. FLAG + skip the delete; re-run to finish.
-                    print(
+                    safe_print(
                         f"   ! '{old_name}' still on {failed} issue(s) — not deleted; re-run",
                         file=sys.stderr,
                     )
                 else:
-                    rc, _out, err = _run_gh(
+                    rc, _out, err = run_gh_task(
                         ["label", "delete", old_name, "--repo", repo, "--yes"]
                     )
                     if rc != 0:
-                        print(
+                        safe_print(
                             f"   ! could not delete stale label '{old_name}' "
                             f"({_stderr_tail(err)}) — re-run to retry",
                             file=sys.stderr,
                         )
                     else:
-                        print(f"   • deleted stale label '{old_name}'")
+                        safe_print(f"   • deleted stale label '{old_name}'")
 
         for flag in flags:
             # Never-silent: a noncompliant label with no alias is left untouched and reported (G2).
@@ -1029,24 +1324,13 @@ def reconcile_labels(repo, labels_json, dry_run):
             )
 
 
-def reconcile_milestones(repo, milestones_json, dry_run):
-    milestones = json.loads(milestones_json.read_text(encoding="utf-8"))
-    existing = {
-        m["title"]: m["number"]
-        for m in json.loads(
-            gh(["api", f"repos/{repo}/milestones?state=all", "--paginate"])
-        )
-    }
-    print(f">> milestones: {len(milestones)} declared in {milestones_json.name}")
-    for ms in milestones:
-        title = ms["title"]
-        if title in existing:
-            print(f"   = exists #{existing[title]}: {title}")
-            continue
-        if dry_run:
-            print(f"   + would create: {title}")
-            continue
-        out = gh(
+def _milestone_create_task(repo, ms):
+    """Build a batch task that creates one absent milestone (disjoint by title, idempotent here
+    because the caller only enqueues titles not already present)."""
+    title = ms["title"]
+
+    def task():
+        rc, out, err = run_gh_task(
             [
                 "api",
                 f"repos/{repo}/milestones",
@@ -1058,7 +1342,44 @@ def reconcile_milestones(repo, milestones_json, dry_run):
                 f"description={ms.get('description', '')}",
             ]
         )
-        print(f"   + created #{json.loads(out)['number']}: {title}")
+        if rc != 0:
+            return (title, False, _stderr_tail(err))
+        safe_print(f"   + created #{json.loads(out)['number']}: {title}")
+        return (title, True, None)
+
+    task.item = title
+    return task
+
+
+def reconcile_milestones(repo, milestones_json, dry_run):
+    milestones = json.loads(milestones_json.read_text(encoding="utf-8"))
+    existing = {
+        m["title"]: m["number"]
+        for m in json.loads(
+            gh(["api", f"repos/{repo}/milestones?state=all", "--paginate"])
+        )
+    }
+    print(f">> milestones: {len(milestones)} declared in {milestones_json.name}")
+    to_create = []
+    for ms in milestones:
+        title = ms["title"]
+        if title in existing:
+            print(f"   = exists #{existing[title]}: {title}")
+            continue
+        if dry_run:
+            print(f"   + would create: {title}")
+            continue
+        to_create.append(ms)
+    if to_create:
+        # Batch: each absent milestone is a disjoint create — run them concurrently (M-397).
+        _ok, _fail, failures = run_batch(
+            "milestones", [_milestone_create_task(repo, ms) for ms in to_create]
+        )
+        for title, err in failures:
+            safe_print(
+                f"   ! could not create milestone '{title}' ({err}) — re-run to retry",
+                file=sys.stderr,
+            )
 
 
 def create_issue(repo, entry, dry_run):
@@ -1094,8 +1415,90 @@ def assign_milestone(repo, number, milestone, dry_run):
         )
 
 
-def apply_issue_update(repo, number, changes, entry, dry_run):
-    """Apply a non-empty ``changes`` plan to issue ``number`` via `gh`, reporting each field."""
+def _create_issue_task(repo, entry):
+    """Build a batch task that creates one issue (pass-1) and returns a result carrying the new
+    number/id so the caller can record an idmap row. Fault-tolerant: a failure is captured as
+    ``(tid, False, err)`` and never aborts the create batch (G2)."""
+    tid = entry["id"]
+    title = entry["title"]
+
+    def task():
+        args = ["issue", "create", "--repo", repo, "--title", title, "--body-file", "-"]
+        for label in entry.get("labels") or []:
+            args += ["--label", label]
+        rc, out, err = run_gh_task(args, input_text=entry.get("body", "") or "")
+        if rc != 0:
+            return (tid, False, _stderr_tail(err))
+        number = int(out.strip().rstrip("/").rsplit("/", 1)[-1])
+        rc2, out2, err2 = run_gh_task(["api", f"repos/{repo}/issues/{number}"])
+        if rc2 != 0:
+            return (tid, False, _stderr_tail(err2))
+        node = json.loads(out2)
+        safe_print(f"   + created #{number}: {title}")
+        if entry.get("milestone"):
+            rc3, _o3, err3 = run_gh_task(
+                [
+                    "issue",
+                    "edit",
+                    str(number),
+                    "--repo",
+                    repo,
+                    "--milestone",
+                    entry["milestone"],
+                ]
+            )
+            if rc3 != 0:
+                safe_print(
+                    f"     ! milestone absent (run with --milestones first): {entry['milestone']}",
+                    file=sys.stderr,
+                )
+            else:
+                safe_print(f"     ~ milestone: {entry['milestone']}")
+        # Carry the new number/id back via the result's err slot (a dict) so reconcile_issues can
+        # record the idmap row; ok=True signals success.
+        return (tid, True, {"number": number, "id": node["id"]})
+
+    task.item = tid
+    return task
+
+
+def _update_issue_task(repo, live, changes, update_bodies):
+    """Build a batch task that applies an issue's ``changes`` plan (pass-2 update). Disjoint per
+    issue + idempotent; a failure is captured, never aborts the update batch (G2)."""
+    number = live["number"]
+
+    def task():
+        label_args, summary = _issue_update_args(changes)
+        if label_args:
+            rc, _o, err = run_gh_task(
+                ["issue", "edit", str(number), "--repo", repo, *label_args]
+            )
+            if rc != 0:
+                return (number, False, _stderr_tail(err))
+        if "body" in changes:
+            rc, _o, err = run_gh_task(
+                ["issue", "edit", str(number), "--repo", repo, "--body-file", "-"],
+                input_text=changes["body"],
+            )
+            if rc != 0:
+                return (number, False, _stderr_tail(err))
+        if "state" in changes:
+            verb = "close" if changes["state"] == "closed" else "reopen"
+            rc, _o, err = run_gh_task(["issue", verb, str(number), "--repo", repo])
+            if rc != 0:
+                return (number, False, _stderr_tail(err))
+        safe_print(f"   ~ updated #{number}: {', '.join(summary)}")
+        return (number, True, None)
+
+    task.item = number
+    return task
+
+
+def _issue_update_args(changes):
+    """PURE: render an issue ``changes`` plan to (gh-edit-args, human-summary) (no I/O).
+
+    Factored out of ``apply_issue_update`` so the batch path and the sequential path build the
+    exact same `gh issue edit` arguments + the same never-silent summary (exercised by --self-test)."""
     label_args = []
     if "labels" in changes:
         add, remove = changes["labels"]
@@ -1122,6 +1525,12 @@ def apply_issue_update(repo, number, changes, entry, dry_run):
         summary.append("body")
     if "state" in changes:
         summary.append(f"state={changes['state']}")
+    return label_args, summary
+
+
+def apply_issue_update(repo, number, changes, entry, dry_run):
+    """Apply a non-empty ``changes`` plan to issue ``number`` via `gh`, reporting each field."""
+    label_args, summary = _issue_update_args(changes)
 
     if dry_run:
         print(f"   ~ would update #{number}: {', '.join(summary)}")
@@ -1140,6 +1549,37 @@ def apply_issue_update(repo, number, changes, entry, dry_run):
     print(f"   ~ updated #{number}: {', '.join(summary)}")
 
 
+def partition_issue_work(
+    issues, idmap, by_number, by_title, *, do_update, update_bodies
+):
+    """PURE: split issues.yaml entries into the create / update / in-sync work classes (no I/O).
+
+    Returns ``(to_create, to_update, idmap_rows, in_sync)``:
+      * ``to_create`` — entries whose live issue was not found (pass-1 create work);
+      * ``to_update`` — ``[(entry, live, changes)]`` whose live issue drifts (pass-2 update work);
+      * ``idmap_rows`` — ``[(tid, number, id)]`` for ALREADY-EXISTING matches (create rows are
+        appended later from the create results);
+      * ``in_sync`` — count of matched-but-unchanged entries.
+    Matching is idmap-number-first (rename-safe) then title — identical to the sequential logic;
+    factoring it pure lets --self-test cover the batch-partitioning decision (M-397)."""
+    to_create, to_update, idmap_rows, in_sync = [], [], [], 0
+    for entry in issues:
+        tid = entry["id"]
+        live = by_number.get(idmap.get(tid)) or by_title.get(entry["title"])
+        if live is None:
+            to_create.append(entry)
+            continue
+        idmap_rows.append((tid, live["number"], live["id"]))
+        if not do_update:
+            continue
+        changes = plan_issue_update(entry, live, update_bodies=update_bodies)
+        if changes:
+            to_update.append((entry, live, changes))
+        else:
+            in_sync += 1
+    return to_create, to_update, idmap_rows, in_sync
+
+
 def reconcile_issues(repo, issues, idmap_path, *, do_update, update_bodies, dry_run):
     by_number, by_title = snapshot_issues(repo)
     idmap = load_idmap(idmap_path)
@@ -1149,33 +1589,67 @@ def reconcile_issues(repo, issues, idmap_path, *, do_update, update_bodies, dry_
         f"(update={'on' if do_update else 'off'}, bodies={'on' if update_bodies else 'off'})"
     )
 
-    created, updated, in_sync = 0, 0, 0
-    idmap_rows = []
-    for entry in issues:
-        tid = entry["id"]
-        # Match by idmap number first (rename-safe), then by title.
-        live = by_number.get(idmap.get(tid)) or by_title.get(entry["title"])
+    to_create, to_update, idmap_rows, in_sync = partition_issue_work(
+        issues,
+        idmap,
+        by_number,
+        by_title,
+        do_update=do_update,
+        update_bodies=update_bodies,
+    )
 
-        if live is None:
-            made = create_issue(repo, entry, dry_run)
-            if made is None:  # dry run
-                continue
-            created += 1
-            idmap_rows.append((tid, made["number"], made["id"]))
-            continue
-
-        idmap_rows.append((tid, live["number"], live["id"]))
-        if not do_update:
-            continue
-        changes = plan_issue_update(entry, live, update_bodies=update_bodies)
-        if changes:
+    if dry_run:
+        # Preview only — sequential, mutates nothing (preserves the exact dry-run output).
+        for entry in to_create:
+            create_issue(repo, entry, dry_run)
+        for entry, live, changes in to_update:
             apply_issue_update(repo, live["number"], changes, entry, dry_run)
-            updated += 1
-        else:
-            in_sync += 1
+        print(
+            f">> issues done — {len(to_create)} would create, {len(to_update)} would update, "
+            f"{in_sync} already in sync"
+        )
+        return
 
-    if not dry_run:
-        append_idmap(idmap_path, idmap_rows)
+    # Pass-1: create absent issues as a batch. MUST complete before pass-2 so a future
+    # depends_on/sub-issue linking pass (not yet implemented in this script) would see every new
+    # number. Cross-batch order preserved: creates fully aggregate before updates dispatch.
+    created = 0
+    if to_create:
+        # _create_issue_task returns the new number/id in the ok result's payload slot, so we ask
+        # for the full results list to append idmap rows for the successes + flag the failures.
+        create_results = run_batch(
+            "issue create (pass 1)",
+            [_create_issue_task(repo, e) for e in to_create],
+            return_results=True,
+        )
+        for tid, ok, payload in create_results:
+            if ok and isinstance(payload, dict):
+                idmap_rows.append((tid, payload["number"], payload["id"]))
+                created += 1
+            else:
+                safe_print(
+                    f"   ! could not create issue {tid} ({payload}) — re-run to retry",
+                    file=sys.stderr,
+                )
+
+    # Pass-2: apply drift updates as a batch (disjoint per issue, idempotent).
+    updated = 0
+    if to_update:
+        _ok, _fail, upd_failures = run_batch(
+            "issue updates (pass 2)",
+            [
+                _update_issue_task(repo, live, changes, update_bodies)
+                for _e, live, changes in to_update
+            ],
+        )
+        updated = len(to_update) - len(upd_failures)
+        for number, err in upd_failures:
+            safe_print(
+                f"   ! could not update #{number} ({err}) — re-run to retry",
+                file=sys.stderr,
+            )
+
+    append_idmap(idmap_path, idmap_rows)
     print(
         f">> issues done — {created} created, {updated} updated, {in_sync} already in sync"
     )
@@ -1215,7 +1689,11 @@ def reconcile_prs(repo, conventions, area_set, task_to_ms, *, dry_run):
     prs = snapshot_prs(repo)
     print(f">> PRs: {len(prs)} on {repo} — add-only label/milestone backfill")
 
-    updated, in_sync = 0, 0
+    # Phase A — derive each PR's plan SEQUENTIALLY (keeps flag output ordered + stable; the
+    # commit-title fallback is a cheap read). Phase B — batch the actual edits (disjoint per PR,
+    # add-only ⇒ idempotent), aggregating results never-silently (M-397).
+    in_sync = 0
+    edits = []  # [(number, edit_args, summary_line)]
     for pr in prs:
         number = pr["number"]
         text = f"{pr['title']}\n{pr['body']}"
@@ -1257,11 +1735,36 @@ def reconcile_prs(repo, conventions, area_set, task_to_ms, *, dry_run):
             edit_args += ["--add-label", ",".join(to_add)]
         if set_ms:
             edit_args += ["--milestone", set_ms]
-        gh(edit_args)
-        print(f"   ~ updated #{number}: {', '.join(summary)}{via}")
-        updated += 1
+        edits.append((number, edit_args, f"{', '.join(summary)}{via}"))
+
+    updated = 0
+    if not dry_run and edits:
+        _ok, _fail, failures = run_batch(
+            "PR backfill",
+            [_pr_edit_task(number, args, line) for number, args, line in edits],
+        )
+        updated = len(edits) - len(failures)
+        for number, err in failures:
+            safe_print(
+                f"   ! could not update PR #{number} ({err}) — re-run to retry",
+                file=sys.stderr,
+            )
 
     print(f">> PRs done — {updated} updated, {in_sync} already in sync")
+
+
+def _pr_edit_task(number, edit_args, summary_line):
+    """Build a batch task that applies one PR's add-only label/milestone edit (disjoint, idempotent)."""
+
+    def task():
+        rc, _out, err = run_gh_task(edit_args)
+        if rc != 0:
+            return (number, False, _stderr_tail(err))
+        safe_print(f"   ~ updated #{number}: {summary_line}")
+        return (number, True, None)
+
+    task.item = number
+    return task
 
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -2008,12 +2511,173 @@ def self_test():
     assert _stderr_tail("") == "(no stderr)"
     assert _stderr_tail(None) == "(no stderr)"
 
+    # ── M-397 bounded-concurrency / rate-negotiation pure logic ─────────────────────────────────
+    # should_pause_for_rate_limit: secondary-limit / abuse / 403 / 429 pause; primary-limit + clean
+    # do NOT; Retry-After honored (clamped); default backoff otherwise.
+    pause, secs = should_pause_for_rate_limit(
+        "You have exceeded a secondary rate limit. Retry-After: 30"
+    )
+    assert pause and secs == 30, (pause, secs)
+    pause, secs = should_pause_for_rate_limit(
+        "HTTP 403: You have triggered an abuse detection"
+    )
+    assert pause and secs == 60, (pause, secs)  # no Retry-After ⇒ default 60
+    assert should_pause_for_rate_limit("HTTP 429 Too Many Requests")[0] is True
+    # Retry-After above the ceiling is clamped; below the floor is raised to ≥1.
+    assert (
+        should_pause_for_rate_limit("secondary rate limit; retry-after: 9999")[1] == 300
+    )
+    assert should_pause_for_rate_limit("secondary rate limit; retry-after: 0")[1] == 1
+    # A PRIMARY rate-limit is NOT a short pause (it resets hourly) — stay honest, don't absorb it.
+    assert should_pause_for_rate_limit("API rate limit exceeded") == (False, 0)
+    # Clean / unrelated failures never pause.
+    assert should_pause_for_rate_limit("HTTP 422: Validation Failed") == (False, 0)
+    assert should_pause_for_rate_limit("") == (False, 0)
+    assert should_pause_for_rate_limit(None) == (False, 0)
+
+    # parse_rate_remaining: both API shapes, with a safe None fallback.
+    assert parse_rate_remaining({"resources": {"core": {"remaining": 4321}}}) == 4321
+    assert parse_rate_remaining({"rate": {"remaining": 17}}) == 17
+    assert parse_rate_remaining({"resources": {}}) is None
+    assert parse_rate_remaining({}) is None
+    assert parse_rate_remaining(None) is None
+    assert parse_rate_remaining("not-a-dict") is None
+
+    # negotiate_concurrency: unknown budget ⇒ trust the request; low budget ⇒ serialize; floor ≥ 1.
+    assert negotiate_concurrency(6, None) == 6
+    assert negotiate_concurrency(6, 5000) == 6
+    assert negotiate_concurrency(6, 50) == 1  # below low_water ⇒ clamp to 1
+    assert negotiate_concurrency(6, 100) == 6  # at the water line ⇒ unchanged
+    assert negotiate_concurrency(0, 5000) == 1  # always at least one worker
+
+    # aggregate_results: counts split + the (item, err) failure sublist preserved in order.
+    results = [
+        ("a", True, None),
+        ("b", False, "boom"),
+        ("c", True, None),
+        ("d", False, "x"),
+    ]
+    ok, fail, failures = aggregate_results(results)
+    assert ok == 2 and fail == 2 and failures == [("b", "boom"), ("d", "x")], (
+        ok,
+        fail,
+        failures,
+    )
+    assert aggregate_results([]) == (0, 0, [])
+
+    # _issue_update_args: the gh-edit args + summary mirror the sequential path exactly.
+    args, summary = _issue_update_args(
+        {
+            "labels": (["x"], ["y"]),
+            "title": "T",
+            "milestone": "M",
+            "body": "b",
+            "state": "closed",
+        }
+    )
+    assert "--add-label" in args and "--remove-label" in args and "--title" in args, (
+        args
+    )
+    assert args[args.index("--milestone") + 1] == "M"
+    assert summary == [
+        "labels +x -y",
+        "title",
+        "milestone=M",
+        "body",
+        "state=closed",
+    ], summary
+    assert _issue_update_args({}) == ([], [])
+
+    # partition_issue_work: idmap-number-first match, then title; create / update / in-sync split.
+    by_number = {
+        10: {
+            "number": 10,
+            "id": "i10",
+            "title": "Keep",
+            "labels": {"phase:8"},
+            "milestone": None,
+            "state": "open",
+        },
+        11: {
+            "number": 11,
+            "id": "i11",
+            "title": "Drift",
+            "labels": set(),
+            "milestone": None,
+            "state": "open",
+        },
+    }
+    by_title = {rec["title"]: rec for rec in by_number.values()}
+    p_issues = [
+        {
+            "id": "M-1",
+            "title": "Keep",
+            "labels": ["phase:8"],
+        },  # in sync (matched by idmap #10)
+        {
+            "id": "M-2",
+            "title": "Drift",
+            "labels": ["phase:8"],
+        },  # drift (matched by title #11)
+        {"id": "M-3", "title": "Brand New", "labels": []},  # absent ⇒ create
+    ]
+    p_idmap = {"M-1": 10}
+    to_create, to_update, idmap_rows, in_sync = partition_issue_work(
+        p_issues, p_idmap, by_number, by_title, do_update=True, update_bodies=False
+    )
+    assert [e["id"] for e in to_create] == ["M-3"], to_create
+    assert [e["id"] for (e, _l, _c) in to_update] == ["M-2"], to_update
+    assert ("M-1", 10, "i10") in idmap_rows and ("M-2", 11, "i11") in idmap_rows
+    assert in_sync == 1, in_sync
+    # do_update=False ⇒ no updates planned, but existing matches still record idmap rows.
+    tc2, tu2, rows2, sync2 = partition_issue_work(
+        p_issues, p_idmap, by_number, by_title, do_update=False, update_bodies=False
+    )
+    assert (
+        tu2 == []
+        and sync2 == 0
+        and len(rows2) == 2
+        and [e["id"] for e in tc2] == ["M-3"]
+    )
+
+    # run_batch: N=1 sequential ⇒ identical aggregation; fault-tolerant (one failure never aborts).
+    def _mk(item, ok, err):
+        def t():
+            return (item, ok, err)
+
+        return t
+
+    ok, fail, failures = run_batch(
+        "self-test",
+        [_mk("a", True, None), _mk("b", False, "e")],
+        concurrency=1,
+        summary=False,
+    )
+    assert ok == 1 and fail == 1 and failures == [("b", "e")], (ok, fail, failures)
+
+    # concurrency>1 aggregates the SAME totals (order of failures may differ under as_completed, so
+    # compare as a set); a raising task is captured, not propagated.
+    def _boom():
+        raise ValueError("kaboom")
+
+    res = run_batch(
+        "self-test",
+        [_mk("a", True, None), _boom, _mk("c", True, None)],
+        concurrency=4,
+        summary=False,
+        return_results=True,
+    )
+    ok2, fail2, _f = aggregate_results(res)
+    assert ok2 == 2 and fail2 == 1, (ok2, fail2)
+    assert any(not r[1] and "kaboom" in str(r[2]) for r in res), res
+
     print(
         "self-test OK: label_delta, normalize_body, plan_issue_update, parse_conventional, "
         "derive_pr_labels, milestone_rank, infer_milestone (multi-milestone), "
         "plan_label_migrations, label_to_field_values, plan_field_reconcile, "
         "plan_option_additions, required_scopes, missing_scopes, over_grants, _auth_command, "
-        "_is_transient_network, _stderr_tail"
+        "_is_transient_network, _stderr_tail, should_pause_for_rate_limit, parse_rate_remaining, "
+        "negotiate_concurrency, aggregate_results, _issue_update_args, partition_issue_work, run_batch"
     )
 
 
@@ -2132,6 +2796,23 @@ def main():
         action="store_true",
         help="echo every `gh` invocation to stderr before it runs (pinpoints a hang to the call)",
     )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=_DEFAULT_CONCURRENCY,
+        metavar="N",
+        help=(
+            "max in-flight `gh` calls per batch (default 6, conservative for GitHub secondary "
+            "limits). N=1 reproduces the exact sequential behaviour (clean --verbose/debug "
+            "fallback). The pool auto-PAUSES on a secondary-rate-limit/abuse/Retry-After signal."
+        ),
+    )
+    parser.add_argument(
+        "--no-rate-probe",
+        action="store_true",
+        help="skip the start-of-run `gh api rate_limit` budget probe (which can reduce N when the "
+        "remaining budget is low); use the requested --concurrency unchanged.",
+    )
     args = parser.parse_args()
 
     if args.self_test:
@@ -2203,6 +2884,23 @@ def main():
         )
         print()
     do_project = want_project and project_ok
+
+    # M-397 — set the run-scoped worker count. A live run optionally probes the rate budget and
+    # reduces N when it is low (never-silent); --dry-run mutates nothing so it stays sequential
+    # (N=1) for a stable, ordered preview. The shared RATE_GATE pauses the whole pool on a
+    # secondary-rate-limit signal mid-run (see run_gh_task).
+    global CONCURRENCY
+    requested = max(1, args.concurrency)
+    if args.dry_run:
+        CONCURRENCY = 1
+    elif args.no_rate_probe or args.no_preflight:
+        CONCURRENCY = requested
+        if requested > 1:
+            print(f">> concurrency: {requested} worker(s) (rate probe skipped)\n")
+    else:
+        print(">> concurrency: negotiating worker count against the gh rate budget")
+        CONCURRENCY = probe_rate_budget(requested)
+        print()
 
     if do_labels:
         reconcile_labels(args.repo, args.labels_json, args.dry_run)

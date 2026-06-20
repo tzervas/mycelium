@@ -1704,3 +1704,14 @@ issues:
     body: |
       Add scripts/doc_status_check.py + scripts/checks/doc-status.sh + `just doc-status`, wired into `just check` skip-gracefully. Three never-silent passes: lattice validation of every decision-doc Status header (#236 lattice: Draft/Proposed → Accepted → Enacted → Superseded), nav-README↔authoritative-header cross-check (the drift that left 8 stale RFC rows), and Declared stale-phrase invariants (tools/doc-status-invariants.yaml; e.g. the post-ratification "pending ratification" guard). Honest Declared line/regex heuristic — source is ground truth; pass-3 rules are maintainer-declared, never inferred.
       DONE (2026-06-20, PR #237): gate green in `just check`; the corpus statuses normalized to the canonical `Enacted` token (RFC-0011/0012/0013/0014/0015) + the 8 stale docs/rfcs/README.md rows fixed against their authoritative headers; Doc-Index normalized. A re-introduced stale RFC row is caught by pass 2 (negative test).
+
+  # 2026-06-20: concurrent/batched sync (M-382 follow-up; speed).
+  - id: M-397
+    title: "M-397 — gh-issues-sync: bounded-concurrency, rate-negotiated, batched execution"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:done]
+    depends_on: [M-361, M-382]
+    doc_refs: [src:tools/github/gh-issues-sync.py]
+    body: |
+      Speed up the sync (M-382 follow-up) with a `--concurrency N` thread pool (default 6; N=1 = exact sequential fallback) over the existing retry/backoff/120s-timeout-wrapped `gh()`. Batched dispatch (label/milestone/issue-create/issue-update/PR-backfill/migration-relabel) preserves cross-batch dependency order; a pool-wide `RateGate` pauses the whole pool on secondary-rate-limit/abuse/403/429/Retry-After then retries once; an optional `gh api rate_limit` probe dials N down when the budget is low; never-silent fault-tolerant lock-ordered per-batch aggregation (one failure never aborts a batch).
+      DONE (2026-06-20, PR #256): --self-test (all new pure helpers) + full `just check` green. HONESTY: the rate-limit tuning (N=6, pause windows, low-water) is **Declared** — GitHub does not publish secondary-limit thresholds and no live gh was run; confirm with a small live run before trusting high `--concurrency`. N=1 reproduces today's exact sequential behaviour (the safe fallback + the baseline-equivalence diff target).
