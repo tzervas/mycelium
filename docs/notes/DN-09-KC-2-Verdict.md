@@ -198,10 +198,91 @@ unaffected.
 turnkey (`cd tools/llm-harness && ./run.sh --smoke` then `./run.sh`); a successful re-run
 appends findings here (append-only) and updates M-381 with the measured retention ratio.
 
+## 8. Grok/xAI retry run (2026-06-20) — harness fixed, live run completed
+
+This section records the follow-up live run once xAI account credits were available (same day,
+later session). Three fixes were applied to the harness before re-running (M-330 diagnostic
+feedback; see commit `2c3c2e0`):
+
+1. **Diagnostic feedback fix.** `myc-check` emits parse/type errors on stdout; the scorer was
+   only reading stderr. Every task therefore received `diagnostics: []` in the correction
+   prompt — the model was told "fix your syntax" with no indication of what was wrong. Fixed:
+   stderr preferred, stdout fallback. Each failing round now carries the actual
+   `parse-error: …` or `check-error: …` message.
+2. **Selective resume (`--resume-from reports/`).** Prior PASS outcomes are carried forward;
+   only non-PASS tasks are retried. This avoids re-billing tasks already confirmed clean.
+3. **Harness self-test:** extended to **16/16** (T14 resume-logic bookkeeping added, T6
+   stdout-fallback path added).
+
+**Live run results (Empirical — run executed, 2 models, task set `gold-compose-v1`, seed 42,
+spend cap $5):**
+
+| model | run | syntactic valid | type-check pass | cost | requests | mean latency |
+|---|---|---|---|---|---|---|
+| `grok-build-0.1` | retry | 14.3% (1/7 scored) | 14.3% (1/7) | $0.006097 | 18 | 33.8s |
+| `grok-4.3` | retry | 12.5% (1/8) | 0.0% (0/8) | $0.011025 | 24 | 4.1s |
+
+Task-level outcomes (retry run `20260620T151333Z`):
+
+| task | grok-build-0.1 | grok-4.3 |
+|---|---|---|
+| g01-identity | **PASS** (attempt 1, clean) | FAIL (syn×3) |
+| g02-not | FAIL (syn×3) | FAIL (syn×3) |
+| g03-double | FAIL (syn, **typ**, syn) | FAIL (syn×3) |
+| g04-widen-swap | FAIL (syn×3) | FAIL (syn×3) |
+| g05-narrow-swap | FAIL (syn×3) | FAIL (syn×3) |
+| g06-compose-not-double | FAIL (syn×2, err) | FAIL (syn×3) |
+| g07-and-then-widen | FAIL (syn×3) | FAIL (syn, syn, **typ**) |
+| g08-roundtrip | **PASS** (carried from blind run) | FAIL (syn×3) |
+
+`syn` = syntax_error (myc-check exit 2); `typ` = type_error (exit 3); `err` = harness-level error
+(no exit code — runner timeout/transport, not a model parse failure); **typ** means the model
+produced syntactically valid Mycelium that failed type-checking — an improvement signal.
+
+**What the diagnostic feedback confirmed (Empirical):**
+
+- Rounds 2+ carry `is_correction: true` and the actual parse/type error in `diagnostics`. The
+  model IS receiving the error message in its correction prompt — the feedback loop is wired.
+- Example (g02-not, grok-build-0.1):
+  - Round 1 diagnostic: `"parse-error: parse error at 2:1: expected a top-level item … found Ident(\"flip\")"` — model wrote `flip(…)` not `fn flip(…)`.
+  - Round 2 diagnostic: `"parse-error: unexpected character '~'"` — tried `~` for NOT.
+  - Round 3 diagnostic: `"parse-error: unexpected '-' (expected '->')"` — still not converging.
+- The models can recognise the feedback but do not have enough Mycelium knowledge to self-
+  correct within 3 rounds. This is expected for frontier models with zero Mycelium fine-tuning.
+
+**New PASSes across both runs (Empirical):**
+
+- grok-build-0.1: g08-roundtrip (blind) + **g01-identity (retry, first attempt)** → 2/8 total.
+- grok-4.3: 0/8 total (in both the blind and retry runs).
+
+Both PASSes involve trivial wrapping functions (identity / round-trip). Composition, NOT, double,
+widen-swap resist all 3 rounds with diagnostics. The failure mode is *not* irrecoverable (the
+local-model evidence §2 already established that); it is a knowledge-surface gap (the models
+lack Mycelium-specific syntax knowledge without fine-tuning or a sufficiently explicit primer).
+
+**Retention ratio (T3.6 / M-381): INDETERMINATE.** Arms 3 (grammar-constrained decoding),
+4 (LlmCanonical — the denominator), and 5 (embedded-DSL) remain blocked. The retention-ratio
+threshold comparison requires arm 4; it cannot be computed from arms 1+2 alone.
+
+**Cumulative spend: ~$0.035** across all three runs ($0.000 blind-blocked, $0.018 blind-live,
+$0.017 retry). Well within the $5 run cap and $10 session constraint.
+
+**Effect on the standing verdict:** the 2026-06-18 verdict — **KC-2: proceed** — stands
+unchanged. The frontier-model arm adds supplemental evidence:
+- The surface is *parseable* by frontier models without fine-tuning (g01-identity, g08-roundtrip PASS).
+- Composition tasks resist 3-round correction without Mycelium-specific priming — consistent
+  with the local-model finding (§2: the grammar-in-context primer was the dominant knob at 7B).
+- No irrecoverable collapse — the failure mode is a knowledge gap, not a structural one.
+
 ---
 
 ## Changelog
 
+- **2026-06-20 — §8 added (Grok/xAI retry run completed).** Harness fixed (stdout diagnostic
+  fallback + `--resume-from`; self-test **16/16**). Retry run `20260620T151333Z` executed live:
+  grok-build-0.1 14.3% syntactic valid / 14.3% type-check pass; grok-4.3 12.5% / 0.0%.
+  Diagnostic feedback confirmed working. Arms 3/4/5 still blocked; retention ratio still
+  INDETERMINATE (arm 4 denominator not run). KC-2 verdict unchanged: proceed.
 - **2026-06-20 — Supplemental record (Grok/xAI arm blocked).** The `tools/llm-harness/`
   harness passed **14/14 offline self-tests** (Empirical/plumbing). The live run was blocked
   by `HTTP 403 permission-denied` (xAI account has no credits; not a language-model result).
