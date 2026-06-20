@@ -46,6 +46,19 @@ All model-dependent results are labelled `mock-PASS`, never `PASS`.
 
 ## Live xAI (Grok) runs — with the hard spend cap
 
+**One command (recommended):** `./run.sh` from `tools/llm-harness/` does the whole flow —
+`uv sync` → the offline self-test (aborts if it fails, so you never spend on a broken
+harness) → list models → the **capped** live run (only if a key is present; otherwise it
+stops after the free checks and tells you how to set the key).
+
+```sh
+cd tools/llm-harness
+./run.sh --check-only          # setup + self-test + list-models — no key, no spend
+export XAI_API_KEY=…           # (or GROK_API_KEY=…)
+./run.sh --smoke               # a $2 single-model smoke, then the full $10 cheapest-first sweep
+# knobs: --max-usd N · --models a,b · --no-ablation · --batch · -- <extra grok.cli args>
+```
+
 The `grok/` sub-package drives real xAI runs (OpenAI-compatible `https://api.x.ai/v1`; key
 from `$XAI_API_KEY` or `$GROK_API_KEY`). Models run **cheapest-first**; `--mode batch` uses
 the xAI batch API (lower price). A **never-silent USD spend gate** (`--max-usd`, default
@@ -54,6 +67,8 @@ cost would breach the cap is **refused before it is sent**, and the run stops wi
 honestly-flagged report (G2). It is a **best-effort** gate, *not* a formal upper bound — the
 token estimate is a heuristic and live completions are unbounded (no `max_tokens`), so a
 single in-flight request can overrun; the gate biases high and stops **new** work early.
+
+Equivalent explicit invocations (what `run.sh` calls under the hood):
 
 ```sh
 cd tools/llm-harness
