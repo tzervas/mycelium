@@ -12,12 +12,13 @@
 //!   *names* the per-op never-silent / EXPLAIN contract (RFC-0016 §4.1 C1/C3) so "this
 //!   value is an honest stdlib error" is inspectable and bound-checkable, with a blanket
 //!   impl so no type opts in by hand.
-//! - [`impl_std_error!`] — a tiny declarative macro that emits the boilerplate
+//! - [`impl_std_error!`](crate::impl_std_error) — a tiny declarative macro that emits the boilerplate
 //!   `impl std::error::Error for T {}` (optionally with a `source()` arm), leaving the
 //!   **hand-written, domain-specific `Display` message in the caller** — untouched.
-//! - [`assert_is_std_error`] / [`assert_display_contains`] — the test helpers DN-17 §4
+//! - `assert_is_std_error` / `assert_display_contains` — the test helpers DN-17 §4
 //!   blesses as the *safe* consolidation (the `*_is_std_error` + `*_display_includes_*`
-//!   duplication), gated behind `#[cfg(any(test, feature = "test-support"))]`.
+//!   duplication), gated behind `#[cfg(any(test, feature = "test-support"))]` (so they are
+//!   absent — and these names unlinkable — in a default doc build).
 //!
 //! ## What it does NOT do (VR-5 / DN-17 §5 — non-coupling by construction)
 //! It never generates, alters, or inspects a `Display` *message*; never adds, removes, or
@@ -30,7 +31,7 @@
 //!
 //! # Guarantee tag
 //! **`Exact`** — the scaffold is pure, total, allocation-free glue: [`StdError`] is a marker
-//! with a trivial blanket impl, [`impl_std_error!`] expands to the exact trait impl the
+//! with a trivial blanket impl, [`impl_std_error!`](crate::impl_std_error) expands to the exact trait impl the
 //! caller would otherwise write, and the assert helpers are total predicates over a borrowed
 //! error. No approximation, no selection, no representation choice is introduced (C5: it adds
 //! no trusted code — it consumes `std::error::Error`).
