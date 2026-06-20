@@ -516,6 +516,8 @@ def check_canonical_bridge() -> Check:
         "(fn [x] (fn [y] y))",  # nested lambda not expressible in .myc expr grammar
         "(swap! x :to Ternary{6})",  # swap! missing :policy (never silent)
         "(((",  # malformed / unclosed
+        "(op bit.not x>)",  # stray '>' delimiter: must fail-fast, NEVER hang (G2)
+        ">",  # bare stray '>' on its own
     ]
     for bad in refusals:
         if convert_to_myc(bad, **sig) is not None:

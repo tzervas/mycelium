@@ -104,10 +104,17 @@ def _tokenize(source: str) -> list[str]:
                 raise _ConvertError("unclosed '<'")
             i += 1  # consume '>'
             tokens.append(source[start:i])
+        elif c == ">":
+            # A stray '>' (the closer of '<…>' is consumed in the '<' branch above).
+            # Reject it explicitly — it is in the atom stop-set, so the atom branch
+            # below would loop forever on it (G2: fail-fast, never hang).
+            raise _ConvertError("unexpected '>'")
         else:  # atom: read to whitespace or a delimiter
             start = i
             while i < n and source[i] not in " \t\r\n()[]<>;":
                 i += 1
+            if i == start:  # defensive: no atom char consumed -> would loop (G2)
+                raise _ConvertError(f"unexpected delimiter {c!r}")
             tokens.append(source[start:i])
     return tokens
 
