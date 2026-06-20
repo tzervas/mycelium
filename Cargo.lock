@@ -186,6 +186,7 @@ dependencies = [
 name = "mycelium-check"
 version = "0.0.0"
 dependencies = [
+ "mycelium-cli-common",
  "mycelium-l1",
  "mycelium-lsp",
  "mycelium-proj",
@@ -237,6 +238,7 @@ dependencies = [
 name = "mycelium-fmt"
 version = "0.0.0"
 dependencies = [
+ "mycelium-cli-common",
  "mycelium-l1",
  "mycelium-proj",
 ]
@@ -264,6 +266,7 @@ dependencies = [
 name = "mycelium-lint"
 version = "0.0.0"
 dependencies = [
+ "mycelium-cli-common",
  "mycelium-doc",
  "mycelium-l1",
  "mycelium-lsp",
@@ -314,6 +317,9 @@ dependencies = [
 [[package]]
 name = "mycelium-sec"
 version = "0.0.0"
+dependencies = [
+ "mycelium-cli-common",
+]
 
 [[package]]
 name = "mycelium-select"
