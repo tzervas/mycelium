@@ -149,6 +149,31 @@ pub struct TypeRef {
     pub guarantee: Option<Strength>,
 }
 
+impl TypeRef {
+    /// A type with **no** written guarantee index — the surface `T` form (the index is then
+    /// supplied by the checked context, never silently defaulted; RFC-0007 §4.3). Equivalent to the
+    /// `TypeRef { base, guarantee: None }` literal the parser builds; offered as a named, additive
+    /// constructor so callers need not reach through the struct fields (Law of Demeter).
+    #[must_use]
+    pub fn unguaranteed(base: BaseType) -> Self {
+        TypeRef {
+            base,
+            guarantee: None,
+        }
+    }
+
+    /// A type carrying an explicit guarantee-strength index — the surface `T @ g` form. Equivalent
+    /// to `TypeRef { base, guarantee: Some(g) }`. Additive convenience; it only *records* the index,
+    /// it does not check it (that stays the typechecker/evaluator's never-silent job — VR-5).
+    #[must_use]
+    pub fn with_guarantee(base: BaseType, guarantee: Strength) -> Self {
+        TypeRef {
+            base,
+            guarantee: Some(guarantee),
+        }
+    }
+}
+
 /// A base (un-annotated) type.
 #[derive(Debug, Clone, PartialEq)]
 pub enum BaseType {
@@ -188,7 +213,7 @@ pub enum Sparsity {
 }
 
 /// A scalar element kind.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Scalar {
     /// `F16`.
     F16,
@@ -201,7 +226,7 @@ pub enum Scalar {
 }
 
 /// A guarantee-lattice strength.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Strength {
     /// `Exact`.
     Exact,
@@ -320,7 +345,14 @@ pub enum Pattern {
 }
 
 /// A literal value.
+///
+/// `#[non_exhaustive]`: the bare/ambient family has grown once already (`AmbientInt` arrived with
+/// RFC-0012) and may grow again, so an *external* crate must keep a `_` arm — additive to the
+/// public surface, never a removal (the attribute is added, no variant changes). In-crate matches
+/// are unaffected by the attribute and stay exhaustive; no in-workspace caller matches `Literal`
+/// today (M-642 survey), so nothing breaks.
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum Literal {
     /// `0b…` (the digit/`_` string, verbatim).
     Bin(String),
@@ -336,4 +368,92 @@ pub enum Literal {
     AmbientInt(Paradigm, i64),
     /// A list literal `[e, …]`.
     List(Vec<Expr>),
+}
+
+impl Literal {
+    /// A binary literal from its verbatim digit/`_` string (the `…` of `0b…`). Additive alias for
+    /// [`Literal::Bin`]; like the variant it stores the string **verbatim** — it does not validate
+    /// the digits (the lexer is the never-silent gate that only ever builds well-formed ones).
+    #[must_use]
+    pub fn binary(digits: impl Into<String>) -> Self {
+        Literal::Bin(digits.into())
+    }
+
+    /// A ternary literal from its verbatim `+0-` string, MSB-first (the inner text of `<…>`).
+    /// Additive alias for [`Literal::Trit`]; stores the string verbatim, no validation (see
+    /// [`Literal::binary`]).
+    #[must_use]
+    pub fn ternary(trits: impl Into<String>) -> Self {
+        Literal::Trit(trits.into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    #[test]
+    fn typeref_unguaranteed_matches_field_form() {
+        let base = BaseType::Binary(8);
+        assert_eq!(
+            TypeRef::unguaranteed(base.clone()),
+            TypeRef {
+                base,
+                guarantee: None
+            }
+        );
+    }
+
+    #[test]
+    fn typeref_with_guarantee_matches_field_form() {
+        let base = BaseType::Ternary(3);
+        assert_eq!(
+            TypeRef::with_guarantee(base.clone(), Strength::Exact),
+            TypeRef {
+                base,
+                guarantee: Some(Strength::Exact)
+            }
+        );
+    }
+
+    #[test]
+    fn literal_ctors_match_variants() {
+        assert_eq!(Literal::binary("1010"), Literal::Bin("1010".to_owned()));
+        assert_eq!(Literal::ternary("+0-"), Literal::Trit("+0-".to_owned()));
+        // `impl Into<String>` accepts both `&str` and `String`.
+        assert_eq!(
+            Literal::binary(String::from("11")),
+            Literal::Bin("11".to_owned())
+        );
+    }
+
+    fn hash_of<T: Hash>(t: &T) -> u64 {
+        let mut h = DefaultHasher::new();
+        t.hash(&mut h);
+        h.finish()
+    }
+
+    #[test]
+    fn scalar_and_strength_hash_is_consistent_with_eq() {
+        // The new `Hash` derives must agree with `Eq` (equal values hash equal); enough to confirm
+        // the derive is wired and usable as a map/set key.
+        assert_eq!(hash_of(&Scalar::F32), hash_of(&Scalar::F32));
+        assert_eq!(hash_of(&Strength::Proven), hash_of(&Strength::Proven));
+        use std::collections::HashSet;
+        let scalars: HashSet<Scalar> = [Scalar::F16, Scalar::Bf16, Scalar::F32, Scalar::F64]
+            .into_iter()
+            .collect();
+        assert_eq!(scalars.len(), 4);
+        let strengths: HashSet<Strength> = [
+            Strength::Exact,
+            Strength::Proven,
+            Strength::Empirical,
+            Strength::Declared,
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(strengths.len(), 4);
+    }
 }
