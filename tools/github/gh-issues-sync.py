@@ -673,6 +673,37 @@ def plan_option_reconcile(desired_options, actual_option_names):
     return [opt["name"] for opt in desired_options if opt["name"] not in actual]
 
 
+def plan_option_additions(live_options, desired_options):
+    """Build the additive, non-destructive option union for ``updateProjectV2Field`` (pure).
+
+    ``live_options`` are the field's CURRENT options (dicts: name/color/description, from
+    ``fetch_project_fields``). ``desired_options`` are the manifest's options (same shape, from
+    ``project.json``). ``updateProjectV2Field`` matches by name and DELETES any omitted option, so
+    we return the **full union** the caller must send verbatim.
+
+    Returns ``(full_union_options, added_names, extra_live_names)``:
+      * ``full_union_options`` — every live option first (preserved verbatim: id is kept by name,
+        color/description unchanged) then each manifest option not already live (appended). Sending
+        this set adds the new options and deletes nothing.
+      * ``added_names`` — manifest options newly appended (order-preserving on the manifest).
+      * ``extra_live_names`` — live options absent from the manifest (a would-be deletion): kept in
+        the union (never deleted) and surfaced so the caller can FLAG them (G2 — never silently
+        destructive). Order-preserving on the live list.
+    """
+    live_names = [o["name"] for o in live_options]
+    live_set = set(live_names)
+    desired_set = {o["name"] for o in desired_options}
+
+    full_union_options = list(live_options)  # preserve every live option verbatim
+    added_names = []
+    for opt in desired_options:
+        if opt["name"] not in live_set:
+            full_union_options.append(opt)
+            added_names.append(opt["name"])
+    extra_live_names = [n for n in live_names if n not in desired_set]
+    return full_union_options, added_names, extra_live_names
+
+
 def plan_field_reconcile(desired_fields, actual_fields_by_name):
     """Plan field/option creation. Returns {'create': [...], 'add_options': {field: [names]}}.
 
@@ -1158,12 +1189,19 @@ def create_project(owner, owner_type, title):
 
 
 def fetch_project_fields(project_id):
-    """Return {field_name: {'id', 'options': {option_name: option_id}}} for single-selects."""
+    """Return {field_name: {'id', 'options', 'option_objs'}} for single-select fields.
+
+    ``options`` is {option_name: option_id} (used to set an item's field value). ``option_objs``
+    is the live option list verbatim — name + color + description — so an additive reconcile can
+    re-send every existing option unchanged (``updateProjectV2Field`` matches by name and would
+    DELETE any omitted option; we never omit a live one). See ``add_field_options``.
+    """
     query = (
         f"query{{ node(id:{gql_str(project_id)}){{ ... on ProjectV2{{ "
         f"fields(first:50){{ nodes{{ __typename "
         f"... on ProjectV2FieldCommon{{ id name }} "
-        f"... on ProjectV2SingleSelectField{{ id name options{{ id name }} }} }} }} }} }} }}"
+        f"... on ProjectV2SingleSelectField{{ id name "
+        f"options{{ id name color description }} }} }} }} }} }} }}"
     )
     nodes = (
         ((gh_graphql(query).get("node") or {}).get("fields") or {}).get("nodes")
@@ -1172,21 +1210,62 @@ def fetch_project_fields(project_id):
     for node in nodes:
         if not node.get("name"):
             continue
-        options = {o["name"]: o["id"] for o in node.get("options", [])}
-        fields[node["name"]] = {"id": node["id"], "options": options}
+        live = node.get("options", [])
+        options = {o["name"]: o["id"] for o in live}
+        option_objs = [
+            {
+                "name": o["name"],
+                "color": o.get("color") or "GRAY",
+                "description": o.get("description", "") or "",
+            }
+            for o in live
+        ]
+        fields[node["name"]] = {
+            "id": node["id"],
+            "typename": node.get("__typename"),
+            "options": options,
+            "option_objs": option_objs,
+        }
     return fields
+
+
+def _single_select_options_gql(options):
+    """Render a ``singleSelectOptions:[...]`` literal from option dicts (name/color/description).
+
+    Shared by the create + additive-update mutations so colors and quoting are mapped identically.
+    """
+    return ", ".join(
+        f"{{name:{gql_str(o['name'])}, color:{o.get('color') or 'GRAY'}, "
+        f"description:{gql_str(o.get('description', ''))}}}"
+        for o in options
+    )
 
 
 def create_single_select_field(project_id, field):
     """Create an absent single-select field with all its options (one safe, non-destructive call)."""
-    opts = ", ".join(
-        f"{{name:{gql_str(o['name'])}, color:{o.get('color', 'GRAY')}, "
-        f"description:{gql_str(o.get('description', ''))}}}"
-        for o in field.get("options", [])
-    )
+    opts = _single_select_options_gql(field.get("options", []))
     query = (
         f"mutation{{ createProjectV2Field(input:{{projectId:{gql_str(project_id)}, "
         f"dataType:SINGLE_SELECT, name:{gql_str(field['name'])}, "
+        f"singleSelectOptions:[{opts}]}}){{ projectV2Field{{ "
+        f"... on ProjectV2SingleSelectField{{ id name }} }} }} }}"
+    )
+    gh_graphql(query)
+
+
+def add_field_options(field_id, full_option_list, dry_run):
+    """Additively reconcile an existing single-select field's options via ``updateProjectV2Field``.
+
+    ``full_option_list`` is the **complete** desired option set (the union of live + manifest
+    options) — ``updateProjectV2Field`` matches by NAME (existing names keep their option id and
+    item assignments; new names are appended; **omitted names are DELETED**), so the caller MUST
+    pass every live option to avoid a deletion. ``--dry-run`` mutates nothing.
+    """
+    if dry_run:
+        return
+    opts = _single_select_options_gql(full_option_list)
+    query = (
+        f"mutation{{ updateProjectV2Field(input:{{fieldId:{gql_str(field_id)}, "
         f"singleSelectOptions:[{opts}]}}){{ projectV2Field{{ "
         f"... on ProjectV2SingleSelectField{{ id name }} }} }} }}"
     )
@@ -1245,8 +1324,9 @@ def reconcile_project(repo, manifest, contents, *, dry_run):
     """Reconcile the Project v2 board to project.json. ``contents`` = the issue/PR records to add.
 
     Idempotent + never-silent: find-or-create the project; create absent fields (with options);
-    FLAG missing options on existing fields + every settings-only view/workflow as a manual step;
-    add absent items; set Status/Phase/Area/Priority only where the value drifts.
+    ADDITIVELY reconcile missing options on existing fields (union of live + manifest, name-matched,
+    never-deleting); FLAG every settings-only view/workflow as a manual step; add absent items; set
+    Status/Phase/Area/Priority only where the value drifts.
     """
     proj = manifest["project"]
     owner, owner_type, title = (
@@ -1271,7 +1351,8 @@ def reconcile_project(repo, manifest, contents, *, dry_run):
     # accurate — only the mutations below are suppressed.
     actual = fetch_project_fields(pid)
     actual_by_name = {n: {"options": list(f["options"])} for n, f in actual.items()}
-    create, add_options = plan_field_reconcile(manifest["fields"], actual_by_name)
+    create, _ = plan_field_reconcile(manifest["fields"], actual_by_name)
+    options_added = False
     for name in create:
         field = next(f for f in manifest["fields"] if f["name"] == name)
         if dry_run:
@@ -1281,15 +1362,43 @@ def reconcile_project(repo, manifest, contents, *, dry_run):
         else:
             create_single_select_field(pid, field)
             print(f"   + created field: {name}")
-    for name, missing in add_options.items():
-        # An add-to-existing option mutation replaces the option set and is not safely
-        # idempotent without live validation — so we FLAG it (never silently skip; G2).
-        print(
-            f"   ! field '{name}' is missing option(s) {missing} — add them in the project UI "
-            f"(API option-edit is not enabled in v0; see RECONCILE.md).",
-            file=sys.stderr,
+    # Existing fields: additively reconcile their options via updateProjectV2Field. The mutation
+    # matches options by NAME and DELETES any omitted one, so we send the UNION of the field's live
+    # options (preserved verbatim — keeps their ids + item assignments) and the manifest's options.
+    # New names are appended (never-silent: each printed); a live option absent from the manifest is
+    # a would-be deletion — kept in the union and FLAGGED, never silently removed (G2).
+    for field in manifest["fields"]:
+        name = field["name"]
+        live = actual.get(name)
+        if not live:
+            continue  # absent field was handled by the create path above
+        if live.get("typename") != "ProjectV2SingleSelectField":
+            # A same-named field of a different type exists on the board — never attempt a
+            # single-select option mutation against it (it would error / abort the run). FLAG + skip (G2).
+            if field.get("options"):
+                print(
+                    f"   ! field '{name}' exists on the board but is not a single-select "
+                    f"(type {live.get('typename')!r}) — option reconcile skipped; resolve it in the UI.",
+                    file=sys.stderr,
+                )
+            continue
+        union, added, extra_live = plan_option_additions(
+            live["option_objs"], field.get("options", [])
         )
-    if not dry_run and create:
+        for opt in extra_live:
+            print(
+                f"   ! field '{name}' has live option '{opt}' absent from project.json — "
+                f"left in place; remove it in the UI if intended.",
+                file=sys.stderr,
+            )
+        if not added:
+            continue
+        add_field_options(live["id"], union, dry_run)
+        options_added = True
+        prefix = "would add " if dry_run else "+ "
+        for opt in added:
+            print(f"   {prefix}field '{name}' option: {opt}")
+    if not dry_run and (create or options_added):
         actual = fetch_project_fields(pid)  # refetch so new field/option ids resolve
 
     # 2) Views + built-in workflows are settings-only — record intent, FLAG as manual.
@@ -1663,6 +1772,55 @@ def self_test():
     }
     assert plan_field_reconcile(desired_fields, synced_fields) == ([], {})
 
+    # ── plan_option_additions (pure, additive, never-destructive) ─────────────────────────────
+    # Overlap (kept verbatim) + a new manifest option (appended) + a live-only extra (preserved + flagged).
+    live = [
+        {"name": "core-ir", "color": "BLUE", "description": "WS-B"},
+        {"name": "legacy", "color": "GRAY", "description": "old"},  # live-only extra
+    ]
+    desired = [
+        {
+            "name": "core-ir",
+            "color": "PURPLE",
+            "description": "changed",
+        },  # overlap by name
+        {"name": "stdlib", "color": "GREEN", "description": "new area"},  # new
+    ]
+    union, added, extra = plan_option_additions(live, desired)
+    # Every live option is preserved verbatim (color/description unchanged — never re-colored).
+    assert union[0] == {"name": "core-ir", "color": "BLUE", "description": "WS-B"}, (
+        union
+    )
+    assert union[1] == {"name": "legacy", "color": "GRAY", "description": "old"}, union
+    # The genuinely-new manifest option is appended with its manifest color/description.
+    assert union[2] == {
+        "name": "stdlib",
+        "color": "GREEN",
+        "description": "new area",
+    }, union
+    assert [o["name"] for o in union] == ["core-ir", "legacy", "stdlib"], union
+    assert added == ["stdlib"], added  # only the new name is reported added
+    assert extra == ["legacy"], (
+        extra
+    )  # live-only option surfaced for a FLAG, not deleted
+    # Fully in sync (manifest ⊆ live, no extras) → nothing added, nothing flagged, union == live.
+    union2, added2, extra2 = plan_option_additions(
+        [{"name": "a", "color": "GRAY", "description": ""}],
+        [{"name": "a", "color": "GRAY", "description": ""}],
+    )
+    assert (
+        added2 == []
+        and extra2 == []
+        and union2 == [{"name": "a", "color": "GRAY", "description": ""}]
+    ), (union2, added2, extra2)
+    # Empty live (e.g. a field with no options yet) → every manifest option is an add, no extras.
+    union3, added3, extra3 = plan_option_additions([], desired)
+    assert added3 == ["core-ir", "stdlib"] and extra3 == [] and union3 == desired, (
+        union3,
+        added3,
+        extra3,
+    )
+
     # ── least-privilege scope computation (pure, offline) ───────────────────────────────────────
     # offline-only ops need nothing.
     assert required_scopes(set(), repo_public=True, read_only=False) == set()
@@ -1711,7 +1869,7 @@ def self_test():
         "self-test OK: label_delta, normalize_body, plan_issue_update, parse_conventional, "
         "derive_pr_labels, milestone_rank, infer_milestone (multi-milestone), "
         "plan_label_migrations, label_to_field_values, plan_field_reconcile, "
-        "required_scopes, missing_scopes, over_grants, _auth_command"
+        "plan_option_additions, required_scopes, missing_scopes, over_grants, _auth_command"
     )
 
 
