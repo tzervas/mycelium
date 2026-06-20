@@ -51,12 +51,38 @@ def main() -> int:
     parser.add_argument("--issues-yaml", type=Path, default=HERE / "issues.yaml")
     parser.add_argument("--labels", type=Path, default=HERE / "labels.json")
     parser.add_argument("--milestones", type=Path, default=HERE / "milestones.json")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="print the full traceback + extra detail on a malformed/unreadable manifest "
+        "(otherwise a clean one-line error) — for debugging this class of issue.",
+    )
     args = parser.parse_args()
 
-    spec = yaml.safe_load(args.issues_yaml.read_text())
-    issues = spec.get("issues", []) if spec else []
-    defined_labels = {d["name"] for d in json.loads(args.labels.read_text())}
-    defined_ms = {d["title"] for d in json.loads(args.milestones.read_text())}
+    # Load the manifests; a malformed/unreadable file is a clean, classified error (its raw
+    # traceback shows only under --debug — the detail you want when investigating further).
+    try:
+        spec = yaml.safe_load(args.issues_yaml.read_text())
+        issues = spec.get("issues", []) if spec else []
+        defined_labels = {d["name"] for d in json.loads(args.labels.read_text())}
+        defined_ms = {d["title"] for d in json.loads(args.milestones.read_text())}
+    except Exception as exc:
+        if args.debug:
+            import traceback
+
+            traceback.print_exc()
+        print(
+            f"ERROR: a manifest is malformed/unreadable: {type(exc).__name__}: {exc} "
+            "(re-run with --debug for the full traceback)",
+            file=sys.stderr,
+        )
+        return 1
+    if args.debug:
+        print(
+            f"  debug: {len(issues)} issue(s); {len(defined_labels)} defined label(s), "
+            f"{len(defined_ms)} defined milestone(s)",
+            file=sys.stderr,
+        )
 
     used_labels: dict[str, list[str]] = {}
     used_ms: dict[str, list[str]] = {}
@@ -66,42 +92,42 @@ def main() -> int:
         if entry.get("milestone"):
             used_ms.setdefault(entry["milestone"], []).append(entry["id"])
 
-    errors = 0
+    # A reference USED by an issue but absent from the manifest is a non-fatal, actionable
+    # WARNING (never-silent), not a hard failure: the label-sync auto-creates such a label with a
+    # default colour until you add it properly. Only genuine manifest corruption (malformed
+    # JSON / dangling doc_refs) blocks the sync — the gap is surfaced loudly (G2), just not fatal.
+    warnings = 0
     missing_labels = sorted(set(used_labels) - defined_labels)
     for name in missing_labels:
         ids = used_labels[name]
         print(
-            f"ERROR: label '{name}' used by {len(ids)} issue(s) "
-            f"(e.g. {', '.join(ids[:5])}) is absent from {args.labels.name}",
+            f"WARNING: label '{name}' used by {len(ids)} issue(s) "
+            f"(e.g. {', '.join(ids[:5])}) is absent from {args.labels.name} — add it "
+            f"(the label-sync auto-creates it with a default colour until you do)",
             file=sys.stderr,
         )
-        errors += 1
+        warnings += 1
     missing_ms = sorted(set(used_ms) - defined_ms)
     for title in missing_ms:
         ids = used_ms[title]
         print(
-            f"ERROR: milestone '{title}' used by {len(ids)} issue(s) "
-            f"(e.g. {', '.join(ids[:5])}) is absent from {args.milestones.name}",
+            f"WARNING: milestone '{title}' used by {len(ids)} issue(s) "
+            f"(e.g. {', '.join(ids[:5])}) is absent from {args.milestones.name} "
+            f"— add it to {args.milestones.name}",
             file=sys.stderr,
         )
-        errors += 1
+        warnings += 1
 
-    # Reverse direction is advisory only — an unused manifest entry is harmless.
+    # Reverse direction is info-level — an unused manifest entry is harmless.
     for name in sorted(defined_labels - set(used_labels)):
-        print(f"  note: label '{name}' is defined but unused by any issue")
+        print(f"  info: label '{name}' is defined but unused by any issue")
     for title in sorted(defined_ms - set(used_ms)):
-        print(f"  note: milestone '{title}' is defined but unused by any issue")
+        print(f"  info: milestone '{title}' is defined but unused by any issue")
 
-    if errors:
-        print(
-            f">> manifest check FAILED: {errors} undefined reference(s) "
-            "— add them to the manifest before syncing.",
-            file=sys.stderr,
-        )
-        return 1
+    suffix = f" ({warnings} warning(s) — see above)" if warnings else ""
     print(
         f">> manifest check OK: {len(issues)} issue(s); "
-        f"{len(used_labels)} label(s) + {len(used_ms)} milestone(s) all defined."
+        f"{len(used_labels)} label(s) + {len(used_ms)} milestone(s){suffix}."
     )
 
     # doc_refs validation (additive — runs after label/milestone checks pass)

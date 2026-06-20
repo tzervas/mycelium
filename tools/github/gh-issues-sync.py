@@ -87,6 +87,7 @@ HERE = Path(__file__).resolve().parent
 # Module-level flag (set by main from --verbose). When True, every `gh` invocation is echoed to
 # stderr BEFORE it runs, so a hang is pinpointable to the exact call (M-382 diagnosability).
 VERBOSE = False
+DEBUG = False  # --debug: show full tracebacks on unexpected failure (set in main())
 
 # Bounded retry policy for transient network blips on a `gh` call (M-382). MAX retries (so up to
 # MAX+1 attempts total: the initial call + MAX retries); the backoff delays below are applied
@@ -1219,8 +1220,31 @@ def _relabel_task(repo, number, old_name, new_name):
     return task
 
 
-def reconcile_labels(repo, labels_json, dry_run):
+DEFAULT_LABEL_COLOR = "ededed"  # neutral gray for an auto-created (undefined-in-manifest) label
+
+
+def reconcile_labels(repo, labels_json, dry_run, issues_yaml=None):
     labels = json.loads(labels_json.read_text(encoding="utf-8"))
+    # Robustness (matches manifest-check's non-fatal WARNING): a label USED by an issue but absent
+    # from labels.json is auto-included here with a default colour + a loud warning (never-silent),
+    # so the gap never becomes a hard sync break. Add it to labels.json for a proper colour/description.
+    if issues_yaml and Path(issues_yaml).exists():
+        declared = {lb["name"] for lb in labels}
+        spec = yaml.safe_load(Path(issues_yaml).read_text(encoding="utf-8")) or {}
+        used = {lab for e in spec.get("issues", []) for lab in (e.get("labels") or [])}
+        for name in sorted(used - declared):
+            safe_print(
+                f"   ! label '{name}' is used by issues but absent from {labels_json.name} — "
+                f"auto-creating with a default colour (add it to {labels_json.name} properly)",
+                file=sys.stderr,
+            )
+            labels.append(
+                {
+                    "name": name,
+                    "color": DEFAULT_LABEL_COLOR,
+                    "description": "auto-created (undefined in labels.json) — please define properly",
+                }
+            )
     print(f">> labels: {len(labels)} declared in {labels_json.name}")
     if dry_run:
         for lb in labels:
@@ -2706,7 +2730,8 @@ def run_validation(args):
                 str(args.labels_json),
                 "--milestones",
                 str(args.milestones_json),
-            ],
+            ]
+            + (["--debug"] if DEBUG else []),
             check=False,
         ).returncode
         ok = ok and rc == 0
@@ -2817,15 +2842,23 @@ def main():
         help="skip the start-of-run `gh api rate_limit` budget probe (which can reduce N when the "
         "remaining budget is low); use the requested --concurrency unchanged.",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="debug mode: print the full Python traceback on an unexpected failure (and imply "
+        "--verbose) — for investigating manifest/sync issues further.",
+    )
     args = parser.parse_args()
 
     if args.self_test:
         self_test()
         return
 
-    # Wire the module-level verbosity flag so _run_gh echoes each call (M-382 diagnosability).
-    global VERBOSE
-    VERBOSE = args.verbose
+    # Wire the module-level flags so _run_gh echoes each call (M-382 diagnosability) and the
+    # top-level guard can show a full traceback under --debug.
+    global VERBOSE, DEBUG
+    DEBUG = args.debug
+    VERBOSE = args.verbose or args.debug  # debug implies verbose
 
     reconcile_selected = (
         args.all
@@ -2907,7 +2940,7 @@ def main():
         print()
 
     if do_labels:
-        reconcile_labels(args.repo, args.labels_json, args.dry_run)
+        reconcile_labels(args.repo, args.labels_json, args.dry_run, args.issues_yaml)
         print()
     if do_milestones:
         reconcile_milestones(args.repo, args.milestones_json, args.dry_run)
@@ -2959,8 +2992,13 @@ if __name__ == "__main__":
         sys.exit("\nERROR: interrupted by user.")
     except SystemExit:
         raise
-    except Exception as exc:  # pragma: no cover - last-resort guard, never a traceback
+    except Exception as exc:  # pragma: no cover - last-resort guard
+        if DEBUG:
+            import traceback
+
+            traceback.print_exc()
         sys.exit(
             f"ERROR: unexpected failure: {type(exc).__name__}: {exc}\n"
-            "  (this should have been an explicit, classified error — please report it.)"
+            "  (this should have been an explicit, classified error — please report it; "
+            "re-run with --debug for the full traceback.)"
         )
