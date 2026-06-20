@@ -19,6 +19,14 @@ repos:
       - id: check-executables-have-shebangs
       - id: check-shebang-scripts-are-executable
 
+  # Secret-scanning — gitleaks in --redact mode (pre-commit manages the Go binary; no manual
+  # install). Allowlist + scope live in .gitleaks.toml; .example templates stay scanned.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+        args: ["--redact", "--config", ".gitleaks.toml"]
+
   # Substantive checks — delegate to our scripts so local == pre-commit == CI.
   - repo: local
     hooks:

@@ -9,19 +9,43 @@ useDefault = true
 [allowlist]
 description = "Allowlist for Mycelium project"
 # Paths exempt from scanning. Keep this list minimal — a real secret pasted into an
-# allowlisted file would go undetected. (`.gitleaks.toml` itself is here because it
-# documents detection patterns.)
+# allowlisted file would go undetected. These are FILE PATTERNS that genuinely should not be
+# scanned (lockfiles, build output, vendored/fixture blobs), never secret *value* patterns.
+#
+# IN SCOPE on purpose (deliberately NOT listed here): `.env.example` and every other `.example`
+# template — they are copy-to-real templates that MUST pass the scan clean, so they stay scanned.
+#
+# Entries are regexes matched against the file path (gitleaks `allowlist.paths` semantics).
 paths = [
-  ".gitleaks.toml",
+  '''\.gitleaks\.toml$''',                 # this config documents detection patterns
+  # Lockfiles: machine-generated dependency graphs (hashes/URLs, no credentials) that trip the
+  # high-entropy rules with pure noise. Scanning them adds false positives, not coverage.
+  '''(^|/)Cargo\.lock$''',
+  '''(^|/)uv\.lock$''',
+  '''(^|/)package-lock\.json$''',
+  '''(^|/)pnpm-lock\.yaml$''',
+  '''(^|/)yarn\.lock$''',
+  '''(^|/)poetry\.lock$''',
+  # Build output and dependency caches — never source; can be large and binary.
+  '''(^|/)target/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)dist/''',
+  '''(^|/)\.venv/''',
+  # Vendored third-party trees.
+  '''(^|/)vendor/''',
+  # Binary / fixture blobs: not text, can false-positive on high entropy. Scoped to obvious
+  # binary extensions only; source files and `.example` templates stay scanned.
+  '''\.(png|jpe?g|gif|ico|pdf|woff2?|ttf|otf|zip|gz|tar|bin|wasm|so|dylib|dll|a|o)$''',
   # B1-06: `research/` is allowlisted wholesale as a DELIBERATE, documented trade-off — it is the
   # evidence base (prose + source lists, no credentials) and its example strings (API key formats
   # discussed in source surveys) trip gitleaks' default rules with high false-positive noise. The
   # accepted risk: a real key pasted under research/ would go un-scanned. If research/ ever holds
   # live config, narrow this to the specific noisy subpaths instead of the whole tree.
-  "research/",
-  "LICENSE",
-  "README.md"
+  '''(^|/)research/''',
+  '''(^|/)LICENSE$''',
+  '''(^|/)README\.md$''',
 ]
-# NOTE: do NOT allowlist secret *patterns* here (e.g. the AWS `AKIA…` key format) — an
-# allowlist regex tells gitleaks to IGNORE matches, which would suppress real leaked keys.
-# Allowlist a specific example string or file path instead, never the whole pattern.
+# NOTE: do NOT allowlist secret *value* patterns here (e.g. the AWS `AKIA…` key format via a
+# `regexes`/`stopwords` entry) — that tells gitleaks to IGNORE such matches, suppressing real
+# leaked keys. Allowlist a specific file path instead, never the whole secret pattern. And never
+# allowlist `*.example` / `.env.example`: those templates must keep passing the scan clean.

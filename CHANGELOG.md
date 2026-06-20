@@ -8,6 +8,29 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: Phase 8 — one-command setup, gitleaks redaction, PM-manifest hardening)
+Toolchain/PM infrastructure: a single idempotent, parameterized install command plus secret-scanning,
+and a more forgiving-but-honest manifest validator.
+- **One-command install (`scripts/install.sh`, `just setup`).** Idempotent + parameterized (component
+  flags/`MYC_INSTALL_COMPONENTS` env: rust · python/uv · check-tools · pre-commit hooks; `--mlir`
+  opt-in, delegates to `setup-mlir.sh`; `--help`). Probes before acting (a double run is a no-op);
+  reads the MSRV from the committed pin (never bumps it); never-silent G2 (optional tool missing →
+  clear skip + continue; a required failure ends `exit 1` with a summary); **no `curl|bash`**.
+- **gitleaks secret-scanning, redaction-first.** A `gitleaks` pre-commit hook in `--redact` mode
+  (pre-commit manages the binary — no manual install) + `.gitleaks.toml` (default ruleset + a
+  **path-only** allowlist for lockfiles/`target/`/binaries; **`.example` templates stay scanned**) +
+  `just secrets-scan`/`gitleaks`. `.env.example` ships generic safe placeholders (incl.
+  `XAI_API_KEY`/`GROK_API_KEY`) and is tracked; real `.env`/`*.key`/`*.pem` are git-ignored.
+- **PM-manifest validator — severity refined (per maintainer).** A label/milestone *used by an issue
+  but absent from the manifest* is now a **non-fatal, actionable WARNING** (never-silent), not a hard
+  abort; `reconcile_labels` **auto-creates** such a label with a default colour + a loud log so the
+  warning never becomes a sync break. Defined-but-unused entries are **info-level**. Only genuine
+  corruption (malformed JSON/YAML, dangling `doc_refs`) still fails (G2). New **`--debug`** mode
+  (`gh-issues-sync.py` + `manifest-check.py`, threaded through) prints the full traceback + detail for
+  investigating this class of issue. Defined the previously-missing `status:in-progress` label.
+- Verified: `--validate` green (used→warning exits 0; corruption still fails); `--self-test` green;
+  `just --list` + pre-commit config + `.gitleaks.toml` + `install.sh -n` all parse; full `just check` green.
+
 ### Added (2026-06-20: Wave-1 — native MLIR→LLVM path keystone (M-348/M-603, M-601, M-602); epic E6-1)
 Closed Phase-4's last open item (M-348) and delivered the Phase-6 E6-1 keystone: a real, non-fragile
 `mlir-dialect` lowering path with libMLIR now durably provisionable on Linux. The interpreter stays the

@@ -7,15 +7,22 @@ set shell := ["bash", "-uc"]
 default:
     @just --list
 
-# Best-effort install of the check tools (uv tool / npx / pip). Safe to re-run.
+# One-command, idempotent, parameterized install of the dev environment + toolchains
+# (rust · python/uv · check tools · pre-commit hooks). `bash scripts/install.sh --help` lists
+# components; `--mlir` adds libMLIR (ADR-019, opt-in). Safe to re-run.
 setup:
-    @bash scripts/install-tools.sh
+    @bash scripts/install.sh
 
 # Provision the OFF-by-default `mlir-dialect` feature's libMLIR toolchain (apt; may use sudo).
 # Deliberately kept OUT of `just setup` so the default never apt-installs or sudo-prompts for an
 # optional feature most contributors don't build (ADR-019); run this only if you want that feature.
 setup-mlir:
     @bash scripts/setup-mlir.sh
+
+# Full-repo secret scan — gitleaks in --redact mode (allowlist/scope in .gitleaks.toml).
+secrets-scan:
+    @gitleaks detect --redact --no-banner -c .gitleaks.toml --source .
+alias gitleaks := secrets-scan
 
 # Run the FULL local suite. Identical to what CI runs (`just ci`).
 check:
