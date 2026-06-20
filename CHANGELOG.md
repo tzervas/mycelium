@@ -8,6 +8,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-20: docs/README refresh — ratification status + native-path honesty)
+Refreshed the prose READMEs to the current, verified state: the top-level `README.md` and
+`docs/spec/stdlib/README.md` now report the **23 Rust-first stdlib specs as `Accepted`** (2026-06-20,
+DN-07, on a checked basis — `runtime` + `self-hosting-readiness` stay `Draft`), replacing the stale
+*"implemented (Rust-first), pending ratification" / never-silently-Accepted* wording. Corrected the
+native-path claims (VR-5): the **direct-LLVM native path** (M-373/M-378/M-379), **JIT** (M-340), and **hot-inject** (M-341) are
+built; the real `ternary`→arith/vector→LLVM **MLIR-dialect lowering (M-601)** is **unblocked**
+(libMLIR now provisionable on Linux, M-348) **and in progress** — not yet complete — so it moves to the
+"in progress" bucket. Also added a squash-only / `/land` note to the README contributing section. Docs
+only; append-only (each spec's own Status line was already moved by the DN-07 pass).
+
 ### Changed (2026-06-20: squash-only-into-main + curated-commit merge policy)
 Baked the merge discipline into `CLAUDE.md` (Commits & PRs + the Autonomous PR workflow): every PR lands on
 `main` as a **single squash commit** for a linear, bisectable history (the internal swarm leaf→epic→orch

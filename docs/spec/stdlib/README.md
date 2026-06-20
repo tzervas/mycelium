@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Living index** (2026-06-17) — the per-module design specs that decompose **RFC-0016** (the Core Library RFC). Each module spec is `Draft (needs-design)` until its task's acceptance is met and the maintainer ratifies. |
+| **Status** | **Living index** (updated 2026-06-20) — the per-module design specs that decompose **RFC-0016** (the Core Library RFC). The **23 Rust-first module specs are now `Accepted`** (2026-06-20, maintainer-ratified per DN-07, on a checked basis — guarantee matrices asserted in tests); **`runtime` and `self-hosting-readiness` stay `Draft (needs-design)`** (gate-pending). A module spec moves to `Accepted` only when its task's acceptance is met and the maintainer ratifies — never silently. |
 | **Scope** | The home of the per-module standard-library design specs (`docs/spec/stdlib/<module>.md`). Each spec fixes a module's **scope + boundary**, its **exported-op surface**, and — the load-bearing deliverable — its **guarantee matrix** (RFC-0016 §4.5), proving the module meets the §4.1 contract **per op**, as a checked table rather than prose. |
 | **Source of truth above this dir** | `docs/rfcs/RFC-0016-Core-Library-and-Standard-Library.md` (the **scope + per-op contract + taxonomy**); `docs/planning/phase-5.md` (the task decomposition M-510…M-534) |
 | **Conformance template** | `docs/spec/stdlib/_TEMPLATE.md` — every module spec follows it (single-template conformance, the §4.1 doc quality-bar lint) |
@@ -66,12 +66,16 @@ matrix is how C1/C2/C3/C6 are *verified* rather than claimed.
 | [`../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md`](../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md) | M-501 | the contract + taxonomy keystone (every spec traces to its §4.1) | **Accepted** (2026-06-17, maintainer; DN-07) — phylum `std`; full 23-module v0 taxonomy; §8 resolved/deferred (see §5 Net) |
 | [`self-hosting-readiness.md`](./self-hosting-readiness.md) | M-502 | the *checkable* self-hosting verdict — gates the Mycelium-lang migration half (RFC-0016 §4.6), not the Rust-first specs/impls | **Draft (needs-design)** — verdict: *not yet established* |
 
-**Wave status:** `Draft — landed` = the spec is authored + integrated (and awaits maintainer ratification
-with RFC-0016). The **first wave** landed the Tier-A differentiators `core`/`swap`/`ternary`/`dense`/
+**Wave status:** `Draft — landed` was the design-wave state — the spec authored + integrated, awaiting
+ratification. The **first wave** landed the Tier-A differentiators `core`/`swap`/`ternary`/`dense`/
 `select`/`content` + the Tier-B commons `iter`/`math`/`error`/`cmp`/`fmt`; the **second wave** landed the
 remainder (`numerics`/`vsa`/`diag`/`recover`/`runtime`/`spore` + `collections`/`text`/`io`/`fs`/`time`/
-`rand`/`testing`) — **every module in the RFC-0016 taxonomy now has a `Draft` spec.** Cross-module FLAGs
-reconciled in §5.
+`rand`/`testing`) — every module in the RFC-0016 taxonomy got a `Draft` spec. **Ratified 2026-06-20
+(DN-07):** the **23 Rust-first specs moved `Draft — landed` → `Accepted`** on a checked basis (each spec's
+own Status line + the changelog below carry the per-spec disposition); **`runtime` and
+`self-hosting-readiness` stay `Draft (needs-design)`** (Phase-7 / migration-gated). The index tables below
+keep their `Draft — landed` cells as **append-only design-wave history** — each spec's Status line is the
+authoritative current state. Cross-module FLAGs reconciled in §5.
 
 ### Tier A — differentiator modules (RFC-0016 §4.3)
 
@@ -182,6 +186,16 @@ implementations proceed against RFC-0016 now.
 
 ## Meta — changelog
 
+- **2026-06-20 — 23 Rust-first specs ratified `Draft — landed` → `Accepted` (DN-07; PR #228).** The
+  maintainer ran the DN-07 per-spec ratification pass: the 23 Rust-first module specs (`cmp`, `collections`,
+  `content`, `core`, `dense`, `diag`, `error`, `fmt`, `fs`, `io`, `iter`, `math`, `numerics`, `rand`,
+  `recover` [Rust-first half], `select`, `spore` [library/manifest half], `swap`, `ternary`, `testing`,
+  `text`, `time`, `vsa`) move to **`Accepted`** on a **checked basis** — each carries its RFC-0016 §4.5
+  guarantee matrix asserted in tests; **no guarantee tag was upgraded without a checked basis** (VR-5; open
+  §7/§8 items stay design/scope calls, not contract violations). **`runtime` and `self-hosting-readiness`
+  remain `Draft (needs-design)`** (Phase-7 / migration-gated). The per-spec Status lines carry the
+  authoritative disposition; the index tables' `Draft — landed` cells are kept verbatim as append-only
+  design-wave history. The Mycelium-lang *migration half* (M-502-gated) still remains. Append-only.
 - **2026-06-19 — §5 "One canonical JSON" seam resolved/wired (M-372).** The §5 reconciliation row for the `fmt`↔`io` JSON-projection seam moves from "pending maintainer sign-off" to **resolved — delegation wired (M-372, 2026-06-19)**: `fmt.to_json`/`from_json` now delegate to `mycelium_std_io::{to_json, from_json}`; the round-trip property is established once in `std.io`, re-checked in `std.fmt`. Tag-framing residual noted (io `Empirical` vs fmt `Exact` for `from_json`; see fmt §7-Q1 / io §7-Q1) — preserved as a noted residual for the maintainer (VR-5), not silently resolved. The §5 history row is kept verbatim (append-only); this entry supersedes only the "pending sign-off" portion. No spec status change; no public API change; no other seams affected. Append-only.
 - **2026-06-17 — RFC-0016 ratified (keystone → Accepted); §8 dispositions recorded.** The maintainer ran the
   DN-07 ratification pass: the keystone row moves **Draft → Accepted** (phylum `std`; full 23-module v0
