@@ -220,8 +220,7 @@ mod tests {
     fn test_channel_zero_capacity_fails() {
         // Mutant witness: removing the zero-capacity check would make this return Ok(_),
         // causing unwrap_err() to panic with a success value.
-        let err = Network::channel::<i32>(0)
-            .unwrap_err();
+        let err = Network::channel::<i32>(0).unwrap_err();
         assert_eq!(
             err,
             ChannelError::ZeroCapacity,

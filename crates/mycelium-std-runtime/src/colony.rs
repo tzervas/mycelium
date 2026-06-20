@@ -90,33 +90,27 @@ impl<T, E> Scope<T, E> {
     }
 }
 
-impl<T: Send + 'static, E> Scope<T, E> {
-    /// Run all spawned tasks in FIFO spawn order and collect their return values.
+impl<E> Scope<(), E> {
+    /// Run all spawned tasks in FIFO spawn order.
     ///
-    /// Returns `Ok(results)` where `results[i]` is the output of the i-th spawned task (in
-    /// spawn order — **Exact** FIFO sweep guarantee, ADR-020 §4).
+    /// In v0, `Task` closures always return `()`. Returns `Ok(())` when all complete.
     ///
     /// Returns `Err(ScopeError::Cancelled)` if the scope was cancelled before `join_all`.
-    /// Returns `Err(ScopeError::TasksStillRunning)` if any task panics (the panic is caught,
-    /// remaining tasks are dropped, the error is returned explicitly — G2: never silent).
+    /// Returns `Err(ScopeError::TasksStillRunning)` if any task panics (the panic is caught
+    /// and an explicit error is returned — G2: never silent).
     ///
     /// Guarantee: **Empirical** (RT2 sequentialization differential, ADR-020 §4).
-    pub fn join_all(self) -> Result<Vec<T>, ScopeError>
-    where
-        Task: ResultTask<T>,
-    {
+    pub fn join_all(self) -> Result<(), ScopeError> {
         if self.cancelled {
             return Err(ScopeError::Cancelled);
         }
-        let mut results = Vec::with_capacity(self.tasks.len());
         for task in self.tasks {
-            // Catch panics so we can return an explicit error (G2: never silent).
-            match panic::catch_unwind(panic::AssertUnwindSafe(|| task.run_result())) {
-                Ok(v) => results.push(v),
+            match panic::catch_unwind(panic::AssertUnwindSafe(|| task.run())) {
+                Ok(()) => {}
                 Err(_) => return Err(ScopeError::TasksStillRunning),
             }
         }
-        Ok(results)
+        Ok(())
     }
 }
 
@@ -124,15 +118,6 @@ impl<T, E> Default for Scope<T, E> {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// Extension trait that lets a `Task` return a typed value `T`.
-///
-/// In v0, `Task` holds a `FnOnce() -> ()`. To have a typed return we use a separate
-/// `ResultTask<T>` wrapper approach: the caller wraps the returning closure via
-/// [`Scope::spawn_result`] (see below). The trait is sealed to this module.
-pub trait ResultTask<T>: Sized {
-    fn run_result(self) -> T;
 }
 
 /// Colony: a group of scopes sharing a supervision tree and a `Network`.
@@ -171,85 +156,46 @@ impl<T, E> Default for Colony<T, E> {
     }
 }
 
-// ── ResultTask for unit-returning Task ───────────────────────────────────────
-
-/// A `Task` that returns `()` trivially satisfies `ResultTask<()>`.
-impl ResultTask<()> for Task {
-    fn run_result(self) {
-        self.run();
-    }
-}
-
-// ── Typed scope helper ────────────────────────────────────────────────────────
-
-/// A scope variant where each task returns a value of type `T`.
-///
-/// Unlike `Scope<T, E>` (which uses `Task` holding `FnOnce() -> ()`), `TypedScope<T>`
-/// stores `Box<dyn FnOnce() -> T + Send>` closures directly, giving typed `join_all`.
-///
-/// Guarantee: **Exact** (FIFO sweep) / **Empirical** (completion semantics, ADR-020 §4).
-pub struct TypedScope<T> {
-    closures: Vec<Box<dyn FnOnce() -> T + Send + 'static>>,
-    cancelled: bool,
-}
-
-impl<T> TypedScope<T> {
-    /// Create an empty typed scope.
-    pub fn new() -> Self {
-        TypedScope {
-            closures: Vec::new(),
-            cancelled: false,
-        }
-    }
-
-    /// Returns the number of closures queued.
-    pub fn task_count(&self) -> usize {
-        self.closures.len()
-    }
-
-    /// Spawn a typed closure into the scope (FIFO order).
-    pub fn spawn<F: FnOnce() -> T + Send + 'static>(&mut self, f: F) {
-        self.closures.push(Box::new(f));
-    }
-
-    /// Cancel the scope.
-    pub fn cancel(&mut self) {
-        self.cancelled = true;
-    }
-}
-
-impl<T: Send + 'static> TypedScope<T> {
-    /// Run all closures in FIFO order, returning their results.
-    ///
-    /// Returns `Err(ScopeError::Cancelled)` if cancelled.
-    /// Returns `Err(ScopeError::TasksStillRunning)` if any closure panics (G2: never silent).
-    ///
-    /// Guarantee: **Empirical** (RT2 sequentialization differential, ADR-020 §4).
-    pub fn join_all(self) -> Result<Vec<T>, ScopeError> {
-        if self.cancelled {
-            return Err(ScopeError::Cancelled);
-        }
-        let mut results = Vec::with_capacity(self.closures.len());
-        for f in self.closures {
-            match panic::catch_unwind(panic::AssertUnwindSafe(f)) {
-                Ok(v) => results.push(v),
-                Err(_) => return Err(ScopeError::TasksStillRunning),
-            }
-        }
-        Ok(results)
-    }
-}
-
-impl<T> Default for TypedScope<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::task::Task;
+    use std::panic;
+
+    /// Test-only typed scope: stores closures returning `T` for FIFO-order assertions.
+    struct TypedScope<T> {
+        closures: Vec<Box<dyn FnOnce() -> T + Send + 'static>>,
+        cancelled: bool,
+    }
+    impl<T> TypedScope<T> {
+        fn new() -> Self {
+            TypedScope {
+                closures: Vec::new(),
+                cancelled: false,
+            }
+        }
+        fn spawn<F: FnOnce() -> T + Send + 'static>(&mut self, f: F) {
+            self.closures.push(Box::new(f));
+        }
+        fn cancel(&mut self) {
+            self.cancelled = true;
+        }
+    }
+    impl<T: Send + 'static> TypedScope<T> {
+        fn join_all(self) -> Result<Vec<T>, ScopeError> {
+            if self.cancelled {
+                return Err(ScopeError::Cancelled);
+            }
+            let mut out = Vec::with_capacity(self.closures.len());
+            for f in self.closures {
+                match panic::catch_unwind(panic::AssertUnwindSafe(f)) {
+                    Ok(v) => out.push(v),
+                    Err(_) => return Err(ScopeError::TasksStillRunning),
+                }
+            }
+            Ok(out)
+        }
+    }
 
     #[test]
     fn test_scope_new_is_empty() {

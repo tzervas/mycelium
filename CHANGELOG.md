@@ -8,6 +8,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: Wave 2 — M-620 native spore deploy seam, M-521 runtime phylum impl, M-381 Arm 4 unblocked)
+- **M-620 — DONE (native deploy/germination seam, FLAG Q2 resolved):** `crates/mycelium-std-spore/src/deploy.rs`
+  implements `germinate(spore, target) -> Result<DeployResult, DeployError>` — the content-addressed
+  native deploy pipeline. `DeployVerification` carries `content_hash_canonical` (Exact) and
+  `no_opaque_lowering` (Declared, VR-4). All 4 error paths are explicit, never silent (G2);
+  `explain_deploy` is always deterministic (Exact, SC-3). 44 tests pass; guarantee matrix extended
+  from 11 → 15 rows. ADR-013 FLAG Q2 ("Phase-6-gated") retired.
+- **M-521 — runtime phylum implemented (ADR-020 Accepted):** `crates/mycelium-std-runtime` v0 R1
+  surface fully implemented: `Scope<(),E>::join_all` (Empirical, FIFO sweep Exact, panic-caught G2);
+  `Colony<T,E>::scope()` factory; `Task` with `run(self)` (Declared purity); `TaskCtx::cancel`;
+  bounded `Network::channel(capacity)` returning `(Sender<V>, Receiver<V>)` with real
+  `Arc<Mutex<VecDeque>>` backend; `TrySend<V>` / `TryRecv<V>` fail-closed (`ZeroCapacity` on
+  capacity=0 — G2); all reserved vocabulary absent (RFC-0008 §4.5 Glossary ⟂); `#![forbid(unsafe_code)]`.
+  21 tests; 16-row guarantee matrix; clippy -D warnings clean.
+- **M-381 Arm 4 — unblocked (LlmCanonical parser + harness wiring):** `crates/mycelium-lsp/src/llm_canonical_parser.rs`
+  — `parse_llm_canonical(source) -> Result<String, ParseError>`, depth-limited recursive descent
+  (DEPTH_LIMIT=64; banked guard #4), 4 error variants, 14 tests. `tools/llm-harness/grok/llm_canonical_arm4.py`
+  — `arm4_run` with graceful-skip when Rust binary absent (`status: "skip"`, reason reported,
+  never silent). `ablation.py`: Arm 4 flipped to `runnable=True`. Python selftest 16/16 green.
+  Guarantee tag: `Empirical` (heuristic parser — not upgraded without checked basis, VR-5).
+- **ADR-020 — Accepted** (2026-06-20; moved from Proposed): unblocks M-521 implementation.
+
 ### Added (2026-06-20: Wave 1 — Phase 5/6 close: M-601 done, ADR-020 Proposed, M-602 verified)
 - **ADR-020 — `runtime`/`colony` Phylum Placement (Proposed, M-521):** resolves RFC-0016
   §8-Q4 (the deferred phylum-placement question). Decision: **Option C hybrid** — a dedicated

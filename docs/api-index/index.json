@@ -11073,7 +11073,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 16,
+      "line": 17,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11128,7 +11128,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 17,
+      "line": 18,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11590,7 +11590,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 18,
+      "line": 19,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11799,7 +11799,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 19,
+      "line": 20,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22678,7 +22678,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore",
       "file": "crates/mycelium-std-spore/src/guarantee_matrix.rs",
-      "line": 66,
+      "line": 69,
       "summary": "The `std.spore` guarantee matrix (spec §4.5), encoded as data (RFC-0016 §4.5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22744,7 +22744,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore",
       "file": "crates/mycelium-std-spore/src/spore_ops.rs",
-      "line": 329,
+      "line": 344,
       "summary": "The `EXPLAIN` of a built spore: the identity receipt, the surface, the code by hash, the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22755,7 +22755,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore",
       "file": "crates/mycelium-std-spore/src/lib.rs",
-      "line": 58,
+      "line": 61,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22766,7 +22766,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore::guarantee_matrix",
       "file": "crates/mycelium-std-spore/src/guarantee_matrix.rs",
-      "line": 30,
+      "line": 31,
       "summary": "Guarantee tag string — the lattice position (`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22777,7 +22777,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore::guarantee_matrix",
       "file": "crates/mycelium-std-spore/src/guarantee_matrix.rs",
-      "line": 66,
+      "line": 69,
       "summary": "The `std.spore` guarantee matrix (spec §4.5), encoded as data (RFC-0016 §4.5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22788,7 +22788,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore::guarantee_matrix",
       "file": "crates/mycelium-std-spore/src/guarantee_matrix.rs",
-      "line": 34,
+      "line": 35,
       "summary": "One row of the `std.spore` guarantee matrix (RFC-0016 §4.5 / spec §4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22810,7 +22810,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore",
       "file": "crates/mycelium-std-spore/src/spore_ops.rs",
-      "line": 306,
+      "line": 321,
       "summary": "The reconstruction manifest of a `SporeUnit`, if any — `None` for project spores without one.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22821,7 +22821,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore",
       "file": "crates/mycelium-std-spore/src/lib.rs",
-      "line": 59,
+      "line": 62,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23173,7 +23173,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore",
       "file": "crates/mycelium-std-spore/src/lib.rs",
-      "line": 60,
+      "line": 63,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23338,7 +23338,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore::spore_ops",
       "file": "crates/mycelium-std-spore/src/spore_ops.rs",
-      "line": 329,
+      "line": 344,
       "summary": "The `EXPLAIN` of a built spore: the identity receipt, the surface, the code by hash, the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23360,7 +23360,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore::spore_ops",
       "file": "crates/mycelium-std-spore/src/spore_ops.rs",
-      "line": 306,
+      "line": 321,
       "summary": "The reconstruction manifest of a `SporeUnit`, if any — `None` for project spores without one.",
       "guarantee_tag": null,
       "corpus_refs": []

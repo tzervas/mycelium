@@ -583,8 +583,8 @@ mod tests {
         //     → fires DepthLimitExceeded before reading inner content
         // So we need DEPTH_LIMIT+1 opening parens total.
         let nesting = DEPTH_LIMIT + 1;
-        let open: String = std::iter::repeat("(const ").take(nesting).collect();
-        let close: String = std::iter::repeat(')').take(nesting).collect();
+        let open: String = "(const ".repeat(nesting);
+        let close: String = ")".repeat(nesting);
         let deep_input = format!("{open}x @Exact{close}");
         assert_eq!(
             parse_llm_canonical(&deep_input),
