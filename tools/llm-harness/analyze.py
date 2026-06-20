@@ -300,7 +300,6 @@ def generate_recommendations(analyses: list[dict[str, Any]]) -> list[dict[str, A
         model = a["model"]
         convergence = a.get("convergence", [])
         error_taxonomy = a.get("error_taxonomy", [])
-        top_errors = a.get("top_error_prefixes", [])
 
         # Check if pass@1 is low but later attempts improve
         p1 = next(
@@ -813,7 +812,7 @@ def main(argv: list[str] | None = None) -> None:
     json_path.write_text(json.dumps(analysis_payload, indent=2), encoding="utf-8")
     md_path.write_text(md, encoding="utf-8")
 
-    print(f"\nAnalysis written:")
+    print("\nAnalysis written:")
     print(f"  {json_path}")
     print(f"  {md_path}")
 

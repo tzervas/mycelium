@@ -8,6 +8,32 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: Wave 1 — Phase 5/6 close: M-601 done, ADR-020 Proposed, M-602 verified)
+- **ADR-020 — `runtime`/`colony` Phylum Placement (Proposed, M-521):** resolves RFC-0016
+  §8-Q4 (the deferred phylum-placement question). Decision: **Option C hybrid** — a dedicated
+  `runtime` phylum (`crates/mycelium-std-runtime`) with a thin `std.runtime` re-export facade
+  inside `std`; construct-by-construct activation at the Phase-7 gate. v0 R1 surface:
+  `Colony<T,E>`/`Scope<T,E>`, `Task`, `TaskCtx`, `Poll`, `SweepOrder`, `Deadlock`,
+  `Network`, `Sender<V>`, `Receiver<V>`, `TrySend<V>`, `TryRecv` — with per-op guarantee
+  matrix (`Exact`/`Empirical`/`Declared`; `Empirical` on `Scope`/`Network` grounded in the
+  RT2 sequentialization + Kahn-determinism differentials; `Declared` on the `Task` purity
+  contract). All RFC-0008 §4.5 reserved vocabulary (`hypha`/`fuse`/`xloc`/`cyst`/`graft`/
+  `forage`/`backbone`/`mesh`/`tier`/`reclaim`) stays Glossary ⟂. `runtime` v0 is
+  `wild`-free. Awaiting maintainer ratification (Proposed → Accepted).
+- **M-601 — DONE (honest scope):** native MLIR→LLVM codegen for the bit/trit element-wise
+  fragment (core.id, bit.not/and/or/xor, trit.neg) via `mlir-opt-18 | mlir-translate-18`
+  behind the `mlir-dialect` feature (`crates/mycelium-mlir/src/dialect/native.rs`); every
+  stage dumpable (VR-4); data/closure/recursion explicitly return `DialectError::Unsupported`
+  (never silent, VR-5). The full calculus runs end-to-end across interpreter + direct-LLVM +
+  MLIR; full-MLIR data/closure lowering is an honest open follow-up (not gated on M-601).
+- **M-602 — verified:** three-way interp↔MLIR↔direct-LLVM differential harness in
+  `crates/mycelium-mlir/tests/threeway_differential.rs`; 148 tests pass (graceful skip when
+  `mlir-opt-18` absent); E1 speedup test skeleton in place (pending `scripts/setup-mlir.sh`
+  toolchain installation). MLIR path correctly refuses out-of-fragment nodes while
+  interp↔direct-LLVM equivalence holds across the full calculus corpus.
+- **M-521 — in-progress (design initiated):** ADR-020 Proposed unblocks M-521-impl. Labels
+  updated from `needs-design` → `in-progress`.
+
 ### Added (2026-06-20: KC-2 / M-002 close — Grok/xAI harness verification + honest run record)
 - **DN-09 §7 (append-only):** records the 2026-06-20 Grok/xAI live run attempt. Harness
   self-test **14/14** (Empirical/plumbing — 14 checks: T0–T12 + T2b verified). Live run **blocked** by
