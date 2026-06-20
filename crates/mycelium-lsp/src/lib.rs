@@ -13,6 +13,7 @@ pub mod expand;
 pub mod feedback;
 pub mod fmt;
 pub mod lint;
+pub mod llm_canonical_parser;
 pub mod project;
 pub mod recover;
 pub mod sync;
@@ -34,6 +35,7 @@ pub use fmt::format;
 pub use lint::{
     has_errors, lint, lint_nodule_header, lint_structured_header, Diagnostic, Severity,
 };
+pub use llm_canonical_parser::{parse_llm_canonical, ParseError, DEPTH_LIMIT};
 pub use recover::{
     check_effects, handle, EffectBudget, EffectBudgetExhausted, EffectKind, Outcome,
     RecoveryPolicy, Resolution, StructuredError, UndeclaredEffect as RecoverUndeclaredEffect,

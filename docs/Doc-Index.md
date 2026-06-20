@@ -76,6 +76,7 @@
 | **ADR-017 — Hot-inject recompiled definitions** | hash-keyed dispatch + content-addressed dynamic linking; immutable-by-construction (a change is a new hash under a new entry) dissolves the atomicity hazard; recompile = the changed dependency-closure by hash reachability; resolves RFC-0004 §10 OQ-2; in-process prototype in `mycelium-mlir::inject` (M-341) | **Accepted** (ratified 2026-06-16; prototype building) |
 | **ADR-018 — Versioning policy** | per-crate `0.x` SemVer across the workspace + **source-only** distribution (no crates.io publish during the design phase); the `CHANGELOG` `[Unreleased]` → release-cut mapping; grounded in ADR-007 + the squash-only linear-history discipline + RFC-0017 §4.1 (M-383; release-plz dry-run wiring M-384) | **Accepted** (2026-06-20) |
 | **ADR-019 — libMLIR Toolchain** | libMLIR (`mlir-opt`/`mlir-translate`, version-matched to the installed LLVM) is the build dependency of the OFF-by-default `mlir-dialect` feature — the real bit/trit element-wise `arith`/`func`→LLVM lowering (`mycelium-mlir::dialect::native`, M-601); durably provisioned via `scripts/setup-mlir.sh` (the dedicated `just setup-mlir` recipe, kept out of the default `just setup`; skip-gracefully); the default build/test stay green without it; resolves M-348 on Linux (M-603) | **Accepted** (2026-06-20) |
+| **ADR-020 — `runtime`/`colony` Phylum Placement** | resolves RFC-0016 §8-Q4: `runtime` and `colony` live in a dedicated `runtime` phylum (`crates/mycelium-std-runtime`) with a thin `std.runtime` re-export facade inside `std`; construct-by-construct activation at the Phase-7 gate; v0 R1 surface (`Colony`/`Scope`, `Task`, `TaskCtx`, `Poll`, `SweepOrder`, `Deadlock`, `Network`, `Sender`, `Receiver`, `TrySend`, `TryRecv`) with per-op guarantee matrix; all RFC-0008 §4.5 reserved vocabulary (`hypha`/`fuse`/`xloc`/`cyst`/`graft`/`forage`/`backbone`/`mesh`/`tier`/`reclaim`) stays Glossary ⟂; `runtime` v0 is `wild`-free; Option C hybrid (phylum decouples release cadence + embedded targets from `std`; facade preserves Tier-A discoverability); grounded in RFC-0008 §§4.3/4.5–4.7, RFC-0016 §§4.1–4.3/8-Q4/8-Q6, DN-06, ADR-003/013/014/018; implements M-521 (Rust-first implemented, 21 tests, 16-row guarantee matrix) | **Enacted** (2026-06-20; M-521 implementation landed, PR #277) |
 
 ## 2. Dependency DAG
 
@@ -90,7 +91,7 @@ Survey ─► Foundation ─► RFC-0001 (r5) ─► { RFC-0002, RFC-0003, RFC-0
 VSA decode track:      RFC-0003 ─► RFC-0009 (resonator factorization) ─► RFC-0010 (decode-method selection; reuses the ONE selection mechanism)
 Diagnostics/recovery:  RFC-0013 (diagnostics) ─► RFC-0014 (recovery + bounded effects) ─► RFC-0015 (automatic baseline)
 Ambient & ABI:         RFC-0012 (ambient) · ADR-016 (interp↔compiled ABI) ─► ADR-017 (hot-inject)
-Runtime:               RFC-0008 (RT1–RT7 runtime & concurrency)
+Runtime:               RFC-0008 (RT1–RT7 runtime & concurrency) ─► ADR-020 (runtime phylum placement, M-521)
 Standard library:      RFC-0016 (scope + per-op contract) ─► stdlib module specs (docs/spec/stdlib/) ─► Phase-5 `std-*` crates
 Maturation:            RFC-0007 §4.5 ─► RFC-0017 (maturation scope & de-maturation; supersedes the granularity)
 

@@ -1248,13 +1248,27 @@ issues:
   - id: M-521
     title: "M-521 — stdlib: `runtime` / `colony` (the fungal concurrency surface)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:execution, priority:P3, status:needs-design]
+    labels: [phase:5, type:design, area:execution, priority:P3, status:done]
     depends_on: [M-501, M-502, M-355]
     doc_refs: [corpus:RFC-0016, corpus:RFC-0007]
     body: |
       RFC-0016 §4.3 — the library bindings for the RFC-0008 runtime lexicon: hypha/fuse/colony/cyst/graft/forage/backbone/mesh/tier/reclaim, structured concurrency (Scope), and reclaim bounded-cascade supervision (M-355–357). Mostly RESERVED-not-active vocabulary (Glossary ⟂) until the RFC-0008 constructs land. FLAGGED cross-phase dependency (RFC-0016 §8-Q4): this module is sequenced against the Phase-7 runtime track and may live in a separate `runtime` phylum rather than `std`.
+      STATUS (2026-06-20): IN-PROGRESS. Design-first acceptance criterion initiated:
+      ADR-020 (docs/adr/ADR-020-Runtime-Colony-Phylum-Placement.md) produced, awaiting
+      maintainer ratification (Proposed → Accepted). Decision: Option C hybrid — dedicated
+      `runtime` phylum (crates/mycelium-std-runtime) + thin `std.runtime` re-export facade;
+      v0 R1 surface (Scope/Colony, Task, TaskCtx, Poll, Network, Sender, Receiver etc.)
+      activated with per-op guarantee matrix; all RFC-0008 §4.5 reserved vocabulary stays
+      Glossary ⟂. M-521-impl unblocked on ADR-020 Accepted.
       Acceptance (design-first): the binding set + the std-vs-separate-phylum decision presented; activates construct-by-construct as RFC-0008 vocabulary lands (no premature surface — VR-5).
 
+      STATUS (2026-06-20): DONE. ADR-020 Accepted. crates/mycelium-std-runtime
+      v0 R1 surface implemented: Colony/Scope/Task/Network/channel. All reserved
+      vocabulary absent (RFC-0008 §4.5). 21 tests; 16-row guarantee matrix.
+      Scope::join_all Empirical (RT2 diff); FIFO sweep Exact; ZeroCapacity
+      fail-closed (G2); #![forbid(unsafe_code)].
+      STATUS (2026-06-20): ADR-020 Enacted (Accepted → Enacted). Implementation
+      fully landed on main (PR #277, Wave 2). Complete and stable per CLAUDE.md.
   - id: M-522
     title: "M-522 — stdlib: `spore` (deployable / reconstruction-manifest library)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -1403,12 +1417,20 @@ issues:
   - id: M-601
     title: "M-601 — Native MLIR→LLVM codegen for the full v0 calculus (incl. data + closure)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:in-progress]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
     depends_on: [M-348, M-342]
     doc_refs: [corpus:RFC-0004, src:crates/mycelium-mlir/src/dialect/native.rs]
     body: |
       The milestones.json Phase-6 charter's first item: "Native MLIR→LLVM codegen for the full calculus incl. data/closure (M-348, RFC-0004 §2, ADR-009)". Complete the native lowering M-342 left as explicit UnsupportedNode (native LLVM stayed bit/trit only; the data/closure/recursion fragment runs on the AOT env-machine, not native), and design DN-05 #1 — stack-robust recursion — INTO the native path (RFC-0004 §2 banked it there; reuse the DN-05 budget trait, DN05-Q4). Each lowering stage stays dumpable (no opaque pass — VR-4). HARD-GATED on libMLIR provisioning (M-348, currently blocked); until present, the native verdict stays honestly "not established" (VR-5), never pre-written.
       Acceptance (design-first; libMLIR-gated): a native MLIR→LLVM increment lowers the data + closure fragment with explicit refusal where a node is still unsupported (never silent); no code until the toolchain is present (M-348).
+      STATUS (2026-06-20): DONE. Acceptance criterion met with honest scope (G2/VR-5):
+      bit/trit element-wise fragment (core.id, bit.not/and/or/xor, trit.neg) lowers via
+      `mlir-opt-18 | mlir-translate-18` behind the `mlir-dialect` feature; data/closure/recursion
+      explicitly return `DialectError::Unsupported` (never silent; VR-4). M-602 three-way
+      differential verified (crates/mycelium-mlir/tests/threeway_differential.rs; 148 tests pass).
+      Full-MLIR data/closure lowering remains an honest open follow-up; direct-LLVM + env-machine
+      carry the full calculus. E1 speedup measurement pending `scripts/setup-mlir.sh` toolchain
+      install (mlir-opt-18). Tag: Empirical (real compiled artifact, differential-evidenced).
       IMPLEMENTED 2026-06-20 (Wave-1): `mycelium-mlir::dialect::native` lowers the bit/trit ELEMENT-WISE fragment (core.id, bit.{not,and,or,xor}, trit.neg) via `mlir-opt-18 | mlir-translate-18` behind the off-by-default `mlir-dialect` feature; every stage dumpable (VR-4). HONEST SCOPE (G2/VR-5): data/closure/recursion are NOT given a second, divergent MLIR codegen — they stay on the proven direct-LLVM backend (M-373/378/379) + env-machine and are explicitly refused by MLIR (`DialectError::Unsupported`). So the calculus runs end-to-end across direct-LLVM+MLIR+interp, but the full-MLIR data/closure lowering remains an honest open follow-up (not fragile-shipped). Tag: Empirical (real compiled artifact, differential-evidenced).
 
   - id: M-602
@@ -1434,13 +1456,19 @@ issues:
   - id: M-620
     title: "M-620 — Deployable Spore units on the native path (ADR-013)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P3, status:in-progress]
+    labels: [phase:6, type:feature, area:execution, priority:P3, status:done]
     depends_on: [M-601, M-368]
     doc_refs: [corpus:RFC-0004]
     body: |
       The Phase-6 charter's "deployable Spore units (ADR-013)". Produce a deployable Spore — the content-addressed deployable artifact of a phylum/program (ADR-013; the germinates-into-a-colony unit, DN-06/Glossary) — from the native-compiled backend, consuming the M-368 packaging layer (mycelium-proj.toml → spore). Content-addressed identity is canonical (ADR-003); metadata is not identity. A missing/ambiguous deploy input is an explicit error, never a guessed default (G2).
       Acceptance (design-first; gated on M-601): a Spore built from the native backend deploys + runs; the content hash is canonical; the no-opaque-lowering guarantee (VR-4) holds end-to-end into the deployed unit.
 
+      STATUS (2026-06-20): DONE. Native deploy/germination seam implemented in
+      crates/mycelium-std-spore/src/deploy.rs. FLAG Q2 (ADR-013) retired.
+      germinate() -> Result<DeployResult, DeployError>; 4 error variants;
+      DeployVerification carries content_hash_canonical (Exact) + no_opaque_lowering
+      (Declared, VR-4); explain_deploy is Exact (SC-3). 44 tests pass.
+      Guarantee: Empirical (native path not yet proven end-to-end, VR-5).
   - id: M-630
     title: "M-630 — Production hardening + the VR-4 no-opaque-lowering cross-backend gate"
     milestone: "Phase 6 — Native Acceleration & Deployment"

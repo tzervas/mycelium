@@ -1068,12 +1068,12 @@
 | `mycelium_lsp::lint_nodule_header` | fn | `crates/mycelium-lsp/src/lint.rs:81` | The **source-text** companion lint (M-141; DN-06 §6): recognise the `// nodule:` header marker |
 | `mycelium_lsp::lint_structured_header` | fn | `crates/mycelium-lsp/src/lint.rs:103` | The **structured-header** lint (M-141; M-359 / spec §3): parse the `// @key: value` header and |
 | `mycelium_lsp::present` | fn | `crates/mycelium-lsp/src/diagnostics/record.rs:151` | Present an explicit [`ReasonedError`] as a [`DiagnosticRecord`], optionally shaped by a policy. |
-| `mycelium_lsp::project` | mod | `crates/mycelium-lsp/src/lib.rs:16` | — |
+| `mycelium_lsp::project` | mod | `crates/mycelium-lsp/src/lib.rs:17` | — |
 | `mycelium_lsp::project::llm_canonical` | fn | `crates/mycelium-lsp/src/project.rs:40` | Render a closed Core IR [`Node`] as the `LlmCanonical` s-expression surface (RFC-0021 §4.6). |
 | `mycelium_lsp::publish_diagnostics_notification` | fn | `crates/mycelium-lsp/src/wire.rs:79` | Build the full `textDocument/publishDiagnostics` JSON-RPC **notification** (server → client) that |
 | `mycelium_lsp::publish_for_source` | fn | `crates/mycelium-lsp/src/sync.rs:83` | The full `textDocument/publishDiagnostics` notification for `uri`'s `text` (parse → check). |
 | `mycelium_lsp::read_message` | fn | `crates/mycelium-lsp/src/wire.rs:104` | Read one JSON-RPC message off `reader`, decoding the `Content-Length` header framing. |
-| `mycelium_lsp::recover` | mod | `crates/mycelium-lsp/src/lib.rs:17` | — |
+| `mycelium_lsp::recover` | mod | `crates/mycelium-lsp/src/lib.rs:18` | — |
 | `mycelium_lsp::recover::EffectSet` | type | `crates/mycelium-lsp/src/recover/effect.rs:27` | A definition's **declared** effect set (§4.5 I3) — what it says it can do, on its signature. |
 | `mycelium_lsp::recover::Outcome` | enum | `crates/mycelium-lsp/src/recover/mod.rs:67` | The result sum `Ok(τ) \| Err(ε)` (RFC-0014 §4.1). |
 | `mycelium_lsp::recover::RecoveryPolicy` | struct | `crates/mycelium-lsp/src/recover/policy.rs:50` | A reified recovery policy: a map from a **registry-resolved** [`ClassName`] to its [`RecoveryAction`]. |
@@ -1115,7 +1115,7 @@
 | `mycelium_lsp::serve` | fn | `crates/mycelium-lsp/src/wire.rs:171` | Drive the LSP lifecycle **with document sync** (M-310) over `reader`/`writer` (stdio in the real |
 | `mycelium_lsp::serve_stdio` | fn | `crates/mycelium-lsp/src/wire.rs:235` | Run [`serve`] over the process's **real stdio** — the entry point an editor launches |
 | `mycelium_lsp::source_diagnostics` | fn | `crates/mycelium-lsp/src/sync.rs:71` | Analyze a document's source through the text → `Node` pipeline and return its LSP diagnostics |
-| `mycelium_lsp::sync` | mod | `crates/mycelium-lsp/src/lib.rs:18` | — |
+| `mycelium_lsp::sync` | mod | `crates/mycelium-lsp/src/lib.rs:19` | — |
 | `mycelium_lsp::sync::DocumentStore` | struct | `crates/mycelium-lsp/src/sync.rs:27` | An in-memory store of open documents (`uri → source text`), the minimal state full-sync requires. |
 | `mycelium_lsp::sync::DocumentStore::is_empty` | fn | `crates/mycelium-lsp/src/sync.rs:62` | Whether the store is empty. |
 | `mycelium_lsp::sync::DocumentStore::is_empty` | fn | `crates/mycelium-lsp/src/sync.rs:62` | Whether the store is empty. |
@@ -1134,7 +1134,7 @@
 | `mycelium_lsp::sync::resilient_source_diagnostics` | fn | `crates/mycelium-lsp/src/sync.rs:102` | Like [`source_diagnostics`], but **isolating an internal analysis panic** as a structured |
 | `mycelium_lsp::sync::source_diagnostics` | fn | `crates/mycelium-lsp/src/sync.rs:71` | Analyze a document's source through the text → `Node` pipeline and return its LSP diagnostics |
 | `mycelium_lsp::to_lsp_diagnostic` | fn | `crates/mycelium-lsp/src/wire.rs:47` | Map a [`Diagnostic`] to an LSP-`Diagnostic` JSON value. |
-| `mycelium_lsp::wire` | mod | `crates/mycelium-lsp/src/lib.rs:19` | — |
+| `mycelium_lsp::wire` | mod | `crates/mycelium-lsp/src/lib.rs:20` | — |
 | `mycelium_lsp::wire::SERVER_NAME:` | const | `crates/mycelium-lsp/src/wire.rs:31` | The advertised server name (LSP `serverInfo.name`). |
 | `mycelium_lsp::wire::initialize_result` | fn | `crates/mycelium-lsp/src/wire.rs:92` | The `initialize` result: the server's advertised capabilities. |
 | `mycelium_lsp::wire::lsp_severity` | fn | `crates/mycelium-lsp/src/wire.rs:36` | LSP `DiagnosticSeverity` code for a [`Severity`] (LSP spec: Error=1, Warning=2, Information=3, |
@@ -2238,20 +2238,20 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_std_spore::MATRIX:` | const | `crates/mycelium-std-spore/src/guarantee_matrix.rs:66` | The `std.spore` guarantee matrix (spec §4.5), encoded as data (RFC-0016 §4.5). |
+| `mycelium_std_spore::MATRIX:` | const | `crates/mycelium-std-spore/src/guarantee_matrix.rs:69` | The `std.spore` guarantee matrix (spec §4.5), encoded as data (RFC-0016 §4.5). |
 | `mycelium_std_spore::MalformedManifest` | enum | `crates/mycelium-std-spore/src/recon_manifest.rs:190` | A refusal from manifest validation — explicitly named, never silent (C1/G2). |
 | `mycelium_std_spore::ReconManifest` | struct | `crates/mycelium-std-spore/src/recon_manifest.rs:37` | A validated reconstruction manifest — the RFC-0003 §6 record: mode, model, dim, codebooks, |
 | `mycelium_std_spore::RegrowthResult` | struct | `crates/mycelium-std-spore/src/recon_manifest.rs:233` | The result of a probabilistic regrowth attempt via `std.vsa`. |
 | `mycelium_std_spore::SporeErr` | enum | `crates/mycelium-std-spore/src/spore_ops.rs:29` | An explicit spore error — never a silent accept (C1/G2). |
 | `mycelium_std_spore::SporeUnit` | struct | `crates/mycelium-std-spore/src/spore_ops.rs:96` | A content-addressed, value-semantic spore handle (ADR-013). |
-| `mycelium_std_spore::explain_spore` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:329` | The `EXPLAIN` of a built spore: the identity receipt, the surface, the code by hash, the |
-| `mycelium_std_spore::guarantee_matrix` | mod | `crates/mycelium-std-spore/src/lib.rs:58` | — |
-| `mycelium_std_spore::guarantee_matrix::GuaranteeTag` | type | `crates/mycelium-std-spore/src/guarantee_matrix.rs:30` | Guarantee tag string — the lattice position (`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`). |
-| `mycelium_std_spore::guarantee_matrix::MATRIX:` | const | `crates/mycelium-std-spore/src/guarantee_matrix.rs:66` | The `std.spore` guarantee matrix (spec §4.5), encoded as data (RFC-0016 §4.5). |
-| `mycelium_std_spore::guarantee_matrix::MatrixRow` | struct | `crates/mycelium-std-spore/src/guarantee_matrix.rs:34` | One row of the `std.spore` guarantee matrix (RFC-0016 §4.5 / spec §4). |
+| `mycelium_std_spore::explain_spore` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:344` | The `EXPLAIN` of a built spore: the identity receipt, the surface, the code by hash, the |
+| `mycelium_std_spore::guarantee_matrix` | mod | `crates/mycelium-std-spore/src/lib.rs:61` | — |
+| `mycelium_std_spore::guarantee_matrix::GuaranteeTag` | type | `crates/mycelium-std-spore/src/guarantee_matrix.rs:31` | Guarantee tag string — the lattice position (`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`). |
+| `mycelium_std_spore::guarantee_matrix::MATRIX:` | const | `crates/mycelium-std-spore/src/guarantee_matrix.rs:69` | The `std.spore` guarantee matrix (spec §4.5), encoded as data (RFC-0016 §4.5). |
+| `mycelium_std_spore::guarantee_matrix::MatrixRow` | struct | `crates/mycelium-std-spore/src/guarantee_matrix.rs:35` | One row of the `std.spore` guarantee matrix (RFC-0016 §4.5 / spec §4). |
 | `mycelium_std_spore::identity` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:227` | The spore's canonical content-addressed identity (ADR-003). |
-| `mycelium_std_spore::manifest_of` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:306` | The reconstruction manifest of a `SporeUnit`, if any — `None` for project spores without one. |
-| `mycelium_std_spore::recon_manifest` | mod | `crates/mycelium-std-spore/src/lib.rs:59` | — |
+| `mycelium_std_spore::manifest_of` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:321` | The reconstruction manifest of a `SporeUnit`, if any — `None` for project spores without one. |
+| `mycelium_std_spore::recon_manifest` | mod | `crates/mycelium-std-spore/src/lib.rs:62` | — |
 | `mycelium_std_spore::recon_manifest::MalformedManifest` | enum | `crates/mycelium-std-spore/src/recon_manifest.rs:190` | A refusal from manifest validation — explicitly named, never silent (C1/G2). |
 | `mycelium_std_spore::recon_manifest::ReconManifest` | struct | `crates/mycelium-std-spore/src/recon_manifest.rs:37` | A validated reconstruction manifest — the RFC-0003 §6 record: mode, model, dim, codebooks, |
 | `mycelium_std_spore::recon_manifest::ReconManifest::declared_strength` | fn | `crates/mycelium-std-spore/src/recon_manifest.rs:126` | The declared guarantee strength from the manifest's bound certificate. |
@@ -2283,7 +2283,7 @@
 | `mycelium_std_spore::recon_manifest::RegrowthResult::new` | fn | `crates/mycelium-std-spore/src/recon_manifest.rs:63` | Build and validate a reconstruction manifest from its components. |
 | `mycelium_std_spore::recon_manifest::RegrowthResult::strength` | fn | `crates/mycelium-std-spore/src/recon_manifest.rs:277` | The honest guarantee strength — **derived** from the bound's basis (never fabricated, |
 | `mycelium_std_spore::recon_manifest::RegrowthResult::strength` | fn | `crates/mycelium-std-spore/src/recon_manifest.rs:277` | The honest guarantee strength — **derived** from the bound's basis (never fabricated, |
-| `mycelium_std_spore::spore_ops` | mod | `crates/mycelium-std-spore/src/lib.rs:60` | — |
+| `mycelium_std_spore::spore_ops` | mod | `crates/mycelium-std-spore/src/lib.rs:63` | — |
 | `mycelium_std_spore::spore_ops::SporeErr` | enum | `crates/mycelium-std-spore/src/spore_ops.rs:29` | An explicit spore error — never a silent accept (C1/G2). |
 | `mycelium_std_spore::spore_ops::SporeUnit` | struct | `crates/mycelium-std-spore/src/spore_ops.rs:96` | A content-addressed, value-semantic spore handle (ADR-013). |
 | `mycelium_std_spore::spore_ops::SporeUnit::from_manifest` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:127` | Build a `SporeUnit` from a parsed `Manifest` and the project directory. |
@@ -2298,9 +2298,9 @@
 | `mycelium_std_spore::spore_ops::SporeUnit::raw` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:246` | The raw M-368 spore (for consumers that need the full project representation). |
 | `mycelium_std_spore::spore_ops::SporeUnit::verify` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:208` | Verify the spore: recompute the component-DAG hash and compare to the declared identity. |
 | `mycelium_std_spore::spore_ops::SporeUnit::verify` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:208` | Verify the spore: recompute the component-DAG hash and compare to the declared identity. |
-| `mycelium_std_spore::spore_ops::explain_spore` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:329` | The `EXPLAIN` of a built spore: the identity receipt, the surface, the code by hash, the |
+| `mycelium_std_spore::spore_ops::explain_spore` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:344` | The `EXPLAIN` of a built spore: the identity receipt, the surface, the code by hash, the |
 | `mycelium_std_spore::spore_ops::identity` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:227` | The spore's canonical content-addressed identity (ADR-003). |
-| `mycelium_std_spore::spore_ops::manifest_of` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:306` | The reconstruction manifest of a `SporeUnit`, if any — `None` for project spores without one. |
+| `mycelium_std_spore::spore_ops::manifest_of` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:321` | The reconstruction manifest of a `SporeUnit`, if any — `None` for project spores without one. |
 | `mycelium_std_spore::spore_ops::verify` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:208` | Verify the spore: recompute the component-DAG hash and compare to the declared identity. |
 | `mycelium_std_spore::verify` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:208` | Verify the spore: recompute the component-DAG hash and compare to the declared identity. |
 

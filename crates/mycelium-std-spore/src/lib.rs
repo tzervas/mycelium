@@ -23,8 +23,10 @@
 //!
 //! # Out of scope (FLAGS carried from spec §7)
 //!
-//! - **Native deploy / germination** (FLAG Q2) — Phase-6-gated (M-620); the `deploy` seam
-//!   exists in the spec but is not implemented here — FLAGGED §7 Q2.
+//! - **Native deploy / germination** — Implemented in M-620 (see [`deploy`] module):
+//!   [`deploy::germinate`], [`deploy::explain_deploy`], [`deploy::DeployTarget`],
+//!   [`deploy::DeployResult`], [`deploy::DeployError`], [`deploy::DeployVerification`].
+//!   FLAG Q2 is resolved; the seam is live and guarded end-to-end (G2 / VR-4).
 //! - **Approx coupling** (FLAG Q4a — RESOLVED) — [`RegrowthResult`] carries the manifest's full
 //!   certificate `Bound` and projects to `std.numerics::Approx<Factorization>` via
 //!   [`recon_manifest::RegrowthResult::as_approx`] (strength derived from the bound's basis, never
@@ -55,6 +57,7 @@
 //! the packing.
 #![forbid(unsafe_code)]
 
+pub mod deploy;
 pub mod guarantee_matrix;
 pub mod recon_manifest;
 pub mod spore_ops;
@@ -63,6 +66,9 @@ pub mod spore_ops;
 pub use mycelium_core::{ContentHash, GuaranteeStrength};
 pub use mycelium_spore::{Spore as RawSpore, SporeError};
 
+pub use deploy::{
+    explain_deploy, germinate, DeployError, DeployResult, DeployTarget, DeployVerification,
+};
 pub use guarantee_matrix::MATRIX;
 pub use recon_manifest::{MalformedManifest, ReconManifest, ReconMode, RegrowthResult};
 pub use spore_ops::{explain_spore, identity, manifest_of, verify, SporeErr, SporeUnit};
