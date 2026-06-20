@@ -102,230 +102,254 @@ issues:
   - id: M-101
     title: "M-101 — Core IR data structures"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:feature, area:core-ir, priority:P0]
+    labels: [phase:1, type:feature, area:core-ir, priority:P0, status:done]
     depends_on: [M-091, M-010]
     doc_refs: [corpus:RFC-0001]
     body: |
       Rust types for Value<Repr,Meta>, Repr enum, Meta mirroring the schemas; commit a concrete Core IR node grammar (EBNF; closes SPEC §10.2) (RFC-0001 §4.1–§4.3).
       Acceptance: construction + well-formedness unit tests.
 
+      DONE (2026-06-09): mycelium-core: Value<Repr,Meta> + Repr + Meta; 17 construction/well-formedness tests. (phase-1.md §4)
   - id: M-102
     title: "M-102 — Guarantee lattice + meet-composition"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:feature, area:core-ir, priority:P0]
+    labels: [phase:1, type:feature, area:core-ir, priority:P0, status:done]
     depends_on: [M-101]
     doc_refs: [corpus:RFC-0001]
     body: |
       Guarantee lattice with meet (assoc/comm/idempotent, property-tested); ops propagate by meet (RFC-0001 §3.4/§4.7).
       Acceptance: all 4x4 pairs tested.
 
+      DONE (2026-06-09): mycelium-core::guarantee: GuaranteeLattice + meet; 4×4(×4) exhaustive law tests. (phase-1.md §6.1)
   - id: M-103
     title: "M-103 — Content-addressing"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:feature, area:core-ir, priority:P1]
+    labels: [phase:1, type:feature, area:core-ir, priority:P1, status:done]
     depends_on: [M-101]
     doc_refs: [corpus:RFC-0001]
     body: |
       Hash-of-AST identity + names-as-metadata (RFC-0001 §4.6; ADR-003); cert/policy refs are content hashes.
       Acceptance: identical defs collide; trivial renames don't change identity.
 
+      DONE (2026-06-09): mycelium-core::content: BLAKE3 hash-of-AST; Names as metadata; identity/rename tests. (phase-1.md §6.2)
   - id: M-104
     title: "M-104 — Core IR (de)serialization"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:feature, area:core-ir, priority:P1]
+    labels: [phase:1, type:feature, area:core-ir, priority:P1, status:done]
     depends_on: [M-101, M-010]
     doc_refs: [corpus:RFC-0001]
     body: |
       (De)serialize Core IR to/from the JSON schemas; round-trip property test; output validates against value.schema.json in CI.
 
+      DONE (2026-06-09): mycelium-core serde layer: round-trip + schema-pinned examples; value.schema.json validates in CI. (phase-1.md §6.3)
   - id: M-110
     title: "M-110 — Reference interpreter"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:feature, area:core-ir, priority:P0]
+    labels: [phase:1, type:feature, area:core-ir, priority:P0, status:done]
     depends_on: [M-101]
     doc_refs: [corpus:RFC-0004, corpus:RFC-0001]
     body: |
       The executable reference semantics for the Core IR; document small-step rules alongside (closes SPEC §10.3) (RFC-0004 §2; ADR-009; NFR-7).
       Acceptance: golden test corpus with expected results.
 
+      DONE (2026-06-09): mycelium-interp: small-step reference interpreter; golden corpus tests. (phase-1.md table)
   - id: M-111
     title: "M-111 — Bit/Trit values + balanced-ternary arithmetic"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:feature, area:core-ir, priority:P0]
+    labels: [phase:1, type:feature, area:core-ir, priority:P0, status:done]
     depends_on: [M-110]
     doc_refs: [corpus:RFC-0001]
     body: |
       First-class Bit and Trit{-1,0,+1}; balanced-ternary add/neg/mul with identities (negation=flip; rounding≡truncation) (FR-M2).
       Acceptance: property tests vs an oracle (balanced-ternary crate or hand-derived).
 
+      DONE (2026-06-09): mycelium-core::ternary: Bit/Trit; neg/add/sub/mul with exhaustive i64-oracle property tests; trit.* prims. (phase-1.md table)
   - id: M-112
     title: "M-112 — Inspectable lowering (>=2 stages)"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:feature, area:execution, priority:P1]
+    labels: [phase:1, type:feature, area:execution, priority:P1, status:done]
     depends_on: [M-110]
     doc_refs: [corpus:RFC-0001]
     body: |
       >=2 dumpable/diffable lowering stages; metadata preserved across stages (WF5; SC-4; closes SPEC §10.5 partial).
       Acceptance: a wrong/missing metadata propagation is caught by test.
 
+      DONE (2026-06-09): mycelium-core::lower: core→ANF substrate + scheduled layouts; dumpable/diffable; metadata preserved. (phase-1.md table)
   - id: M-120
     title: "M-120 — Binary<->ternary swap (LosslessWithinRange)"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:feature, area:swap, priority:P0]
+    labels: [phase:1, type:feature, area:swap, priority:P0, status:done]
     depends_on: [M-111, M-012]
     doc_refs: [corpus:RFC-0002]
     body: |
       enc/dec per M-012; dec returns Option; out-of-range = explicit error (never silent); emits a LosslessWithinRange certificate (RFC-0002 §4).
       Acceptance: dec(enc x)=Some x over a large corpus (SC-1, SC-3).
 
+      DONE (2026-06-09): mycelium-cert: enc/dec + Bijective cert; exhaustive dec(enc x) over all 256 bytes; interp SwapEngine. (phase-1.md table)
   - id: M-121
     title: "M-121 — Round-trip proof"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:verification, area:swap, priority:P1]
+    labels: [phase:1, type:verification, area:swap, priority:P1, status:done]
     depends_on: [M-120]
     doc_refs: [corpus:RFC-0002]
     body: |
       Machine-checkable round-trip/injectivity proof for fixed widths (SMT or Coq decide), referenced by proof_ref (VR-1; SC-1).
 
+      DONE (2026-06-09): proofs/binary-ternary-roundtrip/: Z3 unsat on injectivity (8↔6 trit); proof_ref wired. (phase-1.md table)
   - id: M-130
     title: "M-130 — VsaModel trait + MAP-I"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:feature, area:vsa, priority:P0]
+    labels: [phase:1, type:feature, area:vsa, priority:P0, status:done]
     depends_on: [M-101]
     doc_refs: [corpus:RFC-0003]
     body: |
       Composition-style VsaModel trait; MAP-I bind/unbind (self-inverse, Exact), permute (Exact), bundle; dependency-gated submodule (kernel still type-checks hypervector mentions; KC-3) (RFC-0003 §3–§4; T2.6).
 
+      DONE (2026-06-09): mycelium-vsa: VsaModel trait + MAP-I bind/unbind/permute (Exact) + bundle; dependency-gated. (phase-1.md table)
   - id: M-131
     title: "M-131 — Tagged bounds on shipped ops (SC-2)"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:verification, area:vsa, priority:P0]
+    labels: [phase:1, type:verification, area:vsa, priority:P0, status:done]
     depends_on: [M-130, M-102]
     doc_refs: [corpus:RFC-0003]
     body: |
       bundle ships a CapacityBound tagged Proven (citing the M-001 theorem) with side-conditions checked; measured behavior within bound across >=1e4 trials; honest per-op tag (RFC-0003 §4; VR-3/5; SC-2).
 
+      DONE (2026-06-09): mycelium-vsa: checked-instantiation Proven CapacityBound; ≥10⁴-trial validation ≤ δ; SC-2 met. (phase-1.md table)
   - id: M-132
     title: "M-132 — Item-memory / cleanup"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:feature, area:vsa, priority:P2]
+    labels: [phase:1, type:feature, area:vsa, priority:P2, status:done]
     depends_on: [M-130]
     doc_refs: [corpus:RFC-0003]
     body: |
       Clean-up memory (nearest-neighbor item memory) returning (item, confidence) to make approximate unbind usable (FR-S4).
 
+      DONE (2026-06-09): mycelium-vsa: CleanupMemory nearest-neighbour item memory → (label, confidence, margin). (phase-1.md table)
   - id: M-140
     title: "M-140 — LSP skeleton"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:feature, area:toolchain, priority:P1]
+    labels: [phase:1, type:feature, area:toolchain, priority:P1, status:done]
     depends_on: [M-110, M-112]
     doc_refs: [corpus:RFC-0001]
     body: |
       LSP exposing the four feedback artifact kinds — typecheck diagnostics, swap certificates, bound/guarantee annotations, lowering-stage dumps — over one surface (FR-S5; §5.8; SC-5 channel).
       Acceptance: verified with a scripted client.
 
+      DONE (2026-06-09): mycelium-lsp::analyze: 4 feedback artifact kinds exposed; scripted-client test. (phase-1.md table)
   - id: M-141
     title: "M-141 — Invariant linter"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:feature, area:toolchain, priority:P1]
+    labels: [phase:1, type:feature, area:toolchain, priority:P1, status:done]
     depends_on: [M-101]
     doc_refs: [corpus:RFC-0001]
     body: |
       Lints for implicit-swap attempt, untagged bound, swap without PolicyRef (SC-3; G2).
       Acceptance: positive + negative test per lint.
 
+      DONE (2026-06-09): mycelium-check (mycelium-lsp::lint): implicit-swap / unverified-bound / placeholder-policy / free-variable lints. (phase-1.md table)
   - id: M-142
     title: "M-142 — Formatter"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:feature, area:toolchain, priority:P2]
+    labels: [phase:1, type:feature, area:toolchain, priority:P2, status:done]
     depends_on: [M-101]
     doc_refs: [corpus:RFC-0001]
     body: |
       Canonical rendering; reformatting does not change content-addressed identity (ADR-003).
 
+      DONE (2026-06-09): mycelium-fmt (core::lower::format): α-normalized canonical dump; reformatting preserves content-addressed identity. (phase-1.md table)
   - id: M-150
     title: "M-150 — MLIR->LLVM AOT path (ternary dialect skeleton)"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:feature, area:execution, priority:P1]
+    labels: [phase:1, type:feature, area:execution, priority:P1, status:done]
     depends_on: [M-110, M-091]
     doc_refs: [corpus:RFC-0003]
     body: |
       A ternary MLIR dialect skeleton lowering a kernel subset via arith/vector -> LLVM -> native; each stage dumpable (no opaque pass) (RFC-0004 §2; ADR-007; T1.5).
       Acceptance: runnable artifact for the subset.
 
+      DONE (2026-06-09): mycelium-mlir: textual ternary-dialect emitter + runnable AOT artifact over lowered ANF; each stage dumpable. (phase-1.md table)
   - id: M-151
     title: "M-151 — Interp<->AOT differential testing"
     milestone: "Phase 1 — Minimal Viable Core"
-    labels: [phase:1, type:verification, area:execution, priority:P1]
+    labels: [phase:1, type:verification, area:execution, priority:P1, status:done]
     depends_on: [M-150, M-110]
     doc_refs: [corpus:RFC-0004]
     body: |
       Harness runs the kernel corpus under interpreter and AOT artifact; asserts observable equivalence; divergence fails CI (NFR-7; VR-4; RR-12). Cheap baseline preceding per-artifact TV in Phase 2.
 
+      DONE (2026-06-09): Kernel-corpus differential: observable equivalence; divergence fails CI (NFR-7). (phase-1.md table)
   # ---------------- Phase 2 (epics) ----------------
   - id: E2-1
     title: "E2-1 (epic) — Dense embeddings + Dense<->VSA swaps"
     milestone: "Phase 2 — Full Unification & Verified Swaps"
-    labels: [phase:2, type:feature, area:swap, priority:P1]
+    labels: [phase:2, type:feature, area:swap, priority:P1, status:done]
     depends_on: [M-101, M-120, M-130]
     doc_refs: [corpus:RFC-0001]
     body: |
       EPIC. Typed dim-tracked Dense{dim,dtype}; Dense<->VSA swaps with epsilon/delta bounds (RFC-0002 §5). Exit: SC-2 for new swaps. Decompose at the Phase-1 gate.
 
+      DONE (2026-06-11): Dense{dim,dtype} ops (M-230) + Dense↔VSA swaps with ε/δ bounds (M-231); all leaf tasks done. (phase-2.md)
   - id: E2-2
     title: "E2-2 (epic) — Remaining VSA models"
     milestone: "Phase 2 — Full Unification & Verified Swaps"
-    labels: [phase:2, type:feature, area:vsa, priority:P1]
+    labels: [phase:2, type:feature, area:vsa, priority:P1, status:done]
     depends_on: [M-130, M-131]
     doc_refs: [corpus:RFC-0002]
     body: |
       EPIC. MAP-B, BSC, HRR, FHRR, sparse/SBC with RFC-0003 §4 honest tags; HRR/FHRR unbind Empirical + cleanup; restrict MAP-B deep nesting (RR-13). Decompose at gate.
 
+      DONE (2026-06-11): MAP-B + BSC (M-240), HRR + FHRR Empirical unbind (M-241), Sparse/SBC + matrix + RR-13 refusal (M-242); all leaf tasks done. (phase-2.md)
   - id: E2-3
     title: "E2-3 (epic) — Full swap + shared certificate checker"
     milestone: "Phase 2 — Full Unification & Verified Swaps"
-    labels: [phase:2, type:feature, area:swap, priority:P0]
+    labels: [phase:2, type:feature, area:swap, priority:P0, status:done]
     depends_on: [E2-1, E2-4]
     doc_refs: [corpus:RFC-0004]
     body: |
       EPIC. Complete swap with split regime; the single translation-validation certificate checker (A,B,R,bound,certificate) shared with interp<->AOT (RFC-0002 §2 / RFC-0004 §3). Exit: SC-3 global; cert overhead within KC-4 budget.
 
+      DONE (2026-06-10): Shared TV cert checker (M-210), bounded/lossy F32→BF16 swap (M-211), KC-4 overhead + SC-3 global (M-212); all leaf tasks done. (phase-2.md)
   - id: E2-4
     title: "E2-4 (epic) — Verified-numerics checker (ADR-010)"
     milestone: "Phase 2 — Full Unification & Verified Swaps"
-    labels: [phase:2, type:verification, area:numerics, priority:P0]
+    labels: [phase:2, type:verification, area:numerics, priority:P0, status:done]
     depends_on: [M-102, M-001]
     doc_refs: [corpus:RFC-0003]
     body: |
       EPIC. ErrorBound (affine arith) + ProbBound (union-bound; apRHL) kernels meeting at the shared {eps,delta,strength} certificate; certificate-checker-in-Rust (tier-i; tier-ii optional) (ADR-010). Exit: sound/monotone/deterministic composition; tier-i checker validates examples.
 
+      DONE (2026-06-09): ErrorBound/ProbBound kernels (M-201/M-202), shared cert + tier-i checker (M-203/M-204); all leaf tasks done. (phase-2.md)
   - id: E2-5
     title: "E2-5 (epic) — Reconstruction manifest"
     milestone: "Phase 2 — Full Unification & Verified Swaps"
-    labels: [phase:2, type:feature, area:vsa, priority:P1]
+    labels: [phase:2, type:feature, area:vsa, priority:P1, status:done]
     depends_on: [E2-2]
     doc_refs: [corpus:RFC-0003]
     body: |
       EPIC. Implement ReconInfo (RFC-0003 §6; recon-info.schema.json): indexed retrieval vs compositional reconstruction; content-addressed codebooks; bound attached. Exit: compositional path recovers a novel combination.
 
+      DONE (2026-06-11): ReconInfo + compositional reconstruction + content-addressed codebooks (M-260); all leaf tasks done. (phase-2.md)
   - id: E2-6
     title: "E2-6 (epic) — Selection policy + EXPLAIN"
     milestone: "Phase 2 — Full Unification & Verified Swaps"
-    labels: [phase:2, type:feature, area:selection, priority:P0]
+    labels: [phase:2, type:feature, area:selection, priority:P0, status:done]
     depends_on: [E2-3, E2-7]
     doc_refs: [corpus:RFC-0005]
     body: |
       EPIC. Total non-learned content-addressed decision-table policy (RFC-0005) + mandatory EXPLAIN; one mechanism, two sites. Exit: every selection emits a valid explain-record; determinism + overrides tested.
 
+      DONE (2026-06-10): SelectionPolicy (M-220), mandatory EXPLAIN + LSP surfacing (M-221), swap/packing sites wired (M-222); all leaf tasks done. (phase-2.md)
   - id: E2-7
     title: "E2-7 (epic) — Schedule-staged packing selector"
     milestone: "Phase 2 — Full Unification & Verified Swaps"
-    labels: [phase:2, type:feature, area:execution, priority:P1]
+    labels: [phase:2, type:feature, area:execution, priority:P1, status:done]
     depends_on: [M-150, E2-6]
     doc_refs: [corpus:RFC-0003]
     body: |
       EPIC. Cost-model + exhaustive-over-fixed-set selector among bitnet.cpp packings (I2_S/TL1/TL2); records meta.physical; runs E1 (perf) + E3 (wrong-layout soundness vs NFR-7) (RFC-0004 §5). Exit: within ~0.01 PPL / 0.1% of full precision; E3 catches a mislabeled layout.
 
+      DONE (2026-06-12): Packing selector I2_S/TL1/TL2 (M-250), E3 wrong-layout differential (M-251); all leaf tasks done. (phase-2.md)
   # ---------------- Phase 3 (epics) ----------------
   - id: E3-1
     title: "E3-1 (epic) — Semantic-level projections"
@@ -537,7 +561,7 @@ issues:
       Turnkey protocol (research/11 T11.7): the five arms (bare novel; +grammar-in-context; +constrained decoding (a new GBNF/Outlines/Guidance dependency); LlmCanonical familiar-skin (the crates/mycelium-lsp/src/project.rs renderer); embedded-DSL RR-3), >=3 seeds, >=1 frontier model, over the experiments/ harness (M-002 substrate). Headline metric: retention ratio vs the familiar-skin arm; falsification threshold < ~70% (RFC-0006 §8 Q1). Report each arm at the strength actually run (Empirical/Declared); never pre-write the verdict (experiments/README.md §3).
       Acceptance (needs-design first): the run executed per the protocol; the retention ratio + verdict recorded append-only; on falsification, the superseding RFC opened (the §4.7 trigger). Build deps it requires: the grammar-constrained decoder integration (arm 3) and the LlmCanonical renderer (arm 4, done). NON-BLOCKING: nothing in the Accepted framework waits on this.
       STATUS (2026-06-20, in-progress): retention ratio INDETERMINATE. Grok/xAI live run attempted; blocked by HTTP 403 (xAI account has no credits). Harness self-test 14/14 verified (Empirical/plumbing). Schema mismatch noted: Grok harness output (metadata/quality/performance/outcomes) differs from mycelium-bench ingestion format (harness/summary/results). Re-run requires: (1) xAI account credits, (2) schema bridge or bench-crate update. See DN-09 §7.
-      STATUS (2026-06-20 retry, in-progress): harness fixed (stdout diagnostic fallback + --resume-from selective retry; self-test 16/16 incl. T14-resume). Retry run `20260620T151333Z` completed live. grok-build-0.1: syntactic_valid 14.3% (1/7 scored), typecheck_pass 14.3%, $0.006097; grok-4.3: syntactic_valid 12.5% (1/8), typecheck_pass 0.0%, $0.011025. Total spend ≈$0.035 cumulative (well within cap). Diagnostic feedback confirmed working (is_correction=true, parse-error text in rounds 2+). New PASSes: grok-build-0.1 g01-identity (1st attempt, 9s, 19 tokens); grok-build-0.1 g08-roundtrip (resumed from prior run). arm1 pass@1 4.2%; arm2 pass@1 95.8–100% (grammar-in-context). Arms 3/4/5 still BLOCKED (M-380 constrained decoder + LlmCanonical renderer not built; OpenAI REST surface does not expose GBNF). Retention ratio INDETERMINATE — arm4 (LlmCanonical denominator) did not run (T11.7 step 3). KC-2 verdict unchanged: proceed. See DN-09 §8.
+      STATUS (2026-06-20 retry, in-progress): harness fixed (stdout diagnostic fallback + --resume-from selective retry; self-test 16/16 incl. T14-resume). Retry run `20260620T151333Z` completed live. grok-build-0.1: syntactic_valid 14.3% (1/7 scored), typecheck_pass 14.3%, $0.006097; grok-4.3: syntactic_valid 12.5% (1/8), typecheck_pass 0.0%, $0.011025. Total spend ≈$0.035 cumulative (well within cap). Diagnostic feedback confirmed working (is_correction=true, parse-error text in rounds 2+). New PASSes: grok-build-0.1 g01-identity (1st attempt, 9s, 19 tokens); grok-build-0.1 g08-roundtrip (resumed from prior run). arm1 pass@1 4.2%; arm2 pass@1 95.8–100% (grammar-in-context). Arms 3/4/5 still BLOCKED: arm3 needs grammar-constrained decoder (OpenAI REST surface does not expose GBNF); arm4 needs harness integration of the LlmCanonical renderer (prototype enacted in crates/mycelium-lsp/src/project.rs via M-380, but not yet wired into the ablation harness as the arm4 projection path); arm5 needs embedded-DSL baseline (RR-3). Retention ratio INDETERMINATE — arm4 denominator run not executed (T11.7 step 3). KC-2 verdict unchanged: proceed. See DN-09 §8.
 
   - id: M-330
     title: "M-330 — AI co-authoring loop (generate -> feedback -> self-correct)"

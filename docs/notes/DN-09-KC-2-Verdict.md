@@ -201,7 +201,7 @@ appends findings here (append-only) and updates M-381 with the measured retentio
 ## 8. Grok/xAI retry run (2026-06-20) — harness fixed, live run completed
 
 This section records the follow-up live run once xAI account credits were available (same day,
-later session). Two fixes were applied to the harness before re-running (M-330 diagnostic
+later session). Three fixes were applied to the harness before re-running (M-330 diagnostic
 feedback; see commit `2c3c2e0`):
 
 1. **Diagnostic feedback fix.** `myc-check` emits parse/type errors on stdout; the scorer was
@@ -231,11 +231,12 @@ Task-level outcomes (retry run `20260620T151333Z`):
 | g03-double | FAIL (syn, **typ**, syn) | FAIL (syn×3) |
 | g04-widen-swap | FAIL (syn×3) | FAIL (syn×3) |
 | g05-narrow-swap | FAIL (syn×3) | FAIL (syn×3) |
-| g06-compose-not-double | FAIL (syn, error) | FAIL (syn×3) |
+| g06-compose-not-double | FAIL (syn×2, err) | FAIL (syn×3) |
 | g07-and-then-widen | FAIL (syn×3) | FAIL (syn, syn, **typ**) |
 | g08-roundtrip | **PASS** (carried from blind run) | FAIL (syn×3) |
 
-`syn` = syntax_error (myc-check exit 2); `typ` = type_error (exit 3); **typ** means the model
+`syn` = syntax_error (myc-check exit 2); `typ` = type_error (exit 3); `err` = harness-level error
+(no exit code — runner timeout/transport, not a model parse failure); **typ** means the model
 produced syntactically valid Mycelium that failed type-checking — an improvement signal.
 
 **What the diagnostic feedback confirmed (Empirical):**
@@ -277,6 +278,11 @@ unchanged. The frontier-model arm adds supplemental evidence:
 
 ## Changelog
 
+- **2026-06-20 — §8 added (Grok/xAI retry run completed).** Harness fixed (stdout diagnostic
+  fallback + `--resume-from`; self-test **16/16**). Retry run `20260620T151333Z` executed live:
+  grok-build-0.1 14.3% syntactic valid / 14.3% type-check pass; grok-4.3 12.5% / 0.0%.
+  Diagnostic feedback confirmed working. Arms 3/4/5 still blocked; retention ratio still
+  INDETERMINATE (arm 4 denominator not run). KC-2 verdict unchanged: proceed.
 - **2026-06-20 — Supplemental record (Grok/xAI arm blocked).** The `tools/llm-harness/`
   harness passed **14/14 offline self-tests** (Empirical/plumbing). The live run was blocked
   by `HTTP 403 permission-denied` (xAI account has no credits; not a language-model result).
