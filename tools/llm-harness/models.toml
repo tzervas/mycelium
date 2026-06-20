@@ -1,0 +1,81 @@
+# Mycelium LLM co-authoring harness — xAI / Grok model rubric.
+#
+# HONESTY (house rule 1; VR-5): the numbers below are a *configuration*, not a
+# measurement. Context windows, rate limits and prices are seeded from the xAI
+# docs cited in the harness brief (docs.x.ai/developers/{models,pricing}) as of
+# 2026-06-20 and are tagged `Declared` — they are asserted defaults, not values
+# this harness verified. CONFIRM against the live docs before a paid run; every
+# field is overridable on the command line / by editing this file.
+#
+# Sort order (cheapest -> priciest): the harness sorts models by `out_price`
+# then `in_price`, ties keeping config order (the order they appear here).
+# `--models a,b,c` selects a subset; `--order a,b,c` forces an explicit order.
+#
+# Per-field meaning:
+#   id                 model id passed to the API (`model` field / batch model).
+#   context            max context window in tokens (Declared).
+#   tpm                tokens-per-minute budget the live pacer respects (Declared).
+#   rpm                requests-per-minute budget the live pacer respects (Declared).
+#   in_price           USD per 1e6 input (prompt) tokens, SYNC/live pricing.
+#   out_price          USD per 1e6 output (completion) tokens, SYNC/live pricing.
+#   batch_in_price     USD per 1e6 input tokens, BATCH pricing.
+#   batch_out_price    USD per 1e6 output tokens, BATCH pricing.
+#
+# BATCH PRICING — TODO(confirm): the batch-API pricing page
+# (docs.x.ai/developers/pricing#batch-api-pricing) was not fetched in the build
+# environment (no network). Per the brief we do NOT invent a discount: the
+# batch_* defaults below are set EQUAL to the sync prices (conservative — a real
+# batch discount can only make the true cost lower, never higher). Replace with
+# the published batch rates before relying on batch-mode cost figures.
+
+schema_version = 1
+
+[[model]]
+id = "grok-build-0.1"
+context = 256000
+tpm = 10000000
+rpm = 1800
+in_price = 1.00
+out_price = 2.00
+batch_in_price = 1.00   # TODO(confirm): = sync price until batch-pricing doc fetched
+batch_out_price = 2.00  # TODO(confirm): = sync price until batch-pricing doc fetched
+
+[[model]]
+id = "grok-4.3"
+context = 1000000
+tpm = 10000000
+rpm = 1800
+in_price = 1.25
+out_price = 2.50
+batch_in_price = 1.25   # TODO(confirm): = sync price until batch-pricing doc fetched
+batch_out_price = 2.50  # TODO(confirm): = sync price until batch-pricing doc fetched
+
+[[model]]
+id = "grok-4.20-0309-non-reasoning"
+context = 1000000
+tpm = 10000000
+rpm = 1800
+in_price = 1.25
+out_price = 2.50
+batch_in_price = 1.25   # TODO(confirm): = sync price until batch-pricing doc fetched
+batch_out_price = 2.50  # TODO(confirm): = sync price until batch-pricing doc fetched
+
+[[model]]
+id = "grok-4.20-0309-reasoning"
+context = 1000000
+tpm = 10000000
+rpm = 1800
+in_price = 1.25
+out_price = 2.50
+batch_in_price = 1.25   # TODO(confirm): = sync price until batch-pricing doc fetched
+batch_out_price = 2.50  # TODO(confirm): = sync price until batch-pricing doc fetched
+
+[[model]]
+id = "grok-4.20-multi-agent-0309"
+context = 1000000
+tpm = 2500000
+rpm = 450
+in_price = 1.25
+out_price = 2.50
+batch_in_price = 1.25   # TODO(confirm): = sync price until batch-pricing doc fetched
+batch_out_price = 2.50  # TODO(confirm): = sync price until batch-pricing doc fetched

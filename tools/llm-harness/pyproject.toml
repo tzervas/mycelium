@@ -1,0 +1,46 @@
+# Mycelium LLM co-authoring harness — uv/pip project metadata (M-331).
+#
+# Portability contract: the LIVE path and the OFFLINE self-test are PURE Python
+# standard library (no third-party runtime deps) so the harness runs from a WSL
+# host — or anywhere — with nothing but `uv` and CPython 3.11+. The native batch
+# backend needs `xai_sdk`, declared as an OPTIONAL extra so it is installed only
+# when batch mode is used (`uv add xai_sdk` / `uv sync --extra batch`). A missing
+# `xai_sdk` never breaks live mode or the self-test (G2: the batch client raises a
+# clear, actionable error only when it is actually invoked).
+
+[project]
+name = "mycelium-llm-harness"
+version = "0.1.0"
+description = "Grok/xAI + local-llama co-authoring harness for Mycelium (M-330/M-331/M-381)"
+readme = "README.md"
+requires-python = ">=3.11"
+# No required runtime dependencies — live mode + self-test are stdlib-only.
+dependencies = []
+
+[project.optional-dependencies]
+# Batch mode only. `uv sync --extra batch` or `uv add xai_sdk`.
+batch = ["xai-sdk>=0.1"]
+
+[project.scripts]
+# `uv run grok-harness --self-test` once the project is synced.
+grok-harness = "grok.cli:main"
+
+[tool.ruff]
+# Match the repo-wide ruff default (88) — there is no root ruff config, so the rest
+# of the tree (e.g. tools/github/*.py) formats at ruff's default line length. Pinning
+# 88 here keeps this package on the SAME width and avoids leaking a wider limit onto
+# the pre-existing sibling files (coauthor.py / harness.py) that ruff would discover
+# this config for. Local↔CI parity: `scripts/checks/format.sh` runs plain `ruff
+# format` with no width override.
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+# CLAUDE.md: ruff + ruff format (Black-compatible). Keep the default rule set so this
+# package is checked identically to the rest of the repo (no extra/looser rules).
+
+[tool.setuptools]
+# This is a tools/ harness, not a distributable library; packaging metadata is
+# present only so `uv run` / `uv sync` resolve the console script + extras.
+py-modules = ["harness", "coauthor"]
+packages = ["grok"]

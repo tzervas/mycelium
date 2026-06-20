@@ -3717,7 +3717,26 @@ def _dispatch(args: argparse.Namespace) -> int:
     return run_harness(args)
 
 
+def _maybe_dispatch_grok(argv: list[str]) -> int | None:
+    """If invoked as `harness.py --grok …`, delegate to the Grok harness CLI.
+
+    Returns the exit code when it handled the call, else None (so the normal llama
+    validation harness runs). Kept as an early passthrough so the two argparse
+    surfaces stay decoupled (KISS) while `harness.py` remains the single entry
+    point the README documents.
+    """
+    if "--grok" not in argv:
+        return None
+    rest = [a for a in argv if a != "--grok"]
+    from grok.cli import main as grok_main
+
+    return grok_main(rest)
+
+
 def main() -> None:
+    grok_code = _maybe_dispatch_grok(sys.argv[1:])
+    if grok_code is not None:
+        sys.exit(grok_code)
     args = _build_parser().parse_args()
     try:
         code = _dispatch(args)
