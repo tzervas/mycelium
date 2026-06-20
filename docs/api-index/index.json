@@ -11953,7 +11953,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 192,
+      "line": 274,
       "summary": "A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12349,7 +12349,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 192,
+      "line": 274,
       "summary": "A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12360,7 +12360,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet::BitnetDotKernel",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 231,
+      "line": 323,
       "summary": "Run the kernel over `packed_weights` (packed under scheme) and",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12371,7 +12371,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet::BitnetDotKernel",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 231,
+      "line": 323,
       "summary": "Run the kernel over `packed_weights` (packed under scheme) and",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12382,8 +12382,8 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet::BitnetDotKernel",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 222,
-      "summary": "The packing this kernel decodes inline.",
+      "line": 68,
+      "summary": "The packing scheme.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -12393,8 +12393,8 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet::BitnetDotKernel",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 222,
-      "summary": "The packing this kernel decodes inline.",
+      "line": 68,
+      "summary": "The packing scheme.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -12404,7 +12404,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 42,
+      "line": 124,
       "summary": "The packing this kernel decodes inline by default.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12415,7 +12415,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 268,
+      "line": 360,
       "summary": "Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12426,7 +12426,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 275,
+      "line": 367,
       "summary": "Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12437,7 +12437,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 61,
+      "line": 143,
       "summary": "Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12448,7 +12448,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 73,
+      "line": 155,
       "summary": "Emit the textual LLVM IR for the packed-ternary dot kernel",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12459,7 +12459,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 311,
+      "line": 403,
       "summary": "Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12470,7 +12470,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 317,
+      "line": 409,
       "summary": "As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12481,7 +12481,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 49,
+      "line": 131,
       "summary": "The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12855,7 +12855,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 268,
+      "line": 360,
       "summary": "Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12866,7 +12866,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 275,
+      "line": 367,
       "summary": "Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12943,7 +12943,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 48,
+      "line": 49,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12976,7 +12976,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 61,
+      "line": 143,
       "summary": "Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12987,7 +12987,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 73,
+      "line": 155,
       "summary": "Emit the textual LLVM IR for the packed-ternary dot kernel",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13053,7 +13053,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 49,
+      "line": 50,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13306,7 +13306,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 50,
+      "line": 51,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13394,7 +13394,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 311,
+      "line": 403,
       "summary": "Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13405,7 +13405,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 317,
+      "line": 409,
       "summary": "As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13416,7 +13416,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 51,
+      "line": 52,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13504,7 +13504,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 52,
+      "line": 53,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13658,7 +13658,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 53,
+      "line": 54,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13746,7 +13746,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 54,
+      "line": 55,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13823,7 +13823,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 55,
+      "line": 56,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13944,7 +13944,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 49,
+      "line": 131,
       "summary": "The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the",
       "guarantee_tag": null,
       "corpus_refs": []

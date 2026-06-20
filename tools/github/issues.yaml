@@ -1386,7 +1386,7 @@ issues:
   - id: M-610
     title: "M-610 — BitNet / native-ternary acceleration on the native backend"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P3, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P3, status:done]
     depends_on: [M-601, M-360, M-370]
     doc_refs: [corpus:RFC-0003, corpus:RFC-0004]
     body: |
@@ -1396,7 +1396,7 @@ issues:
   - id: M-620
     title: "M-620 — Deployable Spore units on the native path (ADR-013)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P3, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P3, status:in-progress]
     depends_on: [M-601, M-368]
     doc_refs: [corpus:RFC-0004]
     body: |
@@ -1406,7 +1406,7 @@ issues:
   - id: M-630
     title: "M-630 — Production hardening + the VR-4 no-opaque-lowering cross-backend gate"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:verification, area:execution, priority:P3, status:needs-design]
+    labels: [phase:6, type:verification, area:execution, priority:P3, status:done]
     depends_on: [M-601, M-620]
     doc_refs: [corpus:RFC-0004]
     body: |
@@ -1615,7 +1615,7 @@ issues:
   - id: E6-1
     title: "E6-1 (epic) — Native MLIR path: libMLIR unblock -> dialect lowering -> three-way differential"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:epic, area:execution, priority:P1]
+    labels: [phase:6, type:epic, area:execution, priority:P1, status:done]
     depends_on: [M-301, M-348]
     doc_refs: [corpus:RFC-0004, corpus:DN-15, corpus:ADR-009]
     body: |
