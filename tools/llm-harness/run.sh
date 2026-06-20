@@ -14,7 +14,9 @@
 # spend cap (--max-usd, default $10): a unit whose estimate would breach it is refused before
 # it is sent. This wrapper adds nothing to the bill; it just sequences the calls.
 #
-# Usage (run from anywhere):
+# Usage (the script cd's to its own dir, so it operates correctly from any cwd — invoke it as
+# `./run.sh` from tools/llm-harness/, or by an absolute/relative path from elsewhere, e.g.
+# `tools/llm-harness/run.sh`):
 #   ./run.sh                       # setup + self-test + list-models + (if key) the $10 sweep
 #   ./run.sh --smoke               # + a cheap single-model ($2) smoke before the full sweep
 #   ./run.sh --max-usd 5           # change the total spend cap (must be finite, >= 0)
@@ -50,10 +52,16 @@ while [[ $# -gt 0 ]]; do
     --smoke)        SMOKE=1; shift ;;
     --check-only)   CHECK_ONLY=1; shift ;;
     --)             shift; PASSTHRU=("$@"); break ;;
-    -h|--help)      sed -n '2,30p' "$HERE/run.sh"; exit 0 ;;
-    *)              echo "run.sh: unknown arg '$1' (use --help, or '--' to pass through)"; exit 2 ;;
+    -h|--help)      sed -n '2,32p' "$HERE/run.sh"; exit 0 ;;
+    *)              echo "run.sh: unknown arg '$1' (use --help, or '--' to pass through)" >&2; exit 2 ;;
   esac
 done
+
+# Validate --mode early (grok.cli only accepts live|batch) so an invalid value fails clearly
+# now — not later, after the setup + self-test have already run.
+if [[ "$MODE" != "live" && "$MODE" != "batch" ]]; then
+  echo "run.sh: --mode must be 'live' or 'batch', got '$MODE'" >&2; exit 2
+fi
 
 # --- resolve the runner: uv (preferred) else system python3 -----------------------------
 # uv gives us the project venv + the console script + extras. Without uv, the LIVE path and
