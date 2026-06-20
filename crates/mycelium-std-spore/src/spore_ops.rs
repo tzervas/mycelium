@@ -246,6 +246,21 @@ impl SporeUnit {
     pub fn raw(&self) -> &RawSpore {
         &self.raw
     }
+
+    /// Test-only constructor: replace the declared identity hash with `tampered_id`.
+    ///
+    /// Used exclusively in tests (e.g. `deploy.rs`) to exercise the hash-mismatch error path
+    /// without access to private fields from outside this module. Not available in non-test
+    /// builds.
+    #[cfg(test)]
+    pub fn with_tampered_id(self, tampered_id: ContentHash) -> Self {
+        let mut raw = self.raw;
+        raw.id = tampered_id;
+        SporeUnit {
+            raw,
+            manifest: self.manifest,
+        }
+    }
 }
 
 /// Re-derive the canonical content-addressed identity for a built spore (ADR-003 / M-368).

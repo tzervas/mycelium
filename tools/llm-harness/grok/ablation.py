@@ -37,6 +37,7 @@ from typing import Any
 
 from .client import ChatClient, ChatMessage
 from .coauthor_loop import SYSTEM_PROMPT, scan_forbidden_self_tags
+from .llm_canonical_arm4 import arm4_llm_canonical_prompt
 from .models import ModelSpec
 from .scoring import VERDICT_CLEAN, MycCheckScorer
 from .tasks import Task
@@ -101,15 +102,24 @@ def _primer_prompt(task: Task) -> list[ChatMessage]:
 
 
 def default_arms() -> list[Arm]:
-    """The five protocol arms, with arms 3 & 4 & 5 marked blocked on missing deps.
+    """The five protocol arms, with arms 3 & 5 marked blocked on missing deps.
 
     Honest wiring (research/11 §T11.7): arms 1 and 2 are runnable against any chat
     backend; arm 3 needs a grammar-constrained decoder (GBNF/Outlines — not exposed
-    by the OpenAI-compatible REST surface); arm 4's renderer is enacted in
-    crates/mycelium-lsp/src/project.rs (M-380, 2026-06-18) but needs a
-    LlmCanonical→Core-IR parser + harness integration before it can run; arm 5
-    needs an embedded-DSL baseline harness (RR-3). Blocked arms carry their reason
-    and are never given a fabricated score.
+    by the OpenAI-compatible REST surface); arm 4 is now RUNNABLE — the
+    LlmCanonical renderer (M-380) is enacted and the parser + harness integration
+    (M-381 Arm 4, W2L3) landed; arm 5 needs an embedded-DSL baseline harness (RR-3).
+    Blocked arms carry their reason and are never given a fabricated score.
+
+    Note on arm 4 scoring: the harness validates LlmCanonical S-expression syntax
+    (Python-side heuristic, Empirical) and then scores the normalized output via
+    ``myc-check``.  Since ``myc-check`` expects ``.myc`` (L1 surface) format and
+    receives Core-IR S-expressions, it will typically return exit-code 2 (parse
+    error).  This is honest — it faithfully measures what ``myc-check`` says about
+    LlmCanonical-formatted output.  A full LlmCanonical→L1 converter is a future
+    RFC-0021 §4.1 EditCapability follow-up.  The arm gracefully skips when the
+    compiled Rust binary is absent (``status: "skip"``,
+    ``reason: "llm-canonical-parser-not-compiled"``).
     """
     return [
         Arm(
@@ -137,16 +147,8 @@ def default_arms() -> list[Arm]:
         Arm(
             id=ARM_CANONICAL,
             description="LlmCanonical projection (familiar-skin, same AST)",
-            runnable=False,
-            blocked_reason=(
-                "LlmCanonical renderer enacted in crates/mycelium-lsp/src/project.rs "
-                "(M-380, 2026-06-18). Still needs: (1) a LlmCanonical→Core-IR parser "
-                "so model s-expression output can be scored by myc-check; (2) harness "
-                "integration wiring this arm's prompt builder to call the renderer on "
-                "task examples. The retention-ratio DENOMINATOR — threshold comparison "
-                "indeterminate until this arm runs (research/11 §T11.7 step 3). Not "
-                "fabricated (VR-5)."
-            ),
+            runnable=True,
+            prompt_builder=arm4_llm_canonical_prompt,
         ),
         Arm(
             id=ARM_EMBEDDED_DSL,
