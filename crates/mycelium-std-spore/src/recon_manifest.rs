@@ -213,7 +213,7 @@ impl std::fmt::Display for MalformedManifest {
     }
 }
 
-impl std::error::Error for MalformedManifest {}
+mycelium_std_core::impl_std_error!(MalformedManifest);
 
 /// The result of a probabilistic regrowth attempt via `std.vsa`.
 ///

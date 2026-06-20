@@ -71,7 +71,7 @@ impl std::fmt::Display for SporeErr {
     }
 }
 
-impl std::error::Error for SporeErr {}
+mycelium_std_core::impl_std_error!(SporeErr);
 
 /// A content-addressed, value-semantic spore handle (ADR-013).
 ///

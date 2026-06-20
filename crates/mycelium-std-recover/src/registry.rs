@@ -52,7 +52,7 @@ impl std::fmt::Display for UnknownClass {
     }
 }
 
-impl std::error::Error for UnknownClass {}
+mycelium_std_core::impl_std_error!(UnknownClass);
 
 /// A simple, append-only **error-class registry** (RFC-0013 §4.5 / X1).
 ///

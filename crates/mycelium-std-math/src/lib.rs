@@ -133,4 +133,4 @@ impl core::fmt::Display for MathErr {
     }
 }
 
-impl std::error::Error for MathErr {}
+mycelium_std_core::impl_std_error!(MathErr);
