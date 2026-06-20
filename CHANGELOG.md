@@ -8,6 +8,27 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: Phase 3 — Grok-pluggable LLM co-authoring harness (M-330/331; M-381 wired))
+Extended `tools/llm-harness/` (M-330/331, already `done`) with a pluggable, batchable, cost-aware Grok/xAI
+backend so the language-leverage experiment is runnable from a WSL host (or any box with a key).
+- **Three backends, never-silent.** Live **OpenAI-compatible REST** (`https://api.x.ai/v1`, key from
+  `XAI_API_KEY`/`GROK_API_KEY`), native **`xai_sdk` batch** (`Client().batch.create(...)` for lower
+  cost), and the pre-existing local **llama-server** (RTX-5080/WSL) — selectable per run. A missing key
+  / bad config / unexpected SDK shape is an explicit error (G2), never a guess.
+- **Configurable, ordered multi-model runs** (`models.toml`): the 5 Grok models run **cheapest→priciest**
+  (`grok-build-0.1` $1.00/$2.00 → `grok-4.3` → the `grok-4.20-0309-*` variants $1.25/$2.50), with
+  per-model RPM/TPM-aware pacing + backoff. Captures the KC-2/SC-5b quality measures (syntactic validity,
+  type-check pass via `myc-check`, edit-to-fix iterations) **plus** tokens, latency, and computed USD;
+  emits a per-model JSON + a cross-model comparison markdown.
+- **M-381 ablation wired** (`research/11` T11.7 retention-ratio) — runnable mode; arms 3/4/5 are reported
+  **blocked on M-380** (never fabricated), the verdict INDETERMINATE until they land.
+- **Honesty floor.** No API key exists in CI, so the **live quality/cost/retention numbers are a
+  USER-EXECUTED step** (Declared / pending-run). Plumbing is **Empirical** — an offline `--self-test`
+  (mocked client) is green 13/13 (model ordering, RPM/TPM pacing, batch-vs-live cost accounting, scoring,
+  report emission); the one committed sample report is stamped `SYNTHETIC (self-test)`. Batch prices are
+  `Declared` placeholders (default to sync) pending the published batch-pricing doc. Live `--mode live`
+  vs `--mode batch` documented for WSL.
+
 ### Changed (2026-06-20: Phase 5 — L1 DRY (E4-1) + stdlib error unification (E5-1))
 Two behaviour-preserving Phase-5 refactors (existing tests stay green; no guarantee/semantic change, VR-5).
 - **E4-1 — L1 front-end DRY + ergonomics (M-640/641/642).** Parser: `comma_separated`/`expect_keyword`

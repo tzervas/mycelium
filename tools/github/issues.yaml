@@ -518,7 +518,7 @@ issues:
   - id: M-381
     title: "M-381 — LLM-leverage validation (T3.6 retention-ratio ablation) — isolated, non-blocking"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:research, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:3, type:research, area:toolchain, priority:P3, status:in-progress]
     depends_on: [M-380, M-002]
     doc_refs: [corpus:RFC-0021, corpus:RFC-0006, src:tools/llm-harness/coauthor.py]
     body: |
