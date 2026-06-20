@@ -1,0 +1,60 @@
+# release-plz configuration — Mycelium (M-384; implements ADR-018).
+#
+# POLICY (ADR-018 + CLAUDE.md "Remote CI policy"):
+#   * SOURCE-ONLY in the design phase — NOTHING is published to crates.io. Every setting that could
+#     publish, tag, or open a release PR is disabled here, so even an accidental non-dry-run invocation
+#     mutates nothing. The release workflow (.github/workflows/release.yml) runs `release-plz` in
+#     DRY-RUN, manual-dispatch-only, advisory mode; this file is the second, defense-in-depth guard.
+#   * PER-CRATE 0.x SemVer — release-plz is per-package by nature (each crate gets its own version +
+#     changelog from its own Conventional-Commit history); ADR-018 chooses that over a workspace-wide
+#     number. No `[workspace] version` coupling is set.
+#
+# The intent is a *preview*: derive the per-crate version bumps + changelog fragments from the
+# squash-only, Conventional-Commit history, and show them — publish/tag/PR nothing.
+
+[workspace]
+# --- Source-only: no registry publish, no GitHub release, no tag, no release PR. ---
+# Do not `cargo publish` (the crates also carry `publish = false` in their manifests — belt and braces).
+publish = false
+# Do not create GitHub Releases (no public release artifact during the design phase).
+git_release_enable = false
+# Do not push git tags (a release cut is a deliberate manual act per ADR-018 §3, not tooling-driven).
+git_tag_enable = false
+# Do not open an automated "release" PR (the dry-run only previews; humans cut releases).
+release_pr = false
+# Keep `release-plz update` from auto-bumping inter-crate path-dep version requirements on a dry-run.
+dependencies_update = false
+# Allow unpublished (registry-absent) crates: with publish=false the registry is never queried, but
+# this makes the source-only stance explicit for the workspace's `publish = false` members.
+publish_allow_dirty = false
+
+# --- Changelog (Keep a Changelog 1.1.0; matches CHANGELOG.md). ---
+# release-plz computes the changelog from Conventional Commits; the dry-run prints the fragment it
+# *would* add. We keep its own file writing on so the preview shows a real diff, but no commit/PR/tag
+# results from a dry-run.
+changelog_update = true
+
+# Per-package overrides: none needed in the design phase — every crate follows the workspace defaults
+# above (per-crate 0.x, source-only). When a specific crate is first cut for release (ADR-018 §3), add
+# a `[[package]]` block here for it rather than flipping the workspace defaults.
+
+[changelog]
+# Conventional-Commit → changelog section mapping (Keep a Changelog headings). Mirrors how CHANGELOG.md
+# is already grouped (Added / Changed / Fixed …) so the preview reads consistently with the hand-kept
+# log. `feat` ⇒ minor-axis bump, `fix` ⇒ patch-axis, a `!`/`BREAKING CHANGE` ⇒ the 0.y breaking axis
+# (ADR-018 §3) — release-plz derives the bump from these commit types.
+commit_parsers = [
+    { message = "^feat", group = "Added" },
+    { message = "^fix", group = "Fixed" },
+    { message = "^docs", group = "Documentation" },
+    { message = "^perf", group = "Changed" },
+    { message = "^refactor", group = "Changed" },
+    { message = "^chore", group = "Changed" },
+    { message = "^test", group = "Changed" },
+    { message = "^ci", group = "Changed" },
+    { message = "^build", group = "Changed" },
+    # A breaking change (Conventional `!` or a BREAKING CHANGE footer) drives the 0.y axis.
+    { message = "^.*!:", group = "Changed" },
+]
+# Skip the squash/merge/WIP noise the squash-only policy already curates away on `main`.
+protect_breaking_commits = true

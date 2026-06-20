@@ -16,6 +16,9 @@ workspace = true
 # No new external dependency (the workspace keeps its deps few/vetted; a new one is an ADR).
 mycelium-l1 = { path = "../mycelium-l1" }
 mycelium-proj = { path = "../mycelium-proj" }
+# M-643: the shared CLI substrate (stdin-or-file `read_source`). In-workspace path dep, std-only —
+# no new external crate enters the tree (KC-3).
+mycelium-cli-common = { path = "../mycelium-cli-common" }
 
 [[bin]]
 name = "mycfmt"

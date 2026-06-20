@@ -15,6 +15,7 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
+use mycelium_cli_common::Args;
 use mycelium_sec::{audit_wild, collect_myc, explain_wild, Severity, WildAudit};
 
 /// The status of an orchestrated (shell-script) family — the honest three-way (never just ok/fail).
@@ -42,10 +43,10 @@ fn main() -> ExitCode {
     let mut do_secrets = true;
     let mut do_supply = true;
 
-    let mut args = std::env::args().skip(1);
+    let mut args = Args::from_env();
     while let Some(a) = args.next() {
         match a.as_str() {
-            "--project" => match args.next() {
+            "--project" => match args.value() {
                 Some(p) => dir = PathBuf::from(p),
                 None => return usage(),
             },

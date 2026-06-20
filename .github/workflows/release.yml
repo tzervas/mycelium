@@ -1,0 +1,77 @@
+# release-plz DRY-RUN preview, run on demand only (M-384; implements ADR-018).
+#
+# POLICY (see CLAUDE.md "Remote CI policy" + ADR-018): no automatic remote CI, and SOURCE-ONLY in the
+# design phase. This workflow triggers ONLY via manual dispatch (no push / pull_request auto-triggers)
+# to avoid surprise Actions cost, and it is ADVISORY (the preview step is non-blocking — it informs,
+# it never gates). It runs `release-plz` in DRY-RUN: it PREVIEWS the per-crate version bumps + the
+# changelog fragments derived from the squash-only Conventional-Commit history, and PUBLISHES NOTHING
+# — no crates.io publish, no GitHub Release, no git tag, no release PR. release-plz.toml is the
+# config-level second guard (publish=false, git_release_enable=false, git_tag_enable=false,
+# release_pr=false), so even a misfired non-dry-run invocation would mutate nothing.
+#
+# A *real* release is a deliberate, gated, manual act (ADR-018 §3/§4) — turning on publishing is its
+# own superseding decision, never a silent edit here.
+name: release (manual, dry-run, advisory)
+
+# B1-01 (target posture, mirrors checks.yml): the `uses:` actions below are pinned to mutable major
+# tags (@v4, @v0.5, …), not 40-char commit SHAs. Full-SHA pinning is the intended hardening target;
+# the SHAs were not resolvable in the offline authoring environment, so Dependabot
+# (.github/dependabot.yml, `github-actions` ecosystem) surfaces action updates and — once SHA-pinned —
+# keeps those pins current. Resolve each `uses:` to its SHA when network access is available.
+
+on:
+  workflow_dispatch:
+    inputs:
+      verbose:
+        description: "Verbose release-plz output (the preview is always dry-run regardless)"
+        type: boolean
+        default: false
+
+# Read-only token: a dry-run needs no write scope. This guarantees the run cannot publish/tag/release
+# even if a step were misconfigured — the policy is enforced by the token, not just by flags.
+permissions:
+  contents: read
+
+jobs:
+  release-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history — release-plz needs the commit range since the last tag)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Rust (pinned to MSRV via rust-toolchain.toml — M-091)
+        run: rustup show
+
+      # The official release-plz action, invoked in DRY-RUN. `release-pr` computes the per-crate bumps
+      # + changelog and, with `--dry-run`, prints them WITHOUT opening a PR, tagging, or publishing.
+      # The job is advisory (continue-on-error) so a preview hiccup never gates anything.
+      - name: release-plz dry-run preview (advisory)
+        id: preview
+        continue-on-error: true
+        uses: release-plz/action@v0.5
+        with:
+          command: release-pr
+          # Defense in depth: dry-run on top of the publish/tag/PR-disabled release-plz.toml.
+          args: ${{ inputs.verbose && '--dry-run --verbose' || '--dry-run' }}
+        env:
+          # Intentionally NO CARGO_REGISTRY_TOKEN: source-only (ADR-018) — there is no registry to
+          # publish to, and a dry-run does not need one. GITHUB_TOKEN is the default read-only token.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## release-plz dry-run (advisory, source-only)"
+            echo ""
+            echo "This is a **preview only** — nothing was published, tagged, or PR'd (ADR-018)."
+            if [ "${{ steps.preview.outcome }}" = "success" ]; then
+              echo "Preview computed. See the **release-plz dry-run preview** step log for the per-crate bumps + changelog."
+            else
+              echo "⚠️ The preview step reported an issue (advisory). See the step log."
+            fi
+            echo ""
+            echo "A real release is a deliberate, gated manual act (ADR-018 §3/§4); enabling crates.io publishing is its own superseding decision."
+          } >> "$GITHUB_STEP_SUMMARY"
