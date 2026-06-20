@@ -4,7 +4,7 @@
 |---|---|
 | **ADR** | 020 |
 | **Title** | `runtime`/`colony` module placement: a dedicated `runtime` phylum with a thin `std.runtime` facade, construct-by-construct activation at the Phase-7 gate; v0 API surface for the landed R1 slice (`Scope`/`Colony`/`Network`) |
-| **Status** | **Proposed** (2026-06-20) |
+| **Status** | **Accepted** (2026-06-20) |
 | **Date** | 2026-06-20 |
 | **Depends on** | RFC-0008 (Runtime & Concurrency Execution Model — RT1–RT7, §4.3/§4.5/§4.6/§4.7); RFC-0016 §4.3 (`runtime`/`colony` Tier-A module, M-521) + §4.2 (ring layering, KC-3) + §8-Q4 (phylum placement deferred); DN-06 (static `phylum`/`nodule`/`colony` lexicon); RFC-0001 (guarantee lattice); ADR-013 (`spore` — the deployable unit); ADR-014 (`wild`/unsafe policy); ADR-003 (content-addressing); ADR-007 (Rust-first toolchain) |
 | **Resolves** | RFC-0016 §8-Q4 (the deferred `runtime`/`colony` phylum-placement question) |
