@@ -138,33 +138,144 @@ def _parse_line(line: str, crate_name: str) -> Optional[dict]:
 # Source file search
 # ---------------------------------------------------------------------------
 def _crate_src_dirs(repo_root: Path, crate_name: str) -> list[Path]:
-    """Return candidate src dirs for a crate name."""
-    # Normalise: cargo-public-api uses _ but directories use -
+    """Return the **unique** existing src dir(s) for a crate name.
+
+    Deduped by resolved path: when `normalised == crate_name` (no `_`/`-` difference)
+    the two candidates collapse to one dir — searching it twice would make every
+    symbol look doubly-defined (a false ambiguity). `xtask/src` is only a candidate
+    for the `xtask` crate itself, not every crate (accuracy: a non-xtask symbol must
+    not resolve into xtask).
+    """
+    # Normalise: cargo-public-api uses _ but directories use -.
     normalised = crate_name.replace("_", "-")
     candidates = [
         repo_root / "crates" / normalised / "src",
         repo_root / "crates" / crate_name / "src",
-        repo_root / "xtask" / "src",
     ]
-    return [p for p in candidates if p.is_dir()]
+    if crate_name in ("xtask", "mycelium-xtask", "mycelium_xtask"):
+        candidates.append(repo_root / "xtask" / "src")
+    seen: set[Path] = set()
+    out: list[Path] = []
+    for p in candidates:
+        if not p.is_dir():
+            continue
+        resolved = p.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        out.append(p)
+    return out
+
+
+def _file_module_path(rs_file: Path, src_dir: Path) -> str:
+    """The within-crate module path implied by a file's location under `src_dir`.
+
+    Honors both Rust module-file conventions: `src/lib.rs` / `src/main.rs` and any
+    `…/mod.rs` map to their *containing* module; a plain `foo.rs` adds `foo`. So
+    `src/lib.rs` → ''; `src/llvm.rs` → 'llvm'; `src/dialect/native.rs` →
+    'dialect::native'; `src/dialect/mod.rs` → 'dialect'. Matched against a symbol's
+    (crate-prefix-stripped) module path to attribute it to the right file even when
+    the same short name is defined in several modules.
+    """
+    try:
+        rel = rs_file.relative_to(src_dir)
+    except ValueError:
+        return ""
+    parts = list(rel.parts)
+    if not parts:
+        return ""
+    stem = parts[-1]
+    if stem in ("lib.rs", "main.rs", "mod.rs"):
+        segs = list(parts[:-1])
+    else:
+        segs = list(parts[:-1]) + [stem[:-3] if stem.endswith(".rs") else stem]
+    return "::".join(segs)
+
+
+def _strip_crate_prefix(module: str, crate_name: str) -> str:
+    """Drop the leading crate segment from a qualified module path — the qualified
+    symbol path carries it (`mycelium_mlir::llvm`) but file paths don't (`llvm`)."""
+    crate_us = crate_name.replace("-", "_")
+    if crate_us and (module == crate_us or module.startswith(crate_us + "::")):
+        return module[len(crate_us) :].lstrip(":")
+    return module
+
+
+def _module_for_file(sym_mod: str) -> str:
+    """The *module* whose file holds a symbol's definition, for file matching.
+
+    Drops trailing type/trait segments (Rust convention: modules are `snake_case`,
+    types/traits are `PascalCase`; a method/assoc-fn lives in an `impl Type` block
+    inside its module's file, not a file named after the type). `node::Node` → `node`
+    (so `Node::content_hash` resolves to `node.rs`); `llvm` → `llvm`; `Foo` → ''.
+    """
+    segs = sym_mod.split("::") if sym_mod else []
+    while segs and segs[-1][:1].isupper():
+        segs.pop()
+    return "::".join(segs)
+
+
+def _disambiguate_by_module(
+    matches: list[tuple[str, int, Optional[str], str]], sym_mod: str
+) -> Optional[tuple[str, int, Optional[str]]]:
+    """Pick the definition whose file-module matches the symbol's module.
+
+    Accurate + robust (no brittle brace parsing): prefer an **exact** file-module
+    match (the file-per-module case); else the **longest strict-ancestor** file-module
+    (the inline-`mod` case, where the remaining segments are inline modules in that
+    file). Returns the chosen (file, line, summary) only when it is *unambiguous* —
+    a tie (or no module signal) returns None so the caller flags it (G2: never a
+    silent mis-attribution; source stays ground truth).
+    """
+    exact = [m for m in matches if m[3] == sym_mod]
+    if len(exact) == 1:
+        return exact[0][:3]
+    if exact:
+        return None  # several defs in the same module → genuinely ambiguous
+
+    # Inline-module fallback: a non-root file-module that is a strict ancestor of the
+    # symbol's module (its remaining segments are inline `mod`s inside that file).
+    ancestors = sorted(
+        (
+            m
+            for m in matches
+            if m[3] and (sym_mod == m[3] or sym_mod.startswith(m[3] + "::"))
+        ),
+        key=lambda m: len(m[3]),
+        reverse=True,
+    )
+    if ancestors and (
+        len(ancestors) == 1 or len(ancestors[0][3]) > len(ancestors[1][3])
+    ):
+        return ancestors[0][:3]
+    return None
 
 
 def _find_definition(
-    src_dirs: list[Path], kind: str, short_name: str
-) -> Optional[tuple[str, int, Optional[str]]]:
+    src_dirs: list[Path],
+    kind: str,
+    short_name: str,
+    module: str = "",
+    crate_name: str = "",
+) -> Optional[tuple[str, int, Optional[str], bool]]:
     """Search .rs files in src_dirs for the definition of `short_name`.
 
-    Returns (relative_file_path, 1-based_line_no, summary) or None.
-    The relative_file_path is relative to the repository root (passed via src_dirs).
+    Returns (file_path, 1-based_line_no, summary, ambiguous) or None. When the short
+    name is defined in more than one file, the symbol's `module` disambiguates (prefer
+    the file whose path matches the module, after stripping the leading crate segment —
+    `mycelium_mlir::llvm` → `llvm.rs`). If it still cannot be disambiguated, the first
+    match is returned with `ambiguous=True` so the caller flags it (never a silent
+    mis-attribution — G2; source stays ground truth).
     """
     if kind == "use":
         return None  # Re-exports: cannot reliably locate without type resolution
 
     pattern = _def_re(kind, short_name)
 
+    # All definitions of `short_name`, each tagged with its file's module path.
+    matches: list[tuple[str, int, Optional[str], str]] = []
     for src_dir in src_dirs:
-        rs_files = sorted(src_dir.rglob("*.rs"))
-        for rs_file in rs_files:
+        for rs_file in sorted(src_dir.rglob("*.rs")):
             try:
                 text = rs_file.read_text(encoding="utf-8", errors="replace")
             except OSError:
@@ -172,10 +283,32 @@ def _find_definition(
             lines = text.splitlines()
             for i, src_line in enumerate(lines):
                 if pattern.search(src_line):
-                    line_no = i + 1  # 1-based
-                    summary = _extract_summary(lines, i)
-                    return (str(rs_file), line_no, summary)
-    return None
+                    matches.append(
+                        (
+                            str(rs_file),
+                            i + 1,
+                            _extract_summary(lines, i),
+                            _file_module_path(rs_file, src_dir),
+                        )
+                    )
+                    break  # first definition per file
+
+    if not matches:
+        return None
+    if len(matches) == 1:
+        f, ln, summ, _ = matches[0]
+        return (f, ln, summ, False)
+
+    # Several files define `short_name` → attribute by module (accurate + robust).
+    sym_mod = _module_for_file(_strip_crate_prefix(module, crate_name))
+    chosen = _disambiguate_by_module(matches, sym_mod)
+    if chosen is not None:
+        f, ln, summ = chosen
+        return (f, ln, summ, False)
+
+    # Genuinely ambiguous → best-effort first match, flagged (never silently wrong, G2).
+    f, ln, summ, _ = matches[0]
+    return (f, ln, summ, True)
 
 
 def _extract_summary(lines: list[str], def_line_idx: int) -> Optional[str]:
@@ -275,7 +408,9 @@ def build_index(repo_root: Path) -> tuple[list[dict], list[dict]]:
                 )
                 continue
 
-            result = _find_definition(src_dirs, kind, short_name)
+            result = _find_definition(
+                src_dirs, kind, short_name, parsed["module"], crate_name
+            )
             if result is None:
                 flagged.append(
                     {
@@ -289,7 +424,7 @@ def build_index(repo_root: Path) -> tuple[list[dict], list[dict]]:
                 )
                 continue
 
-            abs_file, line_no, summary = result
+            abs_file, line_no, summary, ambiguous = result
             # Make path relative to repo_root
             try:
                 rel_file = str(Path(abs_file).relative_to(repo_root))
@@ -308,6 +443,19 @@ def build_index(repo_root: Path) -> tuple[list[dict], list[dict]]:
                 "corpus_refs": [],
             }
             items.append(item)
+            if ambiguous:
+                # Located, but the short name is defined in several modules and the
+                # symbol's module path didn't disambiguate — never silently trust it (G2).
+                flagged.append(
+                    {
+                        "symbol": symbol,
+                        "reason": (
+                            f"ambiguous: short name {short_name!r} is defined in multiple "
+                            f"modules; attributed to {rel_file} by heuristic — verify "
+                            "against source (ground truth)"
+                        ),
+                    }
+                )
 
     # Stable key order: sort by (crate, symbol)
     items.sort(key=lambda x: (x["crate"], x["symbol"]))
@@ -445,6 +593,56 @@ def self_test(repo_root: Path, output_dir: Path) -> int:
         if len(missing) > 20:
             print(f"        … and {len(missing) - 20} more")
         failures.append("completeness")
+
+    # --- Module-aware attribution: a short name defined in several modules resolves
+    #     by the symbol's module; only genuinely-undecidable cases are ambiguous (G2). ---
+    def _case(name: str, got: object, want: object) -> None:
+        if got != want:
+            print(f"  FAIL  attribution {name}: got {got!r}, want {want!r}")
+            failures.append(f"attribution:{name}")
+
+    sd = Path("/c/src")
+    _case("file_mod/lib", _file_module_path(sd / "lib.rs", sd), "")
+    _case("file_mod/leaf", _file_module_path(sd / "llvm.rs", sd), "llvm")
+    _case(
+        "file_mod/nested",
+        _file_module_path(sd / "dialect" / "native.rs", sd),
+        "dialect::native",
+    )
+    _case(
+        "file_mod/mod.rs", _file_module_path(sd / "dialect" / "mod.rs", sd), "dialect"
+    )
+    _case(
+        "strip_crate",
+        _strip_crate_prefix("mycelium_mlir::llvm", "mycelium-mlir"),
+        "llvm",
+    )
+    _case("mod_for_file/type", _module_for_file("node::Node"), "node")
+    _case("mod_for_file/fn", _module_for_file("llvm"), "llvm")
+    _case("mod_for_file/bare_type", _module_for_file("Foo"), "")
+    # `compile` defined in both llvm and dialect::native → module decides; root is ambiguous.
+    twin = [
+        ("/c/src/dialect/native.rs", 694, None, "dialect::native"),
+        ("/c/src/llvm.rs", 2450, None, "llvm"),
+    ]
+    _case(
+        "disambig/llvm",
+        _disambiguate_by_module(twin, "llvm"),
+        ("/c/src/llvm.rs", 2450, None),
+    )
+    _case(
+        "disambig/native",
+        _disambiguate_by_module(twin, "dialect::native"),
+        ("/c/src/dialect/native.rs", 694, None),
+    )
+    _case("disambig/root_ambiguous", _disambiguate_by_module(twin, ""), None)
+    _case(
+        "disambig/inline_ancestor",
+        _disambiguate_by_module([("/c/src/llvm.rs", 10, None, "llvm")], "llvm::inner"),
+        ("/c/src/llvm.rs", 10, None),
+    )
+    if not any(f.startswith("attribution:") for f in failures):
+        print("  PASS  attribution: module-aware symbol resolution (12 cases)")
 
     if failures:
         print(f"FAIL — {len(failures)} check(s) failed: {', '.join(failures)}")

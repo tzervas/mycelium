@@ -41,6 +41,18 @@ trusted base; MLIR is a differential-tested perf-path increment, never a black b
   (both feature configs, `-A unsafe_code` per ADR-014) clean; full `just check` green. Also scaffolds
   the empty `mycelium-cli-common` crate (workspace infra the Phase-8 release-mechanics work populates).
 
+### Changed (2026-06-20: api-index generator — module-aware symbol attribution, PR #259 review)
+Hardened `tools/docgen/code_index.py` so a short name defined in several modules (e.g. `compile` in
+both `mycelium_mlir::llvm` and `::dialect::native`) resolves to the **right file** instead of the
+first alphabetically: each candidate definition is tagged with its file's module path and matched
+against the symbol's (crate-prefix-stripped, trailing-type-segment-stripped) module — **exact** match
+first, then a **longest-ancestor** fallback for inline `mod`s. Genuinely-undecidable cases (root
+re-exports; a method whose `impl` lives in a different file) are attributed best-effort **and flagged**
+(`ambiguous: …`), never silently mis-attributed (G2; source stays ground truth). Also fixed a
+duplicate-`src`-dir bug that made every symbol in a dash-named crate look doubly-defined (3416→3424
+flagged is now honest, was inflating to 6013). New offline `--self-test` attribution cases (12) gate
+it via `scripts/checks/doc-index.sh`. Resolves the Copilot PR #259 api-index review notes.
+
 ### Added (2026-06-20: M-397 — `gh-issues-sync` bounded-concurrency, rate-negotiated, batched execution)
 Sped up the live reconcile by overlapping the many small, independent `gh` mutations per run while
 staying inside GitHub's secondary-rate limits — never-silent (G2), fault-tolerant, and a clean N=1

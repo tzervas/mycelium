@@ -24,3 +24,12 @@ else
   fail "docs/api-index/ is stale — run 'just docs-index' and commit the result"
   exit 1
 fi
+
+# Generator logic gate: determinism + completeness + module-aware attribution (offline).
+if python3 tools/docgen/code_index.py --self-test >/dev/null 2>&1; then
+  ok "code_index self-test (determinism · completeness · module attribution)"
+else
+  python3 tools/docgen/code_index.py --self-test || true
+  fail "code_index self-test failed"
+  exit 1
+fi
