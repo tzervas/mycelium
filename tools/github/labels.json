@@ -35,6 +35,7 @@
   { "name": "priority:P3", "color": "BFDADC", "description": "Low priority / anticipated / out-of-gate" },
   { "name": "status:blocked", "color": "E99695", "description": "Blocked by a dependency" },
   { "name": "status:needs-design", "color": "F9D0C4", "description": "Needs design before implementation" },
+  { "name": "status:in-progress", "color": "FBCA04", "description": "Implementation underway (not yet complete/verified)" },
   { "name": "status:done", "color": "0E8A16", "description": "Completed and verified" },
   { "name": "good-first-issue", "color": "7057FF", "description": "Good entry point" }
 ]
