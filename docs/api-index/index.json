@@ -1327,7 +1327,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 51,
+      "line": 60,
       "summary": "The aggregated result of checking a set of sources.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1338,7 +1338,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check::Report",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 67,
+      "line": 91,
       "summary": "The CI exit code: 2 if any parse error, else 3 if any check error, else 0.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1349,7 +1349,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check::Report",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 61,
+      "line": 85,
       "summary": "Whether the report is clean (no findings).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1360,7 +1360,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 80,
+      "line": 104,
       "summary": "A project-resolution failure — no/ambiguous input (no sources, an unreadable file).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1371,7 +1371,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 153,
+      "line": 189,
       "summary": "Resolve and check a whole project: every `.myc` under `dir`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1382,7 +1382,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 92,
+      "line": 116,
       "summary": "Check one source, appending any finding.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1393,7 +1393,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 134,
+      "line": 170,
       "summary": "Check an explicit set of `(path, contents)` sources, aggregating findings deterministically.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4946,7 +4946,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 140,
+      "line": 144,
       "summary": "A stable diagnostic code / error class (RFC-0013 §4.2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4957,7 +4957,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Code",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 123,
+      "line": 127,
       "summary": "The canonical name used in human/machine output.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4968,7 +4968,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 212,
+      "line": 216,
       "summary": "A structured diagnostic record (RFC-0013 §4.1): a content-addressable value over an",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4979,7 +4979,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 270,
+      "line": 274,
       "summary": "Attach a source locus (explicit; absence stays `None` — never a fabricated zero, G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4990,7 +4990,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 299,
+      "line": 303,
       "summary": "The diagnostic code / error class.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5001,7 +5001,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 314,
+      "line": 318,
       "summary": "The **content address** of this diagnostic (RFC-0013 §4.3; ADR-003) — a deterministic BLAKE3",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5012,7 +5012,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 232,
+      "line": 236,
       "summary": "Build an `Error`-severity diagnostic with the given code (total builder).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5023,7 +5023,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 447,
+      "line": 451,
       "summary": "Recover a `Diag` from its machine JSON projection (I3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5034,7 +5034,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 371,
+      "line": 375,
       "summary": "The **human projection** (G11 / RFC-0013 I3): a human-readable string.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5045,7 +5045,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 244,
+      "line": 248,
       "summary": "Build an `Info`-severity diagnostic with the given code (total builder).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5056,7 +5056,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 425,
+      "line": 429,
       "summary": "The **machine projection** (G11 / RFC-0013 I3): a lossless JSON record with the content `id`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5067,7 +5067,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 263,
+      "line": 267,
       "summary": "Set the human-readable message (value-semantic builder).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5078,7 +5078,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 277,
+      "line": 281,
       "summary": "Attach a note (EXPLAIN payload).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5089,7 +5089,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 293,
+      "line": 297,
       "summary": "The typed severity (a `Warn` never silently becomes a pass — I1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5100,7 +5100,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 284,
+      "line": 288,
       "summary": "Replace the trace (value-semantic builder).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5111,7 +5111,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 238,
+      "line": 242,
       "summary": "Build a `Warn`-severity diagnostic with the given code (total builder).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5122,7 +5122,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 250,
+      "line": 254,
       "summary": "The common total builder behind [`Self::error`]/[`Self::warn`]/[`Self::info`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5133,7 +5133,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 170,
+      "line": 174,
       "summary": "A source locus — *where* a diagnostic points (RFC-0013 §4.2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5144,7 +5144,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 101,
+      "line": 105,
       "summary": "Graded diagnostic severity (RFC-0013 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5155,7 +5155,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Severity",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 114,
+      "line": 118,
       "summary": "All severities, ordered weakest-to-strongest (`Debug < Info < Warn < Error`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5166,7 +5166,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Severity",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 123,
+      "line": 127,
       "summary": "The canonical name used in human/machine output.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5177,7 +5177,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 184,
+      "line": 188,
       "summary": "An ordered diagnostic trace — the chain of frames/notes that led to the failure (RFC-0013 §4.3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5188,7 +5188,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Trace",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 192,
+      "line": 196,
       "summary": "The empty trace (explicit absence — not a fabricated frame).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5199,7 +5199,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Trace",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 198,
+      "line": 202,
       "summary": "Push a frame, returning the extended trace (value-semantic).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6277,7 +6277,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 48,
+      "line": 69,
       "summary": "A formatting refusal — never a partial rewrite (G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6288,7 +6288,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt::FmtError",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 60,
+      "line": 81,
       "summary": "The CLI exit code for this refusal (contract §5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6299,7 +6299,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 37,
+      "line": 41,
       "summary": "A successful format result.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6321,7 +6321,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 90,
+      "line": 111,
       "summary": "Format `src` into its canonical form.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8400,7 +8400,7 @@
       "crate": "mycelium-lint",
       "module": "mycelium_lint",
       "file": "crates/mycelium-lint/src/lib.rs",
-      "line": 52,
+      "line": 56,
       "summary": "A reified fix offer for a finding.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8411,7 +8411,7 @@
       "crate": "mycelium-lint",
       "module": "mycelium_lint",
       "file": "crates/mycelium-lint/src/lib.rs",
-      "line": 29,
+      "line": 33,
       "summary": "How a fix may be applied — the opt-in boundary (the crux).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8422,7 +8422,7 @@
       "crate": "mycelium-lint",
       "module": "mycelium_lint::FixTier",
       "file": "crates/mycelium-lint/src/lib.rs",
-      "line": 41,
+      "line": 45,
       "summary": "The canonical label.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8433,7 +8433,7 @@
       "crate": "mycelium-lint",
       "module": "mycelium_lint",
       "file": "crates/mycelium-lint/src/lib.rs",
-      "line": 63,
+      "line": 79,
       "summary": "One lint finding with its (optional) reified fix.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8444,7 +8444,7 @@
       "crate": "mycelium-lint",
       "module": "mycelium_lint",
       "file": "crates/mycelium-lint/src/lib.rs",
-      "line": 80,
+      "line": 105,
       "summary": "The aggregated lint result.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8455,7 +8455,7 @@
       "crate": "mycelium-lint",
       "module": "mycelium_lint::LintReport",
       "file": "crates/mycelium-lint/src/lib.rs",
-      "line": 90,
+      "line": 130,
       "summary": "Whether any finding is an error-severity house-rule violation.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8466,7 +8466,7 @@
       "crate": "mycelium-lint",
       "module": "mycelium_lint::LintReport",
       "file": "crates/mycelium-lint/src/lib.rs",
-      "line": 96,
+      "line": 136,
       "summary": "Counts by tier: (apply, suggest, scaffold).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8477,7 +8477,7 @@
       "crate": "mycelium-lint",
       "module": "mycelium_lint",
       "file": "crates/mycelium-lint/src/lib.rs",
-      "line": 190,
+      "line": 230,
       "summary": "The status line for the §4.1 doc lint — now **active** (it runs over the M-363 doc-IR via `myc-doc`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8488,7 +8488,7 @@
       "crate": "mycelium-lint",
       "module": "mycelium_lint",
       "file": "crates/mycelium-lint/src/lib.rs",
-      "line": 201,
+      "line": 241,
       "summary": "Lint one source, appending findings.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8499,7 +8499,7 @@
       "crate": "mycelium-lint",
       "module": "mycelium_lint",
       "file": "crates/mycelium-lint/src/lib.rs",
-      "line": 237,
+      "line": 277,
       "summary": "Lint an explicit set of `(file, contents)` sources, deterministically.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8510,7 +8510,7 @@
       "crate": "mycelium-lint",
       "module": "mycelium_lint",
       "file": "crates/mycelium-lint/src/lib.rs",
-      "line": 163,
+      "line": 203,
       "summary": "Generate an RFC-0014 **recovery scaffold** for an error `class` under a named, bounded [`RecoveryProfile`]",
       "guarantee_tag": null,
       "corpus_refs": []

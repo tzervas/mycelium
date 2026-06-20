@@ -137,13 +137,13 @@
 |---|---|---|---|
 | `mycelium_check::Finding` | struct | `crates/mycelium-check/src/lib.rs:34` | One aggregated diagnostic. |
 | `mycelium_check::FindingKind` | enum | `crates/mycelium-check/src/lib.rs:25` | What kind of refusal a finding records. |
-| `mycelium_check::Report` | struct | `crates/mycelium-check/src/lib.rs:51` | The aggregated result of checking a set of sources. |
-| `mycelium_check::Report::exit_code` | fn | `crates/mycelium-check/src/lib.rs:67` | The CI exit code: 2 if any parse error, else 3 if any check error, else 0. |
-| `mycelium_check::Report::is_ok` | fn | `crates/mycelium-check/src/lib.rs:61` | Whether the report is clean (no findings). |
-| `mycelium_check::ResolveError` | struct | `crates/mycelium-check/src/lib.rs:80` | A project-resolution failure — no/ambiguous input (no sources, an unreadable file). |
-| `mycelium_check::check_project` | fn | `crates/mycelium-check/src/lib.rs:153` | Resolve and check a whole project: every `.myc` under `dir`. |
-| `mycelium_check::check_source` | fn | `crates/mycelium-check/src/lib.rs:92` | Check one source, appending any finding. |
-| `mycelium_check::check_sources` | fn | `crates/mycelium-check/src/lib.rs:134` | Check an explicit set of `(path, contents)` sources, aggregating findings deterministically. |
+| `mycelium_check::Report` | struct | `crates/mycelium-check/src/lib.rs:60` | The aggregated result of checking a set of sources. |
+| `mycelium_check::Report::exit_code` | fn | `crates/mycelium-check/src/lib.rs:91` | The CI exit code: 2 if any parse error, else 3 if any check error, else 0. |
+| `mycelium_check::Report::is_ok` | fn | `crates/mycelium-check/src/lib.rs:85` | Whether the report is clean (no findings). |
+| `mycelium_check::ResolveError` | struct | `crates/mycelium-check/src/lib.rs:104` | A project-resolution failure — no/ambiguous input (no sources, an unreadable file). |
+| `mycelium_check::check_project` | fn | `crates/mycelium-check/src/lib.rs:189` | Resolve and check a whole project: every `.myc` under `dir`. |
+| `mycelium_check::check_source` | fn | `crates/mycelium-check/src/lib.rs:116` | Check one source, appending any finding. |
+| `mycelium_check::check_sources` | fn | `crates/mycelium-check/src/lib.rs:170` | Check an explicit set of `(path, contents)` sources, aggregating findings deterministically. |
 
 ## mycelium-core
 
@@ -481,30 +481,30 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_diag::Code` | enum | `crates/mycelium-diag/src/lib.rs:140` | A stable diagnostic code / error class (RFC-0013 §4.2). |
-| `mycelium_diag::Code::as_str` | fn | `crates/mycelium-diag/src/lib.rs:123` | The canonical name used in human/machine output. |
-| `mycelium_diag::Diag` | struct | `crates/mycelium-diag/src/lib.rs:212` | A structured diagnostic record (RFC-0013 §4.1): a content-addressable value over an |
-| `mycelium_diag::Diag::at` | fn | `crates/mycelium-diag/src/lib.rs:270` | Attach a source locus (explicit; absence stays `None` — never a fabricated zero, G2). |
-| `mycelium_diag::Diag::code` | fn | `crates/mycelium-diag/src/lib.rs:299` | The diagnostic code / error class. |
-| `mycelium_diag::Diag::content_hash` | fn | `crates/mycelium-diag/src/lib.rs:314` | The **content address** of this diagnostic (RFC-0013 §4.3; ADR-003) — a deterministic BLAKE3 |
-| `mycelium_diag::Diag::error` | fn | `crates/mycelium-diag/src/lib.rs:232` | Build an `Error`-severity diagnostic with the given code (total builder). |
-| `mycelium_diag::Diag::from_json` | fn | `crates/mycelium-diag/src/lib.rs:447` | Recover a `Diag` from its machine JSON projection (I3). |
-| `mycelium_diag::Diag::human` | fn | `crates/mycelium-diag/src/lib.rs:371` | The **human projection** (G11 / RFC-0013 I3): a human-readable string. |
-| `mycelium_diag::Diag::info` | fn | `crates/mycelium-diag/src/lib.rs:244` | Build an `Info`-severity diagnostic with the given code (total builder). |
-| `mycelium_diag::Diag::machine` | fn | `crates/mycelium-diag/src/lib.rs:425` | The **machine projection** (G11 / RFC-0013 I3): a lossless JSON record with the content `id` |
-| `mycelium_diag::Diag::message` | fn | `crates/mycelium-diag/src/lib.rs:263` | Set the human-readable message (value-semantic builder). |
-| `mycelium_diag::Diag::note` | fn | `crates/mycelium-diag/src/lib.rs:277` | Attach a note (EXPLAIN payload). |
-| `mycelium_diag::Diag::severity` | fn | `crates/mycelium-diag/src/lib.rs:293` | The typed severity (a `Warn` never silently becomes a pass — I1). |
-| `mycelium_diag::Diag::trace` | fn | `crates/mycelium-diag/src/lib.rs:284` | Replace the trace (value-semantic builder). |
-| `mycelium_diag::Diag::warn` | fn | `crates/mycelium-diag/src/lib.rs:238` | Build a `Warn`-severity diagnostic with the given code (total builder). |
-| `mycelium_diag::Diag::with_severity` | fn | `crates/mycelium-diag/src/lib.rs:250` | The common total builder behind [`Self::error`]/[`Self::warn`]/[`Self::info`]. |
-| `mycelium_diag::Locus` | struct | `crates/mycelium-diag/src/lib.rs:170` | A source locus — *where* a diagnostic points (RFC-0013 §4.2). |
-| `mycelium_diag::Severity` | enum | `crates/mycelium-diag/src/lib.rs:101` | Graded diagnostic severity (RFC-0013 §4.1). |
-| `mycelium_diag::Severity::ALL:` | const | `crates/mycelium-diag/src/lib.rs:114` | All severities, ordered weakest-to-strongest (`Debug < Info < Warn < Error`). |
-| `mycelium_diag::Severity::as_str` | fn | `crates/mycelium-diag/src/lib.rs:123` | The canonical name used in human/machine output. |
-| `mycelium_diag::Trace` | struct | `crates/mycelium-diag/src/lib.rs:184` | An ordered diagnostic trace — the chain of frames/notes that led to the failure (RFC-0013 §4.3). |
-| `mycelium_diag::Trace::empty` | fn | `crates/mycelium-diag/src/lib.rs:192` | The empty trace (explicit absence — not a fabricated frame). |
-| `mycelium_diag::Trace::with_frame` | fn | `crates/mycelium-diag/src/lib.rs:198` | Push a frame, returning the extended trace (value-semantic). |
+| `mycelium_diag::Code` | enum | `crates/mycelium-diag/src/lib.rs:144` | A stable diagnostic code / error class (RFC-0013 §4.2). |
+| `mycelium_diag::Code::as_str` | fn | `crates/mycelium-diag/src/lib.rs:127` | The canonical name used in human/machine output. |
+| `mycelium_diag::Diag` | struct | `crates/mycelium-diag/src/lib.rs:216` | A structured diagnostic record (RFC-0013 §4.1): a content-addressable value over an |
+| `mycelium_diag::Diag::at` | fn | `crates/mycelium-diag/src/lib.rs:274` | Attach a source locus (explicit; absence stays `None` — never a fabricated zero, G2). |
+| `mycelium_diag::Diag::code` | fn | `crates/mycelium-diag/src/lib.rs:303` | The diagnostic code / error class. |
+| `mycelium_diag::Diag::content_hash` | fn | `crates/mycelium-diag/src/lib.rs:318` | The **content address** of this diagnostic (RFC-0013 §4.3; ADR-003) — a deterministic BLAKE3 |
+| `mycelium_diag::Diag::error` | fn | `crates/mycelium-diag/src/lib.rs:236` | Build an `Error`-severity diagnostic with the given code (total builder). |
+| `mycelium_diag::Diag::from_json` | fn | `crates/mycelium-diag/src/lib.rs:451` | Recover a `Diag` from its machine JSON projection (I3). |
+| `mycelium_diag::Diag::human` | fn | `crates/mycelium-diag/src/lib.rs:375` | The **human projection** (G11 / RFC-0013 I3): a human-readable string. |
+| `mycelium_diag::Diag::info` | fn | `crates/mycelium-diag/src/lib.rs:248` | Build an `Info`-severity diagnostic with the given code (total builder). |
+| `mycelium_diag::Diag::machine` | fn | `crates/mycelium-diag/src/lib.rs:429` | The **machine projection** (G11 / RFC-0013 I3): a lossless JSON record with the content `id` |
+| `mycelium_diag::Diag::message` | fn | `crates/mycelium-diag/src/lib.rs:267` | Set the human-readable message (value-semantic builder). |
+| `mycelium_diag::Diag::note` | fn | `crates/mycelium-diag/src/lib.rs:281` | Attach a note (EXPLAIN payload). |
+| `mycelium_diag::Diag::severity` | fn | `crates/mycelium-diag/src/lib.rs:297` | The typed severity (a `Warn` never silently becomes a pass — I1). |
+| `mycelium_diag::Diag::trace` | fn | `crates/mycelium-diag/src/lib.rs:288` | Replace the trace (value-semantic builder). |
+| `mycelium_diag::Diag::warn` | fn | `crates/mycelium-diag/src/lib.rs:242` | Build a `Warn`-severity diagnostic with the given code (total builder). |
+| `mycelium_diag::Diag::with_severity` | fn | `crates/mycelium-diag/src/lib.rs:254` | The common total builder behind [`Self::error`]/[`Self::warn`]/[`Self::info`]. |
+| `mycelium_diag::Locus` | struct | `crates/mycelium-diag/src/lib.rs:174` | A source locus — *where* a diagnostic points (RFC-0013 §4.2). |
+| `mycelium_diag::Severity` | enum | `crates/mycelium-diag/src/lib.rs:105` | Graded diagnostic severity (RFC-0013 §4.1). |
+| `mycelium_diag::Severity::ALL:` | const | `crates/mycelium-diag/src/lib.rs:118` | All severities, ordered weakest-to-strongest (`Debug < Info < Warn < Error`). |
+| `mycelium_diag::Severity::as_str` | fn | `crates/mycelium-diag/src/lib.rs:127` | The canonical name used in human/machine output. |
+| `mycelium_diag::Trace` | struct | `crates/mycelium-diag/src/lib.rs:188` | An ordered diagnostic trace — the chain of frames/notes that led to the failure (RFC-0013 §4.3). |
+| `mycelium_diag::Trace::empty` | fn | `crates/mycelium-diag/src/lib.rs:196` | The empty trace (explicit absence — not a fabricated frame). |
+| `mycelium_diag::Trace::with_frame` | fn | `crates/mycelium-diag/src/lib.rs:202` | Push a frame, returning the extended trace (value-semantic). |
 
 ## mycelium-doc
 
@@ -612,11 +612,11 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_fmt::FmtError` | enum | `crates/mycelium-fmt/src/lib.rs:48` | A formatting refusal — never a partial rewrite (G2). |
-| `mycelium_fmt::FmtError::exit_code` | fn | `crates/mycelium-fmt/src/lib.rs:60` | The CLI exit code for this refusal (contract §5). |
-| `mycelium_fmt::Formatted` | struct | `crates/mycelium-fmt/src/lib.rs:37` | A successful format result. |
+| `mycelium_fmt::FmtError` | enum | `crates/mycelium-fmt/src/lib.rs:69` | A formatting refusal — never a partial rewrite (G2). |
+| `mycelium_fmt::FmtError::exit_code` | fn | `crates/mycelium-fmt/src/lib.rs:81` | The CLI exit code for this refusal (contract §5). |
+| `mycelium_fmt::Formatted` | struct | `crates/mycelium-fmt/src/lib.rs:41` | A successful format result. |
 | `mycelium_fmt::MYCFMT_VERSION:` | const | `crates/mycelium-fmt/src/lib.rs:33` | The formatter spelling/version this build implements. |
-| `mycelium_fmt::format_source` | fn | `crates/mycelium-fmt/src/lib.rs:90` | Format `src` into its canonical form. |
+| `mycelium_fmt::format_source` | fn | `crates/mycelium-fmt/src/lib.rs:111` | Format `src` into its canonical form. |
 
 ## mycelium-interp
 
@@ -820,17 +820,17 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_lint::Fix` | struct | `crates/mycelium-lint/src/lib.rs:52` | A reified fix offer for a finding. |
-| `mycelium_lint::FixTier` | enum | `crates/mycelium-lint/src/lib.rs:29` | How a fix may be applied — the opt-in boundary (the crux). |
-| `mycelium_lint::FixTier::as_str` | fn | `crates/mycelium-lint/src/lib.rs:41` | The canonical label. |
-| `mycelium_lint::LintFinding` | struct | `crates/mycelium-lint/src/lib.rs:63` | One lint finding with its (optional) reified fix. |
-| `mycelium_lint::LintReport` | struct | `crates/mycelium-lint/src/lib.rs:80` | The aggregated lint result. |
-| `mycelium_lint::LintReport::has_errors` | fn | `crates/mycelium-lint/src/lib.rs:90` | Whether any finding is an error-severity house-rule violation. |
-| `mycelium_lint::LintReport::tier_counts` | fn | `crates/mycelium-lint/src/lib.rs:96` | Counts by tier: (apply, suggest, scaffold). |
-| `mycelium_lint::doc_lint_status` | fn | `crates/mycelium-lint/src/lib.rs:190` | The status line for the §4.1 doc lint — now **active** (it runs over the M-363 doc-IR via `myc-doc`, |
-| `mycelium_lint::lint_source` | fn | `crates/mycelium-lint/src/lib.rs:201` | Lint one source, appending findings. |
-| `mycelium_lint::lint_sources` | fn | `crates/mycelium-lint/src/lib.rs:237` | Lint an explicit set of `(file, contents)` sources, deterministically. |
-| `mycelium_lint::recovery_scaffold` | fn | `crates/mycelium-lint/src/lib.rs:163` | Generate an RFC-0014 **recovery scaffold** for an error `class` under a named, bounded [`RecoveryProfile`] |
+| `mycelium_lint::Fix` | struct | `crates/mycelium-lint/src/lib.rs:56` | A reified fix offer for a finding. |
+| `mycelium_lint::FixTier` | enum | `crates/mycelium-lint/src/lib.rs:33` | How a fix may be applied — the opt-in boundary (the crux). |
+| `mycelium_lint::FixTier::as_str` | fn | `crates/mycelium-lint/src/lib.rs:45` | The canonical label. |
+| `mycelium_lint::LintFinding` | struct | `crates/mycelium-lint/src/lib.rs:79` | One lint finding with its (optional) reified fix. |
+| `mycelium_lint::LintReport` | struct | `crates/mycelium-lint/src/lib.rs:105` | The aggregated lint result. |
+| `mycelium_lint::LintReport::has_errors` | fn | `crates/mycelium-lint/src/lib.rs:130` | Whether any finding is an error-severity house-rule violation. |
+| `mycelium_lint::LintReport::tier_counts` | fn | `crates/mycelium-lint/src/lib.rs:136` | Counts by tier: (apply, suggest, scaffold). |
+| `mycelium_lint::doc_lint_status` | fn | `crates/mycelium-lint/src/lib.rs:230` | The status line for the §4.1 doc lint — now **active** (it runs over the M-363 doc-IR via `myc-doc`, |
+| `mycelium_lint::lint_source` | fn | `crates/mycelium-lint/src/lib.rs:241` | Lint one source, appending findings. |
+| `mycelium_lint::lint_sources` | fn | `crates/mycelium-lint/src/lib.rs:277` | Lint an explicit set of `(file, contents)` sources, deterministically. |
+| `mycelium_lint::recovery_scaffold` | fn | `crates/mycelium-lint/src/lib.rs:203` | Generate an RFC-0014 **recovery scaffold** for an error `class` under a named, bounded [`RecoveryProfile`] |
 
 ## mycelium-lsp
 

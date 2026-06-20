@@ -33,7 +33,11 @@ use mycelium_proj::{parse_header, Deprecated, HeaderFields, StructuredHeader};
 pub const MYCFMT_VERSION: &str = "mycfmt-0";
 
 /// A successful format result.
-#[derive(Debug, Clone, PartialEq, Eq)]
+///
+/// `Default` is the empty result (no output, unchanged, no notes) — an additive constructor
+/// convenience (M-644); the canonical "ends with one newline" output is produced by
+/// [`format_source`], not by `Default`/`From`.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Formatted {
     /// The canonical output (always ends with exactly one newline).
     pub output: String,
@@ -43,8 +47,25 @@ pub struct Formatted {
     pub notes: Vec<String>,
 }
 
+impl From<String> for Formatted {
+    /// Lift a raw output string into a [`Formatted`] (M-644 ergonomics): `changed` is `false` and
+    /// `notes` is empty — a trivial wrapper for callers/tests that already hold canonical text.
+    /// `format_source` is the path that computes `changed`/`notes`; this does not.
+    fn from(output: String) -> Self {
+        Self {
+            output,
+            changed: false,
+            notes: Vec::new(),
+        }
+    }
+}
+
 /// A formatting refusal — never a partial rewrite (G2). Each maps to a CLI exit code.
+///
+/// `#[non_exhaustive]`: new refusal kinds may be added without a breaking change — an external
+/// exhaustive `match` must carry a `_` arm (M-644; additive — no variant removed).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum FmtError {
     /// Input is not a valid `.myc` program (exit 2).
     Parse(String),
@@ -374,5 +395,15 @@ mod tests {
         let src = "// nodule: g\n// a stray non-key comment\n// @license: MIT\nnodule g\nfn f() -> Binary{8} = 0b0\n";
         let err = format_source(src, None).unwrap_err();
         assert_eq!(err.exit_code(), 4);
+    }
+
+    #[test]
+    fn formatted_default_and_from_are_additive_ergonomics() {
+        // M-644: Default is the empty result; From<String> lifts raw text (changed=false, no notes).
+        let d = Formatted::default();
+        assert!(d.output.is_empty() && !d.changed && d.notes.is_empty());
+        let f = Formatted::from("0b0\n".to_owned());
+        assert_eq!(f.output, "0b0\n");
+        assert!(!f.changed && f.notes.is_empty());
     }
 }
