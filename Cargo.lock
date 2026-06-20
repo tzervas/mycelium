@@ -488,6 +488,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-std-runtime"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-std-core",
+]
+
+[[package]]
 name = "mycelium-std-select"
 version = "0.0.0"
 dependencies = [

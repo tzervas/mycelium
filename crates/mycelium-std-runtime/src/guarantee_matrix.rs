@@ -77,6 +77,27 @@ pub static MATRIX: &[GaugeRow] = &[
         strength: GuaranteeStrength::Empirical,
         basis: "RT2 Kahn-determinism differential; formal proof pending (ADR-020 §4)",
     },
+    // ── Channel construction ops (added with the real channel implementation) ──
+    GaugeRow {
+        operation: "Network::channel (construction)",
+        strength: GuaranteeStrength::Exact,
+        basis: "constructor is trivially correct; backed by Arc<Mutex<VecDeque>> (ADR-020 §4)",
+    },
+    GaugeRow {
+        operation: "Network::channel zero-capacity check",
+        strength: GuaranteeStrength::Exact,
+        basis: "fail-closed: ZeroCapacity is returned deterministically when capacity==0 (G2/ADR-020 §4)",
+    },
+    GaugeRow {
+        operation: "Sender::try_send FIFO (bounded channel)",
+        strength: GuaranteeStrength::Exact,
+        basis: "push to VecDeque tail; FIFO ordering exact by construction (ADR-020 §4)",
+    },
+    GaugeRow {
+        operation: "Receiver::try_recv FIFO (bounded channel)",
+        strength: GuaranteeStrength::Exact,
+        basis: "pop from VecDeque head; FIFO ordering exact by construction (ADR-020 §4)",
+    },
 ];
 
 #[cfg(test)]
@@ -141,6 +162,33 @@ mod tests {
                     row.operation
                 );
             }
+        }
+    }
+
+    #[test]
+    fn test_new_channel_ops_are_exact() {
+        // The four new bounded-channel operation rows are all Exact (deterministic by
+        // construction). We match them by their known operation name prefixes, which are
+        // distinct from the pre-existing Empirical rows (Kahn, Deadlock, Colony, etc.).
+        // Mutant witness: changing any of these four rows to Empirical would make this test
+        // fail, correctly catching an ungrounded tag downgrade for a deterministic operation.
+        let exact_channel_op_prefixes = [
+            "Network::channel (construction)",
+            "Network::channel zero-capacity check",
+            "Sender::try_send FIFO",
+            "Receiver::try_recv FIFO",
+        ];
+        for prefix in &exact_channel_op_prefixes {
+            let row = MATRIX
+                .iter()
+                .find(|r| r.operation.starts_with(prefix))
+                .unwrap_or_else(|| panic!("guarantee matrix missing row starting with '{prefix}'"));
+            assert_eq!(
+                row.strength,
+                GuaranteeStrength::Exact,
+                "bounded-channel op '{}' must be Exact (ADR-020 §4)",
+                row.operation
+            );
         }
     }
 }
