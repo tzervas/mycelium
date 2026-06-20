@@ -12,7 +12,7 @@ issues:
   - id: M-001
     title: "M-001 — Liquid-Haskell bundle capacity-refinement probe"
     milestone: "Phase 0 — Confirm & Specify"
-    labels: [phase:0, type:verification, area:numerics, priority:P0]
+    labels: [phase:0, type:verification, area:numerics, priority:P0, status:done]
     depends_on: [M-010]
     doc_refs: [corpus:RFC-0003]
     body: |
@@ -22,7 +22,7 @@ issues:
   - id: M-002
     title: "M-002 — KC-2 LLM-leverage experiment (E4)"
     milestone: "Phase 0 — Confirm & Specify"
-    labels: [phase:0, type:research, area:project, priority:P0]
+    labels: [phase:0, type:research, area:project, priority:P0, status:in-progress]
     depends_on: [M-020, M-010]
     doc_refs: [corpus:RFC-0006]
     body: |
@@ -32,7 +32,7 @@ issues:
   - id: M-020
     title: "M-020 — Minimal surface-syntax fragment (experiment-only)"
     milestone: "Phase 0 — Confirm & Specify"
-    labels: [phase:0, type:spec, area:core-ir, priority:P0]
+    labels: [phase:0, type:spec, area:core-ir, priority:P0, status:done]
     depends_on: []
     doc_refs: [corpus:RFC-0006]
     body: |
@@ -41,7 +41,7 @@ issues:
   - id: M-010
     title: "M-010 — Ratify core data-contract schemas"
     milestone: "Phase 0 — Confirm & Specify"
-    labels: [phase:0, type:spec, area:project, priority:P0]
+    labels: [phase:0, type:spec, area:project, priority:P0, status:done]
     depends_on: []
     doc_refs: [corpus:RFC-0001]
     body: |
@@ -51,7 +51,7 @@ issues:
   - id: M-011
     title: "M-011 — Ratify SPECIFICATION.md"
     milestone: "Phase 0 — Confirm & Specify"
-    labels: [phase:0, type:spec, area:project, priority:P1]
+    labels: [phase:0, type:spec, area:project, priority:P1, status:done]
     depends_on: [M-010]
     doc_refs: [corpus:RFC-0001]
     body: |
@@ -61,7 +61,7 @@ issues:
   - id: M-012
     title: "M-012 — Binary<->ternary canonical encoding spec"
     milestone: "Phase 0 — Confirm & Specify"
-    labels: [phase:0, type:spec, area:swap, priority:P1]
+    labels: [phase:0, type:spec, area:swap, priority:P1, status:done]
     depends_on: []
     doc_refs: [corpus:RFC-0002]
     body: |
@@ -71,7 +71,7 @@ issues:
   - id: M-090
     title: "M-090 — Docs CI"
     milestone: "Phase 0 — Confirm & Specify"
-    labels: [phase:0, type:infra, area:project, priority:P1]
+    labels: [phase:0, type:infra, area:project, priority:P1, status:done]
     depends_on: []
     doc_refs: [corpus:RFC-0001]
     body: |
@@ -81,7 +81,7 @@ issues:
   - id: M-091
     title: "M-091 — Rust workspace skeleton"
     milestone: "Phase 0 — Confirm & Specify"
-    labels: [phase:0, type:infra, area:core-ir, priority:P0]
+    labels: [phase:0, type:infra, area:core-ir, priority:P0, status:done]
     depends_on: []
     doc_refs: [corpus:RFC-0001]
     body: |
@@ -91,7 +91,7 @@ issues:
   - id: M-092
     title: "M-092 — Python tooling skeleton"
     milestone: "Phase 0 — Confirm & Specify"
-    labels: [phase:0, type:infra, area:project, priority:P1]
+    labels: [phase:0, type:infra, area:project, priority:P1, status:done]
     depends_on: []
     doc_refs: [corpus:RFC-0001]
     body: |
@@ -338,7 +338,7 @@ issues:
   - id: E3-2
     title: "E3-2 (epic) — AI co-authoring loop"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:toolchain, priority:P1]
+    labels: [phase:3, type:feature, area:toolchain, priority:P1, status:done]
     depends_on: [M-140, E2-6]
     doc_refs: [corpus:RFC-0021, corpus:RFC-0006]
     body: |
@@ -347,7 +347,7 @@ issues:
   - id: E3-3
     title: "E3-3 (epic) — Matured toolchain"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:toolchain, priority:P1]
+    labels: [phase:3, type:feature, area:toolchain, priority:P1, status:done]
     depends_on: [M-140, M-141, M-142]
     doc_refs: [corpus:RFC-0006]
     body: |
@@ -356,7 +356,7 @@ issues:
   - id: E3-4
     title: "E3-4 (epic) — JIT optimization"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:execution, priority:P2]
+    labels: [phase:3, type:feature, area:execution, priority:P2, status:done]
     depends_on: [E2-3]
     doc_refs: [corpus:RFC-0004]
     body: |
@@ -374,7 +374,7 @@ issues:
   - id: E3-6
     title: "E3-6 (epic) — BitNet-class packed-ternary acceleration"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:execution, priority:P2]
+    labels: [phase:3, type:feature, area:execution, priority:P2, status:done]
     depends_on: [E2-7]
     doc_refs: [corpus:RFC-0003]
     body: |
@@ -383,7 +383,7 @@ issues:
   - id: E3-7
     title: "E3-7 (epic) — Native-ternary forward-compatibility path"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:execution, priority:P2]
+    labels: [phase:3, type:feature, area:execution, priority:P2, status:done]
     depends_on: [M-150, E2-7]
     doc_refs: [corpus:RFC-0004]
     body: |
@@ -1585,7 +1585,7 @@ issues:
   - id: E8-1
     title: "E8-1 (epic) — Release machinery & housekeeping (mechanics only, no release)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:epic, area:release, priority:P2]
+    labels: [phase:8, type:epic, area:release, priority:P2, status:done]
     depends_on: [M-361]
     doc_refs: [corpus:RFC-0017]
     body: |

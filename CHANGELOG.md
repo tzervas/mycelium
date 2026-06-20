@@ -8,6 +8,22 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-20: PM-manifest phase-status reconciliation — Phase 0/3/8)
+Reconciled the `tools/github/issues.yaml` board to the verified completion state (the labels had
+lagged reality — `docs/planning/phase-0.md §2` already recorded the work done). Audited each item
+against on-disk artifacts / child-task status before flipping (honesty rule — no marking-done
+without a checked basis):
+- **Phase 0** → `status:done` on the 8 completed tasks (M-001 LH/KC-1 probe, M-010 schemas,
+  M-011 SPECIFICATION.md, M-012 binary↔ternary spec, M-020 surface fragment, M-090 docs-CI,
+  M-091 Rust workspace, M-092 Python tooling — all artifacts present on disk). The one residual,
+  **M-002 (KC-2 LLM-leverage verdict)**, is marked **`status:in-progress`**, not done: the DN-09
+  verdict (*proceed*) is recorded, but the SC-5b baseline + the rigorous T3.6 ablation are gated on
+  a **live model run** (tracked as M-381) — surfaced honestly, not overclaimed.
+- **Phase 3** → `status:done` on the completed epics E3-2/E3-3/E3-4/E3-6/E3-7 (every child task
+  already `status:done`); **Phase 8** → `status:done` on epic E8-1 (children M-383/384/385 done).
+- **README** phase-status line updated: Phases 0–5 and 7 complete; Phase 6's VR-4 exit gate met
+  (M-601/M-620 follow-ons in progress); Phase 8 complete bar the deferred M-644.
+
 ### Added (2026-06-20: E-BENCH — honest benchmarking & evaluation harness (E3-9 / M-645))
 A new crate **`crates/mycelium-bench/`** (lib + `bench` bin) that measures **what this language
 actually buys us — and where we lose**. Times whole v0-calculus programs across every execution
