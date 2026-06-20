@@ -13,7 +13,7 @@ Refreshed the prose READMEs to the current, verified state: the top-level `READM
 `docs/spec/stdlib/README.md` now report the **23 Rust-first stdlib specs as `Accepted`** (2026-06-20,
 DN-07, on a checked basis — `runtime` + `self-hosting-readiness` stay `Draft`), replacing the stale
 *"implemented (Rust-first), pending ratification" / never-silently-Accepted* wording. Corrected the
-native-path claims (VR-5): the **direct-LLVM native path + JIT + hot-inject** (M-373/M-378/M-379) is
+native-path claims (VR-5): the **direct-LLVM native path** (M-373/M-378/M-379), **JIT** (M-340), and **hot-inject** (M-341) are
 built; the real `ternary`→arith/vector→LLVM **MLIR-dialect lowering (M-601)** is **unblocked**
 (libMLIR now provisionable on Linux, M-348) **and in progress** — not yet complete — so it moves to the
 "in progress" bucket. Also added a squash-only / `/land` note to the README contributing section. Docs
