@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0013 |
-| **Status** | **Accepted — Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design is normative. **Enacted 2026-06-16 — M-345** (#107): the error-class registry (no `eval`, §4.5 X1), the content-addressed diagnostic record with dual human/JSON round-trip projection (G11, §4.3), graded levels with the allowlisted detailed tier (§4.5 X2), the reified `on <ErrorClass> => {…}` policy with content-addressed `PolicyRef` (§4.4), and the representation-crossing audit view (§4.6) are code in `crates/mycelium-lsp/src/diagnostics`. Verified by the §5 suite incl. the central never-silent invariant test. No kernel change (KC-3).) |
+| **Status** | **Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design is normative. **Enacted 2026-06-16 — M-345** (#107): the error-class registry (no `eval`, §4.5 X1), the content-addressed diagnostic record with dual human/JSON round-trip projection (G11, §4.3), graded levels with the allowlisted detailed tier (§4.5 X2), the reified `on <ErrorClass> => {…}` policy with content-addressed `PolicyRef` (§4.4), and the representation-crossing audit view (§4.6) are code in `crates/mycelium-lsp/src/diagnostics`. Verified by the §5 suite incl. the central never-silent invariant test. No kernel change (KC-3).) |
 | **Type** | Foundational / normative (once Accepted) — tooling/observability-layer feature; no kernel change |
 | **Date** | 2026-06-16 |
 | **Feeds** | RFC-0008 (runtime/observability — the diagnostic stream lives here); the AI co-author loop (M-330); the stdlib `diagnostics` candidate (M-346) |
@@ -357,6 +357,7 @@ invariants I1–I5 are verified, when the tooling lands, by:
 
 ## Meta — changelog
 
+- **2026-06-20 — status spelling normalized.** Status header `Accepted — Enacted` → **`Enacted`** (the now-canonical standalone token, per the ratified `Draft/Proposed → Accepted → Enacted → Superseded` lattice, #236); semantics unchanged. Append-only.
 - **2026-06-16 — §8 route targets resolved + bound to RFC-0008 sinks (M-354; RFC-0008 Accepted).** The
   last genuinely-open §8 question — the concrete `route` set and how it composes with RFC-0008's
   observability sinks — is **resolved**: a **closed v0 route vocabulary** (`stream`/`audit`/`log`/

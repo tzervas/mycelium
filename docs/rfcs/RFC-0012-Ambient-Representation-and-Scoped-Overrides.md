@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0012 |
-| **Status** | **Accepted — Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design is normative. **Enacted 2026-06-16 — M-344** (#106): the resolution pass, the never-silent `UnresolvedAmbient`/`ParadigmShapeMismatch`/`MissingConversion` checks, bare-decimal width-from-context, the M-142/LSP "expand ambient" rendering, and the §4.6 differential are code in `mycelium-l1`/`mycelium-lsp`. See the changelog for the enactment clarifications, incl. the surface-layer provenance realization and the R12-Q1..Q4 dispositions.) |
+| **Status** | **Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design is normative. **Enacted 2026-06-16 — M-344** (#106): the resolution pass, the never-silent `UnresolvedAmbient`/`ParadigmShapeMismatch`/`MissingConversion` checks, bare-decimal width-from-context, the M-142/LSP "expand ambient" rendering, and the §4.6 differential are code in `mycelium-l1`/`mycelium-lsp`. See the changelog for the enactment clarifications, incl. the surface-layer provenance realization and the R12-Q1..Q4 dispositions.) |
 | **Type** | Foundational / normative (once Accepted) — surface/term-layer feature; no kernel change |
 | **Date** | 2026-06-16 |
 | **Depends on** | RFC-0006 §3/§4 (surface language & term-layering — this is a surface-layer feature); RFC-0005 (selection-policy language — the ambient is a reified selection); RFC-0001 §4.5/§4.6 (Core IR; content-addressing / names-as-metadata; WF1/WF2 swap-only repr change); RFC-0007 §4.6 (the elaboration this rides); ADR-006 (selections are reified, inspectable artifacts); ADR-016 (the cross-module ABI is concrete hashes/reprs); G2 (never-silent); tension **A** (the verbosity cost of honesty); KC-3 (small kernel); NFR-7 (the differential) |
@@ -342,3 +342,4 @@ annotation resolved to. No ambient declaration can upgrade a guarantee (VR-5).
   Net: **M-351 closes with no new ambient code** — R12-Q1 and R12-Q2 both resolve to the M-344 baseline
   plus the honesty rule; the one genuinely-new idea (representation-crossing auditability) is handed to
   M-345. Append-only.
+- **2026-06-20 — status spelling normalized.** Status header `Accepted — Enacted` → **`Enacted`** (the now-canonical standalone token, per the ratified `Draft/Proposed → Accepted → Enacted → Superseded` lattice, #236); semantics unchanged. Append-only.
