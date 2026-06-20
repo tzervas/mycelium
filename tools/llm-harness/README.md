@@ -48,10 +48,12 @@ All model-dependent results are labelled `mock-PASS`, never `PASS`.
 
 The `grok/` sub-package drives real xAI runs (OpenAI-compatible `https://api.x.ai/v1`; key
 from `$XAI_API_KEY` or `$GROK_API_KEY`). Models run **cheapest-first**; `--mode batch` uses
-the xAI batch API (lower price). A **hard, never-silent USD cap** (`--max-usd`, default
-**$10.00**) guards the **total** spend across all models: a unit of work whose conservative
-estimate would breach the cap is **refused before it is sent**, and the run stops with a
-partial, honestly-flagged report — it cannot quietly over-spend (G2).
+the xAI batch API (lower price). A **never-silent USD spend gate** (`--max-usd`, default
+**$10.00**) guards the **total** spend across all models: a unit of work whose *estimated*
+cost would breach the cap is **refused before it is sent**, and the run stops with a partial,
+honestly-flagged report (G2). It is a **best-effort** gate, *not* a formal upper bound — the
+token estimate is a heuristic and live completions are unbounded (no `max_tokens`), so a
+single in-flight request can overrun; the gate biases high and stops **new** work early.
 
 ```sh
 cd tools/llm-harness
@@ -68,9 +70,10 @@ uv run python -m grok.cli --list-models
 ```
 
 Every measured number is **Empirical** (with its trial count); the model-quality / KC-2
-retention **verdict stays open** until a real run lands (never pre-written — VR-5). The cap
-estimate is deliberately conservative (it never under-counts tokens), so it errs toward
-stopping early, never late.
+retention **verdict stays open** until a real run lands (never pre-written — VR-5). The gate's
+estimate is deliberately **biased high** (a conservative token figure), so it errs toward
+stopping early — but because live completions are unbounded it cannot guarantee the final
+billed total stays under the cap to the cent; set `--max-usd` with a little headroom.
 
 ## Reports and logs
 

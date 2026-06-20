@@ -1,29 +1,32 @@
-"""Hard USD spend cap for live/batch runs — the operator's ``--max-usd`` ceiling.
+"""Conservative USD spend gate for live/batch runs — the operator's ``--max-usd`` ceiling.
 
-**Never-silent (G2).** A unit of work whose *conservative* cost estimate would push the
-cumulative **actual** spend past the cap is **refused before it is sent**: the run stops
-with a partial, honestly-flagged report rather than quietly over-spending. The estimate
-that guards the next unit is deliberately conservative (it never under-counts tokens), so
-the cap is a true upper bound on what can be billed, not a hope.
+**Never-silent (G2).** Before each unit of work the harness *estimates* its cost and, if that
+estimate would push the cumulative **actual** spend past the cap, **refuses the unit before it
+is sent**: the run stops with a partial, honestly-flagged report rather than quietly launching
+more work. Actual billed cost is then accumulated as the run proceeds.
 
-**Honesty (VR-5).** ``spent_usd`` accumulates *actual* per-request cost (the billed
-tokens), priced via :meth:`models.ModelSpec.cost_usd`; the *estimate* is only used to
-decide whether to start the next unit. The two are kept distinct so the reported spend is
-the real one.
+**Honest scope (VR-5) — this is a *best-effort* gate, NOT a formal upper bound.** The per-call
+token figure the harness uses is a heuristic (``coauthor_loop._estimate_tokens`` ≈ chars//4 +
+fixed headroom), and live requests do not bound the completion (no ``max_tokens``), so a single
+in-flight request *can* bill more than estimated. The gate therefore *reduces* over-spend risk
+and stops *early* on the estimate (it is deliberately biased high), but it cannot guarantee the
+final billed total stays under the cap to the cent. What it does guarantee: no *new* unit is
+started once the estimate says the budget is reached, and the spend that is reported is the
+real one — never a fabricated or silently-ignored cost.
 
-This module is pure stdlib and has **no network/SDK** dependency, so the cap logic is
-exercised by the offline ``--self-test`` (the plumbing is Empirical; the live spend is
-whatever the run actually bills).
+Pure stdlib, no network/SDK, so the gate logic is exercised by the offline ``--self-test``.
 """
 
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 
-# A conservative per-request token figure used only to *estimate* the next unit of work
-# when the real prompt size is not yet known (the first task of a model). Chosen to
-# over-count a typical code-gen request so the cap errs toward stopping early, never late.
+# A conservative per-request token figure used only to *estimate* the next unit of work when the
+# real prompt size is not yet known (the first task of a model). Chosen to over-count a typical
+# code-gen request so the gate biases toward stopping early — but it is a heuristic, not a bound
+# (live completions are not capped by ``max_tokens``; see the module docstring).
 CONSERVATIVE_TOKENS_PER_REQUEST = 4096
 
 
@@ -41,9 +44,9 @@ class BudgetExceeded(Exception):
         self.cap_usd = cap_usd
         self.model_id = model_id
         super().__init__(
-            f"USD budget cap reached: spent ${spent_usd:.4f} + next≈${est_usd:.4f} would "
-            f"exceed cap ${cap_usd:.2f} (at model {model_id}). Refusing the request and "
-            f"stopping — never silently over-spend (G2)."
+            f"USD spend cap reached: spent ${spent_usd:.4f} + next≈${est_usd:.4f} would "
+            f"exceed cap ${cap_usd:.2f} (at model {model_id}). Refusing this unit and "
+            f"stopping before it is sent (G2; the gate is conservative, not a formal bound)."
         )
 
 
@@ -60,6 +63,11 @@ class BudgetGuard:
     refused: bool = False
 
     def __post_init__(self) -> None:
+        if not math.isfinite(self.cap_usd):
+            raise ValueError(
+                f"budget cap must be a finite number, got {self.cap_usd!r} "
+                "(reject nan/inf so the cap can never be silently disabled)"
+            )
         if self.cap_usd < 0:
             raise ValueError(f"budget cap must be >= 0, got {self.cap_usd}")
 
@@ -69,7 +77,14 @@ class BudgetGuard:
         return max(0.0, self.cap_usd - self.spent_usd)
 
     def would_exceed(self, est_usd: float) -> bool:
-        """Whether committing ``est_usd`` more would push cumulative spend past the cap."""
+        """Whether committing ``est_usd`` more would push cumulative spend past the cap.
+
+        A non-finite estimate (nan/inf) is treated as an **automatic exceed** — a unit whose
+        cost cannot be bounded must never be started (a NaN comparison would otherwise be
+        silently False and slip past the gate).
+        """
+        if not math.isfinite(est_usd):
+            return True
         return self.spent_usd + max(0.0, est_usd) > self.cap_usd
 
     def check_or_raise(

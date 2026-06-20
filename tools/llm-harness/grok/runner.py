@@ -67,8 +67,9 @@ class RunConfig:
     ablation_seeds: list[int] | None = None
     repo_root: Path | None = None
     base_url: str = "https://api.x.ai/v1"
-    # Hard cap on TOTAL xAI spend across all models (never-silent; G2). A unit of work whose
-    # conservative estimate would breach this is refused before it is sent. Default $10.
+    # Conservative, never-silent gate on TOTAL xAI spend across all models (G2): a unit whose
+    # estimated cost would breach this is refused before it is sent. Best-effort, not a formal
+    # bound (heuristic token estimate; unbounded live completions). Default $10.
     max_usd: float = 10.0
 
 
@@ -120,10 +121,13 @@ def run_live_model(
 ) -> report_mod.ModelRunReport:
     """Run the full gold set (and optional ablation) for one model in live mode.
 
-    When ``budget`` is given, each task is gated by a conservative cost estimate: a task
-    whose worst-case cost would push cumulative spend past the cap raises
-    :class:`~grok.budget.BudgetExceeded` *before* the task runs (never silently
-    over-spend; G2). Actual per-task cost is recorded into the guard as the run proceeds.
+    When ``budget`` is given, each task — and the optional ablation block as a whole — is
+    gated by a *conservative* cost estimate: if the estimate would push cumulative spend past
+    the cap, the unit raises :class:`~grok.budget.BudgetExceeded` *before* it runs, and actual
+    cost (gold-set per task, ablation summed from its per-sample tokens) is recorded into the
+    guard as the run proceeds. This is a best-effort gate, **not** a formal upper bound: the
+    token estimate is a heuristic and live completions are unbounded (no ``max_tokens``), so a
+    single in-flight request can overrun — the gate biases high and stops *new* work early (G2).
     """
     client = OpenAICompatClient(base_url=cfg.base_url)
     pacer = RatePacer(rpm=model.rpm, tpm=model.tpm)
@@ -140,8 +144,8 @@ def run_live_model(
     est_holder: dict[str, int] = {"est": 256}
 
     for task in cfg.tasks:
-        # Hard budget gate (G2): refuse to START a task whose conservative worst-case cost
-        # (max_rounds requests at the running token estimate, floored) would breach the cap.
+        # Budget gate (G2): refuse to START a task whose conservative cost estimate
+        # (max_rounds requests at the floored token estimate) would breach the cap.
         if budget is not None:
             est_tokens = max(est_holder["est"], CONSERVATIVE_TOKENS_PER_REQUEST)
             est_task_usd = (
@@ -203,9 +207,27 @@ def run_live_model(
     )
     ablation_dict = None
     if cfg.run_ablation:
+        # Gate the ablation block too (G2): estimate its cost (arms × seeds × tasks requests at
+        # the floored token figure) and refuse to start it if that would breach the cap, so an
+        # `--ablation` run cannot exceed the cap unaccounted-for. Actual cost is recorded after.
+        if budget is not None:
+            seeds = cfg.ablation_seeds or [11, 23, 42]
+            n_req = len(default_arms()) * len(seeds) * len(cfg.tasks)
+            est_abl_usd = model.cost_usd(
+                prompt_tokens=CONSERVATIVE_TOKENS_PER_REQUEST * n_req,
+                completion_tokens=CONSERVATIVE_TOKENS_PER_REQUEST * n_req,
+                batch=False,
+            )
+            budget.check_or_raise(
+                est_abl_usd, model_id=f"{model.id} (ablation)", log=log
+            )
         ablation_dict = _run_ablation_live(
             model=model, cfg=cfg, client=client, pacer=pacer, scorer=scorer, log=log
         )
+        if budget is not None:
+            budget.record(
+                _ablation_cost_usd(ablation_dict, model)
+            )  # ACTUAL billed (VR-5)
     meta = report_mod.RunMetadata(
         model=model.id,
         mode="live",
@@ -293,6 +315,23 @@ def _run_ablation_live(*, model, cfg, client, pacer, scorer, log) -> dict[str, A
     ).to_dict()
 
 
+def _ablation_cost_usd(ablation_dict: dict[str, Any], model: ModelSpec) -> float:
+    """Sum the ACTUAL billed cost of an ablation run from its per-sample token records.
+
+    Lets the budget guard account for ablation spend (live prices), so an ``--ablation`` run
+    does not under-report against the cap (VR-5).
+    """
+    total = 0.0
+    for arm in ablation_dict.get("arms", []):
+        for sample in arm.get("per_sample", []):
+            total += model.cost_usd(
+                prompt_tokens=int(sample.get("prompt_tokens", 0) or 0),
+                completion_tokens=int(sample.get("completion_tokens", 0) or 0),
+                batch=False,
+            )
+    return total
+
+
 def run_batch_model(
     *,
     model: ModelSpec,
@@ -316,7 +355,7 @@ def run_batch_model(
     requests, items = build_generation_requests(
         tasks=cfg.tasks, model=model, seed=cfg.seed
     )
-    # Hard budget gate (G2): a batch is all-or-nothing once submitted, so estimate the whole
+    # Budget gate (G2): a batch is all-or-nothing once submitted, so estimate the whole
     # batch conservatively (one request/task at the floored token estimate, batch-priced) and
     # refuse to submit if it would breach the cap.
     if budget is not None:
@@ -383,7 +422,10 @@ def run(
     json_paths: list[Path] = []
     # One guard for the whole run: the cap is TOTAL xAI spend, not per-model (G2).
     budget = BudgetGuard(cap_usd=cfg.max_usd)
-    log.info("hard spend cap: $%.2f (total across all models)", cfg.max_usd)
+    log.info(
+        "spend cap: $%.2f (total across all models; conservative gate)", cfg.max_usd
+    )
+    first_refusal: BudgetExceeded | None = None
     for model in cfg.models:
         log.info(
             "=== model %s (mode=%s) — %s ===", model.id, cfg.mode, budget.summary()
@@ -395,7 +437,8 @@ def run(
                 mr = run_live_model(model=model, cfg=cfg, log=log, budget=budget)
         except BudgetExceeded as exc:
             # Never-silent: stop the run with whatever completed, honestly flagged. The
-            # remaining (pricier) models are skipped — the cap is a hard ceiling.
+            # remaining (pricier) models are skipped — the gate refuses further work.
+            first_refusal = exc
             log.warning(
                 "STOPPING the run at the spend cap before model %s: %s", model.id, exc
             )
@@ -407,8 +450,9 @@ def run(
     log.info("run complete — %s", budget.summary())
     if not reports:
         # The very first unit breached the cap (e.g. an absurdly low --max-usd): emit nothing
-        # rather than a misleading empty comparison, and say so loudly (G2).
-        raise BudgetExceeded(
+        # rather than a misleading empty comparison, and re-raise the ORIGINAL refusal so its
+        # estimate + model id are preserved (G2 — the message stays informative).
+        raise first_refusal or BudgetExceeded(
             spent_usd=budget.spent_usd,
             est_usd=0.0,
             cap_usd=budget.cap_usd,

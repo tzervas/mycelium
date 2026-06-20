@@ -28,6 +28,7 @@ returns process exit 0 iff all pass. Plumbing verified this way is **Empirical**
 from __future__ import annotations
 
 import json
+import math
 import tempfile
 from collections import deque
 from dataclasses import dataclass
@@ -602,8 +603,9 @@ def _live_pacer_smoke() -> Check:
 
 
 def check_budget_cap() -> Check:
-    # The hard USD spend cap (G2): would_exceed / record / check_or_raise behave as a true
-    # cumulative ceiling, and a breaching estimate is REFUSED (raises), never silently spent.
+    # The USD spend gate (G2): would_exceed / record / check_or_raise behave as a cumulative
+    # ceiling, a breaching estimate is REFUSED (raises), and non-finite cap/estimate cannot
+    # silently disable the gate.
     g = BudgetGuard(cap_usd=1.0)
     if g.would_exceed(0.5) or not g.would_exceed(1.5):
         return Check("T12 budget-cap", False, "would_exceed wrong at spent=0")
@@ -626,16 +628,21 @@ def check_budget_cap() -> Check:
         return Check(
             "T12 budget-cap", False, "a breaching estimate must be refused (raise)"
         )
-    # A negative cap is rejected at construction (config sanity).
-    try:
-        BudgetGuard(cap_usd=-1.0)
-        return Check("T12 budget-cap", False, "a negative cap must be rejected")
-    except ValueError:
-        pass
+    # A negative or non-finite cap is rejected at construction (the gate cannot be disabled).
+    for bad in (-1.0, math.inf, math.nan):
+        try:
+            BudgetGuard(cap_usd=bad)
+            return Check("T12 budget-cap", False, f"cap {bad!r} must be rejected")
+        except ValueError:
+            pass
+    # A non-finite ESTIMATE is an automatic exceed (a NaN comparison would otherwise slip past).
+    fresh = BudgetGuard(cap_usd=5.0)
+    if not fresh.would_exceed(math.inf) or not fresh.would_exceed(math.nan):
+        return Check("T12 budget-cap", False, "a non-finite estimate must auto-exceed")
     return Check(
         "T12 budget-cap",
         True,
-        "hard USD cap: cumulative ceiling + never-silent refusal of a breaching unit (G2)",
+        "USD gate: cumulative ceiling, refusal of a breaching unit, nan/inf rejected (G2)",
     )
 
 
