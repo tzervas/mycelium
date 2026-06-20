@@ -8,6 +8,32 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Fixed (2026-06-20: M-382 — `gh-issues-sync` EOF-aware retry/backoff + fault-tolerant migration + `--verbose`)
+Hardened `tools/github/gh-issues-sync.py` against the M-382 hang. Root cause was three-fold:
+(a) the network-error classifier in `_gh_fail` omitted `EOF`, so the symptom `gh: Post "…":
+unexpected EOF` fell through to the non-retryable generic branch; (b) there was **no** retry/backoff
+anywhere, so one transient blip on a paginated `gh api` read aborted the whole sync; (c) the
+noncompliant-label migration ran each per-issue `gh issue edit` with `check=True`, so a single failing
+edit `sys.exit`ed and aborted the entire label migration mid-run (looked like a hang; the stale label
+was never deleted).
+- **EOF-aware transient classifier** — new pure `_is_transient_network(stderr)` recognizes
+  `unexpected eof` / `eof` / `connection reset` / `reset by peer` / `tls handshake` / `i/o timeout`
+  **plus** the pre-existing DNS/dial/timeout/unreachable/refused set; used in **both** the `_gh_fail`
+  network branch and the new retry (covered by `--self-test`).
+- **Bounded retry + exponential backoff in `_run_gh`** (1/2/4/8s, 4 retries) — centralizes the fix for
+  **every** `gh` call (pagination, edits, graphql): a never-silent `~ transient network error … retry
+  k/MAX in Ds: …` line per retry (G2); a non-transient failure or success returns immediately; after the
+  last retry the final `(rc,out,err)` is returned so `gh()`/`_gh_fail` still produce the classified error.
+- **Fault-tolerant migration loop** — each per-issue relabel now runs non-aborting; a failure prints
+  `! could not relabel #<n> … — left as-is; re-run to retry` and **continues** the batch. **Open issues
+  are processed before closed** (a closed-issue failure never blocks the rest). The stale label is
+  deleted **only** if every relabel succeeded; otherwise a never-silent `! '<old>' still on N issue(s) —
+  not deleted; re-run` FLAG skips the delete (G2 — never break the label↔issue link silently).
+- **`--verbose`** — echoes `→ gh <args>` to stderr before each invocation so a hang is pinpointable to
+  the exact call. `--dry-run` / `--self-test` preserved; `--self-test` extended to cover the new pure
+  logic. Verified: `python3 tools/github/gh-issues-sync.py --self-test` green; ruff lint + format clean.
+  No live/networked `gh` was run.
+
 ### Added (2026-06-20: `doc-status` currency gate + normalize statuses to the `Enacted` lattice)
 The follow-up flagged by the `Enacted`-lattice change (#236): a status sweep + a gate that enforces it.
 - **Status normalization (append-only — forward only, no status invented):** the compound spelling

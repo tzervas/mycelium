@@ -11,6 +11,7 @@ Runs identically on Linux/macOS and on **Windows (PowerShell)** — it is pure P
     python tools/github/gh-issues-sync.py --project  # reconcile the Project v2 board
     python tools/github/gh-issues-sync.py --validate # cross-manifest + codebase accuracy check
     python tools/github/gh-issues-sync.py --self-test       # offline check of the pure logic
+    python tools/github/gh-issues-sync.py --all --verbose   # echo each `gh` call (pinpoint a hang)
 
 It reconciles the repo to the committed source-of-truth manifests, idempotently and
 **never-silently**:
@@ -62,6 +63,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 try:
@@ -78,23 +80,96 @@ HERE = Path(__file__).resolve().parent
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # gh plumbing (cross-platform: subprocess with a list argv, never shell=True)
 # ─────────────────────────────────────────────────────────────────────────────────────────────
+
+# Module-level flag (set by main from --verbose). When True, every `gh` invocation is echoed to
+# stderr BEFORE it runs, so a hang is pinpointable to the exact call (M-382 diagnosability).
+VERBOSE = False
+
+# Bounded retry policy for transient network blips on a `gh` call (M-382). MAX retries (so up to
+# MAX+1 attempts total: the initial call + MAX retries); the backoff delays below are applied
+# BEFORE each retry (1s, 2s, 4s, 8s — exponential).
+_GH_RETRY_MAX = 4
+_GH_RETRY_DELAYS = (1, 2, 4, 8)
+
+
+def _is_transient_network(stderr) -> bool:
+    """PURE: True iff ``stderr`` looks like a *transient* network failure that is worth retrying
+    (no I/O — exercised offline by --self-test).
+
+    This is the EOF-aware classifier at the heart of the M-382 fix: the original symptom
+    ``gh: Post "...": unexpected EOF`` was not recognized as a network error, so it fell through to
+    the non-retryable generic branch and aborted the whole paginated sync. We recognize EOF, TCP
+    reset, TLS-handshake, and I/O-timeout failures in addition to the DNS/dial/timeout set.
+    """
+    low = (stderr or "").lower()
+    needles = (
+        # EOF / reset / handshake / io-timeout class (the M-382 additions)
+        "unexpected eof",
+        "eof",
+        "connection reset",
+        "reset by peer",
+        "tls handshake",
+        "i/o timeout",
+        # the pre-existing DNS / dial / timeout / unreachable set
+        "could not resolve host",
+        "dial tcp",
+        "timeout",
+        "timed out",
+        "network is unreachable",
+        "connection refused",
+    )
+    return any(n in low for n in needles)
+
+
+def _stderr_tail(stderr) -> str:
+    """Last non-empty line of a gh stderr blob (compact, for one-line never-silent messages)."""
+    lines = [ln for ln in (stderr or "").splitlines() if ln.strip()]
+    return lines[-1].strip() if lines else "(no stderr)"
+
+
 def _run_gh(args, *, input_text=None):
     """Low-level: run `gh` and return ``(returncode, stdout, stderr)``. Never raises a traceback —
-    a missing `gh` binary is an explicit, classified ``sys.exit`` (G2)."""
-    try:
-        proc = subprocess.run(
-            ["gh", *args],
-            check=False,
-            text=True,
-            input=input_text,
-            capture_output=True,
-        )
-    except FileNotFoundError:  # pragma: no cover - environment guard
-        sys.exit(
-            "ERROR: `gh` (GitHub CLI) not found on PATH. Install it and run `gh auth login` "
-            "(Windows: `winget install GitHub.cli`)."
-        )
-    return proc.returncode, proc.stdout, proc.stderr
+    a missing `gh` binary is an explicit, classified ``sys.exit`` (G2).
+
+    Centralizes the M-382 fix for EVERY gh call (pagination, edits, graphql): on a transient
+    network failure (``_is_transient_network``) it retries with bounded exponential backoff
+    (``_GH_RETRY_MAX`` retries; 1/2/4/8s delays), printing a never-silent line per retry. A
+    non-transient failure (or success) returns immediately; after the last retry it returns the
+    final ``(rc, out, err)`` so ``gh()``/``_gh_fail`` still produce the classified error.
+    """
+    rc, out, err = 0, "", ""
+    # attempt 0 = the initial call; attempts 1.._GH_RETRY_MAX = the bounded retries.
+    for attempt in range(0, _GH_RETRY_MAX + 1):
+        if VERBOSE:
+            print(f"   → gh {' '.join(args)}", file=sys.stderr)
+        try:
+            proc = subprocess.run(
+                ["gh", *args],
+                check=False,
+                text=True,
+                input=input_text,
+                capture_output=True,
+            )
+        except FileNotFoundError:  # pragma: no cover - environment guard
+            sys.exit(
+                "ERROR: `gh` (GitHub CLI) not found on PATH. Install it and run `gh auth login` "
+                "(Windows: `winget install GitHub.cli`)."
+            )
+        rc, out, err = proc.returncode, proc.stdout, proc.stderr
+        # Success, or a non-transient failure: return immediately (no retry).
+        if rc == 0 or not _is_transient_network(err):
+            return rc, out, err
+        # Transient failure with retries remaining: never-silent retry + backoff.
+        if attempt < _GH_RETRY_MAX:
+            delay = _GH_RETRY_DELAYS[attempt]
+            print(
+                f"   ~ transient network error (gh exit {rc}) — "
+                f"retry {attempt + 1}/{_GH_RETRY_MAX} in {delay}s: {_stderr_tail(err)}",
+                file=sys.stderr,
+            )
+            time.sleep(delay)
+    # Exhausted: hand back the last classified failure for gh()/_gh_fail to surface.
+    return rc, out, err
 
 
 def _gh_fail(args, rc, stderr):
@@ -121,15 +196,11 @@ def _gh_fail(args, rc, stderr):
             "the token lacks a required scope or SSO authorization — see the preflight EXPLAIN, "
             "or grant it with `gh auth refresh -s <scope>`."
         )
-    elif (
-        "could not resolve host" in low
-        or "dial tcp" in low
-        or "timeout" in low
-        or "timed out" in low
-        or "network is unreachable" in low
-        or "connection refused" in low
-    ):
-        hint = "network error reaching GitHub — check connectivity/proxy and retry."
+    elif _is_transient_network(blob):
+        hint = (
+            "network error reaching GitHub — check connectivity/proxy and retry "
+            "(this was already retried with backoff; the blip persisted)."
+        )
     else:
         hint = "see the gh stderr above; fix the cause and re-run (`gh auth status` to check auth)."
     sys.exit(
@@ -877,15 +948,27 @@ def reconcile_labels(repo, labels_json, dry_run):
                     ]
                 )
             )
-            numbers = [item["number"] for item in raw_issues]
+            # Prioritize OPEN issues (maintainer's note "at least for open issues"): process open
+            # before closed so a closed-issue blip never blocks the actively-tracked ones.
+            open_items = [it for it in raw_issues if it.get("state") == "open"]
+            closed_items = [it for it in raw_issues if it.get("state") != "open"]
+            ordered_numbers = [it["number"] for it in open_items] + [
+                it["number"] for it in closed_items
+            ]
             if dry_run:
                 print(
                     f"   ~ would migrate label '{old_name}' -> '{new_name}' "
-                    f"({len(numbers)} issue(s)/PR(s)), then delete '{old_name}'"
+                    f"({len(ordered_numbers)} issue(s)/PR(s): "
+                    f"{len(open_items)} open, {len(closed_items)} closed), then delete '{old_name}'"
                 )
             else:
-                for number in numbers:
-                    gh(
+                # Fault-tolerant: a per-issue edit that fails is reported and SKIPPED — never an
+                # abort of the whole label (M-382). We track failures so the stale label is only
+                # deleted when EVERY issue was successfully relabeled (G2: never break the
+                # label↔issue link silently).
+                failed = 0
+                for number in ordered_numbers:
+                    rc, _out, err = _run_gh(
                         [
                             "issue",
                             "edit",
@@ -898,9 +981,34 @@ def reconcile_labels(repo, labels_json, dry_run):
                             old_name,
                         ]
                     )
+                    if rc != 0:
+                        failed += 1
+                        print(
+                            f"   ! could not relabel #{number} '{old_name}'->'{new_name}' "
+                            f"({_stderr_tail(err)}) — left as-is; re-run to retry",
+                            file=sys.stderr,
+                        )
+                        continue
                     print(f"   • #{number}: label '{old_name}' -> '{new_name}'")
-                gh(["label", "delete", old_name, "--repo", repo, "--yes"])
-                print(f"   • deleted stale label '{old_name}'")
+                if failed:
+                    # Never delete a label still carried by issues — a stale-but-present label is
+                    # safer than a silently-broken link. FLAG + skip the delete; re-run to finish.
+                    print(
+                        f"   ! '{old_name}' still on {failed} issue(s) — not deleted; re-run",
+                        file=sys.stderr,
+                    )
+                else:
+                    rc, _out, err = _run_gh(
+                        ["label", "delete", old_name, "--repo", repo, "--yes"]
+                    )
+                    if rc != 0:
+                        print(
+                            f"   ! could not delete stale label '{old_name}' "
+                            f"({_stderr_tail(err)}) — re-run to retry",
+                            file=sys.stderr,
+                        )
+                    else:
+                        print(f"   • deleted stale label '{old_name}'")
 
         for flag in flags:
             # Never-silent: a noncompliant label with no alias is left untouched and reported (G2).
@@ -1865,11 +1973,37 @@ def self_test():
     )
     assert _auth_command({"repo"}, authed=False) == "gh auth login -s repo"
 
+    # _is_transient_network: the M-382 EOF symptom + the TCP/TLS/io-timeout class must be retryable;
+    # auth/rate-limit/generic failures must NOT be (so they fail fast, never spin on backoff).
+    assert _is_transient_network(
+        'gh: Post "https://api.github.com/...": unexpected EOF'
+    )
+    assert _is_transient_network("read tcp 1.2.3.4: connection reset by peer")
+    assert _is_transient_network("net/http: TLS handshake timeout")
+    assert _is_transient_network("dial tcp: i/o timeout")
+    assert _is_transient_network("could not resolve host: api.github.com")
+    assert _is_transient_network("dial tcp 140.82.x.x: connection refused")
+    assert _is_transient_network("network is unreachable")
+    assert _is_transient_network("Client.Timeout exceeded while awaiting headers")
+    # Non-transient: must fail fast, not retry.
+    assert not _is_transient_network("HTTP 401: Bad credentials")
+    assert not _is_transient_network("API rate limit exceeded")
+    assert not _is_transient_network("HTTP 422: Validation Failed")
+    assert not _is_transient_network("")
+    assert not _is_transient_network(None)
+    # case-insensitive
+    assert _is_transient_network("Unexpected EOF")
+    # _stderr_tail: last non-empty line, with a stable empty fallback.
+    assert _stderr_tail("first\n\nlast line\n") == "last line"
+    assert _stderr_tail("") == "(no stderr)"
+    assert _stderr_tail(None) == "(no stderr)"
+
     print(
         "self-test OK: label_delta, normalize_body, plan_issue_update, parse_conventional, "
         "derive_pr_labels, milestone_rank, infer_milestone (multi-milestone), "
         "plan_label_migrations, label_to_field_values, plan_field_reconcile, "
-        "plan_option_additions, required_scopes, missing_scopes, over_grants, _auth_command"
+        "plan_option_additions, required_scopes, missing_scopes, over_grants, _auth_command, "
+        "_is_transient_network, _stderr_tail"
     )
 
 
@@ -1983,11 +2117,20 @@ def main():
         action="store_true",
         help="run the offline pure-logic check and exit",
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="echo every `gh` invocation to stderr before it runs (pinpoints a hang to the call)",
+    )
     args = parser.parse_args()
 
     if args.self_test:
         self_test()
         return
+
+    # Wire the module-level verbosity flag so _run_gh echoes each call (M-382 diagnosability).
+    global VERBOSE
+    VERBOSE = args.verbose
 
     reconcile_selected = (
         args.all
