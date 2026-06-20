@@ -8,6 +8,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: Phase 8 — release mechanics + CLI DRY (M-383, M-384, M-643))
+- **ADR-018 (Accepted) — versioning policy.** Per-crate `0.x` SemVer across the workspace,
+  **source-only** distribution (no crates.io publish in the design phase), and the `CHANGELOG`
+  `[Unreleased]` → release-cut mapping. Grounded in ADR-007 + the squash-only linear-history
+  discipline + RFC-0017 §4.1. (ADR index now also lists ADR-019.)
+- **release-plz dry-run (M-384).** `release-plz.toml` (per-crate; `publish`/`git_release`/`git_tag`/
+  `release_pr` all disabled — defense-in-depth) + `.github/workflows/release.yml` — **`workflow_dispatch`
+  only**, advisory (`continue-on-error`), read-only token, runs `release-pr --dry-run` (no push/PR/tag/
+  publish). Consistent with the repo's "no automatic remote CI" policy.
+- **CLI DRY — `mycelium-cli-common` (M-643).** A dependency-free (`std`-only, KC-3) crate folding the
+  three duplicated idioms out of the four toolchain CLIs: `read_source` (stdin-or-file, never-silent
+  G2 — tool-tag is a parameter so each bin's stderr stays byte-identical), `walk_myc` (the `.myc`
+  recursive sorted walk), and `Args` (the value-flag arg-loop). `mycfmt`/`myc-check`/`myc-lint`/
+  `myc-sec` refactored onto it, **behaviour-preserving** (runtime-verified identical stderr/exit codes),
+  net −58 LOC. Tags: each helper **Exact** (thin total `std` wrappers). Resolves the scaffold placed by
+  the keystone wave.
+
 ### Added (2026-06-20: Phase 8 — one-command setup, gitleaks redaction, PM-manifest hardening)
 Toolchain/PM infrastructure: a single idempotent, parameterized install command plus secret-scanning,
 and a more forgiving-but-honest manifest validator.

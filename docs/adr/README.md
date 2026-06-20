@@ -35,6 +35,8 @@ New ADRs go here as standalone files. (ADR-001…009 may be extracted into indiv
 | 015 | `DEFAULT_ENUM_BUDGET = 4096` (guarantee-maximal): the RFC-0010 decode selector defaults to the `Exact` arm across the whole validated envelope, not the cost-optimal ≈128 | Accepted | `ADR-015-decode-enum-budget-default.md` |
 | 016 | The interpreted↔compiled ABI: dispatch a compiled definition by its content hash; cross values in the self-describing wire form (RFC-0004 §10 OQ-1) | Accepted | `ADR-016-Interpreted-Compiled-ABI.md` |
 | 017 | Hot-inject recompiled definitions: hash-keyed dispatch + content-addressed dynamic linking, immutable-by-construction (RFC-0004 §10 OQ-2) | Accepted | `ADR-017-Hot-Inject-Recompiled-Definitions.md` |
+| 018 | Versioning policy: per-crate `0.x` SemVer + source-only distribution (no crates.io publish in the design phase); CHANGELOG `[Unreleased]` → release-cut mapping | Accepted | `ADR-018-Versioning-Policy.md` |
+| 019 | libMLIR toolchain: the version-matched build dependency of the off-by-default `mlir-dialect` feature; provisioned via `scripts/setup-mlir.sh` (`just setup-mlir`); resolves M-348 on Linux | Accepted | `ADR-019-libMLIR-Toolchain.md` |
 
 ## Template
 
