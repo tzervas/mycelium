@@ -39,7 +39,9 @@ pub const MYCFMT_VERSION: &str = "mycfmt-0";
 /// [`format_source`], not by `Default`/`From`.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Formatted {
-    /// The canonical output (always ends with exactly one newline).
+    /// The output text. For a value produced by [`format_source`] this is the **canonical** form and
+    /// always ends with exactly one newline; the additive `Default` / `From<String>` constructors do
+    /// **not** normalize (M-644), so a hand-built `Formatted` may not carry that invariant.
     pub output: String,
     /// Whether the output differs from the input (drives `--check`).
     pub changed: bool,

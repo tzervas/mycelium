@@ -9,13 +9,16 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 ## [Unreleased]
 
 ### Added (2026-06-20: Phase 8 — toolchain API ergonomics (M-644))
-Purely **additive**, source-backwards-compatible ergonomics on the four toolchain library crates
-(owns only their `src/lib.rs`) — every change ADDS; existing callers compile unchanged (verified by a
-clean `cargo build --workspace`). Completes Phase 8.
+Purely **additive** ergonomics on the four toolchain library crates (owns only their `src/lib.rs`) —
+every change ADDS a symbol / trait impl / attribute; **no in-workspace caller changes** (verified by a
+clean `cargo build --workspace`). Completes Phase 8. *Compatibility nuance:* `#[non_exhaustive]` is
+additive to the API surface (a variant is never removed), but for an **external** crate that
+exhaustively `match`es one of these enums it is a source change requiring a `_` arm — not silently
+breaking, and no such matcher exists in-workspace.
 - **`#[non_exhaustive]`** on the growth-prone public enums `FmtError` (fmt), `FixTier` (lint), and
-  `Severity` (diag) — a future variant is no longer a breaking change. Verified no in-workspace
-  external exhaustive `match` exists (the cross-crate `Severity` matches are on *other* `Severity`
-  types — lsp's, sec's — not `mycelium_diag::Severity`).
+  `Severity` (diag) — a future variant is no longer a breaking change *for downstream users that
+  already carry a `_` arm*. Verified no in-workspace external exhaustive `match` exists (the cross-crate
+  `Severity` matches are on *other* `Severity` types — lsp's, sec's — not `mycelium_diag::Severity`).
 - **`Default`** for `Formatted` (derived) and `Fix` (tier `Suggest` — the **never-auto-applied** tier,
   so a defaulted fix can never silently rewrite code, G2); **`From<String> for Formatted`** (a trivial
   lift; `format_source` remains the path that computes `changed`/`notes`).

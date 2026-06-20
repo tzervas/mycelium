@@ -6277,7 +6277,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 69,
+      "line": 71,
       "summary": "A formatting refusal — never a partial rewrite (G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6288,7 +6288,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt::FmtError",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 81,
+      "line": 83,
       "summary": "The CLI exit code for this refusal (contract §5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6321,7 +6321,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 111,
+      "line": 113,
       "summary": "Format `src` into its canonical form.",
       "guarantee_tag": null,
       "corpus_refs": []

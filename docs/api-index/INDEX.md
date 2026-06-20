@@ -612,11 +612,11 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_fmt::FmtError` | enum | `crates/mycelium-fmt/src/lib.rs:69` | A formatting refusal — never a partial rewrite (G2). |
-| `mycelium_fmt::FmtError::exit_code` | fn | `crates/mycelium-fmt/src/lib.rs:81` | The CLI exit code for this refusal (contract §5). |
+| `mycelium_fmt::FmtError` | enum | `crates/mycelium-fmt/src/lib.rs:71` | A formatting refusal — never a partial rewrite (G2). |
+| `mycelium_fmt::FmtError::exit_code` | fn | `crates/mycelium-fmt/src/lib.rs:83` | The CLI exit code for this refusal (contract §5). |
 | `mycelium_fmt::Formatted` | struct | `crates/mycelium-fmt/src/lib.rs:41` | A successful format result. |
 | `mycelium_fmt::MYCFMT_VERSION:` | const | `crates/mycelium-fmt/src/lib.rs:33` | The formatter spelling/version this build implements. |
-| `mycelium_fmt::format_source` | fn | `crates/mycelium-fmt/src/lib.rs:111` | Format `src` into its canonical form. |
+| `mycelium_fmt::format_source` | fn | `crates/mycelium-fmt/src/lib.rs:113` | Format `src` into its canonical form. |
 
 ## mycelium-interp
 
