@@ -51,7 +51,9 @@
         { "name": "selection", "color": "YELLOW", "description": "WS-G Selection & EXPLAIN" },
         { "name": "toolchain", "color": "PINK",   "description": "WS-H Toolchain (LSP/linter/formatter/build)" },
         { "name": "project",   "color": "GRAY",   "description": "WS-I Project infrastructure" },
-        { "name": "language",  "color": "BLUE",   "description": "Surface language (L1)" }
+        { "name": "language",  "color": "BLUE",   "description": "Surface language (L1)" },
+        { "name": "stdlib",    "color": "GREEN",  "description": "Standard / core library (mycelium-std-*, RFC-0016)" },
+        { "name": "release",   "color": "ORANGE", "description": "Release engineering — versioning, release-plz, packaging" }
       ]
     },
     {
