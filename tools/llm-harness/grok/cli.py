@@ -36,6 +36,25 @@ def _split_csv(value: str | None) -> list[str] | None:
     return [v.strip() for v in value.split(",") if v.strip()]
 
 
+def _nonneg_finite_float(value: str) -> float:
+    """An argparse type for a finite, non-negative USD amount.
+
+    ``float("nan")`` / ``float("inf")`` parse fine but would disable the spend cap (a NaN
+    comparison is silently False), so reject them at parse time (G2).
+    """
+    import math
+
+    try:
+        out = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"not a number: {value!r}") from exc
+    if not math.isfinite(out) or out < 0:
+        raise argparse.ArgumentTypeError(
+            f"must be a finite, non-negative dollar amount, got {value!r}"
+        )
+    return out
+
+
 def _find_repo_root(start: Path) -> Path | None:
     cur = start.resolve()
     for parent in [cur, *cur.parents]:
@@ -121,6 +140,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="max throttle/backoff retries per request in live mode (default 5).",
     )
     cfg.add_argument(
+        "--max-usd",
+        type=_nonneg_finite_float,
+        default=10.0,
+        help="Conservative cap on TOTAL xAI spend across all models (default $10.00; must be "
+        "finite and >= 0). A unit of work whose estimated cost would breach this is refused "
+        "before it is sent and the run stops with a partial report (G2). Best-effort, not a "
+        "formal bound: the token estimate is a heuristic and live completions are unbounded, "
+        "so a single in-flight request can overrun — the gate biases high and stops early.",
+    )
+    cfg.add_argument(
         "--task-set",
         default=TASK_SET_ID,
         help=f"task set id (default {TASK_SET_ID}).",
@@ -196,6 +225,7 @@ def main(argv: list[str] | None = None) -> int:
         ablation_seeds=[int(s) for s in seeds] if seeds else None,
         repo_root=_find_repo_root(here),
         base_url=args.base_url,
+        max_usd=args.max_usd,
     )
 
     log.info(

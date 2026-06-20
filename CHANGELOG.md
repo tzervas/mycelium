@@ -8,6 +8,22 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: LLM harness — USD spend gate (`--max-usd`, default $10))
+The Grok/xAI harness (`tools/llm-harness/grok/`) now **gates** total xAI spend (the operator's ≤ $10
+requirement), instead of merely *estimating* cost. A new `budget.BudgetGuard` (one instance per run,
+shared across all models so the cap is the *total* spend) gates each unit of work — a task and the
+ablation block (live) or the batch (batch mode): a unit whose **conservative** cost estimate would push
+cumulative **actual** spend past the cap is **refused before it is sent** (`BudgetExceeded`), the run
+stops, and whatever completed is emitted as a partial, honestly-flagged report (G2 — never a silent
+launch of more work). Honest scope (VR-5): this is a **best-effort** gate, **not a formal upper bound** —
+the per-call token figure is a heuristic (`_estimate_tokens` ≈ chars//4 + headroom) and live completions
+are unbounded (no `max_tokens`), so a single in-flight request can overrun; the gate biases high and
+refuses *new* work early. Actual billed cost is recorded as the run proceeds (the reported spend is the
+real one), and a non-finite `--max-usd` (nan/inf) is rejected at parse time so the gate cannot be
+silently disabled. `--max-usd` (default `10.0`) is wired through `RunConfig`; the offline `--self-test`
+gains a deterministic budget-gate check (now **14/14**, no key/network). Documented in the harness
+README ("Live xAI (Grok) runs").
+
 ### Added (2026-06-20: Phase 8 — toolchain API ergonomics (M-644))
 Purely **additive** ergonomics on the four toolchain library crates (owns only their `src/lib.rs`) —
 every change ADDS a symbol / trait impl / attribute; **no in-workspace caller changes** (verified by a

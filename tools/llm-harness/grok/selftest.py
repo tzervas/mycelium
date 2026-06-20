@@ -28,12 +28,14 @@ returns process exit 0 iff all pass. Plumbing verified this way is **Empirical**
 from __future__ import annotations
 
 import json
+import math
 import tempfile
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 
 from . import report as report_mod
+from .budget import BudgetExceeded, BudgetGuard
 from .ablation import (
     ARM_BARE,
     ARM_CANONICAL,
@@ -600,6 +602,50 @@ def _live_pacer_smoke() -> Check:
     )
 
 
+def check_budget_cap() -> Check:
+    # The USD spend gate (G2): would_exceed / record / check_or_raise behave as a cumulative
+    # ceiling, a breaching estimate is REFUSED (raises), and non-finite cap/estimate cannot
+    # silently disable the gate.
+    g = BudgetGuard(cap_usd=1.0)
+    if g.would_exceed(0.5) or not g.would_exceed(1.5):
+        return Check("T12 budget-cap", False, "would_exceed wrong at spent=0")
+    g.record(0.6)  # actual spend
+    if g.would_exceed(0.3):  # 0.6 + 0.3 = 0.9 <= 1.0
+        return Check("T12 budget-cap", False, "0.9 should be within the $1.00 cap")
+    if not g.would_exceed(0.5):  # 0.6 + 0.5 = 1.1 > 1.0
+        return Check("T12 budget-cap", False, "1.1 should exceed the $1.00 cap")
+    # The breaching unit is refused (raised), and the guard is flagged stopped-at-cap.
+    raised = False
+    try:
+        g.check_or_raise(0.5, model_id="m")
+    except BudgetExceeded as exc:
+        raised = True
+        if abs(exc.spent_usd - 0.6) > 1e-9 or abs(exc.cap_usd - 1.0) > 1e-9:
+            return Check(
+                "T12 budget-cap", False, f"exception carries wrong numbers: {exc}"
+            )
+    if not raised or not g.refused:
+        return Check(
+            "T12 budget-cap", False, "a breaching estimate must be refused (raise)"
+        )
+    # A negative or non-finite cap is rejected at construction (the gate cannot be disabled).
+    for bad in (-1.0, math.inf, math.nan):
+        try:
+            BudgetGuard(cap_usd=bad)
+            return Check("T12 budget-cap", False, f"cap {bad!r} must be rejected")
+        except ValueError:
+            pass
+    # A non-finite ESTIMATE is an automatic exceed (a NaN comparison would otherwise slip past).
+    fresh = BudgetGuard(cap_usd=5.0)
+    if not fresh.would_exceed(math.inf) or not fresh.would_exceed(math.nan):
+        return Check("T12 budget-cap", False, "a non-finite estimate must auto-exceed")
+    return Check(
+        "T12 budget-cap",
+        True,
+        "USD gate: cumulative ceiling, refusal of a breaching unit, nan/inf rejected (G2)",
+    )
+
+
 # -- driver ------------------------------------------------------------------
 
 ALL_CHECKS = [
@@ -616,6 +662,7 @@ ALL_CHECKS = [
     check_live_status_guard,
     check_paced_retry_acquires_once,
     check_report_emission,
+    check_budget_cap,
 ]
 
 
