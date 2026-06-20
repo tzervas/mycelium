@@ -23,6 +23,7 @@ HONESTY (VR-5 / G2):
 
 from __future__ import annotations
 
+import datetime
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -100,14 +101,17 @@ class RoundRecord:
     chat: ChatResult
     cost_usd: float
     is_correction: bool
+    timestamp_utc: str = ""  # ISO wall-clock when the response was received
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "attempt": self.attempt,
             "is_correction": self.is_correction,
+            "timestamp_utc": self.timestamp_utc,
             "verdict": self.score.verdict,
             "syntactic_valid": self.score.syntactic_valid,
             "typecheck_pass": self.score.typecheck_pass,
+            "exit_code": self.score.exit_code,
             "prompt_tokens": self.chat.prompt_tokens,
             "completion_tokens": self.chat.completion_tokens,
             "latency_s": round(self.chat.latency_s, 4),
@@ -212,6 +216,7 @@ def run_task_loop(
         if before_request is not None:
             before_request(est_tokens)
         chat = client.complete(model=model.id, messages=messages, seed=seed)
+        ts = datetime.datetime.now(datetime.UTC).strftime("%Y%m%dT%H%M%SZ")
         if after_request is not None:
             after_request(chat)
 
@@ -230,7 +235,7 @@ def run_task_loop(
                 batch=batch,
             )
             rounds.append(
-                RoundRecord(attempt, "", score, chat, cost, is_correction=attempt > 1)
+                RoundRecord(attempt, "", score, chat, cost, is_correction=attempt > 1, timestamp_utc=ts)
             )
             return TaskOutcome(
                 task_id=task.id,
@@ -261,7 +266,7 @@ def run_task_loop(
             )
             rounds.append(
                 RoundRecord(
-                    attempt, source, score, chat, cost, is_correction=attempt > 1
+                    attempt, source, score, chat, cost, is_correction=attempt > 1, timestamp_utc=ts
                 )
             )
             return TaskOutcome(
@@ -276,7 +281,7 @@ def run_task_loop(
 
         score = scorer.score(source)
         rounds.append(
-            RoundRecord(attempt, source, score, chat, cost, is_correction=attempt > 1)
+            RoundRecord(attempt, source, score, chat, cost, is_correction=attempt > 1, timestamp_utc=ts)
         )
 
         if score.verdict == VERDICT_SKIP:

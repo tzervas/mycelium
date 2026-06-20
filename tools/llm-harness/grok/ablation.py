@@ -104,10 +104,12 @@ def default_arms() -> list[Arm]:
     """The five protocol arms, with arms 3 & 4 & 5 marked blocked on missing deps.
 
     Honest wiring (research/11 §T11.7): arms 1 and 2 are runnable against any chat
-    backend; arm 3 needs a grammar-constrained decoder, arm 4 needs the
-    ``LlmCanonical`` projection renderer (both M-380, not yet built), and arm 5
-    needs an embedded-DSL baseline harness. Blocked arms carry their reason and are
-    never given a fabricated score.
+    backend; arm 3 needs a grammar-constrained decoder (GBNF/Outlines — not exposed
+    by the OpenAI-compatible REST surface); arm 4's renderer is enacted in
+    crates/mycelium-lsp/src/project.rs (M-380, 2026-06-18) but needs a
+    LlmCanonical→Core-IR parser + harness integration before it can run; arm 5
+    needs an embedded-DSL baseline harness (RR-3). Blocked arms carry their reason
+    and are never given a fabricated score.
     """
     return [
         Arm(
@@ -137,10 +139,13 @@ def default_arms() -> list[Arm]:
             description="LlmCanonical projection (familiar-skin, same AST)",
             runnable=False,
             blocked_reason=(
-                "needs the LlmCanonical projection renderer over mycelium-core "
-                "(M-380 / T11.4); not built yet. The retention-ratio DENOMINATOR — "
-                "so the threshold comparison is indeterminate until this arm runs "
-                "(research/11 §T11.7 step 3). Not fabricated (VR-5)."
+                "LlmCanonical renderer enacted in crates/mycelium-lsp/src/project.rs "
+                "(M-380, 2026-06-18). Still needs: (1) a LlmCanonical→Core-IR parser "
+                "so model s-expression output can be scored by myc-check; (2) harness "
+                "integration wiring this arm's prompt builder to call the renderer on "
+                "task examples. The retention-ratio DENOMINATOR — threshold comparison "
+                "indeterminate until this arm runs (research/11 §T11.7 step 3). Not "
+                "fabricated (VR-5)."
             ),
         ),
         Arm(
