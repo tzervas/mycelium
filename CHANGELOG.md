@@ -8,6 +8,14 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-20: squash-only-into-main + curated-commit merge policy)
+Baked the merge discipline into `CLAUDE.md` (Commits & PRs + the Autonomous PR workflow): every PR lands on
+`main` as a **single squash commit** for a linear, bisectable history (the internal swarm leaf→epic→orch
+merges stay octopus/`--no-ff` to preserve lineage; only the `main` landing squashes), and the squash commit
+is **curated** — a clear subject + body describing the net change, never the auto-concatenated WIP/fixup/merge
+trail. Process/operating-guide change only; codifies existing practice. (Future: fold into `.claude/skills/` +
+tooling.)
+
 ### Changed (2026-06-20: stdlib spec ratification pass — 23 specs → Accepted, DN-07)
 Maintainer ratification (DN-07, append-only) of the implemented Rust-first standard-library specs, after the
 DN-16 readiness survey + an independent review:

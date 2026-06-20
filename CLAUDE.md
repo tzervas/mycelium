@@ -64,6 +64,14 @@ auto-triggers without an explicit decision.
 - A PR states which `FR/NFR/VR/SC` it advances (or which ADR/RFC it implements) and **how it was
   verified**. Editorial-only PRs say so.
 - Branch from `main`, one task per branch.
+- **Squash-only into `main`.** Every PR lands on `main` as a **single squash commit** — a linear,
+  bisectable history that keeps downstream development and integration merges smooth. The internal
+  swarm integration merges (leaf→epic→orch) stay octopus/`--no-ff` to preserve lineage; **only the
+  final landing on `main` squashes.**
+- **Curate the squash commit — housekeeping is part of the merge.** Write a clear, self-contained
+  subject + body describing the *net* change; **never** let the auto-concatenated WIP /
+  `wip(batch …)` / fixup / merge trail stand as the squash message. The commit left on `main` is the
+  permanent record — keep it clean and legible, not cluttered.
 
 ## Swarm development — octopus-merge pattern (parallel agents, zero collision)
 When a wave decomposes into several **tightly-scoped, independent** tasks (e.g. one stdlib
@@ -271,7 +279,8 @@ asked to wait, wait.)
    if it's ambiguous or architecturally significant. Reply once, frugally; the diff is the record.
 3. **Green, then merge.** The full `just check` (local↔CI parity) must be green — fix integration,
    regenerate orchestrator-owned artifacts (`docs/api-index/`, api baselines, `CHANGELOG`,
-   `issues.yaml` status), then merge (squash to `main`, matching repo convention).
+   `issues.yaml` status), then merge as a **single curated squash** to `main` (the squash-only policy
+   above — a clean subject + body for the net change, never the WIP/`wip(batch …)`/fixup/merge trail).
 4. **Pull-down before merge-up — keep tips current, never integrate across divergent history.**
    Before merging a child into its parent, **pull the parent down into the child first** (or branch
    the child from the parent's *latest pushed tip*), so the child already contains the parent's
