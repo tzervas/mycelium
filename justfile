@@ -10,6 +10,7 @@ default:
 # Best-effort install of the check tools (uv tool / npx / pip). Safe to re-run.
 setup:
     @bash scripts/install-tools.sh
+    @bash scripts/setup-mlir.sh
 
 # Run the FULL local suite. Identical to what CI runs (`just ci`).
 check:

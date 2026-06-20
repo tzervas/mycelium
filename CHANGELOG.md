@@ -8,6 +8,38 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: Wave-1 — native MLIR→LLVM path keystone (M-348/M-603, M-601, M-602); epic E6-1)
+Closed Phase-4's last open item (M-348) and delivered the Phase-6 E6-1 keystone: a real, non-fragile
+`mlir-dialect` lowering path with libMLIR now durably provisionable on Linux. The interpreter stays the
+trusted base; MLIR is a differential-tested perf-path increment, never a black box.
+- **Durable libMLIR provisioning (M-348/M-603).** `scripts/setup-mlir.sh` — version-matched to the
+  installed LLVM (major derived from `llc`/`clang`, never hard-coded — no silent version bump),
+  `apt-get install libmlir-$M-dev mlir-$M-tools`, idempotent, skip-gracefully (`exit 0`), no
+  `curl|bash` — wired into `just setup`. **ADR-019 (Accepted)** records libMLIR as the build dependency
+  of the `mlir-dialect` feature; **DN-15 §9** appends the unblock (provisionable on Linux). Default
+  build/test stay green WITHOUT libMLIR.
+- **Real MLIR-dialect lowering (M-601) — honest scope.** `mycelium-mlir`'s `dialect::native` lowers the
+  **bit/trit element-wise fragment** (`core.id`, `bit.{not,and,or,xor}`, `trit.neg`) to a genuine
+  `arith`/`func` MLIR module → `mlir-opt-18 --convert-func-to-llvm --convert-arith-to-llvm
+  --reconcile-unrealized-casts | mlir-translate-18 --mlir-to-llvmir` → real LLVM IR → native; every
+  stage dumpable (VR-4). Behind the **OFF-by-default `mlir-dialect`** Cargo feature; the toolchain is
+  probed at runtime and skips gracefully when absent (`DialectError::ToolchainMissing`). **Honest
+  boundary (G2/VR-5):** data/closure/recursion are NOT given a second, divergent MLIR codegen — they
+  remain on the proven direct-LLVM backend (`llvm.rs`, M-373/378/379) + env-machine, and the MLIR path
+  **explicitly refuses** them (`DialectError::Unsupported`), routing there rather than shipping fragile
+  codegen. Tag: **Empirical** (real compiled artifact; correctness evidenced by the differential — not
+  Proven). So the v0 calculus runs end-to-end on the compiled paths, but the *MLIR-dialect* increment
+  itself is element-wise; trit-carry/data/closure/recursion stay on direct-LLVM/interp.
+- **Three-way differential + measured E1 (M-602).** `interp ≡ direct-LLVM ≡ MLIR-dialect` over the
+  element-wise corpus through the shared M-210 checker (non-vacuous + discriminating; out-of-fragment
+  nodes asserted explicitly refused by MLIR while `interp ≡ direct-LLVM` still holds). The E1 verdict
+  moves "not established" → **measured** (release-gated, refuses a debug build, no pre-written target;
+  honest caption — the trivial kernel is process-spawn-bound, so this is an AOT-path number, not a
+  blanket speedup claim).
+- Green: `cargo test -p mycelium-mlir` (default) and `--features mlir-dialect` both pass; fmt + clippy
+  (both feature configs, `-A unsafe_code` per ADR-014) clean; full `just check` green. Also scaffolds
+  the empty `mycelium-cli-common` crate (workspace infra the Phase-8 release-mechanics work populates).
+
 ### Added (2026-06-20: M-397 — `gh-issues-sync` bounded-concurrency, rate-negotiated, batched execution)
 Sped up the live reconcile by overlapping the many small, independent `gh` mutations per run while
 staying inside GitHub's secondary-rate limits — never-silent (G2), fault-tolerant, and a clean N=1

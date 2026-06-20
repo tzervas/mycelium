@@ -12250,7 +12250,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 35,
+      "line": 44,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12338,7 +12338,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 36,
+      "line": 45,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12492,7 +12492,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 37,
+      "line": 46,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12701,7 +12701,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 38,
+      "line": 47,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12832,9 +12832,9 @@
       "kind": "fn",
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
-      "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2450,
-      "summary": "Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`)",
+      "file": "crates/mycelium-mlir/src/dialect/native.rs",
+      "line": 675,
+      "summary": "Compile `node` through the MLIR pipeline to a native executable (MLIR → LLVM IR → `clang`)",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -12843,9 +12843,9 @@
       "kind": "fn",
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
-      "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2476,
-      "summary": "Compile the bit/trit-subset program to a native executable, run it once, and read the result",
+      "file": "crates/mycelium-mlir/src/dialect/native.rs",
+      "line": 705,
+      "summary": "Compile + run `node` through the MLIR pipeline and read the result back.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -12943,7 +12943,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 39,
+      "line": 48,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12954,7 +12954,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::dialect",
       "file": "crates/mycelium-mlir/src/dialect.rs",
-      "line": 45,
+      "line": 71,
       "summary": "Emit the textual `ternary`-dialect module for `node` (one op per lowered binding).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12965,7 +12965,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/dialect.rs",
-      "line": 45,
+      "line": 71,
       "summary": "Emit the textual `ternary`-dialect module for `node` (one op per lowered binding).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13053,7 +13053,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 40,
+      "line": 49,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13306,7 +13306,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 41,
+      "line": 50,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13416,7 +13416,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 42,
+      "line": 51,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13470,9 +13470,9 @@
       "kind": "fn",
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
-      "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2450,
-      "summary": "Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`)",
+      "file": "crates/mycelium-mlir/src/dialect/native.rs",
+      "line": 675,
+      "summary": "Compile `node` through the MLIR pipeline to a native executable (MLIR → LLVM IR → `clang`)",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -13481,9 +13481,9 @@
       "kind": "fn",
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
-      "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2476,
-      "summary": "Compile the bit/trit-subset program to a native executable, run it once, and read the result",
+      "file": "crates/mycelium-mlir/src/dialect/native.rs",
+      "line": 705,
+      "summary": "Compile + run `node` through the MLIR pipeline and read the result back.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -13504,7 +13504,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 43,
+      "line": 52,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13658,7 +13658,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 44,
+      "line": 53,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13746,7 +13746,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 45,
+      "line": 54,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13823,7 +13823,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 46,
+      "line": 55,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
