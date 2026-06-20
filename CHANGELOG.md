@@ -8,6 +8,19 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: Wave 4 — M-381 ablation results recorded)
+- **M-381 ablation run `20260620T195352Z` — results recorded (DN-09 §9):** Three-arm live
+  ablation (grok-build-0.1, seeds [11,23,42], 8 tasks × 3 seeds). Results [Empirical]: arm1
+  (bare) 0/24 = 0%; arm2 (grammar-primer) 24/24 = **100%**; arm4 (LlmCanonical) 0/24 = 0%
+  (scoring artifact — `myc-check` cannot parse S-expressions by design). Retention ratio:
+  **INDETERMINATE** — arm4 denominator = 0 (arm4 pass@1 reflects scorer limitation, not model
+  failure). Gold set: g04-widen-swap PARTIAL_PASS (self-corrected), g05-narrow-swap PASS (first
+  attempt) — 4/8 total PASSes. Total spend $0.0373 this run, ≈$0.072 cumulative. KC-2 verdict
+  unchanged: **proceed** (DN-09 §3). To unlock a determinate retention ratio: add
+  LlmCanonical-native scoring (Python-side parse-only or RFC-0021 §4.1 L1-bridge).
+  Arm3 (grammar-constrained) and arm5 (embedded-DSL) remain blocked (no GBNF, no RR-3).
+  M-381 status: in-progress (non-blocking research track).
+
 ### Changed (2026-06-20: Wave 3 — ADR-020 Enacted, M-381 Arm 4 ablation run)
 - **ADR-020 — Enacted** (2026-06-20): `runtime`/`colony` phylum-placement decision is now
   **Enacted** — the M-521 v0 R1 implementation landed on `main` in Wave 2

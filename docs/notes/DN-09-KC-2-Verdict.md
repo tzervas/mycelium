@@ -276,8 +276,105 @@ unchanged. The frontier-model arm adds supplemental evidence:
 
 ---
 
+## 9. Ablation run (2026-06-20, arm 4 now runnable) — retention ratio INDETERMINATE
+
+This section records the M-381 five-arm retention ablation run (`20260620T195352Z`), executed
+after landing the `llm_canonical_parse` binary (M-381 Arm 4, W2L3) which unblocked arm 4.
+Run: `grok-build-0.1`, task set `gold-compose-v1`, seeds [11, 23, 42], $5 cap, actual spend
+$0.0373 (cumulative ~$0.072 across all Grok/xAI sessions — well within the $10 session bound).
+
+### 9.1 Gold task set results (grok-build-0.1, seed 42, 6 retried tasks)
+
+Two tasks carried forward (PASS) from the §8 retry run: **g01-identity**, **g08-roundtrip**.
+
+| task | status | rounds | note |
+|---|---|---|---|
+| g01-identity | PASS (carried) | 1 | from §8 |
+| g02-not | FAIL | 3 | syn×3 |
+| g03-double | FAIL | 3 | syn×2, typ |
+| **g04-widen-swap** | **PARTIAL_PASS** | 2 | syn then clean (self-corrected with diagnostics) |
+| **g05-narrow-swap** | **PASS** | 1 | first-attempt clean |
+| g06-compose-not-double | FAIL | 3 | syn×3 |
+| g07-and-then-widen | FAIL | 3 | syn×3 |
+| g08-roundtrip | PASS (carried) | 1 | from §8 |
+
+**Cumulative gold-set result across §7–§9:** 4/8 tasks PASS or PARTIAL_PASS (g01, g04, g05, g08).
+g04 and g05 are new PASSes — not previously seen in §7/§8. Both involve explicit representation
+swaps: g04 (widen: Binary{8}→Binary{16}) and g05 (narrow: Binary{16}→Binary{8}). The
+diagnostic-feedback loop (M-330) enabled the self-correction. These are positive signals for the
+"recoverable, not irrecoverable" KC-2 verdict and the grammar-feedback mechanism.
+
+### 9.2 Ablation arm results (Empirical, 8 tasks × 3 seeds = 24 samples per arm)
+
+| arm | ran | n_clean / n_samples | pass@1 | guarantee tag |
+|---|---|---|---|---|
+| arm1 — bare novel surface | yes | 0 / 24 | **0.0%** | Empirical |
+| arm2 — +grammar-in-context primer | yes | 24 / 24 | **100.0%** | Empirical |
+| arm3 — grammar-constrained decoding | **blocked** | — | — | Declared |
+| arm4 — LlmCanonical projection | yes | 0 / 24 | **0.0%** | Empirical |
+| arm5 — embedded-DSL baseline | **blocked** | — | — | Declared |
+
+**Retention ratio: INDETERMINATE.** arm4.pass@1 = 0.0 — the denominator is zero; the ratio
+cannot be formed. The threshold comparison (≥ ~70% ⇒ novel surface retains leverage) applies
+only when arm 4 is present with a non-zero denominator (research/11 §T11.7 step 3).
+
+### 9.3 Honest interpretation (VR-5)
+
+**arm2 (grammar-primer) at 100% is a strong, reproducible signal [Empirical].** Across all 8
+tasks and 3 seeds (24 independent samples), every generation passed `myc-check` on the first
+attempt when the grammar-in-context primer was included. This replicates the prior
+`experiments/` finding (§2: grammar-in-context was the dominant knob at 7B) and extends it to a
+frontier API model (grok-build-0.1) across multiple seeds. The grammar primer is highly
+effective as a lever; without it (arm1), pass@1 = 0%.
+
+**arm4 (LlmCanonical) at 0% is a scoring-method artifact, not a model failure [Declared].**
+The arm4 scorer uses `myc-check` (which expects `.myc` L1 surface syntax) to evaluate
+LlmCanonical S-expression output. `myc-check` returns exit code 2 (parse error) on
+S-expression input by design — this is documented in the ablation code and was anticipated
+before the run. A 0% arm4 score means "the current scorer cannot validate LlmCanonical output"
+— NOT "the model fails to produce LlmCanonical syntax". To get a meaningful arm4 result, a
+LlmCanonical→L1 converter (or a separate S-expression scorer) is required (RFC-0021 §4.1
+EditCapability follow-up). The arm4 result is honest but uninformative about model capability.
+
+**What this run establishes:**
+
+- Grammar-in-context primers are highly effective for grok-build-0.1 on the Mycelium surface
+  (100% pass@1 across all tasks and seeds). [Empirical]
+- The retention ratio threshold comparison (research/11 §T11.7 step 3; RFC-0021 §4.7) remains
+  INDETERMINATE: arm4 requires a scorer that understands LlmCanonical format.
+- The KC-2 verdict (§3: **proceed**) is not affected; this run adds supplemental evidence.
+
+**What this run does NOT establish:**
+
+- Whether the LlmCanonical format provides a meaningful advantage over the grammar-primed novel
+  surface — the arm4 scorer cannot currently answer that question.
+- A determinate retention ratio or threshold comparison.
+- Any upgrade of the leverage claim beyond "Declared/open" (VR-5).
+
+### 9.4 What reopens arm4
+
+To get a determinate arm4 result: build a scorer that evaluates LlmCanonical S-expression output
+on its own terms (not via `myc-check`). Options:
+(a) **Python-side structural validator only**: use the existing `parse_llm_canonical_py` — a
+    correct S-expression parse = PASS for arm4's purpose. This would give arm4 its pass@1 for the
+    retention ratio computation, though it cannot verify type correctness.
+(b) **Full LlmCanonical→L1 bridge**: a converter from S-expressions to `.myc` surface, allowing
+    `myc-check` to fully validate (parse + typecheck). This is the RFC-0021 §4.1 EditCapability
+    path, estimated 1–2 days effort.
+
+Option (a) is immediately implementable; option (b) is the rigorous path. Either reopens the
+retention ratio comparison. Tracked as the standing follow-up: update M-381 when one of these
+lands.
+
+---
+
 ## Changelog
 
+- **2026-06-20 — §9 added (M-381 arm 4 ablation run).** arm 4 now runnable
+  (`llm_canonical_parse` compiled, M-381 W2L3 landed). Ablation run
+  `20260620T195352Z`: arm1 0%, arm2 100%, arm4 0% (scoring-method artifact).
+  Retention ratio: INDETERMINATE (arm4 denominator zero). Gold set: g04 PARTIAL_PASS,
+  g05 PASS (new). KC-2 verdict unchanged: proceed.
 - **2026-06-20 — §8 added (Grok/xAI retry run completed).** Harness fixed (stdout diagnostic
   fallback + `--resume-from`; self-test **16/16**). Retry run `20260620T151333Z` executed live:
   grok-build-0.1 14.3% syntactic valid / 14.3% type-check pass; grok-4.3 12.5% / 0.0%.
