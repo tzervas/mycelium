@@ -11,8 +11,7 @@ New ADRs go here as standalone files. (ADR-001…009 may be extracted into indiv
 
 ## Status set
 
-`Proposed → Accepted → Enacted → Superseded`. All current ADRs are **Accepted** (or **Enacted** for fully-landed decisions) except **ADR-012**
-(**Proposed** — its runtime model is now drafted as RFC-0008; ratification pending). **ADR-020** is now **Enacted** (M-521 v0 R1 implementation landed 2026-06-20).
+`Proposed → Accepted → Enacted → Superseded`. All current ADRs are **Accepted** (or **Enacted** for fully-landed decisions). **ADR-020** is now **Enacted** (M-521 v0 R1 implementation landed 2026-06-20).
 
 ## Index
 
@@ -29,7 +28,7 @@ New ADRs go here as standalone files. (ADR-001…009 may be extracted into indiv
 | 009 | Hybrid execution; AOT preferred for stable components; interpreter is reference | Accepted | Foundation §8 |
 | 010 | Verified-numerics foundation: two bound kernels (ε / δ) + shared certificate | Accepted | `ADR-010-Verified-Numerics-Foundation.md` |
 | 011 | `BoundBasis` is a property of every `Bound` (not just `CapacityBound`) | Accepted | `ADR-011-BoundBasis-Is-Universal.md` |
-| 012 | Layered lexicon (Surface/Runtime/Formal tiers) + fungal runtime vocabulary | Proposed | `ADR-012-Layered-Lexicon-and-Fungal-Runtime-Model.md` |
+| 012 | Layered lexicon (Surface/Runtime/Formal tiers) + fungal runtime vocabulary | Accepted | `ADR-012-Layered-Lexicon-and-Fungal-Runtime-Model.md` |
 | 013 | `spore` is the deployable unit; the reconstruction manifest is one component | Accepted | `ADR-013-Spore-Is-The-Deployable-Unit.md` |
 | 014 | `unsafe` Rust: permitted-but-warned (explicit, justified, dev-warned, release-silenceable), not forbidden | Accepted | `ADR-014-Unsafe-Code-Policy.md` |
 | 015 | `DEFAULT_ENUM_BUDGET = 4096` (guarantee-maximal): the RFC-0010 decode selector defaults to the `Exact` arm across the whole validated envelope, not the cost-optimal ≈128 | Accepted | `ADR-015-decode-enum-budget-default.md` |
