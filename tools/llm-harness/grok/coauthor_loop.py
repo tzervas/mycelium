@@ -235,7 +235,15 @@ def run_task_loop(
                 batch=batch,
             )
             rounds.append(
-                RoundRecord(attempt, "", score, chat, cost, is_correction=attempt > 1, timestamp_utc=ts)
+                RoundRecord(
+                    attempt,
+                    "",
+                    score,
+                    chat,
+                    cost,
+                    is_correction=attempt > 1,
+                    timestamp_utc=ts,
+                )
             )
             return TaskOutcome(
                 task_id=task.id,
@@ -266,7 +274,13 @@ def run_task_loop(
             )
             rounds.append(
                 RoundRecord(
-                    attempt, source, score, chat, cost, is_correction=attempt > 1, timestamp_utc=ts
+                    attempt,
+                    source,
+                    score,
+                    chat,
+                    cost,
+                    is_correction=attempt > 1,
+                    timestamp_utc=ts,
                 )
             )
             return TaskOutcome(
@@ -281,7 +295,15 @@ def run_task_loop(
 
         score = scorer.score(source)
         rounds.append(
-            RoundRecord(attempt, source, score, chat, cost, is_correction=attempt > 1, timestamp_utc=ts)
+            RoundRecord(
+                attempt,
+                source,
+                score,
+                chat,
+                cost,
+                is_correction=attempt > 1,
+                timestamp_utc=ts,
+            )
         )
 
         if score.verdict == VERDICT_SKIP:
