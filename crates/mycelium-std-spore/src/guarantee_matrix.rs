@@ -11,13 +11,14 @@
 //! - **`Empirical` (≤ ceiling)** — the reconstruction row inherits the tag `std.vsa` establishes
 //!   for the probabilistic resonator decode (FR-C2). `spore` carries, never sets, this tag.
 //! - **`Exact` (via verification)** — the deploy row verifies the deterministic hash at the target;
-//!   the row's `Exact` is the *verification*'s tag. **FLAGGED §7 Q2** — M-620 owned.
+//!   the row's `Exact` is the *verification*'s tag. Implemented in M-620 (`deploy.rs`).
+//! - **`Declared`** — structural assertion; full proof requires external toolchain (e.g. MLIR).
 //!
 //! # Fallibility (C1 / G2)
 //!
 //! Every `PublishErr`-fallible row names the specific offending input (surfaceless phylum, hashless
 //! dep, version/hash disagreement, bad include, cycle, no sources). No row permits a silent drop
-//! of an error. The `deploy` row is `FLAGGED §7 Q2` (Phase-6, M-620).
+//! of an error. The `deploy` / `germinate` rows enumerate all named error variants (C1/G2).
 //!
 //! # EXPLAIN-able? (C3 / G11)
 //!
@@ -48,16 +49,18 @@ pub struct MatrixRow {
 
 /// The `std.spore` guarantee matrix (spec §4.5), encoded as data (RFC-0016 §4.5).
 ///
-/// One row per exported op (grouped: build / manifest / regrowth / deploy). Tag = the spec §4
-/// normative entry. `explain_able` = whether the op exposes an inspectable artifact (C3).
+/// One row per exported op (grouped: build / manifest / regrowth / deploy / germinate). Tag = the
+/// spec §4 normative entry. `explain_able` = whether the op exposes an inspectable artifact (C3).
 /// Tests assert coverage and tag correctness so divergence from the spec is caught mechanically
 /// (VR-5 / C2).
 ///
-/// # Deploy row (FLAG Q2)
+/// # Deploy / germinate rows (M-620 — implemented)
 ///
-/// The `deploy` row is FLAGGED — the full native-deploy half (turning a spore into a running colony)
-/// is Phase-6-gated (M-620). The row is present to fix the seam and carry the honesty commitment
-/// (hash mismatch = explicit `DeployErr::HashMismatch`, never silent); it is not implemented here.
+/// The `deploy` seam is now implemented in `deploy.rs` (M-620, Phase-6). The `germinate` entry
+/// point verifies content-hash canonicality (Exact — BLAKE3 deterministic) and the no-opaque-
+/// lowering guarantee (Declared — structural assertion, MLIR toolchain pending). Overall tag is
+/// `Empirical` (the MLIR native path is not yet proven end-to-end — VR-5: no upgrade without a
+/// checked basis).
 ///
 /// # Regrowth row (FLAG Q4b)
 ///
@@ -156,16 +159,62 @@ pub const MATRIX: &[MatrixRow] = &[
         never_silent_property: "the carried {ε,δ,strength} bound + decode params are the inspectable \
                                  artifact (C3); non-convergence is an explicit VsaError (never silent)",
     },
-    // ─── Deploy (Phase-6, M-620 — FLAGGED §7 Q2) ───────────────────────────────────────────────
+    // ─── Deploy / germinate (M-620 — implemented in deploy.rs) ────────────────────────────────
     MatrixRow {
-        op: "deploy (Phase-6 native path — FLAG Q2: M-620; NOT implemented here)",
-        guarantee: "Exact (deploy verifies the deterministic hash) — FLAGGED §7 Q2",
-        fallibility: "Err(DeployErr::HashMismatch{expected, got}), TargetUnavailable, Unsupported",
-        effects: "io (network/native deploy)",
+        op: "deploy (ADR-013 native seam — M-620 implemented)",
+        guarantee: "Exact (deploy verifies the deterministic content hash at the target — C4/ADR-003)",
+        fallibility: "Err(DeployError::MissingInput | AmbiguousInput | HashMismatch | \
+                      OpaqueStepDetected) — every error variant names the exact condition (C1/G2)",
+        effects: "io (may write to filesystem for Local target; InMemory has no effects)",
         explain_able: true,
-        never_silent_property: "hash mismatch on deploy is an explicit DeployErr naming both \
-                                 hashes — no silent overwrite, no partial deploy (C1/G2); \
-                                 FLAGGED §7 Q2 — not yet implemented (M-620 Phase-6)",
+        never_silent_property: "hash mismatch on deploy is explicit DeployError::HashMismatch \
+                                 naming both hashes; no silent overwrite, no partial deploy \
+                                 (C1/G2/ADR-003); missing/ambiguous input is named, never guessed",
+    },
+    MatrixRow {
+        op: "germinate (deploy entry point — ADR-013 native path)",
+        guarantee: "Empirical (structural VR-4 check + content-hash verify; native deploy path \
+                    not yet proven end-to-end — MLIR toolchain pending; no upgrade without a \
+                    checked basis, VR-5)",
+        fallibility: "Err(DeployError::MissingInput | AmbiguousInput | HashMismatch | \
+                      OpaqueStepDetected) — never a silent accept or best-effort partial deploy \
+                      (G2 / C1 / ADR-013)",
+        effects: "io (may write to filesystem for Local target; InMemory has no IO effect)",
+        explain_able: true,
+        never_silent_property: "every error path names the specific violated invariant; \
+                                 no guessed default, no silent fallback (G2 / VR-5 / ADR-013)",
+    },
+    MatrixRow {
+        op: "verify content hash canonical (deploy sub-check — C4/ADR-003)",
+        guarantee: "Exact (BLAKE3 is deterministic; the same content always produces the same hash)",
+        fallibility: "Err(DeployError::HashMismatch{expected, actual}) — names both hashes (G11)",
+        effects: "none (pure computation)",
+        explain_able: true,
+        never_silent_property: "hash mismatch is explicit and named; no silent accept of a \
+                                 divergent hash (C1/G2/ADR-003)",
+    },
+    MatrixRow {
+        op: "no-opaque-lowering check (VR-4 structural assertion)",
+        guarantee: "Declared (structural assertion — no opaque lowering step present in the \
+                    pipeline by construction; full end-to-end proof requires the MLIR toolchain \
+                    to be integrated; tag is Declared per VR-5 honesty rule)",
+        fallibility: "Err(DeployError::OpaqueStepDetected{step}) if an opaque step is detected; \
+                      step name is carried for the diagnostic (G11)",
+        effects: "none (pure structural check in v0 stub)",
+        explain_able: true,
+        never_silent_property: "opaque step detected is an explicit refusal naming the step; \
+                                 no silent bypass of the VR-4 invariant (G2 / VR-4 / C1)",
+    },
+    MatrixRow {
+        op: "explain_deploy (EXPLAIN for germination outcome — VR-4/SC-3/C3)",
+        guarantee: "Exact (deterministic; a total pure function of the DeployResult — no \
+                    randomness, no IO, same result always produces the same string)",
+        fallibility: "total",
+        effects: "none",
+        explain_able: true,
+        never_silent_property: "total — the EXPLAIN itself is the inspectable artifact; it always \
+                                 mentions both the content-hash check (C4) and the opaque-lowering \
+                                 check (VR-4) so neither is silently omitted (C3/G11)",
     },
 ];
 
@@ -173,12 +222,14 @@ pub const MATRIX: &[MatrixRow] = &[
 mod tests {
     use super::MATRIX;
 
-    /// The matrix covers all 11 spec §4.5 op rows (the normative table).
+    /// The matrix covers all 15 op rows (11 spec §4.5 rows + 4 M-620 deploy/germinate rows).
     /// Guard: adding or removing a row without updating this count makes it fail.
     #[test]
     fn matrix_covers_all_spec_ops() {
-        // The spec §4.5 table has 11 normative rows (build, build_value, identity, explain,
-        // manifest_of, validate, manifest_hash, mode, declared_strength, reconstruct, deploy).
+        // 11 normative spec §4.5 rows (build, build_value, identity, explain, manifest_of,
+        // validate, manifest_hash, mode, declared_strength, reconstruct, deploy)
+        // + 4 M-620 rows (germinate, verify content hash canonical, no-opaque-lowering check,
+        //   explain_deploy) added when the deploy seam was implemented.
         let expected_op_prefixes = [
             "build (project",
             "build_value",
@@ -191,17 +242,21 @@ mod tests {
             "declared_strength",
             "reconstruct",
             "deploy",
+            "germinate",
+            "verify content hash canonical",
+            "no-opaque-lowering check",
+            "explain_deploy",
         ];
         for prefix in &expected_op_prefixes {
             assert!(
                 MATRIX.iter().any(|r| r.op.starts_with(prefix)),
-                "matrix is missing op starting with {prefix:?} (spec §4.5)"
+                "matrix is missing op starting with {prefix:?} (spec §4.5 + M-620)"
             );
         }
         assert_eq!(
             MATRIX.len(),
-            11,
-            "expected exactly 11 rows (spec §4.5 table); got {}",
+            15,
+            "expected 15 rows (11 spec §4.5 + 4 M-620 deploy rows); got {}",
             MATRIX.len()
         );
     }
@@ -210,8 +265,10 @@ mod tests {
     /// Guard: a tag that doesn't start with "Exact" for a deterministic op makes this fail.
     #[test]
     fn exact_rows_start_with_exact() {
-        // The build/identity/manifest rows are all Exact; only the reconstruct and deploy rows
-        // are flagged/Empirical. We enumerate the expected Exact rows.
+        // The build/identity/manifest rows are all Exact. The reconstruct row is Empirical.
+        // The germinate row is Empirical (native path not proven end-to-end).
+        // The no-opaque-lowering check is Declared.
+        // deploy, verify content hash canonical, explain_deploy are Exact.
         let exact_op_prefixes = [
             "build (project",
             "build_value",
@@ -222,7 +279,9 @@ mod tests {
             "manifest_hash",
             "mode",
             "declared_strength",
-            "deploy", // Exact via verification (FLAG Q2)
+            "deploy",                        // Exact via verification (M-620 implemented)
+            "verify content hash canonical", // Exact — BLAKE3 deterministic
+            "explain_deploy",                // Exact — deterministic pure function
         ];
         for prefix in &exact_op_prefixes {
             let row = MATRIX
@@ -271,20 +330,42 @@ mod tests {
         );
     }
 
-    /// The `deploy` row is flagged (§7 Q2 — M-620 not yet implemented).
-    /// Guard: an unflagged deploy row would overclaim scope.
+    /// The `deploy` row is now implemented (M-620) and no longer flagged.
+    /// The `germinate` row is `Empirical` (native path not proven end-to-end — VR-5).
+    /// Guard: if deploy is re-flagged without a reason, this test will catch it.
     #[test]
-    fn deploy_row_is_flagged() {
-        // Mutant witness: removing FLAG/FLAGGED from the deploy row or guarantee makes this fail.
-        let row = MATRIX
+    fn deploy_row_is_implemented_and_empirical_germinate() {
+        // Mutant witness: removing "M-620 implemented" from the deploy row op makes this fail.
+        let deploy_row = MATRIX
             .iter()
             .find(|r| r.op.starts_with("deploy"))
             .expect("deploy row must be in the matrix (spec §4.5)");
         assert!(
-            row.op.contains("FLAG") || row.guarantee.contains("FLAG"),
-            "deploy row must be flagged (§7 Q2 / M-620): op={:?}, guarantee={:?}",
-            row.op,
-            row.guarantee
+            deploy_row.op.contains("M-620"),
+            "deploy row must reference M-620 (implementation marker): op={:?}",
+            deploy_row.op
+        );
+        // The germinate row must be tagged Empirical (VR-5 — native path not yet proven).
+        // Mutant witness: tagging germinate as Exact or Proven would violate VR-5.
+        let germinate_row = MATRIX
+            .iter()
+            .find(|r| r.op.starts_with("germinate"))
+            .expect("germinate row must be in the matrix (M-620)");
+        assert!(
+            germinate_row.guarantee.contains("Empirical"),
+            "germinate row must be tagged Empirical (VR-5 — native path not proven): {:?}",
+            germinate_row.guarantee
+        );
+        // The no-opaque-lowering check row must be tagged Declared (VR-5 — structural assertion).
+        // Mutant witness: tagging this as Exact/Proven/Empirical would overclaim (MLIR pending).
+        let opaque_row = MATRIX
+            .iter()
+            .find(|r| r.op.starts_with("no-opaque-lowering check"))
+            .expect("no-opaque-lowering check row must be in the matrix (M-620)");
+        assert!(
+            opaque_row.guarantee.contains("Declared"),
+            "no-opaque-lowering check row must be tagged Declared (VR-5): {:?}",
+            opaque_row.guarantee
         );
     }
 
@@ -317,8 +398,8 @@ mod tests {
         }
     }
 
-    /// The manifest-carrying rows have `explain_able: true` (C3 — they expose an inspectable
-    /// artifact).
+    /// The manifest-carrying and deploy rows have `explain_able: true` (C3 — they expose an
+    /// inspectable artifact, or their EXPLAIN surfaces VR-4/ADR-003 checks).
     #[test]
     fn manifest_rows_are_explain_able() {
         let explain_ops = [
@@ -330,6 +411,10 @@ mod tests {
             "validate",
             "reconstruct",
             "deploy",
+            "germinate",
+            "verify content hash canonical",
+            "no-opaque-lowering check",
+            "explain_deploy",
         ];
         for prefix in &explain_ops {
             let row = MATRIX
