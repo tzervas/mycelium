@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-collections` (M-511, #152, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
+| **Status** | **Accepted** (2026-06-20, maintainer-ratified per DN-07 — guarantee matrix asserted in tests; open §7/§8 questions are design/scope calls, not contract violations; was *Implemented (Rust-first) — pending ratification* 2026-06-18, Draft/needs-design 2026-06-17) — the Rust-first code landed as `mycelium-std-collections` (M-511, #152, Batch P5-B; guarantee matrix asserted in tests). The Mycelium-lang migration (M-502-gated) remains. |
 | **Module / Ring** | `std.collections` · Ring 2 (RFC-0016 §4.2) · Tier B (RFC-0016 §4.4) |
 | **Tracks** | `M-511` (#152) — the Phase-5 task this spec delivers |
 | **Scope** | The value-semantic collection structures every program needs: an immutable persistent **`Seq`** (indexed sequence / vector-list), a persistent **`Map`** (key→value), and a persistent **`Set`**, with structural-sharing "updates" (an update returns a *new* value, never mutating in place). The module owns the structures and the *non-identity* hashing-for-buckets used to key a `Map`/`Set`. |
@@ -301,3 +301,5 @@ effect; bounded allocation for the new persistent node is intrinsic and budget-f
   M-501's to ratify; the order-invariant's checked tag; whole-collection identity via `content`; the
   bucketing-hash seed effect; absence ergonomics) — the concrete scope is M-501's to fix, never invented
   here. No code; no kernel change (KC-3). Append-only.
+
+- **2026-06-20 — Accepted (maintainer ratification, DN-07).** The maintainer ratified this Rust-first spec: the §4.5 guarantee matrix is asserted in tests, never-silent fallibility and honest per-op tags hold, and the open §7/§8 questions are design/scope calls, not contract violations. No guarantee tag was upgraded without a checked basis (VR-5). Status moves *Implemented (Rust-first) — pending ratification → Accepted*. Append-only; no kernel change (KC-3).

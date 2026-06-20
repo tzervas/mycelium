@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-math` (M-525, #166, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
+| **Status** | **Accepted** (2026-06-20, maintainer-ratified per DN-07 — guarantee matrix asserted in tests; open §7/§8 questions are design/scope calls, not contract violations; was *Implemented (Rust-first) — pending ratification* 2026-06-18, Draft/needs-design 2026-06-17) — the Rust-first code landed as `mycelium-std-math` (M-525, #166, Batch P5-B; guarantee matrix asserted in tests). The Mycelium-lang migration (M-502-gated) remains. |
 | **Module / Ring** | `std.math` · Ring 2 (RFC-0016 §4.2) · Tier B (RFC-0016 §4.4) |
 | **Tracks** | `M-525` (#166) — the Phase-5 task this spec delivers |
 | **Scope** | Numeric functions over Mycelium's value model: exact integer/rational ops, comparison/aggregation, and the transcendental/approximate family (`sqrt`/`exp`/`log`/`pow`/`sin`/…). Where precision matters, results route through the verified numerics (`mycelium-numerics`, ADR-010) and **carry that crate's bound + tag**. |
@@ -224,3 +224,5 @@ per build, never pre-claimed**, see below).
   is homed in `std.numerics` (the ε-carrier module, M-512) and re-exported by `std.math` — stated in
   exactly one place (NFR-N2). The honest `Proven` magnitude stays the kernel's (ADR-010) / M-541's to
   supply (VR-5). Append-only.
+
+- **2026-06-20 — Accepted (maintainer ratification, DN-07).** The maintainer ratified this Rust-first spec: the §4.5 guarantee matrix is asserted in tests, never-silent fallibility and honest per-op tags hold, and the open §7/§8 questions are design/scope calls, not contract violations. No guarantee tag was upgraded without a checked basis (VR-5). The Proven/Empirical rows were verified/aligned by M-377 (M-512 delivered) — dense elementwise Proven via the ADR-010 IEEE backward-error bound (finiteness side-condition guarded), accumulation rows held at Empirical; nothing upgraded on faith. Status moves *Implemented (Rust-first) — pending ratification → Accepted*. Append-only; no kernel change (KC-3).

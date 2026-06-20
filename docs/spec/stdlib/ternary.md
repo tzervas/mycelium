@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-ternary` (M-517, Batch P5-A; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
+| **Status** | **Accepted** (2026-06-20, maintainer-ratified per DN-07 — guarantee matrix asserted in tests; open §7/§8 questions are design/scope calls, not contract violations; was *Implemented (Rust-first) — pending ratification* 2026-06-18, Draft/needs-design 2026-06-17) — the Rust-first code landed as `mycelium-std-ternary` (M-517, Batch P5-A; guarantee matrix asserted in tests). The Mycelium-lang migration (M-502-gated) remains. |
 | **Module / Ring** | `std.ternary` · Ring 1 (RFC-0016 §4.2) · Tier A |
 | **Tracks** | M-517 (#159) — the Phase-5 task this spec delivers (RFC-0016 §4.3, the `ternary` row). |
 | **Scope** | The ternary-native differentiator surface: exact balanced-ternary integer arithmetic (`add`/`neg`/`mul` and the `int ↔ trits` codec), first-class `Bit` and `Trit{−1,0,+1}` with their identities (FR-M2; M-111), and the packed-ternary helpers — the I2_S/TL1/TL2 codecs (RFC-0004 §5 / DN-01) — exposed as **inspectable** representation choices, never a hidden lowering. |
@@ -210,3 +210,5 @@ code lands — never prose only. `total` = no failure on a well-formed input of 
   claim in FR-M2 / M-111 / RFC-0004 §5 / DN-01 / `binary-ternary.md` §1 / RFC-0016. Four questions
   FLAGGED (naming, a future lossy scheme, the selector boundary, the width/bignum ceiling), tied to
   RFC-0016 §8 where applicable. No code; no kernel change (KC-3). Append-only.
+
+- **2026-06-20 — Accepted (maintainer ratification, DN-07).** The maintainer ratified this Rust-first spec: the §4.5 guarantee matrix is asserted in tests, never-silent fallibility and honest per-op tags hold, and the open §7/§8 questions are design/scope calls, not contract violations. No guarantee tag was upgraded without a checked basis (VR-5). Status moves *Implemented (Rust-first) — pending ratification → Accepted*. Append-only; no kernel change (KC-3).
