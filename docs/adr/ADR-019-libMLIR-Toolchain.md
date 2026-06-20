@@ -48,7 +48,7 @@ for the tools and **skips gracefully** when absent — mirroring the existing `l
 The **interpreter remains the trusted base** (NFR-7); the dialect path is a perf/inspectability path,
 never the trusted base.
 
-**3. Provisioning is a DECISION, made durable by `scripts/setup-mlir.sh` wired into `just setup`.**
+**3. Provisioning is a DECISION, made durable by `scripts/setup-mlir.sh` exposed as the dedicated `just setup-mlir` recipe (deliberately kept out of the default `just setup`, which must not apt-install an optional feature's toolchain).**
 The script **derives the LLVM major from the installed `llc`** (then `clang`) and installs the
 **version-matched** `libmlir-$MAJOR-dev` + `mlir-$MAJOR-tools` via the distro package manager only
 (no `curl | bash`, no unpinned remote fetch). It is idempotent (no-ops when the tools are present)
@@ -68,7 +68,7 @@ any pin and does not make libMLIR a precondition of the trusted base.
   run there.
 - **CI/dev on a box without libMLIR is unaffected**: the `mlir-dialect` feature is off, its tests
   skip, the default build/test stay green (the `llc`/`clang` skip idiom, generalized).
-- **Honest cost:** a contributor who wants the `mlir-dialect` feature must run `just setup` (or
+- **Honest cost:** a contributor who wants the `mlir-dialect` feature must run `just setup-mlir` (or
   `bash scripts/setup-mlir.sh`) **once**. The feature is advisory, never required for the trusted base
   (the interpreter — NFR-7). On non-Linux (Windows/macOS) the script prints a **named-package**
   message instead of auto-installing (§ Scope below).
@@ -110,7 +110,7 @@ basis; G2 — never silent). **Cross-target codegen for non-host triples stays o
   on a checked basis). Decides libMLIR as the **optional**, version-matched build dependency of the
   off-by-default `mlir-dialect` feature of `mycelium-mlir` — default build/test stay green without it
   (the `llc`/`clang` skip idiom, G2) — made durable by `scripts/setup-mlir.sh` (LLVM major derived
-  from the installed `llc`, never hard-coded; no `curl | bash`) wired into `just setup`. MSRV/LLVM
+  from the installed `llc`, never hard-coded; no `curl | bash`) exposed as the dedicated `just setup-mlir` recipe (deliberately kept out of the default `just setup`, which must not apt-install an optional feature's toolchain). MSRV/LLVM
   pins unchanged; the interpreter stays the trusted base (NFR-7). Awaiting maintainer ratification
   (Proposed → Accepted). Append-only.
 - **2026-06-20 — Accepted.** Same-day maintainer ratification (Proposed → Accepted; matching ADR-017's

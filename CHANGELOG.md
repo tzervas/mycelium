@@ -15,7 +15,8 @@ trusted base; MLIR is a differential-tested perf-path increment, never a black b
 - **Durable libMLIR provisioning (M-348/M-603).** `scripts/setup-mlir.sh` — version-matched to the
   installed LLVM (major derived from `llc`/`clang`, never hard-coded — no silent version bump),
   `apt-get install libmlir-$M-dev mlir-$M-tools`, idempotent, skip-gracefully (`exit 0`), no
-  `curl|bash` — wired into `just setup`. **ADR-019 (Accepted)** records libMLIR as the build dependency
+  `curl|bash` — exposed as the dedicated **`just setup-mlir`** recipe (kept out of the default `just
+  setup` so it never apt-installs/sudo-prompts for the OFF-by-default feature). **ADR-019 (Accepted)** records libMLIR as the build dependency
   of the `mlir-dialect` feature; **DN-15 §9** appends the unblock (provisionable on Linux). Default
   build/test stay green WITHOUT libMLIR.
 - **Real MLIR-dialect lowering (M-601) — honest scope.** `mycelium-mlir`'s `dialect::native` lowers the

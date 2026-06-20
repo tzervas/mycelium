@@ -10,6 +10,11 @@ default:
 # Best-effort install of the check tools (uv tool / npx / pip). Safe to re-run.
 setup:
     @bash scripts/install-tools.sh
+
+# Provision the OFF-by-default `mlir-dialect` feature's libMLIR toolchain (apt; may use sudo).
+# Deliberately kept OUT of `just setup` so the default never apt-installs or sudo-prompts for an
+# optional feature most contributors don't build (ADR-019); run this only if you want that feature.
+setup-mlir:
     @bash scripts/setup-mlir.sh
 
 # Run the FULL local suite. Identical to what CI runs (`just ci`).

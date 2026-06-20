@@ -1365,7 +1365,7 @@ issues:
   - id: M-601
     title: "M-601 — Native MLIR→LLVM codegen for the full v0 calculus (incl. data + closure)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:in-progress]
     depends_on: [M-348, M-342]
     doc_refs: [corpus:RFC-0004, src:crates/mycelium-mlir/src/dialect/native.rs]
     body: |

@@ -147,15 +147,14 @@ impl MlirTools {
     }
 }
 
-/// Detect the installed LLVM major version from `llc --version` (the line `… LLVM version NN.…`),
-/// falling back to `clang --version`. Returns `None` when neither tool is present or the version
-/// line cannot be parsed — the caller turns that into a graceful skip.
-fn detect_llvm_major() -> Option<u32> {
-    fn parse_major(s: &str) -> Option<u32> {
-        // Find a token of the form "NN.MM.PP" or "NN.MM" on a "LLVM version" line.
-        for line in s.lines() {
-            if let Some(idx) = line.find("LLVM version") {
-                let rest = &line[idx + "LLVM version".len()..];
+/// Parse the LLVM major version from a `--version` banner — either an `… LLVM version NN.…` line
+/// (`llc`, `mlir-opt`, `mlir-translate`) **or** a `clang version NN.…` line (`clang`, which does not
+/// print "LLVM version"). Returns `None` when no recognized banner is present.
+fn parse_llvm_major(s: &str) -> Option<u32> {
+    for line in s.lines() {
+        for marker in ["LLVM version", "clang version"] {
+            if let Some(idx) = line.find(marker) {
+                let rest = &line[idx + marker.len()..];
                 let tok: String = rest
                     .trim()
                     .chars()
@@ -166,12 +165,17 @@ fn detect_llvm_major() -> Option<u32> {
                 }
             }
         }
-        None
     }
+    None
+}
+
+/// Detect the installed LLVM major version from `llc --version`, falling back to `clang --version`.
+/// Returns `None` when neither tool is present or the version line cannot be parsed — the caller
+/// turns that into a graceful skip.
+fn detect_llvm_major() -> Option<u32> {
     for tool in ["llc", "clang"] {
         if let Ok(out) = Command::new(tool).arg("--version").output() {
-            let text = String::from_utf8_lossy(&out.stdout);
-            if let Some(major) = parse_major(&text) {
+            if let Some(major) = parse_llvm_major(&String::from_utf8_lossy(&out.stdout)) {
                 return Some(major);
             }
         }
@@ -188,6 +192,14 @@ fn tool_present(name: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// The LLVM major a tool reports via `--version`, or `None` if it's absent/unparsable. Used to
+/// confirm an *unversioned* fallback binary actually matches the detected LLVM major before it is
+/// accepted — never a silent mismatched substitution (G2).
+fn tool_major(name: &str) -> Option<u32> {
+    let out = Command::new(name).arg("--version").output().ok()?;
+    parse_llvm_major(&String::from_utf8_lossy(&out.stdout))
+}
+
 /// Resolve the MLIR toolchain, version-matched to the installed LLVM major.
 ///
 /// Tries the versioned binaries first (`mlir-opt-<major>`, `mlir-translate-<major>` — how the distro
@@ -202,31 +214,38 @@ pub fn resolve_tools() -> Result<MlirTools, DialectError> {
 
     let opt_versioned = format!("mlir-opt-{major}");
     let tr_versioned = format!("mlir-translate-{major}");
+    // Versioned binary first; otherwise an unversioned fallback ONLY when its own `--version`
+    // reports the same major (never silently substitute a mismatched toolchain — G2).
     let mlir_opt = if tool_present(&opt_versioned) {
         opt_versioned
-    } else if tool_present("mlir-opt") {
+    } else if tool_major("mlir-opt") == Some(major) {
         "mlir-opt".to_owned()
     } else {
         return Err(DialectError::ToolchainMissing(format!(
-            "mlir-opt-{major} (and unversioned mlir-opt) — run scripts/setup-mlir.sh"
+            "mlir-opt-{major} (unversioned `mlir-opt` absent or a different LLVM major — never \
+             silently substituted, G2) — run scripts/setup-mlir.sh"
         )));
     };
     let mlir_translate = if tool_present(&tr_versioned) {
         tr_versioned
-    } else if tool_present("mlir-translate") {
+    } else if tool_major("mlir-translate") == Some(major) {
         "mlir-translate".to_owned()
     } else {
         return Err(DialectError::ToolchainMissing(format!(
-            "mlir-translate-{major} (and unversioned mlir-translate) — run scripts/setup-mlir.sh"
+            "mlir-translate-{major} (unversioned `mlir-translate` absent or a different LLVM major \
+             — never silently substituted, G2) — run scripts/setup-mlir.sh"
         )));
     };
     let clang_versioned = format!("clang-{major}");
     let clang = if tool_present(&clang_versioned) {
         clang_versioned
-    } else if tool_present("clang") {
+    } else if tool_major("clang") == Some(major) {
         "clang".to_owned()
     } else {
-        return Err(DialectError::ToolchainMissing("clang".to_owned()));
+        return Err(DialectError::ToolchainMissing(format!(
+            "clang-{major} (unversioned `clang` absent or a different LLVM major — never silently \
+             substituted, G2)"
+        )));
     };
 
     Ok(MlirTools {
