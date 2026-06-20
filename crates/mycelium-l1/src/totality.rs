@@ -119,7 +119,7 @@ fn reaches(from: &str, target: &str, calls: &BTreeMap<&str, BTreeSet<String>>) -
 }
 
 fn collect_calls(e: &Expr, fns: &BTreeMap<String, FnDecl>, out: &mut BTreeSet<String>) {
-    walk(e, &mut |x| {
+    walk_expr(e, &mut |x| {
         if let Expr::App { head, .. } = x {
             if let Expr::Path(p) = head.as_ref() {
                 if p.0.len() == 1 && fns.contains_key(&p.0[0]) {
@@ -130,43 +130,53 @@ fn collect_calls(e: &Expr, fns: &BTreeMap<String, FnDecl>, out: &mut BTreeSet<St
     });
 }
 
-fn walk(e: &Expr, f: &mut impl FnMut(&Expr)) {
+/// The shared **pre-order `Expr` traversal** (M-641): visit `e` with `f`, then recurse into every
+/// sub-expression (calling `f` on each in turn). One canonical structural walk reused by every pass
+/// that needs to fold a *stateless* visitor over an expression tree — here totality's `collect_calls`
+/// and the elaborator's call-set collector (`crate::elab`). It is the structure only; each caller
+/// supplies its own visitor action, so factoring it changes no collected set.
+///
+/// Passes that thread *context* down the tree (e.g. the totality descent measure in
+/// [`descend_walk`], which shadows binders per `Match` arm) are deliberately **not** expressed over
+/// this — their per-node state is not a plain `FnMut(&Expr)`, and collapsing them would lose the
+/// scoping that keeps the analysis sound (A4-01).
+pub(crate) fn walk_expr(e: &Expr, f: &mut impl FnMut(&Expr)) {
     f(e);
     match e {
         Expr::Let { bound, body, .. } => {
-            walk(bound, f);
-            walk(body, f);
+            walk_expr(bound, f);
+            walk_expr(body, f);
         }
         Expr::If { cond, conseq, alt } => {
-            walk(cond, f);
-            walk(conseq, f);
-            walk(alt, f);
+            walk_expr(cond, f);
+            walk_expr(conseq, f);
+            walk_expr(alt, f);
         }
         Expr::Match { scrutinee, arms } => {
-            walk(scrutinee, f);
+            walk_expr(scrutinee, f);
             for a in arms {
-                walk(&a.body, f);
+                walk_expr(&a.body, f);
             }
         }
         // A `for` is bounded by construction (RFC-0007 §4.8) — it adds no recursion of its own;
         // only the calls inside its sub-expressions matter.
         Expr::For { xs, init, body, .. } => {
-            walk(xs, f);
-            walk(init, f);
-            walk(body, f);
+            walk_expr(xs, f);
+            walk_expr(init, f);
+            walk_expr(body, f);
         }
-        Expr::Swap { value, .. } => walk(value, f),
+        Expr::Swap { value, .. } => walk_expr(value, f),
         // `with paradigm` is pure surface scoping (stripped by resolution before this runs); recurse
         // transparently into the body in case totality is consulted on an unresolved tree.
-        Expr::WithParadigm { body, .. } => walk(body, f),
-        Expr::Wild(b) | Expr::Spore(b) => walk(b, f),
+        Expr::WithParadigm { body, .. } => walk_expr(body, f),
+        Expr::Wild(b) | Expr::Spore(b) => walk_expr(b, f),
         Expr::App { head, args } => {
-            walk(head, f);
+            walk_expr(head, f);
             for a in args {
-                walk(a, f);
+                walk_expr(a, f);
             }
         }
-        Expr::Ascribe(b, _) => walk(b, f),
+        Expr::Ascribe(b, _) => walk_expr(b, f),
         Expr::Path(_) | Expr::Lit(_) => {}
     }
 }
