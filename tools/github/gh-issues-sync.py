@@ -1215,13 +1215,14 @@ def fetch_project_fields(project_id):
         option_objs = [
             {
                 "name": o["name"],
-                "color": o.get("color", "GRAY"),
+                "color": o.get("color") or "GRAY",
                 "description": o.get("description", "") or "",
             }
             for o in live
         ]
         fields[node["name"]] = {
             "id": node["id"],
+            "typename": node.get("__typename"),
             "options": options,
             "option_objs": option_objs,
         }
@@ -1234,7 +1235,7 @@ def _single_select_options_gql(options):
     Shared by the create + additive-update mutations so colors and quoting are mapped identically.
     """
     return ", ".join(
-        f"{{name:{gql_str(o['name'])}, color:{o.get('color', 'GRAY')}, "
+        f"{{name:{gql_str(o['name'])}, color:{o.get('color') or 'GRAY'}, "
         f"description:{gql_str(o.get('description', ''))}}}"
         for o in options
     )
@@ -1371,6 +1372,16 @@ def reconcile_project(repo, manifest, contents, *, dry_run):
         live = actual.get(name)
         if not live:
             continue  # absent field was handled by the create path above
+        if live.get("typename") != "ProjectV2SingleSelectField":
+            # A same-named field of a different type exists on the board — never attempt a
+            # single-select option mutation against it (it would error / abort the run). FLAG + skip (G2).
+            if field.get("options"):
+                print(
+                    f"   ! field '{name}' exists on the board but is not a single-select "
+                    f"(type {live.get('typename')!r}) — option reconcile skipped; resolve it in the UI.",
+                    file=sys.stderr,
+                )
+            continue
         union, added, extra_live = plan_option_additions(
             live["option_objs"], field.get("options", [])
         )
