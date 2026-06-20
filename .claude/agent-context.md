@@ -88,9 +88,13 @@ Validate: `python3 tools/github/doc_refs_check.py`
 | ID | Title | Status |
 |----|-------|--------|
 | M-381 | LLM-leverage ablation (T3.6) — arm4 needs LlmCanonical scorer | in-progress |
-| Draft DNs | DN-04/05/10/14/15/17/18 — design decisions / analysis captures | draft |
-| Self-hosting (M-502) | First stdlib module in Mycelium-lang (L1/L2 syntax) — design spec done; implementation not yet established | phase gate |
-| RFC enactment | Several Accepted RFCs have complete Rust implementations but Enacted not yet flipped | editorial |
+| M-646 | Close M-381 arm4: standalone LlmCanonical scorer for determinate retention ratio | needs-design |
+| M-647 | RFC-0020 L2 surface language: scoped ratification (§4.2/§4.5 carve-out) | needs-design |
+| M-648 | Editorial sweep: RFC enactment flips + Draft DN → Resolved for landed decisions | needs-design |
+| M-649 | Self-hosting Stage-2: first stdlib module in Mycelium-lang L1 syntax | needs-design |
+| M-650 | DN-11 Next Wave Plan: Phase 5 summary + Phase 6 road map | needs-design |
+| M-651 | Harness→bench schema bridge: Grok report ingestion in mycelium-bench | needs-design |
+| Draft DNs | DN-04/05/10/11/12/14/15/17/18 — decisions pending; M-648/M-650 close most of these | draft |
 
 ---
 

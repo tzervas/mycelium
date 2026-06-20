@@ -1793,3 +1793,184 @@ issues:
     body: |
       The E3-9 deliverable. A standalone crate `crates/mycelium-bench/` (lib + `bench` bin) — chosen over an `xtask bench` subcommand because the WIN/LOSS classifier, report emission, and LLM-report ingestion are real, testable library logic (`cargo test -p mycelium-bench`). Measures all five backends over a 14-program corpus (bit-subset / swap / data / recursion): warm per-run wall time (compile-once/run-many — compile cost reported separately, not charged per call), one-time compile cost, and a differential vs the interpreter classified WIN / LOSS / capability-LOSS / correctness-LOSS / error / skip. The differential compares the OBSERVABLE (repr+payload+guarantee / content-identity, provenance excluded per RFC-0001 §4.6 — matching the M-210 ObservationalEquiv checker; this fix turned 10 false-positive "correctness losses" into honest speed verdicts). Ingests the LLM-harness report (M-330/M-331; KC-2/SC-5b) and labels synthetic as synthetic. Harness plumbing Empirical (test-verified); every measured number Empirical (trial count + spread); capability-loss/skip/error Declared; no verdict Proven/Exact; no pre-written target (VR-5). Zero new external deps (only workspace serde/serde_json + the internal crates it measures, read-only).
       Acceptance: `cargo test -p mycelium-bench` green (29 lib + 4 integration: WIN/LOSS classification incl. the provenance case, report determinism, LLM-report ingestion); fmt + clippy -D warnings clean; emits deterministic md+JSON with a "where we're losing" section. DONE (2026-06-20).
+
+  # ---- 2026-06-20: next-wave open items — M-646 through M-651 ----
+
+  - id: M-646
+    title: "M-646 — Close M-381 arm4: standalone LlmCanonical scorer for determinate retention ratio"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P1, status:needs-design]
+    depends_on: [M-381, M-380]
+    doc_refs: [corpus:DN-09, corpus:RFC-0021, src:tools/llm-harness/coauthor.py, src:crates/mycelium-lsp/src/project.rs]
+    body: |
+      The ablation run `20260620T195352Z` (M-381) produced arm4 pass@1 = 0.0% [Declared — scoring artifact]: myc-check exits 2 on S-expression syntax, so every arm4 sample was marked failing even when the LlmCanonical projection was structurally valid. The pass criterion for arm4 MUST be S-expression parse validity (parse_llm_canonical_py), NOT L1 surface validity (myc-check). This is the minimal remaining piece to get a determinate retention ratio and close the M-381 gate.
+
+      The LlmCanonical parser is already available in crates/mycelium-lsp/src/llm_canonical_parser.rs (enacted in M-380). The ablation harness (tools/llm-harness/coauthor.py) calls myc-check as the universal scorer; arm4 needs its own scorer branch.
+
+      Two implementation paths (pick the simpler one):
+      (a) FAST PATH — invoke parse_llm_canonical_py (or llm_canonical_parse_rs via the LSP project.rs renderer) as arm4's scorer: a sample passes if the projection round-trips through the canonical parser without error. This is SUFFICIENT to give arm4 a pass@1 > 0 and make the retention ratio determinate.
+      (b) COMPLETE PATH — build a LlmCanonical→L1 bridge (RFC-0021 §4.1 projection endpoint) so arm4 samples are scored by the same myc-check gate as arm2. This gives a directly comparable pass@1 but requires the bridge implementation.
+
+      Start with (a); escalate to (b) if the retention ratio is marginal and comparability matters.
+
+      Separate blocker (NOT this task): the Grok harness output schema mismatch vs mycelium-bench ingestion format is tracked in M-651.
+
+      Acceptance (design → impl → run):
+      (1) arm4 branch in the ablation harness uses parse_llm_canonical_py (or the Rust LSP renderer) as its scorer, not myc-check.
+      (2) Re-run the ablation (grok-build-0.1, seeds [11,23,42], 8 tasks × 3 seeds = 24 samples) with the corrected scorer; arm4 pass@1 is now a genuine S-expression validity rate [Empirical].
+      (3) Retention ratio computed: arm2.pass@1 / arm4.pass@1; if ≥ ~70%, text syntax retains leverage; if < ~70%, RFC-0021 §4.7 supersession trigger (record honestly — do NOT pre-write the verdict, VR-5).
+      (4) DN-09 §9 (or §10) updated append-only with final result; M-381 and M-646 closed.
+      Guarantee tags: scorer pass/fail logic Exact (deterministic parser); trial counts Empirical; retention ratio verdict Empirical (if run completes with ≥3 seeds).
+
+  - id: M-647
+    title: "M-647 — RFC-0020 L2 surface language: scoped ratification with §4.2/§4.5 carve-out"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:docs, area:spec, priority:P1, status:needs-design]
+    depends_on: [M-320, M-391]
+    doc_refs: [corpus:RFC-0020, corpus:DN-12, corpus:RFC-0018, corpus:RFC-0019]
+    body: |
+      DN-12 (RFC-0020 Ratification Readiness, Draft) concludes: RFC-0020 is ratifiable NOW with a carve-out for the two sections that gate on RFC-0018 (Stage-1 Static Guarantee Grading) and RFC-0019 (Traits and Parametric Polymorphism), following the scoped-ratification precedent of RFC-0006 r5.
+
+      RATIFIABLE SCOPE (no new gates beyond what mycelium-l1 already enforces):
+      - §4.1 (L2 invariants and well-formedness) — enforced in mycelium-l1
+      - §4.3 (module and nodule structure) — enforced via phylum/colony system
+      - §4.4 (pattern sugar: `if`, `for`, boolean match) — elaborated to L0 in mycelium-l1
+      - §4.6 (literal syntax: binary, ternary, dense) — in grammar + ambient-resolution
+      - §4.7 (ambient paradigm) — mycelium-l1 ambient pass
+      - §4.8 (usability: teaching diagnostics, reserved-word feedback) — mycelium-l1 checks
+      - §4.9 (conformance corpus) — accept/reject grammar fixtures green
+
+      EXPLICITLY DEFERRED (carve-out — not Accepted, tracked separately):
+      - §4.2 (polymorphism and guarantee grading) — gates on RFC-0018 (M-518 done but RFC not yet enacted); record the gate explicitly
+      - §4.5 (trait interfaces and type classes) — gates on RFC-0019 (deferred LR-2); record the gate explicitly
+
+      Task (editorial + small spec append):
+      (1) Append a §10 (or amend §8) to RFC-0020 recording the scoped ratification: what's in scope, what's carved out, and the gate conditions for each carve-out. (Append-only; never rewrite §4.2 or §4.5.)
+      (2) Flip RFC-0020 Status header: Accepted.
+      (3) Resolve DN-12: append resolution record, flip Status: Resolved.
+      (4) Update docs/rfcs/README.md and docs/Doc-Index.md (RFC-0020 row).
+      (5) CHANGELOG entry.
+
+      Acceptance:
+      - RFC-0020 Status: Accepted; carve-outs for §4.2/§4.5 documented in the RFC itself
+      - DN-12 Status: Resolved
+      - Doc-Index, RFC README, CHANGELOG updated; just check green (doc-status pass)
+      - No normative content in §4.2/§4.5 rewritten — only an append that records the deferral
+
+  - id: M-648
+    title: "M-648 — Editorial sweep: RFC enactment flips + Draft DN → Resolved for landed decisions"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:docs, area:spec, priority:P2, status:needs-design]
+    depends_on: [M-501, M-534, M-380, M-390, M-391, M-347, M-349]
+    doc_refs: [corpus:RFC-0016, corpus:RFC-0017, corpus:RFC-0021, corpus:DN-04, corpus:DN-05, corpus:DN-10, corpus:RFC-0018, corpus:RFC-0019]
+    body: |
+      Several docs have landed implementations but their status headers haven't been updated. This is a purely editorial pass; all changes are append-only (never rewrite Accepted content — add resolution records and flip the status header forward).
+
+      RFC ENACTMENT CANDIDATES (verify each against its done M-xxx before flipping — never flip speculatively):
+      - RFC-0016 (Core Library and Standard Library): M-501–M-534 all status:done; check that the full contract (never-silent G2, honest tags, EXPLAIN for every op) is met, then flip to Enacted.
+      - RFC-0021 (Semantic Level Projections): M-380 done (LlmCanonical renderer in mycelium-lsp/src/project.rs); LSP tests pass; flip to Enacted.
+      - RFC-0017 (Maturation Scope and De-maturation): audit M-5xx entries referencing RFC-0017; if implementation is complete, flip to Enacted.
+      - RFC-0018 (Stage-1 Static Guarantee Grading): M-518 done (guarantee grading in mycelium-l1); audit; if complete, flip to Enacted.
+      - RFC-0019 (Traits): NOT a candidate — generics/traits deferred (LR-2); leave Accepted.
+
+      DN RESOLUTION CANDIDATES (all decisions have landed; just need the doc status updated):
+      - DN-04 (Optional Structured Diagnostics / DynEL): decisions ratified into RFC-0013 (M-345). Append resolution record: "resolved by RFC-0013 enactment (M-345, 2026-06-16)." Flip to Resolved.
+      - DN-05 (AOT Recursion Execution Strategy): trampoline (M-347) + dynamic budget (M-349) both done. Append resolution record. Flip to Resolved.
+      - DN-10 (Remaining L1 Gaps): R7-Q3 done (M-391, 2026-06-19) and R7-Q4 done (M-390, 2026-06-18). Append resolution record. Flip to Resolved.
+
+      Acceptance for each doc:
+      - Status header updated forward (Accepted → Enacted; Draft → Resolved)
+      - Resolution record appended (never rewriting existing text)
+      - docs/rfcs/README.md or docs/adr/README.md row updated
+      - docs/Doc-Index.md row updated
+      - CHANGELOG entry (one entry per batch wave, not per doc)
+      - just check green (doc-status pass verifies every status transition is valid)
+
+  - id: M-649
+    title: "M-649 — Self-hosting Stage-2: first stdlib module written in Mycelium-lang L1 syntax"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P0, status:needs-design]
+    depends_on: [M-502, M-647]
+    doc_refs: [corpus:DN-14, corpus:RFC-0020, corpus:RFC-0007, src:docs/spec/stdlib, src:crates/mycelium-l1/src/lib.rs]
+    body: |
+      M-502 produced the honest verdict: self-hosting NOT YET established. Gate-fails (5): generics, trait interfaces, effect annotations, wild/FFI blocks, static guarantee index. PRESENT (5): value types + ADTs, pattern matching, functions + recursion, let/lambda, nodule organization.
+
+      Self-hosting does NOT require all 11 features. It requires ≥1 stdlib module written in Mycelium-lang that passes myc-check and meets the M-501 guarantee/EXPLAIN contract. The 5 present features are SUFFICIENT for a pure-function module with no generics, traits, effects, or FFI.
+
+      CANDIDATE MODULES (ranked by feasibility with current surface):
+      1. `std.ternary` sub-module — basic ternary predicates (is_zero, is_pos, is_neg, negate, add, sub) using existing ternary primitives + pattern match + recursion. No generics, no traits, no effects needed.
+      2. A utility fragment of `std.math` — pure arithmetic helpers over binary types (min, max, abs) using match + recursion.
+      3. A simple `std.option` fragment — Option type + map/unwrap/is_some using ADTs + pattern match.
+
+      Recommended path:
+      (1) DESIGN FIRST: pick one candidate; audit it against the mycelium-l1 feature inventory (checkty.rs, ast.rs, eval.rs) to confirm every construct is in the accept corpus. Write the design note (or DN-14 append).
+      (2) WRITE the module in `.myc` L1 syntax (nodule + phylum/colony header per M-359 format; fn items; pattern match where needed).
+      (3) VERIFY: `myc-check <module>.myc` exits 0. If it exits 2 (parse error) or 3 (type error), this is signal: either fix the module (if the feature IS supported but the syntax is wrong) or record the gap (if a needed feature is absent — flag it, don't guess, VR-5).
+      (4) DIFFERENTIAL: for each exported function, write a `mycelium-l1` evaluation test comparing the Mycelium-lang definition's output to the Rust reference impl's output. The three-way differential (`l1-eval ≡ elaborate→l0-interp`) should cover the self-hosted functions.
+      (5) UPDATE: DN-14 Status → Resolved (or append §N recording the first milestone). Doc-Index + CHANGELOG.
+
+      Acceptance:
+      - ≥1 `.myc` file implementing a stdlib sub-module passes myc-check
+      - Each exported function has a differential test (Mycelium-lang value ≡ Rust reference)
+      - Module meets the M-501 contract: never-silent G2, honest per-op guarantee tags, EXPLAIN-able selections
+      - Phase 5 gate logged as "partially met" (first module in Mycelium-lang exists)
+      - DN-14 Status: Resolved (with honest recording of remaining gate-fails — no silent upgrade)
+
+  - id: M-650
+    title: "M-650 — DN-11 Next Wave Plan: capture Phase 5 completion summary + Phase 6 road map"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:docs, area:project, priority:P2, status:needs-design]
+    depends_on: [M-534, M-630]
+    doc_refs: [corpus:DN-11, corpus:DN-14, src:docs/planning/phase-5.md]
+    body: |
+      DN-11 (Draft) is the "Next Wave Plan" design note. Its purpose is to capture the explicit Phase 5 → Phase 6 transition plan: what Phase 5 completed, what the Phase 5 gate still requires, and what Phase 6 looks like.
+
+      WHAT TO CAPTURE:
+      (1) Phase 5 completion summary:
+          - All M-5xx done (19 stdlib crates, Tier-A completions, runtime phylum v0, toolchain suite)
+          - Remaining Phase 5 gate items: M-649 (first Mycelium-lang module), M-647 (RFC-0020 ratification), M-648 (enactment sweep)
+      (2) Phase 5 gate criteria (honest — not pre-written):
+          - Self-hosting "close" means ≥1 stdlib module in Mycelium-lang passing myc-check
+          - What "established" means per M-346 and DN-14
+      (3) Phase 6 road map (high-level, not decomposed):
+          - Stage-1 generics/traits RFC amendments (RFC-0007 amendment to unlock gate-fails 1+2)
+          - Effect annotation scope decision (RFC-0014 stage-1 spec for gate-fail 3)
+          - Native path (direct LLVM) next increments (closures/heap/recursion per DN-15 §4)
+          - Self-hosting expansion: once Stage-1 generics land, which stdlib modules can be self-hosted next?
+      (4) Research gaps not yet closed:
+          - arm4 retention ratio (M-646); if M-646 lands before this note, include the result
+          - RP-7 (prim BoundBasis-with-citation schema) — deferred from M-390
+      (5) Any decision the maintainer needs to make before Phase 6 fan-out:
+          - RFC-0007 amendment scope (what subset of generics to add first?)
+          - Timeline/priority for RFC-0018/0019 full enactment (unblocks §4.2/§4.5 carve-outs from M-647)
+
+      Format: DN-11 body (append-only to the Draft stub); DN-11 Status → Resolved.
+
+      Acceptance:
+      - DN-11 Status: Resolved
+      - Contains Phase 5 summary, Phase 5 remaining gate items, Phase 6 road map (all grounded in done M-xxx or explicit open questions)
+      - No speculative claims — open questions marked as open questions (VR-5)
+      - Doc-Index, CHANGELOG updated; just check green
+
+  - id: M-651
+    title: "M-651 — Harness→bench schema bridge: Grok report ingestion in mycelium-bench"
+    milestone: "Phase 3 — Tooling, Projections & Acceleration"
+    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:needs-design]
+    depends_on: [M-645, M-381]
+    doc_refs: [corpus:DN-09, src:tools/llm-harness/coauthor.py, src:crates/mycelium-bench/src/lib.rs, src:crates/mycelium-bench/src/report.rs]
+    body: |
+      The Grok/xAI ablation harness (tools/llm-harness/coauthor.py) emits a JSON report with the schema `{metadata: {...}, quality: {...}, performance: {...}, outcomes: [...]}`. The mycelium-bench crate (M-645) ingests LLM reports via `crates/mycelium-bench/src/report.rs` which expects the schema `{harness: {...}, summary: {...}, results: [...]}`. These are incompatible; a live Grok run's output cannot be directly ingested by mycelium-bench (DN-09 §7 / M-381 STATUS 2026-06-20).
+
+      Two paths:
+      (a) BRIDGE IN THE HARNESS — add a `--emit-bench-format` flag (or a post-processing script) that translates harness output to mycelium-bench's expected schema. Keeps both schemas honest (no stealth mutation of either contract).
+      (b) BRIDGE IN MYCELIUM-BENCH — add a `#[serde(deny_unknown_fields)]`-guarded alternate `LlmReportV2` struct matching the harness output; a tagged-union dispatch; a conversion. Extend `the_harness_ingests_the_llm_report_and_labels_synthetic` with a V2 fixture.
+
+      Path (b) is preferred — bench-crate is the consumer and should be robust to the harness format; path (a) adds a runtime transform that can drift. BOTH must be pinned by a committed JSON fixture so serde tag drift is caught (not just round-trip tested — banked guard §3 from dev-workflow).
+
+      Acceptance:
+      - mycelium-bench ingests a Grok harness report (real or synthetic fixture) without schema error
+      - The LLM results are correctly labelled synthetic/live (the existing `labels_synthetic` check)
+      - A committed JSON fixture for the Grok harness schema pins the contract (deny_unknown_fields on deserialize)
+      - `cargo test -p mycelium-bench` green (all 33 existing tests + the new V2 ingestion test)
+      - Honest guarantee tags: ingested numeric metrics remain Empirical/Declared per their origin
+      - After this lands, a live Grok run's output can be fed directly to mycelium-bench for bench-level analysis
