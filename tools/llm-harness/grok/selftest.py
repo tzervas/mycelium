@@ -19,6 +19,9 @@ and an injected scorer, exercising exactly the load-bearing math:
       while arm 4 is blocked (verdict never pre-written, VR-5).
   T9  report emission: per-model JSON + cross-model markdown are written and are
       stamped SYNTHETIC (self-test).
+  T13 API discovery: from_api_discovery() maps a mock GET /v1/models response to
+      ModelSpec objects with correct Declared conservative defaults; bad/missing
+      pricing entries are skipped with a warning; all-bad input is a G2 error.
 
 Each check returns a (name, ok, detail) triple; ``run_self_test`` prints them and
 returns process exit 0 iff all pass. Plumbing verified this way is **Empirical**
@@ -49,7 +52,7 @@ from .coauthor_loop import (
     STATUS_PARTIAL_PASS,
     run_task_loop,
 )
-from .models import ModelSpec, load_models, order_models
+from .models import ModelSpec, from_api_discovery, load_models, order_models
 from .ratelimit import (
     RatePacer,
     backoff_seconds,
@@ -576,7 +579,9 @@ def check_rubric_loads() -> Check:
                 f"{m.id}: seed batch price should equal sync (no invented discount)",
             )
     return Check(
-        "T0 rubric", True, f"models.toml: {len(specs)} models, cheapest-first, batch==sync"
+        "T0 rubric",
+        True,
+        f"models.toml: {len(specs)} models, cheapest-first, batch==sync",
     )
 
 
@@ -646,6 +651,97 @@ def check_budget_cap() -> Check:
     )
 
 
+def check_api_discovery() -> Check:
+    """T13: from_api_discovery() converts a mock GET /v1/models response correctly.
+
+    Verifies: valid entry → ModelSpec with Declared defaults; entry missing pricing
+    skipped; negative pricing skipped; duplicate id skipped; batch prices = sync prices
+    (no invented discount); empty input → ModelConfigError (G2).
+    """
+    from .models import ModelConfigError
+
+    good = {
+        "id": "grok-test-1",
+        "context_length": 65536,
+        "pricing": {"input": 1.0, "output": 2.0},
+    }
+    no_pricing = {"id": "skip-no-price"}
+    bad_pricing = {"id": "skip-neg", "pricing": {"input": -1.0, "output": 2.0}}
+    duplicate = {
+        "id": "grok-test-1",
+        "context_length": 8192,
+        "pricing": {"input": 0.5, "output": 1.0},
+    }
+    no_id = {"context_length": 1024, "pricing": {"input": 0.1, "output": 0.2}}
+
+    # Case 1: valid entry produces a ModelSpec with correct values and Declared defaults.
+    specs = from_api_discovery([good])
+    if len(specs) != 1:
+        return Check("T13 api-discovery", False, f"expected 1 spec, got {len(specs)}")
+    s = specs[0]
+    if s.id != "grok-test-1":
+        return Check("T13 api-discovery", False, f"wrong id: {s.id!r}")
+    if s.context != 65536:
+        return Check("T13 api-discovery", False, f"wrong context: {s.context}")
+    if s.in_price != 1.0 or s.out_price != 2.0:
+        return Check(
+            "T13 api-discovery", False, f"wrong sync prices: {s.in_price}/{s.out_price}"
+        )
+    # batch prices must equal sync (no invented discount)
+    if s.batch_in_price != s.in_price or s.batch_out_price != s.out_price:
+        return Check(
+            "T13 api-discovery",
+            False,
+            f"batch prices must equal sync (no invented discount): {s.batch_in_price}/{s.batch_out_price}",
+        )
+    # Declared conservative defaults for rate limits
+    if s.rpm != 60 or s.tpm != 2_000_000:
+        return Check(
+            "T13 api-discovery",
+            False,
+            f"expected Declared defaults rpm=60 tpm=2000000, got rpm={s.rpm} tpm={s.tpm}",
+        )
+
+    # Case 2: mixed list — bad entries are skipped, only valid one survives.
+    mixed = [no_pricing, bad_pricing, no_id, good, duplicate]
+    specs2 = from_api_discovery(mixed)
+    if len(specs2) != 1 or specs2[0].id != "grok-test-1":
+        return Check(
+            "T13 api-discovery",
+            False,
+            f"mixed list: expected 1 valid spec, got {len(specs2)}",
+        )
+
+    # Case 3: missing context_length falls back to Declared default (131072).
+    no_ctx = {"id": "grok-noctx", "pricing": {"input": 0.5, "output": 1.0}}
+    specs3 = from_api_discovery([no_ctx])
+    if not specs3 or specs3[0].context != 131_072:
+        return Check(
+            "T13 api-discovery",
+            False,
+            f"missing context_length should default to 131072, got {specs3[0].context if specs3 else 'empty'}",
+        )
+
+    # Case 4: all-bad input raises ModelConfigError (G2 — never-silent).
+    raised = False
+    try:
+        from_api_discovery([no_pricing, bad_pricing, no_id])
+    except ModelConfigError:
+        raised = True
+    if not raised:
+        return Check(
+            "T13 api-discovery",
+            False,
+            "all-bad input must raise ModelConfigError (G2), not return empty list",
+        )
+
+    return Check(
+        "T13 api-discovery",
+        True,
+        "from_api_discovery: valid→ModelSpec, skips no-pricing/neg/dup, Declared defaults, all-bad→error (G2)",
+    )
+
+
 # -- driver ------------------------------------------------------------------
 
 ALL_CHECKS = [
@@ -663,6 +759,7 @@ ALL_CHECKS = [
     check_paced_retry_acquires_once,
     check_report_emission,
     check_budget_cap,
+    check_api_discovery,
 ]
 
 

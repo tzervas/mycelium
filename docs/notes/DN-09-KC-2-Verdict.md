@@ -159,11 +159,14 @@ artifacts are the immutable evidence base; this note is the maintainer's reading
 
 This section records the 2026-06-20 attempt to run the Grok/xAI co-authoring experiment
 (`tools/llm-harness/`, M-330/M-331/M-381) against the `gold-compose-v1` task set (8 tasks,
-5 configured models cheapest-first: `grok-build-0.1`, `grok-4.3`, three `grok-4.20-*` variants).
+2 confirmed public models cheapest-first: `grok-build-0.1`, `grok-4.3`). Note: `models.toml`
+originally contained 5 entries (including three `grok-4.20-*` variants); these were removed
+in this PR after reconciliation against the operator-provided xAI API docs.
 
 **Harness self-test** (Empirical — plumbing-verified, no key/network): **14/14 checks passed**
-(T0–T12: model ordering, RPM/TPM pacing math, backoff/throttle, cost accounting, scoring, the
-M-330 generate→fix loop, the M-381 ablation protocol, report emission, and the USD spend gate).
+(T0–T12 + T2b: model ordering, RPM/TPM pacing math, live RatePacer virtual-clock smoke,
+backoff/throttle, cost accounting, scoring, the M-330 generate→fix loop, the M-381 ablation
+protocol, report emission, and the USD spend gate).
 The harness infrastructure is verified and turnkey.
 
 **Live run result** (Empirical — run executed, API reachable): the probe against every model

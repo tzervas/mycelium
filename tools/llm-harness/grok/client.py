@@ -33,6 +33,7 @@ from typing import Any, Protocol
 
 XAI_BASE_URL = "https://api.x.ai/v1"
 _API_KEY_ENV_VARS = ("XAI_API_KEY", "GROK_API_KEY")
+_DISCOVER_TIMEOUT_S = 15.0
 
 
 class ApiKeyMissingError(RuntimeError):
@@ -41,6 +42,10 @@ class ApiKeyMissingError(RuntimeError):
 
 class BackendUnavailableError(RuntimeError):
     """A requested backend (e.g. ``xai_sdk``) is not importable/usable here."""
+
+
+class DiscoverModelsError(RuntimeError):
+    """GET /v1/models failed (never-silent G2 — caller decides whether to fall back)."""
 
 
 @dataclass
@@ -96,6 +101,69 @@ def resolve_api_key(explicit: str | None = None) -> str:
         f"{' / '.join(_API_KEY_ENV_VARS)} in the environment "
         "(e.g. `export XAI_API_KEY=...`). Refusing to call the API without a key."
     )
+
+
+def discover_models(
+    *,
+    api_key: str | None = None,
+    base_url: str = XAI_BASE_URL,
+    timeout_s: float = _DISCOVER_TIMEOUT_S,
+) -> list[dict[str, Any]]:
+    """Call ``GET /v1/models`` and return the raw model-object list.
+
+    Each item carries at minimum ``id``, ``context_length``, and
+    ``pricing: {input, output}`` (USD per Mtok).  Extra fields are passed through
+    so the caller (``models.from_api_discovery``) can inspect them without binding
+    this function to a specific schema version.
+
+    HONESTY (VR-5): the returned data is ``Declared`` — it is API-asserted, not
+    independently verified.  The caller must tag any ``ModelSpec`` objects it builds
+    from this data as ``Declared``.
+
+    Raises :class:`ApiKeyMissingError` when no key is available (never-silent G2).
+    Raises :class:`DiscoverModelsError` on any HTTP / transport / parse failure
+    (never-silent G2 — caller decides whether to fall back to models.toml).
+    """
+    key = resolve_api_key(api_key)
+    url = f"{base_url.rstrip('/')}/models"
+    req = urllib.request.Request(
+        url,
+        method="GET",
+        headers={
+            "Authorization": f"Bearer {key}",
+            "Accept": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            raw_bytes = resp.read()
+    except urllib.error.HTTPError as exc:
+        try:
+            err_body = exc.read().decode("utf-8", "replace")
+        except Exception:  # pragma: no cover
+            err_body = ""
+        raise DiscoverModelsError(
+            f"GET /v1/models → HTTP {exc.code}: {err_body[:300]}"
+        ) from exc
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise DiscoverModelsError(f"GET /v1/models transport error: {exc}") from exc
+
+    try:
+        data = json.loads(raw_bytes.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise DiscoverModelsError(
+            f"GET /v1/models: could not parse response: {exc}"
+        ) from exc
+
+    models = data.get("data")
+    if not isinstance(models, list):
+        raise DiscoverModelsError(
+            f'GET /v1/models: expected {{"data": [...]}}, got: {str(data)[:200]}'
+        )
+    if not models:
+        raise DiscoverModelsError("GET /v1/models returned an empty model list")
+
+    return models
 
 
 class ChatClient(Protocol):

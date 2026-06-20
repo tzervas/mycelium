@@ -10,7 +10,7 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ### Added (2026-06-20: KC-2 / M-002 close — Grok/xAI harness verification + honest run record)
 - **DN-09 §7 (append-only):** records the 2026-06-20 Grok/xAI live run attempt. Harness
-  self-test **14/14** (Empirical/plumbing — T0–T12 verified). Live run **blocked** by
+  self-test **14/14** (Empirical/plumbing — 14 checks: T0–T12 + T2b verified). Live run **blocked** by
   `HTTP 403 permission-denied` (xAI account has no credits; endpoint reachable; $0 spent).
   Retention ratio (T3.6 / M-381): **INDETERMINATE** (ablation did not run). Schema finding:
   Grok harness output format differs from `mycelium-bench` ingestion schema. Standing
@@ -24,7 +24,29 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   as of 2026-06-20): removed three undocumented model IDs (`grok-4.20-0309-non-reasoning`,
   `grok-4.20-0309-reasoning`, `grok-4.20-multi-agent-0309`); retained the two confirmed public
   models (`grok-build-0.1`, `grok-4.3`). Self-test T0 updated to expect ≥2 models (not exactly 5);
-  self-test remains **14/14**.
+  self-test is now **15/15** (T13 for `from_api_discovery` added — see dynamic discovery entry).
+
+### Added (2026-06-20: LLM harness — dynamic model discovery via GET /v1/models)
+- **`grok/client.py` — `discover_models()`**: queries `GET /v1/models` via stdlib `urllib` (no
+  third-party deps); raises `DiscoverModelsError` on HTTP error/parse failure, `ApiKeyMissingError`
+  if no key. Never logs the key value. Returns raw model-dict list for conversion.
+- **`grok/models.py` — `from_api_discovery()`**: converts the raw API response to `ModelSpec`
+  objects. HONESTY (VR-5): all resulting values are **Declared** (API-asserted or conservative
+  defaults). Skips entries without a parseable pricing block (warning to stderr, G2). Batch prices
+  = sync prices (no invented discount). Raises `ModelConfigError` if nothing usable remains.
+  Conservative Declared defaults: `rpm=60`, `tpm=2,000,000`, `context=131,072` when the API omits
+  them.
+- **`grok/cli.py` — `--discover-models` flag**: when present, queries `GET /v1/models` first;
+  falls back to `models.toml` with a warning on `DiscoverModelsError`; falls back with an error
+  log on `ApiKeyMissingError`. The `--list-models` output labels its source
+  (`GET /v1/models (N discovered, Declared)` vs the file path). Never-silent: a key present but
+  returning an auth error logs the failure and falls back; a bad rubric still stops the run (G2).
+- **`run.sh` — `--discover-models` passthrough**: forwards the flag to all `grok.cli` invocations
+  (list-models, smoke, main run). Consistent with the `--` passthrough design.
+- **T13 self-test (`grok/selftest.py`)**: offline, deterministic test of `from_api_discovery()`:
+  valid entry → correct `ModelSpec` + Declared defaults; missing pricing skipped; negative pricing
+  skipped; duplicate id skipped; missing context_length → 131,072 default; all-bad input → G2
+  `ModelConfigError`. Self-test is now **15/15** (was 14 before T13).
 
 ### Added (2026-06-20: LLM harness — one-command runner + packaging fix)
 - **`tools/llm-harness/run.sh`** — a one-command runner: resolves uv (else system python3),
@@ -32,11 +54,12 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   fails** (never spend on a broken harness — G2), lists the cheapest-first models, then does the
   **capped** live/batch run *only when a key is present* (otherwise it stops gracefully after the
   free checks and prints how to set the key). Knobs: `--check-only`, `--smoke`, `--max-usd`,
-  `--models`, `--no-ablation`, `--batch`, and `--` passthrough to `grok.cli`. shellcheck-clean.
+  `--models`, `--no-ablation`, `--batch`, `--discover-models`, and `--` passthrough to `grok.cli`.
+  shellcheck-clean.
 - **Packaging fix:** added the missing `[build-system]` to `tools/llm-harness/pyproject.toml`, so
   `uv sync` builds + installs the project (and the `grok-harness` console script / `--extra batch`)
   instead of skipping the entry point with a warning. Verified `uv sync` clean and `uv run
-  grok-harness --self-test` → 14/14. The harness stays **lockless by design** (`.venv`/`uv.lock`
+  grok-harness --self-test` → 15/15. The harness stays **lockless by design** (`.venv`/`uv.lock`
   gitignored; live + self-test are pure stdlib — no third-party runtime deps).
 - Audited the harness for real-run pitfalls: the live client is stdlib `urllib` (no missing deps),
   all modules import, the no-key path fails gracefully (clear message, not a traceback), the
@@ -55,7 +78,7 @@ are unbounded (no `max_tokens`), so a single in-flight request can overrun; the 
 refuses *new* work early. Actual billed cost is recorded as the run proceeds (the reported spend is the
 real one), and a non-finite `--max-usd` (nan/inf) is rejected at parse time so the gate cannot be
 silently disabled. `--max-usd` (default `10.0`) is wired through `RunConfig`; the offline `--self-test`
-gains a deterministic budget-gate check (now **14/14**, no key/network). Documented in the harness
+gains a deterministic budget-gate check (now **15/15**, no key/network). Documented in the harness
 README ("Live xAI (Grok) runs").
 
 ### Added (2026-06-20: Phase 8 — toolchain API ergonomics (M-644))

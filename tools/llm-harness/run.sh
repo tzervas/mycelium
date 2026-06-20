@@ -23,6 +23,7 @@
 #   ./run.sh --models grok-build-0.1[,grok-4.3]   # restrict to a subset (cheapest-first within it)
 #   ./run.sh --no-ablation         # gold-set only (skip the M-381 retention-ratio ablation)
 #   ./run.sh --batch               # batch-API mode (uv sync --extra batch → xai_sdk)
+#   ./run.sh --discover-models     # query GET /v1/models at runtime instead of static models.toml
 #   ./run.sh --check-only          # just the offline self-test + list-models; no key, no spend
 #   ./run.sh -- --seed 23 ...      # everything after `--` is passed straight to grok.cli
 set -euo pipefail
@@ -38,6 +39,7 @@ ABLATION=(--ablation)  # gold-set + the M-381 retention-ratio ablation by defaul
 MODELS=""              # empty => all, cheapest-first
 SMOKE=0
 CHECK_ONLY=0
+DISCOVER_MODELS=0
 PASSTHRU=()            # extra args after `--`
 
 # --- parse args -------------------------------------------------------------------------
@@ -49,10 +51,11 @@ while [[ $# -gt 0 ]]; do
     --batch)        MODE="batch"; shift ;;
     --ablation)     ABLATION=(--ablation); shift ;;
     --no-ablation)  ABLATION=(); shift ;;
-    --smoke)        SMOKE=1; shift ;;
-    --check-only)   CHECK_ONLY=1; shift ;;
+    --smoke)            SMOKE=1; shift ;;
+    --check-only)       CHECK_ONLY=1; shift ;;
+    --discover-models)  DISCOVER_MODELS=1; shift ;;
     --)             shift; PASSTHRU=("$@"); break ;;
-    -h|--help)      sed -n '2,32p' "$HERE/run.sh"; exit 0 ;;
+    -h|--help)      sed -n '2,33p' "$HERE/run.sh"; exit 0 ;;
     *)              echo "run.sh: unknown arg '$1' (use --help, or '--' to pass through)" >&2; exit 2 ;;
   esac
 done
@@ -93,8 +96,10 @@ if ! "${RUNNER[@]}" --self-test; then
 fi
 
 # --- 2. show the resolved (cheapest-first) model order — $0 -----------------------------
+DISCOVER=()
+[[ "$DISCOVER_MODELS" -eq 1 ]] && DISCOVER=(--discover-models)
 echo ">> resolved models (cheapest-first) ..."
-"${RUNNER[@]}" --list-models
+"${RUNNER[@]}" "${DISCOVER[@]}" --list-models
 
 [[ "$CHECK_ONLY" -eq 1 ]] && { echo ">> --check-only: done (offline checks passed; no spend)."; exit 0; }
 
@@ -114,11 +119,11 @@ SUBSET=()
 [[ -n "$MODELS" ]] && SUBSET=(--models "$MODELS")
 if [[ "$SMOKE" -eq 1 ]]; then
   echo ">> smoke: cheapest model, \$2 cap ..."
-  "${RUNNER[@]}" --models grok-build-0.1 --mode "$MODE" "${ABLATION[@]}" --max-usd 2 "${PASSTHRU[@]}"
+  "${RUNNER[@]}" "${DISCOVER[@]}" --models grok-build-0.1 --mode "$MODE" "${ABLATION[@]}" --max-usd 2 "${PASSTHRU[@]}"
 fi
 
 # --- 5. the real, capped run ------------------------------------------------------------
 echo ">> run: mode=$MODE  cap=\$$MAX_USD  ablation=${ABLATION[*]:-off}  models=${MODELS:-all-cheapest-first}"
-"${RUNNER[@]}" --mode "$MODE" "${ABLATION[@]}" --max-usd "$MAX_USD" "${SUBSET[@]}" "${PASSTHRU[@]}"
+"${RUNNER[@]}" "${DISCOVER[@]}" --mode "$MODE" "${ABLATION[@]}" --max-usd "$MAX_USD" "${SUBSET[@]}" "${PASSTHRU[@]}"
 
 echo ">> done. Reports written under: $HERE/reports/  (send me the newest *-report.json)"

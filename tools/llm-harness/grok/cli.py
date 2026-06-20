@@ -26,7 +26,13 @@ import logging
 import sys
 from pathlib import Path
 
-from .models import ModelConfigError, default_models_path, load_models, order_models
+from .models import (
+    ModelConfigError,
+    default_models_path,
+    from_api_discovery,
+    load_models,
+    order_models,
+)
 from .tasks import TASK_SET_ID, task_set
 
 
@@ -101,10 +107,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     cfg = p.add_argument_group("configuration")
     cfg.add_argument(
+        "--discover-models",
+        action="store_true",
+        help="query GET /v1/models to build the model list dynamically instead of "
+        "reading models.toml. Falls back to models.toml with a warning on failure. "
+        "Requires an API key. Values are Declared (API-asserted); rate-limit fields "
+        "(tpm, rpm) use conservative defaults (60 rpm / 2M tpm). "
+        "Combine with --list-models to preview discovered models before a run.",
+    )
+    cfg.add_argument(
         "--models-file",
         type=Path,
         default=None,
-        help="path to the model rubric TOML (default: bundled models.toml).",
+        help="path to the model rubric TOML (default: bundled models.toml). "
+        "Ignored when --discover-models succeeds.",
     )
     cfg.add_argument(
         "--models",
@@ -188,17 +204,41 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- resolve the model rubric (never-silent on a bad file) --------------
     models_file = args.models_file or default_models_path()
+    source_label = str(models_file)
+    specs_raw = None
+
+    if args.discover_models:
+        from .client import ApiKeyMissingError, DiscoverModelsError, discover_models
+
+        try:
+            raw = discover_models(base_url=args.base_url)
+            specs_raw = from_api_discovery(raw)
+            source_label = f"GET /v1/models ({len(specs_raw)} discovered, Declared)"
+            log.info("model discovery: %d model(s) from API", len(specs_raw))
+        except ApiKeyMissingError as exc:
+            log.error("model discovery: %s — falling back to %s", exc, models_file)
+        except (DiscoverModelsError, ModelConfigError) as exc:
+            log.warning(
+                "model discovery failed: %s — falling back to %s", exc, models_file
+            )
+
+    if specs_raw is None:
+        try:
+            specs_raw = load_models(models_file)
+        except ModelConfigError as exc:
+            log.error("model rubric error: %s", exc)
+            return 2
+
     try:
-        specs = load_models(models_file)
         ordered = order_models(
-            specs, select=_split_csv(args.models), order=_split_csv(args.order)
+            specs_raw, select=_split_csv(args.models), order=_split_csv(args.order)
         )
     except ModelConfigError as exc:
-        log.error("model rubric error: %s", exc)
+        log.error("model ordering error: %s", exc)
         return 2
 
     if args.list_models:
-        print(f"resolved model order ({len(ordered)}) from {models_file}:")
+        print(f"resolved model order ({len(ordered)}) from {source_label}:")
         for i, m in enumerate(ordered, 1):
             print(
                 f"  {i}. {m.id}  ctx={m.context}  rpm={m.rpm} tpm={m.tpm}  "
