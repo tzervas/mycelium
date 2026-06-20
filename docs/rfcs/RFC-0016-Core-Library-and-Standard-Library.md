@@ -111,9 +111,9 @@ the template), so the honesty claims are a checked table, not prose.
     values, the guarantee-lattice types — thin, mostly re-exporting `mycelium-core` (RFC-0001). *No new
     trusted code.*
   - **Ring 1 — capability surfaces** (Tier A): ergonomic libraries over the landed capability crates
-    (`numerics`, `swap`, `vsa`, `dense`, `select`, `diag`, `recover`). These *consume* the trusted base;
-    they are certificate/EXPLAIN **consumers**.
-  - **Ring 2 — general library** (Tier B + `runtime`/`spore`): collections, text, IO, etc., written to the
+    (`numerics`, `swap`, `vsa`, `dense`, `select`, `diag`, `recover`, `spore`). These *consume* the trusted
+    base; they are certificate/EXPLAIN **consumers**.
+  - **Ring 2 — general library** (Tier B + `runtime`): collections, text, IO, etc., written to the
     contract over Ring 0/1.
 - **Packaging**: each module ships in the `std` `phylum`; the publishable artifact is a `spore` (ADR-013).
   Versioning + metadata ride the M-359 `mycelium-proj.toml` manifest; metadata is not identity (ADR-003).
@@ -319,6 +319,14 @@ Empirical/Declared, never Proven (VR-5). This clears the §8 gate for ratificati
 
 ## Meta — changelog
 
+- **2026-06-20 — Erratum (§4.2 ring layering; maintainer-authorized, stdlib ratification pass).** Reconciled an
+  internal inconsistency: §4.2 listed `spore` under **Ring 2** while §4.3 (Tier A table), the stdlib index, and
+  `spore.md` place it Tier A / **Ring 1**. `spore` is an ergonomic capability surface over the landed
+  `mycelium-spore` + `mycelium-content` crates (a certificate/EXPLAIN consumer, no new trusted code — KC-3),
+  which is the Ring-1 definition; §4.2's parenthetical was the outlier. Corrected §4.2 to file `spore` under
+  Ring 1 (added to the capability-surface list; removed from the Ring-2 parenthetical). Corrigendum only —
+  **not** a decision reversal (the Tier-A taxonomy of §4.3 is unchanged); the Accepted status stands. This
+  unblocks `spore.md`'s §7-Q1 ratification. Append-only; no kernel change (KC-3).
 - **2026-06-17 — Draft → Accepted (maintainer ratification; M-501/DN-07).** The maintainer ratified the
   RFC-0016 core: the §4.1 per-op **contract** (C1–C6), the §4.2 **ring layering**, the §4.3/§4.4
   **Tier-A/Tier-B taxonomy** (full **23-module v0 scope**), the §4.5 **guarantee-matrix** obligation, and the
