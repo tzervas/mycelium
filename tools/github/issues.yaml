@@ -1513,12 +1513,13 @@ issues:
   - id: M-382
     title: "M-382 — gh-issues-sync.py: ProjectV2 graphql pagination aborts on transient `gh api graphql` EOF (add retry/backoff)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:infra, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:8, type:infra, area:toolchain, priority:P3, status:done]
     depends_on: []
     doc_refs: [src:tools/github/gh-issues-sync.py]
     body: |
       BUG (captured 2026-06-19; maintainer will fix later). The GitHub Project-v2 reconcile in tools/github/gh-issues-sync.py walks `... ProjectV2{ items(first:100, after:<cursor>) }` over `gh api graphql` via the `gh_graphql()` helper (~L152). A transient network failure mid-pagination — observed `gh: Post "https://api.github.com/graphql": unexpected EOF` (gh exit 1) — propagates out of `gh()`/`gh_graphql()` and ABORTS the whole sync, even though the same network-error class is already classified with a hint at gh-issues-sync.py:132. The paginated query is read-only/idempotent, so it is safe to retry.
       Fix direction (policy is maintainer's call): wrap the `gh api graphql` calls (at least the paginated ProjectV2 reads) in a bounded retry with exponential backoff on the transient-network error class the :132 hint already recognizes; surface an explicit error only after retries are exhausted (never-silent, G2). Mutations stay idempotent/safe to re-run (the script's create-if-absent + update-to-match posture already supports re-runs).
+      DONE (2026-06-20, PR #238): centralized EOF-aware transient retry/backoff in `_run_gh` (a new pure `_is_transient_network` recognizes `unexpected eof`/reset/tls/io-timeout + the prior DNS/dial/timeout set — the original symptom was misclassified as non-retryable; 4 retries, 1/2/4/8s, never-silent per-retry line) covering EVERY gh call. Also hardened the noncompliant-label migration to be fault-tolerant (one failing per-issue relabel no longer aborts the batch; open issues first; a stale label is never deleted while issues still carry it — G2) and added `--verbose` (echoes each `→ gh <args>` so a hang is pinpointable). --self-test + full `just check` green.
       Scope: tooling-only (tools/github/gh-issues-sync.py); no kernel/spec impact. Not started.
 
   # 2026-06-19: Wave-1 native continuation — Increment-3 (tail recursion + Binary branch). Continues M-378.
