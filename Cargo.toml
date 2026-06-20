@@ -48,6 +48,7 @@ members = [
     "crates/mycelium-std-rand",
     "crates/mycelium-std-sys",
     "crates/mycelium-cli-common",
+    "crates/mycelium-bench",
     "xtask",
 ]
 

@@ -4,7 +4,7 @@
 
 **Status:** design + **Rust-first implementation underway.** The design corpus is Accepted/Resolved
 (Foundation, RFC-0001…0021, ADR-001…017, DN-01…14), and the kernel is landing as a
-Rust workspace of **44 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified binary↔ternary
+Rust workspace of **45 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified binary↔ternary
 swaps, the selection-policy engine, and a Rust-first standard library. Phases **0–3, 5, and 7** are
 complete; Phases **4, 6, and 8** are in progress. Per the honesty rule, the 23 Rust-first stdlib
 specs were **ratified to `Accepted`** (2026-06-20, DN-07) only on a checked basis (guarantee

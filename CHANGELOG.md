@@ -8,6 +8,31 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: E-BENCH — honest benchmarking & evaluation harness (E3-9 / M-645))
+A new crate **`crates/mycelium-bench/`** (lib + `bench` bin) that measures **what this language
+actually buys us — and where we lose**. Times whole v0-calculus programs across every execution
+backend (interpreter trusted-base, AOT env-machine, JIT, direct-LLVM, MLIR-dialect behind
+`mlir-dialect`) over a shared 14-program corpus, and classifies each (backend, case) vs the
+interpreter as a speed **WIN/LOSS**/neutral, a **capability LOSS** (with reason), a correctness LOSS,
+a runtime error, or a graceful **Skip**.
+- **Honest differential.** Compares the **observable** (`repr`+`payload`+`guarantee` / content-identity,
+  provenance excluded per RFC-0001 §4.6 — matching the M-210 `ObservationalEquiv` checker). This fix
+  turned 10 false-positive "correctness losses" (compiled backends stamp `Provenance::Root` where the
+  interpreter records a `Derived` chain) into honest speed verdicts — a clean differential (0
+  correctness losses).
+- **Surfaces losses, not just wins (G2).** The committed sample reports 1 win / 1 neutral / 26
+  speed-losses / 14 capability-losses / 0 correctness-losses — e.g. `rec-mutual`/`aot-env` ×1.11 (win);
+  `bit-not`/`direct-llvm` a **process-spawn-bound** loss (per-invocation time dominated by spawning a
+  fresh native process, not compute — M-602/E1, surfaced not buried); `rec-mutual` a capability-loss
+  (mutual recursion unsupported in Increment-3, RFC-0004 §11.6).
+- **Ingests the LLM-harness report** (M-330/M-331; KC-2/SC-5b), labelling synthetic as synthetic.
+- **Honest tags (VR-5):** every measured number is **Empirical** (trial count + spread); a capability
+  loss / skip / error is **Declared**; no verdict is Proven/Exact; **no pre-written performance
+  target**. Debug builds refused for perf numbers; spawn/warmup caveats stated.
+- **Zero new external deps** (only workspace `serde`/`serde_json` + the internal crates it measures,
+  read-only). Verified: `cargo test -p mycelium-bench` 29 lib + 4 integration green; workspace clippy
+  `-D warnings` + build green; full `just check` green.
+
 ### Added (2026-06-20: Phase 6 — native acceleration + deploy + VR-4 exit gate (M-360, M-610/620/630))
 Completed the Phase-6 native path on the keystone (E6-1) — the **VR-4 no-opaque-lowering cross-backend
 gate is met (the Phase-6 exit)**. All in `crates/mycelium-mlir/` (+ DN-18); interpreter stays the
