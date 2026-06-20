@@ -8,6 +8,41 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: M-397 — `gh-issues-sync` bounded-concurrency, rate-negotiated, batched execution)
+Sped up the live reconcile by overlapping the many small, independent `gh` mutations per run while
+staying inside GitHub's secondary-rate limits — never-silent (G2), fault-tolerant, and a clean N=1
+fallback. Builds on the existing M-382 per-call retry/backoff/120s-timeout in `_run_gh`/`gh()` (used
+**as-is**, unchanged).
+- **Bounded thread pool over the existing synchronous `gh()`** (subprocess/IO-bound ⇒ threads, **not**
+  an asyncio rewrite). New `--concurrency N` (default **6**, conservative for secondary limits);
+  **`N=1` reproduces today's exact sequential behaviour** (the debugging / `--verbose` fallback — each
+  task runs inline, in submission order, with no executor). `--dry-run` stays sequential for a stable,
+  ordered preview and mutates nothing.
+- **Batched dispatch with `as_completed` aggregation** — the independent per-item loops now dispatch as
+  batches: label create-or-update, milestone create, **issue create (pass 1)**, **per-issue updates
+  (pass 2)**, PR backfill, and the noncompliant-label **migration relabels**. The cross-batch
+  dependency order is preserved (labels+milestones before issue creation; create-pass-1 fully
+  aggregates before the update pass). Only items that are idempotent + target disjoint resources are
+  parallelized within a batch.
+- **Well-negotiated rate limits** — (a) bounded concurrency; (b) a shared `RateGate` (a
+  `threading.Event` + lock): on a `403`/`429`/`secondary rate limit`/`abuse`/`Retry-After` stderr the
+  whole pool **PAUSES** for the advised window (parsed by the pure, testable
+  `should_pause_for_rate_limit`), then resumes — one post-pause retry, never a continued burst; (c) an
+  optional start-of-run `gh api rate_limit` probe that reduces `N` when the remaining core budget is
+  low (`negotiate_concurrency`, never-silent; `--no-rate-probe` opts out). A **primary** rate-limit is
+  deliberately NOT absorbed into a short pause (it resets hourly — `_gh_fail` surfaces it honestly).
+- **Never-silent, fault-tolerant, ordered output** — each task returns `(item, ok, err)`; `run_batch`
+  aggregates per batch (`aggregate_results`), prints `>> <batch>: N ok, M failed`, and collects every
+  failure as a re-runnable FLAG — one failure never aborts the batch. **All printing is guarded by a
+  process-wide lock** (`safe_print`/`_safe_stderr`) so concurrent / `--verbose` output never interleaves.
+- **Pure helpers + `--self-test`** — `should_pause_for_rate_limit`, `parse_rate_remaining`,
+  `negotiate_concurrency`, `aggregate_results`, `_issue_update_args`, `partition_issue_work`, and
+  `run_batch` (N=1 sequential + concurrent fault-capture) are all covered offline. Verified:
+  `python3 tools/github/gh-issues-sync.py --self-test` green; ruff lint + `ruff format --check` clean;
+  `just check` green. No live/networked `gh` was run — GitHub's exact concurrency/secondary-limit
+  thresholds are **Declared** (documented, not Proven) and tuned conservatively (default N=6, pause +
+  one retry); see `tools/github/RECONCILE.md`.
+
 ### Fixed (2026-06-20: M-382 — `gh-issues-sync` EOF-aware retry/backoff + fault-tolerant migration + `--verbose`)
 Hardened `tools/github/gh-issues-sync.py` against the M-382 hang. Root cause was three-fold:
 (a) the network-error classifier in `_gh_fail` omitted `EOF`, so the symptom `gh: Post "…":

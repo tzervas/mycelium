@@ -76,6 +76,50 @@ generated without an explicit trigger.
 `--all` = the **full maintenance suite**, in order:
 **preflight → validate → labels → milestones → issues → PRs → project**.
 
+## Bounded-concurrency, rate-negotiated, batched execution (M-397)
+
+The live reconcile issues many small, **independent, idempotent** `gh` mutations per run (one per
+label, one per drifted issue, …). They are subprocess/IO-bound, so the engine overlaps their latency
+with a **bounded thread pool over the existing synchronous `gh()`** (threads, **not** an asyncio
+rewrite) — `gh()`/`_run_gh` keep their M-382 retry/backoff/120s-timeout verbatim. This maximizes sync
+speed while staying inside GitHub's **secondary** rate limits, and it is never-silent (G2),
+fault-tolerant, and ordered.
+
+| Knob | Default | Meaning |
+|---|---|---|
+| `--concurrency N` | **6** | max in-flight `gh` calls per batch (conservative for secondary limits). |
+| `N=1` | — | reproduces the **exact sequential behaviour** — each task runs inline, in submission order, no executor. The clean `--verbose`/debug fallback. |
+| `--no-rate-probe` | off | skip the start-of-run `gh api rate_limit` budget probe (which can reduce `N` when the remaining core budget is low). |
+| `--dry-run` | — | stays **sequential** (N=1) for a stable, ordered preview; mutates nothing. |
+
+**Batches (cross-batch dependency order preserved).** Each independent per-item loop dispatches as a
+batch with `as_completed` aggregation: label create-or-update · milestone create · **issue create
+(pass 1)** · **per-issue field/label/milestone updates (pass 2)** · PR backfill · noncompliant-label
+**migration relabels**. Ordering invariants hold: **labels + milestones before issue creation**, and
+**create-pass-1 fully aggregates before the update pass** (so a future `depends_on`/sub-issue linking
+pass would see every new number). Only items that are **idempotent + target disjoint resources** run
+in parallel within a batch.
+
+**Rate negotiation (three layers).** (a) bounded concurrency; (b) a shared `RateGate` — on a
+`403`/`429`/`secondary rate limit`/`abuse`/`Retry-After` stderr the **whole pool PAUSES** for the
+advised window (parsed by the pure, `--self-test`'d `should_pause_for_rate_limit`), then resumes with
+one post-pause retry — never a continued burst; (c) an optional `gh api rate_limit` probe that reduces
+`N` when the remaining core budget is low (`negotiate_concurrency`, never-silent). A **primary**
+rate-limit (`API rate limit exceeded`) is *not* absorbed into a short pause — it resets on a fixed
+hourly window, so `_gh_fail` surfaces it honestly with the `gh api -i rate_limit` remediation.
+
+**Never-silent output.** Each task returns `(item, ok, err)`; a batch prints `>> <batch>: N ok, M
+failed` and every failure as a re-runnable FLAG (one failure never aborts the batch). All printing is
+guarded by a process-wide lock (`safe_print`/`_safe_stderr`) so concurrent / `--verbose` lines never
+interleave.
+
+> **Honesty (Declared).** GitHub's exact secondary-rate-limit / abuse thresholds and concurrency
+> tolerances are **not publicly specified** and were **not** exercised against the live API here, so
+> the tuning (default `N=6`, pause-the-pool + single retry, `low_water=100`, `default_backoff=60s`,
+> `max_backoff=300s`) is **Declared** — conservative defaults, never claimed Proven. The pure decision
+> logic is `--self-test`-covered offline; the live concurrency behaviour should be confirmed with a
+> `--dry-run` and a small live run before trusting a high `--concurrency`.
+
 ## Preflight (auto sanity check — proceed when good, remediate only when lacking)
 
 Before any live work, `--all` (and each gh level) runs a sanity check and then **just proceeds if
