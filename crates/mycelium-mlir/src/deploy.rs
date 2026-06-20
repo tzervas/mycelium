@@ -237,23 +237,39 @@ mod tests {
 
     #[test]
     fn identity_is_the_program_hash_and_metadata_is_not_identity() {
-        // ADR-003: two artifacts with the SAME program identity are the same unit even if their
-        // carried metadata (here, a different identity tag would change identity — so we hold the
-        // identity fixed and confirm same_identity_as keys on it, not on the IR bytes).
-        let a = NativeArtifact::build(&in_fragment(), ident("aaaa0000")).unwrap();
-        let b = NativeArtifact::build(&in_fragment(), ident("aaaa0000")).unwrap();
-        let c = NativeArtifact::build(&in_fragment(), ident("bbbb1111")).unwrap();
+        // ADR-003 — witnessed directly: identity is the supplied content hash, NOT the carried
+        // metadata (the lowered IR + the VR-4 attestation). To prove metadata-blindness we build two
+        // artifacts from DIFFERENT programs (so their lowered IR and VR-4 attestation genuinely
+        // differ) but pass the SAME identity, and confirm `same_identity_as` still holds.
+        let prog_a = in_fragment(); // bit.not(bit.xor(a,b))
+        let prog_b = Node::Op {
+            // a different program ⇒ different lowered IR + different attestation byte-size
+            prim: "bit.and".into(),
+            args: vec![
+                Node::Const(byte([true; 8])),
+                Node::Const(byte([false, true, false, true, false, true, false, true])),
+            ],
+        };
+        let a = NativeArtifact::build(&prog_a, ident("aaaa0000")).unwrap();
+        let b = NativeArtifact::build(&prog_b, ident("aaaa0000")).unwrap();
+        // The carried metadata genuinely differs between the two...
+        assert_ne!(
+            a.lowered_ir(),
+            b.lowered_ir(),
+            "the two programs must have different lowered IR (so this is a real metadata-blindness test)"
+        );
+        // ...yet they share identity, because identity is the supplied hash, not the metadata (ADR-003).
         assert!(
             a.same_identity_as(&b),
-            "same program hash ⇒ same identity (ADR-003)"
+            "same supplied identity ⇒ same artifact identity, even with different IR (metadata is not identity)"
         );
+        // Conversely, the SAME program under a DIFFERENT identity is a different artifact.
+        let c = NativeArtifact::build(&prog_a, ident("bbbb1111")).unwrap();
         assert!(
             !a.same_identity_as(&c),
-            "different program hash ⇒ different identity"
+            "different supplied identity ⇒ different artifact identity"
         );
-        // The carried IR is byte-identical for the same program here, but identity does NOT depend on
-        // it — it is the supplied content hash (metadata is not identity).
-        assert_eq!(a.id(), b.id());
+        assert_eq!(a.id().as_str(), "blake3:aaaa0000");
     }
 
     #[test]

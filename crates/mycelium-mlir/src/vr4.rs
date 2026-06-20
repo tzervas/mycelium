@@ -19,7 +19,7 @@
 //! | Direct-LLVM (M-301/M-373/M-378/M-379) | textual LLVM IR | [`crate::llvm::emit_llvm_ir`] | `Empirical` (the interp↔native differential, M-302) |
 //! | MLIR-dialect textual skeleton (M-150) | the ternary-dialect ANF skeleton | [`crate::dialect::emit`] | `Declared` (the always-available no-opaque anchor) |
 //! | MLIR-dialect real lowering (M-601, feature `mlir-dialect`) | the `arith`/`func` module + the lowered LLVM IR | [`crate::dialect::native::emit_mlir`] / [`lower_to_llvm_ir`](crate::dialect::native::lower_to_llvm_ir) | `Empirical` (the three-way differential, M-602) |
-//! | JIT / SIMD packed-ternary (M-360/M-610) | the unpack-compute kernel IR | [`crate::bitnet::emit_bitnet_dot_ir_for`] / [`crate::simd`] | `Empirical` (the SIMD↔scalar differential) |
+//! | JIT / SIMD packed-ternary (M-360/M-610) | the unpack-compute kernel IR (**node-independent** — a fixed I2_S kernel exemplar; the packed-ternary kernel is a runtime-data primitive, not a lowering of the program) | [`crate::bitnet::emit_bitnet_dot_ir_for`] / [`crate::simd`] | `Empirical` (the SIMD↔scalar differential) |
 //!
 //! **Honesty (VR-5).** The tag on each stage is the strength of the *evidence that the dumped stage
 //! is faithful to what runs*, not a claim about the program's numerics. The compiled paths are
@@ -214,13 +214,15 @@ fn dump_stage(backend: Backend, node: &Node) -> BackendStage {
             GuaranteeStrength::Declared,
         ),
         // Direct-LLVM emits textual LLVM IR for the in-fragment subset; an out-of-fragment node is an
-        // explicit refusal (the backend's own honest boundary). The dump's semantics are validated
-        // against the interpreter by the M-302 differential ⇒ Empirical.
+        // explicit refusal (the backend's own honest boundary). When it *dumps*, the dump's semantics
+        // are validated against the interpreter by the M-302 differential ⇒ Empirical. When it
+        // *skips*, nothing was dumped, so the tag is `Declared` — the asserted strength of the honest
+        // boundary, not a differential verdict over an absent artifact (VR-5).
         Backend::DirectLlvm => match emit_llvm_ir(node) {
             Ok(ir) => (StageStatus::Dumped(ir), GuaranteeStrength::Empirical),
             Err(e) => (
                 StageStatus::Skipped(format!("out of the direct-LLVM fragment: {e}")),
-                GuaranteeStrength::Empirical,
+                GuaranteeStrength::Declared,
             ),
         },
         // The MLIR textual skeleton is always available (no toolchain) — the no-opaque anchor.
@@ -229,17 +231,23 @@ fn dump_stage(backend: Backend, node: &Node) -> BackendStage {
             GuaranteeStrength::Declared,
         ),
         // The real MLIR lowering: emitting the arith/func module is a pure-text emission (no tool to
-        // *emit* — the tool only *runs* it), so it dumps even without libMLIR. Validated three ways by
-        // M-602 ⇒ Empirical. An out-of-fragment node is an explicit skip. Feature-gated.
+        // *emit* — the tool only *runs* it), so it dumps even without libMLIR. A dumped module is
+        // validated three ways by M-602 ⇒ Empirical; a skip (out-of-fragment, or the feature off)
+        // dumped nothing ⇒ `Declared`. Feature-gated.
         Backend::MlirDialect => mlir_dialect_stage(node),
-        // The JIT/SIMD packed-ternary path: its dumpable stage is the unpack-compute kernel IR (the
-        // I2_S default kernel — representative; the SIMD/TL1/TL2 kernels emit analogously). Pure text,
-        // no toolchain. Validated against the scalar oracle by the SIMD differential ⇒ Empirical.
+        // The JIT/SIMD packed-ternary path: its dumpable stage is the unpack-compute kernel IR. NOTE
+        // it is **node-independent** — a fixed I2_S kernel exemplar (the TL1/TL2/SIMD kernels emit
+        // analogously), since the packed-ternary kernel is a runtime-data primitive, not a lowering of
+        // `node`. So its stage is always present; the `Err` arm is unreachable (I2_S is statically
+        // supported), kept only as a never-silent guard. A dumped kernel is differential-validated
+        // against the scalar oracle ⇒ Empirical.
         Backend::JitSimd => match emit_bitnet_dot_ir_for(PackScheme::I2S) {
             Ok(ir) => (StageStatus::Dumped(ir), GuaranteeStrength::Empirical),
+            // Unreachable in practice (I2_S always has a kernel); a never-silent guard, tagged
+            // `Declared` because it would have dumped nothing.
             Err(e) => (
                 StageStatus::Skipped(format!("kernel IR unavailable: {e}")),
-                GuaranteeStrength::Empirical,
+                GuaranteeStrength::Declared,
             ),
         },
     };
@@ -256,16 +264,20 @@ fn dump_stage(backend: Backend, node: &Node) -> BackendStage {
 #[cfg(feature = "mlir-dialect")]
 fn mlir_dialect_stage(node: &Node) -> (StageStatus, GuaranteeStrength) {
     match crate::dialect::native::emit_mlir(node) {
+        // A dumped arith/func module is validated three ways by M-602 ⇒ Empirical.
         Ok((module, _kind, _width)) => (StageStatus::Dumped(module), GuaranteeStrength::Empirical),
+        // An out-of-fragment node dumped nothing ⇒ `Declared` (the asserted boundary, not a verdict
+        // over an absent artifact; VR-5).
         Err(e) => (
             StageStatus::Skipped(format!("out of the MLIR element-wise fragment: {e}")),
-            GuaranteeStrength::Empirical,
+            GuaranteeStrength::Declared,
         ),
     }
 }
 
 /// Feature-OFF: the real MLIR lowering is not compiled in — an explicit skip (never a fabricated
-/// dump). The textual skeleton ([`Backend::MlirSkeleton`]) still covers the no-opaque anchor.
+/// dump). The textual skeleton ([`Backend::MlirSkeleton`]) still covers the no-opaque anchor. The tag
+/// is `Declared`: nothing was dumped, so there is no differential verdict to claim (VR-5).
 #[cfg(not(feature = "mlir-dialect"))]
 fn mlir_dialect_stage(_node: &Node) -> (StageStatus, GuaranteeStrength) {
     (
@@ -274,7 +286,7 @@ fn mlir_dialect_stage(_node: &Node) -> (StageStatus, GuaranteeStrength) {
              skeleton covers the no-opaque anchor)"
                 .to_owned(),
         ),
-        GuaranteeStrength::Empirical,
+        GuaranteeStrength::Declared,
     )
 }
 
