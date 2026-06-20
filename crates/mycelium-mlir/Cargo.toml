@@ -11,6 +11,19 @@ publish = false
 [lints]
 workspace = true
 
+[features]
+# `mlir-dialect` (OFF by default) turns on the **real** `ternary`→`arith`/`func`→LLVM dialect
+# lowering (M-601; RFC-0004 §2; ADR-009/ADR-019): `dialect::compile_and_run` emits a genuine MLIR
+# module in the `arith`/`func` dialects and drives it through `mlir-opt-<v>` + `mlir-translate-<v>`
+# (version-matched to the installed LLVM major) to real LLVM IR, then `clang` → native → read-back.
+# It needs the libMLIR tools (`scripts/setup-mlir.sh`; ADR-019) — but, like the existing
+# `llc`/`clang` path, it **probes for them at runtime and skips gracefully** when absent, so even
+# `cargo test --features mlir-dialect` is green on a box without the tools (each test sees
+# `DialectError::ToolchainMissing` and returns). The default build/test path is unchanged: with the
+# feature OFF the dialect module exposes only the textual skeleton (no native MLIR invocation). The
+# trusted base remains the interpreter (NFR-7); this feature is the perf/inspectability path.
+mlir-dialect = []
+
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
 mycelium-interp = { path = "../mycelium-interp" }

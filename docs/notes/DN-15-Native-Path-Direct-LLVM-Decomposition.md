@@ -379,9 +379,56 @@ an explicit `UnsupportedNode` (G2), never fragile/incorrect IR.
 
 ---
 
+## 9. libMLIR unblock — provisionable on Linux (M-603; 2026-06-20)
+
+This section records, append-only, that the **libMLIR-gated half** of M-348 (§2; the §5 table's
+**Increment 4 — real ternary MLIR dialect lowering** row) is **no longer blocked on Linux**. The
+`M-348` "libMLIR absent" premise — the basis for §2's "stays blocked" and §4.4's "permanent block
+until M-348" — has been **checked false on Linux** (VR-5: upgrade only on a checked basis; the basis
+is the verified install + working pipeline below). Nothing above is rewritten — DN-15 remains a
+**Draft** design note (its Status line is unchanged; history is not rewritten), and this section only
+adds the new, grounded finding.
+
+**Verified facts (Linux; the same facts ADR-019 Context records).** `apt-get install -y
+--no-install-recommends libmlir-18-dev mlir-18-tools` installs candidate **`1:18.1.3-1ubuntu1`**,
+**version-matched to the installed LLVM 18.1.3** (`llc --version` ⇒ `Ubuntu LLVM version 18.1.3`),
+providing `/usr/bin/mlir-opt-18`, `/usr/bin/mlir-translate-18`, and `libMLIR.so.18.1`. The pipeline
+`mlir-opt-18 --convert-func-to-llvm --convert-arith-to-llvm --reconcile-unrealized-casts | mlir-translate-18 --mlir-to-llvmir`
+emits **valid LLVM IR**. So the §2 / §4.4 premise ("no libMLIR binding in this environment") does not
+hold on Linux any more.
+
+**Made durable (the decision, not a one-off).** Provisioning is now reproducible via
+`scripts/setup-mlir.sh` (derives the LLVM major from the installed `llc`, then `clang`; installs the
+**version-matched** `libmlir-$MAJOR-dev` + `mlir-$MAJOR-tools` through the distro package manager only
+— no `curl | bash`; idempotent; skips gracefully when LLVM / `apt-get` / the packages are absent),
+intended to be wired into `just setup`. **ADR-019 (Accepted, 2026-06-20)** records the toolchain
+decision: libMLIR is the **optional**, version-matched build dependency of the **off-by-default**
+`mlir-dialect` Cargo feature of `mycelium-mlir` — **not** the default build.
+
+**What changes, and what stays honest.** The **real** `ternary` → `arith`/`vector` → LLVM dialect
+lowering (the §2 / §4.4 libMLIR-gated work) is **M-601** (provisionable + testable on Linux now;
+tagged at its own honestly-supportable strength — §2's textual `dialect.rs` skeleton stays the
+inspectable stand-in where libMLIR is absent), and the **three-way differential** (interp ≡ AOT ≡
+native dialect) is **M-602** (measured; no pre-written target). Because the `mlir-dialect` feature is
+**OFF by default** and probes for the tools (the `llc`/`clang` `ToolchainMissing` skip idiom of §3,
+generalized), the **default build and `cargo test` stay green without libMLIR** — an explicit,
+never-silent skip (G2/VR-5), exactly the posture this note has held throughout.
+
+**Status movement (prose; the §5 table is unchanged — append-only).** The §5 table's **Increment 4 —
+real ternary MLIR dialect lowering** row reads "**Yes — libMLIR-gated** … Blocked on M-348; every
+verdict stays `not established` (VR-5)." With the premise now checked-false on Linux, that increment's
+status moves **from "blocked on M-348 / not established" toward "provisionable + in-progress under
+M-601"**. The table text itself is left exactly as written (append-only is honoured); this paragraph
+is the prose record of the status change. Increment 4's *verdicts* (correctness, the M-602
+differential) remain **not yet established** until M-601 lands and M-602 measures them — the unblock is
+of *provisioning*, not of the *verdict* (VR-5).
+
+---
+
 ## Meta — changelog
 
 <!-- changelog: 2026-06-19 Draft created (M-373) — records the libMLIR-gated vs direct-LLVM-advanceable decomposition, the Increment-1 (Construct/Match) design strategy, the DN-05 #1 DepthBudget reuse plan for Increment 3, and the per-increment risk table. Append-only. -->
 <!-- changelog: 2026-06-19 §7 added (M-378) — realized Increment-2 design: narrow packed-i64 closure ABI; bump-arena no-GC strategy with the single alloc seam where Increment-3's DepthBudget ceiling attaches (DN-05 #1); free-variable-analysis closure conversion. §5 table Increment-2 row marked landed. Guarantee stays Declared (VR-5). Append-only. -->
 <!-- changelog: 2026-06-19 §8 added (M-379) — realized Increment-3 design: tail-position Fix → iterative LLVM loop (host C stack O(1) by construction, DN-05 #1 compliant), bounded by an AutoDepthBudget ceiling (M-349) → graceful DepthLimit (the Inc-2 arena seam generalized to a depth counter); a Binary branch primitive (Match repr-lane scrutinee + Lit arms) for the base case. Non-tail recursion, FixGroup, and recursive heap data stay UnsupportedNode (G2). §5 table Increment-3 row marked partially landed (tail only). Guarantee stays Declared (VR-5). Append-only. -->
 <!-- changelog: 2026-06-19 §8.5 refined (M-379; PR #224 review) — recorded a further deferred native-codegen-shape limitation: a Match in a tail arm's pre-tail binding sequence (step computed via Match) would invalidate the loop back-edge phi, so it is an explicit UnsupportedNode (needs current-block tracking through the back-edge; deferred). The program stays semantically valid (interpreter evaluates it); honest boundary, never fragile IR (G2). Append-only. -->
+<!-- changelog: 2026-06-20 §9 added (M-603) — recorded the libMLIR unblock: the M-348 "libMLIR absent" premise is checked-false on Linux (apt `libmlir-18-dev` + `mlir-18-tools`, candidate 1:18.1.3-1ubuntu1, version-matched to LLVM 18.1.3; the --convert-*-to-llvm | mlir-translate --mlir-to-llvmir pipeline emits valid LLVM IR). Made durable via scripts/setup-mlir.sh + ADR-019 (Accepted): libMLIR is the optional, version-matched build dep of the OFF-by-default mlir-dialect feature, so the default build/test stay green without it (G2/VR-5). Real dialect lowering is M-601; the three-way differential is M-602. §5 table Increment-4 status moves (in prose) from blocked-on-M-348 toward provisionable + in-progress under M-601; the table text is unchanged. Append-only. -->
