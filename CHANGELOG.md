@@ -8,6 +8,16 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-20: ADR-012 — Layered Lexicon status Proposed → Accepted)
+- **ADR-012 status flipped to Accepted.** All five §7 flags were resolved by prior downstream
+  decisions; the file status was simply never updated. §7.1 applied at review time (tier-label
+  de-confliction); §7.2 resolved by RFC-0007 r2 (recursion-only kernel; bounded iteration
+  reserved); §7.3 resolved by RFC-0008 (Accepted 2026-06-16) + Research Pass-4; §7.4 resolved
+  by ADR-013 (Accepted 2026-06-10, `spore` is the deployable unit); §7.5/§7.6 resolved by DN-03
+  (Resolved 2026-06-10, one name per term — flat). Resolution record added as ADR-012 §8.
+  `docs/adr/README.md` and `docs/Doc-Index.md` updated to reflect Accepted status.
+  (Editorial — no normative content changed.)
+
 ### Added (2026-06-20: Wave 4 — M-381 ablation results recorded)
 - **M-381 ablation run `20260620T195352Z` — results recorded (DN-09 §9):** Three-arm live
   ablation (grok-build-0.1, seeds [11,23,42], 8 tasks × 3 seeds). Results [Empirical]: arm1

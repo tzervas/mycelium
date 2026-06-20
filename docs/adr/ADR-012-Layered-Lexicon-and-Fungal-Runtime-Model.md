@@ -4,7 +4,7 @@
 |-------|-------|
 | **ADR** | 012 |
 | **Title** | Layered Lexicon and Fungal Runtime Model |
-| **Status** | Proposed |
+| **Status** | Accepted |
 | **Date** | 2026-06-10 |
 | **Depends on** | DN-02 (Fungal Lexicon), RFC-0001 (Core IR), RFC-0003 (VSA), RFC-0004 (Execution Model) |
 
@@ -53,7 +53,7 @@ Additionally, integrate the comparative analysis showing Mycelium’s position r
 
 ## 6. Status
 
-**Proposed** — Awaiting maintainer review and ratification.
+**Accepted** — 2026-06-20. All §7 flags resolved by downstream decisions; see §8.
 
 ---
 
@@ -180,6 +180,23 @@ stable-component mapping (RFC-0004 §4) — all consistent.
 3. **RFC-0007 amendment** resolving control flow (recursion-only vs bounded-iteration sugar; §7.2).
 4. **RFC-0003 revision** reconciling the `spore` scope (§7.4).
 5. **Grammar evolution** for record types/named fields if the examples' style is adopted (§7.7).
+
+---
+
+## 8. Resolution record (2026-06-20)
+
+All §7 open flags were resolved by subsequent decisions before this ADR was accepted.
+Status moved from **Proposed → Accepted** 2026-06-20.
+
+| §7 flag | Resolution |
+|---------|-----------|
+| §7.1 L1/L2/L3 label collision | Applied at review time — tiers renamed Surface/Runtime/Formal in `Lexicon-Reference.md` |
+| §7.2 Control-flow contradiction (`loop`/`while`/`for`) | RFC-0007 r2 — kernel stays functional; bounded iteration reserved as future sugar; `for` reserved, imperative loop keywords excluded |
+| §7.3 Runtime tier ungrounded | RFC-0008 (Accepted 2026-06-16) + Research Pass-4 (`research/04-runtime-concurrency-RECORD.md`) — RT1–RT7 ground the Runtime vocabulary operationally |
+| §7.4 `spore` scope drift | ADR-013 (Accepted 2026-06-10) — `spore` is the deployable unit; RFC-0003 reconstruction manifest becomes one digest-referenced component |
+| §7.5 `consume`/`grow`/`embody` gate | DN-03 (Resolved 2026-06-10) — `consume`/`grow` adopted; `embody` declined (keep `impl`) |
+| §7.6 Short-form quality | DN-03 §3 — one name per term (flat); ADR-012 §7.6's canonical+alias scheme rejected; single Runtime names ratified (`hypha`/`fuse`/`xloc`/`cyst`/`graft`/`forage`/`backbone`/`mesh`/`tier`/`reclaim`) |
+| §7.7 Examples vs RFC-0001 semantics | Fixes applied at review time; grounding notes added to `Example-Programs-Reference.md` |
 
 ---
 

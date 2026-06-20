@@ -312,6 +312,7 @@ diagnostic-feedback loop (M-330) enabled the self-correction. These are positive
 | arm2 — +grammar-in-context primer | yes | 24 / 24 | **100.0%** | Empirical |
 | arm3 — grammar-constrained decoding | **blocked** | — | — | Declared |
 | arm4 — LlmCanonical projection | yes | 0 / 24 | **0.0%** | Empirical |
+| arm4 — LlmCanonical projection | yes | 0 / 24 | **0.0%** | **Declared** (scoring artifact — see §9.3) |
 | arm5 — embedded-DSL baseline | **blocked** | — | — | Declared |
 
 **Retention ratio: INDETERMINATE.** arm4.pass@1 = 0.0 — the denominator is zero; the ratio
