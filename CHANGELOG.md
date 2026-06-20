@@ -34,8 +34,8 @@ trusted base, native is the differential-tested perf-path.
   Empirical for differential-validated dumps; **never Proven**); an absent feature/tool is an explicit
   `Skipped(reason)`, never a fabricated dump. The test drove the real `mlir-opt-18 | mlir-translate-18`
   pipeline to genuine LLVM IR. **No opaque pass on any backend → Phase-6 exit gate met.**
-- Verified: `cargo test -p mycelium-mlir` 133 (default) / 140 (`mlir-dialect`) green; `mycelium-spore`
-  + `mycelium-proj` 32 green; workspace clippy `-D warnings` + fmt clean; full `just check` green.
+- Verified: `cargo test -p mycelium-mlir` 133 (default) / 140 (`mlir-dialect`) green; `mycelium-spore` &
+  `mycelium-proj` 32 green; workspace clippy `-D warnings` + fmt clean; full `just check` green.
 
 ### Added (2026-06-20: Phase 3 — Grok-pluggable LLM co-authoring harness (M-330/331; M-381 wired))
 Extended `tools/llm-harness/` (M-330/331, already `done`) with a pluggable, batchable, cost-aware Grok/xAI
