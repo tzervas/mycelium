@@ -126,7 +126,7 @@ impl core::fmt::Display for TimeErr {
     }
 }
 
-impl std::error::Error for TimeErr {}
+mycelium_std_core::impl_std_error!(TimeErr);
 
 // ── §2. Effect-declaration marker types (C6 / RFC-0014 / FLAG §7-Q5) ───────────────────────────
 

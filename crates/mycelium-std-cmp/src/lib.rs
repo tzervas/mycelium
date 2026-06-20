@@ -268,7 +268,11 @@ impl<T: std::fmt::Debug> std::fmt::Display for ClampError<T> {
     }
 }
 
-impl<T: std::fmt::Debug> std::error::Error for ClampError<T> {}
+mycelium_std_core::impl_std_error!(
+    ClampError<T>,
+    generics = [T: std::fmt::Debug],
+    where = [T: std::fmt::Debug]
+);
 
 /// Clamp `x` to `[lo, hi]` under total order.
 ///
@@ -347,7 +351,7 @@ impl std::fmt::Display for NarrowError {
     }
 }
 
-impl std::error::Error for NarrowError {}
+mycelium_std_core::impl_std_error!(NarrowError);
 
 /// Explicitly-fallible narrowing conversion — the value may not fit in the target type.
 ///

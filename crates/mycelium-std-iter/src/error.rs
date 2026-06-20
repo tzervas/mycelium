@@ -17,7 +17,7 @@ impl fmt::Display for ZeroStep {
     }
 }
 
-impl std::error::Error for ZeroStep {}
+mycelium_std_core::impl_std_error!(ZeroStep);
 
 /// Error returned by [`zip_exact`](crate::zip_exact) when the left and right `Foldable`s have
 /// different lengths.
@@ -43,4 +43,4 @@ impl fmt::Display for ZipLengthMismatch {
     }
 }
 
-impl std::error::Error for ZipLengthMismatch {}
+mycelium_std_core::impl_std_error!(ZipLengthMismatch);

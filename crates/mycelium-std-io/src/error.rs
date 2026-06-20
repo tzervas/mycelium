@@ -136,7 +136,7 @@ impl fmt::Display for SerError {
     }
 }
 
-impl std::error::Error for SerError {}
+mycelium_std_core::impl_std_error!(SerError);
 
 // ── IoError ──────────────────────────────────────────────────────────────────
 
@@ -195,7 +195,7 @@ impl fmt::Display for IoError {
     }
 }
 
-impl std::error::Error for IoError {}
+mycelium_std_core::impl_std_error!(IoError);
 
 // ── Combined error for read_value ────────────────────────────────────────────
 
@@ -219,14 +219,15 @@ impl fmt::Display for ReadValueError {
     }
 }
 
-impl std::error::Error for ReadValueError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
+mycelium_std_core::impl_std_error!(
+    ReadValueError,
+    source = |this| {
+        match this {
             ReadValueError::Io(e) => Some(e),
             ReadValueError::Ser(e) => Some(e),
         }
     }
-}
+);
 
 impl From<IoError> for ReadValueError {
     fn from(e: IoError) -> Self {

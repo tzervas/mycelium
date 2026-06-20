@@ -204,7 +204,7 @@ impl core::fmt::Display for FromJsonError {
     }
 }
 
-impl std::error::Error for FromJsonError {}
+mycelium_std_core::impl_std_error!(FromJsonError);
 
 /// Error the `to_json` machine projection can raise.
 ///
@@ -234,7 +234,7 @@ impl core::fmt::Display for ToJsonError {
     }
 }
 
-impl std::error::Error for ToJsonError {}
+mycelium_std_core::impl_std_error!(ToJsonError);
 
 /// The payload index of the first non-finite `f64`, if any (`Dense`/`Vsa` payloads only).
 fn first_non_finite(v: &Value) -> Option<usize> {

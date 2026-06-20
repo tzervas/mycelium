@@ -181,6 +181,49 @@ const DEFAULT_FUEL: u64 = 1_000_000;
 /// larger stack).
 const DEFAULT_DEPTH: u32 = 64;
 
+/// The tunable **budgets** of an [`Evaluator`] — the step (`fuel`) and recursion-depth guards — as
+/// a single options struct, an alternative to threading the fluent [`Evaluator::with_fuel`] /
+/// [`Evaluator::with_depth`] chain. Applied via [`Evaluator::with_opts`]; the fluent setters stay.
+///
+/// Only the `Copy` budget knobs live here: the *engines* (`PrimRegistry`, `Box<dyn SwapEngine>`)
+/// are not part of `EvaluatorOpts` — they are not `Clone`/`Default` and stay set through
+/// [`Evaluator::with_engines`], so this struct is a plain, copyable, defaultable bundle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EvaluatorOpts {
+    /// The step budget (as [`Evaluator::with_fuel`]). [`Default`] is [`DEFAULT_FUEL`].
+    pub fuel: u64,
+    /// The recursion-depth (host-stack) budget (as [`Evaluator::with_depth`]). [`Default`] is
+    /// [`DEFAULT_DEPTH`].
+    pub depth: u32,
+}
+
+/// The defaults mirror [`Evaluator::new`] exactly — [`DEFAULT_FUEL`] / [`DEFAULT_DEPTH`] — so
+/// `Evaluator::new(env).with_opts(EvaluatorOpts::default())` is a no-op (the budgets are unchanged).
+impl Default for EvaluatorOpts {
+    fn default() -> Self {
+        EvaluatorOpts {
+            fuel: DEFAULT_FUEL,
+            depth: DEFAULT_DEPTH,
+        }
+    }
+}
+
+impl EvaluatorOpts {
+    /// Set the step budget (builder-style), leaving `depth` untouched.
+    #[must_use]
+    pub fn fuel(mut self, fuel: u64) -> Self {
+        self.fuel = fuel;
+        self
+    }
+
+    /// Set the recursion-depth budget (builder-style), leaving `fuel` untouched.
+    #[must_use]
+    pub fn depth(mut self, depth: u32) -> Self {
+        self.depth = depth;
+        self
+    }
+}
+
 /// The L1 evaluator over a checked [`Env`]. Construction wires the same trusted engines the
 /// L0 paths use: the built-in prim registry and the certified binary↔ternary swap engine
 /// (M-120/M-210) — override with [`Evaluator::with_engines`] for tests or extensions.
@@ -225,6 +268,14 @@ impl<'e> Evaluator<'e> {
     pub fn with_depth(mut self, depth: u32) -> Self {
         self.depth = depth;
         self
+    }
+
+    /// Apply a budget [`EvaluatorOpts`] in one call — equivalent to
+    /// `self.with_fuel(opts.fuel).with_depth(opts.depth)`. Additive convenience; the engines are
+    /// untouched (configure those with [`Evaluator::with_engines`]).
+    #[must_use]
+    pub fn with_opts(self, opts: EvaluatorOpts) -> Self {
+        self.with_fuel(opts.fuel).with_depth(opts.depth)
     }
 
     /// Call function `name` with `args`, big-step, under the configured budgets. The result
@@ -1048,5 +1099,52 @@ mod tests {
         };
         let err = Evaluator::new(&env).call("main", vec![]).unwrap_err();
         assert!(matches!(err, L1Error::Unsupported { .. }), "{err:?}");
+    }
+
+    // --- M-642 additive ergonomics: EvaluatorOpts / with_opts -----------------------------------
+
+    #[test]
+    fn evaluator_opts_default_matches_new_budgets() {
+        // `with_opts(default)` is a no-op: same observable result as plain `new` on a program that
+        // runs well inside both budgets.
+        let e = env("nodule d\nfn main() -> Binary{8} = not(0b0000_0000)");
+        let baseline = Evaluator::new(&e).call("main", vec![]).expect("evaluates");
+        let via_opts = Evaluator::new(&e)
+            .with_opts(EvaluatorOpts::default())
+            .call("main", vec![])
+            .expect("evaluates");
+        assert_eq!(baseline, via_opts);
+    }
+
+    #[test]
+    fn evaluator_opts_apply_the_fuel_budget() {
+        // A starvation-level fuel budget supplied via `with_opts` must take effect — proving the
+        // opts struct is actually applied (each node costs one unit; 1 unit cannot finish `not(_)`).
+        let e = env("nodule d\nfn main() -> Binary{8} = not(0b0000_0000)");
+        let err = Evaluator::new(&e)
+            .with_opts(EvaluatorOpts::default().fuel(1))
+            .call("main", vec![])
+            .unwrap_err();
+        assert!(matches!(err, L1Error::FuelExhausted), "{err:?}");
+    }
+
+    #[test]
+    fn evaluator_opts_builder_sets_both_fields() {
+        let o = EvaluatorOpts::default().fuel(42).depth(7);
+        assert_eq!(o.fuel, 42);
+        assert_eq!(o.depth, 7);
+        // `with_opts` is exactly the `with_fuel`+`with_depth` chain (same observable behavior under a
+        // generous budget — both evaluate the program), checked here via the no-op-on-success path.
+        let e = env("nodule d\nfn main() -> Binary{8} = not(0b1111_0000)");
+        let chained = Evaluator::new(&e)
+            .with_fuel(1_000)
+            .with_depth(64)
+            .call("main", vec![])
+            .expect("evaluates");
+        let opted = Evaluator::new(&e)
+            .with_opts(EvaluatorOpts::default().fuel(1_000).depth(64))
+            .call("main", vec![])
+            .expect("evaluates");
+        assert_eq!(chained, opted);
     }
 }

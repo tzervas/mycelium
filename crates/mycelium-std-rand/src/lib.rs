@@ -118,7 +118,7 @@ impl core::fmt::Display for RandErr {
     }
 }
 
-impl std::error::Error for RandErr {}
+mycelium_std_core::impl_std_error!(RandErr);
 
 // ──────────────────────────────────────────────────────────────────────────────
 // § 2. Declared effects (C6 / RT3 / RFC-0014)
