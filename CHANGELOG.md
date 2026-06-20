@@ -8,6 +8,15 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-20: Wave 3 — ADR-020 Enacted, M-381 Arm 4 ablation run)
+- **ADR-020 — Enacted** (2026-06-20): `runtime`/`colony` phylum-placement decision is now
+  **Enacted** — the M-521 v0 R1 implementation landed on `main` in Wave 2
+  (`crates/mycelium-std-runtime`; 21 tests, 16-row guarantee matrix, `#![forbid(unsafe_code)]`).
+  Status: Accepted → Enacted. ADR-020 is outside ongoing maintenance; future runtime constructs
+  (Phase-7 gate) will reference it but not modify it. Append-only.
+- **ADR README** updated: status-set now shows `Proposed → Accepted → Enacted → Superseded`;
+  ADR-020 table row and summary text corrected (was stale "Proposed").
+
 ### Added (2026-06-20: Wave 2 — M-620 native spore deploy seam, M-521 runtime phylum impl, M-381 Arm 4 unblocked)
 - **M-620 — DONE (native deploy/germination seam, FLAG Q2 resolved):** `crates/mycelium-std-spore/src/deploy.rs`
   implements `germinate(spore, target) -> Result<DeployResult, DeployError>` — the content-addressed

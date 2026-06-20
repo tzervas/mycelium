@@ -1266,6 +1266,8 @@ issues:
       vocabulary absent (RFC-0008 §4.5). 21 tests; 16-row guarantee matrix.
       Scope::join_all Empirical (RT2 diff); FIFO sweep Exact; ZeroCapacity
       fail-closed (G2); #![forbid(unsafe_code)].
+      STATUS (2026-06-20): ADR-020 Enacted (Accepted → Enacted). Implementation
+      fully landed on main (PR #277, Wave 2). Complete and stable per CLAUDE.md.
   - id: M-522
     title: "M-522 — stdlib: `spore` (deployable / reconstruction-manifest library)"
     milestone: "Phase 5 — Self-Hosting & Core Library"

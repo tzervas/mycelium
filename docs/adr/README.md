@@ -11,9 +11,8 @@ New ADRs go here as standalone files. (ADR-001…009 may be extracted into indiv
 
 ## Status set
 
-`Proposed → Accepted → Superseded`. All current ADRs are **Accepted** except ADR-012
-(**Proposed** — its runtime model is now drafted as RFC-0008; ratification pending) and ADR-020
-(**Proposed** — the `runtime`/`colony` phylum-placement decision; awaiting maintainer ratification).
+`Proposed → Accepted → Enacted → Superseded`. All current ADRs are **Accepted** (or **Enacted** for fully-landed decisions) except **ADR-012**
+(**Proposed** — its runtime model is now drafted as RFC-0008; ratification pending). **ADR-020** is now **Enacted** (M-521 v0 R1 implementation landed 2026-06-20).
 
 ## Index
 
@@ -38,7 +37,7 @@ New ADRs go here as standalone files. (ADR-001…009 may be extracted into indiv
 | 017 | Hot-inject recompiled definitions: hash-keyed dispatch + content-addressed dynamic linking, immutable-by-construction (RFC-0004 §10 OQ-2) | Accepted | `ADR-017-Hot-Inject-Recompiled-Definitions.md` |
 | 018 | Versioning policy: per-crate `0.x` SemVer + source-only distribution (no crates.io publish in the design phase); CHANGELOG `[Unreleased]` → release-cut mapping | Accepted | `ADR-018-Versioning-Policy.md` |
 | 019 | libMLIR toolchain: the version-matched build dependency of the off-by-default `mlir-dialect` feature; provisioned via `scripts/setup-mlir.sh` (`just setup-mlir`); resolves M-348 on Linux | Accepted | `ADR-019-libMLIR-Toolchain.md` |
-| 020 | `runtime`/`colony` phylum placement: dedicated `runtime` phylum + thin `std.runtime` facade; construct-by-construct activation at the Phase-7 gate; v0 API surface for the landed R1 slice (M-521) | Accepted | `ADR-020-Runtime-Colony-Phylum-Placement.md` |
+| 020 | `runtime`/`colony` phylum placement: dedicated `runtime` phylum + thin `std.runtime` facade; construct-by-construct activation at the Phase-7 gate; v0 API surface for the landed R1 slice (M-521) | **Enacted** | `ADR-020-Runtime-Colony-Phylum-Placement.md` |
 
 ## Template
 
