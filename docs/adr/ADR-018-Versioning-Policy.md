@@ -77,12 +77,12 @@ is unambiguous.
 **4. Honest release-capability gate — not now.** A *real* release (a tagged, distributed version that
 anyone may depend on) must clear a capability bar this project has **not** yet reached. The bar, stated
 honestly so it is not mistaken for a present capability:
-  - the kernel API is past `0.1` and the `cargo public-api` baselines (`docs/spec/api/`) are stable
-    enough that breaking changes are deliberate and reviewed, **not** routine;
-  - the MVP execution path exists end-to-end (the native/interpreter differential, NFR-7) so a released
-    artifact actually *does* something stable;
-  - if/when crates.io publishing is turned on, that flip is its **own** superseding decision (it
-    changes `publish` and the workflow's push behaviour — never a silent config edit).
+- the kernel API is past `0.1` and the `cargo public-api` baselines (`docs/spec/api/`) are stable
+  enough that breaking changes are deliberate and reviewed, **not** routine;
+- the MVP execution path exists end-to-end (the native/interpreter differential, NFR-7) so a released
+  artifact actually *does* something stable;
+- if/when crates.io publishing is turned on, that flip is its **own** superseding decision (it
+  changes `publish` and the workflow's push behaviour — never a silent config edit).
 
 Until the bar is met, versioning is **internal bookkeeping + a dry-run preview**: numbers and
 changelogs are maintained and previewed; **nothing is tagged-as-released or published automatically.**
