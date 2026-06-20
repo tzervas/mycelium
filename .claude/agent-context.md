@@ -70,7 +70,7 @@ Validate: `python3 tools/github/doc_refs_check.py`
 | RFC-0016…0021 | Accepted (ratified; enactment staged by M-5xx/M-6xx) |
 | ADR-010…020 | Accepted (ADR-020 **Enacted** — M-521 runtime phylum v0) |
 | DN-01…03, 06…09, 13, 16 | **Resolved** |
-| DN-04, 05, 10, 11, 14, 15, 17, 18 | **Draft** (decisions/captures pending) |
+| DN-04, 05, 10, 11, 12, 14, 15, 17, 18 | **Draft** (decisions/captures pending) |
 
 ### Implementation state
 
@@ -89,7 +89,7 @@ Validate: `python3 tools/github/doc_refs_check.py`
 |----|-------|--------|
 | M-381 | LLM-leverage ablation (T3.6) — arm4 needs LlmCanonical scorer | in-progress |
 | Draft DNs | DN-04/05/10/14/15/17/18 — design decisions / analysis captures | draft |
-| Self-hosting | First stdlib module in Mycelium-lang (L1/L2 syntax) | not yet issued |
+| Self-hosting (M-502) | First stdlib module in Mycelium-lang (L1/L2 syntax) — design spec done; implementation not yet established | phase gate |
 | RFC enactment | Several Accepted RFCs have complete Rust implementations but Enacted not yet flipped | editorial |
 
 ---
@@ -124,3 +124,4 @@ Before assigning a new M-xxx or E-xxx ID, verify the slot is free:
 - `/land` — self-review + green check → curated squash PR → main
 - `/docs-review` — cross-refs, notation, grounding labels
 - `/security-review` — secrets, supply-chain, shell/CI safety
+- `/doc-index` — regenerate and query `docs/api-index/`; check `doc_refs` grammar validity
