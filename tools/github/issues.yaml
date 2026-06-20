@@ -1629,3 +1629,66 @@ issues:
     body: |
       Make the M-348 unblock DURABLE + honest (a toolchain DECISION, not a silent install): a `scripts/setup-mlir.sh` recipe (`apt-get install libmlir-18-dev mlir-18-tools`, version-matched to the installed LLVM) wired into `just setup` (skip-gracefully if absent); ADR-019 recording libMLIR as a build dependency of the MLIR-dialect feature; an append-only DN-15 update recording that the libMLIR-gated half (M-348/M-601) is now provisionable on Linux. FLAG up justfile/CI/Cargo.toml feature changes to the parent.
       Acceptance: a clean checkout runs `just setup` -> MLIR present -> the dialect feature builds; ADR-019 Accepted; DN-15 updated; no silent toolchain bump.
+
+  # ---------------- E4-1: behaviour-preserving DRY + backwards-compat API ergonomics over the L1 front-end + toolchain ----------------
+  # Two families: (1) DRY/extraction of duplicated front-end + CLI logic; (2) NON-destructive, source-backwards-compatible API
+  # ergonomics. Grounded in the real crates (file:line cited per leaf). Disjoint file ownership ⇒ swarm-runnable.
+  - id: E4-1
+    title: "E4-1 (epic) — DRY + backwards-compatible API-ergonomics pass over the L1 lexer/parser + toolchain"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:language, priority:P2, status:needs-design]
+    depends_on: []
+    doc_refs: [src:crates/mycelium-l1/src/parse.rs, src:crates/mycelium-l1/src/ast.rs, src:crates/mycelium-fmt/src/lib.rs, src:crates/mycelium-diag/src/lib.rs]
+    body: |
+      EPIC (KC-3/DRY house rule). Two families of behaviour-preserving, source-backwards-compatible cleanups over the surface language (`crates/mycelium-l1`) and the toolchain (`mycelium-fmt`/`mycelium-lint`/`mycelium-check`/`mycelium-sec`/`mycelium-diag`): (1) DRY/extraction of duplicated front-end + CLI logic the survey found cited at file:line; (2) NON-destructive API ergonomics (Default/From/constructors/`#[non_exhaustive]`/getters/additive overloads) that aid callers without breaking any. Disjoint-file leaves M-640..M-644 run as a swarm. HONESTY FLOOR (every leaf): a refactor NEVER changes a guarantee tag and NEVER removes/changes a public item (VR-5); each change is behaviour-preserving + source-backwards-compatible; `cargo public-api` baselines only-ADD (never remove/alter); per-leaf `cargo test -p <crate>` + full `just check` stay green; net LOC trends down for the DRY leaves.
+      Acceptance: M-640..M-644 landed; every touched crate's tests + `cargo public-api` baseline green (baselines diff is additions-only); zero guarantee-tag change; full `just check` green.
+
+  - id: M-640
+    title: "M-640 — L1 parser DRY: extract separated-list + punctuation-expect helpers"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:language, priority:P2, status:needs-design]
+    depends_on: []
+    doc_refs: [src:crates/mycelium-l1/src/parse.rs, src:crates/mycelium-l1/src/token.rs, src:crates/mycelium-l1/src/lexer.rs]
+    body: |
+      DRY leaf (owns only `crates/mycelium-l1/src/{parse.rs,token.rs,lexer.rs}`). The recursive-descent parser hand-rolls the same `push(one); while eat(Comma) { push(one) } expect(close)` separated-list shape at 8 sites (parse.rs constructor fields ~180, value params ~234, type params ~253, type args ~377, match arms ~562, subpatterns ~591, call args ~683, list literals ~722) and inlines a bespoke message at every `expect(&Tok::X, "...")` punctuation site (parse.rs:69 `expect` + dozens of callers). Extract a `Parser::parse_separated<T>(open,sep,close, parse_one)` helper and a punctuation-message-templating `expect_punct(&Tok)`, folding the callers onto them. Behaviour-preserving: identical tokens consumed, identical `ParseError` produced (same pos+message text where a custom message is kept). No grammar/AST change.
+      Acceptance: every folded site produces byte-identical parse results + diagnostics on the accept/reject corpus; `cargo test -p mycelium-l1` + clippy -D warnings + fmt --check green; no public-API/guarantee change (cargo public-api baseline unchanged); net LOC down.
+
+  - id: M-641
+    title: "M-641 — L1 pass DRY: unify Expr walkers + parameterize pattern-matrix specialization"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:language, priority:P2, status:needs-design]
+    depends_on: []
+    doc_refs: [src:crates/mycelium-l1/src/elab.rs, src:crates/mycelium-l1/src/totality.rs, src:crates/mycelium-l1/src/usefulness.rs, src:crates/mycelium-l1/src/decision.rs]
+    body: |
+      DRY leaf (owns only `crates/mycelium-l1/src/{elab.rs,totality.rs,usefulness.rs,decision.rs}`). Two confirmed duplications: (a) the full Expr traversal exists twice — `totality.rs:133` `walk(e,f)` and the 10-arm `elab.rs:400` `collect_calls` re-walk every variant identically; extract ONE shared `walk_expr(&Expr, &mut impl FnMut(&Expr))` (or `pub(crate)` in ast.rs) and express both `collect_calls` over it. (b) `specialize_ctor`/`specialize_lit` are duplicated row-for-row between `usefulness.rs:62/85` (over `Vec<Pat>`) and `decision.rs:239/262` (over `Row`); parameterize on the row type so one implementation serves both. Behaviour-preserving: same call-set collected, same matrix specialization; totality/usefulness/decision verdicts unchanged.
+      Acceptance: totality + exhaustiveness + decision-tree tests byte-identical; `cargo test -p mycelium-l1` + clippy -D warnings green; no public-API/guarantee change; net LOC down.
+
+  - id: M-642
+    title: "M-642 — L1 backwards-compatible API ergonomics (Default/From/ctors/non_exhaustive/getters)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P3, status:needs-design]
+    depends_on: []
+    doc_refs: [src:crates/mycelium-l1/src/ast.rs, src:crates/mycelium-l1/src/eval.rs, src:crates/mycelium-l1/src/error.rs, src:crates/mycelium-l1/src/checkty.rs]
+    body: |
+      ADDITIVE-only leaf (owns only `crates/mycelium-l1/src/{ast.rs,eval.rs,error.rs,checkty.rs}`). Non-destructive ergonomics the survey grounded: `TypeRef` (ast.rs:143) gains `::unguaranteed(base)`/`::with_guarantee(base,g)` constructors + `impl Default`; the value enums `Scalar` (ast.rs:192) / `Strength` (ast.rs:205) gain `derive(Hash)` (already Copy); the closed-and-rare-to-grow `Literal` (ast.rs:324) gains `#[non_exhaustive]` + `binary`/`ternary` ctors; `Evaluator` (eval.rs:187, already a fluent builder) gains an `EvaluatorOpts` options-struct + a `with_opts` constructor (the existing `with_*` chain is kept); `Env` (checkty.rs:104) gains `type_info`/`fn_decl`/`fn_totality` getters; `ParseError`/`CheckError` (error.rs) gain ergonomic `::at` aliases. SOURCE-backwards-compatible: every change ADDS a method/impl/attribute; no field/variant/signature is removed or changed, so no existing call site breaks and the `cargo public-api` baseline only-adds. Honest caveat: `#[non_exhaustive]` on `Literal` is additive to the public-API surface (the attribute is added, nothing removed) but does force a `_` arm on any *external-crate* exhaustive `match` — there are none in-workspace today, and in-crate matches are unaffected; if the cost outweighs the benefit at implementation time, drop the `#[non_exhaustive]` and keep the ctors (which are unconditionally additive). No guarantee tag changes (VR-5).
+      Acceptance: existing callers compile unchanged; `cargo test -p mycelium-l1` + clippy -D warnings green; the `cargo public-api` baseline diff is ADDITIONS-only (regenerated, never removals); zero guarantee-tag change.
+
+  - id: M-643
+    title: "M-643 — Toolchain CLI DRY: shared mycelium-cli-common (read-input/collect-sources/arg-parse)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:toolchain, priority:P2, status:needs-design]
+    depends_on: []
+    doc_refs: [src:crates/mycelium-fmt/src/bin/mycfmt.rs, src:crates/mycelium-check/src/bin/myc-check.rs, src:crates/mycelium-lint/src/bin/myc-lint.rs, src:crates/mycelium-sec/src/bin/myc-sec.rs]
+    body: |
+      DRY leaf (owns a NEW `crates/mycelium-cli-common/` + ONLY the `*/src/bin/` files of fmt/lint/check/sec). The four CLI binaries duplicate the same stdin-or-file `read_input` (mycfmt.rs:144 ≈ myc-check.rs:177, char-for-char modulo the exit-code newtype), the same `.myc` source-walking (myc-lint.rs:173 `walk`/`walk_into`, myc-sec.rs collect loop), and the same hand-rolled `env::args().skip(1)` option loop + `usage()` (mycfmt.rs:36, myc-lint.rs:26, myc-check.rs:28, myc-sec.rs:38). Extract a small dependency-free `mycelium-cli-common` (`read_source`, `collect_sources`, a minimal arg helper); fold the bins onto it. FLAG the new-crate workspace-`Cargo.toml` registration UP to the parent (orchestrator-owned) — do not edit it. Behaviour-preserving: same files read, same exit codes, same stderr text.
+      Acceptance: each CLI's observable behaviour (stdout/stderr/exit code) byte-identical on the existing fixtures; `cargo test` for the new crate + each bin's crate green; clippy -D warnings clean; new crate's `cargo public-api` baseline added, the bins' baselines only-add (no removals); net LOC down.
+
+  - id: M-644
+    title: "M-644 — Toolchain API ergonomics: non_exhaustive + Default/From + additive default-policy convenience fns"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: []
+    doc_refs: [src:crates/mycelium-fmt/src/lib.rs, src:crates/mycelium-lint/src/lib.rs, src:crates/mycelium-check/src/lib.rs, src:crates/mycelium-diag/src/lib.rs]
+    body: |
+      ADDITIVE-only leaf (owns ONLY the `src/lib.rs` of fmt/lint/check/diag — disjoint from M-643's bin files). Non-destructive ergonomics: `#[non_exhaustive]` on the growth-prone public enums `FmtError` (fmt/src/lib.rs:47), `FixTier` (lint/src/lib.rs:29), and `Severity` (diag/src/lib.rs:101); `impl Default` for `Formatted` (fmt:37)/`Fix` (lint) and `From<String> for Formatted`; fluent `with_*` setters on `LintFinding`/`LintReport`/`Finding`/`Report` (lint+check); and a NEW additive default-policy convenience fn `check_source_default(file,src,out)` (a new name — Rust has no overloading, and renaming the existing `check_source` would be breaking) that derives the default `ClassRegistry`/baseline policy the way `check_sources` (check/src/lib.rs:134) does and delegates to the existing 5-arg `check_source(file,src,policy,registry,out)` (check/src/lib.rs:92) for the 90% case. SOURCE-backwards-compatible: every change ADDS; the diag `Code` enum already has the `Other` escape hatch and `Locus` already derives `Default` (no change). Honest caveat: `#[non_exhaustive]` is additive to the public-API surface (cargo public-api gains the attribute, removes nothing); it only forces a `_` arm on a hypothetical *external-crate* exhaustive match — none exist in-workspace today. No guarantee tag changes (VR-5).
+      Acceptance: existing callers compile unchanged; `cargo test -p mycelium-fmt -p mycelium-lint -p mycelium-check -p mycelium-diag` + clippy -D warnings green; each `cargo public-api` baseline diff is ADDITIONS-only (regenerated); zero guarantee-tag change.
