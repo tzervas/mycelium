@@ -37,6 +37,15 @@
 //! reified representation of any value as a pure, total query (never an inferred default).
 #![forbid(unsafe_code)]
 
+// ---- shared stdlib error scaffold (M-535, E5-1; DN-17 §2.4/§4 P3) ----------------
+//
+// The non-coupling, mechanical-only scaffold every `mycelium-std-*` error type can use:
+// the `StdError` marker trait (+ blanket impl), the `impl_std_error!` boilerplate macro,
+// and the `assert_is_std_error` / `assert_display_contains` test helpers. It factors out
+// *only* the repeated `impl std::error::Error` marker / `source()` delegate / `*_is_std_error`
+// test — never a `Display` message, a variant, a derive, or a guarantee tag (VR-5 / DN-17 §5).
+pub mod error_scaffold;
+
 // ---- value model re-exports (RFC-0001 §4.1–§4.3) ---------------------------------
 pub use mycelium_core::bound::{Bound, BoundBasis, BoundKind, NormKind};
 pub use mycelium_core::datum::{CoreValue, Datum};
