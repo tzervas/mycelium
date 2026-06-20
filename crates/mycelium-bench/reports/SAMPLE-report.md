@@ -8,7 +8,7 @@ Guarantee lattice: `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`.
 
 Speed band: a backend within ±10% of the interpreter is *neutral*; faster is a **WIN**, slower a **LOSS (speed)**. Trusted baseline: the **interpreter** (in-process; NFR-7/ADR-007).
 
-Tally across the run: **1 win(s)**, 1 neutral, **26 speed-loss(es)**, **0 correctness-loss(es)**, **14 capability-loss(es)**, 0 runtime-error(s), 14 skip(s).
+Tally across the run: **2 win(s)**, 0 neutral, **26 speed-loss(es)**, **0 correctness-loss(es)**, **14 capability-loss(es)**, 0 runtime-error(s), 14 skip(s).
 
 **Microbench caveats (honest):** numbers are warmup + min-mean over batches via `std::time::Instant` (no `criterion`). The compiled native paths (`direct-llvm`, `mlir-dialect`) are **process-spawn-bound**: each invocation execs a fresh native artifact, so for a trivial kernel the per-invocation figure is spawn-dominated, **not** kernel compute (the honest M-602/E1 finding — surfaced, not buried). `jit` runs in-process (`dlopen`) so it is not spawn-bound. A debug build is refused for perf numbers.
 
@@ -18,39 +18,39 @@ Each non-baseline backend vs the interpreter, per case. `ratio` is `interp / bac
 
 | case | fragment | backend | verdict | ratio | tag | reason / detail |
 |---|---|---|---|---|---|---|
-| `bit-literal` | bit-subset | `aot-env` | LOSS (speed) | 0.04x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `bit-literal` | bit-subset | `jit` | LOSS (speed) | 0.03x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-literal` | bit-subset | `aot-env` | LOSS (speed) | 0.01x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-literal` | bit-subset | `jit` | LOSS (speed) | 0.00x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `bit-literal` | bit-subset | `direct-llvm` | LOSS (speed) | 0.00x | Empirical | process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter |
 | `bit-literal` | bit-subset | `mlir-dialect` | skipped | — | Declared | the `mlir-dialect` feature is off (build with --features mlir-dialect) |
-| `bit-not` | bit-subset | `aot-env` | LOSS (speed) | 0.09x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `bit-not` | bit-subset | `jit` | LOSS (speed) | 0.05x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-not` | bit-subset | `aot-env` | LOSS (speed) | 0.06x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-not` | bit-subset | `jit` | LOSS (speed) | 0.04x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `bit-not` | bit-subset | `direct-llvm` | LOSS (speed) | 0.00x | Empirical | process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter |
 | `bit-not` | bit-subset | `mlir-dialect` | skipped | — | Declared | the `mlir-dialect` feature is off (build with --features mlir-dialect) |
-| `bit-xor-not` | bit-subset | `aot-env` | LOSS (speed) | 0.18x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `bit-xor-not` | bit-subset | `jit` | LOSS (speed) | 0.11x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-xor-not` | bit-subset | `aot-env` | LOSS (speed) | 0.14x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-xor-not` | bit-subset | `jit` | LOSS (speed) | 0.10x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `bit-xor-not` | bit-subset | `direct-llvm` | LOSS (speed) | 0.00x | Empirical | process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter |
 | `bit-xor-not` | bit-subset | `mlir-dialect` | skipped | — | Declared | the `mlir-dialect` feature is off (build with --features mlir-dialect) |
-| `bit-let-chain` | bit-subset | `aot-env` | LOSS (speed) | 0.26x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `bit-let-chain` | bit-subset | `jit` | LOSS (speed) | 0.24x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-let-chain` | bit-subset | `aot-env` | LOSS (speed) | 0.23x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-let-chain` | bit-subset | `jit` | LOSS (speed) | 0.19x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `bit-let-chain` | bit-subset | `direct-llvm` | LOSS (speed) | 0.01x | Empirical | process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter |
 | `bit-let-chain` | bit-subset | `mlir-dialect` | skipped | — | Declared | the `mlir-dialect` feature is off (build with --features mlir-dialect) |
-| `trit-neg` | bit-subset | `aot-env` | LOSS (speed) | 0.09x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `trit-neg` | bit-subset | `jit` | LOSS (speed) | 0.05x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `trit-neg` | bit-subset | `aot-env` | LOSS (speed) | 0.06x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `trit-neg` | bit-subset | `jit` | LOSS (speed) | 0.04x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `trit-neg` | bit-subset | `direct-llvm` | LOSS (speed) | 0.00x | Empirical | process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter |
 | `trit-neg` | bit-subset | `mlir-dialect` | skipped | — | Declared | the `mlir-dialect` feature is off (build with --features mlir-dialect) |
-| `trit-add` | bit-subset | `aot-env` | LOSS (speed) | 0.12x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `trit-add` | bit-subset | `jit` | LOSS (speed) | 0.08x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `trit-add` | bit-subset | `aot-env` | LOSS (speed) | 0.09x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `trit-add` | bit-subset | `jit` | LOSS (speed) | 0.06x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `trit-add` | bit-subset | `direct-llvm` | LOSS (speed) | 0.00x | Empirical | process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter |
 | `trit-add` | bit-subset | `mlir-dialect` | skipped | — | Declared | the `mlir-dialect` feature is off (build with --features mlir-dialect) |
-| `swap-roundtrip` | swap | `aot-env` | LOSS (speed) | 0.17x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `swap-roundtrip` | swap | `aot-env` | LOSS (speed) | 0.15x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `swap-roundtrip` | swap | `jit` | LOSS (capability) | — | Declared | unsupported node for the AOT subset: swap to Ternary { trits: 6 } (the subset is straight-line bit/trit ops; M-301) |
 | `swap-roundtrip` | swap | `direct-llvm` | LOSS (capability) | — | Declared | unsupported node for the AOT subset: swap to Ternary { trits: 6 } (the subset is straight-line bit/trit ops; M-301) |
 | `swap-roundtrip` | swap | `mlir-dialect` | skipped | — | Declared | the `mlir-dialect` feature is off (build with --features mlir-dialect) |
-| `data-match-repr` | data | `aot-env` | LOSS (speed) | 0.10x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `data-match-repr` | data | `jit` | LOSS (speed) | 0.07x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `data-match-repr` | data | `aot-env` | LOSS (speed) | 0.08x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `data-match-repr` | data | `jit` | LOSS (speed) | 0.05x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `data-match-repr` | data | `direct-llvm` | LOSS (speed) | 0.00x | Empirical | process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter |
 | `data-match-repr` | data | `mlir-dialect` | skipped | — | Declared | the `mlir-dialect` feature is off (build with --features mlir-dialect) |
-| `data-construct` | data | `aot-env` | LOSS (speed) | 0.07x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `data-construct` | data | `aot-env` | LOSS (speed) | 0.02x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `data-construct` | data | `jit` | LOSS (capability) | — | Declared | unsupported node for the AOT subset: Construct field: expected a repr lane but found a data value |
 | `data-construct` | data | `direct-llvm` | LOSS (capability) | — | Declared | unsupported node for the AOT subset: Construct field: expected a repr lane but found a data value |
 | `data-construct` | data | `mlir-dialect` | skipped | — | Declared | the `mlir-dialect` feature is off (build with --features mlir-dialect) |
@@ -58,60 +58,60 @@ Each non-baseline backend vs the interpreter, per case. `ratio` is `interp / bac
 | `data-nested-match` | data | `jit` | LOSS (capability) | — | Declared | unsupported node for the AOT subset: Construct field: expected a repr lane but found a data value |
 | `data-nested-match` | data | `direct-llvm` | LOSS (capability) | — | Declared | unsupported node for the AOT subset: Construct field: expected a repr lane but found a data value |
 | `data-nested-match` | data | `mlir-dialect` | skipped | — | Declared | the `mlir-dialect` feature is off (build with --features mlir-dialect) |
-| `rec-self` | recursion | `aot-env` | LOSS (speed) | 0.65x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `rec-self` | recursion | `aot-env` | LOSS (speed) | 0.62x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `rec-self` | recursion | `jit` | LOSS (capability) | — | Declared | unsupported node for the AOT subset: Construct field: expected a repr lane but found a data value |
 | `rec-self` | recursion | `direct-llvm` | LOSS (capability) | — | Declared | unsupported node for the AOT subset: Construct field: expected a repr lane but found a data value |
 | `rec-self` | recursion | `mlir-dialect` | skipped | — | Declared | the `mlir-dialect` feature is off (build with --features mlir-dialect) |
-| `rec-build` | recursion | `aot-env` | neutral | 1.07x | Empirical |  |
+| `rec-build` | recursion | `aot-env` | WIN | 1.17x | Empirical |  |
 | `rec-build` | recursion | `jit` | LOSS (capability) | — | Declared | unsupported node for the AOT subset: Construct field: expected a repr lane but found a data value |
 | `rec-build` | recursion | `direct-llvm` | LOSS (capability) | — | Declared | unsupported node for the AOT subset: Construct field: expected a repr lane but found a data value |
 | `rec-build` | recursion | `mlir-dialect` | skipped | — | Declared | the `mlir-dialect` feature is off (build with --features mlir-dialect) |
-| `rec-mutual` | recursion | `aot-env` | WIN | 1.11x | Empirical |  |
+| `rec-mutual` | recursion | `aot-env` | WIN | 1.13x | Empirical |  |
 | `rec-mutual` | recursion | `jit` | LOSS (capability) | — | Declared | unsupported node for the AOT subset: FixGroup: mutual recursion is not supported in Increment-3 (only single Fix with a λparam.Match body is supported; RFC-0004 §11.6; G2) |
 | `rec-mutual` | recursion | `direct-llvm` | LOSS (capability) | — | Declared | unsupported node for the AOT subset: FixGroup: mutual recursion is not supported in Increment-3 (only single Fix with a λparam.Match body is supported; RFC-0004 §11.6; G2) |
 | `rec-mutual` | recursion | `mlir-dialect` | skipped | — | Declared | the `mlir-dialect` feature is off (build with --features mlir-dialect) |
-| `rec-fold` | recursion | `aot-env` | LOSS (speed) | 0.26x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `rec-fold` | recursion | `aot-env` | LOSS (speed) | 0.25x | Empirical | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `rec-fold` | recursion | `jit` | LOSS (capability) | — | Declared | unsupported node for the AOT subset: Construct field: expected a repr lane but found a data value |
 | `rec-fold` | recursion | `direct-llvm` | LOSS (capability) | — | Declared | unsupported node for the AOT subset: Construct field: expected a repr lane but found a data value |
 | `rec-fold` | recursion | `mlir-dialect` | skipped | — | Declared | the `mlir-dialect` feature is off (build with --features mlir-dialect) |
 
 ## Per-case timings (ns/call, Empirical)
 
-Interpreter baseline + each backend that produced a timed value. `spread` is worst/best batch (a noise flag). `—` = not timed (skip / capability loss / error).
+Interpreter baseline + each backend that produced a timed value. The best ns/call is shown; the worst/best spread (a noise flag) is in the JSON projection (`ns_per_call_worst`), omitted from this compact table. `—` = not timed (skip / capability loss / error).
 
 | case | interp ns | aot-env ns | jit ns | direct-llvm ns | mlir-dialect ns |
 |---|---|---|---|---|---|
-| `bit-literal` | 1.3k | 29.9k | 48.7k | 1.81M | — |
-| `bit-not` | 3.4k | 37.9k | 63.5k | 2.07M | — |
-| `bit-xor-not` | 7.7k | 42.1k | 69.4k | 2.56M | — |
-| `bit-let-chain` | 14.1k | 53.8k | 59.1k | 1.23M | — |
-| `trit-neg` | 3.3k | 35.8k | 60.8k | 2.43M | — |
-| `trit-add` | 4.6k | 38.4k | 56.4k | 1.56M | — |
-| `swap-roundtrip` | 8.1k | 46.4k | — | — | — |
-| `data-match-repr` | 4.3k | 42.7k | 66.2k | 2.10M | — |
-| `data-construct` | 2.7k | 37.4k | — | — | — |
-| `data-nested-match` | 7.9k | 65.2k | — | — | — |
-| `rec-self` | 50.0k | 76.6k | — | — | — |
-| `rec-build` | 71.3k | 66.7k | — | — | — |
-| `rec-mutual` | 87.0k | 78.3k | — | — | — |
-| `rec-fold` | 58.7k | 223.4k | — | — | — |
+| `bit-literal` | 101.8 | 21.6k | 39.4k | 1.29M | — |
+| `bit-not` | 1.5k | 24.6k | 39.3k | 1.25M | — |
+| `bit-xor-not` | 3.9k | 27.7k | 40.4k | 1.27M | — |
+| `bit-let-chain` | 7.6k | 32.7k | 39.5k | 1.26M | — |
+| `trit-neg` | 1.5k | 25.0k | 39.7k | 1.29M | — |
+| `trit-add` | 2.2k | 25.3k | 39.3k | 1.26M | — |
+| `swap-roundtrip` | 4.4k | 28.5k | — | — | — |
+| `data-match-repr` | 1.9k | 25.3k | 40.1k | 1.26M | — |
+| `data-construct` | 403.0 | 23.2k | — | — | — |
+| `data-nested-match` | 4.5k | 39.3k | — | — | — |
+| `rec-self` | 34.4k | 55.8k | — | — | — |
+| `rec-build` | 57.0k | 48.7k | — | — | — |
+| `rec-mutual` | 72.8k | 64.4k | — | — | — |
+| `rec-fold` | 45.1k | 179.8k | — | — | — |
 
 One-time compile cost (emit IR → toolchain → native, NOT in the per-run figures above):
 
-- `bit-literal` / `jit`: 185.94M (one-time)
-- `bit-literal` / `direct-llvm`: 197.30M (one-time)
-- `bit-not` / `jit`: 121.90M (one-time)
-- `bit-not` / `direct-llvm`: 292.49M (one-time)
-- `bit-xor-not` / `jit`: 119.43M (one-time)
-- `bit-xor-not` / `direct-llvm`: 228.86M (one-time)
-- `bit-let-chain` / `jit`: 120.88M (one-time)
-- `bit-let-chain` / `direct-llvm`: 278.79M (one-time)
-- `trit-neg` / `jit`: 230.96M (one-time)
-- `trit-neg` / `direct-llvm`: 187.79M (one-time)
-- `trit-add` / `jit`: 118.30M (one-time)
-- `trit-add` / `direct-llvm`: 218.81M (one-time)
-- `data-match-repr` / `jit`: 121.16M (one-time)
-- `data-match-repr` / `direct-llvm`: 250.18M (one-time)
+- `bit-literal` / `jit`: 78.91M (one-time)
+- `bit-literal` / `direct-llvm`: 122.97M (one-time)
+- `bit-not` / `jit`: 82.88M (one-time)
+- `bit-not` / `direct-llvm`: 118.85M (one-time)
+- `bit-xor-not` / `jit`: 89.16M (one-time)
+- `bit-xor-not` / `direct-llvm`: 120.45M (one-time)
+- `bit-let-chain` / `jit`: 79.54M (one-time)
+- `bit-let-chain` / `direct-llvm`: 122.67M (one-time)
+- `trit-neg` / `jit`: 82.78M (one-time)
+- `trit-neg` / `direct-llvm`: 124.43M (one-time)
+- `trit-add` / `jit`: 82.47M (one-time)
+- `trit-add` / `direct-llvm`: 128.39M (one-time)
+- `data-match-repr` / `jit`: 87.30M (one-time)
+- `data-match-repr` / `direct-llvm`: 120.32M (one-time)
 
 ## Where we're losing (explicit)
 
@@ -138,36 +138,36 @@ One-time compile cost (emit IR → toolchain → native, NOT in the per-run figu
 
 | case | backend | ratio (interp/backend) | reason |
 |---|---|---|---|
-| `bit-literal` | `aot-env` | 0.04x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `bit-literal` | `jit` | 0.03x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-literal` | `aot-env` | 0.01x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-literal` | `jit` | 0.00x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `bit-literal` | `direct-llvm` | 0.00x | process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter |
-| `bit-not` | `aot-env` | 0.09x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `bit-not` | `jit` | 0.05x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-not` | `aot-env` | 0.06x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-not` | `jit` | 0.04x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `bit-not` | `direct-llvm` | 0.00x | process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter |
-| `bit-xor-not` | `aot-env` | 0.18x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `bit-xor-not` | `jit` | 0.11x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-xor-not` | `aot-env` | 0.14x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-xor-not` | `jit` | 0.10x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `bit-xor-not` | `direct-llvm` | 0.00x | process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter |
-| `bit-let-chain` | `aot-env` | 0.26x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `bit-let-chain` | `jit` | 0.24x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-let-chain` | `aot-env` | 0.23x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `bit-let-chain` | `jit` | 0.19x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `bit-let-chain` | `direct-llvm` | 0.01x | process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter |
-| `trit-neg` | `aot-env` | 0.09x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `trit-neg` | `jit` | 0.05x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `trit-neg` | `aot-env` | 0.06x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `trit-neg` | `jit` | 0.04x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `trit-neg` | `direct-llvm` | 0.00x | process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter |
-| `trit-add` | `aot-env` | 0.12x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `trit-add` | `jit` | 0.08x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `trit-add` | `aot-env` | 0.09x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `trit-add` | `jit` | 0.06x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `trit-add` | `direct-llvm` | 0.00x | process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter |
-| `swap-roundtrip` | `aot-env` | 0.17x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `data-match-repr` | `aot-env` | 0.10x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `data-match-repr` | `jit` | 0.07x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `swap-roundtrip` | `aot-env` | 0.15x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `data-match-repr` | `aot-env` | 0.08x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `data-match-repr` | `jit` | 0.05x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `data-match-repr` | `direct-llvm` | 0.00x | process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter |
-| `data-construct` | `aot-env` | 0.07x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `data-construct` | `aot-env` | 0.02x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 | `data-nested-match` | `aot-env` | 0.12x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `rec-self` | `aot-env` | 0.65x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
-| `rec-fold` | `aot-env` | 0.26x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `rec-self` | `aot-env` | 0.62x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
+| `rec-fold` | `aot-env` | 0.25x | slower than the in-process interpreter on this case (measured; no target — VR-5) |
 
 ## LLM-harness leverage (KC-2 / SC-5b)
 
-Source: `/home/user/mycelium/.claude/worktrees/agent-ac9d36a1c13fe5cbd/tools/llm-harness/reports/20260617T182214Z-report.json` — **SYNTHETIC sample** (a fixture run — NOT real model quality; never treated as evidence, per the harness's own VR-5/V-03 rule).
+Source: `/home/user/mycelium/tools/llm-harness/reports/20260617T182214Z-report.json` — **SYNTHETIC sample** (a fixture run — NOT real model quality; never treated as evidence, per the harness's own VR-5/V-03 rule).
 
 > mycelium-llm-validation v0.1.0 — run 20260617T182214Z — mode=mock — SYNTHETIC (fixture; not real model quality) (4 validations: 1 pass / 3 mock-pass / 0 skip / 0 fail)
 

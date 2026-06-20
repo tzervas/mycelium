@@ -305,8 +305,10 @@ impl Report {
         let _ = writeln!(s, "## Per-case timings (ns/call, Empirical)\n");
         let _ = writeln!(
             s,
-            "Interpreter baseline + each backend that produced a timed value. `spread` is \
-             worst/best batch (a noise flag). `—` = not timed (skip / capability loss / error).\n"
+            "Interpreter baseline + each backend that produced a timed value. The best ns/call is \
+             shown; the worst/best spread (a noise flag) is in the JSON projection \
+             (`ns_per_call_worst`), omitted from this compact table. `—` = not timed (skip / \
+             capability loss / error).\n"
         );
         let _ = writeln!(
             s,

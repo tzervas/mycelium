@@ -335,20 +335,35 @@ impl WarmRun {
 #[must_use]
 pub fn warm_runner(backend: Backend, node: &Node, eng: &Engines) -> WarmRun {
     match backend {
-        // In-process: re-run the evaluator each time (no compile phase). We clone the node into the
-        // closure so it is `'static`.
+        // In-process: prepare the evaluator ONCE (outside the timed closure) and reuse it across the
+        // timed runs — so the per-run number measures evaluation, not Interpreter/registry/engine
+        // construction. This gives the in-process backends the same compile-once/run-many parity the
+        // compiled backends below get, so the baseline/AOT numbers are comparable to JIT/direct-LLVM
+        // (Copilot #265). We clone the node into the closure so it is `'static`.
         Backend::Interp => {
             let probe = run_interp(node, eng);
             let n = node.clone();
-            WarmRun::in_process(probe, Box::new(move || run_interp(&n, &Engines::default())))
+            // Build the interpreter once; `eval_core(&self, …)` serves every timed run (same builtins /
+            // certified swap `run_interp` uses — identical semantics, construction just hoisted out).
+            let interp = Interpreter::new(
+                PrimRegistry::with_builtins(),
+                Box::new(BinaryTernarySwapEngine),
+            );
+            WarmRun::in_process(
+                probe,
+                Box::new(move || match interp.eval_core(&n) {
+                    Ok(v) => Outcome::value_outcome(v),
+                    Err(e) => Outcome::Error(e.to_string()),
+                }),
+            )
         }
         Backend::AotEnv => {
             let probe = run_aot_env(node, eng);
             let n = node.clone();
-            WarmRun::in_process(
-                probe,
-                Box::new(move || run_aot_env(&n, &Engines::default())),
-            )
+            // Build the engines once and reuse them — `run_aot_env` reads `eng.prims`/`eng.swap`, so a
+            // single owned `Engines` avoids rebuilding `PrimRegistry::with_builtins()` on every run.
+            let owned = Engines::default();
+            WarmRun::in_process(probe, Box::new(move || run_aot_env(&n, &owned)))
         }
         // Compiled: compile ONCE (timed), then the closure times only the artifact call.
         Backend::Jit => warm_jit(node),
@@ -501,7 +516,15 @@ mod tests {
                 i.value().expect("interp produces a value"),
                 a.value().expect("aot produces a value"),
             );
-            assert_eq!(iv, av, "interp vs AOT diverged on `{}`", case.id);
+            // Compare the OBSERVABLE (repr+payload+guarantee / content-identity, provenance excluded —
+            // RFC-0001 §4.6), the same differential obligation the harness itself uses and that
+            // mycelium-l1/tests/differential.rs follows: robust to provenance/meta-only differences,
+            // still catching a true repr/payload/guarantee divergence (Copilot #265).
+            assert!(
+                observable_eq(iv, av),
+                "interp vs AOT diverged (observable: repr+payload+guarantee) on `{}`",
+                case.id
+            );
         }
     }
 

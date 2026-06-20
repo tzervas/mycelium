@@ -20,22 +20,22 @@
         "fragment": "bit-subset",
         "note": "a bare 8-bit literal — the most trivial kernel (spawn-bound for compiled paths)",
         "src": "nodule d\nfn main() -> Binary{8} = 0b1011_0010",
-        "baseline_ns": 1282.0518,
+        "baseline_ns": 101.7878,
         "backends": [
           {
             "backend": "aot-env",
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 29914.66305,
+              "ns_per_call": 21579.78455,
               "iters": 20000,
               "batches": 5,
-              "ns_per_call_worst": 33834.2735
+              "ns_per_call_worst": 21768.8929
             },
             "compile_ns": null,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 43,
+              "ratio_x1000": 5,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -44,15 +44,15 @@
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 48698.1435,
+              "ns_per_call": 39412.047,
               "iters": 2000,
               "batches": 5,
-              "ns_per_call_worst": 57948.71
+              "ns_per_call_worst": 49394.3285
             },
-            "compile_ns": 185935523.0,
+            "compile_ns": 78907241.0,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 26,
+              "ratio_x1000": 3,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -61,15 +61,15 @@
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 1805575.275,
+              "ns_per_call": 1286108.1,
               "iters": 40,
               "batches": 5,
-              "ns_per_call_worst": 2748692.85
+              "ns_per_call_worst": 1299060.2
             },
-            "compile_ns": 197302066.0,
+            "compile_ns": 122970698.0,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 1,
+              "ratio_x1000": 0,
               "reason": "process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter"
             }
           },
@@ -91,22 +91,22 @@
         "fragment": "bit-subset",
         "note": "single unary bit op",
         "src": "nodule d\nfn main() -> Binary{8} = not(0b1011_0010)",
-        "baseline_ns": 3356.75245,
+        "baseline_ns": 1535.972,
         "backends": [
           {
             "backend": "aot-env",
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 37926.6406,
+              "ns_per_call": 24563.85085,
               "iters": 20000,
               "batches": 5,
-              "ns_per_call_worst": 42335.49235
+              "ns_per_call_worst": 24862.20995
             },
             "compile_ns": null,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 89,
+              "ratio_x1000": 63,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -115,15 +115,15 @@
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 63520.2045,
+              "ns_per_call": 39261.69,
               "iters": 2000,
               "batches": 5,
-              "ns_per_call_worst": 70127.8255
+              "ns_per_call_worst": 40069.4335
             },
-            "compile_ns": 121897364.0,
+            "compile_ns": 82880741.0,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 53,
+              "ratio_x1000": 39,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -132,15 +132,15 @@
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 2068101.2,
+              "ns_per_call": 1249583.9,
               "iters": 40,
               "batches": 5,
-              "ns_per_call_worst": 3027121.7
+              "ns_per_call_worst": 1255202.025
             },
-            "compile_ns": 292487047.0,
+            "compile_ns": 118850974.0,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 2,
+              "ratio_x1000": 1,
               "reason": "process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter"
             }
           },
@@ -162,22 +162,22 @@
         "fragment": "bit-subset",
         "note": "a small straight-line bit pipeline (the xtask-e1 §2 shape)",
         "src": "nodule d\nfn main() -> Binary{8} = not(xor(0b1011_0010, 0b1111_1111))",
-        "baseline_ns": 7700.213,
+        "baseline_ns": 3872.56115,
         "backends": [
           {
             "backend": "aot-env",
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 42147.7726,
+              "ns_per_call": 27700.30905,
               "iters": 20000,
               "batches": 5,
-              "ns_per_call_worst": 47850.0444
+              "ns_per_call_worst": 28495.5103
             },
             "compile_ns": null,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 183,
+              "ratio_x1000": 140,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -186,15 +186,15 @@
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 69363.745,
+              "ns_per_call": 40369.099,
               "iters": 2000,
               "batches": 5,
-              "ns_per_call_worst": 79850.0695
+              "ns_per_call_worst": 41175.6025
             },
-            "compile_ns": 119425501.0,
+            "compile_ns": 89157009.0,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 111,
+              "ratio_x1000": 96,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -203,12 +203,12 @@
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 2563063.825,
+              "ns_per_call": 1269383.075,
               "iters": 40,
               "batches": 5,
-              "ns_per_call_worst": 3633316.075
+              "ns_per_call_worst": 1281129.325
             },
-            "compile_ns": 228855991.0,
+            "compile_ns": 120448505.0,
             "verdict": {
               "kind": "speed-loss",
               "ratio_x1000": 3,
@@ -233,22 +233,22 @@
         "fragment": "bit-subset",
         "note": "let-bound straight-line bit computation (a few surface ops: not/xor only)",
         "src": "nodule d\nfn main() -> Binary{8} =\n  let a = 0b1011_0010 in let b = xor(a, 0b0000_1111) in not(xor(b, a))",
-        "baseline_ns": 14144.25005,
+        "baseline_ns": 7615.9669,
         "backends": [
           {
             "backend": "aot-env",
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 53845.8901,
+              "ns_per_call": 32717.76115,
               "iters": 20000,
               "batches": 5,
-              "ns_per_call_worst": 66203.87205
+              "ns_per_call_worst": 34653.54675
             },
             "compile_ns": null,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 263,
+              "ratio_x1000": 233,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -257,15 +257,15 @@
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 59137.1465,
+              "ns_per_call": 39501.7085,
               "iters": 2000,
               "batches": 5,
-              "ns_per_call_worst": 77373.9015
+              "ns_per_call_worst": 46157.753
             },
-            "compile_ns": 120878422.0,
+            "compile_ns": 79538163.0,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 239,
+              "ratio_x1000": 193,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -274,15 +274,15 @@
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 1227085.425,
+              "ns_per_call": 1256200.2,
               "iters": 40,
               "batches": 5,
-              "ns_per_call_worst": 2585117.8
+              "ns_per_call_worst": 1301468.975
             },
-            "compile_ns": 278788436.0,
+            "compile_ns": 122671145.0,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 12,
+              "ratio_x1000": 6,
               "reason": "process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter"
             }
           },
@@ -304,22 +304,22 @@
         "fragment": "bit-subset",
         "note": "element-wise trit negation (the only trit op the MLIR-dialect path lowers)",
         "src": "nodule d\nfn main() -> Ternary{4} = neg(<00+->)",
-        "baseline_ns": 3278.3464,
+        "baseline_ns": 1523.2632,
         "backends": [
           {
             "backend": "aot-env",
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 35813.8441,
+              "ns_per_call": 24962.923,
               "iters": 20000,
               "batches": 5,
-              "ns_per_call_worst": 40374.0594
+              "ns_per_call_worst": 25091.4062
             },
             "compile_ns": null,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 92,
+              "ratio_x1000": 61,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -328,15 +328,15 @@
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 60772.1115,
+              "ns_per_call": 39733.557,
               "iters": 2000,
               "batches": 5,
-              "ns_per_call_worst": 77168.6785
+              "ns_per_call_worst": 40454.5015
             },
-            "compile_ns": 230962017.0,
+            "compile_ns": 82779179.0,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 54,
+              "ratio_x1000": 38,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -345,12 +345,12 @@
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 2431296.825,
+              "ns_per_call": 1294803.325,
               "iters": 40,
               "batches": 5,
-              "ns_per_call_worst": 3180290.4
+              "ns_per_call_worst": 1339613.85
             },
-            "compile_ns": 187792489.0,
+            "compile_ns": 124434124.0,
             "verdict": {
               "kind": "speed-loss",
               "ratio_x1000": 1,
@@ -375,22 +375,22 @@
         "fragment": "bit-subset",
         "note": "balanced-ternary ripple-carry add (direct-LLVM lowers it; MLIR-dialect does NOT — a capability split)",
         "src": "nodule d\nfn main() -> Ternary{4} = add(<00+->, <0+0->)",
-        "baseline_ns": 4581.49375,
+        "baseline_ns": 2177.48135,
         "backends": [
           {
             "backend": "aot-env",
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 38439.33365,
+              "ns_per_call": 25316.1472,
               "iters": 20000,
               "batches": 5,
-              "ns_per_call_worst": 49354.3552
+              "ns_per_call_worst": 25574.41575
             },
             "compile_ns": null,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 119,
+              "ratio_x1000": 86,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -399,15 +399,15 @@
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 56440.83,
+              "ns_per_call": 39268.386,
               "iters": 2000,
               "batches": 5,
-              "ns_per_call_worst": 65854.632
+              "ns_per_call_worst": 39689.8295
             },
-            "compile_ns": 118300513.0,
+            "compile_ns": 82471632.0,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 81,
+              "ratio_x1000": 55,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -416,15 +416,15 @@
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 1559744.55,
+              "ns_per_call": 1263254.925,
               "iters": 40,
               "batches": 5,
-              "ns_per_call_worst": 2934565.125
+              "ns_per_call_worst": 1282273.875
             },
-            "compile_ns": 218806009.0,
+            "compile_ns": 128387049.0,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 3,
+              "ratio_x1000": 2,
               "reason": "process-spawn-bound: the per-invocation time is dominated by spawning a fresh native process, not kernel compute (M-602/E1) — expected for a trivial kernel vs the in-process interpreter"
             }
           },
@@ -446,22 +446,22 @@
         "fragment": "swap",
         "note": "a binary->ternary->binary certified round-trip (compiled paths route Swap to the interpreter — capability loss)",
         "src": "nodule d\nfn main() -> Binary{8} =\n  let b = 0b0010_1010 in swap(swap(b, to: Ternary{6}, policy: rt), to: Binary{8}, policy: rt)",
-        "baseline_ns": 8123.1496,
+        "baseline_ns": 4387.69285,
         "backends": [
           {
             "backend": "aot-env",
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 46416.4365,
+              "ns_per_call": 28527.6682,
               "iters": 20000,
               "batches": 5,
-              "ns_per_call_worst": 54934.0491
+              "ns_per_call_worst": 28804.395
             },
             "compile_ns": null,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 175,
+              "ratio_x1000": 154,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -505,22 +505,22 @@
         "fragment": "data",
         "note": "a flat non-recursive data match returning a repr — a data case the compiled backends MAY still lower (measured, not assumed)",
         "src": "nodule d\ntype Sign = Neg | Zero | Pos\nfn label(s: Sign) -> Ternary{1} = match s { Neg => <->, Zero => <0>, _ => <+> }\nfn main() -> Ternary{1} = label(Zero)",
-        "baseline_ns": 4294.4012,
+        "baseline_ns": 1927.2637,
         "backends": [
           {
             "backend": "aot-env",
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 42660.95125,
+              "ns_per_call": 25255.4014,
               "iters": 20000,
               "batches": 5,
-              "ns_per_call_worst": 51021.4645
+              "ns_per_call_worst": 25503.4682
             },
             "compile_ns": null,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 101,
+              "ratio_x1000": 76,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -529,15 +529,15 @@
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 66184.171,
+              "ns_per_call": 40098.718,
               "iters": 2000,
               "batches": 5,
-              "ns_per_call_worst": 73064.9615
+              "ns_per_call_worst": 40791.815
             },
-            "compile_ns": 121156083.0,
+            "compile_ns": 87302425.0,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 65,
+              "ratio_x1000": 48,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -546,12 +546,12 @@
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 2102465.225,
+              "ns_per_call": 1255482.2,
               "iters": 40,
               "batches": 5,
-              "ns_per_call_worst": 3961177.175
+              "ns_per_call_worst": 1410437.825
             },
-            "compile_ns": 250184162.0,
+            "compile_ns": 120315360.0,
             "verdict": {
               "kind": "speed-loss",
               "ratio_x1000": 2,
@@ -576,22 +576,22 @@
         "fragment": "data",
         "note": "a datum result (the program evaluates to constructed data)",
         "src": "nodule d\ntype Nat = Z | S(Nat)\nfn main() -> Nat = S(S(Z))",
-        "baseline_ns": 2718.62205,
+        "baseline_ns": 402.97485,
         "backends": [
           {
             "backend": "aot-env",
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 37428.8112,
+              "ns_per_call": 23200.16795,
               "iters": 20000,
               "batches": 5,
-              "ns_per_call_worst": 42659.10215
+              "ns_per_call_worst": 23551.2948
             },
             "compile_ns": null,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 73,
+              "ratio_x1000": 17,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -635,22 +635,22 @@
         "fragment": "data",
         "note": "nested (Maranget) patterns returning a datum",
         "src": "nodule d\ntype Nat = Z | S(Nat)\nfn pred2(n: Nat) -> Nat = match n { Z => Z, S(Z) => Z, S(S(m)) => m }\nfn main() -> Nat = pred2(S(S(S(Z))))",
-        "baseline_ns": 7930.48565,
+        "baseline_ns": 4544.85785,
         "backends": [
           {
             "backend": "aot-env",
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 65192.8012,
+              "ns_per_call": 39298.6995,
               "iters": 20000,
               "batches": 5,
-              "ns_per_call_worst": 72535.4629
+              "ns_per_call_worst": 40312.6076
             },
             "compile_ns": null,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 122,
+              "ratio_x1000": 116,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -694,22 +694,22 @@
         "fragment": "recursion",
         "note": "self-recursion consuming a Nat (Fix + App + Match)",
         "src": "nodule d\ntype Nat = Z | S(Nat)\nfn drop_(n: Nat) -> Nat = match n { Z => Z, S(m) => drop_(m) }\nfn main() -> Nat = drop_(S(S(S(Z))))",
-        "baseline_ns": 49957.76815,
+        "baseline_ns": 34438.76025,
         "backends": [
           {
             "backend": "aot-env",
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 76571.79935,
+              "ns_per_call": 55794.4436,
               "iters": 20000,
               "batches": 5,
-              "ns_per_call_worst": 85094.32765
+              "ns_per_call_worst": 56565.16365
             },
             "compile_ns": null,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 652,
+              "ratio_x1000": 617,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -753,22 +753,22 @@
         "fragment": "recursion",
         "note": "self-recursion building data on the way back",
         "src": "nodule d\ntype Nat = Z | S(Nat)\nfn copy(n: Nat) -> Nat = match n { Z => Z, S(m) => S(copy(m)) }\nfn main() -> Nat = copy(S(S(Z)))",
-        "baseline_ns": 71302.71885,
+        "baseline_ns": 57009.68985,
         "backends": [
           {
             "backend": "aot-env",
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 66712.1661,
+              "ns_per_call": 48715.74885,
               "iters": 20000,
               "batches": 5,
-              "ns_per_call_worst": 72579.5073
+              "ns_per_call_worst": 51019.444
             },
             "compile_ns": null,
             "verdict": {
-              "kind": "speed-neutral",
-              "ratio_x1000": 1069
+              "kind": "speed-win",
+              "ratio_x1000": 1170
             }
           },
           {
@@ -811,22 +811,22 @@
         "fragment": "recursion",
         "note": "mutual recursion (a FixGroup)",
         "src": "nodule d\ntype Nat = Z | S(Nat)\nfn ping(n: Nat) -> Nat = match n { Z => Z, S(m) => pong(m) }\nfn pong(n: Nat) -> Nat = match n { Z => Z, S(m) => ping(m) }\nfn main() -> Nat = ping(S(S(Z)))",
-        "baseline_ns": 87044.45985,
+        "baseline_ns": 72766.26425,
         "backends": [
           {
             "backend": "aot-env",
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 78309.8103,
+              "ns_per_call": 64406.5724,
               "iters": 20000,
               "batches": 5,
-              "ns_per_call_worst": 85319.4444
+              "ns_per_call_worst": 68470.5832
             },
             "compile_ns": null,
             "verdict": {
               "kind": "speed-win",
-              "ratio_x1000": 1112
+              "ratio_x1000": 1130
             }
           },
           {
@@ -869,22 +869,22 @@
         "fragment": "recursion",
         "note": "a `for` fold over a list spine (a synthesized Fix fold) returning a repr",
         "src": "nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\nfn checksum(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\nfn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))",
-        "baseline_ns": 58658.98715,
+        "baseline_ns": 45131.68685,
         "backends": [
           {
             "backend": "aot-env",
             "outcome_status": "value",
             "outcome_reason": "",
             "timing": {
-              "ns_per_call": 223445.1267,
+              "ns_per_call": 179813.21195,
               "iters": 20000,
               "batches": 5,
-              "ns_per_call_worst": 241379.2013
+              "ns_per_call_worst": 187584.737
             },
             "compile_ns": null,
             "verdict": {
               "kind": "speed-loss",
-              "ratio_x1000": 263,
+              "ratio_x1000": 251,
               "reason": "slower than the in-process interpreter on this case (measured; no target — VR-5)"
             }
           },
@@ -926,7 +926,7 @@
     ]
   },
   "llm": {
-    "source_path": "/home/user/mycelium/.claude/worktrees/agent-ac9d36a1c13fe5cbd/tools/llm-harness/reports/20260617T182214Z-report.json",
+    "source_path": "/home/user/mycelium/tools/llm-harness/reports/20260617T182214Z-report.json",
     "is_synthetic": true,
     "provenance": "mycelium-llm-validation v0.1.0 — run 20260617T182214Z — mode=mock — SYNTHETIC (fixture; not real model quality) (4 validations: 1 pass / 3 mock-pass / 0 skip / 0 fail)",
     "validations": [
