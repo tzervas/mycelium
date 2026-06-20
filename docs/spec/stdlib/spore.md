@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Implemented (Rust-first, library/manifest half) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the **library / reconstruction-manifest half** landed as `mycelium-std-spore` (M-522, #163, Batch P5 Tier-A completion): build/identity/manifest/verify over the `mycelium-spore` packager + `std.content` hash + `std.vsa` decode (KC-3 — no new hash, no new trusted code). Identity is the canonical content hash and metadata-invariant (ADR-003); a hash mismatch is an explicit `Err` (C1/G2); probabilistic regrowth is held at the **`Empirical` ceiling** (FR-C2/VR-5, never `Proven`), enforced structurally. Guarantee matrix asserted in tests. The **full native deploy / germination** is **Phase-6-gated (M-620)** and out of this wave (FLAG §7 Q2). The maintainer's append-only **ratification** remains. |
-| **Module / Ring** | `std.spore` · Ring 1 (RFC-0016 §4.3 lists it Tier A) · Tier A — *ring placement FLAGGED §7 Q1: RFC-0016 §4.2 currently files `spore` under Ring 2*. |
+| **Status** | **Accepted (library/manifest half)** (2026-06-20, maintainer-ratified per DN-07 — guarantee matrix asserted in tests; §7-Q1 ring reconciled via the RFC-0016 §4.2 erratum; remaining §7 questions are scope/cross-phase calls, not contract violations; was *Implemented (Rust-first, library/manifest half) — pending ratification* 2026-06-18, Draft/needs-design 2026-06-17) — the **library / reconstruction-manifest half** landed as `mycelium-std-spore` (M-522, #163, Batch P5 Tier-A completion): build/identity/manifest/verify over the `mycelium-spore` packager + `std.content` hash + `std.vsa` decode (KC-3 — no new hash, no new trusted code). Identity is the canonical content hash and metadata-invariant (ADR-003); a hash mismatch is an explicit `Err` (C1/G2); probabilistic regrowth is held at the **`Empirical` ceiling** (FR-C2/VR-5, never `Proven`), enforced structurally. The **full native deploy / germination** stays **Phase-6-gated (M-620)** and out of this wave (FLAG §7 Q2). |
+| **Module / Ring** | `std.spore` · Ring 1 · Tier A (RFC-0016 §4.2/§4.3 — §7-Q1 ring placement **reconciled to Ring 1** by the RFC-0016 §4.2 erratum, 2026-06-20). |
 | **Tracks** | `M-522` (#163) — the Phase-5 task this spec delivers |
 | **Scope** | The library form of the **content-addressed deployable unit** (ADR-013): build a `spore` (a hash-identified DAG of code + values + reconstruction manifest + artifact metadata) with a **deterministic content hash**, and author/inspect the RFC-0003 §6 **reconstruction manifest** (the regrow-a-value-from-its-recipe recipe). The narrow `spore(v)` single-value case is the degenerate point of the same surface (ADR-013 §2). |
 | **Boundary** | Content-hash **primitives** (`hash_of_value`/`hash_of_def`/`ContentHash`) are `std.content` (M-523) — `spore` **consumes** them, never re-hashes. The reconstruction **operations** (VSA bind/unbind/cleanup/resonator decode) and their **probabilistic ceiling** are `std.vsa` (M-513) — `spore` *packages* a manifest, `vsa` *performs* the regrowth. The **packaging schema/CLI** (`mycelium-proj.toml → spore`, the never-silent publish checks) is owned by **M-368** (`crates/mycelium-spore`, the Accepted/enacted Spore Build & Publish Contract) — `spore` is its library face, not a second source of the schema. The **full native deploy / germination** lands with the Phase-6 native path **M-620** — FLAGGED §7 Q2. A representation change is `std.swap` (M-516). |
@@ -245,12 +245,13 @@ artifact exists (the identity receipt / the manifest record / the refusal diagno
 
 ## 7. Open questions (FLAGGED — resolve before ratification)
 
-- **(Q1) Ring placement — Ring 1 (Tier A) vs Ring 2.** RFC-0016 **§4.3** lists `spore` among the **Tier A**
-  differentiator modules (and the stdlib index files it there), while RFC-0016 **§4.2** files `spore` under
-  **Ring 2** ("Tier B + `runtime`/`spore`"). This spec follows the **Tier-A / Ring-1** placement (it is a
-  capability surface over the landed `mycelium-spore` + `mycelium-content` crates, a certificate/EXPLAIN
-  consumer) and **surfaces the discrepancy** rather than silently resolving it. — *Disposition: FLAGGED to the
-  maintainer for the RFC-0016 ratification pass; a one-line §4.2/§4.3 reconciliation, not a per-module choice.*
+- **(Q1 — RESOLVED 2026-06-20) Ring placement — Ring 1 (Tier A).** RFC-0016 **§4.3** lists `spore` among the
+  **Tier A** differentiator modules (and the stdlib index files it there), while RFC-0016 **§4.2** *had* filed
+  `spore` under **Ring 2** ("Tier B + `runtime`/`spore`"). **Resolved in the ratification pass:** `spore` is a
+  capability surface over the landed `mycelium-spore` + `mycelium-content` crates (a certificate/EXPLAIN
+  consumer, no new trusted code — the Ring-1 definition), so the maintainer-authorized **RFC-0016 §4.2 erratum
+  (2026-06-20)** reconciled it to **Ring 1, Tier A** (the §4.2 parenthetical was the outlier; §4.3 was already
+  correct). Corrigendum only — not a decision reversal; the §4.3 Tier-A taxonomy is unchanged.
 - **(Q2) The Phase-6 native-deploy half (M-620) — the cross-phase dependency.** The **full native deploy /
   germination** (turning a spore into a running colony on the native backend) lands with the Phase-6 native
   path **M-620**, and `docs/planning/phase-6.md` **does not yet exist**. The artifact wire-schema, signing, and
@@ -306,3 +307,12 @@ artifact exists (the identity receipt / the manifest record / the refusal diagno
   strength derived from the bound's basis (`Approx::attach`, never upgraded — VR-5), held at the
   `Empirical` ceiling (FR-C2). It carries `Factorization` (the VSA decode result), not `Value` (that
   mapping is `std.vsa`'s). `std.spore` now depends on `mycelium-std-numerics`. Append-only.
+- **2026-06-20 — Accepted (library/manifest half; maintainer ratification, DN-07).** The maintainer ratified
+  the Rust-first library/manifest half of this spec: the §4.5 guarantee matrix is asserted in tests, the
+  never-silent / `Empirical`-ceiling / hash-mismatch-refusal invariants hold, and the open §7 questions are
+  scope/cross-phase calls (Q2 native-deploy is Phase-6-gated M-620; Q3 manifest-mode breadth), not contract
+  violations. **§7-Q1 (ring placement) is resolved**: the maintainer-authorized **RFC-0016 §4.2 erratum
+  (2026-06-20)** reconciled `spore` to **Ring 1, Tier A** (the §4.2 parenthetical was the outlier; §4.3 was
+  already correct). The full native deploy / germination half stays out (Phase-6, M-620). Status moves
+  *Implemented (Rust-first, library/manifest half) — pending ratification → Accepted (library/manifest half)*.
+  Append-only; no kernel change (KC-3).
