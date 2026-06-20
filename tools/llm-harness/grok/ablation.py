@@ -18,11 +18,13 @@ NON-NEGOTIABLE HONESTY (§T11.7 step 4; VR-5):
   * **Report each arm at the strength actually run.** Arms that could not run
     (missing dependency) are recorded as ``blocked`` with their reason, never as a
     0% or 100% result.
-  * Arms 3 (grammar-constrained decoding) and 4 (`LlmCanonical` projection
-    renderer) depend on build deps that **do not exist yet** (M-380). They are
-    declared and wired, but marked ``blocked`` until those deps land — we do not
-    fabricate their outputs. The threshold comparison "applies only when arm 4 is
-    present" (§T11.7 step 3), so it is reported as *indeterminate* until arm 4 runs.
+  * Arm 4 (`LlmCanonical` projection) is now scored at the same parse+typecheck bar
+    as the novel arms via the ``llm_canonical_to_l1`` bridge (DN-09 §9.4 option b),
+    so it provides the retention-ratio denominator and the threshold comparison is
+    determinate when it runs. Arm 3 (grammar-constrained decoding) and arm 5
+    (embedded-DSL baseline) still depend on build deps that **do not exist yet**
+    (a GBNF/Outlines decoder; an RR-3 host DSL); they stay ``blocked`` with their
+    reason — we never fabricate their outputs (VR-5).
 
 Independent samples ((arm, task, seed)) are batchable; this runner can drive them
 live (paced) or be fed batch results.
@@ -38,6 +40,7 @@ from typing import Any
 from .client import ChatClient, ChatMessage
 from .coauthor_loop import SYSTEM_PROMPT, scan_forbidden_self_tags
 from .llm_canonical_arm4 import arm4_llm_canonical_prompt
+from .llm_canonical_to_l1 import convert_to_myc
 from .models import ModelSpec
 from .scoring import VERDICT_CLEAN, MycCheckScorer
 from .tasks import Task
@@ -56,6 +59,33 @@ ARM_EMBEDDED_DSL = "arm5-embedded-dsl-baseline"
 
 # Arms whose surface is "novel" (the numerator candidates for the retention ratio).
 NOVEL_SURFACE_ARMS = (ARM_BARE, ARM_PRIMER, ARM_CONSTRAINED)
+
+# A canonical bridge maps (model output, task) -> a typecheckable .myc source, or
+# None if the LlmCanonical output cannot be faithfully converted (G2: never a false
+# PASS). Injected so the offline self-test can exercise arm-4 plumbing without a
+# scorer/binary; the default is the real DN-09 §9.4 option-(b) bridge.
+CanonicalBridge = Callable[[str, Task], "str | None"]
+
+
+def default_canonical_bridge(content: str, task: Task) -> str | None:
+    """The real LlmCanonical->L1 bridge for arm 4 (DN-09 §9.4 option b).
+
+    Wraps the model's converted expression in the task's *known* signature so the
+    authoritative ``myc-check`` can typecheck it at the same bar as arms 1/2. A task
+    with no declared signature cannot be bridged -> ``None`` (scored not-clean, G2).
+
+    Guarantee tag: Empirical (the conversion is a heuristic rewrite; the type-check
+    is ``myc-check``'s — see ``llm_canonical_to_l1``).
+    """
+    if task.fn_name is None or task.param_type is None or task.return_type is None:
+        return None
+    return convert_to_myc(
+        content,
+        fn_name=task.fn_name,
+        param_type=task.param_type,
+        return_type=task.return_type,
+        param_name=task.param_name or "x",
+    )
 
 
 @dataclass
@@ -111,15 +141,16 @@ def default_arms() -> list[Arm]:
     (M-381 Arm 4, W2L3) landed; arm 5 needs an embedded-DSL baseline harness (RR-3).
     Blocked arms carry their reason and are never given a fabricated score.
 
-    Note on arm 4 scoring: the harness validates LlmCanonical S-expression syntax
-    (Python-side heuristic, Empirical) and then scores the normalized output via
-    ``myc-check``.  Since ``myc-check`` expects ``.myc`` (L1 surface) format and
-    receives Core-IR S-expressions, it will typically return exit-code 2 (parse
-    error).  This is honest — it faithfully measures what ``myc-check`` says about
-    LlmCanonical-formatted output.  A full LlmCanonical→L1 converter is a future
-    RFC-0021 §4.1 EditCapability follow-up.  The arm gracefully skips when the
-    compiled Rust binary is absent (``status: "skip"``,
-    ``reason: "llm-canonical-parser-not-compiled"``).
+    Note on arm 4 scoring (DN-09 §9.4 option b, M-381): the harness converts the
+    model's LlmCanonical S-expression to ``.myc`` via the
+    ``llm_canonical_to_l1`` bridge and scores the produced ``.myc`` with the SAME
+    ``myc-check`` (parse+typecheck) used for arms 1/2 — so arm 4 sits on the same
+    quality bar and yields a determinate retention-ratio denominator. The bridge is
+    Empirical (heuristic rewrite; the type-check is authoritative ``myc-check``); an
+    output it cannot convert is scored not-clean, never a false PASS (G2). The model
+    is not asked to author the fn signature (LlmCanonical cannot express it) — the
+    bridge supplies the task's known signature, which makes the retention ratio a
+    CONSERVATIVE estimate (see ``RetentionVerdict.to_dict``'s ``arm4_basis``).
     """
     return [
         Arm(
@@ -229,6 +260,15 @@ class RetentionVerdict:
                 "not a ratified verdict. The leverage hypothesis stays open/Declared "
                 "until the full ≥3-seed, ≥1-frontier campaign (research/11 §T11.6)."
             ),
+            "arm4_basis": (
+                "arm 4 (denominator) is scored via the LlmCanonical->L1 bridge "
+                "(DN-09 §9.4 option b): the same myc-check parse+typecheck as arms "
+                "1/2, but the model is NOT asked to author the fn signature (the "
+                "format cannot express it) — the bridge supplies the task's known "
+                "signature. Arm 4 is therefore slightly advantaged, so the retention "
+                "ratio is a CONSERVATIVE (downward-biased) estimate: clearing the "
+                "threshold is robust; falling below it is ambiguous (Empirical)."
+            ),
         }
 
 
@@ -315,6 +355,7 @@ def run_arm(
     batch: bool = False,
     before_request: Any = None,
     after_request: Any = None,
+    canonical_bridge: CanonicalBridge | None = None,
     log: logging.Logger | None = None,
 ) -> ArmResult:
     """Run one arm's independent (task × seed) pass@1 samples (single attempt each).
@@ -322,6 +363,12 @@ def run_arm(
     A blocked arm returns an :class:`ArmResult` with ``ran=False`` and its reason —
     never a fabricated score (VR-5). pass@1 counts a sample clean iff the scorer's
     verdict is ``clean`` on the single generation (no correction rounds — pass@1).
+
+    Arm 4 (``LlmCanonical``) is scored at the **same** parse+typecheck bar as the
+    novel arms: its S-expression output is first converted to ``.myc`` by
+    ``canonical_bridge`` (default :func:`default_canonical_bridge`, DN-09 §9.4
+    option b) and the produced ``.myc`` is then scored by the same ``myc-check``.
+    An output the bridge cannot convert is scored not-clean — never a false PASS (G2).
     """
     log = log or _LOG
     if not arm.runnable or arm.prompt_builder is None:
@@ -331,6 +378,7 @@ def run_arm(
             ran=False,
             blocked_reason=arm.blocked_reason or "arm not runnable",
         )
+    bridge = canonical_bridge or default_canonical_bridge
     per_sample: list[dict[str, Any]] = []
     n_clean = 0
     for task in tasks:
@@ -348,6 +396,15 @@ def run_arm(
                 note = f"api-error: {chat.error}"
             elif scan_forbidden_self_tags(chat.content):
                 note = "VR-5: forbidden self-tag in output (counts as not-clean)"
+            elif arm.id == ARM_CANONICAL:
+                # Bridge LlmCanonical -> .myc, then score with the SAME myc-check.
+                myc = bridge(chat.content, task)
+                if myc is None:
+                    note = "bridge: LlmCanonical not convertible to L1 (not-clean — G2)"
+                else:
+                    score = scorer.score(myc)
+                    clean = score.verdict == VERDICT_CLEAN
+                    note = f"bridge->{score.verdict}"
             else:
                 score = scorer.score(chat.content)
                 clean = score.verdict == VERDICT_CLEAN
