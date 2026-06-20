@@ -8,6 +8,24 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: KC-2 / M-002 close — Grok/xAI harness verification + honest run record)
+- **DN-09 §7 (append-only):** records the 2026-06-20 Grok/xAI live run attempt. Harness
+  self-test **14/14** (Empirical/plumbing — T0–T12 verified). Live run **blocked** by
+  `HTTP 403 permission-denied` (xAI account has no credits; endpoint reachable; $0 spent).
+  Retention ratio (T3.6 / M-381): **INDETERMINATE** (ablation did not run). Schema finding:
+  Grok harness output format differs from `mycelium-bench` ingestion schema. Standing
+  KC-2 verdict (2026-06-18, **proceed**) is unchanged — the 403 is a billing constraint,
+  not a language-learnability result.
+- **M-002 status → done** (issues.yaml): the KC-2 verdict is genuinely recorded with its basis
+  in DN-09; Grok follow-up attempt documented in DN-09 §7, blocked on billing.
+- **M-381 status:** remains in-progress; updated body notes INDETERMINATE retention ratio,
+  blocked Grok arm, and schema mismatch requiring resolution before a successful re-run.
+- **models.toml reconciled** against operator-provided xAI API docs (docs.x.ai/developers/models
+  as of 2026-06-20): removed three undocumented model IDs (`grok-4.20-0309-non-reasoning`,
+  `grok-4.20-0309-reasoning`, `grok-4.20-multi-agent-0309`); retained the two confirmed public
+  models (`grok-build-0.1`, `grok-4.3`). Self-test T0 updated to expect ≥2 models (not exactly 5);
+  self-test remains **14/14**.
+
 ### Added (2026-06-20: LLM harness — one-command runner + packaging fix)
 - **`tools/llm-harness/run.sh`** — a one-command runner: resolves uv (else system python3),
   `uv sync` (+`xai_sdk` only for `--batch`), runs the offline self-test and **aborts if it

@@ -155,10 +155,55 @@ This note is **Resolved**; revisiting the verdict means a **new** note that supe
 the §4 follow-up ablation reverses the finding), never a rewrite. The measured `experiments/results/`
 artifacts are the immutable evidence base; this note is the maintainer's reading of them.
 
+## 7. Grok/xAI arm attempt (2026-06-20) — harness verified, live run blocked
+
+This section records the 2026-06-20 attempt to run the Grok/xAI co-authoring experiment
+(`tools/llm-harness/`, M-330/M-331/M-381) against the `gold-compose-v1` task set (8 tasks,
+5 configured models cheapest-first: `grok-build-0.1`, `grok-4.3`, three `grok-4.20-*` variants).
+
+**Harness self-test** (Empirical — plumbing-verified, no key/network): **14/14 checks passed**
+(T0–T12: model ordering, RPM/TPM pacing math, backoff/throttle, cost accounting, scoring, the
+M-330 generate→fix loop, the M-381 ablation protocol, report emission, and the USD spend gate).
+The harness infrastructure is verified and turnkey.
+
+**Live run result** (Empirical — run executed, API reachable): the probe against every model
+returned `HTTP 403 permission-denied` on every task request. The error text: *"Your newly created
+team doesn't have any credits or licenses yet."* The API endpoint (`https://api.x.ai/v1`) is
+reachable (explicit 403, not a network timeout); the account bound to `XAI_API_KEY` has no
+credits. Total tokens consumed: 0. Total spend: $0.00 (spend gate never triggered).
+
+**This is a billing constraint, not a language-learnability result.** Zero tasks ran; the
+all-zero outcome rates reflect API failure, not Mycelium surface behaviour by any model.
+
+**Retention ratio (T3.6 / M-381): INDETERMINATE.** The ablation did not run. The 5-arm retention
+ablation (bare novel; +grammar-in-context; +constrained decoding; familiar-skin / `LlmCanonical`;
+embedded-DSL) requires live token production; none occurred.
+
+**Schema finding (Declared):** the Grok harness report format (`metadata` / `quality` /
+`performance` / `outcomes`) differs from the schema `crates/mycelium-bench` binds to
+(`harness` / `summary` / `results` — the `mycelium-llm-validation` harness schema). Even a
+successful live run cannot be ingested by the bench crate without a schema bridge. This is a
+separate tracked issue; it does not affect the verdict below.
+
+**Effect on the standing verdict:** the 2026-06-18 verdict — **KC-2: proceed** — stands
+unchanged. The Grok arm would have provided supplemental frontier-model evidence (see §4's
+open follow-up), but its absence does not overturn the local-model measurement that cleared
+the kill criterion. The L3 strategy selection (§3.1) and the usability bias (§3.2) are
+unaffected.
+
+**What reopens this:** loading credits into the xAI account and re-running. The harness is
+turnkey (`cd tools/llm-harness && ./run.sh --smoke` then `./run.sh`); a successful re-run
+appends findings here (append-only) and updates M-381 with the measured retention ratio.
+
 ---
 
 ## Changelog
 
+- **2026-06-20 — Supplemental record (Grok/xAI arm blocked).** The `tools/llm-harness/`
+  harness passed **14/14 offline self-tests** (Empirical/plumbing). The live run was blocked
+  by `HTTP 403 permission-denied` (xAI account has no credits; not a language-model result).
+  M-381 retention ratio: INDETERMINATE. The 2026-06-18 verdict (proceed) stands unchanged.
+  Schema mismatch noted between Grok harness output and `mycelium-bench` ingestion format.
 - **2026-06-18 — Resolved (maintainer verdict).** Records the **KC-2 verdict = proceed**: the M-002
   run (local Qwen2.5-Coder, 10-task gold set, seed 42) shows *weak-but-recoverable* leverage (best
   arm 7B+examples: 40% first-attempt → 70% eventual, +30pp edit-to-fix), so the "irrecoverable

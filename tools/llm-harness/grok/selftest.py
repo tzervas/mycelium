@@ -554,15 +554,15 @@ def check_report_emission() -> Check:
 
 
 def check_rubric_loads() -> Check:
-    """The bundled models.toml parses, orders cheapest-first, and has 5 models."""
+    """The bundled models.toml parses, orders cheapest-first, and has ≥2 models."""
     from .models import default_models_path
 
     path = default_models_path()
     if not path.exists():
         return Check("T0 rubric", False, f"models.toml not found at {path}")
     specs = load_models(path)
-    if len(specs) != 5:
-        return Check("T0 rubric", False, f"expected 5 seed models, got {len(specs)}")
+    if len(specs) < 2:
+        return Check("T0 rubric", False, f"expected ≥2 seed models, got {len(specs)}")
     ordered = order_models(specs)
     prices = [m.out_price for m in ordered]
     if prices != sorted(prices):
@@ -576,7 +576,7 @@ def check_rubric_loads() -> Check:
                 f"{m.id}: seed batch price should equal sync (no invented discount)",
             )
     return Check(
-        "T0 rubric", True, "models.toml: 5 models, cheapest-first, batch==sync"
+        "T0 rubric", True, f"models.toml: {len(specs)} models, cheapest-first, batch==sync"
     )
 
 

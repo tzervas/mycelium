@@ -7,6 +7,14 @@
 # this harness verified. CONFIRM against the live docs before a paid run; every
 # field is overridable on the command line / by editing this file.
 #
+# RECONCILIATION (2026-06-20): reconciled against the operator-provided xAI API
+# docs (compiled from docs.x.ai/developers/models as of 2026-06-20). Only two
+# models are currently listed as public: `grok-build-0.1` and `grok-4.3`. Three
+# model IDs previously present in this file (`grok-4.20-0309-non-reasoning`,
+# `grok-4.20-0309-reasoning`, `grok-4.20-multi-agent-0309`) are NOT listed in
+# the docs; they were removed. If those IDs are needed, verify them against the
+# live docs.x.ai/developers/models and re-add explicitly.
+#
 # Sort order (cheapest -> priciest): the harness sorts models by `out_price`
 # then `in_price`, ties keeping config order (the order they appear here).
 # `--models a,b,c` selects a subset; `--order a,b,c` forces an explicit order.
@@ -22,11 +30,11 @@
 #   batch_out_price    USD per 1e6 output tokens, BATCH pricing.
 #
 # BATCH PRICING — TODO(confirm): the batch-API pricing page
-# (docs.x.ai/developers/pricing#batch-api-pricing) was not fetched in the build
-# environment (no network). Per the brief we do NOT invent a discount: the
-# batch_* defaults below are set EQUAL to the sync prices (conservative — a real
-# batch discount can only make the true cost lower, never higher). Replace with
-# the published batch rates before relying on batch-mode cost figures.
+# (docs.x.ai/developers/pricing#batch-api-pricing) was not provided in the
+# operator docs. Per the brief we do NOT invent a discount: the batch_* defaults
+# below are set EQUAL to the sync prices (conservative — a real batch discount
+# can only make the true cost lower, never higher). Replace with the published
+# batch rates before relying on batch-mode cost figures.
 
 schema_version = 1
 
@@ -45,36 +53,6 @@ id = "grok-4.3"
 context = 1000000
 tpm = 10000000
 rpm = 1800
-in_price = 1.25
-out_price = 2.50
-batch_in_price = 1.25   # TODO(confirm): = sync price until batch-pricing doc fetched
-batch_out_price = 2.50  # TODO(confirm): = sync price until batch-pricing doc fetched
-
-[[model]]
-id = "grok-4.20-0309-non-reasoning"
-context = 1000000
-tpm = 10000000
-rpm = 1800
-in_price = 1.25
-out_price = 2.50
-batch_in_price = 1.25   # TODO(confirm): = sync price until batch-pricing doc fetched
-batch_out_price = 2.50  # TODO(confirm): = sync price until batch-pricing doc fetched
-
-[[model]]
-id = "grok-4.20-0309-reasoning"
-context = 1000000
-tpm = 10000000
-rpm = 1800
-in_price = 1.25
-out_price = 2.50
-batch_in_price = 1.25   # TODO(confirm): = sync price until batch-pricing doc fetched
-batch_out_price = 2.50  # TODO(confirm): = sync price until batch-pricing doc fetched
-
-[[model]]
-id = "grok-4.20-multi-agent-0309"
-context = 1000000
-tpm = 2500000
-rpm = 450
 in_price = 1.25
 out_price = 2.50
 batch_in_price = 1.25   # TODO(confirm): = sync price until batch-pricing doc fetched
