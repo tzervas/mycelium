@@ -27,7 +27,7 @@
 use std::collections::BTreeMap;
 
 use crate::checkty::{DataInfo, Ty};
-use crate::usefulness::Pat;
+use crate::usefulness::{specialize_ctor, specialize_lit, Pat};
 
 /// An **occurrence**: the path of field indices from the scrutinee root to a sub-value (`[]` is the
 /// whole scrutinee, `[1]` is its second constructor field, `[1, 0]` the first field of that, …).
@@ -69,6 +69,22 @@ pub(crate) enum Tree {
 struct Row {
     pats: Vec<Pat>,
     arm: usize,
+}
+
+/// A decision-tree row specializes exactly like a bare pattern vector, but must **carry its surface
+/// arm index** through unchanged (that index is what a `Leaf` ultimately runs). Implementing
+/// [`SpecializeRow`](crate::usefulness::SpecializeRow) lets the Maranget `S` specialization be the
+/// single shared one in `crate::usefulness` (M-641) rather than a row-for-row duplicate here.
+impl crate::usefulness::SpecializeRow for Row {
+    fn columns(&self) -> &[Pat] {
+        &self.pats
+    }
+    fn with_columns(&self, columns: Vec<Pat>) -> Self {
+        Row {
+            pats: columns,
+            arm: self.arm,
+        }
+    }
 }
 
 /// Compile a checked match into a decision tree. `matrix` is the per-arm normalized pattern rows (one
@@ -233,50 +249,11 @@ fn child_tys(tys: &[Ty], fields: &[Ty]) -> Vec<Ty> {
     out
 }
 
-/// Specialize on constructor `c` of arity `a` at column 0 (Maranget's `S`): a `c(subs…)` row expands
-/// its subs into the leading columns; a wildcard row expands to `a` wildcards; a differently-headed
-/// row is dropped.
-fn specialize_ctor(rows: &[Row], c: &str, a: usize) -> Vec<Row> {
-    let mut out = Vec::new();
-    for r in rows {
-        let (first, rest) = r.pats.split_first().expect("non-empty row");
-        match first {
-            Pat::Ctor(n, subs) if n == c => {
-                let mut pats = subs.clone();
-                pats.extend_from_slice(rest);
-                out.push(Row { pats, arm: r.arm });
-            }
-            Pat::Wild => {
-                let mut pats = vec![Pat::Wild; a];
-                pats.extend_from_slice(rest);
-                out.push(Row { pats, arm: r.arm });
-            }
-            _ => {}
-        }
-    }
-    out
-}
-
-/// Specialize on literal `k` at column 0 (arity 0): keep rows headed by that literal or a wildcard,
-/// dropping the leading column.
-fn specialize_lit(rows: &[Row], k: &str) -> Vec<Row> {
-    let mut out = Vec::new();
-    for r in rows {
-        let (first, rest) = r.pats.split_first().expect("non-empty row");
-        match first {
-            Pat::Lit(j) if j == k => out.push(Row {
-                pats: rest.to_vec(),
-                arm: r.arm,
-            }),
-            Pat::Wild => out.push(Row {
-                pats: rest.to_vec(),
-                arm: r.arm,
-            }),
-            _ => {}
-        }
-    }
-    out
-}
+// Maranget's `S` specialization (constructor and literal heads) is shared with the usefulness
+// analysis via `crate::usefulness::{specialize_ctor, specialize_lit}` over the `SpecializeRow`
+// trait `Row` implements above (M-641) — the decision-tree-specific part is only carrying the arm
+// index through, which the trait's `with_columns` does. `default_rows` (the `D(P)` matrix) stays
+// local: it is a distinct operation, not part of that shared specialization.
 
 /// The default rows `D(P)`: rows headed by a wildcard, leading column dropped.
 fn default_rows(rows: &[Row]) -> Vec<Row> {

@@ -62,11 +62,7 @@ impl std::fmt::Display for PolicyHashError {
     }
 }
 
-impl std::error::Error for PolicyHashError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.source)
-    }
-}
+mycelium_std_core::impl_std_error!(PolicyHashError, source = |this| { Some(&this.source) });
 
 /// A reified, content-addressed recovery policy.
 ///

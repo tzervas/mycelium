@@ -398,45 +398,16 @@ fn calls_in_fn(body: &Expr) -> BTreeSet<String> {
 }
 
 fn collect_calls(e: &Expr, out: &mut BTreeSet<String>) {
-    match e {
-        Expr::Path(p) => {
+    // Same pre-order traversal totality uses (M-641) — factored into the one shared `walk_expr`;
+    // this collector's *action* differs (it gathers **every** single-segment path, the superset
+    // filter `calls_in_fn` documents, not just `App` heads), so the visitor closure carries that.
+    crate::totality::walk_expr(e, &mut |x| {
+        if let Expr::Path(p) = x {
             if p.0.len() == 1 {
                 out.insert(p.0[0].clone());
             }
         }
-        Expr::App { head, args } => {
-            collect_calls(head, out);
-            for a in args {
-                collect_calls(a, out);
-            }
-        }
-        Expr::Let { bound, body, .. } => {
-            collect_calls(bound, out);
-            collect_calls(body, out);
-        }
-        Expr::If { cond, conseq, alt } => {
-            collect_calls(cond, out);
-            collect_calls(conseq, out);
-            collect_calls(alt, out);
-        }
-        Expr::Match { scrutinee, arms } => {
-            collect_calls(scrutinee, out);
-            for arm in arms {
-                collect_calls(&arm.body, out);
-            }
-        }
-        Expr::For { xs, init, body, .. } => {
-            collect_calls(xs, out);
-            collect_calls(init, out);
-            collect_calls(body, out);
-        }
-        Expr::Swap { value, .. } => collect_calls(value, out),
-        Expr::WithParadigm { body, .. } => collect_calls(body, out),
-        Expr::Wild(inner) | Expr::Spore(inner) | Expr::Ascribe(inner, _) => {
-            collect_calls(inner, out);
-        }
-        Expr::Lit(_) => {}
-    }
+    });
 }
 
 /// Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's

@@ -45,7 +45,7 @@ impl std::fmt::Display for UndeclaredEffect {
     }
 }
 
-impl std::error::Error for UndeclaredEffect {}
+mycelium_std_core::impl_std_error!(UndeclaredEffect);
 
 /// The **compositional no-undeclared-effect check** (I3).
 ///

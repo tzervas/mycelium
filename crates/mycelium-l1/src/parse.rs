@@ -84,6 +84,82 @@ impl Parser {
         }
     }
 
+    // ---- separated lists (DRY, M-640) ----
+    //
+    // The grammar repeats two comma-separated shapes; these helpers are the single code path for
+    // each, so every call site consumes byte-identical tokens and raises the identical `ParseError`
+    // (the close-delimiter `expect` with its bespoke message stays at the call site). No grammar
+    // change — a pure factoring of the hand-rolled loops.
+
+    /// `one (`,` one)*` — a **non-empty** comma list, parsed *between* already-recognized delimiters
+    /// (the caller consumed the opener and will `expect` the closer). Parses the first element
+    /// unconditionally, then one more after each comma, stopping at the first non-comma. With
+    /// `trailing_end = Some(t)`, a comma immediately followed by `t` ends the list (consumed) — the
+    /// trailing-comma tolerance of `match` arms; with `None`, no trailing comma is accepted. Mirrors
+    /// the bare `push(one); while eat(Comma) { … push(one) }` loop exactly. Used for constructor
+    /// fields, type params, type args, sub-patterns (no trailing) and match arms (trailing).
+    fn comma_separated<T>(
+        &mut self,
+        trailing_end: Option<&Tok>,
+        mut parse_one: impl FnMut(&mut Self) -> Result<T, ParseError>,
+    ) -> Result<Vec<T>, ParseError> {
+        let mut items = vec![parse_one(self)?];
+        while self.eat(&Tok::Comma) {
+            if let Some(end) = trailing_end {
+                if self.at(end) {
+                    break;
+                }
+            }
+            items.push(parse_one(self)?);
+        }
+        Ok(items)
+    }
+
+    /// `[ one (`,` one)* ]` — a possibly-**empty** comma list bounded by `end`, parsed *inside*
+    /// already-opened delimiters (the caller consumed the opener and will `expect`/consume `end`).
+    /// Equivalent to `if !at(end) { push(one); while eat(Comma) { push(one) } }`; no trailing comma.
+    /// Used for value params, call args, and list-literal elements (each empty-permitting).
+    fn comma_separated_until<T>(
+        &mut self,
+        end: &Tok,
+        parse_one: impl FnMut(&mut Self) -> Result<T, ParseError>,
+    ) -> Result<Vec<T>, ParseError> {
+        if self.at(end) {
+            return Ok(Vec::new());
+        }
+        self.comma_separated(None, parse_one)
+    }
+
+    /// `expect` a **leading keyword** whose diagnostic is just its own backtick-quoted spelling
+    /// (`expected `let`, found …`), templating the message from one token→spelling table instead of
+    /// re-spelling the keyword at each opener (M-640). Byte-identical to the prior
+    /// `expect(&Tok::Let, "`let`")` form — same token consumed, same `ParseError` text. Only used at
+    /// the self-naming keyword openers; sites whose message carries extra context (e.g.
+    /// `"`fn` in the trait body"`) keep their bespoke [`expect`](Self::expect) call unchanged.
+    fn expect_keyword(&mut self, kw: &Tok) -> Result<(), ParseError> {
+        // Canonical surface spelling of each self-naming keyword opener. Total over exactly the
+        // tokens the parser passes here; the `_` fallback keeps this **panic-free** (the parser
+        // never panics — module invariant) by falling back to the `{:?}` form for any token outside
+        // the set, so even a future miswiring is an explicit diagnostic, never a crash.
+        let spelling = match kw {
+            Tok::Type => "type",
+            Tok::Trait => "trait",
+            Tok::Fn => "fn",
+            Tok::Let => "let",
+            Tok::If => "if",
+            Tok::Then => "then",
+            Tok::Else => "else",
+            Tok::Match => "match",
+            Tok::For => "for",
+            Tok::Swap => "swap",
+            Tok::With => "with",
+            Tok::Wild => "wild",
+            Tok::Spore => "spore",
+            other => return self.expect(kw, &format!("{other:?}")),
+        };
+        self.expect(kw, &format!("`{spelling}`"))
+    }
+
     fn ident(&mut self) -> Result<String, ParseError> {
         match self.cur() {
             Tok::Ident(s) => {
@@ -159,7 +235,7 @@ impl Parser {
     }
 
     fn parse_type_decl(&mut self) -> Result<TypeDecl, ParseError> {
-        self.expect(&Tok::Type, "`type`")?;
+        self.expect_keyword(&Tok::Type)?;
         let name = self.ident()?;
         let params = self.parse_type_params_opt()?;
         self.expect(&Tok::Eq, "`=` before the constructors")?;
@@ -178,17 +254,14 @@ impl Parser {
         let name = self.ident()?;
         let mut fields = Vec::new();
         if self.eat(&Tok::LParen) {
-            fields.push(self.parse_type_ref()?);
-            while self.eat(&Tok::Comma) {
-                fields.push(self.parse_type_ref()?);
-            }
+            fields = self.comma_separated(None, Self::parse_type_ref)?;
             self.expect(&Tok::RParen, "`)` to close the constructor fields")?;
         }
         Ok(Ctor { name, fields })
     }
 
     fn parse_trait_decl(&mut self) -> Result<TraitDecl, ParseError> {
-        self.expect(&Tok::Trait, "`trait`")?;
+        self.expect_keyword(&Tok::Trait)?;
         let name = self.ident()?;
         let params = self.parse_type_params_opt()?;
         self.expect(&Tok::LBrace, "`{` to open the trait body")?;
@@ -232,29 +305,18 @@ impl Parser {
     }
 
     fn parse_params_opt(&mut self) -> Result<Vec<Param>, ParseError> {
-        let mut params = Vec::new();
-        if self.at(&Tok::RParen) {
-            return Ok(params);
-        }
-        loop {
-            let name = self.ident()?;
-            self.expect(&Tok::Colon, "`:` and the parameter type")?;
-            let ty = self.parse_type_ref()?;
-            params.push(Param { name, ty });
-            if !self.eat(&Tok::Comma) {
-                break;
-            }
-        }
-        Ok(params)
+        self.comma_separated_until(&Tok::RParen, |p| {
+            let name = p.ident()?;
+            p.expect(&Tok::Colon, "`:` and the parameter type")?;
+            let ty = p.parse_type_ref()?;
+            Ok(Param { name, ty })
+        })
     }
 
     fn parse_type_params_opt(&mut self) -> Result<Vec<String>, ParseError> {
         let mut params = Vec::new();
         if self.eat(&Tok::LAngle) {
-            params.push(self.ident()?);
-            while self.eat(&Tok::Comma) {
-                params.push(self.ident()?);
-            }
+            params = self.comma_separated(None, Self::ident)?;
             self.expect(&Tok::RAngle, "`>` to close the type parameters")?;
         }
         Ok(params)
@@ -375,10 +437,7 @@ impl Parser {
     fn parse_type_args_opt(&mut self) -> Result<Vec<TypeRef>, ParseError> {
         let mut args = Vec::new();
         if self.eat(&Tok::LAngle) {
-            args.push(self.parse_type_ref()?);
-            while self.eat(&Tok::Comma) {
-                args.push(self.parse_type_ref()?);
-            }
+            args = self.comma_separated(None, Self::parse_type_ref)?;
             self.expect(&Tok::RAngle, "`>` to close the type arguments")?;
         }
         Ok(args)
@@ -506,7 +565,7 @@ impl Parser {
 
     /// `for x in xs, acc = init => body` (RFC-0007 §4.8; spelling adopted at r3).
     fn parse_for(&mut self) -> Result<Expr, ParseError> {
-        self.expect(&Tok::For, "`for`")?;
+        self.expect_keyword(&Tok::For)?;
         let x = self.ident()?;
         self.expect(&Tok::In, "`in` after the element binder")?;
         let xs = Box::new(self.parse_app()?);
@@ -526,7 +585,7 @@ impl Parser {
     }
 
     fn parse_let(&mut self) -> Result<Expr, ParseError> {
-        self.expect(&Tok::Let, "`let`")?;
+        self.expect_keyword(&Tok::Let)?;
         let name = self.ident()?;
         let ty = if self.eat(&Tok::Colon) {
             Some(self.parse_type_ref()?)
@@ -546,26 +605,21 @@ impl Parser {
     }
 
     fn parse_if(&mut self) -> Result<Expr, ParseError> {
-        self.expect(&Tok::If, "`if`")?;
+        self.expect_keyword(&Tok::If)?;
         let cond = Box::new(self.parse_expr()?);
-        self.expect(&Tok::Then, "`then`")?;
+        self.expect_keyword(&Tok::Then)?;
         let conseq = Box::new(self.parse_expr()?);
-        self.expect(&Tok::Else, "`else`")?;
+        self.expect_keyword(&Tok::Else)?;
         let alt = Box::new(self.parse_expr()?);
         Ok(Expr::If { cond, conseq, alt })
     }
 
     fn parse_match(&mut self) -> Result<Expr, ParseError> {
-        self.expect(&Tok::Match, "`match`")?;
+        self.expect_keyword(&Tok::Match)?;
         let scrutinee = Box::new(self.parse_expr()?);
         self.expect(&Tok::LBrace, "`{` to open the match arms")?;
-        let mut arms = vec![self.parse_arm()?];
-        while self.eat(&Tok::Comma) {
-            if self.at(&Tok::RBrace) {
-                break; // trailing comma
-            }
-            arms.push(self.parse_arm()?);
-        }
+        // Non-empty (≥ 1 arm), with a trailing comma before `}` tolerated.
+        let arms = self.comma_separated(Some(&Tok::RBrace), Self::parse_arm)?;
         self.expect(
             &Tok::RBrace,
             "`}` to close the match (or `,` and another arm)",
@@ -589,10 +643,7 @@ impl Parser {
             Tok::Ident(s) => {
                 self.bump();
                 if self.eat(&Tok::LParen) {
-                    let mut subs = vec![self.parse_pattern()?];
-                    while self.eat(&Tok::Comma) {
-                        subs.push(self.parse_pattern()?);
-                    }
+                    let subs = self.comma_separated(None, Self::parse_pattern)?;
                     self.expect(&Tok::RParen, "`)` to close the constructor pattern")?;
                     Ok(Pattern::Ctor(s, subs))
                 } else {
@@ -607,7 +658,7 @@ impl Parser {
     }
 
     fn parse_swap(&mut self) -> Result<Expr, ParseError> {
-        self.expect(&Tok::Swap, "`swap`")?;
+        self.expect_keyword(&Tok::Swap)?;
         self.expect(&Tok::LParen, "`(` after `swap`")?;
         let value = Box::new(self.parse_expr()?);
         self.expect(&Tok::Comma, "`,` before the `to:` target")?;
@@ -633,7 +684,7 @@ impl Parser {
     /// the resolution pass fills the interior tags and strips the block; an unbridged cross-paradigm
     /// edge is a never-silent `MissingConversion`.
     fn parse_with_paradigm(&mut self) -> Result<Expr, ParseError> {
-        self.expect(&Tok::With, "`with`")?;
+        self.expect_keyword(&Tok::With)?;
         self.expect(&Tok::Paradigm, "`paradigm` after `with` (RFC-0012 §4.4)")?;
         let paradigm = self.parse_paradigm()?;
         self.expect(&Tok::LBrace, "`{` to open the `with paradigm` block")?;
@@ -643,7 +694,7 @@ impl Parser {
     }
 
     fn parse_wild(&mut self) -> Result<Expr, ParseError> {
-        self.expect(&Tok::Wild, "`wild`")?;
+        self.expect_keyword(&Tok::Wild)?;
         self.expect(&Tok::LBrace, "`{` to open the wild block")?;
         let body = Box::new(self.parse_expr()?);
         self.expect(&Tok::RBrace, "`}` to close the wild block")?;
@@ -651,7 +702,7 @@ impl Parser {
     }
 
     fn parse_spore(&mut self) -> Result<Expr, ParseError> {
-        self.expect(&Tok::Spore, "`spore`")?;
+        self.expect_keyword(&Tok::Spore)?;
         self.expect(&Tok::LParen, "`(` after `spore`")?;
         let value = Box::new(self.parse_expr()?);
         self.expect(&Tok::RParen, "`)` to close `spore(…)`")?;
@@ -676,15 +727,7 @@ impl Parser {
     }
 
     fn parse_args_opt(&mut self) -> Result<Vec<Expr>, ParseError> {
-        let mut args = Vec::new();
-        if self.at(&Tok::RParen) {
-            return Ok(args);
-        }
-        args.push(self.parse_expr()?);
-        while self.eat(&Tok::Comma) {
-            args.push(self.parse_expr()?);
-        }
-        Ok(args)
+        self.comma_separated_until(&Tok::RParen, Self::parse_expr)
     }
 
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
@@ -719,13 +762,7 @@ impl Parser {
             }
             Tok::LBracket => {
                 self.bump();
-                let mut elems = Vec::new();
-                if !self.at(&Tok::RBracket) {
-                    elems.push(self.parse_expr()?);
-                    while self.eat(&Tok::Comma) {
-                        elems.push(self.parse_expr()?);
-                    }
-                }
+                let elems = self.comma_separated_until(&Tok::RBracket, Self::parse_expr)?;
                 self.expect(&Tok::RBracket, "`]` to close the list literal")?;
                 Ok(Literal::List(elems))
             }
@@ -739,5 +776,143 @@ impl Parser {
             segs.push(self.ident()?);
         }
         Ok(Path(segs))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! Behavioral tests for the M-640 separated-list / keyword `expect` factoring. They drive the
+    //! private helpers through the public [`parse`] entry on representative grammar so the folded
+    //! call sites are exercised end-to-end (empty / single / multi lists, the match-arm trailing
+    //! comma, and that bare lists reject a trailing comma) — pinning byte-identical behavior.
+    use super::*;
+    use crate::ast::{Expr, Item, Literal};
+
+    fn fn_body(src: &str) -> Expr {
+        let n = parse(src).expect("parses");
+        n.items
+            .into_iter()
+            .find_map(|i| match i {
+                Item::Fn(fd) => Some(fd.body),
+                _ => None,
+            })
+            .expect("a fn item")
+    }
+
+    #[test]
+    fn empty_list_literal_parses_to_no_elems() {
+        // `comma_separated_until(RBracket)` empty path.
+        let Expr::Lit(Literal::List(elems)) = fn_body("nodule d\nfn main() -> Binary{1} = []")
+        else {
+            panic!("expected a list literal");
+        };
+        assert!(elems.is_empty());
+    }
+
+    #[test]
+    fn single_and_multi_element_list_literals() {
+        let one = fn_body("nodule d\nfn main() -> Binary{1} = [0b0]");
+        let Expr::Lit(Literal::List(e1)) = one else {
+            panic!("list")
+        };
+        assert_eq!(e1.len(), 1);
+        let many = fn_body("nodule d\nfn main() -> Binary{1} = [0b0, 0b1, 0b0]");
+        let Expr::Lit(Literal::List(e3)) = many else {
+            panic!("list")
+        };
+        assert_eq!(e3.len(), 3);
+    }
+
+    #[test]
+    fn call_args_empty_single_multi() {
+        // `comma_separated_until(RParen)` for application args.
+        let zero = fn_body("nodule d\nfn main() -> Binary{1} = f()");
+        let Expr::App { args, .. } = zero else {
+            panic!("app")
+        };
+        assert_eq!(args.len(), 0);
+        let two = fn_body("nodule d\nfn main() -> Binary{1} = f(0b0, 0b1)");
+        let Expr::App { args, .. } = two else {
+            panic!("app")
+        };
+        assert_eq!(args.len(), 2);
+    }
+
+    #[test]
+    fn ctor_fields_and_type_params_and_args() {
+        // Constructor fields (`comma_separated` after `(`), type params/args (`<…>`).
+        let n = parse(
+            "nodule d\ntype Pair<A, B> = MkPair(A, B)\n\
+             fn id(x: Pair<Binary{1}, Binary{1}>) -> Pair<Binary{1}, Binary{1}> = x",
+        )
+        .expect("parses");
+        let Item::Type(td) = &n.items[0] else {
+            panic!("type decl")
+        };
+        assert_eq!(td.params, vec!["A".to_owned(), "B".to_owned()]);
+        assert_eq!(td.ctors.len(), 1);
+        assert_eq!(td.ctors[0].fields.len(), 2); // two ctor fields
+    }
+
+    #[test]
+    fn value_params_empty_and_nonempty() {
+        let zero = parse("nodule d\nfn main() -> Binary{1} = 0b0").expect("parses");
+        let Item::Fn(fd) = &zero.items[0] else {
+            panic!("fn")
+        };
+        assert_eq!(fd.sig.value_params.len(), 0);
+        let two =
+            parse("nodule d\nfn g(a: Binary{1}, b: Binary{1}) -> Binary{1} = a").expect("parses");
+        let Item::Fn(fd) = &two.items[0] else {
+            panic!("fn")
+        };
+        assert_eq!(fd.sig.value_params.len(), 2);
+    }
+
+    #[test]
+    fn match_arms_tolerate_a_trailing_comma() {
+        // `comma_separated(Some(RBrace))` trailing-comma path — same arm count with or without it.
+        let with = fn_body(
+            "nodule d\ntype B = F | T\nfn m(x: B) -> Binary{1} = match x { F => 0b0, T => 0b1, }",
+        );
+        let Expr::Match { arms, .. } = with else {
+            panic!("match")
+        };
+        assert_eq!(arms.len(), 2);
+        let without = fn_body(
+            "nodule d\ntype B = F | T\nfn m(x: B) -> Binary{1} = match x { F => 0b0, T => 0b1 }",
+        );
+        let Expr::Match { arms, .. } = without else {
+            panic!("match")
+        };
+        assert_eq!(arms.len(), 2);
+    }
+
+    #[test]
+    fn empty_match_is_still_an_explicit_error() {
+        // The non-empty invariant of match arms must survive the factoring: `match x { }` parses the
+        // first arm and fails on the pattern — never silently an empty arm list.
+        let err = parse("nodule d\ntype B = F\nfn m(x: B) -> Binary{1} = match x { }")
+            .expect_err("empty match must be rejected");
+        assert!(err.message.contains("a pattern"), "{}", err.message);
+    }
+
+    #[test]
+    fn a_bare_list_rejects_a_trailing_comma() {
+        // Constructor fields take no trailing comma (`comma_separated(None)`): a dangling `,` makes
+        // the helper try to parse another field and fail explicitly — behavior unchanged by M-640.
+        let err = parse("nodule d\ntype T = C(Binary{1},)")
+            .expect_err("trailing comma in ctor fields must be rejected");
+        assert!(err.message.contains("expected a type"), "{}", err.message);
+    }
+
+    #[test]
+    fn keyword_opener_diagnostic_is_the_backtick_spelling() {
+        // `expect_keyword` must reproduce the exact `` `let` `` (etc.) message of the old inline
+        // form. A `let` body that is truncated right where a keyword opener is required surfaces it.
+        let err = parse("nodule d\nfn main() -> Binary{1} = if 0b0 then 0b1 els 0b0")
+            .expect_err("malformed if must be rejected");
+        // `els` is an identifier where `else` is required.
+        assert!(err.message.contains("`else`"), "{}", err.message);
     }
 }

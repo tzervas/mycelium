@@ -235,7 +235,7 @@ impl fmt::Display for FsErr {
     }
 }
 
-impl std::error::Error for FsErr {}
+mycelium_std_core::impl_std_error!(FsErr);
 
 #[cfg(test)]
 mod tests {

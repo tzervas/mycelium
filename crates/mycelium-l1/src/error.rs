@@ -19,6 +19,17 @@ impl ParseError {
     pub fn new(pos: Pos, message: String) -> Self {
         ParseError { pos, message }
     }
+
+    /// Ergonomic alias for [`ParseError::new`] taking any `impl Into<String>` message (so a `&str`
+    /// literal needs no `.to_owned()` at the call site). Additive: [`new`](ParseError::new) is
+    /// unchanged and still the canonical constructor.
+    #[must_use]
+    pub fn at(pos: Pos, message: impl Into<String>) -> Self {
+        ParseError {
+            pos,
+            message: message.into(),
+        }
+    }
 }
 
 impl core::fmt::Display for ParseError {
@@ -28,3 +39,22 @@ impl core::fmt::Display for ParseError {
 }
 
 impl std::error::Error for ParseError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn at_alias_equals_new() {
+        let p = Pos { line: 1, col: 1 };
+        assert_eq!(
+            ParseError::at(p, "boom"),
+            ParseError::new(p, "boom".to_owned())
+        );
+        // Accepts an owned String too.
+        assert_eq!(
+            ParseError::at(p, String::from("x")),
+            ParseError::new(p, "x".to_owned())
+        );
+    }
+}

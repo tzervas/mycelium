@@ -56,23 +56,46 @@ fn ctor_fields(ty: &Ty, c: &str, types: &BTreeMap<String, DataInfo>) -> Vec<Ty> 
         .unwrap_or_default()
 }
 
+/// A **matrix row** that can be specialized (Maranget `S`/default): it exposes its pattern columns
+/// and can rebuild itself with a new column vector, carrying any *non-pattern* payload through
+/// unchanged. Implemented by the bare `Vec<Pat>` row the usefulness analysis uses and by the
+/// arm-tagged `Row` the decision-tree compiler uses (`crate::decision`), so the specialization is
+/// written **once** over both (M-641). `with_columns` is the only place a row's payload is
+/// preserved, keeping every implementor's identity (e.g. the surface arm index) intact.
+pub(crate) trait SpecializeRow {
+    /// This row's pattern columns (always non-empty when specialized).
+    fn columns(&self) -> &[Pat];
+    /// Rebuild a row of the same kind with `columns` as its new column vector, preserving payload.
+    fn with_columns(&self, columns: Vec<Pat>) -> Self;
+}
+
+impl SpecializeRow for Vec<Pat> {
+    fn columns(&self) -> &[Pat] {
+        self
+    }
+    fn with_columns(&self, columns: Vec<Pat>) -> Self {
+        columns
+    }
+}
+
 /// Specialize the matrix on a constructor head `c` of arity `a`: keep rows whose first pattern is `c`
 /// (expanding its sub-patterns into the new leading columns) or a wildcard (expanding to `a`
-/// wildcards), dropping rows headed by a different constructor.
-fn specialize_ctor(matrix: &[Vec<Pat>], c: &str, a: usize) -> Vec<Vec<Pat>> {
+/// wildcards), dropping rows headed by a different constructor. Generic over the row type so the
+/// usefulness matrix (`Vec<Pat>`) and the decision-tree matrix (`Row`) share one implementation.
+pub(crate) fn specialize_ctor<R: SpecializeRow>(matrix: &[R], c: &str, a: usize) -> Vec<R> {
     let mut out = Vec::new();
     for row in matrix {
-        let (first, rest) = row.split_first().expect("non-empty row");
+        let (first, rest) = row.columns().split_first().expect("non-empty row");
         match first {
             Pat::Ctor(n, subs) if n == c => {
                 let mut r = subs.clone();
                 r.extend_from_slice(rest);
-                out.push(r);
+                out.push(row.with_columns(r));
             }
             Pat::Wild => {
                 let mut r = vec![Pat::Wild; a];
                 r.extend_from_slice(rest);
-                out.push(r);
+                out.push(row.with_columns(r));
             }
             _ => {} // different constructor / a literal head: drop
         }
@@ -81,14 +104,14 @@ fn specialize_ctor(matrix: &[Vec<Pat>], c: &str, a: usize) -> Vec<Vec<Pat>> {
 }
 
 /// Specialize the matrix on a literal head `k` (arity 0): keep rows headed by that exact literal or a
-/// wildcard, dropping the leading column.
-fn specialize_lit(matrix: &[Vec<Pat>], k: &str) -> Vec<Vec<Pat>> {
+/// wildcard, dropping the leading column. Generic over the row type (see [`specialize_ctor`]).
+pub(crate) fn specialize_lit<R: SpecializeRow>(matrix: &[R], k: &str) -> Vec<R> {
     let mut out = Vec::new();
     for row in matrix {
-        let (first, rest) = row.split_first().expect("non-empty row");
+        let (first, rest) = row.columns().split_first().expect("non-empty row");
         match first {
-            Pat::Lit(j) if j == k => out.push(rest.to_vec()),
-            Pat::Wild => out.push(rest.to_vec()),
+            Pat::Lit(j) if j == k => out.push(row.with_columns(rest.to_vec())),
+            Pat::Wild => out.push(row.with_columns(rest.to_vec())),
             _ => {}
         }
     }
@@ -311,5 +334,98 @@ mod tests {
         // With a default, `_` is no longer useful.
         let with_default = vec![vec![Pat::Lit("b:0".into())], vec![Pat::Wild]];
         assert!(useful(&t, &with_default, &[Pat::Wild], &[Ty::Binary(1)]).is_none());
+    }
+
+    // --- M-641: the shared `SpecializeRow` specialization over two row types ---------------------
+
+    /// A stand-in payload-carrying row (like `decision::Row`) to prove the generic specializer
+    /// preserves non-pattern payload and produces the same columns as the bare `Vec<Pat>` form.
+    #[derive(Clone, PartialEq, Debug)]
+    struct TaggedRow {
+        pats: Vec<Pat>,
+        tag: usize,
+    }
+    impl SpecializeRow for TaggedRow {
+        fn columns(&self) -> &[Pat] {
+            &self.pats
+        }
+        fn with_columns(&self, columns: Vec<Pat>) -> Self {
+            TaggedRow {
+                pats: columns,
+                tag: self.tag,
+            }
+        }
+    }
+
+    fn ctorp(n: &str, subs: Vec<Pat>) -> Pat {
+        Pat::Ctor(n.to_owned(), subs)
+    }
+
+    #[test]
+    fn specialize_ctor_is_identical_across_row_types_and_keeps_payload() {
+        // matrix: [ S(Z) | tag 7 ], [ _ | tag 9 ], [ Z | tag 5 ] — specialize on S/arity 1.
+        let bare: Vec<Vec<Pat>> = vec![
+            vec![ctorp("S", vec![ctorp("Z", vec![])])],
+            vec![Pat::Wild],
+            vec![ctorp("Z", vec![])],
+        ];
+        let tagged: Vec<TaggedRow> = vec![
+            TaggedRow {
+                pats: vec![ctorp("S", vec![ctorp("Z", vec![])])],
+                tag: 7,
+            },
+            TaggedRow {
+                pats: vec![Pat::Wild],
+                tag: 9,
+            },
+            TaggedRow {
+                pats: vec![ctorp("Z", vec![])],
+                tag: 5,
+            },
+        ];
+        let s_bare = specialize_ctor(&bare, "S", 1);
+        let s_tagged = specialize_ctor(&tagged, "S", 1);
+        // Same surviving columns on both: S(Z)→[Z], _→[_]; the Z-headed row is dropped.
+        assert_eq!(s_bare, vec![vec![ctorp("Z", vec![])], vec![Pat::Wild]]);
+        let cols: Vec<Vec<Pat>> = s_tagged.iter().map(|r| r.pats.clone()).collect();
+        assert_eq!(cols, s_bare);
+        // Payload preserved in row order (S row kept tag 7, wildcard row kept tag 9).
+        assert_eq!(
+            s_tagged.iter().map(|r| r.tag).collect::<Vec<_>>(),
+            vec![7, 9]
+        );
+    }
+
+    #[test]
+    fn specialize_lit_is_identical_across_row_types_and_keeps_payload() {
+        let bare: Vec<Vec<Pat>> = vec![
+            vec![Pat::Lit("b:0".into())],
+            vec![Pat::Wild],
+            vec![Pat::Lit("b:1".into())],
+        ];
+        let tagged: Vec<TaggedRow> = vec![
+            TaggedRow {
+                pats: vec![Pat::Lit("b:0".into())],
+                tag: 1,
+            },
+            TaggedRow {
+                pats: vec![Pat::Wild],
+                tag: 2,
+            },
+            TaggedRow {
+                pats: vec![Pat::Lit("b:1".into())],
+                tag: 3,
+            },
+        ];
+        let l_bare = specialize_lit(&bare, "b:0");
+        let l_tagged = specialize_lit(&tagged, "b:0");
+        // b:0 and the wildcard survive (each drops its leading column → empty), b:1 is dropped.
+        assert_eq!(l_bare, vec![Vec::<Pat>::new(), Vec::<Pat>::new()]);
+        let cols: Vec<Vec<Pat>> = l_tagged.iter().map(|r| r.pats.clone()).collect();
+        assert_eq!(cols, l_bare);
+        assert_eq!(
+            l_tagged.iter().map(|r| r.tag).collect::<Vec<_>>(),
+            vec![1, 2]
+        );
     }
 }

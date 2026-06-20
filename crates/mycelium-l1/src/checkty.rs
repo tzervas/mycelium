@@ -56,6 +56,18 @@ impl CheckError {
             message: message.into(),
         }
     }
+
+    /// Public, ergonomic constructor: a check failure at `site` with `message`. Mirrors the
+    /// crate-internal [`new`](CheckError::new) (which stays private) so external callers — the
+    /// toolchain crates that surface L1 diagnostics — can build a [`CheckError`] without reaching
+    /// through the struct fields (Law of Demeter). Additive; no existing signature changes.
+    #[must_use]
+    pub fn at(site: impl Into<String>, message: impl Into<String>) -> Self {
+        CheckError {
+            site: site.into(),
+            message: message.into(),
+        }
+    }
 }
 
 impl core::fmt::Display for CheckError {
@@ -120,6 +132,28 @@ impl Env {
         self.types
             .values()
             .find_map(|d| d.ctors.iter().position(|c| c.name == ctor).map(|i| (d, i)))
+    }
+
+    /// The registered data type named `name`, if any. Additive read-only accessor over the public
+    /// [`types`](Env::types) map — a Law-of-Demeter-friendly alternative to `env.types.get(name)`.
+    #[must_use]
+    pub fn type_info(&self, name: &str) -> Option<&DataInfo> {
+        self.types.get(name)
+    }
+
+    /// The function declaration named `name`, if any. Additive read-only accessor over the public
+    /// [`fns`](Env::fns) map.
+    #[must_use]
+    pub fn fn_decl(&self, name: &str) -> Option<&FnDecl> {
+        self.fns.get(name)
+    }
+
+    /// The totality verdict for function `name`, if it has been classified. Additive read-only
+    /// accessor over the public [`totality`](Env::totality) map. `Totality` is `Copy`, so this
+    /// returns it by value (never silently fabricating a verdict for an unclassified name — `None`).
+    #[must_use]
+    pub fn fn_totality(&self, name: &str) -> Option<crate::totality::Totality> {
+        self.totality.get(name).copied()
     }
 }
 
@@ -1382,4 +1416,43 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "neg" => "trit.neg",
         _ => return None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parse;
+
+    fn env(src: &str) -> Env {
+        check_nodule(&parse(src).expect("parses")).expect("checks")
+    }
+
+    #[test]
+    fn check_error_at_is_a_public_alias() {
+        // `::at` builds the same value the private `new` does (the canonical site+message struct).
+        assert_eq!(
+            CheckError::at("main", "boom"),
+            CheckError::new("main", "boom"),
+        );
+    }
+
+    #[test]
+    fn env_getters_mirror_the_public_maps() {
+        // A program with a data type and two functions, one recursive (so totality is filled).
+        let e = env("nodule d\ntype Nat = Z | S(Nat)\n\
+             fn count(n: Nat) -> Nat = match n { Z => Z, S(m) => S(count(m)) }\n\
+             fn main() -> Nat = count(S(Z))");
+        // type_info ⇔ types.get
+        assert_eq!(e.type_info("Nat"), e.types.get("Nat"));
+        assert!(e.type_info("Nat").is_some());
+        assert!(e.type_info("Nope").is_none());
+        // fn_decl ⇔ fns.get
+        assert_eq!(e.fn_decl("count"), e.fns.get("count"));
+        assert!(e.fn_decl("count").is_some());
+        assert!(e.fn_decl("absent").is_none());
+        // fn_totality ⇔ totality.get (copied)
+        assert_eq!(e.fn_totality("count"), e.totality.get("count").copied());
+        assert!(e.fn_totality("count").is_some());
+        assert!(e.fn_totality("absent").is_none());
+    }
 }

@@ -62,7 +62,7 @@ impl fmt::Display for Utf8Error {
     }
 }
 
-impl std::error::Error for Utf8Error {}
+mycelium_std_core::impl_std_error!(Utf8Error);
 
 // ─── BoundaryError ───────────────────────────────────────────────────────────
 
@@ -135,7 +135,7 @@ impl fmt::Display for BoundaryError {
     }
 }
 
-impl std::error::Error for BoundaryError {}
+mycelium_std_core::impl_std_error!(BoundaryError);
 
 // ─── ParseErr ─────────────────────────────────────────────────────────────────
 
@@ -202,7 +202,7 @@ impl fmt::Display for ParseErr {
     }
 }
 
-impl std::error::Error for ParseErr {}
+mycelium_std_core::impl_std_error!(ParseErr);
 
 // ─── EncodeError ─────────────────────────────────────────────────────────────
 
@@ -247,7 +247,7 @@ impl fmt::Display for EncodeError {
     }
 }
 
-impl std::error::Error for EncodeError {}
+mycelium_std_core::impl_std_error!(EncodeError);
 
 // ─── TranscodeError ──────────────────────────────────────────────────────────
 
@@ -289,7 +289,7 @@ impl fmt::Display for TranscodeError {
     }
 }
 
-impl std::error::Error for TranscodeError {}
+mycelium_std_core::impl_std_error!(TranscodeError);
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 

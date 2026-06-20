@@ -63,7 +63,9 @@ impl fmt::Display for CollErr {
     }
 }
 
-impl std::error::Error for CollErr {}
+// The mechanical `std::error::Error` marker — from the shared scaffold (M-535), not
+// hand-rolled. The hand-written `Display` above is untouched (DN-17 §5; VR-5).
+mycelium_std_core::impl_std_error!(CollErr);
 
 #[cfg(test)]
 mod tests {
