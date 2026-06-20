@@ -113,9 +113,12 @@ without a checked basis):
 - **Phase 0** → `status:done` on the 8 completed tasks (M-001 LH/KC-1 probe, M-010 schemas,
   M-011 SPECIFICATION.md, M-012 binary↔ternary spec, M-020 surface fragment, M-090 docs-CI,
   M-091 Rust workspace, M-092 Python tooling — all artifacts present on disk). The one residual,
-  **M-002 (KC-2 LLM-leverage verdict)**, is marked **`status:in-progress`**, not done: the DN-09
-  verdict (*proceed*) is recorded, but the SC-5b baseline + the rigorous T3.6 ablation are gated on
-  a **live model run** (tracked as M-381) — surfaced honestly, not overclaimed.
+  **M-002 (KC-2 LLM-leverage verdict)**, was marked **`status:in-progress`** at the time of this
+  reconciliation: the DN-09 verdict (*proceed*) was recorded, but the SC-5b baseline + the rigorous
+  T3.6 ablation were gated on a **live model run** (tracked as M-381) — surfaced honestly, not
+  overclaimed. *M-002 was subsequently closed in this same PR (see "KC-2 / M-002 close" entry
+  above) after the Grok/xAI run attempt was documented honestly in DN-09 §7 and the KC-2 verdict
+  deemed fully recorded.*
 - **Phase 3** → `status:done` on the completed epics E3-2/E3-3/E3-4/E3-6/E3-7 (every child task
   already `status:done`); **Phase 8** → `status:done` on epic E8-1 (children M-383/384/385 done).
 - **README** phase-status line updated: Phases 0–5 and 7 complete; Phase 6's VR-4 exit gate met
