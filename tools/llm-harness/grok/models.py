@@ -14,6 +14,7 @@ Pure stdlib: ``tomllib`` ships in CPython 3.11+. No third-party TOML dependency.
 
 from __future__ import annotations
 
+import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -205,3 +206,106 @@ def order_models(
 def default_models_path() -> Path:
     """Path to the bundled ``models.toml`` (sibling of the ``grok`` package)."""
     return Path(__file__).resolve().parent.parent / "models.toml"
+
+
+# Conservative Declared defaults for fields the GET /v1/models API does not provide.
+# Tagged Declared — they are asserted conservative values, never independently measured.
+_DISCOVER_RPM_DEFAULT = 60  # requests per minute (conservative)
+_DISCOVER_TPM_DEFAULT = 2_000_000  # tokens per minute (conservative)
+_DISCOVER_CTX_DEFAULT = 131_072  # context tokens when context_length absent
+
+
+def from_api_discovery(raw_models: list[dict[str, Any]]) -> list["ModelSpec"]:
+    """Convert raw ``GET /v1/models`` items into :class:`ModelSpec` objects.
+
+    The API provides ``id``, ``context_length``, and ``pricing: {input, output}``
+    (USD per Mtok).  Fields the API omits — ``tpm``, ``rpm``, and batch prices —
+    receive conservative ``Declared`` defaults so the harness never under-estimates
+    cost or over-drives rate limits.
+
+    HONESTY (VR-5): every value produced here is ``Declared`` (API-asserted or
+    conservatively defaulted).  The caller must not present resulting ModelSpec
+    objects as ``Empirical``.  The conservative defaults are:
+      - ``rpm`` = 60 req/min
+      - ``tpm`` = 2,000,000 tok/min
+      - ``batch_*_price`` = sync price (no invented discount; conservative)
+
+    Models without a parseable pricing block are skipped with a warning to stderr
+    (never-silent G2 — a model that cannot be priced cannot be safely gated).
+
+    Raises :class:`ModelConfigError` when no usable models remain after filtering.
+    """
+    specs: list[ModelSpec] = []
+    seen: set[str] = set()
+
+    for i, raw in enumerate(raw_models):
+        mid = raw.get("id")
+        if not mid or not isinstance(mid, str):
+            print(
+                f"  discover: skipping entry #{i} — no usable id: {str(raw)[:80]}",
+                file=sys.stderr,
+            )
+            continue
+        if mid in seen:
+            print(f"  discover: skipping duplicate model id {mid!r}", file=sys.stderr)
+            continue
+
+        pricing = raw.get("pricing")
+        if not isinstance(pricing, dict):
+            print(
+                f"  discover: skipping {mid!r} — missing or non-object pricing block",
+                file=sys.stderr,
+            )
+            continue
+
+        raw_in = pricing.get("input")
+        raw_out = pricing.get("output")
+        if raw_in is None or raw_out is None:
+            print(
+                f"  discover: skipping {mid!r} — pricing.input or pricing.output absent",
+                file=sys.stderr,
+            )
+            continue
+        try:
+            in_price = float(raw_in)
+            out_price = float(raw_out)
+        except (TypeError, ValueError):
+            print(
+                f"  discover: skipping {mid!r} — non-numeric pricing: {pricing}",
+                file=sys.stderr,
+            )
+            continue
+        if in_price < 0 or out_price < 0:
+            print(
+                f"  discover: skipping {mid!r} — negative pricing: {pricing}",
+                file=sys.stderr,
+            )
+            continue
+
+        raw_ctx = raw.get("context_length")
+        try:
+            context = int(raw_ctx) if raw_ctx is not None else _DISCOVER_CTX_DEFAULT
+        except (TypeError, ValueError):
+            context = _DISCOVER_CTX_DEFAULT
+        context = max(1, context)
+
+        spec = ModelSpec(
+            id=mid,
+            context=context,
+            tpm=_DISCOVER_TPM_DEFAULT,  # Declared conservative default
+            rpm=_DISCOVER_RPM_DEFAULT,  # Declared conservative default
+            in_price=in_price,
+            out_price=out_price,
+            batch_in_price=in_price,  # = sync (no invented batch discount)
+            batch_out_price=out_price,  # = sync (no invented batch discount)
+            config_order=len(specs),
+        )
+        seen.add(mid)
+        specs.append(spec)
+
+    if not specs:
+        raise ModelConfigError(
+            "API discovery returned no usable models with pricing "
+            "(every entry was skipped — check stderr for reasons)"
+        )
+    return specs

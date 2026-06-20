@@ -22,12 +22,13 @@ issues:
   - id: M-002
     title: "M-002 — KC-2 LLM-leverage experiment (E4)"
     milestone: "Phase 0 — Confirm & Specify"
-    labels: [phase:0, type:research, area:project, priority:P0, status:in-progress]
+    labels: [phase:0, type:research, area:project, priority:P0, status:done]
     depends_on: [M-020, M-010]
-    doc_refs: [corpus:RFC-0006]
+    doc_refs: [corpus:RFC-0006, corpus:DN-09]
     body: |
       Fixed benchmark: tasks generated in the minimal Mycelium surface fragment vs a Python-embedded DSL baseline; measure syntactic validity + type-check pass rate + edit-to-fix iterations (Foundation §6 P0.2; SC-5b; G10).
       Acceptance: SC-5b baseline number + a written KC-2 verdict (proceed / reweight-to-human / fall-back-to-embedded-DSL).
+      DONE (2026-06-18/2026-06-20): KC-2 verdict = proceed, recorded in DN-09 with basis (local Qwen2.5-Coder ≤7B, 10-task gold set, seed 42; best arm 7B+examples 40%→70%, +30pp edit-to-fix). Grok/xAI follow-up arm (2026-06-20) blocked by API 403 (account has no credits); harness self-test 14/14 verified; verdict stands on local-model evidence. Full Grok run remains open (M-381 / DN-09 §7).
 
   - id: M-020
     title: "M-020 — Minimal surface-syntax fragment (experiment-only)"
@@ -530,11 +531,12 @@ issues:
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
     labels: [phase:3, type:research, area:toolchain, priority:P3, status:in-progress]
     depends_on: [M-380, M-002]
-    doc_refs: [corpus:RFC-0021, corpus:RFC-0006, src:tools/llm-harness/coauthor.py]
+    doc_refs: [corpus:RFC-0021, corpus:RFC-0006, corpus:DN-09, src:tools/llm-harness/coauthor.py]
     body: |
       The empirical LLM-leverage gate split out of RFC-0021 (Accepted framework) as its OWN isolated, NON-BLOCKING track (RP-1 / DN-09 §4 / RFC-0006 §8 Q1). It does NOT gate RFC-0021 or RFC-0020; its only coupling is a SUPERSESSION (RFC-0021 §4.7): if the text-grammar arm retains < ~70% of the LlmCanonical familiar-skin arm's pass@1 on composition tasks, a future RFC supersedes the text-primary framing and promotes LlmCanonical to primary. Until it runs, NO leverage result is asserted (VR-5; DN-09 §4 — the working hypothesis stays supported-but-not-confirmed).
       Turnkey protocol (research/11 T11.7): the five arms (bare novel; +grammar-in-context; +constrained decoding (a new GBNF/Outlines/Guidance dependency); LlmCanonical familiar-skin (the crates/mycelium-lsp/src/project.rs renderer); embedded-DSL RR-3), >=3 seeds, >=1 frontier model, over the experiments/ harness (M-002 substrate). Headline metric: retention ratio vs the familiar-skin arm; falsification threshold < ~70% (RFC-0006 §8 Q1). Report each arm at the strength actually run (Empirical/Declared); never pre-write the verdict (experiments/README.md §3).
       Acceptance (needs-design first): the run executed per the protocol; the retention ratio + verdict recorded append-only; on falsification, the superseding RFC opened (the §4.7 trigger). Build deps it requires: the grammar-constrained decoder integration (arm 3) and the LlmCanonical renderer (arm 4, done). NON-BLOCKING: nothing in the Accepted framework waits on this.
+      STATUS (2026-06-20, in-progress): retention ratio INDETERMINATE. Grok/xAI live run attempted; blocked by HTTP 403 (xAI account has no credits). Harness self-test 14/14 verified (Empirical/plumbing). Schema mismatch noted: Grok harness output (metadata/quality/performance/outcomes) differs from mycelium-bench ingestion format (harness/summary/results). Re-run requires: (1) xAI account credits, (2) schema bridge or bench-crate update. See DN-09 §7.
 
   - id: M-330
     title: "M-330 — AI co-authoring loop (generate -> feedback -> self-correct)"
