@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-io` (M-514, #155, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
+| **Status** | **Accepted** (2026-06-20, maintainer-ratified per DN-07 — guarantee matrix asserted in tests; open §7/§8 questions are design/scope calls, not contract violations; was *Implemented (Rust-first) — pending ratification* 2026-06-18, Draft/needs-design 2026-06-17) — the Rust-first code landed as `mycelium-std-io` (M-514, #155, Batch P5-B; guarantee matrix asserted in tests). The Mycelium-lang migration (M-502-gated) remains. |
 | **Module / Ring** | `std.io` (+ the `serialize` half) · Ring 2 (RFC-0016 §4.2) · Tier B (RFC-0016 §4.4) |
 | **Tracks** | `M-514` (#155) — the Phase-5 task this spec delivers (the io half + the serialize half of the M-346 "I/O + serialization" candidate) |
 | **Scope** | Two coupled surfaces over the content-addressed value model: **(serialize)** projecting a `Value` to/from a byte/text form — `serialize`/`deserialize` (the self-describing wire form, RFC-0001 §4.8) and the **one canonical JSON** projection; **(io)** moving bytes over an abstract source/sink — `read`/`write` against an affine `substrate` handle consumed exactly once (LR-8). Round-trip is a **checked property**; serialization is a **projection**, not identity (ADR-003 — the content hash stays canonical). |
@@ -273,3 +273,5 @@ below).
   ADR-015, LR-8, RFC-0016 §4.1/§4.4/§4.5, G2/G11/VR-5/KC-3. Five questions FLAGGED (the canonical-JSON/`fmt`
   delegation → §8-Q1; which round-trip reaches `Proven` → not fabricated; the `io`↔`fs` build-on seam; the
   `wild`/FFI floor → §8-Q6; the format/budget ergonomics → §8-Q3). No code; no kernel change (KC-3). Append-only.
+
+- **2026-06-20 — Accepted (maintainer ratification, DN-07).** The maintainer ratified this Rust-first spec: the §4.5 guarantee matrix is asserted in tests, never-silent fallibility and honest per-op tags hold, and the open §7/§8 questions are design/scope calls, not contract violations. No guarantee tag was upgraded without a checked basis (VR-5). Status moves *Implemented (Rust-first) — pending ratification → Accepted*. Append-only; no kernel change (KC-3).

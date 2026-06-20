@@ -8,6 +8,27 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-20: stdlib spec ratification pass — 23 specs → Accepted, DN-07)
+Maintainer ratification (DN-07, append-only) of the implemented Rust-first standard-library specs, after the
+DN-16 readiness survey + an independent review:
+- **Ratified → `Accepted` (23 specs):** `cmp`, `collections`, `content`, `core`, `dense`, `diag`, `error`,
+  `fmt`, `fs`, `io`, `iter`, `math`, `numerics`, `rand`, `recover`, `select`, `spore` (library/manifest half),
+  `swap`, `ternary`, `testing`, `text`, `time`, `vsa`. Each carries an asserted §4.5 guarantee matrix; the open
+  §7/§8 questions are design/scope calls, not contract violations.
+- **Honesty preserved (VR-5) — no guarantee tag upgraded without a checked basis:** the `dense`/`math`/`vsa`/
+  `numerics` `Proven` rows were verified/aligned by M-377 (dense elementwise `Proven` finalized via the ADR-010
+  IEEE backward-error bound with the finiteness side-condition guarded, M-512 delivered; accumulation rows held
+  at `Empirical`; math all `Declared`; vsa cells mirror the cited, test-guarded RFC-0003 §4 matrix).
+- **Two pre-ratification fixes:** `cmp` trait naming (`MycEq`/`MycOrd`/`MycPartialOrd`) documented in spec §3
+  (a Rust namespace-collision parity note, not honesty); `spore` §7-Q1 ring placement reconciled to **Ring 1 /
+  Tier A** via a maintainer-authorized **RFC-0016 §4.2 erratum** (the §4.2 parenthetical was the outlier vs
+  §4.3; corrigendum, not a decision reversal).
+- **Deferred (stay `Draft`):** `runtime` (Phase-7 / RFC-0008 constructs, no crate) and `self-hosting-readiness`
+  (M-502 gate; verdict "not yet established"). Incomplete Draft RFCs/ADRs/DNs (DN-04/05/14/15/17, ADR-012) were
+  **not** ratified — they are open or superseded, and ratifying them would bless incomplete work (grounding).
+Append-only — no spec rewritten; status headers + per-spec changelog footers + Doc-Index rows moved forward.
+See DN-16 (Resolved) for the readiness survey and DN-07 for the ratification posture.
+
 ### Changed (2026-06-19: bake the autonomous PR/merge workflow into CLAUDE.md)
 Institutionalized the review-before-merge discipline the native waves (M-378/M-379) converged on, as a
 new **"Autonomous PR workflow"** section in `CLAUDE.md`: the merge gate is the agent's (self-review with

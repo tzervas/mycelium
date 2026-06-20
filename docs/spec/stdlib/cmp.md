@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-cmp` (M-532, #172, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
+| **Status** | **Accepted** (2026-06-20, maintainer-ratified per DN-07 — guarantee matrix asserted in tests; the landed `MycEq`/`MycOrd`/`MycPartialOrd` trait naming is documented in §3 (a parity note, not honesty); open §7 questions are design/scope calls, not contract violations; was *Implemented (Rust-first) — pending ratification* 2026-06-18, Draft/needs-design 2026-06-17) — the Rust-first code landed as `mycelium-std-cmp` (M-532, #172, Batch P5-B). The Mycelium-lang migration (M-502-gated) remains. |
 | **Module / Ring** | `std.cmp` / `convert` · Ring `2` (RFC-0016 §4.2) · Tier `B` |
 | **Tracks** | `M-532` (#172) — the Phase-5 task this spec delivers (RFC-0016 §4.4 `cmp`/`convert` row) |
 | **Scope** | The ordering/equality traits (`eq`, `ord`, partial/total order, `min`/`max`/`clamp`/`sort`-key) and **ordinary value conversions** — lossless widening (e.g. `i8 → i32`) and explicitly-fallible narrowing (e.g. `i32 → i8`). These are *value* conversions: same representation paradigm, value re-typed within it. |
@@ -31,18 +31,18 @@
 A value-semantic, immutable-by-default surface. Total ops return their value directly; fallible ops return `Result`. No effects. **Illustrative — not a committed grammar.**
 
 ```
-// illustrative signatures (not a committed surface)
+// illustrative signatures (not a committed surface; trait NAMES match the landed crate)
 
-// --- equality / ordering traits ---
-trait Eq      { fn eq(&self, other: &Self) -> bool }        // total; respects ADR-003 identity
-trait Ord     { fn cmp(&self, other: &Self) -> Ordering }   // total order
-trait PartialOrd { fn partial_cmp(&self, other: &Self) -> Option<Ordering> } // partial (e.g. floats: NaN => None)
+// --- equality / ordering traits (landed as MycEq / MycOrd / MycPartialOrd) ---
+trait MycEq         { fn eq(&self, other: &Self) -> bool }        // total; respects ADR-003 identity
+trait MycOrd        { fn cmp(&self, other: &Self) -> Ordering }   // total order
+trait MycPartialOrd { fn partial_cmp(&self, other: &Self) -> Option<Ordering> } // partial (e.g. floats: NaN => None)
 
 enum Ordering { Less, Equal, Greater }
 
-fn min<T: Ord>(a: T, b: T) -> T
-fn max<T: Ord>(a: T, b: T) -> T
-fn clamp<T: Ord>(x: T, lo: T, hi: T) -> Result<T, ClampError>  // lo>hi is an explicit error, not a silent swap
+fn min<T: MycOrd>(a: T, b: T) -> T
+fn max<T: MycOrd>(a: T, b: T) -> T
+fn clamp<T: MycOrd>(x: T, lo: T, hi: T) -> Result<T, ClampError>  // lo>hi is an explicit error, not a silent swap
 
 // --- value conversions (NOT representation swaps) ---
 trait Widen<To>  { fn widen(self) -> To }                       // lossless, total: domain subset of codomain
@@ -51,6 +51,8 @@ trait Narrow<To> { fn narrow(self) -> Result<To, NarrowError> } // fallible: may
 enum NarrowError { OutOfRange { value, target_min, target_max }, NotRepresentable { reason } }
 enum ClampError  { InvertedBounds { lo, hi } }
 ```
+
+**Naming — the `Myc` prefix (landed-surface parity).** The equality/ordering traits export as `MycEq` / `MycOrd` / `MycPartialOrd` (not `Eq` / `Ord` / `PartialOrd`) in the Rust-first crate `mycelium-std-cmp`: the prefix avoids a namespace collision with Rust's own `std::cmp::{Eq, Ord, PartialOrd}` (the crate cannot re-use those names without shadowing), per the RFC-0016 §8-Q2 naming lexicon. The *contract* is the trait semantics above (reflexive/total equality respecting ADR-003 identity; total vs partial order), not the spelling; the Mycelium-lang surface (post-M-502) may drop the prefix. This is a documentation-parity note, **not** an honesty matter — no guarantee tag is affected.
 
 The `Widen`/`Narrow` split is the surface form of the honesty crux: widening is *structurally* total (the type system witnesses `domain ⊆ codomain`), so it has no error arm; narrowing is *structurally* fallible (the value may not fit), so its result type **is** a `Result` — a caller cannot narrow without handling the out-of-range arm (C1).
 
@@ -98,3 +100,4 @@ Rows = exported ops. Columns = `{ guarantee tag · fallibility (explicit error s
 ## Meta — changelog
 
 - **2026-06-17 — Draft (needs-design).** Stands up the `std.cmp` / `convert` module spec under **RFC-0016 (Draft)**, M-532 (#172): the ordering/equality trait surface (`eq`/`cmp`/`partial_cmp` + `min`/`max`/`clamp`) and the **non-representation value-conversion** surface (lossless `widen`, explicitly-fallible `narrow`). The **honesty crux** is the never-silent narrowing (C1/G2) — a lossy conversion is an explicit `Result` (`NarrowError::{OutOfRange, NotRepresentable}`), never a silent truncation/wrap — and `eq` respects content-addressed identity (ADR-003, metadata-is-not-identity). The **boundary clause** is load-bearing: a representation change (binary↔ternary, `F32→BF16`, Dense↔VSA) is a certificate-carrying `std.swap` (M-516 / RFC-0002), **not** a `convert`; this module crosses no `Repr` paradigm and emits no certificate. The guarantee matrix (RFC-0016 §4.5) carries nine rows, all `Exact` (no accuracy semantics — the honesty is in the fallibility column), with the narrowing rows `EXPLAIN`-able via their reified error. §4.1 conformance (C1–C6) stated per clause; three questions FLAGGED (float total order vs. partial, the `convert`/`math` rounding seam, cross-paradigm `eq`), tied to RFC-0016 §8-Q1/Q3. No code; no kernel change (KC-3, Ring 2, no trusted base growth). Append-only.
+- **2026-06-20 — Accepted (maintainer ratification, DN-07).** The maintainer ratified this Rust-first spec: the §4.5 guarantee matrix (nine `Exact` rows) is asserted in tests, never-silent narrowing (`Result`, never silent truncation) holds, and the open §7 questions (float total order, the `convert`/`math` rounding seam, cross-paradigm `eq`) are design/scope calls, not contract violations. The **landed trait naming** (`MycEq`/`MycOrd`/`MycPartialOrd`) is now documented in §3 — a `Myc`-prefix that avoids a Rust `std::cmp` namespace collision (RFC-0016 §8-Q2); a parity note, **not** an honesty matter. Status moves *Implemented (Rust-first) — pending ratification → Accepted*. Append-only; no kernel change (KC-3).

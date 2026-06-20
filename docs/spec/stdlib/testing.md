@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-testing` (M-534, #174, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
+| **Status** | **Accepted** (2026-06-20, maintainer-ratified per DN-07 — guarantee matrix asserted in tests; open §7/§8 questions are design/scope calls, not contract violations; was *Implemented (Rust-first) — pending ratification* 2026-06-18, Draft/needs-design 2026-06-17) — the Rust-first code landed as `mycelium-std-testing` (M-534, #174, Batch P5-B; guarantee matrix asserted in tests). The Mycelium-lang migration (M-502-gated) remains. |
 | **Module / Ring** | `std.testing` · Ring 2 (RFC-0016 §4.2) · Tier B (RFC-0016 §4.4) |
 | **Tracks** | `M-534` (#174) — the Phase-5 task this spec delivers |
 | **Scope** | The repo's own verification discipline as a library: **property** tests (a bound for every guarantee), **golden / snapshot** tests, the **differential** harness (the M-151/M-210 interp↔AOT/native oracle pattern), and the explicit **skip / undetermined** reporter that makes a non-run check visible. |
@@ -115,3 +115,5 @@ Rows = exported ops. To be encoded as a checked table and asserted in tests once
   `mycelium_diag::Diag` (description→message; op context + reproducing seed + trial → EXPLAIN notes,
   G11), keeping the testing-specific seed/trial reproduction metadata. Code + test landed; spec
   unchanged otherwise. Append-only.
+
+- **2026-06-20 — Accepted (maintainer ratification, DN-07).** The maintainer ratified this Rust-first spec: the §4.5 guarantee matrix is asserted in tests, never-silent fallibility and honest per-op tags hold, and the open §7/§8 questions are design/scope calls, not contract violations. No guarantee tag was upgraded without a checked basis (VR-5). Status moves *Implemented (Rust-first) — pending ratification → Accepted*. Append-only; no kernel change (KC-3).

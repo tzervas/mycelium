@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-content` (M-523, Batch P5-A; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
+| **Status** | **Accepted** (2026-06-20, maintainer-ratified per DN-07 — guarantee matrix asserted in tests; open §7/§8 questions are design/scope calls, not contract violations; was *Implemented (Rust-first) — pending ratification* 2026-06-18, Draft/needs-design 2026-06-17) — the Rust-first code landed as `mycelium-std-content` (M-523, Batch P5-A; guarantee matrix asserted in tests). The Mycelium-lang migration (M-502-gated) remains. |
 | **Module / Ring** | `std.content` (alias surface `hash`) · Ring 1 (RFC-0016 §4.2) · Tier A |
 | **Tracks** | `M-523` (#164) — the Phase-5 task this spec delivers |
 | **Scope** | The library form of Mycelium's **identity model**: read-only access to a value/definition's content-addressed identity (`hash-of-value`, `hash-of-AST`), digest equality, and the typed content-hash refs that cert/policy/provenance/`spore` artifacts already use. It re-exports and wraps the kernel's content-hash surface (RFC-0001 §4.6); it does not define a new hash. |
@@ -211,3 +211,5 @@ Justification of the tags (all `Exact` — none weaker, so no `Proven`/`Empirica
   illustrative only; the value-vs-definition identity boundary; the `hash ↔ name` map ownership, tied to
   RFC-0016 §8-Q2; ergonomics-vs-contract, tied to §8-Q3) carried for ratification. No code; no kernel change
   (KC-3). Append-only.
+
+- **2026-06-20 — Accepted (maintainer ratification, DN-07).** The maintainer ratified this Rust-first spec: the §4.5 guarantee matrix is asserted in tests, never-silent fallibility and honest per-op tags hold, and the open §7/§8 questions are design/scope calls, not contract violations. No guarantee tag was upgraded without a checked basis (VR-5). Status moves *Implemented (Rust-first) — pending ratification → Accepted*. Append-only; no kernel change (KC-3).

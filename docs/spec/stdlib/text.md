@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-text` (M-524, #165, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
+| **Status** | **Accepted** (2026-06-20, maintainer-ratified per DN-07 — guarantee matrix asserted in tests; open §7/§8 questions are design/scope calls, not contract violations; was *Implemented (Rust-first) — pending ratification* 2026-06-18, Draft/needs-design 2026-06-17) — the Rust-first code landed as `mycelium-std-text` (M-524, #165, Batch P5-B; guarantee matrix asserted in tests). The Mycelium-lang migration (M-502-gated) remains. |
 | **Module / Ring** | `std.text` / `string` · Ring `2` (RFC-0016 §4.2) · Tier `B` (RFC-0016 §4.4) |
 | **Tracks** | `M-524` (#165) — the Phase-5 task this spec delivers (RFC-0016 §4.4 `text`/`string` row) |
 | **Scope** | The UTF-8 string **type** and its operations: construction, slicing/indexing on validated char/grapheme boundaries, the parse surface (`str → T` as `Result`), and encoding/transcoding (UTF-8 ⇄ UTF-16/Latin-1/bytes). Value-semantic, immutable by default. |
@@ -269,3 +269,5 @@ parse/transcode **trace**.
   KC-3. Four questions FLAGGED (the `Lossy` opt-in shape, grapheme-table basis/versioning, the
   parse↔numerics value-semantics seam, the UTF-8/segmentation `wild`/FFI floor), tied to RFC-0016
   §8-Q3/§8-Q6. No code; no kernel change (KC-3, Ring 2, no trusted-base growth). Append-only.
+
+- **2026-06-20 — Accepted (maintainer ratification, DN-07).** The maintainer ratified this Rust-first spec: the §4.5 guarantee matrix is asserted in tests, never-silent fallibility and honest per-op tags hold, and the open §7/§8 questions are design/scope calls, not contract violations. No guarantee tag was upgraded without a checked basis (VR-5). Status moves *Implemented (Rust-first) — pending ratification → Accepted*. Append-only; no kernel change (KC-3).

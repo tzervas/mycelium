@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-core` (M-515, Batch P5-A; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
+| **Status** | **Accepted** (2026-06-20, maintainer-ratified per DN-07 — guarantee matrix asserted in tests; open §7/§8 questions are design/scope calls, not contract violations; was *Implemented (Rust-first) — pending ratification* 2026-06-18, Draft/needs-design 2026-06-17) — the Rust-first code landed as `mycelium-std-core` (M-515, Batch P5-A; guarantee matrix asserted in tests). The Mycelium-lang migration (M-502-gated) remains. |
 | **Module / Ring** | `std.core` (the prelude) · Ring `0` (RFC-0016 §4.2) · Tier `A` |
 | **Tracks** | `M-515` (#157) — the Phase-5 task this spec delivers |
 | **Scope** | The thin prelude: the re-exported value model (`Value`/`Repr`/`Meta`), `Option`/`Result` + the never-silent error values, and the guarantee-lattice tags (`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`) with their query surface. It owns the *naming and documentation* of the kernel's value model for the library — not the model itself. |
@@ -176,3 +176,5 @@ check here, so claiming `Proven` would itself violate VR-5; `Exact` is correct a
   prelude membership (Q1; ties to RFC-0016 §8-Q3), re-export naming + the unverified canonical error-value name
   (Q2; ties to §8-Q2 and to `std.error` M-527), and the types-only boundary vs. `std.error` (Q3) — all for the
   orchestrator to reconcile across modules. No code; no kernel change (KC-3). Append-only.
+
+- **2026-06-20 — Accepted (maintainer ratification, DN-07).** The maintainer ratified this Rust-first spec: the §4.5 guarantee matrix is asserted in tests, never-silent fallibility and honest per-op tags hold, and the open §7/§8 questions are design/scope calls, not contract violations. No guarantee tag was upgraded without a checked basis (VR-5). Status moves *Implemented (Rust-first) — pending ratification → Accepted*. Append-only; no kernel change (KC-3).

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-fs` (M-528, #169, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
+| **Status** | **Accepted** (2026-06-20, maintainer-ratified per DN-07 — guarantee matrix asserted in tests; open §7/§8 questions are design/scope calls, not contract violations; was *Implemented (Rust-first) — pending ratification* 2026-06-18, Draft/needs-design 2026-06-17) — the Rust-first code landed as `mycelium-std-fs` (M-528, #169, Batch P5-B; guarantee matrix asserted in tests). The Mycelium-lang migration (M-502-gated) remains. |
 | **Module / Ring** | `std.fs` · Ring 2 (RFC-0016 §4.2) · Tier B (RFC-0016 §4.4) |
 | **Tracks** | `M-528` (#169) — the Phase-5 task this spec delivers |
 | **Scope** | Filesystem access — path resolution, open/read/write/append, `stat`/metadata, directory `list`, `create`/`remove`/`rename` — over **affine `substrate` handles** (a handle is consumed exactly once, LR-8), layered on the `io` byte source/sink surface (M-514). Every path/permission/IO failure is an explicit, traceable error (G2); there is **no silent create-on-write and no silent truncation**. |
@@ -290,3 +290,5 @@ precision). The **`wild`?** column marks which ops bottom out in the audited `wi
   and TOCTOU; capability-scoped filesystem effect) — the io surface and the `std`-vs-`std-sys` placement are
   *not* invented here. No code; no kernel change beyond the FLAGGED, inventoried `wild` floor (KC-3,
   narrowed). Append-only.
+
+- **2026-06-20 — Accepted (maintainer ratification, DN-07).** The maintainer ratified this Rust-first spec: the §4.5 guarantee matrix is asserted in tests, never-silent fallibility and honest per-op tags hold, and the open §7/§8 questions are design/scope calls, not contract violations. No guarantee tag was upgraded without a checked basis (VR-5). Status moves *Implemented (Rust-first) — pending ratification → Accepted*. Append-only; no kernel change (KC-3).

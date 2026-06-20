@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Implemented (Rust-first) — pending ratification** (2026-06-18; was Draft/needs-design 2026-06-17) — RFC-0016 is **Accepted**, so the Rust-first code landed as `mycelium-std-error` (M-527, #168, Batch P5-B; guarantee matrix asserted in tests). The maintainer's append-only **ratification** of this spec, and the Mycelium-lang migration (M-502-gated), remain. |
+| **Status** | **Accepted** (2026-06-20, maintainer-ratified per DN-07 — guarantee matrix asserted in tests; open §7/§8 questions are design/scope calls, not contract violations; was *Implemented (Rust-first) — pending ratification* 2026-06-18, Draft/needs-design 2026-06-17) — the Rust-first code landed as `mycelium-std-error` (M-527, #168, Batch P5-B; guarantee matrix asserted in tests). The Mycelium-lang migration (M-502-gated) remains. |
 | **Module / Ring** | `std.error` / `std.option` / `std.result` · Ring `2` ([RFC-0016 §4.2](../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md)) · Tier `B` ([RFC-0016 §4.4](../../rfcs/RFC-0016-Core-Library-and-Standard-Library.md)) |
 | **Tracks** | `M-527` (#168) — the Phase-5 task this spec delivers: the errors-as-values ergonomics layer (combinators + `?`-style propagation) held to the never-silent floor (I1). |
 | **Scope** | The ergonomic combinator surface over the value model's `Option`/`Result`/error sums: the total, pure combinators (`map`/`map_err`/`and_then`/`or_else`/`unwrap_or`/`ok_or`/…), the explicit propagation form (`?`-style), the explicit named partial accessors (`expect`/`unwrap`), and the **bridge** from an error value into RFC-0014 reified recovery. It owns *ergonomics*, not error representation. |
@@ -219,3 +219,5 @@ states each op's explicit outcome set; none of them is "silently returns success
   `mycelium_std_recover::{Outcome, Resolution, RecoverOutcome, handle_classified}` (M-520). `std.error`
   is the bridge *target*, not the home of the recovery algebra (KC-3); the I1 (no drop) / I2 (tag
   inherited, never laundered) contract holds verbatim in the landed types. Append-only.
+
+- **2026-06-20 — Accepted (maintainer ratification, DN-07).** The maintainer ratified this Rust-first spec: the §4.5 guarantee matrix is asserted in tests, never-silent fallibility and honest per-op tags hold, and the open §7/§8 questions are design/scope calls, not contract violations. No guarantee tag was upgraded without a checked basis (VR-5). Status moves *Implemented (Rust-first) — pending ratification → Accepted*. Append-only; no kernel change (KC-3).
