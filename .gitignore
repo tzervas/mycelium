@@ -59,3 +59,22 @@ CLAUDE.local.md
 # ---- Local check-tool installs ----
 .tools-venv/
 node_modules/
+
+# ---- Secrets & credentials (NEVER commit) ----
+# Local env files carry real keys (XAI_API_KEY, etc.) — ignore them, but KEEP the committed
+# `.env.example` template (the negation below re-includes it; order matters).
+.env
+.env.*
+!.env.example
+# Private keys, certs, and credential blobs.
+*.key
+*.pem
+*.p12
+*.pfx
+*.keystore
+id_rsa
+id_ed25519
+*.crt
+secrets.*
+credentials.json
+.netrc
