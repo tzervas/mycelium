@@ -1,9 +1,15 @@
 # Generated run artifacts are NOT committed — each harness run writes a new
-# timestamped report/log here. One example set (the 20260617T182214Z-* trio,
-# the --mock format reference) is tracked deliberately; everything else is
-# ignored so real runs never clutter the tree.
+# timestamped report/log here. Two example sets are tracked deliberately:
+#   * the 20260617T182214Z-* trio — the llama validation harness --mock reference;
+#   * the SYNTHETIC-SAMPLE-* pair — the Grok harness offline self-test reference
+#     (reproducible via `python -m grok.cli --self-test --emit-sample`).
+# Everything else is ignored so real runs never clutter the tree. Real Grok runs
+# are stamped with a wall-clock run id and stay ignored (and unlabelled-real
+# reports must never be committed — they would be unverified by definition).
 *
 !.gitignore
 !20260617T182214Z-report.json
 !20260617T182214Z-report.txt
 !20260617T182214Z.log
+!SYNTHETIC-SAMPLE-grok-4.3-self-test.json
+!SYNTHETIC-SAMPLE-comparison.md
