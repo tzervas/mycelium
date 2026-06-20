@@ -1,15 +1,24 @@
-//! `mycelium-mlir` — the AOT path: a textual **ternary-dialect skeleton** (M-150) plus a
-//! **direct-LLVM-IR backend** that genuinely compiles the bit subset to native code (M-301;
-//! RFC-0004 §2/§6; ADR-007/009; T1.5; phase-3.md §1).
+//! `mycelium-mlir` — the AOT path: a textual **ternary-dialect skeleton** (M-150), a **real**
+//! `arith`/`func`→LLVM dialect lowering behind the `mlir-dialect` feature (M-601), and a
+//! **direct-LLVM-IR backend** that genuinely compiles the full v0 calculus to native code (M-301/
+//! M-373/M-378/M-379; RFC-0004 §2/§6/§11; ADR-007/009/019; T1.5; phase-3.md §1).
 //!
-//! **Scope / honesty.** The ratified AOT path is `MLIR → LLVM` (RFC-0004 §2), but libMLIR (C++) is
-//! absent in this environment; the full `ternary`-dialect → `arith`/`vector` → LLVM lowering is
-//! therefore **deferred** (Phase 3 matures it once libMLIR is provisioned; ADR-009). What lands here:
+//! **Scope / honesty.** The ratified AOT path is `MLIR → LLVM` (RFC-0004 §2). On Linux libMLIR is
+//! now provisionable (`scripts/setup-mlir.sh`; ADR-019), so the real dialect lowering ([`dialect::native`],
+//! feature `mlir-dialect`) lands for the bit/trit element-wise fragment and is differential-checked
+//! three ways (M-602). The richer data/closure/recursion fragment is carried by the direct-LLVM
+//! backend ([`llvm`]); anything the standard MLIR dialects cannot faithfully express is an explicit
+//! never-silent refusal routed there (VR-5/G2). What lands here:
 //!
 //! - [`dialect::emit`] — a **textual** ternary-dialect rendering of the lowered IR
 //!   (`mycelium-core::lower` A-normal form): one dialect op per binding, every value/attr visible.
 //!   This is the *per-stage-dumpable, no-opaque-pass* anchor (RFC-0004 §6) — text, not native code,
-//!   and the dumpable skeleton of the eventual MLIR path.
+//!   and the dumpable skeleton of the MLIR path. Always available (no toolchain needed).
+//! - [`dialect::native`] *(feature `mlir-dialect`, OFF by default; M-601)* — the **real** lowering:
+//!   for the bit/trit element-wise fragment it emits a genuine `arith`/`func` MLIR module and drives
+//!   it through `mlir-opt`/`mlir-translate` to **real LLVM IR**, then `clang` → native → read-back
+//!   (the same read-back as [`llvm`], so the two compiled paths compare like-for-like). Probes the
+//!   toolchain and skips gracefully when absent (ADR-019). Guarantee: `Empirical` (M-602 differential).
 //! - [`aot::run`] — the **env-machine** runnable model: an independent big-step evaluator over the
 //!   lowered ANF (sequential binding evaluation) vs the reference interpreter's small-step
 //!   substitution (M-110). A genuine *two-path* check for the interp↔AOT differential (M-151/NFR-7).
@@ -58,6 +67,11 @@ pub use budget::{
 };
 pub use channel::{Network, Receiver, Sender, TryRecv, TrySend};
 pub use dialect::emit;
+#[cfg(feature = "mlir-dialect")]
+pub use dialect::native::{
+    compile as mlir_compile, compile_and_run as mlir_compile_and_run, emit_mlir, lower_to_llvm_ir,
+    Compiled as MlirCompiled, DialectError, MlirTools, ResultKind,
+};
 pub use inject::{recompile_closure, Image, InjectError, Resolution};
 pub use jit::{compile_so, jit_run, JitArtifact};
 pub use llvm::{compile, compile_and_run, emit_llvm_ir, AotError, CompiledArtifact};
