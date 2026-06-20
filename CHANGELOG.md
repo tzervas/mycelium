@@ -8,6 +8,31 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: `doc-status` currency gate + normalize statuses to the `Enacted` lattice)
+The follow-up flagged by the `Enacted`-lattice change (#236): a status sweep + a gate that enforces it.
+- **Status normalization (append-only — forward only, no status invented):** the compound spelling
+  `Accepted — Enacted` → the canonical standalone **`Enacted`** wherever it denotes a doc's status —
+  the `Status` headers of **RFC-0012/0013/0014** (and the r3-specific `Accepted — r3 ENACTED` →
+  **`Enacted (r3)`** for **RFC-0011**), each with an append-only changelog-footer note. **RFC-0015**
+  promoted `Accepted → Enacted` (its §4 design was ratified Accepted and is landed in
+  `mycelium-lsp/src/baseline.rs`, M-362 — a stepped-through forward move). Live body citations of those
+  RFCs in `docs/spec/stdlib/diag.md` + `recover.md` normalized too (dated changelog-footer history left
+  verbatim).
+- **Stale `docs/rfcs/README.md` rows fixed to the authoritative headers** (re-verified per RFC): 0008,
+  0010 → **Accepted**; 0011 → **Enacted (r3)**; 0012/0013/0014/0015 → **Enacted**; 0018, 0019 →
+  **Accepted**; 0020 → **Accepted (scoped)**; 0021 → **Accepted (framework)**. Status-set prose + the
+  template Status line updated to the new lattice.
+- **New `doc-status` gate** (`scripts/doc_status_check.py` + `scripts/checks/doc-status.sh` +
+  `just doc-status`, wired into `just check`, skip-graceful if python3/PyYAML absent): three never-silent
+  passes — (1) **lattice** validation of every decision doc's `Status` header
+  (`{Draft, Proposed, Preliminary, Accepted, Enacted, Superseded, Resolved}`; flags the legacy compound),
+  (2) **nav-README ↔ authoritative-header cross-check** (the exact drift that left the 8 stale rows),
+  (3) **Declared stale-phrase invariants** from `tools/doc-status-invariants.yaml` (e.g. once the stdlib
+  is Accepted-or-later, no nav README may say "pending ratification"). Honest posture: a **Declared**
+  line/regex heuristic — source is ground truth; the pass-3 rules are maintainer-Declared, never inferred
+  (documented in the script header + `scripts/README.md`). Verified: `just check` green; a negative test
+  confirms the cross-check catches a re-introduced stale row.
+
 ### Changed (2026-06-20: add `Enacted` as a first-class decision status)
 Extended the append-only status lattice in `CLAUDE.md` (house rule #3) + `CONTRIBUTING.md` from
 `Draft/Proposed → Accepted → Superseded` to **`Draft/Proposed → Accepted → Enacted → Superseded`**

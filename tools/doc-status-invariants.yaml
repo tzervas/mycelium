@@ -1,0 +1,72 @@
+# doc-status-invariants.yaml — maintainer-DECLARED stale-phrase invariants for the
+# `doc-status` currency gate (scripts/doc_status_check.py, pass 3).
+#
+# HONESTY POSTURE (house-rule 1 / VR-5): every rule here is a *Declared* maintainer
+# decision — an asserted, human-authored invariant, NOT an inferred or guessed one.
+# Like the agent code-index, this is a Declared heuristic: it catches the specific
+# drift a maintainer has named, no more. The gate never invents a rule; it only
+# enforces the rules committed in this file. To add or relax an invariant is itself a
+# decision — edit this file deliberately (and note it in the changelog), do not let the
+# script infer one.
+#
+# Each rule is a `forbid_phrase` invariant:
+#   id:          stable identifier (for the gate's never-silent per-check output).
+#   description: what the rule asserts and why (the Declared basis).
+#   phrase:      the literal stale phrase that must NOT appear (case-insensitive).
+#   in_files:    list of repo-root-relative navigational doc paths to scan.
+#   when:        (optional) a precondition — the rule only fires when it holds.
+#                Supported forms (each over a `glob`, with an optional `except` list and
+#                a `floor` lattice status): `all_status_at_least` fires once EVERY
+#                non-excepted doc in the glob has reached the floor; `any_status_at_least`
+#                fires once AT LEAST ONE has. A malformed when-clause fails the gate
+#                (controlled error, not a traceback).
+#
+# The lattice rank used by the preconditions (forward order):
+#   Draft=0  Proposed=0  Preliminary=0  Accepted=1  Enacted=2  Superseded=3  Resolved=1
+# (Resolved is the notes-track terminal of Accepted; it ranks with Accepted for "≥".)
+
+rules:
+  - id: stdlib-not-pending-ratification
+    description: >-
+      DECLARED (DN-07, 2026-06-20): once every docs/spec/stdlib/*.md module spec
+      EXCEPT runtime and self-hosting-readiness is Accepted-or-later, no navigational
+      README may still describe the stdlib as "pending ratification" — that phrase is
+      then stale (the maintainer ratification pass is done). Targets the exact drift
+      that left the 8 stale RFC rows: a nav doc lagging the authoritative headers.
+    phrase: "pending ratification"
+    in_files:
+      - docs/spec/stdlib/README.md
+    when:
+      all_status_at_least:
+        glob: docs/spec/stdlib/*.md
+        floor: Accepted
+        except:
+          - docs/spec/stdlib/runtime.md
+          - docs/spec/stdlib/self-hosting-readiness.md
+          - docs/spec/stdlib/_TEMPLATE.md
+          - docs/spec/stdlib/README.md
+
+  - id: rfcs-readme-no-legacy-compound-enacted
+    description: >-
+      DECLARED (#236, 2026-06-20): the canonical landed-decision token is the
+      standalone `Enacted`; the legacy compound `Accepted — Enacted` is retired. No
+      RFC index README may carry the compound spelling.
+    phrase: "Accepted — Enacted"
+    in_files:
+      - docs/rfcs/README.md
+
+  - id: adr-readme-status-set-current
+    description: >-
+      DECLARED (#236, 2026-06-20): the ADR index's "Status set" line must name the
+      ratified lattice, which now includes `Enacted`. A status-set line that omits it
+      is stale once any ADR reaches Enacted. (Seeded as a forbid on the OLD bare
+      three-token set; benign until an ADR is enacted, then load-bearing.)
+    phrase: "`Proposed → Accepted → Superseded`"
+    in_files:
+      - docs/adr/README.md
+    when:
+      any_status_at_least:
+        glob: docs/adr/*.md
+        floor: Enacted
+        except:
+          - docs/adr/README.md

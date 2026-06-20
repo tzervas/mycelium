@@ -33,6 +33,8 @@ links:
     @bash scripts/checks/links.sh
 doc-currency:
     @bash scripts/checks/doc-currency.sh
+doc-status:
+    @bash scripts/checks/doc-status.sh
 schema:
     @bash scripts/checks/schema.sh
 grammar:

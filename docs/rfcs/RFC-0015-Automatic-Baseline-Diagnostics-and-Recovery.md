@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0015 |
-| **Status** | **Accepted** (2026-06-16 — §8 resolved against the prior-art grounding in `research/06-…`; enacted by M-362 in `crates/mycelium-lsp/src/baseline.rs`) |
+| **Status** | **Enacted** (2026-06-16 — §8 resolved against the prior-art grounding in `research/06-…`; the Accepted §4 design is landed by M-362 in `crates/mycelium-lsp/src/baseline.rs`; status promoted Accepted → Enacted 2026-06-20 to the canonical lattice token, the landing it already recorded unchanged) |
 | **Type** | Foundational / normative (once Accepted) — a **tooling-layer automation** over RFC-0013/0014; minimal/no kernel change (KC-3) |
 | **Feeds** | RFC-0006 (the optional surface for opting in/out); the stdlib (M-346); the toolchain (M-361) |
 | **Depends on** | RFC-0013 (presentation — the additive substrate the auto-baseline applies); RFC-0014 (declarative recovery & bounded effects — the opt-in control layer); RFC-0005/ADR-006 (reified, content-addressed, EXPLAIN-able policies); RFC-0008 §4.8/RFC-0013 §8 (the observability sinks routes bind to); G2 (never-silent), VR-5, KC-3, NFR-2/SC-5b |
@@ -159,6 +159,7 @@ config that silently no-ops) that A4/§8-Q1 explicitly avoids.
 
 ## Meta — changelog
 
+- **2026-06-20 — status promoted to the canonical `Enacted` token.** Header `Accepted` → **`Enacted`** — the §4 design was ratified `Accepted` (2026-06-16) and is fully landed in `crates/mycelium-lsp/src/baseline.rs` (M-362), so it now carries the standalone `Enacted` token of the ratified `Draft/Proposed → Accepted → Enacted → Superseded` lattice (#236). A forward, append-only move (stepped through `Accepted`); the M-362 landing already recorded is unchanged. Aligns the `docs/rfcs/README.md` row, which had claimed the legacy compound `Accepted — Enacted`.
 - **2026-06-16 — Accepted + enacted (M-362).** Prior art traced into `research/06-…` (T6.1–T6.5,
   discharging the §7 grounding obligation); the four §8 questions **resolved** (the derivation function:
   a total, inspectable closed `class → (level, route)` table scoped by declared effects; the closed

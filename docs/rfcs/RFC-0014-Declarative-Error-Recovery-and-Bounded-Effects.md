@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0014 |
-| **Status** | **Accepted — Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design and all §8 dispositions are normative. **Enacted 2026-06-16 — M-352** (#116): the reified recovery subsystem — the result-sum error value, the closed recovery-action set, the registry-shared `on <ErrorClass> => <action>` recovery policy, declared + budgeted effects with a graceful `EffectBudgetExhausted`, the no-undeclared-effect check, and the never-silent `handle` (every error recovered or re-propagated, never dropped) — is code in `crates/mycelium-lsp/src/recover`; the L0-`Match`-over-error-sums lowering target is differentially verified in `mycelium-l1` (no new kernel node, KC-3). Wiring effect-budget enforcement into the AOT env-machine was the RFC-0008 integration — **completed in M-353** (§4.8 changelog entry; the ledger lifted into `mycelium-interp`, an overrun is `EvalError::EffectBudget`).) |
+| **Status** | **Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design and all §8 dispositions are normative. **Enacted 2026-06-16 — M-352** (#116): the reified recovery subsystem — the result-sum error value, the closed recovery-action set, the registry-shared `on <ErrorClass> => <action>` recovery policy, declared + budgeted effects with a graceful `EffectBudgetExhausted`, the no-undeclared-effect check, and the never-silent `handle` (every error recovered or re-propagated, never dropped) — is code in `crates/mycelium-lsp/src/recover`; the L0-`Match`-over-error-sums lowering target is differentially verified in `mycelium-l1` (no new kernel node, KC-3). Wiring effect-budget enforcement into the AOT env-machine was the RFC-0008 integration — **completed in M-353** (§4.8 changelog entry; the ledger lifted into `mycelium-interp`, an overrun is `EvalError::EffectBudget`).) |
 | **Type** | Foundational / normative (once Accepted) — a **separable** surface + runtime subsystem; minimal/no kernel change (KC-3) |
 | **Date** | 2026-06-16 |
 | **Feeds** | RFC-0006 (the optional recovery/effect surface); RFC-0008 (runtime — where effect budgets are enforced, alongside fuel/depth); RFC-0013 (the diagnostic *presentation* of an error this RFC *acts on*); the stdlib (a `result`/`effect` module candidate, M-346) |
@@ -440,6 +440,7 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
 
 ## Meta — changelog
 
+- **2026-06-20 — status spelling normalized.** Status header `Accepted — Enacted` → **`Enacted`** (the now-canonical standalone token, per the ratified `Draft/Proposed → Accepted → Enacted → Superseded` lattice, #236); semantics unchanged. Append-only.
 - **2026-06-18 — Append-only note to §4.7 (RFC-0017 Accepted): maturation is now a scope attribute.**
   Added an inline note to §4.7 recording that "only `total` definitions may be `matured`" now reads
   **over the matured scope** (RFC-0017 §4.2): every reachable non-`thaw` definition in a matured

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0011 |
-| **Status** | **Accepted — r3 ENACTED** (2026-06-15: the staged r3 — data-and-matching core, flat `Match` — is now **folded into RFC-0001 (r3) and implemented in lockstep**. The §4.1–4.3 diff below is in force: `Construct` + flat `Match` + the content-addressed data registry + WF6/WF7/WF8 are L0 Core IR; the §4.6 `Residual` is narrowed for data/matching (RFC-0007 §4.6 note added); the M-320 elaborator now emits `Match`/`Construct`, the M-110 interpreter evaluates them, and the M-210 differential covers the data fragment (L1-eval ≡ elaborate→L0-interp). `Lam/App/Fix` remain the named **r4**. The prior "decision only; enactment sequenced" status is superseded by this entry — append-only.) |
+| **Status** | **Enacted (r3)** (2026-06-15: the staged r3 — data-and-matching core, flat `Match` — is now **folded into RFC-0001 (r3) and implemented in lockstep**. The §4.1–4.3 diff below is in force: `Construct` + flat `Match` + the content-addressed data registry + WF6/WF7/WF8 are L0 Core IR; the §4.6 `Residual` is narrowed for data/matching (RFC-0007 §4.6 note added); the M-320 elaborator now emits `Match`/`Construct`, the M-110 interpreter evaluates them, and the M-210 differential covers the data fragment (L1-eval ≡ elaborate→L0-interp). `Lam/App/Fix` remain the named **r4**. The prior "decision only; enactment sequenced" status is superseded by this entry — append-only.) |
 | **Type** | Foundational / normative (once Accepted) |
 | **Date** | 2026-06-15 |
 | **Depends on** | RFC-0001 §4.5/§4.6 (frozen Core IR, WF1–WF5, content-addressing); RFC-0006 §3/§4.4 step 2 (layering; the named revision); RFC-0007 §4.1–4.6 (the L1 calculus this folds in: terms, registry, typing, the §4.6 fragment restriction this retires); ADR-003 (Unison identity); `crates/mycelium-l1` (the non-normative prototype: `usefulness`, `decision`, `checkty`, `elab`) |
@@ -288,6 +288,7 @@ backend grows data support.
 
 ## Meta — changelog
 
+- **2026-06-20 — status spelling normalized (note; append-only).** Status header `Accepted — r3 ENACTED` → **`Enacted (r3)`** to use the now-canonical standalone `Enacted` token (the just-ratified `Draft/Proposed → Accepted → Enacted → Superseded` lattice, #236). Semantics unchanged — the r3 enactment recorded below stands.
 - **2026-06-15 — the §4.5 r4 sketch is now REALIZED in RFC-0001 r4 (note; append-only).** The named
   follow-on this RFC sketched (§4.5: `Lam`/`App`/`Fix` into L0, retiring §4.6 entirely) is enacted as
   **RFC-0001 r4** — R7-Q1 resolved (a `Fix` node), R7-Q3's content-addressed cycle *identity* fixed
