@@ -59,7 +59,7 @@ pub use aot::{
 };
 pub use bitnet::{
     compile_bitnet_dot, compile_bitnet_dot_for, emit_bitnet_dot_ir, emit_bitnet_dot_ir_for,
-    jit_ternary_dot, jit_ternary_dot_for, ternary_dot_ref, BitnetDotKernel,
+    jit_ternary_dot, jit_ternary_dot_for, ternary_dot_ref, BitnetDotKernel, KernelLayout,
 };
 pub use budget::{
     AutoDepthBudget, DepthBasis, DepthBudget, DepthResolution, MemSource, StaticDepthBudget,
@@ -75,7 +75,7 @@ pub use dialect::native::{
 pub use inject::{recompile_closure, Image, InjectError, Resolution};
 pub use jit::{compile_so, jit_run, JitArtifact};
 pub use llvm::{compile, compile_and_run, emit_llvm_ir, AotError, CompiledArtifact};
-pub use pack::{pack_trits, relayout_trits, unpack_trits};
+pub use pack::{needed_bytes as needed_bytes_for, pack_trits, relayout_trits, unpack_trits};
 pub use runtime::{Colony, Deadlock, Poll, Scope, SweepOrder, Task, TaskCtx};
 pub use simd::{
     compile_bitnet_dot_simd, compile_bitnet_dot_simd_tl1, compile_bitnet_dot_simd_tl2,
