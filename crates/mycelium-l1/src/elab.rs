@@ -598,6 +598,7 @@ impl Elab<'_> {
             ),
             Expr::Wild(_) => residual(site, "`wild` is denied by default (LR-9)"),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
+            Expr::Colony(hyphae) => self.elab_colony(stack, scope, hyphae),
             Expr::Ascribe(inner, t) => {
                 if let Some(g) = t.guarantee {
                     return residual(
@@ -1184,6 +1185,60 @@ impl Elab<'_> {
             arg: Box::new(init_node),
         })
     }
+
+    /// Elaborate `colony { hypha e1, …, hypha eN }` to its **RT2 spawn-order sequentialization**
+    /// (RFC-0008 §4.2/RT2; M-666). RFC-0008 makes the *reference semantics* of a deterministic
+    /// concurrent program its deterministic sequentialization, and content-addressing/the NFR-7
+    /// differential are over that reference — so the honest L0 form is the sequentialization, **not**
+    /// a concurrency node (the L0 Core IR has none; the trusted base stays sequential — KC-3). It
+    /// lowers to a chain of `Let`s that evaluates each leading hypha for its (sequentialized) effect,
+    /// in order, and yields the **last** hypha's value:
+    ///
+    /// ```text
+    /// Let(_1, ⟦e1⟧, Let(_2, ⟦e2⟧, … ⟦eN⟧))      (each _i a fresh, `%`-named unused binder)
+    /// ```
+    ///
+    /// Nothing is dropped silently (G2): every hypha body is elaborated and bound, so a leading
+    /// hypha's refusal/divergence is preserved under CBV (RT4/I1). A real concurrent executor
+    /// (`mycelium-mlir::runtime` `Scope::join_all`/`Task`, M-357) is a **performance path validated
+    /// against this L0 reference** (the RT2 differential) — that cross-crate wiring is the
+    /// orchestrator's integration concern, not an L0 kernel node.
+    ///
+    /// Honesty (Declared at the surface; the lowering itself adds no guarantee): this realizes the
+    /// *deterministic* R1 fragment (RFC-0008 §4.6 R1) only. With no v0 product type the colony's
+    /// observable is the last hypha's value (the sequential reference's final step), never a
+    /// fabricated join-product.
+    fn elab_colony(
+        &mut self,
+        stack: &mut Vec<String>,
+        scope: &[Binding],
+        hyphae: &[crate::ast::Hypha],
+    ) -> Result<Node, ElabError> {
+        let site = stack.last().expect("non-empty").clone();
+        let Some((last, leading)) = hyphae.split_last() else {
+            return residual(
+                &site,
+                "internal: an empty `colony` reached elaboration — the parser requires ≥ 1 hypha \
+                 (RFC-0008 §4.7)",
+            );
+        };
+        // The last hypha is the colony's observable (the RT2 sequentialization's final step).
+        let mut node = self.expr(stack, scope, &last.body)?;
+        // Wrap right-to-left so the first hypha's `Let` ends up outermost (evaluated first, CBV).
+        for h in leading.iter().rev() {
+            let bound = self.expr(stack, scope, &h.body)?;
+            // A fresh `%`-named binder: `%` is not a surface identifier char, so it never captures a
+            // surface name, and the binding is intentionally unused (the value is sequentialized for
+            // its effect only). The leading hypha is still fully evaluated under CBV.
+            let kvar = self.fresh("hypha");
+            node = Node::Let {
+                id: kvar,
+                bound: Box::new(bound),
+                body: Box::new(node),
+            };
+        }
+        Ok(node)
+    }
 }
 
 /// Reconstruct the L0 [`Value`] of a literal-pattern key (`b:1010` / `t:+0-`) produced by the
@@ -1464,5 +1519,91 @@ mod tests {
         let c = policy_name_ref(&Path(vec!["other".into()]));
         assert_eq!(a, b);
         assert_ne!(a, c);
+    }
+
+    // ---- M-666: `colony { hypha … }` elaboration (RFC-0008 §4.7) ----
+
+    #[test]
+    fn a_single_hypha_colony_elaborates_to_its_body_and_runs() {
+        // RT2 reference semantics: a one-hypha colony *is* its body. `colony { hypha not(0b…) }`
+        // elaborates and runs to `not(0b1011_0010) = 0b0100_1101`.
+        let env = env("nodule d\nfn main() -> Binary{8} = colony { hypha not(0b1011_0010) }");
+        let node = elaborate(&env, "main").expect("a colony is in the fragment (M-666)");
+        let v = mycelium_interp::Interpreter::default()
+            .eval(&node)
+            .expect("runs");
+        assert_eq!(
+            v.payload(),
+            &Payload::Bits(vec![false, true, false, false, true, true, false, true])
+        );
+    }
+
+    #[test]
+    fn a_multi_hypha_colony_lowers_to_a_let_chain_and_yields_the_last_hypha() {
+        // The RT2 spawn-order sequentialization lowers to nested `Let`s (leading hyphae bound to
+        // fresh `%`-names), so the L0 form contains ≥1 `Let` and the observable is the LAST hypha's
+        // value — here `xor(0b1111_0000, 0b0000_1111) = 0b1111_1111`, regardless of the leading two.
+        let env = env(
+            "nodule d\nfn compute(x: Binary{8}) -> Binary{8} = not(x)\n\
+             fn main() -> Binary{8} =\n  colony { hypha compute(0b0000_0001), hypha compute(0b0000_0010), hypha xor(0b1111_0000, 0b0000_1111) }",
+        );
+        let node = elaborate(&env, "main").expect("multi-hypha colony elaborates");
+        // The lowering is a Let chain (the sequentialization), not a single bare op.
+        assert!(
+            matches!(node, Node::Let { .. }),
+            "a multi-hypha colony must lower to a Let chain (the RT2 sequentialization), got {node:?}"
+        );
+        let v = mycelium_interp::Interpreter::default()
+            .eval(&node)
+            .expect("runs");
+        assert_eq!(
+            v.payload(),
+            &Payload::Bits(vec![true; 8]),
+            "last hypha = all-ones"
+        );
+    }
+
+    /// **Property (RT2 sequentialization bound; RFC-0008 §4.2/§4.6 R1).** For *every* number of
+    /// leading pure hyphae `k ∈ 0..=8`, a colony `colony { hypha e_0, …, hypha e_{k-1}, hypha
+    /// e_last }` elaborates to L0 and evaluates to **exactly** `e_last`'s value — the leading hyphae
+    /// never change the observable (the colony equals its last hypha under sequentialization). The
+    /// leading bodies are all *distinct* from the last, so a silent "keep the first" / "drop the
+    /// last" elaboration bug would change the result and trip the assertion. This is the bound the
+    /// `colony` surface rests on; bounded exhaustive generation over `k` is the crate's property-test
+    /// idiom (no `proptest` dep — consistent with `usefulness`/`totality`).
+    #[test]
+    fn prop_colony_value_is_its_last_hypha_for_any_leading_count() {
+        let interp = mycelium_interp::Interpreter::default();
+        // The last hypha's expected 8-bit payload: not(0b0101_0101) = 0b1010_1010.
+        let last_payload: Vec<bool> = (0..8u32).map(|i| i.is_multiple_of(2)).collect();
+        for k in 0u32..=8 {
+            // k distinct leading hyphae, each a different pure `not(...)` over a per-index literal,
+            // then the final hypha whose value is the only observable.
+            let mut hyphae = String::new();
+            for j in 0..k {
+                // a per-index 8-bit literal so the leading bodies differ from each other & the last
+                let bits: String = (0..8u32)
+                    .map(|b| if (j + b).is_multiple_of(2) { '1' } else { '0' })
+                    .collect();
+                hyphae.push_str(&format!("hypha not(0b{bits}), "));
+            }
+            // last hypha: xor(0b1111_0000, 0b0101_0101) = 0b1010_0101? compute deterministically.
+            // Use a literal whose value we assert directly to avoid arithmetic ambiguity: a `not`.
+            // not(0b0101_0101) = 0b1010_1010 = last_payload.
+            hyphae.push_str("hypha not(0b0101_0101)");
+            let src = format!("nodule d\nfn main() -> Binary{{8}} = colony {{ {hyphae} }}");
+            let env = env(&src);
+            let node = elaborate(&env, "main")
+                .unwrap_or_else(|e| panic!("k={k}: colony must be in the fragment: {e}"));
+            let v = interp
+                .eval(&node)
+                .unwrap_or_else(|e| panic!("k={k}: colony must run: {e}"));
+            assert_eq!(
+                v.payload(),
+                &Payload::Bits(last_payload.clone()),
+                "k={k}: the colony's value must equal its LAST hypha (RT2 sequentialization), \
+                 independent of the {k} leading hyphae"
+            );
+        }
     }
 }

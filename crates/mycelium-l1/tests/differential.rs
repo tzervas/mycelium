@@ -51,6 +51,16 @@ fn corpus() -> Vec<&'static str> {
         "nodule d\nfn main() -> Binary{8} =\n  let b = 0b0010_1010 in swap(swap(b, to: Ternary{6}, policy: rt), to: Binary{8}, policy: rt)",
         // an op feeding a swap, through a helper
         "nodule d\nfn widen(x: Binary{8}) -> Ternary{6} = swap(not(x), to: Ternary{6}, policy: rt)\nfn main() -> Ternary{6} = widen(0b1011_0010)",
+        // --- M-666: the `colony { hypha … }` structured-concurrency surface (RFC-0008 §4.7) ---
+        // The reference semantics is the RT2 spawn-order sequentialization (RFC-0008 §4.2), so all
+        // three execution paths (L1-eval ≡ elaborate→L0-interp ≡ AOT) must agree on it like any
+        // other in-fragment program — a single-hypha colony is exactly its body.
+        "nodule d\nfn main() -> Binary{8} = colony { hypha not(0b1011_0010) }",
+        // A multi-hypha colony: leading hyphae are evaluated for effect (here pure), the observable
+        // is the last hypha's value (no v0 product type). Determinism: the value is independent of
+        // any scheduling — the sequentialization is the meaning.
+        "nodule d\nfn compute(x: Binary{8}) -> Binary{8} = not(x)\n\
+         fn main() -> Binary{8} =\n  colony { hypha compute(0b0000_1111), hypha compute(0b1010_1010), hypha xor(0b1111_0000, 0b0000_1111) }",
     ]
 }
 

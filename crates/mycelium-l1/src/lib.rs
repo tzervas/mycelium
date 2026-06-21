@@ -84,20 +84,70 @@ mod tests {
     }
 
     #[test]
-    fn phylum_and_colony_are_reserved_not_active() {
-        // DN-06: `phylum` (library grouping) and `colony` (dynamic runtime grouping) are reserved
-        // keywords — they lex as keywords (so never silent identifiers) but no L1 construct consumes
-        // them yet, so neither opens a program and neither is a usable identifier (G2).
+    fn phylum_is_reserved_not_active() {
+        // DN-06: `phylum` (the library grouping) is a reserved keyword — it lexes as a keyword (so
+        // never a silent identifier) but no L1 construct consumes it yet, so it neither opens a
+        // program nor is a usable identifier (G2). (`colony` was reserved-not-active until M-666;
+        // it is now an active *expression* construct — see `colony_and_hypha_are_active`.)
         assert!(parse("phylum signals\n").is_err());
-        assert!(parse("colony signals\n").is_err());
         assert!(parse("nodule demo\nfn phylum() -> Binary{8} = 0b0").is_err());
-        assert!(parse("nodule demo\nfn f(colony: Binary{8}) -> Binary{8} = colony").is_err());
+    }
+
+    #[test]
+    fn colony_and_hypha_are_active() {
+        // M-666 / RFC-0008 §4.7: `colony { hypha … }` is now an **active** L1 expression construct.
+        // A well-formed colony parses; `colony`/`hypha` are still keywords, so they can never be
+        // identifiers (G2) — using either as a name remains an explicit error.
+        let n = parse(
+            "nodule demo\nfn compute(x: Binary{8}) -> Binary{8} = not(x)\n\
+             fn run() -> Binary{8} = colony { hypha compute(0b0000_0001), hypha compute(0b0000_0010) }",
+        )
+        .expect("a well-formed colony parses (M-666)");
+        let Item::Fn(run) = n
+            .items
+            .iter()
+            .find(|i| matches!(i, Item::Fn(f) if f.sig.name == "run"))
+            .expect("run fn")
+        else {
+            panic!("run fn");
+        };
+        let Expr::Colony(hyphae) = &run.body else {
+            panic!("run body must be a colony, got {:?}", run.body);
+        };
+        assert_eq!(hyphae.len(), 2, "two hyphae");
+
+        // `colony`/`hypha` are still keywords → never usable as identifiers (G2).
+        assert!(
+            parse("nodule demo\nfn f(colony: Binary{8}) -> Binary{8} = colony").is_err(),
+            "`colony` as a param name must stay an error (still a keyword)"
+        );
+        assert!(
+            parse("nodule demo\nfn hypha() -> Binary{8} = 0b0").is_err(),
+            "`hypha` as a fn name must stay an error (still a keyword)"
+        );
+        // A bare `hypha` outside a colony is a never-silent error (RT7 — no orphan hypha).
+        let orphan = parse("nodule demo\nfn f() -> Binary{8} = hypha g(0b0)").unwrap_err();
+        assert!(
+            orphan.message.contains("only valid inside a `colony"),
+            "orphan hypha must teach the colony scoping, got: {}",
+            orphan.message
+        );
+        // An empty colony is rejected at type-check (the parser requires ≥1 hypha at parse time —
+        // an empty `colony { }` fails parsing because `hypha` is required for the first element).
+        let empty = parse("nodule demo\nfn f() -> Binary{8} = colony { }").unwrap_err();
+        assert!(
+            empty.message.contains("hypha"),
+            "empty colony must mention `hypha`, got: {}",
+            empty.message
+        );
     }
 
     #[test]
     fn runtime_vocab_keywords_are_reserved_not_active() {
-        // DN-03 §4 / RFC-0008 §4.5 / M-665: the 10 Runtime-tier names are reserved keywords —
-        // they lex as keywords (never silent identifiers, G2) but no L1 construct consumes them.
+        // DN-03 §4 / RFC-0008 §4.5 / M-665: the Runtime-tier names are reserved keywords — they lex
+        // as keywords (never silent identifiers, G2) but no L1 construct consumes them. `hypha`
+        // **left** this set with M-666 (it is now active inside a `colony`); the remaining nine stay
+        // reserved-not-active until their own constructs land (RFC-0008 §4.6 R1/R2).
         //
         // Honesty (Declared): the RFC-0008 teaching diagnostic fires when the runtime keyword is
         // reached in a position where the parser dispatches to `parse_item` or `parse_expr_inner`
@@ -106,8 +156,7 @@ mod tests {
         // identifier / expected a `nodule` header" error — still explicit and non-silent (G2),
         // just without the RFC-0008 reference, because the never-active guard fires earlier.
         let words = [
-            "hypha", "fuse", "mesh", "graft", "cyst", "xloc", "forage", "backbone", "tier",
-            "reclaim",
+            "fuse", "mesh", "graft", "cyst", "xloc", "forage", "backbone", "tier", "reclaim",
         ];
         for word in words {
             // Sanity: `keyword(w)` returns Some — the word lexes as a keyword, not a plain Ident.
