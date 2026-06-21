@@ -1,7 +1,13 @@
 //! Property tests for the verified-numerics kernels (E2-4; RFC-0001 §4.7 — Soundness, Monotonicity,
 //! Determinism). Migrated from hand-rolled LCG (Phase-1 style) to **proptest** (M-654 Gate A3):
-//! shrinking is enabled, `PROPTEST_CASES` controls trial count (default 20 000 to match the
-//! previous LCG coverage), and CI rotates the seed via `PROPTEST_SEED`.
+//! shrinking is enabled, `PROPTEST_CASES` controls the trial count, and CI rotates the seed via
+//! `PROPTEST_SEED`.
+//!
+//! Case-tiering (DN-20): these property tests are the *empirical basis* for the numerics guarantee
+//! tags (VR-5), so they are never dropped — only their case count is tiered. `PROPTEST_CASES`
+//! selects the count: the everyday `just check` runs a LOW count (default 8) for fast feedback,
+//! `just check-full` runs a HIGH count (256+) for full statistical power on release. With the env
+//! var unset the default below (`DEFAULT_CASES`) keeps the bound exercised at modest power.
 
 use mycelium_core::{Bound, BoundBasis, BoundKind, GuaranteeStrength, NormKind};
 use mycelium_numerics::{
@@ -25,11 +31,39 @@ fn nonneg(hi: f64) -> BoxedStrategy<f64> {
     (0.0f64..=hi).boxed()
 }
 
-// Default case count: 20 000, matching the previous LCG trial count.
-// Override with PROPTEST_CASES env var; CI rotates seed via PROPTEST_SEED.
+// Default case count when `PROPTEST_CASES` is unset. Kept LOW (DN-20) so the everyday loop is fast;
+// the bound is still exercised every commit. `just check` sets `PROPTEST_CASES=8`, `just check-full`
+// sets `PROPTEST_CASES=256` for release-grade statistical power.
+const DEFAULT_CASES: u32 = 8;
+
+// Build the proptest config, reading `PROPTEST_CASES` EXPLICITLY (DN-20). NOTE: proptest only
+// auto-reads `PROPTEST_CASES` for a `ProptestConfig::default()` whose `cases` is left untouched —
+// the previous `ProptestConfig { cases: 20_000, .. }` literal HARDCODED 20 000 and silently ignored
+// the env var. We therefore parse it ourselves so the case count is genuinely tiered. CI still
+// rotates the seed via `PROPTEST_SEED`.
 fn cfg() -> ProptestConfig {
+    let cases = std::env::var("PROPTEST_CASES")
+        .ok()
+        .and_then(|v| v.parse::<u32>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(DEFAULT_CASES);
     ProptestConfig {
-        cases: 20_000,
+        cases,
+        ..ProptestConfig::default()
+    }
+}
+
+// Mutant-witness configs (the `*_refuses_*` guard tests). These exercise a refusal property where a
+// modest case count is sufficient; they too honor `PROPTEST_CASES` (DN-20) with a low default so the
+// fast tier stays fast while `just check-full` raises the count. Same precedence reasoning as `cfg()`.
+fn witness_cfg() -> ProptestConfig {
+    let cases = std::env::var("PROPTEST_CASES")
+        .ok()
+        .and_then(|v| v.parse::<u32>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(DEFAULT_CASES);
+    ProptestConfig {
+        cases,
         ..ProptestConfig::default()
     }
 }
@@ -675,7 +709,7 @@ fn basis_strength_maps_each_variant() {
 //
 // Location: `crates/mycelium-numerics/src/error.rs` fn `ErrorBound::new`.
 proptest! {
-    #![proptest_config(ProptestConfig { cases: 1000, ..ProptestConfig::default() })]
+    #![proptest_config(witness_cfg())]
     #[test]
     fn error_bound_new_refuses_negative_or_nonfinite(
         eps in prop_oneof![
@@ -694,7 +728,7 @@ proptest! {
 //
 // Location: `crates/mycelium-numerics/src/prob.rs` fn `ProbBound::new`.
 proptest! {
-    #![proptest_config(ProptestConfig { cases: 1000, ..ProptestConfig::default() })]
+    #![proptest_config(witness_cfg())]
     #[test]
     fn prob_bound_new_refuses_out_of_range(
         delta in prop_oneof![

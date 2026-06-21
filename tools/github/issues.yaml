@@ -2161,9 +2161,9 @@ issues:
   - id: M-665
     title: "M-665 — feat(l1-lexer): Reserve all 10 DN-03 runtime terms in keyword() — never-silent reservation (G2)"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:language, priority:P2, status:needs-design]
+    labels: [phase:7, type:feature, area:language, priority:P2, status:done]
     depends_on: []
-    doc_refs: [corpus:DN-03, corpus:RFC-0008, src:crates/mycelium-l1/src/token.rs]
+    doc_refs: [corpus:DN-03, corpus:RFC-0008, src:crates/mycelium-l1/src/token.rs, src:crates/mycelium-l1/src/parse.rs]
     body: |
       DN-03 §4 ratifies 10 runtime vocabulary terms (`hypha`, `fuse`, `mesh`, `graft`, `cyst`, `xloc`, `forage`, `backbone`, `tier`, `reclaim`) as the one-per-concept names against RFC-0008 §4.5 operational meanings. None appear in `keyword()` or the `Tok` enum (token.rs fully inspected 2026-06-21). G2 never-silent obligation: a ratified reserved word must never silently become an identifier. This issue adds all 10 to `Tok` and `keyword()` as reserved-not-active tokens (like `phylum`/`colony` today — they lex as keywords, produce a "reserved for the runtime model (RFC-0008), not yet active" parse error, never a silent accept). Conformance reject-corpus entries added for each.
       Acceptance: all 10 appear in `Tok` and `keyword()`; each produces an explicit parse error if used as identifier or in an expression (G2); reject-corpus entries added; no grammar production yet consumes them (lexed-reserved, not active); `just check` green.
@@ -2197,3 +2197,15 @@ issues:
     body: |
       RFC-0008 §4.6 R2 covers the distribution vocabulary: `xloc` (explicit value movement across nodes), `mesh` (gossip/pub-sub overlay — RT5, probabilistic guarantees), `cyst` (content-addressed checkpoint of a dormable computation — RT2), `graft` (capability contract with external infrastructure — RT4), `forage` (adaptive placement policy — RFC-0005 site), `backbone` (declared high-bandwidth transport path — RT3). None have implementation RFCs yet; RFC-0008 §4.5 status rule requires each to have its own implementation RFC committing typing + elaboration. This planning issue produces the R2 decomposition: a design note or DN-11 append splitting R2 into per-construct implementation RFCs, with explicit dependency ordering, honesty bounds (probabilistic guarantee tags for `mesh` per RT5/T4.2, fallible typing for `xloc` per RT4), and gate conditions.
       Acceptance: a design note (or DN-11 append) decomposing R2 into per-construct implementation RFCs with explicit gates and honest guarantee tags; each R2 term's typing + elaboration strategy sketched (sufficient for a future implementation RFC); R2 explicitly gated on R1 completion (M-667); CHANGELOG entry.
+
+  # ---------------- 2026-06-21: Dogfooding wave (post-1.0; see .claude/kickoff.md Track 3) ----------------
+  - id: M-669
+    title: "M-669 — feat(mycelium-lsp): lexical/scaffolding completion provider (dogfooding DX)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:done]
+    depends_on: []
+    doc_refs: [src:crates/mycelium-lsp/src/completions.rs, src:crates/mycelium-lsp/src/wire.rs]
+    body: |
+      Dogfooding developer-experience: a baseline LSP completion provider so developers scaffold Mycelium code easily. `crates/mycelium-lsp/src/completions.rs` offers (1) the 36 **ACTIVE** keyword completions drawn from `mycelium_l1::token::keyword()` (structural / expression / type / scalar / strength), and (2) five grammar-grounded snippets — `nodule-header`, `fn-def`, `type-adt`, `match-expr`, `swap-expr` (the swap snippet pins both `to:` and `policy:` per the S1/WF2 invariant). `wire.rs` advertises `completionProvider` and handles `textDocument/completion`.
+      Honesty (G2/VR-5): scope is **Declared** — lexical/scaffolding only, no semantic/type-aware resolution (stated in the module doc). Reserved-not-active (`phylum`/`colony`) and not-yet-lexed runtime words (`hypha`…`reclaim`, plus `impl`/`consume`/`grow`) are **excluded** — never offered as if usable.
+      Acceptance: `cargo test -p mycelium-lsp` green (83 tests); `completionProvider` advertised in `initialize_result`; ACTIVE keywords offered, reserved/not-yet-lexed words excluded; 5 grammar-grounded snippets. DONE (2026-06-21).

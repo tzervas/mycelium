@@ -8,6 +8,7 @@
 //! depends on `mycelium-core`/`-interp`/`-cert`/`-select` but nothing depends on it.
 
 pub mod baseline;
+pub mod completions;
 pub mod diagnostics;
 pub mod expand;
 pub mod feedback;
@@ -23,6 +24,7 @@ pub use baseline::{
     baseline_for_class, derive_baseline, derive_baseline_for, explain_baseline, recovery_profile,
     BaselineRule, RecoveryProfile, RESILIENT_MAX_ATTEMPTS,
 };
+pub use completions::{completion_list, CompletionItem, KEYWORD_COMPLETIONS, SNIPPET_COMPLETIONS};
 pub use diagnostics::{
     present, AuditView, ClassRegistry, Crossing, DiagnosticPolicy, DiagnosticRecord, Level,
     Presentation, ReasonedError, Rule, UnknownClass,
