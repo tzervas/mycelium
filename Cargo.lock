@@ -167,8 +167,6 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
- "mycelium-std-error",
- "mycelium-std-io",
  "proptest",
 ]
 
