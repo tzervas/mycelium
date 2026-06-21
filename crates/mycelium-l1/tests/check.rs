@@ -651,3 +651,136 @@ fn instance_cap_error_is_explicit_residual_not_a_panic() {
     let _node =
         elaborate(&env, "main").expect("ordinary recursive generic must NOT fire the instance cap");
 }
+
+// ---- S5: trait registry + impl checking + coherence (M-658/M-659) ----
+
+#[test]
+fn trait_declaration_registers_in_env() {
+    // A `trait Show { fn show(x: Binary{8}) -> Binary{8} }` registers in `env.traits`.
+    let src = "nodule d\ntrait Show {\n  fn show(x: Binary{8}) -> Binary{8}\n}";
+    let env = check(src).expect("trait declaration must check");
+    assert!(
+        env.traits.contains_key("Show"),
+        "Show should be in env.traits; got: {:?}",
+        env.traits.keys().collect::<Vec<_>>()
+    );
+    assert_eq!(env.traits["Show"].methods.len(), 1);
+    assert_eq!(env.traits["Show"].methods[0].name, "show");
+}
+
+#[test]
+fn duplicate_trait_declaration_is_an_explicit_error() {
+    // Two `trait Show` declarations → explicit CheckError (never a silent shadow — G2).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+    );
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("duplicate trait"),
+        "expected duplicate-trait error; got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn impl_for_registered_type_checks() {
+    // A valid `impl Show for Binary{8}` registers in `env.impls` and type-checks the method body.
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "impl Show for Binary{8} {\n",
+        "  fn show(x: Binary{8}) -> Binary{8} = x\n",
+        "}\n",
+    );
+    let env = check(src).expect("impl must check");
+    assert!(
+        env.impl_info("Show", &mycelium_l1::Ty::Binary(8)).is_some(),
+        "impl Show for Binary{{8}} should be registered"
+    );
+}
+
+#[test]
+fn impl_for_unknown_trait_is_an_explicit_error() {
+    // `impl Unknown for Binary{8}` — trait not declared → explicit CheckError (G2).
+    let src =
+        "nodule d\nimpl Unknown for Binary{8} {\n  fn show(x: Binary{8}) -> Binary{8} = x\n}\n";
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("unknown trait"),
+        "expected unknown-trait error; got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn overlapping_impl_is_an_explicit_error() {
+    // Two `impl Show for Binary{8}` declarations → coherence violation (RFC-0019 §4.5).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "impl Show for Binary{8} { fn show(x: Binary{8}) -> Binary{8} = x }\n",
+        "impl Show for Binary{8} { fn show(x: Binary{8}) -> Binary{8} = x }\n",
+    );
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("overlapping impl") || err.message.contains("coherence"),
+        "expected coherence error; got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn impl_missing_method_is_an_explicit_error() {
+    // `impl Show for Binary{8}` without `show` → missing method CheckError (never-silent, G2).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "impl Show for Binary{8} { }\n",
+    );
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("missing method"),
+        "expected missing-method error; got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn impl_extra_method_is_an_explicit_error() {
+    // Providing a method NOT in the trait → explicit error (never-silent, G2).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "impl Show for Binary{8} {\n",
+        "  fn show(x: Binary{8}) -> Binary{8} = x\n",
+        "  fn extra(x: Binary{8}) -> Binary{8} = x\n",
+        "}\n",
+    );
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("not declared in trait"),
+        "expected undeclared-method error; got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn impl_method_type_mismatch_is_an_explicit_error() {
+    // Method body returns wrong type → explicit CheckError (never-silent, G2).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "impl Show for Binary{8} {\n",
+        "  fn show(x: Binary{8}) -> Binary{8} = swap(x, to: Ternary{6}, policy: rt)\n",
+        "}\n",
+    );
+    let err = check(src).unwrap_err();
+    // Either a MissingConversion or a plain type mismatch — either way it must not succeed.
+    assert!(
+        !err.message.is_empty(),
+        "impl method type mismatch should be an error; got: {}",
+        err.message
+    );
+}

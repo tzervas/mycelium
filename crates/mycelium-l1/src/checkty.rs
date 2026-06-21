@@ -185,6 +185,9 @@ pub struct Env {
     /// Trait registry, keyed by trait name. Filled by Pass 1c (M-658, **Declared**).
     /// Each entry holds the trait's type params and method signatures (may contain `Ty::Var`).
     pub traits: BTreeMap<String, TraitInfo>,
+    /// Impl registry, keyed by `(trait_name, for_ty.to_string())`. Filled by Pass 1d (M-659,
+    /// **Declared**). Duplicate `(trait, type)` pairs → explicit `CheckError` (RFC-0019 §4.5).
+    pub impls: BTreeMap<(String, String), ImplInfo>,
     /// Function table, keyed by name.
     pub fns: BTreeMap<String, FnDecl>,
     /// Per-function totality classification (RFC-0007 §4.5), filled by the totality checker.
@@ -212,6 +215,13 @@ impl Env {
     #[must_use]
     pub fn trait_info(&self, name: &str) -> Option<&TraitInfo> {
         self.traits.get(name)
+    }
+
+    /// The impl info for `trait_name` on `for_ty`, if registered. Additive read-only accessor
+    /// over the public [`impls`](Env::impls) map (M-659, **Declared**).
+    #[must_use]
+    pub fn impl_info(&self, trait_name: &str, for_ty: &Ty) -> Option<&ImplInfo> {
+        self.impls.get(&(trait_name.to_owned(), for_ty.to_string()))
     }
 
     /// The function declaration named `name`, if any. Additive read-only accessor over the public
@@ -660,6 +670,19 @@ pub struct TraitInfo {
     pub methods: Vec<crate::ast::FnSig>,
 }
 
+/// A checked impl block: the `for_ty` (resolved, monomorphic) plus the type-checked method bodies.
+///
+/// Registered in `Env.impls` by Pass 1d. Keyed by `(trait_name, for_ty.to_string())` for
+/// O(log n) coherence lookup (RFC-0019 §4.5, **Declared**). Duplicate `(trait, type)` pairs
+/// are an explicit `CheckError` — the coherence invariant (no overlapping instances).
+#[derive(Debug, Clone)]
+pub struct ImplInfo {
+    /// The resolved `for` type (monomorphic — no `Ty::Var`).
+    pub for_ty: Ty,
+    /// Type-checked method bodies, in declaration order.
+    pub methods: Vec<FnDecl>,
+}
+
 /// Check a whole nodule: build the registry (prelude + declarations), then type every function
 /// body against its signature, classify totality. No maturation gate is applied (the scope is
 /// treated as non-matured). Returns the checked [`Env`].
@@ -794,6 +817,141 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
         }
     }
 
+    // Pass 1d: collect impl declarations → coherence check + method type-check (M-659, **Declared**).
+    // Rules (RFC-0019 §4.5):
+    //   - The trait named in `impl T for Ty` must exist in `traits` (no orphaned impls).
+    //   - No two impls for the same `(trait, for_ty)` pair (overlap = explicit CheckError).
+    //   - Every method declared in the trait must appear in the impl body (completeness).
+    //   - Method bodies are type-checked against the declared trait signature with the `for_ty`
+    //     substituted for the trait's first type param (v0 restriction: single-param traits only;
+    //     multi-param trait bodies are deferred — a CheckError for now).
+    //   - The `for_ty` must be a concrete (Var-free) monomorphic type (never abstract).
+    let mut impls: BTreeMap<(String, String), ImplInfo> = BTreeMap::new();
+    for item in &nodule.items {
+        if let Item::Impl(id) = item {
+            let site = format!("impl {} for …", id.trait_name);
+            // 1. The trait must be registered.
+            let trait_info = traits.get(&id.trait_name).ok_or_else(|| {
+                CheckError::new(
+                    &site,
+                    format!(
+                        "impl for unknown trait `{}`; declare `trait {} {{ … }}` first",
+                        id.trait_name, id.trait_name
+                    ),
+                )
+            })?;
+            // 2. Resolve the `for` type — must be monomorphic (no tyvars at impl head).
+            let (for_ty, _) = resolve_ty_mut(&site, &mut types, &generics, &[], &id.for_ty)?;
+            // Reject Var — abstract `for`-type is never valid (G2).
+            if matches!(for_ty, Ty::Var(_)) {
+                return Err(CheckError::new(
+                    &site,
+                    "abstract `for`-type in an impl is not valid — the `for` type must be concrete",
+                ));
+            }
+            // 3. Coherence: no duplicate (trait, for_ty) pair.
+            let key = (id.trait_name.clone(), for_ty.to_string());
+            if impls.contains_key(&key) {
+                return Err(CheckError::new(
+                    &site,
+                    format!(
+                        "overlapping impl of `{}` for `{for_ty}` — only valid inside a `colony`; \
+                         two impls for the same (trait, type) pair violate coherence (RFC-0019 §4.5)",
+                        id.trait_name
+                    ),
+                ));
+            }
+            // 4. Build method lookup from the impl body.
+            let mut method_map: BTreeMap<String, &crate::ast::FnDecl> = BTreeMap::new();
+            for m in &id.methods {
+                if method_map.insert(m.sig.name.clone(), m).is_some() {
+                    return Err(CheckError::new(
+                        &site,
+                        format!("duplicate method `{}` in impl body", m.sig.name),
+                    ));
+                }
+            }
+            // 5. Method completeness: every trait method must be implemented.
+            for sig in &trait_info.methods {
+                if !method_map.contains_key(&sig.name) {
+                    return Err(CheckError::new(
+                        &site,
+                        format!(
+                            "impl of `{}` for `{for_ty}` is missing method `{}`",
+                            id.trait_name, sig.name
+                        ),
+                    ));
+                }
+            }
+            // 6. No extra methods: only trait-declared names are allowed (never-silent, G2).
+            for mname in method_map.keys() {
+                if !trait_info.methods.iter().any(|s| &s.name == mname) {
+                    return Err(CheckError::new(
+                        &site,
+                        format!(
+                            "method `{mname}` in impl is not declared in trait `{}`",
+                            id.trait_name
+                        ),
+                    ));
+                }
+            }
+            // 7. Type-check each method body. Substitution: the trait's first type param → for_ty.
+            //    v0: single-param traits only. Multi-param trait impls are a deferred CheckError.
+            let subst: BTreeMap<String, Ty> = if trait_info.params.is_empty() {
+                BTreeMap::new()
+            } else if trait_info.params.len() == 1 {
+                let mut m = BTreeMap::new();
+                m.insert(trait_info.params[0].clone(), for_ty.clone());
+                m
+            } else {
+                return Err(CheckError::new(
+                    &site,
+                    format!(
+                        "impl of multi-param trait `{}` is not yet supported in v0 (deferred)",
+                        id.trait_name
+                    ),
+                ));
+            };
+            let mut checked_methods = Vec::with_capacity(id.methods.len());
+            for m in &id.methods {
+                let msite = format!("{}::{}", site, m.sig.name);
+                let mut scope: Vec<(String, Ty)> = Vec::new();
+                for p in &m.sig.value_params {
+                    let (raw, _) = resolve_ty_mut(&msite, &mut types, &generics, &[], &p.ty)?;
+                    let ty = subst_ty(&raw, &subst);
+                    scope.push((p.name.clone(), ty));
+                }
+                let (raw_ret, _) = resolve_ty_mut(&msite, &mut types, &generics, &[], &m.sig.ret)?;
+                let ret = subst_ty(&raw_ret, &subst);
+                let cx = Cx {
+                    site: &msite,
+                    types: &types,
+                    generics: &generics,
+                    fns: &BTreeMap::new(), // impl methods see no top-level fns (no recursion in v0)
+                };
+                let (got, body) = cx.check(&mut scope, &m.body, Some(&ret))?;
+                if got != ret {
+                    return Err(CheckError::new(
+                        &msite,
+                        edge_mismatch("impl method body", &ret, &got),
+                    ));
+                }
+                checked_methods.push(FnDecl {
+                    thaw: m.thaw,
+                    sig: m.sig.clone(),
+                    body,
+                });
+            }
+            impls.insert(
+                key,
+                ImplInfo {
+                    for_ty,
+                    methods: checked_methods,
+                },
+            );
+        }
+    }
+
     // Pass 2: collect functions (signatures must resolve).
     // Generic fns (non-empty `sig.params`) are included: bodies are checked with tyvars in scope
     // in Pass 3, and call sites use arg-driven instantiation (S5, M-657).
@@ -872,6 +1030,7 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
         types,
         generics,
         traits,
+        impls,
         fns,
         totality,
     })
@@ -2950,6 +3109,7 @@ pub(crate) fn monomorphize_with_cap(
         types: env.types.clone(),
         generics: env.generics.clone(),
         traits: env.traits.clone(),
+        impls: env.impls.clone(),
         fns: rewritten_fns,
         totality: env.totality.clone(),
     })

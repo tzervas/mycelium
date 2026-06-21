@@ -1115,6 +1115,7 @@ mod tests {
             types: std::collections::BTreeMap::new(),
             generics: std::collections::BTreeMap::new(),
             traits: std::collections::BTreeMap::new(),
+            impls: std::collections::BTreeMap::new(),
             fns: nodule
                 .items
                 .iter()
