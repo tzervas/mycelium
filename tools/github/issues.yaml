@@ -1980,12 +1980,14 @@ issues:
   - id: M-652
     title: "M-652 — Gate A4: make the cargo-deny/cargo-audit supply-chain gate non-skip"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:toolchain, priority:P1, status:todo]
+    labels: [phase:8, type:feature, area:toolchain, priority:P1, status:done]
     depends_on: []
     doc_refs: [corpus:ADR-021, corpus:DN-19, src:scripts/checks/deny.sh, src:deny.toml, src:justfile]
     body: |
       ADR-021 Gate A4 / DN-19 GAP-3. The supply-chain gate is already WIRED: `deny.toml` exists at the repo root, `scripts/checks/deny.sh` runs both `cargo deny check` + `cargo audit`, the `deny:` recipe is in the `justfile`, and `deny` is in the `all.sh` check set — so `just check` already invokes it. The remaining gap is that the gate is skip-graceful and currently SKIPs when `cargo-deny`/`cargo-audit` are not installed: a skip-pass is not a closed gate (G2 — never silently green). Close it: provision the tools (`just setup` / CI setup) so the gate genuinely RUNS, confirm it passes against the current tree, and refine `deny.toml` policy (licenses, bans, advisories, sources) as the run surfaces. Standalone — independent of code changes (DN-19: parallelizable).
       Acceptance: with the tools installed, `just check` runs cargo-deny + cargo-audit GREEN (or with an explicit, rationale-tagged allowlist for any advisory that cannot be resolved — never a silent ignore); the gate no longer skip-passes in the gate environment; `deny.toml` policy reviewed. Closes ADR-021 Gate A4.
+
+      DONE (2026-06-21): cargo-deny 0.19.9 + cargo-audit 0.22.2 provisioned via `scripts/install-tools.sh` (`cargo install --locked`); `scripts/checks/deny.sh` now runs GREEN, not skip — `cargo deny check` (advisories/bans/licenses/sources all ok) + `cargo audit` (101 deps scanned, no known advisories). deny.toml policy reviewed: license allow-list matches the tree; `multiple-versions` stays "warn" (pre-1.0 transitive churn); `wildcards` stays "warn" + added `allow-wildcard-paths = true` so internal v0.0.0 path-dep noise clears, leaving one genuine, non-silent (G2) smell visible — the publishable std crates (e.g. `mycelium-std-math` v0.1.0) carry version-less path deps, which `allow-wildcard-paths` cannot excuse; FLAGGED to the ADR-018 per-crate-SemVer / release-engineering track, out of scope for the gate. (PR branch: claude/m-652-supply-chain-gate)
 
   - id: M-653
     title: "M-653 — Gate A2: Medium-findings ledger (close or explicitly defer each)"
