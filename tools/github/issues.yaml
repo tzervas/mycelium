@@ -1976,3 +1976,43 @@ issues:
       - `cargo test -p mycelium-bench` green (all 33 existing tests + the new V2 ingestion test)
       - Honest guarantee tags: ingested numeric metrics remain Empirical/Declared per their origin
       - After this lands, a live Grok run's output can be fed directly to mycelium-bench for bench-level analysis
+
+  - id: M-652
+    title: "M-652 — Gate A4: wire cargo-deny + cargo-audit into `just check`"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P1, status:todo]
+    depends_on: []
+    doc_refs: [corpus:ADR-021, corpus:DN-19, src:scripts/checks, src:justfile]
+    body: |
+      ADR-021 Gate A4 / DN-19 GAP-3. `just check` currently SKIPs `cargo deny` and `cargo audit` (not installed). Wire them in: add a `deny.toml` (licenses, bans, advisories, sources), a `scripts/checks/supply-chain.sh` (skip-graceful per the `just check` idiom; `just setup` installs the tools), and route through `just check`/`just ci`. Standalone — independent of code changes (DN-19: parallelizable).
+      Acceptance: `just check` runs cargo-deny + cargo-audit GREEN (or with an explicit, rationale-tagged allowlist for any advisory that cannot be resolved — never a silent ignore); `deny.toml` committed; the recipes documented. Closes ADR-021 Gate A4.
+
+  - id: M-653
+    title: "M-653 — Gate A2: Medium-findings ledger (close or explicitly defer each)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:research, area:project, priority:P1, status:todo]
+    depends_on: []
+    doc_refs: [corpus:ADR-021, corpus:DN-19, src:docs/reviews/2026-06-14-deep-review]
+    body: |
+      ADR-021 Gate A2 / DN-19 GAP-2. Enumerate every open **Medium** finding from the 2026-06-14 deep review (`docs/reviews/2026-06-14-deep-review/`); for each, either CLOSE it (fix + a regression test that fails without the fix, citing the finding id) or EXPLICITLY DEFER it (a one-line rationale — never a silent drop, G2/VR-5). Swarm candidate: fans out by finding/crate (each leaf owns its fix + test).
+      Acceptance: a committed Medium-findings ledger with every Medium marked resolved or deferred-with-rationale; all fixes ship regression tests; `just check` green. Closes ADR-021 Gate A2.
+
+  - id: M-654
+    title: "M-654 — Gate A3: WS8 durability (cargo-mutants + proptest + cargo-fuzz)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:core-ir, priority:P0, status:todo]
+    depends_on: [M-653]
+    doc_refs: [corpus:ADR-021, corpus:DN-19, src:crates/mycelium-cert, src:crates/mycelium-core]
+    body: |
+      ADR-021 Gate A3 / DN-19 GAP-4 (the largest gate item; start after M-653 so mutants run against the cleaned tree). Make the honesty surface DURABLE (WS8): (1) `cargo-mutants` green on the trusted base (`mycelium-core`/`-cert`/`-interp`/`-numerics`) — every surviving mutant triaged (killed by a new test or justified); (2) migrate the LCG/ad-hoc property tests to `proptest` with seed rotation; (3) add `cargo-fuzz` targets for the parser (`mycelium-l1`), the swap engine, and the certificate checker, wired into CI with a smoke corpus.
+      Acceptance: a mutants report with no un-triaged survivors on the trusted base; the proptest migration landed; fuzz targets build + run a smoke corpus green; `just check` green. Closes ADR-021 Gate A3.
+
+  - id: M-655
+    title: "M-655 — Cut 1.0.0 (kernel/core): ADR-021 Accepted → Enacted at the tagged release"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:task, area:project, priority:P1, status:blocked]
+    depends_on: [M-652, M-653, M-654]
+    doc_refs: [corpus:ADR-021, corpus:DN-19, corpus:ADR-018]
+    body: |
+      The terminal 1.0.0 step. Once Gate A2/A3/A4 (M-653/M-654/M-652) close — A1/A5/B1/B2 already met — cut **1.0.0 of the kernel/core**: record the conscientious release decision by moving ADR-021 `Accepted → Enacted` (it must step through Accepted first — house rule #3), and tag the release. Per ADR-018 each crate advancing to 1.0.0 is its own explicit decision; this gate governs the kernel/core release as a set. The surface language stays scoped to `1.x` (ADR-021 §2/§5).
+      Acceptance: all ADR-021 gate rows met; the release decision recorded (ADR-021 → Enacted, append-only); the 1.0.0 tag cut; CHANGELOG `[Unreleased]` → `[1.0.0]` section. BLOCKED on M-652/M-653/M-654.
