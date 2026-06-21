@@ -146,10 +146,23 @@ orphan is `origin/claude/rescue/m665-dup-orphan-a2f18c62` (a duplicate M-665 —
    **`dfr`** → the RP-10/RP-9 research gate (item 4), **`dfb`** → the web/adk Rust-first builds
    (item 5). Each runs on a **protected head branch** current with `main`; land via **`/wave-land`**,
    propagate via `scripts/sync-heads.sh` (CLAUDE.md §Wave-N).
-2. **E7-1 generics chain** — serialize on the shared `mycelium-l1` files (one task at a time, never two
-   leaves editing token/parse/checkty/elab in parallel): M-656 spec → M-657 impl → M-658/M-659 traits →
-   M-660 effects → M-661 `wild`/FFI → M-662 phylum/cross-nodule → M-663 RFC-0018 grading → M-664
-   `consume`/`grow`/`impl`. Unblocks **M-649** (self-hosting).
+2. **E7-1 chain** — serialize on the shared `mycelium-l1` files (one task at a time, never two leaves
+   editing token/parse/checkty/elab in parallel):
+   - **M-656 ✅ + M-657 ✅ LANDED on `claude/head/e7-language`** (PR #346, merge `a9f0b49`, 2026-06-21):
+     stage-1 generics — generic ADTs + generic fns incl. **recursive/mutual** via `checkty::monomorphize`
+     (reuses Fix/FixGroup, no new kernel node KC-3); `let`/`match`/`for` binder capture; opt-in
+     `MYCELIUM_MONO_INSTANCE_CAP`; never-silent (G2); tag **Declared**. 189 tests, `just check` green.
+     (Copilot review addressed: unify_arg permutation, phantom-tyvar detection, cap test race,
+     depth-correct mangled split.)
+   - **NEXT — M-673 (priority-bumped per maintainer: do major refactors early):** replace the
+     **mangled-string** abstract-type representation (`Ty::Data("List<A>")`) with a **structural
+     `Ty::App(name, Vec<Ty>)`** — eliminates the fragile `split_mangled_outer` / `parse_ty_from_display`
+     / `subst_in_abstract_data_name` / `ty_mentions_tyvar` string-parsing (which already produced 3
+     review bugs). Contained: abstract `Ty::App`/`Ty::Var` stay in checkty's checking phase; everything
+     monomorphizes to concrete `Ty::Data(mangled)` before elab/eval (downstream barely changes). **Do
+     BEFORE traits** so traits/effects/phylum build on the clean representation.
+   - Then: M-658/M-659 traits → M-660 effects → M-661 `wild`/FFI → M-662 phylum/cross-nodule → M-663
+     RFC-0018 grading → M-664 `consume`/`grow`/`impl`. Unblocks **M-649** (self-hosting).
 3. **E7-2 continue:** M-667 (`fuse`/`reclaim`/`tier`) → M-668 (R2 design).
 4. **Web/ADK deep-research follow-up (RP-10 web / RP-9 ADK)** — the two-phase **gate** (fractured Opus
    reasoners discharge the RFC-0022/0023 Honest-Uncertainty Registers). **Per maintainer: run this
