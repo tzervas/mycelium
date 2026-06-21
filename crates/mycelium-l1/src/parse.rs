@@ -3,8 +3,9 @@
 //! (never a panic, never a silent accept — S5/G2). v0 covers the L1-facing core.
 
 use crate::ast::{
-    AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, Hypha, Item, Literal, Nodule,
-    Paradigm, Param, Path, Pattern, Scalar, Sparsity, Strength, TraitDecl, TypeDecl, TypeRef,
+    AmbientParams, Arm, BaseType, Bound, Ctor, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal,
+    Nodule, Paradigm, Param, Path, Pattern, Scalar, Sparsity, Strength, TraitDecl, TypeDecl,
+    TypeRef,
 };
 use crate::error::ParseError;
 use crate::lexer::lex;
@@ -209,9 +210,9 @@ impl Parser {
             }
             Tok::Type => self.parse_type_decl().map(Item::Type),
             Tok::Trait => self.parse_trait_decl().map(Item::Trait),
-            // `impl` is parsed from S2 onward (M-658/M-659); the `for` keyword is mandatory —
-            // `impl Show { }` without a `for Type` is a parse error (never a silent accept, G2).
-            Tok::Impl => self.parse_impl_decl_stub(),
+            // `impl TraitName for Type { fn … }` — M-658/M-659. The `for` keyword is mandatory
+            // (never a silent accept, G2; reject/14 guards this).
+            Tok::Impl => self.parse_impl_decl().map(Item::Impl),
             Tok::Fn | Tok::Thaw => self.parse_fn_decl().map(Item::Fn),
             Tok::Matured => Err(ParseError::new(
                 self.pos(),
@@ -312,26 +313,6 @@ impl Parser {
         Ok(TraitDecl { name, params, sigs })
     }
 
-    /// S2 stub: consume `impl <trait_name> <type_args>?` and require `for` — a missing `for` is
-    /// an explicit parse error (never a silent accept, G2). The full impl parser lands in S3.
-    fn parse_impl_decl_stub(&mut self) -> Result<Item, ParseError> {
-        self.expect_keyword(&Tok::Impl)?;
-        let _trait_name = self.ident()?;
-        // Skip optional type args `<A, B, …>`.
-        let _trait_args = self.parse_type_params_opt()?;
-        // `for` is mandatory — the reject/14 fixture tests this.
-        self.expect(
-            &Tok::For,
-            "`for` after the trait name in an `impl` declaration (e.g. `impl Show for Binary{8} { … }`)",
-        )?;
-        // Full parsing deferred to S3. If somehow we reach here in S2 tests beyond the `for`,
-        // return a placeholder error rather than silently accepting.
-        Err(ParseError::new(
-            self.pos(),
-            "`impl` bodies are not yet fully parsed (pending S3 implementation — M-659)".to_owned(),
-        ))
-    }
-
     fn parse_fn_sig(&mut self) -> Result<FnSig, ParseError> {
         self.expect(&Tok::Fn, "`fn` in the trait body")?;
         self.parse_sig_tail()
@@ -347,9 +328,12 @@ impl Parser {
     }
 
     /// The shared `name <params>? ( value_params? ) -> ret` tail of a signature.
+    ///
+    /// Type params may carry a single optional bound: `<A: Show, B>` (M-658 v0; one bound per
+    /// param only — `+` multi-bounds are deferred and fail at the parser with an explicit error).
     fn parse_sig_tail(&mut self) -> Result<FnSig, ParseError> {
         let name = self.ident()?;
-        let params = self.parse_type_params_opt()?;
+        let (params, bounds) = self.parse_type_params_with_bounds()?;
         self.expect(&Tok::LParen, "`(` to open the parameter list")?;
         let value_params = self.parse_params_opt()?;
         self.expect(&Tok::RParen, "`)` to close the parameter list")?;
@@ -358,6 +342,7 @@ impl Parser {
         Ok(FnSig {
             name,
             params,
+            bounds,
             value_params,
             ret,
         })
@@ -373,12 +358,88 @@ impl Parser {
     }
 
     fn parse_type_params_opt(&mut self) -> Result<Vec<String>, ParseError> {
+        Ok(self.parse_type_params_with_bounds()?.0)
+    }
+
+    /// Parse optional type parameters, each with an optional single bound: `<A: Show, B>`.
+    ///
+    /// Returns `(params, bounds)` — `params` is the bare name list (unchanged for existing
+    /// readers) and `bounds` holds any `A: Trait` annotations (M-658 v0: one bound per param).
+    /// Writing `+` for multi-bounds is a deferred feature and will fail at the parser with an
+    /// explicit "unexpected `+`" error (never a silent accept, G2).
+    fn parse_type_params_with_bounds(&mut self) -> Result<(Vec<String>, Vec<Bound>), ParseError> {
         let mut params = Vec::new();
+        let mut bounds = Vec::new();
         if self.eat(&Tok::LAngle) {
-            params = self.comma_separated(None, Self::ident)?;
+            // Parse each `ParamName (: TraitName TraitArgs?)?` entry.
+            let first_param = self.ident()?;
+            let first_bound = self.parse_opt_bound(&first_param)?;
+            params.push(first_param);
+            if let Some(b) = first_bound {
+                bounds.push(b);
+            }
+            while self.eat(&Tok::Comma) {
+                let pname = self.ident()?;
+                let bound = self.parse_opt_bound(&pname)?;
+                params.push(pname);
+                if let Some(b) = bound {
+                    bounds.push(b);
+                }
+            }
             self.expect(&Tok::RAngle, "`>` to close the type parameters")?;
         }
-        Ok(params)
+        Ok((params, bounds))
+    }
+
+    /// Optionally parse `: TraitName` after a type param name (M-658 v0).
+    ///
+    /// Returns `None` if no `:` follows (unbound param). One bound per param; `+` multi-bounds
+    /// are deferred and will surface as an unexpected-token error (never a silent accept, G2).
+    /// Trait type args (e.g. `Eq<A>`) are also deferred in v0 — the bound surface is `A: Trait`
+    /// with no angle brackets; trait_args is always empty here.
+    fn parse_opt_bound(&mut self, param: &str) -> Result<Option<Bound>, ParseError> {
+        if !self.eat(&Tok::Colon) {
+            return Ok(None);
+        }
+        let trait_name = self.ident()?;
+        Ok(Some(Bound {
+            param: param.to_owned(),
+            trait_name,
+            trait_args: vec![],
+        }))
+    }
+
+    /// Replace the S2 stub: full `impl TraitName<trait_args>? for ForTy { fn bodies* }` parser.
+    fn parse_impl_decl(&mut self) -> Result<ImplDecl, ParseError> {
+        self.expect_keyword(&Tok::Impl)?;
+        let trait_name = self.ident()?;
+        // Optional type args on the trait name: `impl Show<Binary{8}> for …`
+        // These are TypeRefs, parsed inside `< >`.
+        let trait_args = if self.eat(&Tok::LAngle) {
+            let args = self.comma_separated(None, Self::parse_type_ref)?;
+            self.expect(&Tok::RAngle, "`>` to close the trait type arguments")?;
+            args
+        } else {
+            vec![]
+        };
+        // `for` is mandatory (verified in S2 stub; now we parse the full form).
+        self.expect(
+            &Tok::For,
+            "`for` after the trait name in an `impl` declaration (e.g. `impl Show for Binary{8} { … }`)",
+        )?;
+        let for_ty = self.parse_type_ref()?;
+        self.expect(&Tok::LBrace, "`{` to open the impl body")?;
+        let mut methods = Vec::new();
+        while !self.at(&Tok::RBrace) {
+            methods.push(self.parse_fn_decl()?);
+        }
+        self.expect(&Tok::RBrace, "`}` to close the impl body")?;
+        Ok(ImplDecl {
+            trait_name,
+            trait_args,
+            for_ty,
+            methods,
+        })
     }
 
     // ---- types ----

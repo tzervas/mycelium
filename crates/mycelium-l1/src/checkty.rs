@@ -760,7 +760,8 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
                 }
             }
             // `default` is consumed by the resolution pass; it never reaches `check_resolved`.
-            Item::Default(_) | Item::Trait(_) | Item::Use(_) | Item::Type(_) => {}
+            // `impl` blocks are collected in a later pass (Pass 1d/S5); skip here.
+            Item::Default(_) | Item::Trait(_) | Item::Use(_) | Item::Type(_) | Item::Impl(_) => {}
         }
     }
 
@@ -2858,6 +2859,7 @@ pub(crate) fn monomorphize_with_cap(
             sig: FnSig {
                 name: mangled.clone(),
                 params: vec![], // monomorphic — no type params
+                bounds: vec![], // monomorphic — no bounds
                 value_params: mono_params,
                 ret: mono_ret,
             },

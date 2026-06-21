@@ -1,0 +1,12 @@
+// exercises: trait declaration, impl block with `for`, and a bounded generic fn (M-658/M-659)
+nodule show_demo
+
+trait Show {
+    fn show(x: Binary{8}) -> Binary{8}
+}
+
+impl Show for Binary{8} {
+    fn show(x: Binary{8}) -> Binary{8} = x
+}
+
+fn identity<T: Show>(x: Binary{8}) -> Binary{8} = x
