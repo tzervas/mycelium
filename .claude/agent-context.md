@@ -63,6 +63,12 @@ Validate: `python3 tools/github/doc_refs_check.py`
 
 ### Recently landed (most recent first)
 
+- **Post-1.0 wave — first tranche landed (this session, 2026-06-21):** **#331** DN-20 tiered +
+  change-scoped testing (cargo-nextest); **#330** mycelium-lsp baseline completions (M-669); **#332**
+  **M-665** — 10 DN-03 runtime keywords reserved never-silent (G2); **#334** **RFC-0022** web-tooling
+  phylum Draft (M-670/RP-10); **#335** **RFC-0023** ADK-port phylum Draft (M-671/RP-9); **#336** docsite
+  lang-ref page (M-672). **M-666** (`hypha`/`colony` real-concurrency constructs) in integration —
+  branch `claude/leaf/E72-M666-real-concurrency` (**pushed**).
 - **1.0.0 kernel/core gate CLOSED** — **M-654 (#313)** Gate A3: cargo-mutants **0 un-triaged survivors**
   on the trusted base (`core`/`cert`/`interp`/`numerics`; equivalents justified in one workspace-root
   `.cargo/mutants.toml`), LCG suites → **proptest** (pinned `cases:1`), **cargo-fuzz** targets + smoke CI.
@@ -116,11 +122,40 @@ Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is 
 | ID | Title | Status |
 |----|-------|--------|
 | **E7-1** | L1 Stage-1 language completeness — generics→traits→effects→FFI→phylum→grading (M-656…M-664) | needs-design (active wave) |
-| **E7-2** | RFC-0008 runtime vocabulary — M-665 (lexer) → M-666/667 constructs → M-668 R2 | needs-design (M-665 in flight) |
-| **Dogfooding** | web phylum (planned RFC-0022) · ADK port (planned RFC-0023) · doc-site build · LSP completions | research / active |
+| **E7-2** | RFC-0008 runtime vocab — **M-665 done (#332)**; **M-666** `hypha`/`colony` real-concurrency **in integration**; next M-667 (`fuse`/`reclaim`/`tier`) → M-668 R2 | in progress |
+| **Dogfooding** | RFC-0022 web + RFC-0023 ADK Drafts landed (#334/#335); doc-site (#336) + LSP completions (#330) landed. **Builds M-670/M-671 blocked** — gated on the RP-10/RP-9 deep-research follow-up (post-compaction) + E7-1/E7-2 | research-gated |
 | **M-649** | self-host the first stdlib nodule in Mycelium-lang | needs-design (after E7-1; M-502 ✅) |
 | M-655 | Cut 1.0.0 tag — ADR-021 → Enacted | **maintainer-reserved** |
 | M-381 / M-646 | LLM-leverage ablation arms 3/5 — local runs | **maintainer-reserved** |
+
+### Post-compaction continuation (durable handoff)
+
+**Durability lesson (this session):** a session compaction **orphans in-flight background agents**
+(observed: a ~12:59 mass-orphan of ~49 sub-agents + a ~4× render-time inflation in the tasks panel —
+not real runtime). **Worktree branches are the durable artifact** — every spawned agent must **push
+before completing**; the orchestrator pulls + lands. All landed work is on `main`; the one rescued
+orphan is `origin/claude/rescue/m665-dup-orphan-a2f18c62` (a duplicate M-665 — review-then-drop).
+
+**Remaining wave — drive to done** (reserved/excluded: **M-655** tag · **M-381/M-646** LLM runs):
+1. **Land M-666** (`claude/leaf/E72-M666-real-concurrency`, pushed; integration in progress) — real
+   concurrency via the M-357 runtime validated ≡ the sequential reference (**RT2**); determinism
+   **Empirical** (not Proven); `ColonyError` divergence/failure/empty are never-silent (G2). **RFC-0008
+   stays Accepted, trusted base sequential** (§4.2/§4.7 forbid an L0 concurrency node). *Maintainer
+   note:* this is the RFC-0008-compliant realization of "real concurrency"; putting concurrency **in**
+   the trusted base would mean **superseding RFC-0008** — a separate, bigger decision, not taken.
+2. **E7-1 generics chain** — serialize on the shared `mycelium-l1` files (one task at a time, never two
+   leaves editing token/parse/checkty/elab in parallel): M-656 spec → M-657 impl → M-658/M-659 traits →
+   M-660 effects → M-661 `wild`/FFI → M-662 phylum/cross-nodule → M-663 RFC-0018 grading → M-664
+   `consume`/`grow`/`impl`. Unblocks **M-649** (self-hosting).
+3. **E7-2 continue:** M-667 (`fuse`/`reclaim`/`tier`) → M-668 (R2 design).
+4. **Web/ADK deep-research follow-up (RP-10 web / RP-9 ADK)** — the two-phase **gate** (fractured Opus
+   reasoners discharge the RFC-0022/0023 Honest-Uncertainty Registers). **Per maintainer: run this
+   post-compaction, on consolidated working branches — do NOT blow up orchestrator context.** Inputs
+   are landed: RFC-0022/0023 + `research/12-web-phylum`/`research/13-adk-phylum` RECORDs + the RP-9/RP-10
+   prompts in `docs/notes/research-prompts.md`.
+5. **Dogfooding builds** (M-670 `mycelium-web` / M-671 `mycelium-adk`, `status:blocked`) — build **only
+   after** the research follow-up discharges **and** E7-1/E7-2 land.
+6. **M-649** self-host the first stdlib nodule — after E7-1 (M-502 ✅).
 
 > **Component memory files:** see `.claude/memory/` — compact per-component orientation
 > (value model, swaps/certificates, VSA, numerics/dense, selection/EXPLAIN, language/execution,
