@@ -171,7 +171,7 @@ Per the honesty rule and VR-5, kill-criterion status is tracked at the strength 
 | **KC-1** | Honest, usefully-tight bound for a core VSA op? | ✅ **confirmed (build)** — carried from Phase 1: M-001 LH probe SAFE; M-131 ships a `Proven` capacity bound via checked instantiation + ≥1e4-trial validation. No regression. | Phase 2 *extends* the pattern to MAP-B/BSC/HRR/FHRR/sparse (M-240…M-242) — each tagged at the strength its basis supports, never upgraded. |
 | **KC-2** | LLM code-gen/reasoning survives the Mycelium surface? | **open — blocked (external)** — *running* M-002 (#3) still needs LLM API access. **Harness landed (2026-06-10)**: `experiments/mycelium_experiments/kc2/` — the fixed 8-task benchmark (minimal Mycelium fragment vs a Python-embedded DSL baseline, both arms with checked reference solutions proving well-posedness), the `myc-check` oracle (parse / typecheck / task-signature exit codes), and the generate→check→feedback loop measuring syntactic validity, first-attempt type-check pass rate (the SC-5b number), and edit-to-fix iterations. The report hard-codes "verdict: not established" (VR-5 — never pre-written). | Out of Phase-2 scope to *run*; plug an LLM generator into the `Generator` protocol when API access exists. Honest verdict: not yet established. |
 | **KC-3** | Kernel stays single-expert auditable? | **holding** — `mycelium-core` stayed small and by-construction-correct through Phase 1; VSA is behind the ADR-008 submodule boundary. | Phase 2 adds surface (numerics, swaps, selection, more VSA). Decision: keep numerics in a *separate* `mycelium-numerics` crate and selection in `mycelium-select` (SoC) so the core kernel does not balloon. Re-assess at the Phase-2 gate. |
-| **KC-4** | Per-swap certificate-check overhead within budget? | **measured (2026-06-10, M-212)** — cert checks cost the same order as the swap itself (bijective ≈1.3× of a ~1.3 µs swap; bounded ≈0.13× of a ~16 µs swap; observational ≈10 ns) → the downgrade path is **not** triggered on this evidence. See §6.7 for the numbers + caveats. | A *ratified numeric budget* is still pending (Foundation says "an agreed budget" — a maintainer decision); re-measure on representative hardware when one is set. |
+| **KC-4** | Per-swap certificate-check overhead within budget? | **measured (2026-06-10, M-212)** — cert checks cost the same order as the swap itself (bijective ≈1.3× of a ~1.3 µs swap; bounded ≈0.13× of a ~16 µs swap; observational ≈10 ns) → the downgrade path is **not** triggered on this evidence. See §6.7 for the numbers + caveats. | **Budget ratified 2026-06-21** (≤5 µs absolute + ≤2× guardrail; re-measured within budget, ~2.5× headroom — §6.7; closes ADR-021 Gate A5). Long-term target: drive toward the nanosecond range (post-1.0). |
 
 **KC-3 decision (sequencing/scope, 2026-06-09).** The two bound kernels and the selection mechanism
 land as their own crates (`mycelium-numerics`, `mycelium-select`), *not* inside `mycelium-core`. This
@@ -360,6 +360,17 @@ to **exit-gate met** (§8) on this basis.
     `CertifiedSwapEngine` — never silent, anywhere on the surface.
 - **Honesty.** The unimplemented table rows are *part of* the SC-3 statement: SC-3 demands they
   fail explicitly until their swaps exist (M-231/M-242), and the test pins exactly that.
+- **Budget ratified (2026-06-21, maintainer — closes ADR-021 Gate A5).** The agreed KC-4 budget is
+  **per-swap certificate-check ≤ 5 µs absolute AND ≤ 2× the swap cost for swaps whose own cost ≥ the
+  check** (an absolute budget is the honest framing — the `check/swap` ratio only looks high on the
+  trivially-cheap bijective swaps; the absolute check is a near-fixed ~2 µs validation tax, and on
+  the AOT/stable path the per-swap check is not on the hot path — ADR-009). Re-measured this run
+  (`cargo run --release -p xtask -- kc4`, optimized build): bijective enc/dec **1719 / 1703 ns**
+  (1.30× / 1.27×), bounded F32→BF16 **2003 ns** (0.12×), observational **8 ns**. Max ~2 µs / 1.30×
+  ⇒ **within budget, ~2.5× headroom**. **Long-term target (post-1.0): drive per-check overhead
+  toward the nanosecond range** — the ≤5 µs budget is the starting bar, not the ceiling (a tracked
+  cert-check optimization goal, not a 1.0.0 blocker). Append-only; supersedes nothing (the
+  2026-06-10 measurement above stands as the first datum).
 
 ### 6.8 M-220 — Decision-table SelectionPolicy + cost function · #55 · P0 · done 2026-06-10
 
