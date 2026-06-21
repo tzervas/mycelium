@@ -1499,7 +1499,10 @@ mod tests {
         // The continuation body (Var "f" → rendered as "var v0" since f is the first def name)
         // must appear at depth+1 = "  " (2 leading spaces).
         // Kills: write_canon(body, depth + 1, ...) → +1 replaced with *1=0 (body unindented)
-        let var_lines: Vec<&str> = text.lines().filter(|l| l.trim_start().starts_with("var ")).collect();
+        let var_lines: Vec<&str> = text
+            .lines()
+            .filter(|l| l.trim_start().starts_with("var "))
+            .collect();
         assert!(
             !var_lines.is_empty(),
             "FixGroup must produce a 'var' line for the body: {text:?}"
@@ -1911,7 +1914,7 @@ mod tests {
             alts: vec![crate::node::Alt::Ctor {
                 ctor: cref,
                 binders: vec!["a".into(), "b".into()], // two binders
-                body: Node::Var("a".into()),            // body uses first binder
+                body: Node::Var("a".into()),           // body uses first binder
             }],
             default: None,
         };
