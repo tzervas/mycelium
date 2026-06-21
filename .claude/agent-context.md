@@ -38,7 +38,7 @@ code lands incrementally per the phase plan.
 | **Task tracking** | `tools/github/issues.yaml` — M-xxx IDs + status + doc_refs |
 | **ID map** | `tools/github/idmap.tsv` — M-xxx → GitHub issue number/db-id |
 | **Changelog** | `CHANGELOG.md` (append-only, most recent at top) |
-| **Phase plan** | `docs/planning/phase-5.md` (current); no phase-6 doc yet |
+| **Phase plan** | `docs/planning/phase-5.md`; Phase-6 roadmap in **`DN-11 §5`**; active wave → `.claude/kickoff.md` |
 | **RFC index** | `docs/rfcs/README.md` |
 | **ADR index** | `docs/adr/README.md` |
 | **DN index** | `docs/Doc-Index.md` §Design Notes |
@@ -63,31 +63,28 @@ Validate: `python3 tools/github/doc_refs_check.py`
 
 ### Recently landed (most recent first)
 
-- **PM sync hardened** — `tools/github/` manifests are warning-clean: `area:spec` / `status:todo` /
-  `type:task` added to `labels.json`, `spec` option added to the project `Area` field, `scaffold`
-  type + ~18 recurring scope aliases added to `conventions.json`, a **`retire`** list (stock GitHub
-  labels deleted only when unused, else flagged — G2) in `label-aliases.json`, and doc-ref/task-id/
-  wave PR scopes downgraded from `!` flags to `~` info. `python3 tools/github/gh-issues-sync.py
-  --validate` is clean; `--self-test` green.
-- **Branching discipline strengthened** (CLAUDE.md) — explicit *working-branch → PR → squash-to-
-  `main`* flow (`main` is never touched directly); **pull the squashed `main` down into the working
-  branch before PR-ing** (and propagate it down through swarm levels) so the PR diff is clean and the
-  squash-merge is conflict-free; plus swarm mitigation **#7** (branch-ref drift → silent partial
-  octopus merge: merge the ref the child *reports*, then *count* the landed files).
-- **Gate issues live on GitHub** — M-652→#301, M-653→#300, M-654→#299, M-655→#298 (idmap updated).
-- **Next-wave prep + 10 component memory files** (`.claude/memory/`) — PR #297, squash `358c8c5`.
+- **1.0.0 kernel/core gate CLOSED** — **M-654 (#313)** Gate A3: cargo-mutants **0 un-triaged survivors**
+  on the trusted base (`core`/`cert`/`interp`/`numerics`; equivalents justified in one workspace-root
+  `.cargo/mutants.toml`), LCG suites → **proptest** (pinned `cases:1`), **cargo-fuzz** targets + smoke CI.
+  With A1/A2/A4/A5/B1/B2 already met, **every ADR-021 row is green**.
+- **Gap-closure epics filed (#312)** — **E7-1** / **E7-2** + 13 issues M-656…M-668; cross-referenced in
+  DN-14 §3 / DN-11 §5 + the lexicon memory.
+- **Editorial enactment sweep (#310)** — RFC-0016/0017/0021 → **Enacted**; DN-04/05/10/11/12 → Resolved;
+  **M-649 deferred** (post-1.0) — now back in scope (E7-1 unblocks it; M-502 ✅).
+- **Lexicon/syntax/grammar memory (#311)** — `.claude/memory/lang-lexicon-syntax.md` + a CLAUDE.md
+  fungal-lexicon quick-ref (phylum/nodule/spore/hypha/colony — never "crate"/"module").
+- Also: A4 non-skip gate (M-652 #303), A2 Medium-findings ledger (M-653 #306), scope→milestone +
+  per-PR/issue override manifest (#304/#309), bench Grok ingestion (M-651 #308), llm-harness
+  one-command `run.sh --all` (#307).
 
-### The 1.0.0 gate (ADR-021 — Accepted; see `docs/notes/DN-19-Road-to-1.0.0.md`)
+### The 1.0.0 gate — **CLOSED** (ADR-021 Accepted; the maintainer enacts at the tag)
 
-1.0.0 = the **kernel/core** once ADR-021's gate rows close. Status:
-- **Closed:** A1 (zero open High) · A5 (KC-4 cert-overhead budget ratified ≤5 µs + ≤2× guardrail) ·
-  B1 (RFC-0003/0006/0007 Accepted) · B2 (KC-2 verdict recorded — determinate retention ratio).
-- **Open (the remaining gap = the next wave):** **A2** (M-653, Medium-findings ledger) · **A3**
-  (M-654, WS8 durability — mutants/proptest/fuzz) · **A4** (M-652, make the cargo-deny/audit gate
-  non-skip — it is already wired into `just check`; provision the tools so it runs, not skip-passes).
-- Then **M-655**: cut 1.0.0 (ADR-021 `Accepted → Enacted` at the tagged release).
-- **Out of scope for 1.0.0 (post-1.0/1.x):** surface language, self-hosting (M-502/M-649), native
-  codegen, JIT, projections, RP-8 perf, arms 3/5 (ADR-021 §5).
+Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is **1.0.0-ready**.
+- **M-655** (cut 1.0.0) is **unblocked** and **maintainer-reserved**: move ADR-021 `Accepted → Enacted`
+  (append-only) + tag the kernel/core set (per-crate SemVer, ADR-018) + roll CHANGELOG `[1.0.0]`.
+- **Post-1.0 work = the active wave** (see `.claude/kickoff.md`): E7-1 + E7-2 (language/runtime
+  completeness), dogfooding (web/ADK phyla, doc-site, LSP completions), and **M-649** (self-hosting).
+- **Maintainer-reserved (excluded from the wave):** M-655 (tag) and M-381/M-646 (LLM local runs).
 
 ### Corpus status
 
@@ -95,10 +92,12 @@ Validate: `python3 tools/github/doc_refs_check.py`
 |-------|--------|
 | RFC-0001…0010 | Accepted |
 | RFC-0011…0015 | **Enacted** (`crates/mycelium-lsp/`) |
-| RFC-0016…0021 | Accepted (**ADR-021** = the 1.0.0 gate, **Accepted 2026-06-21**) |
-| ADR-010…021 | Accepted (ADR-020 **Enacted**; ADR-021 Accepted) |
-| stdlib specs | **25/25 Accepted** (DN-07 23 + runtime + sys on 2026-06-21); only `self-hosting-readiness` Draft |
-| DNs | DN-01…03,06…10,12,13,16 + **DN-19** Resolved/captured; DN-04,05,14,15,17,18 Draft |
+| RFC-0016 / 0017 / 0021 | **Enacted** (stdlib · maturation · projection framework) |
+| RFC-0018 / 0019 | Accepted (stage-1 grading / traits — **not yet implemented**; E7-1 closes them) |
+| RFC-0020 | Accepted (scoped) |
+| ADR-010…021 | Accepted (ADR-020 **Enacted**; **ADR-021** gate met, awaiting `Enacted` at the 1.0.0 tag) |
+| stdlib specs | **25/25 ratified**; only `self-hosting-readiness` Draft |
+| DNs | DN-01…03,06…13,16,19 Resolved; **DN-14** Draft (self-hosting gate — E7-1); DN-15,17,18 Draft |
 
 ### Implementation state
 
@@ -116,19 +115,17 @@ Validate: `python3 tools/github/doc_refs_check.py`
 
 | ID | Title | Status |
 |----|-------|--------|
-| **M-652** | A4 — make the cargo-deny/audit gate non-skip (already wired; provision tools) | open (1.0.0 gate) |
-| **M-653** | A2 — Medium-findings ledger (close/defer each) | open (1.0.0 gate) |
-| **M-654** | A3 — WS8 durability (cargo-mutants + proptest + fuzz) | open (1.0.0 gate) |
-| **M-655** | Cut 1.0.0 — ADR-021 → Enacted at the tagged release | open (after A2/A3/A4) |
-| M-647 | RFC-0020 L2 surface: scoped ratification (§4.2/§4.5 carve-out) | open |
-| M-648 | Editorial sweep: landed RFCs → Enacted; Draft DN → Resolved | open |
-| M-651 | Harness→bench schema bridge (Grok report ingestion) | open |
-| M-649 | Self-hosting Stage-2 — **post-1.0** (M-502 gate) | open |
-| M-381 | LLM-leverage ablation — headline DONE; arms 3/5 backlogged (non-blocking) | in-progress |
+| **E7-1** | L1 Stage-1 language completeness — generics→traits→effects→FFI→phylum→grading (M-656…M-664) | needs-design (active wave) |
+| **E7-2** | RFC-0008 runtime vocabulary — M-665 (lexer) → M-666/667 constructs → M-668 R2 | needs-design (M-665 in flight) |
+| **Dogfooding** | web phylum (RFC-0022) · ADK port (RFC-0023) · doc-site build · LSP completions | research / active |
+| **M-649** | self-host the first stdlib nodule in Mycelium-lang | needs-design (after E7-1; M-502 ✅) |
+| M-655 | Cut 1.0.0 tag — ADR-021 → Enacted | **maintainer-reserved** |
+| M-381 / M-646 | LLM-leverage ablation arms 3/5 — local runs | **maintainer-reserved** |
 
 > **Component memory files:** see `.claude/memory/` — compact per-component orientation
 > (value model, swaps/certificates, VSA, numerics/dense, selection/EXPLAIN, language/execution,
-> toolchain, stdlib, honesty model, experiments/LLM). Load the relevant one before deep work.
+> **lexicon/syntax/grammar**, toolchain, stdlib, honesty model, experiments/LLM). Load the relevant
+> one before deep work.
 
 ---
 
@@ -163,3 +160,4 @@ Before assigning a new M-xxx or E-xxx ID, verify the slot is free:
 - `/docs-review` — cross-refs, notation, grounding labels
 - `/security-review` — secrets, supply-chain, shell/CI safety
 - `/doc-index` — regenerate and query `docs/api-index/`; check `doc_refs` grammar validity
+- `/deep-research` — fan-out multi-source research + adversarial verification (the research **follow-up** phase)

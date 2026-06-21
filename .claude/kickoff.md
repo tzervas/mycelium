@@ -2,72 +2,105 @@
 
 Read `.claude/agent-context.md` for the compact orientation brief (CLAUDE.md wins on any conflict).
 
-## Mission: close the remaining 1.0.0 gate rows → cut 1.0.0 (kernel/core)
+## Mission: drive **every** open issue & work item to done — Gap-Closure + Dogfooding
 
-**ADR-021 (the 1.0.0 release-readiness gate) is Accepted.** 1.0.0 = closing its remaining open
-Gate-A rows; everything else (surface language, self-hosting, native codegen, JIT, projections,
-arms 3/5) is **post-1.0 / 1.x** (ADR-021 §5). The full prioritized roadmap is **`docs/notes/DN-19-Road-to-1.0.0.md`** — read it first.
+The **1.0.0 kernel/core gate is closed** (every ADR-021 row green; M-654 landed). This wave resolves
+the **entire remaining backlog to done** — **except** two items the maintainer reserves:
+**M-655** (cut the 1.0.0 tag / ADR-021 `Accepted → Enacted`) and **M-381 / M-646** (LLM local runs).
+Once E7-1 lands, **also complete M-649** (self-host the first stdlib nodule). Roadmap: **`DN-11 §5`**
+(Phase-6 plan) + **`DN-14 §3`** (self-hosting gate) + the **E7-1 / E7-2** epics in `issues.yaml`.
 
-### Already closed (this is the *remaining* gap list)
-A1 (zero open High findings) ✅ · A5 (KC-4 cert-overhead budget ratified: ≤5 µs + ≤2× guardrail) ✅ ·
-B1 (RFC-0003/0006/0007 Accepted) ✅ · B2 (KC-2 verdict recorded — determinate retention ratio) ✅.
+### Already done (do not redo)
+1.0.0 gate **all green** (A1·A2·A3·A4·A5·B1·B2); stdlib 25/25 enacted (RFC-0016/0017/0021 Enacted);
+DN-04/05/10/11/12 Resolved; M-502 done; M-651 done. The maintainer tags 1.0.0 on their own.
 
-### Current wave: the 1.0.0 critical path (DN-19 §2)
+### Track 1 — E7-1: L1 Stage-1 Language Completeness (Phase 5, `crates/mycelium-l1`)
+| ID | Title | depends_on |
+|----|-------|-----------|
+| **M-656** | spec(rfc-0007): ratify stage-1 generic type parameters | — |
+| **M-657** | feat(l1): generics in `checkty.rs` + `elab.rs` | M-656 |
+| **M-658** | spec(rfc-0007): stage-1 trait interfaces + `impl` | M-657 |
+| **M-659** | feat(l1): trait checking + `impl` blocks | M-658 |
+| **M-660** | spec+feat(l1): effect annotations on `fn` (RFC-0014 stage-1) | M-659 |
+| **M-661** | feat(l1): `wild` block typecheck — auditable FFI surface | M-660 |
+| **M-662** | feat(l1): `phylum` construct + cross-nodule import resolution | M-657, M-659 |
+| **M-663** | feat(l1): enact RFC-0018 stage-1 static guarantee grading | M-657 |
+| **M-664** | feat(l1): `consume`/`grow`/`impl` surface keywords | M-659 |
 
-| ID | Gate | Title | Priority | Parallel? |
-|----|------|-------|----------|-----------|
-| **M-652** | A4 | Make the `cargo deny`/`cargo audit` gate non-skip — already wired (`deny.toml` + `scripts/checks/deny.sh` + in `all.sh`); provision the tools so it runs green, not skip-passes | P1 | ✅ standalone |
-| **M-653** | A2 | Medium-findings ledger: close or explicitly defer every open deep-review Medium (one-line rationale each) | P1 | ✅ swarm (by finding/crate) |
-| **M-654** | A3 | WS8 durability: cargo-mutants green on the trusted base + LCG property tests → proptest (seed rotation) + cargo-fuzz targets in CI | P0 | partial (after M-653) |
-| **M-655** | ADR-021 | Cut 1.0.0: once A2/A3/A4 close, move ADR-021 `Accepted → Enacted` at the tagged release (per-crate SemVer, ADR-018) | P1 | after M-652–654 |
+### Track 2 — E7-2: RFC-0008 Runtime Vocabulary (Phase 7, `crates/mycelium-l1` + runtime)
+| ID | Title | depends_on |
+|----|-------|-----------|
+| **M-665** | feat(l1-lexer): reserve the 10 DN-03 runtime terms never-silent *(in flight)* | — |
+| **M-666** | feat(l1+runtime): R1 `hypha` + `colony` surface constructs | M-665 |
+| **M-667** | feat(l1+runtime): R1 `fuse` / `reclaim` / `tier` | M-666 |
+| **M-668** | design: R2 planning — `xloc`/`mesh`/`cyst`/`graft`/`forage`/`backbone` | M-667 |
 
-### Remaining open corpus/impl items (parallel, not 1.0.0-gating)
+### Track 3 — Dogfooding (build Mycelium **phyla**, never "crates"; IDs minted from the RFCs)
+| Item | Title | Gate |
+|------|-------|------|
+| **RFC-0022 → `mycelium-web`** | Web-tooling phylum (HTTP client/server/routing/JSON) | follow-up research → build |
+| **RFC-0023 → `mycelium-adk`** | Google ADK port (Agent/Tool/Session/Runner/multi-agent) | follow-up research → build |
+| **doc-site** | build the in-repo doc site + run the lang-ref autogen (`just docs-site` / `scripts/docsite.sh`) | unblocked |
+| **LSP completions** | baseline scaffolding completions in `crates/mycelium-lsp` (grounded in the L1 grammar) | unblocked |
 
-| ID | Title | Priority |
-|----|-------|----------|
-| **M-647** | RFC-0020 L2 surface: scoped ratification (§4.2/§4.5 carve-out) | P1 |
-| **M-648** | Editorial sweep: landed RFCs → Enacted; Draft DN-04/05/10/12/14/15/17/18 → Resolved where the decision landed | P2 |
-| **M-651** | Harness→bench schema bridge: Grok report (`metadata/quality/performance/outcomes`) ingestion in `mycelium-bench` | P2 |
-| **M-649** | Self-hosting Stage-2: first stdlib module in `.myc` L1 syntax — **post-1.0** (ADR-021 §5; M-502 gate) | P0 (post-1.0) |
+### Track 4 — Self-hosting (after E7-1)
+| ID | Title | depends_on |
+|----|-------|-----------|
+| **M-649** | self-host the first stdlib nodule in Mycelium-lang | E7-1 (M-502 ✅) |
 
-### Backlog (post-1.0, non-blocking)
-- **RP-8** — performance optimization + tool-extraction spike (profile → optimize cert-check toward
-  the nanosecond target → extract perf kernels; never weaken a guarantee). `docs/notes/research-prompts.md`.
-- **arms 3/5 live runs** — M-381 ablation arms (arm 3 needs a local GBNF model; `tools/llm-harness/local/`).
+## Two-phase research discipline (every research task)
+Each research task runs **two phases**, and the **follow-up gates ratification/build**:
+1. **Initial** — produce the design as a **Draft** RFC + a `research/NN-…-RECORD.md` (T-labelled
+   findings + a **Honest-Uncertainty Register §** per the Record-09/11 pattern: what's design-decidable
+   vs irreducibly empirical) + mint a follow-up **`RP-n`** in `docs/notes/research-prompts.md` (question,
+   falsification threshold, "Feeds:", status Open).
+2. **Follow-up** — a deep, multi-source verification pass (use **`/deep-research`**) that discharges the
+   open gates and resolves the `RP-n`. **The RFC stays `Draft` and its code is NOT built/landed until the
+   follow-up discharges its gates** (RFC-0021's carve-out is the precedent). Design may proceed in
+   parallel; **ratification and landing wait on the follow-up.** Append-only; never pre-write a verdict.
 
-## Swarm guidance
+## Sequencing — **max parallel** (every unblocked track at once)
+Run Tracks 1–4 **concurrently**. The only serialization is the **shared collision surface**: E7-1 and
+E7-2 both edit `crates/mycelium-l1` (`token.rs`/`parse.rs`/`checkty.rs`/`elab.rs`). The **orchestrator
+owns those files** and lands the L1 changes **in dependency order** — never two leaves editing the same
+L1 file in parallel (mitigation #7: merge the ref each child *reports*, then *count* landed files).
+Dogfooding research, doc-site, and LSP completions are disjoint and fully parallel now; the web/ADK
+**builds** start once their follow-up research discharges.
 
-Default mode: **Sonnet Swarm** (all spawned agents Sonnet; CLAUDE.md §Fractal Swarm). Opus orchestrator.
+## Swarm model — Opus + Sonnet (as needed)
+Opus **orchestrator** + **Opus** epic agents + **Sonnet** leaves. Pass the resolved model **explicitly**
+to every spawn (never substitute silently). Fractal merge flow (leaf → epic → orch → squash PR → main);
+**push the parent tip before spawning worktree children**; **pull squashed `main` down before each
+merge-up**. Use the deep-research skill for research follow-ups.
 
-Parallelizable now (disjoint dirs):
-- **M-652** (A4) — the gate is already wired (`deny.toml` + `scripts/checks/deny.sh` + in `all.sh`); the work is provisioning `cargo-deny`/`cargo-audit` so it runs green instead of skip-passing (+ policy review); standalone PR.
-- **M-653** (A2) — the Medium-findings sweep fans out by finding/crate (each leaf owns its fix + regression test).
-- **M-647 / M-648 / M-651** — docs + `mycelium-bench`; independent of the gate rows.
-- **M-654** (A3) is the heavy one — start cargo-mutants on the trusted base + the proptest migration after M-653's fixes land (so mutants run against the cleaned tree).
-
-Shared files (orchestrator-owned, read-only for leaves): `CHANGELOG.md`, `docs/Doc-Index.md`,
-`tools/github/issues.yaml`, `docs/api-index/`, `justfile`, `docs/planning/phase-*.md`.
+## Prompting policy — autonomous; ask only on real ambiguity
+**Proceed automatically until all requirements are satisfied.** A leaf **FLAGs up**, never guesses
+(G2/VR-5). The orchestrator decides from sensible defaults and uses **`AskUserQuestion`** **only** for:
+(1) genuinely ambiguous requirements, (2) architecturally-significant choices, (3) honesty/guarantee-tag
+tradeoffs, or (4) scope changes. Otherwise, drive on.
 
 ## Key invariants for this wave
+- **Honesty (VR-5)**: every bound/guarantee at its honestly-supportable strength; `Proven` only with a
+  *checked* basis. **LLM/agent outputs stay `Declared`/`Empirical`, never `Proven`** (the ADK port's
+  differentiator). A spec moves to "implemented (Rust-first), pending ratification", never silently `Accepted`.
+- **Never-silent (G2)**: every fallible path returns `Option`/`Result`/explicit error; reserved-not-active
+  keywords lex as keywords (never silent identifiers).
+- **Append-only**: status flips add a resolution record; supersede, don't rewrite.
+- **Grounded**: every claim cites the corpus (`G/A/R/T` labels, RFC/ADR/DN §). Research follow-ups cite sources.
+- **Tests**: a property test for every bound; a regression/witness test for every behavior; `just check` green.
+- **IDs**: pre-check every new `M-xxx`/`E-xxx` slot (`grep "id: M-669" issues.yaml`); after any change,
+  `python3 tools/github/gh-issues-sync.py --validate` warning-clean.
 
-- **Honesty rule (VR-5)**: every new bound/guarantee tagged at its honestly-supportable strength;
-  `Proven` only with a checked basis. Durability work (M-654) must not paper over a real failure.
-- **Never-silent (G2)**: every fallible Rust/Python path returns `Option`/`Result`/explicit error.
-- **Append-only**: status flips add a resolution record; no rewriting Accepted/Enacted text.
-- **Each fix ships a regression test** that fails without it (cite the finding ID) — the WS8 discipline.
-- **A2 honesty**: a deferred Medium gets a one-line rationale, never a silent drop.
-
-## Branch and PR flow
+## Branch & PR flow
 
 ```
-Branch from main → develop → just check (already runs the cargo-deny/audit gate; M-652 makes it non-skip)
-  → pull squashed main down into the branch → PR → squash to main
+Branch from main → develop → just check green → pull squashed main down → curated squash PR → main
 ```
 
-`main` is **never touched directly** — the only write to it is the PR's squash-merge (CLAUDE.md
-§Commits & PRs / §Autonomous PR workflow). **Before PR-ing, pull the latest squashed `main` into the
-branch** (`git fetch origin main` → merge/rebase → re-`just check`) so the diff is clean and the
-squash-merge is conflict-free; in a swarm, propagate the squashed `main` down through every level
-after each landing (pull-down flows down, squash-merge flows up). Use `/land` for the final squash.
-New IDs: verify the slot is free first (`grep "id: M-655" tools/github/issues.yaml`). After adding
-issues, run `python3 tools/github/gh-issues-sync.py --validate` (must be warning-clean).
+`main` is **never touched directly** — the only write is the PR's squash-merge. Handle every Copilot/CI
+review comment **first**, then land. Keep `issues.yaml` status + `CHANGELOG` append-only and current.
+Use `/land` for the final squash.
+
+## Stop conditions (the maintainer's, not the swarm's)
+- **M-655** — cut the 1.0.0 tag + move ADR-021 `Accepted → Enacted` (prepped, but the maintainer's step).
+- **M-381 / M-646** — the LLM local runs (scripts are polished: `cd tools/llm-harness && ./run.sh --all`).
