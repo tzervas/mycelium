@@ -45,8 +45,9 @@ check:
 ci: check
 
 # Tier 2 — release / nightly / durability. The FULL workspace at HIGH proptest cases, PLUS the
-# heavy durability gates: cargo-mutants (`just mutants`) + the cargo-fuzz smoke (`just fuzz`). This
-# is the M-654 WS8 durability gate. SLOW by design — run deliberately (release prep, nightly).
+# heavy durability gates: cargo-mutants (`just mutants`) + a cargo-fuzz smoke (scripts/checks/
+# fuzz-smoke.sh, which wraps `just fuzz` skip-gracefully — a missing nightly/cargo-fuzz skips, never
+# hard-fails). This is the M-654 WS8 durability gate. SLOW by design — run deliberately (release/nightly).
 check-full:
     @echo "── check-full (Tier 2: full workspace · high proptest cases · mutants · fuzz) ──"
     @MYC_TEST_TIER=full PROPTEST_CASES=${PROPTEST_CASES:-256} bash scripts/checks/all.sh
