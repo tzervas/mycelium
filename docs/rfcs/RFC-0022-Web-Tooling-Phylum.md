@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0022 |
-| **Status** | **Draft** (2026-06-21 — Phase-1 design pass. Per the two-phase research discipline, a **follow-up deep-research pass gates ratification** (tracked as RP-10); the §10 Honest-Uncertainty Register enumerates exactly what that pass must verify. No status moves past Draft until §10.2 is discharged.) |
+| **Status** | **Draft** (2026-06-21 — Phase-1 design pass. Per the two-phase research discipline, a **follow-up deep-research pass gates ratification** (tracked as RP-10); the §10 Honest-Uncertainty Register enumerates exactly what that pass must verify. No status moves past Draft until §10.2 is discharged.) · **RP-10 research gate DISCHARGED (2026-06-21, `dfr` session)** — §10.2 verified against primary specs (RFC 9110/9112, RFC 8259, WHATWG-URL) + landed source by four fractured Opus sub-reasoners (`research/12-web-phylum-RECORD.md` §8); all four obligations (HTTP never-silent · JSON codec-reuse · server-determinism · routing/EXPLAIN) **design-sound, no falsification**. Residuals named, not closed — **deferred-to-build** (the ≥100-vector corpus, the RT2 differential, per-dispatch `RouteMatch`) + **scoped-future** (HTTP/2-3, TLS, the cross-peer smuggling model, wall-clock time, async-runtime choice, RT3). **Pending maintainer ratification** to Accepted (an agent stages the discharge; the maintainer ratifies — RFC-0018 precedent). *Honesty (VR-5):* Empirical/Declared, never `Proven`; empirical confirmation lands at the `dfb` build — the basis for a future Accepted→Enacted.) |
 | **Type** | Foundational / normative (once Accepted) — a **standard-library phylum** above the kernel (KC-3); no kernel change |
 | **Date** | June 21, 2026 |
 | **Tracks** | A new web-tooling phylum (working name `web`). Decomposes into per-nodule tasks once ratified; v1 lands Rust-first as a `mycelium-web` crate (mirroring the RFC-0016 §4.6 Rust-first order). |
@@ -481,6 +481,14 @@ server) is **not** borrowed — it is the web-library form of the Accepted RFC-0
 
 ## Meta — changelog
 
+- **2026-06-21 — RP-10 research gate discharged (Phase-2 deep-research follow-up; `dfr` session).**
+  Four fractured Opus sub-reasoners (W1 HTTP/never-silent · W2 JSON-codec-reuse · W3
+  server-determinism · W4 routing/EXPLAIN) verified §10.2 against primary specs + landed source; all
+  four obligations **design-sound, no falsification** (`research/12-web-phylum-RECORD.md` §8).
+  Residuals categorized (deferred-to-build empirical-on-code; scoped-future dependency-gated/non-goal)
+  and named — none silently closed (G2). Status appended: **"RP-10 research gate discharged; pending
+  maintainer ratification"** (the agent stages; the maintainer ratifies to Accepted). Findings
+  Empirical/Declared, never `Proven` (VR-5). Append-only; no design content rewritten.
 - **2026-06-21 — Draft (Phase-1 design pass).** Stands up the web-tooling phylum (working name
   `web`) as five nodules over one `phylum` — `web.http` (value model + never-silent parsing),
   `web.json` (a thin convenience over `std.io`'s one canonical JSON — no new codec), `web.route`
