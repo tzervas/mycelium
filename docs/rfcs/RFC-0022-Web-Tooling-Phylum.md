@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0022 |
-| **Status** | **Draft** (2026-06-21 — Phase-1 design pass. Per the two-phase research discipline, a **follow-up deep-research pass gates ratification**; the §10 Honest-Uncertainty Register enumerates exactly what that pass must verify. No status moves past Draft until §10.2 is discharged.) |
+| **Status** | **Draft** (2026-06-21 — Phase-1 design pass. Per the two-phase research discipline, a **follow-up deep-research pass gates ratification** (tracked as RP-10); the §10 Honest-Uncertainty Register enumerates exactly what that pass must verify. No status moves past Draft until §10.2 is discharged.) |
 | **Type** | Foundational / normative (once Accepted) — a **standard-library phylum** above the kernel (KC-3); no kernel change |
 | **Date** | June 21, 2026 |
 | **Tracks** | A new web-tooling phylum (working name `web`). Decomposes into per-nodule tasks once ratified; v1 lands Rust-first as a `mycelium-web` crate (mirroring the RFC-0016 §4.6 Rust-first order). |

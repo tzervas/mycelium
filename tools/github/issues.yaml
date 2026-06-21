@@ -2209,3 +2209,13 @@ issues:
       Dogfooding developer-experience: a baseline LSP completion provider so developers scaffold Mycelium code easily. `crates/mycelium-lsp/src/completions.rs` offers (1) the 36 **ACTIVE** keyword completions drawn from `mycelium_l1::token::keyword()` (structural / expression / type / scalar / strength), and (2) five grammar-grounded snippets — `nodule-header`, `fn-def`, `type-adt`, `match-expr`, `swap-expr` (the swap snippet pins both `to:` and `policy:` per the S1/WF2 invariant). `wire.rs` advertises `completionProvider` and handles `textDocument/completion`.
       Honesty (G2/VR-5): scope is **Declared** — lexical/scaffolding only, no semantic/type-aware resolution (stated in the module doc). Reserved-not-active (`phylum`/`colony`) and not-yet-lexed runtime words (`hypha`…`reclaim`, plus `impl`/`consume`/`grow`) are **excluded** — never offered as if usable.
       Acceptance: `cargo test -p mycelium-lsp` green (83 tests); `completionProvider` advertised in `initialize_result`; ACTIVE keywords offered, reserved/not-yet-lexed words excluded; 5 grammar-grounded snippets. DONE (2026-06-21).
+
+  # ---------------- 2026-06-21: Web phylum (RFC-0022) ----------------
+  - id: M-670
+    title: "M-670 — feat(web): build the mycelium-web phylum (HTTP client/server/routing/JSON) per RFC-0022"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:stdlib, priority:P2, status:blocked]
+    depends_on: [M-657, M-659, M-666]
+    doc_refs: [corpus:RFC-0022, corpus:RFC-0016, corpus:RFC-0008]
+    body: |
+      build the `web` phylum (Rust-first `mycelium-web`): nodules web.http / web.json / web.route / web.server / web.client per RFC-0022. **BLOCKED** on the two-phase research discharge (**RP-10** must discharge the RFC-0022 §10 Honest-Uncertainty Register) AND E7-1 (M-657 generics, M-659 traits — the typed `Json<T>` handler surface) + E7-2 (M-666 `hypha`/`colony` — the `colony { hypha … }` server surface). v1 Rust-first; honest guarantee matrix (never `Proven` without a checked basis); never-silent throughout (G2).
