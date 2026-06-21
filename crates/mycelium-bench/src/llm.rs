@@ -8,6 +8,25 @@
 //! sample is surfaced as SYNTHETIC and never presented as evidence of real model quality (VR-5, and
 //! the harness's own V-03 rule). We bind to the harness's documented schema
 //! (`tools/llm-harness/harness.py::_write_json_report`); unknown `detail` fields are kept opaque.
+//!
+//! ## Grok/xAI harness bridge
+//!
+//! The Grok co-author harness (`tools/llm-harness/`) emits a different schema than the bench
+//! harness above. Both are ingested via the schema-dispatching [`parse_any_llm_json`] function:
+//!
+//! - **Bench schema** (`mycelium-llm-validation`): `{harness, version, run_id, mode, honesty_posture,
+//!   summary, results}` — ingested via [`LlmReport::from_json`] (original path; unchanged).
+//! - **Grok schema** (`mycelium-grok-coauthor`): `{metadata, honesty_posture, quality, performance,
+//!   outcomes, ablation}` — ingested via [`GrokLlmReport::from_json`].
+//!
+//! Tagged dispatch in [`parse_any_llm_json`]: a top-level `"metadata"` key (an object) unambiguously
+//! marks the Grok schema; its absence selects the bench schema. The two root shapes are structurally
+//! distinct — no magic-string check on `harness` is needed.
+//!
+//! **Honesty (VR-5):** numeric metrics in [`GrokOutcome`] carry their own `guarantee_tag`
+//! (`"Declared"` in the synthetic sample). [`parse_any_llm_json`] preserves that tag — never
+//! upgrades. The `synthetic` flag from `honesty_posture` propagates so `is_synthetic` / the
+//! "SYNTHETIC" label remain correct in the unified report.
 
 use std::path::Path;
 
@@ -213,6 +232,320 @@ impl std::fmt::Display for LlmIngestError {
 
 impl std::error::Error for LlmIngestError {}
 
+// ─── Grok/xAI harness schema ──────────────────────────────────────────────────────────────────
+
+/// The top-level Grok/xAI harness report (`mycelium-grok-coauthor`).
+///
+/// `#[serde(deny_unknown_fields)]` pins the contract: any unknown key in a Grok fixture is a loud
+/// parse error, not a silent drop (G2 — never silent). This catches schema drift at the boundary.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GrokLlmReport {
+    /// Harness metadata (name, version, model, mode, …).
+    pub metadata: GrokMetadata,
+    /// Honesty posture block (shared lattice; Grok adds `synthetic` + `synthetic_note`).
+    pub honesty_posture: GrokHonestyPosture,
+    /// Aggregate quality metrics (syntactic validity rate, type-check pass rate, …).
+    pub quality: GrokQuality,
+    /// Aggregate token / latency / cost metrics.
+    pub performance: GrokPerformance,
+    /// Per-task outcomes — the primary per-validation rows.
+    pub outcomes: Vec<GrokOutcome>,
+    /// Ablation experiment block (arms + retention result).
+    pub ablation: GrokAblation,
+}
+
+/// Harness metadata block in the Grok report.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GrokMetadata {
+    /// Harness identifier (e.g. `"mycelium-grok-coauthor"`).
+    pub harness: String,
+    /// Schema version (e.g. `"0.1.0"`).
+    pub version: String,
+    /// Model identifier (e.g. `"grok-4.3"`).
+    pub model: String,
+    /// Run mode (e.g. `"self-test"`, `"real"`, `"mock"`).
+    pub mode: String,
+    /// Endpoint description (e.g. `"mock (offline)"`, or a real URL).
+    pub endpoint: String,
+    /// Task-set identifier.
+    pub task_set_id: String,
+    /// Random seed used.
+    pub seed: u64,
+    /// Maximum rounds per task.
+    pub max_rounds: u32,
+    /// UTC timestamp string (or `"SAMPLE-DETERMINISTIC"` for fixtures).
+    pub timestamp_utc: String,
+}
+
+/// Honesty posture block in the Grok report. Extends the bench posture with `synthetic` flag.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GrokHonestyPosture {
+    /// Always true in the Grok harness.
+    pub never_silent: bool,
+    /// Guarantee lattice, strongest-first.
+    pub guarantee_lattice: Vec<String>,
+    /// Tags a model-derived claim is allowed to carry.
+    pub model_allowed_tags: Vec<String>,
+    /// VR-5 rule text (Grok variant is longer than the bench variant).
+    pub vr5_rule: String,
+    /// `true` when this is a synthetic self-test (no real model call). The authoritative
+    /// synthetic discriminant for the Grok schema.
+    pub synthetic: bool,
+    /// Human-readable note explaining the synthetic status.
+    pub synthetic_note: String,
+}
+
+/// Aggregate quality metrics from the Grok report.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GrokQuality {
+    /// Total tasks in the run.
+    pub total: u32,
+    /// Tasks actually scored (not skipped).
+    pub scored: u32,
+    /// Tasks skipped.
+    pub skipped: u32,
+    /// Count of syntactically valid outputs.
+    pub syntactic_valid: u32,
+    /// Count of type-check passes.
+    pub typecheck_pass: u32,
+    /// Syntactic validity rate (0.0–1.0).
+    pub syntactic_validity_rate: f64,
+    /// Type-check pass rate (0.0–1.0).
+    pub typecheck_pass_rate: f64,
+    /// Edit-to-fix iteration counts (one per task).
+    pub edit_to_fix_iterations: Vec<u32>,
+    /// Mean edit-to-fix iterations across tasks.
+    pub mean_edit_to_fix: f64,
+}
+
+/// Aggregate performance metrics from the Grok report.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GrokPerformance {
+    /// Total prompt tokens across all rounds.
+    pub prompt_tokens: u64,
+    /// Total completion tokens across all rounds.
+    pub completion_tokens: u64,
+    /// Sum of prompt + completion tokens.
+    pub total_tokens: u64,
+    /// Total cost in USD (may be 0.0 for mock runs).
+    pub total_cost_usd: f64,
+    /// Number of API requests made.
+    pub request_count: u32,
+    /// Number of batch requests (0 for non-batch runs).
+    pub batch_count: u32,
+    /// Mean per-request latency in seconds.
+    pub mean_latency_s: f64,
+    /// Total latency in seconds.
+    pub total_latency_s: f64,
+}
+
+/// Per-task outcome in the Grok report. Maps to one `LlmValidationRow` in the unified report.
+///
+/// `guarantee_tag` is preserved verbatim — never upgraded (VR-5 / honesty rule). The Grok
+/// synthetic sample carries `"Declared"` for all outcomes; a real run may carry `"Empirical"`.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GrokOutcome {
+    /// Task identifier (e.g. `"g01"`).
+    pub task_id: String,
+    /// Task specification name (e.g. `"identity"`).
+    pub spec: String,
+    /// Model that ran this task.
+    pub model: String,
+    /// Outcome status: `"PASS"` | `"PARTIAL_PASS"` | `"FAIL"` | `"SKIP"`.
+    pub status: String,
+    /// Honest guarantee tag — preserved verbatim, never upgraded (VR-5).
+    pub guarantee_tag: String,
+    /// Number of edit–fix iterations until clean (or until max_rounds exhausted).
+    pub iterations_to_clean: u32,
+    /// Per-round detail (kept as opaque JSON — round shape may evolve between harness versions).
+    pub rounds: Vec<serde_json::Value>,
+    /// Total prompt tokens for this task (sum across rounds).
+    pub total_prompt_tokens: u64,
+    /// Total completion tokens for this task (sum across rounds).
+    pub total_completion_tokens: u64,
+    /// Total latency in seconds for this task.
+    pub total_latency_s: f64,
+    /// Total cost in USD for this task.
+    pub total_cost_usd: f64,
+    /// Human-readable one-line message.
+    pub message: String,
+}
+
+/// The ablation block in the Grok report. Scalars are typed; `arms` and `retention` are kept
+/// opaque (`serde_json::Value`) because their inner schemas evolve independently.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GrokAblation {
+    /// Experiment description.
+    pub experiment: String,
+    /// Model that ran the ablation.
+    pub model: String,
+    /// Task-set identifier.
+    pub task_set_id: String,
+    /// Seeds used.
+    pub seeds: Vec<u64>,
+    /// Ablation arms (opaque — inner shape may evolve).
+    pub arms: Vec<serde_json::Value>,
+    /// Retention result block (opaque — inner shape may evolve).
+    pub retention: serde_json::Value,
+}
+
+impl GrokLlmReport {
+    /// Parse a Grok harness report from JSON text. Errors are explicit — never silent (G2).
+    pub fn from_json(text: &str) -> Result<Self, LlmIngestError> {
+        serde_json::from_str(text).map_err(|e| LlmIngestError::Parse(e.to_string()))
+    }
+
+    /// Whether this Grok report represents a synthetic (offline mock / self-test) run.
+    ///
+    /// The primary honesty gate: a synthetic report MUST be labeled synthetic in the unified
+    /// report (VR-5 / the harness's V-03 rule). Driven by `honesty_posture.synthetic` (the
+    /// authoritative flag); corroborated by `metadata.mode`.
+    #[must_use]
+    pub fn is_synthetic(&self) -> bool {
+        self.honesty_posture.synthetic
+            || self.metadata.mode == "mock"
+            || self.metadata.mode == "self-test"
+    }
+
+    /// A one-line provenance string for the unified report, analogous to [`LlmReport::provenance`].
+    #[must_use]
+    pub fn provenance(&self) -> String {
+        let kind = if self.is_synthetic() {
+            "SYNTHETIC (self-test / offline mock; NOT real model quality)"
+        } else {
+            "real model run"
+        };
+        format!(
+            "{} v{} — model={} — mode={} — {} ({} outcomes: {} scored / {} skipped)",
+            self.metadata.harness,
+            self.metadata.version,
+            self.metadata.model,
+            self.metadata.mode,
+            kind,
+            self.quality.total,
+            self.quality.scored,
+            self.quality.skipped,
+        )
+    }
+}
+
+// ─── Schema-dispatching ingestion ─────────────────────────────────────────────────────────────
+
+/// Peek at a raw JSON value to decide which harness schema it belongs to.
+///
+/// - `"metadata"` key present at root → Grok schema (`mycelium-grok-coauthor`)
+/// - absent → bench schema (`mycelium-llm-validation`)
+///
+/// Structural discriminant: the Grok schema has a nested `metadata` object at root; the bench
+/// schema has flat `harness`/`version` strings at root. The two shapes are unambiguous.
+#[must_use]
+fn is_grok_schema(raw: &serde_json::Value) -> bool {
+    raw.get("metadata")
+        .is_some_and(serde_json::Value::is_object)
+}
+
+/// Intermediate form produced by [`parse_any_llm_json`]; consumed by
+/// [`crate::report::LlmSection::from_parsed`].
+#[derive(Debug)]
+pub struct ParsedLlmSection {
+    /// Source file path (for provenance, not reachability).
+    pub source_path: String,
+    /// Whether the report is synthetic — the honesty gate (VR-5).
+    pub is_synthetic: bool,
+    /// One-line provenance string.
+    pub provenance: String,
+    /// Per-validation/per-outcome rows; guarantee tags preserved verbatim.
+    pub validations: Vec<crate::report::LlmValidationRow>,
+}
+
+/// Parse raw JSON text as *either* the Grok or the bench harness schema, returning a
+/// [`ParsedLlmSection`] ready for the unified report.
+///
+/// **Dispatch:** peeks at the root JSON value (one `serde_json::from_str` parse); dispatches on
+/// the presence of a `"metadata"` object key. Both paths are explicit parse errors, never silent
+/// (G2).
+///
+/// **Honesty:** per-outcome `guarantee_tag` values are preserved verbatim from their source
+/// schema — never upgraded. `is_synthetic` propagates from the authoritative flag in each schema.
+///
+/// # Errors
+/// Returns [`LlmIngestError::Parse`] if the text is not valid JSON or does not match the
+/// detected schema (including `deny_unknown_fields` violations in the Grok path).
+pub fn parse_any_llm_json(
+    text: &str,
+    source_path: String,
+) -> Result<ParsedLlmSection, LlmIngestError> {
+    // One parse to peek the discriminant; the schema-specific parse repeats the work but
+    // avoids an unsafe transmute or complex deserialization dance. Both parses are fast — the
+    // reports are small JSON blobs.
+    let raw: serde_json::Value =
+        serde_json::from_str(text).map_err(|e| LlmIngestError::Parse(e.to_string()))?;
+
+    if is_grok_schema(&raw) {
+        let grok = GrokLlmReport::from_json(text)?;
+        let is_synthetic = grok.is_synthetic();
+        let provenance = grok.provenance();
+        let validations = grok
+            .outcomes
+            .iter()
+            .map(|o| crate::report::LlmValidationRow {
+                // Compose a stable id: "<task_id>/<spec>" mirrors the V-xx style used by
+                // the bench harness while being self-documenting for the Grok outcomes.
+                id: format!("{}/{}", o.task_id, o.spec),
+                status: o.status.clone(),
+                // Preserve the per-outcome guarantee tag verbatim — never upgrade (VR-5).
+                guarantee_tag: Some(o.guarantee_tag.clone()),
+                wall_seconds: Some(o.total_latency_s),
+                prompt_tokens: Some(o.total_prompt_tokens),
+                generated_tokens: Some(o.total_completion_tokens),
+                message: o.message.clone(),
+            })
+            .collect();
+        Ok(ParsedLlmSection {
+            source_path,
+            is_synthetic,
+            provenance,
+            validations,
+        })
+    } else {
+        let bench = LlmReport::from_json(text)?;
+        let is_synthetic = bench.is_synthetic();
+        let provenance = bench.provenance();
+        let validations = bench
+            .results
+            .iter()
+            .map(|v| {
+                let (p, g) = match v.token_counts() {
+                    Some((p, g)) => (p, g),
+                    None => (None, None),
+                };
+                crate::report::LlmValidationRow {
+                    id: v.id.clone(),
+                    status: v.status.clone(),
+                    guarantee_tag: v.guarantee_tag.clone(),
+                    wall_seconds: v.wall_seconds(),
+                    prompt_tokens: p,
+                    generated_tokens: g,
+                    message: v.message.clone(),
+                }
+            })
+            .collect();
+        Ok(ParsedLlmSection {
+            source_path,
+            is_synthetic,
+            provenance,
+            validations,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -326,5 +659,166 @@ mod tests {
             }
         }
         // Not reachable from CWD — fine; the SAMPLE-based tests above cover the binding.
+    }
+
+    // ─── Grok schema tests ────────────────────────────────────────────────────────────────────
+
+    /// A minimal but complete Grok synthetic sample matching the committed fixture
+    /// (`crates/mycelium-bench/tests/SYNTHETIC-SAMPLE-grok-4.3-self-test.json`).
+    /// Kept inline so the unit tests are fully offline and deterministic.
+    const GROK_SAMPLE: &str = r#"{
+      "metadata": {
+        "harness": "mycelium-grok-coauthor",
+        "version": "0.1.0",
+        "model": "grok-4.3",
+        "mode": "self-test",
+        "endpoint": "mock (offline)",
+        "task_set_id": "gold-compose-v1",
+        "seed": 42,
+        "max_rounds": 3,
+        "timestamp_utc": "SAMPLE-DETERMINISTIC"
+      },
+      "honesty_posture": {
+        "never_silent": true,
+        "guarantee_lattice": ["Exact", "Proven", "Empirical", "Declared"],
+        "model_allowed_tags": ["Empirical", "Declared"],
+        "vr5_rule": "Model-derived claims are Empirical or Declared — NEVER Proven or Exact.",
+        "synthetic": true,
+        "synthetic_note": "SYNTHETIC (self-test): offline mock. NOT real model quality."
+      },
+      "quality": {
+        "total": 2,
+        "scored": 2,
+        "skipped": 0,
+        "syntactic_valid": 2,
+        "typecheck_pass": 2,
+        "syntactic_validity_rate": 1.0,
+        "typecheck_pass_rate": 1.0,
+        "edit_to_fix_iterations": [1, 1],
+        "mean_edit_to_fix": 1.0
+      },
+      "performance": {
+        "prompt_tokens": 100,
+        "completion_tokens": 50,
+        "total_tokens": 150,
+        "total_cost_usd": 0.0002,
+        "request_count": 2,
+        "batch_count": 0,
+        "mean_latency_s": 0.0,
+        "total_latency_s": 0.0
+      },
+      "outcomes": [
+        {
+          "task_id": "g01",
+          "spec": "identity",
+          "model": "grok-4.3",
+          "status": "PASS",
+          "guarantee_tag": "Declared",
+          "iterations_to_clean": 1,
+          "rounds": [
+            {"attempt": 1, "is_correction": false, "verdict": "clean",
+             "syntactic_valid": true, "typecheck_pass": true,
+             "prompt_tokens": 60, "completion_tokens": 25, "latency_s": 0.0,
+             "cost_usd": 0.00014, "chat_ok": true, "chat_error": "", "diagnostics": []}
+          ],
+          "total_prompt_tokens": 60,
+          "total_completion_tokens": 25,
+          "total_latency_s": 0.0,
+          "total_cost_usd": 0.00014,
+          "message": "clean on first attempt"
+        },
+        {
+          "task_id": "g04",
+          "spec": "widen",
+          "model": "grok-4.3",
+          "status": "PASS",
+          "guarantee_tag": "Declared",
+          "iterations_to_clean": 1,
+          "rounds": [
+            {"attempt": 1, "is_correction": false, "verdict": "clean",
+             "syntactic_valid": true, "typecheck_pass": true,
+             "prompt_tokens": 40, "completion_tokens": 25, "latency_s": 0.0,
+             "cost_usd": 0.00006, "chat_ok": true, "chat_error": "", "diagnostics": []}
+          ],
+          "total_prompt_tokens": 40,
+          "total_completion_tokens": 25,
+          "total_latency_s": 0.0,
+          "total_cost_usd": 0.00006,
+          "message": "clean on first attempt"
+        }
+      ],
+      "ablation": {
+        "experiment": "test ablation",
+        "model": "grok-4.3",
+        "task_set_id": "gold-compose-v1",
+        "seeds": [1, 2],
+        "arms": [],
+        "retention": {"determinate": false}
+      }
+    }"#;
+
+    #[test]
+    fn grok_schema_parses_and_marks_synthetic() {
+        let g = GrokLlmReport::from_json(GROK_SAMPLE).expect("grok sample parses");
+        assert_eq!(g.metadata.harness, "mycelium-grok-coauthor");
+        assert_eq!(g.metadata.model, "grok-4.3");
+        assert_eq!(g.metadata.mode, "self-test");
+        assert!(g.honesty_posture.never_silent);
+        assert!(g.honesty_posture.synthetic, "synthetic flag must be set");
+        assert!(
+            g.is_synthetic(),
+            "a self-test Grok report must be flagged synthetic"
+        );
+        assert!(
+            g.provenance().contains("SYNTHETIC"),
+            "provenance must surface the synthetic label: {}",
+            g.provenance()
+        );
+        assert_eq!(g.outcomes.len(), 2);
+    }
+
+    #[test]
+    fn grok_deny_unknown_fields_catches_drift() {
+        // An extra key at the root level must be a loud error, not a silent drop (G2).
+        let drifted = r#"{"metadata":{},"extra_key":"drift","honesty_posture":{},"quality":{},
+                          "performance":{},"outcomes":[],"ablation":{}}"#;
+        let err = GrokLlmReport::from_json(drifted).unwrap_err();
+        assert!(
+            matches!(err, LlmIngestError::Parse(_)),
+            "unknown field must be a parse error, not silent: {err}"
+        );
+    }
+
+    #[test]
+    fn parse_any_dispatches_bench_schema_without_metadata_key() {
+        let parsed = parse_any_llm_json(SAMPLE, "sample.json".into())
+            .expect("bench sample dispatches correctly");
+        assert!(!parsed.validations.is_empty());
+        assert!(parsed.is_synthetic, "mock bench report is synthetic");
+        assert!(parsed.provenance.contains("SYNTHETIC"));
+    }
+
+    #[test]
+    fn parse_any_dispatches_grok_schema_with_metadata_key() {
+        let parsed = parse_any_llm_json(GROK_SAMPLE, "grok-sample.json".into())
+            .expect("grok sample dispatches correctly");
+        assert_eq!(parsed.validations.len(), 2, "two outcomes → two rows");
+        assert!(parsed.is_synthetic, "self-test Grok report is synthetic");
+        assert!(parsed.provenance.contains("SYNTHETIC"));
+        // Guarantee tags must be preserved verbatim — the Grok sample carries "Declared".
+        for row in &parsed.validations {
+            assert_eq!(
+                row.guarantee_tag.as_deref(),
+                Some("Declared"),
+                "guarantee_tag must be preserved from the Grok outcome: {}",
+                row.id
+            );
+        }
+    }
+
+    #[test]
+    fn parse_any_malformed_json_is_loud() {
+        let err = parse_any_llm_json("{ not json", "x.json".into()).unwrap_err();
+        assert!(matches!(err, LlmIngestError::Parse(_)));
     }
 }

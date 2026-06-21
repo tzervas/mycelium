@@ -9,7 +9,7 @@
 
 use mycelium_bench::backend::{Backend, Engines};
 use mycelium_bench::corpus::corpus;
-use mycelium_bench::llm::LlmReport;
+use mycelium_bench::llm::{parse_any_llm_json, LlmReport};
 use mycelium_bench::measure::run_corpus;
 use mycelium_bench::report::{neutral_band, Honesty, LlmSection, Report};
 use mycelium_bench::verdict::Verdict;
@@ -195,5 +195,94 @@ fn both_report_projections_are_emitted_and_valid() {
     assert!(
         md.contains("process-spawn-bound"),
         "the spawn caveat must be stated"
+    );
+}
+
+#[test]
+fn the_harness_ingests_grok_report_and_labels_synthetic_correctly() {
+    // Load the committed Grok SYNTHETIC fixture. The path is crate-local (in tests/), so it is
+    // always reachable from the integration-test's working directory.
+    let fixture_path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/SYNTHETIC-SAMPLE-grok-4.3-self-test.json"
+    );
+    let text = std::fs::read_to_string(fixture_path)
+        .unwrap_or_else(|e| panic!("Grok fixture must be readable: {e}"));
+
+    // The schema-dispatching entry-point must recognise the Grok schema and not error.
+    let parsed = parse_any_llm_json(&text, fixture_path.into())
+        .expect("parse_any_llm_json must ingest the Grok fixture without error");
+
+    // Synthetic flag: the fixture has `honesty_posture.synthetic = true` and
+    // `metadata.mode = "self-test"` — both mark it as a synthetic run.
+    assert!(
+        parsed.is_synthetic,
+        "the Grok self-test fixture must be flagged synthetic (VR-5)"
+    );
+    assert!(
+        parsed.provenance.contains("SYNTHETIC"),
+        "provenance must surface the synthetic label: {}",
+        parsed.provenance
+    );
+
+    // Per-outcome rows: the committed fixture has 3 outcomes (g01, g02, g04).
+    assert_eq!(
+        parsed.validations.len(),
+        3,
+        "three Grok outcomes → three validation rows"
+    );
+
+    // Guarantee tags must be preserved verbatim from the Grok outcomes — never upgraded (VR-5).
+    for row in &parsed.validations {
+        assert_eq!(
+            row.guarantee_tag.as_deref(),
+            Some("Declared"),
+            "guarantee_tag must be preserved from the Grok outcome (VR-5): row id={}",
+            row.id
+        );
+    }
+
+    // Build a full report with the Grok-ingested LLM section and verify the markdown labels it
+    // synthetic (the same path the bench harness uses for the original harness).
+    let eng = Engines::default();
+    let cases: Vec<_> = corpus()
+        .into_iter()
+        .filter(|c| c.id == "bit-xor-not")
+        .collect();
+    let run = run_corpus(&cases, &eng);
+    let llm_section = LlmSection::from_parsed(parsed);
+    assert!(
+        llm_section.is_synthetic,
+        "LlmSection built from Grok parsed must carry the synthetic flag"
+    );
+
+    let report = Report {
+        tool: "mycelium-bench-grok-test",
+        profile: "test",
+        mlir_dialect_feature: cfg!(feature = "mlir-dialect"),
+        host_note: "grok-bridge-test".into(),
+        honesty: Honesty::default(),
+        neutral_band: neutral_band(),
+        run,
+        llm: Some(llm_section),
+    };
+
+    let md = report.to_markdown();
+    assert!(
+        md.contains("SYNTHETIC sample"),
+        "the unified markdown report must label a Grok synthetic run as SYNTHETIC"
+    );
+    // Spot-check that at least one outcome row appears in the markdown.
+    assert!(
+        md.contains("g01"),
+        "the Grok outcome g01 must appear in the report table"
+    );
+
+    // JSON projection: the llm section must serialize and carry is_synthetic = true.
+    let json = report.to_json().expect("json serializes");
+    let v: serde_json::Value = serde_json::from_str(&json).expect("valid json");
+    assert!(
+        v["llm"]["is_synthetic"].as_bool().unwrap_or(false),
+        "JSON llm.is_synthetic must be true for the Grok synthetic fixture"
     );
 }

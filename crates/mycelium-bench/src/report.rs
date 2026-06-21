@@ -121,6 +121,19 @@ impl LlmSection {
             validations,
         }
     }
+
+    /// Build the section from the schema-agnostic [`crate::llm::ParsedLlmSection`] produced by
+    /// [`crate::llm::parse_any_llm_json`]. This is the preferred entry-point when the caller
+    /// does not know in advance whether the JSON is a bench-harness or a Grok-harness report.
+    #[must_use]
+    pub fn from_parsed(parsed: crate::llm::ParsedLlmSection) -> Self {
+        Self {
+            source_path: parsed.source_path,
+            is_synthetic: parsed.is_synthetic,
+            provenance: parsed.provenance,
+            validations: parsed.validations,
+        }
+    }
 }
 
 /// A roll-up of losses for the "where we're losing" section.
