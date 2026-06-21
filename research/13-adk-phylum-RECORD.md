@@ -345,6 +345,11 @@ Empirical/Declared, never `Proven` (VR-5).
 
 ## Meta — changelog
 
+- **2026-06-21 — RFC-0023 RATIFIED → Accepted (maintainer).** The §6.4 open completeness item is
+  **closed**: RFC-0023 §3 repaired (new §3.7 — ADK 2.0 graph Workflow Runtime + modes + budget; §3
+  pinned v2.3.0). Ratified: runtime `mycelium-mlir::runtime`; `ToolError` budget→`TaskOutcome`;
+  Session snapshot-v0 (merge→`fuse`); LLM-leverage no-verdict. See RFC-0023 Status + changelog.
+  Accepted = design; Enacted gated on the build + E7-1/E7-2.
 - **2026-06-21 — RP-9 discharge pass (Phase-2 deep-research follow-up; four fractured Opus
   sub-reasoners A1–A4).** Appends §6: the RP-9 research gate **substantially discharges** (design
   soundness; no soundness falsification) against primary ADK source (pinned `adk-python` v2.3.0 /

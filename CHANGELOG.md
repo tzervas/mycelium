@@ -8,6 +8,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-21: RFC-0022 + RFC-0023 ratified Draft → Accepted)
+- **RFC-0022 (Web-Tooling Phylum) and RFC-0023 (ADK Phylum) ratified to Accepted** by the maintainer
+  after the Phase-2 deep-research discharge (RP-10 / RP-9; `dfr` session). RFC-0023's §3 concept-map was
+  **repaired at ratification** (new **§3.7** mapping ADK 2.0's graph **Workflow Runtime**, operating
+  `mode`s, code-Router, and `RunConfig.max_llm_calls`→`TaskOutcome::BudgetExhausted`; §3 pinned to
+  `adk-python` **v2.3.0**), closing the one open completeness item. Ratified design decisions:
+  `web.server` + `adk.runner` run on **`mycelium-mlir::runtime`** (no external executor); `ToolError`
+  keeps `BadArgs|OutOfDomain|Refused|Upstream` with budget on `TaskOutcome::BudgetExhausted`;
+  Session/State is snapshot-v0 with concurrent merge deferred to `fuse`; IDNA pinned at build
+  (nontransitional, fail-closed); HTTP/2-3 + TLS + the cross-peer smuggling model are named v1
+  non-goals; LLM-leverage stays **no-verdict**. **Accepted = design agreed; Enacted gated on the
+  `mycelium-web` / `mycelium-adk` builds + E7-1/E7-2.** Append-only; status trails preserved in each
+  RFC's Status cell. Empirical/Declared, never Proven (VR-5). (RP-9/RP-10; M-670/M-671.)
+
 ### Added (2026-06-21: M-666 — RFC-0008 R1 `hypha`/`colony` real-concurrency L1 constructs)
 - **RFC-0008 R1 `hypha`/`colony` L1 surface constructs** (`mycelium-l1`, `mycelium-mlir`):
   `colony { hypha compute(x), hypha compute(y) }` now parses, type-checks, and lowers to

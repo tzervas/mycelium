@@ -837,6 +837,11 @@ basis for a future Accepted→Enacted move.
 
 ## Meta — changelog
 
+- **2026-06-21 — RFC-0022 RATIFIED → Accepted (maintainer).** Following the clean RP-10 discharge,
+  the maintainer ratified the design. Ratified: IDNA policy pinned at build (nontransitional,
+  fail-closed); `web.server` on the Mycelium runtime (`mycelium-mlir::runtime`, no external executor);
+  HTTP/2-3 + TLS + smuggling-model = named v1 non-goals. See RFC-0022 Status + changelog.
+  Accepted = design; Enacted gated on the `mycelium-web` build.
 - **2026-06-21 — RP-10 discharge pass (Phase-2 deep-research follow-up; four fractured Opus
   sub-reasoners W1–W4).** Appends §8: the RP-10 research gate **discharges** — all four obligations
   (HTTP never-silent, JSON codec-reuse, server-determinism, routing/EXPLAIN) design-verified sound
