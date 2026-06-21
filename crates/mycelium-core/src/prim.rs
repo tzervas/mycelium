@@ -325,4 +325,96 @@ mod tests {
         // Two independent builds produce the same hashes (content-addressing is a pure function).
         assert_eq!(PrimTable::builtins(), PrimTable::builtins());
     }
+
+    // Mutant-witness (prim.rs:71:9): PrimSig::arity() must return operands.len(), not 0 or 1.
+    // Tests against unary, binary, and zero-arity signatures to cover all three replacement constants.
+    #[test]
+    fn arity_reflects_operand_count() {
+        // Zero-arity (no operands).
+        let zero = PrimSig {
+            operands: vec![],
+            result: PrimParadigm::Any,
+            width: WidthRel::Uniform,
+        };
+        assert_eq!(zero.arity(), 0);
+        // Unary.
+        let unary = PrimSig {
+            operands: vec![PrimParadigm::Binary],
+            result: PrimParadigm::Binary,
+            width: WidthRel::Uniform,
+        };
+        assert_eq!(unary.arity(), 1);
+        // Binary.
+        let binary = PrimSig {
+            operands: vec![PrimParadigm::Ternary, PrimParadigm::Ternary],
+            result: PrimParadigm::Ternary,
+            width: WidthRel::Uniform,
+        };
+        assert_eq!(binary.arity(), 2);
+        // From builtins: core.id is unary, bit.xor is binary.
+        let t = PrimTable::builtins();
+        assert_eq!(t.get("core.id").unwrap().sig.arity(), 1);
+        assert_eq!(t.get("bit.xor").unwrap().sig.arity(), 2);
+    }
+
+    // Mutant-witness (prim.rs:122:9): Display for PrimRef must emit a non-empty, `#`-prefixed
+    // string, not Ok(Default::default()) (which would emit nothing).
+    #[test]
+    fn prim_ref_display_is_hash_prefixed() {
+        use super::PrimRef;
+        let t = PrimTable::builtins();
+        let r = t.prim_ref("bit.xor").unwrap();
+        let s = r.to_string();
+        // Must start with `#` (the Unison-style prim reference spelling).
+        assert!(s.starts_with('#'), "PrimRef display must start with '#': got {s:?}");
+        // Must be non-empty and carry the algo prefix from the hash.
+        assert!(s.len() > 1, "PrimRef display must be non-trivial: got {s:?}");
+    }
+
+    // Mutant-witness (prim.rs:191:9 and prim.rs:203:9): decl_hash and decl must return the
+    // actual registered entry for a known name, not always None.
+    #[test]
+    fn decl_hash_and_decl_return_entries_for_known_names() {
+        let t = PrimTable::builtins();
+        // decl_hash returns Some for a registered name.
+        let h = t.decl_hash("bit.not");
+        assert!(h.is_some(), "decl_hash must return Some for a registered prim");
+        // decl resolves the hash to the actual declaration.
+        let d = t.decl(h.unwrap());
+        assert!(d.is_some(), "decl must resolve a registered hash");
+        assert_eq!(d.unwrap().intrinsic, GuaranteeStrength::Exact);
+        // Unknown names return None.
+        assert!(t.decl_hash("nonexistent").is_none());
+    }
+
+    // Mutant-witness (prim.rs:228:9 both true/false replacements): contains() must return true
+    // for registered names and false for unregistered names — both sides kill both replacements.
+    #[test]
+    fn contains_returns_true_iff_registered() {
+        let t = PrimTable::builtins();
+        assert!(t.contains("trit.mul"), "contains must be true for a registered prim");
+        assert!(t.contains("bit.and"));
+        assert!(!t.contains("nonexistent"), "contains must be false for an unknown prim");
+        assert!(!t.contains(""));
+    }
+
+    // Mutant-witness (prim.rs:234:9 all three replacements: vec![], vec![""], vec!["xyzzy"]):
+    // names() must return exactly the registered kernel names, sorted — neither empty, nor
+    // containing blank strings, nor containing sentinel strings.
+    #[test]
+    fn names_returns_registered_sorted_names() {
+        let t = PrimTable::builtins();
+        let ns = t.names();
+        // Exactly 9 builtins.
+        assert_eq!(ns.len(), 9, "names() count must match the builtin count: {ns:?}");
+        // Sorted (BTreeMap iteration is sorted).
+        let mut sorted = ns.clone();
+        sorted.sort();
+        assert_eq!(ns, sorted, "names() must be in sorted order");
+        // Must contain specific known names, not blank/sentinel strings.
+        assert!(ns.contains(&"bit.xor"), "must contain 'bit.xor'");
+        assert!(ns.contains(&"core.id"), "must contain 'core.id'");
+        assert!(!ns.contains(&""), "must not contain empty string");
+        assert!(!ns.contains(&"xyzzy"), "must not contain sentinel 'xyzzy'");
+    }
 }

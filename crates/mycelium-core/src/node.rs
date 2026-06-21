@@ -249,4 +249,94 @@ mod tests {
         }
         .is_repr_changing());
     }
+
+    // Mutant-witnesses for Node::is_aot_lowerable (node.rs:183:9 true/false replacements and the
+    // structural && → || mutations at lines 185, 195, 198, 202, 204):
+    //
+    // The function is documented as "now total over the v0 node set" — every well-formed v0 node
+    // is AOT-lowerable. Accordingly, the `&&` → `||` mutations at each structural arm are
+    // **equivalent** (both sides of `&&` are always true, so `||` produces the same result).
+    // The whole-function replacements (`→ true` / `→ false`) ARE killable: replacing with
+    // `false` would make every node fail, which these tests detect.
+    //
+    // These tests also cover every node variant so that any future variant that _isn't_ always
+    // lowerable would be detected if the predicate is strengthened later.
+    #[test]
+    fn is_aot_lowerable_is_total_over_v0_nodes() {
+        let policy = ContentHash::parse("policy:round_trip_safe").expect("hash");
+        let v = byte();
+        // Leaf nodes.
+        assert!(Node::Const(v.clone()).is_aot_lowerable());
+        assert!(Node::Var("x".to_owned()).is_aot_lowerable());
+
+        // Let — both bound and body must be lowerable (line 185 && mutant).
+        let let_node = Node::Let {
+            id: "a".to_owned(),
+            bound: Box::new(Node::Const(v.clone())),
+            body: Box::new(Node::Var("a".to_owned())),
+        };
+        assert!(let_node.is_aot_lowerable());
+
+        // Op — args (may be empty or non-empty).
+        assert!(Node::Op { prim: "bit.not".to_owned(), args: vec![] }.is_aot_lowerable());
+        assert!(Node::Op {
+            prim: "bit.xor".to_owned(),
+            args: vec![Node::Var("x".to_owned()), Node::Var("y".to_owned())],
+        }.is_aot_lowerable());
+
+        // Swap — src must be lowerable.
+        let swap = Node::Swap {
+            src: Box::new(Node::Const(v.clone())),
+            target: Repr::Ternary { trits: 6 },
+            policy: policy.clone(),
+        };
+        assert!(swap.is_aot_lowerable());
+
+        // Lam and Fix — body must be lowerable.
+        let lam = Node::Lam {
+            param: "x".to_owned(),
+            body: Box::new(Node::Var("x".to_owned())),
+        };
+        assert!(lam.is_aot_lowerable());
+        let fix = Node::Fix {
+            name: "f".to_owned(),
+            body: Box::new(Node::Var("f".to_owned())),
+        };
+        assert!(fix.is_aot_lowerable());
+
+        // App — both func and arg must be lowerable (line 204 && mutant).
+        let app = Node::App {
+            func: Box::new(Node::Var("f".to_owned())),
+            arg: Box::new(Node::Const(v.clone())),
+        };
+        assert!(app.is_aot_lowerable());
+
+        // FixGroup — all defs and body (line 202 && mutant).
+        let fixgroup = Node::FixGroup {
+            defs: vec![
+                ("f".to_owned(), Box::new(Node::Var("g".to_owned()))),
+                ("g".to_owned(), Box::new(Node::Var("f".to_owned()))),
+            ],
+            body: Box::new(Node::Var("f".to_owned())),
+        };
+        assert!(fixgroup.is_aot_lowerable());
+
+        // Match — scrutinee, all alt bodies, and optional default (lines 195, 198 && mutants).
+        use crate::data::{CtorRef, CtorSpec, DataRegistry, DeclSpec};
+        use std::collections::BTreeMap;
+        let mut m = BTreeMap::new();
+        m.insert("Unit".to_owned(), DeclSpec { ctors: vec![CtorSpec { fields: vec![] }] });
+        let reg = DataRegistry::build(&m).unwrap();
+        let cref = reg.ctor_ref("Unit", 0).unwrap();
+        let match_node = Node::Match {
+            scrutinee: Box::new(Node::Var("x".to_owned())),
+            alts: vec![Alt::Ctor {
+                ctor: cref,
+                binders: vec![],
+                body: Node::Const(v.clone()),
+            }],
+            default: Some(Box::new(Node::Var("x".to_owned()))),
+        };
+        assert!(match_node.is_aot_lowerable());
+    }
 }

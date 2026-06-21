@@ -280,4 +280,78 @@ mod tests {
         // Z vs S(Z) differ.
         assert_ne!(z().content_hash(), a.content_hash());
     }
+
+    // Mutant-witness (datum.rs:59:9): Datum::fields() must return the actual fields, not an empty
+    // slice. If replaced by `Vec::leak(Vec::new())`, fields() would always return `[]`.
+    #[test]
+    fn fields_accessor_returns_actual_fields() {
+        let reg = nat_registry();
+        let z = Datum::new(reg.ctor_ref("Nat", 0).unwrap(), vec![]);
+        // Z has 0 fields.
+        assert_eq!(z.fields().len(), 0);
+        // S(Z) has 1 field, and it is the Z datum.
+        let s = Datum::new(
+            reg.ctor_ref("Nat", 1).unwrap(),
+            vec![CoreValue::Data(Datum::new(
+                reg.ctor_ref("Nat", 0).unwrap(),
+                vec![],
+            ))],
+        );
+        assert_eq!(s.fields().len(), 1);
+        // The single field is a Data variant.
+        assert!(s.fields()[0].as_data().is_some());
+        assert!(s.fields()[0].as_repr().is_none());
+    }
+
+    // Mutant-witness (datum.rs:101:9 and datum.rs:110:9): CoreValue::as_repr and as_data must
+    // return Some(_) for the matching variant and None for the other. Both survivors would be
+    // killed by asserting both the Some and the None branches.
+    #[test]
+    fn core_value_as_repr_and_as_data_are_discriminated() {
+        let reg = nat_registry();
+        let v = byte(GuaranteeStrength::Exact);
+        let repr_val = CoreValue::Repr(v.clone());
+        // as_repr returns Some for Repr variant and None for Data variant.
+        assert!(repr_val.as_repr().is_some());
+        assert!(repr_val.as_data().is_none());
+        // The returned reference is to the same value.
+        assert_eq!(repr_val.as_repr().unwrap(), &v);
+
+        let datum = Datum::new(reg.ctor_ref("Nat", 0).unwrap(), vec![]);
+        let data_val = CoreValue::Data(datum.clone());
+        // as_data returns Some for Data variant and None for Repr variant.
+        assert!(data_val.as_data().is_some());
+        assert!(data_val.as_repr().is_none());
+        assert_eq!(data_val.as_data().unwrap(), &datum);
+    }
+
+    // Mutant-witness (datum.rs:153:9): Canon::core_value must actually encode the value content
+    // (not no-op). If it were replaced by `()`, all CoreValues would hash identically. The
+    // content_hash test above already covers Datum encoding; this test pins the Repr arm.
+    #[test]
+    fn core_value_content_hash_depends_on_content() {
+        // Two Repr values with different payloads must have different content hashes as CoreValues.
+        let v1 = CoreValue::Repr(
+            Value::new(
+                Repr::Binary { width: 8 },
+                Payload::Bits(vec![false; 8]),
+                Meta::exact(Provenance::Root),
+            )
+            .unwrap(),
+        );
+        let v2 = CoreValue::Repr(
+            Value::new(
+                Repr::Binary { width: 8 },
+                Payload::Bits(vec![true; 8]),
+                Meta::exact(Provenance::Root),
+            )
+            .unwrap(),
+        );
+        assert_ne!(v1.content_hash(), v2.content_hash());
+
+        // A Repr and a Data value must have different content hashes.
+        let reg = nat_registry();
+        let d = CoreValue::Data(Datum::new(reg.ctor_ref("Nat", 0).unwrap(), vec![]));
+        assert_ne!(v1.content_hash(), d.content_hash());
+    }
 }
