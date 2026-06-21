@@ -51,7 +51,7 @@ pub mod verdict;
 
 pub use backend::{Backend, Engines, Outcome};
 pub use corpus::{corpus, Case, Fragment};
-pub use llm::LlmReport;
+pub use llm::{parse_any_llm_json, GrokLlmReport, LlmReport, ParsedLlmSection};
 pub use measure::{run_corpus, CaseRecord, RunRecord};
 pub use report::{Honesty, LlmSection, Report};
 pub use verdict::{classify, Speed, Verdict};

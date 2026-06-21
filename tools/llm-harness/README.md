@@ -9,6 +9,38 @@ Termux on Android (ARM/aarch64) with zero external Python dependencies.
 > the KC-2 LLM-leverage experiment (M-002) against the same local model — lives in
 > [`experiments/README.md`](../../experiments/README.md).
 
+## One command to run everything
+
+```sh
+cd tools/llm-harness
+./run.sh --all          # xAI ablation + local arm-3 — each skips gracefully if prerequisites absent
+./run.sh --local        # local arm-3 only (no xAI key needed)
+./run.sh                # xAI ablation only (today's default — same as before)
+./run.sh --check-only   # offline self-test + model list only; no key, no spend, no GPU
+```
+
+**What runs and what gets skipped (skip-graceful, G2 — never silent):**
+
+| Command | xAI path | local arm-3 |
+|---|---|---|
+| `./run.sh` | runs if `XAI_API_KEY`/`GROK_API_KEY` set; skips with message if absent | not run |
+| `./run.sh --all` | same as above | always runs setup (GPU optional — CPU fallback); inference SKIPs only if the backend/model is still unavailable after setup |
+| `./run.sh --local` | not run | always runs setup (GPU optional — CPU fallback); inference SKIPs only if the backend/model is still unavailable after setup |
+| `./run.sh --check-only` | offline self-test + list-models only (no spend, no GPU) | not run |
+
+**Prerequisites by path:**
+
+| Path | Prerequisite | Skip behaviour when absent |
+|---|---|---|
+| xAI/Grok | `XAI_API_KEY` or `GROK_API_KEY` | prints a message, exits 0 |
+| local arm-3 setup | Python >= 3.13 (load-bearing); `uv` recommended (warn-only — setup can still succeed if deps/model are already present) | wrong Python ⇒ exits 1; otherwise idempotent |
+| local arm-3 inference | RECOMMENDED an NVIDIA GPU (CPU fallback works, just slower); the ~5 GB GGUF is auto-downloaded by setup | `run_arm3_local.py` reports SKIP per task only when `llama_cpp`/model is still unavailable after setup, exits 0 |
+
+The local arm-3 setup (`local/setup_local_llm.py`) is **idempotent** — safe to re-run. It will
+skip steps that are already done (llama-cpp-python installed, model already on disk).
+
+---
+
 ## Honesty posture (non-negotiable)
 
 These rules are enforced by the harness, not just documented:
