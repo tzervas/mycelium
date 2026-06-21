@@ -99,6 +99,11 @@ docs:
 # Regenerate committed agent index (docs/api-index/); commit the result after any public-API change.
 docs-index:
     python3 tools/docgen/code_index.py
+# Assemble a browsable local docsite under target/docsite/ — corpus (myc-doc HTML), agent API
+# index, and rustdoc. Advisory, NOT part of `just check`. Skip-graceful: missing tools warn only.
+# WSL: cd target/docsite && python3 -m http.server 8080, then open http://localhost:8080.
+docs-site:
+    @bash scripts/docsite.sh
 
 # --- pre-commit (optional, easy DX) ---
 # Install the git hooks so `just check`-equivalent runs on every commit.
