@@ -24,9 +24,22 @@ allow = [
 confidence-threshold = 0.8
 
 [bans]
-# Warn on multiple versions of the same crate; do not hard-fail (skeleton tree churns).
+# Multiple versions of the same crate are warned, not denied: the pre-1.0 tree still pulls in
+# transitive duplicates we do not control. Tighten `multiple-versions` to "deny" once it settles.
+#
+# Wildcards stay at "warn" rather than "deny" — deliberately, with a flagged follow-up. With
+# `allow-wildcard-paths = true` the version-less *internal* path deps of non-published crates
+# (`mycelium-* v0.0.0 = { path = "../..." }`) no longer warn (legitimate intra-workspace wiring).
+# What remains visible is a real, non-silent finding: the *publishable* std crates (e.g.
+# `mycelium-std-math` v0.1.0) carry version-less path deps, which `allow-wildcard-paths` cannot
+# excuse (crates.io disallows path deps), so they would block a `wildcards = "deny"`. Fixing that
+# means declaring versioned deps or `publish = false` on those crates — an ADR-018 per-crate
+# SemVer / release-engineering decision, out of scope for the M-652 supply-chain gate. Until that
+# lands, wildcards is "warn" so the smell surfaces (G2 — never silently green) without failing
+# the gate on a pre-existing packaging gap.
 multiple-versions = "warn"
 wildcards = "warn"
+allow-wildcard-paths = true
 
 [sources]
 # Only crates.io. Reject unknown registries/git sources unless explicitly allowed later.
