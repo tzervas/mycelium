@@ -16,6 +16,7 @@
 #   - prints the cargo package-selection args on STDOUT, space-separated, ONE of:
 #       --workspace                      (conservative full run)
 #       -p crateA -p crateB ...          (scoped run)
+#       --no-changes                     (empty selection: no changed crate vs base — caller skips Rust tests this tier)
 #   - prints all human/diagnostic narration on STDERR (so STDOUT is clean for `$(...)` capture).
 #   - exits 0 on success or any graceful fallback; non-zero only on an internal contract violation.
 #
@@ -102,9 +103,11 @@ done <<< "$changed_paths"
 # --- Map changed paths -> workspace crates via cargo metadata. ------------------------------------
 # `cargo metadata --no-deps` lists workspace members with their manifest paths; the crate's source
 # root is that manifest's directory. A changed path under <dir>/ belongs to that crate. Offline.
+# Strictly --offline (the header's contract): a network-hitting fallback could hang in a
+# restricted env. An offline-metadata failure is itself a reason to widen to --workspace
+# (over-test, never under-test) rather than risk the network.
 meta="$(cargo metadata --no-deps --format-version 1 --offline 2>/dev/null)" \
-  || meta="$(cargo metadata --no-deps --format-version 1 2>/dev/null)" \
-  || emit_workspace "cargo metadata failed"
+  || emit_workspace "cargo metadata (offline) failed — cannot map paths to crates"
 
 # name<TAB>relative-crate-dir for every workspace member (dir relative to repo root).
 crate_dirs="$(
@@ -145,9 +148,11 @@ fi
 # Build the intra-workspace reverse-dependency edges from a FULL `cargo metadata` resolve graph,
 # then BFS outward from the touched set. We restrict to workspace members (external crates are
 # irrelevant — they don't have tests here). Offline.
+# Strictly --offline, and a failure here widens to --workspace: an empty resolve graph would
+# leave `rev` empty, collapsing the reverse-dep closure to just the touched crates and
+# UNDER-testing their dependents — a safety-contract violation. Widen instead (over-test).
 full_meta="$(cargo metadata --format-version 1 --offline 2>/dev/null)" \
-  || full_meta="$(cargo metadata --format-version 1 2>/dev/null)" \
-  || full_meta=""
+  || emit_workspace "cargo metadata (full resolve, offline) failed — cannot compute reverse-deps"
 
 declare -A rev=()   # rev[dep_name] = "userA userB ..."  (who depends on dep_name)
 if [[ -n "$full_meta" ]]; then

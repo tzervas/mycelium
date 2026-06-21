@@ -92,6 +92,14 @@ if [[ -f Cargo.toml ]] && have cargo; then
   fi
 
   if [[ "$run_rust" -eq 1 ]]; then
+    # Tier-1 `check` restores full feature coverage (DN-20 §1 parity with the prior
+    # `cargo test --workspace --all-features`) so feature-gated code (e.g. mycelium-mlir's
+    # `mlir-dialect`) is exercised on every CI run. The `fast` pre-commit tier stays
+    # default-features-only — it is the reduced-coverage tier by design (speed over breadth).
+    if [[ "$TIER" == "check" ]]; then
+      selection+=(--all-features)
+      log_sel="$log_sel --all-features"
+    fi
     ok "runner: $runner_desc; selection: $log_sel"
     case "$TIER" in
       fast)
