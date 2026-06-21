@@ -50,6 +50,8 @@ members = [
     "crates/mycelium-std-sys",
     "crates/mycelium-cli-common",
     "crates/mycelium-bench",
+    "crates/mycelium-web",
+    "crates/mycelium-adk",
     "xtask",
 ]
 

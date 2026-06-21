@@ -1,0 +1,24 @@
+[package]
+name = "mycelium-web"
+version = "0.0.0"
+description = "web — Rust-first web-tooling phylum (HTTP/1.1, JSON, routing) per RFC-0022 (M-670)."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+mycelium-core = { path = "../mycelium-core" }
+mycelium-std-core = { path = "../mycelium-std-core" }
+# web.json delegates to std.io's one canonical JSON codec (no new codec — DRY/KC-3).
+mycelium-std-io = { path = "../mycelium-std-io" }
+# web.server structures request handling on the runtime Colony/Scope surface.
+mycelium-std-runtime = { path = "../mycelium-std-runtime" }
+
+[dev-dependencies]
+# one property test per bound (status / parse / route round-trips; never-silent refusals).
+proptest = "1"
