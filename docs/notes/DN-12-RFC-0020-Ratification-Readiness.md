@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-12 |
-| **Status** | **Draft / Resolved-as-capture** (a ratification-*readiness* assessment, advisory — the same role DN-07 played for RFC-0016). Records that RFC-0020 carries **no research gate**, maps its deferred items onto the now-research-discharged RFC-0018/0019, and recommends a **scoped** ratification with a carve-out. Decides nothing normatively. |
+| **Status** | **Resolved** (2026-06-21 — RFC-0020 ratified as `Accepted (scoped)` (2026-06-18, maintainer); all DN-12 deferred items mapped: §4.2 (polymorphism/grading) gates RFC-0018 (Accepted), §4.5 (trait interfaces) gates RFC-0019 (Accepted), R20-Q4 dependency (RFC-0001 r5 `FixGroup`) enacted. Readiness-capture purpose complete. M-647/M-648 editorial sweep. Append-only.) **Draft / Resolved-as-capture** (a ratification-*readiness* assessment, advisory — the same role DN-07 played for RFC-0016). Records that RFC-0020 carries **no research gate**, maps its deferred items onto the now-research-discharged RFC-0018/0019, and recommends a **scoped** ratification with a carve-out. Decides nothing normatively. |
 | **Decides** | *Nothing normatively.* Frames RFC-0020's ratification readiness for the maintainer's append-only decision. |
 | **Feeds** | `docs/rfcs/RFC-0020-L2-Surface-Term-Language.md` §10; RFC-0006 §10 (the carve-out precedent, r5); RFC-0018 / RFC-0019 (the deferred-item dependencies, both now research-discharged — `research/09`, `research/10`); RFC-0001 r5 `FixGroup` (the R20-Q4 dependency, enacted). |
 | **Date** | June 18, 2026 |
@@ -70,6 +70,7 @@ gate on it.
 
 ## Changelog
 
+- **2026-06-21 — Resolved (M-647/M-648 editorial sweep).** RFC-0020 was ratified `Accepted (scoped)` (2026-06-18) following this note's recommendation: §4.1/§4.3/§4.4/§4.6–§4.9 core Accepted; §4.2/§4.5 and R20-Q1…Q5 carved out pending RFC-0018/0019 full enactment; RFC-0001 r5 `FixGroup` enacted (R20-Q4 cleared). RFC-0020's Doc-Index row already reflects `Accepted (scoped)`. This readiness-capture note's purpose is complete. Append-only.
 - **2026-06-18 — Draft / Resolved-as-capture.** Records that RFC-0020 carries no research gate; maps
   its deferred items onto the now-research-discharged RFC-0018 (RP-2/`research/09`) and RFC-0019
   (RP-3/`research/10`) and the enacted RFC-0001 r5 `FixGroup`; recommends a scoped ratification with a

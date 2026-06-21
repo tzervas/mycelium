@@ -553,7 +553,7 @@ issues:
   - id: M-381
     title: "M-381 — LLM-leverage validation (T3.6 retention-ratio ablation) — isolated, non-blocking"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:research, area:toolchain, priority:P3, status:in-progress]
+    labels: [phase:3, type:research, area:toolchain, priority:P3, status:done]
     depends_on: [M-380, M-002]
     doc_refs: [corpus:RFC-0021, corpus:RFC-0006, corpus:DN-09, src:tools/llm-harness/coauthor.py]
     body: |
@@ -566,6 +566,7 @@ issues:
       STATUS (2026-06-20 rigorous ablation, in-progress): retention ratio now DETERMINATE — landed the LlmCanonical→L1 bridge (DN-09 §9.4 option b; src:tools/llm-harness/grok/llm_canonical_to_l1.py), scoring arm 4 at the SAME myc-check parse+typecheck bar as arms 1/2. Two models, seeds [11,23,42], 8 tasks = 24 samples/arm. grok-build-0.1 (run 20260620T230403Z): arm1 2/24=8.3%, arm2 22/24=91.7%, arm4 4/24=16.7% [all Empirical] → retention 5.50 (550%). grok-4.3 (run 20260620T234224Z): arm1 1/24=4.2%, arm2 22/24=91.7%, arm4 10/24=41.7% [Empirical] → retention 2.20 (220%). Both ≥ ~70%: the RFC-0021 §4.7 promote-LlmCanonical trigger does NOT fire. Honest biases (VR-5): arm4's dominant failure was bridge-non-convertible model output (19/24, 12/24) and the Empirical bridge can only reject (G2) ⇒ arm4 is a lower bound; the supplied fn signature is an opposing advantage ⇒ net bias uncertain, but non-falsification is robust (arm2 91.7% dominates). Leverage claim stays Declared/open — still only 3 of 5 arms. arm3 (grammar-constrained decoding) needs a local GBNF backend (M-331/llama.cpp; xAI REST exposes no grammar param); arm5 (embedded-DSL) is the RR-3 contingency, unspent since KC-2=proceed. Self-test 17/17 (T15 bridge). Spend $0.088 this run, ≈$0.17 cumulative. Follow-ups (independent branch): arm3 GBNF backend, arm5 RR-3, fuller LlmCanonical→L1 converter, xai_sdk 1.17.0 batch-API reconciliation (gRPC CA + create/add/get/list_batch_results). KC-2 verdict unchanged: proceed. See DN-09 §10.
       STATUS (2026-06-21, clarity — NON-BLOCKING): M-381's headline deliverable (the T3.6 retention ratio + KC-2 verdict, recorded append-only) is DONE — the ratio is determinate (DN-09 §10) and the verdict (proceed) recorded. Status stays in-progress ONLY because arm 3 (grammar-constrained decoding — needs a local GBNF/llama.cpp model; xAI REST exposes no grammar param) and arm 5 (embedded-DSL, the RR-3 contingency, unspent since KC-2=proceed) are not yet run. These are research follow-ups that do NOT gate Phase-3 closure or 1.0.0 — ADR-021 Gate B2 (KC-2 verdict recorded) is MET on the recorded verdict. arm 3 / arm 5 are being built on branch claude/orch-0000-llm-ablation-arms-35 (does not block release).
       STATUS (2026-06-21, BACKLOGGED — maintainer decision): arm 3 + arm 5 modules LANDED (PR #290; arm 5 runnable, arm 3 implemented + offline-tested, runtime-blocked pending a local GBNF backend; local-LLM WSL/5080 setup automation in tools/llm-harness/local/). Per maintainer call, the remaining arm-3/arm-5 LIVE runs are now BACKLOGGED as a nice-to-have — they do NOT gate 1.0.0 (ADR-021 §5 out-of-scope; Gate B2 already met). To resume: run tools/llm-harness/local/setup_local_llm.py on a CUDA box then run_arm3_local.py (arm 3), or ./run.sh --ablation (arm 5 live). M-381 headline (retention ratio) stays DONE; status remains in-progress only to track the backlogged arms. The road to 1.0.0 is tracked in DN-19.
+      DONE (2026-06-21, M-646/M-381 close, M-648 editorial sweep): Gate B2 headline met — DN-09 §10 determinate retention ratio recorded (proceed). arm-4 LlmCanonical→L1 bridge landed in M-381; arms 3/5 live runs backlogged (need a local GBNF model, ADR-021 §5 out-of-scope). Closing as done.
 
   - id: M-330
     title: "M-330 — AI co-authoring loop (generate -> feedback -> self-correct)"
@@ -1801,7 +1802,7 @@ issues:
   - id: M-646
     title: "M-646 — Close M-381 arm4: standalone LlmCanonical scorer for determinate retention ratio"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:toolchain, priority:P1, status:needs-design]
+    labels: [phase:3, type:feature, area:toolchain, priority:P1, status:done]
     depends_on: [M-381, M-380]
     doc_refs: [corpus:DN-09, corpus:RFC-0021, src:tools/llm-harness/coauthor.py, src:crates/mycelium-lsp/src/project.rs]
     body: |
@@ -1823,11 +1824,12 @@ issues:
       (3) Retention ratio computed: arm2.pass@1 / arm4.pass@1; if ≥ ~70%, text syntax retains leverage; if < ~70%, RFC-0021 §4.7 supersession trigger (record honestly — do NOT pre-write the verdict, VR-5).
       (4) DN-09 §9 (or §10) updated append-only with final result; M-381 and M-646 closed.
       Guarantee tags: scorer pass/fail logic Exact (deterministic parser); trial counts Empirical; retention ratio verdict Empirical (if run completes with ≥3 seeds).
+      DONE (2026-06-21, M-648 editorial sweep): LlmCanonical→L1 bridge landed (tools/llm-harness/grok/llm_canonical_to_l1.py; path (b) complete); arm4 re-run with corrected scorer produced determinate retention 5.50×/2.20× [Empirical]; DN-09 §10 updated append-only; M-381 headline met (ADR-021 Gate B2). arms 3/5 backlogged per maintainer decision.
 
   - id: M-647
     title: "M-647 — RFC-0020 L2 surface language: scoped ratification with §4.2/§4.5 carve-out"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:docs, area:spec, priority:P1, status:needs-design]
+    labels: [phase:5, type:docs, area:spec, priority:P1, status:done]
     depends_on: [M-320, M-391]
     doc_refs: [corpus:RFC-0020, corpus:DN-12, corpus:RFC-0018, corpus:RFC-0019]
     body: |
@@ -1858,11 +1860,12 @@ issues:
       - DN-12 Status: Resolved
       - Doc-Index, RFC README, CHANGELOG updated; just check green (doc-status pass)
       - No normative content in §4.2/§4.5 rewritten — only an append that records the deferral
+      DONE (2026-06-21, M-648 editorial sweep): RFC-0020 already Accepted (scoped) per DN-12 recommendation (2026-06-18); DN-12 resolved (resolution record appended); Doc-Index and RFC README rows confirm Accepted (scoped); CHANGELOG entry in this sweep.
 
   - id: M-648
     title: "M-648 — Editorial sweep: RFC enactment flips + Draft DN → Resolved for landed decisions"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:docs, area:spec, priority:P2, status:needs-design]
+    labels: [phase:5, type:docs, area:spec, priority:P2, status:done]
     depends_on: [M-501, M-534, M-380, M-390, M-391, M-347, M-349]
     doc_refs: [corpus:RFC-0016, corpus:RFC-0017, corpus:RFC-0021, corpus:DN-04, corpus:DN-05, corpus:DN-10, corpus:RFC-0018, corpus:RFC-0019]
     body: |
@@ -1887,6 +1890,7 @@ issues:
       - docs/Doc-Index.md row updated
       - CHANGELOG entry (one entry per batch wave, not per doc)
       - just check green (doc-status pass verifies every status transition is valid)
+      DONE (2026-06-21): RFC-0016/0017/0021 → Enacted; DN-04/05/10/12 → Resolved; RFC-0018 stays Accepted (stage-1 static grading not yet implemented, honesty/VR-5); RFC-0019 stays Accepted (LR-2 deferred). Doc-Index, RFC README, CHANGELOG updated; just check green.
 
   - id: M-649
     title: "M-649 — Self-hosting Stage-2: first stdlib module written in Mycelium-lang L1 syntax"
@@ -1917,11 +1921,12 @@ issues:
       - Module meets the M-501 contract: never-silent G2, honest per-op guarantee tags, EXPLAIN-able selections
       - Phase 5 gate logged as "partially met" (first module in Mycelium-lang exists)
       - DN-14 Status: Resolved (with honest recording of remaining gate-fails — no silent upgrade)
+      DEFERRED (2026-06-21, M-648 editorial sweep): scoped post-1.0 per ADR-021 §5. The 5 gate-fails (generics, trait interfaces, effect annotations, wild/FFI, static guarantee index) block all non-trivial stdlib authoring in Mycelium-lang; the 5 present features are insufficient for any module in the RFC-0016 taxonomy. This issue stays OPEN; resumption requires Stage-1 generics/traits RFC amendments (Phase-6). DN-14 deferral note appended (2026-06-21).
 
   - id: M-650
     title: "M-650 — DN-11 Next Wave Plan: capture Phase 5 completion summary + Phase 6 road map"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:docs, area:project, priority:P2, status:needs-design]
+    labels: [phase:5, type:docs, area:project, priority:P2, status:done]
     depends_on: [M-534, M-630]
     doc_refs: [corpus:DN-11, corpus:DN-14, src:docs/planning/phase-5.md]
     body: |
@@ -1953,6 +1958,7 @@ issues:
       - Contains Phase 5 summary, Phase 5 remaining gate items, Phase 6 road map (all grounded in done M-xxx or explicit open questions)
       - No speculative claims — open questions marked as open questions (VR-5)
       - Doc-Index, CHANGELOG updated; just check green
+      DONE (2026-06-21, M-648 editorial sweep): DN-11 refreshed with Phase-5-complete summary (all 25 std crates M-501–M-534/540/541 done), remaining Phase-5 gate items (M-649 DEFERRED, M-647/M-648 done), and high-level Phase-6 roadmap (Stage-1 generics/traits, effect annotations, native codegen increments, self-hosting expansion). DN-11 → Resolved. Doc-Index and CHANGELOG updated.
 
   - id: M-651
     title: "M-651 — Harness→bench schema bridge: Grok report ingestion in mycelium-bench"

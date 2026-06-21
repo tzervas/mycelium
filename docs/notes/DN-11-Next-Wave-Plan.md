@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-11 |
-| **Status** | **Draft / Resolved-as-capture** (planning capture, advisory — see posture). Indexes the next wave of work into dependency-ordered tracks with their gates; mints task ids for the two L1 gaps that had none. Decides nothing normatively. |
+| **Status** | **Resolved** (2026-06-21 — Phase-5 completion summary, remaining gate items, and Phase-6 roadmap appended below (§5); M-650 editorial sweep. Append-only.) **Draft / Resolved-as-capture** (planning capture, advisory — see posture). Indexes the next wave of work into dependency-ordered tracks with their gates; mints task ids for the two L1 gaps that had none. Decides nothing normatively. |
 | **Decides** | *Nothing normatively.* Frames the wave the #194 KC-2/RFC-0017 ratification unblocked as three tracks, names the leading item, and records honest status nuances. |
 | **Feeds** | `docs/notes/DN-10-Remaining-L1-Gaps.md` (Track A); `docs/notes/research-prompts.md` (RP-1…RP-7 gates); RFC-0018/0019/0020/0021 (Track B, all Draft); RFC-0016 + `docs/spec/stdlib/` (Track C); `tools/github/issues.yaml` (the M-390/M-391 mint). |
 | **Date** | June 18, 2026 |
@@ -119,8 +119,72 @@ Track C waits on the Phase-4 gate. The leading item (M-390) blocks nothing else 
 
 ---
 
+---
+
+## 5. Phase-5 completion summary and Phase-6 roadmap (2026-06-21, M-650)
+
+> **Posture.** Same advisory posture as §§1–4 above. `done` items cite their M-xxx; open questions
+> are marked explicitly (VR-5). This section does not ratify any decision.
+
+### 5.1 Phase-5 completion: what landed (M-5xx done)
+
+All three tracks from §2 are closed on their Rust-first scope.
+
+**Track A — L1 completion (DN-10) — DONE.**
+- **M-390** (R7-Q4 — prim declarations): content-addressed prim signature table enacted in `mycelium-core::data`. Done (2026-06-18).
+- **M-391** (R7-Q3 — mutual-recursion surface elaboration): Tarjan SCC → `FixGroup` landed in `mycelium-l1::elab`; RP-6 surface-grammar spike resolved. Done (2026-06-19).
+
+**Track B — Wave-2 RFC ratification — DONE (all four Accepted).**
+- **RFC-0018** (Stage-1 Static Guarantee Grading) — Accepted (2026-06-18, `research/09`, R18-Q1 = Design A).
+- **RFC-0019** (Traits & Parametric Polymorphism) — Accepted (2026-06-18, `research/10`; coherence = orphan + global-uniqueness).
+- **RFC-0020** (L2 Surface Term Language) — Accepted (scoped) (2026-06-18, DN-12; §4.2/§4.5 carved out).
+- **RFC-0021** (Semantic-Level Projection Framework) — Enacted (framework) (M-380 LlmCanonical renderer landed; M-648 editorial sweep).
+
+**Track C — Phase-5 stdlib enactment — DONE (Rust-first scope).**
+- **M-501** (RFC-0016 ratification): Accepted (2026-06-17). RFC-0016 → Enacted (2026-06-21, M-648).
+- **M-510…M-534** (23 stdlib crates): all done (Rust-first; 1883+722+230 tests; guarantee matrices asserted). Accepted (scoped, 2026-06-20 maintainer ratification). Self-hosting migration half (M-502) stays Phase-5-C/M-502-gated.
+- **M-540** (per-ring ergonomics design pass, RFC-0016 §8-Q3): done.
+- **M-541** (FFI inventory, `std-sys` phylum floor): done.
+- **RFC-0017** — Enacted (2026-06-21, M-648; `thaw`/scope-`matured` in `mycelium-l1`).
+- **M-381 / M-646** (LLM-leverage ablation + LlmCanonical scorer): done. Retention ratio determinate (DN-09 §10: grok-build-0.1 5.50×; grok-4.3 2.20× — both ≥ ~70%, RFC-0021 §4.7 trigger does NOT fire). Arms 3/5 backlogged per ADR-021 §5.
+
+### 5.2 Phase-5 remaining gate items
+
+The Phase-5 gate (per `docs/planning/phase-5.md`) has two items still open or deferred:
+
+| Item | Status | Note |
+|---|---|---|
+| **M-647** (RFC-0020 scoped ratification) | **Done** (2026-06-21) | RFC-0020 Accepted (scoped); DN-12 Resolved. |
+| **M-648** (editorial enactment sweep) | **Done** (2026-06-21) | This note is part of M-648. |
+| **M-649** (first stdlib module in Mycelium-lang) | **DEFERRED (post-1.0)** | 5 gate-fails block self-hosting (generics, trait interfaces, effect annotations, wild/FFI, static guarantee index). Scoped to Phase-6 per ADR-021 §5. |
+| **M-502** (self-hosting readiness verdict) | **Not yet established** (honest) | Verdict stays `not-yet` until M-649 gate-fails resolve. DN-14 records the honest 5/5 split. |
+
+### 5.3 Phase-6 roadmap (high-level; open questions noted)
+
+Phase-6 is not decomposed here — this is the planning capture. Each item below is either grounded in a done RFC/ADR or marked an open question (VR-5).
+
+**1. Stage-1 generics and traits (unblocks M-649 gate-fails 1 + 2).**
+RFC-0018 (Accepted) and RFC-0019 (Accepted) define the *design*; neither is yet Enacted (no implementation). A Phase-6 wave implements the graded coeffect type judgment `Γ; pc ⊢ e : τ @ g` (RFC-0018 §4) and `impl Trait for T` elaboration to dictionary-passing L1 (RFC-0019 §4). *Open question:* which subset of generics to add first (monomorphic grade polymorphism → bounded grade polymorphism, per RFC-0018 §5's staged path) — RFC-0007 amendment scope is a maintainer decision.
+
+**2. Effect annotations (unblocks M-649 gate-fail 3).**
+RFC-0014 §8 deferred `fn f() -> T / {time}` declared-effects surface to stage-1. A Phase-6 spec amends RFC-0007 and RFC-0014 to surface `/ {…}` effect annotations in the elaborator. *Open question:* ordering relative to generics/traits.
+
+**3. Native codegen increments (DN-15).**
+DN-15 §4 table: closures+heap (non-recursive `Construct`/`Match` landed; closures next), then recursion+DN-05-priority-1 stack-robustness, then the real MLIR dialect (libMLIR-gated, M-348). *Open question:* timing of M-348 (libMLIR provisioning).
+
+**4. Self-hosting expansion.**
+Once Stage-1 generics/traits land, the `std.ternary`, `std.math` (pure fragments), and `std.option` modules become self-hosting candidates (DN-14 §4 ranking). The three-way differential obligation (RFC-0016 §4.6 M-210 bar) applies. *Open question:* which module is the first milestone.
+
+**5. Research gaps not yet closed.**
+- **RP-7** (prim `BoundBasis`-with-citation schema) — deferred from M-390 as a spike; no open issue yet.
+- **arm-3 / arm-5 live runs** (M-381) — backlogged per ADR-021 §5; resumption needs a local GBNF/llama.cpp model.
+- **RFC-0018/0019 full enactment** — unblocks §4.2/§4.5 carve-outs from RFC-0020. *Open question:* timeline/priority.
+
+---
+
 ## Changelog
 
+- **2026-06-21 — Resolved (M-650 editorial sweep).** Phase-5 completion summary (§5.1), remaining gate items (§5.2), and Phase-6 roadmap (§5.3) appended. All Track-A/B/C items confirmed done or explicitly deferred with honest gate-status. DN-11 Status → Resolved. Grounded in M-390/391/501–534/540/541/646/647/648; open questions marked per VR-5. Append-only.
 - **2026-06-18 — Draft / Resolved-as-capture.** Initial capture of the post-#194 wave as three
   dependency-ordered tracks (A: DN-10 L1 completion; B: RFC-0018…0021 ratification gated on
   RP-1…RP-4; C: Phase-5 stdlib gated on M-501/M-502). Mints M-390 (R7-Q4) and M-391 (R7-Q3).
