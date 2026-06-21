@@ -1,0 +1,40 @@
+// exercises: M-657B generic recursive functions — a generic self-recursive function and a
+// mutually-recursive generic pair, both elaborating via the monomorphization pass.
+// The parser must accept `<A>` type-param lists (already tested in 14-generics.myc);
+// this file exercises the elaboration path: monomorphize → Fix/FixGroup (RFC-0001 r4/r5).
+nodule generic_recursion
+
+type List<A> = Nil | Cons(A, List<A>)
+
+type Nat = Z | S(Nat)
+
+// Self-recursive generic function: length<A>(List<A>) -> Nat.
+// Monomorphized at Binary{8} by the wrapper byte_length.
+// After monomorphization, length<Binary{8}> is a monomorphic self-recursive fn.
+fn length<A>(xs: List<A>) -> Nat =
+    match xs {
+        Nil => Z,
+        Cons(_, rest) => S(length(rest))
+    }
+
+fn byte_length(xs: List<Binary{8}>) -> Nat = length(xs)
+
+// Mutually-recursive generic pair: even<A>/odd<A> over List<A>.
+// Monomorphized at Binary{1} by the wrapper byte_even.
+// After monomorphization, even<Binary{1}> and odd<Binary{1}> are a mutually-recursive
+// monomorphic pair lowered to a FixGroup.
+fn even<A>(xs: List<A>) -> Bool =
+    match xs {
+        Nil => True,
+        Cons(_, rest) => odd(rest)
+    }
+
+fn odd<A>(xs: List<A>) -> Bool =
+    match xs {
+        Nil => False,
+        Cons(_, rest) => even(rest)
+    }
+
+fn byte_even(xs: List<Binary{1}>) -> Bool = even(xs)
+
+fn main() -> Nat = byte_length(Cons(0b0000_0001, Nil))

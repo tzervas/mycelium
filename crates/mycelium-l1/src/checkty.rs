@@ -11,12 +11,12 @@
 //! Guarantee tag: **Declared** (mirrors RFC-0019's Declared-with-argument posture; the
 //! three-way differential supplies Empirical evidence — VR-5).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::ambient::AmbientError;
 use crate::ast::{
-    BaseType, Expr, FnDecl, Hypha, Item, Literal, Nodule, Paradigm, Path, Pattern, Scalar,
-    Strength, TypeDecl, TypeRef,
+    Arm, BaseType, Expr, FnDecl, FnSig, Hypha, Item, Literal, Nodule, Paradigm, Param, Path,
+    Pattern, Scalar, Strength, TypeDecl, TypeRef,
 };
 
 /// A v0 (monomorphic) type.
@@ -2411,6 +2411,1061 @@ pub(crate) fn unify_arg(
         )),
     }
 }
+
+// ─── Stage-1 generic monomorphization pass (M-657B) ───────────────────────────────────────
+//
+// `monomorphize` is called at the top of elaboration: it returns a **new `Env`** in which every
+// generic-function call reachable from `entry` has been replaced by a concrete monomorphic
+// `FnDecl` (mangled name, Var-free parameter and return types, and a body whose internal generic
+// calls have been rewritten to their mangled instances). The existing `recursive_sccs` / `Fix` /
+// `FixGroup` machinery then handles recursion without any elaborator changes.
+//
+// Design invariants (M-657B, **Declared**):
+//   - Instances are memoized by mangled name → ordinary recursion terminates in one step.
+//   - Polymorphic recursion (a generic fn instantiating itself at a strictly larger type) is
+//     detected by an instance cap (256) and refused with an explicit `Residual` — never loops.
+//   - A repr-mismatched instantiation is an explicit error (propagated from `unify_arg`).
+//   - The pass is transparent to non-generic functions (passed through unchanged).
+//   - ADT instances the body needs must already be in `env.types` (minted by the checker) — the
+//     pass asserts this and mints on demand via `instantiate_generic` if needed.
+
+/// Monomorphize all generic-function instances reachable from `entry` and return a new `Env`
+/// where every such instance is an ordinary (Var-free) `FnDecl` under its mangled name.
+/// Calls to the original generic function name in the entry body (and in each materialized
+/// instance body) are rewritten to the mangled names.
+///
+/// **Guarantee: Declared** (M-657B). Correctness of the substitution rests on the typechecker's
+/// prior validation via `check_generic_call`; the monomorphizer trusts that validation and
+/// does no re-checking (KC-3, DRY). The three-way differential (`tests/differential.rs`) supplies
+/// Empirical evidence that the monomorphized env produces the same result as the L1 evaluator.
+///
+/// **Never-silent (G2/VR-5)**:
+///   - An unknown entry → `Err(CheckError)`.
+///   - Polymorphic recursion (instance cap exceeded) → explicit `CheckError` naming the function.
+///   - A type inference failure in a generic call → `CheckError` with the diagnostic.
+///   - All errors propagate explicitly; no silent coercion or partial result.
+///
+/// Returns `CheckError` (not `ElabError`) to avoid a circular module dependency: `elab.rs`
+/// imports from `checkty.rs` and calls this function, converting the error itself.
+pub(crate) fn monomorphize(env: &Env, entry: &str) -> Result<Env, CheckError> {
+    // Fast path: nothing generic reachable → return a cheap clone.
+    if env.generics.is_empty() {
+        return Ok(env.clone());
+    }
+
+    // --- Phase 1: collect the set of generic functions that appear in the env ---
+    // A function is "generic" if sig.params is non-empty.
+    let generic_fns: BTreeSet<String> = env
+        .fns
+        .iter()
+        .filter(|(_, fd)| !fd.sig.params.is_empty())
+        .map(|(n, _)| n.clone())
+        .collect();
+
+    if generic_fns.is_empty() {
+        return Ok(env.clone());
+    }
+
+    // --- Phase 2: worklist monomorphization ---
+    // The new env starts as a clone; we add mangled instances and rewrite bodies.
+    let mut new_fns: BTreeMap<String, FnDecl> = BTreeMap::new();
+    // Copy all non-generic functions as-is (their bodies may reference generic fns; we rewrite
+    // those later in Phase 3).
+    for (n, fd) in &env.fns {
+        if !generic_fns.contains(n) {
+            new_fns.insert(n.clone(), fd.clone());
+        }
+    }
+
+    // Worklist: (generic_fn_name, concrete_type_args) pairs to materialize.
+    // We also need to know where they were called from to produce useful error sites, but
+    // `unify_arg` carries its own site string so we store the call-site function name.
+    let mut worklist: Vec<(String, Vec<Ty>, String)> = Vec::new(); // (generic_fn, args, caller_site)
+                                                                   // Memo: mangled names already materialized (or in-progress) — prevents re-processing and
+                                                                   // detects ordinary recursion (the self-call of `length<B8>` finds its own mangled name in
+                                                                   // the memo before recursing).
+    let mut memo: BTreeSet<String> = BTreeSet::new();
+
+    // Seed the worklist from the entry body (and from all non-generic bodies reachable from it).
+    // We need a transitive closure: walk all non-generic functions reachable from entry, collect
+    // all their generic call sites.
+    let mut reachable_non_generic: BTreeSet<String> = BTreeSet::new();
+    {
+        let mut frontier = vec![entry.to_owned()];
+        while let Some(f) = frontier.pop() {
+            if !reachable_non_generic.insert(f.clone()) {
+                continue;
+            }
+            if let Some(fd) = env.fns.get(&f) {
+                if generic_fns.contains(&f) {
+                    continue; // generic fns are handled via worklist, not traced here
+                }
+                // Build the caller's param scope so infer_generic_arg_tys_with_env can
+                // resolve param names appearing as arguments to generic calls.
+                let caller_scope: Vec<(String, Ty)> = fd
+                    .sig
+                    .value_params
+                    .iter()
+                    .filter_map(|p| {
+                        resolve_ty(&f, &env.types, &[], &p.ty)
+                            .map(|(t, _)| (p.name.clone(), t))
+                            .ok()
+                    })
+                    .collect();
+                collect_generic_calls_with_env(
+                    &fd.body,
+                    env,
+                    &generic_fns,
+                    &mut worklist,
+                    &f,
+                    &caller_scope,
+                );
+                // Also trace non-generic callees.
+                for callee in calls_in_body(&fd.body) {
+                    if env.fns.contains_key(&callee) && !generic_fns.contains(&callee) {
+                        frontier.push(callee);
+                    }
+                }
+            }
+        }
+    }
+
+    // Instance cap: protects against polymorphic recursion expanding without bound.
+    const INSTANCE_CAP: usize = 256;
+    let mut instance_count: usize = 0;
+
+    // Process the worklist.
+    while let Some((gfn_name, arg_tys, caller_site)) = worklist.pop() {
+        let mangled = mangle(&gfn_name, &arg_tys);
+        if memo.contains(&mangled) {
+            continue; // already materialized or in progress
+        }
+
+        instance_count += 1;
+        if instance_count > INSTANCE_CAP {
+            return Err(CheckError::new(
+                &gfn_name,
+                format!(
+                    "generic function `{gfn_name}` exceeded the monomorphization instance cap \
+                     ({INSTANCE_CAP}) — this indicates polymorphic recursion (a generic function \
+                     instantiating itself at a strictly growing type), which is out of scope for \
+                     stage-1 generics (RFC-0007 §4.9 / M-657B). Refuse rather than loop.",
+                ),
+            ));
+        }
+
+        // Mark as in-progress immediately (before recursing) so that self-recursive calls
+        // find the memo entry and terminate the worklist processing.
+        memo.insert(mangled.clone());
+
+        // Fetch the generic function's template.
+        let gfd = env.fns.get(&gfn_name).ok_or_else(|| {
+            CheckError::new(
+                &caller_site,
+                format!("internal: generic function `{gfn_name}` not in env (M-657B)"),
+            )
+        })?;
+
+        // Build the substitution: type param name → concrete Ty.
+        let subst: BTreeMap<String, Ty> = gfd
+            .sig
+            .params
+            .iter()
+            .zip(arg_tys.iter())
+            .map(|(p, t)| (p.clone(), t.clone()))
+            .collect();
+
+        // Ensure the ADT instances the body needs are present in new_env's types.
+        // The checker already minted them during check_nodule; they live in env.types.
+        // We'll use env.types as-is in the new env (same reference for the clone below).
+
+        // Build the monomorphic signature: substitute type vars in param and return types.
+        let mono_params: Vec<Param> = gfd
+            .sig
+            .value_params
+            .iter()
+            .map(|p| {
+                // Resolve the abstract param type with tyvars, then substitute.
+                let abstract_ty =
+                    resolve_ty_body(&mangled, &env.types, &env.generics, &gfd.sig.params, &p.ty)
+                        .map(|(t, _)| t)
+                        .unwrap_or_else(|_| Ty::Var("?".to_owned())); // defensive; checker validated this
+                let concrete_ty = subst_ty(&abstract_ty, &subst);
+                Param {
+                    name: p.name.clone(),
+                    ty: ty_to_typeref(&concrete_ty),
+                }
+            })
+            .collect();
+
+        let abstract_ret = resolve_ty_body(
+            &mangled,
+            &env.types,
+            &env.generics,
+            &gfd.sig.params,
+            &gfd.sig.ret,
+        )
+        .map(|(t, _)| t)
+        .unwrap_or_else(|_| Ty::Var("?".to_owned()));
+        let concrete_ret = subst_ty(&abstract_ret, &subst);
+        let mono_ret = ty_to_typeref(&concrete_ret);
+
+        // Build the concrete scope for this instance: param name → concrete type.
+        // Needed so that `rewrite_expr` can infer types of args to other generic calls
+        // inside this body (e.g. `g(x)` where `x` is a param bound to a concrete type).
+        let concrete_scope: Vec<(String, Ty)> = gfd
+            .sig
+            .value_params
+            .iter()
+            .map(|p| {
+                let abstract_ty =
+                    resolve_ty_body(&mangled, &env.types, &env.generics, &gfd.sig.params, &p.ty)
+                        .map(|(t, _)| t)
+                        .unwrap_or(Ty::Var("?".to_owned()));
+                let concrete_ty = subst_ty(&abstract_ty, &subst);
+                (p.name.clone(), concrete_ty)
+            })
+            .collect();
+
+        // Build the monomorphic body: deep-copy the generic body, rewrite internal calls to
+        // generic functions (including the self-call) to their mangled instance names under
+        // the *current* substitution.
+        let mono_body = rewrite_body_for_instance(
+            &gfd.body,
+            &gfn_name,
+            &subst,
+            &generic_fns,
+            env,
+            &mut worklist,
+            &memo,
+            &mangled,
+            &concrete_scope,
+        )?;
+
+        // Build and insert the monomorphic FnDecl.
+        let mono_fd = FnDecl {
+            thaw: gfd.thaw,
+            sig: FnSig {
+                name: mangled.clone(),
+                params: vec![], // monomorphic — no type params
+                value_params: mono_params,
+                ret: mono_ret,
+            },
+            body: mono_body,
+        };
+        new_fns.insert(mangled.clone(), mono_fd);
+    }
+
+    // --- Phase 3: rewrite non-generic function bodies to use mangled names ---
+    // After all instances are materialized, rewrite every non-generic body: calls to generic
+    // function names that we've now mangled must be updated to the mangled names.
+    // We need to re-walk each non-generic fn's body and replace generic calls with mangled ones.
+    let mut rewritten_fns: BTreeMap<String, FnDecl> = BTreeMap::new();
+    for (n, fd) in &new_fns {
+        if generic_fns.contains(n) {
+            // Generic templates are dropped from the new env (replaced by mangled instances).
+            continue;
+        }
+        let rewritten_body = rewrite_generic_calls_in_body(&fd.body, &generic_fns, env, fd)?;
+        rewritten_fns.insert(
+            n.clone(),
+            FnDecl {
+                thaw: fd.thaw,
+                sig: fd.sig.clone(),
+                body: rewritten_body,
+            },
+        );
+    }
+    // Add the mangled instances (their bodies were already rewritten during Phase 2).
+    for (n, fd) in &new_fns {
+        if !generic_fns.contains(n) && !rewritten_fns.contains_key(n) {
+            rewritten_fns.insert(n.clone(), fd.clone());
+        } else if !generic_fns.contains(n) {
+            // already inserted above
+        } else {
+            // skip generic templates
+        }
+    }
+
+    Ok(Env {
+        types: env.types.clone(),
+        generics: env.generics.clone(),
+        fns: rewritten_fns,
+        totality: env.totality.clone(),
+    })
+}
+
+/// Infer concrete type arguments for a generic function call, using the full `Env`.
+/// Mirrors `check_generic_call`'s logic but only computes the substitution (no type rewriting).
+fn infer_generic_arg_tys_with_env(
+    site: &str,
+    env: &Env,
+    gfd: &FnDecl,
+    args: &[Expr],
+    scope: &[(String, Ty)],
+) -> Result<Vec<Ty>, CheckError> {
+    let tyvars: &[String] = &gfd.sig.params;
+    // Resolve abstract param types (with tyvars in scope → Ty::Var or abstract mangled).
+    let abstract_params: Vec<Ty> = gfd
+        .sig
+        .value_params
+        .iter()
+        .map(|pm| resolve_ty_body(site, &env.types, &env.generics, tyvars, &pm.ty).map(|(t, _)| t))
+        .collect::<Result<_, _>>()?;
+
+    // Build a Cx to call infer.
+    let cx = Cx {
+        site,
+        types: &env.types,
+        generics: &env.generics,
+        fns: &env.fns,
+    };
+    let mut scope_mut: Vec<(String, Ty)> = scope.to_vec();
+
+    let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
+    for (abstract_ty, a) in abstract_params.iter().zip(args.iter()) {
+        let (got, _) = cx.check(&mut scope_mut, a, None)?;
+        unify_arg(site, &env.generics, abstract_ty, &got, &mut subst)?;
+    }
+
+    // Return the type args in declaration order.
+    gfd.sig
+        .params
+        .iter()
+        .map(|p| {
+            subst.get(p).cloned().ok_or_else(|| {
+                CheckError::new(
+                    site,
+                    format!(
+                        "type parameter `{p}` of `{}` was not inferred from arguments (M-657B)",
+                        gfd.sig.name
+                    ),
+                )
+            })
+        })
+        .collect()
+}
+
+/// Collect all calls to generic functions in `body`, using `env` for type inference.
+/// `initial_scope` contains the caller's own parameter bindings so that arg-type inference can
+/// resolve parameter names appearing as arguments (e.g. `is_cons(xs)` where `xs` is a param).
+fn collect_generic_calls_with_env(
+    body: &Expr,
+    env: &Env,
+    generic_fns: &BTreeSet<String>,
+    worklist: &mut Vec<(String, Vec<Ty>, String)>,
+    site: &str,
+    initial_scope: &[(String, Ty)],
+) {
+    collect_calls_with_env_inner(body, env, generic_fns, worklist, site, initial_scope);
+}
+
+fn collect_calls_with_env_inner(
+    e: &Expr,
+    env: &Env,
+    generic_fns: &BTreeSet<String>,
+    worklist: &mut Vec<(String, Vec<Ty>, String)>,
+    site: &str,
+    scope: &[(String, Ty)],
+) {
+    match e {
+        Expr::App { head, args } => {
+            if let Expr::Path(p) = head.as_ref() {
+                if p.0.len() == 1 {
+                    let name = &p.0[0];
+                    if let Some(gfd) = generic_fns
+                        .contains(name)
+                        .then(|| env.fns.get(name.as_str()))
+                        .flatten()
+                    {
+                        if let Ok(arg_tys) =
+                            infer_generic_arg_tys_with_env(site, env, gfd, args, scope)
+                        {
+                            worklist.push((name.clone(), arg_tys, site.to_owned()));
+                        }
+                    }
+                }
+            }
+            collect_calls_with_env_inner(head, env, generic_fns, worklist, site, scope);
+            for a in args {
+                collect_calls_with_env_inner(a, env, generic_fns, worklist, site, scope);
+            }
+        }
+        Expr::Let { bound, body, .. } => {
+            collect_calls_with_env_inner(bound, env, generic_fns, worklist, site, scope);
+            collect_calls_with_env_inner(body, env, generic_fns, worklist, site, scope);
+        }
+        Expr::If { cond, conseq, alt } => {
+            collect_calls_with_env_inner(cond, env, generic_fns, worklist, site, scope);
+            collect_calls_with_env_inner(conseq, env, generic_fns, worklist, site, scope);
+            collect_calls_with_env_inner(alt, env, generic_fns, worklist, site, scope);
+        }
+        Expr::Match { scrutinee, arms } => {
+            collect_calls_with_env_inner(scrutinee, env, generic_fns, worklist, site, scope);
+            for arm in arms {
+                collect_calls_with_env_inner(&arm.body, env, generic_fns, worklist, site, scope);
+            }
+        }
+        Expr::For { xs, init, body, .. } => {
+            collect_calls_with_env_inner(xs, env, generic_fns, worklist, site, scope);
+            collect_calls_with_env_inner(init, env, generic_fns, worklist, site, scope);
+            collect_calls_with_env_inner(body, env, generic_fns, worklist, site, scope);
+        }
+        Expr::Swap { value, .. } => {
+            collect_calls_with_env_inner(value, env, generic_fns, worklist, site, scope);
+        }
+        Expr::WithParadigm { body, .. } => {
+            collect_calls_with_env_inner(body, env, generic_fns, worklist, site, scope);
+        }
+        Expr::Wild(b) | Expr::Spore(b) => {
+            collect_calls_with_env_inner(b, env, generic_fns, worklist, site, scope);
+        }
+        Expr::Colony(hyphae) => {
+            for h in hyphae {
+                collect_calls_with_env_inner(&h.body, env, generic_fns, worklist, site, scope);
+            }
+        }
+        Expr::Ascribe(b, _) => {
+            collect_calls_with_env_inner(b, env, generic_fns, worklist, site, scope);
+        }
+        Expr::Path(_) | Expr::Lit(_) => {}
+    }
+}
+
+/// All function-like names called in `body` (single-segment paths appearing as App heads).
+fn calls_in_body(body: &Expr) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    crate::totality::walk_expr(body, &mut |e| {
+        if let Expr::Path(p) = e {
+            if p.0.len() == 1 {
+                out.insert(p.0[0].clone());
+            }
+        }
+    });
+    out
+}
+
+/// Deep-copy and rewrite the body of a generic function to produce the body of one monomorphic
+/// instance. This is the heart of the monomorphizer:
+///
+/// - Every call to a generic function (including the self-call) is renamed to its mangled instance
+///   name under the *current* substitution `subst`, where `subst` maps the generic fn's type
+///   params to concrete types.
+/// - Calls to OTHER generic functions in the body use `unify_arg` against the callee's abstract
+///   param types to compute their own substitution, then push the resulting instance onto
+///   `worklist` for materialization.
+/// - Ascriptions (`expr : T`) whose type refs contain Ty::Var are left as-is (elab is
+///   transparent to them — the type was already checked by the checker).
+///
+/// The rewriting is purely structural (tree transformation over `Expr`). No new type checking
+/// is performed — correctness rests on the checker's prior validation.
+#[allow(clippy::too_many_arguments)]
+fn rewrite_body_for_instance(
+    body: &Expr,
+    self_name: &str,
+    subst: &BTreeMap<String, Ty>,
+    generic_fns: &BTreeSet<String>,
+    env: &Env,
+    worklist: &mut Vec<(String, Vec<Ty>, String)>,
+    memo: &BTreeSet<String>,
+    mangled_self: &str,
+    concrete_scope: &[(String, Ty)],
+) -> Result<Expr, CheckError> {
+    rewrite_expr(
+        body,
+        self_name,
+        subst,
+        generic_fns,
+        env,
+        worklist,
+        memo,
+        mangled_self,
+        concrete_scope,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn rewrite_expr(
+    e: &Expr,
+    self_name: &str,
+    subst: &BTreeMap<String, Ty>,
+    generic_fns: &BTreeSet<String>,
+    env: &Env,
+    worklist: &mut Vec<(String, Vec<Ty>, String)>,
+    memo: &BTreeSet<String>,
+    mangled_self: &str,
+    concrete_scope: &[(String, Ty)],
+) -> Result<Expr, CheckError> {
+    match e {
+        Expr::App { head, args } => {
+            if let Expr::Path(p) = head.as_ref() {
+                if p.0.len() == 1 {
+                    let callee_name = &p.0[0];
+
+                    // Self-recursive call: rename to the mangled self name.
+                    if callee_name == self_name {
+                        let new_args: Vec<Expr> = args
+                            .iter()
+                            .map(|a| {
+                                rewrite_expr(
+                                    a,
+                                    self_name,
+                                    subst,
+                                    generic_fns,
+                                    env,
+                                    worklist,
+                                    memo,
+                                    mangled_self,
+                                    concrete_scope,
+                                )
+                            })
+                            .collect::<Result<_, _>>()?;
+                        return Ok(Expr::App {
+                            head: Box::new(Expr::Path(Path(vec![mangled_self.to_owned()]))),
+                            args: new_args,
+                        });
+                    }
+
+                    // Call to another generic function: infer its arg types and rename.
+                    // Strategy: first try to infer directly from `subst` (by substituting
+                    // the callee's type params using the current instance's substitution).
+                    // This handles the common case where both the caller and callee share
+                    // the same type parameter names (e.g. `even<A>` calling `odd<A>`).
+                    // Fall back to arg-type inference if subst-based inference fails.
+                    if generic_fns.contains(callee_name) {
+                        if let Some(callee_fd) = env.fns.get(callee_name.as_str()) {
+                            // Strategy 1: apply the current substitution to the callee's
+                            // type param list directly (works when caller and callee share params).
+                            let subst_tys: Vec<Ty> = callee_fd
+                                .sig
+                                .params
+                                .iter()
+                                .map(|p| {
+                                    subst.get(p).cloned().unwrap_or_else(|| Ty::Var(p.clone()))
+                                })
+                                .collect();
+                            let all_concrete = subst_tys.iter().all(|t| !matches!(t, Ty::Var(_)));
+                            let callee_arg_tys = if all_concrete {
+                                Ok(subst_tys)
+                            } else {
+                                // Strategy 2: infer from actual arguments using the type env.
+                                // Use `concrete_scope` for variable lookups (function params).
+                                infer_generic_arg_tys_with_env(
+                                    mangled_self,
+                                    env,
+                                    callee_fd,
+                                    args,
+                                    concrete_scope,
+                                )
+                            };
+                            match callee_arg_tys {
+                                Ok(callee_arg_tys) => {
+                                    let callee_mangled = mangle(callee_name, &callee_arg_tys);
+                                    if !memo.contains(&callee_mangled) {
+                                        worklist.push((
+                                            callee_name.clone(),
+                                            callee_arg_tys,
+                                            mangled_self.to_owned(),
+                                        ));
+                                    }
+                                    let new_args: Vec<Expr> = args
+                                        .iter()
+                                        .map(|a| {
+                                            rewrite_expr(
+                                                a,
+                                                self_name,
+                                                subst,
+                                                generic_fns,
+                                                env,
+                                                worklist,
+                                                memo,
+                                                mangled_self,
+                                                concrete_scope,
+                                            )
+                                        })
+                                        .collect::<Result<_, _>>()?;
+                                    return Ok(Expr::App {
+                                        head: Box::new(Expr::Path(Path(vec![callee_mangled]))),
+                                        args: new_args,
+                                    });
+                                }
+                                Err(e) => {
+                                    return Err(CheckError::new(
+                                        mangled_self,
+                                        format!(
+                                            "could not infer type args for generic call `{callee_name}` \
+                                             inside instance `{mangled_self}`: {e:?} (M-657B)"
+                                        ),
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // Non-generic call: recurse into head and args.
+            let new_head = rewrite_expr(
+                head,
+                self_name,
+                subst,
+                generic_fns,
+                env,
+                worklist,
+                memo,
+                mangled_self,
+                concrete_scope,
+            )?;
+            let new_args: Vec<Expr> = args
+                .iter()
+                .map(|a| {
+                    rewrite_expr(
+                        a,
+                        self_name,
+                        subst,
+                        generic_fns,
+                        env,
+                        worklist,
+                        memo,
+                        mangled_self,
+                        concrete_scope,
+                    )
+                })
+                .collect::<Result<_, _>>()?;
+            Ok(Expr::App {
+                head: Box::new(new_head),
+                args: new_args,
+            })
+        }
+        Expr::Let {
+            name,
+            ty,
+            bound,
+            body,
+        } => Ok(Expr::Let {
+            name: name.clone(),
+            ty: ty.clone(),
+            bound: Box::new(rewrite_expr(
+                bound,
+                self_name,
+                subst,
+                generic_fns,
+                env,
+                worklist,
+                memo,
+                mangled_self,
+                concrete_scope,
+            )?),
+            body: Box::new(rewrite_expr(
+                body,
+                self_name,
+                subst,
+                generic_fns,
+                env,
+                worklist,
+                memo,
+                mangled_self,
+                concrete_scope,
+            )?),
+        }),
+        Expr::If { cond, conseq, alt } => Ok(Expr::If {
+            cond: Box::new(rewrite_expr(
+                cond,
+                self_name,
+                subst,
+                generic_fns,
+                env,
+                worklist,
+                memo,
+                mangled_self,
+                concrete_scope,
+            )?),
+            conseq: Box::new(rewrite_expr(
+                conseq,
+                self_name,
+                subst,
+                generic_fns,
+                env,
+                worklist,
+                memo,
+                mangled_self,
+                concrete_scope,
+            )?),
+            alt: Box::new(rewrite_expr(
+                alt,
+                self_name,
+                subst,
+                generic_fns,
+                env,
+                worklist,
+                memo,
+                mangled_self,
+                concrete_scope,
+            )?),
+        }),
+        Expr::Match { scrutinee, arms } => {
+            let new_scrutinee = rewrite_expr(
+                scrutinee,
+                self_name,
+                subst,
+                generic_fns,
+                env,
+                worklist,
+                memo,
+                mangled_self,
+                concrete_scope,
+            )?;
+            let new_arms: Vec<Arm> = arms
+                .iter()
+                .map(|arm| {
+                    rewrite_expr(
+                        &arm.body,
+                        self_name,
+                        subst,
+                        generic_fns,
+                        env,
+                        worklist,
+                        memo,
+                        mangled_self,
+                        concrete_scope,
+                    )
+                    .map(|body| Arm {
+                        pattern: arm.pattern.clone(),
+                        body,
+                    })
+                })
+                .collect::<Result<_, _>>()?;
+            Ok(Expr::Match {
+                scrutinee: Box::new(new_scrutinee),
+                arms: new_arms,
+            })
+        }
+        Expr::For {
+            x,
+            xs,
+            acc,
+            init,
+            body,
+        } => Ok(Expr::For {
+            x: x.clone(),
+            xs: Box::new(rewrite_expr(
+                xs,
+                self_name,
+                subst,
+                generic_fns,
+                env,
+                worklist,
+                memo,
+                mangled_self,
+                concrete_scope,
+            )?),
+            acc: acc.clone(),
+            init: Box::new(rewrite_expr(
+                init,
+                self_name,
+                subst,
+                generic_fns,
+                env,
+                worklist,
+                memo,
+                mangled_self,
+                concrete_scope,
+            )?),
+            body: Box::new(rewrite_expr(
+                body,
+                self_name,
+                subst,
+                generic_fns,
+                env,
+                worklist,
+                memo,
+                mangled_self,
+                concrete_scope,
+            )?),
+        }),
+        Expr::Swap {
+            value,
+            target,
+            policy,
+        } => Ok(Expr::Swap {
+            value: Box::new(rewrite_expr(
+                value,
+                self_name,
+                subst,
+                generic_fns,
+                env,
+                worklist,
+                memo,
+                mangled_self,
+                concrete_scope,
+            )?),
+            target: target.clone(),
+            policy: policy.clone(),
+        }),
+        Expr::WithParadigm { paradigm, body } => Ok(Expr::WithParadigm {
+            paradigm: *paradigm,
+            body: Box::new(rewrite_expr(
+                body,
+                self_name,
+                subst,
+                generic_fns,
+                env,
+                worklist,
+                memo,
+                mangled_self,
+                concrete_scope,
+            )?),
+        }),
+        Expr::Wild(b) => Ok(Expr::Wild(Box::new(rewrite_expr(
+            b,
+            self_name,
+            subst,
+            generic_fns,
+            env,
+            worklist,
+            memo,
+            mangled_self,
+            concrete_scope,
+        )?))),
+        Expr::Spore(b) => Ok(Expr::Spore(Box::new(rewrite_expr(
+            b,
+            self_name,
+            subst,
+            generic_fns,
+            env,
+            worklist,
+            memo,
+            mangled_self,
+            concrete_scope,
+        )?))),
+        Expr::Colony(hyphae) => {
+            let new_hyphae: Vec<Hypha> = hyphae
+                .iter()
+                .map(|h| {
+                    rewrite_expr(
+                        &h.body,
+                        self_name,
+                        subst,
+                        generic_fns,
+                        env,
+                        worklist,
+                        memo,
+                        mangled_self,
+                        concrete_scope,
+                    )
+                    .map(|body| Hypha { body })
+                })
+                .collect::<Result<_, _>>()?;
+            Ok(Expr::Colony(new_hyphae))
+        }
+        Expr::Ascribe(b, ty) => Ok(Expr::Ascribe(
+            Box::new(rewrite_expr(
+                b,
+                self_name,
+                subst,
+                generic_fns,
+                env,
+                worklist,
+                memo,
+                mangled_self,
+                concrete_scope,
+            )?),
+            ty.clone(),
+        )),
+        Expr::Path(_) | Expr::Lit(_) => Ok(e.clone()),
+    }
+}
+
+/// Rewrite all calls to generic functions in `body` to their mangled names, using the env's
+/// type information to infer the correct monomorphic instance. Called during Phase 3 to rewrite
+/// non-generic function bodies.
+///
+/// Unlike `rewrite_body_for_instance`, this operates without a substitution context (the caller
+/// is monomorphic, so arg types can be directly inferred from the env). The caller's own params
+/// are provided as the initial scope so that argument types can be inferred correctly.
+fn rewrite_generic_calls_in_body(
+    body: &Expr,
+    generic_fns: &BTreeSet<String>,
+    env: &Env,
+    fd: &FnDecl,
+) -> Result<Expr, CheckError> {
+    // Build a scope from this (monomorphic) function's value params so `infer_type` can
+    // resolve parameter names inside the body (e.g. `is_cons(xs)` where `xs: List<Binary{8}>`).
+    let initial_scope: Vec<(String, Ty)> = fd
+        .sig
+        .value_params
+        .iter()
+        .filter_map(|p| {
+            resolve_ty(fd.sig.name.as_str(), &env.types, &[], &p.ty)
+                .map(|(t, _)| (p.name.clone(), t))
+                .ok()
+        })
+        .collect();
+    rewrite_mono_caller(body, generic_fns, env, &fd.sig.name, &initial_scope)
+}
+
+fn rewrite_mono_caller(
+    e: &Expr,
+    generic_fns: &BTreeSet<String>,
+    env: &Env,
+    site: &str,
+    scope: &[(String, Ty)],
+) -> Result<Expr, CheckError> {
+    match e {
+        Expr::App { head, args } => {
+            if let Expr::Path(p) = head.as_ref() {
+                if p.0.len() == 1 {
+                    let name = &p.0[0];
+                    if generic_fns.contains(name) {
+                        if let Some(gfd) = env.fns.get(name.as_str()) {
+                            match infer_generic_arg_tys_with_env(site, env, gfd, args, scope) {
+                                Ok(arg_tys) => {
+                                    let mangled = mangle(name, &arg_tys);
+                                    let new_args: Vec<Expr> = args
+                                        .iter()
+                                        .map(|a| {
+                                            rewrite_mono_caller(a, generic_fns, env, site, scope)
+                                        })
+                                        .collect::<Result<_, _>>()?;
+                                    return Ok(Expr::App {
+                                        head: Box::new(Expr::Path(Path(vec![mangled]))),
+                                        args: new_args,
+                                    });
+                                }
+                                Err(err) => {
+                                    return Err(CheckError::new(
+                                        site,
+                                        format!(
+                                            "could not infer type args for generic call `{name}`: \
+                                             {err:?} (M-657B phase 3)"
+                                        ),
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            let new_head = rewrite_mono_caller(head, generic_fns, env, site, scope)?;
+            let new_args: Vec<Expr> = args
+                .iter()
+                .map(|a| rewrite_mono_caller(a, generic_fns, env, site, scope))
+                .collect::<Result<_, _>>()?;
+            Ok(Expr::App {
+                head: Box::new(new_head),
+                args: new_args,
+            })
+        }
+        Expr::Let {
+            name,
+            ty,
+            bound,
+            body,
+        } => Ok(Expr::Let {
+            name: name.clone(),
+            ty: ty.clone(),
+            bound: Box::new(rewrite_mono_caller(bound, generic_fns, env, site, scope)?),
+            body: Box::new(rewrite_mono_caller(body, generic_fns, env, site, scope)?),
+        }),
+        Expr::If { cond, conseq, alt } => Ok(Expr::If {
+            cond: Box::new(rewrite_mono_caller(cond, generic_fns, env, site, scope)?),
+            conseq: Box::new(rewrite_mono_caller(conseq, generic_fns, env, site, scope)?),
+            alt: Box::new(rewrite_mono_caller(alt, generic_fns, env, site, scope)?),
+        }),
+        Expr::Match { scrutinee, arms } => {
+            let new_scrutinee = rewrite_mono_caller(scrutinee, generic_fns, env, site, scope)?;
+            let new_arms: Vec<Arm> = arms
+                .iter()
+                .map(|arm| {
+                    rewrite_mono_caller(&arm.body, generic_fns, env, site, scope).map(|body| Arm {
+                        pattern: arm.pattern.clone(),
+                        body,
+                    })
+                })
+                .collect::<Result<_, _>>()?;
+            Ok(Expr::Match {
+                scrutinee: Box::new(new_scrutinee),
+                arms: new_arms,
+            })
+        }
+        Expr::For {
+            x,
+            xs,
+            acc,
+            init,
+            body,
+        } => Ok(Expr::For {
+            x: x.clone(),
+            xs: Box::new(rewrite_mono_caller(xs, generic_fns, env, site, scope)?),
+            acc: acc.clone(),
+            init: Box::new(rewrite_mono_caller(init, generic_fns, env, site, scope)?),
+            body: Box::new(rewrite_mono_caller(body, generic_fns, env, site, scope)?),
+        }),
+        Expr::Swap {
+            value,
+            target,
+            policy,
+        } => Ok(Expr::Swap {
+            value: Box::new(rewrite_mono_caller(value, generic_fns, env, site, scope)?),
+            target: target.clone(),
+            policy: policy.clone(),
+        }),
+        Expr::WithParadigm { paradigm, body } => Ok(Expr::WithParadigm {
+            paradigm: *paradigm,
+            body: Box::new(rewrite_mono_caller(body, generic_fns, env, site, scope)?),
+        }),
+        Expr::Wild(b) => Ok(Expr::Wild(Box::new(rewrite_mono_caller(
+            b,
+            generic_fns,
+            env,
+            site,
+            scope,
+        )?))),
+        Expr::Spore(b) => Ok(Expr::Spore(Box::new(rewrite_mono_caller(
+            b,
+            generic_fns,
+            env,
+            site,
+            scope,
+        )?))),
+        Expr::Colony(hyphae) => {
+            let new_hyphae: Vec<Hypha> = hyphae
+                .iter()
+                .map(|h| {
+                    rewrite_mono_caller(&h.body, generic_fns, env, site, scope)
+                        .map(|body| Hypha { body })
+                })
+                .collect::<Result<_, _>>()?;
+            Ok(Expr::Colony(new_hyphae))
+        }
+        Expr::Ascribe(b, ty) => Ok(Expr::Ascribe(
+            Box::new(rewrite_mono_caller(b, generic_fns, env, site, scope)?),
+            ty.clone(),
+        )),
+        Expr::Path(_) | Expr::Lit(_) => Ok(e.clone()),
+    }
+}
+
+/// Convert a checked [`Ty`] back to a surface [`TypeRef`] (guarantee-free).
+///
+/// Used to build the monomorphic `FnDecl`'s parameter and return types. All concrete types have
+/// a direct surface representation; `Ty::Var` should never reach here after substitution (if it
+/// does, we produce a placeholder `Named("?", [])` rather than panicking — defense-in-depth).
+/// Guarantee: **Declared** — the checker already validated the types; this is a mechanical
+/// invertible mapping for the concrete subset.
+fn ty_to_typeref(ty: &Ty) -> TypeRef {
+    TypeRef::unguaranteed(match ty {
+        Ty::Binary(n) => BaseType::Binary(*n),
+        Ty::Ternary(m) => BaseType::Ternary(*m),
+        Ty::Dense(d, s) => BaseType::Dense(*d, *s),
+        Ty::Data(name) => BaseType::Named(name.clone(), vec![]),
+        Ty::Substrate(tag) => BaseType::Substrate(tag.clone()),
+        // A residual Var after substitution is a checker bug — emit a placeholder (defense-in-depth).
+        // The elaborator will fail on this if it survives to that point (G2).
+        Ty::Var(a) => BaseType::Named(format!("?{a}"), vec![]),
+    })
+}
+
+// ─── end monomorphization pass ────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
