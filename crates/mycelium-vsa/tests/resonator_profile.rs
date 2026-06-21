@@ -7,10 +7,20 @@
 //! The `#[ignore]`d `resonator_capacity_sweep` is the manual instrument that *maps the operational
 //! edge* across `{F, k, d}` (the data behind the chosen envelope). No `rand` dependency (deterministic
 //! LCG). The const δ is the conservative ceiling these runs confirm, never asserted ahead of them.
+//!
+//! ## proptest migration (M-654 / ADR-021 Gate A3)
+//!
+//! `mapi_resonator_profile_holds_over_declared_trials` is migrated from a hand-rolled
+//! `for trial in 0..p.trials { Lcg::new(salt ^ trial) … }` loop to proptest.  proptest generates a
+//! `Vec<u64>` of exactly `p.trials` seeds; the same `recovery_fails` helper is reused.  The
+//! statistical assertion (rate ≤ declared δ) is preserved unchanged.  `measure_rate` is retained
+//! for the `#[ignore]`d sweep/ablation instruments — they are not migrated as they are manual
+//! instruments, not correctness property tests.
 
 use mycelium_vsa::{
     factorize, Cleanup, CleanupMemory, MapI, ResonatorParams, VsaModel, MAPI_RESONATOR_PROFILE,
 };
+use proptest::prelude::*;
 
 /// The canonical knobs the profile validates and records (kept in sync with the const's `method`).
 /// The adopted cleanup is the §10.3 wall-breach [`Cleanup::Hebbian`] (`sign(Σⱼ simⱼ·cⱼ)`).
@@ -43,9 +53,9 @@ impl Lcg {
 }
 
 /// One trial: build `f` fresh codebooks of `k` bipolar atoms at `dim`, pick a true tuple, bind it,
-/// factorize (the given `cleanup`, iteration budget), and return `true` iff the resonator recovers
-/// **exactly** the true tuple. A wrong-fixed-point `Ok`, an oscillation/budget error, or a below-gate
-/// refusal all count as failure (RFC-0009 §5.3/§6).
+/// factorize (the given `cleanup`, iteration budget), and return `true` iff the resonator fails to
+/// recover **exactly** the true tuple. A wrong-fixed-point `Ok`, an oscillation/budget error, or a
+/// below-gate refusal all count as failure (RFC-0009 §5.3/§6).
 fn recovery_fails(
     model: &MapI,
     f: usize,
@@ -83,7 +93,8 @@ fn recovery_fails(
     }
 }
 
-/// Measure the exact-recovery failure rate over `trials` at a `{f, k, dim}` point with `cleanup`/`budget`.
+/// Measure the exact-recovery failure rate over `trials` at a `{f, k, dim}` point with
+/// `cleanup`/`budget`. Used by the `#[ignore]`d sweep/ablation instruments below.
 fn measure_rate(
     f: usize,
     k: usize,
@@ -104,35 +115,55 @@ fn measure_rate(
     (failures, failures as f64 / trials as f64)
 }
 
-#[test]
-fn mapi_resonator_profile_holds_over_declared_trials() {
-    let p = &MAPI_RESONATOR_PROFILE;
-    // Run at the profile's worst covered point: max factors, max codebook, the floor dimension, with
-    // the canonical knobs the profile records.
-    let (failures, rate) = measure_rate(
-        p.max_factors,
-        p.max_codebook,
-        p.min_dim,
-        PROFILE_CLEANUP,
-        PROFILE_BUDGET,
-        p.trials,
-        0x8E50_0000,
-    );
-    // Transparency: the measured rate is the evidence the const's δ records (run with --nocapture).
-    eprintln!(
-        "resonator profile worst point (F={}, k={}, d={}, cleanup={PROFILE_CLEANUP:?}): {failures}/{} failures, rate={rate} (δ={})",
-        p.max_factors, p.max_codebook, p.min_dim, p.trials, p.delta
-    );
-    assert!(
-        rate <= p.delta,
-        "measured resonator failure rate {rate} ({failures}/{}) exceeds the profile's δ={} \
-         (F={}, k={}, d={}) — the Empirical tag would outrun its evidence (VR-5)",
-        p.trials,
-        p.delta,
-        p.max_factors,
-        p.max_codebook,
-        p.min_dim
-    );
+proptest! {
+    /// The profile gate: measured failure rate ≤ `MAPI_RESONATOR_PROFILE.delta` over exactly
+    /// `profile.trials` Monte-Carlo trials at the worst covered point (max factors, max codebook,
+    /// min dim), with canonical cleanup/budget.
+    ///
+    /// proptest generates `p.trials` independent seeds per case; `PROPTEST_CASES` controls how many
+    /// independent batches are tested (default 16). CI rotates seeds across runs automatically.
+    ///
+    /// Transparency: the measured rate and count are emitted via `eprintln!` — run with
+    /// `--nocapture` to observe them.
+    #[test]
+    fn mapi_resonator_profile_holds_over_declared_trials(
+        seeds in proptest::collection::vec(any::<u64>(), MAPI_RESONATOR_PROFILE.trials as usize)
+    ) {
+        let p = &MAPI_RESONATOR_PROFILE;
+        let model = MapI::new(p.min_dim);
+        let failures: u64 = seeds
+            .iter()
+            .filter(|&&seed| {
+                let mut lcg = Lcg::new(seed);
+                recovery_fails(
+                    &model,
+                    p.max_factors,
+                    p.max_codebook,
+                    p.min_dim,
+                    PROFILE_CLEANUP,
+                    PROFILE_BUDGET,
+                    &mut lcg,
+                )
+            })
+            .count() as u64;
+        let rate = failures as f64 / p.trials as f64;
+        // Transparency: emit the measured evidence so --nocapture shows it.
+        eprintln!(
+            "resonator profile worst point (F={}, k={}, d={}, cleanup={PROFILE_CLEANUP:?}): \
+             {failures}/{} failures, rate={rate} (δ={})",
+            p.max_factors, p.max_codebook, p.min_dim, p.trials, p.delta
+        );
+        prop_assert!(
+            rate <= p.delta,
+            "measured resonator failure rate {rate} ({failures}/{}) exceeds the profile's δ={} \
+             (F={}, k={}, d={}) — the Empirical tag would outrun its evidence (VR-5)",
+            p.trials,
+            p.delta,
+            p.max_factors,
+            p.max_codebook,
+            p.min_dim
+        );
+    }
 }
 
 /// Maps the MAP-I resonator's operational-capacity edge across `{F, k, d}` (RFC-0009 §9 Q4). Run

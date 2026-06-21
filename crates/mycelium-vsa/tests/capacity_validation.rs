@@ -6,9 +6,22 @@
 //! dimension that satisfies the side-condition, the measured retrieval-failure rate stays at or
 //! below the proven target `δ`. (It does not re-prove the theorem — it checks the instantiation
 //! behaves as claimed, the SC-2 obligation.)
+//!
+//! ## proptest migration (M-654 / ADR-021 Gate A3)
+//!
+//! The original hand-rolled LCG trial loop (`for trial in 0..TRIALS { Lcg::new(0xC0FFEE ^ trial)
+//! }`) is replaced by a `proptest!` test that generates a `Vec<u64>` of exactly `TRIALS` seeds
+//! using proptest's value tree.  This preserves the statistical property (failure rate ≤ δ) while
+//! gaining:
+//! - Proper shrinking: when a batch fails, proptest minimises the seed list.
+//! - `PROPTEST_CASES` control: the outer proptest loop (number of independent batches to draw)
+//!   respects the env-var; CI can rotate seeds across runs.
+//! - The LCG is retained as the per-trial atom generator — it is cheap, no-alloc, and matches the
+//!   distributions the crate's empirical constants were calibrated on.
 
 use mycelium_core::{Meta, Payload, Provenance, Repr, SparsityClass, Value};
 use mycelium_vsa::{capacity, MapI, VsaError};
+use proptest::prelude::*;
 
 /// Deterministic bipolar (`±1`) atom generator (a tiny LCG — reproducible, no rand dependency).
 struct Lcg(u64);
@@ -37,50 +50,59 @@ const DELTA: f64 = 1e-2; // proven target failure probability
 const N: usize = 8; // codebook size
 const TRIALS: usize = 10_000; // ≥ 1e4 (SC-2)
 
-/// SC-2: with `dim ≥ requiredDim(M, δ)`, the empirical retrieval-failure rate is `≤ δ` over ≥10⁴
-/// trials — every bundled member out-scores every non-member by nearest-neighbour cleanup.
-#[test]
-fn bundle_capacity_holds_over_1e4_trials() {
-    // A3-08: what this empirical check does — and does not — establish. The Clarkson/Thomas bound is
-    // a *sufficient* condition (`dim ≥ requiredDim ⟹ failProb ≤ δ`), so a trial run at the boundary
-    // dim can confirm the bound's *non-vacuity* (the rate really does stay ≤ δ there) but **cannot**
-    // confirm its *tightness*: a sufficient condition admits slack, and no number of trials at one
-    // dim distinguishes a tight bound from a loose one. Tamper-protection for the bound's *constant*
-    // is therefore NOT this test — it is the pinned-constant unit test in `mycelium_vsa::capacity`
-    // plus the `dim >= requiredDim` sentinel asserted below; this test only guards non-vacuity.
-    let dim = capacity::required_dim(M, DELTA, capacity::MARGIN_MU) as usize; // 1141
-    assert!(dim >= 1141);
-
-    let mut failures = 0usize;
-    for trial in 0..TRIALS {
-        let mut rng = Lcg::new(0xC0FFEE ^ trial as u64);
-        // A fresh codebook of N atoms; bundle the first M of them.
-        let codebook: Vec<Vec<f64>> = (0..N).map(|_| rng.atom(dim)).collect();
-        let mut bundle = vec![0.0f64; dim];
-        for atom in codebook.iter().take(M as usize) {
-            for (b, x) in bundle.iter_mut().zip(atom) {
-                *b += x;
-            }
-        }
-        // Dot of the bundle with each codebook atom (norms are equal, so dot ranks = cosine ranks).
-        let dot = |atom: &[f64]| -> f64 { bundle.iter().zip(atom).map(|(b, x)| b * x).sum() };
-        let member_min = (0..M as usize)
-            .map(|i| dot(&codebook[i]))
-            .fold(f64::INFINITY, f64::min);
-        let stranger_max = (M as usize..N)
-            .map(|j| dot(&codebook[j]))
-            .fold(f64::NEG_INFINITY, f64::max);
-        // Failure: some non-member out-ranks some member (cleanup would mis-retrieve).
-        if member_min <= stranger_max {
-            failures += 1;
+/// Run a single capacity trial with the given seed. Returns `true` on failure (some non-member
+/// out-ranks some member — cleanup would mis-retrieve).
+fn capacity_trial_fails(seed: u64, dim: usize) -> bool {
+    let mut rng = Lcg::new(seed);
+    // A fresh codebook of N atoms; bundle the first M of them.
+    let codebook: Vec<Vec<f64>> = (0..N).map(|_| rng.atom(dim)).collect();
+    let mut bundle = vec![0.0f64; dim];
+    for atom in codebook.iter().take(M as usize) {
+        for (b, x) in bundle.iter_mut().zip(atom) {
+            *b += x;
         }
     }
+    // Dot of the bundle with each codebook atom (norms are equal, so dot ranks = cosine ranks).
+    let dot = |atom: &[f64]| -> f64 { bundle.iter().zip(atom).map(|(b, x)| b * x).sum() };
+    let member_min = (0..M as usize)
+        .map(|i| dot(&codebook[i]))
+        .fold(f64::INFINITY, f64::min);
+    let stranger_max = (M as usize..N)
+        .map(|j| dot(&codebook[j]))
+        .fold(f64::NEG_INFINITY, f64::max);
+    // Failure: some non-member out-ranks some member (cleanup would mis-retrieve).
+    member_min <= stranger_max
+}
 
-    let rate = failures as f64 / TRIALS as f64;
-    assert!(
-        rate <= DELTA,
-        "empirical failure rate {rate} exceeded the proven δ={DELTA} (failures={failures}/{TRIALS}, dim={dim})"
-    );
+proptest! {
+    /// SC-2: with `dim ≥ requiredDim(M, δ)`, the empirical retrieval-failure rate is `≤ δ` over ≥10⁴
+    /// trials — every bundled member out-scores every non-member by nearest-neighbour cleanup.
+    ///
+    /// A3-08 (preserved): The Clarkson/Thomas bound is a *sufficient* condition (`dim ≥ requiredDim
+    /// ⟹ failProb ≤ δ`), so a trial run at the boundary dim confirms non-vacuity but **cannot**
+    /// confirm tightness. Tamper-protection for the bound's constant is the pinned-constant unit test
+    /// in `mycelium_vsa::capacity`; this test guards non-vacuity only.
+    ///
+    /// proptest generates `TRIALS` independent seeds per case; `PROPTEST_CASES` controls how many
+    /// independent batches are tested (default 16). CI rotates seeds across runs automatically.
+    #[test]
+    fn bundle_capacity_holds_over_1e4_trials(
+        seeds in proptest::collection::vec(any::<u64>(), TRIALS)
+    ) {
+        let dim = capacity::required_dim(M, DELTA, capacity::MARGIN_MU) as usize; // 1141
+        prop_assert!(dim >= 1141);
+
+        let failures: usize = seeds
+            .iter()
+            .filter(|&&seed| capacity_trial_fails(seed, dim))
+            .count();
+        let rate = failures as f64 / TRIALS as f64;
+        prop_assert!(
+            rate <= DELTA,
+            "empirical failure rate {rate} exceeded the proven δ={DELTA} \
+             (failures={failures}/{TRIALS}, dim={dim})"
+        );
+    }
 }
 
 /// The certified Value-level bundle issues a `Proven` `CapacityBound` exactly when the dimension

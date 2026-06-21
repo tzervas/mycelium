@@ -20,3 +20,6 @@ mycelium-select = { path = "../mycelium-select" }
 [dev-dependencies]
 # Manifest/value wire round-trip tests (M-260); the on-the-wire form is JSON (M-104).
 serde_json.workspace = true
+# Property-testing with shrinking + PROPTEST_CASES; migrates the hand-rolled LCG trial loops
+# (M-654 / ADR-021 Gate A3).
+proptest = "1.11"
