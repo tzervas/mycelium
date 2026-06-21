@@ -11,8 +11,8 @@ use mycelium_cert::{
     DENSE_VSA_DEFAULT_DELTA, DENSE_VSA_EMP_DELTA,
 };
 use mycelium_core::{
-    binary, ternary, Bound, BoundBasis, BoundKind, ContentHash, GuaranteeStrength, Meta, NormKind,
-    Payload, Provenance, Repr, ScalarKind, SparsityClass, Value,
+    binary, operation_hash, ternary, Bound, BoundBasis, BoundKind, ContentHash, GuaranteeStrength,
+    Meta, NormKind, Payload, Provenance, Repr, ScalarKind, SparsityClass, Value,
 };
 use mycelium_interp::{EvalError, SwapEngine};
 use mycelium_numerics::Certificate;
@@ -375,10 +375,18 @@ fn check_bijection_catches_width_mismatch_independent_of_trits() {
 /// The check is `if *width != params.width || *trits != params.trits`.
 /// With `&&`, a cert whose only `trits` field mismatches would be accepted. This test exercises
 /// the Ternary→Binary arm with a trits mismatch but correct width.
+///
+/// CRITICAL: the cert's `params` must pass `legal_pair(params.width, params.trits)` (line 204)
+/// or it is rejected there BEFORE reaching line 224. So we need params.trits = 7 (a legal but
+/// WRONG value): legal_pair(8,7)=true (3^7/2=1093≥128) but trits 7≠6 (the actual Ternary width).
+/// With the `||` honest code: `(8≠8)||(6≠7)` = true → mismatch caught.
+/// With `&&` mutant:      `(8≠8)&&(6≠7)` = false → NOT caught → re-derives & validates (wrong).
 #[test]
 fn check_bijection_catches_trits_mismatch_independent_of_width() {
-    // Build a cert claiming Ternary{6}→Binary{8} but with params {width:8, trits:4}.
-    // width matches (8 vs 8), trits mismatch (6 vs 4).
+    // Build a cert claiming Ternary{6}→Binary{8} but with params {width:8, trits:7}.
+    // width matches (8 == 8), trits mismatch (6 ≠ 7).
+    // legal_pair(8,7)=true so passes the legal_pair guard at line 204,
+    // but trits in repr (6) ≠ params.trits (7) — which must be caught.
     let a_bin = byte_of(-20);
     let (a_tern, _) = binary_to_ternary(&a_bin, 6, &policy()).unwrap();
     let (b, _) = ternary_to_binary(&a_tern, 8, &policy()).unwrap();
@@ -387,7 +395,7 @@ fn check_bijection_catches_trits_mismatch_independent_of_width() {
         target: Repr::Binary { width: 8 },
         policy_used: policy(),
         lemma_ref: roundtrip_lemma_ref(),
-        params: BinTernParams { width: 8, trits: 4 }, // trits WRONG, width correct
+        params: BinTernParams { width: 8, trits: 7 }, // trits WRONG (7≠6), width correct
     };
     let result = check(
         &a_tern,
@@ -473,32 +481,39 @@ fn check_bounded_prob_vr5_direction_is_correct() {
 // src/check.rs — deviation L2 norm `*` operators
 // ===========================================================================
 
-/// mutant: src/check.rs:569 `*` → `+` or `/` in L2 deviation (the `d * d` squaring term)
+/// mutant: src/check.rs:569 `*` → `/` in L2 deviation (the `d * d` squaring term)
 ///
-/// The L2 norm is `sqrt(sum(d^2))`. With `+` instead of `*`, it computes `sum(d+d) = 2*sum(d)`;
-/// with `/`, it computes `sum(d/d) = n` (number of elements). Neither is the L2 norm.
-/// This test uses a known L2 deviation and asserts the checker accepts/rejects accordingly.
+/// The L2 norm is `sqrt(sum(d^2))`. With `/` instead of `*`, it computes `sqrt(sum(d/d)) =
+/// sqrt(n)` for n non-zero elements. The two are identical ONLY when all diffs are 1.0.
+///
+/// CRITICAL: the original test used A=[0,0,0,0], B=[1,1,1,1] with diffs all = 1.0. For d=1,
+/// d*d=1 = d/d=1 = d+d=2 (almost). This test uses diff=3.0 where `d*d=9`, `d+d=6`, `d/d=1`.
+///
+/// A=[0], B=[3]: honest L2 = sqrt(9) = 3.0.
+/// With `+` mutant: sqrt(3+3) = sqrt(6) ≈ 2.449.
+/// With `/` mutant: sqrt(3/3) = sqrt(1) = 1.0.
+/// A cert with eps=2.5: honest rejects (3.0 > 2.5), both mutants accept (< 2.5). Test catches both.
 #[test]
 fn check_bounded_l2_deviation_uses_correct_multiplication() {
-    // A = [0.0, 0.0, 0.0, 0.0], B = [1.0, 1.0, 1.0, 1.0]
-    // L2 deviation = sqrt(1+1+1+1) = 2.0
-    // With `+` mutant: 2*(1+1+1+1) = 8; with `/` mutant: 4 (count).
-    // So: a cert with eps = 2.5 should pass (2.0 ≤ 2.5), but eps = 1.5 should fail (2.0 > 1.5).
+    // A = [0.0], B = [3.0], diff = 3.0
+    // Honest L2 = sqrt(3^2) = sqrt(9) = 3.0
+    // With `+` mutant: sqrt(3+3) = sqrt(6) ≈ 2.449 (WRONG — accepts eps=2.5)
+    // With `/` mutant: sqrt(3/3) = sqrt(1) = 1.0 (WRONG — accepts eps=2.5)
     let a = Value::new(
         Repr::Dense {
-            dim: 4,
+            dim: 1,
             dtype: ScalarKind::F32,
         },
-        Payload::Scalars(vec![0.0, 0.0, 0.0, 0.0]),
+        Payload::Scalars(vec![0.0]),
         Meta::exact(Provenance::Root),
     )
     .unwrap();
     let b = Value::new(
         Repr::Dense {
-            dim: 4,
+            dim: 1,
             dtype: ScalarKind::Bf16,
         },
-        Payload::Scalars(vec![1.0, 1.0, 1.0, 1.0]),
+        Payload::Scalars(vec![3.0]),
         Meta::exact(Provenance::Root),
     )
     .unwrap();
@@ -517,8 +532,8 @@ fn check_bounded_l2_deviation_uses_correct_multiplication() {
             },
         },
     };
-    // eps = 2.5 > actual L2 = 2.0 → should validate.
-    let claimed_ok = Certificate::new(2.5, 0.0, GuaranteeStrength::Empirical).unwrap();
+    // eps = 3.5 > actual L2 = 3.0 → must validate (honest and both mutants).
+    let claimed_ok = Certificate::new(3.5, 0.0, GuaranteeStrength::Empirical).unwrap();
     assert!(
         matches!(
             check(
@@ -526,15 +541,18 @@ fn check_bounded_l2_deviation_uses_correct_multiplication() {
                 &b,
                 RefinementRelation::BoundedSimilarity,
                 claimed_ok,
-                &Evidence::Swap(&l2_cert(2.5))
+                &Evidence::Swap(&l2_cert(3.5))
             ),
             CheckVerdict::Validated { .. }
         ),
-        "L2 eps=2.5 ≥ actual 2.0 must validate (mutant: * → + or / changes the norm)"
+        "L2 eps=3.5 ≥ actual 3.0 must validate"
     );
 
-    // eps = 1.5 < actual L2 = 2.0 → must fail with ClaimTooTight.
-    let claimed_tight = Certificate::new(1.5, 0.0, GuaranteeStrength::Empirical).unwrap();
+    // eps = 2.5: honest L2 = 3.0 > 2.5 → ClaimTooTight.
+    // `+` mutant: sqrt(6) ≈ 2.449 ≤ 2.5 → would Validate (WRONG).
+    // `/` mutant: sqrt(1) = 1.0 ≤ 2.5 → would Validate (WRONG).
+    // Both mutants are caught by this assertion.
+    let claimed_tight = Certificate::new(2.5, 0.0, GuaranteeStrength::Empirical).unwrap();
     assert!(
         matches!(
             check(
@@ -542,14 +560,15 @@ fn check_bounded_l2_deviation_uses_correct_multiplication() {
                 &b,
                 RefinementRelation::BoundedSimilarity,
                 claimed_tight,
-                &Evidence::Swap(&l2_cert(1.5))
+                &Evidence::Swap(&l2_cert(2.5))
             ),
             CheckVerdict::NotValidated {
                 reason: NotValidatedReason::ClaimTooTight { .. },
                 ..
             }
         ),
-        "L2 eps=1.5 < actual 2.0 must be ClaimTooTight (mutant: * → + gives wrong deviation)"
+        "L2 eps=2.5 < actual 3.0 must be ClaimTooTight \
+         (mutant * → + gives ≈2.449 which would pass; mutant * → / gives 1.0 which would pass)"
     );
 }
 
@@ -559,31 +578,52 @@ fn check_bounded_l2_deviation_uses_correct_multiplication() {
 
 /// mutant: src/dense.rs:49 `>>` → `<<` in `(bits >> 16) & 1` (lsb extraction)
 ///
-/// The LSB of the bfloat16 mantissa is bit 16 of the f32 bits. With `<<` instead of `>>`, the
-/// extraction reads from the wrong bit position and produces a wrong lsb, breaking round-to-
-/// nearest-even. This test specifically checks the tie-breaking behavior at the midpoint between
-/// two bf16 values: the lsb of the lower bf16 value determines whether we round to even.
+/// The LSB of the bfloat16 mantissa is bit 16 of the f32 bits. `(bits >> 16) & 1` extracts it.
+/// With `<<`, `(bits << 16) & 1` is ALWAYS 0 for any u32 (shifting left by 16 fills the low 16
+/// bits with zeros, so bit 0 of the result is always 0). This means the tie-breaking lsb is
+/// always 0 under the mutant, forcing round-down even when the lower bf16 neighbour is odd.
 ///
-/// bf16 grid point: 1.0 (bits = 0x3F80_0000, bf16 mantissa lsb = bit 16 = 0 → even).
-/// Mid-point between 1.0 and next-up: 1.0 + 2^-8 = 1 + 0.00390625.
-/// Round to nearest even: must round down to 1.0 (lsb=0 → even).
-/// With `<<` the lsb is computed from a different bit → may give 1 → rounds to 1 + 2^-7 (wrong).
+/// IMPORTANT: the original test case used 1.0+2^-8 where the lower bf16 grid point (1.0) has
+/// f32 bit 16 = 0. Honest lsb=0 and mutant lsb=0 agree here — that test does NOT kill the
+/// mutant. The distinguishing case needs a tie where the lower bf16 neighbour has bit 16 = 1
+/// (odd mantissa), so honest lsb=1 → rounds UP while mutant lsb=0 → rounds DOWN.
+///
+/// Lower bf16 neighbour `1.0+2^-7` has f32 bits 0x3F810000; bit 16 = 0x3F81 & 1 = 1 (odd).
+/// Its tie-point is `1.0+2^-7+2^-8 = 1.0117188`.
+/// Honest: lsb=1, adds 0x8000, rounds UP to 1.0+2^-6 = 1.015625.
+/// Mutant: lsb=0 always, adds 0x7FFF, rounds DOWN to 1.0+2^-7 = 1.0078125.
 #[test]
 fn round_to_nearest_even_at_tie_point_uses_correct_lsb_extraction() {
-    // 1.0 + 2^-8 is the exact midpoint between 1.0 and 1.0+2^-7 in bfloat16.
-    // 1.0 has bf16 mantissa LSB = 0 (even) → tie rounds DOWN to 1.0.
-    let tie = 1.0 + 2.0_f64.powi(-8);
-    let a = dense_f32(vec![tie]);
-    let (b, _) = dense_f32_to_bf16(&a, &policy()).expect("must not fail on tie");
-    let result = match b.payload() {
+    // Case 1: lsb=0 (even lower neighbour 1.0), tie rounds DOWN.
+    // Both honest and mutant give lsb=0 here — confirms round-down path but does NOT kill mutant.
+    let tie_down = 1.0 + 2.0_f64.powi(-8); // midpoint; lower bf16=1.0 (bit16=0) → round down
+    let a_down = dense_f32(vec![tie_down]);
+    let (b_down, _) = dense_f32_to_bf16(&a_down, &policy()).expect("must not fail");
+    let r_down = match b_down.payload() {
         Payload::Scalars(xs) => xs[0],
-        other => panic!("expected scalars, got {other:?}"),
+        other => panic!("{other:?}"),
     };
-    // Must round to 1.0 (even), not 1.0 + 2^-7 = 1.0078125.
     assert_eq!(
-        result, 1.0,
-        "tie at 1+2^-8 must round to 1.0 (even); got {result} \
-         (mutant: >> → << breaks lsb extraction, changing tie-breaking)"
+        r_down, 1.0,
+        "tie at 1+2^-8 must round DOWN to 1.0 (lsb=0 even)"
+    );
+
+    // Case 2: lsb=1 (odd lower neighbour 1.0+2^-7), tie rounds UP — kills the >> → << mutant.
+    // Midpoint: 1.0+2^-7+2^-8 = 1.0117188. Lower bf16=1.0+2^-7, bit 16 of its f32=1 (odd).
+    // Honest: lsb=1 → rounds UP to 1.0+2^-6=1.015625.
+    // Mutant (>> → <<, lsb always 0): rounds DOWN to 1.0+2^-7=1.0078125.
+    let tie_up = 1.0 + 2.0_f64.powi(-7) + 2.0_f64.powi(-8); // midpoint; lower has lsb=1
+    let a_up = dense_f32(vec![tie_up]);
+    let (b_up, _) = dense_f32_to_bf16(&a_up, &policy()).expect("must not fail on odd-lsb tie");
+    let r_up = match b_up.payload() {
+        Payload::Scalars(xs) => xs[0],
+        other => panic!("{other:?}"),
+    };
+    // Must round UP to 1.0+2^-6 = 1.015625 (even upper neighbour).
+    assert!(
+        (r_up - 1.015_625).abs() < 1e-9,
+        "tie at 1+2^-7+2^-8 must round UP to 1.015625 (lsb=1 odd → round to even upper); got {r_up} \
+         (mutant: >> → << always gives lsb=0 → rounds DOWN to 1.0078125)"
     );
 }
 
@@ -799,26 +839,63 @@ fn dense_to_vsa_accumulation_mul_and_div_equivalent_for_bipolar() {
 
 /// mutant: src/dense_vsa.rs:224 match guard `op == &operation_hash(ENC_OP)` → `true`
 ///
-/// If the guard is `true`, any VSA hypervector (even a Root-provenance one) would be accepted as
-/// a valid Dense↔VSA encoding product, bypassing the provenance gate. This test confirms that a
-/// root-provenance VSA is rejected with `NotDenseVsaEncoding`.
+/// The match arm at line 224 is `Provenance::Derived { op, .. } if op == &operation_hash(ENC_OP)`.
+/// With `guard → true`, the condition becomes `if true`, so any `Derived` provenance with ANY op
+/// is accepted (the op is no longer checked). `Root` provenance still fails the `Derived` pattern,
+/// so the Root test does NOT kill this mutant — Root falls to `_ => NotDenseVsaEncoding` regardless.
+///
+/// The distinguishing case is a VSA with `Provenance::Derived { op: <wrong-op>, inputs: ... }`:
+/// honest code returns `NotDenseVsaEncoding` (wrong op), mutant returns Ok (guard=true accepts it).
 #[test]
 fn vsa_to_dense_requires_enc_v1_provenance_not_just_model() {
-    // A Hypervector with correct model/dim but Root provenance (not derived from enc.v1).
-    let stray = Value::new(
+    let vsa_dim = 2048u32;
+
+    // Case 1: Root provenance — caught by the `_` arm, not the guard. Documents the error path.
+    let root_stray = Value::new(
         Repr::Vsa {
             model: dense_vsa::DENSE_VSA_MODEL.to_owned(),
-            dim: 2048,
+            dim: vsa_dim,
             sparsity: SparsityClass::Dense,
         },
-        Payload::Hypervector(vec![0.5; 2048]),
-        Meta::exact(Provenance::Root), // Root, not enc.v1
+        Payload::Hypervector(vec![0.5; vsa_dim as usize]),
+        Meta::exact(Provenance::Root),
     )
     .unwrap();
     assert_eq!(
-        vsa_to_dense(&stray, 8, 1e-2, &policy()),
+        vsa_to_dense(&root_stray, 8, 1e-2, &policy()),
         Err(SwapError::NotDenseVsaEncoding),
-        "Root-provenance VSA must be NotDenseVsaEncoding (mutant: guard → true bypasses check)"
+        "Root-provenance VSA must be NotDenseVsaEncoding"
+    );
+
+    // Case 2: Derived provenance with a WRONG op — kills the `guard → true` mutant.
+    // Honest code: op != enc.v1 → guard fires (false) → falls to `_ => NotDenseVsaEncoding`.
+    // Mutant (guard → true): Derived pattern matches regardless of op → proceeds to decode → Ok.
+    let wrong_op_meta = Meta::new(
+        Provenance::Derived {
+            op: operation_hash("some.other.operation"),
+            inputs: vec![policy()],
+        },
+        mycelium_core::GuaranteeStrength::Exact,
+        None,
+        None,
+        None,
+        Some(policy()),
+    )
+    .unwrap();
+    let derived_stray = Value::new(
+        Repr::Vsa {
+            model: dense_vsa::DENSE_VSA_MODEL.to_owned(),
+            dim: vsa_dim,
+            sparsity: SparsityClass::Dense,
+        },
+        Payload::Hypervector(vec![0.5; vsa_dim as usize]),
+        wrong_op_meta,
+    )
+    .unwrap();
+    assert_eq!(
+        vsa_to_dense(&derived_stray, 8, 1e-2, &policy()),
+        Err(SwapError::NotDenseVsaEncoding),
+        "Derived-but-wrong-op VSA must be NotDenseVsaEncoding (mutant: guard → true accepts it)"
     );
 }
 
@@ -960,7 +1037,11 @@ fn certified_engine_vsa_to_dense_model_guard_is_correct() {
         "MAP-I VSA→Dense must succeed (mutant: guard → false breaks this)"
     );
 
-    // A non-MAP-I VSA → Dense must not succeed.
+    // A non-MAP-I VSA → Dense must not succeed — and must be UnsupportedSwap specifically.
+    // With the `model == DENSE_VSA_MODEL → true` mutant, HRR VSA routes to vsa_to_dense which
+    // returns NotDenseVsaEncoding (a SwapError, not UnsupportedSwap). The honest code falls through
+    // to BinaryTernarySwapEngine which returns EvalError::UnsupportedSwap. So we must assert the
+    // specific error variant to kill the mutant.
     let hrr_hv = Value::new(
         Repr::Vsa {
             model: "HRR".to_owned(),
@@ -974,8 +1055,8 @@ fn certified_engine_vsa_to_dense_model_guard_is_correct() {
     assert!(
         matches!(
             CertifiedSwapEngine.swap(&hrr_hv, &dense_target, &policy()),
-            Err(EvalError::UnsupportedSwap { .. } | EvalError::Swap(_))
+            Err(EvalError::UnsupportedSwap { .. })
         ),
-        "HRR VSA→Dense must not succeed (mutant: guard → true would attempt the wrong arm)"
+        "HRR VSA→Dense must be UnsupportedSwap specifically (mutant: guard → true gives Swap(NotDenseVsaEncoding) instead)"
     );
 }
