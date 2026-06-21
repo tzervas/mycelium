@@ -26,6 +26,24 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 - **RP-9** (`docs/notes/research-prompts.md`): the follow-up deep-research pass that gates RFC-0023
   past Draft — must verify ADK→Mycelium concept-map, honesty-as-differentiator claim, tool-dispatch
   never-silent contract, session/runner model + LLM-harness reuse; Open, 2026-06-21.
+### Added (2026-06-21: RFC-0022 — Web-Tooling Phylum Draft + research/12-web-phylum-RECORD.md + RP-10)
+- **RFC-0022 — Web-Tooling Phylum** (`docs/rfcs/RFC-0022-Web-Tooling-Phylum.md`): **Draft** design for
+  a `web` phylum (HTTP client/server/routing/JSON) — nodules `web.http` (never-silent HTTP/1.1
+  parser: every malformed input is a located `ParseError`, never a sentinel), `web.json` (thin
+  convenience over `std.io`'s one canonical JSON codec — no new codec, DRY/KC-3), `web.route`
+  (inspectable route table + EXPLAIN-able dispatch), `web.server` (server as a `colony` of one
+  request-handling `hypha` per connection — the RFC-0008 RT model faithfully instantiated),
+  `web.client` (`get`/`post`/`request`). v1 Rust-first as `mycelium-web` (RFC-0016 §4.6
+  precedent). **Gated**: typed `Json<T>` handler surface blocked on E7-1 (M-657 generics, M-659
+  traits); `.myc` `colony { hypha … }` server surface blocked on E7-2 (M-666). Not yet built;
+  tracked as M-670.
+- **`research/12-web-phylum-RECORD.md`** (`Empirical/Declared` — design-informing prior-art +
+  corpus-grounding, never `Proven`): the Phase-1 evidence base for RFC-0022 (T12.1.x–T12.4.x +
+  §6 Honest-Uncertainty Register).
+- **RP-10** (`docs/notes/research-prompts.md`): the follow-up deep-research pass that gates
+  RFC-0022 past Draft — must verify HTTP/1.1 edge-case never-silent contract, JSON delegation,
+  server-as-colony RT2 differential (Empirical, not Proven), and route EXPLAIN-ability; Open,
+  2026-06-21.
 
 ### Added (2026-06-21: M-665 — L1 reserves the 10 DN-03 runtime terms, never-silent (G2))
 - **Runtime-vocabulary lexer reservation** (`crates/mycelium-l1/src/{token,parse,lib}.rs`): all 10
