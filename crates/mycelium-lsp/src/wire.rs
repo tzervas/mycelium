@@ -88,11 +88,22 @@ pub fn publish_diagnostics_notification(uri: &str, feedback: &Feedback) -> Value
 /// pipeline exists (M-310; RFC-0011 r3 / RFC-0001 r4), the server advertises **`textDocumentSync: 1`**
 /// (`TextDocumentSyncKind.Full`) — it re-analyzes the whole document on each edit ([`crate::sync`])
 /// and pushes diagnostics via [`publish_diagnostics_notification`] / `crate::sync::publish_for_source`.
+///
+/// Also advertises **`completionProvider`** for the lexical/scaffolding completion provider
+/// ([`crate::completions`]). The trigger characters `["/", "@"]` prompt the nodule-header
+/// and matured-header snippets; the provider is otherwise token-prefix-triggered by the client.
+/// Scope is `Declared` — lexical/scaffolding only, no semantic/type-aware resolution.
 #[must_use]
 pub fn initialize_result() -> Value {
     json!({
         "capabilities": {
             "textDocumentSync": 1,
+            // Lexical/scaffolding completion provider (Declared: keyword + snippet list only;
+            // no type-aware or scope-aware resolution -- see crate::completions module doc).
+            "completionProvider": {
+                "resolveProvider": false,
+                "triggerCharacters": ["/", "@"],
+            },
         },
         "serverInfo": { "name": SERVER_NAME, "version": env!("CARGO_PKG_VERSION") },
     })
@@ -213,6 +224,14 @@ pub fn serve<R: BufRead, W: Write>(reader: &mut R, writer: &mut W) -> io::Result
                         }),
                     )?;
                 }
+            }
+
+            // --- lexical/scaffolding completions (request; id is always Some) ---
+            // Scope: Declared — lexical keyword + snippet list only; no semantic analysis.
+            // The full static list is returned unconditionally; prefix-filtering is the client's
+            // responsibility (standard LSP: the server provides candidates, the client filters).
+            ("textDocument/completion", Some(id)) => {
+                write_message(writer, &response(id, crate::completions::completion_list()))?;
             }
 
             // Any other request must get a response (never a silent hang); -32601 = MethodNotFound.
@@ -432,5 +451,101 @@ mod tests {
         let resp = read_message(&mut rout).unwrap().unwrap();
         assert_eq!(resp["id"], 7);
         assert_eq!(resp["error"]["code"], -32601);
+    }
+
+    #[test]
+    fn completion_request_returns_keyword_and_snippet_list() {
+        // Scripted client: textDocument/completion → must respond with a CompletionList that has
+        // the LSP `isIncomplete + items` shape, contains at least one keyword item (kind=14) and
+        // one snippet item (kind=15), and specifically includes `nodule` and the `swap-expr` snippet.
+        // Mutant-witness: a server falling through to MethodNotFound (-32601) would fail the `items`
+        // array check and the kind assertions.
+        let mut input = Vec::new();
+        write_message(
+            &mut input,
+            &json!({
+                "jsonrpc": "2.0", "id": 5, "method": "textDocument/completion",
+                "params": {
+                    "textDocument": { "uri": "mem://t" },
+                    "position": { "line": 0, "character": 2 },
+                }
+            }),
+        )
+        .unwrap();
+        write_message(&mut input, &json!({ "jsonrpc": "2.0", "method": "exit" })).unwrap();
+
+        let mut reader = Cursor::new(input);
+        let mut out = Vec::new();
+        serve(&mut reader, &mut out).unwrap();
+
+        let mut rout = Cursor::new(out);
+        let resp = read_message(&mut rout).unwrap().unwrap();
+        assert_eq!(resp["id"], 5);
+        // Must be a success response, not an error.
+        assert!(
+            resp.get("error").is_none(),
+            "completion must not return an error"
+        );
+        let result = &resp["result"];
+        assert_eq!(result["isIncomplete"], false);
+        let items = result["items"].as_array().expect("items must be an array");
+        assert!(!items.is_empty(), "completion list must be non-empty");
+
+        // At least one keyword item (kind=14: `nodule`) and one snippet item (kind=15).
+        let has_keyword = items.iter().any(|i| i["kind"] == 14);
+        let has_snippet = items.iter().any(|i| i["kind"] == 15);
+        assert!(has_keyword, "must have at least one keyword item (kind=14)");
+        assert!(has_snippet, "must have at least one snippet item (kind=15)");
+
+        // `nodule` keyword must be present (it is the primary structural keyword).
+        let nodule = items.iter().find(|i| i["label"] == "nodule");
+        assert!(nodule.is_some(), "`nodule` keyword must appear in the list");
+        assert_eq!(nodule.unwrap()["kind"], 14);
+
+        // `swap-expr` snippet must be present and use snippet format (2).
+        let swap_snip = items.iter().find(|i| i["label"] == "swap-expr");
+        assert!(
+            swap_snip.is_some(),
+            "`swap-expr` snippet must appear in the list"
+        );
+        assert_eq!(swap_snip.unwrap()["insertTextFormat"], 2); // snippet grammar
+
+        // `phylum` and `colony` (reserved-not-active) must NOT appear in completions.
+        let has_phylum = items.iter().any(|i| i["label"] == "phylum");
+        let has_colony = items.iter().any(|i| i["label"] == "colony");
+        assert!(
+            !has_phylum,
+            "`phylum` (reserved-not-active) must not be offered"
+        );
+        assert!(
+            !has_colony,
+            "`colony` (reserved-not-active) must not be offered"
+        );
+
+        // Server stops cleanly after exit.
+        assert_eq!(read_message(&mut rout).unwrap(), None);
+    }
+
+    #[test]
+    fn initialize_result_advertises_completion_provider() {
+        // The `initialize` response must include `completionProvider` so clients know to
+        // request completions. Mutant-witness: removing the field from `initialize_result()`
+        // would break editor discovery and make completion requests unreachable in practice.
+        let result = initialize_result();
+        assert!(
+            result["capabilities"]["completionProvider"].is_object(),
+            "capabilities must include completionProvider"
+        );
+        assert_eq!(
+            result["capabilities"]["completionProvider"]["resolveProvider"], false,
+            "resolveProvider must be false (static list, no resolve step)"
+        );
+        let triggers = result["capabilities"]["completionProvider"]["triggerCharacters"]
+            .as_array()
+            .expect("triggerCharacters must be an array");
+        assert!(
+            triggers.iter().any(|t| t == "/"),
+            "triggerCharacters must include '/' for the nodule-header snippet"
+        );
     }
 }
