@@ -784,3 +784,39 @@ fn impl_method_type_mismatch_is_an_explicit_error() {
         err.message
     );
 }
+
+// ---- S6: bounded-call resolution (M-658/M-659) ----
+
+#[test]
+fn bounded_generic_call_with_impl_checks() {
+    // `fn identity<T: Show>(x: T) -> T` called with `Binary{8}` where `impl Show for Binary{8}`
+    // exists — the bound check must find the impl and succeed. The call `identity(0b0000_0000)`
+    // anchors T=Binary{8}; the impl lookup for Show@Binary{8} must pass (M-659).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "impl Show for Binary{8} { fn show(x: Binary{8}) -> Binary{8} = x }\n",
+        "fn identity<T: Show>(x: T) -> T = x\n",
+        "fn main() -> Binary{8} = identity(0b0000_0000)\n",
+    );
+    check(src).expect("bounded generic call with registered impl must check");
+}
+
+#[test]
+fn bounded_call_missing_impl_is_an_explicit_error() {
+    // `fn identity<T: Show>(x: T) -> T` called with `Binary{8}` but NO `impl Show for Binary{8}`
+    // registered → explicit CheckError (never-silent, G2 / M-659).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        // No impl registered for Binary{8}.
+        "fn identity<T: Show>(x: T) -> T = x\n",
+        "fn main() -> Binary{8} = identity(0b0000_0000)\n",
+    );
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("no impl of"),
+        "expected missing-impl error; got: {}",
+        err.message
+    );
+}

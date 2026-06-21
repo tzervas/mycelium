@@ -927,6 +927,7 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
                     site: &msite,
                     types: &types,
                     generics: &generics,
+                    impls: &impls,
                     fns: &BTreeMap::new(), // impl methods see no top-level fns (no recursion in v0)
                 };
                 let (got, body) = cx.check(&mut scope, &m.body, Some(&ret))?;
@@ -990,6 +991,7 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
             site,
             types: &types,
             generics: &generics,
+            impls: &impls,
             fns: &fns,
         };
         let (got, body) = cx.check(&mut scope, &fd.body, Some(&ret))?;
@@ -1223,6 +1225,8 @@ struct Cx<'a> {
     types: &'a BTreeMap<String, DataInfo>,
     /// Generic shell registry — used for abstract pattern matching in generic fn bodies (M-657).
     generics: &'a BTreeMap<String, GenericShell>,
+    /// Impl registry — used for bounded-call resolution (M-659, **Declared**).
+    impls: &'a BTreeMap<(String, String), ImplInfo>,
     fns: &'a BTreeMap<String, FnDecl>,
 }
 
@@ -1664,6 +1668,29 @@ impl Cx<'_> {
                 )
             })?;
             rebuilt.push(a2);
+        }
+        // 2b. Bounded-call resolution (M-658/M-659, **Declared**): for each trait bound in the
+        // signature, verify that a registered impl exists for the concrete type. A bound that maps
+        // to a type var (not yet substituted) or has no registered impl is an explicit error.
+        for b in &sig.bounds {
+            let concrete_ty = match subst.get(&b.param) {
+                Some(t) => t.clone(),
+                None => {
+                    return self.err(format!(
+                        "`{name}`: bound `{}: {}` — type parameter `{}` was not instantiated \
+                         at this call site (no argument anchors it)",
+                        b.param, b.trait_name, b.param
+                    ));
+                }
+            };
+            let key = (b.trait_name.clone(), concrete_ty.to_string());
+            if !self.impls.contains_key(&key) {
+                return self.err(format!(
+                    "`{name}`: no impl of `{}` for `{concrete_ty}` — \
+                     add `impl {} for {concrete_ty} {{ … }}` (M-659 dictionary-passing, RFC-0019 §4.5)",
+                    b.trait_name, b.trait_name
+                ));
+            }
         }
         // 3. Apply substitution to the abstract return type to get the concrete return type.
         let abstract_ret = resolve_ty_body(self.site, self.types, self.generics, tyvars, &sig.ret)
@@ -2128,6 +2155,7 @@ pub(crate) fn infer_type(
         site: "<elaborate>",
         types: &env.types,
         generics: &env.generics,
+        impls: &env.impls,
         fns: &env.fns,
     };
     cx.infer(scope, e)
@@ -3138,6 +3166,7 @@ fn infer_generic_arg_tys_with_env(
         site,
         types: &env.types,
         generics: &env.generics,
+        impls: &env.impls,
         fns: &env.fns,
     };
     let mut scope_mut: Vec<(String, Ty)> = scope.to_vec();
