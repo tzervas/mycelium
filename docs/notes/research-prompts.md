@@ -297,6 +297,54 @@ schema); ADR-003 (content-addressed identity); KC-3 (small auditable kernel).
 
 ---
 
+## RP-8 — Performance Optimization & Tool-Extraction Spike
+
+**Status:** Open (maintainer direction, 2026-06-21). Near-future spike — **post-1.0 / parallel to
+the 1.0.0 gate work**, not a 1.0.0 blocker (the 1.0.0 gate is honesty-integrity + durability, not
+performance — ADR-021 §5; DN-19).
+
+**Direction (maintainer).** The long-term aim is performance that is **fast, robust, reliable, and
+easy to use across the full spectrum** — low-level systems code to high-level application code and
+everything between — *while keeping the honesty guarantees intact* (never-silent swaps, the
+per-op guarantee lattice, no black boxes). This is the language's north star; this prompt turns it
+into a tracked, falsifiable optimization track rather than an aspiration.
+
+**Question.** Where is the performance actually spent today, and which hot paths can be optimized
+or **extracted into dedicated tools / native paths** without weakening any guarantee? Concretely:
+1. **Profile the current Rust workspace** under representative workloads (the interpreter trusted
+   base; `mycelium-cert` swap + certificate-check; `mycelium-vsa`/`-dense` ops; the MLIR→LLVM AOT
+   path) and produce an honest hot-path inventory (Empirical — measured, this-machine, like KC-4).
+2. **Cert-check overhead toward the nanosecond range** (the ADR-021 A5 / phase-2.md §6.7 long-term
+   target — currently ~µs): can the translation-validation check be specialized/precompiled per
+   swap class, memoized on content hash (ADR-003), or shifted off the hot path on the AOT/stable
+   path (ADR-009) so the *interpreter* keeps full per-swap checking while *stable* code pays
+   near-zero? Without ever making a swap silent (G2/VR-5).
+3. **Extraction into tools.** Which perf-critical kernels (packing, VSA bind/bundle, dense numerics,
+   the certificate checker) warrant extraction into a dedicated optimized crate / native codegen
+   path / SIMD or BitNet-packed kernel (FR-C3) — and what's the honest guarantee-preserving boundary
+   for each?
+4. **Scope coverage.** What does "works across low→high level" require that isn't built yet
+   (the intended-scopes gap), sequenced against the Phase-6 native path (libMLIR, M-348/M-601)?
+
+*Confirmation:* a committed, reproducible profiling harness (extending the `xtask kc4` pattern) +
+an Empirical hot-path report; at least one optimization landed with a before/after measurement and
+a regression test proving the guarantee it touches is unchanged; the cert-check budget tracked
+against the nanosecond target. Each optimization is honest (measured, this-machine) and
+guarantee-preserving.
+
+*Falsification:* a hot path whose only viable speedup *weakens* a guarantee (makes a swap silent,
+drops a bound's basis, or removes EXPLAIN-ability) falsifies "optimize without weakening guarantees"
+for that path — it must then be recorded as an explicit honesty/performance tension (a DN), not
+silently taken.
+
+**Feeds:** ADR-021 §5 (out-of-scope-for-1.0.0 maturation) + A5 (the nanosecond cert-overhead
+target); `docs/planning/phase-2.md` §6.7 (KC-4 measurement + budget); Phase-6 native path
+(M-348/M-601, libMLIR); FR-C3 (BitNet packed-ternary acceleration); ADR-009 (AOT vs interpreter);
+ADR-003 (content-addressed memoization); the honesty rule / G2 / VR-5 (the non-negotiable
+constraint on every optimization). NON-BLOCKING for 1.0.0.
+
+---
+
 ## Resolved Prompts
 
 - **RP-6 — R7-Q3 Surface Grammar for Mutual Recursion.** **Resolved 2026-06-19.** Verdict: **candidate

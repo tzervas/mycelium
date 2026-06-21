@@ -93,6 +93,39 @@ not prose; the pass-3 rules are **Declared** maintainer decisions in the manifes
 inferred by the script. Adding/relaxing an invariant is itself a decision — edit the
 manifest deliberately (and note it in the changelog), don't let the gate guess one.
 
+## Local docsite
+
+`scripts/docsite.sh` (run via `just docs-site`) assembles a single browsable static site under
+`target/docsite/` from three sources:
+
+| Section | Tool | What it builds |
+|---|---|---|
+| **Corpus** | `myc-doc build` | HTML view of RFCs/ADRs/DNs/specs (M-363 doc-IR) |
+| **Agent index** | `tools/docgen/code_index.py` | Symbol table with crate/file:line/guarantee-tag |
+| **Rustdoc** | `cargo doc --no-deps --workspace` | Public Rust API reference |
+
+Each section **skips gracefully** when its tool is absent (warns, continues). The output is
+gitignored (`target/docsite/`); it is never committed.
+
+**Usage:**
+
+```sh
+just docs-site              # build the site
+```
+
+**Browsing on WSL:** serve the output dir with Python's built-in HTTP server, then open the URL in
+your Windows browser:
+
+```sh
+cd target/docsite
+python3 -m http.server 8080
+# open http://localhost:8080 in your Windows browser
+```
+
+The landing page (`target/docsite/index.html`) links all three sections and lists any that were
+skipped. Most sections also work when opened as a local file, except rustdoc (which uses
+absolute-path links and requires a server).
+
 ## Remote CI
 `.github/workflows/checks.yml` is **manual-dispatch only** (`workflow_dispatch`) and
 **advisory** (non-blocking) — it runs `just ci`, i.e. this same suite. See the repo CI policy
