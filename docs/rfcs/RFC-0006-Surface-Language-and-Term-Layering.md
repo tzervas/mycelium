@@ -287,7 +287,15 @@ that nothing else blocks on:
   quantification → RFC-0007 §4.5. Ratifying RFC-0006 ratifies these positions as the committed
   direction.
 
-**Stays gated / deferred (explicit, honest — must NOT be read as ratified).**
+**Stays gated / deferred — the r4 (2026-06-15) snapshot; SUPERSEDED by the r5 status line + changelog below.**
+
+> **r5 note (2026-06-18, append-only):** This subsection is the r4 picture, retained unedited for
+> the record (append-only). As of r5, **Q1 is discharged** (DN-09, KC-2 verdict = proceed; L3 =
+> text syntax + co-equal projections) and **Q3 is discharged** (RFC-0018), so the "Concrete L3
+> syntax — KC-2-gated (Q1/Q6)" and "Stage-1 grading (Q3)" bullets below read as *r4-historical*, not
+> current. What genuinely remains open is the **Q8 `unsafe`-class L3 *spelling*** (keyword/theming
+> only — the LR-9 *mechanism* is committed), tracked separately and never KC-2-gated. The r5 status
+> line below is in force.
 
 - **Concrete L3 surface syntax — KC-2-gated (Q1; the one deliberate deferral).** Blocked on M-002
   (#3), LLM-API-external. The Q1 experiment is *designed* (T3.6) but unrun; its verdict picks text /
