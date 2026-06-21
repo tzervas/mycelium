@@ -1,24 +1,30 @@
-//! `adk` — a Rust-first port of Google's Agent Development Kit, per **RFC-0023** (M-671).
+//! `mycelium-adk` — Agent Development Kit phylum (RFC-0023, M-671).
 //!
-//! # The differentiator: honesty (RFC-0023 §6)
-//! The Mycelium port is **honest where Python ADK is silent** — and this holds *regardless of
-//! model quality*, because the substrate forbids the dishonest move structurally:
-//! - an LLM output is **type-forbidden from `Proven`/`Exact`** (`model_allowed_tags =
-//!   {Declared, Empirical}`; the tag is preserved verbatim, **never upgraded**),
-//! - a tool failure is an explicit `Err(ToolError)` — never a silent `None`/default (C1/G2),
-//!   and a synthetic/mock run is flagged ([`model::is_synthetic`]), never reported as real.
+//! A Mycelium port of Google ADK: typed tools, pure-data agent definitions,
+//! content-addressed session/state, a (gated) runner, and a model layer.
+//! The **differentiator** (RFC-0023 §6) is honesty:
 //!
-//! # Status — scaffold + pure data model, pending ratification
-//! RFC-0023 is **`Draft`**; the `dfr` deep-research pass (**RP-9**) gates its Honest-Uncertainty
-//! Register. This session builds the **non-gated pure data model + honesty discipline** only.
-//! FLAGGED-gated (never faked):
-//! - [`runner`]'s colony-driven loop — pending the runtime-realization choice (R23-Q1:
-//!   `mycelium-std-runtime::colony` vs `mycelium-mlir::runtime`),
-//! - [`model`]'s real `generate` call — real LLM runs are excluded from this wave (M-381/M-646),
-//! - the typed `Tool<In,Out>` / `Agent` and `colony { … }` `.myc` surfaces (E7-1 / E7-2).
+//! - An LLM outcome's guarantee tag is **type-forbidden** from `Proven`/`Exact`
+//!   (only `Declared`|`Empirical` are allowed — `model_allowed_tags`).
+//! - Tool failures are **never silent** (`Result<_, ToolError>`, always `Err`).
+//! - Deferred/gated paths return explicit `Err`, never a fabricated success.
 //!
-//! # Nodules (RFC-0023 §4)
-//! [`tool`] · [`agent`] · [`session`] · [`runner`] · [`model`].
+//! ## Status
+//! **Rust-first**, data-model + honesty discipline only.  The runtime loop
+//! (`runner`) is gated on R23-Q1 (runtime-realization choice).  Real LLM calls
+//! are excluded this wave (M-381/M-646).  Mycelium-language surface (§4) targets
+//! E7-1/E7-2 completion.
+//!
+//! ## Nodules (modules)
+//! - [`tool`] — `ToolError`, `Tool` trait, pure tool surface (`adk.tool`)
+//! - [`agent`] — pure data: `LlmAgent`, `Workflow`, `Agent`, id newtypes (`adk.agent`)
+//! - [`session`] — `State`, `Event`, `Session`; value-semantic `put` (`adk.session`)
+//! - [`model`] — `ModelError`, `LlmRequest`, `LlmOutcome`, honesty guard (`adk.model`)
+//! - [`runner`] — `RunError`, `run` stub (gated, R23-Q1) (`adk.runner`)
+//! - [`guarantee_matrix`] — per-op matrix + load-bearing LLM-tag guard tests
+//!
+//! ## Design spec
+//! `docs/rfcs/RFC-0023-Agent-Development-Kit-Phylum.md`
 #![forbid(unsafe_code)]
 
 pub mod agent;

@@ -14,9 +14,7 @@ workspace = true
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
 mycelium-std-core = { path = "../mycelium-std-core" }
-# session/state serialization uses std.io's canonical codec; error propagation uses std.error.
-mycelium-std-io = { path = "../mycelium-std-io" }
-mycelium-std-error = { path = "../mycelium-std-error" }
 
 [dev-dependencies]
+# property tests: one property per bound (VR-5 / RFC-0023 §6).
 proptest = "1"
