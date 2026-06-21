@@ -2322,4 +2322,429 @@ mod tests {
             "nested result at inner depth (6 spaces) must come before outer result (2 spaces): {nested_result:?}\nfull:\n{lam_dump}"
         );
     }
+
+    // ============================================================================================
+    // M-654 finish batch: kill the remaining 19 lower.rs survivors that batches 1–4 left alive.
+    //
+    // Why they survived: every earlier indentation test asserts `starts_with("  ")` (or a *relative*
+    // `inner > outer`) on a node's **own header** line — never on what it **recursively emits one
+    // level down**. So `depth + 1 → depth * 1` (which collapses a depth-0 child to 0 spaces but is
+    // invisible if no test reads the child line) and the deeper `depth + 2 → depth * 1` (which
+    // yields 4 spaces where 6 are required, still satisfying a `> outer` check) slipped through.
+    // The counter survivors (`*counter += 1 → *= 1`, `scope[mark + i] → mark * i`) survived because
+    // every earlier test used a **single** binder of a given node type, so the canonical name was
+    // always `v0` regardless of whether the counter advanced. Each test below pins the **child**
+    // line's absolute indentation, or uses **≥2 consecutive binders** and asserts **distinct** names.
+    // ============================================================================================
+
+    /// Build a `CtorRef` for a constructor with `n_fields` `Binary{8}` fields (for `Construct` /
+    /// `Ctor`-alt tests). The dump paths (`format`/`dump_node`/substrate) render args structurally
+    /// and do not WF-check saturation, so the field types only need to be well-formed reprs.
+    fn ctor_ref_with_fields(n_fields: usize) -> crate::data::CtorRef {
+        use crate::data::{CtorSpec, DataRegistry, DeclSpec, FieldSpec};
+        use std::collections::BTreeMap;
+        let mut m = BTreeMap::new();
+        m.insert(
+            "T".to_owned(),
+            DeclSpec {
+                ctors: vec![CtorSpec {
+                    fields: vec![FieldSpec::Repr(Repr::Binary { width: 8 }); n_fields],
+                }],
+            },
+        );
+        let reg = DataRegistry::build(&m).unwrap();
+        reg.ctor_ref("T", 0).unwrap()
+    }
+
+    // ----- write_canon (format) -----------------------------------------------------------------
+
+    // Kills lower.rs:208:37 `write_canon(body, depth + 1, ...)` `+ → *` (Let **body**).
+    // The earlier Let test asserted only the **bound** (const) line; the body line was never read,
+    // so `depth * 1 = 0` (unindented body at root) survived. Assert the body line at depth 1.
+    #[test]
+    fn format_let_body_is_indented_at_depth_one() {
+        let let_node = Node::Let {
+            id: "x".into(),
+            bound: Box::new(Node::Const(byte())),
+            body: Box::new(Node::Var("x".into())), // bound → renders "var v0"
+        };
+        let text = format(&let_node);
+        let body_line = text
+            .lines()
+            .find(|l| l.trim_start().starts_with("var v0"))
+            .expect("Let body must render 'var v0'");
+        assert!(
+            body_line.starts_with("  "),
+            "Let body at depth 1 must start with 2 spaces (depth+1, not depth*1=0): {body_line:?}\nfull:\n{text}"
+        );
+        assert!(
+            !body_line.starts_with("    "),
+            "Let body must be at depth 1 (2 spaces), not depth 2: {body_line:?}"
+        );
+    }
+
+    // Kills lower.rs:228:38 `write_canon(a, depth + 1, ...)` `+ → *` and `+ → -` (Construct **args**).
+    // No earlier test exercised `Node::Construct`, so neither mutant's code path was reached.
+    // `+ → -` underflows usize at root (panic) once the path runs; `+ → *` collapses args to 0 spaces.
+    #[test]
+    fn format_construct_args_indent_at_depth_one() {
+        let node = Node::Construct {
+            ctor: ctor_ref_with_fields(1),
+            args: vec![Node::Const(byte())],
+        };
+        let text = format(&node);
+        assert!(
+            text.lines()
+                .any(|l| l.trim_start().starts_with("construct")),
+            "Construct must render a 'construct' header: {text:?}"
+        );
+        // Match "const Binary" specifically — "construct" also begins with "const".
+        let arg_line = text
+            .lines()
+            .find(|l| l.trim_start().starts_with("const Binary"))
+            .expect("Construct must render a const arg line");
+        assert!(
+            arg_line.starts_with("  "),
+            "Construct arg at depth 1 must start with 2 spaces (depth+1, not depth*1=0): {arg_line:?}\nfull:\n{text}"
+        );
+        assert!(
+            !arg_line.starts_with("    "),
+            "Construct arg must be at depth 1, not depth 2: {arg_line:?}"
+        );
+    }
+
+    // Kills lower.rs:260:49 `write_canon(body, depth + 1, ...)` `+ → *` (Match **Ctor-alt body**).
+    // Earlier Match tests used only a `Lit` alt; the Ctor-alt body line was never indentation-checked.
+    #[test]
+    fn format_ctor_alt_body_is_indented_at_depth_one() {
+        let match_node = Node::Match {
+            scrutinee: Box::new(Node::Const(byte())),
+            alts: vec![crate::node::Alt::Ctor {
+                ctor: ctor_ref_with_fields(1),
+                binders: vec!["a".into()],
+                body: Node::Var("a".into()), // bound binder → renders "var v0"
+            }],
+            default: None,
+        };
+        let text = format(&match_node);
+        // The alt header is "alt #...#0 (v0)"; its body "var v0" must be one level deeper (depth 1).
+        let body_line = text
+            .lines()
+            .find(|l| l.trim_start().starts_with("var v0"))
+            .expect("Ctor alt body must render 'var v0'");
+        assert!(
+            body_line.starts_with("  "),
+            "Ctor-alt body at depth 1 must start with 2 spaces (depth+1, not depth*1=0): {body_line:?}\nfull:\n{text}"
+        );
+        assert!(
+            !body_line.starts_with("    "),
+            "Ctor-alt body must be at depth 1, not depth 2: {body_line:?}"
+        );
+    }
+
+    // Kills lower.rs:282:22 `*counter += 1` `+= → *=` (**Lam** counter).
+    // A single Lam always names its param `v0` whether or not the counter advances; the earlier
+    // shadowed-Let+Lam test still saw `v1` because the *Let* advanced the counter. Use **two nested
+    // Lams** so the inner name depends on the outer Lam's increment: correct → `lam v1`, mutant → `lam v0`.
+    #[test]
+    fn format_nested_lam_advances_counter_to_v1() {
+        let node = Node::App {
+            func: Box::new(Node::Lam {
+                param: "x".into(),
+                body: Box::new(Node::Lam {
+                    param: "y".into(),
+                    body: Box::new(Node::Var("y".into())),
+                }),
+            }),
+            arg: Box::new(Node::Const(byte())),
+        };
+        let text = format(&node);
+        assert!(
+            text.contains("lam v0 =>"),
+            "outer Lam must be 'lam v0 =>': {text:?}"
+        );
+        assert!(
+            text.contains("lam v1 =>"),
+            "inner Lam must advance the counter to 'lam v1 =>' (kills *counter *= 1): {text:?}"
+        );
+    }
+
+    // Kills lower.rs:295:22 `*counter += 1` `+= → *=` (**Fix** counter).
+    // Two nested Fix: correct → inner `fix v1 =>`, mutant (`*= 1`, counter stuck at 0) → `fix v0 =>`.
+    #[test]
+    fn format_nested_fix_advances_counter_to_v1() {
+        let node = Node::Fix {
+            name: "f".into(),
+            body: Box::new(Node::Fix {
+                name: "g".into(),
+                body: Box::new(Node::Var("g".into())),
+            }),
+        };
+        let text = format(&node);
+        assert!(
+            text.contains("fix v0 =>"),
+            "outer Fix must be 'fix v0 =>': {text:?}"
+        );
+        assert!(
+            text.contains("fix v1 =>"),
+            "inner Fix must advance the counter to 'fix v1 =>' (kills *counter *= 1): {text:?}"
+        );
+    }
+
+    // Kills lower.rs:308:26 `*counter += 1` `+= → *=` (**FixGroup** member counter) AND
+    //       lower.rs:312:40 `scope[mark + i]` `+ → *` (**FixGroup** member scope index).
+    // A 2-def FixGroup at top level (mark = 0, scope empty):
+    //   - `*= 1`  → both members minted at counter 0 → both named `v0` (no distinct `v1`).
+    //   - `mark * i` = `0 * i` = 0 → every member reads `scope[0]` → both rendered as the first name.
+    // Either mutant erases the **distinctness** of the two member names; asserting both `def v0 =>`
+    // and `def v1 =>` appear (distinct names) kills both with one observation.
+    #[test]
+    fn format_fixgroup_members_get_distinct_names_v0_v1() {
+        let c = Node::Const(byte());
+        let node = Node::FixGroup {
+            defs: vec![("f".into(), Box::new(c.clone())), ("g".into(), Box::new(c))],
+            body: Box::new(Node::Var("f".into())),
+        };
+        let text = format(&node);
+        assert!(
+            text.contains("def v0 =>"),
+            "first FixGroup member must be 'def v0 =>': {text:?}"
+        );
+        assert!(
+            text.contains("def v1 =>"),
+            "second FixGroup member must be a DISTINCT 'def v1 =>' (kills *= 1 and scope[mark*i]): {text:?}"
+        );
+    }
+
+    // ----- write_core (dump_node) ---------------------------------------------------------------
+
+    // Kills lower.rs:345:36 `write_core(body, depth + 1, s)` `+ → *` (Let **body**, dump_node path).
+    // The earlier dump_node Let test asserted only the **bound**; the body line was never read.
+    #[test]
+    fn dump_node_let_body_is_indented_at_depth_one() {
+        let let_node = Node::Let {
+            id: "x".into(),
+            bound: Box::new(Node::Const(byte())),
+            body: Box::new(Node::Var("x".into())), // dump_node keeps source name → "var x"
+        };
+        let text = dump_node(&let_node);
+        let body_line = text
+            .lines()
+            .find(|l| l.trim_start() == "var x")
+            .expect("dump_node Let body must render 'var x'");
+        assert!(
+            body_line.starts_with("  "),
+            "dump_node Let body at depth 1 must start with 2 spaces (depth+1, not depth*1=0): {body_line:?}\nfull:\n{text}"
+        );
+        assert!(
+            !body_line.starts_with("    "),
+            "dump_node Let body must be at depth 1, not depth 2: {body_line:?}"
+        );
+    }
+
+    // Kills lower.rs:364:37 `write_core(a, depth + 1, s)` `+ → *` and `+ → -` (Construct **args**).
+    #[test]
+    fn dump_node_construct_args_indent_at_depth_one() {
+        let node = Node::Construct {
+            ctor: ctor_ref_with_fields(1),
+            args: vec![Node::Const(byte())],
+        };
+        let text = dump_node(&node);
+        assert!(
+            text.lines()
+                .any(|l| l.trim_start().starts_with("construct")),
+            "dump_node Construct must render a 'construct' header: {text:?}"
+        );
+        // Match "const Binary" specifically — "construct" also begins with "const".
+        let arg_line = text
+            .lines()
+            .find(|l| l.trim_start().starts_with("const Binary"))
+            .expect("dump_node Construct must render a const arg line");
+        assert!(
+            arg_line.starts_with("  "),
+            "dump_node Construct arg at depth 1 must start with 2 spaces (depth+1, not depth*1=0): {arg_line:?}\nfull:\n{text}"
+        );
+        assert!(
+            !arg_line.starts_with("    "),
+            "dump_node Construct arg must be at depth 1, not depth 2: {arg_line:?}"
+        );
+    }
+
+    // Kills lower.rs:383:48 `write_core(body, depth + 1, s)` `+ → *` and `+ → -` (Match **Ctor-alt body**).
+    #[test]
+    fn dump_node_ctor_alt_body_is_indented_at_depth_one() {
+        let match_node = Node::Match {
+            scrutinee: Box::new(Node::Const(byte())),
+            alts: vec![crate::node::Alt::Ctor {
+                ctor: ctor_ref_with_fields(1),
+                binders: vec!["a".into()],
+                body: Node::Var("a".into()), // dump_node keeps source name → "var a"
+            }],
+            default: None,
+        };
+        let text = dump_node(&match_node);
+        let body_line = text
+            .lines()
+            .find(|l| l.trim_start() == "var a")
+            .expect("dump_node Ctor alt body must render 'var a'");
+        assert!(
+            body_line.starts_with("  "),
+            "dump_node Ctor-alt body at depth 1 must start with 2 spaces (depth+1, not depth*1=0): {body_line:?}\nfull:\n{text}"
+        );
+        assert!(
+            !body_line.starts_with("    "),
+            "dump_node Ctor-alt body must be at depth 1, not depth 2: {body_line:?}"
+        );
+    }
+
+    // Kills lower.rs:424:36 `write_core(body, depth + 1, s)` `+ → *` (FixGroup **body continuation**).
+    // The earlier dump_node FixGroup test checked the `def`/`in`/def-body lines but never the
+    // continuation body (the `var f` after `in`). At root, `depth * 1 = 0` unindents it.
+    #[test]
+    fn dump_node_fixgroup_continuation_body_is_indented_at_depth_one() {
+        let c = Node::Const(byte());
+        let node = Node::FixGroup {
+            defs: vec![("f".into(), Box::new(c))],
+            body: Box::new(Node::Var("f".into())), // continuation → "var f" after "in"
+        };
+        let text = dump_node(&node);
+        let lines: Vec<&str> = text.lines().collect();
+        let in_idx = lines
+            .iter()
+            .position(|l| l.trim() == "in")
+            .expect("dump_node FixGroup must have an 'in' line");
+        // The continuation body follows the "in" line.
+        let body_line = lines[(in_idx + 1)..]
+            .iter()
+            .find(|l| l.trim_start() == "var f")
+            .expect("dump_node FixGroup continuation must render 'var f' after 'in'");
+        assert!(
+            body_line.starts_with("  "),
+            "FixGroup continuation body at depth 1 must start with 2 spaces (depth+1, not depth*1=0): {body_line:?}\nfull:\n{text}"
+        );
+        assert!(
+            !body_line.starts_with("    "),
+            "FixGroup continuation body must be at depth 1, not depth 2: {body_line:?}"
+        );
+    }
+
+    // ----- write_rhs (substrate dump) -----------------------------------------------------------
+    //
+    // write_rhs is invoked from Anf::write_block at depth+1 (line 885); the outer substrate{} is at
+    // depth 0, so for a root node write_rhs runs at depth = 1. A body-bearing arm therefore calls
+    // `write_block(depth + 2)` = depth 3 → its nested `substrate {` header sits at **6** leading
+    // spaces. The earlier tests asserted only a **relative** `inner > outer` (which 4 > 2 satisfies)
+    // or the **alt-header** line — never the alt **body** block's absolute depth. `depth + 2 → depth * 1`
+    // gives `1 * 1 = 1` → 4 spaces (passes a `> outer` check but is wrong); these tests pin ≥ 6.
+
+    // Kills lower.rs:829:40 `body.write_block(depth + 2, s)` `+ → *` (Rhs::FixGroup **def body**).
+    #[test]
+    fn substrate_fixgroup_def_body_block_at_absolute_depth_six_spaces() {
+        let node = Node::FixGroup {
+            defs: vec![("g".into(), Box::new(Node::Const(byte())))],
+            body: Box::new(Node::Var("g".into())),
+        };
+        let dump = lower_to_anf(&node).dump();
+        // The def body's nested substrate header is the 2nd "substrate {" (1st is the outer block).
+        let def_body_sub = dump
+            .lines()
+            .filter(|l| l.trim() == "substrate {")
+            .nth(1)
+            .expect("FixGroup def body must produce a nested 'substrate {' block");
+        let indent = def_body_sub.len() - def_body_sub.trim_start().len();
+        assert!(
+            indent >= 6,
+            "FixGroup def-body substrate must be at absolute depth+2 (>= 6 spaces, not 4 from depth*1): got {indent} in {def_body_sub:?}\nfull:\n{dump}"
+        );
+    }
+
+    // Kills lower.rs:847:48 `body.write_block(depth + 2, s)` `+ → *` and `+ → -` (Rhs::Match **Ctor-alt body**).
+    // The earlier substrate Match test had only a Lit alt, so the Ctor-alt code path never ran
+    // (`+ → -` would underflow usize → panic once reached; `+ → *` yields 4 spaces, not 6).
+    #[test]
+    fn substrate_match_ctor_alt_body_block_at_absolute_depth_six_spaces() {
+        let match_node = Node::Match {
+            scrutinee: Box::new(Node::Const(byte())),
+            alts: vec![crate::node::Alt::Ctor {
+                ctor: ctor_ref_with_fields(1),
+                binders: vec!["a".into()],
+                body: Node::Const(byte()),
+            }],
+            default: None,
+        };
+        let dump = lower_to_anf(&match_node).dump();
+        assert!(
+            dump.contains("match "),
+            "substrate dump must contain a 'match' RHS: {dump:?}"
+        );
+        // 1st substrate is the outer block; the Ctor-alt body block is the next nested one.
+        let alt_body_sub = dump
+            .lines()
+            .filter(|l| l.trim() == "substrate {")
+            .nth(1)
+            .expect("Ctor-alt body must produce a nested 'substrate {' block");
+        let indent = alt_body_sub.len() - alt_body_sub.trim_start().len();
+        assert!(
+            indent >= 6,
+            "Match Ctor-alt body substrate must be at absolute depth+2 (>= 6 spaces, not 4 from depth*1): got {indent} in {alt_body_sub:?}\nfull:\n{dump}"
+        );
+    }
+
+    // Kills lower.rs:851:48 `body.write_block(depth + 2, s)` `+ → *` (Rhs::Match **Lit-alt body**).
+    #[test]
+    fn substrate_match_lit_alt_body_block_at_absolute_depth_six_spaces() {
+        let match_node = Node::Match {
+            scrutinee: Box::new(Node::Const(byte())),
+            alts: vec![crate::node::Alt::Lit {
+                value: byte(),
+                body: Node::Const(byte()),
+            }],
+            default: None,
+        };
+        let dump = lower_to_anf(&match_node).dump();
+        assert!(
+            dump.contains("alt-lit"),
+            "substrate dump must contain an 'alt-lit' arm: {dump:?}"
+        );
+        let alt_body_sub = dump
+            .lines()
+            .filter(|l| l.trim() == "substrate {")
+            .nth(1)
+            .expect("Lit-alt body must produce a nested 'substrate {' block");
+        let indent = alt_body_sub.len() - alt_body_sub.trim_start().len();
+        assert!(
+            indent >= 6,
+            "Match Lit-alt body substrate must be at absolute depth+2 (>= 6 spaces, not 4 from depth*1): got {indent} in {alt_body_sub:?}\nfull:\n{dump}"
+        );
+    }
+
+    // Kills lower.rs:859:41 `d.write_block(depth + 2, s)` `+ → *` (Rhs::Match **default body**).
+    #[test]
+    fn substrate_match_default_body_block_at_absolute_depth_six_spaces() {
+        // A scrutinee that lowers to a binding plus a default-only match: the default body is a
+        // nested block. Use a Lit alt as well so the match has at least one arm before the default.
+        let match_node = Node::Match {
+            scrutinee: Box::new(Node::Const(byte())),
+            alts: vec![crate::node::Alt::Lit {
+                value: byte(),
+                body: Node::Const(byte()),
+            }],
+            default: Some(Box::new(Node::Const(byte()))),
+        };
+        let dump = lower_to_anf(&match_node).dump();
+        assert!(
+            dump.lines().any(|l| l.trim_start().starts_with("default")),
+            "substrate dump must contain a 'default' arm: {dump:?}"
+        );
+        // The default body is the LAST nested "substrate {" (after the alt body block).
+        let default_body_sub = dump
+            .lines()
+            .rfind(|l| l.trim() == "substrate {")
+            .expect("default body must produce a nested 'substrate {' block");
+        let indent = default_body_sub.len() - default_body_sub.trim_start().len();
+        assert!(
+            indent >= 6,
+            "Match default-body substrate must be at absolute depth+2 (>= 6 spaces, not 4 from depth*1): got {indent} in {default_body_sub:?}\nfull:\n{dump}"
+        );
+    }
 }
