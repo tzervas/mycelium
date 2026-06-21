@@ -2171,7 +2171,7 @@ issues:
   - id: M-666
     title: "M-666 — feat(l1+runtime): RFC-0008 R1 `hypha` + `colony` L1 surface constructs"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P2, status:needs-design]
+    labels: [phase:7, type:feature, area:execution, priority:P2, status:done]
     depends_on: [M-665]
     doc_refs: [corpus:RFC-0008, corpus:DN-06, src:crates/mycelium-mlir/src/runtime.rs, src:crates/mycelium-l1/src/parse.rs]
     body: |

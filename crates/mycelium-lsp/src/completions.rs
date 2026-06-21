@@ -10,9 +10,12 @@
 //!
 //! Active keywords are drawn from the `keyword()` function in `mycelium-l1::token` — the
 //! authoritative source for which words lex as keywords today. Reserved-not-active words
-//! (`phylum`, `colony`, and the 10 DN-03 runtime words `hypha`…`reclaim` reserved by M-665) and
-//! ratified-not-yet-lexed words (`impl`, `consume`, `grow`) are intentionally excluded from
-//! keyword completions: offering them as if usable would violate the honesty rule (VR-5 / G2).
+//! (`phylum` and the 8 remaining DN-03 runtime words `fuse`/`mesh`/`graft`/`cyst`/`xloc`/
+//! `forage`/`backbone`/`tier`/`reclaim` reserved by M-665) and ratified-not-yet-lexed words
+//! (`impl`, `consume`, `grow`) are intentionally excluded from keyword completions: offering them
+//! as if usable would violate the honesty rule (VR-5 / G2). `colony` and `hypha` were
+//! reserved-not-active through M-665; M-666 made them **active** (they now open real surface
+//! constructs — RFC-0008 §4.5/§4.7) and are offered here.
 //!
 //! `matured` is offered as a keyword (it is reserved — using it at item position is an explicit
 //! parse error with a teaching diagnostic, RFC-0017 §4.1); its correct use is the header attribute
@@ -76,8 +79,9 @@ impl CompletionItem {
 // ---------------------------------------------------------------------------
 //
 // Source-of-truth: `crates/mycelium-l1/src/token.rs` `keyword()` function.
-// Only ACTIVE keywords are listed here. Reserved-not-active (`phylum`, `colony`) are
-// intentionally absent — they cannot open any construct yet (G2 / VR-5).
+// Only ACTIVE keywords are listed here. Reserved-not-active (`phylum` and the remaining 8
+// DN-03 §4 runtime words) are intentionally absent — they cannot open any construct yet
+// (G2 / VR-5). `colony` and `hypha` moved from reserved-not-active to active as of M-666.
 
 /// The complete set of active keyword completions.
 ///
@@ -186,6 +190,27 @@ pub const KEYWORD_COMPLETIONS: &[CompletionItem] = &[
         detail: "keyword — denied-by-default unsafe block",
         documentation: "The only FFI/raw-memory site: `wild { expr }`. \
                         Denied by default; requires an explicit capability grant. DN-02 §5/§7.",
+    },
+    // --- concurrency keywords (active as of M-666 / RFC-0008 R1) ---
+    CompletionItem {
+        label: "colony",
+        kind: KIND_KEYWORD,
+        insert_text: "colony",
+        insert_text_format: FORMAT_PLAIN,
+        detail: "keyword — structured-concurrency scope (RFC-0008 §4.7)",
+        documentation: "colony { hypha …, hypha … } — structured-concurrency scope (RFC-0008 §4.7). \
+                        A `colony` block cannot exit before all `hypha` children complete (RT7). \
+                        Elaborates to `run_colony` / `Scope::join_all`. Active as of M-666.",
+    },
+    CompletionItem {
+        label: "hypha",
+        kind: KIND_KEYWORD,
+        insert_text: "hypha",
+        insert_text_format: FORMAT_PLAIN,
+        detail: "keyword — concurrent execution unit, inside a colony (RFC-0008 §4.5)",
+        documentation: "hypha <expr> — concurrent execution unit, inside a colony (RFC-0008 §4.5). \
+                        Spawns a concurrent `Task` over a deterministic computation; must appear \
+                        inside a `colony { … }` block. Elaborates to a `Task` call. Active as of M-666.",
     },
     // --- expression keywords ---
     CompletionItem {
@@ -478,6 +503,16 @@ pub const SNIPPET_COMPLETIONS: &[CompletionItem] = &[
                         never implicit; every representation change is lexically visible. \
                         RFC-0001 §4.5; RFC-0002.",
     },
+    CompletionItem {
+        label: "colony-block",
+        kind: KIND_SNIPPET,
+        insert_text: "colony {\n\thypha ${1:expr},\n\thypha ${2:expr},\n}$0",
+        insert_text_format: FORMAT_SNIPPET,
+        detail: "snippet — structured-concurrency colony block (RFC-0008 §4.7)",
+        documentation: "Scaffolds a `colony { hypha …, hypha … }` structured-concurrency block. \
+                        All hypha children must complete before the colony exits (RT7). \
+                        Elaborates to `run_colony` / `Scope::join_all`. RFC-0008 §4.5/§4.7; M-666.",
+    },
 ];
 
 // ---------------------------------------------------------------------------
@@ -517,10 +552,11 @@ mod tests {
     fn all_active_structural_keywords_are_offered() {
         let labels: Vec<&str> = KEYWORD_COMPLETIONS.iter().map(|c| c.label).collect();
         // These are all the active structural keywords (token.rs `keyword()` -- active set).
+        // `colony` and `hypha` were reserved-not-active until M-666; they are now active.
         for kw in [
             "nodule", "use", "type", "trait", "fn", "thaw", "let", "in", "if", "then", "else",
             "match", "for", "swap", "default", "paradigm", "with", "wild", "spore", "to", "policy",
-            "matured",
+            "matured", "colony", "hypha",
         ] {
             assert!(
                 labels.contains(&kw),
@@ -572,17 +608,18 @@ mod tests {
 
     #[test]
     fn reserved_not_active_words_are_not_offered() {
-        // `phylum`/`colony` and the 10 DN-03 §4 runtime-vocabulary words (reserved by M-665) are
-        // reserved-not-active: they lex as keywords but no construct consumes them yet -- offering
-        // them as usable would violate the honesty rule (G2 / VR-5).
+        // `phylum` and the 8 remaining DN-03 §4 runtime-vocabulary words (reserved by M-665,
+        // minus `colony`/`hypha` which became active in M-666) are reserved-not-active: they lex
+        // as keywords but no construct consumes them yet -- offering them as usable would violate
+        // the honesty rule (G2 / VR-5). `colony` and `hypha` are now offered (see above).
         let labels: Vec<&str> = KEYWORD_COMPLETIONS
             .iter()
             .chain(SNIPPET_COMPLETIONS.iter())
             .map(|c| c.label)
             .collect();
         for banned in [
-            "phylum", "colony", "hypha", "fuse", "mesh", "graft", "cyst", "xloc", "forage",
-            "backbone", "tier", "reclaim",
+            "phylum", "fuse", "mesh", "graft", "cyst", "xloc", "forage", "backbone", "tier",
+            "reclaim",
         ] {
             assert!(
                 !labels.contains(&banned),
