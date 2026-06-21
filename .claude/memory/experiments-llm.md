@@ -69,6 +69,7 @@ co-equal projection layer** (M-380, RFC-0021); embedded-DSL fallback (RR-3) stay
 - Cheapest-first model ordering; `--models a,b,c` or `--order a,b,c` overrides.
 
 **Run (from `tools/llm-harness/`):**
+
 ```sh
 uv run python -m grok.cli --self-test          # offline green gate (19/19, no key)
 ./run.sh --smoke                                # $2 single-model smoke + full sweep
