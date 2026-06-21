@@ -182,6 +182,9 @@ pub struct Env {
     /// declaration's params and the Var-bearing ctor field types (never in `types`).
     /// Stage-1 generics (M-657, **Declared**).
     pub generics: BTreeMap<String, GenericShell>,
+    /// Trait registry, keyed by trait name. Filled by Pass 1c (M-658, **Declared**).
+    /// Each entry holds the trait's type params and method signatures (may contain `Ty::Var`).
+    pub traits: BTreeMap<String, TraitInfo>,
     /// Function table, keyed by name.
     pub fns: BTreeMap<String, FnDecl>,
     /// Per-function totality classification (RFC-0007 §4.5), filled by the totality checker.
@@ -202,6 +205,13 @@ impl Env {
     #[must_use]
     pub fn type_info(&self, name: &str) -> Option<&DataInfo> {
         self.types.get(name)
+    }
+
+    /// The trait info for trait named `name`, if registered. Additive read-only accessor over the
+    /// public [`traits`](Env::traits) map (M-658, **Declared**).
+    #[must_use]
+    pub fn trait_info(&self, name: &str) -> Option<&TraitInfo> {
+        self.traits.get(name)
     }
 
     /// The function declaration named `name`, if any. Additive read-only accessor over the public
@@ -635,6 +645,21 @@ pub struct GenericShell {
     pub ctors: Vec<CtorInfo>,
 }
 
+/// A trait's checked signature table — the dictionary shape the impl must satisfy.
+///
+/// Registered in `Env.traits` by Pass 1c. Method signatures are stored with their trait type
+/// params in scope (they may reference `Ty::Var` through the shared `params` list). The
+/// dictionary-passing strategy (M-658 §4, **Declared**) threads `TraitInfo` as extra `Lam` params
+/// at impl-check time; only the `for_ty` is substituted at bounded-call sites.
+#[derive(Debug, Clone)]
+pub struct TraitInfo {
+    /// The trait's own type parameter names (the `<T>` in `trait Show<T> { … }`).
+    pub params: Vec<String>,
+    /// Method signatures, in declaration order. Field types may contain `Ty::Var` keyed to
+    /// `params` (never returned to elaboration or eval — Var-free check is the caller's gate).
+    pub methods: Vec<crate::ast::FnSig>,
+}
+
 /// Check a whole nodule: build the registry (prelude + declarations), then type every function
 /// body against its signature, classify totality. No maturation gate is applied (the scope is
 /// treated as non-matured). Returns the checked [`Env`].
@@ -748,6 +773,27 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
         }
     }
 
+    // Pass 1c: collect trait declarations → `traits` registry (M-658, **Declared**).
+    // Duplicate trait names are an explicit error. Method signatures are stored with Var-bearing
+    // types where the trait's own type params appear; no bodies exist at this level (traits are
+    // type-class signatures only). The dictionary-passing strategy threads these as extra `Lam`
+    // params at impl-check time (S5 / M-659).
+    let mut traits: BTreeMap<String, TraitInfo> = BTreeMap::new();
+    for item in &nodule.items {
+        if let Item::Trait(td) = item {
+            if traits.contains_key(&td.name) {
+                return Err(CheckError::new(&td.name, "duplicate trait declaration"));
+            }
+            traits.insert(
+                td.name.clone(),
+                TraitInfo {
+                    params: td.params.clone(),
+                    methods: td.sigs.clone(),
+                },
+            );
+        }
+    }
+
     // Pass 2: collect functions (signatures must resolve).
     // Generic fns (non-empty `sig.params`) are included: bodies are checked with tyvars in scope
     // in Pass 3, and call sites use arg-driven instantiation (S5, M-657).
@@ -825,6 +871,7 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     Ok(Env {
         types,
         generics,
+        traits,
         fns,
         totality,
     })
@@ -2902,6 +2949,7 @@ pub(crate) fn monomorphize_with_cap(
     Ok(Env {
         types: env.types.clone(),
         generics: env.generics.clone(),
+        traits: env.traits.clone(),
         fns: rewritten_fns,
         totality: env.totality.clone(),
     })
