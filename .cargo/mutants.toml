@@ -1,0 +1,49 @@
+# cargo-mutants exclusions for mycelium-interp (M-654 Gate A3)
+#
+# Only genuinely equivalent / unreachable-from-public-API defensive mutants are excluded.
+# Every other survivor must be killed by a regression test.
+
+# prims.rs:61 — PrimRegistry::empty() → Default::default()
+#
+# PrimRegistry derives Default (BTreeMap::new()), and empty() also returns BTreeMap::new().
+# The two forms produce identical values: an empty registry with no registered primitives.
+# This mutant is GENUINELY EQUIVALENT — there is no observable difference between
+# `PrimRegistry { table: BTreeMap::new() }` and `<PrimRegistry as Default>::default()`.
+# Justified: cosmetic implementation detail, not a semantic difference (VR-5).
+#
+# lib.rs:545 — delete Node::Var arm in node_to_core_value
+# lib.rs:566 — delete Node::Var arm in guarantee_of_value
+# lib.rs:626 — delete Node::Var arm in as_const
+#
+# These three defensive Var arms are UNREACHABLE from the public eval_core/eval/step APIs
+# under the invariants maintained by the interpreter loop:
+#
+# - node_to_core_value (lib.rs:545): called only when step() returns Step::Value, which only
+#   fires for Const, Construct (all-value args), Lam, and FixGroup/Fix-as-final. A Var never
+#   reaches node_to_core_value as a top-level node because step(Var) → Err(FreeVariable) and
+#   the eval_core loop propagates that error. The Var arm is defensive (G2: never-silent fallback
+#   for a future code path or a custom SwapEngine/PrimFn that somehow feeds a Var into
+#   node_to_core_value via a malformed internal call — never via the public API).
+#
+# - guarantee_of_value (lib.rs:566): called only from the E-Match-Sel branch of step(), which
+#   fires when step(scrutinee) returns Step::Value. Since step(Var) → Err(FreeVariable),
+#   guarantee_of_value is never called with a top-level Var. Inside a Construct, step tries
+#   step(arg) first → Err(FreeVariable) before guarantee_of_value is called recursively. The
+#   Var arm is defensive for the same reason as lib.rs:545.
+#
+# - as_const (lib.rs:626): called from collect_values() after step() already reported
+#   Step::Value for each arg. A Var cannot return Step::Value from step(), so as_const's Var
+#   arm is unreachable from the public API. The wildcard _ branch already gives a FreeVariable
+#   error (with a "<non-value normal form>" name rather than the actual var name), so the
+#   observable difference between the mutant (Var falls to wildcard) and the original (Var has
+#   its own arm returning the actual name) is only the error message content. These arms are
+#   defensive (G2) for consistency and future safety.
+#
+# All three are justified: defensive never-silent fallbacks (G2/VR-5), structurally unreachable
+# from the public API by the invariants of the eval_core loop.
+exclude_re = [
+    "replace PrimRegistry::empty -> Self with Default::default",
+    "delete match arm Node::Var.x. in node_to_core_value",
+    "delete match arm Node::Var.x. in guarantee_of_value",
+    "delete match arm Node::Var.x. in as_const",
+]
