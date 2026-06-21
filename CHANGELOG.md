@@ -8,6 +8,14 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-21: M-669 — mycelium-lsp baseline completions, dogfooding DX)
+- **LSP completion provider** (`crates/mycelium-lsp/src/completions.rs`): 36 **active** keyword
+  completions (from `mycelium_l1::token::keyword()`) + 5 grammar-grounded snippets (`nodule-header`,
+  `fn-def`, `type-adt`, `match-expr`, `swap-expr` — the swap snippet pins both `to:` and `policy:`).
+  `wire.rs` advertises `completionProvider` and serves `textDocument/completion`. Honest (G2/VR-5):
+  scope is **Declared** (lexical/scaffolding only, no semantic resolution); reserved-not-active
+  (`phylum`/`colony`) and not-yet-lexed runtime words are excluded — never offered as usable. 83 tests.
+
 ### Added (2026-06-21: M-654 — Gate A3 WS8 durability: mutants + proptest + fuzz)
 - **cargo-mutants green on the trusted base.** `mycelium-core`, `-cert`, `-interp`, `-numerics`
   report **0 un-triaged survivors**: every surviving mutant is either killed by a new witness test
