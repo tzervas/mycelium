@@ -38,7 +38,7 @@ Python); it is "best-effort restricted eval" — Declared, not Proven. Specifica
     etc.) are absent from the execution scope.
   - Explicit ``import`` / ``__import__`` / ``exec`` / ``eval`` names are blocked by
     keyword scanning BEFORE evaluation, so a literal ``import os`` or ``__import__``
-    call in the model's snippet is rejected pre-emptively.
+    call in the model's snippet is rejected preemptively.
   - Dunder attribute access (``__class__``, ``__subclasses__``, etc.) in the snippet
     text is rejected by the same pre-scan.
   - The restricted exec runs in a SEPARATE PROCESS (``multiprocessing``, fork context
@@ -332,7 +332,7 @@ _DSL_NAMESPACE: dict[str, Any] = {
 # ---------------------------------------------------------------------------
 
 # Pre-scan patterns that must never appear in the model snippet.
-# Blocking these pre-emptively catches the most common escape attempts before
+# Blocking these preemptively catches the most common escape attempts before
 # any Python bytecode is compiled (defence-in-depth on top of the namespace guard).
 _BLOCKED_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"\bimport\b"),  # import statement / from-import

@@ -501,7 +501,10 @@ fn wire_spellings_are_pinned_per_bound_kind_basis_and_layout() {
 
     // BinaryWords — the remaining PhysicalLayout variant (Copilot #306).
     let bw = serde_json::to_value(PhysicalLayout::BinaryWords).unwrap();
-    assert_eq!(bw["layout"], "BinaryWords", "A6-03: BinaryWords layout spelling");
+    assert_eq!(
+        bw["layout"], "BinaryWords",
+        "A6-03: BinaryWords layout spelling"
+    );
 
     // EVERY PackScheme wire spelling — TL1/TL2 alone left Unpacked / TwoBitPerTrit /
     // FiveTritPerByte / I2S unpinned (Copilot #306). Default serde renders the variant name

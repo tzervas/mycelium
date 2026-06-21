@@ -844,7 +844,7 @@
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
       "line": 357,
-      "summary": "A SwapEngine for the reference interpreter that performs the",
+      "summary": "A [`SwapEngine`] for the reference interpreter that performs the",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -10436,7 +10436,7 @@
       "module": "mycelium_lsp::diagnostics::registry::ClassRegistry",
       "file": "crates/mycelium-lsp/src/diagnostics/registry.rs",
       "line": 100,
-      "summary": "The registry seeded with the v0 [`BUILTIN_CLASSES`].",
+      "summary": "The registry seeded with the v0 built-in classes (`BUILTIN_CLASSES`).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -10447,7 +10447,7 @@
       "module": "mycelium_lsp::diagnostics::registry::ClassRegistry",
       "file": "crates/mycelium-lsp/src/diagnostics/registry.rs",
       "line": 100,
-      "summary": "The registry seeded with the v0 [`BUILTIN_CLASSES`].",
+      "summary": "The registry seeded with the v0 built-in classes (`BUILTIN_CLASSES`).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -10458,7 +10458,7 @@
       "module": "mycelium_lsp::diagnostics::registry::ClassRegistry",
       "file": "crates/mycelium-lsp/src/diagnostics/registry.rs",
       "line": 100,
-      "summary": "The registry seeded with the v0 [`BUILTIN_CLASSES`].",
+      "summary": "The registry seeded with the v0 built-in classes (`BUILTIN_CLASSES`).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
