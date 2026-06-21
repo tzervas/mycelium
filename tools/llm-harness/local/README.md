@@ -14,7 +14,7 @@ It requires a local GGUF-capable backend: `llama-cpp-python` + a GGUF model.
 | Requirement | Notes |
 |---|---|
 | Python >= 3.13 | Install via `uv` or `pyenv` |
-| `uv` | https://docs.astral.sh/uv/ |
+| `uv` | <https://docs.astral.sh/uv/> |
 | NVIDIA driver + CUDA toolkit | Recommended; CPU fallback works but is slow |
 | ~5 GB disk space | For the default 7B Q4_K_M GGUF model |
 | ~5 GB VRAM | Qwen2.5-Coder-7B-Instruct Q4_K_M; CPU-offload if less |
@@ -145,7 +145,7 @@ CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=120" \
 ```
 
 This requires the CUDA toolkit to be installed (`nvcc` on PATH).
-See: https://github.com/ggerganov/llama.cpp/discussions/7693
+See: <https://github.com/ggerganov/llama.cpp/discussions/7693>
 
 ---
 
