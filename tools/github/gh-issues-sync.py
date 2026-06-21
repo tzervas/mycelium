@@ -917,16 +917,21 @@ def is_intentional_unmapped_scope(scope):
 
 
 def derive_pr_labels(parsed, type_map, area_set, scope_aliases=None):
-    """Map a parsed title to (labels:set, flags:list) using conventions.json + the area:* set.
+    """Map a parsed title to (labels:set, flags:list, infos:list) via conventions.json + area:* set.
 
-    Pure + honest: an unknown type, or a scope that is neither an area:* label nor a declared
-    ``scope_to_area`` alias, produces a FLAG, never an invented label (G2). The type label is
-    required; area labels are best-effort on an exact scope match or a ratified alias.
+    Pure + honest. The split is **structural**, not by message text, so the print site never sniffs
+    wording to decide severity (a brittleness the earlier substring check had):
+    - ``flags`` — genuine refusals-to-invent (unknown type, an unmapped scope, a bad alias). `!`.
+    - ``infos`` — scopes that are area-less BY DESIGN (doc-ref/task-id/wave per the scope_to_area
+      policy). `~`. Surfaced, never silently dropped (G2) — just not a gap to fix.
+
+    The type label is required; area labels are best-effort on an exact scope match or a ratified
+    alias.
     """
     scope_aliases = scope_aliases or {}
-    labels, flags = set(), []
+    labels, flags, infos = set(), [], []
     if parsed is None:
-        return labels, ["title not Conventional-Commit form; type unresolved"]
+        return labels, ["title not Conventional-Commit form; type unresolved"], infos
     type_label = type_map.get(parsed["type"])
     if type_label:
         labels.add(type_label)
@@ -944,16 +949,15 @@ def derive_pr_labels(parsed, type_map, area_set, scope_aliases=None):
                     f"scope alias '{scope}' -> '{scope_aliases[scope]}' is not an area:* label"
                 )
         elif is_intentional_unmapped_scope(scope):
-            # By-design area-less scope (doc-ref / task-id / wave) — info, not a flag-to-fix (G2:
-            # still reported, never silently dropped).
-            flags.append(
-                f"scope '{scope}' intentionally unmapped (doc-ref/task-id/wave) — no area inferred"
+            # By-design area-less scope (doc-ref / task-id / wave) — info, not a flag-to-fix.
+            infos.append(
+                f"scope '{scope}' unmapped by design (doc-ref/task-id/wave) — no area inferred"
             )
         else:
             flags.append(f"scope '{scope}' is not an area:* label (no area inferred)")
     if parsed["breaking"]:
         flags.append("breaking change marked (no breaking:* label to apply)")
-    return labels, flags
+    return labels, flags, infos
 
 
 def extract_task_ids(text, patterns):
@@ -1819,18 +1823,24 @@ def reconcile_prs(repo, conventions, area_set, task_to_ms, *, dry_run):
                     parsed, source, text = cand, "commit", text + "\n" + subject
                     break
 
-        desired, flags = derive_pr_labels(parsed, type_map, area_set, scope_aliases)
-        ms, ms_flag = infer_milestone(extract_task_ids(text, patterns), task_to_ms)
-        if ms_flag:
-            flags.append(ms_flag)
+        desired, flags, infos = derive_pr_labels(
+            parsed, type_map, area_set, scope_aliases
+        )
+        ms, ms_note = infer_milestone(extract_task_ids(text, patterns), task_to_ms)
+        if ms_note:
+            # The milestone WAS set (to the highest spanned phase); the note is informational.
+            infos.append(ms_note)
 
         to_add = sorted(desired - pr["labels"])
         set_ms = ms if (ms and ms != pr["milestone"]) else None
 
-        for flag in flags:  # never-silent: report every refusal to invent
-            # By-design unmapped scopes are info (`~`); genuine gaps stay a flag (`!`).
-            sigil = "~" if "intentionally unmapped" in flag else "!"
-            print(f"   {sigil} #{number}: {flag}", file=sys.stderr)
+        # Structural severity (set by derive_pr_labels), never sniffed from message text:
+        # infos are by-design/informational (`~`); flags are genuine refusals-to-invent (`!`).
+        # Both are surfaced — never silently dropped (G2).
+        for info in infos:
+            print(f"   ~ #{number}: {info}", file=sys.stderr)
+        for flag in flags:
+            print(f"   ! #{number}: {flag}", file=sys.stderr)
 
         if not to_add and not set_ms:
             in_sync += 1
@@ -2362,30 +2372,36 @@ def self_test():
     type_map = {"feat": "type:feature", "docs": "type:docs"}
     areas = {"area:swap", "area:toolchain"}
     # exact scope match → area label; unknown scope/type → FLAG, never invented (G2).
-    labels, flags = derive_pr_labels(
+    labels, flags, infos = derive_pr_labels(
         parse_conventional("feat(swap): x"), type_map, areas
     )
-    assert labels == {"type:feature", "area:swap"} and flags == [], (labels, flags)
-    labels, flags = derive_pr_labels(
+    assert labels == {"type:feature", "area:swap"} and flags == [] and infos == [], (
+        labels,
+        flags,
+        infos,
+    )
+    labels, flags, infos = derive_pr_labels(
         parse_conventional("feat(mlir): x"), type_map, areas
     )
     assert labels == {"type:feature"} and any("mlir" in f for f in flags), (
         labels,
         flags,
     )
-    labels, flags = derive_pr_labels(parse_conventional("spec(x): y"), type_map, areas)
+    labels, flags, infos = derive_pr_labels(
+        parse_conventional("spec(x): y"), type_map, areas
+    )
     assert labels == set() and any("unknown commit type" in f for f in flags)
-    labels, flags = derive_pr_labels(None, type_map, areas)
+    labels, flags, infos = derive_pr_labels(None, type_map, areas)
     assert labels == set() and flags  # unparsed title is flagged, not invented
     # a declared scope alias turns a FLAG into a mapping; an alias to a non-area still FLAGs.
-    labels, flags = derive_pr_labels(
+    labels, flags, infos = derive_pr_labels(
         parse_conventional("feat(mlir): x"),
         type_map,
         {"area:execution"},
         {"mlir": "execution"},
     )
     assert labels == {"type:feature", "area:execution"} and flags == [], (labels, flags)
-    labels, flags = derive_pr_labels(
+    labels, flags, infos = derive_pr_labels(
         parse_conventional("feat(zzz): x"),
         type_map,
         {"area:execution"},
@@ -2480,19 +2496,18 @@ def self_test():
         assert is_intentional_unmapped_scope(s), s
     for s in ("toolchain", "llm-harness", "readme", "widget", "core", ""):
         assert not is_intentional_unmapped_scope(s), s
-    # in derive_pr_labels: a by-design scope is flagged as "intentionally unmapped", a genuine
-    # unknown scope keeps the plain "is not an area:* label" flag.
-    _l, fl = derive_pr_labels(
+    # in derive_pr_labels: a by-design scope lands in INFOS (structurally), not flags; a genuine
+    # unknown scope lands in FLAGS with the plain "is not an area:* label" message.
+    _l, fl, inf = derive_pr_labels(
         parse_conventional("docs(adr-021): x"), {"docs": "type:docs"}, areas
     )
-    assert _l == {"type:docs"} and any("intentionally unmapped" in f for f in fl), (
-        _l,
-        fl,
+    assert (
+        _l == {"type:docs"} and fl == [] and any("unmapped by design" in i for i in inf)
+    ), (_l, fl, inf)
+    _l, fl, inf = derive_pr_labels(
+        parse_conventional("feat(widget): x"), type_map, areas
     )
-    _l, fl = derive_pr_labels(parse_conventional("feat(widget): x"), type_map, areas)
-    assert any("is not an area:* label" in f for f in fl) and not any(
-        "intentionally unmapped" in f for f in fl
-    ), fl
+    assert any("is not an area:* label" in f for f in fl) and inf == [], (fl, inf)
 
     # ── Project v2 pure mapping/diff ──────────────────────────────────────────────────────────
     field_map = {
