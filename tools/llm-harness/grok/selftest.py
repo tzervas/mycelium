@@ -464,7 +464,11 @@ def check_canonical_bridge() -> Check:
 
     # 1. identity lambda -> body `x`, lambda param name adopted.
     out = convert_to_myc("(fn [x] x)", **sig)
-    if out is None or "fn f(x: Binary{8}) -> Binary{8} =" not in out or "  x\n" not in out:
+    if (
+        out is None
+        or "fn f(x: Binary{8}) -> Binary{8} =" not in out
+        or "  x\n" not in out
+    ):
         return Check("T15 canonical-bridge", False, f"identity wrong: {out!r}")
 
     # 2. op bit.not -> surface call `not(x)`.
@@ -521,9 +525,7 @@ def check_canonical_bridge() -> Check:
     ]
     for bad in refusals:
         if convert_to_myc(bad, **sig) is not None:
-            return Check(
-                "T15 canonical-bridge", False, f"should have refused: {bad!r}"
-            )
+            return Check("T15 canonical-bridge", False, f"should have refused: {bad!r}")
 
     return Check(
         "T15 canonical-bridge",

@@ -228,7 +228,9 @@ def _emit(node, depth: int = 0) -> str:
     if head in ("fn", "fix", "fix-group", "make", "seq"):
         # Not expressible in the .myc *expression* grammar at this position
         # (e.g. a nested lambda). Honest refusal — never a fabricated program.
-        raise _ConvertError(f"node kind {head!r} is not convertible in expression position")
+        raise _ConvertError(
+            f"node kind {head!r} is not convertible in expression position"
+        )
 
     # Otherwise: application with a bare-identifier callee — (f a b) -> f(a, b).
     return _emit_app(node, depth)
