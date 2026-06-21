@@ -2122,32 +2122,33 @@ pub(crate) fn subst_ty(ty: &Ty, subst: &BTreeMap<String, Ty>) -> Ty {
 /// (e.g. `"List<A>"` → `"List<Binary{8}>"` when `subst["A"] = Binary{8}`).
 ///
 /// Abstract mangled names have the form `"Base<Arg0, Arg1, …>"`. This function parses the
-/// outer wrapper, substitutes each arg token, and re-mangles. It is deliberately simple (no
-/// nested `<>` beyond what mangle/Display produces) and only applies to names that contain `<`.
+/// outer wrapper using [`split_mangled_outer`] (depth-correct `{`/`<` tracking), substitutes
+/// each arg token, and re-mangles. Previously used a naive `inner.split(", ")` that incorrectly
+/// split multi-arg concrete types such as `Pair<Binary{8}, Binary{16}>` at the inner comma
+/// (M-657D2 fix: use depth-tracking split to handle nested multi-arg concrete args correctly).
 fn subst_in_abstract_data_name(name: &str, subst: &BTreeMap<String, Ty>) -> String {
-    // Fast path: no type parameters embedded (a concrete or abstract-bare name).
-    let Some(inner_start) = name.find('<') else {
+    // Fast path: no `<` → bare name (concrete or abstract-bare), nothing to substitute.
+    let Some((base, parts)) = split_mangled_outer(name) else {
         return name.to_owned();
     };
-    let base = &name[..inner_start];
-    let inner = name
-        .strip_suffix('>')
-        .and_then(|s| s[inner_start + 1..].into())
-        .unwrap_or_else(|| &name[inner_start + 1..]);
-    // Split the inner part by ", " (the separator mangle uses).
-    // Each part is either a bare Var name, or a concrete Ty Display string, or a nested abstract.
-    let parts: Vec<&str> = inner.split(", ").collect();
     let substituted: Vec<Ty> = parts
         .iter()
         .map(|part| {
-            // Try to match as a single Var name first (a bare identifier with no spaces).
+            // Bare identifier (no `{` or `<`): check if it's a type variable to substitute.
             if part.chars().all(|c| c.is_alphanumeric() || c == '_') {
                 if let Some(replacement) = subst.get(*part) {
                     return replacement.clone();
                 }
             }
-            // Otherwise treat it as a concrete Display-form (pass through after recursive subst).
-            Ty::Data(subst_in_abstract_data_name(part, subst))
+            // Nested mangled form (contains `<`): recurse so depth-correct splitting applies.
+            if part.contains('<') {
+                return Ty::Data(subst_in_abstract_data_name(part, subst));
+            }
+            // Concrete Display-form (e.g. `Binary{8}`, `Ternary{4}`, `Dense{4, S}`): parse or
+            // wrap as Data. We prefer parse_ty_from_display for concrete scalar types so the
+            // round-trip is exact; falls back to Ty::Data for forms like Dense{…} that
+            // parse_ty_from_display skips.
+            parse_ty_from_display(part).unwrap_or_else(|| Ty::Data((*part).to_owned()))
         })
         .collect();
     mangle(base, &substituted)
@@ -3820,6 +3821,62 @@ mod tests {
         let subst = BTreeMap::new();
         let var = Ty::Var("B".to_owned());
         assert_eq!(subst_ty(&var, &subst), var);
+    }
+
+    // ---- M-657D2 FIX 4: subst_in_abstract_data_name depth-correct split ----
+
+    /// **Property: `subst_in_abstract_data_name` substitutes correctly when a nested arg
+    /// contains a multi-arg concrete type (e.g. `Pair<Binary{8}, Binary{16}>`).**
+    ///
+    /// The old `inner.split(", ")` would mis-split `Box<Pair<Binary{8}, Binary{16}>>` at the
+    /// inner comma, producing `["Pair<Binary{8}", "Binary{16}>"]`. The fix uses
+    /// `split_mangled_outer` which tracks `{`/`<` depth correctly.
+    ///
+    /// Guarantee: **Declared** (M-657D2 review fix).
+    #[test]
+    fn subst_in_abstract_data_name_does_not_split_nested_multi_arg_concrete() {
+        let mut subst = BTreeMap::new();
+        subst.insert("A".to_owned(), Ty::Binary(8));
+        // Simple case: "List<A>" → "List<Binary{8}>"
+        let result = subst_in_abstract_data_name("List<A>", &subst);
+        assert_eq!(
+            result, "List<Binary{8}>",
+            "simple Var substitution in mangled name"
+        );
+
+        // Nested case: "Box<A>" where A=Binary{8} → "Box<Binary{8}>"
+        let result2 = subst_in_abstract_data_name("Box<A>", &subst);
+        assert_eq!(result2, "Box<Binary{8}>", "nested single-arg substitution");
+
+        // The key regression: an arg that is itself a multi-arg concrete type.
+        // "Wrap<Pair<Binary{8}, Binary{16}>>" should survive intact (no Var to substitute).
+        let result3 = subst_in_abstract_data_name("Wrap<Pair<Binary{8}, Binary{16}>>", &subst);
+        assert_eq!(
+            result3, "Wrap<Pair<Binary{8}, Binary{16}>>",
+            "multi-arg concrete nested arg must not be split at the inner comma"
+        );
+
+        // Mixed: "Pair<A, Pair<Binary{8}, Binary{16}>>" → "Pair<Binary{8}, Pair<Binary{8}, Binary{16}>>"
+        let result4 = subst_in_abstract_data_name("Pair<A, Pair<Binary{8}, Binary{16}>>", &subst);
+        assert_eq!(
+            result4, "Pair<Binary{8}, Pair<Binary{8}, Binary{16}>>",
+            "A is substituted but the nested Pair<Binary{{8}}, Binary{{16}}> arg is left intact"
+        );
+    }
+
+    /// **Property: `subst_in_abstract_data_name` is the identity when no vars are in the subst.**
+    ///
+    /// Guarantee: **Declared** (M-657D2 review fix regression guard).
+    #[test]
+    fn subst_in_abstract_data_name_identity_when_no_matching_var() {
+        let subst = BTreeMap::new();
+        for name in &["List<Binary{8}>", "Pair<Binary{8}, Ternary{6}>", "Simple"] {
+            let result = subst_in_abstract_data_name(name, &subst);
+            assert_eq!(
+                &result, name,
+                "no-op substitution must be identity for `{name}`"
+            );
+        }
     }
 
     #[test]
