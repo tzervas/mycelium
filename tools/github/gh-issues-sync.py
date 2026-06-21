@@ -1221,18 +1221,29 @@ def load_pr_overrides(here):
     overrides_path = here / "pr-overrides.json"
     if not overrides_path.exists():
         return {}
-    raw = json.loads(overrides_path.read_text(encoding="utf-8"))
+    try:
+        raw = json.loads(overrides_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"pr-overrides.json: JSON parse error — {exc}") from exc
     result = {}
     for key, entry in raw.get("overrides", {}).items():
-        if not key.lstrip("-").isdigit():
-            continue  # skip any non-numeric key (safety guard)
+        # PR/issue numbers are positive integers — `isdigit()` rejects '-67', 'abc', '' (a typo
+        # must surface, not be silently routed past). Never-silent (G2): a malformed key/entry is
+        # an explicit error here, not a dropped override that would vanish on a `--prs` run.
+        if not key.isdigit():
+            raise ValueError(
+                f"pr-overrides.json: key {key!r} is not a valid PR/issue number "
+                "(must be a positive integer string)"
+            )
         number = int(key)
         milestone = entry.get("milestone")
+        if not milestone:
+            raise ValueError(
+                f"pr-overrides.json: override #{key} has no 'milestone' field "
+                "(every override must declare a milestone title)"
+            )
         labels = [lb for lb in (entry.get("labels") or []) if not lb.startswith("_")]
-        if (
-            milestone
-        ):  # an entry without a milestone is malformed — skip silently (validated)
-            result[number] = {"milestone": milestone, "labels": labels}
+        result[number] = {"milestone": milestone, "labels": labels}
     return result
 
 
@@ -1251,6 +1262,56 @@ def apply_pr_override(pr_number, overrides, existing_milestone, existing_labels)
         lb for lb in (override.get("labels") or []) if lb not in existing_labels
     ]
     return ms, labels_to_add
+
+
+def issue_override_changes(live, override):
+    """PURE: render a declared override into an issue ``changes`` plan (consumed by
+    ``apply_issue_update``). The issue-side twin of ``apply_pr_override``: the override milestone
+    wins (highest precedence) and labels are union-added (add-only) — never stripped. Returns an
+    empty dict when the issue already matches the override (idempotent no-op)."""
+    changes = {}
+    ms = override.get("milestone")
+    if ms and ms != live.get("milestone"):
+        changes["milestone"] = ms
+    add = sorted(
+        lb
+        for lb in (override.get("labels") or [])
+        if lb not in live.get("labels", set())
+    )
+    if add:
+        changes["labels"] = (
+            add,
+            [],
+        )  # (add, remove) — add-only, never removes a human's label
+    return changes
+
+
+def apply_issue_overrides(repo, by_number, overrides, dry_run):
+    """Apply declared overrides to existing ISSUES — the ``--issues`` counterpart of the ``--prs``
+    override path in ``reconcile_prs``.
+
+    For each override number that is an issue on ``repo`` (e.g. a closed issue like #67 that is NOT a
+    task in ``issues.yaml``, so the create/update passes never touch it), set its milestone + add-only
+    labels (idempotent). Numbers that are not issues here are PRs → applied by ``reconcile_prs``.
+    Never-silent (G2): prints a one-line summary (applied / already-in-sync / routed-to-``--prs``) so
+    no override is silently unaccounted-for."""
+    if not overrides:
+        return
+    applied = in_sync = routed = 0
+    for number, override in overrides.items():
+        live = by_number.get(number)
+        if live is None:
+            routed += 1  # not an issue on this repo → a PR; reconcile_prs applies it
+            continue
+        changes = issue_override_changes(live, override)
+        if not changes:
+            in_sync += 1
+            continue
+        apply_issue_update(repo, number, changes, None, dry_run)
+        applied += 1
+    verb = "would apply" if dry_run else "applied"
+    tail = f"; {routed} are PRs -> applied by --prs" if routed else ""
+    print(f">> issue overrides — {applied} {verb}, {in_sync} already in sync{tail}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -1772,7 +1833,9 @@ def partition_issue_work(
     return to_create, to_update, idmap_rows, in_sync
 
 
-def reconcile_issues(repo, issues, idmap_path, *, do_update, update_bodies, dry_run):
+def reconcile_issues(
+    repo, issues, idmap_path, *, do_update, update_bodies, dry_run, overrides=None
+):
     by_number, by_title = snapshot_issues(repo)
     idmap = load_idmap(idmap_path)
     print(
@@ -1800,6 +1863,7 @@ def reconcile_issues(repo, issues, idmap_path, *, do_update, update_bodies, dry_
             f">> issues done — {len(to_create)} would create, {len(to_update)} would update, "
             f"{in_sync} already in sync"
         )
+        apply_issue_overrides(repo, by_number, overrides, dry_run)
         return
 
     # Pass-1: create absent issues as a batch. MUST complete before pass-2 so a future
@@ -1845,6 +1909,9 @@ def reconcile_issues(repo, issues, idmap_path, *, do_update, update_bodies, dry_
     print(
         f">> issues done — {created} created, {updated} updated, {in_sync} already in sync"
     )
+    # Declared overrides for issues present on the repo (e.g. #67, not an issues.yaml task). The PR
+    # path applies overrides whose number is a PR; this applies them where the number is an issue.
+    apply_issue_overrides(repo, by_number, overrides, dry_run)
 
 
 def append_idmap(idmap_path, rows):
@@ -2395,7 +2462,8 @@ def validate_manifests(here, *, repo_root):
             errors.append(f"pr-overrides.json: JSON parse error — {exc}")
             overrides_raw = {}
         for pr_num_str, entry in overrides_raw.get("overrides", {}).items():
-            if not pr_num_str.lstrip("-").isdigit():
+            # PR/issue numbers are positive integers — reject '-67'/typos (mirror load_pr_overrides).
+            if not pr_num_str.isdigit():
                 errors.append(
                     f"pr-overrides.json: key '{pr_num_str}' is not a valid PR/issue number"
                 )
@@ -2410,7 +2478,10 @@ def validate_manifests(here, *, repo_root):
                     f"pr-overrides.json: override #{pr_num_str} milestone '{ov_ms}' "
                     "is not a milestone title in milestones.json"
                 )
+            # `_`-prefixed entries are informational annotations (mirror load_pr_overrides' filter).
             for lb in entry.get("labels") or []:
+                if lb.startswith("_"):
+                    continue
                 if lb not in labels:
                     errors.append(
                         f"pr-overrides.json: override #{pr_num_str} label '{lb}' "
@@ -3085,6 +3156,24 @@ def self_test():
     ov_ms5, _ = apply_pr_override(1, _overrides, _P8, set())
     assert ov_ms5 == _P0, f"override must win over scope fallback: got {ov_ms5!r}"
 
+    # ── issue_override_changes (pure, offline) — the issue-side override path (#67 etc.) ───────
+    # Milestone differs → set it; labels add-only; idempotent no-op when already matching.
+    _live_bare = {"milestone": None, "labels": set()}
+    chg = issue_override_changes(_live_bare, {"milestone": _P0, "labels": ["phase:0"]})
+    assert chg.get("milestone") == _P0 and chg.get("labels") == (["phase:0"], []), chg
+    # Already on the override milestone, label already present → empty changes (idempotent).
+    _live_synced = {"milestone": _P0, "labels": {"phase:0"}}
+    assert (
+        issue_override_changes(_live_synced, {"milestone": _P0, "labels": ["phase:0"]})
+        == {}
+    ), "issue override must be a no-op when the issue already matches"
+    # Milestone matches but a new label is declared → labels-only change (add-only, never removes).
+    _live_ms_only = {"milestone": _P0, "labels": {"keep:me"}}
+    chg2 = issue_override_changes(
+        _live_ms_only, {"milestone": _P0, "labels": ["phase:0"]}
+    )
+    assert chg2 == {"labels": (["phase:0"], [])}, chg2
+
     # ── validate_manifests: pr-overrides validation (pure subset, offline) ────────────────────
     # This tests the validation logic directly without a real filesystem. We call the relevant
     # pure sub-logic: each override milestone must be in ms_titles; each label must be in labels.
@@ -3096,12 +3185,19 @@ def self_test():
         """PURE sub-logic extracted from validate_manifests for self-test coverage."""
         errs = []
         for pr_num_str, entry in overrides_dict.items():
+            if (
+                not pr_num_str.isdigit()
+            ):  # PR/issue numbers are positive integers (no '-67')
+                errs.append(f"#{pr_num_str}: not a valid PR/issue number")
+                continue
             ov_ms = entry.get("milestone")
             if not ov_ms:
                 errs.append(f"#{pr_num_str}: no milestone")
             elif ov_ms not in ms_titles:
                 errs.append(f"#{pr_num_str}: bad milestone '{ov_ms}'")
             for lb in entry.get("labels") or []:
+                if lb.startswith("_"):
+                    continue  # informational annotation, not a real label
                 if lb not in label_names:
                     errs.append(f"#{pr_num_str}: unknown label '{lb}'")
         return errs
@@ -3132,11 +3228,23 @@ def self_test():
     errs3 = _check_overrides(no_ms_ov, _ms_titles, _label_set)
     assert any("no milestone" in e for e in errs3), errs3
 
+    # Negative / non-numeric key → error (PR/issue numbers are positive; a typo must not slip past).
+    bad_key_ov = {"-67": {"milestone": _P0, "labels": []}}
+    errs4 = _check_overrides(bad_key_ov, _ms_titles, _label_set)
+    assert any("not a valid PR/issue number" in e for e in errs4), errs4
+
+    # `_`-prefixed annotation labels are skipped (not flagged as unknown).
+    annot_ov = {"1": {"milestone": _P0, "labels": ["_note", "phase:0"]}}
+    assert _check_overrides(annot_ov, _ms_titles, _label_set) == [], _check_overrides(
+        annot_ov, _ms_titles, _label_set
+    )
+
     print(
         "self-test OK: label_delta, normalize_body, plan_issue_update, parse_conventional, "
         "derive_pr_labels, milestone_rank, infer_milestone (multi-milestone), "
         "infer_milestone_from_scope (scope fallback), "
         "apply_pr_override (declared override precedence), "
+        "issue_override_changes (issue-side override), "
         "plan_label_migrations, label_to_field_values, plan_field_reconcile, "
         "plan_option_additions, required_scopes, missing_scopes, over_grants, _auth_command, "
         "_is_transient_network, _stderr_tail, should_pause_for_rate_limit, parse_rate_remaining, "
@@ -3383,6 +3491,8 @@ def main():
     if do_issues:
         spec = yaml.safe_load(args.issues_yaml.read_text(encoding="utf-8"))
         issues = spec.get("issues", []) if spec else []
+        # Declared overrides also apply to ISSUES (e.g. closed #67 — not an issues.yaml task). Same
+        # manifest the --prs path consumes; never-silent on a present-but-malformed file.
         reconcile_issues(
             args.repo,
             issues,
@@ -3390,6 +3500,7 @@ def main():
             do_update=not args.no_update,
             update_bodies=args.update_bodies,
             dry_run=args.dry_run,
+            overrides=load_pr_overrides(HERE),
         )
         print()
     if do_prs:
