@@ -5,11 +5,23 @@
 //! the profile's worst covered point (max items, min dim) and asserts the measured failure rate
 //! stays at or below the declared δ. The basis recorded on values (`EmpiricalFit{trials, …}`) is
 //! honest *because* this suite exists — the constants are exercised, never merely asserted.
+//!
+//! ## proptest migration (M-654 / ADR-021 Gate A3)
+//!
+//! Each hand-rolled `for trial in 0..p.trials { Lcg::new(base ^ trial) … }` loop is replaced by
+//! a `proptest!` test that generates a `Vec<u64>` of exactly `p.trials` seeds.  The same LCG is
+//! retained as the per-trial atom generator.  The statistical assertion (rate ≤ declared δ) is
+//! preserved unchanged.  proptest adds:
+//! - Shrinking: a failing seed batch is minimised before reporting.
+//! - `PROPTEST_CASES` control: number of independent batches tested per run (default 16); CI
+//!   rotates seeds across runs automatically.
+//! - No new dependency on `rand`; the LCG matches the calibration distributions.
 
 use mycelium_vsa::{
     bsc::BSC_BUNDLE_PROFILE, fhrr::FHRR_UNBIND_PROFILE, hrr::HRR_UNBIND_PROFILE,
     mapb::MAPB_BUNDLE_PROFILE, Bsc, CleanupMemory, Fhrr, Hrr, MapB, VsaModel,
 };
+use proptest::prelude::*;
 
 /// Deterministic generator (tiny LCG — house style, no rand dependency).
 struct Lcg(u64);
@@ -86,62 +98,6 @@ fn decode_fails<M: VsaModel>(
     member_min <= stranger_max
 }
 
-/// MAP-B: the declared bundle profile holds at its worst covered point (m = max items,
-/// d = min dim) over exactly the declared trial count.
-#[test]
-fn mapb_bundle_profile_holds_over_declared_trials() {
-    let p = MAPB_BUNDLE_PROFILE;
-    let model = MapB::new(p.min_dim);
-    let m = p.max_items;
-    let mut failures = 0usize;
-    for trial in 0..p.trials {
-        let mut rng = Lcg::new(0xB1_B0 ^ trial);
-        let codebook: Vec<Vec<f64>> = (0..CODEBOOK)
-            .map(|_| rng.bipolar(p.min_dim as usize))
-            .collect();
-        let refs: Vec<&[f64]> = codebook[..m].iter().map(Vec::as_slice).collect();
-        let bundle = model.bundle(&refs).unwrap();
-        if decode_fails(&model, &bundle, &codebook, m) {
-            failures += 1;
-        }
-    }
-    let rate = failures as f64 / p.trials as f64;
-    assert!(
-        rate <= p.delta,
-        "MAP-B empirical rate {rate} exceeded the declared δ={} ({failures}/{} failures)",
-        p.delta,
-        p.trials
-    );
-}
-
-/// BSC: the declared bundle profile holds at its worst covered point over exactly the declared
-/// trial count.
-#[test]
-fn bsc_bundle_profile_holds_over_declared_trials() {
-    let p = BSC_BUNDLE_PROFILE;
-    let model = Bsc::new(p.min_dim);
-    let m = p.max_items;
-    let mut failures = 0usize;
-    for trial in 0..p.trials {
-        let mut rng = Lcg::new(0x5C_5C ^ trial);
-        let codebook: Vec<Vec<f64>> = (0..CODEBOOK)
-            .map(|_| rng.binary(p.min_dim as usize))
-            .collect();
-        let refs: Vec<&[f64]> = codebook[..m].iter().map(Vec::as_slice).collect();
-        let bundle = model.bundle(&refs).unwrap();
-        if decode_fails(&model, &bundle, &codebook, m) {
-            failures += 1;
-        }
-    }
-    let rate = failures as f64 / p.trials as f64;
-    assert!(
-        rate <= p.delta,
-        "BSC empirical rate {rate} exceeded the declared δ={} ({failures}/{} failures)",
-        p.delta,
-        p.trials
-    );
-}
-
 /// One bind→unbind→cleanup recovery trial: returns `true` on failure (wrong atom recovered).
 fn unbind_recovery_fails<M: VsaModel>(
     model: &M,
@@ -158,66 +114,146 @@ fn unbind_recovery_fails<M: VsaModel>(
     }
 }
 
-/// HRR: the declared single-factor unbind profile holds at its worst covered point (min dim,
-/// codebook 16) over exactly the declared trial count.
-#[test]
-fn hrr_unbind_profile_holds_over_declared_trials() {
-    let p = HRR_UNBIND_PROFILE;
-    let model = Hrr::new(p.min_dim);
-    let dim = p.min_dim as usize;
-    let mut failures = 0usize;
-    for trial in 0..p.trials {
-        let mut rng = Lcg::new(0x44_88 ^ trial);
-        let codebook: Vec<(String, Vec<f64>)> = (0..16)
-            .map(|i| (format!("atom{i}"), rng.gaussian(dim)))
-            .collect();
-        let mut mem = CleanupMemory::new(p.min_dim);
-        for (label, atom) in &codebook {
-            mem.insert(label.clone(), atom.clone()).unwrap();
-        }
-        let role = rng.gaussian(dim);
-        let target = (trial % 16) as usize;
-        if unbind_recovery_fails(&model, &role, &codebook, target, &mem) {
-            failures += 1;
-        }
+proptest! {
+    /// MAP-B: the declared bundle profile holds at its worst covered point (m = max items,
+    /// d = min dim) over exactly the declared trial count.
+    ///
+    /// proptest generates `p.trials` independent seeds per case. `PROPTEST_CASES` controls how
+    /// many independent batches are tested (default 16).
+    #[test]
+    fn mapb_bundle_profile_holds_over_declared_trials(
+        seeds in proptest::collection::vec(any::<u64>(), MAPB_BUNDLE_PROFILE.trials as usize)
+    ) {
+        let p = MAPB_BUNDLE_PROFILE;
+        let model = MapB::new(p.min_dim);
+        let m = p.max_items;
+        let failures: usize = seeds
+            .iter()
+            .filter(|&&seed| {
+                let mut rng = Lcg::new(seed);
+                let codebook: Vec<Vec<f64>> = (0..CODEBOOK)
+                    .map(|_| rng.bipolar(p.min_dim as usize))
+                    .collect();
+                let refs: Vec<&[f64]> = codebook[..m].iter().map(Vec::as_slice).collect();
+                let bundle = model.bundle(&refs).unwrap();
+                decode_fails(&model, &bundle, &codebook, m)
+            })
+            .count();
+        let rate = failures as f64 / p.trials as f64;
+        prop_assert!(
+            rate <= p.delta,
+            "MAP-B empirical rate {rate} exceeded the declared δ={} ({failures}/{} failures)",
+            p.delta,
+            p.trials
+        );
     }
-    let rate = failures as f64 / p.trials as f64;
-    assert!(
-        rate <= p.delta,
-        "HRR unbind empirical rate {rate} exceeded the declared δ={} ({failures}/{} failures)",
-        p.delta,
-        p.trials
-    );
-}
 
-/// FHRR: the declared single-factor unbind profile holds at its worst covered point over exactly
-/// the declared trial count.
-#[test]
-fn fhrr_unbind_profile_holds_over_declared_trials() {
-    let p = FHRR_UNBIND_PROFILE;
-    let model = Fhrr::new(p.min_dim);
-    let dim = p.min_dim as usize;
-    let mut failures = 0usize;
-    for trial in 0..p.trials {
-        let mut rng = Lcg::new(0xF4_44 ^ trial);
-        let codebook: Vec<(String, Vec<f64>)> = (0..16)
-            .map(|i| (format!("atom{i}"), rng.phasor(dim)))
-            .collect();
-        let mut mem = CleanupMemory::new(p.min_dim);
-        for (label, atom) in &codebook {
-            mem.insert(label.clone(), atom.clone()).unwrap();
-        }
-        let role = rng.phasor(dim);
-        let target = (trial % 16) as usize;
-        if unbind_recovery_fails(&model, &role, &codebook, target, &mem) {
-            failures += 1;
-        }
+    /// BSC: the declared bundle profile holds at its worst covered point over exactly the declared
+    /// trial count.
+    ///
+    /// proptest generates `p.trials` independent seeds per case. `PROPTEST_CASES` controls how
+    /// many independent batches are tested (default 16).
+    #[test]
+    fn bsc_bundle_profile_holds_over_declared_trials(
+        seeds in proptest::collection::vec(any::<u64>(), BSC_BUNDLE_PROFILE.trials as usize)
+    ) {
+        let p = BSC_BUNDLE_PROFILE;
+        let model = Bsc::new(p.min_dim);
+        let m = p.max_items;
+        let failures: usize = seeds
+            .iter()
+            .filter(|&&seed| {
+                let mut rng = Lcg::new(seed);
+                let codebook: Vec<Vec<f64>> = (0..CODEBOOK)
+                    .map(|_| rng.binary(p.min_dim as usize))
+                    .collect();
+                let refs: Vec<&[f64]> = codebook[..m].iter().map(Vec::as_slice).collect();
+                let bundle = model.bundle(&refs).unwrap();
+                decode_fails(&model, &bundle, &codebook, m)
+            })
+            .count();
+        let rate = failures as f64 / p.trials as f64;
+        prop_assert!(
+            rate <= p.delta,
+            "BSC empirical rate {rate} exceeded the declared δ={} ({failures}/{} failures)",
+            p.delta,
+            p.trials
+        );
     }
-    let rate = failures as f64 / p.trials as f64;
-    assert!(
-        rate <= p.delta,
-        "FHRR unbind empirical rate {rate} exceeded the declared δ={} ({failures}/{} failures)",
-        p.delta,
-        p.trials
-    );
+
+    /// HRR: the declared single-factor unbind profile holds at its worst covered point (min dim,
+    /// codebook 16) over exactly the declared trial count.
+    ///
+    /// proptest generates `p.trials` independent seeds per case. `PROPTEST_CASES` controls how
+    /// many independent batches are tested (default 16).
+    #[test]
+    fn hrr_unbind_profile_holds_over_declared_trials(
+        seeds in proptest::collection::vec(any::<u64>(), HRR_UNBIND_PROFILE.trials as usize)
+    ) {
+        let p = HRR_UNBIND_PROFILE;
+        let model = Hrr::new(p.min_dim);
+        let dim = p.min_dim as usize;
+        let failures: usize = seeds
+            .iter()
+            .enumerate()
+            .filter(|&(idx, &seed)| {
+                let mut rng = Lcg::new(seed);
+                let codebook: Vec<(String, Vec<f64>)> = (0..16)
+                    .map(|i| (format!("atom{i}"), rng.gaussian(dim)))
+                    .collect();
+                let mut mem = CleanupMemory::new(p.min_dim);
+                for (label, atom) in &codebook {
+                    mem.insert(label.clone(), atom.clone()).unwrap();
+                }
+                let role = rng.gaussian(dim);
+                let target = idx % 16;
+                unbind_recovery_fails(&model, &role, &codebook, target, &mem)
+            })
+            .count();
+        let rate = failures as f64 / p.trials as f64;
+        prop_assert!(
+            rate <= p.delta,
+            "HRR unbind empirical rate {rate} exceeded the declared δ={} ({failures}/{} failures)",
+            p.delta,
+            p.trials
+        );
+    }
+
+    /// FHRR: the declared single-factor unbind profile holds at its worst covered point over
+    /// exactly the declared trial count.
+    ///
+    /// proptest generates `p.trials` independent seeds per case. `PROPTEST_CASES` controls how
+    /// many independent batches are tested (default 16).
+    #[test]
+    fn fhrr_unbind_profile_holds_over_declared_trials(
+        seeds in proptest::collection::vec(any::<u64>(), FHRR_UNBIND_PROFILE.trials as usize)
+    ) {
+        let p = FHRR_UNBIND_PROFILE;
+        let model = Fhrr::new(p.min_dim);
+        let dim = p.min_dim as usize;
+        let failures: usize = seeds
+            .iter()
+            .enumerate()
+            .filter(|&(idx, &seed)| {
+                let mut rng = Lcg::new(seed);
+                let codebook: Vec<(String, Vec<f64>)> = (0..16)
+                    .map(|i| (format!("atom{i}"), rng.phasor(dim)))
+                    .collect();
+                let mut mem = CleanupMemory::new(p.min_dim);
+                for (label, atom) in &codebook {
+                    mem.insert(label.clone(), atom.clone()).unwrap();
+                }
+                let role = rng.phasor(dim);
+                let target = idx % 16;
+                unbind_recovery_fails(&model, &role, &codebook, target, &mem)
+            })
+            .count();
+        let rate = failures as f64 / p.trials as f64;
+        prop_assert!(
+            rate <= p.delta,
+            "FHRR unbind empirical rate {rate} exceeded the declared δ={} ({failures}/{} failures)",
+            p.delta,
+            p.trials
+        );
+    }
 }

@@ -578,6 +578,7 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-select",
+ "proptest",
  "serde_json",
 ]
 
