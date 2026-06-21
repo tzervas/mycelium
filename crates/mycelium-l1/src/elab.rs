@@ -531,9 +531,15 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
             dtype: scalar_kind(*s),
         }),
         Ty::Data(n) => FieldSpec::Data(n.clone()),
-        // `Substrate` and `Var` have no r3 value form.  A residual `Var` here is defense in
-        // depth: the checker must have substituted all vars before storing into `env.types`.
+        // `Substrate`, `Var`, and `App` have no r3 value form.  A residual `Var`/`App` here is
+        // defense in depth: the checker must have substituted/monomorphized all abstract types
+        // before they reach elaboration (G2/VR-5, M-657/M-673).
         Ty::Substrate(_) | Ty::Var(_) => return None,
+        // App (M-673): an unmonomorphized generic application reaching elaboration is an internal
+        // invariant violation (App must not survive past the monomorphization boundary). Explicit
+        // arm (not `_`) so the compiler enforces exhaustiveness on future Ty variants.
+        Ty::App(_, _) => return None,
+
     })
 }
 

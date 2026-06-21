@@ -26,6 +26,13 @@ use crate::ast::{
 /// that produces `Var` must substitute it away before returning to elaboration, evaluation, or
 /// coverage analysis. A residual `Var` reaching those consumers is a checker bug — the affected
 /// site returns an explicit error rather than silently guessing a concrete type (G2/VR-5).
+///
+/// [`Ty::App`] is the **M-673 structural** form of an abstract generic application (e.g.
+/// `List<A>` when `A` is a type variable). It exists *only* in the checking phase and carries the
+/// invariant: **`App ⟺ abstract`** — at least one arg contains a `Ty::Var`. A fully-concrete
+/// instantiation is immediately monomorphized to `Ty::Data(mangle(name, args))`. `App` must never
+/// reach elaboration, evaluation, or coverage analysis; any such residual is an explicit internal
+/// error (G2/VR-5, **Declared**).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
     /// `Binary{n}`.
@@ -44,6 +51,17 @@ pub enum Ty {
     /// (via [`subst_ty`]) before any type is stored in `Env` or passed to elaboration/eval.
     /// A residual `Var` is an explicit `CheckError`, never a silent default.
     Var(String),
+    /// A structural abstract generic application (M-673, **Declared**). `App(name, args)` where
+    /// at least one element of `args` contains a [`Ty::Var`] — the **abstract** form of
+    /// `name<arg0, arg1, …>`. A fully-concrete application is represented as
+    /// `Ty::Data(mangle(name, args))` instead. `App` is checking-phase only: any `App` reaching
+    /// elaboration/evaluation/coverage is an internal invariant violation, reported as an
+    /// explicit error (never silent — G2/VR-5).
+    ///
+    /// The args are heap-allocated (`Box<Vec<Ty>>`) to keep `size_of::<Ty>()` at 32 bytes
+    /// (the same as pre-M-673), preventing stack-frame inflation in the deeply-recursive
+    /// checker (A4-02). The box is an implementation detail; callers deref it as `&[Ty]`.
+    App(String, Box<Vec<Ty>>),
 }
 
 impl core::fmt::Display for Ty {
@@ -55,6 +73,11 @@ impl core::fmt::Display for Ty {
             Ty::Data(n) => write!(f, "{n}"),
             Ty::Substrate(t) => write!(f, "Substrate{{{t}}}"),
             Ty::Var(a) => write!(f, "{a}"),
+            // App renders identical to the mangled form so user-facing messages are unchanged.
+            Ty::App(name, args) => {
+                let parts: Vec<String> = args.iter().map(|t| t.to_string()).collect();
+                write!(f, "{name}<{}>", parts.join(", "))
+            }
         }
     }
 }
@@ -1938,9 +1961,9 @@ fn paradigm_name(t: &Ty) -> Option<&'static str> {
         Ty::Binary(_) => Some("Binary"),
         Ty::Ternary(_) => Some("Ternary"),
         Ty::Dense(_, _) => Some("Dense"),
-        // `Data`, `Substrate`, and `Var` have no paradigm: they are not representation types.
-        // A `Var` reaching here is a transient abstract param — no paradigm assigned (M-657).
-        Ty::Data(_) | Ty::Substrate(_) | Ty::Var(_) => None,
+        // `Data`, `Substrate`, `Var`, and `App` have no paradigm: they are not representation types.
+        // A `Var`/`App` reaching here is a transient abstract form — no paradigm assigned (M-657/M-673).
+        Ty::Data(_) | Ty::Substrate(_) | Ty::Var(_) | Ty::App(_, _) => None,
     }
 }
 
@@ -2096,13 +2119,24 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
     })
 }
 
-// ─── Stage-1 generics helpers (M-657, Declared) ──────────────────────────────────────────────
+// ─── Stage-1 generics helpers (M-657, Declared) / M-673 structural App ───────────────────────
+
+/// Returns true if `ty` is abstract — i.e., contains a `Ty::Var` or is a `Ty::App` (which by
+/// invariant has at least one abstract arg). Used by `subst_ty` to decide whether to collapse
+/// `App` → `Data` after substitution (M-673, **Declared**).
+fn ty_is_abstract(ty: &Ty) -> bool {
+    contains_var(ty)
+}
 
 /// Substitute all [`Ty::Var`] occurrences in `ty` using the `subst` map (var-name → concrete Ty).
 ///
-/// For shell ctor fields that encode recursive generic self-references as
-/// `Ty::Data("List<A>")` (an abstract mangled name where `A` is a type var), this function
-/// delegates to [`subst_ty_in_shell`] which re-resolves the embedded vars in the mangled name.
+/// For `Ty::App(name, args)` (M-673 structural abstract form), recursion substitutes each arg;
+/// the result may be `Ty::Data(mangle(name, &substituted_args))` if all vars resolved to
+/// concrete types, or `Ty::App(name, substituted_args)` if abstract vars remain.
+///
+/// For shell ctor fields that still use `Ty::Data("List<A>")` (abstract mangled names where `A`
+/// is a type var), this function delegates to [`subst_in_abstract_data_name`] which re-resolves
+/// the embedded vars. (These shell ctor fields are replaced by `Ty::App` in S3/S6.)
 ///
 /// Guarantee: **Declared** — capture-avoiding substitution over a first-order type language
 /// (no higher-rank types). Terminates because the type structure is finite-depth.
@@ -2115,6 +2149,16 @@ pub(crate) fn subst_ty(ty: &Ty, subst: &BTreeMap<String, Ty>) -> Ty {
         // Substitute the embedded vars by re-parsing the abstract name components.
         // Note: concrete (registered) Data names never contain '<' so this is safe to detect.
         Ty::Data(name) => Ty::Data(subst_in_abstract_data_name(name, subst)),
+        // App (M-673): recurse structurally into args.
+        // If all args become concrete after substitution, collapse to Ty::Data(mangle(...)).
+        Ty::App(name, args) => {
+            let substituted: Vec<Ty> = args.iter().map(|a| subst_ty(a, subst)).collect();
+            if substituted.iter().any(ty_is_abstract) {
+                Ty::App(name.clone(), Box::new(substituted))
+            } else {
+                Ty::Data(mangle(name, &substituted))
+            }
+        }
     }
 }
 
@@ -2177,14 +2221,18 @@ pub(crate) fn mangle(name: &str, args: &[Ty]) -> String {
 /// parameters after call-site instantiation. A return type that still contains a `Var` means no
 /// argument anchored it; the caller must provide an explicit annotation (G2 / never-silent).
 ///
-/// **Conservative**: returns false for `Ty::Data` even if the Data string encodes an abstract
-/// mangled name like `"List<A>"`. This is intentional — `Data` with embedded vars only appears
-/// in GenericShell ctor field types (body context), not in function return types after
+/// **Conservative for `Ty::Data`**: returns false for `Ty::Data` even if the Data string encodes
+/// an abstract mangled name like `"List<A>"`. This is intentional — `Data` with embedded vars only
+/// appears in GenericShell ctor field types (body context), not in function return types after
 /// substitution. Callers that must detect vars inside mangled Data strings should use
 /// [`ty_mentions_tyvar`] instead.
+///
+/// `Ty::App` (M-673): structural recursive check — any abstract arg propagates `true`.
 pub(crate) fn contains_var(ty: &Ty) -> bool {
     match ty {
         Ty::Var(_) => true,
+        // App is structural: abstract iff any arg is abstract.
+        Ty::App(_, args) => args.iter().any(contains_var),
         // Ty::Data may encode an abstract mangled name like "List<A>" in a shell field;
         // in concrete (env.types) contexts Ty::Data never contains vars.
         // We conservatively return false here — abstract-mangled Data are only in GenericShell,
@@ -2194,17 +2242,20 @@ pub(crate) fn contains_var(ty: &Ty) -> bool {
 }
 
 /// Returns true if `ty` mentions any of the given type-variable names, including when the
-/// variable appears embedded inside a mangled `Ty::Data` string like `"List<A>"`.
+/// variable appears embedded inside a mangled `Ty::Data` string like `"List<A>"` or inside a
+/// structural `Ty::App` (M-673).
 ///
-/// Used **only** at the phantom-type-param refusal site (~line 1411) where the return type
-/// may be `Ty::Data("List<A>")` after `resolve_ty_body` — a case that `contains_var` misses
-/// because it conservatively returns false for all `Ty::Data`. Do NOT change `contains_var`
-/// (other callers rely on its conservative behaviour at ~288/448).
+/// Used **only** at the phantom-type-param refusal site where the return type may still be
+/// abstract after substitution. `contains_var` misses vars inside mangled `Ty::Data` strings;
+/// this function also recurses into `Ty::App` args structurally. Do NOT change `contains_var`
+/// (other callers rely on its conservative behaviour).
 ///
-/// Guarantee: **Declared** (M-657D2 review fix, G2/VR-5).
+/// Guarantee: **Declared** (M-657D2 review fix, M-673 extension, G2/VR-5).
 fn ty_mentions_tyvar(ty: &Ty, tyvars: &[String]) -> bool {
     match ty {
         Ty::Var(v) => tyvars.iter().any(|t| t == v),
+        // App (M-673): structural — check each arg recursively.
+        Ty::App(_, args) => args.iter().any(|a| ty_mentions_tyvar(a, tyvars)),
         Ty::Data(name) if name.contains('<') => {
             // Peek inside the mangled form: split and check each arg token.
             split_mangled_outer(name)
@@ -3763,8 +3814,9 @@ fn rewrite_mono_caller(
 /// Convert a checked [`Ty`] back to a surface [`TypeRef`] (guarantee-free).
 ///
 /// Used to build the monomorphic `FnDecl`'s parameter and return types. All concrete types have
-/// a direct surface representation; `Ty::Var` should never reach here after substitution (if it
-/// does, we produce a placeholder `Named("?", [])` rather than panicking — defense-in-depth).
+/// a direct surface representation; `Ty::Var`/`Ty::App` should never reach here after
+/// substitution (if they do, we produce a placeholder `Named("?", [])` rather than panicking —
+/// defense-in-depth, G2/VR-5).
 /// Guarantee: **Declared** — the checker already validated the types; this is a mechanical
 /// invertible mapping for the concrete subset.
 fn ty_to_typeref(ty: &Ty) -> TypeRef {
@@ -3777,6 +3829,8 @@ fn ty_to_typeref(ty: &Ty) -> TypeRef {
         // A residual Var after substitution is a checker bug — emit a placeholder (defense-in-depth).
         // The elaborator will fail on this if it survives to that point (G2).
         Ty::Var(a) => BaseType::Named(format!("?{a}"), vec![]),
+        // A residual App after substitution is a checker bug (should have been collapsed to Data).
+        Ty::App(name, _) => BaseType::Named(format!("?App:{name}"), vec![]),
     })
 }
 

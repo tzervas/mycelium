@@ -169,8 +169,18 @@ fn compile_rows(
                 false
             }
         }
-        // Binary/Ternary value domains are never enumerated — always need a default.
-        _ => false,
+        // Binary/Ternary/Dense/Substrate/Var: value domains are never enumerated — need a default.
+        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Var(_) => false,
+        // App (M-673): an unmonomorphized generic application must never reach decision compilation.
+        // Explicit arm (not `_`) so the compiler enforces exhaustiveness on future Ty variants.
+        Ty::App(name, _) => {
+            debug_assert!(
+                false,
+                "internal: Ty::App({name:?}, ..) reached decision::compile_rows — \
+                 unmonomorphized generic (M-673 invariant: App must not reach decision compilation)"
+            );
+            false
+        }
     };
 
     if let Ty::Data(dn) = &ty0 {

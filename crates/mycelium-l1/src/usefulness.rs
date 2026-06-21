@@ -48,7 +48,22 @@ fn signature<'a>(
 ) -> Option<std::borrow::Cow<'a, DataInfo>> {
     match ty {
         Ty::Data(n) => Some(lookup_data_info(types, generics, n)),
-        _ => None,
+        // Binary/Ternary/Dense/Substrate/Var: open or non-data domains — no finite signature.
+        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Var(_) => None,
+        // App (M-673): an unmonomorphized generic application must never reach usefulness analysis.
+        // Explicit arm (not `_`) so the compiler enforces exhaustiveness on future Ty variants.
+        Ty::App(name, _) => {
+            // Defense-in-depth: return None so the pattern-matrix column is treated as open
+            // (no finite signature). An App surviving to this point is an internal bug.
+            // Callers relying on the signature being Some for a well-typed column will
+            // propagate a coverage error rather than silently misanalysing coverage (G2/VR-5).
+            debug_assert!(
+                false,
+                "internal: Ty::App({name:?}, ..) reached usefulness::signature — \
+                 unmonomorphized generic (M-673 invariant: App must not reach coverage analysis)"
+            );
+            None
+        }
     }
 }
 
