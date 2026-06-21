@@ -59,11 +59,23 @@ One source of truth (`just`); pre-commit and CI route through the same recipes.
 
 ```
 just            # list recipes
-just setup      # best-effort install of the check tools (uv tool / npx / pip)
-just check      # run the FULL suite — identical to what CI runs (`just ci`)
+just setup      # best-effort install of the check tools (uv tool / npx / pip / cargo-nextest)
+just test-fast  # Tier 0 (pre-commit): change-scoped crates' unit/regression tests — fastest
+just check      # Tier 1 (default; = `just ci`): change-scoped tests (LOW proptest cases) + all gates
+just check-full # Tier 2 (release/durability): full workspace, HIGH proptest cases, mutants + fuzz
 just fmt        # auto-format (rust + python)
 just hooks      # install the pre-commit hooks
 ```
+
+**Three test tiers (DN-20)** — change-scoped + heavy-gated, via cargo-nextest (with a `cargo test`
+fallback): `just test-fast` is the sub-second pre-commit loop (scoped crates' unit/regression tests
+only); **`just check` stays the default and the CI entrypoint** (`just ci` = `just check`) —
+change-scoped crates **+ their reverse-dependents**, all targets + proptest at LOW cases + every
+always-on non-test gate; `just check-full` is the release/nightly durability gate (full workspace,
+HIGH proptest cases, `cargo-mutants` + `cargo-fuzz` smoke). **Honesty (VR-5):** no property/bound
+test is dropped — only its *case count* is tiered (low every commit, full on release); the
+change-scoping only ever *widens* to `--workspace` (over-test, never under-test), and `check-full`
+always runs everything.
 
 Checks **skip gracefully** when a tool or language isn't present yet (most code doesn't exist
 yet). Never hand off a red `just check` without explaining the skip.
@@ -71,8 +83,10 @@ yet). Never hand off a red `just check` without explaining the skip.
 ## Remote CI policy
 **No automatic remote CI.** `.github/workflows/checks.yml` is **manual-dispatch only**
 (`workflow_dispatch`) and **advisory** (non-blocking) — to keep parity with local while avoiding
-surprise Actions cost. It runs the same `just ci`. Do not add `on: push` / `on: pull_request`
-auto-triggers without an explicit decision.
+surprise Actions cost. It runs the same `just ci` (= `just check`, the fast Tier-1 default — DN-20:
+change-scoped tests at low proptest cases + all non-test gates; the heavy `just check-full`
+durability tier — full workspace, mutants, fuzz — is run deliberately, not in this advisory job). Do
+not add `on: push` / `on: pull_request` auto-triggers without an explicit decision.
 
 ## Commits & PRs
 - Conventional, imperative subjects referencing the issue/task
@@ -97,6 +111,23 @@ When a wave decomposes into several **tightly-scoped, independent** tasks (e.g. 
 module / capability crate per task), run them as a **swarm of agents merged with a single
 octopus merge**, with **one orchestrator owning every shared file**. This keeps parallel work
 collision-free *by construction* rather than by after-the-fact conflict resolution.
+
+**Pre-flight — align + prune + push before launching any agent (mandatory; ties to the
+branch-ref-drift and stale-base mitigations #5/#7).** Branch-ref drift and stale-base launches are
+the two cheapest swarm failures to *prevent* and the most expensive to *recover from*. Before
+spawning the first agent, the orchestrator runs a branch-hygiene pre-flight so every agent launches
+from a correct, pushed tip:
+1. **Align the working branch with `main`.** `git fetch origin`, then ensure the orchestrator branch
+   is on the intended `main` tip (`git rebase origin/main` or branch fresh from it) — never fan out
+   from a branch that has silently diverged from `main`.
+2. **Prune stale local branches + worktrees.** Delete every local branch that is **not `main` and
+   not the current working branch**, and remove stale worktrees, so no agent can branch from or merge
+   a leftover ref (`git worktree prune`; `git branch` → delete the others; `git worktree list` to
+   confirm). A clean ref namespace is what makes "merge the ref the child reports" unambiguous.
+3. **Push the working branch, then launch from the *pushed* tip.** An `isolation:"worktree"` agent
+   branches from the branch's **upstream** (`origin/…`), so push the orchestrator/epic branch
+   **before** spawning its children. Push first; deconflict never (mitigation #5). Propagate
+   freshly-squashed `main` *down* through every level after each landing (mitigation #6).
 
 The discipline:
 1. **Partition by file ownership, not just by task.** Each agent owns a **disjoint directory**

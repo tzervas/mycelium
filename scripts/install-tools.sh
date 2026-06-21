@@ -117,6 +117,16 @@ if have cargo; then
   done
 fi
 
+# cargo-nextest (DN-20): the tiered test runner `scripts/checks/test.sh` prefers. Best-effort,
+# idempotent (`cargo nextest --version` short-circuits when present), `--locked` for a deterministic
+# install. When absent, test.sh falls back to `cargo test` so local↔CI parity holds either way — so
+# this is a pure speed-up, never a gate. Skip-graceful (offline / install failure → plain `cargo test`).
+if have cargo; then
+  if cargo nextest --version >/dev/null 2>&1; then ok "cargo: cargo-nextest present"
+  elif cargo install --locked --quiet cargo-nextest 2>/dev/null; then ok "cargo install: cargo-nextest"
+  else skip "cargo: cargo-nextest (install failed or offline; tests fall back to \`cargo test\`)"; fi
+fi
+
 # Code-map / API-surface tools (optional). `cargo public-api` (the `just api` gate) drives a
 # nightly rustdoc — used only to introspect the surface, not to build the MSRV-pinned artifact.
 # Graphviz (`dot`) renders the `just map` graphs; install it via your system package manager.
