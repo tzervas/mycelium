@@ -8,6 +8,15 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-21: M-665 — L1 reserves the 10 DN-03 runtime terms, never-silent (G2))
+- **Runtime-vocabulary lexer reservation** (`crates/mycelium-l1/src/{token,parse,lib}.rs`): all 10
+  DN-03 §4 runtime terms (`hypha`, `fuse`, `mesh`, `graft`, `cyst`, `xloc`, `forage`, `backbone`,
+  `tier`, `reclaim`) are now `Tok` variants in `keyword()` — reserved-not-active (like
+  `phylum`/`colony`). Each produces an explicit `ParseError` ("reserved for the runtime model
+  (RFC-0008), not yet active") at both item and expression position — **never** a silent identifier
+  accept or panic (G2). No grammar production consumes them yet (lexed-reserved, not active). Adds a
+  `reject/12-runtime-vocab-reserved-not-active.myc` conformance fixture + bidirectional table↔corpus
+  integrity test; EBNF + grammar README updated. Closes E7-2 row M-665.
 ### Added (2026-06-21: M-669 — mycelium-lsp baseline completions, dogfooding DX)
 - **LSP completion provider** (`crates/mycelium-lsp/src/completions.rs`): 36 **active** keyword
   completions (from `mycelium_l1::token::keyword()`) + 5 grammar-grounded snippets (`nodule-header`,

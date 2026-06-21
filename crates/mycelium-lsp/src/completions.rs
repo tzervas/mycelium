@@ -10,9 +10,9 @@
 //!
 //! Active keywords are drawn from the `keyword()` function in `mycelium-l1::token` — the
 //! authoritative source for which words lex as keywords today. Reserved-not-active words
-//! (`phylum`, `colony`) and ratified-not-yet-lexed runtime words (`hypha`, `fuse`, …) are
-//! intentionally excluded from keyword completions: offering them as if usable would violate the
-//! honesty rule (VR-5 / G2).
+//! (`phylum`, `colony`, and the 10 DN-03 runtime words `hypha`…`reclaim` reserved by M-665) and
+//! ratified-not-yet-lexed words (`impl`, `consume`, `grow`) are intentionally excluded from
+//! keyword completions: offering them as if usable would violate the honesty rule (VR-5 / G2).
 //!
 //! `matured` is offered as a keyword (it is reserved — using it at item position is an explicit
 //! parse error with a teaching diagnostic, RFC-0017 §4.1); its correct use is the header attribute
@@ -572,34 +572,44 @@ mod tests {
 
     #[test]
     fn reserved_not_active_words_are_not_offered() {
-        // `phylum` and `colony` are reserved-not-active: they lex as keywords but no construct
-        // consumes them yet -- offering them as usable would violate the honesty rule (G2 / VR-5).
+        // `phylum`/`colony` and the 10 DN-03 §4 runtime-vocabulary words (reserved by M-665) are
+        // reserved-not-active: they lex as keywords but no construct consumes them yet -- offering
+        // them as usable would violate the honesty rule (G2 / VR-5).
         let labels: Vec<&str> = KEYWORD_COMPLETIONS
             .iter()
             .chain(SNIPPET_COMPLETIONS.iter())
             .map(|c| c.label)
             .collect();
-        for banned in ["phylum", "colony"] {
+        for banned in [
+            "phylum", "colony", "hypha", "fuse", "mesh", "graft", "cyst", "xloc", "forage",
+            "backbone", "tier", "reclaim",
+        ] {
             assert!(
                 !labels.contains(&banned),
                 "reserved-not-active word `{banned}` must NOT appear in completions"
+            );
+            // These ARE in keyword() (lexed) but excluded from the offered set. If one is dropped
+            // from keyword(), this fails -- keeping the exclusion list and the lexer aligned.
+            assert!(
+                mycelium_l1::token::keyword(banned).is_some(),
+                "`{banned}` is reserved-not-active but no longer in keyword() -- update the \
+                 exclusion list + this test together"
             );
         }
     }
 
     #[test]
-    fn runtime_not_yet_lexed_words_are_not_offered() {
-        // These are ratified but not yet in keyword() -- offering them as active syntax would
-        // be dishonest (they currently lex as plain identifiers).
+    fn not_yet_lexed_words_are_not_offered() {
+        // `impl`/`consume`/`grow` are ratified but not yet in keyword() -- offering them as active
+        // syntax would be dishonest (they currently lex as plain identifiers). The 10 runtime words
+        // `hypha`…`reclaim` were ratified-not-yet-lexed too until M-665 reserved them; they are now
+        // covered by `reserved_not_active_words_are_not_offered`.
         let labels: Vec<&str> = KEYWORD_COMPLETIONS
             .iter()
             .chain(SNIPPET_COMPLETIONS.iter())
             .map(|c| c.label)
             .collect();
-        for unlexed in [
-            "hypha", "fuse", "mesh", "graft", "cyst", "xloc", "forage", "backbone", "tier",
-            "reclaim", "impl", "consume", "grow",
-        ] {
+        for unlexed in ["impl", "consume", "grow"] {
             assert!(
                 !labels.contains(&unlexed),
                 "ratified-not-yet-lexed word `{unlexed}` must NOT appear in completions"

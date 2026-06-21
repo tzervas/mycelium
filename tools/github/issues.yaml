@@ -2161,9 +2161,9 @@ issues:
   - id: M-665
     title: "M-665 — feat(l1-lexer): Reserve all 10 DN-03 runtime terms in keyword() — never-silent reservation (G2)"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:language, priority:P2, status:needs-design]
+    labels: [phase:7, type:feature, area:language, priority:P2, status:done]
     depends_on: []
-    doc_refs: [corpus:DN-03, corpus:RFC-0008, src:crates/mycelium-l1/src/token.rs]
+    doc_refs: [corpus:DN-03, corpus:RFC-0008, src:crates/mycelium-l1/src/token.rs, src:crates/mycelium-l1/src/parse.rs]
     body: |
       DN-03 §4 ratifies 10 runtime vocabulary terms (`hypha`, `fuse`, `mesh`, `graft`, `cyst`, `xloc`, `forage`, `backbone`, `tier`, `reclaim`) as the one-per-concept names against RFC-0008 §4.5 operational meanings. None appear in `keyword()` or the `Tok` enum (token.rs fully inspected 2026-06-21). G2 never-silent obligation: a ratified reserved word must never silently become an identifier. This issue adds all 10 to `Tok` and `keyword()` as reserved-not-active tokens (like `phylum`/`colony` today — they lex as keywords, produce a "reserved for the runtime model (RFC-0008), not yet active" parse error, never a silent accept). Conformance reject-corpus entries added for each.
       Acceptance: all 10 appear in `Tok` and `keyword()`; each produces an explicit parse error if used as identifier or in an expression (G2); reject-corpus entries added; no grammar production yet consumes them (lexed-reserved, not active); `just check` green.

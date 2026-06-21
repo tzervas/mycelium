@@ -1,0 +1,7 @@
+// rejected: 'hypha' is a DN-03 §4 runtime-vocabulary reserved word (concurrent execution unit,
+// RFC-0008) — it is reserved-not-active: it lexes as a keyword (never a silent identifier, G2)
+// but no construct consumes it, so it cannot appear at item position. The parser emits a teaching
+// diagnostic naming RFC-0008. The other nine runtime-tier names (fuse, mesh, graft, cyst, xloc,
+// forage, backbone, tier, reclaim) are reserved the same way (see unit tests for all ten).
+nodule demo
+hypha worker
