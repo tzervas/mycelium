@@ -51,6 +51,8 @@ from .ablation import (
     run_arm,
 )
 from .llm_canonical_to_l1 import convert_to_myc
+from .arm3_constrained import arm3_selftest
+from .arm5_embedded_dsl import arm5_selftest
 from .client import MockClient, MockScript
 from .coauthor_loop import (
     STATUS_PARTIAL_PASS,
@@ -538,6 +540,40 @@ def check_canonical_bridge() -> Check:
     )
 
 
+def check_arm3_module() -> Check:
+    """T16: arm-3 (grammar-constrained decoding) module — offline, via arm3_selftest.
+
+    Wraps the leaf's own offline checks (GBNF grammar well-formed, prompt builds,
+    backend constructs + SKIPs honestly when no local model is configured). Arm 3
+    stays runtime-blocked without a local GBNF backend (G2 — never fabricated)."""
+    results = arm3_selftest()
+    failed = [(n, d) for n, ok, d in results if not ok]
+    if failed:
+        return Check("T16 arm3-module", False, f"{len(failed)} failed: {failed[:2]}")
+    return Check(
+        "T16 arm3-module",
+        True,
+        f"{len(results)} checks: GBNF + prompt + backend SKIPs without a local model (G2)",
+    )
+
+
+def check_arm5_module() -> Check:
+    """T17: arm-5 (embedded-DSL baseline) module — offline, via arm5_selftest.
+
+    Wraps the leaf's own offline checks (DSL renders valid .myc; the restricted
+    sandbox blocks import/dunder/open/eval/exec and returns None on malformed or
+    hostile input — never a fabricated PASS, G2)."""
+    results = arm5_selftest()
+    failed = [(n, d) for n, ok, d in results if not ok]
+    if failed:
+        return Check("T17 arm5-module", False, f"{len(failed)} failed: {failed[:2]}")
+    return Check(
+        "T17 arm5-module",
+        True,
+        f"{len(results)} checks: DSL render + sandboxed eval (blocks import/dunder/exec → None, G2)",
+    )
+
+
 def check_live_status_guard() -> Check:
     """A non-2xx returned as a TUPLE (not raised) must yield ok=False (never-silent).
 
@@ -948,6 +984,8 @@ ALL_CHECKS = [
     check_coauthor_loop,
     check_ablation,
     check_canonical_bridge,
+    check_arm3_module,
+    check_arm5_module,
     check_live_status_guard,
     check_paced_retry_acquires_once,
     check_report_emission,
