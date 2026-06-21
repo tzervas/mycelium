@@ -1,0 +1,22 @@
+[package]
+name = "mycelium-adk"
+version = "0.0.0"
+description = "adk — Rust-first Agent Development Kit phylum (honest LLM/tool tags) per RFC-0023 (M-671)."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+mycelium-core = { path = "../mycelium-core" }
+mycelium-std-core = { path = "../mycelium-std-core" }
+# session/state serialization uses std.io's canonical codec; error propagation uses std.error.
+mycelium-std-io = { path = "../mycelium-std-io" }
+mycelium-std-error = { path = "../mycelium-std-error" }
+
+[dev-dependencies]
+proptest = "1"
