@@ -345,6 +345,51 @@ constraint on every optimization). NON-BLOCKING for 1.0.0.
 
 ---
 
+## RP-9 — Agent Development Kit Phylum: discharge RFC-0023 gates
+
+**Status:** Open (2026-06-21). **Gates RFC-0023 past Draft** (tracked as M-671 — blocked until this pass is resolved).
+
+**Direction.** This is the **follow-up deep-research pass** that RFC-0023 requires before ratification. The Phase-1 design pass produced the RFC and `research/13-adk-phylum-RECORD.md` (the fractured-methodology pass: four Opus sub-reasoners over one cross-context packet; findings are Empirical/Declared, never Proven). This RP-9 pass must discharge the open items in RFC-0023's Honest-Uncertainty Register. All findings remain **Empirical/Declared** — never `Proven` (VR-5).
+
+**Question(s).** Four verification obligations gating RFC-0023 ratification:
+
+1. **ADK→Mycelium concept-map correctness** — verify that RFC-0023 §3's mapping of ADK's abstractions (Agent, Tool, Session/State/Memory, Runner, multi-agent composition, model layer) to Mycelium constructs (`colony`/`hypha`, typed `fn -> Result`, content-addressed value state, `graft` capability handles, `GrokLlmReport`) is sound: no ADK concept is silently dropped; every mapping is grounded in the source ADK APIs and the corresponding Mycelium corpus file:line. The `Declared` tag on the concept-map is appropriately conservative — upgrade to `Empirical` only if an implementation demonstrates the mapping in running code.
+
+2. **Honesty-as-differentiator claim** — the RFC-0023 §6 claim that Mycelium's honesty contract (every LLM/tool output tagged Declared/Empirical, never Proven; every tool call a never-silent `Result`) constitutes a genuine differentiator over raw ADK is **Declared** today. This pass must produce a grounded, falsifiable argument: what ADK agent workflow would currently misrepresent a Declared output as Proven, and how does the Mycelium surface prevent it? The claim stays `Declared` (asserted, flagged) unless a concrete running example confirms the never-silent contract holds end-to-end.
+
+3. **Tool-dispatch never-silent contract** — the `adk.tool` nodule's typed `fn -> Result<Out, ToolError>` dispatch model claims never-silent fallibility (every tool call that fails returns an explicit `ToolError`, never a silent default or panic). Verify that the Rust-first `mycelium-adk` implementation honors this for the documented tool-dispatch surface (at minimum: argument-type mismatch → `ToolError::TypeMismatch`, execution failure → `ToolError::Exec`, timeout → `ToolError::Budget`). The verification is `Empirical` (passes the test corpus); it is not `Proven`.
+
+4. **Session/runner model and LLM-harness reuse** — confirm that the `adk.session` (content-addressed value state, ADR-003) and `adk.runner` (the orchestration surface) designs correctly reuse the existing LLM harness (`GrokLlmReport` / `tools/llm-harness/`) without introducing a second model-call path. Any second path would violate DRY (KC-3) and create an unaudited surface. Also confirm the `adk.model` nodule's model-transport dependency on the `web` phylum's HTTP/JSON surface (M-670) is correctly scoped as a dependency, not a duplicate.
+
+**Confirmation thresholds.** Each sub-question is confirmed when: (1) every ADK concept maps to a named Mycelium construct with a corpus citation; (2) at least one concrete example shows a Declared-tagged output that would be un-tagged in raw ADK; (3) the tool-dispatch test suite covers the documented `ToolError` variants with zero silent failures; (4) the `mycelium-adk` crate imports `GrokLlmReport` from the existing harness with no competing model-call path.
+
+**Falsification thresholds.** (1) A dropped ADK concept with no Mycelium equivalent falsifies the completeness of the concept-map; (2) an ADK workflow where the honesty-as-differentiator claim adds no observable change to the output tagging falsifies the differentiator case; (3) a tool-dispatch path that returns a default/silent result on failure falsifies the never-silent contract; (4) a second model-call path in `mycelium-adk` falsifies the LLM-harness reuse claim.
+
+**Feeds:** RFC-0023 (the ADK phylum design + Honest-Uncertainty Register); `research/13-adk-phylum-RECORD.md` (the Phase-1 evidence base); M-671 (the build task blocked on this pass); RFC-0016 §4.1 C1–C6 (per-op contract); RFC-0008 RT1–RT7 (colony/hypha model); ADR-003 (content-addressed session state); G2 (never-silent); VR-5 (honest tags); KC-3 (no duplicate trusted-code surfaces).
+## RP-10 — Web-Tooling Phylum: discharge RFC-0022 gates
+
+**Status:** Open (2026-06-21). **Gates RFC-0022 past Draft** (tracked as M-670 — blocked until this pass is resolved).
+
+**Direction.** This is the **follow-up deep-research pass** that RFC-0022 §10 (the Honest-Uncertainty Register) demands before ratification. The Phase-1 design pass produced the RFC and `research/12-web-phylum-RECORD.md` (T12.1.x–T12.4.x); this RP-10 pass must close the open items in the §10 register and that record's §6. All findings are **Empirical/Declared** (measured or asserted, grounded in evidence) — never `Proven` (no machine-checked theorem underpins any of these; VR-5).
+
+**Question(s).** Four concrete verification obligations from RFC-0022 §10 / `research/12-web-phylum-RECORD.md` §6:
+
+1. **HTTP/1.1 parsing edge cases + the never-silent located-error contract** — verify the `web.http` never-silent parser (every malformed input produces a located `ParseError` naming the field and byte offset, never a sentinel or partial result) against a real HTTP conformance corpus. The `Empirical` tag on the parser contract needs measured coverage across edge cases (folded headers, obsolete line folding, chunked encoding edge cases, request-target forms per RFC 7230). The tag must not be upgraded to `Proven` without a mechanized conformance proof.
+
+2. **JSON↔Value surface delegating to `std.io`'s one canonical codec (no new codec)** — confirm that `web.json` introduces zero new trusted serialization code: the `to_json` / `from_json` surface is a thin ergonomic layer (convenience types + routing glue) exclusively delegating to `std.io`'s one canonical JSON projection over `Value` (RFC-0001 §4.8, M-514). Any second codec path would violate DRY (KC-3) and re-introduce trusted-code surface `std.io` deliberately avoids.
+
+3. **Server-as-`colony`-of-`hyphae` determinism claim (Empirical-via-RT2 differential, NOT Proven)** — the RFC-0022 §4.5 claim that the `web.server` surface (a `colony` of one request-handling `hypha` per connection) satisfies the RFC-0008 RT2 determinism invariant must be verified via a differential test (matching interpreter-path vs AOT-path over a fixed request corpus), not declared. The determinism argument is **Empirical** (passes the RT2 differential on the test corpus); it is not `Proven` (no machine-checked concurrency proof exists — VR-5).
+
+4. **Route-table inspectability / EXPLAIN** — confirm that `web.route`'s route-dispatch is EXPLAIN-able: every dispatch decision can be materialized as an inspectable `RouteMatch` record (the selected handler + the matched pattern + the priority ordering that resolved ambiguity), satisfying RFC-0016 §4.1 C3 (no black-box routing). Verify that ambiguous routes (two patterns matching the same path) produce an explicit `CheckError` at route-table construction time, never at dispatch time.
+
+**Confirmation thresholds.** Each sub-question is confirmed when: (1) a measured edge-case corpus (≥100 HTTP/1.1 test vectors) passes the located-error contract with zero silent accepts; (2) the `web.json` crate has zero serialization code outside its delegation to `std.io`; (3) the RT2 differential test suite covers the server surface with ≥3 seeds and zero divergences; (4) the route-table EXPLAIN path materializes a `RouteMatch` for every dispatch in the test corpus, and the ambiguity-at-construction-time check fires on a hand-crafted ambiguous table.
+
+**Falsification thresholds.** (1) A conformance-corpus HTTP vector accepted silently (no error returned) falsifies the never-silent contract; (2) any serialization path in `mycelium-web` that does not delegate to `std.io` falsifies the DRY claim; (3) a server test case where the `colony`/`hypha` path produces a different observable output from the sequential-interpreter path falsifies the `Empirical` determinism claim and requires a design change; (4) a route dispatch that selects a handler without materializing an EXPLAIN record falsifies the inspectability claim.
+
+**Feeds:** RFC-0022 §10 (Honest-Uncertainty Register); `research/12-web-phylum-RECORD.md` §6; M-670 (the build task blocked on this pass); RFC-0016 §4.1 C1–C6 (the per-op contract); RFC-0008 RT2 (determinism differential); ADR-003 (content-addressed identity); G2 (never-silent); VR-5 (honest tags).
+
+---
+
 ## Resolved Prompts
 
 - **RP-6 — R7-Q3 Surface Grammar for Mutual Recursion.** **Resolved 2026-06-19.** Verdict: **candidate
