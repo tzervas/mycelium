@@ -19,3 +19,6 @@ serde.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+# Property-based testing (proptest migration from hand-rolled LCG; M-654 Gate A3).
+# Version matches the workspace lockfile entry pulled in by mycelium-std-io (1.11.0).
+proptest = "1"

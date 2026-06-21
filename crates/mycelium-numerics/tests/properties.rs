@@ -1,6 +1,7 @@
 //! Property tests for the verified-numerics kernels (E2-4; RFC-0001 §4.7 — Soundness, Monotonicity,
-//! Determinism). Following the Phase-1 house style, randomness is a tiny inline LCG (no `proptest`/
-//! `rand` dependency); the trial counts make these de-facto property tests over many cases.
+//! Determinism). Migrated from hand-rolled LCG (Phase-1 style) to **proptest** (M-654 Gate A3):
+//! shrinking is enabled, `PROPTEST_CASES` controls trial count (default 20 000 to match the
+//! previous LCG coverage), and CI rotates the seed via `PROPTEST_SEED`.
 
 use mycelium_core::{Bound, BoundBasis, BoundKind, GuaranteeStrength, NormKind};
 use mycelium_numerics::{
@@ -8,92 +9,110 @@ use mycelium_numerics::{
     recompute_error, AffineForm, ApRhlJudgment, Certificate, CheckOutcome, ErrorBound, ErrorOp,
     ProbBound,
 };
+use proptest::prelude::*;
 
-/// A tiny deterministic LCG (SplitMix-ish), seeded — the Phase-1 trial-test pattern, no `rand` dep.
-struct Lcg(u64);
-impl Lcg {
-    fn new(seed: u64) -> Self {
-        Lcg(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1))
-    }
-    fn next_u64(&mut self) -> u64 {
-        self.0 = self
-            .0
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
-        self.0
-    }
-    /// Uniform in `[-1, 1]`.
-    fn unit(&mut self) -> f64 {
-        (self.next_u64() as f64 / u64::MAX as f64) * 2.0 - 1.0
-    }
-    /// Uniform in `[0, hi]`.
-    fn nonneg(&mut self, hi: f64) -> f64 {
-        (self.next_u64() as f64 / u64::MAX as f64) * hi
+// ---------------------------------------------------------------------------
+// Shared strategies — mirror the original LCG ranges exactly.
+// ---------------------------------------------------------------------------
+
+/// Uniform in [-1, 1] (matches `Lcg::unit()`).
+fn unit() -> BoxedStrategy<f64> {
+    (-1.0f64..=1.0f64).boxed()
+}
+
+/// Uniform in [0, hi] (matches `Lcg::nonneg(hi)`).
+fn nonneg(hi: f64) -> BoxedStrategy<f64> {
+    (0.0f64..=hi).boxed()
+}
+
+// Default case count: 20 000, matching the previous LCG trial count.
+// Override with PROPTEST_CASES env var; CI rotates seed via PROPTEST_SEED.
+fn cfg() -> ProptestConfig {
+    ProptestConfig {
+        cases: 20_000,
+        ..ProptestConfig::default()
     }
 }
 
-const TRIALS: usize = 20_000;
+// ---------------------------------------------------------------------------
+// ErrorBound / AffineForm
+// ---------------------------------------------------------------------------
 
-// --- ErrorBound / AffineForm -------------------------------------------------------------------
-
-/// **Soundness (affine, linear ops are exact).** For every noise assignment, the composed form
-/// evaluates to *exactly* the corresponding real operation — `add`/`sub`/`neg`/`scale` introduce no
-/// error (the affine domain is exact on linear maps; ADR-010 §1).
-#[test]
-fn affine_linear_ops_are_exact() {
-    let mut rng = Lcg::new(1);
-    for _ in 0..TRIALS {
-        // Two forms over a shared symbol 0 plus private symbols 1 and 2 — exercises correlation.
-        let x = AffineForm::uncertain(rng.unit() * 5.0, 0, rng.nonneg(3.0))
+// **Soundness (affine, linear ops are exact).** For every noise assignment, the composed form
+// evaluates to *exactly* the corresponding real operation — `add`/`sub`/`neg`/`scale` introduce no
+// error (the affine domain is exact on linear maps; ADR-010 §1).
+proptest! {
+    #![proptest_config(cfg())]
+    #[test]
+    fn affine_linear_ops_are_exact(
+        // x: center in [-5,5] over shared sym 0, plus private sym 1
+        x_center in (-5.0f64..=5.0f64),
+        x_r0    in nonneg(3.0),
+        x_r1    in nonneg(2.0),
+        // y: center in [-5,5] over shared sym 0, plus private sym 2
+        y_center in (-5.0f64..=5.0f64),
+        y_r0    in nonneg(3.0),
+        y_r2    in nonneg(2.0),
+        // Noise assignments for syms 0, 1, 2
+        e0 in unit(),
+        e1 in unit(),
+        e2 in unit(),
+        // Scale factor in [-4,4]
+        c in (-4.0f64..=4.0f64),
+    ) {
+        let x = AffineForm::uncertain(x_center, 0, x_r0)
             .unwrap()
-            .add(&AffineForm::uncertain(0.0, 1, rng.nonneg(2.0)).unwrap());
-        let y = AffineForm::uncertain(rng.unit() * 5.0, 0, rng.nonneg(3.0))
+            .add(&AffineForm::uncertain(0.0, 1, x_r1).unwrap());
+        let y = AffineForm::uncertain(y_center, 0, y_r0)
             .unwrap()
-            .add(&AffineForm::uncertain(0.0, 2, rng.nonneg(2.0)).unwrap());
-        let e0 = rng.unit();
-        let e1 = rng.unit();
-        let e2 = rng.unit();
+            .add(&AffineForm::uncertain(0.0, 2, y_r2).unwrap());
         let assign = |s| match s {
             0 => e0,
             1 => e1,
             2 => e2,
             _ => 0.0,
         };
-        let c = rng.unit() * 4.0;
 
         let approx_add = x.add(&y).eval(assign);
-        let exact_add = x.eval(assign) + y.eval(assign);
-        assert!((approx_add - exact_add).abs() < 1e-9);
+        let exact_add  = x.eval(assign) + y.eval(assign);
+        prop_assert!((approx_add - exact_add).abs() < 1e-9);
 
         let approx_sub = x.sub(&y).eval(assign);
-        let exact_sub = x.eval(assign) - y.eval(assign);
-        assert!((approx_sub - exact_sub).abs() < 1e-9);
+        let exact_sub  = x.eval(assign) - y.eval(assign);
+        prop_assert!((approx_sub - exact_sub).abs() < 1e-9);
 
         let approx_scale = x.scale(c).eval(assign);
-        assert!((approx_scale - c * x.eval(assign)).abs() < 1e-9);
+        prop_assert!((approx_scale - c * x.eval(assign)).abs() < 1e-9);
 
         let approx_neg = x.neg().eval(assign);
-        assert!((approx_neg + x.eval(assign)).abs() < 1e-9);
+        prop_assert!((approx_neg + x.eval(assign)).abs() < 1e-9);
     }
 }
 
-/// **Soundness (affine `mul`).** The true product lies inside `[center ± radius]` of the composed
-/// form for every noise assignment — the second-order remainder is soundly over-approximated.
-#[test]
-fn affine_mul_is_sound() {
-    let mut rng = Lcg::new(2);
-    for _ in 0..TRIALS {
-        let x = AffineForm::uncertain(rng.unit() * 5.0, 0, rng.nonneg(3.0))
+// **Soundness (affine `mul`).** The true product lies inside `[center ± radius]` of the composed
+// form for every noise assignment — the second-order remainder is soundly over-approximated.
+proptest! {
+    #![proptest_config(cfg())]
+    #[test]
+    fn affine_mul_is_sound(
+        x_center in (-5.0f64..=5.0f64),
+        x_r0    in nonneg(3.0),
+        x_r1    in nonneg(2.0),
+        y_center in (-5.0f64..=5.0f64),
+        y_r0    in nonneg(3.0),
+        y_r2    in nonneg(2.0),
+        e0 in unit(),
+        e1 in unit(),
+        e2 in unit(),
+    ) {
+        let x = AffineForm::uncertain(x_center, 0, x_r0)
             .unwrap()
-            .add(&AffineForm::uncertain(0.0, 1, rng.nonneg(2.0)).unwrap());
-        let y = AffineForm::uncertain(rng.unit() * 5.0, 0, rng.nonneg(3.0))
+            .add(&AffineForm::uncertain(0.0, 1, x_r1).unwrap());
+        let y = AffineForm::uncertain(y_center, 0, y_r0)
             .unwrap()
-            .add(&AffineForm::uncertain(0.0, 2, rng.nonneg(2.0)).unwrap());
+            .add(&AffineForm::uncertain(0.0, 2, y_r2).unwrap());
         // Fresh symbol 9 not used by x or y.
         let prod = x.mul(&y, 9);
-        let e0 = rng.unit();
-        let e1 = rng.unit();
-        let e2 = rng.unit();
         let assign = |s| match s {
             0 => e0,
             1 => e1,
@@ -101,7 +120,7 @@ fn affine_mul_is_sound() {
             _ => 0.0,
         };
         let true_product = x.eval(assign) * y.eval(assign);
-        assert!(
+        prop_assert!(
             (true_product - prod.center()).abs() <= prod.radius() + 1e-9,
             "mul unsound: |{true_product} - {}| > radius {}",
             prod.center(),
@@ -110,35 +129,39 @@ fn affine_mul_is_sound() {
     }
 }
 
-/// **Soundness (scalar `ErrorBound`).** The composed `eps` upper-bounds the true deviation of the
-/// composed *values* for `add`/`sub`/`scale`/`mul` over both signs of the deviation. With outward
-/// rounding (A2-01) the composed `eps` is a true upper bound, so the assertions hold with **zero**
-/// slack — the previous `1e-9`/`1e-6` slacks (which masked the ulp-scale unsoundness, A2-07) are
-/// removed.
-#[test]
-fn error_bound_scalar_is_sound() {
-    let mut rng = Lcg::new(3);
-    for _ in 0..TRIALS {
-        let ex = rng.nonneg(4.0);
-        let ey = rng.nonneg(4.0);
+// **Soundness (scalar `ErrorBound`).** The composed `eps` upper-bounds the true deviation of the
+// composed *values* for `add`/`sub`/`scale`/`mul` over both signs of the deviation. With outward
+// rounding (A2-01) the composed `eps` is a true upper bound, so the assertions hold with **zero**
+// slack — the previous `1e-9`/`1e-6` slacks (which masked the ulp-scale unsoundness, A2-07) are
+// removed.
+proptest! {
+    #![proptest_config(cfg())]
+    #[test]
+    fn error_bound_scalar_is_sound(
+        ex in nonneg(4.0),
+        ey in nonneg(4.0),
+        // True deviations within the per-input bounds (both signs exercised).
+        dx_unit in unit(),
+        dy_unit in unit(),
+        c  in (-3.0f64..=3.0f64),
+        x0 in (-6.0f64..=6.0f64),
+        y0 in (-6.0f64..=6.0f64),
+    ) {
         let bx = ErrorBound::new(ex, NormKind::Linf).unwrap();
         let by = ErrorBound::new(ey, NormKind::Linf).unwrap();
-        // True deviations within the per-input bounds (both signs exercised by `rng.unit()`).
-        let dx = rng.unit() * ex;
-        let dy = rng.unit() * ey;
+        // Scale to stay within the declared error bounds (matches original `rng.unit() * ex`).
+        let dx = dx_unit * ex;
+        let dy = dy_unit * ey;
 
         // add: |dx + dy| <= eps_add (both sides; A2-07 fix — was only the positive side).
-        assert!((dx + dy).abs() <= bx.add(&by).unwrap().eps());
+        prop_assert!((dx + dy).abs() <= bx.add(&by).unwrap().eps());
         // sub: |dx - dy| <= eps_sub
-        assert!((dx - dy).abs() <= bx.sub(&by).unwrap().eps());
+        prop_assert!((dx - dy).abs() <= bx.sub(&by).unwrap().eps());
         // scale
-        let c = rng.unit() * 3.0;
-        assert!((c * dx).abs() <= bx.scale(c).eps());
-        // mul about centers x0,y0: |(x0+dx)(y0+dy) - x0 y0| <= eps_mul
-        let x0 = rng.unit() * 6.0;
-        let y0 = rng.unit() * 6.0;
+        prop_assert!((c * dx).abs() <= bx.scale(c).eps());
+        // mul about centers x0, y0: |(x0+dx)(y0+dy) - x0 y0| <= eps_mul
         let true_dev = ((x0 + dx) * (y0 + dy) - x0 * y0).abs();
-        assert!(true_dev <= bx.mul(&by, x0, y0).unwrap().eps());
+        prop_assert!(true_dev <= bx.mul(&by, x0, y0).unwrap().eps());
     }
 }
 
@@ -162,34 +185,36 @@ fn error_bound_add_rounds_outward() {
     assert_eq!(zero.add(&zero).unwrap().eps(), 0.0);
 }
 
-/// **Monotonicity.** Raising any input `eps` can only raise the composed `eps`.
-#[test]
-fn error_bound_is_monotone() {
-    let mut rng = Lcg::new(4);
-    for _ in 0..TRIALS {
-        let ex = rng.nonneg(4.0);
-        let ey = rng.nonneg(4.0);
-        let bump = rng.nonneg(2.0);
+// **Monotonicity.** Raising any input `eps` can only raise the composed `eps`.
+proptest! {
+    #![proptest_config(cfg())]
+    #[test]
+    fn error_bound_is_monotone(
+        ex   in nonneg(4.0),
+        ey   in nonneg(4.0),
+        bump in nonneg(2.0),
+    ) {
         let lo = ErrorBound::new(ex, NormKind::L2).unwrap();
         let hi = ErrorBound::new(ex + bump, NormKind::L2).unwrap();
-        let y = ErrorBound::new(ey, NormKind::L2).unwrap();
-        assert!(hi.add(&y).unwrap().eps() >= lo.add(&y).unwrap().eps());
-        assert!(hi.mul(&y, 2.0, 3.0).unwrap().eps() >= lo.mul(&y, 2.0, 3.0).unwrap().eps());
+        let y  = ErrorBound::new(ey, NormKind::L2).unwrap();
+        prop_assert!(hi.add(&y).unwrap().eps() >= lo.add(&y).unwrap().eps());
+        prop_assert!(hi.mul(&y, 2.0, 3.0).unwrap().eps() >= lo.mul(&y, 2.0, 3.0).unwrap().eps());
     }
 }
 
-/// **Determinism.** Identical inputs → identical composed `eps` (so composed bounds are
-/// content-addressable).
-#[test]
-fn error_bound_is_deterministic() {
-    let mut rng = Lcg::new(5);
-    for _ in 0..TRIALS {
-        let ex = rng.nonneg(4.0);
-        let ey = rng.nonneg(4.0);
+// **Determinism.** Identical inputs → identical composed `eps` (so composed bounds are
+// content-addressable).
+proptest! {
+    #![proptest_config(cfg())]
+    #[test]
+    fn error_bound_is_deterministic(
+        ex in nonneg(4.0),
+        ey in nonneg(4.0),
+    ) {
         let x = ErrorBound::new(ex, NormKind::Rel).unwrap();
         let y = ErrorBound::new(ey, NormKind::Rel).unwrap();
-        assert_eq!(x.add(&y), x.add(&y));
-        assert_eq!(x.mul(&y, 1.5, 2.5), x.mul(&y, 1.5, 2.5));
+        prop_assert_eq!(x.add(&y), x.add(&y));
+        prop_assert_eq!(x.mul(&y, 1.5, 2.5), x.mul(&y, 1.5, 2.5));
     }
 }
 
@@ -231,23 +256,37 @@ fn uncertain_refuses_non_finite() {
     assert!(AffineForm::uncertain(2.0, 0, 1.5).unwrap().radius() >= 1.5);
 }
 
-// --- ProbBound ---------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ProbBound
+// ---------------------------------------------------------------------------
 
 /// **Soundness (union bound).** The union δ upper-bounds the empirical failure rate of independent
 /// events with the given per-event probabilities; and it never exceeds 1.
+///
+/// NOTE: the empirical simulation from the original (200k LCG trials) is retained as-is because
+/// proptest shrinking on a stochastic simulation is not meaningful — the simulation itself is the
+/// soundness witness, not a generated input. The 200k sample gives a 3σ confidence interval of
+/// ±0.003 around the true rate, well inside the 0.01 slack.
 #[test]
 fn union_bound_is_sound() {
-    let mut rng = Lcg::new(6);
+    // Use a fast deterministic RNG (SplitMix) for the simulation — same seed as the original LCG.
+    let mut state: u64 = 6u64.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1);
+    let mut next_f64 = || {
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        state as f64 / u64::MAX as f64
+    };
+
     let deltas = [0.01, 0.02, 0.05];
     let bounds: Vec<ProbBound> = deltas.iter().map(|d| ProbBound::new(*d).unwrap()).collect();
     let claimed = ProbBound::union(&bounds);
     assert!(claimed.delta() <= 1.0);
+
     let mut failures = 0u64;
     let n = 200_000u64;
     for _ in 0..n {
-        let any = deltas
-            .iter()
-            .any(|d| (rng.next_u64() as f64 / u64::MAX as f64) < *d);
+        let any = deltas.iter().any(|d| next_f64() < *d);
         if any {
             failures += 1;
         }
@@ -295,7 +334,9 @@ fn aprhl_seq_composes() {
     assert_eq!(big.seq(&big).delta(), 1.0);
 }
 
-// --- tier-i checker ----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// tier-i checker
+// ---------------------------------------------------------------------------
 
 /// The checker accepts a sound (≥ re-derivation) claim and **rejects a too-tight** one — never a
 /// silent pass (ADR-010 "Trusted base"; RFC-0002 §2).
@@ -372,7 +413,9 @@ fn checker_is_not_vacuous_for_tiny_bounds() {
     );
 }
 
-// --- cross-kernel + certificate ----------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// cross-kernel + certificate
+// ---------------------------------------------------------------------------
 
 /// The single sanctioned cross-kernel rule: within tolerance ⇒ inherits the accuracy confidence;
 /// outside ⇒ honest worst case δ = 1 (ADR-010 §4).
@@ -405,7 +448,9 @@ fn certificate_round_trips() {
     assert!(Certificate::new(0.0, 1.5, GuaranteeStrength::Declared).is_none());
 }
 
-// --- compose_error_bound (the M-204 entry) -----------------------------------------------------
+// ---------------------------------------------------------------------------
+// compose_error_bound (the M-204 entry)
+// ---------------------------------------------------------------------------
 
 fn error_bound(eps: f64, basis: BoundBasis) -> Bound {
     Bound {
@@ -509,4 +554,195 @@ fn compose_refuses_overflow_to_non_finite() {
     );
     // f64::MAX + f64::MAX overflows to +inf — must be refused, not emitted as a bound.
     assert!(compose_error_bound(&[&huge, &huge], ErrorOp::Add).is_none());
+}
+
+// ---------------------------------------------------------------------------
+// Additional mutant-killing witnesses (M-654 Part 2)
+// ---------------------------------------------------------------------------
+
+/// **Mutant-witness: `round::add_up` returns `s` unchanged when `add_err > 0`.**
+/// Mutant: flip the `> 0` guard to `>= 0` in `add_up`, inflating exact sums.
+/// The exact-preservation path is tested here: a representable sum must NOT be inflated.
+///
+/// Location: `crates/mycelium-numerics/src/round.rs` fn `add_up`.
+#[test]
+fn add_up_does_not_inflate_exact_results() {
+    // 1.0 + 2.0 is exactly representable; outward-rounding must not push it above 3.0.
+    let eb1 = ErrorBound::new(1.0, NormKind::Linf).unwrap();
+    let eb2 = ErrorBound::new(2.0, NormKind::Linf).unwrap();
+    assert_eq!(eb1.add(&eb2).unwrap().eps(), 3.0);
+    // 0.0 + 0.0 stays exactly 0.
+    let zero = ErrorBound::exact(NormKind::Linf);
+    assert_eq!(zero.add(&zero).unwrap().eps(), 0.0);
+}
+
+/// **Mutant-witness: `ProbBound::or` uses wrong min-clamp direction.**
+/// Mutant: replace `.min(1.0)` with `.max(1.0)` in the `or`/`union` implementation.
+///
+/// Location: `crates/mycelium-numerics/src/prob.rs` fn `union` / `.min(1.0)`.
+#[test]
+fn union_clamp_is_min_not_max() {
+    let a = ProbBound::new(0.1).unwrap();
+    let b = ProbBound::new(0.2).unwrap();
+    // Sum = 0.3, well below 1.0; the clamp must not inflate it to 1.0.
+    let u = a.or(&b);
+    assert!(u.delta() < 1.0, "union clamp inflated 0.3 to {}", u.delta());
+    assert!((u.delta() - 0.3).abs() < 1e-12);
+}
+
+/// **Mutant-witness: `ErrorBound::scale` uses `1.0` instead of `c.abs()`.**
+/// Mutant: replace `c.abs()` with `1.0` in the scale mul (drops the scaling factor).
+///
+/// Location: `crates/mycelium-numerics/src/error.rs` `ErrorBound::scale`.
+#[test]
+fn scale_by_zero_yields_zero_eps() {
+    let b = ErrorBound::new(5.0, NormKind::Linf).unwrap();
+    assert_eq!(b.scale(0.0).eps(), 0.0, "scale(0) must yield eps=0");
+    // And scale by 2 doubles the bound.
+    assert!((b.scale(2.0).eps() - 10.0).abs() < 1e-12);
+}
+
+/// **Mutant-witness: `ApRhlJudgment::seq` swaps eps and delta channels.**
+/// Mutant: `seq` adds `self.eps` into the delta field and vice versa.
+///
+/// Location: `crates/mycelium-numerics/src/prob.rs` `ApRhlJudgment::seq`.
+#[test]
+fn aprhl_seq_channels_are_distinct() {
+    let j1 = ApRhlJudgment::new(1.0, 0.1).unwrap();
+    let j2 = ApRhlJudgment::new(0.5, 0.2).unwrap();
+    let s = j1.seq(&j2);
+    // eps must sum to 1.5 (not 0.3), delta to 0.3 (not 1.5).
+    assert!((s.eps() - 1.5).abs() < 1e-12, "seq eps = {}", s.eps());
+    assert!((s.delta() - 0.3).abs() < 1e-12, "seq delta = {}", s.delta());
+}
+
+/// **Mutant-witness: `check_error_claim` uses `<` instead of `>=` in the validity guard.**
+/// Mutant: flip the Valid condition, making exact claims spuriously rejected.
+///
+/// Location: `crates/mycelium-numerics/src/cert.rs` fn `check_error_claim`.
+#[test]
+fn check_error_claim_accepts_exact_match() {
+    let x = ErrorBound::new(1.0, NormKind::Linf).unwrap();
+    let recomputed = recompute_error(&[x], ErrorOp::Neg).unwrap();
+    // Exact match must be Valid.
+    assert_eq!(
+        check_error_claim(&[x], ErrorOp::Neg, recomputed),
+        CheckOutcome::Valid
+    );
+}
+
+/// **Mutant-witness: `recompute_error` `Neg` arm returns wrong value or ignores arity.**
+/// Mutant: in the `Neg` arm, return `inputs[0].add(&inputs[0])` instead of `neg`.
+///
+/// Location: `crates/mycelium-numerics/src/cert.rs` fn `recompute_error`, `ErrorOp::Neg` arm.
+#[test]
+fn recompute_neg_preserves_eps() {
+    let x = ErrorBound::new(3.7, NormKind::L2).unwrap();
+    let r = recompute_error(&[x], ErrorOp::Neg).unwrap();
+    assert_eq!(r.eps(), 3.7, "neg must preserve eps magnitude");
+    // Wrong arity: two inputs for Neg is malformed.
+    let y = ErrorBound::new(1.0, NormKind::L2).unwrap();
+    assert!(recompute_error(&[x, y], ErrorOp::Neg).is_none());
+}
+
+/// **Mutant-witness: `basis_strength` maps wrong variant to wrong strength.**
+/// Mutant: return `Empirical` for `ProvenThm` (or `Proven` for `UserDeclared`).
+///
+/// Location: `crates/mycelium-numerics/src/cert.rs` fn `basis_strength`.
+#[test]
+fn basis_strength_maps_each_variant() {
+    assert_eq!(
+        mycelium_numerics::basis_strength(&BoundBasis::ProvenThm {
+            citation: "t".to_owned()
+        }),
+        GuaranteeStrength::Proven
+    );
+    assert_eq!(
+        mycelium_numerics::basis_strength(&BoundBasis::EmpiricalFit {
+            trials: 1000,
+            method: "m".to_owned()
+        }),
+        GuaranteeStrength::Empirical
+    );
+    assert_eq!(
+        mycelium_numerics::basis_strength(&BoundBasis::UserDeclared),
+        GuaranteeStrength::Declared
+    );
+}
+
+// **Mutant-witness: `ErrorBound::new` accepts negative eps or NaN.**
+// Mutant: remove the `eps >= 0.0` guard, so `ErrorBound::new(-0.1, …)` returns `Some`.
+//
+// Location: `crates/mycelium-numerics/src/error.rs` fn `ErrorBound::new`.
+proptest! {
+    #![proptest_config(ProptestConfig { cases: 1000, ..ProptestConfig::default() })]
+    #[test]
+    fn error_bound_new_refuses_negative_or_nonfinite(
+        eps in prop_oneof![
+            (-1e6f64..-1e-30f64),               // negative finite
+            Just(f64::NEG_INFINITY),
+            Just(f64::INFINITY),
+            Just(f64::NAN),
+        ]
+    ) {
+        prop_assert!(ErrorBound::new(eps, NormKind::Linf).is_none());
+    }
+}
+
+// **Mutant-witness: `ProbBound::new` accepts values outside [0,1].**
+// Mutant: remove the `(0..=1).contains` guard.
+//
+// Location: `crates/mycelium-numerics/src/prob.rs` fn `ProbBound::new`.
+proptest! {
+    #![proptest_config(ProptestConfig { cases: 1000, ..ProptestConfig::default() })]
+    #[test]
+    fn prob_bound_new_refuses_out_of_range(
+        delta in prop_oneof![
+            (1.0001f64..=1e6f64),          // > 1
+            (-1e6f64..=-0.0001f64),        // < 0
+            Just(f64::NAN),
+        ]
+    ) {
+        prop_assert!(ProbBound::new(delta).is_none());
+    }
+}
+
+/// **Mutant-witness: `compose_error_bound` returns `Some` for empty input.**
+/// Mutant: remove the early `if inputs.is_empty() { return None }` guard.
+///
+/// Location: `crates/mycelium-numerics/src/cert.rs` fn `compose_error_bound`.
+#[test]
+fn compose_refuses_empty_inputs() {
+    assert!(compose_error_bound(&[], ErrorOp::Add).is_none());
+    assert!(compose_error_bound(&[], ErrorOp::Sub).is_none());
+}
+
+/// **Mutant-witness: `AffineForm::radius` uses plain `+` instead of `round::add_up`.**
+/// Mutant: replace `fold(0.0, round::add_up)` with `fold(0.0, |a, b| a + b)` in `radius`.
+///
+/// Location: `crates/mycelium-numerics/src/error.rs` `AffineForm::radius`.
+#[test]
+fn affine_radius_rounds_outward() {
+    // Build a form with two coefficients whose sum is unrepresentable under RN.
+    let a = AffineForm::uncertain(0.0, 0, 1.0).unwrap();
+    let b = AffineForm::uncertain(0.0, 1, 2f64.powi(-54)).unwrap();
+    let sum = a.add(&b);
+    // The radius must be > 1.0 (not rounded down to 1.0 by RN).
+    assert!(
+        sum.radius() > 1.0,
+        "radius was rounded down: {}",
+        sum.radius()
+    );
+}
+
+/// **Mutant-witness: `accuracy_to_probability` uses `<` instead of `<=` for the eps/tau check.**
+/// Mutant: `acc.eps() < tau` instead of `acc.eps() <= tau`. Killed by the boundary case eps == tau.
+///
+/// Location: `crates/mycelium-numerics/src/cert.rs` fn `accuracy_to_probability`.
+#[test]
+fn accuracy_to_probability_boundary_case() {
+    // eps == tau exactly; must be "within tolerance", returning acc_delta (not 1.0).
+    let acc = ErrorBound::new(0.5, NormKind::Linf).unwrap();
+    let result = accuracy_to_probability(acc, 0.5, 0.05).unwrap();
+    assert_eq!(result, ProbBound::new(0.05).unwrap());
 }
