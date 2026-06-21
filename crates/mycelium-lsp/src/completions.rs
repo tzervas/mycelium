@@ -15,10 +15,10 @@
 //! honesty rule (VR-5 / G2).
 //!
 //! `matured` is offered as a keyword (it is reserved — using it at item position is an explicit
-//! parse error with a teaching diagnostic, RFC-0017 §4.1) because the correct usage in a header
-//! comment (`// @matured: true`) benefits from a header-scaffold snippet, not from a keyword
-//! completion in code position. The keyword entry is provided with a detail note pointing at the
-//! header attribute form. `thaw` is offered as a keyword because `thaw fn f(…)` is active syntax.
+//! parse error with a teaching diagnostic, RFC-0017 §4.1); its correct use is the header attribute
+//! form (`// @matured: true`), not a code-position keyword. The keyword entry is still offered (it
+//! IS in `keyword()`) but carries a detail note pointing at that header attribute form. `thaw` is
+//! offered as a keyword because `thaw fn f(…)` is active syntax.
 //!
 //! LSP completion item kinds (integer codes from the LSP specification):
 //! - `1` = Text
@@ -530,6 +530,21 @@ mod tests {
     }
 
     #[test]
+    fn every_offered_keyword_is_a_real_active_lexer_keyword() {
+        // Forward drift guard: every keyword-kind completion is recognized by the lexer's
+        // authoritative `keyword()` set, so KEYWORD_COMPLETIONS cannot silently drift out of sync
+        // with mycelium_l1::token::keyword() (e.g. by offering a word that is not actually a keyword).
+        for c in KEYWORD_COMPLETIONS.iter() {
+            assert!(
+                mycelium_l1::token::keyword(c.label).is_some(),
+                "completion `{}` is offered as a keyword but mycelium_l1::token::keyword() does \
+                 not recognize it — remove it from KEYWORD_COMPLETIONS or fix the lexer",
+                c.label
+            );
+        }
+    }
+
+    #[test]
     fn all_active_type_keywords_are_offered() {
         let labels: Vec<&str> = KEYWORD_COMPLETIONS.iter().map(|c| c.label).collect();
         for kw in [
@@ -588,6 +603,14 @@ mod tests {
             assert!(
                 !labels.contains(&unlexed),
                 "ratified-not-yet-lexed word `{unlexed}` must NOT appear in completions"
+            );
+            // Enforce the stated intent against the lexer: these words are genuinely NOT in
+            // keyword() yet. If the lexer starts recognizing one, this fails — forcing the
+            // completion list + the "not yet lexed" claim to be updated together (never drift).
+            assert!(
+                mycelium_l1::token::keyword(unlexed).is_none(),
+                "`{unlexed}` is now a real keyword in mycelium_l1::token::keyword() — it is no \
+                 longer 'not yet lexed'; update the completion list + this test together"
             );
         }
     }

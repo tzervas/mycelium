@@ -90,8 +90,8 @@ pub fn publish_diagnostics_notification(uri: &str, feedback: &Feedback) -> Value
 /// and pushes diagnostics via [`publish_diagnostics_notification`] / `crate::sync::publish_for_source`.
 ///
 /// Also advertises **`completionProvider`** for the lexical/scaffolding completion provider
-/// ([`crate::completions`]). The trigger characters `["/", "@"]` prompt the nodule-header
-/// and matured-header snippets; the provider is otherwise token-prefix-triggered by the client.
+/// ([`crate::completions`]). The trigger characters `["/", "@"]` prompt completion while editing
+/// the `// nodule:` / `// @key:` header forms; the provider is otherwise token-prefix-triggered.
 /// Scope is `Declared` — lexical/scaffolding only, no semantic/type-aware resolution.
 #[must_use]
 pub fn initialize_result() -> Value {
