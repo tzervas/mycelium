@@ -251,8 +251,10 @@ pub struct GrokLlmReport {
     pub performance: GrokPerformance,
     /// Per-task outcomes — the primary per-validation rows.
     pub outcomes: Vec<GrokOutcome>,
-    /// Ablation experiment block (arms + retention result).
-    pub ablation: GrokAblation,
+    /// Ablation experiment block (arms + retention result). Optional: the harness emits `null`
+    /// when `--ablation` was not run (and may omit it on some versions) — Copilot #308.
+    #[serde(default)]
+    pub ablation: Option<GrokAblation>,
 }
 
 /// Harness metadata block in the Grok report.
@@ -265,7 +267,8 @@ pub struct GrokMetadata {
     pub version: String,
     /// Model identifier (e.g. `"grok-4.3"`).
     pub model: String,
-    /// Run mode (e.g. `"self-test"`, `"real"`, `"mock"`).
+    /// Run mode — the Grok harness emits `"live"`, `"batch"`, or `"self-test"`
+    /// (`tools/llm-harness/grok/report.py`). Corroborates `synthetic` in `is_synthetic`.
     pub mode: String,
     /// Endpoint description (e.g. `"mock (offline)"`, or a real URL).
     pub endpoint: String,
@@ -338,8 +341,10 @@ pub struct GrokPerformance {
     pub request_count: u32,
     /// Number of batch requests (0 for non-batch runs).
     pub batch_count: u32,
-    /// Mean per-request latency in seconds.
-    pub mean_latency_s: f64,
+    /// Mean per-request latency in seconds. Optional: `null` for batch runs with no per-request
+    /// latencies (Copilot #308).
+    #[serde(default)]
+    pub mean_latency_s: Option<f64>,
     /// Total latency in seconds.
     pub total_latency_s: f64,
 }
@@ -406,12 +411,11 @@ impl GrokLlmReport {
     ///
     /// The primary honesty gate: a synthetic report MUST be labeled synthetic in the unified
     /// report (VR-5 / the harness's V-03 rule). Driven by `honesty_posture.synthetic` (the
-    /// authoritative flag); corroborated by `metadata.mode`.
+    /// authoritative flag); corroborated by `metadata.mode == "self-test"` (the Grok harness
+    /// never emits `"mock"` — its modes are `"live"`/`"batch"`/`"self-test"`).
     #[must_use]
     pub fn is_synthetic(&self) -> bool {
-        self.honesty_posture.synthetic
-            || self.metadata.mode == "mock"
-            || self.metadata.mode == "self-test"
+        self.honesty_posture.synthetic || self.metadata.mode == "self-test"
     }
 
     /// A one-line provenance string for the unified report, analogous to [`LlmReport::provenance`].
@@ -779,14 +783,49 @@ mod tests {
 
     #[test]
     fn grok_deny_unknown_fields_catches_drift() {
-        // An extra key at the root level must be a loud error, not a silent drop (G2).
-        let drifted = r#"{"metadata":{},"extra_key":"drift","honesty_posture":{},"quality":{},
-                          "performance":{},"outcomes":[],"ablation":{}}"#;
-        let err = GrokLlmReport::from_json(drifted).unwrap_err();
+        // Copilot #308: start from a VALID sample and inject ONE unknown root key, so the failure
+        // is specifically the unknown field (deny_unknown_fields) — not a missing required field on
+        // an empty object. An extra root key must be a loud error, never a silent drop (G2).
+        let mut v: serde_json::Value =
+            serde_json::from_str(GROK_SAMPLE).expect("base Grok sample is valid");
+        v.as_object_mut()
+            .expect("root is an object")
+            .insert("extra_key".into(), serde_json::json!("drift"));
+        let drifted = serde_json::to_string(&v).expect("re-serialize");
+        let err = GrokLlmReport::from_json(&drifted).unwrap_err();
         assert!(
             matches!(err, LlmIngestError::Parse(_)),
-            "unknown field must be a parse error, not silent: {err}"
+            "unknown root field must be a parse error, not silent: {err}"
         );
+        // Control: the un-drifted base parses — proves the error is the extra key, not the base.
+        GrokLlmReport::from_json(GROK_SAMPLE).expect("the un-drifted base sample parses");
+    }
+
+    #[test]
+    fn grok_accepts_null_ablation_and_null_mean_latency() {
+        // Copilot #308: real harness shapes — `ablation: null` (when `--ablation` was not run) and
+        // `performance.mean_latency_s: null` (batch runs with no per-request latencies). Both must
+        // ingest cleanly into `Option` fields, not fail deserialization.
+        let mut v: serde_json::Value =
+            serde_json::from_str(GROK_SAMPLE).expect("base Grok sample is valid");
+        let root = v.as_object_mut().expect("root is an object");
+        root.insert("ablation".into(), serde_json::Value::Null);
+        root.get_mut("performance")
+            .and_then(serde_json::Value::as_object_mut)
+            .expect("performance is an object")
+            .insert("mean_latency_s".into(), serde_json::Value::Null);
+        let text = serde_json::to_string(&v).expect("re-serialize");
+        let g =
+            GrokLlmReport::from_json(&text).expect("null ablation + null mean_latency must ingest");
+        assert!(g.ablation.is_none(), "null ablation -> None");
+        assert!(
+            g.performance.mean_latency_s.is_none(),
+            "null mean_latency_s -> None"
+        );
+        // And it still dispatches + marks synthetic (the sample is a self-test).
+        let parsed =
+            parse_any_llm_json(&text, "grok-null.json".into()).expect("null-field Grok dispatches");
+        assert!(parsed.is_synthetic);
     }
 
     #[test]
