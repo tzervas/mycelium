@@ -746,3 +746,326 @@ fn accuracy_to_probability_boundary_case() {
     let result = accuracy_to_probability(acc, 0.5, 0.05).unwrap();
     assert_eq!(result, ProbBound::new(0.05).unwrap());
 }
+
+// ---------------------------------------------------------------------------
+// Additional mutant-killing witnesses — Part 2 survivors from cargo-mutants
+// ---------------------------------------------------------------------------
+
+/// **Mutant-witness: `recompute_error` deletes the `Scale` arm.**
+/// Mutant: delete the `[x] => Some(x.scale(c))` arm of `ErrorOp::Scale`. Without that arm,
+/// Scale arity-1 returns `None`. Killed by calling recompute_error with Scale and asserting Some.
+///
+/// Location: `crates/mycelium-numerics/src/cert.rs:79` `recompute_error`, `Scale([x])` arm.
+#[test]
+fn recompute_scale_works() {
+    let x = ErrorBound::new(3.0, NormKind::Linf).unwrap();
+    let r = recompute_error(&[x], ErrorOp::Scale(2.0)).unwrap();
+    // 3.0 * 2.0 = 6.0 (outward-rounded, exact here).
+    assert!(
+        (r.eps() - 6.0).abs() < 1e-12,
+        "Scale recompute eps = {}",
+        r.eps()
+    );
+    // Wrong arity: two inputs for Scale is malformed.
+    let y = ErrorBound::new(1.0, NormKind::Linf).unwrap();
+    assert!(recompute_error(&[x, y], ErrorOp::Scale(1.0)).is_none());
+}
+
+/// **Mutant-witness: `recompute_error` deletes the `Mul` arm.**
+/// Mutant: delete the `[x, y] => x.mul(y, …)` arm of `ErrorOp::Mul`. Without that arm,
+/// Mul arity-2 returns `None`. Killed by calling recompute_error with Mul and asserting Some.
+///
+/// Location: `crates/mycelium-numerics/src/cert.rs:83` `recompute_error`, `Mul([x,y])` arm.
+#[test]
+fn recompute_mul_works() {
+    let x = ErrorBound::new(1.0, NormKind::Linf).unwrap();
+    let y = ErrorBound::new(2.0, NormKind::Linf).unwrap();
+    // eps_mul = |x0|*eps_y + |y0|*eps_x + eps_x*eps_y = 3*2 + 4*1 + 1*2 = 12.
+    let r = recompute_error(
+        &[x, y],
+        ErrorOp::Mul {
+            x0_mag: 3.0,
+            y0_mag: 4.0,
+        },
+    )
+    .unwrap();
+    assert!(r.eps() >= 12.0, "Mul recompute eps = {}", r.eps());
+    // Wrong arity: single input for Mul is malformed.
+    assert!(recompute_error(
+        &[x],
+        ErrorOp::Mul {
+            x0_mag: 1.0,
+            y0_mag: 1.0
+        }
+    )
+    .is_none());
+}
+
+/// **Mutant-witness: `Certificate::eps()` returns a constant (0.0/1.0/-1.0).**
+/// Mutant: replace `self.eps` with `0.0` (or 1.0 or -1.0) in the getter. Killed by asserting
+/// that two certificates with distinct eps values actually return distinct eps().
+///
+/// Location: `crates/mycelium-numerics/src/cert.rs:186` `Certificate::eps`.
+#[test]
+fn certificate_eps_getter_returns_stored_value() {
+    let c1 = Certificate::new(0.37, 0.01, GuaranteeStrength::Proven).unwrap();
+    let c2 = Certificate::new(0.73, 0.01, GuaranteeStrength::Proven).unwrap();
+    // If eps() always returned 0.0, both would be 0.0 and equal.
+    assert!((c1.eps() - 0.37).abs() < 1e-12, "c1.eps() = {}", c1.eps());
+    assert!((c2.eps() - 0.73).abs() < 1e-12, "c2.eps() = {}", c2.eps());
+    assert!(c1.eps() != c2.eps(), "getter must return the stored value");
+}
+
+/// **Mutant-witness: `Certificate::delta()` returns a constant (0.0/1.0/-1.0).**
+/// Mutant: replace `self.delta` with `0.0` (or 1.0 or -1.0) in the getter.
+///
+/// Location: `crates/mycelium-numerics/src/cert.rs:191` `Certificate::delta`.
+#[test]
+fn certificate_delta_getter_returns_stored_value() {
+    let c1 = Certificate::new(0.0, 0.25, GuaranteeStrength::Proven).unwrap();
+    let c2 = Certificate::new(0.0, 0.75, GuaranteeStrength::Proven).unwrap();
+    assert!(
+        (c1.delta() - 0.25).abs() < 1e-12,
+        "c1.delta() = {}",
+        c1.delta()
+    );
+    assert!(
+        (c2.delta() - 0.75).abs() < 1e-12,
+        "c2.delta() = {}",
+        c2.delta()
+    );
+    assert!(
+        c1.delta() != c2.delta(),
+        "getter must return the stored value"
+    );
+}
+
+/// **Mutant-witness: `composed_basis` deletes the `ProvenThm{citation}` filter_map arm.**
+/// Mutant: the filter_map body drops the `BoundBasis::ProvenThm { citation }` arm, so the
+/// `inputs` vec is always empty and the citation never includes theorem names. Killed by
+/// checking that the composed citation actually contains the input theorem citations.
+///
+/// Location: `crates/mycelium-numerics/src/cert.rs:288` `composed_basis`, ProvenThm filter arm.
+#[test]
+fn composed_basis_includes_input_citations() {
+    let x = error_bound(
+        1.0,
+        BoundBasis::ProvenThm {
+            citation: "sentinel-thm-alpha".to_owned(),
+        },
+    );
+    let y = error_bound(
+        2.0,
+        BoundBasis::ProvenThm {
+            citation: "sentinel-thm-beta".to_owned(),
+        },
+    );
+    let composed = compose_error_bound(&[&x, &y], ErrorOp::Add).unwrap();
+    // The citation must contain both input theorem names — not just the bare affine citation.
+    match &composed.bound.basis {
+        BoundBasis::ProvenThm { citation } => {
+            assert!(
+                citation.contains("sentinel-thm-alpha"),
+                "composed citation missing alpha: {citation}"
+            );
+            assert!(
+                citation.contains("sentinel-thm-beta"),
+                "composed citation missing beta: {citation}"
+            );
+        }
+        other => panic!("expected ProvenThm, got {other:?}"),
+    }
+}
+
+/// **Mutant-witness: `error_norm` returns `None` always, or deletes the `Error{norm}` arm.**
+/// Mutant (a): replace whole function body with `None`. Mutant (b): delete the `BoundKind::Error`
+/// match arm. Killed by calling `error_norm` on an Error bound and asserting `Some(norm)`.
+///
+/// Location: `crates/mycelium-numerics/src/cert.rs:356–357` `error_norm`.
+#[test]
+fn error_norm_extracts_norm() {
+    use mycelium_numerics::error_norm;
+    let b = error_bound(
+        1.0,
+        BoundBasis::ProvenThm {
+            citation: "t".to_owned(),
+        },
+    );
+    // An Error bound must return Some with the correct norm.
+    assert_eq!(error_norm(&b), Some(NormKind::Linf));
+    // A non-Error bound must return None.
+    let cap = Bound {
+        kind: BoundKind::Capacity { items: 1, dim: 1 },
+        basis: BoundBasis::UserDeclared,
+    };
+    assert_eq!(error_norm(&cap), None);
+}
+
+/// **Mutant-witness: `AffineForm::uncertain` changes `> 0.0` to `>= 0.0` (stores zero term).**
+/// Mutant: `if radius > 0.0` → `if radius >= 0.0` means a radius=0.0 form stores a zero-coeff
+/// term. The radius() is unchanged (0 * 1.0 = 0.0), but the form has extra structure. We detect
+/// this by comparing an uncertain(c, s, 0.0) to a constant(c) via structural eval: if a zero
+/// term is stored on sym `s`, eval with that sym as 1.0 differs from eval with sym=0 ONLY if the
+/// coefficient is truly stored. With coeff=0 it doesn't matter. A better test: an extra zero-coeff
+/// term means eval(assign) would still equal center (×0 = 0). So instead we test that the EQ
+/// invariant holds: uncertain(c, s, 0) == AffineForm::constant(c).
+///
+/// NOTE: `AffineForm` does not implement `Eq` beyond `PartialEq` but it DOES implement
+/// `PartialEq`. The equality impl only cares about the terms map; a zero-coeff term that is
+/// accidentally stored means the forms differ structurally.
+///
+/// Location: `crates/mycelium-numerics/src/error.rs:78` `AffineForm::uncertain`, zero-radius guard.
+#[test]
+fn uncertain_zero_radius_equals_constant() {
+    // The exact-constant form has an empty `terms` map. Use an arbitrary non-special constant.
+    let center = 7.654_321_0_f64;
+    let exact = AffineForm::constant(center);
+    // uncertain with radius=0 must be equal to constant — no term stored for sym 0.
+    let via_uncertain = AffineForm::uncertain(center, 0, 0.0).unwrap();
+    // AffineForm: PartialEq on (center, terms). If the mutant stores a 0-coeff term, ≠.
+    assert_eq!(
+        exact, via_uncertain,
+        "uncertain(c, s, 0) must equal constant(c) — no zero-coeff term stored (center={center})"
+    );
+}
+
+/// **Mutant-witness: `AffineForm::eval` changes `+` to `-` in the accumulator.**
+/// Mutant: `self.center + self.terms.iter().map(…).sum()` → `self.center - sum`.
+/// Killed by evaluating a form with a known positive coefficient and checking sign of result.
+///
+/// Location: `crates/mycelium-numerics/src/error.rs:106` `AffineForm::eval`.
+#[test]
+fn affine_eval_sign_is_positive_accumulation() {
+    // Form: center=10.0, coefficient on sym 0 is +3.0.
+    let f = AffineForm::uncertain(10.0, 0, 3.0).unwrap();
+    // With sym 0 = +1.0: eval = 10.0 + 3.0*1.0 = 13.0 (NOT 10.0 - 3.0 = 7.0).
+    let val = f.eval(|s| if s == 0 { 1.0 } else { 0.0 });
+    assert!(
+        (val - 13.0).abs() < 1e-12,
+        "eval should be 13.0 (center + term), got {val}"
+    );
+}
+
+/// **Mutant-witness: `AffineForm::add` changes `+` to `*` in the center field.**
+/// Mutant: `center: self.center + other.center` → `center: self.center * other.center`.
+/// Killed by adding two forms with non-zero centers and checking the center is the sum, not product.
+///
+/// Location: `crates/mycelium-numerics/src/error.rs:151` `AffineForm::add`, center computation.
+#[test]
+fn affine_add_center_is_sum_not_product() {
+    // 3.0 + 5.0 = 8.0; 3.0 * 5.0 = 15.0 — clearly distinct.
+    let a = AffineForm::uncertain(3.0, 0, 0.0).unwrap(); // center 3, no terms
+    let b = AffineForm::uncertain(5.0, 1, 0.0).unwrap(); // center 5, no terms
+    let s = a.add(&b);
+    assert!(
+        (s.center() - 8.0).abs() < 1e-12,
+        "add center must be sum (8.0), got {}",
+        s.center()
+    );
+}
+
+/// **Mutant-witness: `round::add_err` changes `-` to `+` in the two-sum formula.**
+/// Mutant: `(a - (s - bv)) + (b - bv)` → `(a + (s - bv)) + (b - bv)`. This corrupts the
+/// round-off computation so `add_up` no longer detects when the IEEE sum rounded down.
+/// Killed by checking the outward-rounding case that depends on a positive `add_err`:
+/// 1.0 + 2^-54 must produce a composed eps > 1.0.
+///
+/// NOTE: This is the same case as `error_bound_add_rounds_outward`. The add_err mutant makes
+/// the guard condition `add_err(1.0, 2^-54) > 0.0` return wrong sign, so `add_up` doesn't
+/// push up. The existing test already exercises this path — the mutant should already be
+/// caught. Including a direct structural check here for round::add_err sign correctness.
+///
+/// Location: `crates/mycelium-numerics/src/round.rs:18` `add_err`, subtraction sign.
+#[test]
+fn add_err_sign_for_rounded_down_sum() {
+    // 1.0 + 1e-17: IEEE rounds DOWN (result is 1.0, the real sum is slightly above).
+    // The correct add_err for a down-rounded sum is POSITIVE.
+    // We observe add_err indirectly via add_up: if add_err were always wrong-sign,
+    // add_up would never call next_up, and the result would stay at 1.0.
+    let a = ErrorBound::new(1.0, NormKind::Linf).unwrap();
+    let b = ErrorBound::new(1e-17, NormKind::Linf).unwrap();
+    let composed = a.add(&b).unwrap().eps();
+    // The real sum 1.0 + 1e-17 rounds DOWN to 1.0; add_up must push to > 1.0.
+    assert!(
+        composed > 1.0,
+        "add_err mutant: composed eps was not rounded outward: {composed}"
+    );
+}
+
+/// **Mutant-witness: `round::mul_err` always returns 0.0 or -1.0.**
+/// Mutant (a) 0.0: `mul_up` never calls `next_up` → downward-rounded products not pushed up.
+/// Mutant (b) -1.0: `mul_up` never calls `next_up` either (mul_err=-1.0 is never > 0).
+///
+/// Killed by strict-inequality tests on a downward-rounded product:
+/// `a = 1 + 2^-52`, `a * a` rounds DOWN to `1 + 2^-51` in f64. With mul_err returning
+/// the true error of mul, mul_up pushes to `(1 + 2^-51).next_up()`. With 0.0 or -1.0, it stays.
+/// We observe this via `ErrorBound::scale(a)` which calls `mul_up(a, eps)` internally.
+///
+/// Location: `crates/mycelium-numerics/src/round.rs:25` `mul_err`.
+#[test]
+fn mul_up_rounds_outward_for_inexact_product() {
+    // a = 1 + 2^-52 (largest f64 with biased exponent 0).
+    // a * a (true) = 1 + 2^-51 + 2^-104, which rounds DOWN to 1 + 2^-51 in f64.
+    // mul_up(a, a) must return (1 + 2^-51).next_up(), which is strictly > a*a (the f64 product).
+    let a = 1.0_f64 + 2f64.powi(-52);
+    let f64_product = a * a; // = 1 + 2^-51 (rounded down)
+                             // Access mul_up(a, a) via ErrorBound::scale(a) on a bound with eps = a.
+    let b = ErrorBound::new(a, NormKind::Linf).unwrap();
+    let scaled = b.scale(a);
+    // With correct mul_up: scaled.eps() > f64_product (pushed up by one ULP).
+    // With 0.0/−1.0 mutant: scaled.eps() == f64_product (no push).
+    assert!(
+        scaled.eps() > f64_product,
+        "mul_up must push downward-rounded product above f64 result: \
+         scaled={} but f64_product={}",
+        scaled.eps(),
+        f64_product
+    );
+    // Confirm the exact product is NOT inflated (guards against a hypothetical always-next_up).
+    let exact_b = ErrorBound::new(2.0, NormKind::Linf).unwrap();
+    let exact_scale = exact_b.scale(3.0);
+    assert_eq!(
+        exact_scale.eps(),
+        6.0,
+        "exact product must not be inflated by mul_up: {}",
+        exact_scale.eps()
+    );
+}
+
+/// **Mutant-witness: `round::mul_up` flips guard `> 0` to `< 0`.**
+/// Mutant: `if mul_err(a, b) > 0.0 { p.next_up() }` → `if mul_err(a, b) < 0.0 { p.next_up() }`.
+/// With the flipped guard, mul_up DOES NOT call next_up when the product rounds DOWN (failing
+/// to correct). Same observable effect as the mul_err→0.0/−1.0 mutants.
+///
+/// Killed by the same strict-inequality check in `mul_up_rounds_outward_for_inexact_product`
+/// (which shares the core logic), plus an exact-product non-inflation check here.
+///
+/// Location: `crates/mycelium-numerics/src/round.rs:45` `mul_up`, guard direction.
+#[test]
+fn mul_up_guard_direction() {
+    // Exact product: mul_up(4.0, 2.5) must return exactly 10.0, not 10.0.next_up().
+    // (The flipped-guard mutant with mul_err correctly computed: for an exact product,
+    //  mul_err = 0.0, so `< 0.0` is false → no next_up → result is exactly 10.0. Same. ✓)
+    let b = ErrorBound::new(2.5, NormKind::Linf).unwrap();
+    let s = b.scale(4.0);
+    assert_eq!(
+        s.eps(),
+        10.0,
+        "exact product must not be inflated: {}",
+        s.eps()
+    );
+
+    // Downward-rounded product (same case as mul_up_rounds_outward_for_inexact_product):
+    // a = 1 + 2^-52, a*a rounds DOWN → mul_up must push strictly above the f64 product.
+    // With the flipped guard: mul_err(a,a) > 0 (it rounds down), so `< 0.0` is false → no push.
+    let a = 1.0_f64 + 2f64.powi(-52);
+    let f64_product = a * a;
+    let eb = ErrorBound::new(a, NormKind::Linf).unwrap();
+    assert!(
+        eb.scale(a).eps() > f64_product,
+        "mul_up guard-flip mutant: failed to push downward-rounded product above f64 result \
+         (got {}, expected > {})",
+        eb.scale(a).eps(),
+        f64_product
+    );
+}
