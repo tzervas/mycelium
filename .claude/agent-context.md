@@ -137,12 +137,15 @@ before completing**; the orchestrator pulls + lands. All landed work is on `main
 orphan is `origin/claude/rescue/m665-dup-orphan-a2f18c62` (a duplicate M-665 — review-then-drop).
 
 **Remaining wave — drive to done** (reserved/excluded: **M-655** tag · **M-381/M-646** LLM runs):
-1. **Land M-666** (`claude/leaf/E72-M666-real-concurrency`, pushed; integration in progress) — real
-   concurrency via the M-357 runtime validated ≡ the sequential reference (**RT2**); determinism
-   **Empirical** (not Proven); `ColonyError` divergence/failure/empty are never-silent (G2). **RFC-0008
-   stays Accepted, trusted base sequential** (§4.2/§4.7 forbid an L0 concurrency node). *Maintainer
-   note:* this is the RFC-0008-compliant realization of "real concurrency"; putting concurrency **in**
-   the trusted base would mean **superseding RFC-0008** — a separate, bigger decision, not taken.
+1. **M-666 ✅ LANDED** (`1d67da8`) — `hypha`/`colony` real-concurrency via the M-357 runtime,
+   RT2-validated, determinism **Empirical** (not Proven); `ColonyError` never-silent (G2); RFC-0008
+   **Accepted-not-Enacted** (trusted base stays sequential — in-base concurrency would **supersede
+   RFC-0008**, not taken). **The remaining items 2–6 are now stowed wave-2 kickoffs** — fire each in
+   its own fresh session via **`/kickoff <uid>`** (`.claude/kickoffs/`, indexed in `README.md`):
+   **`e7l`** → the `mycelium-l1` chain (E7-1 items 2–3, E7-2, M-649; **M-666 foundation in place**),
+   **`dfr`** → the RP-10/RP-9 research gate (item 4), **`dfb`** → the web/adk Rust-first builds
+   (item 5). Each runs on a **protected head branch** current with `main`; land via **`/wave-land`**,
+   propagate via `scripts/sync-heads.sh` (CLAUDE.md §Wave-N).
 2. **E7-1 generics chain** — serialize on the shared `mycelium-l1` files (one task at a time, never two
    leaves editing token/parse/checkty/elab in parallel): M-656 spec → M-657 impl → M-658/M-659 traits →
    M-660 effects → M-661 `wild`/FFI → M-662 phylum/cross-nodule → M-663 RFC-0018 grading → M-664
