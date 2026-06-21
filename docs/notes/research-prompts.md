@@ -345,6 +345,30 @@ constraint on every optimization). NON-BLOCKING for 1.0.0.
 
 ---
 
+## RP-10 — Web-Tooling Phylum: discharge RFC-0022 gates
+
+**Status:** Open (2026-06-21). **Gates RFC-0022 past Draft** (tracked as M-670 — blocked until this pass is resolved).
+
+**Direction.** This is the **follow-up deep-research pass** that RFC-0022 §10 (the Honest-Uncertainty Register) demands before ratification. The Phase-1 design pass produced the RFC and `research/12-web-phylum-RECORD.md` (T12.1.x–T12.4.x); this RP-10 pass must close the open items in the §10 register and that record's §6. All findings are **Empirical/Declared** (measured or asserted, grounded in evidence) — never `Proven` (no machine-checked theorem underpins any of these; VR-5).
+
+**Question(s).** Four concrete verification obligations from RFC-0022 §10 / `research/12-web-phylum-RECORD.md` §6:
+
+1. **HTTP/1.1 parsing edge cases + the never-silent located-error contract** — verify the `web.http` never-silent parser (every malformed input produces a located `ParseError` naming the field and byte offset, never a sentinel or partial result) against a real HTTP conformance corpus. The `Empirical` tag on the parser contract needs measured coverage across edge cases (folded headers, obsolete line folding, chunked encoding edge cases, request-target forms per RFC 7230). The tag must not be upgraded to `Proven` without a mechanized conformance proof.
+
+2. **JSON↔Value surface delegating to `std.io`'s one canonical codec (no new codec)** — confirm that `web.json` introduces zero new trusted serialization code: the `to_json` / `from_json` surface is a thin ergonomic layer (convenience types + routing glue) exclusively delegating to `std.io`'s one canonical JSON projection over `Value` (RFC-0001 §4.8, M-514). Any second codec path would violate DRY (KC-3) and re-introduce trusted-code surface `std.io` deliberately avoids.
+
+3. **Server-as-`colony`-of-`hyphae` determinism claim (Empirical-via-RT2 differential, NOT Proven)** — the RFC-0022 §4.5 claim that the `web.server` surface (a `colony` of one request-handling `hypha` per connection) satisfies the RFC-0008 RT2 determinism invariant must be verified via a differential test (matching interpreter-path vs AOT-path over a fixed request corpus), not declared. The determinism argument is **Empirical** (passes the RT2 differential on the test corpus); it is not `Proven` (no machine-checked concurrency proof exists — VR-5).
+
+4. **Route-table inspectability / EXPLAIN** — confirm that `web.route`'s route-dispatch is EXPLAIN-able: every dispatch decision can be materialized as an inspectable `RouteMatch` record (the selected handler + the matched pattern + the priority ordering that resolved ambiguity), satisfying RFC-0016 §4.1 C3 (no black-box routing). Verify that ambiguous routes (two patterns matching the same path) produce an explicit `CheckError` at route-table construction time, never at dispatch time.
+
+**Confirmation thresholds.** Each sub-question is confirmed when: (1) a measured edge-case corpus (≥100 HTTP/1.1 test vectors) passes the located-error contract with zero silent accepts; (2) the `web.json` crate has zero serialization code outside its delegation to `std.io`; (3) the RT2 differential test suite covers the server surface with ≥3 seeds and zero divergences; (4) the route-table EXPLAIN path materializes a `RouteMatch` for every dispatch in the test corpus, and the ambiguity-at-construction-time check fires on a hand-crafted ambiguous table.
+
+**Falsification thresholds.** (1) A conformance-corpus HTTP vector accepted silently (no error returned) falsifies the never-silent contract; (2) any serialization path in `mycelium-web` that does not delegate to `std.io` falsifies the DRY claim; (3) a server test case where the `colony`/`hypha` path produces a different observable output from the sequential-interpreter path falsifies the `Empirical` determinism claim and requires a design change; (4) a route dispatch that selects a handler without materializing an EXPLAIN record falsifies the inspectability claim.
+
+**Feeds:** RFC-0022 §10 (Honest-Uncertainty Register); `research/12-web-phylum-RECORD.md` §6; M-670 (the build task blocked on this pass); RFC-0016 §4.1 C1–C6 (the per-op contract); RFC-0008 RT2 (determinism differential); ADR-003 (content-addressed identity); G2 (never-silent); VR-5 (honest tags).
+
+---
+
 ## Resolved Prompts
 
 - **RP-6 — R7-Q3 Surface Grammar for Mutual Recursion.** **Resolved 2026-06-19.** Verdict: **candidate
