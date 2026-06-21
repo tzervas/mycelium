@@ -19,9 +19,11 @@
 #
 # Prerequisites:
 #   xAI/Grok path:   XAI_API_KEY (or GROK_API_KEY) — skipped gracefully if absent.
-#   local arm-3:     NVIDIA GPU + ~5 GB VRAM + ~5 GB disk (7B Q4_K_M GGUF);
-#                    setup_local_llm.py always runs (idempotent); inference is skipped
-#                    with an explicit message when no backend is available (G2).
+#   local arm-3:     RECOMMENDED an NVIDIA GPU + ~5 GB VRAM (CPU fallback works, just slower) +
+#                    ~5 GB disk for the 7B Q4_K_M GGUF (setup_local_llm.py downloads it). A
+#                    missing GPU is warn-only, never fatal. setup_local_llm.py always runs
+#                    (idempotent); inference SKIPs (explicit, G2) only when the backend/model is
+#                    still unavailable AFTER setup (no llama_cpp / no model) — not just without a GPU.
 #
 # Usage (the script cd's to its own dir, so it operates correctly from any cwd — invoke it as
 # `./run.sh` from tools/llm-harness/, or by an absolute/relative path from elsewhere, e.g.
@@ -70,7 +72,7 @@ while [[ $# -gt 0 ]]; do
     --all)              RUN_LOCAL=1; shift ;;
     --local)            RUN_LOCAL=1; SKIP_XAI=1; shift ;;
     --)             shift; PASSTHRU=("$@"); break ;;
-    -h|--help)      sed -n '2,38p' "$HERE/run.sh"; exit 0 ;;
+    -h|--help)      awk 'NR>1 && /^#/{sub(/^# ?/,""); print; next} NR>1{exit}' "$HERE/run.sh"; exit 0 ;;
     *)              echo "run.sh: unknown arg '$1' (use --help, or '--' to pass through)" >&2; exit 2 ;;
   esac
 done
