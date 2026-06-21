@@ -8,6 +8,21 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-21: M-666 — RFC-0008 R1 `hypha`/`colony` real-concurrency L1 constructs)
+- **RFC-0008 R1 `hypha`/`colony` L1 surface constructs** (`mycelium-l1`, `mycelium-mlir`):
+  `colony { hypha compute(x), hypha compute(y) }` now parses, type-checks, and lowers to
+  **real concurrency** via the M-357 runtime (`run_colony` spawns hyphae as concurrent Tokio Tasks,
+  `run_interleaved` provides the sequential reference). RT7 invariant enforced: a `colony` block
+  cannot exit before all `hypha` children complete. **RT2 differential validated** — real-concurrency
+  output ≡ sequential reference for deterministic computations; determinism is **Empirical** (not
+  Proven). Divergence, failure, and empty-colony are explicit `ColonyError` variants (never-silent,
+  G2). `colony` and `hypha` are now **active keywords** in the grammar (previously
+  reserved-not-active after M-665). Implemented **Rust-first; RFC-0008 pending ratification
+  (Accepted, not yet Enacted)** — the trusted base stays sequential (RFC-0008 §4.2/§4.7; no L0
+  node added). LSP cross-crate fix: `colony` and `hypha` added to `mycelium-lsp` keyword
+  completions (and the `colony-block` snippet); removed from the `reserved_not_active` ban-list.
+  (RFC-0008 §4.5/§4.7; M-666, E7-2)
+
 ### Added (2026-06-21: M-672 — docsite lang-ref page + honesty fix for reserved runtime keywords)
 - **Language-reference autogen page** (`scripts/docsite.sh`, `just docs-site`): the generated
   lang-ref landing page now includes EBNF productions, the three reserved-word tables, the 25-entry

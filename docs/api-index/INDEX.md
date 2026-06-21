@@ -732,19 +732,19 @@
 | `mycelium_l1::ambient::resolve_report` | fn | `crates/mycelium-l1/src/ambient.rs:151` | Like [`resolve`], but also returns the provenance trace ([`ResolutionNote`]s) for EXPLAIN (§4.3). |
 | `mycelium_l1::ast` | mod | `crates/mycelium-l1/src/lib.rs:30` | — |
 | `mycelium_l1::ast::AmbientParams` | enum | `crates/mycelium-l1/src/ast.rs:46` | The written params of a **paradigm-less repr** `{ … }` (RFC-0012 §4.2): the size/shape is still |
-| `mycelium_l1::ast::Arm` | struct | `crates/mycelium-l1/src/ast.rs:327` | A `match` arm. |
+| `mycelium_l1::ast::Arm` | struct | `crates/mycelium-l1/src/ast.rs:349` | A `match` arm. |
 | `mycelium_l1::ast::BaseType` | enum | `crates/mycelium-l1/src/ast.rs:179` | A base (un-annotated) type. |
 | `mycelium_l1::ast::Ctor` | struct | `crates/mycelium-l1/src/ast.rs:91` | One constructor of a [`TypeDecl`]. |
 | `mycelium_l1::ast::Expr` | enum | `crates/mycelium-l1/src/ast.rs:243` | An expression. |
 | `mycelium_l1::ast::FnDecl` | struct | `crates/mycelium-l1/src/ast.rs:125` | A function definition. |
 | `mycelium_l1::ast::FnSig` | struct | `crates/mycelium-l1/src/ast.rs:111` | A function signature (shared by trait requirements and `fn` definitions). |
 | `mycelium_l1::ast::Item` | enum | `crates/mycelium-l1/src/ast.rs:64` | A top-level item. |
-| `mycelium_l1::ast::Literal` | enum | `crates/mycelium-l1/src/ast.rs:356` | A literal value. |
+| `mycelium_l1::ast::Literal` | enum | `crates/mycelium-l1/src/ast.rs:390` | A literal value. |
 | `mycelium_l1::ast::Nodule` | struct | `crates/mycelium-l1/src/ast.rs:10` | A whole program: a `nodule` header and its items. |
 | `mycelium_l1::ast::Paradigm` | enum | `crates/mycelium-l1/src/ast.rs:20` | A representation **paradigm** tag (RFC-0001 §4.2): the granularity of the RFC-0012 ambient. |
 | `mycelium_l1::ast::Param` | struct | `crates/mycelium-l1/src/ast.rs:136` | A value parameter `name: type`. |
 | `mycelium_l1::ast::Path` | struct | `crates/mycelium-l1/src/ast.rs:6` | A dotted path (`signals.demo`, `core.binary`); also a bare name. |
-| `mycelium_l1::ast::Pattern` | enum | `crates/mycelium-l1/src/ast.rs:336` | A pattern. |
+| `mycelium_l1::ast::Pattern` | enum | `crates/mycelium-l1/src/ast.rs:370` | A pattern. |
 | `mycelium_l1::ast::Scalar` | enum | `crates/mycelium-l1/src/ast.rs:217` | A scalar element kind. |
 | `mycelium_l1::ast::Sparsity` | enum | `crates/mycelium-l1/src/ast.rs:208` | Declared sparsity of a VSA type. |
 | `mycelium_l1::ast::Strength` | enum | `crates/mycelium-l1/src/ast.rs:230` | A guarantee-lattice strength. |
@@ -765,11 +765,11 @@
 | `mycelium_l1::checkty::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:275` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
 | `mycelium_l1::checkty::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:231` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
 | `mycelium_l1::checkty::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:240` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
-| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:1409` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
-| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:1395` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
+| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:1450` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
+| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:1436` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
 | `mycelium_l1::elab` | mod | `crates/mycelium-l1/src/lib.rs:33` | — |
 | `mycelium_l1::elab::ElabError` | enum | `crates/mycelium-l1/src/elab.rs:45` | Why a definition could not be elaborated to L0 — always explicit, never a partial artifact |
-| `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:421` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |
+| `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:484` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |
 | `mycelium_l1::elab::elaborate` | fn | `crates/mycelium-l1/src/elab.rs:204` | Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`]. |
 | `mycelium_l1::elab::lit_value` | fn | `crates/mycelium-l1/src/elab.rs:83` | Build the L0 [`Value`] of a representation literal (Q6: a literal *is* its representation — |
 | `mycelium_l1::elab::policy_name_ref` | fn | `crates/mycelium-l1/src/elab.rs:183` | The v0 **policy-name reference**: a deterministic, domain-separated content address derived |
@@ -1154,9 +1154,9 @@
 | `mycelium_mlir::AotError` | enum | `crates/mycelium-mlir/src/llvm.rs:56` | An explicit failure of the direct-LLVM AOT path. |
 | `mycelium_mlir::AutoDepthBudget` | struct | `crates/mycelium-mlir/src/budget.rs:164` | The default policy: derive the ceiling from **detected memory headroom**, conservative fallback |
 | `mycelium_mlir::BitnetDotKernel` | struct | `crates/mycelium-mlir/src/bitnet.rs:274` | A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop), |
-| `mycelium_mlir::Colony` | type | `crates/mycelium-mlir/src/runtime.rs:106` | A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of |
+| `mycelium_mlir::Colony` | type | `crates/mycelium-mlir/src/runtime.rs:112` | A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of |
 | `mycelium_mlir::CompiledArtifact` | struct | `crates/mycelium-mlir/src/llvm.rs:2406` | A compiled native artifact for a bit/trit-subset program: the executable on disk (in a |
-| `mycelium_mlir::Deadlock` | struct | `crates/mycelium-mlir/src/runtime.rs:96` | A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a |
+| `mycelium_mlir::Deadlock` | struct | `crates/mycelium-mlir/src/runtime.rs:102` | A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a |
 | `mycelium_mlir::DepthBasis` | enum | `crates/mycelium-mlir/src/budget.rs:102` | The inspectable derivation of a [`DepthResolution`] — the no-black-box record (G2). |
 | `mycelium_mlir::DepthBudget` | trait | `crates/mycelium-mlir/src/budget.rs:63` | Resolves a control-stack **depth ceiling** for the AOT env-machine, with an inspectable basis. |
 | `mycelium_mlir::DepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:168` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
@@ -1166,18 +1166,18 @@
 | `mycelium_mlir::JitArtifact` | struct | `crates/mycelium-mlir/src/jit.rs:97` | A JIT-compiled kernel: the `.so` on disk (in a per-artifact temp dir, cleaned on drop) + the |
 | `mycelium_mlir::MemSource` | enum | `crates/mycelium-mlir/src/budget.rs:93` | Which kernel accounting figure the detected headroom came from. |
 | `mycelium_mlir::Network` | struct | `crates/mycelium-mlir/src/channel.rs:71` | A **Kahn process network** (RFC-0008 §4.3): the grouping whose typed SPSC channels form a |
-| `mycelium_mlir::Poll` | enum | `crates/mycelium-mlir/src/runtime.rs:32` | The result of advancing a task one cooperative step. |
+| `mycelium_mlir::Poll` | enum | `crates/mycelium-mlir/src/runtime.rs:33` | The result of advancing a task one cooperative step. |
 | `mycelium_mlir::Receiver` | struct | `crates/mycelium-mlir/src/channel.rs:117` | The **single consumer** end of a channel. |
 | `mycelium_mlir::Resolution` | enum | `crates/mycelium-mlir/src/inject.rs:50` | How a [`ContentHash`] resolves in an [`Image`] — the inspectable/`EXPLAIN`-able dispatch decision |
 | `mycelium_mlir::STATIC_FALLBACK_DEPTH:` | const | `crates/mycelium-mlir/src/budget.rs:56` | The conservative static fallback ceiling: the prior fixed default (M-347's `AOT_MAX_DEPTH`), |
-| `mycelium_mlir::Scope` | struct | `crates/mycelium-mlir/src/runtime.rs:74` | A **structured concurrency scope** (RT7): tasks spawned here are all joined before the scope |
+| `mycelium_mlir::Scope` | struct | `crates/mycelium-mlir/src/runtime.rs:80` | A **structured concurrency scope** (RT7): tasks spawned here are all joined before the scope |
 | `mycelium_mlir::Sender` | struct | `crates/mycelium-mlir/src/channel.rs:112` | The **single producer** end of a channel. |
 | `mycelium_mlir::SpecializedDotKernel` | struct | `crates/mycelium-mlir/src/specialize.rs:88` | A compiled, in-process **weight-specialized** dot kernel: the `.so` (in a per-artifact temp dir, |
 | `mycelium_mlir::StaticDepthBudget` | struct | `crates/mycelium-mlir/src/budget.rs:235` | An explicit, fixed depth ceiling — for tests and callers that want a deterministic budget. |
 | `mycelium_mlir::StaticReason` | enum | `crates/mycelium-mlir/src/budget.rs:82` | Why a [`DepthBasis::Static`] budget was used (detection not attempted, failed, or explicit). |
-| `mycelium_mlir::SweepOrder` | enum | `crates/mycelium-mlir/src/runtime.rs:84` | The order a **dataflow** sweep visits still-pending children. |
-| `mycelium_mlir::Task` | trait | `crates/mycelium-mlir/src/runtime.rs:55` | A cooperative task: `poll` advances it by one step. |
-| `mycelium_mlir::TaskCtx` | struct | `crates/mycelium-mlir/src/runtime.rs:42` | The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token |
+| `mycelium_mlir::SweepOrder` | enum | `crates/mycelium-mlir/src/runtime.rs:90` | The order a **dataflow** sweep visits still-pending children. |
+| `mycelium_mlir::Task` | trait | `crates/mycelium-mlir/src/runtime.rs:56` | A cooperative task: `poll` advances it by one step. |
+| `mycelium_mlir::TaskCtx` | struct | `crates/mycelium-mlir/src/runtime.rs:43` | The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token |
 | `mycelium_mlir::TryRecv` | enum | `crates/mycelium-mlir/src/channel.rs:134` | Why a [`Receiver::try_recv`] yielded no value. |
 | `mycelium_mlir::TrySend` | enum | `crates/mycelium-mlir/src/channel.rs:124` | Why a [`Sender::try_send`] could not complete *right now*. |
 | `mycelium_mlir::aot` | mod | `crates/mycelium-mlir/src/lib.rs:44` | — |
@@ -1309,13 +1309,13 @@
 | `mycelium_mlir::run_core_with_fuel` | fn | `crates/mycelium-mlir/src/aot.rs:152` | [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling. |
 | `mycelium_mlir::run_with_layout` | fn | `crates/mycelium-mlir/src/aot.rs:543` | Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251; |
 | `mycelium_mlir::runtime` | mod | `crates/mycelium-mlir/src/lib.rs:54` | — |
-| `mycelium_mlir::runtime::Colony` | type | `crates/mycelium-mlir/src/runtime.rs:106` | A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of |
-| `mycelium_mlir::runtime::Deadlock` | struct | `crates/mycelium-mlir/src/runtime.rs:96` | A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a |
-| `mycelium_mlir::runtime::Poll` | enum | `crates/mycelium-mlir/src/runtime.rs:32` | The result of advancing a task one cooperative step. |
-| `mycelium_mlir::runtime::Scope` | struct | `crates/mycelium-mlir/src/runtime.rs:74` | A **structured concurrency scope** (RT7): tasks spawned here are all joined before the scope |
-| `mycelium_mlir::runtime::SweepOrder` | enum | `crates/mycelium-mlir/src/runtime.rs:84` | The order a **dataflow** sweep visits still-pending children. |
-| `mycelium_mlir::runtime::Task` | trait | `crates/mycelium-mlir/src/runtime.rs:55` | A cooperative task: `poll` advances it by one step. |
-| `mycelium_mlir::runtime::TaskCtx` | struct | `crates/mycelium-mlir/src/runtime.rs:42` | The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token |
+| `mycelium_mlir::runtime::Colony` | type | `crates/mycelium-mlir/src/runtime.rs:112` | A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of |
+| `mycelium_mlir::runtime::Deadlock` | struct | `crates/mycelium-mlir/src/runtime.rs:102` | A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a |
+| `mycelium_mlir::runtime::Poll` | enum | `crates/mycelium-mlir/src/runtime.rs:33` | The result of advancing a task one cooperative step. |
+| `mycelium_mlir::runtime::Scope` | struct | `crates/mycelium-mlir/src/runtime.rs:80` | A **structured concurrency scope** (RT7): tasks spawned here are all joined before the scope |
+| `mycelium_mlir::runtime::SweepOrder` | enum | `crates/mycelium-mlir/src/runtime.rs:90` | The order a **dataflow** sweep visits still-pending children. |
+| `mycelium_mlir::runtime::Task` | trait | `crates/mycelium-mlir/src/runtime.rs:56` | A cooperative task: `poll` advances it by one step. |
+| `mycelium_mlir::runtime::TaskCtx` | struct | `crates/mycelium-mlir/src/runtime.rs:43` | The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token |
 | `mycelium_mlir::simd` | mod | `crates/mycelium-mlir/src/lib.rs:55` | — |
 | `mycelium_mlir::simd::compile_bitnet_dot_simd` | fn | `crates/mycelium-mlir/src/simd.rs:127` | Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process, |
 | `mycelium_mlir::simd::compile_bitnet_dot_simd_tl1` | fn | `crates/mycelium-mlir/src/simd.rs:250` | Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process, |

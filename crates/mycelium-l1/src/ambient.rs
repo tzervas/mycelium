@@ -384,6 +384,17 @@ impl Resolver {
             },
             Expr::Wild(b) => Expr::Wild(Box::new(self.expr(amb, site, b)?)),
             Expr::Spore(b) => Expr::Spore(Box::new(self.expr(amb, site, b)?)),
+            // A `colony`'s ambient flows transparently into each `hypha` body (no new ambient frame;
+            // RFC-0008 §4.7). Resolve every hypha body under the same `amb`.
+            Expr::Colony(hyphae) => {
+                let mut out = Vec::with_capacity(hyphae.len());
+                for h in hyphae {
+                    out.push(crate::ast::Hypha {
+                        body: self.expr(amb, site, &h.body)?,
+                    });
+                }
+                Expr::Colony(out)
+            }
             Expr::App { head, args } => {
                 let mut out = Vec::with_capacity(args.len());
                 for a in args {
@@ -684,6 +695,13 @@ fn print_expr(e: &Expr) -> String {
         }
         Expr::Wild(b) => format!("wild {{ {} }}", print_expr(b)),
         Expr::Spore(b) => format!("spore({})", print_expr(b)),
+        Expr::Colony(hyphae) => {
+            let hs: Vec<String> = hyphae
+                .iter()
+                .map(|h| format!("hypha {}", print_expr(&h.body)))
+                .collect();
+            format!("colony {{ {} }}", hs.join(", "))
+        }
         Expr::App { head, args } => {
             let args: Vec<String> = args.iter().map(print_expr).collect();
             format!("{}({})", print_expr(head), args.join(", "))

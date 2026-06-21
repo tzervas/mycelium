@@ -467,6 +467,32 @@ impl<'e> Evaluator<'e> {
                     .to_owned(),
             }),
 
+            // `colony { hypha e1, …, hypha eN }` (RFC-0008 §4.7; M-666). The trusted base evaluates
+            // the **RT2 spawn-order sequentialization** — the reference semantics of any deterministic
+            // concurrent program (RFC-0008 §4.2/RT2): each hypha body is evaluated in spawn order,
+            // and the colony's value is the **last** hypha's (matching the type rule). This is the
+            // honest reference run — *not* a real scheduler (the trusted base stays sequential; KC-3).
+            // A real concurrent executor (`mycelium-mlir::runtime`, M-357) is a performance path
+            // validated *against* this sequentialization (the RT2 differential), never a new meaning.
+            // The parser guarantees ≥ 1 hypha; an empty list is still an explicit refusal here.
+            Expr::Colony(hyphae) => {
+                let Some((last, leading)) = hyphae.split_last() else {
+                    return Err(L1Error::Unsupported {
+                        site: site.to_owned(),
+                        what: "internal: an empty `colony` reached the evaluator — the parser \
+                               requires ≥ 1 hypha (RFC-0008 §4.7)"
+                            .to_owned(),
+                    });
+                };
+                // Evaluate each leading hypha for its (sequentialized) effect, in order; a refusal in
+                // any one propagates (never silently dropped — RT4/I1). Their values are not the
+                // colony's observable in this no-product v0 (only the last hypha's is).
+                for h in leading {
+                    self.eval(fuel, depth, site, scope, &h.body)?;
+                }
+                self.eval(fuel, depth, site, scope, &last.body)
+            }
+
             Expr::Ascribe(inner, t) => {
                 let v = self.eval(fuel, depth, site, scope, inner)?;
                 if let Some(g) = t.guarantee {

@@ -79,7 +79,9 @@ pub use inject::{recompile_closure, Image, InjectError, Resolution};
 pub use jit::{compile_so, jit_run, JitArtifact};
 pub use llvm::{compile, compile_and_run, emit_llvm_ir, AotError, CompiledArtifact};
 pub use pack::{needed_bytes as needed_bytes_for, pack_trits, relayout_trits, unpack_trits};
-pub use runtime::{Colony, Deadlock, Poll, Scope, SweepOrder, Task, TaskCtx};
+pub use runtime::{
+    run_colony, Colony, ColonyError, Deadlock, Poll, Scope, SweepOrder, Task, TaskCtx,
+};
 pub use simd::{
     compile_bitnet_dot_simd, compile_bitnet_dot_simd_tl1, compile_bitnet_dot_simd_tl2,
     emit_bitnet_dot_simd_ir, emit_bitnet_dot_simd_tl1_ir, emit_bitnet_dot_simd_tl2_ir,

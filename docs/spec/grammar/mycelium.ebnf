@@ -22,17 +22,22 @@
  * proceed; RFC-0006 §10 Q1 resolved). Refinements are append-only recorded decisions, not drift; a
  * co-equal structured-projection layer (M-380) renders the same content-addressed defs (FR-S5).
  *
- * RESERVED, NOT YET ACTIVE (DN-06): `phylum` (the library-scale grouping above nodules) and
- * `colony` (the dynamic runtime grouping of `hypha`, RFC-0008 §4.7) are reserved words — they lex
- * as keywords (so they are never silent identifiers) but no production consumes them yet, so neither
- * opens a program (see conformance/reject/10). They activate when their constructs land.
+ * RESERVED, NOT YET ACTIVE (DN-06): `phylum` (the library-scale grouping above nodules) is a
+ * reserved word — it lexes as a keyword (so it is never a silent identifier) but no production
+ * consumes it yet, so it does not open a program (see conformance/reject/10). It activates when its
+ * construct lands. (`colony`, once reserved here too, ACTIVATED with M-666 as an expression — see
+ * `colony_expr` below, RFC-0008 §4.7.)
  *
- * RESERVED, NOT YET ACTIVE (DN-03 §4; RFC-0008 §4.5): the ten runtime-vocabulary names are
- * reserved keywords — they lex as keywords (never silent identifiers, G2) but no production
+ * ACTIVE (M-666; RFC-0008 §4.7 R1): `colony` and `hypha` are now active surface constructs (the
+ * deterministic structured-concurrency fragment). `colony { hypha e, … }` is an expression (a
+ * `colony_expr`, below) — the dynamic runtime grouping of `hypha` execution units; the reference
+ * semantics is the spawn-order sequentialization (RT2). They are no longer reserved-not-active.
+ *
+ * RESERVED, NOT YET ACTIVE (DN-03 §4; RFC-0008 §4.5): the remaining nine runtime-vocabulary names
+ * are reserved keywords — they lex as keywords (never silent identifiers, G2) but no production
  * consumes them, so they cannot open a program or appear in identifier position at this language
  * version (see conformance/reject/12). They activate when their runtime-model constructs land
  * (RFC-0008 §4.6 R1/R2):
- *   hypha      — concurrent execution unit
  *   fuse       — lawful state fusion / CRDT join (RFC-0008 RT6)
  *   mesh       — decentralized gossip/pub-sub overlay (RFC-0008 RT5)
  *   graft      — capability contract with infrastructure (RFC-0008 RT4)
@@ -120,6 +125,7 @@ expr           ::= let_expr
                  | with_expr
                  | wild_expr
                  | spore_expr
+                 | colony_expr
                  | app_expr
 
 /* with paradigm: a block-scope ambient override (RFC-0012 §4.4; M-344). Not a conversion — it
@@ -150,6 +156,19 @@ wild_expr      ::= 'wild' '{' expr '}'
 
 /* spore: build a reconstruction manifest for a value (RFC-0003 §6; DN-02 themed term). */
 spore_expr     ::= 'spore' '(' expr ')'
+
+/* colony / hypha: the structured-concurrency scope (RFC-0008 §4.7; DN-06 §1.3; M-666). A `colony`
+ * is the dynamic runtime grouping of `hypha` execution units; its body is a NON-EMPTY list of
+ * `hypha <expr>` spawns (a trailing comma before `}` is tolerated, the match-arm convention). RT7:
+ * a `hypha` is ONLY expressible inside a `colony` ("an orphan hypha is not expressible") — there is
+ * no free `hypha` production. Deterministic R1 fragment only (RFC-0008 §4.6 R1); the reference
+ * semantics is the spawn-order sequentialization (RT2), so the colony's observable value is its
+ * children run in order (the v0 surface has no product type, so the colony yields the LAST hypha's
+ * value — a join-result product is later work). The arbitration/placement RT3 constructs (select/
+ * merge, `forage`) are separate. The runtime realization is `mycelium-mlir::runtime`
+ * (`Scope`/`Colony`/`Task`, M-357), a performance path validated against the RT2 sequentialization. */
+colony_expr    ::= 'colony' '{' hypha (',' hypha)* ','? '}'
+hypha          ::= 'hypha' app_expr
 
 /* Application / primary. Calls and atoms; ascription binds loosest. */
 app_expr       ::= primary ('(' args? ')')* (':' type_ref)?
