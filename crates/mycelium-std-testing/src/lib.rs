@@ -142,7 +142,7 @@ impl Rng {
 /// A type that can produce values of type `T` given an `Rng`.
 ///
 /// The seed + generator sequence is fully deterministic (C4/RT3). A `Gen<T>` that cannot
-/// produce any value MUST return an empty list from [`Gen::candidates`] so the harness can
+/// produce any value MUST return an empty list from [`Gen::shrink`] so the harness can
 /// report [`Verdict::Skipped`] rather than looping indefinitely.
 pub trait Gen<T> {
     /// Try to produce a value; `None` if the generator is exhausted or cannot produce.

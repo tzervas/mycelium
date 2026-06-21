@@ -5,7 +5,7 @@
 //! These are **runtime-orchestration types, not kernel calculus** — they introduce **no L0 node** and
 //! do not change the trusted interpreter's sequential evaluation (RT2: "concurrency adds scheduling
 //! *outside* the kernel, never new meaning inside it"; KC-3). They live here, beside the shared
-//! [`Budgets`](crate::Budgets) ledger (M-353), because both the recovery driver (`mycelium-lsp`) and
+//! [`Budgets`] ledger (M-353), because both the recovery driver (`mycelium-lsp`) and
 //! the forthcoming RT2 deterministic-fragment runtime (`mycelium-mlir`, M-357) consume them and both
 //! crates depend on `mycelium-interp` — the same no-cycle placement the budget primitive used. There
 //! is **no task scheduler here**: that is M-357 (RFC-0008 R1). This module is the scheduler-independent

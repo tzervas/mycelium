@@ -15,7 +15,7 @@
 //! - **The RT2 sequentialization guarantee** (the heart): tasks are **pure over immutable values with
 //!   no shared state** (RT1), so a *deterministic interleaved* schedule and the *sequential* run in
 //!   spawn order produce the **identical** per-task outcomes. That equivalence is the
-//!   NFR-7-extension RFC-0008 §4.6 names — verified by [`tests`] across an interleaving corpus and a
+//!   NFR-7-extension RFC-0008 §4.6 names — verified by `tests` across an interleaving corpus and a
 //!   real-L0-evaluation corpus (each task runs the env-machine).
 //!
 //! ## What this module covers, and what its sibling does

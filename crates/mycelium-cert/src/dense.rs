@@ -11,7 +11,7 @@
 //! VR-5; "a pair with no statable bound is a type error, not a `Declared` gamble", RFC-0002 §5).
 //!
 //! The emitted certificate validates through the M-210 shared checker
-//! ([`crate::check`]) under [`RefinementRelation::BoundedSimilarity`](crate::RefinementRelation).
+//! ([`mod@crate::check`]) under [`RefinementRelation::BoundedSimilarity`](crate::RefinementRelation).
 //!
 //! **Honest scope (v1).** Subnormal elements and approximate (non-`Exact`) sources are refused
 //! explicitly: the subnormal range is outside the cited theorem's side-conditions (its absolute

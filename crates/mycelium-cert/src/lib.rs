@@ -10,7 +10,7 @@
 //! (P4), never a coerced wrap.
 //!
 //! The single, unified translation-validation certificate *checker* (shared with RFC-0004 §3) is
-//! the [`check`] module (M-210, E2-3): `check(A, B, R, claimed, evidence)` validates bijective
+//! the [`mod@check`] module (M-210, E2-3): `check(A, B, R, claimed, evidence)` validates bijective
 //! certificates by re-derivation equality, bounded certificates through the `mycelium-numerics`
 //! tier-i checker (E2-4), and interp↔AOT observational equivalence (the M-151 differential) — one
 //! checker, every instance, never a silent pass. The serialized certificate form is exactly
@@ -349,7 +349,7 @@ pub fn ternary_to_binary(
     Ok((out, cert))
 }
 
-/// A [`SwapEngine`](mycelium_interp::SwapEngine) for the reference interpreter that performs the
+/// A [`SwapEngine`] for the reference interpreter that performs the
 /// certified binary↔ternary swap (and same-`Repr` identity), refusing anything else explicitly. The
 /// emitted certificate is available from the standalone [`binary_to_ternary`]/[`ternary_to_binary`]
 /// functions; the interpreter result carries the honest `Meta` (Exact, `policy_used`, provenance).

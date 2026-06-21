@@ -63,7 +63,7 @@ pub struct MatrixRow {
 }
 
 /// The `std.content` guarantee matrix.  One row per exported op, encoded as data and asserted in
-/// [`tests`] — never prose-only (RFC-0016 §4.5; spec §4).
+/// `tests` — never prose-only (RFC-0016 §4.5; spec §4).
 ///
 /// **All rows are `Exact`** (deterministic): a content hash is a pure function of normalized
 /// structure (RFC-0001 §4.6 WF4; ADR-003). **All rows declare no effects** (C6: pure reads).

@@ -4,7 +4,7 @@
 //! `Dormant`. The gate fails on any **error-severity** finding; warnings/info are surfaced, not gated.
 //!
 //! This is what flips `mycelium_lint::doc_lint_status()` from *dormant-but-defined* to *active*: the
-//! checks now run over a real, content-addressed model produced by [`crate::build`].
+//! checks now run over a real, content-addressed model produced by [`mod@crate::build`].
 
 use mycelium_l1::{check_nodule, parse};
 

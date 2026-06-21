@@ -15,7 +15,7 @@ use crate::policy::PolicyRef;
 /// Errors propagate by default — there is no silent unwinding; an `Err` must be explicitly acted
 /// on by a recovery policy or it continues to surface.
 ///
-/// This is the **input** type to [`crate::handle`] and [`crate::recover`].  The `E` error payload
+/// This is the **input** type to [`crate::handle`] and `crate::recover`.  The `E` error payload
 /// should carry a [`Diag`] diagnostic record per FR-R5.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Outcome<T, E> {

@@ -3,7 +3,7 @@
 //! One call, one surface, the **four** semantic-feedback artifact kinds the dual-intelligibility
 //! goal delivers (the same surface serves human IDEs and AI co-authors):
 //!
-//! 1. **typecheck/invariant diagnostics** — from the linter ([`crate::lint`]);
+//! 1. **typecheck/invariant diagnostics** — from the linter ([`mod@crate::lint`]);
 //! 2. **swap certificates** — the inspectable `SwapCertificate` for each statically-resolvable swap
 //!    site (`mycelium-cert`);
 //! 3. **bound/guarantee annotations** — the per-value honesty tag + bound (RFC-0001 §4.3/§4.7);

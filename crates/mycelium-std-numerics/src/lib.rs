@@ -94,7 +94,7 @@ mod sealed {
 ///
 /// The only way to obtain a `ProvenThm` is via [`ProvenThm::new`], which validates that the
 /// citation is non-empty (ADR-011 / `bound.schema.json`: `citation` must not be blank). The
-/// private [`sealed::Sealed`] sentinel field makes it impossible to construct `ProvenThm { .. }`
+/// private `sealed::Sealed` sentinel field makes it impossible to construct `ProvenThm { .. }`
 /// by hand outside this crate — type-system enforcement, no `unsafe` required.
 ///
 /// # Example

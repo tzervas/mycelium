@@ -221,7 +221,7 @@ mycelium_std_core::impl_std_error!(MalformedManifest);
 /// `GuaranteeStrength` tag from the manifest's bound certificate — always ≤ `Empirical`
 /// for the resonator path (FR-C2 enforced at manifest construction time).
 ///
-/// # Approx<T> coupling (FLAG Q4a — RESOLVED)
+/// # `Approx<T>` coupling (FLAG Q4a — RESOLVED)
 ///
 /// `RegrowthResult` carries the manifest's **full `{ε,δ,strength}` certificate bound** (with its
 /// `BoundBasis`), so it projects losslessly to the stdlib's honest carrier via

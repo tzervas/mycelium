@@ -11,7 +11,7 @@
 //!   not a runtime check.
 //! - [`read`] (chunked) returns the handle so a caller may continue reading; the same
 //!   handle is threaded linearly through every call.
-//! - [`write`] similarly returns the `Sink` so the caller may continue writing.
+//! - [`write()`] similarly returns the `Sink` so the caller may continue writing.
 //!
 //! The affine type enforces that a substrate cannot be silently re-read after
 //! exhaustion (LR-8 / spec §1/§3 / the module's honesty crux).
@@ -160,7 +160,7 @@ impl Source {
 
 /// An abstract byte **sink**: a write target wrapped in an affine handle.
 ///
-/// A `Sink` is threaded linearly through [`write`] calls (each call consumes the
+/// A `Sink` is threaded linearly through [`write()`] calls (each call consumes the
 /// current handle and returns the updated one).  The affine discipline means a
 /// written sink cannot be silently re-used; a double-write is a compile-time error.
 ///

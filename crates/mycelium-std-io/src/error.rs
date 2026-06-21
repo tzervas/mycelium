@@ -99,7 +99,7 @@ pub enum SerError {
         tag: String,
     },
     /// A field decoded successfully but violates a value-model invariant (RFC-0001
-    /// §4.3 — e.g. payload length ≠ repr width, bound delta ∉ [0,1]).
+    /// §4.3 — e.g. payload length ≠ repr width, bound delta ∉ \[0,1\]).
     ///
     /// The invariant name is carried in `why` so the caller can surface it.
     OutOfDomain {

@@ -101,7 +101,7 @@ pub struct MatrixRow {
 /// The `std.io` + `serialize` guarantee matrix.
 ///
 /// Eight rows — one per exported op (spec §4 guarantee matrix / RFC-0016 §4.5).
-/// Asserted in [`tests`] — never prose-only (C2 / VR-5).
+/// Asserted in `tests` — never prose-only (C2 / VR-5).
 pub const MATRIX: &[MatrixRow] = &[
     // ── serialize: Value → bytes (total, Exact) ───────────────────────────────
     MatrixRow {

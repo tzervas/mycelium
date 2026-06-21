@@ -4,7 +4,7 @@
 //! M-373/M-378/M-379; RFC-0004 §2/§6/§11; ADR-007/009/019; T1.5; phase-3.md §1).
 //!
 //! **Scope / honesty.** The ratified AOT path is `MLIR → LLVM` (RFC-0004 §2). On Linux libMLIR is
-//! now provisionable (`scripts/setup-mlir.sh`; ADR-019), so the real dialect lowering ([`dialect::native`],
+//! now provisionable (`scripts/setup-mlir.sh`; ADR-019), so the real dialect lowering (`dialect::native`,
 //! feature `mlir-dialect`) lands for the bit/trit element-wise fragment and is differential-checked
 //! three ways (M-602). The richer data/closure/recursion fragment is carried by the direct-LLVM
 //! backend ([`llvm`]); anything the standard MLIR dialects cannot faithfully express is an explicit
@@ -14,7 +14,7 @@
 //!   (`mycelium-core::lower` A-normal form): one dialect op per binding, every value/attr visible.
 //!   This is the *per-stage-dumpable, no-opaque-pass* anchor (RFC-0004 §6) — text, not native code,
 //!   and the dumpable skeleton of the MLIR path. Always available (no toolchain needed).
-//! - [`dialect::native`] *(feature `mlir-dialect`, OFF by default; M-601)* — the **real** lowering:
+//! - `dialect::native` *(feature `mlir-dialect`, OFF by default; M-601)* — the **real** lowering:
 //!   for the bit/trit element-wise fragment it emits a genuine `arith`/`func` MLIR module and drives
 //!   it through `mlir-opt`/`mlir-translate` to **real LLVM IR**, then `clang` → native → read-back
 //!   (the same read-back as [`llvm`], so the two compiled paths compare like-for-like). Probes the

@@ -19,7 +19,7 @@
 //! **Never-silent (G2).** Unparsable input, a malformed header, or a construct outside the round-trip-safe
 //! v0 scope (§7 — interior comments; an expression that does not round-trip) is an **explicit error** with
 //! an exit code; `mycfmt` **never** writes a partial or garbled rewrite. The load-bearing subtlety: the
-//! body is printed from the **raw parse** ([`mycelium_l1::parse`]), *not* the ambient-resolved twin — so
+//! body is printed from the **raw parse** (`mycelium_l1::parse`), *not* the ambient-resolved twin — so
 //! `default paradigm` / `with paradigm` are **preserved**, not expanded (formatting ≠ "expand ambient").
 //!
 //! KC-3: this lives entirely above the kernel; the trusted base depends on nothing here.

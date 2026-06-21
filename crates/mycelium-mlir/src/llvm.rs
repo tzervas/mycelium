@@ -19,7 +19,7 @@
 //! (`s + 4`, then `srem 3 − 1` for the balanced digit and `sdiv 3 − 1` for the carry — euclidean by
 //! construction because `s + 4 ≥ 1`). Fixed-width overflow (a non-zero final carry, or non-zero high
 //! trits of a product) is **detected at runtime** and signalled through the **read-back protocol**:
-//! an out-of-range result prints the [`OVERFLOW_SENTINEL`] line (AOT) / returns a non-zero status
+//! an out-of-range result prints the `OVERFLOW_SENTINEL` line (AOT) / returns a non-zero status
 //! (JIT) and surfaces as an explicit [`AotError::Overflow`] — never a silent wrap (SC-3; G2). This
 //! matches the interpreter's `EvalError::Overflow` so the M-302 differential stays honest.
 //!

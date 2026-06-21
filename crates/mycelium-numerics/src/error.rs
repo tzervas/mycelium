@@ -8,7 +8,7 @@
 //! nonlinear, so its second-order remainder is over-approximated onto a fresh noise symbol.
 //!
 //! **The compositions are computed in f64, and a `Proven` ε that travels in a bound must be a *true*
-//! upper bound** — so every bound-increasing quantity is rounded **outward** (the [`crate::round`]
+//! upper bound** — so every bound-increasing quantity is rounded **outward** (the `crate::round`
 //! helpers), and each operation folds the magnitude of its own floating-point round-off into the
 //! reserved [`ROUNDOFF_SYM`] term so [`AffineForm::radius`] stays a sound enclosure under f64
 //! arithmetic (WS1; A2-01). An operation that is exact in f64 (e.g. integer sums, power-of-two

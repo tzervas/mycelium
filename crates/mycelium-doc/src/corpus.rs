@@ -1,5 +1,5 @@
 //! Markdown → doc-IR projection (the `gen-manual` / `gen-book` corpus path, spec §4). Projects an
-//! RFC/ADR/note/spec/devlog markdown file into a [`Node::Document`] of level-graded sections, prose,
+//! RFC/ADR/note/spec/devlog markdown file into a [`Node`] with `Payload::Document` — level-graded sections, prose,
 //! checked-or-illustrative code examples, and cross-references — **verbatim projection, never a
 //! rewrite** (the prose stays the corpus's; we only structure it). Dependency-free: a small,
 //! purpose-built CommonMark *subset* parser (headings, fenced code, paragraphs, inline links) — the

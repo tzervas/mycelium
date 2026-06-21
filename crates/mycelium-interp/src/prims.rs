@@ -16,7 +16,7 @@
 //! (`mycelium-numerics`, E2-4), a built-in over an *approximate* input no longer refuses outright: it
 //! composes the input's `Error` bound through the affine ε-kernel and meets the strength to the
 //! weakest input ([`mycelium_numerics::compose_error_bound`]). Each prim declares its
-//! [`ApproxRule`]: the additive ternary arithmetic (`trit.add/sub/neg`) carries a sound affine
+//! `ApproxRule`: the additive ternary arithmetic (`trit.add/sub/neg`) carries a sound affine
 //! composition; `core.id` passes the bound through unchanged; the logical `bit.*` ops and `trit.mul`
 //! have **no defined ε-propagation rule over approximate inputs** and so still refuse
 //! (`EvalError::ApproxCompositionUnsupported`) — refusing remains the honest choice over fabricating a

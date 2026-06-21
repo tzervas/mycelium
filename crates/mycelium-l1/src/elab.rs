@@ -12,7 +12,7 @@
 //!
 //! # How a `match` lowers (RFC-0011 §4.4)
 //! Nested surface patterns are compiled to the **flat** kernel `Match` by the **M-320 Maranget
-//! decision tree** ([`crate::decision`]) — the untrusted, inspectable lowering. Each tree `Switch`
+//! decision tree** (`crate::decision`) — the untrusted, inspectable lowering. Each tree `Switch`
 //! becomes an L0 `Match` on the occurrence's bound variable; each constructor case becomes an
 //! `Alt::Ctor` binding *all* the constructor's fields (so every binder occurrence is available at
 //! the leaf), and each leaf elaborates the surface arm's body with its binders mapped to those

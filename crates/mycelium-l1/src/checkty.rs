@@ -58,7 +58,7 @@ impl CheckError {
     }
 
     /// Public, ergonomic constructor: a check failure at `site` with `message`. Mirrors the
-    /// crate-internal [`new`](CheckError::new) (which stays private) so external callers — the
+    /// crate-internal `CheckError::new` (which stays private) so external callers — the
     /// toolchain crates that surface L1 diagnostics — can build a [`CheckError`] without reaching
     /// through the struct fields (Law of Demeter). Additive; no existing signature changes.
     #[must_use]

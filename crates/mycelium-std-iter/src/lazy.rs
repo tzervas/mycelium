@@ -3,7 +3,7 @@
 //! A `Lazy<E>` is a potentially-unbounded source. It is **NOT total** and is tagged
 //! [`Declared`](mycelium_core::GuaranteeStrength::Declared) — the unboundedness is *asserted
 //! and flagged*, never proven away. It is a distinct named type; there is no implicit coercion
-//! from [`Foldable`](crate::Foldable) to `Lazy<E>` (C1 / C4).
+//! from [`Foldable`] to `Lazy<E>` (C1 / C4).
 //!
 //! The only sanctioned way to turn a `Lazy<E>` back into a total, foldable value is
 //! [`lazy_take`](crate::lazy_take) — an explicit `Nat` bound that re-establishes the totality
