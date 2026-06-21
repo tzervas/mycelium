@@ -388,12 +388,15 @@ def check_ablation() -> Check:
     model = _spec("m", out_price=2.0, in_price=1.0, order=0)
     tasks = [Task("t1", "a"), Task("t2", "b")]
     seeds = [1, 2, 3]
+
     # Inject a stub arm-4 bridge: the MockClient echoes prose (not LlmCanonical), so
     # the real bridge would reject it. The stub returns a fixed non-None .myc string,
     # leaving the (fake, always-clean) scorer to drive arm-4 pass@1 — this exercises
     # the run_arm arm-4 *plumbing* offline. The real conversion logic is covered by
     # check_canonical_bridge (T15).
-    stub_bridge = lambda content, task: "nodule t\nfn f(x: Binary{8}) -> Binary{8} = x"
+    def stub_bridge(content, task):
+        return "nodule t\nfn f(x: Binary{8}) -> Binary{8} = x"
+
     arm_results = [
         run_arm(
             arm=arm,

@@ -249,7 +249,6 @@ def _emit_swap(node, depth: int) -> str:
     src = node[1]
     to_repr: str | None = None
     policy: str | None = None
-    i = 2
     rest = node[2:]
     j = 0
     while j < len(rest):
