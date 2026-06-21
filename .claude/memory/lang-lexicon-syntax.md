@@ -148,11 +148,12 @@ Verified against `crates/mycelium-l1/src/token.rs` and `docs/spec/grammar/myceli
 **Reserved-not-active words lex as keywords — they can never be silent identifiers.** Using
 `phylum` or `colony` as a function name is a parse error (verified in
 `crates/mycelium-l1/src/lib.rs` test `phylum_and_colony_are_reserved_not_active`). No production
-consumes them yet, so they do not open a program (see `conformance/reject/10`).
+consumes them yet, so they do not open a program (see `docs/spec/grammar/conformance/reject/10-reserved-not-active.myc`).
 
 **Words not reserved (DN-02 §6):** `while`, `loop`, `break`, `continue`, `return` —
 unbounded iteration undermines the divergence bit. The toolchain emits **teaching diagnostics**
-when they appear, pointing at recursion or `for`. `embody` is also not reserved.
+when they appear, pointing at recursion or `for`. (`embody` is also unreserved — it was declined in
+**DN-03 §1**; inherent methods keep `impl`.)
 
 ---
 
@@ -174,8 +175,11 @@ L0  Core IR (frozen, RFC-0001)       ← Const | Var | Let | Op | Swap + Meta/WF
   independent L2 semantics. Elaboration is always `EXPLAIN`-able (S4/ADR-006 — no black box).
 - **Content-addressed identity** (ADR-003) is over elaborated **L0**, not the surface keyword. A
   header date-bump does not change identity; a code change does.
-- The grammar artifact (`mycelium.ebnf`) is the **L3 text oracle**. The LR(1) oracle + accept/reject
-  conformance corpus under `docs/spec/grammar/conformance/` are the machine-verified gates.
+- The committed grammar artifacts are `docs/spec/grammar/mycelium.ebnf` — the normative **W3C-EBNF
+  grammar oracle** (an LR(1)/LALR(1)-class grammar) — plus the accept/reject conformance corpus under
+  `docs/spec/grammar/conformance/`; `scripts/checks/grammar.sh` and the parser conformance tests are
+  the machine-verified gates. (No separate LR(1) parser-table artifact is committed — the EBNF is the
+  oracle.)
 
 **Invariants every layer must preserve (RFC-0006 §4.1):**
 
@@ -383,7 +387,7 @@ operator in the grammar).
 
 - **`phylum` and `colony` are reserved-not-active.** They lex as keywords so using them as
   identifiers is a parse error — but no construct consumes them yet. Neither opens a program.
-  `conformance/reject/10` tests this.
+  `docs/spec/grammar/conformance/reject/10-reserved-not-active.myc` tests this.
 - **`colony` was reassigned (DN-06).** DN-02 §2 originally gave `colony` the static "module"
   meaning; DN-06 (2026-06-16) superseded that and reassigned `colony` to the dynamic runtime
   grouping of `hypha`. The static role moved to `nodule`. The M-358 migration completed this in

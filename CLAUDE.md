@@ -23,8 +23,9 @@ package (versioned, content-addressed; ≈ crate) · **`nodule`** = the basic st
 (ADR-013) · **`hypha`** = one concurrent execution unit (task) · **`colony`** = a runtime grouping
 of hyphae · **`swap`** = the never-silent representation change. (The *Rust kernel* packages named
 `mycelium-*` are genuinely Rust crates; *Mycelium-language* units are phyla/nodules — keep that
-distinction.) Only `nodule`/`phylum`/`colony` are wired into the lexer so far (`phylum`/`colony`
-reserved-not-active); the rest of the runtime tier are ratified names not yet lexed. Full reference
+distinction.) Of these grouping terms `nodule` is an active keyword and `phylum`/`colony` are
+reserved-not-active (lexed, no construct yet); most of the runtime tier (`hypha`, `fuse`, `mesh`, …)
+are ratified names not yet lexed. Full reference
 — reserved words, surface syntax, grammar, conventions: **`.claude/memory/lang-lexicon-syntax.md`**;
 canonical definitions: `docs/Glossary.md` + DN-02/03/06.
 
