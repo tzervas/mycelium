@@ -504,6 +504,10 @@ pub fn build_registry(env: &Env) -> Result<DataRegistry, ElabError> {
 }
 
 /// Convert a v0 field type to a registry [`FieldSpec`]; `None` for a type with no r3 value form.
+///
+/// A residual [`Ty::Var`] (stage-1 generics, M-657) reaching this point is a checker bug —
+/// generic shells must never be elaborated directly, only their monomorphic instantiations.
+/// Returns `None` so `build_registry` skips the type (Residual if it is ever used at runtime).
 fn field_spec(ty: &Ty) -> Option<FieldSpec> {
     Some(match ty {
         Ty::Binary(n) => FieldSpec::Repr(Repr::Binary { width: *n }),
@@ -513,7 +517,9 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
             dtype: scalar_kind(*s),
         }),
         Ty::Data(n) => FieldSpec::Data(n.clone()),
-        Ty::Substrate(_) => return None,
+        // `Substrate` and `Var` have no r3 value form.  A residual `Var` here is defense in
+        // depth: the checker must have substituted all vars before storing into `env.types`.
+        Ty::Substrate(_) | Ty::Var(_) => return None,
     })
 }
 

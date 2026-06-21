@@ -3,6 +3,13 @@
 //! RFC-0007 §4.2) and the function table. Every refusal is an explicit [`CheckError`] — generics,
 //! `spore`, value-level integers without context, and `wild` blocks (denied by default, LR-9) are
 //! *refused with a reason*, never guessed at.
+//!
+//! Stage-1 generics (M-657): [`Ty::Var`] is a *transient* type variable that exists only while
+//! the checker validates a generic ADT shell or generic function body. It must **never reach**
+//! `usefulness`, `decision`, `elab`, or `eval`. Monomorphization happens at the registry layer
+//! (`checkty.rs`) before those consumers see any type — they only ever see concrete [`Ty`] forms.
+//! Guarantee tag: **Declared** (mirrors RFC-0019's Declared-with-argument posture; the
+//! three-way differential supplies Empirical evidence — VR-5).
 
 use std::collections::BTreeMap;
 
@@ -13,6 +20,12 @@ use crate::ast::{
 };
 
 /// A v0 (monomorphic) type.
+///
+/// [`Ty::Var`] is a *transient* stage-1 generics helper — it exists only while the checker
+/// validates a generic ADT shell or generic function body (M-657, **Declared**). Every call path
+/// that produces `Var` must substitute it away before returning to elaboration, evaluation, or
+/// coverage analysis. A residual `Var` reaching those consumers is a checker bug — the affected
+/// site returns an explicit error rather than silently guessing a concrete type (G2/VR-5).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
     /// `Binary{n}`.
@@ -26,6 +39,11 @@ pub enum Ty {
     Data(String),
     /// `Substrate{tag}` — the affine external-resource kind (LR-8). No value forms exist in v0.
     Substrate(String),
+    /// An abstract type parameter (stage-1 generics, M-657 — **Declared**). Exists *only*
+    /// transiently while the checker validates a generic shell; must be substituted away
+    /// (via [`subst_ty`]) before any type is stored in `Env` or passed to elaboration/eval.
+    /// A residual `Var` is an explicit `CheckError`, never a silent default.
+    Var(String),
 }
 
 impl core::fmt::Display for Ty {
@@ -36,6 +54,7 @@ impl core::fmt::Display for Ty {
             Ty::Dense(d, s) => write!(f, "Dense{{{d}, {s:?}}}"),
             Ty::Data(n) => write!(f, "{n}"),
             Ty::Substrate(t) => write!(f, "Substrate{{{t}}}"),
+            Ty::Var(a) => write!(f, "{a}"),
         }
     }
 }
@@ -1303,7 +1322,9 @@ fn paradigm_name(t: &Ty) -> Option<&'static str> {
         Ty::Binary(_) => Some("Binary"),
         Ty::Ternary(_) => Some("Ternary"),
         Ty::Dense(_, _) => Some("Dense"),
-        Ty::Data(_) | Ty::Substrate(_) => None,
+        // `Data`, `Substrate`, and `Var` have no paradigm: they are not representation types.
+        // A `Var` reaching here is a transient abstract param — no paradigm assigned (M-657).
+        Ty::Data(_) | Ty::Substrate(_) | Ty::Var(_) => None,
     }
 }
 
