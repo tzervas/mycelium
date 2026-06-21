@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0023 |
-| **Status** | **Draft** (2026-06-21 — research-grounded design from `research/13-adk-phylum-RECORD.md`, fractured-methodology pass; four Opus sub-reasoners over one cross-context packet). **Not ratified.** The follow-up deep pass (**RP-9**) gates ratification: it must scaffold/implement `mycelium-adk`, discharge the E7-1/E7-2 dependencies the surface needs (§7), and honestly scope any ADK-shaped LLM-leverage claim (which inherits DN-09's open posture). *Honesty (VR-5):* this Draft asserts **no** LLM-capability result. |
+| **Status** | **Accepted** (2026-06-21 — maintainer ratification: design agreed; **Enacted** still gated on the `mycelium-adk` build + E7-1/E7-2). *Ratification trail:* **Draft** (2026-06-21 — research-grounded design from `research/13-adk-phylum-RECORD.md`, fractured-methodology pass; four Opus sub-reasoners over one cross-context packet). **Not ratified.** The follow-up deep pass (**RP-9**) gates ratification: it must scaffold/implement `mycelium-adk`, discharge the E7-1/E7-2 dependencies the surface needs (§7), and honestly scope any ADK-shaped LLM-leverage claim (which inherits DN-09's open posture). *Honesty (VR-5):* this Draft asserts **no** LLM-capability result. · **RP-9 research gate SUBSTANTIALLY DISCHARGED (2026-06-21, `dfr` session)** — the §11 register verified against primary ADK source (pinned `adk-python` **v2.3.0** / "ADK 2.0") + landed in-repo substrate by four fractured Opus sub-reasoners (`research/13-adk-phylum-RECORD.md` §6); **design soundness confirmed, no soundness falsification** (concept-map rows sound; tool-dispatch taxonomy complete & never-silent; harness reuse single-path; honesty differentiator grounded+falsifiable, stays `Declared`; RT2 `Empirical`; drift item 1 + parser-not-lexer item 3 resolved). **One open completeness item:** the §3 concept-map is incomplete for ADK 2.0 — **graph/Workflow** dropped + agent-`mode`/code-Router/`RunConfig`-budget rows missing — `dfb` must add them + re-pin §3 (G2: named, not closed). Other residuals: deferred-to-build empirical-on-code; a `ToolError` budget-arm; the runtime-realization choice (recommend `mycelium-mlir::runtime`); LLM-leverage (item 6) scoped, **no verdict** (DN-09 INDETERMINATE). **Pending maintainer ratification** — ratification additionally requires the `mycelium-adk` build + E7-1/E7-2 (per this Status), naturally honored by "pending"; an agent stages the discharge, the maintainer ratifies. · **RATIFIED → Accepted (2026-06-21, maintainer).** The one open completeness item is now **CLOSED** — §3 repaired (new **§3.7**: ADK 2.0 graph **Workflow Runtime**, operating-`mode`, code-Router, `RunConfig`-budget; §3 pinned **v2.3.0**). Ratified decisions: `adk.runner` on **`mycelium-mlir::runtime`** (R23-Q1; migrate to the std.runtime facade later); **`ToolError`** budget routes to **`TaskOutcome::BudgetExhausted`** (branded names canonical; RP-9 `TypeMismatch/Exec/Budget` = aliases); **Session** snapshot-v0, concurrent merge deferred to **`fuse`** (R23-Q2; never silent-overwrite); **LLM-leverage** stays no-verdict (separate measured pass, DN-09). **Enacted** gated on the build + E7-1/E7-2. |
 | **Type** | Application / phylum design (a library port; rests on RFC-0008/0016/0021 + the LLM harness; no L0 or L1 kernel change — KC-3) |
 | **Date** | 2026-06-21 |
 | **Depends on** | RFC-0008 (the runtime/concurrency model — `colony`/`hypha`, RT1–RT7; the §4.7 composition contract); RFC-0016 (§4.1 per-op contract C1–C6, §4.5 guarantee matrix — the phylum-authoring convention); RFC-0021 (semantic-level projections / `LlmCanonical` — the LLM-facing surface, leverage Declared/open); DN-09 (the honest LLM-leverage posture — KC-2 = proceed); the LLM harness (`tools/llm-harness/` + `crates/mycelium-bench/src/llm.rs` — the model layer's real-call substrate); ADR-003 (content-addressed identity — Session/State); ADR-013 (`spore` — an agent deploys as a spore); LR-8 (`substrate` — the `graft` capability handle); G2 (never-silent); VR-5 (honest tags); KC-2/KC-3 |
@@ -81,6 +81,10 @@ ADK's abstractions, captured from the official docs (`adk.dev`, formerly `google
 and the `google/adk-python` source on `main`, then mapped to Mycelium. Every ADK row cites a public
 source; every Mycelium row cites a corpus location. (Could-not-verify items: §11.)
 
+**Pinned (RP-9 ratification, 2026-06-21).** The §3 map is verified against **`adk-python` v2.3.0**
+(ADK 2.0, GA 2026-05-19); **§3.7** adds the ADK 2.0 graph **Workflow Runtime** + collaborative-
+orchestration concepts the Phase-1 draft omitted. `dfb` re-checks the surface at build (R23-Q5).
+
 ### 3.1 Agent
 
 | ADK concept (source) | Faithful description | Mycelium mapping | Grounding |
@@ -89,7 +93,7 @@ source; every Mycelium row cites a corpus location. (Could-not-verify items: §1
 | **`LlmAgent`** (alias **`Agent`**; `agents/llm_agent.py`) | Self-contained unit; the LLM *dynamically decides* flow/tools/output. Fields: `model`, `instruction`, `description`, `tools`, `sub_agents`, `output_key`, `output_schema`, `planner`, callbacks. | An `adk.agent` value: a `nodule` of typed defs whose *running* invocation is a `colony` whose model-decisions are **RT3** (reified, EXPLAIN-able). | `RFC-0008:109-116` (RT3); §4 below |
 | **`SequentialAgent`** (`workflow-agents/sequential-agents/`) | Runs sub-agents in fixed order, threading one `InvocationContext` (state via `output_key` → `{placeholder}`). Deterministic. | An **ordered `hypha` chain** (spawn-order sequential run). | RT2 (`RFC-0008:99-107`); `runtime.rs:144` |
 | **`ParallelAgent`** (`workflow-agents/parallel-agents/`) | Runs sub-agents concurrently in **isolated branches** (no auto state-sharing); results via distinct `output_key`s. Deterministic. | A **`colony` fork/join** over the M-357 deterministic executor (RT2 fragment); branch isolation = RT1 share-nothing. | RT1/RT2 (`RFC-0008:91-107`); `runtime.rs:172`, `colony.rs:103` |
-| **`LoopAgent`** (`workflow-agents/loop-agents/`) | Repeats sub-agents until `max_iterations` **or** a sub-agent sets `actions.escalate`. | **Bounded** `for`/structural recursion (Total). *Unbounded loops have no mapping.* | `for` Active (`token.rs:123`); lexicon `:160-163` |
+| **`LoopAgent`** (`workflow-agents/loop-agents/`) | Repeats sub-agents until `max_iterations` **or** a sub-agent sets `actions.escalate`. | **Bounded** `for`/structural recursion (Total). *Unbounded loops have no mapping.* | `for` Active (`token.rs:94`); lexicon `:160-163` |
 | **Custom agent** (`custom-agents/`) | Subclass `BaseAgent`, implement `_run_async_impl` for bespoke flow. | A user `nodule` composing the `adk.runner` primitives directly. | §4.4 |
 
 ### 3.2 Tool
@@ -140,6 +144,27 @@ source; every Mycelium row cites a corpus location. (Could-not-verify items: §1
 | **`LlmRequest`/`LlmResponse`** (`models/llm_response.py`; `Event` ⊂ `LlmResponse`) | Model I/O envelope: `content`, `usage_metadata`, `partial`, `error_code`, `get_function_calls()`. | Reuse the harness `GrokLlmReport`/`GrokOutcome` result schema; the response value carries a guarantee tag. | `llm.rs:243-258,356-383` |
 | **`LLMRegistry`** (`models/registry.py`) | String → `BaseLlm` subclass via `supported_models()` regex `fullmatch`. | A model-resolution `fn` (string → backend); a no-match is a never-silent `Err`. | C1 (`RFC-0016:82-84`) |
 
+### 3.7 Graph Workflow Runtime + collaborative orchestration (ADK 2.0 — `adk-python` v2.3.0)
+
+> Added at RP-9 ratification (2026-06-21). ADK 2.0 (GA 2026-05-19) replaced the hierarchical agent
+> executor with a **graph-based Workflow Runtime** — *"a slider from dynamic, model-led reasoning to
+> strict, deterministic workflows."* This is the explicit graph form of §3's load-bearing RT3↔RT2 line,
+> so it maps node-for-node onto the `colony`/`hypha` model with **no invented machinery**. Sources:
+> `adk.dev/2.0`; `adk-python` #4581 (GraphAgent — directed-graph workflow orchestration).
+
+| ADK 2.0 concept (source) | Faithful description | Mycelium mapping | Grounding |
+|---|---|---|---|
+| **Workflow Runtime** (graph execution engine; `adk.dev/2.0`) | Graph-based engine composing deterministic execution flows; the "slider" from model-led to strictly deterministic. | A **`colony` DAG** where **each node carries its own honesty tag**: rule-driven nodes **RT2** (deterministic), model-led nodes **RT3** (reified, `EXPLAIN`-able). The slider *is* the per-node RT2/RT3 boundary. | RT2/RT3 (`RFC-0008:99-116`); §3 load-bearing line |
+| **Routing** (Workflow Runtime / code-driven Agent-Router) | Directs flow to the next node(s) by rule or model decision. | A reified selection policy (the RFC-0005 selection site): rule-routing **RT2**, model-routing **RT3** — a `Declared`/`Empirical` choice, never `Proven`. | RT3; RFC-0005 §2; VR-5 |
+| **Fan-out / fan-in** | Split to parallel branches, join their results. | A **`colony` fork/join**; branches are RT1 share-nothing; the join is a structured-scope barrier (RT7). | RT1/RT7 (`RFC-0008:91-97,148-156`); `crates/mycelium-mlir/src/runtime.rs` |
+| **Loops / retry** | Repeat a node / re-attempt on failure, bounded. | **Bounded** structural recursion (Total) for loops; retry = an **RT5** declarative recovery policy (bounded effects). *Unbounded → no mapping.* | `for` Active (`token.rs:94`); RT5 (`RFC-0008:127-133`) |
+| **Dynamic nodes** (graph mutated mid-run) | The graph adds/rewrites nodes at runtime (model-driven). | An **RT3** reified decision — the node-set change is a `Declared`/`Empirical` selection, materialized + `EXPLAIN`-able, never a silent rewrite. | RT3; VR-5; G2 |
+| **Human-in-the-loop / interrupt → resume** | Pause for external (human) input; resume later. | A **`hypha` awaiting an external `Result`** (never-silent); a *durable* pause is a **`cyst`** checkpoint (dormancy → reclaim). | `cyst` (Glossary; DN-03); RT4 (`RFC-0008:118-126`) |
+| **Nested workflows** | A node is itself a sub-workflow. | A **nested `colony`** (a structured-scope subtree). | RT7; §4.7 C2 |
+| **State management** (per-graph state across nodes) | State threaded across the graph's nodes. | A content-addressed `State` **snapshot that moves** (RT1); concurrent-branch merge = an explicit **`fuse`** (deferred, E7-2 M-667), never a silent overwrite. | RT1; §4.3; R23-Q2 |
+| **Collaborative orchestration — operating `mode`** (chat / task / single-turn; formerly the Task-based Agent Collaboration API) | A coordinator delegates with an explicit mode: **chat** (full user interaction), **task** (interaction for clarifications), **single-turn** (no interaction, parallel). | A reified **`mode` field** on the coordinator `colony`: chat/task ⇒ a `hypha` awaiting external input (human-in-the-loop, never-silent); single-turn ⇒ a `ParallelAgent`-style RT1 fork/join. The mode is inspectable, never implicit. | RT1/RT3/RT4; §3.5; G2 |
+| **`RunConfig.max_llm_calls`** (model-call budget) | Caps total model calls per run. | A never-silent **effect budget** on the colony (M-353): overrun ⇒ explicit **`TaskOutcome::BudgetExhausted`**, never a silent truncation. | `crates/mycelium-interp/src/supervise.rs` (`TaskOutcome::BudgetExhausted`); M-353 |
+
 **The load-bearing line.** ADK's **LLM-agent vs workflow-agent** split is exactly Mycelium's
 **RT3-nondeterministic vs RT2-deterministic** boundary. Workflow agents (Sequential/Parallel/Loop)
 are deterministic orchestration → RT2; LLM reasoning and `transfer_to_agent` routing are
@@ -168,6 +193,11 @@ nodule adk.tool
 
 // Every tool failure is an explicit, named error — never a silent None/empty (C1).
 type ToolError = BadArgs(Text) | OutOfDomain(Text) | Refused(Text) | Upstream(Text)
+
+// RATIFIED (2026-06-21, RP-9): budget is NOT a ToolError arm — a tool's budget overrun surfaces on the
+//   task channel as RunError::BudgetExhausted / TaskOutcome::BudgetExhausted (the per-task effect
+//   budget, M-353; supervise.rs). obl.3 map: TypeMismatch->BadArgs, Exec->Upstream,
+//   Budget->TaskOutcome::BudgetExhausted. The branded names above are canonical (generic names = aliases).
 
 // FLAG (E7-1 / M-657): `Tool<In, Out>` needs generics — not in the language yet
 //   (issues.yaml:1879, 2066-2074). Until then, tools are concrete-typed.
@@ -238,6 +268,10 @@ fn append(events: List<Event>, e: Event) -> List<Event> = …
 //   Concurrent sub-agent merge = `fuse` (RT6, RFC-0008:135-145): payload joins up / guarantee meets
 //   down; a non-lawful merge is an EXPLICIT conflict surfaced to a policy (RT3), never a silent
 //   overwrite. `fuse` is Ratified-not-yet-lexed (lexicon:145) -> E7-2/M-667. Flag, do not paper over.
+//
+// RATIFIED (2026-06-21, RP-9 / R23-Q2): v1 = the snapshot model above; concurrent sub-agent State
+//   merge is deferred to `fuse`. v1 never silently overwrites — it serializes commits or surfaces an
+//   explicit conflict.
 ```
 
 ### 4.4 `adk.runner` — the colony scheduler
@@ -253,6 +287,10 @@ type RunError = AgentFailed(Text) | BudgetExhausted | Cancelled    // mirrors Ta
 // FLAG (E7-2 / M-666): the `colony { … }` / `hypha <expr>` L1 constructs are not yet active
 //   (lexed, but no parser production — token.rs:34,42 reserved-not-active). The Rust-first runner
 //   calls mycelium_mlir::runtime / mycelium_std_runtime::colony directly (§7).
+//
+// RATIFIED (2026-06-21, RP-9 / R23-Q1): v1 builds on `mycelium_mlir::runtime` — the only landed runtime
+//   with typed value-returning hyphae + never-silent TaskOutcome (incl. BudgetExhausted) + the RT2
+//   differential; migrate to the std.runtime facade (ADR-020) when it grows value-returning tasks.
 
 // Run an agent against a session. The agent's reason->act->observe loop is a `hypha`; the runner is
 // the structured-concurrency scope (RT7 no-orphan join). Partial failure is explicit (RT4).
@@ -603,6 +641,30 @@ moves to Accepted:
 
 ## Meta — changelog
 
+- **2026-06-21 — RATIFIED → Accepted (maintainer).** The one open completeness item is **closed**: §3
+  repaired with new **§3.7** mapping ADK 2.0's graph **Workflow Runtime** (a `colony` DAG with per-node
+  RT2/RT3 tags), routing/fan-out-fan-in/loops/retry/nested, dynamic nodes, human-in-the-loop →
+  `cyst` checkpoint, the collaborative operating-`mode` (chat/task/single-turn), and
+  `RunConfig.max_llm_calls` → `TaskOutcome::BudgetExhausted`; §3 pinned to `adk-python` **v2.3.0**.
+  Ratified design decisions (recorded inline): `adk.runner` on **`mycelium-mlir::runtime`** (R23-Q1,
+  migrate to the std.runtime facade later); **`ToolError`** keeps `BadArgs|OutOfDomain|Refused|Upstream`
+  with budget on **`TaskOutcome::BudgetExhausted`** (branded names canonical); **Session** snapshot-v0,
+  concurrent merge deferred to **`fuse`** (R23-Q2, never silent-overwrite); **LLM-leverage** stays
+  **no-verdict** (separate measured pass). **Accepted = design agreed; Enacted gated on the
+  `mycelium-adk` build + E7-1/E7-2.** Append-only; trail preserved in the Status cell. Empirical/Declared,
+  never `Proven` (VR-5).
+- **2026-06-21 — RP-9 research gate substantially discharged (Phase-2 deep-research follow-up; `dfr`
+  session).** Four fractured Opus sub-reasoners (A1 concept-map · A2 honesty-differentiator · A3
+  tool-dispatch never-silent · A4 session/runner + harness reuse) verified §11 against primary ADK
+  source (pinned `adk-python` v2.3.0) + landed in-repo substrate (`research/13-adk-phylum-RECORD.md`
+  §6). **Design soundness confirmed, no soundness falsification**; register drift item 1 +
+  parser-not-lexer item 3 resolved; item 7 (RT2 `Empirical`) confirmed; items 2/5 deferred; item 6
+  (LLM-leverage) scoped with **no verdict** (DN-09 INDETERMINATE). **One open completeness item** — the
+  ADK-2.0 concept-map repair (graph/Workflow + 3 rows) — plus a `ToolError` budget-arm constraint and
+  the runtime-choice decision, all carried forward, none silently closed (G2). Status appended:
+  **"RP-9 research gate substantially discharged; concept-map completeness open; pending maintainer
+  ratification"** (ratification still requires the build + E7-1/E7-2). Findings Empirical/Declared,
+  never `Proven` (VR-5). Append-only; no design content rewritten.
 - **2026-06-21 — Created (Draft).** Research-grounded design from `research/13-adk-phylum-RECORD.md`
   (fractured-methodology pass; four Opus sub-reasoners over one cross-context packet). Captures the
   ADK→Mycelium concept-map (§3, source-cited), the `adk` phylum surface (§4, Mycelium syntax), the

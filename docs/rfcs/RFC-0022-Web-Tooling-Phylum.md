@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0022 |
-| **Status** | **Draft** (2026-06-21 — Phase-1 design pass. Per the two-phase research discipline, a **follow-up deep-research pass gates ratification** (tracked as RP-10); the §10 Honest-Uncertainty Register enumerates exactly what that pass must verify. No status moves past Draft until §10.2 is discharged.) |
+| **Status** | **Accepted** (2026-06-21 — maintainer ratification: design agreed; **Enacted** still gated on the `mycelium-web` build). *Ratification trail:* **Draft** (2026-06-21 — Phase-1 design pass. Per the two-phase research discipline, a **follow-up deep-research pass gates ratification** (tracked as RP-10); the §10 Honest-Uncertainty Register enumerates exactly what that pass must verify. No status moves past Draft until §10.2 is discharged.) · **RP-10 research gate DISCHARGED (2026-06-21, `dfr` session)** — §10.2 verified against primary specs (RFC 9110/9112, RFC 8259, WHATWG-URL) + landed source by four fractured Opus sub-reasoners (`research/12-web-phylum-RECORD.md` §8); all four obligations (HTTP never-silent · JSON codec-reuse · server-determinism · routing/EXPLAIN) **design-sound, no falsification**. Residuals named, not closed — **deferred-to-build** (the ≥100-vector corpus, the RT2 differential, per-dispatch `RouteMatch`) + **scoped-future** (HTTP/2-3, TLS, the cross-peer smuggling model, wall-clock time, async-runtime choice, RT3). **Pending maintainer ratification** to Accepted (an agent stages the discharge; the maintainer ratifies — RFC-0018 precedent). *Honesty (VR-5):* Empirical/Declared, never `Proven`; empirical confirmation lands at the `dfb` build — the basis for a future Accepted→Enacted. · **RATIFIED → Accepted (2026-06-21, maintainer).** Decisions: **IDNA/UTS-46** — ratify the *policy* (pin a Unicode version, **nontransitional**, fail-not-best-effort; `dfb` pins the exact version current at build + records it — U7); **`web.server`** runs on the **Mycelium colony/hypha runtime** (no external executor; realization `mycelium-mlir::runtime`, tracking RFC-0023 R23-Q1); **v1 non-goals confirmed** (HTTP/2-3, TLS, the cross-peer smuggling threat model — §6, named not dropped). **Enacted** gated on the `mycelium-web` build (+ E7-1/E7-2 for the `.myc` surface). |
 | **Type** | Foundational / normative (once Accepted) — a **standard-library phylum** above the kernel (KC-3); no kernel change |
 | **Date** | June 21, 2026 |
 | **Tracks** | A new web-tooling phylum (working name `web`). Decomposes into per-nodule tasks once ratified; v1 lands Rust-first as a `mycelium-web` crate (mirroring the RFC-0016 §4.6 Rust-first order). |
@@ -265,6 +265,11 @@ requests), load-balanced upstream selection, and multi-source `select`/`merge` a
 multi-source primitive is **deferred / not yet landed** in `mycelium-mlir::runtime` (§10.2 U15). v1
 either avoids racing (deterministic upstream choice) or FLAGs it as a pending RT3 construct.
 
+**RATIFIED (2026-06-21).** `web.server`'s concurrency is the **Mycelium runtime**, not an external
+executor (tokio/async-std) — one concurrency substrate across the stdlib (KC-3, no trusted external
+dependency; uniform RT2 determinism). v1 realization = **`mycelium-mlir::runtime`** (tracking the
+RFC-0023 R23-Q1 ratification); migrate to the `std.runtime` facade (ADR-020) when it grows the surface.
+
 ### 4.5 Honest per-op guarantee tags + the guarantee-matrix obligation (RFC-0016 §4.5)
 
 The honesty load is carried — as in `std.text`/`std.io` — almost entirely by the **fallibility**
@@ -458,7 +463,10 @@ server) is **not** borrowed — it is the web-library form of the Accepted RFC-0
 - **U6 — Streaming-body backpressure** (touches `hypha`/colony scheduling — undecidable until the R1
   scheduler + the E7-2 surface land).
 - **U7 — WHATWG-vs-RFC-3986 URL divergences + IDNA/Punycode** (needs a versioned, reified,
-  inspectable Unicode/IDNA table — text.md §7-Q2 analogue).
+  inspectable Unicode/IDNA table — text.md §7-Q2 analogue). **RATIFIED (2026-06-21):** the *policy* is
+  fixed — pin a Unicode version, **nontransitional** processing, **fail-not-best-effort**; `dfb` pins
+  the exact Unicode/UTS-46 version current at build and records it (WHATWG leaves it unpinned). The
+  table is versioned + reified + inspectable.
 - **U8 — The `net` effect granularity** (coarse `io` vs a finer `net`/socket capability; RFC-0014 /
   RFC-0016 §8-Q3; effect-annotation surface is E7-1-gated, M-660).
 - **U9 — Content-negotiation selection** (`Accept`/`q`-value ranking, RFC 9110 §12 — the one
@@ -481,6 +489,22 @@ server) is **not** borrowed — it is the web-library form of the Accepted RFC-0
 
 ## Meta — changelog
 
+- **2026-06-21 — RATIFIED → Accepted (maintainer).** RP-10 discharged clean (no soundness/completeness
+  gap), so the design is ratified. Decisions: **IDNA/UTS-46** — ratify the policy (pin a Unicode
+  version, nontransitional, fail-not-best-effort; `dfb` pins the exact version at build — U7);
+  **`web.server`** runs on the Mycelium colony/hypha runtime (no external executor; realization
+  `mycelium-mlir::runtime`, tracking RFC-0023 R23-Q1); **v1 non-goals confirmed** (HTTP/2-3, TLS, the
+  cross-peer smuggling threat model — §6). **Accepted = design agreed; Enacted gated on the
+  `mycelium-web` build.** Append-only; trail preserved in the Status cell. Empirical/Declared, never
+  `Proven` (VR-5).
+- **2026-06-21 — RP-10 research gate discharged (Phase-2 deep-research follow-up; `dfr` session).**
+  Four fractured Opus sub-reasoners (W1 HTTP/never-silent · W2 JSON-codec-reuse · W3
+  server-determinism · W4 routing/EXPLAIN) verified §10.2 against primary specs + landed source; all
+  four obligations **design-sound, no falsification** (`research/12-web-phylum-RECORD.md` §8).
+  Residuals categorized (deferred-to-build empirical-on-code; scoped-future dependency-gated/non-goal)
+  and named — none silently closed (G2). Status appended: **"RP-10 research gate discharged; pending
+  maintainer ratification"** (the agent stages; the maintainer ratifies to Accepted). Findings
+  Empirical/Declared, never `Proven` (VR-5). Append-only; no design content rewritten.
 - **2026-06-21 — Draft (Phase-1 design pass).** Stands up the web-tooling phylum (working name
   `web`) as five nodules over one `phylum` — `web.http` (value model + never-silent parsing),
   `web.json` (a thin convenience over `std.io`'s one canonical JSON — no new codec), `web.route`

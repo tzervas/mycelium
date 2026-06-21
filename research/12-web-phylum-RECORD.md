@@ -713,8 +713,147 @@ FLAGGED (G2/VR-5).
 
 ---
 
+## 8. RP-10 discharge pass (Phase-2 deep-research follow-up, 2026-06-21)
+
+> The Phase-2 pass §6.2 / RFC-0022 §10.2 demand. Method: four fractured Opus max-effort
+> sub-reasoners — **W1** HTTP/never-silent · **W2** JSON-codec-reuse · **W3** server-determinism ·
+> **W4** routing/EXPLAIN — each a live multi-source pass (web search → fetch primary sources →
+> adversarial verify → cited synthesis) over one tight cross-context packet. Findings are
+> **Empirical/Declared, never `Proven`** (VR-5). **`mycelium-web` does not exist yet** (it is the
+> `dfb` build's task, gated on this pass), so every running-code threshold is **deferred-to-build**:
+> *discharge* here = design verified sound against the primary specs + in-repo ground truth with **no
+> falsification** (the research gate) — not the empirical-on-code confirmation, which lands at build
+> (the RFC-0018 precedent: ratify on a research discharge; the stronger evidence deferred). **Outcome:
+> the RP-10 research gate DISCHARGES — no obligation falsified.**
+
+### 8.1 Findings per obligation
+
+- **Obl. 1 — HTTP/1.1 never-silent located-error contract (W1).** *[Empirical, vs RFC 9112 primary
+  text.]* Every RFC 9112 malformed-input class carries a normative reject clause that maps onto a
+  located `ParseError` arm — obs-fold §5.2-4, whitespace-before-colon §5.1-2 (MUST-400), body-length
+  precedence §6.3 (TE overrides CL; co-present ⇒ error), invalid/duplicate Content-Length §6.3-2.5
+  (MUST-400+close), chunked grammar §7.1 (incl. the §7.1-5 integer-overflow guard). **Not falsified:**
+  no class *inherently* needs a silent accept — every RFC leniency (obs-fold→SP, CL+TE→TE) is an
+  *optional* branch Mycelium declines (G2 = take the reject branch). A self-consistent never-silent
+  parser cannot be desync-smuggled against itself (PortSwigger CL.TE/TE.CL/TE.TE); residual smuggling
+  risk exists only at a trust boundary with a *lenient peer* (scoped-future). **U7:** WHATWG-URL
+  diverges from RFC 3986 (percent-encode-vs-reject; `\`≡`/`; IDNA via UTS-46 ToASCII, nontransitional)
+  and **deliberately leaves the Unicode version unpinned** — so Mycelium must *add* a reified, pinned
+  IDNA-table version (C3 "no hidden defaults"), a design addition the spec itself does not provide.
+- **Obl. 2 — JSON↔`Value` delegates to one canonical codec (W2).** *[Empirical, vs landed Rust
+  source.]* The sole trusted `impl Serialize/Deserialize for Value` is `crates/mycelium-core/src/value.rs`
+  (M-104); the one canonical JSON projection is `crates/mycelium-std-io/src/serialize.rs` (wraps `serde_json`
+  over `Value`, adds the non-finite-f64 refusal + located errors, no new logic); `std.fmt` *already*
+  delegates here (M-372, ratified 2026-06-19) — the exact precedent `web.json` follows. A repo-wide
+  sweep found **no second `Value`↔JSON codec** (lsp/doc/bench/cert/spore serialize their own Rust
+  structs via derive). **DRY not falsified.** **U16:** decode stays **`Empirical`** — a `Proven`
+  round-trip needs a checked theorem over the closed grammar (io §7-Q2) that does not exist; the
+  guard-test `no_op_is_proven_without_a_checked_theorem` forbids the upgrade, and the f64 round-trip is
+  empirically narrowed to the losslessly-representable subset. Cross-checked vs RFC 8259 (§6 Infinity/
+  NaN excluded; §4 duplicate-key "unpredictable"; leading-zeros forbidden) — the refusals are
+  correctly placed.
+- **Obl. 3 — server-as-`colony` determinism is Empirical-via-differential, not Proven (W3).**
+  *[Empirical/Declared.]* The colony-of-hyphae server satisfies RT2 **by construction** (RT1
+  share-nothing immutable `Request`→`Response`; RT4 explicit `TaskOutcome`; RT7 scope = graceful
+  shutdown). The honest ceiling is the **RT2 differential** (interpreter-path vs AOT-path over a fixed
+  corpus), tagged **`Empirical`** — mirroring the landed M-357 precedent (`crates/mycelium-mlir/src/runtime.rs`
+  `run_colony`; the guard-test `kahn_determinism_is_empirical_not_proven` in
+  `crates/mycelium-std-runtime/src/guarantee_matrix.rs`). **`Proven` correctly withheld:** Kahn (1974)'s
+  determinacy is a *denotational* result over an idealized stream model (continuous functions / least
+  fixed point), **not** a proof that a real scheduler realizes it — exactly the gap that keeps the
+  claim `Empirical` (VR-5). **Not falsified:** isolation is structural, so the colony *can* satisfy
+  RT2. Actor-model (mailbox arrival-order indeterminacy) correctly rejected; structured concurrency
+  (Sústrik) supplies RT7 scoping.
+- **Obl. 4 — route-table inspectability / EXPLAIN (W4).** *[Declared/Empirical.]* RFC-0016 §4.1 C3
+  binds route dispatch (it *selects* a handler); RFC-0005 §2 already supplies the reified
+  selection-record shape `{inputs considered, cost, chosen, override hook}` — `RouteMatch` is an
+  instance, no new EXPLAIN convention needed. Construction-time ambiguity detection matches/exceeds
+  prior art: **Go 1.22 `net/http.ServeMux`** panics on conflicting patterns at registration; **axum**
+  panics on overlapping method-routes at router-build — Mycelium *improves* on both by returning a
+  never-silent **`CheckError`** value (naming the two colliding patterns + witnessing path) instead of
+  a panic (G2). **U9:** RFC 9110 §12 gives a deterministic `Accept`/q-value ranking (§12.4.2) with
+  most-specific-precedence tie-break (§12.5.1) → the op stays **`Exact`**; `Vary` (§12.5.5) shows the
+  spec itself surfaces the *why* of a representation choice — so a reified content-negotiation
+  selection record is both required (C3) and HTTP-aligned. **Not falsified.**
+
+### 8.2 Per-item disposition (append-only; none silently dropped — G2)
+
+| Item | Disposition | Basis |
+|---|---|---|
+| RP-10 obl.1 (HTTP never-silent) | discharged-by-research **+** deferred-to-build-Empirical | design sound vs RFC 9112; the ≥100-vector corpus is `dfb`'s |
+| RP-10 obl.2 (JSON codec-reuse) | discharged-by-research | one codec located in source; no second path; `dfb` carries guard-tests |
+| RP-10 obl.3 (server determinism) | discharged-by-research (tags/design) **+** deferred-to-build-Empirical (differential) | RT2-by-construction; `Empirical` ceiling honest; suite is `dfb`'s |
+| RP-10 obl.4 (routing/EXPLAIN) | discharged-by-research **+** deferred-to-build-Empirical | C3 + RFC-0005 shape sound; per-dispatch materialization is `dfb`'s |
+| D1–D10 (decidable-now) | discharged-by-research | re-confirmed sound; unchanged |
+| U1 (naming) | scoped-future | DN-02 three-test lexicon call; not a research-empirical gate |
+| U2 (socket `wild`/FFI floor) | deferred | `std-sys` vs web-internal placement; security-sensitive; `dfb` + ADR |
+| U3 (HTTP/2,3) | scoped-future-non-goal | explicit v1 non-goal |
+| U4 (TLS/HTTPS) | scoped-future-non-goal | v2; ties U2 + a security pass |
+| U5 (smuggling/injection) | discharged-by-research (single-node) **+** scoped-future (cross-peer proxy) | reject-branch closes self-desync; proxy model is a `/security-review`-grade follow-up |
+| U6 (streaming backpressure) | scoped-future | R1 scheduler / E7-2; not a determinism gate |
+| U7 (URL/IDNA) | discharged-by-research (divergence catalogue) **+** deferred-to-build (versioned IDNA pin) | Mycelium adds the pin WHATWG omits |
+| U8 (`net` effect granularity) | deferred | E7-1 M-660 effect surface |
+| U9 (content-negotiation) | discharged-by-research | deterministic `Exact` + reified selection; concrete fields are `dfb`'s |
+| U10 (body↔Source/Sink seam) | deferred-to-build | io §7-Q3 analogue |
+| U11 (cross-request shared state) | deferred | R2 M-667/M-668; v1 picks a Rust repr + FLAGs the construct |
+| U12 (wall-clock time) | scoped-future | RFC-0008 R8-Q3; nondeterministic input *outside* the RT2 fragment — preserves determinism |
+| U13 (graceful-shutdown policy) | scoped-future | structural contract discharged (D8); drain/deadline/force policy ties U12 |
+| U14 (async runtime choice) | scoped-future | RFC-0008 R8-Q1; fairness is performance, RT2 invariant to it |
+| U15 (multi-source select/merge RT3) | scoped-future-non-goal | RT3 construct, deferred; outside the RT2 default |
+| U16 (Proven JSON round-trip) | resolved — stays `Empirical` | no checked theorem; guard-test forbids upgrade |
+| U17 (typed `Json<T>` + `.myc` surface) | deferred-to-build | E7-1/E7-2-gated; Rust-first now |
+
+### 8.3 Constraints the `dfb` Rust-first build MUST honor
+
+1. **Located errors:** every `Err` carries byte-offset + field/component name; no sentinel/clamp/partial value.
+2. **Take the *reject* branch** at every RFC 9112 fork (obs-fold, CL+TE, invalid request-line) — what makes never-silent stronger than mere RFC-compliance and closes U5 self-desync.
+3. **Framing precedence (§6.3):** CL+TE co-present ⇒ explicit `Err` (not "TE wins"); conflicting/duplicate CL ⇒ `Err`; the connection-close-after is a `web.server` duty.
+4. **Strict CRLF** in chunked framing; guard chunk-size integer overflow (§7.1-5).
+5. **Versioned, reified IDNA/UTS-46 table:** pin a Unicode version, nontransitional processing, return failure (not best-effort), make the version inspectable (C3).
+6. **`web.json`:** zero `Value`↔JSON code outside `std.io`; propagate the non-finite-f64 refusal; carry `no_op_is_proven_without_a_checked_theorem`; decode tagged `Empirical`.
+7. **RT2 differential suite:** interpreter-vs-AOT, ≥3 seeds, zero divergences, a non-vacuity (genuine-interleave) guard; carry `kahn_determinism_is_empirical_not_proven`; per-request isolation real (no ambient shared mutable state).
+8. **`RouteMatch`** materialized for every dispatch (RFC-0005 §2 shape: handler + matched pattern + captures + precedence ordering); ambiguity ⇒ `CheckError` at construction (a value, not a panic) naming the two patterns + witnessing path; 404/405 distinct runtime channels.
+9. **Content-negotiation** (if shipped): rank by RFC 9110 §12.4.2 q-values, tie-break §12.5.1; tag `Exact`; reify the selection record + emit `Vary`.
+10. **Honest tags:** all inherited from landed std precedents, never upgraded; VR-5 guard-tests carried into `crates/mycelium-web/src/guarantee_matrix.rs` (the future build's crate).
+
+### 8.4 Carried-forward open items (explicitly NOT closed by this pass)
+
+- **Empirical-on-code confirmation** of every obligation (the ≥100-vector corpus; the RT2 differential; per-dispatch `RouteMatch` materialization) — **`dfb`'s at build**; the basis for a later Accepted→Enacted move.
+- The **cross-peer / proxy request-smuggling threat model** (Mycelium-`web` front-ending a lenient peer; HTTP/2-downgrade desync) — a `/security-review`-grade follow-up; **not** closed by the single-node parser (U5 residual).
+- The **specific IDNA/Unicode version to pin** (WHATWG leaves it open) — a `dfb` + DN/ADR decision (U7 residual).
+- The scoped-future register items **U1–U4, U6, U8, U10–U15, U17** — each named in §8.2 with its gating dependency; carried into a future RFC/supersession, not silently closed.
+
+### 8.5 Discharge assessment
+
+**RP-10 research gate: DISCHARGES.** All four obligations are design-verified sound against primary
+specs + landed source with **no falsification**; residuals are honestly categorized as
+deferred-to-build (empirical-on-code) or scoped-future (dependency-gated / non-goal) and named in §8.4
+— none silently closed (G2). Per the maintainer's decision, RFC-0022 Status moves to **"Draft —
+RP-10 research gate discharged; pending maintainer ratification"** (not self-ratified to Accepted; the
+discharge + the M-670 body update is what unblocks `dfb`). Empirical confirmation is `dfb`'s, the
+basis for a future Accepted→Enacted move.
+
+**[Update 2026-06-21 — ratified.]** The maintainer subsequently **ratified RFC-0022 to Accepted** (see
+the Meta changelog below + the RFC Status cell). This §8.5 records the *discharge-time* assessment —
+the recommendation to stage at "pending ratification" was enacted, then superseded by ratification.
+
+---
+
 ## Meta — changelog
 
+- **2026-06-21 — RFC-0022 RATIFIED → Accepted (maintainer).** Following the clean RP-10 discharge,
+  the maintainer ratified the design. Ratified: IDNA policy pinned at build (nontransitional,
+  fail-closed); `web.server` on the Mycelium runtime (`mycelium-mlir::runtime`, no external executor);
+  HTTP/2-3 + TLS + smuggling-model = named v1 non-goals. See RFC-0022 Status + changelog.
+  Accepted = design; Enacted gated on the `mycelium-web` build.
+- **2026-06-21 — RP-10 discharge pass (Phase-2 deep-research follow-up; four fractured Opus
+  sub-reasoners W1–W4).** Appends §8: the RP-10 research gate **discharges** — all four obligations
+  (HTTP never-silent, JSON codec-reuse, server-determinism, routing/EXPLAIN) design-verified sound
+  against primary specs (RFC 9110/9112, RFC 8259, WHATWG-URL, RFC 9110 §12) + landed source
+  (`mycelium-core` M-104 codec, `mycelium-std-io`, `run_colony` differential), **no falsification**.
+  Residuals categorized (deferred-to-build / scoped-future) and named (§8.4) — none silently closed.
+  Findings Empirical/Declared, never `Proven` (VR-5). RFC-0022 → "research gate discharged; pending
+  maintainer ratification." Append-only.
 - **2026-06-21 — Record created (Phase-1 design pass for RFC-0022).** Fractured research over four
   sub-endeavours (HTTP protocol + parsing; server concurrency; JSON↔`Value`; phylum surface +
   guarantees + examples + build plan), each a focused max-effort sub-reasoner sharing one
