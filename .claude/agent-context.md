@@ -61,6 +61,22 @@ Validate: `python3 tools/github/doc_refs_check.py`
 
 ## Current state (2026-06-21)
 
+### Recently landed (most recent first)
+
+- **PM sync hardened** — `tools/github/` manifests are warning-clean: `area:spec` / `status:todo` /
+  `type:task` added to `labels.json`, `spec` option added to the project `Area` field, `scaffold`
+  type + ~18 recurring scope aliases added to `conventions.json`, a **`retire`** list (stock GitHub
+  labels deleted only when unused, else flagged — G2) in `label-aliases.json`, and doc-ref/task-id/
+  wave PR scopes downgraded from `!` flags to `~` info. `python3 tools/github/gh-issues-sync.py
+  --validate` is clean; `--self-test` green.
+- **Branching discipline strengthened** (CLAUDE.md) — explicit *working-branch → PR → squash-to-
+  `main`* flow (`main` is never touched directly); **pull the squashed `main` down into the working
+  branch before PR-ing** (and propagate it down through swarm levels) so the PR diff is clean and the
+  squash-merge is conflict-free; plus swarm mitigation **#7** (branch-ref drift → silent partial
+  octopus merge: merge the ref the child *reports*, then *count* the landed files).
+- **Gate issues live on GitHub** — M-652→#301, M-653→#300, M-654→#299, M-655→#298 (idmap updated).
+- **Next-wave prep + 10 component memory files** (`.claude/memory/`) — PR #297, squash `358c8c5`.
+
 ### The 1.0.0 gate (ADR-021 — Accepted; see `docs/notes/DN-19-Road-to-1.0.0.md`)
 
 1.0.0 = the **kernel/core** once ADR-021's gate rows close. Status:

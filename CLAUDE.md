@@ -66,11 +66,14 @@ auto-triggers without an explicit decision.
   (`docs(rfc-0003): tighten capacity-bound wording`, `feat(swap): …`).
 - A PR states which `FR/NFR/VR/SC` it advances (or which ADR/RFC it implements) and **how it was
   verified**. Editorial-only PRs say so.
-- Branch from `main`, one task per branch.
+- **Working-branch workflow — `main` is never touched directly.** All work happens on a working
+  branch off `main` (one task per branch); `main` advances **only** through a reviewed PR. Never
+  `git push` to `main`, never fast-forward or merge-commit into it, never commit on it locally —
+  the *only* write to `main` is the PR's squash-merge. This holds even for a one-file fix.
 - **Squash-only into `main`.** Every PR lands on `main` as a **single squash commit** — a linear,
-  bisectable history that keeps downstream development and integration merges smooth. The internal
-  swarm integration merges (leaf→epic→orch) stay octopus/`--no-ff` to preserve lineage; **only the
-  final landing on `main` squashes.**
+  bisectable history that keeps downstream development and integration merges smooth. Squashing
+  happens **only** at the PR→`main` step; the internal swarm integration merges (leaf→epic→orch)
+  stay octopus/`--no-ff` to preserve lineage — **only the final landing on `main` squashes.**
 - **Curate the squash commit — housekeeping is part of the merge.** Write a clear, self-contained
   subject + body describing the *net* change; **never** let the auto-concatenated WIP /
   `wip(batch …)` / fixup / merge trail stand as the squash message. The commit left on `main` is the
@@ -263,6 +266,22 @@ large files. Use `TaskOutput(block=false)` for progress polls (don't block). Sum
 phase explicitly (in-context) before starting the next. The orchestrator's context budget is the
 scarcest resource in a multi-wave swarm — protect it.
 
+### 7. Branch-ref drift → silent partial octopus merge (lesson, 2026-06-21)
+**Pattern:** A worktree agent commits to a branch whose name differs from the one the parent
+assumed (e.g. the parent merged `worktree-agent-<id>` but the agent had created and committed to
+`claude/leaf/<EPIC>-<LEAF>-…`). `git merge --no-ff <assumed-branch>` then "succeeds" by merging an
+**empty/stale** ref, so only a subset of the children's files land — and an octopus merge reports
+success regardless. The gap is invisible unless you count the result.  
+**Mitigation:** Two cheap, mandatory guards:
+1. **Merge the ref the child reports, not an assumed name.** Every agent reports its **exact branch
+   ref and SHA**; the parent merges *that* ref. Before merging, confirm the ref carries the expected
+   payload: `git ls-tree --name-only <ref> <dir>/` is non-empty (or `git rev-list --count
+   main..<ref>` > 0).
+2. **Verify the merge landed the whole set.** After the octopus merge, assert the expected file
+   count/paths are present (e.g. `ls <dir> | wc -l` equals the number of leaves × files-per-leaf,
+   and a manifest/index ↔ actual `diff` is empty). A green merge is **not** evidence the content
+   arrived — count it. (This is the merge-time twin of mitigation #2's post-merge YAML dedup.)
+
 ## Autonomous PR workflow — review-before-merge, no human gate
 
 The merge gate is the agent's, not a human's. A parent (orchestrator/epic) **merges its children
@@ -295,6 +314,14 @@ asked to wait, wait.)
    spawning worktree children — an `isolation:"worktree"` leaf branches from the branch's *upstream*
    (`origin/...`), so an un-pushed parent tip leaves the leaf on a stale base and forces an
    after-the-fact deconfliction (lesson: M-379 Stage-2). Push first; deconflict never.
+6. **Pull the squashed `main` down before PR-ing into `main`.** Because landing squashes the whole
+   PR into one commit, a branch's pre-merge commits **diverge** from `main`'s new history the moment
+   any PR lands. So **before opening or squash-merging a PR into `main`, first pull the latest
+   (squashed) `main` down into the working branch** (`git fetch origin main` → merge/rebase onto it),
+   resolve there, and re-run `just check`. The PR diff then shows **only** this branch's net change
+   against current `main`, and the squash-merge stays conflict-free. In a swarm, propagate the
+   freshly-squashed `main` **down through every level** (orch → epic → leaf) after each landing so no
+   lower branch keeps building on a superseded base — pull-down flows *down*, squash-merge flows *up*.
 
 ## Skills (`.claude/skills/`)
 Invoke with `/<name>`; they auto-engage when relevant.

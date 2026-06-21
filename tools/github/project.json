@@ -53,7 +53,8 @@
         { "name": "project",   "color": "GRAY",   "description": "WS-I Project infrastructure" },
         { "name": "language",  "color": "BLUE",   "description": "Surface language (L1)" },
         { "name": "stdlib",    "color": "GREEN",  "description": "Standard / core library (mycelium-std-*, RFC-0016)" },
-        { "name": "release",   "color": "ORANGE", "description": "Release engineering — versioning, release-plz, packaging" }
+        { "name": "release",   "color": "ORANGE", "description": "Release engineering — versioning, release-plz, packaging" },
+        { "name": "spec",      "color": "PURPLE", "description": "Specification / corpus authoring (RFC/ADR/DN, spec docs)" }
       ]
     },
     {

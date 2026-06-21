@@ -60,8 +60,14 @@ Shared files (orchestrator-owned, read-only for leaves): `CHANGELOG.md`, `docs/D
 ## Branch and PR flow
 
 ```
-Branch from main → develop → just check (already runs the cargo-deny/audit gate; M-652 makes it non-skip) → PR → squash to main
+Branch from main → develop → just check (already runs the cargo-deny/audit gate; M-652 makes it non-skip)
+  → pull squashed main down into the branch → PR → squash to main
 ```
 
-Always PR into main. Never push main directly. Use `/land` for the final squash step. New IDs:
-verify the slot is free first (`grep "id: M-655" tools/github/issues.yaml`).
+`main` is **never touched directly** — the only write to it is the PR's squash-merge (CLAUDE.md
+§Commits & PRs / §Autonomous PR workflow). **Before PR-ing, pull the latest squashed `main` into the
+branch** (`git fetch origin main` → merge/rebase → re-`just check`) so the diff is clean and the
+squash-merge is conflict-free; in a swarm, propagate the squashed `main` down through every level
+after each landing (pull-down flows down, squash-merge flows up). Use `/land` for the final squash.
+New IDs: verify the slot is free first (`grep "id: M-655" tools/github/issues.yaml`). After adding
+issues, run `python3 tools/github/gh-issues-sync.py --validate` (must be warning-clean).

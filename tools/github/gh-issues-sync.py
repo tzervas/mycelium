@@ -788,22 +788,27 @@ def label_delta(desired, actual):
     return sorted(desired - actual), sorted(actual - desired)
 
 
-def plan_label_migrations(repo_label_names, canonical_names, aliases):
-    """Plan noncompliant-label migrations from the repo's live label set.
+def plan_label_migrations(repo_label_names, canonical_names, aliases, retire=None):
+    """Plan noncompliant-label reconcile actions from the repo's live label set.
 
-    Pure (no I/O): returns (migrations, flags) where:
+    Pure (no I/O): returns (migrations, retirements, flags) where:
     - ``migrations`` is a sorted list of (old_name, new_name) for noncompliant labels that have a
       declared alias;
-    - ``flags`` is a sorted list of noncompliant label names with NO declared alias (they must be
-      handled manually — never silently deleted, G2).
+    - ``retirements`` is a sorted list of noncompliant names declared in ``retire`` — to be deleted
+      ONLY if unused at reconcile time (a retired-but-still-carried label is FLAGGED there, never
+      silently dropped, G2);
+    - ``flags`` is a sorted list of noncompliant names that are neither aliased nor retired (handled
+      manually — never silently deleted, G2).
 
     A label is COMPLIANT when its name appears in ``canonical_names`` (the labels.json set). A
-    noncompliant label is either MIGRATED (has an alias) or FLAGGED (has no alias). An alias that
-    maps to a name not in ``canonical_names`` is itself flagged (the target must be declared).
+    noncompliant label is MIGRATED (has an alias), else RETIRED (declared in ``retire``), else
+    FLAGGED. An alias WINS over retire — migrating preserves the label↔issue link. An alias whose
+    target is not in ``canonical_names`` is itself flagged (the target must be declared first).
     """
     canonical = set(canonical_names)
+    retire = set(retire or ())
     noncompliant = [n for n in repo_label_names if n not in canonical]
-    migrations, flags = [], []
+    migrations, retirements, flags = [], [], []
     for name in noncompliant:
         if name in aliases:
             target = aliases[name]
@@ -814,9 +819,11 @@ def plan_label_migrations(repo_label_names, canonical_names, aliases):
                 flags.append(
                     f"{name} (alias -> '{target}' is not in labels.json; add it first)"
                 )
+        elif name in retire:
+            retirements.append(name)
         else:
             flags.append(name)
-    return sorted(migrations), sorted(flags)
+    return sorted(migrations), sorted(retirements), sorted(flags)
 
 
 def normalize_body(text):
@@ -890,6 +897,25 @@ def parse_conventional(title):
     }
 
 
+# Scopes that are area-less BY DESIGN, not by omission (the conventions.json scope_to_area policy):
+# doc-reference scopes (rfc-*/adr-*/dn-*/rp-* and the bare forms), task-id scopes (M-###, E#-#,
+# m###-p#), and wave planning markers. These are surfaced as INFO at the print site (a `~`, not a
+# `!`), so a genuine missing-area mapping stands out from one that is unmapped on purpose.
+_INTENTIONAL_SCOPE_RE = re.compile(
+    r"^(?:adr|dn|rfc|rp)(?:[-_].*)?$"  # doc-reference scopes (incl. the bare adr/dn/rfc/rp)
+    r"|^m-?\d.*$"  # M-task ids: m-381, m376-p1
+    r"|^e\d+-\d+.*$"  # E-task ids: e3-8
+    r"|^wave.*$",  # wave / wave-1 / wave4 planning markers
+    re.IGNORECASE,
+)
+
+
+def is_intentional_unmapped_scope(scope):
+    """True when ``scope`` is unmappable by design (doc-ref / task-id / wave) — reported as info,
+    not a flag-to-fix. See ``_INTENTIONAL_SCOPE_RE``."""
+    return bool(_INTENTIONAL_SCOPE_RE.match((scope or "").strip()))
+
+
 def derive_pr_labels(parsed, type_map, area_set, scope_aliases=None):
     """Map a parsed title to (labels:set, flags:list) using conventions.json + the area:* set.
 
@@ -917,6 +943,12 @@ def derive_pr_labels(parsed, type_map, area_set, scope_aliases=None):
                 flags.append(
                     f"scope alias '{scope}' -> '{scope_aliases[scope]}' is not an area:* label"
                 )
+        elif is_intentional_unmapped_scope(scope):
+            # By-design area-less scope (doc-ref / task-id / wave) — info, not a flag-to-fix (G2:
+            # still reported, never silently dropped).
+            flags.append(
+                f"scope '{scope}' intentionally unmapped (doc-ref/task-id/wave) — no area inferred"
+            )
         else:
             flags.append(f"scope '{scope}' is not an area:* label (no area inferred)")
     if parsed["breaking"]:
@@ -1163,6 +1195,19 @@ def _load_label_aliases(here):
     return {k: v for k, v in data.get("aliases", {}).items()}
 
 
+def _load_label_retire(here):
+    """Load the declared ``retire`` list from label-aliases.json — names approved for deletion when
+    UNUSED. Absent file/key → empty set (nothing retired). Each entry is a ratified decision: the
+    label is deleted only if it carries no issues/PRs at reconcile time, else FLAGGED (G2 — never a
+    silent drop). Lets the standard GitHub stock labels (duplicate/help wanted/…) be cleared without
+    re-flagging them every run, while still refusing to drop one that is actually in use."""
+    aliases_path = here / "label-aliases.json"
+    if not aliases_path.exists():
+        return set()
+    data = json.loads(aliases_path.read_text(encoding="utf-8"))
+    return set(data.get("retire", []))
+
+
 def _label_task(repo, lb):
     """Build a batch task (callable -> (item, ok, err)) that create-or-updates one label.
 
@@ -1267,14 +1312,15 @@ def reconcile_labels(repo, labels_json, dry_run, issues_yaml=None):
     # with a declared alias are migrated (relabel every open+closed issue/PR, then delete the
     # stale label). Noncompliant labels without an alias are FLAGGED — never silently deleted (G2).
     aliases = _load_label_aliases(HERE)
+    retire = _load_label_retire(HERE)
     canonical_names = {lb["name"] for lb in labels}
     raw_repo_labels = json.loads(gh(["api", "--paginate", f"repos/{repo}/labels"]))
     repo_label_names = [lb["name"] for lb in raw_repo_labels]
-    migrations, flags = plan_label_migrations(
-        repo_label_names, canonical_names, aliases
+    migrations, retirements, flags = plan_label_migrations(
+        repo_label_names, canonical_names, aliases, retire
     )
 
-    if not migrations and not flags:
+    if not migrations and not retirements and not flags:
         print("   = noncompliant labels: none found (repo labels match labels.json)")
     else:
         if migrations:
@@ -1345,11 +1391,48 @@ def reconcile_labels(repo, labels_json, dry_run, issues_yaml=None):
                     else:
                         safe_print(f"   • deleted stale label '{old_name}'")
 
+        for old_name in retirements:
+            # A retired label (declared in label-aliases.json `retire`) is deleted ONLY when it
+            # carries no issues/PRs. A retired-but-still-used label is FLAGGED, never silently
+            # dropped (G2) — add an alias to migrate it, or clear it manually. URL-encode the name
+            # (it can contain spaces, e.g. `help wanted`) — an unencoded space HANGS the query.
+            raw_issues = json.loads(
+                gh(
+                    [
+                        "api",
+                        "--paginate",
+                        f"repos/{repo}/issues?state=all&per_page=100&labels={quote(old_name, safe='')}",
+                    ]
+                )
+            )
+            carriers = [it["number"] for it in raw_issues]
+            if carriers:
+                safe_print(
+                    f"   ! retired label '{old_name}' still on {len(carriers)} issue(s)/PR(s) "
+                    f"— not deleted; add an alias to migrate it, or clear it manually (G2)",
+                    file=sys.stderr,
+                )
+                continue
+            if dry_run:
+                print(f"   ~ would retire (delete unused) label '{old_name}'")
+                continue
+            rc, _out, err = run_gh_task(
+                ["label", "delete", old_name, "--repo", repo, "--yes"]
+            )
+            if rc != 0:
+                safe_print(
+                    f"   ! could not retire label '{old_name}' "
+                    f"({_stderr_tail(err)}) — re-run to retry",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"   • retired unused label '{old_name}'")
+
         for flag in flags:
             # Never-silent: a noncompliant label with no alias is left untouched and reported (G2).
             print(
                 f"   ! noncompliant label '{flag}' has no declared alias in label-aliases.json "
-                f"— left untouched; add an alias or delete it manually",
+                f"— left untouched; add an alias, retire it, or delete it manually",
                 file=sys.stderr,
             )
 
@@ -1745,7 +1828,9 @@ def reconcile_prs(repo, conventions, area_set, task_to_ms, *, dry_run):
         set_ms = ms if (ms and ms != pr["milestone"]) else None
 
         for flag in flags:  # never-silent: report every refusal to invent
-            print(f"   ! #{number}: {flag}", file=sys.stderr)
+            # By-design unmapped scopes are info (`~`); genuine gaps stay a flag (`!`).
+            sigil = "~" if "intentionally unmapped" in flag else "!"
+            print(f"   {sigil} #{number}: {flag}", file=sys.stderr)
 
         if not to_add and not set_ms:
             in_sync += 1
@@ -2350,24 +2435,64 @@ def self_test():
         "documentation": "type:docs",
         "good first issue": "good-first-issue",
     }
-    # compliant labels → no migrations, no flags.
-    migs, flgs = plan_label_migrations(["type:bug", "area:swap"], canonical, aliases)
-    assert migs == [] and flgs == [], (migs, flgs)
+    # compliant labels → no migrations, no retirements, no flags.
+    migs, rets, flgs = plan_label_migrations(
+        ["type:bug", "area:swap"], canonical, aliases
+    )
+    assert migs == [] and rets == [] and flgs == [], (migs, rets, flgs)
     # mix: two aliased + one unaliased noncompliant.
-    migs, flgs = plan_label_migrations(
+    migs, rets, flgs = plan_label_migrations(
         ["type:bug", "bug", "enhancement", "orphan-label"], canonical, aliases
     )
     assert migs == [("bug", "type:bug"), ("enhancement", "type:feature")], migs
-    assert flgs == ["orphan-label"], flgs
+    assert rets == [] and flgs == ["orphan-label"], (rets, flgs)
     # alias pointing to a non-canonical target → appears in flags, not migrations.
     bad_aliases = {"stale": "nonexistent-canonical"}
-    migs2, flgs2 = plan_label_migrations(["stale"], canonical, bad_aliases)
-    assert migs2 == [], migs2
+    migs2, rets2, flgs2 = plan_label_migrations(["stale"], canonical, bad_aliases)
+    assert migs2 == [] and rets2 == [], (migs2, rets2)
     assert any("nonexistent-canonical" in f for f in flgs2), flgs2
-    # empty repo labels → no migrations, no flags (idempotent on an already-clean repo).
-    assert plan_label_migrations([], canonical, aliases) == ([], [])
+    # retire: an unaliased noncompliant label declared in `retire` → retirement, not a flag.
+    migs3, rets3, flgs3 = plan_label_migrations(
+        ["bug", "wontfix", "orphan-label"], canonical, aliases, {"wontfix", "question"}
+    )
+    assert migs3 == [("bug", "type:bug")], migs3
+    assert rets3 == ["wontfix"] and flgs3 == ["orphan-label"], (rets3, flgs3)
+    # an alias WINS over retire (migration preserves the label↔issue link).
+    m4, r4, _f4 = plan_label_migrations(["bug"], canonical, aliases, {"bug"})
+    assert m4 == [("bug", "type:bug")] and r4 == [], (m4, r4)
+    # empty repo labels → all empty (idempotent on an already-clean repo).
+    assert plan_label_migrations([], canonical, aliases) == ([], [], [])
     # all canonical → no output.
-    assert plan_label_migrations(list(canonical), canonical, aliases) == ([], [])
+    assert plan_label_migrations(list(canonical), canonical, aliases) == ([], [], [])
+
+    # ── is_intentional_unmapped_scope (pure) ─────────────────────────────────────────────────────
+    for s in (
+        "adr-021",
+        "ADR-021",
+        "dn-16",
+        "rfc-0009",
+        "rp-8",
+        "m-381",
+        "m376-p1",
+        "wave",
+        "wave5",
+    ):
+        assert is_intentional_unmapped_scope(s), s
+    for s in ("toolchain", "llm-harness", "readme", "widget", "core", ""):
+        assert not is_intentional_unmapped_scope(s), s
+    # in derive_pr_labels: a by-design scope is flagged as "intentionally unmapped", a genuine
+    # unknown scope keeps the plain "is not an area:* label" flag.
+    _l, fl = derive_pr_labels(
+        parse_conventional("docs(adr-021): x"), {"docs": "type:docs"}, areas
+    )
+    assert _l == {"type:docs"} and any("intentionally unmapped" in f for f in fl), (
+        _l,
+        fl,
+    )
+    _l, fl = derive_pr_labels(parse_conventional("feat(widget): x"), type_map, areas)
+    assert any("is not an area:* label" in f for f in fl) and not any(
+        "intentionally unmapped" in f for f in fl
+    ), fl
 
     # ── Project v2 pure mapping/diff ──────────────────────────────────────────────────────────
     field_map = {

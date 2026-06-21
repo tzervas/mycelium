@@ -8,7 +8,22 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
-### Changed (2026-06-21: 1.0.0 ratification wave — maintainer-ratified)
+### Changed (2026-06-21: PM-sync hardening + branching discipline — tooling/process)
+- **GitHub PM sync handles its flagged cases gracefully** (`tools/github/`). `labels.json` gains
+  `area:spec`, `status:todo`, `type:task`; the project `Area` field gains a `spec` option;
+  `conventions.json` gains a `scaffold` → `type:infra` mapping and ~18 recurring scope→area aliases
+  (and routes `stdlib`/`std` → `area:stdlib`, `spec` → `area:spec` now that those areas exist).
+  `label-aliases.json` gains a **`retire`** list — stock GitHub labels (`duplicate`, `help wanted`,
+  `invalid`, `question`, `wontfix`) are deleted **only when unused**, else FLAGGED (G2: never a
+  silent drop). PR scopes that are area-less *by design* (doc-ref `adr-*/dn-*/rfc-*`, task-ids,
+  wave markers) are now surfaced as `~` info, not `!` flags. `--validate` is warning-clean;
+  `--self-test` green (new coverage for `retire` + intentional-scope classification).
+- **Branching/merge discipline strengthened** (CLAUDE.md). Explicit *working-branch → PR →
+  squash-to-`main`* flow (`main` is never written except by a PR squash-merge); **pull the squashed
+  `main` down into the branch before PR-ing** (and propagate down through swarm levels) so the diff
+  is clean and the squash-merge is conflict-free; new swarm-failure mitigation **#7** (branch-ref
+  drift → silent partial octopus merge: merge the ref the child *reports*, then *count* the landed
+  files). `.claude/agent-context.md` + `.claude/kickoff.md` refreshed to match.
 - **ADR-021 — Proposed → Accepted (maintainer-ratified).** The 1.0.0 kernel/core release-gate
   *criteria* are agreed; the §7 open questions (A2 Medium ledger, A3/A4 durability + `cargo deny`,
   A5 KC-4 budget, B1 RFC-0003 reconciliation) are now the tracked gate-completion work. Moves to
