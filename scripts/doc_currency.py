@@ -30,7 +30,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # Top-level directories that are config/build noise, not part of the documented
 # project structure. Dot-entries are ignored wholesale (they may still be listed
 # in the README — the phantom check validates anything that *is* listed).
-IGNORE_TOPLEVEL = {"target", "oom", "__pycache__"}
+# `mutants.out`/`mutants.out.old` are cargo-mutants runtime output (git-ignored, written by
+# `just mutants` into the cwd) — transient artifacts, not repo structure (M-654).
+IGNORE_TOPLEVEL = {"target", "oom", "__pycache__", "mutants.out", "mutants.out.old"}
 
 # Top-level files the README tree is expected to mention (the load-bearing ones).
 KEY_FILES = {
