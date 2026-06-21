@@ -325,6 +325,44 @@ mod tests {
         assert_eq!(data_val.as_data().unwrap(), &datum);
     }
 
+    // Mutant-witness (datum.rs:153:9): Canon::core_value must actually encode the value content.
+    // If replaced by `()` (no-op), two datums with the SAME ctor but DIFFERENT field values
+    // would hash identically — indistinguishable. This test pins that field-content changes hash.
+    #[test]
+    fn datum_hash_depends_on_field_content_not_just_ctor() {
+        let reg = nat_registry();
+        // Two S(·) datums whose inner value differs in payload: same ctor (Nat/1), different field.
+        let s_zero = Datum::new(
+            reg.ctor_ref("Nat", 1).unwrap(),
+            vec![CoreValue::Repr(
+                Value::new(
+                    Repr::Binary { width: 8 },
+                    Payload::Bits(vec![false; 8]),
+                    Meta::exact(Provenance::Root),
+                )
+                .unwrap(),
+            )],
+        );
+        let s_ones = Datum::new(
+            reg.ctor_ref("Nat", 1).unwrap(),
+            vec![CoreValue::Repr(
+                Value::new(
+                    Repr::Binary { width: 8 },
+                    Payload::Bits(vec![true; 8]),
+                    Meta::exact(Provenance::Root),
+                )
+                .unwrap(),
+            )],
+        );
+        // Same constructor index but different field payloads → different content hash.
+        // If Canon::core_value is a no-op, both hash to the same value.
+        assert_ne!(
+            s_zero.content_hash(),
+            s_ones.content_hash(),
+            "datums with same ctor but different field values must have different hashes"
+        );
+    }
+
     // Mutant-witness (datum.rs:153:9): Canon::core_value must actually encode the value content
     // (not no-op). If it were replaced by `()`, all CoreValues would hash identically. The
     // content_hash test above already covers Datum encoding; this test pins the Repr arm.

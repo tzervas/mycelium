@@ -25,4 +25,7 @@ exclude_re = [
     "node\\.rs:[0-9]+:[0-9]+: replace && with \\|\\| in Node::is_aot_lowerable",
     # node.rs: is_aot_lowerable → true; equivalent since all arms always return true
     "node\\.rs:[0-9]+:[0-9]+: replace Node::is_aot_lowerable -> bool with true",
+    # binary.rs: (unsigned << 1) | b → (unsigned << 1) ^ b; equivalent because
+    # (x << 1) always has LSB = 0, and for b ∈ {0,1}: 0|b = 0^b = b.
+    "binary\\.rs:[0-9]+:[0-9]+: replace \\| with \\^ in bits_to_int",
 ]
