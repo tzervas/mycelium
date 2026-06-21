@@ -361,14 +361,19 @@ mod tests {
     // string, not Ok(Default::default()) (which would emit nothing).
     #[test]
     fn prim_ref_display_is_hash_prefixed() {
-        use super::PrimRef;
         let t = PrimTable::builtins();
         let r = t.prim_ref("bit.xor").unwrap();
         let s = r.to_string();
         // Must start with `#` (the Unison-style prim reference spelling).
-        assert!(s.starts_with('#'), "PrimRef display must start with '#': got {s:?}");
+        assert!(
+            s.starts_with('#'),
+            "PrimRef display must start with '#': got {s:?}"
+        );
         // Must be non-empty and carry the algo prefix from the hash.
-        assert!(s.len() > 1, "PrimRef display must be non-trivial: got {s:?}");
+        assert!(
+            s.len() > 1,
+            "PrimRef display must be non-trivial: got {s:?}"
+        );
     }
 
     // Mutant-witness (prim.rs:191:9 and prim.rs:203:9): decl_hash and decl must return the
@@ -378,7 +383,10 @@ mod tests {
         let t = PrimTable::builtins();
         // decl_hash returns Some for a registered name.
         let h = t.decl_hash("bit.not");
-        assert!(h.is_some(), "decl_hash must return Some for a registered prim");
+        assert!(
+            h.is_some(),
+            "decl_hash must return Some for a registered prim"
+        );
         // decl resolves the hash to the actual declaration.
         let d = t.decl(h.unwrap());
         assert!(d.is_some(), "decl must resolve a registered hash");
@@ -392,9 +400,15 @@ mod tests {
     #[test]
     fn contains_returns_true_iff_registered() {
         let t = PrimTable::builtins();
-        assert!(t.contains("trit.mul"), "contains must be true for a registered prim");
+        assert!(
+            t.contains("trit.mul"),
+            "contains must be true for a registered prim"
+        );
         assert!(t.contains("bit.and"));
-        assert!(!t.contains("nonexistent"), "contains must be false for an unknown prim");
+        assert!(
+            !t.contains("nonexistent"),
+            "contains must be false for an unknown prim"
+        );
         assert!(!t.contains(""));
     }
 
@@ -406,7 +420,11 @@ mod tests {
         let t = PrimTable::builtins();
         let ns = t.names();
         // Exactly 9 builtins.
-        assert_eq!(ns.len(), 9, "names() count must match the builtin count: {ns:?}");
+        assert_eq!(
+            ns.len(),
+            9,
+            "names() count must match the builtin count: {ns:?}"
+        );
         // Sorted (BTreeMap iteration is sorted).
         let mut sorted = ns.clone();
         sorted.sort();

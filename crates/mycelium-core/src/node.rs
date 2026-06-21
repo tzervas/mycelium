@@ -278,11 +278,16 @@ mod tests {
         assert!(let_node.is_aot_lowerable());
 
         // Op — args (may be empty or non-empty).
-        assert!(Node::Op { prim: "bit.not".to_owned(), args: vec![] }.is_aot_lowerable());
+        assert!(Node::Op {
+            prim: "bit.not".to_owned(),
+            args: vec![]
+        }
+        .is_aot_lowerable());
         assert!(Node::Op {
             prim: "bit.xor".to_owned(),
             args: vec![Node::Var("x".to_owned()), Node::Var("y".to_owned())],
-        }.is_aot_lowerable());
+        }
+        .is_aot_lowerable());
 
         // Swap — src must be lowerable.
         let swap = Node::Swap {
@@ -322,10 +327,15 @@ mod tests {
         assert!(fixgroup.is_aot_lowerable());
 
         // Match — scrutinee, all alt bodies, and optional default (lines 195, 198 && mutants).
-        use crate::data::{CtorRef, CtorSpec, DataRegistry, DeclSpec};
+        use crate::data::{CtorSpec, DataRegistry, DeclSpec};
         use std::collections::BTreeMap;
         let mut m = BTreeMap::new();
-        m.insert("Unit".to_owned(), DeclSpec { ctors: vec![CtorSpec { fields: vec![] }] });
+        m.insert(
+            "Unit".to_owned(),
+            DeclSpec {
+                ctors: vec![CtorSpec { fields: vec![] }],
+            },
+        );
         let reg = DataRegistry::build(&m).unwrap();
         let cref = reg.ctor_ref("Unit", 0).unwrap();
         let match_node = Node::Match {

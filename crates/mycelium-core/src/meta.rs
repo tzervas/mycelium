@@ -484,7 +484,10 @@ mod tests {
             None,
         )
         .unwrap();
-        assert!(m.bound().is_some(), "bound() must return Some when a bound was passed");
+        assert!(
+            m.bound().is_some(),
+            "bound() must return Some when a bound was passed"
+        );
         assert_eq!(m.bound().unwrap(), &b);
 
         // sparsity() — must return the SparsityObs, not None.
@@ -501,7 +504,10 @@ mod tests {
             None,
         )
         .unwrap();
-        assert!(m2.sparsity().is_some(), "sparsity() must return Some when a SparsityObs was passed");
+        assert!(
+            m2.sparsity().is_some(),
+            "sparsity() must return Some when a SparsityObs was passed"
+        );
         assert_eq!(m2.sparsity().unwrap(), sp);
 
         // policy_used() — must return the ContentHash, not None.
@@ -522,9 +528,9 @@ mod tests {
         assert_eq!(m3.policy_used().unwrap(), &hash);
 
         // reconstruction() — must return the ReconInfo, not None. Built via with_reconstruction().
-        use crate::bound::{BoundKind, BoundBasis};
-        use crate::recon::{DecodeSpec, DecodeProcedure, ReconInfo, ReconMode};
+        use crate::bound::{BoundBasis, BoundKind};
         use crate::content::operation_hash;
+        use crate::recon::{DecodeProcedure, DecodeSpec, ReconInfo, ReconMode};
         let recon = ReconInfo::new(
             ReconMode::IndexedRetrieval,
             "MAP-I",

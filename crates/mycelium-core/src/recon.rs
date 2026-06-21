@@ -651,7 +651,10 @@ mod tests {
         assert_eq!(info.codebooks().len(), 1);
         assert_eq!(info.codebooks()[0], codebook_ref);
         // recipe() must return Some(&recipe) for CompositionalReconstruction.
-        assert!(info.recipe().is_some(), "recipe() must be Some for CompositionalReconstruction");
+        assert!(
+            info.recipe().is_some(),
+            "recipe() must be Some for CompositionalReconstruction"
+        );
         assert_eq!(info.recipe().unwrap(), &recipe);
         // mode() and bound() correctness (not mutated, but pin the accessors).
         assert_eq!(info.mode(), ReconMode::CompositionalReconstruction);
