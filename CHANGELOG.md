@@ -8,6 +8,24 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-21: RFC-0023 — ADK-port phylum Draft + research/13-adk-phylum-RECORD.md + RP-9)
+- **RFC-0023 — Agent Development Kit Phylum** (`docs/rfcs/RFC-0023-Agent-Development-Kit-Phylum.md`):
+  **Draft** design for an `adk` phylum — a Mycelium port of Google's Agent Development Kit, with
+  **honesty-as-differentiator**: every tool/model output tagged Declared/Empirical, never Proven;
+  every tool call a never-silent `Result<Out, ToolError>`. Nodules: `adk.agent` (the ADK Agent
+  construct mapped to `colony`/`hypha`), `adk.tool` (typed `fn -> Result`, never-silent dispatch),
+  `adk.session` (content-addressed value state, ADR-003), `adk.runner` (orchestration), `adk.model`
+  (LLM harness reuse — `GrokLlmReport`, no second model-call path). v1 Rust-first as `mycelium-adk`.
+  **Gated**: `Tool<In,Out>`/`Agent` generic surface blocked on E7-1 (M-657 generics, M-659 traits);
+  `.myc` `colony { hypha … }` agent surface blocked on E7-2 (M-666); model transport reuses M-670.
+  Not yet built; tracked as M-671.
+- **`research/13-adk-phylum-RECORD.md`** (renamed from `research/12-adk-phylum-RECORD.md`; heading
+  updated; RP-9 / all other internal references preserved): the Phase-1 evidence base for RFC-0023
+  (fractured-methodology pass; four Opus sub-reasoners over one cross-context packet; findings
+  Empirical/Declared, never Proven).
+- **RP-9** (`docs/notes/research-prompts.md`): the follow-up deep-research pass that gates RFC-0023
+  past Draft — must verify ADK→Mycelium concept-map, honesty-as-differentiator claim, tool-dispatch
+  never-silent contract, session/runner model + LLM-harness reuse; Open, 2026-06-21.
 ### Added (2026-06-21: RFC-0022 — Web-Tooling Phylum Draft + research/12-web-phylum-RECORD.md + RP-10)
 - **RFC-0022 — Web-Tooling Phylum** (`docs/rfcs/RFC-0022-Web-Tooling-Phylum.md`): **Draft** design for
   a `web` phylum (HTTP client/server/routing/JSON) — nodules `web.http` (never-silent HTTP/1.1
