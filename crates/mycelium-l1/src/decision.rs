@@ -26,7 +26,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::checkty::{DataInfo, Ty};
+use crate::checkty::{lookup_data_info, DataInfo, GenericShell, Ty};
 use crate::usefulness::{specialize_ctor, specialize_lit, Pat};
 
 /// An **occurrence**: the path of field indices from the scrutinee root to a sub-value (`[]` is the
@@ -94,6 +94,7 @@ impl crate::usefulness::SpecializeRow for Row {
 /// exhaustiveness/redundancy (so the first all-wildcard row is a real catch-all).
 pub(crate) fn compile(
     types: &BTreeMap<String, DataInfo>,
+    generics: &BTreeMap<String, GenericShell>,
     matrix: &[Vec<Pat>],
     arms: &[usize],
     occ: &[Occurrence],
@@ -107,11 +108,12 @@ pub(crate) fn compile(
             arm,
         })
         .collect();
-    compile_rows(types, &rows, occ, tys)
+    compile_rows(types, generics, &rows, occ, tys)
 }
 
 fn compile_rows(
     types: &BTreeMap<String, DataInfo>,
+    generics: &BTreeMap<String, GenericShell>,
     rows: &[Row],
     occ: &[Occurrence],
     tys: &[Ty],
@@ -154,25 +156,33 @@ fn compile_rows(
 
     let mut cases: Vec<(Head, Tree)> = Vec::new();
     // Whether the cases cover the column's whole signature (so no default is needed).
+    // Handles abstract-mangled types (e.g. "List<A>") via lookup_data_info (M-657).
     let complete = match &ty0 {
-        Ty::Data(n) => types.get(n).is_some_and(|d| {
-            // Iterate constructors in signature order for a stable, complete switch.
-            d.ctors
-                .iter()
-                .all(|ci| ctor_heads.iter().any(|(m, _)| *m == ci.name))
-        }),
+        Ty::Data(n) => {
+            // Use lookup_data_info to handle both concrete and abstract-mangled types.
+            if types.contains_key(n) || n.contains('<') {
+                let d = lookup_data_info(types, generics, n);
+                d.ctors
+                    .iter()
+                    .all(|ci| ctor_heads.iter().any(|(m, _)| *m == ci.name))
+            } else {
+                false
+            }
+        }
         // Binary/Ternary value domains are never enumerated — always need a default.
         _ => false,
     };
 
     if let Ty::Data(dn) = &ty0 {
-        if let Some(d) = types.get(dn) {
-            let d = d.clone();
+        // Use lookup_data_info to handle both concrete and abstract-mangled types.
+        if types.contains_key(dn.as_str()) || dn.contains('<') {
+            let d = lookup_data_info(types, generics, dn).into_owned();
             for ci in &d.ctors {
                 if ctor_heads.iter().any(|(m, _)| *m == ci.name) {
                     let a = ci.fields.len();
                     let sub = compile_rows(
                         types,
+                        generics,
                         &specialize_ctor(&rows, &ci.name, a),
                         &child_occ(&occ, &occ0, a),
                         &child_tys(&tys, &ci.fields),
@@ -183,7 +193,13 @@ fn compile_rows(
         }
     }
     for k in &lit_heads {
-        let sub = compile_rows(types, &specialize_lit(&rows, k), &occ[1..], &tys[1..]);
+        let sub = compile_rows(
+            types,
+            generics,
+            &specialize_lit(&rows, k),
+            &occ[1..],
+            &tys[1..],
+        );
         cases.push((Head::Lit(k.clone()), sub));
     }
 
@@ -192,6 +208,7 @@ fn compile_rows(
     } else {
         Some(Box::new(compile_rows(
             types,
+            generics,
             &default_rows(&rows),
             &occ[1..],
             &tys[1..],
@@ -333,7 +350,11 @@ fn head_matches(head: &Head, value: &Pat) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::checkty::{CtorInfo, DataInfo};
+    use crate::checkty::{CtorInfo, DataInfo, GenericShell};
+
+    fn no_generics() -> BTreeMap<String, GenericShell> {
+        BTreeMap::new()
+    }
 
     fn nat_registry() -> BTreeMap<String, DataInfo> {
         let mut m = BTreeMap::new();
@@ -405,7 +426,14 @@ mod tests {
         // Z => 0 | S(_) => 1  (exhaustive, flat).
         let arms = vec![ctor("Z", vec![]), ctor("S", vec![Pat::Wild])];
         let matrix: Vec<Vec<Pat>> = arms.iter().cloned().map(|p| vec![p]).collect();
-        let tree = compile(&t, &matrix, &[0, 1], &[vec![]], &[Ty::Data("Nat".into())]);
+        let tree = compile(
+            &t,
+            &no_generics(),
+            &matrix,
+            &[0, 1],
+            &[vec![]],
+            &[Ty::Data("Nat".into())],
+        );
         // Root switches on the whole scrutinee with both constructors covered → no default.
         match &tree {
             Tree::Switch {
@@ -438,6 +466,7 @@ mod tests {
         let matrix: Vec<Vec<Pat>> = arms.iter().cloned().map(|p| vec![p]).collect();
         let tree = compile(
             &t,
+            &no_generics(),
             &matrix,
             &[0, 1, 2],
             &[vec![]],
@@ -465,6 +494,7 @@ mod tests {
         let matrix: Vec<Vec<Pat>> = arms.iter().cloned().map(|p| vec![p]).collect();
         let tree = compile(
             &t,
+            &no_generics(),
             &matrix,
             &[0, 1, 2],
             &[vec![]],
@@ -481,7 +511,14 @@ mod tests {
         // value domain is open).
         let arms = [Pat::Lit("b:0".into()), Pat::Wild];
         let matrix: Vec<Vec<Pat>> = arms.iter().cloned().map(|p| vec![p]).collect();
-        let tree = compile(&t, &matrix, &[0, 1], &[vec![]], &[Ty::Binary(1)]);
+        let tree = compile(
+            &t,
+            &no_generics(),
+            &matrix,
+            &[0, 1],
+            &[vec![]],
+            &[Ty::Binary(1)],
+        );
         match &tree {
             Tree::Switch { cases, default, .. } => {
                 assert_eq!(cases.len(), 1);

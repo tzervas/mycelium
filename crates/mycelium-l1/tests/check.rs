@@ -318,7 +318,8 @@ fn generic_adt_declaration_registers_shell() {
 #[test]
 fn generic_adt_wrong_arity_is_an_explicit_error() {
     // List<A> has 1 param; supplying 2 args at use-site is an explicit error.
-    let src = "nodule d\ntype List<A> = Nil | Cons(A, List<A>)\ntype Bad = X(List<Binary{8}, Binary{4}>)";
+    let src =
+        "nodule d\ntype List<A> = Nil | Cons(A, List<A>)\ntype Bad = X(List<Binary{8}, Binary{4}>)";
     let err = check(src).unwrap_err();
     assert!(
         err.message.contains("arity") || err.message.contains("argument"),
@@ -339,6 +340,64 @@ fn recursive_generic_adt_instantiates_correctly() {
         env.types.contains_key("List<Binary{8}>"),
         "List<Binary{{8}}> should be instantiated in types, got: {:?}",
         env.types.keys().collect::<Vec<_>>()
+    );
+}
+
+// --- S5: generic function signatures (M-657) ---
+
+#[test]
+fn generic_fn_instantiates_monomorphically() {
+    // `fn id<A>(x: A) -> A = x` called at Binary{8} resolves to Binary{8} → Binary{8}.
+    // The body type-checks with Ty::Var("A") in scope; the call site instantiates A=Binary{8}.
+    let src = "nodule d\nfn id<A>(x: A) -> A = x\nfn main() -> Binary{8} = id(0b0000_0001)";
+    let env = check(src).expect("generic id must check");
+    assert!(env.fns.contains_key("id"), "id should be in fns");
+    assert!(env.fns.contains_key("main"), "main should be in fns");
+}
+
+#[test]
+fn generic_fn_with_adt_arg_instantiates() {
+    // is_cons<A>(xs: List<A>) -> Bool — exhaustive match on a generic ADT (M-657 criteria).
+    // The caller provides a concrete List<Binary{8}> instantiation via a monomorphic wrapper.
+    // The wrapper fn `wrap` forces List<Binary{8}> into types, making Nil/Cons concrete.
+    let src = concat!(
+        "nodule d\n",
+        "type List<A> = Nil | Cons(A, List<A>)\n",
+        "fn is_cons<A>(xs: List<A>) -> Bool = match xs { Nil => False, Cons(_, _) => True }\n",
+        // Force List<Binary{8}> into the concrete registry by using it as a parameter type.
+        // Then pass it to is_cons.
+        "fn check_list(xs: List<Binary{8}>) -> Bool = is_cons(xs)",
+    );
+    let env = check(src).expect("generic fn with ADT arg must check");
+    assert!(env.fns.contains_key("is_cons"), "is_cons should be in fns");
+    assert!(
+        env.fns.contains_key("check_list"),
+        "check_list should be in fns"
+    );
+    assert!(
+        env.types.contains_key("List<Binary{8}>"),
+        "List<Binary{{8}}> should be in types"
+    );
+}
+
+#[test]
+fn repr_mismatched_instantiation_is_never_a_silent_swap() {
+    // Calling `fn id<A>(x: A) -> A` with a Binary{8} arg, then using the result where
+    // a Ternary{9} is expected, must produce an explicit mismatch error — never a silent swap.
+    let src = concat!(
+        "nodule d\n",
+        "fn id<A>(x: A) -> A = x\n",
+        "fn main() -> Ternary{9} = id(0b0000_0001)",
+    );
+    let err = check(src).unwrap_err();
+    // The body type mismatch or return type mismatch must be explicit.
+    // MissingConversion is the cross-paradigm form of never-silent mismatch (RFC-0012 §4.4).
+    assert!(
+        err.message.contains("mismatch")
+            || err.message.contains("expect")
+            || err.message.contains("MissingConversion"),
+        "got: {}",
+        err.message
     );
 }
 

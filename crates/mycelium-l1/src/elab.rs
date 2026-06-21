@@ -756,19 +756,33 @@ impl Elab<'_> {
         let mut arm_binders: Vec<Vec<(String, Ty, Vec<usize>)>> = Vec::with_capacity(arms.len());
         for arm in arms {
             let mut binds = Vec::new();
-            let pat =
-                normalize_pattern(&self.env.types, &site, &arm.pattern, &sty, &[], &mut binds)
-                    .map_err(|e| ElabError::Residual {
-                        site: site.clone(),
-                        what: format!("could not normalise a match pattern: {e}"),
-                    })?;
+            let pat = normalize_pattern(
+                &self.env.types,
+                &self.env.generics,
+                &site,
+                &arm.pattern,
+                &sty,
+                &[],
+                &mut binds,
+            )
+            .map_err(|e| ElabError::Residual {
+                site: site.clone(),
+                what: format!("could not normalise a match pattern: {e}"),
+            })?;
             matrix.push(vec![pat]);
             arm_binders.push(binds);
         }
         // 4. Compile (and re-verify Fail-free) the Maranget decision tree — the untrusted lowering.
         let arm_ix: Vec<usize> = (0..arms.len()).collect();
         let occ_root = [Vec::<usize>::new()];
-        let tree = decision::compile(&self.env.types, &matrix, &arm_ix, &occ_root, &[sty]);
+        let tree = decision::compile(
+            &self.env.types,
+            &self.env.generics,
+            &matrix,
+            &arm_ix,
+            &occ_root,
+            &[sty],
+        );
         if decision::has_reachable_fail(&tree) {
             return residual(
                 &site,
@@ -969,12 +983,27 @@ impl Elab<'_> {
                     );
                 }
                 let karg = self.expr(stack, scope, arg)?;
-                let pty = resolve_ty(site, &self.env.types, &[], &param.ty)
-                    .map(|(t, _)| t)
-                    .map_err(|e| ElabError::Residual {
+                // For generic functions (type params non-empty), the declared param type
+                // may contain abstract type vars (e.g. `List<A>`). Infer the concrete type
+                // from the actual argument instead (the typechecker already verified correctness).
+                // For monomorphic functions, resolve from the declared param type as before.
+                let pty = if !fd.sig.params.is_empty() {
+                    let mut tscope = Self::ty_scope(scope);
+                    infer_type(self.env, &mut tscope, arg).map_err(|e| ElabError::Residual {
                         site: site.to_owned(),
-                        what: format!("could not resolve `{name}`'s parameter type: {e}"),
-                    })?;
+                        what: format!(
+                            "could not infer concrete type for generic `{name}`'s parameter `{}`: {e}",
+                            param.name
+                        ),
+                    })?
+                } else {
+                    resolve_ty(site, &self.env.types, &[], &param.ty)
+                        .map(|(t, _)| t)
+                        .map_err(|e| ElabError::Residual {
+                            site: site.to_owned(),
+                            what: format!("could not resolve `{name}`'s parameter type: {e}"),
+                        })?
+                };
                 bindings.push((param.name.clone(), self.fresh(&param.name), karg, pty));
             }
             let callee_scope: Vec<Binding> = bindings

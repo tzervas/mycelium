@@ -218,6 +218,14 @@ fn data_corpus() -> Vec<&'static str> {
          fn shrink(t: Two) -> Nat = match t { Mk(Z, b) => b, Mk(S(a), b) => grow(Mk(a, b)) }\n\
          fn grow(t: Two) -> Nat = match t { Mk(a, Z) => a, Mk(a, S(b)) => shrink(Mk(a, b)) }\n\
          fn main() -> Nat = shrink(Mk(S(Z), S(Z)))",
+        // --- M-657 stage-1 generics: generic ADT + generic fn, instantiated monomorphically ---
+        // is_cons<A>(List<A>) -> Bool: a generic fn over a generic recursive ADT; monomorphized
+        // at Binary{8}. All three paths (L1 eval, L0 interp, AOT) must agree on the result.
+        "nodule d\n\
+         type List<A> = Nil | Cons(A, List<A>)\n\
+         fn is_cons<A>(xs: List<A>) -> Bool = match xs { Nil => False, Cons(_, _) => True }\n\
+         fn check_list(xs: List<Binary{8}>) -> Bool = is_cons(xs)\n\
+         fn main() -> Bool = check_list(Cons(0b0000_0001, Nil))",
     ]
 }
 

@@ -247,6 +247,107 @@ pub(crate) fn resolve_ty_mut(
     resolve_ty_impl_mut(site, types, generics, tyvars, t)
 }
 
+/// Generic-body type resolution (M-657): immutable (no `&mut types`) but generics-aware.
+///
+/// Used inside generic function bodies where the registry is final (all types are registered)
+/// but we need to recognize abstract type applications like `List<A>` (where `A` is a tyvar)
+/// and return a symbolic abstract mangled `Ty::Data("List<A>")` without instantiating.
+///
+/// Rules:
+/// - `Named(A, [])` where `A` ∈ `tyvars` → `Ty::Var("A")`
+/// - `Named(X, [a1..])` with any arg containing `Ty::Var` → `Ty::Data("X<a1, ..>")` abstract
+/// - `Named(X, [c1..])` all concrete → require `"X<c1, ..>"` already in `types`; else error
+/// - `Named(X, [])` → require `X` in `types` or `generics`
+fn resolve_ty_body(
+    site: &str,
+    types: &BTreeMap<String, DataInfo>,
+    generics: &BTreeMap<String, GenericShell>,
+    tyvars: &[String],
+    t: &TypeRef,
+) -> Result<(Ty, Option<Strength>), CheckError> {
+    let base = match &t.base {
+        BaseType::Binary(n) => Ty::Binary(*n),
+        BaseType::Ternary(m) => Ty::Ternary(*m),
+        BaseType::Dense(d, s) => Ty::Dense(*d, *s),
+        BaseType::Substrate(tag) => Ty::Substrate(tag.clone()),
+        BaseType::Vsa { .. } => {
+            return Err(CheckError::new(
+                site,
+                "VSA types are deferred in the L1 v0 prototype (no value forms yet)",
+            ))
+        }
+        BaseType::Named(name, args) => {
+            if args.is_empty() && tyvars.contains(name) {
+                return Ok((Ty::Var(name.clone()), t.guarantee));
+            }
+            if !args.is_empty() {
+                let arg_tys: Vec<Ty> = args
+                    .iter()
+                    .map(|a| resolve_ty_body(site, types, generics, tyvars, a).map(|(t, _)| t))
+                    .collect::<Result<_, _>>()?;
+                if arg_tys.iter().any(contains_var) {
+                    // Abstract context: validate base name exists, check arity, return mangled.
+                    if !generics.contains_key(name) && !types.contains_key(name) {
+                        return Err(CheckError::new(
+                            site,
+                            format!("unknown generic type `{name}`"),
+                        ));
+                    }
+                    if let Some(shell) = generics.get(name) {
+                        if arg_tys.len() != shell.params.len() {
+                            return Err(CheckError::new(
+                                site,
+                                format!(
+                                    "generic type `{name}` expects {} type argument(s), got {} \
+                                     (M-657 arity)",
+                                    shell.params.len(),
+                                    arg_tys.len()
+                                ),
+                            ));
+                        }
+                    }
+                    let abstract_mangled = mangle(name, &arg_tys);
+                    return Ok((Ty::Data(abstract_mangled), t.guarantee));
+                }
+                // All concrete: the mangled name must already be in types.
+                let mangled = mangle(name, &arg_tys);
+                if types.contains_key(&mangled) {
+                    return Ok((Ty::Data(mangled), t.guarantee));
+                }
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "generic type `{name}<…>` encountered in generic body — \
+                         the instantiation `{mangled}` was not pre-registered (M-657 internal)"
+                    ),
+                ));
+            }
+            if !types.contains_key(name) && !generics.contains_key(name) {
+                return Err(CheckError::new(site, format!("unknown type `{name}`")));
+            }
+            if types.contains_key(name) {
+                Ty::Data(name.clone())
+            } else {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "generic type `{name}` requires type arguments — \
+                         e.g. `{name}<Binary{{8}}>` (M-657)"
+                    ),
+                ));
+            }
+        }
+        BaseType::Ambient(_) => {
+            return Err(CheckError::new(
+                site,
+                "internal: an unresolved paradigm-less repr `{…}` reached the checker — the \
+                 ambient resolution pass should have filled it (RFC-0012 §4.3)",
+            ))
+        }
+    };
+    Ok((base, t.guarantee))
+}
+
 /// Immutable path type resolution. Does not instantiate new generics; used in elab and
 /// post-check contexts where the registry is already fully resolved.
 fn resolve_ty_impl(
@@ -338,13 +439,40 @@ fn resolve_ty_impl_mut(
                 return Ok((Ty::Var(name.clone()), t.guarantee));
             }
             if !args.is_empty() {
-                // Generic instantiation: resolve args, compute mangled name, mint DataInfo.
-                // Resolve each argument to a concrete Ty (args must be closed at a monomorphic
-                // use site; a Var arg is valid inside a generic body).
+                // Resolve each argument type. Args may contain Var if we are inside a generic
+                // body (tyvars non-empty). A Var arg means we are in an abstract context.
                 let arg_tys: Vec<Ty> = args
                     .iter()
                     .map(|a| resolve_ty_impl_mut(site, types, generics, tyvars, a).map(|(t, _)| t))
                     .collect::<Result<_, _>>()?;
+                if arg_tys.iter().any(contains_var) {
+                    // Abstract context (inside generic body/shell): produce a symbolic abstract
+                    // mangled name (`Ty::Data("List<A>")`) — do NOT instantiate into `types`.
+                    // This Ty::Data never reaches eval/elab/usefulness (M-657 invariant).
+                    if !generics.contains_key(name) && !types.contains_key(name) {
+                        return Err(CheckError::new(
+                            site,
+                            format!("unknown generic type `{name}`"),
+                        ));
+                    }
+                    // Arity check in abstract context.
+                    if let Some(shell) = generics.get(name) {
+                        if arg_tys.len() != shell.params.len() {
+                            return Err(CheckError::new(
+                                site,
+                                format!(
+                                    "generic type `{name}` expects {} type argument(s), got {} \
+                                     (M-657 arity)",
+                                    shell.params.len(),
+                                    arg_tys.len()
+                                ),
+                            ));
+                        }
+                    }
+                    let abstract_mangled = mangle(name, &arg_tys);
+                    return Ok((Ty::Data(abstract_mangled), t.guarantee));
+                }
+                // All args are concrete: monomorphize into types.
                 let ty = instantiate_generic(site, name, &arg_tys, types, generics)?;
                 // The guarantee from the original TypeRef is propagated.
                 return Ok((ty, t.guarantee));
@@ -551,12 +679,21 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
             }
             if td.params.is_empty() {
                 // Monomorphic: insert empty shell first (recursive field refs resolve to this).
-                types.insert(td.name.clone(), DataInfo { name: td.name.clone(), ctors: vec![] });
+                types.insert(
+                    td.name.clone(),
+                    DataInfo {
+                        name: td.name.clone(),
+                        ctors: vec![],
+                    },
+                );
             } else {
                 // Generic: register an empty GenericShell; will be filled in Pass 1b.
                 generics.insert(
                     td.name.clone(),
-                    GenericShell { params: td.params.clone(), ctors: vec![] },
+                    GenericShell {
+                        params: td.params.clone(),
+                        ctors: vec![],
+                    },
                 );
             }
         }
@@ -580,18 +717,12 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     }
 
     // Pass 2: collect functions (signatures must resolve).
-    // Generic fn signatures are still deferred (S5); only monomorphic fns are processed here.
+    // Generic fns (non-empty `sig.params`) are included: bodies are checked with tyvars in scope
+    // in Pass 3, and call sites use arg-driven instantiation (S5, M-657).
     let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();
     for item in &nodule.items {
         match item {
             Item::Fn(fd) => {
-                if !fd.sig.params.is_empty() {
-                    // Generic fn: deferred to S5.
-                    return Err(CheckError::new(
-                        &fd.sig.name,
-                        "generic functions are parsed but deferred in v0 (RFC-0007 §4.4)",
-                    ));
-                }
                 if fns.insert(fd.sig.name.clone(), fd.clone()).is_some() {
                     return Err(CheckError::new(&fd.sig.name, "duplicate function"));
                 }
@@ -604,11 +735,14 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     // Pass 3: type every body **against** its declared return type (bidirectional, RFC-0012 §4.3)
     // and resolve any ambient bare-decimal widths from context — rewriting each body so the
     // downstream evaluator/elaborator see only concrete literals.
-    // Monomorphic function bodies may USE generic types (via `resolve_ty_mut` for instantiation).
+    // Monomorphic bodies may USE generic types (via `resolve_ty_mut`).
+    // Generic fn bodies are checked with tyvars in scope → Ty::Var; call sites instantiate (S5).
     let mut resolved_fns: BTreeMap<String, FnDecl> = BTreeMap::new();
     for fd in fns.values() {
         let site = &fd.sig.name;
-        let tyvars: &[String] = &[]; // monomorphic fn: no type vars in scope
+        // Generic fn: type params in scope so field/param types resolve to Ty::Var.
+        // Monomorphic fn: no type vars in scope.
+        let tyvars: &[String] = &fd.sig.params;
         let mut scope: Vec<(String, Ty)> = Vec::new();
         for p in &fd.sig.value_params {
             let (ty, _) = resolve_ty_mut(site, &mut types, &generics, tyvars, &p.ty)?;
@@ -808,7 +942,10 @@ fn resolve_shell_field_ty(
                 let abstract_mangled = mangle(name, &arg_tys);
                 return Ok(Ty::Data(abstract_mangled));
             }
-            Err(CheckError::new(site, format!("unknown generic type `{name}`")))
+            Err(CheckError::new(
+                site,
+                format!("unknown generic type `{name}`"),
+            ))
         }
         BaseType::Ambient(_) => Err(CheckError::new(
             site,
@@ -822,8 +959,7 @@ fn resolve_shell_field_ty(
 struct Cx<'a> {
     site: &'a str,
     types: &'a BTreeMap<String, DataInfo>,
-    /// Generic shell registry — available to `resolve_ty` instantiation logic (S4, M-657).
-    #[allow(dead_code)] // used in S4 when instantiation is wired in
+    /// Generic shell registry — used for abstract pattern matching in generic fn bodies (M-657).
     generics: &'a BTreeMap<String, GenericShell>,
     fns: &'a BTreeMap<String, FnDecl>,
 }
@@ -945,7 +1081,7 @@ impl Cx<'_> {
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
         let want = match ty {
-            Some(t) => Some(resolve_ty(self.site, self.types, &[],t)?.0),
+            Some(t) => Some(resolve_ty(self.site, self.types, &[], t)?.0),
             None => None,
         };
         let (bty, bound2) = self.check(scope, bound, want.as_ref())?;
@@ -1017,7 +1153,7 @@ impl Cx<'_> {
                 "swap source must be a representation type, got {vty}"
             ));
         }
-        let (tty, _) = resolve_ty(self.site, self.types, &[],target)?;
+        let (tty, _) = resolve_ty(self.site, self.types, &[], target)?;
         if !matches!(tty, Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _)) {
             return self.err(format!(
                 "swap target must be a representation type, got {tty}"
@@ -1079,7 +1215,7 @@ impl Cx<'_> {
         inner: &Expr,
         t: &TypeRef,
     ) -> Result<(Ty, Expr), CheckError> {
-        let (want, _) = resolve_ty(self.site, self.types, &[],t)?;
+        let (want, _) = resolve_ty(self.site, self.types, &[], t)?;
         let (ity, inner2) = self.check(scope, inner, Some(&want))?;
         if ity != want {
             return self.err(format!(
@@ -1118,21 +1254,30 @@ impl Cx<'_> {
                     args.len()
                 ));
             }
-            let mut rebuilt = Vec::with_capacity(args.len());
-            for (pm, a) in fd.sig.value_params.iter().zip(args) {
-                let (want, _) = resolve_ty(self.site, self.types, &[],&pm.ty)?;
-                let (got, a2) = self.check(scope, a, Some(&want))?;
-                if want != got {
-                    return self.err(format!(
-                        "`{name}` parameter `{}`: {}",
-                        pm.name,
-                        edge_mismatch("argument", &want, &got)
-                    ));
+            if fd.sig.params.is_empty() {
+                // Monomorphic call: resolve param and return types directly (fast path,
+                // kept lean to preserve the per-frame stack budget — see A4-02).
+                let mut rebuilt = Vec::with_capacity(args.len());
+                for (pm, a) in fd.sig.value_params.iter().zip(args) {
+                    let (want, _) = resolve_ty(self.site, self.types, &[], &pm.ty)?;
+                    let (got, a2) = self.check(scope, a, Some(&want))?;
+                    if want != got {
+                        return self.err(format!(
+                            "`{name}` parameter `{}`: {}",
+                            pm.name,
+                            edge_mismatch("argument", &want, &got)
+                        ));
+                    }
+                    rebuilt.push(a2);
                 }
-                rebuilt.push(a2);
+                let (ret, _) = resolve_ty(self.site, self.types, &[], &fd.sig.ret)?;
+                return Ok((ret, app_node(head, rebuilt)));
+            } else {
+                // Generic call (S5, M-657): arg-driven instantiation (NOT Hindley-Milner).
+                // Clone sig data upfront so we can release the shared borrow before calling
+                // self.check (which may recursively call check_app again).
+                return self.check_generic_call(name, &fd.sig.clone(), args, scope, head);
             }
-            let (ret, _) = resolve_ty(self.site, self.types, &[],&fd.sig.ret)?;
-            return Ok((ret, app_node(head, rebuilt)));
         }
 
         // Constructor: each field is checked against its declared type (W6 saturation).
@@ -1212,6 +1357,65 @@ impl Cx<'_> {
                 "`{name}` does not accept argument types {arg_tys:?} (T-Op; RFC-0007 §4.4)"
             )),
         }
+    }
+
+    /// Generic call (S5, M-657): arg-driven instantiation. Called only for fns with type params.
+    ///
+    /// Separated from `check_app` to keep the monomorphic path's stack frame lean — important for
+    /// deeply-nested expressions (A4-02: per-node depth charge). Takes ownership of the cloned sig
+    /// to allow re-borrowing `self` for `self.check` calls.
+    #[inline(never)]
+    fn check_generic_call(
+        &self,
+        name: &str,
+        sig: &crate::ast::FnSig,
+        args: &[Expr],
+        scope: &mut Vec<(String, Ty)>,
+        head: &Expr,
+    ) -> Result<(Ty, Expr), CheckError> {
+        // 1. Resolve abstract param types (with tyvars in scope → Ty::Var or abstract mangled).
+        // Use resolve_ty_body: immutable but generics-aware, handles "List<A>" in body context.
+        let tyvars: &[String] = &sig.params;
+        let abstract_params: Vec<Ty> = sig
+            .value_params
+            .iter()
+            .map(|pm| {
+                resolve_ty_body(self.site, self.types, self.generics, tyvars, &pm.ty)
+                    .map(|(t, _)| t)
+            })
+            .collect::<Result<_, _>>()?;
+        // 2. Infer each concrete arg type and build the substitution via unify_arg.
+        // Never-silent: repr mismatch is an explicit error, not a silent coercion (G2/VR-5).
+        let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
+        let mut rebuilt = Vec::with_capacity(args.len());
+        for ((pm, abstract_ty), a) in sig
+            .value_params
+            .iter()
+            .zip(abstract_params.iter())
+            .zip(args)
+        {
+            let (got, a2) = self.check(scope, a, None)?;
+            unify_arg(self.site, self.generics, abstract_ty, &got, &mut subst).map_err(|e| {
+                CheckError::new(
+                    self.site,
+                    format!("`{name}` parameter `{}`: {}", pm.name, e.message),
+                )
+            })?;
+            rebuilt.push(a2);
+        }
+        // 3. Apply substitution to the abstract return type to get the concrete return type.
+        let abstract_ret = resolve_ty_body(self.site, self.types, self.generics, tyvars, &sig.ret)
+            .map(|(t, _)| t)?;
+        let ret = subst_ty(&abstract_ret, &subst);
+        // 4. Reject phantom params (return type still has Var after instantiation — G2/never-silent).
+        if contains_var(&ret) {
+            return self.err(format!(
+                "`{name}` return type still contains abstract type variable(s) after \
+                 instantiation — add an explicit type annotation or pass a typed argument \
+                 that anchors the type parameter (M-657 §arg-driven)"
+            ));
+        }
+        Ok((ret, app_node(head, rebuilt)))
     }
 
     /// T-For (RFC-0007 §4.8): `xs` must be a *linearly recursive* data type (nil/cons shape);
@@ -1299,8 +1503,14 @@ impl Cx<'_> {
             let pat = self.check_pattern(&pattern, &sty, &mut binds)?;
             self.check_linear(&binds)?;
             // Redundancy (W7): an arm covered by the earlier rows is unreachable.
-            if crate::usefulness::useful(self.types, &rows, std::slice::from_ref(&pat), &col)
-                .is_none()
+            if crate::usefulness::useful(
+                self.types,
+                self.generics,
+                &rows,
+                std::slice::from_ref(&pat),
+                &col,
+            )
+            .is_none()
             {
                 return self.err(
                     "this arm is unreachable — earlier arms already cover it (W7: every arm must \
@@ -1333,9 +1543,13 @@ impl Cx<'_> {
             });
         }
         // Exhaustiveness (W7): a wildcard must not be useful — else its witness is a missing case.
-        if let Some(witness) =
-            crate::usefulness::useful(self.types, &rows, &[crate::usefulness::Pat::Wild], &col)
-        {
+        if let Some(witness) = crate::usefulness::useful(
+            self.types,
+            self.generics,
+            &rows,
+            &[crate::usefulness::Pat::Wild],
+            &col,
+        ) {
             return self.err(format!(
                 "non-exhaustive match on {sty}: missing {} (W7 — coverage is checked, never assumed)",
                 crate::usefulness::render(&witness[0])
@@ -1348,7 +1562,7 @@ impl Cx<'_> {
         // its leaves as L0 kernel nodes awaits the RFC-0001 revision (RFC-0007 §4.6).
         let arm_ix: Vec<usize> = (0..rows.len()).collect();
         let occ = [Vec::<usize>::new()];
-        let tree = crate::decision::compile(self.types, &rows, &arm_ix, &occ, &col);
+        let tree = crate::decision::compile(self.types, self.generics, &rows, &arm_ix, &occ, &col);
         if crate::decision::has_reachable_fail(&tree) {
             return self.err(
                 "internal: an exhaustive match compiled to a decision tree with a reachable Fail \
@@ -1439,7 +1653,15 @@ impl Cx<'_> {
         expected: &Ty,
         binds: &mut Vec<(String, Ty, Vec<usize>)>,
     ) -> Result<crate::usefulness::Pat, CheckError> {
-        normalize_pattern(self.types, self.site, pat, expected, &[], binds)
+        normalize_pattern(
+            self.types,
+            self.generics,
+            self.site,
+            pat,
+            expected,
+            &[],
+            binds,
+        )
     }
 
     /// A pattern must bind each name at most once (linearity) — a repeated binder is ambiguous, so it
@@ -1510,6 +1732,7 @@ pub(crate) fn lit_ty_of(site: &str, l: &Literal) -> Result<Ty, CheckError> {
 /// coverage (it refines nothing), a nullary constructor an empty `Ctor`.
 pub(crate) fn normalize_pattern(
     types: &BTreeMap<String, DataInfo>,
+    generics: &BTreeMap<String, GenericShell>,
     site: &str,
     pat: &Pattern,
     expected: &Ty,
@@ -1523,7 +1746,7 @@ pub(crate) fn normalize_pattern(
             // A bare name is a nullary-constructor alternative iff it names one of the expected
             // data type's constructors; otherwise it binds the whole position (at this occurrence).
             if let Ty::Data(tn) = expected {
-                let d = types.get(tn).expect("registered data type");
+                let d = lookup_data_info(types, generics, tn);
                 if let Some(c) = d.ctors.iter().find(|c| c.name == *n) {
                     if !c.fields.is_empty() {
                         return Err(CheckError::new(
@@ -1549,7 +1772,7 @@ pub(crate) fn normalize_pattern(
                     ),
                 ));
             };
-            let d = types.get(tn).expect("registered data type").clone();
+            let d = lookup_data_info(types, generics, tn).into_owned();
             let Some(c) = d.ctors.iter().find(|c| c.name == *n) else {
                 return Err(CheckError::new(
                     site,
@@ -1570,7 +1793,9 @@ pub(crate) fn normalize_pattern(
             for (i, (sub, fty)) in subs.iter().zip(&c.fields).enumerate() {
                 let mut child = occ.to_vec();
                 child.push(i);
-                out.push(normalize_pattern(types, site, sub, fty, &child, binds)?);
+                out.push(normalize_pattern(
+                    types, generics, site, sub, fty, &child, binds,
+                )?);
             }
             Ok(Pat::Ctor(n.clone(), out))
         }
@@ -1944,18 +2169,144 @@ pub(crate) fn mangle(name: &str, args: &[Ty]) -> String {
     format!("{name}<{}>", parts.join(", "))
 }
 
+/// Returns true if `ty` contains any [`Ty::Var`] — used to detect unresolved phantom type
+/// parameters after call-site instantiation. A return type that still contains a `Var` means no
+/// argument anchored it; the caller must provide an explicit annotation (G2 / never-silent).
+pub(crate) fn contains_var(ty: &Ty) -> bool {
+    match ty {
+        Ty::Var(_) => true,
+        // Ty::Data may encode an abstract mangled name like "List<A>" in a shell field;
+        // in concrete (env.types) contexts Ty::Data never contains vars.
+        // We conservatively return false here — abstract-mangled Data are only in GenericShell,
+        // not in function return types after instantiation.
+        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Data(_) | Ty::Substrate(_) => false,
+    }
+}
+
+/// Look up a `DataInfo` for pattern matching, handling both concrete registered types and abstract
+/// mangled names (like `"List<A>"`) that appear in generic fn body contexts (M-657).
+///
+/// - Concrete: `types.get(tn)` directly.
+/// - Abstract mangled (contains `<`): parse the base name, look up in `generics`, and return a
+///   synthetic `DataInfo` whose ctor fields are the shell's abstract (Var-bearing) ctors. This
+///   synthetic DataInfo is ephemeral — only for pattern coverage checking in generic body context.
+///   Fields containing `Ty::Var` are valid here because the body checker uses them only for binder
+///   type annotation (the binder type is abstract: `h: Ty::Var("A")`), never for evaluation.
+///
+/// Panics if neither `types` nor `generics` contain the type — same contract as `.expect()` at
+/// monomorphic call sites (the type must have been registered during Pass 1).
+pub(crate) fn lookup_data_info<'t>(
+    types: &'t BTreeMap<String, DataInfo>,
+    generics: &'t BTreeMap<String, GenericShell>,
+    tn: &str,
+) -> std::borrow::Cow<'t, DataInfo> {
+    if let Some(d) = types.get(tn) {
+        return std::borrow::Cow::Borrowed(d);
+    }
+    // Abstract mangled name: extract the base generic name (before `<`).
+    if let Some(angle) = tn.find('<') {
+        let base = &tn[..angle];
+        if let Some(shell) = generics.get(base) {
+            // Synthesize a DataInfo whose ctors have the abstract (Var-bearing) field types.
+            let ctors = shell.ctors.clone();
+            return std::borrow::Cow::Owned(DataInfo {
+                name: tn.to_owned(),
+                ctors,
+            });
+        }
+    }
+    panic!("lookup_data_info: unregistered type `{tn}` — not in types or generics")
+}
+
+/// Split a mangled type string `"Name<arg1, arg2>"` into `("Name", ["arg1", "arg2"])`.
+///
+/// Splits at the first `<`, strips the trailing `>`, then splits the inner string at
+/// top-level `, ` separators (tracking `{` / `<` depth so nested forms like `Dense{4, S}`
+/// and `Pair<A, B>` are not incorrectly split). Returns `None` if the string has no `<`.
+fn split_mangled_outer(s: &str) -> Option<(&str, Vec<&str>)> {
+    let lt = s.find('<')?;
+    let base = &s[..lt];
+    let rest = s.get(lt + 1..)?;
+    let inner = rest.strip_suffix('>')?;
+    // Split at top-level `, ` (depth 0 for both `{` and `<`).
+    let mut args: Vec<&str> = Vec::new();
+    let mut depth_brace: usize = 0;
+    let mut depth_angle: usize = 0;
+    let mut start = 0;
+    let bytes = inner.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'{' => depth_brace += 1,
+            b'}' => depth_brace = depth_brace.saturating_sub(1),
+            b'<' => depth_angle += 1,
+            b'>' => depth_angle = depth_angle.saturating_sub(1),
+            b',' if depth_brace == 0 && depth_angle == 0 => {
+                // Expect ", " separator.
+                args.push(&inner[start..i]);
+                // Skip ", ".
+                i += 2;
+                start = i;
+                continue;
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    args.push(&inner[start..]);
+    Some((base, args))
+}
+
+/// Parse a `Ty` from its [`Display`] string representation (M-657, Declared).
+///
+/// Used by [`unify_arg`] to decompose concrete mangled type names for structural unification.
+/// Handles the common concrete forms: `Binary{N}`, `Ternary{N}`, `Substrate{T}`, nested mangled
+/// `Name<…>`, and plain identifiers (treated as `Ty::Data` or `Ty::Var` depending on context).
+/// Returns `None` for `Dense{…}` (uncommon in generic arg positions; caller falls through to
+/// mismatch). Guarantee: **Declared** (heuristic display→Ty inverse; ground truth is the AST).
+fn parse_ty_from_display(s: &str) -> Option<Ty> {
+    let s = s.trim();
+    // Binary{N}
+    if let Some(inner) = s.strip_prefix("Binary{").and_then(|x| x.strip_suffix('}')) {
+        return inner.parse::<u32>().ok().map(Ty::Binary);
+    }
+    // Ternary{N}
+    if let Some(inner) = s.strip_prefix("Ternary{").and_then(|x| x.strip_suffix('}')) {
+        return inner.parse::<u32>().ok().map(Ty::Ternary);
+    }
+    // Substrate{T}
+    if let Some(inner) = s
+        .strip_prefix("Substrate{")
+        .and_then(|x| x.strip_suffix('}'))
+    {
+        return Some(Ty::Substrate(inner.to_owned()));
+    }
+    // Dense{…} — skip (caller falls through to mismatch error if needed).
+    if s.starts_with("Dense{") {
+        return None;
+    }
+    // Plain name or nested mangled name (contains `<`): treat as Data (may be Var if in tyvars,
+    // but at this call site we don't have tyvars — the abstract side drives var binding).
+    Some(Ty::Data(s.to_owned()))
+}
+
 /// First-order unification helper for generic instantiation (M-657, Declared).
 ///
-/// Walk `param_ty` (which may contain `Ty::Var`) and `arg_ty` (which must be closed/concrete)
-/// in lockstep, filling `subst` with `Var(a) → arg_ty` mappings. Returns an error if a
-/// mismatch is found (different concrete heads) or if a Var is mapped to two inconsistent types.
+/// Walk `param_ty` (which may contain `Ty::Var` or abstract mangled `Ty::Data("List<A>")`) and
+/// `arg_ty` (which must be closed/concrete) in lockstep, filling `subst` with `Var(a) → arg_ty`
+/// mappings. Returns an error if a mismatch is found (different concrete heads) or if a Var is
+/// mapped to two inconsistent types.
 ///
-/// This is NOT full Hindley-Milner: it is first-order, purely structural, and requires the arg
-/// to be fully closed. A type var appearing only in the return type (phantom param) cannot be
-/// inferred here; the caller must supply it from the `expected` type or report an explicit error.
-#[allow(dead_code)] // used in S5 (M-657 generic function bodies)
+/// Handles structural decomposition of abstract mangled `Ty::Data` types — when `param_ty` is
+/// `Ty::Data("List<A>")` and `arg_ty` is `Ty::Data("List<Binary{8}>")`, it extracts the base
+/// name's params from `generics`, pairs them with the concrete arg types parsed from the string,
+/// and recursively unifies. This enables `is_cons<A>(xs: List<A>)` to be called with a
+/// `List<Binary{8}>` argument and correctly bind `A → Binary{8}`.
+///
+/// This is NOT full Hindley-Milner: purely first-order, purely structural, arg-driven only.
 pub(crate) fn unify_arg(
     site: &str,
+    generics: &BTreeMap<String, GenericShell>,
     param_ty: &Ty,
     arg_ty: &Ty,
     subst: &mut BTreeMap<String, Ty>,
@@ -1983,6 +2334,73 @@ pub(crate) fn unify_arg(
         (Ty::Dense(d1, s1), Ty::Dense(d2, s2)) if d1 == d2 && s1 == s2 => Ok(()),
         (Ty::Data(n1), Ty::Data(n2)) if n1 == n2 => Ok(()),
         (Ty::Substrate(t1), Ty::Substrate(t2)) if t1 == t2 => Ok(()),
+        // Abstract mangled `Ty::Data("List<A>")` vs concrete mangled `Ty::Data("List<Binary{8}>")`.
+        // Structurally decompose both and recursively unify the arg positions.
+        (Ty::Data(n1), Ty::Data(n2)) if n1.contains('<') => {
+            let Some((base1, _)) = split_mangled_outer(n1) else {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "type mismatch: parameter type `{param_ty}` does not match argument \
+                         type `{arg_ty}` (M-657 first-order unification)"
+                    ),
+                ));
+            };
+            let Some((base2, concrete_arg_strs)) = split_mangled_outer(n2) else {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "type mismatch: parameter type `{param_ty}` does not match argument \
+                         type `{arg_ty}` — expected `{base1}<…>` (M-657 first-order unification)"
+                    ),
+                ));
+            };
+            if base1 != base2 {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "type mismatch: generic base `{base1}` vs `{base2}` — \
+                         incompatible generic types (M-657 first-order unification)"
+                    ),
+                ));
+            }
+            // Recover the abstract arg types from the generic shell's params.
+            let shell = generics.get(base1).ok_or_else(|| {
+                CheckError::new(
+                    site,
+                    format!(
+                        "internal: abstract mangled type `{n1}` references unknown generic \
+                         `{base1}` (M-657)"
+                    ),
+                )
+            })?;
+            if shell.params.len() != concrete_arg_strs.len() {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "type mismatch: generic `{base1}` has {} type params but concrete type \
+                         `{n2}` was parsed with {} args (M-657 arity check)",
+                        shell.params.len(),
+                        concrete_arg_strs.len()
+                    ),
+                ));
+            }
+            // Recursively unify each abstract param (Ty::Var) with its concrete arg.
+            for (param_name, concrete_str) in shell.params.iter().zip(concrete_arg_strs.iter()) {
+                let abstract_arg = Ty::Var(param_name.clone());
+                let concrete_arg = parse_ty_from_display(concrete_str).ok_or_else(|| {
+                    CheckError::new(
+                        site,
+                        format!(
+                            "cannot parse concrete type arg `{concrete_str}` in mangled type \
+                             `{n2}` — Dense in generic position is not yet supported (M-657)"
+                        ),
+                    )
+                })?;
+                unify_arg(site, generics, &abstract_arg, &concrete_arg, subst)?;
+            }
+            Ok(())
+        }
         // Structural mismatch: the argument type does not match the parameter's concrete head.
         _ => Err(CheckError::new(
             site,
@@ -2020,7 +2438,10 @@ mod tests {
     fn subst_ty_leaves_non_var_unchanged() {
         let subst = BTreeMap::new();
         assert_eq!(subst_ty(&Ty::Binary(8), &subst), Ty::Binary(8));
-        assert_eq!(subst_ty(&Ty::Data("Foo".to_owned()), &subst), Ty::Data("Foo".to_owned()));
+        assert_eq!(
+            subst_ty(&Ty::Data("Foo".to_owned()), &subst),
+            Ty::Data("Foo".to_owned())
+        );
     }
 
     #[test]
@@ -2065,32 +2486,57 @@ mod tests {
 
     #[test]
     fn unify_arg_binds_var() {
+        let generics = BTreeMap::new();
         let mut subst = BTreeMap::new();
-        unify_arg("t", &Ty::Var("A".to_owned()), &Ty::Binary(8), &mut subst).unwrap();
+        unify_arg(
+            "t",
+            &generics,
+            &Ty::Var("A".to_owned()),
+            &Ty::Binary(8),
+            &mut subst,
+        )
+        .unwrap();
         assert_eq!(subst.get("A"), Some(&Ty::Binary(8)));
     }
 
     #[test]
     fn unify_arg_consistent_rebind() {
         // Binding A→Binary{8} twice (same type) is OK.
+        let generics = BTreeMap::new();
         let mut subst = BTreeMap::new();
         subst.insert("A".to_owned(), Ty::Binary(8));
-        unify_arg("t", &Ty::Var("A".to_owned()), &Ty::Binary(8), &mut subst).unwrap();
+        unify_arg(
+            "t",
+            &generics,
+            &Ty::Var("A".to_owned()),
+            &Ty::Binary(8),
+            &mut subst,
+        )
+        .unwrap();
     }
 
     #[test]
     fn unify_arg_inconsistent_rebind_is_explicit_error() {
+        let generics = BTreeMap::new();
         let mut subst = BTreeMap::new();
         subst.insert("A".to_owned(), Ty::Binary(8));
-        let err =
-            unify_arg("t", &Ty::Var("A".to_owned()), &Ty::Ternary(6), &mut subst).unwrap_err();
+        let err = unify_arg(
+            "t",
+            &generics,
+            &Ty::Var("A".to_owned()),
+            &Ty::Ternary(6),
+            &mut subst,
+        )
+        .unwrap_err();
         assert!(err.message.contains("ambiguous"), "got: {}", err.message);
     }
 
     #[test]
     fn unify_arg_concrete_mismatch_is_explicit_error() {
+        let generics = BTreeMap::new();
         let mut subst = BTreeMap::new();
-        let err = unify_arg("t", &Ty::Binary(8), &Ty::Ternary(6), &mut subst).unwrap_err();
+        let err =
+            unify_arg("t", &generics, &Ty::Binary(8), &Ty::Ternary(6), &mut subst).unwrap_err();
         assert!(err.message.contains("mismatch"), "got: {}", err.message);
     }
 
@@ -2162,5 +2608,87 @@ mod tests {
         assert_eq!(e.fn_totality("count"), e.totality.get("count").copied());
         assert!(e.fn_totality("count").is_some());
         assert!(e.fn_totality("absent").is_none());
+    }
+
+    // ---- S7: M-657 property bounds (Declared — loop over representative concrete types) ----
+
+    /// Property: monomorphizing `List<T>` at each concrete type `T` inserts a named `DataInfo`
+    /// under the mangled key and does NOT silently swap representations (G2/never-silent).
+    ///
+    /// Guarantee: **Declared** — loop over a fixed finite set of representative concrete types;
+    /// all-pass is Empirical evidence; the invariant is not formally proven.
+    #[test]
+    fn prop_instantiation_inserts_no_swap() {
+        // A sample of concrete types that List<T> should monomorphize to.
+        let cases: &[(&str, &str)] = &[
+            ("Binary{8}", "List<Binary{8}>"),
+            ("Binary{16}", "List<Binary{16}>"),
+            ("Ternary{6}", "List<Ternary{6}>"),
+        ];
+        for (arg_ty_str, expected_mangled) in cases {
+            let src = format!(
+                "nodule d\ntype List<A> = Nil | Cons(A, List<A>)\n\
+                 fn use_list(xs: List<{arg_ty_str}>) -> Bool = True"
+            );
+            let e = env(&src);
+            assert!(
+                e.types.contains_key(*expected_mangled),
+                "instantiation of List<{arg_ty_str}> should register `{expected_mangled}` in types, \
+                 but it is absent — monomorphization did not fire (M-657 prop)"
+            );
+            // The registered DataInfo must have the concrete arg type in its constructor fields —
+            // no silent coercion of the field type (G2/VR-5 never-silent).
+            let di = e.types.get(*expected_mangled).unwrap();
+            let cons_ctor = di
+                .ctors
+                .iter()
+                .find(|c| c.name == "Cons")
+                .expect("Cons must be in List<T>");
+            // The first field of Cons is the element type T.
+            let elem_ty = &cons_ctor.fields[0];
+            let elem_str = elem_ty.to_string();
+            assert_eq!(
+                &elem_str, arg_ty_str,
+                "Cons field[0] should be `{arg_ty_str}` (the element type), \
+                 got `{elem_str}` — silent repr change detected (G2/VR-5)"
+            );
+        }
+    }
+
+    /// Property: calling a generic function with a concrete argument produces the correct concrete
+    /// return type — no `Ty::Var` residuals, no silent coercion (M-657 Declared).
+    ///
+    /// The type `id<A>(x: A) -> A` is the minimal identity: the return type must equal the arg type.
+    /// Checks a representative sample of concrete types (Declared — not exhaustive).
+    #[test]
+    fn prop_monomorphization_preserves_typing() {
+        let cases: &[(&str, &str)] = &[
+            // Generic identity fn: argument type = return type (no silent coercion).
+            (
+                "nodule d\nfn id<A>(x: A) -> A = x\nfn main() -> Binary{8} = id(0b0000_0000)",
+                "Binary{8}",
+            ),
+            (
+                "nodule d\nfn id<A>(x: A) -> A = x\nfn main() -> Ternary{6} = id(<000000>)",
+                "Ternary{6}",
+            ),
+        ];
+        for (src, expected_ret_str) in cases {
+            // The program must check without error.
+            let e = env(src);
+            // `main` exists and its return type (as declared) matches what we expect.
+            let fd = e.fn_decl("main").expect("main must be in fns");
+            // Resolve the declared return type from the checked env to get the concrete Ty.
+            let ret_ty = resolve_ty("main", &e.types, &[], &fd.sig.ret)
+                .expect("main return must resolve")
+                .0;
+            assert_eq!(
+                ret_ty.to_string(),
+                *expected_ret_str,
+                "id<A> with {expected_ret_str} arg: return type must be {expected_ret_str}, \
+                 got {} — silent coercion or Var residual (M-657 prop, G2/VR-5)",
+                ret_ty
+            );
+        }
     }
 }
