@@ -741,8 +741,8 @@ FLAGGED (G2/VR-5).
   and **deliberately leaves the Unicode version unpinned** — so Mycelium must *add* a reified, pinned
   IDNA-table version (C3 "no hidden defaults"), a design addition the spec itself does not provide.
 - **Obl. 2 — JSON↔`Value` delegates to one canonical codec (W2).** *[Empirical, vs landed Rust
-  source.]* The sole trusted `impl Serialize/Deserialize for Value` is `mycelium-core/src/value.rs`
-  (M-104); the one canonical JSON projection is `mycelium-std-io/src/serialize.rs` (wraps `serde_json`
+  source.]* The sole trusted `impl Serialize/Deserialize for Value` is `crates/mycelium-core/src/value.rs`
+  (M-104); the one canonical JSON projection is `crates/mycelium-std-io/src/serialize.rs` (wraps `serde_json`
   over `Value`, adds the non-finite-f64 refusal + located errors, no new logic); `std.fmt` *already*
   delegates here (M-372, ratified 2026-06-19) — the exact precedent `web.json` follows. A repo-wide
   sweep found **no second `Value`↔JSON codec** (lsp/doc/bench/cert/spore serialize their own Rust
@@ -756,9 +756,9 @@ FLAGGED (G2/VR-5).
   *[Empirical/Declared.]* The colony-of-hyphae server satisfies RT2 **by construction** (RT1
   share-nothing immutable `Request`→`Response`; RT4 explicit `TaskOutcome`; RT7 scope = graceful
   shutdown). The honest ceiling is the **RT2 differential** (interpreter-path vs AOT-path over a fixed
-  corpus), tagged **`Empirical`** — mirroring the landed M-357 precedent (`mycelium-mlir/src/runtime.rs`
+  corpus), tagged **`Empirical`** — mirroring the landed M-357 precedent (`crates/mycelium-mlir/src/runtime.rs`
   `run_colony`; the guard-test `kahn_determinism_is_empirical_not_proven` in
-  `mycelium-std-runtime/src/guarantee_matrix.rs`). **`Proven` correctly withheld:** Kahn (1974)'s
+  `crates/mycelium-std-runtime/src/guarantee_matrix.rs`). **`Proven` correctly withheld:** Kahn (1974)'s
   determinacy is a *denotational* result over an idealized stream model (continuous functions / least
   fixed point), **not** a proof that a real scheduler realizes it — exactly the gap that keeps the
   claim `Empirical` (VR-5). **Not falsified:** isolation is structural, so the colony *can* satisfy
@@ -814,7 +814,7 @@ FLAGGED (G2/VR-5).
 7. **RT2 differential suite:** interpreter-vs-AOT, ≥3 seeds, zero divergences, a non-vacuity (genuine-interleave) guard; carry `kahn_determinism_is_empirical_not_proven`; per-request isolation real (no ambient shared mutable state).
 8. **`RouteMatch`** materialized for every dispatch (RFC-0005 §2 shape: handler + matched pattern + captures + precedence ordering); ambiguity ⇒ `CheckError` at construction (a value, not a panic) naming the two patterns + witnessing path; 404/405 distinct runtime channels.
 9. **Content-negotiation** (if shipped): rank by RFC 9110 §12.4.2 q-values, tie-break §12.5.1; tag `Exact`; reify the selection record + emit `Vary`.
-10. **Honest tags:** all inherited from landed std precedents, never upgraded; VR-5 guard-tests carried into `mycelium-web/src/guarantee_matrix.rs`.
+10. **Honest tags:** all inherited from landed std precedents, never upgraded; VR-5 guard-tests carried into `crates/mycelium-web/src/guarantee_matrix.rs` (the future build's crate).
 
 ### 8.4 Carried-forward open items (explicitly NOT closed by this pass)
 

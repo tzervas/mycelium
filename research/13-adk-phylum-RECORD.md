@@ -270,11 +270,11 @@ events, models, memory).
   `Err`; the taxonomy is **complete** for the documented surface. **Gap (a `dfb` constraint):**
   RFC-0023 §4.1's `ToolError = BadArgs|OutOfDomain|Refused|Upstream` has **no budget arm**, yet obl.3
   requires `→ Budget`; satisfiable via the landed never-silent `TaskOutcome::BudgetExhausted`
-  (`mycelium-interp/src/supervise.rs:100`) — `dfb` must add `ToolError::Budget` or document the split
+  (`crates/mycelium-interp/src/supervise.rs`, ~L90–103) — `dfb` must add `ToolError::Budget` or document the split
   (the `TypeMismatch/Exec/Budget` ↔ `BadArgs/Upstream/…` variant-name reconciliation is a maintainer
   call). **Not falsified.**
 - **Obl. 4 — session/runner + harness reuse (A4).** *[Empirical/Declared.]* One model-call substrate
-  exists and is reusable — `GrokLlmReport`/`GrokOutcome` (`mycelium-bench/src/llm.rs`: model-allowed
+  exists and is reusable — `GrokLlmReport`/`GrokOutcome` (`crates/mycelium-bench/src/llm.rs`: model-allowed
   tags, verbatim tag preservation, `deny_unknown_fields`, `is_synthetic`) + the `tools/llm-harness/`
   transport (never-silent USD spend gate, `Declared` not a formal bound). RFC-0023 §4.5/§5 wire
   `adk.model`/`adk.runner` to it with **no second model-call path**, faithful to ADK's `BaseLlm`/
@@ -296,7 +296,7 @@ events, models, memory).
 | RP-9 obl.4 (harness reuse) | discharged-by-research | one substrate, no second path; the running import is `dfb`'s |
 | item 1 (concept-map fidelity / drift) | discharged-by-research | all six drift items resolved; pin v2.3.0 |
 | item 2 (§4 surface is a TARGET) | scoped-future (`.myc` surface) **+** discharged (soundness) | E7-1 M-657/M-659/M-660/M-664 + E7-2 M-666/M-667; Rust-first now |
-| item 3 (parser-not-lexer) | discharged-by-research | re-verified vs `token.rs` (the reserved runtime-keyword block; M-665 landed) |
+| item 3 (parser-not-lexer) | discharged-by-research | re-verified vs `crates/mycelium-l1/src/token.rs` (the reserved runtime-keyword block; M-665 landed) |
 | item 4 (two runtime realizations) | deferred-to-build (decision) + recommendation | recommend `mycelium-mlir::runtime`; the coupling tradeoff is `dfb`'s |
 | item 5 (State immutability) | discharged-by-research (snapshot v0) **+** scoped-future (`fuse`-merge) | ADR-003; `fuse` ratified-not-lexed (E7-2 M-667) |
 | item 6 (LLM-leverage) | scoped-future — **no verdict** | inherits DN-09 INDETERMINATE; later supersession (VR-5) |
@@ -348,7 +348,7 @@ Empirical/Declared, never `Proven` (VR-5).
 - **2026-06-21 — RP-9 discharge pass (Phase-2 deep-research follow-up; four fractured Opus
   sub-reasoners A1–A4).** Appends §6: the RP-9 research gate **substantially discharges** (design
   soundness; no soundness falsification) against primary ADK source (pinned `adk-python` v2.3.0 /
-  "ADK 2.0") + landed in-repo substrate (`mycelium-bench/src/llm.rs`, `token.rs`, `supervise.rs`).
+  "ADK 2.0") + landed in-repo substrate (`crates/mycelium-bench/src/llm.rs`, `crates/mycelium-l1/src/token.rs`, `crates/mycelium-interp/src/supervise.rs`).
   Drift items 1 + parser-not-lexer item 3 resolved; tool-dispatch taxonomy complete; harness reuse
   single-path; honesty differentiator grounded + falsifiable (stays `Declared`); RT2 `Empirical`.
   **One open completeness item carried forward** — the ADK-2.0 concept-map repair (graph/Workflow + 3
