@@ -1,7 +1,8 @@
-// rejected: 'hypha' is a DN-03 §4 runtime-vocabulary reserved word (concurrent execution unit,
-// RFC-0008) — it is reserved-not-active: it lexes as a keyword (never a silent identifier, G2)
-// but no construct consumes it, so it cannot appear at item position. The parser emits a teaching
-// diagnostic naming RFC-0008. The other nine runtime-tier names (fuse, mesh, graft, cyst, xloc,
-// forage, backbone, tier, reclaim) are reserved the same way (see unit tests for all ten).
+// rejected: 'fuse' is a DN-03 §4 runtime-vocabulary reserved word (lawful state fusion / CRDT
+// join, RFC-0008 RT6) — it is reserved-not-active: it lexes as a keyword (never a silent
+// identifier, G2) but no construct consumes it, so it cannot appear at item position. The parser
+// emits a teaching diagnostic naming RFC-0008. The other still-reserved runtime-tier names (mesh,
+// graft, cyst, xloc, forage, backbone, tier, reclaim) are reserved the same way (see unit tests).
+// ('hypha' and 'colony' LEFT this reserved set with M-666 — they are now active; see accept/13.)
 nodule demo
-hypha worker
+fuse worker

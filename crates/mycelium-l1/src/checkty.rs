@@ -8,8 +8,8 @@ use std::collections::BTreeMap;
 
 use crate::ambient::AmbientError;
 use crate::ast::{
-    BaseType, Expr, FnDecl, Item, Literal, Nodule, Paradigm, Path, Pattern, Scalar, Strength,
-    TypeDecl, TypeRef,
+    BaseType, Expr, FnDecl, Hypha, Item, Literal, Nodule, Paradigm, Path, Pattern, Scalar,
+    Strength, TypeDecl, TypeRef,
 };
 
 /// A v0 (monomorphic) type.
@@ -491,6 +491,7 @@ impl Cx<'_> {
             Expr::Spore(_) => {
                 self.err("`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)")
             }
+            Expr::Colony(hyphae) => self.check_colony(scope, hyphae, expected),
             Expr::WithParadigm { .. } => self.err(
                 "internal: a `with paradigm` block reached the checker — the ambient resolution \
                  pass should have stripped it (RFC-0012 §4.4)",
@@ -624,6 +625,46 @@ impl Cx<'_> {
                 policy: policy.clone(),
             },
         ))
+    }
+
+    /// Type a `colony { hypha e1, …, hypha eN }` block (RFC-0008 §4.7; M-666). Every `hypha` body
+    /// is type-checked under the **current** scope (RT1: hyphae share no state — each closes over
+    /// the lexical environment by value, never over a mutable cell), and the colony's result type is
+    /// the **last** hypha's type — the **RT2 spawn-order sequentialization**'s final observable
+    /// (RFC-0008 §4.6 R1: the deterministic fragment's reference semantics is the sequentialization).
+    /// The `expected` type, if any, applies to that last hypha (the colony's value); the earlier
+    /// hyphae are checked with no expected. A colony must hold **≥ 1** hypha (defense-in-depth — the
+    /// parser already requires it); an empty colony is an explicit refusal, never a silent unit.
+    ///
+    /// Honesty (Declared): this typing is the conservative v0 surface for RFC-0008 §4.7. With no
+    /// product/tuple type in the v0 calculus, the colony cannot yet yield *all* hyphae's joined
+    /// results as one heterogeneous value — that is later work (a join-result product; RFC-0008
+    /// RT6/§4.7). The last-hypha-as-observable rule keeps the type honest and matches the RT2
+    /// sequential reference; it never invents a product type or silently discards a type mismatch.
+    fn check_colony(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        hyphae: &[Hypha],
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        let Some((last, leading)) = hyphae.split_last() else {
+            return self.err(
+                "a `colony` must contain at least one `hypha` (RFC-0008 §4.7 — a colony is a \
+                 grouping of *active* hyphae); an empty `colony { }` has no observable",
+            );
+        };
+        let mut checked: Vec<Hypha> = Vec::with_capacity(hyphae.len());
+        // Leading hyphae: each is its own computation with no expected type. RT1 — each is checked
+        // under the same lexical scope (closed over by value), never mutating it.
+        for h in leading {
+            let (_ty, body2) = self.check(scope, &h.body, None)?;
+            checked.push(Hypha { body: body2 });
+        }
+        // The final hypha carries the colony's observable (the RT2 sequentialization's last step), so
+        // the `expected` type applies to it.
+        let (rty, last_body2) = self.check(scope, &last.body, expected)?;
+        checked.push(Hypha { body: last_body2 });
+        Ok((rty, Expr::Colony(checked)))
     }
 
     fn check_ascribe(
@@ -1425,6 +1466,51 @@ mod tests {
 
     fn env(src: &str) -> Env {
         check_nodule(&parse(src).expect("parses")).expect("checks")
+    }
+
+    fn check_err(src: &str) -> CheckError {
+        check_nodule(&parse(src).expect("parses")).expect_err("must fail to check")
+    }
+
+    // ---- M-666: `colony { hypha … }` type rule (RFC-0008 §4.7) ----
+
+    #[test]
+    fn a_colony_types_as_its_last_hypha() {
+        // The colony's result type is the LAST hypha's (the RT2 sequentialization's observable). Here
+        // the body must match the fn's `Binary{8}` return — the leading hyphae may be any type.
+        let e = env(
+            "nodule d\nfn compute(x: Binary{8}) -> Binary{8} = not(x)\n\
+             fn run() -> Binary{8} = colony { hypha compute(0b0000_0001), hypha compute(0b0000_0010) }",
+        );
+        assert!(e.fn_decl("run").is_some());
+    }
+
+    #[test]
+    fn a_colony_whose_last_hypha_mistypes_is_an_explicit_error() {
+        // The last hypha carries the colony's type, so a `Ternary` last hypha under a `Binary{8}`
+        // return is a never-silent body mismatch (the bidirectional check catches it).
+        let err = check_err(
+            "nodule d\nfn run() -> Binary{8} = colony { hypha not(0b0000_0001), hypha <00+0> }",
+        );
+        assert!(
+            err.message.contains("body") || err.message.contains("expected"),
+            "a mistyped last hypha must be an explicit edge mismatch, got: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn a_leading_hypha_that_does_not_type_check_is_still_an_error() {
+        // RT4/I1: a leading hypha's refusal is never silently dropped — an ill-typed leading hypha
+        // (an unknown name) fails the whole colony check.
+        let err = check_err(
+            "nodule d\nfn run() -> Binary{8} = colony { hypha nope(0b0), hypha not(0b0000_0001) }",
+        );
+        assert!(
+            err.message.contains("nope") || err.message.contains("unknown"),
+            "an ill-typed leading hypha must surface its error, got: {}",
+            err.message
+        );
     }
 
     #[test]

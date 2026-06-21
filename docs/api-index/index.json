@@ -7487,7 +7487,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 327,
+      "line": 349,
       "summary": "A `match` arm.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7564,7 +7564,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 356,
+      "line": 390,
       "summary": "A literal value.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7619,7 +7619,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 336,
+      "line": 370,
       "summary": "A pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7850,7 +7850,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1409,
+      "line": 1450,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7861,7 +7861,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1395,
+      "line": 1436,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7894,7 +7894,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 421,
+      "line": 484,
       "summary": "Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11964,7 +11964,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 106,
+      "line": 112,
       "summary": "A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11986,7 +11986,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 96,
+      "line": 102,
       "summary": "A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12096,7 +12096,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 32,
+      "line": 33,
       "summary": "The result of advancing a task one cooperative step.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12140,7 +12140,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 74,
+      "line": 80,
       "summary": "A **structured concurrency scope** (RT7): tasks spawned here are all joined before the scope",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12195,7 +12195,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 84,
+      "line": 90,
       "summary": "The order a **dataflow** sweep visits still-pending children.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12206,7 +12206,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 55,
+      "line": 56,
       "summary": "A cooperative task: `poll` advances it by one step.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12217,7 +12217,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 42,
+      "line": 43,
       "summary": "The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13669,7 +13669,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::runtime",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 106,
+      "line": 112,
       "summary": "A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13680,7 +13680,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::runtime",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 96,
+      "line": 102,
       "summary": "A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13691,7 +13691,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::runtime",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 32,
+      "line": 33,
       "summary": "The result of advancing a task one cooperative step.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13702,7 +13702,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::runtime",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 74,
+      "line": 80,
       "summary": "A **structured concurrency scope** (RT7): tasks spawned here are all joined before the scope",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13713,7 +13713,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::runtime",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 84,
+      "line": 90,
       "summary": "The order a **dataflow** sweep visits still-pending children.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13724,7 +13724,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::runtime",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 55,
+      "line": 56,
       "summary": "A cooperative task: `poll` advances it by one step.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13735,7 +13735,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::runtime",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 42,
+      "line": 43,
       "summary": "The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token",
       "guarantee_tag": null,
       "corpus_refs": []

@@ -1,4 +1,5 @@
 // rejected: 'phylum' is a reserved word (the library grouping, DN-06) that is not yet an active
-// construct, so it does not open a program — only `nodule` does. 'colony' (the dynamic runtime
-// grouping, RFC-0008 §4.7) is reserved the same way.
+// construct, so it does not open a program — only `nodule` does. (Note: 'colony', once reserved
+// the same way, became an ACTIVE expression construct with M-666 — `colony { hypha … }`, RFC-0008
+// §4.7 — so it is no longer a reserved-not-active reject case; 'phylum' still is.)
 phylum signals.demo

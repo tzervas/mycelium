@@ -78,6 +78,11 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "12-runtime-vocab-reserved-not-active.myc",
         "reserved for the runtime model (RFC-0008), not yet active",
     ),
+    (
+        // M-666 / RFC-0008 §4.7 RT7: a `hypha` outside a `colony` is not expressible.
+        "13-orphan-hypha.myc",
+        "only valid inside a `colony",
+    ),
 ];
 
 #[test]
