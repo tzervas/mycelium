@@ -1,7 +1,9 @@
 [codespell]
 # Spell-check prose. Add genuine false positives to ignore-words-list (comma-separated,
 # lowercase). Keep this list small and justified.
-skip = .git,*.lock,node_modules,target,dist-newstyle,.venv,.tools-venv,*.svg,idmap.tsv,./tools/llm-harness/reports/*,tools/llm-harness/reports/*
+# fuzz/corpus/* is fuzzer input/output data (committed seeds + libFuzzer-generated mutations) —
+# raw bytes, never prose, so it is skipped like target/ and the harness reports (M-654).
+skip = .git,*.lock,node_modules,target,dist-newstyle,.venv,.tools-venv,*.svg,idmap.tsv,./tools/llm-harness/reports/*,tools/llm-harness/reports/*,./fuzz/corpus/*,fuzz/corpus/*
 # Domain terms / abbreviations codespell otherwise flags:
 # ser (Serialize abbrev), clen (Content-Length var), publisherr (PublishErr type), raison (raison
 # d'être), copyed/copys (Dockerfile COPY directive), re-used (valid hyphenation).
