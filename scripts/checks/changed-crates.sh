@@ -154,7 +154,7 @@ fi
 full_meta="$(cargo metadata --format-version 1 --offline 2>/dev/null)" \
   || emit_workspace "cargo metadata (full resolve, offline) failed — cannot compute reverse-deps"
 
-declare -A rev=()   # rev[dep_name] = "userA userB ..."  (who depends on dep_name)
+declare -A rev=()   # rev[dep_name] = "pkgA pkgB ..."  (workspace pkgs that depend on dep_name)
 if [[ -n "$full_meta" ]]; then
   # Workspace member names (the set we keep). NOTE: cargo's `resolve.nodes[].deps[].name` are the
   # *normalized* crate names (hyphens -> underscores, e.g. `mycelium_core`), whereas
