@@ -119,3 +119,28 @@ fn the_gate_is_non_vacuous() {
     assert!(!myc_files("accept").is_empty());
     assert!(!myc_files("reject").is_empty());
 }
+
+/// Every entry in [`REJECT_EXPECTED`] must correspond to an actual fixture file in the reject
+/// corpus — an orphaned entry (pointing at a deleted or renamed fixture) would silently pass
+/// while exercising nothing, creating a blind spot the gate is supposed to close. Mutant-witness:
+/// adding a `REJECT_EXPECTED` entry for a non-existent file trips this test, keeping the table
+/// and the corpus in sync **in both directions** (A4 bidirectional integrity).
+#[test]
+fn reject_expected_table_has_no_orphaned_entries() {
+    let existing: std::collections::BTreeSet<String> = myc_files("reject")
+        .into_iter()
+        .map(|p| {
+            p.file_name()
+                .and_then(|n| n.to_str())
+                .expect("fixture has a UTF-8 name")
+                .to_owned()
+        })
+        .collect();
+    for (name, _) in REJECT_EXPECTED {
+        assert!(
+            existing.contains(*name),
+            "REJECT_EXPECTED entry {name:?} has no corresponding reject fixture — \
+             either add the fixture or remove the orphaned entry (A4 bidirectional integrity)"
+        );
+    }
+}
