@@ -22,7 +22,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::checkty::{DataInfo, Ty};
+use crate::checkty::{lookup_data_info, DataInfo, GenericShell, Ty};
 
 /// A normalized pattern for the usefulness matrix. The typechecker lowers `ast::Pattern` to this:
 /// binders and `_` both become [`Pat::Wild`] (they do not refine coverage), a nullary constructor or
@@ -40,19 +40,33 @@ pub(crate) enum Pat {
 
 /// The finite constructor signature of `ty`, or `None` if its value domain is open (`Binary`/
 /// `Ternary` — never a complete signature, so a literal column always needs a default).
-fn signature<'a>(ty: &Ty, types: &'a BTreeMap<String, DataInfo>) -> Option<&'a DataInfo> {
+/// Handles abstract mangled types (e.g. `"List<A>"`) by falling back to `generics` (M-657).
+fn signature<'a>(
+    ty: &Ty,
+    types: &'a BTreeMap<String, DataInfo>,
+    generics: &'a BTreeMap<String, GenericShell>,
+) -> Option<std::borrow::Cow<'a, DataInfo>> {
     match ty {
-        Ty::Data(n) => types.get(n),
+        Ty::Data(n) => Some(lookup_data_info(types, generics, n)),
         _ => None,
     }
 }
 
 /// The field types of constructor `c` in data type `ty` (empty if not found — the caller has already
 /// type-checked the pattern, so a miss cannot happen on a well-typed matrix).
-fn ctor_fields(ty: &Ty, c: &str, types: &BTreeMap<String, DataInfo>) -> Vec<Ty> {
-    signature(ty, types)
-        .and_then(|d| d.ctors.iter().find(|ci| ci.name == c))
-        .map(|ci| ci.fields.clone())
+fn ctor_fields(
+    ty: &Ty,
+    c: &str,
+    types: &BTreeMap<String, DataInfo>,
+    generics: &BTreeMap<String, GenericShell>,
+) -> Vec<Ty> {
+    signature(ty, types, generics)
+        .and_then(|d| {
+            d.ctors
+                .iter()
+                .find(|ci| ci.name == c)
+                .map(|ci| ci.fields.clone())
+        })
         .unwrap_or_default()
 }
 
@@ -143,9 +157,11 @@ fn head_ctors(matrix: &[Vec<Pat>]) -> BTreeSet<String> {
 /// `U(P, q)` — is `q` useful w.r.t. matrix `P` (some value matches `q` but no row of `P`)? Returns a
 /// witness value (as a pattern vector of the same width) when useful, else `None`. `col_types` gives
 /// the type of each column (parallel to `q`); it drives the complete-signature test and the lazy
-/// field-type expansion.
+/// field-type expansion. `generics` enables coverage of abstract-mangled types in generic fn bodies
+/// (M-657): a `Ty::Data("List<A>")` scrutinee resolves via the generic shell registry.
 pub(crate) fn useful(
     types: &BTreeMap<String, DataInfo>,
+    generics: &BTreeMap<String, GenericShell>,
     matrix: &[Vec<Pat>],
     q: &[Pat],
     col_types: &[Ty],
@@ -162,20 +178,20 @@ pub(crate) fn useful(
             let m2 = specialize_ctor(matrix, c, a);
             let mut q2 = subs.clone();
             q2.extend_from_slice(&q[1..]);
-            let mut ct2 = ctor_fields(head_ty, c, types);
+            let mut ct2 = ctor_fields(head_ty, c, types, generics);
             ct2.extend_from_slice(&col_types[1..]);
-            useful(types, &m2, &q2, &ct2).map(|w| rebuild_ctor(c, a, w))
+            useful(types, generics, &m2, &q2, &ct2).map(|w| rebuild_ctor(c, a, w))
         }
         Pat::Lit(k) => {
             let m2 = specialize_lit(matrix, k);
             let q2 = q[1..].to_vec();
             let ct2 = col_types[1..].to_vec();
-            useful(types, &m2, &q2, &ct2).map(|w| prepend(Pat::Lit(k.clone()), w))
+            useful(types, generics, &m2, &q2, &ct2).map(|w| prepend(Pat::Lit(k.clone()), w))
         }
-        Pat::Wild => match signature(head_ty, types) {
+        Pat::Wild => match signature(head_ty, types, generics) {
             // Finite (data) signature: complete once every constructor appears in column 0.
             Some(d) => {
-                let d = d.clone();
+                let d = d.into_owned();
                 let present = head_ctors(matrix);
                 if d.ctors.iter().all(|ci| present.contains(&ci.name)) {
                     // Complete: useful iff useful under *some* constructor specialization.
@@ -186,7 +202,7 @@ pub(crate) fn useful(
                         q2.extend_from_slice(&q[1..]);
                         let mut ct2 = ci.fields.clone();
                         ct2.extend_from_slice(&col_types[1..]);
-                        if let Some(w) = useful(types, &m2, &q2, &ct2) {
+                        if let Some(w) = useful(types, generics, &m2, &q2, &ct2) {
                             return Some(rebuild_ctor(&ci.name, a, w));
                         }
                     }
@@ -194,7 +210,7 @@ pub(crate) fn useful(
                 } else {
                     // Incomplete: recurse on the default; the witness head is a *missing* constructor.
                     let m2 = default_matrix(matrix);
-                    useful(types, &m2, &q[1..], &col_types[1..]).map(|w| {
+                    useful(types, generics, &m2, &q[1..], &col_types[1..]).map(|w| {
                         let missing = d.ctors.iter().find(|ci| !present.contains(&ci.name));
                         let head = missing.map_or(Pat::Wild, |ci| {
                             Pat::Ctor(ci.name.clone(), vec![Pat::Wild; ci.fields.len()])
@@ -206,7 +222,8 @@ pub(crate) fn useful(
             // Open (Binary/Ternary) domain: never complete — recurse on the default, witness `_`.
             None => {
                 let m2 = default_matrix(matrix);
-                useful(types, &m2, &q[1..], &col_types[1..]).map(|w| prepend(Pat::Wild, w))
+                useful(types, generics, &m2, &q[1..], &col_types[1..])
+                    .map(|w| prepend(Pat::Wild, w))
             }
         },
     }
@@ -247,7 +264,7 @@ pub(crate) fn render(p: &Pat) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::checkty::{CtorInfo, DataInfo};
+    use crate::checkty::{CtorInfo, DataInfo, GenericShell};
 
     fn nat_registry() -> BTreeMap<String, DataInfo> {
         let mut m = BTreeMap::new();
@@ -270,6 +287,10 @@ mod tests {
         m
     }
 
+    fn no_generics() -> BTreeMap<String, GenericShell> {
+        BTreeMap::new()
+    }
+
     fn ctor(n: &str, subs: Vec<Pat>) -> Pat {
         Pat::Ctor(n.to_owned(), subs)
     }
@@ -279,7 +300,14 @@ mod tests {
         let t = nat_registry();
         // rows: Z, S(_) — a wildcard `_` is then not useful ⇒ exhaustive.
         let rows = vec![vec![ctor("Z", vec![])], vec![ctor("S", vec![Pat::Wild])]];
-        assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into())]).is_none());
+        assert!(useful(
+            &t,
+            &no_generics(),
+            &rows,
+            &[Pat::Wild],
+            &[Ty::Data("Nat".into())]
+        )
+        .is_none());
     }
 
     #[test]
@@ -287,7 +315,14 @@ mod tests {
         let t = nat_registry();
         // rows: only Z — `_` is useful, witness is the missing `S(_)`.
         let rows = vec![vec![ctor("Z", vec![])]];
-        let w = useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into())]).expect("non-exhaustive");
+        let w = useful(
+            &t,
+            &no_generics(),
+            &rows,
+            &[Pat::Wild],
+            &[Ty::Data("Nat".into())],
+        )
+        .expect("non-exhaustive");
         assert_eq!(render(&w[0]), "S(_)");
     }
 
@@ -299,7 +334,14 @@ mod tests {
             vec![ctor("Z", vec![])],
             vec![ctor("S", vec![ctor("Z", vec![])])],
         ];
-        let w = useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into())]).expect("non-exhaustive");
+        let w = useful(
+            &t,
+            &no_generics(),
+            &rows,
+            &[Pat::Wild],
+            &[Ty::Data("Nat".into())],
+        )
+        .expect("non-exhaustive");
         assert_eq!(render(&w[0]), "S(S(_))");
     }
 
@@ -312,7 +354,14 @@ mod tests {
             vec![ctor("S", vec![ctor("Z", vec![])])],
             vec![ctor("S", vec![ctor("S", vec![Pat::Wild])])],
         ];
-        assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into())]).is_none());
+        assert!(useful(
+            &t,
+            &no_generics(),
+            &rows,
+            &[Pat::Wild],
+            &[Ty::Data("Nat".into())]
+        )
+        .is_none());
     }
 
     #[test]
@@ -321,7 +370,7 @@ mod tests {
         // After Z and S(_), the arm S(Z) is redundant (already covered) ⇒ not useful.
         let prior = vec![vec![ctor("Z", vec![])], vec![ctor("S", vec![Pat::Wild])]];
         let row = vec![ctor("S", vec![ctor("Z", vec![])])];
-        assert!(useful(&t, &prior, &row, &[Ty::Data("Nat".into())]).is_none());
+        assert!(useful(&t, &no_generics(), &prior, &row, &[Ty::Data("Nat".into())]).is_none());
     }
 
     #[test]
@@ -330,10 +379,17 @@ mod tests {
         // A Binary{1} column with literal rows 0b0, 0b1 but no default is still non-exhaustive: the
         // value domain is never enumerated (M-320), so `_` stays useful.
         let rows = vec![vec![Pat::Lit("b:0".into())], vec![Pat::Lit("b:1".into())]];
-        assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Binary(1)]).is_some());
+        assert!(useful(&t, &no_generics(), &rows, &[Pat::Wild], &[Ty::Binary(1)]).is_some());
         // With a default, `_` is no longer useful.
         let with_default = vec![vec![Pat::Lit("b:0".into())], vec![Pat::Wild]];
-        assert!(useful(&t, &with_default, &[Pat::Wild], &[Ty::Binary(1)]).is_none());
+        assert!(useful(
+            &t,
+            &no_generics(),
+            &with_default,
+            &[Pat::Wild],
+            &[Ty::Binary(1)]
+        )
+        .is_none());
     }
 
     // --- M-641: the shared `SpecializeRow` specialization over two row types ---------------------

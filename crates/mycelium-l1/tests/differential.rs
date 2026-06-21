@@ -218,6 +218,33 @@ fn data_corpus() -> Vec<&'static str> {
          fn shrink(t: Two) -> Nat = match t { Mk(Z, b) => b, Mk(S(a), b) => grow(Mk(a, b)) }\n\
          fn grow(t: Two) -> Nat = match t { Mk(a, Z) => a, Mk(a, S(b)) => shrink(Mk(a, b)) }\n\
          fn main() -> Nat = shrink(Mk(S(Z), S(Z)))",
+        // --- M-657 stage-1 generics: generic ADT + generic fn, instantiated monomorphically ---
+        // is_cons<A>(List<A>) -> Bool: a generic fn over a generic recursive ADT; monomorphized
+        // at Binary{8}. All three paths (L1 eval, L0 interp, AOT) must agree on the result.
+        "nodule d\n\
+         type List<A> = Nil | Cons(A, List<A>)\n\
+         fn is_cons<A>(xs: List<A>) -> Bool = match xs { Nil => False, Cons(_, _) => True }\n\
+         fn check_list(xs: List<Binary{8}>) -> Bool = is_cons(xs)\n\
+         fn main() -> Bool = check_list(Cons(0b0000_0001, Nil))",
+        // --- M-657B: generic recursive function elaborates via monomorphization ---
+        // length<A>(List<A>) -> Nat: a self-recursive generic function; monomorphized at
+        // Binary{8} via the wrapper byte_length. The Fix node handles the recursion.
+        // All three paths must agree: length(Cons(x, Nil)) => S(Z), length(Nil) => Z.
+        "nodule d\n\
+         type List<A> = Nil | Cons(A, List<A>)\n\
+         type Nat = Z | S(Nat)\n\
+         fn length<A>(xs: List<A>) -> Nat = match xs { Nil => Z, Cons(_, rest) => S(length(rest)) }\n\
+         fn byte_length(xs: List<Binary{8}>) -> Nat = length(xs)\n\
+         fn main() -> Nat = byte_length(Cons(0b0000_0001, Nil))",
+        // Mutual generic pair: even<A>/odd<A> over List<A>, monomorphized at Binary{1}.
+        // even(Cons(_, Cons(_, Nil))) => True (two elements, even count).
+        // Verifies FixGroup lowers correctly for mutually-recursive generic instances.
+        "nodule d\n\
+         type List<A> = Nil | Cons(A, List<A>)\n\
+         fn even<A>(xs: List<A>) -> Bool = match xs { Nil => True, Cons(_, rest) => odd(rest) }\n\
+         fn odd<A>(xs: List<A>) -> Bool = match xs { Nil => False, Cons(_, rest) => even(rest) }\n\
+         fn byte_even(xs: List<Binary{1}>) -> Bool = even(xs)\n\
+         fn main() -> Bool = byte_even(Cons(0b0, Cons(0b0, Nil)))",
     ]
 }
 

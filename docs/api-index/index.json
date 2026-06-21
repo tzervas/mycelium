@@ -7245,7 +7245,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 45,
+      "line": 64,
       "summary": "An explicit check failure (never a silent pass or a guess — S5/G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7256,7 +7256,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 45,
+      "line": 47,
       "summary": "Why a definition could not be elaborated to L0 — always explicit, never a partial artifact",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7267,7 +7267,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 119,
+      "line": 145,
       "summary": "The checked program environment: registry + function table.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7377,7 +7377,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 17,
+      "line": 30,
       "summary": "A v0 (monomorphic) type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7696,7 +7696,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 275,
+      "line": 658,
       "summary": "Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7707,7 +7707,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 231,
+      "line": 614,
       "summary": "Check a whole nodule: build the registry (prelude + declarations), then type every function",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7718,7 +7718,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 240,
+      "line": 623,
       "summary": "Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7740,7 +7740,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 45,
+      "line": 64,
       "summary": "An explicit check failure (never a silent pass or a guess — S5/G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7751,7 +7751,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 100,
+      "line": 119,
       "summary": "One constructor of a registered data type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7762,7 +7762,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 109,
+      "line": 128,
       "summary": "A registered (monomorphic) data type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7773,7 +7773,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 119,
+      "line": 145,
       "summary": "The checked program environment: registry + function table.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7784,7 +7784,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 131,
+      "line": 162,
       "summary": "Find the data type owning constructor `ctor`, with its index — `None` if no type has it.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7795,7 +7795,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 131,
+      "line": 162,
       "summary": "Find the data type owning constructor `ctor`, with its index — `None` if no type has it.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7806,7 +7806,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 17,
+      "line": 30,
       "summary": "A v0 (monomorphic) type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7817,7 +7817,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 275,
+      "line": 658,
       "summary": "Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7828,7 +7828,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 231,
+      "line": 614,
       "summary": "Check a whole nodule: build the registry (prelude + declarations), then type every function",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7839,7 +7839,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 240,
+      "line": 623,
       "summary": "Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7850,7 +7850,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1450,
+      "line": 2087,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7861,7 +7861,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1436,
+      "line": 2073,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7883,7 +7883,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 45,
+      "line": 47,
       "summary": "Why a definition could not be elaborated to L0 — always explicit, never a partial artifact",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7894,7 +7894,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 484,
+      "line": 498,
       "summary": "Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7905,7 +7905,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 204,
+      "line": 206,
       "summary": "Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7916,7 +7916,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 83,
+      "line": 85,
       "summary": "Build the L0 [`Value`] of a representation literal (Q6: a literal *is* its representation —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7927,7 +7927,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 183,
+      "line": 185,
       "summary": "The v0 **policy-name reference**: a deterministic, domain-separated content address derived",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7938,7 +7938,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 142,
+      "line": 144,
       "summary": "Resolve a surface [`TypeRef`] to a kernel [`Repr`] (swap targets).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7949,7 +7949,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 204,
+      "line": 206,
       "summary": "Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`].",
       "guarantee_tag": null,
       "corpus_refs": []

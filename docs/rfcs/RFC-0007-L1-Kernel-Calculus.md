@@ -134,6 +134,14 @@ Polymorphism (type parameters, traits/LR-2) is **deliberately out of v0**: decla
 *parameterized* (and are hashed as such), but v0 type checking is monomorphic; instantiating a
 generic is an explicit "deferred" error, never a guess. The trait system is its own later RFC.
 
+> **Generics slice amended by §4.9 (2026-06-21; append-only — M-656 / RFC-0019 / E7-1).** The
+> "instantiating a generic is an explicit deferred error" clause above is **superseded for the
+> stage-1 generics slice** by **§4.9**: monomorphic instantiation of generic *data declarations* and
+> generic *function signatures* is now specified (and implemented Rust-first in
+> `crates/mycelium-l1`, pending ratification — M-657). The **trait** half of LR-2 stays deferred to
+> RFC-0019. The slice's soundness tag is **`Declared`** — instantiation reduces to the §4.4
+> judgments by construction, but that reduction is argued, not separately machine-checked (VR-5).
+
 ### 4.5 The divergence bit & the `matured` gate (Q4/Q7; T3.4)
 
 > **Granularity superseded by RFC-0017 (2026-06-18; append-only — soundness unchanged).** This
@@ -255,6 +263,56 @@ the diagnostic level: where these words already produce an error (juxtaposition 
 syntax; an unknown name is a check error), the diagnostic *teaches* — "Mycelium iterates by
 recursion or `for` (§4.8)" — rather than reporting a generic failure.
 
+### 4.9 Stage-1 generic type parameters — monomorphic instantiation (M-656; append-only)
+
+> **Status: Accepted spec; implemented Rust-first in `crates/mycelium-l1` (M-657), pending
+> ratification.** Closes the §4.4 generics deferral for the **monomorphic-instantiation** slice; the
+> **trait** half of LR-2 remains RFC-0019's (M-658/M-659). Honest tag of the slice: **`Declared`** —
+> the rules below are type-preserving by construction (monomorphization reduces to the §4.4
+> judgments), but that preservation is argued, not machine-checked (VR-5). The three-way differential
+> (§4.6 / NFR-7) supplies `Empirical` evidence per program.
+
+**Scope.** Two surface forms move from "parsed-but-deferred" (§4.4) to checked:
+
+- **Generic data declarations** — `type List<A> = Nil | Cons(A, List<A>)` (one or more type
+  parameters; recursive uses of the declared type are permitted, exactly as for monomorphic ADTs —
+  the §4.2 registry shell is inserted before constructor fields resolve).
+- **Generic function signatures** — `fn head<A>(xs: List<A>) -> A = …` (the type parameters scope
+  over the value-parameter and return types).
+
+**Typing — instantiation reduces to §4.4.** A generic declaration `D<Ā>` is checked **once** with
+its parameters `Ā` as abstract type variables; the parameters are *opaque* — no operation may
+inspect their representation (see the Repr-polymorphism restriction). Each **use site** supplies
+concrete type arguments `τ̄` (written, or determined from the value arguments' types by first-order
+matching — **not** Hindley–Milner inference), yielding a **monomorphic instance** `D[τ̄/Ā]`:
+
+```text
+ T-Inst   Σ ⊢ D<Ā> wf      τ̄ concrete (resolved)      D[τ̄/Ā] well-formed under §4.4
+          ──────────────────────────────────────────────────────────────────────────
+          Σ ⊢ D⟨τ̄⟩  ≡  the monomorphic registry entry D[τ̄/Ā]
+```
+
+The instance is an **ordinary monomorphic registry entry** (§4.2): generics add **no new kernel
+node and no new term form** — `Construct` / `Match` / `App` / `Fix` and the §4.2 registry are
+unchanged (KC-3, the ten-node budget holds). The reduction is **dictionary-passing-ready** (RFC-0019
+§4.3/§4.4): for generics *without* trait bounds the dictionary is empty (zero runtime cost), and the
+elaboration is structured so RFC-0019's trait dictionaries slot in at this same instantiation point.
+
+**Repr-polymorphism restriction (RFC-0019 §4.6, normative; never-silent S1).** A type parameter
+abstracts over a *type*, never over a representation that would require a `swap`: an instantiation
+**never silently inserts a `Swap`**. An operation that needs a specific representation of an abstract
+parameter (e.g. a `Binary`-only prim applied to a value of parameter type `A`) is an **explicit
+refusal** (`MissingConversion` / a prim-signature error), never an implicit conversion — the same
+never-silent gate as every other representation mismatch (S1 / G2 / VR-5), and locally checkable at
+the instantiation site.
+
+**What stays deferred (explicit — not ratified here).** Trait bounds on parameters and `impl`
+dispatch (RFC-0019; M-658/M-659); representation-kind polymorphism (abstracting over `Repr` itself);
+the static guarantee-grading interaction with type parameters (RFC-0018; M-663); and full HM
+inference — v0.1 uses bidirectional checking with **explicit or argument-determined** type
+arguments, so a type variable appearing **only** in a return position requires an ascription (an
+honest, locally-diagnosable limit, never a guess).
+
 ## 5. Drawbacks
 
 Ten nodes + a registry is more machinery than L0's five — but it is the smallest budget any
@@ -345,6 +403,16 @@ revisions / KC-2-gated.*
 
 ## Meta — changelog
 
+- **2026-06-21 — §4.4 generics deferral closed for the monomorphic-instantiation slice (new §4.9;
+  M-656 / E7-1; append-only, additive).** §4.4's "instantiating a generic is an explicit deferred
+  error" clause is **superseded for the generics slice** by the new **§4.9** (stage-1 generic type
+  parameters): monomorphic instantiation of generic data declarations and generic function
+  signatures is now specified — reducing to the §4.4 judgments via registry monomorphization, with
+  **no new kernel node** (KC-3) and the RFC-0019 §4.6 Repr-polymorphism restriction enforced
+  never-silently (S1). The **trait** half of LR-2 stays deferred to RFC-0019 (M-658/M-659). Slice
+  honesty: **`Declared`** (type-preservation argued, not machine-checked — VR-5); implemented
+  Rust-first in `crates/mycelium-l1` (M-657), **pending ratification** — RFC-0007 stays `Accepted`,
+  not silently `Enacted`.
 - **2026-06-19 — §8 R7-Q3 surface grammar decided (RP-6 → DN-13; M-391; append-only, surface
   commitment).** The remaining R7-Q3 sub-question — the *surface grammar* for a group of ≥2
   mutually-recursive top-level functions — is resolved: **nodule-wide mutual visibility, no new

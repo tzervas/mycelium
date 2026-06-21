@@ -81,7 +81,7 @@ primary evidence for refusals.
 | 3 | **Functions + self-recursion + mutual recursion** (nodule-wide; Tarjan SCC → `FixGroup`) | All | `elab.rs` `FixGroup`; `checkty.rs` Pass 2 + Pass 3; DN-13; M-343 + M-391 | **present** |
 | 4 | **Let bindings + lambda abstractions** (`let`, anonymous `fn`-forms, `for` sugar) | All combinators, `iter`, `error` | `ast.rs` `Expr::Let`; `elab.rs` `elab_lam`; `ast.rs` `Expr::For`; M-343 | **present** |
 | 5 | **Nodule-level organization** (`nodule` header, single-nodule scoping, `use path`) | Any library unit | `ast.rs` `Nodule`/`Item::Use`; `nodule.rs`; DN-06; M-343 | **present** |
-| 6 | **Generic type parameters** (`fn f<A, B>(…)`, `type List<A>`) | `collections`, `iter`, `cmp`, `error`, `math`, `text` | `checkty.rs` line ~167: *"generic type `T<…>` is deferred in v0 (RFC-0007 §4.4) — monomorphic only"*; line ~286: *"generic functions are parsed but deferred in v0"*; RFC-0007 §4.4 | **gate-fails** |
+| 6 | **Generic type parameters** (`fn f<A, B>(…)`, `type List<A>`) | `collections`, `iter`, `cmp`, `error`, `math`, `text` | **Implemented (M-656/M-657, 2026-06-21; RFC-0007 §4.9, Rust-first pending ratification).** `checkty.rs` `Ty::Var` + registry monomorphization; generic ADTs, generic fns (incl. return-position type vars), and **recursive/mutually-recursive** generic fns via `checkty::monomorphize` → existing `Fix`/`FixGroup` (no new kernel node, KC-3). Never-silent: repr mismatch → `MissingConversion`; polymorphic recursion → explicit refusal at the opt-in `MYCELIUM_MONO_INSTANCE_CAP`. Tag `Declared`. *Caveat (never-silent):* deeply-nested ctor-pattern binders refuse explicitly (no wrong instance) — follow-up. | **present** |
 | 7 | **Trait-like interfaces** (`trait T { fn … }`) + impl blocks | RFC-0016 §4.1 C1–C6 contract machinery in-language; `iter`, `cmp`, `fmt` | `checkty.rs` line 297: `Item::Trait(_)` is skipped (no check arm); RFC-0007 Accepted scope explicitly defers "traits/LR-2" per RFC-0007 status field; AST parses `TraitDecl` but `checkty` ignores it | **gate-fails** |
 | 8 | **Effect annotations (RFC-0014 RT3)** — declared `{time, entropy, io, …}` on surface `fn` | `rand`, `time`, `io`, `fs`, `recover` | No effect-annotation syntax in `ast.rs` `FnSig` or `FnDecl`; `checkty.rs` has no effect-checking pass (RFC-0007 §4.3: "stage 1, a revision of this RFC"); RFC-0014 effects exist only in the L0 interpreter budget layer (`mycelium-interp`) | **gate-fails** |
 | 9 | **`wild` / FFI surface** — callable host operations | `fs`, `rand`, `io` (std-sys call sites) | `checkty.rs` line ~454: *"`wild` is denied by default (LR-9): no host FFI capability exists in v0, so a wild block cannot be checked or run — this refusal is the design, not a gap"*; `ast.rs` `Expr::Wild` parses but typechecker rejects | **gate-fails** |
@@ -99,16 +99,19 @@ primary evidence for refusals.
 
 **Self-hosting is not yet established.**
 
-Of the 11 required features, **5 are present** (features 1–5: value types, ADTs + pattern
-matching, functions + recursion including mutual recursion, let/lambda, nodule-level organization).
-**5 are gate-fails** (features 6–9, 11: generics, traits, effect annotations, `wild`/FFI,
+Of the 11 required features, **6 are present** (features 1–6: value types, ADTs + pattern
+matching, functions + recursion including mutual recursion, let/lambda, nodule-level organization,
+**and stage-1 generic type parameters — M-656/M-657, 2026-06-21, RFC-0007 §4.9, Rust-first pending
+ratification**). **4 are gate-fails** (features 7–9, 11: traits, effect annotations, `wild`/FFI,
 static guarantee index). **1 is partially missing** (feature 10: cross-nodule phyla).
 
 The **blocking gates** for any non-trivial stdlib module authored in Mycelium-lang are:
 
-- **Generic type parameters** — without polymorphism, no `List<A>`, no `Option<T>`, no `Result<T,E>`
-  at the surface level; the `collections`, `iter`, `error`, `cmp`, `text`, `math` modules cannot
-  be authored. (RFC-0007 §4.4 defers this as stage-1; no surface-level generics in v0.)
+- **Generic type parameters** — **RESOLVED (M-656/M-657, 2026-06-21).** Stage-1 generics landed
+  (RFC-0007 §4.9): generic ADTs (`List<A>`, `Option<T>`, `Result<T,E>`) and generic functions
+  (including recursive/mutually-recursive, via per-instantiation monomorphization). This unblocks the
+  polymorphic-container surface of `collections`/`iter`/`error`/`cmp`/`text`/`math`. (One honest
+  follow-up: deeply-nested ctor-pattern binders — see §3 row 6 caveat.)
 - **Trait interfaces** — without `trait` / `impl` blocks functioning in the typechecker, the
   RFC-0016 §4.1 C1–C6 guarantee/EXPLAIN contract cannot be expressed as a surface constraint;
   modules cannot declare conformance in-language. (RFC-0007 defers traits/LR-2 from the accepted

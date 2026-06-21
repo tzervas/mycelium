@@ -8,6 +8,38 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-21: M-656 + M-657 — stage-1 generic type parameters in `mycelium-l1`, E7-1)
+- **RFC-0007 §4.9 — stage-1 generics (spec, M-656; append-only):** closes the §4.4 generics deferral
+  for the monomorphic-instantiation slice — the `T-Inst` judgment (generic data declarations + generic
+  function signatures reduce to the §4.4 rules via registry monomorphization), the RFC-0019 §4.6
+  **Repr-polymorphism restriction** (no instantiation silently inserts a `Swap` — S1), and a
+  dictionary-passing-ready elaboration. **No new kernel node** (KC-3). RFC-0007 stays **Accepted**; the
+  slice is tagged **`Declared`**, implemented Rust-first (M-657), **pending ratification** — not
+  silently Enacted. The trait half of LR-2 stays deferred to RFC-0019 (M-658/M-659).
+- **Generic type parameters (impl, M-657)** (`mycelium-l1`: `checkty.rs`, `elab.rs`): generic ADTs
+  (`type List<A> = Nil | Cons(A, List<A>)`) and generic functions — including return-position type
+  variables (`fn id<A>(x: A) -> A`) and generic-ADT matching (`fn is_cons<A>(xs: List<A>) -> Bool`) —
+  now parse, type-check, elaborate to closed L0, and evaluate. **Monomorphize at the registry layer**:
+  an instantiation `List<Binary{8}>` becomes a concrete `Ty::Data` registry entry, so `usefulness`,
+  `decision`, `eval`, and the trusted kernel are unchanged.
+- **Recursive + mutually-recursive generic functions** elaborate via a per-instantiation
+  **monomorphization pass** (`checkty::monomorphize`) that materializes each reachable generic-function
+  instance (e.g. `length<Binary{8}>`) as an ordinary monomorphic `FnDecl` and lets the **existing
+  `Fix`/`FixGroup`** machinery handle recursion — still **no new kernel node** (KC-3). `let`/`match`/
+  `for` binders are captured so instance inference is **argument-driven** (an earlier unsound
+  type-parameter-name-collision shortcut was caught by a TDD test and removed).
+- **Honesty (G2/VR-5):** a representation-mismatched instantiation is an explicit `MissingConversion`
+  (never a silent `Swap`); **polymorphic recursion** is an explicit refusal at an **opt-in instance
+  cap** (`MYCELIUM_MONO_INSTANCE_CAP`, default 256 — an honest resource bound, like evaluator fuel).
+  Guarantee tag **`Declared`** (the three-way differential supplies `Empirical` evidence). 181
+  `mycelium-l1` tests green; `clippy -D warnings` clean; conformance fixtures `accept/14-generics.myc`,
+  `accept/15-generic-recursion.myc`. DN-14 §3 row 6 (generics) → **present**.
+- **Known limitation (FLAG, honest/never-silent):** deeply-nested constructor-pattern binders may fall
+  back to an un-extended scope; a generic call depending on such a binder **refuses explicitly** (never
+  a wrong instance) — tracked as a follow-up before broad self-hosting (M-649). The literal
+  `head<A>(List<A>)->A` is partial on `Nil` (not total in the pure fragment); `id<A>`/`is_cons<A>`
+  stand in for the same machinery.
+
 ### Added (2026-06-21: M-666 — RFC-0008 R1 `hypha`/`colony` real-concurrency L1 constructs)
 - **RFC-0008 R1 `hypha`/`colony` L1 surface constructs** (`mycelium-l1`, `mycelium-mlir`):
   `colony { hypha compute(x), hypha compute(y) }` now parses, type-checks, and lowers to
