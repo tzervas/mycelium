@@ -134,10 +134,22 @@ pub struct DataInfo {
 
 /// The checked program environment: registry + function table. Built by [`check_nodule`]; the
 /// evaluator and elaborator consume it (so nothing runs unchecked).
+///
+/// **API note (M-657):** `generics` is a new public field added in stage-1 generics. It holds
+/// the abstract generic shells (with `Ty::Var` fields) that were registered during checking but
+/// whose monomorphic instantiations appear in `types`. Downstream consumers (`elab`, `eval`)
+/// use only `types` (which contains the concrete instantiations); `generics` is for re-checking
+/// and for the `docs/api-index/` regeneration signal. FLAG to orchestrator: this public API
+/// change triggers regeneration of `docs/api-index/` (`just docs-index`).
 #[derive(Debug, Clone)]
 pub struct Env {
-    /// Data registry, keyed by type name.
+    /// Data registry, keyed by type name. Contains only monomorphic (Var-free) `DataInfo`.
+    /// Generic instantiations (`List<Binary{8}>`) appear here under their mangled name.
     pub types: BTreeMap<String, DataInfo>,
+    /// Generic shell registry, keyed by the raw (unmangled) type name. Each shell holds the
+    /// declaration's params and the Var-bearing ctor field types (never in `types`).
+    /// Stage-1 generics (M-657, **Declared**).
+    pub generics: BTreeMap<String, GenericShell>,
     /// Function table, keyed by name.
     pub fns: BTreeMap<String, FnDecl>,
     /// Per-function totality classification (RFC-0007 §4.5), filled by the totality checker.
@@ -194,12 +206,36 @@ fn prelude() -> DataInfo {
     }
 }
 
-/// Resolve a surface [`TypeRef`] to a v0 [`Ty`]. Generic instantiations and VSA types are
-/// explicit "deferred" refusals in v0 (RFC-0007 §4.4), never guesses. The guarantee index is
-/// *allowed* and returned alongside (checked dynamically at stage 0 — RFC-0007 §4.3).
+/// Resolve a surface [`TypeRef`] to a v0 [`Ty`].
+///
+/// VSA types are explicit "deferred" refusals (RFC-0007 §4.4). The guarantee index is
+/// allowed and returned alongside (checked dynamically at stage 0 — RFC-0007 §4.3).
+///
+/// `tyvars` lists the type-parameter names in scope for the declaration being checked. When
+/// non-empty, a `Named(name, [])` that matches one of the type vars resolves to
+/// [`Ty::Var(name)`] instead of looking it up in the data registry. This supports
+/// stage-1 generic ADT shells and generic function bodies (M-657, **Declared**).
+/// Call sites that are not inside a generic shell pass `&[]` (the monomorphic default).
+///
+/// Generic *instantiations* (`Named(name, args)` with non-empty `args`) are handled by
+/// [`resolve_generic_instantiation`] after this function is extended in S4.
 pub(crate) fn resolve_ty(
     site: &str,
     types: &BTreeMap<String, DataInfo>,
+    tyvars: &[String],
+    t: &TypeRef,
+) -> Result<(Ty, Option<Strength>), CheckError> {
+    resolve_ty_inner(site, types, tyvars, None, t)
+}
+
+/// Internal implementation of type resolution, also used by instantiation (S4) where
+/// `generics` carries the generic shell registry. Kept private so callers only see the
+/// clean `resolve_ty` / instantiation API.
+fn resolve_ty_inner(
+    site: &str,
+    types: &BTreeMap<String, DataInfo>,
+    tyvars: &[String],
+    _generics: Option<&BTreeMap<String, GenericShell>>,
     t: &TypeRef,
 ) -> Result<(Ty, Option<Strength>), CheckError> {
     let base = match &t.base {
@@ -214,7 +250,13 @@ pub(crate) fn resolve_ty(
             ))
         }
         BaseType::Named(name, args) => {
+            // Check if this name is an in-scope type parameter.
+            if args.is_empty() && tyvars.contains(name) {
+                return Ok((Ty::Var(name.clone()), t.guarantee));
+            }
             if !args.is_empty() {
+                // Generic instantiation handled in S4 once the generics registry exists.
+                // Until then, the deferral refusal stays (removed in S4).
                 return Err(CheckError::new(
                     site,
                     format!("generic type `{name}<…>` is deferred in v0 (RFC-0007 §4.4) — monomorphic only"),
@@ -237,6 +279,17 @@ pub(crate) fn resolve_ty(
         }
     };
     Ok((base, t.guarantee))
+}
+
+/// A generic ADT shell: the abstract (Var-bearing) form of a generic data declaration.
+/// Registered in `Env.generics` during Pass 1; used by `resolve_ty` to mint monomorphic
+/// instantiations on demand (S4, M-657, **Declared**).
+#[derive(Debug, Clone)]
+pub struct GenericShell {
+    /// The type parameter names, in declaration order.
+    pub params: Vec<String>,
+    /// Constructor info whose field types may contain `Ty::Var`. Never stored in `env.types`.
+    pub ctors: Vec<CtorInfo>,
 }
 
 /// Check a whole nodule: build the registry (prelude + declarations), then type every function
@@ -299,19 +352,24 @@ pub fn check_and_resolve(nodule: &Nodule) -> Result<(Env, Nodule), CheckError> {
 /// When `matured_scope` is true, every fn with `thaw == false` must be `Total` (RFC-0017 §4.2).
 fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, CheckError> {
     let mut types = BTreeMap::new();
+    let generics: BTreeMap<String, GenericShell> = BTreeMap::new();
     let p = prelude();
     types.insert(p.name.clone(), p);
 
     // Pass 1: register data declarations (so they can reference each other).
+    // Monomorphic decls enter `types` as before; generic decls (non-empty params) enter
+    // `generics` as abstract shells with Var-bearing fields (S4 adds the shell-building logic).
     for item in &nodule.items {
         if let Item::Type(td) = item {
             if !td.params.is_empty() {
+                // Generic ADT: register shell + monomorphic sentinel. S4 will build the real shell.
+                // For S2, still refuse (the deferral is removed in S4).
                 return Err(CheckError::new(
                     &td.name,
                     "generic data declarations are parsed but deferred in v0 (RFC-0007 §4.4)",
                 ));
             }
-            if types.contains_key(&td.name) {
+            if types.contains_key(&td.name) || generics.contains_key(&td.name) {
                 return Err(CheckError::new(&td.name, "duplicate type declaration"));
             }
             // Insert a shell first so recursive field references resolve.
@@ -326,8 +384,12 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     }
     for item in &nodule.items {
         if let Item::Type(td) = item {
-            let ctors = resolve_ctors(&types, td)?;
-            types.get_mut(&td.name).expect("registered above").ctors = ctors;
+            if td.params.is_empty() {
+                // Monomorphic path: resolve constructors with no type vars.
+                let ctors = resolve_ctors(&types, &generics, &[], td)?;
+                types.get_mut(&td.name).expect("registered above").ctors = ctors;
+            }
+            // Generic path handled in S4.
         }
     }
 
@@ -337,6 +399,7 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
         match item {
             Item::Fn(fd) => {
                 if !fd.sig.params.is_empty() {
+                    // Generic fn: still refused in S2; removed in S5.
                     return Err(CheckError::new(
                         &fd.sig.name,
                         "generic functions are parsed but deferred in v0 (RFC-0007 §4.4)",
@@ -357,15 +420,18 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     let mut resolved_fns: BTreeMap<String, FnDecl> = BTreeMap::new();
     for fd in fns.values() {
         let site = &fd.sig.name;
+        // Monomorphic context: no type variables in scope (pass &[] to resolve_ty).
+        let tyvars: &[String] = &[];
         let mut scope: Vec<(String, Ty)> = Vec::new();
         for p in &fd.sig.value_params {
-            let (ty, _) = resolve_ty(site, &types, &p.ty)?;
+            let (ty, _) = resolve_ty(site, &types, tyvars, &p.ty)?;
             scope.push((p.name.clone(), ty));
         }
-        let (ret, _) = resolve_ty(site, &types, &fd.sig.ret)?;
+        let (ret, _) = resolve_ty(site, &types, tyvars, &fd.sig.ret)?;
         let cx = Cx {
             site,
             types: &types,
+            generics: &generics,
             fns: &fns,
         };
         let (got, body) = cx.check(&mut scope, &fd.body, Some(&ret))?;
@@ -404,6 +470,7 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
 
     Ok(Env {
         types,
+        generics,
         fns,
         totality,
     })
@@ -411,6 +478,8 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
 
 fn resolve_ctors(
     types: &BTreeMap<String, DataInfo>,
+    _generics: &BTreeMap<String, GenericShell>,
+    tyvars: &[String],
     td: &TypeDecl,
 ) -> Result<Vec<CtorInfo>, CheckError> {
     let mut ctors = Vec::new();
@@ -423,7 +492,7 @@ fn resolve_ctors(
         }
         let mut fields = Vec::new();
         for f in &c.fields {
-            let (ty, _) = resolve_ty(&td.name, types, f)?;
+            let (ty, _) = resolve_ty(&td.name, types, tyvars, f)?;
             fields.push(ty);
         }
         ctors.push(CtorInfo {
@@ -438,6 +507,9 @@ fn resolve_ctors(
 struct Cx<'a> {
     site: &'a str,
     types: &'a BTreeMap<String, DataInfo>,
+    /// Generic shell registry — available to `resolve_ty` instantiation logic (S4, M-657).
+    #[allow(dead_code)] // used in S4 when instantiation is wired in
+    generics: &'a BTreeMap<String, GenericShell>,
     fns: &'a BTreeMap<String, FnDecl>,
 }
 
@@ -558,7 +630,7 @@ impl Cx<'_> {
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
         let want = match ty {
-            Some(t) => Some(resolve_ty(self.site, self.types, t)?.0),
+            Some(t) => Some(resolve_ty(self.site, self.types, &[],t)?.0),
             None => None,
         };
         let (bty, bound2) = self.check(scope, bound, want.as_ref())?;
@@ -630,7 +702,7 @@ impl Cx<'_> {
                 "swap source must be a representation type, got {vty}"
             ));
         }
-        let (tty, _) = resolve_ty(self.site, self.types, target)?;
+        let (tty, _) = resolve_ty(self.site, self.types, &[],target)?;
         if !matches!(tty, Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _)) {
             return self.err(format!(
                 "swap target must be a representation type, got {tty}"
@@ -692,7 +764,7 @@ impl Cx<'_> {
         inner: &Expr,
         t: &TypeRef,
     ) -> Result<(Ty, Expr), CheckError> {
-        let (want, _) = resolve_ty(self.site, self.types, t)?;
+        let (want, _) = resolve_ty(self.site, self.types, &[],t)?;
         let (ity, inner2) = self.check(scope, inner, Some(&want))?;
         if ity != want {
             return self.err(format!(
@@ -733,7 +805,7 @@ impl Cx<'_> {
             }
             let mut rebuilt = Vec::with_capacity(args.len());
             for (pm, a) in fd.sig.value_params.iter().zip(args) {
-                let (want, _) = resolve_ty(self.site, self.types, &pm.ty)?;
+                let (want, _) = resolve_ty(self.site, self.types, &[],&pm.ty)?;
                 let (got, a2) = self.check(scope, a, Some(&want))?;
                 if want != got {
                     return self.err(format!(
@@ -744,7 +816,7 @@ impl Cx<'_> {
                 }
                 rebuilt.push(a2);
             }
-            let (ret, _) = resolve_ty(self.site, self.types, &fd.sig.ret)?;
+            let (ret, _) = resolve_ty(self.site, self.types, &[],&fd.sig.ret)?;
             return Ok((ret, app_node(head, rebuilt)));
         }
 
@@ -1214,6 +1286,7 @@ pub(crate) fn infer_type(
     let cx = Cx {
         site: "<elaborate>",
         types: &env.types,
+        generics: &env.generics,
         fns: &env.fns,
     };
     cx.infer(scope, e)

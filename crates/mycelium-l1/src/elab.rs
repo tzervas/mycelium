@@ -969,7 +969,7 @@ impl Elab<'_> {
                     );
                 }
                 let karg = self.expr(stack, scope, arg)?;
-                let pty = resolve_ty(site, &self.env.types, &param.ty)
+                let pty = resolve_ty(site, &self.env.types, &[], &param.ty)
                     .map(|(t, _)| t)
                     .map_err(|e| ElabError::Residual {
                         site: site.to_owned(),
@@ -1059,7 +1059,7 @@ impl Elab<'_> {
                 );
             }
             let kp = self.fresh(&p.name);
-            let pty = resolve_ty(fname, &self.env.types, &p.ty)
+            let pty = resolve_ty(fname, &self.env.types, &[], &p.ty)
                 .map(|(t, _)| t)
                 .map_err(|e| ElabError::Residual {
                     site: fname.to_owned(),
