@@ -9,6 +9,38 @@ Termux on Android (ARM/aarch64) with zero external Python dependencies.
 > the KC-2 LLM-leverage experiment (M-002) against the same local model — lives in
 > [`experiments/README.md`](../../experiments/README.md).
 
+## One command to run everything
+
+```sh
+cd tools/llm-harness
+./run.sh --all          # xAI ablation + local arm-3 — each skips gracefully if prerequisites absent
+./run.sh --local        # local arm-3 only (no xAI key needed)
+./run.sh                # xAI ablation only (today's default — same as before)
+./run.sh --check-only   # offline self-test + model list only; no key, no spend, no GPU
+```
+
+**What runs and what gets skipped (skip-graceful, G2 — never silent):**
+
+| Command | xAI path | local arm-3 |
+|---|---|---|
+| `./run.sh` | runs if `XAI_API_KEY`/`GROK_API_KEY` set; skips with message if absent | not run |
+| `./run.sh --all` | same as above | always runs setup; inference skips if no model/GPU |
+| `./run.sh --local` | not run | always runs setup; inference skips if no model/GPU |
+| `./run.sh --check-only` | offline self-test + list-models only (no spend, no GPU) | not run |
+
+**Prerequisites by path:**
+
+| Path | Prerequisite | Skip behaviour when absent |
+|---|---|---|
+| xAI/Grok | `XAI_API_KEY` or `GROK_API_KEY` | prints a message, exits 0 |
+| local arm-3 setup | Python >= 3.13, `uv` | setup exits 1 (fatal — Python version is load-bearing) |
+| local arm-3 inference | NVIDIA GPU + ~5 GB VRAM + model download (~5 GB) | `run_arm3_local.py` reports SKIP per task, exits 0 |
+
+The local arm-3 setup (`local/setup_local_llm.py`) is **idempotent** — safe to re-run. It will
+skip steps that are already done (llama-cpp-python installed, model already on disk).
+
+---
+
 ## Honesty posture (non-negotiable)
 
 These rules are enforced by the harness, not just documented:
