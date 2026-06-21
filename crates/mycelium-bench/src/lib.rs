@@ -6,7 +6,7 @@
 //! never changes them.
 //!
 //! ## What it measures
-//! Over a shared corpus of v0-calculus programs ([`corpus`]), each backend ([`backend::Backend`]):
+//! Over a shared corpus of v0-calculus programs ([`mod@corpus`]), each backend ([`backend::Backend`]):
 //! - the **interpreter** — the trusted base (NFR-7/ADR-007), the differential baseline,
 //! - the **AOT env-machine** (`mycelium_mlir::run_core`),
 //! - the **JIT** (`mycelium_mlir::jit_run`),

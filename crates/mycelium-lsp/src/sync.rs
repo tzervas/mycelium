@@ -4,7 +4,7 @@
 //!
 //! On each edit the server re-analyzes the *whole* document (full sync — `TextDocumentSyncKind.Full`)
 //! and pushes `textDocument/publishDiagnostics`. The diagnostics are **honest about their spans**:
-//! - a **parse/lex** failure carries a **real range** (the L1 lexer tracks `line:col`, [`Pos`]);
+//! - a **parse/lex** failure carries a **real range** (the L1 lexer tracks `line:col`, `Pos`);
 //! - a **type-check** failure carries a best-effort range at the offending function's `fn <name>`
 //!   declaration (the checker tracks the failing *function* but not yet the failing *sub-expression*
 //!   span — flagged, not fabricated: the precise sub-span awaits the checker carrying spans), with

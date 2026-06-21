@@ -1,10 +1,10 @@
 //! The **LSP wire protocol** (M-310; FR-S5; SC-5): JSON-RPC 2.0 framing over stdio plus the
-//! mapping of the [`Feedback`](crate::feedback::Feedback) surface into LSP-shaped messages — the
+//! mapping of the [`Feedback`] surface into LSP-shaped messages — the
 //! "mechanical wrapping" the facade doc (M-140) flagged as the later step.
 //!
 //! What this layer **is**: the byte-level [`read_message`]/[`write_message`] codec (the
 //! `Content-Length` header framing every LSP transport uses), the
-//! [`Diagnostic`](crate::lint::Diagnostic) → LSP-`Diagnostic` mapping with the proper
+//! [`Diagnostic`] → LSP-`Diagnostic` mapping with the proper
 //! `DiagnosticSeverity` codes, the `textDocument/publishDiagnostics` notification builder, and a
 //! minimal [`serve`] lifecycle loop (`initialize` → capabilities, `shutdown`/`exit`). [`serve_stdio`]
 //! runs that loop over the process's real stdin/stdout — the executable an editor launches (the

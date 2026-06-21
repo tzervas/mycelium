@@ -62,7 +62,7 @@ pub struct MatrixRow {
 }
 
 /// The `std.collections` guarantee matrix. One row per exported op, encoded as data and
-/// asserted in [`tests`] — never prose-only (RFC-0016 §4.5; spec §4).
+/// asserted in `tests` — never prose-only (RFC-0016 §4.5; spec §4).
 ///
 /// **All rows are `Exact`** — no accuracy semantics anywhere in `std.collections`.
 /// The load-bearing honesty is in the **fallibility** column (C1: explicit `Option`/`Result`)

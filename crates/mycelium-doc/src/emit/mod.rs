@@ -1,7 +1,7 @@
 //! Renderers — **pure functions of the doc-IR** (spec §3): HTML, Typst (→ PDF) and machine JSON are
 //! *views of one content-addressed model*, never parallel truths. Every renderer embeds each node's
 //! content address, so the §4.1 `dual-projection-parity` lint can prove HTML and JSON are two views of
-//! the same nodes (G11 / ADR-003). EPUB is an honest deferral (see [`crate::build`] notes) — never a
+//! the same nodes (G11 / ADR-003). EPUB is an honest deferral (see [`mod@crate::build`] notes) — never a
 //! half-build.
 
 pub mod html;

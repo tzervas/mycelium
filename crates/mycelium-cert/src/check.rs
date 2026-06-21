@@ -280,7 +280,7 @@ fn check_observational(
 /// Observational equivalence over a whole [`CoreValue`] (RFC-0011 §4.6; NFR-7) — the M-151/M-210
 /// observable **generalized from a representation [`Value`] to the data + recursion fragment**
 /// (M-342). It is the *same* relation, one category up: a representation leaf is the existing
-/// `(repr, payload, guarantee)` observable ([`check_observational`], so path-dependent provenance is
+/// `(repr, payload, guarantee)` observable (`check_observational`, so path-dependent provenance is
 /// excluded exactly as before); a [`Datum`] is its **constructor identity** + **meet-summary
 /// guarantee** + **field-wise** observational equivalence (recursing into each field). Two values of
 /// different category (a repr vs a datum) are an explicit divergence.

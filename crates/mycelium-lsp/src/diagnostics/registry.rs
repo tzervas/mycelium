@@ -95,7 +95,7 @@ impl ClassRegistry {
         }
     }
 
-    /// The registry seeded with the v0 [`BUILTIN_CLASSES`].
+    /// The registry seeded with the v0 built-in classes (`BUILTIN_CLASSES`).
     #[must_use]
     pub fn with_builtins() -> Self {
         ClassRegistry {

@@ -9,7 +9,7 @@
 //! - [`manifest`] — the **`mycelium-proj.toml` manifest**, read by a deliberately **minimal,
 //!   no-new-dependency TOML-subset** reader (the workspace keeps its deps few/vetted; **adding** a
 //!   full TOML crate would be an ADR, not a build detail). It is honestly a subset, named as one.
-//! - [`resolve`] — **top-down inheritance** (`in-file > manifest`) with per-field provenance and an
+//! - [`mod@resolve`] — **top-down inheritance** (`in-file > manifest`) with per-field provenance and an
 //!   `EXPLAIN`, so a field's effective value and *source* are never ambient (G2).
 //!
 //! **Metadata is not identity (ADR-003).** Nothing here perturbs a definition's content hash — these

@@ -77,7 +77,7 @@ pub struct MatrixRow {
 /// The `std.diag` guarantee matrix (spec §4; RFC-0016 §4.5).
 ///
 /// 14 rows — one per exported op in the spec §3 surface. All rows are `Exact` (VR-5); no row
-/// permits a silent drop of the underlying error (I1/C1). Asserted structurally via [`tests`].
+/// permits a silent drop of the underlying error (I1/C1). Asserted structurally via `tests`.
 pub const MATRIX: &[MatrixRow] = &[
     // ── presentation / identity ────────────────────────────────────────────────────────────────
     MatrixRow {

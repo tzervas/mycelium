@@ -82,7 +82,7 @@ pub struct MatrixRow {
 }
 
 /// The `std.fs` guarantee matrix. One row per exported op, encoded as data and asserted in
-/// [`tests`] — never prose-only (RFC-0016 §4.5 / spec §4).
+/// `tests` — never prose-only (RFC-0016 §4.5 / spec §4).
 ///
 /// Every row is `"Exact"` — fs carries no accuracy semantics (spec §4 / VR-5).
 /// Every io-effecting row declares `Effects::Io` (C6: no undeclared side effects).

@@ -1,9 +1,10 @@
 //! `std.runtime` — the fungal concurrency surface (M-521 / ADR-020).
 //!
 //! Implements the v0 R1 API surface decided in ADR-020 (Accepted 2026-06-20):
-//! [`Colony`]/[`Scope`] structured concurrency, [`Task`]/[`TaskCtx`]/[`Poll`],
-//! sweep ordering ([`SweepOrder`], [`Deadlock`]), and the channel surface
-//! ([`Network`], [`Sender`], [`Receiver`], [`TrySend`], [`TryRecv`]).
+//! [`colony::Colony`]/[`colony::Scope`] structured concurrency,
+//! [`task::Task`]/[`task::TaskCtx`]/[`task::Poll`],
+//! sweep ordering ([`task::SweepOrder`], [`task::Deadlock`]), and the channel surface
+//! ([`network::Network`], [`network::Sender`], [`network::Receiver`], [`network::TrySend`], [`network::TryRecv`]).
 //!
 //! # Guarantee matrix
 //!

@@ -190,14 +190,14 @@ const DEFAULT_DEPTH: u32 = 64;
 /// [`Evaluator::with_engines`], so this struct is a plain, copyable, defaultable bundle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EvaluatorOpts {
-    /// The step budget (as [`Evaluator::with_fuel`]). [`Default`] is [`DEFAULT_FUEL`].
+    /// The step budget (as [`Evaluator::with_fuel`]). [`Default`] is `DEFAULT_FUEL`.
     pub fuel: u64,
     /// The recursion-depth (host-stack) budget (as [`Evaluator::with_depth`]). [`Default`] is
-    /// [`DEFAULT_DEPTH`].
+    /// `DEFAULT_DEPTH`.
     pub depth: u32,
 }
 
-/// The defaults mirror [`Evaluator::new`] exactly — [`DEFAULT_FUEL`] / [`DEFAULT_DEPTH`] — so
+/// The defaults mirror [`Evaluator::new`] exactly — `DEFAULT_FUEL` / `DEFAULT_DEPTH` — so
 /// `Evaluator::new(env).with_opts(EvaluatorOpts::default())` is a no-op (the budgets are unchanged).
 impl Default for EvaluatorOpts {
     fn default() -> Self {

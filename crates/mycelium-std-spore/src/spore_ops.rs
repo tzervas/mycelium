@@ -201,7 +201,7 @@ impl SporeUnit {
     /// If the recomputed hash diverges from the declared identity, this is an explicit
     /// `Err(SporeErr::HashMismatch)` naming both hashes — never a silent accept (C1/G2).
     ///
-    /// For a well-formed `SporeUnit` constructed by [`from_manifest`] or [`from_value`], this
+    /// For a well-formed `SporeUnit` constructed by `from_manifest` or `from_value`, this
     /// always returns `Ok(())`.
     ///
     /// # Effects: none (pure computation)

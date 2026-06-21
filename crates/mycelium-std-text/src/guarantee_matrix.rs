@@ -43,7 +43,7 @@ pub struct MatrixRow {
 }
 
 /// The `std.text` guarantee matrix — one row per exported op, encoded as data and asserted
-/// in [`tests`] — never prose-only (RFC-0016 §4.5; spec §4).
+/// in `tests` — never prose-only (RFC-0016 §4.5; spec §4).
 ///
 /// **All rows are `Exact`** (no accuracy semantics).
 /// **All rows declare no effects** (C6: pure value ops).

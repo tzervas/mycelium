@@ -127,7 +127,7 @@ impl Iterator for DirIter {
 /// explicit and inspectable: a function that does not hold an `&mut Fs` cannot perform
 /// filesystem IO (partial C6 capability scoping — see FLAG Q5).
 ///
-/// Currently backed by [`InMemoryFs`]. Wire `RealFs` (M-541) when the `std-sys` phylum lands.
+/// Currently backed by `InMemoryFs`. Wire `RealFs` (M-541) when the `std-sys` phylum lands.
 pub struct Fs {
     backend: InMemoryFs,
 }

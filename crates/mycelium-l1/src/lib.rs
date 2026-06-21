@@ -14,7 +14,7 @@
 //! ↔ AOT, validated through the M-210 shared checker) lives in `tests/differential.rs` (NFR-7).
 //! `match` covers data types and `Binary`/`Ternary` literal patterns *and* **nested** patterns
 //! (M-320): a literal arm fires on `repr + payload` equality, and coverage is decided by the
-//! **Maranget usefulness** algorithm ([`usefulness`]) — exhaustiveness (a `_` must not be useful; its
+//! **Maranget usefulness** algorithm (`usefulness`) — exhaustiveness (a `_` must not be useful; its
 //! witness names a concrete missing case) and redundancy (an arm covered by earlier rows is
 //! unreachable) are both *checked* (W7 — never assumed; a `Binary`/`Ternary` value domain is never
 //! enumerated, so a literal match still needs a `_`/binder default). The Maranget *compilation* to the

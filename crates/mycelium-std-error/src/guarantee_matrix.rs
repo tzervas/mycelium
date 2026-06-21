@@ -85,7 +85,7 @@ pub struct MatrixRow {
 }
 
 /// The `std.error` guarantee matrix. One row per exported op, encoded as data and asserted
-/// in [`tests`] — never prose-only (RFC-0016 §4.5; spec §4).
+/// in `tests` — never prose-only (RFC-0016 §4.5; spec §4).
 ///
 /// **No row permits a silent drop of an error** (RFC-0014 I1 / RFC-0016 C1). Every row
 /// either transforms the sum (the error survives in the result), re-propagates it,

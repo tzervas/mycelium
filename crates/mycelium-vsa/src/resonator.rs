@@ -31,7 +31,7 @@
 //! tuple (`ι` == the previous sweep's) is not, on its own, a cycle — its real-valued estimate may
 //! still be sharpening, so the loop keeps iterating while the lock bottleneck (min per-slot
 //! similarity) climbs and only refuses (`Stalled`) once that climb plateaus below `τ_lock` for
-//! [`STALL_PATIENCE`] sweeps. This is the M-350 premature-abort fix: the prior code conflated a
+//! `STALL_PATIENCE` sweeps. This is the M-350 premature-abort fix: the prior code conflated a
 //! stationary-but-still-improving tuple with a genuine limit cycle and aborted it as `Oscillating`.
 
 use std::collections::VecDeque;

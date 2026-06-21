@@ -19,7 +19,7 @@
 //! # Scope (honesty)
 //! **Self-recursion is fully realised and tested** (`Nat`, `Bytes`, `List`-shaped types). **Mutual
 //! recursion** (a multi-member cycle) now content-addresses **canonically and name-independently**
-//! via [`canonical_cycle_order`] (the Unison recipe; R7-Q3 cycle-ordering closed in RFC-0001 r4).
+//! via `canonical_cycle_order` (the Unison recipe; R7-Q3 cycle-ordering closed in RFC-0001 r4).
 //! The surface→registry *elaboration* of mutual recursion stays deferred (the L1 prototype accepts
 //! only self-recursion), but the **identity** of a mutually-recursive group is now correct, not
 //! provisional — so when the surface grows mutual recursion, the hashes do not change underneath it.

@@ -18,7 +18,7 @@
 //! | AOT env-machine | the lowered A-normal-form substrate stage | [`mycelium_core::lower::Anf::dump`] | `Declared` (a faithful structural render) |
 //! | Direct-LLVM (M-301/M-373/M-378/M-379) | textual LLVM IR | [`crate::llvm::emit_llvm_ir`] | `Empirical` (the interp↔native differential, M-302) |
 //! | MLIR-dialect textual skeleton (M-150) | the ternary-dialect ANF skeleton | [`crate::dialect::emit`] | `Declared` (the always-available no-opaque anchor) |
-//! | MLIR-dialect real lowering (M-601, feature `mlir-dialect`) | the `arith`/`func` module + the lowered LLVM IR | [`crate::dialect::native::emit_mlir`] / [`lower_to_llvm_ir`](crate::dialect::native::lower_to_llvm_ir) | `Empirical` (the three-way differential, M-602) |
+//! | MLIR-dialect real lowering (M-601, feature `mlir-dialect`) | the `arith`/`func` module + the lowered LLVM IR | `crate::dialect::native::emit_mlir` / `crate::dialect::native::lower_to_llvm_ir` | `Empirical` (the three-way differential, M-602) |
 //! | JIT / SIMD packed-ternary (M-360/M-610) | the unpack-compute kernel IR (**node-independent** — a fixed I2_S kernel exemplar; the packed-ternary kernel is a runtime-data primitive, not a lowering of the program) | [`crate::bitnet::emit_bitnet_dot_ir_for`] / [`crate::simd`] | `Empirical` (the SIMD↔scalar differential) |
 //!
 //! **Honesty (VR-5).** The tag on each stage is the strength of the *evidence that the dumped stage
