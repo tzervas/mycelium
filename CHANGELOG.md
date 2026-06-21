@@ -8,6 +8,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-20: M-381 — rigorous arm-4 bridge; retention ratio now DETERMINATE)
+- **`LlmCanonical→L1` bridge landed (`tools/llm-harness/grok/llm_canonical_to_l1.py`),
+  DN-09 §9.4 option (b).** Converts the ablation's arm-4 `LlmCanonical` S-expression output to
+  `.myc` surface and scores it with the **same authoritative `myc-check`** (parse+typecheck) as
+  arms 1/2 — putting arm 4 on the same quality bar and replacing the prior 0 % scoring artifact
+  with a non-zero, type-checked denominator. The converter is **Empirical** (heuristic rewrite;
+  the typecheck stays `myc-check`'s); unconvertible output → `None`, scored not-clean, never a
+  false PASS (G2). Self-test **17/17** (T15 added). Verified end-to-end: bridged programs
+  typecheck clean against the real `myc-check`.
+- **M-381 retention ratio is now DETERMINATE [Empirical].** Re-ran the ablation on two models
+  (seeds [11,23,42], 8 tasks ⇒ 24 samples/arm): `grok-build-0.1` (run `20260620T230403Z`) arm2
+  91.7 % / arm4 16.7 % → **retention 5.50 (550 %)**; `grok-4.3` (run `20260620T234224Z`) arm2
+  91.7 % / arm4 41.7 % → **retention 2.20 (220 %)**. Both **≥ ~70 %** — the RFC-0021 §4.7
+  promote-`LlmCanonical`-to-primary trigger does **not** fire; the grammar-primed novel surface
+  out-performs the familiar-skin projection. Residual biases (signature-supply vs
+  bridge-rejection) disclosed in DN-09 §10.2; non-falsification robust to them. Leverage claim
+  stays **Declared/open** (arms 3/5 still blocked — only 3 of 5 arms). **KC-2 verdict
+  unchanged: proceed.** Spend $0.088 this run (~$0.17 cumulative); raw reports gitignored. Recorded
+  in DN-09 §10 (append-only) and M-381 status. Follow-ups (independent branch): arm 3 GBNF
+  backend (M-331/llama.cpp), arm 5 embedded-DSL (RR-3, contingency), `xai_sdk` 1.17.0 batch-API
+  reconciliation.
+
 ### Changed (2026-06-20: ADR-012 — Layered Lexicon status Proposed → Accepted)
 - **ADR-012 status flipped to Accepted.** All five §7 flags were resolved by prior downstream
   decisions; the file status was simply never updated. §7.1 applied at review time (tier-label
