@@ -229,8 +229,133 @@ events, models, memory).
 
 ---
 
+## 6. RP-9 discharge pass (Phase-2 deep-research follow-up, 2026-06-21)
+
+> The Phase-2 pass §5 / RFC-0023 §11 demand. Method: four fractured Opus max-effort sub-reasoners —
+> **A1** ADK→Mycelium concept-map · **A2** honesty-as-differentiator · **A3** tool-dispatch
+> never-silent · **A4** session/runner + LLM-harness reuse — each a live multi-source pass (web search
+> → fetch primary ADK sources → adversarial verify → cited synthesis) over one tight cross-context
+> packet. Findings **Empirical/Declared, never `Proven`** (VR-5). **`mycelium-adk` does not exist yet**
+> (it is the `dfb` build's task, gated on this pass), so every running-code threshold is
+> **deferred-to-build**: *discharge* = design verified sound against primary ADK source (pinned
+> **`adk-python` v2.3.0** / "ADK 2.0") + in-repo ground truth. **Outcome: the RP-9 research gate
+> substantially DISCHARGES — design soundness confirmed, no soundness falsification — with ONE
+> explicit completeness open item (the ADK-2.0 concept-map repair) carried forward, not silently
+> closed (G2).**
+
+### 6.1 Findings per obligation
+
+- **Obl. 1 — ADK→Mycelium concept-map (A1).** *[Empirical vs pinned `adk-python` v2.3.0; map stays
+  Declared.]* §3 re-verified against the current "ADK 2.0" line (pin **v2.3.0**, 2026-06-18 — a full
+  major version ahead of the v1.x the Phase-1 packet captured). Every *present* §3 row is **sound** and
+  grounded in a real current API; all six register-item-1 drift items **resolved** (`ToolContext =
+  Context` alias in `tools/tool_context.py`; tool catalog verified via `tools/__init__.py`;
+  `LongRunningFunctionTool` signature; three `MemoryService` concretes; `LlmRequest`/`RunConfig`
+  fields). **Completeness gap (the one open item):** ADK 2.0's new first-class **graph/Workflow**
+  orchestration is **dropped** from §3, and agent-`mode`/isolation, the code-driven Agent-Router, and
+  the `RunConfig.max_llm_calls` budget lack rows. Per RP-9's falsification threshold this falsifies
+  *completeness for v2.x* (not soundness) — repairable by `dfb` adding the rows + re-pinning §3 to
+  v2.3.0.
+- **Obl. 2 — honesty-as-differentiator (A2).** *[Declared, now grounded + falsifiable.]* The §6
+  differentiator is argued against **real ADK behavior**: a tool failure becomes silent/model-ignorable
+  three ways — the missing-arg error-**dict** the model may treat as data (`function_tool.py`); the
+  **silently-caught `ValidationError`** that runs the tool on the raw dict ([adk-python #4777]); and
+  **no tool-level budget** — whereas the Mycelium surface forecloses all three (tag lattice
+  `{Declared,Empirical}` type-forbids `Proven`; never-silent `Result` forces a branch; schema derived
+  from the typed `In` can't silently coerce). Honest near-counterexample logged: ADK's Gemini-search
+  `confidence` field (narrow, search-only, `None` on the LiteLlm path) — scopes, doesn't refute. Claim
+  stays **`Declared`** (no running `mycelium-adk` to confirm end-to-end); the falsifier is stated.
+- **Obl. 3 — tool-dispatch never-silent (A3).** *[Empirical/Declared.]* `adk.tool`'s
+  `fn -> Result<Out, ToolError>` soundly forces every documented ADK tool-failure mode into a named
+  `Err`; the taxonomy is **complete** for the documented surface. **Gap (a `dfb` constraint):**
+  RFC-0023 §4.1's `ToolError = BadArgs|OutOfDomain|Refused|Upstream` has **no budget arm**, yet obl.3
+  requires `→ Budget`; satisfiable via the landed never-silent `TaskOutcome::BudgetExhausted`
+  (`mycelium-interp/src/supervise.rs:100`) — `dfb` must add `ToolError::Budget` or document the split
+  (the `TypeMismatch/Exec/Budget` ↔ `BadArgs/Upstream/…` variant-name reconciliation is a maintainer
+  call). **Not falsified.**
+- **Obl. 4 — session/runner + harness reuse (A4).** *[Empirical/Declared.]* One model-call substrate
+  exists and is reusable — `GrokLlmReport`/`GrokOutcome` (`mycelium-bench/src/llm.rs`: model-allowed
+  tags, verbatim tag preservation, `deny_unknown_fields`, `is_synthetic`) + the `tools/llm-harness/`
+  transport (never-silent USD spend gate, `Declared` not a formal bound). RFC-0023 §4.5/§5 wire
+  `adk.model`/`adk.runner` to it with **no second model-call path**, faithful to ADK's `BaseLlm`/
+  `Runner` split (the Runner does not call the model). `adk.model`↔`web` (M-670) is a **dependency,
+  not a duplicate** (`M-671 depends_on M-670`; transport over `web`'s HTTP/JSON). Session/State =
+  content-addressed snapshots that move (ADR-003/RT1) — honest v0; `fuse`-merge precision deferred.
+  **Runtime-realization choice (item 4):** A4 recommends **`mycelium-mlir::runtime`** (the only one
+  with typed-outcome value-carrying hyphae + never-silent `TaskOutcome` incl. `BudgetExhausted` + the
+  RT2 differential), and **FLAGs** the `std.runtime`-facade-vs-`mlir`-crate coupling as a genuine
+  `dfb` decision. **Not falsified.**
+
+### 6.2 Per-item disposition (append-only; none silently dropped — G2)
+
+| Item | Disposition | Basis |
+|---|---|---|
+| RP-9 obl.1 (concept-map) | discharged-by-research (soundness) **+ OPEN: completeness** | rows sound vs v2.3.0; graph/Workflow + 3 rows missing → `dfb` repair |
+| RP-9 obl.2 (honesty-differentiator) | discharged-by-research (Declared, grounded+falsifiable) **+** deferred-to-build (upgrade) | concrete ADK silent paths vs the Mycelium surface; end-to-end proof is `dfb`'s |
+| RP-9 obl.3 (tool-dispatch never-silent) | discharged-by-research (taxonomy) **+** deferred-to-build-Empirical (corpus) | complete taxonomy; the budget-arm gap is a `dfb` constraint |
+| RP-9 obl.4 (harness reuse) | discharged-by-research | one substrate, no second path; the running import is `dfb`'s |
+| item 1 (concept-map fidelity / drift) | discharged-by-research | all six drift items resolved; pin v2.3.0 |
+| item 2 (§4 surface is a TARGET) | scoped-future (`.myc` surface) **+** discharged (soundness) | E7-1 M-657/M-659/M-660/M-664 + E7-2 M-666/M-667; Rust-first now |
+| item 3 (parser-not-lexer) | discharged-by-research | re-verified vs `token.rs` (the reserved runtime-keyword block; M-665 landed) |
+| item 4 (two runtime realizations) | deferred-to-build (decision) + recommendation | recommend `mycelium-mlir::runtime`; the coupling tradeoff is `dfb`'s |
+| item 5 (State immutability) | discharged-by-research (snapshot v0) **+** scoped-future (`fuse`-merge) | ADR-003; `fuse` ratified-not-lexed (E7-2 M-667) |
+| item 6 (LLM-leverage) | scoped-future — **no verdict** | inherits DN-09 INDETERMINATE; later supersession (VR-5) |
+| item 7 (RT2 determinism) | discharged-by-research | Empirical-via-differential; `ParallelAgent` merge must cite it, never `Proven` |
+
+### 6.3 Constraints the `dfb` Rust-first build MUST honor
+
+1. **Re-pin §3 to ADK v2.3.0 + add the missing rows** (per G2, graph/Workflow may not be silently omitted): **graph/Workflow** (map to an RT3-policy colony DAG; `interrupt`/`resume` → a `cyst` durable checkpoint — or scope it out explicitly in §10); agent-`mode`/isolation; the code-driven Agent-Router; the `RunConfig.max_llm_calls` budget. Correct the `ToolContext`→`Context` citation.
+2. **`ToolError`:** add a budget arm or route tool-budget overrun through `TaskOutcome::BudgetExhausted` + document the split; no variant is a sentinel/clamp/partial result.
+3. **Type-is-schema (C4):** derive the call schema from `In`/`Out`, never hand-written — this forecloses ADK #4777's silent type-coercion.
+4. **Reuse the one harness** (`GrokLlmReport`/`GrokOutcome` + `tools/llm-harness/`); **no second model-call path or report schema**. Tags `{Declared,Empirical}` only, preserved verbatim; cost guarantees stay `Declared`.
+5. **`adk.model` transport rides on `mycelium-web`** (M-670) — no private HTTP client; JSON via `std.io`/`web.json`.
+6. **Pick + justify one runtime realization** (recommend `mycelium-mlir::runtime`); thread its `TaskOutcome` into `RunError` with no silent variant; determinism stays **`Empirical`** (RT2 differential), never `Proven`.
+7. **Session/State = content-addressed snapshots that move (RT1)**; concurrent sub-agent merge = an explicit `fuse` (conflict-as-data), never a silent overwrite.
+8. **Never-silent test corpus** (the `Empirical` deliverable): one test per tool-failure mode asserting an explicit `Err`/`TaskOutcome` + the **absence** of any silent default/panic; guarantee-matrix-as-data rows; `#![forbid(unsafe_code)]`.
+9. **`is_synthetic`/SYNTHETIC labeling survives end-to-end** — a mocked agent run is never reported as real.
+10. **Assert NO LLM-leverage result** (item 6); any ADK-shaped generation measurement is a separate DN-09/RP-1-protocol pass.
+
+### 6.4 Carried-forward open items (explicitly NOT closed by this pass)
+
+- **OPEN (completeness) — the ADK-2.0 concept-map repair:** graph/Workflow + agent-`mode` + code-Router + `RunConfig`-budget rows; re-pin §3 to v2.3.0. The one item that keeps RFC-0023 short of a clean discharge; `dfb` repairs at build (or a §3 editorial pass before).
+- **`ToolError` budget-arm + variant-name reconciliation** — a maintainer/`dfb` call.
+- **Runtime-realization choice (item 4)** — `dfb` decision (recommend `mycelium-mlir::runtime`).
+- **Empirical-on-code confirmation** of all obligations (the tool-dispatch corpus; the end-to-end never-silent contract; the harness import-with-no-competing-path) — **`dfb`'s at build**; the basis for a future Accepted→Enacted move.
+- **`fuse`-merge precision** for concurrent sub-agent State (R23-Q2; E7-2 M-667) — scoped-future.
+- **ADK-shaped LLM-leverage** (item 6) — a separate measured pass (DN-09/RP-1 protocol); inherits INDETERMINATE; never pre-written.
+- The **`.myc` `adk` surface** — E7-1 (M-657/M-659/M-660/M-664) + E7-2 (M-666/M-667) gated; Rust-first now.
+
+### 6.5 Discharge assessment
+
+**RP-9 research gate: SUBSTANTIALLY DISCHARGES (soundness), with one named-open completeness item.**
+All four obligations are design-verified sound against primary ADK source (pinned v2.3.0) + the landed
+in-repo substrate, with **no soundness falsification**: the §3 rows are sound, every ADK tool-failure
+mode maps never-silently, the differentiator is grounded + falsifiable, and harness reuse is
+single-path. Residuals are honestly categorized — **one open completeness item** (the ADK-2.0
+concept-map repair: graph/Workflow + 3 rows), deferred-to-build empirical confirmations, a `ToolError`
+budget-arm constraint, a runtime-choice decision, and the scoped-future items (LLM-leverage,
+`fuse`-merge, the `.myc` surface) — all named in §6.4, **none silently closed (G2)**. Per the
+maintainer's decision, RFC-0023 Status moves to **"Draft — RP-9 research gate substantially discharged
+(soundness); ADK-2.0 concept-map completeness open; pending maintainer ratification"** (not
+self-ratified to Accepted; the discharge + the M-671 body update unblocks `dfb`; RFC-0023's own Status
+additionally requires the build + E7-1/E7-2 to ratify — naturally honored by "pending"). Findings
+Empirical/Declared, never `Proven` (VR-5).
+
+---
+
 ## Meta — changelog
 
+- **2026-06-21 — RP-9 discharge pass (Phase-2 deep-research follow-up; four fractured Opus
+  sub-reasoners A1–A4).** Appends §6: the RP-9 research gate **substantially discharges** (design
+  soundness; no soundness falsification) against primary ADK source (pinned `adk-python` v2.3.0 /
+  "ADK 2.0") + landed in-repo substrate (`mycelium-bench/src/llm.rs`, `token.rs`, `supervise.rs`).
+  Drift items 1 + parser-not-lexer item 3 resolved; tool-dispatch taxonomy complete; harness reuse
+  single-path; honesty differentiator grounded + falsifiable (stays `Declared`); RT2 `Empirical`.
+  **One open completeness item carried forward** — the ADK-2.0 concept-map repair (graph/Workflow + 3
+  rows) — plus deferred-to-build, scoped-future (LLM-leverage no-verdict), and a `ToolError` budget-arm
+  constraint; none silently closed (§6.4, G2). RFC-0023 → "research gate substantially discharged;
+  concept-map completeness open; pending maintainer ratification." Empirical/Declared, never `Proven`
+  (VR-5). Append-only; no design content rewritten.
 - **2026-06-21 — Created (RFC-0023 research pass; fractured methodology).** Four Opus sub-reasoners
   sharing one cross-context packet produced: the ADK concept-map (web-cited), the Agent↔runtime
   mapping (RFC-0008-grounded), the Tool/Session/Model surface (RFC-0016 + `llm.rs`-grounded), and
