@@ -1,0 +1,5 @@
+// REJECT: `impl Show { }` without a `for Type` is a parse error.
+// An impl declaration requires `impl TraitName for Type { … }` — the `for` keyword
+// is mandatory (never a silent accept, G2; RFC-0019 §4.5).
+nodule d
+impl Show { }

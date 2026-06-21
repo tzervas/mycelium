@@ -68,6 +68,8 @@ pub enum Tok {
     Type,
     /// `trait` — typeclass (conventional; `guild` was declined).
     Trait,
+    /// `impl` — trait implementation block (M-658/M-659; `impl Trait for Type { … }`).
+    Impl,
     /// `fn` — function.
     Fn,
     /// `matured` — **reserved keyword** (RFC-0017): maturation is now a scope/header attribute
@@ -233,6 +235,7 @@ pub fn keyword(word: &str) -> Option<Tok> {
         "use" => Tok::Use,
         "type" => Tok::Type,
         "trait" => Tok::Trait,
+        "impl" => Tok::Impl,
         "fn" => Tok::Fn,
         "matured" => Tok::Matured,
         "thaw" => Tok::Thaw,

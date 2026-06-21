@@ -144,6 +144,7 @@ impl Parser {
         let spelling = match kw {
             Tok::Type => "type",
             Tok::Trait => "trait",
+            Tok::Impl => "impl",
             Tok::Fn => "fn",
             Tok::Let => "let",
             Tok::If => "if",
@@ -208,6 +209,9 @@ impl Parser {
             }
             Tok::Type => self.parse_type_decl().map(Item::Type),
             Tok::Trait => self.parse_trait_decl().map(Item::Trait),
+            // `impl` is parsed from S2 onward (M-658/M-659); the `for` keyword is mandatory —
+            // `impl Show { }` without a `for Type` is a parse error (never a silent accept, G2).
+            Tok::Impl => self.parse_impl_decl_stub(),
             Tok::Fn | Tok::Thaw => self.parse_fn_decl().map(Item::Fn),
             Tok::Matured => Err(ParseError::new(
                 self.pos(),
@@ -251,7 +255,7 @@ impl Parser {
                 ),
             )),
             _ => self.err(
-                "a top-level item (`use`, `default paradigm`, `type`, `trait`, `fn`, or `thaw fn`)",
+                "a top-level item (`use`, `default paradigm`, `type`, `trait`, `impl`, `fn`, or `thaw fn`)",
             ),
         }
     }
@@ -306,6 +310,26 @@ impl Parser {
         }
         self.expect(&Tok::RBrace, "`}` to close the trait body")?;
         Ok(TraitDecl { name, params, sigs })
+    }
+
+    /// S2 stub: consume `impl <trait_name> <type_args>?` and require `for` — a missing `for` is
+    /// an explicit parse error (never a silent accept, G2). The full impl parser lands in S3.
+    fn parse_impl_decl_stub(&mut self) -> Result<Item, ParseError> {
+        self.expect_keyword(&Tok::Impl)?;
+        let _trait_name = self.ident()?;
+        // Skip optional type args `<A, B, …>`.
+        let _trait_args = self.parse_type_params_opt()?;
+        // `for` is mandatory — the reject/14 fixture tests this.
+        self.expect(
+            &Tok::For,
+            "`for` after the trait name in an `impl` declaration (e.g. `impl Show for Binary{8} { … }`)",
+        )?;
+        // Full parsing deferred to S3. If somehow we reach here in S2 tests beyond the `for`,
+        // return a placeholder error rather than silently accepting.
+        Err(ParseError::new(
+            self.pos(),
+            "`impl` bodies are not yet fully parsed (pending S3 implementation — M-659)".to_owned(),
+        ))
     }
 
     fn parse_fn_sig(&mut self) -> Result<FnSig, ParseError> {
