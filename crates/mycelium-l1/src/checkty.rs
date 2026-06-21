@@ -62,6 +62,14 @@ pub enum Ty {
     /// (the same as pre-M-673), preventing stack-frame inflation in the deeply-recursive
     /// checker (A4-02). The box is an implementation detail; callers deref it as `&[Ty]`.
     App(String, Box<Vec<Ty>>),
+    /// A function type `(A -> B)` — the checker-level type of a trait method value (M-658,
+    /// **Declared**). Used **only** within the typechecker's trait/bound machinery to type
+    /// the runtime dictionary entries (method values that are passed as curried `Lam`
+    /// parameters at the elaboration level). `Arrow` must **never** appear as a field of a
+    /// user ADT in `env.types` / the L0 `DataRegistry` — the L0 data contract is frozen
+    /// (KC-3). Any residual `Arrow` reaching elaboration/evaluation/coverage is a checker
+    /// bug, refused explicitly (never silent — G2/VR-5).
+    Arrow(Box<Ty>, Box<Ty>),
 }
 
 impl core::fmt::Display for Ty {
@@ -78,6 +86,7 @@ impl core::fmt::Display for Ty {
                 let parts: Vec<String> = args.iter().map(|t| t.to_string()).collect();
                 write!(f, "{name}<{}>", parts.join(", "))
             }
+            Ty::Arrow(a, b) => write!(f, "({a} -> {b})"),
         }
     }
 }
@@ -2020,9 +2029,10 @@ fn paradigm_name(t: &Ty) -> Option<&'static str> {
         Ty::Binary(_) => Some("Binary"),
         Ty::Ternary(_) => Some("Ternary"),
         Ty::Dense(_, _) => Some("Dense"),
-        // `Data`, `Substrate`, `Var`, and `App` have no paradigm: they are not representation types.
-        // A `Var`/`App` reaching here is a transient abstract form — no paradigm assigned (M-657/M-673).
-        Ty::Data(_) | Ty::Substrate(_) | Ty::Var(_) | Ty::App(_, _) => None,
+        // `Data`, `Substrate`, `Var`, `App`, and `Arrow` have no paradigm: they are not representation
+        // types. A `Var`/`App` reaching here is a transient abstract form; `Arrow` is a checker-internal
+        // method-type form (M-658) — no paradigm assigned.
+        Ty::Data(_) | Ty::Substrate(_) | Ty::Var(_) | Ty::App(_, _) | Ty::Arrow(_, _) => None,
     }
 }
 
@@ -2216,6 +2226,9 @@ pub(crate) fn subst_ty(ty: &Ty, subst: &BTreeMap<String, Ty>) -> Ty {
                 Ty::Data(mangle(name, &substituted))
             }
         }
+        // Arrow (M-658): recurse into both sides — method types may carry type variables when
+        // the trait method is generic over the trait param (e.g. `(A -> Binary{8})`).
+        Ty::Arrow(a, b) => Ty::Arrow(Box::new(subst_ty(a, subst)), Box::new(subst_ty(b, subst))),
     }
 }
 
@@ -2253,6 +2266,8 @@ pub(crate) fn contains_var(ty: &Ty) -> bool {
         Ty::Var(_) => true,
         // App is structural: abstract iff any arg is abstract.
         Ty::App(_, args) => args.iter().any(contains_var),
+        // Arrow (M-658): recurse into both sides.
+        Ty::Arrow(a, b) => contains_var(a) || contains_var(b),
         // Post-M-673: abstract generic applications are `Ty::App` (above); `Ty::Data` is a concrete,
         // registered monomorphic type name and never carries a type variable — so false.
         Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Data(_) | Ty::Substrate(_) => false,
@@ -2331,7 +2346,13 @@ fn ctors_of_expected(
         Ty::App(base_name, _) => generics
             .get(base_name.as_str())
             .map(|shell| shell.ctors.clone()),
-        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Var(_) => None,
+        // Arrow is a checker-internal method-type form (M-658) — not a data type, no ctors.
+        Ty::Binary(_)
+        | Ty::Ternary(_)
+        | Ty::Dense(_, _)
+        | Ty::Substrate(_)
+        | Ty::Var(_)
+        | Ty::Arrow(_, _) => None,
     }
 }
 
@@ -3876,6 +3897,9 @@ fn ty_to_typeref(ty: &Ty) -> TypeRef {
         Ty::Var(a) => BaseType::Named(format!("?{a}"), vec![]),
         // A residual App after substitution is a checker bug (should have been collapsed to Data).
         Ty::App(name, _) => BaseType::Named(format!("?App:{name}"), vec![]),
+        // Arrow is a checker-internal method-type (M-658) — it never appears in a monomorphized
+        // FnDecl's sig. A residual Arrow here is a checker bug; emit a placeholder (defense-in-depth).
+        Ty::Arrow(_, _) => BaseType::Named("?Arrow".to_owned(), vec![]),
     })
 }
 

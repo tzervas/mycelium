@@ -187,6 +187,9 @@ fn compile_rows(
                 false
             }
         }
+        // Arrow (M-658): checker-internal method-type form — not a data type, never matched
+        // via constructors. No default needed: Arrow must never reach pattern coverage analysis.
+        Ty::Arrow(_, _) => false,
     };
 
     // Compile ctor cases: handle both Ty::Data (concrete/mangled) and Ty::App (abstract generic).
