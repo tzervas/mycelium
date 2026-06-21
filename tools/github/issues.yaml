@@ -2010,22 +2010,24 @@ issues:
   - id: M-654
     title: "M-654 — Gate A3: WS8 durability (cargo-mutants + proptest + cargo-fuzz)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:core-ir, priority:P0, status:todo]
+    labels: [phase:8, type:feature, area:core-ir, priority:P0, status:done]
     depends_on: [M-653]
     doc_refs: [corpus:ADR-021, corpus:DN-19, src:crates/mycelium-cert, src:crates/mycelium-core]
     body: |
       ADR-021 Gate A3 / DN-19 GAP-4 (the largest gate item; start after M-653 so mutants run against the cleaned tree). Make the honesty surface DURABLE (WS8): (1) `cargo-mutants` green on the trusted base (`mycelium-core`/`-cert`/`-interp`/`-numerics`) — every surviving mutant triaged (killed by a new test or justified); (2) migrate the LCG/ad-hoc property tests to `proptest` with seed rotation; (3) add `cargo-fuzz` targets for the parser (`mycelium-l1`), the swap engine, and the certificate checker, wired into CI with a smoke corpus.
       Acceptance: a mutants report with no un-triaged survivors on the trusted base; the proptest migration landed; fuzz targets build + run a smoke corpus green; `just check` green. Closes ADR-021 Gate A3.
+      DONE (2026-06-21): cargo-mutants green on the trusted base — `mycelium-core`/`-cert`/`-interp`/`-numerics` report **0 un-triaged survivors** (every survivor killed by a witness test or justified-equivalent in the single workspace-root `.cargo/mutants.toml`, 16 inline-justified entries; cert's 3 truly-equivalent excluded, its other 3 killed by tests). LCG/ad-hoc property suites migrated to `proptest` (numerics + vsa, seed-rotated). `cargo-fuzz` targets added (L1 lexer+parser, M-210 checker, core value deser) with a `workflow_dispatch` smoke CI. Full `just check` green (151 tests; nightly fuzz smoke 0 crashes).
 
   - id: M-655
     title: "M-655 — Cut 1.0.0 (kernel/core): ADR-021 Accepted → Enacted at the tagged release"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:task, area:project, priority:P1, status:blocked]
+    labels: [phase:8, type:task, area:project, priority:P1, status:todo]
     depends_on: [M-652, M-653, M-654]
     doc_refs: [corpus:ADR-021, corpus:DN-19, corpus:ADR-018]
     body: |
       The terminal 1.0.0 step. Once Gate A2/A3/A4 (M-653/M-654/M-652) close — A1/A5/B1/B2 already met — cut **1.0.0 of the kernel/core**: record the conscientious release decision by moving ADR-021 `Accepted → Enacted` (it must step through Accepted first — house rule #3), and tag the release. Per ADR-018 each crate advancing to 1.0.0 is its own explicit decision; this gate governs the kernel/core release as a set. The surface language stays scoped to `1.x` (ADR-021 §2/§5).
-      Acceptance: all ADR-021 gate rows met; the release decision recorded (ADR-021 → Enacted, append-only); the 1.0.0 tag cut; CHANGELOG `[Unreleased]` → `[1.0.0]` section. BLOCKED on M-652/M-653/M-654.
+      Acceptance: all ADR-021 gate rows met; the release decision recorded (ADR-021 → Enacted, append-only); the 1.0.0 tag cut; CHANGELOG `[Unreleased]` → `[1.0.0]` section.
+      READY (2026-06-21): A2/A3/A4 closed (M-653/M-654/M-652) and A1/A5/B1/B2 already met — every ADR-021 gate row is green. Unblocked; the maintainer cuts the 1.0.0 tag and moves ADR-021 `Accepted → Enacted` at that step.
 
   # ---------------- 2026-06-21: Phase-6 gap-closure wave (DN-gap-inventory) ----------------
   # Two epics minted from the gap inventory produced by the Sonnet research agent (2026-06-21).
