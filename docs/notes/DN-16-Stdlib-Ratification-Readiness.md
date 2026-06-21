@@ -471,8 +471,55 @@ not-yet-implemented.
 
 ---
 
+## Fresh post-implementation honesty re-audit (2026-06-21, swarm)
+
+A three-batch **Sonnet swarm** (Opus-orchestrated) re-audited all 25 `mycelium-std-*`
+crates *against the landed code* (guarantee-tag honesty, `cargo test -p <crate>`,
+`#![forbid(unsafe_code)]`, spec↔code drift). This is a **verification** pass — it does
+**not** ratify (status flips to Accepted remain the maintainer's call, RFC-0016 / DN-07).
+Empirical (per-crate test runs + code reads); source is ground truth.
+
+**Result: 24 / 25 RATIFICATION-READY; 1 NEEDS-WORK; no honesty-tag violations found.**
+Every `Proven` tag traces to a checked basis (the only `Proven` rows — `dense` elementwise
+float ops — are the ADR-010 per-element IEEE bound with the finiteness side-condition
+guarded; `vsa`/`swap` `Proven` cells mirror the cited RFC-0003 / cert kernel matrices).
+Every approximation is `Empirical`/`Declared`; every fallible op is an explicit
+`Result`/`Option`; no silent NaN/sentinel escape in any crate.
+
+| batch | crates | verdict |
+|---|---|---|
+| 1 | cmp, collections, content, core, dense, diag, error, fmt, fs | 9/9 ready |
+| 2 | io, iter, math, numerics, rand, recover, runtime, select | 8/8 ready |
+| 3 | spore, swap, sys, ternary, testing, text, time, vsa | 7 ready, **sys NEEDS-WORK** |
+
+**Actionable items (for the maintainer's ratification pass):**
+- **`mycelium-std-sys` — no `docs/spec/stdlib/sys.md`.** Code + tags honest (`[Declared]`
+  wrappers; fallibility explicit), but it lacks the per-crate spec every other crate has.
+  The one ratification blocker in the batch — write the spec (or fold sys under another).
+- **`FLAG-RAND-IMPL` is RESOLVED** [Empirical]: `mycelium-std-rand` now uses xoshiro256++
+  (Blackman & Vigna 2021) with splitmix64 seeding — the old non-crypto DefaultHasher+
+  SystemTime stand-in is gone; statistical claims honestly `Declared`/`Empirical`. Any
+  corpus text still describing the stand-in is stale.
+- **Minor spec-text drifts (not honesty issues, document at ratification):** `swap`
+  `tern_to_bin` returns `Err(OutOfRange)` (stricter) where §4 says Option `None`; `vsa`
+  reuses `Err(BelowCleanupThreshold)` for margin-shortfall where §3 listed a distinct
+  `Ambiguous` (documented FLAG); `text` guarantee-matrix `guarantee` field is `&str` vs the
+  `GuaranteeStrength` enum used elsewhere (stylistic).
+- **Test depth note:** `mycelium-std-runtime` (21 tests) is the thinnest; tags are honest
+  but the empirical base is light (no concurrent-load tests) — a V&V follow-up, not a
+  blocker.
+
+This re-audit supersedes nothing; it adds a current readiness signal on top of the M-377
+honesty cleanups (all of which it confirms held through implementation).
+
 ## Changelog
 
+- **2026-06-21 — Fresh post-implementation honesty re-audit (swarm).** Three Sonnet agents
+  re-verified all 25 stdlib crates against landed code: 24/25 ratification-ready, 1
+  NEEDS-WORK (`std-sys` missing its spec), **no honesty-tag violations**. FLAG-RAND-IMPL
+  confirmed RESOLVED (xoshiro256++). Minor spec-text drifts noted (swap `Err` vs `None`,
+  vsa `Ambiguous`, text field type). Verification only — no status flips (maintainer's
+  call). Append-only.
 - **2026-06-19 — Draft (M-374).** Produces per-spec ratification-readiness survey for all 25
   `docs/spec/stdlib/*.md` entries. Classifies 1 ratification-ready, 17 ratification-ready-with-flags,
   2 ratification-ready-with-flags (scoped), 3 divergent, and 2 not-yet-implemented. Identifies four
