@@ -256,4 +256,48 @@ mod tests {
         let as_eval: EvalError = exhausted.clone().into();
         assert_eq!(as_eval, EvalError::EffectBudget(exhausted));
     }
+
+    // ---- budget.rs:44 — EffectKind Display → Ok(Default::default()) ----
+    // Mutant: fmt body becomes a no-op; all variants format as empty string.
+    // Kill: assert the formatted output contains a recognizable, variant-specific substring.
+    #[test]
+    fn effect_kind_display_is_non_empty_and_variant_specific() {
+        // Mutant-witness: budget.rs:44 replace fmt → Ok(Default::default()).
+        assert_eq!(EffectKind::Retry.to_string(), "retry");
+        assert_eq!(EffectKind::Alloc.to_string(), "alloc");
+        assert_eq!(EffectKind::Io.to_string(), "io");
+        assert_eq!(EffectKind::Cascade.to_string(), "cascade");
+        assert_eq!(EffectKind::Time.to_string(), "time");
+        let named = EffectKind::Named("myeffect".to_owned()).to_string();
+        assert!(
+            named.contains("myeffect"),
+            "Named variant must include the effect name; got: {named:?}"
+        );
+    }
+
+    // ---- budget.rs:125 — EffectBudgetExhausted Display → Ok(Default::default()) ----
+    // Mutant: fmt body becomes a no-op; the structured error message is dropped.
+    // Kill: assert the formatted output contains the effect kind name and the numeric fields.
+    #[test]
+    fn effect_budget_exhausted_display_contains_kind_and_amounts() {
+        // Mutant-witness: budget.rs:125 replace fmt → Ok(Default::default()).
+        let e = EffectBudgetExhausted {
+            kind: EffectKind::Retry,
+            requested: 3,
+            remaining: 1,
+        };
+        let msg = e.to_string();
+        assert!(
+            msg.contains("retry"),
+            "Display must include the effect kind 'retry'; got: {msg:?}"
+        );
+        assert!(
+            msg.contains('3'),
+            "Display must include the requested amount 3; got: {msg:?}"
+        );
+        assert!(
+            msg.contains('1'),
+            "Display must include the remaining amount 1; got: {msg:?}"
+        );
+    }
 }
