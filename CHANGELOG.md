@@ -8,6 +8,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-21: M-381 — arm-3 + arm-5 ablation arms, swarm-built)
+- **arm 5 (embedded-DSL baseline, RR-3) is now RUNNABLE.** The model writes a small
+  Python embedded DSL; the harness evaluates it in a **restricted sandbox** (blocks
+  `import`/dunder/`open`/`eval`/`exec`; `__builtins__` cleared) to `.myc`, then scores
+  with the **same `myc-check`** as arms 1/2/4. Malformed/hostile snippet → `None` →
+  not-clean, never a false PASS (G2); the sandbox is best-effort restricted eval
+  (Declared). New module `grok/arm5_embedded_dsl.py` (21 offline checks → self-test T17).
+- **arm 3 (grammar-constrained decoding) implemented + offline-tested, runtime-blocked.**
+  New module `grok/arm3_constrained.py`: a GBNF grammar for the gold `.myc` surface +
+  an optional local `ConstrainedBackend` that **SKIPs honestly** when no local model is
+  configured (the xAI REST surface exposes no grammar param — activation is the M-331
+  llama.cpp path: install `llama_cpp` + set `MYC_ARM3_MODEL`). 17 offline checks →
+  self-test T16. Never fabricated (VR-5). Harness self-test now **19/19**.
+  Built by a Sonnet swarm (Opus-orchestrated) on `claude/orch-0000-llm-ablation-arms-35`.
 ### Added (2026-06-21: ADR-021 — 1.0.0 release-readiness gate, Proposed)
 - **ADR-021 drafted (Proposed) — the explicit 1.0.0 kernel/core release gate.** CHANGELOG has
   long said versioning begins "when the kernel stabilizes" but no gate defined "stabilizes"

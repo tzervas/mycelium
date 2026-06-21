@@ -21,10 +21,12 @@ NON-NEGOTIABLE HONESTY (§T11.7 step 4; VR-5):
   * Arm 4 (`LlmCanonical` projection) is now scored at the same parse+typecheck bar
     as the novel arms via the ``llm_canonical_to_l1`` bridge (DN-09 §9.4 option b),
     so it provides the retention-ratio denominator and the threshold comparison is
-    determinate when it runs. Arm 3 (grammar-constrained decoding) and arm 5
-    (embedded-DSL baseline) still depend on build deps that **do not exist yet**
-    (a GBNF/Outlines decoder; an RR-3 host DSL); they stay ``blocked`` with their
-    reason — we never fabricate their outputs (VR-5).
+    determinate when it runs. Arm 5 (embedded-DSL baseline, RR-3) is now RUNNABLE:
+    the model writes a small Python embedded DSL which is evaluated in a restricted
+    sandbox to ``.myc`` and scored by the same ``myc-check``. Arm 3
+    (grammar-constrained decoding) is implemented + offline-tested but stays
+    runtime-``blocked`` until a local GBNF backend is present (the xAI REST surface
+    exposes no grammar param — M-331 llama.cpp path); we never fabricate outputs (VR-5).
 
 Independent samples ((arm, task, seed)) are batchable; this runner can drive them
 live (paced) or be fed batch results.
@@ -37,6 +39,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from .arm3_constrained import arm3_constrained_prompt
+from .arm5_embedded_dsl import arm5_embedded_dsl_prompt, eval_embedded_dsl
 from .client import ChatClient, ChatMessage
 from .coauthor_loop import SYSTEM_PROMPT, scan_forbidden_self_tags
 from .llm_canonical_arm4 import arm4_llm_canonical_prompt
@@ -132,13 +136,15 @@ def _primer_prompt(task: Task) -> list[ChatMessage]:
 
 
 def default_arms() -> list[Arm]:
-    """The five protocol arms, with arms 3 & 5 marked blocked on missing deps.
+    """The five protocol arms: 1, 2, 4, 5 runnable; arm 3 blocked on a local backend.
 
     Honest wiring (research/11 §T11.7): arms 1 and 2 are runnable against any chat
-    backend; arm 3 needs a grammar-constrained decoder (GBNF/Outlines — not exposed
-    by the OpenAI-compatible REST surface); arm 4 is now RUNNABLE — the
+    backend; arm 3 is implemented + offline-tested but runtime-blocked (needs a local
+    GBNF decoder — the OpenAI-compatible REST surface exposes no grammar param);
+    arm 5 (embedded-DSL, RR-3) is runnable (model writes a Python DSL → sandboxed
+    eval → ``.myc`` → ``myc-check``); arm 4 is RUNNABLE — the
     LlmCanonical renderer (M-380) is enacted and the parser + harness integration
-    (M-381 Arm 4, W2L3) landed; arm 5 needs an embedded-DSL baseline harness (RR-3).
+    (M-381 Arm 4, W2L3) landed.
     Blocked arms carry their reason and are never given a fabricated score.
 
     Note on arm 4 scoring (DN-09 §9.4 option b, M-381): the harness converts the
@@ -167,13 +173,24 @@ def default_arms() -> list[Arm]:
         ),
         Arm(
             id=ARM_CONSTRAINED,
-            description="+ grammar-constrained decoding (GBNF/Outlines/Guidance)",
+            description="+ grammar-constrained decoding (GBNF, local backend)",
+            # The arm-3 module is implemented + offline-tested (GBNF grammar +
+            # ConstrainedBackend in arm3_constrained.py), but it stays BLOCKED at
+            # runtime until a local GBNF backend is present: the xAI REST surface
+            # exposes no grammar parameter, so routing REST output here would
+            # mislabel un-constrained text as "constrained" (dishonest). Activating
+            # it = install llama_cpp + set MYC_ARM3_MODEL (the M-331 llama.cpp path)
+            # and route run_arm's generation through ConstrainedBackend. Never
+            # fabricated (VR-5).
             runnable=False,
             blocked_reason=(
-                "needs a grammar-constrained decoder integration (M-380); not built "
-                "yet, and the OpenAI-compatible REST surface does not expose GBNF. "
-                "Not fabricated (VR-5)."
+                "arm-3 module implemented + offline-tested (GBNF grammar + "
+                "ConstrainedBackend, arm3_constrained.py); BLOCKED at runtime — no "
+                "local GBNF backend here and the xAI REST surface exposes no grammar "
+                "param. To run: install llama_cpp + set MYC_ARM3_MODEL (M-331 path), "
+                "then route generation through ConstrainedBackend. Not fabricated (VR-5)."
             ),
+            prompt_builder=arm3_constrained_prompt,
         ),
         Arm(
             id=ARM_CANONICAL,
@@ -183,12 +200,9 @@ def default_arms() -> list[Arm]:
         ),
         Arm(
             id=ARM_EMBEDDED_DSL,
-            description="embedded-DSL baseline (RR-3)",
-            runnable=False,
-            blocked_reason=(
-                "needs an embedded-DSL baseline harness (RR-3); out of scope for the "
-                "Grok harness wiring. Not fabricated (VR-5)."
-            ),
+            description="embedded-DSL baseline (RR-3): model writes a Python DSL → .myc",
+            runnable=True,
+            prompt_builder=arm5_embedded_dsl_prompt,
         ),
     ]
 
@@ -405,6 +419,18 @@ def run_arm(
                     score = scorer.score(myc)
                     clean = score.verdict == VERDICT_CLEAN
                     note = f"bridge->{score.verdict}"
+            elif arm.id == ARM_EMBEDDED_DSL:
+                # Eval the model's Python embedded-DSL in a restricted sandbox -> .myc,
+                # then score with the SAME myc-check (same bar as arms 1/2/4). A snippet
+                # that errors/escapes the sandbox -> None -> not-clean, never a false
+                # PASS (G2). The sandbox is best-effort restricted eval (Declared).
+                myc = eval_embedded_dsl(chat.content)
+                if myc is None:
+                    note = "arm5-dsl: not evaluable to L1 (not-clean — G2)"
+                else:
+                    score = scorer.score(myc)
+                    clean = score.verdict == VERDICT_CLEAN
+                    note = f"dsl->{score.verdict}"
             else:
                 score = scorer.score(chat.content)
                 clean = score.verdict == VERDICT_CLEAN
