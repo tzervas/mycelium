@@ -3,8 +3,8 @@
 > A programming language that treats **traditional binary**, **balanced ternary**, **dense embeddings**, and **Vector Symbolic Architectures (VSA / hyperdimensional computing)** as co-equal, first-class substrates — under semantics that are **transparent** (no hidden behavior), **metadata-native**, and **amenable to formal reasoning**.
 
 **Status:** design + **Rust-first implementation underway.** The design corpus is Accepted/Resolved
-(Foundation, RFC-0001…0021, ADR-001…021, DN-01…19), and the Rust workspace has **46 crates**
-(+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified swaps,
+(Foundation, RFC-0001…0021, ADR-001…021, DN-01…19), and the Rust workspace has
+**46 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified swaps,
 the selection-policy engine, a verified-numerics layer, and a **25-crate Rust-first standard library**
 (all 25/25 specs Accepted, 2026-06-21). Phases **0–3, 5, 7, and 8** are complete. The
 **1.0.0 release-readiness gate is defined and ratified** (ADR-021, Accepted 2026-06-21) with open
