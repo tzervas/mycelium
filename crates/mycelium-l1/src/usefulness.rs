@@ -40,7 +40,10 @@ pub(crate) enum Pat {
 
 /// The finite constructor signature of `ty`, or `None` if its value domain is open (`Binary`/
 /// `Ternary` — never a complete signature, so a literal column always needs a default).
-/// Handles abstract mangled types (e.g. `"List<A>"`) by falling back to `generics` (M-657).
+/// Handles registered generic instances by falling back to the `generics` shell registry (M-657).
+/// M-673: also handles `Ty::App(name, args)` — the structural abstract generic form that arises
+/// during generic function body typechecking. The generic shell's ctors provide the finite
+/// constructor set; field types remain abstract (`Ty::Var`, `Ty::App`) as in the body context.
 fn signature<'a>(
     ty: &Ty,
     types: &'a BTreeMap<String, DataInfo>,
@@ -48,7 +51,20 @@ fn signature<'a>(
 ) -> Option<std::borrow::Cow<'a, DataInfo>> {
     match ty {
         Ty::Data(n) => Some(lookup_data_info(types, generics, n)),
-        _ => None,
+        // Binary/Ternary/Dense/Substrate/Var: open or non-data domains — no finite signature.
+        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Var(_) => None,
+        // App (M-673): the structural abstract generic form (`List<A>`, etc.) used during generic
+        // function body typechecking. Look up the generic shell to get the finite constructor set.
+        // The field types in the shell's ctors are abstract (Ty::Var/Ty::App) — correct for the
+        // body context. Post-monomorphization, Ty::App is replaced by Ty::Data(mangle(...)) before
+        // reaching elaboration/evaluation (the invariant guarded in elab.rs/decision.rs).
+        // Explicit arm (not `_`) so the compiler enforces exhaustiveness on future Ty variants.
+        Ty::App(name, _) => generics.get(name.as_str()).map(|shell| {
+            std::borrow::Cow::Owned(DataInfo {
+                name: name.clone(),
+                ctors: shell.ctors.clone(),
+            })
+        }),
     }
 }
 

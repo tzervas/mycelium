@@ -710,9 +710,9 @@
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
 | `mycelium_l1::AmbientError` | enum | `crates/mycelium-l1/src/ambient.rs:49` | A never-silent refusal from the resolution pass (§4.3/§4.4) — always explicit, never a guess. |
-| `mycelium_l1::CheckError` | struct | `crates/mycelium-l1/src/checkty.rs:64` | An explicit check failure (never a silent pass or a guess — S5/G2). |
+| `mycelium_l1::CheckError` | struct | `crates/mycelium-l1/src/checkty.rs:87` | An explicit check failure (never a silent pass or a guess — S5/G2). |
 | `mycelium_l1::ElabError` | enum | `crates/mycelium-l1/src/elab.rs:47` | Why a definition could not be elaborated to L0 — always explicit, never a partial artifact |
-| `mycelium_l1::Env` | struct | `crates/mycelium-l1/src/checkty.rs:145` | The checked program environment: registry + function table. |
+| `mycelium_l1::Env` | struct | `crates/mycelium-l1/src/checkty.rs:168` | The checked program environment: registry + function table. |
 | `mycelium_l1::Evaluator` | struct | `crates/mycelium-l1/src/eval.rs:230` | The L1 evaluator over a checked [`Env`]. |
 | `mycelium_l1::L1Error` | enum | `crates/mycelium-l1/src/eval.rs:86` | Why L1 evaluation could not produce a value — always explicit (S5/G2). |
 | `mycelium_l1::L1Value` | enum | `crates/mycelium-l1/src/eval.rs:35` | An L1 runtime value: an L0 representation value, or a constructed datum. |
@@ -722,7 +722,7 @@
 | `mycelium_l1::ParseError` | struct | `crates/mycelium-l1/src/error.rs:9` | A parse/lex failure at a source position. |
 | `mycelium_l1::Resolved` | struct | `crates/mycelium-l1/src/ambient.rs:129` | The resolved twin plus its provenance trace. |
 | `mycelium_l1::Totality` | enum | `crates/mycelium-l1/src/totality.rs:31` | The divergence bit (RFC-0007 §4.5). |
-| `mycelium_l1::Ty` | enum | `crates/mycelium-l1/src/checkty.rs:30` | A v0 (monomorphic) type. |
+| `mycelium_l1::Ty` | enum | `crates/mycelium-l1/src/checkty.rs:37` | A v0 (monomorphic) type. |
 | `mycelium_l1::ambient` | mod | `crates/mycelium-l1/src/lib.rs:29` | — |
 | `mycelium_l1::ambient::AmbientError` | enum | `crates/mycelium-l1/src/ambient.rs:49` | A never-silent refusal from the resolution pass (§4.3/§4.4) — always explicit, never a guess. |
 | `mycelium_l1::ambient::ResolutionNote` | struct | `crates/mycelium-l1/src/ambient.rs:118` | A record of one ambient fill, for EXPLAIN / "where did this paradigm come from?" (§4.3). |
@@ -751,22 +751,22 @@
 | `mycelium_l1::ast::TraitDecl` | struct | `crates/mycelium-l1/src/ast.rs:100` | `trait Name<params> { fn … }` (LR-2; conventional term). |
 | `mycelium_l1::ast::TypeDecl` | struct | `crates/mycelium-l1/src/ast.rs:80` | `type Name<params> = Ctor \| Ctor(field, …) \| …` (LR-1). |
 | `mycelium_l1::ast::TypeRef` | struct | `crates/mycelium-l1/src/ast.rs:145` | A type with an optional guarantee-strength index (`T @ Exact`; LR-6). |
-| `mycelium_l1::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:658` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
-| `mycelium_l1::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:614` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
-| `mycelium_l1::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:623` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
+| `mycelium_l1::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:681` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
+| `mycelium_l1::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:637` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
+| `mycelium_l1::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:646` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
 | `mycelium_l1::checkty` | mod | `crates/mycelium-l1/src/lib.rs:31` | — |
-| `mycelium_l1::checkty::CheckError` | struct | `crates/mycelium-l1/src/checkty.rs:64` | An explicit check failure (never a silent pass or a guess — S5/G2). |
-| `mycelium_l1::checkty::CtorInfo` | struct | `crates/mycelium-l1/src/checkty.rs:119` | One constructor of a registered data type. |
-| `mycelium_l1::checkty::DataInfo` | struct | `crates/mycelium-l1/src/checkty.rs:128` | A registered (monomorphic) data type. |
-| `mycelium_l1::checkty::Env` | struct | `crates/mycelium-l1/src/checkty.rs:145` | The checked program environment: registry + function table. |
-| `mycelium_l1::checkty::Env::ctor` | fn | `crates/mycelium-l1/src/checkty.rs:162` | Find the data type owning constructor `ctor`, with its index — `None` if no type has it. |
-| `mycelium_l1::checkty::Env::ctor` | fn | `crates/mycelium-l1/src/checkty.rs:162` | Find the data type owning constructor `ctor`, with its index — `None` if no type has it. |
-| `mycelium_l1::checkty::Ty` | enum | `crates/mycelium-l1/src/checkty.rs:30` | A v0 (monomorphic) type. |
-| `mycelium_l1::checkty::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:658` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
-| `mycelium_l1::checkty::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:614` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
-| `mycelium_l1::checkty::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:623` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
-| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:2087` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
-| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:2073` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
+| `mycelium_l1::checkty::CheckError` | struct | `crates/mycelium-l1/src/checkty.rs:87` | An explicit check failure (never a silent pass or a guess — S5/G2). |
+| `mycelium_l1::checkty::CtorInfo` | struct | `crates/mycelium-l1/src/checkty.rs:142` | One constructor of a registered data type. |
+| `mycelium_l1::checkty::DataInfo` | struct | `crates/mycelium-l1/src/checkty.rs:151` | A registered (monomorphic) data type. |
+| `mycelium_l1::checkty::Env` | struct | `crates/mycelium-l1/src/checkty.rs:168` | The checked program environment: registry + function table. |
+| `mycelium_l1::checkty::Env::ctor` | fn | `crates/mycelium-l1/src/checkty.rs:185` | Find the data type owning constructor `ctor`, with its index — `None` if no type has it. |
+| `mycelium_l1::checkty::Env::ctor` | fn | `crates/mycelium-l1/src/checkty.rs:185` | Find the data type owning constructor `ctor`, with its index — `None` if no type has it. |
+| `mycelium_l1::checkty::Ty` | enum | `crates/mycelium-l1/src/checkty.rs:37` | A v0 (monomorphic) type. |
+| `mycelium_l1::checkty::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:681` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
+| `mycelium_l1::checkty::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:637` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
+| `mycelium_l1::checkty::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:646` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
+| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:2169` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
+| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:2155` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
 | `mycelium_l1::elab` | mod | `crates/mycelium-l1/src/lib.rs:33` | — |
 | `mycelium_l1::elab::ElabError` | enum | `crates/mycelium-l1/src/elab.rs:47` | Why a definition could not be elaborated to L0 — always explicit, never a partial artifact |
 | `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:498` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |

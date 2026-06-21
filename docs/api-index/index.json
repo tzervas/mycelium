@@ -7245,7 +7245,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 64,
+      "line": 87,
       "summary": "An explicit check failure (never a silent pass or a guess — S5/G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7267,7 +7267,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 145,
+      "line": 168,
       "summary": "The checked program environment: registry + function table.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7377,7 +7377,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 30,
+      "line": 37,
       "summary": "A v0 (monomorphic) type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7696,7 +7696,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 658,
+      "line": 681,
       "summary": "Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7707,7 +7707,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 614,
+      "line": 637,
       "summary": "Check a whole nodule: build the registry (prelude + declarations), then type every function",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7718,7 +7718,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 623,
+      "line": 646,
       "summary": "Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7740,7 +7740,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 64,
+      "line": 87,
       "summary": "An explicit check failure (never a silent pass or a guess — S5/G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7751,7 +7751,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 119,
+      "line": 142,
       "summary": "One constructor of a registered data type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7762,7 +7762,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 128,
+      "line": 151,
       "summary": "A registered (monomorphic) data type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7773,7 +7773,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 145,
+      "line": 168,
       "summary": "The checked program environment: registry + function table.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7784,7 +7784,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 162,
+      "line": 185,
       "summary": "Find the data type owning constructor `ctor`, with its index — `None` if no type has it.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7795,7 +7795,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 162,
+      "line": 185,
       "summary": "Find the data type owning constructor `ctor`, with its index — `None` if no type has it.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7806,7 +7806,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 30,
+      "line": 37,
       "summary": "A v0 (monomorphic) type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7817,7 +7817,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 658,
+      "line": 681,
       "summary": "Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7828,7 +7828,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 614,
+      "line": 637,
       "summary": "Check a whole nodule: build the registry (prelude + declarations), then type every function",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7839,7 +7839,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 623,
+      "line": 646,
       "summary": "Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7850,7 +7850,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2087,
+      "line": 2169,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7861,7 +7861,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2073,
+      "line": 2155,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []

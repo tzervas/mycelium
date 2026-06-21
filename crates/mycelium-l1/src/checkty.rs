@@ -26,6 +26,13 @@ use crate::ast::{
 /// that produces `Var` must substitute it away before returning to elaboration, evaluation, or
 /// coverage analysis. A residual `Var` reaching those consumers is a checker bug — the affected
 /// site returns an explicit error rather than silently guessing a concrete type (G2/VR-5).
+///
+/// [`Ty::App`] is the **M-673 structural** form of an abstract generic application (e.g.
+/// `List<A>` when `A` is a type variable). It exists *only* in the checking phase and carries the
+/// invariant: **`App ⟺ abstract`** — at least one arg contains a `Ty::Var`. A fully-concrete
+/// instantiation is immediately monomorphized to `Ty::Data(mangle(name, args))`. `App` must never
+/// reach elaboration, evaluation, or coverage analysis; any such residual is an explicit internal
+/// error (G2/VR-5, **Declared**).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
     /// `Binary{n}`.
@@ -44,6 +51,17 @@ pub enum Ty {
     /// (via [`subst_ty`]) before any type is stored in `Env` or passed to elaboration/eval.
     /// A residual `Var` is an explicit `CheckError`, never a silent default.
     Var(String),
+    /// A structural abstract generic application (M-673, **Declared**). `App(name, args)` where
+    /// at least one element of `args` contains a [`Ty::Var`] — the **abstract** form of
+    /// `name<arg0, arg1, …>`. A fully-concrete application is represented as
+    /// `Ty::Data(mangle(name, args))` instead. `App` is checking-phase only: any `App` reaching
+    /// elaboration/evaluation/coverage is an internal invariant violation, reported as an
+    /// explicit error (never silent — G2/VR-5).
+    ///
+    /// The args are heap-allocated (`Box<Vec<Ty>>`) to keep `size_of::<Ty>()` at 32 bytes
+    /// (the same as pre-M-673), preventing stack-frame inflation in the deeply-recursive
+    /// checker (A4-02). The box is an implementation detail; callers deref it as `&[Ty]`.
+    App(String, Box<Vec<Ty>>),
 }
 
 impl core::fmt::Display for Ty {
@@ -55,6 +73,11 @@ impl core::fmt::Display for Ty {
             Ty::Data(n) => write!(f, "{n}"),
             Ty::Substrate(t) => write!(f, "Substrate{{{t}}}"),
             Ty::Var(a) => write!(f, "{a}"),
+            // App renders identical to the mangled form so user-facing messages are unchanged.
+            Ty::App(name, args) => {
+                let parts: Vec<String> = args.iter().map(|t| t.to_string()).collect();
+                write!(f, "{name}<{}>", parts.join(", "))
+            }
         }
     }
 }
@@ -247,15 +270,16 @@ pub(crate) fn resolve_ty_mut(
     resolve_ty_impl_mut(site, types, generics, tyvars, t)
 }
 
-/// Generic-body type resolution (M-657): immutable (no `&mut types`) but generics-aware.
+/// Generic-body type resolution (M-657 / M-673 structural): immutable (no `&mut types`) but
+/// generics-aware.
 ///
 /// Used inside generic function bodies where the registry is final (all types are registered)
 /// but we need to recognize abstract type applications like `List<A>` (where `A` is a tyvar)
-/// and return a symbolic abstract mangled `Ty::Data("List<A>")` without instantiating.
+/// and return a structural `Ty::App("List", [Ty::Var("A")])` without instantiating (M-673).
 ///
 /// Rules:
 /// - `Named(A, [])` where `A` ∈ `tyvars` → `Ty::Var("A")`
-/// - `Named(X, [a1..])` with any arg containing `Ty::Var` → `Ty::Data("X<a1, ..>")` abstract
+/// - `Named(X, [a1..])` with any arg containing `Ty::Var` → `Ty::App("X", [a1, ..])`
 /// - `Named(X, [c1..])` all concrete → require `"X<c1, ..>"` already in `types`; else error
 /// - `Named(X, [])` → require `X` in `types` or `generics`
 fn resolve_ty_body(
@@ -286,7 +310,8 @@ fn resolve_ty_body(
                     .map(|a| resolve_ty_body(site, types, generics, tyvars, a).map(|(t, _)| t))
                     .collect::<Result<_, _>>()?;
                 if arg_tys.iter().any(contains_var) {
-                    // Abstract context: validate base name exists, check arity, return mangled.
+                    // Abstract context: validate base name exists, check arity, return structural App.
+                    // M-673: use Ty::App instead of Ty::Data(abstract_mangled).
                     if !generics.contains_key(name) && !types.contains_key(name) {
                         return Err(CheckError::new(
                             site,
@@ -306,8 +331,7 @@ fn resolve_ty_body(
                             ));
                         }
                     }
-                    let abstract_mangled = mangle(name, &arg_tys);
-                    return Ok((Ty::Data(abstract_mangled), t.guarantee));
+                    return Ok((Ty::App(name.clone(), Box::new(arg_tys)), t.guarantee));
                 }
                 // All concrete: the mangled name must already be in types.
                 let mangled = mangle(name, &arg_tys);
@@ -446,9 +470,9 @@ fn resolve_ty_impl_mut(
                     .map(|a| resolve_ty_impl_mut(site, types, generics, tyvars, a).map(|(t, _)| t))
                     .collect::<Result<_, _>>()?;
                 if arg_tys.iter().any(contains_var) {
-                    // Abstract context (inside generic body/shell): produce a symbolic abstract
-                    // mangled name (`Ty::Data("List<A>")`) — do NOT instantiate into `types`.
-                    // This Ty::Data never reaches eval/elab/usefulness (M-657 invariant).
+                    // Abstract context (inside generic body/shell): produce structural Ty::App.
+                    // M-673: Ty::App replaces the old Ty::Data(abstract_mangled) encoding.
+                    // Ty::App never reaches eval/elab/usefulness (M-657/M-673 invariant).
                     if !generics.contains_key(name) && !types.contains_key(name) {
                         return Err(CheckError::new(
                             site,
@@ -469,8 +493,7 @@ fn resolve_ty_impl_mut(
                             ));
                         }
                     }
-                    let abstract_mangled = mangle(name, &arg_tys);
-                    return Ok((Ty::Data(abstract_mangled), t.guarantee));
+                    return Ok((Ty::App(name.clone(), Box::new(arg_tys)), t.guarantee));
                 }
                 // All args are concrete: monomorphize into types.
                 let ty = instantiate_generic(site, name, &arg_tys, types, generics)?;
@@ -936,11 +959,34 @@ fn resolve_shell_field_ty(
                 .iter()
                 .map(|a| resolve_shell_field_ty(site, types, generics, tyvars, a))
                 .collect::<Result<_, _>>()?;
-            // Encode as an abstract mangled name (Var-bearing, only in shell storage).
-            // This is intentionally NOT inserted into `types` — it only lives in the shell.
-            if generics.contains_key(name) || types.contains_key(name) {
-                let abstract_mangled = mangle(name, &arg_tys);
-                return Ok(Ty::Data(abstract_mangled));
+            // M-673: produce Ty::App for abstract args (has Var), Ty::Data(mangle) for concrete.
+            // Ty::App is only in shell storage — never inserted into `types`. Validate first
+            // (never-silent, G2): a monomorphic type may not take type arguments, and a generic's
+            // arity must match — otherwise we would build a wrong-shape `Ty::App` that downstream
+            // unification/matching assumes cannot occur.
+            if let Some(shell) = generics.get(name) {
+                if shell.params.len() != arg_tys.len() {
+                    return Err(CheckError::new(
+                        site,
+                        format!(
+                            "generic type `{name}` expects {} type argument(s) but {} were given \
+                             (M-657 arity)",
+                            shell.params.len(),
+                            arg_tys.len()
+                        ),
+                    ));
+                }
+                return if arg_tys.iter().any(contains_var) {
+                    Ok(Ty::App(name.clone(), Box::new(arg_tys)))
+                } else {
+                    Ok(Ty::Data(mangle(name, &arg_tys)))
+                };
+            }
+            if types.contains_key(name) {
+                return Err(CheckError::new(
+                    site,
+                    format!("type `{name}` is not generic — it takes no type arguments (M-657)"),
+                ));
             }
             Err(CheckError::new(
                 site,
@@ -1485,7 +1531,12 @@ impl Cx<'_> {
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
         let (sty, scrut2) = self.check(scope, scrutinee, None)?;
-        if !matches!(sty, Ty::Data(_) | Ty::Binary(_) | Ty::Ternary(_)) {
+        // M-673: Ty::App is the abstract generic form (e.g. `List<A>` in a generic fn body).
+        // It is valid as a match scrutinee: the generic shell provides the ctors.
+        if !matches!(
+            sty,
+            Ty::Data(_) | Ty::Binary(_) | Ty::Ternary(_) | Ty::App(_, _)
+        ) {
             return self.err(format!(
                 "match scrutinee must be a data, Binary, or Ternary type, got {sty}"
             ));
@@ -1601,6 +1652,14 @@ impl Cx<'_> {
                         .types
                         .get(tn)
                         .and_then(|d| d.ctors.iter().find(|c| c.name == *name))
+                        .filter(|c| c.fields.len() == subs.len())
+                        .map(|c| c.fields.clone()),
+                    // M-673: Ty::App is the abstract generic form in generic fn bodies.
+                    // Use the generic shell's ctors (they have Ty::Var field types).
+                    Ty::App(base_name, _) => self
+                        .generics
+                        .get(base_name.as_str())
+                        .and_then(|shell| shell.ctors.iter().find(|c| c.name == *name))
                         .filter(|c| c.fields.len() == subs.len())
                         .map(|c| c.fields.clone()),
                     _ => None,
@@ -1748,38 +1807,61 @@ pub(crate) fn normalize_pattern(
         Pattern::Ident(n) => {
             // A bare name is a nullary-constructor alternative iff it names one of the expected
             // data type's constructors; otherwise it binds the whole position (at this occurrence).
-            if let Ty::Data(tn) = expected {
-                let d = lookup_data_info(types, generics, tn);
-                if let Some(c) = d.ctors.iter().find(|c| c.name == *n) {
-                    if !c.fields.is_empty() {
-                        return Err(CheckError::new(
-                            site,
-                            format!(
-                                "constructor pattern `{n}` must bind its {} field(s) (W7)",
-                                c.fields.len()
-                            ),
-                        ));
-                    }
-                    return Ok(Pat::Ctor(n.clone(), vec![]));
+            // M-673: Ty::App is the abstract generic form — look up the generic shell's ctors.
+            // `ctors_of_ty` avoids Cow<Vec<_>> by returning owned ctors only when the lookup
+            // synthesises a temporary DataInfo (abstract-mangled Data); the App case borrows directly.
+            let found_ctor: Option<CtorInfo> = ctors_of_expected(types, generics, expected)
+                .and_then(|ctors| ctors.into_iter().find(|c| c.name == *n));
+            if let Some(c) = found_ctor {
+                if !c.fields.is_empty() {
+                    return Err(CheckError::new(
+                        site,
+                        format!(
+                            "constructor pattern `{n}` must bind its {} field(s) (W7)",
+                            c.fields.len()
+                        ),
+                    ));
                 }
+                return Ok(Pat::Ctor(n.clone(), vec![]));
             }
             binds.push((n.clone(), expected.clone(), occ.to_vec()));
             Ok(Pat::Wild)
         }
         Pattern::Ctor(n, subs) => {
-            let Ty::Data(tn) = expected else {
-                return Err(CheckError::new(
-                    site,
-                    format!(
-                        "constructor pattern `{n}` on a {expected} scrutinee — match a literal or `_`"
-                    ),
-                ));
+            // M-673: accept both Ty::Data (concrete or abstract-mangled) and Ty::App (structural
+            // abstract generic form). For Ty::App we look up the generic shell directly.
+            let (ctor_name_for_err, ctors): (String, Vec<CtorInfo>) = match expected {
+                Ty::Data(tn) => (
+                    tn.clone(),
+                    lookup_data_info(types, generics, tn).into_owned().ctors,
+                ),
+                Ty::App(base_name, _) => {
+                    if let Some(shell) = generics.get(base_name.as_str()) {
+                        (base_name.clone(), shell.ctors.clone())
+                    } else {
+                        return Err(CheckError::new(
+                            site,
+                            format!(
+                                "constructor pattern `{n}` on unregistered generic type \
+                                 `{base_name}` — unknown generic type"
+                            ),
+                        ));
+                    }
+                }
+                _ => {
+                    return Err(CheckError::new(
+                        site,
+                        format!(
+                            "constructor pattern `{n}` on a {expected} scrutinee — match a \
+                             literal or `_`"
+                        ),
+                    ));
+                }
             };
-            let d = lookup_data_info(types, generics, tn).into_owned();
-            let Some(c) = d.ctors.iter().find(|c| c.name == *n) else {
+            let Some(c) = ctors.iter().find(|c| c.name == *n) else {
                 return Err(CheckError::new(
                     site,
-                    format!("`{n}` is not a constructor of {tn}"),
+                    format!("`{n}` is not a constructor of {ctor_name_for_err}"),
                 ));
             };
             if subs.len() != c.fields.len() {
@@ -1938,9 +2020,9 @@ fn paradigm_name(t: &Ty) -> Option<&'static str> {
         Ty::Binary(_) => Some("Binary"),
         Ty::Ternary(_) => Some("Ternary"),
         Ty::Dense(_, _) => Some("Dense"),
-        // `Data`, `Substrate`, and `Var` have no paradigm: they are not representation types.
-        // A `Var` reaching here is a transient abstract param — no paradigm assigned (M-657).
-        Ty::Data(_) | Ty::Substrate(_) | Ty::Var(_) => None,
+        // `Data`, `Substrate`, `Var`, and `App` have no paradigm: they are not representation types.
+        // A `Var`/`App` reaching here is a transient abstract form — no paradigm assigned (M-657/M-673).
+        Ty::Data(_) | Ty::Substrate(_) | Ty::Var(_) | Ty::App(_, _) => None,
     }
 }
 
@@ -2096,13 +2178,23 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
     })
 }
 
-// ─── Stage-1 generics helpers (M-657, Declared) ──────────────────────────────────────────────
+// ─── Stage-1 generics helpers (M-657, Declared) / M-673 structural App ───────────────────────
+
+/// Returns true if `ty` is abstract — i.e., contains a `Ty::Var` or is a `Ty::App` (which by
+/// invariant has at least one abstract arg). Used by `subst_ty` to decide whether to collapse
+/// `App` → `Data` after substitution (M-673, **Declared**).
+fn ty_is_abstract(ty: &Ty) -> bool {
+    contains_var(ty)
+}
 
 /// Substitute all [`Ty::Var`] occurrences in `ty` using the `subst` map (var-name → concrete Ty).
 ///
-/// For shell ctor fields that encode recursive generic self-references as
-/// `Ty::Data("List<A>")` (an abstract mangled name where `A` is a type var), this function
-/// delegates to [`subst_ty_in_shell`] which re-resolves the embedded vars in the mangled name.
+/// For `Ty::App(name, args)` (M-673 structural abstract form), recursion substitutes each arg;
+/// the result is `Ty::Data(mangle(name, &substituted_args))` if all vars became concrete, or
+/// `Ty::App(name, substituted_args)` if abstract vars remain.
+///
+/// `Ty::Data` is always concrete after M-673 S3 — abstract generic applications are `Ty::App`,
+/// not mangled Data strings — so substitution on a `Ty::Data` is always the identity.
 ///
 /// Guarantee: **Declared** — capture-avoiding substitution over a first-order type language
 /// (no higher-rank types). Terminates because the type structure is finite-depth.
@@ -2111,47 +2203,20 @@ pub(crate) fn subst_ty(ty: &Ty, subst: &BTreeMap<String, Ty>) -> Ty {
         Ty::Var(a) => subst.get(a).cloned().unwrap_or_else(|| ty.clone()),
         // Primitive types have no embedded Vars.
         Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) => ty.clone(),
-        // Data may encode an abstract mangled name (e.g. "List<A>") in shell ctor fields.
-        // Substitute the embedded vars by re-parsing the abstract name components.
-        // Note: concrete (registered) Data names never contain '<' so this is safe to detect.
-        Ty::Data(name) => Ty::Data(subst_in_abstract_data_name(name, subst)),
+        // Ty::Data is always concrete after S3 (abstract generic types are Ty::App).
+        // A concrete Data name never contains Var, so substitution is the identity.
+        Ty::Data(_) => ty.clone(),
+        // App (M-673): recurse structurally into args.
+        // If all args become concrete after substitution, collapse to Ty::Data(mangle(...)).
+        Ty::App(name, args) => {
+            let substituted: Vec<Ty> = args.iter().map(|a| subst_ty(a, subst)).collect();
+            if substituted.iter().any(ty_is_abstract) {
+                Ty::App(name.clone(), Box::new(substituted))
+            } else {
+                Ty::Data(mangle(name, &substituted))
+            }
+        }
     }
-}
-
-/// Substitute type variables that appear encoded inside an abstract mangled data name
-/// (e.g. `"List<A>"` → `"List<Binary{8}>"` when `subst["A"] = Binary{8}`).
-///
-/// Abstract mangled names have the form `"Base<Arg0, Arg1, …>"`. This function parses the
-/// outer wrapper using [`split_mangled_outer`] (depth-correct `{`/`<` tracking), substitutes
-/// each arg token, and re-mangles. Previously used a naive `inner.split(", ")` that incorrectly
-/// split multi-arg concrete types such as `Pair<Binary{8}, Binary{16}>` at the inner comma
-/// (M-657D2 fix: use depth-tracking split to handle nested multi-arg concrete args correctly).
-fn subst_in_abstract_data_name(name: &str, subst: &BTreeMap<String, Ty>) -> String {
-    // Fast path: no `<` → bare name (concrete or abstract-bare), nothing to substitute.
-    let Some((base, parts)) = split_mangled_outer(name) else {
-        return name.to_owned();
-    };
-    let substituted: Vec<Ty> = parts
-        .iter()
-        .map(|part| {
-            // Bare identifier (no `{` or `<`): check if it's a type variable to substitute.
-            if part.chars().all(|c| c.is_alphanumeric() || c == '_') {
-                if let Some(replacement) = subst.get(*part) {
-                    return replacement.clone();
-                }
-            }
-            // Nested mangled form (contains `<`): recurse so depth-correct splitting applies.
-            if part.contains('<') {
-                return Ty::Data(subst_in_abstract_data_name(part, subst));
-            }
-            // Concrete Display-form (e.g. `Binary{8}`, `Ternary{4}`, `Dense{4, S}`): parse or
-            // wrap as Data. We prefer parse_ty_from_display for concrete scalar types so the
-            // round-trip is exact; falls back to Ty::Data for forms like Dense{…} that
-            // parse_ty_from_display skips.
-            parse_ty_from_display(part).unwrap_or_else(|| Ty::Data((*part).to_owned()))
-        })
-        .collect();
-    mangle(base, &substituted)
 }
 
 /// Produce a **stable, collision-free** mangled name for a generic instantiation `D<arg0,arg1,…>`.
@@ -2177,48 +2242,39 @@ pub(crate) fn mangle(name: &str, args: &[Ty]) -> String {
 /// parameters after call-site instantiation. A return type that still contains a `Var` means no
 /// argument anchored it; the caller must provide an explicit annotation (G2 / never-silent).
 ///
-/// **Conservative**: returns false for `Ty::Data` even if the Data string encodes an abstract
-/// mangled name like `"List<A>"`. This is intentional — `Data` with embedded vars only appears
-/// in GenericShell ctor field types (body context), not in function return types after
-/// substitution. Callers that must detect vars inside mangled Data strings should use
-/// [`ty_mentions_tyvar`] instead.
+/// **`Ty::Data` is opaque/concrete (post-M-673)**: abstract generic applications are `Ty::App`
+/// (handled structurally below), so a `Ty::Data` name is always a registered monomorphic type and
+/// never carries a type variable — it returns false. ([`ty_mentions_tyvar`] is the distinct check
+/// for whether a type still names one of a function's declared type parameters.)
+///
+/// `Ty::App` (M-673): structural recursive check — any abstract arg propagates `true`.
 pub(crate) fn contains_var(ty: &Ty) -> bool {
     match ty {
         Ty::Var(_) => true,
-        // Ty::Data may encode an abstract mangled name like "List<A>" in a shell field;
-        // in concrete (env.types) contexts Ty::Data never contains vars.
-        // We conservatively return false here — abstract-mangled Data are only in GenericShell,
-        // not in function return types after instantiation.
+        // App is structural: abstract iff any arg is abstract.
+        Ty::App(_, args) => args.iter().any(contains_var),
+        // Post-M-673: abstract generic applications are `Ty::App` (above); `Ty::Data` is a concrete,
+        // registered monomorphic type name and never carries a type variable — so false.
         Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Data(_) | Ty::Substrate(_) => false,
     }
 }
 
-/// Returns true if `ty` mentions any of the given type-variable names, including when the
-/// variable appears embedded inside a mangled `Ty::Data` string like `"List<A>"`.
+/// Returns true if `ty` mentions any of the given type-variable names, including when they
+/// appear inside a structural `Ty::App` (M-673).
 ///
-/// Used **only** at the phantom-type-param refusal site (~line 1411) where the return type
-/// may be `Ty::Data("List<A>")` after `resolve_ty_body` — a case that `contains_var` misses
-/// because it conservatively returns false for all `Ty::Data`. Do NOT change `contains_var`
-/// (other callers rely on its conservative behaviour at ~288/448).
+/// Used **only** at the phantom-type-param refusal site where the return type may still be
+/// abstract after substitution. After M-673 S3, abstract generic types are always `Ty::App`
+/// (never mangled `Ty::Data`), so this function only needs to recurse into `Ty::Var` and
+/// `Ty::App`. Do NOT change `contains_var` (other callers rely on its conservative behaviour).
 ///
-/// Guarantee: **Declared** (M-657D2 review fix, G2/VR-5).
+/// Guarantee: **Declared** (M-657D2 review fix, M-673 S6 simplification, G2/VR-5).
 fn ty_mentions_tyvar(ty: &Ty, tyvars: &[String]) -> bool {
     match ty {
         Ty::Var(v) => tyvars.iter().any(|t| t == v),
-        Ty::Data(name) if name.contains('<') => {
-            // Peek inside the mangled form: split and check each arg token.
-            split_mangled_outer(name)
-                .map(|(_, parts)| {
-                    parts.iter().any(|p| {
-                        // Bare identifier matching a tyvar name.
-                        tyvars.iter().any(|t| t == p)
-                            // Or a nested mangled form that itself mentions a tyvar.
-                            || (p.contains('<')
-                                && ty_mentions_tyvar(&Ty::Data((*p).to_owned()), tyvars))
-                    })
-                })
-                .unwrap_or(false)
-        }
+        // App (M-673): structural — check each arg recursively.
+        Ty::App(_, args) => args.iter().any(|a| ty_mentions_tyvar(a, tyvars)),
+        // Ty::Data is always concrete after S3 (abstract generic types are Ty::App, not
+        // mangled Data strings). Concrete Data names never embed Var — return false.
         _ => false,
     }
 }
@@ -2256,6 +2312,27 @@ pub(crate) fn lookup_data_info<'t>(
         }
     }
     panic!("lookup_data_info: unregistered type `{tn}` — not in types or generics")
+}
+
+/// Return an owned `Vec<CtorInfo>` for the given expected type, or `None` if the type has no
+/// finite constructor set (Binary/Ternary/Dense/Substrate/Var — value domains that are never
+/// enumerated). Used by [`normalize_pattern`] to resolve constructor names and their field types.
+///
+/// M-673: handles both `Ty::Data(mangled)` (via [`lookup_data_info`]) and `Ty::App(name, _)`
+/// (via the generic shell's ctors directly). The returned ctors may contain `Ty::Var` field types
+/// in the `Ty::App` case — this is correct for the generic body check context.
+fn ctors_of_expected(
+    types: &BTreeMap<String, DataInfo>,
+    generics: &BTreeMap<String, GenericShell>,
+    expected: &Ty,
+) -> Option<Vec<CtorInfo>> {
+    match expected {
+        Ty::Data(tn) => Some(lookup_data_info(types, generics, tn).into_owned().ctors),
+        Ty::App(base_name, _) => generics
+            .get(base_name.as_str())
+            .map(|shell| shell.ctors.clone()),
+        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Var(_) => None,
+    }
 }
 
 /// Split a mangled type string `"Name<arg1, arg2>"` into `("Name", ["arg1", "arg2"])`.
@@ -2379,29 +2456,37 @@ pub(crate) fn unify_arg(
         (Ty::Dense(d1, s1), Ty::Dense(d2, s2)) if d1 == d2 && s1 == s2 => Ok(()),
         (Ty::Data(n1), Ty::Data(n2)) if n1 == n2 => Ok(()),
         (Ty::Substrate(t1), Ty::Substrate(t2)) if t1 == t2 => Ok(()),
-        // Abstract mangled `Ty::Data("List<A>")` vs concrete mangled `Ty::Data("List<Binary{8}>")`.
-        // Structurally decompose both sides using split_mangled_outer and recursively unify
-        // each arg position. We use n1's ACTUAL arg strings (not the shell's declaration-order
-        // params) so that permuted forms like `Pair<B, A>` bind B→arg0, A→arg1 correctly
-        // (M-657D2 fix: using shell.params order was wrong for permuted/repeated params).
-        (Ty::Data(n1), Ty::Data(n2)) if n1.contains('<') => {
-            let Some((base1, abstract_arg_strs)) = split_mangled_outer(n1) else {
-                return Err(CheckError::new(
-                    site,
-                    format!(
-                        "type mismatch: parameter type `{param_ty}` does not match argument \
-                         type `{arg_ty}` (M-657 first-order unification)"
-                    ),
-                ));
-            };
-            let Some((base2, concrete_arg_strs)) = split_mangled_outer(n2) else {
-                return Err(CheckError::new(
-                    site,
-                    format!(
-                        "type mismatch: parameter type `{param_ty}` does not match argument \
-                         type `{arg_ty}` — expected `{base1}<…>` (M-657 first-order unification)"
-                    ),
-                ));
+        // M-673 structural: `Ty::App(name, args)` vs concrete `Ty::Data(mangled)`.
+        // `Ty::App` is the primary abstract-generic form after S3 — produced by resolve_ty_body
+        // etc. for any generic application that still contains Ty::Var args. We decompose the
+        // concrete side's mangled string (e.g. "List<Binary{8}>") and unify arg-by-arg.
+        // Permuted/repeated type-param positions (M-657D2) are naturally handled because we
+        // iterate the App's structural args in order — no shell.params lookup needed.
+        (Ty::App(base1, app_args), Ty::Data(n2)) => {
+            let (base2, concrete_arg_strs) = if let Some(split) = split_mangled_outer(n2) {
+                split
+            } else {
+                // n2 has no '<' — it's a bare concrete name; arity must be 0 vs app_args len.
+                if !app_args.is_empty() {
+                    return Err(CheckError::new(
+                        site,
+                        format!(
+                            "type mismatch: parameter type `{param_ty}` does not match argument \
+                             type `{arg_ty}` — expected `{base1}<…>` (M-657 first-order unification)"
+                        ),
+                    ));
+                }
+                // Zero-arg App matching a bare Data name — just check name equality.
+                if base1 != n2 {
+                    return Err(CheckError::new(
+                        site,
+                        format!(
+                            "type mismatch: parameter type `{param_ty}` does not match argument \
+                             type `{arg_ty}` (M-657 first-order unification)"
+                        ),
+                    ));
+                }
+                return Ok(());
             };
             if base1 != base2 {
                 return Err(CheckError::new(
@@ -2412,37 +2497,18 @@ pub(crate) fn unify_arg(
                     ),
                 ));
             }
-            // Arity check: n1's arg count must equal n2's arg count.
-            if abstract_arg_strs.len() != concrete_arg_strs.len() {
+            if app_args.len() != concrete_arg_strs.len() {
                 return Err(CheckError::new(
                     site,
                     format!(
-                        "type mismatch: abstract type `{n1}` has {} type arg(s) but concrete \
-                         type `{n2}` has {} — arity mismatch (M-657 first-order unification)",
-                        abstract_arg_strs.len(),
+                        "type mismatch: abstract type `{param_ty}` has {} type arg(s) but \
+                         concrete type `{n2}` has {} — arity mismatch (M-657 first-order unification)",
+                        app_args.len(),
                         concrete_arg_strs.len()
                     ),
                 ));
             }
-            // Recursively unify each abstract arg with its corresponding concrete arg.
-            // Abstract arg string → Ty: bare identifier → Ty::Var; contains '<' → nested abstract
-            // Data (recursion handles it); otherwise parse from display.
-            for (abstract_str, concrete_str) in
-                abstract_arg_strs.iter().zip(concrete_arg_strs.iter())
-            {
-                let abstract_arg = if abstract_str
-                    .chars()
-                    .all(|c| c.is_alphanumeric() || c == '_')
-                    && !abstract_str.contains('{')
-                    && !abstract_str.contains('<')
-                {
-                    // Bare identifier — treat as Ty::Var (a type variable in the abstract position).
-                    Ty::Var((*abstract_str).to_owned())
-                } else {
-                    // Nested abstract (e.g. "List<A>") or concrete nested form.
-                    parse_ty_from_display(abstract_str)
-                        .unwrap_or_else(|| Ty::Data((*abstract_str).to_owned()))
-                };
+            for (abstract_arg, concrete_str) in app_args.iter().zip(concrete_arg_strs.iter()) {
                 let concrete_arg = parse_ty_from_display(concrete_str).ok_or_else(|| {
                     CheckError::new(
                         site,
@@ -2452,7 +2518,37 @@ pub(crate) fn unify_arg(
                         ),
                     )
                 })?;
-                unify_arg(site, generics, &abstract_arg, &concrete_arg, subst)?;
+                unify_arg(site, generics, abstract_arg, &concrete_arg, subst)?;
+            }
+            Ok(())
+        }
+        // M-673: both sides are structural App (e.g. nested generic params like Map<A, List<B>>
+        // matched against Map<Binary{8}, List<Binary{16}>>  when the arg itself is still abstract).
+        // This case arises if a generic function takes `Map<A, List<B>>` and the argument also
+        // happens to resolve to an App form (unusual but possible for multi-level generics).
+        (Ty::App(base1, args1), Ty::App(base2, args2)) => {
+            if base1 != base2 {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "type mismatch: generic base `{base1}` vs `{base2}` — \
+                         incompatible generic types (M-657 first-order unification)"
+                    ),
+                ));
+            }
+            if args1.len() != args2.len() {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "type mismatch: abstract type `{param_ty}` has {} type arg(s) but \
+                         argument type `{arg_ty}` has {} — arity mismatch (M-657 first-order unification)",
+                        args1.len(),
+                        args2.len()
+                    ),
+                ));
+            }
+            for (a1, a2) in args1.iter().zip(args2.iter()) {
+                unify_arg(site, generics, a1, a2, subst)?;
             }
             Ok(())
         }
@@ -3763,8 +3859,9 @@ fn rewrite_mono_caller(
 /// Convert a checked [`Ty`] back to a surface [`TypeRef`] (guarantee-free).
 ///
 /// Used to build the monomorphic `FnDecl`'s parameter and return types. All concrete types have
-/// a direct surface representation; `Ty::Var` should never reach here after substitution (if it
-/// does, we produce a placeholder `Named("?", [])` rather than panicking — defense-in-depth).
+/// a direct surface representation; `Ty::Var`/`Ty::App` should never reach here after
+/// substitution (if they do, we produce a placeholder `Named("?", [])` rather than panicking —
+/// defense-in-depth, G2/VR-5).
 /// Guarantee: **Declared** — the checker already validated the types; this is a mechanical
 /// invertible mapping for the concrete subset.
 fn ty_to_typeref(ty: &Ty) -> TypeRef {
@@ -3777,6 +3874,8 @@ fn ty_to_typeref(ty: &Ty) -> TypeRef {
         // A residual Var after substitution is a checker bug — emit a placeholder (defense-in-depth).
         // The elaborator will fail on this if it survives to that point (G2).
         Ty::Var(a) => BaseType::Named(format!("?{a}"), vec![]),
+        // A residual App after substitution is a checker bug (should have been collapsed to Data).
+        Ty::App(name, _) => BaseType::Named(format!("?App:{name}"), vec![]),
     })
 }
 
@@ -3821,62 +3920,6 @@ mod tests {
         let subst = BTreeMap::new();
         let var = Ty::Var("B".to_owned());
         assert_eq!(subst_ty(&var, &subst), var);
-    }
-
-    // ---- M-657D2 FIX 4: subst_in_abstract_data_name depth-correct split ----
-
-    /// **Property: `subst_in_abstract_data_name` substitutes correctly when a nested arg
-    /// contains a multi-arg concrete type (e.g. `Pair<Binary{8}, Binary{16}>`).**
-    ///
-    /// The old `inner.split(", ")` would mis-split `Box<Pair<Binary{8}, Binary{16}>>` at the
-    /// inner comma, producing `["Pair<Binary{8}", "Binary{16}>"]`. The fix uses
-    /// `split_mangled_outer` which tracks `{`/`<` depth correctly.
-    ///
-    /// Guarantee: **Declared** (M-657D2 review fix).
-    #[test]
-    fn subst_in_abstract_data_name_does_not_split_nested_multi_arg_concrete() {
-        let mut subst = BTreeMap::new();
-        subst.insert("A".to_owned(), Ty::Binary(8));
-        // Simple case: "List<A>" → "List<Binary{8}>"
-        let result = subst_in_abstract_data_name("List<A>", &subst);
-        assert_eq!(
-            result, "List<Binary{8}>",
-            "simple Var substitution in mangled name"
-        );
-
-        // Nested case: "Box<A>" where A=Binary{8} → "Box<Binary{8}>"
-        let result2 = subst_in_abstract_data_name("Box<A>", &subst);
-        assert_eq!(result2, "Box<Binary{8}>", "nested single-arg substitution");
-
-        // The key regression: an arg that is itself a multi-arg concrete type.
-        // "Wrap<Pair<Binary{8}, Binary{16}>>" should survive intact (no Var to substitute).
-        let result3 = subst_in_abstract_data_name("Wrap<Pair<Binary{8}, Binary{16}>>", &subst);
-        assert_eq!(
-            result3, "Wrap<Pair<Binary{8}, Binary{16}>>",
-            "multi-arg concrete nested arg must not be split at the inner comma"
-        );
-
-        // Mixed: "Pair<A, Pair<Binary{8}, Binary{16}>>" → "Pair<Binary{8}, Pair<Binary{8}, Binary{16}>>"
-        let result4 = subst_in_abstract_data_name("Pair<A, Pair<Binary{8}, Binary{16}>>", &subst);
-        assert_eq!(
-            result4, "Pair<Binary{8}, Pair<Binary{8}, Binary{16}>>",
-            "A is substituted but the nested Pair<Binary{{8}}, Binary{{16}}> arg is left intact"
-        );
-    }
-
-    /// **Property: `subst_in_abstract_data_name` is the identity when no vars are in the subst.**
-    ///
-    /// Guarantee: **Declared** (M-657D2 review fix regression guard).
-    #[test]
-    fn subst_in_abstract_data_name_identity_when_no_matching_var() {
-        let subst = BTreeMap::new();
-        for name in &["List<Binary{8}>", "Pair<Binary{8}, Ternary{6}>", "Simple"] {
-            let result = subst_in_abstract_data_name(name, &subst);
-            assert_eq!(
-                &result, name,
-                "no-op substitution must be identity for `{name}`"
-            );
-        }
     }
 
     #[test]
@@ -3964,6 +4007,156 @@ mod tests {
         let err =
             unify_arg("t", &generics, &Ty::Binary(8), &Ty::Ternary(6), &mut subst).unwrap_err();
         assert!(err.message.contains("mismatch"), "got: {}", err.message);
+    }
+
+    // ---- M-673: Ty::App structural tests (S7) ----
+
+    /// **Property: `subst_ty` on `Ty::App` with fully-concrete substitution collapses to `Ty::Data(mangle(…))`.**
+    ///
+    /// `Ty::App("List", [Var("A")])` with `{A → Binary{8}}` → `Ty::Data("List<Binary{8}>")`.
+    ///
+    /// Guarantee: **Declared** (M-673 S7).
+    #[test]
+    fn subst_ty_collapses_app_to_data_when_all_args_concrete() {
+        let mut subst = BTreeMap::new();
+        subst.insert("A".to_owned(), Ty::Binary(8));
+        let app = Ty::App("List".to_owned(), Box::new(vec![Ty::Var("A".to_owned())]));
+        let result = subst_ty(&app, &subst);
+        assert_eq!(
+            result,
+            Ty::Data("List<Binary{8}>".to_owned()),
+            "App with all-concrete args must collapse to Data(mangle(...))"
+        );
+    }
+
+    /// **Property: `subst_ty` on `Ty::App` with partial substitution remains `Ty::App`.**
+    ///
+    /// `Ty::App("Pair", [Var("A"), Var("B")])` with `{A → Binary{8}}` (B unbound) →
+    /// `Ty::App("Pair", [Binary{8}, Var("B")])` (still abstract).
+    ///
+    /// Guarantee: **Declared** (M-673 S7).
+    #[test]
+    fn subst_ty_keeps_app_abstract_when_some_vars_remain() {
+        let mut subst = BTreeMap::new();
+        subst.insert("A".to_owned(), Ty::Binary(8));
+        let app = Ty::App(
+            "Pair".to_owned(),
+            Box::new(vec![Ty::Var("A".to_owned()), Ty::Var("B".to_owned())]),
+        );
+        let result = subst_ty(&app, &subst);
+        assert_eq!(
+            result,
+            Ty::App(
+                "Pair".to_owned(),
+                Box::new(vec![Ty::Binary(8), Ty::Var("B".to_owned())])
+            ),
+            "App with remaining unbound vars must stay as Ty::App"
+        );
+    }
+
+    /// **Property: `unify_arg` with nested generic `Pair<A, List<A>>` vs concrete `Pair<Binary{8}, List<Binary{8}>>` binds A correctly.**
+    ///
+    /// M-673: the abstract side is structural `Ty::App("Pair", [Var("A"), App("List", [Var("A")])])`.
+    ///
+    /// Guarantee: **Declared** (M-673 S7).
+    #[test]
+    fn unify_arg_nested_generic_pair_a_list_a() {
+        let mut generics: BTreeMap<String, GenericShell> = BTreeMap::new();
+        generics.insert(
+            "Pair".to_owned(),
+            GenericShell {
+                params: vec!["A".to_owned(), "B".to_owned()],
+                ctors: vec![],
+            },
+        );
+        generics.insert(
+            "List".to_owned(),
+            GenericShell {
+                params: vec!["A".to_owned()],
+                ctors: vec![],
+            },
+        );
+        // Abstract: Pair<A, List<A>> as Ty::App.
+        let abstract_ty = Ty::App(
+            "Pair".to_owned(),
+            Box::new(vec![
+                Ty::Var("A".to_owned()),
+                Ty::App("List".to_owned(), Box::new(vec![Ty::Var("A".to_owned())])),
+            ]),
+        );
+        // Concrete: Pair<Binary{8}, List<Binary{8}>> as mangled Data.
+        let concrete_ty = Ty::Data("Pair<Binary{8}, List<Binary{8}>>".to_owned());
+        let mut subst = BTreeMap::new();
+        unify_arg("test", &generics, &abstract_ty, &concrete_ty, &mut subst).unwrap();
+        assert_eq!(
+            subst.get("A"),
+            Some(&Ty::Binary(8)),
+            "A must bind to Binary{{8}} from both positions"
+        );
+    }
+
+    /// **Property: `unify_arg` with permuted `Pair<B, A>` (App) vs concrete `Pair<Ternary{3}, Binary{8}>` binds each to correct position.**
+    ///
+    /// M-673: structural Ty::App preserves argument order, so B→Ternary{3}, A→Binary{8}.
+    ///
+    /// Guarantee: **Declared** (M-673 S7).
+    #[test]
+    fn unify_arg_permuted_pair_b_a_structural() {
+        let mut generics: BTreeMap<String, GenericShell> = BTreeMap::new();
+        generics.insert(
+            "Pair".to_owned(),
+            GenericShell {
+                params: vec!["A".to_owned(), "B".to_owned()],
+                ctors: vec![],
+            },
+        );
+        let abstract_ty = Ty::App(
+            "Pair".to_owned(),
+            Box::new(vec![Ty::Var("B".to_owned()), Ty::Var("A".to_owned())]),
+        );
+        let concrete_ty = Ty::Data("Pair<Ternary{3}, Binary{8}>".to_owned());
+        let mut subst = BTreeMap::new();
+        unify_arg("test", &generics, &abstract_ty, &concrete_ty, &mut subst).unwrap();
+        assert_eq!(
+            subst.get("B"),
+            Some(&Ty::Ternary(3)),
+            "B (pos 0) must bind to Ternary{{3}}"
+        );
+        assert_eq!(
+            subst.get("A"),
+            Some(&Ty::Binary(8)),
+            "A (pos 1) must bind to Binary{{8}}"
+        );
+    }
+
+    /// **Property: `unify_arg` with repeated `Pair<A, A>` (App) vs inconsistent concrete types is an explicit error.**
+    ///
+    /// M-673: structural App; A→Binary{8} then A→Ternary{3} is ambiguous → explicit error.
+    ///
+    /// Guarantee: **Declared** (M-673 S7).
+    #[test]
+    fn unify_arg_repeated_param_inconsistent_structural() {
+        let mut generics: BTreeMap<String, GenericShell> = BTreeMap::new();
+        generics.insert(
+            "Pair".to_owned(),
+            GenericShell {
+                params: vec!["A".to_owned(), "B".to_owned()],
+                ctors: vec![],
+            },
+        );
+        let abstract_ty = Ty::App(
+            "Pair".to_owned(),
+            Box::new(vec![Ty::Var("A".to_owned()), Ty::Var("A".to_owned())]),
+        );
+        let concrete_ty = Ty::Data("Pair<Binary{8}, Ternary{3}>".to_owned());
+        let mut subst = BTreeMap::new();
+        let err = unify_arg("test", &generics, &abstract_ty, &concrete_ty, &mut subst)
+            .expect_err("inconsistent A binding must be an explicit error");
+        assert!(
+            err.message.contains("ambiguous"),
+            "error must mention ambiguity; got: {}",
+            err.message
+        );
     }
 
     // ---- M-666: `colony { hypha … }` type rule (RFC-0008 §4.7) ----
@@ -4298,8 +4491,10 @@ mod tests {
     #[test]
     fn unify_arg_permuted_type_params_bind_correct_concrete() {
         // Build the registry manually: Pair<A,B> generic shell + unify_arg call with
-        // abstract = Ty::Data("Pair<B, A>") (i.e. permuted) and concrete = Ty::Data("Pair<Ternary{3}, Binary{8}>").
+        // abstract = Ty::App("Pair", [Var("B"), Var("A")]) (i.e. permuted) and
+        // concrete = Ty::Data("Pair<Ternary{3}, Binary{8}>").
         // After unification, subst must have A→Binary{8}, B→Ternary{3}.
+        // M-673: the abstract side is now structural Ty::App, not mangled Ty::Data.
         let mut generics: BTreeMap<String, GenericShell> = BTreeMap::new();
         generics.insert(
             "Pair".to_owned(),
@@ -4309,9 +4504,12 @@ mod tests {
             },
         );
         let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
-        // Abstract arg is Pair<B, A> (permuted, from fn return type).
-        let abstract_ty = Ty::Data("Pair<B, A>".to_owned());
-        // Concrete arg is Pair<Ternary{3}, Binary{8}> (arg0=Ternary{3}, arg1=Binary{8}).
+        // Abstract arg is Pair<B, A> (permuted) — structural Ty::App form.
+        let abstract_ty = Ty::App(
+            "Pair".to_owned(),
+            Box::new(vec![Ty::Var("B".to_owned()), Ty::Var("A".to_owned())]),
+        );
+        // Concrete arg is Pair<Ternary{3}, Binary{8}> — mangled Ty::Data (concrete).
         let concrete_ty = Ty::Data("Pair<Ternary{3}, Binary{8}>".to_owned());
         unify_arg("test", &generics, &abstract_ty, &concrete_ty, &mut subst).unwrap();
         // B must bind to Ternary{3} (position 0 in concrete), A to Binary{8} (position 1).
@@ -4338,6 +4536,7 @@ mod tests {
     /// Guarantee: **Declared** (M-657D2 review fix).
     #[test]
     fn unify_arg_repeated_param_consistent_ok() {
+        // M-673: abstract side is now Ty::App (structural), not mangled Ty::Data.
         let mut generics: BTreeMap<String, GenericShell> = BTreeMap::new();
         generics.insert(
             "Pair".to_owned(),
@@ -4347,7 +4546,10 @@ mod tests {
             },
         );
         let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
-        let abstract_ty = Ty::Data("Pair<A, A>".to_owned());
+        let abstract_ty = Ty::App(
+            "Pair".to_owned(),
+            Box::new(vec![Ty::Var("A".to_owned()), Ty::Var("A".to_owned())]),
+        );
         let concrete_ty = Ty::Data("Pair<Binary{8}, Binary{8}>".to_owned());
         unify_arg("test", &generics, &abstract_ty, &concrete_ty, &mut subst).unwrap();
         assert_eq!(subst.get("A"), Some(&Ty::Binary(8)));
@@ -4366,8 +4568,12 @@ mod tests {
                 ctors: vec![],
             },
         );
+        // M-673: abstract side is Ty::App (structural).
         let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
-        let abstract_ty = Ty::Data("Pair<A, A>".to_owned());
+        let abstract_ty = Ty::App(
+            "Pair".to_owned(),
+            Box::new(vec![Ty::Var("A".to_owned()), Ty::Var("A".to_owned())]),
+        );
         let concrete_ty = Ty::Data("Pair<Binary{8}, Ternary{3}>".to_owned());
         let err = unify_arg("test", &generics, &abstract_ty, &concrete_ty, &mut subst).expect_err(
             "repeated param with inconsistent concrete types must be an explicit CheckError",
@@ -4389,10 +4595,9 @@ mod tests {
     /// Guarantee: **Declared** (M-657D2 review fix).
     #[test]
     fn unify_arg_permuted_type_param_position_is_correct_via_split() {
-        // Direct unit test: unify Pair<B, A> vs Pair<Ternary{4}, Binary{8}>.
-        // After fix, B must be Ternary{4} (pos 0) and A must be Binary{8} (pos 1).
-        // This mirrors what happens when a function returns `Pair<B,A>` and the call-site
-        // infers the type by looking at abstract_arg_strs from n1 = "Pair<B, A>".
+        // M-673: structural unify_arg test — abstract side is Ty::App, not mangled Ty::Data.
+        // Unify Pair<B, A> (as App) vs Pair<Ternary{4}, Binary{8}> (as mangled Data).
+        // After unification, B must be Ternary{4} (pos 0) and A must be Binary{8} (pos 1).
         let mut generics: BTreeMap<String, GenericShell> = BTreeMap::new();
         generics.insert(
             "Pair".to_owned(),
@@ -4401,7 +4606,7 @@ mod tests {
                 ctors: vec![],
             },
         );
-        // Also test the 3-way case: triple<A,B,C> vs Triple<C, A, B> — all permuted.
+        // Also test the 3-way case: Triple<C, A, B> — all permuted.
         generics.insert(
             "Triple".to_owned(),
             GenericShell {
@@ -4409,10 +4614,17 @@ mod tests {
                 ctors: vec![],
             },
         );
-        // 3-arg permuted: abstract Triple<C, A, B> vs concrete Triple<Binary{8}, Ternary{4}, Ternary{6}>
+        // 3-arg permuted: abstract Triple<C, A, B> (App) vs concrete Triple<Binary{8}, Ternary{4}, Ternary{6}> (Data).
         // Expected: C→Binary{8}, A→Ternary{4}, B→Ternary{6}
         let mut subst3: BTreeMap<String, Ty> = BTreeMap::new();
-        let abstract3 = Ty::Data("Triple<C, A, B>".to_owned());
+        let abstract3 = Ty::App(
+            "Triple".to_owned(),
+            Box::new(vec![
+                Ty::Var("C".to_owned()),
+                Ty::Var("A".to_owned()),
+                Ty::Var("B".to_owned()),
+            ]),
+        );
         let concrete3 = Ty::Data("Triple<Binary{8}, Ternary{4}, Ternary{6}>".to_owned());
         unify_arg("test3", &generics, &abstract3, &concrete3, &mut subst3).unwrap();
         assert_eq!(
@@ -4432,52 +4644,61 @@ mod tests {
         );
     }
 
-    // ---- M-657D2 FIX 2: phantom type param via mangled Ty::Data return type ----
+    // ---- M-673 S6: ty_mentions_tyvar with structural Ty::App (replaces mangled-Data tests) ----
 
-    /// **Property: `ty_mentions_tyvar` detects tyvar embedded in mangled Data strings.**
+    /// **Property: `ty_mentions_tyvar` detects tyvars in structural `Ty::App` and `Ty::Var`.**
     ///
-    /// `contains_var` returns false for `Ty::Data("List<A>")` (conservative). The new
-    /// `ty_mentions_tyvar` must return true for `Ty::Data("List<A>")` when `tyvars = ["A"]`,
-    /// and false for `Ty::Data("List<Binary{8}>")` (no bare tyvar present).
+    /// After M-673 S3, abstract generic types are `Ty::App(name, args)` (not mangled `Ty::Data`).
+    /// `ty_mentions_tyvar` must detect vars in `Ty::Var` and recursively in `Ty::App` args.
+    /// `Ty::Data` is always concrete (no embedded vars), so it always returns false.
     ///
-    /// Guarantee: **Declared** (M-657D2 review fix, G2/VR-5).
+    /// Guarantee: **Declared** (M-657D2 review fix, M-673 S6 update, G2/VR-5).
     #[test]
-    fn ty_mentions_tyvar_detects_var_in_mangled_data() {
+    fn ty_mentions_tyvar_detects_var_in_app_and_var() {
         let tyvars = vec!["A".to_owned(), "B".to_owned()];
         // Ty::Var("A") → always detected.
         assert!(
             ty_mentions_tyvar(&Ty::Var("A".to_owned()), &tyvars),
             "Ty::Var(A) must be detected by ty_mentions_tyvar"
         );
-        // Ty::Data("List<A>") → A appears as bare identifier inside the mangled form.
+        // Ty::App("List", [Var("A")]) → structural form; A in args.
+        let list_a = Ty::App("List".to_owned(), Box::new(vec![Ty::Var("A".to_owned())]));
         assert!(
-            ty_mentions_tyvar(&Ty::Data("List<A>".to_owned()), &tyvars),
-            "Ty::Data(\"List<A>\") must mention tyvar A via mangled form"
+            ty_mentions_tyvar(&list_a, &tyvars),
+            "Ty::App(List, [Var(A)]) must mention tyvar A"
         );
-        // Ty::Data("List<Binary{8}>") → concrete, no tyvars.
+        // Ty::App("List", [Data("List<Binary{8}>")]) → concrete arg, no tyvar.
+        let list_conc = Ty::App(
+            "List".to_owned(),
+            Box::new(vec![Ty::Data("List<Binary{8}>".to_owned())]),
+        );
         assert!(
-            !ty_mentions_tyvar(&Ty::Data("List<Binary{8}>".to_owned()), &tyvars),
-            "Ty::Data(\"List<Binary{{8}}>\") must NOT mention any tyvar"
+            !ty_mentions_tyvar(&list_conc, &tyvars),
+            "Ty::App(List, [Data(concrete)]) must NOT mention any tyvar"
         );
-        // Ty::Data("Pair<A, B>") → both A and B detected.
+        // Nested: Ty::App("Pair", [App("List", [Var("A")]), Binary(8)]) → A nested inside.
+        let pair_nested = Ty::App(
+            "Pair".to_owned(),
+            Box::new(vec![list_a.clone(), Ty::Binary(8)]),
+        );
         assert!(
-            ty_mentions_tyvar(&Ty::Data("Pair<A, B>".to_owned()), &tyvars),
-            "Ty::Data(\"Pair<A, B>\") must mention tyvar A or B"
+            ty_mentions_tyvar(&pair_nested, &tyvars),
+            "Ty::App(Pair, [App(List, [Var(A)]), Binary(8)]) must detect nested A"
         );
-        // Nested: Ty::Data("Pair<List<A>, Binary{8}>") → A is nested inside List<A>.
-        assert!(
-            ty_mentions_tyvar(&Ty::Data("Pair<List<A>, Binary{8}>".to_owned()), &tyvars),
-            "Ty::Data(\"Pair<List<A>, Binary{{8}}>\") must detect nested A"
-        );
-        // Ty::Data("Foo") → no '<', fast path returns false.
+        // Ty::Data("Foo") → always false (concrete).
         assert!(
             !ty_mentions_tyvar(&Ty::Data("Foo".to_owned()), &tyvars),
-            "Ty::Data(\"Foo\") (no angle bracket) must not mention tyvars"
+            "Ty::Data(\"Foo\") must not mention tyvars — Data is always concrete after M-673 S3"
         );
         // contains_var still returns false for Data (conservative behaviour preserved).
         assert!(
-            !contains_var(&Ty::Data("List<A>".to_owned())),
-            "contains_var must still return false for Ty::Data — its conservative behaviour is unchanged"
+            !contains_var(&Ty::Data("List<Binary{8}>".to_owned())),
+            "contains_var must still return false for Ty::Data — conservative behaviour unchanged"
+        );
+        // contains_var returns true for App with Var args.
+        assert!(
+            contains_var(&list_a),
+            "contains_var must return true for Ty::App with Var args"
         );
     }
 
@@ -4513,10 +4734,21 @@ mod tests {
         // Confirm ty_mentions_tyvar also detects bare Var.
         let tyvars = vec!["A".to_owned()];
         assert!(ty_mentions_tyvar(&Ty::Var("A".to_owned()), &tyvars));
-        // Confirm ty_mentions_tyvar detects mangled Data (the new case).
-        assert!(ty_mentions_tyvar(&Ty::Data("List<A>".to_owned()), &tyvars));
-        // Confirm contains_var does NOT detect mangled Data (the pre-fix gap).
-        assert!(!contains_var(&Ty::Data("List<A>".to_owned())));
+        // M-673 S6: confirm ty_mentions_tyvar detects Ty::App with Var args (the new abstract form).
+        let app_list_a = Ty::App("List".to_owned(), Box::new(vec![Ty::Var("A".to_owned())]));
+        assert!(
+            ty_mentions_tyvar(&app_list_a, &tyvars),
+            "ty_mentions_tyvar must detect Var inside Ty::App args"
+        );
+        // Confirm contains_var also detects Ty::App with Var (conservative, but App is structural).
+        assert!(
+            contains_var(&app_list_a),
+            "contains_var must return true for Ty::App with Var args"
+        );
+        // Confirm Ty::Data (always concrete) is not flagged by either.
+        let data_concrete = Ty::Data("List<Binary{8}>".to_owned());
+        assert!(!contains_var(&data_concrete));
+        assert!(!ty_mentions_tyvar(&data_concrete, &tyvars));
     }
 
     // ---- M-657C: opt-in instance cap (MYCELIUM_MONO_INSTANCE_CAP) ----
