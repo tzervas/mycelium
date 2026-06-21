@@ -185,6 +185,19 @@ Once Stage-1 generics/traits land, the `std.ternary`, `std.math` (pure fragments
 ## Changelog
 
 - **2026-06-21 — Resolved (M-650 editorial sweep).** Phase-5 completion summary (§5.1), remaining gate items (§5.2), and Phase-6 roadmap (§5.3) appended. All Track-A/B/C items confirmed done or explicitly deferred with honest gate-status. DN-11 Status → Resolved. Grounded in M-390/391/501–534/540/541/646/647/648; open questions marked per VR-5. Append-only.
+- **2026-06-21 — Phase-6 gap-closure wave cross-reference (append-only).** A Sonnet research
+  agent produced a grounded gap inventory covering the delta between the ratified lexicon/spec and
+  the current `mycelium-l1` implementation. Two new epics
+  were minted and added to `tools/github/issues.yaml`: **E7-1** (L1 Stage-1 Language Completeness:
+  generics, traits, effect annotations, wild/FFI, static guarantee grading, phylum + cross-nodule;
+  Phase 5) and **E7-2** (RFC-0008 Runtime Vocabulary: lexer reservation → L1 construct activation,
+  R1 then R2; Phase 7). E7-1 children: M-656…M-664 (9 issues). E7-2 children: M-665…M-668 (4
+  issues). The tracks are: E7-1 gates DN-14 self-hosting (all 6 gate-fails + 1 missing-partial
+  row); E7-2 gates concurrency dogfooding (RFC-0008 §4.6 R1/R2 vocabulary). Both are independent
+  of each other (E7-2 can start immediately with M-665 lexer-only change). These IDs supersede the
+  informally-noted "Stage-1 generics/traits RFC amendments" and "Effect annotation scope decision"
+  placeholder descriptions that M-650 referenced. Append-only.
+
 - **2026-06-18 — Draft / Resolved-as-capture.** Initial capture of the post-#194 wave as three
   dependency-ordered tracks (A: DN-10 L1 completion; B: RFC-0018…0021 ratification gated on
   RP-1…RP-4; C: Phase-5 stdlib gated on M-501/M-502). Mints M-390 (R7-Q4) and M-391 (R7-Q3).
