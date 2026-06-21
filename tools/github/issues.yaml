@@ -1990,12 +1990,14 @@ issues:
   - id: M-653
     title: "M-653 — Gate A2: Medium-findings ledger (close or explicitly defer each)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:research, area:project, priority:P1, status:todo]
+    labels: [phase:8, type:research, area:project, priority:P1, status:done]
     depends_on: []
-    doc_refs: [corpus:ADR-021, corpus:DN-19, src:docs/reviews/2026-06-14-deep-review]
+    doc_refs: [corpus:ADR-021, corpus:DN-19, src:docs/reviews/2026-06-14-deep-review, src:docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md]
     body: |
       ADR-021 Gate A2 / DN-19 GAP-2. Enumerate every open **Medium** finding from the 2026-06-14 deep review (`docs/reviews/2026-06-14-deep-review/`); for each, either CLOSE it (fix + a regression test that fails without the fix, citing the finding id) or EXPLICITLY DEFER it (a one-line rationale — never a silent drop, G2/VR-5). Swarm candidate: fans out by finding/crate (each leaf owns its fix + test).
       Acceptance: a committed Medium-findings ledger with every Medium marked resolved or deferred-with-rationale; all fixes ship regression tests; `just check` green. Closes ADR-021 Gate A2.
+
+      DONE (2026-06-21): A2 ledger committed at `docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md`. All 25 WS2–WS6 Medium finding-ids are Fixed, 0 deferred — each with a mutant-witness regression test (reverting the fix fails the test). The re-audit found the large majority were already remediated in prior waves (the 2026-06-15 roadmap never recorded them resolved, so A2 read open); M-653 verified each fix AND its guarding test, then closed the two genuine gaps: A6-03 (a wire-spelling pin test) and the reject-corpus orphan-entry integrity test — the only net code delta. Affected crate suites + the kc2 pytest green; `clippy -D warnings -A unsafe_code` (ADR-014) clean. Closes ADR-021 Gate A2. (PR branch: claude/m-653-medium-findings)
 
   - id: M-654
     title: "M-654 — Gate A3: WS8 durability (cargo-mutants + proptest + cargo-fuzz)"
