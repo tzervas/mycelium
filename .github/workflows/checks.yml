@@ -78,6 +78,11 @@ jobs:
       - name: Run checks (advisory unless strict=true)
         id: run
         continue-on-error: ${{ !inputs.strict }}
+        env:
+          # Supply-chain gate is non-skip in the gate environment: a missing cargo-deny/cargo-audit
+          # FAILS, not skips (G2 — a skip-pass is not a closed gate). The "Install check tools" step
+          # above provisions them; this var makes deny.sh strict even if CI= were ever unset.
+          MYCELIUM_REQUIRE_SUPPLY_CHAIN: "1"
         run: just ci
 
       - name: Python coverage + Codecov upload (advisory — M-092)
