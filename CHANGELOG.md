@@ -22,6 +22,18 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   llama.cpp path: install `llama_cpp` + set `MYC_ARM3_MODEL`). 17 offline checks →
   self-test T16. Never fabricated (VR-5). Harness self-test now **19/19**.
   Built by a Sonnet swarm (Opus-orchestrated) on `claude/orch-0000-llm-ablation-arms-35`.
+### Added (2026-06-21: ADR-021 — 1.0.0 release-readiness gate, Proposed)
+- **ADR-021 drafted (Proposed) — the explicit 1.0.0 kernel/core release gate.** CHANGELOG has
+  long said versioning begins "when the kernel stabilizes" but no gate defined "stabilizes"
+  (deep-review remediation roadmap §1). ADR-021 formalizes it: **Gate A** (honesty-integrity +
+  durability — zero open High findings ✅, mutants/fuzz, `just check` incl. `cargo deny`, KC-4
+  budget) and **Gate B** (decision/external — RFC-0003 reconciliation; **KC-2 verdict now MET**
+  via DN-09 §10's determinate retention ratio). Surface language scoped to a tracked `1.x`;
+  Phase-3+ maturation (native codegen, JIT, projections, self-hosting) explicitly out of scope.
+  Grounded in remediation roadmap §5, ADR-018, Foundation §6. **Proposed only — it defines the
+  criteria for maintainer ratification; it asserts no release** (house rule 3). Registered in
+  `docs/adr/README.md` + `docs/Doc-Index.md`. M-381 annotated NON-BLOCKING (headline retention
+  ratio recorded; arms 3/5 are research follow-ups that do not gate Phase-3 closure or 1.0.0).
 
 ### Added (2026-06-20: M-381 — rigorous arm-4 bridge; retention ratio now DETERMINATE)
 - **`LlmCanonical→L1` bridge landed (`tools/llm-harness/grok/llm_canonical_to_l1.py`),
