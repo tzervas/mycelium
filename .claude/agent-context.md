@@ -59,42 +59,59 @@ Validate: `python3 tools/github/doc_refs_check.py`
 
 ---
 
-## Current state (2026-06-20)
+## Current state (2026-06-21)
+
+### The 1.0.0 gate (ADR-021 — Accepted; see `docs/notes/DN-19-Road-to-1.0.0.md`)
+
+1.0.0 = the **kernel/core** once ADR-021's gate rows close. Status:
+- **Closed:** A1 (zero open High) · A5 (KC-4 cert-overhead budget ratified ≤5 µs + ≤2× guardrail) ·
+  B1 (RFC-0003/0006/0007 Accepted) · B2 (KC-2 verdict recorded — determinate retention ratio).
+- **Open (the remaining gap = the next wave):** **A2** (M-653, Medium-findings ledger) · **A3**
+  (M-654, WS8 durability — mutants/proptest/fuzz) · **A4** (M-652, `cargo deny`/`audit` in `just check`).
+- Then **M-655**: cut 1.0.0 (ADR-021 `Accepted → Enacted` at the tagged release).
+- **Out of scope for 1.0.0 (post-1.0/1.x):** surface language, self-hosting (M-502/M-649), native
+  codegen, JIT, projections, RP-8 perf, arms 3/5 (ADR-021 §5).
 
 ### Corpus status
 
 | Layer | Status |
 |-------|--------|
-| RFC-0001…0010 | Accepted (ratified; implementations vary — see §Enacted below) |
-| RFC-0011…0015 | **Enacted** (implemented in `crates/mycelium-lsp/`) |
-| RFC-0016…0021 | Accepted (ratified; enactment staged by M-5xx/M-6xx) |
-| ADR-010…020 | Accepted (ADR-020 **Enacted** — M-521 runtime phylum v0) |
-| DN-01…03, 06…09, 13, 16 | **Resolved** |
-| DN-04, 05, 10, 11, 12, 14, 15, 17, 18 | **Draft** (decisions/captures pending) |
+| RFC-0001…0010 | Accepted |
+| RFC-0011…0015 | **Enacted** (`crates/mycelium-lsp/`) |
+| RFC-0016…0021 | Accepted (**ADR-021** = the 1.0.0 gate, **Accepted 2026-06-21**) |
+| ADR-010…021 | Accepted (ADR-020 **Enacted**; ADR-021 Accepted) |
+| stdlib specs | **25/25 Accepted** (DN-07 23 + runtime + sys on 2026-06-21); only `self-hosting-readiness` Draft |
+| DNs | DN-01…03,06…10,12,13,16 + **DN-19** Resolved/captured; DN-04,05,14,15,17,18 Draft |
 
 ### Implementation state
 
-- **Rust-first stdlib**: M-501…M-534 done — 19 stdlib crates + 4 Tier-A completions
-- **Native codegen**: M-601…M-630 done — MLIR→LLVM, BitNet, deployable Spore
-- **Runtime phylum**: M-521 Enacted — `crates/mycelium-runtime` v0 R1
-- **Toolchain**: M-361…M-385 done — mycfmt, myc-check, myc-lint, myc-sec
-- **L1 parser + grammar**: working (`myc-check` exit-2 on invalid, exit-0 on valid)
-- **Self-hosting** (≥1 stdlib module in Mycelium-lang): **not yet done** (Phase 5 gate)
-- **M-381 research** (retention-ratio ablation): in-progress, non-blocking — arm2 100%
-  [Empirical], arm4 INDETERMINATE (scorer limitation, not model failure)
+- **Rust-first stdlib**: 25 `mycelium-std-*` crates, all with guarantee matrices, **all specs ratified**
+  (DN-16 2026-06-21 re-audit: 24/25 clean + `sys` spec written → 25/25; no honesty-tag violations).
+- **Native codegen**: M-601…M-630 — MLIR→LLVM, BitNet, deployable Spore (libMLIR-gated).
+- **Runtime phylum**: ADR-020 Enacted — `crates/mycelium-std-runtime` v0 R1.
+- **Toolchain**: `myc-check`/`mycfmt`/`myc-lint`/`myc-sec`/`myc-doc`/`spore`/`bench`/`lsp`. `just docs-site`
+  builds a local browsable docsite (corpus + api-index + rustdoc → `target/docsite/`).
+- **KC-2 / M-381**: **RESOLVED** — verdict = proceed; the **rigorous arm-4 LlmCanonical→L1 bridge**
+  (DN-09 §9.4 option b) made the **retention ratio DETERMINATE** (grok-build-0.1 5.50×, grok-4.3 2.20×;
+  both ≥70% → §4.7 trigger does not fire; DN-09 §10). arm-3/arm-5 modules landed; live runs **backlogged**.
 
 ### Open items (issues.yaml)
 
 | ID | Title | Status |
 |----|-------|--------|
-| M-381 | LLM-leverage ablation (T3.6) — arm4 needs LlmCanonical scorer | in-progress |
-| M-646 | Close M-381 arm4: standalone LlmCanonical scorer for determinate retention ratio | needs-design |
-| M-647 | RFC-0020 L2 surface language: scoped ratification (§4.2/§4.5 carve-out) | needs-design |
-| M-648 | Editorial sweep: RFC enactment flips + Draft DN → Resolved for landed decisions | needs-design |
-| M-649 | Self-hosting Stage-2: first stdlib module in Mycelium-lang L1 syntax | needs-design |
-| M-650 | DN-11 Next Wave Plan: Phase 5 summary + Phase 6 road map | needs-design |
-| M-651 | Harness→bench schema bridge: Grok report ingestion in mycelium-bench | needs-design |
-| Draft DNs | DN-04/05/10/11/12/14/15/17/18 — decisions pending; M-648/M-650 close most of these | draft |
+| **M-652** | A4 — `cargo deny`/`audit` into `just check` | open (1.0.0 gate) |
+| **M-653** | A2 — Medium-findings ledger (close/defer each) | open (1.0.0 gate) |
+| **M-654** | A3 — WS8 durability (cargo-mutants + proptest + fuzz) | open (1.0.0 gate) |
+| **M-655** | Cut 1.0.0 — ADR-021 → Enacted at the tagged release | open (after A2/A3/A4) |
+| M-647 | RFC-0020 L2 surface: scoped ratification (§4.2/§4.5 carve-out) | open |
+| M-648 | Editorial sweep: landed RFCs → Enacted; Draft DN → Resolved | open |
+| M-651 | Harness→bench schema bridge (Grok report ingestion) | open |
+| M-649 | Self-hosting Stage-2 — **post-1.0** (M-502 gate) | open |
+| M-381 | LLM-leverage ablation — headline DONE; arms 3/5 backlogged (non-blocking) | in-progress |
+
+> **Component memory files:** see `.claude/memory/` — compact per-component orientation
+> (value model, swaps/certificates, VSA, numerics/dense, selection/EXPLAIN, language/execution,
+> toolchain, stdlib, honesty model, experiments/LLM). Load the relevant one before deep work.
 
 ---
 
