@@ -133,12 +133,14 @@ The **Language reference** (`lang-ref/index.html`) is generated deterministicall
 in a single pass — no separate tool required. It is emitted only when the corpus builds (it links
 into `corpus/pages/`). The page covers:
 
-- **Surface grammar** — links to the grammar README, RFC-0006, RFC-0007, RFC-0020, and the
-  normative EBNF productions (inlined verbatim).
-- **Reserved-word lexicon** — three tables: active keywords, reserved-not-active words, and
-  ratified-not-yet-lexed names; sourced from `.claude/memory/lang-lexicon-syntax.md` and
-  `crates/mycelium-l1/src/token.rs` (ground truth; the tables are an orientation aid,
-  Empirical/Declared — re-verify against `token.rs` after any lexer change).
+- **Surface grammar** — links to the grammar README, RFC-0006, RFC-0007, RFC-0020, and a
+  **curated excerpt** of key EBNF productions (a hand-maintained snapshot, not auto-extracted;
+  `docs/spec/grammar/mycelium.ebnf` is the normative source).
+- **Reserved-word lexicon** — three tables (active keywords, reserved-not-active words, and
+  ratified-not-yet-lexed names) as a **hand-curated orientation snapshot**, not auto-extracted from
+  the lexer. The normative ground truth is `crates/mycelium-l1/src/token.rs` +
+  `docs/spec/grammar/mycelium.ebnf` (`.claude/memory/lang-lexicon-syntax.md` is a non-normative
+  maintenance note). Re-verify against `token.rs` after any lexer change (Empirical/Declared — G2/VR-5).
 - **Standard-library module specs** — per-module links for all 25 modules (Ring 0/1/2), with
   ring, task, and grounding crux; traces to RFC-0016 §4.5 guarantee matrices.
 - **Language-layer design documents** — links to RFC-0001, RFC-0012, RFC-0017, RFC-0019,
