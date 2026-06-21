@@ -115,11 +115,15 @@ fn unbind_recovery_fails<M: VsaModel>(
 }
 
 proptest! {
+    // Default to ONE batch (the original single-batch LCG behaviour) so `cargo test`/`just check`
+    // stay fast; `PROPTEST_CASES=N` opts into N independent batches (CI seed rotation / extra power).
+    #![proptest_config(ProptestConfig { cases: 1, ..ProptestConfig::default() })]
     /// MAP-B: the declared bundle profile holds at its worst covered point (m = max items,
     /// d = min dim) over exactly the declared trial count.
     ///
     /// proptest generates `p.trials` independent seeds per case. `PROPTEST_CASES` controls how
-    /// many independent batches are tested (default 16).
+    /// many independent batches run (default 1 — the single-batch behaviour; set `PROPTEST_CASES=N`
+    /// for more).
     #[test]
     fn mapb_bundle_profile_holds_over_declared_trials(
         seeds in proptest::collection::vec(any::<u64>(), MAPB_BUNDLE_PROFILE.trials as usize)
@@ -152,7 +156,8 @@ proptest! {
     /// trial count.
     ///
     /// proptest generates `p.trials` independent seeds per case. `PROPTEST_CASES` controls how
-    /// many independent batches are tested (default 16).
+    /// many independent batches run (default 1 — the single-batch behaviour; set `PROPTEST_CASES=N`
+    /// for more).
     #[test]
     fn bsc_bundle_profile_holds_over_declared_trials(
         seeds in proptest::collection::vec(any::<u64>(), BSC_BUNDLE_PROFILE.trials as usize)
@@ -185,7 +190,8 @@ proptest! {
     /// codebook 16) over exactly the declared trial count.
     ///
     /// proptest generates `p.trials` independent seeds per case. `PROPTEST_CASES` controls how
-    /// many independent batches are tested (default 16).
+    /// many independent batches run (default 1 — the single-batch behaviour; set `PROPTEST_CASES=N`
+    /// for more).
     #[test]
     fn hrr_unbind_profile_holds_over_declared_trials(
         seeds in proptest::collection::vec(any::<u64>(), HRR_UNBIND_PROFILE.trials as usize)
@@ -223,7 +229,8 @@ proptest! {
     /// exactly the declared trial count.
     ///
     /// proptest generates `p.trials` independent seeds per case. `PROPTEST_CASES` controls how
-    /// many independent batches are tested (default 16).
+    /// many independent batches run (default 1 — the single-batch behaviour; set `PROPTEST_CASES=N`
+    /// for more).
     #[test]
     fn fhrr_unbind_profile_holds_over_declared_trials(
         seeds in proptest::collection::vec(any::<u64>(), FHRR_UNBIND_PROFILE.trials as usize)

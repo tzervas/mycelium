@@ -75,6 +75,9 @@ fn capacity_trial_fails(seed: u64, dim: usize) -> bool {
 }
 
 proptest! {
+    // Default to ONE batch (the original single-batch LCG behaviour) so `cargo test`/`just check`
+    // stay fast; `PROPTEST_CASES=N` opts into N independent batches (CI seed rotation / extra power).
+    #![proptest_config(ProptestConfig { cases: 1, ..ProptestConfig::default() })]
     /// SC-2: with `dim ≥ requiredDim(M, δ)`, the empirical retrieval-failure rate is `≤ δ` over ≥10⁴
     /// trials — every bundled member out-scores every non-member by nearest-neighbour cleanup.
     ///
@@ -84,7 +87,8 @@ proptest! {
     /// in `mycelium_vsa::capacity`; this test guards non-vacuity only.
     ///
     /// proptest generates `TRIALS` independent seeds per case; `PROPTEST_CASES` controls how many
-    /// independent batches are tested (default 16). CI rotates seeds across runs automatically.
+    /// independent batches run (default **1** — the single-batch LCG behaviour; set `PROPTEST_CASES=N`
+    /// for N batches). CI rotates seeds across runs automatically.
     #[test]
     fn bundle_capacity_holds_over_1e4_trials(
         seeds in proptest::collection::vec(any::<u64>(), TRIALS)

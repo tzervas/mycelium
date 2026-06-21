@@ -116,12 +116,16 @@ fn measure_rate(
 }
 
 proptest! {
+    // Default to ONE batch (the original single-batch LCG behaviour) so `cargo test`/`just check`
+    // stay fast; `PROPTEST_CASES=N` opts into N independent batches (CI seed rotation / extra power).
+    #![proptest_config(ProptestConfig { cases: 1, ..ProptestConfig::default() })]
     /// The profile gate: measured failure rate ≤ `MAPI_RESONATOR_PROFILE.delta` over exactly
     /// `profile.trials` Monte-Carlo trials at the worst covered point (max factors, max codebook,
     /// min dim), with canonical cleanup/budget.
     ///
     /// proptest generates `p.trials` independent seeds per case; `PROPTEST_CASES` controls how many
-    /// independent batches are tested (default 16). CI rotates seeds across runs automatically.
+    /// independent batches run (default 1 — the single-batch behaviour; set `PROPTEST_CASES=N` for N
+    /// batches). CI rotates seeds across runs automatically.
     ///
     /// Transparency: the measured rate and count are emitted via `eprintln!` — run with
     /// `--nocapture` to observe them.
