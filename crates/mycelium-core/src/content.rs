@@ -664,4 +664,212 @@ mod tests {
         assert_eq!(swap_def("renamed_binder").content_hash(), h);
         assert_eq!(names.len(), 1);
     }
+
+    // Mutant-witnesses for Canon::f64 (content.rs:131:9 → `()`): if f64 is a no-op,
+    // all Dense Scalar values with different float payloads hash identically.
+    #[test]
+    fn f64_is_included_in_scalar_payload_hash() {
+        use crate::repr::ScalarKind;
+        use crate::value::Payload;
+        let v1 = Value::new(
+            Repr::Dense {
+                dim: 1,
+                dtype: ScalarKind::F32,
+            },
+            Payload::Scalars(vec![1.0]),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap();
+        let v2 = Value::new(
+            Repr::Dense {
+                dim: 1,
+                dtype: ScalarKind::F32,
+            },
+            Payload::Scalars(vec![2.0]),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap();
+        // Different float payloads must yield different hashes.
+        // If Canon::f64 is a no-op, both would hash identically.
+        assert_ne!(
+            v1.content_hash(),
+            v2.content_hash(),
+            "Dense values with different float payloads must have different content hashes"
+        );
+    }
+
+    // Mutant-witness for Canon::ctor_ref (content.rs:148:9 → `()`): if ctor_ref is a no-op,
+    // two Construct nodes using different constructors would hash identically.
+    #[test]
+    fn ctor_ref_is_included_in_construct_node_hash() {
+        use crate::data::{CtorSpec, DataRegistry, DeclSpec};
+        use std::collections::BTreeMap;
+        let mut m = BTreeMap::new();
+        m.insert(
+            "Bool".to_owned(),
+            DeclSpec {
+                ctors: vec![
+                    CtorSpec { fields: vec![] }, // False
+                    CtorSpec { fields: vec![] }, // True
+                ],
+            },
+        );
+        let reg = DataRegistry::build(&m).unwrap();
+        let false_ref = reg.ctor_ref("Bool", 0).unwrap();
+        let true_ref = reg.ctor_ref("Bool", 1).unwrap();
+        let false_node = Node::Construct {
+            ctor: false_ref,
+            args: vec![],
+        };
+        let true_node = Node::Construct {
+            ctor: true_ref,
+            args: vec![],
+        };
+        // Different constructors (same decl, different index) must yield different hashes.
+        // If Canon::ctor_ref is a no-op, both hash to the same value.
+        assert_ne!(
+            false_node.content_hash(),
+            true_node.content_hash(),
+            "Construct nodes with different ctors must have different content hashes"
+        );
+    }
+
+    // Mutant-witness for Canon::prim_paradigm (content.rs:175:9 → `()`): if prim_paradigm
+    // is a no-op, prims with different paradigms hash identically.
+    #[test]
+    fn prim_paradigm_is_included_in_prim_decl_hash() {
+        use crate::guarantee::GuaranteeStrength;
+        use crate::prim::{PrimDecl, PrimParadigm, PrimSig, WidthRel};
+        let bin_sig = PrimSig {
+            operands: vec![PrimParadigm::Binary],
+            result: PrimParadigm::Binary,
+            width: WidthRel::Uniform,
+        };
+        let tern_sig = PrimSig {
+            operands: vec![PrimParadigm::Ternary],
+            result: PrimParadigm::Ternary,
+            width: WidthRel::Uniform,
+        };
+        let bin_decl = PrimDecl {
+            sig: bin_sig,
+            intrinsic: GuaranteeStrength::Exact,
+        };
+        let tern_decl = PrimDecl {
+            sig: tern_sig,
+            intrinsic: GuaranteeStrength::Exact,
+        };
+        // Different paradigms must yield different hashes.
+        // If Canon::prim_paradigm is a no-op, both hash identically.
+        assert_ne!(
+            bin_decl.content_hash(),
+            tern_decl.content_hash(),
+            "PrimDecls with different paradigms must have different content hashes"
+        );
+    }
+
+    // Mutant-witnesses for de Bruijn arithmetic (content.rs:287:50, 287:54 → `+` or `/`):
+    // The subtraction `scope.len() - 1 - pos` computes the de Bruijn index.
+    // - For a single binder, pos=0 and scope.len()=1, so 1-1-0=0 always (mutations also give 0).
+    // - For a deeper binder (pos>0), the mutation produces a wrong index:
+    //   scope.len()=2, pos=1: correct=2-1-1=0; mutant `+pos`=2-1+1=2 (wrong).
+    // Test: let x = let y = Var("x") in y in x — outer let binds "x" at pos=1 in inner scope.
+    #[test]
+    fn de_bruijn_correctly_resolves_outer_binder_in_nested_scope() {
+        // Build: let x = const in let y = const in Var("x")
+        // When hashing Var("x"), scope = ["x", "y"], pos = 0 (x's index in scope), len = 2.
+        // de Bruijn for x = 2 - 1 - 0 = 1 (x is 1 binder deep from the inner let).
+        // vs let x = const in let y = const in Var("y")
+        // de Bruijn for y = 2 - 1 - 1 = 0 (y is bound immediately).
+        // These should hash DIFFERENTLY; α-renaming both lets should NOT change which is which.
+        let node_ref_outer = Node::Let {
+            id: "x".into(),
+            bound: Box::new(Node::Const(byte(B))),
+            body: Box::new(Node::Let {
+                id: "y".into(),
+                bound: Box::new(Node::Const(byte(B))),
+                body: Box::new(Node::Var("x".into())), // references outer let
+            }),
+        };
+        let node_ref_inner = Node::Let {
+            id: "x".into(),
+            bound: Box::new(Node::Const(byte(B))),
+            body: Box::new(Node::Let {
+                id: "y".into(),
+                bound: Box::new(Node::Const(byte(B))),
+                body: Box::new(Node::Var("y".into())), // references inner let
+            }),
+        };
+        // Referencing outer binder vs inner binder must yield different hashes.
+        // If de Bruijn arithmetic is wrong (+ instead of -), pos=0 gives index 2 for x and
+        // pos=1 gives 2 for y too, potentially causing false collisions or wrong renaming.
+        assert_ne!(
+            node_ref_outer.content_hash(),
+            node_ref_inner.content_hash(),
+            "Nodes referencing outer vs inner binder must have different content hashes"
+        );
+
+        // α-equivalence: renaming the binders doesn't change which variable is referenced.
+        let node_ref_outer_renamed = Node::Let {
+            id: "a".into(),
+            bound: Box::new(Node::Const(byte(B))),
+            body: Box::new(Node::Let {
+                id: "b".into(),
+                bound: Box::new(Node::Const(byte(B))),
+                body: Box::new(Node::Var("a".into())), // still references outer
+            }),
+        };
+        assert_eq!(
+            node_ref_outer.content_hash(),
+            node_ref_outer_renamed.content_hash(),
+            "α-equivalent nodes (same outer binding reference) must hash identically"
+        );
+    }
+
+    // Mutant-witnesses for Names::len (content.rs:481:9 → 1) and
+    // Names::is_empty (content.rs:487:9 → true):
+    // - Names::len → 1: a fresh Names.len() would return 1 (wrong — it's 0).
+    // - Names::is_empty → true: a Names with 2 entries would report empty (wrong).
+    #[test]
+    fn names_len_and_is_empty_reflect_actual_count() {
+        let mut names = Names::new();
+        // Empty table: len=0, is_empty=true.
+        assert_eq!(
+            names.len(),
+            0,
+            "empty Names must have len=0 (not 1 constant)"
+        );
+        assert!(names.is_empty(), "empty Names must be is_empty=true");
+
+        // Use two Const nodes with different payloads — guaranteed distinct hashes.
+        use crate::value::Payload;
+        let v1 = Value::new(
+            Repr::Binary { width: 8 },
+            Payload::Bits(vec![false; 8]),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap();
+        let v2 = Value::new(
+            Repr::Binary { width: 8 },
+            Payload::Bits(vec![true; 8]),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap();
+        let h1 = Node::Const(v1).content_hash();
+        let h2 = Node::Const(v2).content_hash();
+        assert_ne!(
+            h1, h2,
+            "must be distinct hashes for the test to be meaningful"
+        );
+
+        names.bind(h1, "name1");
+        assert_eq!(names.len(), 1, "after 1 bind: len=1");
+        assert!(!names.is_empty(), "after 1 bind: not empty");
+
+        names.bind(h2, "name2");
+        assert_eq!(names.len(), 2, "after 2 binds: len=2 (not 1 constant)");
+        assert!(
+            !names.is_empty(),
+            "after 2 binds: is_empty=false (not true constant)"
+        );
+    }
 }

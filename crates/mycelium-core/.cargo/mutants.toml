@@ -1,0 +1,58 @@
+# cargo-mutants configuration for mycelium-core
+# Justified equivalent-mutant exclusions (VR-5: honestly documented, not silently skipped).
+
+# ternary.rs:56:15 — `(pow - 1) / 2` → `(pow / 1) / 2 = pow / 2`
+# Equivalent: 3^m is always odd, and for any odd N, (N-1)/2 == N/2 in integer
+# division (floor). So the mutant produces identical output for every m ≥ 0.
+# Reference: ternary.rs §1 spec: "max_magnitude(m) = (3^m − 1) / 2".
+
+# ternary.rs:158:45 — `factor < 0` → `factor <= 0`
+# Equivalent: the guard `if factor == 0 { continue; }` at line 154 ensures that
+# `factor` is in {-1, 1} at this point. `<0` and `<=0` agree on both values.
+# Reference: from_digit() domain invariant (C1-05), factor = digit(bk) ∈ {-1,0,1}.
+
+# node.rs — `&&` → `||` in is_aot_lowerable()
+# Equivalent: is_aot_lowerable() is documented as "total over the v0 node set"
+# (RFC-0011 §4.4 Q5, M-342): all arms return true. Both sides of every `&&`
+# are always true, so `||` produces the same result.
+
+# content.rs:287 — the de Bruijn index `(scope.len() - 1 - pos)` for a bound Var.
+# THREE of the four arithmetic mutants here are equivalent; the fourth (`- with /` at
+# col 54) is NOT and is killed by the de Bruijn tests in content.rs. The content hash's
+# *only* observable contract (RFC-0001 §4.6, ADR-003, M-103) is the equivalence relation it
+# induces: α-equivalent terms hash equal; non-α-equivalent terms hash distinctly. It is NOT a
+# contract on the specific digest bytes (those are an arbitrary BLAKE3 image). Writing the de
+# Bruijn index `d` as `idx(L) = a(L) ± d` therefore yields an *observably identical* hash
+# function iff, at every fixed scope depth L, `idx(L, ·)` is a bijection of `d` — a bijection
+# preserves both α-equivalence (the index sequence is name-blind, so it is reproduced identically
+# under any deterministic reindex) and same-depth distinctness (the only way the hash can tell two
+# Vars apart), while merely permuting the digest representative. Each of the three excluded mutants
+# is exactly such a per-depth bijection of `d = len-1-pos`:
+#   • 287:50 `- → +`  ⇒ `(len+1) - pos = d + 2`           (uniform +2 shift; bijection)
+#   • 287:50 `- → /`  ⇒ `(len/1) - pos = len - pos = d+1` (len/1 ≡ len; uniform +1; bijection)
+#   • 287:54 `- → +`  ⇒ `(len-1) + pos = 2*(len-1) - d`   (per-depth affine reflection; bijection)
+# Empirically confirmed (M-654): the full mycelium-core suite — including an exhaustive probe that
+# hashes every distinct binder-reference pair across nesting depths 2..6 and asserts distinct refs
+# hash distinctly — stays green under all three. The excluded fourth mutant `287:54 - → /`
+# (`(len-1)/pos`, a non-injective integer division that also divides-by-zero for the outermost
+# reference pos=0) is NOT equivalent and is caught.
+
+exclude_re = [
+    # ternary.rs: (pow - 1) / 2 → pow / 2; equivalent for all odd pow = 3^m
+    "ternary\\.rs:56:15: replace - with / in max_magnitude",
+    # ternary.rs: factor < 0 → factor <= 0; equivalent since factor ∈ {-1,1} here
+    "ternary\\.rs:158:45: replace < with <= in mul",
+    # node.rs: && → || in is_aot_lowerable; equivalent since all arms return true
+    "node\\.rs:[0-9]+:[0-9]+: replace && with \\|\\| in Node::is_aot_lowerable",
+    # node.rs: is_aot_lowerable → true; equivalent since all arms always return true
+    "node\\.rs:[0-9]+:[0-9]+: replace Node::is_aot_lowerable -> bool with true",
+    # binary.rs: (unsigned << 1) | b → (unsigned << 1) ^ b; equivalent because
+    # (x << 1) always has LSB = 0, and for b ∈ {0,1}: 0|b = 0^b = b.
+    "binary\\.rs:[0-9]+:[0-9]+: replace \\| with \\^ in bits_to_int",
+    # content.rs: de Bruijn index `(len - 1 - pos)` — three per-depth bijections of the index that
+    # preserve the hash's α-equivalence/distinctness contract (only the digest value changes).
+    # The non-equivalent fourth mutant (`287:54 - with /`) is deliberately NOT excluded (it is caught).
+    "content\\.rs:287:50: replace - with \\+ in Canon::node",
+    "content\\.rs:287:50: replace - with / in Canon::node",
+    "content\\.rs:287:54: replace - with \\+ in Canon::node",
+]

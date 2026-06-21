@@ -186,6 +186,60 @@ mod tests {
         .well_formed());
     }
 
+    // Mutant-witnesses (bound.rs:128:58, 130:62): `&&` → `||` in Bound::well_formed.
+    // - bound.rs:128: `tail.is_none_or(|t| t.is_finite() && t >= 0.0)` → with `||`, infinite
+    //   positive tail would pass (is_finite()=false but t >= 0.0=true).
+    // - bound.rs:130: `items >= 1 && dim >= 1` → with `||`, items=0 or dim=0 alone passes.
+    #[test]
+    fn well_formed_rejects_zero_capacity_and_infinite_tail() {
+        let proven = proven();
+
+        // Capacity bound with items=0 must be rejected (items must be >= 1).
+        // Kills: `items >= 1 && dim >= 1` → `items >= 1 || dim >= 1` (items=0, dim=1 → || passes)
+        assert!(!Bound {
+            kind: BoundKind::Capacity { items: 0, dim: 1 },
+            basis: proven.clone(),
+        }
+        .well_formed());
+
+        // Capacity bound with dim=0 must be rejected.
+        // Kills: `&&` → `||` (items=1, dim=0 → || passes with items=1)
+        assert!(!Bound {
+            kind: BoundKind::Capacity { items: 1, dim: 0 },
+            basis: proven.clone(),
+        }
+        .well_formed());
+
+        // Capacity bound with both >= 1 is valid.
+        assert!(Bound {
+            kind: BoundKind::Capacity { items: 2, dim: 4 },
+            basis: proven.clone(),
+        }
+        .well_formed());
+
+        // Crosstalk bound with infinite positive tail must be rejected.
+        // Kills: `t.is_finite() && t >= 0.0` → `t.is_finite() || t >= 0.0`
+        // (t=+inf: is_finite()=false, t >= 0.0=true → || passes, && correctly rejects).
+        assert!(!Bound {
+            kind: BoundKind::Crosstalk {
+                expected: 0.5,
+                tail: Some(f64::INFINITY), // infinite tail — not a finite bound
+            },
+            basis: proven.clone(),
+        }
+        .well_formed());
+
+        // Crosstalk bound with finite positive tail is valid.
+        assert!(Bound {
+            kind: BoundKind::Crosstalk {
+                expected: 0.5,
+                tail: Some(0.1),
+            },
+            basis: proven,
+        }
+        .well_formed());
+    }
+
     #[test]
     fn well_formed_rejects_evidence_free_basis() {
         // A6-02/B2-03: an Empirical tag backed by zero trials (or an empty method/citation) is not

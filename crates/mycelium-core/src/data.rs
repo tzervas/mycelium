@@ -647,4 +647,74 @@ mod tests {
             vec![FieldTy::Data(byte_decl.clone()), FieldTy::Data(byte_decl)]
         );
     }
+
+    // Mutant-witnesses for data.rs:65:9 (CtorRef::fmt → Ok(Default::default())) and
+    // data.rs:134:9 (RegistryError::fmt → Ok(Default::default())):
+    // A Display returning an empty string is undetectable if never formatted and asserted.
+    #[test]
+    fn ctor_ref_display_is_hash_prefixed_and_non_empty() {
+        let nat = DataRegistry::build(&nat_spec()).expect("builds");
+        let z = nat.ctor_ref("Nat", 0).expect("Z constructor");
+        let s_ref = format!("{z}");
+        // CtorRef formats as "#<declhash>#<index>" — must start with '#' and be non-empty.
+        assert!(!s_ref.is_empty(), "CtorRef Display must not be empty");
+        assert!(
+            s_ref.starts_with('#'),
+            "CtorRef Display must start with '#': got {s_ref:?}"
+        );
+        // Index 0 appears in the ref; index 1 gives a different display.
+        let s = nat.ctor_ref("Nat", 1).expect("S constructor");
+        let s_str = format!("{s}");
+        assert_ne!(s_ref, s_str, "Z and S CtorRef must display differently");
+    }
+
+    #[test]
+    fn registry_error_display_is_non_empty() {
+        let err = RegistryError::UnknownTypeRef {
+            in_decl: "Tree".to_owned(),
+            missing: "Forest".to_owned(),
+        };
+        let msg = format!("{err}");
+        assert!(!msg.is_empty(), "RegistryError Display must not be empty");
+        assert!(
+            msg.contains("Tree"),
+            "must mention the declaring type: {msg:?}"
+        );
+        assert!(
+            msg.contains("Forest"),
+            "must mention the missing type: {msg:?}"
+        );
+    }
+
+    // Mutant-witness for data.rs:252:29 (`<` → `<=` in DataRegistry::ctor_ref):
+    // `if (index as usize) < decl.ctors.len()` — with `<=`, an out-of-range index
+    // (= len) would be returned as Some, creating an invalid CtorRef.
+    #[test]
+    fn ctor_ref_out_of_range_index_returns_none() {
+        let nat = DataRegistry::build(&nat_spec()).expect("builds");
+        // Nat has exactly 2 constructors (index 0 and 1).
+        assert!(nat.ctor_ref("Nat", 0).is_some(), "index 0 must exist");
+        assert!(nat.ctor_ref("Nat", 1).is_some(), "index 1 must exist");
+        // index 2 is out of range; must return None (not Some with an invalid index).
+        assert_eq!(
+            nat.ctor_ref("Nat", 2),
+            None,
+            "index 2 (== ctor count) must return None"
+        );
+    }
+
+    // Mutant-witness for data.rs:262:9 (`DataRegistry::decl` → always None):
+    // If decl() always returns None, looking up a registered declaration fails.
+    #[test]
+    fn decl_returns_some_for_registered_hash() {
+        let nat = DataRegistry::build(&nat_spec()).expect("builds");
+        let hash = nat.decl_hash("Nat").expect("Nat is registered");
+        let decl = nat.decl(hash);
+        assert!(
+            decl.is_some(),
+            "decl() must return Some for a registered hash"
+        );
+        // Must have exactly 2 constructors (Z and S).
+        assert_eq!(decl.unwrap().ctors.len(), 2, "Nat must have 2 constructors");
+    }
 }
