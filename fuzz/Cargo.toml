@@ -1,0 +1,52 @@
+# cargo-fuzz manifest — standalone non-workspace crate (cargo-fuzz default; ADR-007 MSRV note:
+# fuzz targets require nightly, so this crate is intentionally NOT in the workspace and uses
+# a separate `[package.metadata.cargo-fuzz]` feature flag). Run via:
+#   cargo +nightly fuzz run <target> -- -max_total_time=60
+# Do NOT add this crate to the workspace members list — it is excluded by design.
+[package]
+name = "mycelium-fuzz"
+version = "0.0.0"
+authors = ["Mycelium contributors"]
+publish = false
+edition = "2021"
+
+# Declare a standalone workspace so Cargo does not try to merge this crate into
+# the parent workspace (the root Cargo.toml does not list fuzz/ as a member and
+# we do NOT touch the root manifest — FLAG: root Cargo.toml is NOT modified).
+# cargo-fuzz requires this pattern for non-workspace fuzz crates.
+[workspace]
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+serde_json = "1"
+
+# The three crates under test — path-relative from this fuzz/ directory.
+mycelium-l1      = { path = "../crates/mycelium-l1" }
+mycelium-check   = { path = "../crates/mycelium-check" }
+mycelium-core    = { path = "../crates/mycelium-core" }
+
+# Suppress the workspace-level lint gate: fuzz targets run on nightly and the
+# workspace clippy config is not applied here.
+[lints.rust]
+unsafe_code = "warn"
+
+[[bin]]
+name = "fuzz_l1_parse"
+path = "fuzz_targets/fuzz_l1_parse.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_m210_checker"
+path = "fuzz_targets/fuzz_m210_checker.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_core_value_deser"
+path = "fuzz_targets/fuzz_core_value_deser.rs"
+test = false
+doc = false

@@ -1,0 +1,63 @@
+# cargo-fuzz smoke CI — ADR-021 Gate A3 (M-654), WS8 durability.
+#
+# POLICY (see CLAUDE.md): manual-dispatch only (no push / pull_request auto-triggers) to match
+# the repo's "no automatic remote CI" policy. This workflow is ADVISORY — it does not gate
+# merges. It confirms the three fuzz targets build and run without crashing for a bounded time
+# under AddressSanitizer. A crash here is a real bug (G2/VR-5); the artifact is uploaded so the
+# crashing input can be reproduced locally.
+#
+# B1-01 note: `uses:` pins use mutable major tags (not 40-char SHAs) because SHA pinning was not
+# possible in an offline environment. Dependabot (.github/dependabot.yml) is configured to surface
+# action updates and should be used to resolve to SHAs.
+name: fuzz smoke (manual, advisory)
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_total_time:
+        description: "Max fuzz time per target in seconds (default: 60)"
+        type: number
+        default: 60
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz-smoke:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - fuzz_l1_parse
+          - fuzz_m210_checker
+          - fuzz_core_value_deser
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+
+      - name: Build fuzz target
+        working-directory: fuzz
+        run: cargo +nightly fuzz build ${{ matrix.target }}
+
+      - name: Run fuzz smoke (${{ matrix.target }})
+        working-directory: fuzz
+        run: |
+          cargo +nightly fuzz run ${{ matrix.target }} -- \
+            -max_total_time=${{ inputs.max_total_time || 60 }}
+        # A non-zero exit means the fuzzer found a crash — that is a real bug (G2).
+        # The artifact is uploaded below for local reproduction.
+
+      - name: Upload crash artifacts (if any)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crash-${{ matrix.target }}
+          path: fuzz/artifacts/${{ matrix.target }}/
+          if-no-files-found: ignore
