@@ -539,7 +539,6 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
         // invariant violation (App must not survive past the monomorphization boundary). Explicit
         // arm (not `_`) so the compiler enforces exhaustiveness on future Ty variants.
         Ty::App(_, _) => return None,
-
     })
 }
 

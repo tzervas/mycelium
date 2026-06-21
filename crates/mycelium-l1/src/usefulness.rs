@@ -41,6 +41,9 @@ pub(crate) enum Pat {
 /// The finite constructor signature of `ty`, or `None` if its value domain is open (`Binary`/
 /// `Ternary` — never a complete signature, so a literal column always needs a default).
 /// Handles abstract mangled types (e.g. `"List<A>"`) by falling back to `generics` (M-657).
+/// M-673: also handles `Ty::App(name, args)` — the structural abstract generic form that arises
+/// during generic function body typechecking. The generic shell's ctors provide the finite
+/// constructor set; field types remain abstract (`Ty::Var`, `Ty::App`) as in the body context.
 fn signature<'a>(
     ty: &Ty,
     types: &'a BTreeMap<String, DataInfo>,
@@ -50,20 +53,18 @@ fn signature<'a>(
         Ty::Data(n) => Some(lookup_data_info(types, generics, n)),
         // Binary/Ternary/Dense/Substrate/Var: open or non-data domains — no finite signature.
         Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Var(_) => None,
-        // App (M-673): an unmonomorphized generic application must never reach usefulness analysis.
+        // App (M-673): the structural abstract generic form (`List<A>`, etc.) used during generic
+        // function body typechecking. Look up the generic shell to get the finite constructor set.
+        // The field types in the shell's ctors are abstract (Ty::Var/Ty::App) — correct for the
+        // body context. Post-monomorphization, Ty::App is replaced by Ty::Data(mangle(...)) before
+        // reaching elaboration/evaluation (the invariant guarded in elab.rs/decision.rs).
         // Explicit arm (not `_`) so the compiler enforces exhaustiveness on future Ty variants.
-        Ty::App(name, _) => {
-            // Defense-in-depth: return None so the pattern-matrix column is treated as open
-            // (no finite signature). An App surviving to this point is an internal bug.
-            // Callers relying on the signature being Some for a well-typed column will
-            // propagate a coverage error rather than silently misanalysing coverage (G2/VR-5).
-            debug_assert!(
-                false,
-                "internal: Ty::App({name:?}, ..) reached usefulness::signature — \
-                 unmonomorphized generic (M-673 invariant: App must not reach coverage analysis)"
-            );
-            None
-        }
+        Ty::App(name, _) => generics.get(name.as_str()).map(|shell| {
+            std::borrow::Cow::Owned(DataInfo {
+                name: name.clone(),
+                ctors: shell.ctors.clone(),
+            })
+        }),
     }
 }
 

@@ -26,7 +26,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::checkty::{lookup_data_info, DataInfo, GenericShell, Ty};
+use crate::checkty::{lookup_data_info, CtorInfo, DataInfo, GenericShell, Ty};
 use crate::usefulness::{specialize_ctor, specialize_lit, Pat};
 
 /// An **occurrence**: the path of field indices from the scrutinee root to a sub-value (`[]` is the
@@ -171,34 +171,45 @@ fn compile_rows(
         }
         // Binary/Ternary/Dense/Substrate/Var: value domains are never enumerated — need a default.
         Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Var(_) => false,
-        // App (M-673): an unmonomorphized generic application must never reach decision compilation.
-        // Explicit arm (not `_`) so the compiler enforces exhaustiveness on future Ty variants.
+        // App (M-673): structural abstract generic form that appears during generic body
+        // typechecking (e.g. `List<A>` in `is_cons<A>(xs: List<A>)`). The generic shell
+        // provides the finite constructor set; field types remain abstract. Post-monomorphization,
+        // Ty::App is replaced by Ty::Data(mangle(...)) before reaching elaboration (guarded in
+        // elab.rs). Explicit arm (not `_`) so the compiler enforces exhaustiveness on future
+        // Ty variants.
         Ty::App(name, _) => {
-            debug_assert!(
-                false,
-                "internal: Ty::App({name:?}, ..) reached decision::compile_rows — \
-                 unmonomorphized generic (M-673 invariant: App must not reach decision compilation)"
-            );
-            false
+            if let Some(shell) = generics.get(name.as_str()) {
+                shell
+                    .ctors
+                    .iter()
+                    .all(|ci| ctor_heads.iter().any(|(m, _)| *m == ci.name))
+            } else {
+                false
+            }
         }
     };
 
-    if let Ty::Data(dn) = &ty0 {
-        // Use lookup_data_info to handle both concrete and abstract-mangled types.
-        if types.contains_key(dn.as_str()) || dn.contains('<') {
-            let d = lookup_data_info(types, generics, dn).into_owned();
-            for ci in &d.ctors {
-                if ctor_heads.iter().any(|(m, _)| *m == ci.name) {
-                    let a = ci.fields.len();
-                    let sub = compile_rows(
-                        types,
-                        generics,
-                        &specialize_ctor(&rows, &ci.name, a),
-                        &child_occ(&occ, &occ0, a),
-                        &child_tys(&tys, &ci.fields),
-                    );
-                    cases.push((Head::Ctor(ci.name.clone(), a), sub));
-                }
+    // Compile ctor cases: handle both Ty::Data (concrete/mangled) and Ty::App (abstract generic).
+    let data_ctors: Option<Vec<CtorInfo>> = match &ty0 {
+        Ty::Data(dn) if types.contains_key(dn.as_str()) || dn.contains('<') => {
+            Some(lookup_data_info(types, generics, dn).into_owned().ctors)
+        }
+        // M-673: Ty::App — use the generic shell's ctors (abstract field types).
+        Ty::App(name, _) => generics.get(name.as_str()).map(|shell| shell.ctors.clone()),
+        _ => None,
+    };
+    if let Some(ctors) = data_ctors {
+        for ci in &ctors {
+            if ctor_heads.iter().any(|(m, _)| *m == ci.name) {
+                let a = ci.fields.len();
+                let sub = compile_rows(
+                    types,
+                    generics,
+                    &specialize_ctor(&rows, &ci.name, a),
+                    &child_occ(&occ, &occ0, a),
+                    &child_tys(&tys, &ci.fields),
+                );
+                cases.push((Head::Ctor(ci.name.clone(), a), sub));
             }
         }
     }
