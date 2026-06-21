@@ -338,7 +338,7 @@ mod tests {
 
     /// Build a fresh producer→consumer scope over a `cap`-bounded channel carrying `items`. Returns
     /// the scope and the network (whose epoch the dataflow scheduler watches).
-    fn pipe(items: &[i64], capacity: usize) -> (Scope<Vec<i64>, String>, Network) {
+    fn pipe(items: &[i64], capacity: usize) -> (Scope<'static, Vec<i64>, String>, Network) {
         let net = Network::new();
         let (tx, rx) = net.channel::<i64>(cap(capacity));
         let mut scope = Scope::new();

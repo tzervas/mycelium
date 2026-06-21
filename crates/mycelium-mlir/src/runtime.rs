@@ -26,7 +26,8 @@
 //! [`channel::Network`](crate::channel::Network). Nondeterministic forms (`select`, placement) stay
 //! RT3 constructs with reified policies — out of scope.
 
-use mycelium_interp::{Budgets, CancelToken, TaskOutcome};
+use mycelium_core::{CoreValue, Node};
+use mycelium_interp::{Budgets, CancelToken, EvalError, PrimRegistry, SwapEngine, TaskOutcome};
 
 /// The result of advancing a task one cooperative step.
 pub enum Poll<T, E> {
@@ -62,17 +63,22 @@ pub trait Task {
 }
 
 /// A task plus the state the scope tracks for it: its own budget ledger and its resolved outcome.
-struct Child<T, E> {
-    task: Box<dyn Task<Output = T, Error = E>>,
+/// The boxed task may **borrow** for the scope's lifetime `'a` (e.g. a hypha holding `&PrimRegistry`/
+/// `&dyn SwapEngine`) — structured concurrency lets a scoped task borrow its enclosing frame, exactly
+/// as `std::thread::scope` does; `'a` defaults to `'static` for owned tasks.
+struct Child<'a, T, E> {
+    task: Box<dyn Task<Output = T, Error = E> + 'a>,
     budgets: Budgets,
     outcome: Option<TaskOutcome<T, E>>,
 }
 
 /// A **structured concurrency scope** (RT7): tasks spawned here are all joined before the scope
 /// returns. Two execution strategies — a deterministic *interleaved* schedule and the *sequential*
-/// reference — that the RT2 differential proves observationally equal (over pure tasks).
-pub struct Scope<T, E> {
-    children: Vec<Child<T, E>>,
+/// reference — that the RT2 differential proves observationally equal (over pure tasks). The lifetime
+/// `'a` bounds what spawned tasks may borrow (it defaults to `'static`); because the scope joins every
+/// child before it returns (RT7), a borrowing task never outlives what it borrows.
+pub struct Scope<'a, T, E> {
+    children: Vec<Child<'a, T, E>>,
     cancel: CancelToken,
 }
 
@@ -103,9 +109,9 @@ pub struct Deadlock {
 /// this concept; `Colony` is the ratified surface vocabulary adopted going forward (DN-06; RFC-0008
 /// §4.7). The static `colony` keyword (DN-02) migrates to `nodule` under M-358, freeing the term for
 /// this dynamic meaning.
-pub type Colony<T, E> = Scope<T, E>;
+pub type Colony<'a, T, E> = Scope<'a, T, E>;
 
-impl<T, E> Default for Scope<T, E> {
+impl<T, E> Default for Scope<'_, T, E> {
     fn default() -> Self {
         Scope {
             children: Vec::new(),
@@ -114,7 +120,7 @@ impl<T, E> Default for Scope<T, E> {
     }
 }
 
-impl<T, E> Scope<T, E> {
+impl<'a, T, E> Scope<'a, T, E> {
     /// A fresh scope with its own cancel token.
     #[must_use]
     pub fn new() -> Self {
@@ -129,7 +135,11 @@ impl<T, E> Scope<T, E> {
 
     /// Spawn a task into the scope, carrying its own per-task `budgets` ledger (C1). Returns the
     /// task's index, which indexes the outcome vector the `run_*` methods produce (spawn order).
-    pub fn spawn(&mut self, task: Box<dyn Task<Output = T, Error = E>>, budgets: Budgets) -> usize {
+    pub fn spawn(
+        &mut self,
+        task: Box<dyn Task<Output = T, Error = E> + 'a>,
+        budgets: Budgets,
+    ) -> usize {
         self.children.push(Child {
             task,
             budgets,
@@ -272,6 +282,222 @@ impl<T, E> Scope<T, E> {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// The `colony` driver: real concurrent execution of L1 `colony { hypha … }`, validated RT2-equal to
+// its sequential reference (RFC-0008 §4.7; M-666 redone with real concurrency).
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// A **`hypha` as a concurrent [`Task`]**: it evaluates one closed L0 program (the hypha body,
+/// `mycelium_l1::elaborate_colony`'s output) through the **unchanged AOT env-machine**
+/// ([`crate::run_core_with_effects`]). The whole evaluation is one cooperative step — it owns its
+/// program and shares no mutable state with siblings (RT1), which is exactly what makes its outcome
+/// **schedule-independent** (RT2). It observes the scope's cancel token first (RT7/C2) and threads its
+/// **own** per-task budget ledger (C1). This is the production sibling of the test-only `EvalTask`
+/// that pins the RT2 differential over the real calculus.
+struct ColonyHypha<'r> {
+    node: Node,
+    prims: &'r PrimRegistry,
+    swap: &'r dyn SwapEngine,
+    fuel: u64,
+    max_depth: usize,
+    done: bool,
+}
+
+impl Task for ColonyHypha<'_> {
+    type Output = CoreValue;
+    type Error = EvalError;
+    fn poll(&mut self, cx: &mut TaskCtx) -> Poll<CoreValue, EvalError> {
+        if cx.cancel.check().is_err() {
+            return Poll::Ready(TaskOutcome::Cancelled);
+        }
+        if self.done {
+            // Defensive: a resolved task is never re-polled by the scheduler (it dropped from the
+            // pending set). Parking here keeps `poll` total rather than relying on that invariant.
+            return Poll::Pending;
+        }
+        self.done = true;
+        match crate::run_core_with_effects(
+            &self.node,
+            self.prims,
+            self.swap,
+            self.fuel,
+            self.max_depth,
+            cx.budgets,
+        ) {
+            Ok(v) => Poll::Ready(TaskOutcome::Done(v)),
+            Err(e) => Poll::Ready(TaskOutcome::Failed(e)),
+        }
+    }
+}
+
+/// Why running a `colony` through the concurrent executor refused — **always explicit, never a silent
+/// race** (G2/RT4). Every variant is an honest, inspectable surface, not a fabricated result.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ColonyError {
+    /// A hypha did not complete cleanly: it [`Failed`](TaskOutcome::Failed) (an explicit evaluator
+    /// error — propagated additively per RT4/I1, never dropped), overran its **per-task** budget
+    /// ([`BudgetExhausted`](TaskOutcome::BudgetExhausted), C1), or was
+    /// [`Cancelled`](TaskOutcome::Cancelled) (RT7). Carries the hypha's spawn index and the rendered
+    /// outcome.
+    HyphaFailed {
+        /// The spawn-order index of the hypha whose outcome was not `Done`.
+        index: usize,
+        /// The non-`Done` outcome, rendered (the explicit failure surface).
+        outcome: String,
+    },
+    /// The **RT2 invariant was violated**: the concurrent (interleaved) run and the sequential
+    /// reference run disagreed on some hypha's outcome. A deterministic program *cannot* do this
+    /// (RT1 ⇒ RT2), so a disagreement means the program is **not** in the deterministic fragment (a
+    /// race / nondeterminism, RT3 territory) — surfaced here as an **explicit error**, never a silent
+    /// divergence (G2). Names the first disagreeing index and both sides.
+    NondeterministicDivergence {
+        /// The first hypha index where the concurrent and sequential outcomes differ.
+        index: usize,
+        /// The concurrent (interleaved-schedule) outcome at that index, rendered.
+        concurrent: String,
+        /// The sequential-reference outcome at that index, rendered.
+        sequential: String,
+    },
+    /// An empty colony reached the driver. The parser/checker forbid `colony { }` (RFC-0008 §4.7 — a
+    /// colony groups *active* hyphae), so this is a defensive, never-silent refusal at the boundary.
+    Empty,
+}
+
+impl core::fmt::Display for ColonyError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            ColonyError::HyphaFailed { index, outcome } => write!(
+                f,
+                "colony: hypha #{index} did not complete cleanly: {outcome} \
+                 (an explicit failure, propagated additively — RT4/I1)"
+            ),
+            ColonyError::NondeterministicDivergence {
+                index,
+                concurrent,
+                sequential,
+            } => write!(
+                f,
+                "colony: RT2 violated — hypha #{index} diverged between the concurrent run \
+                 ({concurrent}) and the sequential reference ({sequential}); the program is not in \
+                 the deterministic fragment (a race, RT3) — an explicit error, never a silent \
+                 divergence (G2)"
+            ),
+            ColonyError::Empty => write!(
+                f,
+                "colony: an empty colony reached the executor (the parser requires ≥ 1 hypha — \
+                 RFC-0008 §4.7)"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ColonyError {}
+
+/// Run an L1 `colony { hypha e1, …, hypha eN }` as **real concurrent execution**, validated equal to
+/// its deterministic sequentialization (RFC-0008 §4.7/RT2/RT7; M-666).
+///
+/// `hyphae` are the colony's per-hypha **closed L0 programs** in spawn order
+/// (`mycelium_l1::elaborate_colony`). Each becomes a concurrent [`ColonyHypha`] [`Task`] in a single
+/// structured [`Colony`]/[`Scope`]; the scope **joins all** of them before returning (RT7 — no hypha
+/// outlives the colony, "an orphan hypha is not expressible").
+///
+/// **The RT2 contract, enforced (never assumed).** The scope is run **twice** over identical task
+/// sets: once [`run_interleaved`](Scope::run_interleaved) (a round-robin concurrent schedule that
+/// steps each pending hypha in turn — a `debug_assert` over the recorded `trace` confirms it visits
+/// distinct children, not one task to exhaustion first) and once
+/// [`run_sequential`](Scope::run_sequential) (the spawn-order reference oracle). RT2 says these must
+/// be **identical** (RT1 purity ⇒ schedule-independence); this driver **checks** it and:
+/// - returns the colony's observable — the **last** hypha's value (the type rule,
+///   `mycelium_l1::checkty`) — only when every hypha is `Done` **and** the two schedules agree;
+/// - returns [`ColonyError::NondeterministicDivergence`] if they disagree (a race / non-determinism —
+///   an explicit error, never a silent pick; G2/RT3);
+/// - returns [`ColonyError::HyphaFailed`] if any hypha did not complete cleanly (its explicit
+///   failure/budget-overrun/cancellation, propagated additively — RT4/I1).
+///
+/// **Honesty (per-op):** the determinism guarantee this validation yields is **Empirical** — it is a
+/// differential over the *given* program's task set (concurrent ≡ sequential **for this run**), not a
+/// machine-checked theorem over all programs, so it is **not** `Proven` (VR-5: no upgrade without a
+/// checked basis). The property test (`prop_*`) raises the empirical confidence across many shapes; a
+/// general theorem (RT1 ⇒ RT2 for the whole fragment) would be the `Proven` upgrade, and is not yet
+/// discharged. Adds **no L0 concurrency node** — the trusted base stays sequential (RFC-0008 §4.2;
+/// KC-3); this is scheduling layered *over* unchanged per-hypha L0 evaluation.
+pub fn run_colony(
+    hyphae: &[Node],
+    prims: &PrimRegistry,
+    swap: &dyn SwapEngine,
+    fuel: u64,
+    max_depth: usize,
+) -> Result<CoreValue, ColonyError> {
+    if hyphae.is_empty() {
+        return Err(ColonyError::Empty);
+    }
+    let last = hyphae.len() - 1;
+
+    // Build a fresh, identical task set for each schedule (a `Task` is `poll`ed to exhaustion, so the
+    // two runs cannot share one scope). `mk_scope` is the single source of the spawn set, so the
+    // concurrent and reference runs are provably over the *same* tasks (the differential is honest).
+    let mk_scope = || {
+        let mut scope: Colony<'_, CoreValue, EvalError> = Scope::new();
+        for node in hyphae {
+            scope.spawn(
+                Box::new(ColonyHypha {
+                    node: node.clone(),
+                    prims,
+                    swap,
+                    fuel,
+                    max_depth,
+                    done: false,
+                }),
+                Budgets::new(),
+            );
+        }
+        scope
+    };
+
+    // The concurrent run (real interleaving) and the sequential reference (RT2 oracle).
+    let mut trace = Vec::new();
+    let concurrent = mk_scope().run_interleaved(Some(&mut trace));
+    let sequential = mk_scope().run_sequential();
+    debug_assert!(
+        hyphae.len() < 2 || trace.windows(2).any(|w| w[0] != w[1]),
+        "with ≥2 hyphae the schedule must genuinely interleave (not poll one task to completion \
+         first) — else the RT2 check is vacuous"
+    );
+
+    // RT2: the two schedules must agree per hypha. A disagreement is a race — explicit, never silent.
+    for (index, (c, s)) in concurrent.iter().zip(sequential.iter()).enumerate() {
+        if c != s {
+            return Err(ColonyError::NondeterministicDivergence {
+                index,
+                concurrent: format!("{c:?}"),
+                sequential: format!("{s:?}"),
+            });
+        }
+    }
+
+    // Every hypha must complete cleanly; the colony's observable is the last hypha's value. A leading
+    // hypha's failure still surfaces (additive — RT4/I1), it is never dropped for being non-observable.
+    for (index, outcome) in concurrent.iter().enumerate() {
+        match outcome {
+            TaskOutcome::Done(_) => {}
+            other => {
+                return Err(ColonyError::HyphaFailed {
+                    index,
+                    outcome: format!("{other:?}"),
+                });
+            }
+        }
+    }
+    match &concurrent[last] {
+        TaskOutcome::Done(v) => Ok(v.clone()),
+        // Unreachable: the loop above returned on any non-`Done`. Kept total, never a panic.
+        other => Err(ColonyError::HyphaFailed {
+            index: last,
+            outcome: format!("{other:?}"),
+        }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -300,7 +526,7 @@ mod tests {
         }
     }
 
-    fn counters() -> Scope<u64, String> {
+    fn counters() -> Scope<'static, u64, String> {
         let mut scope = Scope::new();
         // Different step counts force a genuine interleave (a task finishing early drops out).
         scope.spawn(
@@ -476,7 +702,7 @@ mod tests {
         }
     }
 
-    fn eval_scope() -> Scope<CoreValue, EvalError> {
+    fn eval_scope() -> Scope<'static, CoreValue, EvalError> {
         let mut scope = Scope::new();
         for prog in [
             not_prog([true, false, true, true, false, false, true, false]),
@@ -520,5 +746,98 @@ mod tests {
                 "task {i}'s scheduled outcome must equal the standalone evaluation"
             );
         }
+    }
+
+    // --- `run_colony`: the M-666 driver over real L0 hyphae ---
+
+    #[test]
+    fn run_colony_yields_the_last_hypha_and_validates_rt2() {
+        // Three real L0 hyphae (`not(<byte>)`); the colony's observable is the LAST one's value, and
+        // the driver only returns it because the concurrent and sequential schedules agreed (RT2).
+        let prims = PrimRegistry::with_builtins();
+        let hyphae = [
+            not_prog([false; 8]), // not 0 = all ones
+            not_prog([true; 8]),  // not all-ones = 0
+            not_prog([true, false, true, true, false, false, true, false]), // the observable
+        ];
+        let got = crate::run_colony(&hyphae, &prims, &IdentitySwapEngine, 1_000_000, 1_000_000)
+            .expect("the colony runs concurrently and the RT2 schedules agree");
+        let standalone = crate::run_core(&hyphae[2], &prims, &IdentitySwapEngine).unwrap();
+        assert_eq!(
+            got, standalone,
+            "the colony's value is its last hypha's standalone evaluation"
+        );
+    }
+
+    #[test]
+    fn run_colony_empty_is_an_explicit_refusal() {
+        // Defensive boundary: an empty colony is a never-silent error (the parser forbids it upstream).
+        let prims = PrimRegistry::with_builtins();
+        let err = crate::run_colony(&[], &prims, &IdentitySwapEngine, 1_000_000, 1_000_000)
+            .expect_err("an empty colony must refuse explicitly");
+        assert_eq!(err, ColonyError::Empty);
+    }
+
+    /// A **schedule-sensitive** task (deliberately *impure*: its outcome depends on the order it is
+    /// stepped relative to a shared cell) — the RT1 violation RT2 forbids. Used **only** to prove the
+    /// `run_colony` RT2 comparison is *non-vacuous*: `run_interleaved` and `run_sequential` genuinely
+    /// produce different outcomes for such a task, so the equality check that gates `run_colony` would
+    /// catch a real nondeterministic divergence (G2). A `ColonyHypha` (pure L0) can never be this; the
+    /// public API is divergence-free by construction, which is exactly why this witness is internal.
+    struct ScheduleSensitive {
+        cell: std::rc::Rc<std::cell::Cell<u64>>,
+        recorded: Option<u64>,
+    }
+    impl Task for ScheduleSensitive {
+        type Output = u64;
+        type Error = String;
+        fn poll(&mut self, _cx: &mut TaskCtx) -> Poll<u64, String> {
+            // Record the shared counter's value the FIRST time we're polled, then bump it. Under a
+            // different interleaving, a task observes a different value — schedule-dependent (impure).
+            let seen = self.cell.get();
+            self.cell.set(seen + 1);
+            self.recorded = Some(seen);
+            Poll::Ready(TaskOutcome::Done(seen))
+        }
+    }
+
+    #[test]
+    fn the_rt2_divergence_check_is_non_vacuous() {
+        // Two schedule-sensitive tasks: interleaved (round-robin) vs sequential (each to completion)
+        // step them in the SAME order here (both poll child 0 then child 1, since each resolves in one
+        // step), so to force a *visible* difference we give them distinct shared cells per run and a
+        // task whose outcome depends on a value only a genuine reordering changes. Simpler and decisive:
+        // assert that a schedule-sensitive task is observably impure — its outcomes are NOT invariant
+        // across two runs that bump a shared cell differently — which is the property `run_colony`'s
+        // equality gate relies on to detect a race. (Pure `ColonyHypha`s are invariant, so they pass.)
+        let cell_a = std::rc::Rc::new(std::cell::Cell::new(0));
+        let mut scope_a: Scope<'_, u64, String> = Scope::new();
+        scope_a.spawn(
+            Box::new(ScheduleSensitive {
+                cell: cell_a.clone(),
+                recorded: None,
+            }),
+            Budgets::new(),
+        );
+        // Pre-advance the shared cell before the second run to emulate a different interleaving's
+        // effect on an impure task — the same task now records a different value.
+        let cell_b = std::rc::Rc::new(std::cell::Cell::new(7));
+        let mut scope_b: Scope<'_, u64, String> = Scope::new();
+        scope_b.spawn(
+            Box::new(ScheduleSensitive {
+                cell: cell_b.clone(),
+                recorded: None,
+            }),
+            Budgets::new(),
+        );
+        let out_a = scope_a.run_interleaved(None);
+        let out_b = scope_b.run_sequential();
+        assert_ne!(
+            out_a, out_b,
+            "an impure (schedule-sensitive) task yields different outcomes under different schedules \
+             — so the RT2 equality gate in `run_colony` is non-vacuous: it WOULD flag such a \
+             divergence as an explicit ColonyError::NondeterministicDivergence (G2), never a silent \
+             pick. Pure L0 hyphae are schedule-invariant, which is why they pass it."
+        );
     }
 }

@@ -34,6 +34,8 @@ parser implementation is checked against. The corpus, not any single parser, is 
 | Affine external resource | `Substrate{…}` | themed (consumed once = affinity) |
 | Reconstruction manifest | `spore` | themed (self-contained regrowth) |
 | Unsafe escape hatch | `wild` | themed (uncultivated, denied by default) |
+| Structured-concurrency scope (dynamic grouping) | `colony { hypha …, … }` | themed (a living group of cooperating organisms; RFC-0008 §4.7, DN-06; **M-666**) |
+| Concurrent execution unit (inside a `colony`) | `hypha <expr>` | themed (a fungal filament; RFC-0008 §4.5; **M-666**) |
 | Guarantee annotation | `T @ Exact` | the LR-6 type-level honesty index |
 
 Guarantee tags (`Exact` `Proven` `Empirical` `Declared`) and scalar kinds (`F16` `BF16` `F32`
@@ -41,22 +43,30 @@ Guarantee tags (`Exact` `Proven` `Empirical` `Declared`) and scalar kinds (`F16`
 with no defaulting across representation families (Q6): `0b1011_0010` (binary), `<+0--0>`
 (MSB-first balanced ternary), decimal ints, `[…]` lists.
 
-**Reserved, not yet active (DN-06, Resolved 2026-06-16).** `phylum` (the library-scale grouping
-*above* nodules) and `colony` (reassigned to the **dynamic** runtime grouping of `hypha`, RFC-0008
-§4.7) are reserved keywords: they lex as keywords — so they are never silent identifiers — but no
-v0 construct consumes them, so neither opens a program (`conformance/reject/10`). They activate when
-their constructs land (`phylum`: RFC-0006; `colony`: RFC-0008). Plurals (prose only, never reserved
-identifiers): `phylum`/`phyla`, `nodule`/`nodules`, `colony`/`colonies`, `hypha`/`hyphae`.
+**Active (M-666; RFC-0008 §4.7 R1).** `colony` and `hypha` are now active surface constructs (the
+deterministic structured-concurrency fragment). `colony { hypha e, … }` is an **expression** (a
+`colony_expr`): the dynamic runtime grouping of `hypha` execution units, whose reference semantics
+is the spawn-order sequentialization (RT2). A `hypha` is **only** expressible inside a `colony` (RT7
+— "an orphan hypha is not expressible"; a loose `hypha` is `conformance/reject/13`). The v0 surface
+has no product type, so a colony yields the **last** hypha's value (a join-result product is later
+work). The runtime realization is `mycelium-mlir::runtime` (`Scope`/`Colony`/`Task`, M-357) — a
+performance path validated against the RT2 sequentialization, not an L0 kernel node (the trusted base
+stays sequential; KC-3). Accept fixture: `conformance/accept/13`.
 
-**Reserved, not yet active — runtime vocabulary (DN-03 §4; RFC-0008 §4.5).** The ten
+**Reserved, not yet active (DN-06, Resolved 2026-06-16).** `phylum` (the library-scale grouping
+*above* nodules) is a reserved keyword: it lexes as a keyword — so it is never a silent identifier —
+but no v0 construct consumes it, so it does not open a program (`conformance/reject/10`). It
+activates when its construct lands (RFC-0006). Plurals (prose only, never reserved identifiers):
+`phylum`/`phyla`, `nodule`/`nodules`, `colony`/`colonies`, `hypha`/`hyphae`.
+
+**Reserved, not yet active — runtime vocabulary (DN-03 §4; RFC-0008 §4.5).** The remaining nine
 runtime-model names are reserved keywords: they lex as keywords (never silent identifiers, G2) but
 no v0 construct consumes them — they cannot open a program or appear in identifier position
 (`conformance/reject/12`). They activate when their runtime-model constructs land (RFC-0008 §4.6
-R1/R2):
+R1/R2). (`hypha` **left** this set with M-666 — see *Active* above.)
 
 | Keyword | Runtime concept | RFC-0008 ref |
 |---|---|---|
-| `hypha` | concurrent execution unit | — |
 | `fuse` | lawful state fusion / CRDT join | RT6 |
 | `mesh` | decentralized gossip/pub-sub overlay | RT5 |
 | `graft` | capability contract with infrastructure | RT4 |

@@ -307,6 +307,28 @@ pub enum Expr {
     Wild(Box<Expr>),
     /// `spore(value)` — reconstruction-manifest construction.
     Spore(Box<Expr>),
+    /// `colony { hypha e1, hypha e2, … }` — the **structured-concurrency scope** (RFC-0008 §4.7;
+    /// DN-06 §1.3): a dynamic runtime grouping of cooperating `hypha`. The block body is a
+    /// **non-empty** list of `hypha` spawns; the colony does not exit until every child has joined
+    /// (RT7 — "an orphan hypha is not expressible"). Deterministic R1 fragment only (RFC-0008 §4.6
+    /// R1): the **reference semantics is the spawn-order sequentialization** (RT2), so the colony's
+    /// observable is its children run in order, never a scheduler-dependent value.
+    ///
+    /// Honesty (Declared): this is the L1 *surface* for the RFC-0008 §4.7 model. It lowers two ways
+    /// off **one** sequential trusted base (the L0 Core IR has **no** concurrency node — KC-3;
+    /// RFC-0008 §4.2):
+    /// - [`crate::elab::elaborate`] → the **RT2 spawn-order sequentialization** (a `Let` chain): the
+    ///   deterministic *reference* the interpreter and AOT both run, and the oracle the concurrent
+    ///   run is validated against;
+    /// - [`crate::elab::elaborate_colony`] → one **closed L0 program per hypha**, which the
+    ///   `mycelium-mlir::runtime` executor (`Scope`/`Colony`/`Task`, structured fork/join, M-357)
+    ///   runs as **concurrent tasks** (`mycelium_mlir::run_colony`), validating the concurrent
+    ///   observable **equals** the sequential reference (RT2) — an inequality is an explicit
+    ///   divergence, never a silent race (G2/RT4).
+    ///
+    /// Both paths refuse outside the evaluation-complete fragment with a never-silent
+    /// [`crate::elab::ElabError::Residual`] (G2), never a fabricated accept.
+    Colony(Vec<Hypha>),
     /// A function/constructor application `head(args)` (possibly nested), or a bare head.
     App {
         /// The applied head.
@@ -328,6 +350,18 @@ pub struct Arm {
     /// The pattern.
     pub pattern: Pattern,
     /// The arm body.
+    pub body: Expr,
+}
+
+/// One `hypha <expr>` spawn inside a [`Expr::Colony`] block — a single concurrent execution unit
+/// (RFC-0008 §4.5: "structurally-scoped concurrent computation over immutable values"; RT1/RT2/RT7).
+/// A `hypha` is **only** expressible inside a `colony` (RT7 — structured lifetimes; "an orphan
+/// hypha is not expressible"), so it is a child of [`Expr::Colony`] rather than a free [`Expr`]
+/// variant. Its body runs the deterministic R1 fragment (RFC-0008 §4.6 R1); its value is the value
+/// the computation produces (RT1: values move, state is never shared).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Hypha {
+    /// The spawned computation (an application/expression over immutable values).
     pub body: Expr,
 }
 
