@@ -65,6 +65,11 @@ Four layers, each with its own grammar and spec artifact; **only L0 is trusted**
   syntax, structured projections of L1/L2 (Unison-style, consistent with ADR-003 identity), or an
   embedded DSL in a host language (RR-3's fallback). The M-020 fragment is an L3 *experiment
   fixture*, not a commitment.
+  > **r5 note (2026-06-18, append-only):** KC-2 has since been resolved (DN-09 verdict: proceed).
+  > The selected L3 strategy is **text syntax + projections, co-equally**: the v0 grammar
+  > (`docs/spec/grammar/mycelium.ebnf`) is the committed L3 surface (refined append-only), and the
+  > structured-projection layer (M-380, FR-S5) is opened as a co-equal deliverable. The embedded-DSL
+  > fallback (RR-3) is retained unspent. See §8 Q1 and §10 for the full disposition.
 
 ## 4. Reference-level design (normative once Accepted)
 
@@ -152,6 +157,12 @@ construction rather than by a borrow checker the substrate doesn't need.
    strategy: text syntax | projections | embedded DSL.
 4. **L2/L3 RFCs** (typeclasses, modules, the chosen surface), each with grammar artifacts +
    conformance corpus per §4.3.
+
+> **r5 note (2026-06-18, append-only):** Steps 1 and 3 are now complete. Step 1 was ratified
+> at r4 (2026-06-15, §10). Step 3 is complete: KC-2 verdict = proceed (DN-09, 2026-06-18);
+> L3 strategy = text syntax + projections co-equally. Steps 2 and 4 are in progress: RFC-0001
+> r3/r4 landed (M-320/RFC-0011); RFC-0007 (L1 calculus), RFC-0018 (stage-1 grading), RFC-0019
+> (traits), RFC-0020 (L2 surface), RFC-0021 (projections) all Accepted as of 2026-06-18.
 
 ## 5. Drawbacks
 
@@ -276,7 +287,15 @@ that nothing else blocks on:
   quantification → RFC-0007 §4.5. Ratifying RFC-0006 ratifies these positions as the committed
   direction.
 
-**Stays gated / deferred (explicit, honest — must NOT be read as ratified).**
+**Stays gated / deferred — the r4 (2026-06-15) snapshot; SUPERSEDED by the r5 status line + changelog below.**
+
+> **r5 note (2026-06-18, append-only):** This subsection is the r4 picture, retained unedited for
+> the record (append-only). As of r5, **Q1 is discharged** (DN-09, KC-2 verdict = proceed; L3 =
+> text syntax + co-equal projections) and **Q3 is discharged** (RFC-0018), so the "Concrete L3
+> syntax — KC-2-gated (Q1/Q6)" and "Stage-1 grading (Q3)" bullets below read as *r4-historical*, not
+> current. What genuinely remains open is the **Q8 `unsafe`-class L3 *spelling*** (keyword/theming
+> only — the LR-9 *mechanism* is committed), tracked separately and never KC-2-gated. The r5 status
+> line below is in force.
 
 - **Concrete L3 surface syntax — KC-2-gated (Q1; the one deliberate deferral).** Blocked on M-002
   (#3), LLM-API-external. The Q1 experiment is *designed* (T3.6) but unrun; its verdict picks text /
@@ -291,9 +310,15 @@ that nothing else blocks on:
   Perceus-as-default + cycle handling + region inference are implementation/mechanism choices
   refined later (T3.5), not blocking this ratification.
 
-**Status line (now in force):** *Accepted — layering, invariants (S1–S6), capability targets
-(LR-1…LR-9), grammar discipline, and the §8 Q2/Q4/Q5/Q7 positions; concrete L3 syntax (Q1/Q6) stays
-KC-2-gated and stage-1 grading (Q3) stays open for the grading RFC.*
+**Status line (r4, 2026-06-15 — superseded by r5 below):** *Accepted — layering, invariants (S1–S6),
+capability targets (LR-1…LR-9), grammar discipline, and the §8 Q2/Q4/Q5/Q7 positions; concrete L3
+syntax (Q1/Q6) stays KC-2-gated and stage-1 grading (Q3) stays open for the grading RFC.*
+
+**Status line (r5, 2026-06-18 — now in force):** *Accepted — all of the above, plus: Q1 discharged
+(DN-09, KC-2 verdict = proceed; L3 = text syntax + projections co-equally); Q3 discharged (RFC-0018,
+stage-1 grading mechanism = graded coeffect + Design A implicit-flows); Q6 (literal spelling)
+committable. Residual non-KC-2-gated: Q8 `unsafe`-class L3 spelling (mechanism committed via LR-9;
+keyword/theming tracked separately, not a RFC-0006 gate).*
 
 ## Meta — changelog
 

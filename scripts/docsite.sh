@@ -66,11 +66,9 @@ API_INDEX_OUT="$OUT/api-index"
 mkdir -p "$API_INDEX_OUT"
 
 # Try to regenerate from source; fall back to the committed snapshot.
-REGENERATED=0
 if have python3 && [[ -f "$REPO_ROOT/tools/docgen/code_index.py" ]]; then
   if python3 "$REPO_ROOT/tools/docgen/code_index.py" 2>&1; then
     ok "api-index regenerated"
-    REGENERATED=1
   else
     skip "docs-index regeneration failed — using committed snapshot"
   fi
