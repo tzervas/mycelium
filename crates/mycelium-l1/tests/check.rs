@@ -299,10 +299,47 @@ fn wild_is_denied_by_default() {
 }
 
 #[test]
-fn generics_are_an_explicit_deferral_not_a_guess() {
+fn generic_adt_declaration_registers_shell() {
+    // A generic type declaration registers a GenericShell; no instantiation yet.
     let src = "nodule d\ntype Box<T> = Wrap(T)";
+    let env = check(src).expect("generic ADT declaration must check");
+    // Shell is stored in generics, not in types
+    assert!(
+        env.generics.contains_key("Box"),
+        "Box should be in generics, got: {:?}",
+        env.generics.keys().collect::<Vec<_>>()
+    );
+    assert!(
+        !env.types.contains_key("Box"),
+        "Box should NOT be in types until instantiated"
+    );
+}
+
+#[test]
+fn generic_adt_wrong_arity_is_an_explicit_error() {
+    // List<A> has 1 param; supplying 2 args at use-site is an explicit error.
+    let src = "nodule d\ntype List<A> = Nil | Cons(A, List<A>)\ntype Bad = X(List<Binary{8}, Binary{4}>)";
     let err = check(src).unwrap_err();
-    assert!(err.message.contains("deferred"), "got: {}", err.message);
+    assert!(
+        err.message.contains("arity") || err.message.contains("argument"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn recursive_generic_adt_instantiates_correctly() {
+    // List<Binary{8}> is the classic self-referential generic.
+    // The shell-first algorithm must handle this without infinite recursion.
+    let src =
+        "nodule d\ntype List<A> = Nil | Cons(A, List<A>)\ntype ByteList = Wrap(List<Binary{8}>)";
+    let env = check(src).expect("recursive generic ADT must check");
+    // The monomorphic instantiation must be concrete in types
+    assert!(
+        env.types.contains_key("List<Binary{8}>"),
+        "List<Binary{{8}}> should be instantiated in types, got: {:?}",
+        env.types.keys().collect::<Vec<_>>()
+    );
 }
 
 // --- bounded iteration (RFC-0007 §4.8, r2) ---

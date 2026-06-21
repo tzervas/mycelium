@@ -217,25 +217,42 @@ fn prelude() -> DataInfo {
 /// stage-1 generic ADT shells and generic function bodies (M-657, **Declared**).
 /// Call sites that are not inside a generic shell pass `&[]` (the monomorphic default).
 ///
-/// Generic *instantiations* (`Named(name, args)` with non-empty `args`) are handled by
-/// [`resolve_generic_instantiation`] after this function is extended in S4.
+/// Generic *instantiations* (`Named(name, args)` with non-empty `args`) require a mutable
+/// `types` registry (to mint new concrete `DataInfo` entries on demand). Use
+/// [`resolve_ty_mut`] for those contexts. This immutable variant returns an explicit error for
+/// any instantiation form (used by elab and check-time sites where the registry is already
+/// fully resolved).
 pub(crate) fn resolve_ty(
     site: &str,
     types: &BTreeMap<String, DataInfo>,
     tyvars: &[String],
     t: &TypeRef,
 ) -> Result<(Ty, Option<Strength>), CheckError> {
-    resolve_ty_inner(site, types, tyvars, None, t)
+    resolve_ty_impl(site, types, tyvars, t)
 }
 
-/// Internal implementation of type resolution, also used by instantiation (S4) where
-/// `generics` carries the generic shell registry. Kept private so callers only see the
-/// clean `resolve_ty` / instantiation API.
-fn resolve_ty_inner(
+/// Mutable-registry variant of [`resolve_ty`]: resolves surface types including generic
+/// instantiations (M-657). When `Named(name, args)` has non-empty `args` and `name` is in
+/// the generic shell registry, it mints a concrete `DataInfo` under the mangled name and
+/// inserts it into `types` (idempotent — re-instantiation finds the existing entry). The
+/// shell-first insertion (inserting an empty shell before resolving ctors) makes the recursion
+/// terminate for recursive types like `type List<A> = Nil | Cons(A, List<A>)`.
+pub(crate) fn resolve_ty_mut(
+    site: &str,
+    types: &mut BTreeMap<String, DataInfo>,
+    generics: &BTreeMap<String, GenericShell>,
+    tyvars: &[String],
+    t: &TypeRef,
+) -> Result<(Ty, Option<Strength>), CheckError> {
+    resolve_ty_impl_mut(site, types, generics, tyvars, t)
+}
+
+/// Immutable path type resolution. Does not instantiate new generics; used in elab and
+/// post-check contexts where the registry is already fully resolved.
+fn resolve_ty_impl(
     site: &str,
     types: &BTreeMap<String, DataInfo>,
     tyvars: &[String],
-    _generics: Option<&BTreeMap<String, GenericShell>>,
     t: &TypeRef,
 ) -> Result<(Ty, Option<Strength>), CheckError> {
     let base = match &t.base {
@@ -250,16 +267,31 @@ fn resolve_ty_inner(
             ))
         }
         BaseType::Named(name, args) => {
-            // Check if this name is an in-scope type parameter.
+            // Check if this name is an in-scope type parameter (abstract well-formedness pass).
             if args.is_empty() && tyvars.contains(name) {
                 return Ok((Ty::Var(name.clone()), t.guarantee));
             }
             if !args.is_empty() {
-                // Generic instantiation handled in S4 once the generics registry exists.
-                // Until then, the deferral refusal stays (removed in S4).
+                // In the immutable path (elab, post-check), the registry is already fully
+                // resolved: any instantiation `D<τ̄>` has already been monomorphized into a
+                // concrete `DataInfo` under its mangled name and should be in `types`. This
+                // branch is for generic type *args* that somehow survived to here — an internal
+                // invariant break (checker did not fully monomorphize). Refuse explicitly.
+                // Check if the mangled name is already in types (idempotent instantiation).
+                let concrete_args = args
+                    .iter()
+                    .map(|a| resolve_ty(site, types, tyvars, a).map(|(t, _)| t))
+                    .collect::<Result<Vec<_>, _>>()?;
+                let mangled = mangle(name, &concrete_args);
+                if types.contains_key(&mangled) {
+                    return Ok((Ty::Data(mangled), t.guarantee));
+                }
                 return Err(CheckError::new(
                     site,
-                    format!("generic type `{name}<…>` is deferred in v0 (RFC-0007 §4.4) — monomorphic only"),
+                    format!(
+                        "generic type `{name}<…>` encountered in post-check context — \
+                         the instantiation `{mangled}` was not pre-registered (M-657 internal)"
+                    ),
                 ));
             }
             if !types.contains_key(name) {
@@ -279,6 +311,157 @@ fn resolve_ty_inner(
         }
     };
     Ok((base, t.guarantee))
+}
+
+/// Mutable-path type resolution. Handles generic instantiation by minting new `DataInfo` entries.
+fn resolve_ty_impl_mut(
+    site: &str,
+    types: &mut BTreeMap<String, DataInfo>,
+    generics: &BTreeMap<String, GenericShell>,
+    tyvars: &[String],
+    t: &TypeRef,
+) -> Result<(Ty, Option<Strength>), CheckError> {
+    let base = match &t.base {
+        BaseType::Binary(n) => Ty::Binary(*n),
+        BaseType::Ternary(m) => Ty::Ternary(*m),
+        BaseType::Dense(d, s) => Ty::Dense(*d, *s),
+        BaseType::Substrate(tag) => Ty::Substrate(tag.clone()),
+        BaseType::Vsa { .. } => {
+            return Err(CheckError::new(
+                site,
+                "VSA types are deferred in the L1 v0 prototype (no value forms yet)",
+            ))
+        }
+        BaseType::Named(name, args) => {
+            // In-scope type parameter → Var (abstract well-formedness pass).
+            if args.is_empty() && tyvars.contains(name) {
+                return Ok((Ty::Var(name.clone()), t.guarantee));
+            }
+            if !args.is_empty() {
+                // Generic instantiation: resolve args, compute mangled name, mint DataInfo.
+                // Resolve each argument to a concrete Ty (args must be closed at a monomorphic
+                // use site; a Var arg is valid inside a generic body).
+                let arg_tys: Vec<Ty> = args
+                    .iter()
+                    .map(|a| resolve_ty_impl_mut(site, types, generics, tyvars, a).map(|(t, _)| t))
+                    .collect::<Result<_, _>>()?;
+                let ty = instantiate_generic(site, name, &arg_tys, types, generics)?;
+                // The guarantee from the original TypeRef is propagated.
+                return Ok((ty, t.guarantee));
+            }
+            if !types.contains_key(name) && !generics.contains_key(name) {
+                return Err(CheckError::new(site, format!("unknown type `{name}`")));
+            }
+            if types.contains_key(name) {
+                Ty::Data(name.clone())
+            } else {
+                // name is a generic shell with no args: must be applied, not used bare.
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "generic type `{name}` requires type arguments — \
+                         e.g. `{name}<Binary{{8}}>` (M-657)"
+                    ),
+                ));
+            }
+        }
+        BaseType::Ambient(_) => {
+            return Err(CheckError::new(
+                site,
+                "internal: an unresolved paradigm-less repr `{…}` reached the checker — the \
+                 ambient resolution pass should have filled it (RFC-0012 §4.3)",
+            ));
+        }
+    };
+    Ok((base, t.guarantee))
+}
+
+/// Monomorphize a generic instantiation `name<arg_tys>` into a concrete `DataInfo` in `types`.
+///
+/// Algorithm (M-657, **Declared**):
+/// 1. Compute the mangled name. If already in `types`, return it (idempotent).
+/// 2. Check arity against the shell's params.
+/// 3. **Shell-first insert**: insert an empty `DataInfo` shell under the mangled name *before*
+///    resolving constructors. This makes recursive instantiations (e.g. `List<A>` inside
+///    `Cons(A, List<A>)` instantiated at `List<Binary{8}>`) terminate identically to the
+///    existing monomorphic recursion at `check_resolved_matured` Pass 1.
+/// 4. Build the substitution `[params ↦ arg_tys]`, substitute each ctor's field types.
+/// 5. Fill in the concrete ctors.
+/// 6. Return `Ty::Data(mangled_name)`.
+fn instantiate_generic(
+    site: &str,
+    name: &str,
+    arg_tys: &[Ty],
+    types: &mut BTreeMap<String, DataInfo>,
+    generics: &BTreeMap<String, GenericShell>,
+) -> Result<Ty, CheckError> {
+    let mangled = mangle(name, arg_tys);
+    // Idempotent: already monomorphized.
+    if types.contains_key(&mangled) {
+        return Ok(Ty::Data(mangled));
+    }
+    let shell = generics.get(name).ok_or_else(|| {
+        CheckError::new(
+            site,
+            format!("unknown generic type `{name}` (not in the generic shell registry, M-657)"),
+        )
+    })?;
+    // Arity check (explicit, never a silent truncation — S1/G2).
+    if arg_tys.len() != shell.params.len() {
+        return Err(CheckError::new(
+            site,
+            format!(
+                "generic type `{name}` expects {} type argument(s), got {} (M-657 arity)",
+                shell.params.len(),
+                arg_tys.len()
+            ),
+        ));
+    }
+    // Build substitution map: param_name → concrete Ty.
+    let subst: BTreeMap<String, Ty> = shell
+        .params
+        .iter()
+        .zip(arg_tys.iter())
+        .map(|(p, t)| (p.clone(), t.clone()))
+        .collect();
+    // Shell-first: insert an empty DataInfo so recursive self-refs resolve via the already-
+    // present mangled key (identical to monomorphic recursion at Pass 1 of check_resolved_matured).
+    types.insert(
+        mangled.clone(),
+        DataInfo {
+            name: mangled.clone(),
+            ctors: vec![],
+        },
+    );
+    // Substitute ctor field types: Var(a) → subst[a], concrete types are identity.
+    let ctors: Vec<CtorInfo> = shell
+        .ctors
+        .iter()
+        .map(|c| {
+            let fields: Vec<Ty> = c
+                .fields
+                .iter()
+                .map(|f| {
+                    // A substituted field may itself be an instantiated generic (e.g. a field
+                    // of type `List<Binary{8}>` after substituting A→Binary{8} in List<A>).
+                    // Those are already in `types` (the registry is fully built by this point
+                    // for the recursive case via the shell-first insertion above), so we do not
+                    // need to recurse here — the Ty::Data(mangled) is already registered.
+                    subst_ty(f, &subst)
+                })
+                .collect();
+            CtorInfo {
+                name: c.name.clone(),
+                fields,
+            }
+        })
+        .collect();
+    // Fill in the concrete ctors (replaces the empty shell).
+    types
+        .get_mut(&mangled)
+        .expect("just inserted shell above")
+        .ctors = ctors;
+    Ok(Ty::Data(mangled))
 }
 
 /// A generic ADT shell: the abstract (Var-bearing) form of a generic data declaration.
@@ -350,56 +533,60 @@ pub fn check_and_resolve(nodule: &Nodule) -> Result<(Env, Nodule), CheckError> {
 
 /// The core checker, run on an already ambient-resolved nodule, with an explicit maturation flag.
 /// When `matured_scope` is true, every fn with `thaw == false` must be `Total` (RFC-0017 §4.2).
+///
+/// Stage-1 generics (M-657, Declared): generic ADT decls are now real (not deferred). Generic
+/// fn decls are still deferred in S4; they become real in S5.
 fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, CheckError> {
-    let mut types = BTreeMap::new();
-    let generics: BTreeMap<String, GenericShell> = BTreeMap::new();
+    let mut types: BTreeMap<String, DataInfo> = BTreeMap::new();
+    let mut generics: BTreeMap<String, GenericShell> = BTreeMap::new();
     let p = prelude();
     types.insert(p.name.clone(), p);
 
-    // Pass 1: register data declarations (so they can reference each other).
-    // Monomorphic decls enter `types` as before; generic decls (non-empty params) enter
-    // `generics` as abstract shells with Var-bearing fields (S4 adds the shell-building logic).
+    // Pass 1a: register data declarations — shells in `types` for monomorphic, shells in
+    // `generics` for generic (with Var-bearing fields). This allows forward references.
     for item in &nodule.items {
         if let Item::Type(td) = item {
-            if !td.params.is_empty() {
-                // Generic ADT: register shell + monomorphic sentinel. S4 will build the real shell.
-                // For S2, still refuse (the deferral is removed in S4).
-                return Err(CheckError::new(
-                    &td.name,
-                    "generic data declarations are parsed but deferred in v0 (RFC-0007 §4.4)",
-                ));
-            }
             if types.contains_key(&td.name) || generics.contains_key(&td.name) {
                 return Err(CheckError::new(&td.name, "duplicate type declaration"));
             }
-            // Insert a shell first so recursive field references resolve.
-            types.insert(
-                td.name.clone(),
-                DataInfo {
-                    name: td.name.clone(),
-                    ctors: vec![],
-                },
-            );
+            if td.params.is_empty() {
+                // Monomorphic: insert empty shell first (recursive field refs resolve to this).
+                types.insert(td.name.clone(), DataInfo { name: td.name.clone(), ctors: vec![] });
+            } else {
+                // Generic: register an empty GenericShell; will be filled in Pass 1b.
+                generics.insert(
+                    td.name.clone(),
+                    GenericShell { params: td.params.clone(), ctors: vec![] },
+                );
+            }
         }
     }
+
+    // Pass 1b: fill in the constructor field types for each declaration.
     for item in &nodule.items {
         if let Item::Type(td) = item {
             if td.params.is_empty() {
-                // Monomorphic path: resolve constructors with no type vars.
-                let ctors = resolve_ctors(&types, &generics, &[], td)?;
+                // Monomorphic path: resolve ctors with no type vars in scope.
+                // Uses resolve_ty_mut so field types can trigger on-demand generic instantiation.
+                let ctors = resolve_ctors(&mut types, &generics, &[], td)?;
                 types.get_mut(&td.name).expect("registered above").ctors = ctors;
+            } else {
+                // Generic path: resolve ctors with the decl's type params in scope (→ Ty::Var).
+                // The ctors may contain Ty::Var fields — they live in the GenericShell only.
+                let ctors = resolve_ctors_generic(&types, &generics, &td.params, td)?;
+                generics.get_mut(&td.name).expect("registered above").ctors = ctors;
             }
-            // Generic path handled in S4.
         }
     }
 
     // Pass 2: collect functions (signatures must resolve).
+    // Generic fn signatures are still deferred (S5); only monomorphic fns are processed here.
     let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();
     for item in &nodule.items {
         match item {
             Item::Fn(fd) => {
                 if !fd.sig.params.is_empty() {
-                    // Generic fn: still refused in S2; removed in S5.
+                    // Generic fn: deferred to S5.
                     return Err(CheckError::new(
                         &fd.sig.name,
                         "generic functions are parsed but deferred in v0 (RFC-0007 §4.4)",
@@ -417,17 +604,17 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     // Pass 3: type every body **against** its declared return type (bidirectional, RFC-0012 §4.3)
     // and resolve any ambient bare-decimal widths from context — rewriting each body so the
     // downstream evaluator/elaborator see only concrete literals.
+    // Monomorphic function bodies may USE generic types (via `resolve_ty_mut` for instantiation).
     let mut resolved_fns: BTreeMap<String, FnDecl> = BTreeMap::new();
     for fd in fns.values() {
         let site = &fd.sig.name;
-        // Monomorphic context: no type variables in scope (pass &[] to resolve_ty).
-        let tyvars: &[String] = &[];
+        let tyvars: &[String] = &[]; // monomorphic fn: no type vars in scope
         let mut scope: Vec<(String, Ty)> = Vec::new();
         for p in &fd.sig.value_params {
-            let (ty, _) = resolve_ty(site, &types, tyvars, &p.ty)?;
+            let (ty, _) = resolve_ty_mut(site, &mut types, &generics, tyvars, &p.ty)?;
             scope.push((p.name.clone(), ty));
         }
-        let (ret, _) = resolve_ty(site, &types, tyvars, &fd.sig.ret)?;
+        let (ret, _) = resolve_ty_mut(site, &mut types, &generics, tyvars, &fd.sig.ret)?;
         let cx = Cx {
             site,
             types: &types,
@@ -476,9 +663,15 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     })
 }
 
+/// Resolve monomorphic constructors (no type vars in scope).
+///
+/// Uses `resolve_ty_mut` so that field types referencing generic types (e.g. `List<Binary{8}>` in
+/// `type ByteList = Wrap(List<Binary{8}>)`) trigger on-demand monomorphization via
+/// `instantiate_generic`. This is the same mutable-registry pattern as Pass 3 (function bodies).
+/// Recursive monomorphic types work via the pre-inserted empty shell (Pass 1a).
 fn resolve_ctors(
-    types: &BTreeMap<String, DataInfo>,
-    _generics: &BTreeMap<String, GenericShell>,
+    types: &mut BTreeMap<String, DataInfo>,
+    generics: &BTreeMap<String, GenericShell>,
     tyvars: &[String],
     td: &TypeDecl,
 ) -> Result<Vec<CtorInfo>, CheckError> {
@@ -492,7 +685,7 @@ fn resolve_ctors(
         }
         let mut fields = Vec::new();
         for f in &c.fields {
-            let (ty, _) = resolve_ty(&td.name, types, tyvars, f)?;
+            let (ty, _) = resolve_ty_mut(&td.name, types, generics, tyvars, f)?;
             fields.push(ty);
         }
         ctors.push(CtorInfo {
@@ -501,6 +694,128 @@ fn resolve_ctors(
         });
     }
     Ok(ctors)
+}
+
+/// Resolve constructor field types for a **generic** ADT shell (type params in scope → Ty::Var).
+///
+/// A generic shell's ctor fields may contain `Ty::Var` (for bare type params like `A` in
+/// `Cons(A, List<A>)`) and `Ty::Data(mangled)` for inner instantiated types. The shell's own
+/// recursive self-reference (`List<A>` inside `Cons`) is expressed as `Ty::Var` if `A` is in
+/// tyvars, or as a recursive data ref. Since `List<A>` with args is detected by resolve_ty_impl
+/// as an instantiation and the *abstract* shell allows `Ty::Var` args, we emit the substituted
+/// field directly.
+///
+/// Note: a generic shell's ctor fields are resolved using `resolve_ty` (immutable, tyvar-aware)
+/// not `resolve_ty_mut`, because the shell itself must not trigger instantiation — only concrete
+/// use sites instantiate. A self-referential field `List<A>` inside `List<A>` decl with params
+/// `[A]` resolves the inner `List<A>` as a `Ty::Data` of the abstract un-mangled name... but we
+/// can't store that in a concrete DataInfo. Instead, for abstract shells, we keep the field type
+/// as produced by the abstract resolution: `Ty::Var("A")` for bare params, and for `List<A>` we
+/// need a different approach.
+///
+/// **Approach for recursive generics (shell fields):** When resolving a generic shell's ctors,
+/// an inner `List<A>` field is left as `Ty::Data("List<A>")` — a symbolic name that only appears
+/// in the *shell*, never in the concrete registry. The `instantiate_generic` function handles
+/// the recursive case: when substituting `Cons(A, List<A>)` at `A=Binary{8}`, the field
+/// `Ty::Data("List<A>")` gets recognized as the *un-substituted* recursive reference and mapped
+/// to `Ty::Data("List<Binary{8}>")` via the substitution. To make this work, we store the
+/// recursive self-ref as a `Ty::Data(abstract_mangled_name)` where `abstract_mangled_name`
+/// is `mangle(name, &[Ty::Var("A")])` — e.g. `"List<A>"`. This is the only place `Ty::Data`
+/// can contain a non-registered name (only in shell ctor fields, never in `env.types`).
+///
+/// Then `subst_ty` must recurse into `Ty::Data` to substitute embedded Var names.
+/// See `subst_ty_deep` below.
+fn resolve_ctors_generic(
+    types: &BTreeMap<String, DataInfo>,
+    generics: &BTreeMap<String, GenericShell>,
+    tyvars: &[String],
+    td: &TypeDecl,
+) -> Result<Vec<CtorInfo>, CheckError> {
+    let mut ctors = Vec::new();
+    for c in &td.ctors {
+        if ctors.iter().any(|x: &CtorInfo| x.name == c.name) {
+            return Err(CheckError::new(
+                &td.name,
+                format!("duplicate constructor `{}`", c.name),
+            ));
+        }
+        let mut fields = Vec::new();
+        for f in &c.fields {
+            let ty = resolve_shell_field_ty(&td.name, types, generics, tyvars, f)?;
+            fields.push(ty);
+        }
+        ctors.push(CtorInfo {
+            name: c.name.clone(),
+            fields,
+        });
+    }
+    Ok(ctors)
+}
+
+/// Resolve a single field TypeRef for a generic shell. Handles:
+/// - Primitive types → their Ty.
+/// - Bare type params (Named(a, []) where a ∈ tyvars) → Ty::Var(a).
+/// - Parameterized refs (Named(D, args)) → Ty::Data(abstract_mangled_name) using abstract arg
+///   types. The abstract mangled name encodes the Var-bearing form, e.g. `"List<A>"`. This is
+///   only ever stored in GenericShell, not in env.types.
+/// - Other bare names → Ty::Data(name) (concrete registered type).
+fn resolve_shell_field_ty(
+    site: &str,
+    types: &BTreeMap<String, DataInfo>,
+    generics: &BTreeMap<String, GenericShell>,
+    tyvars: &[String],
+    f: &TypeRef,
+) -> Result<Ty, CheckError> {
+    match &f.base {
+        BaseType::Binary(n) => Ok(Ty::Binary(*n)),
+        BaseType::Ternary(m) => Ok(Ty::Ternary(*m)),
+        BaseType::Dense(d, s) => Ok(Ty::Dense(*d, *s)),
+        BaseType::Substrate(tag) => Ok(Ty::Substrate(tag.clone())),
+        BaseType::Vsa { .. } => Err(CheckError::new(
+            site,
+            "VSA types are deferred in the L1 v0 prototype (no value forms yet)",
+        )),
+        BaseType::Named(name, args) => {
+            if args.is_empty() {
+                if tyvars.contains(name) {
+                    // Bare type parameter → abstract Var.
+                    return Ok(Ty::Var(name.clone()));
+                }
+                if types.contains_key(name) {
+                    return Ok(Ty::Data(name.clone()));
+                }
+                if generics.contains_key(name) {
+                    // A bare generic name with no args in a shell field is not allowed — generics
+                    // must be applied (same rule as for monomorphic use sites).
+                    return Err(CheckError::new(
+                        site,
+                        format!(
+                            "generic type `{name}` used without type arguments in a generic \
+                             shell field — must be `{name}<TypeVar>` (M-657)"
+                        ),
+                    ));
+                }
+                return Err(CheckError::new(site, format!("unknown type `{name}`")));
+            }
+            // Parameterized: resolve each arg abstractly (may produce Ty::Var for param names).
+            let arg_tys: Vec<Ty> = args
+                .iter()
+                .map(|a| resolve_shell_field_ty(site, types, generics, tyvars, a))
+                .collect::<Result<_, _>>()?;
+            // Encode as an abstract mangled name (Var-bearing, only in shell storage).
+            // This is intentionally NOT inserted into `types` — it only lives in the shell.
+            if generics.contains_key(name) || types.contains_key(name) {
+                let abstract_mangled = mangle(name, &arg_tys);
+                return Ok(Ty::Data(abstract_mangled));
+            }
+            Err(CheckError::new(site, format!("unknown generic type `{name}`")))
+        }
+        BaseType::Ambient(_) => Err(CheckError::new(
+            site,
+            "internal: an unresolved paradigm-less repr `{…}` reached the checker — the \
+             ambient resolution pass should have filled it (RFC-0012 §4.3)",
+        )),
+    }
 }
 
 /// The checking context for one function body.
@@ -1556,23 +1871,58 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
 // ─── Stage-1 generics helpers (M-657, Declared) ──────────────────────────────────────────────
 
 /// Substitute all [`Ty::Var`] occurrences in `ty` using the `subst` map (var-name → concrete Ty).
-/// Recursion into `Ty::Data` is intentionally shallow: a `Data` name refers to an already-
-/// monomorphized registry entry (either a monomorphic decl or a mangled instantiation) whose
-/// field types are fully substituted at registration time. Only top-level `Var` nodes and the
-/// args of a hypothetical `App` variant need substitution — since we don't have `App` (we
-/// represent instantiations as `Data(mangled_name)`), this is a simple structural map.
 ///
-/// Guarantee: **Declared** — this is a capture-avoiding substitution over a first-order type
-/// language (no higher-rank types, no closures). The substitution terminates because the type
-/// structure is finite-depth (no infinite types in the language).
+/// For shell ctor fields that encode recursive generic self-references as
+/// `Ty::Data("List<A>")` (an abstract mangled name where `A` is a type var), this function
+/// delegates to [`subst_ty_in_shell`] which re-resolves the embedded vars in the mangled name.
+///
+/// Guarantee: **Declared** — capture-avoiding substitution over a first-order type language
+/// (no higher-rank types). Terminates because the type structure is finite-depth.
 pub(crate) fn subst_ty(ty: &Ty, subst: &BTreeMap<String, Ty>) -> Ty {
     match ty {
         Ty::Var(a) => subst.get(a).cloned().unwrap_or_else(|| ty.clone()),
-        // Primitive types and Data/Substrate have no embedded Vars after monomorphization.
-        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Data(_) | Ty::Substrate(_) => {
-            ty.clone()
-        }
+        // Primitive types have no embedded Vars.
+        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) => ty.clone(),
+        // Data may encode an abstract mangled name (e.g. "List<A>") in shell ctor fields.
+        // Substitute the embedded vars by re-parsing the abstract name components.
+        // Note: concrete (registered) Data names never contain '<' so this is safe to detect.
+        Ty::Data(name) => Ty::Data(subst_in_abstract_data_name(name, subst)),
     }
+}
+
+/// Substitute type variables that appear encoded inside an abstract mangled data name
+/// (e.g. `"List<A>"` → `"List<Binary{8}>"` when `subst["A"] = Binary{8}`).
+///
+/// Abstract mangled names have the form `"Base<Arg0, Arg1, …>"`. This function parses the
+/// outer wrapper, substitutes each arg token, and re-mangles. It is deliberately simple (no
+/// nested `<>` beyond what mangle/Display produces) and only applies to names that contain `<`.
+fn subst_in_abstract_data_name(name: &str, subst: &BTreeMap<String, Ty>) -> String {
+    // Fast path: no type parameters embedded (a concrete or abstract-bare name).
+    let Some(inner_start) = name.find('<') else {
+        return name.to_owned();
+    };
+    let base = &name[..inner_start];
+    let inner = name
+        .strip_suffix('>')
+        .and_then(|s| s[inner_start + 1..].into())
+        .unwrap_or_else(|| &name[inner_start + 1..]);
+    // Split the inner part by ", " (the separator mangle uses).
+    // Each part is either a bare Var name, or a concrete Ty Display string, or a nested abstract.
+    let parts: Vec<&str> = inner.split(", ").collect();
+    let substituted: Vec<Ty> = parts
+        .iter()
+        .map(|part| {
+            // Try to match as a single Var name first (a bare identifier with no spaces).
+            if part.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                if let Some(replacement) = subst.get(*part) {
+                    return replacement.clone();
+                }
+            }
+            // Otherwise treat it as a concrete Display-form (pass through after recursive subst).
+            Ty::Data(subst_in_abstract_data_name(part, subst))
+        })
+        .collect();
+    mangle(base, &substituted)
 }
 
 /// Produce a **stable, collision-free** mangled name for a generic instantiation `D<arg0,arg1,…>`.
@@ -1603,6 +1953,7 @@ pub(crate) fn mangle(name: &str, args: &[Ty]) -> String {
 /// This is NOT full Hindley-Milner: it is first-order, purely structural, and requires the arg
 /// to be fully closed. A type var appearing only in the return type (phantom param) cannot be
 /// inferred here; the caller must supply it from the `expected` type or report an explicit error.
+#[allow(dead_code)] // used in S5 (M-657 generic function bodies)
 pub(crate) fn unify_arg(
     site: &str,
     param_ty: &Ty,
