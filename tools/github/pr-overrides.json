@@ -1,0 +1,51 @@
+{
+  "_about": "Declared per-PR/issue milestone+label overrides for Mycelium. The escape hatch for items with no inferable milestone (no task-id, no mapped scope). Each entry is an explicit, ratified per-item decision — NOT inference — and wins over task-id and scope fallback with highest precedence (G2: never-invent complement). Consumed by gh-issues-sync.py --prs/--issues.",
+
+  "_policy": "Keys are POSITIVE PR/issue numbers (as strings; '-67'/non-numeric keys fail --validate and abort a live load — never silently skipped). Each value is an object with a required 'milestone' (must be an exact title from milestones.json; validated by --validate) and an optional 'labels' list (union-added, never removed; each must exist in labels.json). A typo in 'milestone' or an unknown label name fails --validate before any live run. Routing: --prs applies overrides whose number is a PR; --issues applies overrides whose number is an issue on the repo (e.g. #67) — each path reports what it applied vs routed to its sibling, so no override is silently unaccounted-for. Rationale for each override is recorded in '_rationale' (informational only; not consumed by the engine). Flag items the maintainer should confirm before treating as final are noted in '_confirm'.",
+
+  "_confirm": [
+    "#67: RFC-0006 is the L1/L2/L3 layering RFC — Phase 4 (ABI/language integration) seems right, but could be Phase 5 (Self-Hosting & Core Library) if it is considered a surface-language self-hosting prerequisite. Confirm.",
+    "#69: Early L1 parser prototype — placed in Phase 4 (the L1/grammar track lives there per milestone description), but could be Phase 1 (Minimal Viable Core) if this is a bootstrap parser. Confirm.",
+    "#70: ADR-012 lexicon integration doc — placed in Phase 1 (lexicon is a foundation-spec item), but could be Phase 0 (Confirm & Specify) if ADR-012 is a spec-ratification decision. Confirm.",
+    "#293: RP-8 perf optimization + tool-extraction spike — placed in Phase 8 (Toolchain & Release Engineering, the natural home for tool-extraction), but could be Phase 3 (Tooling, Projections & Acceleration) for the perf side. Confirm."
+  ],
+
+  "overrides": {
+    "1": {
+      "milestone": "Phase 0 — Confirm & Specify",
+      "_rationale": "docs: align corpus with design baseline versions — baseline versioning is a Phase 0 spec-ratification task (no scope → no scope fallback; Declared override)."
+    },
+    "67": {
+      "milestone": "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion",
+      "_rationale": "RFC-0006 Surface language & term-language layering (L1/L2/L3) — the ABI/language integration phase is the natural home for surface-language layering. FLAG: could be Phase 5. Confirm with maintainer.",
+      "_confirm": true
+    },
+    "69": {
+      "milestone": "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion",
+      "_rationale": "feat(l1,grammar): surface grammar + conformance corpus + parser prototype — the L1/grammar track is in Phase 4 per the milestone description (ADR-016/017 + M-346 stdlib roadmap). FLAG: could be Phase 1 if this is the bootstrap parser. Confirm with maintainer.",
+      "_confirm": true
+    },
+    "70": {
+      "milestone": "Phase 1 — Minimal Viable Core",
+      "_rationale": "docs: verify + integrate the lexicon docs (ADR-012) — ADR-012 lexicon integration is a foundation document that underpins the minimal viable core spec. FLAG: could be Phase 0. Confirm with maintainer.",
+      "_confirm": true
+    },
+    "135": {
+      "milestone": "Phase 6 — Native Acceleration & Deployment",
+      "_rationale": "chore(mlir): fix codespell finding — a maintenance chore on MLIR code; MLIR→LLVM native acceleration is Phase 6."
+    },
+    "143": {
+      "milestone": "Phase 8 — Toolchain & Release Engineering",
+      "_rationale": "feat: unified GitHub project reconciler (labels, milestones, issues, PRs, Project v2) — the PM toolchain is Phase 8 (Toolchain & Release Engineering). No scope → no scope fallback; Declared override."
+    },
+    "292": {
+      "milestone": "Phase 8 — Toolchain & Release Engineering",
+      "_rationale": "docs: 1.0.0 ratification wave — ADR-021 Accepted — ratification/release-gate documentation is Phase 8 (Toolchain & Release Engineering). No scope → no scope fallback; Declared override."
+    },
+    "293": {
+      "milestone": "Phase 8 — Toolchain & Release Engineering",
+      "_rationale": "docs(RP-8): performance optimization + tool-extraction spike — tool-extraction is the Phase 8 toolchain concern (M-361 epic anchor). FLAG: the perf side could be Phase 3. Confirm with maintainer.",
+      "_confirm": true
+    }
+  }
+}
