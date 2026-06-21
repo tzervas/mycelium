@@ -202,6 +202,66 @@ type Binding = (String, String, Ty);
 /// `Residual`: a dynamic guarantee index `@ g` (RFC-0007 §4.3, stage 0). On success the result is a
 /// closed L0 term whose evaluation must agree with the L1 evaluator (NFR-7; the M-210 differential).
 pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
+    let (mut el, binders, fd) = elab_prelude(env, entry)?;
+    let mut stack = vec![entry.to_owned()];
+    let entry_body = el.expr(&mut stack, &[], &fd.body)?;
+    Ok(wrap_in_binders(binders, entry_body))
+}
+
+/// **Per-hypha elaboration of a `colony` entry** for the *real-concurrency* execution path
+/// (RFC-0008 §4.7; M-666 redone with the `mycelium-mlir::runtime` executor). Where [`elaborate`]
+/// produces the single L0 `Node` whose body is the **RT2 spawn-order sequentialization** (a `Let`
+/// chain — the deterministic *reference* the concurrent run is validated against), this produces one
+/// **closed L0 `Node` per `hypha`**: each hypha body, elaborated under the entry's scope and wrapped
+/// in the **same** recursive-binder prelude (so a hypha may call the nodule's recursive functions).
+/// The `mycelium-mlir` colony driver spawns each as a concurrent `Task` in a `Scope`/`Colony`, runs
+/// the structured fork/join, and validates the concurrent observable **equals** the sequential
+/// reference (RT2; an inequality is an explicit divergence, never silent — G2/RT4).
+///
+/// The colony's *observable* is its **last** hypha's value (the type rule, [`crate::checkty`]); the
+/// returned vector preserves spawn order, so element `N-1` is that observable. This adds **no L0
+/// concurrency node** — the trusted base stays sequential (RFC-0008 §4.2; KC-3); concurrency is
+/// scheduling layered *over* unchanged per-hypha L0 terms.
+///
+/// Refuses with an explicit [`ElabError::Residual`] (never a fabricated accept) when the entry body
+/// is **not** a `colony`, or when any hypha body is outside the evaluation-complete fragment.
+pub fn elaborate_colony(env: &Env, entry: &str) -> Result<Vec<Node>, ElabError> {
+    let (mut el, binders, fd) = elab_prelude(env, entry)?;
+    let Expr::Colony(hyphae) = &fd.body else {
+        return residual(
+            entry,
+            "the entry body is not a `colony` — `elaborate_colony` lowers a colony to its per-hypha \
+             closed L0 programs (the concurrent path); use `elaborate` for the sequentialized form",
+        );
+    };
+    if hyphae.is_empty() {
+        return residual(
+            entry,
+            "internal: an empty `colony` reached elaboration — the parser requires ≥ 1 hypha \
+             (RFC-0008 §4.7)",
+        );
+    }
+    let mut stack = vec![entry.to_owned()];
+    // One closed L0 program per hypha: the hypha body elaborated under the entry scope, then wrapped
+    // in the *shared* recursive prelude (the binders are cloned per hypha so each task is independent
+    // — RT1: no shared state crosses a hypha boundary). Spawn order is preserved.
+    let mut programs = Vec::with_capacity(hyphae.len());
+    for h in hyphae {
+        let body = el.expr(&mut stack, &[], &h.body)?;
+        programs.push(wrap_in_binders(binders.clone(), body));
+    }
+    Ok(programs)
+}
+
+/// Shared front-end of [`elaborate`]/[`elaborate_colony`]: validate the entry is a closed (nullary,
+/// no dynamic guarantee) definition, build the data registry, decompose the reachable call graph into
+/// callee-first recursive SCCs (Tarjan), and elaborate each SCC's recursive binder. Returns the
+/// primed [`Elab`], the callee-first binder list, and the entry's [`FnDecl`]. DRY: the recursion
+/// machinery is identical whether the entry body is sequentialized to one `Node` or split per-hypha.
+fn elab_prelude<'e>(
+    env: &'e Env,
+    entry: &str,
+) -> Result<(Elab<'e>, Vec<RecBinding>, &'e crate::ast::FnDecl), ElabError> {
     let Some(fd) = env.fns.get(entry) else {
         return Err(ElabError::UnknownFn(entry.to_owned()));
     };
@@ -258,28 +318,31 @@ pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
             binders.push(RecBinding::Group(defs));
         }
     }
-    let mut stack = vec![entry.to_owned()];
-    let entry_body = el.expr(&mut stack, &[], &fd.body)?;
-    // `binders` is callee-first; fold in reverse so the first (callee) binding ends up outermost.
-    let node = binders
-        .into_iter()
-        .rev()
-        .fold(entry_body, |acc, b| match b {
-            RecBinding::Single { var, fix } => Node::Let {
-                id: var,
-                bound: fix,
-                body: Box::new(acc),
-            },
-            RecBinding::Group(defs) => Node::FixGroup {
-                defs,
-                body: Box::new(acc),
-            },
-        });
-    Ok(node)
+    Ok((el, binders, fd))
+}
+
+/// Wrap an elaborated body in a callee-first binder prelude. `binders` is callee-first; fold in
+/// reverse so the first (callee) binding ends up outermost (in scope for every later binding and the
+/// body). Shared by [`elaborate`] (one body) and [`elaborate_colony`] (each hypha body).
+fn wrap_in_binders(binders: Vec<RecBinding>, body: Node) -> Node {
+    binders.into_iter().rev().fold(body, |acc, b| match b {
+        RecBinding::Single { var, fix } => Node::Let {
+            id: var,
+            bound: fix,
+            body: Box::new(acc),
+        },
+        RecBinding::Group(defs) => Node::FixGroup {
+            defs,
+            body: Box::new(acc),
+        },
+    })
 }
 
 /// One recursive binding the entry body is wrapped in: a self-recursive singleton (`Fix`, bound via
 /// `Let`) or a mutually-recursive group (`FixGroup`). Built callee-first; see [`elaborate`].
+// `Clone` so [`elaborate_colony`] can replay the *same* recursive prelude over each hypha body
+// (every concurrent task is an independent closed term — RT1: no shared mutable state).
+#[derive(Clone)]
 enum RecBinding {
     /// A self-recursive function: its kernel variable and the `Fix` node bound to it (boxed — the
     /// `Group` variant is pointer-sized, so an unboxed `Node` here would unbalance the enum).
@@ -1199,10 +1262,13 @@ impl Elab<'_> {
     /// ```
     ///
     /// Nothing is dropped silently (G2): every hypha body is elaborated and bound, so a leading
-    /// hypha's refusal/divergence is preserved under CBV (RT4/I1). A real concurrent executor
-    /// (`mycelium-mlir::runtime` `Scope::join_all`/`Task`, M-357) is a **performance path validated
-    /// against this L0 reference** (the RT2 differential) — that cross-crate wiring is the
-    /// orchestrator's integration concern, not an L0 kernel node.
+    /// hypha's refusal/divergence is preserved under CBV (RT4/I1). This sequentialization is the
+    /// **RT2 reference ORACLE**: the real concurrent executor (`mycelium-mlir::runtime` —
+    /// `Scope`/`Colony`/`Task`, structured fork/join, M-357) runs the colony's per-hypha L0 programs
+    /// ([`elaborate_colony`]) as concurrent tasks and is **validated equal to this reference** (the
+    /// RT2 differential, `mycelium_mlir::run_colony`); a divergence is an explicit error, never a
+    /// silent race (G2/RT4). The concurrent run adds **no L0 kernel node** — the trusted base stays
+    /// sequential (RFC-0008 §4.2; KC-3).
     ///
     /// Honesty (Declared at the surface; the lowering itself adds no guarantee): this realizes the
     /// *deterministic* R1 fragment (RFC-0008 §4.6 R1) only. With no v0 product type the colony's

@@ -620,3 +620,187 @@ fn a_partial_program_exhausts_fuel_explicitly() {
         .unwrap_err();
     assert_eq!(err, L1Error::FuelExhausted);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// M-666 (redone): the `colony` **RT2 real-concurrency differential** — concurrent ≡ sequential.
+//
+// RFC-0008 §4.2/§4.7/RT2: the reference semantics of a deterministic concurrent program is its
+// deterministic sequentialization. `mycelium_l1::elaborate` lowers a colony to that sequentialization
+// (the oracle); `mycelium_l1::elaborate_colony` lowers it to per-hypha closed L0 programs which
+// `mycelium_mlir::run_colony` runs as **real concurrent tasks** (`Scope`/`Colony`, structured
+// fork/join, M-357), validating concurrent ≡ sequential. These tests pin that the concurrent
+// observable equals the sequential reference every other path already agrees on — Empirically (a
+// differential over a corpus + a property, not a `Proven` theorem; VR-5).
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// Run `entry`'s colony through `mycelium_mlir::run_colony` (real concurrent execution of the
+/// per-hypha L0 programs) and return the colony's observable as a `CoreValue`.
+fn run_colony_concurrent(env: &mycelium_l1::Env, entry: &str) -> mycelium_core::CoreValue {
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
+    let hyphae = mycelium_l1::elaborate_colony(env, entry)
+        .expect("the colony elaborates to its per-hypha L0 programs");
+    mycelium_mlir::run_colony(&hyphae, &prims, &engine, 1_000_000, 1_000_000)
+        .expect("the colony runs concurrently and the schedules agree (RT2)")
+}
+
+/// **The RT2 real-concurrency differential (M-666).** For each colony in the corpus, the **concurrent**
+/// run (`run_colony`, real interleaved tasks) must produce the **identical** observable as the
+/// **sequential reference** — both the L1 evaluator's spawn-order run and the `elaborate`→interp
+/// sequentialization — and every agreeing pair validates through the shared M-210 checker. This is the
+/// faithful RT2 obligation (RFC-0008 §4.6): "concurrent observable ≡ the deterministic reference's
+/// observable", now over an executor that genuinely interleaves the hyphae (not a sequential stand-in).
+#[test]
+fn colony_concurrent_run_equals_the_sequential_reference_rt2() {
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(BinaryTernarySwapEngine),
+    );
+    // Colonies of varied shapes: a single hypha (degenerate), pure multi-hypha, hyphae that call a
+    // helper and a recursive function (exercising the shared recursive-binder prelude per hypha).
+    let corpus = [
+        "nodule d\nfn main() -> Binary{8} = colony { hypha not(0b1011_0010) }",
+        "nodule d\nfn compute(x: Binary{8}) -> Binary{8} = not(x)\n\
+         fn main() -> Binary{8} =\n  \
+         colony { hypha compute(0b0000_1111), hypha compute(0b1010_1010), hypha xor(0b1111_0000, 0b0000_1111) }",
+        // a hypha that drives a recursive (Total) function — the per-hypha prelude must carry the `Fix`
+        "nodule d\ntype Nat = Z | S(Nat)\n\
+         fn depth(n: Nat) -> Binary{8} = match n { Z => 0b0000_0000, S(m) => not(depth(m)) }\n\
+         fn main() -> Binary{8} =\n  \
+         colony { hypha depth(S(S(Z))), hypha not(0b0000_0001), hypha depth(S(Z)) }",
+        // a swap reached through a helper call — the colony spans the repr-conversion fragment too.
+        // (A hypha body is an `app_expr`, the prior M-666 surface — KEEP; the `swap` keyword form is
+        // wrapped in `widen`, exactly the existing differential corpus's `widen` pattern.)
+        "nodule d\nfn widen(x: Binary{8}) -> Ternary{6} = swap(x, to: Ternary{6}, policy: rt)\n\
+         fn keep(x: Ternary{6}) -> Ternary{6} = x\n\
+         fn main() -> Ternary{6} =\n  \
+         colony { hypha keep(<00+0-+>), hypha widen(0b1011_0010) }",
+    ];
+
+    for (i, src) in corpus.iter().enumerate() {
+        let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+        // The sequential reference, two independent ways (the RT2 oracle).
+        let l1_seq = Evaluator::new(&env)
+            .call("main", vec![])
+            .unwrap_or_else(|e| panic!("colony #{i}: L1-eval (sequential reference) failed: {e}"));
+        let l1_seq = l1_seq
+            .as_repr()
+            .unwrap_or_else(|| panic!("colony #{i}: reference result must be a repr value"))
+            .clone();
+        let seq_node = elaborate(&env, "main")
+            .unwrap_or_else(|e| panic!("colony #{i}: sequentialization must elaborate: {e}"));
+        let interp_seq = interp
+            .eval(&seq_node)
+            .unwrap_or_else(|e| panic!("colony #{i}: elaborate→interp (reference) failed: {e}"));
+
+        // The CONCURRENT run (real interleaved tasks) — the heart of M-666.
+        let concurrent = run_colony_concurrent(&env, "main");
+        let concurrent = concurrent
+            .as_repr()
+            .unwrap_or_else(|| panic!("colony #{i}: concurrent result must be a repr value"))
+            .clone();
+
+        // RT2: the concurrent observable equals the sequential reference (both ways).
+        assert_eq!(
+            observable(&concurrent),
+            observable(&l1_seq),
+            "colony #{i}: concurrent run diverged from the L1 sequential reference (RT2 violated)"
+        );
+        assert_eq!(
+            observable(&concurrent),
+            observable(&interp_seq),
+            "colony #{i}: concurrent run diverged from the elaborate→interp reference (RT2 violated)"
+        );
+
+        // The shared M-210 checker validates the concurrent↔reference pair like any other equivalence.
+        assert_eq!(
+            check(
+                &concurrent,
+                &interp_seq,
+                RefinementRelation::ObservationalEquiv,
+                Certificate::exact(),
+                &Evidence::Observational,
+            ),
+            CheckVerdict::Validated {
+                strength: GuaranteeStrength::Exact
+            },
+            "colony #{i}: the shared checker must validate the concurrent↔reference pair"
+        );
+    }
+}
+
+/// **Property: the bound on the RT2 differential.** For *any* number `k` of leading hyphae (0..=8), a
+/// colony whose hyphae are pure unary ops run **concurrently** (`run_colony`) yields exactly the
+/// **last** hypha's value — i.e. the concurrent observable is independent of the `k` leading hyphae and
+/// equal to the deterministic sequentialization (RFC-0008 RT2). This is the empirical-confidence
+/// breadth behind the `Empirical` determinism tag: many shapes, all concurrent ≡ sequential.
+#[test]
+fn prop_colony_concurrent_value_is_its_last_hypha_for_any_leading_count() {
+    use mycelium_core::{Payload, Repr};
+    for k in 0u32..=8 {
+        // k leading `not(<i>)` hyphae (evaluated concurrently for effect), then a fixed last hypha
+        // whose value (`not(0b0101_0101) = 0b1010_1010`) is the colony's observable for every k.
+        let mut hyphae = String::new();
+        for i in 0..k {
+            let bits = format!("{:08b}", i & 0xFF);
+            let bits = format!("{}_{}", &bits[..4], &bits[4..]);
+            hyphae.push_str(&format!("hypha not(0b{bits}), "));
+        }
+        hyphae.push_str("hypha not(0b0101_0101)");
+        let src = format!("nodule d\nfn main() -> Binary{{8}} = colony {{ {hyphae} }}");
+        let env = check_nodule(&parse(&src).expect("parses")).expect("checks");
+
+        let concurrent = run_colony_concurrent(&env, "main");
+        let v = concurrent
+            .as_repr()
+            .unwrap_or_else(|| panic!("k={k}: concurrent colony result must be a repr value"));
+        assert_eq!(v.repr(), &Repr::Binary { width: 8 });
+        assert_eq!(
+            v.payload(),
+            &Payload::Bits(vec![true, false, true, false, true, false, true, false]),
+            "k={k}: the CONCURRENT colony's value must equal its LAST hypha (RT2), \
+             independent of the {k} leading hyphae"
+        );
+
+        // And it equals the sequential reference for this k (the differential, parameterised).
+        let seq = Evaluator::new(&env).call("main", vec![]).unwrap();
+        assert_eq!(
+            observable(seq.as_repr().unwrap()),
+            observable(v),
+            "k={k}: concurrent ≡ sequential reference (RT2)"
+        );
+    }
+}
+
+/// **A hypha's explicit failure is surfaced, never silently dropped (G2/RT4/I1).** `run_colony`
+/// requires every hypha to complete cleanly; a hypha whose L0 evaluation fails (here a deliberate
+/// `FuelExhausted` from a starved fuel budget on a recursive hypha) is reported as an explicit
+/// `ColonyError::HyphaFailed` carrying its index — never absorbed into a "successful" colony.
+#[test]
+fn a_failing_hypha_is_an_explicit_colony_error_not_a_silent_drop() {
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
+    // A Total recursion that needs more than the tiny fuel we give it → an explicit FuelExhausted in
+    // that hypha's L0 evaluation; the colony must surface it, not return the last hypha's value.
+    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
+               fn depth(n: Nat) -> Binary{8} = match n { Z => 0b0000_0000, S(m) => not(depth(m)) }\n\
+               fn main() -> Binary{8} =\n  \
+               colony { hypha depth(S(S(S(S(S(Z)))))), hypha not(0b0000_0001) }";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+    let hyphae = mycelium_l1::elaborate_colony(&env, "main").expect("elaborates per-hypha");
+    // Starve fuel so the recursive hypha #0 cannot finish — an explicit, graceful refusal.
+    let err = mycelium_mlir::run_colony(&hyphae, &prims, &engine, 2, 1_000_000).expect_err(
+        "a starved recursive hypha must make the colony refuse, never silently succeed",
+    );
+    match err {
+        mycelium_mlir::ColonyError::HyphaFailed { index, outcome } => {
+            assert_eq!(index, 0, "the failing hypha is #0 (the recursive one)");
+            assert!(
+                outcome.contains("Fuel") || outcome.contains("Failed"),
+                "the failure is the explicit evaluator refusal; got: {outcome}"
+            );
+        }
+        other => panic!("expected an explicit HyphaFailed, got: {other}"),
+    }
+}

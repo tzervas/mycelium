@@ -314,13 +314,20 @@ pub enum Expr {
     /// R1): the **reference semantics is the spawn-order sequentialization** (RT2), so the colony's
     /// observable is its children run in order, never a scheduler-dependent value.
     ///
-    /// Honesty (Declared): this is the L1 *surface* for the RFC-0008 §4.7 model. Its runtime
-    /// realization is `mycelium-mlir::runtime` (`Scope`/`Colony`/`Task`, M-357), **not** an L0
-    /// kernel node — the L0 Core IR has no concurrency primitive (KC-3; the trusted base stays
-    /// sequential, RT2). So a `colony` type-checks (the deterministic fragment is checkable) but
-    /// **does not lower to L0** in this prototype: elaboration is a never-silent
-    /// [`crate::elab::ElabError::Residual`] (G2), never a silent or fabricated accept. Activation of
-    /// the *runtime lowering* awaits the RFC-0008 §4.5 implementation RFC committing its elaboration.
+    /// Honesty (Declared): this is the L1 *surface* for the RFC-0008 §4.7 model. It lowers two ways
+    /// off **one** sequential trusted base (the L0 Core IR has **no** concurrency node — KC-3;
+    /// RFC-0008 §4.2):
+    /// - [`crate::elab::elaborate`] → the **RT2 spawn-order sequentialization** (a `Let` chain): the
+    ///   deterministic *reference* the interpreter and AOT both run, and the oracle the concurrent
+    ///   run is validated against;
+    /// - [`crate::elab::elaborate_colony`] → one **closed L0 program per hypha**, which the
+    ///   `mycelium-mlir::runtime` executor (`Scope`/`Colony`/`Task`, structured fork/join, M-357)
+    ///   runs as **concurrent tasks** (`mycelium_mlir::run_colony`), validating the concurrent
+    ///   observable **equals** the sequential reference (RT2) — an inequality is an explicit
+    ///   divergence, never a silent race (G2/RT4).
+    ///
+    /// Both paths refuse outside the evaluation-complete fragment with a never-silent
+    /// [`crate::elab::ElabError::Residual`] (G2), never a fabricated accept.
     Colony(Vec<Hypha>),
     /// A function/constructor application `head(args)` (possibly nested), or a bare head.
     App {
