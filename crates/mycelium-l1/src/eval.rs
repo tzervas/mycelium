@@ -1113,6 +1113,7 @@ mod tests {
             parse("nodule d\nfn main() -> Binary{8} = wild { foreign(0b0000_0001) }").unwrap();
         let env = Env {
             types: std::collections::BTreeMap::new(),
+            generics: std::collections::BTreeMap::new(),
             fns: nodule
                 .items
                 .iter()

@@ -504,6 +504,10 @@ pub fn build_registry(env: &Env) -> Result<DataRegistry, ElabError> {
 }
 
 /// Convert a v0 field type to a registry [`FieldSpec`]; `None` for a type with no r3 value form.
+///
+/// A residual [`Ty::Var`] (stage-1 generics, M-657) reaching this point is a checker bug —
+/// generic shells must never be elaborated directly, only their monomorphic instantiations.
+/// Returns `None` so `build_registry` skips the type (Residual if it is ever used at runtime).
 fn field_spec(ty: &Ty) -> Option<FieldSpec> {
     Some(match ty {
         Ty::Binary(n) => FieldSpec::Repr(Repr::Binary { width: *n }),
@@ -513,7 +517,9 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
             dtype: scalar_kind(*s),
         }),
         Ty::Data(n) => FieldSpec::Data(n.clone()),
-        Ty::Substrate(_) => return None,
+        // `Substrate` and `Var` have no r3 value form.  A residual `Var` here is defense in
+        // depth: the checker must have substituted all vars before storing into `env.types`.
+        Ty::Substrate(_) | Ty::Var(_) => return None,
     })
 }
 
@@ -750,19 +756,33 @@ impl Elab<'_> {
         let mut arm_binders: Vec<Vec<(String, Ty, Vec<usize>)>> = Vec::with_capacity(arms.len());
         for arm in arms {
             let mut binds = Vec::new();
-            let pat =
-                normalize_pattern(&self.env.types, &site, &arm.pattern, &sty, &[], &mut binds)
-                    .map_err(|e| ElabError::Residual {
-                        site: site.clone(),
-                        what: format!("could not normalise a match pattern: {e}"),
-                    })?;
+            let pat = normalize_pattern(
+                &self.env.types,
+                &self.env.generics,
+                &site,
+                &arm.pattern,
+                &sty,
+                &[],
+                &mut binds,
+            )
+            .map_err(|e| ElabError::Residual {
+                site: site.clone(),
+                what: format!("could not normalise a match pattern: {e}"),
+            })?;
             matrix.push(vec![pat]);
             arm_binders.push(binds);
         }
         // 4. Compile (and re-verify Fail-free) the Maranget decision tree — the untrusted lowering.
         let arm_ix: Vec<usize> = (0..arms.len()).collect();
         let occ_root = [Vec::<usize>::new()];
-        let tree = decision::compile(&self.env.types, &matrix, &arm_ix, &occ_root, &[sty]);
+        let tree = decision::compile(
+            &self.env.types,
+            &self.env.generics,
+            &matrix,
+            &arm_ix,
+            &occ_root,
+            &[sty],
+        );
         if decision::has_reachable_fail(&tree) {
             return residual(
                 &site,
@@ -963,12 +983,27 @@ impl Elab<'_> {
                     );
                 }
                 let karg = self.expr(stack, scope, arg)?;
-                let pty = resolve_ty(site, &self.env.types, &param.ty)
-                    .map(|(t, _)| t)
-                    .map_err(|e| ElabError::Residual {
+                // For generic functions (type params non-empty), the declared param type
+                // may contain abstract type vars (e.g. `List<A>`). Infer the concrete type
+                // from the actual argument instead (the typechecker already verified correctness).
+                // For monomorphic functions, resolve from the declared param type as before.
+                let pty = if !fd.sig.params.is_empty() {
+                    let mut tscope = Self::ty_scope(scope);
+                    infer_type(self.env, &mut tscope, arg).map_err(|e| ElabError::Residual {
                         site: site.to_owned(),
-                        what: format!("could not resolve `{name}`'s parameter type: {e}"),
-                    })?;
+                        what: format!(
+                            "could not infer concrete type for generic `{name}`'s parameter `{}`: {e}",
+                            param.name
+                        ),
+                    })?
+                } else {
+                    resolve_ty(site, &self.env.types, &[], &param.ty)
+                        .map(|(t, _)| t)
+                        .map_err(|e| ElabError::Residual {
+                            site: site.to_owned(),
+                            what: format!("could not resolve `{name}`'s parameter type: {e}"),
+                        })?
+                };
                 bindings.push((param.name.clone(), self.fresh(&param.name), karg, pty));
             }
             let callee_scope: Vec<Binding> = bindings
@@ -1053,7 +1088,7 @@ impl Elab<'_> {
                 );
             }
             let kp = self.fresh(&p.name);
-            let pty = resolve_ty(fname, &self.env.types, &p.ty)
+            let pty = resolve_ty(fname, &self.env.types, &[], &p.ty)
                 .map(|(t, _)| t)
                 .map_err(|e| ElabError::Residual {
                     site: fname.to_owned(),
