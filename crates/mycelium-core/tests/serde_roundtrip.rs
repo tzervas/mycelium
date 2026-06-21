@@ -498,6 +498,43 @@ fn wire_spellings_are_pinned_per_bound_kind_basis_and_layout() {
     let vs = PhysicalLayout::VsaStore { sparse: true };
     let j = serde_json::to_value(vs).unwrap();
     assert_eq!(j["layout"], "VsaStore", "A6-03: VsaStore layout spelling");
+
+    // BinaryWords — the remaining PhysicalLayout variant (Copilot #306).
+    let bw = serde_json::to_value(PhysicalLayout::BinaryWords).unwrap();
+    assert_eq!(bw["layout"], "BinaryWords", "A6-03: BinaryWords layout spelling");
+
+    // EVERY PackScheme wire spelling — TL1/TL2 alone left Unpacked / TwoBitPerTrit /
+    // FiveTritPerByte / I2S unpinned (Copilot #306). Default serde renders the variant name
+    // verbatim except the explicitly-renamed TL1/TL2.
+    for (scheme, wire) in [
+        (PackScheme::Unpacked, "Unpacked"),
+        (PackScheme::TwoBitPerTrit, "TwoBitPerTrit"),
+        (PackScheme::FiveTritPerByte, "FiveTritPerByte"),
+        (PackScheme::I2S, "I2S"),
+        (PackScheme::Tl1, "TL1"),
+        (PackScheme::Tl2, "TL2"),
+    ] {
+        let j = serde_json::to_value(PhysicalLayout::TritPacked { scheme }).unwrap();
+        assert_eq!(j["scheme"], wire, "A6-03: {scheme:?} scheme spelling");
+    }
+
+    // Compile-enforced exhaustiveness: adding a PackScheme or PhysicalLayout variant breaks these
+    // matches, forcing whoever adds it to pin the new wire spelling above — so a spelling can never
+    // drift in unnoticed (the standing A6-03 concern, made a build error rather than a runtime gap).
+    let _pin_pack = |s: PackScheme| match s {
+        PackScheme::Unpacked
+        | PackScheme::TwoBitPerTrit
+        | PackScheme::FiveTritPerByte
+        | PackScheme::I2S
+        | PackScheme::Tl1
+        | PackScheme::Tl2 => {}
+    };
+    let _pin_layout = |l: &PhysicalLayout| match l {
+        PhysicalLayout::BinaryWords
+        | PhysicalLayout::TritPacked { .. }
+        | PhysicalLayout::DenseArray
+        | PhysicalLayout::VsaStore { .. } => {}
+    };
 }
 
 /// An `Empirical` guarantee whose bound rests on **zero trials** is evidence-free and must be
