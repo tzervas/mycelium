@@ -24,6 +24,15 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   (ADR-021 §5); modules already landed (PR #290). M-381 headline (retention ratio) stays DONE.
 - **DN-19 (Road to 1.0.0) added** — the prioritized, dependency-ordered remaining-gaps roadmap
   (the open ADR-021 gate rows are the critical path; everything else is post-1.0 / 1.x).
+- **ADR-021 Gate A5 (KC-4 cert-overhead budget) ratified + closed.** Maintainer budget:
+  per-swap certificate-check **≤ 5 µs absolute AND ≤ 2× the swap cost** (for swaps ≥ the check).
+  Re-measured (`xtask kc4`): bijective 1.30×/1.27× (~1.7 µs), bounded 0.12× (~2 µs), observational
+  8 ns → **within budget, ~2.5× headroom**. Long-term target: nanosecond range (post-1.0).
+  Recorded in phase-2.md §6.7.
+- **ADR-021 Gate B1 confirmed + closed** — RFC-0003 (r4), RFC-0006 (r5; KC-2 discharges Q1),
+  RFC-0007 (r4) all Accepted; concrete-syntax ratification is KC-2-gated and KC-2 = proceed.
+  Remaining open 1.0.0 gate rows: **A2** (Medium ledger), **A3** (WS8 durability), **A4**
+  (`cargo deny` in `just check`) — tracked in DN-19.
 
 ### Added (2026-06-21: M-381 — arm-3 + arm-5 ablation arms, swarm-built)
 - **arm 5 (embedded-DSL baseline, RR-3) is now RUNNABLE.** The model writes a small
