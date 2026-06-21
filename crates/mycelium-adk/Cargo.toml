@@ -1,0 +1,29 @@
+[package]
+name = "mycelium-adk"
+version = "0.0.0"
+description = "Agent Development Kit phylum — honest ADK port with never-silent tool/model guarantees (RFC-0023)."
+edition = "2021"
+rust-version = "1.92"
+license = "MIT"
+repository = "https://github.com/tzervas/mycelium"
+publish = false
+
+# FLAG (orchestrator): add "crates/mycelium-adk" to workspace.members in root Cargo.toml.
+# This table makes the crate buildable standalone (so cargo test -p mycelium-adk works from
+# the crate dir) until the orchestrator registers it in the workspace.  Once registered,
+# this [workspace] section must be REMOVED (workspace.members takes precedence).
+[workspace]
+
+[lints.rust]
+unsafe_code = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[dependencies]
+mycelium-core = { path = "../mycelium-core" }
+mycelium-std-core = { path = "../mycelium-std-core" }
+
+[dev-dependencies]
+# property tests: one property per bound (VR-5 / RFC-0023 §6)
+proptest = "1"
