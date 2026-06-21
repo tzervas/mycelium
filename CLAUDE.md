@@ -367,6 +367,27 @@ asked to wait, wait.)
    freshly-squashed `main` **down through every level** (orch → epic → leaf) after each landing so no
    lower branch keeps building on a superseded base — pull-down flows *down*, squash-merge flows *up*.
 
+## Wave-N multi-session workflow — protected bases, free children, squash-only `main`
+
+When a wave is too big for one session, split it into **independent parent sessions** by **disjoint
+file ownership** — one **protected head branch** each — stowed as kickoffs in `.claude/kickoffs/`
+(`README.md` indexes them; each has a short UID, e.g. `e7l`/`dfr`/`dfb`). Invariants:
+- **Persistent branches are PR-gated & protected:** `main` and every `claude/head/*` base — no direct
+  push/merge, **PR only**. They **persist** when stale working branches are pruned.
+- **Only `main` squash-merges.** Heads (and the octopus/`--no-ff` child merges below them) **preserve
+  lineage** — squashing happens *only* at the head→`main` PR.
+- **Ephemeral child branches merge freely (no PR).** Below a head, working/leaf branches octopus/
+  `--no-ff` into each other in whatever pattern is optimal. Flow: free child merges → **PR into the
+  head** → (final) **squash-PR into `main`** → **propagate the squashed `main` back down** into the
+  other heads/children (`scripts/sync-heads.sh`; pull-down flows down — mitigation #6).
+- **Swarm pattern is scoped per collision profile** (in each kickoff): serial-on-shared-files for a
+  high-collision crate (`mycelium-l1`), parallel-leaf octopus for disjoint dirs, fractured Opus
+  reasoners for research. Size to the work — don't over-fan-out.
+- **Cross-session continuity rides the issues** (`issues.yaml` `depends_on` + body notes), never by
+  touching another session's files. Heads complete + self-integrate first; a final integration
+  octopus-merges the heads, reconciles shared files once, and squash-PRs to `main`.
+- Honesty/append-only survive the split (VR-5/G2) exactly as in the single-session swarm.
+
 ## Skills (`.claude/skills/`)
 Invoke with `/<name>`; they auto-engage when relevant.
 - **`/dev-workflow`** — the implementation discipline above, as a working loop.
