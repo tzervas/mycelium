@@ -8,6 +8,21 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-21: M-673 — structural `Ty::App` abstract-generic-type representation, E7-1)
+- **`mycelium-l1` checker now represents abstract generic types structurally** (`Ty::App(name, args)`)
+  instead of mangled strings (`Ty::Data("List<A>")`). `subst_ty` / `unify_arg` / the type-variable
+  mention check are now plain structural recursion — so generic **type-parameter permutation**
+  (`Pair<B, A>`), **repetition** (`Pair<A, A>`), and **nesting** (`Pair<A, List<A>>`) are handled
+  correctly **without** the string special-cases that previously caused three PR-#346 review bugs.
+  Removed `subst_in_abstract_data_name`; `split_mangled_outer` survives only at the single
+  `App`-vs-concrete-`Ty::Data` unification boundary, and `mangle` only at the monomorphization
+  boundary. **Invariant:** abstract `Ty::App`/`Ty::Var` are confined to the checking phase —
+  everything monomorphizes to concrete `Ty::Data(<mangled>)` before elab/eval/usefulness/decision,
+  which get explicit "unmonomorphized generic" refusal arms (never-silent, G2; unreachable in tests).
+  **Behaviour-preserving** (tag stays `Declared`); **no new kernel node** (KC-3 — `Ty` is the checker's
+  surface type, not an L0 node). Done early (before traits) so M-658/M-659+ build on the clean
+  representation. 192 `mycelium-l1` tests green; `just check` green.
+
 ### Added (2026-06-21: M-656 + M-657 — stage-1 generic type parameters in `mycelium-l1`, E7-1)
 - **RFC-0007 §4.9 — stage-1 generics (spec, M-656; append-only):** closes the §4.4 generics deferral
   for the monomorphic-instantiation slice — the `T-Inst` judgment (generic data declarations + generic
