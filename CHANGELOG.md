@@ -8,6 +8,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-21: 1.0.0 ratification wave — maintainer-ratified)
+- **ADR-021 — Proposed → Accepted (maintainer-ratified).** The 1.0.0 kernel/core release-gate
+  *criteria* are agreed; the §7 open questions (A2 Medium ledger, A3/A4 durability + `cargo deny`,
+  A5 KC-4 budget, B1 RFC-0003 reconciliation) are now the tracked gate-completion work. Moves to
+  `Enacted` only at the tagged release. (ADR README + Doc-Index updated.)
+- **Stdlib ratification finalized (24/25).** `docs/spec/stdlib/runtime.md` ratified **Draft →
+  Accepted** (v0 R1 surface; preconditions met — RFC-0016/0008 Accepted, M-521 landed, ADR-020
+  Enacted, DN-16 re-audit clean); the other 23 implemented specs were already Accepted (DN-07).
+  Further `runtime` constructs activate construct-by-construct at the Phase-7 gate (ADR-020).
+- **`mycelium-std-sys` spec written + ratified** — the 25th crate's missing `docs/spec/stdlib/sys.md`
+  (the one DN-16 NEEDS-WORK item) authored to match the landed crate (honest `Declared` wrappers)
+  and ratified, completing 25/25 stdlib spec ratification.
+- **arm-3 / arm-5 live runs BACKLOGGED** (maintainer decision) — nice-to-have, do not gate 1.0.0
+  (ADR-021 §5); modules already landed (PR #290). M-381 headline (retention ratio) stays DONE.
+- **DN-19 (Road to 1.0.0) added** — the prioritized, dependency-ordered remaining-gaps roadmap
+  (the open ADR-021 gate rows are the critical path; everything else is post-1.0 / 1.x).
+
 ### Added (2026-06-21: M-381 — arm-3 + arm-5 ablation arms, swarm-built)
 - **arm 5 (embedded-DSL baseline, RR-3) is now RUNNABLE.** The model writes a small
   Python embedded DSL; the harness evaluates it in a **restricted sandbox** (blocks

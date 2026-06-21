@@ -11,7 +11,7 @@ New ADRs go here as standalone files. (ADR-001…009 may be extracted into indiv
 
 ## Status set
 
-`Proposed → Accepted → Enacted → Superseded`. ADRs 001–019 are **Accepted**; **ADR-020** is **Enacted** (M-521 v0 R1 implementation landed 2026-06-20); **ADR-021** is **Proposed** (the 1.0.0 release-readiness gate, drafted 2026-06-21 for maintainer ratification — it defines the criteria, it does not declare a release).
+`Proposed → Accepted → Enacted → Superseded`. ADRs 001–019 and **ADR-021** are **Accepted**; **ADR-020** is **Enacted** (M-521 v0 R1 implementation landed 2026-06-20). ADR-021 (the 1.0.0 release-readiness gate) was **maintainer-ratified 2026-06-21** — its criteria are agreed; it moves to `Enacted` only at the tagged 1.0.0 release (gate-completion work tracked in DN-19).
 
 ## Index
 
@@ -37,7 +37,7 @@ New ADRs go here as standalone files. (ADR-001…009 may be extracted into indiv
 | 018 | Versioning policy: per-crate `0.x` SemVer + source-only distribution (no crates.io publish in the design phase); CHANGELOG `[Unreleased]` → release-cut mapping | Accepted | `ADR-018-Versioning-Policy.md` |
 | 019 | libMLIR toolchain: the version-matched build dependency of the off-by-default `mlir-dialect` feature; provisioned via `scripts/setup-mlir.sh` (`just setup-mlir`); resolves M-348 on Linux | Accepted | `ADR-019-libMLIR-Toolchain.md` |
 | 020 | `runtime`/`colony` phylum placement: dedicated `runtime` phylum + thin `std.runtime` facade; construct-by-construct activation at the Phase-7 gate; v0 API surface for the landed R1 slice (M-521) | **Enacted** | `ADR-020-Runtime-Colony-Phylum-Placement.md` |
-| 021 | 1.0.0 release-readiness gate: kernel/core 1.0.0 criteria (Gate A honesty-integrity/durability; Gate B decision/external — KC-2 now met); surface language scoped to `1.x`; Phase-3+ maturation out of scope | **Proposed** | `ADR-021-1.0.0-Release-Readiness-Gate.md` |
+| 021 | 1.0.0 release-readiness gate: kernel/core 1.0.0 criteria (Gate A honesty-integrity/durability; Gate B decision/external — KC-2 now met); surface language scoped to `1.x`; Phase-3+ maturation out of scope | **Accepted** | `ADR-021-1.0.0-Release-Readiness-Gate.md` |
 
 ## Template
 
