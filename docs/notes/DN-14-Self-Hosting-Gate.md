@@ -155,7 +155,7 @@ not change whether stdlib authoring in Mycelium-lang is currently possible):
 
 - **2026-06-21 — M-649 DEFERRED (post-1.0, ADR-021 §5; M-648/M-649 editorial sweep).** M-649 (Self-hosting Stage-2: first stdlib module in Mycelium-lang) is scoped post-1.0 per ADR-021 §5. Gate status: **5 present / 5 absent**. Present: value types + ADTs, pattern matching, functions + recursion, let/lambda, nodule organization. Absent (gate-fails): (1) generic type parameters (no `List<A>`/`Option<T>` without RFC-0019 enactment), (2) trait interfaces (`impl Trait` blocked — RFC-0019 deferred LR-2), (3) effect annotations (declared effects `fn f() -> T / {time}` — deferred RFC-0014 stage-1), (4) `wild`/FFI surface (denied by design in v0, LR-9; `std-sys` phylum is the roadmap path), (5) static guarantee index (stage-1 graded type checking — RFC-0018 accepted, not yet enacted). These five block all non-trivial stdlib modules from being authored in Mycelium-lang. M-649 stays OPEN with DEFERRED status — it is not blocked, it is scoped to Phase-6 (Stage-1 generics/traits RFC amendments). This note stays **Draft** (M-649 verdict is `not-yet`; self-hosting is not declared until gate-fails resolve). Append-only.
 <!-- changelog: 2026-06-21 Tracking IDs assigned (E7-1 epic, M-656..M-664); append-only -->
-**2026-06-21 — Tracking IDs assigned (append-only).** The six gate-fails (§3 rows 6–9, 11) and
+**2026-06-21 — Tracking IDs assigned (append-only).** The five gate-fails (§3 rows 6–9, 11) and
 the one missing-partial (§3 row 10) now have tracking issues under epic **E7-1** (L1 Stage-1
 Language Completeness, Phase 5). Dependency order: M-656 (RFC-0007 spec: generics) → M-657 (L1
 generics impl) → M-658 (RFC-0007 spec: traits + `impl`) → M-659 (L1 traits impl); then in
@@ -163,7 +163,7 @@ parallel: M-660 (effect annotations, row 8), M-663 (static guarantee / RFC-0018 
 M-662 (phylum construct + cross-nodule, row 10). M-661 (wild/FFI, row 9) depends on M-660. M-664
 (`consume`/`grow`/`impl` surface keywords) depends on M-659. Each row in §3 flips to `present`
 when its tracking issue lands and `just check` confirms green. DN-14 Status → `Resolved`
-(append-only) after all 6 gate-fail rows and the 1 missing-partial row are `present`. This note
+(append-only) after all 5 gate-fail rows and the 1 missing-partial row are `present`. This note
 itself does not flip any row — only a landed, confirmed implementation may do so (VR-5/honesty rule).
 
 <!-- changelog: 2026-06-19 Draft created (M-502) -->

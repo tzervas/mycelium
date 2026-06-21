@@ -2032,8 +2032,9 @@ issues:
   # E7-1 = L1 Stage-1 Language Completeness (generics/traits/effects/FFI/phylum/surface-terms).
   # E7-2 = RFC-0008 Runtime Vocabulary Lexing + Construct Activation.
   # ID-collision check performed before minting: highest M-xxx = M-655; highest E-x = E8-1;
-  # E7-x namespace was free. M-656..M-668 assigned (13 issues). idmap.tsv updated when issues
-  # are created via GitHub MCP (separate step per mcp-bootstrap.md).
+  # E7-x namespace was free. M-656..M-668 assigned (13 issues). idmap.tsv is appended by
+  # gh-issues-sync.py itself when it creates the issues; GitHub MCP/GraphQL handles the later
+  # dependency/sub-issue linking (mcp-bootstrap.md).
 
   - id: E7-1
     title: "E7-1 (epic) — L1 Stage-1 Language Completeness: Generics, Traits, Effects, FFI, Phylum, Surface Terms"
@@ -2042,12 +2043,12 @@ issues:
     depends_on: []
     doc_refs: [corpus:DN-14, corpus:RFC-0007, corpus:RFC-0018, corpus:RFC-0019]
     body: |
-      Epic closing the six DN-14 §3 gate-fails (generics, traits, effect annotations, wild/FFI, static guarantee index, cross-nodule phyla) plus the three surface terms ratified in DN-03 §1 that are not yet in the lexer (`consume`, `grow`, `impl`). Together these unblock self-hosting of non-trivial stdlib modules and the L2/L3 dogfooding phyla.
+      Epic closing the five DN-14 §3 gate-fails (rows 6–9, 11: generics, traits, effect annotations, wild/FFI, static guarantee index) and the one missing-partial row (row 10: cross-nodule phyla), plus the three surface terms ratified in DN-03 §1 that are not yet in the lexer (`consume`, `grow`, `impl`). Together these unblock self-hosting of non-trivial stdlib modules and the L2/L3 dogfooding phyla.
 
-      Children (dependency-ordered): M-656 (RFC-0007 spec: generics) → M-657 (L1 generics impl) → M-658 (RFC-0007 spec: traits + `impl`) → M-659 (L1 traits impl) → then in parallel: M-660 (effect annotations), M-663 (static guarantee, RFC-0018 enactment), M-664 (phylum construct + cross-nodule). M-661 (wild/FFI) depends on M-660. M-665 (consume/grow/impl surface keywords) depends on M-659. Orchestrator owns workspace Cargo.toml, CHANGELOG, issues.yaml, Doc-Index, DN-14 §3 rows (append-only update when each child lands).
+      Children (dependency-ordered): M-656 (RFC-0007 spec: generics) → M-657 (L1 generics impl) → M-658 (RFC-0007 spec: traits + `impl`) → M-659 (L1 traits impl) → then in parallel: M-660 (effect annotations), M-663 (static guarantee, RFC-0018 enactment), M-662 (phylum construct + cross-nodule). M-661 (wild/FFI) depends on M-660. M-664 (consume/grow/impl surface keywords) depends on M-659. Orchestrator owns workspace Cargo.toml, CHANGELOG, issues.yaml, Doc-Index, DN-14 §3 rows (append-only update when each child lands).
 
-      Honesty floor: no gate-fail row in DN-14 §3 may be flipped to `present` before the implementing issue (M-657/M-659/M-660/M-661/M-663/M-664) is landed and confirmed by `just check` green. Tags stay at the honestly-supportable strength; VR-5 applies to every implementing child.
-      Acceptance: all six gate-fail rows in DN-14 §3 flipped to `present`; DN-14 Status → Resolved (append-only); `just check` green; CHANGELOG entry.
+      Honesty floor: no gate-fail row in DN-14 §3 may be flipped to `present` before the implementing issue (M-657/M-659/M-660/M-661/M-662/M-663) is landed and confirmed by `just check` green. Tags stay at the honestly-supportable strength; VR-5 applies to every implementing child.
+      Acceptance: all five gate-fail rows (6–9, 11) plus the missing-partial row (10) in DN-14 §3 flipped to `present`; DN-14 Status → Resolved (append-only); `just check` green; CHANGELOG entry.
 
   - id: M-656
     title: "M-656 — spec(rfc-0007): Amend RFC-0007 to ratify stage-1 generic type parameters"

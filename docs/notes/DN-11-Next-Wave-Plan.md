@@ -192,8 +192,7 @@ Once Stage-1 generics/traits land, the `std.ternary`, `std.math` (pure fragments
   generics, traits, effect annotations, wild/FFI, static guarantee grading, phylum + cross-nodule;
   Phase 5) and **E7-2** (RFC-0008 Runtime Vocabulary: lexer reservation → L1 construct activation,
   R1 then R2; Phase 7). E7-1 children: M-656…M-664 (9 issues). E7-2 children: M-665…M-668 (4
-  issues). The tracks are: E7-1 gates DN-14 self-hosting (all 6 gate-fails + 1 missing-partial
-  row); E7-2 gates concurrency dogfooding (RFC-0008 §4.6 R1/R2 vocabulary). Both are independent
+  issues). The tracks are: E7-1 gates DN-14 self-hosting (all 5 gate-fails — rows 6–9, 11 — plus the 1 missing-partial row 10); E7-2 gates concurrency dogfooding (RFC-0008 §4.6 R1/R2 vocabulary). Both are independent
   of each other (E7-2 can start immediately with M-665 lexer-only change). These IDs supersede the
   informally-noted "Stage-1 generics/traits RFC amendments" and "Effect annotation scope decision"
   placeholder descriptions that M-650 referenced. Append-only.
