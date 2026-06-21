@@ -20,6 +20,8 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   criteria for maintainer ratification; it asserts no release** (house rule 3). Registered in
   `docs/adr/README.md` + `docs/Doc-Index.md`. M-381 annotated NON-BLOCKING (headline retention
   ratio recorded; arms 3/5 are research follow-ups that do not gate Phase-3 closure or 1.0.0).
+
+### Added (2026-06-20: M-381 — rigorous arm-4 bridge; retention ratio now DETERMINATE)
 - **`LlmCanonical→L1` bridge landed (`tools/llm-harness/grok/llm_canonical_to_l1.py`),
   DN-09 §9.4 option (b).** Converts the ablation's arm-4 `LlmCanonical` S-expression output to
   `.myc` surface and scores it with the **same authoritative `myc-check`** (parse+typecheck) as
