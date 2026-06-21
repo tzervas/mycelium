@@ -117,7 +117,7 @@ Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is 
 |----|-------|--------|
 | **E7-1** | L1 Stage-1 language completeness — generics→traits→effects→FFI→phylum→grading (M-656…M-664) | needs-design (active wave) |
 | **E7-2** | RFC-0008 runtime vocabulary — M-665 (lexer) → M-666/667 constructs → M-668 R2 | needs-design (M-665 in flight) |
-| **Dogfooding** | web phylum (RFC-0022) · ADK port (RFC-0023) · doc-site build · LSP completions | research / active |
+| **Dogfooding** | web phylum (planned RFC-0022) · ADK port (planned RFC-0023) · doc-site build · LSP completions | research / active |
 | **M-649** | self-host the first stdlib nodule in Mycelium-lang | needs-design (after E7-1; M-502 ✅) |
 | M-655 | Cut 1.0.0 tag — ADR-021 → Enacted | **maintainer-reserved** |
 | M-381 / M-646 | LLM-leverage ablation arms 3/5 — local runs | **maintainer-reserved** |

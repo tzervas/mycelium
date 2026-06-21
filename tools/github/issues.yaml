@@ -1965,7 +1965,7 @@ issues:
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
     labels: [phase:3, type:feature, area:toolchain, priority:P2, status:done]
     depends_on: [M-645, M-381]
-    doc_refs: [corpus:DN-09, src:tools/llm-harness/coauthor.py, src:crates/mycelium-bench/src/lib.rs, src:crates/mycelium-bench/src/report.rs]
+    doc_refs: [corpus:DN-09, src:tools/llm-harness/coauthor.py, src:crates/mycelium-bench/src/lib.rs, src:crates/mycelium-bench/src/report.rs, src:crates/mycelium-bench/src/llm.rs]
     body: |
       The Grok/xAI ablation harness (tools/llm-harness/coauthor.py) emits a JSON report with the schema `{metadata: {...}, quality: {...}, performance: {...}, outcomes: [...]}`. The mycelium-bench crate (M-645) ingests LLM reports via `crates/mycelium-bench/src/report.rs` which expects the schema `{harness: {...}, summary: {...}, results: [...]}`. These are incompatible; a live Grok run's output cannot be directly ingested by mycelium-bench (DN-09 §7 / M-381 STATUS 2026-06-20).
 

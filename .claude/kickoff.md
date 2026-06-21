@@ -38,8 +38,8 @@ DN-04/05/10/11/12 Resolved; M-502 done; M-651 done. The maintainer tags 1.0.0 on
 ### Track 3 — Dogfooding (build Mycelium **phyla**, never "crates"; IDs minted from the RFCs)
 | Item | Title | Gate |
 |------|-------|------|
-| **RFC-0022 → `mycelium-web`** | Web-tooling phylum (HTTP client/server/routing/JSON) | follow-up research → build |
-| **RFC-0023 → `mycelium-adk`** | Google ADK port (Agent/Tool/Session/Runner/multi-agent) | follow-up research → build |
+| **`mycelium-web`** *(planned RFC-0022 — in research, not yet minted)* | Web-tooling phylum (HTTP client/server/routing/JSON) | follow-up research → build |
+| **`mycelium-adk`** *(planned RFC-0023 — in research, not yet minted)* | Google ADK port (Agent/Tool/Session/Runner/multi-agent) | follow-up research → build |
 | **doc-site** | build the in-repo doc site + run the lang-ref autogen (`just docs-site` / `scripts/docsite.sh`) | unblocked |
 | **LSP completions** | baseline scaffolding completions in `crates/mycelium-lsp` (grounded in the L1 grammar) | unblocked |
 
