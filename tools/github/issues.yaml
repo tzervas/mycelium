@@ -2209,3 +2209,32 @@ issues:
       Dogfooding developer-experience: a baseline LSP completion provider so developers scaffold Mycelium code easily. `crates/mycelium-lsp/src/completions.rs` offers (1) the 36 **ACTIVE** keyword completions drawn from `mycelium_l1::token::keyword()` (structural / expression / type / scalar / strength), and (2) five grammar-grounded snippets — `nodule-header`, `fn-def`, `type-adt`, `match-expr`, `swap-expr` (the swap snippet pins both `to:` and `policy:` per the S1/WF2 invariant). `wire.rs` advertises `completionProvider` and handles `textDocument/completion`.
       Honesty (G2/VR-5): scope is **Declared** — lexical/scaffolding only, no semantic/type-aware resolution (stated in the module doc). Reserved-not-active (`phylum`/`colony`) and not-yet-lexed runtime words (`hypha`…`reclaim`, plus `impl`/`consume`/`grow`) are **excluded** — never offered as if usable.
       Acceptance: `cargo test -p mycelium-lsp` green (83 tests); `completionProvider` advertised in `initialize_result`; ACTIVE keywords offered, reserved/not-yet-lexed words excluded; 5 grammar-grounded snippets. DONE (2026-06-21).
+
+  # ---------------- 2026-06-21: Docsite lang-ref (M-672) ----------------
+  - id: M-672
+    title: "M-672 — feat(docsite): language-reference autogen page in the docs-site pipeline"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P3, status:done]
+    depends_on: []
+    doc_refs: [src:scripts/docsite.sh]
+    body: |
+      extend `scripts/docsite.sh` (`just docs-site`) with a generated language-reference landing page — EBNF productions, the three reserved-word tables (active / reserved-not-active / not-yet-lexed, verified against `token::keyword()`), the 25-entry stdlib spec table, design-doc links. DONE (2026-06-21).
+  # ---------------- 2026-06-21: Web phylum (RFC-0022) ----------------
+  - id: M-670
+    title: "M-670 — feat(web): build the mycelium-web phylum (HTTP client/server/routing/JSON) per RFC-0022"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:stdlib, priority:P2, status:blocked]
+    depends_on: [M-657, M-659, M-666]
+    doc_refs: [corpus:RFC-0022, corpus:RFC-0016, corpus:RFC-0008]
+    body: |
+      build the `web` phylum (Rust-first `mycelium-web`): nodules web.http / web.json / web.route / web.server / web.client per RFC-0022. **BLOCKED** on the two-phase research discharge (**RP-10** must discharge the RFC-0022 §10 Honest-Uncertainty Register) AND E7-1 (M-657 generics, M-659 traits — the typed `Json<T>` handler surface) + E7-2 (M-666 `hypha`/`colony` — the `colony { hypha … }` server surface). v1 Rust-first; honest guarantee matrix (never `Proven` without a checked basis); never-silent throughout (G2).
+
+  # ---------------- 2026-06-21: ADK phylum (RFC-0023) ----------------
+  - id: M-671
+    title: "M-671 — feat(adk): build the mycelium-adk phylum (Agent Development Kit port) per RFC-0023"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:stdlib, priority:P2, status:blocked]
+    depends_on: [M-657, M-659, M-666, M-670]
+    doc_refs: [corpus:RFC-0023, corpus:RFC-0016, corpus:RFC-0008]
+    body: |
+      build the `adk` phylum (Rust-first `mycelium-adk`): nodules adk.agent / adk.tool / adk.session / adk.runner / adk.model per RFC-0023 — a Mycelium port of Google's Agent Development Kit, with **honesty-as-differentiator** (every tool/model output tagged Declared/Empirical, never Proven). **BLOCKED** on the two-phase research discharge (**RP-9** discharges the RFC-0023 Honest-Uncertainty Register) AND E7-1 + E7-2 + M-670 (reuses the web phylum's HTTP/JSON for model transport). Wires to the LLM harness (reuses `GrokLlmReport`). v1 Rust-first; never-silent (G2).

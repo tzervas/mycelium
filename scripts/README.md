@@ -96,11 +96,12 @@ manifest deliberately (and note it in the changelog), don't let the gate guess o
 ## Local docsite
 
 `scripts/docsite.sh` (run via `just docs-site`) assembles a single browsable static site under
-`target/docsite/` from three sources:
+`target/docsite/` from four sources:
 
 | Section | Tool | What it builds |
 |---|---|---|
 | **Corpus** | `myc-doc build` | HTML view of RFCs/ADRs/DNs/specs (M-363 doc-IR) |
+| **Language reference** | `scripts/docsite.sh` (autogen) | Grammar + lexicon + stdlib spec index (`lang-ref/index.html`) |
 | **Agent index** | `tools/docgen/code_index.py` | Symbol table with crate/file:line/guarantee-tag |
 | **Rustdoc** | `cargo doc --no-deps --workspace` | Public Rust API reference |
 
@@ -110,7 +111,7 @@ gitignored (`target/docsite/`); it is never committed.
 **Usage:**
 
 ```sh
-just docs-site              # build the site
+just docs-site              # build the site (all four sections)
 ```
 
 **Browsing on WSL:** serve the output dir with Python's built-in HTTP server, then open the URL in
@@ -122,9 +123,31 @@ python3 -m http.server 8080
 # open http://localhost:8080 in your Windows browser
 ```
 
-The landing page (`target/docsite/index.html`) links all three sections and lists any that were
-skipped. Most sections also work when opened as a local file, except rustdoc (which uses
-absolute-path links and requires a server).
+The landing page (`target/docsite/index.html`) links all four sections and lists any that were
+skipped. Most sections work when opened as a local file; rustdoc requires a server (absolute-path
+links).
+
+### Language-reference autogeneration
+
+The **Language reference** (`lang-ref/index.html`) is generated deterministically from the corpus
+in a single pass — no separate tool required. It is emitted only when the corpus builds (it links
+into `corpus/pages/`). The page covers:
+
+- **Surface grammar** — links to the grammar README, RFC-0006, RFC-0007, RFC-0020, and a
+  **curated excerpt** of key EBNF productions (a hand-maintained snapshot, not auto-extracted;
+  `docs/spec/grammar/mycelium.ebnf` is the normative source).
+- **Reserved-word lexicon** — three tables (active keywords, reserved-not-active words, and
+  ratified-not-yet-lexed names) as a **hand-curated orientation snapshot**, not auto-extracted from
+  the lexer. The normative ground truth is `crates/mycelium-l1/src/token.rs` +
+  `docs/spec/grammar/mycelium.ebnf` (`.claude/memory/lang-lexicon-syntax.md` is a non-normative
+  maintenance note). Re-verify against `token.rs` after any lexer change (Empirical/Declared — G2/VR-5).
+- **Standard-library module specs** — per-module links for all 25 modules (Ring 0/1/2), with
+  ring, task, and grounding crux; traces to RFC-0016 §4.5 guarantee matrices.
+- **Language-layer design documents** — links to RFC-0001, RFC-0012, RFC-0017, RFC-0019,
+  the Nodule-Header spec, and the Example Programs Reference.
+
+To regenerate after a corpus change, just re-run `just docs-site` — the lang-ref page is rebuilt
+from scratch on every run (idempotent, deterministic, offline).
 
 ## Remote CI
 `.github/workflows/checks.yml` is **manual-dispatch only** (`workflow_dispatch`) and
