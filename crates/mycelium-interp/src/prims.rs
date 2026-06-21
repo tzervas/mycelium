@@ -315,3 +315,120 @@ fn prim_trit_sub(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
 fn prim_trit_mul(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     trit_binop(prim, args, ternary::mul, ApproxRule::Refuse)
 }
+
+#[cfg(test)]
+mod mutant_witness_tests {
+    //! Mutant-witness tests for prims.rs survivors (M-654 Gate A3).
+    use super::*;
+    use mycelium_core::{Meta, Payload, Provenance, Repr, Value};
+
+    fn byte(bits: [bool; 8]) -> Value {
+        Value::new(
+            Repr::Binary { width: 8 },
+            Payload::Bits(bits.to_vec()),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap()
+    }
+
+    // ---- prims.rs:61 — PrimRegistry::empty → Default::default() ----
+    // JUSTIFIED: PrimRegistry derives Default (BTreeMap::new()), and `empty()` also constructs
+    // BTreeMap::new(). The two are semantically identical — both produce an empty registry with no
+    // registered prims. This mutant is genuinely equivalent and is excluded via mutants.toml.
+
+    // ---- prims.rs:169 — expect_arity → Ok(()) ----
+    // Mutant: expect_arity always succeeds, even with wrong arity — arity errors are never raised.
+    // Kill: invoking a prim with wrong arity must return a PrimType error, not succeed silently.
+    #[test]
+    fn expect_arity_rejects_wrong_arity() {
+        // Mutant-witness: prims.rs:169 replace expect_arity → Ok(()).
+        // bit.not requires exactly 1 arg; providing 0 or 2 must be a PrimType error.
+        // Test via the PrimRegistry public API.
+        let reg = PrimRegistry::with_builtins();
+        let f = reg.get("bit.not").expect("bit.not registered");
+        let b = byte([true; 8]);
+        // Zero args → PrimType.
+        assert!(
+            matches!(f("bit.not", &[]), Err(EvalError::PrimType { .. })),
+            "bit.not with 0 args must be PrimType"
+        );
+        // Two args → PrimType.
+        assert!(
+            matches!(f("bit.not", &[&b, &b]), Err(EvalError::PrimType { .. })),
+            "bit.not with 2 args must be PrimType"
+        );
+        // One arg → Ok (correct arity).
+        assert!(
+            f("bit.not", &[&b]).is_ok(),
+            "bit.not with 1 arg must succeed"
+        );
+    }
+
+    // ---- prims.rs:240 — prim_bit_and: & → | or ^ ----
+    // Mutant A (& → |): AND is replaced by OR — (1&0)=0 but (1|0)=1.
+    // Mutant B (& → ^): AND is replaced by XOR — (1&1)=1 but (1^1)=0.
+    // Kill: test a case where AND, OR, and XOR all differ (e.g. a=1,b=0 and a=1,b=1).
+    #[test]
+    fn bit_and_is_conjunction_not_disjunction_or_xor() {
+        // Mutant-witness: prims.rs:240 & → | or ^.
+        let reg = PrimRegistry::with_builtins();
+        let f = reg.get("bit.and").expect("bit.and registered");
+
+        // Operands: a = [true; 8], b = [false; 8].
+        // AND: all false. OR: all true. XOR: all true. AND ≠ OR,XOR.
+        let a = byte([true; 8]);
+        let b_zeros = byte([false; 8]);
+        let result = f("bit.and", &[&a, &b_zeros]).expect("bit.and evaluates");
+        assert_eq!(
+            result.payload(),
+            &Payload::Bits(vec![false; 8]),
+            "bit.and([1;8], [0;8]) must be [0;8] (AND), not [1;8] (OR/XOR)"
+        );
+
+        // Operands: a = [true; 8], b = [true; 8].
+        // AND: all true. OR: all true. XOR: all false. AND ≠ XOR here.
+        let b_ones = byte([true; 8]);
+        let result2 = f("bit.and", &[&a, &b_ones]).expect("bit.and evaluates");
+        assert_eq!(
+            result2.payload(),
+            &Payload::Bits(vec![true; 8]),
+            "bit.and([1;8], [1;8]) must be [1;8] (AND/OR), distinguishing from XOR ([0;8])"
+        );
+    }
+
+    // ---- prims.rs:243 — prim_bit_or: | → & or ^ ----
+    // Mutant A (| → &): OR is replaced by AND — (1|0)=1 but (1&0)=0.
+    // Mutant B (| → ^): OR is replaced by XOR — (1|1)=1 but (1^1)=0.
+    // Kill: test case where OR, AND, XOR all differ.
+    #[test]
+    fn bit_or_is_disjunction_not_conjunction_or_xor() {
+        // Mutant-witness: prims.rs:243 | → & or ^.
+        let reg = PrimRegistry::with_builtins();
+        let f = reg.get("bit.or").expect("bit.or registered");
+
+        // Operands: a = [true; 8], b = [false; 8].
+        // OR: all true. AND: all false. XOR: all true. OR ≠ AND.
+        let a = byte([true; 8]);
+        let b_zeros = byte([false; 8]);
+        let result = f("bit.or", &[&a, &b_zeros]).expect("bit.or evaluates");
+        assert_eq!(
+            result.payload(),
+            &Payload::Bits(vec![true; 8]),
+            "bit.or([1;8], [0;8]) must be [1;8] (OR), not [0;8] (AND)"
+        );
+
+        // Operands: a = [true; 8], b = [true; 8].
+        // OR: all true. AND: all true. XOR: all false. OR ≠ XOR here.
+        let b_ones = byte([true; 8]);
+        let result2 = f("bit.or", &[&a, &b_ones]).expect("bit.or evaluates");
+        assert_eq!(
+            result2.payload(),
+            &Payload::Bits(vec![true; 8]),
+            "bit.or([1;8], [1;8]) must be [1;8] (OR/AND), distinguishing from XOR ([0;8])"
+        );
+
+        // Mixed: a=[T,F,T,F,T,F,T,F], b=[F,F,F,F,F,F,F,F].
+        // OR=[T,F,T,F,T,F,T,F], AND=[F;8], XOR=[T,F,T,F,T,F,T,F] — OR and XOR agree here.
+        // But the two tests above already distinguish OR from both AND and XOR.
+    }
+}
