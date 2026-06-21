@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0017 |
-| **Status** | **Accepted** (2026-06-18 — maintainer sign-off ratifying DN-08's direction). Lifts `matured` from **per-definition** to **scope** granularity: a `nodule` or `phylum` is matured via its **header**, a program/package via its **`mycelium-proj.toml` manifest**; **`matured fn` (per-definition maturation) is retired** (superseded — no longer expressible). Reserves **`thaw`** (Surface; conventional-clearest) as the rare in-source **de-maturation** marker. **Supersedes the *granularity* of RFC-0007 §4.5** (the per-definition reading); the gate's **soundness argument is unchanged** — `matured ⟹ total` is quantified over the matured scope. |
+| **Status** | **Enacted** (2026-06-21 — `thaw`/scope-`matured` gate implemented and tested in `mycelium-l1`; the scope-granularity elaborator, `matured fn` retirement, and `thaw` de-maturation marker are all present in `crates/mycelium-l1/`; M-648 editorial sweep. Append-only; steps through Accepted below.) **Accepted** (2026-06-18 — maintainer sign-off ratifying DN-08's direction). Lifts `matured` from **per-definition** to **scope** granularity: a `nodule` or `phylum` is matured via its **header**, a program/package via its **`mycelium-proj.toml` manifest**; **`matured fn` (per-definition maturation) is retired** (superseded — no longer expressible). Reserves **`thaw`** (Surface; conventional-clearest) as the rare in-source **de-maturation** marker. **Supersedes the *granularity* of RFC-0007 §4.5** (the per-definition reading); the gate's **soundness argument is unchanged** — `matured ⟹ total` is quantified over the matured scope. |
 | **Type** | Foundational / normative |
 | **Date** | June 18, 2026 |
 | **Supersedes** | RFC-0007 §4.5 *granularity* (the per-definition framing of where `matured` attaches) — append-only; the §4.5 totality/soundness argument is **retained, re-quantified**, not rewritten. Ratifies **DN-08** (→ Resolved). |
@@ -259,6 +259,7 @@ runtime (RFC-0008) `tier` switch lands.
 
 ## Meta — changelog
 
+- **2026-06-21 — Accepted → Enacted (M-648 editorial sweep).** The `thaw`/scope-`matured` gate is implemented and tested in `mycelium-l1` (crates/mycelium-l1/): scope-granularity maturation via header, `matured fn` retirement enforced in the elaborator, and `thaw` de-maturation marker present; DN-08's five §3 questions all closed by the implementation. Append-only.
 - **2026-06-18 — Accepted (maintainer sign-off; ratifies DN-08).** Lifts `matured` from
   per-definition to **scope** granularity: `nodule`/`phylum` matured via header `// @matured: …`,
   program/package via the `mycelium-proj.toml` manifest; **retires `matured fn`** (superseded — per-

@@ -8,6 +8,42 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-21: M-647/M-648/M-650/M-381/M-646 — editorial enactment sweep)
+- **RFC-0016 (Core Library & Standard Library) → Enacted.** All 25 `mycelium-std-*` crates landed
+  Rust-first (M-501–M-534, M-540, M-541): the 23-module Tier-A/Tier-B guarantee matrices are asserted
+  in tests, never-silent G2 holds across all modules, per-op `EXPLAIN` obligation met. Self-hosting
+  migration half (M-502, Phase-5-C) remains open per KC-2 gate ruling.
+- **RFC-0017 (Maturation Scope & De-maturation) → Enacted.** `thaw`/scope-`matured` gate implemented
+  and tested in `crates/mycelium-l1/`: scope-granularity elaboration via header, `matured fn`
+  retirement enforced, `thaw` de-maturation marker present; DN-08's five §3 questions all closed.
+- **RFC-0021 (Semantic-Level Projection Framework) → Enacted (framework).** M-380 `LlmCanonical`
+  renderer landed in `crates/mycelium-lsp/src/project.rs`, total over all 11 L1 node kinds, P1–P6
+  invariants unit-tested. LLM-leverage claim stays `Declared`/open in the isolated non-blocking track
+  (RP-1 / M-381) — no leverage result asserted (VR-5).
+- **RFC-0018 STAYS Accepted (not Enacted).** Stage-1 *static* graded judgment is not yet implemented
+  (only stage-0 dynamic checks exist; DN-14 lists it as gate-fail 5 for self-hosting). Honesty/VR-5:
+  acceptance does not upgrade to enacted without the implementation.
+- **RFC-0019 STAYS Accepted.** Traits/generics deferred (LR-2); no implementation.
+- **DN-04 (Optional Structured Diagnostics) → Resolved.** RFC-0013 enacted (M-345): §4 design landed
+  in `crates/mycelium-lsp/src/diagnostics`; all Q1–Q5 decisions absorbed.
+- **DN-05 (AOT Recursion Execution Strategy) → Resolved.** M-347 (trampoline) + M-349 (dynamic
+  `DepthBudget`) both enacted; `EvalError::DepthLimit` explicit and `EXPLAIN`-able, G2 holds.
+- **DN-10 (Remaining L1 Gaps) → Resolved.** R7-Q4 (M-390): prim signature table → content-addressed
+  prim declarations; R7-Q3 (M-391): mutual-recursion surface elaboration in `mycelium-l1::elab`.
+- **DN-12 (RFC-0020 Ratification-Readiness) → Resolved.** RFC-0020 ratified `Accepted (scoped)` per
+  DN-12 recommendation; §4.2/§4.5 carve-outs recorded; readiness-capture purpose complete.
+- **DN-11 (Next-Wave Plan) → Resolved.** §5 appended: Phase-5 completion summary (all 25 std crates,
+  RFC-0016/0017/0021 Enacted), remaining gate items (M-649 DEFERRED post-1.0, M-502 not-yet), and
+  Phase-6 roadmap (Stage-1 generics/traits, effect annotations, native codegen, self-hosting
+  expansion, open research gaps).
+- **M-649 DEFERRED (post-1.0).** Self-hosting Stage-2 scoped post-1.0 per ADR-021 §5. Gate status:
+  5 present / 5 absent. Absent: generics, trait interfaces, effect annotations, wild/FFI, static
+  guarantee index. DN-14 deferral note appended. M-649 stays open.
+- **M-381 / M-646 closed.** Gate B2 headline met (DN-09 §10 determinate retention ratio — proceed).
+  Arm-4 LlmCanonical→L1 bridge landed (M-381); arms 3/5 live runs backlogged per ADR-021 §5
+  (need local GBNF model; do not gate 1.0.0).
+- Doc-Index, RFC README, issues.yaml, per-doc changelog footers updated; `just check` green.
+
 ### Fixed (2026-06-21: M-653 — ADR-021 Gate A2, Medium-findings ledger)
 - **Gate A2 closed — every WS2–WS6 Medium from the 2026-06-14 deep review is resolved.** A committed
   ledger (`docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md`) records each of the 25

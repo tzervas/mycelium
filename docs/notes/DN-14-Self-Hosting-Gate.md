@@ -153,4 +153,6 @@ not change whether stdlib authoring in Mycelium-lang is currently possible):
 
 ## Meta — changelog
 
+- **2026-06-21 — M-649 DEFERRED (post-1.0, ADR-021 §5; M-648/M-649 editorial sweep).** M-649 (Self-hosting Stage-2: first stdlib module in Mycelium-lang) is scoped post-1.0 per ADR-021 §5. Gate status: **5 present / 5 absent**. Present: value types + ADTs, pattern matching, functions + recursion, let/lambda, nodule organization. Absent (gate-fails): (1) generic type parameters (no `List<A>`/`Option<T>` without RFC-0019 enactment), (2) trait interfaces (`impl Trait` blocked — RFC-0019 deferred LR-2), (3) effect annotations (declared effects `fn f() -> T / {time}` — deferred RFC-0014 stage-1), (4) `wild`/FFI surface (denied by design in v0, LR-9; `std-sys` phylum is the roadmap path), (5) static guarantee index (stage-1 graded type checking — RFC-0018 accepted, not yet enacted). These five block all non-trivial stdlib modules from being authored in Mycelium-lang. M-649 stays OPEN with DEFERRED status — it is not blocked, it is scoped to Phase-6 (Stage-1 generics/traits RFC amendments). This note stays **Draft** (M-649 verdict is `not-yet`; self-hosting is not declared until gate-fails resolve). Append-only.
+
 <!-- changelog: 2026-06-19 Draft created (M-502) -->

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-10 |
-| **Status** | **Draft / Resolved-as-capture** (planning capture, advisory — see posture below). Records the two open L1 work items as concrete, dependency-ordered plans. Neither item is a normative decision; both are build-task framings for the maintainer to schedule. |
+| **Status** | **Resolved** (2026-06-21 — R7-Q3 enacted by M-391 (2026-06-19): mutually-recursive surface elaboration landed in `mycelium-l1::elab`; R7-Q4 enacted by M-390 (2026-06-18): prim signature table migrated to content-addressed prim declarations. Both items done; capture purpose complete. M-648 editorial sweep. Append-only.) **Draft / Resolved-as-capture** (planning capture, advisory — see posture below). Records the two open L1 work items as concrete, dependency-ordered plans. Neither item is a normative decision; both are build-task framings for the maintainer to schedule. |
 | **Decides** | Nothing normatively. Frames the *elaboration* work remaining under R7-Q3 and R7-Q4 as concrete, dependency-ordered steps with differential obligations and one research/spike prompt each. |
 | **Feeds** | RFC-0007 §8 (R7-Q3, R7-Q4); RFC-0001 r4/r5 (the `Fix`/`FixGroup` node grammar); `crates/mycelium-l1::elab`; ADR-003 (content-addressed identity); KC-3 (small auditable kernel). |
 | **Date** | June 18, 2026 |
@@ -275,6 +275,7 @@ data declarations). Both are purely additive in the RFC-0001 r5/RFC-0007 r4 worl
 
 ## Changelog
 
+- **2026-06-21 — Resolved (M-648 editorial sweep).** Both planned items are enacted: R7-Q4 (M-390, 2026-06-18) — prim signature table `Π` migrated to content-addressed prim declarations in `mycelium-core::data`; R7-Q3 (M-391, 2026-06-19) — mutually-recursive surface elaboration (Tarjan SCC → `FixGroup`) landed in `mycelium-l1::elab`, resolving the surface-grammar spike (RP-6). This note's capture purpose is complete. Append-only.
 - **2026-06-18 — Draft / Resolved-as-capture.** Initial capture of the two remaining L1 work
   items (R7-Q3 surface elaboration, R7-Q4 prim-table migration) as concrete, dependency-ordered
   plans. Grounded in RFC-0007 §8, RFC-0001 r4/r5, RFC-0006 §4/§8, ADR-003, KC-3. Advisory

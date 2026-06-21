@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-05 |
-| **Status** | **Draft — investigation; recommendation presented** (2026-06-16). Design-first / present-before-fold: no code lands with this note. |
+| **Status** | **Resolved** (2026-06-21 — M-347 trampoline + M-349 dynamic budget both enacted: explicit control stack / trampoline in `crates/mycelium-mlir` makes the depth limit explicit `EvalError::DepthLimit` (never abort/hang); dynamic `DepthBudget` derives `max_depth` from detected memory headroom, zero-`unsafe`, `EXPLAIN`-able `DepthBasis`. DN05-Q1 priority-1 banked as RFC-0004 §2 requirement; DN05-Q5 enacted. Append-only.) **Draft — investigation; recommendation presented** (2026-06-16). Design-first / present-before-fold: no code lands with this note. |
 | **Feeds** | RFC-0004 (execution model — the native AOT path); ADR-007/009 (interpreter is the trusted base; AOT/native is the perf path); RFC-0007 §4.5 (the fuel clock); `mycelium-mlir::aot` (the env-machine, M-342); G2 (never-silent), KC-3 / KISS / YAGNI (small auditable kernel, no bloat), NFR-7 (the M-210 differential) |
 | **Question** | How should object-level recursion execute on the AOT path so it is **stack-robust** (a deep recursion is a graceful explicit limit, never a host-stack abort) and **performant**, *without bloating or destabilising* the project? |
 | **Surfaced by** | M-342 (#104): the AOT env-machine recurses on the **host call stack** (O(depth)); the fuel clock bounds *productive work* but depth beyond the host stack **aborts** — worse than a hang. M-347 (#109) tracks the fix. |
@@ -168,6 +168,7 @@ AOT env-machine is a bounded-depth differential path — stated, not hidden.
 
 ## Meta — changelog
 
+- **2026-06-21 — Draft → Resolved (M-648 editorial sweep).** Both resolution tasks are enacted: M-347 (trampoline / explicit control stack in `mycelium-mlir::aot` — depth limit is explicit `EvalError::DepthLimit`, never abort/hang, G2 holds; `recursion-probe` post-fix verifies no abort to fuel 5 000 000) and M-349 (dynamic `DepthBudget` in `mycelium-mlir::budget` deriving `max_depth` from detected memory headroom, zero-`unsafe`, `EXPLAIN`-able `DepthBasis`). Priority-1 (native MLIR stack-robustness) banked as RFC-0004 §2 requirement, stays libMLIR-gated (M-348). All DN05 open questions resolved in code. Append-only.
 - **2026-06-16 — Draft.** Created for M-347 (#109) at the maintainer's direction to **investigate +
   improve before venturing further** on the execution path. Records the prioritisation (1: bank native
   MLIR→LLVM stack-robustness as a design requirement — libMLIR-gated, not built; 2: explicit control
