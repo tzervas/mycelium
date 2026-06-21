@@ -382,9 +382,19 @@ and <code>docs/spec/grammar/mycelium.ebnf</code>. The tables below are an orient
 <tbody>
 <tr><td><code>phylum</code></td><td>Library-scale grouping above nodules; activates when its construct lands (RFC-0006)</td><td>DN-06; RFC-0006</td></tr>
 <tr><td><code>colony</code></td><td>Dynamic runtime grouping of active <code>hypha</code>; reassigned from former static meaning (DN-06)</td><td>DN-06; RFC-0008 §4.7</td></tr>
+<tr><td><code>hypha</code></td><td>Reserved keyword &mdash; produces a ParseError; not yet active as a construct (RFC-0008 §4.5)</td><td>DN-03 §4; RFC-0008 §4.5; M-665</td></tr>
+<tr><td><code>fuse</code></td><td>Reserved keyword &mdash; produces a ParseError; not yet active as a construct (RFC-0008 §4.5)</td><td>DN-03 §4; RFC-0008 §4.5/RT6; M-665</td></tr>
+<tr><td><code>mesh</code></td><td>Reserved keyword &mdash; produces a ParseError; not yet active as a construct (RFC-0008 §4.5)</td><td>DN-03 §4; RFC-0008 §4.5/RT5; M-665</td></tr>
+<tr><td><code>graft</code></td><td>Reserved keyword &mdash; produces a ParseError; not yet active as a construct (RFC-0008 §4.5)</td><td>DN-03 §4; RFC-0008 §4.5/RT4; M-665</td></tr>
+<tr><td><code>cyst</code></td><td>Reserved keyword &mdash; produces a ParseError; not yet active as a construct (RFC-0008 §4.5)</td><td>DN-03 §4; RFC-0008 §4.5/RT2; M-665</td></tr>
+<tr><td><code>xloc</code></td><td>Reserved keyword &mdash; produces a ParseError; not yet active as a construct (RFC-0008 §4.5)</td><td>DN-03 §4; RFC-0008 §4.5/RT1; M-665</td></tr>
+<tr><td><code>forage</code></td><td>Reserved keyword &mdash; produces a ParseError; not yet active as a construct (RFC-0008 §4.5)</td><td>DN-03 §4; RFC-0008 §4.5/RT3; M-665</td></tr>
+<tr><td><code>backbone</code></td><td>Reserved keyword &mdash; produces a ParseError; not yet active as a construct (RFC-0008 §4.5)</td><td>DN-03 §4; RFC-0008 §4.5/RT3; M-665</td></tr>
+<tr><td><code>tier</code></td><td>Reserved keyword &mdash; produces a ParseError; not yet active as a construct (RFC-0008 §4.5)</td><td>DN-03 §4; RFC-0008 §4.5; M-665</td></tr>
+<tr><td><code>reclaim</code></td><td>Reserved keyword &mdash; produces a ParseError; not yet active as a construct (RFC-0008 §4.5)</td><td>DN-03 §4; RFC-0008 §4.5/RT7; M-665</td></tr>
 </tbody>
 </table>
-<div class="warn">Using <code>phylum</code> or <code>colony</code> as identifiers is a parse error (they lex as keywords &mdash; G2: never silent). See <code>conformance/reject/10-reserved-not-active.myc</code>.</div>
+<div class="warn">Using any of the above as identifiers is a parse error (they lex as keywords &mdash; G2: never silent). See <code>conformance/reject/10-reserved-not-active.myc</code> and <code>conformance/reject/12-runtime-vocab-reserved-not-active.myc</code>.</div>
 
 <h3>Ratified, not yet lexed (lex as ordinary identifiers today)</h3>
 <table>
@@ -393,16 +403,6 @@ and <code>docs/spec/grammar/mycelium.ebnf</code>. The tables below are an orient
 <tr><td><code>impl</code></td><td>Inherent methods on a type</td><td>DN-03 §1</td></tr>
 <tr><td><code>consume</code></td><td>Acquire exclusive ownership of an affine <code>substrate</code></td><td>DN-03 §1</td></tr>
 <tr><td><code>grow</code></td><td>Derive-like generative capability extension</td><td>DN-03 §1</td></tr>
-<tr><td><code>hypha</code></td><td>Single concurrent execution unit</td><td>DN-03 §4; RFC-0008 §4.5</td></tr>
-<tr><td><code>fuse</code></td><td>Lawful state fusion: semilattice merge of two <code>hypha</code> states</td><td>DN-03 §4; RFC-0008 §4.5/RT6</td></tr>
-<tr><td><code>mesh</code></td><td>Gossip/pub-sub overlay with honest probabilistic guarantees</td><td>DN-03 §4; RFC-0008 §4.5/RT5</td></tr>
-<tr><td><code>graft</code></td><td>Capability contract with external infrastructure</td><td>DN-03 §4; RFC-0008 §4.5/RT4</td></tr>
-<tr><td><code>cyst</code></td><td>Content-addressed checkpoint of a dormable computation</td><td>DN-03 §4; RFC-0008 §4.5/RT2</td></tr>
-<tr><td><code>xloc</code></td><td>Explicit, fallible, Meta-preserving value movement</td><td>DN-03 §4; RFC-0008 §4.5/RT1</td></tr>
-<tr><td><code>forage</code></td><td>Adaptive placement policy</td><td>DN-03 §4; RFC-0008 §4.5/RT3</td></tr>
-<tr><td><code>backbone</code></td><td>Declared high-bandwidth transport path</td><td>DN-03 §4; RFC-0008 §4.5/RT3</td></tr>
-<tr><td><code>tier</code></td><td>Execution-mode switch (interpreted vs native); distinct from a <code>swap</code></td><td>DN-03 §4; RFC-0008 §4.5</td></tr>
-<tr><td><code>reclaim</code></td><td>Supervision-tree reclamation of stale runtime units (never memory)</td><td>DN-03 §4; RFC-0008 §4.5/RT7</td></tr>
 </tbody>
 </table>
 
