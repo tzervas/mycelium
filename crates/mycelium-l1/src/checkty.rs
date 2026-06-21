@@ -960,13 +960,33 @@ fn resolve_shell_field_ty(
                 .map(|a| resolve_shell_field_ty(site, types, generics, tyvars, a))
                 .collect::<Result<_, _>>()?;
             // M-673: produce Ty::App for abstract args (has Var), Ty::Data(mangle) for concrete.
-            // Ty::App is only in shell storage — never inserted into `types`.
-            if generics.contains_key(name) || types.contains_key(name) {
+            // Ty::App is only in shell storage — never inserted into `types`. Validate first
+            // (never-silent, G2): a monomorphic type may not take type arguments, and a generic's
+            // arity must match — otherwise we would build a wrong-shape `Ty::App` that downstream
+            // unification/matching assumes cannot occur.
+            if let Some(shell) = generics.get(name) {
+                if shell.params.len() != arg_tys.len() {
+                    return Err(CheckError::new(
+                        site,
+                        format!(
+                            "generic type `{name}` expects {} type argument(s) but {} were given \
+                             (M-657 arity)",
+                            shell.params.len(),
+                            arg_tys.len()
+                        ),
+                    ));
+                }
                 return if arg_tys.iter().any(contains_var) {
                     Ok(Ty::App(name.clone(), Box::new(arg_tys)))
                 } else {
                     Ok(Ty::Data(mangle(name, &arg_tys)))
                 };
+            }
+            if types.contains_key(name) {
+                return Err(CheckError::new(
+                    site,
+                    format!("type `{name}` is not generic — it takes no type arguments (M-657)"),
+                ));
             }
             Err(CheckError::new(
                 site,
@@ -2222,11 +2242,10 @@ pub(crate) fn mangle(name: &str, args: &[Ty]) -> String {
 /// parameters after call-site instantiation. A return type that still contains a `Var` means no
 /// argument anchored it; the caller must provide an explicit annotation (G2 / never-silent).
 ///
-/// **Conservative for `Ty::Data`**: returns false for `Ty::Data` even if the Data string encodes
-/// an abstract mangled name like `"List<A>"`. This is intentional — `Data` with embedded vars only
-/// appears in GenericShell ctor field types (body context), not in function return types after
-/// substitution. Callers that must detect vars inside mangled Data strings should use
-/// [`ty_mentions_tyvar`] instead.
+/// **`Ty::Data` is opaque/concrete (post-M-673)**: abstract generic applications are `Ty::App`
+/// (handled structurally below), so a `Ty::Data` name is always a registered monomorphic type and
+/// never carries a type variable — it returns false. ([`ty_mentions_tyvar`] is the distinct check
+/// for whether a type still names one of a function's declared type parameters.)
 ///
 /// `Ty::App` (M-673): structural recursive check — any abstract arg propagates `true`.
 pub(crate) fn contains_var(ty: &Ty) -> bool {
@@ -2234,10 +2253,8 @@ pub(crate) fn contains_var(ty: &Ty) -> bool {
         Ty::Var(_) => true,
         // App is structural: abstract iff any arg is abstract.
         Ty::App(_, args) => args.iter().any(contains_var),
-        // Ty::Data may encode an abstract mangled name like "List<A>" in a shell field;
-        // in concrete (env.types) contexts Ty::Data never contains vars.
-        // We conservatively return false here — abstract-mangled Data are only in GenericShell,
-        // not in function return types after instantiation.
+        // Post-M-673: abstract generic applications are `Ty::App` (above); `Ty::Data` is a concrete,
+        // registered monomorphic type name and never carries a type variable — so false.
         Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Data(_) | Ty::Substrate(_) => false,
     }
 }

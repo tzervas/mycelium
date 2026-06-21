@@ -40,7 +40,7 @@ pub(crate) enum Pat {
 
 /// The finite constructor signature of `ty`, or `None` if its value domain is open (`Binary`/
 /// `Ternary` — never a complete signature, so a literal column always needs a default).
-/// Handles abstract mangled types (e.g. `"List<A>"`) by falling back to `generics` (M-657).
+/// Handles registered generic instances by falling back to the `generics` shell registry (M-657).
 /// M-673: also handles `Ty::App(name, args)` — the structural abstract generic form that arises
 /// during generic function body typechecking. The generic shell's ctors provide the finite
 /// constructor set; field types remain abstract (`Ty::Var`, `Ty::App`) as in the body context.

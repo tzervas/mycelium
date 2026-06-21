@@ -156,7 +156,7 @@ orphan is `origin/claude/rescue/m665-dup-orphan-a2f18c62` (a duplicate M-665 —
      depth-correct mangled split.)
    - **M-673 ✅ DONE (2026-06-21, on the work branch; landing onto the head):** replaced the
      mangled-string abstract-type representation (`Ty::Data("List<A>")`) with a **structural
-     `Ty::App(name, Vec<Ty>)`** — `subst_ty`/`unify_arg`/mention-checks are structural; permutation
+     `Ty::App(name, args)`** — `subst_ty`/`unify_arg`/mention-checks are structural; permutation
      (`Pair<B,A>`) / repetition (`Pair<A,A>`) / nesting pass structurally (no special-casing).
      `subst_in_abstract_data_name` removed; abstract `App`/`Var` confined to the checking phase
      (elab/eval get explicit "unmonomorphized generic" refusal arms). 192 tests, `just check` green.

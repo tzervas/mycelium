@@ -329,6 +329,33 @@ fn generic_adt_wrong_arity_is_an_explicit_error() {
 }
 
 #[test]
+fn shell_field_monomorphic_type_with_args_is_refused() {
+    // M-673 review (PR #348): a GENERIC ADT whose ctor field applies a NON-generic type to type
+    // arguments is an explicit error (the `resolve_shell_field_ty` path) — never a silent wrong
+    // `Ty::App`. G2/never-silent.
+    let src = "nodule d\ntype Flag = On | Off\ntype Bad<A> = Mk(Flag<A>)";
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("not generic") || err.message.contains("no type arguments"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn shell_field_generic_arity_mismatch_is_refused() {
+    // M-673 review (PR #348): a GENERIC ADT whose ctor field applies a generic at the WRONG arity
+    // is an explicit error (the `resolve_shell_field_ty` path) — never a wrong-arity `Ty::App`.
+    let src = "nodule d\ntype List<A> = Nil | Cons(A, List<A>)\ntype Bad<A> = Mk(List<A, A>)";
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("arity") || err.message.contains("argument"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
 fn recursive_generic_adt_instantiates_correctly() {
     // List<Binary{8}> is the classic self-referential generic.
     // The shell-first algorithm must handle this without infinite recursion.
