@@ -24,12 +24,37 @@ secrets-scan:
     @gitleaks detect --redact --no-banner -c .gitleaks.toml --source .
 alias gitleaks := secrets-scan
 
-# Run the FULL local suite. Identical to what CI runs (`just ci`).
+# ── Tiered testing (DN-20) ────────────────────────────────────────────────────────────────────
+# Three change-scoped, heavy-gated tiers so the everyday loop is fast while release stays durable.
+# Honesty (VR-5): no property/bound test is ever dropped — only its CASE COUNT is tiered (low every
+# commit, full on release). Coverage is focused, never removed. See docs/notes/DN-20.
+
+# Tier 0 — pre-commit / fastest. ONLY the change-scoped crates' unit + regression/witness tests
+# (no integration, no proptest, no doctests, no mutation/fuzz). Ultra-fast feedback.
+test-fast:
+    @MYC_TEST_TIER=fast bash scripts/checks/test.sh
+
+# Run the FULL local non-test gate suite + Tier-1 tests. Identical to what CI runs (`just ci`).
+# Tier 1 (local↔CI parity): change-scoped crates (+ reverse-deps) — unit + regression/witness +
+# integration + proptest at LOW cases — PLUS every always-on non-test gate (fmt, clippy, markdown,
+# doc-status, doc_refs, deny/audit, …). Skips mutation + fuzz (those are `just check-full`).
 check:
-    @bash scripts/checks/all.sh
+    @MYC_TEST_TIER=check PROPTEST_CASES=${PROPTEST_CASES:-8} bash scripts/checks/all.sh
 
 # CI entrypoint — same as `check` (explicit alias used by .github/workflows/checks.yml).
 ci: check
+
+# Tier 2 — release / nightly / durability. The FULL workspace at HIGH proptest cases, PLUS the
+# heavy durability gates: cargo-mutants (`just mutants`) + a cargo-fuzz smoke (scripts/checks/
+# fuzz-smoke.sh, which wraps `just fuzz` skip-gracefully — a missing nightly/cargo-fuzz skips, never
+# hard-fails). This is the M-654 WS8 durability gate. SLOW by design — run deliberately (release/nightly).
+check-full:
+    @echo "── check-full (Tier 2: full workspace · high proptest cases · mutants · fuzz) ──"
+    @MYC_TEST_TIER=full PROPTEST_CASES=${PROPTEST_CASES:-256} bash scripts/checks/all.sh
+    @echo "── durability: cargo-mutants (trusted base) ──"
+    @just mutants
+    @echo "── durability: cargo-fuzz smoke (first target, 60s; needs nightly + cargo-fuzz) ──"
+    @bash scripts/checks/fuzz-smoke.sh
 
 # Auto-format code (rust + python). Writes changes.
 fmt:

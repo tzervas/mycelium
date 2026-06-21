@@ -95,6 +95,72 @@ mod tests {
     }
 
     #[test]
+    fn runtime_vocab_keywords_are_reserved_not_active() {
+        // DN-03 §4 / RFC-0008 §4.5 / M-665: the 10 Runtime-tier names are reserved keywords —
+        // they lex as keywords (never silent identifiers, G2) but no L1 construct consumes them.
+        //
+        // Honesty (Declared): the RFC-0008 teaching diagnostic fires when the runtime keyword is
+        // reached in a position where the parser dispatches to `parse_item` or `parse_expr_inner`
+        // (cases b-item and d). At positions where the parser expects a plain Ident token (the
+        // fn-name slot, param binders, or program opener) it raises the standard "expected an
+        // identifier / expected a `nodule` header" error — still explicit and non-silent (G2),
+        // just without the RFC-0008 reference, because the never-active guard fires earlier.
+        let words = [
+            "hypha", "fuse", "mesh", "graft", "cyst", "xloc", "forage", "backbone", "tier",
+            "reclaim",
+        ];
+        for word in words {
+            // Sanity: `keyword(w)` returns Some — the word lexes as a keyword, not a plain Ident.
+            assert!(
+                crate::token::keyword(word).is_some(),
+                "`{word}` must resolve to a keyword token (keyword() must return Some)"
+            );
+
+            // (a) cannot open a program — parser sees the keyword where `nodule` is required.
+            // Error is "expected a `nodule` header", not the RFC-0008 message (the parser never
+            // reaches `parse_item`), but the reservation is still non-silent (G2).
+            assert!(
+                parse(&format!("{word} signals\n")).is_err(),
+                "`{word}` opening a program must be an explicit error"
+            );
+
+            // (b-item) at item position (after a valid nodule header), `parse_item` dispatches to
+            // the reserved-keyword arm and produces the RFC-0008 teaching diagnostic.
+            let err = parse(&format!("nodule demo\n{word} worker")).unwrap_err();
+            assert!(
+                err.message.contains("RFC-0008"),
+                "`{word}` at item position: teaching diagnostic must mention RFC-0008, got: {}",
+                err.message
+            );
+
+            // (b-name) fn-name slot expects an Ident: "expected an identifier" — explicit, not
+            // the RFC-0008 message, because `parse_sig_tail` → `ident()` fires before `parse_item`.
+            assert!(
+                parse(&format!("nodule demo\nfn {word}() -> Binary{{8}} = 0b0")).is_err(),
+                "`{word}` as fn name must be an explicit error"
+            );
+
+            // (c) cannot be used as a parameter name (binder expects an Ident).
+            assert!(
+                parse(&format!(
+                    "nodule demo\nfn f({word}: Binary{{8}}) -> Binary{{8}} = 0b0"
+                ))
+                .is_err(),
+                "`{word}` as param name must be an error"
+            );
+
+            // (d) at expression position, `parse_expr_inner` dispatches to the reserved-keyword
+            // arm and produces the RFC-0008 teaching diagnostic.
+            let err = parse(&format!("nodule demo\nfn f() -> Binary{{8}} = {word}")).unwrap_err();
+            assert!(
+                err.message.contains("RFC-0008"),
+                "`{word}` in expression position: teaching diagnostic must mention RFC-0008, got: {}",
+                err.message
+            );
+        }
+    }
+
+    #[test]
     fn a_malformed_ternary_literal_is_explicit() {
         let src = "nodule demo\nfn f() -> Ternary{3} = <+x->";
         let err = parse(src).unwrap_err();
