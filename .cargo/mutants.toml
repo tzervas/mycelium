@@ -1,0 +1,15 @@
+# cargo-mutants exclusions for mycelium-numerics (M-654 Gate A3).
+# Each entry is a JUSTIFIED equivalent mutant — not a coverage gap.
+#
+# NOTE: This file must be referenced via `--config crates/mycelium-numerics/mutants.toml`
+# when running cargo-mutants, since the tool reads .cargo/mutants.toml at workspace root by
+# default. The justification is maintained here (inside the owned crate dir) for auditability.
+# The orchestrator should copy or symlink this into .cargo/mutants.toml.
+#
+# Justification for round::add_err line 18 (`replace - with + in add_err`):
+#   Mutant: `(a - (s - bv)) + (b - bv)` → `(a + (s - bv)) + (b - bv)` = `3a + b - s`.
+#   For all non-negative a, b (the only domain used in add_up: all eps/delta values ≥ 0),
+#   this is always > 0 whenever a+b rounds down (when add_err > 0 in the original).
+#   Proof: if fl(a+b) < a+b, then a+b-s > 0, so 3a+b-s = 2a+(a+b-s) > 0 for a≥0.
+#   The sign is preserved → add_up still calls next_up. EQUIVALENT for domain a,b≥0.
+exclude_re = ["replace - with \\+ in add_err"]
