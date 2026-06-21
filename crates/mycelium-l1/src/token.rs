@@ -32,6 +32,36 @@ pub enum Tok {
     /// it lexes as a keyword (never a silent identifier) but no L1 construct consumes it; the
     /// realization lives in `mycelium-mlir::runtime` (M-357).
     Colony,
+
+    // --- runtime-vocabulary reserved words (DN-03 §4; RFC-0008 §4.5) ---
+    // All ten are **reserved, not yet active**: they lex as keywords (never silent identifiers,
+    // G2) but no L1 construct consumes them. At item-declaration and expression position the parser
+    // emits the explicit "reserved for the runtime model (RFC-0008), not yet active" diagnostic;
+    // where an identifier is grammatically required (a fn/binder name, a program opener) the
+    // standard "expected an identifier"/"expected a `nodule` header" error fires first. Either way
+    // the word can NEVER be used as an identifier (G2 holds) — only the message differs.
+    // Activation requires each construct's implementation RFC (RFC-0008 §4.6 R1/R2).
+    /// `hypha` — concurrent execution unit (RFC-0008). **Reserved, not yet active.**
+    Hypha,
+    /// `fuse` — lawful state fusion / CRDT join (RFC-0008 RT6). **Reserved, not yet active.**
+    Fuse,
+    /// `mesh` — decentralized gossip/pub-sub overlay (RFC-0008 RT5). **Reserved, not yet active.**
+    Mesh,
+    /// `graft` — capability contract with infrastructure (RFC-0008 RT4). **Reserved, not yet active.**
+    Graft,
+    /// `cyst` — durable checkpoint / encystment into a dormant resumable form (RFC-0008 RT2). **Reserved, not yet active.**
+    Cyst,
+    /// `xloc` — explicit value movement / trans-locate (RFC-0008). **Reserved, not yet active.**
+    Xloc,
+    /// `forage` — adaptive placement policy (RFC-0008 RT3). **Reserved, not yet active.**
+    Forage,
+    /// `backbone` — priority transport path (RFC-0008 RT3). **Reserved, not yet active.**
+    Backbone,
+    /// `tier` — execution-mode switch (interpreted ↔ native, RFC-0008). **Reserved, not yet active.**
+    Tier,
+    /// `reclaim` — runtime-unit reclamation (stale units only, never memory — RFC-0008 RT7). **Reserved, not yet active.**
+    Reclaim,
+
     /// `use` — import (conventional).
     Use,
     /// `type` — data-type declaration.
@@ -188,6 +218,18 @@ pub fn keyword(word: &str) -> Option<Tok> {
         // identifiers, but no L1 construct consumes them yet (a never-silent reservation, G2).
         "phylum" => Tok::Phylum,
         "colony" => Tok::Colony,
+        // Reserved, not yet active (DN-03 §4; RFC-0008 §4.5): the runtime-vocabulary terms.
+        // They lex as keywords (never silent identifiers, G2) but no L1 construct consumes them.
+        "hypha" => Tok::Hypha,
+        "fuse" => Tok::Fuse,
+        "mesh" => Tok::Mesh,
+        "graft" => Tok::Graft,
+        "cyst" => Tok::Cyst,
+        "xloc" => Tok::Xloc,
+        "forage" => Tok::Forage,
+        "backbone" => Tok::Backbone,
+        "tier" => Tok::Tier,
+        "reclaim" => Tok::Reclaim,
         "use" => Tok::Use,
         "type" => Tok::Type,
         "trait" => Tok::Trait,

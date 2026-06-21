@@ -8,6 +8,48 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-21: M-665 — L1 reserves the 10 DN-03 runtime terms, never-silent (G2))
+- **Runtime-vocabulary lexer reservation** (`crates/mycelium-l1/src/{token,parse,lib}.rs`): all 10
+  DN-03 §4 runtime terms (`hypha`, `fuse`, `mesh`, `graft`, `cyst`, `xloc`, `forage`, `backbone`,
+  `tier`, `reclaim`) are now `Tok` variants in `keyword()` — reserved-not-active (like
+  `phylum`/`colony`). Each produces an explicit `ParseError` ("reserved for the runtime model
+  (RFC-0008), not yet active") at both item and expression position — **never** a silent identifier
+  accept or panic (G2). No grammar production consumes them yet (lexed-reserved, not active). Adds a
+  `reject/12-runtime-vocab-reserved-not-active.myc` conformance fixture + bidirectional table↔corpus
+  integrity test; EBNF + grammar README updated. Closes E7-2 row M-665.
+### Added (2026-06-21: M-669 — mycelium-lsp baseline completions, dogfooding DX)
+- **LSP completion provider** (`crates/mycelium-lsp/src/completions.rs`): 36 **active** keyword
+  completions (from `mycelium_l1::token::keyword()`) + 5 grammar-grounded snippets (`nodule-header`,
+  `fn-def`, `type-adt`, `match-expr`, `swap-expr` — the swap snippet pins both `to:` and `policy:`).
+  `wire.rs` advertises `completionProvider` and serves `textDocument/completion`. Honest (G2/VR-5):
+  scope is **Declared** (lexical/scaffolding only, no semantic resolution); reserved-not-active
+  (`phylum`/`colony`) and not-yet-lexed runtime words are excluded — never offered as usable. 83 tests.
+### Added (2026-06-21: DN-20 — Tiered testing & change-scoping: faster `just check`, durable release gate)
+- **Three change-scoped test tiers** (`scripts/checks/test.sh`, driven by `MYC_TEST_TIER`):
+  `just test-fast` (Tier 0, pre-commit — change-scoped crates' unit/regression tests only,
+  sub-second on a single-crate change), `just check` (Tier 1, **unchanged as the CI entrypoint**;
+  `just ci` = `just check`) — change-scoped crates **+ their reverse-dependents**, all targets +
+  proptest at LOW cases (`PROPTEST_CASES=8`) + every always-on non-test gate, and `just check-full`
+  (Tier 2, release/durability — **full workspace**, proptest at HIGH cases (`PROPTEST_CASES=256`),
+  `cargo-mutants` + a `cargo-fuzz` smoke; the M-654/ADR-021 Gate A3 durability surface).
+- **Change-scoping** (`scripts/checks/changed-crates.sh`, new): maps the working diff to workspace
+  crates via `cargo metadata` (longest manifest-dir prefix) and expands to their reverse-dependency
+  closure, emitting `-p <crate>` args. **Conservative `--workspace` fallback** on any shared/root
+  file change (root `Cargo.toml`/`Cargo.lock`/`.cargo/`/`justfile`/`scripts/`/…), detection failure,
+  or missing base ref — it may *over*-test but never *under*-tests. Offline + deterministic +
+  skip-graceful.
+- **cargo-nextest** runner with a `cargo test` parity fallback (so local↔CI parity holds when
+  nextest is absent); `just setup` installs nextest best-effort. nextest skips doctests, so the
+  `check`/`full` tiers add a scoped `cargo test --doc` pass.
+- **Proptest case-tiering FLAG fix.** `mycelium-numerics/tests/properties.rs` `cfg()` hardcoded
+  `cases: 20_000` and silently ignored `PROPTEST_CASES`; it now reads the env var explicitly (low
+  default 8). Verified: the same property runs in 0.00 s at 4 cases vs 0.82 s at 20 000 — the knob is
+  now genuinely honored. The two mutant-witness configs route through the same `witness_cfg()`.
+- **Honesty (VR-5):** no property/bound test is dropped — only its *case count* is tiered (low every
+  commit, full on release). Coverage is focused, never removed; KC-3 small-kernel + local↔CI parity
+  preserved (the change is in check tooling, not the kernel). Records the methodology + the swarm
+  branch-hygiene pre-flight pattern (ties to mitigations #5/#7) in **DN-20** (Accepted) + CLAUDE.md.
+
 ### Added (2026-06-21: M-654 — Gate A3 WS8 durability: mutants + proptest + fuzz)
 - **cargo-mutants green on the trusted base.** `mycelium-core`, `-cert`, `-interp`, `-numerics`
   report **0 un-triaged survivors**: every surviving mutant is either killed by a new witness test

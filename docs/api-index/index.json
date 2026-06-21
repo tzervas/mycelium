@@ -8312,7 +8312,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 149,
+      "line": 179,
       "summary": "Scalar-kind keyword payload.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8323,7 +8323,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 175,
+      "line": 205,
       "summary": "A token with its starting position.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8334,7 +8334,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 162,
+      "line": 192,
       "summary": "Guarantee-strength keyword payload.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8356,7 +8356,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 184,
+      "line": 214,
       "summary": "Resolve an identifier-shaped lexeme to its keyword token, or `None` if it is a plain identifier.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9027,7 +9027,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 11,
+      "line": 12,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10688,7 +10688,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 12,
+      "line": 13,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10732,7 +10732,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 13,
+      "line": 14,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10875,7 +10875,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 14,
+      "line": 15,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10930,7 +10930,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 15,
+      "line": 16,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11073,7 +11073,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 17,
+      "line": 18,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11117,7 +11117,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/wire.rs",
-      "line": 104,
+      "line": 115,
       "summary": "Read one JSON-RPC message off `reader`, decoding the `Content-Length` header framing.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11128,7 +11128,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 18,
+      "line": 19,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11557,7 +11557,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/wire.rs",
-      "line": 171,
+      "line": 182,
       "summary": "Drive the LSP lifecycle **with document sync** (M-310) over `reader`/`writer` (stdio in the real",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11568,7 +11568,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/wire.rs",
-      "line": 235,
+      "line": 254,
       "summary": "Run [`serve`] over the process's **real stdio** — the entry point an editor launches",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11590,7 +11590,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 19,
+      "line": 20,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11799,7 +11799,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 20,
+      "line": 21,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11821,7 +11821,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp::wire",
       "file": "crates/mycelium-lsp/src/wire.rs",
-      "line": 92,
+      "line": 97,
       "summary": "The `initialize` result: the server's advertised capabilities.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11865,7 +11865,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp::wire",
       "file": "crates/mycelium-lsp/src/wire.rs",
-      "line": 104,
+      "line": 115,
       "summary": "Read one JSON-RPC message off `reader`, decoding the `Content-Length` header framing.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11876,7 +11876,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp::wire",
       "file": "crates/mycelium-lsp/src/wire.rs",
-      "line": 171,
+      "line": 182,
       "summary": "Drive the LSP lifecycle **with document sync** (M-310) over `reader`/`writer` (stdio in the real",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11887,7 +11887,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp::wire",
       "file": "crates/mycelium-lsp/src/wire.rs",
-      "line": 235,
+      "line": 254,
       "summary": "Run [`serve`] over the process's **real stdio** — the entry point an editor launches",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11909,7 +11909,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp::wire",
       "file": "crates/mycelium-lsp/src/wire.rs",
-      "line": 143,
+      "line": 154,
       "summary": "Write one JSON-RPC message to `writer` with the `Content-Length` framing, then flush.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11920,7 +11920,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/wire.rs",
-      "line": 143,
+      "line": 154,
       "summary": "Write one JSON-RPC message to `writer` with the `Content-Length` framing, then flush.",
       "guarantee_tag": null,
       "corpus_refs": []

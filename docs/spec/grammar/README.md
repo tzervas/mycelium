@@ -48,6 +48,25 @@ v0 construct consumes them, so neither opens a program (`conformance/reject/10`)
 their constructs land (`phylum`: RFC-0006; `colony`: RFC-0008). Plurals (prose only, never reserved
 identifiers): `phylum`/`phyla`, `nodule`/`nodules`, `colony`/`colonies`, `hypha`/`hyphae`.
 
+**Reserved, not yet active — runtime vocabulary (DN-03 §4; RFC-0008 §4.5).** The ten
+runtime-model names are reserved keywords: they lex as keywords (never silent identifiers, G2) but
+no v0 construct consumes them — they cannot open a program or appear in identifier position
+(`conformance/reject/12`). They activate when their runtime-model constructs land (RFC-0008 §4.6
+R1/R2):
+
+| Keyword | Runtime concept | RFC-0008 ref |
+|---|---|---|
+| `hypha` | concurrent execution unit | — |
+| `fuse` | lawful state fusion / CRDT join | RT6 |
+| `mesh` | decentralized gossip/pub-sub overlay | RT5 |
+| `graft` | capability contract with infrastructure | RT4 |
+| `cyst` | durable checkpoint / dormant resumable form | RT2 |
+| `xloc` | explicit value movement / trans-locate | — |
+| `forage` | adaptive placement policy | RT3 |
+| `backbone` | priority transport path | RT3 |
+| `tier` | execution-mode switch (interpreted ↔ native) | — |
+| `reclaim` | runtime-unit reclamation (stale units only, never memory) | RT7 |
+
 ### The `// nodule:` header marker (DN-06 §6)
 
 A source file declares its nodule status with a comment on its **first non-blank line** —

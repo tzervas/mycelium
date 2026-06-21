@@ -215,6 +215,26 @@ impl Parser {
                      to keep one definition interpreted inside a matured scope use `thaw fn`"
                     .to_owned(),
             )),
+            // DN-03 §4 / RFC-0008 §4.5: runtime-vocabulary reserved words. They lex as keywords
+            // (never silent identifiers, G2) but no L1 construct consumes them — teaching
+            // diagnostic, never a silent accept.
+            t @ (Tok::Hypha
+            | Tok::Fuse
+            | Tok::Mesh
+            | Tok::Graft
+            | Tok::Cyst
+            | Tok::Xloc
+            | Tok::Forage
+            | Tok::Backbone
+            | Tok::Tier
+            | Tok::Reclaim) => Err(ParseError::new(
+                self.pos(),
+                format!(
+                    "`{word}` is reserved for the runtime model (RFC-0008), not yet active — \
+                     it cannot open a program or be used as an identifier at this language version",
+                    word = runtime_keyword_spelling(t)
+                ),
+            )),
             _ => self.err(
                 "a top-level item (`use`, `default paradigm`, `type`, `trait`, `fn`, or `thaw fn`)",
             ),
@@ -508,6 +528,28 @@ impl Parser {
 
     fn parse_expr_inner(&mut self) -> Result<Expr, ParseError> {
         self.teach_imperative()?;
+        // DN-03 §4 / RFC-0008 §4.5: runtime-vocabulary reserved words produce a teaching
+        // diagnostic at expression position (never a silent accept, G2).
+        if let t @ (Tok::Hypha
+        | Tok::Fuse
+        | Tok::Mesh
+        | Tok::Graft
+        | Tok::Cyst
+        | Tok::Xloc
+        | Tok::Forage
+        | Tok::Backbone
+        | Tok::Tier
+        | Tok::Reclaim) = self.cur()
+        {
+            return Err(ParseError::new(
+                self.pos(),
+                format!(
+                    "`{word}` is reserved for the runtime model (RFC-0008), not yet active — \
+                     it cannot open a program or be used as an identifier at this language version",
+                    word = runtime_keyword_spelling(t)
+                ),
+            ));
+        }
         match self.cur() {
             Tok::Let => self.parse_let(),
             Tok::If => self.parse_if(),
@@ -776,6 +818,26 @@ impl Parser {
             segs.push(self.ident()?);
         }
         Ok(Path(segs))
+    }
+}
+
+/// Return the surface spelling for a DN-03 §4 runtime-vocabulary reserved keyword token.
+/// Used in teaching diagnostics so the error message names the actual word, not the enum variant.
+/// Total over exactly the runtime-vocabulary tokens; the `_` arm is unreachable in practice
+/// (callers only pass one of the ten runtime-vocab arms) but keeps this panic-free (G2).
+fn runtime_keyword_spelling(tok: &Tok) -> &'static str {
+    match tok {
+        Tok::Hypha => "hypha",
+        Tok::Fuse => "fuse",
+        Tok::Mesh => "mesh",
+        Tok::Graft => "graft",
+        Tok::Cyst => "cyst",
+        Tok::Xloc => "xloc",
+        Tok::Forage => "forage",
+        Tok::Backbone => "backbone",
+        Tok::Tier => "tier",
+        Tok::Reclaim => "reclaim",
+        _ => "<runtime-keyword>",
     }
 }
 
