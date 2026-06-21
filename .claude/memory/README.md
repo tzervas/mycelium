@@ -20,6 +20,7 @@ operations · Key invariants (honesty) · Read-more entry points · Gotchas.**
 | [`toolchain.md`](./toolchain.md) | The tool crates + `just check` + `just docs-site` | `myc-check`, `mycfmt`, `myc-lint`, `myc-sec`, `myc-doc`, `spore`, `bench`, `lsp`, `build`, `proj` | RFC-0013, the contract specs |
 | [`stdlib.md`](./stdlib.md) | The 25 `mycelium-std-*` crates: rings/tiers, per-op guarantee matrices, the `runtime` phylum | `mycelium-std-*` | RFC-0016, DN-07/DN-16 |
 | [`experiments-llm.md`](./experiments-llm.md) | KC-2/M-381 LLM-leverage: the harness, the ablation arms + the LlmCanonical→L1 bridge, the determinate retention ratio, RP-8 | `tools/llm-harness`, `mycelium-bench` | DN-09, RFC-0021, RP-8 |
+| [`lang-lexicon-syntax.md`](./lang-lexicon-syntax.md) | Mycelium lexicon, surface syntax, grammar & naming conventions: reserved-word table, generic→Mycelium mapping, naming law (three-test gate), layer cake, `// nodule:` header, `mycelium-proj.toml`, example snippets | `crates/mycelium-l1/src/token.rs`, `docs/spec/grammar/mycelium.ebnf` | RFC-0006/0007/0020, DN-02/03/06, Glossary |
 
 **Maintenance:** when a component changes materially, refresh its memory file (append-only is not
 required here — these are living orientation aids, but keep them honest + currency-accurate; cite
