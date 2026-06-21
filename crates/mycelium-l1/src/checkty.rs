@@ -1553,6 +1553,96 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
     })
 }
 
+// ─── Stage-1 generics helpers (M-657, Declared) ──────────────────────────────────────────────
+
+/// Substitute all [`Ty::Var`] occurrences in `ty` using the `subst` map (var-name → concrete Ty).
+/// Recursion into `Ty::Data` is intentionally shallow: a `Data` name refers to an already-
+/// monomorphized registry entry (either a monomorphic decl or a mangled instantiation) whose
+/// field types are fully substituted at registration time. Only top-level `Var` nodes and the
+/// args of a hypothetical `App` variant need substitution — since we don't have `App` (we
+/// represent instantiations as `Data(mangled_name)`), this is a simple structural map.
+///
+/// Guarantee: **Declared** — this is a capture-avoiding substitution over a first-order type
+/// language (no higher-rank types, no closures). The substitution terminates because the type
+/// structure is finite-depth (no infinite types in the language).
+pub(crate) fn subst_ty(ty: &Ty, subst: &BTreeMap<String, Ty>) -> Ty {
+    match ty {
+        Ty::Var(a) => subst.get(a).cloned().unwrap_or_else(|| ty.clone()),
+        // Primitive types and Data/Substrate have no embedded Vars after monomorphization.
+        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Data(_) | Ty::Substrate(_) => {
+            ty.clone()
+        }
+    }
+}
+
+/// Produce a **stable, collision-free** mangled name for a generic instantiation `D<arg0,arg1,…>`.
+/// The mangling is deterministic: the same set of arguments (in the same order) always produces
+/// the same string. This gives the registry a content-addressed key (RFC-0019 §4.4 content
+/// identity). The `<` / `>` delimiters are chosen because they cannot appear in a surface
+/// identifier (the lexer treats `<` as a keyword or ternary literal opener), so mangled names
+/// never collide with surface names.
+///
+/// Example: `mangle("List", &[Ty::Binary(8)])` → `"List<Binary{8}>"`.
+///
+/// Guarantee: **Declared** — deterministic by construction (Display is deterministic for each
+/// Ty variant); collision-freedom holds because the delimiter set is disjoint from surface names.
+pub(crate) fn mangle(name: &str, args: &[Ty]) -> String {
+    if args.is_empty() {
+        return name.to_owned();
+    }
+    let parts: Vec<String> = args.iter().map(|t| t.to_string()).collect();
+    format!("{name}<{}>", parts.join(", "))
+}
+
+/// First-order unification helper for generic instantiation (M-657, Declared).
+///
+/// Walk `param_ty` (which may contain `Ty::Var`) and `arg_ty` (which must be closed/concrete)
+/// in lockstep, filling `subst` with `Var(a) → arg_ty` mappings. Returns an error if a
+/// mismatch is found (different concrete heads) or if a Var is mapped to two inconsistent types.
+///
+/// This is NOT full Hindley-Milner: it is first-order, purely structural, and requires the arg
+/// to be fully closed. A type var appearing only in the return type (phantom param) cannot be
+/// inferred here; the caller must supply it from the `expected` type or report an explicit error.
+pub(crate) fn unify_arg(
+    site: &str,
+    param_ty: &Ty,
+    arg_ty: &Ty,
+    subst: &mut BTreeMap<String, Ty>,
+) -> Result<(), CheckError> {
+    match (param_ty, arg_ty) {
+        (Ty::Var(a), concrete) => {
+            if let Some(prev) = subst.get(a) {
+                if prev != concrete {
+                    return Err(CheckError::new(
+                        site,
+                        format!(
+                            "type variable `{a}` inferred as both `{prev}` and `{concrete}` — \
+                             ambiguous instantiation (M-657)"
+                        ),
+                    ));
+                }
+            } else {
+                subst.insert(a.clone(), concrete.clone());
+            }
+            Ok(())
+        }
+        // Both sides are the same concrete type: trivially unified.
+        (Ty::Binary(n), Ty::Binary(m)) if n == m => Ok(()),
+        (Ty::Ternary(n), Ty::Ternary(m)) if n == m => Ok(()),
+        (Ty::Dense(d1, s1), Ty::Dense(d2, s2)) if d1 == d2 && s1 == s2 => Ok(()),
+        (Ty::Data(n1), Ty::Data(n2)) if n1 == n2 => Ok(()),
+        (Ty::Substrate(t1), Ty::Substrate(t2)) if t1 == t2 => Ok(()),
+        // Structural mismatch: the argument type does not match the parameter's concrete head.
+        _ => Err(CheckError::new(
+            site,
+            format!(
+                "type mismatch: parameter type `{param_ty}` does not match argument type \
+                 `{arg_ty}` (M-657 first-order unification)"
+            ),
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1564,6 +1654,93 @@ mod tests {
 
     fn check_err(src: &str) -> CheckError {
         check_nodule(&parse(src).expect("parses")).expect_err("must fail to check")
+    }
+
+    // ---- S3: subst_ty + mangle unit tests (M-657) ----
+
+    #[test]
+    fn subst_ty_replaces_var() {
+        let mut subst = BTreeMap::new();
+        subst.insert("A".to_owned(), Ty::Binary(8));
+        assert_eq!(subst_ty(&Ty::Var("A".to_owned()), &subst), Ty::Binary(8));
+    }
+
+    #[test]
+    fn subst_ty_leaves_non_var_unchanged() {
+        let subst = BTreeMap::new();
+        assert_eq!(subst_ty(&Ty::Binary(8), &subst), Ty::Binary(8));
+        assert_eq!(subst_ty(&Ty::Data("Foo".to_owned()), &subst), Ty::Data("Foo".to_owned()));
+    }
+
+    #[test]
+    fn subst_ty_var_not_in_subst_is_identity() {
+        // A Var not in the subst is left as-is (the checker must error on residual Vars; this
+        // function does not error, the caller validates completeness).
+        let subst = BTreeMap::new();
+        let var = Ty::Var("B".to_owned());
+        assert_eq!(subst_ty(&var, &subst), var);
+    }
+
+    #[test]
+    fn mangle_no_args_is_identity() {
+        assert_eq!(mangle("List", &[]), "List");
+    }
+
+    #[test]
+    fn mangle_single_arg() {
+        assert_eq!(mangle("List", &[Ty::Binary(8)]), "List<Binary{8}>");
+    }
+
+    #[test]
+    fn mangle_multi_arg() {
+        let args = vec![Ty::Binary(8), Ty::Ternary(6)];
+        assert_eq!(mangle("Pair", &args), "Pair<Binary{8}, Ternary{6}>");
+    }
+
+    #[test]
+    fn mangle_is_deterministic() {
+        // Same args, same name → same result (content-addressed key, RFC-0019 §4.4).
+        let args = vec![Ty::Binary(8)];
+        assert_eq!(mangle("List", &args), mangle("List", &args));
+    }
+
+    #[test]
+    fn mangle_different_args_produce_different_names() {
+        assert_ne!(
+            mangle("List", &[Ty::Binary(8)]),
+            mangle("List", &[Ty::Ternary(6)])
+        );
+    }
+
+    #[test]
+    fn unify_arg_binds_var() {
+        let mut subst = BTreeMap::new();
+        unify_arg("t", &Ty::Var("A".to_owned()), &Ty::Binary(8), &mut subst).unwrap();
+        assert_eq!(subst.get("A"), Some(&Ty::Binary(8)));
+    }
+
+    #[test]
+    fn unify_arg_consistent_rebind() {
+        // Binding A→Binary{8} twice (same type) is OK.
+        let mut subst = BTreeMap::new();
+        subst.insert("A".to_owned(), Ty::Binary(8));
+        unify_arg("t", &Ty::Var("A".to_owned()), &Ty::Binary(8), &mut subst).unwrap();
+    }
+
+    #[test]
+    fn unify_arg_inconsistent_rebind_is_explicit_error() {
+        let mut subst = BTreeMap::new();
+        subst.insert("A".to_owned(), Ty::Binary(8));
+        let err =
+            unify_arg("t", &Ty::Var("A".to_owned()), &Ty::Ternary(6), &mut subst).unwrap_err();
+        assert!(err.message.contains("ambiguous"), "got: {}", err.message);
+    }
+
+    #[test]
+    fn unify_arg_concrete_mismatch_is_explicit_error() {
+        let mut subst = BTreeMap::new();
+        let err = unify_arg("t", &Ty::Binary(8), &Ty::Ternary(6), &mut subst).unwrap_err();
+        assert!(err.message.contains("mismatch"), "got: {}", err.message);
     }
 
     // ---- M-666: `colony { hypha … }` type rule (RFC-0008 §4.7) ----
