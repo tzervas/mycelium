@@ -39,6 +39,15 @@ dist-newstyle/
 /scratch/
 /.tmp/
 
+# ---- WS8 durability outputs (M-654): cargo-mutants + cargo-fuzz runtime artifacts ----
+# The `just mutants`/`just fuzz` recipes, fuzz targets, and configs ARE committed; the generated
+# run output (mutants reports, fuzz corpora/crashes) is not.
+mutants.out/
+mutants.out.old/
+/fuzz/corpus/
+/fuzz/artifacts/
+/fuzz/target/
+
 # ---- Editors / OS ----
 .idea/
 .vscode/*
