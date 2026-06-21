@@ -1963,15 +1963,16 @@ issues:
   - id: M-651
     title: "M-651 — Harness→bench schema bridge: Grok report ingestion in mycelium-bench"
     milestone: "Phase 3 — Tooling, Projections & Acceleration"
-    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:needs-design]
+    labels: [phase:3, type:feature, area:toolchain, priority:P2, status:done]
     depends_on: [M-645, M-381]
-    doc_refs: [corpus:DN-09, src:tools/llm-harness/coauthor.py, src:crates/mycelium-bench/src/lib.rs, src:crates/mycelium-bench/src/report.rs]
+    doc_refs: [corpus:DN-09, src:tools/llm-harness/coauthor.py, src:crates/mycelium-bench/src/lib.rs, src:crates/mycelium-bench/src/report.rs, src:crates/mycelium-bench/src/llm.rs]
     body: |
       The Grok/xAI ablation harness (tools/llm-harness/coauthor.py) emits a JSON report with the schema `{metadata: {...}, quality: {...}, performance: {...}, outcomes: [...]}`. The mycelium-bench crate (M-645) ingests LLM reports via `crates/mycelium-bench/src/report.rs` which expects the schema `{harness: {...}, summary: {...}, results: [...]}`. These are incompatible; a live Grok run's output cannot be directly ingested by mycelium-bench (DN-09 §7 / M-381 STATUS 2026-06-20).
 
       Two paths:
       (a) BRIDGE IN THE HARNESS — add a `--emit-bench-format` flag (or a post-processing script) that translates harness output to mycelium-bench's expected schema. Keeps both schemas honest (no stealth mutation of either contract).
       (b) BRIDGE IN MYCELIUM-BENCH — add a `#[serde(deny_unknown_fields)]`-guarded alternate `LlmReportV2` struct matching the harness output; a tagged-union dispatch; a conversion. Extend `the_harness_ingests_the_llm_report_and_labels_synthetic` with a V2 fixture.
+      DONE (2026-06-21, #308): path (b) landed — `GrokLlmReport` (`deny_unknown_fields`, `#[serde(default)]` ablation/mean_latency) + tagged/untagged dispatch + `GrokLlmReport → LlmSection` conversion in `crates/mycelium-bench/src/llm.rs`; ingested metrics stay Empirical/Declared (never upgraded); `cargo test -p mycelium-bench` green.
 
       Path (b) is preferred — bench-crate is the consumer and should be robust to the harness format; path (a) adds a runtime transform that can drift. BOTH must be pinned by a committed JSON fixture so serde tag drift is caught (not just round-trip tested — banked guard §3 from dev-workflow).
 
