@@ -74,6 +74,10 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "expected a `nodule` header to open the program",
     ),
     ("11-matured-fn-retired.myc", "maturation is declared per"),
+    (
+        "12-runtime-vocab-reserved-not-active.myc",
+        "reserved for the runtime model (RFC-0008), not yet active",
+    ),
 ];
 
 #[test]

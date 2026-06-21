@@ -27,6 +27,22 @@
  * as keywords (so they are never silent identifiers) but no production consumes them yet, so neither
  * opens a program (see conformance/reject/10). They activate when their constructs land.
  *
+ * RESERVED, NOT YET ACTIVE (DN-03 §4; RFC-0008 §4.5): the ten runtime-vocabulary names are
+ * reserved keywords — they lex as keywords (never silent identifiers, G2) but no production
+ * consumes them, so they cannot open a program or appear in identifier position at this language
+ * version (see conformance/reject/12). They activate when their runtime-model constructs land
+ * (RFC-0008 §4.6 R1/R2):
+ *   hypha      — concurrent execution unit
+ *   fuse       — lawful state fusion / CRDT join (RFC-0008 RT6)
+ *   mesh       — decentralized gossip/pub-sub overlay (RFC-0008 RT5)
+ *   graft      — capability contract with infrastructure (RFC-0008 RT4)
+ *   cyst       — durable checkpoint / dormant resumable form (RFC-0008 RT2)
+ *   xloc       — explicit value movement / trans-locate
+ *   forage     — adaptive placement policy (RFC-0008 RT3)
+ *   backbone   — priority transport path (RFC-0008 RT3)
+ *   tier       — execution-mode switch (interpreted ↔ native)
+ *   reclaim    — runtime-unit reclamation (stale units only, never memory; RFC-0008 RT7)
+ *
  * This is v0 — it covers the L1-facing core (RFC-0006 §3 L1); abstraction/recursion typing,
  * the full trait/guild machinery (LR-2), and L2 sugar layer above it.
  *)
