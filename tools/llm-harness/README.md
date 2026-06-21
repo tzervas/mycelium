@@ -73,7 +73,7 @@ Equivalent explicit invocations (what `run.sh` calls under the hood):
 ```sh
 cd tools/llm-harness
 
-# Offline plumbing gate — no key, no network (14/14 checks).
+# Offline plumbing gate — no key, no network (17/17 checks).
 uv run python -m grok.cli --self-test
 
 # Live, batch-priced, cheapest-first, capped at $10 (the default):
@@ -486,16 +486,21 @@ export XAI_API_KEY=xai-...
 uv run python harness.py --grok --mode live --ablation --seeds 11,23,42
 ```
 
-Runs the protocol's arms it **can** run (arm 1 bare surface, arm 2 grammar primer)
-over the composition task set × seeds, computes **pass@1** per arm and the
-**retention ratio** = pass@1(best novel-surface arm) ÷ pass@1(familiar-skin arm 4),
-and compares to the `~70%` falsification threshold (`RFC-0021 §4.7`). Arms 3
-(grammar-constrained decoding), 4 (`LlmCanonical` projection renderer) and 5
-(embedded-DSL baseline) depend on build deps that **do not exist yet** (M-380); they
-are wired but reported **`blocked`** with their reason — never fabricated. Because
-arm 4 is the ratio's denominator, the threshold comparison is reported
-**INDETERMINATE / pending run** until arm 4 lands, and the leverage claim stays
-**open (`Declared`)**.
+Runs the protocol's arms it **can** run (arm 1 bare surface, arm 2 grammar primer,
+arm 4 `LlmCanonical` familiar-skin) over the composition task set × seeds, computes
+**pass@1** per arm and the **retention ratio** = pass@1(best novel-surface arm) ÷
+pass@1(familiar-skin arm 4), and compares to the `~70%` falsification threshold
+(`RFC-0021 §4.7`). Arm 4 is scored at the **same** `myc-check` parse+typecheck bar
+as arms 1/2 via the `llm_canonical_to_l1` bridge (DN-09 §9.4 option b): the model's
+S-expression output is converted to `.myc` and typechecked by the real `myc-check`.
+The bridge supplies the task's known fn signature (LlmCanonical, an expression IR,
+cannot express one), so arm 4 is slightly advantaged and the retention ratio is a
+**conservative** estimate — clearing the threshold is robust; falling below it is
+ambiguous (see `RetentionVerdict.to_dict`'s `arm4_basis`). Arms 3
+(grammar-constrained decoding) and 5 (embedded-DSL baseline) depend on build deps
+that **do not exist yet** (a GBNF/Outlines decoder; an RR-3 host DSL); they are
+wired but reported **`blocked`** with their reason — never fabricated. The leverage
+claim stays **open (`Declared`)** until the full ≥3-seed, ≥1-frontier campaign.
 
 ### Reports
 

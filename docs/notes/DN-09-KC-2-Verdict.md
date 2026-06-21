@@ -369,8 +369,106 @@ lands.
 
 ---
 
+## 10. Rigorous ablation (2026-06-20, arm 4 bridge landed) — retention ratio now DETERMINATE
+
+This section records the M-381 ablation re-run after landing the **LlmCanonical→L1
+bridge** (DN-09 §9.4 **option (b)**, `tools/llm-harness/grok/llm_canonical_to_l1.py`).
+The bridge converts each arm-4 `LlmCanonical` S-expression to `.myc` surface and scores the
+produced `.myc` with the **same authoritative `myc-check`** (parse **and** typecheck) used for
+arms 1/2 — so arm 4 finally sits on the **same quality bar** and yields a **non-zero,
+type-checked denominator**. The §9 INDETERMINATE result (arm 4 = 0 %, a scoring artifact) is
+thereby superseded: the retention ratio is now **DETERMINATE**.
+
+**Runs (Empirical — live, seed 42 gold-set + ablation seeds [11, 23, 42], 8 tasks ⇒ 24 samples/arm):**
+`grok-build-0.1` (run `20260620T230403Z`) and `grok-4.3` (run `20260620T234224Z`). Harness
+self-test **17/17** (T15 added for the bridge). Spend this run **$0.088** (grok-build-0.1
+$0.039 + grok-4.3 $0.049); cumulative across all Grok/xAI sessions **≈$0.17** — far under the
+$10 session bound.
+
+### 10.1 Per-arm pass@1 and the retention ratio
+
+| model | arm1 bare | arm2 grammar-primer | arm4 LlmCanonical (bridge→`myc-check`) | retention = arm2 / arm4 | threshold (~70 %) |
+|---|---|---|---|---|---|
+| `grok-build-0.1` | 2/24 = **8.3 %** | 22/24 = **91.7 %** | 4/24 = **16.7 %** | **5.50 (550 %)** | **not** falsified |
+| `grok-4.3` | 1/24 = **4.2 %** | 22/24 = **91.7 %** | 10/24 = **41.7 %** | **2.20 (220 %)** | **not** falsified |
+
+All rates **[Empirical]** (24 trials each). Arms 3 (grammar-constrained decoding) and 5
+(embedded-DSL) remain **blocked** **[Declared]** (see §10.4) — this is the arm2-vs-arm4
+comparison, not yet the full five-arm protocol.
+
+**The RFC-0021 §4.7 falsification trigger (< ~70 % ⇒ promote `LlmCanonical` to primary) does
+NOT fire for either model.** The grammar-primed novel text surface *out*-performs the
+`LlmCanonical` familiar-skin projection (ratio > 100 % both models), the opposite of the
+deficit the trigger guards against.
+
+### 10.2 Honest interpretation (VR-5)
+
+- **arm2 (grammar-in-context primer) = 91.7 % for BOTH models** is the dominant, reproducible
+  signal — it replicates §2 (the grammar primer was the dominant knob at 7B) and the §8/§9 Grok
+  runs, now extended to two frontier models at the parse+typecheck bar. Without the primer
+  (arm1), pass@1 collapses to 4–8 %.
+- **arm4 measures the whole `LlmCanonical` pipeline**, not just "is the projection good": a
+  sample is clean iff the model emits a valid S-expression **and** the Empirical bridge converts
+  it **and** `myc-check` typechecks the result. The dominant arm-4 failure was
+  **bridge-non-convertible** output (grok-build-0.1 19/24; grok-4.3 12/24), not typecheck
+  failure (the converted `.myc` typechecked clean in all but 1+2 cases respectively). The bigger
+  model produced more convertible `LlmCanonical` (10 vs 4 clean), as expected.
+- **Two opposing residual biases on the ratio, both disclosed:**
+  1. *Signature-supply (inflates arm4 ⇒ deflates ratio, conservative):* `LlmCanonical` is an
+     expression IR with no fn signature, so the bridge supplies the task's known signature —
+     arm 4's model is not asked to author it, an advantage arms 1/2 do not get.
+  2. *Bridge-heuristic rejection (deflates arm4 ⇒ inflates ratio, anti-conservative):* the
+     Empirical bridge can only **reject**, never false-pass (G2); a more complete
+     `LlmCanonical→L1` converter could accept some of the non-convertible outputs and raise
+     arm 4. Raw arm-4 outputs are not retained (reports are gitignored), so whether a fuller
+     converter would materially raise arm 4 is **open**.
+  Net bias direction is therefore **uncertain**. What is **robust to the bias** is the
+  **non-falsification**: arm2 = 91.7 % so dominates arm4's plausible range that the ratio stays
+  well above ~70 % even if arm4's true rate were several-fold higher. The *precise* ratio is
+  bias-laden; the *verdict* (not falsified) is not.
+- The bridge was **not tuned** to raise arm 4 (that would be results-chasing — VR-5); results
+  are reported as the as-shipped heuristic produced them.
+
+### 10.3 What this run establishes / does not establish
+
+**Establishes [Empirical]:** a **determinate** retention ratio for two frontier models, both
+decisively **above** the ~70 % threshold — the novel grammar-primed surface retains (indeed
+exceeds) the `LlmCanonical` leverage; the §4.7 promote-to-projection trigger is **not** tripped.
+
+**Does NOT establish:** the strong Q1 hypothesis at full rigor — only 2 models, 3 seeds, 8
+tasks, and only **3 of 5** arms (arms 3/5 blocked). The overall **leverage claim stays
+Declared / open** pending the full ≥3-seed, ≥1-frontier, five-arm campaign. The
+**KC-2 verdict (§3: proceed) is unchanged and reinforced** — non-collapse + recoverability hold,
+and the familiar-skin projection is not needed as the primary surface.
+
+### 10.4 Standing follow-ups (tracked in M-381; to be patched on an independent branch)
+
+- **arm 3 — grammar-constrained decoding:** needs a local GBNF-capable backend (llama.cpp /
+  Outlines / Guidance); the xAI OpenAI-compatible REST surface exposes no grammar parameter, so
+  arm 3 cannot run through it. Natural home: the M-331 llama.cpp harness. (Not a bug — a missing
+  backend.)
+- **arm 5 — embedded-DSL baseline (RR-3):** the RR-3 contingency is **unspent** (KC-2 = proceed),
+  so the embedded DSL was deliberately never built; arm 5 is moot unless the verdict reverses.
+- **arm 4 bridge completeness:** a fuller `LlmCanonical→L1` converter (RFC-0021 §4.1
+  EditCapability path) would tighten arm 4's lower bound.
+- **batch mode (`xai_sdk`):** blocked here by (a) gRPC TLS vs the env's intercepting proxy (fixed
+  by `GRPC_DEFAULT_SSL_ROOTS_FILE_PATH`) and (b) `xai-sdk` 1.17.0 batch-API drift
+  (`create/add/get/list_batch_results`, not `create/add/submit`). Supplemental only (live already
+  captures first-pass pass@1); a harness reconciliation is the follow-up.
+
+---
+
 ## Changelog
 
+- **2026-06-20 — §10 added (rigorous ablation; retention ratio now DETERMINATE).** Landed the
+  `LlmCanonical→L1` bridge (§9.4 option b), scoring arm 4 at the same `myc-check` parse+typecheck
+  bar as arms 1/2. Re-ran the ablation on two models: `grok-build-0.1` (run `20260620T230403Z`)
+  retention **5.50 (550 %)**; `grok-4.3` (run `20260620T234224Z`) retention **2.20 (220 %)** —
+  both **≥ ~70 %**, the RFC-0021 §4.7 promote-to-projection trigger does **not** fire. arm2
+  (grammar primer) = 91.7 % both models; arm4 = 16.7 % / 41.7 % [Empirical]. Residual biases
+  (signature-supply vs bridge-rejection) disclosed; non-falsification robust to them; leverage
+  claim stays Declared/open (arms 3/5 still blocked). KC-2 verdict unchanged: **proceed**. Self-test
+  17/17. Spend $0.088 this run (~$0.17 cumulative).
 - **2026-06-20 — §9 added (M-381 arm 4 ablation run).** arm 4 now runnable
   (`llm_canonical_parse` compiled, M-381 W2L3 landed). Ablation run
   `20260620T195352Z`: arm1 0%, arm2 100%, arm4 0% (scoring-method artifact).

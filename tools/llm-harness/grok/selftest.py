@@ -50,6 +50,7 @@ from .ablation import (
     default_arms,
     run_arm,
 )
+from .llm_canonical_to_l1 import convert_to_myc
 from .client import MockClient, MockScript
 from .coauthor_loop import (
     STATUS_PARTIAL_PASS,
@@ -387,6 +388,15 @@ def check_ablation() -> Check:
     model = _spec("m", out_price=2.0, in_price=1.0, order=0)
     tasks = [Task("t1", "a"), Task("t2", "b")]
     seeds = [1, 2, 3]
+
+    # Inject a stub arm-4 bridge: the MockClient echoes prose (not LlmCanonical), so
+    # the real bridge would reject it. The stub returns a fixed non-None .myc string,
+    # leaving the (fake, always-clean) scorer to drive arm-4 pass@1 — this exercises
+    # the run_arm arm-4 *plumbing* offline. The real conversion logic is covered by
+    # check_canonical_bridge (T15).
+    def stub_bridge(content, task):
+        return "nodule t\nfn f(x: Binary{8}) -> Binary{8} = x"
+
     arm_results = [
         run_arm(
             arm=arm,
@@ -396,6 +406,7 @@ def check_ablation() -> Check:
             client=client,
             scorer=scorer,
             guarantee_tag="Declared",
+            canonical_bridge=stub_bridge,
         )
         for arm in default_arms()
     ]
@@ -441,6 +452,89 @@ def check_ablation() -> Check:
         True,
         f"arm1/2/4 pass@1 computed; arm4 RUNNABLE; retention={verdict.ratio:.2f} "
         "(Declared/open — single run, not a ratified verdict; VR-5)",
+    )
+
+
+def check_canonical_bridge() -> Check:
+    """T15: the LlmCanonical->L1 bridge (DN-09 §9.4 option b) — PURE, offline.
+
+    Verifies the arm-4 bridge converts representative LlmCanonical outputs to ``.myc``
+    wrapped in the task's known signature, and refuses (returns None) the kinds it
+    cannot faithfully convert — never a fabricated program (G2). Type-checking of the
+    produced ``.myc`` is myc-check's job (not exercised here — this is offline)."""
+    sig = dict(fn_name="f", param_type="Binary{8}", return_type="Binary{8}")
+    tsig = dict(fn_name="f", param_type="Ternary{6}", return_type="Ternary{6}")
+
+    # 1. identity lambda -> body `x`, lambda param name adopted.
+    out = convert_to_myc("(fn [x] x)", **sig)
+    if (
+        out is None
+        or "fn f(x: Binary{8}) -> Binary{8} =" not in out
+        or "  x\n" not in out
+    ):
+        return Check("T15 canonical-bridge", False, f"identity wrong: {out!r}")
+
+    # 2. op bit.not -> surface call `not(x)`.
+    out = convert_to_myc("(fn [x] (op bit.not x))", **sig)
+    if out is None or "not(x)" not in out:
+        return Check("T15 canonical-bridge", False, f"op wrong: {out!r}")
+
+    # 3. swap! -> swap(..., to:, policy:), keyword-order tolerant.
+    out = convert_to_myc(
+        "(fn [x] (swap! x :to Ternary{6} :policy roundtrip))",
+        fn_name="widen",
+        param_type="Binary{8}",
+        return_type="Ternary{6}",
+    )
+    if out is None or "swap(x, to: Ternary{6}, policy: roundtrip)" not in out:
+        return Check("T15 canonical-bridge", False, f"swap wrong: {out!r}")
+
+    # 4. nested swap (g08 round-trip) — inner swap as the src of the outer.
+    out = convert_to_myc(
+        "(fn [x] (swap! (swap! x :to Ternary{6} :policy roundtrip) "
+        ":to Binary{8} :policy clamp))",
+        **sig,
+    )
+    if out is None or (
+        "swap(swap(x, to: Ternary{6}, policy: roundtrip), to: Binary{8}, policy: clamp)"
+        not in out
+    ):
+        return Check("T15 canonical-bridge", False, f"nested swap wrong: {out!r}")
+
+    # 5. let binding + op add (ternary double).
+    out = convert_to_myc("(fn [x] (let [y (op trit.add x x)] y))", **tsig)
+    if out is None or "let y = add(x, x) in y" not in out:
+        return Check("T15 canonical-bridge", False, f"let/add wrong: {out!r}")
+
+    # 6. const strips the guarantee tag.
+    out = convert_to_myc("(const 0b0000_0001 @Exact)", **sig)
+    if out is None or "0b0000_0001" not in out or "@Exact" in out:
+        return Check("T15 canonical-bridge", False, f"const wrong: {out!r}")
+
+    # 7. code fences are tolerated (models sometimes wrap despite the prompt).
+    out = convert_to_myc("```\n(fn [x] x)\n```", **sig)
+    if out is None or "fn f(x: Binary{8})" not in out:
+        return Check("T15 canonical-bridge", False, f"fence-strip wrong: {out!r}")
+
+    # 8. unconvertible / honest refusals -> None (never a fabricated PASS — G2).
+    refusals = [
+        "",  # empty
+        "(op mystery.prim x)",  # unknown primitive
+        "(fn [x] (fn [y] y))",  # nested lambda not expressible in .myc expr grammar
+        "(swap! x :to Ternary{6})",  # swap! missing :policy (never silent)
+        "(((",  # malformed / unclosed
+        "(op bit.not x>)",  # stray '>' delimiter: must fail-fast, NEVER hang (G2)
+        ">",  # bare stray '>' on its own
+    ]
+    for bad in refusals:
+        if convert_to_myc(bad, **sig) is not None:
+            return Check("T15 canonical-bridge", False, f"should have refused: {bad!r}")
+
+    return Check(
+        "T15 canonical-bridge",
+        True,
+        "LlmCanonical->L1 converts id/op/swap/nested/let/const(+fence); refuses "
+        "unknown-prim/nested-fn/missing-policy/malformed (None, G2). Empirical.",
     )
 
 
@@ -853,6 +947,7 @@ ALL_CHECKS = [
     check_scoring_classifier,
     check_coauthor_loop,
     check_ablation,
+    check_canonical_bridge,
     check_live_status_guard,
     check_paced_retry_acquires_once,
     check_report_emission,
