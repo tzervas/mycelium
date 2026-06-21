@@ -8,6 +8,22 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-21: RFC-0006 r4→r5 Doc-Index reconciliation + issue #67 close-out)
+- **RFC-0006 Doc-Index row advanced r4 → r5** (`docs/Doc-Index.md`). The row previously reflected
+  the r4 ratification (2026-06-15, KC-2-gated concrete syntax). Now reflects the r5 state
+  (2026-06-18): Q1 discharged by DN-09 (KC-2 verdict = proceed; L3 = text syntax + projections
+  co-equally, M-380/FR-S5); Q3 discharged by RFC-0018 (stage-1 grading accepted); Q6 (literal
+  spelling) now committable. Residual non-KC-2-gated item: **Q8 `unsafe`-class L3 spelling**
+  (mechanism committed via LR-9; only theming/keyword remains, tracked separately — not a
+  RFC-0006 gate). Dependency DAG updated from `RFC-0006 (r4)` to `RFC-0006 (r5)`.
+- **RFC-0006 body reconciled (append-only).** Two forward-looking passages superseded by r5:
+  (1) §3 L3 bullet ("KC-2-gated…") — clarifying note appended citing DN-09 verdict and M-380;
+  (2) §4.4 sequencing ("Now (this RFC, Draft)…KC-2 runs…") — status note appended recording
+  steps 1 and 3 complete, steps 2/4 in progress (RFC-0001 r3/r4, RFC-0007…0021 Accepted). No
+  ratified normative text was rewritten (VR-5; append-only rule observed).
+- **Closes issue #67** (RFC-0006 "deliberate + ratify" tracking issue). RFC-0006 is Accepted at
+  r5; all KC-2-gated items discharged; residual Q8 spelling is a separately-tracked design detail.
+
 ### Changed (2026-06-21: PM-sync hardening + branching discipline — tooling/process)
 - **GitHub PM sync handles its flagged cases gracefully** (`tools/github/`). `labels.json` gains
   `area:spec`, `status:todo`, `type:task`; the project `Area` field gains a `spec` option;
