@@ -40,6 +40,7 @@ Guarantee tags (per operation):
 from __future__ import annotations
 
 import os
+import re
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -361,13 +362,16 @@ def arm3_selftest() -> list[tuple[str, bool, str]]:
         )
     )
 
-    # T2: GBNF has a 'root' start rule
-    has_root = "root" in gbnf and "::=" in gbnf
+    # T2: GBNF has a 'root' start rule — match an actual rule definition line,
+    # not just the substring "root" appearing in a comment or rule body.
+    # Pattern: optional leading whitespace, then "root", then optional whitespace,
+    # then "::=" — in MULTILINE mode so ^ anchors to each line start.
+    has_root = bool(re.search(r"^\s*root\s*::=", gbnf, re.MULTILINE))
     results.append(
         (
             "arm3/gbnf-has-root-rule",
             has_root,
-            "found 'root' rule" if has_root else "MISSING root rule",
+            "found 'root ::=' rule definition" if has_root else "MISSING root ::= rule",
         )
     )
 

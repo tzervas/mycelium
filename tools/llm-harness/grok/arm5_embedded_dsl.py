@@ -41,6 +41,11 @@ Python); it is "best-effort restricted eval" — Declared, not Proven. Specifica
     call in the model's snippet is rejected pre-emptively.
   - Dunder attribute access (``__class__``, ``__subclasses__``, etc.) in the snippet
     text is rejected by the same pre-scan.
+  - The restricted exec runs in a SEPARATE PROCESS (``multiprocessing``, fork context
+    on Linux/WSL) with a hard wall-clock timeout (default 5 s). If the process exceeds
+    the timeout it is ``terminate()``-d and ``None`` is returned. This is the robust
+    non-termination guard: ``signal.alarm`` is not used because the caller may run from
+    worker threads where signal-based alarms do not fire.
   - All exceptions (SyntaxError, NameError, any runtime error) → ``None`` (never raise
     out, never a fabricated score).
   LIMITS (acknowledged): a sufficiently determined adversary *could* escape via
@@ -51,6 +56,7 @@ Python); it is "best-effort restricted eval" — Declared, not Proven. Specifica
 
 from __future__ import annotations
 
+import multiprocessing
 import re
 from typing import Any
 
@@ -365,14 +371,43 @@ def _prescan(code: str) -> str | None:
     return None
 
 
-def eval_embedded_dsl(code: str) -> str | None:
+def _eval_worker(code: str, q: "multiprocessing.Queue[str | None]") -> None:
+    """Module-level worker executed in a child process by ``eval_embedded_dsl``.
+
+    Performs the restricted exec and puts the rendered ``.myc`` string (or None)
+    into ``q``. Must be module-level so it is picklable by ``multiprocessing``.
+
+    Any exception inside the child → None (never raise out, G2).  The result
+    (a plain ``str`` or ``None``) is picklable, so the queue transfer is safe.
+    """
+    try:
+        namespace: dict[str, Any] = dict(_DSL_NAMESPACE)
+        namespace["__builtins__"] = {}
+        exec(code, namespace)  # noqa: S102 — intentional, sandboxed, in child process
+        result = namespace.get(_OUTPUT_VAR)
+        if result is None or not isinstance(result, str) or not result.strip():
+            q.put(None)
+        else:
+            q.put(result)
+    except Exception:  # any compile or runtime error -> not-clean
+        q.put(None)
+
+
+def eval_embedded_dsl(code: str, *, timeout_s: float = 5.0) -> str | None:
     """Evaluate DSL ``code`` in a restricted sandbox -> rendered ``.myc``, or None.
 
     CONTRACT (G2 / VR-5):
-    - Malformed / hostile / raising snippets -> ``None`` (never a fabricated PASS).
+    - Malformed / hostile / raising / non-terminating snippets -> ``None``
+      (never a fabricated PASS).
     - Never raises out to the caller — all exceptions caught, log-dropped, -> None.
     - The snippet must assign the result of ``Nodule.render()`` to the variable
       ``_myc_program``; that variable is read back as the ``.myc`` text.
+
+    TIMEOUT: the restricted exec runs in a separate child process (``multiprocessing``,
+    fork context on Linux/WSL). If the child does not complete within ``timeout_s``
+    seconds (default 5 s), it is ``terminate()``-d and ``None`` is returned.
+    ``signal.alarm`` is NOT used because this function may be called from worker
+    threads where SIGALRM does not fire.
 
     SANDBOX (Declared / best-effort — NOT a proven isolation):
     - ``__builtins__`` is set to ``{}`` in the exec namespace, removing all standard
@@ -394,20 +429,32 @@ def eval_embedded_dsl(code: str) -> str | None:
     if _prescan(code) is not None:
         return None
 
-    # Build isolated namespace: DSL names + empty builtins.
-    namespace: dict[str, Any] = dict(_DSL_NAMESPACE)
-    namespace["__builtins__"] = {}
-
+    # Run the restricted exec in a child process with a hard wall-clock timeout.
+    # fork context: fast on Linux/WSL; avoids the overhead of a full spawn.
+    ctx = multiprocessing.get_context("fork")
+    q: multiprocessing.Queue[str | None] = ctx.Queue()
+    proc = ctx.Process(target=_eval_worker, args=(code, q), daemon=True)
     try:
-        exec(code, namespace)  # noqa: S102 — intentional, sandboxed
-    except Exception:  # any compile or runtime error -> not-clean
+        proc.start()
+        proc.join(timeout=timeout_s)
+        if proc.is_alive():
+            # Hard wall-clock timeout exceeded — terminate the child and return None.
+            proc.terminate()
+            proc.join(timeout=1.0)  # give it a moment to clean up
+            return None
+        # Child finished within the timeout: read back the result.
+        try:
+            result = q.get_nowait()
+        except Exception:  # empty queue (child crashed before put) -> None
+            return None
+        return result
+    except Exception:  # any process-management error -> None (G2)
+        try:
+            if proc.is_alive():
+                proc.terminate()
+        except Exception:
+            pass
         return None
-
-    # Read back the rendered .myc from the output variable.
-    result = namespace.get(_OUTPUT_VAR)
-    if result is None or not isinstance(result, str) or not result.strip():
-        return None
-    return result
 
 
 # ---------------------------------------------------------------------------
@@ -755,6 +802,30 @@ def arm5_selftest() -> list[tuple[str, bool, str]]:
         _fail("EVAL-13 exec-blocked", "exec() in snippet must be blocked -> None")
     else:
         _ok("EVAL-13 exec-blocked", "exec() in snippet blocked -> None (sandbox)")
+
+    # ------------------------------------------------------------------
+    # EVAL-14 (REGRESSION): non-terminating snippet -> None within timeout
+    #
+    # A snippet containing a ``while True: pass`` infinite spin must return
+    # None under the hard process timeout — NEVER hang the harness.
+    # Uses timeout_s=2 so this test completes quickly (target ≤ 3 s wall-clock).
+    #
+    # ``while True: pass`` passes the pre-scan (no blocked keywords), so the
+    # process-kill timeout is the ONLY guard — this test validates the core
+    # G2 timeout guarantee: process is terminate()-d and None is returned.
+    # ------------------------------------------------------------------
+    _nonterminating_snippet = "while True: pass\n_myc_program = 'x'\n"
+    _timeout_result = eval_embedded_dsl(_nonterminating_snippet, timeout_s=2.0)
+    if _timeout_result is not None:
+        _fail(
+            "EVAL-14 timeout-nonterminating",
+            f"non-terminating snippet must return None under timeout (got {_timeout_result!r})",
+        )
+    else:
+        _ok(
+            "EVAL-14 timeout-nonterminating",
+            "non-terminating snippet (while True) -> None within 2 s timeout (hard process kill, G2)",
+        )
 
     # ------------------------------------------------------------------
     # PROMPT-1: prompt structure is well-formed (PURE check)
