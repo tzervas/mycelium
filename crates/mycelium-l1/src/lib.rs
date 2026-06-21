@@ -95,6 +95,57 @@ mod tests {
     }
 
     #[test]
+    fn runtime_vocab_keywords_are_reserved_not_active() {
+        // DN-03 §4 / RFC-0008 §4.5 / M-665: the 10 Runtime-tier names are reserved keywords —
+        // they lex as keywords (never silent identifiers, G2) but no L1 construct consumes them.
+        // Each must be an explicit parse error with a teaching diagnostic naming RFC-0008.
+        //
+        // Coverage: (a) each word cannot open a program; (b) each cannot be used as a function
+        // name (item position); (c) each cannot be used as a parameter name (binder position);
+        // (d) each cannot appear in expression position. The diagnostic must mention "RFC-0008".
+        let words = [
+            "hypha", "fuse", "mesh", "graft", "cyst", "xloc", "forage", "backbone", "tier",
+            "reclaim",
+        ];
+        for word in words {
+            // (a) cannot open a program
+            let err = parse(&format!("{word} signals\n")).unwrap_err();
+            assert!(
+                err.message.contains("RFC-0008"),
+                "`{word}` opening a program: teaching diagnostic must mention RFC-0008, got: {}",
+                err.message
+            );
+
+            // (b) cannot be used as a function name (item position — the keyword is the fn name slot)
+            let err =
+                parse(&format!("nodule demo\nfn {word}() -> Binary{{8}} = 0b0")).unwrap_err();
+            assert!(
+                err.message.contains("RFC-0008"),
+                "`{word}` as fn name: teaching diagnostic must mention RFC-0008, got: {}",
+                err.message
+            );
+
+            // (c) cannot be used as a parameter name
+            assert!(
+                parse(&format!(
+                    "nodule demo\nfn f({word}: Binary{{8}}) -> Binary{{8}} = 0b0"
+                ))
+                .is_err(),
+                "`{word}` as param name must be an error"
+            );
+
+            // (d) cannot appear in expression position
+            let err =
+                parse(&format!("nodule demo\nfn f() -> Binary{{8}} = {word}")).unwrap_err();
+            assert!(
+                err.message.contains("RFC-0008"),
+                "`{word}` in expression position: teaching diagnostic must mention RFC-0008, got: {}",
+                err.message
+            );
+        }
+    }
+
+    #[test]
     fn a_malformed_ternary_literal_is_explicit() {
         let src = "nodule demo\nfn f() -> Ternary{3} = <+x->";
         let err = parse(src).unwrap_err();
