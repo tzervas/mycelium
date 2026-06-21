@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Living index** (updated 2026-06-20) — the per-module design specs that decompose **RFC-0016** (the Core Library RFC). The **23 Rust-first module specs are now `Accepted`** (2026-06-20, maintainer-ratified per DN-07, on a checked basis — guarantee matrices asserted in tests); **`runtime` and `self-hosting-readiness` stay `Draft (needs-design)`** (gate-pending). A module spec moves to `Accepted` only when its task's acceptance is met and the maintainer ratifies — never silently. |
+| **Status** | **Living index** (updated 2026-06-21) — the per-module design specs that decompose **RFC-0016** (the Core Library RFC). The **23 Rust-first module specs were `Accepted`** 2026-06-20 (DN-07, on a checked basis — guarantee matrices asserted in tests); on **2026-06-21** the maintainer additionally ratified **`runtime`** (v0 R1 surface — preconditions met, DN-16 re-audit clean; further constructs activate at the Phase-7 gate per ADR-020) and the newly-written **`sys`** spec (`mycelium-std-sys`, M-541) — completing **25/25** crate specs `Accepted`. Only **`self-hosting-readiness`** stays `Draft (needs-design)` (the M-502 gate doc, not a crate). A module spec moves to `Accepted` only when its task's acceptance is met and the maintainer ratifies — never silently. (DN-16 2026-06-21 re-audit: 25/25 ratification-ready, no honesty-tag violations.) |
 | **Scope** | The home of the per-module standard-library design specs (`docs/spec/stdlib/<module>.md`). Each spec fixes a module's **scope + boundary**, its **exported-op surface**, and — the load-bearing deliverable — its **guarantee matrix** (RFC-0016 §4.5), proving the module meets the §4.1 contract **per op**, as a checked table rather than prose. |
 | **Source of truth above this dir** | `docs/rfcs/RFC-0016-Core-Library-and-Standard-Library.md` (the **scope + per-op contract + taxonomy**); `docs/planning/phase-5.md` (the task decomposition M-510…M-534) |
 | **Conformance template** | `docs/spec/stdlib/_TEMPLATE.md` — every module spec follows it (single-template conformance, the §4.1 doc quality-bar lint) |
@@ -93,6 +93,7 @@ authoritative current state. Cross-module FLAGs reconciled in §5.
 | `recover` | [`recover.md`](./recover.md) | M-520 (#156) | RFC-0014; M-352/353 | **Draft — landed** |
 | `runtime` / `colony` | [`runtime.md`](./runtime.md) | M-521 (#162) | RFC-0008; M-355–357 | **Draft — landed** (reserved-vocabulary; Phase-7-gated, §8-Q4) |
 | `spore` | [`spore.md`](./spore.md) | M-522 (#163) | ADR-013; RFC-0003 §6; M-368 | **Draft — landed** |
+| `sys` (OS/FFI floor) | [`sys.md`](./sys.md) | M-541 | RFC-0016 §8-Q6; ADR-014 | **landed; Accepted 2026-06-21** |
 
 ### Tier B — common / expected modules (RFC-0016 §4.4)
 
