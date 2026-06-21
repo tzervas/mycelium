@@ -67,7 +67,8 @@ Validate: `python3 tools/github/doc_refs_check.py`
 - **Closed:** A1 (zero open High) · A5 (KC-4 cert-overhead budget ratified ≤5 µs + ≤2× guardrail) ·
   B1 (RFC-0003/0006/0007 Accepted) · B2 (KC-2 verdict recorded — determinate retention ratio).
 - **Open (the remaining gap = the next wave):** **A2** (M-653, Medium-findings ledger) · **A3**
-  (M-654, WS8 durability — mutants/proptest/fuzz) · **A4** (M-652, `cargo deny`/`audit` in `just check`).
+  (M-654, WS8 durability — mutants/proptest/fuzz) · **A4** (M-652, make the cargo-deny/audit gate
+  non-skip — it is already wired into `just check`; provision the tools so it runs, not skip-passes).
 - Then **M-655**: cut 1.0.0 (ADR-021 `Accepted → Enacted` at the tagged release).
 - **Out of scope for 1.0.0 (post-1.0/1.x):** surface language, self-hosting (M-502/M-649), native
   codegen, JIT, projections, RP-8 perf, arms 3/5 (ADR-021 §5).
@@ -99,7 +100,7 @@ Validate: `python3 tools/github/doc_refs_check.py`
 
 | ID | Title | Status |
 |----|-------|--------|
-| **M-652** | A4 — `cargo deny`/`audit` into `just check` | open (1.0.0 gate) |
+| **M-652** | A4 — make the cargo-deny/audit gate non-skip (already wired; provision tools) | open (1.0.0 gate) |
 | **M-653** | A2 — Medium-findings ledger (close/defer each) | open (1.0.0 gate) |
 | **M-654** | A3 — WS8 durability (cargo-mutants + proptest + fuzz) | open (1.0.0 gate) |
 | **M-655** | Cut 1.0.0 — ADR-021 → Enacted at the tagged release | open (after A2/A3/A4) |

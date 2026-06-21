@@ -16,7 +16,7 @@ B1 (RFC-0003/0006/0007 Accepted) ✅ · B2 (KC-2 verdict recorded — determinat
 
 | ID | Gate | Title | Priority | Parallel? |
 |----|------|-------|----------|-----------|
-| **M-652** | A4 | Wire `cargo deny` + `cargo audit` into `just check` (deny.toml; skip-graceful; green) | P1 | ✅ standalone |
+| **M-652** | A4 | Make the `cargo deny`/`cargo audit` gate non-skip — already wired (`deny.toml` + `scripts/checks/deny.sh` + in `all.sh`); provision the tools so it runs green, not skip-passes | P1 | ✅ standalone |
 | **M-653** | A2 | Medium-findings ledger: close or explicitly defer every open deep-review Medium (one-line rationale each) | P1 | ✅ swarm (by finding/crate) |
 | **M-654** | A3 | WS8 durability: cargo-mutants green on the trusted base + LCG property tests → proptest (seed rotation) + cargo-fuzz targets in CI | P0 | partial (after M-653) |
 | **M-655** | ADR-021 | Cut 1.0.0: once A2/A3/A4 close, move ADR-021 `Accepted → Enacted` at the tagged release (per-crate SemVer, ADR-018) | P1 | after M-652–654 |
@@ -40,7 +40,7 @@ B1 (RFC-0003/0006/0007 Accepted) ✅ · B2 (KC-2 verdict recorded — determinat
 Default mode: **Sonnet Swarm** (all spawned agents Sonnet; CLAUDE.md §Fractal Swarm). Opus orchestrator.
 
 Parallelizable now (disjoint dirs):
-- **M-652** (A4) — `deny.toml` + `scripts/checks/` + `justfile`; standalone PR.
+- **M-652** (A4) — the gate is already wired (`deny.toml` + `scripts/checks/deny.sh` + in `all.sh`); the work is provisioning `cargo-deny`/`cargo-audit` so it runs green instead of skip-passing (+ policy review); standalone PR.
 - **M-653** (A2) — the Medium-findings sweep fans out by finding/crate (each leaf owns its fix + regression test).
 - **M-647 / M-648 / M-651** — docs + `mycelium-bench`; independent of the gate rows.
 - **M-654** (A3) is the heavy one — start cargo-mutants on the trusted base + the proptest migration after M-653's fixes land (so mutants run against the cleaned tree).
@@ -60,7 +60,7 @@ Shared files (orchestrator-owned, read-only for leaves): `CHANGELOG.md`, `docs/D
 ## Branch and PR flow
 
 ```
-Branch from main → develop → just check (incl. cargo deny once M-652 lands) → PR → squash to main
+Branch from main → develop → just check (already runs the cargo-deny/audit gate; M-652 makes it non-skip) → PR → squash to main
 ```
 
 Always PR into main. Never push main directly. Use `/land` for the final squash step. New IDs:

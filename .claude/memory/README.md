@@ -23,4 +23,5 @@ operations · Key invariants (honesty) · Read-more entry points · Gotchas.**
 
 **Maintenance:** when a component changes materially, refresh its memory file (append-only is not
 required here — these are living orientation aids, but keep them honest + currency-accurate; cite
-the source so drift is catchable). The set is indexed in `docs/Doc-Index.md` only by this README.
+the source so drift is catchable). This README is the only index of the set; it is intentionally
+not registered in `docs/Doc-Index.md` (that map tracks the normative corpus, not these agent aids).

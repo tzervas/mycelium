@@ -1978,14 +1978,14 @@ issues:
       - After this lands, a live Grok run's output can be fed directly to mycelium-bench for bench-level analysis
 
   - id: M-652
-    title: "M-652 — Gate A4: wire cargo-deny + cargo-audit into `just check`"
+    title: "M-652 — Gate A4: make the cargo-deny/cargo-audit supply-chain gate non-skip"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:feature, area:toolchain, priority:P1, status:todo]
     depends_on: []
-    doc_refs: [corpus:ADR-021, corpus:DN-19, src:scripts/checks, src:justfile]
+    doc_refs: [corpus:ADR-021, corpus:DN-19, src:scripts/checks/deny.sh, src:deny.toml, src:justfile]
     body: |
-      ADR-021 Gate A4 / DN-19 GAP-3. `just check` currently SKIPs `cargo deny` and `cargo audit` (not installed). Wire them in: add a `deny.toml` (licenses, bans, advisories, sources), a `scripts/checks/supply-chain.sh` (skip-graceful per the `just check` idiom; `just setup` installs the tools), and route through `just check`/`just ci`. Standalone — independent of code changes (DN-19: parallelizable).
-      Acceptance: `just check` runs cargo-deny + cargo-audit GREEN (or with an explicit, rationale-tagged allowlist for any advisory that cannot be resolved — never a silent ignore); `deny.toml` committed; the recipes documented. Closes ADR-021 Gate A4.
+      ADR-021 Gate A4 / DN-19 GAP-3. The supply-chain gate is already WIRED: `deny.toml` exists at the repo root, `scripts/checks/deny.sh` runs both `cargo deny check` + `cargo audit`, the `deny:` recipe is in the `justfile`, and `deny` is in the `all.sh` check set — so `just check` already invokes it. The remaining gap is that the gate is skip-graceful and currently SKIPs when `cargo-deny`/`cargo-audit` are not installed: a skip-pass is not a closed gate (G2 — never silently green). Close it: provision the tools (`just setup` / CI setup) so the gate genuinely RUNS, confirm it passes against the current tree, and refine `deny.toml` policy (licenses, bans, advisories, sources) as the run surfaces. Standalone — independent of code changes (DN-19: parallelizable).
+      Acceptance: with the tools installed, `just check` runs cargo-deny + cargo-audit GREEN (or with an explicit, rationale-tagged allowlist for any advisory that cannot be resolved — never a silent ignore); the gate no longer skip-passes in the gate environment; `deny.toml` policy reviewed. Closes ADR-021 Gate A4.
 
   - id: M-653
     title: "M-653 — Gate A2: Medium-findings ledger (close or explicitly defer each)"
