@@ -1030,4 +1030,313 @@ mod tests {
         assert!(dump.contains("op f"));
         assert!(dump.contains("%0"));
     }
+
+    // ===== Mutant-witnesses for render_scalar_kind (lower.rs:72:5) =====
+    // Replaced with "" or "xyzzy" — must emit the actual scalar kind name.
+    // Tests by checking dump_node output for Dense reprs carries the specific dtype string.
+    #[test]
+    fn render_scalar_kind_emits_the_kind_name() {
+        // The dump of a Dense const must contain the dtype string: "F32", "F16", "BF16", "F64".
+        for (dtype, expected) in [
+            (ScalarKind::F32, "F32"),
+            (ScalarKind::F16, "F16"),
+            (ScalarKind::Bf16, "BF16"),
+            (ScalarKind::F64, "F64"),
+        ] {
+            let v = Value::new(
+                Repr::Dense { dim: 4, dtype },
+                Payload::Scalars(vec![0.0, 0.0, 0.0, 0.0]),
+                Meta::exact(Provenance::Root),
+            )
+            .unwrap();
+            let text = dump_node(&Node::Const(v));
+            assert!(
+                text.contains(expected),
+                "dump of Dense{{{dtype:?}}} must contain '{expected}': got {text:?}"
+            );
+            // The empty-string and "xyzzy" replacements would fail this check.
+            assert!(
+                !text.contains("xyzzy"),
+                "dump must not contain sentinel 'xyzzy': got {text:?}"
+            );
+        }
+    }
+
+    // ===== Mutant-witnesses for render_payload (lower.rs:100:5) =====
+    // Replaced with String::new() or "xyzzy".into() — must emit non-empty payload text.
+    #[test]
+    fn render_payload_emits_non_empty_payload_text() {
+        // Bits payload: should contain "bits=..."
+        let v_bits = Value::new(
+            Repr::Binary { width: 4 },
+            Payload::Bits(vec![true, false, true, false]),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap();
+        let bits_text = dump_node(&Node::Const(v_bits));
+        assert!(
+            bits_text.contains("bits=1010"),
+            "dump of Binary Const must contain 'bits=1010': got {bits_text:?}"
+        );
+        // Trits payload: should contain "trits=..."
+        use crate::value::Trit;
+        let v_trits = Value::new(
+            Repr::Ternary { trits: 3 },
+            Payload::Trits(vec![Trit::Pos, Trit::Zero, Trit::Neg]),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap();
+        let trits_text = dump_node(&Node::Const(v_trits));
+        assert!(
+            trits_text.contains("trits=+0-"),
+            "dump of Ternary Const must contain 'trits=+0-': got {trits_text:?}"
+        );
+    }
+
+    // ===== Mutant-witnesses for short_hash (lower.rs:142:5) =====
+    // Replaced with String::new() or "xyzzy".into() — must emit a non-empty algo:prefix string.
+    #[test]
+    fn short_hash_emits_algo_and_prefix() {
+        let h = ContentHash::parse("blake3:round_trip_safe").unwrap();
+        let v = Value::new(
+            Repr::Binary { width: 8 },
+            Payload::Bits(vec![false; 8]),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap();
+        let swap_node = Node::Swap {
+            src: Box::new(Node::Const(v)),
+            target: Repr::Ternary { trits: 6 },
+            policy: h,
+        };
+        let text = dump_node(&swap_node);
+        // short_hash renders as "algo:first8chars" — the @prefix should appear in the dump.
+        assert!(
+            text.contains("@blake3:"),
+            "dump of Swap must contain '@blake3:' from short_hash: got {text:?}"
+        );
+        // The empty-string and "xyzzy" replacements would omit this.
+        assert!(!text.is_empty(), "dump must not be empty");
+    }
+
+    // ===== Mutant-witnesses for dump_node (lower.rs:154:5) =====
+    // Replaced with String::new() or "xyzzy".into() — must emit the actual node representation.
+    #[test]
+    fn dump_node_emits_non_empty_and_meaningful_text() {
+        let text = dump_node(&Node::Var("hello".into()));
+        assert!(!text.is_empty(), "dump_node must return non-empty string");
+        assert!(text.contains("var hello"), "dump_node Var must contain 'var hello': {text:?}");
+        assert!(!text.contains("xyzzy"), "dump_node must not return sentinel");
+
+        let text2 = dump_node(&Node::Const(byte()));
+        assert!(text2.contains("const Binary{8}"), "dump_node Const must contain type: {text2:?}");
+    }
+
+    // ===== Mutant-witnesses for format (lower.rs:170:5 and write_canon with ()) =====
+    // format() replaced with String::new() or "xyzzy".into().
+    // write_canon replaced with () — makes format() always return "".
+    // Tests check that format() returns non-empty, meaningful α-normalized output.
+    #[test]
+    fn format_returns_alpha_normalized_output() {
+        // A Var node should render with a canonical name.
+        let text = format(&Node::Var("my_var".into()));
+        assert!(!text.is_empty(), "format must return non-empty string");
+        // A Const should render with the value details.
+        let text2 = format(&Node::Const(byte()));
+        assert!(text2.contains("const"), "format Const must contain 'const': {text2:?}");
+        assert!(!text2.contains("xyzzy"), "format must not return sentinel");
+    }
+
+    // ===== Mutant-witnesses for write_canon counter arithmetic (lower.rs:202:22 += → -=/*=) =====
+    // *counter += 1 → *counter -= 1 or *counter *= 1 makes consecutive let/lam binders get the
+    // same or decrementing names. Tests check that nested let nodes generate sequential names.
+    #[test]
+    fn format_alpha_normalizes_nested_lets_with_sequential_names() {
+        // let x = (let y = c in y) in x — two nested lets should get v0 and v1.
+        let c = Node::Const(byte());
+        let inner = Node::Let {
+            id: "y".into(),
+            bound: Box::new(c),
+            body: Box::new(Node::Var("y".into())),
+        };
+        let outer = Node::Let {
+            id: "x".into(),
+            bound: Box::new(inner),
+            body: Box::new(Node::Var("x".into())),
+        };
+        let text = format(&outer);
+        // Must contain both v0 and v1 (sequential counter).
+        assert!(text.contains("v0"), "format must use v0 for first let: {text:?}");
+        assert!(text.contains("v1"), "format must use v1 for second let: {text:?}");
+        // The two names must be DIFFERENT (counter must increment, not stay at 0).
+        let v0_count = text.matches("v0").count();
+        let v1_count = text.matches("v1").count();
+        // Both appear — different binders are given different names.
+        assert!(v0_count > 0 && v1_count > 0,
+            "format must produce distinct sequential names v0, v1: {text:?}");
+    }
+
+    // ===== Mutant-witnesses for write_canon indentation arithmetic (depth + 1 → depth - 1/*1) =====
+    // write_canon(bound, depth + 1, ...) → wrong depth. Tests check indentation levels are correct.
+    #[test]
+    fn format_indents_nested_nodes_more_than_parent() {
+        // A Let at depth 0 renders "let v0 =" then the bound at depth 1 (2 more spaces).
+        let let_node = Node::Let {
+            id: "x".into(),
+            bound: Box::new(Node::Const(byte())),
+            body: Box::new(Node::Var("x".into())),
+        };
+        let text = format(&let_node);
+        // The "let" keyword should appear at depth 0 (no leading spaces).
+        let let_line = text.lines().find(|l| l.contains("let v0")).expect("must have let line");
+        assert!(!let_line.starts_with("  "),
+            "let at depth 0 must not be indented: {let_line:?}");
+        // The bound (const) should be at depth 1 (2 leading spaces).
+        let const_line = text.lines().find(|l| l.contains("const")).expect("must have const line");
+        assert!(const_line.starts_with("  "),
+            "const at depth 1 must start with 2 spaces: {const_line:?}");
+        assert!(!const_line.starts_with("    "),
+            "const at depth 1 must not start with 4 spaces (depth+1 must be 1, not 2): {const_line:?}");
+    }
+
+    // ===== Mutant-witnesses for write_core indentation arithmetic =====
+    // Similar to write_canon but for dump_node (which uses write_core).
+    #[test]
+    fn dump_node_indents_nested_nodes_more_than_parent() {
+        let let_node = Node::Let {
+            id: "x".into(),
+            bound: Box::new(Node::Const(byte())),
+            body: Box::new(Node::Var("x".into())),
+        };
+        let text = dump_node(&let_node);
+        // "let x =" at depth 0 — no leading spaces.
+        let let_line = text.lines().find(|l| l.contains("let x")).expect("must have let line");
+        assert!(!let_line.starts_with("  "),
+            "let at depth 0 must not be indented in dump_node: {let_line:?}");
+        // "const ..." at depth 1 — 2 leading spaces.
+        let const_line = text.lines().find(|l| l.contains("const")).expect("must have const line");
+        assert!(const_line.starts_with("  "),
+            "const at depth 1 must start with 2 spaces in dump_node: {const_line:?}");
+        assert!(!const_line.starts_with("    "),
+            "const at depth 1 must not start with 4 spaces: {const_line:?}");
+    }
+
+    // ===== Mutant-witnesses for fresh() counter (lower.rs:603:5 → 0, lower.rs:604:11 += → *=) =====
+    // fresh() replaced with constant 0: every temp is %0.
+    // *next += 1 → *next *= 1: counter never advances, all temps are %0.
+    // Tests check that multiple Consts/Ops produce DISTINCT temp names.
+    #[test]
+    fn lowering_assigns_distinct_sequential_temps_to_consts() {
+        // Two constants in an Op: each should get a distinct temp name.
+        let c = Node::Const(byte());
+        let node = Node::Op {
+            prim: "bit.xor".into(),
+            args: vec![c.clone(), c.clone()],
+        };
+        let anf = lower_to_anf(&node);
+        // With 2 Const args + 1 Op result, there must be at least 2 distinct temps.
+        let dump = anf.dump();
+        assert!(dump.contains("%0"), "must have temp %0: {dump:?}");
+        assert!(dump.contains("%1"), "must have temp %1: {dump:?}");
+        // If fresh() always returns 0, %1 would never appear (everything is %0).
+        // If counter never advances (*= 1 mutant), same issue.
+    }
+
+    // ===== Mutant-witnesses for Anf::len, is_empty, bindings =====
+    // lower.rs:898:9 Anf::len replaced with 0 or 1.
+    // lower.rs:904:9 Anf::is_empty replaced with true or false.
+    // lower.rs:910:9 Anf::bindings replaced with Vec::leak(Vec::new()).
+    #[test]
+    fn anf_len_is_empty_and_bindings_reflect_actual_content() {
+        // A single Const node produces exactly 1 binding.
+        let anf_const = lower_to_anf(&Node::Const(byte()));
+        assert_eq!(anf_const.len(), 1, "single Const must produce 1 binding");
+        assert!(!anf_const.is_empty(), "single Const ANF must not be empty");
+        assert_eq!(anf_const.bindings().len(), 1, "bindings() must have 1 entry");
+
+        // A Var produces 0 bindings (it's just a named atom — no temp allocation).
+        let anf_var = lower_to_anf(&Node::Var("x".into()));
+        assert_eq!(anf_var.len(), 0, "Var must produce 0 bindings");
+        assert!(anf_var.is_empty(), "Var ANF must be empty");
+        assert_eq!(anf_var.bindings().len(), 0, "bindings() must have 0 entries for Var");
+
+        // Two nested Consts produce 2 bindings.
+        let node = Node::Op {
+            prim: "bit.not".into(),
+            args: vec![Node::Const(byte())],
+        };
+        let anf_op = lower_to_anf(&node);
+        // 1 binding for the Const arg + 1 for the Op result = 2.
+        assert_eq!(anf_op.len(), 2, "Op(Const) must produce 2 bindings: {}", anf_op.dump());
+        assert!(!anf_op.is_empty(), "Op(Const) ANF must not be empty");
+        assert_eq!(anf_op.bindings().len(), 2, "bindings() must have 2 entries");
+        // The bindings() slice must contain the actual bindings, not an empty Vec.
+        let names: Vec<String> = anf_op.bindings().iter().map(|b| b.name.render()).collect();
+        assert!(names.len() == 2, "bindings() must have 2 named entries: {names:?}");
+    }
+
+    // ===== Mutant-witnesses for write_rhs indentation arithmetic (lower.rs:818–859) =====
+    // depth + 1 → depth - 1 or depth * 1 in write_rhs's recursive write_block calls.
+    // Tests check that nested lambda/fix bodies in the substrate dump are indented correctly.
+    #[test]
+    fn substrate_dump_indents_nested_blocks() {
+        // A Lam node lowers to an Rhs::Lam which calls write_block at depth+1.
+        let lam = Node::Lam {
+            param: "x".into(),
+            body: Box::new(Node::Const(byte())),
+        };
+        let anf = lower_to_anf(&lam);
+        let dump = anf.dump();
+        // The substrate block header at depth 0: "substrate {"
+        assert!(dump.contains("substrate {"), "must have substrate header: {dump:?}");
+        // There must be content inside the substrate block (inner indent > outer).
+        // The inner block is indented by 2 additional spaces vs the enclosing "substrate {".
+        let lines: Vec<&str> = dump.lines().collect();
+        // Find the "substrate {" line and check that the line after it is indented.
+        let sub_idx = lines.iter().position(|l| l.contains("substrate {")).unwrap();
+        if sub_idx + 1 < lines.len() {
+            // At minimum, something follows at greater indentation.
+            let next_meaningful: Option<&str> = lines[(sub_idx + 1)..].iter()
+                .find(|l| !l.trim().is_empty())
+                .copied();
+            if let Some(inner_line) = next_meaningful {
+                // Must have at least 2 leading spaces (depth 1 = "  ").
+                assert!(inner_line.starts_with("  "),
+                    "inner substrate content must be indented: {inner_line:?}\nfull dump:\n{dump}");
+            }
+        }
+    }
+
+    // ===== Mutant-witnesses for write_block indentation (lower.rs:881, 885) =====
+    // "  ".repeat(depth + 1) → "  ".repeat(depth * 1). Tests check that nested substrate blocks
+    // (inner Anf inside a Lam/Fix Rhs) indent the inner substrate header.
+    #[test]
+    fn nested_substrate_block_is_indented_relative_to_outer() {
+        // A Fix over a body of Fix: produces a nested substrate block.
+        let fix = Node::Fix {
+            name: "f".into(),
+            body: Box::new(Node::Var("f".into())),
+        };
+        let anf = lower_to_anf(&fix);
+        let dump = anf.dump();
+        // Find the Rhs::Fix rendering — the outer substrate {} header is at depth 0.
+        // The nested body's "substrate {" should be at depth 2 (4 spaces).
+        // At minimum, there should be a nested block.
+        assert!(dump.contains("fix f =>"), "must have 'fix f =>' in dump: {dump:?}");
+        // Find any "substrate {" after the first one — that's the nested block.
+        let substrate_count = dump.matches("substrate {").count();
+        assert!(substrate_count >= 2,
+            "nested Fix must have >= 2 substrate blocks in dump: {dump:?}");
+        // The inner substrate block must be more indented than the outer one.
+        let lines: Vec<&str> = dump.lines().collect();
+        let sub_lines: Vec<(usize, &&str)> = lines.iter().enumerate()
+            .filter(|(_, l)| l.contains("substrate {"))
+            .collect();
+        if sub_lines.len() >= 2 {
+            let outer_indent = sub_lines[0].1.len() - sub_lines[0].1.trim_start().len();
+            let inner_indent = sub_lines[1].1.len() - sub_lines[1].1.trim_start().len();
+            assert!(inner_indent > outer_indent,
+                "inner substrate block must be more indented than outer:\nouter={outer_indent}, inner={inner_indent}\n{dump}");
+        }
+    }
 }
