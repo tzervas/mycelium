@@ -91,6 +91,14 @@ single clearest.
 
 Verified against `crates/mycelium-l1/src/token.rs` and `docs/spec/grammar/mycelium.ebnf`.
 
+**Status legend (be precise — this is the highest-value correctness surface):**
+- **Active** — in the lexer's `keyword()` *and* consumed by a construct (it forms/opens programs).
+- **Reserved-not-active** — in `keyword()` (lexes as a keyword, so it can *never* be a silent
+  identifier — G2) but no construct consumes it yet: **only `phylum` and `colony`**.
+- **Ratified — not yet lexed** — a name ratified in DN-02/DN-03 but **not** in `keyword()`, so it
+  currently lexes as an ordinary **identifier** (using it is *not* yet an error). The whole Runtime
+  tier plus `consume`/`grow`/`impl` are here — their lexer reservation lags the spec.
+
 | Term | Layer | Status | Meaning | Normative source |
 |---|---|---|---|---|
 | `nodule` | L2 Surface (static) | **Active** | The basic static organizational unit (replaces "module"); opens a program | DN-06; RFC-0006 |
@@ -115,7 +123,7 @@ Verified against `crates/mycelium-l1/src/token.rs` and `docs/spec/grammar/myceli
 | `to` | L2 Surface | **Active** | Swap target label (within `swap(…, to: …, policy: …)`) | grammar |
 | `policy` | L2 Surface | **Active** | Swap policy label (within `swap(…, to: …, policy: …)`) | grammar |
 | `matured` | L2 Surface | **Active (reserved keyword)** | Scope-level promotion to AOT-compiled, stable form; a `matured fn` at item position is a parse error with teaching diagnostic | RFC-0017; DN-02 §7 |
-| `impl` | L2 Surface (future) | **Reserved (not in v0 grammar)** | Inherent methods on a type (conventional; `embody` declined; not in v0 grammar yet) | DN-03 §1 |
+| `impl` | L2 Surface (future) | **Ratified — not yet lexed** | Inherent methods on a type (conventional; `embody` declined; not in `keyword()` / v0 grammar yet) | DN-03 §1 |
 | `Binary` | Type | **Active** | N-bit binary representation type (`Binary{N}`) | RFC-0001; grammar |
 | `Ternary` | Type | **Active** | N-trit balanced-ternary type (`Ternary{N}`) | RFC-0001; grammar |
 | `Dense` | Type | **Active** | Dense embedding type (`Dense{N, scalar}`) | RFC-0001; grammar |
@@ -124,18 +132,18 @@ Verified against `crates/mycelium-l1/src/token.rs` and `docs/spec/grammar/myceli
 | `Sparse` | Type qualifier | **Active** | Sparsity qualifier for VSA (`Sparse{N}`) | grammar |
 | `F16`, `BF16`, `F32`, `F64` | Scalar kind | **Active** | Scalar type keywords for Dense | grammar |
 | `Exact`, `Proven`, `Empirical`, `Declared` | Formal / Honesty | **Active** | Guarantee strength tags; type-level index `T @ Exact` (LR-6) | RFC-0001; DN-02 §7 |
-| `consume` | L2 Surface | **Active (reserved)** | Acquire exclusive ownership of an affine `substrate` (single-use semantics) | DN-03 §1 |
-| `grow` | L2 Surface | **Active (reserved)** | Derive-like generative capability extension (`grow Debug for T`) | DN-03 §1 |
-| `hypha` | Runtime | **Reserved-not-active** | Single concurrent execution unit | DN-03 §4; RFC-0008 §4.5 |
-| `fuse` | Runtime | **Reserved-not-active** | Lawful state fusion: semilattice merge of two `hypha` states | DN-03 §4; RFC-0008 §4.5/RT6 |
-| `mesh` | Runtime | **Reserved-not-active** | Gossip/pub-sub overlay with honest probabilistic guarantees | DN-03 §4; RFC-0008 §4.5/RT5 |
-| `graft` | Runtime | **Reserved-not-active** | Capability contract with external infrastructure | DN-03 §4; RFC-0008 §4.5/RT4 |
-| `cyst` | Runtime | **Reserved-not-active** | Content-addressed checkpoint of a dormable computation | DN-03 §4; RFC-0008 §4.5/RT2 |
-| `xloc` | Runtime | **Reserved-not-active** | Explicit, fallible, Meta-preserving value movement ("trans-locate") | DN-03 §4; RFC-0008 §4.5/RT1/RT4 |
-| `forage` | Runtime | **Reserved-not-active** | Adaptive placement policy (reified RFC-0005 selection) | DN-03 §4; RFC-0008 §4.5/RT3 |
-| `backbone` | Runtime | **Reserved-not-active** | Declared high-bandwidth transport path (placement artifact, semantics-free) | DN-03 §4; RFC-0008 §4.5/RT3 |
-| `tier` | Runtime | **Reserved-not-active** | Execution-mode switch (interpreted vs native); distinct from a `swap` (Repr change) | DN-03 §4; RFC-0008 §4.5 |
-| `reclaim` | Runtime | **Reserved-not-active** | Supervision-tree reclamation of stale runtime units (never memory — LR-9 makes memory automatic) | DN-03 §4; RFC-0008 §4.5/RT7 |
+| `consume` | L2 Surface (future) | **Ratified — not yet lexed** | Acquire exclusive ownership of an affine `substrate` (single-use semantics) | DN-03 §1 |
+| `grow` | L2 Surface (future) | **Ratified — not yet lexed** | Derive-like generative capability extension (`grow Debug for T`) | DN-03 §1 |
+| `hypha` | Runtime (future) | **Ratified — not yet lexed** | Single concurrent execution unit | DN-03 §4; RFC-0008 §4.5 |
+| `fuse` | Runtime (future) | **Ratified — not yet lexed** | Lawful state fusion: semilattice merge of two `hypha` states | DN-03 §4; RFC-0008 §4.5/RT6 |
+| `mesh` | Runtime (future) | **Ratified — not yet lexed** | Gossip/pub-sub overlay with honest probabilistic guarantees | DN-03 §4; RFC-0008 §4.5/RT5 |
+| `graft` | Runtime (future) | **Ratified — not yet lexed** | Capability contract with external infrastructure | DN-03 §4; RFC-0008 §4.5/RT4 |
+| `cyst` | Runtime (future) | **Ratified — not yet lexed** | Content-addressed checkpoint of a dormable computation | DN-03 §4; RFC-0008 §4.5/RT2 |
+| `xloc` | Runtime (future) | **Ratified — not yet lexed** | Explicit, fallible, Meta-preserving value movement ("trans-locate") | DN-03 §4; RFC-0008 §4.5/RT1/RT4 |
+| `forage` | Runtime (future) | **Ratified — not yet lexed** | Adaptive placement policy (reified RFC-0005 selection) | DN-03 §4; RFC-0008 §4.5/RT3 |
+| `backbone` | Runtime (future) | **Ratified — not yet lexed** | Declared high-bandwidth transport path (placement artifact, semantics-free) | DN-03 §4; RFC-0008 §4.5/RT3 |
+| `tier` | Runtime (future) | **Ratified — not yet lexed** | Execution-mode switch (interpreted vs native); distinct from a `swap` (Repr change) | DN-03 §4; RFC-0008 §4.5 |
+| `reclaim` | Runtime (future) | **Ratified — not yet lexed** | Supervision-tree reclamation of stale runtime units (never memory — LR-9 makes memory automatic) | DN-03 §4; RFC-0008 §4.5/RT7 |
 
 **Reserved-not-active words lex as keywords — they can never be silent identifiers.** Using
 `phylum` or `colony` as a function name is a parse error (verified in
@@ -344,11 +352,13 @@ operator in the grammar).
   Downgrade to stay honest; never upgrade without a checked basis (VR-5). `Proven` requires a
   theorem with *checked* side-conditions. `Declared` is always flagged.
 - **Honesty of this file:** the reserved-word table above is verified against
-  `crates/mycelium-l1/src/token.rs` (the `keyword()` function and `Tok` enum). The Runtime-tier
-  words (`hypha`, `fuse`, `mesh`, etc.) are confirmed reserved-not-active there — they are not
-  listed in the `keyword()` function in `token.rs`; their names are ratified in DN-03 but their
-  reservation in the lexer may lag the spec. FLAG: verify Runtime-tier reservation in `token.rs`
-  before relying on their lexer behavior — the token file only shows L1/L2 words above.
+  `crates/mycelium-l1/src/token.rs` (the `keyword()` function + `Tok` enum). Confirmed: `keyword()`
+  reserves only the **Active** and **Reserved-not-active** rows — `nodule`, `phylum`, `colony`, and
+  the L1/L2/type/scalar/strength words. The Runtime-tier words (`hypha`, `fuse`, `mesh`, …) **and**
+  `consume`/`grow`/`impl` are **not** in `keyword()`, so they currently lex as ordinary identifiers
+  and are marked **Ratified — not yet lexed** (their lexer reservation lags the DN-03 spec; using one
+  as an identifier is not yet an error). Source is ground truth — re-verify against `token.rs` after
+  any lexer change.
 
 ---
 

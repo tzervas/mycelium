@@ -16,6 +16,18 @@ never-silent** representation swaps and **honest, per-operation guarantees**. It
 **design phase**: the corpus in `docs/` is the product right now; code lands per the phase plan
 (see `tools/github/issues.yaml` and the `M-xxx`/`E*` task ids).
 
+## Lexicon — name things correctly (fungal, on-brand)
+Mycelium's libraries/units are **not** "crates"/"modules". Core mapping: **`phylum`** = library /
+package (versioned, content-addressed; ≈ crate) · **`nodule`** = the basic static unit / "module"
+(opens a program via a `// nodule:` header) · **`spore`** = the deployable/published artifact
+(ADR-013) · **`hypha`** = one concurrent execution unit (task) · **`colony`** = a runtime grouping
+of hyphae · **`swap`** = the never-silent representation change. (The *Rust kernel* packages named
+`mycelium-*` are genuinely Rust crates; *Mycelium-language* units are phyla/nodules — keep that
+distinction.) Only `nodule`/`phylum`/`colony` are wired into the lexer so far (`phylum`/`colony`
+reserved-not-active); the rest of the runtime tier are ratified names not yet lexed. Full reference
+— reserved words, surface syntax, grammar, conventions: **`.claude/memory/lang-lexicon-syntax.md`**;
+canonical definitions: `docs/Glossary.md` + DN-02/03/06.
+
 ## Non-negotiable house rules
 1. **The honesty rule.** Every accuracy/guarantee claim is tagged per-model/per-op on the
    lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`. `Proven` is allowed **only** with a theorem
