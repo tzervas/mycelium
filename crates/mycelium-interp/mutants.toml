@@ -1,0 +1,16 @@
+# cargo-mutants exclusions for mycelium-interp (M-654 Gate A3)
+#
+# Only genuinely equivalent / cosmetically-unreachable mutants are excluded here.
+# Every other survivor must be killed by a regression test.
+
+[exclude]
+
+# prims.rs:61 — PrimRegistry::empty() → Default::default()
+#
+# PrimRegistry derives Default, which constructs BTreeMap::new(). empty() also constructs
+# BTreeMap::new(). The two forms produce identical values: an empty registry with no registered
+# primitives. This mutant is GENUINELY EQUIVALENT — there is no observable difference between
+# `PrimRegistry { table: BTreeMap::new() }` and `<PrimRegistry as Default>::default()` since
+# the Default impl is exactly `BTreeMap::new()` (derived). Justified: cosmetic implementation
+# detail, not a semantic difference (VR-5: no honesty downgrade — empty is empty).
+re = ["replace PrimRegistry::empty -> Self with Default::default"]
