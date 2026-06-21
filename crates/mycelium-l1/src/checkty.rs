@@ -2412,7 +2412,7 @@ pub(crate) fn unify_arg(
     }
 }
 
-// ─── Stage-1 generic monomorphization pass (M-657B) ───────────────────────────────────────
+// ─── Stage-1 generic monomorphization pass (M-657B / M-657C) ─────────────────────────────
 //
 // `monomorphize` is called at the top of elaboration: it returns a **new `Env`** in which every
 // generic-function call reachable from `entry` has been replaced by a concrete monomorphic
@@ -2420,10 +2420,17 @@ pub(crate) fn unify_arg(
 // calls have been rewritten to their mangled instances). The existing `recursive_sccs` / `Fix` /
 // `FixGroup` machinery then handles recursion without any elaborator changes.
 //
-// Design invariants (M-657B, **Declared**):
+// Design invariants (M-657B + M-657C, **Declared**):
 //   - Instances are memoized by mangled name → ordinary recursion terminates in one step.
 //   - Polymorphic recursion (a generic fn instantiating itself at a strictly larger type) is
-//     detected by an instance cap (256) and refused with an explicit `Residual` — never loops.
+//     detected by an instance cap (default 256, opt-in via `MYCELIUM_MONO_INSTANCE_CAP`) and
+//     refused with an explicit `CheckError` — never loops, never silently truncates.
+//   - Type-arg inference is argument-driven (Strategy 2 only — M-657C): type args for a
+//     generic callee are inferred from the actual call arguments, not from the caller's
+//     substitution by param name (the "Strategy 1 name-collision" unsoundness was removed).
+//   - Binder capture (M-657C): `let`, `match`, and `for` binders are tracked through all
+//     three traversals (collection, rewriting, Phase 3 caller-body rewriting) so that a
+//     generic call whose argument is a let/match/for-bound variable can be resolved.
 //   - A repr-mismatched instantiation is an explicit error (propagated from `unify_arg`).
 //   - The pass is transparent to non-generic functions (passed through unchanged).
 //   - ADT instances the body needs must already be in `env.types` (minted by the checker) — the
@@ -2441,18 +2448,19 @@ pub(crate) fn unify_arg(
 ///
 /// **Never-silent (G2/VR-5)**:
 ///   - An unknown entry → `Err(CheckError)`.
-///   - Polymorphic recursion (instance cap exceeded) → explicit `CheckError` naming the function.
+///   - Polymorphic recursion (instance cap exceeded) → explicit `CheckError` naming the function
+///     and the opt-in env var `MYCELIUM_MONO_INSTANCE_CAP` for legitimate deep monomorphization.
 ///   - A type inference failure in a generic call → `CheckError` with the diagnostic.
 ///   - All errors propagate explicitly; no silent coercion or partial result.
+///
+/// **Instance cap opt-in**: the default cap (256) can be raised via the environment variable
+/// `MYCELIUM_MONO_INSTANCE_CAP=<N>` for programs that legitimately require more than 256
+/// distinct generic instances (e.g. deep library combinators).  This is an honest resource
+/// bound, not a semantics knob: exceeding the (possibly raised) cap is still a `CheckError`.
 ///
 /// Returns `CheckError` (not `ElabError`) to avoid a circular module dependency: `elab.rs`
 /// imports from `checkty.rs` and calls this function, converting the error itself.
 pub(crate) fn monomorphize(env: &Env, entry: &str) -> Result<Env, CheckError> {
-    // Fast path: nothing generic reachable → return a cheap clone.
-    if env.generics.is_empty() {
-        return Ok(env.clone());
-    }
-
     // --- Phase 1: collect the set of generic functions that appear in the env ---
     // A function is "generic" if sig.params is non-empty.
     let generic_fns: BTreeSet<String> = env
@@ -2462,6 +2470,10 @@ pub(crate) fn monomorphize(env: &Env, entry: &str) -> Result<Env, CheckError> {
         .map(|(n, _)| n.clone())
         .collect();
 
+    // Fast path: no generic functions → nothing to monomorphize.
+    // Note: env.generics tracks generic *type* definitions (ADTs), not functions; a program
+    // with only generic functions (no generic ADTs) has env.generics empty but still needs
+    // monomorphization (M-657C correctness fix).
     if generic_fns.is_empty() {
         return Ok(env.clone());
     }
@@ -2531,7 +2543,16 @@ pub(crate) fn monomorphize(env: &Env, entry: &str) -> Result<Env, CheckError> {
     }
 
     // Instance cap: protects against polymorphic recursion expanding without bound.
-    const INSTANCE_CAP: usize = 256;
+    // Default is 256; an explicit opt-in via `MYCELIUM_MONO_INSTANCE_CAP` raises it for
+    // legitimate deep (finite) monomorphization.  Read ONCE here — not per-iteration — so the
+    // env-var lookup cost is O(1) for the whole pass.  An unparseable value is silently ignored
+    // and the default applies (never-silent only when the cap is actually breached — the cap
+    // itself is an honest resource bound, not a semantics knob).
+    const DEFAULT_CAP: usize = 256;
+    let instance_cap: usize = std::env::var("MYCELIUM_MONO_INSTANCE_CAP")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(DEFAULT_CAP);
     let mut instance_count: usize = 0;
 
     // Process the worklist.
@@ -2542,14 +2563,16 @@ pub(crate) fn monomorphize(env: &Env, entry: &str) -> Result<Env, CheckError> {
         }
 
         instance_count += 1;
-        if instance_count > INSTANCE_CAP {
+        if instance_count > instance_cap {
             return Err(CheckError::new(
                 &gfn_name,
                 format!(
                     "generic function `{gfn_name}` exceeded the monomorphization instance cap \
-                     ({INSTANCE_CAP}) — this indicates polymorphic recursion (a generic function \
+                     ({instance_cap}) — this indicates polymorphic recursion (a generic function \
                      instantiating itself at a strictly growing type), which is out of scope for \
-                     stage-1 generics (RFC-0007 §4.9 / M-657B). Refuse rather than loop.",
+                     stage-1 generics (RFC-0007 §4.9 / M-657B). Refuse rather than loop. \
+                     If this is legitimate deep (finite) monomorphization rather than polymorphic \
+                     recursion, raise the cap via MYCELIUM_MONO_INSTANCE_CAP=<N>.",
                 ),
             ));
         }
@@ -2746,6 +2769,58 @@ fn infer_generic_arg_tys_with_env(
         .collect()
 }
 
+/// Extract the type bindings introduced by a pattern match arm.
+///
+/// Given the pattern and the scrutinee's concrete type, walk the pattern tree and collect
+/// `(name, Ty)` pairs for every `Pattern::Ident` binder reachable inside constructor subpatterns.
+/// This is used to extend the scope before traversing an arm body, so that generic calls whose
+/// arguments are pattern-bound variables can have their type arguments inferred.
+///
+/// Best-effort: returns `None` if the scrutinee type is not a `Ty::Data` or the constructor
+/// cannot be found (the caller falls back to the un-extended scope).
+///
+/// Guarantee: **Declared** — mirrors the checker's `check_pattern` logic at a coarse level;
+/// does not reproduce the full coverage/exhaustiveness machinery.
+fn collect_pattern_bindings(
+    pat: &Pattern,
+    scrutinee_ty: &Ty,
+    types: &BTreeMap<String, DataInfo>,
+) -> Option<Vec<(String, Ty)>> {
+    let mut bindings = Vec::new();
+    collect_pattern_bindings_inner(pat, scrutinee_ty, types, &mut bindings);
+    Some(bindings)
+}
+
+fn collect_pattern_bindings_inner(
+    pat: &Pattern,
+    ty: &Ty,
+    types: &BTreeMap<String, DataInfo>,
+    out: &mut Vec<(String, Ty)>,
+) {
+    match pat {
+        // A bare identifier at the root of a pattern or as a constructor sub-pattern is a binder
+        // (the checker resolves nullary constructors separately; here we treat every Ident as a
+        // binder — a nullary constructor would have no sub-patterns and adds nothing harmful).
+        Pattern::Ident(name) => {
+            out.push((name.clone(), ty.clone()));
+        }
+        // A constructor pattern: look up the ctor's field types and recurse into sub-patterns.
+        Pattern::Ctor(ctor_name, sub_pats) => {
+            if let Ty::Data(type_name) = ty {
+                if let Some(di) = types.get(type_name) {
+                    if let Some(ctor) = di.ctors.iter().find(|c| c.name == *ctor_name) {
+                        for (sub_pat, field_ty) in sub_pats.iter().zip(ctor.fields.iter()) {
+                            collect_pattern_bindings_inner(sub_pat, field_ty, types, out);
+                        }
+                    }
+                }
+            }
+        }
+        // Wildcard and literal patterns bind nothing.
+        Pattern::Wildcard | Pattern::Lit(_) => {}
+    }
+}
+
 /// Collect all calls to generic functions in `body`, using `env` for type inference.
 /// `initial_scope` contains the caller's own parameter bindings so that arg-type inference can
 /// resolve parameter names appearing as arguments (e.g. `is_cons(xs)` where `xs` is a param).
@@ -2791,9 +2866,24 @@ fn collect_calls_with_env_inner(
                 collect_calls_with_env_inner(a, env, generic_fns, worklist, site, scope);
             }
         }
-        Expr::Let { bound, body, .. } => {
+        Expr::Let {
+            name, bound, body, ..
+        } => {
             collect_calls_with_env_inner(bound, env, generic_fns, worklist, site, scope);
-            collect_calls_with_env_inner(body, env, generic_fns, worklist, site, scope);
+            // Extend the scope with the let-bound variable's type so that a generic call in
+            // `body` whose argument IS the bound name can be resolved.  Best-effort: if the
+            // bound expression's type cannot be inferred (e.g. it itself calls a generic fn
+            // whose instance isn't materialised yet), we fall back to the un-extended scope —
+            // the call is silently skipped rather than crashing (G2: no silent *wrong* instance;
+            // only a deferred instance that the worklist may seed from another path).
+            let mut scope_mut = scope.to_vec();
+            if let Ok(bound_ty) = infer_type(env, &mut scope_mut, bound) {
+                let mut extended = scope.to_vec();
+                extended.push((name.clone(), bound_ty));
+                collect_calls_with_env_inner(body, env, generic_fns, worklist, site, &extended);
+            } else {
+                collect_calls_with_env_inner(body, env, generic_fns, worklist, site, scope);
+            }
         }
         Expr::If { cond, conseq, alt } => {
             collect_calls_with_env_inner(cond, env, generic_fns, worklist, site, scope);
@@ -2802,14 +2892,61 @@ fn collect_calls_with_env_inner(
         }
         Expr::Match { scrutinee, arms } => {
             collect_calls_with_env_inner(scrutinee, env, generic_fns, worklist, site, scope);
+            // Infer the scrutinee type so we can bind each arm's pattern variables.
+            let mut scope_mut = scope.to_vec();
+            let scrutinee_ty = infer_type(env, &mut scope_mut, scrutinee).ok();
             for arm in arms {
-                collect_calls_with_env_inner(&arm.body, env, generic_fns, worklist, site, scope);
+                // Build the extended scope for this arm by extracting pattern bindings.
+                // Best-effort: if we cannot resolve a binding's type, fall back to un-extended.
+                let arm_scope = scrutinee_ty
+                    .as_ref()
+                    .and_then(|sty| collect_pattern_bindings(&arm.pattern, sty, &env.types))
+                    .map(|extra| {
+                        let mut s = scope.to_vec();
+                        s.extend(extra);
+                        s
+                    });
+                let effective_scope = arm_scope.as_deref().unwrap_or(scope);
+                collect_calls_with_env_inner(
+                    &arm.body,
+                    env,
+                    generic_fns,
+                    worklist,
+                    site,
+                    effective_scope,
+                );
             }
         }
-        Expr::For { xs, init, body, .. } => {
+        Expr::For {
+            x,
+            xs,
+            acc,
+            init,
+            body,
+            ..
+        } => {
             collect_calls_with_env_inner(xs, env, generic_fns, worklist, site, scope);
             collect_calls_with_env_inner(init, env, generic_fns, worklist, site, scope);
-            collect_calls_with_env_inner(body, env, generic_fns, worklist, site, scope);
+            // Extend scope with the iteration variable `x` (element type) and `acc`
+            // (accumulator, same type as init).  Best-effort: fall back if type is unknown.
+            let mut scope_mut = scope.to_vec();
+            let init_ty = infer_type(env, &mut scope_mut, init).ok();
+            let xs_ty = infer_type(env, &mut scope_mut, xs).ok();
+            let elem_ty = xs_ty.as_ref().and_then(|t| {
+                if let Ty::Data(name) = t {
+                    linear_elem_ty(site, &env.types, name).ok()
+                } else {
+                    None
+                }
+            });
+            let mut for_scope = scope.to_vec();
+            if let Some(et) = elem_ty {
+                for_scope.push((x.clone(), et));
+            }
+            if let Some(at) = init_ty {
+                for_scope.push((acc.clone(), at));
+            }
+            collect_calls_with_env_inner(body, env, generic_fns, worklist, site, &for_scope);
         }
         Expr::Swap { value, .. } => {
             collect_calls_with_env_inner(value, env, generic_fns, worklist, site, scope);
@@ -2885,6 +3022,11 @@ fn rewrite_body_for_instance(
 }
 
 #[allow(clippy::too_many_arguments)]
+// `subst` is threaded through recursive calls (representing the current instance's
+// type substitution) for potential future use and structural consistency with
+// `rewrite_body_for_instance`; Strategy 1 (direct subst-based inference) was removed
+// in M-657C, so it is no longer directly read inside this function body.
+#[allow(clippy::only_used_in_recursion)]
 fn rewrite_expr(
     e: &Expr,
     self_name: &str,
@@ -2926,38 +3068,34 @@ fn rewrite_expr(
                         });
                     }
 
-                    // Call to another generic function: infer its arg types and rename.
-                    // Strategy: first try to infer directly from `subst` (by substituting
-                    // the callee's type params using the current instance's substitution).
-                    // This handles the common case where both the caller and callee share
-                    // the same type parameter names (e.g. `even<A>` calling `odd<A>`).
-                    // Fall back to arg-type inference if subst-based inference fails.
+                    // Call to another generic function: infer its type args from the actual
+                    // call arguments (argument-driven inference — Strategy 2 is the sole
+                    // source of truth).
+                    //
+                    // Strategy 1 (reading the callee's type params from the CALLER's `subst`
+                    // by param name) was REMOVED (M-657C) because it produces an incorrect
+                    // instance whenever caller and callee share a type-param NAME but the
+                    // argument expression is NOT the same type as the caller's param
+                    // (e.g. a let-bound literal of a different repr than the caller's param).
+                    // Example unsoundness: outer<A=Binary{8}> calls wrap(y) where y: Ternary{4};
+                    // wrap<A> shares param name A → Strategy 1 returned wrap<Binary{8}> instead
+                    // of the correct wrap<Ternary{4}>.
+                    //
+                    // Strategy 2 avoids the name-collision by inferring the callee's type args
+                    // directly from the actual argument expressions using `concrete_scope` (which
+                    // now includes let/match/for binder types — see binder-capture fix below).
+                    // This is always sound because the caller's checker already validated the
+                    // call site; the monomorphizer only needs to read the argument types.
                     if generic_fns.contains(callee_name) {
                         if let Some(callee_fd) = env.fns.get(callee_name.as_str()) {
-                            // Strategy 1: apply the current substitution to the callee's
-                            // type param list directly (works when caller and callee share params).
-                            let subst_tys: Vec<Ty> = callee_fd
-                                .sig
-                                .params
-                                .iter()
-                                .map(|p| {
-                                    subst.get(p).cloned().unwrap_or_else(|| Ty::Var(p.clone()))
-                                })
-                                .collect();
-                            let all_concrete = subst_tys.iter().all(|t| !matches!(t, Ty::Var(_)));
-                            let callee_arg_tys = if all_concrete {
-                                Ok(subst_tys)
-                            } else {
-                                // Strategy 2: infer from actual arguments using the type env.
-                                // Use `concrete_scope` for variable lookups (function params).
-                                infer_generic_arg_tys_with_env(
-                                    mangled_self,
-                                    env,
-                                    callee_fd,
-                                    args,
-                                    concrete_scope,
-                                )
-                            };
+                            // Argument-driven inference (previously "Strategy 2").
+                            let callee_arg_tys = infer_generic_arg_tys_with_env(
+                                mangled_self,
+                                env,
+                                callee_fd,
+                                args,
+                                concrete_scope,
+                            );
                             match callee_arg_tys {
                                 Ok(callee_arg_tys) => {
                                     let callee_mangled = mangle(callee_name, &callee_arg_tys);
@@ -2994,7 +3132,7 @@ fn rewrite_expr(
                                         mangled_self,
                                         format!(
                                             "could not infer type args for generic call `{callee_name}` \
-                                             inside instance `{mangled_self}`: {e:?} (M-657B)"
+                                             inside instance `{mangled_self}`: {e:?} (M-657C)"
                                         ),
                                     ));
                                 }
@@ -3041,10 +3179,9 @@ fn rewrite_expr(
             ty,
             bound,
             body,
-        } => Ok(Expr::Let {
-            name: name.clone(),
-            ty: ty.clone(),
-            bound: Box::new(rewrite_expr(
+        } => {
+            // Rewrite the bound expression first (it doesn't yet have `name` in scope).
+            let new_bound = rewrite_expr(
                 bound,
                 self_name,
                 subst,
@@ -3054,8 +3191,22 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
-            )?),
-            body: Box::new(rewrite_expr(
+            )?;
+            // Extend the concrete scope for the body: if we can infer the bound's type,
+            // add `(name, ty)` so that generic calls in `body` whose arg IS `name` can
+            // have their type args resolved.  Best-effort: fall back to the unextended
+            // scope (the caller's checker already validated the body — we are only adding
+            // monomorphization scope hints here, never re-checking).
+            let mut scope_mut = concrete_scope.to_vec();
+            let body_scope: std::borrow::Cow<'_, [(String, Ty)]> =
+                if let Ok(bound_ty) = infer_type(env, &mut scope_mut, bound) {
+                    let mut extended = concrete_scope.to_vec();
+                    extended.push((name.clone(), bound_ty));
+                    std::borrow::Cow::Owned(extended)
+                } else {
+                    std::borrow::Cow::Borrowed(concrete_scope)
+                };
+            let new_body = rewrite_expr(
                 body,
                 self_name,
                 subst,
@@ -3064,9 +3215,15 @@ fn rewrite_expr(
                 worklist,
                 memo,
                 mangled_self,
-                concrete_scope,
-            )?),
-        }),
+                &body_scope,
+            )?;
+            Ok(Expr::Let {
+                name: name.clone(),
+                ty: ty.clone(),
+                bound: Box::new(new_bound),
+                body: Box::new(new_body),
+            })
+        }
         Expr::If { cond, conseq, alt } => Ok(Expr::If {
             cond: Box::new(rewrite_expr(
                 cond,
@@ -3114,9 +3271,22 @@ fn rewrite_expr(
                 mangled_self,
                 concrete_scope,
             )?;
+            // Infer the scrutinee type so we can bind pattern variables per arm.
+            let mut scope_mut = concrete_scope.to_vec();
+            let scrutinee_ty = infer_type(env, &mut scope_mut, scrutinee).ok();
             let new_arms: Vec<Arm> = arms
                 .iter()
                 .map(|arm| {
+                    // Extend the scope with pattern bindings for this arm.
+                    let arm_scope: std::borrow::Cow<'_, [(String, Ty)]> = scrutinee_ty
+                        .as_ref()
+                        .and_then(|sty| collect_pattern_bindings(&arm.pattern, sty, &env.types))
+                        .map(|extra| {
+                            let mut s = concrete_scope.to_vec();
+                            s.extend(extra);
+                            std::borrow::Cow::Owned(s)
+                        })
+                        .unwrap_or(std::borrow::Cow::Borrowed(concrete_scope));
                     rewrite_expr(
                         &arm.body,
                         self_name,
@@ -3126,7 +3296,7 @@ fn rewrite_expr(
                         worklist,
                         memo,
                         mangled_self,
-                        concrete_scope,
+                        &arm_scope,
                     )
                     .map(|body| Arm {
                         pattern: arm.pattern.clone(),
@@ -3145,9 +3315,8 @@ fn rewrite_expr(
             acc,
             init,
             body,
-        } => Ok(Expr::For {
-            x: x.clone(),
-            xs: Box::new(rewrite_expr(
+        } => {
+            let new_xs = rewrite_expr(
                 xs,
                 self_name,
                 subst,
@@ -3157,9 +3326,8 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
-            )?),
-            acc: acc.clone(),
-            init: Box::new(rewrite_expr(
+            )?;
+            let new_init = rewrite_expr(
                 init,
                 self_name,
                 subst,
@@ -3169,8 +3337,27 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
-            )?),
-            body: Box::new(rewrite_expr(
+            )?;
+            // Extend the scope for the body with the iteration variable `x` (element type)
+            // and accumulator `acc` (same type as init).  Best-effort.
+            let mut scope_mut = concrete_scope.to_vec();
+            let init_ty = infer_type(env, &mut scope_mut, init).ok();
+            let xs_ty = infer_type(env, &mut scope_mut, xs).ok();
+            let elem_ty = xs_ty.as_ref().and_then(|t| {
+                if let Ty::Data(name) = t {
+                    linear_elem_ty(mangled_self, &env.types, name).ok()
+                } else {
+                    None
+                }
+            });
+            let mut for_scope = concrete_scope.to_vec();
+            if let Some(et) = elem_ty {
+                for_scope.push((x.clone(), et));
+            }
+            if let Some(at) = init_ty {
+                for_scope.push((acc.clone(), at));
+            }
+            let new_body = rewrite_expr(
                 body,
                 self_name,
                 subst,
@@ -3179,9 +3366,16 @@ fn rewrite_expr(
                 worklist,
                 memo,
                 mangled_self,
-                concrete_scope,
-            )?),
-        }),
+                &for_scope,
+            )?;
+            Ok(Expr::For {
+                x: x.clone(),
+                xs: Box::new(new_xs),
+                acc: acc.clone(),
+                init: Box::new(new_init),
+                body: Box::new(new_body),
+            })
+        }
         Expr::Swap {
             value,
             target,
@@ -3360,12 +3554,26 @@ fn rewrite_mono_caller(
             ty,
             bound,
             body,
-        } => Ok(Expr::Let {
-            name: name.clone(),
-            ty: ty.clone(),
-            bound: Box::new(rewrite_mono_caller(bound, generic_fns, env, site, scope)?),
-            body: Box::new(rewrite_mono_caller(body, generic_fns, env, site, scope)?),
-        }),
+        } => {
+            let new_bound = rewrite_mono_caller(bound, generic_fns, env, site, scope)?;
+            // Extend scope for the body with the let-bound variable's type.  Best-effort.
+            let mut scope_mut = scope.to_vec();
+            let body_scope: std::borrow::Cow<'_, [(String, Ty)]> =
+                if let Ok(bound_ty) = infer_type(env, &mut scope_mut, bound) {
+                    let mut extended = scope.to_vec();
+                    extended.push((name.clone(), bound_ty));
+                    std::borrow::Cow::Owned(extended)
+                } else {
+                    std::borrow::Cow::Borrowed(scope)
+                };
+            let new_body = rewrite_mono_caller(body, generic_fns, env, site, &body_scope)?;
+            Ok(Expr::Let {
+                name: name.clone(),
+                ty: ty.clone(),
+                bound: Box::new(new_bound),
+                body: Box::new(new_body),
+            })
+        }
         Expr::If { cond, conseq, alt } => Ok(Expr::If {
             cond: Box::new(rewrite_mono_caller(cond, generic_fns, env, site, scope)?),
             conseq: Box::new(rewrite_mono_caller(conseq, generic_fns, env, site, scope)?),
@@ -3373,12 +3581,26 @@ fn rewrite_mono_caller(
         }),
         Expr::Match { scrutinee, arms } => {
             let new_scrutinee = rewrite_mono_caller(scrutinee, generic_fns, env, site, scope)?;
+            // Infer the scrutinee type so we can bind pattern variables per arm.
+            let mut scope_mut = scope.to_vec();
+            let scrutinee_ty = infer_type(env, &mut scope_mut, scrutinee).ok();
             let new_arms: Vec<Arm> = arms
                 .iter()
                 .map(|arm| {
-                    rewrite_mono_caller(&arm.body, generic_fns, env, site, scope).map(|body| Arm {
-                        pattern: arm.pattern.clone(),
-                        body,
+                    let arm_scope: std::borrow::Cow<'_, [(String, Ty)]> = scrutinee_ty
+                        .as_ref()
+                        .and_then(|sty| collect_pattern_bindings(&arm.pattern, sty, &env.types))
+                        .map(|extra| {
+                            let mut s = scope.to_vec();
+                            s.extend(extra);
+                            std::borrow::Cow::Owned(s)
+                        })
+                        .unwrap_or(std::borrow::Cow::Borrowed(scope));
+                    rewrite_mono_caller(&arm.body, generic_fns, env, site, &arm_scope).map(|body| {
+                        Arm {
+                            pattern: arm.pattern.clone(),
+                            body,
+                        }
                     })
                 })
                 .collect::<Result<_, _>>()?;
@@ -3393,13 +3615,36 @@ fn rewrite_mono_caller(
             acc,
             init,
             body,
-        } => Ok(Expr::For {
-            x: x.clone(),
-            xs: Box::new(rewrite_mono_caller(xs, generic_fns, env, site, scope)?),
-            acc: acc.clone(),
-            init: Box::new(rewrite_mono_caller(init, generic_fns, env, site, scope)?),
-            body: Box::new(rewrite_mono_caller(body, generic_fns, env, site, scope)?),
-        }),
+        } => {
+            let new_xs = rewrite_mono_caller(xs, generic_fns, env, site, scope)?;
+            let new_init = rewrite_mono_caller(init, generic_fns, env, site, scope)?;
+            // Extend scope for the body with iteration variable and accumulator types.
+            let mut scope_mut = scope.to_vec();
+            let init_ty = infer_type(env, &mut scope_mut, init).ok();
+            let xs_ty = infer_type(env, &mut scope_mut, xs).ok();
+            let elem_ty = xs_ty.as_ref().and_then(|t| {
+                if let Ty::Data(name) = t {
+                    linear_elem_ty(site, &env.types, name).ok()
+                } else {
+                    None
+                }
+            });
+            let mut for_scope = scope.to_vec();
+            if let Some(et) = elem_ty {
+                for_scope.push((x.clone(), et));
+            }
+            if let Some(at) = init_ty {
+                for_scope.push((acc.clone(), at));
+            }
+            let new_body = rewrite_mono_caller(body, generic_fns, env, site, &for_scope)?;
+            Ok(Expr::For {
+                x: x.clone(),
+                xs: Box::new(new_xs),
+                acc: acc.clone(),
+                init: Box::new(new_init),
+                body: Box::new(new_body),
+            })
+        }
         Expr::Swap {
             value,
             target,
