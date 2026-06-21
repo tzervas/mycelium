@@ -35,8 +35,11 @@ pub enum Tok {
 
     // --- runtime-vocabulary reserved words (DN-03 §4; RFC-0008 §4.5) ---
     // All ten are **reserved, not yet active**: they lex as keywords (never silent identifiers,
-    // G2) but no L1 construct consumes them. Each is a parse error in identifier/expression
-    // position (a "reserved for the runtime model (RFC-0008), not yet active" diagnostic).
+    // G2) but no L1 construct consumes them. At item-declaration and expression position the parser
+    // emits the explicit "reserved for the runtime model (RFC-0008), not yet active" diagnostic;
+    // where an identifier is grammatically required (a fn/binder name, a program opener) the
+    // standard "expected an identifier"/"expected a `nodule` header" error fires first. Either way
+    // the word can NEVER be used as an identifier (G2 holds) — only the message differs.
     // Activation requires each construct's implementation RFC (RFC-0008 §4.6 R1/R2).
     /// `hypha` — concurrent execution unit (RFC-0008). **Reserved, not yet active.**
     Hypha,
