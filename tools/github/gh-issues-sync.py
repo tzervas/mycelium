@@ -1874,6 +1874,16 @@ def reconcile_prs(repo, conventions, area_set, task_to_ms, *, dry_run):
                     f"milestone set via scope fallback: scope(s) {scopes!r} -> '{ms}'"
                 )
 
+        if ms is None and not pr["milestone"]:
+            # Neither a task-id nor a mapped scope yielded a milestone, and the PR has none on
+            # GitHub: surface it (never silent, G2) for manual assignment — we do NOT invent one.
+            # Covers scope-less CC titles (`docs: …`) and area-valid-but-milestone-unmapped scopes
+            # (`mlir`, `l1`, …) that derive_pr_labels maps cleanly but scope_to_milestone leaves
+            # unmapped by design.
+            infos.append(
+                "no milestone inferable (no task-id; scope absent or unmapped) — assign manually"
+            )
+
         to_add = sorted(desired - pr["labels"])
         set_ms = ms if (ms and ms != pr["milestone"]) else None
 
@@ -2291,6 +2301,17 @@ def validate_manifests(here, *, repo_root):
         if f"area:{area}" not in labels and area not in labels:
             errors.append(
                 f"conventions.json: scope alias '{scope}' -> '{area}' is not an area label"
+            )
+    # scope_to_milestone alias VALUES must be real milestone titles — catch a typo at --validate
+    # time, before a runtime `gh pr edit --milestone` would fail on a bad title (Copilot, #304).
+    ms_titles = {m["title"] for m in json.loads((here / "milestones.json").read_text())}
+    for scope, ms_title in (
+        conventions.get("scope_to_milestone", {}).get("aliases", {}).items()
+    ):
+        if ms_title not in ms_titles:
+            errors.append(
+                f"conventions.json: scope_to_milestone alias '{scope}' -> '{ms_title}' "
+                "is not a milestone title in milestones.json"
             )
 
     # project: Area options == area:* labels; field-map targets are real options/labels.
