@@ -353,6 +353,193 @@ fn rejects_unknown_wire_fields() {
     assert!(serde_json::from_str::<Value>(meta_extra).is_err());
 }
 
+/// Pin the exact wire spellings of every bound-kind/basis/layout variant so that enum-spelling
+/// drift (e.g. `TL2` → `Tl2x`, `ErrorBound` → `Error`) is caught immediately (A6-03).
+///
+/// Mutant-witness (A6-03): removing or changing the `#[serde(rename = "TL2")]` attribute on
+/// `PackScheme::Tl2` to any other string (e.g. `"Tl2x"`) makes the `scheme == "TL2"` assertion
+/// fail — the symmetric round-trip test alone would have passed silently because it re-reads
+/// whatever the serializer wrote. This test breaks that blind spot.
+#[test]
+fn wire_spellings_are_pinned_per_bound_kind_basis_and_layout() {
+    // --- BoundKind wire spellings ---
+
+    // ErrorBound + L2 norm + EmpiricalFit basis
+    let err_l2 = Bound {
+        kind: BoundKind::Error {
+            eps: 0.004,
+            norm: NormKind::L2,
+        },
+        basis: BoundBasis::EmpiricalFit {
+            trials: 10_000,
+            method: "Frady-Sommer Gaussian".into(),
+        },
+    };
+    let j = serde_json::to_value(&err_l2).unwrap();
+    assert_eq!(j["kind"], "ErrorBound", "A6-03: ErrorBound kind spelling");
+    assert_eq!(j["norm"], "L2", "A6-03: L2 norm spelling");
+    assert_eq!(
+        j["basis"]["kind"], "EmpiricalFit",
+        "A6-03: EmpiricalFit basis spelling"
+    );
+    assert!(j["basis"]["trials"].is_number(), "A6-03: trials present");
+
+    // ErrorBound + Linf norm (distinct spelling)
+    let err_linf = Bound {
+        kind: BoundKind::Error {
+            eps: 0.1,
+            norm: NormKind::Linf,
+        },
+        basis: BoundBasis::UserDeclared,
+    };
+    let j = serde_json::to_value(&err_linf).unwrap();
+    assert_eq!(j["norm"], "Linf", "A6-03: Linf norm spelling");
+    assert_eq!(
+        j["basis"]["kind"], "UserDeclared",
+        "A6-03: UserDeclared basis spelling"
+    );
+
+    // ProbabilityBound + UserDeclared basis
+    let prob = Bound {
+        kind: BoundKind::Probability { delta: 0.01 },
+        basis: BoundBasis::UserDeclared,
+    };
+    let j = serde_json::to_value(&prob).unwrap();
+    assert_eq!(
+        j["kind"], "ProbabilityBound",
+        "A6-03: ProbabilityBound kind spelling"
+    );
+
+    // CrosstalkBound with tail
+    let ct_with = Bound {
+        kind: BoundKind::Crosstalk {
+            expected: 0.02,
+            tail: Some(0.1),
+        },
+        basis: BoundBasis::UserDeclared,
+    };
+    let j = serde_json::to_value(&ct_with).unwrap();
+    assert_eq!(
+        j["kind"], "CrosstalkBound",
+        "A6-03: CrosstalkBound kind spelling"
+    );
+    assert!(
+        j.get("tail").is_some(),
+        "A6-03: tail field present when Some"
+    );
+
+    // CrosstalkBound without tail (optional field omitted)
+    let ct_no = Bound {
+        kind: BoundKind::Crosstalk {
+            expected: 0.02,
+            tail: None,
+        },
+        basis: BoundBasis::UserDeclared,
+    };
+    let j = serde_json::to_value(&ct_no).unwrap();
+    assert_eq!(
+        j["kind"], "CrosstalkBound",
+        "A6-03: CrosstalkBound (no tail) kind spelling"
+    );
+    assert!(
+        j.get("tail").is_none(),
+        "A6-03: tail field absent when None"
+    );
+
+    // CapacityBound + ProvenThm basis
+    let cap = Bound {
+        kind: BoundKind::Capacity {
+            items: 3,
+            dim: 10_000,
+        },
+        basis: BoundBasis::ProvenThm {
+            citation: "Clarkson-Ubaru-Yang 2023".into(),
+        },
+    };
+    let j = serde_json::to_value(&cap).unwrap();
+    assert_eq!(
+        j["kind"], "CapacityBound",
+        "A6-03: CapacityBound kind spelling"
+    );
+    assert_eq!(
+        j["basis"]["kind"], "ProvenThm",
+        "A6-03: ProvenThm basis spelling"
+    );
+
+    // --- PhysicalLayout / PackScheme wire spellings ---
+
+    // TritPacked + TL2
+    let tl2 = PhysicalLayout::TritPacked {
+        scheme: PackScheme::Tl2,
+    };
+    let j = serde_json::to_value(tl2).unwrap();
+    assert_eq!(
+        j["layout"], "TritPacked",
+        "A6-03: TritPacked layout spelling"
+    );
+    assert_eq!(j["scheme"], "TL2", "A6-03: TL2 scheme spelling");
+
+    // TritPacked + TL1
+    let tl1 = PhysicalLayout::TritPacked {
+        scheme: PackScheme::Tl1,
+    };
+    let j = serde_json::to_value(tl1).unwrap();
+    assert_eq!(j["scheme"], "TL1", "A6-03: TL1 scheme spelling");
+
+    // DenseArray
+    let da = PhysicalLayout::DenseArray;
+    let j = serde_json::to_value(da).unwrap();
+    assert_eq!(
+        j["layout"], "DenseArray",
+        "A6-03: DenseArray layout spelling"
+    );
+
+    // VsaStore
+    let vs = PhysicalLayout::VsaStore { sparse: true };
+    let j = serde_json::to_value(vs).unwrap();
+    assert_eq!(j["layout"], "VsaStore", "A6-03: VsaStore layout spelling");
+
+    // BinaryWords — the remaining PhysicalLayout variant (Copilot #306).
+    let bw = serde_json::to_value(PhysicalLayout::BinaryWords).unwrap();
+    assert_eq!(
+        bw["layout"], "BinaryWords",
+        "A6-03: BinaryWords layout spelling"
+    );
+
+    // EVERY PackScheme wire spelling — TL1/TL2 alone left Unpacked / TwoBitPerTrit /
+    // FiveTritPerByte / I2S unpinned (Copilot #306). Default serde renders the variant name
+    // verbatim except the explicitly-renamed TL1/TL2.
+    for (scheme, wire) in [
+        (PackScheme::Unpacked, "Unpacked"),
+        (PackScheme::TwoBitPerTrit, "TwoBitPerTrit"),
+        (PackScheme::FiveTritPerByte, "FiveTritPerByte"),
+        (PackScheme::I2S, "I2S"),
+        (PackScheme::Tl1, "TL1"),
+        (PackScheme::Tl2, "TL2"),
+    ] {
+        let j = serde_json::to_value(PhysicalLayout::TritPacked { scheme }).unwrap();
+        assert_eq!(j["scheme"], wire, "A6-03: {scheme:?} scheme spelling");
+    }
+
+    // Compile-enforced exhaustiveness: adding a PackScheme or PhysicalLayout variant breaks these
+    // matches, forcing whoever adds it to pin the new wire spelling above — so a spelling can never
+    // drift in unnoticed (the standing A6-03 concern, made a build error rather than a runtime gap).
+    let _pin_pack = |s: PackScheme| match s {
+        PackScheme::Unpacked
+        | PackScheme::TwoBitPerTrit
+        | PackScheme::FiveTritPerByte
+        | PackScheme::I2S
+        | PackScheme::Tl1
+        | PackScheme::Tl2 => {}
+    };
+    let _pin_layout = |l: &PhysicalLayout| match l {
+        PhysicalLayout::BinaryWords
+        | PhysicalLayout::TritPacked { .. }
+        | PhysicalLayout::DenseArray
+        | PhysicalLayout::VsaStore { .. } => {}
+    };
+}
+
 /// An `Empirical` guarantee whose bound rests on **zero trials** is evidence-free and must be
 /// rejected on the wire, not silently accepted (A6-02/B2-03). Mutant-witness: reverting
 /// `Bound::well_formed` to skip the basis check makes the `trials: 0` case parse.

@@ -8,6 +8,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Fixed (2026-06-21: M-653 — ADR-021 Gate A2, Medium-findings ledger)
+- **Gate A2 closed — every WS2–WS6 Medium from the 2026-06-14 deep review is resolved.** A committed
+  ledger (`docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md`) records each of the 25
+  finding-ids as **Fixed** (0 deferred), each with the mutant-witness regression test that fails
+  without the fix. The re-audit found the large majority were already remediated in prior waves but
+  never recorded resolved (so A2 read open); M-653 **verified** each fix *and its guarding test*,
+  then closed the two genuine gaps — `A6-03` (a `serde_roundtrip` test pinning every
+  bound-kind/basis/layout wire spelling) and the L1 reject-corpus
+  `reject_expected_table_has_no_orphaned_entries` bidirectional-integrity test (the only net code
+  delta). Honesty rule held: fixes only tighten a bound or turn a silent acceptance into an explicit
+  refusal — no guarantee tag upgraded (VR-5).
 ### Changed (2026-06-21: RFC-0006 r4→r5 Doc-Index reconciliation + issue #67 close-out)
 - **RFC-0006 Doc-Index row advanced r4 → r5** (`docs/Doc-Index.md`). The row previously reflected
   the r4 ratification (2026-06-15, KC-2-gated concrete syntax). Now reflects the r5 state

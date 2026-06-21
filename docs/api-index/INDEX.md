@@ -88,7 +88,7 @@
 | `mycelium_cert::BF16_MIN_NORMAL:` | const | `crates/mycelium-cert/src/dense.rs:34` | Smallest positive *normal* bfloat16 (same exponent range as f32): `2^−126`. |
 | `mycelium_cert::BF16_REL_EPS:` | const | `crates/mycelium-cert/src/dense.rs:30` | The proven per-element relative rounding bound: the unit roundoff `u = β^(1−p)/2 = 2^(1−8)/2 = |
 | `mycelium_cert::BinTernParams` | struct | `crates/mycelium-cert/src/lib.rs:40` | Concrete parameters binding a bijection lemma to one use — `{ width, trits }` for binary↔ternary |
-| `mycelium_cert::BinaryTernarySwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:357` | A SwapEngine for the reference interpreter that performs the |
+| `mycelium_cert::BinaryTernarySwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:357` | A [`SwapEngine`] for the reference interpreter that performs the |
 | `mycelium_cert::CertifiedSwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:392` | A [`SwapEngine`] over the **complete certified swap surface** (SC-3 global, M-212): the |
 | `mycelium_cert::CheckVerdict` | enum | `crates/mycelium-cert/src/check.rs:110` | The checker's verdict. |
 | `mycelium_cert::DENSE_VSA_DEFAULT_DELTA:` | const | `crates/mycelium-cert/src/lib.rs:383` | The δ the engine requests for a Dense↔VSA swap when no policy channel supplies one — the same |
@@ -1010,9 +1010,9 @@
 | `mycelium_lsp::diagnostics::registry::ClassRegistry::resolve` | fn | `crates/mycelium-lsp/src/diagnostics/registry.rs:123` | Resolve a name to a [`ClassName`] **through the registry** — the only way to obtain one. |
 | `mycelium_lsp::diagnostics::registry::ClassRegistry::resolve` | fn | `crates/mycelium-lsp/src/diagnostics/registry.rs:123` | Resolve a name to a [`ClassName`] **through the registry** — the only way to obtain one. |
 | `mycelium_lsp::diagnostics::registry::ClassRegistry::resolve` | fn | `crates/mycelium-lsp/src/diagnostics/registry.rs:123` | Resolve a name to a [`ClassName`] **through the registry** — the only way to obtain one. |
-| `mycelium_lsp::diagnostics::registry::ClassRegistry::with_builtins` | fn | `crates/mycelium-lsp/src/diagnostics/registry.rs:100` | The registry seeded with the v0 [`BUILTIN_CLASSES`]. |
-| `mycelium_lsp::diagnostics::registry::ClassRegistry::with_builtins` | fn | `crates/mycelium-lsp/src/diagnostics/registry.rs:100` | The registry seeded with the v0 [`BUILTIN_CLASSES`]. |
-| `mycelium_lsp::diagnostics::registry::ClassRegistry::with_builtins` | fn | `crates/mycelium-lsp/src/diagnostics/registry.rs:100` | The registry seeded with the v0 [`BUILTIN_CLASSES`]. |
+| `mycelium_lsp::diagnostics::registry::ClassRegistry::with_builtins` | fn | `crates/mycelium-lsp/src/diagnostics/registry.rs:100` | The registry seeded with the v0 built-in classes (`BUILTIN_CLASSES`). |
+| `mycelium_lsp::diagnostics::registry::ClassRegistry::with_builtins` | fn | `crates/mycelium-lsp/src/diagnostics/registry.rs:100` | The registry seeded with the v0 built-in classes (`BUILTIN_CLASSES`). |
+| `mycelium_lsp::diagnostics::registry::ClassRegistry::with_builtins` | fn | `crates/mycelium-lsp/src/diagnostics/registry.rs:100` | The registry seeded with the v0 built-in classes (`BUILTIN_CLASSES`). |
 | `mycelium_lsp::diagnostics::registry::UnknownClass` | struct | `crates/mycelium-lsp/src/diagnostics/registry.rs:36` | Resolving an error-class name not in the registry — an **explicit** configuration error (X1: never |
 | `mycelium_lsp::diagnostics::sink` | mod | `crates/mycelium-lsp/src/diagnostics/mod.rs:30` | — |
 | `mycelium_lsp::diagnostics::sink::Delivery` | enum | `crates/mycelium-lsp/src/diagnostics/sink.rs:161` | The **honest delivery semantics** of a sink (RT5). |
