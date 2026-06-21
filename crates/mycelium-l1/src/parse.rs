@@ -3,8 +3,8 @@
 //! (never a panic, never a silent accept — S5/G2). v0 covers the L1-facing core.
 
 use crate::ast::{
-    AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, Item, Literal, Nodule, Paradigm,
-    Param, Path, Pattern, Scalar, Sparsity, Strength, TraitDecl, TypeDecl, TypeRef,
+    AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, Hypha, Item, Literal, Nodule,
+    Paradigm, Param, Path, Pattern, Scalar, Sparsity, Strength, TraitDecl, TypeDecl, TypeRef,
 };
 use crate::error::ParseError;
 use crate::lexer::lex;
@@ -155,6 +155,7 @@ impl Parser {
             Tok::With => "with",
             Tok::Wild => "wild",
             Tok::Spore => "spore",
+            Tok::Colony => "colony",
             other => return self.expect(kw, &format!("{other:?}")),
         };
         self.expect(kw, &format!("`{spelling}`"))
@@ -215,11 +216,25 @@ impl Parser {
                      to keep one definition interpreted inside a matured scope use `thaw fn`"
                     .to_owned(),
             )),
-            // DN-03 §4 / RFC-0008 §4.5: runtime-vocabulary reserved words. They lex as keywords
-            // (never silent identifiers, G2) but no L1 construct consumes them — teaching
-            // diagnostic, never a silent accept.
-            t @ (Tok::Hypha
-            | Tok::Fuse
+            // M-666 / RFC-0008 §4.7: `colony` and `hypha` are now **active**, but as *expressions*,
+            // not top-level items — they live inside a `fn` body. Teaching diagnostics point there
+            // (never a silent accept, G2).
+            Tok::Colony => Err(ParseError::new(
+                self.pos(),
+                "`colony { … }` is an expression (a structured-concurrency scope; RFC-0008 §4.7), \
+                 not a top-level item — write it inside a `fn` body"
+                    .to_owned(),
+            )),
+            Tok::Hypha => Err(ParseError::new(
+                self.pos(),
+                "`hypha <expr>` spawns a concurrent task and is only valid inside a `colony { … }` \
+                 block (RFC-0008 §4.7 RT7 — an orphan hypha is not expressible), not at item position"
+                    .to_owned(),
+            )),
+            // DN-03 §4 / RFC-0008 §4.5: the remaining runtime-vocabulary reserved words. They lex as
+            // keywords (never silent identifiers, G2) but no L1 construct consumes them yet — teaching
+            // diagnostic, never a silent accept. (`hypha`/`colony` left the set with M-666.)
+            t @ (Tok::Fuse
             | Tok::Mesh
             | Tok::Graft
             | Tok::Cyst
@@ -528,10 +543,22 @@ impl Parser {
 
     fn parse_expr_inner(&mut self) -> Result<Expr, ParseError> {
         self.teach_imperative()?;
-        // DN-03 §4 / RFC-0008 §4.5: runtime-vocabulary reserved words produce a teaching
-        // diagnostic at expression position (never a silent accept, G2).
-        if let t @ (Tok::Hypha
-        | Tok::Fuse
+        // M-666 / RFC-0008 §4.7: a bare `hypha <expr>` at expression position is only valid *inside*
+        // a `colony { … }` block (RT7 — an orphan hypha is not expressible); `parse_colony` consumes
+        // the `hypha` keywords in the block body, so reaching one here means it is unscoped. Explicit
+        // teaching diagnostic, never a silent accept (G2).
+        if self.at(&Tok::Hypha) {
+            return Err(ParseError::new(
+                self.pos(),
+                "`hypha <expr>` spawns a concurrent task and is only valid inside a `colony { … }` \
+                 block (RFC-0008 §4.7 RT7 — an orphan hypha is not expressible)"
+                    .to_owned(),
+            ));
+        }
+        // DN-03 §4 / RFC-0008 §4.5: the remaining runtime-vocabulary reserved words produce a
+        // teaching diagnostic at expression position (never a silent accept, G2). (`hypha`/`colony`
+        // left the reserved set with M-666 — `colony` is dispatched below; `hypha` is handled above.)
+        if let t @ (Tok::Fuse
         | Tok::Mesh
         | Tok::Graft
         | Tok::Cyst
@@ -559,6 +586,7 @@ impl Parser {
             Tok::With => self.parse_with_paradigm(),
             Tok::Wild => self.parse_wild(),
             Tok::Spore => self.parse_spore(),
+            Tok::Colony => self.parse_colony(),
             _ => self.parse_app(),
         }
     }
@@ -749,6 +777,38 @@ impl Parser {
         let value = Box::new(self.parse_expr()?);
         self.expect(&Tok::RParen, "`)` to close `spore(…)`")?;
         Ok(Expr::Spore(value))
+    }
+
+    /// `colony { hypha e1, hypha e2, … }` — the structured-concurrency scope (RFC-0008 §4.7; DN-06
+    /// §1.3). The block body is a **non-empty** comma-separated list of `hypha <expr>` spawns; an
+    /// empty `colony { }` is an explicit error (a colony with no hyphae is meaningless — RT7 names a
+    /// *grouping of active hyphae*). Each `hypha` keyword opens one spawn whose body is an
+    /// application/expression over immutable values; a trailing comma before `}` is tolerated (the
+    /// `match`-arm convention). Deterministic R1 fragment only (RFC-0008 §4.6 R1) — the
+    /// arbitration/placement RT3 constructs are separate, later work.
+    fn parse_colony(&mut self) -> Result<Expr, ParseError> {
+        self.expect_keyword(&Tok::Colony)?;
+        self.expect(&Tok::LBrace, "`{` to open the `colony` block")?;
+        // Non-empty (≥ 1 hypha), trailing comma before `}` tolerated.
+        let hyphae = self.comma_separated(Some(&Tok::RBrace), Self::parse_hypha)?;
+        self.expect(
+            &Tok::RBrace,
+            "`}` to close the `colony` (or `,` and another `hypha`)",
+        )?;
+        Ok(Expr::Colony(hyphae))
+    }
+
+    /// One `hypha <expr>` spawn inside a [`parse_colony`] body. The `hypha` keyword is mandatory
+    /// (RT7: every concurrent unit is named — a bare body would be ambiguous with a value), and its
+    /// computation is parsed as an `app_expr` (a call like `compute(x)` — the issue's canonical form),
+    /// matching `for`'s use of `app_expr` for its bounded sub-expressions.
+    fn parse_hypha(&mut self) -> Result<Hypha, ParseError> {
+        self.expect(
+            &Tok::Hypha,
+            "`hypha` to open a concurrent task in the `colony` block (RFC-0008 §4.7)",
+        )?;
+        let body = self.parse_app()?;
+        Ok(Hypha { body })
     }
 
     fn parse_app(&mut self) -> Result<Expr, ParseError> {

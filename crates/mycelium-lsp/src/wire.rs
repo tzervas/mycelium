@@ -510,16 +510,22 @@ mod tests {
         );
         assert_eq!(swap_snip.unwrap()["insertTextFormat"], 2); // snippet grammar
 
-        // `phylum` and `colony` (reserved-not-active) must NOT appear in completions.
+        // `phylum` (still reserved-not-active) must NOT appear in completions.
+        // `colony` and `hypha` moved to active in M-666 and MUST now appear.
         let has_phylum = items.iter().any(|i| i["label"] == "phylum");
         let has_colony = items.iter().any(|i| i["label"] == "colony");
+        let has_hypha = items.iter().any(|i| i["label"] == "hypha");
         assert!(
             !has_phylum,
             "`phylum` (reserved-not-active) must not be offered"
         );
         assert!(
-            !has_colony,
-            "`colony` (reserved-not-active) must not be offered"
+            has_colony,
+            "`colony` is now an active keyword (M-666) and must appear in completions"
+        );
+        assert!(
+            has_hypha,
+            "`hypha` is now an active keyword (M-666) and must appear in completions"
         );
 
         // Server stops cleanly after exit.
