@@ -36,7 +36,9 @@ use mycelium_core::{
 };
 
 use crate::ast::{Arm, BaseType, Expr, Literal, Path, Scalar, TypeRef};
-use crate::checkty::{infer_type, normalize_pattern, prim_kernel_name, resolve_ty, Env, Ty};
+use crate::checkty::{
+    infer_type, monomorphize, normalize_pattern, prim_kernel_name, resolve_ty, Env, Ty,
+};
 use crate::decision::{self, Head, Tree};
 
 /// Why a definition could not be elaborated to L0 — always explicit, never a partial artifact
@@ -202,7 +204,13 @@ type Binding = (String, String, Ty);
 /// `Residual`: a dynamic guarantee index `@ g` (RFC-0007 §4.3, stage 0). On success the result is a
 /// closed L0 term whose evaluation must agree with the L1 evaluator (NFR-7; the M-210 differential).
 pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
-    let (mut el, binders, fd) = elab_prelude(env, entry)?;
+    // Pre-process: materialize all reachable generic-function instances as monomorphic FnDecls
+    // so that elab_fn_lam never sees Ty::Var in param types (M-657B).
+    let mono_env = monomorphize(env, entry).map_err(|e| ElabError::Residual {
+        site: entry.to_owned(),
+        what: format!("monomorphization failed: {e:?}"),
+    })?;
+    let (mut el, binders, fd) = elab_prelude(&mono_env, entry)?;
     let mut stack = vec![entry.to_owned()];
     let entry_body = el.expr(&mut stack, &[], &fd.body)?;
     Ok(wrap_in_binders(binders, entry_body))
@@ -226,7 +234,13 @@ pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
 /// Refuses with an explicit [`ElabError::Residual`] (never a fabricated accept) when the entry body
 /// is **not** a `colony`, or when any hypha body is outside the evaluation-complete fragment.
 pub fn elaborate_colony(env: &Env, entry: &str) -> Result<Vec<Node>, ElabError> {
-    let (mut el, binders, fd) = elab_prelude(env, entry)?;
+    // Pre-process: materialize all reachable generic-function instances as monomorphic FnDecls
+    // so that elab_fn_lam never sees Ty::Var in param types (M-657B).
+    let mono_env = monomorphize(env, entry).map_err(|e| ElabError::Residual {
+        site: entry.to_owned(),
+        what: format!("monomorphization failed: {e:?}"),
+    })?;
+    let (mut el, binders, fd) = elab_prelude(&mono_env, entry)?;
     let Expr::Colony(hyphae) = &fd.body else {
         return residual(
             entry,
