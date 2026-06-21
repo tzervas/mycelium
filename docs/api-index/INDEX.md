@@ -882,7 +882,7 @@
 | `mycelium_lsp::check_effects` | fn | `crates/mycelium-lsp/src/recover/effect.rs:58` | The **compositional no-undeclared-effect check** (I3): every effect a definition *performs* (its own |
 | `mycelium_lsp::derive_baseline` | fn | `crates/mycelium-lsp/src/baseline.rs:97` | Derive the baseline [`DiagnosticPolicy`] for **every** class in `registry` (the broadest scope). |
 | `mycelium_lsp::derive_baseline_for` | fn | `crates/mycelium-lsp/src/baseline.rs:110` | Derive the baseline scoped to a **definition's declared effect classes** (the classes it can raise; |
-| `mycelium_lsp::diagnostics` | mod | `crates/mycelium-lsp/src/lib.rs:11` | — |
+| `mycelium_lsp::diagnostics` | mod | `crates/mycelium-lsp/src/lib.rs:12` | — |
 | `mycelium_lsp::diagnostics::AuditView` | struct | `crates/mycelium-lsp/src/diagnostics/audit.rs:34` | The audit view: every crossing in a program, in deterministic traversal order. |
 | `mycelium_lsp::diagnostics::ClassName` | struct | `crates/mycelium-lsp/src/diagnostics/registry.rs:17` | A **resolved** error-class name. |
 | `mycelium_lsp::diagnostics::ClassRegistry` | struct | `crates/mycelium-lsp/src/diagnostics/registry.rs:60` | The known set of error-class names a policy may name (RFC-0013 §4.5). |
@@ -1033,11 +1033,11 @@
 | `mycelium_lsp::diagnostics::sink::Route::resolve` | fn | `crates/mycelium-lsp/src/diagnostics/sink.rs:80` | Resolve a `route` string to its [`Route`] — **checked against the closed v0 set** (the §4.5 X1 |
 | `mycelium_lsp::diagnostics::sink::SinkBinding` | struct | `crates/mycelium-lsp/src/diagnostics/sink.rs:215` | A resolved binding of a [`Route`] to its RFC-0008 sink and the sink's honest [`Delivery`] guarantee. |
 | `mycelium_lsp::diagnostics::sink::UnknownRoute` | struct | `crates/mycelium-lsp/src/diagnostics/sink.rs:138` | A `route` string that is not in the closed v0 [`Route`] set — an explicit configuration error |
-| `mycelium_lsp::expand` | mod | `crates/mycelium-lsp/src/lib.rs:12` | — |
+| `mycelium_lsp::expand` | mod | `crates/mycelium-lsp/src/lib.rs:13` | — |
 | `mycelium_lsp::expand::expand_ambient` | fn | `crates/mycelium-lsp/src/expand.rs:26` | Render `text`'s fully-resolved longhand twin (paradigm tags filled, `with paradigm` blocks |
 | `mycelium_lsp::expand_ambient` | fn | `crates/mycelium-lsp/src/expand.rs:26` | Render `text`'s fully-resolved longhand twin (paradigm tags filled, `with paradigm` blocks |
 | `mycelium_lsp::explain_baseline` | fn | `crates/mycelium-lsp/src/baseline.rs:134` | The `EXPLAIN` of the baseline derivation over `registry` (A3): every class with its derived level, |
-| `mycelium_lsp::feedback` | mod | `crates/mycelium-lsp/src/lib.rs:13` | — |
+| `mycelium_lsp::feedback` | mod | `crates/mycelium-lsp/src/lib.rs:14` | — |
 | `mycelium_lsp::feedback::ExplainSite` | struct | `crates/mycelium-lsp/src/feedback.rs:86` | A surfaced selection EXPLAIN (M-221; RFC-0005 §4): the swap site and the re-derived trace. |
 | `mycelium_lsp::feedback::Feedback` | struct | `crates/mycelium-lsp/src/feedback.rs:95` | The aggregated feedback surface (SC-5 channel) for one Core IR program. |
 | `mycelium_lsp::feedback::Feedback::summary` | fn | `crates/mycelium-lsp/src/feedback.rs:148` | Summarize this feedback into a [`FeedbackSummary`] (M-310). |
@@ -1050,12 +1050,12 @@
 | `mycelium_lsp::feedback::SwapSite` | struct | `crates/mycelium-lsp/src/feedback.rs:53` | A swap site and the certificate it emits (when statically resolvable). |
 | `mycelium_lsp::feedback::analyze` | fn | `crates/mycelium-lsp/src/feedback.rs:183` | Analyze a Core IR program and return the feedback artifact kinds over one surface. |
 | `mycelium_lsp::feedback::analyze_with` | fn | `crates/mycelium-lsp/src/feedback.rs:192` | [`analyze`], plus the **EXPLAIN channel** (M-221; SC-5): every swap site whose `PolicyRef` |
-| `mycelium_lsp::fmt` | mod | `crates/mycelium-lsp/src/lib.rs:14` | — |
+| `mycelium_lsp::fmt` | mod | `crates/mycelium-lsp/src/lib.rs:15` | — |
 | `mycelium_lsp::fmt::format` | fn | `crates/mycelium-lsp/src/fmt.rs:16` | Format a Core IR node into its canonical textual normal form (α-normalized binders). |
 | `mycelium_lsp::format` | fn | `crates/mycelium-lsp/src/fmt.rs:16` | Format a Core IR node into its canonical textual normal form (α-normalized binders). |
 | `mycelium_lsp::handle` | fn | `crates/mycelium-lsp/src/recover/mod.rs:110` | Handle an [`Outcome`] under a reified recovery `policy`, drawing on a budget ledger and an |
 | `mycelium_lsp::has_errors` | fn | `crates/mycelium-lsp/src/lint.rs:71` | Whether `lint` found at least one `Error`-severity diagnostic. |
-| `mycelium_lsp::lint` | mod | `crates/mycelium-lsp/src/lib.rs:15` | — |
+| `mycelium_lsp::lint` | mod | `crates/mycelium-lsp/src/lib.rs:16` | — |
 | `mycelium_lsp::lint` | fn | `crates/mycelium-lsp/src/lint.rs:62` | Lint a (closed) Core IR program, returning all findings in deterministic traversal order. |
 | `mycelium_lsp::lint::Diagnostic` | struct | `crates/mycelium-lsp/src/lint.rs:35` | A single lint finding. |
 | `mycelium_lsp::lint::Diagnostic::path` | fn | `crates/mycelium-lsp/src/lint.rs:51` | The breadcrumb [`Self::at`] as a structured, navigable path (split on `/`) — so a client can |
@@ -1068,12 +1068,12 @@
 | `mycelium_lsp::lint_nodule_header` | fn | `crates/mycelium-lsp/src/lint.rs:81` | The **source-text** companion lint (M-141; DN-06 §6): recognise the `// nodule:` header marker |
 | `mycelium_lsp::lint_structured_header` | fn | `crates/mycelium-lsp/src/lint.rs:103` | The **structured-header** lint (M-141; M-359 / spec §3): parse the `// @key: value` header and |
 | `mycelium_lsp::present` | fn | `crates/mycelium-lsp/src/diagnostics/record.rs:151` | Present an explicit [`ReasonedError`] as a [`DiagnosticRecord`], optionally shaped by a policy. |
-| `mycelium_lsp::project` | mod | `crates/mycelium-lsp/src/lib.rs:17` | — |
+| `mycelium_lsp::project` | mod | `crates/mycelium-lsp/src/lib.rs:18` | — |
 | `mycelium_lsp::project::llm_canonical` | fn | `crates/mycelium-lsp/src/project.rs:40` | Render a closed Core IR [`Node`] as the `LlmCanonical` s-expression surface (RFC-0021 §4.6). |
 | `mycelium_lsp::publish_diagnostics_notification` | fn | `crates/mycelium-lsp/src/wire.rs:79` | Build the full `textDocument/publishDiagnostics` JSON-RPC **notification** (server → client) that |
 | `mycelium_lsp::publish_for_source` | fn | `crates/mycelium-lsp/src/sync.rs:83` | The full `textDocument/publishDiagnostics` notification for `uri`'s `text` (parse → check). |
-| `mycelium_lsp::read_message` | fn | `crates/mycelium-lsp/src/wire.rs:104` | Read one JSON-RPC message off `reader`, decoding the `Content-Length` header framing. |
-| `mycelium_lsp::recover` | mod | `crates/mycelium-lsp/src/lib.rs:18` | — |
+| `mycelium_lsp::read_message` | fn | `crates/mycelium-lsp/src/wire.rs:115` | Read one JSON-RPC message off `reader`, decoding the `Content-Length` header framing. |
+| `mycelium_lsp::recover` | mod | `crates/mycelium-lsp/src/lib.rs:19` | — |
 | `mycelium_lsp::recover::EffectSet` | type | `crates/mycelium-lsp/src/recover/effect.rs:27` | A definition's **declared** effect set (§4.5 I3) — what it says it can do, on its signature. |
 | `mycelium_lsp::recover::Outcome` | enum | `crates/mycelium-lsp/src/recover/mod.rs:67` | The result sum `Ok(τ) \| Err(ε)` (RFC-0014 §4.1). |
 | `mycelium_lsp::recover::RecoveryPolicy` | struct | `crates/mycelium-lsp/src/recover/policy.rs:50` | A reified recovery policy: a map from a **registry-resolved** [`ClassName`] to its [`RecoveryAction`]. |
@@ -1112,10 +1112,10 @@
 | `mycelium_lsp::recovery_profile` | fn | `crates/mycelium-lsp/src/baseline.rs:191` | Build a [`RecoveryPolicy`] from a named [`RecoveryProfile`] over the **explicitly supplied** classes |
 | `mycelium_lsp::resilient_publish_for_source` | fn | `crates/mycelium-lsp/src/sync.rs:110` | The resilient counterpart of [`publish_for_source`]: the server-boundary builder that the |
 | `mycelium_lsp::resilient_source_diagnostics` | fn | `crates/mycelium-lsp/src/sync.rs:102` | Like [`source_diagnostics`], but **isolating an internal analysis panic** as a structured |
-| `mycelium_lsp::serve` | fn | `crates/mycelium-lsp/src/wire.rs:171` | Drive the LSP lifecycle **with document sync** (M-310) over `reader`/`writer` (stdio in the real |
-| `mycelium_lsp::serve_stdio` | fn | `crates/mycelium-lsp/src/wire.rs:235` | Run [`serve`] over the process's **real stdio** — the entry point an editor launches |
+| `mycelium_lsp::serve` | fn | `crates/mycelium-lsp/src/wire.rs:182` | Drive the LSP lifecycle **with document sync** (M-310) over `reader`/`writer` (stdio in the real |
+| `mycelium_lsp::serve_stdio` | fn | `crates/mycelium-lsp/src/wire.rs:254` | Run [`serve`] over the process's **real stdio** — the entry point an editor launches |
 | `mycelium_lsp::source_diagnostics` | fn | `crates/mycelium-lsp/src/sync.rs:71` | Analyze a document's source through the text → `Node` pipeline and return its LSP diagnostics |
-| `mycelium_lsp::sync` | mod | `crates/mycelium-lsp/src/lib.rs:19` | — |
+| `mycelium_lsp::sync` | mod | `crates/mycelium-lsp/src/lib.rs:20` | — |
 | `mycelium_lsp::sync::DocumentStore` | struct | `crates/mycelium-lsp/src/sync.rs:27` | An in-memory store of open documents (`uri → source text`), the minimal state full-sync requires. |
 | `mycelium_lsp::sync::DocumentStore::is_empty` | fn | `crates/mycelium-lsp/src/sync.rs:62` | Whether the store is empty. |
 | `mycelium_lsp::sync::DocumentStore::is_empty` | fn | `crates/mycelium-lsp/src/sync.rs:62` | Whether the store is empty. |
@@ -1134,18 +1134,18 @@
 | `mycelium_lsp::sync::resilient_source_diagnostics` | fn | `crates/mycelium-lsp/src/sync.rs:102` | Like [`source_diagnostics`], but **isolating an internal analysis panic** as a structured |
 | `mycelium_lsp::sync::source_diagnostics` | fn | `crates/mycelium-lsp/src/sync.rs:71` | Analyze a document's source through the text → `Node` pipeline and return its LSP diagnostics |
 | `mycelium_lsp::to_lsp_diagnostic` | fn | `crates/mycelium-lsp/src/wire.rs:47` | Map a [`Diagnostic`] to an LSP-`Diagnostic` JSON value. |
-| `mycelium_lsp::wire` | mod | `crates/mycelium-lsp/src/lib.rs:20` | — |
+| `mycelium_lsp::wire` | mod | `crates/mycelium-lsp/src/lib.rs:21` | — |
 | `mycelium_lsp::wire::SERVER_NAME:` | const | `crates/mycelium-lsp/src/wire.rs:31` | The advertised server name (LSP `serverInfo.name`). |
-| `mycelium_lsp::wire::initialize_result` | fn | `crates/mycelium-lsp/src/wire.rs:92` | The `initialize` result: the server's advertised capabilities. |
+| `mycelium_lsp::wire::initialize_result` | fn | `crates/mycelium-lsp/src/wire.rs:97` | The `initialize` result: the server's advertised capabilities. |
 | `mycelium_lsp::wire::lsp_severity` | fn | `crates/mycelium-lsp/src/wire.rs:36` | LSP `DiagnosticSeverity` code for a [`Severity`] (LSP spec: Error=1, Warning=2, Information=3, |
 | `mycelium_lsp::wire::publish_diagnostics_notification` | fn | `crates/mycelium-lsp/src/wire.rs:79` | Build the full `textDocument/publishDiagnostics` JSON-RPC **notification** (server → client) that |
 | `mycelium_lsp::wire::publish_diagnostics_params` | fn | `crates/mycelium-lsp/src/wire.rs:64` | The `params` of a `textDocument/publishDiagnostics` notification for `feedback` at `uri`. |
-| `mycelium_lsp::wire::read_message` | fn | `crates/mycelium-lsp/src/wire.rs:104` | Read one JSON-RPC message off `reader`, decoding the `Content-Length` header framing. |
-| `mycelium_lsp::wire::serve` | fn | `crates/mycelium-lsp/src/wire.rs:171` | Drive the LSP lifecycle **with document sync** (M-310) over `reader`/`writer` (stdio in the real |
-| `mycelium_lsp::wire::serve_stdio` | fn | `crates/mycelium-lsp/src/wire.rs:235` | Run [`serve`] over the process's **real stdio** — the entry point an editor launches |
+| `mycelium_lsp::wire::read_message` | fn | `crates/mycelium-lsp/src/wire.rs:115` | Read one JSON-RPC message off `reader`, decoding the `Content-Length` header framing. |
+| `mycelium_lsp::wire::serve` | fn | `crates/mycelium-lsp/src/wire.rs:182` | Drive the LSP lifecycle **with document sync** (M-310) over `reader`/`writer` (stdio in the real |
+| `mycelium_lsp::wire::serve_stdio` | fn | `crates/mycelium-lsp/src/wire.rs:254` | Run [`serve`] over the process's **real stdio** — the entry point an editor launches |
 | `mycelium_lsp::wire::to_lsp_diagnostic` | fn | `crates/mycelium-lsp/src/wire.rs:47` | Map a [`Diagnostic`] to an LSP-`Diagnostic` JSON value. |
-| `mycelium_lsp::wire::write_message` | fn | `crates/mycelium-lsp/src/wire.rs:143` | Write one JSON-RPC message to `writer` with the `Content-Length` framing, then flush. |
-| `mycelium_lsp::write_message` | fn | `crates/mycelium-lsp/src/wire.rs:143` | Write one JSON-RPC message to `writer` with the `Content-Length` framing, then flush. |
+| `mycelium_lsp::wire::write_message` | fn | `crates/mycelium-lsp/src/wire.rs:154` | Write one JSON-RPC message to `writer` with the `Content-Length` framing, then flush. |
+| `mycelium_lsp::write_message` | fn | `crates/mycelium-lsp/src/wire.rs:154` | Write one JSON-RPC message to `writer` with the `Content-Length` framing, then flush. |
 
 ## mycelium-mlir
 

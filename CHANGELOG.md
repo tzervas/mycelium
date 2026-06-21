@@ -8,6 +8,13 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-21: M-669 — mycelium-lsp baseline completions, dogfooding DX)
+- **LSP completion provider** (`crates/mycelium-lsp/src/completions.rs`): 36 **active** keyword
+  completions (from `mycelium_l1::token::keyword()`) + 5 grammar-grounded snippets (`nodule-header`,
+  `fn-def`, `type-adt`, `match-expr`, `swap-expr` — the swap snippet pins both `to:` and `policy:`).
+  `wire.rs` advertises `completionProvider` and serves `textDocument/completion`. Honest (G2/VR-5):
+  scope is **Declared** (lexical/scaffolding only, no semantic resolution); reserved-not-active
+  (`phylum`/`colony`) and not-yet-lexed runtime words are excluded — never offered as usable. 83 tests.
 ### Added (2026-06-21: DN-20 — Tiered testing & change-scoping: faster `just check`, durable release gate)
 - **Three change-scoped test tiers** (`scripts/checks/test.sh`, driven by `MYC_TEST_TIER`):
   `just test-fast` (Tier 0, pre-commit — change-scoped crates' unit/regression tests only,
