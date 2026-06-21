@@ -9,6 +9,26 @@ It requires a local GGUF-capable backend: `llama-cpp-python` + a GGUF model.
 
 ---
 
+## Quick start — single command
+
+Run both the xAI ablation and local arm-3 together from `tools/llm-harness/`:
+
+```sh
+cd tools/llm-harness
+./run.sh --all          # xAI sweep (if key) + local arm-3 setup + inference
+./run.sh --local        # local arm-3 only — no xAI key needed
+```
+
+Both flags are **skip-graceful**: a missing GPU is fine (CPU fallback works, just slower) and the
+model is auto-downloaded by setup, so `run_arm3_local.py` reports `SKIP` per task and exits 0 (G2:
+never a fabricated result) **only when the backend/model is still unavailable after setup** (no
+`llama_cpp` / no model). The one fatal case is Python < 3.13 (load-bearing) => setup exits 1; a
+missing `uv` is warn-only (setup can still succeed if deps/model are already present).
+
+See `tools/llm-harness/README.md` for the full flag reference and skip-behaviour table.
+
+---
+
 ## Prerequisites
 
 | Requirement | Notes |
