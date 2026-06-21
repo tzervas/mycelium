@@ -341,6 +341,11 @@ self-ratified to Accepted; the discharge + the M-671 body update unblocks `dfb`;
 additionally requires the build + E7-1/E7-2 to ratify — naturally honored by "pending"). Findings
 Empirical/Declared, never `Proven` (VR-5).
 
+**[Update 2026-06-21 — ratified.]** The maintainer subsequently **ratified RFC-0023 to Accepted**: the
+open completeness item was closed (§3 repaired via the new §3.7) and the design decisions were made
+(see the Meta changelog below + the RFC Status cell). This §6.5 records the *discharge-time* assessment
+— superseded by the ratification event.
+
 ---
 
 ## Meta — changelog

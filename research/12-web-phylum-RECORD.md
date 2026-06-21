@@ -833,6 +833,10 @@ RP-10 research gate discharged; pending maintainer ratification"** (not self-rat
 discharge + the M-670 body update is what unblocks `dfb`). Empirical confirmation is `dfb`'s, the
 basis for a future Accepted→Enacted move.
 
+**[Update 2026-06-21 — ratified.]** The maintainer subsequently **ratified RFC-0022 to Accepted** (see
+the Meta changelog below + the RFC Status cell). This §8.5 records the *discharge-time* assessment —
+the recommendation to stage at "pending ratification" was enacted, then superseded by ratification.
+
 ---
 
 ## Meta — changelog
