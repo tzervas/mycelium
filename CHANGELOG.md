@@ -8,6 +8,19 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-21: M-672 — docsite lang-ref page + honesty fix for reserved runtime keywords)
+- **Language-reference autogen page** (`scripts/docsite.sh`, `just docs-site`): the generated
+  lang-ref landing page now includes EBNF productions, the three reserved-word tables, the 25-entry
+  stdlib spec table, and design-doc links. Closes M-672.
+- **CRITICAL honesty fix** (`scripts/docsite.sh`): the "Ratified, not yet lexed / lex as ordinary
+  identifiers today" table previously listed all 10 DN-03 §4 runtime terms (`hypha`, `fuse`, `mesh`,
+  `graft`, `cyst`, `xloc`, `forage`, `backbone`, `tier`, `reclaim`) as lexing as ordinary identifiers
+  — **this was false** after M-665 (landed on `origin/main`, 2026-06-21) reserved all 10 in
+  `keyword()`. The 10 runtime words now appear in the **"Reserved-not-active"** table (alongside
+  `phylum`/`colony`), with description "reserved keyword — produces a ParseError; not yet active as a
+  construct (RFC-0008 §4.5)". The "not yet lexed / lex as identifier" category now contains only
+  `impl`, `consume`, `grow` — verified against `crates/mycelium-l1/src/token.rs` `keyword()`
+  post-M-665 (G2: never-silent; honesty rule / VR-5).
 ### Added (2026-06-21: RFC-0023 — ADK-port phylum Draft + research/13-adk-phylum-RECORD.md + RP-9)
 - **RFC-0023 — Agent Development Kit Phylum** (`docs/rfcs/RFC-0023-Agent-Development-Kit-Phylum.md`):
   **Draft** design for an `adk` phylum — a Mycelium port of Google's Agent Development Kit, with

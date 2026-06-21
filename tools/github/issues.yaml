@@ -2210,6 +2210,15 @@ issues:
       Honesty (G2/VR-5): scope is **Declared** — lexical/scaffolding only, no semantic/type-aware resolution (stated in the module doc). Reserved-not-active (`phylum`/`colony`) and not-yet-lexed runtime words (`hypha`…`reclaim`, plus `impl`/`consume`/`grow`) are **excluded** — never offered as if usable.
       Acceptance: `cargo test -p mycelium-lsp` green (83 tests); `completionProvider` advertised in `initialize_result`; ACTIVE keywords offered, reserved/not-yet-lexed words excluded; 5 grammar-grounded snippets. DONE (2026-06-21).
 
+  # ---------------- 2026-06-21: Docsite lang-ref (M-672) ----------------
+  - id: M-672
+    title: "M-672 — feat(docsite): language-reference autogen page in the docs-site pipeline"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P3, status:done]
+    depends_on: []
+    doc_refs: [src:scripts/docsite.sh]
+    body: |
+      extend `scripts/docsite.sh` (`just docs-site`) with a generated language-reference landing page — EBNF productions, the three reserved-word tables (active / reserved-not-active / not-yet-lexed, verified against `token::keyword()`), the 25-entry stdlib spec table, design-doc links. DONE (2026-06-21).
   # ---------------- 2026-06-21: Web phylum (RFC-0022) ----------------
   - id: M-670
     title: "M-670 — feat(web): build the mycelium-web phylum (HTTP client/server/routing/JSON) per RFC-0022"
