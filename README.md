@@ -287,6 +287,7 @@ mycelium/
 ├── research/                 ← the evidence base (records 01 … 11)
 ├── examples/                 ← worked `.myc` programs (hello-phylum, repr-tour)
 ├── experiments/              ← uv-managed Python experiments (the KC-2 LLM-leverage harness)
+├── fuzz/                     ← cargo-fuzz durability targets (standalone nightly workspace; WS8/M-654)
 ├── proofs/                   ← Z3/SMT2 + Liquid-Haskell proof artifacts
 ├── scripts/                  ← the check tooling (scripts/checks/* behind `just check`)
 ├── tools/                    ← GitHub issue bootstrap, LLM harness, Termux setup

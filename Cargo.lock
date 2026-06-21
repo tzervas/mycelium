@@ -316,6 +316,7 @@ name = "mycelium-numerics"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
+ "proptest",
  "serde",
  "serde_json",
 ]
