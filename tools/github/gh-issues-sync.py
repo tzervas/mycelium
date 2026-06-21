@@ -1004,6 +1004,35 @@ def infer_milestone(task_ids, task_to_ms):
     return chosen, note
 
 
+def infer_milestone_from_scope(scopes, scope_ms_aliases):
+    """Declared scope→milestone fallback (Declared/G2 — never-invent).
+
+    Consulted ONLY after task-id inference yields (None, None). Returns:
+    - (milestone, None)         — all mapped scopes agree on one milestone.
+    - (None, flag_string)       — scopes resolve to DIFFERENT milestones → FLAG, set nothing.
+    - (None, None)              — no scopes are mapped (unmapped scopes are flagged by the
+                                   caller via the normal derive_pr_labels flag path).
+
+    Pure + honest: every lookup is a declared alias from conventions.json; no interpolation.
+    Unmapped scopes are deliberately ignored here — the area-label FLAG path already surfaces
+    them for the maintainer (double-FLAG would be noise, not signal).
+    """
+    resolved = {scope_ms_aliases[s] for s in scopes if s in scope_ms_aliases}
+    if len(resolved) == 1:
+        return next(iter(resolved)), None
+    if not resolved:
+        return (
+            None,
+            None,
+        )  # no mapped scopes — silent; caller has already flagged unmapped ones
+    # Multiple different milestones from the scope set — ambiguous, refuse to guess.
+    flag = (
+        f"scope milestone fallback: scopes {sorted(s for s in scopes if s in scope_ms_aliases)!r} "
+        f"resolve to different milestones {sorted(resolved)} — not set (ambiguous)"
+    )
+    return None, flag
+
+
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Pure Project-v2 mapping/diff logic (drives --project; exercised by --self-test)
 # ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -1803,6 +1832,7 @@ def reconcile_prs(repo, conventions, area_set, task_to_ms, *, dry_run):
     }
     patterns = conventions["milestone_inference"]["task_id_patterns"]
     scope_aliases = conventions.get("scope_to_area", {}).get("aliases", {})
+    scope_ms_aliases = conventions.get("scope_to_milestone", {}).get("aliases", {})
     prs = snapshot_prs(repo)
     print(f">> PRs: {len(prs)} on {repo} — add-only label/milestone backfill")
 
@@ -1830,6 +1860,19 @@ def reconcile_prs(repo, conventions, area_set, task_to_ms, *, dry_run):
         if ms_note:
             # The milestone WAS set (to the highest spanned phase); the note is informational.
             infos.append(ms_note)
+        if ms is None and parsed is not None:
+            # No task-id resolved → try the declared scope→milestone fallback (G2: never-invent).
+            # Task-ids always win; this is only consulted when they yield nothing.
+            scopes = parsed.get("scopes", [])
+            ms, scope_ms_flag = infer_milestone_from_scope(scopes, scope_ms_aliases)
+            if scope_ms_flag:
+                # Ambiguous multi-scope: different milestones — refuse to set, flag it.
+                flags.append(scope_ms_flag)
+                ms = None
+            elif ms is not None:
+                infos.append(
+                    f"milestone set via scope fallback: scope(s) {scopes!r} -> '{ms}'"
+                )
 
         to_add = sorted(desired - pr["labels"])
         set_ms = ms if (ms and ms != pr["milestone"]) else None
@@ -2841,9 +2884,52 @@ def self_test():
     assert ok2 == 2 and fail2 == 1, (ok2, fail2)
     assert any(not r[1] and "kaboom" in str(r[2]) for r in res), res
 
+    # ── infer_milestone_from_scope (pure, offline) ────────────────────────────────────────────
+    _P8 = "Phase 8 — Toolchain & Release Engineering"
+    _scope_ms = {
+        "gh-sync": _P8,
+        "gh": _P8,
+        "toolchain": _P8,
+        "llm-harness": _P8,
+    }
+    # Single mapped scope → milestone set, no flag.
+    ms_s, flag_s = infer_milestone_from_scope(["gh-sync"], _scope_ms)
+    assert ms_s == _P8 and flag_s is None, (ms_s, flag_s)
+
+    # Multiple scopes that all agree → milestone set, no flag.
+    ms_s2, flag_s2 = infer_milestone_from_scope(["gh", "gh-sync"], _scope_ms)
+    assert ms_s2 == _P8 and flag_s2 is None, (ms_s2, flag_s2)
+
+    # Scopes resolving to DIFFERENT milestones → no milestone, flag returned.
+    _scope_ms_mixed = {"gh-sync": _P8, "vsa": "Phase 3 — VSA & HDC"}
+    ms_s3, flag_s3 = infer_milestone_from_scope(["gh-sync", "vsa"], _scope_ms_mixed)
+    assert ms_s3 is None and flag_s3 and "ambiguous" in flag_s3, (ms_s3, flag_s3)
+
+    # No mapped scopes at all → (None, None) — silent; area-label path already flags unmapped.
+    ms_s4, flag_s4 = infer_milestone_from_scope(["mlir", "l1"], _scope_ms)
+    assert ms_s4 is None and flag_s4 is None, (ms_s4, flag_s4)
+
+    # Empty scope list → (None, None).
+    ms_s5, flag_s5 = infer_milestone_from_scope([], _scope_ms)
+    assert ms_s5 is None and flag_s5 is None, (ms_s5, flag_s5)
+
+    # Task-id wins over scope: task-id inference resolves a milestone → scope fallback not reached.
+    # Simulate: task-id gives Phase 1; scope would give Phase 8. task-id path is called first in
+    # reconcile_prs, so if it returns non-None the scope path is skipped. We verify infer_milestone
+    # itself here to confirm it returns Phase 1, meaning the caller would never reach scope fallback.
+    _t2m_p1 = {"M-001": "Phase 1 — Foundation"}
+    ms_tid, note_tid = infer_milestone(["M-001"], _t2m_p1)
+    assert ms_tid == "Phase 1 — Foundation" and note_tid is None, (ms_tid, note_tid)
+    # (scope fallback would yield Phase 8, but is never consulted because ms_tid is not None)
+
+    # chore(gh-sync): … → scope fallback → Phase 8 (representative real-world case).
+    ms_real, flag_real = infer_milestone_from_scope(["gh-sync"], _scope_ms)
+    assert ms_real == _P8 and flag_real is None, (ms_real, flag_real)
+
     print(
         "self-test OK: label_delta, normalize_body, plan_issue_update, parse_conventional, "
         "derive_pr_labels, milestone_rank, infer_milestone (multi-milestone), "
+        "infer_milestone_from_scope (scope fallback), "
         "plan_label_migrations, label_to_field_values, plan_field_reconcile, "
         "plan_option_additions, required_scopes, missing_scopes, over_grants, _auth_command, "
         "_is_transient_network, _stderr_tail, should_pause_for_rate_limit, parse_rate_remaining, "

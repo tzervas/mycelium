@@ -112,6 +112,45 @@
     "task_id_patterns": ["M-[0-9]+", "E[0-9]+-[0-9]+"]
   },
 
+  "scope_to_milestone": {
+    "_policy": "Declared scope→milestone fallback, consulted ONLY when task-id inference yields nothing (G2: task-ids always win). Map a PR's conventional-commit scope(s) to a milestone title ONLY when the mapping is unambiguous: if multiple scopes resolve to DIFFERENT milestones, FLAG and set nothing. Scopes not in the aliases map are FLAGGED for the maintainer and left unset — never guessed. Phase-ambiguous code-phase scopes (mlir, l1, grammar, surface, jit, llvm, runtime, vsa, numerics, dense, bitnet, select, swap, std, stdlib, spec, kc2, and earlier-phase planning scopes) are deliberately left UNMAPPED so they remain flagged rather than wrongly assigned.",
+    "aliases": {
+      "gh-sync":     "Phase 8 — Toolchain & Release Engineering",
+      "gh":          "Phase 8 — Toolchain & Release Engineering",
+      "github":      "Phase 8 — Toolchain & Release Engineering",
+      "pm":          "Phase 8 — Toolchain & Release Engineering",
+      "process":     "Phase 8 — Toolchain & Release Engineering",
+      "context":     "Phase 8 — Toolchain & Release Engineering",
+      "orch":        "Phase 8 — Toolchain & Release Engineering",
+      "ratify":      "Phase 8 — Toolchain & Release Engineering",
+      "tooling":     "Phase 8 — Toolchain & Release Engineering",
+      "toolchain":   "Phase 8 — Toolchain & Release Engineering",
+      "lsp":         "Phase 8 — Toolchain & Release Engineering",
+      "fmt":         "Phase 8 — Toolchain & Release Engineering",
+      "lint":        "Phase 8 — Toolchain & Release Engineering",
+      "check":       "Phase 8 — Toolchain & Release Engineering",
+      "checks":      "Phase 8 — Toolchain & Release Engineering",
+      "sec":         "Phase 8 — Toolchain & Release Engineering",
+      "spore":       "Phase 8 — Toolchain & Release Engineering",
+      "xtask":       "Phase 8 — Toolchain & Release Engineering",
+      "diagnostics": "Phase 8 — Toolchain & Release Engineering",
+      "harness":     "Phase 8 — Toolchain & Release Engineering",
+      "llm-harness": "Phase 8 — Toolchain & Release Engineering",
+      "bench":       "Phase 8 — Toolchain & Release Engineering",
+      "rustdoc":     "Phase 8 — Toolchain & Release Engineering",
+      "readme":      "Phase 8 — Toolchain & Release Engineering",
+      "currency":    "Phase 8 — Toolchain & Release Engineering",
+      "review":      "Phase 8 — Toolchain & Release Engineering",
+      "planning":    "Phase 8 — Toolchain & Release Engineering",
+      "issues":      "Phase 8 — Toolchain & Release Engineering",
+      "skills":      "Phase 8 — Toolchain & Release Engineering",
+      "changelog":   "Phase 8 — Toolchain & Release Engineering",
+      "proj":        "Phase 8 — Toolchain & Release Engineering",
+      "workspace":   "Phase 8 — Toolchain & Release Engineering",
+      "claude":      "Phase 8 — Toolchain & Release Engineering"
+    }
+  },
+
   "breaking_change": {
     "_policy": "A breaking marker (type! or a `BREAKING CHANGE:` footer) is reported in the never-silent output. There is no breaking:* label in labels.json today, so it is FLAGGED for the maintainer rather than mapped to an invented label.",
     "label": null
