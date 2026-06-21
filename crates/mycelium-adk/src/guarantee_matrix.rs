@@ -150,13 +150,14 @@ pub const MATRIX: &[MatrixRow] = &[
         llm_output: IsLlmOutput::No,
     },
     // ── adk.session: State::get ───────────────────────────────────────────────
-    // Pure, total: returns Option<&Value>; None for missing key — never silent (C1).
-    // Exact (C2 — no accuracy semantics, just a lookup).
+    // Pure, fallible: returns Option<&Value>; None for missing key — never a silent default (C1/G2).
+    // Exact (C2 — no accuracy semantics, just a lookup).  The Option is the Fallible surface:
+    // callers must handle the None case; no sentinel / silent default is ever substituted.
     MatrixRow {
         op: "adk.session::State::get",
         guarantee: GuaranteeTag::Exact,
-        fallibility: Fallibility::Total,
-        error_set: "",
+        fallibility: Fallibility::Fallible,
+        error_set: "None — missing key (Option; never a silent default)",
         effects: "none",
         explainable: Explainable::NotApplicable,
         llm_output: IsLlmOutput::No,

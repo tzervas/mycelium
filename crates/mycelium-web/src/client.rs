@@ -4,13 +4,13 @@
 //! The client is structured around a [`Transport`] trait seam (mirror of `std.io`'s `Substrate`):
 //! - In-memory / loopback impl for tests: `InMemoryTransport`.
 //! - Real socket transport is **FLAGGED-gated** (U2 socket-floor, U8 net-effect): the real path
-//!   returns explicit `Err(HttpError::Unwired)` — never a stubbed success (C1/G2).
+//!   returns explicit `Err(ClientError::Refused { why })` — never a stubbed success (C1/G2).
 //!
 //! # Guarantee summary (RFC-0022 §4.5)
 //! - `get` / `request`: `Exact`-when-`Ok`, Fallible `Err(UnexpectedEof|Refused|EffectBudget)`,
 //!   **io** (transport-gated), EXPLAIN-able.
-//! - `get_json`: `Empirical`, Fallible `Err(HttpError|IoError|JsonError)`, **io**, EXPLAIN-able.
-//! - Real socket transport: `Err(HttpError::Unwired)` — explicit, never-silent, FLAGGED.
+//! - `get_json`: `Empirical`, Fallible `Err(ClientError::HttpParse|Json|Refused)`, **io**, EXPLAIN-able.
+//! - Real socket transport: `Err(ClientError::Refused { why })` — explicit, never-silent, FLAGGED.
 
 use std::fmt;
 
@@ -29,7 +29,7 @@ pub enum ClientError {
     /// The transport refused the operation (includes the real-socket FLAGGED case).
     ///
     /// # FLAGGED: real socket transport is NOT implemented (U2/U8 gated).
-    /// When using the real socket path, `why` will contain the `Unwired` reason.
+    /// When using the real socket path, `why` explains the FLAGGED gate (U2/U8 not discharged).
     Refused {
         /// Why the transport refused (G11 dual projection).
         why: String,
@@ -103,7 +103,7 @@ pub trait Transport: fmt::Debug {
     /// caller will then parse via `parse_response`. This keeps parsing pure and testable.
     ///
     /// # FLAGGED: real socket transport is NOT implemented (U2 socket-floor, U8 net-effect).
-    /// A `RealSocketTransport` (future, FLAGGED) would return `Err(Refused{Unwired})` until
+    /// A `RealSocketTransport` (future, FLAGGED) would return `Err(ClientError::Refused { why })` until
     /// the research gate is discharged.
     fn send_receive(&self, request_bytes: &[u8]) -> Result<Vec<u8>, ClientError>;
 }
@@ -180,12 +180,12 @@ impl Transport for InMemoryTransport {
 // attempt to use a real socket must return an explicit error — never a stubbed success (C1/G2).
 //
 // This stub type carries the gate: it exists so the type system can name the unavailable path,
-// but its `send_receive` always returns `Err(Refused{Unwired})`.
+// but its `send_receive` always returns `Err(ClientError::Refused { why })`.
 
 /// A placeholder for the (FLAGGED-gated) real socket transport.
 ///
 /// # FLAGGED: U2 socket-floor (socket bind/connect), U8 net-effect (OS network permissions).
-/// These are NOT discharged. This type always returns `Err(ClientError::Refused{Unwired})`
+/// These are NOT discharged. This type always returns `Err(ClientError::Refused { why })`
 /// to make the unavailability explicit — never a stub success (C1/G2 — never-silent).
 ///
 /// A production socket impl will be added in a future task once RP-10 + ADR-014 (the `wild`
@@ -200,7 +200,7 @@ impl RealSocketTransport {
     /// Create a (FLAGGED) real socket transport targeting `address`.
     ///
     /// FLAGGED: this constructor succeeds, but every `send_receive` call on the returned
-    /// transport will return `Err(Refused{Unwired})` — the gate is not discharged.
+    /// transport will return `Err(ClientError::Refused { why })` — the gate is not discharged.
     #[must_use]
     pub fn new(address: impl Into<String>) -> Self {
         RealSocketTransport {
@@ -210,7 +210,7 @@ impl RealSocketTransport {
 }
 
 impl Transport for RealSocketTransport {
-    /// # FLAGGED: always returns `Err(Refused{Unwired})` (U2/U8 gate not discharged — C1/G2).
+    /// # FLAGGED: always returns `Err(ClientError::Refused { why })` (U2/U8 gate not discharged — C1/G2).
     fn send_receive(&self, _request_bytes: &[u8]) -> Result<Vec<u8>, ClientError> {
         Err(ClientError::Refused {
             why: format!(
@@ -232,7 +232,7 @@ impl Transport for RealSocketTransport {
 /// strictly (via `parse_response` — never-silent parse errors, C1/G2).
 ///
 /// FLAGGED: if `transport` is a [`RealSocketTransport`], this always returns
-/// `Err(ClientError::Refused{Unwired})` — the socket gate is not discharged.
+/// `Err(ClientError::Refused { why })` — the socket gate is not discharged.
 pub fn get(url: &Url, transport: &dyn Transport) -> Result<Response, ClientError> {
     let req = Request::new(Method::Get, url.clone(), Headers::new(), Body::empty());
     request(req, transport)
@@ -253,7 +253,7 @@ pub fn post(url: &Url, body: Body, transport: &dyn Transport) -> Result<Response
 /// # Guarantee: `Exact`-when-`Ok`, Fallible `Err(ClientError)`, **io**, EXPLAIN-able
 /// This is the base operation; `get`/`post` delegate to it (DRY).
 ///
-/// FLAGGED: if `transport` is a [`RealSocketTransport`], returns `Err(Refused{Unwired})`.
+/// FLAGGED: if `transport` is a [`RealSocketTransport`], returns `Err(ClientError::Refused { why })`.
 pub fn request(req: Request, transport: &dyn Transport) -> Result<Response, ClientError> {
     let bytes = serialize_request(&req);
     let response_bytes = transport.send_receive(&bytes)?;

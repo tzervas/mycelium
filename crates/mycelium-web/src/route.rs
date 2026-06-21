@@ -241,10 +241,14 @@ impl RoutePattern {
 // ── RouteEntry ────────────────────────────────────────────────────────────────
 
 /// One entry in the route table: a pattern + a map from method to handler.
+///
+/// `handlers` is keyed by `method.as_str()` (for O(log n) lookup) and the value carries
+/// the `Method` alongside the `Handler` so that `allowed` can be built without reparsing
+/// the key string — never a silent `Method::parse(...).ok()` drop (C1/G2).
 #[derive(Clone)]
 struct RouteEntry {
     pattern: RoutePattern,
-    handlers: BTreeMap<String, Handler>, // keyed by method.as_str()
+    handlers: BTreeMap<String, (Method, Handler)>, // keyed by method.as_str(); value carries (Method, Handler)
 }
 
 // ── RouteTable ────────────────────────────────────────────────────────────────
@@ -288,10 +292,10 @@ impl RouteTable {
             .iter_mut()
             .find(|e| e.pattern.raw == route_pattern.raw)
         {
-            entry.handlers.insert(method_key, handler);
+            entry.handlers.insert(method_key, (method, handler));
         } else {
             let mut handlers = BTreeMap::new();
-            handlers.insert(method_key, handler);
+            handlers.insert(method_key, (method, handler));
             self.entries.push(RouteEntry {
                 pattern: route_pattern,
                 handlers,
@@ -316,6 +320,7 @@ impl RouteTable {
     /// # Guarantee: `Exact` / Total (BTreeMap order for methods; insertion order for patterns)
     pub fn patterns(&self) -> impl Iterator<Item = (&str, Vec<&str>)> {
         self.entries.iter().map(|e| {
+            // Key is still the method string; value is (Method, Handler) — we iterate keys.
             let methods: Vec<&str> = e.handlers.keys().map(|s| s.as_str()).collect();
             (e.pattern.raw.as_str(), methods)
         })
@@ -384,7 +389,7 @@ pub fn match_route(
 
     // Second pass: among path-matched entries, find one whose method matches.
     for entry in &path_matched {
-        if let Some(handler) = entry.handlers.get(method_key) {
+        if let Some((_, handler)) = entry.handlers.get(method_key) {
             // A match — build the EXPLAIN artifact.
             let captures = entry
                 .pattern
@@ -399,15 +404,16 @@ pub fn match_route(
         }
     }
 
-    // Path matched but method didn't — collect all allowed methods (non-empty by construction).
+    // Path matched but method didn't — collect all allowed methods from stored Method values.
+    // Built from stored `Method` values (non-empty by construction; never reparsed/dropped —
+    // C1/G2: no `.ok()` drop on `Method::parse`).
     let allowed: Vec<Method> = path_matched
         .iter()
-        .flat_map(|e| e.handlers.keys().map(|k| Method::parse(k.as_bytes())))
-        .filter_map(|r| r.ok())
+        .flat_map(|e| e.handlers.values().map(|(m, _)| m.clone()))
         .collect();
 
     // `allowed` is guaranteed non-empty: `path_matched` is non-empty and every entry has
-    // at least one handler (inserted by `add`).
+    // at least one handler (inserted by `add`), and stored Method values are never dropped.
     Err(RouteError::MethodNotAllowed { allowed })
 }
 

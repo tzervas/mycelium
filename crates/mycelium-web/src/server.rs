@@ -3,12 +3,12 @@
 //!
 //! # Design
 //! - Dispatch is structured on [`mycelium_std_runtime::colony::Scope`]: each request is a
-//!   spawned `Task` in a `Scope<(), ServeError>`. Per-request join is **`Empirical`** via RT2
+//!   spawned `Task` in a `Scope<(), ()>`. Per-request join is **`Empirical`** via RT2
 //!   (matching `Scope::join_all`'s honest tag).
 //! - **In-memory dispatch** is fully implemented and testable: `dispatch_request` routes
 //!   a parsed [`Request`] through a [`RouteTable`] to its handler.
 //! - **Real socket bind/accept-loop** is **FLAGGED-gated** (U2 socket-floor, U8 net-effect):
-//!   `serve` always returns explicit `Err(ServeError::Refused{Unwired})` — never a stub
+//!   `serve` always returns explicit `Err(ServeError::Refused { why })` — never a stub
 //!   success (C1/G2 — never-silent).
 //! - Handler-purity contract is **`Declared`** (FLAGGED): the type system cannot enforce that
 //!   a handler is pure; the contract is a convention, not a proof.
@@ -17,7 +17,7 @@
 //! - `dispatch_request`: `Exact`-when-`Ok`, Fallible `Err(NotFound|MethodNotAllowed)`, none, yes.
 //! - per-request join (`Scope::join_all`): `Empirical`, Fallible `Err(ServeError|TaskPanicked|EffectBudget)`, **io**.
 //! - handler-purity contract: `Declared` (FLAGGED — convention, not proven).
-//! - `serve` (real-socket bind): `Exact`-when-`Ok`, Fallible `Err(Refused{Unwired})`, **io**, yes
+//! - `serve` (real-socket bind): `Exact`-when-`Ok`, Fallible `Err(ServeError::Refused { why })`, **io**, yes
 //!   (FLAGGED-gated).
 
 use std::fmt;
@@ -96,7 +96,7 @@ impl From<HttpError> for ServeError {
 ///
 /// # FLAGGED: U2 (socket bind), U8 (net-effect).
 /// This type carries the insertion point for a future OS-backed listener. Until the gate is
-/// discharged, `serve` always returns `Err(ServeError::Refused{Unwired})`.
+/// discharged, `serve` always returns `Err(ServeError::Refused { why })`.
 #[derive(Debug)]
 pub struct Listener {
     /// The bind address (for diagnostic purposes only — not connected).
@@ -107,7 +107,7 @@ impl Listener {
     /// Create a (FLAGGED) listener placeholder.
     ///
     /// # FLAGGED: constructing a `Listener` does NOT bind a socket. The `serve` function
-    /// will refuse with `Err(Refused{Unwired})`. This type is the insertion point for a
+    /// will refuse with `Err(ServeError::Refused { why })`. This type is the insertion point for a
     /// future OS-backed listener once RP-10 + ADR-014 are ratified.
     #[must_use]
     pub fn new(address: impl Into<String>) -> Self {
@@ -198,14 +198,14 @@ pub fn dispatch_batch(
 /// Start serving requests from `listener` using `table` — **FLAGGED-gated (U2/U8)**.
 ///
 /// # FLAGGED: real socket bind/accept-loop is NOT implemented (U2, U8 gate not discharged).
-/// This function always returns `Err(ServeError::Refused{Unwired})` — never a stub success
+/// This function always returns `Err(ServeError::Refused { why })` — never a stub success
 /// (C1/G2 — never-silent). Use [`dispatch_request`] or [`dispatch_batch`] for in-memory
 /// dispatch (fully implemented and testable).
 ///
 /// A real implementation will be added in a future task once RP-10 + ADR-014 (the `wild`
 /// OS-facility seam for network I/O) are ratified and the socket floor is discharged.
 ///
-/// # Guarantee: `Exact`-when-`Ok`, Fallible `Err(Refused{Unwired})`, **io** declared,
+/// # Guarantee: `Exact`-when-`Ok`, Fallible `Err(ServeError::Refused { why })`, **io** declared,
 /// EXPLAIN-able (the `why` message names the open gate).
 pub fn serve(_table: RouteTable, listener: Listener) -> Result<(), ServeError> {
     Err(ServeError::Refused {

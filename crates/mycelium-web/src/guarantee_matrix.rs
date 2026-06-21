@@ -39,8 +39,8 @@ pub use mycelium_std_io::guarantee_matrix::{Explainable, Fallibility, GuaranteeT
 
 /// The `web` phylum guarantee matrix.
 ///
-/// 14 rows — one per exported op group (RFC-0022 §4.5). Asserted in tests — never prose-only
-/// (C2 / VR-5).
+/// 19 rows — one per exported op or spec-mandated guarantee-bearing contract (e.g. the
+/// handler-purity contract) (RFC-0022 §4.5). Asserted in tests — never prose-only (C2 / VR-5).
 pub const MATRIX: &[MatrixRow] = &[
     // ── http.parse_request / parse_response ───────────────────────────────────
     // Exact-when-Ok: faithful parsing with no accuracy semantics.
@@ -203,16 +203,28 @@ pub const MATRIX: &[MatrixRow] = &[
         effects: "io",
         explainable: Explainable::Yes,
     },
-    // ── server.per-request-join ───────────────────────────────────────────────
-    // Empirical: per-request join via Scope::join_all is Empirical (RT2 differential).
-    // Fallible: Err(ServeError::TaskPanicked|EffectBudget) — G2 never-silent on panic.
-    // Effects: **io** (declared; dispatch dispatches handlers). EXPLAIN: yes.
+    // ── server.dispatch_request ───────────────────────────────────────────────
+    // Exact-when-Ok: routes a request through the table; always returns ServeError on miss/error.
+    // Fallible: Err(Route(NotFound|MethodNotAllowed)|Handler(_)) — never-silent (C1/G2).
+    // Effects: none (pure over RouteTable + Request). EXPLAIN: yes.
     MatrixRow {
-        op: "server::per_request_join",
+        op: "server::dispatch_request",
+        guarantee: GuaranteeTag::Exact,
+        fallibility: Fallibility::Fallible,
+        error_set: "Err(ServeError::Route(NotFound|MethodNotAllowed)|ServeError::Handler(_))",
+        effects: "none",
+        explainable: Explainable::Yes,
+    },
+    // ── server.dispatch_batch ─────────────────────────────────────────────────
+    // Empirical: per-request join via Scope::join_all is Empirical (RT2 differential).
+    // Fallible: Err(ServeError::TaskPanicked) — G2 never-silent on panic.
+    // Effects: none (in-memory; real socket accept-loop is FLAGGED-gated). EXPLAIN: yes.
+    MatrixRow {
+        op: "server::dispatch_batch",
         guarantee: GuaranteeTag::Empirical,
         fallibility: Fallibility::Fallible,
         error_set: "Err(ServeError::TaskPanicked|EffectBudget|Refused) — TaskPanicked never silent (G2)",
-        effects: "io",
+        effects: "none",
         explainable: Explainable::Yes,
     },
     // ── server.handler-purity-contract ────────────────────────────────────────
@@ -229,14 +241,14 @@ pub const MATRIX: &[MatrixRow] = &[
     },
     // ── server.serve (real-socket bind — FLAGGED-gated) ───────────────────────
     // Exact-when-Ok: the bind/accept-loop is faithful IF the gate were discharged.
-    // Fallible: Err(Refused{Unwired}) — gate not discharged, refusing explicitly (C1/G2).
+    // Fallible: Err(ServeError::Refused { why }) — gate not discharged, refusing explicitly (C1/G2).
     // Effects: **io** (declared — a real bind would touch OS network).
     // EXPLAIN: yes (the Refused::why names the open gate).
     MatrixRow {
         op: "server::serve",
         guarantee: GuaranteeTag::Exact,
         fallibility: Fallibility::Fallible,
-        error_set: "Err(Refused{Unwired}) — FLAGGED gate (U2/U8 not discharged); NEVER a stub success (C1/G2)",
+        error_set: "Err(ServeError::Refused { why }) — FLAGGED gate (U2/U8 not discharged); NEVER a stub success (C1/G2)",
         effects: "io",
         explainable: Explainable::Yes,
     },
@@ -248,7 +260,8 @@ pub const MATRIX: &[MatrixRow] = &[
 mod tests {
     use super::{Explainable, Fallibility, GuaranteeTag, MATRIX};
 
-    // The expected op names (one per spec row).
+    // The expected op names (one per spec row — one per exported op or spec-mandated
+    // guarantee-bearing contract).
     const EXPECTED_OPS: &[&str] = &[
         "http::parse_request",
         "http::parse_response",
@@ -265,7 +278,8 @@ mod tests {
         "client::get",
         "client::request",
         "client::get_json",
-        "server::per_request_join",
+        "server::dispatch_request",
+        "server::dispatch_batch",
         "server::handler_purity_contract",
         "server::serve",
     ];
@@ -334,7 +348,7 @@ mod tests {
         let expected = [
             "json::decode_body",
             "client::get_json",
-            "server::per_request_join",
+            "server::dispatch_batch",
         ];
         for op in &expected {
             assert!(
@@ -378,7 +392,6 @@ mod tests {
             "client::get",
             "client::request",
             "client::get_json",
-            "server::per_request_join",
             "server::serve",
         ];
         for op in &io_ops {

@@ -2,7 +2,8 @@
 //!
 //! # Guarantee summary
 //! - Accessors (`method`, `path`, `header_get`): `Exact` / Total — no accuracy semantics.
-//! - `Request::new` / `with_header`: `Exact`-when-`Ok`, Fallible `Err(InvalidHeaderName|InvalidHeaderValue)`.
+//! - `Request::new`: `Exact` / Total.
+//! - `with_header`: `Exact`-when-`Ok`, Fallible `Err(InvalidHeaderName|InvalidHeaderValue)`.
 //! - `Status::from_u16`: `Exact`-when-`Ok`, Fallible `Err(OutOfRange{code})` — **never a clamp**.
 //! - `parse_request` / `parse_response` / `Method::parse` / `Url::parse`: `Exact`-when-`Ok`,
 //!   Fallible with **located** errors (byte offset `at` / field `why`).
@@ -628,7 +629,8 @@ impl Body {
 /// An HTTP/1.1 request (value type).
 ///
 /// # Guarantee
-/// - `Request::new` / `with_header`: `Exact`-when-`Ok`, Fallible `Err(InvalidHeaderName|InvalidHeaderValue)`.
+/// - `Request::new`: `Exact` / Total.
+/// - `with_header`: `Exact`-when-`Ok`, Fallible `Err(InvalidHeaderName|InvalidHeaderValue)`.
 /// - Accessors (`method`, `url`, `path`, `headers`): `Exact` / Total.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Request {
@@ -641,7 +643,9 @@ pub struct Request {
 impl Request {
     /// Create a new request.
     ///
-    /// # Guarantee: `Exact`-when-`Ok`, Fallible `Err(InvalidHeaderName|InvalidHeaderValue)`
+    /// # Guarantee: `Exact` / Total
+    /// Returns `Self` unconditionally — header validation was done at `Headers` construction
+    /// time (`Headers::insert`); this constructor accepts already-validated components (C1/G2).
     pub fn new(method: Method, url: Url, headers: Headers, body: Body) -> Self {
         Request {
             method,
@@ -887,11 +891,11 @@ fn parse_request_line(bytes: &[u8], start: usize) -> Result<(Method, Url, usize)
         why: "missing URI in request-line".to_owned(),
     })?;
     let version = parts.next().unwrap_or(b"");
-    if !version.starts_with(b"HTTP/") {
+    if version != b"HTTP/1.1" {
         return Err(HttpParseError::Malformed {
             at: ByteOffset(crlf as u64 - version.len() as u64),
             why: format!(
-                "expected HTTP/1.x version, got {:?}",
+                "expected HTTP/1.1 version, got {:?}",
                 String::from_utf8_lossy(version)
             ),
         });
@@ -912,11 +916,11 @@ fn parse_status_line(bytes: &[u8], start: usize) -> Result<(Status, usize), Http
     // `HTTP/1.x SP NNN SP Reason`
     let mut parts = line.splitn(3, |&b| b == b' ');
     let version = parts.next().unwrap_or(b"");
-    if !version.starts_with(b"HTTP/") {
+    if version != b"HTTP/1.1" {
         return Err(HttpParseError::Malformed {
             at: ByteOffset(start as u64),
             why: format!(
-                "expected HTTP/1.x version in status-line, got {:?}",
+                "expected HTTP/1.1 version in status-line, got {:?}",
                 String::from_utf8_lossy(version)
             ),
         });
@@ -1124,6 +1128,28 @@ mod tests {
         // No CRLF at all → Truncated
         let raw = b"GET /foo HTTP/1.1";
         assert!(parse_request(raw).is_err());
+    }
+
+    /// HTTP/2.0 in request line must be rejected — never-silent (C1/G2).
+    /// Guard: returning Ok for a non-HTTP/1.1 request would silently accept a wrong protocol.
+    #[test]
+    fn parse_request_http2_version_is_err_never_silent() {
+        let raw = b"GET / HTTP/2.0\r\n\r\n";
+        assert!(
+            parse_request(raw).is_err(),
+            "HTTP/2.0 request must be Err — only HTTP/1.1 is accepted (C1/G2)"
+        );
+    }
+
+    /// HTTP/2.0 in response status line must be rejected — never-silent (C1/G2).
+    /// Guard: returning Ok for a non-HTTP/1.1 response would silently accept a wrong protocol.
+    #[test]
+    fn parse_response_http2_version_is_err_never_silent() {
+        let raw = b"HTTP/2.0 200 OK\r\n\r\n";
+        assert!(
+            parse_response(raw).is_err(),
+            "HTTP/2.0 response must be Err — only HTTP/1.1 is accepted (C1/G2)"
+        );
     }
 
     #[test]

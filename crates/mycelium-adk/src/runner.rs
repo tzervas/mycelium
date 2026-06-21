@@ -31,7 +31,7 @@ use crate::session::{Event, Session};
 /// The explicit error set for runner failures (RFC-0023 §4.4).
 ///
 /// Mirrors `TaskOutcome::Failed`/`BudgetExhausted`/`Cancelled` from
-/// `crates/mycelium-std-runtime/src/supervise.rs:94-103`.
+/// `crates/mycelium-interp/src/supervise.rs:94` (`enum TaskOutcome`).
 ///
 /// # Honesty (C1 / VR-5)
 /// No variant means "proceed as if the agent succeeded."  A failed run is an explicit
