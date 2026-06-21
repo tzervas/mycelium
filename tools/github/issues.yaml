@@ -2056,23 +2056,25 @@ issues:
   - id: M-656
     title: "M-656 — spec(rfc-0007): Amend RFC-0007 to ratify stage-1 generic type parameters"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:spec, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:spec, area:language, priority:P1, status:done]
     depends_on: []
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, corpus:DN-14]
     body: |
       RFC-0007 §4.4 explicitly defers generic type parameters to stage-1; RFC-0019 (Accepted 2026-06-18) ratifies the coherence and Repr-polymorphism restriction set. This issue produces the RFC-0007 amendment (append-only §N) closing the stage-0 deferral: records the dictionary-passing elaboration strategy per RFC-0019 §4 and defines the minimally-sufficient surface (monomorphic instantiation of generic type declarations — `type List<A> = Nil | Cons(A, List<A>)` and `fn map<A, B>(…)`) that `mycelium-l1` v1 must check.
       Does NOT implement the checker changes (that is M-657); this is the spec gate that unblocks them.
       Acceptance: RFC-0007 §N appended (append-only) recording the stage-1 generics scope and the RFC-0019 coherence/Repr-polymorphism restriction set; Doc-Index row updated; CHANGELOG entry; DN-14 §3 row 6 gate formally captured in the amendment.
+      DONE (2026-06-21, append-only): RFC-0007 §4.9 added — stage-1 generics scope, T-Inst monomorphic-instantiation judgment, RFC-0019 §4.6 Repr-polymorphism restriction (never-silent S1), dictionary-passing-ready; §4.4 forward-note + Meta-changelog entry. RFC-0007 stays Accepted; the slice is tagged Declared, implemented Rust-first (M-657), pending ratification.
 
   - id: M-657
     title: "M-657 — feat(l1): Implement generic type parameters in checkty.rs + elab.rs"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [M-656]
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, src:crates/mycelium-l1/src/checkty.rs, src:crates/mycelium-l1/src/elab.rs]
     body: |
       M-656 specifies the stage-1 generic scope; this issue implements it in `crates/mycelium-l1/src/checkty.rs` (polymorphic type-declaration checking) and `elab.rs` (monomorphic-instantiation elaboration). The v0 monomorphic-only typechecker rejects generic type declarations (checkty.rs ~167) and generic function declarations (~286) with explicit `Declared` refusals; those refusals become real checked passes. Dictionary-passing elaboration per RFC-0019 §4 keeps the kernel node budget unchanged (KC-3). Honesty: a generic that instantiates a representation mismatch is `Residual`, not silently coerced (S1/VR-5).
       Acceptance: `type List<A> = Nil | Cons(A, List<A>)` + `fn head<A>(xs: List<A>) -> A` parse, type-check, and elaborate to closed L0; RFC-0019 Repr-polymorphism restriction enforced (no instantiation silently inserts a `Swap`); `cargo test -p mycelium-l1` green; `clippy -D warnings` clean; property test per instantiation bound; DN-14 §3 row 6 → `present`.
+      DONE (2026-06-21, Rust-first pending ratification): generic ADTs + generic functions — including return-position type vars (`id<A>(x:A)->A`) and generic-ADT matching (`is_cons<A>(List<A>)->Bool`) — parse/check/elaborate/eval. Recursive AND mutually-recursive generic functions elaborate via a per-instantiation monomorphization pass (`checkty::monomorphize`) that reuses the existing Fix/FixGroup machinery — no new kernel node (KC-3). Never-silent (G2/VR-5): repr-mismatched instantiation → explicit MissingConversion (no silent Swap); polymorphic recursion → explicit refusal at an opt-in instance cap (`MYCELIUM_MONO_INSTANCE_CAP`, default 256); `let`/`match`/`for` binders captured for argument-driven instance inference (the unsound type-param-name-collision shortcut was found via a TDD test and removed). Tag Declared (the three-way differential supplies Empirical evidence). 181 tests green; clippy -D warnings clean; conformance accept/14,15. NOTE: the literal `head<A>(List<A>)->A` is partial on `Nil` (not total in the pure fragment), so `id<A>`/`is_cons<A>` stand in for the same return-type-var + ADT machinery. FLAG (honest, never-silent): deeply-nested constructor-pattern binders may fall back to un-extended scope — such a generic call refuses explicitly (never a wrong instance); tracked as a follow-up before broad self-hosting (M-649).
 
   - id: M-658
     title: "M-658 — spec(rfc-0007): Amend RFC-0007 for stage-1 trait interfaces + `impl` blocks"

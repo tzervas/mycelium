@@ -2545,7 +2545,7 @@ pub(crate) fn monomorphize(env: &Env, entry: &str) -> Result<Env, CheckError> {
     // Instance cap: protects against polymorphic recursion expanding without bound.
     // Default is 256; an explicit opt-in via `MYCELIUM_MONO_INSTANCE_CAP` raises it for
     // legitimate deep (finite) monomorphization.  Read ONCE here — not per-iteration — so the
-    // env-var lookup cost is O(1) for the whole pass.  An unparseable value is silently ignored
+    // env-var lookup cost is O(1) for the whole pass.  An unparsable value is silently ignored
     // and the default applies (never-silent only when the cap is actually breached — the cap
     // itself is an honest resource bound, not a semantics knob).
     const DEFAULT_CAP: usize = 256;
@@ -4127,7 +4127,7 @@ mod tests {
             match e {
                 Expr::App { head, args } => {
                     let head_is_wrong = if let Expr::Path(p) = head.as_ref() {
-                        p.0.get(0).map(|s| s == "wrap<Binary{8}>").unwrap_or(false)
+                        p.0.first().map(|s| s == "wrap<Binary{8}>").unwrap_or(false)
                     } else {
                         false
                     };
