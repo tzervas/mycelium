@@ -1,7 +1,7 @@
 # Mycelium — Document Index & Status
 
 **Date:** June 08, 2026 *(table living — last refreshed 2026-06-19)*
-**Purpose:** the authoritative map of the document corpus — every RFC/ADR/DN with its status and the dependency DAG. The design corpus is Accepted/Resolved and **Rust-first implementation is underway** (Phases 0–3, 5, 7 complete; 4, 6, 8 in progress — see `docs/planning/phase-*.md`). Per the honesty rule the per-module stdlib specs were held at *"implemented (Rust-first), pending ratification"* — **not** silently `Accepted` — until the maintainer's explicit ratification pass (2026-06-20, DN-07) moved the 23 implemented specs to **`Accepted`** (`runtime` and `self-hosting-readiness` stay `Draft`, gate-pending). This index is append-only (§6).
+**Purpose:** the authoritative map of the document corpus — every RFC/ADR/DN with its status and the dependency DAG. The design corpus is Accepted/Resolved and **Rust-first implementation is underway** (Phases 0–3, 5, 7 complete; 4, 6, 8 in progress — see `docs/planning/phase-*.md`). Per the honesty rule the per-module stdlib specs were held at *"implemented (Rust-first), pending ratification"* — **not** silently `Accepted` — until the maintainer ratification passes (2026-06-20 DN-07 moved 23 specs to `Accepted`; **2026-06-21** additionally ratified `runtime` (v0 R1 surface) and the newly-written `sys` spec → **25/25** crate specs `Accepted`). Only `self-hosting-readiness` (the M-502 gate doc, not a crate) stays `Draft`. This index is append-only (§6).
 
 ---
 
