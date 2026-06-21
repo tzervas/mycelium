@@ -1,4 +1,4 @@
-# Research Record 12 — ADK-as-Phylum: porting Google's Agent Development Kit to Mycelium (RFC-0023 / RP-9)
+# Research Record 13 — ADK-as-Phylum: porting Google's Agent Development Kit to Mycelium (RFC-0023 / RP-9)
 
 > **Status: Empirical/Declared** — source + RFC/ADR/DN are ground truth; this record is the
 > research basis for **RFC-0023** (Draft). It captures the *fractured research methodology* pass

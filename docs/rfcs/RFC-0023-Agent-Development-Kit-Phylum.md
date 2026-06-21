@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0023 |
-| **Status** | **Draft** (2026-06-21 — research-grounded design from `research/12-adk-phylum-RECORD.md`, fractured-methodology pass; four Opus sub-reasoners over one cross-context packet). **Not ratified.** The follow-up deep pass (**RP-9**) gates ratification: it must scaffold/implement `mycelium-adk`, discharge the E7-1/E7-2 dependencies the surface needs (§7), and honestly scope any ADK-shaped LLM-leverage claim (which inherits DN-09's open posture). *Honesty (VR-5):* this Draft asserts **no** LLM-capability result. |
+| **Status** | **Draft** (2026-06-21 — research-grounded design from `research/13-adk-phylum-RECORD.md`, fractured-methodology pass; four Opus sub-reasoners over one cross-context packet). **Not ratified.** The follow-up deep pass (**RP-9**) gates ratification: it must scaffold/implement `mycelium-adk`, discharge the E7-1/E7-2 dependencies the surface needs (§7), and honestly scope any ADK-shaped LLM-leverage claim (which inherits DN-09's open posture). *Honesty (VR-5):* this Draft asserts **no** LLM-capability result. |
 | **Type** | Application / phylum design (a library port; rests on RFC-0008/0016/0021 + the LLM harness; no L0 or L1 kernel change — KC-3) |
 | **Date** | 2026-06-21 |
 | **Depends on** | RFC-0008 (the runtime/concurrency model — `colony`/`hypha`, RT1–RT7; the §4.7 composition contract); RFC-0016 (§4.1 per-op contract C1–C6, §4.5 guarantee matrix — the phylum-authoring convention); RFC-0021 (semantic-level projections / `LlmCanonical` — the LLM-facing surface, leverage Declared/open); DN-09 (the honest LLM-leverage posture — KC-2 = proceed); the LLM harness (`tools/llm-harness/` + `crates/mycelium-bench/src/llm.rs` — the model layer's real-call substrate); ADR-003 (content-addressed identity — Session/State); ADR-013 (`spore` — an agent deploys as a spore); LR-8 (`substrate` — the `graft` capability handle); G2 (never-silent); VR-5 (honest tags); KC-2/KC-3 |
@@ -603,7 +603,7 @@ moves to Accepted:
 
 ## Meta — changelog
 
-- **2026-06-21 — Created (Draft).** Research-grounded design from `research/12-adk-phylum-RECORD.md`
+- **2026-06-21 — Created (Draft).** Research-grounded design from `research/13-adk-phylum-RECORD.md`
   (fractured-methodology pass; four Opus sub-reasoners over one cross-context packet). Captures the
   ADK→Mycelium concept-map (§3, source-cited), the `adk` phylum surface (§4, Mycelium syntax), the
   harness wiring (§5), the honesty-as-differentiator model (§6), the Rust-first reality + the
