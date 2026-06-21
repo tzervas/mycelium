@@ -99,6 +99,13 @@ Verified against `crates/mycelium-l1/src/token.rs` and `docs/spec/grammar/myceli
   currently lexes as an ordinary **identifier** (using it is *not* yet an error). The whole Runtime
   tier plus `consume`/`grow`/`impl` are here — their lexer reservation lags the spec.
 
+**Gap-closure tracking (2026-06-21):** the **Reserved-not-active** and **Ratified — not yet lexed**
+gaps are tracked for implementation under **E7-1** (L1 language features — generics, traits, effects,
+wild/FFI, static guarantee grading, phylum + `consume`/`grow`/`impl`; issues M-656…M-664, Phase 5)
+and **E7-2** (runtime vocabulary: lexer reservation → L1 construct activation — the 10 DN-03 §4
+runtime words + `hypha`/`colony` constructs; M-665…M-668, Phase 7). A status above flips only when
+its tracking issue lands and `just check` is green (VR-5).
+
 | Term | Layer | Status | Meaning | Normative source |
 |---|---|---|---|---|
 | `nodule` | L2 Surface (static) | **Active** | The basic static organizational unit (replaces "module"); opens a program | DN-06; RFC-0006 |
