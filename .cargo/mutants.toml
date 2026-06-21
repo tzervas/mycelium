@@ -1,0 +1,70 @@
+# cargo-mutants configuration — workspace-root single source of truth (M-654 Gate A3).
+#
+# cargo-mutants (27.1.0) auto-discovers ONLY this workspace-root `.cargo/mutants.toml`; the
+# per-crate configs the leaf agents authored have been FOLDED IN here (and deleted) so that a
+# plain `cargo mutants -p <crate>` honours every justified exclusion without any `--config` flag.
+#
+# Every entry below is a JUSTIFIED *equivalent* (or structurally-unreachable defensive) mutant —
+# NOT a coverage gap (VR-5: honestly documented, never silently skipped; G2). Each is paired with
+# a one-line justification; the long-form proofs live in the cited tests / source. Any mutant NOT
+# listed here must be killed by a regression test (the four trusted-base crates report 0 missed).
+#
+# Grouped by crate:
+#   • mycelium-numerics  — 1 equivalent  (round::add_err sign-preserving)
+#   • mycelium-core      — 8 equivalent  (ternary x2, is_aot_lowerable x2, binary x1, de Bruijn x3)
+#   • mycelium-interp    — 4 equivalent/defensive (PrimRegistry::empty + 3 unreachable Node::Var arms)
+#   • mycelium-cert      — 3 equivalent  (dense_vsa +/-1-bipolar arithmetic + already-guarded sign)
+#
+# NOTE on cert: only 3 of cert's surviving mutants are genuinely equivalent (below). The mutants
+#   `lib.rs:368 == -> true`, `dense_vsa.rs:72 == -> !=`, and `dense_vsa.rs:72 & -> ^` are NOT
+#   excluded — they are CAUGHT by witness tests in crates/mycelium-cert/tests/mutant_witnesses.rs
+#   (excluding them would hide killable mutants — G2/VR-5).
+
+exclude_re = [
+    # ───────────────────────── mycelium-numerics ─────────────────────────
+    # round::add_err `(a - (s-bv)) + (b-bv)` with `- -> +` => `3a + b - s`. For the only domain used
+    # (all eps/delta >= 0, i.e. a,b >= 0), this stays > 0 exactly when add_err > 0, so the sign — the
+    # only thing add_up observes (it gates next_up) — is preserved. EQUIVALENT for a,b >= 0.
+    "replace - with \\+ in add_err",
+
+    # ─────────────────────────── mycelium-core ───────────────────────────
+    # ternary.rs: (pow - 1) / 2 -> pow / 2; equivalent for all odd pow = 3^m (floor div agrees).
+    "ternary\\.rs:56:15: replace - with / in max_magnitude",
+    # ternary.rs: factor < 0 -> factor <= 0; equivalent — the `factor == 0` guard leaves factor in {-1,1}.
+    "ternary\\.rs:158:45: replace < with <= in mul",
+    # node.rs: && -> || in is_aot_lowerable; equivalent — the fn is total over the v0 node set (all arms true).
+    "node\\.rs:[0-9]+:[0-9]+: replace && with \\|\\| in Node::is_aot_lowerable",
+    # node.rs: is_aot_lowerable -> true; equivalent since all arms always return true.
+    "node\\.rs:[0-9]+:[0-9]+: replace Node::is_aot_lowerable -> bool with true",
+    # binary.rs: (unsigned << 1) | b -> (unsigned << 1) ^ b; equivalent because (x<<1) has LSB 0 and 0|b == 0^b for b in {0,1}.
+    "binary\\.rs:[0-9]+:[0-9]+: replace \\| with \\^ in bits_to_int",
+    # content.rs: de Bruijn index `(len - 1 - pos)` — three per-depth bijections of the index that
+    # preserve the content hash's only contract (alpha-equiv terms hash equal; same-depth distinct
+    # refs hash distinct), changing only the arbitrary BLAKE3 digest value. The non-equivalent
+    # fourth mutant (`287:54 - with /`, non-injective + div-by-zero at pos=0) is deliberately NOT excluded.
+    "content\\.rs:287:50: replace - with \\+ in Canon::node",
+    "content\\.rs:287:50: replace - with / in Canon::node",
+    "content\\.rs:287:54: replace - with \\+ in Canon::node",
+
+    # ────────────────────────── mycelium-interp ──────────────────────────
+    # prims.rs: PrimRegistry::empty() -> Default::default(); GENUINELY EQUIVALENT — derived Default is
+    # `BTreeMap::new()`, exactly what empty() builds; no observable difference (VR-5: empty is empty).
+    "replace PrimRegistry::empty -> Self with Default::default",
+    # lib.rs: three defensive `Node::Var` match arms unreachable from the public eval_core/eval/step
+    # API — step(Var) -> Err(FreeVariable) before any of these is reached, so deleting the arm only
+    # changes an error message the public surface never produces. Defensive never-silent (G2).
+    "delete match arm Node::Var.x. in node_to_core_value",
+    "delete match arm Node::Var.x. in guarantee_of_value",
+    "delete match arm Node::Var.x. in as_const",
+
+    # ─────────────────────────── mycelium-cert ───────────────────────────
+    # dense_vsa::dense_to_vsa accumulation `*h += x * a` with `* -> /`: inputs x and atoms a are both
+    # +/-1 (NotBipolar-gated source, +/-1 codebook), and x*a == x/a for +/-1. EQUIVALENT for all valid inputs.
+    "dense_vsa\\.rs:[0-9]+:[0-9]+: replace \\* with / in dense_to_vsa",
+    # dense_vsa::vsa_to_dense correlation `dot += h * a` with `* -> /`: atoms a are +/-1, so h/a == h*a
+    # for every hypervector element h (regardless of h's magnitude). EQUIVALENT for +/-1 atoms.
+    "dense_vsa\\.rs:[0-9]+:[0-9]+: replace \\* with / in vsa_to_dense",
+    # dense_vsa::vsa_to_dense sign decision `if dot > 0.0` with `> -> >=`: the `dot == 0.0` case is
+    # already caught one line above (-> AmbiguousDecode), so dot != 0.0 here and > is equivalent to >=.
+    "dense_vsa\\.rs:[0-9]+:[0-9]+: replace > with >= in vsa_to_dense",
+]

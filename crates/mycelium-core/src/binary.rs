@@ -84,4 +84,24 @@ mod tests {
             assert_eq!(bits_to_int(&bits), v);
         }
     }
+
+    // Mutant-witness (binary.rs:31:25): `value == 0` → `value != 0`
+    // The mutation changes the n=0 guard so that any non-zero value returns Some(Vec::new())
+    // (the zero-width representation of any integer!) instead of None. The existing
+    // round_trips_exhaustively_at_n8 test only covers n=8, missing this guard entirely.
+    #[test]
+    fn int_to_bits_n0_rejects_nonzero() {
+        // n=0 has a zero-width repr that can only hold the value 0.
+        assert_eq!(
+            int_to_bits(0, 0),
+            Some(Vec::new()),
+            "0 in 0 bits is representable"
+        );
+        assert_eq!(int_to_bits(1, 0), None, "1 cannot be represented in 0 bits");
+        assert_eq!(
+            int_to_bits(-1, 0),
+            None,
+            "-1 cannot be represented in 0 bits"
+        );
+    }
 }

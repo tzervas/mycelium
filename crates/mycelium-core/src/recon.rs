@@ -614,4 +614,64 @@ mod tests {
         bad["mode"] = "CompositionalReconstruction".into();
         assert!(serde_json::from_value::<ReconInfo>(bad).is_err());
     }
+
+    // Mutant-witnesses for the accessor methods (recon.rs:221, 226, 231, 236):
+    // - ReconInfo::model() returns "" or "xyzzy" when mutated
+    // - ReconInfo::dim() returns 0 or 1 when mutated
+    // - ReconInfo::codebooks() returns [] when mutated
+    // - ReconInfo::recipe() returns None when mutated (for CompositionalReconstruction)
+    // Each test directly asserts the accessor returns the value passed to new().
+    #[test]
+    fn accessors_return_the_constructed_values() {
+        let codebook_ref = operation_hash("codebook-abc");
+        let recipe = Recipe {
+            roles: vec!["color".to_owned(), "shape".to_owned()],
+            structure: BTreeMap::from([
+                ("color".to_owned(), operation_hash("role-color")),
+                ("shape".to_owned(), operation_hash("role-shape")),
+            ]),
+        };
+        // Use CompositionalReconstruction to exercise the recipe() path.
+        let info = ReconInfo::new(
+            ReconMode::CompositionalReconstruction,
+            "FHRR",
+            4096,
+            vec![codebook_ref.clone()],
+            Some(recipe.clone()),
+            cleanup_decode(),
+            empirical_bound(),
+        )
+        .unwrap();
+
+        // model() must return the exact string, not "" or "xyzzy".
+        assert_eq!(info.model(), "FHRR");
+        // dim() must return 4096, not 0 or 1.
+        assert_eq!(info.dim(), 4096);
+        // codebooks() must return the actual slice, not [].
+        assert_eq!(info.codebooks().len(), 1);
+        assert_eq!(info.codebooks()[0], codebook_ref);
+        // recipe() must return Some(&recipe) for CompositionalReconstruction.
+        assert!(
+            info.recipe().is_some(),
+            "recipe() must be Some for CompositionalReconstruction"
+        );
+        assert_eq!(info.recipe().unwrap(), &recipe);
+        // mode() and bound() correctness (not mutated, but pin the accessors).
+        assert_eq!(info.mode(), ReconMode::CompositionalReconstruction);
+
+        // For IndexedRetrieval, recipe() must be None.
+        let indexed = ReconInfo::new(
+            ReconMode::IndexedRetrieval,
+            "MAP-B",
+            512,
+            vec![operation_hash("cb")],
+            None,
+            cleanup_decode(),
+            empirical_bound(),
+        )
+        .unwrap();
+        assert_eq!(indexed.model(), "MAP-B");
+        assert_eq!(indexed.dim(), 512);
+        assert!(indexed.recipe().is_none());
+    }
 }

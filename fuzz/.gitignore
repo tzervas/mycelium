@@ -1,0 +1,14 @@
+# cargo-fuzz build output and crash artifacts — not committed (they are large and ephemeral;
+# the seed corpus in fuzz/corpus/ IS committed as a guide for the fuzzer; hand-written
+# seeds use the `seed_*` prefix to distinguish them from auto-generated entries).
+target/
+artifacts/
+Cargo.lock
+
+# Generated corpus entries produced by the fuzzer at runtime — not committed (they are
+# ephemerally discovered and can be regenerated; we only commit the hand-written seeds).
+# The pattern below excludes 40-char hex files (the libFuzzer naming convention for new
+# corpus entries) while keeping our named `seed_*` files.
+corpus/fuzz_l1_parse/[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*
+corpus/fuzz_m210_checker/[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*
+corpus/fuzz_core_value_deser/[0-9a-f][0-9a-f][0-9a-f][0-9a-f]*

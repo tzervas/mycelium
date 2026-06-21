@@ -316,6 +316,7 @@ name = "mycelium-numerics"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
+ "proptest",
  "serde",
  "serde_json",
 ]
@@ -578,6 +579,7 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-select",
+ "proptest",
  "serde_json",
 ]
 

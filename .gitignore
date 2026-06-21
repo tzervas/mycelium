@@ -39,6 +39,17 @@ dist-newstyle/
 /scratch/
 /.tmp/
 
+# ---- WS8 durability outputs (M-654): cargo-mutants + cargo-fuzz runtime artifacts ----
+# The `just mutants`/`just fuzz` recipes, fuzz targets, and configs ARE committed; the generated
+# run output (mutants reports, fuzz build dir + crash artifacts) is not. The hand-written seed
+# corpus (`fuzz/corpus/**/seed_*`) IS committed; only the libFuzzer-discovered hex-named corpus
+# entries are ignored — that granularity is delegated to `fuzz/.gitignore` (so we do NOT blanket
+# `/fuzz/corpus/` here, which would shadow the committed seeds).
+mutants.out/
+mutants.out.old/
+/fuzz/artifacts/
+/fuzz/target/
+
 # ---- Editors / OS ----
 .idea/
 .vscode/*

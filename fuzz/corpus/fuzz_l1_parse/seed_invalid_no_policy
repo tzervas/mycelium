@@ -1,0 +1,2 @@
+nodule demo
+fn f(x: Binary{8}) -> Ternary{6} = swap(x, to: Ternary{6})

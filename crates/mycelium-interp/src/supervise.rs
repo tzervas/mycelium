@@ -340,4 +340,118 @@ mod tests {
             "after the window clears, restarting is bounded-OK again"
         );
     }
+
+    // ---- supervise.rs:79 — Cancelled Display → Ok(Default::default()) ----
+    // Mutant: fmt body is a no-op; the formatted string is empty.
+    // Kill: assert the Cancelled Display output is non-empty and mentions "cancel".
+    #[test]
+    fn cancelled_display_is_non_empty_and_descriptive() {
+        // Mutant-witness: supervise.rs:79 replace fmt → Ok(Default::default()).
+        let msg = Cancelled.to_string();
+        assert!(
+            !msg.is_empty(),
+            "Cancelled Display must not be empty (got empty string)"
+        );
+        assert!(
+            msg.to_lowercase().contains("cancel"),
+            "Cancelled Display must mention 'cancel'; got: {msg:?}"
+        );
+    }
+
+    // ---- supervise.rs:151 — Escalation Display → Ok(Default::default()) ----
+    // Mutant: fmt body is a no-op; the formatted string is empty for all variants.
+    // Kill: assert the Escalation Display contains variant-specific content.
+    #[test]
+    fn escalation_display_is_non_empty_and_variant_specific() {
+        // Mutant-witness: supervise.rs:151 replace fmt → Ok(Default::default()).
+        let e = Escalation::IntensityExceeded {
+            restarts_in_window: 5,
+            max_restarts: 3,
+            window_ticks: 10,
+        };
+        let msg = e.to_string();
+        assert!(
+            !msg.is_empty(),
+            "Escalation::IntensityExceeded Display must not be empty"
+        );
+        assert!(
+            msg.contains('5') || msg.contains('3'),
+            "IntensityExceeded Display must contain the restart counts; got: {msg:?}"
+        );
+
+        // CascadeBudgetExhausted variant.
+        let cascade_e = Escalation::CascadeBudgetExhausted(EffectBudgetExhausted {
+            kind: EffectKind::Cascade,
+            requested: 1,
+            remaining: 0,
+        });
+        let cascade_msg = cascade_e.to_string();
+        assert!(
+            !cascade_msg.is_empty(),
+            "Escalation::CascadeBudgetExhausted Display must not be empty"
+        );
+    }
+
+    // ---- supervise.rs:203 — Supervisor::now → 0 or 1 ----
+    // Mutant A (→ 0): now() always returns 0, regardless of actual tick count.
+    // Mutant B (→ 1): now() always returns 1.
+    // Kill: tick twice and assert now() reflects the actual counter value.
+    #[test]
+    fn supervisor_now_reflects_actual_tick_count() {
+        // Mutant-witness: supervise.rs:203 replace now() → 0 or 1.
+        let mut sup = Supervisor::new(
+            RestartIntensity {
+                max_restarts: 100,
+                window_ticks: 1_000,
+            },
+            1_000,
+        );
+        assert_eq!(sup.now(), 0, "initial tick is 0");
+        sup.tick();
+        assert_eq!(
+            sup.now(),
+            1,
+            "after 1 tick, now() must be 1 (not 0 or some constant)"
+        );
+        sup.tick();
+        assert_eq!(sup.now(), 2, "after 2 ticks, now() must be 2 (not 1 or 0)");
+        for _ in 0..8 {
+            sup.tick();
+        }
+        assert_eq!(sup.now(), 10, "after 10 ticks total, now() must be 10");
+    }
+
+    // ---- supervise.rs:216 — Supervisor::restarts_remaining → 0 ----
+    // Mutant: restarts_remaining always returns 0, even when budget remains.
+    // Kill: after creating a supervisor with max_total=5 and recording 2 restarts, remaining must be 3.
+    #[test]
+    fn supervisor_restarts_remaining_decrements_correctly() {
+        // Mutant-witness: supervise.rs:216 replace restarts_remaining → 0.
+        let mut sup = Supervisor::new(
+            RestartIntensity {
+                max_restarts: 100,
+                window_ticks: 1_000,
+            },
+            5, // max_total = 5
+        );
+        assert_eq!(
+            sup.restarts_remaining(),
+            5,
+            "before any restarts, remaining must be 5"
+        );
+        sup.tick();
+        sup.record_restart().unwrap();
+        assert_eq!(
+            sup.restarts_remaining(),
+            4,
+            "after 1 restart, remaining must be 4 (not 0)"
+        );
+        sup.tick();
+        sup.record_restart().unwrap();
+        assert_eq!(
+            sup.restarts_remaining(),
+            3,
+            "after 2 restarts, remaining must be 3 (not 0)"
+        );
+    }
 }

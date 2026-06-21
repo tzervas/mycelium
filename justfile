@@ -86,6 +86,22 @@ doc-index:
 deny:
     @bash scripts/checks/deny.sh
 
+# --- durability / WS8 (M-654; opt-in, deliberately NOT part of `just check`) ---
+# Mutation testing on the trusted base. SLOW (re-runs the suite per mutant) — run deliberately.
+# Every surviving mutant is a missing/weak test: kill it with a regression test or justify it.
+# `just mutants` = the four trusted-base crates; override the args to scope, e.g.
+# `just mutants -p mycelium-cert`. Needs cargo-mutants (`cargo install --locked cargo-mutants`).
+mutants *ARGS="-p mycelium-core -p mycelium-cert -p mycelium-interp -p mycelium-numerics":
+    @cargo mutants {{ARGS}}
+# cargo-fuzz targets (libFuzzer). Needs NIGHTLY: `rustup toolchain install nightly` +
+# `cargo install --locked cargo-fuzz`. Targets live in fuzz/fuzz_targets/. `just fuzz <target> [secs]`
+# smoke-runs one; `just fuzz-list` lists them. The pinned stable default (rust-toolchain.toml) is
+# untouched — fuzzing uses `+nightly` explicitly.
+fuzz target secs="60":
+    @cargo +nightly fuzz run {{target}} -- -max_total_time={{secs}}
+fuzz-list:
+    @cargo +nightly fuzz list
+
 # --- code map / observability (advisory; not gating) ---
 # Generate code maps (crate deps, module structure, rustdoc incl. private) under target/map/.
 map:

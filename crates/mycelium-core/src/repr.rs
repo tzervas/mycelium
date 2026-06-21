@@ -147,4 +147,36 @@ mod tests {
         }
         .well_formed());
     }
+
+    // Mutant-witness (repr.rs:95:45 Dense{dim} and repr.rs:101:22 Vsa{dim}): the guard is
+    // `> 0` (strictly positive), NOT `>= 0`. A zero-dim Repr must be rejected (above).
+    // A dim-1 Repr MUST be accepted — pins the `>` side. Combined, both tests together kill
+    // the `> → >=` mutant on the Dense and Vsa dim checks.
+    #[test]
+    fn well_formed_rejects_zero_dim_accepts_one() {
+        // Dense dim == 0 is rejected; dim == 1 is accepted (strict lower bound is 1, not 0).
+        assert!(!Repr::Dense {
+            dim: 0,
+            dtype: ScalarKind::F16
+        }
+        .well_formed());
+        assert!(Repr::Dense {
+            dim: 1,
+            dtype: ScalarKind::F16
+        }
+        .well_formed());
+        // Vsa dim == 0 is rejected; dim == 1 is accepted.
+        assert!(!Repr::Vsa {
+            model: "MAP-I".to_string(),
+            dim: 0,
+            sparsity: SparsityClass::Dense,
+        }
+        .well_formed());
+        assert!(Repr::Vsa {
+            model: "MAP-I".to_string(),
+            dim: 1,
+            sparsity: SparsityClass::Dense,
+        }
+        .well_formed());
+    }
 }

@@ -1,0 +1,2 @@
+nodule demo
+fn f() -> Binary{8} = nope(0b0)

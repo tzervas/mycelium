@@ -8,6 +8,25 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-21: M-654 — Gate A3 WS8 durability: mutants + proptest + fuzz)
+- **cargo-mutants green on the trusted base.** `mycelium-core`, `-cert`, `-interp`, `-numerics`
+  report **0 un-triaged survivors**: every surviving mutant is either killed by a new witness test
+  or documented as a justified *equivalent* in a single workspace-root `.cargo/mutants.toml` (16
+  inline-justified entries — domain-constrained ±1 arithmetic, de Bruijn index bijections, total/
+  unreachable defensive arms). Honesty (G2/VR-5): cert's 3 genuinely-equivalent survivors are
+  excluded; its other 3 are *killed* by witness tests, not hidden. 14 new `mycelium-core` witness
+  tests close the `lower.rs`/`content.rs` survivors (assert the child line not the header; ≥2 binders
+  for distinct canonical names; absolute substrate depth).
+- **proptest migration.** The hand-rolled fixed-seed LCG suites in `mycelium-numerics` and the
+  `mycelium-vsa` seed-based property tests migrated to `proptest` with shrinking + `PROPTEST_*` seed
+  rotation, preserving the exact bound-math.
+- **cargo-fuzz targets.** A standalone `fuzz/` workspace with three targets (L1 lexer+parser, the
+  M-210 checker, core `Value` deserialization) + a `workflow_dispatch`-only smoke CI
+  (`.github/workflows/fuzz.yml`); nightly smoke green (0 crashes). `just mutants` / `just fuzz`
+  recipes added; cargo-mutants/cargo-fuzz runtime output git-ignored.
+- Closes **ADR-021 Gate A3** (DN-19 GAP-4) — the last open 1.0.0 kernel/core gate row. With A1/A2/
+  A4/A5/B1/B2 already met, the kernel/core is 1.0.0-ready pending the maintainer's tag (M-655).
+
 ### Changed (2026-06-21: M-647/M-648/M-650/M-381/M-646 — editorial enactment sweep)
 - **RFC-0016 (Core Library & Standard Library) → Enacted.** All 25 `mycelium-std-*` crates landed
   Rust-first (M-501–M-534, M-540, M-541): the 23-module Tier-A/Tier-B guarantee matrices are asserted
