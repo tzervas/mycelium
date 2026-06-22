@@ -8,8 +8,8 @@
 # Honesty (VR-5): this is an `Empirical`/`Declared` regex heuristic, not a parser — the Rust source is
 # ground truth. It excludes line/doc comments (so prose mentioning "unsafe" is not a hit) and the
 # `unsafe_code` lint attribute (`\bunsafe\b` skips it — no whitespace before `_code`). A string literal
-# containing `unsafe {` would be a false positive; none exist today (DN-21 §2 inventory = exactly 6
-# sites, all real, all in crates/mycelium-mlir).
+# containing `unsafe {` would be a false positive; none exist today. The entire workspace unsafe surface
+# is confined to `crates/mycelium-mlir/src/jit.rs` (DN-21 §6 holds the current per-site inventory).
 source "${BASH_SOURCE%/*}/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "unsafe // SAFETY: adjacency (ADR-014 §8.1 / DN-21)"
@@ -20,12 +20,23 @@ section "unsafe // SAFETY: adjacency (ADR-014 §8.1 / DN-21)"
 # stay genuinely "adjacent".
 WINDOW=12
 
-# Candidate sites under crates/: `unsafe` immediately followed by `{` / `fn` / `impl` / `trait`,
-# excluding lines whose content begins with `//` (line/doc comments).
-mapfile -t hits < <(
-  git grep -nE '(^|[^[:alnum:]_])unsafe[[:space:]]+(\{|fn|impl|trait)' -- ':(glob)crates/**/*.rs' \
-    | grep -vE ':[0-9]+:[[:space:]]*//' || true
-)
+# Candidate sites under crates/: `unsafe` immediately followed by `{` / `fn` / `impl` / `trait`.
+# `git grep` exits 0 when it matches and 1 when it finds nothing — both are normal here — but >=2 means
+# a real failure (bad pathspec, repo error). Distinguish them explicitly so a genuine error fails loudly
+# (G2) instead of being swallowed into an empty hit list and a false `ok` (the `|| true` trap).
+raw=$(git grep -nE '(^|[^[:alnum:]_])unsafe[[:space:]]+(\{|fn|impl|trait)' -- ':(glob)crates/**/*.rs') \
+  || grep_rc=$?
+grep_rc=${grep_rc:-0}
+if (( grep_rc >= 2 )); then
+  fail "git grep failed (exit ${grep_rc}) while scanning for \`unsafe\` sites — cannot audit"
+  exit 1
+fi
+# Drop lines whose content begins with `//` (line/doc comments); a no-match here is a legitimate empty
+# result, not an error.
+hits=()
+if [[ -n "$raw" ]]; then
+  mapfile -t hits < <(printf '%s\n' "$raw" | grep -vE ':[0-9]+:[[:space:]]*//' || true)
+fi
 
 if [[ ${#hits[@]} -eq 0 ]]; then
   ok "no Rust \`unsafe\` sites under crates/ (nothing to justify)"
