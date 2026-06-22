@@ -40,8 +40,8 @@
 //! (RFC-0001 §4.6) and is fully recoverable here. See the RFC-0012 changelog (append-only).
 
 use crate::ast::{
-    AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, Item, Literal, Nodule, Paradigm,
-    Param, Pattern, Scalar, Sparsity, TraitDecl, TypeDecl, TypeRef,
+    AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, ImplDecl, Item, Literal, Nodule,
+    Paradigm, Param, Pattern, Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef,
 };
 
 /// A never-silent refusal from the resolution pass (§4.3/§4.4) — always explicit, never a guess.
@@ -171,6 +171,7 @@ pub fn resolve_report(nodule: &Nodule) -> Result<Resolved, AmbientError> {
             Item::Use(p) => items.push(Item::Use(p.clone())),
             Item::Type(td) => items.push(Item::Type(r.type_decl(default, td)?)),
             Item::Trait(td) => items.push(Item::Trait(r.trait_decl(default, td)?)),
+            Item::Impl(id) => items.push(Item::Impl(r.impl_decl(default, id)?)),
             Item::Fn(fd) => items.push(Item::Fn(r.fn_decl(default, fd)?)),
         }
     }
@@ -199,6 +200,7 @@ pub fn expand_to_source(nodule: &Nodule) -> String {
             Item::Default(p) => out.push_str(&format!("default paradigm {p}\n")),
             Item::Type(td) => out.push_str(&print_type_decl(td)),
             Item::Trait(td) => out.push_str(&print_trait_decl(td)),
+            Item::Impl(id) => out.push_str(&print_impl_decl(id)),
             Item::Fn(fd) => out.push_str(&print_fn_decl(fd)),
         }
     }
@@ -256,6 +258,33 @@ impl Resolver {
             name: td.name.clone(),
             params: td.params.clone(),
             sigs,
+        })
+    }
+
+    /// Resolve an `impl Trait<args> for T { fn … }` (RFC-0019 §4.1): the trait arguments, the
+    /// `for` type, and each method (signature + body) all resolve under the nodule ambient — the
+    /// same passes the surrounding `type`/`fn` use, so an impl never sees an unresolved paradigm-less
+    /// repr reach the checker (defense in depth — RFC-0012 §4.3).
+    fn impl_decl(
+        &mut self,
+        amb: Option<Paradigm>,
+        id: &ImplDecl,
+    ) -> Result<ImplDecl, AmbientError> {
+        let site = &id.trait_name;
+        let mut trait_args = Vec::with_capacity(id.trait_args.len());
+        for a in &id.trait_args {
+            trait_args.push(self.type_ref(amb, site, a)?);
+        }
+        let for_ty = self.type_ref(amb, site, &id.for_ty)?;
+        let mut methods = Vec::with_capacity(id.methods.len());
+        for m in &id.methods {
+            methods.push(self.fn_decl(amb, m)?);
+        }
+        Ok(ImplDecl {
+            trait_name: id.trait_name.clone(),
+            trait_args,
+            for_ty,
+            methods,
         })
     }
 
@@ -557,7 +586,8 @@ fn print_sig_tail(sig: &FnSig) -> String {
     let tp = if sig.params.is_empty() {
         String::new()
     } else {
-        format!("<{}>", sig.params.join(", "))
+        let ps: Vec<String> = sig.params.iter().map(print_type_param).collect();
+        format!("<{}>", ps.join(", "))
     };
     let ps: Vec<String> = sig
         .value_params
@@ -579,6 +609,48 @@ fn print_type_ref(t: &TypeRef) -> String {
         Some(g) => format!("{base} @ {g:?}"),
         None => base,
     }
+}
+
+/// Canonical surface form of a (possibly bounded) function type-parameter (`T` or `T: Cmp + Ord<T>`;
+/// RFC-0019 §4.1).
+fn print_type_param(p: &TypeParam) -> String {
+    if p.bounds.is_empty() {
+        p.name.clone()
+    } else {
+        let bs: Vec<String> = p.bounds.iter().map(print_trait_ref).collect();
+        format!("{}: {}", p.name, bs.join(" + "))
+    }
+}
+
+/// Canonical surface form of a trait reference in a bound (`Cmp` or `Cmp<Binary{8}>`).
+fn print_trait_ref(tr: &TraitRef) -> String {
+    if tr.args.is_empty() {
+        tr.name.clone()
+    } else {
+        let args: Vec<String> = tr.args.iter().map(print_type_ref).collect();
+        format!("{}<{}>", tr.name, args.join(", "))
+    }
+}
+
+/// Canonical surface form of an `impl Trait<args> for T { fn … }` (RFC-0019 §4.1).
+fn print_impl_decl(id: &ImplDecl) -> String {
+    let args = if id.trait_args.is_empty() {
+        String::new()
+    } else {
+        let a: Vec<String> = id.trait_args.iter().map(print_type_ref).collect();
+        format!("<{}>", a.join(", "))
+    };
+    let mut s = format!(
+        "impl {}{} for {} {{\n",
+        id.trait_name,
+        args,
+        print_type_ref(&id.for_ty)
+    );
+    for m in &id.methods {
+        s.push_str(&format!("  {}", print_fn_decl(m)));
+    }
+    s.push_str("}\n");
+    s
 }
 
 /// A [`Display`] for [`BaseType`] in canonical surface form (shared by the printer and the

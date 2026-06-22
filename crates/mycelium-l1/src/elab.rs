@@ -1092,6 +1092,25 @@ impl Elab<'_> {
             });
         }
 
+        // An **unqualified trait-method call** (RFC-0019 §4.4) type-checks (the checker resolved the
+        // instance / bound), but its L0 lowering is **dictionary-passing**, staged identically to a
+        // generic instantiation — RFC-0007 §12.3. Refuse with an explicit `Residual` (never a silent
+        // or fabricated artifact — G2); it lands with the monomorphization follow-up (M-673).
+        if self
+            .env
+            .traits
+            .values()
+            .any(|tr| tr.sigs.iter().any(|s| s.name == *name))
+        {
+            return residual(
+                site,
+                format!(
+                    "trait-method call `{name}` type-checks, but dictionary-passing lowering to L0 \
+                     is staged (RFC-0019 §4.4 / RFC-0007 §12.3; the M-673 follow-up). No L0 form yet."
+                ),
+            );
+        }
+
         residual(site, format!("unknown function/constructor/prim `{name}`"))
     }
 
