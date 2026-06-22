@@ -2357,14 +2357,23 @@ issues:
   - id: M-660
     title: "M-660 — spec + feat(l1): Effect annotations on fn signatures (RFC-0014 stage-1 surface)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [M-659]
     epic: E7-1
     doc_refs: [corpus:RFC-0014, corpus:RFC-0007, src:crates/mycelium-l1/src/ast.rs]
     body: |
+      DONE (2026-06-22): effect annotations land on fn signatures — surface `fn … -> ret !{eff1, eff2}` (maintainer-decided `!{}`; absent ⇒ pure; effect names = identifiers; duplicate = parse refusal — G2); `ast.rs` `FnSig.effects`, `Tok::Bang`. The `checkty.rs` **effect-coverage** pass enforces **declared ⊇ performed** (performed = union of every callee's declared effects — a top-level fn OR an unqualified trait method — checked over fn AND impl-method bodies, so no effect is hidden from a caller; under-declaration = explicit `CheckError`, over-declaration OK — I5). Guarantee `Declared`; no new L0 node (KC-3). RFC-0014 §3.4 pins the surface (append-only, still Enacted); DN-14 §3 row 8 → `present`. **Deferred (was task 5, out of scope):** wiring declared effects into the `mycelium-interp::budget` runtime ledger + per-effect budget syntax (`retry(<=3)`) → **M-677**; `wild`-sourced effects → M-661. 203 `mycelium-l1` tests green (effect suite + monotonicity property + trait/impl conformance + a soundness regression for trait-method/impl-body coverage). — Original task:
       RFC-0014 §4.3 defines declared effects (RT3); the L1 surface has no effect-annotation syntax in `FnSig` or `FnDecl` (DN-14 §3 row 8). This issue: (1) amends RFC-0007 or RFC-0014 to define the stage-1 surface syntax (`fn f() -> T / {time, entropy}`); (2) extends `ast.rs` `FnSig` with an effects field; (3) adds effect-annotation parsing to `parse.rs`; (4) implements an effect-checking pass in `checkty.rs` (declared effects propagate; undeclared effect in a callee is a `CheckError` — I3); (5) wires declared effects into the `mycelium-interp::budget` ledger (M-353 landed the enforcement mechanism). Effect inference is monotone (adding a callee never removes effects from the caller) — property tested.
       Acceptance: `fn rng() -> Binary{64} / {entropy} = wild { … }` is a valid annotated signature; an unannotated caller of `rng` is a `CheckError`; property test for monotone effect inference; DN-14 §3 row 8 → `present`.
 
+  - id: M-677
+    title: "M-677 — feat(runtime): wire declared effects → mycelium-interp budget ledger + per-effect budget syntax"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:execution, priority:P2, status:needs-design]
+    depends_on: [M-660]
+    doc_refs: [corpus:RFC-0014, src:crates/mycelium-l1/src/checkty.rs]
+    body: |
+      M-660 landed the effect-annotation SURFACE + the checker-side coverage check (declared ⊇ performed); it does NOT wire declared effects into the runtime. This issue: (1) thread a fn's declared effect set through elaboration to the L0 evaluator so the `mycelium-interp::budget` ledger (M-353) is primed/consumed per declared effect; (2) add the per-effect BUDGET surface syntax (`!{retry(<=3), alloc(<=64KiB)}` — RFC-0014 §3.4/I4) that M-660 left out (M-660 parses the effect SET only); (3) an overrun yields the explicit `EffectBudgetExhausted` (RFC-0014 I4), never a hang/OOM. No new L0 node (KC-3) — effects stay metadata threaded as budgets. Acceptance: a budgeted effectful fn runs under its budget and yields `EffectBudgetExhausted` on overrun; the M-210 three-way differential agrees; property test for budget monotonicity.
   - id: M-661
     title: "M-661 — feat(l1): `wild` block typechecking — enable auditable FFI surface in std-sys context"
     milestone: "Phase 5 — Self-Hosting & Core Library"
