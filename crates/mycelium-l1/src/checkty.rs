@@ -1801,6 +1801,30 @@ impl Cx<'_> {
         head: &Expr,
         args: &[Expr],
     ) -> Result<Option<(Ty, Expr)>, CheckError> {
+        // Never-silent dispatch (G2/VR-5): a trait-method call is resolved by its (short) name.
+        // If more than one in-scope bound provides a method with this name the call is ambiguous —
+        // refuse explicitly rather than silently taking the first bound (v0 has no disambiguation
+        // syntax). Distinct method names across bounds are unaffected.
+        let providing: Vec<&str> = self
+            .bounds
+            .iter()
+            .filter(|b| {
+                self.traits
+                    .get(&b.trait_name)
+                    .is_some_and(|ti| ti.methods.iter().any(|s| s.name == name))
+            })
+            .map(|b| b.trait_name.as_str())
+            .collect();
+        if providing.len() > 1 {
+            return Err(CheckError::new(
+                self.site,
+                format!(
+                    "ambiguous trait-method call `{name}`: provided by bounds on {} — v0 has no \
+                     disambiguation syntax, so this is refused (never-silent, G2)",
+                    providing.join(", ")
+                ),
+            ));
+        }
         for b in self.bounds {
             if let Some(ti) = self.traits.get(&b.trait_name) {
                 if let Some(m_sig) = ti.methods.iter().find(|s| s.name == name) {
@@ -3321,6 +3345,23 @@ pub(crate) fn monomorphize_with_cap(
                 if let Some(trait_info) = env.traits.get(&b.trait_name) {
                     for m_sig in &trait_info.methods {
                         let impl_name = impl_method_name(&b.trait_name, concrete_ty, &m_sig.name);
+                        // Never-silent (G2): if two bounds resolve the same method name to
+                        // different impls, the dispatch is ambiguous — refuse rather than let
+                        // `insert` silently overwrite. (The checker also refuses the call site in
+                        // `check_trait_method_call`; this guards the monomorphization path too.)
+                        if let Some(prev) = dict.get(&m_sig.name) {
+                            if prev != &impl_name {
+                                return Err(CheckError::new(
+                                    &gfd.sig.name,
+                                    format!(
+                                        "ambiguous trait method `{}` monomorphizing `{}`: two bounds \
+                                         resolve it to different impls (`{prev}` vs `{impl_name}`) — \
+                                         refused (never-silent, G2)",
+                                        m_sig.name, gfd.sig.name
+                                    ),
+                                ));
+                            }
+                        }
                         dict.insert(m_sig.name.clone(), impl_name);
                     }
                 }

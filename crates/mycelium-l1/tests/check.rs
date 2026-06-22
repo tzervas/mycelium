@@ -1121,3 +1121,24 @@ fn m659_literal_acceptance_two_param_method_checks() {
     assert!(env.impl_info("Cmp", &mycelium_l1::Ty::Binary(8)).is_some());
     assert_eq!(env.traits["Cmp"].methods[0].value_params.len(), 2);
 }
+
+#[test]
+fn ambiguous_trait_method_across_two_bounds_is_refused() {
+    // Two traits declare a method `m`; a generic fn bounded by both calls `m`. v0 dispatches by
+    // method name and has no disambiguation syntax, so the call is an explicit CheckError — never
+    // a silent first-bound pick (G2/VR-5).
+    let src = concat!(
+        "nodule d\n",
+        "trait A { fn m(x: Binary{8}) -> Binary{8} }\n",
+        "trait B { fn m(x: Binary{8}) -> Binary{8} }\n",
+        "impl A for Binary{8} { fn m(x: Binary{8}) -> Binary{8} = x }\n",
+        "impl B for Binary{8} { fn m(x: Binary{8}) -> Binary{8} = not(x) }\n",
+        "fn f<X: A, Y: B>(x: X, y: Y) -> Binary{8} = m(x)\n",
+    );
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("ambiguous") && err.message.contains('m'),
+        "expected an ambiguous-trait-method error; got: {}",
+        err.message
+    );
+}

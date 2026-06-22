@@ -85,7 +85,9 @@ pub enum Item {
 pub struct ImplDecl {
     /// The trait being implemented.
     pub trait_name: String,
-    /// The trait's type arguments (e.g. `A` in `impl Show<A> for List<A>` — v0 defers these).
+    /// The trait's type arguments (e.g. `Binary{8}` in `impl Cmp<Binary{8}> for Binary{8}`). v0
+    /// accepts at most one and requires it to equal `for_ty` (omitting it infers the argument);
+    /// `impl Tr<C> for D` with C≠D is an explicit deferral (checked in `checkty`, never silent).
     pub trait_args: Vec<TypeRef>,
     /// The type this impl is for.
     pub for_ty: TypeRef,
@@ -93,18 +95,21 @@ pub struct ImplDecl {
     pub methods: Vec<FnDecl>,
 }
 
-/// A trait bound on a type parameter: `A: TraitName<trait_args>` (M-658).
+/// A trait bound on a type parameter: `A: TraitName` (M-658).
 ///
 /// In v0 each type parameter carries **at most one** bound (a single `:` annotation in the
-/// angle-bracket list). The `+` multi-bound syntax is deferred — a written `+` fails at the
-/// lexer/parser with an explicit error (never a silent accept, G2).
+/// angle-bracket list), written as `A: TraitName` with **no** trait type arguments — bound trait
+/// args (`A: TraitName<…>`) are deferred, so [`trait_args`](Bound::trait_args) is always empty.
+/// The `+` multi-bound syntax is deferred — a written `+` fails at the lexer/parser with an
+/// explicit error (never a silent accept, G2).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bound {
     /// The bounded type-parameter name (e.g. `A`).
     pub param: String,
     /// The required trait (e.g. `Show`).
     pub trait_name: String,
-    /// The trait's type arguments (e.g. empty for `Show`, or `[Binary{8}]` for `Show<Binary{8}>`).
+    /// Reserved for bound trait arguments (`A: TraitName<…>`). v0 defers these, so the parser
+    /// always leaves this **empty**; a non-empty value is not produced by the current surface.
     pub trait_args: Vec<TypeRef>,
 }
 

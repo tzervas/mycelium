@@ -114,7 +114,7 @@ pub const KEYWORD_COMPLETIONS: &[CompletionItem] = &[
         insert_text_format: FORMAT_PLAIN,
         detail: "keyword — trait implementation",
         documentation: "Implements a trait for a type: `impl Trait for Type { fn … }` \
-                        (parametric: `impl Trait<Arg> for Type`). RFC-0019 §4.5; DN-02 §7.",
+                        (parametric: `impl Trait<Arg> for Type`). RFC-0007 §4.10; RFC-0019 §4.5.",
     },
     CompletionItem {
         label: "matured",

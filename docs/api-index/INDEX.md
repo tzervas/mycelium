@@ -732,25 +732,25 @@
 | `mycelium_l1::ambient::resolve_report` | fn | `crates/mycelium-l1/src/ambient.rs:151` | Like [`resolve`], but also returns the provenance trace ([`ResolutionNote`]s) for EXPLAIN (§4.3). |
 | `mycelium_l1::ast` | mod | `crates/mycelium-l1/src/lib.rs:30` | — |
 | `mycelium_l1::ast::AmbientParams` | enum | `crates/mycelium-l1/src/ast.rs:46` | The written params of a **paradigm-less repr** `{ … }` (RFC-0012 §4.2): the size/shape is still |
-| `mycelium_l1::ast::Arm` | struct | `crates/mycelium-l1/src/ast.rs:385` | A `match` arm. |
-| `mycelium_l1::ast::BaseType` | enum | `crates/mycelium-l1/src/ast.rs:215` | A base (un-annotated) type. |
-| `mycelium_l1::ast::Ctor` | struct | `crates/mycelium-l1/src/ast.rs:124` | One constructor of a [`TypeDecl`]. |
-| `mycelium_l1::ast::Expr` | enum | `crates/mycelium-l1/src/ast.rs:279` | An expression. |
-| `mycelium_l1::ast::FnDecl` | struct | `crates/mycelium-l1/src/ast.rs:161` | A function definition. |
-| `mycelium_l1::ast::FnSig` | struct | `crates/mycelium-l1/src/ast.rs:144` | A function signature (shared by trait requirements and `fn` definitions). |
+| `mycelium_l1::ast::Arm` | struct | `crates/mycelium-l1/src/ast.rs:390` | A `match` arm. |
+| `mycelium_l1::ast::BaseType` | enum | `crates/mycelium-l1/src/ast.rs:220` | A base (un-annotated) type. |
+| `mycelium_l1::ast::Ctor` | struct | `crates/mycelium-l1/src/ast.rs:129` | One constructor of a [`TypeDecl`]. |
+| `mycelium_l1::ast::Expr` | enum | `crates/mycelium-l1/src/ast.rs:284` | An expression. |
+| `mycelium_l1::ast::FnDecl` | struct | `crates/mycelium-l1/src/ast.rs:166` | A function definition. |
+| `mycelium_l1::ast::FnSig` | struct | `crates/mycelium-l1/src/ast.rs:149` | A function signature (shared by trait requirements and `fn` definitions). |
 | `mycelium_l1::ast::Item` | enum | `crates/mycelium-l1/src/ast.rs:64` | A top-level item. |
-| `mycelium_l1::ast::Literal` | enum | `crates/mycelium-l1/src/ast.rs:426` | A literal value. |
+| `mycelium_l1::ast::Literal` | enum | `crates/mycelium-l1/src/ast.rs:431` | A literal value. |
 | `mycelium_l1::ast::Nodule` | struct | `crates/mycelium-l1/src/ast.rs:10` | A whole program: a `nodule` header and its items. |
 | `mycelium_l1::ast::Paradigm` | enum | `crates/mycelium-l1/src/ast.rs:20` | A representation **paradigm** tag (RFC-0001 §4.2): the granularity of the RFC-0012 ambient. |
-| `mycelium_l1::ast::Param` | struct | `crates/mycelium-l1/src/ast.rs:172` | A value parameter `name: type`. |
+| `mycelium_l1::ast::Param` | struct | `crates/mycelium-l1/src/ast.rs:177` | A value parameter `name: type`. |
 | `mycelium_l1::ast::Path` | struct | `crates/mycelium-l1/src/ast.rs:6` | A dotted path (`signals.demo`, `core.binary`); also a bare name. |
-| `mycelium_l1::ast::Pattern` | enum | `crates/mycelium-l1/src/ast.rs:406` | A pattern. |
-| `mycelium_l1::ast::Scalar` | enum | `crates/mycelium-l1/src/ast.rs:253` | A scalar element kind. |
-| `mycelium_l1::ast::Sparsity` | enum | `crates/mycelium-l1/src/ast.rs:244` | Declared sparsity of a VSA type. |
-| `mycelium_l1::ast::Strength` | enum | `crates/mycelium-l1/src/ast.rs:266` | A guarantee-lattice strength. |
-| `mycelium_l1::ast::TraitDecl` | struct | `crates/mycelium-l1/src/ast.rs:133` | `trait Name<params> { fn … }` (LR-2; conventional term). |
-| `mycelium_l1::ast::TypeDecl` | struct | `crates/mycelium-l1/src/ast.rs:113` | `type Name<params> = Ctor \| Ctor(field, …) \| …` (LR-1). |
-| `mycelium_l1::ast::TypeRef` | struct | `crates/mycelium-l1/src/ast.rs:181` | A type with an optional guarantee-strength index (`T @ Exact`; LR-6). |
+| `mycelium_l1::ast::Pattern` | enum | `crates/mycelium-l1/src/ast.rs:411` | A pattern. |
+| `mycelium_l1::ast::Scalar` | enum | `crates/mycelium-l1/src/ast.rs:258` | A scalar element kind. |
+| `mycelium_l1::ast::Sparsity` | enum | `crates/mycelium-l1/src/ast.rs:249` | Declared sparsity of a VSA type. |
+| `mycelium_l1::ast::Strength` | enum | `crates/mycelium-l1/src/ast.rs:271` | A guarantee-lattice strength. |
+| `mycelium_l1::ast::TraitDecl` | struct | `crates/mycelium-l1/src/ast.rs:138` | `trait Name<params> { fn … }` (LR-2; conventional term). |
+| `mycelium_l1::ast::TypeDecl` | struct | `crates/mycelium-l1/src/ast.rs:118` | `type Name<params> = Ctor \| Ctor(field, …) \| …` (LR-1). |
+| `mycelium_l1::ast::TypeRef` | struct | `crates/mycelium-l1/src/ast.rs:186` | A type with an optional guarantee-strength index (`T @ Exact`; LR-6). |
 | `mycelium_l1::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:738` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
 | `mycelium_l1::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:694` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
 | `mycelium_l1::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:703` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
@@ -765,8 +765,8 @@
 | `mycelium_l1::checkty::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:738` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
 | `mycelium_l1::checkty::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:694` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
 | `mycelium_l1::checkty::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:703` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
-| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:2638` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
-| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:2624` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
+| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:2662` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
+| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:2648` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
 | `mycelium_l1::elab` | mod | `crates/mycelium-l1/src/lib.rs:33` | — |
 | `mycelium_l1::elab::ElabError` | enum | `crates/mycelium-l1/src/elab.rs:47` | Why a definition could not be elaborated to L0 — always explicit, never a partial artifact |
 | `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:498` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |

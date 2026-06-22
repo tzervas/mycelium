@@ -718,13 +718,30 @@ impl<'e> Evaluator<'e> {
     ) -> Result<Option<L1Value>, L1Error> {
         if let Some(first_arg) = argv.first() {
             if let Some(concrete_ty) = Self::l1value_ty(first_arg) {
+                // Collect every trait that declares `name` AND has a registered impl for the
+                // concrete argument type. More than one ⇒ ambiguous dispatch — an explicit error,
+                // never a silent map-order pick (G2; mirrors the checker's refusal).
+                let mut hits: Vec<String> = Vec::new();
                 for (trait_name, trait_info) in &self.env.traits {
                     if trait_info.methods.iter().any(|m| m.name == name) {
                         let mangled = impl_method_name(trait_name, &concrete_ty, name);
                         if self.env.fns.contains_key(&mangled) {
-                            return self.invoke(fuel, depth, &mangled, argv).map(Some);
+                            hits.push(mangled);
                         }
                     }
+                }
+                if hits.len() > 1 {
+                    return Err(L1Error::Stuck {
+                        site: name.to_owned(),
+                        why: format!(
+                            "ambiguous trait-method dispatch `{name}` on `{concrete_ty}`: \
+                             {} matching impls — refused (never-silent, G2)",
+                            hits.len()
+                        ),
+                    });
+                }
+                if let Some(mangled) = hits.first() {
+                    return self.invoke(fuel, depth, mangled, argv).map(Some);
                 }
             }
         }
