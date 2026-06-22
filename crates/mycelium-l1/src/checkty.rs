@@ -1597,11 +1597,7 @@ impl Cx<'_> {
     ///    audited* now; actually *running* it elaborates to an explicit [`crate::elab::ElabError::Residual`]
     ///    (a future capability) — consistent with M-657/659/660 staging. The body is preserved
     ///    **verbatim** in the returned expression (opaque — no interior resolution).
-    fn check_wild(
-        &self,
-        body: &Expr,
-        expected: Option<&Ty>,
-    ) -> Result<(Ty, Expr), CheckError> {
+    fn check_wild(&self, body: &Expr, expected: Option<&Ty>) -> Result<(Ty, Expr), CheckError> {
         if !self.std_sys {
             return self.err(
                 "`wild` is denied outside a `@std-sys` nodule — the audited FFI floor lives only in \

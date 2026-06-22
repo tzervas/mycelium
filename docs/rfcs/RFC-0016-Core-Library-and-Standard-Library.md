@@ -292,6 +292,27 @@ Empirical/Declared, never Proven (VR-5). This clears the §8 gate for ratificati
     The three call sites (`fs` syscalls, `rand` platform entropy, `math` libm transcendentals — stdlib README
     §5; the Rust `core`/`std` precedent, T8.1) consolidate into one `std-sys` boundary. The **minimal audited
     FFI inventory** is a named follow-on deliverable (M-541).
+  - **→ Resolution refinement (M-661 — `@std-sys` is a header *attribute*, not a naming convention; the
+    `wild` gate; implemented Rust-first, pending ratification).** The `std-sys` boundary is carried by an
+    **explicit nodule-header marker `@std-sys`** (surface: `nodule std.sys.fs @std-sys`), *not* by the
+    nodule's *name* — a `std.sys.*`-named nodule without the marker is **not** the FFI floor, and a marked
+    nodule of any name **is**. The **gate** the L1 reference frontend now enforces: a `wild` block (the
+    denied-by-default unsafe escape — LR-9/S6; ADR-014) is legal **iff** (a) it is inside a `@std-sys` nodule
+    **and** (b) its enclosing `fn` declares the **`ffi` effect** (`!{ffi}` — `wild` is the `ffi` effect
+    *source*, binding to RFC-0014/M-660 coverage). A `wild` in a non-`@std-sys` nodule is a **hard
+    `CheckError`** (a never-silent refusal — G2, *not* a lint); a `wild` whose fn omits `!{ffi}` is the
+    M-660 under-declaration refusal. The `wild` **body is the trusted/opaque FFI escape — NOT recursively
+    type-checked** (it conforms to the expected type by ascription; it is *audited*, not *verified* —
+    VR-5/ADR-014), so it requires an expected type (a synthesis position refuses with "ascribe the `wild`
+    block's result type"). **Execution stays staged:** with no FFI host in v0, a `wild` block *type-checks +
+    gates + is audited* now but does **not run** — it elaborates to an explicit `Residual` (a future
+    capability), consistent with the M-657/659/660 staging. Guarantee on the gate: **`Declared`** (a
+    structural + audited context gate, not a theorem). The lexical `// SAFETY:`-presence audit (`myc-sec`
+    `audit_wild`, ADR-014) is **orthogonal and unchanged** — it inventories + justification-checks every
+    `wild`; this typechecker gate is the *context* check. Implemented Rust-first in `crates/mycelium-l1/`
+    (`ast.rs` `Nodule.std_sys`; `lexer.rs`/`token.rs` the atomic `@std-sys` token; `parse.rs` `parse_nodule`;
+    `checkty.rs` `Cx::check_wild` + the effect-coverage `ffi` source; `elab.rs` the staged `Residual`),
+    **pending ratification** — this refinement is append-only and supersedes nothing.
 
 - **(Residual cross-module FLAG, not an original §8 item) — the `BF16→F32` placement.** The one unsettled
   *owned-surface* seam (stdlib README §5; `swap` §7-Q3 / `cmp` §7-Q2): which module owns the *lossless
@@ -319,6 +340,7 @@ Empirical/Declared, never Proven (VR-5). This clears the §8 gate for ratificati
 
 ## Meta — changelog
 
+- **2026-06-22 — §8-Q6 refinement: the `@std-sys` header marker + the `wild` gate landed Rust-first (M-661, E7-1; append-only, pending ratification).** The audited FFI floor is now *enterable*: `@std-sys` is an explicit **nodule-header attribute** (`nodule std.sys.fs @std-sys`), **not** a naming convention, and a `wild` block (LR-9/S6; ADR-014) type-checks **iff** it is in a `@std-sys` nodule **and** its `fn` declares the **`ffi` effect** (`!{ffi}` — `wild` is the `ffi` source, binding to RFC-0014/M-660); a `wild` elsewhere is a **hard `CheckError`** (G2, not a lint), and an undeclared `ffi` is the M-660 coverage refusal. The `wild` body is the **trusted/opaque** FFI escape — not recursively type-checked (audited, not verified — VR-5/ADR-014) — so it needs an ascribed/expected type (synthesis refuses). **Execution stays staged** (no FFI host in v0 → an explicit elaboration `Residual`); guarantee on the gate **`Declared`**. The `myc-sec` `// SAFETY:`-presence audit is orthogonal and unchanged. Implemented in `crates/mycelium-l1/` (lexer/`token`/`parse`/`ast`/`checkty`/`elab`) + `mycelium-l1` tests + conformance `accept/18-wild-std-sys.myc`; verified by `cargo fmt`/`clippy -D warnings`/`cargo test -p mycelium-l1` green. This refinement pins the §8-Q6 resolution; it is append-only and supersedes nothing. (DN-14 §3 row 9 flips to *conditionally present (audited, std-sys context; type-checks + gates; execution staged)*.)
 - **2026-06-21 — Accepted → Enacted (M-648 editorial sweep).** All 25 `mycelium-std-*` crates landed Rust-first (M-501–M-534, M-540, M-541): the 23-module Tier-A/Tier-B guarantee matrices are asserted in tests (1 883 + 722 + 230 tests across the wave), never-silent G2 holds across all modules, and the per-op `EXPLAIN` obligation is met. The Mycelium-lang self-hosting migration half (M-502, Phase-5-C) remains open per KC-2 gate ruling and does not block enactment of the Rust-first scope. Append-only.
 - **2026-06-20 — Erratum (§4.2 ring layering; maintainer-authorized, stdlib ratification pass).** Reconciled an
   internal inconsistency: §4.2 listed `spore` under **Ring 2** while §4.3 (Tier A table), the stdlib index, and
