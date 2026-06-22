@@ -2700,6 +2700,7 @@ mod depth_budget_tests {
                         base: BaseType::Binary(1),
                         guarantee: None,
                     },
+                    effects: vec![],
                 },
                 body,
             })],
