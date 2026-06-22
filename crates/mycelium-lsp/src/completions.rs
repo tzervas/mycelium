@@ -108,6 +108,15 @@ pub const KEYWORD_COMPLETIONS: &[CompletionItem] = &[
                         L1 grammar; RFC-0007.",
     },
     CompletionItem {
+        label: "impl",
+        kind: KIND_KEYWORD,
+        insert_text: "impl",
+        insert_text_format: FORMAT_PLAIN,
+        detail: "keyword — trait implementation",
+        documentation: "Implements a trait for a type: `impl Trait for Type { fn … }` \
+                        (parametric: `impl Trait<Arg> for Type`). RFC-0019 §4.5; DN-02 §7.",
+    },
+    CompletionItem {
         label: "matured",
         kind: KIND_KEYWORD,
         insert_text: "matured",
@@ -637,8 +646,10 @@ mod tests {
 
     #[test]
     fn not_yet_lexed_words_are_not_offered() {
-        // `impl`/`consume`/`grow` are ratified but not yet in keyword() -- offering them as active
-        // syntax would be dishonest (they currently lex as plain identifiers). The 10 runtime words
+        // `consume`/`grow` are ratified but not yet in keyword() -- offering them as active
+        // syntax would be dishonest (they currently lex as plain identifiers). `impl` was in this
+        // set until M-658/M-659 made it an active construct (`impl Trait for Type`); it is now a
+        // real keyword and IS offered (see KEYWORD_COMPLETIONS). The 10 runtime words
         // `hypha`…`reclaim` were ratified-not-yet-lexed too until M-665 reserved them; they are now
         // covered by `reserved_not_active_words_are_not_offered`.
         let labels: Vec<&str> = KEYWORD_COMPLETIONS
@@ -646,7 +657,7 @@ mod tests {
             .chain(SNIPPET_COMPLETIONS.iter())
             .map(|c| c.label)
             .collect();
-        for unlexed in ["impl", "consume", "grow"] {
+        for unlexed in ["consume", "grow"] {
             assert!(
                 !labels.contains(&unlexed),
                 "ratified-not-yet-lexed word `{unlexed}` must NOT appear in completions"
