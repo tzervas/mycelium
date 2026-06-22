@@ -1444,3 +1444,29 @@ fn a_real_binder_pattern_still_carries_the_scrutinee_grade() {
         err.message
     );
 }
+
+#[test]
+fn a_binder_colliding_with_an_unrelated_types_nullary_ctor_is_still_a_binder() {
+    // Soundness regression (M-663; Copilot review of #377): the bare-ident ctor-vs-binder decision must
+    // be resolved against the scrutinee's *own* type, not a GLOBAL ctor scan. Here `End` is a nullary
+    // ctor of the UNRELATED type `Other`, but the scrutinee is `T` (whose ctors are `Leaf`/`Node`), so
+    // the pattern `End` is a true binder over the whole `T` value and carries the scrutinee grade
+    // (`@ Declared`). The arm body references that binder, so the match grades `Declared` and is
+    // correctly refused against the `@ Exact` return. A global scan would mis-classify `End` as a ctor,
+    // drop the binding, and let the body grade `Exact` — an unsound grade *upgrade* (a wrong accept).
+    let err = check(
+        "nodule d\n\
+         type Other = End\n\
+         type T = Leaf | Node(Binary{8}, T)\n\
+         fn f(x: T @ Declared) -> T @ Exact = match x { End => End }",
+    )
+    .expect_err(
+        "a binder colliding with an unrelated type's nullary ctor carries the scrutinee grade — \
+         a Declared value cannot satisfy @ Exact (no unsound upgrade)",
+    );
+    assert!(
+        err.message.contains("guarantee") && err.message.contains("Exact"),
+        "the refusal must be a guarantee error naming the unmet Exact demand, got: {}",
+        err.message
+    );
+}

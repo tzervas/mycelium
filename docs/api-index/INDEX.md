@@ -765,8 +765,8 @@
 | `mycelium_l1::checkty::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:965` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
 | `mycelium_l1::checkty::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:550` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
 | `mycelium_l1::checkty::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:906` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
-| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:3313` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
-| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:3299` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
+| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:3351` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
+| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:3337` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
 | `mycelium_l1::elab` | mod | `crates/mycelium-l1/src/lib.rs:41` | — |
 | `mycelium_l1::elab::ElabError` | enum | `crates/mycelium-l1/src/elab.rs:46` | Why a definition could not be elaborated to L0 — always explicit, never a partial artifact |
 | `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:498` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |
