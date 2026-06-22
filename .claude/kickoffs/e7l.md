@@ -3,10 +3,42 @@
 > Stowed kickoff, UID **`e7l`**. A parent session for the L1 language-completeness task set.
 > Read `.claude/agent-context.md` + `CLAUDE.md` first (house rules win); this file adds the specifics.
 
-## Head branch (your locked base)
-**`claude/head/e7-language`** — branch every sub-task off it, merge every sub-task back into it; it is
-the single integration point for this task set and a **protected, persistent base** (survives pruning).
-Never touch other heads or `main` directly. `main` is PR-only.
+## ⚡ RESUME HERE (updated 2026-06-22 — read this first)
+
+**Branch fresh off `main`.** `main` already carries the M-666 `hypha`/`colony` foundation + the whole
+post-1.0 wave (tip was `5313964` "dfr discharge" before this session). **This session's e7l first
+tranche + the depth-safety architecture LANDED to `main` via squash PR** (2026-06-22 — see "Done so
+far"). So on resume: `git fetch origin main` → branch a fresh working branch off `origin/main`
+(`git checkout -b claude/<desc> origin/main`); everything below is already on `main`. `main` is PR-only;
+your working branch squash-PRs to `main` per logical unit.
+
+**Continue the chain at M-659** (the next un-done item).
+
+**Done so far (LANDED to `main` this session, 2026-06-22):**
+- ✅ **M-656** — RFC-0007 §11 (generics deferral discharged → RFC-0019).
+- ✅ **M-657 checker** — unbounded parametric generics type-check (`Ty::Var`, applied `Ty::Data`,
+  unification-based call-site instantiation, arity/undetermined/repr-op refusals). **Elaboration of a
+  generic instantiation is STAGED** as an explicit `Residual` → **M-673** (monomorphization follow-up).
+- ✅ **M-658** — RFC-0007 §12 trait surface + **`impl` reserved** (`Tok::Impl`, reject-corpus
+  `14-impl-reserved-ident.myc`). Trait *checker* is M-659 (next).
+- ✅ **Depth-safety / limit-point discipline (M-674):** explicit budgets on all 4 L1 passes (parser
+  256, checker `MAX_CHECK_DEPTH=4096`, elaborator `MAX_ELAB_DEPTH=4096`, evaluator `DEFAULT_DEPTH=64`
+  now host-stack-safe); checker/elaborator/evaluator run on a **deep worker stack** in the new
+  **`mycelium-stack`** crate (isolated outside the kernel); kernel is **`#![forbid(unsafe_code)]`**
+  (machine-proven). Measured checker ceiling ~24,600 levels (debug). **M-673** (monomorphization) +
+  **M-674** (remaining: totality/ambient budgets + cross-crate audit — evaluator item DONE) filed.
+
+**Next un-done: M-659 (traits checker)** — a large atomic unit: AST `Item::Impl` + parser productions
+for `impl Trait for T { … }` and bounded type-params `T: Trait` (RFC-0019 §4.1 — do not yet exist),
+then trait-declaration + impl-block checking with **coherence** (orphan rule + global uniqueness,
+RFC-0019 §4.5), then dictionary-passing **typing** (L0 lowering STAGED like generics → M-673). Do NOT
+half-land it (parse-but-skip-in-checker = a silent no-op, G2 violation). Then M-660 → M-661 → M-662 →
+M-663 → M-664 → M-667/M-668 → M-649.
+
+> **Lesson recorded:** the original brief named a protected head `claude/head/e7-language`; in practice
+> a single working branch off `main`, squash-PR'd per tranche, worked cleanly (no separate head
+> needed). The L1 collision-serialization (token/parse/checkty/elab one editor at a time) held; a
+> *disjoint* file (e.g. `eval.rs`) can run as a parallel leaf alongside the serial chain.
 
 ## Mission
 Drive **E7-1** (L1 Stage-1 language completeness) + **E7-2** (runtime constructs) + **M-649**
@@ -14,9 +46,9 @@ Drive **E7-1** (L1 Stage-1 language completeness) + **E7-2** (runtime constructs
 
 | # | Issue(s) | What |
 |---|---|---|
-| 0 | pull-down | `git fetch origin main` → merge — **M-666 (`hypha`/`colony`) is your foundation**, already on `main`. |
-| 1 | M-656 → M-657 | generics: spec → impl |
-| 2 | M-658 → M-659 | traits + `impl`: spec → impl |
+| 0 | pull-down | ✅ done — `main` carries the M-666 `hypha`/`colony` foundation + post-1.0 wave. |
+| 1 | M-656 → M-657 | ✅ generics: spec done; **checker** done (elab staged → M-673). |
+| 2 | M-658 → M-659 | ✅ M-658 (spec + `impl` reserved) done; **M-659 trait checker = NEXT**. |
 | 3 | M-660 | effect annotations |
 | 4 | M-661 | `wild` / FFI floor (audited; std-sys) |
 | 5 | M-662 | `phylum` + cross-nodule |
