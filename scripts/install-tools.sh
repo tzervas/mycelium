@@ -83,6 +83,31 @@ else
   skip "no uv/python3 — skipped python tools"
 fi
 
+section "node runtime (for the npx-based gates)"
+# Node/npm: the npx-driven gates (markdownlint; any structured-doc / json-schema check that shells to
+# `npx`) need a Node runtime — and a CURRENT one: markdownlint-cli2 (pinned below) requires Node >= 20.
+# The cloud base image normally ships a recent Node on PATH; a bare or minimal container may lack it, or
+# carry one too old. Idempotent (probes the major version first), never `curl | bash`, best-effort and
+# never-silent: a too-old or failed install prints a clear skip and the npx gates skip, never blocking
+# the rest of setup (G2). NB the distro `nodejs` can be older than 20 on some images — hence the floor.
+NODE_MIN=20
+node_ge_min() { local m; m="$(node --version 2>/dev/null | sed -E 's/^v?([0-9]+).*/\1/')"; [[ -n "$m" ]] && (( m >= NODE_MIN )); }
+if have npm && node_ge_min; then
+  ok "node present ($(node --version)) >= $NODE_MIN"
+elif have apt-get; then
+  if DEBIAN_FRONTEND=noninteractive apt-get update -qq >/dev/null 2>&1 \
+     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nodejs npm >/dev/null 2>&1 \
+     && node_ge_min; then
+    ok "apt: installed node ($(node --version)) >= $NODE_MIN"
+  elif have npm; then
+    skip "node ($(node --version 2>/dev/null || echo '?')) is < $NODE_MIN — markdownlint-cli2 needs Node >= $NODE_MIN; the markdown gate will skip (install a newer Node, e.g. via NodeSource, for full coverage)"
+  else
+    skip "nodejs/npm install failed (offline/restricted allowlist) — the npx checks (markdown lint) will skip"
+  fi
+else
+  skip "no Node >= $NODE_MIN and no apt-get — install Node $NODE_MIN+ via your package manager so the npx-based checks run"
+fi
+
 # Node tool: markdownlint-cli2 is invoked on demand via `npx --yes`; warm the cache.
 # Pinned to a specific version (B1-02) — keep this in sync with scripts/checks/markdown.sh.
 if have npx; then
