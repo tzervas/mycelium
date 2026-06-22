@@ -10,6 +10,7 @@ robust parallel development. `main` is **PR-only** (direct push/merge blocked); 
 | UID | Kickoff | Head branch | Owns (isolated) | Depends on |
 |---|---|---|---|---|
 | **`e7l`** | `e7l.md` | `claude/head/e7-language` | `crates/mycelium-l1/` · `docs/spec/grammar/` · 1 `.myc` nodule | M-666 on `main` (pull down) |
+| **`e7lb`** | `e7lb.md` | *(single branch off `main`; squash-PR per tranche — e7l lesson)* | `crates/mycelium-l1/` · `docs/spec/grammar/` · 1 `.myc` nodule | **continuation of `e7l`** — tranche M-656→M-660 on `main`; M-661 leaf in-flight |
 | **`dfr`** | `dfr.md` | `claude/head/dogfood-research` | RFC-0022/0023 Status · `research/12,13` · `research-prompts.md` | — (gates `dfb`) |
 | **`dfb`** | `dfb.md` | `claude/head/dogfood-build` | `crates/mycelium-web/` · `crates/mycelium-adk/` (NEW) · root `Cargo.toml` | `dfr` discharge (RP-10/RP-9) |
 

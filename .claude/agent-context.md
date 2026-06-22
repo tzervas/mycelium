@@ -63,16 +63,28 @@ Validate: `python3 tools/github/doc_refs_check.py`
 
 ### Recently landed (most recent first)
 
-- **e7l first tranche + depth-safety architecture — landed to `main` (this session, 2026-06-22):**
-  **M-656** RFC-0007 §11 (generics deferral discharged); **M-657 checker** — unbounded parametric
-  generics type-check (`Ty::Var` + applied `Ty::Data`, unification-based call-site instantiation,
-  never-guess refusals; **elaboration STAGED** as explicit `Residual` → **M-673** monomorphization);
-  **M-658** RFC-0007 §12 trait surface + **`impl` reserved** (`Tok::Impl`). **Depth-safety (M-674):**
-  explicit budgets on all 4 L1 passes (parser/checker/elaborator/evaluator) + a **deep worker stack**
-  in the new **`mycelium-stack`** crate (isolated outside the kernel) + kernel **`#![forbid(unsafe_code)]`**
-  (machine-proven); measured checker ceiling ~24,600 levels (debug); evaluator now host-stack-safe at
-  raised budgets. **M-673** (monomorphize generics+traits to L0) + **M-674** (remaining: totality/ambient
-  budgets + cross-crate audit) filed. **Next: M-659 (trait checker)** — branch fresh off `main`.
+- **M-660 — effect annotations (landed `dfb7af5`, 2026-06-22):** surface `fn … -> T !{eff1, eff2}`
+  (Koka-style `!`; effect names = kernel kinds `retry|alloc|io|cascade|time` + user `Named`; absent
+  ⇒ pure; duplicate effect = never-silent **parse** refusal). AST `FnSig.effects: Vec<String>`,
+  `Tok::Bang`. Checker `check_effect_coverage`: **declared ⊇ performed**, performed = union of every
+  callee's declared effects (top-level fn OR unqualified trait method) over fn bodies AND impl-method
+  bodies. Under-declaration = explicit `CheckError`; over-declaration OK. Guarantee **`Declared`**.
+  **No new L0 node (KC-3)** — effects are checker-only metadata, do NOT lower/run. DN-14 §3 row 8 →
+  `present`. RFC-0014 §3.4 surface pinned (append-only, still Enacted).
+- **M-659 — stage-1 trait/impl checker + coherence (landed `4b53bde`, 2026-06-22):**
+  `Item::Impl`, bounded type-params `<T: Cmp + …>`, `Tok::Plus`; trait/instance registries; coherence
+  (global uniqueness per `(trait, type-head)` + single-nodule orphan rule); exact method-set
+  conformance; bounded-call + unqualified trait-method resolution. Self-bound sugar `T: Cmp ≡ T: Cmp<T>`.
+  All refusals explicit (G2). Guarantee **`Declared`**. **Dictionary-passing L0 lowering STAGED →
+  M-673** (traits type-check but do NOT yet RUN). `Tok::Trait`/`Tok::Impl` active.
+- **track-a PM tooling (`fb92479`, #353) + M-674 depth-safety (landed 2026-06-22):**
+  `gh-issues-sync.py --relationships` (issue↔PR↔date manifest, status-aware; opt-in `--use-api`
+  REST+GraphQL; multi-phase milestone anchor). **M-674:** `mycelium-stack` crate, explicit budgets
+  on all L1 passes, kernel `#![forbid(unsafe_code)]`. Follow-ups: **M-675** (idmap reconcile),
+  **M-676** (multi-area project field — SECONDARY), **M-677** (effect→interp budget wiring).
+- **e7l first tranche — landed 2026-06-22:** **M-656** (generics spec); **M-657 checker** — generics
+  type-check (`Ty::Var` + applied `Ty::Data`, unification-based instantiation; **elaboration STAGED →
+  M-673**); **M-658** (trait surface + `impl` reserved `Tok::Impl`).
 - **Post-1.0 wave — first tranche landed (2026-06-21):** **#331** DN-20 tiered +
   change-scoped testing (cargo-nextest); **#330** mycelium-lsp baseline completions (M-669); **#332**
   **M-665** — 10 DN-03 runtime keywords reserved never-silent (G2); **#334** **RFC-0022** web-tooling
@@ -109,11 +121,11 @@ Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is 
 | RFC-0001…0010 | Accepted |
 | RFC-0011…0015 | **Enacted** (`crates/mycelium-lsp/`) |
 | RFC-0016 / 0017 / 0021 | **Enacted** (stdlib · maturation · projection framework) |
-| RFC-0018 / 0019 | Accepted (stage-1 grading / traits — **not yet implemented**; E7-1 closes them) |
+| RFC-0018 / 0019 | Accepted (grading / traits — **traits type-check** M-659/M-660 ✅; elaboration STAGED → M-673; grading `Declared` → M-663) |
 | RFC-0020 | Accepted (scoped) |
 | ADR-010…021 | Accepted (ADR-020 **Enacted**; **ADR-021** gate met, awaiting `Enacted` at the 1.0.0 tag) |
 | stdlib specs | **25/25 ratified**; only `self-hosting-readiness` Draft |
-| DNs | DN-01…03,06…13,16,19 Resolved; **DN-14** Draft (self-hosting gate — E7-1); DN-15,17,18 Draft |
+| DNs | DN-01…03,06…13,16,19 Resolved; **DN-14** Draft (self-hosting gate — row 6/7 partial [type-checks, elab STAGED → M-673], row 8 `present` M-660 ✅); DN-15,17,18 Draft |
 
 ### Implementation state
 
@@ -131,8 +143,12 @@ Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is 
 
 | ID | Title | Status |
 |----|-------|--------|
-| **E7-1** | L1 Stage-1 language completeness — generics→traits→effects→FFI→phylum→grading (M-656…M-664) | needs-design (active wave) |
-| **E7-2** | RFC-0008 runtime vocab — **M-665 done (#332)**; **M-666** `hypha`/`colony` real-concurrency **in integration**; next M-667 (`fuse`/`reclaim`/`tier`) → M-668 R2 | in progress |
+| **E7-1** | L1 Stage-1 language completeness — M-656/657/658/659/660 ✅ **LANDED**; next **M-661** (`wild`/FFI) → M-662 → M-663 → M-664 | active wave |
+| **E7-2** | RFC-0008 runtime vocab — **M-665 done (#332)**; **M-666** ✅ LANDED; next **M-667** (`fuse`/`reclaim`/`tier`) → M-668 R2 | in progress |
+| **M-673** | Monomorphization + trait-dictionary elaboration (makes generics/traits RUN) | follow-up (post E7-1) |
+| **M-675** | idmap full reconcile | follow-up |
+| **M-676** | Multi-area Projects-v2 field | follow-up (SECONDARY) |
+| **M-677** | Effect→`mycelium-interp::budget` runtime wiring + per-effect budget syntax | follow-up (post M-661) |
 | **Dogfooding** | RFC-0022 web + RFC-0023 ADK Drafts landed (#334/#335); doc-site (#336) + LSP completions (#330) landed. **Builds M-670/M-671 blocked** — gated on the RP-10/RP-9 deep-research follow-up (post-compaction) + E7-1/E7-2 | research-gated |
 | **M-649** | self-host the first stdlib nodule in Mycelium-lang | needs-design (after E7-1; M-502 ✅) |
 | M-655 | Cut 1.0.0 tag — ADR-021 → Enacted | **maintainer-reserved** |
@@ -140,18 +156,22 @@ Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is 
 
 ### Post-compaction continuation (durable handoff)
 
-**▶ NEXT (2026-06-22 — `/kickoff e7l`): M-660 (effect annotations) — IN FLIGHT.** M-659 (trait checker,
-`4b53bde`) + track-a PM tooling (`fb92479`, #353) + M-656/657/658 + M-674 depth-safety are all LANDED on
-`main`. **Maintainer direction (FIRM): complete the FULL lexicon (M-660→M-664→E7-2 M-667/M-668) BEFORE any
-dogfooding** — a complete surface unlocks whole-project self-hosting + the example phylum. The **M-660 leaf
-is in flight** (Opus worktree off `4b53bde`); **effect syntax decided: `fn f() -> T !{eff}`** (Koka `!`;
-unannotated = pure; coverage `declared ⊇ performed`, over-declare OK; no new L0 node; checker-side only). On
-resume: `git fetch origin`, find the leaf's pushed branch (`git branch -r | grep -iE 'worktree-agent|effect|660'`),
-verify scope, review (honesty + soundness pass — Copilot caught a real `require_instance` over-acceptance bug on
-M-659), gates, reconcile (CHANGELOG / issues.yaml M-660→done / DN-14 §3 row 8→present / regen api-index), squash-PR
-to `main`. **Then:** M-661→M-662→M-663→M-664→E7-2, **then** dogfooding M-673 (elaboration) → M-649 (self-host) →
-example phylum. See `.claude/kickoffs/e7l.md` "RESUME HERE". Open follow-ups: **M-673** (monomorphization +
-trait-dictionary elaboration), **M-675** (idmap reconcile), **M-676** (multi-area project field — secondary).
+**▶ NEXT (2026-06-22 — `/kickoff e7l`): M-661 (`wild`/FFI floor).** M-660 (effect annotations,
+`dfb7af5`) + M-659 (trait checker, `4b53bde`) + track-a PM tooling + M-656/657/658 + M-674 depth-safety
+are all LANDED on `main` (tip `dfb7af5`). **Maintainer direction (FIRM): complete the FULL lexicon
+(M-661→M-664→E7-2 M-667/M-668) BEFORE any dogfooding** — a complete surface unlocks whole-project
+self-hosting + the example phylum.
+
+**M-661:** accept `wild { … }` inside a fn that declares the `ffi` effect; `wild` becomes the `ffi`
+effect SOURCE for M-660's coverage checker; `myc-sec` wild-audit gate keeps flagging unapproved `wild`.
+**Chain:** M-661 → M-662 (`phylum`/cross-nodule + cross-nodule orphan from M-659) → M-663 (RFC-0018
+grading, stays `Declared`) → M-664 (`consume`/`grow`/`impl` keywords) → E7-2 M-667/M-668. **Then**
+dogfooding: M-673 (elaboration — monomorphization + trait dictionaries; makes generics/traits RUN) →
+M-649 (self-host first `.myc` nodule) → example phylum.
+
+Open follow-ups: **M-673** (monomorphization + trait-dictionary elaboration), **M-675** (idmap full
+reconcile), **M-676** (multi-area project field — SECONDARY), **M-677** (effect→`mycelium-interp::budget`
+runtime wiring + per-effect budget syntax `retry(<=3)`).
 
 **Durability lesson (earlier session):** a session compaction **orphans in-flight background agents**
 (observed: a ~12:59 mass-orphan of ~49 sub-agents + a ~4× render-time inflation in the tasks panel —
@@ -170,8 +190,8 @@ orphan is `origin/claude/rescue/m665-dup-orphan-a2f18c62` (a duplicate M-665 —
    (item 5). Each runs on a **protected head branch** current with `main`; land via **`/wave-land`**,
    propagate via `scripts/sync-heads.sh` (CLAUDE.md §Wave-N).
 2. **E7-1 generics chain** — serialize on the shared `mycelium-l1` files (one task at a time, never two
-   leaves editing token/parse/checkty/elab in parallel): M-656 spec → M-657 impl → M-658/M-659 traits →
-   M-660 effects → M-661 `wild`/FFI → M-662 phylum/cross-nodule → M-663 RFC-0018 grading → M-664
+   leaves editing token/parse/checkty/elab in parallel): M-656/M-657/M-658 ✅ generics → M-659 ✅ traits →
+   M-660 ✅ effects → **M-661** `wild`/FFI → M-662 phylum/cross-nodule → M-663 RFC-0018 grading → M-664
    `consume`/`grow`/`impl`. Unblocks **M-649** (self-hosting).
 3. **E7-2 continue:** M-667 (`fuse`/`reclaim`/`tier`) → M-668 (R2 design).
 4. **Web/ADK deep-research follow-up (RP-10 web / RP-9 ADK)** — the two-phase **gate** (fractured Opus
