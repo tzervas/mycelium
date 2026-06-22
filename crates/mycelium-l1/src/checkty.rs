@@ -9,8 +9,8 @@ use std::collections::BTreeMap;
 
 use crate::ambient::AmbientError;
 use crate::ast::{
-    BaseType, Expr, FnDecl, Hypha, Item, Literal, Nodule, Paradigm, Path, Pattern, Scalar,
-    Strength, TypeDecl, TypeRef,
+    BaseType, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, Nodule, Paradigm, Path, Pattern,
+    Scalar, Strength, TraitRef, TypeDecl, TypeRef,
 };
 
 /// The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02).
@@ -175,6 +175,54 @@ pub struct DataInfo {
     pub ctors: Vec<CtorInfo>,
 }
 
+/// A registered **trait** (RFC-0019 §4.2; LR-2). Stage-1 is single-parameter, but the structure
+/// carries `params: Vec<String>` uniformly (the trait's type-variable names, in scope as `Ty::Var`
+/// while its method signatures are checked). The method `sigs` are stored as their surface
+/// [`FnSig`]s; an `impl`'s methods are checked against the trait's sigs with `params ↦ trait_args`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TraitInfo {
+    /// Trait name.
+    pub name: String,
+    /// Type-parameter names (single-parameter in stage-1; abstract over the method sigs).
+    pub params: Vec<String>,
+    /// The required method signatures, in declaration order.
+    pub sigs: Vec<FnSig>,
+}
+
+/// A registered **instance** `impl Trait<args> for T` (RFC-0019 §4.5). Keyed in [`Env::instances`]
+/// by `(trait_name, type_head(for_ty))`; the full `for_ty`/`trait_args` are kept for `EXPLAIN` and
+/// the staged dictionary lowering (M-673).
+#[derive(Debug, Clone, PartialEq)]
+pub struct InstanceInfo {
+    /// The trait this instances.
+    pub trait_name: String,
+    /// The (concrete) trait arguments.
+    pub trait_args: Vec<Ty>,
+    /// The (concrete) type the instance is for.
+    pub for_ty: Ty,
+    /// The provided method names (a non-silent record of what the dictionary supplies).
+    pub methods: Vec<String>,
+}
+
+/// The **coherence key** of a type (RFC-0019 §4.5): the head a `(trait, type-head)` instance key is
+/// computed from. Width/shape is intentionally **erased** — stage-1 keys per *head*, conservatively
+/// rejecting two instances on the same head even at different widths (a documented, deferrable
+/// refinement; the alternative, width-granular keying, needs the role/variance machinery deferred to
+/// v2). A bare type **variable** is not a legal instance head in stage-1 (an `impl … for T` over an
+/// abstract `T` would be a blanket instance — refused explicitly, never silently), so `Ty::Var`
+/// yields `None`.
+#[must_use]
+pub fn type_head(ty: &Ty) -> Option<String> {
+    Some(match ty {
+        Ty::Binary(_) => "Binary".to_owned(),
+        Ty::Ternary(_) => "Ternary".to_owned(),
+        Ty::Dense(_, _) => "Dense".to_owned(),
+        Ty::Substrate(t) => format!("Substrate:{t}"),
+        Ty::Data(n, _) => format!("Data:{n}"),
+        Ty::Var(_) => return None,
+    })
+}
+
 /// Substitute type arguments for the abstract parameters in a stage-1 type (RFC-0007 §11.2): replace
 /// each [`Ty::Var`] by its binding in `s`, recursing into [`Ty::Data`] arguments. A `Var` with no
 /// binding is left as-is (it is a parameter still in scope — e.g. while checking a generic body). This
@@ -260,6 +308,15 @@ pub struct Env {
     pub fns: BTreeMap<String, FnDecl>,
     /// Per-function totality classification (RFC-0007 §4.5), filled by the totality checker.
     pub totality: BTreeMap<String, crate::totality::Totality>,
+    /// Trait registry (RFC-0019 §4.2; LR-2), keyed by trait name. A trait is a **registry entry**,
+    /// never a kernel node (KC-3). Stored for `EXPLAIN` and for the staged dictionary lowering
+    /// (M-673).
+    pub traits: BTreeMap<String, TraitInfo>,
+    /// Instance registry (RFC-0019 §4.5; the **coherence** key), keyed by `(trait_name, type_head)`.
+    /// Head-granular keying is the stage-1 coherence discipline — at most one instance per
+    /// `(trait, type-head)` (global uniqueness). Stored for instance resolution + the staged
+    /// dictionary lowering (M-673).
+    pub instances: BTreeMap<(String, String), InstanceInfo>,
 }
 
 impl Env {
@@ -291,6 +348,21 @@ impl Env {
     #[must_use]
     pub fn fn_totality(&self, name: &str) -> Option<crate::totality::Totality> {
         self.totality.get(name).copied()
+    }
+
+    /// The registered trait named `name`, if any (RFC-0019 §4.2). Additive read-only accessor over
+    /// the public [`traits`](Env::traits) map.
+    #[must_use]
+    pub fn trait_info(&self, name: &str) -> Option<&TraitInfo> {
+        self.traits.get(name)
+    }
+
+    /// The registered instance for `(trait_name, head)`, if any (RFC-0019 §4.5). `head` is a
+    /// [`type_head`]. Additive read-only accessor over the public [`instances`](Env::instances) map.
+    #[must_use]
+    pub fn instance(&self, trait_name: &str, head: &str) -> Option<&InstanceInfo> {
+        self.instances
+            .get(&(trait_name.to_owned(), head.to_owned()))
     }
 }
 
@@ -482,6 +554,11 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
         }
     }
 
+    // Pass 1b: register trait declarations (RFC-0019 §4.2; LR-2). A trait is a registry entry, never
+    // a kernel node (KC-3). Its method signatures must resolve with the trait's params in scope as
+    // abstract type-variables; duplicate trait names and duplicate method names are explicit errors.
+    let traits = register_traits(&types, nodule)?;
+
     // Pass 2: collect functions (signatures must resolve). Stage-1: a **generic** function
     // `fn head<A>(…)` is registered as-is; its body is checked in Pass 3 with `A` an abstract
     // variable, and call sites instantiate it (RFC-0007 §11.2/§11.3).
@@ -489,7 +566,7 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     for item in &nodule.items {
         match item {
             Item::Fn(fd) => {
-                if let Some(dup) = first_duplicate(&fd.sig.params) {
+                if let Some(dup) = first_duplicate(&fd.sig.param_names()) {
                     return Err(CheckError::new(
                         &fd.sig.name,
                         format!("duplicate type parameter `{dup}` in `{}`", fd.sig.name),
@@ -500,36 +577,27 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
                 }
             }
             // `default` is consumed by the resolution pass; it never reaches `check_resolved`.
-            Item::Default(_) | Item::Trait(_) | Item::Use(_) | Item::Type(_) => {}
+            // Traits were registered in Pass 1b; impls are handled in Pass 2b (below).
+            Item::Default(_) | Item::Trait(_) | Item::Impl(_) | Item::Use(_) | Item::Type(_) => {}
         }
     }
+
+    // Pass 2b: register trait **instances** (RFC-0019 §4.5). Coherence (global uniqueness + the
+    // orphan rule) is enforced as each instance is registered; ALL instances are registered before
+    // any method body is checked (Pass 3b), so a method body may rely on an instance declared by a
+    // *later* `impl`. This pass resolves heads + checks coherence; it does not yet check bodies.
+    let instances = register_instances(&types, &traits, nodule)?;
 
     // Pass 3: type every body **against** its declared return type (bidirectional, RFC-0012 §4.3)
     // and resolve any ambient bare-decimal widths from context — rewriting each body so the
     // downstream evaluator/elaborator see only concrete literals.
     let mut resolved_fns: BTreeMap<String, FnDecl> = BTreeMap::new();
     for fd in fns.values() {
-        let site = &fd.sig.name;
         // Stage-1: the function's type parameters are in scope while resolving its signature and
-        // checking its body — each resolves to a `Ty::Var` (RFC-0007 §11.2).
-        let tyvars = &fd.sig.params;
-        let mut scope: Vec<(String, Ty)> = Vec::new();
-        for p in &fd.sig.value_params {
-            let (ty, _) = resolve_ty(site, &types, tyvars, &p.ty)?;
-            scope.push((p.name.clone(), ty));
-        }
-        let (ret, _) = resolve_ty(site, &types, tyvars, &fd.sig.ret)?;
-        let cx = Cx {
-            site,
-            types: &types,
-            fns: &fns,
-            tyvars,
-            depth: Cell::new(0),
-        };
-        let (got, body) = cx.check(&mut scope, &fd.body, Some(&ret))?;
-        if got != ret {
-            return Err(CheckError::new(site, edge_mismatch("body", &ret, &got)));
-        }
+        // checking its body — each resolves to a `Ty::Var` (RFC-0007 §11.2). Bounds (RFC-0019 §4.1)
+        // are validated and carried so an unqualified trait-method call in the body can type through
+        // a bound (the dictionary it stands for is staged — RFC-0007 §12.3 / M-673).
+        let (body, _ret) = check_fn_body(&types, &fns, &traits, &instances, fd)?;
         resolved_fns.insert(
             fd.sig.name.clone(),
             FnDecl {
@@ -540,6 +608,16 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
         );
     }
     let fns = resolved_fns;
+
+    // Pass 3b: check each `impl` method body against its **expected** signature (the trait sig with
+    // the trait's params substituted by this impl's trait_args — RFC-0019 §4.5). The instance set is
+    // fully registered (Pass 2b), so a method may use any instance. Bodies are checked but not
+    // re-stored (the elaborator stages the dictionary lowering — M-673), only validated.
+    for item in &nodule.items {
+        if let Item::Impl(id) = item {
+            check_impl_methods(&types, &fns, &traits, &instances, id)?;
+        }
+    }
 
     // Pass 4: totality classification + the scope-quantified matured gate (RFC-0017 §4.2).
     // When `matured_scope` is true, every fn with `thaw == false` must be `Total`; a non-total
@@ -564,6 +642,8 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
         types,
         fns,
         totality,
+        traits,
+        instances,
     })
 }
 
@@ -601,14 +681,472 @@ fn first_duplicate(xs: &[String]) -> Option<&String> {
     xs.iter().find(|x| !seen.insert((*x).clone()))
 }
 
+/// **Trait pass** (RFC-0019 §4.2; LR-2 — guarantee: `Declared`, a structural registry check, not a
+/// theorem). Register each `trait Tr<params> { fn … }` as a [`TraitInfo`]: reject a duplicate trait
+/// name; reject duplicate type-parameter names and duplicate method names; and check that **every**
+/// method signature *resolves* with the trait's params in scope as abstract type-variables (its
+/// value-param types and return type via [`resolve_ty`]). A trait is a registry entry, never a
+/// kernel node (KC-3). Every refusal is an explicit [`CheckError`] (G2).
+fn register_traits(
+    types: &BTreeMap<String, DataInfo>,
+    nodule: &Nodule,
+) -> Result<BTreeMap<String, TraitInfo>, CheckError> {
+    let mut traits: BTreeMap<String, TraitInfo> = BTreeMap::new();
+    for item in &nodule.items {
+        let Item::Trait(td) = item else { continue };
+        let site = &td.name;
+        if let Some(dup) = first_duplicate(&td.params) {
+            return Err(CheckError::new(
+                site,
+                format!("duplicate type parameter `{dup}` in trait `{}`", td.name),
+            ));
+        }
+        if traits.contains_key(&td.name) {
+            return Err(CheckError::new(site, "duplicate trait declaration"));
+        }
+        // Method names must be distinct within the trait (a duplicated requirement is ambiguous).
+        let mut seen_methods: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+        for s in &td.sigs {
+            if !seen_methods.insert(s.name.as_str()) {
+                return Err(CheckError::new(
+                    site,
+                    format!("duplicate method `{}` in trait `{}`", s.name, td.name),
+                ));
+            }
+            // Each method sig must resolve with the trait's params (and the method's own params) in
+            // scope as type-variables (RFC-0007 §11.2). A method may carry its own type-params too;
+            // bounds on them are validated against the complete trait registry in the pass below (G2).
+            let mut tyvars = td.params.clone();
+            tyvars.extend(s.param_names());
+            check_sig_resolves(types, site, &tyvars, s)?;
+        }
+        traits.insert(
+            td.name.clone(),
+            TraitInfo {
+                name: td.name.clone(),
+                params: td.params.clone(),
+                sigs: td.sigs.clone(),
+            },
+        );
+    }
+    // The registry is now complete: validate that every trait-method type-parameter BOUND names a
+    // KNOWN trait. This is a second pass precisely so a bound may forward-reference a later-declared
+    // trait. An unknown bound (`fn f<T: Nope>(…)`) is an explicit error here, never silently
+    // registered (G2) — otherwise the ill-formed requirement would surface only at an unrelated
+    // later check, or never (if no impl exercises it).
+    for tr in traits.values() {
+        for s in &tr.sigs {
+            for tp in &s.params {
+                for b in &tp.bounds {
+                    if !traits.contains_key(&b.name) {
+                        return Err(CheckError::new(
+                            &tr.name,
+                            format!(
+                                "trait `{}` method `{}`: unknown trait `{}` in the bound `{}: {}` \
+                                 (RFC-0019 §4.1 — a method's type-parameter bound must name a \
+                                 declared trait)",
+                                tr.name, s.name, b.name, tp.name, b.name
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    Ok(traits)
+}
+
+/// Confirm a [`FnSig`]'s value-parameter types and return type all resolve under `tyvars` (the
+/// abstract type-variables in scope). Shared by the trait pass (method requirements) and the
+/// bounded-fn body checker (signature validation). Does not check the body — only the signature.
+fn check_sig_resolves(
+    types: &BTreeMap<String, DataInfo>,
+    site: &str,
+    tyvars: &[String],
+    sig: &FnSig,
+) -> Result<(), CheckError> {
+    for p in &sig.value_params {
+        resolve_ty(site, types, tyvars, &p.ty)?;
+    }
+    resolve_ty(site, types, tyvars, &sig.ret)?;
+    Ok(())
+}
+
+/// **Impl pass — registration + coherence** (RFC-0019 §4.5; LR-2 — guarantee: `Declared`, the
+/// coherence argument is Declared-with-argument per RFC-0019, not machine-checked). For each
+/// `impl Trait<args> for T`:
+/// - resolve `for_ty` and each `trait_args` to a **concrete** [`Ty`] (no type-variables in scope);
+/// - the trait must exist and the argument **arity** must match the trait's params (else explicit);
+/// - **global uniqueness:** key `(trait, type_head(for_ty))` must be free, else an overlapping-
+///   instance / coherence refusal naming the pair (RFC-0019 §4.5; ADR-003);
+/// - **orphan rule (single-nodule stage-1):** the trait is declared here, OR `for_ty` is a `Data`
+///   declared here, OR `for_ty` is a primitive repr type (`Binary`/`Ternary`/`Dense`/`Substrate`);
+///   otherwise an explicit orphan refusal (cross-nodule enforcement is staged with the phylum work,
+///   M-662).
+///
+/// Method *bodies* are not checked here (that is [`check_impl_methods`], after the whole instance
+/// set is known); method *presence* (exact-match against the trait's sigs) IS checked here.
+fn register_instances(
+    types: &BTreeMap<String, DataInfo>,
+    traits: &BTreeMap<String, TraitInfo>,
+    nodule: &Nodule,
+) -> Result<BTreeMap<(String, String), InstanceInfo>, CheckError> {
+    // Which traits / data types are declared in *this* nodule (the orphan-rule locality test).
+    let local_traits: std::collections::BTreeSet<&str> = nodule
+        .items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Trait(td) => Some(td.name.as_str()),
+            _ => None,
+        })
+        .collect();
+    let local_types: std::collections::BTreeSet<&str> = nodule
+        .items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Type(td) => Some(td.name.as_str()),
+            _ => None,
+        })
+        .collect();
+
+    let mut instances: BTreeMap<(String, String), InstanceInfo> = BTreeMap::new();
+    for item in &nodule.items {
+        let Item::Impl(id) = item else { continue };
+        let site = &id.trait_name;
+        // The trait must exist.
+        let Some(tr) = traits.get(&id.trait_name) else {
+            return Err(CheckError::new(
+                site,
+                format!(
+                    "`impl` for unknown trait `{}` (RFC-0019 §4.5)",
+                    id.trait_name
+                ),
+            ));
+        };
+        // Resolve the `for` type and the trait arguments concretely (no type-variables in scope —
+        // an instance head is a concrete type in stage-1).
+        let (for_ty, _) = resolve_ty(site, types, &[], &id.for_ty)?;
+        let mut trait_args = Vec::with_capacity(id.trait_args.len());
+        for a in &id.trait_args {
+            trait_args.push(resolve_ty(site, types, &[], a)?.0);
+        }
+        // Arity: the trait's params count must equal the written trait-argument count.
+        if trait_args.len() != tr.params.len() {
+            return Err(CheckError::new(
+                site,
+                format!(
+                    "trait `{}` takes {} type argument(s), but this `impl` supplies {} \
+                     (RFC-0019 §4.5)",
+                    tr.name,
+                    tr.params.len(),
+                    trait_args.len()
+                ),
+            ));
+        }
+        // Coherence key — the type head (width/shape erased; stage-1 keys per head).
+        let Some(head) = type_head(&for_ty) else {
+            return Err(CheckError::new(
+                site,
+                format!(
+                    "an `impl … for {for_ty}` over a bare type variable is not a legal instance \
+                     head in stage-1 (no blanket instances — RFC-0019 §4.5); the `for` type must \
+                     be concrete"
+                ),
+            ));
+        };
+        // Orphan rule (single-nodule stage-1; RFC-0019 §4.5): legal iff the trait is local, OR the
+        // `for` type is a local data type, OR a primitive repr type.
+        let trait_local = local_traits.contains(id.trait_name.as_str());
+        let type_local = match &for_ty {
+            Ty::Data(n, _) => local_types.contains(n.as_str()),
+            // Primitive repr types are "owned here" for stage-1 single-nodule (RFC-0019 §4.5).
+            Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) => true,
+            Ty::Var(_) => false,
+        };
+        if !trait_local && !type_local {
+            return Err(CheckError::new(
+                site,
+                format!(
+                    "orphan instance: `impl {} for {for_ty}` is in neither the trait's nodule nor \
+                     `{for_ty}`'s nodule (RFC-0019 §4.5 orphan rule); cross-nodule instances are \
+                     staged with the phylum work (M-662)",
+                    id.trait_name
+                ),
+            ));
+        }
+        // Global uniqueness — at most one instance per `(trait, head)` (RFC-0019 §4.5; ADR-003). A
+        // duplicate (even at a different width on the same head — the documented stage-1 over-rejection)
+        // is an explicit coherence refusal, never a silent shadow (G2).
+        let key = (id.trait_name.clone(), head.clone());
+        if instances.contains_key(&key) {
+            return Err(CheckError::new(
+                site,
+                format!(
+                    "overlapping instance — coherence/global-uniqueness violation (RFC-0019 §4.5): \
+                     a second `impl {} for` a `{head}` type. Stage-1 keys per (trait, type-head), so \
+                     two instances on the same head (even at different widths) conflict.",
+                    id.trait_name
+                ),
+            ));
+        }
+        // Method presence: the impl's method set must EXACTLY match the trait's required sigs.
+        check_impl_method_set(tr, id)?;
+        instances.insert(
+            key,
+            InstanceInfo {
+                trait_name: id.trait_name.clone(),
+                trait_args,
+                for_ty,
+                methods: id.methods.iter().map(|m| m.sig.name.clone()).collect(),
+            },
+        );
+    }
+    Ok(instances)
+}
+
+/// The impl's method **set** must match the trait's requirement set **exactly** (RFC-0019 §4.5):
+/// a missing method and an extra method are both explicit refusals (never silently filled or
+/// dropped — G2). Signature/body agreement is [`check_impl_methods`]; this is only presence/names.
+fn check_impl_method_set(tr: &TraitInfo, id: &ImplDecl) -> Result<(), CheckError> {
+    let site = &id.trait_name;
+    let required: std::collections::BTreeSet<&str> =
+        tr.sigs.iter().map(|s| s.name.as_str()).collect();
+    let provided: std::collections::BTreeSet<&str> =
+        id.methods.iter().map(|m| m.sig.name.as_str()).collect();
+    for need in &required {
+        if !provided.contains(need) {
+            return Err(CheckError::new(
+                site,
+                format!("impl of `{}` is missing method `{need}`", tr.name),
+            ));
+        }
+    }
+    for have in &provided {
+        if !required.contains(have) {
+            return Err(CheckError::new(
+                site,
+                format!(
+                    "impl of `{}` has method `{have}` not in trait `{}`",
+                    tr.name, tr.name
+                ),
+            ));
+        }
+    }
+    // A method must not be provided twice (ambiguous dictionary slot).
+    if let Some(dup) = first_duplicate(
+        &id.methods
+            .iter()
+            .map(|m| m.sig.name.clone())
+            .collect::<Vec<_>>(),
+    ) {
+        return Err(CheckError::new(
+            site,
+            format!(
+                "impl of `{}` provides method `{dup}` more than once",
+                tr.name
+            ),
+        ));
+    }
+    Ok(())
+}
+
+/// Check one `impl`'s method bodies against their **expected** signatures (RFC-0019 §4.5; guarantee:
+/// `Declared` — a structural check). The expected signature of method `m` is the trait's sig for `m`
+/// with the trait's params substituted by this impl's `trait_args`; the method body is checked the
+/// normal fn-body way against those substituted value-param/return types. A signature mismatch
+/// (wrong param types or arity, wrong return) is an explicit refusal, never silently accepted.
+fn check_impl_methods(
+    types: &BTreeMap<String, DataInfo>,
+    fns: &BTreeMap<String, FnDecl>,
+    traits: &BTreeMap<String, TraitInfo>,
+    instances: &BTreeMap<(String, String), InstanceInfo>,
+    id: &ImplDecl,
+) -> Result<(), CheckError> {
+    let tr = traits
+        .get(&id.trait_name)
+        .expect("instance registration checked the trait exists");
+    // The trait-arg substitution `trait.params ↦ impl.trait_args` (resolved concretely).
+    let (for_ty, _) = resolve_ty(&id.trait_name, types, &[], &id.for_ty)?;
+    let mut trait_args = Vec::with_capacity(id.trait_args.len());
+    for a in &id.trait_args {
+        trait_args.push(resolve_ty(&id.trait_name, types, &[], a)?.0);
+    }
+    let s = param_subst(&tr.params, &trait_args);
+    for method in &id.methods {
+        let req = tr
+            .sigs
+            .iter()
+            .find(|x| x.name == method.sig.name)
+            .expect("method-set match checked at registration");
+        let site = &method.sig.name;
+        // Arity must match the requirement.
+        if method.sig.value_params.len() != req.value_params.len() {
+            return Err(CheckError::new(
+                site,
+                format!(
+                    "impl method `{}` of `{}` takes {} parameter(s), but the trait requires {}",
+                    method.sig.name,
+                    tr.name,
+                    method.sig.value_params.len(),
+                    req.value_params.len()
+                ),
+            ));
+        }
+        // Each declared parameter type must equal the (substituted) required type; likewise the
+        // return type. The method's own value-param types are resolved concretely (the impl is over a
+        // concrete `for_ty`, so the method carries no abstract type-variables in stage-1).
+        for (mp, rp) in method.sig.value_params.iter().zip(&req.value_params) {
+            let (got, _) = resolve_ty(site, types, &[], &mp.ty)?;
+            let want = subst_ty(&resolve_ty(site, types, &tr.params, &rp.ty)?.0, &s);
+            if got != want {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "impl method `{}` parameter `{}`: {}",
+                        method.sig.name,
+                        mp.name,
+                        edge_mismatch("type", &want, &got)
+                    ),
+                ));
+            }
+        }
+        let (got_ret, _) = resolve_ty(site, types, &[], &method.sig.ret)?;
+        let want_ret = subst_ty(&resolve_ty(site, types, &tr.params, &req.ret)?.0, &s);
+        if got_ret != want_ret {
+            return Err(CheckError::new(
+                site,
+                format!(
+                    "impl method `{}` return: {}",
+                    method.sig.name,
+                    edge_mismatch("type", &want_ret, &got_ret)
+                ),
+            ));
+        }
+        // The body is checked the normal fn-body way (against the method's own — now validated —
+        // signature). `for_ty` is concrete, so the body has no abstract type-variables; the full
+        // trait/instance context is available so the body may itself call trait methods.
+        check_fn_body(types, fns, traits, instances, method)?;
+    }
+    let _ = for_ty; // resolved above for the arg substitution; head reuse is at registration.
+    Ok(())
+}
+
+/// Check a function (or impl method) body against its declared signature (RFC-0007 §11; RFC-0019
+/// §4.1). Validates the type-parameter bounds, builds the `tyvars`/`bounds` scopes, resolves the
+/// value-param + return types, and runs the bidirectional [`Cx::check`]. Returns the **resolved**
+/// body (ambient bare-decimals filled) and the resolved return type. Shared by Pass 3 (top-level
+/// fns) and [`check_impl_methods`] (impl methods) — DRY.
+fn check_fn_body(
+    types: &BTreeMap<String, DataInfo>,
+    fns: &BTreeMap<String, FnDecl>,
+    traits: &BTreeMap<String, TraitInfo>,
+    instances: &BTreeMap<(String, String), InstanceInfo>,
+    fd: &FnDecl,
+) -> Result<(Expr, Ty), CheckError> {
+    let site = &fd.sig.name;
+    let tyvars = fd.sig.param_names();
+    // Validate every bound names a real trait with the right argument arity (RFC-0019 §4.1). The
+    // bound's trait-args may reference the fn's own type-variables (`T: Cmp<T>`), so resolve them
+    // with `tyvars` in scope. A bound on an unknown trait / wrong arity is an explicit refusal.
+    let bounds = check_bounds(types, traits, site, &tyvars, &fd.sig.params)?;
+    let mut scope: Vec<(String, Ty)> = Vec::new();
+    for p in &fd.sig.value_params {
+        let (ty, _) = resolve_ty(site, types, &tyvars, &p.ty)?;
+        scope.push((p.name.clone(), ty));
+    }
+    let (ret, _) = resolve_ty(site, types, &tyvars, &fd.sig.ret)?;
+    let cx = Cx {
+        site,
+        types,
+        fns,
+        traits,
+        instances,
+        tyvars: &tyvars,
+        bounds: &bounds,
+        depth: Cell::new(0),
+    };
+    let (got, body) = cx.check(&mut scope, &fd.body, Some(&ret))?;
+    if got != ret {
+        return Err(CheckError::new(site, edge_mismatch("body", &ret, &got)));
+    }
+    Ok((body, ret))
+}
+
+/// Validate a function/method's type-parameter **bounds** (RFC-0019 §4.1): each bound must name a
+/// registered trait with the correct type-argument arity, and the bound's trait-args must resolve
+/// under `tyvars`. Returns the `(param, bounds)` pairs (only the bounded params) for the checking
+/// context. Every refusal is explicit (G2). The dictionary the bound stands for is staged to
+/// elaboration (RFC-0007 §12.3 / M-673) — the checker only validates satisfiability ("typing").
+fn check_bounds(
+    types: &BTreeMap<String, DataInfo>,
+    traits: &BTreeMap<String, TraitInfo>,
+    site: &str,
+    tyvars: &[String],
+    params: &[crate::ast::TypeParam],
+) -> Result<Vec<(String, Vec<TraitRef>)>, CheckError> {
+    let mut bounds: Vec<(String, Vec<TraitRef>)> = Vec::new();
+    for p in params {
+        for b in &p.bounds {
+            let Some(tr) = traits.get(&b.name) else {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "bound `{}: {}` names unknown trait `{}` (RFC-0019 §4.1)",
+                        p.name, b.name, b.name
+                    ),
+                ));
+            };
+            // Arity: written args must match the trait's params — **except** the canonical
+            // elided-self form `T: Cmp` on a single-parameter trait, which is sugar for `T: Cmp<T>`
+            // (Rust/Haskell `T: Cmp` ⇒ `Cmp T`). That elision is *only* valid for a single-param
+            // trait with zero written args; any other count mismatch is an explicit refusal (G2).
+            let elided_self = b.args.is_empty() && tr.params.len() == 1;
+            if !elided_self && b.args.len() != tr.params.len() {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "bound `{}: {}<…>` supplies {} type argument(s), but trait `{}` takes {} \
+                         (write `{}: {}` for the single-parameter self-bound, or supply all args)",
+                        p.name,
+                        b.name,
+                        b.args.len(),
+                        b.name,
+                        tr.params.len(),
+                        p.name,
+                        b.name
+                    ),
+                ));
+            }
+            for a in &b.args {
+                resolve_ty(site, types, tyvars, a)?;
+            }
+        }
+        if !p.bounds.is_empty() {
+            bounds.push((p.name.clone(), p.bounds.clone()));
+        }
+    }
+    Ok(bounds)
+}
+
 /// The checking context for one function body.
 struct Cx<'a> {
     site: &'a str,
     types: &'a BTreeMap<String, DataInfo>,
     fns: &'a BTreeMap<String, FnDecl>,
+    /// Trait registry (RFC-0019 §4.2) — for resolving bounded-generic-call satisfiability and
+    /// unqualified trait-method calls (`Tr::m`). Empty in re-inference (`infer_type`).
+    traits: &'a BTreeMap<String, TraitInfo>,
+    /// Instance registry (RFC-0019 §4.5), keyed by `(trait, type-head)` — the coherence map a
+    /// bounded call / trait-method call resolves against. Empty in re-inference.
+    instances: &'a BTreeMap<(String, String), InstanceInfo>,
     /// The type parameters in scope for this body (RFC-0007 §11.2) — empty for a monomorphic
     /// function. A bare `Named` type that matches one of these resolves to [`Ty::Var`].
     tyvars: &'a [String],
+    /// The **bounds** on the type parameters in scope (`T: Cmp` ⇒ `("T", TraitRef{Cmp})`), so an
+    /// unqualified trait-method call inside a bounded body can be typed through a bound (the
+    /// dictionary it stands for is staged to elaboration — RFC-0007 §12.3 / M-673). Parallel to
+    /// `tyvars`; empty for an unbounded/monomorphic body.
+    bounds: &'a [(String, Vec<TraitRef>)],
     /// Live expression-nesting depth for the explicit [`MAX_CHECK_DEPTH`] budget (interior
     /// mutability so [`Self::check`] stays `&self`). Reset per body; accounted by [`DepthGuard`].
     depth: Cell<u32>,
@@ -1002,6 +1540,13 @@ impl Cx<'_> {
                 .check_app_generic_ctor(scope, head, name, dname, params, fields, args, expected);
         }
 
+        // Unqualified **trait-method** call (RFC-0019 §4.4; RFC-0007 §12.1): if `name` is not a
+        // fn/ctor (checked above) but is a method of exactly one registered trait, resolve it
+        // through a bound in scope or a concrete instance — extracted (frame-size; A4-02).
+        if self.is_trait_method(name) {
+            return self.check_trait_method_call(scope, head, name, args, expected);
+        }
+
         // Builtin prim: width-polymorphic and width-preserving, so the result's expected width (or
         // a concrete operand's width) anchors any bare-decimal operand (RFC-0012 §4.3). Inlined
         // (not a separate method) to keep the per-nesting-level host-stack frame count at the
@@ -1072,11 +1617,11 @@ impl Cx<'_> {
         fd: &FnDecl,
         args: &[Expr],
     ) -> Result<(Ty, Expr), CheckError> {
-        let callee_vars = &fd.sig.params;
+        let callee_vars = fd.sig.param_names();
         let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
         let mut rebuilt = Vec::with_capacity(args.len());
         for (pm, a) in fd.sig.value_params.iter().zip(args) {
-            let want = resolve_ty(self.site, self.types, callee_vars, &pm.ty)?.0;
+            let want = resolve_ty(self.site, self.types, &callee_vars, &pm.ty)?.0;
             let want_now = subst_ty(&want, &subst);
             // A fully-concrete (post-substitution) expected type drives the argument's check (so a
             // bare decimal takes the width); a still-abstract one lets the argument synthesize.
@@ -1094,7 +1639,7 @@ impl Cx<'_> {
             })?;
             rebuilt.push(a2);
         }
-        for v in callee_vars {
+        for v in &callee_vars {
             if !subst.contains_key(v) {
                 return self.err(format!(
                     "`{name}` is generic over `{v}`, but this call does not determine it — \
@@ -1102,8 +1647,202 @@ impl Cx<'_> {
                 ));
             }
         }
+        // Bounded-generic-call satisfiability (RFC-0019 §4.1/§4.5; RFC-0007 §12.1). Now `T = C` is
+        // solved, for each bound `T: Tr` on a type-parameter require an instance `(Tr, head(C))` to
+        // exist — else an explicit "no instance" refusal. The dictionary VALUE is NOT constructed
+        // here (staged to elaboration — RFC-0007 §12.3 / M-673); the checker only validates the bound
+        // is *satisfiable* ("dictionary typing"), never a silent skip (G2).
+        for p in &fd.sig.params {
+            for b in &p.bounds {
+                let concrete = subst
+                    .get(&p.name)
+                    .cloned()
+                    .unwrap_or(Ty::Var(p.name.clone()));
+                self.require_instance(
+                    &b.name,
+                    &concrete,
+                    &format!("required by `{name}`'s bound `{}: {}`", p.name, b.name),
+                )?;
+            }
+        }
         let ret = subst_ty(
-            &resolve_ty(self.site, self.types, callee_vars, &fd.sig.ret)?.0,
+            &resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0,
+            &subst,
+        );
+        Ok((ret, app_node(head, rebuilt)))
+    }
+
+    /// Require that an instance `(trait_name, type_head(concrete))` exists, or refuse explicitly
+    /// (RFC-0019 §4.5; G2). Used for bounded-generic-call satisfiability and concrete trait-method
+    /// resolution. If `concrete` is still abstract (a bare `Ty::Var` — the call is itself inside a
+    /// bounded generic whose bound already guarantees the instance at the eventual concrete type),
+    /// the requirement is **discharged by the bound in scope**: it is satisfied iff that same
+    /// `(var: trait)` bound is present in `self.bounds` (else an explicit "no instance/bound" error).
+    /// The dictionary value is staged to elaboration (M-673) — this is satisfiability only.
+    fn require_instance(
+        &self,
+        trait_name: &str,
+        concrete: &Ty,
+        because: &str,
+    ) -> Result<(), CheckError> {
+        match type_head(concrete) {
+            Some(head) => match self.instances.get(&(trait_name.to_owned(), head)) {
+                // Head-erasure is the COHERENCE key (≤1 instance per head); RESOLUTION must still
+                // match the FULL concrete type — a `Binary{8}` instance does not satisfy a `Binary{4}`
+                // call. Head-erasure over-REJECTS duplicates; it must never over-ACCEPT a different
+                // type (G2: never silently reuse a mismatched instance).
+                Some(info) if info.for_ty == *concrete => Ok(()),
+                Some(info) => self.err(format!(
+                    "no instance `{trait_name}` for `{concrete}` ({because}) — the `{trait_name}` \
+                     instance on this type head is declared for `{}`, not `{concrete}` (RFC-0019 §4.5)",
+                    info.for_ty
+                )),
+                None => self.err(format!(
+                    "no instance `{trait_name}` for `{concrete}` ({because}) — declare \
+                     `impl {trait_name}<…> for {concrete} {{ … }}` (RFC-0019 §4.5, never assumed)"
+                )),
+            },
+            // `concrete` is a type-variable in scope: discharge via a matching bound (the dictionary
+            // is threaded by the eventual caller — RFC-0007 §12.3 / M-673).
+            None => {
+                let Ty::Var(v) = concrete else {
+                    return self.err(format!(
+                        "no instance `{trait_name}` for `{concrete}` ({because})"
+                    ));
+                };
+                let satisfied = self
+                    .bounds
+                    .iter()
+                    .any(|(pv, bs)| pv == v && bs.iter().any(|b| b.name == trait_name));
+                if satisfied {
+                    Ok(())
+                } else {
+                    self.err(format!(
+                        "no instance/bound provides `{trait_name}` for type variable `{v}` \
+                         ({because}) — add the bound `{v}: {trait_name}` (RFC-0019 §4.1)"
+                    ))
+                }
+            }
+        }
+    }
+
+    /// Is `name` a method of some registered trait? (The call-resolution path uses this to decide
+    /// whether to try trait-method resolution — fn/ctor names were already dispatched, so a name
+    /// reaching here that matches a trait method is an unqualified trait-method call.)
+    fn is_trait_method(&self, name: &str) -> bool {
+        self.traits
+            .values()
+            .any(|tr| tr.sigs.iter().any(|s| s.name == name))
+    }
+
+    /// Resolve and type an **unqualified trait-method call** `m(args)` (RFC-0019 §4.4; RFC-0007
+    /// §12.1; guarantee: `Declared`). The method must belong to **exactly one** trait (ambiguity
+    /// across traits is an explicit error — never a guess). The trait's single type-parameter is
+    /// determined by **unifying** the trait method's signature against the actual argument types;
+    /// then an instance must exist — either a concrete `(Tr, head(C))` or a `T: Tr` **bound in
+    /// scope** (dictionary staged to elaboration — M-673). The call types at the (substituted)
+    /// method return type. Extracted (`#[inline(never)]`) for the frame-size reason as the other
+    /// generic paths (A4-02).
+    #[inline(never)]
+    fn check_trait_method_call(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        head: &Expr,
+        name: &str,
+        args: &[Expr],
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        // 1. The trait(s) that declare a method named `name`. Exactly one ⇒ resolve; >1 ⇒ ambiguous.
+        let owners: Vec<&TraitInfo> = self
+            .traits
+            .values()
+            .filter(|tr| tr.sigs.iter().any(|s| s.name == name))
+            .collect();
+        let tr = match owners.as_slice() {
+            [one] => *one,
+            [] => unreachable!("is_trait_method gated this call"),
+            many => {
+                let names: Vec<&str> = many.iter().map(|t| t.name.as_str()).collect();
+                return self.err(format!(
+                    "ambiguous trait-method call `{name}` — declared by multiple traits ({}); \
+                     stage-1 has no qualified-call syntax, so this is an explicit refusal, never a \
+                     guess (RFC-0019 §4.4)",
+                    names.join(", ")
+                ));
+            }
+        };
+        if tr.params.len() != 1 {
+            return self.err(format!(
+                "trait-method resolution for `{name}` needs a single-parameter trait in stage-1 \
+                 (trait `{}` has {} parameters — multi-parameter traits are v2, RFC-0019 §10)",
+                tr.name,
+                tr.params.len()
+            ));
+        }
+        let sig = tr
+            .sigs
+            .iter()
+            .find(|s| s.name == name)
+            .expect("owner has the method");
+        if sig.value_params.len() != args.len() {
+            return self.err(format!(
+                "trait method `{}::{name}` takes {} argument(s), got {}",
+                tr.name,
+                sig.value_params.len(),
+                args.len()
+            ));
+        }
+        // 2. Unify the method's (abstract-over-the-trait-param) value-param types against the actual
+        //    argument types to solve the trait parameter — never a guess (RFC-0007 §11.3).
+        let tparam = &tr.params[0];
+        let trait_vars = std::slice::from_ref(tparam);
+        let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
+        // Seed from `expected` against the (abstract) return type, so a nullary-ish return can pin
+        // the parameter even when an argument is a bare decimal.
+        if let Some(exp) = expected {
+            let ret_abs = resolve_ty(self.site, self.types, trait_vars, &sig.ret)?.0;
+            let _ = unify(self.site, &ret_abs, exp, &mut subst);
+        }
+        let mut rebuilt = Vec::with_capacity(args.len());
+        for (pm, a) in sig.value_params.iter().zip(args) {
+            let want = resolve_ty(self.site, self.types, trait_vars, &pm.ty)?.0;
+            let want_now = subst_ty(&want, &subst);
+            let exp = if has_var(&want_now) {
+                None
+            } else {
+                Some(&want_now)
+            };
+            let (got, a2) = self.check(scope, a, exp)?;
+            unify(self.site, &want_now, &got, &mut subst).map_err(|e| {
+                CheckError::new(
+                    self.site,
+                    format!(
+                        "trait method `{}::{name}` argument `{}`: {}",
+                        tr.name, pm.name, e.message
+                    ),
+                )
+            })?;
+            rebuilt.push(a2);
+        }
+        // 3. The trait parameter must be determined; then an instance (concrete or via a scope bound)
+        //    must provide the trait — else an explicit "no instance/bound" refusal (never a guess).
+        let Some(receiver) = subst.get(tparam).cloned() else {
+            return self.err(format!(
+                "trait-method call `{name}` does not determine trait `{}`'s type parameter `{tparam}` \
+                 from its arguments — ascribe an argument or the result (RFC-0019 §4.4, never a guess)",
+                tr.name
+            ));
+        };
+        self.require_instance(
+            &tr.name,
+            &receiver,
+            &format!(
+                "no instance/bound provides `{}::{name}` for these arguments",
+                tr.name
+            ),
+        )?;
+        let ret = subst_ty(
+            &resolve_ty(self.site, self.types, trait_vars, &sig.ret)?.0,
             &subst,
         );
         Ok((ret, app_node(head, rebuilt)))
@@ -1569,10 +2308,15 @@ pub(crate) fn infer_type(
         site: "<elaborate>",
         types: &env.types,
         fns: &env.fns,
+        // The trait/instance registries are available for re-inference (a monomorphic body may
+        // call a trait method resolved through a concrete instance — RFC-0019 §4.5).
+        traits: &env.traits,
+        instances: &env.instances,
         // Re-inference runs over already-checked, monomorphic terms (a generic *instantiation* is
         // refused at elaboration before re-inference — RFC-0007 §11.3 staging), so no type
-        // parameters are in scope here.
+        // parameters / bounds are in scope here.
         tyvars: &[],
+        bounds: &[],
         depth: Cell::new(0),
     };
     cx.infer(scope, e)

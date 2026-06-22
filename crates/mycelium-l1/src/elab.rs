@@ -1092,6 +1092,25 @@ impl Elab<'_> {
             });
         }
 
+        // An **unqualified trait-method call** (RFC-0019 §4.4) type-checks (the checker resolved the
+        // instance / bound), but its L0 lowering is **dictionary-passing**, staged identically to a
+        // generic instantiation — RFC-0007 §12.3. Refuse with an explicit `Residual` (never a silent
+        // or fabricated artifact — G2); it lands with the monomorphization follow-up (M-673).
+        if self
+            .env
+            .traits
+            .values()
+            .any(|tr| tr.sigs.iter().any(|s| s.name == *name))
+        {
+            return residual(
+                site,
+                format!(
+                    "trait-method call `{name}` type-checks, but dictionary-passing lowering to L0 \
+                     is staged (RFC-0019 §4.4 / RFC-0007 §12.3; the M-673 follow-up). No L0 form yet."
+                ),
+            );
+        }
+
         residual(site, format!("unknown function/constructor/prim `{name}`"))
     }
 
@@ -1761,5 +1780,66 @@ mod tests {
                  independent of the {k} leading hyphae"
             );
         }
+    }
+
+    // --- M-659: dictionary-passing lowering is STAGED to a Residual (RFC-0019 §4.4 / RFC-0007 §12.3;
+    // the M-673 follow-up) — exactly mirroring how a generic instantiation stages (M-657). The
+    // *checker* types traits/impls/bounded-calls; the L0 lowering of a generic/trait instantiation is
+    // an explicit never-silent `Residual`, never a partial/fabricated artifact (G2/VR-5).
+
+    #[test]
+    fn a_bounded_generic_entry_is_an_explicit_residual() {
+        // A bounded generic fn type-checks, but its L0 lowering is staged — asked to elaborate it
+        // directly, the elaborator refuses with an explicit Residual, never a silent or
+        // half-monomorphized artifact (G2/VR-5). (A bounded fn has value params *and* type params,
+        // so it cannot be a closed entry either way; both reasons surface as an honest Residual.)
+        let env = env(
+            "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n\
+             impl Cmp<Binary{8}> for Binary{8} \
+             { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b00 }\n\
+             fn use_cmp<T: Cmp>(a: T, b: T) -> Binary{2} = cmp(a, b)",
+        );
+        let err = elaborate(&env, "use_cmp").unwrap_err();
+        assert!(
+            matches!(err, ElabError::Residual { .. }),
+            "a bounded generic entry must stage to a Residual, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn a_nullary_generic_entry_stages_with_the_monomorphization_residual() {
+        // A *nullary* generic fn (no value params) reaches the generic-specific staging branch: its
+        // L0 lowering is staged to monomorphization (the same staging M-657 introduced for §11), an
+        // explicit Residual that names it.
+        let env = env("nodule d\nfn g<A>() -> Binary{1} = 0b1");
+        let err = elaborate(&env, "g").unwrap_err();
+        let ElabError::Residual { what, .. } = &err else {
+            panic!("expected a Residual for a generic entry, got {err:?}");
+        };
+        assert!(
+            what.contains("generic") || what.contains("monomorph"),
+            "got: {what}"
+        );
+    }
+
+    #[test]
+    fn an_unqualified_trait_method_call_lowers_to_an_explicit_residual() {
+        // A *concrete* trait-method call type-checks (resolved via the instance), but its L0 form is
+        // dictionary-passing, staged to M-673. Elaborating an entry that makes such a call refuses
+        // with an explicit Residual naming the dictionary-passing staging — never a fabricated Op.
+        let env = env(
+            "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n\
+             impl Cmp<Binary{8}> for Binary{8} \
+             { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b00 }\n\
+             fn direct() -> Binary{2} = cmp(0b0000_0001, 0b0000_0010)",
+        );
+        let err = elaborate(&env, "direct").unwrap_err();
+        let ElabError::Residual { what, .. } = &err else {
+            panic!("expected a Residual for a trait-method call, got {err:?}");
+        };
+        assert!(
+            what.contains("trait-method") || what.contains("dictionary"),
+            "the residual must name the dictionary-passing staging, got: {what}"
+        );
     }
 }

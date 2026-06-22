@@ -82,7 +82,7 @@ primary evidence for refusals.
 | 4 | **Let bindings + lambda abstractions** (`let`, anonymous `fn`-forms, `for` sugar) | All combinators, `iter`, `error` | `ast.rs` `Expr::Let`; `elab.rs` `elab_lam`; `ast.rs` `Expr::For`; M-343 | **present** |
 | 5 | **Nodule-level organization** (`nodule` header, single-nodule scoping, `use path`) | Any library unit | `ast.rs` `Nodule`/`Item::Use`; `nodule.rs`; DN-06; M-343 | **present** |
 | 6 | **Generic type parameters** (`fn f<A, B>(…)`, `type List<A>`) | `collections`, `iter`, `cmp`, `error`, `math`, `text` | M-657: `checkty.rs` checks unbounded generics (type vars, unification-based instantiation, arity, never-guess); `elab.rs` **stages** the L0 lowering of a generic *instantiation* as an explicit `Residual` (monomorphization follow-up); RFC-0007 §11 | **partial — type-checks; elaboration staged** |
-| 7 | **Trait-like interfaces** (`trait T { fn … }`) + impl blocks | RFC-0016 §4.1 C1–C6 contract machinery in-language; `iter`, `cmp`, `fmt` | `checkty.rs` line 297: `Item::Trait(_)` is skipped (no check arm); RFC-0007 Accepted scope explicitly defers "traits/LR-2" per RFC-0007 status field; AST parses `TraitDecl` but `checkty` ignores it | **gate-fails** |
+| 7 | **Trait-like interfaces** (`trait T { fn … }`) + impl blocks | RFC-0016 §4.1 C1–C6 contract machinery in-language; `iter`, `cmp`, `fmt` | **Checker landed (M-659):** `trait`/`impl` type-check with **coherence** (global uniqueness + single-nodule orphan rule), exact method-set conformance, and bounded-call/trait-method resolution — every violation an explicit `CheckError` (G2), guarantee `Declared`; **dictionary-passing L0 lowering staged → M-673** | **partial — type-checks; elaboration staged** |
 | 8 | **Effect annotations (RFC-0014 RT3)** — declared `{time, entropy, io, …}` on surface `fn` | `rand`, `time`, `io`, `fs`, `recover` | No effect-annotation syntax in `ast.rs` `FnSig` or `FnDecl`; `checkty.rs` has no effect-checking pass (RFC-0007 §4.3: "stage 1, a revision of this RFC"); RFC-0014 effects exist only in the L0 interpreter budget layer (`mycelium-interp`) | **gate-fails** |
 | 9 | **`wild` / FFI surface** — callable host operations | `fs`, `rand`, `io` (std-sys call sites) | `checkty.rs` line ~454: *"`wild` is denied by default (LR-9): no host FFI capability exists in v0, so a wild block cannot be checked or run — this refusal is the design, not a gap"*; `ast.rs` `Expr::Wild` parses but typechecker rejects | **gate-fails** |
 | 10 | **Full phyla + cross-nodule imports** — `phylum std`, `use` across nodule boundaries | Any multi-nodule library | `ast.rs` `Item::Use(Path)` is parsed; `lib.rs` notes "v0 is single-nodule"; `checkty.rs` does not resolve cross-nodule paths; `ast.rs` notes `phylum` is a **reserved keyword** (DN-06) but no phylum-level elaboration exists | **missing (partial)** |
@@ -153,6 +153,16 @@ not change whether stdlib authoring in Mycelium-lang is currently possible):
 
 ## Meta — changelog
 
+- **2026-06-22 — §3 row 7 trait CHECKER landed → row 7 now `partial` (M-659; append-only, VR-5).**
+  The stage-1 trait/impl **checker** landed in `mycelium-l1`: `trait`/`impl` type-check with **coherence**
+  (global uniqueness + single-nodule orphan rule), exact method-set conformance, and bounded-generic +
+  trait-method call resolution — every violation an explicit `CheckError` (G2), guarantee **`Declared`**
+  (RFC-0019 §4.5, not machine-checked). The single-parameter self-bound sugar `T: Cmp ≡ T: Cmp<T>` is
+  supported; multi-param/ambiguous bounds are explicit errors. **Dictionary-passing L0 lowering stays
+  STAGED** (explicit `Residual`) → **M-673**, so **row 7 is `partial`**, not `present` — it flips to
+  `present` only when M-673 lands the dictionaries (VR-5: no upgrade without the landed lowering). 187
+  `mycelium-l1` tests green incl. a coherence property sweep + `accept`/`reject` conformance fixtures.
+  (RFC-0007 §12, RFC-0019 §4; M-659, E7-1)
 - **2026-06-22 — §3 row 7 spec gate landed; `impl` reserved (M-658; append-only, no row flip yet).**
   The **trait** spec gate is in place: **RFC-0007 §12** pins the stage-1 trait surface (single-parameter
   `trait`/`impl Trait for T` + coherence = orphan rule + global uniqueness, per RFC-0019), and **`impl`

@@ -78,6 +78,10 @@ impl Lexer {
                 ',' => self.single(Tok::Comma),
                 '.' => self.single(Tok::Dot),
                 '|' => self.single(Tok::Pipe),
+                // `+` is the trait-bound separator (`T: A + B`; RFC-0019 §4.1). It is also a trit
+                // glyph, but a trit literal is only ever scanned *whole* from an opening `<` (in
+                // `lex_angle_or_trit`), so a `+` reaching here is always the bound separator token.
+                '+' => self.single(Tok::Plus),
                 '<' => self.lex_angle_or_trit(pos)?,
                 '=' => self.lex_eq(),
                 '-' => self.lex_dash(pos)?,

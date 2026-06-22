@@ -169,6 +169,10 @@ pub enum Tok {
     Dot,
     /// `|`.
     Pipe,
+    /// `+` — the trait-bound separator in a bounded type-parameter (`T: A + B`; RFC-0019 §4.1).
+    /// v0 has no arithmetic `+` (prims are named calls), so this token appears **only** inside a
+    /// bound; anywhere else the parser raises an explicit error, never a silent accept (G2).
+    Plus,
     /// `=`.
     Eq,
     /// `->`.

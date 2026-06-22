@@ -453,3 +453,345 @@ fn imperative_words_get_teaching_diagnostics() {
         cerr.message
     );
 }
+
+// --- stage-1 traits + impls with coherence (RFC-0019 §4.1/§4.4/§4.5; RFC-0007 §12; M-659) --------
+// The trait checker: trait/impl declarations type-check with coherence (global uniqueness + orphan
+// rule); a bounded generic call requires a resolvable instance; dictionary-passing is *typed* in the
+// checker but its L0 lowering is STAGED to a `Residual` (M-673). Every coherence / orphan /
+// missing-method / undetermined / no-instance case is an explicit `CheckError` — never silent (G2).
+// Guarantee tags on the checker entry points are `Declared` (a structural registry check, not a
+// theorem; RFC-0019's coherence result is Declared-with-argument — VR-5).
+
+/// `Cmp<A>` — a one-method, single-parameter trait used across the M-659 tests.
+const CMP: &str = "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n";
+/// `Cmp<A>` plus the canonical `impl Cmp<Binary{8}> for Binary{8}` (the M-659 acceptance instance).
+const CMP_I8: &str = "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n\
+     impl Cmp<Binary{8}> for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b00 }\n";
+
+#[test]
+fn a_trait_and_impl_check() {
+    // The M-659 acceptance: a single-parameter trait + a concrete instance with a total, simple
+    // method body. The instance is registered and coherent.
+    let env = check(CMP_I8).expect("a trait + impl check");
+    assert!(env.trait_info("Cmp").is_some(), "trait registered");
+    // Keyed by (trait, type-head) — `Binary{8}`'s head is "Binary".
+    assert!(
+        env.instance("Cmp", "Binary").is_some(),
+        "instance registered under (Cmp, Binary)"
+    );
+}
+
+#[test]
+fn a_trait_method_sig_must_resolve() {
+    // A trait method referencing an unknown type is an explicit refusal (the trait pass resolves
+    // each method sig with the trait params in scope).
+    let err = check("nodule d\ntrait T<A> { fn f(x: Nope) -> A }").unwrap_err();
+    assert!(err.message.contains("unknown type"), "got: {}", err.message);
+}
+
+#[test]
+fn a_bounded_generic_fn_checks_with_an_instance() {
+    // `use_cmp<T: Cmp>` calls the trait method `cmp` through its bound (the dictionary is staged to
+    // elaboration — M-673), and the call site resolves the instance `(Cmp, Binary)`.
+    let env = check(&format!(
+        "{CMP_I8}fn use_cmp<T: Cmp>(a: T, b: T) -> Binary{{2}} = cmp(a, b)\n\
+         fn main() -> Binary{{2}} = use_cmp(0b0000_0001, 0b0000_0010)"
+    ))
+    .expect("a bounded generic fn checks with an instance");
+    // The bounded fn is registered as generic.
+    assert_eq!(env.fn_decl("use_cmp").unwrap().sig.params.len(), 1);
+}
+
+#[test]
+fn a_bounded_generic_fn_without_an_instance_is_an_explicit_error() {
+    // Same `use_cmp<T: Cmp>`, but no instance for the call's `Binary{8}` — the bound is unsatisfiable
+    // at the call site, an explicit "no instance" refusal (never assumed — G2/VR-5).
+    let err = check(&format!(
+        "{CMP}fn use_cmp<T: Cmp>(a: T, b: T) -> Binary{{2}} = cmp(a, b)\n\
+         fn main() -> Binary{{2}} = use_cmp(0b0000_0001, 0b0000_0010)"
+    ))
+    .unwrap_err();
+    assert!(
+        err.message.contains("no instance") && err.message.contains("Cmp"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_duplicate_instance_on_the_same_head_is_a_coherence_error() {
+    // Two instances on the same `(trait, type-head)` — even at different widths (`Binary{8}` and
+    // `Binary{4}` share the head "Binary") — is a global-uniqueness / overlapping-instance violation
+    // (RFC-0019 §4.5; the documented stage-1 head-granular over-rejection).
+    let err = check(&format!(
+        "{CMP_I8}impl Cmp<Binary{{4}}> for Binary{{4}} \
+         {{ fn cmp(a: Binary{{4}}, b: Binary{{4}}) -> Binary{{2}} = 0b00 }}"
+    ))
+    .unwrap_err();
+    assert!(
+        err.message.contains("coherence") || err.message.contains("overlapping"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn an_impl_missing_a_method_is_an_explicit_error() {
+    let err = check(
+        "nodule d\ntrait Two<A> { fn f(x: A) -> A\n fn g(x: A) -> A }\n\
+         impl Two<Binary{8}> for Binary{8} { fn f(x: Binary{8}) -> Binary{8} = x }",
+    )
+    .unwrap_err();
+    assert!(
+        err.message.contains("missing method") && err.message.contains("g"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn an_impl_with_an_extra_method_is_an_explicit_error() {
+    let err = check(
+        "nodule d\ntrait One<A> { fn f(x: A) -> A }\n\
+         impl One<Binary{8}> for Binary{8} \
+         { fn f(x: Binary{8}) -> Binary{8} = x\n fn h(x: Binary{8}) -> Binary{8} = x }",
+    )
+    .unwrap_err();
+    assert!(
+        err.message.contains("not in trait") && err.message.contains("h"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn an_impl_method_with_the_wrong_signature_is_an_explicit_error() {
+    // The method body's declared return (`Binary{4}`) disagrees with the trait's required return
+    // (`Binary{2}` after substituting the impl's trait arg) — an explicit edge mismatch.
+    let err = check(
+        "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n\
+         impl Cmp<Binary{8}> for Binary{8} \
+         { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{4} = 0b0000 }",
+    )
+    .unwrap_err();
+    assert!(
+        err.message.contains("return") && err.message.contains("Binary{2}"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn an_impl_for_an_unknown_trait_is_an_explicit_error() {
+    let err = check(
+        "nodule d\nimpl Nope<Binary{8}> for Binary{8} { fn f(x: Binary{8}) -> Binary{8} = x }",
+    )
+    .unwrap_err();
+    assert!(
+        err.message.contains("unknown trait"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn an_impl_with_the_wrong_trait_arg_arity_is_an_explicit_error() {
+    // `Cmp` takes one type argument; supplying two is a clean arity error (never a guess).
+    let err = check(
+        "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n\
+         impl Cmp<Binary{8}, Binary{8}> for Binary{8} \
+         { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b00 }",
+    )
+    .unwrap_err();
+    assert!(
+        err.message.contains("type argument"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_concrete_trait_method_call_resolves_via_an_instance() {
+    // An unqualified trait-method call at a concrete type (no bounded fn) types via the concrete
+    // instance `(Cmp, Binary)`.
+    let env = check(&format!(
+        "{CMP_I8}fn direct() -> Binary{{2}} = cmp(0b0000_0001, 0b0000_0010)"
+    ))
+    .expect("a concrete trait-method call resolves via the instance");
+    assert_eq!(env.totality["direct"], Totality::Total);
+}
+
+#[test]
+fn a_concrete_trait_method_call_without_an_instance_is_an_explicit_error() {
+    // `cmp` at `Ternary{2}` — no instance for that head — is an explicit refusal (never a guess).
+    let err = check(&format!(
+        "{CMP_I8}fn direct() -> Binary{{2}} = cmp(<00>, <00>)"
+    ))
+    .unwrap_err();
+    assert!(err.message.contains("no instance"), "got: {}", err.message);
+}
+
+#[test]
+fn an_ambiguous_trait_method_call_is_an_explicit_error_never_a_guess() {
+    // The method name `m` is declared by two traits — with no qualified-call syntax in stage-1 this
+    // is ambiguous, an explicit refusal, never a silent pick (RFC-0019 §4.4; G2/VR-5).
+    let err = check(
+        "nodule d\ntrait A1<X> { fn m(x: X) -> X }\ntrait A2<X> { fn m(x: X) -> X }\n\
+         fn f() -> Binary{8} = m(0b0000_0001)",
+    )
+    .unwrap_err();
+    assert!(err.message.contains("ambiguous"), "got: {}", err.message);
+}
+
+#[test]
+fn an_undetermined_trait_method_call_is_an_explicit_error() {
+    // A trait whose method does not mention its type parameter in a position the args determine:
+    // `mk` returns `A` but takes no `A` argument, so a bare call cannot determine the receiver — an
+    // explicit "does not determine" refusal, never a guessed instance.
+    let err =
+        check("nodule d\ntrait Mk<A> { fn mk() -> A }\nfn f() -> Binary{8} = mk()").unwrap_err();
+    assert!(
+        err.message.contains("does not determine") || err.message.contains("no instance"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_duplicate_trait_declaration_is_an_explicit_error() {
+    let err = check("nodule d\ntrait T<A> { fn f(x: A) -> A }\ntrait T<A> { fn g(x: A) -> A }")
+        .unwrap_err();
+    assert!(
+        err.message.contains("duplicate trait"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_duplicate_method_in_a_trait_is_an_explicit_error() {
+    let err = check("nodule d\ntrait T<A> { fn f(x: A) -> A\n fn f(x: A) -> A }").unwrap_err();
+    assert!(
+        err.message.contains("duplicate method"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_bound_on_an_unknown_trait_is_an_explicit_error() {
+    let err = check("nodule d\nfn f<T: Nope>(x: T) -> T = x").unwrap_err();
+    assert!(
+        err.message.contains("unknown trait"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_representation_specific_op_on_a_bounded_type_parameter_is_still_refused() {
+    // RFC-0019 §4.6: a bound does NOT grant representation-specific ops. A `Binary` prim (`not`) on a
+    // bounded `T: Cmp` value is refused exactly as in the unbounded case — never a silent coercion.
+    let err = check(&format!("{CMP}fn bad<T: Cmp>(x: T) -> T = not(x)")).unwrap_err();
+    assert!(
+        err.message.contains("accept") || err.message.contains("not"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn bounds_on_type_or_trait_parameters_are_a_parse_refusal() {
+    // Stage-1: bounds live only on function type-params (the dictionary site). A bound on a `type`
+    // (or `trait`) parameter is an explicit parse refusal — never silently dropped (G2).
+    let err = parse("nodule d\ntype T<A: Cmp> = C(A)").unwrap_err();
+    assert!(err.message.contains("deferred"), "got: {}", err.message);
+}
+
+#[test]
+fn an_orphan_instance_for_a_foreign_type_and_trait_is_refused() {
+    // The orphan rule (RFC-0019 §4.5) is checked on a `Data` head. Single-nodule stage-1 treats a
+    // *local* trait OR a *local* data type as ownership, and primitive reprs as local. To exercise
+    // the orphan refusal we make BOTH foreign: a trait declared, but an `impl` of it for a data type
+    // declared in *neither* the trait's nodule nor the type's — but single-nodule everything is local.
+    // So instead we confirm the locality logic positively: an instance for a primitive repr is legal
+    // even when the trait is local (primitives count as owned), and a `Data` instance for a locally
+    // declared type is legal. The cross-nodule orphan refusal is staged with M-662 (phylum work);
+    // here we pin that a `Data` instance whose type is undeclared is rejected (unknown type), the
+    // single-nodule stand-in for "you don't own this type".
+    let err = check(
+        "nodule d\ntrait T<A> { fn f(x: A) -> A }\n\
+         impl T<Foreign> for Foreign { fn f(x: Foreign) -> Foreign = x }",
+    )
+    .unwrap_err();
+    assert!(err.message.contains("unknown type"), "got: {}", err.message);
+    // And a locally declared data type *is* a legal instance head (orphan rule satisfied via the
+    // type's locality).
+    let ok = check(
+        "nodule d\ntype Pt = P(Binary{8})\ntrait T<A> { fn f(x: A) -> A }\n\
+         impl T<Pt> for Pt { fn f(x: Pt) -> Pt = x }",
+    );
+    assert!(
+        ok.is_ok(),
+        "a local data type is a legal instance head: {ok:?}"
+    );
+}
+
+#[test]
+fn coherence_is_a_property_across_a_sweep_of_types_and_widths() {
+    // Property (RFC-0019 §4.5 global uniqueness, per (trait, type-head)): across a sweep of repr
+    // types and widths, a SINGLE instance per head always *checks*, and a SECOND instance on the
+    // same head always *fails* with a coherence error — uniformly, never a guess. (Deterministic
+    // sweep in the established `check.rs` property style — the existing generics property test, l.372,
+    // uses the same loop form; no new proptest dependency.)
+    // Each case: (trait-arg+for type written form, a *different* width on the SAME head).
+    let cases: &[(&str, &str)] = &[
+        ("Binary{8}", "Binary{16}"),
+        ("Binary{1}", "Binary{32}"),
+        ("Ternary{3}", "Ternary{9}"),
+        ("Ternary{6}", "Ternary{12}"),
+        ("Dense{4, F32}", "Dense{8, F32}"),
+    ];
+    for (ty, other) in cases {
+        // A unique instance on the head always checks.
+        let unique = format!(
+            "nodule d\ntrait Tr<A> {{ fn f(x: A) -> A }}\n\
+             impl Tr<{ty}> for {ty} {{ fn f(x: {ty}) -> {ty} = x }}"
+        );
+        let unique_res = check(&unique);
+        assert!(
+            unique_res.is_ok(),
+            "a unique instance on {ty} must check: {:?}",
+            unique_res
+        );
+        // A second instance on the SAME head (different width) always fails coherence.
+        let dup = format!(
+            "nodule d\ntrait Tr<A> {{ fn f(x: A) -> A }}\n\
+             impl Tr<{ty}> for {ty} {{ fn f(x: {ty}) -> {ty} = x }}\n\
+             impl Tr<{other}> for {other} {{ fn f(x: {other}) -> {other} = x }}"
+        );
+        let e = check(&dup).expect_err("a second instance on the head must be rejected");
+        assert!(
+            e.message.contains("coherence") || e.message.contains("overlapping"),
+            "second instance on {ty}'s head must be a coherence error, got: {}",
+            e.message
+        );
+    }
+}
+
+#[test]
+fn an_instance_on_the_same_head_but_a_different_width_does_not_satisfy_a_call() {
+    // Coherence keys per type-head, but RESOLUTION must match the FULL concrete type: a `Binary{8}`
+    // instance must NOT satisfy a trait-method call whose receiver is `Binary{4}` (same head). This
+    // is over-rejection-for-duplicates / never-over-acceptance-for-missing (RFC-0019 §4.5; G2).
+    let src = "nodule d\n\
+        trait Tr<A> { fn f(x: A) -> A }\n\
+        impl Tr<Binary{8}> for Binary{8} { fn f(x: Binary{8}) -> Binary{8} = x }\n\
+        fn g(x: Binary{4}) -> Binary{4} = f(x)";
+    let e = check(src).expect_err("a Binary{4} call must not reuse the Binary{8} instance");
+    assert!(
+        e.message.contains("no instance") && e.message.contains("declared for"),
+        "expected an explicit 'no instance … declared for' refusal, got: {}",
+        e.message
+    );
+}

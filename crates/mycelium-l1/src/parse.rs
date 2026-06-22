@@ -3,8 +3,9 @@
 //! (never a panic, never a silent accept — S5/G2). v0 covers the L1-facing core.
 
 use crate::ast::{
-    AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, Hypha, Item, Literal, Nodule,
-    Paradigm, Param, Path, Pattern, Scalar, Sparsity, Strength, TraitDecl, TypeDecl, TypeRef,
+    AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal,
+    Nodule, Paradigm, Param, Path, Pattern, Scalar, Sparsity, Strength, TraitDecl, TraitRef,
+    TypeDecl, TypeParam, TypeRef,
 };
 use crate::error::ParseError;
 use crate::lexer::lex;
@@ -208,6 +209,10 @@ impl Parser {
             }
             Tok::Type => self.parse_type_decl().map(Item::Type),
             Tok::Trait => self.parse_trait_decl().map(Item::Trait),
+            // M-659 / RFC-0019 §4.1: `impl Trait<args> for T { fn … }` (the trait-instance
+            // production). `impl` was reserved by M-658 (RFC-0007 §12.2); this is the production that
+            // consumes it.
+            Tok::Impl => self.parse_impl_decl().map(Item::Impl),
             Tok::Fn | Tok::Thaw => self.parse_fn_decl().map(Item::Fn),
             Tok::Matured => Err(ParseError::new(
                 self.pos(),
@@ -251,7 +256,8 @@ impl Parser {
                 ),
             )),
             _ => self.err(
-                "a top-level item (`use`, `default paradigm`, `type`, `trait`, `fn`, or `thaw fn`)",
+                "a top-level item (`use`, `default paradigm`, `type`, `trait`, `impl`, `fn`, or \
+                 `thaw fn`)",
             ),
         }
     }
@@ -322,10 +328,12 @@ impl Parser {
         Ok(FnDecl { thaw, sig, body })
     }
 
-    /// The shared `name <params>? ( value_params? ) -> ret` tail of a signature.
+    /// The shared `name <params>? ( value_params? ) -> ret` tail of a signature. A function's
+    /// type-parameters may carry **trait bounds** (`<T: Cmp + Ord<T>>`; RFC-0019 §4.1) — the
+    /// dictionary site — so this uses [`parse_type_params_bounded`](Self::parse_type_params_bounded).
     fn parse_sig_tail(&mut self) -> Result<FnSig, ParseError> {
         let name = self.ident()?;
-        let params = self.parse_type_params_opt()?;
+        let params = self.parse_type_params_bounded()?;
         self.expect(&Tok::LParen, "`(` to open the parameter list")?;
         let value_params = self.parse_params_opt()?;
         self.expect(&Tok::RParen, "`)` to close the parameter list")?;
@@ -348,13 +356,95 @@ impl Parser {
         })
     }
 
+    /// `< name (, name)* >?` — **unbounded** type-parameter names, for `type`/`trait` declarations
+    /// (stage-1: data/trait type-params are unbounded abstractions — RFC-0019 §4.1 / RFC-0007 §12.1).
+    /// A bound (`<T: Cmp>`) here is an **explicit refusal** (deferred to a later stage), never
+    /// silently dropped — bounds belong only on function type-params (the dictionary site).
     fn parse_type_params_opt(&mut self) -> Result<Vec<String>, ParseError> {
         let mut params = Vec::new();
         if self.eat(&Tok::LAngle) {
-            params = self.comma_separated(None, Self::ident)?;
+            params = self.comma_separated(None, |p| {
+                let name = p.ident()?;
+                if p.at(&Tok::Colon) {
+                    return Err(ParseError::new(
+                        p.pos(),
+                        "bounds on `type`/`trait` type-parameters are deferred in stage-1 \
+                         (RFC-0019 §4.1 — bounds live only on function type-parameters, the \
+                         dictionary site); write the bound on the bounded `fn` instead"
+                            .to_owned(),
+                    ));
+                }
+                Ok(name)
+            })?;
             self.expect(&Tok::RAngle, "`>` to close the type parameters")?;
         }
         Ok(params)
+    }
+
+    /// `< type_param (, type_param)* >?` where `type_param ::= Ident (':' bound)?` — **bounded**
+    /// type-parameters for **functions** (RFC-0019 §4.1). An unbounded `T` yields
+    /// `TypeParam { bounds: [] }` (the §11 identity, so every v0 program still parses).
+    fn parse_type_params_bounded(&mut self) -> Result<Vec<TypeParam>, ParseError> {
+        let mut params = Vec::new();
+        if self.eat(&Tok::LAngle) {
+            params = self.comma_separated(None, Self::parse_type_param)?;
+            self.expect(&Tok::RAngle, "`>` to close the type parameters")?;
+        }
+        Ok(params)
+    }
+
+    /// One bounded type-parameter `Ident (':' bound)?` (RFC-0019 §4.1).
+    fn parse_type_param(&mut self) -> Result<TypeParam, ParseError> {
+        let name = self.ident()?;
+        let bounds = if self.eat(&Tok::Colon) {
+            self.parse_bound()?
+        } else {
+            Vec::new()
+        };
+        Ok(TypeParam { name, bounds })
+    }
+
+    /// A trait bound `Ident type_args? ('+' Ident type_args?)*` — one or more trait references
+    /// (RFC-0019 §4.1 `bound`). Reuses the existing type-argument parser for each trait's `<…>`.
+    fn parse_bound(&mut self) -> Result<Vec<TraitRef>, ParseError> {
+        let mut bounds = vec![self.parse_trait_ref()?];
+        while self.eat(&Tok::Plus) {
+            bounds.push(self.parse_trait_ref()?);
+        }
+        Ok(bounds)
+    }
+
+    /// One trait reference in a bound — `Cmp` or `Cmp<Binary{8}>` (RFC-0019 §4.1).
+    fn parse_trait_ref(&mut self) -> Result<TraitRef, ParseError> {
+        let name = self.ident()?;
+        let args = self.parse_type_args_opt()?;
+        Ok(TraitRef { name, args })
+    }
+
+    /// `impl Ident type_args? 'for' type_ref '{' fn_decl* '}'` — a trait instance (RFC-0019 §4.1;
+    /// RFC-0007 §12.1). The `<…>` are the trait's **type arguments** (concrete `TypeRef`s, reusing
+    /// the existing type-arg parser), not parameter names; the methods are full `fn … = body` defs.
+    fn parse_impl_decl(&mut self) -> Result<ImplDecl, ParseError> {
+        self.expect(&Tok::Impl, "`impl`")?;
+        let trait_name = self.ident()?;
+        let trait_args = self.parse_type_args_opt()?;
+        self.expect(
+            &Tok::For,
+            "`for` after the trait in an `impl` (RFC-0019 §4.1)",
+        )?;
+        let for_ty = self.parse_type_ref()?;
+        self.expect(&Tok::LBrace, "`{` to open the `impl` body")?;
+        let mut methods = Vec::new();
+        while !self.at(&Tok::RBrace) {
+            methods.push(self.parse_fn_decl()?);
+        }
+        self.expect(&Tok::RBrace, "`}` to close the `impl` body")?;
+        Ok(ImplDecl {
+            trait_name,
+            trait_args,
+            for_ty,
+            methods,
+        })
     }
 
     // ---- types ----
@@ -1036,5 +1126,80 @@ mod tests {
             .expect_err("malformed if must be rejected");
         // `els` is an identifier where `else` is required.
         assert!(err.message.contains("`else`"), "{}", err.message);
+    }
+
+    // --- M-659 / RFC-0019 §4.1: `impl` decls + bounded type-params parse ---
+
+    #[test]
+    fn an_impl_decl_parses_with_trait_args_for_type_and_methods() {
+        let n = parse(
+            "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n\
+             impl Cmp<Binary{8}> for Binary{8} \
+             { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b00 }",
+        )
+        .expect("an impl parses");
+        let Item::Impl(id) = n
+            .items
+            .iter()
+            .find(|i| matches!(i, Item::Impl(_)))
+            .expect("an impl item")
+        else {
+            panic!("impl");
+        };
+        assert_eq!(id.trait_name, "Cmp");
+        assert_eq!(id.trait_args.len(), 1); // `<Binary{8}>`
+        assert_eq!(id.methods.len(), 1);
+        assert_eq!(id.methods[0].sig.name, "cmp");
+    }
+
+    #[test]
+    fn an_impl_without_for_is_an_explicit_error() {
+        let err = parse("nodule d\nimpl Cmp<Binary{8}> Binary{8} { }")
+            .expect_err("impl missing `for` must be rejected");
+        assert!(err.message.contains("`for`"), "{}", err.message);
+    }
+
+    #[test]
+    fn a_bounded_fn_type_param_parses_with_a_self_bound_and_a_plus_list() {
+        // `<T: Cmp>` (single self-bound) and `<T: A + B<T>>` (a `+`-list with type-args) both parse.
+        let n = parse(
+            "nodule d\nfn f<T: Cmp>(x: T) -> T = x\n\
+             fn g<T: A + B<T>>(x: T) -> T = x",
+        )
+        .expect("bounded type-params parse");
+        let Item::Fn(f) = &n.items[0] else {
+            panic!("fn")
+        };
+        assert_eq!(f.sig.params.len(), 1);
+        assert_eq!(f.sig.params[0].name, "T");
+        assert_eq!(f.sig.params[0].bounds.len(), 1);
+        assert_eq!(f.sig.params[0].bounds[0].name, "Cmp");
+        let Item::Fn(g) = &n.items[1] else {
+            panic!("fn")
+        };
+        assert_eq!(g.sig.params[0].bounds.len(), 2); // A + B<T>
+        assert_eq!(g.sig.params[0].bounds[1].name, "B");
+        assert_eq!(g.sig.params[0].bounds[1].args.len(), 1); // B<T>
+    }
+
+    #[test]
+    fn an_unbounded_fn_type_param_still_parses_the_identity_case() {
+        // The §11 identity: `<A>` with no bound is `TypeParam { bounds: [] }` — every v0 program
+        // that parsed before this extension still parses.
+        let n = parse("nodule d\nfn id<A>(x: A) -> A = x").expect("unbounded parses");
+        let Item::Fn(f) = &n.items[0] else {
+            panic!("fn")
+        };
+        assert_eq!(f.sig.params.len(), 1);
+        assert!(f.sig.params[0].bounds.is_empty());
+    }
+
+    #[test]
+    fn a_bound_on_a_type_decl_param_is_an_explicit_parse_refusal() {
+        // Stage-1: bounds live only on fn type-params. A bound on a `type` param is rejected, never
+        // silently dropped (G2). (Conformance reject/15 pins this at the corpus level too.)
+        let err = parse("nodule d\ntype Box<A: Cmp> = Wrap(A)")
+            .expect_err("a bound on a type-decl param must be rejected");
+        assert!(err.message.contains("deferred"), "{}", err.message);
     }
 }
