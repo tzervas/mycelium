@@ -34,7 +34,7 @@ one content-addressed artifact" stance DN-04 §2 takes for human-vs-JSON output.
 The motivation is **NFR-2 / SC-5b + the AI co-author loop (M-330)**: a model paired with the language
 consumes a *graded, machine-readable* diagnostic stream. Once it has learned the codebook, a code
 like `Fn2` carries extreme granularity at a fraction of the tokens of a prose diagnostic — while
-humans and un-trained tooling still `EXPLAIN` it back to the full text. This is token-efficiency for
+humans and untrained tooling still `EXPLAIN` it back to the full text. This is token-efficiency for
 the development-assistance channel, *without* sacrificing honesty or granularity.
 
 ## 2. The layered code
@@ -65,7 +65,7 @@ leading positions), so they never disagree.
 
 For the code to be honest it must be **decodable and collision-free**, which requires a registry that
 is the single source of truth (the same "content-addressed declaration, file is a projection" stance
-DN-04-Q3 / R7-Q4 took for config):
+DN04-Q3 / R7-Q4 took for config):
 
 - **Codes are *derived* from the structured diagnostic** (its severity + domain + component path +
   reason class), **never hand-assigned ad hoc** (G2/VR-5) — so two emitters cannot collide or drift,
@@ -74,7 +74,7 @@ DN-04-Q3 / R7-Q4 took for config):
   `NotValidatedReason`, fallback, tags. The compact form degrades gracefully — *before* a model has
   learned the codebook, anyone (or any tool) recovers the full meaning from the registry. The codebook
   is itself a content-addressed, queryable artifact (a natural `diag`-module / tooling citizen — cf.
-  DN-04-Q5).
+  DN04-Q5).
 - **A code is a versioned interface** (ADR-018), exactly like the guarantee tags: **append-only**; a
   code's meaning is **never silently re-pointed**, or a model's learned mapping (and every logged
   code) rots. New reasons get new sub-codes; deprecated ones are tombstoned, not reused.
@@ -104,7 +104,7 @@ one step away) before any language-level commitment.
 - **DN22-Q2 — the b36 string grammar.** Fix the positional grammar
   (`<severity><domain><component-path><reason>[·<payload>]`), the separator, and how a variable-depth
   **component path** is encoded (fixed-width segments vs delimited).
-- **DN22-Q3 — registry home + format.** Is the codebook a `diag`-stdlib module (DN-04-Q5), a tooling
+- **DN22-Q3 — registry home + format.** Is the codebook a `diag`-stdlib module (DN04-Q5), a tooling
   artifact, or both? It must be content-addressed and `EXPLAIN`-queryable (house rule #2).
 - **DN22-Q4 — derivation from RFC-0013.** Pin exactly which diagnostic fields project into which code
   positions, so codes are mechanically derived (and stable) rather than authored.
