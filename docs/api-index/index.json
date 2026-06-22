@@ -7256,7 +7256,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 45,
+      "line": 46,
       "summary": "Why a definition could not be elaborated to L0 — always explicit, never a partial artifact",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7487,7 +7487,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 500,
+      "line": 539,
       "summary": "A `match` arm.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7520,7 +7520,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 389,
+      "line": 428,
       "summary": "An expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7564,7 +7564,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 541,
+      "line": 580,
       "summary": "A literal value.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7619,7 +7619,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 521,
+      "line": 560,
       "summary": "A pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7850,7 +7850,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3302,
+      "line": 3313,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7861,7 +7861,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3288,
+      "line": 3299,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7883,7 +7883,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 45,
+      "line": 46,
       "summary": "Why a definition could not be elaborated to L0 — always explicit, never a partial artifact",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7894,7 +7894,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 502,
+      "line": 498,
       "summary": "Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7905,7 +7905,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 204,
+      "line": 205,
       "summary": "Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7916,7 +7916,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 83,
+      "line": 84,
       "summary": "Build the L0 [`Value`] of a representation literal (Q6: a literal *is* its representation —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7927,7 +7927,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 183,
+      "line": 184,
       "summary": "The v0 **policy-name reference**: a deterministic, domain-separated content address derived",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7938,7 +7938,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 142,
+      "line": 143,
       "summary": "Resolve a surface [`TypeRef`] to a kernel [`Repr`] (swap targets).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7949,7 +7949,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 204,
+      "line": 205,
       "summary": "Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8114,7 +8114,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 44,
+      "line": 48,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8136,7 +8136,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 45,
+      "line": 49,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8224,7 +8224,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 46,
+      "line": 50,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8290,7 +8290,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 47,
+      "line": 51,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8367,7 +8367,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 48,
+      "line": 52,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []

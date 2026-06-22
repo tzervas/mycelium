@@ -1099,6 +1099,17 @@ fn check_nodule_with(
     // context, never re-litigated here). The merged `fns`/`traits` give the callee effect lookups.
     check_effect_coverage(&fns, &regs.fns, &traits, nodule)?;
 
+    // Pass 3d: **guarantee grading** (RFC-0018 §4.3 stage-1a, Design A — guarantee: `Declared`). The
+    // guarantee index `@ g` becomes a statically-enforced constraint over the integrity lattice
+    // `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`: every call's argument must satisfy its callee
+    // parameter's demand, and each body must satisfy its declared return demand (G-App/G-Weaken). Runs
+    // after bodies type-check, over the merged `fns` (so a call to an imported `pub fn` resolves to
+    // that callee's declared grades) and this nodule's own fns + impl methods. A violation is an
+    // explicit `CheckError` (never silent — G2/VR-5). This is the static successor to RFC-0007 §4.3's
+    // stage-0 dynamic check (which remains the runtime semantics); the noninterference *theorem* stays
+    // Declared-with-argument (RFC-0018 §11 / `research/09`), not upgraded.
+    crate::grade::check_guarantees(&fns, &regs.fns, nodule)?;
+
     // Pass 4: totality classification + the scope-quantified matured gate (RFC-0017 §4.2). Classify
     // over the merged `fns` so an own fn calling an imported one classifies against the real callee.
     // When `matured_scope` is true, every **own** fn with `thaw == false` must be `Total`; a non-total

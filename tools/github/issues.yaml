@@ -2454,10 +2454,12 @@ issues:
   - id: M-663
     title: "M-663 — feat(l1): Enact RFC-0018 stage-1 static guarantee grading in checkty.rs/elab.rs"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [M-657]
     epic: E7-1
-    doc_refs: [corpus:RFC-0018, corpus:RFC-0007, src:crates/mycelium-l1/src/elab.rs, src:crates/mycelium-l1/src/checkty.rs]
+    landed_date: 2026-06-22
+    landed_basis: "CHANGELOG.md '### Added (2026-06-22: M-663 — RFC-0018 stage-1a static guarantee grading (E7-1); RFC-0018 → Enacted)'; implemented in crates/mycelium-l1/src/grade.rs (Pass 3d) + elab.rs Residual removal; RFC-0018 Status → Enacted (stage 1a); DN-14 §3 row 11 → present. Branch claude/lex-kickoff-d4y98k; full just check green."
+    doc_refs: [corpus:RFC-0018, corpus:RFC-0007, src:crates/mycelium-l1/src/grade.rs, src:crates/mycelium-l1/src/elab.rs, src:crates/mycelium-l1/src/checkty.rs]
     body: |
       RFC-0018 is Accepted (2026-06-18) but not yet enacted in `mycelium-l1`. `elab.rs` returns `Residual` for any `@ g` guarantee annotation on function return types or parameters (lines 215–223, 542–546, 580–583, 880–887). This issue implements the RFC-0018 Design A (data-lineage / data-provenance integrity) graded typing pass: the guarantee index `@ g` on a type becomes a statically-checked constraint; the checker enforces the lattice (`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`) and propagates guarantee meets at call sites. Honesty: the noninterference argument remains `Declared-with-argument` per RFC-0018 §4 — this issue does not upgrade it.
       Acceptance: `fn f(x: Binary{8} @ Exact) -> Binary{8} @ Exact = …` type-checks correctly; calling `f` with a `@ Empirical` argument is a `CheckError`; `elab.rs` no longer returns `Residual` for `@ g` annotations; RFC-0018 Status → Enacted (after audit per M-648 criteria); DN-14 §3 row 11 → `present`.
