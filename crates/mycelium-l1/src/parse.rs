@@ -1127,4 +1127,79 @@ mod tests {
         // `els` is an identifier where `else` is required.
         assert!(err.message.contains("`else`"), "{}", err.message);
     }
+
+    // --- M-659 / RFC-0019 §4.1: `impl` decls + bounded type-params parse ---
+
+    #[test]
+    fn an_impl_decl_parses_with_trait_args_for_type_and_methods() {
+        let n = parse(
+            "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n\
+             impl Cmp<Binary{8}> for Binary{8} \
+             { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b00 }",
+        )
+        .expect("an impl parses");
+        let Item::Impl(id) = n
+            .items
+            .iter()
+            .find(|i| matches!(i, Item::Impl(_)))
+            .expect("an impl item")
+        else {
+            panic!("impl");
+        };
+        assert_eq!(id.trait_name, "Cmp");
+        assert_eq!(id.trait_args.len(), 1); // `<Binary{8}>`
+        assert_eq!(id.methods.len(), 1);
+        assert_eq!(id.methods[0].sig.name, "cmp");
+    }
+
+    #[test]
+    fn an_impl_without_for_is_an_explicit_error() {
+        let err = parse("nodule d\nimpl Cmp<Binary{8}> Binary{8} { }")
+            .expect_err("impl missing `for` must be rejected");
+        assert!(err.message.contains("`for`"), "{}", err.message);
+    }
+
+    #[test]
+    fn a_bounded_fn_type_param_parses_with_a_self_bound_and_a_plus_list() {
+        // `<T: Cmp>` (single self-bound) and `<T: A + B<T>>` (a `+`-list with type-args) both parse.
+        let n = parse(
+            "nodule d\nfn f<T: Cmp>(x: T) -> T = x\n\
+             fn g<T: A + B<T>>(x: T) -> T = x",
+        )
+        .expect("bounded type-params parse");
+        let Item::Fn(f) = &n.items[0] else {
+            panic!("fn")
+        };
+        assert_eq!(f.sig.params.len(), 1);
+        assert_eq!(f.sig.params[0].name, "T");
+        assert_eq!(f.sig.params[0].bounds.len(), 1);
+        assert_eq!(f.sig.params[0].bounds[0].name, "Cmp");
+        let Item::Fn(g) = &n.items[1] else {
+            panic!("fn")
+        };
+        assert_eq!(g.sig.params[0].bounds.len(), 2); // A + B<T>
+        assert_eq!(g.sig.params[0].bounds[1].name, "B");
+        assert_eq!(g.sig.params[0].bounds[1].args.len(), 1); // B<T>
+    }
+
+    #[test]
+    fn an_unbounded_fn_type_param_still_parses_the_identity_case() {
+        // The §11 identity: `<A>` with no bound is `TypeParam { bounds: [] }` — every v0 program
+        // that parsed before this extension still parses.
+        let n = parse("nodule d\nfn id<A>(x: A) -> A = x").expect("unbounded parses");
+        let Item::Fn(f) = &n.items[0] else {
+            panic!("fn")
+        };
+        assert_eq!(f.sig.params.len(), 1);
+        assert!(f.sig.params[0].bounds.is_empty());
+    }
+
+    #[test]
+    fn a_bound_on_a_type_decl_param_is_an_explicit_parse_refusal() {
+        // Stage-1: bounds live only on fn type-params. A bound on a `type` param is rejected, never
+        // silently dropped (G2). (Conformance reject/15 pins this at the corpus level too.)
+        let err = parse("nodule d\ntype Box<A: Cmp> = Wrap(A)")
+            .expect_err("a bound on a type-decl param must be rejected");
+        assert!(err.message.contains("deferred"), "{}", err.message);
+    }
 }

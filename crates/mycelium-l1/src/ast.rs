@@ -542,4 +542,29 @@ mod tests {
         .collect();
         assert_eq!(strengths.len(), 4);
     }
+
+    #[test]
+    fn fn_sig_param_names_drops_bounds() {
+        // `param_names()` projects the bounded type-params (RFC-0019 §4.1) to their names — the form
+        // the §11 generic machinery / checker `tyvars` consume. Bounds are read separately.
+        let sig = FnSig {
+            name: "f".to_owned(),
+            params: vec![
+                TypeParam {
+                    name: "T".to_owned(),
+                    bounds: vec![TraitRef {
+                        name: "Cmp".to_owned(),
+                        args: vec![],
+                    }],
+                },
+                TypeParam {
+                    name: "U".to_owned(),
+                    bounds: vec![],
+                },
+            ],
+            value_params: vec![],
+            ret: TypeRef::unguaranteed(BaseType::Binary(1)),
+        };
+        assert_eq!(sig.param_names(), vec!["T".to_owned(), "U".to_owned()]);
+    }
 }
