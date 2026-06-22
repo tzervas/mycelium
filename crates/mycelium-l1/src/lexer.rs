@@ -73,7 +73,11 @@ impl Lexer {
                 '[' => self.single(Tok::LBracket),
                 ']' => self.single(Tok::RBracket),
                 '>' => self.single(Tok::RAngle),
-                '@' => self.single(Tok::At),
+                // `@` is the guarantee-annotation glyph (`T @ Exact`), but `@std-sys` is the atomic
+                // nodule-header FFI-floor marker (M-661): `-` is not an identifier char, so `@std-sys`
+                // could never lex as `@` + an identifier — it must be recognized whole here. Only the
+                // exact `@std-sys` is special; any other `@…` stays the bare `Tok::At`.
+                '@' => self.lex_at(),
                 ':' => self.single(Tok::Colon),
                 ',' => self.single(Tok::Comma),
                 '.' => self.single(Tok::Dot),
@@ -100,6 +104,33 @@ impl Lexer {
                 }
             };
             out.push(Spanned { tok, pos });
+        }
+    }
+
+    /// Lex an `@`: the atomic `@std-sys` nodule-header marker (M-661) if `@` is immediately followed
+    /// by the literal `std-sys`, else the bare guarantee-annotation [`Tok::At`]. The match is on the
+    /// exact 7-char tail `std-sys`; a longer identifier (`std-system`) is **not** matched (the char
+    /// after `-sys` must not be an identifier continuation), so the special case stays maximally
+    /// narrow and `@std` / `@Exact` are unaffected. No `unsafe`; a pure lookahead-and-consume.
+    fn lex_at(&mut self) -> Tok {
+        self.bump(); // '@'
+        // Peek the exact `std-sys` tail without consuming unless it matches in full.
+        const MARKER: &[char] = &['s', 't', 'd', '-', 's', 'y', 's'];
+        let matches_tail = MARKER
+            .iter()
+            .enumerate()
+            .all(|(k, &want)| self.chars.get(self.i + k).copied() == Some(want));
+        // It must be a *whole* word: the char after `std-sys` cannot continue an identifier
+        // (so `@std-system` is NOT the marker — it stays `@` + ident, which then fails downstream).
+        let next_after = self.chars.get(self.i + MARKER.len()).copied();
+        let whole_word = next_after.is_none_or(|c| !is_ident_continue(c));
+        if matches_tail && whole_word {
+            for _ in 0..MARKER.len() {
+                self.bump();
+            }
+            Tok::AtStdSys
+        } else {
+            Tok::At
         }
     }
 

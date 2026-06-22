@@ -186,14 +186,26 @@ impl Parser {
 
     // ---- items ----
 
+    /// `nodule <path> @std-sys? <item>*` — the program header (RFC-0006 §4.3). An optional
+    /// **`@std-sys`** marker after the path (M-661; RFC-0016 §8-Q6) tags the nodule as the audited
+    /// FFI-floor context: only a `@std-sys` nodule may contain a `wild` block (the checker enforces
+    /// this — a `wild` elsewhere is a hard refusal, never silent — G2). The marker is lexed atomically
+    /// as [`Tok::AtStdSys`] (so `@std-sys`'s `-` is not a lex error); absent ⇒ a normal nodule.
     fn parse_nodule(&mut self) -> Result<Nodule, ParseError> {
         self.expect(&Tok::Nodule, "a `nodule` header to open the program")?;
         let path = self.parse_path()?;
+        // Optional `@std-sys` FFI-floor header marker (M-661). It is the audited-FFI *context* gate;
+        // it carries no further syntax (no `: true`/`: false` — its mere presence is the attribute).
+        let std_sys = self.eat(&Tok::AtStdSys);
         let mut items = Vec::new();
         while !self.at(&Tok::Eof) {
             items.push(self.parse_item()?);
         }
-        Ok(Nodule { path, items })
+        Ok(Nodule {
+            path,
+            std_sys,
+            items,
+        })
     }
 
     fn parse_item(&mut self) -> Result<Item, ParseError> {

@@ -10,6 +10,13 @@ pub struct Path(pub Vec<String>);
 pub struct Nodule {
     /// The nodule's dotted name.
     pub path: Path,
+    /// Whether the header carries the explicit **`@std-sys`** marker (`nodule std.sys.fs @std-sys`)
+    /// — the audited FFI-floor context (RFC-0016 §8-Q6; LR-9/S6; M-661). This is a header
+    /// **attribute**, *not* a naming convention: a `wild` block (the denied-by-default unsafe escape,
+    /// LR-9) is legal **only** inside a nodule marked `@std-sys` — the checker hard-refuses a `wild`
+    /// in any non-`@std-sys` nodule, never a silent escape (G2). The marker is parsed and threaded to
+    /// the checker; it gates `wild` (and nothing else in v0).
+    pub std_sys: bool,
     /// Top-level items.
     pub items: Vec<Item>,
 }

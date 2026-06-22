@@ -502,6 +502,9 @@ fn check_and_resolve_matured_inner(
     }
     let twin = Nodule {
         path: resolved.path.clone(),
+        // Preserve the `@std-sys` FFI-floor marker (M-661) on the resolved longhand twin — it is
+        // header metadata, untouched by ambient resolution / body checking.
+        std_sys: resolved.std_sys,
         items,
     };
     Ok((env, twin))
@@ -597,7 +600,7 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
         // checking its body — each resolves to a `Ty::Var` (RFC-0007 §11.2). Bounds (RFC-0019 §4.1)
         // are validated and carried so an unqualified trait-method call in the body can type through
         // a bound (the dictionary it stands for is staged — RFC-0007 §12.3 / M-673).
-        let (body, _ret) = check_fn_body(&types, &fns, &traits, &instances, fd)?;
+        let (body, _ret) = check_fn_body(&types, &fns, &traits, &instances, nodule.std_sys, fd)?;
         resolved_fns.insert(
             fd.sig.name.clone(),
             FnDecl {
@@ -615,7 +618,7 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     // re-stored (the elaborator stages the dictionary lowering — M-673), only validated.
     for item in &nodule.items {
         if let Item::Impl(id) = item {
-            check_impl_methods(&types, &fns, &traits, &instances, id)?;
+            check_impl_methods(&types, &fns, &traits, &instances, nodule.std_sys, id)?;
         }
     }
 
@@ -695,11 +698,23 @@ fn check_effect_coverage(
     Ok(())
 }
 
+/// What introduced a performed effect, for the coverage diagnostic. `Ord` so the `(effect, source)`
+/// set is deterministic (a stable first-miss). A **`Call`** is a top-level fn or trait-method call
+/// (M-660); **`Wild`** is the `wild` FFI floor (M-661 — `wild` performs `ffi`).
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum EffectSource {
+    /// A call to a named callee (top-level fn or unqualified trait method) — M-660.
+    Call(String),
+    /// A `wild` block — the FFI floor; it performs the `ffi` effect (M-661).
+    Wild,
+}
+
 /// One body's effect coverage: `declared ⊇ performed`, where *performed* is the union of each
 /// callee's declared effects — a known top-level fn (`fns`), else an unqualified trait method
-/// (`traits`, by name). Owned-`String` sets keep lifetimes simple; the structural walk is shared
-/// with totality (one traversal, no bespoke depth-guarded recursion). Deterministic order ⇒ a stable
-/// first-miss diagnostic. `wild`-sourced effects (M-661) and the M-353 budget ledger are not consulted.
+/// (`traits`, by name) — **plus the `ffi` effect contributed by any `wild` block** (M-661). Owned-
+/// `String` sets keep lifetimes simple; the structural walk is shared with totality (one traversal,
+/// no bespoke depth-guarded recursion). Deterministic order ⇒ a stable first-miss diagnostic. The
+/// M-353 runtime budget ledger is a separate concern (not consulted here).
 fn check_body_effect_coverage(
     fns: &BTreeMap<String, FnDecl>,
     traits: &BTreeMap<String, TraitInfo>,
@@ -708,25 +723,33 @@ fn check_body_effect_coverage(
     body: &Expr,
 ) -> Result<(), CheckError> {
     let declared: std::collections::BTreeSet<String> = declared_effs.iter().cloned().collect();
-    let mut performed: std::collections::BTreeSet<(String, String)> =
+    // Each performed effect is recorded with its **source** so the diagnostic can name it: a
+    // `Source::Call(callee)` (a top-level fn or trait-method call — M-660) or the `Source::Wild`
+    // FFI floor (M-661). The set is `(effect, source)` for a deterministic, de-duplicated first-miss.
+    let mut performed: std::collections::BTreeSet<(String, EffectSource)> =
         std::collections::BTreeSet::new();
     crate::totality::walk_expr(body, &mut |x| {
-        if let Expr::App { head, .. } = x {
-            if let Expr::Path(p) = head.as_ref() {
-                if p.0.len() == 1 {
-                    let callee = &p.0[0];
-                    if let Some(g) = fns.get(callee) {
-                        for eff in &g.sig.effects {
-                            performed.insert((eff.clone(), callee.clone()));
-                        }
-                    } else {
-                        // Not a top-level fn ⇒ an unqualified trait-method call: it performs the
-                        // declaring trait method's declared effects (the contract).
-                        for tr in traits.values() {
-                            for s in &tr.sigs {
-                                if &s.name == callee {
-                                    for eff in &s.effects {
-                                        performed.insert((eff.clone(), callee.clone()));
+        match x {
+            Expr::App { head, .. } => {
+                if let Expr::Path(p) = head.as_ref() {
+                    if p.0.len() == 1 {
+                        let callee = &p.0[0];
+                        if let Some(g) = fns.get(callee) {
+                            for eff in &g.sig.effects {
+                                performed.insert((eff.clone(), EffectSource::Call(callee.clone())));
+                            }
+                        } else {
+                            // Not a top-level fn ⇒ an unqualified trait-method call: it performs the
+                            // declaring trait method's declared effects (the contract).
+                            for tr in traits.values() {
+                                for s in &tr.sigs {
+                                    if &s.name == callee {
+                                        for eff in &s.effects {
+                                            performed.insert((
+                                                eff.clone(),
+                                                EffectSource::Call(callee.clone()),
+                                            ));
+                                        }
                                     }
                                 }
                             }
@@ -734,16 +757,30 @@ fn check_body_effect_coverage(
                     }
                 }
             }
+            // `wild` is the `ffi` effect **source** (M-661; RFC-0016 §8-Q6 binding to M-660): a fn
+            // whose body contains a `wild` block *performs* `ffi`, so it must declare `!{ffi}` — else
+            // the coverage check refuses it exactly as for a call-sourced undeclared effect (G2). The
+            // `@std-sys` context gate is the typechecker's separate concern ([`Cx::check_wild`]); here
+            // `wild` only contributes its effect. (A `wild` that reached this pass already passed the
+            // context gate, since coverage runs after bodies type-check.)
+            Expr::Wild(_) => {
+                performed.insert(("ffi".to_owned(), EffectSource::Wild));
+            }
+            _ => {}
         }
     });
-    for (eff, callee) in &performed {
+    for (eff, source) in &performed {
         if !declared.contains(eff) {
+            let via = match source {
+                EffectSource::Call(callee) => format!("via calling `{callee}`"),
+                EffectSource::Wild => "via a `wild` block (the FFI floor — M-661)".to_owned(),
+            };
             return Err(CheckError::new(
                 name,
                 format!(
-                    "`{name}` performs effect `{eff}` (via calling `{callee}`) but does not declare \
-                     it — add it to the `!{{…}}` effect annotation (RFC-0014 §4.5 I3: no undeclared \
-                     effects; never silent — G2)"
+                    "`{name}` performs effect `{eff}` ({via}) but does not declare it — add it to \
+                     the `!{{…}}` effect annotation (RFC-0014 §4.5 I3: no undeclared effects; never \
+                     silent — G2)"
                 ),
             ));
         }
@@ -1070,6 +1107,7 @@ fn check_impl_methods(
     fns: &BTreeMap<String, FnDecl>,
     traits: &BTreeMap<String, TraitInfo>,
     instances: &BTreeMap<(String, String), InstanceInfo>,
+    std_sys: bool,
     id: &ImplDecl,
 ) -> Result<(), CheckError> {
     let tr = traits
@@ -1158,8 +1196,10 @@ fn check_impl_methods(
         }
         // The body is checked the normal fn-body way (against the method's own — now validated —
         // signature). `for_ty` is concrete, so the body has no abstract type-variables; the full
-        // trait/instance context is available so the body may itself call trait methods.
-        check_fn_body(types, fns, traits, instances, method)?;
+        // trait/instance context is available so the body may itself call trait methods. The
+        // `@std-sys` context (M-661) flows in so a `wild` block inside an impl method is gated
+        // exactly as in a top-level fn (an impl in a non-`@std-sys` nodule may not contain `wild`).
+        check_fn_body(types, fns, traits, instances, std_sys, method)?;
     }
     let _ = for_ty; // resolved above for the arg substitution; head reuse is at registration.
     Ok(())
@@ -1175,6 +1215,7 @@ fn check_fn_body(
     fns: &BTreeMap<String, FnDecl>,
     traits: &BTreeMap<String, TraitInfo>,
     instances: &BTreeMap<(String, String), InstanceInfo>,
+    std_sys: bool,
     fd: &FnDecl,
 ) -> Result<(Expr, Ty), CheckError> {
     let site = &fd.sig.name;
@@ -1197,6 +1238,7 @@ fn check_fn_body(
         instances,
         tyvars: &tyvars,
         bounds: &bounds,
+        std_sys,
         depth: Cell::new(0),
     };
     let (got, body) = cx.check(&mut scope, &fd.body, Some(&ret))?;
@@ -1281,6 +1323,11 @@ struct Cx<'a> {
     /// dictionary it stands for is staged to elaboration — RFC-0007 §12.3 / M-673). Parallel to
     /// `tyvars`; empty for an unbounded/monomorphic body.
     bounds: &'a [(String, Vec<TraitRef>)],
+    /// Whether the enclosing nodule carries the `@std-sys` FFI-floor marker (M-661; RFC-0016 §8-Q6).
+    /// A `wild` block (the denied-by-default unsafe escape, LR-9/S6) type-checks **only** when this is
+    /// `true`; in a non-`@std-sys` nodule a `wild` is a hard [`CheckError`] (never a silent escape —
+    /// G2). Threaded down from the nodule header through [`check_fn_body`] / [`check_impl_methods`].
+    std_sys: bool,
     /// Live expression-nesting depth for the explicit [`MAX_CHECK_DEPTH`] budget (interior
     /// mutability so [`Self::check`] stays `&self`). Reset per body; accounted by [`DepthGuard`].
     depth: Cell<u32>,
@@ -1367,10 +1414,7 @@ impl Cx<'_> {
                 target,
                 policy,
             } => self.check_swap(scope, value, target, policy),
-            Expr::Wild(_) => self.err(
-                "`wild` is denied by default (LR-9): no host FFI capability exists in v0, so a \
-                 wild block cannot be checked or run — this refusal is the design, not a gap",
-            ),
+            Expr::Wild(body) => self.check_wild(body, expected),
             Expr::Spore(_) => {
                 self.err("`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)")
             }
@@ -1531,6 +1575,53 @@ impl Cx<'_> {
                 policy: policy.clone(),
             },
         ))
+    }
+
+    /// Type a `wild { body }` block — the **audited FFI floor** (M-661; RFC-0016 §8-Q6; LR-9/S6;
+    /// ADR-014). Guarantee: **`Declared`** — this is a structural + audited *context* gate, never a
+    /// theorem (VR-5). The rule (settled by the maintainer; RFC-0016 §8-Q6 amendment):
+    ///
+    /// 1. **Context gate.** A `wild` block is legal **only** inside a `@std-sys` nodule. In any other
+    ///    nodule it is a hard [`CheckError`] — the audited FFI floor lives only in `std-sys` (LR-9),
+    ///    never a silent escape from safe code (G2). This is a hard refusal, **not** a lint.
+    /// 2. **Type by ascription, never synthesis.** The `wild` body is the **trusted/opaque FFI
+    ///    escape** — it is **not** recursively type-checked (it conforms to the expected type; it is
+    ///    *audited*, not *verified* — VR-5/ADR-014). So a result type must be supplied by the context
+    ///    (`expected`); in a synthesis position the checker refuses with "ascribe the `wild` block's
+    ///    result type" (never a guessed type — G2). The block then **has** that expected type.
+    /// 3. **Effect source.** `wild` is the `ffi` effect source (M-660 binding): the enclosing fn must
+    ///    declare `!{ffi}`. That is enforced separately, in the effect-coverage pass
+    ///    ([`check_body_effect_coverage`]) — which credits a `wild` with performing `ffi` — so it
+    ///    composes with the M-660 machinery rather than duplicating it here.
+    /// 4. **Execution is staged.** There is no FFI host in v0, so `wild` *type-checks + gates + is
+    ///    audited* now; actually *running* it elaborates to an explicit [`crate::elab::ElabError::Residual`]
+    ///    (a future capability) — consistent with M-657/659/660 staging. The body is preserved
+    ///    **verbatim** in the returned expression (opaque — no interior resolution).
+    fn check_wild(
+        &self,
+        body: &Expr,
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        if !self.std_sys {
+            return self.err(
+                "`wild` is denied outside a `@std-sys` nodule — the audited FFI floor lives only in \
+                 `std-sys` (RFC-0016 §8-Q6, LR-9); never a silent escape — G2. Mark the nodule's \
+                 header `@std-sys` to author the FFI floor.",
+            );
+        }
+        // The body is the trusted/opaque FFI escape — NOT recursively checked (audited, not verified;
+        // VR-5/ADR-014). It must therefore take its type from the context: refuse in synthesis.
+        let Some(want) = expected else {
+            return self.err(
+                "a `wild` block has no synthesizable type — its body is the trusted/opaque FFI escape \
+                 (not type-checked, only audited; ADR-014/VR-5). Ascribe the `wild` block's result \
+                 type (`wild { … } : Binary{8}`) or use it in a typed position (a fn body / `let` \
+                 with an annotation) — never a guess (G2).",
+            );
+        };
+        // `@std-sys` + a known expected type: the block *has* that type; the body is preserved
+        // verbatim (opaque). Effect coverage (`ffi`) is checked by the M-660 pass, not here.
+        Ok((want.clone(), Expr::Wild(Box::new(body.clone()))))
     }
 
     /// Type a `colony { hypha e1, …, hypha eN }` block (RFC-0008 §4.7; M-666). Every `hypha` body
@@ -2451,6 +2542,12 @@ pub(crate) fn infer_type(
         // parameters / bounds are in scope here.
         tyvars: &[],
         bounds: &[],
+        // Re-inference is **post-check**: the `@std-sys` gate (M-661) already passed during checking,
+        // and a `wild` block lowers to an explicit `Residual` in the elaborator *before* any interior
+        // re-inference, so `wild` never reaches here. Setting this `true` keeps re-inference honest
+        // (it would never spuriously refuse a `wild` that the program already validated) without
+        // re-litigating the gate — the gate is the checker's job, done once.
+        std_sys: true,
         depth: Cell::new(0),
     };
     cx.infer(scope, e)
@@ -2824,6 +2921,7 @@ mod depth_budget_tests {
     pub(crate) fn nodule_with_body(body: Expr) -> Nodule {
         Nodule {
             path: Path(vec!["d".to_string()]),
+            std_sys: false,
             items: vec![Item::Fn(FnDecl {
                 thaw: false,
                 sig: FnSig {
