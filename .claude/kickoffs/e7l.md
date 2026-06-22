@@ -74,12 +74,29 @@ every issue body + status updated, ready for final integration to `main`.
 
 ### ACTIVE TASK — extend traits to PARAMETRIC (maintainer chose this) via a Sonnet micro-task swarm
 Target: `trait Cmp<A> { fn cmp(a:A,b:A)->Binary{2} }` (trait TYPE PARAM in method sigs) + `impl Cmp<Binary{8}> for Binary{8}` + bound `<X:Cmp> ⇒ impl Cmp<X> for X`. ADDITIVE (0-param traits + all 208 tests stay green). Reuses Ty::Var/Ty::App/Ty::Arrow/dictionary/monomorphize.
-**Micro-tasks (serial-on-L1, each a small Sonnet leaf branched from the prior's pushed tip, push each):**
-- **MT1** `parse.rs`+`ast.rs`: impl header trait-args (`impl Ident type_args? for type_ref {…}`) + `ImplDecl.trait_args: Vec<TypeRef>` + parse test.
-- **MT2** `checkty.rs` Pass 1c+1d: resolve trait method sigs with the trait param in `tyvars` (→`Ty::Var`) + dict shell generic over the param; impl substitutes `A↦C`, checks methods vs substituted sigs, require `C==for_ty` (else refuse).
-- **MT3** `checkty.rs` `check_generic_call`+`monomorphize`: parametric bound resolution (`X:T ⇒ impls[(T, mangle(X))]`, missing→explicit error) + generic-dictionary threading.
-- **MT4** tests: `accept/17-parametric-trait.myc` + `check.rs` parametric cases + `differential.rs` three-way.
-Every leaf: HARD PRECONDITION (grep `traits:`/`Ty::Arrow` in checkty.rs; else `git reset --hard origin/claude/keen-hypatia-bdmtt4`); never-silent (G2); Declared (VR-5, no `Proven`); no new kernel node (KC-3); no `proptest` (bounded `#[test]`); `cargo clippy -p mycelium-l1 --all-targets -D warnings` (ignore pre-existing `mycelium-mlir` unsafe noise).
+**Swarm shape (maintainer directive): parallelize nonconflicting micro-tasks; serialize the common
+collision surface (`checkty.rs`); octopus-merge the disjoint leaves with clean-merge deconfliction.**
+
+- **Serial spine (shared L1 files — the "common components", one Sonnet leaf at a time, each based on
+  the prior's pushed tip):**
+  - **S-A** `parse.rs` + `ast.rs`: impl header trait-args (`impl Ident type_args? for type_ref {…}`) +
+    `ImplDecl.trait_args: Vec<TypeRef>` (prerequisite surface; the checker reads it).
+  - **S-B** `checkty.rs` (the bulk — serialized): Pass 1c trait method sigs with the trait param in
+    `tyvars` (→`Ty::Var`) + dict shell generic over the param; Pass 1d impl substitutes `A↦C`, checks
+    methods vs substituted sigs, require `C==for_ty` (else refuse); `check_generic_call` parametric
+    bound resolution (`X:T ⇒ impls[(T, mangle(X))]`, missing→explicit error); `monomorphize`
+    generic-dictionary threading.
+- **Parallel wave (DISJOINT files — run concurrently after S-B; conflict-free octopus-merge):**
+  - **P-1** `tests/check.rs`: parametric check/coherence cases.
+  - **P-2** `tests/differential.rs`: parametric three-way dispatch.
+  - **P-3** `docs/spec/grammar/conformance/accept/17-parametric-trait.myc` (+ any reject/`REJECT_EXPECTED`).
+- **Merge discipline:** the parallel leaves touch disjoint files → `git merge --no-ff P-1 P-2 P-3` is
+  conflict-free by construction; verify each leaf's merge-base + payload (mitigation #7) and run
+  `just check`. The serial spine (S-A→S-B) is one-at-a-time (shared files).
+- Every leaf: HARD PRECONDITION (grep `traits:`/`Ty::Arrow` in `checkty.rs`; else `git reset --hard
+  origin/claude/keen-hypatia-bdmtt4`); never-silent (G2); Declared (VR-5, no `Proven`); no new kernel
+  node (KC-3); no `proptest` (bounded `#[test]`); `cargo clippy -p mycelium-l1 --all-targets -D
+  warnings` (ignore pre-existing `mycelium-mlir` unsafe noise); push every commit.
 
 ### AFTER parametric traits are green on the work branch (orchestrator/Opus does these)
 1. **Write RFC-0007 §4.10 spec** (mirror §4.9): parametric trait surface + literal-runtime-dictionary model + honest deferrals (multi-param traits, assoc types, supertraits, multi-bound `+`/no `Tok::Plus`, `impl T<C> for D` with C≠D). + ebnf `impl_item`/`bound` in `docs/spec/grammar/mycelium.ebnf`. RFC-0007 stays Accepted; slice Declared, "Rust-first pending ratification."
