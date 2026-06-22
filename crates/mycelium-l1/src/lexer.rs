@@ -78,6 +78,10 @@ impl Lexer {
                 ',' => self.single(Tok::Comma),
                 '.' => self.single(Tok::Dot),
                 '|' => self.single(Tok::Pipe),
+                // `!` opens the effect annotation `!{ … }` (RFC-0014 §3.4; M-660). Single-char token;
+                // the effect names inside stay identifiers. v0 has no other `!` use, so the parser
+                // accepts it only before an effect set and errors otherwise (never a silent accept).
+                '!' => self.single(Tok::Bang),
                 // `+` is the trait-bound separator (`T: A + B`; RFC-0019 §4.1). It is also a trit
                 // glyph, but a trit literal is only ever scanned *whole* from an opening `<` (in
                 // `lex_angle_or_trit`), so a `+` reaching here is always the bound separator token.

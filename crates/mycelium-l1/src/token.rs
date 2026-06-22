@@ -179,6 +179,11 @@ pub enum Tok {
     Arrow,
     /// `=>`.
     FatArrow,
+    /// `!` — opens the effect annotation `!{ … }` on a fn signature (RFC-0014 §3.4; M-660). It
+    /// appears **only** before the `{` of an effect set; v0 has no boolean-`not`/negation operator
+    /// (logical ops are named prims), so a `!` anywhere else is an explicit parse error (G2), never a
+    /// silent accept. The effect *names* inside the braces stay ordinary identifiers.
+    Bang,
     /// End of input.
     Eof,
 }

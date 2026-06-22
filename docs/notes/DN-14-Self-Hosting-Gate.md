@@ -83,7 +83,7 @@ primary evidence for refusals.
 | 5 | **Nodule-level organization** (`nodule` header, single-nodule scoping, `use path`) | Any library unit | `ast.rs` `Nodule`/`Item::Use`; `nodule.rs`; DN-06; M-343 | **present** |
 | 6 | **Generic type parameters** (`fn f<A, B>(…)`, `type List<A>`) | `collections`, `iter`, `cmp`, `error`, `math`, `text` | M-657: `checkty.rs` checks unbounded generics (type vars, unification-based instantiation, arity, never-guess); `elab.rs` **stages** the L0 lowering of a generic *instantiation* as an explicit `Residual` (monomorphization follow-up); RFC-0007 §11 | **partial — type-checks; elaboration staged** |
 | 7 | **Trait-like interfaces** (`trait T { fn … }`) + impl blocks | RFC-0016 §4.1 C1–C6 contract machinery in-language; `iter`, `cmp`, `fmt` | **Checker landed (M-659):** `trait`/`impl` type-check with **coherence** (global uniqueness + single-nodule orphan rule), exact method-set conformance, and bounded-call/trait-method resolution — every violation an explicit `CheckError` (G2), guarantee `Declared`; **dictionary-passing L0 lowering staged → M-673** | **partial — type-checks; elaboration staged** |
-| 8 | **Effect annotations (RFC-0014 RT3)** — declared `{time, entropy, io, …}` on surface `fn` | `rand`, `time`, `io`, `fs`, `recover` | No effect-annotation syntax in `ast.rs` `FnSig` or `FnDecl`; `checkty.rs` has no effect-checking pass (RFC-0007 §4.3: "stage 1, a revision of this RFC"); RFC-0014 effects exist only in the L0 interpreter budget layer (`mycelium-interp`) | **gate-fails** |
+| 8 | **Effect annotations (RFC-0014 RT3)** — declared `{time, entropy, io, …}` on surface `fn` | `rand`, `time`, `io`, `fs`, `recover` | **Landed (M-660):** `ast.rs` `FnSig.effects`; `parse.rs` parses the `!{ … }` annotation after the return type (absent ⇒ pure; duplicate-effect = parse refusal); `checkty.rs` `check_effect_coverage` enforces **declared ⊇ performed** (performed = union of top-level callees' declared effects), under-declaration an explicit `CheckError` (G2/RFC-0014 I3), over-declaration allowed (I5); impl-method effects must equal the trait method's. Guarantee **`Declared`** (a structural coverage check). **No new L0 node** (KC-3); the runtime budget ledger stays `mycelium-interp::budget` (M-353), and `wild`-sourced effects arrive with M-661 | **present** |
 | 9 | **`wild` / FFI surface** — callable host operations | `fs`, `rand`, `io` (std-sys call sites) | `checkty.rs` line ~454: *"`wild` is denied by default (LR-9): no host FFI capability exists in v0, so a wild block cannot be checked or run — this refusal is the design, not a gap"*; `ast.rs` `Expr::Wild` parses but typechecker rejects | **gate-fails** |
 | 10 | **Full phyla + cross-nodule imports** — `phylum std`, `use` across nodule boundaries | Any multi-nodule library | `ast.rs` `Item::Use(Path)` is parsed; `lib.rs` notes "v0 is single-nodule"; `checkty.rs` does not resolve cross-nodule paths; `ast.rs` notes `phylum` is a **reserved keyword** (DN-06) but no phylum-level elaboration exists | **missing (partial)** |
 | 11 | **Refinement / dependent types for guarantee-matrix encoding** (guarantee index as first-class surface type, checked statically) | Per-op guarantee machinery, RFC-0016 §4.5 | `ast.rs` `TypeRef.guarantee: Option<Strength>` parses the index; `checkty.rs` note: "stage-0 semantics… runtime tags + meet"; RFC-0007 §4.3: "static graded judgment is stage 1, a revision of this RFC" — stage-1 is not implemented | **gate-fails** |
@@ -153,6 +153,25 @@ not change whether stdlib authoring in Mycelium-lang is currently possible):
 
 ## Meta — changelog
 
+- **2026-06-22 — §3 row 8 effect annotations landed → row 8 now `present` (M-660; append-only, VR-5).**
+  Stage-1 **effect annotations** landed in `mycelium-l1` (RFC-0014 §3.4/§4.5, the `!{…}` surface now
+  pinned normative for the frontend): `FnSig.effects` (`ast.rs`), the parser's optional
+  `!{ eff1, eff2 }` after the return type (`parse.rs` — absent ⇒ pure; a duplicate effect name in one
+  annotation is a never-silent **parse** refusal), and the **effect-coverage** checker pass
+  (`checkty.rs` `check_effect_coverage`): a fn's **declared** effects must be a **superset** of the
+  effects it **performs** (performed = the union of the declared effects of every top-level fn it
+  calls — the §8 manual-declare + compositional-**check** line, never inference). **Under-declaration**
+  is an explicit `CheckError` naming the effect + the callee (G2/RFC-0014 I3); **over-declaration is
+  allowed** (a declaration is a contract — I5); an **impl method's** effect set must **equal** the
+  trait method's (exact match). Guarantee **`Declared`** (a structural coverage check, not a theorem).
+  **No new L0 node** (KC-3) — effects are checker metadata and do not lower; the **runtime budget
+  ledger stays `mycelium-interp::budget` (M-353)**, not wired by this frontend, and **`wild`-sourced
+  effects expand the source set with M-661** (`wild` stays rejected here). Verified by the `mycelium-l1`
+  effect test suite (`tests/check.rs` incl. a monotonicity property sweep + trait/impl
+  effect-conformance; `tests/parse.rs` grammar; `accept/16`/`reject/17` conformance fixtures), `just
+  check` green for `mycelium-l1`. This **flips row 8 only** (rows 6/7 stay `partial`, rows 9/11 stay
+  `gate-fails`, row 10 stays missing-partial); DN-14 → `Resolved` still awaits those remaining rows.
+  (RFC-0014 §4.5; M-660, E7-1)
 - **2026-06-22 — §3 row 7 trait CHECKER landed → row 7 now `partial` (M-659; append-only, VR-5).**
   The stage-1 trait/impl **checker** landed in `mycelium-l1`: `trait`/`impl` type-check with **coherence**
   (global uniqueness + single-nodule orphan rule), exact method-set conformance, and bounded-generic +

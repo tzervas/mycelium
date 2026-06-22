@@ -99,6 +99,12 @@ graded judgment is **stage 1, a revision of this RFC**, with one rule already fi
 annotation may only *weaken* — asserting `@ g` on a term whose tag is weaker than `g` is an
 error, never an upgrade (VR-5).
 
+> **Note (2026-06-22 — append-only; M-660): effect annotations are a separate signature surface.**
+> A fn signature may *also* carry an **effect annotation** `!{eff1, eff2}` after its return type
+> (`-> ret !{…}`; absent ⇒ pure) — orthogonal to the `@ g` guarantee index above. Its surface +
+> v0 coverage check (declared ⊇ performed) is pinned in **RFC-0014 §3.4/§4.5** and implemented
+> Rust-first in `crates/mycelium-l1/` (no new L0 node — effects are checker metadata, KC-3).
+
 ### 4.4 Typing judgments (v0: simple types, monomorphic)
 
 `Γ ⊢ e : τ`, with `Σ` the data registry and `Π` the prim signature table:

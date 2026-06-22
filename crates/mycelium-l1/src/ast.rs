@@ -158,6 +158,15 @@ pub struct FnSig {
     pub value_params: Vec<Param>,
     /// Result type.
     pub ret: TypeRef,
+    /// The **declared effect set** (RFC-0014 §3.4/§4.5 I3; M-660) — the `!{eff1, eff2}` annotation
+    /// after the return type, as surface effect **names** in source order. **Empty = pure** (an
+    /// unannotated `fn`; RFC-0014 I5 default-tightly-scoped). The names are plain identifiers (NOT
+    /// reserved words): the closed kernel effect kinds (`retry|alloc|io|cascade|time`) plus
+    /// user-declared `Named` effects (RFC-0014 §4.5). Stored as `Vec<String>` — the surface names the
+    /// effect-coverage checker compares by string (the v0 mechanism; mapping a name to
+    /// `mycelium_interp::budget::EffectKind` is the *runtime* ledger's concern — M-353 — out of the L1
+    /// frontend's scope). These are checker metadata only: effects lower to **no** L0 node (KC-3).
+    pub effects: Vec<String>,
 }
 
 impl FnSig {
@@ -564,6 +573,7 @@ mod tests {
             ],
             value_params: vec![],
             ret: TypeRef::unguaranteed(BaseType::Binary(1)),
+            effects: vec![],
         };
         assert_eq!(sig.param_names(), vec!["T".to_owned(), "U".to_owned()]);
     }

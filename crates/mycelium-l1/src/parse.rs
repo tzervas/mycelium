@@ -328,9 +328,12 @@ impl Parser {
         Ok(FnDecl { thaw, sig, body })
     }
 
-    /// The shared `name <params>? ( value_params? ) -> ret` tail of a signature. A function's
-    /// type-parameters may carry **trait bounds** (`<T: Cmp + Ord<T>>`; RFC-0019 §4.1) — the
-    /// dictionary site — so this uses [`parse_type_params_bounded`](Self::parse_type_params_bounded).
+    /// The shared `name <params>? ( value_params? ) -> ret !{effects}?` tail of a signature. A
+    /// function's type-parameters may carry **trait bounds** (`<T: Cmp + Ord<T>>`; RFC-0019 §4.1) —
+    /// the dictionary site — so this uses
+    /// [`parse_type_params_bounded`](Self::parse_type_params_bounded). The optional
+    /// `!{ eff1, eff2 }` **effect annotation** (RFC-0014 §3.4; M-660) follows the return type; absent
+    /// ⇒ the empty (pure) effect set.
     fn parse_sig_tail(&mut self) -> Result<FnSig, ParseError> {
         let name = self.ident()?;
         let params = self.parse_type_params_bounded()?;
@@ -339,12 +342,50 @@ impl Parser {
         self.expect(&Tok::RParen, "`)` to close the parameter list")?;
         self.expect(&Tok::Arrow, "`->` and a result type")?;
         let ret = self.parse_type_ref()?;
+        let effects = self.parse_effects_opt()?;
         Ok(FnSig {
             name,
             params,
             value_params,
             ret,
+            effects,
         })
+    }
+
+    /// `!{ eff (, eff)* }?` — the optional **effect annotation** after a signature's return type
+    /// (RFC-0014 §3.4/§4.5 I3; M-660). When the next token is `!`, consume `!{` … `}` and parse a
+    /// comma-separated list of effect **names** (plain identifiers — the closed kernel kinds
+    /// `retry|alloc|io|cascade|time` plus user `Named` effects; RFC-0014 §4.5); the empty set `!{}`
+    /// is allowed (an explicit, written "pure" annotation). When there is no `!`, return `vec![]`
+    /// (the implicit pure default — RFC-0014 I5). A **duplicate** effect name in one annotation is an
+    /// explicit refusal (never a silent dedup — G2): a repeated effect is a written redundancy the
+    /// author should fix, not something the parser quietly collapses.
+    fn parse_effects_opt(&mut self) -> Result<Vec<String>, ParseError> {
+        if !self.eat(&Tok::Bang) {
+            return Ok(Vec::new());
+        }
+        self.expect(
+            &Tok::LBrace,
+            "`{` after `!` to open the effect set (RFC-0014 §3.4)",
+        )?;
+        // The empty written set `!{}` is valid (an explicit "declares no effects").
+        let effects = if self.at(&Tok::RBrace) {
+            Vec::new()
+        } else {
+            self.comma_separated(None, Self::ident)?
+        };
+        self.expect(&Tok::RBrace, "`}` to close the effect set")?;
+        if let Some(dup) = first_duplicate_str(&effects) {
+            return Err(ParseError::new(
+                self.pos(),
+                format!(
+                    "duplicate effect `{dup}` in the effect annotation — list each declared effect \
+                     once (RFC-0014 §4.5; a repeated effect is a never-silent refusal, not a silent \
+                     dedup)"
+                ),
+            ));
+        }
+        Ok(effects)
     }
 
     fn parse_params_opt(&mut self) -> Result<Vec<Param>, ParseError> {
@@ -971,6 +1012,15 @@ impl Parser {
     }
 }
 
+/// The first value appearing more than once in `xs` (left to right), if any. Used by the effect
+/// annotation parser to reject a duplicate effect name explicitly (M-660; G2 — never a silent
+/// dedup). A small, allocation-light scan (effect sets are short); mirrors the checker's
+/// `first_duplicate` without coupling the two modules.
+fn first_duplicate_str(xs: &[String]) -> Option<&String> {
+    let mut seen = std::collections::BTreeSet::new();
+    xs.iter().find(|x| !seen.insert((*x).as_str()))
+}
+
 /// Return the surface spelling for a DN-03 §4 runtime-vocabulary reserved keyword token.
 /// Used in teaching diagnostics so the error message names the actual word, not the enum variant.
 /// Total over exactly the runtime-vocabulary tokens; the `_` arm is unreachable in practice
@@ -1201,5 +1251,53 @@ mod tests {
         let err = parse("nodule d\ntype Box<A: Cmp> = Wrap(A)")
             .expect_err("a bound on a type-decl param must be rejected");
         assert!(err.message.contains("deferred"), "{}", err.message);
+    }
+
+    // --- M-660 / RFC-0014 §3.4: effect annotations `!{ … }` on fn signatures parse ---
+
+    #[test]
+    fn an_effect_annotation_parses_into_the_signature_effect_set() {
+        // `!{io, time}` after the return type lands as the signature's effect set, in source order.
+        let n = parse("nodule d\nfn a() -> Binary{8} !{io, time} = 0b00000000").expect("parses");
+        let Item::Fn(f) = &n.items[0] else {
+            panic!("fn")
+        };
+        assert_eq!(f.sig.effects, vec!["io".to_owned(), "time".to_owned()]);
+    }
+
+    #[test]
+    fn an_unannotated_fn_has_an_empty_effect_set_and_an_explicit_empty_set_too() {
+        // Unannotated ⇒ pure (empty set); the explicit written `!{}` is also the empty set — both
+        // mean "declares no effects" (RFC-0014 I5).
+        let plain = parse("nodule d\nfn a() -> Binary{8} = 0b00000000").expect("parses");
+        let Item::Fn(f) = &plain.items[0] else {
+            panic!("fn")
+        };
+        assert!(f.sig.effects.is_empty());
+        let empty = parse("nodule d\nfn a() -> Binary{8} !{} = 0b00000000").expect("parses");
+        let Item::Fn(f) = &empty.items[0] else {
+            panic!("fn")
+        };
+        assert!(f.sig.effects.is_empty());
+    }
+
+    #[test]
+    fn a_trait_method_requirement_carries_an_effect_annotation() {
+        // The effect annotation is part of the shared signature tail, so a trait method requirement
+        // (no body) carries it too (the impl-vs-trait effect conformance check consumes it — M-660).
+        let n = parse("nodule d\ntrait T<A> { fn m(x: A) -> A !{io} }").expect("parses");
+        let Item::Trait(td) = &n.items[0] else {
+            panic!("trait")
+        };
+        assert_eq!(td.sigs[0].effects, vec!["io".to_owned()]);
+    }
+
+    #[test]
+    fn a_bare_bang_without_an_effect_brace_is_an_explicit_error() {
+        // `!` only ever opens an effect set; a `!` not followed by `{` is a never-silent parse error
+        // (v0 has no negation/`not` operator — logical ops are named prims; G2).
+        let err = parse("nodule d\nfn a() -> Binary{8} ! = 0b00000000")
+            .expect_err("a bare `!` must be rejected");
+        assert!(err.message.contains("effect set"), "got: {}", err.message);
     }
 }
