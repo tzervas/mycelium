@@ -99,12 +99,13 @@ Verified against `crates/mycelium-l1/src/token.rs` and `docs/spec/grammar/myceli
   currently lexes as an ordinary **identifier** (using it is *not* yet an error). The whole Runtime
   tier plus `consume`/`grow`/`impl` are here — their lexer reservation lags the spec.
 
-**Gap-closure tracking (2026-06-21):** the **Reserved-not-active** and **Ratified — not yet lexed**
-gaps are tracked for implementation under **E7-1** (L1 language features — generics, traits, effects,
-wild/FFI, static guarantee grading, phylum + `consume`/`grow`/`impl`; issues M-656…M-664, Phase 5)
-and **E7-2** (runtime vocabulary: lexer reservation → L1 construct activation — the 10 DN-03 §4
-runtime words + `hypha`/`colony` constructs; M-665…M-668, Phase 7). A status above flips only when
-its tracking issue lands and `just check` is green (VR-5).
+**Gap-closure tracking (2026-06-22):** the **Reserved-not-active** and **Ratified — not yet lexed**
+gaps are tracked under **E7-1** (L1 language features; issues M-656…M-664, Phase 5) and **E7-2**
+(runtime vocabulary; M-665…M-668, Phase 7). Progress: **M-656/657/658** (generics), **M-659** (traits;
+`Tok::Trait`/`Tok::Impl` active; elab STAGED → M-673), **M-660** (effects; `Tok::Bang`; checker-only,
+no L0 node) — all LANDED. **Remaining E7-1:** M-661 (`wild`/FFI), M-662 (`phylum`/cross-nodule), M-663
+(grading), M-664 (`consume`/`grow`/`impl`). **E7-2 remaining:** M-667 (`fuse`/`reclaim`/`tier`), M-668
+(R2). A status row flips only when its tracking issue lands and `just check` is green (VR-5).
 
 | Term | Layer | Status | Meaning | Normative source |
 |---|---|---|---|---|
@@ -113,7 +114,7 @@ its tracking issue lands and `just check` is green (VR-5).
 | `colony` | Runtime | **Reserved-not-active** | Dynamic runtime grouping of active `hypha`; lexes as keyword, never a silent identifier; reassigned from its former static meaning | DN-06; RFC-0008 §4.7 |
 | `use` | L2 Surface | **Active** | Import (conventional) | DN-02 §3 |
 | `type` | L2 Surface | **Active** | Data-type (sum) declaration (conventional; `species` declined) | DN-02 §7 |
-| `trait` | L2 Surface | **Active** | Typeclass / behavior set (conventional; `guild` declined) | DN-02 §7 |
+| `trait` | L2 Surface | **Active** | Typeclass / behavior set (conventional; `guild` declined); `Tok::Trait` active; **trait checker + coherence LANDED M-659** — type-checks; dictionary-passing L0 lowering **STAGED → M-673** (does NOT yet RUN) | DN-02 §7; RFC-0019 |
 | `fn` | L2 Surface | **Active** | Function definition (conventional; `spawn`/`grow` rejected on T-map) | DN-02 §3 |
 | `thaw` | L2 Surface | **Active** | De-maturation: keeps one `fn` interpreted inside a `matured` scope; `thaw fn f(…)` | RFC-0017 §4.3/§5; DN-03 changelog |
 | `let` | L2 Surface | **Active** | Local binding (conventional) | DN-02 §3 |
@@ -130,7 +131,7 @@ its tracking issue lands and `just check` is green (VR-5).
 | `to` | L2 Surface | **Active** | Swap target label (within `swap(…, to: …, policy: …)`) | grammar |
 | `policy` | L2 Surface | **Active** | Swap policy label (within `swap(…, to: …, policy: …)`) | grammar |
 | `matured` | L2 Surface | **Active (reserved keyword)** | Scope-level promotion to AOT-compiled, stable form; a `matured fn` at item position is a parse error with teaching diagnostic | RFC-0017; DN-02 §7 |
-| `impl` | L2 Surface (future) | **Ratified — not yet lexed** | Inherent methods on a type (conventional; `embody` declined; not in `keyword()` / v0 grammar yet) | DN-03 §1 |
+| `impl` | L2 Surface | **Active** (`Tok::Impl` lexed, M-659) | Trait implementation block (`impl Trait<X> for Y { … }`); `Tok::Impl` in the lexer; inherent-impl `impl T { … }` uses the same token; dictionary-passing L0 lowering **STAGED → M-673** | DN-03 §1; RFC-0019; M-659 |
 | `Binary` | Type | **Active** | N-bit binary representation type (`Binary{N}`) | RFC-0001; grammar |
 | `Ternary` | Type | **Active** | N-trit balanced-ternary type (`Ternary{N}`) | RFC-0001; grammar |
 | `Dense` | Type | **Active** | Dense embedding type (`Dense{N, scalar}`) | RFC-0001; grammar |
@@ -314,13 +315,34 @@ The EBNF in `docs/spec/grammar/mycelium.ebnf` is the normative oracle. Key produ
 ```ebnf
 program        ::= nodule_header item*
 nodule_header  ::= 'nodule' path
-item           ::= use_item | default_item | type_item | trait_item | fn_item
-fn_item        ::= 'thaw'? 'fn' Ident type_params? '(' params? ')' '->' type_ref '=' expr
+item           ::= use_item | default_item | type_item | trait_item | impl_item | fn_item
+fn_item        ::= 'thaw'? 'fn' Ident type_params? '(' params? ')' '->' type_ref effect_ann? '=' expr
+type_params    ::= '<' type_param (',' type_param)* '>'
+type_param     ::= Ident (':' bound ('+' bound)*)?   /* bounded type param; bound = trait name */
+effect_ann     ::= '!' '{' (Ident (',' Ident)*)? '}'  /* absent = pure; '!{}' = explicit pure */
+trait_item     ::= 'trait' Ident type_params? '{' fn_sig* '}'
+impl_item      ::= 'impl' Ident type_args? 'for' type_ref '{' fn_item* '}'
 type_ref       ::= base_type ('@' strength)?
 swap_expr      ::= 'swap' '(' expr ',' 'to' ':' type_ref ',' 'policy' ':' path ')'
 wild_expr      ::= 'wild' '{' expr '}'
 for_expr       ::= 'for' Ident 'in' app_expr ',' Ident '=' app_expr '=>' expr
 ```
+
+**Landed surface — honesty notes (VR-5):**
+- **Generics** (`type List<A>`, `fn f<A>(…)`) — type-check via unification (`Ty::Var` + `Ty::Data(name,args)`).
+  **Elaboration STAGED → M-673**: generics type-check but **do not yet RUN** (explicit `Residual` placeholder).
+- **Bounded generics** (`fn f<T: Cmp>(…)`, `fn f<T: Cmp + Eq>(…)`) — self-bound sugar `T: Cmp ≡ T: Cmp<T>`;
+  a bound on a `type`/`trait` param that isn't a trait name is an explicit refusal (G2). LANDED M-659.
+- **Traits + impls** (`trait T<A> { fn … }`, `impl T<X> for Y { … }`) — coherence = global uniqueness per
+  `(trait, type-head)` + single-nodule orphan rule; exact method-set conformance; bounded-call + unqualified
+  trait-method resolution. All refusals explicit. **Dictionary-passing L0 lowering STAGED → M-673** (traits
+  type-check but do NOT yet RUN). LANDED M-659.
+- **Effect annotations** (`fn f(…) -> T !{retry, alloc}`) — effect names: kernel kinds
+  `retry|alloc|io|cascade|time` + user `Named`; absent ⇒ pure; duplicate effect = never-silent parse
+  refusal. Checker `check_effect_coverage`: declared ⊇ performed; performed = union of every callee's
+  declared effects over fn bodies AND impl-method bodies; under-declaration = explicit `CheckError`,
+  over-declaration OK. **No new L0 node (KC-3)** — effects are **checker-only metadata**, do NOT lower or
+  run. Guarantee `Declared`. LANDED M-660.
 
 **Literals are representation-typed and universal-until-elaboration** — no defaulting across
 representation families (Q6 resolved):
@@ -421,3 +443,10 @@ operator in the grammar).
   one-or-more; `A | B` alternation; `(A B)` grouping; `/* */` comments (RFC-0006 §4.3 / T3.1-B).
 - **`tier` is an execution-mode switch, not a representation change.** Interpreted ↔ native is a
   `tier`. Dense ↔ sparse is a `swap` (S1). These are distinct operations (RFC-0008 §4.5 / DN-03 §4).
+- **Generics and traits type-check but do NOT yet run (elaboration STAGED → M-673).** `Ty::Var` unification
+  and trait coherence are implemented (M-656/M-657/M-659); the monomorphization + dictionary-passing L0
+  lowering is an explicit `Residual` placeholder pending M-673. Do not claim generics or traits execute.
+- **Effect annotations are checker-only (no L0 lowering).** `fn f() -> T !{alloc}` is parsed and
+  coverage-checked (M-660); the `!{…}` annotation does NOT add an L0 node and does NOT wire to the
+  interpreter budget yet (that is M-677). Never state that effects "run" or "enforce at runtime" —
+  the guarantee is `Declared`.
