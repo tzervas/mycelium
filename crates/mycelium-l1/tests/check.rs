@@ -758,10 +758,11 @@ fn coherence_is_a_property_across_a_sweep_of_types_and_widths() {
             "nodule d\ntrait Tr<A> {{ fn f(x: A) -> A }}\n\
              impl Tr<{ty}> for {ty} {{ fn f(x: {ty}) -> {ty} = x }}"
         );
+        let unique_res = check(&unique);
         assert!(
-            check(&unique).is_ok(),
+            unique_res.is_ok(),
             "a unique instance on {ty} must check: {:?}",
-            check(&unique)
+            unique_res
         );
         // A second instance on the SAME head (different width) always fails coherence.
         let dup = format!(
@@ -776,4 +777,21 @@ fn coherence_is_a_property_across_a_sweep_of_types_and_widths() {
             e.message
         );
     }
+}
+
+#[test]
+fn an_instance_on_the_same_head_but_a_different_width_does_not_satisfy_a_call() {
+    // Coherence keys per type-head, but RESOLUTION must match the FULL concrete type: a `Binary{8}`
+    // instance must NOT satisfy a trait-method call whose receiver is `Binary{4}` (same head). This
+    // is over-rejection-for-duplicates / never-over-acceptance-for-missing (RFC-0019 §4.5; G2).
+    let src = "nodule d\n\
+        trait Tr<A> { fn f(x: A) -> A }\n\
+        impl Tr<Binary{8}> for Binary{8} { fn f(x: Binary{8}) -> Binary{8} = x }\n\
+        fn g(x: Binary{4}) -> Binary{4} = f(x)";
+    let e = check(src).expect_err("a Binary{4} call must not reuse the Binary{8} instance");
+    assert!(
+        e.message.contains("no instance") && e.message.contains("declared for"),
+        "expected an explicit 'no instance … declared for' refusal, got: {}",
+        e.message
+    );
 }

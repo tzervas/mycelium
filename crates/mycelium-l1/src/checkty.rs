@@ -715,7 +715,7 @@ fn register_traits(
             }
             // Each method sig must resolve with the trait's params (and the method's own params) in
             // scope as type-variables (RFC-0007 §11.2). A method may carry its own type-params too;
-            // bounds on them are validated like a fn's (the dictionary site).
+            // bounds on them are validated against the complete trait registry in the pass below (G2).
             let mut tyvars = td.params.clone();
             tyvars.extend(s.param_names());
             check_sig_resolves(types, site, &tyvars, s)?;
@@ -728,6 +728,30 @@ fn register_traits(
                 sigs: td.sigs.clone(),
             },
         );
+    }
+    // The registry is now complete: validate that every trait-method type-parameter BOUND names a
+    // KNOWN trait. This is a second pass precisely so a bound may forward-reference a later-declared
+    // trait. An unknown bound (`fn f<T: Nope>(…)`) is an explicit error here, never silently
+    // registered (G2) — otherwise the ill-formed requirement would surface only at an unrelated
+    // later check, or never (if no impl exercises it).
+    for tr in traits.values() {
+        for s in &tr.sigs {
+            for tp in &s.params {
+                for b in &tp.bounds {
+                    if !traits.contains_key(&b.name) {
+                        return Err(CheckError::new(
+                            &tr.name,
+                            format!(
+                                "trait `{}` method `{}`: unknown trait `{}` in the bound `{}: {}` \
+                                 (RFC-0019 §4.1 — a method's type-parameter bound must name a \
+                                 declared trait)",
+                                tr.name, s.name, b.name, tp.name, b.name
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
     }
     Ok(traits)
 }
@@ -1662,19 +1686,22 @@ impl Cx<'_> {
         because: &str,
     ) -> Result<(), CheckError> {
         match type_head(concrete) {
-            Some(head) => {
-                if self
-                    .instances
-                    .contains_key(&(trait_name.to_owned(), head.clone()))
-                {
-                    Ok(())
-                } else {
-                    self.err(format!(
-                        "no instance `{trait_name}` for `{concrete}` ({because}) — declare \
-                         `impl {trait_name}<…> for {concrete} {{ … }}` (RFC-0019 §4.5, never assumed)"
-                    ))
-                }
-            }
+            Some(head) => match self.instances.get(&(trait_name.to_owned(), head)) {
+                // Head-erasure is the COHERENCE key (≤1 instance per head); RESOLUTION must still
+                // match the FULL concrete type — a `Binary{8}` instance does not satisfy a `Binary{4}`
+                // call. Head-erasure over-REJECTS duplicates; it must never over-ACCEPT a different
+                // type (G2: never silently reuse a mismatched instance).
+                Some(info) if info.for_ty == *concrete => Ok(()),
+                Some(info) => self.err(format!(
+                    "no instance `{trait_name}` for `{concrete}` ({because}) — the `{trait_name}` \
+                     instance on this type head is declared for `{}`, not `{concrete}` (RFC-0019 §4.5)",
+                    info.for_ty
+                )),
+                None => self.err(format!(
+                    "no instance `{trait_name}` for `{concrete}` ({because}) — declare \
+                     `impl {trait_name}<…> for {concrete} {{ … }}` (RFC-0019 §4.5, never assumed)"
+                )),
+            },
             // `concrete` is a type-variable in scope: discharge via a matching bound (the dictionary
             // is threaded by the eventual caller — RFC-0007 §12.3 / M-673).
             None => {
