@@ -1614,8 +1614,9 @@ impl Cx<'_> {
             return self.err(
                 "a `wild` block has no synthesizable type — its body is the trusted/opaque FFI escape \
                  (not type-checked, only audited; ADR-014/VR-5). Ascribe the `wild` block's result \
-                 type (`wild { … } : Binary{8}`) or use it in a typed position (a fn body / `let` \
-                 with an annotation) — never a guess (G2).",
+                 type — `(wild { … }) : Binary{8}` (a special form takes the ascription parenthesized) \
+                 — or use it in a typed position (a fn body / a `let` with an annotation, e.g. \
+                 `let v: Binary{8} = wild { … }`) — never a guess (G2).",
             );
         };
         // `@std-sys` + a known expected type: the block *has* that type; the body is preserved

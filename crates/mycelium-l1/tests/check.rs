@@ -429,6 +429,21 @@ fn an_ascribed_wild_in_a_let_bound_position_type_checks() {
 }
 
 #[test]
+fn the_parenthesized_ascription_the_synthesis_refusal_suggests_actually_parses_and_checks() {
+    // M-661 (Copilot, PR #360): the synthesis-position refusal suggests `(wild { … }) : T`. A special
+    // form takes an ascription only when **parenthesized** — a bare `wild { … } : T` does NOT parse
+    // (the `:` is not consumed). This pins that the diagnostic's advice is *actionable*: the exact
+    // form it suggests parses and type-checks (so the message can never drift back to a non-parsing
+    // suggestion — a self-policing diagnostic-quality guard).
+    let env = check(
+        "nodule std.sys.x @std-sys\n\
+         fn f() -> Binary{8} !{ffi} = (wild { foreign() }) : Binary{8}",
+    )
+    .expect("the parenthesized ascription the refusal suggests must parse + type-check");
+    assert!(env.fn_decl("f").is_some());
+}
+
+#[test]
 fn over_declaring_ffi_without_a_wild_block_is_allowed() {
     // Symmetry with M-660 I5: declaring `!{ffi}` is a contract — a fn may reserve it without (yet)
     // containing a `wild` block. A pure-bodied `@std-sys` fn declaring `!{ffi}` checks (over-decl OK).
