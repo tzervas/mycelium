@@ -41,6 +41,10 @@ pub(crate) mod decision;
 pub mod elab;
 pub mod error;
 pub mod eval;
+/// RFC-0018 stage-1a static guarantee grading (Design A) — the [`checkty`] post-pass that enforces
+/// the guarantee lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` statically. Internal to the
+/// frontend (driven by [`checkty::check_nodule`]); not part of the public surface.
+mod grade;
 pub mod lexer;
 pub mod nodule;
 pub mod parse;

@@ -86,7 +86,7 @@ primary evidence for refusals.
 | 8 | **Effect annotations (RFC-0014 RT3)** — declared `{time, entropy, io, …}` on surface `fn` | `rand`, `time`, `io`, `fs`, `recover` | **Landed (M-660):** `ast.rs` `FnSig.effects`; `parse.rs` parses the `!{ … }` annotation after the return type (absent ⇒ pure; duplicate-effect = parse refusal); `checkty.rs` `check_effect_coverage` enforces **declared ⊇ performed** (performed = union of every callee's declared effects — a top-level fn OR an unqualified trait method — checked over fn bodies **and** impl-method bodies, so an effect can never be hidden from a caller), under-declaration an explicit `CheckError` (G2/RFC-0014 I3), over-declaration allowed (I5); impl-method effects must equal the trait method's. Guarantee **`Declared`** (a structural coverage check). **No new L0 node** (KC-3); the runtime budget ledger stays `mycelium-interp::budget` (M-353); `wild`-sourced effects **arrived with M-661** (a `wild` block performs the `ffi` effect — see row 9) | **present** |
 | 9 | **`wild` / FFI surface** — callable host operations | `fs`, `rand`, `io` (std-sys call sites) | **Gate landed (M-661):** `@std-sys` is an explicit **nodule-header attribute** (`ast.rs` `Nodule.std_sys`; `lexer.rs`/`token.rs` atomic `@std-sys` token; `parse.rs` `parse_nodule`), **not** a naming convention. `checkty.rs` `Cx::check_wild` admits a `wild` block **iff** the nodule is `@std-sys` **and** the `fn` declares `!{ffi}` (`wild` is the `ffi` effect *source* — fed into the M-660 coverage pass); a `wild` elsewhere is a **hard `CheckError`** (G2, not a lint). The `wild` body is the **trusted/opaque** FFI escape — NOT recursively type-checked (audited, not verified — VR-5/ADR-014) — so it needs an expected/ascribed type (synthesis refuses). **Execution stays staged:** `elab.rs` lowers `wild` to an explicit `Residual` (no FFI host in v0). Guarantee **`Declared`**. The `myc-sec` `// SAFETY:` audit (ADR-014) is orthogonal + unchanged. | **conditionally present (audited, std-sys context; type-checks + gates; execution staged)** |
 | 10 | **Full phyla + cross-nodule imports** — `phylum std`, `use` across nodule boundaries | Any multi-nodule library | **Landed (M-662):** `parse_phylum` parses a `phylum <path>` header + multiple `nodule` blocks (`ast.rs` `Phylum`; a header-less nodule is a phylum-of-one); `checkty.rs` `check_phylum` builds a qualified per-phylum import registry (pub-only) + a pub-blind coherence view, resolves cross-nodule `use` (specific + glob `use a.b.*`) with **never-silent** absent/private/duplicate/glob-ambiguity refusals (G2), and enforces the RFC-0019 §4.5 orphan rule **phylum-wide**; `pub` exports gate cross-nodule visibility (default private-to-nodule). Guarantee `Declared`. | **present** |
-| 11 | **Refinement / dependent types for guarantee-matrix encoding** (guarantee index as first-class surface type, checked statically) | Per-op guarantee machinery, RFC-0016 §4.5 | `ast.rs` `TypeRef.guarantee: Option<Strength>` parses the index; `checkty.rs` note: "stage-0 semantics… runtime tags + meet"; RFC-0007 §4.3: "static graded judgment is stage 1, a revision of this RFC" — stage-1 is not implemented | **gate-fails** |
+| 11 | **Refinement / dependent types for guarantee-matrix encoding** (guarantee index as first-class surface type, checked statically) | Per-op guarantee machinery, RFC-0016 §4.5 | **Stage-1a landed (M-663; RFC-0018 Enacted):** `grade.rs` is a static guarantee-grading checker pass (Pass 3d) enforcing the §4.3 judgment over the lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` — G-App (argument ⊒ parameter demand), G-Weaken (`@ g` may only weaken), meet composition (G-Let/G-Con/G-Op), `G-Match/A` (Design A — data not control), G-Swap (cert reference trusted at the type level — R18-Q4); `elab.rs` no longer `Residual`s an `@ g` index (statically checked + erased — no L0 node, KC-3). Guarantee **`Declared`** (the noninterference theorem stays Declared-with-argument — not upgraded, VR-5). **Stage 1b (grade polymorphism) / stage 2 (refinements) remain future RFCs** | **present (stage 1a)** |
 
 **Verdicts defined:**
 - **present** — the feature exists and is exercised in the typechecker/elaborator (grounded in source).
@@ -153,6 +153,22 @@ not change whether stdlib authoring in Mycelium-lang is currently possible):
 
 ## Meta — changelog
 
+- **2026-06-22 — §3 row 11 static guarantee grading landed → row 11 now `present (stage 1a)` (M-663;
+  RFC-0018 Enacted; append-only, VR-5).** The guarantee index `@ g` is now a **statically-enforced**
+  surface constraint in `mycelium-l1` (RFC-0018 §4.3, stage 1a, Design A). A self-contained checker pass
+  (`grade.rs`, Pass 3d) runs after type-checking and enforces the lattice `Exact ⊐ Proven ⊐ Empirical ⊐
+  Declared`: G-App (a call argument's grade must satisfy its parameter's demand), G-Weaken (an `@ g`
+  annotation/return demand may only *weaken*, never upgrade — VR-5), the meet composition rule
+  (G-Let/G-Con/G-Op), `G-Match/A` (Design A — the scrutinee's *control* grade does not degrade the
+  result; a destructured field inherits the scrutinee's *data* grade), and G-Swap (the endorsement point
+  — the certificate **reference** is trusted at the type level, validity deferred to elaboration/runtime
+  per R18-Q4). `elab.rs` no longer returns `Residual` for an `@ g` index — a grade, like a type, is
+  statically checked and **erased** (no L0 node — KC-3). Unannotated types default modular/bottom
+  (`Declared`), so grading only ever *bites* where an `@ g` is written (un-annotated code is unaffected).
+  Guarantee **`Declared`** — the noninterference *theorem* stays **Declared-with-argument**, not upgraded.
+  Stage 1b (grade polymorphism) and stage 2 (refinements) remain future RFCs. `cargo fmt`/`clippy
+  -D warnings`/`cargo test -p mycelium-l1` + the full `just check` green. This **flips row 11 only**
+  (rows 6/7 stay `partial`, row 10 `present`); DN-14 → `Resolved` still awaits the remaining staged rows.
 - **2026-06-22 — §3 row 9 `wild`/FFI gate landed → row 9 now `conditionally present (audited, std-sys
   context; type-checks + gates; execution staged)` (M-661; append-only, VR-5).** The audited FFI floor is
   now *enterable* in `mycelium-l1` (RFC-0016 §8-Q6). **`@std-sys` is an explicit nodule-header attribute**
