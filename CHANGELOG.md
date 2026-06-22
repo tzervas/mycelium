@@ -8,6 +8,19 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-22: M-674 — evaluator runs on the deep worker stack; depth budget is the ceiling)
+- **The L1 evaluator (`Evaluator::call`) now runs on the deep, lazily-committed worker stack**
+  (`mycelium_stack::with_deep_stack`), so the **explicit recursion-depth budget** — not the caller's
+  thread stack — is always what bounds a pathological input. `DEFAULT_DEPTH = 64` is unchanged (no
+  behavior change), but raising it via `with_depth(N)` for deep runtime computation (recursive folds
+  over large dense/VSA structures — the dense-embeddings/HDC axis) is now **host-stack-safe**: the
+  budget refuses cleanly with `DepthExceeded` well before any physical limit (estimated ~65k–130k
+  levels on the 256 MiB worker in debug). `SwapEngine` is tightened to `+ Send + Sync` (engines are
+  `Copy` unit structs — no call-site change) so the scoped-thread closure is `Send`. Clean-refusal
+  regression test added. Extends the uniform banked-guard-4 discipline (M-674) to the evaluator; the
+  budget is the portable primitive for the self-hosted frontend, the worker stack the transitional
+  Rust-host adapter. (M-674; RFC-0007 §4.6)
+
 ### Changed (2026-06-22: M-658 — RFC-0007 §12 trait surface + `impl` reserved)
 - **RFC-0007 §12 (append-only) pins the stage-1 trait / bounded-generics surface** `mycelium-l1` v1
   must check (single-parameter `trait`/`impl Trait for T` declarations + **coherence** = orphan rule +
