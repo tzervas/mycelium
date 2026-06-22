@@ -165,6 +165,15 @@ pub const KEYWORD_COMPLETIONS: &[CompletionItem] = &[
                         DN-02 §7.",
     },
     CompletionItem {
+        label: "impl",
+        kind: KIND_KEYWORD,
+        insert_text: "impl",
+        insert_text_format: FORMAT_PLAIN,
+        detail: "keyword — trait implementation block",
+        documentation: "Implements a trait for a type: `impl Trait for T { fn … }`. \
+                        Active since M-659 (checker + coherence); RFC-0019, DN-03 §1.",
+    },
+    CompletionItem {
         label: "type",
         kind: KIND_KEYWORD,
         insert_text: "type",
@@ -554,9 +563,9 @@ mod tests {
         // These are all the active structural keywords (token.rs `keyword()` -- active set).
         // `colony` and `hypha` were reserved-not-active until M-666; they are now active.
         for kw in [
-            "nodule", "use", "type", "trait", "fn", "thaw", "let", "in", "if", "then", "else",
-            "match", "for", "swap", "default", "paradigm", "with", "wild", "spore", "to", "policy",
-            "matured", "colony", "hypha",
+            "nodule", "use", "type", "trait", "impl", "fn", "thaw", "let", "in", "if", "then",
+            "else", "match", "for", "swap", "default", "paradigm", "with", "wild", "spore", "to",
+            "policy", "matured", "colony", "hypha",
         ] {
             assert!(
                 labels.contains(&kw),
@@ -637,16 +646,18 @@ mod tests {
 
     #[test]
     fn not_yet_lexed_words_are_not_offered() {
-        // `impl`/`consume`/`grow` are ratified but not yet in keyword() -- offering them as active
-        // syntax would be dishonest (they currently lex as plain identifiers). The 10 runtime words
-        // `hypha`…`reclaim` were ratified-not-yet-lexed too until M-665 reserved them; they are now
-        // covered by `reserved_not_active_words_are_not_offered`.
+        // `consume`/`grow` are ratified but not yet in keyword() -- offering them as active syntax
+        // would be dishonest (they currently lex as plain identifiers). `impl` graduated to a real,
+        // active keyword in M-659 (checker + coherence), so it moved to the offered set (mirroring
+        // `trait`) and is asserted by `all_active_structural_keywords_are_offered`; it is no longer
+        // tracked here. The 10 runtime words `hypha`…`reclaim` were ratified-not-yet-lexed too until
+        // M-665 reserved them; they are now covered by `reserved_not_active_words_are_not_offered`.
         let labels: Vec<&str> = KEYWORD_COMPLETIONS
             .iter()
             .chain(SNIPPET_COMPLETIONS.iter())
             .map(|c| c.label)
             .collect();
-        for unlexed in ["impl", "consume", "grow"] {
+        for unlexed in ["consume", "grow"] {
             assert!(
                 !labels.contains(&unlexed),
                 "ratified-not-yet-lexed word `{unlexed}` must NOT appear in completions"
