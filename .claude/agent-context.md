@@ -160,8 +160,14 @@ orphan is `origin/claude/rescue/m665-dup-orphan-a2f18c62` (a duplicate M-665 —
      (`Pair<B,A>`) / repetition (`Pair<A,A>`) / nesting pass structurally (no special-casing).
      `subst_in_abstract_data_name` removed; abstract `App`/`Var` confined to the checking phase
      (elab/eval get explicit "unmonomorphized generic" refusal arms). 192 tests, `just check` green.
-   - **NEXT: M-658/M-659 traits** → M-660 effects → M-661 `wild`/FFI → M-662 phylum/cross-nodule →
-     M-663 RFC-0018 grading → M-664 `consume`/`grow`/`impl`. Unblocks **M-649** (self-hosting).
+   - **M-658/M-659 traits — non-parametric slice MERGED on the work branch `claude/keen-hypatia-bdmtt4`
+     @ `fb2ad99`** (208 tests, `just check` green; literal runtime dictionary-passing + coherence;
+     `Ty::Arrow` added). **Parametric extension (`trait T<A>`) IN PROGRESS via a Sonnet micro-task
+     swarm** (Opus orchestrator). **Full post-compaction resume point: `.claude/kickoffs/e7l.md`
+     §"Continuation handoff (2026-06-22)".**
+   - Then → M-660 effects → M-661 `wild`/FFI → M-662 phylum/cross-nodule → M-663 RFC-0018 grading →
+     M-664 `consume`/`grow`/`impl` → E7-2 M-667/M-668 → M-649 self-host = the **full lexicon** (DFB's
+     unblock). Unblocks **M-649**.
 3. **E7-2 continue:** M-667 (`fuse`/`reclaim`/`tier`) → M-668 (R2 design).
 4. **Web/ADK deep-research follow-up (RP-10 web / RP-9 ADK)** — the two-phase **gate** (fractured Opus
    reasoners discharge the RFC-0022/0023 Honest-Uncertainty Registers). **Per maintainer: run this
