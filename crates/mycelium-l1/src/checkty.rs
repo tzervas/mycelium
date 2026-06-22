@@ -8,12 +8,12 @@
 //! execution staged ([`crate::elab`] lowers it to a `Residual`).
 
 use std::cell::Cell;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::ambient::AmbientError;
 use crate::ast::{
     BaseType, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, Nodule, Paradigm, Path, Pattern,
-    Scalar, Strength, TraitRef, TypeDecl, TypeRef,
+    Phylum, Scalar, Strength, TraitRef, TypeDecl, TypeRef, UsePath,
 };
 
 /// The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02).
@@ -451,6 +451,90 @@ pub(crate) fn resolve_ty(
     Ok((base, t.guarantee))
 }
 
+/// The checked environments of a whole **phylum** (M-662): one [`Env`] per nodule, paired with the
+/// nodule's path. The product of [`check_phylum`]. For a phylum-of-one this holds the single nodule's
+/// `Env` (so [`check_nodule`] just unwraps it) — additive, backward-compatible.
+#[derive(Debug, Clone)]
+pub struct PhylumEnv {
+    /// One `(nodule path, checked Env)` per nodule, in source order.
+    pub nodules: Vec<(Path, Env)>,
+}
+
+impl PhylumEnv {
+    /// The single nodule's [`Env`] when this is a phylum-of-one, else `None`. The bridge
+    /// [`check_nodule`] uses to keep its single-`Env` return type (M-662).
+    #[must_use]
+    pub fn single(&self) -> Option<&Env> {
+        match self.nodules.as_slice() {
+            [(_, env)] => Some(env),
+            _ => None,
+        }
+    }
+
+    /// The checked [`Env`] of the nodule whose path equals `path`, if present.
+    #[must_use]
+    pub fn nodule(&self, path: &Path) -> Option<&Env> {
+        self.nodules.iter().find(|(p, _)| p == path).map(|(_, e)| e)
+    }
+}
+
+/// The **phylum-wide export table** (M-662): the `pub` items of every nodule, keyed by **qualified
+/// name** (`nodule.path` + `.` + item name, e.g. `"std.collections.List"`). This is the *import
+/// registry* — the **only-`pub`** view a `use` resolves against (RFC-0006 §4.3). It is kept strictly
+/// separate from the pub-blind coherence view (below): conflating the two would let a `use` import a
+/// private name or let the orphan rule miss a private declaration (a bug — the two views answer
+/// different questions).
+#[derive(Debug, Default)]
+struct Exports {
+    /// Exported data types, by qualified name.
+    types: BTreeMap<String, DataInfo>,
+    /// Exported functions, by qualified name.
+    fns: BTreeMap<String, FnDecl>,
+    /// Exported traits, by qualified name.
+    traits: BTreeMap<String, TraitInfo>,
+    /// **All** declared simple names per nodule-prefix, with their `pub`-ness — used to distinguish
+    /// "no such name" from "exists but private" in a `use` refusal (G2 — an honest, helpful
+    /// diagnostic). Keyed by qualified name → `is_pub`.
+    declared: BTreeMap<String, bool>,
+}
+
+/// The resolved imports available to **one** nodule while its bodies are checked (M-662): the
+/// imported `pub` declarations, merged by **simple name** at the documented precedence (own decls
+/// shadow explicit `use` shadow glob), plus the set of names that a **glob-vs-glob collision** left
+/// **ambiguous** (importable only by an explicit `use`). The ambiguous set is consulted at every
+/// unresolved-name site so a *reference* to an ambiguous glob name is a never-silent `CheckError`,
+/// never a silent winner (G2).
+#[derive(Debug, Default, Clone)]
+struct NoduleImports {
+    /// Imported data types, by simple name.
+    types: BTreeMap<String, DataInfo>,
+    /// Imported functions, by simple name.
+    fns: BTreeMap<String, FnDecl>,
+    /// Imported traits, by simple name.
+    traits: BTreeMap<String, TraitInfo>,
+    /// Names brought in by **two or more** globs (and not resolved by an explicit `use` or a local
+    /// decl): a *reference* to one of these is the never-silent glob-vs-glob ambiguity error.
+    ambiguous: BTreeSet<String>,
+}
+
+impl NoduleImports {
+    /// The never-silent glob-vs-glob ambiguity refusal for `name`, if it is ambiguous here (G2).
+    /// Returns `None` when the name is unambiguous (so the caller falls through to its own
+    /// unknown-name diagnostic).
+    fn ambiguity_error(&self, site: &str, name: &str) -> Option<CheckError> {
+        self.ambiguous.contains(name).then(|| {
+            CheckError::new(
+                site,
+                format!(
+                    "`{name}` is ambiguous — imported by more than one glob `use … .*` in this \
+                     nodule; import it explicitly (`use <path>.{name}`) to disambiguate (M-662; \
+                     never a silent winner — G2)"
+                ),
+            )
+        })
+    }
+}
+
 /// Check a whole nodule: build the registry (prelude + declarations), then type every function
 /// body against its signature, classify totality. No maturation gate is applied (the scope is
 /// treated as non-matured). Returns the checked [`Env`].
@@ -459,8 +543,351 @@ pub(crate) fn resolve_ty(
 /// ([`crate::ambient::resolve`]) — paradigm-less reprs are filled, `with paradigm` blocks stripped,
 /// bare decimals tagged — so the checker only ever sees fully-explicit (longhand) forms. A program
 /// using no ambient is unchanged (resolution is identity).
+///
+/// As of M-662 a bare nodule is checked as a **phylum-of-one** ([`check_phylum`]); this is a thin
+/// wrapper that unwraps the single [`Env`]. Behavior on every single-nodule program is unchanged
+/// (no imports, the orphan rule's locality set is exactly this one nodule).
 pub fn check_nodule(nodule: &Nodule) -> Result<Env, CheckError> {
     check_and_resolve(nodule).map(|(env, _)| env)
+}
+
+/// Check a whole **phylum** (M-662; RFC-0006 §4.3): build the phylum-wide `pub` **export table** and
+/// the pub-blind **coherence view**, then check each nodule's bodies with its resolved `use` imports
+/// available and the **phylum-wide orphan rule** enforced. Returns one [`Env`] per nodule.
+///
+/// Two strictly-separate phylum-wide views (conflating them is a bug — they answer different
+/// questions): the **import registry** ([`Exports`]) is `pub`-only (what a `use` may bind); the
+/// **coherence view** is pub-blind (every nodule's trait/type declarations are visible to the orphan
+/// rule regardless of `pub`). Cross-nodule **execution** is staged — the per-nodule [`Env`]s are real
+/// and complete for type-checking; running a `use`d fn across nodules is a follow-up (eval keeps its
+/// per-nodule reach; a cross-nodule call lowers to a never-silent `Unsupported`/`Residual`).
+///
+/// # Errors
+/// Any never-silent refusal: an unknown/private/ambiguous import, a duplicate import, a coherence or
+/// phylum-wide orphan violation, or any per-nodule type error (all surfaced as [`CheckError`]).
+pub fn check_phylum(phylum: &Phylum) -> Result<PhylumEnv, CheckError> {
+    check_phylum_matured(phylum, false)
+}
+
+/// Like [`check_phylum`] but with the explicit `matured_scope` gate applied to **every** nodule
+/// (RFC-0017 §4.2; M-662). When `matured_scope` is `false` this is identical to [`check_phylum`].
+///
+/// # Errors
+/// See [`check_phylum`]; additionally a non-total non-`thaw` definition in any nodule under a matured
+/// scope is an explicit [`CheckError`].
+pub fn check_phylum_matured(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv, CheckError> {
+    mycelium_stack::with_deep_stack(|| check_phylum_inner(phylum, matured_scope))
+}
+
+fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv, CheckError> {
+    // 1. Ambient-resolve every nodule once (RFC-0012): the checker only ever sees longhand forms.
+    let resolved: Vec<Nodule> = phylum
+        .nodules
+        .iter()
+        .map(crate::ambient::resolve)
+        .collect::<Result<_, _>>()?;
+
+    // 2. Register each nodule's declarations into its own registries, and from those build the two
+    //    phylum-wide views: the `pub`-only export table (import registry) and the pub-blind coherence
+    //    view (all traits/types, for the orphan rule). Registration here is *declaration-level* only
+    //    (no body checking) — bodies are checked in pass 3 with imports available.
+    let mut per_nodule_regs: Vec<NoduleRegs> = Vec::with_capacity(resolved.len());
+    let mut exports = Exports::default();
+    let mut coherence = CoherenceView::default();
+    for nodule in &resolved {
+        let regs = register_nodule_decls(nodule)?;
+        let qual = |name: &str| qualify(&nodule.path, name);
+        // Export the `pub` items (import registry — pub-only); record every declared name's pub-ness
+        // (for the never-silent "no such name" vs "exists but private" distinction).
+        for (name, info) in &regs.types {
+            exports
+                .declared
+                .insert(qual(name), info_is_pub_type(nodule, name));
+            if info_is_pub_type(nodule, name) {
+                exports.types.insert(qual(name), info.clone());
+            }
+        }
+        for (name, fd) in &regs.fns {
+            exports.declared.insert(qual(name), fd.vis.is_pub());
+            if fd.vis.is_pub() {
+                exports.fns.insert(qual(name), fd.clone());
+            }
+        }
+        for (name, info) in &regs.traits {
+            exports
+                .declared
+                .insert(qual(name), info_is_pub_trait(nodule, name));
+            if info_is_pub_trait(nodule, name) {
+                exports.traits.insert(qual(name), info.clone());
+            }
+        }
+        // Coherence view (pub-blind): every nodule's trait + data-type *names* are visible to the
+        // phylum-wide orphan rule regardless of `pub` (coherence is enforcement authority, not the
+        // `pub` namespace — RFC-0019 §4.5; M-662).
+        for name in regs.traits.keys() {
+            coherence.traits.insert(name.clone());
+        }
+        for name in regs.types.keys() {
+            // The prelude `Bool` is registered into every nodule; skip it as a phylum "local" so it
+            // does not falsely satisfy the orphan rule for an unrelated impl (it is a primitive-ish
+            // builtin, handled by the primitive-repr arm anyway).
+            if name != "Bool" {
+                coherence.types.insert(name.clone());
+            }
+        }
+        per_nodule_regs.push(regs);
+    }
+
+    // 3. Check each nodule's bodies with (a) its resolved `use` imports merged into its registries and
+    //    (b) the phylum-wide pub-blind orphan rule. Each yields a checked `Env`.
+    let mut out = Vec::with_capacity(resolved.len());
+    for (nodule, regs) in resolved.iter().zip(per_nodule_regs) {
+        let imports = resolve_imports(nodule, &exports)?;
+        let env = check_nodule_with(nodule, regs, &imports, &coherence, matured_scope)?;
+        out.push((nodule.path.clone(), env));
+    }
+    Ok(PhylumEnv { nodules: out })
+}
+
+/// `nodule.path` + `.` + `name` — a top-level item's **qualified name** (the import-registry key;
+/// M-662). `nodule a.b` declaring `List` ⇒ `"a.b.List"`.
+fn qualify(path: &Path, name: &str) -> String {
+    if path.0.is_empty() {
+        name.to_owned()
+    } else {
+        format!("{}.{name}", path.0.join("."))
+    }
+}
+
+/// Is the named **type** declared `pub` in this (resolved) nodule? (The registry [`DataInfo`] does
+/// not carry `Vis` — it is a checked, post-resolution structure — so the surface `Vis` is read back
+/// from the nodule's items. The prelude `Bool` is never a surface item ⇒ not `pub`.)
+fn info_is_pub_type(nodule: &Nodule, name: &str) -> bool {
+    nodule
+        .items
+        .iter()
+        .any(|i| matches!(i, Item::Type(td) if td.name == name && td.vis.is_pub()))
+}
+
+/// Is the named **trait** declared `pub` in this (resolved) nodule? (See [`info_is_pub_type`].)
+fn info_is_pub_trait(nodule: &Nodule, name: &str) -> bool {
+    nodule
+        .items
+        .iter()
+        .any(|i| matches!(i, Item::Trait(td) if td.name == name && td.vis.is_pub()))
+}
+
+/// The pub-blind **coherence view** for the phylum-wide orphan rule (M-662; RFC-0019 §4.5): the set
+/// of **all** trait names and **all** data-type names declared by **any** nodule of the phylum,
+/// regardless of `pub`. Distinct from the [`Exports`] (pub-only) import registry — an `impl` is legal
+/// iff its trait OR its `for`-type head is declared *somewhere* in the phylum, and that visibility is
+/// pub-blind (coherence is enforcement authority, not the `pub` namespace).
+#[derive(Debug, Default)]
+struct CoherenceView {
+    /// Every trait name declared anywhere in the phylum (pub-blind).
+    traits: BTreeSet<String>,
+    /// Every data-type name declared anywhere in the phylum (pub-blind), excluding the prelude.
+    types: BTreeSet<String>,
+}
+
+/// The **declaration-level** registries of one nodule (types/fns/traits), built before any body is
+/// checked (M-662). The phylum builds its two cross-nodule views from these, then re-uses them as the
+/// per-nodule base when checking that nodule's bodies (so registration runs once per nodule — DRY).
+struct NoduleRegs {
+    types: BTreeMap<String, DataInfo>,
+    fns: BTreeMap<String, FnDecl>,
+    traits: BTreeMap<String, TraitInfo>,
+}
+
+/// Register one (resolved) nodule's **declarations** — data types (Pass 1), traits (Pass 1b), and
+/// function signatures (Pass 2) — into its registries, with the same duplicate/arity refusals as the
+/// single-nodule checker (M-662 factors these out of `check_resolved_matured` so the phylum can build
+/// its cross-nodule views before checking any body). Bodies and instances are **not** handled here
+/// (instances need the phylum-wide orphan view; bodies need imports). The prelude `Bool` is included
+/// so intra-nodule resolution is unchanged.
+fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, CheckError> {
+    let mut types = BTreeMap::new();
+    let p = prelude();
+    types.insert(p.name.clone(), p);
+    register_types(&mut types, nodule)?;
+    let traits = register_traits(&types, nodule)?;
+    let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();
+    for item in &nodule.items {
+        if let Item::Fn(fd) = item {
+            if let Some(dup) = first_duplicate(&fd.sig.param_names()) {
+                return Err(CheckError::new(
+                    &fd.sig.name,
+                    format!("duplicate type parameter `{dup}` in `{}`", fd.sig.name),
+                ));
+            }
+            if fns.insert(fd.sig.name.clone(), fd.clone()).is_some() {
+                return Err(CheckError::new(&fd.sig.name, "duplicate function"));
+            }
+        }
+    }
+    Ok(NoduleRegs { types, fns, traits })
+}
+
+/// Resolve one nodule's `use` imports against the phylum-wide [`Exports`] (M-662). Builds the
+/// per-nodule [`NoduleImports`] — imported `pub` decls merged by simple name at glob-then-explicit
+/// precedence (own decls shadow these later, in [`check_nodule_with`]) — and enforces every
+/// never-silent rule:
+///
+/// - **unknown name/path** → explicit refusal (distinguishing "no such name" from "exists but
+///   private", honest + helpful);
+/// - **two explicit `use`s binding the same simple name** → duplicate-import refusal;
+/// - **glob-vs-glob collision** on a name → recorded `ambiguous` (a *reference* to it is refused at
+///   use-site), never a silent winner.
+///
+/// (A glob over a prefix with zero `pub` names is allowed — an empty import; an unresolved *reference*
+/// then surfaces the normal unknown-name error.)
+fn resolve_imports(nodule: &Nodule, exports: &Exports) -> Result<NoduleImports, CheckError> {
+    let site = qualify(&nodule.path, "<use>");
+    let mut imp = NoduleImports::default();
+    // Track how each simple name entered (glob vs explicit) so precedence + the dup-explicit and
+    // glob-ambiguity rules are enforced deterministically.
+    let mut via_explicit: BTreeSet<String> = BTreeSet::new();
+    let mut via_glob: BTreeSet<String> = BTreeSet::new();
+
+    // First the globs (lowest precedence), then the explicit `use`s (which shadow a glob name).
+    for item in &nodule.items {
+        let Item::Use(UsePath { path, glob: true }) = item else {
+            continue;
+        };
+        let prefix = path.0.join(".");
+        // Every exported name directly under this prefix (qualified key = prefix + "." + simple, with
+        // exactly one trailing segment).
+        let mut any = false;
+        for (qual, _is_pub) in &exports.declared {
+            let Some(simple) = direct_child(&prefix, qual) else {
+                continue;
+            };
+            // Only `pub` names are importable; a glob silently *skips* a private name (a glob over a
+            // path imports its **public** surface — a private name is simply not part of it, which is
+            // not a silent swap: it was never importable). Whether it is `pub` is in `exports.*`.
+            if !exports_has_pub(exports, qual) {
+                continue;
+            }
+            any = true;
+            if via_explicit.contains(&simple) {
+                continue; // an explicit use already bound this name (higher precedence)
+            }
+            if via_glob.contains(&simple) {
+                // A second glob brings the same name ⇒ ambiguous (unless later shadowed). Remove the
+                // tentative binding; record the ambiguity (never a silent winner — G2).
+                imp.ambiguous.insert(simple.clone());
+                remove_import(&mut imp, &simple);
+                continue;
+            }
+            via_glob.insert(simple.clone());
+            insert_export(&mut imp, exports, qual, &simple);
+        }
+        let _ = any; // an empty glob (no pub names) is allowed (the reference, if any, fails later)
+    }
+    // Explicit `use a.b.X` (higher precedence than any glob).
+    for item in &nodule.items {
+        let Item::Use(UsePath { path, glob: false }) = item else {
+            continue;
+        };
+        // The path's last segment is the imported item; the prefix is its owning nodule path.
+        let Some((simple, prefix)) = split_last_seg(path) else {
+            return Err(CheckError::new(
+                &site,
+                "a `use` path must name an item (`use a.b.Item`) — a bare single segment does not \
+                 name a cross-nodule item (M-662)",
+            ));
+        };
+        let qual = if prefix.is_empty() {
+            simple.clone()
+        } else {
+            format!("{prefix}.{simple}")
+        };
+        // Never-silent: unknown path/name vs exists-but-private (honest + helpful — G2).
+        match exports.declared.get(&qual) {
+            None => {
+                return Err(CheckError::new(
+                    &site,
+                    format!(
+                        "`use {}`: no such name `{qual}` in the phylum — no nodule declares it \
+                         (M-662; never a silent skip — G2)",
+                        path.0.join(".")
+                    ),
+                ));
+            }
+            Some(false) => {
+                return Err(CheckError::new(
+                    &site,
+                    format!(
+                        "`use {}`: `{qual}` exists but is not `pub` — it is private to its nodule \
+                         and not importable (mark it `pub` to export it; M-662)",
+                        path.0.join(".")
+                    ),
+                ));
+            }
+            Some(true) => {}
+        }
+        // Duplicate explicit import of the same simple name (ambiguous local binding) — G2.
+        if via_explicit.contains(&simple) {
+            return Err(CheckError::new(
+                &site,
+                format!(
+                    "duplicate import of `{simple}` — two `use` declarations bind the same name; \
+                     import it once (M-662; never a silent shadow — G2)"
+                ),
+            ));
+        }
+        via_explicit.insert(simple.clone());
+        // An explicit use shadows any glob binding/ambiguity for this name (deterministic precedence).
+        imp.ambiguous.remove(&simple);
+        insert_export(&mut imp, exports, &qual, &simple);
+    }
+    Ok(imp)
+}
+
+/// Does the export table mark `qual` as a `pub` (importable) name?
+fn exports_has_pub(exports: &Exports, qual: &str) -> bool {
+    matches!(exports.declared.get(qual), Some(true))
+}
+
+/// If `qual` is `prefix` + `.` + a **single** further segment, return that segment (a *direct* child
+/// of `prefix`); else `None`. (`"a.b.List"` is a direct child of `"a.b"` ⇒ `List`; `"a.b.c.X"` is
+/// not.) Used to expand a glob `use prefix.*` to exactly the names one level under the prefix.
+fn direct_child(prefix: &str, qual: &str) -> Option<String> {
+    let rest = qual.strip_prefix(prefix)?.strip_prefix('.')?;
+    if rest.is_empty() || rest.contains('.') {
+        None
+    } else {
+        Some(rest.to_owned())
+    }
+}
+
+/// Split a `use` path into `(last_segment, prefix_joined)`; `None` for an empty path. `a.b.Item` ⇒
+/// `("Item", "a.b")`; a single-segment `Item` ⇒ `("Item", "")`.
+fn split_last_seg(path: &Path) -> Option<(String, String)> {
+    let (last, init) = path.0.split_last()?;
+    Some((last.clone(), init.join(".")))
+}
+
+/// Insert the export `qual` (a `pub` type/fn/trait) into the per-nodule imports under `simple`.
+/// Exactly one of the three export tables holds `qual` (a name is one kind); insert from whichever.
+fn insert_export(imp: &mut NoduleImports, exports: &Exports, qual: &str, simple: &str) {
+    if let Some(info) = exports.types.get(qual) {
+        imp.types.insert(simple.to_owned(), info.clone());
+    }
+    if let Some(fd) = exports.fns.get(qual) {
+        imp.fns.insert(simple.to_owned(), fd.clone());
+    }
+    if let Some(info) = exports.traits.get(qual) {
+        imp.traits.insert(simple.to_owned(), info.clone());
+    }
+}
+
+/// Remove any import binding for `simple` across all three tables (used when a glob-vs-glob collision
+/// demotes a tentatively-bound name to `ambiguous`).
+fn remove_import(imp: &mut NoduleImports, simple: &str) {
+    imp.types.remove(simple);
+    imp.fns.remove(simple);
+    imp.traits.remove(simple);
 }
 
 /// Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`,
@@ -487,8 +914,18 @@ fn check_and_resolve_matured_inner(
     nodule: &Nodule,
     matured_scope: bool,
 ) -> Result<(Env, Nodule), CheckError> {
+    // A bare nodule is a **phylum-of-one** (M-662): route it through the same phylum orchestration so
+    // its orphan rule's locality set is exactly this one nodule and its imports are empty — behavior
+    // identical to the pre-M-662 single-nodule path, by construction. The `with_deep_stack` is already
+    // established by the caller (`check_and_resolve_matured` / `check_phylum_matured`), so call the
+    // inner orchestrator directly to avoid nesting worker stacks.
     let resolved = crate::ambient::resolve(nodule)?;
-    let env = check_resolved_matured(&resolved, matured_scope)?;
+    let phylum = Phylum::of_one(resolved.clone());
+    let penv = check_phylum_inner(&phylum, matured_scope)?;
+    let env = penv
+        .single()
+        .expect("a phylum-of-one yields exactly one Env")
+        .clone();
     let mut items = Vec::with_capacity(resolved.items.len());
     for item in &resolved.items {
         match item {
@@ -521,16 +958,14 @@ pub fn check_and_resolve(nodule: &Nodule) -> Result<(Env, Nodule), CheckError> {
     check_and_resolve_matured(nodule, false)
 }
 
-/// The core checker, run on an already ambient-resolved nodule, with an explicit maturation flag.
-/// When `matured_scope` is true, every fn with `thaw == false` must be `Total` (RFC-0017 §4.2).
-fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, CheckError> {
-    let mut types = BTreeMap::new();
-    let p = prelude();
-    types.insert(p.name.clone(), p);
-
-    // Pass 1: register data declarations (so they can reference each other). Stage-1 (RFC-0007 §11):
-    // a **generic** declaration `type List<A> = …` registers its type parameters; its constructor
-    // fields are resolved abstractly (with the parameters in scope), so they may contain `Ty::Var`.
+/// Register a (resolved) nodule's **data declarations** into `types` (Pass 1; RFC-0007 §11): a shell
+/// per type first (so recursive field references resolve), then its constructors. Duplicate type
+/// parameters / duplicate type names are explicit refusals. Extracted (M-662) so the phylum can build
+/// its registries once and reuse them; behavior is byte-identical to the inlined Pass 1.
+fn register_types(
+    types: &mut BTreeMap<String, DataInfo>,
+    nodule: &Nodule,
+) -> Result<(), CheckError> {
     for item in &nodule.items {
         if let Item::Type(td) = item {
             if let Some(dup) = first_duplicate(&td.params) {
@@ -555,58 +990,69 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     }
     for item in &nodule.items {
         if let Item::Type(td) = item {
-            let ctors = resolve_ctors(&types, td)?;
+            let ctors = resolve_ctors(types, td)?;
             types.get_mut(&td.name).expect("registered above").ctors = ctors;
         }
     }
+    Ok(())
+}
 
-    // Pass 1b: register trait declarations (RFC-0019 §4.2; LR-2). A trait is a registry entry, never
-    // a kernel node (KC-3). Its method signatures must resolve with the trait's params in scope as
-    // abstract type-variables; duplicate trait names and duplicate method names are explicit errors.
-    let traits = register_traits(&types, nodule)?;
-
-    // Pass 2: collect functions (signatures must resolve). Stage-1: a **generic** function
-    // `fn head<A>(…)` is registered as-is; its body is checked in Pass 3 with `A` an abstract
-    // variable, and call sites instantiate it (RFC-0007 §11.2/§11.3).
-    let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();
-    for item in &nodule.items {
-        match item {
-            Item::Fn(fd) => {
-                if let Some(dup) = first_duplicate(&fd.sig.param_names()) {
-                    return Err(CheckError::new(
-                        &fd.sig.name,
-                        format!("duplicate type parameter `{dup}` in `{}`", fd.sig.name),
-                    ));
-                }
-                if fns.insert(fd.sig.name.clone(), fd.clone()).is_some() {
-                    return Err(CheckError::new(&fd.sig.name, "duplicate function"));
-                }
-            }
-            // `default` is consumed by the resolution pass; it never reaches `check_resolved`.
-            // Traits were registered in Pass 1b; impls are handled in Pass 2b (below).
-            Item::Default(_) | Item::Trait(_) | Item::Impl(_) | Item::Use(_) | Item::Type(_) => {}
-        }
-    }
+/// The core checker for **one nodule of a phylum** (M-662), run on an already ambient-resolved nodule
+/// with its pre-built declaration registries (`regs`), its resolved cross-nodule `imports`, the
+/// phylum-wide pub-blind `coherence` view, and an explicit maturation flag. When `matured_scope` is
+/// true, every fn with `thaw == false` must be `Total` (RFC-0017 §4.2).
+///
+/// The nodule's checking registries = **its own declarations** merged with the **imported `pub`
+/// declarations** (own decls take precedence — the documented shadowing). The orphan rule is enforced
+/// **phylum-wide** (via `coherence`); name resolution is **never-silent** (an ambiguous glob name is
+/// refused at use-site). A phylum-of-one passes empty imports + a coherence view of just this nodule,
+/// so this reduces *exactly* to the pre-M-662 single-nodule checker.
+fn check_nodule_with(
+    nodule: &Nodule,
+    regs: NoduleRegs,
+    imports: &NoduleImports,
+    coherence: &CoherenceView,
+    matured_scope: bool,
+) -> Result<Env, CheckError> {
+    // Build the nodule's checking registries: imports first (lower precedence), own decls override
+    // (the documented "own decl shadows `use`" precedence — RFC-0006 §4.3). `regs` already holds the
+    // prelude + this nodule's own declarations; layering imports *under* them is just inserting any
+    // imported name not already present.
+    let mut types = imports.types.clone();
+    types.extend(regs.types.clone());
+    let mut traits = imports.traits.clone();
+    traits.extend(regs.traits.clone());
+    let mut fns = imports.fns.clone();
+    fns.extend(regs.fns.clone());
 
     // Pass 2b: register trait **instances** (RFC-0019 §4.5). Coherence (global uniqueness + the
-    // orphan rule) is enforced as each instance is registered; ALL instances are registered before
-    // any method body is checked (Pass 3b), so a method body may rely on an instance declared by a
-    // *later* `impl`. This pass resolves heads + checks coherence; it does not yet check bodies.
-    let instances = register_instances(&types, &traits, nodule)?;
+    // **phylum-wide** orphan rule) is enforced as each instance is registered; ALL instances are
+    // registered before any method body is checked (Pass 3b), so a method body may rely on an instance
+    // declared by a *later* `impl`. This pass resolves heads + checks coherence; it does not yet check
+    // bodies. The orphan rule consults the pub-blind phylum-wide `coherence` view (M-662).
+    let instances = register_instances(&types, &traits, coherence, nodule)?;
 
-    // Pass 3: type every body **against** its declared return type (bidirectional, RFC-0012 §4.3)
-    // and resolve any ambient bare-decimal widths from context — rewriting each body so the
-    // downstream evaluator/elaborator see only concrete literals.
-    let mut resolved_fns: BTreeMap<String, FnDecl> = BTreeMap::new();
-    for fd in fns.values() {
-        // Stage-1: the function's type parameters are in scope while resolving its signature and
-        // checking its body — each resolves to a `Ty::Var` (RFC-0007 §11.2). Bounds (RFC-0019 §4.1)
-        // are validated and carried so an unqualified trait-method call in the body can type through
-        // a bound (the dictionary it stands for is staged — RFC-0007 §12.3 / M-673).
-        let (body, _ret) = check_fn_body(&types, &fns, &traits, &instances, nodule.std_sys, fd)?;
+    // Pass 3: type every (own) body **against** its declared return type (bidirectional, RFC-0012
+    // §4.3), with imports available, and resolve any ambient bare-decimal widths from context —
+    // rewriting each body so the downstream evaluator/elaborator see only concrete literals. Only this
+    // nodule's *own* fns are (re)checked + stored (imported fns were already checked in their home
+    // nodule — RFC-0007 §11; a `use`d fn is checked in its home nodule's context, never re-checked
+    // here under this nodule's ambient).
+    let mut resolved_fns: BTreeMap<String, FnDecl> = fns.clone();
+    for fd in regs.fns.values() {
+        let (body, _ret) = check_fn_body(
+            &types,
+            &fns,
+            &traits,
+            &instances,
+            imports,
+            nodule.std_sys,
+            fd,
+        )?;
         resolved_fns.insert(
             fd.sig.name.clone(),
             FnDecl {
+                vis: fd.vis,
                 thaw: fd.thaw,
                 sig: fd.sig.clone(),
                 body,
@@ -621,7 +1067,15 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     // re-stored (the elaborator stages the dictionary lowering — M-673), only validated.
     for item in &nodule.items {
         if let Item::Impl(id) = item {
-            check_impl_methods(&types, &fns, &traits, &instances, nodule.std_sys, id)?;
+            check_impl_methods(
+                &types,
+                &fns,
+                &traits,
+                &instances,
+                imports,
+                nodule.std_sys,
+                id,
+            )?;
         }
     }
 
@@ -632,14 +1086,19 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     // introduces it (under-declaration is never silent — G2/RFC-0014 I3). Over-declaration is
     // allowed (a declaration is a contract — RFC-0014 I5). Run after bodies type-check, over the
     // checked `fns` table.
-    check_effect_coverage(&fns, &traits, nodule)?;
+    // Effect coverage runs over this nodule's **own** fn bodies (and its impl methods); an imported
+    // fn was already coverage-checked in its home nodule (M-662 — a `use`d fn is checked in its home
+    // context, never re-litigated here). The merged `fns`/`traits` give the callee effect lookups.
+    check_effect_coverage(&fns, &regs.fns, &traits, nodule)?;
 
-    // Pass 4: totality classification + the scope-quantified matured gate (RFC-0017 §4.2).
-    // When `matured_scope` is true, every fn with `thaw == false` must be `Total`; a non-total
+    // Pass 4: totality classification + the scope-quantified matured gate (RFC-0017 §4.2). Classify
+    // over the merged `fns` so an own fn calling an imported one classifies against the real callee.
+    // When `matured_scope` is true, every **own** fn with `thaw == false` must be `Total`; a non-total
     // non-thaw fn is an explicit error (RFC-0007 §4.5 / RFC-0017 §4.2). A `thaw` fn is exempt.
+    // (Imported fns are gated by their *own* nodule's scope, not this one — M-662.)
     let totality = crate::totality::classify_all(&fns);
     if matured_scope {
-        for fd in fns.values() {
+        for fd in regs.fns.values() {
             if !fd.thaw && totality[&fd.sig.name] != crate::totality::Totality::Total {
                 return Err(CheckError::new(
                     &fd.sig.name,
@@ -682,10 +1141,13 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
 /// visible in its signature".
 fn check_effect_coverage(
     fns: &BTreeMap<String, FnDecl>,
+    own_fns: &BTreeMap<String, FnDecl>,
     traits: &BTreeMap<String, TraitInfo>,
     nodule: &Nodule,
 ) -> Result<(), CheckError> {
-    for fd in fns.values() {
+    // Only this nodule's **own** fn bodies are coverage-checked (M-662); the callee effect lookups use
+    // the merged `fns` (so an own fn calling an imported `pub` fn sees that callee's declared effects).
+    for fd in own_fns.values() {
         check_body_effect_coverage(fns, traits, &fd.sig.name, &fd.sig.effects, &fd.body)?;
     }
     // `impl`-method bodies perform effects too (the RFC-0019 × RFC-0014 surface). Their declared set
@@ -929,35 +1391,27 @@ fn check_sig_resolves(
 /// - the trait must exist and the argument **arity** must match the trait's params (else explicit);
 /// - **global uniqueness:** key `(trait, type_head(for_ty))` must be free, else an overlapping-
 ///   instance / coherence refusal naming the pair (RFC-0019 §4.5; ADR-003);
-/// - **orphan rule (single-nodule stage-1):** the trait is declared here, OR `for_ty` is a `Data`
-///   declared here, OR `for_ty` is a primitive repr type (`Binary`/`Ternary`/`Dense`/`Substrate`);
-///   otherwise an explicit orphan refusal (cross-nodule enforcement is staged with the phylum work,
-///   M-662).
+/// - **orphan rule (phylum-wide, pub-blind — M-662):** the trait is declared in *some* nodule of the
+///   phylum, OR `for_ty`'s head is a `Data` declared in *some* nodule of the phylum, OR `for_ty` is a
+///   primitive repr type (`Binary`/`Ternary`/`Dense`/`Substrate`); otherwise an explicit orphan
+///   refusal. The locality view is pub-blind (coherence is enforcement authority, not the `pub`
+///   namespace — RFC-0019 §4.5). For a phylum-of-one this reduces to the prior single-nodule test.
 ///
 /// Method *bodies* are not checked here (that is [`check_impl_methods`], after the whole instance
 /// set is known); method *presence* (exact-match against the trait's sigs) IS checked here.
 fn register_instances(
     types: &BTreeMap<String, DataInfo>,
     traits: &BTreeMap<String, TraitInfo>,
+    coherence: &CoherenceView,
     nodule: &Nodule,
 ) -> Result<BTreeMap<(String, String), InstanceInfo>, CheckError> {
-    // Which traits / data types are declared in *this* nodule (the orphan-rule locality test).
-    let local_traits: std::collections::BTreeSet<&str> = nodule
-        .items
-        .iter()
-        .filter_map(|i| match i {
-            Item::Trait(td) => Some(td.name.as_str()),
-            _ => None,
-        })
-        .collect();
-    let local_types: std::collections::BTreeSet<&str> = nodule
-        .items
-        .iter()
-        .filter_map(|i| match i {
-            Item::Type(td) => Some(td.name.as_str()),
-            _ => None,
-        })
-        .collect();
+    // The orphan-rule locality test is **phylum-wide and pub-blind** (M-662; RFC-0019 §4.5): a trait
+    // or `for`-type head is "local" iff *some* nodule of the phylum declares it, regardless of `pub`
+    // (coherence is enforcement authority, not the `pub` namespace). The pub-blind `coherence` view
+    // holds every nodule's trait/type names. For a phylum-of-one this is exactly this nodule's
+    // declarations, so the rule reduces to the pre-M-662 single-nodule test.
+    let phylum_traits = &coherence.traits;
+    let phylum_types = &coherence.types;
 
     let mut instances: BTreeMap<(String, String), InstanceInfo> = BTreeMap::new();
     for item in &nodule.items {
@@ -1004,12 +1458,16 @@ fn register_instances(
                 ),
             ));
         };
-        // Orphan rule (single-nodule stage-1; RFC-0019 §4.5): legal iff the trait is local, OR the
-        // `for` type is a local data type, OR a primitive repr type.
-        let trait_local = local_traits.contains(id.trait_name.as_str());
+        // Orphan rule — **phylum-wide, pub-blind** (RFC-0019 §4.5; M-662): legal iff the trait is
+        // declared in *some* nodule of the phylum, OR the `for`-type head is a data type declared in
+        // *some* nodule of the phylum, OR a primitive repr type. This generalizes the former
+        // nodule-local test to the whole phylum (an impl may be in either the trait's *or* the type's
+        // nodule, or any sibling, so long as one head is phylum-local); an impl whose trait **and**
+        // type are both outside the phylum still orphan-rejects.
+        let trait_local = phylum_traits.contains(id.trait_name.as_str());
         let type_local = match &for_ty {
-            Ty::Data(n, _) => local_types.contains(n.as_str()),
-            // Primitive repr types are "owned here" for stage-1 single-nodule (RFC-0019 §4.5).
+            Ty::Data(n, _) => phylum_types.contains(n.as_str()),
+            // Primitive repr types are "owned by the phylum" for stage-1 (RFC-0019 §4.5).
             Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) => true,
             Ty::Var(_) => false,
         };
@@ -1017,10 +1475,10 @@ fn register_instances(
             return Err(CheckError::new(
                 site,
                 format!(
-                    "orphan instance: `impl {} for {for_ty}` is in neither the trait's nodule nor \
-                     `{for_ty}`'s nodule (RFC-0019 §4.5 orphan rule); cross-nodule instances are \
-                     staged with the phylum work (M-662)",
-                    id.trait_name
+                    "orphan instance: `impl {} for {for_ty}` — neither the trait `{}` nor the type \
+                     `{for_ty}` is declared in any nodule of this phylum (RFC-0019 §4.5 orphan rule, \
+                     phylum-wide; M-662). Declare one of them in the phylum, or move the impl.",
+                    id.trait_name, id.trait_name
                 ),
             ));
         }
@@ -1110,6 +1568,7 @@ fn check_impl_methods(
     fns: &BTreeMap<String, FnDecl>,
     traits: &BTreeMap<String, TraitInfo>,
     instances: &BTreeMap<(String, String), InstanceInfo>,
+    imports: &NoduleImports,
     std_sys: bool,
     id: &ImplDecl,
 ) -> Result<(), CheckError> {
@@ -1202,7 +1661,7 @@ fn check_impl_methods(
         // trait/instance context is available so the body may itself call trait methods. The
         // `@std-sys` context (M-661) flows in so a `wild` block inside an impl method is gated
         // exactly as in a top-level fn (an impl in a non-`@std-sys` nodule may not contain `wild`).
-        check_fn_body(types, fns, traits, instances, std_sys, method)?;
+        check_fn_body(types, fns, traits, instances, imports, std_sys, method)?;
     }
     let _ = for_ty; // resolved above for the arg substitution; head reuse is at registration.
     Ok(())
@@ -1218,6 +1677,7 @@ fn check_fn_body(
     fns: &BTreeMap<String, FnDecl>,
     traits: &BTreeMap<String, TraitInfo>,
     instances: &BTreeMap<(String, String), InstanceInfo>,
+    imports: &NoduleImports,
     std_sys: bool,
     fd: &FnDecl,
 ) -> Result<(Expr, Ty), CheckError> {
@@ -1239,6 +1699,7 @@ fn check_fn_body(
         fns,
         traits,
         instances,
+        imports,
         tyvars: &tyvars,
         bounds: &bounds,
         std_sys,
@@ -1318,6 +1779,13 @@ struct Cx<'a> {
     /// Instance registry (RFC-0019 §4.5), keyed by `(trait, type-head)` — the coherence map a
     /// bounded call / trait-method call resolves against. Empty in re-inference.
     instances: &'a BTreeMap<(String, String), InstanceInfo>,
+    /// The nodule's resolved cross-nodule imports (M-662) — consulted **only** at unresolved-name
+    /// sites to raise the never-silent glob-vs-glob ambiguity error (a *reference* to a name brought
+    /// in by ≥2 globs and not shadowed). Imported `pub` decls themselves are already merged into
+    /// `types`/`fns`/`traits` (by simple name), so ordinary resolution sees them directly; this field
+    /// only carries the `ambiguous` set so a reference to an ambiguous name is refused, never a silent
+    /// winner (G2). Empty (`ambiguous` empty) in re-inference and in a phylum-of-one.
+    imports: &'a NoduleImports,
     /// The type parameters in scope for this body (RFC-0007 §11.2) — empty for a monomorphic
     /// function. A bare `Named` type that matches one of these resolves to [`Ty::Var`].
     tyvars: &'a [String],
@@ -1440,13 +1908,21 @@ impl Cx<'_> {
     ) -> Result<(Ty, Expr), CheckError> {
         if p.0.len() != 1 {
             return self.err(format!(
-                "dotted path `{}` does not resolve in v0 (single-nodule)",
+                "dotted path `{}` does not resolve — multi-segment qualified-path *syntax* is \
+                 deferred in v0; bring the name into scope with a `use` (`use {}`) and reference it \
+                 by its final segment (M-662)",
+                p.0.join("."),
                 p.0.join(".")
             ));
         }
         let name = &p.0[0];
         if let Some((_, ty)) = scope.iter().rev().find(|(n, _)| n == name) {
             return Ok((ty.clone(), e.clone()));
+        }
+        // A reference to a name brought in by ≥2 globs (and not shadowed by a local/own/explicit
+        // binding, which would have resolved above) is the never-silent glob-vs-glob ambiguity (G2).
+        if let Some(err) = self.imports.ambiguity_error(self.site, name) {
+            return Err(err);
         }
         if let Some((d, i)) = self.ctor(name) {
             if d.ctors[i].fields.is_empty() {
@@ -1693,7 +2169,9 @@ impl Cx<'_> {
         };
         if p.0.len() != 1 {
             return self.err(format!(
-                "dotted call `{}` does not resolve in v0",
+                "dotted call `{}` does not resolve — multi-segment qualified-path *syntax* is \
+                 deferred in v0; `use {}` and call by its final segment (M-662)",
+                p.0.join("."),
                 p.0.join(".")
             ));
         }
@@ -1777,6 +2255,11 @@ impl Cx<'_> {
         // (not a separate method) to keep the per-nesting-level host-stack frame count at the
         // pre-M-344 depth — the parser bounds AST nesting, and the checker must fit that bound
         // without overflowing (A4-02).
+        // A call to a name brought in by ≥2 globs (unshadowed) is the never-silent glob-vs-glob
+        // ambiguity (G2) — refuse before falling through to the prim/unknown diagnostic.
+        if let Some(err) = self.imports.ambiguity_error(self.site, name) {
+            return Err(err);
+        }
         let Some(fam) = prim_family(name) else {
             return self.err(teach_unknown(
                 name,
@@ -2529,6 +3012,9 @@ pub(crate) fn infer_type(
     scope: &mut Vec<(String, Ty)>,
     e: &Expr,
 ) -> Result<Ty, CheckError> {
+    // Re-inference has no cross-nodule imports (the term is already checked and monomorphic; no
+    // glob-ambiguity can arise here — any ambiguity was refused during checking — M-662).
+    let no_imports = NoduleImports::default();
     let cx = Cx {
         site: "<elaborate>",
         types: &env.types,
@@ -2537,6 +3023,7 @@ pub(crate) fn infer_type(
         // call a trait method resolved through a concrete instance — RFC-0019 §4.5).
         traits: &env.traits,
         instances: &env.instances,
+        imports: &no_imports,
         // Re-inference runs over already-checked, monomorphic terms (a generic *instantiation* is
         // refused at elaboration before re-inference — RFC-0007 §11.3 staging), so no type
         // parameters / bounds are in scope here.
@@ -2923,6 +3410,7 @@ mod depth_budget_tests {
             path: Path(vec!["d".to_string()]),
             std_sys: false,
             items: vec![Item::Fn(FnDecl {
+                vis: crate::ast::Vis::Private,
                 thaw: false,
                 sig: FnSig {
                     name: "main".to_string(),

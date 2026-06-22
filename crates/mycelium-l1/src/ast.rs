@@ -5,6 +5,70 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Path(pub Vec<String>);
 
+/// A **phylum** — the library-scale static grouping above `nodule` (DN-06; RFC-0006 §4.3; M-662). A
+/// phylum is a *grouping*, not a syntactic container: identity stays **per-nodule** (ADR-003), there
+/// is no `phylum { … }` block. One source file holds an optional `phylum <path>` header followed by
+/// one-or-more `nodule` blocks; it parses to this `Phylum`. A lone `nodule` with **no** `phylum`
+/// header is a **phylum-of-one** (`path: None, nodules: [that_nodule]`) — every single-nodule program
+/// is unchanged (the phylum is an additive layer; see [`crate::parse::parse`] vs
+/// [`crate::parse::parse_phylum`]).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Phylum {
+    /// The phylum's dotted name from its `phylum <path>` header, or `None` for a header-less
+    /// phylum-of-one (a bare single-nodule program).
+    pub path: Option<Path>,
+    /// The nodule(s) grouped by this phylum (≥ 1; the parser requires at least one `nodule` block).
+    pub nodules: Vec<Nodule>,
+}
+
+impl Phylum {
+    /// A **phylum-of-one** wrapping a single bare nodule (no `phylum` header). The additive bridge
+    /// that lets every single-nodule program flow through the phylum-aware checker unchanged — a bare
+    /// `nodule` *is* a phylum of one (M-662).
+    #[must_use]
+    pub fn of_one(nodule: Nodule) -> Self {
+        Phylum {
+            path: None,
+            nodules: vec![nodule],
+        }
+    }
+}
+
+/// **Cross-nodule visibility** of a top-level item (M-662; RFC-0006 §4.3). Top-level `fn`/`trait`/
+/// `type` are **private-to-nodule by default**; a `pub` marker exposes the name to **other** nodules
+/// in the same phylum. *Intra*-nodule everything is visible regardless of `Vis` — `pub` gates **only**
+/// cross-nodule visibility. (`impl`/`default`/`use` are never `pub`-gated.)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Vis {
+    /// Private to its nodule (the default — no `pub` marker). Visible intra-nodule; invisible to
+    /// other nodules of the phylum.
+    Private,
+    /// `pub` — exported to the other nodules of the phylum (cross-nodule visible).
+    Pub,
+}
+
+impl Vis {
+    /// Is this item exported to other nodules of the phylum (`pub`)?
+    #[must_use]
+    pub fn is_pub(self) -> bool {
+        matches!(self, Vis::Pub)
+    }
+}
+
+/// A `use` import target (`use a.b.Item` or the glob `use a.b.*`; M-662; RFC-0006 §4.3). A `use`
+/// binds a name (or, for a glob, every `pub` name under a path) from another nodule of the phylum into
+/// the local scope, keyed by the qualified name. Resolution is **never-silent** (G2): an unknown /
+/// private / ambiguous import is an explicit `CheckError`, never a silent winner.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UsePath {
+    /// The imported path. For a specific import it names the item (`a.b.Item`); for a glob it names
+    /// the *prefix* whose `pub` names are imported (`a.b` from `use a.b.*`).
+    pub path: Path,
+    /// `true` for a glob `use a.b.*` (import all `pub` names under `path`); `false` for a specific
+    /// `use a.b.Item`.
+    pub glob: bool,
+}
+
 /// A whole program: a `nodule` header and its items.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Nodule {
@@ -69,8 +133,9 @@ pub enum AmbientParams {
 /// A top-level item.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Item {
-    /// `use path`.
-    Use(Path),
+    /// `use path` (specific) or `use path.*` (glob) — a cross-nodule import (M-662). Carries the
+    /// import target ([`UsePath`]); a `use` is never `pub`-gated (importing is not re-exporting).
+    Use(UsePath),
     /// `default paradigm P` — the nodule-scope ambient (RFC-0012 §4.2). At most one per nodule; the
     /// outermost ambient frame. Consumed (stripped) by the resolution pass ([`crate::ambient`]).
     Default(Paradigm),
@@ -84,9 +149,13 @@ pub enum Item {
     Fn(FnDecl),
 }
 
-/// `type Name<params> = Ctor | Ctor(field, …) | …` (LR-1).
+/// `type Name<params> = Ctor | Ctor(field, …) | …` (LR-1). An optional leading `pub` marks the type
+/// **exported** to other nodules of the phylum (M-662); absent ⇒ private-to-nodule.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeDecl {
+    /// Cross-nodule visibility (`pub` ⇒ [`Vis::Pub`], else [`Vis::Private`]; M-662). Intra-nodule
+    /// the type is always visible — this gates only cross-nodule import.
+    pub vis: Vis,
     /// Type name.
     pub name: String,
     /// Type parameters.
@@ -109,6 +178,10 @@ pub struct Ctor {
 /// parameters are a deferred refusal, never silently dropped).
 #[derive(Debug, Clone, PartialEq)]
 pub struct TraitDecl {
+    /// Cross-nodule visibility (`pub` ⇒ [`Vis::Pub`]; M-662). Gates only cross-nodule import of the
+    /// trait *name*; the orphan/coherence view is pub-blind (a trait is visible to coherence
+    /// regardless of `Vis`).
+    pub vis: Vis,
     /// Trait name.
     pub name: String,
     /// Type parameters (unbounded names; stage-1).
@@ -191,6 +264,11 @@ impl FnSig {
 /// scope; RFC-0017 §4.3. Maturation itself is a scope/header attribute, not a per-fn modifier.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnDecl {
+    /// Cross-nodule visibility (`pub` ⇒ [`Vis::Pub`]; M-662). A top-level `pub fn` is exported to the
+    /// phylum's other nodules; absent ⇒ private-to-nodule. (An `impl` method's `FnDecl` is never
+    /// `pub`-gated — `impl`/`default` are not part of the `pub` namespace; its `vis` stays
+    /// [`Vis::Private`] and is ignored.)
+    pub vis: Vis,
     /// `thaw` de-matures this def — keeps it interpreted inside a matured scope; RFC-0017 §4.3.
     pub thaw: bool,
     /// Its signature.
