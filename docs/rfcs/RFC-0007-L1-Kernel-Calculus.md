@@ -530,8 +530,38 @@ gate is captured here. Honesty (VR-5): RFC-0019's coherence and S1-preservation 
 **Declared-with-argument**; this amendment **does not upgrade** them — implementing the checker is
 `Empirical` evidence, not a `Proven` basis.
 
+### 12.5 Implementation status (M-659 — implemented Rust-first, pending ratification)
+
+As of M-659 the §12.1 surface is **implemented in `crates/mycelium-l1`** (the reference frontend),
+pending RFC ratification — not flipped to `Enacted`. What landed (all explicit, never-silent — G2):
+the parser productions (`impl Trait<args> for T { fn … }`; bounded fn type-params `<T: Cmp + Ord<T>>`
+— with the single-parameter self-bound sugar `T: Cmp ≡ T: Cmp<T>`; bounds on `type`/`trait`
+parameters are an explicit parse refusal); the trait checker — trait + instance registries on the
+checked `Env`, a head-granular **coherence key** (`type_head`: width/shape erased, so stage-1
+conservatively rejects two instances on the same head even at different widths — a documented,
+deferrable refinement), the **trait pass** (method-sig resolution, duplicate trait/method refusals),
+the **impl pass** (trait-arg arity, **global uniqueness**, the **single-nodule orphan rule** — local
+trait OR local data type OR a primitive repr; cross-nodule enforcement staged with the phylum work,
+M-662 — and exact method-set + per-method signature/body checking), **bounded-call satisfiability**
+and **unqualified trait-method resolution** (concrete instance or bound-in-scope; ambiguity and
+undetermined are explicit refusals, never a guess). The §4.6 Repr-polymorphism restriction is
+unchanged — a bound does **not** grant representation-specific ops. **Elaboration stays staged**: a
+trait-method / bounded-generic call's dictionary-passing L0 lowering is an explicit `Residual`
+(→ M-673), exactly mirroring §11.3's generic-instantiation staging; **no new kernel node** (KC-3).
+Honesty (VR-5): the checker entry points are tagged `Declared` (a structural registry check, not a
+theorem); this status note records implementation as `Empirical` evidence, **not** a `Proven` basis,
+and does **not** advance the decision's status.
+
 ## Meta — changelog
 
+- **2026-06-22 — §12.5 added: the stage-1 trait checker is implemented Rust-first (M-659; append-only,
+  no calculus change).** Records that `crates/mycelium-l1` now implements the §12.1 surface — the
+  `impl`/bounded-`fn` parser productions, the trait/instance registries + coherence (global uniqueness
+  + single-nodule orphan rule, head-granular keying), bounded-call satisfiability + unqualified
+  trait-method resolution, all with explicit never-silent refusals (G2) — while **staging** the
+  dictionary-passing L0 lowering to an explicit `Residual` (→ M-673), mirroring §11.3. No new kernel
+  node (KC-3); RFC-0019's Declared-with-argument coherence result is **not** upgraded (the
+  implementation is `Empirical` evidence; the decision status is unchanged — VR-5).
 - **2026-06-22 — new §12: stage-1 trait interfaces + `impl` blocks; `impl` reserved (M-658; RFC-0019
   ripple, append-only, no calculus change).** The companion to §11: §12 pins the **trait /
   bounded-generics** surface `crates/mycelium-l1` v1 must check (single-parameter `trait`/`impl Trait

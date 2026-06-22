@@ -796,6 +796,20 @@ This RFC is **Draft**. The maintainer must ratify it (move to Accepted) based on
 
 ## Meta — changelog
 
+- **2026-06-22 — stage-1 checker implemented Rust-first (M-659; append-only, status unchanged).**
+  The §4.1 surface (single-parameter `trait`; `impl Trait<args> for T { fn … }`; bounded fn
+  type-params `<T: Cmp + Ord<T>>`, with the `T: Cmp ≡ T: Cmp<T>` single-parameter self-bound) and the
+  §4.5 **coherence** discipline (global uniqueness + the orphan rule) are now checked by
+  `crates/mycelium-l1` (RFC-0007 §12.5). Stage-1 keys instances per **(trait, type-head)** —
+  width/shape erased, so two instances on the same head (even at different widths) conservatively
+  conflict (a documented, deferrable refinement); the orphan rule is enforced **single-nodule** (local
+  trait OR local data type OR a primitive repr — cross-nodule enforcement staged with the phylum work,
+  M-662). The §4.6 Repr-polymorphism restriction holds: a bound does not grant representation-specific
+  ops. Dictionary-passing (§4.4) is **typed** in the checker but its L0 lowering is an explicit
+  never-silent `Residual` (staged → M-673), so the **kernel node budget is unchanged** (KC-3). Honesty
+  (VR-5): the coherence and S1-preservation results stay **Declared-with-argument** — this
+  implementation is `Empirical` evidence, **not** a `Proven` upgrade, and does **not** change the RFC's
+  status. Append-only.
 - **2026-06-18 — Draft, initial authoring.** First draft of the trait / parametric-polymorphism
   layer (LR-2), resolving RFC-0007 §4.4's explicit deferral ("polymorphism/traits deliberately
   out of v0 — its own later RFC"). Specifies surface forms (`impl … for …`, bounded generics,
