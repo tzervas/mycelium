@@ -361,6 +361,42 @@ fn a_wild_in_a_std_sys_nodule_without_declaring_ffi_is_a_coverage_refusal() {
 }
 
 #[test]
+fn effects_inside_an_opaque_wild_body_do_not_leak_into_the_enclosing_fn() {
+    // Regression (Copilot, PR #360 / M-661 × M-660): effect coverage must treat a `wild` body as
+    // OPAQUE. Its interior is trusted FFI — not analyzable Mycelium — so a call inside it contributes
+    // NO effect to the enclosing fn beyond `wild`'s own `ffi` source (§8-Q6). The shared `walk_expr`
+    // previously *descended* into `wild` bodies, wrongly crediting an interior call's effects and
+    // demanding the enclosing fn declare them. Here `noisy` declares `!{io}`; a fn whose only use of
+    // it is inside a `wild` block needs just `!{ffi}` — `io` must NOT be required (audited, not
+    // verified — VR-5/ADR-014). Before the fix this was a false under-declaration refusal.
+    let env = check(
+        "nodule std.sys.x @std-sys\n\
+         fn noisy() -> Binary{8} !{io} = 0b00000000\n\
+         fn f() -> Binary{8} !{ffi} = wild { noisy() }",
+    )
+    .expect(
+        "an effect performed only inside an opaque wild body must not leak to the enclosing fn",
+    );
+    assert!(env.fn_decl("f").is_some());
+
+    // Non-vacuous: the SAME call OUTSIDE a `wild` *does* leak `io` (proving `noisy` genuinely performs
+    // it — so the accept above is the opacity invariant at work, not a coincidence of an inert callee).
+    let err = check(
+        "nodule std.sys.x @std-sys\n\
+         fn noisy() -> Binary{8} !{io} = 0b00000000\n\
+         fn g() -> Binary{8} !{ffi} = noisy()",
+    )
+    .expect_err(
+        "calling `noisy` directly (not inside a wild) must require declaring its `io` effect",
+    );
+    assert!(
+        err.message.contains("io"),
+        "the direct-call refusal must name the undeclared `io` effect, got: {}",
+        err.message
+    );
+}
+
+#[test]
 fn a_wild_in_synthesis_position_demands_an_ascription() {
     // The body takes its type from context (it is not synthesized). In a synthesis position — here a
     // `let` bound with no annotation, whose bound expr must self-synthesize — the checker refuses with
