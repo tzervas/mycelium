@@ -64,6 +64,12 @@ pub enum Tok {
 
     /// `use` — import (conventional).
     Use,
+    /// `pub` — the cross-nodule **export** marker on a top-level `fn`/`trait`/`type` (M-662; RFC-0006
+    /// §4.3; conventional, Rust-like). A top-level item is private-to-nodule by default; `pub` exposes
+    /// its name to the other nodules of the phylum. Reserved as a keyword so it can never be a silent
+    /// identifier (G2). It precedes `fn`/`trait`/`type` (and `thaw fn`); a `pub` anywhere else is an
+    /// explicit parse error.
+    Pub,
     /// `type` — data-type declaration.
     Type,
     /// `trait` — typeclass (conventional; `guild` was declined).
@@ -182,6 +188,10 @@ pub enum Tok {
     /// v0 has no arithmetic `+` (prims are named calls), so this token appears **only** inside a
     /// bound; anywhere else the parser raises an explicit error, never a silent accept (G2).
     Plus,
+    /// `*` — the **glob** marker, the final segment of a wildcard import `use a.b.*` (M-662). v0 has
+    /// no arithmetic `*` (prims are named calls), so this token appears **only** as the tail of a
+    /// glob `use`; anywhere else the parser raises an explicit error, never a silent accept (G2).
+    Star,
     /// `=`.
     Eq,
     /// `->`.
@@ -254,6 +264,8 @@ pub fn keyword(word: &str) -> Option<Tok> {
         "tier" => Tok::Tier,
         "reclaim" => Tok::Reclaim,
         "use" => Tok::Use,
+        // `pub` — the M-662 cross-nodule export marker (reserved so it is never a silent identifier).
+        "pub" => Tok::Pub,
         "type" => Tok::Type,
         "trait" => Tok::Trait,
         "impl" => Tok::Impl,

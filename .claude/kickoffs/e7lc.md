@@ -71,8 +71,8 @@ syntax + the M-661 `@std-sys` gate). The loop:
 | # | Issue(s) | What | Status |
 |---|---|---|---|
 | — | M-656…M-661 | generics → traits → effects → wild/FFI | ✅ landed |
-| 1 | **M-662** | `phylum` + cross-nodule (+ the cross-nodule orphan rule M-659 deferred) | **active — design-map + FLAG first** |
-| 2 | M-663 | RFC-0018 static guarantee grading — **stays `Declared`** (VR-5) | next |
+| 1 | **M-662** | `phylum` + cross-nodule (+ the cross-nodule orphan rule M-659 deferred) | ✅ **landed** (2026-06-22; single-file phylum · `pub` + glob `use` · phylum-wide orphan; all `Declared`) |
+| 2 | M-663 | RFC-0018 static guarantee grading — **stays `Declared`** (VR-5) | **active — next** |
 | 3 | M-664 | `consume`/`grow`/`impl` surface keywords (+ fix the stale `lang-lexicon-syntax.md` legend [~l.100] that still lists `impl` reserved-not-lexed) | |
 | 4 | M-667 → M-668 | E7-2: `fuse`/`reclaim`/`tier` → R2 design | |
 | 5 | M-673 → M-649 | dogfooding: elaboration (RUN) → self-host the first `.myc` nodule → the example phylum | after the lexicon |

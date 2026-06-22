@@ -156,11 +156,12 @@ Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is 
 
 ### Post-compaction continuation (durable handoff)
 
-**▶ NEXT (2026-06-22 — `/kickoff e7l`): M-661 (`wild`/FFI floor).** M-660 (effect annotations,
-`dfb7af5`) + M-659 (trait checker, `4b53bde`) + track-a PM tooling + M-656/657/658 + M-674 depth-safety
-are all LANDED on `main` (tip `dfb7af5`). **Maintainer direction (FIRM): complete the FULL lexicon
-(M-661→M-664→E7-2 M-667/M-668) BEFORE any dogfooding** — a complete surface unlocks whole-project
-self-hosting + the example phylum.
+**▶ NEXT (2026-06-22 — `/kickoff e7lc`): M-663 (RFC-0018 static guarantee grading — stays `Declared`).**
+**M-661** (`wild`/FFI floor) and **M-662** (`phylum` + cross-nodule model — single-file phylum, `pub` +
+glob `use`, qualified per-phylum registry, **phylum-wide** orphan rule; all `Declared`) are now **LANDED
+on `main`**, carrying the lexicon through phyla. M-660/M-659/M-656–658/M-674 + track-a PM tooling landed
+earlier. **Maintainer direction (FIRM): complete the FULL lexicon (M-663 → M-664 → E7-2 M-667/M-668)
+BEFORE any dogfooding** — a complete surface unlocks whole-project self-hosting + the example phylum.
 
 **M-661:** accept `wild { … }` inside a fn that declares the `ffi` effect; `wild` becomes the `ffi`
 effect SOURCE for M-660's coverage checker; `myc-sec` wild-audit gate keeps flagging unapproved `wild`.

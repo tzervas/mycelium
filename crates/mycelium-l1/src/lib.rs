@@ -48,14 +48,19 @@ pub mod token;
 pub mod totality;
 pub(crate) mod usefulness;
 
-pub use ambient::{expand_to_source, resolve, resolve_report, AmbientError, Resolved};
-pub use ast::Nodule;
-pub use checkty::{check_and_resolve, check_nodule, check_nodule_matured, CheckError, Env, Ty};
+pub use ambient::{
+    expand_phylum_to_source, expand_to_source, resolve, resolve_report, AmbientError, Resolved,
+};
+pub use ast::{Nodule, Phylum, UsePath, Vis};
+pub use checkty::{
+    check_and_resolve, check_nodule, check_nodule_matured, check_phylum, check_phylum_matured,
+    CheckError, Env, PhylumEnv, Ty,
+};
 pub use elab::{elaborate, elaborate_colony, ElabError};
 pub use error::ParseError;
 pub use eval::{Evaluator, L1Error, L1Value};
 pub use nodule::{parse_nodule_header, NoduleHeader, NoduleHeaderError};
-pub use parse::parse;
+pub use parse::{parse, parse_phylum};
 pub use totality::Totality;
 
 #[cfg(test)]
@@ -92,13 +97,26 @@ mod tests {
     }
 
     #[test]
-    fn phylum_is_reserved_not_active() {
-        // DN-06: `phylum` (the library grouping) is a reserved keyword — it lexes as a keyword (so
-        // never a silent identifier) but no L1 construct consumes it yet, so it neither opens a
-        // program nor is a usable identifier (G2). (`colony` was reserved-not-active until M-666;
-        // it is now an active *expression* construct — see `colony_and_hypha_are_active`.)
-        assert!(parse("phylum signals\n").is_err());
+    fn phylum_is_an_active_header_but_never_an_identifier() {
+        // M-662 / DN-06 / RFC-0006 §4.3: `phylum` ACTIVATED as a header keyword — it opens a phylum
+        // program via `parse_phylum` (`phylum <path>` then `nodule` blocks). It is **not** a
+        // single-nodule program opener, so `parse` (single-nodule) still rejects it; and it remains a
+        // keyword, so it can never be a silent identifier (G2). (`colony` activated as an *expression*
+        // with M-666 — see `colony_and_hypha_are_active`; `phylum` activates here as a *header*.)
+        // `parse` (the single-nodule entry) does not consume a `phylum` header:
+        assert!(parse("phylum signals\nnodule demo\n").is_err());
+        // …but `parse_phylum` does — `phylum <path>` + a `nodule` block is a well-formed phylum.
+        let ph = parse_phylum("phylum signals.demo\nnodule a\nfn f() -> Binary{8} = 0b0")
+            .expect("a phylum header + nodule parses (M-662)");
+        assert_eq!(
+            ph.path.as_ref().map(|p| p.0.clone()),
+            Some(vec!["signals".to_owned(), "demo".to_owned()])
+        );
+        assert_eq!(ph.nodules.len(), 1);
+        // `phylum` is still a keyword ⇒ never a usable identifier (G2).
         assert!(parse("nodule demo\nfn phylum() -> Binary{8} = 0b0").is_err());
+        // A `phylum` header with no following nodule is a never-silent error (a phylum groups nodules).
+        assert!(parse_phylum("phylum signals\n").is_err());
     }
 
     #[test]

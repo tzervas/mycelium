@@ -322,6 +322,17 @@ keyword/theming tracked separately, not a RFC-0006 gate).*
 
 ## Meta — changelog
 
+- **2026-06-22 — phylum surface + cross-nodule model implemented Rust-first (M-662, E7-1; append-only,
+  status unchanged).** The §3/§4 surface gains the **phylum** construct: an optional `phylum <path>`
+  header groups one-or-more `nodule` blocks in one source file (`program ::= phylum_header? nodule_block+`;
+  a header-less single nodule is a phylum-of-one — backward-compatible). Cross-nodule names are exported
+  with **`pub`** (`pub fn`/`type`/`trait`; absent ⇒ private to the nodule) and imported with **`use`** —
+  specific (`use a.b.X`) or glob (`use a.b.*`). Resolution precedence is local-decl > explicit-`use` >
+  glob (deterministic, documented shadowing); a `use` of an **absent** or **private** name, a **duplicate**
+  import, or a **referenced glob-vs-glob** collision is a **never-silent `CheckError`** (G2). The grammar
+  oracle (`mycelium.ebnf` + `conformance/accept/19`, `reject/10`) and `crates/mycelium-l1` (parse/check/
+  print) now realize this; `phylum` thereby leaves "reserved-not-active" (DN-06) and becomes active, as
+  `colony`/`hypha` did with M-666. Implemented in `crates/mycelium-l1/`; pending ratification. Append-only.
 - **2026-06-22 — LR-9 `wild`/unsafe floor partially realized (M-661, E7-1; ripple, append-only).** LR-9's
   *only* leak vector — "raw FFI / foreign memory … lexically marked and denied by default" — is now
   **conditionally present (audited, std-sys context; type-checks + gates; execution staged)** in the L1

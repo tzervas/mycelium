@@ -90,6 +90,9 @@ impl Lexer {
                 // glyph, but a trit literal is only ever scanned *whole* from an opening `<` (in
                 // `lex_angle_or_trit`), so a `+` reaching here is always the bound separator token.
                 '+' => self.single(Tok::Plus),
+                // `*` is the glob marker of a wildcard import `use a.b.*` (M-662). v0 has no other
+                // `*` use, so the parser accepts it only as a glob-`use` tail and errors otherwise.
+                '*' => self.single(Tok::Star),
                 '<' => self.lex_angle_or_trit(pos)?,
                 '=' => self.lex_eq(),
                 '-' => self.lex_dash(pos)?,

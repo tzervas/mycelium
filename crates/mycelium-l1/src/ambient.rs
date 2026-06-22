@@ -41,7 +41,8 @@
 
 use crate::ast::{
     AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, ImplDecl, Item, Literal, Nodule,
-    Paradigm, Param, Pattern, Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef,
+    Paradigm, Param, Pattern, Phylum, Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl, TypeParam,
+    TypeRef, UsePath, Vis,
 };
 
 /// A never-silent refusal from the resolution pass (§4.3/§4.4) — always explicit, never a guess.
@@ -207,13 +208,32 @@ pub fn expand_to_source(nodule: &Nodule) -> String {
     for item in &nodule.items {
         out.push('\n');
         match item {
-            Item::Use(p) => out.push_str(&format!("use {}\n", path_str(p))),
+            Item::Use(u) => out.push_str(&print_use(u)),
             Item::Default(p) => out.push_str(&format!("default paradigm {p}\n")),
             Item::Type(td) => out.push_str(&print_type_decl(td)),
             Item::Trait(td) => out.push_str(&print_trait_decl(td)),
             Item::Impl(id) => out.push_str(&print_impl_decl(id)),
             Item::Fn(fd) => out.push_str(&print_fn_decl(fd)),
         }
+    }
+    out
+}
+
+/// Render a whole [`Phylum`] back to canonical surface text (M-662): the optional `phylum <path>`
+/// header, then each `nodule` block via [`expand_to_source`]. Round-trips the phylum header, every
+/// `pub` marker, and `use` (specific + glob) verbatim, so `parse_phylum → expand → parse_phylum` is
+/// stable (the LSP "expand ambient" / EXPLAIN projection over a multi-nodule source — RFC-0012 §5).
+#[must_use]
+pub fn expand_phylum_to_source(phylum: &Phylum) -> String {
+    let mut out = String::new();
+    if let Some(path) = &phylum.path {
+        out.push_str(&format!("phylum {}\n", path_str(path)));
+    }
+    for nodule in &phylum.nodules {
+        if !out.is_empty() {
+            out.push('\n');
+        }
+        out.push_str(&expand_to_source(nodule));
     }
     out
 }
@@ -250,6 +270,8 @@ impl Resolver {
             });
         }
         Ok(TypeDecl {
+            // Visibility is surface metadata, untouched by ambient resolution (M-662).
+            vis: td.vis,
             name: td.name.clone(),
             params: td.params.clone(),
             ctors,
@@ -266,6 +288,8 @@ impl Resolver {
             sigs.push(self.fn_sig(amb, s)?);
         }
         Ok(TraitDecl {
+            // Visibility is surface metadata, untouched by ambient resolution (M-662).
+            vis: td.vis,
             name: td.name.clone(),
             params: td.params.clone(),
             sigs,
@@ -305,6 +329,8 @@ impl Resolver {
         // blocks nest *inside* it. Signatures (above) never see a block-scope override.
         let body = self.expr(amb, &fd.sig.name, &fd.body)?;
         Ok(FnDecl {
+            // Visibility is surface metadata, untouched by ambient resolution (M-662).
+            vis: fd.vis,
             thaw: fd.thaw,
             sig,
             body,
@@ -560,6 +586,26 @@ fn path_str(p: &crate::ast::Path) -> String {
     p.0.join(".")
 }
 
+/// The `pub ` prefix for an exported top-level item, or `""` (M-662). Re-emitting it keeps the
+/// longhand twin faithful — dropping `pub` would silently change a name's cross-nodule visibility.
+fn pub_str(vis: Vis) -> &'static str {
+    if vis.is_pub() {
+        "pub "
+    } else {
+        ""
+    }
+}
+
+/// Render a `use` import (specific `use a.b.Item` or glob `use a.b.*`; M-662). Re-emitting the `.*`
+/// keeps the glob distinct from a specific import on round-trip.
+fn print_use(u: &UsePath) -> String {
+    if u.glob {
+        format!("use {}.*\n", path_str(&u.path))
+    } else {
+        format!("use {}\n", path_str(&u.path))
+    }
+}
+
 fn print_type_decl(td: &TypeDecl) -> String {
     let params = if td.params.is_empty() {
         String::new()
@@ -578,7 +624,13 @@ fn print_type_decl(td: &TypeDecl) -> String {
             }
         })
         .collect();
-    format!("type {}{} = {}\n", td.name, params, ctors.join(" | "))
+    format!(
+        "{}type {}{} = {}\n",
+        pub_str(td.vis),
+        td.name,
+        params,
+        ctors.join(" | ")
+    )
 }
 
 fn print_trait_decl(td: &TraitDecl) -> String {
@@ -587,7 +639,7 @@ fn print_trait_decl(td: &TraitDecl) -> String {
     } else {
         format!("<{}>", td.params.join(", "))
     };
-    let mut s = format!("trait {}{} {{\n", td.name, params);
+    let mut s = format!("{}trait {}{} {{\n", pub_str(td.vis), td.name, params);
     for sig in &td.sigs {
         s.push_str(&format!("  fn {}\n", print_sig_tail(sig)));
     }
@@ -597,7 +649,8 @@ fn print_trait_decl(td: &TraitDecl) -> String {
 
 fn print_fn_decl(fd: &FnDecl) -> String {
     format!(
-        "{}fn {} =\n  {}\n",
+        "{}{}fn {} =\n  {}\n",
+        pub_str(fd.vis),
         if fd.thaw { "thaw " } else { "" },
         print_sig_tail(&fd.sig),
         print_expr(&fd.body)

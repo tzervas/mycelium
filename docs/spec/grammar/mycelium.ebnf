@@ -22,11 +22,12 @@
  * proceed; RFC-0006 §10 Q1 resolved). Refinements are append-only recorded decisions, not drift; a
  * co-equal structured-projection layer (M-380) renders the same content-addressed defs (FR-S5).
  *
- * RESERVED, NOT YET ACTIVE (DN-06): `phylum` (the library-scale grouping above nodules) is a
- * reserved word — it lexes as a keyword (so it is never a silent identifier) but no production
- * consumes it yet, so it does not open a program (see conformance/reject/10). It activates when its
- * construct lands. (`colony`, once reserved here too, ACTIVATED with M-666 as an expression — see
- * `colony_expr` below, RFC-0008 §4.7.)
+ * ACTIVE (M-662; RFC-0006, DN-06 §6): `phylum` (the library-scale grouping above nodules) is now an
+ * active surface construct — an optional 'phylum <path>' header groups one-or-more nodules in one
+ * source file (see `program` / `phylum_header` below). It is a metadata grouping (identity stays
+ * per-nodule, ADR-003), paired with `pub` cross-nodule visibility and `use` glob imports (M-662); the
+ * cross-nodule orphan rule (RFC-0019 §4.5) is enforced phylum-wide. (`colony`, once reserved-not-active
+ * here too, ACTIVATED with M-666 as an expression — see `colony_expr` below, RFC-0008 §4.7.)
  *
  * ACTIVE (M-666; RFC-0008 §4.7 R1): `colony` and `hypha` are now active surface constructs (the
  * deterministic structured-concurrency fragment). `colony { hypha e, … }` is an expression (a
@@ -52,7 +53,17 @@
  * the full trait/guild machinery (LR-2), and L2 sugar layer above it.
  *)
 
-program        ::= nodule_header item*
+program        ::= phylum_header? nodule_block+
+nodule_block   ::= nodule_header item*
+
+/* A phylum (M-662; RFC-0006; DN-06 §6) groups one-or-more nodules in a single source file under an
+ * optional 'phylum <path>' header — a metadata grouping parallel to the `nodule` header (identity
+ * stays per-nodule, ADR-003). A header-less single nodule is a phylum-of-one (backward-compatible:
+ * the former `program ::= nodule_header item*`). Cross-nodule names are exported with `pub` and
+ * imported with `use` (specific `use a.b.X` or glob `use a.b.*`); a `use` of an absent/private name,
+ * a duplicate import, or a referenced glob-vs-glob collision is a never-silent refusal (G2). The
+ * cross-nodule orphan rule (RFC-0019 §4.5) is enforced phylum-wide (pub-blind coherence). */
+phylum_header  ::= 'phylum' path
 
 /* Top-level scoping (RP-6 / DN-13; append-only surface commitment per DN-09 §3.1): the `item*` under
  * a `nodule` is unordered for name resolution — every top-level `fn` is mutually visible, so a
@@ -78,7 +89,11 @@ item           ::= use_item
                  | trait_item
                  | fn_item
 
-use_item       ::= 'use' path
+/* Import (M-662): a specific `use a.b.X` binds the single name `X`; a glob `use a.b.*` binds every
+ * `pub` name directly under the prefix `a.b`. Precedence (highest first): a local declaration, then
+ * an explicit `use`, then a glob — higher shadows lower deterministically (documented, never silent).
+ * A referenced name imported by two globs is a never-silent ambiguity refusal (G2). */
+use_item       ::= 'use' path ( '.' '*' )?
 
 /* default paradigm: the nodule-scope ambient (RFC-0012 §4.2; enacted M-344). At most one per
  * nodule — the outermost ambient frame. It supplies an OMITTED paradigm for paradigm-less reprs
@@ -87,20 +102,23 @@ use_item       ::= 'use' path
 default_item   ::= 'default' 'paradigm' paradigm
 paradigm       ::= 'Binary' | 'Ternary' | 'Dense' | 'VSA'
 
-/* Algebraic data type (LR-1): a sum of constructors, each with optional positional fields. */
-type_item      ::= 'type' Ident type_params? '=' constructor ('|' constructor)*
+/* Algebraic data type (LR-1): a sum of constructors, each with optional positional fields. The
+ * optional `pub` (M-662) exports the type to sibling nodules of the phylum; absent ⇒ private to its
+ * nodule (visible intra-nodule, never cross-nodule without a matching `pub` + `use`). */
+type_item      ::= 'pub'? 'type' Ident type_params? '=' constructor ('|' constructor)*
 type_params    ::= '<' Ident (',' Ident)* '>'
 constructor    ::= Ident ('(' type_ref (',' type_ref)* ')')?
 
-/* Trait = a named set of function signatures (LR-2; conventional term, DN-02). */
-trait_item     ::= 'trait' Ident type_params? '{' fn_sig* '}'
+/* Trait = a named set of function signatures (LR-2; conventional term, DN-02). Optional `pub`
+ * (M-662) exports the trait to sibling nodules of the phylum. */
+trait_item     ::= 'pub'? 'trait' Ident type_params? '{' fn_sig* '}'
 fn_sig         ::= 'fn' Ident '(' params? ')' '->' type_ref effects?
 
 /* Function. Optional 'thaw' DE-matures one definition — keeps it interpreted inside an
  * otherwise-matured scope (RFC-0017 §4.3; the rare iterate/debug escape hatch). Maturation itself is
  * NOT a fn modifier — it is declared per `nodule`/`phylum`/program in the header/manifest (RFC-0017
  * §4.1). A bare `matured fn …` is a parse error with a teaching diagnostic. */
-fn_item        ::= 'thaw'? 'fn' Ident type_params? '(' params? ')' '->' type_ref effects? '=' expr
+fn_item        ::= 'pub'? 'thaw'? 'fn' Ident type_params? '(' params? ')' '->' type_ref effects? '=' expr
 params         ::= param (',' param)*
 param          ::= Ident ':' type_ref
 

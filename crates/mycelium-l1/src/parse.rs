@@ -4,8 +4,8 @@
 
 use crate::ast::{
     AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal,
-    Nodule, Paradigm, Param, Path, Pattern, Scalar, Sparsity, Strength, TraitDecl, TraitRef,
-    TypeDecl, TypeParam, TypeRef,
+    Nodule, Paradigm, Param, Path, Pattern, Phylum, Scalar, Sparsity, Strength, TraitDecl,
+    TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, Vis,
 };
 use crate::error::ParseError;
 use crate::lexer::lex;
@@ -19,7 +19,10 @@ use crate::token::{Pos, ScalarTok, Spanned, StrengthTok, Tok};
 /// the AST depth, so the downstream passes are protected transitively.
 const MAX_EXPR_DEPTH: u32 = 256;
 
-/// Parse a complete `nodule` program from source.
+/// Parse a complete **single-`nodule`** program from source — the v0 entry point, unchanged by the
+/// phylum work (M-662). A bare `nodule <path> <item>*` parses to a [`Nodule`]; trailing content (a
+/// second `nodule`, a `phylum` header) is an explicit error here. Multi-nodule / phylum-headed source
+/// uses [`parse_phylum`]; a [`Nodule`] *is* a phylum-of-one ([`Phylum::of_one`]).
 pub fn parse(src: &str) -> Result<Nodule, ParseError> {
     let toks = lex(src)?;
     let mut p = Parser {
@@ -30,6 +33,28 @@ pub fn parse(src: &str) -> Result<Nodule, ParseError> {
     let nodule = p.parse_nodule()?;
     p.expect(&Tok::Eof, "end of input")?;
     Ok(nodule)
+}
+
+/// Parse a complete **phylum** program (M-662; RFC-0006 §4.3): an optional `phylum <path>` header
+/// followed by **one-or-more** `nodule` blocks, into a [`Phylum`]. A header-less single `nodule`
+/// parses to a phylum-of-one (`path: None`) — so `parse_phylum` is a strict superset of [`parse`]:
+/// every program [`parse`] accepts, `parse_phylum` accepts identically (as a phylum-of-one), and it
+/// additionally accepts a `phylum` header and multiple nodules. A `phylum` header with **zero**
+/// nodules is an explicit error (a phylum groups nodules — there must be at least one).
+///
+/// # Errors
+/// Returns a [`ParseError`] for any malformed header, item, or a `phylum` header followed by no
+/// `nodule` (never a panic, never a silent accept — S5/G2).
+pub fn parse_phylum(src: &str) -> Result<Phylum, ParseError> {
+    let toks = lex(src)?;
+    let mut p = Parser {
+        toks,
+        i: 0,
+        depth: 0,
+    };
+    let phylum = p.parse_phylum()?;
+    p.expect(&Tok::Eof, "end of input")?;
+    Ok(phylum)
 }
 
 struct Parser {
@@ -186,11 +211,49 @@ impl Parser {
 
     // ---- items ----
 
-    /// `nodule <path> @std-sys? <item>*` — the program header (RFC-0006 §4.3). An optional
+    /// `phylum_header? nodule+` — a whole phylum program (M-662; RFC-0006 §4.3). An optional
+    /// `phylum <path>` header (the library-scale grouping; DN-06) precedes **one-or-more** `nodule`
+    /// blocks. `phylum` is a *grouping*, not a container — no `phylum { … }` block; the nodules follow
+    /// the header at top level. A header with no following `nodule` is an explicit error.
+    fn parse_phylum(&mut self) -> Result<Phylum, ParseError> {
+        // Optional `phylum <path>` header. `phylum` activates as a header keyword here (M-662); it was
+        // reserved-not-active before. It carries a dotted path and opens no block.
+        let path = if self.eat(&Tok::Phylum) {
+            Some(self.parse_path()?)
+        } else {
+            None
+        };
+        let mut nodules = Vec::new();
+        // One-or-more `nodule` blocks. The first must be present (a phylum, headed or not, groups at
+        // least one nodule); each `parse_nodule` consumes its items up to the next `nodule`/EOF.
+        if !self.at(&Tok::Nodule) {
+            return Err(ParseError::new(
+                self.pos(),
+                if path.is_some() {
+                    "a `phylum` header must be followed by at least one `nodule` block \
+                     (a phylum groups nodules — RFC-0006 §4.3)"
+                        .to_owned()
+                } else {
+                    "expected a `nodule` header to open the program".to_owned()
+                },
+            ));
+        }
+        while self.at(&Tok::Nodule) {
+            nodules.push(self.parse_nodule()?);
+        }
+        Ok(Phylum { path, nodules })
+    }
+
+    /// `nodule <path> @std-sys? <item>*` — one nodule block (RFC-0006 §4.3). An optional
     /// **`@std-sys`** marker after the path (M-661; RFC-0016 §8-Q6) tags the nodule as the audited
     /// FFI-floor context: only a `@std-sys` nodule may contain a `wild` block (the checker enforces
     /// this — a `wild` elsewhere is a hard refusal, never silent — G2). The marker is lexed atomically
     /// as [`Tok::AtStdSys`] (so `@std-sys`'s `-` is not a lex error); absent ⇒ a normal nodule.
+    ///
+    /// Items run until the **next `nodule` header or EOF** (M-662): in a multi-nodule phylum the items
+    /// of one nodule end where the next `nodule` begins. For a single-nodule program ([`parse`]) the
+    /// loop simply runs to EOF, exactly as before — backward-compatible (a `nodule` *is* a
+    /// phylum-of-one).
     fn parse_nodule(&mut self) -> Result<Nodule, ParseError> {
         self.expect(&Tok::Nodule, "a `nodule` header to open the program")?;
         let path = self.parse_path()?;
@@ -198,7 +261,8 @@ impl Parser {
         // it carries no further syntax (no `: true`/`: false` — its mere presence is the attribute).
         let std_sys = self.eat(&Tok::AtStdSys);
         let mut items = Vec::new();
-        while !self.at(&Tok::Eof) {
+        // Stop at the next `nodule` (the start of a sibling nodule in a phylum) or EOF.
+        while !self.at(&Tok::Eof) && !self.at(&Tok::Nodule) {
             items.push(self.parse_item()?);
         }
         Ok(Nodule {
@@ -209,23 +273,28 @@ impl Parser {
     }
 
     fn parse_item(&mut self) -> Result<Item, ParseError> {
+        // A leading `pub` marks a top-level `fn`/`trait`/`type` (or `thaw fn`) as cross-nodule
+        // **exported** (M-662). It is only valid before one of those declarations — a `pub` before
+        // `use`/`default`/`impl` (or anything else) is an explicit refusal, never a silent accept
+        // (G2). `impl`/`default`/`use` are not part of the `pub` namespace (a `use` imports, it does
+        // not re-export). The `pub` is consumed here and threaded into the declaration's `vis`.
+        if self.at(&Tok::Pub) {
+            return self.parse_pub_item();
+        }
         match self.cur() {
-            Tok::Use => {
-                self.bump();
-                Ok(Item::Use(self.parse_path()?))
-            }
+            Tok::Use => self.parse_use().map(Item::Use),
             Tok::Default => {
                 self.bump();
                 self.expect(&Tok::Paradigm, "`paradigm` after `default` (RFC-0012 §4.2)")?;
                 Ok(Item::Default(self.parse_paradigm()?))
             }
-            Tok::Type => self.parse_type_decl().map(Item::Type),
-            Tok::Trait => self.parse_trait_decl().map(Item::Trait),
+            Tok::Type => self.parse_type_decl(Vis::Private).map(Item::Type),
+            Tok::Trait => self.parse_trait_decl(Vis::Private).map(Item::Trait),
             // M-659 / RFC-0019 §4.1: `impl Trait<args> for T { fn … }` (the trait-instance
             // production). `impl` was reserved by M-658 (RFC-0007 §12.2); this is the production that
             // consumes it.
             Tok::Impl => self.parse_impl_decl().map(Item::Impl),
-            Tok::Fn | Tok::Thaw => self.parse_fn_decl().map(Item::Fn),
+            Tok::Fn | Tok::Thaw => self.parse_fn_decl(Vis::Private).map(Item::Fn),
             Tok::Matured => Err(ParseError::new(
                 self.pos(),
                 "maturation is declared per `nodule`/`phylum` in the header \
@@ -267,11 +336,84 @@ impl Parser {
                     word = runtime_keyword_spelling(t)
                 ),
             )),
+            // M-662: a `phylum` header must be the *first* token of the program (before the nodule
+            // blocks); reaching one at item position means it was misplaced after a nodule began.
+            Tok::Phylum => Err(ParseError::new(
+                self.pos(),
+                "a `phylum <path>` header opens the program — it must come before the first \
+                 `nodule` block, not at item position (RFC-0006 §4.3; phylum is a grouping, not a \
+                 `phylum { … }` container)"
+                    .to_owned(),
+            )),
             _ => self.err(
-                "a top-level item (`use`, `default paradigm`, `type`, `trait`, `impl`, `fn`, or \
-                 `thaw fn`)",
+                "a top-level item (`use`, `pub`, `default paradigm`, `type`, `trait`, `impl`, `fn`, \
+                 or `thaw fn`)",
             ),
         }
+    }
+
+    /// Parse a `pub`-prefixed top-level item (M-662). `pub` exports a top-level `fn`/`trait`/`type`
+    /// (or `thaw fn`) to the other nodules of the phylum; it is **only** valid there. A `pub use` /
+    /// `pub default` / `pub impl` (or `pub` before anything else) is an explicit refusal — never a
+    /// silent accept (G2): a `use` imports rather than re-exports, and `impl`/`default` are not part
+    /// of the `pub` namespace.
+    fn parse_pub_item(&mut self) -> Result<Item, ParseError> {
+        self.expect(&Tok::Pub, "`pub`")?;
+        match self.cur() {
+            Tok::Type => self.parse_type_decl(Vis::Pub).map(Item::Type),
+            Tok::Trait => self.parse_trait_decl(Vis::Pub).map(Item::Trait),
+            Tok::Fn | Tok::Thaw => self.parse_fn_decl(Vis::Pub).map(Item::Fn),
+            Tok::Use => Err(ParseError::new(
+                self.pos(),
+                "`pub use` is not a form — a `use` imports a name into this nodule, it does not \
+                 re-export it (M-662); drop the `pub`"
+                    .to_owned(),
+            )),
+            Tok::Impl => Err(ParseError::new(
+                self.pos(),
+                "`pub impl` is not a form — an `impl` is not `pub`-gated (its coherence is \
+                 phylum-wide and pub-blind; M-662/RFC-0019 §4.5); drop the `pub`"
+                    .to_owned(),
+            )),
+            Tok::Default => Err(ParseError::new(
+                self.pos(),
+                "`pub default` is not a form — `default paradigm` is nodule-scope ambient state, \
+                 not an exportable item (M-662); drop the `pub`"
+                    .to_owned(),
+            )),
+            _ => self.err(
+                "`pub` must be followed by `fn`, `trait`, `type`, or `thaw fn` (M-662 — only those \
+                 top-level items are exportable)",
+            ),
+        }
+    }
+
+    /// `use path` (specific) or `use path.*` (glob) — a cross-nodule import (M-662; RFC-0006 §4.3).
+    /// A trailing `.*` makes it a **glob** (import every `pub` name under the path); otherwise the
+    /// path's last segment names the imported item. A `*` anywhere but the final segment is an
+    /// explicit parse error — the lexer emits `Tok::Star` for any `*`; this production is what
+    /// restricts the glob `*` to the final position. `use` is never `pub`-gated.
+    fn parse_use(&mut self) -> Result<UsePath, ParseError> {
+        self.expect(&Tok::Use, "`use`")?;
+        // A `use` path is a dotted path whose final segment may be `*` (the glob). Parse the dotted
+        // path, then check for a trailing `.*`.
+        let mut segs = vec![self.ident()?];
+        let mut glob = false;
+        while self.eat(&Tok::Dot) {
+            if self.eat(&Tok::Star) {
+                glob = true;
+                break;
+            }
+            segs.push(self.ident()?);
+        }
+        // A glob needs a prefix to glob under (`use *` alone is meaningless).
+        if glob && segs.is_empty() {
+            return self.err("a glob `use` needs a path prefix (`use a.b.*`), not a bare `*`");
+        }
+        Ok(UsePath {
+            path: Path(segs),
+            glob,
+        })
     }
 
     /// A bare paradigm tag (`Binary|Ternary|Dense|VSA`) for an ambient declaration (RFC-0012 §4.2).
@@ -287,7 +429,7 @@ impl Parser {
         Ok(p)
     }
 
-    fn parse_type_decl(&mut self) -> Result<TypeDecl, ParseError> {
+    fn parse_type_decl(&mut self, vis: Vis) -> Result<TypeDecl, ParseError> {
         self.expect_keyword(&Tok::Type)?;
         let name = self.ident()?;
         let params = self.parse_type_params_opt()?;
@@ -297,6 +439,7 @@ impl Parser {
             ctors.push(self.parse_ctor()?);
         }
         Ok(TypeDecl {
+            vis,
             name,
             params,
             ctors,
@@ -313,7 +456,7 @@ impl Parser {
         Ok(Ctor { name, fields })
     }
 
-    fn parse_trait_decl(&mut self) -> Result<TraitDecl, ParseError> {
+    fn parse_trait_decl(&mut self, vis: Vis) -> Result<TraitDecl, ParseError> {
         self.expect_keyword(&Tok::Trait)?;
         let name = self.ident()?;
         let params = self.parse_type_params_opt()?;
@@ -323,7 +466,12 @@ impl Parser {
             sigs.push(self.parse_fn_sig()?);
         }
         self.expect(&Tok::RBrace, "`}` to close the trait body")?;
-        Ok(TraitDecl { name, params, sigs })
+        Ok(TraitDecl {
+            vis,
+            name,
+            params,
+            sigs,
+        })
     }
 
     fn parse_fn_sig(&mut self) -> Result<FnSig, ParseError> {
@@ -331,13 +479,21 @@ impl Parser {
         self.parse_sig_tail()
     }
 
-    fn parse_fn_decl(&mut self) -> Result<FnDecl, ParseError> {
+    /// `thaw? fn …` with the caller-supplied cross-nodule visibility `vis` (M-662). Top-level fns get
+    /// `Vis::Pub` iff a `pub` preceded them; impl methods are always parsed with `Vis::Private` (an
+    /// `impl` is not `pub`-gated — its method `vis` is inert).
+    fn parse_fn_decl(&mut self, vis: Vis) -> Result<FnDecl, ParseError> {
         let thaw = self.eat(&Tok::Thaw);
         self.expect(&Tok::Fn, "`fn`")?;
         let sig = self.parse_sig_tail()?;
         self.expect(&Tok::Eq, "`=` before the function body")?;
         let body = self.parse_expr()?;
-        Ok(FnDecl { thaw, sig, body })
+        Ok(FnDecl {
+            vis,
+            thaw,
+            sig,
+            body,
+        })
     }
 
     /// The shared `name <params>? ( value_params? ) -> ret !{effects}?` tail of a signature. A
@@ -491,7 +647,17 @@ impl Parser {
         self.expect(&Tok::LBrace, "`{` to open the `impl` body")?;
         let mut methods = Vec::new();
         while !self.at(&Tok::RBrace) {
-            methods.push(self.parse_fn_decl()?);
+            // An impl method is never `pub`-gated (M-662): a `pub` here is an explicit refusal, never
+            // a silent accept (G2). Methods are parsed with `Vis::Private` (the field is inert).
+            if self.at(&Tok::Pub) {
+                return Err(ParseError::new(
+                    self.pos(),
+                    "an `impl` method is not `pub`-gated — visibility of a trait method follows the \
+                     trait, not the impl (M-662); drop the `pub`"
+                        .to_owned(),
+                ));
+            }
+            methods.push(self.parse_fn_decl(Vis::Private)?);
         }
         self.expect(&Tok::RBrace, "`}` to close the `impl` body")?;
         Ok(ImplDecl {

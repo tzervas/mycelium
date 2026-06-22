@@ -2442,13 +2442,14 @@ issues:
   - id: M-662
     title: "M-662 — feat(l1): `phylum` construct + cross-nodule import resolution"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [M-657, M-659]
     epic: E7-1
-    doc_refs: [corpus:DN-06, corpus:RFC-0006, src:crates/mycelium-l1/src/parse.rs, src:crates/mycelium-l1/src/checkty.rs]
+    doc_refs: [corpus:DN-06, corpus:RFC-0006, corpus:RFC-0019, src:crates/mycelium-l1/src/parse.rs, src:crates/mycelium-l1/src/checkty.rs, src:crates/mycelium-l1/tests/phylum.rs]
     body: |
       `phylum` is lexed as `Tok::Phylum` (token.rs:29) but no parser production consumes it — falls to error arm (parse.rs:218); confirmed by lib.rs:87–95 test. This issue implements: (1) `phylum <path> { … }` header construct in the parser and typechecker (library-scale organizational unit per DN-06 §4); (2) cross-nodule `use` path resolution so `use std.collections.List` resolves across phylum boundaries; (3) multi-nodule typechecking (a phylum's nodules see each other's exported names). Requires generics (M-657) and traits (M-659) to already be in the typechecker because a phylum's public surface will include generic types and trait impls.
       Acceptance: a two-nodule phylum with cross-nodule `use` type-checks and elaborates; `phylum` is an active keyword in the grammar (conformance corpus updated); `just check` green; DN-14 §3 row 10 → `present`.
+      LANDED 2026-06-22 (maintainer-confirmed design). Realized as a **single-file** model — an optional `phylum <path>` HEADER (not a `{ … }` block) grouping multiple `nodule` blocks; a header-less single nodule is a phylum-of-one (`check_phylum(of_one) ≡ check_nodule`). Cross-nodule visibility is `pub` (default private-to-nodule) + `use` (specific `use a.b.X` and glob `use a.b.*`) over a qualified per-phylum import registry; precedence is local-decl > explicit-use > glob, and absent/private/duplicate/referenced-glob-ambiguity are never-silent `CheckError`s (G2). The RFC-0019 §4.5 orphan rule is generalized **phylum-wide** over a pub-blind coherence view (the M-659-staged cross-nodule enforcement), staying `Declared` (VR-5). Surface printer `expand_phylum_to_source` round-trips header/`pub`/`use`; no new L0 node (KC-3), cross-nodule execution staged where needed. Grammar oracle + `accept/19`/`reject/10` updated (gate now oracles via `parse_phylum`); RFC-0006 / RFC-0019 §4.5 / DN-06 carry append-only notes; DN-14 §3 row 10 → `present`. 247 `mycelium-l1` tests green.
 
   - id: M-663
     title: "M-663 — feat(l1): Enact RFC-0018 stage-1 static guarantee grading in checkty.rs/elab.rs"

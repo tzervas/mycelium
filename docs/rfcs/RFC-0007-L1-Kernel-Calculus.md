@@ -419,7 +419,7 @@ M-657 lands in two honest halves (the implementation-of-record, `crates/mycelium
 
 - **The checker is complete** for the unbounded fragment: type-parameter declarations, generic
   functions, call-site **instantiation by unification**, arity, and the never-guess refusals all
-  type-check (§11.2). Re-using the v0 monomorphic judgments as the base case keeps KC-3 — no new
+  type-check (§11.2). Reusing the v0 monomorphic judgments as the base case keeps KC-3 — no new
   kernel node, no new trusted machinery.
 - **Elaboration to L0 of a generic *instantiation* is staged** behind an explicit, never-silent
   `Residual`. A *monomorphic* program elaborates unchanged; a program that instantiates a generic
