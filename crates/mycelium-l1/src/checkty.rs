@@ -619,6 +619,15 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
         }
     }
 
+    // Pass 3c: **effect coverage** (RFC-0014 §3.4/§4.5 I3; M-660 — guarantee: `Declared`, a
+    // structural coverage check, not a theorem). Every effect a fn *performs* — the union of the
+    // declared effects of every top-level fn it calls — must be in its own *declared* set. An
+    // undeclared performed effect is an explicit `CheckError` naming the effect and the callee that
+    // introduces it (under-declaration is never silent — G2/RFC-0014 I3). Over-declaration is
+    // allowed (a declaration is a contract — RFC-0014 I5). Run after bodies type-check, over the
+    // checked `fns` table.
+    check_effect_coverage(&fns)?;
+
     // Pass 4: totality classification + the scope-quantified matured gate (RFC-0017 §4.2).
     // When `matured_scope` is true, every fn with `thaw == false` must be `Total`; a non-total
     // non-thaw fn is an explicit error (RFC-0007 §4.5 / RFC-0017 §4.2). A `thaw` fn is exempt.
@@ -645,6 +654,68 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
         traits,
         instances,
     })
+}
+
+/// **Effect-coverage pass** (RFC-0014 §3.4/§4.5 I3; M-660 — guarantee: `Declared`). For every
+/// top-level function `f`, the effects it **performs** must be a subset of the effects it
+/// **declares**. The *performed* set is the union, over every call in `f`'s body to a **known
+/// top-level fn** `g` (in `fns`), of `g`'s declared effects — the v0 "manual-declare +
+/// compositional-check" line (RFC-0014 §8): the checker *composes* declared effects up the call
+/// graph as a **check**, it never *infers* (synthesises) an undeclared effect. (In M-660 the only
+/// effect source is a callee's declaration: `wild`-sourced effects arrive with M-661, and the
+/// runtime budget ledger is the separate M-353 concern — neither is consulted here.)
+///
+/// **Under-declaration** — performing an effect not declared — is an explicit [`CheckError`] naming
+/// both the missing effect and the callee that introduces it (G2/RFC-0014 I3 "no undeclared
+/// effects"). **Over-declaration** is allowed: declaring an effect the body never performs is a
+/// *contract*, not an error (RFC-0014 I5 default-tightly-scoped — a fn may reserve headroom). The
+/// effect names compare by string (the surface names live on `FnDecl.sig.effects` in `Env.fns`, so
+/// they are reachable for `EXPLAIN` / future runtime wiring without a new map).
+fn check_effect_coverage(fns: &BTreeMap<String, FnDecl>) -> Result<(), CheckError> {
+    for fd in fns.values() {
+        let declared: std::collections::BTreeSet<&str> =
+            fd.sig.effects.iter().map(String::as_str).collect();
+        // The callees of `f` that are known top-level fns (the canonical pre-order walk shared with
+        // totality's call collector — one structural traversal, no bespoke recursion to depth-guard).
+        let mut callees: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+        crate::totality::walk_expr(&fd.body, &mut |x| {
+            if let Expr::App { head, .. } = x {
+                if let Expr::Path(p) = head.as_ref() {
+                    if p.0.len() == 1 {
+                        if let Some((callee_name, _)) = fns.get_key_value(&p.0[0]) {
+                            callees.insert(callee_name.as_str());
+                        }
+                    }
+                }
+            }
+        });
+        // Each performed effect (a callee's declared effect) must be declared by `f`. Deterministic
+        // order (callees + their effects are walked in sorted order) so the *first* missing effect
+        // reported is stable across runs.
+        for callee in &callees {
+            let g = &fns[*callee];
+            for eff in &g.sig.effects {
+                if !declared.contains(eff.as_str()) {
+                    return Err(CheckError::new(
+                        &fd.sig.name,
+                        format!(
+                            "`{}` performs effect `{eff}` (via calling `{callee}`) but does not \
+                             declare it — add it to the `!{{…}}` effect annotation (RFC-0014 §4.5 \
+                             I3: no undeclared effects; never silent — G2)",
+                            fd.sig.name
+                        ),
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Render an effect set for a diagnostic in the surface `!{a, b}` form (`!{}` for the empty/pure
+/// set). Used only for never-silent error messages (M-660); preserves the written source order.
+fn render_effects(effects: &[String]) -> String {
+    format!("!{{{}}}", effects.join(", "))
 }
 
 fn resolve_ctors(
@@ -1019,6 +1090,30 @@ fn check_impl_methods(
                     "impl method `{}` return: {}",
                     method.sig.name,
                     edge_mismatch("type", &want_ret, &got_ret)
+                ),
+            ));
+        }
+        // Effect conformance (RFC-0014 §4.5 I3; M-660): an impl method's **declared effect set must
+        // equal the trait method's** (exact match in stage-1 — an unannotated trait method ⇒ the
+        // impl method must also be unannotated/pure). The effect annotation is part of the
+        // signature contract, so a divergence is an explicit refusal, never a silent widen/narrow
+        // (G2). Set equality (order-insensitive); duplicates within one annotation were already
+        // refused at parse time.
+        let req_effects: std::collections::BTreeSet<&str> =
+            req.effects.iter().map(String::as_str).collect();
+        let got_effects: std::collections::BTreeSet<&str> =
+            method.sig.effects.iter().map(String::as_str).collect();
+        if req_effects != got_effects {
+            return Err(CheckError::new(
+                site,
+                format!(
+                    "impl method `{}` declares effects {} but trait `{}` requires {} — an impl \
+                     method's effect annotation must match the trait method's exactly (RFC-0014 \
+                     §4.5 I3; never silently widened or narrowed — G2)",
+                    method.sig.name,
+                    render_effects(&method.sig.effects),
+                    tr.name,
+                    render_effects(&req.effects),
                 ),
             ));
         }
