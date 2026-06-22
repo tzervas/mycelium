@@ -929,3 +929,82 @@ fn bounded_generic_trait_method_elaborates_correctly() {
     // Elaboration to L0 must also succeed — no new kernel nodes needed (KC-3).
     let _ = elaborate(&env, "main").expect("must elaborate to L0");
 }
+
+#[test]
+fn prop_trait_dispatch_is_consistent_across_representative_concrete_types() {
+    // S8 / M-658 / M-659 property bound (Declared): for each concrete type implementing a trait,
+    // the dict-dispatch and runtime-dispatch paths agree on the result. We exercise this by
+    // building a nodule that supplies *separate* impls for several Binary widths (4, 8, 16) and a
+    // single bounded generic `apply_not`, then verifying that calling it with a value of each
+    // concrete type produces the result that the per-type `not` prim would produce.
+    //
+    // This is a representative coverage loop — not exhaustive over all widths — consistent with
+    // the DN-20 Tier-0/Tier-1 tiering (low proptest cases per commit).
+    //
+    // Guarantee tag: Declared (the dispatch contract is argued, not machine-checked; see VR-5).
+
+    struct Case {
+        width: u32,
+        input_bits: &'static str,
+        expected: Vec<bool>, // expected `not` of input
+    }
+
+    // `not` inverts every bit, so 0b0000 → 0b1111, 0b0000_0000 → 0b1111_1111, etc.
+    let cases: &[Case] = &[
+        Case {
+            width: 4,
+            input_bits: "0b0000",
+            expected: vec![true, true, true, true],
+        },
+        Case {
+            width: 8,
+            input_bits: "0b0000_0000",
+            expected: vec![true, true, true, true, true, true, true, true],
+        },
+        Case {
+            width: 16,
+            input_bits: "0b0000_0000_0000_0000",
+            expected: vec![
+                true, true, true, true, true, true, true, true, true, true, true, true, true, true,
+                true, true,
+            ],
+        },
+    ];
+
+    for case in cases {
+        let w = case.width;
+        // Build a nodule with impl for each width but only the `apply_not` generic is called.
+        // Impls for widths not used by `main` are noise — that's intentional: the checker must
+        // accept them without complaint (no overlap, no missing-method errors).
+        let src = format!(
+            "nodule d\n\
+             trait Invertible {{ fn invert(x: Binary{{{w}}})\
+             -> Binary{{{w}}} }}\n\
+             impl Invertible for Binary{{4}} {{ fn invert(x: Binary{{4}}) -> Binary{{4}} = not(x) }}\n\
+             impl Invertible for Binary{{8}} {{ fn invert(x: Binary{{8}}) -> Binary{{8}} = not(x) }}\n\
+             impl Invertible for Binary{{16}} {{ fn invert(x: Binary{{16}}) -> Binary{{16}} = not(x) }}\n\
+             fn apply_not<T: Invertible>(x: T) -> Binary{{{w}}} = invert(x)\n\
+             fn main() -> Binary{{{w}}} = apply_not({input})\n",
+            w = w,
+            input = case.input_bits,
+        );
+        let env = check(&src).unwrap_or_else(|e| panic!("width {w}: must check, got: {e:?}"));
+        let result = Evaluator::new(&env)
+            .call("main", vec![])
+            .unwrap_or_else(|e| panic!("width {w}: must evaluate, got: {e:?}"));
+        let val = result
+            .as_repr()
+            .unwrap_or_else(|| panic!("width {w}: expected repr value"));
+        use mycelium_core::Payload;
+        match val.payload() {
+            Payload::Bits(bits) => {
+                assert_eq!(
+                    bits, &case.expected,
+                    "width {w}: not({}) dispatch gave wrong result",
+                    case.input_bits
+                );
+            }
+            other => panic!("width {w}: expected Bits payload, got {other:?}"),
+        }
+    }
+}
