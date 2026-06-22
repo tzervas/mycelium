@@ -75,7 +75,7 @@ for the other:
 | Population | Where | Surface | Gate |
 |---|---|---|---|
 | **`wild { … }`** — the *in-language* escape hatch | Mycelium `.myc` sources | LR-9 / S6 / DN-02 §5 | **this `wild`-audit** (`myc-sec`): inventory + justification-presence |
-| **Rust `unsafe { … }`** — the *host-implementation* FFI | the Rust workspace (`.rs`, today only `crates/mycelium-mlir`'s 6 dynamic-linking FFI blocks — DN-21 §2) | ADR-014 | `clippy … -D warnings -A unsafe_code` (permitted-but-warned) **+** the mandatory `// SAFETY:` convention (ADR-014 §8.1) **+** the `just safety-check` adjacency gate (DN-21 §5 F-3 / M-681) |
+| **Rust `unsafe { … }`** — the *host-implementation* FFI | the Rust workspace (`.rs`) — all confined to `crates/mycelium-mlir/src/jit.rs` (the dynamic-linking FFI + the audited ABI `transmute` choke-point and its typed accessors; see DN-21 §6 for the current per-site inventory) | ADR-014 | `clippy … -D warnings -A unsafe_code` (permitted-but-warned) **+** the mandatory `// SAFETY:` convention (ADR-014 §8.1) **+** the `just safety-check` adjacency gate (DN-21 §5 F-3 / M-681) |
 
 The `wild`-audit **scans `.myc` files only**; it deliberately does **not** cover the Rust `unsafe` in the
 implementation crates, and the Rust `unsafe` gates do not parse `.myc`. This split is architecturally
