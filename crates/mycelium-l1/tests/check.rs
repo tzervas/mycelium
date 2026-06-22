@@ -1084,8 +1084,9 @@ fn parametric_impl_signature_must_conform_to_trait() {
     );
     let err = check(src).unwrap_err();
     assert!(
-        !err.message.is_empty(),
-        "impl whose signature does not conform to the trait must be rejected; got ok"
+        err.message.contains("requires") && err.message.contains("parameter"),
+        "expected a signature-conformance error naming the trait's required parameter type; got: {}",
+        err.message
     );
 }
 
@@ -1100,8 +1101,9 @@ fn parametric_impl_trait_arg_ne_for_ty_is_a_deferred_error() {
     );
     let err = check(src).unwrap_err();
     assert!(
-        !err.message.is_empty(),
-        "impl T<C> for D with C != D must be a deferred error; got ok"
+        err.message.contains("deferred") && err.message.contains("different from"),
+        "expected a C≠D deferral error; got: {}",
+        err.message
     );
 }
 
