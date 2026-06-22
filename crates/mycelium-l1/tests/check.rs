@@ -958,6 +958,47 @@ fn effect_coverage_is_monotone_over_a_callee_sweep_a_property_bound() {
 }
 
 #[test]
+fn effect_coverage_accounts_for_trait_method_calls_and_impl_method_bodies() {
+    // The coverage check must see effects performed through a TRAIT-METHOD call (not only direct fn
+    // calls) and inside an IMPL-METHOD body — otherwise an effect could be hidden from a caller,
+    // breaking the RFC-0014 invariant "an effect a function performs is visible in its signature".
+    const LOG: &str = "nodule d\n\
+        trait Log<A> { fn log(x: A) -> A !{io} }\n\
+        impl Log<Binary{8}> for Binary{8} { fn log(x: Binary{8}) -> Binary{8} !{io} = x }\n";
+    // (1) A fn calling the effectful trait method `log` performs `io` and must declare it.
+    let bad = format!("{LOG}fn f(x: Binary{{8}}) -> Binary{{8}} = log(x)");
+    let e = check(&bad)
+        .expect_err("an unannotated caller of an effectful trait method must be refused");
+    assert!(
+        e.message.contains("io") && e.message.contains("does not declare"),
+        "got: {}",
+        e.message
+    );
+    // Declaring it checks.
+    let ok = format!("{LOG}fn f(x: Binary{{8}}) -> Binary{{8}} !{{io}} = log(x)");
+    assert!(
+        check(&ok).is_ok(),
+        "declaring `io` checks: {:?}",
+        check(&ok)
+    );
+
+    // (2) An IMPL-METHOD body that performs an effect its declared set (== the trait method's) does
+    // not cover is refused — here `m` declares `time` (matching the trait) but its body performs `io`
+    // via the top-level `ioop`, so the effect would be hidden if impl bodies were not checked.
+    let bad_impl = "nodule d\n\
+        fn ioop() -> Binary{8} !{io} = 0b00000000\n\
+        trait T<A> { fn m(x: A) -> Binary{8} !{time} }\n\
+        impl T<Binary{8}> for Binary{8} { fn m(x: Binary{8}) -> Binary{8} !{time} = let _y = ioop() in x }";
+    let e2 = check(bad_impl)
+        .expect_err("an impl method performing an effect it does not declare must be refused");
+    assert!(
+        e2.message.contains("io") && e2.message.contains("does not declare"),
+        "got: {}",
+        e2.message
+    );
+}
+
+#[test]
 fn a_trait_method_with_effects_an_impl_with_different_effects_is_refused() {
     // Effect conformance (RFC-0014 §4.5 I3; M-660): an impl method's declared effects must EQUAL the
     // trait method's. Here the trait declares `cmp` with `!{io}` but the impl method declares `!{}`

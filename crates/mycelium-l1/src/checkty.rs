@@ -626,7 +626,7 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     // introduces it (under-declaration is never silent — G2/RFC-0014 I3). Over-declaration is
     // allowed (a declaration is a contract — RFC-0014 I5). Run after bodies type-check, over the
     // checked `fns` table.
-    check_effect_coverage(&fns)?;
+    check_effect_coverage(&fns, &traits, nodule)?;
 
     // Pass 4: totality classification + the scope-quantified matured gate (RFC-0017 §4.2).
     // When `matured_scope` is true, every fn with `thaw == false` must be `Total`; a non-total
@@ -657,56 +657,95 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
 }
 
 /// **Effect-coverage pass** (RFC-0014 §3.4/§4.5 I3; M-660 — guarantee: `Declared`). For every
-/// top-level function `f`, the effects it **performs** must be a subset of the effects it
-/// **declares**. The *performed* set is the union, over every call in `f`'s body to a **known
-/// top-level fn** `g` (in `fns`), of `g`'s declared effects — the v0 "manual-declare +
-/// compositional-check" line (RFC-0014 §8): the checker *composes* declared effects up the call
-/// graph as a **check**, it never *infers* (synthesises) an undeclared effect. (In M-660 the only
-/// effect source is a callee's declaration: `wild`-sourced effects arrive with M-661, and the
-/// runtime budget ledger is the separate M-353 concern — neither is consulted here.)
+/// top-level function **and every `impl`-method body**, the effects it **performs** must be a subset
+/// of the effects it **declares**. The *performed* set is the union, over every call in the body, of
+/// the declared effects of the callee — a **known top-level fn** `g` (in `fns`) OR an unqualified
+/// **trait-method** call (the declaring trait method's effects, from `traits`; an ambiguous method
+/// name was already refused at the call site — M-659, so the name maps to one trait in any program
+/// reaching here). This is the v0 "manual-declare + compositional-check" line (RFC-0014 §8): the
+/// checker *composes* declared effects up the call graph as a **check**, never *infers* an undeclared
+/// one. (In M-660 the only effect sources are these declarations: `wild`-sourced effects arrive with
+/// M-661, and the runtime budget ledger is the separate M-353 concern.)
 ///
 /// **Under-declaration** — performing an effect not declared — is an explicit [`CheckError`] naming
 /// both the missing effect and the callee that introduces it (G2/RFC-0014 I3 "no undeclared
 /// effects"). **Over-declaration** is allowed: declaring an effect the body never performs is a
-/// *contract*, not an error (RFC-0014 I5 default-tightly-scoped — a fn may reserve headroom). The
-/// effect names compare by string (the surface names live on `FnDecl.sig.effects` in `Env.fns`, so
-/// they are reachable for `EXPLAIN` / future runtime wiring without a new map).
-fn check_effect_coverage(fns: &BTreeMap<String, FnDecl>) -> Result<(), CheckError> {
+/// *contract*, not an error (RFC-0014 I5 default-tightly-scoped). Checking `impl`-method bodies too
+/// (their declared set == the trait method's, by conformance) is what keeps an effect from being
+/// **hidden** from a caller — the core RFC-0014 invariant that "an effect a function performs is
+/// visible in its signature".
+fn check_effect_coverage(
+    fns: &BTreeMap<String, FnDecl>,
+    traits: &BTreeMap<String, TraitInfo>,
+    nodule: &Nodule,
+) -> Result<(), CheckError> {
     for fd in fns.values() {
-        let declared: std::collections::BTreeSet<&str> =
-            fd.sig.effects.iter().map(String::as_str).collect();
-        // The callees of `f` that are known top-level fns (the canonical pre-order walk shared with
-        // totality's call collector — one structural traversal, no bespoke recursion to depth-guard).
-        let mut callees: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
-        crate::totality::walk_expr(&fd.body, &mut |x| {
-            if let Expr::App { head, .. } = x {
-                if let Expr::Path(p) = head.as_ref() {
-                    if p.0.len() == 1 {
-                        if let Some((callee_name, _)) = fns.get_key_value(&p.0[0]) {
-                            callees.insert(callee_name.as_str());
+        check_body_effect_coverage(fns, traits, &fd.sig.name, &fd.sig.effects, &fd.body)?;
+    }
+    // `impl`-method bodies perform effects too (the RFC-0019 × RFC-0014 surface). Their declared set
+    // equals the trait method's (conformance), so a body performing more than that is an undeclared
+    // effect that must be refused — otherwise a trait-method/impl effect would be hidden from callers.
+    for item in &nodule.items {
+        if let Item::Impl(id) = item {
+            for m in &id.methods {
+                check_body_effect_coverage(fns, traits, &m.sig.name, &m.sig.effects, &m.body)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// One body's effect coverage: `declared ⊇ performed`, where *performed* is the union of each
+/// callee's declared effects — a known top-level fn (`fns`), else an unqualified trait method
+/// (`traits`, by name). Owned-`String` sets keep lifetimes simple; the structural walk is shared
+/// with totality (one traversal, no bespoke depth-guarded recursion). Deterministic order ⇒ a stable
+/// first-miss diagnostic. `wild`-sourced effects (M-661) and the M-353 budget ledger are not consulted.
+fn check_body_effect_coverage(
+    fns: &BTreeMap<String, FnDecl>,
+    traits: &BTreeMap<String, TraitInfo>,
+    name: &str,
+    declared_effs: &[String],
+    body: &Expr,
+) -> Result<(), CheckError> {
+    let declared: std::collections::BTreeSet<String> = declared_effs.iter().cloned().collect();
+    let mut performed: std::collections::BTreeSet<(String, String)> =
+        std::collections::BTreeSet::new();
+    crate::totality::walk_expr(body, &mut |x| {
+        if let Expr::App { head, .. } = x {
+            if let Expr::Path(p) = head.as_ref() {
+                if p.0.len() == 1 {
+                    let callee = &p.0[0];
+                    if let Some(g) = fns.get(callee) {
+                        for eff in &g.sig.effects {
+                            performed.insert((eff.clone(), callee.clone()));
+                        }
+                    } else {
+                        // Not a top-level fn ⇒ an unqualified trait-method call: it performs the
+                        // declaring trait method's declared effects (the contract).
+                        for tr in traits.values() {
+                            for s in &tr.sigs {
+                                if &s.name == callee {
+                                    for eff in &s.effects {
+                                        performed.insert((eff.clone(), callee.clone()));
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
-        });
-        // Each performed effect (a callee's declared effect) must be declared by `f`. Deterministic
-        // order (callees + their effects are walked in sorted order) so the *first* missing effect
-        // reported is stable across runs.
-        for callee in &callees {
-            let g = &fns[*callee];
-            for eff in &g.sig.effects {
-                if !declared.contains(eff.as_str()) {
-                    return Err(CheckError::new(
-                        &fd.sig.name,
-                        format!(
-                            "`{}` performs effect `{eff}` (via calling `{callee}`) but does not \
-                             declare it — add it to the `!{{…}}` effect annotation (RFC-0014 §4.5 \
-                             I3: no undeclared effects; never silent — G2)",
-                            fd.sig.name
-                        ),
-                    ));
-                }
-            }
+        }
+    });
+    for (eff, callee) in &performed {
+        if !declared.contains(eff) {
+            return Err(CheckError::new(
+                name,
+                format!(
+                    "`{name}` performs effect `{eff}` (via calling `{callee}`) but does not declare \
+                     it — add it to the `!{{…}}` effect annotation (RFC-0014 §4.5 I3: no undeclared \
+                     effects; never silent — G2)"
+                ),
+            ));
         }
     }
     Ok(())
