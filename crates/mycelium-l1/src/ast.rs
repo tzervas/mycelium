@@ -384,6 +384,45 @@ pub enum Strength {
     Declared,
 }
 
+impl Strength {
+    /// The **trust rank** on the integrity lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`
+    /// (RFC-0018 §4.1; Biba 1977, T3.2). Higher = more trusted: `Exact = 3 … Declared = 0`. This is
+    /// the *only* place the chain's order is encoded; [`Self::meet`] and [`Self::satisfies`] derive
+    /// from it (DRY). It is **not** a guarantee strength itself — just the comparison key.
+    #[must_use]
+    pub fn rank(self) -> u8 {
+        match self {
+            Strength::Declared => 0,
+            Strength::Empirical => 1,
+            Strength::Proven => 2,
+            Strength::Exact => 3,
+        }
+    }
+
+    /// The **meet** `g₁ ∧ g₂` — the *weaker* (less trusted) of the two grades (RFC-0018 §4.1: the
+    /// greatest lower bound in the trust order). This is composition's pessimistic rule: a value
+    /// built from mixed-grade parts carries the weakest (`Proven ∧ Empirical = Empirical`). The meet
+    /// can only ever **lower** a grade — the structural reason grade composition is honest (it never
+    /// claims more than the least-trusted input supports — VR-5).
+    #[must_use]
+    pub fn meet(self, other: Strength) -> Strength {
+        if self.rank() <= other.rank() {
+            self
+        } else {
+            other
+        }
+    }
+
+    /// `self ⊒ demand` — is `self` **at least as trusted** as `demand`? The honesty rule as a
+    /// comparison (RFC-0018 §4.3 G-Sub / G-App / G-Weaken): an argument may be passed to a parameter,
+    /// a body may satisfy a return, and an annotation may weaken, **only** when the value's actual
+    /// grade is `⊒` the demanded one. A `@ Empirical` value does **not** satisfy an `@ Exact` demand.
+    #[must_use]
+    pub fn satisfies(self, demand: Strength) -> bool {
+        self.rank() >= demand.rank()
+    }
+}
+
 /// An expression.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
@@ -640,6 +679,59 @@ mod tests {
         .into_iter()
         .collect();
         assert_eq!(strengths.len(), 4);
+    }
+
+    #[test]
+    fn strength_lattice_order_is_the_trust_chain() {
+        // The chain `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` (RFC-0018 §4.1) — strictly decreasing rank.
+        assert!(
+            Strength::Exact.rank() > Strength::Proven.rank()
+                && Strength::Proven.rank() > Strength::Empirical.rank()
+                && Strength::Empirical.rank() > Strength::Declared.rank()
+        );
+    }
+
+    #[test]
+    fn strength_meet_is_the_weaker_grade() {
+        // `g₁ ∧ g₂` is the *less trusted* of the two (RFC-0018 §4.1): the pessimistic composition rule.
+        assert_eq!(Strength::Exact.meet(Strength::Proven), Strength::Proven);
+        assert_eq!(
+            Strength::Proven.meet(Strength::Empirical),
+            Strength::Empirical
+        );
+        assert_eq!(
+            Strength::Empirical.meet(Strength::Declared),
+            Strength::Declared
+        );
+        // Idempotent, commutative, and `Exact` is the identity (top) of the meet-semilattice.
+        for &g in &[
+            Strength::Exact,
+            Strength::Proven,
+            Strength::Empirical,
+            Strength::Declared,
+        ] {
+            assert_eq!(g.meet(g), g, "meet is idempotent");
+            assert_eq!(g.meet(Strength::Exact), g, "Exact is the meet identity");
+            for &h in &[
+                Strength::Exact,
+                Strength::Proven,
+                Strength::Empirical,
+                Strength::Declared,
+            ] {
+                assert_eq!(g.meet(h), h.meet(g), "meet is commutative");
+            }
+        }
+    }
+
+    #[test]
+    fn strength_satisfies_is_at_least_as_trusted() {
+        // `self ⊒ demand` (RFC-0018 §4.3): a value satisfies a demand iff it is at least as trusted.
+        assert!(Strength::Exact.satisfies(Strength::Exact));
+        assert!(Strength::Exact.satisfies(Strength::Declared));
+        assert!(Strength::Proven.satisfies(Strength::Empirical));
+        // The honesty failure: a weaker value does NOT satisfy a stronger demand (VR-5).
+        assert!(!Strength::Empirical.satisfies(Strength::Exact));
+        assert!(!Strength::Declared.satisfies(Strength::Proven));
     }
 
     #[test]

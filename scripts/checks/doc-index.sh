@@ -6,6 +6,8 @@ set -euo pipefail
 cd "$REPO_ROOT" || exit 1
 
 section "doc-index"
+# Specific reason sub-codes (consumed by all.sh's packed exit byte): 2 = committed index is stale
+# (run `just docs-index` + commit), 3 = generator self-test failed. 0 = current.
 
 if ! have python3; then
   skip "python3 not found — install it or run: just setup"
@@ -22,7 +24,7 @@ if diff -rq "$tmpdir" docs/api-index/ >/dev/null 2>&1; then
 else
   diff -r "$tmpdir" docs/api-index/ || true
   fail "docs/api-index/ is stale — run 'just docs-index' and commit the result"
-  exit 1
+  exit 2
 fi
 
 # Generator logic gate: determinism + completeness + module-aware attribution (offline).
@@ -31,5 +33,5 @@ if python3 tools/docgen/code_index.py --self-test >/dev/null 2>&1; then
 else
   python3 tools/docgen/code_index.py --self-test || true
   fail "code_index self-test failed"
-  exit 1
+  exit 3
 fi

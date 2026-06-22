@@ -3,7 +3,9 @@
 # Convention: each check script exits 0 on success OR graceful skip, non-zero on a real failure.
 set -euo pipefail
 
-if [[ -t 1 ]]; then
+# Colorize when stdout is a terminal, OR when a parent explicitly forces it (so a check whose
+# output is piped — e.g. through `tee` in all.sh's capture — still renders color on the real TTY).
+if [[ -t 1 || -n "${MYC_FORCE_COLOR:-}" ]]; then
   C_RED=$'\033[31m'; C_GRN=$'\033[32m'; C_YEL=$'\033[33m'; C_DIM=$'\033[2m'; C_RST=$'\033[0m'
 else
   C_RED=''; C_GRN=''; C_YEL=''; C_DIM=''; C_RST=''
