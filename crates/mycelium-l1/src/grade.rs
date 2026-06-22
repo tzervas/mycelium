@@ -49,7 +49,7 @@
 //! inference to *within a single expression*), and is deliberately not built here (KC-3).
 
 use crate::ast::{Arm, Expr, FnDecl, Item, Literal, Nodule, Pattern, Strength};
-use crate::checkty::CheckError;
+use crate::checkty::{CheckError, DataInfo};
 use std::collections::BTreeMap;
 
 /// The advertised return grade of a callee (G-App result): the written `@ g`, else the modular
@@ -75,15 +75,16 @@ fn param_grade(p: &crate::ast::Param) -> Strength {
 pub(crate) fn check_guarantees(
     fns: &BTreeMap<String, FnDecl>,
     own_fns: &BTreeMap<String, FnDecl>,
+    types: &BTreeMap<String, DataInfo>,
     nodule: &Nodule,
 ) -> Result<(), CheckError> {
     for fd in own_fns.values() {
-        check_fn_grades(fns, fd)?;
+        check_fn_grades(fns, types, fd)?;
     }
     for item in &nodule.items {
         if let Item::Impl(id) = item {
             for m in &id.methods {
-                check_fn_grades(fns, m)?;
+                check_fn_grades(fns, types, m)?;
             }
         }
     }
@@ -92,7 +93,11 @@ pub(crate) fn check_guarantees(
 
 /// Grade-check one function/method body: bind each parameter at its demanded grade, infer the body's
 /// grade, and require it to satisfy the declared return demand (G-Weaken at the function boundary).
-fn check_fn_grades(fns: &BTreeMap<String, FnDecl>, fd: &FnDecl) -> Result<(), CheckError> {
+fn check_fn_grades(
+    fns: &BTreeMap<String, FnDecl>,
+    types: &BTreeMap<String, DataInfo>,
+    fd: &FnDecl,
+) -> Result<(), CheckError> {
     let site = &fd.sig.name;
     let mut scope: Vec<(String, Strength)> = fd
         .sig
@@ -100,7 +105,7 @@ fn check_fn_grades(fns: &BTreeMap<String, FnDecl>, fd: &FnDecl) -> Result<(), Ch
         .iter()
         .map(|p| (p.name.clone(), param_grade(p)))
         .collect();
-    let gx = Gx { site, fns };
+    let gx = Gx { site, fns, types };
     let body = gx.grade(&mut scope, &fd.body)?;
     let demand = ret_grade(fd);
     if !body.satisfies(demand) {
@@ -117,11 +122,13 @@ fn check_fn_grades(fns: &BTreeMap<String, FnDecl>, fd: &FnDecl) -> Result<(), Ch
     Ok(())
 }
 
-/// The grading context for one body: the site (for diagnostics) and the merged function table (for
-/// resolving a call's parameter demands + advertised return grade — G-App).
+/// The grading context for one body: the site (for diagnostics), the merged function table (for
+/// resolving a call's parameter demands + advertised return grade — G-App), and the type registry
+/// (to tell a nullary-constructor `Pattern::Ident` from a true binder — see [`Gx::bind_pattern`]).
 struct Gx<'a> {
     site: &'a str,
     fns: &'a BTreeMap<String, FnDecl>,
+    types: &'a BTreeMap<String, DataInfo>,
 }
 
 impl Gx<'_> {
@@ -275,7 +282,7 @@ impl Gx<'_> {
         let g_s = self.grade(scope, scrutinee)?;
         let mut acc: Option<Strength> = None;
         for arm in arms {
-            let pushed = bind_pattern(scope, &arm.pattern, g_s);
+            let pushed = self.bind_pattern(scope, &arm.pattern, g_s);
             let g_arm = self.grade(scope, &arm.body);
             scope.truncate(scope.len() - pushed);
             let g_arm = g_arm?;
@@ -336,6 +343,53 @@ impl Gx<'_> {
         Ok(acc)
     }
 
+    /// Is `name` a **nullary constructor** in the type registry (a ctor with no fields)? Used to keep
+    /// such a constructor *out* of the grade scope when it appears as a bare `Pattern::Ident` — mirrors
+    /// the checker's `normalize_pattern` ctor/binder resolution.
+    fn is_nullary_ctor(&self, name: &str) -> bool {
+        self.types.values().any(|d| {
+            d.ctors
+                .iter()
+                .any(|c| c.name == name && c.fields.is_empty())
+        })
+    }
+
+    /// Push every variable a pattern binds onto `scope` at grade `g_s` (the scrutinee's grade — a
+    /// destructured field's data provenance is the scrutinee's). Returns how many bindings were pushed,
+    /// so the caller can pop exactly that many.
+    ///
+    /// A `Pattern::Ident` is ambiguous — a true **binder** *or* a **nullary constructor** (the type
+    /// checker resolves which; `normalize_pattern`). Only a binder enters the grade scope: a
+    /// nullary-ctor pattern binds nothing and **must not shadow the ctor name**, or a reference to that
+    /// constructor in the arm body would wrongly grade at the scrutinee's grade instead of `Exact`
+    /// (a spurious refusal — the M-663 bug Copilot caught). `Wildcard`/`Lit` bind nothing; `Ctor`
+    /// recurses into its sub-patterns.
+    fn bind_pattern(
+        &self,
+        scope: &mut Vec<(String, Strength)>,
+        pat: &Pattern,
+        g_s: Strength,
+    ) -> usize {
+        match pat {
+            Pattern::Wildcard | Pattern::Lit(_) => 0,
+            Pattern::Ident(name) => {
+                if self.is_nullary_ctor(name) {
+                    0
+                } else {
+                    scope.push((name.clone(), g_s));
+                    1
+                }
+            }
+            Pattern::Ctor(_, subs) => {
+                let mut n = 0;
+                for s in subs {
+                    n += self.bind_pattern(scope, s, g_s);
+                }
+                n
+            }
+        }
+    }
+
     /// The honesty check `have ⊒ demand` (G-Sub): a never-silent [`CheckError`] naming both grades
     /// and `what` is being constrained when the value is too weak for the demand (VR-5).
     fn require(&self, have: Strength, demand: Strength, what: &str) -> Result<(), CheckError> {
@@ -351,29 +405,5 @@ impl Gx<'_> {
                  upgrade — VR-5; never silent — G2)"
             ),
         ))
-    }
-}
-
-/// Push every variable a pattern binds onto `scope` at grade `g_s` (the scrutinee's grade — a
-/// destructured field's data provenance is the scrutinee's). Returns how many bindings were pushed,
-/// so the caller can pop exactly that many. A `Wildcard`/`Lit`/nullary-`Ctor`/nullary-`Ident`
-/// pattern binds nothing; a `Ctor` recurses into its sub-patterns.
-fn bind_pattern(scope: &mut Vec<(String, Strength)>, pat: &Pattern, g_s: Strength) -> usize {
-    match pat {
-        Pattern::Wildcard | Pattern::Lit(_) => 0,
-        // A bare identifier is a binder *or* a nullary constructor; the type checker resolved which.
-        // Binding it (harmlessly, at the scrutinee grade) is sound either way — a nullary-ctor name
-        // is never *referenced* as a value-with-grade, so the extra binding is inert.
-        Pattern::Ident(name) => {
-            scope.push((name.clone(), g_s));
-            1
-        }
-        Pattern::Ctor(_, subs) => {
-            let mut n = 0;
-            for s in subs {
-                n += bind_pattern(scope, s, g_s);
-            }
-            n
-        }
     }
 }

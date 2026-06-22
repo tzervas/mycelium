@@ -1108,7 +1108,7 @@ fn check_nodule_with(
     // explicit `CheckError` (never silent — G2/VR-5). This is the static successor to RFC-0007 §4.3's
     // stage-0 dynamic check (which remains the runtime semantics); the noninterference *theorem* stays
     // Declared-with-argument (RFC-0018 §11 / `research/09`), not upgraded.
-    crate::grade::check_guarantees(&fns, &regs.fns, nodule)?;
+    crate::grade::check_guarantees(&fns, &regs.fns, &types, nodule)?;
 
     // Pass 4: totality classification + the scope-quantified matured gate (RFC-0017 §4.2). Classify
     // over the merged `fns` so an own fn calling an imported one classifies against the real callee.

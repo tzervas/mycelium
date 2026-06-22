@@ -1409,3 +1409,38 @@ fn a_for_fold_accumulator_demanding_a_strong_grade_is_refused() {
         err.message
     );
 }
+
+#[test]
+fn a_nullary_ctor_pattern_does_not_shadow_the_ctor_grade_in_the_arm() {
+    // Regression (M-663; Copilot-caught): a bare nullary-constructor *pattern* (`Pattern::Ident`) must
+    // NOT enter the grade scope as a binder — otherwise a reference to that constructor in the arm body
+    // would grade at the (weaker) scrutinee grade instead of `Exact`, a spurious refusal. Here `x` is
+    // `@ Declared` but each arm returns the nullary ctor `End` (grade `Exact`), so the match grades
+    // `Exact` and satisfies the `@ Exact` return demand.
+    check(
+        "nodule d\n\
+         type T = End | More(Binary{8}, T)\n\
+         fn f(x: T @ Declared) -> T @ Exact = match x { End => End, _ => End }",
+    )
+    .expect("a nullary-ctor pattern must not degrade the ctor's grade in the arm body");
+}
+
+#[test]
+fn a_real_binder_pattern_still_carries_the_scrutinee_grade() {
+    // The dual: a *true* field binder (here `m` from `More(_, m)`) DOES carry the scrutinee's data
+    // grade — so returning it under a strong demand is correctly refused. `x` is `@ Declared`; the
+    // bound tail `m` is `Declared`, which cannot satisfy the `@ Exact` return.
+    let err = check(
+        "nodule d\n\
+         type T = End | More(Binary{8}, T)\n\
+         fn f(x: T @ Declared) -> T @ Exact = match x { End => End, More(b, m) => m }",
+    )
+    .expect_err(
+        "a destructured field binder carries the scrutinee grade — a Declared tail fails @ Exact",
+    );
+    assert!(
+        err.message.contains("guarantee") && err.message.contains("Exact"),
+        "the refusal must be a guarantee error naming the unmet Exact demand, got: {}",
+        err.message
+    );
+}
