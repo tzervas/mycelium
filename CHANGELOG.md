@@ -8,6 +8,70 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-22: M-674 — evaluator runs on the deep worker stack; depth budget is the ceiling)
+- **The L1 evaluator (`Evaluator::call`) now runs on the deep, lazily-committed worker stack**
+  (`mycelium_stack::with_deep_stack`), so the **explicit recursion-depth budget** — not the caller's
+  thread stack — is always what bounds a pathological input. `DEFAULT_DEPTH = 64` is unchanged (no
+  behavior change), but raising it via `with_depth(N)` for deep runtime computation (recursive folds
+  over large dense/VSA structures — the dense-embeddings/HDC axis) is now **host-stack-safe**: the
+  budget refuses cleanly with `DepthExceeded` well before any physical limit (estimated ~65k–130k
+  levels on the 256 MiB worker in debug). `SwapEngine` is tightened to `+ Send + Sync` (engines are
+  `Copy` unit structs — no call-site change) so the scoped-thread closure is `Send`. Clean-refusal
+  regression test added. Extends the uniform banked-guard-4 discipline (M-674) to the evaluator; the
+  budget is the portable primitive for the self-hosted frontend, the worker stack the transitional
+  Rust-host adapter. (M-674; RFC-0007 §4.6)
+
+### Changed (2026-06-22: M-658 — RFC-0007 §12 trait surface + `impl` reserved)
+- **RFC-0007 §12 (append-only) pins the stage-1 trait / bounded-generics surface** `mycelium-l1` v1
+  must check (single-parameter `trait`/`impl Trait for T` declarations + **coherence** = orphan rule +
+  global uniqueness, per RFC-0019), and **reserves `impl` as a lexer keyword** (`token.rs` `keyword()`
+  → `Tok::Impl`) — never a silent identifier (G2). Reject-corpus fixture
+  `reject/14-impl-reserved-ident.myc` (self-policed by the conformance table). Elaboration is **staged
+  identically to §11.3**: dictionary-passing *types-check* in the checker (M-659); the L0 lowering of an
+  instantiated dictionary is a never-silent `Residual` until monomorphization (M-673, generics + traits
+  together). Multi-parameter traits / associated types / Repr-polymorphism stay deferred (RFC-0019
+  §10). DN-14 §3 row 7 captured (no flip — only the M-659 checker flips it). No v0 calculus change; no
+  new kernel node (KC-3). (RFC-0007 §12; RFC-0019; DN-14 §3 row 7; M-658, E7-1)
+
+### Added (2026-06-22: M-657 — stage-1 unbounded generics checker + depth-safe recursion)
+- **Stage-1 unbounded parametric generics — checker (`mycelium-l1`).** `type List<A> = …`, generic
+  functions (`fn first_or<A>(xs: List<A>, d: A) -> A`), and **call-site instantiation by
+  unification** now type-check (RFC-0007 §11): a type parameter is an abstract `Ty::Var`,
+  constructor/match field types are instantiated by substitution, and the result type is inferred
+  from the arguments. Honest refusals, never a guess (G2/VR-5): wrong type-argument **arity**, an
+  **undetermined** type parameter, and a **representation-specific op on a type parameter** (the
+  RFC-0019 §4.6 Repr-polymorphism restriction — `Var` is representation-opaque, so a paradigm-specific
+  prim/`swap` cannot apply to it; S1 enforced at the checker). **L0 elaboration of a generic
+  *instantiation* is staged** behind an explicit never-silent `Residual` ("monomorphization staged");
+  a monomorphic program elaborates unchanged. DN-14 §3 row 6 → **partial (type-checks; elaboration
+  staged)**, not `present` (a stdlib nodule that instantiates a generic does not yet self-host to L0).
+  RFC-0007 §11.2–§11.4 corrected to the as-implemented split (M-656's "uniform elaboration" wording
+  superseded). No new kernel node (KC-3). (RFC-0007 §11; RFC-0019; DN-14 §3 row 6; M-657, E7-1)
+- **Depth-safe checker/elaborator recursion (`mycelium-l1`).** The checker no longer relies on the
+  caller's thread-stack size to bound its recursion (a fragile coupling — a wider `Ty` had reduced the
+  implicit margin). It now carries an **explicit reified budget** (`MAX_CHECK_DEPTH = 4096`, the
+  "banked guard 4" discipline — a clean `CheckError` past it, never a crash) and runs on a **deep,
+  lazily-committed worker stack** (`crate::deep`, 256 MiB) so deep-but-valid input never overflows the
+  caller's stack. The budget is **measured-safe**: the worker stack physically supports ~24,600 levels
+  in debug (empirically; ~10.9 KiB/frame), so 4096 is a ~6× margin and 16× above the parser's 256-deep
+  surface cap. The explicit budget is the **portable primitive** (it carries to the future
+  Mycelium-native self-hosted frontend's clocked bounded-computation model — RFC-0007 §4.6); the
+  worker stack is a transitional Rust-only adapter. Elaboration runs on the same deep worker.
+
+### Changed (2026-06-22: M-656 — RFC-0007 §11 discharges the §4.4 generics deferral)
+- **RFC-0007 §11 (append-only) discharges the §4.4 "polymorphism deliberately out of v0" deferral**,
+  routing it to its destination RFC — **RFC-0019 (Accepted)** — and pinning the minimally-sufficient
+  **stage-1 generics surface** that `crates/mycelium-l1` v1 must check: (a) **unbounded** parametric
+  generics (`type List<A>`, `fn head<A>`, `fn map<A,B>`), type parameters as abstract variables
+  (M-657); (b) **bounded** generics + traits via RFC-0019 dictionary-passing (M-658/M-659). The
+  §4.4 "instantiating a generic is a deferred error" sentence is **superseded** by §11.3 — the
+  refusal becomes a checked pass, **never a guess** (VR-5/G2). The never-silent-swap obligation
+  (S1/W8) is restated at the polymorphic level: instantiation never inserts a `Swap`; a
+  Repr-polymorphic body that would need one is an explicit `UnresolvedReprPolymorphism`. **No v0
+  calculus content changed**; the amendment leans on RFC-0019's **Declared-with-argument** results
+  and does not upgrade them (§11.5). DN-14 §3 row 6 gate captured. This is the **spec gate** that
+  unblocks the M-657 checker/elaborator implementation. (RFC-0007 §11; RFC-0019; DN-14 §3 row 6; M-656, E7-1)
+
 ### Changed (2026-06-21: RFC-0022 + RFC-0023 ratified Draft → Accepted)
 - **RFC-0022 (Web-Tooling Phylum) and RFC-0023 (ADK Phylum) ratified to Accepted** by the maintainer
   after the Phase-2 deep-research discharge (RP-10 / RP-9; `dfr` session). RFC-0023's §3 concept-map was

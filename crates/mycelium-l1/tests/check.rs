@@ -298,11 +298,91 @@ fn wild_is_denied_by_default() {
     assert!(err.message.contains("wild"), "got: {}", err.message);
 }
 
+// --- stage-1 unbounded parametric generics (RFC-0007 §11; M-657) -----------------------------
+// The §4.4 "generics are a deferred error" posture is discharged: a generic *type* declaration and a
+// generic *function* now type-check, instantiate, and (for the unbounded core) check honestly. What
+// stays an explicit refusal: wrong arity, a representation-specific op on a type parameter (the
+// Repr-polymorphism restriction, RFC-0019 §4.6), and an undetermined type parameter — never a guess.
+
+const LIST: &str = "nodule d\ntype List<A> = Nil | Cons(A, List<A>)\n";
+
 #[test]
-fn generics_are_an_explicit_deferral_not_a_guess() {
-    let src = "nodule d\ntype Box<T> = Wrap(T)";
+fn a_generic_data_type_and_a_total_generic_fn_check() {
+    // `is_empty` is total (covers both constructors), generic over `A`, and representation-agnostic.
+    let env = check(&format!(
+        "{LIST}fn is_empty<A>(xs: List<A>) -> Binary{{1}} = match xs {{ Nil => 0b1, Cons(_, _) => 0b0 }}"
+    ))
+    .expect("a generic data type + total generic fn check");
+    assert_eq!(env.totality["is_empty"], Totality::Total);
+}
+
+#[test]
+fn a_generic_fn_instantiates_at_a_concrete_type() {
+    // `first_or<A>` returns `A`; the call site infers `A = Binary{8}` from the arguments and the
+    // result type is `Binary{8}` — the never-guess instantiation of RFC-0007 §11.3.
+    let env = check(&format!(
+        "{LIST}fn first_or<A>(xs: List<A>, d: A) -> A = match xs {{ Nil => d, Cons(x, _) => x }}\n\
+         fn main() -> Binary{{8}} = first_or(Cons(0b0000_0001, Nil), 0b0000_0000)"
+    ))
+    .expect("a generic fn instantiates at Binary{8}");
+    assert_eq!(env.totality["main"], Totality::Total);
+}
+
+#[test]
+fn the_wrong_type_argument_arity_is_explicit_never_a_guess() {
+    // `Pair` takes two type arguments; applying it to one is a clean error (RFC-0007 §11.3), not a
+    // silently-defaulted second argument.
+    let src = "nodule d\ntype Pair<A, B> = MkPair(A, B)\n\
+               fn f(p: Pair<Binary{8}>) -> Binary{8} = match p { MkPair(a, b) => a }";
     let err = check(src).unwrap_err();
-    assert!(err.message.contains("deferred"), "got: {}", err.message);
+    assert!(
+        err.message.contains("type argument") && err.message.contains("got 1"),
+        "expected an arity error, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_representation_specific_op_on_a_type_parameter_is_refused() {
+    // RFC-0019 §4.6 (unbounded case): a value of abstract type `A` is representation-opaque, so a
+    // paradigm-specific prim (`and`, a `Binary` op) may not apply to it — refused, never a silent
+    // coercion/swap (S1). The restriction falls out of the abstract-variable discipline.
+    let src = format!("{LIST}fn bad<A>(x: A) -> A = and(x, x)");
+    let err = check(&src).unwrap_err();
+    assert!(
+        err.message.contains("accept") || err.message.contains("and"),
+        "expected a representation-op refusal, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn an_undetermined_type_parameter_is_explicit_not_a_guess() {
+    // `g<A>()` mentions `A` nowhere in its value parameters, so a call cannot determine it — an
+    // explicit "does not determine it" error, never a guessed default (G2/VR-5).
+    let src = "nodule d\nfn g<A>() -> Binary{1} = 0b1\nfn main() -> Binary{1} = g()";
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("does not determine"),
+        "expected an undetermined-type-parameter error, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn generic_instantiation_type_checks_across_widths_a_property_bound() {
+    // Property (per instantiation bound, RFC-0007 §11.3): instantiating a generic at `Binary{n}` for
+    // a range of widths `n` type-checks and yields a `Binary{n}` result — uniformly, never a guess.
+    for n in [1u32, 2, 4, 8, 16, 32, 64, 128] {
+        let src = format!(
+            "{LIST}fn first_or<A>(xs: List<A>, d: A) -> A = match xs {{ Nil => d, Cons(x, _) => x }}\n\
+             fn main() -> Binary{{{n}}} = first_or(Cons(0b{ones}, Nil), 0b{zeros})",
+            ones = "1".repeat(n as usize),
+            zeros = "0".repeat(n as usize),
+        );
+        let env = check(&src).unwrap_or_else(|e| panic!("n={n} should check: {e}"));
+        assert_eq!(env.totality["main"], Totality::Total, "n={n}");
+    }
 }
 
 // --- bounded iteration (RFC-0007 §4.8, r2) ---

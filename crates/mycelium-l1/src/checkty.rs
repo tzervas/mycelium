@@ -4,6 +4,7 @@
 //! `spore`, value-level integers without context, and `wild` blocks (denied by default, LR-9) are
 //! *refused with a reason*, never guessed at.
 
+use std::cell::Cell;
 use std::collections::BTreeMap;
 
 use crate::ambient::AmbientError;
@@ -12,7 +13,42 @@ use crate::ast::{
     Strength, TypeDecl, TypeRef,
 };
 
-/// A v0 (monomorphic) type.
+/// The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02).
+/// Type-checking recurses on the expression AST; rather than rely on the host call stack to bound
+/// that recursion (a resource that varies by thread and by IR frame size — never a semantic limit),
+/// the checker carries this reified budget and refuses past it with a clean [`CheckError`], exactly as
+/// the parser ([`crate::parse::MAX_EXPR_DEPTH`]) and the evaluator (`eval::DEFAULT_DEPTH`) do for their
+/// recursions. It is set comfortably **above** the parser's surface-nesting cap (so it never trips for
+/// parser-produced ASTs — it is the defense-in-depth ceiling for an AST handed straight to the checker
+/// via the API), and the recursion runs on a deep worker stack ([`mycelium_stack`]) so this budget — not a
+/// host-stack overflow — is always what bounds a pathological input.
+///
+/// **Grounding (measured, not guessed).** The 256 MiB worker stack physically supports **~24,600**
+/// levels of `check` recursion in a debug build (empirically: 24,589 survives, 24,765 aborts;
+/// ~10.9 KiB/frame — release frames are smaller, so the ceiling is *higher* there). This budget
+/// (`4096`) is therefore a **~6× safety margin** below the measured physical ceiling, and **16×**
+/// above the parser's 256-deep surface cap — so a real (parsed) program is never within ~16× of it,
+/// and even a synthetic AST refuses cleanly with ~6× stack headroom to spare. Raising it is safe up to
+/// roughly a third of the physical ceiling; widen the worker stack first if more is ever wanted.
+///
+/// **Self-hosting:** this explicit budget is the portable primitive (it carries over to the
+/// Mycelium-native frontend's clocked bounded-computation model); the worker stack is the transitional
+/// Rust-only adapter (`mycelium_stack`).
+pub const MAX_CHECK_DEPTH: u32 = 4096;
+
+/// RAII depth accounting for the checker's recursive [`Cx::check`] (paired with [`MAX_CHECK_DEPTH`]):
+/// increments the live nesting depth on entry and decrements it on drop, so the budget is honoured on
+/// **every** exit path (early `return`, `?`, or fall-through) — never a counter that leaks on error.
+struct DepthGuard<'a>(&'a Cell<u32>);
+
+impl Drop for DepthGuard<'_> {
+    fn drop(&mut self) {
+        self.0.set(self.0.get().saturating_sub(1));
+    }
+}
+
+/// A checked type. Stage-0 is monomorphic; stage-1 (RFC-0007 §11) adds **type parameters as
+/// abstract variables** ([`Ty::Var`]) and **applied data types** ([`Ty::Data`] with arguments).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
     /// `Binary{n}`.
@@ -21,11 +57,20 @@ pub enum Ty {
     Ternary(u32),
     /// `Dense{d, s}`.
     Dense(u32, Scalar),
-    /// A registered data type, by name (content addressing of declarations: RFC-0007 §4.2;
-    /// the prototype keys by name since v0 is single-nodule).
-    Data(String),
+    /// A registered data type applied to type arguments — `Data("List", [Binary(8)])` is
+    /// `List<Binary{8}>`; an empty argument vector is a monomorphic/nullary type (`Data("Bool", [])`).
+    /// Content addressing of declarations: RFC-0007 §4.2 (parameterized declarations are one registry
+    /// entry); the prototype keys by name since v0 is single-nodule.
+    Data(String, Vec<Ty>),
     /// `Substrate{tag}` — the affine external-resource kind (LR-8). No value forms exist in v0.
     Substrate(String),
+    /// An **abstract type parameter** (a skolem variable) — in scope only while checking a generic
+    /// declaration's constructors or a generic function's body (RFC-0007 §11.2). Two `Var`s are equal
+    /// iff their names match; that structural equality is the engine of parametric checking. A
+    /// `Var`-typed value is **representation-opaque**: no representation-specific `Op` may apply to it
+    /// (this is the unbounded-case form of RFC-0019 §4.6's Repr-polymorphism restriction — it falls
+    /// out of the abstract-variable discipline, restating S1 at the polymorphic level).
+    Var(String),
 }
 
 impl core::fmt::Display for Ty {
@@ -34,8 +79,19 @@ impl core::fmt::Display for Ty {
             Ty::Binary(n) => write!(f, "Binary{{{n}}}"),
             Ty::Ternary(m) => write!(f, "Ternary{{{m}}}"),
             Ty::Dense(d, s) => write!(f, "Dense{{{d}, {s:?}}}"),
-            Ty::Data(n) => write!(f, "{n}"),
+            Ty::Data(n, args) if args.is_empty() => write!(f, "{n}"),
+            Ty::Data(n, args) => {
+                write!(f, "{n}<")?;
+                for (i, a) in args.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{a}")?;
+                }
+                write!(f, ">")
+            }
             Ty::Substrate(t) => write!(f, "Substrate{{{t}}}"),
+            Ty::Var(v) => write!(f, "{v}"),
         }
     }
 }
@@ -104,13 +160,94 @@ pub struct CtorInfo {
     pub fields: Vec<Ty>,
 }
 
-/// A registered (monomorphic) data type.
+/// A registered data type. **Stage-1 (RFC-0007 §11):** `params` are the type parameters (empty for a
+/// monomorphic type); a constructor's [`CtorInfo::fields`] may reference them as [`Ty::Var`]. The
+/// fields are stored *abstractly* (over the parameters) — [`subst_ty`] instantiates them at concrete
+/// type arguments when a value is constructed or matched.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DataInfo {
     /// Type name.
     pub name: String,
-    /// Constructors, in declaration order (the index is the `#type#i` of RFC-0007 §4.2).
+    /// Type parameters, in declaration order (empty for a monomorphic type). `List<A>` ⇒ `["A"]`.
+    pub params: Vec<String>,
+    /// Constructors, in declaration order (the index is the `#type#i` of RFC-0007 §4.2). Field types
+    /// are abstract over `params` (may contain [`Ty::Var`]).
     pub ctors: Vec<CtorInfo>,
+}
+
+/// Substitute type arguments for the abstract parameters in a stage-1 type (RFC-0007 §11.2): replace
+/// each [`Ty::Var`] by its binding in `s`, recursing into [`Ty::Data`] arguments. A `Var` with no
+/// binding is left as-is (it is a parameter still in scope — e.g. while checking a generic body). This
+/// is total and never inserts a `Swap` (S1): it only renames/instantiates type structure.
+pub(crate) fn subst_ty(ty: &Ty, s: &BTreeMap<String, Ty>) -> Ty {
+    match ty {
+        Ty::Var(v) => s.get(v).cloned().unwrap_or_else(|| ty.clone()),
+        Ty::Data(n, args) => Ty::Data(n.clone(), args.iter().map(|a| subst_ty(a, s)).collect()),
+        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) => ty.clone(),
+    }
+}
+
+/// Build the parameter→argument substitution for a data type's constructor fields (RFC-0007 §11.2):
+/// pairs each declared parameter name with the corresponding concrete type argument. A mismatched
+/// length yields a partial map (the caller has already arity-checked, or is in a position where the
+/// extra/missing entries simply do not substitute — never a panic).
+pub(crate) fn param_subst(params: &[String], args: &[Ty]) -> BTreeMap<String, Ty> {
+    params.iter().cloned().zip(args.iter().cloned()).collect()
+}
+
+/// Does `ty` mention any abstract type parameter ([`Ty::Var`])? Used to decide whether a (partially
+/// substituted) declared type is concrete enough to drive a bidirectional check, or must let the
+/// argument synthesize its own type so the parameter can be inferred (RFC-0007 §11.3).
+pub(crate) fn has_var(ty: &Ty) -> bool {
+    match ty {
+        Ty::Var(_) => true,
+        Ty::Data(_, args) => args.iter().any(has_var),
+        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) => false,
+    }
+}
+
+/// One-sided **unification** of a declared type (which may contain [`Ty::Var`] parameters) against a
+/// concrete `actual` type, accumulating the parameter substitution `s` (RFC-0007 §11.3). Used to
+/// **infer** a generic function's type arguments from its call-site argument types, and a constructor's
+/// from its field arguments. A parameter is bound at most once; a second, conflicting binding is an
+/// explicit mismatch (never a silent re-coercion — G2/VR-5). No `Swap` is ever inserted: a
+/// representation-level disagreement (`Binary{8}` vs `Binary{16}`) is an explicit error, not a
+/// conversion (S1).
+pub(crate) fn unify(
+    site: &str,
+    decl: &Ty,
+    actual: &Ty,
+    s: &mut BTreeMap<String, Ty>,
+) -> Result<(), CheckError> {
+    match (decl, actual) {
+        (Ty::Var(v), _) => match s.get(v) {
+            Some(bound) if bound != actual => Err(CheckError::new(
+                site,
+                format!(
+                    "type parameter `{v}` would have to be both {bound} and {actual} — \
+                     an ambiguous instantiation, not a guess (RFC-0007 §11.3)"
+                ),
+            )),
+            _ => {
+                s.insert(v.clone(), actual.clone());
+                Ok(())
+            }
+        },
+        // A parameter appearing on the concrete side (nested generic call inside a generic body):
+        // treat as equality (both must already agree).
+        (_, Ty::Var(_)) if decl == actual => Ok(()),
+        (Ty::Data(n1, a1), Ty::Data(n2, a2)) if n1 == n2 && a1.len() == a2.len() => {
+            for (d, a) in a1.iter().zip(a2) {
+                unify(site, d, a, s)?;
+            }
+            Ok(())
+        }
+        _ if decl == actual => Ok(()),
+        _ => Err(CheckError::new(
+            site,
+            format!("cannot match {decl} against {actual} (RFC-0007 §11.3 — never a silent swap)"),
+        )),
+    }
 }
 
 /// The checked program environment: registry + function table. Built by [`check_nodule`]; the
@@ -162,6 +299,7 @@ impl Env {
 fn prelude() -> DataInfo {
     DataInfo {
         name: "Bool".to_owned(),
+        params: vec![],
         ctors: vec![
             CtorInfo {
                 name: "False".to_owned(),
@@ -175,12 +313,16 @@ fn prelude() -> DataInfo {
     }
 }
 
-/// Resolve a surface [`TypeRef`] to a v0 [`Ty`]. Generic instantiations and VSA types are
-/// explicit "deferred" refusals in v0 (RFC-0007 §4.4), never guesses. The guarantee index is
-/// *allowed* and returned alongside (checked dynamically at stage 0 — RFC-0007 §4.3).
+/// Resolve a surface [`TypeRef`] to a checked [`Ty`], with the type parameters `tyvars` in scope
+/// (RFC-0007 §11.2): a `Named(name, [])` whose `name` is a type parameter resolves to [`Ty::Var`];
+/// any other `Named` is a data type whose **arity is checked** against its declaration (`List<A>`
+/// applied to the wrong number of arguments is an explicit error, never a guess). VSA types stay a
+/// deferred refusal. The guarantee index is *allowed* and returned alongside (checked dynamically at
+/// stage 0 — RFC-0007 §4.3). `tyvars` is `&[]` in a monomorphic context.
 pub(crate) fn resolve_ty(
     site: &str,
     types: &BTreeMap<String, DataInfo>,
+    tyvars: &[String],
     t: &TypeRef,
 ) -> Result<(Ty, Option<Strength>), CheckError> {
     let base = match &t.base {
@@ -195,16 +337,30 @@ pub(crate) fn resolve_ty(
             ))
         }
         BaseType::Named(name, args) => {
-            if !args.is_empty() {
-                return Err(CheckError::new(
-                    site,
-                    format!("generic type `{name}<…>` is deferred in v0 (RFC-0007 §4.4) — monomorphic only"),
-                ));
+            // A bare name that is a type parameter in scope is an abstract type variable (§11.2).
+            if args.is_empty() && tyvars.iter().any(|v| v == name) {
+                Ty::Var(name.clone())
+            } else {
+                let Some(decl) = types.get(name) else {
+                    return Err(CheckError::new(site, format!("unknown type `{name}`")));
+                };
+                // Arity is checked — never a guess (§11.3). A type parameter cannot be applied.
+                if args.len() != decl.params.len() {
+                    return Err(CheckError::new(
+                        site,
+                        format!(
+                            "`{name}` takes {} type argument(s), got {} (RFC-0007 §11.3)",
+                            decl.params.len(),
+                            args.len()
+                        ),
+                    ));
+                }
+                let mut resolved = Vec::with_capacity(args.len());
+                for a in args {
+                    resolved.push(resolve_ty(site, types, tyvars, a)?.0);
+                }
+                Ty::Data(name.clone(), resolved)
             }
-            if !types.contains_key(name) {
-                return Err(CheckError::new(site, format!("unknown type `{name}`")));
-            }
-            Ty::Data(name.clone())
         }
         BaseType::Ambient(_) => {
             // The resolution pass ([`crate::ambient`]) fills every paradigm-less repr before the
@@ -242,6 +398,17 @@ pub fn check_nodule_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env,
 }
 
 fn check_and_resolve_matured(
+    nodule: &Nodule,
+    matured_scope: bool,
+) -> Result<(Env, Nodule), CheckError> {
+    // Run the recursive pass on a deep worker stack so deep-but-valid input never overflows the
+    // *caller's* thread stack — the explicit [`MAX_CHECK_DEPTH`] budget, not the host stack, bounds a
+    // pathological input (banked guard 4; the worker stack is the transitional Rust-only adapter —
+    // see [`mycelium_stack`]). Borrows are fine: the worker is a scoped thread.
+    mycelium_stack::with_deep_stack(|| check_and_resolve_matured_inner(nodule, matured_scope))
+}
+
+fn check_and_resolve_matured_inner(
     nodule: &Nodule,
     matured_scope: bool,
 ) -> Result<(Env, Nodule), CheckError> {
@@ -283,13 +450,15 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     let p = prelude();
     types.insert(p.name.clone(), p);
 
-    // Pass 1: register data declarations (so they can reference each other).
+    // Pass 1: register data declarations (so they can reference each other). Stage-1 (RFC-0007 §11):
+    // a **generic** declaration `type List<A> = …` registers its type parameters; its constructor
+    // fields are resolved abstractly (with the parameters in scope), so they may contain `Ty::Var`.
     for item in &nodule.items {
         if let Item::Type(td) = item {
-            if !td.params.is_empty() {
+            if let Some(dup) = first_duplicate(&td.params) {
                 return Err(CheckError::new(
                     &td.name,
-                    "generic data declarations are parsed but deferred in v0 (RFC-0007 §4.4)",
+                    format!("duplicate type parameter `{dup}` in `{}`", td.name),
                 ));
             }
             if types.contains_key(&td.name) {
@@ -300,6 +469,7 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
                 td.name.clone(),
                 DataInfo {
                     name: td.name.clone(),
+                    params: td.params.clone(),
                     ctors: vec![],
                 },
             );
@@ -312,15 +482,17 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
         }
     }
 
-    // Pass 2: collect functions (signatures must resolve).
+    // Pass 2: collect functions (signatures must resolve). Stage-1: a **generic** function
+    // `fn head<A>(…)` is registered as-is; its body is checked in Pass 3 with `A` an abstract
+    // variable, and call sites instantiate it (RFC-0007 §11.2/§11.3).
     let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();
     for item in &nodule.items {
         match item {
             Item::Fn(fd) => {
-                if !fd.sig.params.is_empty() {
+                if let Some(dup) = first_duplicate(&fd.sig.params) {
                     return Err(CheckError::new(
                         &fd.sig.name,
-                        "generic functions are parsed but deferred in v0 (RFC-0007 §4.4)",
+                        format!("duplicate type parameter `{dup}` in `{}`", fd.sig.name),
                     ));
                 }
                 if fns.insert(fd.sig.name.clone(), fd.clone()).is_some() {
@@ -338,16 +510,21 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     let mut resolved_fns: BTreeMap<String, FnDecl> = BTreeMap::new();
     for fd in fns.values() {
         let site = &fd.sig.name;
+        // Stage-1: the function's type parameters are in scope while resolving its signature and
+        // checking its body — each resolves to a `Ty::Var` (RFC-0007 §11.2).
+        let tyvars = &fd.sig.params;
         let mut scope: Vec<(String, Ty)> = Vec::new();
         for p in &fd.sig.value_params {
-            let (ty, _) = resolve_ty(site, &types, &p.ty)?;
+            let (ty, _) = resolve_ty(site, &types, tyvars, &p.ty)?;
             scope.push((p.name.clone(), ty));
         }
-        let (ret, _) = resolve_ty(site, &types, &fd.sig.ret)?;
+        let (ret, _) = resolve_ty(site, &types, tyvars, &fd.sig.ret)?;
         let cx = Cx {
             site,
             types: &types,
             fns: &fns,
+            tyvars,
+            depth: Cell::new(0),
         };
         let (got, body) = cx.check(&mut scope, &fd.body, Some(&ret))?;
         if got != ret {
@@ -404,7 +581,9 @@ fn resolve_ctors(
         }
         let mut fields = Vec::new();
         for f in &c.fields {
-            let (ty, _) = resolve_ty(&td.name, types, f)?;
+            // The declaration's type parameters are in scope, so a field may be an abstract
+            // `Ty::Var` (`Cons(A, List<A>)` ⇒ fields `[Var("A"), Data("List", [Var("A")])]`).
+            let (ty, _) = resolve_ty(&td.name, types, &td.params, f)?;
             fields.push(ty);
         }
         ctors.push(CtorInfo {
@@ -415,16 +594,45 @@ fn resolve_ctors(
     Ok(ctors)
 }
 
+/// The first value that appears more than once in `xs` (left to right), if any. Used to reject
+/// duplicate type-parameter names — an explicit error, never a silently-shadowed binding (G2).
+fn first_duplicate(xs: &[String]) -> Option<&String> {
+    let mut seen = std::collections::BTreeSet::new();
+    xs.iter().find(|x| !seen.insert((*x).clone()))
+}
+
 /// The checking context for one function body.
 struct Cx<'a> {
     site: &'a str,
     types: &'a BTreeMap<String, DataInfo>,
     fns: &'a BTreeMap<String, FnDecl>,
+    /// The type parameters in scope for this body (RFC-0007 §11.2) — empty for a monomorphic
+    /// function. A bare `Named` type that matches one of these resolves to [`Ty::Var`].
+    tyvars: &'a [String],
+    /// Live expression-nesting depth for the explicit [`MAX_CHECK_DEPTH`] budget (interior
+    /// mutability so [`Self::check`] stays `&self`). Reset per body; accounted by [`DepthGuard`].
+    depth: Cell<u32>,
 }
 
 impl Cx<'_> {
     fn err<T>(&self, msg: impl Into<String>) -> Result<T, CheckError> {
         Err(CheckError::new(self.site, msg))
+    }
+
+    /// Enter one level of `check` recursion against the explicit [`MAX_CHECK_DEPTH`] budget
+    /// (banked guard 4): charge a level, refuse with a clean [`CheckError`] past the budget (never a
+    /// host-stack overflow), and return a [`DepthGuard`] that releases the level on **any** exit path.
+    fn enter(&self) -> Result<DepthGuard<'_>, CheckError> {
+        let d = self.depth.get() + 1;
+        if d > MAX_CHECK_DEPTH {
+            return self.err(format!(
+                "expression nesting exceeds the checker depth budget ({MAX_CHECK_DEPTH}) — an \
+                 explicit budget (banked guard 4), refused cleanly rather than overflowing the \
+                 host stack (RFC-0007 §4.6 clocked-recursion discipline)"
+            ));
+        }
+        self.depth.set(d);
+        Ok(DepthGuard(&self.depth))
     }
 
     fn ctor(&self, name: &str) -> Option<(&DataInfo, usize)> {
@@ -453,6 +661,9 @@ impl Cx<'_> {
         e: &Expr,
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
+        // Charge one nesting level against the explicit depth budget; released on every exit path.
+        // This is what bounds checker recursion — not the host stack (RFC-0007 §4.6; A4-02).
+        let _depth = self.enter()?;
         match e {
             Expr::Lit(Literal::AmbientInt(p, v)) => {
                 let lit = self.resolve_ambient_int(*p, *v, expected)?;
@@ -460,7 +671,7 @@ impl Cx<'_> {
                 Ok((ty, Expr::Lit(lit)))
             }
             Expr::Lit(l) => Ok((self.lit_ty(l)?, Expr::Lit(l.clone()))),
-            Expr::Path(p) => self.check_path(scope, p, e),
+            Expr::Path(p) => self.check_path(scope, p, e, expected),
             // The heavy, allocation-bearing arms are separate methods so this dispatch frame stays
             // small — a deep but call-light nest (e.g. `not(not(…))`) must fit the host stack the
             // parser's depth bound allows, in debug builds too (A4-02).
@@ -506,6 +717,7 @@ impl Cx<'_> {
         scope: &[(String, Ty)],
         p: &Path,
         e: &Expr,
+        expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
         if p.0.len() != 1 {
             return self.err(format!(
@@ -519,7 +731,29 @@ impl Cx<'_> {
         }
         if let Some((d, i)) = self.ctor(name) {
             if d.ctors[i].fields.is_empty() {
-                return Ok((Ty::Data(d.name.clone()), e.clone())); // nullary ctor as a value
+                // Nullary constructor as a value. A **generic** type has no fields to infer its type
+                // arguments from, so they must come from `expected` (bidirectional) — an absent or
+                // mismatched context is an explicit "ascribe it" error, never a guess (§11.3).
+                let targs = if d.params.is_empty() {
+                    vec![]
+                } else {
+                    match expected {
+                        Some(Ty::Data(en, eargs))
+                            if en == &d.name && eargs.len() == d.params.len() =>
+                        {
+                            eargs.clone()
+                        }
+                        _ => {
+                            return self.err(format!(
+                                "constructor `{name}` of generic `{}<…>` needs its type \
+                                 argument(s) from context — ascribe the value (RFC-0007 §11.3, \
+                                 never a guess)",
+                                d.name
+                            ))
+                        }
+                    }
+                };
+                return Ok((Ty::Data(d.name.clone(), targs), e.clone()));
             }
             return self.err(format!(
                 "constructor `{name}` takes {} field(s) — apply it (W6 saturation)",
@@ -539,7 +773,7 @@ impl Cx<'_> {
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
         let want = match ty {
-            Some(t) => Some(resolve_ty(self.site, self.types, t)?.0),
+            Some(t) => Some(resolve_ty(self.site, self.types, self.tyvars, t)?.0),
             None => None,
         };
         let (bty, bound2) = self.check(scope, bound, want.as_ref())?;
@@ -571,7 +805,7 @@ impl Cx<'_> {
         alt: &Expr,
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
-        let bool_ty = Ty::Data("Bool".to_owned());
+        let bool_ty = Ty::Data("Bool".to_owned(), vec![]);
         let (c, cond2) = self.check(scope, cond, Some(&bool_ty))?;
         if c != bool_ty {
             return self.err(format!("if-condition must be Bool, got {c}"));
@@ -611,7 +845,7 @@ impl Cx<'_> {
                 "swap source must be a representation type, got {vty}"
             ));
         }
-        let (tty, _) = resolve_ty(self.site, self.types, target)?;
+        let (tty, _) = resolve_ty(self.site, self.types, self.tyvars, target)?;
         if !matches!(tty, Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _)) {
             return self.err(format!(
                 "swap target must be a representation type, got {tty}"
@@ -673,7 +907,7 @@ impl Cx<'_> {
         inner: &Expr,
         t: &TypeRef,
     ) -> Result<(Ty, Expr), CheckError> {
-        let (want, _) = resolve_ty(self.site, self.types, t)?;
+        let (want, _) = resolve_ty(self.site, self.types, self.tyvars, t)?;
         let (ity, inner2) = self.check(scope, inner, Some(&want))?;
         if ity != want {
             return self.err(format!(
@@ -712,45 +946,60 @@ impl Cx<'_> {
                     args.len()
                 ));
             }
-            let mut rebuilt = Vec::with_capacity(args.len());
-            for (pm, a) in fd.sig.value_params.iter().zip(args) {
-                let (want, _) = resolve_ty(self.site, self.types, &pm.ty)?;
-                let (got, a2) = self.check(scope, a, Some(&want))?;
-                if want != got {
-                    return self.err(format!(
-                        "`{name}` parameter `{}`: {}",
-                        pm.name,
-                        edge_mismatch("argument", &want, &got)
-                    ));
+            // Monomorphic callee — unchanged v0 path (exact bidirectional checking + error messages).
+            if fd.sig.params.is_empty() {
+                let mut rebuilt = Vec::with_capacity(args.len());
+                for (pm, a) in fd.sig.value_params.iter().zip(args) {
+                    let (want, _) = resolve_ty(self.site, self.types, &[], &pm.ty)?;
+                    let (got, a2) = self.check(scope, a, Some(&want))?;
+                    if want != got {
+                        return self.err(format!(
+                            "`{name}` parameter `{}`: {}",
+                            pm.name,
+                            edge_mismatch("argument", &want, &got)
+                        ));
+                    }
+                    rebuilt.push(a2);
                 }
-                rebuilt.push(a2);
+                let (ret, _) = resolve_ty(self.site, self.types, &[], &fd.sig.ret)?;
+                return Ok((ret, app_node(head, rebuilt)));
             }
-            let (ret, _) = resolve_ty(self.site, self.types, &fd.sig.ret)?;
-            return Ok((ret, app_node(head, rebuilt)));
+            // Generic callee — extracted to a separate (non-inlined) method so `check_app`'s frame
+            // stays small on the common monomorphic/prim path (the A4-02 host-stack-depth bound).
+            return self.check_app_generic_fn(scope, head, name, fd, args);
         }
 
-        // Constructor: each field is checked against its declared type (W6 saturation).
+        // Constructor (W6 saturation).
         if let Some((d, i)) = self.ctor(name) {
-            let fields = d.ctors[i].fields.clone();
-            if fields.len() != args.len() {
+            let arity = d.ctors[i].fields.len();
+            let dname = d.name.clone();
+            let params = d.params.clone();
+            if arity != args.len() {
                 return self.err(format!(
-                    "constructor `{name}` takes {} field(s), got {} (W6 saturation)",
-                    fields.len(),
+                    "constructor `{name}` takes {arity} field(s), got {} (W6 saturation)",
                     args.len()
                 ));
             }
-            let mut rebuilt = Vec::with_capacity(args.len());
-            for (want, a) in fields.iter().zip(args) {
-                let (got, a2) = self.check(scope, a, Some(want))?;
-                if want != &got {
-                    return self.err(format!(
-                        "constructor `{name}` field: {}",
-                        edge_mismatch("argument", want, &got)
-                    ));
+            // Monomorphic data type — the original inline path (small frame, exact v0 errors).
+            if params.is_empty() {
+                let fields = d.ctors[i].fields.clone();
+                let mut rebuilt = Vec::with_capacity(args.len());
+                for (want, a) in fields.iter().zip(args) {
+                    let (got, a2) = self.check(scope, a, Some(want))?;
+                    if want != &got {
+                        return self.err(format!(
+                            "constructor `{name}` field: {}",
+                            edge_mismatch("argument", want, &got)
+                        ));
+                    }
+                    rebuilt.push(a2);
                 }
-                rebuilt.push(a2);
+                return Ok((Ty::Data(dname, vec![]), app_node(head, rebuilt)));
             }
-            return Ok((Ty::Data(d.name.clone()), app_node(head, rebuilt)));
+            // Generic data type — extracted (frame-size; A4-02).
+            let fields = d.ctors[i].fields.clone();
+            return self
+                .check_app_generic_ctor(scope, head, name, dname, params, fields, args, expected);
         }
 
         // Builtin prim: width-polymorphic and width-preserving, so the result's expected width (or
@@ -808,6 +1057,117 @@ impl Cx<'_> {
         }
     }
 
+    /// Check a call to a **generic** function (RFC-0007 §11.3): resolve the callee's signature with
+    /// the *callee's* type parameters as abstract variables, **unify** the declared parameter types
+    /// against the actual argument types to infer the type arguments, and substitute the solution
+    /// into the return type. An unsolved type parameter is an explicit error — never a guessed
+    /// default (G2/VR-5). Extracted (`#[inline(never)]`) so [`Self::check_app`]'s frame stays within
+    /// the A4-02 host-stack-depth bound on the common monomorphic/prim path.
+    #[inline(never)]
+    fn check_app_generic_fn(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        head: &Expr,
+        name: &str,
+        fd: &FnDecl,
+        args: &[Expr],
+    ) -> Result<(Ty, Expr), CheckError> {
+        let callee_vars = &fd.sig.params;
+        let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
+        let mut rebuilt = Vec::with_capacity(args.len());
+        for (pm, a) in fd.sig.value_params.iter().zip(args) {
+            let want = resolve_ty(self.site, self.types, callee_vars, &pm.ty)?.0;
+            let want_now = subst_ty(&want, &subst);
+            // A fully-concrete (post-substitution) expected type drives the argument's check (so a
+            // bare decimal takes the width); a still-abstract one lets the argument synthesize.
+            let exp = if has_var(&want_now) {
+                None
+            } else {
+                Some(&want_now)
+            };
+            let (got, a2) = self.check(scope, a, exp)?;
+            unify(self.site, &want_now, &got, &mut subst).map_err(|e| {
+                CheckError::new(
+                    self.site,
+                    format!("`{name}` argument `{}`: {}", pm.name, e.message),
+                )
+            })?;
+            rebuilt.push(a2);
+        }
+        for v in callee_vars {
+            if !subst.contains_key(v) {
+                return self.err(format!(
+                    "`{name}` is generic over `{v}`, but this call does not determine it — \
+                     ascribe an argument or the result (RFC-0007 §11.3, never a guessed default)"
+                ));
+            }
+        }
+        let ret = subst_ty(
+            &resolve_ty(self.site, self.types, callee_vars, &fd.sig.ret)?.0,
+            &subst,
+        );
+        Ok((ret, app_node(head, rebuilt)))
+    }
+
+    /// Check a saturated application of a **generic** data constructor (RFC-0007 §11.2/§11.3). The
+    /// constructor's declared fields are abstract over the type's parameters; the type arguments are
+    /// taken from `expected` when it pins this data type (bidirectional), otherwise **inferred** from
+    /// the field arguments via [`unify`]. An undetermined parameter is an explicit "ascribe it" error
+    /// — never a guess. Extracted (`#[inline(never)]`) for the same frame-size reason as
+    /// [`Self::check_app_generic_fn`].
+    #[inline(never)]
+    #[allow(clippy::too_many_arguments)]
+    fn check_app_generic_ctor(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        head: &Expr,
+        name: &str,
+        dname: String,
+        params: Vec<String>,
+        fields: Vec<Ty>,
+        args: &[Expr],
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
+        if let Some(Ty::Data(en, eargs)) = expected {
+            if *en == dname && eargs.len() == params.len() {
+                for (p, ea) in params.iter().zip(eargs) {
+                    subst.insert(p.clone(), ea.clone());
+                }
+            }
+        }
+        let mut rebuilt = Vec::with_capacity(args.len());
+        for (want, a) in fields.iter().zip(args) {
+            let want_now = subst_ty(want, &subst);
+            let exp = if has_var(&want_now) {
+                None
+            } else {
+                Some(&want_now)
+            };
+            let (got, a2) = self.check(scope, a, exp)?;
+            unify(self.site, &want_now, &got, &mut subst).map_err(|e| {
+                CheckError::new(
+                    self.site,
+                    format!("constructor `{name}` field: {}", e.message),
+                )
+            })?;
+            rebuilt.push(a2);
+        }
+        let mut targs = Vec::with_capacity(params.len());
+        for p in &params {
+            match subst.get(p) {
+                Some(t) => targs.push(t.clone()),
+                None => {
+                    return self.err(format!(
+                        "constructor `{name}` does not determine type parameter `{p}` of \
+                         `{dname}<…>` — ascribe the value (RFC-0007 §11.3, never a guess)"
+                    ))
+                }
+            }
+        }
+        Ok((Ty::Data(dname, targs), app_node(head, rebuilt)))
+    }
+
     /// T-For (RFC-0007 §4.8): `xs` must be a *linearly recursive* data type (nil/cons shape);
     /// `init : A`; `body : A` under `x : E, acc : A`; the whole expression is `A`. Every shape
     /// violation is an explicit refusal — general catamorphisms are an L2 concern.
@@ -823,12 +1183,14 @@ impl Cx<'_> {
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
         let (sty, xs2) = self.check(scope, xs, None)?;
-        let Ty::Data(tname) = &sty else {
+        let Ty::Data(tname, targs) = &sty else {
             return self.err(format!(
                 "`for` iterates a linearly recursive data value, got {sty} (RFC-0007 §4.8)"
             ));
         };
-        let elem = linear_elem_ty(self.site, self.types, tname)?;
+        // For a generic linear type (`List<Binary{8}>`) the element type is the declared element
+        // (`Var("A")`) with the scrutinee's type arguments substituted in (RFC-0007 §11.2).
+        let elem = linear_elem_ty(self.site, self.types, tname, targs)?;
         // The accumulator type is the whole expression's type, so the `for`'s expected anchors `init`.
         let (aty, init2) = self.check(scope, init, expected)?;
         scope.push((x.to_owned(), elem));
@@ -872,7 +1234,7 @@ impl Cx<'_> {
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
         let (sty, scrut2) = self.check(scope, scrutinee, None)?;
-        if !matches!(sty, Ty::Data(_) | Ty::Binary(_) | Ty::Ternary(_)) {
+        if !matches!(sty, Ty::Data(_, _) | Ty::Binary(_) | Ty::Ternary(_)) {
             return self.err(format!(
                 "match scrutinee must be a data, Binary, or Ternary type, got {sty}"
             ));
@@ -974,12 +1336,19 @@ impl Cx<'_> {
                 // data type and the constructor/arity line up; otherwise leave `subs` for the
                 // normalizer to diagnose.
                 let field_tys = match expected {
-                    Ty::Data(tn) => self
-                        .types
-                        .get(tn)
-                        .and_then(|d| d.ctors.iter().find(|c| c.name == *name))
-                        .filter(|c| c.fields.len() == subs.len())
-                        .map(|c| c.fields.clone()),
+                    // The declared field types are abstract over the type's parameters; substitute
+                    // the scrutinee's type arguments so a generic field recurses at its concrete
+                    // type (RFC-0007 §11.2).
+                    Ty::Data(tn, targs) => self.types.get(tn).and_then(|d| {
+                        d.ctors
+                            .iter()
+                            .find(|c| c.name == *name)
+                            .filter(|c| c.fields.len() == subs.len())
+                            .map(|c| {
+                                let s = param_subst(&d.params, targs);
+                                c.fields.iter().map(|f| subst_ty(f, &s)).collect::<Vec<_>>()
+                            })
+                    }),
                     _ => None,
                 };
                 let mut out = Vec::with_capacity(subs.len());
@@ -1116,7 +1485,7 @@ pub(crate) fn normalize_pattern(
         Pattern::Ident(n) => {
             // A bare name is a nullary-constructor alternative iff it names one of the expected
             // data type's constructors; otherwise it binds the whole position (at this occurrence).
-            if let Ty::Data(tn) = expected {
+            if let Ty::Data(tn, _) = expected {
                 let d = types.get(tn).expect("registered data type");
                 if let Some(c) = d.ctors.iter().find(|c| c.name == *n) {
                     if !c.fields.is_empty() {
@@ -1135,7 +1504,7 @@ pub(crate) fn normalize_pattern(
             Ok(Pat::Wild)
         }
         Pattern::Ctor(n, subs) => {
-            let Ty::Data(tn) = expected else {
+            let Ty::Data(tn, targs) = expected else {
                 return Err(CheckError::new(
                     site,
                     format!(
@@ -1160,11 +1529,15 @@ pub(crate) fn normalize_pattern(
                     ),
                 ));
             }
+            // The constructor's field types are abstract over the type's parameters; instantiate them
+            // at the scrutinee's type arguments so each binder gets its concrete type (RFC-0007 §11.2).
+            let s = param_subst(&d.params, targs);
             let mut out = Vec::with_capacity(subs.len());
             for (i, (sub, fty)) in subs.iter().zip(&c.fields).enumerate() {
                 let mut child = occ.to_vec();
                 child.push(i);
-                out.push(normalize_pattern(types, site, sub, fty, &child, binds)?);
+                let fty = subst_ty(fty, &s);
+                out.push(normalize_pattern(types, site, sub, &fty, &child, binds)?);
             }
             Ok(Pat::Ctor(n.clone(), out))
         }
@@ -1196,6 +1569,11 @@ pub(crate) fn infer_type(
         site: "<elaborate>",
         types: &env.types,
         fns: &env.fns,
+        // Re-inference runs over already-checked, monomorphic terms (a generic *instantiation* is
+        // refused at elaboration before re-inference — RFC-0007 §11.3 staging), so no type
+        // parameters are in scope here.
+        tyvars: &[],
+        depth: Cell::new(0),
     };
     cx.infer(scope, e)
 }
@@ -1239,10 +1617,14 @@ fn linear_elem_ty(
     site: &str,
     types: &BTreeMap<String, DataInfo>,
     tname: &str,
+    targs: &[Ty],
 ) -> Result<Ty, CheckError> {
     let d = types
         .get(tname)
         .ok_or_else(|| CheckError::new(site, format!("unknown type `{tname}`")))?;
+    // The declared element type is abstract over the type's parameters; instantiate it at the
+    // scrutinee's type arguments (RFC-0007 §11.2) so `for` over a `List<Binary{8}>` binds `Binary{8}`.
+    let s = param_subst(&d.params, targs);
     let mut elem: Option<Ty> = None;
     let mut has_cons = false;
     for c in &d.ctors {
@@ -1252,7 +1634,7 @@ fn linear_elem_ty(
         let (spine, rest): (Vec<&Ty>, Vec<&Ty>) = c
             .fields
             .iter()
-            .partition(|f| matches!(f, Ty::Data(n) if n == tname));
+            .partition(|f| matches!(f, Ty::Data(n, _) if n == tname));
         if spine.len() != 1 || rest.len() != 1 {
             return Err(CheckError::new(
                 site,
@@ -1265,16 +1647,16 @@ fn linear_elem_ty(
             ));
         }
         has_cons = true;
+        let elem_ty = subst_ty(rest[0], &s);
         match &elem {
-            None => elem = Some(rest[0].clone()),
-            Some(e) if e == rest[0] => {}
+            None => elem = Some(elem_ty),
+            Some(e) if *e == elem_ty => {}
             Some(e) => {
                 return Err(CheckError::new(
                     site,
                     format!(
                         "`for` needs one element type across `{tname}`'s constructors: \
-                         {e} vs {}",
-                        rest[0]
+                         {e} vs {elem_ty}"
                     ),
                 ))
             }
@@ -1303,7 +1685,7 @@ fn paradigm_name(t: &Ty) -> Option<&'static str> {
         Ty::Binary(_) => Some("Binary"),
         Ty::Ternary(_) => Some("Ternary"),
         Ty::Dense(_, _) => Some("Dense"),
-        Ty::Data(_) | Ty::Substrate(_) => None,
+        Ty::Data(_, _) | Ty::Substrate(_) | Ty::Var(_) => None,
     }
 }
 
@@ -1540,5 +1922,59 @@ mod tests {
         assert_eq!(e.fn_totality("count"), e.totality.get("count").copied());
         assert!(e.fn_totality("count").is_some());
         assert!(e.fn_totality("absent").is_none());
+    }
+}
+
+#[cfg(test)]
+mod depth_budget_tests {
+    use super::*;
+    use crate::ast::{BaseType, Expr, FnDecl, FnSig, Item, Literal, Nodule, Path, TypeRef};
+
+    /// A `not(not(… not(0b0) …))` nest `depth` deep — built directly (the parser caps surface nesting
+    /// at `MAX_EXPR_DEPTH`, so a direct AST is the way to exercise the *checker's* own budget).
+    pub(crate) fn deep_not(depth: usize) -> Expr {
+        let mut e = Expr::Lit(Literal::Bin("0".to_string()));
+        for _ in 0..depth {
+            e = Expr::App {
+                head: Box::new(Expr::Path(Path(vec!["not".to_string()]))),
+                args: vec![e],
+            };
+        }
+        e
+    }
+
+    pub(crate) fn nodule_with_body(body: Expr) -> Nodule {
+        Nodule {
+            path: Path(vec!["d".to_string()]),
+            items: vec![Item::Fn(FnDecl {
+                thaw: false,
+                sig: FnSig {
+                    name: "main".to_string(),
+                    params: vec![],
+                    value_params: vec![],
+                    ret: TypeRef {
+                        base: BaseType::Binary(1),
+                        guarantee: None,
+                    },
+                },
+                body,
+            })],
+        }
+    }
+
+    #[test]
+    fn the_depth_budget_trips_cleanly_and_just_under_it_succeeds() {
+        // Just under the budget: the checker completes — the deep worker stack ([`mycelium_stack`])
+        // absorbs `MAX_CHECK_DEPTH` levels with large margin (measured physical ceiling ≫ budget).
+        let ok = check_nodule(&nodule_with_body(deep_not((MAX_CHECK_DEPTH - 5) as usize)));
+        assert!(ok.is_ok(), "just under the budget should check ok: {ok:?}");
+        // Past the budget: a clean, explicit refusal — never a host-stack overflow (banked guard 4).
+        let err = check_nodule(&nodule_with_body(deep_not((MAX_CHECK_DEPTH + 50) as usize)))
+            .expect_err("past the budget must refuse");
+        assert!(
+            err.message.contains("depth budget"),
+            "expected the explicit depth-budget refusal, got: {}",
+            err.message
+        );
     }
 }

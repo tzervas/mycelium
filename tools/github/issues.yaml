@@ -2056,10 +2056,12 @@ issues:
   - id: M-656
     title: "M-656 — spec(rfc-0007): Amend RFC-0007 to ratify stage-1 generic type parameters"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:spec, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:spec, area:language, priority:P1, status:done]
     depends_on: []
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, corpus:DN-14]
     body: |
+      DONE (2026-06-22): RFC-0007 §11 appended (append-only) discharging the §4.4 generics deferral → RFC-0019; pins the stage-1 generics surface (unbounded `type List<A>`/`fn head<A>` for M-657; bounded generics + traits via dictionary-passing for M-658/M-659); never-silent-swap restated at the polymorphic level (S1/W8); DN-14 §3 row 6 gate captured (§11.4); Doc-Index + CHANGELOG updated. No v0 calculus change; leans on RFC-0019's Declared-with-argument results without upgrading them (§11.5).
+
       RFC-0007 §4.4 explicitly defers generic type parameters to stage-1; RFC-0019 (Accepted 2026-06-18) ratifies the coherence and Repr-polymorphism restriction set. This issue produces the RFC-0007 amendment (append-only §N) closing the stage-0 deferral: records the dictionary-passing elaboration strategy per RFC-0019 §4 and defines the minimally-sufficient surface (monomorphic instantiation of generic type declarations — `type List<A> = Nil | Cons(A, List<A>)` and `fn map<A, B>(…)`) that `mycelium-l1` v1 must check.
       Does NOT implement the checker changes (that is M-657); this is the spec gate that unblocks them.
       Acceptance: RFC-0007 §N appended (append-only) recording the stage-1 generics scope and the RFC-0019 coherence/Repr-polymorphism restriction set; Doc-Index row updated; CHANGELOG entry; DN-14 §3 row 6 gate formally captured in the amendment.
@@ -2067,20 +2069,42 @@ issues:
   - id: M-657
     title: "M-657 — feat(l1): Implement generic type parameters in checkty.rs + elab.rs"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
     depends_on: [M-656]
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, src:crates/mycelium-l1/src/checkty.rs, src:crates/mycelium-l1/src/elab.rs]
     body: |
-      M-656 specifies the stage-1 generic scope; this issue implements it in `crates/mycelium-l1/src/checkty.rs` (polymorphic type-declaration checking) and `elab.rs` (monomorphic-instantiation elaboration). The v0 monomorphic-only typechecker rejects generic type declarations (checkty.rs ~167) and generic function declarations (~286) with explicit `Declared` refusals; those refusals become real checked passes. Dictionary-passing elaboration per RFC-0019 §4 keeps the kernel node budget unchanged (KC-3). Honesty: a generic that instantiates a representation mismatch is `Residual`, not silently coerced (S1/VR-5).
-      Acceptance: `type List<A> = Nil | Cons(A, List<A>)` + `fn head<A>(xs: List<A>) -> A` parse, type-check, and elaborate to closed L0; RFC-0019 Repr-polymorphism restriction enforced (no instantiation silently inserts a `Swap`); `cargo test -p mycelium-l1` green; `clippy -D warnings` clean; property test per instantiation bound; DN-14 §3 row 6 → `present`.
+      CHECKER DONE (2026-06-22); elaboration STAGED → M-673. The `checkty.rs` checker now implements unbounded parametric generics (RFC-0007 §11): `Ty::Var` abstract type variables + applied `Ty::Data`; generic data + function declarations register and check; **call-site instantiation by unification** infers type arguments; constructor/match field types are instantiated by substitution. Honest never-guess refusals: wrong arity, an undetermined type parameter, and a representation-specific op on a type parameter (RFC-0019 §4.6 — `Var` is representation-opaque; S1 enforced at the checker, so the elaborator is never asked to insert a `Swap`). `elab.rs` **stages** the L0 lowering of a generic *instantiation* behind an explicit never-silent `Residual` (monomorphization → M-673); a monomorphic program elaborates unchanged. RFC-0007 §11.2–§11.4 corrected to this as-implemented split. Also landed (necessitated by the wider `Ty`): depth-safe checker/elaborator recursion — explicit `MAX_CHECK_DEPTH=4096` budget (banked guard 4) + deep worker stack (`crate::deep`, 256 MiB; measured physical ceiling ~24,600 levels debug → ~6× margin).
+      Verified: `cargo test -p mycelium-l1` green (incl. generics accept/refuse tests + width-sweep property bound + depth-budget regression); `cargo clippy -p mycelium-l1 --lib` clean; workspace builds; reverse-deps (lsp/check) green. Honesty: `head<A> -> A` is non-total (no `A` for `Nil`; W7) — replaced by total `first_or`/`is_empty`; higher-order `map` needs L2 arrow types. DN-14 §3 row 6 → **partial (type-checks; elaboration staged)**, flips to `present` when M-673 lands. Original acceptance ("elaborate to closed L0") is split: checker here, monomorphization in M-673 (maintainer-scoped decision 2026-06-22: checker-now, stage-elab).
+
+  - id: M-673
+    title: "M-673 — feat(l1): Monomorphization elaboration for generic instantiations (M-657 follow-up)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    depends_on: [M-657]
+    doc_refs: [corpus:RFC-0007, corpus:RFC-0019, src:crates/mycelium-l1/src/elab.rs]
+    body: |
+      M-657 landed the generics CHECKER; the L0 elaboration of a generic *instantiation* is currently an explicit never-silent `Residual` ("monomorphization staged" — RFC-0007 §11.3). This issue lands the elaboration. Chosen strategy (RFC-0007 §11.3): **monomorphization** — a pre-pass over the checked `Env` specializes each concrete generic use (`List<Binary{8}>`, `first_or` at `A=Binary{8}`) into a monomorphic registry declaration + function instance under a mangled name, rewriting ctor/type/call references, so the existing trusted elaborator/registry run unchanged (no `mycelium-core` change; KC-3). Honest cost (RFC-0019 §4.4): a generic's content-addressed identity fragments across specializations — recorded, not hidden. The alternative (uniform/dictionary "one hash" elaboration via a new abstract-parameter `FieldSpec` in `mycelium-core`) is a separate, trusted-core decision (deferred). Acceptance: a program defining + instantiating `List<A>`/`first_or<A>` elaborates to closed L0 (no `Residual`); the M-210 three-way differential agrees (L1-eval ≡ L0-interp ≡ AOT) on the monomorphized output; never silently inserts a `Swap` (S1); `cargo test -p mycelium-l1` green; DN-14 §3 row 6 → `present`; unblocks M-649 self-hosting of a generic stdlib nodule.
+
+  - id: M-674
+    title: "M-674 — robustness: uniform explicit-budget + deep-stack discipline across all recursion limit points"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:in-progress]
+    depends_on: [M-657]
+    doc_refs: [src:crates/mycelium-stack/src/lib.rs, src:crates/mycelium-l1/src/checkty.rs, src:crates/mycelium-l1/src/elab.rs]
+    body: |
+      Generalize the "explicit reified depth budget (banked guard 4) + deep worker stack (`mycelium-stack`, isolated outside the `#![forbid(unsafe_code)]` kernel) + measured-safe ceiling" discipline to EVERY recursion/resource limit point, so they all refuse cleanly and never crash, and the pattern is uniform + self-hosting-portable (the explicit budgets carry to the Mycelium-native frontend; the host-stack adapter is transitional). The explicit budget is the load-bearing primitive; the deep stack is only needed where frames are large enough that the budget would otherwise outrun a normal host stack.
+      Status (2026-06-22): DONE — checker (`MAX_CHECK_DEPTH`, deep stack), elaborator (`MAX_ELAB_DEPTH`, deep stack), parser (`MAX_EXPR_DEPTH`, explicit budget; small frames fit the normal stack), **evaluator** (`Evaluator::call` runs on the deep worker stack; `DEFAULT_DEPTH=64` stays the explicit ceiling but `with_depth(N)` is now host-stack-safe — est. physical ceiling ~65k–130k levels in debug; `SwapEngine: +Send+Sync`; clean-refusal test). Isolation crate `mycelium-stack` + kernel `forbid(unsafe_code)` landed.
+      TODO (the remaining limit points): (2) **totality** + **ambient** passes — give each an explicit budget (today bounded only transitively by the parser's 256); (3) audit cross-crate recursion limit points (MLIR lowering in `mycelium-mlir`, the runtime task/supervision depth, reconstruction recursion in `mycelium-core::recon`, dense/VSA recursive ops) and apply the same discipline (budget where it recurses; the isolated deep-stack adapter where frames warrant it). (4) Optional: wire the documented `grow-on-demand` (stacker) feature in `mycelium-stack` (unsafe contained in the leaf dep) if unbounded-growth is ever wanted. Each gets a clean-refusal regression test. Honesty: a budget is an honest ceiling (never silent), not a guess; never raise one without measuring the physical headroom (as `MAX_CHECK_DEPTH` records).
 
   - id: M-658
     title: "M-658 — spec(rfc-0007): Amend RFC-0007 for stage-1 trait interfaces + `impl` blocks"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:spec, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:spec, area:language, priority:P1, status:done]
     depends_on: [M-657]
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, corpus:DN-03]
     body: |
+      DONE (2026-06-22): RFC-0007 §12 appended (append-only) pinning the stage-1 trait surface (single-parameter `trait`/`impl Trait for T` + coherence = orphan rule + global uniqueness, per RFC-0019); `impl` reserved in the lexer (`token.rs` `keyword()` → `Tok::Impl`, never a silent identifier — G2); reject-corpus `reject/14-impl-reserved-ident.myc` added + conformance table entry (self-policed, green); DN-14 §3 row 7 captured (no flip — M-659 flips it); Doc-Index + CHANGELOG updated. Elaboration staged identically to §11.3 (dictionary typing in the checker M-659; L0 lowering of an instantiated dictionary → M-673). No v0 calculus change; no new kernel node (KC-3).
+
       RFC-0007 deferred traits (LR-2) from v0 scope; RFC-0019 (Accepted) ratifies trait coherence and the surface contract. This amendment (append-only §N) records the minimal stage-1 trait surface: `trait T<A> { fn method(…) -> … }` declarations, `impl T<Foo> for Bar { … }` blocks, and coherence obligations (orphan rule + global uniqueness). Also decides `impl` as the reserved keyword (DN-03 §1 records this; must now be reserved in the lexer). Blocks M-659.
       Acceptance: RFC-0007 §N appended with trait surface + impl keyword decision; `impl` reserved in `keyword()` (token.rs) — never a silent identifier; reject-corpus entry for `impl` added; DN-14 §3 row 7 gate formally captured.
 

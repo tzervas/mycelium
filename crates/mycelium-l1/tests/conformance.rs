@@ -83,6 +83,11 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "13-orphan-hypha.myc",
         "only valid inside a `colony",
     ),
+    (
+        // M-658 / RFC-0007 §12: `impl` is reserved (DN-03 §1), so it cannot be an identifier.
+        "14-impl-reserved-ident.myc",
+        "expected an identifier",
+    ),
 ];
 
 #[test]

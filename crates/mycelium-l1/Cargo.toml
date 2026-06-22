@@ -17,6 +17,9 @@ workspace = true
 mycelium-core = { path = "../mycelium-core" }
 mycelium-interp = { path = "../mycelium-interp" }
 mycelium-cert = { path = "../mycelium-cert" }
+# Host-stack management for the recursive checker/elaborator, kept OUTSIDE this trusted kernel so the
+# kernel stays `#![forbid(unsafe_code)]` (ADR-014). The kernel calls only its safe `with_deep_stack`.
+mycelium-stack = { path = "../mycelium-stack" }
 
 [dev-dependencies]
 # The RFC-0007 §4.6 differential: L1-eval vs elaborate→L0-interp vs elaborate→AOT, validated

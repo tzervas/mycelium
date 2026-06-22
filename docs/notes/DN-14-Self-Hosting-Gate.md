@@ -81,7 +81,7 @@ primary evidence for refusals.
 | 3 | **Functions + self-recursion + mutual recursion** (nodule-wide; Tarjan SCC → `FixGroup`) | All | `elab.rs` `FixGroup`; `checkty.rs` Pass 2 + Pass 3; DN-13; M-343 + M-391 | **present** |
 | 4 | **Let bindings + lambda abstractions** (`let`, anonymous `fn`-forms, `for` sugar) | All combinators, `iter`, `error` | `ast.rs` `Expr::Let`; `elab.rs` `elab_lam`; `ast.rs` `Expr::For`; M-343 | **present** |
 | 5 | **Nodule-level organization** (`nodule` header, single-nodule scoping, `use path`) | Any library unit | `ast.rs` `Nodule`/`Item::Use`; `nodule.rs`; DN-06; M-343 | **present** |
-| 6 | **Generic type parameters** (`fn f<A, B>(…)`, `type List<A>`) | `collections`, `iter`, `cmp`, `error`, `math`, `text` | `checkty.rs` line ~167: *"generic type `T<…>` is deferred in v0 (RFC-0007 §4.4) — monomorphic only"*; line ~286: *"generic functions are parsed but deferred in v0"*; RFC-0007 §4.4 | **gate-fails** |
+| 6 | **Generic type parameters** (`fn f<A, B>(…)`, `type List<A>`) | `collections`, `iter`, `cmp`, `error`, `math`, `text` | M-657: `checkty.rs` checks unbounded generics (type vars, unification-based instantiation, arity, never-guess); `elab.rs` **stages** the L0 lowering of a generic *instantiation* as an explicit `Residual` (monomorphization follow-up); RFC-0007 §11 | **partial — type-checks; elaboration staged** |
 | 7 | **Trait-like interfaces** (`trait T { fn … }`) + impl blocks | RFC-0016 §4.1 C1–C6 contract machinery in-language; `iter`, `cmp`, `fmt` | `checkty.rs` line 297: `Item::Trait(_)` is skipped (no check arm); RFC-0007 Accepted scope explicitly defers "traits/LR-2" per RFC-0007 status field; AST parses `TraitDecl` but `checkty` ignores it | **gate-fails** |
 | 8 | **Effect annotations (RFC-0014 RT3)** — declared `{time, entropy, io, …}` on surface `fn` | `rand`, `time`, `io`, `fs`, `recover` | No effect-annotation syntax in `ast.rs` `FnSig` or `FnDecl`; `checkty.rs` has no effect-checking pass (RFC-0007 §4.3: "stage 1, a revision of this RFC"); RFC-0014 effects exist only in the L0 interpreter budget layer (`mycelium-interp`) | **gate-fails** |
 | 9 | **`wild` / FFI surface** — callable host operations | `fs`, `rand`, `io` (std-sys call sites) | `checkty.rs` line ~454: *"`wild` is denied by default (LR-9): no host FFI capability exists in v0, so a wild block cannot be checked or run — this refusal is the design, not a gap"*; `ast.rs` `Expr::Wild` parses but typechecker rejects | **gate-fails** |
@@ -153,6 +153,31 @@ not change whether stdlib authoring in Mycelium-lang is currently possible):
 
 ## Meta — changelog
 
+- **2026-06-22 — §3 row 7 spec gate landed; `impl` reserved (M-658; append-only, no row flip yet).**
+  The **trait** spec gate is in place: **RFC-0007 §12** pins the stage-1 trait surface (single-parameter
+  `trait`/`impl Trait for T` + coherence = orphan rule + global uniqueness, per RFC-0019), and **`impl`
+  is now a reserved lexer keyword** (`Tok::Impl`) — never a silent identifier (G2; reject-corpus
+  `reject/14-impl-reserved-ident.myc`). **Row 7 stays `gate-fails`** — only the landed M-659 trait
+  checker (declaration + `impl`-block checking + coherence + dictionary-passing typing) flips it (and,
+  like row 6, the L0 elaboration of an instantiated dictionary is staged → M-673). Spec gate, not an
+  implementation (VR-5). (RFC-0007 §12; M-658, E7-1)
+- **2026-06-22 — §3 row 6 → *partial* (M-657 checker landed; elaboration staged; append-only).**
+  The generics **checker** is implemented in `crates/mycelium-l1` (RFC-0007 §11): type parameters as
+  abstract variables, generic data + function declarations, **call-site instantiation by
+  unification**, arity checks, and the never-guess refusals (undetermined parameter; a
+  representation-specific op on a type parameter — the RFC-0019 §4.6 restriction). **L0 elaboration of
+  a generic instantiation is staged** behind an explicit never-silent `Residual` (monomorphization —
+  RFC-0007 §11.3), so row 6 is **partial**, *not* `present`: a stdlib nodule that *instantiates* a
+  generic type-checks but does not yet self-host through to L0. Row 6 flips to `present` when the
+  monomorphization follow-up lands (tracked under E7-1). Honest, never silent (VR-5/G2). (M-657, E7-1)
+- **2026-06-22 — §3 row 6 spec gate landed (M-656; append-only, no row flip yet).** The **spec gate**
+  for generics is in place: **RFC-0007 §11** (append-only amendment) discharges the §4.4 deferral by
+  routing it to **RFC-0019 (Accepted)** and pinning the minimally-sufficient stage-1 generics surface
+  for `mycelium-l1` v1 — (a) unbounded parametric generics (`type List<A>`, `fn head<A>`), type
+  parameters as abstract variables (M-657); (b) bounded generics + traits via dictionary-passing
+  (M-658/M-659). **Row 6 stays `gate-fails`** here — only the landed M-657 implementation (checker +
+  elaborator, green `just check`) flips it to `present` (VR-5/honesty: a spec gate is not an
+  implementation). This note records the unblock, not the closure. (RFC-0007 §11; M-656, E7-1)
 - **2026-06-21 — M-649 DEFERRED (post-1.0, ADR-021 §5; M-648/M-649 editorial sweep).** M-649 (Self-hosting Stage-2: first stdlib module in Mycelium-lang) is scoped post-1.0 per ADR-021 §5. Gate status: **5 present / 5 absent**. Present: value types + ADTs, pattern matching, functions + recursion, let/lambda, nodule organization. Absent (gate-fails): (1) generic type parameters (no `List<A>`/`Option<T>` without RFC-0019 enactment), (2) trait interfaces (`impl Trait` blocked — RFC-0019 deferred LR-2), (3) effect annotations (declared effects `fn f() -> T / {time}` — deferred RFC-0014 stage-1), (4) `wild`/FFI surface (denied by design in v0, LR-9; `std-sys` phylum is the roadmap path), (5) static guarantee index (stage-1 graded type checking — RFC-0018 accepted, not yet enacted). These five block all non-trivial stdlib modules from being authored in Mycelium-lang. M-649 stays OPEN with DEFERRED status — it is not blocked, it is scoped to Phase-6 (Stage-1 generics/traits RFC amendments). This note stays **Draft** (M-649 verdict is `not-yet`; self-hosting is not declared until gate-fails resolve). Append-only.
 <!-- changelog: 2026-06-21 Tracking IDs assigned (E7-1 epic, M-656..M-664); append-only -->
 **2026-06-21 — Tracking IDs assigned (append-only).** The five gate-fails (§3 rows 6–9, 11) and

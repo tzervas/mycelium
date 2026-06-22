@@ -42,7 +42,7 @@ pub(crate) enum Pat {
 /// `Ternary` — never a complete signature, so a literal column always needs a default).
 fn signature<'a>(ty: &Ty, types: &'a BTreeMap<String, DataInfo>) -> Option<&'a DataInfo> {
     match ty {
-        Ty::Data(n) => types.get(n),
+        Ty::Data(n, _) => types.get(n),
         _ => None,
     }
 }
@@ -255,6 +255,7 @@ mod tests {
             "Nat".to_owned(),
             DataInfo {
                 name: "Nat".to_owned(),
+                params: vec![],
                 ctors: vec![
                     CtorInfo {
                         name: "Z".to_owned(),
@@ -262,7 +263,7 @@ mod tests {
                     },
                     CtorInfo {
                         name: "S".to_owned(),
-                        fields: vec![Ty::Data("Nat".to_owned())],
+                        fields: vec![Ty::Data("Nat".to_owned(), vec![])],
                     },
                 ],
             },
@@ -279,7 +280,7 @@ mod tests {
         let t = nat_registry();
         // rows: Z, S(_) — a wildcard `_` is then not useful ⇒ exhaustive.
         let rows = vec![vec![ctor("Z", vec![])], vec![ctor("S", vec![Pat::Wild])]];
-        assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into())]).is_none());
+        assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])]).is_none());
     }
 
     #[test]
@@ -287,7 +288,8 @@ mod tests {
         let t = nat_registry();
         // rows: only Z — `_` is useful, witness is the missing `S(_)`.
         let rows = vec![vec![ctor("Z", vec![])]];
-        let w = useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into())]).expect("non-exhaustive");
+        let w = useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])])
+            .expect("non-exhaustive");
         assert_eq!(render(&w[0]), "S(_)");
     }
 
@@ -299,7 +301,8 @@ mod tests {
             vec![ctor("Z", vec![])],
             vec![ctor("S", vec![ctor("Z", vec![])])],
         ];
-        let w = useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into())]).expect("non-exhaustive");
+        let w = useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])])
+            .expect("non-exhaustive");
         assert_eq!(render(&w[0]), "S(S(_))");
     }
 
@@ -312,7 +315,7 @@ mod tests {
             vec![ctor("S", vec![ctor("Z", vec![])])],
             vec![ctor("S", vec![ctor("S", vec![Pat::Wild])])],
         ];
-        assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into())]).is_none());
+        assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Data("Nat".into(), vec![])]).is_none());
     }
 
     #[test]
@@ -321,7 +324,7 @@ mod tests {
         // After Z and S(_), the arm S(Z) is redundant (already covered) ⇒ not useful.
         let prior = vec![vec![ctor("Z", vec![])], vec![ctor("S", vec![Pat::Wild])]];
         let row = vec![ctor("S", vec![ctor("Z", vec![])])];
-        assert!(useful(&t, &prior, &row, &[Ty::Data("Nat".into())]).is_none());
+        assert!(useful(&t, &prior, &row, &[Ty::Data("Nat".into(), vec![])]).is_none());
     }
 
     #[test]

@@ -68,6 +68,11 @@ pub enum Tok {
     Type,
     /// `trait` — typeclass (conventional; `guild` was declined).
     Trait,
+    /// `impl` — trait-instance / inherent-method block (DN-03 §1; RFC-0019 §3.2 `impl Trait for T`;
+    /// RFC-0007 §12). Reserved here (M-658) so it can never silently become an identifier (G2); the
+    /// parser productions (`impl … for …` instances, `impl T { … }` inherent methods) land with the
+    /// trait checker (M-659) and the surface-keyword work (M-664).
+    Impl,
     /// `fn` — function.
     Fn,
     /// `matured` — **reserved keyword** (RFC-0017): maturation is now a scope/header attribute
@@ -233,6 +238,7 @@ pub fn keyword(word: &str) -> Option<Tok> {
         "use" => Tok::Use,
         "type" => Tok::Type,
         "trait" => Tok::Trait,
+        "impl" => Tok::Impl,
         "fn" => Tok::Fn,
         "matured" => Tok::Matured,
         "thaw" => Tok::Thaw,
