@@ -38,6 +38,10 @@
 //! **Honesty (VR-5).** The descriptor's guarantee is `Empirical` — the lowered IR is the real
 //! artifact, its faithfulness evidenced by the differentials (M-302/M-602); never `Proven` (no
 //! machine-checked end-to-end deployment-correctness theorem; G2/VR-5).
+//!
+//! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
+//! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
+#![forbid(unsafe_code)]
 
 use mycelium_core::{ContentHash, GuaranteeStrength, Node};
 

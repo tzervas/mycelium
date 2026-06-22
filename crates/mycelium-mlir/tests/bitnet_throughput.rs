@@ -55,13 +55,16 @@ fn activations(n: usize) -> Vec<i32> {
 /// noise). The kernel is compiled once (compile-once/call-many — the deployment shape).
 fn bench_ns(kernel: &BitnetDotKernel, packed: &[u8], x: &[i32], n: usize, iters: usize) -> f64 {
     let mut samples = Vec::with_capacity(iters);
+    // Bind once (resolve the symbol a single time, M-682) so the timed loop measures the kernel, not
+    // per-iteration `dlsym`.
+    let bound = kernel.bind().expect("bind kernel");
     // warm-up (page-in, branch predictor) — not measured.
     for _ in 0..8 {
-        std::hint::black_box(kernel.call(packed, x, n).expect("kernel runs"));
+        std::hint::black_box(bound.call(packed, x, n).expect("kernel runs"));
     }
     for _ in 0..iters {
         let t = std::time::Instant::now();
-        std::hint::black_box(kernel.call(packed, x, n).expect("kernel runs"));
+        std::hint::black_box(bound.call(packed, x, n).expect("kernel runs"));
         #[allow(clippy::cast_precision_loss)]
         samples.push(t.elapsed().as_nanos() as f64);
     }

@@ -2377,7 +2377,7 @@ issues:
   - id: M-678
     title: "M-678 (epic) — Unsafe-code hardening (DN-21): justify, confine, and lifetime-bind the JIT FFI"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:epic, area:execution, priority:P2, status:todo]
+    labels: [phase:6, type:epic, area:execution, priority:P2, status:done]
     doc_refs: [corpus:DN-21, corpus:ADR-014, src:crates/mycelium-mlir/src/jit.rs]
     body: |
       Parent for the DN-21 unsafe-code hardening survey. The whole workspace has exactly 6 `unsafe` blocks, all dynamic-linking FFI in `crates/mycelium-mlir` (`jit.rs` ×4: dlopen/dlsym/dlclose/transmute-call; `bitnet.rs:349`; `specialize.rs:128`); 29 crates are `#![forbid(unsafe_code)]` and the interpreter trusted base is unsafe-free. All 6 carry ADR-014 `// SAFETY:` comments (3 thin, none wrong). This epic enacts ADR-014's named follow-ons + closes the `BitnetDotKernel` co-location dangling-ptr risk, all behaviour-preserving and zero-new-dependency. Children: M-679 (quick-win SAFETY hardening), M-680 (forbid-pin the trusted base + zero-unsafe mlir submodules), M-681 (`just safety-check` adjacency gate), M-682 (in-house `Sym<'lib,T>` lifetime-binding newtype), M-683 (document the audit_wild/.rs scope split). See DN-21 §6 for the priority/risk table; §7 names the irreducible-unsafe floor (do NOT rewrite the SIMD in Rust intrinsics — it lives in JIT'd LLVM IR by design).
@@ -2385,7 +2385,7 @@ issues:
   - id: M-679
     title: "M-679 — chore(mlir): strengthen the 3 thin JIT-FFI `// SAFETY:` comments + add null-ptr debug_asserts"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:chore, area:execution, priority:P1, status:todo]
+    labels: [phase:6, type:chore, area:execution, priority:P1, status:done]
     depends_on: [M-678]
     doc_refs: [corpus:DN-21, corpus:ADR-014, src:crates/mycelium-mlir/src/jit.rs]
     body: |
@@ -2394,7 +2394,7 @@ issues:
   - id: M-680
     title: "M-680 — chore: re-pin `#![forbid(unsafe_code)]` on the trusted base + zero-unsafe mlir submodules"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:chore, area:execution, priority:P1, status:todo]
+    labels: [phase:6, type:chore, area:execution, priority:P1, status:done]
     depends_on: [M-678]
     doc_refs: [corpus:DN-21, corpus:ADR-014]
     body: |
@@ -2403,7 +2403,7 @@ issues:
   - id: M-681
     title: "M-681 — infra(check): `just safety-check` — assert every Rust `unsafe` has an adjacent `// SAFETY:`"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:infra, area:toolchain, priority:P2, status:todo]
+    labels: [phase:6, type:infra, area:toolchain, priority:P2, status:done]
     depends_on: [M-678]
     doc_refs: [corpus:DN-21, corpus:ADR-014, src:scripts/checks]
     body: |
@@ -2412,7 +2412,7 @@ issues:
   - id: M-682
     title: "M-682 — feat(mlir): in-house `Sym<'lib, T>` newtype — lifetime-bind dlsym results to the owning Lib"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:done]
     depends_on: [M-678, M-679]
     doc_refs: [corpus:DN-21, corpus:ADR-014, src:crates/mycelium-mlir/src/jit.rs, src:crates/mycelium-mlir/src/bitnet.rs]
     body: |
@@ -2421,7 +2421,7 @@ issues:
   - id: M-683
     title: "M-683 — docs(spec): document the `audit_wild` (.myc) vs `clippy -A unsafe_code` (.rs) two-population split"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:docs, area:spec, priority:P3, status:todo]
+    labels: [phase:6, type:docs, area:spec, priority:P3, status:done]
     depends_on: [M-678]
     doc_refs: [corpus:DN-21, src:docs/spec/Security-Checks-Contract.md]
     body: |

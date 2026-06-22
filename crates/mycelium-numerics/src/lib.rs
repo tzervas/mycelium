@@ -18,6 +18,9 @@
 //!
 //! All three normative composition properties (RFC-0001 §4.7) are property-tested in
 //! `tests/properties.rs`: **Soundness**, **Monotonicity**, **Determinism**.
+//!
+//! **Trusted-base discipline (ADR-014 / DN-21 §5 F-1):** zero `unsafe` — compiler-enforced.
+#![forbid(unsafe_code)]
 
 pub mod cert;
 pub mod error;

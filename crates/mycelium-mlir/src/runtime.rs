@@ -25,6 +25,10 @@
 //! for tasks that talk) — landed in [`crate::channel`], driven by [`Scope::run_dataflow`] over a
 //! [`channel::Network`](crate::channel::Network). Nondeterministic forms (`select`, placement) stay
 //! RT3 constructs with reified policies — out of scope.
+//!
+//! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
+//! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
+#![forbid(unsafe_code)]
 
 use mycelium_core::{CoreValue, Node};
 use mycelium_interp::{Budgets, CancelToken, EvalError, PrimRegistry, SwapEngine, TaskOutcome};
