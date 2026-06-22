@@ -31,6 +31,10 @@
 //! upgraded; the reduction is exact i64 integer arithmetic. The speedup over the scalar JIT kernels is
 //! whatever `cargo xtask e1` §5 measures over runtime data; no target is pre-written. The scalar
 //! kernels stay the oracle.
+//!
+//! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
+//! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
+#![forbid(unsafe_code)]
 
 use mycelium_core::PackScheme;
 
@@ -148,13 +152,7 @@ pub fn compile_bitnet_dot_simd() -> Result<BitnetDotKernel, AotError> {
     )?;
 
     let lib = dlopen_path(&so)?;
-    let fptr = lib.sym(SIMD_SYM)?;
-    Ok(BitnetDotKernel::from_loaded(
-        guard,
-        lib,
-        fptr,
-        PackScheme::I2S,
-    ))
+    BitnetDotKernel::from_loaded(guard, lib, SIMD_SYM, PackScheme::I2S)
 }
 
 /// Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel
@@ -271,13 +269,7 @@ pub fn compile_bitnet_dot_simd_tl1() -> Result<BitnetDotKernel, AotError> {
     )?;
 
     let lib = dlopen_path(&so)?;
-    let fptr = lib.sym(SIMD_TL1_SYM)?;
-    Ok(BitnetDotKernel::from_loaded(
-        guard,
-        lib,
-        fptr,
-        PackScheme::Tl1,
-    ))
+    BitnetDotKernel::from_loaded(guard, lib, SIMD_TL1_SYM, PackScheme::Tl1)
 }
 
 /// Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel
@@ -624,13 +616,7 @@ pub fn compile_bitnet_dot_simd_tl2() -> Result<BitnetDotKernel, AotError> {
     )?;
 
     let lib = dlopen_path(&so)?;
-    let fptr = lib.sym(SIMD_TL2_SYM)?;
-    Ok(BitnetDotKernel::from_loaded(
-        guard,
-        lib,
-        fptr,
-        PackScheme::Tl2,
-    ))
+    BitnetDotKernel::from_loaded(guard, lib, SIMD_TL2_SYM, PackScheme::Tl2)
 }
 
 #[cfg(test)]

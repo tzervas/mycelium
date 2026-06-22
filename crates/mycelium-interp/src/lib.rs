@@ -102,6 +102,9 @@
 //! [`swap::IdentitySwapEngine`]); the full term language (abstraction/recursion/modules) is a later
 //! RFC. Composing an *approximate* input is refused until the ADR-010 bound kernels land (Phase 2 /
 //! E2-4).
+//!
+//! **Trusted-base discipline (ADR-014 / DN-21 §5 F-1):** zero `unsafe` — compiler-enforced.
+#![forbid(unsafe_code)]
 
 pub mod budget;
 pub mod prims;

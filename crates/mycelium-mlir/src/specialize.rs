@@ -29,18 +29,22 @@
 //! target is pre-written. The specialization is honest *runtime* data (the weights are a runtime
 //! input baked at JIT time), not a constant-folded closed kernel — the activations stay runtime
 //! pointers, so the compute is real.
+//!
+//! **Submodule confinement (DN-21 §5 F-2 / M-682):** zero `unsafe` — the ABI `transmute` is confined
+//! to the single `crate::jit::Lib::get` choke-point, so this kernel resolves its symbol as a
+//! lifetime-bound `Sym` and calls it through ordinary safe Rust; compiler-enforced.
+#![forbid(unsafe_code)]
 
-use std::ffi::c_void;
 use std::fmt::Write as _;
 
 use mycelium_core::ternary::digit;
 use mycelium_core::Trit;
 
-use crate::jit::{dlopen_path, Lib};
+use crate::jit::{dlopen_path, Lib, SpecDotFn, Sym};
 use crate::llvm::{path, run_tool, unique_tmp_dir, AotError, TmpDir};
 
 /// The specialized kernel's symbol — distinct from the generic [`crate::bitnet`] kernel so both can be
-/// loaded at once (e.g. for the E1 §4 differential timing).
+/// loaded at once (e.g. for the E1 §4 differential timing). Matches the symbol `Lib::spec_dot` resolves.
 const SPEC_SYM: &str = "myc_bitnet_dot_spec";
 
 /// Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel
@@ -87,8 +91,7 @@ pub fn emit_specialized_dot_ir(weights: &[Trit]) -> String {
 /// [`SpecializedDotKernel::call`]. Compile once per weight vector, call many — the inference shape.
 pub struct SpecializedDotKernel {
     _dir: TmpDir,
-    _lib: Lib,
-    fptr: *mut c_void,
+    lib: Lib,
     /// Logical lane count baked into the kernel — fixes the activation-buffer bound.
     n: usize,
     /// How many lanes survived specialization (nonzero weights) — inspectable sparsity metadata.
@@ -109,6 +112,36 @@ impl SpecializedDotKernel {
         self.nonzero
     }
 
+    /// **Bind once, call many** (M-682): resolve the `myc_bitnet_dot_spec` entry point a single time
+    /// into a lifetime-bound [`BoundSpecializedDot`] borrowing this kernel's loaded library, so the
+    /// borrow checker guarantees its fn-pointer cannot outlive the `Lib` (DN-21 §4). Bind once and
+    /// reuse for a hot loop over varying activation buffers — the inference shape.
+    pub fn bind(&self) -> Result<BoundSpecializedDot<'_>, AotError> {
+        Ok(BoundSpecializedDot {
+            kernel: self.lib.spec_dot()?,
+            n: self.n,
+        })
+    }
+
+    /// Run the specialized kernel over `activations`, returning `Σ digit(wᵢ)·activations[i]` for the
+    /// baked-in weights. Convenience wrapper that [`bind`](Self::bind)s once and calls; for a hot loop
+    /// bind once and reuse the [`BoundSpecializedDot`]. A short buffer is an explicit [`AotError::Run`],
+    /// never an out-of-bounds read.
+    pub fn call(&self, activations: &[i32]) -> Result<i64, AotError> {
+        self.bind()?.call(activations)
+    }
+}
+
+/// A [`SpecializedDotKernel`] with its entry point resolved into a lifetime-bound `Sym` (M-682).
+/// Produced by [`SpecializedDotKernel::bind`]; borrows the kernel's loaded library for `'lib`, so its
+/// fn-pointer can never be called after the library unloads (the §4 dangling-pointer risk, now
+/// compiler-checked). Call it over as many activation buffers as needed — `dlsym` was paid once.
+pub struct BoundSpecializedDot<'lib> {
+    kernel: Sym<'lib, SpecDotFn>,
+    n: usize,
+}
+
+impl BoundSpecializedDot<'_> {
     /// Run the specialized kernel over `activations`, returning `Σ digit(wᵢ)·activations[i]` for the
     /// baked-in weights. `activations.len()` is checked against the baked lane count `n` so every load
     /// is in bounds — a short buffer is an explicit [`AotError::Run`], never an out-of-bounds read.
@@ -120,16 +153,11 @@ impl SpecializedDotKernel {
                 activations.len()
             )));
         }
-        // SAFETY: `fptr` is the address `dlsym` returned for the `i64 myc_bitnet_dot_spec(ptr)` we
-        // just emitted and compiled, so the `extern "C"` type matches. The kernel reads only
-        // `x[i]` for the baked nonzero lanes `i < n`, all in-bounds by the check above. The library
-        // stays loaded for the call (`_lib`).
-        #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
-        let sum = unsafe {
-            let kernel: extern "C" fn(*const i32) -> i64 = std::mem::transmute(self.fptr);
-            kernel(activations.as_ptr())
-        };
-        Ok(sum)
+        // The kernel reads only `x[i]` for the baked nonzero lanes `i < n`, all in-bounds by the check
+        // above. Calling the typed `extern "C"` pointer is ordinary safe Rust — the ABI claim was made
+        // (and audited) once at `Lib::get`, and the `Sym` lifetime keeps the library loaded for this
+        // call (M-682; DN-21 §4/§7).
+        Ok((self.kernel.as_fn())(activations.as_ptr()))
     }
 }
 
@@ -161,11 +189,11 @@ pub fn compile_specialized_dot(weights: &[Trit]) -> Result<SpecializedDotKernel,
     )?;
 
     let lib = dlopen_path(&so)?;
-    let fptr = lib.sym(SPEC_SYM)?;
+    // Fail fast: verify the entry point is exported now (pre-M-682 behaviour), not at first bind/call.
+    lib.probe(SPEC_SYM)?;
     Ok(SpecializedDotKernel {
         _dir: guard,
-        _lib: lib,
-        fptr,
+        lib,
         n: weights.len(),
         nonzero: weights.iter().filter(|w| digit(**w) != 0).count(),
     })

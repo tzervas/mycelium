@@ -40,6 +40,10 @@
 //! `Swap` (swap to non-binary/ternary repr), Dense/VSA representations. Each is an explicit
 //! [`AotError`]. The MLIR dialect path stays the eventual home (`dialect::emit` is its dumpable
 //! skeleton), deferred until libMLIR exists.
+//!
+//! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
+//! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
+#![forbid(unsafe_code)]
 
 use std::collections::HashMap;
 use std::fmt;
