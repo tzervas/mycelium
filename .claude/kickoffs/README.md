@@ -39,27 +39,25 @@ main` promotes it up.
 
 | UID | Kickoff | Isolated tree (owns) | Swarm method | Depends on |
 |---|---|---|---|---|
+| **`run`** | `run.md` | `crates/mycelium-l1/**` (+ one new `.myc`) | Opus · **serial-on-L1** | — (critical path) |
+| **`srf`** | `srf.md` | `crates/mycelium-l1/**` · `.claude/memory/lang-lexicon-syntax.md` | Opus · **serial-on-L1** | — (M-659 checker landed) |
+| **`tul`** | `tul.md` | `tools/github/**` | Sonnet (docs/tooling) | — (needs GitHub read access) |
 | **`dfr`** | `dfr.md` | `research/12,13` · RFC-0022/0023 Status · `docs/notes/research-prompts.md` | Opus reasoners (docs-only) | — (gates `dfb`) |
 | **`dfb`** | `dfb.md` | `crates/mycelium-web/` · `crates/mycelium-adk/` (NEW) | Sonnet · parallel-leaf | `dfr` + the L1 surface |
 
-**`dfr` is ready now** (docs-only, disjoint — fire it any time). `dfb` is gated (needs `dfr`'s research
-discharged + the L1 surface). Cross-work continuity rides the **issues**
-(`tools/github/issues.yaml` `depends_on` + body notes), never by touching another tree's files.
-(`dfr`/`dfb` predate this workflow — ignore their old `claude/head/*` references; they now branch off
-`dev` like everything else.)
+**Parallelism (collision profile):**
+- **`run` and `srf` share `crates/mycelium-l1` → they SERIALIZE** (one L1 editor at a time —
+  mitigation #7). Run them in **one** session: **`run` first** (it's the critical-path unblock that
+  flips M-657/M-659 to done and opens self-hosting), then `srf`. Neither blocks the other; the order
+  is by priority.
+- **`tul` ⟂ `dfr` ⟂ (the L1 track) are fully disjoint — fire them in parallel** (separate sessions).
+  `tul` = `tools/github/` only; `dfr` = research/docs only; the L1 track = `crates/mycelium-l1`.
+- **`dfb`** stays gated (needs `dfr`'s research discharged + the L1 surface).
 
-### Next candidates (unblocked — for the next short-coded kickoffs)
-The L1 critical path continues from where `lex` left off. Disjoint, ready to cut as fresh kickoffs:
-- **`M-673`** — monomorphization elaboration for generic instantiations (`crates/mycelium-l1/**`). The
-  highest-value unblock: it flips **M-657**/**M-659** from checker-only (in-progress) to fully done
-  (DN-14 §3 rows 6/7 → `present`) and unblocks **M-649** self-hosting of a *generic* stdlib nodule.
-- **`E7-2 R1`** — **M-667** (`fuse`/`reclaim`/`tier`) after M-665/M-666 (`hypha`/`colony`) landed;
-  then **M-668** (R2 planning, docs).
-- **`M-664`** — `consume`/`grow`/`impl` surface keywords (needs the M-659 trait **checker**, which
-  has landed; M-659 itself stays `in-progress` until M-673 lands its dictionary-passing elaboration).
-- **`M-649`** — first self-hosted stdlib module: a *non-generic* candidate (`std.ternary`/`std.option`)
-  is doable on the current surface **now**; a generic one waits on `M-673`.
-- Tooling (lower priority, mostly disjoint): **M-675** (idmap↔GitHub reconcile), **M-676**, **M-677**.
+Cross-work continuity rides the **issues** (`tools/github/issues.yaml` `depends_on` + body notes),
+never by touching another tree's files. (`dfr`/`dfb` predate this workflow — ignore their old
+`claude/head/*` references; they now branch off `dev` like everything else.) **M-677** (effect→budget
+runtime) is L1-collision and runs inside the `run`/`srf` serial track, not as its own parallel wave.
 
 ## Completed (archived)
 - **`e7l` / `e7lb` / `e7lc`** — the E7-1/E7-2 L1-surface chain **M-656 → M-662 LANDED** on `main`
