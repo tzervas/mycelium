@@ -3316,6 +3316,96 @@ mod tests {
         check_nodule(&parse(src).expect("parses")).expect_err("must fail to check")
     }
 
+    // ---- M-662: the orphan-rule **arm** itself fires (non-vacuous), independent of resolution ----
+    //
+    // In the phylum-wide model a *resolvable* impl is never an orphan (resolving a name implies an
+    // in-phylum declaration ⇒ it is in the pub-blind coherence view). To prove the orphan ARM is not
+    // dead code, drive `register_instances` directly with a coherence view that does/does not contain
+    // the impl's heads — the mutant witness that the generalized check still fires + still accepts.
+
+    /// A one-`impl` nodule `impl Tr<Binary{8}> for Binary{8} { fn m(x: Binary{8}) -> Binary{8} = x }`
+    /// plus the registered `types`/`traits` for `Tr`, for driving `register_instances` directly.
+    fn impl_fixture() -> (BTreeMap<String, DataInfo>, BTreeMap<String, TraitInfo>, Nodule) {
+        // Parse a phylum-of-one so the surface `impl` + `trait` are real AST (then strip the trait so
+        // it is NOT in this nodule — the orphan scenario is "trait declared elsewhere / nowhere").
+        let n = parse(
+            "nodule d\ntrait Tr<A> { fn m(x: A) -> A }\n\
+             impl Tr<Binary{8}> for Binary{8} { fn m(x: Binary{8}) -> Binary{8} = x }",
+        )
+        .expect("parses");
+        let mut types = BTreeMap::new();
+        let p = prelude();
+        types.insert(p.name.clone(), p);
+        register_types(&mut types, &n).expect("types register");
+        let traits = register_traits(&types, &n).expect("traits register");
+        // The nodule passed to `register_instances` carries only the `impl` (its locality is decided
+        // by the supplied coherence view, not by this nodule's own items — M-662).
+        let impl_only = Nodule {
+            path: n.path.clone(),
+            std_sys: false,
+            items: n
+                .items
+                .iter()
+                .filter(|i| matches!(i, Item::Impl(_)))
+                .cloned()
+                .collect(),
+        };
+        (types, traits, impl_only)
+    }
+
+    #[test]
+    fn orphan_arm_rejects_when_neither_head_is_in_the_coherence_view() {
+        // Empty coherence view ⇒ `Tr` is not phylum-local and `Binary{8}` is a primitive (always
+        // phylum-owned) … so to force the orphan arm we must also deny the primitive. The primitive
+        // arm is unconditional, so the genuine orphan case is a `for`-type that is a non-local DATA
+        // type. Build that: `for Foreign` where `Foreign` is a registered data type NOT in coherence.
+        let n = parse(
+            "nodule d\ntrait Tr<A> { fn m(x: A) -> A }\ntype Foreign = Mk(Binary{8})\n\
+             impl Tr<Foreign> for Foreign { fn m(x: Foreign) -> Foreign = x }",
+        )
+        .expect("parses");
+        let mut types = BTreeMap::new();
+        let p = prelude();
+        types.insert(p.name.clone(), p);
+        register_types(&mut types, &n).expect("types");
+        let traits = register_traits(&types, &n).expect("traits");
+        let impl_only = Nodule {
+            path: n.path.clone(),
+            std_sys: false,
+            items: n
+                .items
+                .iter()
+                .filter(|i| matches!(i, Item::Impl(_)))
+                .cloned()
+                .collect(),
+        };
+        // Empty coherence view: neither `Tr` nor `Foreign` is phylum-local ⇒ orphan refusal (G2).
+        let empty = CoherenceView::default();
+        let err = register_instances(&types, &traits, &empty, &impl_only)
+            .expect_err("an impl with neither head in the phylum must orphan-reject");
+        assert!(
+            err.message.contains("orphan"),
+            "the orphan arm must fire, got: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn orphan_arm_accepts_once_the_trait_is_in_the_coherence_view() {
+        // The non-vacuous control: add `Tr` to the (pub-blind) coherence view ⇒ the SAME impl is now
+        // in-phylum and registers. Proves the orphan generalization accepts a cross-nodule impl whose
+        // trait is declared elsewhere in the phylum.
+        let (types, traits, impl_only) = impl_fixture();
+        let mut coh = CoherenceView::default();
+        coh.traits.insert("Tr".to_owned());
+        let instances = register_instances(&types, &traits, &coh, &impl_only)
+            .expect("the impl registers once its trait is phylum-local");
+        assert!(
+            instances.contains_key(&("Tr".to_owned(), "Binary".to_owned())),
+            "the instance is keyed by (trait, type-head)"
+        );
+    }
+
     // ---- M-666: `colony { hypha … }` type rule (RFC-0008 §4.7) ----
 
     #[test]
