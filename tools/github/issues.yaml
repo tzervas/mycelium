@@ -2374,6 +2374,59 @@ issues:
     doc_refs: [corpus:RFC-0014, src:crates/mycelium-l1/src/checkty.rs]
     body: |
       M-660 landed the effect-annotation SURFACE + the checker-side coverage check (declared ⊇ performed); it does NOT wire declared effects into the runtime. This issue: (1) thread a fn's declared effect set through elaboration to the L0 evaluator so the `mycelium-interp::budget` ledger (M-353) is primed/consumed per declared effect; (2) add the per-effect BUDGET surface syntax (`!{retry(<=3), alloc(<=64KiB)}` — RFC-0014 §3.4/I4) that M-660 left out (M-660 parses the effect SET only); (3) an overrun yields the explicit `EffectBudgetExhausted` (RFC-0014 I4), never a hang/OOM. No new L0 node (KC-3) — effects stay metadata threaded as budgets. Acceptance: a budgeted effectful fn runs under its budget and yields `EffectBudgetExhausted` on overrun; the M-210 three-way differential agrees; property test for budget monotonicity.
+  - id: M-678
+    title: "M-678 (epic) — Unsafe-code hardening (DN-21): justify, confine, and lifetime-bind the JIT FFI"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:epic, area:execution, priority:P2, status:todo]
+    doc_refs: [corpus:DN-21, corpus:ADR-014, src:crates/mycelium-mlir/src/jit.rs]
+    body: |
+      Parent for the DN-21 unsafe-code hardening survey. The whole workspace has exactly 6 `unsafe` blocks, all dynamic-linking FFI in `crates/mycelium-mlir` (`jit.rs` ×4: dlopen/dlsym/dlclose/transmute-call; `bitnet.rs:349`; `specialize.rs:128`); 29 crates are `#![forbid(unsafe_code)]` and the interpreter trusted base is unsafe-free. All 6 carry ADR-014 `// SAFETY:` comments (3 thin, none wrong). This epic enacts ADR-014's named follow-ons + closes the `BitnetDotKernel` co-location dangling-ptr risk, all behaviour-preserving and zero-new-dependency. Children: M-679 (quick-win SAFETY hardening), M-680 (forbid-pin the trusted base + zero-unsafe mlir submodules), M-681 (`just safety-check` adjacency gate), M-682 (in-house `Sym<'lib,T>` lifetime-binding newtype), M-683 (document the audit_wild/.rs scope split). See DN-21 §6 for the priority/risk table; §7 names the irreducible-unsafe floor (do NOT rewrite the SIMD in Rust intrinsics — it lives in JIT'd LLVM IR by design).
+
+  - id: M-679
+    title: "M-679 — chore(mlir): strengthen the 3 thin JIT-FFI `// SAFETY:` comments + add null-ptr debug_asserts"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:chore, area:execution, priority:P1, status:todo]
+    depends_on: [M-678]
+    doc_refs: [corpus:DN-21, corpus:ADR-014, src:crates/mycelium-mlir/src/jit.rs]
+    body: |
+      DN-21 §3/§4: three `// SAFETY:` comments are thin (none wrong). Strengthen them — behaviour-preserving (docs + dev-asserts only): (1) `jit.rs:150` `dlclose` — state the dangling-pointer obligation (no derived symbol ptr may outlive the `Lib`; §4); (2) `jit.rs:181` `dlsym` — spell out the handle-liveness chain (`self.0` is non-null by `open_lib` construction); (3) `jit.rs:168` `dlopen` — note the `RTLD_NOW = 2` platform assumption + the no-global-ctors fact. Add `debug_assert!(!ptr.is_null())` at the 4 FFI/transmute sites so the "checked non-null" preconditions are machine-checked in dev/test builds (zero release cost — ADR-014 dev-warn ethos). Acceptance: comments updated, asserts in place, `just check` green, no behaviour change.
+
+  - id: M-680
+    title: "M-680 — chore: re-pin `#![forbid(unsafe_code)]` on the trusted base + zero-unsafe mlir submodules"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:chore, area:execution, priority:P1, status:todo]
+    depends_on: [M-678]
+    doc_refs: [corpus:DN-21, corpus:ADR-014]
+    body: |
+      DN-21 §5 F-1/F-2: convert "no unsafe by convention" into compiler-enforced. (1) Add `#![forbid(unsafe_code)]` to the ADR-014-designated trusted base that lacks it — `mycelium-core`, `mycelium-cert`, `mycelium-numerics`, `mycelium-vsa`, `mycelium-interp`, `mycelium-select` (all zero-unsafe today; ADR-014 recommends this). (2) Add a per-file `#![forbid(unsafe_code)]` to the 11 zero-unsafe `mycelium-mlir` submodules (`aot`, `llvm`, `pack`, `dialect`, `runtime`, `simd`, `inject`, `budget`, `channel`, `deploy`, `vr4`), confining unsafe to exactly `jit`/`bitnet`/`specialize` while the crate stays `"warn"` for those three. Acceptance: the pins compile (proving zero-unsafe), `just check` green; a deliberate `unsafe` added to any pinned module now hard-fails (mutant-witness).
+
+  - id: M-681
+    title: "M-681 — infra(check): `just safety-check` — assert every Rust `unsafe` has an adjacent `// SAFETY:`"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:infra, area:toolchain, priority:P2, status:todo]
+    depends_on: [M-678]
+    doc_refs: [corpus:DN-21, corpus:ADR-014, src:scripts/checks]
+    body: |
+      DN-21 §5 F-3: close the ADR-014-named follow-on. Add a `just safety-check` recipe (skip-graceful shell/python, no new dependency) that finds every `unsafe {` / `unsafe fn` / `unsafe impl` in `crates/` and asserts a `// SAFETY:` comment within a small window above (the ADR-014 convention), failing loudly otherwise (G2). Wire it into `scripts/checks/all.sh` (the `just check` non-test gate set). Today the 6 blocks comply, so the gate is green on landing; it prevents a future undocumented `unsafe` from slipping past the `"warn"` lint + review. Acceptance: gate green now; a deliberately un-commented `unsafe` trips it (mutant-witness); local↔CI parity preserved.
+
+  - id: M-682
+    title: "M-682 — feat(mlir): in-house `Sym<'lib, T>` newtype — lifetime-bind dlsym results to the owning Lib"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    depends_on: [M-678, M-679]
+    doc_refs: [corpus:DN-21, corpus:ADR-014, src:crates/mycelium-mlir/src/jit.rs, src:crates/mycelium-mlir/src/bitnet.rs]
+    body: |
+      DN-21 §4/§6: close the `BitnetDotKernel`/`SpecializedDotKernel` co-location dangling-pointer risk (the `fptr: *mut c_void` raw field is kept live only by field-ordering convention, not a compiler-checked lifetime). Maintainer-chosen approach (over `libloading`): a small **in-house `Sym<'lib, T>` newtype** (zero new dependency — KC-3) that ties a `dlsym` result's lifetime to the `&'lib Lib` that owns it, so the borrow checker enforces "symbol does not outlive library" structurally. Replace the raw `fptr` field with the lifetime-bound type. The irreducible unsafe (calling the JIT'd fn-ptr; the ABI `transmute`) stays — DN-21 §7 — now behind a single audited choke-point. NEEDS-DESIGN: the kernel structs own their `Lib`, so a naive `Sym<'lib,T>` field is self-referential — design the ownership carefully (e.g. resolve-at-call-time keeping the current pattern but lifetime-expressed, or an owning-handle shape). Acceptance: no raw `*mut c_void` field survives; the JIT differential + workspace suite green (behaviour-preserving); no hot-path perf regression; no new dependency.
+
+  - id: M-683
+    title: "M-683 — docs(spec): document the `audit_wild` (.myc) vs `clippy -A unsafe_code` (.rs) two-population split"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:docs, area:spec, priority:P3, status:todo]
+    depends_on: [M-678]
+    doc_refs: [corpus:DN-21, src:docs/spec/Security-Checks-Contract.md]
+    body: |
+      DN-21 §5 F-4: the `myc-sec` `audit_wild` gate scans `.myc` files for the in-language `wild { }` surface; it does NOT cover the Rust `unsafe { }` in `mycelium-mlir` (those are governed by `clippy -A unsafe_code` + the `// SAFETY:` convention + the new M-681 gate). This two-population model (`.myc` ⟂ `.rs`) is architecturally correct but implicit. Add one clarifying paragraph to `docs/spec/Security-Checks-Contract.md` §4 making the boundary explicit, so a reader does not mistake `audit_wild` for covering Rust unsafe. Docs-only. Acceptance: the §4 clarification lands; `just check` (doc gates) green.
+
   - id: M-661
     title: "M-661 — feat(l1): `wild` block typechecking — enable auditable FFI surface in std-sys context"
     milestone: "Phase 5 — Self-Hosting & Core Library"
