@@ -152,11 +152,10 @@ pub fn compile_bitnet_dot_simd() -> Result<BitnetDotKernel, AotError> {
     )?;
 
     let lib = dlopen_path(&so)?;
-    let fptr = lib.sym(SIMD_SYM)?;
     Ok(BitnetDotKernel::from_loaded(
         guard,
         lib,
-        fptr,
+        SIMD_SYM,
         PackScheme::I2S,
     ))
 }
@@ -275,11 +274,10 @@ pub fn compile_bitnet_dot_simd_tl1() -> Result<BitnetDotKernel, AotError> {
     )?;
 
     let lib = dlopen_path(&so)?;
-    let fptr = lib.sym(SIMD_TL1_SYM)?;
     Ok(BitnetDotKernel::from_loaded(
         guard,
         lib,
-        fptr,
+        SIMD_TL1_SYM,
         PackScheme::Tl1,
     ))
 }
@@ -628,11 +626,10 @@ pub fn compile_bitnet_dot_simd_tl2() -> Result<BitnetDotKernel, AotError> {
     )?;
 
     let lib = dlopen_path(&so)?;
-    let fptr = lib.sym(SIMD_TL2_SYM)?;
     Ok(BitnetDotKernel::from_loaded(
         guard,
         lib,
-        fptr,
+        SIMD_TL2_SYM,
         PackScheme::Tl2,
     ))
 }

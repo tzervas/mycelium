@@ -7,10 +7,13 @@
 //! that must agree with the reference interpreter on the observable (`repr + payload + guarantee`,
 //! NFR-7/RR-12) — checked in `tests/jit_differential.rs`.
 //!
-//! **Intentional unsafe (ADR-014).** This is the first `unsafe` in the workspace: the dynamic-linker
-//! FFI (`dlopen`/`dlsym`/`dlclose`, resolved via libc — no new dependency) and the one fn-pointer
-//! `transmute`. Each site carries a `// SAFETY:` justification and
-//! `#[cfg_attr(not(debug_assertions), allow(unsafe_code))]` (warns in dev/test as the caution
+//! **Intentional unsafe (ADR-014; confined per DN-21/M-682).** This module is the workspace's *only*
+//! `unsafe`: the dynamic-linker FFI (`dlopen`/`dlsym`/`dlclose`, declared with a bare `extern "C"` —
+//! no `libc` dependency) and the single ABI `transmute` in `Lib::get`. The fn-pointer `transmute`
+//! is consolidated into that one audited choke-point (`Lib::get` → a lifetime-bound `Sym`), so the
+//! BitNet/specialized dot kernels call their resolved pointers through ordinary safe Rust and are
+//! themselves `#![forbid(unsafe_code)]`. Each remaining `unsafe` carries a `// SAFETY:` justification
+//! and `#[cfg_attr(not(debug_assertions), allow(unsafe_code))]` (warns in dev/test as the caution
 //! incentive, silent in release).
 //!
 //! **Honesty / E1.** The kernel is *closed* (constants baked in), so `clang` constant-folds it — the
@@ -21,6 +24,7 @@
 
 use std::ffi::{c_void, CString};
 use std::fmt::Write as _;
+use std::marker::PhantomData;
 use std::os::raw::{c_char, c_int};
 use std::path::PathBuf;
 
@@ -106,25 +110,14 @@ impl JitArtifact {
     /// `Value`. Returns an explicit [`AotError`] on any FFI failure — never a silent/garbage result.
     pub fn call(&self) -> Result<Value, AotError> {
         let lib = dlopen_path(&self.so)?; // dlclose on drop
-        let fptr = lib.sym("myc_kernel")?;
-        // `sym` returns an explicit error on a null result, so `fptr` is non-null here; the
-        // debug-assert makes that precondition machine-checked in dev/test builds (DN-21 §6 M-679).
-        debug_assert!(
-            !fptr.is_null(),
-            "lib.sym must return a non-null address or Err"
-        );
 
+        // Resolve through the single ABI choke-point (M-682): `kernel` is a typed, lifetime-bound
+        // `Sym` that borrows `lib`, so the borrow checker guarantees the fn-pointer is not called
+        // after `lib` (the `.so`) is unloaded. `buf` is exactly `self.width` bytes and the kernel
+        // writes one byte per result element only on the ok path, so the write is in-bounds.
+        let kernel = lib.get::<extern "C" fn(*mut u8) -> i32>("myc_kernel")?;
         let mut buf = vec![0u8; self.width];
-        // SAFETY: `fptr` is the address `dlsym` returned for the `i32 myc_kernel(ptr)` we just
-        // emitted and compiled, so the `extern "C" fn(*mut u8) -> i32` type matches; `buf` is exactly
-        // `self.width` bytes and the kernel writes one byte per result element (`self.width` total)
-        // only on the ok path, so the write is in-bounds. The library stays loaded for the call
-        // (`lib`).
-        #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
-        let status = unsafe {
-            let kernel: extern "C" fn(*mut u8) -> i32 = std::mem::transmute(fptr);
-            kernel(buf.as_mut_ptr())
-        };
+        let status = (kernel.as_fn())(buf.as_mut_ptr());
         // Read-back protocol: a non-zero status means the in-process kernel overflowed the m-trit
         // range — an explicit error, never a silently-wrapped (and unwritten) buffer.
         if status != 0 {
@@ -142,10 +135,66 @@ impl JitArtifact {
 pub(crate) struct Lib(*mut c_void);
 impl Lib {
     /// Resolve `symbol` in this library to a raw function/data address (an explicit error if absent).
-    pub(crate) fn sym(&self, symbol: &str) -> Result<*mut c_void, AotError> {
+    fn sym(&self, symbol: &str) -> Result<*mut c_void, AotError> {
         let name = CString::new(symbol)
             .map_err(|e| AotError::Run(format!("symbol name has interior NUL: {e}")))?;
         lookup_sym(self.0, &name)
+    }
+
+    /// Resolve `symbol` to a **typed, lifetime-bound** function pointer [`Sym<'_, T>`](Sym) (M-682;
+    /// DN-21 §4/§6). `T` MUST be the `extern "C"` fn-pointer type matching the compiled symbol's
+    /// signature — that ABI claim is the caller's assertion, definitionally outside the type system
+    /// (the irreducible unsafe of DN-21 §7). This is the crate's **single ABI-`transmute` choke-point**:
+    /// once a `Sym` is built, calling the pointer through [`Sym::as_fn`] needs no further `unsafe`. The
+    /// returned `Sym` borrows `&self`, so the borrow checker enforces that the resolved pointer cannot
+    /// outlive this `Lib` — closing the §4 co-location dangling-pointer risk structurally rather than
+    /// by field-ordering convention.
+    pub(crate) fn get<T: Copy>(&self, symbol: &str) -> Result<Sym<'_, T>, AotError> {
+        let raw = self.sym(symbol)?; // non-null or an explicit Err
+                                     // `sym` errors on a null result, and a fn pointer is pointer-sized on every supported target;
+                                     // assert both preconditions of the `transmute_copy` in dev/test (DN-21 §6 M-679 ethos).
+        debug_assert!(
+            !raw.is_null(),
+            "Lib::sym must return a non-null address or Err"
+        );
+        debug_assert_eq!(
+            std::mem::size_of::<T>(),
+            std::mem::size_of::<*mut c_void>(),
+            "Sym<T> requires T to be a pointer-sized fn pointer"
+        );
+        // SAFETY: `raw` is the non-null address `dlsym` returned for `symbol` in this still-loaded
+        // library (`sym` returns `Err` on null), and `T` is the `extern "C"` fn-pointer type the caller
+        // asserts matches the symbol's compiled signature — the irreducible ABI claim (DN-21 §7). A
+        // function pointer has the same size as `*mut c_void`, so `transmute_copy` reads exactly the
+        // pointer (the size is debug-asserted above). The returned `Sym` borrows `&self`, binding the
+        // pointer's lifetime to this `Lib`, so it can never be called after the library is dropped.
+        #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
+        let fptr = unsafe { std::mem::transmute_copy::<*mut c_void, T>(&raw) };
+        Ok(Sym {
+            fptr,
+            _lib: PhantomData,
+        })
+    }
+}
+
+/// A symbol resolved out of a [`Lib`], carrying that library's lifetime (M-682; DN-21 §4). `T` is the
+/// symbol's `extern "C"` function-pointer type. The `PhantomData<&'lib Lib>` makes the borrow checker
+/// enforce — structurally, not by field-ordering convention — that the symbol (a JIT'd fn-pointer)
+/// does not outlive the `Lib` that owns it, closing the §4 co-location dangling-pointer risk. The
+/// single audited ABI `transmute` lives in [`Lib::get`]; calling the pointer via [`Sym::as_fn`] is
+/// then ordinary safe Rust (the type already encodes the contract), so the irreducible unsafe is
+/// confined to one choke-point.
+pub(crate) struct Sym<'lib, T: Copy> {
+    fptr: T,
+    _lib: PhantomData<&'lib Lib>,
+}
+
+impl<T: Copy> Sym<'_, T> {
+    /// The typed function pointer. Sound to call for as long as `self` lives — and because `self`
+    /// borrows the owning [`Lib`], that is exactly "while the library is loaded" (the lifetime the
+    /// type carries). No `unsafe` here: a correctly-typed `extern "C" fn` pointer is safe to call.
+    pub(crate) fn as_fn(&self) -> T {
+        self.fptr
     }
 }
 impl Drop for Lib {
