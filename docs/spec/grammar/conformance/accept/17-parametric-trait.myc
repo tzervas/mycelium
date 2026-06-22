@@ -1,0 +1,16 @@
+// exercises: a parametric trait `Cmp<A>` whose type parameter appears in the method signature,
+// a conforming `impl Cmp<Binary{8}> for Binary{8}` (A↦Binary{8}), and a bounded generic that
+// dispatches the trait method (M-658/M-659 parametric extension; RFC-0007 §4.10, **Declared**).
+nodule order
+
+trait Cmp<A> {
+    fn pick(x: A) -> A
+}
+
+impl Cmp<Binary{8}> for Binary{8} {
+    fn pick(x: Binary{8}) -> Binary{8} = x
+}
+
+fn choose<T: Cmp>(x: T) -> T = pick(x)
+
+fn main() -> Binary{8} = choose(0b1010_1010)

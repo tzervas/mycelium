@@ -973,17 +973,18 @@ fn prop_trait_dispatch_is_consistent_across_representative_concrete_types() {
 
     for case in cases {
         let w = case.width;
-        // Build a nodule with impl for each width but only the `apply_not` generic is called.
-        // Impls for widths not used by `main` are noise — that's intentional: the checker must
-        // accept them without complaint (no overlap, no missing-method errors).
+        // Build a nodule with a *parametric* trait `Invertible<A>` and a conforming impl for each
+        // width. Multi-width dispatch is exactly what a parametric trait expresses: each
+        // `impl Invertible<Binary{N}> for Binary{N}` substitutes A↦Binary{N}, so its `invert`
+        // signature conforms (M-658/M-659 parametric). Impls for widths not used by `main` are
+        // valid, accepted, and unused — they neither overlap nor miss a method.
         let src = format!(
             "nodule d\n\
-             trait Invertible {{ fn invert(x: Binary{{{w}}})\
-             -> Binary{{{w}}} }}\n\
-             impl Invertible for Binary{{4}} {{ fn invert(x: Binary{{4}}) -> Binary{{4}} = not(x) }}\n\
-             impl Invertible for Binary{{8}} {{ fn invert(x: Binary{{8}}) -> Binary{{8}} = not(x) }}\n\
-             impl Invertible for Binary{{16}} {{ fn invert(x: Binary{{16}}) -> Binary{{16}} = not(x) }}\n\
-             fn apply_not<T: Invertible>(x: T) -> Binary{{{w}}} = invert(x)\n\
+             trait Invertible<A> {{ fn invert(x: A) -> A }}\n\
+             impl Invertible<Binary{{4}}> for Binary{{4}} {{ fn invert(x: Binary{{4}}) -> Binary{{4}} = not(x) }}\n\
+             impl Invertible<Binary{{8}}> for Binary{{8}} {{ fn invert(x: Binary{{8}}) -> Binary{{8}} = not(x) }}\n\
+             impl Invertible<Binary{{16}}> for Binary{{16}} {{ fn invert(x: Binary{{16}}) -> Binary{{16}} = not(x) }}\n\
+             fn apply_not<T: Invertible>(x: T) -> T = invert(x)\n\
              fn main() -> Binary{{{w}}} = apply_not({input})\n",
             w = w,
             input = case.input_bits,
@@ -1007,4 +1008,99 @@ fn prop_trait_dispatch_is_consistent_across_representative_concrete_types() {
             other => panic!("width {w}: expected Bits payload, got {other:?}"),
         }
     }
+}
+
+// ---- Parametric traits (M-658/M-659 parametric extension, **Declared**) ----
+// A parametric trait `trait Cmp<A>` puts its TYPE PARAMETER in the method signatures. An
+// `impl Cmp<C> for C` substitutes `A ↦ C`; the impl's method signatures must conform to the
+// substituted trait signatures (never-silent, G2). v0 restriction: single-param traits with the
+// trait argument == the `for` type. Multi-param traits and `impl T<C> for D` with C≠D are
+// honest deferrals (explicit CheckError, never a silent accept).
+
+#[test]
+fn parametric_trait_impl_checks() {
+    // `trait Cmp<A> { fn same(x: A) -> A }` — `A` appears in BOTH method positions.
+    // `impl Cmp<Binary{8}> for Binary{8}` substitutes A↦Binary{8}; the impl sig conforms.
+    let src = concat!(
+        "nodule d\n",
+        "trait Cmp<A> { fn same(x: A) -> A }\n",
+        "impl Cmp<Binary{8}> for Binary{8} { fn same(x: Binary{8}) -> Binary{8} = x }\n",
+    );
+    let env = check(src).expect("parametric trait + conforming impl must check");
+    assert!(
+        env.impl_info("Cmp", &mycelium_l1::Ty::Binary(8)).is_some(),
+        "impl Cmp for Binary{{8}} should be registered"
+    );
+    assert_eq!(env.traits["Cmp"].params, vec!["A".to_owned()]);
+}
+
+#[test]
+fn parametric_trait_impl_without_explicit_args_infers_for_ty() {
+    // `impl Cmp for Binary{8}` (no `<…>`) — the single trait param is inferred as the `for` type.
+    let src = concat!(
+        "nodule d\n",
+        "trait Cmp<A> { fn same(x: A) -> A }\n",
+        "impl Cmp for Binary{8} { fn same(x: Binary{8}) -> Binary{8} = x }\n",
+    );
+    let env = check(src).expect("impl with inferred trait arg must check");
+    assert!(env.impl_info("Cmp", &mycelium_l1::Ty::Binary(8)).is_some());
+}
+
+#[test]
+fn parametric_trait_bounded_call_evaluates() {
+    // A bounded generic `fn use_it<T: Cmp>(x: T) -> T = same(x)` calls the trait method `same`,
+    // which dispatches (compile-time dictionary) to the concrete impl after monomorphization.
+    let src = concat!(
+        "nodule d\n",
+        "trait Cmp<A> { fn same(x: A) -> A }\n",
+        "impl Cmp<Binary{8}> for Binary{8} { fn same(x: Binary{8}) -> Binary{8} = x }\n",
+        "fn use_it<T: Cmp>(x: T) -> T = same(x)\n",
+        "fn main() -> Binary{8} = use_it(0b1010_1010)\n",
+    );
+    let env = check(src).expect("parametric bounded call must check");
+    let result = Evaluator::new(&env)
+        .call("main", vec![])
+        .expect("evaluates");
+    let val = result.as_repr().expect("repr value");
+    use mycelium_core::Payload;
+    match val.payload() {
+        Payload::Bits(bits) => assert_eq!(
+            bits,
+            &vec![true, false, true, false, true, false, true, false]
+        ),
+        other => panic!("expected Bits payload, got {other:?}"),
+    }
+}
+
+#[test]
+fn parametric_impl_signature_must_conform_to_trait() {
+    // The impl method body checks against its OWN declared sig (Binary{4}→Binary{4}, valid), but
+    // that sig does NOT match the trait sig substituted at Binary{8} (`same(Binary{8})->Binary{8}`).
+    // This must be an explicit CheckError — a silent accept would be unsound (G2/VR-5).
+    let src = concat!(
+        "nodule d\n",
+        "trait Cmp<A> { fn same(x: A) -> A }\n",
+        "impl Cmp<Binary{8}> for Binary{8} { fn same(x: Binary{4}) -> Binary{4} = x }\n",
+    );
+    let err = check(src).unwrap_err();
+    assert!(
+        !err.message.is_empty(),
+        "impl whose signature does not conform to the trait must be rejected; got ok"
+    );
+}
+
+#[test]
+fn parametric_impl_trait_arg_ne_for_ty_is_a_deferred_error() {
+    // `impl Cmp<Binary{4}> for Binary{8}` — the written trait argument (Binary{4}) differs from
+    // the `for` type (Binary{8}). v0 defers `impl T<C> for D` with C≠D — explicit error (G2).
+    let src = concat!(
+        "nodule d\n",
+        "trait Cmp<A> { fn same(x: A) -> A }\n",
+        "impl Cmp<Binary{4}> for Binary{8} { fn same(x: Binary{8}) -> Binary{8} = x }\n",
+    );
+    let err = check(src).unwrap_err();
+    assert!(
+        !err.message.is_empty(),
+        "impl T<C> for D with C != D must be a deferred error; got ok"
+    );
 }

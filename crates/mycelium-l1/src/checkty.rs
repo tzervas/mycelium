@@ -855,6 +855,38 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
                     "abstract `for`-type in an impl is not valid — the `for` type must be concrete",
                 ));
             }
+            // 2b. Parametric trait arguments (M-658/M-659 parametric extension, **Declared**).
+            // `impl T<C> for D`: validate any written trait arguments against the trait's params.
+            // v0 restriction (honest deferral): a single-param trait's argument must equal the
+            // `for` type (`impl T<C> for C`). `impl T<C> for D` with C ≠ D, supplying arguments to
+            // a non-parametric trait, or any arity mismatch are explicit CheckErrors — never a
+            // silent accept (G2). Omitting the arguments (`impl T for D`) infers the param as `D`.
+            if !id.trait_args.is_empty() {
+                if id.trait_args.len() != trait_info.params.len() {
+                    return Err(CheckError::new(
+                        &site,
+                        format!(
+                            "impl of `{}` supplies {} type argument(s) but the trait declares {}",
+                            id.trait_name,
+                            id.trait_args.len(),
+                            trait_info.params.len()
+                        ),
+                    ));
+                }
+                let (arg0, _) =
+                    resolve_ty_mut(&site, &mut types, &generics, &[], &id.trait_args[0])?;
+                if arg0 != for_ty {
+                    return Err(CheckError::new(
+                        &site,
+                        format!(
+                            "impl `{} <{arg0}> for {for_ty}`: a trait argument different from the \
+                             `for` type is not yet supported in v0 (deferred) — write \
+                             `impl {} for {for_ty}`",
+                            id.trait_name, id.trait_name
+                        ),
+                    ));
+                }
+            }
             // 3. Coherence: no duplicate (trait, for_ty) pair.
             let key = (id.trait_name.clone(), for_ty.to_string());
             if impls.contains_key(&key) {
@@ -921,14 +953,68 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
             let mut checked_methods = Vec::with_capacity(id.methods.len());
             for m in &id.methods {
                 let msite = format!("{}::{}", site, m.sig.name);
-                let mut scope: Vec<(String, Ty)> = Vec::new();
-                for p in &m.sig.value_params {
-                    let (raw, _) = resolve_ty_mut(&msite, &mut types, &generics, &[], &p.ty)?;
-                    let ty = subst_ty(&raw, &subst);
-                    scope.push((p.name.clone(), ty));
+                // Signature conformance (M-658/M-659, **Declared**): the impl method signature
+                // must equal the trait's declared signature with the trait params substituted
+                // (`A ↦ for_ty`). `tsig` exists — extra methods (not declared in the trait) were
+                // already rejected above. A non-conforming impl is an explicit CheckError, never
+                // a silent accept (G2/VR-5): a trait whose impls may carry arbitrary signatures
+                // would be unsound.
+                let tsig = trait_info
+                    .methods
+                    .iter()
+                    .find(|s| s.name == m.sig.name)
+                    .expect("impl method has no matching trait method (extras already rejected)");
+                if tsig.value_params.len() != m.sig.value_params.len() {
+                    return Err(CheckError::new(
+                        &msite,
+                        format!(
+                            "impl method `{}` takes {} parameter(s) but trait `{}` declares {}",
+                            m.sig.name,
+                            m.sig.value_params.len(),
+                            id.trait_name,
+                            tsig.value_params.len()
+                        ),
+                    ));
                 }
-                let (raw_ret, _) = resolve_ty_mut(&msite, &mut types, &generics, &[], &m.sig.ret)?;
-                let ret = subst_ty(&raw_ret, &subst);
+                let mut scope: Vec<(String, Ty)> = Vec::new();
+                for (tp, ip) in tsig.value_params.iter().zip(&m.sig.value_params) {
+                    // Expected: the trait's parameter type resolved with the trait params in scope
+                    // (so a bare `A` → `Ty::Var`), then substituted (`A ↦ for_ty`).
+                    let (raw_expected, _) =
+                        resolve_ty_mut(&msite, &mut types, &generics, &trait_info.params, &tp.ty)?;
+                    let expected = subst_ty(&raw_expected, &subst);
+                    // Actual: the impl's written parameter type (concrete — no trait params).
+                    let (raw_actual, _) =
+                        resolve_ty_mut(&msite, &mut types, &generics, &[], &ip.ty)?;
+                    let actual = subst_ty(&raw_actual, &subst);
+                    if actual != expected {
+                        return Err(CheckError::new(
+                            &msite,
+                            format!(
+                                "impl method `{}` parameter `{}` has type `{actual}` but trait \
+                                 `{}` requires `{expected}`",
+                                m.sig.name, ip.name, id.trait_name
+                            ),
+                        ));
+                    }
+                    scope.push((ip.name.clone(), actual));
+                }
+                // The return type must conform too.
+                let (raw_expected_ret, _) =
+                    resolve_ty_mut(&msite, &mut types, &generics, &trait_info.params, &tsig.ret)?;
+                let expected_ret = subst_ty(&raw_expected_ret, &subst);
+                let (raw_actual_ret, _) =
+                    resolve_ty_mut(&msite, &mut types, &generics, &[], &m.sig.ret)?;
+                let ret = subst_ty(&raw_actual_ret, &subst);
+                if ret != expected_ret {
+                    return Err(CheckError::new(
+                        &msite,
+                        format!(
+                            "impl method `{}` returns `{ret}` but trait `{}` requires `{expected_ret}`",
+                            m.sig.name, id.trait_name
+                        ),
+                    ));
+                }
                 let cx = Cx {
                     site: &msite,
                     types: &types,
@@ -1738,9 +1824,22 @@ impl Cx<'_> {
                         let (_, a2) = self.check(scope, a, None)?;
                         rebuilt.push(a2);
                     }
-                    // Return type: resolve from the trait method's declared return type (v0:
-                    // concrete or bound type var — no tyvars in scope for m_sig.ret resolution).
-                    let (ret_ty, _) = resolve_ty(self.site, self.types, &[], &m_sig.ret)?;
+                    // Return type: the trait method's declared return type may mention the
+                    // trait's own type parameter(s) — e.g. `fn same(x: A) -> A` in
+                    // `trait Cmp<A>`. Resolve it with the trait params in scope (so they become
+                    // `Ty::Var`), then map each trait param to the bounded generic type variable
+                    // it stands for at this call site (v0: a single-param trait's param IS the
+                    // bound/Self type — `A ↦ Ty::Var(<bound's type param>)`). A non-parametric
+                    // trait has no params, so this is identity (M-658, **Declared**).
+                    let param_subst: BTreeMap<String, Ty> = if ti.params.len() == 1 {
+                        let mut m = BTreeMap::new();
+                        m.insert(ti.params[0].clone(), Ty::Var(b.param.clone()));
+                        m
+                    } else {
+                        BTreeMap::new()
+                    };
+                    let (raw_ret, _) = resolve_ty(self.site, self.types, &ti.params, &m_sig.ret)?;
+                    let ret_ty = subst_ty(&raw_ret, &param_subst);
                     return Ok(Some((ret_ty, app_node(head, rebuilt))));
                 }
             }
