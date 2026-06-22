@@ -87,15 +87,23 @@ constructor    ::= Ident ('(' type_ref (',' type_ref)* ')')?
 
 /* Trait = a named set of function signatures (LR-2; conventional term, DN-02). */
 trait_item     ::= 'trait' Ident type_params? '{' fn_sig* '}'
-fn_sig         ::= 'fn' Ident '(' params? ')' '->' type_ref
+fn_sig         ::= 'fn' Ident '(' params? ')' '->' type_ref effects?
 
 /* Function. Optional 'thaw' DE-matures one definition — keeps it interpreted inside an
  * otherwise-matured scope (RFC-0017 §4.3; the rare iterate/debug escape hatch). Maturation itself is
  * NOT a fn modifier — it is declared per `nodule`/`phylum`/program in the header/manifest (RFC-0017
  * §4.1). A bare `matured fn …` is a parse error with a teaching diagnostic. */
-fn_item        ::= 'thaw'? 'fn' Ident type_params? '(' params? ')' '->' type_ref '=' expr
+fn_item        ::= 'thaw'? 'fn' Ident type_params? '(' params? ')' '->' type_ref effects? '=' expr
 params         ::= param (',' param)*
 param          ::= Ident ':' type_ref
+
+/* Effect annotation (RFC-0014 §3.4/§4.5 I3; M-660). Optional `!{ … }` after the return type
+ * declaring a fn's effect set; ABSENT ⇒ pure (the empty set, RFC-0014 I5), and the explicit `!{}`
+ * is also the empty/pure set. Effect names are plain identifiers — the closed kernel effect kinds
+ * (retry|alloc|io|cascade|time) plus user-declared `Named` effects — NOT reserved words; a duplicate
+ * name in one annotation is a never-silent parse refusal (G2). The coverage rule (a fn's declared
+ * effects ⊇ the effects it performs) is a CHECKER obligation, not a grammar one. */
+effects        ::= '!' '{' (Ident (',' Ident)*)? '}'
 
 /* Types. A guarantee-annotated type carries its honesty tag as a type-level index (LR-6). */
 type_ref       ::= base_type ('@' strength)?

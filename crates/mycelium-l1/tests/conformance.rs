@@ -94,6 +94,14 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "15-trait-param-bound.myc",
         "bounds on `type`/`trait` type-parameters are deferred",
     ),
+    (
+        // M-660 / RFC-0014 §4.5: a duplicate effect name in one `!{…}` annotation is a never-silent
+        // PARSE refusal (the set is never silently de-duplicated — G2). The *coverage* refusal
+        // (performing an undeclared effect) is a checker concern exercised in `tests/check.rs`, since
+        // this gate runs only the parser; the fixture's banner documents that split.
+        "17-duplicate-effect.myc",
+        "duplicate effect",
+    ),
 ];
 
 #[test]

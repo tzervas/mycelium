@@ -7487,7 +7487,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 401,
+      "line": 410,
       "summary": "A `match` arm.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7498,7 +7498,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 231,
+      "line": 240,
       "summary": "A base (un-annotated) type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7520,7 +7520,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 295,
+      "line": 304,
       "summary": "An expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7531,7 +7531,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 177,
+      "line": 186,
       "summary": "A function definition.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7564,7 +7564,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 442,
+      "line": 451,
       "summary": "A literal value.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7597,7 +7597,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 188,
+      "line": 197,
       "summary": "A value parameter `name: type`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7619,7 +7619,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 422,
+      "line": 431,
       "summary": "A pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7630,7 +7630,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 269,
+      "line": 278,
       "summary": "A scalar element kind.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7641,7 +7641,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 260,
+      "line": 269,
       "summary": "Declared sparsity of a VSA type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7652,7 +7652,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 282,
+      "line": 291,
       "summary": "A guarantee-lattice strength.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7685,7 +7685,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 197,
+      "line": 206,
       "summary": "A type with an optional guarantee-strength index (`T @ Exact`; LR-6).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7850,7 +7850,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2549,
+      "line": 2710,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7861,7 +7861,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2535,
+      "line": 2696,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8312,7 +8312,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 188,
+      "line": 193,
       "summary": "Scalar-kind keyword payload.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8323,7 +8323,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 214,
+      "line": 219,
       "summary": "A token with its starting position.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8334,7 +8334,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 201,
+      "line": 206,
       "summary": "Guarantee-strength keyword payload.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8356,7 +8356,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 223,
+      "line": 228,
       "summary": "Resolve an identifier-shaped lexeme to its keyword token, or `None` if it is a plain identifier.",
       "guarantee_tag": null,
       "corpus_refs": []

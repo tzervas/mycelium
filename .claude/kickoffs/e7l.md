@@ -12,28 +12,36 @@ far"). So on resume: `git fetch origin main` → branch a fresh working branch o
 (`git checkout -b claude/<desc> origin/main`); everything below is already on `main`. `main` is PR-only;
 your working branch squash-PRs to `main` per logical unit.
 
-**Continue the chain at M-659** (the next un-done item).
+**Continue the chain at M-660 — M-659 (trait checker) LANDED.** Direction (maintainer, FIRM):
+**complete the FULL lexicon first** (M-660→M-664, then E7-2 M-667/M-668) **before any dogfooding** —
+a complete language surface is what unlocks whole-project self-hosting + the example phylum. Do NOT
+shortcut to a partial-language self-host.
 
-**Done so far (LANDED to `main` this session, 2026-06-22):**
-- ✅ **M-656** — RFC-0007 §11 (generics deferral discharged → RFC-0019).
-- ✅ **M-657 checker** — unbounded parametric generics type-check (`Ty::Var`, applied `Ty::Data`,
-  unification-based call-site instantiation, arity/undetermined/repr-op refusals). **Elaboration of a
-  generic instantiation is STAGED** as an explicit `Residual` → **M-673** (monomorphization follow-up).
-- ✅ **M-658** — RFC-0007 §12 trait surface + **`impl` reserved** (`Tok::Impl`, reject-corpus
-  `14-impl-reserved-ident.myc`). Trait *checker* is M-659 (next).
-- ✅ **Depth-safety / limit-point discipline (M-674):** explicit budgets on all 4 L1 passes (parser
-  256, checker `MAX_CHECK_DEPTH=4096`, elaborator `MAX_ELAB_DEPTH=4096`, evaluator `DEFAULT_DEPTH=64`
-  now host-stack-safe); checker/elaborator/evaluator run on a **deep worker stack** in the new
-  **`mycelium-stack`** crate (isolated outside the kernel); kernel is **`#![forbid(unsafe_code)]`**
-  (machine-proven). Measured checker ceiling ~24,600 levels (debug). **M-673** (monomorphization) +
-  **M-674** (remaining: totality/ambient budgets + cross-crate audit — evaluator item DONE) filed.
+**Done so far (LANDED to `main`, 2026-06-22):**
+- ✅ **M-656 / M-657-checker / M-658** — generics spec + checker (elab staged → M-673); trait spec + `impl` reserved.
+- ✅ **M-659 — stage-1 trait/impl CHECKER + coherence** (`4b53bde`): `Item::Impl`, bounded `<T: Cmp>`,
+  `Tok::Plus`, trait/instance registries, coherence (global uniqueness + single-nodule orphan), method-set
+  conformance, bounded-call + unqualified trait-method resolution — all never-silent `CheckError` (G2),
+  guarantee `Declared`; dictionary-passing L0 lowering STAGED → **M-673**. (Copilot caught + we fixed a real
+  `require_instance` over-acceptance soundness bug — resolution now matches the full `for_ty`, not just the head.)
+- ✅ **track-a PM tooling** (`fb92479`, #353): `gh-issues-sync.py --relationships` (issue↔PR↔date manifest,
+  status-aware landed/evidence), opt-in `--use-api` REST+GraphQL client, multi-phase milestone → primary-task
+  anchor. Follow-ups filed: **M-675** (idmap full reconcile), **M-676** (multi-area project field — SECONDARY).
+- ✅ **M-674 depth-safety** (`mycelium-stack`, explicit budgets on all L1 passes, kernel `#![forbid(unsafe_code)]`).
 
-**Next un-done: M-659 (traits checker)** — a large atomic unit: AST `Item::Impl` + parser productions
-for `impl Trait for T { … }` and bounded type-params `T: Trait` (RFC-0019 §4.1 — do not yet exist),
-then trait-declaration + impl-block checking with **coherence** (orphan rule + global uniqueness,
-RFC-0019 §4.5), then dictionary-passing **typing** (L0 lowering STAGED like generics → M-673). Do NOT
-half-land it (parse-but-skip-in-checker = a silent no-op, G2 violation). Then M-660 → M-661 → M-662 →
-M-663 → M-664 → M-667/M-668 → M-649.
+**IN FLIGHT: M-660 (effect annotations)** — leaf spawned (Opus worktree, off `4b53bde`). **Effect syntax
+DECIDED (maintainer): `fn f() -> T !{eff1, eff2}`** (Koka-style `!`; effect names = identifiers; unannotated
+= pure per RFC-0014 I5; coverage rule declared ⊇ body-performed, over-declaration OK; no new L0 node KC-3;
+checker-side only — runtime budget wiring is the M-353 ledger, out of scope). **On resume:** `git fetch origin`,
+find the leaf's pushed branch (`git branch -r | grep -iE 'worktree-agent|effect|660'`), verify scope
+(`crates/mycelium-l1` + RFC-0014/0007/DN-14 §3 row 8 + conformance `16-effect-annotations`/`17-duplicate-effect`),
+then **review (honesty + a soundness pass) → gates (`cargo test -p mycelium-l1`) → reconcile orchestrator files
+(CHANGELOG, issues.yaml M-660→done, DN-14 row 8→present, regen api-index) → squash-PR to `main`**.
+
+**Then (full lexicon, in order):** M-661 (`wild`/FFI floor — consumes M-660's `!{ffi}`) → M-662 (`phylum`/cross-nodule
+— also lands the cross-nodule orphan enforcement M-659 deferred) → M-663 (RFC-0018 grading, stays `Declared`) →
+M-664 (`consume`/`grow`/`impl` surface keywords) → **E7-2** M-667/M-668. **THEN dogfooding:** M-673 (elaboration —
+monomorphization + trait dictionaries; makes generics/traits RUN) → M-649 (self-host first `.myc` nodule) → example phylum.
 
 > **Lesson recorded:** the original brief named a protected head `claude/head/e7-language`; in practice
 > a single working branch off `main`, squash-PR'd per tranche, worked cleanly (no separate head

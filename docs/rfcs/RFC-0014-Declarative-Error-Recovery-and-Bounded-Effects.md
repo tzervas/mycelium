@@ -130,6 +130,19 @@ requires them to be **declared** and **bounded**:
 fn save(r: Record) -> Result<Unit> !{ retry(<=3), alloc(<=64KiB) } = ...   -- declared, bounded effects
 ```
 
+> **Note (2026-06-22 — append-only; M-660): the `!{…}` surface is now pinned for the L1 stage-1
+> frontend.** The `!{ … }` spelling above — *illustrative* under the §3 banner — is **pinned as the
+> normative L1 stage-1 effect-annotation surface** (maintainer decision, 2026-06-22) and implemented
+> Rust-first in `crates/mycelium-l1/`: an **optional** `!{ eff1, eff2 }` after the return type
+> (`-> ret !{…}`), **absent ⇒ pure**, effect names plain identifiers (the §4.5 kernel kinds +
+> user `Named`). The v0 **coverage check** (declared ⊇ performed, where performed = the union of
+> callees' declared effects — I3, §8 manual-declare + compositional-check) lands with it; an impl
+> method's effects must equal the trait method's. The **budgets** in the example (`retry(<=3)`,
+> `alloc(<=64KiB)`) are **not** part of the stage-1 *surface* yet — the frontend parses the **effect
+> *set*** only; budget *enforcement* stays the M-353 `mycelium_interp::budget` runtime ledger, and a
+> per-effect budget syntax is later work. No new L0 node (KC-3). See the Meta-changelog entry of the
+> same date for the full disposition.
+
 Reading rules a developer internalises: *a recovery never silently swallows an error; an effect a function
 can perform is visible in its signature; every effect that could run away is budgeted, and a budget overrun
 is an explicit error; broader/cascading effects are something you opt into by declaring them, never a
@@ -440,6 +453,7 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
 
 ## Meta — changelog
 
+- **2026-06-22 — §3.4 effect-annotation *surface* pinned for the L1 stage-1 frontend; coverage check implemented Rust-first (M-660; append-only, VR-5).** §3.4's previously-**illustrative** `!{…}` effect-annotation form (the §3 banner: "Syntax below is illustrative, not normative … concrete surface syntax is KC-2-gated") is now **pinned as the normative L1 stage-1 surface** — a maintainer decision on the spelling (2026-06-22) — and **implemented Rust-first in `crates/mycelium-l1/`** (pending RFC-0006 ratification of the surface; status header **unchanged — still `Enacted`**, this records an implementation + a surface-spelling pin, not a status move). **Surface:** an **optional** `!{ eff1, eff2 }` after a fn signature's return type — `fn name<params>(value_params) -> ret !{eff1, eff2}`; **absent ⇒ pure** (the empty set; RFC-0014 I5 default-tightly-scoped), and the explicit `!{}` is the same empty/pure set. Effect names are **plain identifiers** (NOT reserved words) — the closed kernel effect kinds `retry|alloc|io|cascade|time` (§4.5) plus user-declared `Named` effects; a **duplicate** name in one annotation is a never-silent **parse** refusal (G2). **Coverage check (I3):** a fn's **declared** effects must be a **superset** of the effects it **performs**, where *performing* = the union of the declared effects of every callee it invokes — a top-level fn OR an unqualified trait method (the latter's effects from the trait registry) — checked over fn bodies **and** impl-method bodies (the §8 "manual-declare + compositional-check" line — the checker *composes* declared effects up the call graph as a **check**, never *infers* an undeclared one; checking impl-method bodies too is what keeps a trait-method/impl effect from being hidden from a caller). **Under-declaration** (performing an undeclared effect) is an explicit `CheckError` naming the effect + the callee; **over-declaration is allowed** (a declaration is a contract — I5). A **trait method** carries effects too: an `impl` method's declared effect set must **equal** the trait method's (exact match in stage-1; an unannotated trait method ⇒ the impl method is pure). **No new L0 node** — effects are **checker metadata** (KC-3); they do **not** lower, and the **runtime budget ledger stays the separate M-353** `mycelium_interp::budget` concern (not wired by this frontend work). Guarantee on the pass: **`Declared`** (a structural coverage check, not a theorem — I3). **Effect *sources* expand later:** `wild`-sourced effects arrive with **M-661** (`wild` stays rejected here), and richer effect typing (rows/inference) remains the §9 future — this frontend lands the **annotation + compositional-coverage** mechanism only. Verified in `mycelium-l1` (`tests/check.rs` effect suite incl. a monotonicity property sweep + the trait/impl effect-conformance cases; `tests/parse.rs` grammar; `accept/16`/`reject/17` conformance fixtures). Append-only.
 - **2026-06-20 — status spelling normalized.** Status header `Accepted — Enacted` → **`Enacted`** (the now-canonical standalone token, per the ratified `Draft/Proposed → Accepted → Enacted → Superseded` lattice, #236); semantics unchanged. Append-only.
 - **2026-06-18 — Append-only note to §4.7 (RFC-0017 Accepted): maturation is now a scope attribute.**
   Added an inline note to §4.7 recording that "only `total` definitions may be `matured`" now reads

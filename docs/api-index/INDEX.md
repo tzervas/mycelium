@@ -732,25 +732,25 @@
 | `mycelium_l1::ambient::resolve_report` | fn | `crates/mycelium-l1/src/ambient.rs:151` | Like [`resolve`], but also returns the provenance trace ([`ResolutionNote`]s) for EXPLAIN (§4.3). |
 | `mycelium_l1::ast` | mod | `crates/mycelium-l1/src/lib.rs:38` | — |
 | `mycelium_l1::ast::AmbientParams` | enum | `crates/mycelium-l1/src/ast.rs:46` | The written params of a **paradigm-less repr** `{ … }` (RFC-0012 §4.2): the size/shape is still |
-| `mycelium_l1::ast::Arm` | struct | `crates/mycelium-l1/src/ast.rs:401` | A `match` arm. |
-| `mycelium_l1::ast::BaseType` | enum | `crates/mycelium-l1/src/ast.rs:231` | A base (un-annotated) type. |
+| `mycelium_l1::ast::Arm` | struct | `crates/mycelium-l1/src/ast.rs:410` | A `match` arm. |
+| `mycelium_l1::ast::BaseType` | enum | `crates/mycelium-l1/src/ast.rs:240` | A base (un-annotated) type. |
 | `mycelium_l1::ast::Ctor` | struct | `crates/mycelium-l1/src/ast.rs:93` | One constructor of a [`TypeDecl`]. |
-| `mycelium_l1::ast::Expr` | enum | `crates/mycelium-l1/src/ast.rs:295` | An expression. |
-| `mycelium_l1::ast::FnDecl` | struct | `crates/mycelium-l1/src/ast.rs:177` | A function definition. |
+| `mycelium_l1::ast::Expr` | enum | `crates/mycelium-l1/src/ast.rs:304` | An expression. |
+| `mycelium_l1::ast::FnDecl` | struct | `crates/mycelium-l1/src/ast.rs:186` | A function definition. |
 | `mycelium_l1::ast::FnSig` | struct | `crates/mycelium-l1/src/ast.rs:151` | A function signature (shared by trait requirements and `fn` definitions). |
 | `mycelium_l1::ast::Item` | enum | `crates/mycelium-l1/src/ast.rs:64` | A top-level item. |
-| `mycelium_l1::ast::Literal` | enum | `crates/mycelium-l1/src/ast.rs:442` | A literal value. |
+| `mycelium_l1::ast::Literal` | enum | `crates/mycelium-l1/src/ast.rs:451` | A literal value. |
 | `mycelium_l1::ast::Nodule` | struct | `crates/mycelium-l1/src/ast.rs:10` | A whole program: a `nodule` header and its items. |
 | `mycelium_l1::ast::Paradigm` | enum | `crates/mycelium-l1/src/ast.rs:20` | A representation **paradigm** tag (RFC-0001 §4.2): the granularity of the RFC-0012 ambient. |
-| `mycelium_l1::ast::Param` | struct | `crates/mycelium-l1/src/ast.rs:188` | A value parameter `name: type`. |
+| `mycelium_l1::ast::Param` | struct | `crates/mycelium-l1/src/ast.rs:197` | A value parameter `name: type`. |
 | `mycelium_l1::ast::Path` | struct | `crates/mycelium-l1/src/ast.rs:6` | A dotted path (`signals.demo`, `core.binary`); also a bare name. |
-| `mycelium_l1::ast::Pattern` | enum | `crates/mycelium-l1/src/ast.rs:422` | A pattern. |
-| `mycelium_l1::ast::Scalar` | enum | `crates/mycelium-l1/src/ast.rs:269` | A scalar element kind. |
-| `mycelium_l1::ast::Sparsity` | enum | `crates/mycelium-l1/src/ast.rs:260` | Declared sparsity of a VSA type. |
-| `mycelium_l1::ast::Strength` | enum | `crates/mycelium-l1/src/ast.rs:282` | A guarantee-lattice strength. |
+| `mycelium_l1::ast::Pattern` | enum | `crates/mycelium-l1/src/ast.rs:431` | A pattern. |
+| `mycelium_l1::ast::Scalar` | enum | `crates/mycelium-l1/src/ast.rs:278` | A scalar element kind. |
+| `mycelium_l1::ast::Sparsity` | enum | `crates/mycelium-l1/src/ast.rs:269` | Declared sparsity of a VSA type. |
+| `mycelium_l1::ast::Strength` | enum | `crates/mycelium-l1/src/ast.rs:291` | A guarantee-lattice strength. |
 | `mycelium_l1::ast::TraitDecl` | struct | `crates/mycelium-l1/src/ast.rs:104` | `trait Name<params> { fn … }` (LR-2; conventional term). |
 | `mycelium_l1::ast::TypeDecl` | struct | `crates/mycelium-l1/src/ast.rs:82` | `type Name<params> = Ctor \| Ctor(field, …) \| …` (LR-1). |
-| `mycelium_l1::ast::TypeRef` | struct | `crates/mycelium-l1/src/ast.rs:197` | A type with an optional guarantee-strength index (`T @ Exact`; LR-6). |
+| `mycelium_l1::ast::TypeRef` | struct | `crates/mycelium-l1/src/ast.rs:206` | A type with an optional guarantee-strength index (`T @ Exact`; LR-6). |
 | `mycelium_l1::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:514` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
 | `mycelium_l1::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:459` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
 | `mycelium_l1::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:468` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
@@ -765,8 +765,8 @@
 | `mycelium_l1::checkty::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:514` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
 | `mycelium_l1::checkty::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:459` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
 | `mycelium_l1::checkty::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:468` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
-| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:2549` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
-| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:2535` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
+| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:2710` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
+| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:2696` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
 | `mycelium_l1::elab` | mod | `crates/mycelium-l1/src/lib.rs:41` | — |
 | `mycelium_l1::elab::ElabError` | enum | `crates/mycelium-l1/src/elab.rs:45` | Why a definition could not be elaborated to L0 — always explicit, never a partial artifact |
 | `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:502` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |
@@ -807,11 +807,11 @@
 | `mycelium_l1::resolve_report` | fn | `crates/mycelium-l1/src/ambient.rs:151` | Like [`resolve`], but also returns the provenance trace ([`ResolutionNote`]s) for EXPLAIN (§4.3). |
 | `mycelium_l1::token` | mod | `crates/mycelium-l1/src/lib.rs:47` | — |
 | `mycelium_l1::token::Pos` | struct | `crates/mycelium-l1/src/token.rs:5` | A 1-based source position, for never-silent parse diagnostics. |
-| `mycelium_l1::token::ScalarTok` | enum | `crates/mycelium-l1/src/token.rs:188` | Scalar-kind keyword payload. |
-| `mycelium_l1::token::Spanned` | struct | `crates/mycelium-l1/src/token.rs:214` | A token with its starting position. |
-| `mycelium_l1::token::StrengthTok` | enum | `crates/mycelium-l1/src/token.rs:201` | Guarantee-strength keyword payload. |
+| `mycelium_l1::token::ScalarTok` | enum | `crates/mycelium-l1/src/token.rs:193` | Scalar-kind keyword payload. |
+| `mycelium_l1::token::Spanned` | struct | `crates/mycelium-l1/src/token.rs:219` | A token with its starting position. |
+| `mycelium_l1::token::StrengthTok` | enum | `crates/mycelium-l1/src/token.rs:206` | Guarantee-strength keyword payload. |
 | `mycelium_l1::token::Tok` | enum | `crates/mycelium-l1/src/token.rs:22` | A lexical token. |
-| `mycelium_l1::token::keyword` | fn | `crates/mycelium-l1/src/token.rs:223` | Resolve an identifier-shaped lexeme to its keyword token, or `None` if it is a plain identifier. |
+| `mycelium_l1::token::keyword` | fn | `crates/mycelium-l1/src/token.rs:228` | Resolve an identifier-shaped lexeme to its keyword token, or `None` if it is a plain identifier. |
 | `mycelium_l1::totality` | mod | `crates/mycelium-l1/src/lib.rs:48` | — |
 | `mycelium_l1::totality::Totality` | enum | `crates/mycelium-l1/src/totality.rs:31` | The divergence bit (RFC-0007 §4.5). |
 | `mycelium_l1::totality::classify_all` | fn | `crates/mycelium-l1/src/totality.rs:45` | Classify every function in the table. |

@@ -140,14 +140,18 @@ Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is 
 
 ### Post-compaction continuation (durable handoff)
 
-**▶ NEXT (2026-06-22 — `/kickoff e7l`): M-659, the trait CHECKER.** Branch fresh off `origin/main`
-(it now carries everything below). M-656/M-657-checker/M-658 + the depth-safety architecture landed
-to `main` this session. M-659 is a large atomic unit (AST `Item::Impl` + parser `impl Trait for T` /
-bounded `T: Trait` productions → trait+impl-block checking with coherence (orphan + global uniqueness,
-RFC-0019 §4.5) → dictionary-passing *typing*, with L0 lowering STAGED → M-673). Do **not** half-land
-it (parse-but-skip = silent no-op, G2). Then M-660→M-661→M-662→M-663→M-664→M-667/668→M-649. See
-`.claude/kickoffs/e7l.md` "RESUME HERE". Open follow-ups: **M-673** (monomorphization elaboration for
-generics+traits), **M-674** (remaining limit-point budgets: totality/ambient + cross-crate audit).
+**▶ NEXT (2026-06-22 — `/kickoff e7l`): M-660 (effect annotations) — IN FLIGHT.** M-659 (trait checker,
+`4b53bde`) + track-a PM tooling (`fb92479`, #353) + M-656/657/658 + M-674 depth-safety are all LANDED on
+`main`. **Maintainer direction (FIRM): complete the FULL lexicon (M-660→M-664→E7-2 M-667/M-668) BEFORE any
+dogfooding** — a complete surface unlocks whole-project self-hosting + the example phylum. The **M-660 leaf
+is in flight** (Opus worktree off `4b53bde`); **effect syntax decided: `fn f() -> T !{eff}`** (Koka `!`;
+unannotated = pure; coverage `declared ⊇ performed`, over-declare OK; no new L0 node; checker-side only). On
+resume: `git fetch origin`, find the leaf's pushed branch (`git branch -r | grep -iE 'worktree-agent|effect|660'`),
+verify scope, review (honesty + soundness pass — Copilot caught a real `require_instance` over-acceptance bug on
+M-659), gates, reconcile (CHANGELOG / issues.yaml M-660→done / DN-14 §3 row 8→present / regen api-index), squash-PR
+to `main`. **Then:** M-661→M-662→M-663→M-664→E7-2, **then** dogfooding M-673 (elaboration) → M-649 (self-host) →
+example phylum. See `.claude/kickoffs/e7l.md` "RESUME HERE". Open follow-ups: **M-673** (monomorphization +
+trait-dictionary elaboration), **M-675** (idmap reconcile), **M-676** (multi-area project field — secondary).
 
 **Durability lesson (earlier session):** a session compaction **orphans in-flight background agents**
 (observed: a ~12:59 mass-orphan of ~49 sub-agents + a ~4× render-time inflation in the tasks panel —

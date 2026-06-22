@@ -619,6 +619,15 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
         }
     }
 
+    // Pass 3c: **effect coverage** (RFC-0014 §3.4/§4.5 I3; M-660 — guarantee: `Declared`, a
+    // structural coverage check, not a theorem). Every effect a fn *performs* — the union of the
+    // declared effects of every top-level fn it calls — must be in its own *declared* set. An
+    // undeclared performed effect is an explicit `CheckError` naming the effect and the callee that
+    // introduces it (under-declaration is never silent — G2/RFC-0014 I3). Over-declaration is
+    // allowed (a declaration is a contract — RFC-0014 I5). Run after bodies type-check, over the
+    // checked `fns` table.
+    check_effect_coverage(&fns, &traits, nodule)?;
+
     // Pass 4: totality classification + the scope-quantified matured gate (RFC-0017 §4.2).
     // When `matured_scope` is true, every fn with `thaw == false` must be `Total`; a non-total
     // non-thaw fn is an explicit error (RFC-0007 §4.5 / RFC-0017 §4.2). A `thaw` fn is exempt.
@@ -645,6 +654,107 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
         traits,
         instances,
     })
+}
+
+/// **Effect-coverage pass** (RFC-0014 §3.4/§4.5 I3; M-660 — guarantee: `Declared`). For every
+/// top-level function **and every `impl`-method body**, the effects it **performs** must be a subset
+/// of the effects it **declares**. The *performed* set is the union, over every call in the body, of
+/// the declared effects of the callee — a **known top-level fn** `g` (in `fns`) OR an unqualified
+/// **trait-method** call (the declaring trait method's effects, from `traits`; an ambiguous method
+/// name was already refused at the call site — M-659, so the name maps to one trait in any program
+/// reaching here). This is the v0 "manual-declare + compositional-check" line (RFC-0014 §8): the
+/// checker *composes* declared effects up the call graph as a **check**, never *infers* an undeclared
+/// one. (In M-660 the only effect sources are these declarations: `wild`-sourced effects arrive with
+/// M-661, and the runtime budget ledger is the separate M-353 concern.)
+///
+/// **Under-declaration** — performing an effect not declared — is an explicit [`CheckError`] naming
+/// both the missing effect and the callee that introduces it (G2/RFC-0014 I3 "no undeclared
+/// effects"). **Over-declaration** is allowed: declaring an effect the body never performs is a
+/// *contract*, not an error (RFC-0014 I5 default-tightly-scoped). Checking `impl`-method bodies too
+/// (their declared set == the trait method's, by conformance) is what keeps an effect from being
+/// **hidden** from a caller — the core RFC-0014 invariant that "an effect a function performs is
+/// visible in its signature".
+fn check_effect_coverage(
+    fns: &BTreeMap<String, FnDecl>,
+    traits: &BTreeMap<String, TraitInfo>,
+    nodule: &Nodule,
+) -> Result<(), CheckError> {
+    for fd in fns.values() {
+        check_body_effect_coverage(fns, traits, &fd.sig.name, &fd.sig.effects, &fd.body)?;
+    }
+    // `impl`-method bodies perform effects too (the RFC-0019 × RFC-0014 surface). Their declared set
+    // equals the trait method's (conformance), so a body performing more than that is an undeclared
+    // effect that must be refused — otherwise a trait-method/impl effect would be hidden from callers.
+    for item in &nodule.items {
+        if let Item::Impl(id) = item {
+            for m in &id.methods {
+                check_body_effect_coverage(fns, traits, &m.sig.name, &m.sig.effects, &m.body)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// One body's effect coverage: `declared ⊇ performed`, where *performed* is the union of each
+/// callee's declared effects — a known top-level fn (`fns`), else an unqualified trait method
+/// (`traits`, by name). Owned-`String` sets keep lifetimes simple; the structural walk is shared
+/// with totality (one traversal, no bespoke depth-guarded recursion). Deterministic order ⇒ a stable
+/// first-miss diagnostic. `wild`-sourced effects (M-661) and the M-353 budget ledger are not consulted.
+fn check_body_effect_coverage(
+    fns: &BTreeMap<String, FnDecl>,
+    traits: &BTreeMap<String, TraitInfo>,
+    name: &str,
+    declared_effs: &[String],
+    body: &Expr,
+) -> Result<(), CheckError> {
+    let declared: std::collections::BTreeSet<String> = declared_effs.iter().cloned().collect();
+    let mut performed: std::collections::BTreeSet<(String, String)> =
+        std::collections::BTreeSet::new();
+    crate::totality::walk_expr(body, &mut |x| {
+        if let Expr::App { head, .. } = x {
+            if let Expr::Path(p) = head.as_ref() {
+                if p.0.len() == 1 {
+                    let callee = &p.0[0];
+                    if let Some(g) = fns.get(callee) {
+                        for eff in &g.sig.effects {
+                            performed.insert((eff.clone(), callee.clone()));
+                        }
+                    } else {
+                        // Not a top-level fn ⇒ an unqualified trait-method call: it performs the
+                        // declaring trait method's declared effects (the contract).
+                        for tr in traits.values() {
+                            for s in &tr.sigs {
+                                if &s.name == callee {
+                                    for eff in &s.effects {
+                                        performed.insert((eff.clone(), callee.clone()));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+    for (eff, callee) in &performed {
+        if !declared.contains(eff) {
+            return Err(CheckError::new(
+                name,
+                format!(
+                    "`{name}` performs effect `{eff}` (via calling `{callee}`) but does not declare \
+                     it — add it to the `!{{…}}` effect annotation (RFC-0014 §4.5 I3: no undeclared \
+                     effects; never silent — G2)"
+                ),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Render an effect set for a diagnostic in the surface `!{a, b}` form (`!{}` for the empty/pure
+/// set). Used only for never-silent error messages (M-660); preserves the written source order.
+fn render_effects(effects: &[String]) -> String {
+    format!("!{{{}}}", effects.join(", "))
 }
 
 fn resolve_ctors(
@@ -1019,6 +1129,30 @@ fn check_impl_methods(
                     "impl method `{}` return: {}",
                     method.sig.name,
                     edge_mismatch("type", &want_ret, &got_ret)
+                ),
+            ));
+        }
+        // Effect conformance (RFC-0014 §4.5 I3; M-660): an impl method's **declared effect set must
+        // equal the trait method's** (exact match in stage-1 — an unannotated trait method ⇒ the
+        // impl method must also be unannotated/pure). The effect annotation is part of the
+        // signature contract, so a divergence is an explicit refusal, never a silent widen/narrow
+        // (G2). Set equality (order-insensitive); duplicates within one annotation were already
+        // refused at parse time.
+        let req_effects: std::collections::BTreeSet<&str> =
+            req.effects.iter().map(String::as_str).collect();
+        let got_effects: std::collections::BTreeSet<&str> =
+            method.sig.effects.iter().map(String::as_str).collect();
+        if req_effects != got_effects {
+            return Err(CheckError::new(
+                site,
+                format!(
+                    "impl method `{}` declares effects {} but trait `{}` requires {} — an impl \
+                     method's effect annotation must match the trait method's exactly (RFC-0014 \
+                     §4.5 I3; never silently widened or narrowed — G2)",
+                    method.sig.name,
+                    render_effects(&method.sig.effects),
+                    tr.name,
+                    render_effects(&req.effects),
                 ),
             ));
         }
@@ -2700,6 +2834,7 @@ mod depth_budget_tests {
                         base: BaseType::Binary(1),
                         guarantee: None,
                     },
+                    effects: vec![],
                 },
                 body,
             })],

@@ -795,3 +795,265 @@ fn an_instance_on_the_same_head_but_a_different_width_does_not_satisfy_a_call() 
         e.message
     );
 }
+
+// --- stage-1 effect annotations + coverage (RFC-0014 §3.4/§4.5 I3/I5; M-660) ---------------------
+// The surface `!{eff1, eff2}` after a fn's return type declares its effect set (empty = pure). The
+// effect-coverage check requires a fn's DECLARED effects ⊇ the effects it PERFORMS, where performing
+// = the union of its top-level callees' declared effects. Under-declaration is an explicit
+// `CheckError` (G2/RFC-0014 I3); over-declaration is allowed (a declaration is a contract — I5).
+// Guarantee on the pass: `Declared` (a structural coverage check, not a theorem). Effect names are
+// plain identifiers (kernel kinds `retry|alloc|io|cascade|time` + user `Named`), NOT reserved words.
+
+#[test]
+fn an_effect_annotated_fn_parses_and_checks() {
+    // `a` over-declares `io` with a pure (literal) body — allowed (the declaration is a contract,
+    // RFC-0014 I5; a fn may reserve an effect its body does not yet perform). It must check, and the
+    // declared set must be recorded on the fn's signature for EXPLAIN / future wiring.
+    let env = check("nodule d\nfn a() -> Binary{8} !{io} = 0b00000000").expect("checks");
+    assert_eq!(
+        env.fn_decl("a").expect("fn a").sig.effects,
+        vec!["io".to_owned()],
+        "the declared effect set is recorded on the signature"
+    );
+}
+
+#[test]
+fn an_unannotated_caller_of_an_effectful_fn_is_a_check_error() {
+    // THE M-660 acceptance: `b` calls the `io`-effectful `a` but declares no effects (unannotated ⇒
+    // pure, RFC-0014 I5), so it PERFORMS `io` without DECLARING it — an explicit under-declaration
+    // refusal naming the effect and the callee (RFC-0014 I3; never silent — G2).
+    let err = check(
+        "nodule d\nfn a() -> Binary{8} !{io} = 0b00000000\n\
+         fn b() -> Binary{8} = a()",
+    )
+    .expect_err("an unannotated caller of an effectful fn must be refused");
+    assert!(
+        err.message.contains("io") && err.message.contains('a'),
+        "the refusal must name the missing effect `io` and the callee `a`, got: {}",
+        err.message
+    );
+    assert!(
+        err.message.contains("does not declare") || err.message.contains("undeclared"),
+        "the refusal must frame it as an under-declaration, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_caller_that_declares_the_callees_effect_checks() {
+    // `c` declares `io`, the effect its callee `a` performs — coverage holds (declared ⊇ performed),
+    // so it checks. The compositional-check line of RFC-0014 §8 (manual-declare + compositional-check).
+    let env = check(
+        "nodule d\nfn a() -> Binary{8} !{io} = 0b00000000\n\
+         fn c() -> Binary{8} !{io} = a()",
+    )
+    .expect("a caller that declares the callee's effect checks");
+    assert_eq!(
+        env.fn_decl("c").expect("fn c").sig.effects,
+        vec!["io".to_owned()]
+    );
+}
+
+#[test]
+fn over_declaration_is_allowed() {
+    // `d` declares `!{io, time}` but only calls `a` (which performs `io`) — declaring the unused
+    // `time` is fine (a contract, never an error/lint — RFC-0014 I5). Coverage is a SUPERSET check.
+    let env = check(
+        "nodule d\nfn a() -> Binary{8} !{io} = 0b00000000\n\
+         fn d() -> Binary{8} !{io, time} = a()",
+    )
+    .expect("over-declaration is allowed");
+    assert_eq!(
+        env.fn_decl("d").expect("fn d").sig.effects,
+        vec!["io".to_owned(), "time".to_owned()]
+    );
+}
+
+#[test]
+fn an_empty_written_effect_set_is_pure_and_equals_unannotated() {
+    // `!{}` is an explicit "declares no effects" — identical in meaning to an unannotated (pure) fn.
+    // A pure-bodied fn with `!{}` checks; both record the empty effect set.
+    let env = check(
+        "nodule d\nfn p() -> Binary{8} !{} = 0b00000000\n\
+         fn q() -> Binary{8} = 0b00000000",
+    )
+    .expect("an explicit empty effect set is pure");
+    assert!(env.fn_decl("p").expect("fn p").sig.effects.is_empty());
+    assert!(env.fn_decl("q").expect("fn q").sig.effects.is_empty());
+}
+
+#[test]
+fn a_duplicate_effect_name_in_one_annotation_is_a_parse_refusal() {
+    // A repeated effect in one annotation is a written redundancy — an explicit parse refusal (never
+    // a silent dedup — G2/RFC-0014 §4.5).
+    let err = parse("nodule d\nfn a() -> Binary{8} !{io, io} = 0b00000000")
+        .expect_err("a duplicate effect name must be rejected");
+    assert!(
+        err.message.contains("duplicate effect"),
+        "got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn effect_coverage_is_monotone_over_a_callee_sweep_a_property_bound() {
+    // Property (RFC-0014 I3, the compositional-check bound): a fn calling a set of effectful fns must
+    // declare ⊇ the union of their declared effects. Across a sweep of subsets of a fixed effect
+    // pool, declaring EXACTLY the performed union always checks, and OMITTING any one performed
+    // effect always fails naming that effect — uniformly, never a guess. (Deterministic sweep in the
+    // established `check.rs` property style — the generics/coherence property tests use the same loop
+    // form; no new proptest dependency.)
+    let pool = ["io", "time", "alloc", "cascade"];
+    // One effectful leaf fn per pool effect: `e_io`, `e_time`, … each declaring its single effect.
+    let leaves: String = pool
+        .iter()
+        .map(|eff| format!("fn e_{eff}() -> Binary{{8}} !{{{eff}}} = 0b00000000\n"))
+        .collect();
+    // Sweep every non-empty subset of the pool (bitmask 1..2^N).
+    for mask in 1u32..(1 << pool.len()) {
+        let chosen: Vec<&str> = pool
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| mask & (1 << i) != 0)
+            .map(|(_, e)| *e)
+            .collect();
+        // The caller calls each chosen leaf exactly once; its performed set is precisely `chosen`.
+        let calls: String = chosen
+            .iter()
+            .map(|eff| format!("let _{eff} = e_{eff}() in "))
+            .collect();
+        let body = format!("{calls}0b00000000");
+
+        // (a) Declaring EXACTLY the performed union checks.
+        let declared = chosen.join(", ");
+        let ok_src =
+            format!("nodule d\n{leaves}fn caller() -> Binary{{8}} !{{{declared}}} = {body}");
+        let ok = check(&ok_src);
+        assert!(
+            ok.is_ok(),
+            "declaring exactly the performed union {chosen:?} must check: {:?}",
+            ok.err()
+        );
+
+        // (b) OMITTING any single performed effect fails, naming that effect (under-declaration).
+        for omit in &chosen {
+            let kept: Vec<&str> = chosen.iter().copied().filter(|e| e != omit).collect();
+            let kept_decl = kept.join(", ");
+            let bad_src =
+                format!("nodule d\n{leaves}fn caller() -> Binary{{8}} !{{{kept_decl}}} = {body}");
+            let err = match check(&bad_src) {
+                Ok(_) => {
+                    panic!("omitting performed effect `{omit}` from {chosen:?} must fail to check")
+                }
+                Err(e) => e,
+            };
+            // The omitted effect cannot be the kept set; the error must name it.
+            assert!(
+                err.message.contains(omit),
+                "omitting `{omit}` (chosen={chosen:?}) must name it in the refusal, got: {}",
+                err.message
+            );
+        }
+    }
+}
+
+#[test]
+fn effect_coverage_accounts_for_trait_method_calls_and_impl_method_bodies() {
+    // The coverage check must see effects performed through a TRAIT-METHOD call (not only direct fn
+    // calls) and inside an IMPL-METHOD body — otherwise an effect could be hidden from a caller,
+    // breaking the RFC-0014 invariant "an effect a function performs is visible in its signature".
+    const LOG: &str = "nodule d\n\
+        trait Log<A> { fn log(x: A) -> A !{io} }\n\
+        impl Log<Binary{8}> for Binary{8} { fn log(x: Binary{8}) -> Binary{8} !{io} = x }\n";
+    // (1) A fn calling the effectful trait method `log` performs `io` and must declare it.
+    let bad = format!("{LOG}fn f(x: Binary{{8}}) -> Binary{{8}} = log(x)");
+    let e = check(&bad)
+        .expect_err("an unannotated caller of an effectful trait method must be refused");
+    assert!(
+        e.message.contains("io") && e.message.contains("does not declare"),
+        "got: {}",
+        e.message
+    );
+    // Declaring it checks.
+    let ok = format!("{LOG}fn f(x: Binary{{8}}) -> Binary{{8}} !{{io}} = log(x)");
+    assert!(
+        check(&ok).is_ok(),
+        "declaring `io` checks: {:?}",
+        check(&ok)
+    );
+
+    // (2) An IMPL-METHOD body that performs an effect its declared set (== the trait method's) does
+    // not cover is refused — here `m` declares `time` (matching the trait) but its body performs `io`
+    // via the top-level `ioop`, so the effect would be hidden if impl bodies were not checked.
+    let bad_impl = "nodule d\n\
+        fn ioop() -> Binary{8} !{io} = 0b00000000\n\
+        trait T<A> { fn m(x: A) -> Binary{8} !{time} }\n\
+        impl T<Binary{8}> for Binary{8} { fn m(x: Binary{8}) -> Binary{8} !{time} = let _y = ioop() in x }";
+    let e2 = check(bad_impl)
+        .expect_err("an impl method performing an effect it does not declare must be refused");
+    assert!(
+        e2.message.contains("io") && e2.message.contains("does not declare"),
+        "got: {}",
+        e2.message
+    );
+}
+
+#[test]
+fn a_trait_method_with_effects_an_impl_with_different_effects_is_refused() {
+    // Effect conformance (RFC-0014 §4.5 I3; M-660): an impl method's declared effects must EQUAL the
+    // trait method's. Here the trait declares `cmp` with `!{io}` but the impl method declares `!{}`
+    // (pure) — an explicit refusal (never a silent widen/narrow — G2).
+    let err = check(
+        "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} !{io} }\n\
+         impl Cmp<Binary{8}> for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b00 }",
+    )
+    .expect_err("an impl method whose effects differ from the trait's must be refused");
+    assert!(
+        err.message.contains("effect") && err.message.contains("match"),
+        "the refusal must frame an effect-annotation mismatch, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_trait_method_with_matching_effects_in_the_impl_checks() {
+    // The dual of the refusal: an impl method declaring the SAME effects as the trait method checks
+    // (exact-match conformance — RFC-0014 §4.5). The trait and impl both declare `!{io}`.
+    let env = check(
+        "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} !{io} }\n\
+         impl Cmp<Binary{8}> for Binary{8} \
+         { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} !{io} = 0b00 }",
+    )
+    .expect("an impl method whose effects match the trait's checks");
+    assert!(env.trait_info("Cmp").is_some());
+}
+
+#[test]
+fn an_effect_carrying_call_through_a_transitive_chain_must_be_declared() {
+    // Coverage composes one hop at a time (the v0 compositional check, RFC-0014 §8): `mid` calls the
+    // `io`-effectful `leaf`, so `mid` must declare `io`; `top` calls `mid` (which declares `io`), so
+    // `top` must declare `io` too. With every link declaring `io`, the chain checks.
+    let env = check(
+        "nodule d\nfn leaf() -> Binary{8} !{io} = 0b00000000\n\
+         fn mid() -> Binary{8} !{io} = leaf()\n\
+         fn top() -> Binary{8} !{io} = mid()",
+    )
+    .expect("a fully-declared effect chain checks");
+    assert_eq!(
+        env.fn_decl("top").expect("fn top").sig.effects,
+        vec!["io".to_owned()]
+    );
+
+    // Break the middle link: `mid` performs `io` (via `leaf`) but does not declare it → refusal.
+    let err = check(
+        "nodule d\nfn leaf() -> Binary{8} !{io} = 0b00000000\n\
+         fn mid() -> Binary{8} = leaf()\n\
+         fn top() -> Binary{8} !{io} = mid()",
+    )
+    .expect_err("an undeclared middle link must be refused");
+    assert!(
+        err.message.contains("io"),
+        "the refusal must name the undeclared effect, got: {}",
+        err.message
+    );
+}
