@@ -38,6 +38,10 @@
 //! channels live wholly outside the trusted evaluator. Single-threaded cooperative scheduling means
 //! every [`RefCell`] borrow is taken and released within one `poll`, before the task yields, so
 //! borrows never overlap — no `unsafe`, no atomics.
+//!
+//! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
+//! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
+#![forbid(unsafe_code)]
 
 use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;

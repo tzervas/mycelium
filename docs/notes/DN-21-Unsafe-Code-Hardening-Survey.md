@@ -150,3 +150,24 @@ emit-IR→compile→`dlopen`→call architecture is the right design; this note 
   M-679…M-683) enacting ADR-014's named follow-ons + an in-house `Sym<'lib,T>` lifetime-binding newtype
   (maintainer-chosen over `libloading`). No code changed. Grounded in ADR-014 (Accepted), LR-9, KC-3.
   Append-only.
+- **2026-06-22 — M-679…M-683 landed (epic M-678 enacted; behaviour-preserving, zero new dependency).**
+  M-679: strengthened the 3 thin `// SAFETY:` comments (§3) + `debug_assert!(!ptr.is_null())` at the
+  FFI/transmute sites. M-680: re-pinned `#![forbid(unsafe_code)]` on the trusted base (§5 F-1) + the 11
+  zero-unsafe `mycelium-mlir` submodules (§5 F-2). M-681: `just safety-check` (`scripts/checks/safety.sh`)
+  — the `// SAFETY:`-adjacency gate (§5 F-3), wired into `just check`. M-683: documented the `audit_wild`
+  (`.myc`) ⟂ Rust `unsafe` (`.rs`) two-population split (§5 F-4 → `Security-Checks-Contract.md` §4.1).
+  M-682: the in-house `Sym<'lib, T>` lifetime-binding newtype + a `bind`-once `BoundBitnetDot`/
+  `BoundSpecializedDot` handle closed the §4 co-location dangling-ptr risk **structurally** (compiler-
+  checked lifetime; no raw `*mut c_void` field survives; no per-call `dlsym` in the E1 hot loop).
+  **Inventory + confinement (honesty):** all `unsafe` now lives in `jit.rs` and nowhere else —
+  `bitnet`/`specialize` are themselves `#![forbid(unsafe_code)]`, resolving their symbols through safe,
+  fixed-type accessors. The fn-pointer `transmute` is a single private `unsafe fn get` (so the ABI claim
+  is never made by safe code — a soundness fix from the PR review), wrapped by three audited safe
+  accessors (`jit_kernel`/`bitnet_dot`/`spec_dot`) that each assert the correct `extern "C"` signature
+  against the IR this crate emits. The workspace `unsafe`-block count is **8**, every one in `jit.rs`:
+  the 3 dynamic-linker FFI (`dlopen`/`dlsym`/`dlclose`), the private `unsafe fn get` + its `transmute_copy`,
+  and the 3 ABI-asserting accessors. (This is up from §2's **6** because each ABI claim is now made
+  explicitly and per-symbol-class rather than inline-and-implicit at the call site — the surface is
+  larger in count but smaller in *kind*: confined to one file, no generic safe resolver, no safe-code UB.)
+  The §7 irreducible floor (calling the JIT'd fn-ptr; the ABI claim) is unchanged — now expressed in one
+  place, lifetime-bound, not pretended away. Append-only.
