@@ -83,6 +83,26 @@ else
   skip "no uv/python3 — skipped python tools"
 fi
 
+section "node runtime (for the npx-based gates)"
+# Node/npm: the npx-driven gates (markdownlint; any structured-doc / json-schema check that shells to
+# `npx`) need a Node runtime. The cloud base image ships Node at /opt/node22, but a bare or minimal
+# container may lack it — provision it via the distro package manager if absent. Idempotent (probes
+# `npm` first; installs ONLY when missing — a snapshot re-run is a no-op), never `curl | bash`,
+# best-effort (an apt failure on a restricted network allowlist prints a skip and the npx gates skip,
+# never blocking the rest of setup — G2).
+if have npm; then
+  ok "node/npm present (npm $(npm --version 2>/dev/null || echo '?'))"
+elif have apt-get; then
+  if DEBIAN_FRONTEND=noninteractive apt-get update -qq >/dev/null 2>&1 \
+     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nodejs npm >/dev/null 2>&1; then
+    ok "apt: installed node $(node --version 2>/dev/null || echo '?') + npm $(npm --version 2>/dev/null || echo '?')"
+  else
+    skip "apt: nodejs/npm install failed (offline/restricted allowlist) — the npx checks (markdown lint) will skip"
+  fi
+else
+  skip "npm absent and no apt-get — install Node 20+ via your package manager so the npx-based checks run"
+fi
+
 # Node tool: markdownlint-cli2 is invoked on demand via `npx --yes`; warm the cache.
 # Pinned to a specific version (B1-02) — keep this in sync with scripts/checks/markdown.sh.
 if have npx; then
