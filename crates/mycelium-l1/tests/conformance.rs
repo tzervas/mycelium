@@ -88,6 +88,12 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "14-impl-reserved-ident.myc",
         "expected an identifier",
     ),
+    (
+        // M-659 / RFC-0019 §4.1: bounds belong only on function type-params; a bound on a `type`
+        // (or `trait`) parameter is a never-silent parse refusal (the bound is never dropped — G2).
+        "15-trait-param-bound.myc",
+        "bounds on `type`/`trait` type-parameters are deferred",
+    ),
 ];
 
 #[test]

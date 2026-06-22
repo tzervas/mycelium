@@ -71,6 +71,8 @@ pub enum Item {
     Type(TypeDecl),
     /// A trait declaration.
     Trait(TraitDecl),
+    /// A trait-instance declaration `impl Trait<args> for T { fn … }` (RFC-0019 §4.1; LR-2).
+    Impl(ImplDecl),
     /// A function definition.
     Fn(FnDecl),
 }
@@ -95,15 +97,53 @@ pub struct Ctor {
     pub fields: Vec<TypeRef>,
 }
 
-/// `trait Name<params> { fn … }` (LR-2; conventional term).
+/// `trait Name<params> { fn … }` (LR-2; conventional term). `params` are **unbounded** type-variable
+/// names in stage-1 (RFC-0019 §4.1 / RFC-0007 §12.1 — single-parameter traits; bounds on trait
+/// parameters are a deferred refusal, never silently dropped).
 #[derive(Debug, Clone, PartialEq)]
 pub struct TraitDecl {
     /// Trait name.
     pub name: String,
-    /// Type parameters.
+    /// Type parameters (unbounded names; stage-1).
     pub params: Vec<String>,
     /// Required function signatures.
     pub sigs: Vec<FnSig>,
+}
+
+/// A trait-instance declaration `impl Trait<args> for T { fn … }` (RFC-0019 §4.1; RFC-0007 §12.1).
+/// The methods are full function definitions (`fn name(params) -> ret = body`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImplDecl {
+    /// The trait being implemented.
+    pub trait_name: String,
+    /// The trait's type arguments (`impl Cmp<Binary{8}> for …` ⇒ `[Binary{8}]`). Concrete
+    /// `TypeRef`s, not parameter names.
+    pub trait_args: Vec<TypeRef>,
+    /// The type the instance is for (`… for Binary{8}` ⇒ `Binary{8}`).
+    pub for_ty: TypeRef,
+    /// The provided method definitions.
+    pub methods: Vec<FnDecl>,
+}
+
+/// A reference to a trait in a bound position — `Cmp` or `Cmp<Binary{8}>` (RFC-0019 §4.1 `bound`).
+/// Appears only as an element of a [`TypeParam`]'s bounds (the dictionary site).
+#[derive(Debug, Clone, PartialEq)]
+pub struct TraitRef {
+    /// The trait name.
+    pub name: String,
+    /// The trait's type arguments, if written (`Cmp<T>` ⇒ `[T]`; bare `Cmp` ⇒ `[]`).
+    pub args: Vec<TypeRef>,
+}
+
+/// A (possibly **bounded**) type parameter on a **function** — `T` or `T: Cmp + Ord<T>` (RFC-0019
+/// §4.1 `type_param`). Bounds live **only** on function type-params (the dictionary site); data/trait
+/// type-params stay unbounded names in stage-1 ([`TypeDecl::params`] / [`TraitDecl::params`]).
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeParam {
+    /// The parameter name.
+    pub name: String,
+    /// Its trait bounds (empty for an unbounded parameter — the §11 identity case).
+    pub bounds: Vec<TraitRef>,
 }
 
 /// A function signature (shared by trait requirements and `fn` definitions).
@@ -111,12 +151,24 @@ pub struct TraitDecl {
 pub struct FnSig {
     /// Function name.
     pub name: String,
-    /// Type parameters.
-    pub params: Vec<String>,
+    /// Type parameters, possibly **bounded** (RFC-0019 §4.1). An unbounded `T` is `TypeParam { name:
+    /// "T", bounds: [] }` — the §11 identity.
+    pub params: Vec<TypeParam>,
     /// Value parameters.
     pub value_params: Vec<Param>,
     /// Result type.
     pub ret: TypeRef,
+}
+
+impl FnSig {
+    /// The **names** of this signature's type parameters (dropping any bounds) — the form the
+    /// checker's `tyvars` scope and the §11 generic machinery consume (each name resolves to a
+    /// `Ty::Var`). Additive helper so callers need not reach through each [`TypeParam`] (DRY / Law
+    /// of Demeter); the bounds are read separately where instance-satisfiability is checked.
+    #[must_use]
+    pub fn param_names(&self) -> Vec<String> {
+        self.params.iter().map(|p| p.name.clone()).collect()
+    }
 }
 
 /// A function definition. `thaw` de-matures this def — keeps it interpreted inside a matured
@@ -489,5 +541,30 @@ mod tests {
         .into_iter()
         .collect();
         assert_eq!(strengths.len(), 4);
+    }
+
+    #[test]
+    fn fn_sig_param_names_drops_bounds() {
+        // `param_names()` projects the bounded type-params (RFC-0019 §4.1) to their names — the form
+        // the §11 generic machinery / checker `tyvars` consume. Bounds are read separately.
+        let sig = FnSig {
+            name: "f".to_owned(),
+            params: vec![
+                TypeParam {
+                    name: "T".to_owned(),
+                    bounds: vec![TraitRef {
+                        name: "Cmp".to_owned(),
+                        args: vec![],
+                    }],
+                },
+                TypeParam {
+                    name: "U".to_owned(),
+                    bounds: vec![],
+                },
+            ],
+            value_params: vec![],
+            ret: TypeRef::unguaranteed(BaseType::Binary(1)),
+        };
+        assert_eq!(sig.param_names(), vec!["T".to_owned(), "U".to_owned()]);
     }
 }
