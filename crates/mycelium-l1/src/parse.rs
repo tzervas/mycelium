@@ -1252,4 +1252,52 @@ mod tests {
             .expect_err("a bound on a type-decl param must be rejected");
         assert!(err.message.contains("deferred"), "{}", err.message);
     }
+
+    // --- M-660 / RFC-0014 §3.4: effect annotations `!{ … }` on fn signatures parse ---
+
+    #[test]
+    fn an_effect_annotation_parses_into_the_signature_effect_set() {
+        // `!{io, time}` after the return type lands as the signature's effect set, in source order.
+        let n = parse("nodule d\nfn a() -> Binary{8} !{io, time} = 0b00000000").expect("parses");
+        let Item::Fn(f) = &n.items[0] else {
+            panic!("fn")
+        };
+        assert_eq!(f.sig.effects, vec!["io".to_owned(), "time".to_owned()]);
+    }
+
+    #[test]
+    fn an_unannotated_fn_has_an_empty_effect_set_and_an_explicit_empty_set_too() {
+        // Unannotated ⇒ pure (empty set); the explicit written `!{}` is also the empty set — both
+        // mean "declares no effects" (RFC-0014 I5).
+        let plain = parse("nodule d\nfn a() -> Binary{8} = 0b00000000").expect("parses");
+        let Item::Fn(f) = &plain.items[0] else {
+            panic!("fn")
+        };
+        assert!(f.sig.effects.is_empty());
+        let empty = parse("nodule d\nfn a() -> Binary{8} !{} = 0b00000000").expect("parses");
+        let Item::Fn(f) = &empty.items[0] else {
+            panic!("fn")
+        };
+        assert!(f.sig.effects.is_empty());
+    }
+
+    #[test]
+    fn a_trait_method_requirement_carries_an_effect_annotation() {
+        // The effect annotation is part of the shared signature tail, so a trait method requirement
+        // (no body) carries it too (the impl-vs-trait effect conformance check consumes it — M-660).
+        let n = parse("nodule d\ntrait T<A> { fn m(x: A) -> A !{io} }").expect("parses");
+        let Item::Trait(td) = &n.items[0] else {
+            panic!("trait")
+        };
+        assert_eq!(td.sigs[0].effects, vec!["io".to_owned()]);
+    }
+
+    #[test]
+    fn a_bare_bang_without_an_effect_brace_is_an_explicit_error() {
+        // `!` only ever opens an effect set; a `!` not followed by `{` is a never-silent parse error
+        // (v0 has no negation/`not` operator — logical ops are named prims; G2).
+        let err = parse("nodule d\nfn a() -> Binary{8} ! = 0b00000000")
+            .expect_err("a bare `!` must be rejected");
+        assert!(err.message.contains("effect set"), "got: {}", err.message);
+    }
 }
