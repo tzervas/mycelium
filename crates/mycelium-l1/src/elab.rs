@@ -205,8 +205,8 @@ pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
     // Elaboration recurses over the (checked) expression AST; run it on a deep worker stack so deep
     // input never overflows the caller's thread stack. The semantic bound stays the upstream explicit
     // budgets (the parser's nesting cap + the checker's `MAX_CHECK_DEPTH`, both already enforced before
-    // a program reaches here); the worker stack is the transitional Rust-only adapter (`crate::deep`).
-    crate::deep::with_deep_stack(|| {
+    // a program reaches here); the worker stack is the transitional Rust-only adapter (`mycelium_stack`).
+    mycelium_stack::with_deep_stack(|| {
         let (mut el, binders, fd) = elab_prelude(env, entry)?;
         let mut stack = vec![entry.to_owned()];
         let entry_body = el.expr(&mut stack, &[], &fd.body)?;
@@ -232,7 +232,7 @@ pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
 /// Refuses with an explicit [`ElabError::Residual`] (never a fabricated accept) when the entry body
 /// is **not** a `colony`, or when any hypha body is outside the evaluation-complete fragment.
 pub fn elaborate_colony(env: &Env, entry: &str) -> Result<Vec<Node>, ElabError> {
-    crate::deep::with_deep_stack(|| elaborate_colony_inner(env, entry))
+    mycelium_stack::with_deep_stack(|| elaborate_colony_inner(env, entry))
 }
 
 fn elaborate_colony_inner(env: &Env, entry: &str) -> Result<Vec<Node>, ElabError> {

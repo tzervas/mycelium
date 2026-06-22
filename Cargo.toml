@@ -10,6 +10,7 @@ members = [
     "crates/mycelium-numerics",
     "crates/mycelium-select",
     "crates/mycelium-l1",
+    "crates/mycelium-stack",
     "crates/mycelium-vsa",
     "crates/mycelium-mlir",
     "crates/mycelium-cert",

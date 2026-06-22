@@ -1,0 +1,24 @@
+[package]
+name = "mycelium-stack"
+version = "0.0.0"
+description = "Host-stack management for the L1 frontend's recursive passes (checker/elaborator), kept OUTSIDE the trusted kernel (`mycelium-l1`) so the kernel stays `unsafe`-free and auditable (ADR-014, KC-3). Default `with_deep_stack` is std-only and `unsafe`-free; any future grow-on-demand stack growth is the one place upstream `unsafe` would be contained — behind a leaf dependency, never in Mycelium-authored source. The explicit depth budgets stay in the kernel (the portable, self-hosting primitive); this crate is the transitional Rust-host adapter."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+
+# --- Future grow-on-demand hybrid (documented, not yet wired) ---------------------------------------
+# The "large stack + grow-on-demand" hybrid lands here, never in the kernel: an optional
+#   [features] grow-on-demand = ["dep:stacker"]
+#   [dependencies] stacker = { version = "0.1", optional = true }
+# would let `with_deep_stack` call `stacker::maybe_grow` (a SAFE API; the stack-switching `unsafe` is
+# internal to the `stacker` leaf crate) so recursion grows past the reserved stack on demand. Even then
+# this crate's own source stays `unsafe`-free (it calls only safe APIs), so the `unsafe` is shunted to a
+# single audited upstream leaf — the furthest possible point from the trusted kernel. Off by default;
+# the std-only path below is the robust, dependency-free, `unsafe`-free baseline.

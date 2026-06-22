@@ -20,7 +20,7 @@ use crate::ast::{
 /// the parser ([`crate::parse::MAX_EXPR_DEPTH`]) and the evaluator (`eval::DEFAULT_DEPTH`) do for their
 /// recursions. It is set comfortably **above** the parser's surface-nesting cap (so it never trips for
 /// parser-produced ASTs — it is the defense-in-depth ceiling for an AST handed straight to the checker
-/// via the API), and the recursion runs on a deep worker stack ([`crate::deep`]) so this budget — not a
+/// via the API), and the recursion runs on a deep worker stack ([`mycelium_stack`]) so this budget — not a
 /// host-stack overflow — is always what bounds a pathological input.
 ///
 /// **Grounding (measured, not guessed).** The 256 MiB worker stack physically supports **~24,600**
@@ -33,7 +33,7 @@ use crate::ast::{
 ///
 /// **Self-hosting:** this explicit budget is the portable primitive (it carries over to the
 /// Mycelium-native frontend's clocked bounded-computation model); the worker stack is the transitional
-/// Rust-only adapter (`crate::deep`).
+/// Rust-only adapter (`mycelium_stack`).
 pub const MAX_CHECK_DEPTH: u32 = 4096;
 
 /// RAII depth accounting for the checker's recursive [`Cx::check`] (paired with [`MAX_CHECK_DEPTH`]):
@@ -404,8 +404,8 @@ fn check_and_resolve_matured(
     // Run the recursive pass on a deep worker stack so deep-but-valid input never overflows the
     // *caller's* thread stack — the explicit [`MAX_CHECK_DEPTH`] budget, not the host stack, bounds a
     // pathological input (banked guard 4; the worker stack is the transitional Rust-only adapter —
-    // see [`crate::deep`]). Borrows are fine: the worker is a scoped thread.
-    crate::deep::with_deep_stack(|| check_and_resolve_matured_inner(nodule, matured_scope))
+    // see [`mycelium_stack`]). Borrows are fine: the worker is a scoped thread.
+    mycelium_stack::with_deep_stack(|| check_and_resolve_matured_inner(nodule, matured_scope))
 }
 
 fn check_and_resolve_matured_inner(
@@ -1964,7 +1964,7 @@ mod depth_budget_tests {
 
     #[test]
     fn the_depth_budget_trips_cleanly_and_just_under_it_succeeds() {
-        // Just under the budget: the checker completes — the deep worker stack ([`crate::deep`])
+        // Just under the budget: the checker completes — the deep worker stack ([`mycelium_stack`])
         // absorbs `MAX_CHECK_DEPTH` levels with large margin (measured physical ceiling ≫ budget).
         let ok = check_nodule(&nodule_with_body(deep_not((MAX_CHECK_DEPTH - 5) as usize)));
         assert!(ok.is_ok(), "just under the budget should check ok: {ok:?}");

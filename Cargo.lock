@@ -273,6 +273,7 @@ dependencies = [
  "mycelium-interp",
  "mycelium-mlir",
  "mycelium-numerics",
+ "mycelium-stack",
 ]
 
 [[package]]
@@ -354,6 +355,10 @@ dependencies = [
  "mycelium-core",
  "mycelium-proj",
 ]
+
+[[package]]
+name = "mycelium-stack"
+version = "0.0.0"
 
 [[package]]
 name = "mycelium-std-cmp"

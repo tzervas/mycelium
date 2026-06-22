@@ -25,12 +25,19 @@
 //! parser never panics and never silently accepts (S5/G2). The lexer disambiguates the one tricky
 //! token (`<` opening a ternary literal vs a type-argument list) by lookahead, and a malformed
 //! ternary literal is an explicit error, not a silent truncation.
+//!
+//! **Trusted-kernel discipline (ADR-014, KC-3):** this crate is `#![forbid(unsafe_code)]` — the
+//! reference interpreter is **machine-proven `unsafe`-free**. Host-stack management for the recursive
+//! checker/elaborator (the deep worker stack) is deliberately kept *outside* this kernel, in the
+//! `mycelium-stack` crate, which the kernel uses only through its safe API; the explicit depth budgets
+//! (`parse::MAX_EXPR_DEPTH`, `checkty::MAX_CHECK_DEPTH`, the evaluator's clock) are the portable
+//! primitive that carries to the self-hosted frontend.
+#![forbid(unsafe_code)]
 
 pub mod ambient;
 pub mod ast;
 pub mod checkty;
 pub(crate) mod decision;
-pub(crate) mod deep;
 pub mod elab;
 pub mod error;
 pub mod eval;
