@@ -826,7 +826,13 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     //     substituted for the trait's first type param (v0 restriction: single-param traits only;
     //     multi-param trait bodies are deferred — a CheckError for now).
     //   - The `for_ty` must be a concrete (Var-free) monomorphic type (never abstract).
+    //   - Each impl method is **also** registered into `impl_fns` under its mangled name
+    //     (S7: compile-time dictionary dispatch, M-659).  These get merged into `env.fns` so the
+    //     evaluator and elaborator can resolve them without any new kernel nodes (KC-3).
     let mut impls: BTreeMap<(String, String), ImplInfo> = BTreeMap::new();
+    // Impl methods registered for evaluator/elaborator resolution (S7, **Declared**).
+    // Keyed by the mangled impl-method name: `__impl_{trait}_for_{for_ty}__{method}`.
+    let mut impl_fns: BTreeMap<String, FnDecl> = BTreeMap::new();
     for item in &nodule.items {
         if let Item::Impl(id) = item {
             let site = format!("impl {} for …", id.trait_name);
@@ -927,8 +933,10 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
                     site: &msite,
                     types: &types,
                     generics: &generics,
+                    traits: &traits,
                     impls: &impls,
                     fns: &BTreeMap::new(), // impl methods see no top-level fns (no recursion in v0)
+                    bounds: &[],           // impl methods have no bounds
                 };
                 let (got, body) = cx.check(&mut scope, &m.body, Some(&ret))?;
                 if got != ret {
@@ -946,10 +954,29 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
             impls.insert(
                 key,
                 ImplInfo {
-                    for_ty,
-                    methods: checked_methods,
+                    for_ty: for_ty.clone(),
+                    methods: checked_methods.clone(),
                 },
             );
+            // S7: also register each checked method into `impl_fns` under its mangled name.
+            // This lets the evaluator/elaborator resolve trait-method calls in monomorphized
+            // bodies without any new kernel nodes (KC-3 / **Declared**).
+            for m in &checked_methods {
+                let mangled = impl_method_name(&id.trait_name, &for_ty, &m.sig.name);
+                // Rebuild the FnDecl with the mangled name in its sig.
+                let mangled_fd = FnDecl {
+                    thaw: m.thaw,
+                    sig: FnSig {
+                        name: mangled.clone(),
+                        params: vec![], // impl methods are always monomorphic (v0)
+                        bounds: vec![], // no bounds on the concrete method
+                        value_params: m.sig.value_params.clone(),
+                        ret: m.sig.ret.clone(),
+                    },
+                    body: m.body.clone(),
+                };
+                impl_fns.insert(mangled, mangled_fd);
+            }
         }
     }
 
@@ -991,8 +1018,11 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
             site,
             types: &types,
             generics: &generics,
+            traits: &traits,
             impls: &impls,
             fns: &fns,
+            // S7: expose this fn's bounds so trait-method calls in the body type-check correctly.
+            bounds: &fd.sig.bounds,
         };
         let (got, body) = cx.check(&mut scope, &fd.body, Some(&ret))?;
         if got != ret {
@@ -1007,7 +1037,13 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
             },
         );
     }
-    let fns = resolved_fns;
+    // S7: merge impl method FnDecls (already type-checked in pass 1d) into `resolved_fns` so the
+    // evaluator/elaborator can resolve them by their mangled names — compile-time dictionary
+    // dispatch, no new kernel nodes needed (KC-3 / **Declared**).
+    let mut fns = resolved_fns;
+    for (mangled, fd) in impl_fns {
+        fns.insert(mangled, fd);
+    }
 
     // Pass 4: totality classification + the scope-quantified matured gate (RFC-0017 §4.2).
     // When `matured_scope` is true, every fn with `thaw == false` must be `Total`; a non-total
@@ -1225,9 +1261,14 @@ struct Cx<'a> {
     types: &'a BTreeMap<String, DataInfo>,
     /// Generic shell registry — used for abstract pattern matching in generic fn bodies (M-657).
     generics: &'a BTreeMap<String, GenericShell>,
+    /// Trait registry — used for trait-method call resolution in bounded generic bodies (S7/M-659).
+    traits: &'a BTreeMap<String, TraitInfo>,
     /// Impl registry — used for bounded-call resolution (M-659, **Declared**).
     impls: &'a BTreeMap<(String, String), ImplInfo>,
     fns: &'a BTreeMap<String, FnDecl>,
+    /// Bounds of the function currently being checked — used to type-check trait-method calls
+    /// inside bounded generic bodies (S7/M-659, **Declared**). Empty for monomorphic functions.
+    bounds: &'a [crate::ast::Bound],
 }
 
 impl Cx<'_> {
@@ -1305,6 +1346,11 @@ impl Cx<'_> {
                  pass should have stripped it (RFC-0012 §4.4)",
             ),
             Expr::Ascribe(inner, t) => self.check_ascribe(scope, inner, t),
+            // S7/M-659 note: trait-method calls in a bounded body are dispatched via
+            // `check_app_with_trait_dispatch` (not inline here) to keep this frame lean (A4-02).
+            Expr::App { head, args } if !self.bounds.is_empty() => {
+                self.check_app_with_trait_dispatch(scope, head, args, expected)
+            }
             Expr::App { head, args } => self.check_app(scope, head, args, expected),
         }
     }
@@ -1623,6 +1669,83 @@ impl Cx<'_> {
                 "`{name}` does not accept argument types {arg_tys:?} (T-Op; RFC-0007 §4.4)"
             )),
         }
+    }
+
+    /// S7 (M-659): `App` dispatch for bounded generic bodies — called instead of `check_app`
+    /// when `self.bounds` is non-empty (a generic fn body with at least one trait bound).
+    ///
+    /// Tries trait-method dispatch first (via `check_trait_method_call`); falls through to the
+    /// normal `check_app` path if `head` is not a bound trait method.
+    ///
+    /// Separated from `check` with `#[inline(never)]` to keep `check`'s frame lean (A4-02:
+    /// `check` recurses on the host stack for every AST node — the hot path for deeply-nested
+    /// expressions. Any local variable added to `check`'s frame multiplies by the nesting depth.)
+    #[inline(never)]
+    fn check_app_with_trait_dispatch(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        head: &Expr,
+        args: &[Expr],
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        if let Expr::Path(p) = head {
+            if p.0.len() == 1 {
+                if let Some(result) = self.check_trait_method_call(scope, &p.0[0], head, args)? {
+                    return Ok(result);
+                }
+            }
+        }
+        self.check_app(scope, head, args, expected)
+    }
+
+    /// S7 (M-659): Try to resolve `name` as a trait method of one of `self.bounds`.
+    ///
+    /// Returns `Ok(Some((ty, expr)))` if `name` is a method of a bound trait (lazy arity-only
+    /// check — argument types are abstract `Ty::Var` in a generic body; correctness is enforced
+    /// at instantiation by S6/S7 — **Declared**). Returns `Ok(None)` if no bound has this
+    /// method name. Returns `Err` for an arity mismatch.
+    ///
+    /// `#[inline(never)]`: separated from `check_app` to keep that frame lean (A4-02 — the
+    /// same rationale as `check_generic_call`).
+    #[inline(never)]
+    fn check_trait_method_call(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        name: &str,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Option<(Ty, Expr)>, CheckError> {
+        for b in self.bounds {
+            if let Some(ti) = self.traits.get(&b.trait_name) {
+                if let Some(m_sig) = ti.methods.iter().find(|s| s.name == name) {
+                    if m_sig.value_params.len() != args.len() {
+                        return Err(CheckError::new(
+                            self.site,
+                            format!(
+                                "trait method `{}::{}` takes {} argument(s), got {}",
+                                b.trait_name,
+                                name,
+                                m_sig.value_params.len(),
+                                args.len()
+                            ),
+                        ));
+                    }
+                    // Type-check arguments lazily (accept them, just infer their types).
+                    // Cannot enforce exact param types: the argument types are abstract (Ty::Var)
+                    // in a generic body; correctness is enforced at instantiation (S6/S7).
+                    let mut rebuilt = Vec::with_capacity(args.len());
+                    for a in args {
+                        let (_, a2) = self.check(scope, a, None)?;
+                        rebuilt.push(a2);
+                    }
+                    // Return type: resolve from the trait method's declared return type (v0:
+                    // concrete or bound type var — no tyvars in scope for m_sig.ret resolution).
+                    let (ret_ty, _) = resolve_ty(self.site, self.types, &[], &m_sig.ret)?;
+                    return Ok(Some((ret_ty, app_node(head, rebuilt))));
+                }
+            }
+        }
+        Ok(None)
     }
 
     /// Generic call (S5, M-657): arg-driven instantiation. Called only for fns with type params.
@@ -2155,8 +2278,10 @@ pub(crate) fn infer_type(
         site: "<elaborate>",
         types: &env.types,
         generics: &env.generics,
+        traits: &env.traits,
         impls: &env.impls,
         fns: &env.fns,
+        bounds: &[],
     };
     cx.infer(scope, e)
 }
@@ -2484,6 +2609,19 @@ pub(crate) fn mangle(name: &str, args: &[Ty]) -> String {
     }
     let parts: Vec<String> = args.iter().map(|t| t.to_string()).collect();
     format!("{name}<{}>", parts.join(", "))
+}
+
+/// Build the **compile-time dictionary** name for an impl method (S7/M-659, **Declared**).
+///
+/// For `impl Show for Binary{8} { fn show(…) }`, produces:
+/// `__impl_Show_for_Binary{8}__show`
+///
+/// This name is globally unique (trait × concrete for-type × method), is registered in
+/// `env.fns` during Pass 1d, and is substituted into monomorphized generic bodies wherever a
+/// call to the abstract trait-method name appears.  No new kernel nodes (KC-3); the evaluator
+/// and elaborator both resolve by name lookup in `env.fns`.
+pub(crate) fn impl_method_name(trait_name: &str, for_ty: &Ty, method: &str) -> String {
+    format!("__impl_{trait_name}_for_{for_ty}__{method}")
 }
 
 /// Returns true if `ty` contains any [`Ty::Var`] — used to detect unresolved phantom type
@@ -3072,9 +3210,27 @@ pub(crate) fn monomorphize_with_cap(
             })
             .collect();
 
+        // S7 (M-659): Build the compile-time dictionary for this instance.
+        // For each bound `B.param: B.trait_name`, look up the concrete type from `subst`
+        // and build a mapping: trait-method-name → mangled impl-method-name.
+        // This lets `rewrite_expr` substitute abstract trait-method calls with concrete
+        // impl-method calls — no runtime dictionary, no new kernel nodes (KC-3 / **Declared**).
+        let mut dict: BTreeMap<String, String> = BTreeMap::new();
+        for b in &gfd.sig.bounds {
+            if let Some(concrete_ty) = subst.get(&b.param) {
+                // Look up the trait info to find which method names belong to this trait.
+                if let Some(trait_info) = env.traits.get(&b.trait_name) {
+                    for m_sig in &trait_info.methods {
+                        let impl_name = impl_method_name(&b.trait_name, concrete_ty, &m_sig.name);
+                        dict.insert(m_sig.name.clone(), impl_name);
+                    }
+                }
+            }
+        }
+
         // Build the monomorphic body: deep-copy the generic body, rewrite internal calls to
         // generic functions (including the self-call) to their mangled instance names under
-        // the *current* substitution.
+        // the *current* substitution.  Also rewrites trait-method calls via `dict` (S7).
         let mono_body = rewrite_body_for_instance(
             &gfd.body,
             &gfn_name,
@@ -3085,6 +3241,7 @@ pub(crate) fn monomorphize_with_cap(
             &memo,
             &mangled,
             &concrete_scope,
+            &dict,
         )?;
 
         // Build and insert the monomorphic FnDecl.
@@ -3166,8 +3323,10 @@ fn infer_generic_arg_tys_with_env(
         site,
         types: &env.types,
         generics: &env.generics,
+        traits: &env.traits,
         impls: &env.impls,
         fns: &env.fns,
+        bounds: &gfd.sig.bounds,
     };
     let mut scope_mut: Vec<(String, Ty)> = scope.to_vec();
 
@@ -3417,11 +3576,16 @@ fn calls_in_body(body: &Expr) -> BTreeSet<String> {
 /// - Calls to OTHER generic functions in the body use `unify_arg` against the callee's abstract
 ///   param types to compute their own substitution, then push the resulting instance onto
 ///   `worklist` for materialization.
+/// - S7 (M-659): calls to trait-method names that appear in `dict` are rewritten to their
+///   concrete mangled impl-method names (compile-time dictionary dispatch — KC-3, no new nodes).
 /// - Ascriptions (`expr : T`) whose type refs contain Ty::Var are left as-is (elab is
 ///   transparent to them — the type was already checked by the checker).
 ///
 /// The rewriting is purely structural (tree transformation over `Expr`). No new type checking
 /// is performed — correctness rests on the checker's prior validation.
+///
+/// `dict`: maps trait-method short name → mangled impl-method name for this instantiation.
+/// Built by the caller from the generic fn's bounds + the current substitution.
 #[allow(clippy::too_many_arguments)]
 fn rewrite_body_for_instance(
     body: &Expr,
@@ -3433,6 +3597,7 @@ fn rewrite_body_for_instance(
     memo: &BTreeSet<String>,
     mangled_self: &str,
     concrete_scope: &[(String, Ty)],
+    dict: &BTreeMap<String, String>,
 ) -> Result<Expr, CheckError> {
     rewrite_expr(
         body,
@@ -3444,6 +3609,7 @@ fn rewrite_body_for_instance(
         memo,
         mangled_self,
         concrete_scope,
+        dict,
     )
 }
 
@@ -3452,6 +3618,8 @@ fn rewrite_body_for_instance(
 // type substitution) for potential future use and structural consistency with
 // `rewrite_body_for_instance`; Strategy 1 (direct subst-based inference) was removed
 // in M-657C, so it is no longer directly read inside this function body.
+// `dict` carries the compile-time dictionary for S7 (M-659): maps trait-method short name →
+// mangled impl-method name for the current instantiation.
 #[allow(clippy::only_used_in_recursion)]
 fn rewrite_expr(
     e: &Expr,
@@ -3463,12 +3631,43 @@ fn rewrite_expr(
     memo: &BTreeSet<String>,
     mangled_self: &str,
     concrete_scope: &[(String, Ty)],
+    dict: &BTreeMap<String, String>,
 ) -> Result<Expr, CheckError> {
     match e {
         Expr::App { head, args } => {
             if let Expr::Path(p) = head.as_ref() {
                 if p.0.len() == 1 {
                     let callee_name = &p.0[0];
+
+                    // S7 (M-659): trait-method dispatch via compile-time dictionary.
+                    // If the callee name is a trait method for this instance's bounds (i.e., it
+                    // appears in `dict`), rewrite it to the concrete impl's mangled method name.
+                    // This check happens BEFORE the self-recursive and generic-fn checks to
+                    // ensure trait methods always dispatch correctly — they are neither self-calls
+                    // nor generic functions.
+                    if let Some(impl_name) = dict.get(callee_name.as_str()) {
+                        let new_args: Vec<Expr> = args
+                            .iter()
+                            .map(|a| {
+                                rewrite_expr(
+                                    a,
+                                    self_name,
+                                    subst,
+                                    generic_fns,
+                                    env,
+                                    worklist,
+                                    memo,
+                                    mangled_self,
+                                    concrete_scope,
+                                    dict,
+                                )
+                            })
+                            .collect::<Result<_, _>>()?;
+                        return Ok(Expr::App {
+                            head: Box::new(Expr::Path(Path(vec![impl_name.clone()]))),
+                            args: new_args,
+                        });
+                    }
 
                     // Self-recursive call: rename to the mangled self name.
                     if callee_name == self_name {
@@ -3485,6 +3684,7 @@ fn rewrite_expr(
                                     memo,
                                     mangled_self,
                                     concrete_scope,
+                                    dict,
                                 )
                             })
                             .collect::<Result<_, _>>()?;
@@ -3545,6 +3745,7 @@ fn rewrite_expr(
                                                 memo,
                                                 mangled_self,
                                                 concrete_scope,
+                                                dict,
                                             )
                                         })
                                         .collect::<Result<_, _>>()?;
@@ -3578,6 +3779,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?;
             let new_args: Vec<Expr> = args
                 .iter()
@@ -3592,6 +3794,7 @@ fn rewrite_expr(
                         memo,
                         mangled_self,
                         concrete_scope,
+                        dict,
                     )
                 })
                 .collect::<Result<_, _>>()?;
@@ -3617,6 +3820,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?;
             // Extend the concrete scope for the body: if we can infer the bound's type,
             // add `(name, ty)` so that generic calls in `body` whose arg IS `name` can
@@ -3642,6 +3846,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 &body_scope,
+                dict,
             )?;
             Ok(Expr::Let {
                 name: name.clone(),
@@ -3661,6 +3866,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?),
             conseq: Box::new(rewrite_expr(
                 conseq,
@@ -3672,6 +3878,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?),
             alt: Box::new(rewrite_expr(
                 alt,
@@ -3683,6 +3890,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?),
         }),
         Expr::Match { scrutinee, arms } => {
@@ -3696,6 +3904,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?;
             // Infer the scrutinee type so we can bind pattern variables per arm.
             let mut scope_mut = concrete_scope.to_vec();
@@ -3723,6 +3932,7 @@ fn rewrite_expr(
                         memo,
                         mangled_self,
                         &arm_scope,
+                        dict,
                     )
                     .map(|body| Arm {
                         pattern: arm.pattern.clone(),
@@ -3752,6 +3962,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?;
             let new_init = rewrite_expr(
                 init,
@@ -3763,6 +3974,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?;
             // Extend the scope for the body with the iteration variable `x` (element type)
             // and accumulator `acc` (same type as init).  Best-effort.
@@ -3793,6 +4005,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 &for_scope,
+                dict,
             )?;
             Ok(Expr::For {
                 x: x.clone(),
@@ -3817,6 +4030,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?),
             target: target.clone(),
             policy: policy.clone(),
@@ -3833,6 +4047,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?),
         }),
         Expr::Wild(b) => Ok(Expr::Wild(Box::new(rewrite_expr(
@@ -3845,6 +4060,7 @@ fn rewrite_expr(
             memo,
             mangled_self,
             concrete_scope,
+            dict,
         )?))),
         Expr::Spore(b) => Ok(Expr::Spore(Box::new(rewrite_expr(
             b,
@@ -3856,6 +4072,7 @@ fn rewrite_expr(
             memo,
             mangled_self,
             concrete_scope,
+            dict,
         )?))),
         Expr::Colony(hyphae) => {
             let new_hyphae: Vec<Hypha> = hyphae
@@ -3871,6 +4088,7 @@ fn rewrite_expr(
                         memo,
                         mangled_self,
                         concrete_scope,
+                        dict,
                     )
                     .map(|body| Hypha { body })
                 })
@@ -3888,6 +4106,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?),
             ty.clone(),
         )),

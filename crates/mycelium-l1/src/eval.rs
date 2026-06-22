@@ -21,11 +21,11 @@
 //!   never panics or defaults (S5/G2).
 
 use mycelium_cert::BinaryTernarySwapEngine;
-use mycelium_core::{CoreValue, DataRegistry, Datum, GuaranteeStrength, Value};
+use mycelium_core::{CoreValue, DataRegistry, Datum, GuaranteeStrength, Repr, ScalarKind, Value};
 use mycelium_interp::{EvalError as KernelError, PrimRegistry, SwapEngine};
 
-use crate::ast::{Expr, Literal, Pattern, Strength};
-use crate::checkty::{prim_kernel_name, Env};
+use crate::ast::{Expr, Literal, Pattern, Scalar, Strength};
+use crate::checkty::{impl_method_name, prim_kernel_name, Env, Ty};
 use crate::elab::{lit_value, policy_name_ref, type_repr, ElabError};
 
 /// An L1 runtime value: an L0 representation value, or a constructed datum. Data values are
@@ -501,6 +501,14 @@ impl<'e> Evaluator<'e> {
                 Ok(v)
             }
 
+            // S7 (M-659): when the env has traits, use `eval_app_with_trait_fallback` which
+            // tries trait-method dispatch after the normal lookup fails. The guard condition
+            // (`!self.env.traits.is_empty()`) is a cheap bool check with no new locals — the
+            // guard pattern keeps `eval`'s frame lean (A4-03: same pattern as `check` uses
+            // for the bounded-generic-body path in the checker).
+            Expr::App { head, args } if !self.env.traits.is_empty() => {
+                self.eval_app_with_trait_fallback(fuel, depth, site, scope, head, args)
+            }
             Expr::App { head, args } => self.eval_app(fuel, depth, site, scope, head, args),
         }
     }
@@ -663,6 +671,145 @@ impl<'e> Evaluator<'e> {
                 L1Value::Data { .. } => Ok(false),
             },
         }
+    }
+
+    /// Convert an [`L1Value`] to the [`Ty`] it inhabits, for runtime trait-method dispatch (S7).
+    ///
+    /// Returns `None` for VSA values that lack a direct `Ty` mapping in v0 (dispatch skips those).
+    /// `#[inline(never)]`: cold helper — non-inline keeps any callers' frames lean (A4-03).
+    #[inline(never)]
+    fn l1value_ty(v: &L1Value) -> Option<Ty> {
+        match v {
+            L1Value::Repr(val) => match val.repr() {
+                Repr::Binary { width } => Some(Ty::Binary(*width)),
+                Repr::Ternary { trits } => Some(Ty::Ternary(*trits)),
+                Repr::Dense { dim, dtype } => {
+                    let scalar = match dtype {
+                        ScalarKind::F16 => Scalar::F16,
+                        ScalarKind::Bf16 => Scalar::Bf16,
+                        ScalarKind::F32 => Scalar::F32,
+                        ScalarKind::F64 => Scalar::F64,
+                    };
+                    Some(Ty::Dense(*dim, scalar))
+                }
+                Repr::Vsa { .. } => None,
+            },
+            L1Value::Data { ty, .. } => Some(Ty::Data(ty.clone())),
+        }
+    }
+
+    /// S7 (M-659): runtime trait-method dispatch fallback for `eval_app`.
+    ///
+    /// When `name` is not in `env.fns` / ctor / prim, try resolving it as a trait method by
+    /// examining the first argument's concrete type and searching `env.traits` for an impl.
+    /// Returns `Ok(Some(v))` on success, `Ok(None)` if no impl was found (caller raises `Stuck`),
+    /// or `Err(_)` if the dispatched invocation itself failed.
+    ///
+    /// `#[inline(never)]`: cold path; non-inline prevents locals (Option<String>, Vec<L1Value>)
+    /// from inflating `eval_app`'s frame — important because `eval_app` is on the hot recursion
+    /// path for deeply-nested expressions (A4-03 contract).
+    #[inline(never)]
+    fn try_trait_dispatch(
+        &self,
+        fuel: &mut u64,
+        depth: u32,
+        name: &str,
+        argv: Vec<L1Value>,
+    ) -> Result<Option<L1Value>, L1Error> {
+        if let Some(first_arg) = argv.first() {
+            if let Some(concrete_ty) = Self::l1value_ty(first_arg) {
+                for (trait_name, trait_info) in &self.env.traits {
+                    if trait_info.methods.iter().any(|m| m.name == name) {
+                        let mangled = impl_method_name(trait_name, &concrete_ty, name);
+                        if self.env.fns.contains_key(&mangled) {
+                            return self.invoke(fuel, depth, &mangled, argv).map(Some);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// S7 (M-659): `App` dispatch with trait-method fallback.
+    ///
+    /// Called from `eval` instead of `eval_app` when `env.traits` is non-empty. Evaluates args
+    /// first (CBV, like `eval_app`), then dispatches: fn→`invoke`, ctor→`Data`, prim→kernel,
+    /// trait-method→`try_trait_dispatch`. The `Stuck` fallback matches `eval_app`'s contract.
+    ///
+    /// Separated from `eval` with `#[inline(never)]` so `eval`'s frame stays lean (A4-03):
+    /// `eval` is the hot recursion path — variables added there multiply by nesting depth.
+    /// Programs with no traits take the direct `eval_app` path (guard in `eval`), unchanged.
+    #[inline(never)]
+    #[allow(clippy::too_many_arguments)]
+    fn eval_app_with_trait_fallback(
+        &self,
+        fuel: &mut u64,
+        depth: u32,
+        site: &str,
+        scope: &mut Vec<(String, L1Value)>,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<L1Value, L1Error> {
+        let Expr::Path(p) = head else {
+            return Err(L1Error::Stuck {
+                site: site.to_owned(),
+                why: "v0 application head must be a name (first-order)".to_owned(),
+            });
+        };
+        if p.0.len() != 1 {
+            return Err(L1Error::Stuck {
+                site: site.to_owned(),
+                why: format!("dotted call `{}`", p.0.join(".")),
+            });
+        }
+        let name = &p.0[0];
+        // CBV: evaluate all args once.
+        let mut argv = Vec::with_capacity(args.len());
+        for a in args {
+            argv.push(self.eval(fuel, depth, site, scope, a)?);
+        }
+        // Normal dispatch (same order as eval_app).
+        if self.env.fns.contains_key(name) {
+            return self.invoke(fuel, depth, name, argv);
+        }
+        if let Some((d, i)) = self.env.ctor(name) {
+            if d.ctors[i].fields.len() != argv.len() {
+                return Err(L1Error::Stuck {
+                    site: site.to_owned(),
+                    why: format!("unsaturated constructor `{name}` (W6)"),
+                });
+            }
+            return Ok(L1Value::Data {
+                ty: d.name.clone(),
+                ctor: name.clone(),
+                fields: argv,
+            });
+        }
+        if let Some(kernel) = prim_kernel_name(name) {
+            let vals: Vec<&Value> = argv
+                .iter()
+                .map(|v| {
+                    v.as_repr().ok_or_else(|| L1Error::Stuck {
+                        site: site.to_owned(),
+                        why: format!("prim `{name}` applied to a data value"),
+                    })
+                })
+                .collect::<Result<_, _>>()?;
+            let f = self
+                .prims
+                .get(kernel)
+                .ok_or_else(|| L1Error::Kernel(KernelError::UnknownPrim(kernel.to_owned())))?;
+            return Ok(L1Value::Repr(f(kernel, &vals)?));
+        }
+        // S7: trait-method dispatch via try_trait_dispatch (also #[inline(never)]).
+        if let Some(v) = self.try_trait_dispatch(fuel, depth, name, argv)? {
+            return Ok(v);
+        }
+        Err(L1Error::Stuck {
+            site: site.to_owned(),
+            why: format!("unknown function/constructor/prim `{name}`"),
+        })
     }
 
     /// First-order application: user functions, saturated constructors (W6), and prims — split
