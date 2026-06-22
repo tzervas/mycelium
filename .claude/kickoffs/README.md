@@ -55,7 +55,8 @@ The L1 critical path continues from where `lex` left off. Disjoint, ready to cut
   (DN-14 §3 rows 6/7 → `present`) and unblocks **M-649** self-hosting of a *generic* stdlib nodule.
 - **`E7-2 R1`** — **M-667** (`fuse`/`reclaim`/`tier`) after M-665/M-666 (`hypha`/`colony`) landed;
   then **M-668** (R2 planning, docs).
-- **`M-664`** — `consume`/`grow`/`impl` surface keywords (depends on the M-659 trait checker, landed).
+- **`M-664`** — `consume`/`grow`/`impl` surface keywords (needs the M-659 trait **checker**, which
+  has landed; M-659 itself stays `in-progress` until M-673 lands its dictionary-passing elaboration).
 - **`M-649`** — first self-hosted stdlib module: a *non-generic* candidate (`std.ternary`/`std.option`)
   is doable on the current surface **now**; a generic one waits on `M-673`.
 - Tooling (lower priority, mostly disjoint): **M-675** (idmap↔GitHub reconcile), **M-676**, **M-677**.
