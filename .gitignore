@@ -5,6 +5,9 @@
 # Cargo.lock IS committed — the workspace ships a binary (`xtask`), so the lockfile is
 # tracked for reproducible builds. (gitignore has no inline comments; keep this on its own line.)
 *.pdb
+# Stray build artifacts: the mycelium-mlir AOT/JIT differential path emits a compiled kernel
+# (librust_out.rlib) into the cwd during tests — a build artifact, never source.
+*.rlib
 
 # ---- Python ----
 __pycache__/
