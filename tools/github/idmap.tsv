@@ -155,3 +155,26 @@ M-630	179	4684129480
 #             JSON delegation (M-372). Created via the GitHub MCP server; real db-ids (append-only).
 M-371	202	4697741054
 M-372	203	4697741421
+# 2026-06-22: e7l / Phase-6 gap-closure epics + children, looked up live via the GitHub MCP
+#   (search_issues / list_issues on tzervas/mycelium). Append-only; the issue_db_id is the
+#   sub_issue_id sub_issue_write takes (NOT the number). The E7-1/E7-2 epic BODIES enumerate their
+#   children (the relationship source of truth). LIVE sub-issue links performed this session:
+#     E7-1 (#316) ← M-656 (#315) and M-658 (#317)  [both status:done; verified via get_sub_issues].
+#   The remaining E7-1 children (M-657, M-659..664) and the E7-2 children (M-665..668) are
+#   relationship-recorded in issues.yaml (epic:) and are a maintainer/token follow-up to link live
+#   (gh-issues-sync.py is script-ready; this env's MCP set has sub_issue_write but no Projects-v2).
+#   HONESTY (VR-5/G2): only the four db-ids below were VERIFIED from a live issue read; the other
+#   e7l children's NUMBERS were confirmed from list_issues but their db-ids were NOT fetched — they
+#   are intentionally omitted (a db-id is never guessed from a sequential pattern). Run a live
+#   issue read (or `--use-api`) to fill them before sub_issue_write. Number-only rows note the gap.
+E7-1	316	4710401111
+E7-2	324	4710401283
+M-656	315	4710401110
+M-658	317	4710401112
+# ISSUE numbers verified (list_issues 2026-06-22, the phase:5 open set); db-ids NOT yet fetched —
+# look up before sub-issue linking:
+#   M-657=#314  M-659=#318  M-660=#319  M-661=#320  M-662=#321  M-663=#322  M-664=#323  M-649=#284
+#   M-673=#351  M-674=#350
+# E7-2 children's ISSUE numbers were NOT enumerated this session (M-665..668) — do not confuse with
+# their LANDING PR numbers in pr-index.json (M-665→PR#332, M-666→PR#342 are PRs, not issues). Look
+# up the issue numbers + db-ids live before linking them under E7-2 (#324).
