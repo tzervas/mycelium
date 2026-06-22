@@ -156,12 +156,20 @@ Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is 
 
 ### Post-compaction continuation (durable handoff)
 
-**▶ NEXT (2026-06-22 — `/kickoff e7lc`): M-663 (RFC-0018 static guarantee grading — stays `Declared`).**
-**M-661** (`wild`/FFI floor) and **M-662** (`phylum` + cross-nodule model — single-file phylum, `pub` +
-glob `use`, qualified per-phylum registry, **phylum-wide** orphan rule; all `Declared`) are now **LANDED
-on `main`**, carrying the lexicon through phyla. M-660/M-659/M-656–658/M-674 + track-a PM tooling landed
-earlier. **Maintainer direction (FIRM): complete the FULL lexicon (M-663 → M-664 → E7-2 M-667/M-668)
-BEFORE any dogfooding** — a complete surface unlocks whole-project self-hosting + the example phylum.
+**▶ NEXT — fire the parallel kickoffs (tiered `dev → integration → main` workflow; see
+`.claude/kickoffs/README.md`).** The E7-1/E7-2 L1-surface chain **M-656 → M-662 is LANDED on `main`**
+(generics · traits · effects · `wild`/FFI · phylum + cross-nodule; all honest `Declared` where graded).
+The next phase splits into **disjoint isolated trees** — fire each in its own session as a **Sonnet
+swarm**, all branching off **`dev`**:
+- **`/kickoff lex`** — L1 surface completion: **M-663** (RFC-0018 grading, stays `Declared`) → M-664
+  (`consume`/`grow`/`impl`) → E7-2 (M-667/M-668) → M-673/M-649 dogfooding. *Critical path; serial-on-L1.*
+- **`/kickoff u78`** — DN-21 unsafe-hardening (M-678 → M-679–683) in `crates/mycelium-mlir` + the check
+  tooling. *Fully disjoint from `lex` — runs in parallel.*
+- **`/kickoff dfr`** — RP-10/RP-9 dogfood research (docs-only). *Disjoint; gates `dfb`.*
+
+`lex ⟂ u78 ⟂ dfr` are fully disjoint (run all three at once). **Maintainer direction (FIRM): complete
+the FULL lexicon (`lex`) before the web/ADK dogfood *builds* (`dfb`)** — a complete surface unlocks
+self-hosting + the example phylum.
 
 **M-661:** accept `wild { … }` inside a fn that declares the `ffi` effect; `wild` becomes the `ffi`
 effect SOURCE for M-660's coverage checker; `myc-sec` wild-audit gate keeps flagging unapproved `wild`.

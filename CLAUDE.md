@@ -93,10 +93,16 @@ not add `on: push` / `on: pull_request` auto-triggers without an explicit decisi
   (`docs(rfc-0003): tighten capacity-bound wording`, `feat(swap): …`).
 - A PR states which `FR/NFR/VR/SC` it advances (or which ADR/RFC it implements) and **how it was
   verified**. Editorial-only PRs say so.
-- **Working-branch workflow — `main` is never touched directly.** All work happens on a working
-  branch off `main` (one task per branch); `main` advances **only** through a reviewed PR. Never
-  `git push` to `main`, never fast-forward or merge-commit into it, never commit on it locally —
-  the *only* write to `main` is the PR's squash-merge. This holds even for a one-file fix.
+- **Tiered branches (`dev → integration → main`) — `main` is never touched directly.** Day-to-day
+  work branches off **`dev`** (the working tier — messy OK: WIP, exploration, octopus/swarm merges;
+  only *compiles + change-scoped tests* required), promotes via PR to **`integration`** (the staging
+  tier — the full `just check` green + the honesty/append-only review, shared files reconciled once),
+  and `integration → main` is the polished, **squash-only release** (PR-gated by `/pr-review` + a
+  Copilot round). Each tier is PR-gated and **more stringent than the last**; `main`/`integration`/
+  `dev` are persistent + protected (no direct push), everything below `dev` is ephemeral and merges
+  freely. `main` advances **only** through the `integration → main` squash-PR — never a direct
+  `git push`/merge/commit, even for a one-file fix. Full workflow + the per-isolated-tree kickoff
+  index (parallel Sonnet swarms): **`.claude/kickoffs/README.md`**.
 - **Squash-only into `main`.** Every PR lands on `main` as a **single squash commit** — a linear,
   bisectable history that keeps downstream development and integration merges smooth. Squashing
   happens **only** at the PR→`main` step; the internal swarm integration merges (leaf→epic→orch)
