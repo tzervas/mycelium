@@ -152,12 +152,7 @@ pub fn compile_bitnet_dot_simd() -> Result<BitnetDotKernel, AotError> {
     )?;
 
     let lib = dlopen_path(&so)?;
-    Ok(BitnetDotKernel::from_loaded(
-        guard,
-        lib,
-        SIMD_SYM,
-        PackScheme::I2S,
-    ))
+    BitnetDotKernel::from_loaded(guard, lib, SIMD_SYM, PackScheme::I2S)
 }
 
 /// Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel
@@ -274,12 +269,7 @@ pub fn compile_bitnet_dot_simd_tl1() -> Result<BitnetDotKernel, AotError> {
     )?;
 
     let lib = dlopen_path(&so)?;
-    Ok(BitnetDotKernel::from_loaded(
-        guard,
-        lib,
-        SIMD_TL1_SYM,
-        PackScheme::Tl1,
-    ))
+    BitnetDotKernel::from_loaded(guard, lib, SIMD_TL1_SYM, PackScheme::Tl1)
 }
 
 /// Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel
@@ -626,12 +616,7 @@ pub fn compile_bitnet_dot_simd_tl2() -> Result<BitnetDotKernel, AotError> {
     )?;
 
     let lib = dlopen_path(&so)?;
-    Ok(BitnetDotKernel::from_loaded(
-        guard,
-        lib,
-        SIMD_TL2_SYM,
-        PackScheme::Tl2,
-    ))
+    BitnetDotKernel::from_loaded(guard, lib, SIMD_TL2_SYM, PackScheme::Tl2)
 }
 
 #[cfg(test)]

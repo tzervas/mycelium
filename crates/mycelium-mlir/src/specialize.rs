@@ -40,16 +40,12 @@ use std::fmt::Write as _;
 use mycelium_core::ternary::digit;
 use mycelium_core::Trit;
 
-use crate::jit::{dlopen_path, Lib, Sym};
+use crate::jit::{dlopen_path, Lib, SpecDotFn, Sym};
 use crate::llvm::{path, run_tool, unique_tmp_dir, AotError, TmpDir};
 
 /// The specialized kernel's symbol — distinct from the generic [`crate::bitnet`] kernel so both can be
-/// loaded at once (e.g. for the E1 §4 differential timing).
+/// loaded at once (e.g. for the E1 §4 differential timing). Matches the symbol `Lib::spec_dot` resolves.
 const SPEC_SYM: &str = "myc_bitnet_dot_spec";
-
-/// The specialized kernel's `extern "C"` signature: `i64 myc_bitnet_dot_spec(ptr %x)` — only the
-/// activation buffer is a runtime argument (the weights are compiled in).
-type SpecDotFn = extern "C" fn(*const i32) -> i64;
 
 /// Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel
 /// `i64 @myc_bitnet_dot_spec(ptr %x)` with `weights` compiled in as constants: it accumulates
@@ -122,7 +118,7 @@ impl SpecializedDotKernel {
     /// reuse for a hot loop over varying activation buffers — the inference shape.
     pub fn bind(&self) -> Result<BoundSpecializedDot<'_>, AotError> {
         Ok(BoundSpecializedDot {
-            kernel: self.lib.get::<SpecDotFn>(SPEC_SYM)?,
+            kernel: self.lib.spec_dot()?,
             n: self.n,
         })
     }
@@ -193,6 +189,8 @@ pub fn compile_specialized_dot(weights: &[Trit]) -> Result<SpecializedDotKernel,
     )?;
 
     let lib = dlopen_path(&so)?;
+    // Fail fast: verify the entry point is exported now (pre-M-682 behaviour), not at first bind/call.
+    lib.probe(SPEC_SYM)?;
     Ok(SpecializedDotKernel {
         _dir: guard,
         lib,

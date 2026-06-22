@@ -159,9 +159,15 @@ emit-IR→compile→`dlopen`→call architecture is the right design; this note 
   M-682: the in-house `Sym<'lib, T>` lifetime-binding newtype + a `bind`-once `BoundBitnetDot`/
   `BoundSpecializedDot` handle closed the §4 co-location dangling-ptr risk **structurally** (compiler-
   checked lifetime; no raw `*mut c_void` field survives; no per-call `dlsym` in the E1 hot loop).
-  **Inventory update (honesty):** consolidating the 3 transmute-call sites into the single audited
-  `Lib::get` ABI choke-point means the workspace `unsafe`-block count is now **4** (all in `jit.rs`:
-  `dlopen`/`dlsym`/`dlclose` + the one `transmute_copy`), down from the **6** of §2 — `bitnet`/`specialize`
-  are now themselves `#![forbid(unsafe_code)]`, so unsafe is confined to one file behind one choke-point.
-  The §7 irreducible floor (calling the JIT'd fn-ptr; the ABI claim) is unchanged — it is now expressed
-  once, lifetime-bound, not pretended away. Append-only.
+  **Inventory + confinement (honesty):** all `unsafe` now lives in `jit.rs` and nowhere else —
+  `bitnet`/`specialize` are themselves `#![forbid(unsafe_code)]`, resolving their symbols through safe,
+  fixed-type accessors. The fn-pointer `transmute` is a single private `unsafe fn get` (so the ABI claim
+  is never made by safe code — a soundness fix from the PR review), wrapped by three audited safe
+  accessors (`jit_kernel`/`bitnet_dot`/`spec_dot`) that each assert the correct `extern "C"` signature
+  against the IR this crate emits. The workspace `unsafe`-block count is **8**, every one in `jit.rs`:
+  the 3 dynamic-linker FFI (`dlopen`/`dlsym`/`dlclose`), the private `unsafe fn get` + its `transmute_copy`,
+  and the 3 ABI-asserting accessors. (This is up from §2's **6** because each ABI claim is now made
+  explicitly and per-symbol-class rather than inline-and-implicit at the call site — the surface is
+  larger in count but smaller in *kind*: confined to one file, no generic safe resolver, no safe-code UB.)
+  The §7 irreducible floor (calling the JIT'd fn-ptr; the ABI claim) is unchanged — now expressed in one
+  place, lifetime-bound, not pretended away. Append-only.

@@ -36,13 +36,9 @@ use std::fmt::Write as _;
 use mycelium_core::ternary::digit;
 use mycelium_core::{PackScheme, PhysicalLayout, Trit};
 
-use crate::jit::{dlopen_path, Lib, Sym};
+use crate::jit::{dlopen_path, BitnetDotFn, Lib, Sym};
 use crate::llvm::{path, run_tool, unique_tmp_dir, AotError, TmpDir};
 use crate::pack::{needed_bytes, pack_trits};
-
-/// The shared `extern "C"` signature of every packed-ternary dot kernel (the generic [`bitnet`](self)
-/// kernel and the [`crate::simd`] hand-vectorized variants): `i64 f(ptr %w, ptr %x, i64 %n)`.
-type BitnetDotFn = extern "C" fn(*const u8, *const i32, i64) -> i64;
 
 /// The **inspectable physical-layout record** a packed-ternary kernel decodes (M-610; NFR-1/NFR-4;
 /// DN-01; RFC-0004 §5). This is the kernel's reified `Meta.physical` claim: which [`PackScheme`] it
@@ -304,13 +300,17 @@ impl BitnetDotKernel {
         lib: Lib,
         sym: &'static str,
         scheme: PackScheme,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, AotError> {
+        // Fail fast: verify the entry point is exported now (preserving the pre-M-682 behaviour where
+        // the symbol was resolved eagerly at load), rather than deferring a missing-symbol error to
+        // the first bind/call.
+        lib.probe(sym)?;
+        Ok(Self {
             _dir: dir,
             lib,
             sym,
             scheme,
-        }
+        })
     }
 
     /// The packing this kernel decodes inline.
@@ -336,7 +336,7 @@ impl BitnetDotKernel {
     /// throughput loop free of per-iteration `dlsym` overhead.
     pub fn bind(&self) -> Result<BoundBitnetDot<'_>, AotError> {
         Ok(BoundBitnetDot {
-            kernel: self.lib.get::<BitnetDotFn>(self.sym)?,
+            kernel: self.lib.bitnet_dot(self.sym)?,
             scheme: self.scheme,
         })
     }
@@ -436,12 +436,7 @@ pub fn compile_bitnet_dot_for(scheme: PackScheme) -> Result<BitnetDotKernel, Aot
     )?;
 
     let lib = dlopen_path(&so)?;
-    Ok(BitnetDotKernel::from_loaded(
-        guard,
-        lib,
-        "myc_bitnet_dot",
-        scheme,
-    ))
+    BitnetDotKernel::from_loaded(guard, lib, "myc_bitnet_dot", scheme)
 }
 
 /// Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot

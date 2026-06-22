@@ -9,11 +9,13 @@
 //!
 //! **Intentional unsafe (ADR-014; confined per DN-21/M-682).** This module is the workspace's *only*
 //! `unsafe`: the dynamic-linker FFI (`dlopen`/`dlsym`/`dlclose`, declared with a bare `extern "C"` —
-//! no `libc` dependency) and the single ABI `transmute` in `Lib::get`. The fn-pointer `transmute`
-//! is consolidated into that one audited choke-point (`Lib::get` → a lifetime-bound `Sym`), so the
-//! BitNet/specialized dot kernels call their resolved pointers through ordinary safe Rust and are
-//! themselves `#![forbid(unsafe_code)]`. Each remaining `unsafe` carries a `// SAFETY:` justification
-//! and `#[cfg_attr(not(debug_assertions), allow(unsafe_code))]` (warns in dev/test as the caution
+//! no `libc` dependency) and the ABI `transmute` behind `Lib`'s symbol resolution. The fn-pointer
+//! `transmute` lives in one private `unsafe fn get` (so the ABI claim is never made by safe code) and
+//! is exposed only through audited **safe, fixed-type accessors** (`jit_kernel`/`bitnet_dot`/`spec_dot`)
+//! that each assert the correct signature against the IR this crate emits. The kernels therefore call
+//! their resolved pointers through ordinary safe Rust and are themselves `#![forbid(unsafe_code)]`.
+//! Each `unsafe` carries a `// SAFETY:` justification and
+//! `#[cfg_attr(not(debug_assertions), allow(unsafe_code))]` (warns in dev/test as the caution
 //! incentive, silent in release).
 //!
 //! **Honesty / E1.** The kernel is *closed* (constants baked in), so `clang` constant-folds it — the
@@ -111,11 +113,11 @@ impl JitArtifact {
     pub fn call(&self) -> Result<Value, AotError> {
         let lib = dlopen_path(&self.so)?; // dlclose on drop
 
-        // Resolve through the single ABI choke-point (M-682): `kernel` is a typed, lifetime-bound
-        // `Sym` that borrows `lib`, so the borrow checker guarantees the fn-pointer is not called
-        // after `lib` (the `.so`) is unloaded. `buf` is exactly `self.width` bytes and the kernel
-        // writes one byte per result element only on the ok path, so the write is in-bounds.
-        let kernel = lib.get::<extern "C" fn(*mut u8) -> i32>("myc_kernel")?;
+        // Resolve through the safe typed accessor (M-682): `kernel` is a lifetime-bound `Sym` that
+        // borrows `lib`, so the borrow checker guarantees the fn-pointer is not called after `lib`
+        // (the `.so`) is unloaded. `buf` is exactly `self.width` bytes and the kernel writes one byte
+        // per result element only on the ok path, so the write is in-bounds.
+        let kernel = lib.jit_kernel()?;
         let mut buf = vec![0u8; self.width];
         let status = (kernel.as_fn())(buf.as_mut_ptr());
         // Read-back protocol: a non-zero status means the in-process kernel overflowed the m-trit
@@ -130,6 +132,15 @@ impl JitArtifact {
     }
 }
 
+/// The `extern "C"` signature of every packed-ternary dot kernel — the generic [`crate::bitnet`]
+/// kernel and the [`crate::simd`] hand-vectorized variants all share it: `i64 f(ptr %w, ptr %x, i64 %n)`.
+pub(crate) type BitnetDotFn = extern "C" fn(*const u8, *const i32, i64) -> i64;
+/// The `extern "C"` signature of the weight-specialized dot kernel: `i64 f(ptr %x)` (the weights are
+/// compiled in, so only the activation buffer is a runtime argument).
+pub(crate) type SpecDotFn = extern "C" fn(*const i32) -> i64;
+/// The `extern "C"` signature of the JIT element-wise kernel: `i32 f(ptr %out)` (the overflow status).
+pub(crate) type JitKernelFn = extern "C" fn(*mut u8) -> i32;
+
 /// A loaded shared library that `dlclose`s itself on drop. `pub(crate)` so other in-crate JIT kernels
 /// (e.g. the M-360 BitNet dot kernel) reuse the same dynamic-loader rather than re-rolling the FFI.
 pub(crate) struct Lib(*mut c_void);
@@ -141,15 +152,25 @@ impl Lib {
         lookup_sym(self.0, &name)
     }
 
-    /// Resolve `symbol` to a **typed, lifetime-bound** function pointer [`Sym<'_, T>`](Sym) (M-682;
-    /// DN-21 §4/§6). `T` MUST be the `extern "C"` fn-pointer type matching the compiled symbol's
-    /// signature — that ABI claim is the caller's assertion, definitionally outside the type system
-    /// (the irreducible unsafe of DN-21 §7). This is the crate's **single ABI-`transmute` choke-point**:
-    /// once a `Sym` is built, calling the pointer through [`Sym::as_fn`] needs no further `unsafe`. The
-    /// returned `Sym` borrows `&self`, so the borrow checker enforces that the resolved pointer cannot
-    /// outlive this `Lib` — closing the §4 co-location dangling-pointer risk structurally rather than
-    /// by field-ordering convention.
-    pub(crate) fn get<T: Copy>(&self, symbol: &str) -> Result<Sym<'_, T>, AotError> {
+    /// Verify `symbol` is exported (it resolves via `dlsym`) without retaining a typed pointer. Called
+    /// at compile/load time so a missing entry point **fails fast** — preserving the pre-M-682
+    /// behaviour where `compile_*` resolved the symbol eagerly, rather than deferring the error to the
+    /// first `bind`/`call`.
+    pub(crate) fn probe(&self, symbol: &str) -> Result<(), AotError> {
+        self.sym(symbol).map(|_| ())
+    }
+
+    /// Resolve `symbol` to a **typed, lifetime-bound** function pointer [`Sym<'_, T>`](Sym) — the
+    /// crate's single ABI-`transmute` choke-point (M-682; DN-21 §4/§6/§7).
+    ///
+    /// # Safety
+    /// `T` MUST be the exact `extern "C"` fn-pointer type of `symbol`'s compiled signature. That ABI
+    /// claim is definitionally outside the type system (the irreducible unsafe of DN-21 §7); a mismatch
+    /// is UB. This is **private + `unsafe`** precisely so the claim is never made by safe code — it is
+    /// made once, in an audited safe wrapper ([`Self::jit_kernel`] / [`Self::bitnet_dot`] /
+    /// [`Self::spec_dot`]) whose hard-coded `T` matches the IR this crate emits. Callers then get only
+    /// the safe, fixed-type accessors.
+    unsafe fn get<T: Copy>(&self, symbol: &str) -> Result<Sym<'_, T>, AotError> {
         let raw = self.sym(symbol)?; // non-null or an explicit Err
                                      // `sym` errors on a null result, and a fn pointer is pointer-sized on every supported target;
                                      // assert both preconditions of the `transmute_copy` in dev/test (DN-21 §6 M-679 ethos).
@@ -163,11 +184,11 @@ impl Lib {
             "Sym<T> requires T to be a pointer-sized fn pointer"
         );
         // SAFETY: `raw` is the non-null address `dlsym` returned for `symbol` in this still-loaded
-        // library (`sym` returns `Err` on null), and `T` is the `extern "C"` fn-pointer type the caller
-        // asserts matches the symbol's compiled signature — the irreducible ABI claim (DN-21 §7). A
-        // function pointer has the same size as `*mut c_void`, so `transmute_copy` reads exactly the
-        // pointer (the size is debug-asserted above). The returned `Sym` borrows `&self`, binding the
-        // pointer's lifetime to this `Lib`, so it can never be called after the library is dropped.
+        // library (`sym` returns `Err` on null); the caller (an audited wrapper below) guarantees `T`
+        // is the symbol's `extern "C"` ABI. A function pointer has the same size as `*mut c_void`, so
+        // `transmute_copy` reads exactly the pointer (the size is debug-asserted above). The returned
+        // `Sym` borrows `&self`, binding the pointer's lifetime to this `Lib`, so it can never be
+        // called after the library is dropped (DN-21 §4).
         #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
         let fptr = unsafe { std::mem::transmute_copy::<*mut c_void, T>(&raw) };
         Ok(Sym {
@@ -175,15 +196,48 @@ impl Lib {
             _lib: PhantomData,
         })
     }
+
+    /// Resolve the JIT element-wise kernel `myc_kernel` to a lifetime-bound, safe-to-call [`Sym`].
+    pub(crate) fn jit_kernel(&self) -> Result<Sym<'_, JitKernelFn>, AotError> {
+        // SAFETY: `emit_kernel_fn` emits exactly `define i32 @myc_kernel(ptr %out)`, so `JitKernelFn`
+        // is this symbol's ABI — the one ABI claim, made here against the emitter that is its source.
+        #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
+        unsafe {
+            self.get::<JitKernelFn>("myc_kernel")
+        }
+    }
+
+    /// Resolve a packed-ternary dot kernel (`myc_bitnet_dot` or a `myc_bitnet_dot_simd*`) to a
+    /// lifetime-bound, safe-to-call [`Sym`]. `symbol` MUST be one of those emitter-produced kernels
+    /// (every one shares the [`BitnetDotFn`] signature — `bitnet::emit_bitnet_dot_ir_for` and the
+    /// `simd::emit_*` variants); the in-crate call sites pass exactly those names.
+    pub(crate) fn bitnet_dot(&self, symbol: &str) -> Result<Sym<'_, BitnetDotFn>, AotError> {
+        // SAFETY: every packed-ternary dot kernel this crate emits defines
+        // `i64 <symbol>(ptr %w, ptr %x, i64 %n)`, so `BitnetDotFn` is its ABI for any such `symbol`.
+        #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
+        unsafe {
+            self.get::<BitnetDotFn>(symbol)
+        }
+    }
+
+    /// Resolve the weight-specialized dot kernel `myc_bitnet_dot_spec` to a lifetime-bound,
+    /// safe-to-call [`Sym`].
+    pub(crate) fn spec_dot(&self) -> Result<Sym<'_, SpecDotFn>, AotError> {
+        // SAFETY: `specialize::emit_specialized_dot_ir` emits exactly
+        // `define i64 @myc_bitnet_dot_spec(ptr %x)`, so `SpecDotFn` is this symbol's ABI.
+        #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
+        unsafe {
+            self.get::<SpecDotFn>("myc_bitnet_dot_spec")
+        }
+    }
 }
 
 /// A symbol resolved out of a [`Lib`], carrying that library's lifetime (M-682; DN-21 §4). `T` is the
 /// symbol's `extern "C"` function-pointer type. The `PhantomData<&'lib Lib>` makes the borrow checker
 /// enforce — structurally, not by field-ordering convention — that the symbol (a JIT'd fn-pointer)
 /// does not outlive the `Lib` that owns it, closing the §4 co-location dangling-pointer risk. The
-/// single audited ABI `transmute` lives in [`Lib::get`]; calling the pointer via [`Sym::as_fn`] is
-/// then ordinary safe Rust (the type already encodes the contract), so the irreducible unsafe is
-/// confined to one choke-point.
+/// ABI `transmute` is audited once, in `Lib`'s typed accessors; calling the pointer via [`Sym::as_fn`]
+/// is then ordinary safe Rust (the type already encodes the contract).
 pub(crate) struct Sym<'lib, T: Copy> {
     fptr: T,
     _lib: PhantomData<&'lib Lib>,

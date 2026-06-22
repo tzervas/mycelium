@@ -41,7 +41,14 @@ for h in "${hits[@]}"; do
     missing+=("$file:$line"); continue
   fi
   start=$(( line > WINDOW ? line - WINDOW : 1 ))
-  if ! sed -n "${start},$((line - 1))p" "$file" | grep -q 'SAFETY:'; then
+  # Require a real justification in the window above, in one of the two ADR-014 §8.1 forms — not a bare
+  # `SAFETY:` substring (so a `SAFETY:` inside a string literal or a `//!` doc comment is not mistaken
+  # for one):
+  #   * `// SAFETY:` — the line-comment form for an `unsafe { … }` block (`//[[:space:]]*SAFETY:`
+  #     excludes `//!`/`///` doc comments, whose 3rd char is `!`/`/`, never a space or `S`);
+  #   * `# Safety`   — the rustdoc doc-section form for an `unsafe fn`/`impl`/`trait` *declaration* (the
+  #     contract clippy's `missing_safety_doc` requires; e.g. `/// # Safety`).
+  if ! sed -n "${start},$((line - 1))p" "$file" | grep -qE '//[[:space:]]*SAFETY:|#[[:space:]]*Safety'; then
     missing+=("$file:$line")
   fi
 done
