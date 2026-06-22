@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0018 |
-| **Status** | **Accepted** (2026-06-18, maintainer ratification) — **R18-Q1 = Design A** (data-lineage / data-provenance integrity); **R18-Q4 = certificate reference at the type level, validity at elaboration/runtime**; the §11/RP-2 soundness obligation discharged (`research/09`); R18-Q2/R7-Q2 closed. **Supersedes RFC-0007 §4.3**'s deferral of stage-1 grading. *Honesty note (VR-5):* the noninterference result remains **Declared-with-argument** (not machine-checked) — RFC acceptance does not upgrade that tag; mechanization is the basis for a future `Proven` upgrade. |
+| **Status** | **Enacted** (2026-06-22 — **stage 1a** landed in `crates/mycelium-l1` via **M-663**: the graded judgment §4.3 is a statically-enforced checker pass [`crate::grade`]; Accepted 2026-06-18, maintainer ratification). **R18-Q1 = Design A** (data-lineage / data-provenance integrity); **R18-Q4 = certificate reference at the type level, validity at elaboration/runtime**; the §11/RP-2 soundness obligation discharged (`research/09`); R18-Q2/R7-Q2 closed. **Supersedes RFC-0007 §4.3**'s deferral of stage-1 grading. *Enactment scope (honesty):* this enacts the RFC's **deliverable — stage 1a** (§4.7, monomorphic); stages **1b** (grade polymorphism) and **2** (refinement premises) remain future work, each its own RFC (§9/§10 — *not* part of this enactment). *Honesty note (VR-5):* the noninterference result remains **Declared-with-argument** (not machine-checked) — neither acceptance nor enactment upgrades that tag; mechanization is the basis for a future `Proven` upgrade. |
 | **Type** | Foundational / normative (language type system) |
 | **Date** | June 18, 2026 |
 | **Depends on** | RFC-0006 §4.1 S2, §4.2 LR-6, §8 Q3, §10; RFC-0007 §4.3/§4.4 (guarantee index `τ @ g`, stage-0 dynamic check); research/03-language-layer-RECORD.md T3.2; VR-5; KC-3 |
@@ -713,3 +713,20 @@ machine-checked, so it can be tracked as a proof obligation.
   **Declared-with-argument** (not machine-checked) — mechanization remains the basis for a `Proven`
   upgrade, named as future work, not claimed. R18-Q3/R18-Q5 left as recorded implementation positions
   (not gating). Append-only.
+- **2026-06-22 — ENACTED (stage 1a; M-663).** Stage 1a (§4.7 — the RFC's deliverable) is **landed in
+  `crates/mycelium-l1`**: a self-contained guarantee-grading checker pass ([`crate::grade`]) runs after
+  type-checking and statically enforces the §4.3 judgment over the lattice `Exact ⊐ Proven ⊐ Empirical
+  ⊐ Declared` — G-App (a call argument's grade must satisfy its parameter's demand), G-Weaken (an `@ g`
+  annotation/return demand may only weaken), G-Let/G-Con/G-Op (the meet composition rule), `G-Match/A`
+  (Design A — the scrutinee's *control* grade does not degrade the result; a destructured field inherits
+  the scrutinee's *data* grade), and G-Swap (the endorsement point — the certificate **reference** is
+  trusted at the type level per R18-Q4; validity stays an elaboration/runtime obligation of the RFC-0002
+  checker). The elaborator (`crate::elab`) no longer returns `Residual` for an `@ g` index — a grade,
+  like a type, is statically checked and **erased** (no L0 node — KC-3). **Unannotated default
+  (R18-Q5, the checker's call):** modular/bottom — an unannotated parameter demands `Declared` and an
+  unannotated return advertises `Declared`, so grading only ever *bites* where an `@ g` is written
+  (never breaks un-annotated code) and a function's advertised grade is exactly what its signature
+  writes (S2/LR-6); cross-function return-grade *inference* (an SCC fixpoint) is **stage 1b**, not built
+  here. **Honesty (VR-5):** the pass is tagged **`Declared`** (it enforces the design); the
+  noninterference *theorem* stays **Declared-with-argument** — **not** upgraded. Stages 1b/2 remain
+  future RFCs. Enacts per the M-648 audit criterion ("audit; if complete, flip to Enacted"). Append-only.

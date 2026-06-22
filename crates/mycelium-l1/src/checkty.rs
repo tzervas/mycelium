@@ -1071,11 +1071,14 @@ fn check_nodule_with(
 
     // Pass 3b: check each `impl` method body against its **expected** signature (the trait sig with
     // the trait's params substituted by this impl's trait_args — RFC-0019 §4.5). The instance set is
-    // fully registered (Pass 2b), so a method may use any instance. Bodies are checked but not
-    // re-stored (the elaborator stages the dictionary lowering — M-673), only validated.
+    // fully registered (Pass 2b), so a method may use any instance. The method bodies are not re-stored
+    // for *elaboration* (the elaborator stages the dictionary lowering — M-673), but their **resolved
+    // (canonical) form** is collected so the guarantee-grading pass (3d) walks the same normalized AST
+    // as a top-level fn — patterns already ctor/binder-resolved (M-663 / Copilot review).
+    let mut resolved_impl_methods: Vec<FnDecl> = Vec::new();
     for item in &nodule.items {
         if let Item::Impl(id) = item {
-            check_impl_methods(
+            resolved_impl_methods.extend(check_impl_methods(
                 &types,
                 &fns,
                 &traits,
@@ -1083,7 +1086,7 @@ fn check_nodule_with(
                 imports,
                 nodule.std_sys,
                 id,
-            )?;
+            )?);
         }
     }
 
@@ -1098,6 +1101,17 @@ fn check_nodule_with(
     // fn was already coverage-checked in its home nodule (M-662 — a `use`d fn is checked in its home
     // context, never re-litigated here). The merged `fns`/`traits` give the callee effect lookups.
     check_effect_coverage(&fns, &regs.fns, &traits, nodule)?;
+
+    // Pass 3d: **guarantee grading** (RFC-0018 §4.3 stage-1a, Design A — guarantee: `Declared`). The
+    // guarantee index `@ g` becomes a statically-enforced constraint over the integrity lattice
+    // `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`: every call's argument must satisfy its callee
+    // parameter's demand, and each body must satisfy its declared return demand (G-App/G-Weaken). Runs
+    // after bodies type-check, over the merged `fns` (so a call to an imported `pub fn` resolves to
+    // that callee's declared grades) and this nodule's own fns + impl methods. A violation is an
+    // explicit `CheckError` (never silent — G2/VR-5). This is the static successor to RFC-0007 §4.3's
+    // stage-0 dynamic check (which remains the runtime semantics); the noninterference *theorem* stays
+    // Declared-with-argument (RFC-0018 §11 / `research/09`), not upgraded.
+    crate::grade::check_guarantees(&fns, &regs.fns, &resolved_impl_methods)?;
 
     // Pass 4: totality classification + the scope-quantified matured gate (RFC-0017 §4.2). Classify
     // over the merged `fns` so an own fn calling an imported one classifies against the real callee.
@@ -1579,10 +1593,15 @@ fn check_impl_methods(
     imports: &NoduleImports,
     std_sys: bool,
     id: &ImplDecl,
-) -> Result<(), CheckError> {
+) -> Result<Vec<FnDecl>, CheckError> {
     let tr = traits
         .get(&id.trait_name)
         .expect("instance registration checked the trait exists");
+    // The resolved method bodies (ambient literals + ctor/binder patterns normalized — the canonical
+    // checked form), returned so the late guarantee-grading pass (Pass 3d) walks the *same* canonical
+    // AST as a top-level fn rather than the raw registered body (M-663 / Copilot review — grading must
+    // not re-derive the ctor/binder ambiguity from a global scan).
+    let mut resolved: Vec<FnDecl> = Vec::with_capacity(id.methods.len());
     // The trait-arg substitution `trait.params ↦ impl.trait_args` (resolved concretely).
     let (for_ty, _) = resolve_ty(&id.trait_name, types, &[], &id.for_ty)?;
     let mut trait_args = Vec::with_capacity(id.trait_args.len());
@@ -1669,10 +1688,17 @@ fn check_impl_methods(
         // trait/instance context is available so the body may itself call trait methods. The
         // `@std-sys` context (M-661) flows in so a `wild` block inside an impl method is gated
         // exactly as in a top-level fn (an impl in a non-`@std-sys` nodule may not contain `wild`).
-        check_fn_body(types, fns, traits, instances, imports, std_sys, method)?;
+        let (body, _ret) =
+            check_fn_body(types, fns, traits, instances, imports, std_sys, method)?;
+        resolved.push(FnDecl {
+            vis: method.vis,
+            thaw: method.thaw,
+            sig: method.sig.clone(),
+            body,
+        });
     }
     let _ = for_ty; // resolved above for the arg substitution; head reuse is at registration.
-    Ok(())
+    Ok(resolved)
 }
 
 /// Check a function (or impl method) body against its declared signature (RFC-0007 §11; RFC-0019
@@ -2702,9 +2728,11 @@ impl Cx<'_> {
         let mut result: Option<Ty> = None;
         let mut arms2: Vec<crate::ast::Arm> = Vec::with_capacity(arms.len());
         for arm in arms {
-            // Resolve any ambient bare-decimal literal patterns against the scrutinee/field types
-            // first, so the matrix, the evaluator, and the elaborator all see concrete literals.
-            let pattern = self.resolve_pattern_lits(&arm.pattern, &sty)?;
+            // Normalize the pattern against the scrutinee/field types first — resolve ambient
+            // bare-decimal literals to concrete ones, and rewrite nullary-ctor idents to explicit
+            // `Ctor(name, [])` — so the matrix, the evaluator, the elaborator, and the type-free
+            // grading/totality passes all see one canonical, unambiguous checked pattern.
+            let pattern = self.resolve_pattern(&arm.pattern, &sty)?;
             // Type the (possibly nested) pattern against the scrutinee type, collecting its binders.
             let mut binds: Vec<(String, Ty, Vec<usize>)> = Vec::new();
             let pat = self.check_pattern(&pattern, &sty, &mut binds)?;
@@ -2777,14 +2805,36 @@ impl Cx<'_> {
         ))
     }
 
-    /// Resolve any ambient bare-decimal (`AmbientInt`) literal **patterns** in `pat` to concrete
-    /// literals, taking each one's width from `expected` — the scrutinee type at the root, and each
-    /// constructor field's type as it recurses. A literal pattern under a non-repr/cross-paradigm
-    /// position is left unchanged so [`normalize_pattern`] raises the precise W7 error.
-    fn resolve_pattern_lits(&self, pat: &Pattern, expected: &Ty) -> Result<Pattern, CheckError> {
+    /// Normalize a surface [`Pattern`] against its `expected` type into the **canonical checked
+    /// form** stored in the resolved AST, type-directed at every position (the scrutinee type at the
+    /// root, each constructor field's type as it recurses):
+    ///
+    /// 1. **Ambient literals** — resolve a bare-decimal (`AmbientInt`) pattern to a concrete
+    ///    `Binary`/`Ternary` literal at the width `expected` pins. A literal under a
+    ///    non-repr/cross-paradigm position is left unchanged so [`normalize_pattern`] raises the
+    ///    precise W7 error.
+    /// 2. **Nullary-ctor idents** — rewrite a bare `Pattern::Ident(name)` that names a *nullary
+    ///    constructor of the scrutinee data type* into an explicit `Pattern::Ctor(name, vec![])`.
+    ///    This makes the checked AST **unambiguous**: a residual `Pattern::Ident` is always a true
+    ///    binder, a `Pattern::Ctor` always a constructor — so the type-free downstream passes
+    ///    (guarantee grading Pass 3d, totality Pass 4) need no type information to tell them apart.
+    ///    The checker (which alone knows the *expected scrutinee type*) is the single source of truth
+    ///    for this resolution, mirroring [`normalize_pattern`]; a binder whose name merely collides
+    ///    with a nullary ctor of an *unrelated* type stays a binder (no global ctor scan — that
+    ///    over-broad scan was an unsound grade-upgrade, M-663 / Copilot review).
+    fn resolve_pattern(&self, pat: &Pattern, expected: &Ty) -> Result<Pattern, CheckError> {
         Ok(match pat {
             Pattern::Lit(Literal::AmbientInt(p, v)) => {
                 Pattern::Lit(self.resolve_ambient_int(*p, *v, Some(expected))?)
+            }
+            // A bare name is a nullary-constructor pattern iff it names a nullary ctor of the
+            // *scrutinee's own* data type; otherwise it is a binder (left as `Ident`).
+            Pattern::Ident(name)
+                if matches!(expected, Ty::Data(tn, _)
+                    if self.types.get(tn).is_some_and(|d|
+                        d.ctors.iter().any(|c| c.name == *name && c.fields.is_empty()))) =>
+            {
+                Pattern::Ctor(name.clone(), vec![])
             }
             Pattern::Ctor(name, subs) => {
                 // Recurse with each sub-pattern's field type, when the expected type is the owning
@@ -2809,7 +2859,7 @@ impl Cx<'_> {
                 let mut out = Vec::with_capacity(subs.len());
                 for (i, s) in subs.iter().enumerate() {
                     match &field_tys {
-                        Some(fts) => out.push(self.resolve_pattern_lits(s, &fts[i])?),
+                        Some(fts) => out.push(self.resolve_pattern(s, &fts[i])?),
                         None => out.push(s.clone()),
                     }
                 }

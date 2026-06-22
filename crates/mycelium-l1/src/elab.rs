@@ -2,9 +2,10 @@
 //! evaluation-complete fragment is now the **whole v0 calculus**: representation ops (L0), data +
 //! matching (r3, `Construct`/flat `Match`), and **functions + recursion** (r4/r5,
 //! `Lam`/`App`/`Fix`/`FixGroup`). So a self- *or* mutually-recursive, data-building, matching program
-//! elaborates to a closed L0 term. The only explicit [`ElabError::Residual`] left for a structurally
-//! v0 program is a **dynamic guarantee index** `@ g` (RFC-0007 §4.3, stage 0) — never a partial
-//! artifact; that runs on the L1 fuel-guarded evaluator ([`crate::eval`]) instead.
+//! elaborates to a closed L0 term. A guarantee index `@ g` is no longer a `Residual`: since RFC-0018
+//! (M-663) it is **statically checked** by [`crate::grade`] and then **erased** here (a grade, like a
+//! type, is a compile-time property with no L0 node — KC-3). The remaining `Residual`s are genuine
+//! staging (generics/monomorphization, `wild`/FFI, `spore`) — never a partial artifact (G2).
 //!
 //! This module also owns the shared surface→kernel bridge the evaluator reuses, so the two
 //! execution paths cannot drift on the basics: literal values ([`lit_value`]), representation
@@ -198,9 +199,9 @@ type Binding = (String, String, Ty);
 /// acyclic). **Mutual recursion** lowers to a `FixGroup` (RFC-0001 r5; M-343 — R7-Q3); top-level
 /// functions in a nodule are mutually visible (RP-6 / DN-13 — no surface marker), so a mutual group is
 /// *inferred* from the call graph and **materialized as a `FixGroup` node** — inspectable in the
-/// elaborated term, never a black box. Still
-/// `Residual`: a dynamic guarantee index `@ g` (RFC-0007 §4.3, stage 0). On success the result is a
-/// closed L0 term whose evaluation must agree with the L1 evaluator (NFR-7; the M-210 differential).
+/// elaborated term, never a black box. A guarantee index `@ g` is statically checked + erased since
+/// RFC-0018 (M-663), not a `Residual`. On success the result is a closed L0 term whose evaluation
+/// must agree with the L1 evaluator (NFR-7; the M-210 differential).
 pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
     // Elaboration recurses over the (checked) expression AST; run it on a deep worker stack so deep
     // input never overflows the caller's thread stack. The semantic bound stays the upstream explicit
@@ -289,15 +290,10 @@ fn elab_prelude<'e>(
              RFC-0007 §11.3, the M-657 follow-up). Elaborate a concrete (monomorphic) entry.",
         );
     }
-    if let Some(g) = fd.sig.ret.guarantee {
-        return residual(
-            entry,
-            format!(
-                "the return guarantee index `@ {g:?}` is checked dynamically in v0 \
-                 (RFC-0007 §4.3) — no L0 form"
-            ),
-        );
-    }
+    // RFC-0018 (M-663): the return guarantee index `@ g` is now **statically checked** by the
+    // grading pass (`crate::grade`) and **erased** here — like a type, a grade has no L0 form (it is
+    // a compile-time property, not a runtime node — KC-3). No `Residual` (the stage-0 dynamic check
+    // it replaced remains the runtime fallback only for dynamically-graded values — RFC-0018 §4.7).
     let registry = build_registry(env)?;
     // The recursive strongly-connected components of the reachable call graph, callee-first (Tarjan).
     // A self-recursive singleton stays a `Fix`; a group of ≥2 mutually-recursive functions becomes a
@@ -662,16 +658,12 @@ impl Elab<'_> {
             }
             Expr::Let {
                 name,
-                ty,
+                ty: _,
                 bound,
                 body,
             } => {
-                if let Some(g) = ty.as_ref().and_then(|t| t.guarantee) {
-                    return residual(
-                        site,
-                        format!("the guarantee index `@ {g:?}` is checked dynamically in v0 — no L0 form"),
-                    );
-                }
+                // RFC-0018 (M-663): a `let`'s `@ g` ascription is statically checked + erased (no L0
+                // form) — see [`elab_prelude`]. The type part is handled by re-inference below.
                 let kbound = self.expr(stack, scope, bound)?;
                 // The bound's type (re-inferred) goes into scope so a later `match` on this binding
                 // can lower its patterns.
@@ -705,12 +697,9 @@ impl Elab<'_> {
                 target,
                 policy,
             } => {
-                if let Some(g) = target.guarantee {
-                    return residual(
-                        site,
-                        format!("the guarantee index `@ {g:?}` is checked dynamically in v0 — no L0 form"),
-                    );
-                }
+                // RFC-0018 (M-663): a `swap` target's `@ g` is statically checked + erased; the swap
+                // is the endorsement point whose certificate is validated at elaboration/runtime
+                // (R18-Q4), not represented as a grade node in L0.
                 let src = self.expr(stack, scope, value)?;
                 Ok(Node::Swap {
                     src: Box::new(src),
@@ -735,14 +724,9 @@ impl Elab<'_> {
             ),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
             Expr::Colony(hyphae) => self.elab_colony(stack, scope, hyphae),
-            Expr::Ascribe(inner, t) => {
-                if let Some(g) = t.guarantee {
-                    return residual(
-                        site,
-                        format!("the guarantee index `@ {g:?}` is checked dynamically in v0 — no L0 form"),
-                    );
-                }
-                // The type part is static and already checked — elaboration is transparent.
+            Expr::Ascribe(inner, _t) => {
+                // The type part is static and already checked — elaboration is transparent. RFC-0018
+                // (M-663): an `@ g` ascription is likewise statically checked (`crate::grade`) + erased.
                 self.expr(stack, scope, inner)
             }
             Expr::App { head, args } => self.app(stack, scope, head, args),
@@ -1026,28 +1010,13 @@ impl Elab<'_> {
                     ),
                 );
             }
-            if let Some(g) = fd.sig.ret.guarantee {
-                return residual(
-                    site,
-                    format!(
-                        "`{name}` asserts `@ {g:?}` on its result — checked dynamically in v0, no L0 form"
-                    ),
-                );
-            }
+            // RFC-0018 (M-663): `{name}`'s return/parameter `@ g` guarantees are statically checked
+            // (`crate::grade`) and erased here — a grade has no L0 form (KC-3). Inline as usual.
             // Inline: Let-bind each argument left-to-right (preserving CBV evaluation order),
             // then elaborate the callee body with its parameters mapped to the fresh binders.
             // The callee sees *only* its parameters (top-level functions close over nothing).
             let mut bindings = Vec::new();
             for (param, arg) in fd.sig.value_params.iter().zip(args) {
-                if let Some(g) = param.ty.guarantee {
-                    return residual(
-                        site,
-                        format!(
-                            "`{name}` parameter `{}` asserts `@ {g:?}` — checked dynamically in v0, no L0 form",
-                            param.name
-                        ),
-                    );
-                }
                 let karg = self.expr(stack, scope, arg)?;
                 // Monomorphic callee (generic callees are staged out above) — no type params in scope.
                 let pty = resolve_ty(site, &self.env.types, &[], &param.ty)
@@ -1151,24 +1120,11 @@ impl Elab<'_> {
                 ),
             );
         }
-        if let Some(g) = fd.sig.ret.guarantee {
-            return residual(
-                fname,
-                format!("`{fname}` asserts `@ {g:?}` on its result — checked dynamically in v0, no L0 form"),
-            );
-        }
+        // RFC-0018 (M-663): `{fname}`'s return/parameter `@ g` guarantees are statically checked
+        // (`crate::grade`) and erased here — a grade has no L0 form (KC-3). Lower the body as usual.
         let mut scope: Vec<Binding> = Vec::new();
         let mut param_kvars: Vec<String> = Vec::new();
         for p in &fd.sig.value_params {
-            if let Some(g) = p.ty.guarantee {
-                return residual(
-                    fname,
-                    format!(
-                        "`{fname}` parameter `{}` asserts `@ {g:?}` — checked dynamically in v0",
-                        p.name
-                    ),
-                );
-            }
             let kp = self.fresh(&p.name);
             // Monomorphic body (generic fns are staged out above) — no type params in scope.
             let pty = resolve_ty(fname, &self.env.types, &[], &p.ty)
@@ -1649,15 +1605,21 @@ mod tests {
     }
 
     #[test]
-    fn a_guarantee_index_is_an_explicit_residual() {
+    fn a_guarantee_index_now_elaborates_after_static_grading() {
+        // RFC-0018 (M-663): an `@ g` guarantee index is **statically checked** (the grading pass) and
+        // **erased** at elaboration — it is no longer an `ElabError::Residual`. Here `main` returns
+        // `Ternary{6} @ Proven` from a `swap` (the endorsement point: the certificate is trusted at
+        // the type level, so the body's grade satisfies the `@ Proven` return demand — R18-Q4), so it
+        // both type-checks/grades and elaborates to a closed L0 `Swap` term (grade gone, no L0 form).
         let env = env(
             "nodule d\nfn main() -> Ternary{6} @ Proven = swap(0b0000_0010, to: Ternary{6}, policy: rt)",
         );
-        let err = elaborate(&env, "main").unwrap_err();
-        let ElabError::Residual { what, .. } = &err else {
-            panic!("expected Residual, got {err:?}");
-        };
-        assert!(what.contains("guarantee index"), "got: {what}");
+        let node =
+            elaborate(&env, "main").expect("an `@ g` index elaborates (statically graded, erased)");
+        assert!(
+            matches!(node, Node::Swap { .. }),
+            "the body lowers to an L0 Swap (the grade is erased), got {node:?}"
+        );
     }
 
     #[test]
