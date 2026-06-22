@@ -1688,8 +1688,7 @@ fn check_impl_methods(
         // trait/instance context is available so the body may itself call trait methods. The
         // `@std-sys` context (M-661) flows in so a `wild` block inside an impl method is gated
         // exactly as in a top-level fn (an impl in a non-`@std-sys` nodule may not contain `wild`).
-        let (body, _ret) =
-            check_fn_body(types, fns, traits, instances, imports, std_sys, method)?;
+        let (body, _ret) = check_fn_body(types, fns, traits, instances, imports, std_sys, method)?;
         resolved.push(FnDecl {
             vis: method.vis,
             thaw: method.thaw,
