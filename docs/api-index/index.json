@@ -832,7 +832,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 40,
+      "line": 43,
       "summary": "Concrete parameters binding a bijection lemma to one use — `{ width, trits }` for binary↔ternary",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -843,7 +843,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 357,
+      "line": 360,
       "summary": "A [`SwapEngine`] for the reference interpreter that performs the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -854,7 +854,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 392,
+      "line": 395,
       "summary": "A [`SwapEngine`] over the **complete certified swap surface** (SC-3 global, M-212): the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -876,7 +876,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 383,
+      "line": 386,
       "summary": "The δ the engine requests for a Dense↔VSA swap when no policy channel supplies one — the same",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -953,7 +953,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 51,
+      "line": 54,
       "summary": "The inspectable certificate every swap produces (RFC-0002 §3/§5; `swap-certificate.schema.json`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -964,7 +964,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 80,
+      "line": 83,
       "summary": "Why a swap could not be performed — always explicit (SC-3; G2), never a silent coercion.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -975,7 +975,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 267,
+      "line": 270,
       "summary": "`enc`: encode an `n`-bit two's-complement [`Value`] into `m` balanced trits over a legal pair.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -986,7 +986,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 19,
+      "line": 22,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1096,7 +1096,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 20,
+      "line": 23,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1162,7 +1162,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 21,
+      "line": 24,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1261,7 +1261,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 231,
+      "line": 234,
       "summary": "Whether `(n, m)` admits a lossless binary→ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1272,7 +1272,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 244,
+      "line": 247,
       "summary": "The content hash of the once-per-swap-kind binary↔ternary round-trip lemma (P1/P2,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1283,7 +1283,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 311,
+      "line": 314,
       "summary": "`dec`: decode `m` balanced trits back into an `n`-bit two's-complement [`Value`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1910,7 +1910,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 46,
+      "line": 49,
       "summary": "Well-formedness errors for Core IR construction (RFC-0001 §4.3/§4.5 invariants).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1932,7 +1932,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 10,
+      "line": 13,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1965,7 +1965,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 11,
+      "line": 14,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2064,7 +2064,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 12,
+      "line": 15,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2207,7 +2207,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 13,
+      "line": 16,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2537,7 +2537,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 14,
+      "line": 17,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2790,7 +2790,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 15,
+      "line": 18,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2944,7 +2944,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 16,
+      "line": 19,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3076,7 +3076,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 17,
+      "line": 20,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3274,7 +3274,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 18,
+      "line": 21,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3582,7 +3582,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 19,
+      "line": 22,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3725,7 +3725,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 20,
+      "line": 23,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4154,7 +4154,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 21,
+      "line": 24,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4418,7 +4418,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 22,
+      "line": 25,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4506,7 +4506,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 23,
+      "line": 26,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4605,7 +4605,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 24,
+      "line": 27,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6409,7 +6409,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 132,
+      "line": 135,
       "summary": "Why evaluation could not proceed (always explicit — the interpreter is never silent; SC-3/G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6431,7 +6431,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 297,
+      "line": 300,
       "summary": "The reference interpreter: a primitive registry + a swap engine.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6442,7 +6442,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 505,
+      "line": 508,
       "summary": "Evaluate `node` to a **representation** value by iterating step to a normal",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6453,7 +6453,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 517,
+      "line": 520,
       "summary": "Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6464,7 +6464,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 317,
+      "line": 320,
       "summary": "Build an interpreter with a custom prim registry and swap engine (e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6475,7 +6475,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 334,
+      "line": 337,
       "summary": "The registered primitive names (for tooling/EXPLAIN).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6486,7 +6486,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 342,
+      "line": 345,
       "summary": "Perform exactly one small-step reduction on `node` (the `⟶` relation above).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6497,7 +6497,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 327,
+      "line": 330,
       "summary": "Override the step budget.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6530,7 +6530,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 122,
+      "line": 125,
       "summary": "The result of one small-step attempt on a node.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6574,7 +6574,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 106,
+      "line": 109,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6783,7 +6783,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 107,
+      "line": 110,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6926,7 +6926,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 108,
+      "line": 111,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7201,7 +7201,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 109,
+      "line": 112,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11931,7 +11931,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 56,
+      "line": 60,
       "summary": "An explicit failure of the direct-LLVM AOT path.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11942,7 +11942,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 164,
+      "line": 168,
       "summary": "The default policy: derive the ceiling from **detected memory headroom**, conservative fallback",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11953,7 +11953,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 274,
+      "line": 281,
       "summary": "A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11964,7 +11964,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 112,
+      "line": 116,
       "summary": "A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11975,7 +11975,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2406,
+      "line": 2410,
       "summary": "A compiled native artifact for a bit/trit-subset program: the executable on disk (in a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11986,7 +11986,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 102,
+      "line": 106,
       "summary": "A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11997,7 +11997,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 102,
+      "line": 106,
       "summary": "The inspectable derivation of a [`DepthResolution`] — the no-black-box record (G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12008,7 +12008,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 63,
+      "line": 67,
       "summary": "Resolves a control-stack **depth ceiling** for the AOT env-machine, with an inspectable basis.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12019,7 +12019,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::DepthBudget",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 168,
+      "line": 172,
       "summary": "How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12030,7 +12030,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 71,
+      "line": 75,
       "summary": "A resolved depth ceiling plus the [`DepthBasis`] explaining how it was chosen.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12041,7 +12041,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 99,
+      "line": 103,
       "summary": "The running **image**: a hash-keyed dispatch table over a compiled overlay + an interpretable",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12052,7 +12052,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 65,
+      "line": 69,
       "summary": "A failure at the dispatch/injection boundary — every variant is explicit (never a silent pass or",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12063,7 +12063,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 97,
+      "line": 103,
       "summary": "A JIT-compiled kernel: the `.so` on disk (in a per-artifact temp dir, cleaned on drop) + the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12074,7 +12074,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 93,
+      "line": 97,
       "summary": "Which kernel accounting figure the detected headroom came from.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12085,7 +12085,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 71,
+      "line": 75,
       "summary": "A **Kahn process network** (RFC-0008 §4.3): the grouping whose typed SPSC channels form a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12096,7 +12096,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 33,
+      "line": 37,
       "summary": "The result of advancing a task one cooperative step.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12107,7 +12107,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 117,
+      "line": 121,
       "summary": "The **single consumer** end of a channel.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12118,7 +12118,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 50,
+      "line": 54,
       "summary": "How a [`ContentHash`] resolves in an [`Image`] — the inspectable/`EXPLAIN`-able dispatch decision",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12129,7 +12129,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 56,
+      "line": 60,
       "summary": "The conservative static fallback ceiling: the prior fixed default (M-347's `AOT_MAX_DEPTH`),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12140,7 +12140,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 80,
+      "line": 84,
       "summary": "A **structured concurrency scope** (RT7): tasks spawned here are all joined before the scope",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12151,7 +12151,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 112,
+      "line": 116,
       "summary": "The **single producer** end of a channel.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12162,7 +12162,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/specialize.rs",
-      "line": 88,
+      "line": 92,
       "summary": "A compiled, in-process **weight-specialized** dot kernel: the `.so` (in a per-artifact temp dir,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12173,7 +12173,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 235,
+      "line": 239,
       "summary": "An explicit, fixed depth ceiling — for tests and callers that want a deterministic budget.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12184,7 +12184,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 82,
+      "line": 86,
       "summary": "Why a [`DepthBasis::Static`] budget was used (detection not attempted, failed, or explicit).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12195,7 +12195,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 90,
+      "line": 94,
       "summary": "The order a **dataflow** sweep visits still-pending children.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12206,7 +12206,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 56,
+      "line": 60,
       "summary": "A cooperative task: `poll` advances it by one step.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12217,7 +12217,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 43,
+      "line": 47,
       "summary": "The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12228,7 +12228,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 134,
+      "line": 138,
       "summary": "Why a [`Receiver::try_recv`] yielded no value.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12239,7 +12239,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 124,
+      "line": 128,
       "summary": "Why a [`Sender::try_send`] could not complete *right now*.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12261,7 +12261,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::aot",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 60,
+      "line": 64,
       "summary": "The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12272,7 +12272,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::aot",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 209,
+      "line": 213,
       "summary": "Run a Core IR program through the AOT path to a representation [`Value`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12283,7 +12283,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::aot",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 143,
+      "line": 147,
       "summary": "Run a Core IR program through the AOT path to a [`CoreValue`] (the full v0 calculus — repr, data,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12294,7 +12294,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::aot",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 167,
+      "line": 171,
       "summary": "[`run_core`] with **both** budgets explicit (M-347): `fuel` bounds `Fix` unfolds (time), `max_depth`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12305,7 +12305,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::aot",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 192,
+      "line": 196,
       "summary": "[`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12316,7 +12316,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::aot",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 152,
+      "line": 156,
       "summary": "[`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12327,7 +12327,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::aot",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 543,
+      "line": 547,
       "summary": "Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12349,7 +12349,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 274,
+      "line": 281,
       "summary": "A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12360,8 +12360,8 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet::BitnetDotKernel",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 323,
-      "summary": "Run the kernel over `packed_weights` (packed under scheme) and",
+      "line": 348,
+      "summary": "Run the kernel over `packed_weights` and `activations`, summing the first `n` ternary products.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -12371,8 +12371,8 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet::BitnetDotKernel",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 323,
-      "summary": "Run the kernel over `packed_weights` (packed under scheme) and",
+      "line": 348,
+      "summary": "Run the kernel over `packed_weights` and `activations`, summing the first `n` ternary products.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -12382,7 +12382,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet::BitnetDotKernel",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 68,
+      "line": 72,
       "summary": "The packing scheme.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12393,7 +12393,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet::BitnetDotKernel",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 68,
+      "line": 72,
       "summary": "The packing scheme.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12404,7 +12404,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 124,
+      "line": 128,
       "summary": "The packing this kernel decodes inline by default.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12415,7 +12415,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 360,
+      "line": 408,
       "summary": "Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12426,7 +12426,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 367,
+      "line": 415,
       "summary": "Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12437,7 +12437,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 143,
+      "line": 147,
       "summary": "Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12448,7 +12448,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 155,
+      "line": 159,
       "summary": "Emit the textual LLVM IR for the packed-ternary dot kernel",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12459,7 +12459,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 403,
+      "line": 445,
       "summary": "Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12470,7 +12470,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 409,
+      "line": 451,
       "summary": "As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12481,7 +12481,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::bitnet",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 131,
+      "line": 135,
       "summary": "The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12503,7 +12503,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 164,
+      "line": 168,
       "summary": "The default policy: derive the ceiling from **detected memory headroom**, conservative fallback",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12514,7 +12514,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget::AutoDepthBudget",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 168,
+      "line": 172,
       "summary": "How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12525,7 +12525,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget::AutoDepthBudget",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 168,
+      "line": 172,
       "summary": "How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12536,7 +12536,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget::AutoDepthBudget",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 168,
+      "line": 172,
       "summary": "How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12547,7 +12547,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget::AutoDepthBudget",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 168,
+      "line": 172,
       "summary": "How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12558,7 +12558,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 40,
+      "line": 44,
       "summary": "Conservative per-frame heap estimate (bytes).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12569,7 +12569,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 102,
+      "line": 106,
       "summary": "The inspectable derivation of a [`DepthResolution`] — the no-black-box record (G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12580,7 +12580,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 63,
+      "line": 67,
       "summary": "Resolves a control-stack **depth ceiling** for the AOT env-machine, with an inspectable basis.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12591,7 +12591,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget::DepthBudget",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 168,
+      "line": 172,
       "summary": "How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12602,7 +12602,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 71,
+      "line": 75,
       "summary": "A resolved depth ceiling plus the [`DepthBasis`] explaining how it was chosen.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12613,7 +12613,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 93,
+      "line": 97,
       "summary": "Which kernel accounting figure the detected headroom came from.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12624,7 +12624,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 56,
+      "line": 60,
       "summary": "The conservative static fallback ceiling: the prior fixed default (M-347's `AOT_MAX_DEPTH`),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12635,7 +12635,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 235,
+      "line": 239,
       "summary": "An explicit, fixed depth ceiling — for tests and callers that want a deterministic budget.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12646,7 +12646,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget::StaticDepthBudget",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 168,
+      "line": 172,
       "summary": "How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12657,7 +12657,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget::StaticDepthBudget",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 168,
+      "line": 172,
       "summary": "How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12668,7 +12668,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget::StaticDepthBudget",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 168,
+      "line": 172,
       "summary": "How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12679,7 +12679,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget::StaticDepthBudget",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 168,
+      "line": 172,
       "summary": "How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12690,7 +12690,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::budget",
       "file": "crates/mycelium-mlir/src/budget.rs",
-      "line": 82,
+      "line": 86,
       "summary": "Why a [`DepthBasis::Static`] budget was used (detection not attempted, failed, or explicit).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12712,7 +12712,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::channel",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 71,
+      "line": 75,
       "summary": "A **Kahn process network** (RFC-0008 §4.3): the grouping whose typed SPSC channels form a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12723,7 +12723,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::channel::Network",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 94,
+      "line": 98,
       "summary": "Create a typed SPSC channel on this network with explicit, finite capacity `cap` (no",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12734,7 +12734,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::channel::Network",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 94,
+      "line": 98,
       "summary": "Create a typed SPSC channel on this network with explicit, finite capacity `cap` (no",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12745,7 +12745,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::channel::Network",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 87,
+      "line": 91,
       "summary": "The number of successful channel sends + recvs across this network so far — monotone,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12756,7 +12756,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::channel::Network",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 87,
+      "line": 91,
       "summary": "The number of successful channel sends + recvs across this network so far — monotone,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12767,7 +12767,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::channel::Network",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 78,
+      "line": 82,
       "summary": "A fresh network with its progress clock at zero.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12778,7 +12778,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::channel::Network",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 78,
+      "line": 82,
       "summary": "A fresh network with its progress clock at zero.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12789,7 +12789,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::channel",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 117,
+      "line": 121,
       "summary": "The **single consumer** end of a channel.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12800,7 +12800,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::channel",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 112,
+      "line": 116,
       "summary": "The **single producer** end of a channel.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12811,7 +12811,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::channel",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 134,
+      "line": 138,
       "summary": "Why a [`Receiver::try_recv`] yielded no value.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12822,7 +12822,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::channel",
       "file": "crates/mycelium-mlir/src/channel.rs",
-      "line": 124,
+      "line": 128,
       "summary": "Why a [`Sender::try_send`] could not complete *right now*.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12855,7 +12855,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 360,
+      "line": 408,
       "summary": "Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12866,7 +12866,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 367,
+      "line": 415,
       "summary": "Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12877,7 +12877,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/simd.rs",
-      "line": 127,
+      "line": 131,
       "summary": "Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12888,7 +12888,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/simd.rs",
-      "line": 250,
+      "line": 248,
       "summary": "Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12899,7 +12899,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/simd.rs",
-      "line": 603,
+      "line": 595,
       "summary": "Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12910,7 +12910,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 194,
+      "line": 322,
       "summary": "Compile the bit/trit-subset program to a shared object without calling it.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12921,7 +12921,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/specialize.rs",
-      "line": 140,
+      "line": 168,
       "summary": "Compile a kernel **specialized on `weights`** (baked in as constants) to a shared object and load",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12932,7 +12932,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 60,
+      "line": 64,
       "summary": "The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12954,7 +12954,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::dialect",
       "file": "crates/mycelium-mlir/src/dialect.rs",
-      "line": 71,
+      "line": 75,
       "summary": "Emit the textual `ternary`-dialect module for `node` (one op per lowered binding).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12965,7 +12965,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/dialect.rs",
-      "line": 71,
+      "line": 75,
       "summary": "Emit the textual `ternary`-dialect module for `node` (one op per lowered binding).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12976,7 +12976,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 143,
+      "line": 147,
       "summary": "Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12987,7 +12987,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 155,
+      "line": 159,
       "summary": "Emit the textual LLVM IR for the packed-ternary dot kernel",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12998,7 +12998,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/simd.rs",
-      "line": 55,
+      "line": 59,
       "summary": "Emit the textual LLVM IR for the **hand-vectorized I2_S** packed-ternary dot kernel",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13009,7 +13009,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/simd.rs",
-      "line": 169,
+      "line": 167,
       "summary": "Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13020,7 +13020,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/simd.rs",
-      "line": 308,
+      "line": 300,
       "summary": "Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13031,7 +13031,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 1920,
+      "line": 1924,
       "summary": "Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13042,7 +13042,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/specialize.rs",
-      "line": 53,
+      "line": 57,
       "summary": "Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13064,7 +13064,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 99,
+      "line": 103,
       "summary": "The running **image**: a hash-keyed dispatch table over a compiled overlay + an interpretable",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13075,7 +13075,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 181,
+      "line": 185,
       "summary": "Dispatch a call by content hash (ADR-016's call ABI, nullary-unit restriction).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13086,7 +13086,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 181,
+      "line": 185,
       "summary": "Dispatch a call by content hash (ADR-016's call ABI, nullary-unit restriction).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13097,7 +13097,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 131,
+      "line": 135,
       "summary": "Register a definition **interpret-only** under its content hash (RFC-0001 §4.6), returning the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13108,7 +13108,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 131,
+      "line": 135,
       "summary": "Register a definition **interpret-only** under its content hash (RFC-0001 §4.6), returning the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13119,7 +13119,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 206,
+      "line": 210,
       "summary": "The number of known (interpretable) definitions.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13130,7 +13130,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 206,
+      "line": 210,
       "summary": "The number of known (interpretable) definitions.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13141,7 +13141,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 149,
+      "line": 153,
       "summary": "**Inject** a recompiled definition: compile its unit (the `dlopen` JIT) and register a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13152,7 +13152,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 149,
+      "line": 153,
       "summary": "**Inject** a recompiled definition: compile its unit (the `dlopen` JIT) and register a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13163,7 +13163,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 200,
+      "line": 204,
       "summary": "The number of compiled (injected) entries — the dispatch table never shrinks on a re-inject",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13174,7 +13174,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 200,
+      "line": 204,
       "summary": "The number of compiled (injected) entries — the dispatch table never shrinks on a re-inject",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13185,7 +13185,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 193,
+      "line": 197,
       "summary": "Whether a compiled (injected) entry exists for `hash`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13196,7 +13196,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 193,
+      "line": 197,
       "summary": "Whether a compiled (injected) entry exists for `hash`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13207,7 +13207,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 114,
+      "line": 118,
       "summary": "An empty image with the default reference interpreter.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13218,7 +13218,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 114,
+      "line": 118,
       "summary": "An empty image with the default reference interpreter.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13229,7 +13229,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 168,
+      "line": 172,
       "summary": "How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13240,7 +13240,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 168,
+      "line": 172,
       "summary": "How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13251,7 +13251,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 121,
+      "line": 125,
       "summary": "Build an image with a specific interpreter for the fallback path (e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13262,7 +13262,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject::Image",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 121,
+      "line": 125,
       "summary": "Build an image with a specific interpreter for the fallback path (e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13273,7 +13273,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 65,
+      "line": 69,
       "summary": "A failure at the dispatch/injection boundary — every variant is explicit (never a silent pass or",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13284,7 +13284,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 50,
+      "line": 54,
       "summary": "How a [`ContentHash`] resolves in an [`Image`] — the inspectable/`EXPLAIN`-able dispatch decision",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13295,7 +13295,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::inject",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 222,
+      "line": 226,
       "summary": "The **recompile set** of a change, by hash reachability (ADR-017 decision 3 — no AST/file diff).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13317,7 +13317,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::jit",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 97,
+      "line": 103,
       "summary": "A JIT-compiled kernel: the `.so` on disk (in a per-artifact temp dir, cleaned on drop) + the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13328,7 +13328,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::jit::JitArtifact",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 107,
+      "line": 113,
       "summary": "Call the kernel in-process (`dlopen` → `dlsym` → call) and read the result back as an `Exact`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13339,7 +13339,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::jit::JitArtifact",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 107,
+      "line": 113,
       "summary": "Call the kernel in-process (`dlopen` → `dlsym` → call) and read the result back as an `Exact`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13350,7 +13350,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::jit",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 194,
+      "line": 322,
       "summary": "Compile the bit/trit-subset program to a shared object without calling it.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13361,7 +13361,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::jit",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 218,
+      "line": 346,
       "summary": "Compile the program to a shared object and call it once, in-process.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13372,7 +13372,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 218,
+      "line": 346,
       "summary": "Compile the program to a shared object and call it once, in-process.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13383,7 +13383,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/specialize.rs",
-      "line": 177,
+      "line": 205,
       "summary": "Convenience: specialize on `weights`, compile, and run the dot product against `activations` once.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13394,7 +13394,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 403,
+      "line": 445,
       "summary": "Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13405,7 +13405,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 409,
+      "line": 451,
       "summary": "As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13427,7 +13427,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 56,
+      "line": 60,
       "summary": "An explicit failure of the direct-LLVM AOT path.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13438,7 +13438,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2406,
+      "line": 2410,
       "summary": "A compiled native artifact for a bit/trit-subset program: the executable on disk (in a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13449,7 +13449,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm::CompiledArtifact",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2416,
+      "line": 2420,
       "summary": "Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13460,7 +13460,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm::CompiledArtifact",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2416,
+      "line": 2420,
       "summary": "Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13471,7 +13471,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2450,
+      "line": 2454,
       "summary": "Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`)",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13482,7 +13482,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2476,
+      "line": 2480,
       "summary": "Compile the bit/trit-subset program to a native executable, run it once, and read the result",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13493,7 +13493,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 1920,
+      "line": 1924,
       "summary": "Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13515,7 +13515,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::pack",
       "file": "crates/mycelium-mlir/src/pack.rs",
-      "line": 43,
+      "line": 47,
       "summary": "A packing-codec error.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13526,7 +13526,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::pack",
       "file": "crates/mycelium-mlir/src/pack.rs",
-      "line": 92,
+      "line": 96,
       "summary": "Bytes required to hold `count` trits under `scheme` — the buffer-bound model.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13537,7 +13537,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::pack",
       "file": "crates/mycelium-mlir/src/pack.rs",
-      "line": 197,
+      "line": 201,
       "summary": "Encode `trits` to bytes under `scheme` (bijective; the AOT path's physical buffer).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13548,7 +13548,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::pack",
       "file": "crates/mycelium-mlir/src/pack.rs",
-      "line": 287,
+      "line": 291,
       "summary": "Re-materialize trits through a pack-then-read round-trip where the buffer is **packed as**",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13559,7 +13559,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::pack",
       "file": "crates/mycelium-mlir/src/pack.rs",
-      "line": 239,
+      "line": 243,
       "summary": "Decode `count` trits from `bytes` under `scheme`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13570,7 +13570,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/pack.rs",
-      "line": 197,
+      "line": 201,
       "summary": "Encode `trits` to bytes under `scheme` (bijective; the AOT path's physical buffer).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13581,7 +13581,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/inject.rs",
-      "line": 222,
+      "line": 226,
       "summary": "The **recompile set** of a change, by hash reachability (ADR-017 decision 3 — no AST/file diff).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13592,7 +13592,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/pack.rs",
-      "line": 287,
+      "line": 291,
       "summary": "Re-materialize trits through a pack-then-read round-trip where the buffer is **packed as**",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13603,7 +13603,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 209,
+      "line": 213,
       "summary": "Run a Core IR program through the AOT path to a representation [`Value`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13614,7 +13614,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 143,
+      "line": 147,
       "summary": "Run a Core IR program through the AOT path to a [`CoreValue`] (the full v0 calculus — repr, data,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13625,7 +13625,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 192,
+      "line": 196,
       "summary": "[`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13636,7 +13636,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 152,
+      "line": 156,
       "summary": "[`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13647,7 +13647,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/aot.rs",
-      "line": 543,
+      "line": 547,
       "summary": "Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13669,7 +13669,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::runtime",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 112,
+      "line": 116,
       "summary": "A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13680,7 +13680,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::runtime",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 102,
+      "line": 106,
       "summary": "A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13691,7 +13691,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::runtime",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 33,
+      "line": 37,
       "summary": "The result of advancing a task one cooperative step.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13702,7 +13702,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::runtime",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 80,
+      "line": 84,
       "summary": "A **structured concurrency scope** (RT7): tasks spawned here are all joined before the scope",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13713,7 +13713,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::runtime",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 90,
+      "line": 94,
       "summary": "The order a **dataflow** sweep visits still-pending children.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13724,7 +13724,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::runtime",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 56,
+      "line": 60,
       "summary": "A cooperative task: `poll` advances it by one step.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13735,7 +13735,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::runtime",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 43,
+      "line": 47,
       "summary": "The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13757,7 +13757,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::simd",
       "file": "crates/mycelium-mlir/src/simd.rs",
-      "line": 127,
+      "line": 131,
       "summary": "Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13768,7 +13768,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::simd",
       "file": "crates/mycelium-mlir/src/simd.rs",
-      "line": 250,
+      "line": 248,
       "summary": "Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13779,7 +13779,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::simd",
       "file": "crates/mycelium-mlir/src/simd.rs",
-      "line": 603,
+      "line": 595,
       "summary": "Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13790,7 +13790,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::simd",
       "file": "crates/mycelium-mlir/src/simd.rs",
-      "line": 55,
+      "line": 59,
       "summary": "Emit the textual LLVM IR for the **hand-vectorized I2_S** packed-ternary dot kernel",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13801,7 +13801,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::simd",
       "file": "crates/mycelium-mlir/src/simd.rs",
-      "line": 169,
+      "line": 167,
       "summary": "Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13812,7 +13812,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::simd",
       "file": "crates/mycelium-mlir/src/simd.rs",
-      "line": 308,
+      "line": 300,
       "summary": "Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13834,7 +13834,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::specialize",
       "file": "crates/mycelium-mlir/src/specialize.rs",
-      "line": 88,
+      "line": 92,
       "summary": "A compiled, in-process **weight-specialized** dot kernel: the `.so` (in a per-artifact temp dir,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13845,7 +13845,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::specialize::SpecializedDotKernel",
       "file": "crates/mycelium-mlir/src/specialize.rs",
-      "line": 115,
+      "line": 130,
       "summary": "Run the specialized kernel over `activations`, returning `Σ digit(wᵢ)·activations[i]` for the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13856,7 +13856,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::specialize::SpecializedDotKernel",
       "file": "crates/mycelium-mlir/src/specialize.rs",
-      "line": 115,
+      "line": 130,
       "summary": "Run the specialized kernel over `activations`, returning `Σ digit(wᵢ)·activations[i]` for the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13867,7 +13867,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::specialize::SpecializedDotKernel",
       "file": "crates/mycelium-mlir/src/specialize.rs",
-      "line": 101,
+      "line": 104,
       "summary": "The logical number of lanes (weight length) compiled into this kernel.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13878,7 +13878,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::specialize::SpecializedDotKernel",
       "file": "crates/mycelium-mlir/src/specialize.rs",
-      "line": 101,
+      "line": 104,
       "summary": "The logical number of lanes (weight length) compiled into this kernel.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13889,7 +13889,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::specialize::SpecializedDotKernel",
       "file": "crates/mycelium-mlir/src/specialize.rs",
-      "line": 108,
+      "line": 111,
       "summary": "The number of nonzero (surviving) lanes — the straight-line `add`/`sub` count, exposed for",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13900,7 +13900,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::specialize::SpecializedDotKernel",
       "file": "crates/mycelium-mlir/src/specialize.rs",
-      "line": 108,
+      "line": 111,
       "summary": "The number of nonzero (surviving) lanes — the straight-line `add`/`sub` count, exposed for",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13911,7 +13911,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::specialize",
       "file": "crates/mycelium-mlir/src/specialize.rs",
-      "line": 140,
+      "line": 168,
       "summary": "Compile a kernel **specialized on `weights`** (baked in as constants) to a shared object and load",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13922,7 +13922,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::specialize",
       "file": "crates/mycelium-mlir/src/specialize.rs",
-      "line": 53,
+      "line": 57,
       "summary": "Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13933,7 +13933,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::specialize",
       "file": "crates/mycelium-mlir/src/specialize.rs",
-      "line": 177,
+      "line": 205,
       "summary": "Convenience: specialize on `weights`, compile, and run the dot product against `activations` once.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13944,7 +13944,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/bitnet.rs",
-      "line": 131,
+      "line": 135,
       "summary": "The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13955,7 +13955,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/pack.rs",
-      "line": 239,
+      "line": 243,
       "summary": "Decode `count` trits from `bytes` under `scheme`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14087,7 +14087,7 @@
       "crate": "mycelium-numerics",
       "module": "mycelium_numerics",
       "file": "crates/mycelium-numerics/src/lib.rs",
-      "line": 22,
+      "line": 25,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14384,7 +14384,7 @@
       "crate": "mycelium-numerics",
       "module": "mycelium_numerics",
       "file": "crates/mycelium-numerics/src/lib.rs",
-      "line": 23,
+      "line": 26,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14846,7 +14846,7 @@
       "crate": "mycelium-numerics",
       "module": "mycelium_numerics",
       "file": "crates/mycelium-numerics/src/lib.rs",
-      "line": 24,
+      "line": 27,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15704,7 +15704,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 253,
+      "line": 256,
       "summary": "What a matched rule does.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15715,7 +15715,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 785,
+      "line": 788,
       "summary": "The fixed **bitnet.cpp** ternary packing candidate set (RFC-0004 §5; Wang et al.): `I2_S`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15726,7 +15726,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 242,
+      "line": 245,
       "summary": "A selectable candidate — the three RFC-0005 §4 sites share one vocabulary (one mechanism).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15737,7 +15737,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 506,
+      "line": 509,
       "summary": "The per-candidate cost line of an [`Explanation`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15748,7 +15748,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 282,
+      "line": 285,
       "summary": "The **explicit cost function** (RFC-0005 §2.1): cost = `storage_weight ×` the candidate's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15759,7 +15759,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::CostModel",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 333,
+      "line": 336,
       "summary": "The deterministic cost of `candidate` given `inputs` — total, finite for every well-formed",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15770,7 +15770,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 73,
+      "line": 76,
       "summary": "The **exact decode facts** the RFC-0010 decode site queries — generic integers/booleans about a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15781,7 +15781,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 229,
+      "line": 232,
       "summary": "A decode methodology — the **third** RFC-0005 §4 site (RFC-0010): how a value is decoded back to",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15792,7 +15792,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 517,
+      "line": 520,
       "summary": "The **mandatory EXPLAIN record** (M-221; RFC-0005 §2.2/§4): emitted on *every* selection —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15803,7 +15803,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 47,
+      "line": 50,
       "summary": "The four closed paradigm kinds, as a predicate-level discriminator (RFC-0001 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15814,7 +15814,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 354,
+      "line": 357,
       "summary": "Why a policy could not be constructed — validated up front so every constructed policy is",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15825,7 +15825,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 729,
+      "line": 732,
       "summary": "A registry resolving a recorded `PolicyRef` back to the policy that decided — the operational",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15836,7 +15836,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::PolicyRegistry",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 749,
+      "line": 752,
       "summary": "Resolve a `PolicyRef` to its policy, if registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15847,7 +15847,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::PolicyRegistry",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 761,
+      "line": 764,
       "summary": "Whether the registry is empty.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15858,7 +15858,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::PolicyRegistry",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 755,
+      "line": 758,
       "summary": "Number of registered policies.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15869,7 +15869,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::PolicyRegistry",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 428,
+      "line": 431,
       "summary": "Build a policy, validating totality up front: at least one candidate, every `Choose(i)`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15880,7 +15880,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::PolicyRegistry",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 741,
+      "line": 744,
       "summary": "Register a policy under its content address; returns the `PolicyRef`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15891,7 +15891,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 135,
+      "line": 138,
       "summary": "The predicate language — small, closed, **not Turing-complete**: no loops, no recursion in the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15902,7 +15902,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::Predicate",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 169,
+      "line": 172,
       "summary": "Evaluate against the queryable inputs — total: every predicate yields a boolean on every",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15913,7 +15913,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::Predicate",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 207,
+      "line": 210,
       "summary": "True iff every floating-point literal in the predicate tree is finite (A5-01/B2-02).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15924,7 +15924,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 263,
+      "line": 266,
       "summary": "One row of the decision table: `when` (a [`Predicate`]) → `action`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15935,7 +15935,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 539,
+      "line": 542,
       "summary": "Why a selection call failed — always explicit (G2), never a silent fallback choice.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15946,7 +15946,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 89,
+      "line": 92,
       "summary": "The **queryable inputs** a policy may inspect — drawn from a value's [`Repr`] + [`Meta`]",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15957,7 +15957,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::SelectionInputs",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 106,
+      "line": 109,
       "summary": "The queryable projection of a `(Repr, Meta)` pair (no decode facts — swap/packing sites).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15968,7 +15968,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::SelectionInputs",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 118,
+      "line": 121,
       "summary": "The queryable projection of a [`Value`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15979,7 +15979,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::SelectionInputs",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 124,
+      "line": 127,
       "summary": "Attach decode-site facts (RFC-0010) for the [`select_decode_method`] adapter.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15990,7 +15990,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 400,
+      "line": 403,
       "summary": "A **reified selection policy** (ADR-006; RFC-0005 §2/§3): an ordered decision table over a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16001,7 +16001,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::SelectionPolicy",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 473,
+      "line": 476,
       "summary": "The finite candidate set.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16012,7 +16012,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::SelectionPolicy",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 488,
+      "line": 491,
       "summary": "The explicit cost model.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16023,7 +16023,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::SelectionPolicy",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 483,
+      "line": 486,
       "summary": "The mandatory default arm (totality).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16034,7 +16034,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::SelectionPolicy",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 468,
+      "line": 471,
       "summary": "The policy's display name (not part of selection semantics, but part of its identity).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16045,7 +16045,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::SelectionPolicy",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 428,
+      "line": 431,
       "summary": "Build a policy, validating totality up front: at least one candidate, every `Choose(i)`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16056,7 +16056,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::SelectionPolicy",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 497,
+      "line": 500,
       "summary": "The **content address** of this policy (RFC-0005 §3; RFC-0001 §4.6): the hash of its",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16067,7 +16067,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select::SelectionPolicy",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 478,
+      "line": 481,
       "summary": "The ordered decision table.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16078,7 +16078,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 804,
+      "line": 807,
       "summary": "Build the **default schedule-staged packing policy** (M-250): the three [`BITNET_PACKINGS`]",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16089,7 +16089,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 666,
+      "line": 669,
       "summary": "`explain(policy, meta) → trace` (RFC-0005 §4): the mandatory EXPLAIN, **total and",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16100,7 +16100,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 791,
+      "line": 794,
       "summary": "Map a chosen ternary [`PackScheme`] to the [`PhysicalLayout`] recorded on `Meta.physical`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16111,7 +16111,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 860,
+      "line": 863,
       "summary": "One-call convenience: select the packing layout for a value's `(Repr, Meta)` and **record it**",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16122,7 +16122,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 594,
+      "line": 597,
       "summary": "The **single selection entry point** (RFC-0005 §2; one mechanism for both §4 sites): evaluate",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16133,7 +16133,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 710,
+      "line": 713,
       "summary": "Decode-method site adapter (RFC-0005 §4 site 3; RFC-0010): the chosen candidate must be a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16144,7 +16144,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 839,
+      "line": 842,
       "summary": "The **packing-schedule selector** (M-250; RFC-0004 §5; one mechanism — RFC-0005 §4): evaluate",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16155,7 +16155,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 691,
+      "line": 694,
       "summary": "Packing-schedule site adapter (RFC-0005 §4 site 2; RFC-0004 §5 — consumed by E2-7/M-250): the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16166,7 +16166,7 @@
       "crate": "mycelium-select",
       "module": "mycelium_select",
       "file": "crates/mycelium-select/src/lib.rs",
-      "line": 674,
+      "line": 677,
       "summary": "Swap-target site adapter (RFC-0005 §4 site 1; RFC-0002): the chosen candidate must be a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26913,7 +26913,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 361,
+      "line": 364,
       "summary": "A **trial-validated empirical profile**: the regime over which a crate-declared `Empirical`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26924,7 +26924,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa::EmpiricalProfile",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 400,
+      "line": 403,
       "summary": "The δ bound this profile backs, with its honest `EmpiricalFit` basis (M-I3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26935,7 +26935,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa::EmpiricalProfile",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 379,
+      "line": 382,
       "summary": "Check the profile's side-conditions for an op over `items` operands at `dim`; a violation",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27111,7 +27111,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 68,
+      "line": 71,
       "summary": "Why a VSA operation could not be performed — always explicit, never a silent coercion (G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27122,7 +27122,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 322,
+      "line": 325,
       "summary": "A composition-style VSA model (RFC-0003 §3): the `bind`/`unbind` (+ self-inverse flag),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27133,7 +27133,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 55,
+      "line": 58,
       "summary": "The VSA operations a model supplies (RFC-0003 §3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27144,7 +27144,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 19,
+      "line": 22,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27287,7 +27287,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 20,
+      "line": 23,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27342,7 +27342,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 21,
+      "line": 24,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27540,7 +27540,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 22,
+      "line": 25,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27628,7 +27628,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 23,
+      "line": 26,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27727,7 +27727,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 24,
+      "line": 27,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27826,7 +27826,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 25,
+      "line": 28,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27969,7 +27969,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 26,
+      "line": 29,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28101,7 +28101,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 27,
+      "line": 30,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28145,7 +28145,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 28,
+      "line": 31,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28233,7 +28233,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 29,
+      "line": 32,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28420,7 +28420,7 @@
       "crate": "mycelium-vsa",
       "module": "mycelium_vsa",
       "file": "crates/mycelium-vsa/src/lib.rs",
-      "line": 30,
+      "line": 33,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
