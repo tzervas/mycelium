@@ -1,8 +1,11 @@
 //! The **v0 monomorphic typechecker** (RFC-0007 §4.4) plus the program environment it checks
 //! against: the data-type registry (declarations are registry entries, never term nodes —
 //! RFC-0007 §4.2) and the function table. Every refusal is an explicit [`CheckError`] — generics,
-//! `spore`, value-level integers without context, and `wild` blocks (denied by default, LR-9) are
-//! *refused with a reason*, never guessed at.
+//! `spore`, value-level integers without context, and a `wild` block outside the audited FFI floor
+//! (the `@std-sys` context gate, M-661/LR-9) are *refused with a reason*, never guessed at. A `wild`
+//! inside a `@std-sys` nodule is the audited FFI escape: gated (it must declare the `ffi` effect),
+//! its body trusted/opaque (not recursively checked — audited, not verified, VR-5/ADR-014), and its
+//! execution staged ([`crate::elab`] lowers it to a `Residual`).
 
 use std::cell::Cell;
 use std::collections::BTreeMap;

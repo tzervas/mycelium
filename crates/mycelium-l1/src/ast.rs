@@ -371,7 +371,12 @@ pub enum Expr {
         /// The block body.
         body: Box<Expr>,
     },
-    /// `wild { body }` — the denied-by-default unsafe block (LR-9).
+    /// `wild { body }` — the **audited FFI floor** (LR-9/S6; ADR-014; M-661). Parsed anywhere an
+    /// expression may appear; its *legality* is a checker gate (`crate::checkty`): legal **only**
+    /// inside a `@std-sys` nodule ([`Nodule::std_sys`]) whose enclosing `fn` declares the `ffi`
+    /// effect — else a hard refusal (never silent — G2). The boxed `body` is the trusted/opaque FFI
+    /// escape: not recursively type-checked (audited, not verified — VR-5), kept verbatim. Execution
+    /// is staged (no FFI host in v0 → an elaboration `Residual`).
     Wild(Box<Expr>),
     /// `spore(value)` — reconstruction-manifest construction.
     Spore(Box<Expr>),
