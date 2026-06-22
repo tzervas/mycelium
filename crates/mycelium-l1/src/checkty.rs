@@ -758,7 +758,7 @@ fn resolve_imports(nodule: &Nodule, exports: &Exports) -> Result<NoduleImports, 
         // Every exported name directly under this prefix (qualified key = prefix + "." + simple, with
         // exactly one trailing segment).
         let mut any = false;
-        for (qual, _is_pub) in &exports.declared {
+        for qual in exports.declared.keys() {
             let Some(simple) = direct_child(&prefix, qual) else {
                 continue;
             };
@@ -3325,7 +3325,11 @@ mod tests {
 
     /// A one-`impl` nodule `impl Tr<Binary{8}> for Binary{8} { fn m(x: Binary{8}) -> Binary{8} = x }`
     /// plus the registered `types`/`traits` for `Tr`, for driving `register_instances` directly.
-    fn impl_fixture() -> (BTreeMap<String, DataInfo>, BTreeMap<String, TraitInfo>, Nodule) {
+    fn impl_fixture() -> (
+        BTreeMap<String, DataInfo>,
+        BTreeMap<String, TraitInfo>,
+        Nodule,
+    ) {
         // Parse a phylum-of-one so the surface `impl` + `trait` are real AST (then strip the trait so
         // it is NOT in this nodule — the orphan scenario is "trait declared elsewhere / nowhere").
         let n = parse(

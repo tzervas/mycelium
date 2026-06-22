@@ -796,6 +796,14 @@ This RFC is **Draft**. The maintainer must ratify it (move to Accepted) based on
 
 ## Meta — changelog
 
+- **2026-06-22 — §4.5 orphan rule generalized phylum-wide (M-662, E7-1; append-only, status unchanged).**
+  The cross-nodule enforcement the M-659 entry below staged "with the phylum work" has landed: the §4.5
+  orphan rule is now checked **phylum-wide** in `crates/mycelium-l1` — an `impl Trait for T` is legal iff
+  the trait OR the `for`-type head is declared in **some nodule of the phylum** (or is a primitive repr),
+  else a never-silent orphan `CheckError` (G2). The coherence view is **pub-blind**: `pub` gates the `use`
+  namespace, not coherence — enforcement *authority* spans the whole phylum regardless of visibility.
+  Honesty (VR-5): the coherence/orphan result stays **Declared-with-argument** — this generalization is
+  `Empirical` evidence, **not** a `Proven` upgrade, and does **not** change the RFC's status. Append-only.
 - **2026-06-22 — stage-1 checker implemented Rust-first (M-659; append-only, status unchanged).**
   The §4.1 surface (single-parameter `trait`; `impl Trait<args> for T { fn … }`; bounded fn
   type-params `<T: Cmp + Ord<T>>`, with the `T: Cmp ≡ T: Cmp<T>` single-parameter self-bound) and the

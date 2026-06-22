@@ -14,9 +14,7 @@
 //! (the same shape, minus the violation, is accepted). Honesty: the coherence/orphan rule is
 //! `Declared` (RFC-0019 §4.5) — these tests pin the never-silent *behavior*, not a proof.
 
-use mycelium_l1::{
-    check_phylum, expand_phylum_to_source, parse_phylum, CheckError, Phylum,
-};
+use mycelium_l1::{check_phylum, expand_phylum_to_source, parse_phylum, CheckError, Phylum};
 
 /// Parse + check a phylum source, returning the per-nodule envs.
 fn check(src: &str) -> Result<mycelium_l1::PhylumEnv, CheckError> {
@@ -90,7 +88,10 @@ fn nodule_b_uses_a_pub_fn_from_nodule_a_and_type_checks() {
     // `b`'s env resolves `use_it` and sees the imported `id`.
     let b = penv.nodule(&path(&["b"])).expect("nodule b present");
     assert!(b.fn_decl("use_it").is_some());
-    assert!(b.fn_decl("id").is_some(), "imported fn is visible in b's env");
+    assert!(
+        b.fn_decl("id").is_some(),
+        "imported fn is visible in b's env"
+    );
 }
 
 #[test]
@@ -344,11 +345,26 @@ fn pub_phylum_header_and_use_round_trip_through_expand() {
     let ph1 = parse_phylum(src).expect("parses");
     let printed = expand_phylum_to_source(&ph1);
     // The longhand twin must carry the phylum header, the `pub` markers, and both `use` forms.
-    assert!(printed.contains("phylum app.core"), "header re-emitted:\n{printed}");
-    assert!(printed.contains("pub fn id"), "pub fn re-emitted:\n{printed}");
-    assert!(printed.contains("pub type Flag"), "pub type re-emitted:\n{printed}");
-    assert!(printed.contains("use a.id\n"), "specific use re-emitted:\n{printed}");
-    assert!(printed.contains("use a.*\n"), "glob use re-emitted:\n{printed}");
+    assert!(
+        printed.contains("phylum app.core"),
+        "header re-emitted:\n{printed}"
+    );
+    assert!(
+        printed.contains("pub fn id"),
+        "pub fn re-emitted:\n{printed}"
+    );
+    assert!(
+        printed.contains("pub type Flag"),
+        "pub type re-emitted:\n{printed}"
+    );
+    assert!(
+        printed.contains("use a.id\n"),
+        "specific use re-emitted:\n{printed}"
+    );
+    assert!(
+        printed.contains("use a.*\n"),
+        "glob use re-emitted:\n{printed}"
+    );
     // Re-parsing the printed form yields a structurally-equal phylum (round-trip stable).
     let ph2 = parse_phylum(&printed).expect("re-parses");
     assert_eq!(ph1, ph2, "parse→print→parse must be stable");
@@ -359,8 +375,14 @@ fn a_header_less_phylum_does_not_gain_a_phylum_line() {
     // An unmarked (header-less) phylum-of-one must NOT sprout a `phylum` line (never invented).
     let ph = parse_phylum("nodule solo\npub fn f() -> Binary{8} = 0b0").expect("parses");
     let printed = expand_phylum_to_source(&ph);
-    assert!(!printed.contains("phylum "), "no header must not be invented:\n{printed}");
-    assert!(printed.contains("pub fn f"), "the pub marker still round-trips:\n{printed}");
+    assert!(
+        !printed.contains("phylum "),
+        "no header must not be invented:\n{printed}"
+    );
+    assert!(
+        printed.contains("pub fn f"),
+        "the pub marker still round-trips:\n{printed}"
+    );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -369,13 +391,17 @@ fn a_header_less_phylum_does_not_gain_a_phylum_line() {
 
 #[test]
 fn check_phylum_of_one_matches_check_nodule() {
-    let src = "nodule d\nfn widen(x: Binary{8}) -> Ternary{6} = swap(x, to: Ternary{6}, policy: rt)";
+    let src =
+        "nodule d\nfn widen(x: Binary{8}) -> Ternary{6} = swap(x, to: Ternary{6}, policy: rt)";
     let nodule = mycelium_l1::parse(src).expect("parses");
     let via_nodule = mycelium_l1::check_nodule(&nodule).expect("checks");
     let via_phylum = check_phylum(&Phylum::of_one(nodule.clone())).expect("checks");
     let single = via_phylum.single().expect("phylum-of-one has one env");
     // The single-nodule env and the phylum-of-one's single env agree on the fn table + totality.
-    assert_eq!(via_nodule.fns.keys().collect::<Vec<_>>(), single.fns.keys().collect::<Vec<_>>());
+    assert_eq!(
+        via_nodule.fns.keys().collect::<Vec<_>>(),
+        single.fns.keys().collect::<Vec<_>>()
+    );
     assert_eq!(via_nodule.totality, single.totality);
 }
 

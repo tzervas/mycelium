@@ -366,6 +366,14 @@ asked to wait, wait.)
    against current `main`, and the squash-merge stays conflict-free. In a swarm, propagate the
    freshly-squashed `main` **down through every level** (orch → epic → leaf) after each landing so no
    lower branch keeps building on a superseded base — pull-down flows *down*, squash-merge flows *up*.
+   **Prefer fast-forward over force-push (drop the force op).** Keep the per-session working branch a
+   *clean pointer at `main`* — do the work + reconcile on a per-task/leaf branch, PR **that**, and after
+   the squash lands bring the working branch up with `git fetch origin main` → `git merge --ff-only
+   origin/main` (`git stash` first if dirty) → a plain (non-force) `git push`. Because the working
+   branch never carried the squashed commits it stays an ancestor of the new tip, so `--ff-only` always
+   succeeds — and *fails loudly* if it ever diverged (a never-silent guard) instead of papering over
+   divergence with `--force`/`--force-with-lease`. Reserve a force-push for the unavoidable case (a
+   branch whose own pre-squash commits already landed on `main` from a prior session).
 
 ## Wave-N multi-session workflow — protected bases, free children, squash-only `main`
 

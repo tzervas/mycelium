@@ -155,6 +155,15 @@ hashable unit with a public surface), consistent with the existing content-addre
 
 ## Meta — changelog & maintenance
 
+- **2026-06-22 — `phylum` activated (M-662, E7-1; append-only, supersedes nothing).** The library-scale
+  grouping `phylum` — added as **reserved-not-active** by the M-358 entry below — is now an **active L1
+  construct**. An optional `phylum <path>` header (the §6 header model: metadata, never content-addressed
+  identity — ADR-003) groups one-or-more `nodule` blocks in one source file; a header-less single nodule is
+  a phylum-of-one. Cross-nodule visibility is `pub`/`use` (specific + glob), and the RFC-0019 §4.5 orphan
+  rule is enforced phylum-wide (pub-blind). Realized in `crates/mycelium-l1` (parse/check/print) + the
+  grammar oracle (`mycelium.ebnf` + README; `conformance/accept/19`; the former reserved-not-active
+  `reject/10` is repurposed to the phylum-no-nodule parse refusal). The remaining reserved-not-active
+  runtime vocabulary (DN-03 §4) is unchanged. **No semantic change to identity** (ADR-003). Append-only.
 - **2026-06-16 — M-358 executed (the keyword migration).** The static surface keyword `colony` → `nodule`
   migration this note required is **done**: the lexer/token/parser/AST/checker/elaborator
   (`crates/mycelium-l1`), the LSP surface (`crates/mycelium-lsp`), the grammar oracle

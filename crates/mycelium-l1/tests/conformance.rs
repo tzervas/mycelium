@@ -2,12 +2,13 @@
 //! parser must **accept** every program under `docs/spec/grammar/conformance/accept/` and
 //! **reject** every program under `…/reject/` with an explicit [`ParseError`] — never a panic,
 //! never a silent accept. The corpus is the ground truth; this test makes the grammar artifact
-//! and the parser agree.
+//! and the parser agree. The oracle is [`parse_phylum`] (M-662) — the top-level surface entry and a
+//! strict superset of `parse` (a bare nodule is a phylum-of-one), so every pre-phylum fixture holds.
 
 use std::fs;
 use std::path::PathBuf;
 
-use mycelium_l1::parse;
+use mycelium_l1::parse_phylum;
 
 fn corpus_dir(kind: &str) -> PathBuf {
     // crate dir → repo root → the grammar conformance corpus.
@@ -32,7 +33,7 @@ fn myc_files(kind: &str) -> Vec<PathBuf> {
 fn accept_corpus_all_parses() {
     for path in myc_files("accept") {
         let src = fs::read_to_string(&path).unwrap();
-        match parse(&src) {
+        match parse_phylum(&src) {
             Ok(_) => {}
             Err(e) => panic!("{} should parse but failed: {e}", path.display()),
         }
@@ -70,8 +71,11 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "expected `paradigm` after `default`",
     ),
     (
-        "10-reserved-not-active.myc",
-        "expected a `nodule` header to open the program",
+        // M-662: `phylum` is now ACTIVE, so a phylum header with no nodule is a never-silent parse
+        // refusal (not the former reserved-not-active rejection). The runtime vocabulary that is
+        // still reserved-not-active is exercised by fixture 12.
+        "10-phylum-no-nodule.myc",
+        "at least one `nodule`",
     ),
     ("11-matured-fn-retired.myc", "maturation is declared per"),
     (
@@ -114,7 +118,7 @@ fn reject_corpus_all_fails_explicitly() {
         let src = fs::read_to_string(&path).unwrap();
         // A reject fixture must fail — and fail as an explicit ParseError, not a panic (the call
         // returning at all proves no panic; the `Err` arm proves no silent accept).
-        let err = match parse(&src) {
+        let err = match parse_phylum(&src) {
             Ok(_) => panic!(
                 "{} should be rejected but parsed successfully",
                 path.display()

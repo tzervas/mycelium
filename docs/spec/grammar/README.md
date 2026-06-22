@@ -53,11 +53,18 @@ work). The runtime realization is `mycelium-mlir::runtime` (`Scope`/`Colony`/`Ta
 performance path validated against the RT2 sequentialization, not an L0 kernel node (the trusted base
 stays sequential; KC-3). Accept fixture: `conformance/accept/13`.
 
-**Reserved, not yet active (DN-06, Resolved 2026-06-16).** `phylum` (the library-scale grouping
-*above* nodules) is a reserved keyword: it lexes as a keyword — so it is never a silent identifier —
-but no v0 construct consumes it, so it does not open a program (`conformance/reject/10`). It
-activates when its construct lands (RFC-0006). Plurals (prose only, never reserved identifiers):
-`phylum`/`phyla`, `nodule`/`nodules`, `colony`/`colonies`, `hypha`/`hyphae`.
+**Active (M-662; RFC-0006, DN-06 §6).** `phylum` (the library-scale grouping *above* nodules) is now
+an active surface construct. An optional `phylum <path>` header groups one-or-more `nodule` blocks in
+one source file (`program ::= phylum_header? nodule_block+`); a header-less single nodule is a
+*phylum-of-one* (backward-compatible). Cross-nodule names are exported with **`pub`** (`pub fn` / `pub
+type` / `pub trait`; absent ⇒ private to the nodule) and imported with **`use`** — specific (`use
+a.b.X`) or glob (`use a.b.*`). Resolution precedence is local-decl > explicit-`use` > glob (higher
+shadows lower deterministically); a `use` of an absent or private name, a duplicate import, or a
+*referenced* glob-vs-glob collision is a never-silent refusal (G2). The cross-nodule **orphan rule**
+(RFC-0019 §4.5) is enforced phylum-wide over a pub-blind coherence view (`Declared`). Accept fixture:
+`conformance/accept/19`; the phylum-no-nodule parse refusal is `conformance/reject/10`. Plurals (prose
+only, never reserved identifiers): `phylum`/`phyla`, `nodule`/`nodules`, `colony`/`colonies`,
+`hypha`/`hyphae`.
 
 **Reserved, not yet active — runtime vocabulary (DN-03 §4; RFC-0008 §4.5).** The remaining nine
 runtime-model names are reserved keywords: they lex as keywords (never silent identifiers, G2) but
@@ -95,7 +102,9 @@ header (`// @key: value`) + `mycelium-proj.toml` manifest layer on top of this (
   no toolchain needed, so it rarely skips.
 - **`crates/mycelium-l1` `tests/conformance.rs`** (in `cargo test`): the real parser gate — the
   hand-written recursive-descent parser must **accept** every `accept/` program and **reject**
-  every `reject/` program with an explicit `ParseError` (never a silent accept, never a panic).
+  every `reject/` program with an explicit `ParseError` (never a silent accept, never a panic). The
+  oracle is `parse_phylum` (M-662) — the top-level entry, a strict superset of `parse`: a bare nodule
+  is a phylum-of-one, so every pre-phylum fixture still holds.
 
 ## Status
 
