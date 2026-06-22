@@ -15,6 +15,9 @@
 //! tier-i checker (E2-4), and interp↔AOT observational equivalence (the M-151 differential) — one
 //! checker, every instance, never a silent pass. The serialized certificate form is exactly
 //! `docs/spec/schemas/swap-certificate.schema.json`.
+//!
+//! **Trusted-base discipline (ADR-014 / DN-21 §5 F-1):** zero `unsafe` — compiler-enforced.
+#![forbid(unsafe_code)]
 
 pub mod check;
 pub mod dense;

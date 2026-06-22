@@ -340,6 +340,12 @@ impl BitnetDotKernel {
             )));
         }
         let n_i64 = i64::try_from(n).map_err(|_| AotError::Run(format!("n too large: {n}")))?;
+        // `fptr` came from `lib.sym`, which errors on a null result, so it is non-null; assert it in
+        // dev/test before the transmute (DN-21 §6 M-679).
+        debug_assert!(
+            !self.fptr.is_null(),
+            "kernel fptr must be a non-null dlsym address"
+        );
         // SAFETY: `fptr` is the address `dlsym` returned for the `i64 myc_bitnet_dot(ptr,ptr,i64)` we
         // emitted and compiled, so the `extern "C"` type matches. The bounds check above guarantees
         // the kernel reads only `w[0..needed_bytes(scheme, n)]` and `x[0..n]`, both in-bounds for the

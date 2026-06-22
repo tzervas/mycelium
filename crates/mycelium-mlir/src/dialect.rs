@@ -30,6 +30,10 @@
 //! **Guarantee tag:** `Empirical` — a genuinely compiled MLIR→LLVM artifact whose correctness is
 //! evidenced by the three-way differential (interp ≡ direct-LLVM ≡ MLIR-dialect) over the v0
 //! calculus corpus (M-602); never `Proven` without a checked equivalence proof.
+//!
+//! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
+//! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
+#![forbid(unsafe_code)]
 
 use core::fmt::Write as _;
 

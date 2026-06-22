@@ -120,6 +120,12 @@ impl SpecializedDotKernel {
                 activations.len()
             )));
         }
+        // `fptr` came from `lib.sym`, which errors on a null result, so it is non-null; assert it in
+        // dev/test before the transmute (DN-21 §6 M-679).
+        debug_assert!(
+            !self.fptr.is_null(),
+            "kernel fptr must be a non-null dlsym address"
+        );
         // SAFETY: `fptr` is the address `dlsym` returned for the `i64 myc_bitnet_dot_spec(ptr)` we
         // just emitted and compiled, so the `extern "C"` type matches. The kernel reads only
         // `x[i]` for the baked nonzero lanes `i < n`, all in-bounds by the check above. The library

@@ -6,6 +6,9 @@
 //! Here so far: the guarantee `meet` composition + laws (M-102) and content-addressing (M-103).
 //! Not yet here (own issues): (de)serialization to the schemas (M-104), the reference interpreter
 //! (M-110).
+//!
+//! **Trusted-base discipline (ADR-014 / DN-21 §5 F-1):** zero `unsafe` — compiler-enforced.
+#![forbid(unsafe_code)]
 
 pub mod binary;
 pub mod bound;

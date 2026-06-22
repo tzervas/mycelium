@@ -4,7 +4,7 @@
 source "${BASH_SOURCE%/*}/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 
-checks=(structured shell markdown links doc-currency doc-status schema grammar spell secrets format lint test myc-fmt myc-check myc-sec myc-lint myc-doc myc-spore proofs api doc-index deny)
+checks=(structured shell markdown links doc-currency doc-status schema grammar spell secrets format lint safety test myc-fmt myc-check myc-sec myc-lint myc-doc myc-spore proofs api doc-index deny)
 failed=()
 for c in "${checks[@]}"; do
   if ! bash "$REPO_ROOT/scripts/checks/$c.sh"; then failed+=("$c"); fi

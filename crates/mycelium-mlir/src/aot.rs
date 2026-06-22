@@ -26,6 +26,10 @@
 //! **dynamically** from detected memory headroom ([`crate::budget`], DN-05 §2.4 / DN05-Q5): with the
 //! control stack on the heap, the budget is a policy over memory, derived honestly and `EXPLAIN`-able,
 //! with a conservative static fallback. [`run_core_with_budget`] still takes an explicit ceiling.
+//!
+//! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
+//! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
+#![forbid(unsafe_code)]
 
 use std::collections::HashMap;
 use std::rc::Rc;

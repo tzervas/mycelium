@@ -107,6 +107,12 @@ impl JitArtifact {
     pub fn call(&self) -> Result<Value, AotError> {
         let lib = dlopen_path(&self.so)?; // dlclose on drop
         let fptr = lib.sym("myc_kernel")?;
+        // `sym` returns an explicit error on a null result, so `fptr` is non-null here; the
+        // debug-assert makes that precondition machine-checked in dev/test builds (DN-21 §6 M-679).
+        debug_assert!(
+            !fptr.is_null(),
+            "lib.sym must return a non-null address or Err"
+        );
 
         let mut buf = vec![0u8; self.width];
         // SAFETY: `fptr` is the address `dlsym` returned for the `i32 myc_kernel(ptr)` we just
@@ -145,7 +151,13 @@ impl Lib {
 impl Drop for Lib {
     fn drop(&mut self) {
         // SAFETY: `self.0` is a handle returned by `dlopen` and not closed elsewhere; closing it
-        // once on drop is the matching `dlclose`.
+        // once on drop is the matching `dlclose`. **Dangling-pointer obligation (DN-21 §4):** any
+        // address `dlsym` derived from this handle (a JIT'd fn-pointer) is unloaded by this
+        // `dlclose`, so no derived pointer may be called after the owning `Lib` is dropped. Today
+        // every call site keeps the `Lib` live for the whole call (the fn-ptr is resolved and
+        // invoked while a `&Lib` / co-located `_lib` field is in scope), so no derived pointer
+        // outlives the handle — M-682 lifts that co-location convention into a compiler-checked
+        // lifetime.
         #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
         unsafe {
             dlclose(self.0);
@@ -162,8 +174,13 @@ pub(crate) fn dlopen_path(so: &std::path::Path) -> Result<Lib, AotError> {
 }
 
 fn open_lib(so: &CString) -> Result<*mut c_void, AotError> {
-    // SAFETY: `so` is a valid NUL-terminated path to the `.so` just written; `RTLD_NOW` resolves
-    // symbols eagerly so a bad library fails here rather than at call time.
+    // SAFETY: `so` is a valid NUL-terminated path (a `CString`) to the `.so` just written;
+    // `RTLD_NOW` resolves symbols eagerly so a bad library fails here rather than at call time.
+    // **Platform assumption (DN-21 §3):** `RTLD_NOW = 2` is hard-coded for the glibc/musl Linux ABI
+    // (no `libc` constant is pulled in — an intentional ADR-014 zero-dependency choice); the JIT is
+    // Linux-only today. **Global-constructor safety:** the JIT IR emits no `@llvm.global_ctors`
+    // (`Empirical` — verified by reading `emit_kernel_fn`/`emit_*_ir`), so `dlopen` runs no foreign
+    // constructor code on load.
     #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
     let handle = unsafe { dlopen(so.as_ptr(), RTLD_NOW) };
     if handle.is_null() {
@@ -176,7 +193,15 @@ fn open_lib(so: &CString) -> Result<*mut c_void, AotError> {
 }
 
 fn lookup_sym(handle: *mut c_void, sym: &CString) -> Result<*mut c_void, AotError> {
-    // SAFETY: `handle` is a live `dlopen` handle (checked non-null) and `sym` is a valid C string.
+    // The handle reached here only via `open_lib`, which returns `Err` on a null `dlopen` result,
+    // so `handle` is non-null by construction; assert it in dev/test (DN-21 §6 M-679).
+    debug_assert!(
+        !handle.is_null(),
+        "lookup_sym requires a live (non-null) dlopen handle"
+    );
+    // SAFETY: `handle` is a live `dlopen` handle — it originates from `open_lib`, which returns the
+    // handle only after checking it is non-null, and the only callers (`Lib::sym`) hold it in a live
+    // `Lib`, so the library is still loaded at this point; `sym` is a valid NUL-terminated C string.
     #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
     let ptr = unsafe { dlsym(handle, sym.as_ptr()) };
     if ptr.is_null() {

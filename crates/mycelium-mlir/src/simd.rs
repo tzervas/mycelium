@@ -31,6 +31,10 @@
 //! upgraded; the reduction is exact i64 integer arithmetic. The speedup over the scalar JIT kernels is
 //! whatever `cargo xtask e1` §5 measures over runtime data; no target is pre-written. The scalar
 //! kernels stay the oracle.
+//!
+//! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
+//! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
+#![forbid(unsafe_code)]
 
 use mycelium_core::PackScheme;
 
