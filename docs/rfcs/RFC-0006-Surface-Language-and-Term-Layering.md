@@ -322,6 +322,19 @@ keyword/theming tracked separately, not a RFC-0006 gate).*
 
 ## Meta — changelog
 
+- **2026-06-22 — LR-9 `wild`/unsafe floor partially realized (M-661, E7-1; ripple, append-only).** LR-9's
+  *only* leak vector — "raw FFI / foreign memory … lexically marked and denied by default" — is now
+  **conditionally present (audited, std-sys context; type-checks + gates; execution staged)** in the L1
+  reference frontend. A `wild` block (the `unsafe`-class form LR-9 requires) is legal **iff** it sits in a
+  `@std-sys` nodule (an explicit nodule-header *attribute*, not a naming convention) **and** its `fn`
+  declares the `ffi` effect (`!{ffi}`); a `wild` outside a `@std-sys` nodule is a **hard `CheckError`**
+  (never silent — G2, *not* a lint), so "denied by default" holds *by construction* and the unsafe surface
+  is confined to the audited FFI floor (RFC-0016 §8-Q6). The `wild` body is the trusted/opaque escape
+  (audited, not verified — VR-5/ADR-014), and **execution stays staged** (no FFI host in v0 → an explicit
+  elaboration `Residual`). This **realizes the LR-9 `wild` mechanism for the std-sys path** (the Q8
+  *theming/spelling* of the `unsafe`-class form was already committed; only the host-execution capability
+  remains future work); LR-9's status column is unchanged (the requirement stands), this only records the
+  implementation reaching it. Implemented in `crates/mycelium-l1/`; pending ratification. Append-only.
 - **2026-06-18 — §8 Q3 discharged (RFC-0018 Accepted; ripple, append-only).** The stage-1 guarantee-
   grading mechanism Q3 left open ("a graded coeffect modality … whether implicit flows taint, recorded
   as a decision") is now **discharged by RFC-0018 (Accepted)**: the mechanism is the graded coeffect

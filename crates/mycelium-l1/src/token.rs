@@ -161,6 +161,15 @@ pub enum Tok {
     RAngle,
     /// `@` — guarantee annotation.
     At,
+    /// `@std-sys` — the explicit **nodule-header marker** for the audited FFI-floor context
+    /// (RFC-0016 §8-Q6; LR-9/S6; M-661). Lexed as **one atomic token** (not `@` + `std-sys`, which
+    /// would not lex — `-` is not an identifier char): the lexer recognizes `@` immediately followed
+    /// by the literal `std-sys`. It can never collide with a `T @ Strength` guarantee annotation
+    /// (that is `@` followed by a `Strength` keyword). A `wild` block is legal only inside a nodule
+    /// whose header carries this marker (M-661); it is otherwise inert in v0. A bare `@std` (without
+    /// the `-sys` tail) still lexes as `Tok::At` + `Tok::Ident("std")`, so this special case is
+    /// maximally narrow.
+    AtStdSys,
     /// `:`.
     Colon,
     /// `,`.

@@ -178,6 +178,10 @@ pub fn resolve_report(nodule: &Nodule) -> Result<Resolved, AmbientError> {
     Ok(Resolved {
         nodule: Nodule {
             path: nodule.path.clone(),
+            // The `@std-sys` FFI-floor marker (M-661) is carried through resolution unchanged — the
+            // checker runs on this longhand twin and gates `wild` on it, so dropping it here would
+            // make every `std-sys` `wild` block spuriously refused (the marker is not ambient state).
+            std_sys: nodule.std_sys,
             items,
         },
         notes: r.notes,
