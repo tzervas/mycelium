@@ -63,7 +63,14 @@ program        ::= nodule_header item*
  * is materialized as a `FixGroup` node in the elaborated term (inspectable; no black box).
  * RFC-0007 §8 R7-Q3; M-343/M-391. */
 
-nodule_header  ::= 'nodule' path
+/* The optional '@std-sys' marker (M-661; RFC-0016 §8-Q6) tags the nodule as the AUDITED FFI FLOOR
+ * context — an explicit header ATTRIBUTE, not a naming convention. It is lexed as ONE atomic token
+ * (the '-' could not lex as '@' + an identifier), and it is the only place a `wild` block (LR-9/S6;
+ * ADR-014) may legally appear: the checker hard-refuses a `wild` in any non-'@std-sys' nodule (never
+ * silent — G2), and inside one a `wild`'s enclosing `fn` must declare the `ffi` effect (`!{ffi}` —
+ * `wild` is the `ffi` source; RFC-0014/M-660). The `wild` body is the trusted/opaque FFI escape
+ * (audited, not verified); execution stays staged in v0. See conformance/accept/18-wild-std-sys. */
+nodule_header  ::= 'nodule' path '@std-sys'?
 
 item           ::= use_item
                  | default_item
@@ -159,7 +166,11 @@ pattern        ::= '_'
 /* swap: the never-silent representation change — target and policy ALWAYS lexical (S1/WF2). */
 swap_expr      ::= 'swap' '(' expr ',' 'to' ':' type_ref ',' 'policy' ':' path ')'
 
-/* wild: the denied-by-default unsafe escape hatch (LR-9/S6; DN-02 §5). */
+/* wild: the denied-by-default unsafe escape hatch (LR-9/S6; DN-02 §5). Grammatically a `wild` block
+ * may appear anywhere an expr may; its LEGALITY is a CHECKER gate (M-661; not a parse rule), so the
+ * accept corpus parses one (accept/18) while the typechecker enforces the '@std-sys' context + the
+ * `!{ffi}` effect (see nodule_header). The body is the trusted/opaque FFI escape (audited, not
+ * recursively type-checked — ADR-014/VR-5); execution is staged (an elaboration `Residual`) in v0. */
 wild_expr      ::= 'wild' '{' expr '}'
 
 /* spore: build a reconstruction manifest for a value (RFC-0003 §6; DN-02 themed term). */

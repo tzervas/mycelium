@@ -562,8 +562,8 @@ and does **not** advance the decision's status.
 
 - **2026-06-22 — §12.5 added: the stage-1 trait checker is implemented Rust-first (M-659; append-only,
   no calculus change).** Records that `crates/mycelium-l1` now implements the §12.1 surface — the
-  `impl`/bounded-`fn` parser productions, the trait/instance registries + coherence (global uniqueness
-  + single-nodule orphan rule, head-granular keying), bounded-call satisfiability + unqualified
+  `impl`/bounded-`fn` parser productions, the trait/instance registries + coherence (global uniqueness +
+  single-nodule orphan rule, head-granular keying), bounded-call satisfiability + unqualified
   trait-method resolution, all with explicit never-silent refusals (G2) — while **staging** the
   dictionary-passing L0 lowering to an explicit `Residual` (→ M-673), mirroring §11.3. No new kernel
   node (KC-3); RFC-0019's Declared-with-argument coherence result is **not** upgraded (the

@@ -64,8 +64,8 @@ checker-only, no L0 node) · track-a PM tooling · M-674 depth-safety. Follow-up
 - **You own:** `crates/mycelium-l1/**`, `docs/spec/grammar/**`, the implemented RFC/DN append-only notes,
   and (M-649) one new `.myc` nodule. **Read-only / FLAG up** (orchestrator reconciles once per merge):
   `tools/github/issues.yaml`, `CHANGELOG.md`, `docs/Doc-Index.md`, `docs/api-index/`, workspace `Cargo.toml`.
-- **Serialize the L1 collision files** (token/parse/checkty/elab — one editor at a time). Opus orchestrator
-  + an Opus leaf per L1-touching impl task, landed one at a time in dependency order, each pulling `main`
+- **Serialize the L1 collision files** (token/parse/checkty/elab — one editor at a time). Opus orchestrator +
+  an Opus leaf per L1-touching impl task, landed one at a time in dependency order, each pulling `main`
   down first. Per-task loop: **Explore-map → settle architecturally-significant choices (FLAG to the
   maintainer, don't guess — cf. the M-660 effect syntax + the M-661 std-sys gate) → Opus leaf →
   honesty+soundness review → Copilot round → curated squash-PR to `main`**.

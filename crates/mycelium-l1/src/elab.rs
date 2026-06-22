@@ -723,7 +723,16 @@ impl Elab<'_> {
                 "internal: a `with paradigm` block reached elaboration — the ambient resolution \
                  pass strips it (RFC-0012 §4.4)",
             ),
-            Expr::Wild(_) => residual(site, "`wild` is denied by default (LR-9)"),
+            // `wild` (the audited FFI floor — M-661) type-checks + is gated + audited, but its
+            // execution is **staged**: there is no FFI host in v0, so it has no L0 form yet. Lower it
+            // to an explicit `Residual` (a future capability), mirroring the M-657/659/660 staging —
+            // never a fabricated artifact (G2). The body is the trusted/opaque escape, not lowered.
+            Expr::Wild(_) => residual(
+                site,
+                "wild/FFI lowering staged — no FFI host in v0 (M-661; RFC-0016 §8-Q6). The `wild` \
+                 block is the audited FFI floor; it type-checks + gates (`@std-sys` context, LR-9) \
+                 but does not execute yet — its lowering to a host call is a future capability.",
+            ),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
             Expr::Colony(hyphae) => self.elab_colony(stack, scope, hyphae),
             Expr::Ascribe(inner, t) => {

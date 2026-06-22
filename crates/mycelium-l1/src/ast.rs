@@ -10,6 +10,13 @@ pub struct Path(pub Vec<String>);
 pub struct Nodule {
     /// The nodule's dotted name.
     pub path: Path,
+    /// Whether the header carries the explicit **`@std-sys`** marker (`nodule std.sys.fs @std-sys`)
+    /// — the audited FFI-floor context (RFC-0016 §8-Q6; LR-9/S6; M-661). This is a header
+    /// **attribute**, *not* a naming convention: a `wild` block (the denied-by-default unsafe escape,
+    /// LR-9) is legal **only** inside a nodule marked `@std-sys` — the checker hard-refuses a `wild`
+    /// in any non-`@std-sys` nodule, never a silent escape (G2). The marker is parsed and threaded to
+    /// the checker; it gates `wild` (and nothing else in v0).
+    pub std_sys: bool,
     /// Top-level items.
     pub items: Vec<Item>,
 }
@@ -364,7 +371,12 @@ pub enum Expr {
         /// The block body.
         body: Box<Expr>,
     },
-    /// `wild { body }` — the denied-by-default unsafe block (LR-9).
+    /// `wild { body }` — the **audited FFI floor** (LR-9/S6; ADR-014; M-661). Parsed anywhere an
+    /// expression may appear; its *legality* is a checker gate (`crate::checkty`): legal **only**
+    /// inside a `@std-sys` nodule ([`Nodule::std_sys`]) whose enclosing `fn` declares the `ffi`
+    /// effect — else a hard refusal (never silent — G2). The boxed `body` is the trusted/opaque FFI
+    /// escape: not recursively type-checked (audited, not verified — VR-5), kept verbatim. Execution
+    /// is staged (no FFI host in v0 → an elaboration `Residual`).
     Wild(Box<Expr>),
     /// `spore(value)` — reconstruction-manifest construction.
     Spore(Box<Expr>),

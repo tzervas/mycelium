@@ -292,10 +292,226 @@ fn deeply_nested_input_is_refused_not_a_crash() {
 }
 
 #[test]
-fn wild_is_denied_by_default() {
-    let src = "nodule d\nfn f(x: Binary{8}) -> Binary{8} = wild { x }";
+fn wild_is_denied_outside_a_std_sys_nodule() {
+    // M-661: a `wild` block in a non-`@std-sys` nodule is a HARD `CheckError` (the audited FFI floor
+    // lives only in `std-sys` — RFC-0016 §8-Q6 / LR-9; never a silent escape — G2). Not a lint.
+    let src = "nodule d\nfn f(x: Binary{8}) -> Binary{8} !{ffi} = wild { x }";
     let err = check(src).unwrap_err();
-    assert!(err.message.contains("wild"), "got: {}", err.message);
+    assert!(
+        err.message.contains("wild") && err.message.contains("std-sys"),
+        "the refusal must point at the missing `@std-sys` context, got: {}",
+        err.message
+    );
+}
+
+// --- M-661: the `wild` block — the audited FFI floor (RFC-0016 §8-Q6; LR-9/S6; ADR-014) ----------
+// Settled design: a `wild` block is legal ONLY inside a `@std-sys` nodule (else a hard refusal, not a
+// lint — G2). Its body is the trusted/opaque FFI escape — NOT recursively type-checked (audited, not
+// verified — VR-5). It needs an EXPECTED type (synthesis refuses with "ascribe"). `wild` is the `ffi`
+// effect source: a fn containing it must declare `!{ffi}` (M-660 coverage). Execution is STAGED (the
+// elaborator lowers it to an explicit `Residual` — no FFI host in v0). Guarantee on the gate:
+// `Declared` (a structural + audited context gate, not a theorem).
+
+#[test]
+fn a_wild_block_in_a_std_sys_nodule_type_checks_with_an_opaque_body() {
+    // The acceptance: a `@std-sys` nodule with `fn read_byte() -> Binary{8} !{ffi} = wild { … }`
+    // type-checks. The body (`foreign_read()`) is opaque — `foreign_read` is NOT a declared fn, yet
+    // the block still checks, because the body is the trusted FFI escape (not recursively checked).
+    let env = check(
+        "nodule std.sys.fs @std-sys\n\
+         fn read_byte() -> Binary{8} !{ffi} = wild { foreign_read() }",
+    )
+    .expect("a wild block in a @std-sys nodule, with !{ffi} declared, type-checks (opaque body)");
+    // The fn is recorded with its `ffi` effect (EXPLAIN / future wiring).
+    assert_eq!(
+        env.fn_decl("read_byte").expect("fn read_byte").sig.effects,
+        vec!["ffi".to_owned()]
+    );
+}
+
+#[test]
+fn a_wild_body_is_not_recursively_type_checked() {
+    // The body is the trusted/opaque escape (audited, not verified — VR-5/ADR-014): even a body that
+    // would NOT type-check on its own (calls an unknown name, with a deliberately wrong shape) is
+    // accepted, because the checker does not descend into it — it conforms to the expected type by
+    // ascription. This is the load-bearing "opaque body" property.
+    let env = check(
+        "nodule std.sys.x @std-sys\n\
+         fn f() -> Binary{8} !{ffi} = wild { totally_undefined_ffi(does, not, exist) }",
+    )
+    .expect("the wild body is opaque — not recursively checked, so an unknown callee is fine");
+    assert!(env.fn_decl("f").is_some());
+}
+
+#[test]
+fn a_wild_in_a_std_sys_nodule_without_declaring_ffi_is_a_coverage_refusal() {
+    // M-661 × M-660: `wild` performs the `ffi` effect, so a fn containing it must declare `!{ffi}`.
+    // Here the nodule IS `@std-sys` (so the context gate passes), but the fn omits `!{ffi}` — the
+    // effect-coverage pass refuses it, naming `ffi` and framing it as an under-declaration (G2).
+    let err = check(
+        "nodule std.sys.fs @std-sys\n\
+         fn read_byte() -> Binary{8} = wild { foreign_read() }",
+    )
+    .expect_err("a wild block whose enclosing fn does not declare !{ffi} must be refused");
+    assert!(
+        err.message.contains("ffi") && err.message.contains("does not declare"),
+        "the refusal must name the undeclared `ffi` effect, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn effects_inside_an_opaque_wild_body_do_not_leak_into_the_enclosing_fn() {
+    // Regression (Copilot, PR #360 / M-661 × M-660): effect coverage must treat a `wild` body as
+    // OPAQUE. Its interior is trusted FFI — not analyzable Mycelium — so a call inside it contributes
+    // NO effect to the enclosing fn beyond `wild`'s own `ffi` source (§8-Q6). The shared `walk_expr`
+    // previously *descended* into `wild` bodies, wrongly crediting an interior call's effects and
+    // demanding the enclosing fn declare them. Here `noisy` declares `!{io}`; a fn whose only use of
+    // it is inside a `wild` block needs just `!{ffi}` — `io` must NOT be required (audited, not
+    // verified — VR-5/ADR-014). Before the fix this was a false under-declaration refusal.
+    let env = check(
+        "nodule std.sys.x @std-sys\n\
+         fn noisy() -> Binary{8} !{io} = 0b00000000\n\
+         fn f() -> Binary{8} !{ffi} = wild { noisy() }",
+    )
+    .expect(
+        "an effect performed only inside an opaque wild body must not leak to the enclosing fn",
+    );
+    assert!(env.fn_decl("f").is_some());
+
+    // Non-vacuous: the SAME call OUTSIDE a `wild` *does* leak `io` (proving `noisy` genuinely performs
+    // it — so the accept above is the opacity invariant at work, not a coincidence of an inert callee).
+    let err = check(
+        "nodule std.sys.x @std-sys\n\
+         fn noisy() -> Binary{8} !{io} = 0b00000000\n\
+         fn g() -> Binary{8} !{ffi} = noisy()",
+    )
+    .expect_err(
+        "calling `noisy` directly (not inside a wild) must require declaring its `io` effect",
+    );
+    assert!(
+        err.message.contains("io"),
+        "the direct-call refusal must name the undeclared `io` effect, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_wild_in_synthesis_position_demands_an_ascription() {
+    // The body takes its type from context (it is not synthesized). In a synthesis position — here a
+    // `let` bound with no annotation, whose bound expr must self-synthesize — the checker refuses with
+    // an explicit "ascribe" message, never a guessed type (G2).
+    let err = check(
+        "nodule std.sys.x @std-sys\n\
+         fn f() -> Binary{8} !{ffi} = let v = wild { foreign() } in v",
+    )
+    .expect_err("a wild block in a synthesis position must demand an ascription");
+    // The message says "Ascribe …" (capitalized at the sentence start) — match case-insensitively.
+    let lower = err.message.to_lowercase();
+    assert!(
+        lower.contains("ascribe") && lower.contains("wild"),
+        "the refusal must ask for an ascription of the wild block's type, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn an_ascribed_wild_in_a_let_bound_position_type_checks() {
+    // Dual of the above: with the `let` binding ANNOTATED (`let v: Binary{8} = …`), the bound has a
+    // known expected type and the opaque `wild` body conforms to it — the program checks. (The
+    // annotation is on the binding, the surface form the bidirectional checker threads as `expected`.)
+    let env = check(
+        "nodule std.sys.x @std-sys\n\
+         fn f() -> Binary{8} !{ffi} = let v: Binary{8} = wild { foreign() } in v",
+    )
+    .expect("an annotated let-binding supplies the wild bound's type and checks");
+    assert!(env.fn_decl("f").is_some());
+}
+
+#[test]
+fn the_parenthesized_ascription_the_synthesis_refusal_suggests_actually_parses_and_checks() {
+    // M-661 (Copilot, PR #360): the synthesis-position refusal suggests `(wild { … }) : T`. A special
+    // form takes an ascription only when **parenthesized** — a bare `wild { … } : T` does NOT parse
+    // (the `:` is not consumed). This pins that the diagnostic's advice is *actionable*: the exact
+    // form it suggests parses and type-checks (so the message can never drift back to a non-parsing
+    // suggestion — a self-policing diagnostic-quality guard).
+    let env = check(
+        "nodule std.sys.x @std-sys\n\
+         fn f() -> Binary{8} !{ffi} = (wild { foreign() }) : Binary{8}",
+    )
+    .expect("the parenthesized ascription the refusal suggests must parse + type-check");
+    assert!(env.fn_decl("f").is_some());
+}
+
+#[test]
+fn over_declaring_ffi_without_a_wild_block_is_allowed() {
+    // Symmetry with M-660 I5: declaring `!{ffi}` is a contract — a fn may reserve it without (yet)
+    // containing a `wild` block. A pure-bodied `@std-sys` fn declaring `!{ffi}` checks (over-decl OK).
+    let env = check(
+        "nodule std.sys.x @std-sys\n\
+         fn f() -> Binary{8} !{ffi} = 0b00000000",
+    )
+    .expect("over-declaring `ffi` without a wild block is allowed (a declaration is a contract)");
+    assert_eq!(
+        env.fn_decl("f").expect("fn f").sig.effects,
+        vec!["ffi".to_owned()]
+    );
+}
+
+#[test]
+fn a_wild_inside_an_impl_method_is_gated_by_the_nodule_std_sys_context() {
+    // The `@std-sys` gate flows into impl-method bodies too: in a NON-`@std-sys` nodule a `wild`
+    // inside an impl method is the same hard refusal as in a top-level fn (the context gate is the
+    // nodule's, not the item's). This pins the impl-method threading of `std_sys`.
+    let err = check(
+        "nodule d\n\
+         trait Ffi<A> { fn raw(x: A) -> A !{ffi} }\n\
+         impl Ffi<Binary{8}> for Binary{8} { fn raw(x: Binary{8}) -> Binary{8} !{ffi} = wild { host(x) } }",
+    )
+    .expect_err("a wild inside an impl method of a non-@std-sys nodule must be refused");
+    assert!(
+        err.message.contains("wild") && err.message.contains("std-sys"),
+        "the impl-method wild refusal must cite the missing `@std-sys` context, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_wild_in_a_std_sys_nodule_is_staged_at_elaboration() {
+    // Execution is STAGED: a `@std-sys` `wild` fn type-checks, but elaborating it to L0 is an explicit
+    // `Residual` (no FFI host in v0 — M-661), never a fabricated artifact (G2). Mirrors M-657/659/660.
+    let nodule = parse(
+        "nodule std.sys.fs @std-sys\nfn read_byte() -> Binary{8} !{ffi} = wild { foreign_read() }",
+    )
+    .expect("parses");
+    let env = check_nodule(&nodule).expect("type-checks");
+    let err = mycelium_l1::elaborate(&env, "read_byte")
+        .expect_err("a wild block has no L0 form in v0 — staged as Residual");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("staged") && (msg.contains("FFI") || msg.contains("wild")),
+        "the elaboration refusal must frame wild/FFI as staged, got: {msg}"
+    );
+}
+
+#[test]
+fn the_std_sys_marker_is_parsed_off_the_header() {
+    // The `@std-sys` marker is a parsed header attribute (not a naming convention): a nodule named
+    // `std.sys.fs` WITHOUT the marker is NOT std-sys, and any nodule WITH the marker is — the name is
+    // irrelevant. This pins that the gate keys on the marker, never on the path.
+    let with_marker = parse("nodule anything.at.all @std-sys\nfn f() -> Binary{1} = 0b0")
+        .expect("parses with marker");
+    assert!(with_marker.std_sys, "the @std-sys marker must set std_sys");
+    let no_marker =
+        parse("nodule std.sys.fs\nfn f() -> Binary{1} = 0b0").expect("parses without marker");
+    assert!(
+        !no_marker.std_sys,
+        "a `std.sys.*`-named nodule WITHOUT the marker is not std-sys (attribute, not convention)"
+    );
+    // Consequently a `wild` in the marker-less `std.sys.*` nodule is still refused.
+    let err = check("nodule std.sys.fs\nfn f() -> Binary{8} !{ffi} = wild { x }")
+        .expect_err("no marker ⇒ wild refused even under a std.sys.* name");
+    assert!(err.message.contains("std-sys"), "got: {}", err.message);
 }
 
 // --- stage-1 unbounded parametric generics (RFC-0007 §11; M-657) -----------------------------

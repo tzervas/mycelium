@@ -169,7 +169,16 @@ pub(crate) fn walk_expr(e: &Expr, f: &mut impl FnMut(&Expr)) {
         // `with paradigm` is pure surface scoping (stripped by resolution before this runs); recurse
         // transparently into the body in case totality is consulted on an unresolved tree.
         Expr::WithParadigm { body, .. } => walk_expr(body, f),
-        Expr::Wild(b) | Expr::Spore(b) => walk_expr(b, f),
+        // `wild` is the audited/opaque FFI escape (M-661): its body is trusted foreign code, **not**
+        // analyzable Mycelium, so the shared traversal treats it as a LEAF. The `wild` node itself is
+        // still visited by `f` above (so effect coverage credits it the `ffi` source — M-661/§8-Q6),
+        // but its interior is **never descended**: effects/calls/recursion inside a `wild` body do not
+        // leak into the enclosing fn's analysis — consistent with `Cx::check_wild` not recursively
+        // checking the body (audited, not verified; VR-5/ADR-014). Execution is staged (`elab` →
+        // `Residual`). `spore(value)`, by contrast, wraps a *real* value expression (deferred —
+        // E2-5/M-260), so it recurses transparently.
+        Expr::Wild(_) => {}
+        Expr::Spore(b) => walk_expr(b, f),
         // A `colony` block's calls are exactly the calls inside its `hypha` bodies (RFC-0008 §4.7).
         // Each hypha body is walked transparently so the call-set / totality collectors see them.
         Expr::Colony(hyphae) => {
@@ -346,7 +355,11 @@ fn descend_walk(
         }
         Expr::Swap { value, .. } => descend_walk(value, pos, param, smaller, ok),
         Expr::WithParadigm { body, .. } => descend_walk(body, pos, param, smaller, ok),
-        Expr::Wild(b) | Expr::Spore(b) => descend_walk(b, pos, param, smaller, ok),
+        // A `wild` body is opaque trusted FFI (M-661) — a leaf here too: a call inside a `wild` block
+        // is not analyzable Mycelium recursion (and execution is staged), so it is not subject to the
+        // structural-descent check, mirroring `walk_expr` (the opacity invariant is uniform — VR-5).
+        Expr::Wild(_) => {}
+        Expr::Spore(b) => descend_walk(b, pos, param, smaller, ok),
         // A `colony`'s hyphae introduce no binders; walk each body transparently so a recursive call
         // inside a hypha is still subject to the structural-descent check (A4-01).
         Expr::Colony(hyphae) => {

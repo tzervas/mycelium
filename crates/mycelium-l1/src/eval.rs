@@ -508,9 +508,16 @@ impl<'e> Evaluator<'e> {
                        resolution pass strips it (RFC-0012 §4.4)"
                     .to_owned(),
             }),
+            // A `wild` block (the audited FFI floor — M-661) that type-checked (so it was in a
+            // `@std-sys` nodule with `!{ffi}` declared) still cannot **run**: there is no FFI host in
+            // v0, so its execution is staged exactly as in the elaborator (an explicit refusal, never
+            // a fabricated value — G2). The body is the trusted/opaque escape; the evaluator does not
+            // synthesize one.
             Expr::Wild(_) => Err(L1Error::Unsupported {
                 site: site.to_owned(),
-                what: "`wild` is denied by default (LR-9): no host FFI capability exists in v0"
+                what: "wild/FFI execution staged — no FFI host in v0 (M-661; RFC-0016 §8-Q6): a \
+                       `wild` block type-checks + gates (`@std-sys` context, LR-9) but does not run \
+                       yet — running it is a future capability"
                     .to_owned(),
             }),
             Expr::Spore(_) => Err(L1Error::Unsupported {

@@ -178,6 +178,10 @@ pub fn resolve_report(nodule: &Nodule) -> Result<Resolved, AmbientError> {
     Ok(Resolved {
         nodule: Nodule {
             path: nodule.path.clone(),
+            // The `@std-sys` FFI-floor marker (M-661) is carried through resolution unchanged — the
+            // checker runs on this longhand twin and gates `wild` on it, so dropping it here would
+            // make every `std-sys` `wild` block spuriously refused (the marker is not ambient state).
+            std_sys: nodule.std_sys,
             items,
         },
         notes: r.notes,
@@ -192,7 +196,14 @@ pub fn resolve_report(nodule: &Nodule) -> Result<Resolved, AmbientError> {
 #[must_use]
 pub fn expand_to_source(nodule: &Nodule) -> String {
     let mut out = String::new();
-    out.push_str(&format!("nodule {}\n", path_str(&nodule.path)));
+    // Re-emit the `@std-sys` FFI-floor marker (M-661) when present: dropping it would silently
+    // relocate audited `wild` code into a non-`@std-sys` context (changing program meaning — G2),
+    // so the longhand twin must round-trip the header attribute.
+    out.push_str(&format!(
+        "nodule {}{}\n",
+        path_str(&nodule.path),
+        if nodule.std_sys { " @std-sys" } else { "" }
+    ));
     for item in &nodule.items {
         out.push('\n');
         match item {
@@ -414,7 +425,15 @@ impl Resolver {
                 target: self.type_ref(amb, site, target)?,
                 policy: policy.clone(),
             },
-            Expr::Wild(b) => Expr::Wild(Box::new(self.expr(amb, site, b)?)),
+            // `wild` is the audited/opaque FFI escape (M-661): its body is trusted foreign code,
+            // preserved **verbatim** — ambient resolution does NOT descend into it. Descending would
+            // (a) rewrite the interior (contradicting the "no interior resolution" contract) and
+            // (b) raise interior ambient errors (e.g. a bare decimal under a non-integer ambient)
+            // from a body that should be opaque/trusted — a surprising refusal. Keeping it a leaf
+            // makes `wild` opaque end-to-end, matching `Cx::check_wild` + `totality::walk_expr`
+            // (audited, not verified — VR-5/ADR-014; RFC-0016 §8-Q6). `spore(value)` wraps a *real*
+            // value expression (deferred — E2-5/M-260), so it still resolves transparently.
+            Expr::Wild(b) => Expr::Wild(b.clone()),
             Expr::Spore(b) => Expr::Spore(Box::new(self.expr(amb, site, b)?)),
             // A `colony`'s ambient flows transparently into each `hypha` body (no new ambient frame;
             // RFC-0008 §4.7). Resolve every hypha body under the same `amb`.
@@ -874,5 +893,67 @@ mod tests {
             resolve(&c),
             Err(AmbientError::ParadigmShapeMismatch { .. })
         ));
+    }
+
+    #[test]
+    fn a_wild_body_is_opaque_to_ambient_resolution() {
+        // M-661 (Copilot, PR #360): the `wild` body is the trusted/opaque FFI escape — ambient
+        // resolution must NOT descend into it. Non-vacuous control: the SAME bare decimal under a
+        // `Dense` ambient, OUTSIDE a wild, is a `BareDecimalNoEncoding` refusal (Dense gives a bare
+        // decimal no encoding — RFC-0012 §4.3).
+        let bad = nodule("nodule d\ndefault paradigm Dense\nfn g() -> Binary{8} = 5");
+        assert!(
+            matches!(
+                resolve(&bad),
+                Err(AmbientError::BareDecimalNoEncoding { .. })
+            ),
+            "control: a bare decimal under a Dense ambient must refuse outside a wild, got: {:?}",
+            resolve(&bad)
+        );
+        // Inside a `wild` body the same literal is preserved **verbatim** — resolution succeeds, no
+        // interior refusal (the body is audited, not verified — VR-5; execution staged → Residual).
+        // Before the fix the resolver descended and raised `BareDecimalNoEncoding` from inside the
+        // opaque body — a surprising refusal for trusted FFI.
+        let good = nodule(
+            "nodule std.sys.x @std-sys\ndefault paradigm Dense\nfn f() -> Binary{8} !{ffi} = wild { 5 }",
+        );
+        let r = resolve(&good)
+            .expect("the wild body is opaque to ambient resolution — no interior refusal (M-661)");
+        let Some(Item::Fn(fd)) = r
+            .items
+            .iter()
+            .find(|i| matches!(i, Item::Fn(f) if f.sig.name == "f"))
+        else {
+            unreachable!("f is present")
+        };
+        let Expr::Wild(b) = &fd.body else {
+            panic!("the body is still a wild block, got: {:?}", fd.body)
+        };
+        assert!(
+            matches!(**b, Expr::Lit(Literal::Int(5))),
+            "the wild body's bare decimal must be untouched (verbatim), got: {b:?}"
+        );
+    }
+
+    #[test]
+    fn the_std_sys_marker_round_trips_through_expand_to_source() {
+        // M-661 (Copilot, PR #360): the canonical longhand printer must re-emit `@std-sys`. Dropping
+        // it would silently relocate audited `wild` code into a non-`@std-sys` context (changing
+        // meaning — G2); `mycelium-lsp`'s `expand_ambient`/EXPLAIN routes through this printer.
+        let marked =
+            nodule("nodule std.sys.fs @std-sys\nfn read() -> Binary{8} !{ffi} = wild { host() }");
+        let resolved = resolve(&marked).expect("a @std-sys nodule resolves");
+        assert!(resolved.std_sys, "resolution preserves the marker");
+        let printed = expand_to_source(&resolved);
+        assert!(
+            printed.contains("nodule std.sys.fs @std-sys"),
+            "the longhand twin must re-emit `@std-sys`, got:\n{printed}"
+        );
+        // An unmarked nodule must NOT sprout the marker (the marker is opt-in — never invented).
+        let plain = nodule("nodule d\nfn f() -> Binary{8} = 0b0");
+        assert!(
+            !expand_to_source(&resolve(&plain).unwrap()).contains("@std-sys"),
+            "an unmarked nodule must not gain `@std-sys`"
+        );
     }
 }
