@@ -59,11 +59,21 @@ Validate: `python3 tools/github/doc_refs_check.py`
 
 ---
 
-## Current state (2026-06-21)
+## Current state (2026-06-22)
 
 ### Recently landed (most recent first)
 
-- **Post-1.0 wave — first tranche landed (this session, 2026-06-21):** **#331** DN-20 tiered +
+- **e7l first tranche + depth-safety architecture — landed to `main` (this session, 2026-06-22):**
+  **M-656** RFC-0007 §11 (generics deferral discharged); **M-657 checker** — unbounded parametric
+  generics type-check (`Ty::Var` + applied `Ty::Data`, unification-based call-site instantiation,
+  never-guess refusals; **elaboration STAGED** as explicit `Residual` → **M-673** monomorphization);
+  **M-658** RFC-0007 §12 trait surface + **`impl` reserved** (`Tok::Impl`). **Depth-safety (M-674):**
+  explicit budgets on all 4 L1 passes (parser/checker/elaborator/evaluator) + a **deep worker stack**
+  in the new **`mycelium-stack`** crate (isolated outside the kernel) + kernel **`#![forbid(unsafe_code)]`**
+  (machine-proven); measured checker ceiling ~24,600 levels (debug); evaluator now host-stack-safe at
+  raised budgets. **M-673** (monomorphize generics+traits to L0) + **M-674** (remaining: totality/ambient
+  budgets + cross-crate audit) filed. **Next: M-659 (trait checker)** — branch fresh off `main`.
+- **Post-1.0 wave — first tranche landed (2026-06-21):** **#331** DN-20 tiered +
   change-scoped testing (cargo-nextest); **#330** mycelium-lsp baseline completions (M-669); **#332**
   **M-665** — 10 DN-03 runtime keywords reserved never-silent (G2); **#334** **RFC-0022** web-tooling
   phylum Draft (M-670/RP-10); **#335** **RFC-0023** ADK-port phylum Draft (M-671/RP-9); **#336** docsite
@@ -130,7 +140,16 @@ Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is 
 
 ### Post-compaction continuation (durable handoff)
 
-**Durability lesson (this session):** a session compaction **orphans in-flight background agents**
+**▶ NEXT (2026-06-22 — `/kickoff e7l`): M-659, the trait CHECKER.** Branch fresh off `origin/main`
+(it now carries everything below). M-656/M-657-checker/M-658 + the depth-safety architecture landed
+to `main` this session. M-659 is a large atomic unit (AST `Item::Impl` + parser `impl Trait for T` /
+bounded `T: Trait` productions → trait+impl-block checking with coherence (orphan + global uniqueness,
+RFC-0019 §4.5) → dictionary-passing *typing*, with L0 lowering STAGED → M-673). Do **not** half-land
+it (parse-but-skip = silent no-op, G2). Then M-660→M-661→M-662→M-663→M-664→M-667/668→M-649. See
+`.claude/kickoffs/e7l.md` "RESUME HERE". Open follow-ups: **M-673** (monomorphization elaboration for
+generics+traits), **M-674** (remaining limit-point budgets: totality/ambient + cross-crate audit).
+
+**Durability lesson (earlier session):** a session compaction **orphans in-flight background agents**
 (observed: a ~12:59 mass-orphan of ~49 sub-agents + a ~4× render-time inflation in the tasks panel —
 not real runtime). **Worktree branches are the durable artifact** — every spawned agent must **push
 before completing**; the orchestrator pulls + lands. All landed work is on `main`; the one rescued
