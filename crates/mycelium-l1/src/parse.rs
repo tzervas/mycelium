@@ -1314,4 +1314,33 @@ mod tests {
             .expect_err("a bare `!` must be rejected");
         assert!(err.message.contains("effect set"), "got: {}", err.message);
     }
+
+    // --- M-661 / RFC-0016 §8-Q6: the `@std-sys` nodule-header FFI-floor marker parses ---
+
+    #[test]
+    fn the_std_sys_header_marker_sets_the_nodule_flag() {
+        // `nodule <path> @std-sys` sets `Nodule.std_sys`; a plain `nodule <path>` leaves it false.
+        // The marker is an attribute on the header, parsed after the path (M-661).
+        let marked =
+            parse("nodule std.sys.fs @std-sys\nfn f() -> Binary{1} = 0b0").expect("parses");
+        assert!(marked.std_sys, "the @std-sys marker must set std_sys");
+        assert_eq!(marked.path.0, vec!["std", "sys", "fs"]);
+        let plain = parse("nodule d\nfn f() -> Binary{1} = 0b0").expect("parses");
+        assert!(!plain.std_sys, "an unmarked nodule is not std-sys");
+    }
+
+    #[test]
+    fn a_std_sys_nodule_parses_a_wild_block_in_a_fn_body() {
+        // The marker + a `wild` block parse together (the context gate + effect coverage are CHECKER
+        // concerns, not parse concerns — this only pins that the surface admits both).
+        let n =
+            parse("nodule std.sys.x @std-sys\nfn f() -> Binary{8} !{ffi} = wild { host_call() }")
+                .expect("a @std-sys nodule with a wild block parses");
+        assert!(n.std_sys);
+        let Item::Fn(fd) = &n.items[0] else {
+            panic!("fn")
+        };
+        assert!(matches!(fd.body, Expr::Wild(_)), "the body is a wild block");
+        assert_eq!(fd.sig.effects, vec!["ffi".to_owned()]);
+    }
 }
