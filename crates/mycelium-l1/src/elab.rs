@@ -308,6 +308,7 @@ fn elab_prelude<'e>(
         registry,
         fresh: 0,
         rec: BTreeMap::new(),
+        depth: 0,
     };
     // Every member of a recursive SCC gets a kernel recursion variable — in scope for every recursive
     // body (its own SCC and any callee SCC) and the entry body.
@@ -554,11 +555,22 @@ fn scalar_kind(s: Scalar) -> ScalarKind {
 /// (for inlining + match/lambda binders), and the **recursion scope** — the reachable self-recursive
 /// functions mapped to their kernel `Fix` variables (RFC-0001 r4). A call to a name in `rec`
 /// elaborates to an `App` chain on its `Fix` var; every other function call still **inlines**.
+/// The elaborator's **explicit expression-nesting budget** — the elaborator's twin of
+/// `checkty::MAX_CHECK_DEPTH` and `parse::MAX_EXPR_DEPTH` (banked guard 4; A4-02). Elaboration runs on
+/// the deep worker stack ([`mycelium_stack`]) and only ever sees a *checked* program (so its depth is
+/// already ≤ the checker's budget), but it carries its own reified budget so it is **self-sufficient**:
+/// fed a hand-built `Env` straight through the API, it refuses past this with a clean [`ElabError`],
+/// never a host-stack overflow. Same value as the checker — the deep worker stack accommodates it with
+/// the same ~6× margin (measured ~24,600-level physical ceiling).
+const MAX_ELAB_DEPTH: u32 = 4096;
+
 struct Elab<'e> {
     env: &'e Env,
     registry: DataRegistry,
     fresh: u32,
     rec: BTreeMap<String, String>,
+    /// Live expression-nesting depth for the explicit [`MAX_ELAB_DEPTH`] budget.
+    depth: u32,
 }
 
 impl Elab<'_> {
@@ -585,9 +597,38 @@ impl Elab<'_> {
             .collect()
     }
 
-    /// Elaborate `e` under `scope` (surface name → kernel variable + type). `stack` is the call
-    /// path — the cycle (recursion) detector and the error site.
+    /// Depth-guarded entry to elaboration (banked guard 4): charge one nesting level against the
+    /// explicit [`MAX_ELAB_DEPTH`] budget, refuse past it with a clean [`ElabError`] (never a
+    /// host-stack overflow), and release the level on every exit path. Mirrors the parser's
+    /// `parse_expr` guard and the checker's `Cx::enter`. All recursive elaboration goes through here.
     fn expr(
+        &mut self,
+        stack: &mut Vec<String>,
+        scope: &[Binding],
+        e: &Expr,
+    ) -> Result<Node, ElabError> {
+        self.depth += 1;
+        if self.depth > MAX_ELAB_DEPTH {
+            self.depth -= 1;
+            let site = stack.last().map_or("<elaborate>", String::as_str);
+            return residual(
+                site,
+                format!(
+                    "expression nesting exceeds the elaborator depth budget ({MAX_ELAB_DEPTH}) — an \
+                     explicit budget (banked guard 4), refused cleanly rather than overflowing the \
+                     host stack (RFC-0007 §4.6 clocked-recursion discipline)"
+                ),
+            );
+        }
+        let r = self.expr_inner(stack, scope, e);
+        self.depth -= 1;
+        r
+    }
+
+    /// Elaborate `e` under `scope` (surface name → kernel variable + type). `stack` is the call
+    /// path — the cycle (recursion) detector and the error site. Always entered via [`Self::expr`]
+    /// (the depth-budget guard), so it — and every `self.expr(…)` it makes — is depth-bounded.
+    fn expr_inner(
         &mut self,
         stack: &mut Vec<String>,
         scope: &[Binding],
