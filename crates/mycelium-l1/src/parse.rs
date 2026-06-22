@@ -369,6 +369,7 @@ impl Parser {
             "`{` after `!` to open the effect set (RFC-0014 §3.4)",
         )?;
         // The empty written set `!{}` is valid (an explicit "declares no effects").
+        let set_start = self.pos();
         let effects = if self.at(&Tok::RBrace) {
             Vec::new()
         } else {
@@ -376,8 +377,9 @@ impl Parser {
         };
         self.expect(&Tok::RBrace, "`}` to close the effect set")?;
         if let Some(dup) = first_duplicate_str(&effects) {
+            // Point at the effect set itself (not after the closing `}`) for a clearer diagnostic.
             return Err(ParseError::new(
-                self.pos(),
+                set_start,
                 format!(
                     "duplicate effect `{dup}` in the effect annotation — list each declared effect \
                      once (RFC-0014 §4.5; a repeated effect is a never-silent refusal, not a silent \

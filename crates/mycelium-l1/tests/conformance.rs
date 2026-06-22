@@ -99,7 +99,7 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         // PARSE refusal (the set is never silently de-duplicated — G2). The *coverage* refusal
         // (performing an undeclared effect) is a checker concern exercised in `tests/check.rs`, since
         // this gate runs only the parser; the fixture's banner documents that split.
-        "17-undeclared-effect.myc",
+        "17-duplicate-effect.myc",
         "duplicate effect",
     ),
 ];

@@ -34,7 +34,7 @@ DECIDED (maintainer): `fn f() -> T !{eff1, eff2}`** (Koka-style `!`; effect name
 = pure per RFC-0014 I5; coverage rule declared ⊇ body-performed, over-declaration OK; no new L0 node KC-3;
 checker-side only — runtime budget wiring is the M-353 ledger, out of scope). **On resume:** `git fetch origin`,
 find the leaf's pushed branch (`git branch -r | grep -iE 'worktree-agent|effect|660'`), verify scope
-(`crates/mycelium-l1` + RFC-0014/0007/DN-14 §3 row 8 + conformance `16-effect-annotations`/`17-undeclared-effect`),
+(`crates/mycelium-l1` + RFC-0014/0007/DN-14 §3 row 8 + conformance `16-effect-annotations`/`17-duplicate-effect`),
 then **review (honesty + a soundness pass) → gates (`cargo test -p mycelium-l1`) → reconcile orchestrator files
 (CHANGELOG, issues.yaml M-660→done, DN-14 row 8→present, regen api-index) → squash-PR to `main`**.
 
