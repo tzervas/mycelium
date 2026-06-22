@@ -2307,6 +2307,16 @@ issues:
       Status (2026-06-22): DONE — checker (`MAX_CHECK_DEPTH`, deep stack), elaborator (`MAX_ELAB_DEPTH`, deep stack), parser (`MAX_EXPR_DEPTH`, explicit budget; small frames fit the normal stack), **evaluator** (`Evaluator::call` runs on the deep worker stack; `DEFAULT_DEPTH=64` stays the explicit ceiling but `with_depth(N)` is now host-stack-safe — est. physical ceiling ~65k–130k levels in debug; `SwapEngine: +Send+Sync`; clean-refusal test). Isolation crate `mycelium-stack` + kernel `forbid(unsafe_code)` landed.
       TODO (the remaining limit points): (2) **totality** + **ambient** passes — give each an explicit budget (today bounded only transitively by the parser's 256); (3) audit cross-crate recursion limit points (MLIR lowering in `mycelium-mlir`, the runtime task/supervision depth, reconstruction recursion in `mycelium-core::recon`, dense/VSA recursive ops) and apply the same discipline (budget where it recurses; the isolated deep-stack adapter where frames warrant it). (4) Optional: wire the documented `grow-on-demand` (stacker) feature in `mycelium-stack` (unsafe contained in the leaf dep) if unbounded-growth is ever wanted. Each gets a clean-refusal regression test. Honesty: a budget is an honest ceiling (never silent), not a guess; never raise one without measuring the physical headroom (as `MAX_CHECK_DEPTH` records).
 
+  - id: M-675
+    title: "M-675 — tooling: reconcile idmap.tsv against live GitHub for all Phase-5/6/7/8 issues"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:infra, area:project, priority:P2, status:needs-design]
+    depends_on: []
+    doc_refs: [src:tools/github/idmap.tsv, src:tools/github/gh-issues-sync.py]
+    body: |
+      `tools/github/idmap.tsv` (task-id → issue-number → issue-db-id) ends at M-372 and is missing every Phase-5/6/7/8 issue (E7-x, M-5xx/6xx). The track-a manifest work appended the verified e7l rows, but a FULL reconciliation needs each issue's live `issue_db_id` (the sub-issue-link key) fetched from GitHub. This issue: enumerate the live issues (GitHub `list_issues`/REST), map every `M-xxx`/`E*` id → number + db-id, and rewrite `idmap.tsv` append-only; then the remaining sub-issue links + `depends_on` "blocked by" edges + Projects-v2 field sync can run from a token-scoped maintainer run (`gh-issues-sync.py --use-api`). Honesty: db-ids are fetched, never guessed (the current gap is explicitly noted in idmap.tsv, not papered over — G2).
+      Acceptance: idmap.tsv covers every non-epic issue id present in issues.yaml; manifest-check.py cross-validates id↔number; the sub-issue/dependency/project sync dry-run resolves all db-ids with no "missing db-id" FLAG.
+
   - id: M-658
     title: "M-658 — spec(rfc-0007): Amend RFC-0007 for stage-1 trait interfaces + `impl` blocks"
     milestone: "Phase 5 — Self-Hosting & Core Library"

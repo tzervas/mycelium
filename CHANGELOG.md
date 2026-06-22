@@ -8,6 +8,9 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-22: track-a — issue↔PR↔sub-issue relationship + date manifest; `gh-issues-sync.py` extraction automation)
+- **`tools/github/` now carries a grounded issue/PR relationship + landing-date manifest plus the automation to regenerate it.** `gh-issues-sync.py` gains a `--relationships` mode that derives the issue↔PR map + dates from the two in-repo sources of truth — dated `CHANGELOG.md` headers and `git log origin/main` squash subjects (`(#NNN)`) — cross-checked against the live merged-PR list, and enriches `issues.yaml` **additively**: 88 `landed_pr`/`landed_date` (on `status:done` only), 8 weaker `evidence_pr`/`evidence_date` (not-done), 35 `epic:` edges, each with a `landed_basis` citing its evidence. **Honesty (G2/VR-5):** a strong `landed_*` is asserted only for done issues (referenced-in-a-PR ≠ completed — verified 0 violations); every date/PR is `Empirical`/`Declared` with a cited basis; no field is null-guessed; existing fields are never rewritten. New `pr-index.json` (issue↔PR from the 39 merged PRs) lets the offline cross-check reproduce without a token. A `gh`-CLI-independent REST + GraphQL(Projects-v2) client (stdlib `urllib`, env token, **opt-in `--use-api`**, every mutation `--dry-run`-gated, never-silent, no token in any log) is wired + self-test-covered for the maintainer's token-scoped sync — live Projects-v2 population is honestly token-gated, not faked. Sub-issue links **E7-1 ← M-656, M-658** synced live (MCP). Full `idmap.tsv` reconciliation tracked as **M-675**. (track-a)
+
 ### Changed (2026-06-22: M-674 — evaluator runs on the deep worker stack; depth budget is the ceiling)
 - **The L1 evaluator (`Evaluator::call`) now runs on the deep, lazily-committed worker stack**
   (`mycelium_stack::with_deep_stack`), so the **explicit recursion-depth budget** — not the caller's
