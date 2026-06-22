@@ -1,0 +1,26 @@
+{
+  "_about": "Issue↔PR cross-check map: {task_id: merged_PR_number}, derived from the LIVE merged-PR list of tzervas/mycelium (GitHub REST, enumerated 2026-06-22 via the GitHub MCP `list_pull_requests` tool). Consumed by gh-issues-sync.py --relationships as the offline cross-check for the git-log (#NNN) PR source (most curated squash subjects omit the (#NNN), so this carries the real merged-PR number). Honesty (G2/VR-5): every entry is grounded in a real merged PR whose TITLE names the task-id (parsed exactly as the conventions.json task_id_patterns, slash-runs expanded). It is NOT authoritative over a git-log (#NNN) that disagrees — build_relationship_manifest prefers the git-log subject and FLAGs any disagreement. Regenerate with `--use-api` against a token (api_merged_pr_index) or by re-querying the merged-PR list. Append-only in spirit; a corrected mapping supersedes, never silently rewrites history.",
+  "_basis": "GitHub MCP list_pull_requests(state=closed) → 39 merged PRs; schema fields number/merged_at/title/state; merged signalled by non-null merged_at (the list endpoint's `merged` bool is unreliably false). PRs #346/#348/#349 (e7l generics tranche) and the #310 multi-id enactment sweep verified against CHANGELOG.md headers + git log origin/main.",
+  "map": {
+    "M-656": 346,
+    "M-657": 346,
+    "M-658": 349,
+    "M-673": 348,
+    "M-674": 349,
+    "M-670": 345,
+    "M-671": 345,
+    "M-666": 342,
+    "M-672": 336,
+    "M-665": 332,
+    "M-669": 330,
+    "M-654": 313,
+    "M-653": 306,
+    "M-651": 308,
+    "M-647": 310,
+    "M-648": 310,
+    "M-650": 310,
+    "M-649": 310,
+    "M-381": 310,
+    "M-646": 310
+  }
+}

@@ -178,3 +178,79 @@ no new dependency · small auditable tooling **above** the kernel (KC-3) · appe
 `scripts/checks/all.sh` green before each commit. The live Project-v2 GraphQL path is
 `--dry-run`-validated, not yet Proven — its status is **Declared** until run on a `project`-scoped
 machine (see `project-v2-spec.md`).
+
+## Issue↔PR relationship + date manifest (`--relationships`) — extraction & enrichment
+
+The reconciler can derive, **offline + idempotently**, the per-issue **relationship/date manifest**
+— which PR landed (or referenced) each `M-xxx`/`E#-#`, on what date, plus the epic edge — from the
+two **in-repo dated sources of truth**, and enrich `issues.yaml` **additively** with it:
+
+> Preview:  `python tools/github/gh-issues-sync.py --relationships --dry-run`
+> Apply:    `python tools/github/gh-issues-sync.py --relationships`
+> Live PR cross-check (needs a token):  add `--use-api` (reads `GITHUB_TOKEN`/`GH_TOKEN`).
+
+### The two evidence sources (the source of truth)
+
+| Source | Yields | Parser |
+|---|---|---|
+| `CHANGELOG.md` dated headers `### Kind (YYYY-MM-DD: M-xxx — …)` | the **date** (preferred) + a basis | `parse_changelog_landings` |
+| `git log <ref> --format='%H\|%ad\|%s'` squash subjects | the landing **SHA** + `(#NNN)` **PR** | `parse_git_log_landings` |
+| `pr-index.json` (`{task_id: pr}`, derived from the **live merged-PR list**) | a **PR** cross-check when the curated subject omits `(#NNN)` | `load_pr_index` / `api_merged_pr_index` |
+
+A slash-run in either source (`M-656/657/658`) is expanded to its members (`expand_task_id_run`);
+a `(#344)` is a **PR number**, never conflated with a task-id. Newest mention wins (both sources are
+newest-first). The merged-PR list was enumerated via the GitHub REST API (the agent run used the
+GitHub MCP `list_pull_requests`; `--use-api` reproduces it over a token).
+
+### Status-aware honesty (the crux — VR-5/G2)
+
+A strong **`landed_pr` / `landed_date`** claim ("this issue's work landed in this PR on this date")
+is asserted **only for a `status:done` issue**. For an issue that is **not** done (in-progress /
+blocked / needs-design) the *same* evidence is real but a **weaker** claim — the id was merely
+**referenced** by that PR/CHANGELOG entry (a partial tranche, a filing commit, an aspirational
+title) — so it is recorded under **`evidence_pr` / `evidence_date`** with a `landed_basis` note that
+**says so**. This refuses to overclaim completion. Every emitted field carries a **`landed_basis`**
+string citing the exact CHANGELOG header line and/or the PR cross-check, so the date/PR is auditable
+and stays `Empirical`/`Declared` (never `Proven`). An issue with **no** grounded evidence gets **no**
+field (never a null-filled guess); existing fields are **never** overwritten (append-only).
+
+The fields added per issue (all additive, all optional): `landed_pr`/`landed_date` **or**
+`evidence_pr`/`evidence_date` (mutually exclusive by status), `landed_basis`, and `epic` (for an
+`E#-#` id). The write is a **surgical text insertion** after each entry's `depends_on:` line — it
+does **not** reformat the file (comments/order/round-trip preserved); the result is re-parsed before
+it is written (never leave `issues.yaml` broken). Re-running is **zero-write** (idempotent).
+
+### Live-sync targets this manifest FEEDS — token/Projects-API-gated **FLAGs**
+
+The offline run **produces + validates** the manifest; it does **not** push these live GitHub
+relationships (they need a token this environment lacks, and — for the board — a Projects-v2
+mutation surface the MCP tool-set does not expose):
+
+- **Issue dependencies** (`depends_on` → GitHub "blocked by"): REST, **needs a token** (`--use-api`,
+  `GITHUB_TOKEN`).
+- **Sub-issue links** (epic → children): REST, **needs a token** (or the GitHub MCP
+  `sub_issue_write`, which takes the issue **db-id** from `idmap.tsv`, not the number).
+- **Projects-v2 field values** (Status / Start date / Target/landed date): **GraphQL**, needs a
+  **`project`-scoped** token; the request construction (`GitHubApi.graphql`) is unit-tested offline,
+  but the live round-trip is **Declared until run** (see `project-v2-spec.md`). The MCP tool-set in
+  the agent sandbox has **no Projects-v2 mutation tool**, so the board population is the
+  **maintainer's token-scoped step** — never faked here (G2).
+
+### What is verified vs. gated (capability honesty)
+
+- **Verified offline** (this run): the extraction + status-aware manifest + additive enrichment are
+  covered by `--self-test` (pure-logic) and applied to `issues.yaml`; `manifest-check.py` +
+  `doc_refs_check.py` + the YAML load stay green.
+- **Script-ready but gated**: the live REST/GraphQL push of dependencies, sub-issue links, and
+  Projects-v2 fields — wired over `urllib`+token (`GitHubApi`, `--use-api`), **Declared** until run
+  with a token (none in this environment). `pr-index.json` lets the offline cross-check reproduce the
+  live merged-PR numbers without a network call.
+
+### gh-CLI-independent token path (`--use-api`)
+
+`GitHubApi` (stdlib `urllib`, no new dependency) gives the same REST + GraphQL capability **without
+the `gh` CLI** (some runners/sandboxes have only a token), reading `GITHUB_TOKEN`/`GH_TOKEN`. It is
+**opt-in** (the default path is still `gh`-driven), **never-silent** (a non-2xx raises with the
+status + body), and **`--dry-run`-aware** (mutating verbs preview, reads always run). A missing token
+is the **honest stop** — it FLAGs the gated step and falls back to `pr-index.json`, **never** a
+fabricated sync.

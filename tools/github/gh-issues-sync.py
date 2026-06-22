@@ -508,6 +508,188 @@ def gql_str(text):
 
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
+# Token-based GitHub API (gh-CLI-INDEPENDENT REST + GraphQL/Projects-v2 path) — M-RELS
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# The `gh()` plumbing above shells to the `gh` CLI. Some environments (CI runners, the agent
+# sandbox here) have **no `gh` CLI**, only a token in the environment. This client gives the same
+# capabilities — REST for issues/PRs/dependencies/sub-issues, GraphQL for the Projects v2 board —
+# over stdlib ``urllib`` reading ``GITHUB_TOKEN``/``GH_TOKEN``. No new dependency (RECONCILE.md
+# rule), never-silent (G2: a non-2xx raises with the status + body), and it is OPT-IN (``--use-api``
+# / auto when `gh` is absent) so the default `gh`-driven behaviour is unchanged.
+#
+# Honesty (Declared): the **live Projects-v2 GraphQL mutation** path is wired but, like the `gh`
+# GraphQL path, is **Declared until run against the live API with a `project`-scoped token** — the
+# pure request-construction below is unit-tested offline (``--self-test``); the network round-trip
+# is not exercised here (no token in this environment). See project-v2-spec.md.
+
+import os  # noqa: E402  (kept local to this gh-independent section for clarity)
+import urllib.error  # noqa: E402
+import urllib.request  # noqa: E402
+
+_GITHUB_API = "https://api.github.com"
+_GITHUB_GRAPHQL = "https://api.github.com/graphql"
+_API_TIMEOUT = (
+    60  # per-request ceiling (mirrors the gh path's bounded timeout discipline)
+)
+
+
+def github_token():
+    """Return the GitHub token from the environment, or None. Never stored; read at call time (G2).
+
+    Honours ``GITHUB_TOKEN`` then ``GH_TOKEN`` (the two conventional names). Returning None lets the
+    caller FLAG the token-gated step rather than fabricate a sync — the honest failure mode.
+    """
+    return os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+
+
+class GitHubApi:
+    """Minimal, never-silent GitHub REST+GraphQL client over urllib (no `gh`, no new dependency).
+
+    A failed request raises ``RuntimeError`` carrying the HTTP status + response body (G2 — never a
+    silent swallow). ``dry_run`` short-circuits every **mutating** verb (POST/PATCH/PUT/DELETE) to a
+    printed, no-write preview; GET always runs (reads are side-effect-free).
+    """
+
+    def __init__(self, token, *, dry_run=False):
+        if not token:
+            raise RuntimeError(
+                "GitHubApi requires a token (GITHUB_TOKEN / GH_TOKEN); none in the environment. "
+                "This is the honest token-gated stop — no live sync is fabricated (G2)."
+            )
+        self._token = token
+        self.dry_run = dry_run
+
+    def _headers(self, *, graphql=False):
+        h = {
+            "Authorization": f"Bearer {self._token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "mycelium-gh-issues-sync",
+        }
+        if graphql:
+            h["Accept"] = "application/json"
+        return h
+
+    def request(self, method, path, *, body=None):
+        """Issue a REST request. ``path`` is API-relative (``/repos/...``) or absolute. Returns the
+        parsed JSON (or {} on 204). Mutating verbs honour ``dry_run`` (printed, no write)."""
+        url = path if path.startswith("http") else f"{_GITHUB_API}{path}"
+        mutating = method.upper() not in ("GET", "HEAD")
+        if mutating and self.dry_run:
+            safe_print(
+                f"   [dry-run] {method} {url}  body={json.dumps(body) if body else '{}'}"
+            )
+            return {}
+        data = json.dumps(body).encode() if body is not None else None
+        req = urllib.request.Request(
+            url, data=data, method=method.upper(), headers=self._headers()
+        )
+        if data is not None:
+            req.add_header("Content-Type", "application/json")
+        try:
+            with urllib.request.urlopen(req, timeout=_API_TIMEOUT) as resp:
+                raw = resp.read().decode()
+                return json.loads(raw) if raw.strip() else {}
+        except urllib.error.HTTPError as e:  # never-silent: surface status + body (G2)
+            detail = e.read().decode(errors="replace") if hasattr(e, "read") else ""
+            raise RuntimeError(
+                f"GitHub REST {method} {url} -> HTTP {e.code}: {detail[:500]}"
+            )
+        except urllib.error.URLError as e:
+            raise RuntimeError(f"GitHub REST {method} {url} -> network error: {e}")
+
+    def paginate(self, path, *, params=None):
+        """GET every page of a list endpoint, following the RFC-5988 ``Link: rel=next`` header.
+
+        Yields each item across pages. ``params`` is a dict merged into the query string (``per_page``
+        defaults to 100). Pure-ish: GET only, no mutation.
+        """
+        from urllib.parse import urlencode
+
+        q = dict(params or {})
+        q.setdefault("per_page", 100)
+        url = (
+            f"{_GITHUB_API}{path}?{urlencode(q)}"
+            if not path.startswith("http")
+            else path
+        )
+        while url:
+            req = urllib.request.Request(url, method="GET", headers=self._headers())
+            try:
+                with urllib.request.urlopen(req, timeout=_API_TIMEOUT) as resp:
+                    page = json.loads(resp.read().decode() or "[]")
+                    link = resp.headers.get("Link", "") or ""
+            except urllib.error.HTTPError as e:
+                detail = e.read().decode(errors="replace") if hasattr(e, "read") else ""
+                raise RuntimeError(
+                    f"GitHub REST GET {url} -> HTTP {e.code}: {detail[:500]}"
+                )
+            for item in page:
+                yield item
+            url = _next_link(link)
+
+    def graphql(self, query, variables=None):
+        """POST a GraphQL query/mutation (the Projects v2 path). Returns ``data``; raises on errors.
+
+        ``dry_run`` previews a **mutation** (heuristic: the document starts with ``mutation``) without
+        writing; a query (read) always runs. Never-silent: a GraphQL ``errors`` array raises (G2).
+        """
+        is_mutation = query.lstrip().lower().startswith("mutation")
+        if is_mutation and self.dry_run:
+            safe_print(
+                f"   [dry-run] GraphQL mutation (suppressed): {query.strip().splitlines()[0]} "
+                f"vars={json.dumps(variables or {})}"
+            )
+            return {}
+        payload = {"query": query, "variables": variables or {}}
+        req = urllib.request.Request(
+            _GITHUB_GRAPHQL,
+            data=json.dumps(payload).encode(),
+            method="POST",
+            headers={**self._headers(graphql=True), "Content-Type": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=_API_TIMEOUT) as resp:
+                out = json.loads(resp.read().decode() or "{}")
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode(errors="replace") if hasattr(e, "read") else ""
+            raise RuntimeError(f"GitHub GraphQL -> HTTP {e.code}: {detail[:500]}")
+        if out.get("errors"):
+            raise RuntimeError(f"GitHub GraphQL error: {json.dumps(out['errors'])}")
+        return out.get("data", {})
+
+
+def _next_link(link_header):
+    """Return the ``rel="next"`` URL from an RFC-5988 ``Link`` header, or None. Pure (unit-tested)."""
+    for part in (link_header or "").split(","):
+        seg = part.strip()
+        if 'rel="next"' in seg and "<" in seg and ">" in seg:
+            return seg[seg.index("<") + 1 : seg.index(">")]
+    return None
+
+
+def api_merged_pr_index(api, repo, patterns):
+    """Build ``{task_id: pr_number}`` from the live merged-PR list via the token API (no `gh`).
+
+    Enumerates ``state=all`` PRs, keeps the merged ones (``merged_at`` set), and maps each task-id in
+    the PR title to its number (newest-merged wins on a tie). Honest: only titles are parsed, exactly
+    as the offline git-log path — the live list is a *cross-check*, never the sole basis. ``patterns``
+    is the conventions.json ``task_id_patterns`` list (kept DRY with the `gh` path).
+    """
+    owner, name = repo.split("/", 1)
+    index = {}
+    for pr in api.paginate(
+        f"/repos/{owner}/{name}/pulls", params={"state": "all", "sort": "created"}
+    ):
+        if not pr.get("merged_at"):
+            continue
+        num = pr.get("number")
+        for tid in expand_task_id_run(pr.get("title") or ""):
+            index.setdefault(tid, num)  # first (created-asc) wins deterministically
+    return index
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
 # Preflight / sanity check (never-silent; proceed when good, remediate only when lacking)
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 def get_gh_scopes():
@@ -1031,6 +1213,261 @@ def infer_milestone_from_scope(scopes, scope_ms_aliases):
         f"resolve to different milestones {sorted(resolved)} — not set (ambiguous)"
     )
     return None, flag
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Relationship/date extraction (issue↔PR landings + dates from CHANGELOG.md + git log) — M-RELS
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# This block is PURE (no network, no `gh`): it derives, from the two in-repo dated sources of
+# truth — ``CHANGELOG.md`` headers and ``git log origin/main`` squash subjects — a per-issue
+# relationship/date manifest (landed_pr, landed_date, the grounding basis). Honesty (VR-5/G2): a
+# date is asserted ONLY when grounded in a CHANGELOG header line or a commit SHA/subject; the basis
+# string records WHICH (so the assertion is auditable and never upgraded past Empirical/Declared).
+# These are exercised offline by ``--self-test`` and applied by ``--relationships`` (dry-run-able).
+
+# A task-id token: M-### or E#-#. Used to find ids in a CHANGELOG header / commit subject. The
+# trailing boundary is left open so a slash-run (``M-656/657/658``) is captured by the run-expander
+# below rather than truncated mid-token.
+_TASK_ID_TOKEN = re.compile(r"\b(M-\d+|E\d+-\d+)\b")
+# A slash/abbreviated run of M-ids: ``M-656/657/658`` or ``M-510/512/520/522`` — the leading id is
+# full (``M-656``); the rest are bare numbers sharing the ``M-`` prefix. Matched greedily so the
+# whole run is one token before expansion.
+_MID_RUN = re.compile(r"\bM-\d+(?:/\d+)+\b")
+# A PR back-reference in a curated squash subject: the trailing ``(#NNN)``. GitHub squash subjects
+# carry it; a curated subject may omit it (then the PR is left unknown — never invented, G2).
+_PR_REF = re.compile(r"\(#(\d+)\)")
+# A dated CHANGELOG section header: ``### Kind (YYYY-MM-DD: <rest>)``. ``rest`` carries the M-id(s).
+_CHANGELOG_HEADER = re.compile(
+    r"^###\s+(?P<kind>[A-Za-z]+)\s+\((?P<date>\d{4}-\d{2}-\d{2}):\s*(?P<rest>.*?)\)\s*$"
+)
+
+
+def expand_task_id_run(text):
+    """Return the ordered, de-duplicated task-ids in ``text``, expanding abbreviated M-id runs.
+
+    ``M-656/657/658`` → ``['M-656', 'M-657', 'M-658']``; a lone ``E7-1`` stays ``['E7-1']``.
+    Pure + total (empty/None → ``[]``). Never invents an id the text does not contain (G2): a bare
+    number only becomes an id when it is part of an explicit ``M-…/…`` run.
+    """
+    if not text:
+        return []
+    found, seen = [], set()
+    covered = []  # char spans already consumed by an expanded run (so members aren't re-matched)
+    for m in _MID_RUN.finditer(text):
+        run = m.group(0)
+        head = run.split("/", 1)[0]  # 'M-656'
+        prefix = head.split("-", 1)[0] + "-"  # 'M-'
+        ids = [head] + [f"{prefix}{n}" for n in run.split("/")[1:]]
+        covered.append((m.start(), m.end()))
+        for tid in ids:
+            if tid not in seen:
+                seen.add(tid)
+                found.append(tid)
+    # Standalone tokens not already inside an expanded run.
+    for m in _TASK_ID_TOKEN.finditer(text):
+        if any(s <= m.start() < e for (s, e) in covered):
+            continue
+        tid = m.group(1)
+        if tid not in seen:
+            seen.add(tid)
+            found.append(tid)
+    return found
+
+
+def parse_changelog_landings(changelog_text):
+    """Parse ``CHANGELOG.md`` into ``{task_id: {date, kind, header, basis}}``.
+
+    Each dated section header ``### Kind (YYYY-MM-DD: M-xxx — …)`` attributes its date to every
+    task-id named in the header text (slash-runs expanded). Pure + honest (G2): the FIRST (topmost,
+    most-recent) header that names an id wins its ``landed_date`` (the changelog is newest-first, so
+    the topmost mention is the landing record); the ``basis`` records the exact header line so the
+    date is auditable. A header with no task-id contributes nothing (never guessed).
+    """
+    out = {}
+    for raw in (changelog_text or "").splitlines():
+        m = _CHANGELOG_HEADER.match(raw)
+        if not m:
+            continue
+        date = m.group("date")
+        kind = m.group("kind")
+        rest = m.group("rest").strip()
+        for tid in expand_task_id_run(rest):
+            if tid in out:
+                continue  # newest-first: keep the topmost (most recent) attribution
+            out[tid] = {
+                "date": date,
+                "kind": kind,
+                "header": rest,
+                "basis": f"CHANGELOG.md '### {kind} ({date}: {rest})'",
+            }
+    return out
+
+
+def parse_git_log_landings(git_log_text):
+    """Parse ``git log`` ``SHA|YYYY-MM-DD|subject`` lines into ``{task_id: {pr, date, sha, subject}}``.
+
+    Feed it the output of ``git log <ref> --format='%H|%ad|%s' --date=short``. For each commit, every
+    task-id in the subject is attributed the commit's short-SHA, date, and ``(#NNN)`` PR number when
+    the subject carries one (a curated subject may omit it → ``pr`` is None, never invented, G2).
+    Newest-first wins (matches ``git log`` default order). Pure + total.
+    """
+    out = {}
+    for raw in (git_log_text or "").splitlines():
+        line = raw.strip()
+        if not line or line.count("|") < 2:
+            continue
+        sha, date, subject = line.split("|", 2)
+        subject = subject.strip()
+        pr_m = _PR_REF.search(subject)
+        pr = int(pr_m.group(1)) if pr_m else None
+        for tid in expand_task_id_run(subject):
+            if tid in out:
+                continue
+            out[tid] = {"pr": pr, "date": date, "sha": sha[:7], "subject": subject}
+    return out
+
+
+def epic_of_task_id(task_id):
+    """Return the epic id a leaf ``E#-#`` id rolls up to, or None.
+
+    Honest by construction (G2): only the **explicit** ``E#-#`` form yields an epic (``E7-1`` →
+    ``E7``); an ``M-###`` id carries no epic in its own text, so this returns None (the epic, when
+    known, comes from issues.yaml ``epic:``/``depends_on`` or the idmap comments — never guessed
+    from the number range).
+    """
+    m = re.match(r"^(E\d+)-\d+$", task_id or "")
+    return m.group(1) if m else None
+
+
+def _status_of(entry):
+    """Return the ``status:*`` value of an issue entry (e.g. 'done'), or None. Pure."""
+    for lb in entry.get("labels", []) or []:
+        if isinstance(lb, str) and lb.startswith("status:"):
+            return lb.split(":", 1)[1]
+    return None
+
+
+def build_relationship_manifest(
+    issues, changelog_landings, gitlog_landings, pr_index=None
+):
+    """Merge the two evidence sources into a per-issue relationship/date manifest.
+
+    Returns ``{task_id: {…}}`` for every issue with grounded evidence. **Status-aware honesty**
+    (VR-5/G2 — the crux): a strong ``landed_pr``/``landed_date`` claim ("this issue's work landed
+    in this PR on this date") is asserted **only for a `status:done` issue**. For an issue that is
+    NOT done (in-progress / blocked / needs-design), the very same evidence is real but a *weaker*
+    claim — the id was merely **referenced** by that PR/CHANGELOG entry (a partial tranche, a filing
+    commit, an aspirational title) — so it is emitted under ``evidence_pr``/``evidence_date`` with a
+    note, **never** as a completed landing. This refuses to overclaim completion (the honesty rule).
+
+    Field provenance (both the strong and weak forms):
+      * the date comes from the CHANGELOG header (preferred — the in-repo dated record) else the
+        git-log commit date; the chosen source is named in the basis.
+      * the PR comes from the git-log ``(#NNN)`` subject else a ``pr_index`` ``{task_id: pr}``
+        cross-checked against the live merged-PR list (the caller supplies it from the MCP/`gh`
+        enumeration — never fabricated here). When both name a PR and they DISAGREE, the
+        disagreement is recorded in the basis (never silently reconciled — G2).
+      * a field is emitted ONLY when grounded; an issue with no evidence is absent (never null-filled).
+      * the ``epic`` edge is a separate, always-grounded relationship (the explicit E#-# id form).
+    """
+    pr_index = pr_index or {}
+    by_id = {e.get("id"): e for e in issues if e.get("id")}
+    out = {}
+    for tid in sorted(by_id):
+        entry = by_id[tid]
+        is_done = _status_of(entry) == "done"
+        date_field = "landed_date" if is_done else "evidence_date"
+        pr_field = "landed_pr" if is_done else "evidence_pr"
+        cl = changelog_landings.get(tid)
+        gl = gitlog_landings.get(tid)
+        idx_pr = pr_index.get(tid)
+        rec = {}
+        basis_bits = []
+        if not is_done:
+            basis_bits.append(
+                f"status:{_status_of(entry) or 'unknown'} (NOT done) — evidence is a REFERENCE/"
+                "partial, not a completed landing"
+            )
+        # date: CHANGELOG header preferred, else git-log commit date.
+        if cl and cl.get("date"):
+            rec[date_field] = cl["date"]
+            basis_bits.append(cl["basis"])
+        elif gl and gl.get("date"):
+            rec[date_field] = gl["date"]
+            basis_bits.append(f"git log {gl['sha']} ({gl['date']}) '{gl['subject']}'")
+        # PR: git-log (#NNN) preferred (carries the SHA), else the cross-checked index.
+        gl_pr = gl.get("pr") if gl else None
+        if gl_pr is not None:
+            rec[pr_field] = gl_pr
+            basis_bits.append(f"git log {gl['sha']} subject '(#{gl_pr})'")
+            if idx_pr is not None and idx_pr != gl_pr:
+                basis_bits.append(
+                    f"FLAG: PR disagreement — git-log #{gl_pr} vs merged-PR-list #{idx_pr}"
+                )
+        elif idx_pr is not None:
+            rec[pr_field] = idx_pr
+            basis_bits.append(
+                f"merged-PR-list #{idx_pr} (cross-checked; no (#NNN) in the curated subject)"
+            )
+        have_eviction = bool(rec.get(date_field) or rec.get(pr_field))
+        if have_eviction:
+            rec["landed_basis"] = "; ".join(basis_bits)
+        epic = epic_of_task_id(tid)
+        if epic:
+            rec["epic"] = epic
+        # Emit when ANY grounded relationship is present (evidence OR an explicit epic edge).
+        if have_eviction or rec.get("epic"):
+            out[tid] = rec
+    return out
+
+
+def plan_relationship_enrichment(issues, manifest):
+    """Plan the ADDITIVE per-issue field writes (never overwrite/rewrite an existing field).
+
+    Returns ``{task_id: {field: value}}`` containing only the fields the manifest grounds that the
+    issue does NOT already carry. Append-only by construction (G2/house-rule 3): an issue that
+    already has ``landed_date`` keeps it; only absent fields are added. Pure — does no IO.
+    """
+    by_id = {e.get("id"): e for e in issues if e.get("id")}
+    plan = {}
+    for tid, rec in manifest.items():
+        entry = by_id.get(tid)
+        if entry is None:
+            continue
+        adds = {}
+        for field in (
+            "landed_pr",
+            "landed_date",
+            "evidence_pr",
+            "evidence_date",
+            "landed_basis",
+            "epic",
+        ):
+            if field in rec and field not in entry:
+                adds[field] = rec[field]
+        if adds:
+            plan[tid] = adds
+    return plan
+
+
+def derive_subissue_edges(issues):
+    """Derive epic→sub-issue edges from issues.yaml, returning ``{epic_id: [child_id, …]}``.
+
+    Honest source (G2): an edge exists when a child entry **already declares** ``epic:``/``parent:``.
+    ``depends_on`` is deliberately NOT used as a parenthood signal (it is a *dependency*, not a
+    parent — conflating them would invent structure); the idmap.tsv comments (e.g. "M-364..M-368
+    sub-issues of M-361") are the human record an editor uses to ADD an ``epic:`` field, not
+    auto-inferred here.
+    """
+    edges = {}
+    for e in issues:
+        cid = e.get("id")
+        if not cid:
+            continue
+        parent = e.get("epic") or e.get("parent")
+        if parent:
+            edges.setdefault(parent, []).append(cid)
+    return edges
 
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -3239,6 +3676,151 @@ def self_test():
         annot_ov, _ms_titles, _label_set
     )
 
+    # ── Relationship/date extraction (issue↔PR landings + dates) — M-RELS ──────────────────────
+    # expand_task_id_run: slash-runs expand; standalone ids kept; bare numbers never invented (G2).
+    assert expand_task_id_run("stage-1 (M-656/657/658, M-674)") == [
+        "M-656",
+        "M-657",
+        "M-658",
+        "M-674",
+    ]
+    assert expand_task_id_run("epics E7-1/E7-2 + M-665") == ["E7-1", "E7-2", "M-665"]
+    assert expand_task_id_run("no ids here") == []
+    assert expand_task_id_run("") == []
+    # A bare "657" alone is NOT an id (only an explicit M-…/… run promotes a bare number).
+    assert expand_task_id_run("see 657 and 658") == []
+
+    # parse_changelog_landings: newest-first wins; basis records the exact header; runs expand.
+    _cl_text = (
+        "## [Unreleased]\n"
+        "### Changed (2026-06-22: M-674 — evaluator on the deep worker stack)\n"
+        "- body\n"
+        "### Added (2026-06-21: M-656/657 — earlier mention of M-674 too)\n"
+        "- body\n"
+        "### Added (2026-06-20: no task id in this header)\n"
+    )
+    _cl = parse_changelog_landings(_cl_text)
+    assert _cl["M-674"]["date"] == "2026-06-22", _cl[
+        "M-674"
+    ]  # topmost wins, not the 06-21 line
+    assert _cl["M-656"]["date"] == "2026-06-21" and _cl["M-657"]["date"] == "2026-06-21"
+    assert "CHANGELOG.md '### Changed (2026-06-22:" in _cl["M-674"]["basis"]
+    assert "M-700" not in _cl  # never invents an id absent from the text
+
+    # parse_git_log_landings: SHA|date|subject; (#NNN) captured; curated subject → pr None; runs ok.
+    _gl_text = (
+        "abc1234def|2026-06-22|feat(l1): tranche (M-656/657/658, M-674)\n"
+        "9999888777|2026-06-21|docs(dfr): discharge (#344)\n"
+        "0000111222|2026-06-20|docs(context): M-666 landed (no PR ref)\n"
+        "malformed line without pipes\n"
+    )
+    _gl = parse_git_log_landings(_gl_text)
+    assert (
+        _gl["M-674"]["sha"] == "abc1234" and _gl["M-674"]["pr"] is None
+    )  # short sha; no (#NNN)
+    assert _gl["M-666"]["pr"] is None and _gl["M-666"]["date"] == "2026-06-20"
+    assert (
+        "M-344" not in _gl
+    )  # the (#344) is a PR number, not a task id — never conflated
+
+    # epic_of_task_id: explicit E#-# only; M-### carries no epic (never guessed from the number).
+    assert epic_of_task_id("E7-1") == "E7" and epic_of_task_id("M-657") is None
+
+    # _status_of: extracts the status:* label value.
+    assert _status_of({"labels": ["phase:5", "status:done"]}) == "done"
+    assert _status_of({"labels": ["phase:5"]}) is None
+
+    # build_relationship_manifest — STATUS-AWARE HONESTY (the crux): a `status:done` issue gets the
+    # strong landed_pr/landed_date; a NOT-done issue gets the weaker evidence_pr/evidence_date with a
+    # note (the id was referenced, not completed). CHANGELOG date preferred; git-log (#NNN) preferred
+    # for PR; pr_index fills a PR when the subject has none, FLAGs a disagreement (G2).
+    _issues = [
+        {"id": "M-674", "labels": ["status:done"]},  # done → strong landed_*
+        {"id": "M-666", "labels": ["status:in-progress"]},  # not done → weak evidence_*
+        {"id": "E7-1", "labels": ["status:needs-design"]},
+        {
+            "id": "M-999"
+        },  # no evidence anywhere → absent from the manifest (never null-guessed)
+    ]
+    _man = build_relationship_manifest(
+        _issues, _cl, _gl, pr_index={"M-666": 343, "M-674": 349}
+    )
+    # done issue → landed_*; CHANGELOG wins over git-log 06-22; PR from the cross-check index.
+    assert (
+        _man["M-674"]["landed_date"] == "2026-06-22"
+        and _man["M-674"]["landed_pr"] == 349
+    )
+    assert "evidence_date" not in _man["M-674"]
+    # not-done issue → evidence_* (NEVER landed_*), with the honest "REFERENCE/partial" note.
+    assert (
+        _man["M-666"]["evidence_pr"] == 343
+        and _man["M-666"]["evidence_date"] == "2026-06-20"
+    )
+    assert "landed_pr" not in _man["M-666"] and "landed_date" not in _man["M-666"]
+    assert "NOT done" in _man["M-666"]["landed_basis"]
+    assert _man["E7-1"]["epic"] == "E7"
+    assert "M-999" not in _man  # no grounded evidence ⇒ omitted (G2: never invented)
+    # Disagreement is surfaced in the basis, never silently reconciled (done issue → landed_pr).
+    _gl_pr = parse_git_log_landings("aaa1111|2026-06-22|feat: x (M-500) (#11)\n")
+    _man_dis = build_relationship_manifest(
+        [{"id": "M-500", "labels": ["status:done"]}], {}, _gl_pr, pr_index={"M-500": 22}
+    )
+    assert "FLAG: PR disagreement" in _man_dis["M-500"]["landed_basis"]
+    assert (
+        _man_dis["M-500"]["landed_pr"] == 11
+    )  # git-log (#NNN) wins; index disagreement flagged
+
+    # plan_relationship_enrichment: additive only — an already-present field is never re-added.
+    _plan = plan_relationship_enrichment(
+        [{"id": "M-674", "landed_date": "2026-06-22"}], _man
+    )
+    assert "landed_date" not in _plan.get("M-674", {}), (
+        _plan
+    )  # already present → not in the plan
+    assert _plan["M-674"]["landed_pr"] == 349  # the absent field IS planned
+
+    # _insert_fields_into_issue_block: surgical, idempotent, append-only text insertion.
+    _src = (
+        "issues:\n"
+        "  - id: M-674\n"
+        '    title: "x"\n'
+        "    depends_on: []\n"
+        "    body: |\n"
+        "      hello\n"
+        "  - id: M-675\n"
+        '    title: "y"\n'
+    )
+    _new, _added = _insert_fields_into_issue_block(
+        _src, "M-674", {"landed_pr": 349, "landed_date": "2026-06-22"}
+    )
+    assert "landed_pr: 349" in _new and "landed_date: 2026-06-22" in _new
+    assert _added == ["landed_pr", "landed_date"]
+    assert yaml.safe_load(_new)["issues"][0]["landed_pr"] == 349  # still valid YAML
+    assert (
+        yaml.safe_load(_new)["issues"][1]["id"] == "M-675"
+    )  # the next block is untouched
+    # Idempotent: re-inserting the same field adds nothing.
+    _new2, _added2 = _insert_fields_into_issue_block(_new, "M-674", {"landed_pr": 349})
+    assert _added2 == [] and _new2 == _new
+    # A missing block is a no-op (never invents an entry).
+    _new3, _added3 = _insert_fields_into_issue_block(_src, "M-000", {"landed_pr": 1})
+    assert _added3 == [] and _new3 == _src
+
+    # _yaml_scalar: ints bare; basis-style strings with ':'/'#'/quotes are quoted + round-trip.
+    assert _yaml_scalar(349) == "349"
+    _basis = (
+        "CHANGELOG.md '### Added (2026-06-22: M-674 — x)'; git log abc1234 '(#349)'"
+    )
+    _q = _yaml_scalar(_basis)
+    assert yaml.safe_load(f"v: {_q}")["v"] == _basis  # exact round-trip through YAML
+
+    # _next_link: extracts rel="next"; absent → None.
+    assert (
+        _next_link('<https://api.github.com/x?page=2>; rel="next", <...>; rel="last"')
+        == "https://api.github.com/x?page=2"
+    )
+    assert _next_link('<...>; rel="prev"') is None
+
     print(
         "self-test OK: label_delta, normalize_body, plan_issue_update, parse_conventional, "
         "derive_pr_labels, milestone_rank, infer_milestone (multi-milestone), "
@@ -3248,8 +3830,286 @@ def self_test():
         "plan_label_migrations, label_to_field_values, plan_field_reconcile, "
         "plan_option_additions, required_scopes, missing_scopes, over_grants, _auth_command, "
         "_is_transient_network, _stderr_tail, should_pause_for_rate_limit, parse_rate_remaining, "
-        "negotiate_concurrency, aggregate_results, _issue_update_args, partition_issue_work, run_batch"
+        "negotiate_concurrency, aggregate_results, _issue_update_args, partition_issue_work, run_batch, "
+        "expand_task_id_run, parse_changelog_landings, parse_git_log_landings, epic_of_task_id, "
+        "_status_of, build_relationship_manifest (status-aware landed_/evidence_), "
+        "plan_relationship_enrichment, _insert_fields_into_issue_block, _yaml_scalar, _next_link"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Relationship/date extraction driver (--relationships) — M-RELS
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+def _git_log_lines(repo_root, ref):
+    """Return ``git log <ref> --format='%H|%ad|%s' --date=short`` output, or '' if git/ref absent.
+
+    Never-silent on a real failure path: a missing ref/git is reported as a skip (the offline date
+    source is the CHANGELOG; git-log is the corroborating PR/SHA source). Pure-IO, read-only.
+    """
+    for candidate in (ref, "main", "HEAD"):
+        try:
+            res = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo_root),
+                    "log",
+                    candidate,
+                    "--format=%H|%ad|%s",
+                    "--date=short",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except FileNotFoundError:
+            print(
+                "   ~ git not found — skipping the git-log PR/SHA corroboration (CHANGELOG only)."
+            )
+            return ""
+        if res.returncode == 0 and res.stdout.strip():
+            if candidate != ref:
+                print(
+                    f"   ~ git ref '{ref}' unavailable; using '{candidate}' for landing SHAs."
+                )
+            return res.stdout
+    print(
+        f"   ~ no usable git ref ({ref}/main/HEAD) — CHANGELOG-only dates (git-log corroboration skipped)."
+    )
+    return ""
+
+
+def load_pr_index(here):
+    """Load the optional ``pr-index.json`` ({task_id: pr_number}) cross-check map, or {}.
+
+    This file records the issue↔PR mapping DERIVED FROM THE LIVE MERGED-PR LIST (GitHub REST/MCP),
+    so the offline ``--relationships`` run can cross-check the git-log subjects against the real
+    merged-PR numbers without a network call. Absence is fine (returns {}); a malformed file is
+    never-silent (it raises with the path). Keys may be bare ints or strings; values are PR numbers.
+    """
+    path = here / "pr-index.json"
+    if not path.exists():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise RuntimeError(f"pr-index.json is present but unreadable: {exc}")
+    data = raw.get("map", raw) if isinstance(raw, dict) else {}
+    out = {}
+    for k, v in data.items() if isinstance(data, dict) else []:
+        if str(k).startswith("_"):  # allow _about / _comment annotation keys
+            continue
+        try:
+            out[str(k)] = int(v)
+        except (TypeError, ValueError):
+            raise RuntimeError(
+                f"pr-index.json: PR number for '{k}' is not an int: {v!r}"
+            )
+    return out
+
+
+def _insert_fields_into_issue_block(text, task_id, adds):
+    """Return ``text`` with ``adds`` (dict of field->value) inserted into the ``- id: <task_id>``
+    block, after its ``depends_on:`` line (or after ``id:`` when none). Surgical text edit — it does
+    NOT reformat the file (preserving comments/order/round-trip; PyYAML dump would clobber them).
+
+    Idempotent: a field already textually present in the block is skipped (so re-running adds
+    nothing). Returns ``(new_text, added_fields_list)``. Never reorders or rewrites existing lines
+    (append-only, house-rule 3).
+    """
+    lines = text.splitlines(keepends=True)
+    # Find the block: a line matching ``^  - id: <task_id>$`` (allow trailing spaces).
+    id_re = re.compile(rf"^(\s*)- id:\s*{re.escape(task_id)}\s*$")
+    start = None
+    indent = "    "
+    for i, ln in enumerate(lines):
+        m = id_re.match(ln.rstrip("\n"))
+        if m:
+            start = i
+            indent = m.group(1) + "  "  # field indent = id indent + 2
+            break
+    if start is None:
+        return text, []  # block not found (never invent one)
+    # Block end = next ``- id:`` at the same list indent, or EOF.
+    list_indent = id_re.match(lines[start].rstrip("\n")).group(1)
+    next_re = re.compile(rf"^{re.escape(list_indent)}- id:\s")
+    end = len(lines)
+    for j in range(start + 1, len(lines)):
+        if next_re.match(lines[j]):
+            end = j
+            break
+    block = lines[start:end]
+    present = set()
+    depends_idx = None
+    for k, ln in enumerate(block):
+        fm = re.match(r"^\s*([a-z_]+):", ln)
+        if fm:
+            present.add(fm.group(1))
+        if re.match(r"^\s*depends_on:", ln):
+            depends_idx = k
+    new_field_lines = []
+    added = []
+    for field, value in adds.items():
+        if field in present:
+            continue  # idempotent: do not duplicate an existing field
+        new_field_lines.append(f"{indent}{field}: {_yaml_scalar(value)}\n")
+        added.append(field)
+    if not new_field_lines:
+        return text, []
+    # Insert after depends_on (keeps the relational fields grouped with depends_on); else after id.
+    insert_at_in_block = (depends_idx + 1) if depends_idx is not None else 1
+    new_block = (
+        block[:insert_at_in_block] + new_field_lines + block[insert_at_in_block:]
+    )
+    new_lines = lines[:start] + new_block + lines[end:]
+    return "".join(new_lines), added
+
+
+def _yaml_scalar(value):
+    """Render a scalar for a single-line YAML field value, quoting strings that need it.
+
+    Ints stay bare; a string with YAML-special characters (``:``/``#``/quotes/leading-special) is
+    double-quoted with internal quotes/backslashes escaped. Keeps the inserted line valid + round-
+    trippable. (The basis string can contain ``:``/``#``/quotes, so this matters.)
+    """
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int):
+        return str(value)
+    s = str(value)
+    needs_quote = (
+        s == ""
+        or s[0] in "!&*?|>%@`\"'#-{}[],: "
+        or s[-1] == " "
+        or ": " in s
+        or " #" in s
+        or any(c in s for c in '":#')
+    )
+    if needs_quote:
+        esc = s.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{esc}"'
+    return s
+
+
+def run_relationships(args):
+    """Extract the issue↔PR + date relationship manifest from CHANGELOG.md + git log and (unless
+    --dry-run) enrich issues.yaml additively. Idempotent, never-silent (G2), append-only.
+
+    Returns True on success. The live GitHub targets that this manifest FEEDS — issue dependencies,
+    sub-issue links, and Projects-v2 field values — are reported as token/Projects-API-gated FLAGs
+    (see project-v2-spec.md): this offline driver produces + validates the manifest; the live push
+    is a separate, token-scoped step (--use-api or the maintainer's `gh project` run).
+    """
+    repo_root = HERE.parents[1]
+    print(">> relationships: extract issue↔PR + dates from CHANGELOG.md + git log")
+    spec = yaml.safe_load(args.issues_yaml.read_text(encoding="utf-8")) or {}
+    issues = spec.get("issues", [])
+    changelog_path = repo_root / "CHANGELOG.md"
+    changelog = (
+        changelog_path.read_text(encoding="utf-8") if changelog_path.exists() else ""
+    )
+    if not changelog:
+        print(
+            "   ~ CHANGELOG.md not found — no dated landing evidence; nothing to extract."
+        )
+    cl = parse_changelog_landings(changelog)
+    gl = parse_git_log_landings(_git_log_lines(repo_root, args.git_ref))
+
+    # PR cross-check index: a live API enumeration when a token is present (or --use-api forces it),
+    # else the committed pr-index.json (derived from the live merged-PR list), else empty.
+    pr_index = {}
+    token = github_token()
+    if args.use_api or token:
+        if token:
+            try:
+                conventions = json.loads(
+                    args.conventions_json.read_text(encoding="utf-8")
+                )
+                patterns = conventions["milestone_inference"]["task_id_patterns"]
+                api = GitHubApi(token, dry_run=args.dry_run)
+                pr_index = api_merged_pr_index(api, args.repo, patterns)
+                print(
+                    f"   = live merged-PR cross-check via token API: {len(pr_index)} id↔PR links."
+                )
+            except RuntimeError as exc:
+                print(
+                    f"   ! live PR cross-check unavailable ({exc}); falling back to pr-index.json."
+                )
+                pr_index = load_pr_index(HERE)
+        else:
+            print(
+                "   ! --use-api given but no GITHUB_TOKEN/GH_TOKEN — FLAG: token-gated; using pr-index.json."
+            )
+            pr_index = load_pr_index(HERE)
+    else:
+        pr_index = load_pr_index(HERE)
+        if pr_index:
+            print(
+                f"   = PR cross-check from committed pr-index.json: {len(pr_index)} id↔PR links."
+            )
+        else:
+            print(
+                "   ~ no token and no pr-index.json — PR numbers come only from git-log (#NNN) subjects."
+            )
+
+    manifest = build_relationship_manifest(issues, cl, gl, pr_index)
+    plan = plan_relationship_enrichment(issues, manifest)
+    print(
+        f"   = manifest: {len(manifest)}/{len(issues)} issues have grounded landing evidence; "
+        f"{len(plan)} need additive field(s)."
+    )
+
+    # Never-silent preview/apply of the additive enrichment.
+    if not plan:
+        print(
+            "   = issues.yaml already carries every grounded field (idempotent — zero writes)."
+        )
+    elif args.dry_run:
+        for tid in sorted(plan):
+            fields = ", ".join(
+                f"{k}={plan[tid][k]!r}" for k in plan[tid] if k != "landed_basis"
+            )
+            print(f"   [dry-run] {tid}: + {fields}")
+        print(
+            f"   [dry-run] would enrich {len(plan)} issue block(s) in {args.issues_yaml.name}."
+        )
+    else:
+        text = args.issues_yaml.read_text(encoding="utf-8")
+        total_added = 0
+        for tid in sorted(plan):
+            text, added = _insert_fields_into_issue_block(text, tid, plan[tid])
+            if added:
+                total_added += 1
+                print(f"   + {tid}: added {', '.join(added)}")
+        # Validate the result parses before writing (never leave issues.yaml broken — G2).
+        try:
+            yaml.safe_load(text)
+        except yaml.YAMLError as exc:
+            raise RuntimeError(
+                f"refusing to write: enriched issues.yaml does not parse: {exc}"
+            )
+        args.issues_yaml.write_text(text, encoding="utf-8")
+        print(
+            f"   = enriched {total_added} issue block(s); issues.yaml re-validated OK."
+        )
+
+    # Honest capability FLAGs for the live-sync targets this manifest feeds.
+    print(
+        "   FLAGs (live-sync targets — token/Projects-API-gated, NOT performed by this offline run):"
+    )
+    print(
+        "     - issue dependencies (depends_on → 'blocked by'): REST, needs a token (--use-api)."
+    )
+    print(
+        "     - sub-issue links (epic → children): REST, needs a token (or the MCP sub_issue_write)."
+    )
+    print(
+        "     - Projects-v2 field values (Status / Start / Target date): GraphQL, needs a"
+    )
+    print(
+        "       `project`-scoped token; Declared until run live (project-v2-spec.md)."
+    )
+    return True
 
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -3309,6 +4169,26 @@ def main():
         "--conventions-json", type=Path, default=HERE / "conventions.json"
     )
     parser.add_argument("--project-json", type=Path, default=HERE / "project.json")
+    parser.add_argument(
+        "--relationships",
+        action="store_true",
+        help="extract issue↔PR + landing dates from CHANGELOG.md + git log and enrich issues.yaml "
+        "additively (append-only). Offline + idempotent; --dry-run previews. Reports the "
+        "token/Projects-API-gated live-sync targets as FLAGs.",
+    )
+    parser.add_argument(
+        "--git-ref",
+        default="origin/main",
+        help="git ref whose squash subjects carry the landing PRs/SHAs (default origin/main; "
+        "falls back to main/HEAD when absent).",
+    )
+    parser.add_argument(
+        "--use-api",
+        action="store_true",
+        help="use the gh-CLI-INDEPENDENT token API (GITHUB_TOKEN/GH_TOKEN over urllib) for the live "
+        "merged-PR cross-check (and the Projects-v2 path). Without a token this FLAGs the gated step "
+        "and falls back to the committed pr-index.json — never a fabricated sync (G2).",
+    )
     parser.add_argument(
         "--all",
         action="store_true",
@@ -3402,6 +4282,15 @@ def main():
     global VERBOSE, DEBUG
     DEBUG = args.debug
     VERBOSE = args.verbose or args.debug  # debug implies verbose
+
+    # --relationships is a standalone, offline-by-default extraction + additive enrichment op
+    # (it consults the token API only with --use-api/a token). It never reconciles labels/issues.
+    if args.relationships:
+        mode = "dry-run" if args.dry_run else "apply"
+        print("=" * 60)
+        print(f">> Mycelium relationship/date extraction — repo: {args.repo}  ({mode})")
+        print("=" * 60)
+        sys.exit(0 if run_relationships(args) else 1)
 
     reconcile_selected = (
         args.all
