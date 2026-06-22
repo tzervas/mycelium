@@ -107,3 +107,20 @@ fn the_header_fixtures_round_trip_or_refuse_explicitly() {
         "bad-header.myc must be a header error (C3/G2)"
     );
 }
+
+#[test]
+fn a_phylum_source_is_refused_out_of_scope_never_a_parse_error() {
+    // M-662: mycfmt v0 canonicalizes a SINGLE nodule; a `phylum` header (or a multi-nodule file) is an
+    // explicit out-of-scope refusal (exit 4), never a parse error (exit 2) and never a partial rewrite
+    // (G2). The shared accept corpus exercises the same path via `accept/19-phylum-cross-nodule.myc`.
+    let src = "phylum app.core\nnodule a\nfn f() -> Binary{8} = 0b0000_0000\nnodule b\nfn g() -> Binary{8} = 0b0000_0001";
+    match format_source(src, None) {
+        Err(FmtError::OutOfScope(msg)) => {
+            assert!(
+                msg.contains("phylum"),
+                "refusal should name phylum, got: {msg}"
+            )
+        }
+        other => panic!("a phylum source must be an explicit OutOfScope refusal, got: {other:?}"),
+    }
+}

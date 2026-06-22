@@ -24,7 +24,7 @@
 //!
 //! KC-3: this lives entirely above the kernel; the trusted base depends on nothing here.
 
-use mycelium_l1::{expand_to_source, parse};
+use mycelium_l1::{expand_to_source, parse, parse_phylum};
 use mycelium_proj::{parse_header, Deprecated, HeaderFields, StructuredHeader};
 
 /// The formatter spelling/version this build implements. The `[toolchain].format` pin (M-359) is a
@@ -119,6 +119,19 @@ pub fn format_source(src: &str, pin: Option<&str>) -> Result<Formatted, FmtError
                  the project did not pin (hard pin; G2). Align the pin or use the matching mycfmt."
             )));
         }
+    }
+
+    // Phylum / multi-nodule sources are outside mycfmt v0 scope (M-662): the formatter v0 canonicalizes a
+    // SINGLE nodule. A `phylum` header or multiple `nodule` blocks in one file is an explicit out-of-scope
+    // refusal — never a parse error and never a partial rewrite (G2). A header-less single nodule is a
+    // phylum-of-one and formats normally below (`parse_phylum` is a strict superset of `parse`).
+    if parse_phylum(src).is_ok_and(|ph| ph.path.is_some() || ph.nodules.len() > 1) {
+        return Err(FmtError::OutOfScope(
+            "phylum / multi-nodule sources are outside mycfmt v0 scope (M-662) — format each nodule's \
+             content individually; whole-phylum canonical formatting is future work (refused, never a \
+             partial rewrite — G2)"
+                .to_string(),
+        ));
     }
 
     // The header (M-358/M-359): a malformed marker/key is explicit, never a silent drop (C3/G2).
