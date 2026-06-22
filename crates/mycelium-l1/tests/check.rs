@@ -1104,3 +1104,18 @@ fn parametric_impl_trait_arg_ne_for_ty_is_a_deferred_error() {
         "impl T<C> for D with C != D must be a deferred error; got ok"
     );
 }
+
+#[test]
+fn m659_literal_acceptance_two_param_method_checks() {
+    // The exact M-659 acceptance example: a parametric trait whose method takes two arguments of
+    // the trait parameter type and returns a concrete `Binary{2}`. The conforming impl substitutes
+    // A↦Binary{8} and must realize `cmp(Binary{8}, Binary{8}) -> Binary{2}`.
+    let src = concat!(
+        "nodule d\n",
+        "trait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n",
+        "impl Cmp<Binary{8}> for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b00 }\n",
+    );
+    let env = check(src).expect("M-659 literal acceptance must check");
+    assert!(env.impl_info("Cmp", &mycelium_l1::Ty::Binary(8)).is_some());
+    assert_eq!(env.traits["Cmp"].methods[0].value_params.len(), 2);
+}

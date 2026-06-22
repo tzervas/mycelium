@@ -827,3 +827,16 @@ This RFC is **Draft**. The maintainer must ratify it (move to Accepted) based on
   (KC-3). *Honesty (VR-5):* acceptance is of the **design**; the coherence and S1-preservation
   *claims* stay **Declared-with-argument** (not machine-checked) — mechanization remains the basis for
   a future `Proven` upgrade. Append-only.
+- **2026-06-22 — stage-1 slice implemented Rust-first in `crates/mycelium-l1` (M-658/M-659; E7-1;
+  append-only).** The **single-parameter** trait slice of this design is now implemented in the L1
+  reference checker and specified by **RFC-0007 §4.10**: `trait Cmp<A>` declarations, `impl Tr<C> for
+  C` blocks with never-silent **signature conformance** + the coherence mechanism adopted above
+  (orphan rule + global uniqueness + reject-overlap), and bounded generic functions whose trait-method
+  calls lower to the concrete impl at monomorphization via the **literal dictionary-passing**
+  elaboration (per-instance compile-time dictionary; kernel node budget unchanged — KC-3). The §4.6
+  Repr-polymorphism restriction is inherited from the generics slice (no instantiation silently
+  inserts a `Swap`). Implemented as adopted here; **deferred exactly as recorded** — multi-parameter
+  traits and associated types (Q-multi-param / Q-associated-types), supertraits, `+`-multi-bounds, and
+  `impl Tr<C> for D` with C≠D are explicit refusals (G2), not silent gaps. RFC-0019 stays **Accepted**
+  and the slice's honesty tag stays **`Declared`** (the three-way differential supplies `Empirical`
+  evidence per program) — implementation does **not** upgrade the tag (VR-5). Append-only.

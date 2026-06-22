@@ -8,6 +8,35 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-22: M-658 + M-659 — stage-1 trait interfaces + `impl` blocks in `mycelium-l1`, E7-1)
+- **RFC-0007 §4.10 — stage-1 traits (spec, M-658; append-only):** closes the §4.4 trait deferral for
+  the single-parameter slice — single-parameter `trait Cmp<A>` declarations, `impl Tr<C> for C` blocks
+  with signature conformance + RFC-0019 §4.5 coherence, and bounded generic functions with literal
+  runtime-dictionary dispatch. RFC-0007 stays `Accepted`; the slice is **`Declared`**, implemented
+  Rust-first (M-659), **pending ratification** — not silently `Enacted`. Honest deferrals (explicit,
+  never-silent): multi-parameter traits, associated types, supertraits, `+`-bounds, `impl Tr<C> for D`
+  with C≠D.
+- **Trait checking + `impl` dispatch (impl, M-659)** (`mycelium-l1`: `checkty.rs` only — no
+  `elab.rs`/`eval.rs`/kernel change): `trait`/`impl` registries (`Env.traits`/`impls`); the literal
+  M-659 acceptance `trait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }` + `impl Cmp<Binary{8}> for
+  Binary{8}` parses, checks, elaborates, evaluates. **Never-silent (G2/VR-5):** coherence
+  (duplicate `(trait, type)`, unknown trait, missing/extra/mismatched method) and **signature
+  conformance** (an impl method must equal the trait signature with the trait param substituted,
+  `A↦for_ty`) are explicit `CheckError`s; bounded-call resolution refuses an unanchored bound or a
+  missing impl; `impl Tr<C> for D` with C≠D (and args to a non-parametric trait) are explicit
+  deferrals. **Dispatch:** a bounded call rewrites each trait-method call to the concrete impl at
+  monomorphization (per-instance compile-time dictionary) — **no new kernel node** (KC-3); the §4.6
+  three-way differential supplies `Empirical` evidence. Tag **`Declared`**.
+- **Closed a pre-existing soundness hole:** before this change an impl body was only checked against
+  its *own* declared return, so an impl could carry a signature unrelated to the trait. Conformance
+  now applies uniformly (a non-parametric trait requires the impl to match its signature literally);
+  the `prop_trait_dispatch` test, which had encoded that unsound acceptance (a concrete-width trait
+  impl'd for several widths), was rewritten to a sound parametric `trait Invertible<A>`.
+- **LSP (`mycelium-lsp`):** `impl` is now offered as a keyword completion (it became an active lexed
+  keyword with traits); the not-yet-lexed tripwire test was reconciled (leaving `consume`/`grow`).
+- **DN-14 §3 row 7 → `present`** (Rust-first, pending ratification). New conformance fixture
+  `accept/17-parametric-trait.myc`. `just check` green (124 lib + 57 check + 14 differential + lsp 84).
+
 ### Changed (2026-06-21: M-673 — structural `Ty::App` abstract-generic-type representation, E7-1)
 - **`mycelium-l1` checker now represents abstract generic types structurally** (`Ty::App(name, args)`)
   instead of mangled strings (`Ty::Data("List<A>")`). `subst_ty` / `unify_arg` / the type-variable

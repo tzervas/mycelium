@@ -82,7 +82,7 @@ primary evidence for refusals.
 | 4 | **Let bindings + lambda abstractions** (`let`, anonymous `fn`-forms, `for` sugar) | All combinators, `iter`, `error` | `ast.rs` `Expr::Let`; `elab.rs` `elab_lam`; `ast.rs` `Expr::For`; M-343 | **present** |
 | 5 | **Nodule-level organization** (`nodule` header, single-nodule scoping, `use path`) | Any library unit | `ast.rs` `Nodule`/`Item::Use`; `nodule.rs`; DN-06; M-343 | **present** |
 | 6 | **Generic type parameters** (`fn f<A, B>(…)`, `type List<A>`) | `collections`, `iter`, `cmp`, `error`, `math`, `text` | **Implemented (M-656/M-657, 2026-06-21; RFC-0007 §4.9, Rust-first pending ratification).** `checkty.rs` `Ty::Var` + registry monomorphization; generic ADTs, generic fns (incl. return-position type vars), and **recursive/mutually-recursive** generic fns via `checkty::monomorphize` → existing `Fix`/`FixGroup` (no new kernel node, KC-3). Never-silent: repr mismatch → `MissingConversion`; polymorphic recursion → explicit refusal at the opt-in `MYCELIUM_MONO_INSTANCE_CAP`. Tag `Declared`. *Caveat (never-silent):* deeply-nested ctor-pattern binders refuse explicitly (no wrong instance) — follow-up. | **present** |
-| 7 | **Trait-like interfaces** (`trait T { fn … }`) + impl blocks | RFC-0016 §4.1 C1–C6 contract machinery in-language; `iter`, `cmp`, `fmt` | `checkty.rs` line 297: `Item::Trait(_)` is skipped (no check arm); RFC-0007 Accepted scope explicitly defers "traits/LR-2" per RFC-0007 status field; AST parses `TraitDecl` but `checkty` ignores it | **gate-fails** |
+| 7 | **Trait-like interfaces** (`trait T { fn … }`) + impl blocks | RFC-0016 §4.1 C1–C6 contract machinery in-language; `iter`, `cmp`, `fmt` | **Implemented (M-658/M-659, 2026-06-22; RFC-0007 §4.10, Rust-first pending ratification).** `checkty.rs` `Env.traits`/`impls` registries; single-parameter `trait Cmp<A>`, `impl Tr<C> for C` with never-silent **signature conformance** + RFC-0019 §4.5 **coherence** (duplicate / orphan / missing / extra / mismatched-method all explicit `CheckError`s), and bounded generic fns dispatching via a **literal runtime dictionary** rewritten to the concrete impl at monomorphization (no new kernel node, KC-3). Tag `Declared`. *Deferred (explicit, never-silent):* multi-param traits, associated types, supertraits, `+`-bounds, `impl Tr<C> for D` with C≠D. | **present** |
 | 8 | **Effect annotations (RFC-0014 RT3)** — declared `{time, entropy, io, …}` on surface `fn` | `rand`, `time`, `io`, `fs`, `recover` | No effect-annotation syntax in `ast.rs` `FnSig` or `FnDecl`; `checkty.rs` has no effect-checking pass (RFC-0007 §4.3: "stage 1, a revision of this RFC"); RFC-0014 effects exist only in the L0 interpreter budget layer (`mycelium-interp`) | **gate-fails** |
 | 9 | **`wild` / FFI surface** — callable host operations | `fs`, `rand`, `io` (std-sys call sites) | `checkty.rs` line ~454: *"`wild` is denied by default (LR-9): no host FFI capability exists in v0, so a wild block cannot be checked or run — this refusal is the design, not a gap"*; `ast.rs` `Expr::Wild` parses but typechecker rejects | **gate-fails** |
 | 10 | **Full phyla + cross-nodule imports** — `phylum std`, `use` across nodule boundaries | Any multi-nodule library | `ast.rs` `Item::Use(Path)` is parsed; `lib.rs` notes "v0 is single-nodule"; `checkty.rs` does not resolve cross-nodule paths; `ast.rs` notes `phylum` is a **reserved keyword** (DN-06) but no phylum-level elaboration exists | **missing (partial)** |
@@ -99,11 +99,13 @@ primary evidence for refusals.
 
 **Self-hosting is not yet established.**
 
-Of the 11 required features, **6 are present** (features 1–6: value types, ADTs + pattern
+Of the 11 required features, **7 are present** (features 1–6: value types, ADTs + pattern
 matching, functions + recursion including mutual recursion, let/lambda, nodule-level organization,
 **and stage-1 generic type parameters — M-656/M-657, 2026-06-21, RFC-0007 §4.9, Rust-first pending
-ratification**). **4 are gate-fails** (features 7–9, 11: traits, effect annotations, `wild`/FFI,
-static guarantee index). **1 is partially missing** (feature 10: cross-nodule phyla).
+ratification**; **plus stage-1 trait interfaces + `impl` blocks — M-658/M-659, 2026-06-22,
+RFC-0007 §4.10, Rust-first pending ratification**). **3 are gate-fails** (features 8, 9, 11: effect
+annotations, `wild`/FFI, static guarantee index). **1 is partially missing** (feature 10:
+cross-nodule phyla).
 
 The **blocking gates** for any non-trivial stdlib module authored in Mycelium-lang are:
 
@@ -112,10 +114,13 @@ The **blocking gates** for any non-trivial stdlib module authored in Mycelium-la
   (including recursive/mutually-recursive, via per-instantiation monomorphization). This unblocks the
   polymorphic-container surface of `collections`/`iter`/`error`/`cmp`/`text`/`math`. (One honest
   follow-up: deeply-nested ctor-pattern binders — see §3 row 6 caveat.)
-- **Trait interfaces** — without `trait` / `impl` blocks functioning in the typechecker, the
-  RFC-0016 §4.1 C1–C6 guarantee/EXPLAIN contract cannot be expressed as a surface constraint;
-  modules cannot declare conformance in-language. (RFC-0007 defers traits/LR-2 from the accepted
-  v0 scope.)
+- **Trait interfaces** — **RESOLVED (M-658/M-659, 2026-06-22).** Stage-1 single-parameter traits
+  landed (RFC-0007 §4.10): `trait Cmp<A>` declarations, `impl Tr<C> for C` blocks with never-silent
+  signature conformance + RFC-0019 §4.5 coherence, and bounded generic fns with literal
+  runtime-dictionary dispatch (no new kernel node, KC-3). This unblocks expressing the RFC-0016 §4.1
+  C1–C6 guarantee/EXPLAIN contract as a surface constraint and in-language conformance for
+  `iter`/`cmp`/`fmt`. (Explicit deferrals: multi-param traits, associated types, supertraits,
+  `+`-bounds — a later append-only amendment lifts them when their checked basis lands.)
 - **Effect annotations** — without declared effects at the surface (`fn f() -> T / {time}`), the
   RFC-0014 RT3 contract cannot be expressed or checked; `rand`, `time`, `io`, `fs` cannot carry
   the honesty invariant. (Deferred to RFC-0007 stage-1.)
@@ -170,3 +175,6 @@ when its tracking issue lands and `just check` confirms green. DN-14 Status → 
 itself does not flip any row — only a landed, confirmed implementation may do so (VR-5/honesty rule).
 
 <!-- changelog: 2026-06-19 Draft created (M-502) -->
+
+**2026-06-22 — §3 rows 6 + 7 flipped to `present` (generics M-656/M-657; traits M-658/M-659; append-only).** Stage-1 generic type parameters (RFC-0007 §4.9, landed 2026-06-21) and stage-1 single-parameter trait interfaces + `impl` blocks (RFC-0007 §4.10, landed 2026-06-22) are implemented Rust-first in `crates/mycelium-l1` and confirmed by a green `just check`, so §3 row 6 and row 7 read `present` (the summary count + blocking-gates list updated to match). Both slices are tagged `Declared` (type-preservation / dispatch argued, not machine-checked — VR-5); RFC-0007 stays `Accepted`, not silently `Enacted`. DN-14 stays **Draft**: **3 gate-fails remain** (rows 8, 9, 11 — effect annotations, `wild`/FFI, static guarantee index) **+ 1 missing-partial** (row 10 — cross-nodule phyla), so the self-hosting verdict is still `not-yet`. This entry records flips already earned by landed, confirmed implementations; it does not itself flip a row (VR-5/honesty rule).
+<!-- changelog: 2026-06-22 §3 rows 6+7 → present (M-656/M-657 generics, M-658/M-659 traits); append-only -->

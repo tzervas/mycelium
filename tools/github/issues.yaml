@@ -2079,22 +2079,24 @@ issues:
   - id: M-658
     title: "M-658 — spec(rfc-0007): Amend RFC-0007 for stage-1 trait interfaces + `impl` blocks"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:spec, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:spec, area:language, priority:P1, status:done]
     depends_on: [M-657]
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, corpus:DN-03]
     body: |
       RFC-0007 deferred traits (LR-2) from v0 scope; RFC-0019 (Accepted) ratifies trait coherence and the surface contract. This amendment (append-only §N) records the minimal stage-1 trait surface: `trait T<A> { fn method(…) -> … }` declarations, `impl T<Foo> for Bar { … }` blocks, and coherence obligations (orphan rule + global uniqueness). Also decides `impl` as the reserved keyword (DN-03 §1 records this; must now be reserved in the lexer). Blocks M-659.
       Acceptance: RFC-0007 §N appended with trait surface + impl keyword decision; `impl` reserved in `keyword()` (token.rs) — never a silent identifier; reject-corpus entry for `impl` added; DN-14 §3 row 7 gate formally captured.
+      DONE (2026-06-22, Rust-first pending ratification): RFC-0007 §4.10 appended (append-only) — single-parameter trait declarations (`trait Cmp<A>`), `impl Tr<C> for C` blocks with never-silent signature conformance + RFC-0019 §4.5 coherence, and bounded generic functions with literal runtime-dictionary dispatch; §4.4 trait deferral note + meta-changelog entry added. `impl` is reserved in `keyword()` (landed with the non-parametric traits slice) and now offered as an LSP completion (the not-yet-lexed tripwire reconciled). Reject corpus: `reject/14-impl-missing-for.myc` (`impl` without `for`); accept corpus: `accept/16-impl.myc` (non-parametric) + new `accept/17-parametric-trait.myc` (parametric impl + dispatch). RFC-0007 stays `Accepted`; the slice is `Declared`, not silently `Enacted`.
 
   - id: M-659
     title: "M-659 — feat(l1): Implement trait checking + `impl` blocks in checkty.rs"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [M-658]
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, src:crates/mycelium-l1/src/checkty.rs]
     body: |
       `checkty.rs` currently skips `Item::Trait(_)` with no check arm; `Item::Fn` does not handle `impl`-block methods. Implements: (1) trait declaration checking (method signature type-checking, coherence checking per RFC-0019 orphan rule); (2) `impl` block parsing + type-checking; (3) dictionary-passing elaboration in `elab.rs` so trait method calls lower to the correct L0 application. No new kernel node (KC-3). Coherence violation is an explicit `CheckError`, never silent.
       Acceptance: `trait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }` + `impl Cmp<Binary{8}> for Binary{8} { … }` parse, check, and elaborate; RFC-0016 §4.1 C1–C6 contract expressible as surface trait constraints; property tests for coherence check; DN-14 §3 row 7 → `present`.
+      DONE (2026-06-22, Rust-first pending ratification): the literal acceptance example `trait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }` + `impl Cmp<Binary{8}> for Binary{8} { … }` parses, type-checks, elaborates, and evaluates (locked as a test). Implemented in `checkty.rs` (no `elab.rs`/`eval.rs`/kernel change): (1) trait + `impl` registries (`Env.traits`/`impls`); (2) never-silent coherence — duplicate `(trait, type)`, unknown trait, missing/extra/mismatched method are explicit `CheckError`s; (3) signature conformance — an impl method must equal the trait's signature with the trait param substituted (`A↦for_ty`), closing a pre-existing soundness hole that affected even non-parametric traits; (4) literal runtime-dictionary dispatch — a bounded call rewrites each trait-method call to the concrete impl at monomorphization (per-instance compile-time dictionary, KC-3 no new node); (5) bounded-call resolution — an unanchored bound or missing impl is an explicit error; (6) trait-argument validation — `impl Tr<C> for D` with C≠D, multi-arg, or args to a non-parametric trait are explicit deferrals/errors. Scope is single-parameter (maintainer-chosen parametric extension over the non-parametric base); multi-param/assoc-types/supertraits/`+`-bounds remain honest deferrals. Tag `Declared` (three-way differential supplies `Empirical` evidence). `just check` green (124 lib + 57 check + 14 differential + lsp 84); `clippy -D warnings` clean.
 
   - id: M-660
     title: "M-660 — spec + feat(l1): Effect annotations on fn signatures (RFC-0014 stage-1 surface)"

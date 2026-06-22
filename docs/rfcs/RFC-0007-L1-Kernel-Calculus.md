@@ -141,6 +141,14 @@ generic is an explicit "deferred" error, never a guess. The trait system is its 
 > `crates/mycelium-l1`, pending ratification — M-657). The **trait** half of LR-2 stays deferred to
 > RFC-0019. The slice's soundness tag is **`Declared`** — instantiation reduces to the §4.4
 > judgments by construction, but that reduction is argued, not separately machine-checked (VR-5).
+>
+> **Trait slice amended by §4.10 (2026-06-22; append-only — M-658/M-659 / RFC-0019 / E7-1).** The
+> "the trait system is its own later RFC" clause above is **superseded for the stage-1 trait slice**
+> by **§4.10**: single-parameter trait declarations, `impl` blocks with signature conformance and
+> coherence, and bounded generic functions with literal-dictionary dispatch are now specified (and
+> implemented Rust-first in `crates/mycelium-l1`, pending ratification — M-658/M-659). The slice's
+> soundness tag is **`Declared`** — dispatch reduces to §4.9 monomorphization + the §4.4 judgments by
+> construction, argued not machine-checked (VR-5).
 
 ### 4.5 The divergence bit & the `matured` gate (Q4/Q7; T3.4)
 
@@ -313,6 +321,65 @@ inference — v0.1 uses bidirectional checking with **explicit or argument-deter
 arguments, so a type variable appearing **only** in a return position requires an ascription (an
 honest, locally-diagnosable limit, never a guess).
 
+### 4.10 Stage-1 traits — single-parameter type classes with literal dictionary dispatch (M-658/M-659; append-only)
+
+> **Status: Accepted spec; implemented Rust-first in `crates/mycelium-l1` (M-658/M-659), pending
+> ratification.** Closes the **trait** half of the §4.4 / LR-2 deferral (the generics half was §4.9),
+> enacting the RFC-0019 §4.3–§4.5 surface for the single-parameter slice. Honest tag: **`Declared`** —
+> dispatch is type-preserving by construction (it reduces to §4.9 monomorphization + the §4.4
+> judgments), but that preservation is argued, not machine-checked (VR-5). The three-way differential
+> (§4.6 / NFR-7) supplies `Empirical` evidence per program.
+
+**Scope.** Three surface forms move from "parsed-but-deferred" (§4.4) to checked:
+
+- **Trait declarations** — `trait Cmp<A> { fn pick(x: A) -> A }` (zero or one type parameter; the
+  parameter scopes over the method signatures, where it appears as an abstract type variable `A`).
+- **Implementations** — `impl Cmp<C> for C { fn pick(x: C) -> C = … }` (the trait's parameter binds
+  to the `for` type; the trait argument may be omitted — `impl Cmp for C` — and is then inferred).
+- **Bounded generic functions** — `fn choose<T: Cmp>(x: T) -> T = pick(x)` (the bound `T: Cmp`
+  licenses calling `Cmp`'s methods on `T`; the call resolves to the concrete impl at instantiation).
+
+**Coherence (RFC-0019 §4.5, normative).** At most one `impl` per `(trait, for-type)` pair — a
+duplicate is an explicit `CheckError` (global uniqueness; overlap is reserved for a future `colony`
+scope). The `for` type must be concrete (no abstract type variable at the impl head). The orphan rule
+is vacuous in the single-nodule v0 (all impls are local).
+
+**Conformance — the impl realizes the substituted trait signature (never-silent, G2).** An impl of
+`Tr<Ā>` for a concrete type `C` substitutes the trait parameters `Ā ↦ C` (v0: a single parameter,
+bound to the `for` type) and **requires each method signature to equal the trait's, substituted** —
+arity, every parameter type, and the return type. A non-conforming impl is an explicit `CheckError`,
+never a silent accept: a trait whose impls could carry arbitrary signatures would constrain nothing
+(this conformance is the soundness basis of the whole construct, and applies uniformly — a
+non-parametric trait requires the impl to match its signature literally).
+
+**Dispatch — literal runtime dictionaries, lowered to monomorphic calls (RFC-0019 §4.3).** A bound
+`T: Cmp` is modeled as a runtime **dictionary** (a record of the trait's method values), realized as
+extra curried-`Lam` parameters at the elaboration level — RFC-0019's literal dictionary-passing. At
+each **instantiation** of a bounded generic (`T-Inst`, §4.9) the dictionary for the concrete type is
+known, so each trait-method call is **rewritten to the concrete impl method** (a per-instance
+compile-time dictionary keyed `(trait, type) → method`). The L1 evaluator dispatches per-impl
+directly (the agreement oracle); the L0 elaboration carries the literal dictionary; both paths agree
+on the observable (the §4.6 three-way differential proves it per program). Either way traits add **no
+new kernel node** — `App` / `Fix` / `Construct` / `Match` and the §4.2 registry are unchanged (KC-3).
+
+```text
+ T-Bound   Σ ⊢ fn f<X: Tr>(…)      Σ ⊢ e : τ      impl Tr for τ registered
+           ──────────────────────────────────────────────────────────────
+           Σ ⊢ f⟨τ⟩  resolves Tr's methods on X  to  impl Tr for τ
+```
+
+A bound whose type parameter is **not** anchored by any argument at a call site, or for which **no
+impl is registered** for the concrete type, is an explicit `CheckError` (never-silent — the call
+cannot be lowered, so it is refused, not guessed). A trait method whose return type mentions the
+trait parameter (e.g. `-> A`) resolves, at the call site, to the bound type variable it stands for.
+
+**What stays deferred (explicit — not ratified here).** Multi-parameter traits (`trait T<A, B>`);
+associated types and supertraits; multi-bound parameters (`X: A + B` — a written `+` is refused at
+the lexer/parser, never silently accepted); and `impl Tr<C> for D` with `C ≠ D` (a trait argument
+differing from the `for` type) — each an explicit refusal/deferral (G2), to be lifted by a later
+append-only amendment once its checked basis lands. Guarantee-grading interaction with trait methods
+follows RFC-0018 (M-663), staying `Declared` until that audit.
+
 ## 5. Drawbacks
 
 Ten nodes + a registry is more machinery than L0's five — but it is the smallest budget any
@@ -403,6 +470,16 @@ revisions / KC-2-gated.*
 
 ## Meta — changelog
 
+- **2026-06-22 — §4.4 trait deferral closed for the single-parameter slice (new §4.10; M-658/M-659 /
+  E7-1; append-only, additive).** §4.4's "the trait system is its own later RFC" clause is
+  **superseded for the stage-1 trait slice** by the new **§4.10** (single-parameter type classes):
+  trait declarations, `impl` blocks with never-silent signature conformance + coherence, and bounded
+  generic functions with literal runtime-dictionary dispatch are now specified — reducing to §4.9
+  monomorphization + the §4.4 judgments, with **no new kernel node** (KC-3) and never-silent refusals
+  for missing impls / non-conforming signatures / the deferred forms (multi-param, `+`-bounds,
+  `impl Tr<C> for D` with C≠D) (G2). Slice honesty: **`Declared`** (type-preservation argued, not
+  machine-checked — VR-5); implemented Rust-first in `crates/mycelium-l1` (M-658/M-659), **pending
+  ratification** — RFC-0007 stays `Accepted`, not silently `Enacted`.
 - **2026-06-21 — §4.4 generics deferral closed for the monomorphic-instantiation slice (new §4.9;
   M-656 / E7-1; append-only, additive).** §4.4's "instantiating a generic is an explicit deferred
   error" clause is **superseded for the generics slice** by the new **§4.9** (stage-1 generic type
