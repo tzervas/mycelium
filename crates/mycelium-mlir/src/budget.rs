@@ -28,6 +28,10 @@
 //! caller-overridable), not a `Proven` figure: it deliberately *over*-counts so the derived depth
 //! *under*-shoots affordable memory (biasing toward an early, graceful refusal rather than an OOM).
 //! The detected headroom itself is `Empirical` (the kernel's live `MemAvailable` / `RLIMIT_AS`).
+//!
+//! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
+//! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
+#![forbid(unsafe_code)]
 
 use std::fmt;
 

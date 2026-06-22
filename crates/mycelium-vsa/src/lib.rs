@@ -15,6 +15,9 @@
 //! the `bundle` *algebra* and the Value-level wrappers for the **Exact** ops; the `Proven`
 //! Value-level bundle (which must carry the checked `CapacityBound`, M-I2) is added in M-131 — we do
 //! not stamp `Proven` on a value without a checked bound here (VR-5).
+//!
+//! **Trusted-base discipline (ADR-014 / DN-21 §5 F-1):** zero `unsafe` — compiler-enforced.
+#![forbid(unsafe_code)]
 
 pub mod bsc;
 pub mod capacity;

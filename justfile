@@ -85,6 +85,11 @@ structured:
     @bash scripts/checks/structured.sh
 secrets:
     @bash scripts/checks/secrets.sh
+# `// SAFETY:`-adjacency gate (ADR-014 §8.1 / DN-21 §5 F-3 / M-681): every Rust `unsafe` under
+# crates/ must carry an adjacent `// SAFETY:` justification. Pure git-grep — no toolchain, never skips.
+safety-check:
+    @bash scripts/checks/safety.sh
+alias safety := safety-check
 test:
     @bash scripts/checks/test.sh
 # Mycelium toolchain gates (M-361): canonical format, type-check, security audit, lint over

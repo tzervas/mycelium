@@ -33,6 +33,10 @@
 //! Decoding is **total** (never panics): an out-of-range code/byte folds `mod 3`, so reading a
 //! buffer under a mismatched scheme yields *some* trit sequence deterministically — a misread, not
 //! a crash. Round-trip under the *same* scheme is the identity ([`pack_trits`] ∘ [`unpack_trits`]).
+//!
+//! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
+//! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
+#![forbid(unsafe_code)]
 
 use mycelium_core::{PackScheme, Trit};
 

@@ -32,6 +32,9 @@
 //!
 //! This crate is deliberately its own crate, outside the trusted kernel (KC-3 / SoC; the
 //! `phase-2.md` §5 sequencing decision): it depends on `mycelium-core` only.
+//!
+//! **Trusted-base discipline (ADR-014 / DN-21 §5 F-1):** zero `unsafe` — compiler-enforced.
+#![forbid(unsafe_code)]
 
 use std::collections::BTreeMap;
 

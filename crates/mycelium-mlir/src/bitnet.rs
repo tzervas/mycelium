@@ -25,14 +25,18 @@
 //! **not** claimed: parity with bitnet.cpp's hand-tuned **SIMD** kernels — that is the next M-360
 //! increment; the E1 verdict reports the measured number and states the comparison baseline
 //! explicitly (no pre-written perf claim, VR-5/G3).
+//!
+//! **Submodule confinement (DN-21 §5 F-2 / M-682):** zero `unsafe` — the ABI `transmute` is now
+//! confined to the single `crate::jit::Lib::get` choke-point, so this kernel resolves its symbol as
+//! a lifetime-bound `Sym` and calls it through ordinary safe Rust; compiler-enforced.
+#![forbid(unsafe_code)]
 
-use std::ffi::c_void;
 use std::fmt::Write as _;
 
 use mycelium_core::ternary::digit;
 use mycelium_core::{PackScheme, PhysicalLayout, Trit};
 
-use crate::jit::{dlopen_path, Lib};
+use crate::jit::{dlopen_path, BitnetDotFn, Lib, Sym};
 use crate::llvm::{path, run_tool, unique_tmp_dir, AotError, TmpDir};
 use crate::pack::{needed_bytes, pack_trits};
 
@@ -269,34 +273,44 @@ pub fn emit_bitnet_dot_ir_for(scheme: PackScheme) -> Result<String, AotError> {
 }
 
 /// A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop),
-/// the dynamic-library handle (kept loaded for the kernel's lifetime), and the resolved entry point.
-/// **Compile once, call many** — the natural shape for the E1 throughput measurement.
+/// the dynamic-library handle (kept loaded for the kernel's lifetime), and the entry-point symbol name.
+/// **Compile once, call many** — the natural shape for the E1 throughput measurement. To call many
+/// cheaply, [`bind`](Self::bind) once (resolves the symbol a single time into a lifetime-bound
+/// `Sym`) and call the resulting [`BoundBitnetDot`] in the hot loop; the convenience
+/// [`call`](Self::call) binds per invocation for one-shot use.
 pub struct BitnetDotKernel {
     _dir: TmpDir,
-    _lib: Lib,
-    fptr: *mut c_void,
+    lib: Lib,
+    /// The kernel's entry-point symbol (`myc_bitnet_dot` for the generic kernel, a `myc_bitnet_dot_simd*`
+    /// for the [`crate::simd`] variants) — resolved at [`bind`](Self::bind) time, never stored as a
+    /// raw pointer (M-682: no `*mut c_void` field survives the co-location risk; DN-21 §4).
+    sym: &'static str,
     /// The packing the kernel decodes — fixes the weight-buffer bounds (`n.div_ceil(trits/byte)`)
     /// so the check and the emitted GEP stride agree.
     scheme: PackScheme,
 }
 
 impl BitnetDotKernel {
-    /// Wrap an already-compiled + loaded `i64 myc_*(ptr %w, ptr %x, i64 %n)` artifact. `pub(crate)`
+    /// Wrap an already-compiled + loaded `i64 <sym>(ptr %w, ptr %x, i64 %n)` artifact. `pub(crate)`
     /// so a sibling codegen module (the M-360 SIMD kernel) reuses this struct's bounds-checked
     /// [`call`](Self::call) instead of re-rolling the FFI — the SIMD kernel has the identical C
-    /// signature and `scheme` bounds model, only a different (hand-vectorized) body + symbol.
+    /// signature and `scheme` bounds model, only a different (hand-vectorized) body + `sym`.
     pub(crate) fn from_loaded(
         dir: TmpDir,
         lib: Lib,
-        fptr: *mut c_void,
+        sym: &'static str,
         scheme: PackScheme,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, AotError> {
+        // Fail fast: verify the entry point is exported now (preserving the pre-M-682 behaviour where
+        // the symbol was resolved eagerly at load), rather than deferring a missing-symbol error to
+        // the first bind/call.
+        lib.probe(sym)?;
+        Ok(Self {
             _dir: dir,
-            _lib: lib,
-            fptr,
+            lib,
+            sym,
             scheme,
-        }
+        })
     }
 
     /// The packing this kernel decodes inline.
@@ -315,7 +329,43 @@ impl BitnetDotKernel {
         KernelLayout::new(self.scheme)
     }
 
-    /// Run the kernel over `packed_weights` (packed under [`scheme`](Self::scheme)) and
+    /// **Bind once, call many** (M-682): resolve the entry point a single time into a lifetime-bound
+    /// [`BoundBitnetDot`] borrowing this kernel's loaded library. The returned handle carries the
+    /// `&self` borrow, so the borrow checker guarantees it (and its fn-pointer) cannot outlive the
+    /// `Lib` — no co-location convention (DN-21 §4). Resolving here (not per call) keeps the E1
+    /// throughput loop free of per-iteration `dlsym` overhead.
+    pub fn bind(&self) -> Result<BoundBitnetDot<'_>, AotError> {
+        Ok(BoundBitnetDot {
+            kernel: self.lib.bitnet_dot(self.sym)?,
+            scheme: self.scheme,
+        })
+    }
+
+    /// Run the kernel over `packed_weights` and `activations`, summing the first `n` ternary products.
+    /// Convenience wrapper that [`bind`](Self::bind)s once and calls — for a hot loop, bind once and
+    /// reuse the [`BoundBitnetDot`]. Lengths are checked (see [`BoundBitnetDot::call`]); a short buffer
+    /// is an explicit [`AotError`], never an out-of-bounds read.
+    pub fn call(
+        &self,
+        packed_weights: &[u8],
+        activations: &[i32],
+        n: usize,
+    ) -> Result<i64, AotError> {
+        self.bind()?.call(packed_weights, activations, n)
+    }
+}
+
+/// A [`BitnetDotKernel`] with its entry point resolved into a lifetime-bound `Sym` (M-682). Produced
+/// by [`BitnetDotKernel::bind`]; borrows the kernel's loaded library for `'lib`, so its fn-pointer can
+/// never be called after the library unloads (the §4 dangling-pointer risk, now compiler-checked).
+/// Call it as many times as needed over varying buffers — the `dlsym` cost was paid once at bind.
+pub struct BoundBitnetDot<'lib> {
+    kernel: Sym<'lib, BitnetDotFn>,
+    scheme: PackScheme,
+}
+
+impl BoundBitnetDot<'_> {
+    /// Run the kernel over `packed_weights` (packed under the bound kernel's `scheme`) and
     /// `activations`, summing the first `n` ternary products. The lengths are checked against `n`
     /// (≥ `pack::needed_bytes(scheme, n)` weight bytes — `n.div_ceil(4)` for I2_S/TL1, the 5-bit
     /// bitstream length for TL2 — and ≥ `n` activations) so the native loads are always in bounds —
@@ -340,18 +390,16 @@ impl BitnetDotKernel {
             )));
         }
         let n_i64 = i64::try_from(n).map_err(|_| AotError::Run(format!("n too large: {n}")))?;
-        // SAFETY: `fptr` is the address `dlsym` returned for the `i64 myc_bitnet_dot(ptr,ptr,i64)` we
-        // emitted and compiled, so the `extern "C"` type matches. The bounds check above guarantees
-        // the kernel reads only `w[0..needed_bytes(scheme, n)]` and `x[0..n]`, both in-bounds for the
-        // slices (the TL2 kernel clamps its 2-byte window read to the last valid byte). The library
-        // stays loaded for the call (`_lib`).
-        #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
-        let sum = unsafe {
-            let kernel: extern "C" fn(*const u8, *const i32, i64) -> i64 =
-                std::mem::transmute(self.fptr);
-            kernel(packed_weights.as_ptr(), activations.as_ptr(), n_i64)
-        };
-        Ok(sum)
+        // The bounds checks above guarantee the kernel reads only `w[0..needed_bytes(scheme, n)]` and
+        // `x[0..n]`, both in-bounds for the slices (the TL2 kernel clamps its 2-byte window read to the
+        // last valid byte). Calling the typed `extern "C"` pointer is ordinary safe Rust — the ABI
+        // claim was made (and audited) once at `Lib::get`, and the `Sym` lifetime keeps the library
+        // loaded for this call (M-682; DN-21 §4/§7).
+        Ok((self.kernel.as_fn())(
+            packed_weights.as_ptr(),
+            activations.as_ptr(),
+            n_i64,
+        ))
     }
 }
 
@@ -388,13 +436,7 @@ pub fn compile_bitnet_dot_for(scheme: PackScheme) -> Result<BitnetDotKernel, Aot
     )?;
 
     let lib = dlopen_path(&so)?;
-    let fptr = lib.sym("myc_bitnet_dot")?;
-    Ok(BitnetDotKernel {
-        _dir: guard,
-        _lib: lib,
-        fptr,
-        scheme,
-    })
+    BitnetDotKernel::from_loaded(guard, lib, "myc_bitnet_dot", scheme)
 }
 
 /// Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot

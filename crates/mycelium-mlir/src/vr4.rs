@@ -32,6 +32,10 @@
 //! with the reason, never a fabricated dump. The gate reports which backends were *covered* so a
 //! caller can require non-vacuous coverage (the interpreter, AOT-env, direct-LLVM textual skeleton
 //! and the SIMD kernel IR are **always** dumpable — no toolchain needed — so the gate is never empty).
+//!
+//! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
+//! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
+#![forbid(unsafe_code)]
 
 use mycelium_core::{GuaranteeStrength, Node, PackScheme};
 
