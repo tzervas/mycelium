@@ -672,7 +672,8 @@ def api_merged_pr_index(api, repo, patterns):
     """Build ``{task_id: pr_number}`` from the live merged-PR list via the token API (no `gh`).
 
     Enumerates ``state=all`` PRs, keeps the merged ones (``merged_at`` set), and maps each task-id in
-    the PR title to its number (newest-merged wins on a tie). Honest: only titles are parsed, exactly
+    the PR title to its number (first-created wins on a tie — created-asc; the earliest merged PR
+    whose title names the id, matching the ``setdefault`` below). Honest: only titles are parsed, exactly
     as the offline git-log path — the live list is a *cross-check*, never the sole basis. ``patterns``
     is the conventions.json ``task_id_patterns`` list (kept DRY with the `gh` path).
     """
@@ -1157,33 +1158,45 @@ def milestone_rank(title):
     """Return the phase number (int) from a 'Phase N' prefix, or -1 for unprefixed titles.
 
     Pure: parses the leading 'Phase N' token only; everything after the first word boundary is
-    ignored. Used to resolve multi-milestone spans deterministically to the highest-phase
-    (most advanced) milestone. Examples: 'Phase 8 — Toolchain' -> 8; 'Backlog' -> -1.
+    ignored. A phase-ordering utility (sorting/grouping milestones by phase); milestone
+    *selection* anchors to the primary task (see `infer_milestone`), never the highest rank.
+    Examples: 'Phase 8 — Toolchain' -> 8; 'Backlog' -> -1.
     """
     m = re.match(r"Phase\s+(\d+)", title or "", re.IGNORECASE)
     return int(m.group(1)) if m else -1
 
 
 def infer_milestone(task_ids, task_to_ms):
-    """Infer a single milestone from referenced task-ids.
+    """Infer the single GitHub milestone for a PR/issue from its referenced task-ids.
 
-    - Exactly one milestone spanned → return (milestone, None).
-    - No milestone found            → return (None, None) — silent, no claim made.
-    - Multiple milestones           → resolve to the HIGHEST-phase milestone (milestone_rank);
-                                      return (chosen, note_string) where the note is
-                                      informational, not a blocking flag — callers that check
-                                      truthiness of the second return value now get a milestone
-                                      AND a note (not a refusal).
+    GitHub allows only ONE milestone per item, so a PR that spans phases must anchor to one. We
+    anchor to the **primary task** — the FIRST referenced task-id with a known milestone. Callers
+    pass task-ids title-first (``f"{title}\\n{body}"``), so the primary is the PR's leading/title
+    task, never an incidental later-phase reference in the body. The span is recorded as an
+    informational note; it is **never** used to over-advance the milestone to the highest phase
+    touched (the previous behavior, which mis-filed a mostly-Phase-5 PR into Phase 8 for a single
+    Phase-8 cross-reference).
+
+    - No milestone found            → (None, None) — silent, no claim made.
+    - Exactly one milestone spanned → (milestone, None).
+    - Multiple milestones spanned   → (primary_milestone, note) — primary = first known; the note
+                                      lists the full span. The note is informational, not a refusal.
     """
-    milestones = {task_to_ms[t] for t in task_ids if t in task_to_ms}
-    if len(milestones) == 1:
-        return next(iter(milestones)), None
-    if not milestones:
+    ordered = [task_to_ms[t] for t in task_ids if t in task_to_ms]
+    if not ordered:
         return None, None  # nothing to infer from — silent (no claim made)
-    # Multi-milestone: resolve deterministically to the highest-phase milestone.
-    chosen = max(milestones, key=milestone_rank)
-    note = f"note: spanned {sorted(milestones)} -> chose highest-phase '{chosen}'"
-    return chosen, note
+    spanned = set(ordered)
+    if len(spanned) == 1:
+        return ordered[0], None
+    # Multi-milestone: anchor to the primary (first-referenced) task's milestone — never the
+    # highest phase (that over-advances on an incidental cross-reference). Order is preserved
+    # because callers pass title-first text, so ordered[0] is the PR's primary task.
+    primary = ordered[0]
+    note = (
+        f"note: spanned {sorted(spanned)} -> anchored to the primary (first-referenced) "
+        f"task's milestone '{primary}', not the highest phase"
+    )
+    return primary, note
 
 
 def infer_milestone_from_scope(scopes, scope_ms_aliases):
@@ -1409,14 +1422,14 @@ def build_relationship_manifest(
             basis_bits.append(
                 f"merged-PR-list #{idx_pr} (cross-checked; no (#NNN) in the curated subject)"
             )
-        have_eviction = bool(rec.get(date_field) or rec.get(pr_field))
-        if have_eviction:
+        have_evidence = bool(rec.get(date_field) or rec.get(pr_field))
+        if have_evidence:
             rec["landed_basis"] = "; ".join(basis_bits)
         epic = epic_of_task_id(tid)
         if epic:
             rec["epic"] = epic
         # Emit when ANY grounded relationship is present (evidence OR an explicit epic edge).
-        if have_eviction or rec.get("epic"):
+        if have_evidence or rec.get("epic"):
             out[tid] = rec
     return out
 
@@ -2433,7 +2446,8 @@ def reconcile_prs(repo, conventions, area_set, task_to_ms, *, dry_run, overrides
             # 2. Task-id inference (issues.yaml task-ids always beat scope fallback).
             ms, ms_note = infer_milestone(extract_task_ids(text, patterns), task_to_ms)
             if ms_note:
-                # The milestone WAS set (to the highest spanned phase); the note is informational.
+                # The milestone WAS set (to the primary/first-referenced task's phase); the note
+                # records the full span — it is informational, never a refusal.
                 infos.append(ms_note)
             if ms is None and parsed is not None:
                 # 3. No task-id resolved → try the declared scope→milestone fallback (G2: never-invent).
@@ -3087,30 +3101,38 @@ def self_test():
         flags,
     )
 
-    # milestone inference: unambiguous → set; multi → highest-phase + note; none → silent.
+    # milestone inference: unambiguous → set; multi → anchor to the PRIMARY (first-referenced)
+    # task's milestone (NOT the highest phase touched); none → silent.
     t2m = {"M-150": "Phase 1", "M-151": "Phase 1", "M-201": "Phase 2"}
     assert extract_task_ids("does M-150 and M-151", ["M-[0-9]+"]) == ["M-150", "M-151"]
     assert infer_milestone(["M-150", "M-151"], t2m) == ("Phase 1", None)
     assert infer_milestone([], t2m) == (None, None)
-    # Multi-milestone: resolves to highest-phase, returns informational note (not a blocking flag).
+    # Multi-milestone: anchors to the FIRST-referenced task's milestone (callers pass task-ids
+    # title-first ⇒ the PR's primary task), with an informational span note (never a refusal).
     ms, note = infer_milestone(["M-150", "M-201"], t2m)
-    assert ms == "Phase 2", f"expected 'Phase 2', got {ms!r}"
-    assert note and note.startswith("note:") and "Phase 2" in note, (
-        f"unexpected note: {note!r}"
-    )
+    assert ms == "Phase 1", f"expected primary 'Phase 1', got {ms!r}"
+    assert (
+        note and note.startswith("note:") and "Phase 1" in note and "Phase 2" in note
+    ), f"unexpected note: {note!r}"
     # milestone_rank: Phase N prefix → N (int); unprefixed → -1.
     assert milestone_rank("Phase 8 — Toolchain & Release Engineering") == 8
     assert milestone_rank("Phase 0") == 0
     assert milestone_rank("Backlog") == -1
     assert milestone_rank("") == -1
     assert milestone_rank(None) == -1
-    # Highest-phase wins even when it's not the lexicographically last name.
+    # The PRIMARY (first-referenced) task's milestone wins even when a LATER reference is a higher
+    # phase — the anchor is the PR's primary work, never over-advanced to the max phase touched.
     t2m_mixed = {"A": "Phase 10 — Future", "B": "Phase 2 — Now", "C": "Backlog"}
-    ms2, note2 = infer_milestone(["A", "B"], t2m_mixed)
-    assert ms2 == "Phase 10 — Future" and note2 and "Phase 10" in note2, (ms2, note2)
-    # All unprefixed → highest by rank (-1 tie) → max() picks deterministically (first in sort).
-    ms3, note3 = infer_milestone(["B", "C"], t2m_mixed)
-    assert ms3 is not None and note3 and note3.startswith("note:"), (ms3, note3)
+    ms2, note2 = infer_milestone(["B", "A"], t2m_mixed)
+    assert (
+        ms2 == "Phase 2 — Now" and note2 and "Phase 2" in note2 and "Phase 10" in note2
+    ), (
+        ms2,
+        note2,
+    )
+    # Order-based, not rank-based: the first known milestone wins even if it's unprefixed.
+    ms3, note3 = infer_milestone(["C", "B"], t2m_mixed)
+    assert ms3 == "Backlog" and note3 and note3.startswith("note:"), (ms3, note3)
 
     # ── plan_label_migrations (pure, offline) ────────────────────────────────────────────────
     canonical = {
@@ -4015,11 +4037,12 @@ def run_relationships(args):
     cl = parse_changelog_landings(changelog)
     gl = parse_git_log_landings(_git_log_lines(repo_root, args.git_ref))
 
-    # PR cross-check index: a live API enumeration when a token is present (or --use-api forces it),
-    # else the committed pr-index.json (derived from the live merged-PR list), else empty.
+    # PR cross-check index: a live API enumeration ONLY when --use-api is passed (opt-in); a token
+    # alone never triggers network calls (CI often sets GITHUB_TOKEN by default). Otherwise the
+    # committed pr-index.json (derived from the live merged-PR list), else empty.
     pr_index = {}
     token = github_token()
-    if args.use_api or token:
+    if args.use_api:
         if token:
             try:
                 conventions = json.loads(
