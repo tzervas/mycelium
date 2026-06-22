@@ -81,7 +81,7 @@ primary evidence for refusals.
 | 3 | **Functions + self-recursion + mutual recursion** (nodule-wide; Tarjan SCC → `FixGroup`) | All | `elab.rs` `FixGroup`; `checkty.rs` Pass 2 + Pass 3; DN-13; M-343 + M-391 | **present** |
 | 4 | **Let bindings + lambda abstractions** (`let`, anonymous `fn`-forms, `for` sugar) | All combinators, `iter`, `error` | `ast.rs` `Expr::Let`; `elab.rs` `elab_lam`; `ast.rs` `Expr::For`; M-343 | **present** |
 | 5 | **Nodule-level organization** (`nodule` header, single-nodule scoping, `use path`) | Any library unit | `ast.rs` `Nodule`/`Item::Use`; `nodule.rs`; DN-06; M-343 | **present** |
-| 6 | **Generic type parameters** (`fn f<A, B>(…)`, `type List<A>`) | `collections`, `iter`, `cmp`, `error`, `math`, `text` | `checkty.rs` line ~167: *"generic type `T<…>` is deferred in v0 (RFC-0007 §4.4) — monomorphic only"*; line ~286: *"generic functions are parsed but deferred in v0"*; RFC-0007 §4.4 | **gate-fails** |
+| 6 | **Generic type parameters** (`fn f<A, B>(…)`, `type List<A>`) | `collections`, `iter`, `cmp`, `error`, `math`, `text` | M-657: `checkty.rs` checks unbounded generics (type vars, unification-based instantiation, arity, never-guess); `elab.rs` **stages** the L0 lowering of a generic *instantiation* as an explicit `Residual` (monomorphization follow-up); RFC-0007 §11 | **partial — type-checks; elaboration staged** |
 | 7 | **Trait-like interfaces** (`trait T { fn … }`) + impl blocks | RFC-0016 §4.1 C1–C6 contract machinery in-language; `iter`, `cmp`, `fmt` | `checkty.rs` line 297: `Item::Trait(_)` is skipped (no check arm); RFC-0007 Accepted scope explicitly defers "traits/LR-2" per RFC-0007 status field; AST parses `TraitDecl` but `checkty` ignores it | **gate-fails** |
 | 8 | **Effect annotations (RFC-0014 RT3)** — declared `{time, entropy, io, …}` on surface `fn` | `rand`, `time`, `io`, `fs`, `recover` | No effect-annotation syntax in `ast.rs` `FnSig` or `FnDecl`; `checkty.rs` has no effect-checking pass (RFC-0007 §4.3: "stage 1, a revision of this RFC"); RFC-0014 effects exist only in the L0 interpreter budget layer (`mycelium-interp`) | **gate-fails** |
 | 9 | **`wild` / FFI surface** — callable host operations | `fs`, `rand`, `io` (std-sys call sites) | `checkty.rs` line ~454: *"`wild` is denied by default (LR-9): no host FFI capability exists in v0, so a wild block cannot be checked or run — this refusal is the design, not a gap"*; `ast.rs` `Expr::Wild` parses but typechecker rejects | **gate-fails** |
@@ -153,6 +153,15 @@ not change whether stdlib authoring in Mycelium-lang is currently possible):
 
 ## Meta — changelog
 
+- **2026-06-22 — §3 row 6 → *partial* (M-657 checker landed; elaboration staged; append-only).**
+  The generics **checker** is implemented in `crates/mycelium-l1` (RFC-0007 §11): type parameters as
+  abstract variables, generic data + function declarations, **call-site instantiation by
+  unification**, arity checks, and the never-guess refusals (undetermined parameter; a
+  representation-specific op on a type parameter — the RFC-0019 §4.6 restriction). **L0 elaboration of
+  a generic instantiation is staged** behind an explicit never-silent `Residual` (monomorphization —
+  RFC-0007 §11.3), so row 6 is **partial**, *not* `present`: a stdlib nodule that *instantiates* a
+  generic type-checks but does not yet self-host through to L0. Row 6 flips to `present` when the
+  monomorphization follow-up lands (tracked under E7-1). Honest, never silent (VR-5/G2). (M-657, E7-1)
 - **2026-06-22 — §3 row 6 spec gate landed (M-656; append-only, no row flip yet).** The **spec gate**
   for generics is in place: **RFC-0007 §11** (append-only amendment) discharges the §4.4 deferral by
   routing it to **RFC-0019 (Accepted)** and pinning the minimally-sufficient stage-1 generics surface

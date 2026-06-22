@@ -8,6 +8,31 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-22: M-657 — stage-1 unbounded generics checker + depth-safe recursion)
+- **Stage-1 unbounded parametric generics — checker (`mycelium-l1`).** `type List<A> = …`, generic
+  functions (`fn first_or<A>(xs: List<A>, d: A) -> A`), and **call-site instantiation by
+  unification** now type-check (RFC-0007 §11): a type parameter is an abstract `Ty::Var`,
+  constructor/match field types are instantiated by substitution, and the result type is inferred
+  from the arguments. Honest refusals, never a guess (G2/VR-5): wrong type-argument **arity**, an
+  **undetermined** type parameter, and a **representation-specific op on a type parameter** (the
+  RFC-0019 §4.6 Repr-polymorphism restriction — `Var` is representation-opaque, so a paradigm-specific
+  prim/`swap` cannot apply to it; S1 enforced at the checker). **L0 elaboration of a generic
+  *instantiation* is staged** behind an explicit never-silent `Residual` ("monomorphization staged");
+  a monomorphic program elaborates unchanged. DN-14 §3 row 6 → **partial (type-checks; elaboration
+  staged)**, not `present` (a stdlib nodule that instantiates a generic does not yet self-host to L0).
+  RFC-0007 §11.2–§11.4 corrected to the as-implemented split (M-656's "uniform elaboration" wording
+  superseded). No new kernel node (KC-3). (RFC-0007 §11; RFC-0019; DN-14 §3 row 6; M-657, E7-1)
+- **Depth-safe checker/elaborator recursion (`mycelium-l1`).** The checker no longer relies on the
+  caller's thread-stack size to bound its recursion (a fragile coupling — a wider `Ty` had reduced the
+  implicit margin). It now carries an **explicit reified budget** (`MAX_CHECK_DEPTH = 4096`, the
+  "banked guard 4" discipline — a clean `CheckError` past it, never a crash) and runs on a **deep,
+  lazily-committed worker stack** (`crate::deep`, 256 MiB) so deep-but-valid input never overflows the
+  caller's stack. The budget is **measured-safe**: the worker stack physically supports ~24,600 levels
+  in debug (empirically; ~10.9 KiB/frame), so 4096 is a ~6× margin and 16× above the parser's 256-deep
+  surface cap. The explicit budget is the **portable primitive** (it carries to the future
+  Mycelium-native self-hosted frontend's clocked bounded-computation model — RFC-0007 §4.6); the
+  worker stack is a transitional Rust-only adapter. Elaboration runs on the same deep worker.
+
 ### Changed (2026-06-22: M-656 — RFC-0007 §11 discharges the §4.4 generics deferral)
 - **RFC-0007 §11 (append-only) discharges the §4.4 "polymorphism deliberately out of v0" deferral**,
   routing it to its destination RFC — **RFC-0019 (Accepted)** — and pinning the minimally-sufficient

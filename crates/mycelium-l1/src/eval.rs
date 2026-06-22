@@ -550,7 +550,7 @@ impl<'e> Evaluator<'e> {
             let mut elem = None;
             let mut rest = None;
             for (f, v) in d.ctors[ci].fields.iter().zip(fields) {
-                if matches!(f, crate::checkty::Ty::Data(n) if *n == ty) {
+                if matches!(f, crate::checkty::Ty::Data(n, _) if *n == ty) {
                     rest = Some(v);
                 } else {
                     elem = Some(v);

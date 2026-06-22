@@ -155,7 +155,7 @@ fn compile_rows(
     let mut cases: Vec<(Head, Tree)> = Vec::new();
     // Whether the cases cover the column's whole signature (so no default is needed).
     let complete = match &ty0 {
-        Ty::Data(n) => types.get(n).is_some_and(|d| {
+        Ty::Data(n, _) => types.get(n).is_some_and(|d| {
             // Iterate constructors in signature order for a stable, complete switch.
             d.ctors
                 .iter()
@@ -165,7 +165,7 @@ fn compile_rows(
         _ => false,
     };
 
-    if let Ty::Data(dn) = &ty0 {
+    if let Ty::Data(dn, _) = &ty0 {
         if let Some(d) = types.get(dn) {
             let d = d.clone();
             for ci in &d.ctors {
@@ -341,6 +341,7 @@ mod tests {
             "Nat".to_owned(),
             DataInfo {
                 name: "Nat".to_owned(),
+                params: vec![],
                 ctors: vec![
                     CtorInfo {
                         name: "Z".to_owned(),
@@ -348,7 +349,7 @@ mod tests {
                     },
                     CtorInfo {
                         name: "S".to_owned(),
-                        fields: vec![Ty::Data("Nat".to_owned())],
+                        fields: vec![Ty::Data("Nat".to_owned(), vec![])],
                     },
                 ],
             },
@@ -405,7 +406,13 @@ mod tests {
         // Z => 0 | S(_) => 1  (exhaustive, flat).
         let arms = vec![ctor("Z", vec![]), ctor("S", vec![Pat::Wild])];
         let matrix: Vec<Vec<Pat>> = arms.iter().cloned().map(|p| vec![p]).collect();
-        let tree = compile(&t, &matrix, &[0, 1], &[vec![]], &[Ty::Data("Nat".into())]);
+        let tree = compile(
+            &t,
+            &matrix,
+            &[0, 1],
+            &[vec![]],
+            &[Ty::Data("Nat".into(), vec![])],
+        );
         // Root switches on the whole scrutinee with both constructors covered → no default.
         match &tree {
             Tree::Switch {
@@ -441,7 +448,7 @@ mod tests {
             &matrix,
             &[0, 1, 2],
             &[vec![]],
-            &[Ty::Data("Nat".into())],
+            &[Ty::Data("Nat".into(), vec![])],
         );
         assert_agrees(&arms, &tree, 5);
         // Spot-check the arm selection directly.
@@ -468,7 +475,7 @@ mod tests {
             &matrix,
             &[0, 1, 2],
             &[vec![]],
-            &[Ty::Data("Nat".into())],
+            &[Ty::Data("Nat".into(), vec![])],
         );
         assert_eq!(eval_tree(&tree, &nat(1)), Some(0)); // S(Z) → first arm S(_), never the shadowed arm 1
         assert_agrees(&arms, &tree, 4);

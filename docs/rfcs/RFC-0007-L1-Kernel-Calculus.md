@@ -381,8 +381,8 @@ The deferral is discharged in two honest steps, matching the dependency order of
 
    ```mycelium
    type List<A> = Nil | Cons(A, List<A>)
-   fn head<A>(xs: List<A>) -> A = match xs { Cons(x, _) => x }    // partial — honest, not total
-   fn map<A, B>(f: A -> B, xs: List<A>) -> List<B> = …
+   fn is_empty<A>(xs: List<A>) -> Binary{1} = match xs { Nil => 0b1, Cons(_, _) => 0b0 }
+   fn first_or<A>(xs: List<A>, d: A) -> A = match xs { Nil => d, Cons(x, _) => x }
    ```
 
    A type parameter `A` is an **abstract type variable**: the checker treats it as opaque — no
@@ -392,6 +392,13 @@ The deferral is discharged in two honest steps, matching the dependency order of
    discipline and needs no separate machinery). Instantiation `List<Binary{8}>` substitutes the
    concrete type for `A`; arity is checked (a `List<Binary{8}, Ternary{3}>` is an explicit error).
 
+   **Two honest boundaries of the v0 surface** (so the examples are not over-claimed): (a) a genuinely
+   *partial* `head<A>(xs: List<A>) -> A` is **not** a total function — there is no `A` to return for
+   `Nil`, and the exhaustiveness gate (W7) refuses a non-covering `match`; the total form is
+   `first_or` above, or a `head` returning an `Option<A>`. (b) **Higher-order** generics like
+   `map<A,B>(f: A -> B, …)` need a surface **arrow type**, which is an L2-with-lambdas concern — the
+   v0 type surface has no `A -> B`, so `map` is deferred to L2, not part of this stage-1 fragment.
+
 2. **Bounded generics + traits (M-658/M-659 — the second step).** `fn f<T: Eq<T>>(…)` and
    `impl Eq<Binary{8}> for Binary{8} { … }` elaborate via the RFC-0019 §4.3 dictionary-passing
    translation. This §11 records that they belong to the same discharge; their typing/elaboration
@@ -400,35 +407,53 @@ The deferral is discharged in two honest steps, matching the dependency order of
 The v0 monomorphic judgments (§4.4 `T-Const…T-Match`) are the **base case** of the stage-1 judgment
 (an empty type-parameter list is the identity). Every v0 program that checked before still checks.
 
-### 11.3 Elaboration & the never-silent-swap obligation (S1/VR-5)
+### 11.3 Elaboration: checker now, monomorphization staged (the honest split, S1/VR-5)
 
-For **unbounded** parametric generics there are **no dictionaries** (dictionaries carry trait
-witnesses; an unbounded `A` witnesses nothing). The elaborated L0 term of a generic function is
-**uniform over its type arguments**: its body moves values only through `Construct`/`Match`/`Var`/
-`App`, whose constructor references `#T#i` are content-addressed and **independent of the type
-argument** (§4.2 — a parameterized declaration is *one* registry entry, hashed with the parameter
-abstract). So `head<A>` has **one** L0 body and **one** content-addressed hash regardless of how
-many types it is instantiated at (the RFC-0019 §4.4 dictionary-passing identity property, here in
-its degenerate no-dictionary form) — KC-3 is preserved with zero new nodes.
+M-657 lands in two honest halves (the implementation-of-record, `crates/mycelium-l1`):
 
-**The S1 obligation (never-silent swap) is load-bearing and is enforced, not assumed.**
-Instantiating a type parameter must **never** cause the elaborator to insert a `Swap` (S1/W8). For
-genuine parametric polymorphism this is automatic — an `A`-typed value flows opaquely and is never
-converted. Where a generic body *would* require a representation change at a concrete instantiation
-(the Repr-polymorphic case, `R: Repr`), the elaborator **rejects with an explicit error** naming
-the expression and the missing `swap` (RFC-0019 §4.6 `UnresolvedReprPolymorphism`) — it may never
-silently insert one. A mismatched instantiation is a checked `Residual`/error, **never a guess**
-(G2). This restates S1 at the polymorphic level and is the honest boundary of the stage-1 fragment.
+- **The checker is complete** for the unbounded fragment: type-parameter declarations, generic
+  functions, call-site **instantiation by unification**, arity, and the never-guess refusals all
+  type-check (§11.2). Re-using the v0 monomorphic judgments as the base case keeps KC-3 — no new
+  kernel node, no new trusted machinery.
+- **Elaboration to L0 of a generic *instantiation* is staged** behind an explicit, never-silent
+  `Residual`. A *monomorphic* program elaborates unchanged; a program that instantiates a generic
+  type or calls a generic function elaborates to a clean `Residual` ("monomorphization staged"),
+  **never** a partial or half-monomorphized artifact (G2). DN-14 §3 row 6 therefore moves to
+  *type-checks; elaboration staged* (§11.4), not silently to `present`.
+
+**Why staged, and the two elaboration strategies.** The L0 data **registry** (`FieldSpec` =
+`Repr | Data(name)`) has no representation for an *abstract type-parameter field*, so a generic
+declaration cannot be lowered abstractly. Two sound discharges exist, and this is the recorded
+choice between them:
+
+1. **Monomorphization** — the issue's "monomorphic-instantiation elaboration": specialize each
+   concrete use into an ordinary monomorphic registry entry. Stays entirely within the frontend
+   (no trusted-core change); the honest cost (RFC-0019 §4.4) is that a generic's content-addressed
+   identity *fragments across specializations*. **This is the chosen path**; the `Residual` above is
+   its not-yet-implemented placeholder.
+2. **Uniform / dictionary-passing** (RFC-0019 §4.4's "one body, one hash" property) — would need a
+   new abstract-parameter `FieldSpec` variant in the **trusted core** (`mycelium-core`), a
+   KC-3-sensitive change. **Deferred**: it is the cleaner long-term identity story, but it is its own
+   decision, not folded into this stage-1 frontend work.
+
+**The S1 obligation (never-silent swap) is enforced at the checker, not deferred.** A `Ty::Var`
+value is **representation-opaque**: applying a representation-specific `Op`/`Swap` to it is a
+**check error** (the prim/`swap` signatures demand a concrete repr; `Var ≠ Binary{n}`), so the
+Repr-polymorphic case is refused *before* elaboration — the elaborator is never asked to insert a
+`Swap` for an instantiation (S1/W8). A mismatched or undetermined instantiation is a checked error,
+**never a guess** (G2). This restates S1 at the polymorphic level and is the honest boundary.
 
 ### 11.4 DN-14 §3 row 6 — gate formally captured
 
-DN-14 §3 row 6 ("Generic type parameters — `fn f<A,B>(…)`, `type List<A>`") is recorded
+DN-14 §3 row 6 ("Generic type parameters — `fn f<A,B>(…)`, `type List<A>`") was recorded
 **gate-fails** with the evidence `checkty.rs:~167/~286` (the explicit deferral refusals). This
-amendment is the **spec gate** that converts those refusals into checked passes: on M-657 landing,
-row 6 moves `gate-fails → present` for the *unbounded* fragment; the *bounded* fragment follows on
-M-659. The honesty discipline (VR-5/G2) is unchanged — the refusal sites become real checks, and
-anything outside the stage-1 fragment (Repr-polymorphism, multi-parameter traits, associated types
-— RFC-0019 §10 deferrals) stays an **explicit** refusal, never a silent accept.
+amendment is the **spec gate** that converts those refusals into checked passes. On M-657 landing,
+row 6 moves to **"type-checks (checker present); L0 elaboration of generic instantiations staged
+(monomorphization — §11.3)"** — *not* a bare `present`, because a stdlib nodule that *instantiates*
+a generic cannot yet self-host through to L0 (that needs the monomorphization follow-up). The
+honesty discipline (VR-5/G2) is unchanged — the refusal sites become real checks, and anything
+outside the stage-1 fragment (Repr-polymorphism, higher-order generics, multi-parameter traits,
+associated types — RFC-0019 §10 deferrals) stays an **explicit** refusal, never a silent accept.
 
 ### 11.5 Honesty posture of this amendment
 
@@ -441,6 +466,19 @@ coherence/S1-preservation arguments. No claim here is stronger than its basis.
 
 ## Meta — changelog
 
+- **2026-06-22 — §11.2–§11.4 corrected to the *as-implemented* split (M-657; honesty fix, same
+  session, pre-`main`).** The M-656 draft of §11 over-described elaboration as already **uniform**
+  ("one body, one content-addressed hash"). The landed M-657 implements the **checker** in full
+  (type variables, unification-based instantiation, arity, never-guess refusals) but **stages
+  elaboration**: a generic *instantiation* lowers to an explicit, never-silent `Residual`
+  ("monomorphization staged"), because the L0 registry `FieldSpec` cannot represent an abstract
+  type-parameter field without a trusted-core change. §11.3 now records the two strategies
+  (monomorphization = chosen, in-frontend; uniform/dictionary = deferred, needs a `mycelium-core`
+  change) and §11.4 records DN-14 row 6 as *type-checks; elaboration staged* (not `present`). The
+  §11.2 examples were also corrected (a total `first_or`/`is_empty` replaces the non-exhaustive
+  `head`; higher-order `map` is noted as L2-with-lambdas — v0 has no surface arrow type). No v0
+  calculus content changed; this only aligns the amendment's wording with the honest implementation
+  (VR-5/G2).
 - **2026-06-22 — §4.4 generics deferral discharged → new §11 (M-656; RFC-0019 ripple, append-only,
   no calculus change).** §4.4's "polymorphism/traits deliberately out of v0 — its own later RFC" is
   now routed to its destination: **RFC-0019 (Accepted 2026-06-18)** ratifies dictionary-passing

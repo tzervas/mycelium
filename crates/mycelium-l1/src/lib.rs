@@ -30,6 +30,7 @@ pub mod ambient;
 pub mod ast;
 pub mod checkty;
 pub(crate) mod decision;
+pub(crate) mod deep;
 pub mod elab;
 pub mod error;
 pub mod eval;

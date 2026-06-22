@@ -202,10 +202,16 @@ type Binding = (String, String, Ty);
 /// `Residual`: a dynamic guarantee index `@ g` (RFC-0007 §4.3, stage 0). On success the result is a
 /// closed L0 term whose evaluation must agree with the L1 evaluator (NFR-7; the M-210 differential).
 pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
-    let (mut el, binders, fd) = elab_prelude(env, entry)?;
-    let mut stack = vec![entry.to_owned()];
-    let entry_body = el.expr(&mut stack, &[], &fd.body)?;
-    Ok(wrap_in_binders(binders, entry_body))
+    // Elaboration recurses over the (checked) expression AST; run it on a deep worker stack so deep
+    // input never overflows the caller's thread stack. The semantic bound stays the upstream explicit
+    // budgets (the parser's nesting cap + the checker's `MAX_CHECK_DEPTH`, both already enforced before
+    // a program reaches here); the worker stack is the transitional Rust-only adapter (`crate::deep`).
+    crate::deep::with_deep_stack(|| {
+        let (mut el, binders, fd) = elab_prelude(env, entry)?;
+        let mut stack = vec![entry.to_owned()];
+        let entry_body = el.expr(&mut stack, &[], &fd.body)?;
+        Ok(wrap_in_binders(binders, entry_body))
+    })
 }
 
 /// **Per-hypha elaboration of a `colony` entry** for the *real-concurrency* execution path
@@ -226,6 +232,10 @@ pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
 /// Refuses with an explicit [`ElabError::Residual`] (never a fabricated accept) when the entry body
 /// is **not** a `colony`, or when any hypha body is outside the evaluation-complete fragment.
 pub fn elaborate_colony(env: &Env, entry: &str) -> Result<Vec<Node>, ElabError> {
+    crate::deep::with_deep_stack(|| elaborate_colony_inner(env, entry))
+}
+
+fn elaborate_colony_inner(env: &Env, entry: &str) -> Result<Vec<Node>, ElabError> {
     let (mut el, binders, fd) = elab_prelude(env, entry)?;
     let Expr::Colony(hyphae) = &fd.body else {
         return residual(
@@ -270,6 +280,13 @@ fn elab_prelude<'e>(
             entry,
             "the entry has value parameters — v0 elaborates closed (nullary) entries; \
              apply it from a nullary definition",
+        );
+    }
+    if !fd.sig.params.is_empty() {
+        return residual(
+            entry,
+            "the entry is generic — a generic definition's L0 lowering is staged (monomorphization; \
+             RFC-0007 §11.3, the M-657 follow-up). Elaborate a concrete (monomorphic) entry.",
         );
     }
     if let Some(g) = fd.sig.ret.guarantee {
@@ -503,7 +520,12 @@ pub fn build_registry(env: &Env) -> Result<DataRegistry, ElabError> {
     })
 }
 
-/// Convert a v0 field type to a registry [`FieldSpec`]; `None` for a type with no r3 value form.
+/// Convert a v0 field type to a registry [`FieldSpec`]; `None` for a type with no monomorphic r3
+/// value form. **Stage-1 (RFC-0007 §11.3):** a **generic instantiation** (`Data` with type arguments)
+/// or an **abstract type parameter** ([`Ty::Var`]) has no monomorphic registry form — its elaboration
+/// is *staged* (monomorphization is the M-657 follow-up). Returning `None` makes [`build_registry`]
+/// skip the owning declaration, so any *use* of a generic value surfaces as an explicit `Residual`
+/// (never a silent, half-monomorphized artifact — G2/VR-5).
 fn field_spec(ty: &Ty) -> Option<FieldSpec> {
     Some(match ty {
         Ty::Binary(n) => FieldSpec::Repr(Repr::Binary { width: *n }),
@@ -512,7 +534,8 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
             dim: *d,
             dtype: scalar_kind(*s),
         }),
-        Ty::Data(n) => FieldSpec::Data(n.clone()),
+        Ty::Data(n, args) if args.is_empty() => FieldSpec::Data(n.clone()),
+        Ty::Data(_, _) | Ty::Var(_) => return None,
         Ty::Substrate(_) => return None,
     })
 }
@@ -927,6 +950,19 @@ impl Elab<'_> {
         }
 
         if let Some(fd) = self.env.fns.get(name) {
+            // Stage-1 (RFC-0007 §11.3): a **generic** function call is type-checked (the checker
+            // instantiates it) but its elaboration to closed L0 is *staged* — monomorphization is the
+            // M-657 follow-up. Refuse explicitly (never a silent or half-monomorphized lowering).
+            if !fd.sig.params.is_empty() {
+                return residual(
+                    site,
+                    format!(
+                        "generic function `{name}<…>` type-checks, but lowering a generic \
+                         instantiation to L0 is staged (monomorphization — RFC-0007 §11.3; the \
+                         M-657 follow-up). This call has no L0 form yet."
+                    ),
+                );
+            }
             // A non-recursive call inlines. Any function in a cycle (self or mutual) is in `self.rec`
             // and was handled by the recursion-variable branch above, so reaching here while `name`
             // is on the inline stack would mean a cycle escaped SCC detection — keep an explicit
@@ -963,7 +999,8 @@ impl Elab<'_> {
                     );
                 }
                 let karg = self.expr(stack, scope, arg)?;
-                let pty = resolve_ty(site, &self.env.types, &param.ty)
+                // Monomorphic callee (generic callees are staged out above) — no type params in scope.
+                let pty = resolve_ty(site, &self.env.types, &[], &param.ty)
                     .map(|(t, _)| t)
                     .map_err(|e| ElabError::Residual {
                         site: site.to_owned(),
@@ -1034,6 +1071,17 @@ impl Elab<'_> {
     /// (which binds the lambdas of a mutually-recursive SCC together — RFC-0001 r5).
     fn elab_fn_lam(&mut self, fname: &str) -> Result<Node, ElabError> {
         let fd = self.env.fns[fname].clone();
+        // Stage-1 (RFC-0007 §11.3): a generic (recursive) function type-checks, but lowering it to a
+        // closed L0 lambda requires monomorphization (the M-657 follow-up) — staged, never silent.
+        if !fd.sig.params.is_empty() {
+            return residual(
+                fname,
+                format!(
+                    "generic function `{fname}<…>` type-checks, but its L0 lowering is staged \
+                     (monomorphization — RFC-0007 §11.3; the M-657 follow-up)"
+                ),
+            );
+        }
         if let Some(g) = fd.sig.ret.guarantee {
             return residual(
                 fname,
@@ -1053,7 +1101,8 @@ impl Elab<'_> {
                 );
             }
             let kp = self.fresh(&p.name);
-            let pty = resolve_ty(fname, &self.env.types, &p.ty)
+            // Monomorphic body (generic fns are staged out above) — no type params in scope.
+            let pty = resolve_ty(fname, &self.env.types, &[], &p.ty)
                 .map(|(t, _)| t)
                 .map_err(|e| ElabError::Residual {
                     site: fname.to_owned(),
@@ -1104,7 +1153,7 @@ impl Elab<'_> {
                 what: format!("could not infer the `for` spine type: {e}"),
             }
         })?;
-        let Ty::Data(tname) = &sty else {
+        let Ty::Data(tname, _) = &sty else {
             return residual(&site, format!("`for` spine is not a data type: {sty}"));
         };
         let d = self
@@ -1128,7 +1177,7 @@ impl Elab<'_> {
             let Some(spine_idx) = c
                 .fields
                 .iter()
-                .position(|f| matches!(f, Ty::Data(n) if n == tname))
+                .position(|f| matches!(f, Ty::Data(n, _) if n == tname))
             else {
                 return residual(
                     &site,
