@@ -153,6 +153,14 @@ not change whether stdlib authoring in Mycelium-lang is currently possible):
 
 ## Meta — changelog
 
+- **2026-06-22 — §3 row 7 spec gate landed; `impl` reserved (M-658; append-only, no row flip yet).**
+  The **trait** spec gate is in place: **RFC-0007 §12** pins the stage-1 trait surface (single-parameter
+  `trait`/`impl Trait for T` + coherence = orphan rule + global uniqueness, per RFC-0019), and **`impl`
+  is now a reserved lexer keyword** (`Tok::Impl`) — never a silent identifier (G2; reject-corpus
+  `reject/14-impl-reserved-ident.myc`). **Row 7 stays `gate-fails`** — only the landed M-659 trait
+  checker (declaration + `impl`-block checking + coherence + dictionary-passing typing) flips it (and,
+  like row 6, the L0 elaboration of an instantiated dictionary is staged → M-673). Spec gate, not an
+  implementation (VR-5). (RFC-0007 §12; M-658, E7-1)
 - **2026-06-22 — §3 row 6 → *partial* (M-657 checker landed; elaboration staged; append-only).**
   The generics **checker** is implemented in `crates/mycelium-l1` (RFC-0007 §11): type parameters as
   abstract variables, generic data + function declarations, **call-site instantiation by

@@ -464,8 +464,85 @@ ratification** of the v1 polymorphic judgment as a checked basis — implementin
 evidence (`Empirical`, via the conformance + property corpus), not a `Proven` upgrade of RFC-0019's
 coherence/S1-preservation arguments. No claim here is stronger than its basis.
 
+## 12. Stage-1 trait interfaces + `impl` blocks — the LR-2 surface (append-only)
+
+> **Append-only amendment (2026-06-22; M-658).** The companion to §11: §11 pins the *unbounded*
+> generics surface, this section pins the **trait / bounded-generics** surface that `crates/mycelium-l1`
+> v1 must check. Like §11 it adds **no v0 calculus content** and leans on **RFC-0019 (Accepted
+> 2026-06-18)**, which is the LR-2 RFC; the trait checker is M-659.
+
+### 12.1 The stage-1 trait surface `mycelium-l1` v1 must check
+
+```mycelium
+// A trait: a set of method signatures over one type parameter (single-parameter only in v1).
+trait Eq<A> { fn equal(x: A, y: A) -> Binary{1} }
+
+// An instance (witness) for a concrete type — the Rust idiom `impl Trait for T`.
+impl Eq<Binary{8}> for Binary{8} { fn equal(x: Binary{8}, y: Binary{8}) -> Binary{1} = … }
+
+// A bounded generic: a type parameter constrained by a trait (extends §11's unbounded core).
+fn contains<T: Eq<T>>(needle: T, haystack: List<T>) -> Binary{1} = …
+```
+
+The existing grammar already parses `trait Ident type_params? { fn_sig* }` (RFC-0019 §3.1); v1 adds the
+`impl_item` and bounded `type_param` productions (RFC-0019 §4.1 — additive; every v0 program still
+parses). What v1 must **check** (RFC-0019 §4.5/§4.9):
+
+- **Trait declarations** — method signatures type-check; the trait is a registry entry (RFC-0019 §4.2),
+  not a kernel node (KC-3).
+- **`impl Trait for T` blocks** — every method is provided at the right signature; **coherence is
+  enforced**: **global uniqueness** (at most one instance per `(Trait, Type)`) and the **orphan rule**
+  (the `impl` shares a `nodule`/`phylum` with the trait *or* the type). A violation is an explicit
+  `CheckError` naming the conflict — **never** a silent shadowing (the content-addressed-identity
+  argument, ADR-003 / RFC-0019 §2.2).
+- **Bounded generics** — `fn f<T: Trait>(…)` resolves the instance at each call site
+  (`inst(Trait, C) ↝ dict`); a missing instance is an explicit error naming the `(Trait, Type)` pair.
+
+### 12.2 `impl` is reserved (M-658) — never a silent identifier
+
+DN-03 §1 chose `impl` (over `embody`/`instance`) for both trait instances (`impl Trait for T`,
+RFC-0019 §3.2) and inherent methods (`impl T { fn … }`, M-664). As of **M-658** `impl` is a **reserved
+keyword** in the lexer (`token.rs` `keyword()` → `Tok::Impl`) — it can **never** lex as an identifier
+(G2); a program using `impl` as a name is an explicit parse error (reject-corpus
+`reject/14-impl-reserved-ident.myc`). The parser productions that *consume* `Tok::Impl` land with the
+trait checker (M-659) and the inherent-method work (M-664); until then `impl` at item position is an
+explicit refusal, never a silent accept.
+
+### 12.3 Elaboration: dictionary-passing, staged the same way as §11.3
+
+Bounded generics + traits elaborate by **dictionary-passing** (RFC-0019 §4.3): a trait becomes a
+`Dict_Trait<A>` data declaration, an `impl` becomes a `Construct` dictionary, a bounded `fn` takes the
+dictionary as an explicit first argument, and a method call is a field projection — **all existing L1
+nodes, kernel budget unchanged** (KC-3). But a `Dict_Trait<A>` is *parameterized*, so lowering an
+instantiated dictionary to L0 hits the **same** abstract-type-parameter-field obstacle as §11.3 — so
+**elaboration is staged identically**: the *checker* (coherence, instance resolution, dictionary
+*typing*) is M-659; the L0 lowering of a generic/trait *instantiation* stays an explicit never-silent
+`Residual` until the **monomorphization follow-up (M-673)**, which discharges generics *and* traits
+together. No new kernel node; no silent artifact (G2).
+
+### 12.4 Scope & honesty (what is *not* in v1)
+
+v1 is **single-parameter** traits only; **multi-parameter traits, associated types, and
+newtype-derived coherence waivers are deferred to v2** (RFC-0019 §10 — they complicate the orphan
+rule / need a roles mechanism). **Repr-polymorphism** (`R: Repr`) and **guarantee-indexed methods**
+(LR-6 stage-2) stay the explicitly-refused / `Declared` cases of RFC-0019 §4.6/§4.7. DN-14 §3 row 7
+gate is captured here. Honesty (VR-5): RFC-0019's coherence and S1-preservation results are
+**Declared-with-argument**; this amendment **does not upgrade** them — implementing the checker is
+`Empirical` evidence, not a `Proven` basis.
+
 ## Meta — changelog
 
+- **2026-06-22 — new §12: stage-1 trait interfaces + `impl` blocks; `impl` reserved (M-658; RFC-0019
+  ripple, append-only, no calculus change).** The companion to §11: §12 pins the **trait /
+  bounded-generics** surface `crates/mycelium-l1` v1 must check (single-parameter `trait`/`impl Trait
+  for T` declarations + coherence = orphan rule + global uniqueness, per **RFC-0019** §4.5/§4.9), and
+  records that **`impl` is now a reserved lexer keyword** (`Tok::Impl`; DN-03 §1) — never a silent
+  identifier (G2), with reject-corpus `reject/14-impl-reserved-ident.myc`. Elaboration is **staged
+  identically to §11.3** (dictionary-passing types-check in the checker — M-659; the L0 lowering of an
+  instantiated dictionary is a never-silent `Residual` until monomorphization — M-673, which discharges
+  generics + traits together). Multi-parameter traits / associated types / Repr-polymorphism stay
+  deferred (RFC-0019 §10). DN-14 §3 row 7 captured. No v0 calculus content changed; leans on RFC-0019's
+  Declared-with-argument results without upgrading them.
 - **2026-06-22 — §11.2–§11.4 corrected to the *as-implemented* split (M-657; honesty fix, same
   session, pre-`main`).** The M-656 draft of §11 over-described elaboration as already **uniform**
   ("one body, one content-addressed hash"). The landed M-657 implements the **checker** in full

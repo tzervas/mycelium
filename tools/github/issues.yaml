@@ -2099,10 +2099,12 @@ issues:
   - id: M-658
     title: "M-658 — spec(rfc-0007): Amend RFC-0007 for stage-1 trait interfaces + `impl` blocks"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:spec, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:spec, area:language, priority:P1, status:done]
     depends_on: [M-657]
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, corpus:DN-03]
     body: |
+      DONE (2026-06-22): RFC-0007 §12 appended (append-only) pinning the stage-1 trait surface (single-parameter `trait`/`impl Trait for T` + coherence = orphan rule + global uniqueness, per RFC-0019); `impl` reserved in the lexer (`token.rs` `keyword()` → `Tok::Impl`, never a silent identifier — G2); reject-corpus `reject/14-impl-reserved-ident.myc` added + conformance table entry (self-policed, green); DN-14 §3 row 7 captured (no flip — M-659 flips it); Doc-Index + CHANGELOG updated. Elaboration staged identically to §11.3 (dictionary typing in the checker M-659; L0 lowering of an instantiated dictionary → M-673). No v0 calculus change; no new kernel node (KC-3).
+
       RFC-0007 deferred traits (LR-2) from v0 scope; RFC-0019 (Accepted) ratifies trait coherence and the surface contract. This amendment (append-only §N) records the minimal stage-1 trait surface: `trait T<A> { fn method(…) -> … }` declarations, `impl T<Foo> for Bar { … }` blocks, and coherence obligations (orphan rule + global uniqueness). Also decides `impl` as the reserved keyword (DN-03 §1 records this; must now be reserved in the lexer). Blocks M-659.
       Acceptance: RFC-0007 §N appended with trait surface + impl keyword decision; `impl` reserved in `keyword()` (token.rs) — never a silent identifier; reject-corpus entry for `impl` added; DN-14 §3 row 7 gate formally captured.
 

@@ -8,6 +8,18 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-22: M-658 — RFC-0007 §12 trait surface + `impl` reserved)
+- **RFC-0007 §12 (append-only) pins the stage-1 trait / bounded-generics surface** `mycelium-l1` v1
+  must check (single-parameter `trait`/`impl Trait for T` declarations + **coherence** = orphan rule +
+  global uniqueness, per RFC-0019), and **reserves `impl` as a lexer keyword** (`token.rs` `keyword()`
+  → `Tok::Impl`) — never a silent identifier (G2). Reject-corpus fixture
+  `reject/14-impl-reserved-ident.myc` (self-policed by the conformance table). Elaboration is **staged
+  identically to §11.3**: dictionary-passing *types-check* in the checker (M-659); the L0 lowering of an
+  instantiated dictionary is a never-silent `Residual` until monomorphization (M-673, generics + traits
+  together). Multi-parameter traits / associated types / Repr-polymorphism stay deferred (RFC-0019
+  §10). DN-14 §3 row 7 captured (no flip — only the M-659 checker flips it). No v0 calculus change; no
+  new kernel node (KC-3). (RFC-0007 §12; RFC-0019; DN-14 §3 row 7; M-658, E7-1)
+
 ### Added (2026-06-22: M-657 — stage-1 unbounded generics checker + depth-safe recursion)
 - **Stage-1 unbounded parametric generics — checker (`mycelium-l1`).** `type List<A> = …`, generic
   functions (`fn first_or<A>(xs: List<A>, d: A) -> A`), and **call-site instantiation by
