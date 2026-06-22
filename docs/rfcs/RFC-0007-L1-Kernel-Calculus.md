@@ -343,8 +343,118 @@ of what is **now ratified** vs deferred:
 guarantee check); stage-1 static grading, R7-Q1…Q4, and concrete surface syntax remain later
 revisions / KC-2-gated.*
 
+## 11. Stage-1 generic type parameters — the §4.4 deferral, discharged (append-only)
+
+> **Append-only amendment (2026-06-22; M-656).** §4.4 states polymorphism is "deliberately out of
+> v0 … its own later RFC", and §9/§10 name that RFC. That RFC is **RFC-0019 (Accepted 2026-06-18)**.
+> This section records the consequence for the L1 calculus and pins the **minimally-sufficient
+> stage-1 surface** that `crates/mycelium-l1` v1 must check. It changes **no v0 calculus content**
+> (the ten-node budget, the §4.1 terms, the §4.4 monomorphic core judgments are all retained
+> verbatim); it discharges the *deferral* by recording the stage-1 scope and its honest grounding.
+> The §4.4 sentence "instantiating a generic is an explicit 'deferred' error, never a guess" is
+> **superseded** by §11.3 (the error becomes a checked pass, never a guess — VR-5/G2 hold either way).
+
+### 11.1 What is ratified, and by which document
+
+Generics and traits were never ratified by *this* RFC — §4.4/§10 explicitly route them to a later
+RFC. **RFC-0019** is that RFC and is **Accepted**: it ratifies (all **Declared-with-argument**,
+not machine-checked — VR-5; `research/10` is the basis for a future `Proven` upgrade):
+
+- **dictionary-passing elaboration** of bounded generics and traits to the *existing* L1 nodes
+  (`Construct`/`Match`/`Lam`/`App`/`Let`/`Var`) — the **kernel node budget does not grow** (KC-3;
+  RFC-0019 §4.3/§4.4);
+- **coherence** = orphan rule + global uniqueness + reject-overlap, the only mechanism consistent
+  with content-addressed identity (ADR-003; RFC-0019 §4.5; `research/10` T10.2–T10.3);
+- the **Repr-polymorphism restriction set** (RFC-0019 §4.6; locally checkable, S1-preserving;
+  `research/10` T10.5–T10.7) — code obeying it is admitted, code violating it gets
+  `UnresolvedReprPolymorphism`.
+
+This §11 adds nothing normative to RFC-0019; it **commits `mycelium-l1` to implementing the
+stage-1 fragment of it** (M-657 for the unbounded core; M-659 for the bounded/trait core).
+
+### 11.2 The stage-1 fragment `mycelium-l1` v1 must check (minimally sufficient)
+
+The deferral is discharged in two honest steps, matching the dependency order of E7-1:
+
+1. **Unbounded parametric generics (M-657 — this discharge's first step).** Generic *type*
+   declarations and generic *function* declarations whose type parameters carry **no trait bound**:
+
+   ```mycelium
+   type List<A> = Nil | Cons(A, List<A>)
+   fn head<A>(xs: List<A>) -> A = match xs { Cons(x, _) => x }    // partial — honest, not total
+   fn map<A, B>(f: A -> B, xs: List<A>) -> List<B> = …
+   ```
+
+   A type parameter `A` is an **abstract type variable**: the checker treats it as opaque — no
+   representation-specific `Op` (`binary_and`, a `Swap`, a width-indexed primitive) may be applied
+   to a value of type `A`, because its representation is not known (this is exactly the §4.6
+   restriction of RFC-0019 specialized to the unbounded case; it falls out of the abstract-variable
+   discipline and needs no separate machinery). Instantiation `List<Binary{8}>` substitutes the
+   concrete type for `A`; arity is checked (a `List<Binary{8}, Ternary{3}>` is an explicit error).
+
+2. **Bounded generics + traits (M-658/M-659 — the second step).** `fn f<T: Eq<T>>(…)` and
+   `impl Eq<Binary{8}> for Binary{8} { … }` elaborate via the RFC-0019 §4.3 dictionary-passing
+   translation. This §11 records that they belong to the same discharge; their typing/elaboration
+   rules are RFC-0019's, not restated here.
+
+The v0 monomorphic judgments (§4.4 `T-Const…T-Match`) are the **base case** of the stage-1 judgment
+(an empty type-parameter list is the identity). Every v0 program that checked before still checks.
+
+### 11.3 Elaboration & the never-silent-swap obligation (S1/VR-5)
+
+For **unbounded** parametric generics there are **no dictionaries** (dictionaries carry trait
+witnesses; an unbounded `A` witnesses nothing). The elaborated L0 term of a generic function is
+**uniform over its type arguments**: its body moves values only through `Construct`/`Match`/`Var`/
+`App`, whose constructor references `#T#i` are content-addressed and **independent of the type
+argument** (§4.2 — a parameterized declaration is *one* registry entry, hashed with the parameter
+abstract). So `head<A>` has **one** L0 body and **one** content-addressed hash regardless of how
+many types it is instantiated at (the RFC-0019 §4.4 dictionary-passing identity property, here in
+its degenerate no-dictionary form) — KC-3 is preserved with zero new nodes.
+
+**The S1 obligation (never-silent swap) is load-bearing and is enforced, not assumed.**
+Instantiating a type parameter must **never** cause the elaborator to insert a `Swap` (S1/W8). For
+genuine parametric polymorphism this is automatic — an `A`-typed value flows opaquely and is never
+converted. Where a generic body *would* require a representation change at a concrete instantiation
+(the Repr-polymorphic case, `R: Repr`), the elaborator **rejects with an explicit error** naming
+the expression and the missing `swap` (RFC-0019 §4.6 `UnresolvedReprPolymorphism`) — it may never
+silently insert one. A mismatched instantiation is a checked `Residual`/error, **never a guess**
+(G2). This restates S1 at the polymorphic level and is the honest boundary of the stage-1 fragment.
+
+### 11.4 DN-14 §3 row 6 — gate formally captured
+
+DN-14 §3 row 6 ("Generic type parameters — `fn f<A,B>(…)`, `type List<A>`") is recorded
+**gate-fails** with the evidence `checkty.rs:~167/~286` (the explicit deferral refusals). This
+amendment is the **spec gate** that converts those refusals into checked passes: on M-657 landing,
+row 6 moves `gate-fails → present` for the *unbounded* fragment; the *bounded* fragment follows on
+M-659. The honesty discipline (VR-5/G2) is unchanged — the refusal sites become real checks, and
+anything outside the stage-1 fragment (Repr-polymorphism, multi-parameter traits, associated types
+— RFC-0019 §10 deferrals) stays an **explicit** refusal, never a silent accept.
+
+### 11.5 Honesty posture of this amendment
+
+This §11 is a **spec record**, not a new soundness claim. It leans entirely on RFC-0019's results,
+which are **Declared-with-argument** (not machine-checked); accepting this amendment **does not
+upgrade** that tag (VR-5). The `mycelium-l1` implementation it commits to is **Rust-first, pending
+ratification** of the v1 polymorphic judgment as a checked basis — implementing the fragment is
+evidence (`Empirical`, via the conformance + property corpus), not a `Proven` upgrade of RFC-0019's
+coherence/S1-preservation arguments. No claim here is stronger than its basis.
+
 ## Meta — changelog
 
+- **2026-06-22 — §4.4 generics deferral discharged → new §11 (M-656; RFC-0019 ripple, append-only,
+  no calculus change).** §4.4's "polymorphism/traits deliberately out of v0 — its own later RFC" is
+  now routed to its destination: **RFC-0019 (Accepted 2026-06-18)** ratifies dictionary-passing
+  elaboration (kernel budget unchanged, KC-3), orphan-rule coherence (ADR-003), and the
+  Repr-polymorphism restriction set — all **Declared-with-argument**. New **§11** records the
+  consequence and pins the **minimally-sufficient stage-1 surface** `crates/mycelium-l1` v1 must
+  check: (a) **unbounded** parametric generics (`type List<A>`, `fn head<A>`, `fn map<A,B>`) with
+  type parameters as abstract variables — M-657; (b) **bounded** generics + traits via RFC-0019
+  dictionary-passing — M-658/M-659. The §4.4 "instantiating a generic is a deferred error" sentence
+  is **superseded** by §11.3 (a checked pass, never a guess — VR-5/G2). The never-silent-swap
+  obligation (S1/W8) is restated at the polymorphic level: instantiation never inserts a `Swap`;
+  a Repr-polymorphic body that would need one is an explicit `UnresolvedReprPolymorphism`, never a
+  silent insertion. DN-14 §3 row 6 gate captured (§11.4). **No v0 calculus content changed**; the
+  amendment leans on RFC-0019's Declared-with-argument results and **does not upgrade** them (§11.5).
 - **2026-06-19 — §8 R7-Q3 surface grammar decided (RP-6 → DN-13; M-391; append-only, surface
   commitment).** The remaining R7-Q3 sub-question — the *surface grammar* for a group of ≥2
   mutually-recursive top-level functions — is resolved: **nodule-wide mutual visibility, no new

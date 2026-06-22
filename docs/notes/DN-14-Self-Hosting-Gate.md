@@ -153,6 +153,14 @@ not change whether stdlib authoring in Mycelium-lang is currently possible):
 
 ## Meta — changelog
 
+- **2026-06-22 — §3 row 6 spec gate landed (M-656; append-only, no row flip yet).** The **spec gate**
+  for generics is in place: **RFC-0007 §11** (append-only amendment) discharges the §4.4 deferral by
+  routing it to **RFC-0019 (Accepted)** and pinning the minimally-sufficient stage-1 generics surface
+  for `mycelium-l1` v1 — (a) unbounded parametric generics (`type List<A>`, `fn head<A>`), type
+  parameters as abstract variables (M-657); (b) bounded generics + traits via dictionary-passing
+  (M-658/M-659). **Row 6 stays `gate-fails`** here — only the landed M-657 implementation (checker +
+  elaborator, green `just check`) flips it to `present` (VR-5/honesty: a spec gate is not an
+  implementation). This note records the unblock, not the closure. (RFC-0007 §11; M-656, E7-1)
 - **2026-06-21 — M-649 DEFERRED (post-1.0, ADR-021 §5; M-648/M-649 editorial sweep).** M-649 (Self-hosting Stage-2: first stdlib module in Mycelium-lang) is scoped post-1.0 per ADR-021 §5. Gate status: **5 present / 5 absent**. Present: value types + ADTs, pattern matching, functions + recursion, let/lambda, nodule organization. Absent (gate-fails): (1) generic type parameters (no `List<A>`/`Option<T>` without RFC-0019 enactment), (2) trait interfaces (`impl Trait` blocked — RFC-0019 deferred LR-2), (3) effect annotations (declared effects `fn f() -> T / {time}` — deferred RFC-0014 stage-1), (4) `wild`/FFI surface (denied by design in v0, LR-9; `std-sys` phylum is the roadmap path), (5) static guarantee index (stage-1 graded type checking — RFC-0018 accepted, not yet enacted). These five block all non-trivial stdlib modules from being authored in Mycelium-lang. M-649 stays OPEN with DEFERRED status — it is not blocked, it is scoped to Phase-6 (Stage-1 generics/traits RFC amendments). This note stays **Draft** (M-649 verdict is `not-yet`; self-hosting is not declared until gate-fails resolve). Append-only.
 <!-- changelog: 2026-06-21 Tracking IDs assigned (E7-1 epic, M-656..M-664); append-only -->
 **2026-06-21 — Tracking IDs assigned (append-only).** The five gate-fails (§3 rows 6–9, 11) and

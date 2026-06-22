@@ -2056,10 +2056,12 @@ issues:
   - id: M-656
     title: "M-656 — spec(rfc-0007): Amend RFC-0007 to ratify stage-1 generic type parameters"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:spec, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:spec, area:language, priority:P1, status:done]
     depends_on: []
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, corpus:DN-14]
     body: |
+      DONE (2026-06-22): RFC-0007 §11 appended (append-only) discharging the §4.4 generics deferral → RFC-0019; pins the stage-1 generics surface (unbounded `type List<A>`/`fn head<A>` for M-657; bounded generics + traits via dictionary-passing for M-658/M-659); never-silent-swap restated at the polymorphic level (S1/W8); DN-14 §3 row 6 gate captured (§11.4); Doc-Index + CHANGELOG updated. No v0 calculus change; leans on RFC-0019's Declared-with-argument results without upgrading them (§11.5).
+
       RFC-0007 §4.4 explicitly defers generic type parameters to stage-1; RFC-0019 (Accepted 2026-06-18) ratifies the coherence and Repr-polymorphism restriction set. This issue produces the RFC-0007 amendment (append-only §N) closing the stage-0 deferral: records the dictionary-passing elaboration strategy per RFC-0019 §4 and defines the minimally-sufficient surface (monomorphic instantiation of generic type declarations — `type List<A> = Nil | Cons(A, List<A>)` and `fn map<A, B>(…)`) that `mycelium-l1` v1 must check.
       Does NOT implement the checker changes (that is M-657); this is the spec gate that unblocks them.
       Acceptance: RFC-0007 §N appended (append-only) recording the stage-1 generics scope and the RFC-0019 coherence/Repr-polymorphism restriction set; Doc-Index row updated; CHANGELOG entry; DN-14 §3 row 6 gate formally captured in the amendment.

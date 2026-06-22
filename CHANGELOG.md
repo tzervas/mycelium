@@ -8,6 +8,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-22: M-656 — RFC-0007 §11 discharges the §4.4 generics deferral)
+- **RFC-0007 §11 (append-only) discharges the §4.4 "polymorphism deliberately out of v0" deferral**,
+  routing it to its destination RFC — **RFC-0019 (Accepted)** — and pinning the minimally-sufficient
+  **stage-1 generics surface** that `crates/mycelium-l1` v1 must check: (a) **unbounded** parametric
+  generics (`type List<A>`, `fn head<A>`, `fn map<A,B>`), type parameters as abstract variables
+  (M-657); (b) **bounded** generics + traits via RFC-0019 dictionary-passing (M-658/M-659). The
+  §4.4 "instantiating a generic is a deferred error" sentence is **superseded** by §11.3 — the
+  refusal becomes a checked pass, **never a guess** (VR-5/G2). The never-silent-swap obligation
+  (S1/W8) is restated at the polymorphic level: instantiation never inserts a `Swap`; a
+  Repr-polymorphic body that would need one is an explicit `UnresolvedReprPolymorphism`. **No v0
+  calculus content changed**; the amendment leans on RFC-0019's **Declared-with-argument** results
+  and does not upgrade them (§11.5). DN-14 §3 row 6 gate captured. This is the **spec gate** that
+  unblocks the M-657 checker/elaborator implementation. (RFC-0007 §11; RFC-0019; DN-14 §3 row 6; M-656, E7-1)
+
 ### Changed (2026-06-21: RFC-0022 + RFC-0023 ratified Draft → Accepted)
 - **RFC-0022 (Web-Tooling Phylum) and RFC-0023 (ADK Phylum) ratified to Accepted** by the maintainer
   after the Phase-2 deep-research discharge (RP-10 / RP-9; `dfr` session). RFC-0023's §3 concept-map was
