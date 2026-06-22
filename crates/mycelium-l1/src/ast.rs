@@ -71,8 +71,41 @@ pub enum Item {
     Type(TypeDecl),
     /// A trait declaration.
     Trait(TraitDecl),
+    /// A trait implementation block (M-658/M-659; `impl TraitName<args> for ForTy { fn … }`).
+    Impl(ImplDecl),
     /// A function definition.
     Fn(FnDecl),
+}
+
+/// `impl TraitName<trait_args> for ForTy { fn method(…) -> Ret = body … }` (M-659).
+///
+/// A concrete instance of a trait for a specific type. The checker validates coherence
+/// (global uniqueness — RFC-0019 §4.5) and method completeness/signature match.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImplDecl {
+    /// The trait being implemented.
+    pub trait_name: String,
+    /// The trait's type arguments (e.g. `A` in `impl Show<A> for List<A>` — v0 defers these).
+    pub trait_args: Vec<TypeRef>,
+    /// The type this impl is for.
+    pub for_ty: TypeRef,
+    /// The method implementations (function bodies, not just sigs).
+    pub methods: Vec<FnDecl>,
+}
+
+/// A trait bound on a type parameter: `A: TraitName<trait_args>` (M-658).
+///
+/// In v0 each type parameter carries **at most one** bound (a single `:` annotation in the
+/// angle-bracket list). The `+` multi-bound syntax is deferred — a written `+` fails at the
+/// lexer/parser with an explicit error (never a silent accept, G2).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Bound {
+    /// The bounded type-parameter name (e.g. `A`).
+    pub param: String,
+    /// The required trait (e.g. `Show`).
+    pub trait_name: String,
+    /// The trait's type arguments (e.g. empty for `Show`, or `[Binary{8}]` for `Show<Binary{8}>`).
+    pub trait_args: Vec<TypeRef>,
 }
 
 /// `type Name<params> = Ctor | Ctor(field, …) | …` (LR-1).
@@ -111,8 +144,11 @@ pub struct TraitDecl {
 pub struct FnSig {
     /// Function name.
     pub name: String,
-    /// Type parameters.
+    /// Type parameters (names only; bounds are in [`bounds`](FnSig::bounds)).
     pub params: Vec<String>,
+    /// Trait bounds on type parameters (M-658). At most one [`Bound`] per type parameter in v0.
+    /// Stored as a **parallel field** so existing `.params` readers are unaffected.
+    pub bounds: Vec<Bound>,
     /// Value parameters.
     pub value_params: Vec<Param>,
     /// Result type.

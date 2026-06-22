@@ -42,7 +42,9 @@ pub(crate) mod usefulness;
 
 pub use ambient::{expand_to_source, resolve, resolve_report, AmbientError, Resolved};
 pub use ast::Nodule;
-pub use checkty::{check_and_resolve, check_nodule, check_nodule_matured, CheckError, Env, Ty};
+pub use checkty::{
+    check_and_resolve, check_nodule, check_nodule_matured, CheckError, Env, ImplInfo, TraitInfo, Ty,
+};
 pub use elab::{elaborate, elaborate_colony, ElabError};
 pub use error::ParseError;
 pub use eval::{Evaluator, L1Error, L1Value};

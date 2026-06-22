@@ -62,6 +62,14 @@ pub enum Ty {
     /// (the same as pre-M-673), preventing stack-frame inflation in the deeply-recursive
     /// checker (A4-02). The box is an implementation detail; callers deref it as `&[Ty]`.
     App(String, Box<Vec<Ty>>),
+    /// A function type `(A -> B)` — the checker-level type of a trait method value (M-658,
+    /// **Declared**). Used **only** within the typechecker's trait/bound machinery to type
+    /// the runtime dictionary entries (method values that are passed as curried `Lam`
+    /// parameters at the elaboration level). `Arrow` must **never** appear as a field of a
+    /// user ADT in `env.types` / the L0 `DataRegistry` — the L0 data contract is frozen
+    /// (KC-3). Any residual `Arrow` reaching elaboration/evaluation/coverage is a checker
+    /// bug, refused explicitly (never silent — G2/VR-5).
+    Arrow(Box<Ty>, Box<Ty>),
 }
 
 impl core::fmt::Display for Ty {
@@ -78,6 +86,7 @@ impl core::fmt::Display for Ty {
                 let parts: Vec<String> = args.iter().map(|t| t.to_string()).collect();
                 write!(f, "{name}<{}>", parts.join(", "))
             }
+            Ty::Arrow(a, b) => write!(f, "({a} -> {b})"),
         }
     }
 }
@@ -173,6 +182,12 @@ pub struct Env {
     /// declaration's params and the Var-bearing ctor field types (never in `types`).
     /// Stage-1 generics (M-657, **Declared**).
     pub generics: BTreeMap<String, GenericShell>,
+    /// Trait registry, keyed by trait name. Filled by Pass 1c (M-658, **Declared**).
+    /// Each entry holds the trait's type params and method signatures (may contain `Ty::Var`).
+    pub traits: BTreeMap<String, TraitInfo>,
+    /// Impl registry, keyed by `(trait_name, for_ty.to_string())`. Filled by Pass 1d (M-659,
+    /// **Declared**). Duplicate `(trait, type)` pairs → explicit `CheckError` (RFC-0019 §4.5).
+    pub impls: BTreeMap<(String, String), ImplInfo>,
     /// Function table, keyed by name.
     pub fns: BTreeMap<String, FnDecl>,
     /// Per-function totality classification (RFC-0007 §4.5), filled by the totality checker.
@@ -193,6 +208,20 @@ impl Env {
     #[must_use]
     pub fn type_info(&self, name: &str) -> Option<&DataInfo> {
         self.types.get(name)
+    }
+
+    /// The trait info for trait named `name`, if registered. Additive read-only accessor over the
+    /// public [`traits`](Env::traits) map (M-658, **Declared**).
+    #[must_use]
+    pub fn trait_info(&self, name: &str) -> Option<&TraitInfo> {
+        self.traits.get(name)
+    }
+
+    /// The impl info for `trait_name` on `for_ty`, if registered. Additive read-only accessor
+    /// over the public [`impls`](Env::impls) map (M-659, **Declared**).
+    #[must_use]
+    pub fn impl_info(&self, trait_name: &str, for_ty: &Ty) -> Option<&ImplInfo> {
+        self.impls.get(&(trait_name.to_owned(), for_ty.to_string()))
     }
 
     /// The function declaration named `name`, if any. Additive read-only accessor over the public
@@ -626,6 +655,34 @@ pub struct GenericShell {
     pub ctors: Vec<CtorInfo>,
 }
 
+/// A trait's checked signature table — the dictionary shape the impl must satisfy.
+///
+/// Registered in `Env.traits` by Pass 1c. Method signatures are stored with their trait type
+/// params in scope (they may reference `Ty::Var` through the shared `params` list). The
+/// dictionary-passing strategy (M-658 §4, **Declared**) threads `TraitInfo` as extra `Lam` params
+/// at impl-check time; only the `for_ty` is substituted at bounded-call sites.
+#[derive(Debug, Clone)]
+pub struct TraitInfo {
+    /// The trait's own type parameter names (the `<T>` in `trait Show<T> { … }`).
+    pub params: Vec<String>,
+    /// Method signatures, in declaration order. Field types may contain `Ty::Var` keyed to
+    /// `params` (never returned to elaboration or eval — Var-free check is the caller's gate).
+    pub methods: Vec<crate::ast::FnSig>,
+}
+
+/// A checked impl block: the `for_ty` (resolved, monomorphic) plus the type-checked method bodies.
+///
+/// Registered in `Env.impls` by Pass 1d. Keyed by `(trait_name, for_ty.to_string())` for
+/// O(log n) coherence lookup (RFC-0019 §4.5, **Declared**). Duplicate `(trait, type)` pairs
+/// are an explicit `CheckError` — the coherence invariant (no overlapping instances).
+#[derive(Debug, Clone)]
+pub struct ImplInfo {
+    /// The resolved `for` type (monomorphic — no `Ty::Var`).
+    pub for_ty: Ty,
+    /// Type-checked method bodies, in declaration order.
+    pub methods: Vec<FnDecl>,
+}
+
 /// Check a whole nodule: build the registry (prelude + declarations), then type every function
 /// body against its signature, classify totality. No maturation gate is applied (the scope is
 /// treated as non-matured). Returns the checked [`Env`].
@@ -739,6 +796,190 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
         }
     }
 
+    // Pass 1c: collect trait declarations → `traits` registry (M-658, **Declared**).
+    // Duplicate trait names are an explicit error. Method signatures are stored with Var-bearing
+    // types where the trait's own type params appear; no bodies exist at this level (traits are
+    // type-class signatures only). The dictionary-passing strategy threads these as extra `Lam`
+    // params at impl-check time (S5 / M-659).
+    let mut traits: BTreeMap<String, TraitInfo> = BTreeMap::new();
+    for item in &nodule.items {
+        if let Item::Trait(td) = item {
+            if traits.contains_key(&td.name) {
+                return Err(CheckError::new(&td.name, "duplicate trait declaration"));
+            }
+            traits.insert(
+                td.name.clone(),
+                TraitInfo {
+                    params: td.params.clone(),
+                    methods: td.sigs.clone(),
+                },
+            );
+        }
+    }
+
+    // Pass 1d: collect impl declarations → coherence check + method type-check (M-659, **Declared**).
+    // Rules (RFC-0019 §4.5):
+    //   - The trait named in `impl T for Ty` must exist in `traits` (no orphaned impls).
+    //   - No two impls for the same `(trait, for_ty)` pair (overlap = explicit CheckError).
+    //   - Every method declared in the trait must appear in the impl body (completeness).
+    //   - Method bodies are type-checked against the declared trait signature with the `for_ty`
+    //     substituted for the trait's first type param (v0 restriction: single-param traits only;
+    //     multi-param trait bodies are deferred — a CheckError for now).
+    //   - The `for_ty` must be a concrete (Var-free) monomorphic type (never abstract).
+    //   - Each impl method is **also** registered into `impl_fns` under its mangled name
+    //     (S7: compile-time dictionary dispatch, M-659).  These get merged into `env.fns` so the
+    //     evaluator and elaborator can resolve them without any new kernel nodes (KC-3).
+    let mut impls: BTreeMap<(String, String), ImplInfo> = BTreeMap::new();
+    // Impl methods registered for evaluator/elaborator resolution (S7, **Declared**).
+    // Keyed by the mangled impl-method name: `__impl_{trait}_for_{for_ty}__{method}`.
+    let mut impl_fns: BTreeMap<String, FnDecl> = BTreeMap::new();
+    for item in &nodule.items {
+        if let Item::Impl(id) = item {
+            let site = format!("impl {} for …", id.trait_name);
+            // 1. The trait must be registered.
+            let trait_info = traits.get(&id.trait_name).ok_or_else(|| {
+                CheckError::new(
+                    &site,
+                    format!(
+                        "impl for unknown trait `{}`; declare `trait {} {{ … }}` first",
+                        id.trait_name, id.trait_name
+                    ),
+                )
+            })?;
+            // 2. Resolve the `for` type — must be monomorphic (no tyvars at impl head).
+            let (for_ty, _) = resolve_ty_mut(&site, &mut types, &generics, &[], &id.for_ty)?;
+            // Reject Var — abstract `for`-type is never valid (G2).
+            if matches!(for_ty, Ty::Var(_)) {
+                return Err(CheckError::new(
+                    &site,
+                    "abstract `for`-type in an impl is not valid — the `for` type must be concrete",
+                ));
+            }
+            // 3. Coherence: no duplicate (trait, for_ty) pair.
+            let key = (id.trait_name.clone(), for_ty.to_string());
+            if impls.contains_key(&key) {
+                return Err(CheckError::new(
+                    &site,
+                    format!(
+                        "overlapping impl of `{}` for `{for_ty}` — only valid inside a `colony`; \
+                         two impls for the same (trait, type) pair violate coherence (RFC-0019 §4.5)",
+                        id.trait_name
+                    ),
+                ));
+            }
+            // 4. Build method lookup from the impl body.
+            let mut method_map: BTreeMap<String, &crate::ast::FnDecl> = BTreeMap::new();
+            for m in &id.methods {
+                if method_map.insert(m.sig.name.clone(), m).is_some() {
+                    return Err(CheckError::new(
+                        &site,
+                        format!("duplicate method `{}` in impl body", m.sig.name),
+                    ));
+                }
+            }
+            // 5. Method completeness: every trait method must be implemented.
+            for sig in &trait_info.methods {
+                if !method_map.contains_key(&sig.name) {
+                    return Err(CheckError::new(
+                        &site,
+                        format!(
+                            "impl of `{}` for `{for_ty}` is missing method `{}`",
+                            id.trait_name, sig.name
+                        ),
+                    ));
+                }
+            }
+            // 6. No extra methods: only trait-declared names are allowed (never-silent, G2).
+            for mname in method_map.keys() {
+                if !trait_info.methods.iter().any(|s| &s.name == mname) {
+                    return Err(CheckError::new(
+                        &site,
+                        format!(
+                            "method `{mname}` in impl is not declared in trait `{}`",
+                            id.trait_name
+                        ),
+                    ));
+                }
+            }
+            // 7. Type-check each method body. Substitution: the trait's first type param → for_ty.
+            //    v0: single-param traits only. Multi-param trait impls are a deferred CheckError.
+            let subst: BTreeMap<String, Ty> = if trait_info.params.is_empty() {
+                BTreeMap::new()
+            } else if trait_info.params.len() == 1 {
+                let mut m = BTreeMap::new();
+                m.insert(trait_info.params[0].clone(), for_ty.clone());
+                m
+            } else {
+                return Err(CheckError::new(
+                    &site,
+                    format!(
+                        "impl of multi-param trait `{}` is not yet supported in v0 (deferred)",
+                        id.trait_name
+                    ),
+                ));
+            };
+            let mut checked_methods = Vec::with_capacity(id.methods.len());
+            for m in &id.methods {
+                let msite = format!("{}::{}", site, m.sig.name);
+                let mut scope: Vec<(String, Ty)> = Vec::new();
+                for p in &m.sig.value_params {
+                    let (raw, _) = resolve_ty_mut(&msite, &mut types, &generics, &[], &p.ty)?;
+                    let ty = subst_ty(&raw, &subst);
+                    scope.push((p.name.clone(), ty));
+                }
+                let (raw_ret, _) = resolve_ty_mut(&msite, &mut types, &generics, &[], &m.sig.ret)?;
+                let ret = subst_ty(&raw_ret, &subst);
+                let cx = Cx {
+                    site: &msite,
+                    types: &types,
+                    generics: &generics,
+                    traits: &traits,
+                    impls: &impls,
+                    fns: &BTreeMap::new(), // impl methods see no top-level fns (no recursion in v0)
+                    bounds: &[],           // impl methods have no bounds
+                };
+                let (got, body) = cx.check(&mut scope, &m.body, Some(&ret))?;
+                if got != ret {
+                    return Err(CheckError::new(
+                        &msite,
+                        edge_mismatch("impl method body", &ret, &got),
+                    ));
+                }
+                checked_methods.push(FnDecl {
+                    thaw: m.thaw,
+                    sig: m.sig.clone(),
+                    body,
+                });
+            }
+            impls.insert(
+                key,
+                ImplInfo {
+                    for_ty: for_ty.clone(),
+                    methods: checked_methods.clone(),
+                },
+            );
+            // S7: also register each checked method into `impl_fns` under its mangled name.
+            // This lets the evaluator/elaborator resolve trait-method calls in monomorphized
+            // bodies without any new kernel nodes (KC-3 / **Declared**).
+            for m in &checked_methods {
+                let mangled = impl_method_name(&id.trait_name, &for_ty, &m.sig.name);
+                // Rebuild the FnDecl with the mangled name in its sig.
+                let mangled_fd = FnDecl {
+                    thaw: m.thaw,
+                    sig: FnSig {
+                        name: mangled.clone(),
+                        params: vec![], // impl methods are always monomorphic (v0)
+                        bounds: vec![], // no bounds on the concrete method
+                        value_params: m.sig.value_params.clone(),
+                        ret: m.sig.ret.clone(),
+                    },
+                    body: m.body.clone(),
+                };
+                impl_fns.insert(mangled, mangled_fd);
+            }
+        }
+    }
+
     // Pass 2: collect functions (signatures must resolve).
     // Generic fns (non-empty `sig.params`) are included: bodies are checked with tyvars in scope
     // in Pass 3, and call sites use arg-driven instantiation (S5, M-657).
@@ -751,7 +992,8 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
                 }
             }
             // `default` is consumed by the resolution pass; it never reaches `check_resolved`.
-            Item::Default(_) | Item::Trait(_) | Item::Use(_) | Item::Type(_) => {}
+            // `impl` blocks are collected in a later pass (Pass 1d/S5); skip here.
+            Item::Default(_) | Item::Trait(_) | Item::Use(_) | Item::Type(_) | Item::Impl(_) => {}
         }
     }
 
@@ -776,7 +1018,11 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
             site,
             types: &types,
             generics: &generics,
+            traits: &traits,
+            impls: &impls,
             fns: &fns,
+            // S7: expose this fn's bounds so trait-method calls in the body type-check correctly.
+            bounds: &fd.sig.bounds,
         };
         let (got, body) = cx.check(&mut scope, &fd.body, Some(&ret))?;
         if got != ret {
@@ -791,7 +1037,13 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
             },
         );
     }
-    let fns = resolved_fns;
+    // S7: merge impl method FnDecls (already type-checked in pass 1d) into `resolved_fns` so the
+    // evaluator/elaborator can resolve them by their mangled names — compile-time dictionary
+    // dispatch, no new kernel nodes needed (KC-3 / **Declared**).
+    let mut fns = resolved_fns;
+    for (mangled, fd) in impl_fns {
+        fns.insert(mangled, fd);
+    }
 
     // Pass 4: totality classification + the scope-quantified matured gate (RFC-0017 §4.2).
     // When `matured_scope` is true, every fn with `thaw == false` must be `Total`; a non-total
@@ -815,6 +1067,8 @@ fn check_resolved_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, C
     Ok(Env {
         types,
         generics,
+        traits,
+        impls,
         fns,
         totality,
     })
@@ -1007,7 +1261,14 @@ struct Cx<'a> {
     types: &'a BTreeMap<String, DataInfo>,
     /// Generic shell registry — used for abstract pattern matching in generic fn bodies (M-657).
     generics: &'a BTreeMap<String, GenericShell>,
+    /// Trait registry — used for trait-method call resolution in bounded generic bodies (S7/M-659).
+    traits: &'a BTreeMap<String, TraitInfo>,
+    /// Impl registry — used for bounded-call resolution (M-659, **Declared**).
+    impls: &'a BTreeMap<(String, String), ImplInfo>,
     fns: &'a BTreeMap<String, FnDecl>,
+    /// Bounds of the function currently being checked — used to type-check trait-method calls
+    /// inside bounded generic bodies (S7/M-659, **Declared**). Empty for monomorphic functions.
+    bounds: &'a [crate::ast::Bound],
 }
 
 impl Cx<'_> {
@@ -1085,6 +1346,11 @@ impl Cx<'_> {
                  pass should have stripped it (RFC-0012 §4.4)",
             ),
             Expr::Ascribe(inner, t) => self.check_ascribe(scope, inner, t),
+            // S7/M-659 note: trait-method calls in a bounded body are dispatched via
+            // `check_app_with_trait_dispatch` (not inline here) to keep this frame lean (A4-02).
+            Expr::App { head, args } if !self.bounds.is_empty() => {
+                self.check_app_with_trait_dispatch(scope, head, args, expected)
+            }
             Expr::App { head, args } => self.check_app(scope, head, args, expected),
         }
     }
@@ -1405,6 +1671,83 @@ impl Cx<'_> {
         }
     }
 
+    /// S7 (M-659): `App` dispatch for bounded generic bodies — called instead of `check_app`
+    /// when `self.bounds` is non-empty (a generic fn body with at least one trait bound).
+    ///
+    /// Tries trait-method dispatch first (via `check_trait_method_call`); falls through to the
+    /// normal `check_app` path if `head` is not a bound trait method.
+    ///
+    /// Separated from `check` with `#[inline(never)]` to keep `check`'s frame lean (A4-02:
+    /// `check` recurses on the host stack for every AST node — the hot path for deeply-nested
+    /// expressions. Any local variable added to `check`'s frame multiplies by the nesting depth.)
+    #[inline(never)]
+    fn check_app_with_trait_dispatch(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        head: &Expr,
+        args: &[Expr],
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        if let Expr::Path(p) = head {
+            if p.0.len() == 1 {
+                if let Some(result) = self.check_trait_method_call(scope, &p.0[0], head, args)? {
+                    return Ok(result);
+                }
+            }
+        }
+        self.check_app(scope, head, args, expected)
+    }
+
+    /// S7 (M-659): Try to resolve `name` as a trait method of one of `self.bounds`.
+    ///
+    /// Returns `Ok(Some((ty, expr)))` if `name` is a method of a bound trait (lazy arity-only
+    /// check — argument types are abstract `Ty::Var` in a generic body; correctness is enforced
+    /// at instantiation by S6/S7 — **Declared**). Returns `Ok(None)` if no bound has this
+    /// method name. Returns `Err` for an arity mismatch.
+    ///
+    /// `#[inline(never)]`: separated from `check_app` to keep that frame lean (A4-02 — the
+    /// same rationale as `check_generic_call`).
+    #[inline(never)]
+    fn check_trait_method_call(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        name: &str,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Result<Option<(Ty, Expr)>, CheckError> {
+        for b in self.bounds {
+            if let Some(ti) = self.traits.get(&b.trait_name) {
+                if let Some(m_sig) = ti.methods.iter().find(|s| s.name == name) {
+                    if m_sig.value_params.len() != args.len() {
+                        return Err(CheckError::new(
+                            self.site,
+                            format!(
+                                "trait method `{}::{}` takes {} argument(s), got {}",
+                                b.trait_name,
+                                name,
+                                m_sig.value_params.len(),
+                                args.len()
+                            ),
+                        ));
+                    }
+                    // Type-check arguments lazily (accept them, just infer their types).
+                    // Cannot enforce exact param types: the argument types are abstract (Ty::Var)
+                    // in a generic body; correctness is enforced at instantiation (S6/S7).
+                    let mut rebuilt = Vec::with_capacity(args.len());
+                    for a in args {
+                        let (_, a2) = self.check(scope, a, None)?;
+                        rebuilt.push(a2);
+                    }
+                    // Return type: resolve from the trait method's declared return type (v0:
+                    // concrete or bound type var — no tyvars in scope for m_sig.ret resolution).
+                    let (ret_ty, _) = resolve_ty(self.site, self.types, &[], &m_sig.ret)?;
+                    return Ok(Some((ret_ty, app_node(head, rebuilt))));
+                }
+            }
+        }
+        Ok(None)
+    }
+
     /// Generic call (S5, M-657): arg-driven instantiation. Called only for fns with type params.
     ///
     /// Separated from `check_app` to keep the monomorphic path's stack frame lean — important for
@@ -1448,6 +1791,29 @@ impl Cx<'_> {
                 )
             })?;
             rebuilt.push(a2);
+        }
+        // 2b. Bounded-call resolution (M-658/M-659, **Declared**): for each trait bound in the
+        // signature, verify that a registered impl exists for the concrete type. A bound that maps
+        // to a type var (not yet substituted) or has no registered impl is an explicit error.
+        for b in &sig.bounds {
+            let concrete_ty = match subst.get(&b.param) {
+                Some(t) => t.clone(),
+                None => {
+                    return self.err(format!(
+                        "`{name}`: bound `{}: {}` — type parameter `{}` was not instantiated \
+                         at this call site (no argument anchors it)",
+                        b.param, b.trait_name, b.param
+                    ));
+                }
+            };
+            let key = (b.trait_name.clone(), concrete_ty.to_string());
+            if !self.impls.contains_key(&key) {
+                return self.err(format!(
+                    "`{name}`: no impl of `{}` for `{concrete_ty}` — \
+                     add `impl {} for {concrete_ty} {{ … }}` (M-659 dictionary-passing, RFC-0019 §4.5)",
+                    b.trait_name, b.trait_name
+                ));
+            }
         }
         // 3. Apply substitution to the abstract return type to get the concrete return type.
         let abstract_ret = resolve_ty_body(self.site, self.types, self.generics, tyvars, &sig.ret)
@@ -1912,7 +2278,10 @@ pub(crate) fn infer_type(
         site: "<elaborate>",
         types: &env.types,
         generics: &env.generics,
+        traits: &env.traits,
+        impls: &env.impls,
         fns: &env.fns,
+        bounds: &[],
     };
     cx.infer(scope, e)
 }
@@ -2020,9 +2389,10 @@ fn paradigm_name(t: &Ty) -> Option<&'static str> {
         Ty::Binary(_) => Some("Binary"),
         Ty::Ternary(_) => Some("Ternary"),
         Ty::Dense(_, _) => Some("Dense"),
-        // `Data`, `Substrate`, `Var`, and `App` have no paradigm: they are not representation types.
-        // A `Var`/`App` reaching here is a transient abstract form — no paradigm assigned (M-657/M-673).
-        Ty::Data(_) | Ty::Substrate(_) | Ty::Var(_) | Ty::App(_, _) => None,
+        // `Data`, `Substrate`, `Var`, `App`, and `Arrow` have no paradigm: they are not representation
+        // types. A `Var`/`App` reaching here is a transient abstract form; `Arrow` is a checker-internal
+        // method-type form (M-658) — no paradigm assigned.
+        Ty::Data(_) | Ty::Substrate(_) | Ty::Var(_) | Ty::App(_, _) | Ty::Arrow(_, _) => None,
     }
 }
 
@@ -2216,6 +2586,9 @@ pub(crate) fn subst_ty(ty: &Ty, subst: &BTreeMap<String, Ty>) -> Ty {
                 Ty::Data(mangle(name, &substituted))
             }
         }
+        // Arrow (M-658): recurse into both sides — method types may carry type variables when
+        // the trait method is generic over the trait param (e.g. `(A -> Binary{8})`).
+        Ty::Arrow(a, b) => Ty::Arrow(Box::new(subst_ty(a, subst)), Box::new(subst_ty(b, subst))),
     }
 }
 
@@ -2238,6 +2611,19 @@ pub(crate) fn mangle(name: &str, args: &[Ty]) -> String {
     format!("{name}<{}>", parts.join(", "))
 }
 
+/// Build the **compile-time dictionary** name for an impl method (S7/M-659, **Declared**).
+///
+/// For `impl Show for Binary{8} { fn show(…) }`, produces:
+/// `__impl_Show_for_Binary{8}__show`
+///
+/// This name is globally unique (trait × concrete for-type × method), is registered in
+/// `env.fns` during Pass 1d, and is substituted into monomorphized generic bodies wherever a
+/// call to the abstract trait-method name appears.  No new kernel nodes (KC-3); the evaluator
+/// and elaborator both resolve by name lookup in `env.fns`.
+pub(crate) fn impl_method_name(trait_name: &str, for_ty: &Ty, method: &str) -> String {
+    format!("__impl_{trait_name}_for_{for_ty}__{method}")
+}
+
 /// Returns true if `ty` contains any [`Ty::Var`] — used to detect unresolved phantom type
 /// parameters after call-site instantiation. A return type that still contains a `Var` means no
 /// argument anchored it; the caller must provide an explicit annotation (G2 / never-silent).
@@ -2253,6 +2639,8 @@ pub(crate) fn contains_var(ty: &Ty) -> bool {
         Ty::Var(_) => true,
         // App is structural: abstract iff any arg is abstract.
         Ty::App(_, args) => args.iter().any(contains_var),
+        // Arrow (M-658): recurse into both sides.
+        Ty::Arrow(a, b) => contains_var(a) || contains_var(b),
         // Post-M-673: abstract generic applications are `Ty::App` (above); `Ty::Data` is a concrete,
         // registered monomorphic type name and never carries a type variable — so false.
         Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Data(_) | Ty::Substrate(_) => false,
@@ -2331,7 +2719,13 @@ fn ctors_of_expected(
         Ty::App(base_name, _) => generics
             .get(base_name.as_str())
             .map(|shell| shell.ctors.clone()),
-        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Var(_) => None,
+        // Arrow is a checker-internal method-type form (M-658) — not a data type, no ctors.
+        Ty::Binary(_)
+        | Ty::Ternary(_)
+        | Ty::Dense(_, _)
+        | Ty::Substrate(_)
+        | Ty::Var(_)
+        | Ty::Arrow(_, _) => None,
     }
 }
 
@@ -2816,9 +3210,27 @@ pub(crate) fn monomorphize_with_cap(
             })
             .collect();
 
+        // S7 (M-659): Build the compile-time dictionary for this instance.
+        // For each bound `B.param: B.trait_name`, look up the concrete type from `subst`
+        // and build a mapping: trait-method-name → mangled impl-method-name.
+        // This lets `rewrite_expr` substitute abstract trait-method calls with concrete
+        // impl-method calls — no runtime dictionary, no new kernel nodes (KC-3 / **Declared**).
+        let mut dict: BTreeMap<String, String> = BTreeMap::new();
+        for b in &gfd.sig.bounds {
+            if let Some(concrete_ty) = subst.get(&b.param) {
+                // Look up the trait info to find which method names belong to this trait.
+                if let Some(trait_info) = env.traits.get(&b.trait_name) {
+                    for m_sig in &trait_info.methods {
+                        let impl_name = impl_method_name(&b.trait_name, concrete_ty, &m_sig.name);
+                        dict.insert(m_sig.name.clone(), impl_name);
+                    }
+                }
+            }
+        }
+
         // Build the monomorphic body: deep-copy the generic body, rewrite internal calls to
         // generic functions (including the self-call) to their mangled instance names under
-        // the *current* substitution.
+        // the *current* substitution.  Also rewrites trait-method calls via `dict` (S7).
         let mono_body = rewrite_body_for_instance(
             &gfd.body,
             &gfn_name,
@@ -2829,6 +3241,7 @@ pub(crate) fn monomorphize_with_cap(
             &memo,
             &mangled,
             &concrete_scope,
+            &dict,
         )?;
 
         // Build and insert the monomorphic FnDecl.
@@ -2837,6 +3250,7 @@ pub(crate) fn monomorphize_with_cap(
             sig: FnSig {
                 name: mangled.clone(),
                 params: vec![], // monomorphic — no type params
+                bounds: vec![], // monomorphic — no bounds
                 value_params: mono_params,
                 ret: mono_ret,
             },
@@ -2879,6 +3293,8 @@ pub(crate) fn monomorphize_with_cap(
     Ok(Env {
         types: env.types.clone(),
         generics: env.generics.clone(),
+        traits: env.traits.clone(),
+        impls: env.impls.clone(),
         fns: rewritten_fns,
         totality: env.totality.clone(),
     })
@@ -2907,7 +3323,10 @@ fn infer_generic_arg_tys_with_env(
         site,
         types: &env.types,
         generics: &env.generics,
+        traits: &env.traits,
+        impls: &env.impls,
         fns: &env.fns,
+        bounds: &gfd.sig.bounds,
     };
     let mut scope_mut: Vec<(String, Ty)> = scope.to_vec();
 
@@ -3157,11 +3576,16 @@ fn calls_in_body(body: &Expr) -> BTreeSet<String> {
 /// - Calls to OTHER generic functions in the body use `unify_arg` against the callee's abstract
 ///   param types to compute their own substitution, then push the resulting instance onto
 ///   `worklist` for materialization.
+/// - S7 (M-659): calls to trait-method names that appear in `dict` are rewritten to their
+///   concrete mangled impl-method names (compile-time dictionary dispatch — KC-3, no new nodes).
 /// - Ascriptions (`expr : T`) whose type refs contain Ty::Var are left as-is (elab is
 ///   transparent to them — the type was already checked by the checker).
 ///
 /// The rewriting is purely structural (tree transformation over `Expr`). No new type checking
 /// is performed — correctness rests on the checker's prior validation.
+///
+/// `dict`: maps trait-method short name → mangled impl-method name for this instantiation.
+/// Built by the caller from the generic fn's bounds + the current substitution.
 #[allow(clippy::too_many_arguments)]
 fn rewrite_body_for_instance(
     body: &Expr,
@@ -3173,6 +3597,7 @@ fn rewrite_body_for_instance(
     memo: &BTreeSet<String>,
     mangled_self: &str,
     concrete_scope: &[(String, Ty)],
+    dict: &BTreeMap<String, String>,
 ) -> Result<Expr, CheckError> {
     rewrite_expr(
         body,
@@ -3184,6 +3609,7 @@ fn rewrite_body_for_instance(
         memo,
         mangled_self,
         concrete_scope,
+        dict,
     )
 }
 
@@ -3192,6 +3618,8 @@ fn rewrite_body_for_instance(
 // type substitution) for potential future use and structural consistency with
 // `rewrite_body_for_instance`; Strategy 1 (direct subst-based inference) was removed
 // in M-657C, so it is no longer directly read inside this function body.
+// `dict` carries the compile-time dictionary for S7 (M-659): maps trait-method short name →
+// mangled impl-method name for the current instantiation.
 #[allow(clippy::only_used_in_recursion)]
 fn rewrite_expr(
     e: &Expr,
@@ -3203,12 +3631,43 @@ fn rewrite_expr(
     memo: &BTreeSet<String>,
     mangled_self: &str,
     concrete_scope: &[(String, Ty)],
+    dict: &BTreeMap<String, String>,
 ) -> Result<Expr, CheckError> {
     match e {
         Expr::App { head, args } => {
             if let Expr::Path(p) = head.as_ref() {
                 if p.0.len() == 1 {
                     let callee_name = &p.0[0];
+
+                    // S7 (M-659): trait-method dispatch via compile-time dictionary.
+                    // If the callee name is a trait method for this instance's bounds (i.e., it
+                    // appears in `dict`), rewrite it to the concrete impl's mangled method name.
+                    // This check happens BEFORE the self-recursive and generic-fn checks to
+                    // ensure trait methods always dispatch correctly — they are neither self-calls
+                    // nor generic functions.
+                    if let Some(impl_name) = dict.get(callee_name.as_str()) {
+                        let new_args: Vec<Expr> = args
+                            .iter()
+                            .map(|a| {
+                                rewrite_expr(
+                                    a,
+                                    self_name,
+                                    subst,
+                                    generic_fns,
+                                    env,
+                                    worklist,
+                                    memo,
+                                    mangled_self,
+                                    concrete_scope,
+                                    dict,
+                                )
+                            })
+                            .collect::<Result<_, _>>()?;
+                        return Ok(Expr::App {
+                            head: Box::new(Expr::Path(Path(vec![impl_name.clone()]))),
+                            args: new_args,
+                        });
+                    }
 
                     // Self-recursive call: rename to the mangled self name.
                     if callee_name == self_name {
@@ -3225,6 +3684,7 @@ fn rewrite_expr(
                                     memo,
                                     mangled_self,
                                     concrete_scope,
+                                    dict,
                                 )
                             })
                             .collect::<Result<_, _>>()?;
@@ -3285,6 +3745,7 @@ fn rewrite_expr(
                                                 memo,
                                                 mangled_self,
                                                 concrete_scope,
+                                                dict,
                                             )
                                         })
                                         .collect::<Result<_, _>>()?;
@@ -3318,6 +3779,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?;
             let new_args: Vec<Expr> = args
                 .iter()
@@ -3332,6 +3794,7 @@ fn rewrite_expr(
                         memo,
                         mangled_self,
                         concrete_scope,
+                        dict,
                     )
                 })
                 .collect::<Result<_, _>>()?;
@@ -3357,6 +3820,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?;
             // Extend the concrete scope for the body: if we can infer the bound's type,
             // add `(name, ty)` so that generic calls in `body` whose arg IS `name` can
@@ -3382,6 +3846,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 &body_scope,
+                dict,
             )?;
             Ok(Expr::Let {
                 name: name.clone(),
@@ -3401,6 +3866,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?),
             conseq: Box::new(rewrite_expr(
                 conseq,
@@ -3412,6 +3878,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?),
             alt: Box::new(rewrite_expr(
                 alt,
@@ -3423,6 +3890,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?),
         }),
         Expr::Match { scrutinee, arms } => {
@@ -3436,6 +3904,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?;
             // Infer the scrutinee type so we can bind pattern variables per arm.
             let mut scope_mut = concrete_scope.to_vec();
@@ -3463,6 +3932,7 @@ fn rewrite_expr(
                         memo,
                         mangled_self,
                         &arm_scope,
+                        dict,
                     )
                     .map(|body| Arm {
                         pattern: arm.pattern.clone(),
@@ -3492,6 +3962,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?;
             let new_init = rewrite_expr(
                 init,
@@ -3503,6 +3974,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?;
             // Extend the scope for the body with the iteration variable `x` (element type)
             // and accumulator `acc` (same type as init).  Best-effort.
@@ -3533,6 +4005,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 &for_scope,
+                dict,
             )?;
             Ok(Expr::For {
                 x: x.clone(),
@@ -3557,6 +4030,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?),
             target: target.clone(),
             policy: policy.clone(),
@@ -3573,6 +4047,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?),
         }),
         Expr::Wild(b) => Ok(Expr::Wild(Box::new(rewrite_expr(
@@ -3585,6 +4060,7 @@ fn rewrite_expr(
             memo,
             mangled_self,
             concrete_scope,
+            dict,
         )?))),
         Expr::Spore(b) => Ok(Expr::Spore(Box::new(rewrite_expr(
             b,
@@ -3596,6 +4072,7 @@ fn rewrite_expr(
             memo,
             mangled_self,
             concrete_scope,
+            dict,
         )?))),
         Expr::Colony(hyphae) => {
             let new_hyphae: Vec<Hypha> = hyphae
@@ -3611,6 +4088,7 @@ fn rewrite_expr(
                         memo,
                         mangled_self,
                         concrete_scope,
+                        dict,
                     )
                     .map(|body| Hypha { body })
                 })
@@ -3628,6 +4106,7 @@ fn rewrite_expr(
                 memo,
                 mangled_self,
                 concrete_scope,
+                dict,
             )?),
             ty.clone(),
         )),
@@ -3876,6 +4355,9 @@ fn ty_to_typeref(ty: &Ty) -> TypeRef {
         Ty::Var(a) => BaseType::Named(format!("?{a}"), vec![]),
         // A residual App after substitution is a checker bug (should have been collapsed to Data).
         Ty::App(name, _) => BaseType::Named(format!("?App:{name}"), vec![]),
+        // Arrow is a checker-internal method-type (M-658) — it never appears in a monomorphized
+        // FnDecl's sig. A residual Arrow here is a checker bug; emit a placeholder (defense-in-depth).
+        Ty::Arrow(_, _) => BaseType::Named("?Arrow".to_owned(), vec![]),
     })
 }
 

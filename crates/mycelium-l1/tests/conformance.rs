@@ -83,6 +83,12 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "13-orphan-hypha.myc",
         "only valid inside a `colony",
     ),
+    (
+        // M-658/M-659: `impl TraitName { }` without `for Type` is a parse error — `for` is
+        // mandatory (RFC-0019 §4.5; never a silent accept, G2).
+        "14-impl-missing-for.myc",
+        "`for`",
+    ),
 ];
 
 #[test]

@@ -539,6 +539,10 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
         // invariant violation (App must not survive past the monomorphization boundary). Explicit
         // arm (not `_`) so the compiler enforces exhaustiveness on future Ty variants.
         Ty::App(_, _) => return None,
+        // Arrow (M-658): checker-internal method-type form — an Arrow must never appear as a
+        // field of a user ADT (the L0 data contract is frozen, KC-3). Defense-in-depth: return
+        // None so the elaborator skips it rather than panicking (G2/VR-5).
+        Ty::Arrow(_, _) => return None,
     })
 }
 

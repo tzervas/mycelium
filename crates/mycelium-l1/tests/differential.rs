@@ -245,6 +245,21 @@ fn data_corpus() -> Vec<&'static str> {
          fn odd<A>(xs: List<A>) -> Bool = match xs { Nil => False, Cons(_, rest) => even(rest) }\n\
          fn byte_even(xs: List<Binary{1}>) -> Bool = even(xs)\n\
          fn main() -> Bool = byte_even(Cons(0b0, Cons(0b0, Nil)))",
+        // --- S7/M-658/M-659: trait + impl + bounded generic — three-path differential ---
+        // A bounded generic fn calls a trait method; after monomorphization and elaboration the
+        // three paths (L1-eval, elaborate→L0-interp, AOT) must agree (NFR-7 / S7 Declared).
+        // `show(x) = not(x)` via `impl Show for Binary{8}`.
+        "nodule d\n\
+         trait Show { fn show(x: Binary{8}) -> Binary{8} }\n\
+         impl Show for Binary{8} { fn show(x: Binary{8}) -> Binary{8} = not(x) }\n\
+         fn apply_show<T: Show>(x: T) -> Binary{8} = show(x)\n\
+         fn main() -> Binary{8} = apply_show(0b0000_0000)",
+        // Identity impl: trait method is the identity — distinguishes dispatch from accident.
+        "nodule d\n\
+         trait Id { fn id_method(x: Binary{8}) -> Binary{8} }\n\
+         impl Id for Binary{8} { fn id_method(x: Binary{8}) -> Binary{8} = x }\n\
+         fn apply_id<T: Id>(x: T) -> Binary{8} = id_method(x)\n\
+         fn main() -> Binary{8} = apply_id(0b1010_1010)",
     ]
 }
 

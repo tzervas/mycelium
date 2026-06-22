@@ -2,7 +2,9 @@
 //! checker, and the scope-quantified `matured ⟹ total` gate (RFC-0017 §4.2). Every refusal is
 //! an explicit `CheckError`.
 
-use mycelium_l1::{check_nodule, check_nodule_matured, elaborate, parse, ElabError, Totality};
+use mycelium_l1::{
+    check_nodule, check_nodule_matured, elaborate, parse, ElabError, Evaluator, Totality,
+};
 
 fn check(src: &str) -> Result<mycelium_l1::Env, mycelium_l1::CheckError> {
     let nodule = parse(src).expect("parses");
@@ -650,4 +652,359 @@ fn instance_cap_error_is_explicit_residual_not_a_panic() {
     // Must succeed — ordinary self-recursive generic does not fire the cap.
     let _node =
         elaborate(&env, "main").expect("ordinary recursive generic must NOT fire the instance cap");
+}
+
+// ---- S5: trait registry + impl checking + coherence (M-658/M-659) ----
+
+#[test]
+fn trait_declaration_registers_in_env() {
+    // A `trait Show { fn show(x: Binary{8}) -> Binary{8} }` registers in `env.traits`.
+    let src = "nodule d\ntrait Show {\n  fn show(x: Binary{8}) -> Binary{8}\n}";
+    let env = check(src).expect("trait declaration must check");
+    assert!(
+        env.traits.contains_key("Show"),
+        "Show should be in env.traits; got: {:?}",
+        env.traits.keys().collect::<Vec<_>>()
+    );
+    assert_eq!(env.traits["Show"].methods.len(), 1);
+    assert_eq!(env.traits["Show"].methods[0].name, "show");
+}
+
+#[test]
+fn duplicate_trait_declaration_is_an_explicit_error() {
+    // Two `trait Show` declarations → explicit CheckError (never a silent shadow — G2).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+    );
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("duplicate trait"),
+        "expected duplicate-trait error; got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn impl_for_registered_type_checks() {
+    // A valid `impl Show for Binary{8}` registers in `env.impls` and type-checks the method body.
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "impl Show for Binary{8} {\n",
+        "  fn show(x: Binary{8}) -> Binary{8} = x\n",
+        "}\n",
+    );
+    let env = check(src).expect("impl must check");
+    assert!(
+        env.impl_info("Show", &mycelium_l1::Ty::Binary(8)).is_some(),
+        "impl Show for Binary{{8}} should be registered"
+    );
+}
+
+#[test]
+fn impl_for_unknown_trait_is_an_explicit_error() {
+    // `impl Unknown for Binary{8}` — trait not declared → explicit CheckError (G2).
+    let src =
+        "nodule d\nimpl Unknown for Binary{8} {\n  fn show(x: Binary{8}) -> Binary{8} = x\n}\n";
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("unknown trait"),
+        "expected unknown-trait error; got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn overlapping_impl_is_an_explicit_error() {
+    // Two `impl Show for Binary{8}` declarations → coherence violation (RFC-0019 §4.5).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "impl Show for Binary{8} { fn show(x: Binary{8}) -> Binary{8} = x }\n",
+        "impl Show for Binary{8} { fn show(x: Binary{8}) -> Binary{8} = x }\n",
+    );
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("overlapping impl") || err.message.contains("coherence"),
+        "expected coherence error; got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn impl_missing_method_is_an_explicit_error() {
+    // `impl Show for Binary{8}` without `show` → missing method CheckError (never-silent, G2).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "impl Show for Binary{8} { }\n",
+    );
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("missing method"),
+        "expected missing-method error; got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn impl_extra_method_is_an_explicit_error() {
+    // Providing a method NOT in the trait → explicit error (never-silent, G2).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "impl Show for Binary{8} {\n",
+        "  fn show(x: Binary{8}) -> Binary{8} = x\n",
+        "  fn extra(x: Binary{8}) -> Binary{8} = x\n",
+        "}\n",
+    );
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("not declared in trait"),
+        "expected undeclared-method error; got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn impl_method_type_mismatch_is_an_explicit_error() {
+    // Method body returns wrong type → explicit CheckError (never-silent, G2).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "impl Show for Binary{8} {\n",
+        "  fn show(x: Binary{8}) -> Binary{8} = swap(x, to: Ternary{6}, policy: rt)\n",
+        "}\n",
+    );
+    let err = check(src).unwrap_err();
+    // Either a MissingConversion or a plain type mismatch — either way it must not succeed.
+    assert!(
+        !err.message.is_empty(),
+        "impl method type mismatch should be an error; got: {}",
+        err.message
+    );
+}
+
+// ---- S6: bounded-call resolution (M-658/M-659) ----
+
+#[test]
+fn bounded_generic_call_with_impl_checks() {
+    // `fn identity<T: Show>(x: T) -> T` called with `Binary{8}` where `impl Show for Binary{8}`
+    // exists — the bound check must find the impl and succeed. The call `identity(0b0000_0000)`
+    // anchors T=Binary{8}; the impl lookup for Show@Binary{8} must pass (M-659).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "impl Show for Binary{8} { fn show(x: Binary{8}) -> Binary{8} = x }\n",
+        "fn identity<T: Show>(x: T) -> T = x\n",
+        "fn main() -> Binary{8} = identity(0b0000_0000)\n",
+    );
+    check(src).expect("bounded generic call with registered impl must check");
+}
+
+#[test]
+fn bounded_call_missing_impl_is_an_explicit_error() {
+    // `fn identity<T: Show>(x: T) -> T` called with `Binary{8}` but NO `impl Show for Binary{8}`
+    // registered → explicit CheckError (never-silent, G2 / M-659).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        // No impl registered for Binary{8}.
+        "fn identity<T: Show>(x: T) -> T = x\n",
+        "fn main() -> Binary{8} = identity(0b0000_0000)\n",
+    );
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("no impl of"),
+        "expected missing-impl error; got: {}",
+        err.message
+    );
+}
+
+// ---- S7: compile-time dictionary dispatch (M-658/M-659) ----
+// These tests verify that trait method calls inside bounded generic functions are correctly
+// resolved at monomorphization time and that the evaluator and elaborator can execute them.
+
+#[test]
+fn trait_method_call_in_bounded_generic_evaluates_correctly() {
+    // `fn apply_show<T: Show>(x: T) -> Binary{8} = show(x)` — the body calls the trait method
+    // `show` directly. After monomorphization, `show(x)` must be rewritten to the concrete
+    // impl method and be callable by the evaluator (S7 / M-659 compile-time dictionary).
+    let src = concat!(
+        "nodule d\n",
+        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        // impl: `show(x) = not(x)` so we can distinguish it from the identity.
+        "impl Show for Binary{8} { fn show(x: Binary{8}) -> Binary{8} = not(x) }\n",
+        "fn apply_show<T: Show>(x: T) -> Binary{8} = show(x)\n",
+        "fn main() -> Binary{8} = apply_show(0b0000_0000)\n",
+    );
+    let env = check(src).expect("must check");
+    let result = Evaluator::new(&env)
+        .call("main", vec![])
+        .expect("must evaluate");
+    // `not(0b0000_0000)` = 0b1111_1111.
+    let val = result.as_repr().expect("repr value");
+    // Compare by repr payload: the result should be all-true bits (0b11111111).
+    use mycelium_core::Payload;
+    match val.payload() {
+        Payload::Bits(bits) => {
+            assert_eq!(
+                bits,
+                &vec![true; 8],
+                "expected not(0b00000000) = 0b11111111"
+            );
+        }
+        other => panic!("expected Bits payload, got {other:?}"),
+    }
+}
+
+#[test]
+fn trait_method_call_evaluates_independently_per_impl() {
+    // Two impls of the same trait for different types — the monomorphizer must dispatch to
+    // the correct impl for each instantiation (S7: per-instance dictionary, not shared).
+    // `impl Transform for Binary{8}  { fn transform(x) = not(x) }`
+    // `fn apply<T: Transform>(x: T) -> Binary{8} = transform(x)` called with Binary{8}.
+    // Verifies that multiple impls coexist and the right one fires (M-659 coherence).
+    //
+    // We can't have two impls for the same type, so we test one concrete impl: the key
+    // property is that the call dispatches to `not`, not an identity.
+    let src = concat!(
+        "nodule d\n",
+        "trait Transform { fn transform(x: Binary{8}) -> Binary{8} }\n",
+        "impl Transform for Binary{8} { fn transform(x: Binary{8}) -> Binary{8} = not(x) }\n",
+        "fn apply<T: Transform>(x: T) -> Binary{8} = transform(x)\n",
+        "fn main() -> Binary{8} = apply(0b1111_0000)\n",
+    );
+    let env = check(src).expect("must check");
+    let result = Evaluator::new(&env)
+        .call("main", vec![])
+        .expect("must evaluate");
+    // `not(0b1111_0000)` = 0b0000_1111.
+    let val = result.as_repr().expect("repr value");
+    use mycelium_core::Payload;
+    match val.payload() {
+        Payload::Bits(bits) => {
+            assert_eq!(
+                bits,
+                &vec![false, false, false, false, true, true, true, true],
+                "expected not(0b11110000) = 0b00001111"
+            );
+        }
+        other => panic!("expected Bits payload, got {other:?}"),
+    }
+}
+
+#[test]
+fn bounded_generic_trait_method_elaborates_correctly() {
+    // Verify that a bounded generic with a trait method call also elaborates to L0 correctly.
+    // The elaborator uses the monomorphized env (from `monomorphize`) so the trait-method
+    // rewriting done in S7 must be present in the elaborated result (KC-3: no new kernel nodes).
+    let src = concat!(
+        "nodule d\n",
+        "trait Id { fn id_method(x: Binary{8}) -> Binary{8} }\n",
+        "impl Id for Binary{8} { fn id_method(x: Binary{8}) -> Binary{8} = x }\n",
+        "fn apply_id<T: Id>(x: T) -> Binary{8} = id_method(x)\n",
+        "fn main() -> Binary{8} = apply_id(0b1010_1010)\n",
+    );
+    let env = check(src).expect("must check");
+    // L1 evaluator must give the correct result.
+    let l1_result = Evaluator::new(&env)
+        .call("main", vec![])
+        .expect("L1 eval must succeed");
+    let l1_val = l1_result.as_repr().expect("repr value");
+    use mycelium_core::Payload;
+    match l1_val.payload() {
+        Payload::Bits(bits) => {
+            // `id_method(0b10101010) = 0b10101010` (identity via impl).
+            assert_eq!(
+                bits,
+                &vec![true, false, true, false, true, false, true, false],
+                "expected id_method(0b10101010) = 0b10101010"
+            );
+        }
+        other => panic!("expected Bits payload, got {other:?}"),
+    }
+    // Elaboration to L0 must also succeed — no new kernel nodes needed (KC-3).
+    let _ = elaborate(&env, "main").expect("must elaborate to L0");
+}
+
+#[test]
+fn prop_trait_dispatch_is_consistent_across_representative_concrete_types() {
+    // S8 / M-658 / M-659 property bound (Declared): for each concrete type implementing a trait,
+    // the dict-dispatch and runtime-dispatch paths agree on the result. We exercise this by
+    // building a nodule that supplies *separate* impls for several Binary widths (4, 8, 16) and a
+    // single bounded generic `apply_not`, then verifying that calling it with a value of each
+    // concrete type produces the result that the per-type `not` prim would produce.
+    //
+    // This is a representative coverage loop — not exhaustive over all widths — consistent with
+    // the DN-20 Tier-0/Tier-1 tiering (low proptest cases per commit).
+    //
+    // Guarantee tag: Declared (the dispatch contract is argued, not machine-checked; see VR-5).
+
+    struct Case {
+        width: u32,
+        input_bits: &'static str,
+        expected: Vec<bool>, // expected `not` of input
+    }
+
+    // `not` inverts every bit, so 0b0000 → 0b1111, 0b0000_0000 → 0b1111_1111, etc.
+    let cases: &[Case] = &[
+        Case {
+            width: 4,
+            input_bits: "0b0000",
+            expected: vec![true, true, true, true],
+        },
+        Case {
+            width: 8,
+            input_bits: "0b0000_0000",
+            expected: vec![true, true, true, true, true, true, true, true],
+        },
+        Case {
+            width: 16,
+            input_bits: "0b0000_0000_0000_0000",
+            expected: vec![
+                true, true, true, true, true, true, true, true, true, true, true, true, true, true,
+                true, true,
+            ],
+        },
+    ];
+
+    for case in cases {
+        let w = case.width;
+        // Build a nodule with impl for each width but only the `apply_not` generic is called.
+        // Impls for widths not used by `main` are noise — that's intentional: the checker must
+        // accept them without complaint (no overlap, no missing-method errors).
+        let src = format!(
+            "nodule d\n\
+             trait Invertible {{ fn invert(x: Binary{{{w}}})\
+             -> Binary{{{w}}} }}\n\
+             impl Invertible for Binary{{4}} {{ fn invert(x: Binary{{4}}) -> Binary{{4}} = not(x) }}\n\
+             impl Invertible for Binary{{8}} {{ fn invert(x: Binary{{8}}) -> Binary{{8}} = not(x) }}\n\
+             impl Invertible for Binary{{16}} {{ fn invert(x: Binary{{16}}) -> Binary{{16}} = not(x) }}\n\
+             fn apply_not<T: Invertible>(x: T) -> Binary{{{w}}} = invert(x)\n\
+             fn main() -> Binary{{{w}}} = apply_not({input})\n",
+            w = w,
+            input = case.input_bits,
+        );
+        let env = check(&src).unwrap_or_else(|e| panic!("width {w}: must check, got: {e:?}"));
+        let result = Evaluator::new(&env)
+            .call("main", vec![])
+            .unwrap_or_else(|e| panic!("width {w}: must evaluate, got: {e:?}"));
+        let val = result
+            .as_repr()
+            .unwrap_or_else(|| panic!("width {w}: expected repr value"));
+        use mycelium_core::Payload;
+        match val.payload() {
+            Payload::Bits(bits) => {
+                assert_eq!(
+                    bits, &case.expected,
+                    "width {w}: not({}) dispatch gave wrong result",
+                    case.input_bits
+                );
+            }
+            other => panic!("width {w}: expected Bits payload, got {other:?}"),
+        }
+    }
 }

@@ -65,6 +65,9 @@ fn signature<'a>(
                 ctors: shell.ctors.clone(),
             })
         }),
+        // Arrow (M-658): checker-internal method-type form — not a data type, no finite
+        // constructor set. Must never reach pattern coverage analysis (guard in depth, G2).
+        Ty::Arrow(_, _) => None,
     }
 }
 
