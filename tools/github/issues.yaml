@@ -2256,6 +2256,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:spec, area:language, priority:P1, status:done]
     depends_on: []
+    epic: E7-1
     landed_pr: 346
     landed_date: 2026-06-22
     landed_basis: "CHANGELOG.md '### Changed (2026-06-22: M-656 — RFC-0007 §11 discharges the §4.4 generics deferral)'; merged-PR-list #346 (cross-checked; no (#NNN) in the curated subject)"
@@ -2272,6 +2273,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
     depends_on: [M-656]
+    epic: E7-1
     evidence_pr: 346
     evidence_date: 2026-06-22
     landed_basis: "status:in-progress (NOT done) — evidence is a REFERENCE/partial, not a completed landing; CHANGELOG.md '### Added (2026-06-22: M-657 — stage-1 unbounded generics checker + depth-safe recursion)'; merged-PR-list #346 (cross-checked; no (#NNN) in the curated subject)"
@@ -2310,6 +2312,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:spec, area:language, priority:P1, status:done]
     depends_on: [M-657]
+    epic: E7-1
     landed_pr: 349
     landed_date: 2026-06-22
     landed_basis: "CHANGELOG.md '### Changed (2026-06-22: M-658 — RFC-0007 §12 trait surface + `impl` reserved)'; merged-PR-list #349 (cross-checked; no (#NNN) in the curated subject)"
@@ -2325,6 +2328,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
     depends_on: [M-658]
+    epic: E7-1
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, src:crates/mycelium-l1/src/checkty.rs]
     body: |
       `checkty.rs` currently skips `Item::Trait(_)` with no check arm; `Item::Fn` does not handle `impl`-block methods. Implements: (1) trait declaration checking (method signature type-checking, coherence checking per RFC-0019 orphan rule); (2) `impl` block parsing + type-checking; (3) dictionary-passing elaboration in `elab.rs` so trait method calls lower to the correct L0 application. No new kernel node (KC-3). Coherence violation is an explicit `CheckError`, never silent.
@@ -2335,6 +2339,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
     depends_on: [M-659]
+    epic: E7-1
     doc_refs: [corpus:RFC-0014, corpus:RFC-0007, src:crates/mycelium-l1/src/ast.rs]
     body: |
       RFC-0014 §4.3 defines declared effects (RT3); the L1 surface has no effect-annotation syntax in `FnSig` or `FnDecl` (DN-14 §3 row 8). This issue: (1) amends RFC-0007 or RFC-0014 to define the stage-1 surface syntax (`fn f() -> T / {time, entropy}`); (2) extends `ast.rs` `FnSig` with an effects field; (3) adds effect-annotation parsing to `parse.rs`; (4) implements an effect-checking pass in `checkty.rs` (declared effects propagate; undeclared effect in a callee is a `CheckError` — I3); (5) wires declared effects into the `mycelium-interp::budget` ledger (M-353 landed the enforcement mechanism). Effect inference is monotone (adding a callee never removes effects from the caller) — property tested.
@@ -2345,6 +2350,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
     depends_on: [M-660]
+    epic: E7-1
     doc_refs: [corpus:RFC-0006, corpus:DN-14, src:crates/mycelium-l1/src/checkty.rs]
     body: |
       `checkty.rs` rejects all `wild` blocks ("denied by default, LR-9"). DN-14 §3 row 9 records this as a gate-fail. RFC-0016 §8-Q6 resolved that the audited `wild` floor splits into a `std-sys` phylum (M-541 design done). This issue implements the typechecker path that accepts `wild { body }` inside a function annotated with the appropriate effect set (e.g., `/ {ffi}`). The `myc-sec` wild-audit gate must flag any `wild` block in a non-`std-sys` nodule (never a silent accept — G2). Enables the three call sites: `fs` syscalls, `rand` entropy, `math` libm.
@@ -2355,6 +2361,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
     depends_on: [M-657, M-659]
+    epic: E7-1
     doc_refs: [corpus:DN-06, corpus:RFC-0006, src:crates/mycelium-l1/src/parse.rs, src:crates/mycelium-l1/src/checkty.rs]
     body: |
       `phylum` is lexed as `Tok::Phylum` (token.rs:29) but no parser production consumes it — falls to error arm (parse.rs:218); confirmed by lib.rs:87–95 test. This issue implements: (1) `phylum <path> { … }` header construct in the parser and typechecker (library-scale organizational unit per DN-06 §4); (2) cross-nodule `use` path resolution so `use std.collections.List` resolves across phylum boundaries; (3) multi-nodule typechecking (a phylum's nodules see each other's exported names). Requires generics (M-657) and traits (M-659) to already be in the typechecker because a phylum's public surface will include generic types and trait impls.
@@ -2365,6 +2372,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
     depends_on: [M-657]
+    epic: E7-1
     doc_refs: [corpus:RFC-0018, corpus:RFC-0007, src:crates/mycelium-l1/src/elab.rs, src:crates/mycelium-l1/src/checkty.rs]
     body: |
       RFC-0018 is Accepted (2026-06-18) but not yet enacted in `mycelium-l1`. `elab.rs` returns `Residual` for any `@ g` guarantee annotation on function return types or parameters (lines 215–223, 542–546, 580–583, 880–887). This issue implements the RFC-0018 Design A (data-lineage / data-provenance integrity) graded typing pass: the guarantee index `@ g` on a type becomes a statically-checked constraint; the checker enforces the lattice (`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`) and propagates guarantee meets at call sites. Honesty: the noninterference argument remains `Declared-with-argument` per RFC-0018 §4 — this issue does not upgrade it.
@@ -2375,6 +2383,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
     depends_on: [M-659]
+    epic: E7-1
     doc_refs: [corpus:DN-03, corpus:RFC-0006, src:crates/mycelium-l1/src/token.rs]
     body: |
       DN-03 §1 ratifies `consume` (acquire affine `Substrate` resource), `grow` (derive-like capability extension), and `impl` (inherent method blocks) as chosen terms. None are in the lexer or parser. Note: `impl` reservation is a prerequisite of M-658 (the spec amendment); the lexer change for `impl` should land with M-658. This issue completes the three constructs: (1) reserves `consume` and `grow` in `keyword()` (token.rs); (2) implements `consume <expr>` expression for affine substrate acquisition (paired with `Substrate{name}` type); (3) implements `grow <trait> for <type> { … }` as the derive-like surface; (4) implements `impl <type> { fn … }` inherent-method block parsing and checking. Gated on traits (M-659) for the `grow` and `impl` constructs.
@@ -2402,6 +2411,7 @@ issues:
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
     labels: [phase:7, type:feature, area:language, priority:P2, status:done]
     depends_on: []
+    epic: E7-2
     landed_pr: 332
     landed_date: 2026-06-21
     landed_basis: "CHANGELOG.md '### Added (2026-06-21: M-665 — L1 reserves the 10 DN-03 runtime terms, never-silent (G2))'; merged-PR-list #332 (cross-checked; no (#NNN) in the curated subject)"
@@ -2415,6 +2425,7 @@ issues:
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
     labels: [phase:7, type:feature, area:execution, priority:P2, status:done]
     depends_on: [M-665]
+    epic: E7-2
     landed_pr: 342
     landed_date: 2026-06-21
     landed_basis: "CHANGELOG.md '### Added (2026-06-21: M-666 — RFC-0008 R1 `hypha`/`colony` real-concurrency L1 constructs)'; merged-PR-list #342 (cross-checked; no (#NNN) in the curated subject)"
@@ -2428,6 +2439,7 @@ issues:
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
     labels: [phase:7, type:feature, area:execution, priority:P2, status:needs-design]
     depends_on: [M-666]
+    epic: E7-2
     doc_refs: [corpus:RFC-0008, src:crates/mycelium-mlir/src/runtime.rs]
     body: |
       After `hypha`/`colony` activate (M-666), the R1 vocabulary remaining is: `fuse` (lawful state fusion — RT6 semilattice merge), `reclaim` (supervision-tree reclamation of runtime units — RT7; the L1 surface hook into the `Supervisor`/`RestartIntensity` mechanism from M-356), and `tier` (execution-mode switch — the RFC-0004 `ExecutionMode` bridge). Each needs: (1) an L1 surface construct; (2) a type-checking pass; (3) elaboration to the runtime/AOT layer. `fuse` requires declared merge operations satisfying semilattice laws (RFC-0008 RT6); `reclaim` attaches a reified supervision policy (RT3/RFC-0005); `tier` switches RFC-0004 `ExecutionMode` with an EXPLAIN-able record.
@@ -2438,6 +2450,7 @@ issues:
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
     labels: [phase:7, type:design, area:execution, priority:P3, status:needs-design]
     depends_on: [M-667]
+    epic: E7-2
     doc_refs: [corpus:RFC-0008, corpus:DN-03, corpus:RFC-0005]
     body: |
       RFC-0008 §4.6 R2 covers the distribution vocabulary: `xloc` (explicit value movement across nodes), `mesh` (gossip/pub-sub overlay — RT5, probabilistic guarantees), `cyst` (content-addressed checkpoint of a dormable computation — RT2), `graft` (capability contract with external infrastructure — RT4), `forage` (adaptive placement policy — RFC-0005 site), `backbone` (declared high-bandwidth transport path — RT3). None have implementation RFCs yet; RFC-0008 §4.5 status rule requires each to have its own implementation RFC committing typing + elaboration. This planning issue produces the R2 decomposition: a design note or DN-11 append splitting R2 into per-construct implementation RFCs, with explicit dependency ordering, honesty bounds (probabilistic guarantee tags for `mesh` per RT5/T4.2, fallible typing for `xloc` per RT4), and gate conditions.
