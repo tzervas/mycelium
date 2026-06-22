@@ -1840,21 +1840,13 @@ impl Cx<'_> {
                             ),
                         ));
                     }
-                    // Type-check arguments lazily (accept them, just infer their types).
-                    // Cannot enforce exact param types: the argument types are abstract (Ty::Var)
-                    // in a generic body; correctness is enforced at instantiation (S6/S7).
-                    let mut rebuilt = Vec::with_capacity(args.len());
-                    for a in args {
-                        let (_, a2) = self.check(scope, a, None)?;
-                        rebuilt.push(a2);
-                    }
-                    // Return type: the trait method's declared return type may mention the
-                    // trait's own type parameter(s) — e.g. `fn same(x: A) -> A` in
-                    // `trait Cmp<A>`. Resolve it with the trait params in scope (so they become
-                    // `Ty::Var`), then map each trait param to the bounded generic type variable
-                    // it stands for at this call site (v0: a single-param trait's param IS the
-                    // bound/Self type — `A ↦ Ty::Var(<bound's type param>)`). A non-parametric
-                    // trait has no params, so this is identity (M-658, **Declared**).
+                    // The trait method's declared types may mention the trait's own type
+                    // parameter(s) — e.g. `fn same(x: A) -> A` in `trait Cmp<A>`. Resolve them with
+                    // the trait params in scope (so a bare `A` becomes `Ty::Var`), then map each
+                    // trait param to the bounded generic type variable it stands for at this call
+                    // site (v0 single-param: the trait param IS the bound/Self type —
+                    // `A ↦ Ty::Var(<bound's type param>)`). A non-parametric trait has no params,
+                    // so this is identity (M-658, **Declared**).
                     let param_subst: BTreeMap<String, Ty> = if ti.params.len() == 1 {
                         let mut m = BTreeMap::new();
                         m.insert(ti.params[0].clone(), Ty::Var(b.param.clone()));
@@ -1862,6 +1854,28 @@ impl Cx<'_> {
                     } else {
                         BTreeMap::new()
                     };
+                    // Type-check each argument against the trait method's declared parameter type
+                    // with that substitution applied (never-silent, G2/VR-5): an argument whose
+                    // type does not match is an explicit `CheckError` at the bounded definition
+                    // site — not a stuck or wrong-valued monomorphic program found at instantiation.
+                    let mut rebuilt = Vec::with_capacity(args.len());
+                    for (pm, a) in m_sig.value_params.iter().zip(args) {
+                        let (raw_expected, _) =
+                            resolve_ty(self.site, self.types, &ti.params, &pm.ty)?;
+                        let expected = subst_ty(&raw_expected, &param_subst);
+                        let (got, a2) = self.check(scope, a, None)?;
+                        if got != expected {
+                            return Err(CheckError::new(
+                                self.site,
+                                format!(
+                                    "trait method `{}::{}` argument `{}` expects `{expected}` \
+                                     but got `{got}`",
+                                    b.trait_name, name, pm.name
+                                ),
+                            ));
+                        }
+                        rebuilt.push(a2);
+                    }
                     let (raw_ret, _) = resolve_ty(self.site, self.types, &ti.params, &m_sig.ret)?;
                     let ret_ty = subst_ty(&raw_ret, &param_subst);
                     return Ok(Some((ret_ty, app_node(head, rebuilt))));

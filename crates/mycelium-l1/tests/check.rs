@@ -834,10 +834,10 @@ fn trait_method_call_in_bounded_generic_evaluates_correctly() {
     // impl method and be callable by the evaluator (S7 / M-659 compile-time dictionary).
     let src = concat!(
         "nodule d\n",
-        "trait Show { fn show(x: Binary{8}) -> Binary{8} }\n",
+        "trait Show<A> { fn show(x: A) -> A }\n",
         // impl: `show(x) = not(x)` so we can distinguish it from the identity.
-        "impl Show for Binary{8} { fn show(x: Binary{8}) -> Binary{8} = not(x) }\n",
-        "fn apply_show<T: Show>(x: T) -> Binary{8} = show(x)\n",
+        "impl Show<Binary{8}> for Binary{8} { fn show(x: Binary{8}) -> Binary{8} = not(x) }\n",
+        "fn apply_show<T: Show>(x: T) -> T = show(x)\n",
         "fn main() -> Binary{8} = apply_show(0b0000_0000)\n",
     );
     let env = check(src).expect("must check");
@@ -872,9 +872,9 @@ fn trait_method_call_evaluates_independently_per_impl() {
     // property is that the call dispatches to `not`, not an identity.
     let src = concat!(
         "nodule d\n",
-        "trait Transform { fn transform(x: Binary{8}) -> Binary{8} }\n",
-        "impl Transform for Binary{8} { fn transform(x: Binary{8}) -> Binary{8} = not(x) }\n",
-        "fn apply<T: Transform>(x: T) -> Binary{8} = transform(x)\n",
+        "trait Transform<A> { fn transform(x: A) -> A }\n",
+        "impl Transform<Binary{8}> for Binary{8} { fn transform(x: Binary{8}) -> Binary{8} = not(x) }\n",
+        "fn apply<T: Transform>(x: T) -> T = transform(x)\n",
         "fn main() -> Binary{8} = apply(0b1111_0000)\n",
     );
     let env = check(src).expect("must check");
@@ -903,9 +903,9 @@ fn bounded_generic_trait_method_elaborates_correctly() {
     // rewriting done in S7 must be present in the elaborated result (KC-3: no new kernel nodes).
     let src = concat!(
         "nodule d\n",
-        "trait Id { fn id_method(x: Binary{8}) -> Binary{8} }\n",
-        "impl Id for Binary{8} { fn id_method(x: Binary{8}) -> Binary{8} = x }\n",
-        "fn apply_id<T: Id>(x: T) -> Binary{8} = id_method(x)\n",
+        "trait Id<A> { fn id_method(x: A) -> A }\n",
+        "impl Id<Binary{8}> for Binary{8} { fn id_method(x: Binary{8}) -> Binary{8} = x }\n",
+        "fn apply_id<T: Id>(x: T) -> T = id_method(x)\n",
         "fn main() -> Binary{8} = apply_id(0b1010_1010)\n",
     );
     let env = check(src).expect("must check");
@@ -1139,6 +1139,26 @@ fn ambiguous_trait_method_across_two_bounds_is_refused() {
     assert!(
         err.message.contains("ambiguous") && err.message.contains('m'),
         "expected an ambiguous-trait-method error; got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn trait_method_call_with_mistyped_argument_is_refused() {
+    // A bounded body that calls a trait method with an argument of the wrong type must be an
+    // explicit CheckError at the definition site — not a stuck or wrong-valued monomorphic program
+    // discovered at instantiation (G2/VR-5). `cmp` expects two `A`s; the second argument here is a
+    // concrete `Binary{2}` literal, not the bound type var `X`.
+    let src = concat!(
+        "nodule d\n",
+        "trait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n",
+        "impl Cmp<Binary{8}> for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b00 }\n",
+        "fn bad<X: Cmp>(x: X) -> Binary{2} = cmp(x, 0b00)\n",
+    );
+    let err = check(src).unwrap_err();
+    assert!(
+        err.message.contains("expects") && err.message.contains("cmp"),
+        "expected a trait-method argument-type error; got: {}",
         err.message
     );
 }
