@@ -124,3 +124,21 @@ fn a_phylum_source_is_refused_out_of_scope_never_a_parse_error() {
         other => panic!("a phylum source must be an explicit OutOfScope refusal, got: {other:?}"),
     }
 }
+
+#[test]
+fn a_malformed_phylum_is_refused_out_of_scope_not_a_parse_error() {
+    // M-662 (Copilot #369): a `phylum` header that fails to parse (here: no `nodule`) is still a phylum
+    // source — mycfmt refuses it `OutOfScope` (exit 4), NEVER a parse error (exit 2), so "a phylum is
+    // never a parse error" holds even off the happy path (G2). Caught by the opening `phylum` keyword
+    // because `parse_phylum` rejects it.
+    let src = "phylum app.core\n";
+    match format_source(src, None) {
+        Err(FmtError::OutOfScope(msg)) => {
+            assert!(
+                msg.contains("phylum"),
+                "refusal should name phylum, got: {msg}"
+            )
+        }
+        other => panic!("a malformed phylum must be OutOfScope, not {other:?}"),
+    }
+}

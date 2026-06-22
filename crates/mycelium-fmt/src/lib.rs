@@ -101,6 +101,21 @@ impl std::fmt::Display for FmtError {
 
 impl std::error::Error for FmtError {}
 
+/// Does `src` open with a `phylum` header — i.e. is the first significant line (after leading blank or
+/// `//`-comment lines) the reserved `phylum` keyword at a word boundary? Lets mycfmt refuse a *malformed*
+/// phylum (one `parse_phylum` rejects, e.g. a `phylum` header with no `nodule`) as `OutOfScope` rather
+/// than a parse error, so a phylum source is never a parse error in v0 (M-662; G2). `phylum` is a
+/// reserved keyword (never an identifier), so a leading `phylum` token unambiguously opens a phylum.
+fn opens_with_phylum(src: &str) -> bool {
+    src.lines()
+        .map(str::trim_start)
+        .find(|l| !l.is_empty() && !l.starts_with("//"))
+        .and_then(|l| l.strip_prefix("phylum"))
+        .is_some_and(|rest| {
+            rest.is_empty() || !rest.starts_with(|c: char| c.is_alphanumeric() || c == '_')
+        })
+}
+
 /// Format `src` into its canonical form.
 ///
 /// `pin` is the optional `[toolchain].format` value from `mycelium-proj.toml` (a **hard pin**: a value
@@ -122,10 +137,14 @@ pub fn format_source(src: &str, pin: Option<&str>) -> Result<Formatted, FmtError
     }
 
     // Phylum / multi-nodule sources are outside mycfmt v0 scope (M-662): the formatter v0 canonicalizes a
-    // SINGLE nodule. A `phylum` header or multiple `nodule` blocks in one file is an explicit out-of-scope
-    // refusal — never a parse error and never a partial rewrite (G2). A header-less single nodule is a
-    // phylum-of-one and formats normally below (`parse_phylum` is a strict superset of `parse`).
-    if parse_phylum(src).is_ok_and(|ph| ph.path.is_some() || ph.nodules.len() > 1) {
+    // SINGLE nodule. A `phylum` header or multiple `nodule` blocks is an explicit out-of-scope refusal —
+    // never a parse error and never a partial rewrite (G2). A WELL-FORMED phylum (header, or >1 nodule) is
+    // caught via `parse_phylum`; a MALFORMED one (a `phylum` header `parse_phylum` rejects — e.g. no
+    // `nodule`) is caught by its opening keyword, so a phylum source NEVER surfaces as a parse error. A
+    // header-less single nodule is a phylum-of-one and formats normally below.
+    let is_phylum = parse_phylum(src).is_ok_and(|ph| ph.path.is_some() || ph.nodules.len() > 1)
+        || opens_with_phylum(src);
+    if is_phylum {
         return Err(FmtError::OutOfScope(
             "phylum / multi-nodule sources are outside mycfmt v0 scope (M-662) — format each nodule's \
              content individually; whole-phylum canonical formatting is future work (refused, never a \

@@ -793,15 +793,23 @@ fn resolve_imports(nodule: &Nodule, exports: &Exports) -> Result<NoduleImports, 
         let Some((simple, prefix)) = split_last_seg(path) else {
             return Err(CheckError::new(
                 &site,
-                "a `use` path must name an item (`use a.b.Item`) — a bare single segment does not \
-                 name a cross-nodule item (M-662)",
+                "a `use` path must name an item (`use a.b.Item`) — an empty `use` path does not name \
+                 a cross-nodule item (M-662)",
             ));
         };
-        let qual = if prefix.is_empty() {
-            simple.clone()
-        } else {
-            format!("{prefix}.{simple}")
-        };
+        // A single-segment `use X` names no nodule (prefix empty). Refuse with a teaching diagnostic
+        // rather than the confusing downstream "no such name" lookup miss (M-662; never-silent — G2).
+        if prefix.is_empty() {
+            return Err(CheckError::new(
+                &site,
+                format!(
+                    "`use {simple}`: a cross-nodule import must be nodule-qualified — `{simple}` names \
+                     no nodule. Write `use <nodule>.{simple}` (a specific import) or `use <nodule>.*` \
+                     (a glob) (M-662)"
+                ),
+            ));
+        }
+        let qual = format!("{prefix}.{simple}");
         // Never-silent: unknown path/name vs exists-but-private (honest + helpful — G2).
         match exports.declared.get(&qual) {
             None => {

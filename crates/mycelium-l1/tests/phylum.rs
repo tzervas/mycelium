@@ -420,6 +420,21 @@ fn a_private_cross_nodule_call_without_a_use_is_a_never_silent_unresolved_name()
     );
 }
 
+#[test]
+fn a_single_segment_use_is_a_never_silent_teaching_refusal() {
+    // M-662 (Copilot #369): `use X` names no nodule — a never-silent refusal with a teaching diagnostic
+    // (qualify it as `use <nodule>.X`), NOT the confusing downstream "no such name" miss (G2).
+    let msg = check_err(
+        "phylum p\n\
+         nodule a\npub fn id(x: Binary{8}) -> Binary{8} = x\n\
+         nodule b\nuse id\nfn f(y: Binary{8}) -> Binary{8} = id(y)",
+    );
+    assert!(
+        msg.contains("nodule-qualified") && msg.contains("id"),
+        "a single-segment use must teach nodule-qualification, got: {msg}"
+    );
+}
+
 /// Build a `Path` from segments (test helper).
 fn path(segs: &[&str]) -> mycelium_l1::ast::Path {
     mycelium_l1::ast::Path(segs.iter().map(|s| (*s).to_owned()).collect())

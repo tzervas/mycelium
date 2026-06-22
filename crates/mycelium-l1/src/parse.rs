@@ -391,7 +391,8 @@ impl Parser {
     /// `use path` (specific) or `use path.*` (glob) — a cross-nodule import (M-662; RFC-0006 §4.3).
     /// A trailing `.*` makes it a **glob** (import every `pub` name under the path); otherwise the
     /// path's last segment names the imported item. A `*` anywhere but the final segment is an
-    /// explicit error (the lexer only ever emits `Tok::Star` here). `use` is never `pub`-gated.
+    /// explicit parse error — the lexer emits `Tok::Star` for any `*`; this production is what
+    /// restricts the glob `*` to the final position. `use` is never `pub`-gated.
     fn parse_use(&mut self) -> Result<UsePath, ParseError> {
         self.expect(&Tok::Use, "`use`")?;
         // A `use` path is a dotted path whose final segment may be `*` (the glob). Parse the dotted
