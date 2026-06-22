@@ -48,8 +48,8 @@
 //! whole-program — that is **stage 1b** (RFC-0018 §4.7, FlowCaml-style), not 1a (R18-Q5 scopes 1a
 //! inference to *within a single expression*), and is deliberately not built here (KC-3).
 
-use crate::ast::{Arm, Expr, FnDecl, Item, Literal, Nodule, Pattern, Strength};
-use crate::checkty::{CheckError, DataInfo};
+use crate::ast::{Arm, Expr, FnDecl, Literal, Pattern, Strength};
+use crate::checkty::CheckError;
 use std::collections::BTreeMap;
 
 /// The advertised return grade of a callee (G-App result): the written `@ g`, else the modular
@@ -66,38 +66,36 @@ fn param_grade(p: &crate::ast::Param) -> Strength {
 }
 
 /// **Guarantee-grading pass** (RFC-0018 stage-1a; Pass 3d). Grade-check every **own** top-level
-/// function body and every `impl`-method body against the lattice (the same body set as the
-/// effect-coverage pass — DRY): each body's grade must satisfy its declared return demand, and every
-/// call inside it must satisfy its callee's parameter demands. `fns` is the **merged** table (own +
-/// imported) so a call to an imported `pub fn` resolves to that callee's declared grades; `own_fns`
-/// is this nodule's own functions (imported fns were graded in their home nodule — M-662). Every
-/// refusal is an explicit [`CheckError`] (G2).
+/// function body and every `impl`-method body against the lattice: each body's grade must satisfy its
+/// declared return demand, and every call inside it must satisfy its callee's parameter demands.
+///
+/// `fns` is the **merged, resolved** table (own + imported): a call to an imported `pub fn` resolves
+/// to that callee's declared grades, and the own-fn entries hold the **resolved (canonical) bodies**
+/// (the checker's `resolve_pattern` already normalized every ctor/binder pattern). The pass therefore
+/// walks `fns[name]` for each own name in `own_names` — *not* the raw registered body — and the
+/// likewise-resolved `impl_methods`, so grading sees only canonical patterns and needs no type
+/// information of its own (M-663 / Copilot review: a global ctor scan over raw patterns was an unsound
+/// grade-upgrade). Imported fns were graded in their home nodule (M-662). Every refusal is an explicit
+/// [`CheckError`] (G2).
 pub(crate) fn check_guarantees(
     fns: &BTreeMap<String, FnDecl>,
-    own_fns: &BTreeMap<String, FnDecl>,
-    types: &BTreeMap<String, DataInfo>,
-    nodule: &Nodule,
+    own_names: &BTreeMap<String, FnDecl>,
+    impl_methods: &[FnDecl],
 ) -> Result<(), CheckError> {
-    for fd in own_fns.values() {
-        check_fn_grades(fns, types, fd)?;
+    for name in own_names.keys() {
+        // `fns` holds the resolved own-fn bodies (the checker overwrote each own entry with its
+        // resolved form), so look the canonical body up there rather than walking the raw `own_names`.
+        check_fn_grades(fns, &fns[name])?;
     }
-    for item in &nodule.items {
-        if let Item::Impl(id) = item {
-            for m in &id.methods {
-                check_fn_grades(fns, types, m)?;
-            }
-        }
+    for m in impl_methods {
+        check_fn_grades(fns, m)?;
     }
     Ok(())
 }
 
 /// Grade-check one function/method body: bind each parameter at its demanded grade, infer the body's
 /// grade, and require it to satisfy the declared return demand (G-Weaken at the function boundary).
-fn check_fn_grades(
-    fns: &BTreeMap<String, FnDecl>,
-    types: &BTreeMap<String, DataInfo>,
-    fd: &FnDecl,
-) -> Result<(), CheckError> {
+fn check_fn_grades(fns: &BTreeMap<String, FnDecl>, fd: &FnDecl) -> Result<(), CheckError> {
     let site = &fd.sig.name;
     let mut scope: Vec<(String, Strength)> = fd
         .sig
@@ -105,7 +103,7 @@ fn check_fn_grades(
         .iter()
         .map(|p| (p.name.clone(), param_grade(p)))
         .collect();
-    let gx = Gx { site, fns, types };
+    let gx = Gx { site, fns };
     let body = gx.grade(&mut scope, &fd.body)?;
     let demand = ret_grade(fd);
     if !body.satisfies(demand) {
@@ -122,13 +120,13 @@ fn check_fn_grades(
     Ok(())
 }
 
-/// The grading context for one body: the site (for diagnostics), the merged function table (for
-/// resolving a call's parameter demands + advertised return grade — G-App), and the type registry
-/// (to tell a nullary-constructor `Pattern::Ident` from a true binder — see [`Gx::bind_pattern`]).
+/// The grading context for one body: the site (for diagnostics) and the merged function table (for
+/// resolving a call's parameter demands + advertised return grade — G-App). No type registry is
+/// needed: the checked AST is already canonical (`Cx::resolve_pattern` resolved every ctor/binder
+/// pattern), so grading is a pure, type-free computation over the lattice.
 struct Gx<'a> {
     site: &'a str,
     fns: &'a BTreeMap<String, FnDecl>,
-    types: &'a BTreeMap<String, DataInfo>,
 }
 
 impl Gx<'_> {
@@ -343,27 +341,20 @@ impl Gx<'_> {
         Ok(acc)
     }
 
-    /// Is `name` a **nullary constructor** in the type registry (a ctor with no fields)? Used to keep
-    /// such a constructor *out* of the grade scope when it appears as a bare `Pattern::Ident` — mirrors
-    /// the checker's `normalize_pattern` ctor/binder resolution.
-    fn is_nullary_ctor(&self, name: &str) -> bool {
-        self.types.values().any(|d| {
-            d.ctors
-                .iter()
-                .any(|c| c.name == name && c.fields.is_empty())
-        })
-    }
-
     /// Push every variable a pattern binds onto `scope` at grade `g_s` (the scrutinee's grade — a
     /// destructured field's data provenance is the scrutinee's). Returns how many bindings were pushed,
     /// so the caller can pop exactly that many.
     ///
-    /// A `Pattern::Ident` is ambiguous — a true **binder** *or* a **nullary constructor** (the type
-    /// checker resolves which; `normalize_pattern`). Only a binder enters the grade scope: a
-    /// nullary-ctor pattern binds nothing and **must not shadow the ctor name**, or a reference to that
-    /// constructor in the arm body would wrongly grade at the scrutinee's grade instead of `Exact`
-    /// (a spurious refusal — the M-663 bug Copilot caught). `Wildcard`/`Lit` bind nothing; `Ctor`
-    /// recurses into its sub-patterns.
+    /// The checked AST is **canonical** (`Cx::resolve_pattern`): a `Pattern::Ident` is always a true
+    /// **binder** and a `Pattern::Ctor` always a constructor — the checker, which alone knows the
+    /// *expected scrutinee type*, already resolved the bare-ident ctor/binder ambiguity and rewrote a
+    /// nullary-ctor pattern to `Ctor(name, [])`. So a binder enters the grade scope at `g_s`, while a
+    /// (nullary or n-ary) `Ctor` binds nothing itself and only recurses into its sub-patterns. This
+    /// pass therefore needs **no type information** — resolving the ambiguity *here* (with only the
+    /// global type registry, not the scrutinee type) was an unsound grade-upgrade: a binder whose name
+    /// collided with a nullary ctor of an *unrelated* type would drop its binding and a later
+    /// reference would grade `Exact` instead of `g_s` (M-663 / Copilot review). `Wildcard`/`Lit` bind
+    /// nothing.
     fn bind_pattern(
         &self,
         scope: &mut Vec<(String, Strength)>,
@@ -373,12 +364,8 @@ impl Gx<'_> {
         match pat {
             Pattern::Wildcard | Pattern::Lit(_) => 0,
             Pattern::Ident(name) => {
-                if self.is_nullary_ctor(name) {
-                    0
-                } else {
-                    scope.push((name.clone(), g_s));
-                    1
-                }
+                scope.push((name.clone(), g_s));
+                1
             }
             Pattern::Ctor(_, subs) => {
                 let mut n = 0;
