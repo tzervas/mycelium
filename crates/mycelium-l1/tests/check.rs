@@ -1273,3 +1273,174 @@ fn an_effect_carrying_call_through_a_transitive_chain_must_be_declared() {
         err.message
     );
 }
+
+// --- M-663: RFC-0018 stage-1a static guarantee grading (Design A) -----------------------------
+// The guarantee index `@ g` is a STATICALLY-checked constraint over the lattice
+// `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`: a call's argument must satisfy (`⊒`) its parameter's
+// demand, and a body must satisfy its declared return demand. Honesty: the pass is `Declared`
+// (it enforces the design; the noninterference theorem stays Declared-with-argument). Every
+// refusal is an explicit `CheckError` (never silent — G2/VR-5).
+
+#[test]
+fn an_exact_to_exact_fn_type_checks() {
+    // The headline acceptance: `fn f(x: Binary{8} @ Exact) -> Binary{8} @ Exact = x` grades, because
+    // `x` is bound at `Exact` (its param demand) and the body grade `Exact ⊒ Exact` (the return).
+    check("nodule d\nfn f(x: Binary{8} @ Exact) -> Binary{8} @ Exact = x")
+        .expect("an Exact-demanding, Exact-returning identity grades");
+}
+
+#[test]
+fn passing_a_weaker_graded_value_to_an_exact_param_is_refused() {
+    // `g` advertises `@ Empirical`; `f` demands `@ Exact`. Calling `f(g(x))` must be refused —
+    // `Empirical` does not satisfy the `Exact` demand (the honesty rule at the call site, VR-5).
+    let err = check(
+        "nodule d\n\
+         fn g(x: Binary{8} @ Empirical) -> Binary{8} @ Empirical = x\n\
+         fn f(y: Binary{8} @ Exact) -> Binary{8} @ Exact = y\n\
+         fn use_it(z: Binary{8} @ Empirical) -> Binary{8} @ Exact = f(g(z))",
+    )
+    .expect_err("an Empirical argument must not satisfy an Exact parameter demand");
+    assert!(
+        err.message.contains("Empirical")
+            && err.message.contains("Exact")
+            && err.message.contains("guarantee"),
+        "the refusal must name both grades and be a guarantee error, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_body_too_weak_for_its_declared_return_is_refused() {
+    // The body's grade must satisfy the declared return demand. Here the param is `@ Empirical`, so the
+    // identity body grades `Empirical`, which does NOT satisfy the declared `@ Exact` return.
+    let err = check("nodule d\nfn f(x: Binary{8} @ Empirical) -> Binary{8} @ Exact = x")
+        .expect_err("an Empirical body cannot satisfy an Exact return demand");
+    assert!(
+        err.message.contains("guarantee") && err.message.contains("Exact"),
+        "the refusal must be a guarantee error naming the return demand, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn weakening_an_exact_value_to_a_declared_return_is_allowed() {
+    // VR-5: annotation may only weaken. An `Exact` body satisfies any weaker return demand — here a
+    // literal (Exact) returned as `@ Declared` grades fine (`Exact ⊒ Declared`).
+    check("nodule d\nfn k() -> Binary{8} @ Declared = 0b00000000")
+        .expect("an Exact literal weakens to a Declared return");
+}
+
+#[test]
+fn a_swap_endorses_to_satisfy_a_strong_return_demand() {
+    // The endorsement point (G-Swap; R18-Q4): a `swap` carries a certificate reference trusted at the
+    // type level, so it satisfies a strong `@ Proven` return demand even from an unannotated source.
+    // (Certificate validity is discharged at elaboration/runtime, never silently — G2.)
+    check(
+        "nodule d\n\
+         fn certified(x: Dense{768, F32}) -> Dense{768, BF16} @ Proven = \
+            swap(x, to: Dense{768, BF16}, policy: bf16_round)",
+    )
+    .expect("a swap endorses to satisfy a Proven return demand (cert trusted at the type level)");
+}
+
+#[test]
+fn an_exact_arg_satisfies_a_weaker_param_demand() {
+    // G-Sub: a more-trusted value satisfies a less-trusted demand. An `Exact` literal passed to an
+    // `@ Empirical` parameter grades fine (`Exact ⊒ Empirical`).
+    check(
+        "nodule d\n\
+         fn sink(x: Binary{8} @ Empirical) -> Binary{8} @ Empirical = x\n\
+         fn feed() -> Binary{8} @ Empirical = sink(0b00000001)",
+    )
+    .expect("an Exact argument satisfies an Empirical parameter demand");
+}
+
+#[test]
+fn unannotated_code_is_unaffected_by_grading() {
+    // The modular/bottom default: an entirely un-annotated program never trips the grading pass
+    // (unannotated returns advertise the bottom `Declared`, which any body satisfies). This is the
+    // backward-compatibility guarantee — grading only "bites" where an `@ g` is written.
+    check(
+        "nodule d\n\
+         type Bytes = End | More(Binary{8}, Bytes)\n\
+         fn checksum(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b00000000 => xor(acc, b)\n\
+         fn main() -> Binary{8} = checksum(More(0b11110000, More(0b00001111, End)))",
+    )
+    .expect("fully un-annotated code is unaffected by guarantee grading");
+}
+
+#[test]
+fn a_let_ascription_can_only_weaken() {
+    // G-Weaken in `let`: the bound's grade must satisfy the ascribed `@ g`. An `Empirical`-graded
+    // bound ascribed `@ Exact` in a `let` is a refusal (the ascription cannot upgrade — VR-5).
+    let err = check(
+        "nodule d\n\
+         fn src(x: Binary{8} @ Empirical) -> Binary{8} @ Empirical = x\n\
+         fn f(z: Binary{8} @ Empirical) -> Binary{8} @ Declared = \
+            let y: Binary{8} @ Exact = src(z) in y",
+    )
+    .expect_err("a let ascription `@ Exact` cannot strengthen an Empirical bound");
+    assert!(
+        err.message.contains("guarantee") && err.message.contains("Exact"),
+        "the refusal must be a guarantee error naming the ascription, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_for_fold_accumulator_demanding_a_strong_grade_is_refused() {
+    // Soundness regression (M-663): a `for` body that DEMANDS `@ Exact` on the accumulator but
+    // produces a WEAKER (`@ Empirical`) next accumulator must be refused — on the 2nd iteration `acc`
+    // is `Empirical`, which cannot satisfy the body's `@ Exact` demand. The accumulator's grade across
+    // iterations is the fixpoint of `meet(init, body)`, NOT the initial grade — so grading the body
+    // with `acc` at its initial `Exact` would be an unsound miss. We bind `acc` at the bottom grade,
+    // catching the violation (never a silent accept — G2/VR-5).
+    let err = check(
+        "nodule d\n\
+         type Bytes = End | More(Binary{8}, Bytes)\n\
+         fn weaken(a: Binary{8} @ Exact) -> Binary{8} @ Empirical = a\n\
+         fn fold(bs: Bytes) -> Binary{8} @ Empirical = \
+            for b in bs, acc = 0b00000000 => weaken(acc)",
+    )
+    .expect_err("a for-body demanding @ Exact on a re-weakened accumulator must be refused");
+    assert!(
+        err.message.contains("guarantee") && err.message.contains("Exact"),
+        "the refusal must be a guarantee error naming the unmet Exact demand, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn a_nullary_ctor_pattern_does_not_shadow_the_ctor_grade_in_the_arm() {
+    // Regression (M-663; Copilot-caught): a bare nullary-constructor *pattern* (`Pattern::Ident`) must
+    // NOT enter the grade scope as a binder — otherwise a reference to that constructor in the arm body
+    // would grade at the (weaker) scrutinee grade instead of `Exact`, a spurious refusal. Here `x` is
+    // `@ Declared` but each arm returns the nullary ctor `End` (grade `Exact`), so the match grades
+    // `Exact` and satisfies the `@ Exact` return demand.
+    check(
+        "nodule d\n\
+         type T = End | More(Binary{8}, T)\n\
+         fn f(x: T @ Declared) -> T @ Exact = match x { End => End, _ => End }",
+    )
+    .expect("a nullary-ctor pattern must not degrade the ctor's grade in the arm body");
+}
+
+#[test]
+fn a_real_binder_pattern_still_carries_the_scrutinee_grade() {
+    // The dual: a *true* field binder (here `m` from `More(_, m)`) DOES carry the scrutinee's data
+    // grade — so returning it under a strong demand is correctly refused. `x` is `@ Declared`; the
+    // bound tail `m` is `Declared`, which cannot satisfy the `@ Exact` return.
+    let err = check(
+        "nodule d\n\
+         type T = End | More(Binary{8}, T)\n\
+         fn f(x: T @ Declared) -> T @ Exact = match x { End => End, More(b, m) => m }",
+    )
+    .expect_err(
+        "a destructured field binder carries the scrutinee grade — a Declared tail fails @ Exact",
+    );
+    assert!(
+        err.message.contains("guarantee") && err.message.contains("Exact"),
+        "the refusal must be a guarantee error naming the unmet Exact demand, got: {}",
+        err.message
+    );
+}

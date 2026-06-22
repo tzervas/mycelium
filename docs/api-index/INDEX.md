@@ -87,21 +87,21 @@
 |---|---|---|---|
 | `mycelium_cert::BF16_MIN_NORMAL:` | const | `crates/mycelium-cert/src/dense.rs:34` | Smallest positive *normal* bfloat16 (same exponent range as f32): `2^−126`. |
 | `mycelium_cert::BF16_REL_EPS:` | const | `crates/mycelium-cert/src/dense.rs:30` | The proven per-element relative rounding bound: the unit roundoff `u = β^(1−p)/2 = 2^(1−8)/2 = |
-| `mycelium_cert::BinTernParams` | struct | `crates/mycelium-cert/src/lib.rs:40` | Concrete parameters binding a bijection lemma to one use — `{ width, trits }` for binary↔ternary |
-| `mycelium_cert::BinaryTernarySwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:357` | A [`SwapEngine`] for the reference interpreter that performs the |
-| `mycelium_cert::CertifiedSwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:392` | A [`SwapEngine`] over the **complete certified swap surface** (SC-3 global, M-212): the |
+| `mycelium_cert::BinTernParams` | struct | `crates/mycelium-cert/src/lib.rs:43` | Concrete parameters binding a bijection lemma to one use — `{ width, trits }` for binary↔ternary |
+| `mycelium_cert::BinaryTernarySwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:360` | A [`SwapEngine`] for the reference interpreter that performs the |
+| `mycelium_cert::CertifiedSwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:395` | A [`SwapEngine`] over the **complete certified swap surface** (SC-3 global, M-212): the |
 | `mycelium_cert::CheckVerdict` | enum | `crates/mycelium-cert/src/check.rs:110` | The checker's verdict. |
-| `mycelium_cert::DENSE_VSA_DEFAULT_DELTA:` | const | `crates/mycelium-cert/src/lib.rs:383` | The δ the engine requests for a Dense↔VSA swap when no policy channel supplies one — the same |
+| `mycelium_cert::DENSE_VSA_DEFAULT_DELTA:` | const | `crates/mycelium-cert/src/lib.rs:386` | The δ the engine requests for a Dense↔VSA swap when no policy channel supplies one — the same |
 | `mycelium_cert::DENSE_VSA_EMP_DELTA:` | const | `crates/mycelium-cert/src/dense_vsa.rs:48` | Empirical profile — the validated δ. |
 | `mycelium_cert::DENSE_VSA_MODEL:` | const | `crates/mycelium-cert/src/dense_vsa.rs:41` | The VSA model the swap targets (the atoms are bipolar and the encoding is the MAP-I additive |
 | `mycelium_cert::Evidence` | enum | `crates/mycelium-cert/src/check.rs:58` | The evidence presented to the checker — the *certificate* of `(A, B, R, claimed, certificate)`. |
 | `mycelium_cert::Fallback` | enum | `crates/mycelium-cert/src/check.rs:69` | The explicit fallback path when validation fails — required by RFC-0002 §2 (TV incompleteness |
 | `mycelium_cert::NotValidatedReason` | enum | `crates/mycelium-cert/src/check.rs:79` | Why the checker did not validate. |
 | `mycelium_cert::RefinementRelation` | enum | `crates/mycelium-cert/src/check.rs:45` | The relation `R` under which `B` claims to refine `A` (RFC-0002 §2). |
-| `mycelium_cert::SwapCertificate` | enum | `crates/mycelium-cert/src/lib.rs:51` | The inspectable certificate every swap produces (RFC-0002 §3/§5; `swap-certificate.schema.json`). |
-| `mycelium_cert::SwapError` | enum | `crates/mycelium-cert/src/lib.rs:80` | Why a swap could not be performed — always explicit (SC-3; G2), never a silent coercion. |
-| `mycelium_cert::binary_to_ternary` | fn | `crates/mycelium-cert/src/lib.rs:267` | `enc`: encode an `n`-bit two's-complement [`Value`] into `m` balanced trits over a legal pair. |
-| `mycelium_cert::check` | mod | `crates/mycelium-cert/src/lib.rs:19` | — |
+| `mycelium_cert::SwapCertificate` | enum | `crates/mycelium-cert/src/lib.rs:54` | The inspectable certificate every swap produces (RFC-0002 §3/§5; `swap-certificate.schema.json`). |
+| `mycelium_cert::SwapError` | enum | `crates/mycelium-cert/src/lib.rs:83` | Why a swap could not be performed — always explicit (SC-3; G2), never a silent coercion. |
+| `mycelium_cert::binary_to_ternary` | fn | `crates/mycelium-cert/src/lib.rs:270` | `enc`: encode an `n`-bit two's-complement [`Value`] into `m` balanced trits over a legal pair. |
+| `mycelium_cert::check` | mod | `crates/mycelium-cert/src/lib.rs:22` | — |
 | `mycelium_cert::check` | fn | `crates/mycelium-cert/src/check.rs:158` | The single shared checker: does artifact `B` refine reference `A` under `relation` within the |
 | `mycelium_cert::check::CheckVerdict` | enum | `crates/mycelium-cert/src/check.rs:110` | The checker's verdict. |
 | `mycelium_cert::check::Evidence` | enum | `crates/mycelium-cert/src/check.rs:58` | The evidence presented to the checker — the *certificate* of `(A, B, R, claimed, certificate)`. |
@@ -111,13 +111,13 @@
 | `mycelium_cert::check::check` | fn | `crates/mycelium-cert/src/check.rs:158` | The single shared checker: does artifact `B` refine reference `A` under `relation` within the |
 | `mycelium_cert::check::check_core` | fn | `crates/mycelium-cert/src/check.rs:293` | Observational equivalence over a whole [`CoreValue`] (RFC-0011 §4.6; NFR-7) — the M-151/M-210 |
 | `mycelium_cert::check_core` | fn | `crates/mycelium-cert/src/check.rs:293` | Observational equivalence over a whole [`CoreValue`] (RFC-0011 §4.6; NFR-7) — the M-151/M-210 |
-| `mycelium_cert::dense` | mod | `crates/mycelium-cert/src/lib.rs:20` | — |
+| `mycelium_cert::dense` | mod | `crates/mycelium-cert/src/lib.rs:23` | — |
 | `mycelium_cert::dense::BF16_MIN_NORMAL:` | const | `crates/mycelium-cert/src/dense.rs:34` | Smallest positive *normal* bfloat16 (same exponent range as f32): `2^−126`. |
 | `mycelium_cert::dense::BF16_REL_EPS:` | const | `crates/mycelium-cert/src/dense.rs:30` | The proven per-element relative rounding bound: the unit roundoff `u = β^(1−p)/2 = 2^(1−8)/2 = |
 | `mycelium_cert::dense::dense_f32_to_bf16` | fn | `crates/mycelium-cert/src/dense.rs:81` | The Dense `F32 → BF16` rounding swap: returns the converted value and a |
 | `mycelium_cert::dense_f32_to_bf16` | fn | `crates/mycelium-cert/src/dense.rs:81` | The Dense `F32 → BF16` rounding swap: returns the converted value and a |
 | `mycelium_cert::dense_to_vsa` | fn | `crates/mycelium-cert/src/dense_vsa.rs:139` | Encode a bipolar `Dense{n, F32}` value into a `Vsa{MAP-I, vsa_dim}` superposition, emitting a |
-| `mycelium_cert::dense_vsa` | mod | `crates/mycelium-cert/src/lib.rs:21` | — |
+| `mycelium_cert::dense_vsa` | mod | `crates/mycelium-cert/src/lib.rs:24` | — |
 | `mycelium_cert::dense_vsa::DENSE_VSA_EMP_DELTA:` | const | `crates/mycelium-cert/src/dense_vsa.rs:48` | Empirical profile — the validated δ. |
 | `mycelium_cert::dense_vsa::DENSE_VSA_EMP_DIM_FACTOR:` | const | `crates/mycelium-cert/src/dense_vsa.rs:46` | Empirical profile — minimum `vsa_dim / components` ratio covered by the trials. |
 | `mycelium_cert::dense_vsa::DENSE_VSA_EMP_MAX_COMPONENTS:` | const | `crates/mycelium-cert/src/dense_vsa.rs:44` | Empirical profile — maximum Dense components covered by the trials. |
@@ -126,9 +126,9 @@
 | `mycelium_cert::dense_vsa::DENSE_VSA_MODEL:` | const | `crates/mycelium-cert/src/dense_vsa.rs:41` | The VSA model the swap targets (the atoms are bipolar and the encoding is the MAP-I additive |
 | `mycelium_cert::dense_vsa::dense_to_vsa` | fn | `crates/mycelium-cert/src/dense_vsa.rs:139` | Encode a bipolar `Dense{n, F32}` value into a `Vsa{MAP-I, vsa_dim}` superposition, emitting a |
 | `mycelium_cert::dense_vsa::vsa_to_dense` | fn | `crates/mycelium-cert/src/dense_vsa.rs:195` | Decode a `swap.dense_vsa.enc.v1` product back to a bipolar `Dense{components, F32}` value by |
-| `mycelium_cert::legal_pair` | fn | `crates/mycelium-cert/src/lib.rs:231` | Whether `(n, m)` admits a lossless binary→ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2` |
-| `mycelium_cert::roundtrip_lemma_ref` | fn | `crates/mycelium-cert/src/lib.rs:244` | The content hash of the once-per-swap-kind binary↔ternary round-trip lemma (P1/P2, |
-| `mycelium_cert::ternary_to_binary` | fn | `crates/mycelium-cert/src/lib.rs:311` | `dec`: decode `m` balanced trits back into an `n`-bit two's-complement [`Value`]. |
+| `mycelium_cert::legal_pair` | fn | `crates/mycelium-cert/src/lib.rs:234` | Whether `(n, m)` admits a lossless binary→ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2` |
+| `mycelium_cert::roundtrip_lemma_ref` | fn | `crates/mycelium-cert/src/lib.rs:247` | The content hash of the once-per-swap-kind binary↔ternary round-trip lemma (P1/P2, |
+| `mycelium_cert::ternary_to_binary` | fn | `crates/mycelium-cert/src/lib.rs:314` | `dec`: decode `m` balanced trits back into an `n`-bit two's-complement [`Value`]. |
 | `mycelium_cert::vsa_to_dense` | fn | `crates/mycelium-cert/src/dense_vsa.rs:195` | Decode a `swap.dense_vsa.enc.v1` product back to a bipolar `Dense{components, F32}` value by |
 
 ## mycelium-check
@@ -195,12 +195,12 @@
 | `mycelium_core::Trit` | enum | `crates/mycelium-core/src/value.rs:19` | A balanced trit in `{-1, 0, +1}`. |
 | `mycelium_core::Value` | struct | `crates/mycelium-core/src/value.rs:134` | A Mycelium value. |
 | `mycelium_core::VarId` | type | `crates/mycelium-core/src/node.rs:29` | A variable identifier (a name; not part of content identity — RFC-0001 §4.6). |
-| `mycelium_core::WfError` | enum | `crates/mycelium-core/src/lib.rs:46` | Well-formedness errors for Core IR construction (RFC-0001 §4.3/§4.5 invariants). |
+| `mycelium_core::WfError` | enum | `crates/mycelium-core/src/lib.rs:49` | Well-formedness errors for Core IR construction (RFC-0001 §4.3/§4.5 invariants). |
 | `mycelium_core::WidthRel` | enum | `crates/mycelium-core/src/prim.rs:50` | How a prim's operand and result *widths* relate. |
-| `mycelium_core::binary` | mod | `crates/mycelium-core/src/lib.rs:10` | — |
+| `mycelium_core::binary` | mod | `crates/mycelium-core/src/lib.rs:13` | — |
 | `mycelium_core::binary::bits_to_int` | fn | `crates/mycelium-core/src/binary.rs:10` | The signed two's-complement value of an MSB-first bit string. |
 | `mycelium_core::binary::int_to_bits` | fn | `crates/mycelium-core/src/binary.rs:29` | The `n`-bit two's-complement representation of `value`, MSB-first — or `None` if `value` is |
-| `mycelium_core::bound` | mod | `crates/mycelium-core/src/lib.rs:11` | — |
+| `mycelium_core::bound` | mod | `crates/mycelium-core/src/lib.rs:14` | — |
 | `mycelium_core::bound::Bound` | struct | `crates/mycelium-core/src/bound.rs:105` | A sound bound plus the basis by which it was obtained (ADR-011: `basis` is universal). |
 | `mycelium_core::bound::Bound::well_formed` | fn | `crates/mycelium-core/src/bound.rs:119` | Well-formedness per `bound.schema.json`: the payload ranges (magnitudes finite and in range) |
 | `mycelium_core::bound::Bound::well_formed` | fn | `crates/mycelium-core/src/bound.rs:119` | Well-formedness per `bound.schema.json`: the payload ranges (magnitudes finite and in range) |
@@ -209,7 +209,7 @@
 | `mycelium_core::bound::BoundBasis::strength` | fn | `crates/mycelium-core/src/bound.rs:42` | The honest [`GuaranteeStrength`] this basis implies (M-I2/M-I3/M-I4): the basis *is* the |
 | `mycelium_core::bound::BoundKind` | enum | `crates/mycelium-core/src/bound.rs:68` | The bound payload, per kind (RFC-0001 §4.3). |
 | `mycelium_core::bound::NormKind` | enum | `crates/mycelium-core/src/bound.rs:53` | Norm in which an [`BoundKind::Error`] `eps` is expressed (extensible registry; RFC-0001 §4.3 r2). |
-| `mycelium_core::content` | mod | `crates/mycelium-core/src/lib.rs:12` | — |
+| `mycelium_core::content` | mod | `crates/mycelium-core/src/lib.rs:15` | — |
 | `mycelium_core::content::Names` | struct | `crates/mycelium-core/src/content.rs:453` | The separable `hash ↔ name` side-table (RFC-0001 §4.6, "names-as-metadata"). |
 | `mycelium_core::content::Names::bind` | fn | `crates/mycelium-core/src/content.rs:468` | Bind a human name to a content hash, returning any previous name for that hash. |
 | `mycelium_core::content::Names::bind` | fn | `crates/mycelium-core/src/content.rs:468` | Bind a human name to a content hash, returning any previous name for that hash. |
@@ -222,7 +222,7 @@
 | `mycelium_core::content::Names::new` | fn | `crates/mycelium-core/src/content.rs:460` | An empty name table. |
 | `mycelium_core::content::Names::new` | fn | `crates/mycelium-core/src/content.rs:460` | An empty name table. |
 | `mycelium_core::content::operation_hash` | fn | `crates/mycelium-core/src/content.rs:442` | The content address of a *primitive operation* identified by its name — for the `op` field of a |
-| `mycelium_core::data` | mod | `crates/mycelium-core/src/lib.rs:13` | — |
+| `mycelium_core::data` | mod | `crates/mycelium-core/src/lib.rs:16` | — |
 | `mycelium_core::data::CtorDecl` | struct | `crates/mycelium-core/src/data.rs:81` | One constructor of a resolved declaration: its field types, in declaration order. |
 | `mycelium_core::data::CtorRef` | struct | `crates/mycelium-core/src/data.rs:37` | A constructor reference `#T#i` (RFC-0007 §4.2): the content hash of a data declaration and the |
 | `mycelium_core::data::CtorRef::decl` | fn | `crates/mycelium-core/src/data.rs:51` | The referenced data declaration's content hash (`#T`). |
@@ -252,7 +252,7 @@
 | `mycelium_core::data::FieldSpec` | enum | `crates/mycelium-core/src/data.rs:99` | A build-time field spec: a representation field, or a data field referencing another declaration |
 | `mycelium_core::data::FieldTy` | enum | `crates/mycelium-core/src/data.rs:72` | A field type within a resolved declaration: a representation type, or a (possibly cyclic) data |
 | `mycelium_core::data::RegistryError` | enum | `crates/mycelium-core/src/data.rs:122` | Why building a [`DataRegistry`] from specs failed — always explicit (never a silent drop). |
-| `mycelium_core::datum` | mod | `crates/mycelium-core/src/lib.rs:14` | — |
+| `mycelium_core::datum` | mod | `crates/mycelium-core/src/lib.rs:17` | — |
 | `mycelium_core::datum::CoreValue` | enum | `crates/mycelium-core/src/datum.rs:90` | A runtime value: a representation [`Value`] (one of the four paradigm kinds) or an algebraic |
 | `mycelium_core::datum::CoreValue::as_data` | fn | `crates/mycelium-core/src/datum.rs:109` | The underlying datum, if this is a [`CoreValue::Data`]. |
 | `mycelium_core::datum::CoreValue::as_data` | fn | `crates/mycelium-core/src/datum.rs:109` | The underlying datum, if this is a [`CoreValue::Data`]. |
@@ -275,7 +275,7 @@
 | `mycelium_core::datum::Datum::meet_guarantee` | fn | `crates/mycelium-core/src/datum.rs:71` | This datum with its summary guarantee met against `g` (weakest-wins). |
 | `mycelium_core::datum::Datum::new` | fn | `crates/mycelium-core/src/datum.rs:41` | Construct a datum from a constructor reference and its field values, computing the |
 | `mycelium_core::datum::Datum::new` | fn | `crates/mycelium-core/src/datum.rs:41` | Construct a datum from a constructor reference and its field values, computing the |
-| `mycelium_core::guarantee` | mod | `crates/mycelium-core/src/lib.rs:15` | — |
+| `mycelium_core::guarantee` | mod | `crates/mycelium-core/src/lib.rs:18` | — |
 | `mycelium_core::guarantee::GuaranteeStrength` | enum | `crates/mycelium-core/src/guarantee.rs:16` | How trustworthy a value's representation/bound is. |
 | `mycelium_core::guarantee::GuaranteeStrength::ALL:` | const | `crates/mycelium-core/src/guarantee.rs:33` | All four strengths, strongest-to-weakest — for exhaustive iteration in tests and tooling. |
 | `mycelium_core::guarantee::GuaranteeStrength::ALL:` | const | `crates/mycelium-core/src/guarantee.rs:33` | All four strengths, strongest-to-weakest — for exhaustive iteration in tests and tooling. |
@@ -289,7 +289,7 @@
 | `mycelium_core::guarantee::GuaranteeStrength::propagate` | fn | `crates/mycelium-core/src/guarantee.rs:77` | Propagate guarantees through an operation (RFC-0001 §4.7): |
 | `mycelium_core::guarantee::GuaranteeStrength::rank` | fn | `crates/mycelium-core/src/guarantee.rs:43` | Lattice rank, `0` = strongest (`Exact`) … `3` = weakest (`Declared`). |
 | `mycelium_core::guarantee::GuaranteeStrength::rank` | fn | `crates/mycelium-core/src/guarantee.rs:43` | Lattice rank, `0` = strongest (`Exact`) … `3` = weakest (`Declared`). |
-| `mycelium_core::id` | mod | `crates/mycelium-core/src/lib.rs:16` | — |
+| `mycelium_core::id` | mod | `crates/mycelium-core/src/lib.rs:19` | — |
 | `mycelium_core::id::ContentHash` | struct | `crates/mycelium-core/src/id.rs:9` | A content address, e.g. |
 | `mycelium_core::id::ContentHash::algo` | fn | `crates/mycelium-core/src/id.rs:45` | The algorithm tag (the part before `:`), e.g. |
 | `mycelium_core::id::ContentHash::algo` | fn | `crates/mycelium-core/src/id.rs:45` | The algorithm tag (the part before `:`), e.g. |
@@ -301,7 +301,7 @@
 | `mycelium_core::id::ContentHash::from_parts` | fn | `crates/mycelium-core/src/id.rs:39` | Build a content address from an algorithm tag and digest, validating the shape (`algo` is |
 | `mycelium_core::id::ContentHash::parse` | fn | `crates/mycelium-core/src/id.rs:15` | Parse a content address, validating its shape: `algo` is `[a-z0-9]+`, `digest` is |
 | `mycelium_core::id::ContentHash::parse` | fn | `crates/mycelium-core/src/id.rs:15` | Parse a content address, validating its shape: `algo` is `[a-z0-9]+`, `digest` is |
-| `mycelium_core::lower` | mod | `crates/mycelium-core/src/lib.rs:17` | — |
+| `mycelium_core::lower` | mod | `crates/mycelium-core/src/lib.rs:20` | — |
 | `mycelium_core::lower::Anf` | struct | `crates/mycelium-core/src/lower.rs:567` | A flattened (A-normal-form) lowering of a Core IR node. |
 | `mycelium_core::lower::Anf::bindings` | fn | `crates/mycelium-core/src/lower.rs:909` | The ordered bindings (for backends consuming the lowered IR — M-150). |
 | `mycelium_core::lower::Anf::dump` | fn | `crates/mycelium-core/src/lower.rs:873` | The canonical, diffable dump of the substrate stage (SC-4). |
@@ -319,7 +319,7 @@
 | `mycelium_core::lower::lower_to_anf` | fn | `crates/mycelium-core/src/lower.rs:586` | Lower a Core IR node into A-normal form (flatten nested nodes to a linear binding list). |
 | `mycelium_core::lower::schedule` | fn | `crates/mycelium-core/src/lower.rs:41` | The default schedule-staged packing for a representation (RFC-0004 §5; DN-01). |
 | `mycelium_core::lower::stages` | fn | `crates/mycelium-core/src/lower.rs:56` | Run the lowering pipeline, returning every stage in order (currently `core` → `substrate`). |
-| `mycelium_core::meta` | mod | `crates/mycelium-core/src/lib.rs:18` | — |
+| `mycelium_core::meta` | mod | `crates/mycelium-core/src/lib.rs:21` | — |
 | `mycelium_core::meta::Meta` | struct | `crates/mycelium-core/src/meta.rs:88` | Runtime, queryable metadata (RFC-0001 §4.3). |
 | `mycelium_core::meta::Meta::bound` | fn | `crates/mycelium-core/src/meta.rs:188` | The bound, if approximate. |
 | `mycelium_core::meta::Meta::bound` | fn | `crates/mycelium-core/src/meta.rs:188` | The bound, if approximate. |
@@ -347,7 +347,7 @@
 | `mycelium_core::meta::PhysicalLayout` | enum | `crates/mycelium-core/src/meta.rs:65` | The recorded schedule-staged packing (RFC-0001 §4.3; RFC-0004 §5). |
 | `mycelium_core::meta::Provenance` | enum | `crates/mycelium-core/src/meta.rs:20` | Provenance: an acyclic derivation DAG (RFC-0001 §4.6). |
 | `mycelium_core::meta::SparsityObs` | struct | `crates/mycelium-core/src/meta.rs:34` | Measured (dynamic) sparsity — distinct from the declared [`crate::repr::SparsityClass`]. |
-| `mycelium_core::node` | mod | `crates/mycelium-core/src/lib.rs:19` | — |
+| `mycelium_core::node` | mod | `crates/mycelium-core/src/lib.rs:22` | — |
 | `mycelium_core::node::Alt` | enum | `crates/mycelium-core/src/node.rs:144` | One alternative of a flat [`Node::Match`] (RFC-0011 §4.1): a constructor arm (binding exactly the |
 | `mycelium_core::node::Node` | enum | `crates/mycelium-core/src/node.rs:37` | A Core IR node. |
 | `mycelium_core::node::Node::content_hash` | fn | `crates/mycelium-core/src/content.rs:417` | The content hash of this value's *identity-bearing* content: its [`Repr`] and payload, with |
@@ -360,7 +360,7 @@
 | `mycelium_core::node::Prim` | type | `crates/mycelium-core/src/node.rs:31` | A primitive operator name; each declares its operand/result paradigms (RFC-0001 §4.5). |
 | `mycelium_core::node::VarId` | type | `crates/mycelium-core/src/node.rs:29` | A variable identifier (a name; not part of content identity — RFC-0001 §4.6). |
 | `mycelium_core::operation_hash` | fn | `crates/mycelium-core/src/content.rs:442` | The content address of a *primitive operation* identified by its name — for the `op` field of a |
-| `mycelium_core::prim` | mod | `crates/mycelium-core/src/lib.rs:20` | — |
+| `mycelium_core::prim` | mod | `crates/mycelium-core/src/lib.rs:23` | — |
 | `mycelium_core::prim::PrimDecl` | struct | `crates/mycelium-core/src/prim.rs:79` | A resolved, content-addressed prim declaration: its signature and the *intrinsic guarantee* `g_f` |
 | `mycelium_core::prim::PrimDecl::content_hash` | fn | `crates/mycelium-core/src/prim.rs:92` | The content hash of this declaration's identity-bearing content (signature + intrinsic |
 | `mycelium_core::prim::PrimDecl::content_hash` | fn | `crates/mycelium-core/src/prim.rs:92` | The content hash of this declaration's identity-bearing content (signature + intrinsic |
@@ -399,7 +399,7 @@
 | `mycelium_core::prim::PrimTable::resolve` | fn | `crates/mycelium-core/src/prim.rs:208` | The declaration a [`PrimRef`] points at, if registered. |
 | `mycelium_core::prim::PrimTable::resolve` | fn | `crates/mycelium-core/src/prim.rs:208` | The declaration a [`PrimRef`] points at, if registered. |
 | `mycelium_core::prim::WidthRel` | enum | `crates/mycelium-core/src/prim.rs:50` | How a prim's operand and result *widths* relate. |
-| `mycelium_core::recon` | mod | `crates/mycelium-core/src/lib.rs:21` | — |
+| `mycelium_core::recon` | mod | `crates/mycelium-core/src/lib.rs:24` | — |
 | `mycelium_core::recon::CleanupShape` | enum | `crates/mycelium-core/src/recon.rs:59` | The per-slot cleanup projection a resonator decode uses (RFC-0003 §6.1; RFC-0009 §3/§9 Q2). |
 | `mycelium_core::recon::DecodeProcedure` | enum | `crates/mycelium-core/src/recon.rs:49` | The decoding procedure. |
 | `mycelium_core::recon::DecodeSpec` | struct | `crates/mycelium-core/src/recon.rs:79` | Decoding procedure + parameters: a cleanup threshold (indexed/cleanup) or a resonator factor |
@@ -423,7 +423,7 @@
 | `mycelium_core::recon::ReconInfo::recipe` | fn | `crates/mycelium-core/src/recon.rs:235` | The compositional recipe, if this manifest is compositional. |
 | `mycelium_core::recon::ReconInfo::recipe` | fn | `crates/mycelium-core/src/recon.rs:235` | The compositional recipe, if this manifest is compositional. |
 | `mycelium_core::recon::ReconMode` | enum | `crates/mycelium-core/src/recon.rs:30` | Which capability the manifest supports (RFC-0003 §6). |
-| `mycelium_core::repr` | mod | `crates/mycelium-core/src/lib.rs:22` | — |
+| `mycelium_core::repr` | mod | `crates/mycelium-core/src/lib.rs:25` | — |
 | `mycelium_core::repr::Repr` | enum | `crates/mycelium-core/src/repr.rs:57` | The four closed paradigm kinds (RFC-0001 §4.1). |
 | `mycelium_core::repr::Repr::well_formed` | fn | `crates/mycelium-core/src/repr.rs:91` | Well-formed iff all widths/dims/trits (and any `max_active`) are positive and a VSA `model` |
 | `mycelium_core::repr::Repr::well_formed` | fn | `crates/mycelium-core/src/repr.rs:91` | Well-formed iff all widths/dims/trits (and any `max_active`) are positive and a VSA `model` |
@@ -431,7 +431,7 @@
 | `mycelium_core::repr::ScalarKind::tag` | fn | `crates/mycelium-core/src/repr.rs:30` | A stable one-byte code for content-addressing (M-103). |
 | `mycelium_core::repr::ScalarKind::tag` | fn | `crates/mycelium-core/src/repr.rs:30` | A stable one-byte code for content-addressing (M-103). |
 | `mycelium_core::repr::SparsityClass` | enum | `crates/mycelium-core/src/repr.rs:44` | Declared sparsity class of a VSA value (RFC-0001 §4.1; RFC-0003 §5). |
-| `mycelium_core::ternary` | mod | `crates/mycelium-core/src/lib.rs:23` | — |
+| `mycelium_core::ternary` | mod | `crates/mycelium-core/src/lib.rs:26` | — |
 | `mycelium_core::ternary::add` | fn | `crates/mycelium-core/src/ternary.rs:107` | Ripple-carry add over two equal-length MSB-first trit strings, fixed-width. |
 | `mycelium_core::ternary::digit` | fn | `crates/mycelium-core/src/ternary.rs:22` | The signed value of a single trit. |
 | `mycelium_core::ternary::int_to_trits` | fn | `crates/mycelium-core/src/ternary.rs:69` | The unique `m`-trit balanced representation of `value`, MSB-first — or `None` if `value` lies |
@@ -440,7 +440,7 @@
 | `mycelium_core::ternary::neg` | fn | `crates/mycelium-core/src/ternary.rs:92` | Digit-wise negation: `value(neg t) = −value(t)` exactly (balanced ternary is sign-symmetric, §1). |
 | `mycelium_core::ternary::sub` | fn | `crates/mycelium-core/src/ternary.rs:130` | Fixed-width subtraction `a − b` = `add(a, neg(b))`. |
 | `mycelium_core::ternary::trits_to_int` | fn | `crates/mycelium-core/src/ternary.rs:61` | The integer denoted by an MSB-first trit string (`value(t)`, §1). |
-| `mycelium_core::value` | mod | `crates/mycelium-core/src/lib.rs:24` | — |
+| `mycelium_core::value` | mod | `crates/mycelium-core/src/lib.rs:27` | — |
 | `mycelium_core::value::Payload` | enum | `crates/mycelium-core/src/value.rs:55` | Representation-specific payload. |
 | `mycelium_core::value::Trit` | enum | `crates/mycelium-core/src/value.rs:19` | A balanced trit in `{-1, 0, +1}`. |
 | `mycelium_core::value::Value` | struct | `crates/mycelium-core/src/value.rs:134` | A Mycelium value. |
@@ -629,22 +629,22 @@
 | `mycelium_interp::EffectBudgetExhausted` | struct | `crates/mycelium-interp/src/budget.rs:114` | Exceeding a budget — an **explicit, graceful** structured error (RFC-0014 §4.5 I4), never a hang / |
 | `mycelium_interp::EffectKind` | enum | `crates/mycelium-interp/src/budget.rs:27` | A closed kernel of effect **kinds** (RFC-0014 §4.5 I3) plus user-declared names. |
 | `mycelium_interp::Escalation` | enum | `crates/mycelium-interp/src/supervise.rs:135` | A supervisor escalated: a restart cascade hit a bound and the supervisor itself fails (its own |
-| `mycelium_interp::EvalError` | enum | `crates/mycelium-interp/src/lib.rs:132` | Why evaluation could not proceed (always explicit — the interpreter is never silent; SC-3/G2). |
+| `mycelium_interp::EvalError` | enum | `crates/mycelium-interp/src/lib.rs:135` | Why evaluation could not proceed (always explicit — the interpreter is never silent; SC-3/G2). |
 | `mycelium_interp::IdentitySwapEngine` | struct | `crates/mycelium-interp/src/swap.rs:27` | The trivial swap engine: a swap whose `target` equals the source `Repr` is the identity — exactly |
-| `mycelium_interp::Interpreter` | struct | `crates/mycelium-interp/src/lib.rs:297` | The reference interpreter: a primitive registry + a swap engine. |
-| `mycelium_interp::Interpreter::eval` | fn | `crates/mycelium-interp/src/lib.rs:505` | Evaluate `node` to a **representation** value by iterating step to a normal |
-| `mycelium_interp::Interpreter::eval_core` | fn | `crates/mycelium-interp/src/lib.rs:517` | Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data |
-| `mycelium_interp::Interpreter::new` | fn | `crates/mycelium-interp/src/lib.rs:317` | Build an interpreter with a custom prim registry and swap engine (e.g. |
-| `mycelium_interp::Interpreter::prim_names` | fn | `crates/mycelium-interp/src/lib.rs:334` | The registered primitive names (for tooling/EXPLAIN). |
-| `mycelium_interp::Interpreter::step` | fn | `crates/mycelium-interp/src/lib.rs:342` | Perform exactly one small-step reduction on `node` (the `⟶` relation above). |
-| `mycelium_interp::Interpreter::with_fuel` | fn | `crates/mycelium-interp/src/lib.rs:327` | Override the step budget. |
+| `mycelium_interp::Interpreter` | struct | `crates/mycelium-interp/src/lib.rs:300` | The reference interpreter: a primitive registry + a swap engine. |
+| `mycelium_interp::Interpreter::eval` | fn | `crates/mycelium-interp/src/lib.rs:508` | Evaluate `node` to a **representation** value by iterating step to a normal |
+| `mycelium_interp::Interpreter::eval_core` | fn | `crates/mycelium-interp/src/lib.rs:520` | Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data |
+| `mycelium_interp::Interpreter::new` | fn | `crates/mycelium-interp/src/lib.rs:320` | Build an interpreter with a custom prim registry and swap engine (e.g. |
+| `mycelium_interp::Interpreter::prim_names` | fn | `crates/mycelium-interp/src/lib.rs:337` | The registered primitive names (for tooling/EXPLAIN). |
+| `mycelium_interp::Interpreter::step` | fn | `crates/mycelium-interp/src/lib.rs:345` | Perform exactly one small-step reduction on `node` (the `⟶` relation above). |
+| `mycelium_interp::Interpreter::with_fuel` | fn | `crates/mycelium-interp/src/lib.rs:330` | Override the step budget. |
 | `mycelium_interp::PrimRegistry` | struct | `crates/mycelium-interp/src/prims.rs:53` | The name→implementation table the interpreter dispatches `Op` nodes through. |
 | `mycelium_interp::RestartIntensity` | struct | `crates/mycelium-interp/src/supervise.rs:125` | **Max-restart-intensity** for `reclaim` supervision (RFC-0008 §4.7; Erlang/OTP, Research Record 05 |
-| `mycelium_interp::Step` | enum | `crates/mycelium-interp/src/lib.rs:122` | The result of one small-step attempt on a node. |
+| `mycelium_interp::Step` | enum | `crates/mycelium-interp/src/lib.rs:125` | The result of one small-step attempt on a node. |
 | `mycelium_interp::Supervisor` | struct | `crates/mycelium-interp/src/supervise.rs:179` | A `reclaim` **supervisor** (RFC-0008 §4.7; RT4/RT7): it restarts a failed child under a *bounded* |
 | `mycelium_interp::SwapEngine` | trait | `crates/mycelium-interp/src/swap.rs:16` | Evaluates a `Swap` node. |
 | `mycelium_interp::TaskOutcome` | enum | `crates/mycelium-interp/src/supervise.rs:94` | The **explicit, additive result of running a task** (RFC-0014 I1 lifted across the task boundary, |
-| `mycelium_interp::budget` | mod | `crates/mycelium-interp/src/lib.rs:106` | — |
+| `mycelium_interp::budget` | mod | `crates/mycelium-interp/src/lib.rs:109` | — |
 | `mycelium_interp::budget::Budgets` | struct | `crates/mycelium-interp/src/budget.rs:146` | The **budget ledger** — one enforcement mechanism over the separate named budgets (RFC-0014 §8 |
 | `mycelium_interp::budget::Budgets::consume` | fn | `crates/mycelium-interp/src/budget.rs:183` | Consume `amount` of `kind`'s budget. |
 | `mycelium_interp::budget::Budgets::consume` | fn | `crates/mycelium-interp/src/budget.rs:183` | Consume `amount` of `kind`'s budget. |
@@ -663,7 +663,7 @@
 | `mycelium_interp::budget::EffectBudget::kind` | fn | `crates/mycelium-interp/src/budget.rs:81` | The effect kind this budget bounds. |
 | `mycelium_interp::budget::EffectBudgetExhausted` | struct | `crates/mycelium-interp/src/budget.rs:114` | Exceeding a budget — an **explicit, graceful** structured error (RFC-0014 §4.5 I4), never a hang / |
 | `mycelium_interp::budget::EffectKind` | enum | `crates/mycelium-interp/src/budget.rs:27` | A closed kernel of effect **kinds** (RFC-0014 §4.5 I3) plus user-declared names. |
-| `mycelium_interp::prims` | mod | `crates/mycelium-interp/src/lib.rs:107` | — |
+| `mycelium_interp::prims` | mod | `crates/mycelium-interp/src/lib.rs:110` | — |
 | `mycelium_interp::prims::PrimFn` | type | `crates/mycelium-interp/src/prims.rs:48` | A primitive implementation: a pure function from argument values to a result value (or an error). |
 | `mycelium_interp::prims::PrimRegistry` | struct | `crates/mycelium-interp/src/prims.rs:53` | The name→implementation table the interpreter dispatches `Op` nodes through. |
 | `mycelium_interp::prims::PrimRegistry::empty` | fn | `crates/mycelium-interp/src/prims.rs:60` | An empty registry. |
@@ -676,7 +676,7 @@
 | `mycelium_interp::prims::PrimRegistry::register` | fn | `crates/mycelium-interp/src/prims.rs:85` | Register (or replace) a primitive. |
 | `mycelium_interp::prims::PrimRegistry::with_builtins` | fn | `crates/mycelium-interp/src/prims.rs:70` | The default registry: the exact built-ins — elementwise logical (`core.id`, |
 | `mycelium_interp::prims::PrimRegistry::with_builtins` | fn | `crates/mycelium-interp/src/prims.rs:70` | The default registry: the exact built-ins — elementwise logical (`core.id`, |
-| `mycelium_interp::supervise` | mod | `crates/mycelium-interp/src/lib.rs:108` | — |
+| `mycelium_interp::supervise` | mod | `crates/mycelium-interp/src/lib.rs:111` | — |
 | `mycelium_interp::supervise::CancelToken` | struct | `crates/mycelium-interp/src/supervise.rs:33` | A **cooperative** cancellation token (RFC-0008 §4.7; structured-concurrency cancellation, RT7). |
 | `mycelium_interp::supervise::CancelToken::cancel` | fn | `crates/mycelium-interp/src/supervise.rs:48` | Request cancellation. |
 | `mycelium_interp::supervise::CancelToken::cancel` | fn | `crates/mycelium-interp/src/supervise.rs:48` | Request cancellation. |
@@ -701,7 +701,7 @@
 | `mycelium_interp::supervise::Supervisor::tick` | fn | `crates/mycelium-interp/src/supervise.rs:208` | Advance the logical clock by one tick and return the new value. |
 | `mycelium_interp::supervise::Supervisor::tick` | fn | `crates/mycelium-interp/src/supervise.rs:208` | Advance the logical clock by one tick and return the new value. |
 | `mycelium_interp::supervise::TaskOutcome` | enum | `crates/mycelium-interp/src/supervise.rs:94` | The **explicit, additive result of running a task** (RFC-0014 I1 lifted across the task boundary, |
-| `mycelium_interp::swap` | mod | `crates/mycelium-interp/src/lib.rs:109` | — |
+| `mycelium_interp::swap` | mod | `crates/mycelium-interp/src/lib.rs:112` | — |
 | `mycelium_interp::swap::IdentitySwapEngine` | struct | `crates/mycelium-interp/src/swap.rs:27` | The trivial swap engine: a swap whose `target` equals the source `Repr` is the identity — exactly |
 | `mycelium_interp::swap::SwapEngine` | trait | `crates/mycelium-interp/src/swap.rs:16` | Evaluates a `Swap` node. |
 
@@ -711,7 +711,7 @@
 |---|---|---|---|
 | `mycelium_l1::AmbientError` | enum | `crates/mycelium-l1/src/ambient.rs:50` | A never-silent refusal from the resolution pass (§4.3/§4.4) — always explicit, never a guess. |
 | `mycelium_l1::CheckError` | struct | `crates/mycelium-l1/src/checkty.rs:104` | An explicit check failure (never a silent pass or a guess — S5/G2). |
-| `mycelium_l1::ElabError` | enum | `crates/mycelium-l1/src/elab.rs:45` | Why a definition could not be elaborated to L0 — always explicit, never a partial artifact |
+| `mycelium_l1::ElabError` | enum | `crates/mycelium-l1/src/elab.rs:46` | Why a definition could not be elaborated to L0 — always explicit, never a partial artifact |
 | `mycelium_l1::Env` | struct | `crates/mycelium-l1/src/checkty.rs:307` | The checked program environment: registry + function table. |
 | `mycelium_l1::Evaluator` | struct | `crates/mycelium-l1/src/eval.rs:260` | The L1 evaluator over a checked [`Env`]. |
 | `mycelium_l1::L1Error` | enum | `crates/mycelium-l1/src/eval.rs:93` | Why L1 evaluation could not produce a value — always explicit (S5/G2). |
@@ -732,19 +732,19 @@
 | `mycelium_l1::ambient::resolve_report` | fn | `crates/mycelium-l1/src/ambient.rs:152` | Like [`resolve`], but also returns the provenance trace ([`ResolutionNote`]s) for EXPLAIN (§4.3). |
 | `mycelium_l1::ast` | mod | `crates/mycelium-l1/src/lib.rs:38` | — |
 | `mycelium_l1::ast::AmbientParams` | enum | `crates/mycelium-l1/src/ast.rs:117` | The written params of a **paradigm-less repr** `{ … }` (RFC-0012 §4.2): the size/shape is still |
-| `mycelium_l1::ast::Arm` | struct | `crates/mycelium-l1/src/ast.rs:500` | A `match` arm. |
+| `mycelium_l1::ast::Arm` | struct | `crates/mycelium-l1/src/ast.rs:539` | A `match` arm. |
 | `mycelium_l1::ast::BaseType` | enum | `crates/mycelium-l1/src/ast.rs:325` | A base (un-annotated) type. |
 | `mycelium_l1::ast::Ctor` | struct | `crates/mycelium-l1/src/ast.rs:169` | One constructor of a [`TypeDecl`]. |
-| `mycelium_l1::ast::Expr` | enum | `crates/mycelium-l1/src/ast.rs:389` | An expression. |
+| `mycelium_l1::ast::Expr` | enum | `crates/mycelium-l1/src/ast.rs:428` | An expression. |
 | `mycelium_l1::ast::FnDecl` | struct | `crates/mycelium-l1/src/ast.rs:266` | A function definition. |
 | `mycelium_l1::ast::FnSig` | struct | `crates/mycelium-l1/src/ast.rs:231` | A function signature (shared by trait requirements and `fn` definitions). |
 | `mycelium_l1::ast::Item` | enum | `crates/mycelium-l1/src/ast.rs:135` | A top-level item. |
-| `mycelium_l1::ast::Literal` | enum | `crates/mycelium-l1/src/ast.rs:541` | A literal value. |
+| `mycelium_l1::ast::Literal` | enum | `crates/mycelium-l1/src/ast.rs:580` | A literal value. |
 | `mycelium_l1::ast::Nodule` | struct | `crates/mycelium-l1/src/ast.rs:74` | A whole program: a `nodule` header and its items. |
 | `mycelium_l1::ast::Paradigm` | enum | `crates/mycelium-l1/src/ast.rs:91` | A representation **paradigm** tag (RFC-0001 §4.2): the granularity of the RFC-0012 ambient. |
 | `mycelium_l1::ast::Param` | struct | `crates/mycelium-l1/src/ast.rs:282` | A value parameter `name: type`. |
 | `mycelium_l1::ast::Path` | struct | `crates/mycelium-l1/src/ast.rs:6` | A dotted path (`signals.demo`, `core.binary`); also a bare name. |
-| `mycelium_l1::ast::Pattern` | enum | `crates/mycelium-l1/src/ast.rs:521` | A pattern. |
+| `mycelium_l1::ast::Pattern` | enum | `crates/mycelium-l1/src/ast.rs:560` | A pattern. |
 | `mycelium_l1::ast::Scalar` | enum | `crates/mycelium-l1/src/ast.rs:363` | A scalar element kind. |
 | `mycelium_l1::ast::Sparsity` | enum | `crates/mycelium-l1/src/ast.rs:354` | Declared sparsity of a VSA type. |
 | `mycelium_l1::ast::Strength` | enum | `crates/mycelium-l1/src/ast.rs:376` | A guarantee-lattice strength. |
@@ -765,16 +765,16 @@
 | `mycelium_l1::checkty::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:965` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
 | `mycelium_l1::checkty::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:550` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
 | `mycelium_l1::checkty::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:906` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
-| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:3302` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
-| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:3288` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
+| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:3313` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
+| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:3299` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
 | `mycelium_l1::elab` | mod | `crates/mycelium-l1/src/lib.rs:41` | — |
-| `mycelium_l1::elab::ElabError` | enum | `crates/mycelium-l1/src/elab.rs:45` | Why a definition could not be elaborated to L0 — always explicit, never a partial artifact |
-| `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:502` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |
-| `mycelium_l1::elab::elaborate` | fn | `crates/mycelium-l1/src/elab.rs:204` | Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`]. |
-| `mycelium_l1::elab::lit_value` | fn | `crates/mycelium-l1/src/elab.rs:83` | Build the L0 [`Value`] of a representation literal (Q6: a literal *is* its representation — |
-| `mycelium_l1::elab::policy_name_ref` | fn | `crates/mycelium-l1/src/elab.rs:183` | The v0 **policy-name reference**: a deterministic, domain-separated content address derived |
-| `mycelium_l1::elab::type_repr` | fn | `crates/mycelium-l1/src/elab.rs:142` | Resolve a surface [`TypeRef`] to a kernel [`Repr`] (swap targets). |
-| `mycelium_l1::elaborate` | fn | `crates/mycelium-l1/src/elab.rs:204` | Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`]. |
+| `mycelium_l1::elab::ElabError` | enum | `crates/mycelium-l1/src/elab.rs:46` | Why a definition could not be elaborated to L0 — always explicit, never a partial artifact |
+| `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:498` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |
+| `mycelium_l1::elab::elaborate` | fn | `crates/mycelium-l1/src/elab.rs:205` | Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`]. |
+| `mycelium_l1::elab::lit_value` | fn | `crates/mycelium-l1/src/elab.rs:84` | Build the L0 [`Value`] of a representation literal (Q6: a literal *is* its representation — |
+| `mycelium_l1::elab::policy_name_ref` | fn | `crates/mycelium-l1/src/elab.rs:184` | The v0 **policy-name reference**: a deterministic, domain-separated content address derived |
+| `mycelium_l1::elab::type_repr` | fn | `crates/mycelium-l1/src/elab.rs:143` | Resolve a surface [`TypeRef`] to a kernel [`Repr`] (swap targets). |
+| `mycelium_l1::elaborate` | fn | `crates/mycelium-l1/src/elab.rs:205` | Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`]. |
 | `mycelium_l1::error` | mod | `crates/mycelium-l1/src/lib.rs:42` | — |
 | `mycelium_l1::error::ParseError` | struct | `crates/mycelium-l1/src/error.rs:9` | A parse/lex failure at a source position. |
 | `mycelium_l1::error::ParseError::new` | fn | `crates/mycelium-l1/src/error.rs:19` | Build an error at `pos`. |
@@ -789,9 +789,9 @@
 | `mycelium_l1::eval::L1Value::to_core` | fn | `crates/mycelium-l1/src/eval.rs:74` | Project this L1 value onto the L0 [`CoreValue`] domain, resolving each constructor's |
 | `mycelium_l1::eval::strength_of` | fn | `crates/mycelium-l1/src/eval.rs:175` | The surface strength keyword's kernel lattice point. |
 | `mycelium_l1::expand_to_source` | fn | `crates/mycelium-l1/src/ambient.rs:198` | Render a (resolved or partly-resolved) [`Nodule`] back to canonical surface text — the M-142/LSP |
-| `mycelium_l1::lexer` | mod | `crates/mycelium-l1/src/lib.rs:44` | — |
+| `mycelium_l1::lexer` | mod | `crates/mycelium-l1/src/lib.rs:48` | — |
 | `mycelium_l1::lexer::lex` | fn | `crates/mycelium-l1/src/lexer.rs:21` | Tokenize `src` into a [`Spanned`] stream terminated by [`Tok::Eof`]. |
-| `mycelium_l1::nodule` | mod | `crates/mycelium-l1/src/lib.rs:45` | — |
+| `mycelium_l1::nodule` | mod | `crates/mycelium-l1/src/lib.rs:49` | — |
 | `mycelium_l1::nodule::NoduleHeader` | struct | `crates/mycelium-l1/src/nodule.rs:25` | A recognised nodule header marker (DN-06 §6). |
 | `mycelium_l1::nodule::NoduleHeader::canonical` | fn | `crates/mycelium-l1/src/nodule.rs:40` | The canonical one-line spelling of this marker — what the formatter (M-142) emits. |
 | `mycelium_l1::nodule::NoduleHeader::canonical` | fn | `crates/mycelium-l1/src/nodule.rs:40` | The canonical one-line spelling of this marker — what the formatter (M-142) emits. |
@@ -799,20 +799,20 @@
 | `mycelium_l1::nodule::NoduleHeader::dotted` | fn | `crates/mycelium-l1/src/nodule.rs:34` | The dotted name as written (`"geometry.shapes"`), or `None` for the bare marker. |
 | `mycelium_l1::nodule::NoduleHeaderError` | struct | `crates/mycelium-l1/src/nodule.rs:51` | An ill-formed nodule header marker — never-silent (G2): the author wrote `// nodule:` but the |
 | `mycelium_l1::nodule::parse_nodule_header` | fn | `crates/mycelium-l1/src/nodule.rs:75` | Recognise the optional nodule header marker on the first non-blank line of `src`. |
-| `mycelium_l1::parse` | mod | `crates/mycelium-l1/src/lib.rs:46` | — |
+| `mycelium_l1::parse` | mod | `crates/mycelium-l1/src/lib.rs:50` | — |
 | `mycelium_l1::parse` | fn | `crates/mycelium-l1/src/parse.rs:26` | Parse a complete **single-`nodule`** program from source — the v0 entry point, unchanged by the |
 | `mycelium_l1::parse::parse` | fn | `crates/mycelium-l1/src/parse.rs:26` | Parse a complete **single-`nodule`** program from source — the v0 entry point, unchanged by the |
 | `mycelium_l1::parse_nodule_header` | fn | `crates/mycelium-l1/src/nodule.rs:75` | Recognise the optional nodule header marker on the first non-blank line of `src`. |
 | `mycelium_l1::resolve` | fn | `crates/mycelium-l1/src/ambient.rs:144` | Resolve a parsed [`Nodule`] to its longhand twin (RFC-0012 §4.3/§4.4). |
 | `mycelium_l1::resolve_report` | fn | `crates/mycelium-l1/src/ambient.rs:152` | Like [`resolve`], but also returns the provenance trace ([`ResolutionNote`]s) for EXPLAIN (§4.3). |
-| `mycelium_l1::token` | mod | `crates/mycelium-l1/src/lib.rs:47` | — |
+| `mycelium_l1::token` | mod | `crates/mycelium-l1/src/lib.rs:51` | — |
 | `mycelium_l1::token::Pos` | struct | `crates/mycelium-l1/src/token.rs:5` | A 1-based source position, for never-silent parse diagnostics. |
 | `mycelium_l1::token::ScalarTok` | enum | `crates/mycelium-l1/src/token.rs:212` | Scalar-kind keyword payload. |
 | `mycelium_l1::token::Spanned` | struct | `crates/mycelium-l1/src/token.rs:238` | A token with its starting position. |
 | `mycelium_l1::token::StrengthTok` | enum | `crates/mycelium-l1/src/token.rs:225` | Guarantee-strength keyword payload. |
 | `mycelium_l1::token::Tok` | enum | `crates/mycelium-l1/src/token.rs:22` | A lexical token. |
 | `mycelium_l1::token::keyword` | fn | `crates/mycelium-l1/src/token.rs:247` | Resolve an identifier-shaped lexeme to its keyword token, or `None` if it is a plain identifier. |
-| `mycelium_l1::totality` | mod | `crates/mycelium-l1/src/lib.rs:48` | — |
+| `mycelium_l1::totality` | mod | `crates/mycelium-l1/src/lib.rs:52` | — |
 | `mycelium_l1::totality::Totality` | enum | `crates/mycelium-l1/src/totality.rs:31` | The divergence bit (RFC-0007 §4.5). |
 | `mycelium_l1::totality::classify_all` | fn | `crates/mycelium-l1/src/totality.rs:45` | Classify every function in the table. |
 
@@ -1151,191 +1151,191 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_mlir::AotError` | enum | `crates/mycelium-mlir/src/llvm.rs:56` | An explicit failure of the direct-LLVM AOT path. |
-| `mycelium_mlir::AutoDepthBudget` | struct | `crates/mycelium-mlir/src/budget.rs:164` | The default policy: derive the ceiling from **detected memory headroom**, conservative fallback |
-| `mycelium_mlir::BitnetDotKernel` | struct | `crates/mycelium-mlir/src/bitnet.rs:274` | A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop), |
-| `mycelium_mlir::Colony` | type | `crates/mycelium-mlir/src/runtime.rs:112` | A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of |
-| `mycelium_mlir::CompiledArtifact` | struct | `crates/mycelium-mlir/src/llvm.rs:2406` | A compiled native artifact for a bit/trit-subset program: the executable on disk (in a |
-| `mycelium_mlir::Deadlock` | struct | `crates/mycelium-mlir/src/runtime.rs:102` | A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a |
-| `mycelium_mlir::DepthBasis` | enum | `crates/mycelium-mlir/src/budget.rs:102` | The inspectable derivation of a [`DepthResolution`] — the no-black-box record (G2). |
-| `mycelium_mlir::DepthBudget` | trait | `crates/mycelium-mlir/src/budget.rs:63` | Resolves a control-stack **depth ceiling** for the AOT env-machine, with an inspectable basis. |
-| `mycelium_mlir::DepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:168` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
-| `mycelium_mlir::DepthResolution` | struct | `crates/mycelium-mlir/src/budget.rs:71` | A resolved depth ceiling plus the [`DepthBasis`] explaining how it was chosen. |
-| `mycelium_mlir::Image` | struct | `crates/mycelium-mlir/src/inject.rs:99` | The running **image**: a hash-keyed dispatch table over a compiled overlay + an interpretable |
-| `mycelium_mlir::InjectError` | enum | `crates/mycelium-mlir/src/inject.rs:65` | A failure at the dispatch/injection boundary — every variant is explicit (never a silent pass or |
-| `mycelium_mlir::JitArtifact` | struct | `crates/mycelium-mlir/src/jit.rs:97` | A JIT-compiled kernel: the `.so` on disk (in a per-artifact temp dir, cleaned on drop) + the |
-| `mycelium_mlir::MemSource` | enum | `crates/mycelium-mlir/src/budget.rs:93` | Which kernel accounting figure the detected headroom came from. |
-| `mycelium_mlir::Network` | struct | `crates/mycelium-mlir/src/channel.rs:71` | A **Kahn process network** (RFC-0008 §4.3): the grouping whose typed SPSC channels form a |
-| `mycelium_mlir::Poll` | enum | `crates/mycelium-mlir/src/runtime.rs:33` | The result of advancing a task one cooperative step. |
-| `mycelium_mlir::Receiver` | struct | `crates/mycelium-mlir/src/channel.rs:117` | The **single consumer** end of a channel. |
-| `mycelium_mlir::Resolution` | enum | `crates/mycelium-mlir/src/inject.rs:50` | How a [`ContentHash`] resolves in an [`Image`] — the inspectable/`EXPLAIN`-able dispatch decision |
-| `mycelium_mlir::STATIC_FALLBACK_DEPTH:` | const | `crates/mycelium-mlir/src/budget.rs:56` | The conservative static fallback ceiling: the prior fixed default (M-347's `AOT_MAX_DEPTH`), |
-| `mycelium_mlir::Scope` | struct | `crates/mycelium-mlir/src/runtime.rs:80` | A **structured concurrency scope** (RT7): tasks spawned here are all joined before the scope |
-| `mycelium_mlir::Sender` | struct | `crates/mycelium-mlir/src/channel.rs:112` | The **single producer** end of a channel. |
-| `mycelium_mlir::SpecializedDotKernel` | struct | `crates/mycelium-mlir/src/specialize.rs:88` | A compiled, in-process **weight-specialized** dot kernel: the `.so` (in a per-artifact temp dir, |
-| `mycelium_mlir::StaticDepthBudget` | struct | `crates/mycelium-mlir/src/budget.rs:235` | An explicit, fixed depth ceiling — for tests and callers that want a deterministic budget. |
-| `mycelium_mlir::StaticReason` | enum | `crates/mycelium-mlir/src/budget.rs:82` | Why a [`DepthBasis::Static`] budget was used (detection not attempted, failed, or explicit). |
-| `mycelium_mlir::SweepOrder` | enum | `crates/mycelium-mlir/src/runtime.rs:90` | The order a **dataflow** sweep visits still-pending children. |
-| `mycelium_mlir::Task` | trait | `crates/mycelium-mlir/src/runtime.rs:56` | A cooperative task: `poll` advances it by one step. |
-| `mycelium_mlir::TaskCtx` | struct | `crates/mycelium-mlir/src/runtime.rs:43` | The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token |
-| `mycelium_mlir::TryRecv` | enum | `crates/mycelium-mlir/src/channel.rs:134` | Why a [`Receiver::try_recv`] yielded no value. |
-| `mycelium_mlir::TrySend` | enum | `crates/mycelium-mlir/src/channel.rs:124` | Why a [`Sender::try_send`] could not complete *right now*. |
+| `mycelium_mlir::AotError` | enum | `crates/mycelium-mlir/src/llvm.rs:60` | An explicit failure of the direct-LLVM AOT path. |
+| `mycelium_mlir::AutoDepthBudget` | struct | `crates/mycelium-mlir/src/budget.rs:168` | The default policy: derive the ceiling from **detected memory headroom**, conservative fallback |
+| `mycelium_mlir::BitnetDotKernel` | struct | `crates/mycelium-mlir/src/bitnet.rs:281` | A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop), |
+| `mycelium_mlir::Colony` | type | `crates/mycelium-mlir/src/runtime.rs:116` | A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of |
+| `mycelium_mlir::CompiledArtifact` | struct | `crates/mycelium-mlir/src/llvm.rs:2410` | A compiled native artifact for a bit/trit-subset program: the executable on disk (in a |
+| `mycelium_mlir::Deadlock` | struct | `crates/mycelium-mlir/src/runtime.rs:106` | A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a |
+| `mycelium_mlir::DepthBasis` | enum | `crates/mycelium-mlir/src/budget.rs:106` | The inspectable derivation of a [`DepthResolution`] — the no-black-box record (G2). |
+| `mycelium_mlir::DepthBudget` | trait | `crates/mycelium-mlir/src/budget.rs:67` | Resolves a control-stack **depth ceiling** for the AOT env-machine, with an inspectable basis. |
+| `mycelium_mlir::DepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:172` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
+| `mycelium_mlir::DepthResolution` | struct | `crates/mycelium-mlir/src/budget.rs:75` | A resolved depth ceiling plus the [`DepthBasis`] explaining how it was chosen. |
+| `mycelium_mlir::Image` | struct | `crates/mycelium-mlir/src/inject.rs:103` | The running **image**: a hash-keyed dispatch table over a compiled overlay + an interpretable |
+| `mycelium_mlir::InjectError` | enum | `crates/mycelium-mlir/src/inject.rs:69` | A failure at the dispatch/injection boundary — every variant is explicit (never a silent pass or |
+| `mycelium_mlir::JitArtifact` | struct | `crates/mycelium-mlir/src/jit.rs:103` | A JIT-compiled kernel: the `.so` on disk (in a per-artifact temp dir, cleaned on drop) + the |
+| `mycelium_mlir::MemSource` | enum | `crates/mycelium-mlir/src/budget.rs:97` | Which kernel accounting figure the detected headroom came from. |
+| `mycelium_mlir::Network` | struct | `crates/mycelium-mlir/src/channel.rs:75` | A **Kahn process network** (RFC-0008 §4.3): the grouping whose typed SPSC channels form a |
+| `mycelium_mlir::Poll` | enum | `crates/mycelium-mlir/src/runtime.rs:37` | The result of advancing a task one cooperative step. |
+| `mycelium_mlir::Receiver` | struct | `crates/mycelium-mlir/src/channel.rs:121` | The **single consumer** end of a channel. |
+| `mycelium_mlir::Resolution` | enum | `crates/mycelium-mlir/src/inject.rs:54` | How a [`ContentHash`] resolves in an [`Image`] — the inspectable/`EXPLAIN`-able dispatch decision |
+| `mycelium_mlir::STATIC_FALLBACK_DEPTH:` | const | `crates/mycelium-mlir/src/budget.rs:60` | The conservative static fallback ceiling: the prior fixed default (M-347's `AOT_MAX_DEPTH`), |
+| `mycelium_mlir::Scope` | struct | `crates/mycelium-mlir/src/runtime.rs:84` | A **structured concurrency scope** (RT7): tasks spawned here are all joined before the scope |
+| `mycelium_mlir::Sender` | struct | `crates/mycelium-mlir/src/channel.rs:116` | The **single producer** end of a channel. |
+| `mycelium_mlir::SpecializedDotKernel` | struct | `crates/mycelium-mlir/src/specialize.rs:92` | A compiled, in-process **weight-specialized** dot kernel: the `.so` (in a per-artifact temp dir, |
+| `mycelium_mlir::StaticDepthBudget` | struct | `crates/mycelium-mlir/src/budget.rs:239` | An explicit, fixed depth ceiling — for tests and callers that want a deterministic budget. |
+| `mycelium_mlir::StaticReason` | enum | `crates/mycelium-mlir/src/budget.rs:86` | Why a [`DepthBasis::Static`] budget was used (detection not attempted, failed, or explicit). |
+| `mycelium_mlir::SweepOrder` | enum | `crates/mycelium-mlir/src/runtime.rs:94` | The order a **dataflow** sweep visits still-pending children. |
+| `mycelium_mlir::Task` | trait | `crates/mycelium-mlir/src/runtime.rs:60` | A cooperative task: `poll` advances it by one step. |
+| `mycelium_mlir::TaskCtx` | struct | `crates/mycelium-mlir/src/runtime.rs:47` | The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token |
+| `mycelium_mlir::TryRecv` | enum | `crates/mycelium-mlir/src/channel.rs:138` | Why a [`Receiver::try_recv`] yielded no value. |
+| `mycelium_mlir::TrySend` | enum | `crates/mycelium-mlir/src/channel.rs:128` | Why a [`Sender::try_send`] could not complete *right now*. |
 | `mycelium_mlir::aot` | mod | `crates/mycelium-mlir/src/lib.rs:44` | — |
-| `mycelium_mlir::aot::default_depth_budget` | fn | `crates/mycelium-mlir/src/aot.rs:60` | The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no |
-| `mycelium_mlir::aot::run` | fn | `crates/mycelium-mlir/src/aot.rs:209` | Run a Core IR program through the AOT path to a representation [`Value`]. |
-| `mycelium_mlir::aot::run_core` | fn | `crates/mycelium-mlir/src/aot.rs:143` | Run a Core IR program through the AOT path to a [`CoreValue`] (the full v0 calculus — repr, data, |
-| `mycelium_mlir::aot::run_core_with_budget` | fn | `crates/mycelium-mlir/src/aot.rs:167` | [`run_core`] with **both** budgets explicit (M-347): `fuel` bounds `Fix` unfolds (time), `max_depth` |
-| `mycelium_mlir::aot::run_core_with_effects` | fn | `crates/mycelium-mlir/src/aot.rs:192` | [`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine |
-| `mycelium_mlir::aot::run_core_with_fuel` | fn | `crates/mycelium-mlir/src/aot.rs:152` | [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling. |
-| `mycelium_mlir::aot::run_with_layout` | fn | `crates/mycelium-mlir/src/aot.rs:543` | Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251; |
+| `mycelium_mlir::aot::default_depth_budget` | fn | `crates/mycelium-mlir/src/aot.rs:64` | The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no |
+| `mycelium_mlir::aot::run` | fn | `crates/mycelium-mlir/src/aot.rs:213` | Run a Core IR program through the AOT path to a representation [`Value`]. |
+| `mycelium_mlir::aot::run_core` | fn | `crates/mycelium-mlir/src/aot.rs:147` | Run a Core IR program through the AOT path to a [`CoreValue`] (the full v0 calculus — repr, data, |
+| `mycelium_mlir::aot::run_core_with_budget` | fn | `crates/mycelium-mlir/src/aot.rs:171` | [`run_core`] with **both** budgets explicit (M-347): `fuel` bounds `Fix` unfolds (time), `max_depth` |
+| `mycelium_mlir::aot::run_core_with_effects` | fn | `crates/mycelium-mlir/src/aot.rs:196` | [`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine |
+| `mycelium_mlir::aot::run_core_with_fuel` | fn | `crates/mycelium-mlir/src/aot.rs:156` | [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling. |
+| `mycelium_mlir::aot::run_with_layout` | fn | `crates/mycelium-mlir/src/aot.rs:547` | Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251; |
 | `mycelium_mlir::bitnet` | mod | `crates/mycelium-mlir/src/lib.rs:45` | — |
-| `mycelium_mlir::bitnet::BitnetDotKernel` | struct | `crates/mycelium-mlir/src/bitnet.rs:274` | A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop), |
-| `mycelium_mlir::bitnet::BitnetDotKernel::call` | fn | `crates/mycelium-mlir/src/bitnet.rs:323` | Run the kernel over `packed_weights` (packed under scheme) and |
-| `mycelium_mlir::bitnet::BitnetDotKernel::call` | fn | `crates/mycelium-mlir/src/bitnet.rs:323` | Run the kernel over `packed_weights` (packed under scheme) and |
-| `mycelium_mlir::bitnet::BitnetDotKernel::scheme` | fn | `crates/mycelium-mlir/src/bitnet.rs:68` | The packing scheme. |
-| `mycelium_mlir::bitnet::BitnetDotKernel::scheme` | fn | `crates/mycelium-mlir/src/bitnet.rs:68` | The packing scheme. |
-| `mycelium_mlir::bitnet::KERNEL_SCHEME:` | const | `crates/mycelium-mlir/src/bitnet.rs:124` | The packing this kernel decodes inline by default. |
-| `mycelium_mlir::bitnet::compile_bitnet_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:360` | Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process. |
-| `mycelium_mlir::bitnet::compile_bitnet_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:367` | Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process. |
-| `mycelium_mlir::bitnet::emit_bitnet_dot_ir` | fn | `crates/mycelium-mlir/src/bitnet.rs:143` | Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme. |
-| `mycelium_mlir::bitnet::emit_bitnet_dot_ir_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:155` | Emit the textual LLVM IR for the packed-ternary dot kernel |
-| `mycelium_mlir::bitnet::jit_ternary_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:403` | Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot |
-| `mycelium_mlir::bitnet::jit_ternary_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:409` | As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs |
-| `mycelium_mlir::bitnet::ternary_dot_ref` | fn | `crates/mycelium-mlir/src/bitnet.rs:131` | The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the |
+| `mycelium_mlir::bitnet::BitnetDotKernel` | struct | `crates/mycelium-mlir/src/bitnet.rs:281` | A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop), |
+| `mycelium_mlir::bitnet::BitnetDotKernel::call` | fn | `crates/mycelium-mlir/src/bitnet.rs:348` | Run the kernel over `packed_weights` and `activations`, summing the first `n` ternary products. |
+| `mycelium_mlir::bitnet::BitnetDotKernel::call` | fn | `crates/mycelium-mlir/src/bitnet.rs:348` | Run the kernel over `packed_weights` and `activations`, summing the first `n` ternary products. |
+| `mycelium_mlir::bitnet::BitnetDotKernel::scheme` | fn | `crates/mycelium-mlir/src/bitnet.rs:72` | The packing scheme. |
+| `mycelium_mlir::bitnet::BitnetDotKernel::scheme` | fn | `crates/mycelium-mlir/src/bitnet.rs:72` | The packing scheme. |
+| `mycelium_mlir::bitnet::KERNEL_SCHEME:` | const | `crates/mycelium-mlir/src/bitnet.rs:128` | The packing this kernel decodes inline by default. |
+| `mycelium_mlir::bitnet::compile_bitnet_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:408` | Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process. |
+| `mycelium_mlir::bitnet::compile_bitnet_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:415` | Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process. |
+| `mycelium_mlir::bitnet::emit_bitnet_dot_ir` | fn | `crates/mycelium-mlir/src/bitnet.rs:147` | Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme. |
+| `mycelium_mlir::bitnet::emit_bitnet_dot_ir_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:159` | Emit the textual LLVM IR for the packed-ternary dot kernel |
+| `mycelium_mlir::bitnet::jit_ternary_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:445` | Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot |
+| `mycelium_mlir::bitnet::jit_ternary_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:451` | As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs |
+| `mycelium_mlir::bitnet::ternary_dot_ref` | fn | `crates/mycelium-mlir/src/bitnet.rs:135` | The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the |
 | `mycelium_mlir::budget` | mod | `crates/mycelium-mlir/src/lib.rs:46` | — |
-| `mycelium_mlir::budget::AutoDepthBudget` | struct | `crates/mycelium-mlir/src/budget.rs:164` | The default policy: derive the ceiling from **detected memory headroom**, conservative fallback |
-| `mycelium_mlir::budget::AutoDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:168` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
-| `mycelium_mlir::budget::AutoDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:168` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
-| `mycelium_mlir::budget::AutoDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:168` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
-| `mycelium_mlir::budget::AutoDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:168` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
-| `mycelium_mlir::budget::DEFAULT_PER_FRAME_BYTES:` | const | `crates/mycelium-mlir/src/budget.rs:40` | Conservative per-frame heap estimate (bytes). |
-| `mycelium_mlir::budget::DepthBasis` | enum | `crates/mycelium-mlir/src/budget.rs:102` | The inspectable derivation of a [`DepthResolution`] — the no-black-box record (G2). |
-| `mycelium_mlir::budget::DepthBudget` | trait | `crates/mycelium-mlir/src/budget.rs:63` | Resolves a control-stack **depth ceiling** for the AOT env-machine, with an inspectable basis. |
-| `mycelium_mlir::budget::DepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:168` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
-| `mycelium_mlir::budget::DepthResolution` | struct | `crates/mycelium-mlir/src/budget.rs:71` | A resolved depth ceiling plus the [`DepthBasis`] explaining how it was chosen. |
-| `mycelium_mlir::budget::MemSource` | enum | `crates/mycelium-mlir/src/budget.rs:93` | Which kernel accounting figure the detected headroom came from. |
-| `mycelium_mlir::budget::STATIC_FALLBACK_DEPTH:` | const | `crates/mycelium-mlir/src/budget.rs:56` | The conservative static fallback ceiling: the prior fixed default (M-347's `AOT_MAX_DEPTH`), |
-| `mycelium_mlir::budget::StaticDepthBudget` | struct | `crates/mycelium-mlir/src/budget.rs:235` | An explicit, fixed depth ceiling — for tests and callers that want a deterministic budget. |
-| `mycelium_mlir::budget::StaticDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:168` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
-| `mycelium_mlir::budget::StaticDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:168` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
-| `mycelium_mlir::budget::StaticDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:168` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
-| `mycelium_mlir::budget::StaticDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:168` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
-| `mycelium_mlir::budget::StaticReason` | enum | `crates/mycelium-mlir/src/budget.rs:82` | Why a [`DepthBasis::Static`] budget was used (detection not attempted, failed, or explicit). |
+| `mycelium_mlir::budget::AutoDepthBudget` | struct | `crates/mycelium-mlir/src/budget.rs:168` | The default policy: derive the ceiling from **detected memory headroom**, conservative fallback |
+| `mycelium_mlir::budget::AutoDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:172` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
+| `mycelium_mlir::budget::AutoDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:172` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
+| `mycelium_mlir::budget::AutoDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:172` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
+| `mycelium_mlir::budget::AutoDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:172` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
+| `mycelium_mlir::budget::DEFAULT_PER_FRAME_BYTES:` | const | `crates/mycelium-mlir/src/budget.rs:44` | Conservative per-frame heap estimate (bytes). |
+| `mycelium_mlir::budget::DepthBasis` | enum | `crates/mycelium-mlir/src/budget.rs:106` | The inspectable derivation of a [`DepthResolution`] — the no-black-box record (G2). |
+| `mycelium_mlir::budget::DepthBudget` | trait | `crates/mycelium-mlir/src/budget.rs:67` | Resolves a control-stack **depth ceiling** for the AOT env-machine, with an inspectable basis. |
+| `mycelium_mlir::budget::DepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:172` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
+| `mycelium_mlir::budget::DepthResolution` | struct | `crates/mycelium-mlir/src/budget.rs:75` | A resolved depth ceiling plus the [`DepthBasis`] explaining how it was chosen. |
+| `mycelium_mlir::budget::MemSource` | enum | `crates/mycelium-mlir/src/budget.rs:97` | Which kernel accounting figure the detected headroom came from. |
+| `mycelium_mlir::budget::STATIC_FALLBACK_DEPTH:` | const | `crates/mycelium-mlir/src/budget.rs:60` | The conservative static fallback ceiling: the prior fixed default (M-347's `AOT_MAX_DEPTH`), |
+| `mycelium_mlir::budget::StaticDepthBudget` | struct | `crates/mycelium-mlir/src/budget.rs:239` | An explicit, fixed depth ceiling — for tests and callers that want a deterministic budget. |
+| `mycelium_mlir::budget::StaticDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:172` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
+| `mycelium_mlir::budget::StaticDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:172` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
+| `mycelium_mlir::budget::StaticDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:172` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
+| `mycelium_mlir::budget::StaticDepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:172` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
+| `mycelium_mlir::budget::StaticReason` | enum | `crates/mycelium-mlir/src/budget.rs:86` | Why a [`DepthBasis::Static`] budget was used (detection not attempted, failed, or explicit). |
 | `mycelium_mlir::channel` | mod | `crates/mycelium-mlir/src/lib.rs:47` | — |
-| `mycelium_mlir::channel::Network` | struct | `crates/mycelium-mlir/src/channel.rs:71` | A **Kahn process network** (RFC-0008 §4.3): the grouping whose typed SPSC channels form a |
-| `mycelium_mlir::channel::Network::channel` | fn | `crates/mycelium-mlir/src/channel.rs:94` | Create a typed SPSC channel on this network with explicit, finite capacity `cap` (no |
-| `mycelium_mlir::channel::Network::channel` | fn | `crates/mycelium-mlir/src/channel.rs:94` | Create a typed SPSC channel on this network with explicit, finite capacity `cap` (no |
-| `mycelium_mlir::channel::Network::epoch` | fn | `crates/mycelium-mlir/src/channel.rs:87` | The number of successful channel sends + recvs across this network so far — monotone, |
-| `mycelium_mlir::channel::Network::epoch` | fn | `crates/mycelium-mlir/src/channel.rs:87` | The number of successful channel sends + recvs across this network so far — monotone, |
-| `mycelium_mlir::channel::Network::new` | fn | `crates/mycelium-mlir/src/channel.rs:78` | A fresh network with its progress clock at zero. |
-| `mycelium_mlir::channel::Network::new` | fn | `crates/mycelium-mlir/src/channel.rs:78` | A fresh network with its progress clock at zero. |
-| `mycelium_mlir::channel::Receiver` | struct | `crates/mycelium-mlir/src/channel.rs:117` | The **single consumer** end of a channel. |
-| `mycelium_mlir::channel::Sender` | struct | `crates/mycelium-mlir/src/channel.rs:112` | The **single producer** end of a channel. |
-| `mycelium_mlir::channel::TryRecv` | enum | `crates/mycelium-mlir/src/channel.rs:134` | Why a [`Receiver::try_recv`] yielded no value. |
-| `mycelium_mlir::channel::TrySend` | enum | `crates/mycelium-mlir/src/channel.rs:124` | Why a [`Sender::try_send`] could not complete *right now*. |
+| `mycelium_mlir::channel::Network` | struct | `crates/mycelium-mlir/src/channel.rs:75` | A **Kahn process network** (RFC-0008 §4.3): the grouping whose typed SPSC channels form a |
+| `mycelium_mlir::channel::Network::channel` | fn | `crates/mycelium-mlir/src/channel.rs:98` | Create a typed SPSC channel on this network with explicit, finite capacity `cap` (no |
+| `mycelium_mlir::channel::Network::channel` | fn | `crates/mycelium-mlir/src/channel.rs:98` | Create a typed SPSC channel on this network with explicit, finite capacity `cap` (no |
+| `mycelium_mlir::channel::Network::epoch` | fn | `crates/mycelium-mlir/src/channel.rs:91` | The number of successful channel sends + recvs across this network so far — monotone, |
+| `mycelium_mlir::channel::Network::epoch` | fn | `crates/mycelium-mlir/src/channel.rs:91` | The number of successful channel sends + recvs across this network so far — monotone, |
+| `mycelium_mlir::channel::Network::new` | fn | `crates/mycelium-mlir/src/channel.rs:82` | A fresh network with its progress clock at zero. |
+| `mycelium_mlir::channel::Network::new` | fn | `crates/mycelium-mlir/src/channel.rs:82` | A fresh network with its progress clock at zero. |
+| `mycelium_mlir::channel::Receiver` | struct | `crates/mycelium-mlir/src/channel.rs:121` | The **single consumer** end of a channel. |
+| `mycelium_mlir::channel::Sender` | struct | `crates/mycelium-mlir/src/channel.rs:116` | The **single producer** end of a channel. |
+| `mycelium_mlir::channel::TryRecv` | enum | `crates/mycelium-mlir/src/channel.rs:138` | Why a [`Receiver::try_recv`] yielded no value. |
+| `mycelium_mlir::channel::TrySend` | enum | `crates/mycelium-mlir/src/channel.rs:128` | Why a [`Sender::try_send`] could not complete *right now*. |
 | `mycelium_mlir::compile` | fn | `crates/mycelium-mlir/src/dialect/native.rs:694` | Compile `node` through the MLIR pipeline to a native executable (MLIR → LLVM IR → `clang`) |
 | `mycelium_mlir::compile_and_run` | fn | `crates/mycelium-mlir/src/dialect/native.rs:724` | Compile + run `node` through the MLIR pipeline and read the result back. |
-| `mycelium_mlir::compile_bitnet_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:360` | Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process. |
-| `mycelium_mlir::compile_bitnet_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:367` | Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process. |
-| `mycelium_mlir::compile_bitnet_dot_simd` | fn | `crates/mycelium-mlir/src/simd.rs:127` | Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process, |
-| `mycelium_mlir::compile_bitnet_dot_simd_tl1` | fn | `crates/mycelium-mlir/src/simd.rs:250` | Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process, |
-| `mycelium_mlir::compile_bitnet_dot_simd_tl2` | fn | `crates/mycelium-mlir/src/simd.rs:603` | Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process, |
-| `mycelium_mlir::compile_so` | fn | `crates/mycelium-mlir/src/jit.rs:194` | Compile the bit/trit-subset program to a shared object without calling it. |
-| `mycelium_mlir::compile_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:140` | Compile a kernel **specialized on `weights`** (baked in as constants) to a shared object and load |
-| `mycelium_mlir::default_depth_budget` | fn | `crates/mycelium-mlir/src/aot.rs:60` | The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no |
+| `mycelium_mlir::compile_bitnet_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:408` | Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process. |
+| `mycelium_mlir::compile_bitnet_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:415` | Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process. |
+| `mycelium_mlir::compile_bitnet_dot_simd` | fn | `crates/mycelium-mlir/src/simd.rs:131` | Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process, |
+| `mycelium_mlir::compile_bitnet_dot_simd_tl1` | fn | `crates/mycelium-mlir/src/simd.rs:248` | Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process, |
+| `mycelium_mlir::compile_bitnet_dot_simd_tl2` | fn | `crates/mycelium-mlir/src/simd.rs:595` | Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process, |
+| `mycelium_mlir::compile_so` | fn | `crates/mycelium-mlir/src/jit.rs:322` | Compile the bit/trit-subset program to a shared object without calling it. |
+| `mycelium_mlir::compile_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:168` | Compile a kernel **specialized on `weights`** (baked in as constants) to a shared object and load |
+| `mycelium_mlir::default_depth_budget` | fn | `crates/mycelium-mlir/src/aot.rs:64` | The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no |
 | `mycelium_mlir::dialect` | mod | `crates/mycelium-mlir/src/lib.rs:49` | — |
-| `mycelium_mlir::dialect::emit` | fn | `crates/mycelium-mlir/src/dialect.rs:71` | Emit the textual `ternary`-dialect module for `node` (one op per lowered binding). |
-| `mycelium_mlir::emit` | fn | `crates/mycelium-mlir/src/dialect.rs:71` | Emit the textual `ternary`-dialect module for `node` (one op per lowered binding). |
-| `mycelium_mlir::emit_bitnet_dot_ir` | fn | `crates/mycelium-mlir/src/bitnet.rs:143` | Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme. |
-| `mycelium_mlir::emit_bitnet_dot_ir_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:155` | Emit the textual LLVM IR for the packed-ternary dot kernel |
-| `mycelium_mlir::emit_bitnet_dot_simd_ir` | fn | `crates/mycelium-mlir/src/simd.rs:55` | Emit the textual LLVM IR for the **hand-vectorized I2_S** packed-ternary dot kernel |
-| `mycelium_mlir::emit_bitnet_dot_simd_tl1_ir` | fn | `crates/mycelium-mlir/src/simd.rs:169` | Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel |
-| `mycelium_mlir::emit_bitnet_dot_simd_tl2_ir` | fn | `crates/mycelium-mlir/src/simd.rs:308` | Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel |
-| `mycelium_mlir::emit_llvm_ir` | fn | `crates/mycelium-mlir/src/llvm.rs:1920` | Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that |
-| `mycelium_mlir::emit_specialized_dot_ir` | fn | `crates/mycelium-mlir/src/specialize.rs:53` | Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel |
+| `mycelium_mlir::dialect::emit` | fn | `crates/mycelium-mlir/src/dialect.rs:75` | Emit the textual `ternary`-dialect module for `node` (one op per lowered binding). |
+| `mycelium_mlir::emit` | fn | `crates/mycelium-mlir/src/dialect.rs:75` | Emit the textual `ternary`-dialect module for `node` (one op per lowered binding). |
+| `mycelium_mlir::emit_bitnet_dot_ir` | fn | `crates/mycelium-mlir/src/bitnet.rs:147` | Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme. |
+| `mycelium_mlir::emit_bitnet_dot_ir_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:159` | Emit the textual LLVM IR for the packed-ternary dot kernel |
+| `mycelium_mlir::emit_bitnet_dot_simd_ir` | fn | `crates/mycelium-mlir/src/simd.rs:59` | Emit the textual LLVM IR for the **hand-vectorized I2_S** packed-ternary dot kernel |
+| `mycelium_mlir::emit_bitnet_dot_simd_tl1_ir` | fn | `crates/mycelium-mlir/src/simd.rs:167` | Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel |
+| `mycelium_mlir::emit_bitnet_dot_simd_tl2_ir` | fn | `crates/mycelium-mlir/src/simd.rs:300` | Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel |
+| `mycelium_mlir::emit_llvm_ir` | fn | `crates/mycelium-mlir/src/llvm.rs:1924` | Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that |
+| `mycelium_mlir::emit_specialized_dot_ir` | fn | `crates/mycelium-mlir/src/specialize.rs:57` | Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel |
 | `mycelium_mlir::inject` | mod | `crates/mycelium-mlir/src/lib.rs:50` | — |
-| `mycelium_mlir::inject::Image` | struct | `crates/mycelium-mlir/src/inject.rs:99` | The running **image**: a hash-keyed dispatch table over a compiled overlay + an interpretable |
-| `mycelium_mlir::inject::Image::call` | fn | `crates/mycelium-mlir/src/inject.rs:181` | Dispatch a call by content hash (ADR-016's call ABI, nullary-unit restriction). |
-| `mycelium_mlir::inject::Image::call` | fn | `crates/mycelium-mlir/src/inject.rs:181` | Dispatch a call by content hash (ADR-016's call ABI, nullary-unit restriction). |
-| `mycelium_mlir::inject::Image::define` | fn | `crates/mycelium-mlir/src/inject.rs:131` | Register a definition **interpret-only** under its content hash (RFC-0001 §4.6), returning the |
-| `mycelium_mlir::inject::Image::define` | fn | `crates/mycelium-mlir/src/inject.rs:131` | Register a definition **interpret-only** under its content hash (RFC-0001 §4.6), returning the |
-| `mycelium_mlir::inject::Image::defined_count` | fn | `crates/mycelium-mlir/src/inject.rs:206` | The number of known (interpretable) definitions. |
-| `mycelium_mlir::inject::Image::defined_count` | fn | `crates/mycelium-mlir/src/inject.rs:206` | The number of known (interpretable) definitions. |
-| `mycelium_mlir::inject::Image::inject` | fn | `crates/mycelium-mlir/src/inject.rs:149` | **Inject** a recompiled definition: compile its unit (the `dlopen` JIT) and register a |
-| `mycelium_mlir::inject::Image::inject` | fn | `crates/mycelium-mlir/src/inject.rs:149` | **Inject** a recompiled definition: compile its unit (the `dlopen` JIT) and register a |
-| `mycelium_mlir::inject::Image::injected_count` | fn | `crates/mycelium-mlir/src/inject.rs:200` | The number of compiled (injected) entries — the dispatch table never shrinks on a re-inject |
-| `mycelium_mlir::inject::Image::injected_count` | fn | `crates/mycelium-mlir/src/inject.rs:200` | The number of compiled (injected) entries — the dispatch table never shrinks on a re-inject |
-| `mycelium_mlir::inject::Image::is_injected` | fn | `crates/mycelium-mlir/src/inject.rs:193` | Whether a compiled (injected) entry exists for `hash`. |
-| `mycelium_mlir::inject::Image::is_injected` | fn | `crates/mycelium-mlir/src/inject.rs:193` | Whether a compiled (injected) entry exists for `hash`. |
-| `mycelium_mlir::inject::Image::new` | fn | `crates/mycelium-mlir/src/inject.rs:114` | An empty image with the default reference interpreter. |
-| `mycelium_mlir::inject::Image::new` | fn | `crates/mycelium-mlir/src/inject.rs:114` | An empty image with the default reference interpreter. |
-| `mycelium_mlir::inject::Image::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:168` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
-| `mycelium_mlir::inject::Image::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:168` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
-| `mycelium_mlir::inject::Image::with_interpreter` | fn | `crates/mycelium-mlir/src/inject.rs:121` | Build an image with a specific interpreter for the fallback path (e.g. |
-| `mycelium_mlir::inject::Image::with_interpreter` | fn | `crates/mycelium-mlir/src/inject.rs:121` | Build an image with a specific interpreter for the fallback path (e.g. |
-| `mycelium_mlir::inject::InjectError` | enum | `crates/mycelium-mlir/src/inject.rs:65` | A failure at the dispatch/injection boundary — every variant is explicit (never a silent pass or |
-| `mycelium_mlir::inject::Resolution` | enum | `crates/mycelium-mlir/src/inject.rs:50` | How a [`ContentHash`] resolves in an [`Image`] — the inspectable/`EXPLAIN`-able dispatch decision |
-| `mycelium_mlir::inject::recompile_closure` | fn | `crates/mycelium-mlir/src/inject.rs:222` | The **recompile set** of a change, by hash reachability (ADR-017 decision 3 — no AST/file diff). |
+| `mycelium_mlir::inject::Image` | struct | `crates/mycelium-mlir/src/inject.rs:103` | The running **image**: a hash-keyed dispatch table over a compiled overlay + an interpretable |
+| `mycelium_mlir::inject::Image::call` | fn | `crates/mycelium-mlir/src/inject.rs:185` | Dispatch a call by content hash (ADR-016's call ABI, nullary-unit restriction). |
+| `mycelium_mlir::inject::Image::call` | fn | `crates/mycelium-mlir/src/inject.rs:185` | Dispatch a call by content hash (ADR-016's call ABI, nullary-unit restriction). |
+| `mycelium_mlir::inject::Image::define` | fn | `crates/mycelium-mlir/src/inject.rs:135` | Register a definition **interpret-only** under its content hash (RFC-0001 §4.6), returning the |
+| `mycelium_mlir::inject::Image::define` | fn | `crates/mycelium-mlir/src/inject.rs:135` | Register a definition **interpret-only** under its content hash (RFC-0001 §4.6), returning the |
+| `mycelium_mlir::inject::Image::defined_count` | fn | `crates/mycelium-mlir/src/inject.rs:210` | The number of known (interpretable) definitions. |
+| `mycelium_mlir::inject::Image::defined_count` | fn | `crates/mycelium-mlir/src/inject.rs:210` | The number of known (interpretable) definitions. |
+| `mycelium_mlir::inject::Image::inject` | fn | `crates/mycelium-mlir/src/inject.rs:153` | **Inject** a recompiled definition: compile its unit (the `dlopen` JIT) and register a |
+| `mycelium_mlir::inject::Image::inject` | fn | `crates/mycelium-mlir/src/inject.rs:153` | **Inject** a recompiled definition: compile its unit (the `dlopen` JIT) and register a |
+| `mycelium_mlir::inject::Image::injected_count` | fn | `crates/mycelium-mlir/src/inject.rs:204` | The number of compiled (injected) entries — the dispatch table never shrinks on a re-inject |
+| `mycelium_mlir::inject::Image::injected_count` | fn | `crates/mycelium-mlir/src/inject.rs:204` | The number of compiled (injected) entries — the dispatch table never shrinks on a re-inject |
+| `mycelium_mlir::inject::Image::is_injected` | fn | `crates/mycelium-mlir/src/inject.rs:197` | Whether a compiled (injected) entry exists for `hash`. |
+| `mycelium_mlir::inject::Image::is_injected` | fn | `crates/mycelium-mlir/src/inject.rs:197` | Whether a compiled (injected) entry exists for `hash`. |
+| `mycelium_mlir::inject::Image::new` | fn | `crates/mycelium-mlir/src/inject.rs:118` | An empty image with the default reference interpreter. |
+| `mycelium_mlir::inject::Image::new` | fn | `crates/mycelium-mlir/src/inject.rs:118` | An empty image with the default reference interpreter. |
+| `mycelium_mlir::inject::Image::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:172` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
+| `mycelium_mlir::inject::Image::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:172` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
+| `mycelium_mlir::inject::Image::with_interpreter` | fn | `crates/mycelium-mlir/src/inject.rs:125` | Build an image with a specific interpreter for the fallback path (e.g. |
+| `mycelium_mlir::inject::Image::with_interpreter` | fn | `crates/mycelium-mlir/src/inject.rs:125` | Build an image with a specific interpreter for the fallback path (e.g. |
+| `mycelium_mlir::inject::InjectError` | enum | `crates/mycelium-mlir/src/inject.rs:69` | A failure at the dispatch/injection boundary — every variant is explicit (never a silent pass or |
+| `mycelium_mlir::inject::Resolution` | enum | `crates/mycelium-mlir/src/inject.rs:54` | How a [`ContentHash`] resolves in an [`Image`] — the inspectable/`EXPLAIN`-able dispatch decision |
+| `mycelium_mlir::inject::recompile_closure` | fn | `crates/mycelium-mlir/src/inject.rs:226` | The **recompile set** of a change, by hash reachability (ADR-017 decision 3 — no AST/file diff). |
 | `mycelium_mlir::jit` | mod | `crates/mycelium-mlir/src/lib.rs:51` | — |
-| `mycelium_mlir::jit::JitArtifact` | struct | `crates/mycelium-mlir/src/jit.rs:97` | A JIT-compiled kernel: the `.so` on disk (in a per-artifact temp dir, cleaned on drop) + the |
-| `mycelium_mlir::jit::JitArtifact::call` | fn | `crates/mycelium-mlir/src/jit.rs:107` | Call the kernel in-process (`dlopen` → `dlsym` → call) and read the result back as an `Exact` |
-| `mycelium_mlir::jit::JitArtifact::call` | fn | `crates/mycelium-mlir/src/jit.rs:107` | Call the kernel in-process (`dlopen` → `dlsym` → call) and read the result back as an `Exact` |
-| `mycelium_mlir::jit::compile_so` | fn | `crates/mycelium-mlir/src/jit.rs:194` | Compile the bit/trit-subset program to a shared object without calling it. |
-| `mycelium_mlir::jit::jit_run` | fn | `crates/mycelium-mlir/src/jit.rs:218` | Compile the program to a shared object and call it once, in-process. |
-| `mycelium_mlir::jit_run` | fn | `crates/mycelium-mlir/src/jit.rs:218` | Compile the program to a shared object and call it once, in-process. |
-| `mycelium_mlir::jit_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:177` | Convenience: specialize on `weights`, compile, and run the dot product against `activations` once. |
-| `mycelium_mlir::jit_ternary_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:403` | Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot |
-| `mycelium_mlir::jit_ternary_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:409` | As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs |
+| `mycelium_mlir::jit::JitArtifact` | struct | `crates/mycelium-mlir/src/jit.rs:103` | A JIT-compiled kernel: the `.so` on disk (in a per-artifact temp dir, cleaned on drop) + the |
+| `mycelium_mlir::jit::JitArtifact::call` | fn | `crates/mycelium-mlir/src/jit.rs:113` | Call the kernel in-process (`dlopen` → `dlsym` → call) and read the result back as an `Exact` |
+| `mycelium_mlir::jit::JitArtifact::call` | fn | `crates/mycelium-mlir/src/jit.rs:113` | Call the kernel in-process (`dlopen` → `dlsym` → call) and read the result back as an `Exact` |
+| `mycelium_mlir::jit::compile_so` | fn | `crates/mycelium-mlir/src/jit.rs:322` | Compile the bit/trit-subset program to a shared object without calling it. |
+| `mycelium_mlir::jit::jit_run` | fn | `crates/mycelium-mlir/src/jit.rs:346` | Compile the program to a shared object and call it once, in-process. |
+| `mycelium_mlir::jit_run` | fn | `crates/mycelium-mlir/src/jit.rs:346` | Compile the program to a shared object and call it once, in-process. |
+| `mycelium_mlir::jit_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:205` | Convenience: specialize on `weights`, compile, and run the dot product against `activations` once. |
+| `mycelium_mlir::jit_ternary_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:445` | Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot |
+| `mycelium_mlir::jit_ternary_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:451` | As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs |
 | `mycelium_mlir::llvm` | mod | `crates/mycelium-mlir/src/lib.rs:52` | — |
-| `mycelium_mlir::llvm::AotError` | enum | `crates/mycelium-mlir/src/llvm.rs:56` | An explicit failure of the direct-LLVM AOT path. |
-| `mycelium_mlir::llvm::CompiledArtifact` | struct | `crates/mycelium-mlir/src/llvm.rs:2406` | A compiled native artifact for a bit/trit-subset program: the executable on disk (in a |
-| `mycelium_mlir::llvm::CompiledArtifact::run` | fn | `crates/mycelium-mlir/src/llvm.rs:2416` | Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}` |
-| `mycelium_mlir::llvm::CompiledArtifact::run` | fn | `crates/mycelium-mlir/src/llvm.rs:2416` | Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}` |
-| `mycelium_mlir::llvm::compile` | fn | `crates/mycelium-mlir/src/llvm.rs:2450` | Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`) |
-| `mycelium_mlir::llvm::compile_and_run` | fn | `crates/mycelium-mlir/src/llvm.rs:2476` | Compile the bit/trit-subset program to a native executable, run it once, and read the result |
-| `mycelium_mlir::llvm::emit_llvm_ir` | fn | `crates/mycelium-mlir/src/llvm.rs:1920` | Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that |
+| `mycelium_mlir::llvm::AotError` | enum | `crates/mycelium-mlir/src/llvm.rs:60` | An explicit failure of the direct-LLVM AOT path. |
+| `mycelium_mlir::llvm::CompiledArtifact` | struct | `crates/mycelium-mlir/src/llvm.rs:2410` | A compiled native artifact for a bit/trit-subset program: the executable on disk (in a |
+| `mycelium_mlir::llvm::CompiledArtifact::run` | fn | `crates/mycelium-mlir/src/llvm.rs:2420` | Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}` |
+| `mycelium_mlir::llvm::CompiledArtifact::run` | fn | `crates/mycelium-mlir/src/llvm.rs:2420` | Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}` |
+| `mycelium_mlir::llvm::compile` | fn | `crates/mycelium-mlir/src/llvm.rs:2454` | Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`) |
+| `mycelium_mlir::llvm::compile_and_run` | fn | `crates/mycelium-mlir/src/llvm.rs:2480` | Compile the bit/trit-subset program to a native executable, run it once, and read the result |
+| `mycelium_mlir::llvm::emit_llvm_ir` | fn | `crates/mycelium-mlir/src/llvm.rs:1924` | Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that |
 | `mycelium_mlir::pack` | mod | `crates/mycelium-mlir/src/lib.rs:53` | — |
-| `mycelium_mlir::pack::PackError` | enum | `crates/mycelium-mlir/src/pack.rs:43` | A packing-codec error. |
-| `mycelium_mlir::pack::needed_bytes` | fn | `crates/mycelium-mlir/src/pack.rs:92` | Bytes required to hold `count` trits under `scheme` — the buffer-bound model. |
-| `mycelium_mlir::pack::pack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:197` | Encode `trits` to bytes under `scheme` (bijective; the AOT path's physical buffer). |
-| `mycelium_mlir::pack::relayout_trits` | fn | `crates/mycelium-mlir/src/pack.rs:287` | Re-materialize trits through a pack-then-read round-trip where the buffer is **packed as** |
-| `mycelium_mlir::pack::unpack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:239` | Decode `count` trits from `bytes` under `scheme`. |
-| `mycelium_mlir::pack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:197` | Encode `trits` to bytes under `scheme` (bijective; the AOT path's physical buffer). |
-| `mycelium_mlir::recompile_closure` | fn | `crates/mycelium-mlir/src/inject.rs:222` | The **recompile set** of a change, by hash reachability (ADR-017 decision 3 — no AST/file diff). |
-| `mycelium_mlir::relayout_trits` | fn | `crates/mycelium-mlir/src/pack.rs:287` | Re-materialize trits through a pack-then-read round-trip where the buffer is **packed as** |
-| `mycelium_mlir::run` | fn | `crates/mycelium-mlir/src/aot.rs:209` | Run a Core IR program through the AOT path to a representation [`Value`]. |
-| `mycelium_mlir::run_core` | fn | `crates/mycelium-mlir/src/aot.rs:143` | Run a Core IR program through the AOT path to a [`CoreValue`] (the full v0 calculus — repr, data, |
-| `mycelium_mlir::run_core_with_effects` | fn | `crates/mycelium-mlir/src/aot.rs:192` | [`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine |
-| `mycelium_mlir::run_core_with_fuel` | fn | `crates/mycelium-mlir/src/aot.rs:152` | [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling. |
-| `mycelium_mlir::run_with_layout` | fn | `crates/mycelium-mlir/src/aot.rs:543` | Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251; |
+| `mycelium_mlir::pack::PackError` | enum | `crates/mycelium-mlir/src/pack.rs:47` | A packing-codec error. |
+| `mycelium_mlir::pack::needed_bytes` | fn | `crates/mycelium-mlir/src/pack.rs:96` | Bytes required to hold `count` trits under `scheme` — the buffer-bound model. |
+| `mycelium_mlir::pack::pack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:201` | Encode `trits` to bytes under `scheme` (bijective; the AOT path's physical buffer). |
+| `mycelium_mlir::pack::relayout_trits` | fn | `crates/mycelium-mlir/src/pack.rs:291` | Re-materialize trits through a pack-then-read round-trip where the buffer is **packed as** |
+| `mycelium_mlir::pack::unpack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:243` | Decode `count` trits from `bytes` under `scheme`. |
+| `mycelium_mlir::pack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:201` | Encode `trits` to bytes under `scheme` (bijective; the AOT path's physical buffer). |
+| `mycelium_mlir::recompile_closure` | fn | `crates/mycelium-mlir/src/inject.rs:226` | The **recompile set** of a change, by hash reachability (ADR-017 decision 3 — no AST/file diff). |
+| `mycelium_mlir::relayout_trits` | fn | `crates/mycelium-mlir/src/pack.rs:291` | Re-materialize trits through a pack-then-read round-trip where the buffer is **packed as** |
+| `mycelium_mlir::run` | fn | `crates/mycelium-mlir/src/aot.rs:213` | Run a Core IR program through the AOT path to a representation [`Value`]. |
+| `mycelium_mlir::run_core` | fn | `crates/mycelium-mlir/src/aot.rs:147` | Run a Core IR program through the AOT path to a [`CoreValue`] (the full v0 calculus — repr, data, |
+| `mycelium_mlir::run_core_with_effects` | fn | `crates/mycelium-mlir/src/aot.rs:196` | [`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine |
+| `mycelium_mlir::run_core_with_fuel` | fn | `crates/mycelium-mlir/src/aot.rs:156` | [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling. |
+| `mycelium_mlir::run_with_layout` | fn | `crates/mycelium-mlir/src/aot.rs:547` | Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251; |
 | `mycelium_mlir::runtime` | mod | `crates/mycelium-mlir/src/lib.rs:54` | — |
-| `mycelium_mlir::runtime::Colony` | type | `crates/mycelium-mlir/src/runtime.rs:112` | A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of |
-| `mycelium_mlir::runtime::Deadlock` | struct | `crates/mycelium-mlir/src/runtime.rs:102` | A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a |
-| `mycelium_mlir::runtime::Poll` | enum | `crates/mycelium-mlir/src/runtime.rs:33` | The result of advancing a task one cooperative step. |
-| `mycelium_mlir::runtime::Scope` | struct | `crates/mycelium-mlir/src/runtime.rs:80` | A **structured concurrency scope** (RT7): tasks spawned here are all joined before the scope |
-| `mycelium_mlir::runtime::SweepOrder` | enum | `crates/mycelium-mlir/src/runtime.rs:90` | The order a **dataflow** sweep visits still-pending children. |
-| `mycelium_mlir::runtime::Task` | trait | `crates/mycelium-mlir/src/runtime.rs:56` | A cooperative task: `poll` advances it by one step. |
-| `mycelium_mlir::runtime::TaskCtx` | struct | `crates/mycelium-mlir/src/runtime.rs:43` | The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token |
+| `mycelium_mlir::runtime::Colony` | type | `crates/mycelium-mlir/src/runtime.rs:116` | A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of |
+| `mycelium_mlir::runtime::Deadlock` | struct | `crates/mycelium-mlir/src/runtime.rs:106` | A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a |
+| `mycelium_mlir::runtime::Poll` | enum | `crates/mycelium-mlir/src/runtime.rs:37` | The result of advancing a task one cooperative step. |
+| `mycelium_mlir::runtime::Scope` | struct | `crates/mycelium-mlir/src/runtime.rs:84` | A **structured concurrency scope** (RT7): tasks spawned here are all joined before the scope |
+| `mycelium_mlir::runtime::SweepOrder` | enum | `crates/mycelium-mlir/src/runtime.rs:94` | The order a **dataflow** sweep visits still-pending children. |
+| `mycelium_mlir::runtime::Task` | trait | `crates/mycelium-mlir/src/runtime.rs:60` | A cooperative task: `poll` advances it by one step. |
+| `mycelium_mlir::runtime::TaskCtx` | struct | `crates/mycelium-mlir/src/runtime.rs:47` | The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token |
 | `mycelium_mlir::simd` | mod | `crates/mycelium-mlir/src/lib.rs:55` | — |
-| `mycelium_mlir::simd::compile_bitnet_dot_simd` | fn | `crates/mycelium-mlir/src/simd.rs:127` | Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process, |
-| `mycelium_mlir::simd::compile_bitnet_dot_simd_tl1` | fn | `crates/mycelium-mlir/src/simd.rs:250` | Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process, |
-| `mycelium_mlir::simd::compile_bitnet_dot_simd_tl2` | fn | `crates/mycelium-mlir/src/simd.rs:603` | Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process, |
-| `mycelium_mlir::simd::emit_bitnet_dot_simd_ir` | fn | `crates/mycelium-mlir/src/simd.rs:55` | Emit the textual LLVM IR for the **hand-vectorized I2_S** packed-ternary dot kernel |
-| `mycelium_mlir::simd::emit_bitnet_dot_simd_tl1_ir` | fn | `crates/mycelium-mlir/src/simd.rs:169` | Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel |
-| `mycelium_mlir::simd::emit_bitnet_dot_simd_tl2_ir` | fn | `crates/mycelium-mlir/src/simd.rs:308` | Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel |
+| `mycelium_mlir::simd::compile_bitnet_dot_simd` | fn | `crates/mycelium-mlir/src/simd.rs:131` | Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process, |
+| `mycelium_mlir::simd::compile_bitnet_dot_simd_tl1` | fn | `crates/mycelium-mlir/src/simd.rs:248` | Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process, |
+| `mycelium_mlir::simd::compile_bitnet_dot_simd_tl2` | fn | `crates/mycelium-mlir/src/simd.rs:595` | Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process, |
+| `mycelium_mlir::simd::emit_bitnet_dot_simd_ir` | fn | `crates/mycelium-mlir/src/simd.rs:59` | Emit the textual LLVM IR for the **hand-vectorized I2_S** packed-ternary dot kernel |
+| `mycelium_mlir::simd::emit_bitnet_dot_simd_tl1_ir` | fn | `crates/mycelium-mlir/src/simd.rs:167` | Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel |
+| `mycelium_mlir::simd::emit_bitnet_dot_simd_tl2_ir` | fn | `crates/mycelium-mlir/src/simd.rs:300` | Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel |
 | `mycelium_mlir::specialize` | mod | `crates/mycelium-mlir/src/lib.rs:56` | — |
-| `mycelium_mlir::specialize::SpecializedDotKernel` | struct | `crates/mycelium-mlir/src/specialize.rs:88` | A compiled, in-process **weight-specialized** dot kernel: the `.so` (in a per-artifact temp dir, |
-| `mycelium_mlir::specialize::SpecializedDotKernel::call` | fn | `crates/mycelium-mlir/src/specialize.rs:115` | Run the specialized kernel over `activations`, returning `Σ digit(wᵢ)·activations[i]` for the |
-| `mycelium_mlir::specialize::SpecializedDotKernel::call` | fn | `crates/mycelium-mlir/src/specialize.rs:115` | Run the specialized kernel over `activations`, returning `Σ digit(wᵢ)·activations[i]` for the |
-| `mycelium_mlir::specialize::SpecializedDotKernel::n` | fn | `crates/mycelium-mlir/src/specialize.rs:101` | The logical number of lanes (weight length) compiled into this kernel. |
-| `mycelium_mlir::specialize::SpecializedDotKernel::n` | fn | `crates/mycelium-mlir/src/specialize.rs:101` | The logical number of lanes (weight length) compiled into this kernel. |
-| `mycelium_mlir::specialize::SpecializedDotKernel::nonzero` | fn | `crates/mycelium-mlir/src/specialize.rs:108` | The number of nonzero (surviving) lanes — the straight-line `add`/`sub` count, exposed for |
-| `mycelium_mlir::specialize::SpecializedDotKernel::nonzero` | fn | `crates/mycelium-mlir/src/specialize.rs:108` | The number of nonzero (surviving) lanes — the straight-line `add`/`sub` count, exposed for |
-| `mycelium_mlir::specialize::compile_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:140` | Compile a kernel **specialized on `weights`** (baked in as constants) to a shared object and load |
-| `mycelium_mlir::specialize::emit_specialized_dot_ir` | fn | `crates/mycelium-mlir/src/specialize.rs:53` | Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel |
-| `mycelium_mlir::specialize::jit_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:177` | Convenience: specialize on `weights`, compile, and run the dot product against `activations` once. |
-| `mycelium_mlir::ternary_dot_ref` | fn | `crates/mycelium-mlir/src/bitnet.rs:131` | The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the |
-| `mycelium_mlir::unpack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:239` | Decode `count` trits from `bytes` under `scheme`. |
+| `mycelium_mlir::specialize::SpecializedDotKernel` | struct | `crates/mycelium-mlir/src/specialize.rs:92` | A compiled, in-process **weight-specialized** dot kernel: the `.so` (in a per-artifact temp dir, |
+| `mycelium_mlir::specialize::SpecializedDotKernel::call` | fn | `crates/mycelium-mlir/src/specialize.rs:130` | Run the specialized kernel over `activations`, returning `Σ digit(wᵢ)·activations[i]` for the |
+| `mycelium_mlir::specialize::SpecializedDotKernel::call` | fn | `crates/mycelium-mlir/src/specialize.rs:130` | Run the specialized kernel over `activations`, returning `Σ digit(wᵢ)·activations[i]` for the |
+| `mycelium_mlir::specialize::SpecializedDotKernel::n` | fn | `crates/mycelium-mlir/src/specialize.rs:104` | The logical number of lanes (weight length) compiled into this kernel. |
+| `mycelium_mlir::specialize::SpecializedDotKernel::n` | fn | `crates/mycelium-mlir/src/specialize.rs:104` | The logical number of lanes (weight length) compiled into this kernel. |
+| `mycelium_mlir::specialize::SpecializedDotKernel::nonzero` | fn | `crates/mycelium-mlir/src/specialize.rs:111` | The number of nonzero (surviving) lanes — the straight-line `add`/`sub` count, exposed for |
+| `mycelium_mlir::specialize::SpecializedDotKernel::nonzero` | fn | `crates/mycelium-mlir/src/specialize.rs:111` | The number of nonzero (surviving) lanes — the straight-line `add`/`sub` count, exposed for |
+| `mycelium_mlir::specialize::compile_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:168` | Compile a kernel **specialized on `weights`** (baked in as constants) to a shared object and load |
+| `mycelium_mlir::specialize::emit_specialized_dot_ir` | fn | `crates/mycelium-mlir/src/specialize.rs:57` | Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel |
+| `mycelium_mlir::specialize::jit_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:205` | Convenience: specialize on `weights`, compile, and run the dot product against `activations` once. |
+| `mycelium_mlir::ternary_dot_ref` | fn | `crates/mycelium-mlir/src/bitnet.rs:135` | The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the |
+| `mycelium_mlir::unpack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:243` | Decode `count` trits from `bytes` under `scheme`. |
 
 ## mycelium-numerics
 
@@ -1352,7 +1352,7 @@
 | `mycelium_numerics::ProbBound` | struct | `crates/mycelium-numerics/src/prob.rs:16` | A scalar failure-probability bound `δ ∈ [0, 1]` — travels in a [`mycelium_core::Bound`] |
 | `mycelium_numerics::accuracy_to_probability` | fn | `crates/mycelium-numerics/src/cert.rs:148` | The single sanctioned **cross-kernel inference** (ADR-010 §4): an [`ErrorBound`] feeds a |
 | `mycelium_numerics::basis_strength` | fn | `crates/mycelium-numerics/src/cert.rs:255` | The strength implied by a bound's basis (M-I2/M-I3/M-I4): the basis *is* the evidence class. |
-| `mycelium_numerics::cert` | mod | `crates/mycelium-numerics/src/lib.rs:22` | — |
+| `mycelium_numerics::cert` | mod | `crates/mycelium-numerics/src/lib.rs:25` | — |
 | `mycelium_numerics::cert::Certificate` | struct | `crates/mycelium-numerics/src/cert.rs:159` | The shared certificate both kernels reduce to (ADR-010 §3): an ε side, a δ side, and a `strength` |
 | `mycelium_numerics::cert::Certificate::delta` | fn | `crates/mycelium-numerics/src/cert.rs:190` | The δ failure-probability side (`0` if no probabilistic component). |
 | `mycelium_numerics::cert::Certificate::delta` | fn | `crates/mycelium-numerics/src/cert.rs:190` | The δ failure-probability side (`0` if no probabilistic component). |
@@ -1379,7 +1379,7 @@
 | `mycelium_numerics::check_error_claim` | fn | `crates/mycelium-numerics/src/cert.rs:109` | Re-validate a claimed ε bound for `op` over `inputs`: **Valid** iff the claim is `≥` the |
 | `mycelium_numerics::check_union_claim` | fn | `crates/mycelium-numerics/src/cert.rs:129` | Re-validate a claimed δ against the **union bound** of `inputs`: **Valid** iff the claim is `≥` |
 | `mycelium_numerics::compose_error_bound` | fn | `crates/mycelium-numerics/src/cert.rs:322` | Compose the **`Error` bounds of approximate inputs** under `op` into a result bound whose |
-| `mycelium_numerics::error` | mod | `crates/mycelium-numerics/src/lib.rs:23` | — |
+| `mycelium_numerics::error` | mod | `crates/mycelium-numerics/src/lib.rs:26` | — |
 | `mycelium_numerics::error::AffineForm` | struct | `crates/mycelium-numerics/src/error.rs:46` | An affine form `x₀ + Σ xᵢ·εᵢ` with noise symbols `εᵢ ∈ [−1, +1]` (ADR-010 §1). |
 | `mycelium_numerics::error::AffineForm::add` | fn | `crates/mycelium-numerics/src/error.rs:140` | Addition — *exact* on the form's structure (shared noise symbols combine, so correlated |
 | `mycelium_numerics::error::AffineForm::add` | fn | `crates/mycelium-numerics/src/error.rs:140` | Addition — *exact* on the form's structure (shared noise symbols combine, so correlated |
@@ -1421,7 +1421,7 @@
 | `mycelium_numerics::error::NoiseSym` | type | `crates/mycelium-numerics/src/error.rs:33` | A noise-symbol identifier. |
 | `mycelium_numerics::error::ROUNDOFF_SYM:` | const | `crates/mycelium-numerics/src/error.rs:40` | The reserved noise symbol carrying the **accumulated floating-point round-off of the affine |
 | `mycelium_numerics::error_norm` | fn | `crates/mycelium-numerics/src/cert.rs:355` | The norm of a `BoundKind::Error`, for callers assembling [`ErrorOp`]s. |
-| `mycelium_numerics::prob` | mod | `crates/mycelium-numerics/src/lib.rs:24` | — |
+| `mycelium_numerics::prob` | mod | `crates/mycelium-numerics/src/lib.rs:27` | — |
 | `mycelium_numerics::prob::ApRhlJudgment` | struct | `crates/mycelium-numerics/src/prob.rs:69` | An apRHL `⟨ε, δ⟩` relational judgment (ADR-010 §2): "the implementation refines the reference up |
 | `mycelium_numerics::prob::ApRhlJudgment::delta` | fn | `crates/mycelium-numerics/src/prob.rs:24` | Failure probability, always in `[0, 1]`. |
 | `mycelium_numerics::prob::ApRhlJudgment::delta` | fn | `crates/mycelium-numerics/src/prob.rs:24` | Failure probability, always in `[0, 1]`. |
@@ -1514,49 +1514,49 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_select::Action` | enum | `crates/mycelium-select/src/lib.rs:253` | What a matched rule does. |
-| `mycelium_select::BITNET_PACKINGS:` | const | `crates/mycelium-select/src/lib.rs:785` | The fixed **bitnet.cpp** ternary packing candidate set (RFC-0004 §5; Wang et al.): `I2_S` |
-| `mycelium_select::Candidate` | enum | `crates/mycelium-select/src/lib.rs:242` | A selectable candidate — the three RFC-0005 §4 sites share one vocabulary (one mechanism). |
-| `mycelium_select::CandidateCost` | struct | `crates/mycelium-select/src/lib.rs:506` | The per-candidate cost line of an [`Explanation`]. |
-| `mycelium_select::CostModel` | struct | `crates/mycelium-select/src/lib.rs:282` | The **explicit cost function** (RFC-0005 §2.1): cost = `storage_weight ×` the candidate's |
-| `mycelium_select::CostModel::cost` | fn | `crates/mycelium-select/src/lib.rs:333` | The deterministic cost of `candidate` given `inputs` — total, finite for every well-formed |
-| `mycelium_select::DecodeFacts` | struct | `crates/mycelium-select/src/lib.rs:73` | The **exact decode facts** the RFC-0010 decode site queries — generic integers/booleans about a |
-| `mycelium_select::DecodeMethod` | enum | `crates/mycelium-select/src/lib.rs:229` | A decode methodology — the **third** RFC-0005 §4 site (RFC-0010): how a value is decoded back to |
-| `mycelium_select::Explanation` | struct | `crates/mycelium-select/src/lib.rs:517` | The **mandatory EXPLAIN record** (M-221; RFC-0005 §2.2/§4): emitted on *every* selection — |
-| `mycelium_select::ParadigmKind` | enum | `crates/mycelium-select/src/lib.rs:47` | The four closed paradigm kinds, as a predicate-level discriminator (RFC-0001 §4.1). |
-| `mycelium_select::PolicyError` | enum | `crates/mycelium-select/src/lib.rs:354` | Why a policy could not be constructed — validated up front so every constructed policy is |
-| `mycelium_select::PolicyRegistry` | struct | `crates/mycelium-select/src/lib.rs:729` | A registry resolving a recorded `PolicyRef` back to the policy that decided — the operational |
-| `mycelium_select::PolicyRegistry::get` | fn | `crates/mycelium-select/src/lib.rs:749` | Resolve a `PolicyRef` to its policy, if registered. |
-| `mycelium_select::PolicyRegistry::is_empty` | fn | `crates/mycelium-select/src/lib.rs:761` | Whether the registry is empty. |
-| `mycelium_select::PolicyRegistry::len` | fn | `crates/mycelium-select/src/lib.rs:755` | Number of registered policies. |
-| `mycelium_select::PolicyRegistry::new` | fn | `crates/mycelium-select/src/lib.rs:428` | Build a policy, validating totality up front: at least one candidate, every `Choose(i)` |
-| `mycelium_select::PolicyRegistry::register` | fn | `crates/mycelium-select/src/lib.rs:741` | Register a policy under its content address; returns the `PolicyRef`. |
-| `mycelium_select::Predicate` | enum | `crates/mycelium-select/src/lib.rs:135` | The predicate language — small, closed, **not Turing-complete**: no loops, no recursion in the |
-| `mycelium_select::Predicate::eval` | fn | `crates/mycelium-select/src/lib.rs:169` | Evaluate against the queryable inputs — total: every predicate yields a boolean on every |
-| `mycelium_select::Predicate::literals_finite` | fn | `crates/mycelium-select/src/lib.rs:207` | True iff every floating-point literal in the predicate tree is finite (A5-01/B2-02). |
-| `mycelium_select::Rule` | struct | `crates/mycelium-select/src/lib.rs:263` | One row of the decision table: `when` (a [`Predicate`]) → `action`. |
-| `mycelium_select::SelectError` | enum | `crates/mycelium-select/src/lib.rs:539` | Why a selection call failed — always explicit (G2), never a silent fallback choice. |
-| `mycelium_select::SelectionInputs` | struct | `crates/mycelium-select/src/lib.rs:89` | The **queryable inputs** a policy may inspect — drawn from a value's [`Repr`] + [`Meta`] |
-| `mycelium_select::SelectionInputs::from_meta` | fn | `crates/mycelium-select/src/lib.rs:106` | The queryable projection of a `(Repr, Meta)` pair (no decode facts — swap/packing sites). |
-| `mycelium_select::SelectionInputs::of_value` | fn | `crates/mycelium-select/src/lib.rs:118` | The queryable projection of a [`Value`]. |
-| `mycelium_select::SelectionInputs::with_decode` | fn | `crates/mycelium-select/src/lib.rs:124` | Attach decode-site facts (RFC-0010) for the [`select_decode_method`] adapter. |
-| `mycelium_select::SelectionPolicy` | struct | `crates/mycelium-select/src/lib.rs:400` | A **reified selection policy** (ADR-006; RFC-0005 §2/§3): an ordered decision table over a |
-| `mycelium_select::SelectionPolicy::candidates` | fn | `crates/mycelium-select/src/lib.rs:473` | The finite candidate set. |
-| `mycelium_select::SelectionPolicy::cost_model` | fn | `crates/mycelium-select/src/lib.rs:488` | The explicit cost model. |
-| `mycelium_select::SelectionPolicy::default_choice` | fn | `crates/mycelium-select/src/lib.rs:483` | The mandatory default arm (totality). |
-| `mycelium_select::SelectionPolicy::name` | fn | `crates/mycelium-select/src/lib.rs:468` | The policy's display name (not part of selection semantics, but part of its identity). |
-| `mycelium_select::SelectionPolicy::new` | fn | `crates/mycelium-select/src/lib.rs:428` | Build a policy, validating totality up front: at least one candidate, every `Choose(i)` |
-| `mycelium_select::SelectionPolicy::policy_ref` | fn | `crates/mycelium-select/src/lib.rs:497` | The **content address** of this policy (RFC-0005 §3; RFC-0001 §4.6): the hash of its |
-| `mycelium_select::SelectionPolicy::rules` | fn | `crates/mycelium-select/src/lib.rs:478` | The ordered decision table. |
-| `mycelium_select::bitnet_packing_policy` | fn | `crates/mycelium-select/src/lib.rs:804` | Build the **default schedule-staged packing policy** (M-250): the three [`BITNET_PACKINGS`] |
-| `mycelium_select::explain` | fn | `crates/mycelium-select/src/lib.rs:666` | `explain(policy, meta) → trace` (RFC-0005 §4): the mandatory EXPLAIN, **total and |
-| `mycelium_select::layout_of` | fn | `crates/mycelium-select/src/lib.rs:791` | Map a chosen ternary [`PackScheme`] to the [`PhysicalLayout`] recorded on `Meta.physical`. |
-| `mycelium_select::record_packing_layout` | fn | `crates/mycelium-select/src/lib.rs:860` | One-call convenience: select the packing layout for a value's `(Repr, Meta)` and **record it** |
-| `mycelium_select::select` | fn | `crates/mycelium-select/src/lib.rs:594` | The **single selection entry point** (RFC-0005 §2; one mechanism for both §4 sites): evaluate |
-| `mycelium_select::select_decode_method` | fn | `crates/mycelium-select/src/lib.rs:710` | Decode-method site adapter (RFC-0005 §4 site 3; RFC-0010): the chosen candidate must be a |
-| `mycelium_select::select_layout` | fn | `crates/mycelium-select/src/lib.rs:839` | The **packing-schedule selector** (M-250; RFC-0004 §5; one mechanism — RFC-0005 §4): evaluate |
-| `mycelium_select::select_packing` | fn | `crates/mycelium-select/src/lib.rs:691` | Packing-schedule site adapter (RFC-0005 §4 site 2; RFC-0004 §5 — consumed by E2-7/M-250): the |
-| `mycelium_select::select_swap_target` | fn | `crates/mycelium-select/src/lib.rs:674` | Swap-target site adapter (RFC-0005 §4 site 1; RFC-0002): the chosen candidate must be a |
+| `mycelium_select::Action` | enum | `crates/mycelium-select/src/lib.rs:256` | What a matched rule does. |
+| `mycelium_select::BITNET_PACKINGS:` | const | `crates/mycelium-select/src/lib.rs:788` | The fixed **bitnet.cpp** ternary packing candidate set (RFC-0004 §5; Wang et al.): `I2_S` |
+| `mycelium_select::Candidate` | enum | `crates/mycelium-select/src/lib.rs:245` | A selectable candidate — the three RFC-0005 §4 sites share one vocabulary (one mechanism). |
+| `mycelium_select::CandidateCost` | struct | `crates/mycelium-select/src/lib.rs:509` | The per-candidate cost line of an [`Explanation`]. |
+| `mycelium_select::CostModel` | struct | `crates/mycelium-select/src/lib.rs:285` | The **explicit cost function** (RFC-0005 §2.1): cost = `storage_weight ×` the candidate's |
+| `mycelium_select::CostModel::cost` | fn | `crates/mycelium-select/src/lib.rs:336` | The deterministic cost of `candidate` given `inputs` — total, finite for every well-formed |
+| `mycelium_select::DecodeFacts` | struct | `crates/mycelium-select/src/lib.rs:76` | The **exact decode facts** the RFC-0010 decode site queries — generic integers/booleans about a |
+| `mycelium_select::DecodeMethod` | enum | `crates/mycelium-select/src/lib.rs:232` | A decode methodology — the **third** RFC-0005 §4 site (RFC-0010): how a value is decoded back to |
+| `mycelium_select::Explanation` | struct | `crates/mycelium-select/src/lib.rs:520` | The **mandatory EXPLAIN record** (M-221; RFC-0005 §2.2/§4): emitted on *every* selection — |
+| `mycelium_select::ParadigmKind` | enum | `crates/mycelium-select/src/lib.rs:50` | The four closed paradigm kinds, as a predicate-level discriminator (RFC-0001 §4.1). |
+| `mycelium_select::PolicyError` | enum | `crates/mycelium-select/src/lib.rs:357` | Why a policy could not be constructed — validated up front so every constructed policy is |
+| `mycelium_select::PolicyRegistry` | struct | `crates/mycelium-select/src/lib.rs:732` | A registry resolving a recorded `PolicyRef` back to the policy that decided — the operational |
+| `mycelium_select::PolicyRegistry::get` | fn | `crates/mycelium-select/src/lib.rs:752` | Resolve a `PolicyRef` to its policy, if registered. |
+| `mycelium_select::PolicyRegistry::is_empty` | fn | `crates/mycelium-select/src/lib.rs:764` | Whether the registry is empty. |
+| `mycelium_select::PolicyRegistry::len` | fn | `crates/mycelium-select/src/lib.rs:758` | Number of registered policies. |
+| `mycelium_select::PolicyRegistry::new` | fn | `crates/mycelium-select/src/lib.rs:431` | Build a policy, validating totality up front: at least one candidate, every `Choose(i)` |
+| `mycelium_select::PolicyRegistry::register` | fn | `crates/mycelium-select/src/lib.rs:744` | Register a policy under its content address; returns the `PolicyRef`. |
+| `mycelium_select::Predicate` | enum | `crates/mycelium-select/src/lib.rs:138` | The predicate language — small, closed, **not Turing-complete**: no loops, no recursion in the |
+| `mycelium_select::Predicate::eval` | fn | `crates/mycelium-select/src/lib.rs:172` | Evaluate against the queryable inputs — total: every predicate yields a boolean on every |
+| `mycelium_select::Predicate::literals_finite` | fn | `crates/mycelium-select/src/lib.rs:210` | True iff every floating-point literal in the predicate tree is finite (A5-01/B2-02). |
+| `mycelium_select::Rule` | struct | `crates/mycelium-select/src/lib.rs:266` | One row of the decision table: `when` (a [`Predicate`]) → `action`. |
+| `mycelium_select::SelectError` | enum | `crates/mycelium-select/src/lib.rs:542` | Why a selection call failed — always explicit (G2), never a silent fallback choice. |
+| `mycelium_select::SelectionInputs` | struct | `crates/mycelium-select/src/lib.rs:92` | The **queryable inputs** a policy may inspect — drawn from a value's [`Repr`] + [`Meta`] |
+| `mycelium_select::SelectionInputs::from_meta` | fn | `crates/mycelium-select/src/lib.rs:109` | The queryable projection of a `(Repr, Meta)` pair (no decode facts — swap/packing sites). |
+| `mycelium_select::SelectionInputs::of_value` | fn | `crates/mycelium-select/src/lib.rs:121` | The queryable projection of a [`Value`]. |
+| `mycelium_select::SelectionInputs::with_decode` | fn | `crates/mycelium-select/src/lib.rs:127` | Attach decode-site facts (RFC-0010) for the [`select_decode_method`] adapter. |
+| `mycelium_select::SelectionPolicy` | struct | `crates/mycelium-select/src/lib.rs:403` | A **reified selection policy** (ADR-006; RFC-0005 §2/§3): an ordered decision table over a |
+| `mycelium_select::SelectionPolicy::candidates` | fn | `crates/mycelium-select/src/lib.rs:476` | The finite candidate set. |
+| `mycelium_select::SelectionPolicy::cost_model` | fn | `crates/mycelium-select/src/lib.rs:491` | The explicit cost model. |
+| `mycelium_select::SelectionPolicy::default_choice` | fn | `crates/mycelium-select/src/lib.rs:486` | The mandatory default arm (totality). |
+| `mycelium_select::SelectionPolicy::name` | fn | `crates/mycelium-select/src/lib.rs:471` | The policy's display name (not part of selection semantics, but part of its identity). |
+| `mycelium_select::SelectionPolicy::new` | fn | `crates/mycelium-select/src/lib.rs:431` | Build a policy, validating totality up front: at least one candidate, every `Choose(i)` |
+| `mycelium_select::SelectionPolicy::policy_ref` | fn | `crates/mycelium-select/src/lib.rs:500` | The **content address** of this policy (RFC-0005 §3; RFC-0001 §4.6): the hash of its |
+| `mycelium_select::SelectionPolicy::rules` | fn | `crates/mycelium-select/src/lib.rs:481` | The ordered decision table. |
+| `mycelium_select::bitnet_packing_policy` | fn | `crates/mycelium-select/src/lib.rs:807` | Build the **default schedule-staged packing policy** (M-250): the three [`BITNET_PACKINGS`] |
+| `mycelium_select::explain` | fn | `crates/mycelium-select/src/lib.rs:669` | `explain(policy, meta) → trace` (RFC-0005 §4): the mandatory EXPLAIN, **total and |
+| `mycelium_select::layout_of` | fn | `crates/mycelium-select/src/lib.rs:794` | Map a chosen ternary [`PackScheme`] to the [`PhysicalLayout`] recorded on `Meta.physical`. |
+| `mycelium_select::record_packing_layout` | fn | `crates/mycelium-select/src/lib.rs:863` | One-call convenience: select the packing layout for a value's `(Repr, Meta)` and **record it** |
+| `mycelium_select::select` | fn | `crates/mycelium-select/src/lib.rs:597` | The **single selection entry point** (RFC-0005 §2; one mechanism for both §4 sites): evaluate |
+| `mycelium_select::select_decode_method` | fn | `crates/mycelium-select/src/lib.rs:713` | Decode-method site adapter (RFC-0005 §4 site 3; RFC-0010): the chosen candidate must be a |
+| `mycelium_select::select_layout` | fn | `crates/mycelium-select/src/lib.rs:842` | The **packing-schedule selector** (M-250; RFC-0004 §5; one mechanism — RFC-0005 §4): evaluate |
+| `mycelium_select::select_packing` | fn | `crates/mycelium-select/src/lib.rs:694` | Packing-schedule site adapter (RFC-0005 §4 site 2; RFC-0004 §5 — consumed by E2-7/M-250): the |
+| `mycelium_select::select_swap_target` | fn | `crates/mycelium-select/src/lib.rs:677` | Swap-target site adapter (RFC-0005 §4 site 1; RFC-0002): the chosen candidate must be a |
 
 ## mycelium-spore
 
@@ -2663,9 +2663,9 @@
 | `mycelium_vsa::CleanupMemory` | struct | `crates/mycelium-vsa/src/cleanup.rs:28` | A labelled item memory at a fixed dimensionality. |
 | `mycelium_vsa::DEFAULT_ENUM_BUDGET:` | const | `crates/mycelium-vsa/src/decode_select.rs:53` | The default enumeration budget: brute force is chosen when `∏ᵢ kᵢ ≤` this. |
 | `mycelium_vsa::DecodeSelection` | struct | `crates/mycelium-vsa/src/decode_select.rs:142` | A reified decode-method selection result (RFC-0010): the chosen methodology, the mandatory EXPLAIN |
-| `mycelium_vsa::EmpiricalProfile` | struct | `crates/mycelium-vsa/src/lib.rs:361` | A **trial-validated empirical profile**: the regime over which a crate-declared `Empirical` |
-| `mycelium_vsa::EmpiricalProfile::bound` | fn | `crates/mycelium-vsa/src/lib.rs:400` | The δ bound this profile backs, with its honest `EmpiricalFit` basis (M-I3). |
-| `mycelium_vsa::EmpiricalProfile::check` | fn | `crates/mycelium-vsa/src/lib.rs:379` | Check the profile's side-conditions for an op over `items` operands at `dim`; a violation |
+| `mycelium_vsa::EmpiricalProfile` | struct | `crates/mycelium-vsa/src/lib.rs:364` | A **trial-validated empirical profile**: the regime over which a crate-declared `Empirical` |
+| `mycelium_vsa::EmpiricalProfile::bound` | fn | `crates/mycelium-vsa/src/lib.rs:403` | The δ bound this profile backs, with its honest `EmpiricalFit` basis (M-I3). |
+| `mycelium_vsa::EmpiricalProfile::check` | fn | `crates/mycelium-vsa/src/lib.rs:382` | Check the profile's side-conditions for an op over `items` operands at `dim`; a violation |
 | `mycelium_vsa::Factorization` | struct | `crates/mycelium-vsa/src/resonator.rs:196` | A clean, gate-passing factorization: the per-slot recovered atom plus its confidence/margin, and |
 | `mycelium_vsa::Fhrr` | struct | `crates/mycelium-vsa/src/fhrr.rs:48` | The FHRR model at a fixed dimensionality. |
 | `mycelium_vsa::Hrr` | struct | `crates/mycelium-vsa/src/hrr.rs:54` | The HRR model at a fixed dimensionality. |
@@ -2681,10 +2681,10 @@
 | `mycelium_vsa::ResonatorTrace` | struct | `crates/mycelium-vsa/src/resonator.rs:181` | The full inspectable trace + verdict — returned on **any** stop (success or error), so `EXPLAIN` |
 | `mycelium_vsa::Sbc` | struct | `crates/mycelium-vsa/src/sbc.rs:36` | The SBC model: `blocks` blocks of `block_len` components (`dim = blocks · block_len`). |
 | `mycelium_vsa::StopReason` | enum | `crates/mycelium-vsa/src/resonator.rs:137` | The terminal verdict of a run (RFC-0009 §3/§6). |
-| `mycelium_vsa::VsaError` | enum | `crates/mycelium-vsa/src/lib.rs:68` | Why a VSA operation could not be performed — always explicit, never a silent coercion (G2). |
-| `mycelium_vsa::VsaModel` | trait | `crates/mycelium-vsa/src/lib.rs:322` | A composition-style VSA model (RFC-0003 §3): the `bind`/`unbind` (+ self-inverse flag), |
-| `mycelium_vsa::VsaOp` | enum | `crates/mycelium-vsa/src/lib.rs:55` | The VSA operations a model supplies (RFC-0003 §3). |
-| `mycelium_vsa::bsc` | mod | `crates/mycelium-vsa/src/lib.rs:19` | — |
+| `mycelium_vsa::VsaError` | enum | `crates/mycelium-vsa/src/lib.rs:71` | Why a VSA operation could not be performed — always explicit, never a silent coercion (G2). |
+| `mycelium_vsa::VsaModel` | trait | `crates/mycelium-vsa/src/lib.rs:325` | A composition-style VSA model (RFC-0003 §3): the `bind`/`unbind` (+ self-inverse flag), |
+| `mycelium_vsa::VsaOp` | enum | `crates/mycelium-vsa/src/lib.rs:58` | The VSA operations a model supplies (RFC-0003 §3). |
+| `mycelium_vsa::bsc` | mod | `crates/mycelium-vsa/src/lib.rs:22` | — |
 | `mycelium_vsa::bsc::BSC_BUNDLE_PROFILE:` | const | `crates/mycelium-vsa/src/bsc.rs:30` | The trial-validated regime backing the Value-level BSC bundle's `Empirical` δ |
 | `mycelium_vsa::bsc::Bsc` | struct | `crates/mycelium-vsa/src/bsc.rs:42` | The BSC model at a fixed dimensionality. |
 | `mycelium_vsa::bsc::Bsc::bind_values` | fn | `crates/mycelium-vsa/src/bsc.rs:75` | Value-level `bind` (Exact, XOR). |
@@ -2697,12 +2697,12 @@
 | `mycelium_vsa::bsc::Bsc::permute_value` | fn | `crates/mycelium-vsa/src/bsc.rs:105` | Value-level `permute` (Exact). |
 | `mycelium_vsa::bsc::Bsc::unbind_values` | fn | `crates/mycelium-vsa/src/bsc.rs:90` | Value-level `unbind` (Exact; XOR is self-inverse). |
 | `mycelium_vsa::bsc::Bsc::unbind_values` | fn | `crates/mycelium-vsa/src/bsc.rs:90` | Value-level `unbind` (Exact; XOR is self-inverse). |
-| `mycelium_vsa::capacity` | mod | `crates/mycelium-vsa/src/lib.rs:20` | — |
+| `mycelium_vsa::capacity` | mod | `crates/mycelium-vsa/src/lib.rs:23` | — |
 | `mycelium_vsa::capacity::CAPACITY_CITATION:` | const | `crates/mycelium-vsa/src/capacity.rs:44` | The citation string for the MAP-I bundle capacity theorem (T0.2). |
 | `mycelium_vsa::capacity::MARGIN_MU:` | const | `crates/mycelium-vsa/src/capacity.rs:21` | The illustrative margin `μ` the M-001 probe fixes (so `2/μ² = 200`). |
 | `mycelium_vsa::capacity::proven_capacity_bound` | fn | `crates/mycelium-vsa/src/capacity.rs:51` | Issue a **`Proven`** capacity [`Bound`] for bundling `items` into `dim`, targeting failure |
 | `mycelium_vsa::capacity::required_dim` | fn | `crates/mycelium-vsa/src/capacity.rs:26` | The cited theorem `requiredDim(m, δ) = ⌈(2/μ²)·ln(m/δ)⌉` (RFC-0003 §5). |
-| `mycelium_vsa::cleanup` | mod | `crates/mycelium-vsa/src/lib.rs:21` | — |
+| `mycelium_vsa::cleanup` | mod | `crates/mycelium-vsa/src/lib.rs:24` | — |
 | `mycelium_vsa::cleanup::CleanupMemory` | struct | `crates/mycelium-vsa/src/cleanup.rs:28` | A labelled item memory at a fixed dimensionality. |
 | `mycelium_vsa::cleanup::CleanupMemory::atoms` | fn | `crates/mycelium-vsa/src/cleanup.rs:76` | The codebook atoms in index order, as `(label, atom)` pairs. |
 | `mycelium_vsa::cleanup::CleanupMemory::atoms` | fn | `crates/mycelium-vsa/src/cleanup.rs:76` | The codebook atoms in index order, as `(label, atom)` pairs. |
@@ -2720,7 +2720,7 @@
 | `mycelium_vsa::cleanup::CleanupMemory::new` | fn | `crates/mycelium-vsa/src/cleanup.rs:36` | An empty memory for `dim`-dimensional atoms. |
 | `mycelium_vsa::cleanup::Match` | struct | `crates/mycelium-vsa/src/cleanup.rs:14` | A cleanup hit: the recovered codebook item plus how confident the match is. |
 | `mycelium_vsa::decode_method_policy` | fn | `crates/mycelium-vsa/src/decode_select.rs:70` | Build the **default decode-method policy** (RFC-0010 §4): three candidates |
-| `mycelium_vsa::decode_select` | mod | `crates/mycelium-vsa/src/lib.rs:22` | — |
+| `mycelium_vsa::decode_select` | mod | `crates/mycelium-vsa/src/lib.rs:25` | — |
 | `mycelium_vsa::decode_select::DEFAULT_ENUM_BUDGET:` | const | `crates/mycelium-vsa/src/decode_select.rs:53` | The default enumeration budget: brute force is chosen when `∏ᵢ kᵢ ≤` this. |
 | `mycelium_vsa::decode_select::DecodeSelection` | struct | `crates/mycelium-vsa/src/decode_select.rs:142` | A reified decode-method selection result (RFC-0010): the chosen methodology, the mandatory EXPLAIN |
 | `mycelium_vsa::decode_select::decode_method_policy` | fn | `crates/mycelium-vsa/src/decode_select.rs:70` | Build the **default decode-method policy** (RFC-0010 §4): three candidates |
@@ -2728,7 +2728,7 @@
 | `mycelium_vsa::decode_select::reconstruct_factors_auto` | fn | `crates/mycelium-vsa/src/decode_select.rs:164` | **Automatic factor reconstruction** (RFC-0010): select the decode methodology for `s` against |
 | `mycelium_vsa::explain_decode_method` | fn | `crates/mycelium-vsa/src/decode_select.rs:127` | The mandatory **EXPLAIN** for a decode-method choice (RFC-0005 §4), without executing the decode: |
 | `mycelium_vsa::factorize` | fn | `crates/mycelium-vsa/src/resonator.rs:326` | Factorize `s` into one atom per slot of `codebooks`, running the RFC-0009 §3 loop with `params`. |
-| `mycelium_vsa::fhrr` | mod | `crates/mycelium-vsa/src/lib.rs:23` | — |
+| `mycelium_vsa::fhrr` | mod | `crates/mycelium-vsa/src/lib.rs:26` | — |
 | `mycelium_vsa::fhrr::FHRR_UNBIND_PROFILE:` | const | `crates/mycelium-vsa/src/fhrr.rs:26` | The trial-validated regime backing the Value-level FHRR unbind's `Empirical` δ |
 | `mycelium_vsa::fhrr::Fhrr` | struct | `crates/mycelium-vsa/src/fhrr.rs:48` | The FHRR model at a fixed dimensionality. |
 | `mycelium_vsa::fhrr::Fhrr::bind_values` | fn | `crates/mycelium-vsa/src/fhrr.rs:84` | Value-level `bind` (deterministic phasor algebra). |
@@ -2737,7 +2737,7 @@
 | `mycelium_vsa::fhrr::Fhrr::new` | fn | `crates/mycelium-vsa/src/fhrr.rs:56` | An FHRR model of dimension `dim`. |
 | `mycelium_vsa::fhrr::Fhrr::unbind_values` | fn | `crates/mycelium-vsa/src/fhrr.rs:102` | Value-level **`Empirical` unbind** (the RFC-0003 §4 weak-link tag, like HRR): the decoded |
 | `mycelium_vsa::fhrr::Fhrr::unbind_values` | fn | `crates/mycelium-vsa/src/fhrr.rs:102` | Value-level **`Empirical` unbind** (the RFC-0003 §4 weak-link tag, like HRR): the decoded |
-| `mycelium_vsa::hrr` | mod | `crates/mycelium-vsa/src/lib.rs:24` | — |
+| `mycelium_vsa::hrr` | mod | `crates/mycelium-vsa/src/lib.rs:27` | — |
 | `mycelium_vsa::hrr::HRR_UNBIND_PROFILE:` | const | `crates/mycelium-vsa/src/hrr.rs:42` | The trial-validated regime backing the Value-level HRR unbind's `Empirical` δ |
 | `mycelium_vsa::hrr::Hrr` | struct | `crates/mycelium-vsa/src/hrr.rs:54` | The HRR model at a fixed dimensionality. |
 | `mycelium_vsa::hrr::Hrr::bind_values` | fn | `crates/mycelium-vsa/src/hrr.rs:100` | Value-level `bind` (deterministic algebra; binding is where HRR is honest — the |
@@ -2746,7 +2746,7 @@
 | `mycelium_vsa::hrr::Hrr::new` | fn | `crates/mycelium-vsa/src/hrr.rs:62` | An HRR model of dimension `dim`. |
 | `mycelium_vsa::hrr::Hrr::unbind_values` | fn | `crates/mycelium-vsa/src/hrr.rs:119` | Value-level **`Empirical` unbind** — the documented weak link (RFC-0003 §4). |
 | `mycelium_vsa::hrr::Hrr::unbind_values` | fn | `crates/mycelium-vsa/src/hrr.rs:119` | Value-level **`Empirical` unbind** — the documented weak link (RFC-0003 §4). |
-| `mycelium_vsa::mapb` | mod | `crates/mycelium-vsa/src/lib.rs:25` | — |
+| `mycelium_vsa::mapb` | mod | `crates/mycelium-vsa/src/lib.rs:28` | — |
 | `mycelium_vsa::mapb::MAPB_BUNDLE_PROFILE:` | const | `crates/mycelium-vsa/src/mapb.rs:34` | The trial-validated regime backing the Value-level MAP-B bundle's `Empirical` δ |
 | `mycelium_vsa::mapb::MapB` | struct | `crates/mycelium-vsa/src/mapb.rs:46` | The MAP-B model at a fixed dimensionality. |
 | `mycelium_vsa::mapb::MapB::bind_values` | fn | `crates/mycelium-vsa/src/mapb.rs:83` | Value-level `bind` (Exact). |
@@ -2759,7 +2759,7 @@
 | `mycelium_vsa::mapb::MapB::permute_value` | fn | `crates/mycelium-vsa/src/mapb.rs:118` | Value-level `permute` (Exact). |
 | `mycelium_vsa::mapb::MapB::unbind_values` | fn | `crates/mycelium-vsa/src/mapb.rs:102` | Value-level `unbind` (Exact; self-inverse). |
 | `mycelium_vsa::mapb::MapB::unbind_values` | fn | `crates/mycelium-vsa/src/mapb.rs:102` | Value-level `unbind` (Exact; self-inverse). |
-| `mycelium_vsa::mapi` | mod | `crates/mycelium-vsa/src/lib.rs:26` | — |
+| `mycelium_vsa::mapi` | mod | `crates/mycelium-vsa/src/lib.rs:29` | — |
 | `mycelium_vsa::mapi::MapI` | struct | `crates/mycelium-vsa/src/mapi.rs:20` | The MAP-I model at a fixed dimensionality. |
 | `mycelium_vsa::mapi::MapI::bind_values` | fn | `crates/mycelium-vsa/src/mapi.rs:94` | Value-level `bind` (Exact): `bind(a, b)` with `Derived` provenance over both inputs. |
 | `mycelium_vsa::mapi::MapI::bind_values` | fn | `crates/mycelium-vsa/src/mapi.rs:94` | Value-level `bind` (Exact): `bind(a, b)` with `Derived` provenance over both inputs. |
@@ -2771,11 +2771,11 @@
 | `mycelium_vsa::mapi::MapI::permute_value` | fn | `crates/mycelium-vsa/src/mapi.rs:123` | Value-level `permute` (Exact): cyclic shift by `shift`. |
 | `mycelium_vsa::mapi::MapI::unbind_values` | fn | `crates/mycelium-vsa/src/mapi.rs:110` | Value-level `unbind` (Exact): recover a factor (self-inverse for MAP-I). |
 | `mycelium_vsa::mapi::MapI::unbind_values` | fn | `crates/mycelium-vsa/src/mapi.rs:110` | Value-level `unbind` (Exact): recover a factor (self-inverse for MAP-I). |
-| `mycelium_vsa::matrix` | mod | `crates/mycelium-vsa/src/lib.rs:27` | — |
+| `mycelium_vsa::matrix` | mod | `crates/mycelium-vsa/src/lib.rs:30` | — |
 | `mycelium_vsa::matrix::RFC0003_MATRIX:` | const | `crates/mycelium-vsa/src/matrix.rs:34` | The §4 matrix: `(model id, op, normative tag)` for every implemented model × operation. |
 | `mycelium_vsa::matrix::matrix_tag` | fn | `crates/mycelium-vsa/src/matrix.rs:70` | Look up the normative tag for `(model_id, op)`; `None` for a model the matrix does not cover |
 | `mycelium_vsa::matrix_tag` | fn | `crates/mycelium-vsa/src/matrix.rs:70` | Look up the normative tag for `(model_id, op)`; `None` for a model the matrix does not cover |
-| `mycelium_vsa::recon` | mod | `crates/mycelium-vsa/src/lib.rs:28` | — |
+| `mycelium_vsa::recon` | mod | `crates/mycelium-vsa/src/lib.rs:31` | — |
 | `mycelium_vsa::recon::reconstruct_factors` | fn | `crates/mycelium-vsa/src/recon.rs:90` | Factorize `record` — a bind product `s = x₁ ⊛ … ⊛ x_F` — into one codebook atom per slot, following |
 | `mycelium_vsa::recon::reconstruct_factors_selected` | fn | `crates/mycelium-vsa/src/recon.rs:158` | Value-level **auto-selected** factor decode (RFC-0010): like [`reconstruct_factors`], but routes |
 | `mycelium_vsa::recon::reconstruct_role` | fn | `crates/mycelium-vsa/src/recon.rs:24` | Compositionally reconstruct the filler bound under `role` inside `record`, following the |
@@ -2783,7 +2783,7 @@
 | `mycelium_vsa::reconstruct_factors_auto` | fn | `crates/mycelium-vsa/src/decode_select.rs:164` | **Automatic factor reconstruction** (RFC-0010): select the decode methodology for `s` against |
 | `mycelium_vsa::reconstruct_factors_selected` | fn | `crates/mycelium-vsa/src/recon.rs:158` | Value-level **auto-selected** factor decode (RFC-0010): like [`reconstruct_factors`], but routes |
 | `mycelium_vsa::reconstruct_role` | fn | `crates/mycelium-vsa/src/recon.rs:24` | Compositionally reconstruct the filler bound under `role` inside `record`, following the |
-| `mycelium_vsa::resonator` | mod | `crates/mycelium-vsa/src/lib.rs:29` | — |
+| `mycelium_vsa::resonator` | mod | `crates/mycelium-vsa/src/lib.rs:32` | — |
 | `mycelium_vsa::resonator::Cleanup` | enum | `crates/mycelium-vsa/src/resonator.rs:63` | Per-slot cleanup projection (RFC-0009 §3 / §9 Q2 / §10.3 ablation). |
 | `mycelium_vsa::resonator::Factorization` | struct | `crates/mycelium-vsa/src/resonator.rs:196` | A clean, gate-passing factorization: the per-slot recovered atom plus its confidence/margin, and |
 | `mycelium_vsa::resonator::Init` | enum | `crates/mycelium-vsa/src/resonator.rs:85` | Initialisation strategy (RFC-0009 §9 Q1). |
@@ -2800,7 +2800,7 @@
 | `mycelium_vsa::resonator::ResonatorTrace` | struct | `crates/mycelium-vsa/src/resonator.rs:181` | The full inspectable trace + verdict — returned on **any** stop (success or error), so `EXPLAIN` |
 | `mycelium_vsa::resonator::StopReason` | enum | `crates/mycelium-vsa/src/resonator.rs:137` | The terminal verdict of a run (RFC-0009 §3/§6). |
 | `mycelium_vsa::resonator::factorize` | fn | `crates/mycelium-vsa/src/resonator.rs:326` | Factorize `s` into one atom per slot of `codebooks`, running the RFC-0009 §3 loop with `params`. |
-| `mycelium_vsa::sbc` | mod | `crates/mycelium-vsa/src/lib.rs:30` | — |
+| `mycelium_vsa::sbc` | mod | `crates/mycelium-vsa/src/lib.rs:33` | — |
 | `mycelium_vsa::sbc::Sbc` | struct | `crates/mycelium-vsa/src/sbc.rs:36` | The SBC model: `blocks` blocks of `block_len` components (`dim = blocks · block_len`). |
 | `mycelium_vsa::sbc::Sbc::bind_values` | fn | `crates/mycelium-vsa/src/sbc.rs:167` | Value-level `bind`: per-block index addition; the result keeps the one-hot refinement, |
 | `mycelium_vsa::sbc::Sbc::bind_values` | fn | `crates/mycelium-vsa/src/sbc.rs:167` | Value-level `bind`: per-block index addition; the result keeps the one-hot refinement, |
