@@ -2932,6 +2932,15 @@ issues:
       now Superseded by ADR-022, so the inherited kernel-gate enactment attaches to ADR-022 track T1
       (not ADR-021 -> Enacted); see the Status section below.
 
+      SCOPE EXTENSION PENDING (2026-06-23, maintainer — RFC-0032 D6): the decision is that T1's
+      Definition of Done also includes E19-1 (the kernel self-hosting-enablement reprs/prims land IN
+      core 1.0.0, so the language is fully self-hosting at the tag). The original ADR-021 Gate A/B rows
+      remain met. This is a CRITERIA change to an Accepted ADR, so per ADR-022's Status (supersede to
+      change criteria, house rule #3) it is recorded in RFC-0032 D6 and will be enacted via the
+      append-only mechanism (a focused superseding/amending ADR) -- NOT applied to ADR-022 §4/§5 in
+      place. M-703 carries the operational depends_on E19-1, flagged pending. See ADR-022 §4 (pending
+      note) + RFC-0032 D6.
+
       User stories:
       - As a maintainer, I want every ADR-021 Gate A row demonstrably met before cutting the
         1.0.0 tag, so that the "kernel stabilizes" claim is grounded, not pre-declared (VR-5).
@@ -3118,17 +3127,26 @@ issues:
     title: "M-703 — Cut core/kernel 1.0.0 + enact ADR-022 track T1 (maintainer-reserved)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:release, priority:P1, status:todo]
-    depends_on: [M-700, M-701, M-702]
+    depends_on: [M-700, M-701, M-702, E19-1]
     epic: E10-1
     doc_refs:
       - corpus:ADR-022
       - corpus:ADR-021
       - corpus:ADR-018
+      - corpus:RFC-0032
       - corpus:DN-25
     body: |
-      maintainer-reserved (like M-655 — no agent cuts the tag or enacts the status). READY
-      (2026-06-23, kickoff c10): M-700/M-701/M-702 are satisfied and ADR-022 §4/§5 records track T1 as
-      GATE-MET / TAG-READY (A1–A5, B1–B2 all met). The remaining act is the maintainer's:
+      SCOPE EXTENDED (2026-06-23, maintainer — RFC-0032 D6): the core `1.0.0` tag now ALSO waits on
+      E19-1 (kernel self-hosting-enablement reprs/prims land IN core 1.0.0); depends_on includes E19-1
+      (operational linkage). The ADR-021 Gate A/B rows remain met. The formal ADR-022 T1-scope amendment
+      is PENDING the append-only mechanism (RFC-0032 D6 — ADR-022's Status requires superseding to
+      change criteria, house rule #3; the change is NOT applied to ADR-022 §4/§5 in place). See ADR-022
+      §4 (pending-amendment note) + RFC-0032 D6.
+
+      maintainer-reserved (like M-655 — no agent cuts the tag or enacts the status). The A/B engineering
+      rows are met (2026-06-23, kickoff c10): M-700/M-701/M-702 are satisfied and ADR-022 §4/§5 records
+      track T1's A1–A5/B1–B2 all met; the gate SCOPE now additionally requires E19-1 (above). The
+      remaining acts are the maintainer's:
       cut the `core 1.0.0` tag per ADR-018 and record the enactment. NOTE on the supersession: ADR-021
       is now SUPERSEDED by ADR-022, so it cannot move Accepted -> Enacted; the inherited kernel-gate
       enactment attaches instead to ADR-022 track T1 (mark T1 Enacted at the tag — house rule #3,
@@ -4405,18 +4423,21 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:stdlib, priority:P1, status:blocked]
     epic: E13-1
-    depends_on: [M-715]
+    depends_on: [M-715, M-749]
     doc_refs:
       - corpus:RFC-0031
+      - corpus:RFC-0032
       - corpus:RFC-0016
       - corpus:DN-25
     body: |
-      BLOCKED (RFC-0031 §5 D4 Tier-2): Vec/Map/Set self-hosting needs a kernel sequence/collection
-      value representation + an indexing prim. The surface today bottoms out on bit.* / trit.* over
-      fixed-width Binary{N}/Ternary{N} with no heap/sequence value, so there is nothing for a .myc
-      Vec to be built on. This port lands once the sequence representation is surfaced (a kernel
-      prereq, not a stdlib task). Not claimed self-hosted ahead of that surface (VR-5/G2). Also
-      depends on M-715 (Option + the iter surface).
+      BLOCKED (RFC-0031 §5 D4 Tier-2) on E19-1/M-749 (sequence/array value representation + indexing,
+      gated by RFC-0032): efficient Vec/Map/Set self-hosting needs a kernel sequence/collection value
+      + an indexing prim. The surface today bottoms out on bit.* / trit.* over fixed-width Binary{N}/
+      Ternary{N} with no heap/sequence value, so there is nothing for an indexed .myc Vec to be built
+      on. (Note: a purely functional cons-List -- type List<A> = Nil | Cons(A, List<A>) -- is an
+      ordinary recursive .myc ADT and is NOT blocked; RFC-0032 Q3 delimits which collection surface
+      needs the new Repr vs which the ADT machinery already covers.) Not claimed self-hosted ahead of
+      that surface (VR-5/G2). Also depends on M-715 (Option + the iter surface).
 
       Port the collections module family (Vec/Map/Set) to Mycelium (.myc) with honest bounds:
       every op carries an explicit guarantee tag (Exact/Empirical/Declared) and out-of-range
@@ -4447,17 +4468,19 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:stdlib, priority:P1, status:blocked]
     epic: E13-1
-    depends_on: [M-715]
+    depends_on: [M-715, M-750]
     doc_refs:
       - corpus:RFC-0031
+      - corpus:RFC-0032
       - corpus:RFC-0016
       - corpus:DN-25
     body: |
-      BLOCKED (RFC-0031 §5 D4 Tier-2): text/fmt self-hosting needs a kernel string/byte-sequence
-      value + codepoint ops. The surface today has no string value (only fixed-width Binary{N}/
-      Ternary{N} + bit/trit prims), so a .myc text type has nothing to bottom out on. This port
-      lands once the string/byte-sequence representation is surfaced. Not claimed self-hosted ahead
-      of that surface (VR-5/G2). Depends on M-715 (Result/Option for never-silent encoding errors).
+      BLOCKED (RFC-0031 §5 D4 Tier-2) on E19-1/M-750 (byte/string value representation + codepoint ops,
+      gated by RFC-0032): text/fmt self-hosting needs a kernel string/byte-sequence value. The surface
+      today has no string value (only fixed-width Binary{N}/Ternary{N} + bit/trit prims), so a .myc
+      text type has nothing to bottom out on. This port lands once the string/byte-sequence
+      representation is surfaced. Not claimed self-hosted ahead of that surface (VR-5/G2). Depends on
+      M-715 (Result/Option for never-silent encoding errors).
 
       Port the text and fmt module families to Mycelium (.myc): string handling (slices,
       concatenation, search, encoding) and formatting (the Display-equivalent surface).
@@ -4488,20 +4511,23 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:stdlib, priority:P1, status:blocked]
     epic: E13-1
-    depends_on: [M-715]
+    depends_on: [M-715, M-747, M-748, M-753]
     doc_refs:
       - corpus:RFC-0031
+      - corpus:RFC-0032
       - corpus:RFC-0016
       - corpus:DN-25
     body: |
-      BLOCKED (RFC-0031 §5 D4 Tier-1): the ternary-arithmetic slice (add/sub/mul/neg over
-      Ternary{N}) is already surfaced as trit.* prims and CAN be ported as a first increment; the
-      BINARY arithmetic + the width-typed comparison surface are blocked — the kernel surfaces only
-      bit.not/bit.xor for Binary{N} (no add/cmp), so binary math + cmp(width) have nothing to bottom
-      out on. This port lands incrementally: ternary-math leaf first (unblocked), then binary-arith +
-      comparison once those prims are surfaced. Not claimed self-hosted ahead of the prims (VR-5/G2).
-      Depends on M-715 (Result/Option for never-silent overflow). Operator-syntax sugar (M-705 ✅)
-      is available but optional (word-based add/mul/neg is sufficient).
+      BLOCKED (RFC-0031 §5 D4 Tier-1) on E19-1: width-typed comparison needs M-747 (reduce-to-Bool
+      comparison prim); binary math needs M-748 (binary arithmetic surface); a GENERAL (non-fixed-
+      width) math/cmp surface needs M-751 (width-generic fns) -- all gated by RFC-0032. The kernel
+      surfaces only bit.not/bit.xor for Binary{N} (bit.and/bit.or are registered but not surfaced via
+      prim_kernel_name; no add/sub/cmp), and width {N} is a concrete literal,
+      not a generic parameter, so a fixed-width-only port would bake Ternary{4} into the stdlib (a weak
+      surface -- not taken, VR-5). NOTE: the ternary-arithmetic ops (add/sub/mul/neg over Ternary{N})
+      are already surfaced as trit.* prims, so once M-751 lands a width-generic ternary-math leaf is
+      the first increment. Not claimed self-hosted ahead of the prims/width-generics (VR-5/G2). Depends
+      on M-715 (Result/Option for never-silent overflow). Operator-syntax sugar (M-705) optional.
 
       Port the math and numerics module families to Mycelium (.myc): arithmetic ops (add,
       sub, mul, div, and the Mycelium-native ternary math), the epsilon/delta numerics surface
@@ -5291,3 +5317,271 @@ issues:
       - A live --apply run reconciles a known duplicate set correctly (canonical kept, twins closed,
         idmap re-anchored), every action printed (never-silent).
       - RECONCILE.md documents it (DONE) and the sync -> dedup workflow is recorded.
+
+  - id: E19-1
+    title: "E19-1 (epic) -- Kernel self-hosting-enablement surface (value reprs + primitive floor)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:core, priority:P1, status:in-progress]
+    epic: E19
+    doc_refs:
+      - corpus:RFC-0032
+      - corpus:RFC-0031
+      - corpus:RFC-0001
+      - corpus:ADR-022
+      - src:crates/mycelium-core/src/repr.rs
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Dependency direction: E19-1 is a PREREQUISITE OF E13-1 (it unblocks E13-1's blocked tiers), not
+      dependent on it -- so no `depends_on: [E13-1]` (that would invert the DAG). The unblock is wired
+      the correct way via the E13-1 children's depends_on (M-716 <= M-749, M-717 <= M-750, M-718 <=
+      M-747/M-748/M-751). E19-1's only internal gate is its own RFC-0032/M-746.
+
+      MAINTAINER DECISIONS (2026-06-23, recorded for M-746 to ratify in RFC-0032):
+      - Q6 (placement) = IN CORE 1.0.0. The new reprs/prims land in the core kernel BEFORE the 1.0.0
+        tag, so the language is fully self-hosting at 1.0.0. CONSEQUENCE: this makes E19-1 a core-1.0.0
+        gate prerequisite -- the E10-1/c10 "gate-met / tag-ready" status (ADR-022 track T1) now also
+        waits on E19-1. FLAG (coordinate, do not edit here): ADR-022 + E10-1 + the c10 kickoff need a
+        maintainer update so the core tag accounts for E19-1; this epic does not rewrite that gate
+        (append-only, c10-owned).
+      - Q5 (width-generics ownership) = E11-1/s10. M-751 (fn f<N>(x: Ternary{N})) is reassigned to the
+        s10 surface-language leg (it edits the mycelium-l1 type system); M-751 stays as a pointer.
+
+      The kernel work leg that unblocks E13-1's blocked tiers. RFC-0031 §5 D4 tiered the stdlib
+      migration and found Tier-0 (structural/polymorphic core) executable (landed, M-715) but the
+      heavier tiers blocked on kernel surface that does not yet exist: Tier-1 (width-typed cmp/Eq/Ord
+      + binary math) needs a reduce-to-Bool comparison prim + binary arithmetic (today bit.not/bit.xor
+      are surfaced + bit.and/bit.or registered-but-unsurfaced; no comparison or add/sub); Tier-2
+      (efficient collections, text/fmt) needs a
+      sequence/array value + a byte/string value (the value model Repr = Binary/Ternary/Dense/Vsa has
+      neither). These additions ENLARGE the value model / trusted base (KC-3), so the epic is
+      DESIGN-GATED by RFC-0032 (M-746) exactly as E13-1 was gated by RFC-0031 (M-714).
+
+      Owned trees (collision profile): crates/mycelium-interp/src/prims.rs (new prims) +
+      crates/mycelium-l1/src/checkty.rs::prim_kernel_name (the localized surface map). The value-model
+      additions (M-749/M-750) touch crates/mycelium-core and are KC-3-significant -- their core-1.0.0-
+      vs-post-1.0.0 placement is an RFC-0032 decision, coordinated with the c10 kernel-T1 ownership.
+      Width-generics (M-751) touches the mycelium-l1 type system -- RFC-0032 decides whether it is owned
+      here or by E11-1 (s10), to avoid an l1 collision.
+
+      User stories:
+      - As a stdlib author, I want the exact set of new prims + reprs named (signature, semantics,
+        honest guarantee, never-silent behaviour), so the blocked E13-1 ports have a concrete surface.
+      - As a kernel engineer, I want each addition's KC-3/1.0.0 placement decided before mycelium-core
+        is touched, so a new Repr does not silently reopen the gate-met value model (ADR-022).
+      - As a maintainer, I want each enabler tied to the E13-1 module it unblocks via depends_on, so
+        cross-leg continuity rides the issues, never a shared-file edit.
+
+      Definition of Done:
+      - RFC-0032 reaches Accepted (M-746): boundary, signatures, KC-3 placement, width-generics
+        ownership, and sequencing all decided or explicitly deferred with direction.
+      - Each named enabler (M-747..M-750, and M-751 if owned here) lands with differential tests and
+        honest tags; never-silent (G2) on overflow/out-of-range/invalid-encoding.
+      - The corresponding E13-1 issues (M-716/M-717/M-718) move blocked -> needs-design/in-progress as
+        their precondition lands; the unblock is demonstrated by a .myc smoke port (M-752).
+      - just check green; CHANGELOG append-only; honest "implemented, pending ratification" framing
+        where RFC-0032 is not yet Enacted.
+
+  - id: M-746
+    title: "M-746 -- author RFC-0032: kernel self-hosting-enablement surface (the E19-1 gate)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:core, priority:P1, status:done]
+    epic: E19-1
+    doc_refs:
+      - corpus:RFC-0032
+      - corpus:RFC-0031
+      - corpus:ADR-022
+      - src:crates/mycelium-core/src/repr.rs
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Author RFC-0032 (Kernel Self-Hosting Enablement Surface) to Accepted. The design gate for E19-1:
+      resolve the 7 open questions in RFC-0032 §5 -- (1) the comparison/equality prim shape (eq->Bool vs
+      cmp->Ordering; over Binary{N}/Ternary{N}; guarantee Exact); (2) binary arithmetic (surface the
+      registered bit.and/bit.or + a never-silent carry-chain add/sub vs a declared-wrapping modular add);
+      (3) whether an indexed sequence/array Repr is required or the recursive-ADT List covers enough of
+      collections (minimal addition); (4) byte/string representation (dedicated Repr vs Seq<Binary{8}> +
+      codepoint ops; never-silent invalid-encoding); (5) width-generics ownership (E19-1 vs E11-1/s10);
+      (6) KC-3/1.0.0 placement of each addition (core 1.0.0 vs post-1.0.0 vs a non-trusted repr-extension;
+      ADR-022 is the gate of record); (7) the implementation sequencing.
+
+      This must reach Accepted before any M-747..M-751 implementation leaf starts -- getting the
+      value-model boundary or the KC-3 placement wrong would force a kernel re-do.
+
+      User stories:
+      - As a kernel engineer, I want the irreducible "what must the kernel add" set named before I touch
+        mycelium-core, so the trusted-base growth is deliberate (KC-3) and gated by ADR-022, not ad hoc.
+      - As a compiler engineer, I want the width-generics ownership decided so exactly one work leg edits
+        the mycelium-l1 type system (no s10 collision).
+
+      Definition of Done:
+      - RFC-0032 §5 open questions all resolved or explicitly deferred with direction.
+      - RFC-0032 reaches Accepted (maintainer ratification); status table + Doc-Index + README updated.
+      - Each enabler issue (M-747..M-751) has its E13-1 depends_on wired and its scope/owning-crate fixed.
+
+  - id: M-747
+    title: "M-747 -- reduce-to-Bool comparison/equality prim over Binary{N}/Ternary{N}"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:core, priority:P1, status:todo]
+    epic: E19-1
+    depends_on: [M-746]
+    doc_refs:
+      - corpus:RFC-0032
+      - src:crates/mycelium-interp/src/prims.rs
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      BLOCKED on M-746 (RFC-0032 must fix the prim shape first). Add the kernel comparison/equality
+      prim(s) over Binary{N}/Ternary{N} that reduce to Bool (or to a kernel Ordering, per RFC-0032 Q1),
+      register them in mycelium-interp::prims, and surface them via prim_kernel_name. Guarantee Exact (a
+      total decidable relation); differential-tested three-way (L1-eval == L0-interp == AOT). UNBLOCKS
+      E13-1 M-718 (width-typed cmp/Eq/Ord) and the ordering basis for M-716 Map/Set.
+
+      Definition of Done:
+      - The prim(s) registered + surfaced; an unsupported domain is an explicit never-silent error (G2).
+      - Three-way differential test green; honest Exact tag with the test as Empirical agreement.
+      - E13-1 M-718 cmp precondition marked satisfied (status note), .myc smoke port in M-752.
+
+  - id: M-748
+    title: "M-748 -- binary arithmetic prim surface (bit.and/bit.or + never-silent add/sub)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:core, priority:P1, status:todo]
+    epic: E19-1
+    depends_on: [M-746]
+    doc_refs:
+      - corpus:RFC-0032
+      - src:crates/mycelium-interp/src/prims.rs
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      BLOCKED on M-746 (RFC-0032 must fix the overflow semantics first). Surface the already-registered
+      bit.and/bit.or (a one-line prim_kernel_name addition) and add binary add/sub over Binary{N} -- a
+      fixed-width carry chain with NEVER-SILENT overflow (an explicit out-of-range error mirroring the
+      ternary prims' in-range contract; G2), unless RFC-0032 Q2 declares a wrapping modular semantics
+      explicitly. UNBLOCKS E13-1 M-718 (binary math half).
+
+      Definition of Done:
+      - bit.and/bit.or surfaced; binary add/sub registered + surfaced with the RFC-0032-decided overflow
+        semantics (never-silent unless declared wrapping).
+      - Three-way differential test green (incl. an overflow-refusal case); honest tag.
+      - E13-1 M-718 binary-math precondition marked satisfied; .myc smoke port in M-752.
+
+  - id: M-749
+    title: "M-749 -- sequence/array value representation + never-silent indexing"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:core, priority:P1, status:todo]
+    epic: E19-1
+    depends_on: [M-746]
+    doc_refs:
+      - corpus:RFC-0032
+      - corpus:RFC-0001
+      - src:crates/mycelium-core/src/repr.rs
+    body: |
+      BLOCKED on M-746 (RFC-0032 must decide whether a new Repr is required vs the recursive-ADT List,
+      and the KC-3/1.0.0 placement). If required: add the sequence/array value representation to
+      mycelium-core (Repr + well-formedness + payload), wire interp eval + the AOT path, and add the L1
+      surface (literal/type + indexing). Indexing is never-silent (out-of-bounds -> Option/error, G2).
+      KC-3-significant: deliberate, ADR-022-placed trusted-base growth. UNBLOCKS E13-1 M-716 (efficient
+      Vec; the Map/Set substrate).
+
+      Definition of Done:
+      - The representation (or the RFC-0032 finding that the ADT List suffices and no Repr is needed) is
+        landed per the decided placement; indexing never-silent (G2).
+      - Three-way differential test green; honest tags; KC-3 trusted-base delta justified.
+      - E13-1 M-716 precondition marked satisfied; .myc smoke port in M-752.
+
+  - id: M-750
+    title: "M-750 -- byte/string value representation + codepoint ops"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:core, priority:P1, status:todo]
+    epic: E19-1
+    depends_on: [M-746, M-749]
+    doc_refs:
+      - corpus:RFC-0032
+      - corpus:RFC-0001
+      - src:crates/mycelium-core/src/repr.rs
+    body: |
+      BLOCKED on M-746 (representation decision) and M-749 (a string may be Seq<Binary{8}> per RFC-0032
+      Q4). Add the byte/string value the text surface needs -- a dedicated Repr or Seq<Binary{8}> +
+      codepoint ops -- with never-silent invalid-encoding handling (Result; the D-tier honesty of
+      RFC-0031). UNBLOCKS E13-1 M-717 (text/fmt).
+
+      Definition of Done:
+      - The byte/string value + codepoint/decode ops land per the RFC-0032 decision; invalid encoding is
+        never-silent (Result/Option, G2).
+      - Three-way differential test green; honest tags.
+      - E13-1 M-717 precondition marked satisfied; .myc smoke port in M-752.
+
+  - id: M-751
+    title: "M-751 -- width-generic functions -- CLOSED: reassigned to E11-1/s10 as M-753 (RFC-0032 D5)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
+    epic: E19-1
+    depends_on: [M-746]
+    doc_refs:
+      - corpus:RFC-0032
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      CLOSED as a pointer (2026-06-23 -- RFC-0032 §5 D5, M-746 ratified). Width-generics (const-generic
+      function parameters over representation width: fn f<N>(x: Ternary{N})) is a surface-language
+      type-system feature that edits the mycelium-l1 checker -- the s10 (E11-1) leg's collision surface
+      -- so the maintainer reassigned it to E11-1/s10, NOT E19-1 (the prims+reprs leg). The work now
+      lives at >>> M-753 <<< (epic E11-1). This issue is closed (never silently dropped -- the dependency
+      is preserved: E13-1 M-718 now depends_on M-753). Rationale: keeps exactly one leg editing the l1
+      type system (no kpr<->s10 collision).
+
+      Status: done (closed as a pointer to M-753; no code work happens under this id).
+
+  - id: M-752
+    title: "M-752 -- enablement conformance: each prim/repr differential-tested + .myc smoke ports"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:verification, area:core, priority:P1, status:blocked]
+    epic: E19-1
+    depends_on: [M-747, M-748, M-749, M-750]
+    doc_refs:
+      - corpus:RFC-0032
+      - corpus:RFC-0031
+      - src:lib/std/result.myc
+    body: |
+      BLOCKED on the enabler leaves. Integration gate for E19-1: confirm every new prim/representation
+      (M-747..M-750, M-751 if owned here) is differential-tested (three-way where it runs to closed L0)
+      and honestly tagged, and demonstrate each unblock with a small .myc smoke port (e.g. a width-typed
+      eq, a binary add, an indexed Vec op, a string slice) following the std_result/std_option/std_cmp
+      harness pattern. The smoke ports prove the E13-1 preconditions are genuinely satisfied -- never
+      asserted (VR-5/G2).
+
+      Definition of Done:
+      - Every enabler has a passing three-way differential test; no enabler is undifferentiated.
+      - A .myc smoke port per unblocked E13-1 tier; each E13-1 issue's precondition flipped with a pointer
+        to the demonstrating test.
+      - just check green; CHANGELOG append-only.
+
+  - id: M-753
+    title: "M-753 -- width-generic functions (const-generic over representation width) [E11-1/s10]"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    epic: E11-1
+    depends_on: [M-708]
+    doc_refs:
+      - corpus:RFC-0032
+      - corpus:RFC-0030
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      Width-generic function parameters: const-generic over representation width, e.g.
+      fn f<N>(x: Ternary{N}) -> Ternary{N}, so math/cmp can be width-POLYMORPHIC rather than fixed-width.
+      Today width {N} is a concrete literal, not a generic parameter (the reason M-715/M-718 could not
+      ship a general, non-fixed-width std.math/cmp surface -- a fixed-width-only port would bake e.g.
+      Ternary{4} into the stdlib, VR-5).
+
+      OWNERSHIP (RFC-0032 §5 D5, maintainer 2026-06-23): this is a SURFACE-LANGUAGE type-system feature
+      that edits the mycelium-l1 checker, so it is owned by the s10 leg (E11-1, surface-language
+      completeness) -- which already owns the mycelium-l1 type system -- NOT by E19-1 (the prims+reprs
+      leg). Keeps exactly one leg editing the l1 type system (no kpr<->s10 collision). Reassigned here
+      from E19-1/M-751 (which closes as a pointer to this issue).
+
+      User stories:
+      - As a stdlib author, I want fn f<N>(x: Ternary{N}) so a single math/cmp definition covers every
+        width, instead of one copy per concrete width baked into the stdlib.
+
+      Definition of Done:
+      - Width parameters parse + type-check + monomorphize to closed concrete-width L0; a width-generic
+        op runs three-way (L1-eval == L0-interp == AOT).
+      - A width-generic ternary-math .myc smoke port demonstrates the unblock; E13-1 M-718's general
+        (non-fixed-width) surface precondition is marked satisfied with a pointer.
+      - just check green; honest tags (VR-5); never-silent on any width mismatch (G2).

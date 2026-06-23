@@ -8,6 +8,51 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-23: RFC-0032 → Accepted — the kernel self-hosting-enablement surface ratified; M-746)
+
+- **RFC-0032 — Kernel Self-Hosting Enablement Surface → Accepted** (M-746, the E19-1 gate). §5 D1–D7
+  ratified: **D1** `eq`/`lt` comparison prims over `Binary{N}`/`Ternary{N}` (→ `Bool`, `Exact`; `cmp`/
+  `Ordering` derives in `.myc`); **D2** binary arithmetic (surface the registered `bit.and`/`bit.or` +
+  add a never-silent carry-chain `add`/`sub` — overflow is an explicit error, never a silent wrap, G2);
+  **D3** a first-class **`Repr::Seq`** (indexed sequence + never-silent `get`/`push`) for efficient
+  `Vec`/`Map`/`Set`; **D4** a dedicated **`Repr::Bytes`** (byte/string value + never-silent UTF-8
+  decode) for `text`/`fmt`; **D5** width-generics → **E11-1/`s10`** (M-751 closed as a pointer to the
+  new **M-753** under E11-1; E13-1 M-718 `depends_on` repointed); **D6** placement **in `core 1.0.0`**
+  (maintainer); **D7** sequencing (comparison → binary-arith → `Repr::Seq` → `Repr::Bytes` →
+  conformance). Enablers **M-747…M-750 → `todo`** (RFC gate cleared); E19-1 → in-progress.
+- **D6 governance (append-only — house rule #3 + Copilot #514).** "In `core 1.0.0`" extends ADR-022
+  track T1's Definition of Done (the core tag waits on E19-1) — a *criteria* change to an **Accepted**
+  ADR, which ADR-022's Status requires capturing by **supersession**, not an in-place edit. The earlier
+  in-place §4/§5 amendment was **reverted**: ADR-022's gate text is pristine (a non-normative
+  *pending-amendment* note in §4), the decision lives in RFC-0032 D6, and the T1-scope change will be
+  enacted via the maintainer-selected append-only mechanism (a focused superseding/amending ADR is the
+  default — confirmation pending). The tracker carries the operational linkage (M-703 `depends_on`
+  E19-1, flagged pending). (RFC-0032 D6; ADR-022 §4; E19-1/M-746)
+
+### Added (2026-06-23: E19-1 — kernel self-hosting-enablement work leg scaffolded; RFC-0032 Draft + kickoff `kpr`)
+
+- **New work leg E19-1 + RFC-0032 (Draft) — the kernel surface that unblocks E13-1's blocked tiers.**
+  RFC-0031 §5 D4 found Tier-0 executable (landed, M-715) but Tier-1/Tier-2 blocked on kernel surface
+  that does not exist: a reduce-to-`Bool` comparison prim + binary arithmetic (Tier-1), and
+  sequence/array + byte/string value representations (Tier-2 — the value model `Repr` =
+  `Binary`/`Ternary`/`Dense`/`Vsa` has neither). These **enlarge the value model / trusted base
+  (KC-3)**, so the leg is **design-gated** by `docs/rfcs/RFC-0032-Kernel-Self-Hosting-Enablement-Surface.md`
+  (Draft stub — 7 open questions: prim shape, binary-overflow semantics, whether an indexed `Repr` is
+  required vs the recursive-ADT `List`, string repr, width-generics ownership, the core-1.0.0-vs-post-1.0.0
+  placement against ADR-022, and sequencing). Epic **E19-1** + issues **M-746** (RFC authoring, the gate)
+  → **M-747** (comparison prim) · **M-748** (binary arithmetic) · **M-749** (sequence repr) · **M-750**
+  (byte/string repr) · **M-751** (width-generic fns — ownership per RFC-0032 Q5) → **M-752** (conformance
+  + `.myc` smoke ports). Cross-leg continuity wired via `depends_on`: E13-1 M-716 ⟸ M-749, M-717 ⟸ M-750,
+  M-718 ⟸ M-747/M-748/M-751. Kickoff **`kpr`** stowed (`.claude/kickoffs/kpr.md`, registered in the
+  index) — owns `crates/mycelium-interp/src/prims.rs` + the `prim_kernel_name` map; the `mycelium-core`
+  reprs + L1 width-generics are flagged **coordinated** with `c10`/`s10` (maintainer sign-off on the
+  RFC-0032 KC-3/placement before merge — architecturally significant, flag-don't-guess). No kernel code
+  changed yet (planning + design-gate scaffolding only). **Maintainer direction recorded (2026-06-23,
+  for M-746 to ratify):** RFC-0032 Q6 = **in `core` 1.0.0** (the reprs/prims land before the 1.0.0 tag
+  → E19-1 becomes a core-1.0.0 gate prerequisite; ADR-022 T1 / E10-1 / `c10` need a maintainer update so
+  the core tag accounts for E19-1 — flagged, not edited here); Q5 = **E11-1/`s10`** (width-generics
+  reassigned; M-751 → pointer). (RFC-0032; E19-1/M-746)
+
 ### Added (2026-06-23: E14-1 completion — M-722/M-723 syscall floor wired + data guarantee matrix; epic `done`)
 
 - **`mycelium-std-sys` guarantee matrix encoded as data (`guarantee_matrix.rs`; M-722).** The prior
@@ -34,6 +79,7 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   per-op byte encoding that makes the byte-oriented `io`/`fs` ops reachable from a `wild { io.write(…) }`
   block is the `@std-sys`-author host encoding, still uncommitted in §4.4; the entropy/clock seams are
   wired today and the io/fs surface encoding follows when §4.4 lands. (E14-1; VR-5/G2)
+
 ### Added (2026-06-23: E13-1 — self-hosted stdlib composition ratified + the executable core/prelude; RFC-0031 Accepted; M-714/M-715 Tier-0)
 
 - **RFC-0031 — Self-Hosted Standard Library Composition → Accepted** (M-714, the E13-1 gate). §5 D1–D7
