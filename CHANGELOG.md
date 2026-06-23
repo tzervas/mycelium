@@ -8,6 +8,52 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-23: E12-1 — runtime & concurrency execution maturity, M-709/M-711/M-713)
+
+- **Real OS-thread scheduler (`mycelium-std-runtime::scheduler`; M-709).** The v0 R1 surface ran tasks
+  cooperatively on the calling thread; the new `Scheduler` runs independent tasks across a fixed pool
+  of OS worker threads (`std::thread::scope` — the crate stays `#![forbid(unsafe_code)]`, no new
+  dependency) with **fair FIFO dispatch** and **demand-signalled, bounded backpressure**: the ready
+  queue holds at most `capacity` pending jobs *by construction* (enqueue only while `len < capacity`),
+  never an unbounded silent buffer (G2 / RFC-0008 §4.3). `run_indexed` returns outputs in spawn order,
+  so the result is directly comparable to the sequential reference — the **RT2 sequentialization
+  differential**, property-tested (`Empirical`, not `Proven`). Zero workers / zero capacity fail closed
+  (explicit `SchedulerError`, never a silent single-worker substitution). Backpressure bound is `Exact`
+  (structural); liveness (each job runs exactly once) is `Empirical`. (M-709; RFC-0008 RT1·RT2·§4.3)
+- **Deadlock-freedom for communicating tasks (`mycelium-std-runtime::dataflow`; M-711).** Communicating
+  tasks are **swept** (one non-blocking poll-step per pending task per sweep); a full sweep that makes
+  no progress while tasks remain pending is an explicit `task::Deadlock`, **never a silent hang** (G2 /
+  RFC-0008 §4.3 sweep-order). The std-runtime sibling of the proven `mycelium-mlir` `run_dataflow`
+  model. Two paths share the *same* never-silent decision: a cooperative `run_dataflow` (schedule is
+  `Exact` — a fixed function of the sweep direction; ascending/descending agree — Kahn-determinism) and
+  `run_dataflow_scheduled`, which runs each sweep's independent polls **across the M-709 OS-thread pool**
+  (the "checked across OS threads" requirement). Detection is complete for DAG channel graphs (`Empirical`);
+  cyclic graphs are an explicit open follow-up (FLAG: ADR-020 §7), never silently mis-reported. (M-711)
+- **Structured-concurrency supervision + cancellation (`mycelium-std-runtime::supervision`; M-713).**
+  Reuses the M-356 composition kernel from `mycelium-interp` (`CancelToken`/`TaskOutcome`/`Supervisor`/
+  `RestartIntensity`/`Escalation` — DRY, no cycle: `mycelium-interp` depends only on core+numerics).
+  Adds: a cancellation **tree** (`CancelTree`) where cancelling a node cascades to every descendant
+  (parent→child, never child→parent — RT7), so a cancelled colony propagates to all its children
+  (never-silent, G2); `run_supervised`, which runs a task set on the OS-thread pool, collects **every**
+  child's explicit `TaskOutcome` (no dropped/silent variant — RT4/I1), and on the first failure cancels
+  the remaining siblings (cooperative observation, never-silent); and `supervise_with_restart`, a live
+  bounded-cascade restart policy that is **EXPLAIN-able** — each decision is a reified `SupervisionRecord`
+  (no black boxes, ADR-006), escalating explicitly when the rate or total-cascade bound is hit, never an
+  unbounded storm. Propagation/collection are `Empirical` (property-tested); the restart bound is `Exact`
+  (inherited from `Supervisor`). (M-713; RFC-0008 RT4·RT7·§4.7)
+- **Guarantee matrix extended** with six E12-1 rows (scheduler RT2 / backpressure / liveness; deadlock
+  sweep; supervision propagation / restart bound), asserted in tests — no tag upgraded without a checked
+  basis (VR-5). Reserved-vocabulary guard still green (no `fuse`/`reclaim`/`tier`/`mesh`/… in op names).
+- **Honest deferrals (VR-5/G2 — flagged, not guessed):** **M-710** (runtime vocabulary execution —
+  `fuse`/`reclaim`/`tier` elaboration) stays **blocked on M-667** (the L1 surface constructs, still
+  `needs-design`): there is no L1 surface to elaborate yet. **M-712** (memory management & reclamation)
+  stays **blocked on RFC-0027 reaching `Accepted`**, which RFC-0027 itself reserves for maintainer
+  sign-off — not advanced unilaterally. E12-1 remains in progress; RFC-0008 stays `Accepted` (the
+  machinery is implemented Rust-first; the spec is not silently moved). Verified with `cargo fmt`,
+  `cargo clippy -p mycelium-std-runtime --all-targets -D warnings`, and `cargo test -p
+  mycelium-std-runtime` (40 tests green). The full `just check` passes except `cargo audit`, which
+  cannot fetch the RustSec advisory database in the offline build sandbox (a network limitation, not
+  an advisory finding). (E12-1; M-709/M-711/M-713; M-710/M-712 deferred)
 ### Changed (2026-06-23: RFC-0029 → Accepted — native-AOT design gate cleared, E15-1 honestly re-scoped)
 
 - **RFC-0029 (AOT Optimization, Codegen Maturity, and JIT) → Accepted** (was Draft; append-only — Draft row preserved). The seven §5 open questions are **resolved against the live `crates/mycelium-mlir/`** (checked 2026-06-23), not from the stub's assumptions. Substantive finding that re-scopes E15-1: **E6-1 is `done`**, so the JIT (M-340 `jit.rs`), BitNet packed-ternary accel (M-360 `bitnet.rs` — I2_S/TL1/TL2), real `arith`/`func`→LLVM **MLIR-dialect** lowering (M-601 `dialect/native.rs`), and the **three-way native differential** (M-602 `tests/threeway_differential.rs`) **already landed**; ADR-019 (libMLIR toolchain) is **Enacted**; and **ADR-009 already sanctions interpreter/JIT for dynamic VSA** (no superseding ADR needed to "lift a deferral"). New normative §7 sanctions: inlining/CSE/DCE as **EXPLAIN-able, never-silent** transforms reified as a transform-log (M-726 — **the one genuinely-new mechanism**, no `src/passes/` exists yet); JIT as an **explicit, never-silently-selected** first-class mode (M-727); the BitNet **explicit capability flag** + never-silent graceful degradation (M-728); and the **mutant-witnessed `interp ≡ AOT ≡ JIT`** durability gate (M-729). Honest tags throughout: `Empirical` for the existing differentially-checked paths, `Declared` for the as-yet-unbuilt optimization passes (VR-5 — no overclaim). RFC index + Doc-Index updated. (RFC-0029; E15-1)
