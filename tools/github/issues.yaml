@@ -4199,7 +4199,7 @@ issues:
   - id: M-724
     title: "M-724 — verify(ffi): FFI safety — ADR-014 unsafe-floor confinement for FFI surface, audited + just safety-check green"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:verification, area:execution, priority:P1, status:done]
+    labels: [phase:7, type:verification, area:execution, priority:P1, status:in-progress]
     depends_on: [M-720, M-721, M-722, M-723]
     epic: E14-1
     doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25, src:crates/mycelium-std-sys/src/lib.rs, src:crates/mycelium-mlir/src/jit.rs]
@@ -4227,7 +4227,7 @@ issues:
   - id: E13-1
     title: "E13-1 (epic) -- Standard library in Mycelium (self-hosted stdlib + core libs)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:stdlib, priority:P1, status:needs-design]
+    labels: [phase:5, type:epic, area:stdlib, priority:P1, status:in-progress]
     depends_on: [E11-1]
     epic: E13
     doc_refs:
@@ -4301,13 +4301,23 @@ issues:
   - id: M-714
     title: "stdlib composition + phylum layout (RFC-0031)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:stdlib, priority:P1, status:needs-design]
+    labels: [phase:5, type:design, area:stdlib, priority:P1, status:done]
     epic: E13-1
     doc_refs:
       - corpus:RFC-0031
       - corpus:RFC-0016
       - src:lib/std/result.myc
     body: |
+      DONE (2026-06-23): RFC-0031 → Accepted. §5 D1–D7 ratified — D1 irreducible-Rust boundary
+      (core/l0/l1/cert/swap/prims/mlir/std-sys) + the (a)trust-root/(b)bootstrap-floor/(c)value-model-
+      FFI/(d)unsafe-ABI criterion; D2 phylum layout (std.<module> → lib/std/<module>.myc); D3 no
+      bootstrap circularity (Rust frontend compiles the .myc stdlib; ring layering forbids use-cycles);
+      D4 surface-readiness-TIERED migration order (Tier-0 structural core executable NOW; Tier-1
+      cmp(width)/math blocked on a comparison + binary-arith prim; Tier-2 collections/iter/text/fmt
+      blocked on a sequence/string representation — VR-5: ports sequenced behind their enabling prims,
+      never claimed ahead); D5 per-op stability bar + the std_result/std_option/std_cmp prototype
+      pattern; D6 Rust crate kept as differential oracle; D7 one spore per phylum. Gates M-715…M-719.
+
       Author RFC-0031 (Self-Hosted Standard Library Composition): define the module set,
       the phylum layout, which parts of the system are irreducibly Rust vs must-be-.myc, and
       the per-module stability bar. This is the design gate that must reach Accepted before any
@@ -4341,14 +4351,29 @@ issues:
   - id: M-715
     title: "core/prelude in Mycelium: Option/Result/cmp/Ord/Eq + iter traits as .myc"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:in-progress]
     epic: E13-1
     doc_refs:
       - corpus:RFC-0031
       - corpus:RFC-0016
       - src:lib/std/result.myc
+      - src:lib/std/option.myc
+      - src:lib/std/cmp.myc
       - corpus:DN-25
     body: |
+      IN PROGRESS (2026-06-23) — Tier-0 landed (RFC-0031 §5 D4): lib/std/option.myc (Option<A> +
+      is_some/is_none/unwrap_or/map/and_then/fold/or_else/flatten), lib/std/cmp.myc (Ordering +
+      is_lt/is_eq/is_gt/reverse + structural bool_eq/bool_cmp/ord_eq over finite types), and an
+      extended lib/std/result.myc (map_err/or_else added to the M-649 surface) are written, three-way
+      differential-tested (L1-eval ≡ L0-interp ≡ AOT — crates/mycelium-l1/tests/std_option.rs +
+      std_cmp.rs + std_result.rs, 44 tests green), honest tags (Exact for total finite/structural
+      ops + the Some/None/Ok/Err discriminators; Declared for generic value combinators; agreement
+      Empirical), never-silent G2. This is the executable core/prelude surface.
+      DEFERRED (honest, VR-5): width-typed cmp/Eq/Ord over Binary{N}/Ternary{N} needs a reduce-to-Bool
+      comparison prim (not surfaced — only bit.not/bit.xor + trit arith exist) → Tier-1, blocks with
+      M-718. The `iter` trait surface needs a concrete sequence type to iterate → Tier-2, blocks with
+      M-716. Neither is claimed self-hosted ahead of its enabling surface.
+
       Port the core/prelude module family to Mycelium (.myc): Option, Result (extending
       lib/std/result.myc), cmp, Ord, Eq, and the iter traits. This is the foundation all other
       stdlib ports depend on -- Vec, Map, and fmt all require Option/iter/Ord. The port must
@@ -4378,13 +4403,21 @@ issues:
   - id: M-716
     title: "collections in Mycelium: Vec/Map/Set as .myc with honest bounds"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:blocked]
     epic: E13-1
+    depends_on: [M-715]
     doc_refs:
       - corpus:RFC-0031
       - corpus:RFC-0016
       - corpus:DN-25
     body: |
+      BLOCKED (RFC-0031 §5 D4 Tier-2): Vec/Map/Set self-hosting needs a kernel sequence/collection
+      value representation + an indexing prim. The surface today bottoms out on bit.* / trit.* over
+      fixed-width Binary{N}/Ternary{N} with no heap/sequence value, so there is nothing for a .myc
+      Vec to be built on. This port lands once the sequence representation is surfaced (a kernel
+      prereq, not a stdlib task). Not claimed self-hosted ahead of that surface (VR-5/G2). Also
+      depends on M-715 (Option + the iter surface).
+
       Port the collections module family (Vec/Map/Set) to Mycelium (.myc) with honest bounds:
       every op carries an explicit guarantee tag (Exact/Empirical/Declared) and out-of-range
       or capacity-exceeded conditions are never-silent (G2 -- Option/Result, never a silent
@@ -4412,13 +4445,20 @@ issues:
   - id: M-717
     title: "text + fmt in Mycelium: string handling + formatting as .myc"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:blocked]
     epic: E13-1
+    depends_on: [M-715]
     doc_refs:
       - corpus:RFC-0031
       - corpus:RFC-0016
       - corpus:DN-25
     body: |
+      BLOCKED (RFC-0031 §5 D4 Tier-2): text/fmt self-hosting needs a kernel string/byte-sequence
+      value + codepoint ops. The surface today has no string value (only fixed-width Binary{N}/
+      Ternary{N} + bit/trit prims), so a .myc text type has nothing to bottom out on. This port
+      lands once the string/byte-sequence representation is surfaced. Not claimed self-hosted ahead
+      of that surface (VR-5/G2). Depends on M-715 (Result/Option for never-silent encoding errors).
+
       Port the text and fmt module families to Mycelium (.myc): string handling (slices,
       concatenation, search, encoding) and formatting (the Display-equivalent surface).
       These are Tier-B common modules per RFC-0016 but prerequisite for diagnostics and any
@@ -4446,13 +4486,23 @@ issues:
   - id: M-718
     title: "math + numerics surface in Mycelium: math ops + epsilon/delta surface as .myc"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:blocked]
     epic: E13-1
+    depends_on: [M-715]
     doc_refs:
       - corpus:RFC-0031
       - corpus:RFC-0016
       - corpus:DN-25
     body: |
+      BLOCKED (RFC-0031 §5 D4 Tier-1): the ternary-arithmetic slice (add/sub/mul/neg over
+      Ternary{N}) is already surfaced as trit.* prims and CAN be ported as a first increment; the
+      BINARY arithmetic + the width-typed comparison surface are blocked — the kernel surfaces only
+      bit.not/bit.xor for Binary{N} (no add/cmp), so binary math + cmp(width) have nothing to bottom
+      out on. This port lands incrementally: ternary-math leaf first (unblocked), then binary-arith +
+      comparison once those prims are surfaced. Not claimed self-hosted ahead of the prims (VR-5/G2).
+      Depends on M-715 (Result/Option for never-silent overflow). Operator-syntax sugar (M-705 ✅)
+      is available but optional (word-based add/mul/neg is sufficient).
+
       Port the math and numerics module families to Mycelium (.myc): arithmetic ops (add,
       sub, mul, div, and the Mycelium-native ternary math), the epsilon/delta numerics surface
       (honest rounding, overflow, and precision disclosure), and the binary/ternary/dense
