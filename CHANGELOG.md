@@ -8,6 +8,13 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-23: full-language 1.0.0 program — Q1/Q2/Q3 resolved + reconcile tooling)
+
+- **ADR-022 Q1/Q2/Q3 resolved** (maintainer): **Q1** — the `lang 1.0.0` self-hosting bar is the **core stdlib/corelib self-hosted in Mycelium** (the language is usable without hand-writing L0/L1); full toolchain self-host trails as the long-term arc, not a 1.0.0 blocker (T9 row + headline scoped accordingly; E18-1 DoD noted). **Q2** — MIT governs **first-party only**; third-party deps keep their licenses (`deny.toml` unchanged). **Q3** — `lang` versioning **starts at `0.1.0` now**. Added **ADR-022 §10 long-term vision** (zero-Rust end state; post-1.0.0 repo decomposition + public-MIT flip).
+- **DN-27 — Post-1.0.0 Repository Decomposition & Public MIT Release** (new Draft note): the post-`lang 1.0.0` plan to split the monorepo into component repos + phylum re-export repos and flip to a public MIT corpus (ADR-022 §10).
+- **`gh-issues-dedup.py` — duplicate-issue reconcile safety net** (M-744): groups GitHub issues by task-id + normalized title, picks the lowest-numbered canonical, and (dry-run by default) reports; `--apply` closes only non-canonical OPEN twins (never the canonical, never a title-only match — G2), `--fix-idmap` re-anchors `idmap.tsv`. The `gh` CLI, no new dependency, offline `--self-test` green; documented in RECONCILE.md. Backstops the reconciler's "never duplicate" contract (cf. the historical #126-129 twins).
+- **Fixed:** 13 program issues (E13/E15 groups) used an ASCII `--` instead of the em-dash `—` in their `Phase 5`/`Phase 6` milestone strings (so they were absent from `milestones.json`); corrected so every milestone validates.
+
 ### Added (2026-06-23: Full-Language 1.0.0 program — ADR-022, DN-25, 9 epics, 44 issues, 11 design stubs)
 
 - **ADR-022 — Full-Language 1.0.0 Release-Readiness Gate** (Accepted, 2026-06-23; supersedes ADR-021). Reframes the 1.0.0 program as a **dual-version gate**: the existing ADR-021 kernel/core criteria survive intact as track **T1** (`c10`), while a co-equal **full-language track** (T2–T9) adds the criteria for a Mycelium whose surface language, runtime, standard library, FFI, native AOT, toolchain, documentation, and self-hosting capstone are all production-ready. The two tracks are independent sub-gates under one top-level 1.0.0 release gate. Governing program map: **DN-25**.
