@@ -8,6 +8,50 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-23: E17-1 docs tranche — language reference + tutorial, generated stdlib API docs, ADR-023 stability; M-738 release act BLOCKED)
+
+- **M-735 — language reference + tutorial (`docs/reference/`).** A full-surface **language
+  reference** (`language-reference.md`) covering lexical structure, nodules/phyla, the four
+  representation types + ADTs + substrates, the guarantee-strength lattice, functions & effects,
+  every expression form, pattern matching, the swap system, generics & traits, ambient paradigms,
+  maturation/`thaw`, `wild`/FFI, the full keyword set, and the L0–L3 layer model — grounded in
+  `mycelium.ebnf`, the conformance corpus, and `crates/mycelium-l1/src/token.rs`, with honest VR-5
+  notes where surface type-checks-but-doesn't-run (generics/traits → M-673; effects checker-only →
+  M-677). A **tutorial** (`tutorial.md`) builds a complete program whose full source is committed as
+  the **parser-verified** conformance fixture `accept/20-tutorial-classifier.myc` (parsed by
+  `mycelium-l1` `tests/conformance.rs` — examples are CI-checked, never invented). Plus a section
+  index (`README.md`). Guarantee: `Declared`. (E17-1; M-735)
+- **M-736 — generated per-module stdlib API docs (`mycelium-doc`).** Wired `lib/std/` into the
+  `myc-doc` apiref build (`BuildInput::conventional`), so every self-hosted stdlib `.myc` nodule is
+  projected into the API reference; added **per-`fn` source-comment extraction** (`apiref::preceding_doc`)
+  so a function's preceding `//` block becomes its documented summary (traces to source, never
+  invented — an undocumented `fn` stays an explicit flagged gap, G2). The whole source is captured as
+  a *checked example* (type-checked). Today `std.result` is covered (the only self-hosting module;
+  `map`/`and_then`/`fold` documented, `is_ok`/`is_err`/`unwrap_or` flagged undocumented); coverage
+  grows as **E13-1** ports modules. `myc-doc lint` (part of `just check`) green:
+  checked-examples 6→7, documented api statements 35→38. New committed reference page
+  `docs/reference/stdlib-api.md`. Guarantee: `Declared`. (E17-1; M-736)
+- **M-737 — ADR-023 stability & API-compatibility guarantees `Draft → Proposed → Accepted`.** All
+  six §5 open questions resolved (append-only): **§3.1** four-layer stability scope (surface syntax,
+  Core-IR/cert/interp, LSP wire, Rust crate API) with explicit carve-outs (codegen internals,
+  reserved-not-active keywords); **§3.2** dual-version model — the full-language 1.0.0 is a
+  *release-event* (`v1.0.0` tag + CHANGELOG + ADR-022 gate record), **not** a crate/workspace version
+  (ADR-018 upheld), labelled distinctly from `core 1.0.0`; **§3.3/§3.3.1** release-based never-silent
+  deprecation (≥ one minor, removal at 2.0.0) + no surface `@unstable` at 1.0; **§3.4** MIT-only legal
+  gate. All §3 claims `Declared` (policy warrants no `Proven` — VR-5). Not Enacted (that is M-738 at
+  the tag). (E17-1; M-737; ADR-023)
+- **MIT-only license fix (ADR-023 §3.4 gate).** A repo-wide sweep of first-party *shipped* `.myc`
+  headers found **six** non-MIT violations, all corrected to **`MIT`**: `lib/std/result.myc` and the
+  five `examples/**` programs (`examples/repr-tour/{ambient,swaps,traits,iter}.myc`,
+  `examples/hello-phylum/hello.myc`). The only remaining non-MIT `@license` strings are deliberate
+  `crates/mycelium-proj/tests/fixtures/` test inputs (Apache + a deliberately-invalid SPDX id) that
+  the `mycelium-proj` tests *assert* (non-inheritance + bad-id error) — left as-is by design.
+- **M-738 — full-language 1.0.0 release act: BLOCKED (no tag cut).** The terminal release act is
+  **not** performed — its external gate deps are unmet: **E13-1** (self-hosting stdlib) and **E18-1**
+  (full-language readiness) are both `needs-design`, and **ADR-022** is `Accepted` (not `Enacted`)
+  with sub-gate rows A2/A3/A4 still open. Per house rule #3 / G2, **`v1.0.0` is not cut**, ADR-021/
+  ADR-022 stay `Accepted`, and the changelog stays `[Unreleased]` — recorded explicitly rather than
+  forced prematurely. M-738 fires only when E13-1 + E18-1 + every ADR-022 row close. (E17-1; M-738)
 ### Changed (2026-06-23: ADR-022 Q4 — T6 native AOT un-gated from 1.0.0 → 1.1)
 
 - **ADR-022 Q4 resolved** (maintainer): **T6 (native AOT maturity / optimization passes / JIT / BitNet accel — epic E15-1) is un-gated from `1.0.0` and rolled to `1.1`** as a QoL/perf enhancement, patched in after release. `lang 1.0.0` ships on the **interpreter (trusted base) + the existing direct-LLVM kernel subset** — optimized native codegen is performance, not correctness. Removed T6 from the ADR-022 §5 gate + §3 scope; updated DN-25 (graph + waves), the `aot10` kickoff row (→ `1.1`/post-1.0.0), and E15-1's DoD scope note. Net: nothing perf-related sits between `lib10` (T4) and the release tag; `aot10` now runs post-1.0.0 alongside `boot10`.
