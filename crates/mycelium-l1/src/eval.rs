@@ -1183,6 +1183,7 @@ mod tests {
             totality: std::collections::BTreeMap::new(),
             traits: std::collections::BTreeMap::new(),
             instances: std::collections::BTreeMap::new(),
+            impls: std::collections::BTreeMap::new(),
         };
         let err = Evaluator::new(&env).call("main", vec![]).unwrap_err();
         assert!(matches!(err, L1Error::Unsupported { .. }), "{err:?}");

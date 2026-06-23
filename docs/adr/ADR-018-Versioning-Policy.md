@@ -4,7 +4,7 @@
 |---|---|
 | **ADR** | 018 |
 | **Title** | The workspace's versioning policy: **per-crate `0.x` SemVer**, **source-only** distribution (no crates.io publish during the design phase), and the `CHANGELOG.md` `[Unreleased]` → release-cut mapping |
-| **Status** | **Accepted** (2026-06-20) |
+| **Status** | **Enacted** (2026-06-23, M-383/M-384; maintainer-approved) · **Accepted** (2026-06-20) |
 | **Date** | 2026-06-20 |
 | **Depends on** | ADR-007 (Rust kernel + reference interpreter; MSRV 1.92 — Foundation §8); the squash-only / linear-bisectable-history discipline (CLAUDE.md "Commits & PRs"); RFC-0017 §4.1 (version metadata lives in scope headers / the project manifest, not the term grammar) |
 | **Supersedes / Superseded by** | — (first versioning policy; nothing prior to supersede) |
@@ -143,6 +143,7 @@ proven property.
 
 ## Meta — changelog
 
+- **2026-06-23 — Enacted (M-383/M-384; maintainer-approved).** The workspace is pinned at `0.0.0` per-crate with `publish = false` in every `Cargo.toml` (M-383); `release-plz` dry-run wired as a manual-dispatch-only workflow (M-384); `CHANGELOG.md` `[Unreleased]` discipline is in force. **Deferred (separate future act, not a ratification gate):** the first actual release cut (`0.0.0` → `0.x.y`) and any crates.io publish flip — both require the capability bar in §4 to be met and are gated on explicit superseding decisions. Append-only.
 - **2026-06-20 — Accepted.** First versioning policy for the workspace. Decides **per-crate `0.x`
   SemVer** (independent lifecycles, `0.y` = breaking / `0.y.z` = compatible per the documented Rust
   convention) over a workspace-wide number (KC-3 — keep decoupled crates decoupled at the version

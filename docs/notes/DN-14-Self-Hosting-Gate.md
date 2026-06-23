@@ -81,8 +81,8 @@ primary evidence for refusals.
 | 3 | **Functions + self-recursion + mutual recursion** (nodule-wide; Tarjan SCC → `FixGroup`) | All | `elab.rs` `FixGroup`; `checkty.rs` Pass 2 + Pass 3; DN-13; M-343 + M-391 | **present** |
 | 4 | **Let bindings + lambda abstractions** (`let`, anonymous `fn`-forms, `for` sugar) | All combinators, `iter`, `error` | `ast.rs` `Expr::Let`; `elab.rs` `elab_lam`; `ast.rs` `Expr::For`; M-343 | **present** |
 | 5 | **Nodule-level organization** (`nodule` header, single-nodule scoping, `use path`) | Any library unit | `ast.rs` `Nodule`/`Item::Use`; `nodule.rs`; DN-06; M-343 | **present** |
-| 6 | **Generic type parameters** (`fn f<A, B>(…)`, `type List<A>`) | `collections`, `iter`, `cmp`, `error`, `math`, `text` | M-657: `checkty.rs` checks unbounded generics (type vars, unification-based instantiation, arity, never-guess); `elab.rs` **stages** the L0 lowering of a generic *instantiation* as an explicit `Residual` (monomorphization follow-up); RFC-0007 §11 | **partial — type-checks; elaboration staged** |
-| 7 | **Trait-like interfaces** (`trait T { fn … }`) + impl blocks | RFC-0016 §4.1 C1–C6 contract machinery in-language; `iter`, `cmp`, `fmt` | **Checker landed (M-659):** `trait`/`impl` type-check with **coherence** (global uniqueness + single-nodule orphan rule), exact method-set conformance, and bounded-call/trait-method resolution — every violation an explicit `CheckError` (G2), guarantee `Declared`; **dictionary-passing L0 lowering staged → M-673** | **partial — type-checks; elaboration staged** |
+| 6 | **Generic type parameters** (`fn f<A, B>(…)`, `type List<A>`) | `collections`, `iter`, `cmp`, `error`, `math`, `text` | M-657: `checkty.rs` checks unbounded generics (type vars, unification-based instantiation, arity, never-guess); `elab.rs` **stages** the L0 lowering of a generic *instantiation* as an explicit `Residual` (monomorphization follow-up); **M-673 landed the monomorphization elaboration (`mono.rs`) — a concrete generic instantiation now lowers to closed L0 (M-210 three-way differential green)**; RFC-0007 §11/§11.3 | **present** |
+| 7 | **Trait-like interfaces** (`trait T { fn … }`) + impl blocks | RFC-0016 §4.1 C1–C6 contract machinery in-language; `iter`, `cmp`, `fmt` | **Checker landed (M-659):** `trait`/`impl` type-check with **coherence** (global uniqueness + single-nodule orphan rule), exact method-set conformance, and bounded-call/trait-method resolution — every violation an explicit `CheckError` (G2), guarantee `Declared`; **M-673 landed the L0 lowering**: dictionary-free **static instance resolution** + a reified EXPLAIN selection record (`mono.rs`) — a trait-method call lowers to a direct call to the coherent instance's method body; the literal RFC-0019 §4.5 runtime-dictionary form remains deferred to a trusted-core ADR (KC-3) | **present** |
 | 8 | **Effect annotations (RFC-0014 RT3)** — declared `{time, entropy, io, …}` on surface `fn` | `rand`, `time`, `io`, `fs`, `recover` | **Landed (M-660):** `ast.rs` `FnSig.effects`; `parse.rs` parses the `!{ … }` annotation after the return type (absent ⇒ pure; duplicate-effect = parse refusal); `checkty.rs` `check_effect_coverage` enforces **declared ⊇ performed** (performed = union of every callee's declared effects — a top-level fn OR an unqualified trait method — checked over fn bodies **and** impl-method bodies, so an effect can never be hidden from a caller), under-declaration an explicit `CheckError` (G2/RFC-0014 I3), over-declaration allowed (I5); impl-method effects must equal the trait method's. Guarantee **`Declared`** (a structural coverage check). **No new L0 node** (KC-3); the runtime budget ledger stays `mycelium-interp::budget` (M-353); `wild`-sourced effects **arrived with M-661** (a `wild` block performs the `ffi` effect — see row 9) | **present** |
 | 9 | **`wild` / FFI surface** — callable host operations | `fs`, `rand`, `io` (std-sys call sites) | **Gate landed (M-661):** `@std-sys` is an explicit **nodule-header attribute** (`ast.rs` `Nodule.std_sys`; `lexer.rs`/`token.rs` atomic `@std-sys` token; `parse.rs` `parse_nodule`), **not** a naming convention. `checkty.rs` `Cx::check_wild` admits a `wild` block **iff** the nodule is `@std-sys` **and** the `fn` declares `!{ffi}` (`wild` is the `ffi` effect *source* — fed into the M-660 coverage pass); a `wild` elsewhere is a **hard `CheckError`** (G2, not a lint). The `wild` body is the **trusted/opaque** FFI escape — NOT recursively type-checked (audited, not verified — VR-5/ADR-014) — so it needs an expected/ascribed type (synthesis refuses). **Execution stays staged:** `elab.rs` lowers `wild` to an explicit `Residual` (no FFI host in v0). Guarantee **`Declared`**. The `myc-sec` `// SAFETY:` audit (ADR-014) is orthogonal + unchanged. | **conditionally present (audited, std-sys context; type-checks + gates; execution staged)** |
 | 10 | **Full phyla + cross-nodule imports** — `phylum std`, `use` across nodule boundaries | Any multi-nodule library | **Landed (M-662):** `parse_phylum` parses a `phylum <path>` header + multiple `nodule` blocks (`ast.rs` `Phylum`; a header-less nodule is a phylum-of-one); `checkty.rs` `check_phylum` builds a qualified per-phylum import registry (pub-only) + a pub-blind coherence view, resolves cross-nodule `use` (specific + glob `use a.b.*`) with **never-silent** absent/private/duplicate/glob-ambiguity refusals (G2), and enforces the RFC-0019 §4.5 orphan rule **phylum-wide**; `pub` exports gate cross-nodule visibility (default private-to-nodule). Guarantee `Declared`. | **present** |
@@ -98,6 +98,14 @@ primary evidence for refusals.
 ## 4. Verdict
 
 **Self-hosting is not yet established.**
+
+> **Update — 2026-06-23 (append-only, VR-5).** Since this §4 prose was written (the original M-502
+> assessment), §3's table has advanced: rows 8 (effects, M-660), 10 (phyla, M-662), 11 (guarantee
+> index stage-1a, M-663), and now **rows 6 (generics) + 7 (traits) → `present` (M-673 —
+> monomorphization + dictionary-free static trait resolution lower both to closed L0)**. The remaining
+> gap is row 9 (`wild`/FFI — type-checks + gated, *execution* staged). **§3's table is
+> authoritative**; the prose below is the original assessment, and the full §4 reconciliation +
+> **Status → Resolved** lands with **M-649** (the first self-hosted generic stdlib nodule).
 
 Of the 11 required features, **5 are present** (features 1–5: value types, ADTs + pattern
 matching, functions + recursion including mutual recursion, let/lambda, nodule-level organization).
@@ -153,6 +161,11 @@ not change whether stdlib authoring in Mycelium-lang is currently possible):
 
 ## Meta — changelog
 
+- **2026-06-23 — §3 rows 6 + 7 → `present` (M-673; append-only, VR-5).** Monomorphization elaboration
+  landed (`crates/mycelium-l1/src/mono.rs`): a generic instantiation lowers to closed L0 (row 6), and
+  trait-method calls lower via dictionary-free static instance resolution + a reified EXPLAIN record
+  (row 7). M-657/M-659 → done. The §4 prose carries an append-only update banner; the full §4
+  reconciliation + **Status → Resolved** lands with M-649 (the first self-hosted generic nodule).
 - **2026-06-22 — §3 row 11 static guarantee grading landed → row 11 now `present (stage 1a)` (M-663;
   RFC-0018 Enacted; append-only, VR-5).** The guarantee index `@ g` is now a **statically-enforced**
   surface constraint in `mycelium-l1` (RFC-0018 §4.3, stage 1a, Design A). A self-contained checker pass

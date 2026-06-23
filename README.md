@@ -3,7 +3,7 @@
 > A programming language that treats **traditional binary**, **balanced ternary**, **dense embeddings**, and **Vector Symbolic Architectures (VSA / hyperdimensional computing)** as co-equal, first-class substrates — under semantics that are **transparent** (no hidden behavior), **metadata-native**, and **amenable to formal reasoning**.
 
 **Status:** design + **Rust-first implementation underway.** The design corpus is Accepted/Resolved
-(Foundation, RFC-0001…0021, ADR-001…021, DN-01…19), and the Rust workspace has
+(Foundation, RFC-0001…0023, ADR-001…021, DN-01…22), and the Rust workspace has
 **47 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified swaps,
 the selection-policy engine, a verified-numerics layer, and a **25-crate Rust-first standard library**
 (all 25/25 specs Accepted, 2026-06-21). Phases **0–3, 5, 7, and 8** are complete. The
@@ -67,7 +67,7 @@ Three non-negotiables shape every decision:
 
 ## What is built
 
-### The Rust workspace — 46 crates (+ `xtask`)
+### The Rust workspace — 47 crates (+ `xtask`)
 
 The kernel and tooling live in `crates/` under MSRV-pinned Rust 1.92 (ADR-007). The public
 surface is gated by a committed API baseline (`docs/spec/api/`, KC-3). Grouped by role:
@@ -94,7 +94,7 @@ surface is gated by a committed API baseline (`docs/spec/api/`, KC-3). Grouped b
 
 | Crate | Role |
 |---|---|
-| `mycelium-l1` | The ten-node L1 kernel calculus (RFC-0007) + the unified swap/interp differential checker |
+| `mycelium-l1` | The ten-node L1 kernel calculus (RFC-0007) + the unified swap/interp differential checker; **E7-1 stage-1 surface landed**: generics (M-656/M-657), traits (M-658/M-659), effects (M-660), `wild`/FFI gate (M-661), phyla/cross-nodule (M-662), and static guarantee grading (M-663, RFC-0018 Enacted); **M-673 landed monomorphization + dictionary-free static trait resolution, so generic/trait instantiations now elaborate to closed L0 and run** (DN-14 §3 rows 6/7 `present`) |
 | `mycelium-mlir` | The AOT path: env-machine + direct-LLVM native lowering of the data/closure/tail-recursion fragment (M-373/M-378/M-379), JIT (M-340), and hot-inject (M-341); the real `ternary`→LLVM MLIR dialect in progress (M-601) |
 
 #### Toolchain crates
@@ -269,7 +269,7 @@ mycelium/
 ├── CONTRIBUTING.md           ← decision process, honesty rule, dev env, workflow
 ├── CLAUDE.md                 ← operating guide for Claude Code / agents (the house rules)
 ├── CHANGELOG.md              ← Keep-a-Changelog; design baseline + implementation edits
-├── Cargo.toml                ← Rust workspace (46 crates + xtask; MSRV 1.92, ADR-007)
+├── Cargo.toml                ← Rust workspace (47 crates + xtask; MSRV 1.92, ADR-007)
 ├── rust-toolchain.toml       ← pinned MSRV
 ├── justfile                  ← one source of truth for local↔CI checks (`just check`)
 ├── deny.toml                 ← cargo-deny supply-chain policy
@@ -278,13 +278,13 @@ mycelium/
 │   ├── Mycelium_Project_Foundation.md   ← charter, requirements, ADR-001…009, roadmap, risks
 │   ├── Doc-Index.md                     ← map of the corpus + status + dependency DAG
 │   ├── Glossary.md                      ← the fungal lexicon + honesty/architecture terms
-│   ├── rfcs/        ← RFC-0001…0021 (normative designs) + index
+│   ├── rfcs/        ← RFC-0001…0023 (normative designs) + index
 │   ├── adr/         ← ADR-010…021 as files (ADR-001…009 live in the Foundation §8) + index
-│   ├── notes/       ← DN-01…19 design notes + reference material (lexicon, examples, research prompts)
+│   ├── notes/       ← DN-01…22 design notes + reference material (lexicon, examples, research prompts)
 │   ├── spec/        ← per-module + per-tool specs (stdlib/, api/ baselines, swaps/, grammar/)
 │   ├── planning/    ← phase-by-phase build plans (phase-0 … phase-8)
 │   └── devlog/      ← append-only development log
-├── research/                 ← the evidence base (records 01 … 11)
+├── research/                 ← the evidence base (records 01 … 13)
 ├── examples/                 ← worked `.myc` programs (hello-phylum, repr-tour)
 ├── experiments/              ← uv-managed Python experiments (the KC-2 LLM-leverage harness)
 ├── fuzz/                     ← cargo-fuzz durability targets (standalone nightly workspace; WS8/M-654)
@@ -339,7 +339,12 @@ selection-policy engine + EXPLAIN; the direct-LLVM native path (data/closure/tai
 fragment, M-373/M-378/M-379); JIT (M-340); hot-inject (M-341); the L1 calculus; the
 runtime/concurrency model (RFC-0008); the full toolchain suite; and the Rust-first standard
 library — **25/25 crate specs ratified to `Accepted`** (2026-06-20/21, DN-07 + maintainer
-2026-06-21).
+2026-06-21). The **E7-1 L1 stage-1 surface** is now complete in the type-checker: generics
+(M-656/M-657), trait/`impl` checker + coherence (M-658/M-659), effect annotations (M-660),
+`wild`/FFI gate (M-661), phyla + cross-nodule model (M-662), and static guarantee grading
+(M-663, RFC-0018 Enacted). **M-673 landed the monomorphization elaboration + dictionary-free
+static trait resolution**, so generic and trait instantiations now elaborate to closed L0 and run
+on all three paths (L1-eval ≡ L0-interp ≡ AOT); DN-14 §3 rows 6 and 7 are now `present`.
 
 **1.0.0 gate defined and ratified (ADR-021, Accepted 2026-06-21).** Gate A1 (zero open High
 findings from the 2026-06-14 deep review) and Gate B2 (KC-2 verdict) are met. Open gate rows
@@ -395,11 +400,11 @@ and `docs/planning/phase-*.md` for the live phase ladder.
 2. **`docs/Mycelium_Project_Foundation.md`** — the charter: vision, requirements (FR/NFR/VR),
    success & kill criteria, ADRs 001–009, roadmap, risks.
 3. **`docs/rfcs/RFC-0001…`** — the Core IR & metadata schema (everything else plugs into this).
-4. **RFC-0002 → RFC-0021**, then the ADRs (010…021) and design notes (DN-01…19) for the deep
+4. **RFC-0002 → RFC-0023**, then the ADRs (010…021) and design notes (DN-01…22) for the deep
    dives — `Doc-Index.md` orders them.
 5. **`crates/mycelium-core` and `crates/mycelium-interp`** — the kernel and reference semantics,
    if you want to read the design as code.
-6. **`research/`** — the evidence base (records 01…11), if you want the "why" behind a decision.
+6. **`research/`** — the evidence base (records 01…13), if you want the "why" behind a decision.
 
 ---
 
@@ -427,7 +432,7 @@ and `docs/planning/phase-*.md` for the live phase ladder.
 | Interpreted↔compiled ABI + hot-inject | ADR-016; ADR-017 | hash-keyed dispatch; content-addressed dynamic linking; immutable-by-construction |
 | 1.0.0 release-readiness gate | ADR-021 | Gate A (honesty-integrity + durability) + Gate B (decision/external); kernel/core scope; surface → 1.x |
 
-> The full set (RFC-0006…0021, ADR-011…021, DN-02…19) with status and dependencies is in
+> The full set (RFC-0006…0023, ADR-011…021, DN-02…22) with status and dependencies is in
 > [`docs/Doc-Index.md`](./docs/Doc-Index.md) — the table above is the load-bearing subset.
 
 ---
@@ -492,12 +497,13 @@ and `docs/planning/phase-*.md` for the live phase ladder.
 ## Provenance & evidence
 
 Everything in `docs/` traces back to the research passes recorded in `research/` — now
-**eleven records** (`01…11`), spanning the prior-art survey and T0/T1/T2 findings through the
+**thirteen records** (`01…13`), spanning the prior-art survey and T0/T1/T2 findings through the
 language layer, runtime/concurrency, error-recovery & bounded effects, automatic-baseline
 diagnostics, the narrative-authoring pipeline, honest-stdlib prior art, stage-1 grading
-non-interference, traits/coherence & Repr-polymorphism, and the semantic-projection framework.
+non-interference, traits/coherence & Repr-polymorphism, the semantic-projection framework,
+the web-tooling phylum (RFC-0022), and the ADK phylum (RFC-0023).
 Each record carries its structured findings + source list; normative claims in `docs/` cite
-their grounding (survey labels `G*`/`A–E`/`R*`; research labels `T0.x…T11.x`) or are flagged
+their grounding (survey labels `G*`/`A–E`/`R*`; research labels `T0.x…T13.x`) or are flagged
 as open questions.
 
 ---

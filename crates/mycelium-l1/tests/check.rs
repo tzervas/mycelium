@@ -2,7 +2,7 @@
 //! checker, and the scope-quantified `matured ⟹ total` gate (RFC-0017 §4.2). Every refusal is
 //! an explicit `CheckError`.
 
-use mycelium_l1::{check_nodule, check_nodule_matured, parse, Totality};
+use mycelium_l1::{check_nodule, check_nodule_matured, monomorphize, parse, Totality};
 
 fn check(src: &str) -> Result<mycelium_l1::Env, mycelium_l1::CheckError> {
     let nodule = parse(src).expect("parses");
@@ -1468,5 +1468,42 @@ fn a_binder_colliding_with_an_unrelated_types_nullary_ctor_is_still_a_binder() {
         err.message.contains("guarantee") && err.message.contains("Exact"),
         "the refusal must be a guarantee error naming the unmet Exact demand, got: {}",
         err.message
+    );
+}
+
+// --- M-673: monomorphization turns the checked generic Env into a closed monomorphic one ---------
+
+#[test]
+fn monomorphize_specializes_first_or_to_a_closed_env() {
+    // The M-673 acceptance shape (checker side): `monomorphize(env, "main")` yields a `main` with no
+    // type parameters and a mangled `first_or$Binary8` whose params are empty — a closed monomorphic
+    // env the elaborator runs unchanged.
+    let env = check(
+        "nodule d\ntype List<A> = Nil | Cons(A, List<A>)\n\
+         fn first_or<A>(xs: List<A>, d: A) -> A = match xs { Nil => d, Cons(x, _) => x }\n\
+         fn main() -> Binary{8} = first_or(Cons(0b0000_0001, Nil), 0b0000_0000)",
+    )
+    .expect("a generic program checks");
+    let mono = monomorphize(&env, "main").expect("monomorphizes");
+    // `main` is preserved (nullary monomorphic ⇒ name unchanged) and stays non-generic.
+    let main = mono.fn_decl("main").expect("main present");
+    assert!(main.sig.params.is_empty(), "main has no type parameters");
+    // The specialization exists, mangled, with empty type parameters.
+    let fo = mono
+        .fn_decl("first_or$Binary8")
+        .expect("first_or$Binary8 emitted");
+    assert!(
+        fo.sig.params.is_empty(),
+        "the specialization is monomorphic (no type parameters)"
+    );
+    assert_eq!(fo.sig.value_params.len(), 2);
+    // The mono'd env has no generics or traits left (the M-673 closure invariant).
+    assert!(
+        mono.fns.values().all(|fd| fd.sig.params.is_empty())
+            && mono.types.values().all(|d| d.params.is_empty())
+            && mono.traits.is_empty()
+            && mono.instances.is_empty()
+            && mono.impls.is_empty(),
+        "the monomorphized env is closed (no generic data, no traits, no trait impls)"
     );
 }

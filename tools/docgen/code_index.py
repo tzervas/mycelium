@@ -457,6 +457,50 @@ def build_index(repo_root: Path) -> tuple[list[dict], list[dict]]:
                     }
                 )
 
+    # De-duplicate rows that resolve to the same (file, line) with the same short symbol
+    # name — a re-export alias and its canonical definition are the same item. Keep one
+    # canonical row: prefer the entry with the shorter qualified symbol path (the
+    # re-exported alias path is shorter than the internal module path for crate-level
+    # re-exports, and the canonical module path is shorter for assoc-fn duplicates);
+    # break ties lexically for determinism. Genuinely distinct symbols (different
+    # file:line, or different short name) are never dropped (G2: never silent).
+    # Dropped alias symbols are tracked in `deduped_aliases` (used by the self-test
+    # completeness check to confirm they are covered by their canonical row).
+    from collections import OrderedDict
+
+    canonical: dict[tuple, dict] = OrderedDict()  # (file, line, short_name) -> best item
+    for item in items:
+        short = item["symbol"].split("::")[-1]
+        key = (item["file"], item["line"], short)
+        if key not in canonical:
+            canonical[key] = item
+        else:
+            # Prefer the shorter qualified path (canonical over alias); break ties lexically.
+            prev_sym = canonical[key]["symbol"]
+            cur_sym = item["symbol"]
+            if len(cur_sym) < len(prev_sym) or (
+                len(cur_sym) == len(prev_sym) and cur_sym < prev_sym
+            ):
+                canonical[key] = item
+    # Record the alias symbols that were dropped (covered by a canonical row at the same
+    # file:line). They go into flagged as "dedup-alias" entries so the completeness
+    # check (self-test) can confirm no item was silently lost (G2: never silent).
+    for item in items:
+        short = item["symbol"].split("::")[-1]
+        key = (item["file"], item["line"], short)
+        kept_sym = canonical[key]["symbol"]
+        if item["symbol"] != kept_sym:
+            flagged.append(
+                {
+                    "symbol": item["symbol"],
+                    "reason": (
+                        f"dedup-alias: same definition as `{kept_sym}` "
+                        f"at {item['file']}:{item['line']} — one canonical row kept"
+                    ),
+                }
+            )
+    items = list(canonical.values())
+
     # Stable key order: sort by (crate, symbol)
     items.sort(key=lambda x: (x["crate"], x["symbol"]))
     flagged.sort(key=lambda x: x["symbol"])
@@ -564,6 +608,8 @@ def self_test(repo_root: Path, output_dir: Path) -> int:
             failures.append("determinism")
 
     # --- Completeness: every `pub` line from spec/api/*.txt in items or flagged ---
+    # Deduped aliases appear in flagged with reason "dedup-alias: …" so they are still
+    # "covered" here — the completeness invariant is: no item is silently lost (G2).
     api_dir = repo_root / "docs" / "spec" / "api"
     txt_files = sorted(api_dir.glob("*.txt"))
 

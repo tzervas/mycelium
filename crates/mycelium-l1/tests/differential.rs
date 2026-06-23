@@ -20,7 +20,7 @@ use mycelium_cert::{
 use mycelium_core::{GuaranteeStrength, Payload, Repr, Value};
 use mycelium_interp::{Interpreter, PrimRegistry};
 use mycelium_l1::elab::build_registry;
-use mycelium_l1::{check_nodule, elaborate, parse, Evaluator, L1Error};
+use mycelium_l1::{check_nodule, elaborate, monomorphize, parse, Evaluator, L1Error};
 use mycelium_numerics::Certificate;
 
 type Observable<'a> = (&'a Repr, &'a Payload, GuaranteeStrength);
@@ -803,4 +803,179 @@ fn a_failing_hypha_is_an_explicit_colony_error_not_a_silent_drop() {
         }
         other => panic!("expected an explicit HyphaFailed, got: {other}"),
     }
+}
+
+// --- M-673: monomorphization — generics + traits to closed L0, three-way differential ----------
+//
+// After M-673 a generic *instantiation* and a *trait-method call* both elaborate to closed L0 (the
+// monomorphization pre-pass — `crate::mono`). The obligation is the SAME three-way differential as
+// the data/recursion corpus (L1-eval ≡ elaborate→L0-interp ≡ AOT), but run on the **monomorphized
+// env**: the L1 evaluator has no trait-method dispatch (`eval_app` resolves only `env.fns`/ctor/prim),
+// so a trait program is only runnable once mono has rewritten its trait calls to direct calls. Running
+// the *generic* cases on the mono'd env too keeps the harness uniform (a generic call's head name is
+// already in `env.fns`, so L1-eval would also run the source env — but the mono'd env is the honest
+// common ground for both kinds).
+
+/// The generic + trait fragment corpus (mirrors `data_corpus`): each program has a nullary `main`
+/// whose reachable graph uses generics and/or a trait/impl, and monomorphizes to closed L0.
+fn generic_corpus() -> Vec<&'static str> {
+    vec![
+        // (1) `List<A>` + `first_or` → closed L0 (the M-673 acceptance fixture)
+        "nodule d\ntype List<A> = Nil | Cons(A, List<A>)\n\
+         fn first_or<A>(xs: List<A>, d: A) -> A = match xs { Nil => d, Cons(x, _) => x }\n\
+         fn main() -> Binary{8} = first_or(Cons(0b0000_0001, Nil), 0b0000_0000)",
+        // (2) a generic returning a datum (the program evaluates to a `List<Binary{8}>`)
+        "nodule d\ntype List<A> = Nil | Cons(A, List<A>)\n\
+         fn main() -> List<Binary{8}> = Cons(0b0000_0001, Nil)",
+        // (3) a trait + impl, the method called directly (static resolution to a direct call)
+        "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n\
+         impl Cmp<Binary{8}> for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b00 }\n\
+         fn main() -> Binary{2} = cmp(0b0000_0001, 0b0000_0010)",
+        // (4) a bounded generic `use_cmp<T: Cmp>` calling the trait method through its bound, at Binary{8}
+        "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n\
+         impl Cmp<Binary{8}> for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b00 }\n\
+         fn use_cmp<T: Cmp>(a: T, b: T) -> Binary{2} = cmp(a, b)\n\
+         fn main() -> Binary{2} = use_cmp(0b0000_0001, 0b0000_0010)",
+        // (5) fragmentation witness — `first_or` at Binary{8} AND Binary{4} reachable from one main
+        "nodule d\ntype List<A> = Nil | Cons(A, List<A>)\n\
+         fn first_or<A>(xs: List<A>, d: A) -> A = match xs { Nil => d, Cons(x, _) => x }\n\
+         fn lo() -> Binary{4} = first_or(Cons(0b0001, Nil), 0b0000)\n\
+         fn hi() -> Binary{8} = first_or(Cons(0b0000_0001, Nil), 0b0000_0000)\n\
+         fn main() -> Binary{8} = let _w = lo() in hi()",
+        // (6) a generic recursive fold over a generic spine (Fix over List<Binary{8}>)
+        "nodule d\ntype List<A> = Nil | Cons(A, List<A>)\n\
+         fn sum_(xs: List<Binary{8}>) -> Binary{8} = \
+           match xs { Nil => 0b0000_0000, Cons(x, r) => xor(x, sum_(r)) }\n\
+         fn main() -> Binary{8} = sum_(Cons(0b0000_1111, Cons(0b1111_0000, Nil)))",
+        // (7) a generic instantiated at a USER DATA TYPE as the type arg (not just reprs) — exercises
+        //     the repr/data-name mangling boundary end-to-end (the locus of the M-673 injectivity fix)
+        "nodule d\ntype Bit = O | I\ntype Box<A> = Wrap(A)\n\
+         fn unbox(b: Box<Bit>) -> Bit = match b { Wrap(x) => x }\n\
+         fn main() -> Bit = unbox(Wrap(I))",
+    ]
+}
+
+#[test]
+fn l1_eval_l0_interp_and_aot_agree_on_the_monomorphized_generic_and_trait_fragment() {
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
+    for (i, src) in generic_corpus().iter().enumerate() {
+        let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+        // Monomorphize: a closed, trait-free, monomorphic env L1-eval can run (it has no trait
+        // dispatch). The entry stays `main` (nullary monomorphic ⇒ name unchanged).
+        let mono = monomorphize(&env, "main")
+            .unwrap_or_else(|e| panic!("program #{i}: must monomorphize: {e}"));
+        // The mono'd env has no generics/traits left (the M-673 closure invariant).
+        assert!(
+            mono.fns.values().all(|fd| fd.sig.params.is_empty())
+                && mono.types.values().all(|d| d.params.is_empty())
+                && mono.traits.is_empty()
+                && mono.instances.is_empty()
+                && mono.impls.is_empty(),
+            "program #{i}: monomorphized env must be closed (no generics/traits)"
+        );
+        let registry = build_registry(&mono).expect("the mono'd data registry builds");
+
+        // Path 1: the L1 fuel-guarded evaluator, on the MONOMORPHIZED env (trait calls are now direct).
+        let l1 = Evaluator::new(&mono)
+            .call("main", vec![])
+            .unwrap_or_else(|e| panic!("program #{i}: L1-eval failed: {e}"));
+        let l1_core = l1
+            .to_core(&mono, &registry)
+            .unwrap_or_else(|| panic!("program #{i}: L1 result is outside the r3 data fragment"));
+
+        // Path 2: elaborate to L0 (elaborate monomorphizes internally; on the source env it produces
+        // the same closed term), run on the reference interpreter.
+        let node = elaborate(&env, "main")
+            .unwrap_or_else(|e| panic!("program #{i}: must elaborate after M-673: {e}"));
+        let l0_core = interp
+            .eval_core(&node)
+            .unwrap_or_else(|e| panic!("program #{i}: L0-interp failed: {e}"));
+
+        // Path 3: the same L0 term through the AOT env-machine.
+        let aot_core = mycelium_mlir::run_core(&node, &prims, &engine)
+            .unwrap_or_else(|e| panic!("program #{i}: AOT run_core failed: {e}"));
+
+        assert_eq!(
+            l1_core, l0_core,
+            "program #{i} diverged: L1-eval(mono) vs elaborate→L0-interp"
+        );
+        assert_eq!(
+            l0_core, aot_core,
+            "program #{i} diverged: L0-interp vs AOT env-machine"
+        );
+        // The single shared M-210 checker validates each pair (a mislabeled lowering is an explicit
+        // NotValidated, never a silent pass).
+        for (x, y, pair) in [
+            (&l1_core, &l0_core, "L1↔interp"),
+            (&l0_core, &aot_core, "interp↔AOT"),
+        ] {
+            assert_eq!(
+                check_core(x, y),
+                CheckVerdict::Validated {
+                    strength: GuaranteeStrength::Exact
+                },
+                "program #{i}: the shared checker must validate the {pair} pair"
+            );
+        }
+    }
+}
+
+/// Determinism across the boundary (M-673): monomorphizing twice yields a byte-equal `Env`, and
+/// elaborating the same source twice yields a byte-equal L0 term — the content identity the swarm's
+/// hashing relies on. (Identity is *fragmented* per instantiation, but each is stable.)
+#[test]
+fn monomorphization_and_its_elaboration_are_deterministic() {
+    for src in generic_corpus() {
+        let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+        let a = monomorphize(&env, "main").expect("mono a");
+        let b = monomorphize(&env, "main").expect("mono b");
+        assert_eq!(
+            format!("{a:?}"),
+            format!("{b:?}"),
+            "monomorphization must be deterministic"
+        );
+        let ea = elaborate(&env, "main").expect("elab a");
+        let eb = elaborate(&env, "main").expect("elab b");
+        assert_eq!(
+            ea, eb,
+            "elaboration of a mono'd program must be deterministic"
+        );
+    }
+}
+
+/// A **mutant-witness** for the monomorphized differential: two structurally different trait/generic
+/// programs must NOT produce equal L0 values — confirming the comparison discriminates (a vacuous
+/// `assert_eq!` would be the bug this guards). Here two impls give the method different bodies.
+#[test]
+fn the_monomorphized_differential_distinguishes_divergent_instances() {
+    let run = |src: &str| {
+        let env = check_nodule(&parse(src).unwrap()).unwrap();
+        let node = elaborate(&env, "main").unwrap();
+        Interpreter::new(
+            PrimRegistry::with_builtins(),
+            Box::new(BinaryTernarySwapEngine),
+        )
+        .eval_core(&node)
+        .unwrap()
+    };
+    // Same trait + call shape, different impl method body (`0b00` vs `0b11`) ⇒ different L0 results.
+    let a = run(
+        "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n\
+         impl Cmp<Binary{8}> for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b00 }\n\
+         fn main() -> Binary{2} = cmp(0b0000_0001, 0b0000_0010)",
+    );
+    let b = run(
+        "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n\
+         impl Cmp<Binary{8}> for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b11 }\n\
+         fn main() -> Binary{2} = cmp(0b0000_0001, 0b0000_0010)",
+    );
+    assert_ne!(
+        a, b,
+        "different impl bodies must yield different L0 values (the differential discriminates)"
+    );
 }

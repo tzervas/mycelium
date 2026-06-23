@@ -208,7 +208,14 @@ pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
     // budgets (the parser's nesting cap + the checker's `MAX_CHECK_DEPTH`, both already enforced before
     // a program reaches here); the worker stack is the transitional Rust-only adapter (`mycelium_stack`).
     mycelium_stack::with_deep_stack(|| {
-        let (mut el, binders, fd) = elab_prelude(env, entry)?;
+        // M-673: monomorphize first — specialize every reachable generic instantiation and statically
+        // resolve every trait-method call to a direct call, yielding a closed monomorphic `Env`. The
+        // entry is nullary monomorphic, so its name is byte-identical in the mono'd env (empty type
+        // args ⇒ unchanged name), and on a non-generic/non-trait program the pre-pass is a fast clone
+        // (so the existing monomorphic differential is observably unchanged — NFR-7). The prelude/SCC
+        // machinery below then runs **unchanged** over the specialized env.
+        let mono_env = crate::mono::monomorphize(env, entry)?;
+        let (mut el, binders, fd) = elab_prelude(&mono_env, entry)?;
         let mut stack = vec![entry.to_owned()];
         let entry_body = el.expr(&mut stack, &[], &fd.body)?;
         Ok(wrap_in_binders(binders, entry_body))
@@ -237,7 +244,10 @@ pub fn elaborate_colony(env: &Env, entry: &str) -> Result<Vec<Node>, ElabError> 
 }
 
 fn elaborate_colony_inner(env: &Env, entry: &str) -> Result<Vec<Node>, ElabError> {
-    let (mut el, binders, fd) = elab_prelude(env, entry)?;
+    // M-673: monomorphize first (see [`elaborate`]); the per-hypha lowering then runs unchanged over
+    // the closed monomorphic env. A colony entry is nullary monomorphic, so its name is preserved.
+    let mono_env = crate::mono::monomorphize(env, entry)?;
+    let (mut el, binders, fd) = elab_prelude(&mono_env, entry)?;
     let Expr::Colony(hyphae) = &fd.body else {
         return residual(
             entry,
@@ -1794,23 +1804,54 @@ mod tests {
     }
 
     #[test]
-    fn an_unqualified_trait_method_call_lowers_to_an_explicit_residual() {
-        // A *concrete* trait-method call type-checks (resolved via the instance), but its L0 form is
-        // dictionary-passing, staged to M-673. Elaborating an entry that makes such a call refuses
-        // with an explicit Residual naming the dictionary-passing staging — never a fabricated Op.
+    fn an_unqualified_trait_method_call_now_elaborates_via_monomorphization() {
+        // M-673: a *concrete* trait-method call type-checks (resolved via the instance) and now
+        // **elaborates** — the monomorphization pre-pass statically resolves it to a direct call to
+        // the instance's method body (a mangled monomorphic fn), so it lowers to a closed L0 term and
+        // runs. (Before M-673 this was a staged dictionary-passing `Residual`; that site is kept in
+        // `app` as a defensive invariant — see `the_generic_residual_sites_remain_as_invariants`.)
         let env = env(
             "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n\
              impl Cmp<Binary{8}> for Binary{8} \
              { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b00 }\n\
              fn direct() -> Binary{2} = cmp(0b0000_0001, 0b0000_0010)",
         );
-        let err = elaborate(&env, "direct").unwrap_err();
+        let node = elaborate(&env, "direct").expect("a trait-method call elaborates after M-673");
+        // The method body is `0b00`, so the closed L0 term runs to that 2-bit value.
+        let v = mycelium_interp::Interpreter::default()
+            .eval(&node)
+            .expect("runs");
+        assert_eq!(v.payload(), &Payload::Bits(vec![false, false]));
+    }
+
+    #[test]
+    fn the_generic_and_trait_residual_sites_remain_as_defensive_invariants() {
+        // G2: M-673 keeps the generic/trait `Residual` sites in `app`/`elab_fn_lam` as defensive
+        // internal invariants — they must never silently disappear. After monomorphization they should
+        // be unreachable on a real (mono'd) program, but they still fire if a generic/trait `Env` is
+        // fed **straight** to the prelude/`Elab` machinery (bypassing `monomorphize`). Drive the
+        // generic-fn site directly: a generic `FnDecl` reaching `elab_fn_lam` is an explicit Residual.
+        let env = env("nodule d\ntype List<A> = Nil | Cons(A, List<A>)\n\
+             fn first_or<A>(xs: List<A>, d: A) -> A = match xs { Nil => d, Cons(x, _) => x }\n\
+             fn main() -> Binary{8} = first_or(Cons(0b0000_0001, Nil), 0b0000_0000)");
+        // `build_registry` + an `Elab` over the *un-monomorphized* env, then ask it to lower the
+        // generic `first_or` lambda — the defensive generic-staging Residual must fire (never a
+        // half-monomorphized artifact).
+        let registry = build_registry(&env).expect("registry builds (skips the generic List)");
+        let mut el = Elab {
+            env: &env,
+            registry,
+            fresh: 0,
+            rec: BTreeMap::new(),
+            depth: 0,
+        };
+        let err = el.elab_fn_lam("first_or").unwrap_err();
         let ElabError::Residual { what, .. } = &err else {
-            panic!("expected a Residual for a trait-method call, got {err:?}");
+            panic!("expected the defensive generic Residual, got {err:?}");
         };
         assert!(
-            what.contains("trait-method") || what.contains("dictionary"),
-            "the residual must name the dictionary-passing staging, got: {what}"
+            what.contains("generic") || what.contains("monomorph"),
+            "the defensive site must still name the generic/monomorphization staging, got: {what}"
         );
     }
 }

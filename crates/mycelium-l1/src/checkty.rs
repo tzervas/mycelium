@@ -320,6 +320,16 @@ pub struct Env {
     /// `(trait, type-head)` (global uniqueness). Stored for instance resolution + the staged
     /// dictionary lowering (M-673).
     pub instances: BTreeMap<(String, String), InstanceInfo>,
+    /// **Retained impl-method bodies** (M-673), keyed `(trait_name, type_head(for_ty))` — parallel to
+    /// [`Self::instances`] (head-granular: at most one instance per key by coherence). Each value is
+    /// the instance's **resolved** method `FnDecl`s (ambient literals + ctor/binder patterns
+    /// normalized — the same canonical form a top-level fn carries). [`InstanceInfo::methods`] keeps
+    /// only the method *names* (a non-silent record of the dictionary slots); to **monomorphize** a
+    /// trait-method call to a direct call (`crate::mono`) the elaborator needs the method *bodies*, so
+    /// they are retained here additively (rather than mutating [`InstanceInfo`], whose `PartialEq` /
+    /// equality sites stay untouched). Empty when a nodule declares no `impl`s — a non-trait program is
+    /// byte-identical to the pre-M-673 `Env`.
+    pub impls: BTreeMap<(String, String), Vec<FnDecl>>,
 }
 
 impl Env {
@@ -1076,9 +1086,14 @@ fn check_nodule_with(
     // (canonical) form** is collected so the guarantee-grading pass (3d) walks the same normalized AST
     // as a top-level fn — patterns already ctor/binder-resolved (M-663 / Copilot review).
     let mut resolved_impl_methods: Vec<FnDecl> = Vec::new();
+    // M-673: retain each instance's resolved method bodies, keyed `(trait, type_head(for_ty))` —
+    // parallel to `instances` (head-granular; coherence guarantees ≤ 1 per key). The grading pass (3d)
+    // still consumes the flat `resolved_impl_methods` list; the keyed `impls` map is what the
+    // monomorphization pre-pass (`crate::mono`) reads to lower a trait-method call to a direct call.
+    let mut impls: BTreeMap<(String, String), Vec<FnDecl>> = BTreeMap::new();
     for item in &nodule.items {
         if let Item::Impl(id) = item {
-            resolved_impl_methods.extend(check_impl_methods(
+            let methods = check_impl_methods(
                 &types,
                 &fns,
                 &traits,
@@ -1086,7 +1101,16 @@ fn check_nodule_with(
                 imports,
                 nodule.std_sys,
                 id,
-            )?);
+            )?;
+            // The instance head: resolve `for_ty` exactly as `register_instances` did (concretely, no
+            // type-vars in scope). Registration already accepted this impl, so resolution + a concrete
+            // head are guaranteed here (a `Ty::Var` head was refused at registration); the `expect`
+            // documents that invariant rather than silently dropping a method set.
+            let (for_ty, _) = resolve_ty(&id.trait_name, &types, &[], &id.for_ty)?;
+            let head = type_head(&for_ty)
+                .expect("instance registration refused a non-concrete `for` type head");
+            impls.insert((id.trait_name.clone(), head), methods.clone());
+            resolved_impl_methods.extend(methods);
         }
     }
 
@@ -1140,6 +1164,7 @@ fn check_nodule_with(
         totality,
         traits,
         instances,
+        impls,
     })
 }
 
