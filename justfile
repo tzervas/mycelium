@@ -115,6 +115,15 @@ doc-index:
 # Supply-chain gate: cargo-deny (deny.toml) + cargo-audit. Skips if the tools are absent.
 deny:
     @bash scripts/checks/deny.sh
+# Editor-grammar drift gate (M-731; RFC-0026): committed tools/grammar/ must match a fresh
+# regeneration from the lexer keyword() table (G2 — never a silent divergence). Skip if python3 absent.
+drift-check:
+    @bash scripts/checks/drift.sh
+alias drift := drift-check
+# (Re)generate the committed editor grammars (TextMate + tree-sitter) from the lexer keyword()
+# table; commit the result. Run after any change to crates/mycelium-l1/src/token.rs::keyword().
+grammar-gen:
+    @python3 tools/grammar/generate.py
 
 # --- durability / WS8 (M-654; opt-in, deliberately NOT part of `just check`) ---
 # Mutation testing on the trusted base. SLOW (re-runs the suite per mutant) — run deliberately.
