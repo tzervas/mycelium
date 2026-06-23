@@ -95,7 +95,7 @@ track **FLAGs up**, it does not edit:
 |---|---|---|
 | `docs/api-index/` (unified `index.json` + `INDEX.md`) | **integrator** — regenerated once via `just docs-index` on the merged state (CLAUDE.md: never hand-merged) | neither head hand-edits it; per-crate baselines `docs/spec/api/<crate>.txt` stay **disjoint** (each track owns its own crate's file) |
 | `CHANGELOG.md` | **`rel10`** (curation is M-738) | `r10` supplies its entry as PR-body / FLAG text; never edits the top-level CHANGELOG on its head |
-| `docs/adr/ADR-022` §5 gate table | **`rel10`** (release-gate steward) | `r10` **FLAGs "T3 → gate-met" up**; its live status rides its own `issues.yaml` rows, not ADR-022 |
+| `docs/adr/ADR-022-*.md` §5 gate table | **`rel10`** (release-gate steward) | `r10` **FLAGs "T3 → gate-met" up**; its live status rides its own `issues.yaml` rows, not ADR-022 |
 | `docs/Doc-Index.md` | **integrator** (reconcile once at `dev → integration`) | each FLAGs its index line; neither edits it on its head |
 | `tools/github/issues.yaml` + `idmap.tsv` | **integrator** (reconcile once) | disjoint rows (M-709…713 vs M-735…738); validate + dedup after merge (mitigation #2) |
 
