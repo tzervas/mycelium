@@ -4,7 +4,7 @@
 // @authors: Tyler Zervas
 // @since: 2026-06-23
 // @updated: 2026-06-23
-// @summary: The first self-hosted generic stdlib nodule — Result<A,E> plus first-order combinators is_ok, is_err, unwrap_or. M-649. Guarantee: Declared (type-level contract; differential agreement Empirical). Never-silent (G2): unwrap_or takes a caller-supplied fallback — no panic, no sentinel. FLAG-HOF: higher-order combinators (map, and_then, fold) cannot self-host in v0 — no surface function type, first-order only; Declared limitation, not a bug.
+// @summary: The first self-hosted generic stdlib nodule — Result<A,E> plus first-order combinators is_ok, is_err, unwrap_or. M-649. Guarantee: Declared (type-level contract; differential agreement Empirical). Never-silent (G2): unwrap_or takes a caller-supplied fallback — no panic, no sentinel. HOF: the higher-order combinators map/and_then/fold are specified as clearly-marked pseudocode in the companion result.pending-hof.md (finalized RFC-0024 surface: function type A -> B; a named fn as a value) — to be swapped into this nodule as executable code once the HOF capstone (static defunctionalization) lands and is pulled back down. Declared/deferred, not silent stubs (G2/VR-5).
 nodule std.result
 
 type Result<A, E> = Ok(A) | Err(E)
