@@ -110,8 +110,11 @@ crates (`mycelium-std-*`). This RFC must answer:
 - [x] `lib/std/result.myc` is analysed as the composition prototype and the patterns it
   establishes are codified as requirements for all subsequent ports. → **§5 D5 (the prototype
   pattern); M-715 `option.myc`/`cmp.myc` follow it.**
-- [x] This RFC reaches **Accepted** (maintainer ratification) before any M-715…M-719 leaf
-  begins implementation. → **this revision; M-715 Tier-0 lands alongside acceptance.**
+- [x] This RFC reaches **Accepted** (maintainer ratification), and implementation leaves follow
+  the ratified §5 D1–D7 rather than a pre-design guess. → **this revision.** The M-715 **Tier-0**
+  ports (`option.myc`/`cmp.myc`) co-land in this PR, written *against* the ratified decisions (the
+  design is the gate, the ports follow it within the same change); the heavier leaves **M-716…M-719
+  begin only after acceptance** (and are `status:blocked` on their §5 D4 surface preconditions).
 - [x] All open questions in §5 are resolved or explicitly deferred with direction. → **§5 D1–D7.**
 
 ## 5. Decisions (D1–D7) — resolving the open questions

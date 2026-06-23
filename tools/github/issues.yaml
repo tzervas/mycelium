@@ -4325,12 +4325,13 @@ issues:
       - corpus:DN-25
     body: |
       IN PROGRESS (2026-06-23) — Tier-0 landed (RFC-0031 §5 D4): lib/std/option.myc (Option<A> +
-      is_some/is_none/unwrap_or/map/and_then/fold) and lib/std/cmp.myc (Ordering + is_lt/is_eq/is_gt/
-      reverse + structural bool_eq/bool_cmp/ord_eq over finite types) are written, three-way
+      is_some/is_none/unwrap_or/map/and_then/fold/or_else/flatten), lib/std/cmp.myc (Ordering +
+      is_lt/is_eq/is_gt/reverse + structural bool_eq/bool_cmp/ord_eq over finite types), and an
+      extended lib/std/result.myc (map_err/or_else added to the M-649 surface) are written, three-way
       differential-tested (L1-eval ≡ L0-interp ≡ AOT — crates/mycelium-l1/tests/std_option.rs +
-      std_cmp.rs, 22 tests green), honest tags (Exact for total finite/structural ops; Declared for
-      generic combinators; agreement Empirical), never-silent G2. Together with std.result (M-649)
-      this is the executable core/prelude surface.
+      std_cmp.rs + std_result.rs, 44 tests green), honest tags (Exact for total finite/structural
+      ops + the Some/None/Ok/Err discriminators; Declared for generic value combinators; agreement
+      Empirical), never-silent G2. This is the executable core/prelude surface.
       DEFERRED (honest, VR-5): width-typed cmp/Eq/Ord over Binary{N}/Ternary{N} needs a reduce-to-Bool
       comparison prim (not surfaced — only bit.not/bit.xor + trit arith exist) → Tier-1, blocks with
       M-718. The `iter` trait surface needs a concrete sequence type to iterate → Tier-2, blocks with

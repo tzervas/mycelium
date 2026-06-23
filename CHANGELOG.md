@@ -23,12 +23,14 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   prototype pattern; **D6** the `mycelium-std-*` Rust crate kept as the differential oracle (deprecated, not
   removed); **D7** one `spore` per phylum. (RFC-0031; E13-1/M-714)
 - **M-715 (Tier-0) — the executable core/prelude self-hosts.** `lib/std/option.myc` (`Option<A>` +
-  `is_some`/`is_none`/`unwrap_or`/`map`/`and_then`/`fold`, the never-silent sibling of `std.result`) and
-  `lib/std/cmp.myc` (`Ordering` + `is_lt`/`is_eq`/`is_gt`/`reverse` + structural `bool_eq`/`bool_cmp`/`ord_eq`
-  over the finite kernel types) are written in `.myc`, three-way **differential-tested** (L1-eval ≡ L0-interp
-  ≡ AOT — `crates/mycelium-l1/tests/std_option.rs` + `std_cmp.rs`, 22 tests green via the M-649 harness), and
-  registered in the `std` phylum manifest (`lib/std/mycelium-proj.toml`). Honest tags (VR-5): total
-  finite/structural ops `Exact`; generic combinators `Declared`; differential agreement `Empirical`.
+  `is_some`/`is_none`/`unwrap_or`/`map`/`and_then`/`fold`/`or_else`/`flatten`, the never-silent sibling of
+  `std.result`), `lib/std/cmp.myc` (`Ordering` + `is_lt`/`is_eq`/`is_gt`/`reverse` + structural
+  `bool_eq`/`bool_cmp`/`ord_eq` over the finite kernel types), and an extended `lib/std/result.myc`
+  (`map_err`/`or_else` added to the M-649 surface) are written in `.myc`, three-way **differential-tested**
+  (L1-eval ≡ L0-interp ≡ AOT — `crates/mycelium-l1/tests/std_option.rs` + `std_cmp.rs` + `std_result.rs`,
+  44 tests green via the M-649 harness), and registered in the `std` phylum manifest
+  (`lib/std/mycelium-proj.toml`). Honest tags (VR-5): total finite/structural ops `Exact`; generic
+  combinators `Declared`; differential agreement `Empirical`.
   Never-silent (G2): `unwrap_or`/`fold` take a caller-supplied fallback — `None` never silently becomes a
   value. **Honestly deferred:** width-typed `cmp`/`Eq`/`Ord` (needs a comparison prim → Tier-1, blocks with
   M-718) and the `iter` trait surface (needs a concrete sequence → Tier-2, blocks with M-716) are *not*

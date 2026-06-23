@@ -7,8 +7,10 @@
 //! the call site via explicitly-typed helpers (`mk_some`, `mk_none`).
 //!
 //! # Honesty tags
-//! - **`Exact`** — the `Some`/`None` constructors + projections (total, RFC-0016 / core spec §3).
-//! - **`Declared`** — the type-level contract of each generic combinator (a structural check).
+//! - **`Exact`** — the `Some`/`None` constructors and the total Bool discriminators `is_some`/
+//!   `is_none` (total, RFC-0016 / core spec §3).
+//! - **`Declared`** — the type-level contract of each value combinator (`unwrap_or`/`map`/`and_then`/
+//!   `fold`/`or_else`/`flatten`) — a structural check, not a theorem.
 //! - **`Empirical`** — the three-way differential agreement (L1-eval ≡ L0-interp ≡ AOT), validated
 //!   by trial on the programs below; not a machine-checked proof.
 
@@ -275,4 +277,67 @@ fn main() -> Binary{8} = fold(mk_none(), id_val, 0b1111_0000)";
     let src = program(driver);
     let expected = "nodule ref\nfn main() -> Binary{8} = 0b1111_0000";
     assert_three_way("fold(None, id_val, d)", &src, expected);
+}
+
+// ── or_else ──────────────────────────────────────────────────────────────────────────────────────
+
+/// `or_else(Some(x), alt)` → `Some(x)` — the present value wins; the alternative is ignored.
+#[test]
+fn or_else_on_some_keeps_value() {
+    let driver = "\
+fn mk_some() -> Option<Binary{8}> = Some(0b0000_0001)\n\
+fn mk_alt() -> Option<Binary{8}> = Some(0b1111_1111)\n\
+fn main() -> Option<Binary{8}> = or_else(mk_some(), mk_alt())";
+    let src = program(driver);
+    let expected = "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{8}> = Some(0b0000_0001)";
+    assert_three_way("or_else(Some, alt)", &src, expected);
+}
+
+/// `or_else(None, alt)` → `alt` — the caller-supplied alternative is taken (never-silent, G2).
+#[test]
+fn or_else_on_none_takes_alternative() {
+    let driver = "\
+fn mk_none() -> Option<Binary{8}> = None\n\
+fn mk_alt() -> Option<Binary{8}> = Some(0b1111_1111)\n\
+fn main() -> Option<Binary{8}> = or_else(mk_none(), mk_alt())";
+    let src = program(driver);
+    let expected = "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{8}> = Some(0b1111_1111)";
+    assert_three_way("or_else(None, alt)", &src, expected);
+}
+
+// ── flatten ──────────────────────────────────────────────────────────────────────────────────────
+
+/// `flatten(Some(Some(x)))` → `Some(x)` — the nested value survives one level of collapse.
+#[test]
+fn flatten_some_some_yields_inner() {
+    let driver = "\
+fn mk() -> Option<Option<Binary{8}>> = Some(Some(0b0000_0001))\n\
+fn main() -> Option<Binary{8}> = flatten(mk())";
+    let src = program(driver);
+    let expected = "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{8}> = Some(0b0000_0001)";
+    assert_three_way("flatten(Some(Some))", &src, expected);
+}
+
+/// `flatten(Some(None))` → `None` — an inner None collapses to None.
+#[test]
+fn flatten_some_none_yields_none() {
+    let driver = "\
+fn mk() -> Option<Option<Binary{8}>> = Some(None)\n\
+fn main() -> Option<Binary{8}> = flatten(mk())";
+    let src = program(driver);
+    let expected =
+        "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{8}> = None";
+    assert_three_way("flatten(Some(None))", &src, expected);
+}
+
+/// `flatten(None)` → `None` — an outer None collapses to None.
+#[test]
+fn flatten_none_yields_none() {
+    let driver = "\
+fn mk() -> Option<Option<Binary{8}>> = None\n\
+fn main() -> Option<Binary{8}> = flatten(mk())";
+    let src = program(driver);
+    let expected =
+        "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{8}> = None";
+    assert_three_way("flatten(None)", &src, expected);
 }
