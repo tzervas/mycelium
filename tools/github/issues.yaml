@@ -4894,7 +4894,10 @@ issues:
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:epic, area:toolchain, priority:P2, status:done]
     landed_basis: "status:done (2026-06-23) — all 5 children done: M-730 (full LSP), M-731 (editor grammars finalized — RFC-0026 Accepted, scope names ratified), M-732 (spore registry), M-733 (myc UX), M-734 (reproducible dist). just check green; guarantee tags at honest strength (VR-5)."
-    depends_on: [E9-1]
+    # E16-1's only cross-epic dependency was M-731 -> M-693 (RFC-0026), now done. Narrowed from the
+    # whole E9-1 epic (whose M-697 packaging leg is unrelated to E16-1) so a `done` issue is not
+    # blocked-by an in-progress epic (Copilot #517).
+    depends_on: [M-693]
     epic: E16
     doc_refs: [corpus:RFC-0026, corpus:DN-24, corpus:DN-25]
     body: |

@@ -2,10 +2,13 @@
 //!
 //! Classifies the lexical token stream into LSP semantic-token types and emits the protocol's
 //! relative-delta encoding. The legend is the **LSP layer of the ratified RFC-0026 §3.2 scope-name
-//! table** (Accepted): `keyword`/`type`/`enumMember`/`number`/`operator`/`comment`/`variable` — the
-//! standard LSP token types the table maps each lexer bucket to (e.g. the guarantee-strength bucket
-//! → `enumMember`, the substrate/scalar types → `type`). The TextMate/tree-sitter layers of the same
-//! table live in `tools/grammar/` (M-731), generated from the same lexer `keyword()`.
+//! table** (Accepted): the standard, *unsuffixed* LSP token types
+//! `keyword`/`type`/`enumMember`/`number`/`operator`/`comment`/`variable` the table maps each lexer
+//! bucket to (e.g. the guarantee-strength bucket → `enumMember`, the substrate/scalar types →
+//! `type`). This is the broadest-coverage layer — it classifies comments, numbers, operators, and
+//! identifiers as well as the keyword buckets. The TextMate + tree-sitter layers of the same table
+//! are generated under `tools/grammar/` (M-731) from the same lexer `keyword()`; per §3.2 those
+//! layers cover a subset today (the tree-sitter scaffold captures only the four word buckets).
 //!
 //! Scope and honesty (`Declared`): classification is **purely lexical/token-kind** — every
 //! identifier is `variable` because the lexer cannot tell a function name from a binding without

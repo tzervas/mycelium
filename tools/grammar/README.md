@@ -27,11 +27,12 @@ lexer.
 
 ## Scope names — ratified (RFC-0026 §3.2, Accepted)
 
-The TextMate / tree-sitter / LSP scope names are the **ratified RFC-0026 §3.2 table**: standard
-TextMate / tree-sitter / LSP names with a `.mycelium` suffix (chosen for maximal theme
-compatibility — every existing theme colors `.myc` with no theme work). The keyword/type/scalar/
-strength **buckets** are mechanically derived from the lexer; the **names** they render to are fixed
-by the RFC:
+The scope names are the **ratified RFC-0026 §3.2 table**: standard names per layer — TextMate scopes
+carry a `.mycelium` suffix, while the tree-sitter captures and LSP token types are the standard
+*unsuffixed* names (chosen for maximal theme compatibility — every existing theme colors `.myc` with
+no theme work). The keyword/type/scalar/strength **buckets** are mechanically derived from the lexer;
+the **names** they render to are fixed by the RFC. A **`—`** marks a cell the **shipped artifact does
+not emit yet** (deferred — see below), not a name choice:
 
 | Lexer bucket | TextMate scope | tree-sitter capture | LSP token type |
 |---|---|---|---|
@@ -39,10 +40,17 @@ by the RFC:
 | `type` | `storage.type.mycelium` | `@type` | `type` |
 | `scalar` | `support.type.builtin.mycelium` | `@type.builtin` | `type` |
 | `strength` | `storage.modifier.guarantee.mycelium` | `@attribute` | `enumMember` |
-| comment | `comment.line.double-slash.mycelium` | `@comment` | `comment` |
-| numeric | `constant.numeric.mycelium` | `@number` | `number` |
+| comment | `comment.line.double-slash.mycelium` | `—` (deferred) | `comment` |
+| numeric | `constant.numeric.mycelium` | `—` (deferred) | `number` |
+| operator | `—` (deferred) | `—` (deferred) | `operator` |
+| identifier | `—` (unscoped) | `—` (deferred) | `variable` |
 
-A change to this table **supersedes** RFC-0026 (append-only); the generator is then re-run.
+**What ships today:** the four word buckets are emitted in all three layers; `comment`/`numeric` in
+TextMate + LSP; `operator`/`identifier` in LSP only. The **tree-sitter artifact is a reserved-word
+scaffold** — its `highlights.scm` captures only the four word buckets; the comment/numeric/operator/
+identifier captures (and the TextMate operator scope) arrive with the **full structural grammar**
+(the M-697 follow-up, RFC-0026 §3.4). A change to this table **supersedes** RFC-0026 (append-only);
+the generator is then re-run.
 
 ## Status & follow-ups
 

@@ -88,14 +88,17 @@ the artifacts decided here).
 
 ### 3.2 Scope-name table (decided — the normative output)
 
-**Convention (decided, §5 Q2):** follow **standard TextMate / tree-sitter / LSP scope names**, with a
-`.mycelium` language suffix on the TextMate scopes. Standard names are chosen over a custom scheme so
-that **every existing editor theme colors `.myc` with zero theme work** (a custom scheme would need
-bespoke theme support); they are checked against the VS Code grammar guide and `rust-analyzer`'s LSP
-legend.
+**Convention (decided, §5 Q2):** follow **standard names per layer** — TextMate scopes carry a
+`.mycelium` language suffix (TextMate convention); **tree-sitter capture names and LSP token types are
+the standard *unsuffixed* names** (`@keyword`, `keyword`, …). Standard names are chosen over a custom
+scheme so that **every existing editor theme colors `.myc` with zero theme work** (a custom scheme
+would need bespoke theme support); they are checked against the VS Code grammar guide and
+`rust-analyzer`'s LSP legend.
 
 The **class column is the lexer-derived bucket** (mechanically extracted from `token.rs::keyword()`
-by `tools/grammar/generate.py` — see §3.3); each bucket maps to exactly one scope name per layer:
+by `tools/grammar/generate.py` — see §3.3); each bucket maps to one name per layer. A **`—`** marks a
+cell **not emitted by the shipped artifact** (deferred — see the coverage note below); it is *not* a
+name choice:
 
 | Lexer class (bucket) | Members (examples) | TextMate scope | tree-sitter capture | LSP token type |
 |---|---|---|---|---|
@@ -103,17 +106,26 @@ by `tools/grammar/generate.py` — see §3.3); each bucket maps to exactly one s
 | `type` | `Binary` `Ternary` `Dense` `VSA` `Substrate` `Sparse` | `storage.type.mycelium` | `@type` | `type` |
 | `scalar` | `F16` `BF16` `F32` `F64` | `support.type.builtin.mycelium` | `@type.builtin` | `type` |
 | `strength` | `Exact` `Proven` `Empirical` `Declared` | `storage.modifier.guarantee.mycelium` | `@attribute` | `enumMember` |
-| *comment* | `// …` | `comment.line.double-slash.mycelium` | `@comment` | `comment` |
-| *numeric* | `0b0010_1010`, `<+0-0>` | `constant.numeric.mycelium` | `@number` | `number` |
-| *operator* | `->` `=>` `@` `!` `+` `-` … | `keyword.operator.mycelium` | `@operator` | `operator` |
-| *identifier* | snake_case names | *(unscoped in TextMate)* | `@variable` | `variable` |
+| *comment* | `// …` | `comment.line.double-slash.mycelium` | `—` (deferred) | `comment` |
+| *numeric* | `0b0010_1010`, `<+0-0>` | `constant.numeric.mycelium` | `—` (deferred) | `number` |
+| *operator* | `->` `=>` `@` `!` `+` `-` … | `—` (deferred) | `—` (deferred) | `operator` |
+| *identifier* | snake_case names | `—` (unscoped) | `—` (deferred) | `variable` |
 
-Notes (honesty):
-- The first four rows (`keyword`/`type`/`scalar`/`strength`) are **mechanically derived** from the
-  `=> Tok::…` right-hand side of each `keyword()` arm — no hand-maintained per-word list, so a new
-  keyword in the lexer is automatically classified (and the drift gate fails until the committed
-  grammars are regenerated). The *comment*/*numeric*/*operator* rows are **syntactic** (not in
-  `keyword()`); they are fixed regex/capture rules.
+**Coverage (honest — what the shipped artifacts emit today):**
+- **The four word buckets** (`keyword`/`type`/`scalar`/`strength`) ship in **all three layers** — they
+  are **mechanically derived** from the `=> Tok::…` right-hand side of each `keyword()` arm (no
+  hand-maintained per-word list; a new lexer keyword is auto-classified and fails the drift gate until
+  regenerated).
+- **`comment` and `numeric`** ship in **TextMate + LSP** (a TextMate regex rule and the LSP classifier).
+- **`operator` and `identifier`** ship in **LSP only** (the M-730 semantic-token classifier); TextMate
+  emits no operator scope and leaves identifiers unscoped today.
+- **The tree-sitter artifact is a reserved-word scaffold:** its `highlights.scm` captures **only the
+  four word buckets**. The *comment*/*numeric*/*operator*/*identifier* tree-sitter captures (and the
+  TextMate operator scope) arrive with the **full structural grammar** — the §3.4 / M-697 follow-up.
+  The names above are the *decided targets* for those captures; the `—` records that the scaffold does
+  not emit them yet (never an overclaim — VR-5/G2).
+
+Notes:
 - **Guarantee strengths** map to `storage.modifier.guarantee.mycelium` / `@attribute` /
   `enumMember`: they are honesty-lattice annotations (modifier-like), not control keywords — coloring
   them distinctly is the whole point of the type-aware layer (DN-24 §3).
@@ -162,8 +174,9 @@ Notes (honesty):
 
 1. **Artifact scope gate** → resolved (§3.1): the three grammar layers are the gate; VS Code
    extension + Linguist are M-697.
-2. **Scope-name convention** → resolved (§3.2): standard TextMate / tree-sitter / LSP names with a
-   `.mycelium` suffix — maximal theme compatibility, no bespoke theme work.
+2. **Scope-name convention** → resolved (§3.2): standard names per layer — TextMate scopes carry a
+   `.mycelium` suffix; tree-sitter captures and LSP token types are the standard *unsuffixed* names —
+   maximal theme compatibility, no bespoke theme work.
 3. **Generator architecture** → resolved (§3.3): a Python generator under `tools/grammar/`, no extra
    workspace dependency, `just`-driven, CI drift-checked.
 4. **tree-sitter build artifact** → *deferred to the community follow-up*: the scaffold ships

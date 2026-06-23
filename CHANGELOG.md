@@ -14,8 +14,9 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   → Accepted same day, maintainer-ratified). §3 fixed normatively: **§3.1** artifact scope (the three
   grammar layers — TextMate · tree-sitter · LSP semantic tokens — are the E9-1/E16-1 gate; the VS Code
   extension + GitHub Linguist registration are the **M-697** follow-up); **§3.2** the scope-name table
-  — **standard TextMate / tree-sitter / LSP names** with a `.mycelium` suffix (chosen for maximal theme
-  compatibility, §5 Q2) mapped over the **lexer-derived** keyword/type/scalar/strength buckets; **§3.3**
+  — **standard names per layer** (TextMate scopes carry a `.mycelium` suffix; tree-sitter captures and
+  LSP token types are the standard *unsuffixed* names — chosen for maximal theme compatibility, §5 Q2)
+  mapped over the **lexer-derived** keyword/type/scalar/strength buckets; **§3.3**
   the single-source-of-truth/drift contract (already implemented: `tools/grammar/generate.py` +
   `just drift-check`). **DN-24 → Resolved** (its recommended layered stack adopted). (M-693; RFC-0026)
 - **M-731 finalized — editor grammars now ship ratified scope names.** The `TODO.rfc-0026.*`

@@ -11,10 +11,12 @@ HONESTY / status (VR-5, G2):
   * The keyword *set* and its *class buckets* are derived mechanically from `token.rs` (the RHS
     `=> Tok::…` of each arm), never hand-maintained — so adding a keyword to the lexer without
     regenerating fails the drift gate.
-  * The TextMate / tree-sitter / LSP *scope names* are the **ratified RFC-0026 §3.2 (Accepted)**
-    table — standard TextMate / tree-sitter names with a `.mycelium` suffix (see `TM_SCOPES` /
-    `TS_CAPTURES`). A change to the scope-name table supersedes RFC-0026 (append-only); the
-    generator is then re-run.
+  * The *scope names* are the **ratified RFC-0026 §3.2 (Accepted)** table: standard names per layer —
+    TextMate scopes carry a `.mycelium` suffix (`TM_SCOPES`), while the tree-sitter captures
+    (`TS_CAPTURES`) are the standard *unsuffixed* names (`@keyword`, `@type.builtin`, …). The
+    tree-sitter `highlights.scm` covers the four word buckets only (a reserved-word scaffold);
+    comment/number/operator/identifier captures arrive with the full structural grammar (RFC-0026
+    §3.4). A change to the table supersedes RFC-0026 (append-only); the generator is then re-run.
 
 Usage:
   generate.py                 # (re)write the committed artifacts under tools/grammar/
