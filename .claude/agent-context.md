@@ -123,6 +123,7 @@ Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is 
 | RFC-0016 / 0017 / 0021 | **Enacted** (stdlib · maturation · projection framework) |
 | RFC-0018 / 0019 | Accepted (grading / traits — **traits type-check** M-659/M-660 ✅; elaboration STAGED → M-673; grading `Declared` → M-663) |
 | RFC-0020 | Accepted (scoped) |
+| RFC-0022 / 0023 | **Accepted** (#344 — web / ADK dogfood phyla; RP-10/RP-9 discharged; **Enacted** gated on the `dfb` builds + E7-1/E7-2) |
 | ADR-010…021 | Accepted (ADR-020 **Enacted**; **ADR-021** gate met, awaiting `Enacted` at the 1.0.0 tag) |
 | stdlib specs | **25/25 ratified**; only `self-hosting-readiness` Draft |
 | DNs | DN-01…03,06…13,16,19 Resolved; **DN-14** Draft (self-hosting gate — row 6/7 partial [type-checks, elab STAGED → M-673], row 8 `present` M-660 ✅); DN-15,17,18 Draft |
@@ -149,7 +150,7 @@ Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is 
 | **M-675** | idmap full reconcile | follow-up |
 | **M-676** | Multi-area Projects-v2 field | follow-up (SECONDARY) |
 | **M-677** | Effect→`mycelium-interp::budget` runtime wiring + per-effect budget syntax | follow-up (post M-661) |
-| **Dogfooding** | RFC-0022 web + RFC-0023 ADK Drafts landed (#334/#335); doc-site (#336) + LSP completions (#330) landed. **Builds M-670/M-671 blocked** — gated on the RP-10/RP-9 deep-research follow-up (post-compaction) + E7-1/E7-2 | research-gated |
+| **Dogfooding** | RFC-0022 web + RFC-0023 ADK **→ Accepted** (#344, 2026-06-21 — RP-10/RP-9 research gate discharged); doc-site (#336) + LSP completions (#330) landed. **Builds M-670/M-671 (`dfb`) now gated on E7-1/E7-2 + the L1 surface only** — research dependency cleared | build-gated |
 | **M-649** | self-host the first stdlib nodule in Mycelium-lang | needs-design (after E7-1; M-502 ✅) |
 | M-655 | Cut 1.0.0 tag — ADR-021 → Enacted | **maintainer-reserved** |
 | M-381 / M-646 | LLM-leverage ablation arms 3/5 — local runs | **maintainer-reserved** |
@@ -161,14 +162,22 @@ Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is 
 (generics · traits · effects · `wild`/FFI · phylum + cross-nodule; all honest `Declared` where graded).
 The next phase splits into **disjoint isolated trees** — fire each in its own session as a **Sonnet
 swarm**, all branching off **`dev`**:
-- **`/kickoff lex`** — L1 surface completion: **M-663** (RFC-0018 grading, stays `Declared`) → M-664
-  (`consume`/`grow`/`impl`) → E7-2 (M-667/M-668) → M-673/M-649 dogfooding. *Critical path; serial-on-L1.*
-- **`/kickoff u78`** — DN-21 unsafe-hardening (M-678 → M-679–683) in `crates/mycelium-mlir` + the check
-  tooling. *Fully disjoint from `lex` — runs in parallel.*
-- **`/kickoff dfr`** — RP-10/RP-9 dogfood research (docs-only). *Disjoint; gates `dfb`.*
+> **UPDATE (2026-06-23): all three kickoffs below have LANDED on `main`** — `dfr` (#344, verified this
+> session), `lex` (M-663 #380), `u78` (M-678 epic #378). See `.claude/kickoffs/README.md` §Completed
+> (archived). The current next-wave kickoffs are **`run`** / **`srf`** (the `mycelium-l1` continuation)
+> and **`tul`** (`tools/github/`); **`dfb`** (web/ADK *builds*) is now gated on the L1 surface only — its
+> `dfr` research dependency is discharged.
 
-`lex ⟂ u78 ⟂ dfr` are fully disjoint (run all three at once). **Maintainer direction (FIRM): complete
-the FULL lexicon (`lex`) before the web/ADK dogfood *builds* (`dfb`)** — a complete surface unlocks
+- **`/kickoff lex`** ✅ LANDED (#380) — L1 surface completion: **M-663** (RFC-0018 grading, stays
+  `Declared`) → M-664 (`consume`/`grow`/`impl`) → E7-2 (M-667/M-668) → M-673/M-649 dogfooding. *Critical path; serial-on-L1.*
+- **`/kickoff u78`** ✅ LANDED (#378) — DN-21 unsafe-hardening (M-678 → M-679–683) in
+  `crates/mycelium-mlir` + the check tooling. *Was disjoint from `lex` — ran in parallel.*
+- **`/kickoff dfr`** ✅ LANDED (#344) — RP-10/RP-9 dogfood research (docs-only); RFC-0022/0023 → Accepted. *Gated `dfb`; now discharged.*
+
+`lex ⟂ u78 ⟂ dfr` were fully disjoint (ran in parallel). **Maintainer direction (FIRM, still
+governing): the FULL lexicon must complete before the web/ADK dogfood *builds* (`dfb`).** The `lex`
+kickoff **landed** its tranche (#380, M-663); the remaining lexicon work continues on the `run`/`srf`
+L1 track (M-664/M-667/M-668), and `dfb` stays gated on that surface. A complete surface unlocks
 self-hosting + the example phylum.
 
 **M-661:** accept `wild { … }` inside a fn that declares the `ffi` effect; `wild` becomes the `ffi`
@@ -192,24 +201,25 @@ orphan is `origin/claude/rescue/m665-dup-orphan-a2f18c62` (a duplicate M-665 —
 1. **M-666 ✅ LANDED** (`1d67da8`) — `hypha`/`colony` real-concurrency via the M-357 runtime,
    RT2-validated, determinism **Empirical** (not Proven); `ColonyError` never-silent (G2); RFC-0008
    **Accepted-not-Enacted** (trusted base stays sequential — in-base concurrency would **supersede
-   RFC-0008**, not taken). **The remaining items 2–6 are now stowed wave-2 kickoffs** — fire each in
-   its own fresh session via **`/kickoff <uid>`** (`.claude/kickoffs/`, indexed in `README.md`):
-   **`e7l`** → the `mycelium-l1` chain (E7-1 items 2–3, E7-2, M-649; **M-666 foundation in place**),
-   **`dfr`** → the RP-10/RP-9 research gate (item 4), **`dfb`** → the web/adk Rust-first builds
-   (item 5). Each runs on a **protected head branch** current with `main`; land via **`/wave-land`**,
-   propagate via `scripts/sync-heads.sh` (CLAUDE.md §Wave-N).
+   RFC-0008**, not taken). **Items 2–6 were stowed wave-2 kickoffs** (`.claude/kickoffs/`, indexed in
+   `README.md`): ✅ **`e7l`** (the `mycelium-l1` chain M-656→M-662, continued by **`lex`**) and ✅
+   **`dfr`** (the RP-10/RP-9 research gate, item 4) have **LANDED**; **`dfb`** (the web/adk Rust-first
+   builds, item 5) remains, gated on the L1 surface. **The active landing workflow is now the tiered
+   `dev → integration → main` flow** (see `.claude/kickoffs/README.md`); the earlier protected-head /
+   `/wave-land` / `scripts/sync-heads.sh` Wave-N references for these kickoffs are superseded by it.
 2. **E7-1 generics chain** — serialize on the shared `mycelium-l1` files (one task at a time, never two
    leaves editing token/parse/checkty/elab in parallel): M-656/M-657/M-658 ✅ generics → M-659 ✅ traits →
    M-660 ✅ effects → **M-661** `wild`/FFI → M-662 phylum/cross-nodule → M-663 RFC-0018 grading → M-664
    `consume`/`grow`/`impl`. Unblocks **M-649** (self-hosting).
 3. **E7-2 continue:** M-667 (`fuse`/`reclaim`/`tier`) → M-668 (R2 design).
-4. **Web/ADK deep-research follow-up (RP-10 web / RP-9 ADK)** — the two-phase **gate** (fractured Opus
-   reasoners discharge the RFC-0022/0023 Honest-Uncertainty Registers). **Per maintainer: run this
-   post-compaction, on consolidated working branches — do NOT blow up orchestrator context.** Inputs
-   are landed: RFC-0022/0023 + `research/12-web-phylum`/`research/13-adk-phylum` RECORDs + the RP-9/RP-10
-   prompts in `docs/notes/research-prompts.md`.
-5. **Dogfooding builds** (M-670 `mycelium-web` / M-671 `mycelium-adk`, `status:blocked`) — build **only
-   after** the research follow-up discharges **and** E7-1/E7-2 land.
+4. **Web/ADK deep-research follow-up (RP-10 web / RP-9 ADK)** — ✅ **DONE (#344, 2026-06-21; verified
+   2026-06-23).** The two-phase **gate** is discharged: four fractured Opus reasoners per RFC verified the
+   RFC-0022/0023 Honest-Uncertainty Registers — design-sound, no falsification (`research/12 §8` /
+   `research/13 §6`). Both RFCs **→ Accepted** (maintainer ratification); M-670/M-671 bodies carry the
+   cleared gate + the `dfb` build constraints. *(Inputs were: RFC-0022/0023 + the `research/12`/`research/13`
+   RECORDs + the RP-9/RP-10 prompts in `docs/notes/research-prompts.md`.)*
+5. **Dogfooding builds** (M-670 `mycelium-web` / M-671 `mycelium-adk`, `status:blocked`) — the research
+   follow-up (#4) is now **discharged**; build (kickoff `dfb`) once **E7-1/E7-2 + the L1 surface** land.
 6. **M-649** self-host the first stdlib nodule — after E7-1 (M-502 ✅).
 
 > **Component memory files:** see `.claude/memory/` — compact per-component orientation
