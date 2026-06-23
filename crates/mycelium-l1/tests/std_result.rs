@@ -15,10 +15,12 @@
 //! - **`Empirical`** — the three-way differential agreement (L1-eval ≡ L0-interp ≡ AOT), validated
 //!   by trial on the programs below; not a machine-checked proof.
 //!
-//! # HOF gap (Declared limitation)
-//! `map`, `and_then`, and `fold` are NOT tested here — they cannot be self-hosted in v0 because
-//! there is no surface function type (`A -> B` as a value) and application is first-order only.
-//! This is a `Declared` limitation recorded in the nodule header and in DN-14.
+//! # HOF combinators (M-649 / M-688 capstone)
+//! `map`, `and_then`, and `fold` are now **present and executable** (RFC-0024 static
+//! defunctionalization, M-685/686/687). The tests below pass a named top-level helper function as
+//! the function argument; the monomorphizer specializes the combinator body at the call site
+//! (defunctionalization), yielding closed first-order L0. Differential agreement is `Empirical`
+//! (trials over the programs below); the type-level contract is `Declared` (VR-5).
 
 use mycelium_cert::{check_core, BinaryTernarySwapEngine, CheckVerdict};
 use mycelium_core::GuaranteeStrength;
@@ -218,4 +220,124 @@ fn main() -> Binary{8} = unwrap_or(mk_err(), 0b1111_1111)";
     let src = program(driver);
     let expected = "nodule ref\nfn main() -> Binary{8} = 0b1111_1111";
     assert_three_way("unwrap_or(Err, d=e)", &src, expected);
+}
+
+// ── map (M-649 / M-688 HOF capstone) ─────────────────────────────────────────────────────────────
+//
+// `map` is now executable via RFC-0024 static defunctionalization: the named helper `not_val` is
+// passed as a first-class value; the monomorphizer specializes `map` at the call site, replacing
+// `f(x)` with a direct call to `not_val`. Differential agreement: `Empirical` (trials). Contract:
+// `Declared`.
+//
+// Helper: `not_val(x: Binary{8}) -> Binary{8} = not(x)`.
+// Hand-computed expected values:
+//   map(Ok(0b0000_0001), not_val) → Ok(not(0b0000_0001)) = Ok(0b1111_1110)
+//   map(Err(0b1111_1111), not_val) → Err(0b1111_1111)  [Err passes through]
+
+/// `map(Ok(x), not_val)` → `Ok(not(x))` — the success value is transformed.
+/// `not_val` is a named top-level fn, defunctionalized at the call site (RFC-0024 §4, Declared).
+/// Hand-computed: not(0b0000_0001) = 0b1111_1110.
+#[test]
+fn map_on_ok_applies_function_to_success_value() {
+    let driver = "\
+fn not_val(x: Binary{8}) -> Binary{8} = not(x)\n\
+fn mk_ok() -> Result<Binary{8},Binary{8}> = Ok(0b0000_0001)\n\
+fn main() -> Result<Binary{8},Binary{8}> = map(mk_ok(), not_val)";
+    let src = program(driver);
+    // Expected: Ok wrapping the computed value not(0b0000_0001). The reference program computes via
+    // not() to match the Derived provenance of the test result (literal 0b1111_1110 would be Root).
+    let expected = "nodule ref\ntype Result<A,E> = Ok(A) | Err(E)\nfn main() -> Result<Binary{8},Binary{8}> = Ok(not(0b0000_0001))";
+    assert_three_way("map(Ok, not_val)", &src, expected);
+}
+
+/// `map(Err(e), not_val)` → `Err(e)` — the error passes through untouched (never-silent, G2).
+/// Hand-computed: Err(0b1111_1111) with no transformation applied.
+#[test]
+fn map_on_err_passes_through_untouched() {
+    let driver = "\
+fn not_val(x: Binary{8}) -> Binary{8} = not(x)\n\
+fn mk_err() -> Result<Binary{8},Binary{8}> = Err(0b1111_1111)\n\
+fn main() -> Result<Binary{8},Binary{8}> = map(mk_err(), not_val)";
+    let src = program(driver);
+    // Expected: the original Err is preserved; not_val is not applied.
+    let expected = "nodule ref\ntype Result<A,E> = Ok(A) | Err(E)\nfn main() -> Result<Binary{8},Binary{8}> = Err(0b1111_1111)";
+    assert_three_way("map(Err, not_val)", &src, expected);
+}
+
+// ── and_then (M-649 / M-688 HOF capstone) ────────────────────────────────────────────────────────
+//
+// `and_then` sequences a Result-returning step. Helper: `mk_ok_inner(x) = Ok(not(x))`.
+// Hand-computed expected values:
+//   and_then(Ok(0b0000_0001), mk_ok_inner) → Ok(not(0b0000_0001)) = Ok(0b1111_1110)
+//   and_then(Err(0b1111_1111), mk_ok_inner) → Err(0b1111_1111)  [Err short-circuits]
+
+/// `and_then(Ok(x), mk_ok_inner)` → `Ok(not(x))` — the step is applied on success.
+/// `mk_ok_inner` wraps `not(x)` in an Ok; defunctionalized at the call site (RFC-0024 §4, Declared).
+/// Hand-computed: Ok(not(0b0000_0001)) = Ok(0b1111_1110).
+#[test]
+fn and_then_on_ok_chains_the_step() {
+    let driver = "\
+fn mk_ok_inner(x: Binary{8}) -> Result<Binary{8},Binary{8}> = Ok(not(x))\n\
+fn mk_ok() -> Result<Binary{8},Binary{8}> = Ok(0b0000_0001)\n\
+fn main() -> Result<Binary{8},Binary{8}> = and_then(mk_ok(), mk_ok_inner)";
+    let src = program(driver);
+    // Expected: the chained step returns Ok(not(0b0000_0001)). The reference program computes via
+    // not() to match the Derived provenance of the test result (literal would be Root).
+    let expected = "nodule ref\ntype Result<A,E> = Ok(A) | Err(E)\nfn main() -> Result<Binary{8},Binary{8}> = Ok(not(0b0000_0001))";
+    assert_three_way("and_then(Ok, mk_ok_inner)", &src, expected);
+}
+
+/// `and_then(Err(e), mk_ok_inner)` → `Err(e)` — the Err short-circuits; the step is not applied.
+/// Hand-computed: Err(0b1111_1111) unchanged.
+#[test]
+fn and_then_on_err_short_circuits() {
+    let driver = "\
+fn mk_ok_inner(x: Binary{8}) -> Result<Binary{8},Binary{8}> = Ok(not(x))\n\
+fn mk_err() -> Result<Binary{8},Binary{8}> = Err(0b1111_1111)\n\
+fn main() -> Result<Binary{8},Binary{8}> = and_then(mk_err(), mk_ok_inner)";
+    let src = program(driver);
+    // Expected: the Err propagates unchanged; mk_ok_inner is never called.
+    let expected = "nodule ref\ntype Result<A,E> = Ok(A) | Err(E)\nfn main() -> Result<Binary{8},Binary{8}> = Err(0b1111_1111)";
+    assert_three_way("and_then(Err, mk_ok_inner)", &src, expected);
+}
+
+// ── fold (M-649 / M-688 HOF capstone) ────────────────────────────────────────────────────────────
+//
+// `fold` eliminates a Result to a common type B via two single-arg fns (the catamorphism).
+// Helpers:
+//   `id_val(x: Binary{8}) -> Binary{8} = x`           (identity — returns the success value)
+//   `const_zero(e: Binary{8}) -> Binary{8} = xor(e, e)` (any XOR itself = 0b0000_0000)
+// Hand-computed expected values:
+//   fold(Ok(0b1010_1010), id_val, const_zero) → id_val(0b1010_1010) = 0b1010_1010
+//   fold(Err(0b1111_0000), id_val, const_zero) → const_zero(0b1111_0000) = xor(0b1111_0000, 0b1111_0000) = 0b0000_0000
+
+/// `fold(Ok(x), id_val, const_zero)` → `x` — the on_ok branch is taken.
+/// Hand-computed: id_val(0b1010_1010) = 0b1010_1010.
+#[test]
+fn fold_on_ok_applies_on_ok_branch() {
+    let driver = "\
+fn id_val(x: Binary{8}) -> Binary{8} = x\n\
+fn const_zero(e: Binary{8}) -> Binary{8} = xor(e, e)\n\
+fn mk_ok() -> Result<Binary{8},Binary{8}> = Ok(0b1010_1010)\n\
+fn main() -> Binary{8} = fold(mk_ok(), id_val, const_zero)";
+    let src = program(driver);
+    // Expected: the success value 0b1010_1010 (on_ok branch; const_zero never called).
+    let expected = "nodule ref\nfn main() -> Binary{8} = 0b1010_1010";
+    assert_three_way("fold(Ok, id_val, const_zero)", &src, expected);
+}
+
+/// `fold(Err(e), id_val, const_zero)` → `xor(e, e) = 0b0000_0000` — the on_err branch is taken.
+/// Hand-computed: xor(0b1111_0000, 0b1111_0000) = 0b0000_0000.
+#[test]
+fn fold_on_err_applies_on_err_branch() {
+    let driver = "\
+fn id_val(x: Binary{8}) -> Binary{8} = x\n\
+fn const_zero(e: Binary{8}) -> Binary{8} = xor(e, e)\n\
+fn mk_err() -> Result<Binary{8},Binary{8}> = Err(0b1111_0000)\n\
+fn main() -> Binary{8} = fold(mk_err(), id_val, const_zero)";
+    let src = program(driver);
+    // Expected: xor(0b1111_0000, 0b1111_0000). The reference program computes via xor() to match the
+    // Derived provenance of the test result (literal 0b0000_0000 would be Root).
+    let expected = "nodule ref\nfn main() -> Binary{8} = xor(0b1111_0000, 0b1111_0000)";
+    assert_three_way("fold(Err, id_val, const_zero)", &src, expected);
 }
