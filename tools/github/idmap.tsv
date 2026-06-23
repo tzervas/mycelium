@@ -261,7 +261,8 @@ M-678	365	4718169368
 M-682	366	4718169375
 M-683	367	4718169394
 # 2026-06-23 (M-675, tul): SECOND idmap reconcile pass — the Phase-5/6/7/8 backlog + gap-closure
-#   epics created AFTER the 2026-06-23 pass above (issues #404-485). Every id below mapped
+#   epics created AFTER the FULL reconcile block above (the 2026-06-23 M-675 pass landed in PR #385,
+#   which mapped ids through #367), i.e. issues #404-485. Every id below mapped
 #   id -> number -> db_id with db_ids FETCHED LIVE (the GitHub MCP `search_issues` `id` field —
 #   `issue_read`/`list_issues` strip the REST id; `search_issues` exposes it), never guessed
 #   (G2/VR-5). Cross-validated this run: all 209 PRE-EXISTING rows still match live GitHub
