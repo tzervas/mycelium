@@ -63,16 +63,15 @@ mod tests {
         assert_eq!(get_env(name), None, "an unset var must be None, never \"\"");
     }
 
-    /// A set variable round-trips through the reader (the OS env is the ground truth; this pins that
-    /// the wrapper returns the value verbatim, not transformed).
+    /// An existing variable round-trips through the reader verbatim (the OS env is ground truth).
+    /// Reads a pre-existing var instead of mutating the global environment — `std::env::set_var`
+    /// is not thread-safe with the concurrent env reads other tests perform (Copilot #507).
     #[test]
-    fn a_set_env_var_reads_back_verbatim() {
-        // SAFETY note: this is `std::env::set_var`, not Rust `unsafe` — single-threaded test, no FFI.
-        std::env::set_var("MYCELIUM_STD_SYS_TEST_VAR", "floor-42");
-        assert_eq!(
-            get_env("MYCELIUM_STD_SYS_TEST_VAR"),
-            Some("floor-42".to_owned())
-        );
+    fn an_existing_env_var_reads_back_verbatim() {
+        let (key, value) = std::env::vars()
+            .next()
+            .expect("the test process always has at least one environment variable");
+        assert_eq!(get_env(&key), Some(value));
     }
 
     /// `args()` always contains at least the program name (arg 0).

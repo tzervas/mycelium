@@ -241,8 +241,8 @@ impl core::fmt::Display for EvalError {
                 Some(op) => write!(
                     f,
                     "host capability `{op}` not granted: the `wild` FFI floor (RFC-0028 §4.3) \
-                     dispatches through the prim registry, which registers no host op by default — \
-                     the `@std-sys` host must register `wild:{op}` to grant it (never silent — G2)"
+dispatches through the prim registry, which registers no host op by default — \
+the `@std-sys` host must register `wild:{op}` to grant it (never silent — G2)"
                 ),
                 None => write!(f, "unknown primitive: {p}"),
             },

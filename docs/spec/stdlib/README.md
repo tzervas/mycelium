@@ -93,7 +93,7 @@ history** — each spec's Status line is the authoritative current state. Cross-
 | `vsa` / `hdc` | [`vsa.md`](./vsa.md) | M-513 (#154) | RFC-0003/0009; M-130/240–242/260 | **Draft — landed** |
 | `diag` | [`diag.md`](./diag.md) | M-510 (#151) | RFC-0013; M-345 | **Draft — landed** |
 | `recover` | [`recover.md`](./recover.md) | M-520 (#156) | RFC-0014; M-352/353 | **Draft — landed** |
-| `runtime` / `colony` | [`runtime.md`](./runtime.md) | M-521 (#162) | RFC-0008; M-355–357 | **Accepted 2026-06-21** (v0 R1 surface; further constructs Phase-7-gated, §8-Q4) |
+| `runtime` / `colony` | [`runtime.md`](./runtime.md) | M-521 (#162) | RFC-0008; M-355–357 | **Draft — landed** |
 | `spore` | [`spore.md`](./spore.md) | M-522 (#163) | ADR-013; RFC-0003 §6; M-368 | **Draft — landed** |
 | `sys` (OS/FFI floor) | [`sys.md`](./sys.md) | M-541 | RFC-0016 §8-Q6; ADR-014 | **landed; Accepted 2026-06-21** |
 

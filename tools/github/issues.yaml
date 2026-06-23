@@ -4162,7 +4162,7 @@ issues:
   - id: M-724
     title: "M-724 — verify(ffi): FFI safety — ADR-014 unsafe-floor confinement for FFI surface, audited + just safety-check green"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:verification, area:execution, priority:P1, status:done]
+    labels: [phase:7, type:verification, area:execution, priority:P1, status:in-progress]
     depends_on: [M-720, M-721, M-722, M-723]
     epic: E14-1
     doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25, src:crates/mycelium-std-sys/src/lib.rs, src:crates/mycelium-mlir/src/jit.rs]
