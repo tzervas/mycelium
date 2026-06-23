@@ -1,0 +1,19 @@
+// nodule: std.result
+// @version: 0.1.0
+// @license: Apache-2.0
+// @authors: Tyler Zervas
+// @since: 2026-06-23
+// @updated: 2026-06-23
+// @summary: The first self-hosted generic stdlib nodule — Result<A,E> plus first-order combinators is_ok, is_err, unwrap_or. M-649. Guarantee: Declared (type-level contract; differential agreement Empirical). Never-silent (G2): unwrap_or takes a caller-supplied fallback — no panic, no sentinel. HOF: the higher-order combinators map/and_then/fold are specified as clearly-marked pseudocode in the companion result.pending-hof.md (finalized RFC-0024 surface: function type A -> B; a named fn as a value) — to be swapped into this nodule as executable code once the HOF capstone (static defunctionalization) lands and is pulled back down. Declared/deferred, not silent stubs (G2/VR-5).
+nodule std.result
+
+type Result<A, E> = Ok(A) | Err(E)
+
+fn is_ok<A, E>(r: Result<A, E>) -> Bool =
+  match r { Ok(_) => True, Err(_) => False }
+
+fn is_err<A, E>(r: Result<A, E>) -> Bool =
+  match r { Ok(_) => False, Err(_) => True }
+
+fn unwrap_or<A, E>(r: Result<A, E>, fallback: A) -> A =
+  match r { Ok(x) => x, Err(_) => fallback }

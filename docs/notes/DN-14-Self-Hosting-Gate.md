@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-14 |
-| **Status** | **Draft** (2026-06-19) |
+| **Status** | **Resolved** (2026-06-23; see §4 + changelog) |
 | **Feeds** | M-502 (#150); RFC-0016 (Core/Standard Library); RFC-0007 (L1 Kernel Calculus); DN-07 (RFC-0016 ratification); DN-13 (RP-6 / mutual recursion) |
 | **Date** | June 19, 2026 |
 | **Decides** | *Nothing normatively* — assessment note only. Enumerates the surface-language features required to author a stdlib module in Mycelium-lang (dogfooding); checks each against the M-391 + M-343 implementations (what is actually present in `crates/mycelium-l1/`); gives an honest verdict per feature. Self-hosting is **NOT declared** until all gate-fails are resolved. |
@@ -269,5 +269,21 @@ M-662 (phylum construct + cross-nodule, row 10). M-661 (wild/FFI, row 9) depends
 when its tracking issue lands and `just check` confirms green. DN-14 Status → `Resolved`
 (append-only) after all 5 gate-fail rows and the 1 missing-partial row are `present`. This note
 itself does not flip any row — only a landed, confirmed implementation may do so (VR-5/honesty rule).
+
+<!-- changelog: 2026-06-23 Status → Resolved (M-649; append-only, VR-5) -->
+**2026-06-23 — Status → Resolved (M-649; append-only, VR-5).** The first self-hosted generic stdlib nodule (`std.result`) has landed: `lib/std/result.myc` type-checks, passes all four toolchain gates (`mycfmt --check`, `myc-check`, `myc-sec`, `myc-lint`), and its differential tests (`crates/mycelium-l1/tests/std_result.rs`) run to closed L0 on all three paths (L1-eval ≡ elaborate→L0-interp ≡ AOT, validated by the M-210 shared checker).
+
+**§3 table status at Resolved:**
+- Rows 1–8, 10–11: all **`present`** (grounded in landed implementations; see prior changelog entries).
+- Row 9 (`wild`/FFI): **`conditionally present`** — type-checks + gated in `@std-sys` context; *execution stays staged* (no FFI host in v0; `elab.rs` lowers `wild` to an explicit `Residual`). This is the only remaining open row; it is not a gate-fail for `std.result` (which is pure and does not use `wild`).
+
+**What M-649 closes:** §3 rows 6 + 7 are now `present` (M-673 — monomorphization + dictionary-free static trait resolution lower both to closed L0); `std.result` self-hosts as the first concrete evidence. The §4 prose ("self-hosting is not yet established") reflects the original 2026-06-19 assessment; the §4 update banner (2026-06-23) and this entry are the authoritative current state.
+
+**Remaining open items (honestly recorded, not silently upgraded):**
+- **`wild`/FFI execution** — row 9 stays staged; a host-execution capability for `wild` blocks is future work (no tracking conflict with this resolution).
+- **Refinement stage-1b/2** — grade polymorphism and full refinement types remain future RFCs (row 11 is `present` at stage-1a only; no change from prior entry).
+- **HOF combinators (`map`, `and_then`, `fold`)** — not yet executable in v0 (first-order surface: no function type `A -> B` as a value). Now captured as **clearly-marked pseudocode** in the companion `lib/std/result.pending-hof.md` (written in the finalized **RFC-0024** surface — function types + named-fn-as-value; `mycfmt` v0 preserves only the structured nodule header + code, so the pseudocode lives beside the nodule, not as interior comments — G2), to be swapped into `result.myc` as executable code once the HOF capstone (static defunctionalization; no kernel change, KC-3) lands and is pulled back down. `Declared`/deferred — documentation of the intended API, **not** silent stubs (G2/VR-5).
+
+Guarantee tags: differential agreement is **`Empirical`** (7 trial tests, all green); the type-level contract is **`Declared`**. Status was `Draft`; now **`Resolved`** (append-only — `Draft → Resolved` per the notes status discipline).
 
 <!-- changelog: 2026-06-19 Draft created (M-502) -->

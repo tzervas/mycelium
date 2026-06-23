@@ -1,0 +1,17 @@
+[project]
+name        = "std"
+kind        = "phylum"
+version     = "0.1.0"
+license     = "Apache-2.0"
+authors     = ["Tyler Zervas"]
+since       = "2026-06-23"
+summary     = "Mycelium-language standard library (self-hosted); first nodule std.result, M-649."
+keywords    = ["stdlib", "self-hosting"]
+lang        = "mycelium-0"
+
+[surface]
+exports     = ["std.result"]
+
+[toolchain]
+format      = "mycfmt-0"
+lints       = "strict"
