@@ -1486,36 +1486,63 @@ def derive_subissue_edges(issues):
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Pure Project-v2 mapping/diff logic (drives --project; exercised by --self-test)
 # ─────────────────────────────────────────────────────────────────────────────────────────────
-def label_to_field_values(labels, field_label_map):
-    """Map an item's labels to {field_name: option_name} per project.json, with unmapped flags.
+def label_to_field_values(labels, field_label_map, field_option_order=None):
+    """Map an item's labels to {field_name: option_name} per project.json.
 
-    Pure: resolves prefix rules (phase:/area:/priority:) and the exact status map to option
-    *names*; the engine later resolves names to option ids and writes only on drift. Unmapped
-    status:* labels are FLAGGED, never guessed (G2).
+    Returns ``(values, flags, infos)``:
+      * ``values`` — {field: option_name} to set (names; the engine resolves names→option ids and
+        writes only on drift).
+      * ``flags``  — never-silent problems that leave a field UNSET (a genuine conflict / unmapped
+        label); the caller prints them and the value is never guessed past (G2).
+      * ``infos``  — informational notes for a value that WAS set under a documented rule (e.g. a
+        multi-area item anchored to its primary area, with the full span recorded).
+
+    Pure: no I/O — exercised offline by ``--self-test``.
+
+    Multi-value handling (M-676): a ``label_prefix`` rule may carry ``"multi": "primary"``. With it,
+    an item bearing several ``<prefix>*`` labels is ANCHORED to a deterministic *primary* — the
+    label whose value is earliest in the field's declared option order
+    (``field_option_order[field]``, taken from project.json's ``fields``), with an alphabetical
+    tie-break for any value outside the declared order — and the full span is recorded as an
+    ``info`` (never a silent skip, never a "not set" punt). This mirrors the primary-task milestone
+    anchor (resolve_milestone_span / #353): pick a primary, record the span, refuse nothing.
+    WITHOUT ``multi`` (the default), a multi-hit field stays a never-set ``flag`` — correct for
+    fields like Phase/Priority where two values is a real conflict, not legitimate multi-membership.
     """
     labels = set(labels)
-    values, flags = {}, []
+    field_option_order = field_option_order or {}
+    values, flags, infos = {}, [], []
     for field, rule in field_label_map.items():
         if field.startswith("_"):
             continue
         if rule.get("from") == "label_prefix":
             prefix = rule["prefix"]
-            hits = [lb[len(prefix) :] for lb in labels if lb.startswith(prefix)]
+            hits = sorted(lb[len(prefix) :] for lb in labels if lb.startswith(prefix))
             if len(hits) == 1:
                 values[field] = rule["template"].replace("{value}", hits[0])
             elif len(hits) > 1:
-                flags.append(
-                    f"{field}: multiple {prefix}* labels {sorted(hits)} — not set"
-                )
+                if rule.get("multi") == "primary":
+                    order = field_option_order.get(field, [])
+                    # primary = earliest in the declared option order; a value outside the order
+                    # sorts last, then alphabetically — fully deterministic, no tie left to chance.
+                    primary = min(
+                        hits,
+                        key=lambda h: (order.index(h) if h in order else len(order), h),
+                    )
+                    values[field] = rule["template"].replace("{value}", primary)
+                    infos.append(
+                        f"{field}: multiple {prefix}* labels {hits} -> anchored to primary "
+                        f"'{primary}' (declared option order); span recorded"
+                    )
+                else:
+                    flags.append(f"{field}: multiple {prefix}* labels {hits} — not set")
         elif rule.get("from") == "label_exact":
-            mapped = [rule["map"][lb] for lb in labels if lb in rule["map"]]
+            mapped = sorted(rule["map"][lb] for lb in labels if lb in rule["map"])
             if len(mapped) == 1:
                 values[field] = mapped[0]
             elif len(mapped) > 1:
-                flags.append(
-                    f"{field}: conflicting status labels {sorted(mapped)} — not set"
-                )
-    return values, flags
+                flags.append(f"{field}: conflicting status labels {mapped} — not set")
+    return values, flags, infos
 
 
 def plan_option_reconcile(desired_options, actual_option_names):
@@ -2801,13 +2828,24 @@ def reconcile_project(repo, manifest, contents, *, dry_run):
     # 3) Items + field values. Items are read live even under --dry-run so the preview reports
     # real adds AND real field-value drift on items that already exist.
     field_label_map = manifest["field_label_map"]
+    # Declared option order per field (project.json `fields`) — drives the M-676 primary-area
+    # anchor: which area:* wins when an item carries several. Built once, passed in (keeps
+    # label_to_field_values pure).
+    field_option_order = {
+        f["name"]: [o["name"] for o in f.get("options", [])]
+        for f in manifest.get("fields", [])
+    }
     existing = project_items(pid)
     added = set_count = synced = 0
     for rec in contents:
         number, node_id, labels = rec["number"], rec.get("node_id"), rec["labels"]
-        values, flags = label_to_field_values(labels, field_label_map)
+        values, flags, infos = label_to_field_values(
+            labels, field_label_map, field_option_order
+        )
         for flag in flags:
             print(f"   ! #{number}: {flag}", file=sys.stderr)
+        for info in infos:
+            print(f"   i #{number}: {info}")
 
         if number not in existing:
             if dry_run:
@@ -3224,7 +3262,7 @@ def self_test():
             "map": {"status:blocked": "Blocked", "status:done": "Done"},
         },
     }
-    vals, vflags = label_to_field_values(
+    vals, vflags, vinfos = label_to_field_values(
         {"phase:8", "area:toolchain", "priority:P3", "status:done"}, field_map
     )
     assert vals == {
@@ -3233,10 +3271,74 @@ def self_test():
         "Priority": "P3",
         "Status": "Done",
     }, vals
-    assert vflags == []
+    assert vflags == [] and vinfos == [], (vflags, vinfos)
     # status:needs-design has no Status option → unmapped (no Status key), not invented.
-    vals2, _ = label_to_field_values({"phase:0", "status:needs-design"}, field_map)
+    vals2, _, _ = label_to_field_values({"phase:0", "status:needs-design"}, field_map)
     assert vals2 == {"Phase": "Phase 0"}, vals2
+
+    # ── M-676: multi-value Area → deterministic primary anchor (never a "not set" punt) ──────────
+    area_order = {
+        "Area": [
+            "core-ir",
+            "swap",
+            "vsa",
+            "execution",
+            "numerics",
+            "selection",
+            "toolchain",
+            "project",
+            "language",
+            "stdlib",
+            "release",
+            "spec",
+        ]
+    }
+    field_map_multi = dict(field_map)
+    field_map_multi["Area"] = {
+        "from": "label_prefix",
+        "prefix": "area:",
+        "template": "{value}",
+        "multi": "primary",
+    }
+    # {language, toolchain}: 'toolchain' precedes 'language' in the declared order → it is primary.
+    mvals, mflags, minfos = label_to_field_values(
+        {"area:language", "area:toolchain", "phase:5"}, field_map_multi, area_order
+    )
+    assert mvals["Area"] == "toolchain" and mvals["Phase"] == "Phase 5", mvals
+    assert mflags == [] and any(
+        "anchored to primary 'toolchain'" in i and "'language'" in i for i in minfos
+    ), (mflags, minfos)
+    # WITHOUT the multi policy (default rule): the same labels leave Area UNSET + flagged (guard the
+    # conflict-flag path that Phase/Priority still rely on; no info emitted).
+    dvals, dflags, dinfos = label_to_field_values(
+        {"area:language", "area:toolchain"}, field_map, area_order
+    )
+    assert "Area" not in dvals and dinfos == [], (dvals, dinfos)
+    assert any("multiple area:* labels" in f and "not set" in f for f in dflags), dflags
+    # A single area:* label is unaffected by the policy (still set, no info, no flag).
+    svals, sflags, sinfos = label_to_field_values(
+        {"area:swap"}, field_map_multi, area_order
+    )
+    assert svals == {"Area": "swap"} and sflags == [] and sinfos == [], (
+        svals,
+        sflags,
+        sinfos,
+    )
+    # Values outside the declared order fall back to a stable alphabetical tie-break (never crash).
+    uvals, _, uinfos = label_to_field_values(
+        {"area:zzz", "area:aaa"}, field_map_multi, {"Area": []}
+    )
+    assert uvals["Area"] == "aaa" and any(
+        "anchored to primary 'aaa'" in i for i in uinfos
+    ), (
+        uvals,
+        uinfos,
+    )
+    # The shipped project.json Area rule actually carries multi:primary (config ↔ engine wired).
+    _proj = json.loads((HERE / "project.json").read_text(encoding="utf-8"))
+    assert _proj["field_label_map"]["Area"].get("multi") == "primary", (
+        "project.json Area rule must set multi:primary for M-676"
+    )
 
     desired_fields = [
         {
