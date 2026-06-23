@@ -118,13 +118,15 @@ correctness is always measured against the interpreter (NFR-7).
 The seven Draft open questions, resolved against `crates/mycelium-mlir/` (checked 2026-06-23):
 
 1. **MLIR binding status — RESOLVED.** ADR-019 (libMLIR toolchain) is **Enacted** (2026-06-23);
-   `scripts/setup-mlir.sh` provisions it. The real dialect lowering (`dialect/native.rs`, feature
-   `mlir-dialect`, M-601) is implemented for the element-wise fragment and probes the toolchain at
-   runtime, skipping gracefully when absent (this environment has `clang`/`llc` but not
-   `mlir-opt`/`mlir-translate`, so the MLIR-dialect path skips and the direct-LLVM path is active —
-   tests stay green either way). M-348 provisioning is therefore resolved; the binding is *present
-   where installed, gated-but-graceful otherwise*. M-725's residual scope is **coverage widening**,
-   not unblocking.
+   `scripts/setup-mlir.sh` provisions the version-matched tools (`mlir-opt-<major>`,
+   `mlir-translate-<major>`) and the repo container ships them. The real dialect lowering
+   (`dialect/native.rs`, feature `mlir-dialect`, M-601) is implemented for the element-wise fragment
+   and **probes the toolchain at runtime**, returning a graceful `DialectError::ToolchainMissing`
+   (the caller skips, never fails) on any box where the tools are absent — so `cargo test
+   --features mlir-dialect` is green with or without libMLIR, and the direct-LLVM/interp paths carry
+   the rest. M-348 provisioning is therefore resolved (setup via `setup-mlir.sh`; ADR-019); the
+   binding is *present where provisioned, gated-but-graceful otherwise*. M-725's residual scope is
+   **coverage widening**, not unblocking.
 2. **Optimization-pass EXPLAIN model — RESOLVED (§7.2).** Each pass emits a **transform log**: an
    ordered, reified record of `(pass, rule, site, before → after, reason)` entries, queryable via
    `EXPLAIN`, mirroring how M-673 reifies `MonoSelections`. No per-node mutation happens without a
