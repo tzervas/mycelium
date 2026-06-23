@@ -4311,7 +4311,7 @@ issues:
   - id: E15-1
     title: "E15-1 (epic) -- Native AOT maturity, optimization, and acceleration"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:epic, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:epic, area:execution, priority:P2, status:in-progress]
     depends_on: [E6-1]
     epic: E15
     doc_refs:
@@ -4319,14 +4319,23 @@ issues:
       - corpus:RFC-0004
       - corpus:DN-25
     body: |
+      DESIGN GATE CLEARED (2026-06-23): RFC-0029 reached Accepted, with its open questions
+      resolved against the live crates/mycelium-mlir/. Honest re-scope: E6-1 is `done`, so the
+      JIT (M-340 jit.rs), BitNet packed-ternary accel (M-360 bitnet.rs), real arith/func->LLVM
+      MLIR-dialect lowering (M-601 dialect/native.rs), and the three-way native differential
+      (M-602 threeway_differential.rs) ALREADY landed; ADR-019 is Enacted; ADR-009 already
+      sanctions interpreter/JIT for dynamic VSA. The one genuinely-new mechanism is M-726
+      (optimization passes — no src/passes/ exists yet); M-725/727/728/729 are coverage-widening
+      / formalization / capability-gating / differential-unification (see RFC-0029 §5/§7).
+
       Mature the native AOT path (today: direct-LLVM kernel subset + mlir-dialect feature
       skeleton in crates/mycelium-mlir/) into a real optimizing backend with performance
       suitable for a usable 1.0. The interpreter stays the trusted base; the native path is
       the performance path. This epic delivers: full libMLIR lowering (subsumes E6-1 remaining),
       EXPLAIN-able never-silent optimization passes (inlining/CSE/DCE), JIT for dynamic/VSA
-      workloads (ADR-009 deferred to enacted), BitNet packed-ternary acceleration (FR-C3), and
-      a mutant-witnessed three-way differential (interp == AOT == JIT). Every transform is
-      EXPLAIN-able per ADR-006/G2 -- no black-box optimization is permitted.
+      workloads (ADR-009 already sanctions it; formalized never-silent), BitNet packed-ternary
+      acceleration (FR-C3), and a mutant-witnessed three-way differential (interp == AOT == JIT).
+      Every transform is EXPLAIN-able per ADR-006/G2 -- no black-box optimization is permitted.
 
       User stories:
       - As a language user, I want programs compiled AOT to produce the same results as the
@@ -4377,7 +4386,7 @@ issues:
   - id: M-725
     title: "full libMLIR integration: ternary-dialect to MLIR to LLVM lowering"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
     epic: E15-1
     doc_refs:
       - corpus:RFC-0029
@@ -4418,7 +4427,7 @@ issues:
   - id: M-726
     title: "optimization passes: inlining/CSE/DCE as EXPLAIN-able never-silent transforms"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
     epic: E15-1
     doc_refs:
       - corpus:RFC-0029
@@ -4456,7 +4465,7 @@ issues:
   - id: M-727
     title: "JIT for dynamic / VSA workloads (ADR-009 deferred to enacted)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
     epic: E15-1
     doc_refs:
       - corpus:RFC-0029
@@ -4492,7 +4501,7 @@ issues:
   - id: M-728
     title: "BitNet-class packed-ternary acceleration (FR-C3)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
     epic: E15-1
     doc_refs:
       - corpus:RFC-0029
@@ -4529,7 +4538,7 @@ issues:
   - id: M-729
     title: "codegen differential durability: interp == AOT == JIT three-way agreement"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:verification, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:verification, area:execution, priority:P2, status:ready]
     epic: E15-1
     doc_refs:
       - corpus:RFC-0029
