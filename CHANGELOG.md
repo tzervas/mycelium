@@ -15,14 +15,13 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 - **M-721 — host dispatch + three-way differential (`Empirical`).** The L1 surface evaluator (`eval.rs` `eval_wild`) dispatches a `wild:` op through the prim registry; the L0 interpreter and the AOT env-machine already dispatch `Op` through the *same* registry, so a deterministic `wild`-backed op now agrees **L1-eval ≡ L0-interp ≡ AOT** (new `wild_ffi_execution_agrees_three_ways` differential, validated by the shared M-210 checker). The default registry grants **no** `wild:` op, so an ungranted host op is an explicit, never-silent `UnknownPrim` whose message names the ungranted capability (G2; `crates/mycelium-interp`). Real syscalls stay `Declared`; the differentially-covered op is `Empirical` (VR-5).
 - **M-722 — `mycelium-std-sys` gains `io` + `sys` modules** (`Declared`): standard-stream I/O (stdin/stdout/stderr, never-silent `write_all`) and process/env (`exit`, `get_env` → explicit `Option`, `args`). The crate stays a pure-std leaf (`#![forbid(unsafe_code)]`, no workspace deps); `fs`/`rand`/`time` already provided real floors. Each op carries a guarantee-matrix doc row (RFC-0016 §4.5). The host-registration *bridge* wiring these into the `wild:` dispatch is specified (RFC-0028 §4.3/§4.5) and proven via the mock differential — the real-op wiring (a host layer depending on both `mycelium-interp` and `std-sys`) is the next incremental step (honestly staged; M-722/M-723 stay `in-progress`, VR-5).
 - **M-724 — `just safety-check` extended to a Mycelium-level `wild`-site audit** (`scripts/checks/safety.sh`): in addition to the Rust `// SAFETY:` adjacency gate (M-681), every `wild` block in a shippable `.myc` nodule must be in a `@std-sys` nodule, inside a fn declaring `!{ffi}`, and carry a `// SAFETY:` comment — a gate, not a lint (G2). The grammar-conformance corpus is excluded (parser fixtures, validated by checker tests). Forward-looking (no shippable `.myc` `wild` sites yet); green.
+
 ### Added (2026-06-23: E12-1 — runtime & concurrency execution maturity, M-709/M-711/M-713)
 
 - **Real OS-thread scheduler (`mycelium-std-runtime::scheduler`; M-709).** The v0 R1 surface ran tasks
   cooperatively on the calling thread; the new `Scheduler` runs independent tasks across a fixed pool
-<<<<<<< HEAD
   of OS worker threads (`std::thread::scope` — the crate stays `#![forbid(unsafe_code)]`, reusing
   `mycelium-interp` for supervision primitives per DRY) with **fair FIFO dispatch** and **demand-signalled, bounded backpressure**: the ready
->>>>>>> origin/integration
   queue holds at most `capacity` pending jobs *by construction* (enqueue only while `len < capacity`),
   never an unbounded silent buffer (G2 / RFC-0008 §4.3). `run_indexed` returns outputs in spawn order,
   so the result is directly comparable to the sequential reference — the **RT2 sequentialization
