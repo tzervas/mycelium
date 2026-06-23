@@ -176,7 +176,11 @@ impl PrimTable {
             intrinsic: GuaranteeStrength::Exact,
         };
         // RFC-0032 D1 (M-747): the reduce-to-`Bool` comparison prims are width-*collapsing* — two
-        // equal-width operands of either paradigm (`Any`) reduce to a `Binary{1}` truth value.
+        // equal-width operands of either paradigm reduce to a `Binary{1}` truth value. The operands
+        // are typed `Any` because each may be Binary OR Ternary; this does NOT permit a *cross*-
+        // paradigm comparison — the same-paradigm + equal-width constraint is enforced (never-silent,
+        // G2) by the interpreter prim (`prims.rs::cmp_repr_operands`) and the L1 checker branch
+        // (`checkty.rs`), since the per-operand `Any` paradigm model cannot express "both agree".
         let cmp = || PrimDecl {
             sig: PrimSig {
                 operands: vec![Any, Any],

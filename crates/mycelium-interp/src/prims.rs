@@ -65,8 +65,10 @@ impl PrimRegistry {
     }
 
     /// The default registry: the exact built-ins — elementwise logical (`core.id`,
-    /// `bit.not/and/or/xor`) and fixed-width balanced-ternary arithmetic (`trit.neg/add/sub/mul`,
-    /// M-111).
+    /// `bit.not/and/or/xor`), fixed-width balanced-ternary arithmetic (`trit.neg/add/sub/mul`,
+    /// M-111), the reduce-to-`Bool` comparison prims (`cmp.eq`/`cmp.lt` → `Binary{1}`, RFC-0032 D1,
+    /// M-747), and never-silent fixed-width binary arithmetic (`bit.add`/`bit.sub`, RFC-0032 D2,
+    /// M-748).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();

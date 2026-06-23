@@ -253,14 +253,32 @@ fn add_bin_overflow_refuses_on_every_path() {
     );
 }
 
-/// `sub_bin` underflow (`0 - 1` at `Binary{8}`, a negative with no unsigned form) refuses likewise.
+/// `sub_bin` underflow (`0 - 1` at `Binary{8}`, a negative with no unsigned form) refuses on **all
+/// three** paths — never a silent wrap to `255` — exactly like the overflow test above.
 #[test]
-fn sub_bin_underflow_refuses() {
+fn sub_bin_underflow_refuses_on_every_path() {
     let src = "nodule d\nfn main() -> Binary{8} = sub_bin(0b0000_0000, 0b0000_0001)";
     let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = mycelium_cert::BinaryTernarySwapEngine;
+
     assert!(
         Evaluator::new(&env).call("main", vec![]).is_err(),
         "L1-eval must refuse the underflow (never a silent wrap to 255)"
+    );
+    let node = elaborate(&env, "main").expect("in fragment");
+    assert!(
+        interp.eval(&node).is_err(),
+        "L0-interp must refuse the underflow"
+    );
+    assert!(
+        mycelium_mlir::run(&node, &prims, &engine).is_err(),
+        "AOT must refuse the underflow"
     );
 }
 
