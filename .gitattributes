@@ -1,11 +1,18 @@
 # Merge drivers for append-only files.
-# Union merge takes all lines from all branches — safe for files that only ever
-# grow (CHANGELOG, idmap.tsv, issues.yaml).  Prevents spurious conflicts during
-# octopus and swarm merges without requiring a custom driver script.
+# Union merge takes all lines from all branches — safe for PROSE that only ever grows
+# (CHANGELOG entries, per-doc changelog footers). Prevents spurious conflicts during octopus
+# and swarm merges without requiring a custom driver script.
+#
+# NOT union-merged (deliberately): tools/github/idmap.tsv and tools/github/issues.yaml are
+# STRUCTURED, orchestrator-owned files with a hard uniqueness invariant (exactly one row/entry
+# per task-id). They are never edited by parallel agents (the orchestrator owns them — CLAUDE.md
+# §Swarm), so union-merge gives no benefit and actively HARMS: across a squash-divergent or
+# cross-branch merge it silently appends BOTH sides, producing duplicate task-id rows / YAML keys
+# that are syntactically valid but semantically broken (CLAUDE.md swarm mitigation #2). They use
+# the default 3-way merge instead, so any genuine collision surfaces as an explicit conflict to
+# reconcile — never a silent duplicate (G2).
 
 CHANGELOG.md            merge=union
-tools/github/idmap.tsv  merge=union
-tools/github/issues.yaml merge=union
 docs/notes/*.md          merge=union
 docs/rfcs/*.md           merge=union
 docs/adr/*.md            merge=union
