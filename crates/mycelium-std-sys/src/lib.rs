@@ -36,10 +36,14 @@
 //! - [`rand`] — platform entropy floor (`fill_bytes`).
 //! - [`fs`] — filesystem syscall floor (thin `std::fs` wrappers).
 //! - [`time`] — OS clock floor (wall + monotonic + sleep).
+//! - [`io`] — standard-stream I/O floor (stdin/stdout/stderr; RFC-0028 §4.5, M-722).
+//! - [`sys`] — process / environment floor (exit, env vars, args; RFC-0028 §4.5, M-722).
 
 #![forbid(unsafe_code)]
 
 pub mod fs;
+pub mod io;
 pub mod math;
 pub mod rand;
+pub mod sys;
 pub mod time;

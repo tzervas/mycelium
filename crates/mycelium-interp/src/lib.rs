@@ -234,7 +234,18 @@ impl core::fmt::Display for EvalError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             EvalError::FreeVariable(x) => write!(f, "free variable: {x}"),
-            EvalError::UnknownPrim(p) => write!(f, "unknown primitive: {p}"),
+            // A `wild:`-namespaced key is a host/FFI operation (RFC-0028 §4.3): the registry is the
+            // capability handle, and the default registry grants none — so an unresolved `wild:` key
+            // is an *ungranted host capability*, not a typo. Report it as such (never silent — G2).
+            EvalError::UnknownPrim(p) => match p.strip_prefix("wild:") {
+                Some(op) => write!(
+                    f,
+                    "host capability `{op}` not granted: the `wild` FFI floor (RFC-0028 §4.3) \
+                     dispatches through the prim registry, which registers no host op by default — \
+                     the `@std-sys` host must register `wild:{op}` to grant it (never silent — G2)"
+                ),
+                None => write!(f, "unknown primitive: {p}"),
+            },
             EvalError::PrimType { prim, why } => write!(f, "type error in {prim}: {why}"),
             EvalError::ApproxCompositionUnsupported { prim } => write!(
                 f,
