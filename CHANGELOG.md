@@ -51,10 +51,9 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   sign-off — not advanced unilaterally. E12-1 remains in progress; RFC-0008 stays `Accepted` (the
   machinery is implemented Rust-first; the spec is not silently moved). Verified with `cargo fmt`,
   `cargo clippy -p mycelium-std-runtime --all-targets -D warnings`, and `cargo test -p
-  mycelium-std-runtime` (40 tests green) — this change's full scope is clean. (The two remaining
-  `just check` findings are **pre-existing and unrelated** to this PR — a codespell typo + Python
-  formatting in `tools/github/gh-issues-dedup.py`, and a codespell typo in RFC-0031 — both in files
-  this PR does not touch.) (E12-1; M-709/M-711/M-713; M-710/M-712 deferred)
+  mycelium-std-runtime` (40 tests green). The full `just check` passes except `cargo audit`, which
+  cannot fetch the RustSec advisory database in the offline build sandbox (a network limitation, not
+  an advisory finding). (E12-1; M-709/M-711/M-713; M-710/M-712 deferred)
 ### Changed (2026-06-23: ADR-022 track T1 status refreshed — core/kernel gate-met, tag-ready; kickoff c10)
 
 - **ADR-022 §4/§5 track-T1 status refreshed: `A1·A2·A3·A4·A5 ✅ · B1·B2 ✅` — GATE-MET / TAG-READY.** The three rows that read "⏳ open" at the 2026-06-23 supersession (A2 Medium ledger, A3 WS8 durability, A4 supply-chain) were in fact closed by the original ADR-021 kernel-gate wave (2026-06-21), and the tooling remains present: **A2** — the Medium-findings ledger is 25/25 Fixed, 0 deferred (`docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md`; M-653/#306); **A3** — `cargo-mutants` 0 un-triaged survivors (`.cargo/mutants.toml`) + LCG→`proptest` migration + `cargo-fuzz` targets/smoke CI (`fuzz/`; M-654/#313); **A4** — `cargo deny`/`cargo audit` wired **non-silently** into `just check` (`deny.toml`, `scripts/checks/`; M-652/#303). **Honesty (VR-5): this is a status report moving forward on a checked prior landing, not a fresh gate run** — the maintainer ratified T1 as satisfied (refresh-status scope), no re-verification was performed this session.
