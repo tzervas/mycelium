@@ -552,6 +552,10 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
         Ty::Data(n, args) if args.is_empty() => FieldSpec::Data(n.clone()),
         Ty::Data(_, _) | Ty::Var(_) => return None,
         Ty::Substrate(_) => return None,
+        // RFC-0024 §4 / M-687: function-typed fields are not yet lowered to kernel form in
+        // stage-1 elaboration (defunctionalization is M-687). A `Ty::Fn` in a field position
+        // returns `None` (staged residual — never a silent, half-elaborated artifact; G2/VR-5).
+        Ty::Fn(_, _) => return None,
     })
 }
 
