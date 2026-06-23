@@ -6684,7 +6684,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::lexer",
       "file": "crates/mycelium-l1/src/lexer.rs",
-      "line": 63,
+      "line": 70,
       "summary": "Tokenize `src` into a [`Spanned`] stream terminated by [`Tok::Eof`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6695,7 +6695,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::lexer",
       "file": "crates/mycelium-l1/src/lexer.rs",
-      "line": 77,
+      "line": 84,
       "summary": "Tokenize `src`, returning the [`Spanned`] token stream **and** an ordered [`Vec<Comment>`]",
       "guarantee_tag": null,
       "corpus_refs": []
