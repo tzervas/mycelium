@@ -508,18 +508,13 @@ impl<'e> Evaluator<'e> {
                        resolution pass strips it (RFC-0012 §4.4)"
                     .to_owned(),
             }),
-            // A `wild` block (the audited FFI floor — M-661) that type-checked (so it was in a
-            // `@std-sys` nodule with `!{ffi}` declared) still cannot **run**: there is no FFI host in
-            // v0, so its execution is staged exactly as in the elaborator (an explicit refusal, never
-            // a fabricated value — G2). The body is the trusted/opaque escape; the evaluator does not
-            // synthesize one.
-            Expr::Wild(_) => Err(L1Error::Unsupported {
-                site: site.to_owned(),
-                what: "wild/FFI execution staged — no FFI host in v0 (M-661; RFC-0016 §8-Q6): a \
-                       `wild` block type-checks + gates (`@std-sys` context, LR-9) but does not run \
-                       yet — running it is a future capability"
-                    .to_owned(),
-            }),
+            // A `wild` block (the audited FFI floor — M-661/M-721) executes by dispatching its
+            // host-call form through the prim registry under the reserved `wild:` namespace
+            // (RFC-0028 §4.3) — the capability handle. The default registry grants no `wild:` op, so
+            // an ungranted host op is an explicit, never-silent refusal (G2). This mirrors the
+            // elaborator's `wild → Op{wild:…}` lowering, so the L1 surface evaluator and the
+            // L0/AOT paths agree on a `wild`-backed operation (the three-way differential).
+            Expr::Wild(body) => self.eval_wild(fuel, depth, site, scope, body),
             Expr::Spore(_) => Err(L1Error::Unsupported {
                 site: site.to_owned(),
                 what: "`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)"
@@ -722,6 +717,64 @@ impl<'e> Evaluator<'e> {
                 L1Value::Data { .. } => Ok(false),
             },
         }
+    }
+
+    /// Execute a `wild { name(args…) }` block — the audited FFI floor (M-661/M-721; RFC-0028 §4.3).
+    /// The host operation is resolved through the prim registry under its reserved `wild:<name>` key
+    /// (the capability handle, §4.3); the registry registers no `wild:` op by default, so an
+    /// ungranted host op is an explicit [`KernelError::UnknownPrim`] (never silent — G2). The body
+    /// is the trusted/opaque escape (M-661): only its *shape* is interpreted (a host-call form
+    /// `name(args…)` or a bare `name`); any other shape is an explicit refusal. Mirrors the
+    /// elaborator's `wild → Op{wild:…}` lowering so this surface path and the L0/AOT paths agree
+    /// (the three-way differential).
+    fn eval_wild(
+        &self,
+        fuel: &mut u64,
+        depth: u32,
+        site: &str,
+        scope: &mut Vec<(String, L1Value)>,
+        body: &Expr,
+    ) -> Result<L1Value, L1Error> {
+        let (name, args): (&str, &[Expr]) =
+            match body {
+                Expr::App { head, args } => match head.as_ref() {
+                    Expr::Path(p) if p.0.len() == 1 => (p.0[0].as_str(), args.as_slice()),
+                    _ => return Err(L1Error::Unsupported {
+                        site: site.to_owned(),
+                        what: "a v0 `wild` block body must be a host-call form `name(args…)` with \
+                               a single, undotted host-operation name (RFC-0028 §4.2)"
+                            .to_owned(),
+                    }),
+                },
+                Expr::Path(p) if p.0.len() == 1 => (p.0[0].as_str(), &[]),
+                _ => return Err(L1Error::Unsupported {
+                    site: site.to_owned(),
+                    what:
+                        "a v0 `wild` block body must be a host-call form `name(args…)` or a bare \
+                           `name` (RFC-0028 §4.2)"
+                            .to_owned(),
+                }),
+            };
+        let key = format!("wild:{name}");
+        // CBV: the host-call arguments evaluate left-to-right before dispatch.
+        let mut argv = Vec::with_capacity(args.len());
+        for a in args {
+            argv.push(self.eval(fuel, depth, site, scope, a)?);
+        }
+        let vals: Vec<&Value> = argv
+            .iter()
+            .map(|v| {
+                v.as_repr().ok_or_else(|| L1Error::Stuck {
+                    site: site.to_owned(),
+                    why: format!("`wild` host op `{name}` applied to a data value (RFC-0028 §4.4)"),
+                })
+            })
+            .collect::<Result<_, _>>()?;
+        let f = self
+            .prims
+            .get(&key)
+            .ok_or_else(|| L1Error::Kernel(KernelError::UnknownPrim(key.clone())))?;
+        Ok(L1Value::Repr(f(&key, &vals)?))
     }
 
     /// First-order application: user functions, saturated constructors (W6), and prims — split
@@ -1165,9 +1218,12 @@ mod tests {
     }
 
     #[test]
-    fn wild_and_unknown_names_are_explicit_refusals() {
-        // `wild` never reaches evaluation through the checker; drive the evaluator directly on an
-        // unchecked nodule to confirm the refusal is the evaluator's own, not just the checker's.
+    fn an_ungranted_wild_host_op_is_an_explicit_refusal() {
+        // M-721: a `wild` host op now *dispatches* (M-720 lowering), but the default registry grants
+        // no `wild:` op (RFC-0028 §4.3 — the capability handle), so running `wild { foreign(…) }`
+        // without the host capability is an explicit `Kernel(UnknownPrim)` refusal — never silent
+        // (G2). Drive the evaluator directly on an unchecked nodule (the checker would also gate the
+        // `@std-sys` context) to confirm the refusal is the evaluator's own.
         let nodule =
             parse("nodule d\nfn main() -> Binary{8} = wild { foreign(0b0000_0001) }").unwrap();
         let env = Env {
@@ -1186,7 +1242,10 @@ mod tests {
             impls: std::collections::BTreeMap::new(),
         };
         let err = Evaluator::new(&env).call("main", vec![]).unwrap_err();
-        assert!(matches!(err, L1Error::Unsupported { .. }), "{err:?}");
+        assert!(
+            matches!(&err, L1Error::Kernel(KernelError::UnknownPrim(p)) if p == "wild:foreign"),
+            "an ungranted wild host op must be an explicit UnknownPrim refusal; got: {err:?}"
+        );
     }
 
     // --- M-642 additive ergonomics: EvaluatorOpts / with_opts -----------------------------------

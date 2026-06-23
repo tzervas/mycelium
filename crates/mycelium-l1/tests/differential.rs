@@ -1184,3 +1184,150 @@ fn the_hof_differential_distinguishes_different_named_fn_arguments() {
         "map with not_val vs id_val must yield different L0 values (the HOF differential discriminates)"
     );
 }
+
+// --- M-720/M-721: the `wild`/FFI execution floor, three-way differential ------------------------
+//
+// RFC-0028 §4.2/§4.3: a `wild { name(args…) }` block in a `@std-sys` nodule lowers to a host-dispatch
+// `Op{prim:"wild:name"}` (M-720, **no new Core-IR node** — KC-3) and *executes* by dispatching through
+// the prim registry — the capability handle. Because all three paths thread the SAME registry, a
+// `wild`-backed op resolves identically on L1-eval, L0-interp, and AOT — so the three-way differential
+// extends to it (closing DN-14 row 9's staged-execution gap for a deterministic host op, `Empirical`).
+
+/// A deterministic mock host op for the `wild`/FFI differential (M-721): `wild:echo` returns its single
+/// argument unchanged. It is *deterministic* (unlike a real syscall), so the three paths can be asserted
+/// equal — exactly the recorded `Empirical` basis for the `wild` dispatch mechanism (RFC-0028 §4.6).
+/// Real syscall host ops (entropy/clock/io) stay `Declared`: non-deterministic, so not coverable by an
+/// equality differential.
+fn wild_echo(_prim: &str, args: &[&Value]) -> Result<Value, mycelium_interp::EvalError> {
+    match args {
+        [v] => Ok((*v).clone()),
+        _ => Err(mycelium_interp::EvalError::PrimType {
+            prim: "wild:echo".to_owned(),
+            why: "the test host op `echo` expects exactly one argument".to_owned(),
+        }),
+    }
+}
+
+/// The trusted built-ins **plus** the `wild:echo` host op registered — a host that *grants* the `echo`
+/// capability (RFC-0028 §4.3). The default `with_builtins()` registry grants no `wild:` op.
+fn host_registry() -> PrimRegistry {
+    let mut prims = PrimRegistry::with_builtins();
+    prims.register("wild:echo", wild_echo);
+    prims
+}
+
+/// **M-720/M-721 — the `wild`/FFI execution floor, three-way.** A `wild` block in a `@std-sys` nodule
+/// lowers to `Op{prim:"wild:echo"}` (no new Core-IR node, KC-3) and *executes* by dispatching through
+/// the prim registry (the capability handle, §4.3), so L1-eval ≡ elaborate→L0-interp ≡ AOT agree on the
+/// `wild`-backed value — the recorded `Empirical` basis closing DN-14 row 9's staged-execution gap.
+#[test]
+fn wild_ffi_execution_agrees_three_ways() {
+    let prims = host_registry();
+    let engine = BinaryTernarySwapEngine;
+    let interp = Interpreter::new(host_registry(), Box::new(BinaryTernarySwapEngine));
+
+    let src = "nodule std.sys.x @std-sys\n\
+               fn main() -> Binary{8} !{ffi} = wild { echo(0b1011_0010) }";
+    let env = check_nodule(&parse(src).expect("parses")).expect("@std-sys wild checks");
+
+    // M-720: the wild block elaborates to a host-dispatch Op (no Residual), in the `wild:` namespace.
+    let node = elaborate(&env, "main").expect("wild elaborates to a host-dispatch Op (M-720)");
+    assert!(
+        matches!(&node, mycelium_core::Node::Op { prim, .. } if prim == "wild:echo"),
+        "wild must lower to Op{{prim:\"wild:echo\"}} — no new Core-IR node (KC-3); got {node:?}"
+    );
+
+    // Path 1: L1-eval, with the host registry injected (the capability granted).
+    let l1 = Evaluator::new(&env)
+        .with_engines(host_registry(), Box::new(BinaryTernarySwapEngine))
+        .call("main", vec![])
+        .expect("L1-eval runs the wild host op");
+    let l1 = l1.as_repr().expect("a repr result").clone();
+
+    // Path 2: L0-interp. Path 3: AOT. Both dispatch the same `wild:echo` through the shared registry.
+    let l0 = interp.eval(&node).expect("L0-interp runs the wild host op");
+    let aot = mycelium_mlir::run(&node, &prims, &engine).expect("AOT runs the wild host op");
+
+    assert_eq!(
+        observable(&l1),
+        observable(&l0),
+        "wild: L1-eval vs L0-interp diverged"
+    );
+    assert_eq!(
+        observable(&l0),
+        observable(&aot),
+        "wild: L0-interp vs AOT diverged"
+    );
+
+    // The dispatched value is the echoed input byte (deterministic — the differential's premise).
+    assert_eq!(l0.repr(), &Repr::Binary { width: 8 });
+    assert_eq!(
+        l0.payload(),
+        &Payload::Bits(vec![true, false, true, true, false, false, true, false]),
+        "the host op echoes the input byte 0b1011_0010"
+    );
+
+    // The single shared M-210 checker validates each agreeing pair (never a vacuous pass).
+    for (a, b, pair) in [(&l1, &l0, "L1↔interp"), (&l0, &aot, "interp↔AOT")] {
+        assert_eq!(
+            check(
+                a,
+                b,
+                RefinementRelation::ObservationalEquiv,
+                Certificate::exact(),
+                &Evidence::Observational,
+            ),
+            CheckVerdict::Validated {
+                strength: GuaranteeStrength::Exact
+            },
+            "wild: the shared checker must validate the {pair} pair"
+        );
+    }
+}
+
+/// **Never-silent capability (G2; RFC-0028 §4.3).** The *default* registry grants no `wild:` op, so a
+/// `wild` program run without the host capability is an explicit refusal — never a silent success or a
+/// fabricated value. The refusal names the ungranted host op (both on L0-interp and L1-eval).
+#[test]
+fn an_ungranted_wild_host_op_is_an_explicit_refusal() {
+    let src = "nodule std.sys.x @std-sys\n\
+               fn main() -> Binary{8} !{ffi} = wild { echo(0b1011_0010) }";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+    let node = elaborate(&env, "main").expect("elaborates to a host-dispatch Op");
+
+    // L0-interp with the DEFAULT (no host) registry — an explicit, named refusal for the ungranted op.
+    let err = Interpreter::default()
+        .eval(&node)
+        .expect_err("an ungranted wild op must refuse, never fabricate a value");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("echo") && msg.contains("not granted"),
+        "the refusal must name the ungranted host capability `echo`; got: {msg}"
+    );
+
+    // L1-eval likewise refuses on the default registry — never silently runs.
+    let l1_err = Evaluator::new(&env)
+        .call("main", vec![])
+        .expect_err("L1-eval must also refuse the ungranted host op");
+    assert!(
+        l1_err.to_string().contains("echo"),
+        "L1-eval must surface the ungranted host op `echo`; got: {l1_err}"
+    );
+}
+
+/// **Never-silent body shape (G2).** A `wild` body that is not a v0 host-call form (here a `let`) is an
+/// explicit elaboration `Residual` — never a fabricated lowering (RFC-0028 §4.2). The program still
+/// type-checks (the body is the opaque, audited escape — M-661); only its *lowering* refuses.
+#[test]
+fn a_wild_body_that_is_not_a_host_call_form_is_an_explicit_residual() {
+    let src = "nodule std.sys.x @std-sys\n\
+               fn main() -> Binary{8} !{ffi} = wild { let a = 0b0000_0000 in a }";
+    let env =
+        check_nodule(&parse(src).expect("parses")).expect("the opaque body still type-checks");
+    let err = elaborate(&env, "main")
+        .expect_err("a non-host-call wild body must refuse to lower, never fabricate");
+    assert!(
+        err.to_string().contains("host-call form"),
+        "the refusal must explain the v0 wild-body grammar (RFC-0028 §4.2); got: {err}"
+    );
+}

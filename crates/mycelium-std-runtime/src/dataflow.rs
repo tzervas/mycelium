@@ -126,10 +126,13 @@ pub fn run_dataflow(
     let n = tasks.len();
     let mut done = vec![false; n];
     let mut remaining = n;
+    // The sweep order is a fixed function of `n` and `dir`, so compute it once and reuse it across
+    // sweeps (no per-sweep allocation on long-running networks).
+    let order = sweep_indices(n, dir);
     while remaining > 0 {
         let before = progress();
         let mut advanced = false;
-        for i in sweep_indices(n, dir) {
+        for &i in &order {
             if done[i] {
                 continue;
             }
