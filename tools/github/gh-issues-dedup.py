@@ -12,7 +12,7 @@ reports the rest as duplicates. **DRY-RUN by default**; ``--apply`` closes the
 non-canonical *open task-id* twins (never the canonical), and ``--fix-idmap`` re-anchors
 ``idmap.tsv`` rows to the canonical number.
 
-Honesty / safety (G2): every detection, action, and skip is printed; an unparseable or
+Honesty / safety (G2): every detection, action, and skip is printed; an unparsable or
 ambiguous case (title-only match, or a CLOSED canonical) is **reported, never auto-acted
 on**; nothing is guessed. ``--self-test`` exercises the pure logic offline (no network).
 

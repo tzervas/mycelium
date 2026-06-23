@@ -75,8 +75,8 @@ landing): `A1·A2·A3·A4·A5 ✅ met · B1·B2 ✅ met` — gate-met / tag-read
 tooling remains present: **A2** — the Medium-findings ledger is 25/25 Fixed, 0 deferred
 (`docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md`; M-653, PR #306); **A3** —
 `cargo-mutants` 0 un-triaged survivors on the trusted base (`.cargo/mutants.toml`), the hand-rolled
-LCG suites migrated to `proptest`, and `cargo-fuzz` targets + smoke CI present (`fuzz/`; M-654, PR
-#313); **A4** — `cargo deny` / `cargo audit` wired **non-silently** into `just check` (`deny.toml`,
+LCG suites migrated to `proptest`, and `cargo-fuzz` targets + smoke CI present (`fuzz/`; M-654,
+PR #313); **A4** — `cargo deny` / `cargo audit` wired **non-silently** into `just check` (`deny.toml`,
 `scripts/checks/`; M-652, PR #303). This refresh is a **status report moving forward on a checked
 basis** (VR-5) — it records the prior landing, not a fresh re-run.
 
