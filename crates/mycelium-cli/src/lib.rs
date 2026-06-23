@@ -137,7 +137,9 @@ pub fn build(manifest_path: &Path) -> Result<(Spore, String), Report> {
             .at(project_dir.display().to_string())
             .help("declare the [surface].exports, add a `.myc` source, or pin a dependency `hash` (ADR-003)")
     })?;
-    Ok((spore.clone(), explain(&spore)))
+    // Compute the descriptor from a borrow, then move `spore` out by value (no clone).
+    let descriptor = explain(&spore);
+    Ok((spore, descriptor))
 }
 
 /// The outcome of [`check_project`]: which nodules type-checked, and the structured failures.

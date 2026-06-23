@@ -134,6 +134,27 @@ fn index_path(root: &Path, name: &str, version: &str) -> PathBuf {
     root.join("index").join(name).join(version)
 }
 
+/// Reject a `name`/`version` that is not a **safe single path component**, so it can never escape the
+/// registry root (path traversal). `[project].name`/`version` are author-controlled strings that
+/// `mycelium-proj` does not constrain to path-safe forms, so the registry validates them itself here:
+/// empty, `.`, `..`, or any string containing `/`, `\`, or a NUL is refused — never silently joined
+/// into a path (G2). This guards `publish`, `resolve`, and `select_version`.
+fn safe_component(kind: &str, value: &str) -> Result<(), RegistryError> {
+    let bad = value.is_empty()
+        || value == "."
+        || value == ".."
+        || value.contains('/')
+        || value.contains('\\')
+        || value.contains('\0');
+    if bad {
+        return Err(RegistryError::PublishInput(format!(
+            "{kind} {value:?} is not a safe path component — a registry {kind} may not be empty, `.`, \
+             `..`, or contain `/`, `\\`, or NUL (refusing to escape the registry root; G2)"
+        )));
+    }
+    Ok(())
+}
+
 fn io<E: std::fmt::Display>(ctx: &str, e: E) -> RegistryError {
     RegistryError::Io(format!("{ctx}: {e}"))
 }
@@ -164,6 +185,9 @@ pub fn publish(
                 .to_owned(),
         ));
     }
+    // Path-traversal guard: name/version become path components below — they must be safe (G2).
+    safe_component("name", name)?;
+    safe_component("version", version)?;
     let artifact = artifact_hash(descriptor);
     let obj = object_path(root, &artifact);
 
@@ -241,6 +265,8 @@ pub fn publish(
 /// for a range constraint; [`RegistryError::Integrity`] if the object is missing or its bytes fail
 /// the `artifact` hash check; [`RegistryError::Io`] on a filesystem failure.
 pub fn resolve(root: &Path, name: &str, constraint: &str) -> Result<Resolved, RegistryError> {
+    // Path-traversal guard on the name; the resolved version is validated inside select_version (G2).
+    safe_component("name", name)?;
     let version = select_version(root, name, constraint)?;
     let idx = index_path(root, name, &version);
     let entry = std::fs::read_to_string(&idx).map_err(|_| {
@@ -298,7 +324,8 @@ fn select_version(root: &Path, name: &str, constraint: &str) -> Result<String, R
              SemVer range resolution is the deferred ADR-018 work, not silently approximated (VR-5)"
         )));
     }
-    // An exact version: it must exist (never invented).
+    // An exact version: validate it is a safe path component, then require it to exist (never invented).
+    safe_component("version", c)?;
     if index_path(root, name, c).exists() {
         Ok(c.to_owned())
     } else {
@@ -476,6 +503,31 @@ mod tests {
         );
         publish(&reg, &spore, &descriptor, "geo", "1.0.0").unwrap();
         assert_eq!(resolve(&reg, "geo", "9.9.9").unwrap_err().exit_code(), 4);
+    }
+
+    #[test]
+    fn a_traversing_name_or_version_is_refused_not_joined_into_a_path() {
+        // Security (G2): a name/version with `..` or a path separator must be refused before it can
+        // escape the registry root — never silently joined.
+        let reg = scratch_registry("traversal");
+        let (spore, descriptor) = demo_spore(
+            "tv",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+        );
+        for bad in ["../escape", "a/b", "..", ".", "x\\y", ""] {
+            let e = publish(&reg, &spore, &descriptor, bad, "1.0.0").unwrap_err();
+            assert_eq!(e.exit_code(), 3, "name {bad:?} should be refused: {e}");
+            let e2 = publish(&reg, &spore, &descriptor, "geo", bad).unwrap_err();
+            assert_eq!(e2.exit_code(), 3, "version {bad:?} should be refused: {e2}");
+        }
+        // resolve refuses a traversing name too.
+        assert_eq!(
+            resolve(&reg, "../escape", "1.0.0").unwrap_err().exit_code(),
+            3
+        );
+        // and a traversing exact-version constraint.
+        publish(&reg, &spore, &descriptor, "geo", "1.0.0").unwrap();
+        assert_eq!(resolve(&reg, "geo", "../1.0.0").unwrap_err().exit_code(), 3);
     }
 
     #[test]

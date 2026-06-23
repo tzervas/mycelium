@@ -116,12 +116,13 @@ def render_tmlanguage(buckets: dict[str, list[str]]) -> str:
             }
         )
     # Comments and binary/ternary literals are syntactic (not in keyword()): include the obvious ones
-    # so the scaffold is usable, still under a TODO scope until RFC-0026 fixes the names.
+    # so the scaffold is usable, still under a TODO scope until RFC-0026 fixes the names. The binary
+    # literal allows `_` digit separators, matching the lexer (lex_binary accepts '0'/'1'/'_').
     patterns.append({"name": f"{TODO_SCOPE}.comment.line.mycelium", "match": r"//.*$"})
     patterns.append(
         {
             "name": f"{TODO_SCOPE}.constant.numeric.mycelium",
-            "match": r"0b[01]+|<[+\-0]+>",
+            "match": r"0b[01_]+|<[+\-0]+>",
         }
     )
 

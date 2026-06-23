@@ -27,7 +27,7 @@
     },
     {
       "name": "TODO.rfc-0026.constant.numeric.mycelium",
-      "match": "0b[01]+|<[+\\-0]+>"
+      "match": "0b[01_]+|<[+\\-0]+>"
     }
   ]
 }

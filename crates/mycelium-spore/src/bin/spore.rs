@@ -79,6 +79,15 @@ fn main() -> ExitCode {
 
 /// The subcommands that first build a spore from a manifest (`build`/`explain`/`publish`).
 fn run_with_spore(cmd: &str, opts: &Opts) -> ExitCode {
+    // These subcommands take no positional arguments — a stray one is a usage error, never silently
+    // ignored (the same never-ignored posture parse_opts applies to unknown flags; G2).
+    if !opts.positionals.is_empty() {
+        eprintln!(
+            "spore: unexpected argument(s): {} — `{cmd}` takes options only",
+            opts.positionals.join(" ")
+        );
+        return usage();
+    }
     let manifest_path = opts
         .config
         .as_deref()

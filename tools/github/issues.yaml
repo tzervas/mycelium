@@ -4885,6 +4885,8 @@ issues:
       - just check green including the differential durability tests.
       - E15-1 issue status -> done; CHANGELOG entry append-only with honest guarantee framing.
   - id: E16-1
+    title: "E16-1 (epic) — Toolchain, IDE & package distribution"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:epic, area:toolchain, priority:P2, status:in-progress]
     landed_basis: "status:in-progress (2026-06-23) — 4 of 5 children done (M-730/M-732/M-733/M-734); M-731 is a scaffold blocked on RFC-0026 §3.2 (M-693, E9-1). Epic completes when RFC-0026 is Accepted and M-731's scope-name table is finalized."
     depends_on: [E9-1]
@@ -4931,6 +4933,8 @@ issues:
       Children: M-730 (full LSP: completions/hover/semantic-tokens/go-to-def beyond the skeleton), M-731 (editor syntax highlighting delivery — RFC-0026: TextMate + tree-sitter + LSP semantic tokens, subsumes E9-1 leaves), M-732 (package manager: spore publish/resolve/registry beyond the build artifact), M-733 (toolchain UX: one-command init/build/test/run + error-message quality bar), M-734 (reproducible toolchain distribution: pinned, content-addressed install).
 
   - id: M-730
+    title: "M-730 — feat(lsp): full LSP completions/hover/semantic-tokens/go-to-def"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:feature, area:toolchain, priority:P2, status:done]
     landed_basis: "status:done (2026-06-23) — mycelium-lsp adds textDocument/hover, definition, and semanticTokens/full (lexical/Declared scope; hover refuses to fabricate an identifier's type per VR-5; definition is single-document; never-silent on unknown position/symbol). Capabilities advertised; all prior completions/diagnostics/fmt tests green; clippy -D warnings clean."
     epic: E16-1
@@ -4959,6 +4963,8 @@ issues:
       - All existing completions/diagnostics/fmt tests remain green; cargo clippy -D warnings clean.
 
   - id: M-731
+    title: "M-731 — feat(tooling): editor syntax highlighting delivery (RFC-0026)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:feature, area:toolchain, priority:P2, status:in-progress]
     landed_basis: "status:in-progress (2026-06-23) — SCAFFOLD landed: tools/grammar/generate.py derives the keyword set + class buckets from token.rs::keyword() and renders TextMate + tree-sitter artifacts; `just drift-check` wired into `just check` (G2 — no silent lexer divergence). Scope names are TODO.rfc-0026.* stubs because RFC-0026 §3.2 is still Draft (M-693 not Done) — the scope-name table is NOT finalized (never guessed, VR-5). Completes when RFC-0026 is Accepted and the generator is re-run."
     epic: E16-1
@@ -4991,6 +4997,8 @@ issues:
       - No silent divergence from the lexer possible (G2).
 
   - id: M-732
+    title: "M-732 — feat(spore): package manager — publish/resolve/registry"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:feature, area:toolchain, priority:P2, status:done]
     landed_basis: "status:done (2026-06-23) — mycelium-spore registry: publish/resolve over a local content-addressed store; spore_id (DAG identity, ADR-003) + artifact (integrity) both verified on publish and resolve; immutability, tamper, and missing-object are never-silent errors (G2); a SemVer range constraint is explicitly Unsupported (ADR-018 deferred, never mis-resolved). proptest hash-verification bound; spore publish/resolve CLI wired; clippy clean."
     epic: E16-1
@@ -5018,6 +5026,8 @@ issues:
       - cargo clippy -D warnings clean; property test for hash verification; just check green.
 
   - id: M-733
+    title: "M-733 — feat(toolchain): toolchain UX — one-command init/build/test/run + error-message quality"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:feature, area:toolchain, priority:P2, status:done]
     landed_basis: "status:done (2026-06-23) — new mycelium-cli crate; `myc init/build/check/test/run` with DN-22 structured Reports (error[code]: msg + location + help; no raw panic reaches the user). init/build/check work end-to-end on a scaffolded phylum; `test` runs the check verification and states a .myc unit-test runner is future work; `run` is honestly not-yet-wired (reports so, exit 70) — VR-5/G2. clippy clean; CLI smoke-tested."
     epic: E16-1
@@ -5046,6 +5056,8 @@ issues:
       - just check green.
 
   - id: M-734
+    title: "M-734 — infra(toolchain): reproducible toolchain distribution — pinned, content-addressed install"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:infra, area:toolchain, priority:P2, status:done]
     landed_basis: "status:done (2026-06-23) — scripts/dist/ content-addressed pin/verify/install: byte-identical re-install, never-silent tamper/missing/added detection (`just dist-verify`); self-describing address blake3 (ADR-003) or sha256; STRICT (hard-fails on a missing hasher, never skips). Honest scope (VR-5): pinning the actual compiler binaries additionally needs a reproducible release build (deferred); the pin/verify/install mechanism is what landed. shellcheck clean."
     epic: E16-1
