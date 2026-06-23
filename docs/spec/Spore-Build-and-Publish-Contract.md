@@ -87,7 +87,7 @@ spore: geometry  →  blake3:…              ← the spore identity (component 
   code:     17 definitions reachable from the surface
   deps:     numerics  blake3:…  (version ^2 satisfied by 2.3.1)   [from [dependencies]]
   values:   0 captured
-  metadata: version 1.2.0, license Apache-2.0, 1 author   [not identity — ADR-003]
+  metadata: version 1.2.0, license MIT, 1 author   [not identity — ADR-003]
 ```
 
 The identity line is the receipt: change the code or a dep hash and it changes; change `version`/`authors`

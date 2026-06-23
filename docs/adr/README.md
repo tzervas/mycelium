@@ -11,7 +11,7 @@ New ADRs go here as standalone files. (ADR-001…009 may be extracted into indiv
 
 ## Status set
 
-`Proposed → Accepted → Enacted → Superseded`. ADRs 001–014/016/017/021 are **Accepted**; **ADR-015/ADR-018/ADR-019** are **Enacted** (2026-06-23, maintainer-approved); **ADR-020** is **Enacted** (M-521 v0 R1 implementation landed 2026-06-20). ADR-021 (the 1.0.0 release-readiness gate) was **maintainer-ratified 2026-06-21** — its criteria are agreed; it moves to `Enacted` only at the tagged 1.0.0 release (gate-completion work tracked in DN-19).
+`Proposed → Accepted → Enacted → Superseded`. ADRs 001–014/016/017 are **Accepted**; **ADR-015/ADR-018/ADR-019** are **Enacted** (2026-06-23, maintainer-approved); **ADR-020** is **Enacted** (M-521 v0 R1 implementation landed 2026-06-20). **ADR-021** (kernel 1.0.0 gate) is **Superseded by ADR-022** (2026-06-23; kernel gate preserved as track T1). **ADR-022** (full-language 1.0.0 gate, dual-version) is **Accepted** (2026-06-23, supersedes ADR-021). **ADR-023** (stability and API-compatibility guarantees) is **Draft** (2026-06-23, planning stub).
 
 ## Index
 
@@ -37,7 +37,9 @@ New ADRs go here as standalone files. (ADR-001…009 may be extracted into indiv
 | 018 | Versioning policy: per-crate `0.x` SemVer + source-only distribution (no crates.io publish in the design phase); CHANGELOG `[Unreleased]` → release-cut mapping | **Enacted** (2026-06-23, M-383/M-384; workspace pinned `0.0.0`; release-plz dry-run wired; first release cut deferred) | `ADR-018-Versioning-Policy.md` |
 | 019 | libMLIR toolchain: the version-matched build dependency of the off-by-default `mlir-dialect` feature; provisioned via `scripts/setup-mlir.sh` (`just setup-mlir`); resolves M-348 on Linux | **Enacted** (2026-06-23, M-348/M-603; `setup-mlir.sh` present; `mlir-dialect` OFF by default; real dialect lowering present M-601) | `ADR-019-libMLIR-Toolchain.md` |
 | 020 | `runtime`/`colony` phylum placement: dedicated `runtime` phylum + thin `std.runtime` facade; construct-by-construct activation at the Phase-7 gate; v0 API surface for the landed R1 slice (M-521) | **Enacted** | `ADR-020-Runtime-Colony-Phylum-Placement.md` |
-| 021 | 1.0.0 release-readiness gate: kernel/core 1.0.0 criteria (Gate A honesty-integrity/durability; Gate B decision/external — KC-2 now met); surface language scoped to `1.x`; Phase-3+ maturation out of scope | **Accepted** | `ADR-021-1.0.0-Release-Readiness-Gate.md` |
+| 021 | 1.0.0 release-readiness gate: kernel/core 1.0.0 criteria (Gate A honesty-integrity/durability; Gate B decision/external — KC-2 now met); surface language scoped to `1.x`; Phase-3+ maturation out of scope | **Superseded by ADR-022** (2026-06-23; kernel gate preserved as track T1 within the full-language program) | `ADR-021-1.0.0-Release-Readiness-Gate.md` |
+| 022 | Full-Language 1.0.0 Release-Readiness Gate: dual-version core⟂lang — kernel track T1 (preserves ADR-021 Gate A/B) + full-language program tracks T2–T9; 9 epics E10-1…E18-1; DN-25 program map | **Accepted** (2026-06-23; supersedes ADR-021) | `ADR-022-Full-Language-1.0.0-Release-Gate.md` |
+| 023 | Stability and API-Compatibility Guarantees: per-phylum stability tiers, SemVer discipline for the Mycelium-language public API surface, and the deprecation/evolution policy | **Draft** (2026-06-23; planning stub; feeds E17-1) | `ADR-023-Stability-and-API-Compatibility-Guarantees.md` |
 
 ## Template
 
