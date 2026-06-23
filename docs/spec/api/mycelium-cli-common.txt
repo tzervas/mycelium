@@ -1,0 +1,34 @@
+pub mod mycelium_cli_common
+pub struct mycelium_cli_common::Args
+impl mycelium_cli_common::Args
+pub fn mycelium_cli_common::Args::from_args<I, S>(I) -> Self where I: core::iter::traits::collect::IntoIterator<Item = S>, S: core::convert::Into<alloc::string::String>
+pub fn mycelium_cli_common::Args::from_env() -> Self
+pub fn mycelium_cli_common::Args::next(&mut self) -> core::option::Option<alloc::string::String>
+pub fn mycelium_cli_common::Args::value(&mut self) -> core::option::Option<alloc::string::String>
+impl core::marker::Freeze for mycelium_cli_common::Args
+impl core::marker::Send for mycelium_cli_common::Args
+impl core::marker::Sync for mycelium_cli_common::Args
+impl core::marker::Unpin for mycelium_cli_common::Args
+impl core::marker::UnsafeUnpin for mycelium_cli_common::Args
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cli_common::Args
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cli_common::Args
+pub struct mycelium_cli_common::ReadError
+impl core::clone::Clone for mycelium_cli_common::ReadError
+pub fn mycelium_cli_common::ReadError::clone(&self) -> mycelium_cli_common::ReadError
+impl core::cmp::Eq for mycelium_cli_common::ReadError
+impl core::cmp::PartialEq for mycelium_cli_common::ReadError
+pub fn mycelium_cli_common::ReadError::eq(&self, &mycelium_cli_common::ReadError) -> bool
+impl core::fmt::Debug for mycelium_cli_common::ReadError
+pub fn mycelium_cli_common::ReadError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_cli_common::ReadError
+impl core::marker::StructuralPartialEq for mycelium_cli_common::ReadError
+impl core::marker::Freeze for mycelium_cli_common::ReadError
+impl core::marker::Send for mycelium_cli_common::ReadError
+impl core::marker::Sync for mycelium_cli_common::ReadError
+impl core::marker::Unpin for mycelium_cli_common::ReadError
+impl core::marker::UnsafeUnpin for mycelium_cli_common::ReadError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cli_common::ReadError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cli_common::ReadError
+pub const mycelium_cli_common::STDIN_SENTINEL: &str
+pub fn mycelium_cli_common::read_source(&str, &str) -> core::result::Result<alloc::string::String, mycelium_cli_common::ReadError>
+pub fn mycelium_cli_common::walk_myc(&std::path::Path) -> core::result::Result<alloc::vec::Vec<std::path::PathBuf>, alloc::string::String>

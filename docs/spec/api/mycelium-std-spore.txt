@@ -4,6 +4,93 @@ pub use mycelium_std_spore::GuaranteeStrength
 pub use mycelium_std_spore::RawSpore
 pub use mycelium_std_spore::ReconMode
 pub use mycelium_std_spore::SporeError
+pub mod mycelium_std_spore::deploy
+pub enum mycelium_std_spore::deploy::DeployError
+pub mycelium_std_spore::deploy::DeployError::AmbiguousInput
+pub mycelium_std_spore::deploy::DeployError::AmbiguousInput::candidates: alloc::vec::Vec<alloc::string::String>
+pub mycelium_std_spore::deploy::DeployError::HashMismatch
+pub mycelium_std_spore::deploy::DeployError::HashMismatch::actual: alloc::string::String
+pub mycelium_std_spore::deploy::DeployError::HashMismatch::expected: alloc::string::String
+pub mycelium_std_spore::deploy::DeployError::MissingInput
+pub mycelium_std_spore::deploy::DeployError::OpaqueStepDetected
+pub mycelium_std_spore::deploy::DeployError::OpaqueStepDetected::step: alloc::string::String
+impl core::clone::Clone for mycelium_std_spore::deploy::DeployError
+pub fn mycelium_std_spore::deploy::DeployError::clone(&self) -> mycelium_std_spore::deploy::DeployError
+impl core::cmp::Eq for mycelium_std_spore::deploy::DeployError
+impl core::cmp::PartialEq for mycelium_std_spore::deploy::DeployError
+pub fn mycelium_std_spore::deploy::DeployError::eq(&self, &mycelium_std_spore::deploy::DeployError) -> bool
+impl core::error::Error for mycelium_std_spore::deploy::DeployError
+impl core::fmt::Debug for mycelium_std_spore::deploy::DeployError
+pub fn mycelium_std_spore::deploy::DeployError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_spore::deploy::DeployError
+pub fn mycelium_std_spore::deploy::DeployError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::deploy::DeployError
+impl core::marker::Freeze for mycelium_std_spore::deploy::DeployError
+impl core::marker::Send for mycelium_std_spore::deploy::DeployError
+impl core::marker::Sync for mycelium_std_spore::deploy::DeployError
+impl core::marker::Unpin for mycelium_std_spore::deploy::DeployError
+impl core::marker::UnsafeUnpin for mycelium_std_spore::deploy::DeployError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::deploy::DeployError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::deploy::DeployError
+pub enum mycelium_std_spore::deploy::DeployResult
+pub mycelium_std_spore::deploy::DeployResult::Deployed
+pub mycelium_std_spore::deploy::DeployResult::Deployed::spore_id: mycelium_core::id::ContentHash
+pub mycelium_std_spore::deploy::DeployResult::Deployed::verification: mycelium_std_spore::deploy::DeployVerification
+pub mycelium_std_spore::deploy::DeployResult::Failed(mycelium_std_spore::deploy::DeployError)
+impl core::clone::Clone for mycelium_std_spore::deploy::DeployResult
+pub fn mycelium_std_spore::deploy::DeployResult::clone(&self) -> mycelium_std_spore::deploy::DeployResult
+impl core::cmp::Eq for mycelium_std_spore::deploy::DeployResult
+impl core::cmp::PartialEq for mycelium_std_spore::deploy::DeployResult
+pub fn mycelium_std_spore::deploy::DeployResult::eq(&self, &mycelium_std_spore::deploy::DeployResult) -> bool
+impl core::fmt::Debug for mycelium_std_spore::deploy::DeployResult
+pub fn mycelium_std_spore::deploy::DeployResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::deploy::DeployResult
+impl core::marker::Freeze for mycelium_std_spore::deploy::DeployResult
+impl core::marker::Send for mycelium_std_spore::deploy::DeployResult
+impl core::marker::Sync for mycelium_std_spore::deploy::DeployResult
+impl core::marker::Unpin for mycelium_std_spore::deploy::DeployResult
+impl core::marker::UnsafeUnpin for mycelium_std_spore::deploy::DeployResult
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::deploy::DeployResult
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::deploy::DeployResult
+pub enum mycelium_std_spore::deploy::DeployTarget
+pub mycelium_std_spore::deploy::DeployTarget::InMemory
+pub mycelium_std_spore::deploy::DeployTarget::Local
+pub mycelium_std_spore::deploy::DeployTarget::Local::path: alloc::string::String
+impl core::clone::Clone for mycelium_std_spore::deploy::DeployTarget
+pub fn mycelium_std_spore::deploy::DeployTarget::clone(&self) -> mycelium_std_spore::deploy::DeployTarget
+impl core::cmp::Eq for mycelium_std_spore::deploy::DeployTarget
+impl core::cmp::PartialEq for mycelium_std_spore::deploy::DeployTarget
+pub fn mycelium_std_spore::deploy::DeployTarget::eq(&self, &mycelium_std_spore::deploy::DeployTarget) -> bool
+impl core::fmt::Debug for mycelium_std_spore::deploy::DeployTarget
+pub fn mycelium_std_spore::deploy::DeployTarget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::deploy::DeployTarget
+impl core::marker::Freeze for mycelium_std_spore::deploy::DeployTarget
+impl core::marker::Send for mycelium_std_spore::deploy::DeployTarget
+impl core::marker::Sync for mycelium_std_spore::deploy::DeployTarget
+impl core::marker::Unpin for mycelium_std_spore::deploy::DeployTarget
+impl core::marker::UnsafeUnpin for mycelium_std_spore::deploy::DeployTarget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::deploy::DeployTarget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::deploy::DeployTarget
+pub struct mycelium_std_spore::deploy::DeployVerification
+pub mycelium_std_spore::deploy::DeployVerification::content_hash_canonical: bool
+pub mycelium_std_spore::deploy::DeployVerification::no_opaque_lowering: bool
+impl core::clone::Clone for mycelium_std_spore::deploy::DeployVerification
+pub fn mycelium_std_spore::deploy::DeployVerification::clone(&self) -> mycelium_std_spore::deploy::DeployVerification
+impl core::cmp::Eq for mycelium_std_spore::deploy::DeployVerification
+impl core::cmp::PartialEq for mycelium_std_spore::deploy::DeployVerification
+pub fn mycelium_std_spore::deploy::DeployVerification::eq(&self, &mycelium_std_spore::deploy::DeployVerification) -> bool
+impl core::fmt::Debug for mycelium_std_spore::deploy::DeployVerification
+pub fn mycelium_std_spore::deploy::DeployVerification::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::deploy::DeployVerification
+impl core::marker::Freeze for mycelium_std_spore::deploy::DeployVerification
+impl core::marker::Send for mycelium_std_spore::deploy::DeployVerification
+impl core::marker::Sync for mycelium_std_spore::deploy::DeployVerification
+impl core::marker::Unpin for mycelium_std_spore::deploy::DeployVerification
+impl core::marker::UnsafeUnpin for mycelium_std_spore::deploy::DeployVerification
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::deploy::DeployVerification
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::deploy::DeployVerification
+pub fn mycelium_std_spore::deploy::explain_deploy(&mycelium_std_spore::deploy::DeployResult) -> alloc::string::String
+pub fn mycelium_std_spore::deploy::germinate(&mycelium_std_spore::spore_ops::SporeUnit, &mycelium_std_spore::deploy::DeployTarget) -> core::result::Result<mycelium_std_spore::deploy::DeployResult, mycelium_std_spore::deploy::DeployError>
 pub mod mycelium_std_spore::guarantee_matrix
 pub struct mycelium_std_spore::guarantee_matrix::MatrixRow
 pub mycelium_std_spore::guarantee_matrix::MatrixRow::effects: &'static str
@@ -149,6 +236,72 @@ pub fn mycelium_std_spore::spore_ops::explain_spore(&mycelium_std_spore::spore_o
 pub fn mycelium_std_spore::spore_ops::identity(&mycelium_std_spore::spore_ops::SporeUnit) -> &mycelium_core::id::ContentHash
 pub fn mycelium_std_spore::spore_ops::manifest_of(&mycelium_std_spore::spore_ops::SporeUnit) -> core::option::Option<&mycelium_std_spore::recon_manifest::ReconManifest>
 pub fn mycelium_std_spore::spore_ops::verify(&mycelium_std_spore::spore_ops::SporeUnit) -> core::result::Result<(), mycelium_std_spore::spore_ops::SporeErr>
+pub enum mycelium_std_spore::DeployError
+pub mycelium_std_spore::DeployError::AmbiguousInput
+pub mycelium_std_spore::DeployError::AmbiguousInput::candidates: alloc::vec::Vec<alloc::string::String>
+pub mycelium_std_spore::DeployError::HashMismatch
+pub mycelium_std_spore::DeployError::HashMismatch::actual: alloc::string::String
+pub mycelium_std_spore::DeployError::HashMismatch::expected: alloc::string::String
+pub mycelium_std_spore::DeployError::MissingInput
+pub mycelium_std_spore::DeployError::OpaqueStepDetected
+pub mycelium_std_spore::DeployError::OpaqueStepDetected::step: alloc::string::String
+impl core::clone::Clone for mycelium_std_spore::deploy::DeployError
+pub fn mycelium_std_spore::deploy::DeployError::clone(&self) -> mycelium_std_spore::deploy::DeployError
+impl core::cmp::Eq for mycelium_std_spore::deploy::DeployError
+impl core::cmp::PartialEq for mycelium_std_spore::deploy::DeployError
+pub fn mycelium_std_spore::deploy::DeployError::eq(&self, &mycelium_std_spore::deploy::DeployError) -> bool
+impl core::error::Error for mycelium_std_spore::deploy::DeployError
+impl core::fmt::Debug for mycelium_std_spore::deploy::DeployError
+pub fn mycelium_std_spore::deploy::DeployError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_spore::deploy::DeployError
+pub fn mycelium_std_spore::deploy::DeployError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::deploy::DeployError
+impl core::marker::Freeze for mycelium_std_spore::deploy::DeployError
+impl core::marker::Send for mycelium_std_spore::deploy::DeployError
+impl core::marker::Sync for mycelium_std_spore::deploy::DeployError
+impl core::marker::Unpin for mycelium_std_spore::deploy::DeployError
+impl core::marker::UnsafeUnpin for mycelium_std_spore::deploy::DeployError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::deploy::DeployError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::deploy::DeployError
+pub enum mycelium_std_spore::DeployResult
+pub mycelium_std_spore::DeployResult::Deployed
+pub mycelium_std_spore::DeployResult::Deployed::spore_id: mycelium_core::id::ContentHash
+pub mycelium_std_spore::DeployResult::Deployed::verification: mycelium_std_spore::deploy::DeployVerification
+pub mycelium_std_spore::DeployResult::Failed(mycelium_std_spore::deploy::DeployError)
+impl core::clone::Clone for mycelium_std_spore::deploy::DeployResult
+pub fn mycelium_std_spore::deploy::DeployResult::clone(&self) -> mycelium_std_spore::deploy::DeployResult
+impl core::cmp::Eq for mycelium_std_spore::deploy::DeployResult
+impl core::cmp::PartialEq for mycelium_std_spore::deploy::DeployResult
+pub fn mycelium_std_spore::deploy::DeployResult::eq(&self, &mycelium_std_spore::deploy::DeployResult) -> bool
+impl core::fmt::Debug for mycelium_std_spore::deploy::DeployResult
+pub fn mycelium_std_spore::deploy::DeployResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::deploy::DeployResult
+impl core::marker::Freeze for mycelium_std_spore::deploy::DeployResult
+impl core::marker::Send for mycelium_std_spore::deploy::DeployResult
+impl core::marker::Sync for mycelium_std_spore::deploy::DeployResult
+impl core::marker::Unpin for mycelium_std_spore::deploy::DeployResult
+impl core::marker::UnsafeUnpin for mycelium_std_spore::deploy::DeployResult
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::deploy::DeployResult
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::deploy::DeployResult
+pub enum mycelium_std_spore::DeployTarget
+pub mycelium_std_spore::DeployTarget::InMemory
+pub mycelium_std_spore::DeployTarget::Local
+pub mycelium_std_spore::DeployTarget::Local::path: alloc::string::String
+impl core::clone::Clone for mycelium_std_spore::deploy::DeployTarget
+pub fn mycelium_std_spore::deploy::DeployTarget::clone(&self) -> mycelium_std_spore::deploy::DeployTarget
+impl core::cmp::Eq for mycelium_std_spore::deploy::DeployTarget
+impl core::cmp::PartialEq for mycelium_std_spore::deploy::DeployTarget
+pub fn mycelium_std_spore::deploy::DeployTarget::eq(&self, &mycelium_std_spore::deploy::DeployTarget) -> bool
+impl core::fmt::Debug for mycelium_std_spore::deploy::DeployTarget
+pub fn mycelium_std_spore::deploy::DeployTarget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::deploy::DeployTarget
+impl core::marker::Freeze for mycelium_std_spore::deploy::DeployTarget
+impl core::marker::Send for mycelium_std_spore::deploy::DeployTarget
+impl core::marker::Sync for mycelium_std_spore::deploy::DeployTarget
+impl core::marker::Unpin for mycelium_std_spore::deploy::DeployTarget
+impl core::marker::UnsafeUnpin for mycelium_std_spore::deploy::DeployTarget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::deploy::DeployTarget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::deploy::DeployTarget
 pub enum mycelium_std_spore::MalformedManifest
 pub mycelium_std_spore::MalformedManifest::KernelWf
 pub mycelium_std_spore::MalformedManifest::ResonatorOverStrength
@@ -196,6 +349,24 @@ impl core::marker::Unpin for mycelium_std_spore::spore_ops::SporeErr
 impl core::marker::UnsafeUnpin for mycelium_std_spore::spore_ops::SporeErr
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::spore_ops::SporeErr
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::spore_ops::SporeErr
+pub struct mycelium_std_spore::DeployVerification
+pub mycelium_std_spore::DeployVerification::content_hash_canonical: bool
+pub mycelium_std_spore::DeployVerification::no_opaque_lowering: bool
+impl core::clone::Clone for mycelium_std_spore::deploy::DeployVerification
+pub fn mycelium_std_spore::deploy::DeployVerification::clone(&self) -> mycelium_std_spore::deploy::DeployVerification
+impl core::cmp::Eq for mycelium_std_spore::deploy::DeployVerification
+impl core::cmp::PartialEq for mycelium_std_spore::deploy::DeployVerification
+pub fn mycelium_std_spore::deploy::DeployVerification::eq(&self, &mycelium_std_spore::deploy::DeployVerification) -> bool
+impl core::fmt::Debug for mycelium_std_spore::deploy::DeployVerification
+pub fn mycelium_std_spore::deploy::DeployVerification::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_spore::deploy::DeployVerification
+impl core::marker::Freeze for mycelium_std_spore::deploy::DeployVerification
+impl core::marker::Send for mycelium_std_spore::deploy::DeployVerification
+impl core::marker::Sync for mycelium_std_spore::deploy::DeployVerification
+impl core::marker::Unpin for mycelium_std_spore::deploy::DeployVerification
+impl core::marker::UnsafeUnpin for mycelium_std_spore::deploy::DeployVerification
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::deploy::DeployVerification
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::deploy::DeployVerification
 pub struct mycelium_std_spore::ReconManifest
 impl mycelium_std_spore::recon_manifest::ReconManifest
 pub fn mycelium_std_spore::recon_manifest::ReconManifest::declared_strength(&self) -> mycelium_core::guarantee::GuaranteeStrength
@@ -263,7 +434,9 @@ impl core::marker::UnsafeUnpin for mycelium_std_spore::spore_ops::SporeUnit
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_spore::spore_ops::SporeUnit
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_spore::spore_ops::SporeUnit
 pub const mycelium_std_spore::MATRIX: &[mycelium_std_spore::guarantee_matrix::MatrixRow]
+pub fn mycelium_std_spore::explain_deploy(&mycelium_std_spore::deploy::DeployResult) -> alloc::string::String
 pub fn mycelium_std_spore::explain_spore(&mycelium_std_spore::spore_ops::SporeUnit) -> alloc::string::String
+pub fn mycelium_std_spore::germinate(&mycelium_std_spore::spore_ops::SporeUnit, &mycelium_std_spore::deploy::DeployTarget) -> core::result::Result<mycelium_std_spore::deploy::DeployResult, mycelium_std_spore::deploy::DeployError>
 pub fn mycelium_std_spore::identity(&mycelium_std_spore::spore_ops::SporeUnit) -> &mycelium_core::id::ContentHash
 pub fn mycelium_std_spore::manifest_of(&mycelium_std_spore::spore_ops::SporeUnit) -> core::option::Option<&mycelium_std_spore::recon_manifest::ReconManifest>
 pub fn mycelium_std_spore::verify(&mycelium_std_spore::spore_ops::SporeUnit) -> core::result::Result<(), mycelium_std_spore::spore_ops::SporeErr>

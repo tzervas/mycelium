@@ -74,6 +74,13 @@ pub enum Ty {
     /// (this is the unbounded-case form of RFC-0019 §4.6's Repr-polymorphism restriction — it falls
     /// out of the abstract-variable discipline, restating S1 at the polymorphic level).
     Var(String),
+    /// A **function type** `A -> B` (RFC-0024 §3, M-686): the type of a named top-level function
+    /// used as a first-class value. Stage-1 supports single-argument arrows only; the parameter
+    /// type and return type may themselves be abstract (`Ty::Var`). A `Fn`-typed value is not a
+    /// legal instance head (coherence is over concrete types — same posture as `Ty::Var`).
+    ///
+    /// Guarantee: `Declared` (a type-level contract; no theorem — VR-5).
+    Fn(Box<Ty>, Box<Ty>),
 }
 
 impl core::fmt::Display for Ty {
@@ -95,6 +102,9 @@ impl core::fmt::Display for Ty {
             }
             Ty::Substrate(t) => write!(f, "Substrate{{{t}}}"),
             Ty::Var(v) => write!(f, "{v}"),
+            // RFC-0024 §3: render as `A -> B` (right-associative; nested arrow-left is parenthesised
+            // for readability but both are valid in the surface grammar — here we keep it minimal).
+            Ty::Fn(a, r) => write!(f, "{a} -> {r}"),
         }
     }
 }
@@ -222,7 +232,9 @@ pub fn type_head(ty: &Ty) -> Option<String> {
         Ty::Dense(_, _) => "Dense".to_owned(),
         Ty::Substrate(t) => format!("Substrate:{t}"),
         Ty::Data(n, _) => format!("Data:{n}"),
-        Ty::Var(_) => return None,
+        // `Ty::Var` and `Ty::Fn` are not legal instance heads in stage-1 — a blanket instance
+        // over an abstract variable or a function type is refused explicitly (RFC-0024 §3 / RFC-0019 §4.5).
+        Ty::Var(_) | Ty::Fn(_, _) => return None,
     })
 }
 
@@ -234,6 +246,9 @@ pub(crate) fn subst_ty(ty: &Ty, s: &BTreeMap<String, Ty>) -> Ty {
     match ty {
         Ty::Var(v) => s.get(v).cloned().unwrap_or_else(|| ty.clone()),
         Ty::Data(n, args) => Ty::Data(n.clone(), args.iter().map(|a| subst_ty(a, s)).collect()),
+        // RFC-0024 §3: substitute into both sides of a function type (the param type and return type
+        // may contain abstract type-variables — e.g. `f: A -> B` in a generic body).
+        Ty::Fn(a, r) => Ty::Fn(Box::new(subst_ty(a, s)), Box::new(subst_ty(r, s))),
         Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) => ty.clone(),
     }
 }
@@ -253,6 +268,8 @@ pub(crate) fn has_var(ty: &Ty) -> bool {
     match ty {
         Ty::Var(_) => true,
         Ty::Data(_, args) => args.iter().any(has_var),
+        // RFC-0024 §3: a function type has a variable if either side does.
+        Ty::Fn(a, r) => has_var(a) || has_var(r),
         Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) => false,
     }
 }
@@ -292,6 +309,14 @@ pub(crate) fn unify(
                 unify(site, d, a, s)?;
             }
             Ok(())
+        }
+        // RFC-0024 §3: structural unification of function types — param and return independently
+        // (arrow is not covariant/contravariant at this stage; it is structural equality with variable
+        // binding). Never a silent coercion — an `A -> B` against a `C -> D` unifies iff A~C and B~D
+        // (VR-5, G2).
+        (Ty::Fn(a1, r1), Ty::Fn(a2, r2)) => {
+            unify(site, a1, a2, s)?;
+            unify(site, r1, r2, s)
         }
         _ if decl == actual => Ok(()),
         _ => Err(CheckError::new(
@@ -456,6 +481,15 @@ pub(crate) fn resolve_ty(
                 "internal: an unresolved paradigm-less repr `{…}` reached the checker — the \
                  ambient resolution pass should have filled it (RFC-0012 §4.3)",
             ));
+        }
+        // RFC-0024 §3 (M-686): function types are now checked. Resolve both sides recursively
+        // under the same `tyvars` scope — the param and return types may themselves be abstract.
+        // Single-argument only in stage-1; multi-argument `(A, B) -> C` is refused below (deferred).
+        // Guarantee: Declared (a type-level contract — VR-5).
+        BaseType::Fn(param, ret) => {
+            let (param_ty, _) = resolve_ty(site, types, tyvars, param)?;
+            let (ret_ty, _) = resolve_ty(site, types, tyvars, ret)?;
+            Ty::Fn(Box::new(param_ty), Box::new(ret_ty))
         }
     };
     Ok((base, t.guarantee))
@@ -1516,7 +1550,10 @@ fn register_instances(
             Ty::Data(n, _) => phylum_types.contains(n.as_str()),
             // Primitive repr types are "owned by the phylum" for stage-1 (RFC-0019 §4.5).
             Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) => true,
-            Ty::Var(_) => false,
+            // `Ty::Var` and `Ty::Fn` are not legal instance heads; type_head() returns None for them,
+            // so this arm is unreachable in practice (the coherence key check rejects them upstream).
+            // Kept for exhaustiveness — never a silent accept (G2).
+            Ty::Var(_) | Ty::Fn(_, _) => false,
         };
         if !trait_local && !type_local {
             return Err(CheckError::new(
@@ -2013,6 +2050,67 @@ impl Cx<'_> {
                 d.ctors[i].fields.len()
             ));
         }
+        // RFC-0024 §3 (M-686): a bare top-level function name in value position synthesizes
+        // `Ty::Fn(param_ty, ret_ty)`. Only single-argument **monomorphic** functions are supported
+        // in stage-1 — a generic function referenced bare without an `expected` context that fixes
+        // its type arguments is a never-silent refusal (G2/VR-5); a multi-value-param function is
+        // refused explicitly (partial application is out-of-scope per RFC-0024 §5).
+        if let Some(fd) = self.fns.get(name) {
+            // Multi-param or zero-param (nullary) functions: partial application is deferred (RFC-0024 §5).
+            if fd.sig.value_params.len() != 1 {
+                return self.err(format!(
+                    "`{name}` has {} value parameter(s) — only single-argument functions can be \
+                     used as first-class values in stage-1; partial application is deferred \
+                     (RFC-0024 §5, never a silent coercion)",
+                    fd.sig.value_params.len()
+                ));
+            }
+            // Monomorphic callee: resolve the param and return types directly.
+            if fd.sig.params.is_empty() {
+                let (param_ty, _) =
+                    resolve_ty(self.site, self.types, &[], &fd.sig.value_params[0].ty)?;
+                let (ret_ty, _) = resolve_ty(self.site, self.types, &[], &fd.sig.ret)?;
+                return Ok((Ty::Fn(Box::new(param_ty), Box::new(ret_ty)), e.clone()));
+            }
+            // Generic callee: type arguments must be fixed by context (`expected`). Attempt to
+            // solve them from the expected `Ty::Fn(a, r)` via unification; any unsolved variable
+            // is a never-silent refusal (G2/VR-5 — never a guessed default).
+            let callee_vars = fd.sig.param_names();
+            let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
+            if let Some(Ty::Fn(ea, er)) = expected {
+                let want_a = resolve_ty(
+                    self.site,
+                    self.types,
+                    &callee_vars,
+                    &fd.sig.value_params[0].ty,
+                )?
+                .0;
+                let want_r = resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0;
+                // Best-effort: ignore unification errors here — unsolved vars are caught below.
+                let _ = unify(self.site, &want_a, ea, &mut subst);
+                let _ = unify(self.site, &want_r, er, &mut subst);
+            }
+            for v in &callee_vars {
+                if !subst.contains_key(v) {
+                    return self.err(format!(
+                        "`{name}` is generic over `{v}`, but its type arguments cannot be \
+                         determined from context — ascribe the value or the call site \
+                         (RFC-0024 §5, RFC-0007 §11.3, never a guessed default)"
+                    ));
+                }
+            }
+            let want_a = resolve_ty(
+                self.site,
+                self.types,
+                &callee_vars,
+                &fd.sig.value_params[0].ty,
+            )?
+            .0;
+            let want_r = resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0;
+            let param_ty = subst_ty(&want_a, &subst);
+            let ret_ty = subst_ty(&want_r, &subst);
+            return Ok((Ty::Fn(Box::new(param_ty), Box::new(ret_ty)), e.clone()));
+        }
         self.err(teach_unknown(name, &format!("unknown name `{name}`")))
     }
 
@@ -2234,6 +2332,32 @@ impl Cx<'_> {
             ));
         }
         let name = &p.0[0];
+
+        // RFC-0024 §3 (M-686): a scope binder of function type `Ty::Fn(a, r)` is applied as a
+        // higher-order call. This covers `f(x)` inside a HOF body where `f: A -> B` is a parameter.
+        // Single-argument only in stage-1 — applying more or fewer arguments is a never-silent error
+        // (RFC-0024 §5, G2). Does NOT apply when the name also shadows a top-level fn (the scope
+        // binder takes priority by the `scope.iter().rev()` lookup, already matching above).
+        if let Some((_, Ty::Fn(param_ty, ret_ty))) = scope.iter().rev().find(|(n, _)| n == name) {
+            let param_ty = param_ty.as_ref().clone();
+            let ret_ty = ret_ty.as_ref().clone();
+            if args.len() != 1 {
+                return self.err(format!(
+                    "`{name}` has function type and takes exactly 1 argument in stage-1; \
+                     got {} (partial application / multi-arg HOF is deferred — RFC-0024 §5, \
+                     never a silent coercion)",
+                    args.len()
+                ));
+            }
+            let (got, a2) = self.check(scope, &args[0], Some(&param_ty))?;
+            if got != param_ty {
+                return self.err(format!(
+                    "`{name}` has type `{param_ty} -> {ret_ty}`; argument has type `{got}` \
+                     (arrow-type mismatch — RFC-0024 §3, never a silent coercion)"
+                ));
+            }
+            return Ok((ret_ty, app_node(head, vec![a2])));
+        }
 
         // User function: each argument is checked **against** its declared parameter type, so a
         // bare-decimal argument takes the parameter's width.
@@ -3229,7 +3353,8 @@ fn paradigm_name(t: &Ty) -> Option<&'static str> {
         Ty::Binary(_) => Some("Binary"),
         Ty::Ternary(_) => Some("Ternary"),
         Ty::Dense(_, _) => Some("Dense"),
-        Ty::Data(_, _) | Ty::Substrate(_) | Ty::Var(_) => None,
+        // `Ty::Fn` is not a representation type — it has no paradigm (RFC-0024 §3).
+        Ty::Data(_, _) | Ty::Substrate(_) | Ty::Var(_) | Ty::Fn(_, _) => None,
     }
 }
 

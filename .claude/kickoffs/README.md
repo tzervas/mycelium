@@ -42,19 +42,29 @@ main` promotes it up.
 | **`srf`** | `srf.md` | `crates/mycelium-l1/**` · `.claude/memory/lang-lexicon-syntax.md` | Sonnet · **serial-on-L1** (M-664 → M-667) + parallel docs leaf (M-668) | `run` ✅ (M-673 landed) |
 | **`std`** | `std.md` | `lib/std/result.myc` + differential tests | Sonnet · **single leaf** (disjoint from L1 Rust) | `run` ✅ (M-673 landed) |
 | **`tul`** | `tul.md` | `tools/github/**` | Sonnet (docs/tooling) | — (needs GitHub read access) |
-| **`dfb`** | `dfb.md` | `crates/mycelium-web/` · `crates/mycelium-adk/` (NEW) | Sonnet · parallel-leaf | `dfr` ✅ (discharged #344) + `run` ✅ (L1 surface advanced) |
+| **`dfb`** | `dfb.md` | `crates/mycelium-web/` · `crates/mycelium-adk/` (NEW) | Sonnet · parallel-leaf | ⏸ **SHELVED** behind E7-3/E7-4/E7-5 (L1 surface completeness) — maintainer 2026-06-23 |
+| *(active)* **l1-capstone** | run-kickoff continuation; head `claude/orch-0000-l1-capstone` | `crates/mycelium-l1/**` · `crates/mycelium-fmt/**` · `lib/std/**` | **E7-3** HOF (serial-on-L1) ∥ **E7-4** comment-preserving mycfmt (lexer+fmt, disjoint) → M-649 complete | `run` ✅ (M-673 landed) |
 
 **Parallelism (collision profile):**
 - **`srf` owns `crates/mycelium-l1/` (Rust) → serial-on-L1** (M-664 leaf lands, then M-667 rebases
-  + lands; M-668 docs leaf can run in parallel). See `srf.md` §M-673 run-collisions for the mandatory
+  and lands; M-668 docs leaf can run in parallel). See `srf.md` §M-673 run-collisions for the mandatory
   rebase checklist.
 - **`std` owns only `.myc` + test files** — fully disjoint from `srf`'s Rust edits. `std` and `srf`
   **may run in parallel** (no collision).
 - **`tul` ⟂ (the L1 track) are fully disjoint — fire in parallel** (separate sessions).
   `tul` = `tools/github/` only; the L1 track = `crates/mycelium-l1`. (`dfr` — research/docs only — is
   **done**: landed #344, see Completed.)
-- **`dfb`** is now unblocked: `dfr` research discharged + L1 surface advanced (M-673 landed). Gated
-  only on the `srf` keywords it may consume — scaffold can start now.
+- **`dfb`** is **SHELVED** (maintainer re-sequencing, 2026-06-23): the dogfooding builds wait behind
+  the **L1 surface-completeness wave** — **E7-3** (HOF / RFC-0024), **E7-4** (comment-preserving
+  `mycfmt`), **E7-5** (operator syntax / DN-23), run on the `claude/orch-0000-l1-capstone` head.
+  Building real apps is what most exercises these surface gaps; resume `dfb` once the surface is
+  complete + ergonomic (issues.yaml M-670/M-671 carry the shelve note + `depends_on` E7-3/E7-4).
+- **l1-capstone wave** (active, this session): **E7-3** owns `crates/mycelium-l1/` (serial-on-L1:
+  M-685 → M-686 → M-687 → M-688); **E7-4** owns `crates/mycelium-l1/src/lexer.rs` + `crates/mycelium-fmt/`
+  (M-689 ✅ → M-690 → M-691) and is **disjoint from E7-3** (fully parallel). All agents branch off the
+  **`claude/orch-0000-l1-capstone`** head (the common fixed base); the head advances as each leaf merges,
+  and the next leaf branches from / pulls down the advanced head. M-649 completes (pseudocode → real
+  combinators) on the head once E7-3 lands.
 
 Cross-work continuity rides the **issues** (`tools/github/issues.yaml` `depends_on` + body notes),
 never by touching another tree's files. (`dfb` predates this workflow — ignore its old

@@ -2073,14 +2073,15 @@ issues:
   - id: M-649
     title: "M-649 — Self-hosting Stage-2: first stdlib module written in Mycelium-lang L1 syntax"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P0, status:needs-design]
-    depends_on: [M-502, M-647]
+    labels: [phase:5, type:feature, area:language, priority:P0, status:in-progress]
+    depends_on: [M-502, M-647, M-673, E7-3, E7-4]
     evidence_pr: 310
     evidence_date: 2026-06-21
     landed_basis: "status:needs-design (NOT done) — evidence is a REFERENCE/partial, not a completed landing; git log 824449f (2026-06-21) 'docs: enactment & resolution sweep (M-647/648/650 done; M-381/646 closed; M-649 deferred)'; merged-PR-list #310 (cross-checked; no (#NNN) in the curated subject)"
     doc_refs: [corpus:DN-14, corpus:RFC-0020, corpus:RFC-0007, src:docs/spec/stdlib, src:crates/mycelium-l1/src/lib.rs]
     body: |
       M-502 produced the honest verdict: self-hosting NOT YET established. Gate-fails (5): generics, trait interfaces, effect annotations, wild/FFI blocks, static guarantee index. PRESENT (5): value types + ADTs, pattern matching, functions + recursion, let/lambda, nodule organization.
+      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
 
       Self-hosting does NOT require all 11 features. It requires ≥1 stdlib module written in Mycelium-lang that passes myc-check and meets the M-501 guarantee/EXPLAIN contract. The 5 present features are SUFFICIENT for a pure-function module with no generics, traits, effects, or FFI.
 
@@ -2103,6 +2104,7 @@ issues:
       - Phase 5 gate logged as "partially met" (first module in Mycelium-lang exists)
       - DN-14 Status: Resolved (with honest recording of remaining gate-fails — no silent upgrade)
       DEFERRED (2026-06-21, M-648 editorial sweep): scoped post-1.0 per ADR-021 §5. The 5 gate-fails (generics, trait interfaces, effect annotations, wild/FFI, static guarantee index) block all non-trivial stdlib authoring in Mycelium-lang; the 5 present features are insufficient for any module in the RFC-0016 taxonomy. This issue stays OPEN; resumption requires Stage-1 generics/traits RFC amendments (Phase-6). DN-14 deferral note appended (2026-06-21).
+      RESUMED (2026-06-23, run-kickoff capstone): unblocked by M-673 (generics/traits run to closed L0). First-order combinators (is_ok/is_err/unwrap_or) + differential tests + DN-14 Status->Resolved are DONE on branch claude/feat/m649-std-result; map/and_then/fold are captured as RFC-0024-syntax pseudocode in lib/std/result.pending-hof.md (mycfmt v0 refuses interior comments — E7-4 fixes that, then the docstrings + combinators move inline). Per maintainer (2026-06-23) M-649 is HELD and lands COMPLETE: the pseudocode is swapped for executable map/and_then/fold once E7-3 (HOF) lands and is pulled down. status -> in-progress; depends_on E7-3 (combinators) + E7-4 (inline docstrings).
 
   - id: M-650
     title: "M-650 — DN-11 Next Wave Plan: capture Phase 5 completion summary + Phase 6 road map"
@@ -2575,7 +2577,7 @@ issues:
     title: "M-670 — feat(web): build the mycelium-web phylum (HTTP client/server/routing/JSON) per RFC-0022"
     milestone: "Phase 6 — Native Acceleration & Deployment"
     labels: [phase:6, type:feature, area:stdlib, priority:P2, status:blocked]
-    depends_on: [M-657, M-659, M-666]
+    depends_on: [M-657, M-659, M-666, E7-3, E7-4]
     evidence_pr: 345
     evidence_date: 2026-06-21
     landed_basis: "status:blocked (NOT done) — evidence is a REFERENCE/partial, not a completed landing; git log ea112bb (2026-06-21) 'docs(rfc-0022): draft Web-Tooling Phylum + research RECORD (M-670, RP-10)'; merged-PR-list #345 (cross-checked; no (#NNN) in the curated subject)"
@@ -2584,13 +2586,14 @@ issues:
       **Wave-2:** built on head `claude/head/dogfood-build` (kickoff `dfb`).
       **✅ RP-10 research gate CLEARED (dfr, 2026-06-21).** Discharged at design-soundness — all four obligations sound vs primary specs (RFC 9110/9112, RFC 8259, WHATWG-URL), no falsification (`research/12-web-phylum-RECORD.md` §8); RFC-0022 **RATIFIED → Accepted (2026-06-21, maintainer)** — design agreed; Enacted gated on this build. **Ratified calls:** `web.server` runs on the Mycelium runtime (realization `mycelium-mlir::runtime`, no external executor); IDNA pinned at build (policy fixed — nontransitional, fail-closed); HTTP/2-3 + TLS + smuggling-model = v1 non-goals. The research dependency is discharged; the build's remaining block is **E7-1/E7-2 only** (M-657/M-659/M-666). **Build constraints (full list: `research/12-web-phylum-RECORD.md` §8.3):** never-silent located errors (byte-offset + field; no sentinel/partial); take the RFC-9112 *reject* branch at every fork (obs-fold, CL+TE, invalid request-line; CL+TE/dup-CL ⇒ explicit Err); strict CRLF + chunk-size overflow guard; a **versioned, reified IDNA/UTS-46 table** (pin a Unicode version, nontransitional, fail-not-best-effort — WHATWG leaves it unpinned); `web.json` **zero codec outside `std.io`** + non-finite-f64 refusal + decode `Empirical` (carry `no_op_is_proven_without_a_checked_theorem`); **RT2 differential** (interpreter-vs-AOT, ≥3 seeds, zero divergences, non-vacuity guard) carrying `kahn_determinism_is_empirical_not_proven`; `RouteMatch` per dispatch + ambiguity ⇒ `CheckError` at construction (a value, not a panic). Carry-forward (NOT this build's gate; §8.4): cross-peer smuggling model, HTTP/2-3, TLS, streaming backpressure, wall-clock time, RT3.
       build the `web` phylum (Rust-first `mycelium-web`): nodules web.http / web.json / web.route / web.server / web.client per RFC-0022. **BLOCKED** on E7-1 (M-657 generics, M-659 traits — the typed `Json<T>` handler surface) + E7-2 (M-666 `hypha`/`colony` — the `colony { hypha … }` server surface). v1 Rust-first; honest guarantee matrix (never `Proven` without a checked basis); never-silent throughout (G2).
+      SHELVED (2026-06-23, maintainer re-sequencing): dogfooding waits behind the L1 surface-completeness wave — E7-3 (HOF), E7-4 (comment-preserving mycfmt), E7-5 (operator syntax). Building real apps is what most exercises these surface gaps; resume `dfb` once the surface is complete + ergonomic. status stays blocked.
 
   # ---------------- 2026-06-21: ADK phylum (RFC-0023) ----------------
   - id: M-671
     title: "M-671 — feat(adk): build the mycelium-adk phylum (Agent Development Kit port) per RFC-0023"
     milestone: "Phase 6 — Native Acceleration & Deployment"
     labels: [phase:6, type:feature, area:stdlib, priority:P2, status:blocked]
-    depends_on: [M-657, M-659, M-666, M-670]
+    depends_on: [M-657, M-659, M-666, M-670, E7-3, E7-4]
     evidence_pr: 345
     evidence_date: 2026-06-21
     landed_basis: "status:blocked (NOT done) — evidence is a REFERENCE/partial, not a completed landing; git log 5d09f77 (2026-06-21) 'docs(rfc-0023): draft Agent Development Kit phylum + research RECORD (M-671, RP-9)'; merged-PR-list #345 (cross-checked; no (#NNN) in the curated subject)"
@@ -2599,3 +2602,220 @@ issues:
       **Wave-2:** built on head `claude/head/dogfood-build` (kickoff `dfb`).
       **✅ RP-9 research gate SUBSTANTIALLY CLEARED (dfr, 2026-06-21).** Discharged at design-soundness — no soundness falsification (`research/13-adk-phylum-RECORD.md` §6); RFC-0023 **RATIFIED → Accepted (2026-06-21, maintainer)** — design agreed; Enacted gated on this build. Remaining block is **E7-1/E7-2 + M-670**. **✅ Concept-map repaired at ratification:** §3.7 now maps ADK 2.0's graph **Workflow Runtime** (a colony DAG, per-node RT2/RT3), routing/fan-out-fan-in/loops/retry/nested, human-in-the-loop→`cyst`, the operating-`mode` (chat/task/single-turn), and `RunConfig.max_llm_calls`→`TaskOutcome::BudgetExhausted`; §3 pinned **v2.3.0**. (Minor build cleanup: the `ToolContext`→`Context` citation.) **Build constraints (full list: `research/13-adk-phylum-RECORD.md` §6.3):** `ToolError` keeps `BadArgs|OutOfDomain|Refused|Upstream` with budget via `TaskOutcome::BudgetExhausted` (ratified — branded names canonical); type-is-schema (derive from `In`/`Out` — forecloses the ADK #4777 silent coercion); **reuse the one harness** (`GrokLlmReport` + `tools/llm-harness/`; NO second model-call path; tags `{Declared,Empirical}` verbatim); `adk.model` transport over `mycelium-web` (M-670), not a private client; **runtime = `mycelium-mlir::runtime`** (ratified, R23-Q1; migrate to std.runtime later) — determinism `Empirical` (RT2 differential), never `Proven`; Session/State = content-addressed snapshots (RT1); never-silent tool-dispatch test corpus; `is_synthetic` survives end-to-end. **Assert NO LLM-leverage result** (item 6 scoped, no verdict — DN-09 INDETERMINATE; a separate measured pass).
       build the `adk` phylum (Rust-first `mycelium-adk`): nodules adk.agent / adk.tool / adk.session / adk.runner / adk.model per RFC-0023 — a Mycelium port of Google's Agent Development Kit, with **honesty-as-differentiator** (every tool/model output tagged Declared/Empirical, never Proven). **BLOCKED** on E7-1 + E7-2 + M-670 (reuses the web phylum's HTTP/JSON for model transport). Wires to the LLM harness (reuses `GrokLlmReport`). v1 Rust-first; never-silent (G2).
+      SHELVED (2026-06-23, maintainer re-sequencing): like M-670, the ADK build waits behind the L1 surface-completeness wave (E7-3 HOF + E7-4 comments + E7-5 operators) and M-670. Resume once the surface is complete. status stays blocked.
+
+  # ---------------- 2026-06-23: Wave — L1 surface completeness (HOF · comments · operators) ----------------
+  # Maintainer re-sequencing (2026-06-23): complete the L1 surface (E7-3 HOF, E7-4 comment-preserving
+  # mycfmt, E7-5 operator syntax) BEFORE the dogfooding builds (dfb: M-670/M-671), which now depend on it.
+  # Capstone of the `run` kickoff. Honesty floor as E7-1: no DN-14 row flips / no tag upgrade without a
+  # landed, `just check`-green implementation (VR-5).
+  - id: E7-3
+    title: "E7-3 (epic) — L1 Higher-Order Functions via Static Defunctionalization (RFC-0024)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:language, priority:P1, status:in-progress]
+    depends_on: [M-673]
+    epic: E7
+    doc_refs: [corpus:RFC-0007, corpus:RFC-0019, corpus:DN-14, src:crates/mycelium-l1/src/mono.rs]
+    body: |
+      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+      Capstone of the `run` kickoff: make higher-order functions RUN so the stdlib combinators
+      (`map`/`and_then`/`fold`) can self-host. The v0 surface is first-order (no function type `A -> B`
+      as a value); this epic adds a minimal HOF surface and lowers it by **static defunctionalization**
+      entirely in the L1 frontend (`mono.rs`), so the L0 kernel stays first-order — **no `mycelium-core`
+      change (KC-3)** — exactly the discipline M-673 used for generics/traits.
+      Children (dependency-ordered): M-684 (spec: RFC-0024) -> M-685 (function-type surface: parser + AST,
+      `BaseType::Fn`, `->` infix) -> M-686 (checker: `Ty::Fn`, fn-value typing, higher-order application,
+      inference) -> M-687 (defunctionalizing mono: specialize each HOF call by its statically-known fn
+      argument) -> M-688 (HOF capability differential + conformance tests). M-649 completes its `std.result`
+      combinator swap under this epic once M-687 lands.
+      Scope (honest boundary, RFC-0024): IN — named top-level functions as first-class values, resolved
+      statically at the call site. OUT (never-silent `Residual`, deferred): closures/lambdas, a fn value
+      flowing dynamically (from a match / data field / fn return), partial application, a still-generic fn
+      passed as a value; full Reynolds defunctionalization. Guarantee Declared; differential agreement
+      Empirical. STOP-and-flag guard: if any in-scope case needs an L0 node, that breaks KC-3 — escalate,
+      do not add a kernel node.
+      Acceptance: map/and_then/fold over Result run to closed L0 (M-210 three-way agreement on the mono'd
+      env); no `mycelium-core` change; `just check` green; M-649 retires its pseudocode companion; DN-14 HOF
+      line -> present (append-only).
+  - id: M-684
+    title: "M-684 — spec(rfc-0024): Higher-Order Functions via Static Defunctionalization"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:spec, area:language, priority:P1, status:needs-design]
+    depends_on: [M-673]
+    epic: E7-3
+    doc_refs: [corpus:RFC-0007, corpus:RFC-0019, src:lib/std/result.myc]
+    body: |
+      Author RFC-0024 (Draft -> Proposed): a new RFC superseding RFC-0007 §4.4's "no function values"
+      clause for the NAMED-function case (append-only; do not rewrite RFC-0007). Normative content: the
+      function type `A -> B` (single-arg v1; multi-arg `(A,B)->C` deferred + flagged); a bare top-level fn
+      name as a function value; static-defunctionalization semantics (each HOF call specialized by its
+      statically-known fn argument; `f(x)` -> a direct call; L0 stays first-order, no kernel change — KC-3);
+      the honesty/scope boundary (closures, dynamic fn-flow, partial application, generic-fn-as-value all
+      stay never-silent `Residual`; full Reynolds defunctionalization deferred). Grounding: contracts
+      Declared, differential agreement Empirical (VR-5). References RFC-0019 §4.4 (mono as the vehicle).
+      Acceptance: RFC-0024 added + Doc-Index row + CHANGELOG; status Draft -> Proposed; no RFC-0007 rewrite.
+  - id: M-685
+    title: "M-685 — feat(l1): function-type surface `A -> B` + named-fn-as-value (parser + AST)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
+    depends_on: [M-684]
+    epic: E7-3
+    doc_refs: [corpus:RFC-0007, src:crates/mycelium-l1/src/parse.rs, src:crates/mycelium-l1/src/ast.rs]
+    body: |
+      Add `BaseType::Fn(Box<TypeRef>, Box<TypeRef>)` to ast.rs and extend `parse_type_ref` (parse.rs) to
+      consume a trailing `Tok::Arrow` in type position (right-associative; `@` binds tighter than `->`).
+      `->`/`=>` are already distinct atomic tokens, and a bare fn name in value position already parses as
+      `Expr::Path` — so this is a localized, additive parser change; the checker (M-686) gives the meaning.
+      Single-arg arrow only in v1 (multi-arg deferred — FLAG). Serial-on-L1 (shares ast.rs/parse.rs with the
+      rest of E7-3 and with E7-4's optional anchoring fallback). Acceptance: `f: A -> B` parses to
+      `BaseType::Fn`; `map(mk_ok(), double)` parses with `double` as `Path`; conformance corpus green.
+      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+  - id: M-686
+    title: "M-686 — feat(l1): checker — `Ty::Fn`, fn-value typing, higher-order application, inference"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
+    depends_on: [M-685]
+    epic: E7-3
+    doc_refs: [corpus:RFC-0019, src:crates/mycelium-l1/src/checkty.rs]
+    body: |
+      Add `Ty::Fn(Box<Ty>, Box<Ty>)` + all total-match arms (subst_ty, has_var, type_head->None, Display,
+      unify [structural], resolve_ty for BaseType::Fn). `check_path` synthesizes `Ty::Fn` for a bare
+      monomorphic top-level fn (a generic fn referenced bare without fixable type args = never-silent
+      refusal). `check_app` types `f(x)` for a fn-typed binder. Inference at `map(mk_ok(), double)` falls out
+      of the new `unify` Fn arm. Every refusal explicit (G2); guarantee Declared. Acceptance: map/and_then/
+      fold over Result type-check; arrow-type mismatch + generic-fn-as-value + partial application all refuse
+      explicitly; `cargo test -p mycelium-l1` green.
+      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+  - id: M-687
+    title: "M-687 — feat(l1): defunctionalizing monomorphization (specialize HOF by static fn argument)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
+    depends_on: [M-686]
+    epic: E7-3
+    doc_refs: [corpus:RFC-0019, corpus:RFC-0007, src:crates/mycelium-l1/src/mono.rs]
+    body: |
+      Extend the M-673 worklist (mono.rs): key a HOF specialization by its statically-known fn argument(s)
+      (extend `Item::Fn` with fn-arg identities; extend item_key/mangle injectively + a pinning test). In
+      `rewrite_app`, resolve a fn-valued argument to a top-level fn, enqueue both it and the HOF
+      specialization, and drop the fn arg from the call. In the emitted specialization, rewrite `f(x)` to a
+      direct call to the baked-in callee and drop the fn-param. Output stays closed first-order L0 — confirm
+      `mycelium-core` untouched (KC-3). Keep/extend never-silent `Residual` for the OUT-of-scope cases
+      (closures, dynamic fn-flow, partial application, generic-fn-as-value). Acceptance: `map(mk_ok(),double)`
+      monomorphizes to closed first-order L0 and runs (three paths agree); dynamic-fn case = explicit
+      Residual; determinism (mono twice = byte-equal); `cargo test -p mycelium-l1` green.
+      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+  - id: M-688
+    title: "M-688 — test(l1): HOF capability differential + conformance (map/and_then/fold to closed L0)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:verification, area:language, priority:P1, status:in-progress]
+    depends_on: [M-687]
+    epic: E7-3
+    doc_refs: [src:crates/mycelium-l1/tests/differential.rs, src:crates/mycelium-l1/src/mono.rs]
+    body: |
+      Add HOF programs to the three-way differential (differential.rs): a named fn passed to map/and_then/
+      fold runs to closed L0 with L1-eval ≡ L0-interp ≡ AOT agreement (tag Empirical) + a mutant-witness
+      (two different fns -> different L0 results). Property tests: defunctionalization determinism +
+      termination. Conformance accept fixture (function type + fn-value) and a reject fixture (malformed
+      arrow / partial application) — orchestrator owns the docs/spec/grammar corpus + mycelium.ebnf.
+      Acceptance: the differential + property tests pass; `just check` green.
+      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+  - id: E7-4
+    title: "E7-4 (epic) — Comment-preserving mycfmt (docstrings survive the formatter)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:epic, area:toolchain, priority:P1, status:in-progress]
+    depends_on: []
+    epic: E7
+    doc_refs: [src:crates/mycelium-l1/src/lexer.rs, src:crates/mycelium-fmt/src/lib.rs, src:docs/spec/Mycfmt-Formatter-Contract.md]
+    body: |
+      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+      Hard requirement (maintainer, 2026-06-23): docstring-style "why" comments must be writable in `.myc`
+      code and survive `mycfmt`. Today the lexer discards `//` comments as trivia and `mycfmt` rebuilds the
+      body from the AST, so to avoid silently dropping comments (G2) it REFUSES any interior or extra-header
+      comment (Mycfmt-Formatter-Contract §7.2/§10.2 — a documented deferral). This epic enacts that deferral.
+      Lexer + formatter only — disjoint from E7-3 (no ast.rs/parse.rs edit; fully parallel) per the design.
+      Faithful preservation of any `//` comment is v1 (no grammar change, no RFC); a structured `///`
+      doc-comment convention (myc-doc-extractable) is a fast-follow RFC (M-691 note).
+      Children (ordered): M-689 (lexer captures comments into a side table — `lex_with_comments`) -> M-690
+      (formatter interleaves them in canonical positions; replace the refusals with placement) -> M-691
+      (conformance fixtures + Mycfmt-Formatter-Contract enactment note + api-index regen).
+      Acceptance: a nodule with a docstring above a fn + interior + trailing comments formats canonically
+      with every comment preserved, idempotent + round-tripping; the `std.result` pseudocode moves back
+      inline into `result.myc` (companion deleted) once this lands; `just check` green.
+  - id: M-689
+    title: "M-689 — feat(l1): lexer captures // comments into a side table (mycfmt stage 1)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P1, status:in-progress]
+    depends_on: []
+    epic: E7-4
+    doc_refs: [src:crates/mycelium-l1/src/lexer.rs]
+    body: |
+      The lexer's `skip_trivia` discards `//`...EOL. Capture each comment instead into an ordered side table
+      (text verbatim + line + col + trailing flag) via a new `pub fn lex_with_comments`, keeping the existing
+      `lex` byte-identical. `Tok` unchanged (no comment token). lexer.rs only — disjoint from E7-3.
+      IN PROGRESS (branch claude/feat/mycfmt-comments-lexer, SHA c3ff439) — capture + 10 tests green.
+      Acceptance: existing lexer tests green; lex_with_comments returns correct text/line/trailing for
+      full-line/trailing/consecutive/blank-separated/header comments; exact capture, never-silent (G2).
+      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+  - id: M-690
+    title: "M-690 — feat(fmt): mycfmt interleaves preserved comments (replace refusal with placement)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P1, status:in-progress]
+    depends_on: [M-689]
+    epic: E7-4
+    doc_refs: [src:crates/mycelium-fmt/src/lib.rs, src:crates/mycelium-l1/src/lexer.rs]
+    body: |
+      Replace `mycfmt`'s interior-comment + stray-header-comment REFUSALS (lib.rs) with PLACEMENT: consume
+      `lex_with_comments`, attach full-line comments as leading doc-blocks to the following item, trailing
+      same-line comments to their line (one-arm-per-line match rendering gated on "has a comment" for
+      idempotence), preserve the structured header. Keep the C1/C2/C3 round-trip guards (comments are
+      AST-invisible). A genuinely unplaceable comment still refuses explicitly (G2). Item anchoring derived
+      from token positions (no ast.rs/parse.rs edit) keeps it HOF-disjoint; if insufficient, a thin
+      `Item`/`Arm` line-number addition serializes on L1 with E7-3 (FLAG). Acceptance: docstring/interior/
+      trailing comments format canonically, preserved, idempotent + round-tripping; previously-refusing tests
+      updated to assert preservation; `just check` green.
+      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+  - id: M-691
+    title: "M-691 — test+spec: mycfmt comment-preservation conformance + contract enactment + api-index"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:verification, area:toolchain, priority:P2, status:needs-design]
+    depends_on: [M-690]
+    epic: E7-4
+    doc_refs: [src:crates/mycelium-fmt/tests/conformance.rs, src:docs/spec/Mycfmt-Formatter-Contract.md]
+    body: |
+      Conformance fixtures (a nodule with a docstring + interior + trailing comments that now formats
+      in-scope); update the previously-refusing unit tests to assert preservation; regenerate docs/api-index
+      (lexer gains a public `lex_with_comments`); append-only enactment note to Mycfmt-Formatter-Contract
+      §7.2/§10.2 (deferred -> enacted; agreement stays Empirical, never Proven — VR-5). FAST-FOLLOW (separate
+      RFC, future): a first-class `///` doc-comment convention (myc-doc-extractable, myc-lint-encourageable);
+      v1 faithful preservation already keeps `///` lines verbatim, so the convention is purely additive.
+      Acceptance: conformance + contract + api-index updated; `just check` green.
+  - id: E7-5
+    title: "E7-5 (epic) — Operator syntax: words canonical, optional symbol sugar (DN-23 -> RFC-0025)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:language, priority:P2, status:needs-design]
+    depends_on: [E7-3]
+    epic: E7
+    doc_refs: [corpus:DN-23, corpus:RFC-0007]
+    body: |
+      The "whole other leg" of basic-mathematics / operator syntax (maintainer, 2026-06-23). Mycelium is
+      word-based today (`add`/`xor`/`neg`/`and`/`cmp`). DN-23 records the decision space + recommendation:
+      keep WORDS canonical in the kernel (a word operator is a named fn — first-class once RFC-0024 lands),
+      and if symbolic math is wanted add it as pure surface SUGAR that desugars to the word functions
+      (frontend-only, no kernel change — KC-3). Side effects already handled/moot: `-`/`->`/`=>` are distinct
+      atomic tokens (no conflict); identifiers are snake_case (no forced casing change). Sequenced AFTER the
+      L1 surface work (E7-3/E7-4) and BEFORE the dogfooding builds (dfb). Children: M-692 (RFC-0025 + sugar
+      impl, future). Acceptance: a binding decision in RFC-0025; if symbols adopted, sugar desugars to word
+      fns with no L0 change.
+  - id: M-692
+    title: "M-692 — spec+feat: operator syntax (RFC-0025 — symbolic sugar -> word functions)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:spec, area:language, priority:P2, status:needs-design]
+    depends_on: [E7-3]
+    epic: E7-5
+    doc_refs: [corpus:DN-23, corpus:RFC-0007, src:docs/notes/DN-23-Operator-Syntax.md]
+    body: |
+      Per DN-23: author RFC-0025 deciding operator syntax (recommended: words canonical + optional symbolic
+      infix sugar `a + b` -> `add(a, b)`, with precedence/associativity defined once in the RFC), then, if
+      adopted, implement the sugar as a frontend desugaring (parser/elaboration only — no `mycelium-core`/L0
+      change, KC-3). Honest: deferred future leg; no syntax enacted until RFC-0025 lands. Acceptance: RFC-0025
+      + Doc-Index + CHANGELOG; if symbols adopted, desugaring tests show identical L0 to the word form.

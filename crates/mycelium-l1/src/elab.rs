@@ -167,6 +167,14 @@ pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
             "internal: an unresolved paradigm-less repr `{…}` reached elaboration — the ambient \
              resolution pass fills it first (RFC-0012 §4.3)",
         ),
+        // Function types are surface-only in HOF stage 1 (RFC-0024 §3, M-685); elaboration
+        // (defunctionalization) is M-687. A function type used as a swap target is a
+        // never-silent explicit refusal (G2).
+        BaseType::Fn(_, _) => residual(
+            site,
+            "function types (`A -> B`) are not a representation type and cannot be a swap target \
+             (RFC-0024 §3, HOF stage 1 — defunctionalization is M-687)",
+        ),
     }
 }
 
@@ -544,6 +552,10 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
         Ty::Data(n, args) if args.is_empty() => FieldSpec::Data(n.clone()),
         Ty::Data(_, _) | Ty::Var(_) => return None,
         Ty::Substrate(_) => return None,
+        // RFC-0024 §4 / M-687: function-typed fields are not yet lowered to kernel form in
+        // stage-1 elaboration (defunctionalization is M-687). A `Ty::Fn` in a field position
+        // returns `None` (staged residual — never a silent, half-elaborated artifact; G2/VR-5).
+        Ty::Fn(_, _) => return None,
     })
 }
 

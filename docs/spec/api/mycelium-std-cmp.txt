@@ -9,11 +9,11 @@ impl<T: core::cmp::Eq> core::cmp::Eq for mycelium_std_cmp::ClampError<T>
 impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_cmp::ClampError<T>
 pub fn mycelium_std_cmp::ClampError<T>::eq(&self, &mycelium_std_cmp::ClampError<T>) -> bool
 impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_cmp::ClampError<T>
-impl<T: core::fmt::Debug> core::error::Error for mycelium_std_cmp::ClampError<T>
 impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_std_cmp::ClampError<T>
 pub fn mycelium_std_cmp::ClampError<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl<T: core::fmt::Debug> core::fmt::Display for mycelium_std_cmp::ClampError<T>
 pub fn mycelium_std_cmp::ClampError<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::error::Error for mycelium_std_cmp::ClampError<T> where T: core::fmt::Debug
 impl<T> core::marker::Freeze for mycelium_std_cmp::ClampError<T> where T: core::marker::Freeze
 impl<T> core::marker::Send for mycelium_std_cmp::ClampError<T> where T: core::marker::Send
 impl<T> core::marker::Sync for mycelium_std_cmp::ClampError<T> where T: core::marker::Sync
