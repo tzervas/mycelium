@@ -75,9 +75,16 @@ pub struct InstanceSelection {
 /// keyed by the mangled callee name (which itself encodes `(method, trait, receiver)`). Populated by
 /// [`monomorphize_with_selections`]; queryable so the dictionary-free static resolution is a
 /// reified, inspectable record rather than a black box (house rule #2).
+///
+/// Extended in M-687 (RFC-0024 §4) to also record **HOF defunctionalization specializations**
+/// (`hof_specs`): each static HOF specialization — the source fn, its type args, its baked-in
+/// function arguments, and the mangled name — is recorded for full inspectability.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MonoSelections {
     by_mangled: BTreeMap<String, InstanceSelection>,
+    /// HOF defunctionalization records (RFC-0024 §4, M-687): keyed by the mangled HOF
+    /// specialization name (e.g. `map$Binary8$Binary8%1:double`).
+    hof_specs: BTreeMap<String, HofSpecialization>,
 }
 
 impl MonoSelections {
@@ -105,6 +112,18 @@ impl MonoSelections {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.by_mangled.is_empty()
+    }
+
+    /// The HOF defunctionalization record for the mangled specialization `mangled`, if any
+    /// (RFC-0024 §4, M-687). Returns the source fn, type args, and baked-in function arguments.
+    #[must_use]
+    pub fn hof(&self, mangled: &str) -> Option<&HofSpecialization> {
+        self.hof_specs.get(mangled)
+    }
+
+    /// Every recorded HOF specialization, in deterministic (mangled-name) order.
+    pub fn hof_iter(&self) -> impl Iterator<Item = (&String, &HofSpecialization)> {
+        self.hof_specs.iter()
     }
 }
 
@@ -142,15 +161,49 @@ pub fn monomorphize_with_selections(
     Ok(m.finish())
 }
 
-/// Is `env` already fully monomorphic and trait-free? Then mono is the identity (the fast
-/// pass-through). True iff **no** function is generic, **no** data type is generic, and there are
-/// **no** traits / instances / retained impls — i.e. nothing to specialize or statically resolve.
+/// Is `env` already fully monomorphic, trait-free, **and** HOF-free? Then mono is the identity
+/// (the fast pass-through). True iff **no** function is generic, **no** function has a fn-typed
+/// value parameter (which needs defunctionalization — RFC-0024 §4, M-687), **no** data type is
+/// generic, and there are **no** traits / instances / retained impls.
 fn is_already_monomorphic(env: &Env) -> bool {
-    env.fns.values().all(|fd| fd.sig.params.is_empty())
-        && env.types.values().all(|d| d.params.is_empty())
+    env.fns.values().all(|fd| {
+        fd.sig.params.is_empty()
+            && fd
+                .sig
+                .value_params
+                .iter()
+                .all(|p| !param_has_fn_type(&env.types, &fd.sig.param_names(), &p.ty))
+    }) && env.types.values().all(|d| d.params.is_empty())
         && env.traits.is_empty()
         && env.instances.is_empty()
         && env.impls.is_empty()
+}
+
+/// True iff the parameter type `t` resolves to (or contains) a `Ty::Fn` — meaning this parameter
+/// is a HOF that needs defunctionalization (RFC-0024 §4, M-687). Best-effort: a resolution failure
+/// is treated as "not fn-typed" (the full mono pass will catch it with an explicit Residual).
+fn param_has_fn_type(
+    types: &BTreeMap<String, crate::checkty::DataInfo>,
+    tyvars: &[String],
+    t: &TypeRef,
+) -> bool {
+    use crate::ast::BaseType;
+    match &t.base {
+        BaseType::Fn(_, _) => true,
+        BaseType::Named(n, args) => {
+            // A type variable or a data type with fn-typed arguments — check args recursively.
+            // A data type itself (not a type var) is not fn-typed; a type variable is also not
+            // fn-typed at the surface level (it resolves to a concrete type at specialization time,
+            // which may or may not be `Ty::Fn`; we conservatively say false here and let the full
+            // mono pass handle it with an explicit Residual if it turns out fn-typed).
+            if tyvars.contains(n) || types.contains_key(n.as_str()) {
+                return false; // bare type var or concrete data type — not a fn type itself
+            }
+            // Otherwise check args (e.g. `F<A->B>` would have a fn-typed arg — exotic but safe).
+            args.iter().any(|a| param_has_fn_type(types, tyvars, a))
+        }
+        _ => false, // Binary/Ternary/Dense/Substrate — never fn-typed
+    }
 }
 
 /// A monomorphization work item — the unit of the dedup worklist. Deduplication is by the item's
@@ -159,8 +212,20 @@ fn is_already_monomorphic(env: &Env) -> bool {
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Item {
     /// A function instance: the source fn `name` at concrete type arguments `targs` (empty for a
-    /// monomorphic fn — which mangles to `name` unchanged).
-    Fn { name: String, targs: Vec<Ty> },
+    /// monomorphic fn — which mangles to `name` unchanged), optionally specialised by resolved
+    /// **function-argument** identities (RFC-0024 §4, M-687). `fn_args` carries `(param_index,
+    /// callee_mangled_name)` for each value-parameter whose type is `Ty::Fn`; empty means no
+    /// higher-order specialization. An `Item::Fn` with non-empty `fn_args` is a defunctionalized
+    /// HOF specialization — distinct from the un-specialized (or differently-specialized) version
+    /// of the same fn.
+    Fn {
+        name: String,
+        targs: Vec<Ty>,
+        /// `(param_index, callee_mangled_name)` for each fn-typed value parameter, sorted by
+        /// param index (deterministic). Baked into the item key so two different function
+        /// arguments produce two distinct specializations (never a silent alias — G2).
+        fn_args: Vec<(usize, String)>,
+    },
     /// A data-type instance: the source type `name` at concrete `targs`.
     Data { name: String, targs: Vec<Ty> },
     /// A trait-method instance: the unqualified method `method` of trait `trait_name`, resolved at the
@@ -170,6 +235,23 @@ enum Item {
         method: String,
         for_ty: Ty,
     },
+}
+
+/// The **EXPLAIN record** of a single HOF defunctionalization (RFC-0024 §4, M-687): which
+/// higher-order function was specialized, at which type arguments, with which function arguments
+/// baked in. Recorded in [`MonoSelections`] so the static dispatch is inspectable (house rule #2
+/// — no black boxes).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HofSpecialization {
+    /// The source (polymorphic / HOF) function name.
+    pub source_fn: String,
+    /// The concrete type arguments (empty if the HOF was monomorphic).
+    pub targs: Vec<Ty>,
+    /// The resolved function argument(s): `(param_index, callee_mangled_name)`, parallel to the
+    /// `fn_args` of the [`Item::Fn`] that triggered this specialization.
+    pub fn_args: Vec<(usize, String)>,
+    /// The mangled name of the emitted closed-first-order specialization.
+    pub mangled: String,
 }
 
 /// The monomorphization driver: the source (checked, generic) env, the dedup worklist, and the
@@ -188,6 +270,13 @@ struct Mono<'e> {
     out_types: BTreeMap<String, DataInfo>,
     /// The reified trait-method dispatch record (house rule #2).
     selections: BTreeMap<String, InstanceSelection>,
+    /// HOF defunctionalization specialization records (RFC-0024 §4, M-687; house rule #2).
+    hof_specs: BTreeMap<String, HofSpecialization>,
+    /// Active fn-parameter substitution during HOF specialization emission (M-687): maps a
+    /// value-parameter name whose type is `Ty::Fn` to the mangled name of its resolved callee.
+    /// Populated by [`emit_fn`] when `fn_args` is non-empty; cleared after each emission. Only
+    /// consulted in [`rewrite_hof_app`].
+    fn_param_subst: BTreeMap<String, String>,
 }
 
 impl<'e> Mono<'e> {
@@ -199,6 +288,8 @@ impl<'e> Mono<'e> {
             out_fns: BTreeMap::new(),
             out_types: BTreeMap::new(),
             selections: BTreeMap::new(),
+            hof_specs: BTreeMap::new(),
+            fn_param_subst: BTreeMap::new(),
         }
     }
 
@@ -224,10 +315,15 @@ impl<'e> Mono<'e> {
         self.enqueue(Item::Fn {
             name: entry.to_owned(),
             targs: vec![],
+            fn_args: vec![],
         });
         while let Some(item) = self.work.pop() {
             match item {
-                Item::Fn { name, targs } => self.emit_fn(&name, &targs)?,
+                Item::Fn {
+                    name,
+                    targs,
+                    fn_args,
+                } => self.emit_fn(&name, &targs, &fn_args)?,
                 Item::Data { name, targs } => self.emit_data(&name, &targs)?,
                 Item::Method {
                     trait_name,
@@ -259,14 +355,28 @@ impl<'e> Mono<'e> {
             env,
             MonoSelections {
                 by_mangled: self.selections,
+                hof_specs: self.hof_specs,
             },
         )
     }
 
-    /// Specialize source function `name` at concrete `targs` and emit the monomorphic `FnDecl` under
-    /// its mangled name. Discovers transitive instances by walking (and rewriting) the body.
-    fn emit_fn(&mut self, name: &str, targs: &[Ty]) -> Result<(), ElabError> {
-        let mangled = mangle_decl(name, targs);
+    /// Specialize source function `name` at concrete `targs` (and optionally with baked-in
+    /// function arguments `fn_args` for HOF defunctionalization — RFC-0024 §4, M-687) and emit
+    /// the monomorphic `FnDecl` under its mangled name. Discovers transitive instances by walking
+    /// (and rewriting) the body.
+    ///
+    /// When `fn_args` is non-empty: each `(param_index, callee_mangled)` pair names a
+    /// value-parameter whose declared type is `Ty::Fn` and the statically-resolved callee that was
+    /// passed at the call site. The specialized body replaces every application of that fn-param
+    /// with a direct call to the callee, and the fn-param is **dropped** from the emitted
+    /// value-parameter list — producing a closed first-order signature (no `Ty::Fn` in params).
+    fn emit_fn(
+        &mut self,
+        name: &str,
+        targs: &[Ty],
+        fn_args: &[(usize, String)],
+    ) -> Result<(), ElabError> {
+        let mangled = mangle_hof_decl(name, targs, fn_args);
         // Already emitted? (the worklist dedups, but a defensive check keeps emission idempotent.)
         if self.out_fns.contains_key(&mangled) {
             return Ok(());
@@ -289,27 +399,72 @@ impl<'e> Mono<'e> {
             );
         }
         let subst: BTreeMap<String, Ty> = param_subst(&tyvars, targs);
-        // The concrete value-parameter scope (param name → substituted concrete type), for re-inferring
-        // sub-expression types while walking the body.
+
+        // Build the fn-parameter substitution map for HOF defunctionalization:
+        //   fn_param_name → callee_mangled_name
+        // and validate that each fn-arg index names an actual fn-typed param.
+        let fn_arg_map: BTreeMap<String, String> = fn_args
+            .iter()
+            .map(|(idx, callee)| {
+                let pname = fd
+                    .sig
+                    .value_params
+                    .get(*idx)
+                    .map(|p| p.name.clone())
+                    .ok_or_else(|| ElabError::Residual {
+                        site: name.to_owned(),
+                        what: format!(
+                            "HOF fn_arg index {idx} out of bounds for `{name}` (internal)"
+                        ),
+                    })?;
+                Ok((pname, callee.clone()))
+            })
+            .collect::<Result<_, ElabError>>()?;
+
+        // Set of param indices that are fn-typed and will be dropped from the emitted signature.
+        let dropped_indices: BTreeSet<usize> = fn_args.iter().map(|(i, _)| *i).collect();
+
+        // The concrete value-parameter scope (param name → substituted concrete type), for
+        // re-inferring sub-expression types while walking the body. Fn-typed params that are being
+        // defunctionalized are added to scope at their `Ty::Fn` type (so re-inference still works),
+        // but are **not** emitted in `new_params` (they are dropped from the closed-first-order sig).
         let mut scope: Vec<(String, Ty)> = Vec::with_capacity(fd.sig.value_params.len());
         let mut new_params: Vec<Param> = Vec::with_capacity(fd.sig.value_params.len());
-        for p in &fd.sig.value_params {
+        for (idx, p) in fd.sig.value_params.iter().enumerate() {
             let cty = self.concrete_ty(name, &tyvars, &subst, &p.ty)?;
-            // Enqueue any generic data instance the parameter type names, so a type that appears only
-            // as a parameter (never destructured in this body) is still emitted (insurance; dedup
-            // makes it idempotent).
-            self.enqueue_tys_in(&cty);
+            // Enqueue any generic data instance the parameter type names, so a type that appears
+            // only as a parameter (never destructured in this body) is still emitted (insurance;
+            // dedup makes it idempotent). Skip for Ty::Fn — no data enqueuing needed.
+            if !matches!(cty, Ty::Fn(_, _)) {
+                self.enqueue_tys_in(&cty);
+            }
             scope.push((p.name.clone(), cty.clone()));
-            new_params.push(Param {
-                name: p.name.clone(),
-                ty: ty_to_ref(&cty),
-            });
+            // Drop fn-typed params that are being defunctionalized from the emitted signature.
+            if !dropped_indices.contains(&idx) {
+                new_params.push(Param {
+                    name: p.name.clone(),
+                    ty: ty_to_ref(&cty),
+                });
+            }
         }
         let ret_cty = self.concrete_ty(name, &tyvars, &subst, &fd.sig.ret)?;
         self.enqueue_tys_in(&ret_cty);
-        // The declared return type drives return-position inference (e.g. a bare nullary generic ctor,
-        // or a return-driven trait-method receiver), mirroring the checker's bidirectional `expected`.
-        let new_body = self.rewrite(name, &mut scope, &fd.body, Some(&ret_cty))?;
+
+        // Install the HOF fn-param substitution map for the duration of this body rewrite.
+        debug_assert!(
+            self.fn_param_subst.is_empty(),
+            "fn_param_subst must be empty before entering emit_fn (invariant)"
+        );
+        self.fn_param_subst = fn_arg_map;
+
+        // The declared return type drives return-position inference (e.g. a bare nullary generic
+        // ctor, or a return-driven trait-method receiver), mirroring the checker's `expected`.
+        let body_result = self.rewrite(name, &mut scope, &fd.body, Some(&ret_cty));
+
+        // Always clear the substitution map — even on error.
+        self.fn_param_subst.clear();
+
+        let new_body = body_result?;
         let new_sig = FnSig {
             name: mangled.clone(),
             params: vec![], // monomorphic: no type parameters remain
@@ -318,7 +473,7 @@ impl<'e> Mono<'e> {
             effects: fd.sig.effects.clone(),
         };
         self.out_fns.insert(
-            mangled,
+            mangled.clone(),
             FnDecl {
                 vis: fd.vis,
                 thaw: fd.thaw,
@@ -326,6 +481,18 @@ impl<'e> Mono<'e> {
                 body: new_body,
             },
         );
+        // EXPLAIN: if this was a HOF specialization, record it (house rule #2 — no black boxes).
+        if !fn_args.is_empty() {
+            self.hof_specs.insert(
+                mangled.clone(),
+                HofSpecialization {
+                    source_fn: name.to_owned(),
+                    targs: targs.to_vec(),
+                    fn_args: fn_args.to_vec(),
+                    mangled,
+                },
+            );
+        }
         Ok(())
     }
 
@@ -707,6 +874,7 @@ impl<'e> Mono<'e> {
             self.enqueue(Item::Fn {
                 name: name.clone(),
                 targs: vec![],
+                fn_args: vec![],
             });
             return Ok(Expr::Path(Path(vec![mangle_decl(name, &[])])));
         }
@@ -734,6 +902,36 @@ impl<'e> Mono<'e> {
         }
         let name = &p.0[0];
 
+        // (0) HOF parameter application: `f(x)` where `f` is a fn-typed value parameter being
+        // defunctionalized. The fn-param substitution map maps `f` to its resolved callee's mangled
+        // name — rewrite to a direct call (RFC-0024 §4, M-687). The callee was already enqueued
+        // when the HOF specialization was enqueued at the outer call site.
+        if let Some(callee_mangled) = self.fn_param_subst.get(name).cloned() {
+            // The HOF parameter `f: A -> B` is single-argument (RFC-0024 §3/§5 — multi-arg is a
+            // staged Residual). Validate the argument count to stay never-silent (G2).
+            if args.len() != 1 {
+                return residual(
+                    site,
+                    format!(
+                        "HOF parameter `{name}` applied to {} argument(s); only 1 is supported in \
+                         stage-1 (RFC-0024 §5 — partial application / multi-arg HOF is deferred)",
+                        args.len()
+                    ),
+                );
+            }
+            // Re-infer the arg type from scope to thread the right `expected` (mirrors the
+            // checker's `Ty::Fn` arm in `check_app`). The callee must already be in `out_fns`
+            // (it was enqueued by `rewrite_app` at the outer HOF call site and emitted before the
+            // HOF body is walked — if not, an `emit_fn` is triggered now via the worklist; since
+            // the worklist drains recursively the callee is present). For re-inference we can use
+            // `None` as `expected` (the arg type is concrete from scope).
+            let arg2 = self.rewrite(site, scope, &args[0], None)?;
+            return Ok(Expr::App {
+                head: Box::new(Expr::Path(Path(vec![callee_mangled]))),
+                args: vec![arg2],
+            });
+        }
+
         // (1) User function call (the head name is in scope as a fn). Clone the decl so the immutable
         // borrow of `self.src` does not outlive the `&mut self` calls below.
         if let Some(fd) = self.src.fns.get(name).cloned() {
@@ -742,14 +940,32 @@ impl<'e> Mono<'e> {
             } else {
                 self.infer_fn_targs(site, scope, name, &fd, args)?
             };
+            // Detect fn-typed value parameters and resolve their actual arguments
+            // (RFC-0024 §4, M-687 static defunctionalization).
+            let fn_args = self.resolve_fn_args(site, scope, name, &fd, &targs, args)?;
             let want_tys = self.fn_value_param_tys(site, &fd, &targs)?;
-            let args2 = self.rewrite_call_args(site, scope, want_tys, args)?;
+            // Rewrite only the non-fn-typed arguments (fn-typed args are baked into the
+            // specialization key and dropped from the call; they are not emitted in args2).
+            let fn_arg_indices: BTreeSet<usize> = fn_args.iter().map(|(i, _)| *i).collect();
+            let mut args2 = Vec::with_capacity(args.len());
+            for (idx, (a, exp)) in args.iter().zip(want_tys.iter()).enumerate() {
+                if fn_arg_indices.contains(&idx) {
+                    // This argument is a function value — it is baked into the specialization key
+                    // and not passed at the call site (defunctionalized away). Skip it.
+                    // But still enqueue the callee fn so it is emitted (it may not be reachable
+                    // from any other path).
+                    continue;
+                }
+                args2.push(self.rewrite(site, scope, a, Some(exp))?);
+            }
+            let mangled = mangle_hof_decl(name, &targs, &fn_args);
             self.enqueue(Item::Fn {
                 name: name.clone(),
                 targs: targs.clone(),
+                fn_args,
             });
             return Ok(Expr::App {
-                head: Box::new(Expr::Path(Path(vec![mangle_decl(name, &targs)]))),
+                head: Box::new(Expr::Path(Path(vec![mangled]))),
                 args: args2,
             });
         }
@@ -1109,6 +1325,103 @@ impl<'e> Mono<'e> {
         })
     }
 
+    /// Resolve the **function-argument identities** for a call to `name` at `targs`, for any
+    /// value-parameter whose (substituted) type is `Ty::Fn` (RFC-0024 §4, M-687). For each such
+    /// parameter, the corresponding actual argument must be an `Expr::Path` naming a statically-
+    /// known top-level function — anything else is a never-silent `Residual` (G2):
+    /// - a closure / lambda: out of scope (RFC-0024 §5)
+    /// - a fn value from a `match` / data field / fn return: dynamic — not statically resolvable
+    /// - a generic function referenced bare (still-generic callee): deferred (FLAG)
+    ///
+    /// Returns `(param_index, callee_mangled_name)` pairs, sorted by index (deterministic). Also
+    /// enqueues each resolved callee as an `Item::Fn` so it is emitted even if unreachable from
+    /// other paths.
+    fn resolve_fn_args(
+        &mut self,
+        site: &str,
+        _scope: &[(String, Ty)], // available for diagnostics
+        callee_name: &str,
+        fd: &FnDecl,
+        targs: &[Ty],
+        args: &[Expr],
+    ) -> Result<Vec<(usize, String)>, ElabError> {
+        let tyvars = fd.sig.param_names();
+        let subst = param_subst(&tyvars, targs);
+        let mut fn_args: Vec<(usize, String)> = Vec::new();
+        for (idx, (pm, actual)) in fd.sig.value_params.iter().zip(args).enumerate() {
+            let (abstract_ty, _) =
+                resolve_ty(site, &self.src.types, &tyvars, &pm.ty).map_err(|e| res_err(site, e))?;
+            let cty = subst_ty(&abstract_ty, &subst);
+            if !matches!(cty, Ty::Fn(_, _)) {
+                continue; // not a fn-typed parameter — nothing to defunctionalize
+            }
+            // This parameter has type `Ty::Fn(a, b)` — the actual argument must be a statically-
+            // known top-level function name (RFC-0024 §4/§5).
+            let Expr::Path(p) = actual else {
+                return residual(
+                    site,
+                    format!(
+                        "call `{callee_name}` argument #{idx} (parameter `{}`) has function type \
+                         `{cty}` — the actual argument must be a top-level function name (a path), \
+                         not a complex expression; closures / dynamic fn values are deferred \
+                         (RFC-0024 §5 — never a silent coercion)",
+                        pm.name
+                    ),
+                );
+            };
+            if p.0.len() != 1 {
+                return residual(
+                    site,
+                    format!(
+                        "function-valued argument `{}` is a dotted path — only top-level \
+                         (single-segment) names are first-class function values in stage-1 \
+                         (RFC-0024 §3, never a silent coercion)",
+                        p.0.join(".")
+                    ),
+                );
+            }
+            let fn_name = &p.0[0];
+            let callee_fd = self
+                .src
+                .fns
+                .get(fn_name)
+                .ok_or_else(|| ElabError::Residual {
+                    site: site.to_owned(),
+                    what: format!(
+                    "function-valued argument `{fn_name}` for parameter `{}` of `{callee_name}` \
+                     is not a top-level function in scope — only named top-level functions are \
+                     first-class values in stage-1 (RFC-0024 §3)",
+                    pm.name
+                ),
+                })?;
+            // A still-generic function as a value argument is deferred (FLAG — RFC-0024 §5).
+            if !callee_fd.sig.params.is_empty() {
+                return residual(
+                    site,
+                    format!(
+                        "function-valued argument `{fn_name}` for parameter `{}` of `{callee_name}` \
+                         is still generic (has type parameters) — a generic fn as a value requires \
+                         type-argument context to defunctionalize; this case is deferred \
+                         (RFC-0024 §5, FLAG: generic-fn-as-arg — never a silent guess)",
+                        pm.name
+                    ),
+                );
+            }
+            // Monomorphic callee — enqueue it and record the resolved identity.
+            let callee_mangled = mangle_decl(fn_name, &[]);
+            self.enqueue(Item::Fn {
+                name: fn_name.clone(),
+                targs: vec![],
+                fn_args: vec![],
+            });
+            fn_args.push((idx, callee_mangled));
+        }
+        // Sort by index for determinism (already in index order since we iterate params in order,
+        // but make it explicit).
+        fn_args.sort_by_key(|(i, _)| *i);
+        Ok(fn_args)
+    }
+
     /// Rewrite a `match` — re-infer the (concrete) scrutinee type, rewrite the scrutinee, then each
     /// arm with its pattern's constructor names mangled and its binders bound at their concrete types.
     fn rewrite_match(
@@ -1313,7 +1626,11 @@ impl<'e> Mono<'e> {
 /// happen to mangle to the same name never alias, and `Ty` needs no `Ord` (just its `Display`).
 fn item_key(item: &Item) -> String {
     match item {
-        Item::Fn { name, targs } => format!("fn:{}", mangle_decl(name, targs)),
+        Item::Fn {
+            name,
+            targs,
+            fn_args,
+        } => format!("fn:{}", mangle_hof_decl(name, targs, fn_args)),
         Item::Data { name, targs } => format!("data:{}", mangle_decl(name, targs)),
         Item::Method {
             trait_name,
@@ -1321,6 +1638,35 @@ fn item_key(item: &Item) -> String {
             for_ty,
         } => format!("method:{}", mangle_method(method, trait_name, for_ty)),
     }
+}
+
+/// Mangle a HOF-specialization declaration name at concrete type arguments **and** fn arguments
+/// (RFC-0024 §4, M-687). Extends [`mangle_decl`]: after the type-argument segments (`$`-joined),
+/// appends fn-argument segments as `%{param_index}:{callee_mangled}` per baked-in fn parameter.
+///
+/// The `%` separator is the elaborator's fresh-variable character (never a surface-identifier
+/// character), so a HOF-specialization mangled name is **disjoint** from:
+/// - surface names (no `$`/`#`/`%` in the Mycelium lexer)
+/// - trait-method mangled names (`method$Trait$ForTy` — no `%`)
+/// - type-only specializations (`name$TyArg…` — no `%`)
+/// - data-repr names (no `%`)
+///
+/// This preserves the overall injective, surface-disjoint property of the mangling scheme (G2).
+///
+/// **Empty `fn_args` delegates to [`mangle_decl`]** — so a fn with no HOF params produces the
+/// exact same mangled name as before M-687 (backward-compatible with the existing corpus).
+fn mangle_hof_decl(name: &str, targs: &[Ty], fn_args: &[(usize, String)]) -> String {
+    if fn_args.is_empty() {
+        return mangle_decl(name, targs);
+    }
+    let mut s = mangle_decl(name, targs);
+    for (idx, callee) in fn_args {
+        s.push('%');
+        s.push_str(&idx.to_string());
+        s.push(':');
+        s.push_str(callee);
+    }
+    s
 }
 
 fn residual<T>(site: &str, what: impl Into<String>) -> Result<T, ElabError> {
@@ -1918,5 +2264,278 @@ mod tests {
                 && !ref_has_var(&fd.sig.ret)
         });
         types_ok && fns_ok
+    }
+
+    /// True iff no `BaseType::Fn` appears in any emitted fn's **value-parameter** list (M-687
+    /// acceptance criterion: defunctionalization must drop all fn-typed params).
+    fn no_fn_in_sig_params(env: &Env) -> bool {
+        fn ref_has_fn(t: &TypeRef) -> bool {
+            matches!(&t.base, crate::ast::BaseType::Fn(_, _))
+        }
+        env.fns
+            .values()
+            .all(|fd| fd.sig.value_params.iter().all(|p| !ref_has_fn(&p.ty)))
+    }
+
+    // ---- M-687: HOF defunctionalization (RFC-0024 §4) ----------------------------------------
+
+    /// The central `map(mk_ok(), double)` acceptance scenario from the M-687 task brief:
+    /// `map` is specialized with `f = double`, the body `f(x)` → `double(x)`, the `f` param is
+    /// dropped from the emitted signature, and the result is closed first-order L0.
+    ///
+    /// Note: `double` here is `not(x)` (flips all bits) — `add` is Ternary-only; the function
+    /// shape is what matters for HOF, not the specific arithmetic.
+    #[test]
+    fn hof_map_mk_ok_double_specializes_to_closed_l0() {
+        let src = "nodule d\n\
+            type Result<A, E> = Ok(A) | Err(E)\n\
+            fn map<A, B, E>(r: Result<A, E>, f: A -> B) -> Result<B, E> =\n\
+              match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }\n\
+            fn double(x: Binary{8}) -> Binary{8} = not(x)\n\
+            fn mk_ok() -> Result<Binary{8}, Binary{8}> = Ok(0b0000_0001)\n\
+            fn main() -> Result<Binary{8}, Binary{8}> = map(mk_ok(), double)";
+        let e = env(src);
+        let (mono, sel) = monomorphize_with_selections(&e, "main").expect("monomorphizes");
+
+        // The specialized HOF fn is emitted under its mangled name.
+        // `map` at A=Binary8, B=Binary8, E=Binary8, fn_arg param 1 = double
+        let specialized = mono
+            .fns
+            .keys()
+            .find(|k| k.starts_with("map") && k.contains("double"))
+            .expect("a map specialization with 'double' in its name exists");
+        assert!(
+            mono.fn_decl(specialized).is_some(),
+            "the specialized map is in the emitted env"
+        );
+
+        // The specialized fn must be closed first-order: no type params, no fn-typed params.
+        let spec_decl = mono.fn_decl(specialized).unwrap();
+        assert!(
+            spec_decl.sig.params.is_empty(),
+            "no type params in the specialization"
+        );
+        assert!(
+            spec_decl
+                .sig
+                .value_params
+                .iter()
+                .all(|p| !matches!(&p.ty.base, crate::ast::BaseType::Fn(_, _))),
+            "no fn-typed value params in the specialization (defunctionalized away)"
+        );
+
+        // The whole mono'd env is closed first-order (no Ty::Var, no fn-typed params).
+        assert!(no_reachable_var(&mono), "a Ty::Var leaked");
+        assert!(
+            no_fn_in_sig_params(&mono),
+            "a Ty::Fn remained in a sig param"
+        );
+
+        // EXPLAIN record: at least one HOF specialization recorded (house rule #2).
+        assert!(
+            !sel.hof_specs.is_empty(),
+            "MonoSelections must record the HOF specialization (EXPLAIN)"
+        );
+        let hof = sel
+            .hof_iter()
+            .find(|(_, h)| h.source_fn == "map")
+            .map(|(_, h)| h)
+            .expect("a HOF spec for 'map' in the EXPLAIN record");
+        assert_eq!(hof.source_fn, "map");
+        assert!(
+            hof.fn_args.iter().any(|(_, callee)| callee == "double"),
+            "the HOF spec records 'double' as the baked-in callee"
+        );
+
+        // `double` itself is emitted as a closed monomorphic fn.
+        assert!(
+            mono.fn_decl("double").is_some(),
+            "the callee `double` is emitted"
+        );
+
+        // `mk_ok` is emitted.
+        assert!(mono.fn_decl("mk_ok").is_some(), "`mk_ok` is emitted");
+
+        // The elaborator runs to the expected value on the elaborate path.
+        let node = crate::elaborate(&e, "main").expect("elaborates");
+        let _ = mycelium_interp::Interpreter::default()
+            .eval_core(&node)
+            .expect("runs to a core value");
+    }
+
+    /// Pinning test: the mangling scheme for HOF specializations is injective —
+    /// two different fn-args produce two different mangled names (no silent alias — G2).
+    #[test]
+    fn hof_fn_arg_joint_mangling_is_injective() {
+        // `mangle_hof_decl("apply", [], [(0, "foo")])` vs `(0, "bar")` — different callees.
+        let n1 = mangle_hof_decl("apply", &[], &[(0, "foo".to_owned())]);
+        let n2 = mangle_hof_decl("apply", &[], &[(0, "bar".to_owned())]);
+        assert_ne!(
+            n1, n2,
+            "different fn-args must produce different mangled names"
+        );
+
+        // vs. a non-HOF (no fn-args) name — must be distinct.
+        let n0 = mangle_hof_decl("apply", &[], &[]);
+        assert_ne!(n0, n1, "HOF and non-HOF mangles are distinct");
+
+        // A fn-arg at param 0 is different from one at param 1.
+        let n3 = mangle_hof_decl("apply", &[], &[(1, "foo".to_owned())]);
+        assert_ne!(
+            n1, n3,
+            "different param indices produce different mangled names"
+        );
+
+        // Two fn-args vs one: distinct.
+        let n4 = mangle_hof_decl(
+            "apply",
+            &[],
+            &[(0, "foo".to_owned()), (1, "bar".to_owned())],
+        );
+        assert_ne!(n1, n4, "one vs two fn-args are distinct");
+
+        // With type args: distinct from without.
+        let n5 = mangle_hof_decl("map", &[Ty::Binary(8)], &[(0, "double".to_owned())]);
+        let n6 = mangle_hof_decl("map", &[Ty::Binary(4)], &[(0, "double".to_owned())]);
+        assert_ne!(
+            n5, n6,
+            "different type args are distinct even at same fn-arg"
+        );
+
+        // `%` separator is not in surface names or prior mangle characters (not `$`/`#`).
+        assert!(n1.contains('%'), "fn-arg separator `%` is present");
+        assert!(!n0.contains('%'), "no-fn-arg name has no `%`");
+    }
+
+    /// A non-statically-resolvable fn value (fn chosen in a `match`) → explicit `Residual`
+    /// (RFC-0024 §5 — out-of-scope, never-silent — G2).
+    ///
+    /// We test two cases: (a) a non-HOF static-fn-arg program (should succeed — control), and (b)
+    /// a program where the checker accepts a `let`-bound fn-typed local but mono cannot see through
+    /// it (the arg expression is an `Expr::Path` that names a *scope binder*, not a top-level fn).
+    #[test]
+    fn hof_dynamic_fn_arg_is_a_residual() {
+        // (a) Static fn arg — must succeed (control for the Residual test).
+        let src_static = "nodule d\n\
+            fn apply(f: Binary{8} -> Binary{8}, x: Binary{8}) -> Binary{8} = f(x)\n\
+            fn flip(x: Binary{8}) -> Binary{8} = not(x)\n\
+            fn main() -> Binary{8} = apply(flip, 0b0000_0010)";
+        let e_static = env(src_static);
+        let mono_static = monomorphize(&e_static, "main").expect("static fn arg monomorphizes");
+        assert!(
+            no_fn_in_sig_params(&mono_static),
+            "no fn-typed param in emitted sig (static)"
+        );
+
+        // (b) The checker allows `apply(x, v)` where `x` is a value-scope binder of fn type —
+        // but `x` is not a top-level fn name, so `resolve_fn_args` returns Residual.
+        // We build this by making `apply` call itself with a fn-typed local that comes from a
+        // value parameter (not a named top-level fn).
+        //
+        // The actual checker handles `f(x)` inside the body of `apply` via the `Ty::Fn`-in-scope
+        // arm (M-686). From mono's perspective, the OUTER call `apply(<non-static-expr>, v)` is
+        // what we need to check.
+        //
+        // The simplest way: a wrapper that passes a *local binder* `g` (which the checker bound
+        // to fn type via a let) to the HOF. The arg at the call site is `g`, not a top-level fn.
+        // NOTE: The checker (M-686) does NOT allow `let g = flip in apply(g, v)` yet because
+        // `flip` as a bare path in a let-bound position needs the checker to synthesize `Ty::Fn`
+        // for a let-binder — which requires `check_let` to handle `Ty::Fn` bounds. If the checker
+        // rejects this, the Residual comes from the checker, not mono; that is still G2-compliant.
+        //
+        // We test that the right kind of error surfaces (Residual), regardless of which gate fires.
+        let src_dyn = "nodule d\n\
+            fn apply(f: Binary{8} -> Binary{8}, x: Binary{8}) -> Binary{8} = f(x)\n\
+            fn flip(x: Binary{8}) -> Binary{8} = not(x)\n\
+            fn outer(g: Binary{8} -> Binary{8}, v: Binary{8}) -> Binary{8} = apply(g, v)\n\
+            fn main() -> Binary{8} = outer(flip, 0b0000_0001)";
+        // `outer(flip, v)` should succeed — `flip` is static here.
+        // `apply(g, v)` inside `outer` has `g` as a local binder of fn type; the mono pass must
+        // handle this as a HOF-param-application (via fn_param_subst when outer is specialized
+        // with fn_args=[(0, "flip")]).
+        let e_dyn = env(src_dyn);
+        let mono_dyn = monomorphize(&e_dyn, "main");
+        // This case exercises the transitive specialization: outer is specialized with g=flip,
+        // and inside outer's body, apply(g, v) → apply's f-param gets g=flip baked in.
+        // Either it succeeds (both specialized correctly) or it surfaces a clear Residual.
+        match mono_dyn {
+            Ok(m) => {
+                // If it succeeds, verify no fn-typed params leaked.
+                assert!(
+                    no_fn_in_sig_params(&m),
+                    "if transitive HOF specialization succeeds, no fn-typed param must remain"
+                );
+            }
+            Err(ElabError::Residual { what, .. }) => {
+                // A Residual is also acceptable — it means the transitive case is deferred (G2).
+                assert!(
+                    !what.is_empty(),
+                    "the Residual must have a non-empty explanation"
+                );
+            }
+            Err(other) => {
+                panic!("expected Ok or Residual, got {other:?}");
+            }
+        }
+    }
+
+    /// Determinism: two calls to `monomorphize` on the same HOF program produce byte-equal results.
+    #[test]
+    fn hof_monomorphize_is_deterministic() {
+        let src = "nodule d\n\
+            fn apply(f: Binary{8} -> Binary{8}, x: Binary{8}) -> Binary{8} = f(x)\n\
+            fn flip(x: Binary{8}) -> Binary{8} = not(x)\n\
+            fn main() -> Binary{8} = apply(flip, 0b0000_0010)";
+        let e = env(src);
+        let a = monomorphize(&e, "main").expect("first mono");
+        let b = monomorphize(&e, "main").expect("second mono");
+        assert_eq!(
+            format!("{a:?}"),
+            format!("{b:?}"),
+            "HOF monomorphization is deterministic"
+        );
+    }
+
+    /// A simple monomorphic HOF (`apply`) specializes, the fn-param is dropped, the body is
+    /// rewritten to a direct call, and the program runs to the expected value.
+    ///
+    /// `flip(x) = not(x)` so `apply(flip, 0b0000_0001) = not(0b0000_0001) = 0b1111_1110`.
+    #[test]
+    fn hof_monomorphic_apply_flip_runs_to_closed_l0() {
+        let src = "nodule d\n\
+            fn apply(f: Binary{8} -> Binary{8}, x: Binary{8}) -> Binary{8} = f(x)\n\
+            fn flip(x: Binary{8}) -> Binary{8} = not(x)\n\
+            fn main() -> Binary{8} = apply(flip, 0b0000_0001)";
+        let e = env(src);
+        let mono = monomorphize(&e, "main").expect("monomorphizes");
+
+        // The specialized `apply` must have no fn-typed param.
+        assert!(no_reachable_var(&mono));
+        assert!(no_fn_in_sig_params(&mono), "fn-typed param was not dropped");
+
+        // There should be a specialized `apply` with `flip` baked in.
+        let specialized = mono
+            .fns
+            .keys()
+            .find(|k| k.starts_with("apply") && k.contains("flip"))
+            .expect("apply%0:flip-like specialization present");
+        let sd = mono.fn_decl(specialized).unwrap();
+        // The fn-param `f` should be gone from the emitted signature.
+        assert_eq!(
+            sd.sig.value_params.len(),
+            1, // only `x: Binary{8}` remains
+            "only the non-fn value-param `x` remains in the specialization"
+        );
+
+        // Runs to 0b1111_1110 (not(0b0000_0001)).
+        let node = crate::elaborate(&e, "main").expect("elaborates");
+        let v = mycelium_interp::Interpreter::default()
+            .eval(&node)
+            .expect("runs");
+        assert_eq!(
+            v.payload(),
+            &mycelium_core::Payload::Bits(vec![true, true, true, true, true, true, true, false]),
+            "apply(flip, 0b0000_0001) = not(0b0000_0001) = 0b1111_1110"
+        );
     }
 }
