@@ -109,8 +109,16 @@ def list_issues(repo: str) -> list[dict]:
     """All issues (open + closed) via ``gh issue list`` — excludes PRs by construction."""
     return gh_json(
         [
-            "issue", "list", "--repo", repo, "--state", "all", "--limit", "2000",
-            "--json", "number,title,state,createdAt",
+            "issue",
+            "list",
+            "--repo",
+            repo,
+            "--state",
+            "all",
+            "--limit",
+            "2000",
+            "--json",
+            "number,title,state,createdAt",
         ]
     )
 
@@ -119,8 +127,16 @@ def close_issue(repo: str, number: int, comment: str) -> None:
     """Close ``#number`` as not-planned with an explanatory ``comment``."""
     subprocess.run(
         [
-            "gh", "issue", "close", str(number), "--repo", repo,
-            "--reason", "not planned", "--comment", comment,
+            "gh",
+            "issue",
+            "close",
+            str(number),
+            "--repo",
+            repo,
+            "--reason",
+            "not planned",
+            "--comment",
+            comment,
         ],
         check=True,
     )
@@ -162,7 +178,9 @@ def report_and_act(repo: str, apply: bool, fix_idmap: bool) -> int:
             if state == "OPEN" and canon_open:
                 actions.append((key, canon["number"], d["number"]))
             elif state == "OPEN":
-                print("    canonical is CLOSED — not auto-closing; review manually (G2)")
+                print(
+                    "    canonical is CLOSED — not auto-closing; review manually (G2)"
+                )
         if mapped and mapped != canon["number"]:
             print(
                 f"    NOTE idmap anchors {key} to #{mapped}, not canonical "
@@ -170,7 +188,9 @@ def report_and_act(repo: str, apply: bool, fix_idmap: bool) -> int:
             )
 
     for _key, canon, dups in title_dups:
-        print(f"\n  same-title (no task-id): canonical #{canon['number']}: {canon['title']}")
+        print(
+            f"\n  same-title (no task-id): canonical #{canon['number']}: {canon['title']}"
+        )
         for d in dups:
             print(f"    duplicate #{d['number']} ({d['state'].upper()})")
         print("    (title-only match — NOT auto-closed; review manually, G2)")
@@ -234,16 +254,20 @@ def main(argv: list[str] | None = None) -> int:
         description="Detect/reconcile duplicate GitHub issues (dry-run by default)."
     )
     p.add_argument(
-        "--apply", action="store_true",
+        "--apply",
+        action="store_true",
         help="close non-canonical OPEN task-id duplicates (default: dry-run report)",
     )
     p.add_argument(
-        "--fix-idmap", action="store_true",
+        "--fix-idmap",
+        action="store_true",
         help="with --apply, re-anchor idmap.tsv rows to the canonical number",
     )
     p.add_argument("--repo", default=REPO, help=f"owner/name (default {REPO})")
     p.add_argument(
-        "--self-test", action="store_true", help="run the offline logic test; no network"
+        "--self-test",
+        action="store_true",
+        help="run the offline logic test; no network",
     )
     a = p.parse_args(argv)
     if a.self_test:
