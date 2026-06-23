@@ -2819,3 +2819,95 @@ issues:
       adopted, implement the sugar as a frontend desugaring (parser/elaboration only — no `mycelium-core`/L0
       change, KC-3). Honest: deferred future leg; no syntax enacted until RFC-0025 lands. Acceptance: RFC-0025
       + Doc-Index + CHANGELOG; if symbols adopted, desugaring tests show identical L0 to the word form.
+  - id: E9-1
+    title: "E9-1 (epic) — Editor syntax highlighting & grammar distribution (DN-24)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:epic, area:toolchain, priority:P2, status:needs-design]
+    depends_on: []
+    epic: E9
+    doc_refs: [corpus:DN-24, src:crates/mycelium-l1/src/token.rs, src:crates/mycelium-lsp]
+    body: |
+      Maintainer ask (2026-06-23): make Mycelium code colorize via syntax highlighting, "easily plugged
+      into pretty much any development environment." Today `.myc` renders as plain text everywhere (no
+      grammar exists). This is a HIGHLIGHTER, not a linter (myc-lint / myc-check already cover lint /
+      correctness — DN-22): classify tokens for color. DN-24 records the decision space + the recommended
+      LAYERED stack with a single source of truth. Children: M-693 (RFC-0026 spec/decision) -> M-694
+      (TextMate grammar, generated from the lexer keyword set + drift-check) ∥ M-695 (tree-sitter grammar)
+      ∥ M-696 (LSP semantic tokens in mycelium-lsp) -> M-697 (packaging: reference VS Code extension +
+      GitHub Linguist registration). Single source of truth (honesty): grammar token classes are GENERATED
+      from crates/mycelium-l1/src/token.rs `keyword()` + lang-lexicon-syntax.md, drift-checked in CI — the
+      highlighter is a projection of the real lexer, never hand-drifted (G2). KC-3 untouched (a highlighter
+      reads tokens; it changes no semantics). Disjoint from E7-5 (operator syntax); runnable in parallel
+      with dfb. Acceptance: a binding format/scope-name decision in RFC-0026; at least the TextMate baseline
+      + LSP semantic tokens shipping; `.myc` colorizes on GitHub; the grammar drift-check green.
+  - id: M-693
+    title: "M-693 — spec(rfc-0026): editor syntax-highlighting grammar(s) + scope-name conventions"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:spec, area:toolchain, priority:P2, status:needs-design]
+    depends_on: []
+    epic: E9-1
+    doc_refs: [corpus:DN-24, src:crates/mycelium-l1/src/token.rs]
+    body: |
+      Author RFC-0026 deciding (per DN-24): which grammar artifacts ship (recommended: TextMate baseline +
+      tree-sitter + LSP semantic tokens), the canonical TextMate/tree-sitter SCOPE NAMES for each token
+      class (keyword, type, ctor, guarantee tag Exact/Proven/Empirical/Declared, operator `->`/`@`/`!{}`,
+      ternary literal, comment/docstring), and the single-source-of-truth rule (scope classes derived from
+      token.rs `keyword()`; a `just` drift-check). Honest: advisory until RFC-0026 lands; no grammar enacted
+      by DN-24. Acceptance: RFC-0026 + Doc-Index + CHANGELOG; scope-name table fixed; drift-check contract
+      specified.
+  - id: M-694
+    title: "M-694 — feat(tooling): TextMate grammar (.tmLanguage.json) generated from the lexer + drift-check"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:needs-design]
+    depends_on: [M-693]
+    epic: E9-1
+    doc_refs: [corpus:DN-24, src:crates/mycelium-l1/src/token.rs]
+    body: |
+      Generate `tools/grammars/mycelium.tmLanguage.json` from the canonical lexer keyword set (token.rs
+      `keyword()`) + the DN-24/RFC-0026 scope-name table — the portable baseline that VS Code / Sublime /
+      Zed / IntelliJ and GitHub Linguist consume. A `just grammar-check` recipe regenerates + diffs, failing
+      if the committed grammar drifts from `keyword()` (G2 — the highlighter tracks the real lexer).
+      Acceptance: the grammar highlights the example corpus (`examples/*.myc`) correctly; drift-check green;
+      no hand-edited keyword list.
+  - id: M-695
+    title: "M-695 — feat(tooling): tree-sitter grammar for Mycelium (modern editors + GitHub)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-693]
+    epic: E9-1
+    doc_refs: [corpus:DN-24, src:crates/mycelium-l1/src/parse.rs]
+    body: |
+      A `tree-sitter-mycelium` grammar (`grammar.js` -> C/wasm) mirroring the L1 surface (RFC-0006 lexer +
+      the parser grammar) for parser-accurate highlighting in Neovim / Helix / Emacs / Zed and GitHub's
+      tree-sitter pipeline; the `highlights.scm` queries use the RFC-0026 scope names. Includes a
+      highlight-corpus test (tree-sitter's own harness). Honest: a second grammar source — its keyword set
+      is cross-checked against token.rs by the same drift-check (G2). Acceptance: grammar parses the example
+      corpus; highlight tests pass; queries match the RFC-0026 scope names.
+  - id: M-696
+    title: "M-696 — feat(lsp): semantic tokens in mycelium-lsp (type-aware highlighting overlay)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:needs-design]
+    depends_on: [M-693]
+    epic: E9-1
+    doc_refs: [corpus:DN-24, src:crates/mycelium-lsp/src/lib.rs]
+    body: |
+      Add a `textDocument/semanticTokens` provider to mycelium-lsp (no such provider today — the crate has
+      completions / diagnostics / fmt only). Drive token classification from the CHECKER (the only layer
+      that can colour a guarantee tag / type var / ctor / generic accurately), a type-aware overlay on top
+      of the TextMate / tree-sitter base. Reuse the existing parse/check plumbing; never-silent on
+      unclassifiable spans (fall through to the base grammar, G2). Acceptance: an LSP client (VS Code /
+      Neovim) renders semantic colors for a `.myc` file; the token legend matches the RFC-0026 scope names.
+  - id: M-697
+    title: "M-697 — feat(tooling): editor packaging — reference VS Code extension + GitHub Linguist"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P3, status:needs-design]
+    depends_on: [M-694, M-696]
+    epic: E9-1
+    doc_refs: [corpus:DN-24]
+    body: |
+      Package the grammars for one-click / repo-visible use: a reference VS Code extension bundling the
+      M-694 TextMate grammar + wiring the M-696 LSP, and a GitHub Linguist registration for `.myc` (a
+      `languages.yml` entry + grammar submission) so the language colorizes in the repo view. Honest:
+      Linguist acceptance is UPSTREAM (a PR to github/linguist) — track the submission, do not claim repo
+      colorization until merged (G2/VR-5). Acceptance: the extension installs + highlights locally; the
+      Linguist PR is opened (its merge is the upstream gate).
