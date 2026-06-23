@@ -12,8 +12,10 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 - **Real OS-thread scheduler (`mycelium-std-runtime::scheduler`; M-709).** The v0 R1 surface ran tasks
   cooperatively on the calling thread; the new `Scheduler` runs independent tasks across a fixed pool
+<<<<<<< HEAD
   of OS worker threads (`std::thread::scope` — the crate stays `#![forbid(unsafe_code)]`, reusing
   `mycelium-interp` for supervision primitives per DRY) with **fair FIFO dispatch** and **demand-signalled, bounded backpressure**: the ready
+>>>>>>> origin/integration
   queue holds at most `capacity` pending jobs *by construction* (enqueue only while `len < capacity`),
   never an unbounded silent buffer (G2 / RFC-0008 §4.3). `run_indexed` returns outputs in spawn order,
   so the result is directly comparable to the sequential reference — the **RT2 sequentialization
